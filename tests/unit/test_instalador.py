@@ -38,4 +38,21 @@ def test_instalador_grava_plat_git_sha_e_confere_hsts():
 def test_hsts_em_todo_bloco_de_add_header_do_modelo():
     locais = NGINX.count("location ")
     hsts = NGINX.count('add_header Strict-Transport-Security "max-age=31536000" always;')
-    assert locais == 2 and hsts == locais + 1, (locais, hsts)
+    assert locais == 4 and hsts == locais + 1, (locais, hsts)
+
+
+def test_logins_com_limite_por_ip_e_zona_escrita_pelo_instalador():
+    for rota in ("location = /api/login {", "location = /api/login/2fa {"):
+        bloco = NGINX[NGINX.index(rota):]
+        bloco = bloco[: bloco.index("}")]
+        assert "limit_req zone=plat_login burst=10 nodelay;" in bloco and "limit_req_status 429;" in bloco, rota
+        assert "proxy_pass http://127.0.0.1:PORTA;" in bloco
+    assert NGINX.index("location = /api/login {") < NGINX.index("location / {")
+    assert "zone=plat_login:10m rate=10r/m" in INSTALL and "/etc/nginx/conf.d/plat_limites.conf" in INSTALL
+
+
+def test_instalador_semeia_plataforma_sem_superadmin_nos_demos_e_confere_cryptography():
+    assert "python3-cryptography" in INSTALL
+    assert "('$slug' = 'plataforma')" in INSTALL and "('$slug' = 'demo')" not in INSTALL
+    assert "rm -f tests/credenciais_totp.txt" in INSTALL
+    assert "plat.log_particao_garantir" in INSTALL and "plat.evento_particao_garantir" in INSTALL

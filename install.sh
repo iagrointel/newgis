@@ -87,7 +87,7 @@ fi
 
 echo "== f. venv"
 # uvicorn e psycopg2 vêm do sistema por decisão (ADR 0001 seção 2.1): pacotes dpkg, conferidos aqui com nome
-for pacote in python3-uvicorn python3-psycopg2 python3-venv; do
+for pacote in python3-uvicorn python3-psycopg2 python3-venv python3-cryptography; do
   dpkg -s "$pacote" >/dev/null 2>&1 || { echo "falta o pacote do sistema $pacote (apt install $pacote)" >&2; exit 1; }
 done
 [ -x venv/bin/python ] || sudo -u "$APP_USER" python3 -m venv --system-site-packages venv
@@ -97,13 +97,19 @@ done
   || { echo "app.main não importa com PYTHONNOUSERSITE=1: requirements.txt incompleto" >&2; exit 1; }
 echo "venv: $(venv/bin/python --version) · fastapi $("${PY[@]}" -c 'import fastapi; print(fastapi.__version__)') da venv · pytest $(venv/bin/pytest --version 2>&1 | awk '{print $2}')"
 
-echo "== g. administradores de demonstração"
+echo "== g. administradores: plataforma (superadmin, 2FA obrigatório) e demonstração (demo, demo2)"
 CRED=tests/credenciais.txt
 if [ ! -f "$CRED" ]; then
-  printf 'demo admin %s\ndemo2 admin %s\n' "$(openssl rand -hex 8)" "$(openssl rand -hex 8)" > "$CRED"
+  printf 'plataforma admin %s\ndemo admin %s\ndemo2 admin %s\n' "$(openssl rand -hex 8)" "$(openssl rand -hex 8)" "$(openssl rand -hex 8)" > "$CRED"
   echo "$CRED criado"
+elif ! grep -q '^plataforma ' "$CRED"; then
+  printf 'plataforma admin %s\n' "$(openssl rand -hex 8)" >> "$CRED"
+  echo "$CRED: linha de plataforma acrescentada"
 fi
 chmod 600 "$CRED"; chown "$APP_USER":"$APP_USER" "$CRED"
+# o 2FA do admin semeado é resetado a cada instalação (superadmin exige 2FA: a suíte liga de novo e guarda o segredo
+# em tests/credenciais_totp.txt, fora do git); o arquivo antigo perde a validade aqui
+rm -f tests/credenciais_totp.txt
 while read -r slug login senha; do
   [ -n "$slug" ] || continue
   # a senha entra pelo stdin (printf é builtin: não aparece em ps nem no COMMAND= que o sudo grava no journal);
@@ -111,12 +117,19 @@ while read -r slug login senha; do
   HASH=$(printf '%s' "$senha" | "${PY[@]}" -c "import sys; from app.senha import gerar_hash; print(gerar_hash(sys.stdin.read()))")
   "${PSQL[@]}" -f - <<SQL
 INSERT INTO plat.usuario(tenant_id, login, nome, senha_hash, perfil, superadmin)
-SELECT t.id, '$login', 'Administrador $slug', '$HASH', 'admin', ('$slug' = 'demo')
+SELECT t.id, '$login', CASE WHEN '$slug' = 'plataforma' THEN 'Operador da plataforma' ELSE 'Administrador $slug' END,
+       '$HASH', 'admin', ('$slug' = 'plataforma')
 FROM plat.tenant t WHERE t.slug = '$slug'
-ON CONFLICT (tenant_id, login) DO UPDATE SET senha_hash = EXCLUDED.senha_hash, ativo = true;
+ON CONFLICT (tenant_id, login) DO UPDATE SET senha_hash = EXCLUDED.senha_hash, ativo = true, superadmin = EXCLUDED.superadmin,
+  trocar_senha = false, totp_secret = NULL, totp_ativo = false, totp_ultimo_passo = NULL, codigos_recuperacao = NULL,
+  bloqueado_ate = NULL, falhas_login = 0, falhas_desde = NULL, desafio_2fa_hash = NULL, desafio_2fa_ate = NULL,
+  perfil = 'admin', papel_id = NULL;
 SQL
   echo "admin de $slug semeado"
 done < "$CRED"
+# partições do mês corrente e dos 3 seguintes para log_acesso e evento (ADR 0002 seções 9.2 e 9.4; o L0-05-d agenda)
+"${PSQL[@]}" -Atc "SELECT plat.log_particao_garantir((date_trunc('month', now()) + make_interval(months => m))::date), plat.evento_particao_garantir((date_trunc('month', now()) + make_interval(months => m))::date) FROM generate_series(0, 3) AS m" | tr '\n' ' '; echo
+echo "partições de log_acesso e evento garantidas"
 
 # inquilinos de demonstração: cota diária de jobs alta (a suíte cria centenas por rodada; padrão de produto = 1.000, ADR 0003)
 "${PSQL[@]}" -Atc "UPDATE plat.tenant SET config = config || '{\"cota_jobs_dia\": 100000}' WHERE slug IN ('demo', 'demo2') AND coalesce((config->>'cota_jobs_dia')::int, 0) < 100000" >/dev/null
@@ -149,6 +162,10 @@ systemctl --no-pager --lines=0 status plat-worker | sed -n '1,4p'
 
 echo "== i. nginx"
 SITE=/etc/nginx/sites-enabled/$DOM
+# zona limit_req própria: 10 tentativas/min por IP em /api/login e /api/login/2fa (ADR 0002 seção 6.2)
+LIMITES=/etc/nginx/conf.d/plat_limites.conf
+printf '# plat: limite por IP nos logins (ADR 0002 secao 6.2); escrito pelo install.sh\nlimit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\n' > "$LIMITES.novo"
+if [ -f "$LIMITES" ] && cmp -s "$LIMITES" "$LIMITES.novo"; then rm -f "$LIMITES.novo"; echo "$LIMITES já existe (igual)"; else mv "$LIMITES.novo" "$LIMITES"; echo "$LIMITES escrito"; fi
 escrever_nginx() {
   local bloco certbot_443 bloco_80
   bloco=$(sed -e "s#DOMINIO#$DOM#g" -e "s#APP_DIR#$APP_DIR#g" -e "s#PORTA#$PORTA#g" deploy/nginx.conf)
