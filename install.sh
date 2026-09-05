@@ -49,12 +49,19 @@ PLAT_MARTIN_URL=
 PLAT_TITILER_URL=
 PLAT_GARAGE_URL=http://127.0.0.1:3900
 PLAT_LOG_NIVEL=INFO
+PLAT_WORKER_URL=http://127.0.0.1:8153
+PLAT_WORKER_PROCESSOS=1
+PLAT_WORKER_MEMORIA_MB=1536
 ENV
   echo ".env criado"
 else
   echo ".env já existe (mantido)"
 fi
 chmod 600 .env; chown "$APP_USER":"$APP_USER" .env
+# fila de jobs (ADR 0003 seção 11): instalação existente ganha as chaves do worker sem perder as demais
+for chave in PLAT_WORKER_URL=http://127.0.0.1:8153 PLAT_WORKER_PROCESSOS=1 PLAT_WORKER_MEMORIA_MB=1536; do
+  grep -q "^${chave%%=*}=" .env || echo "$chave" >> .env
+done
 SENHA=$(sed -nE 's#^PLAT_DSN=postgresql://plat_app:([^@]+)@.*#\1#p' .env)
 [ -n "$SENHA" ] || { echo "PLAT_DSN no .env não tem a forma postgresql://plat_app:<senha>@..." >&2; exit 1; }
 # sempre: a senha do banco passa a ser a do .env (idempotência de verdade; ADR risco 6)
@@ -123,6 +130,19 @@ for i in $(seq 1 30); do
 done
 systemctl --no-pager --lines=0 status $UNIDADE | sed -n '1,4p'
 
+echo "== h2. systemd plat-worker"
+install -d -o "$APP_USER" -g "$APP_USER" var/jobs
+sed -e "s#APP_DIR#$APP_DIR#g" -e "s#APP_USER#$APP_USER#g" deploy/plat-worker.service > /etc/systemd/system/plat-worker.service
+systemctl daemon-reload
+systemctl enable -q plat-worker
+systemctl restart plat-worker
+for i in $(seq 1 30); do
+  if curl -fsS -m 2 "http://127.0.0.1:8153/saude" >/dev/null 2>&1; then echo "/saude do worker respondeu 200 em ${i} s"; break; fi
+  if [ "$i" -eq 30 ]; then echo "plat-worker não respondeu em 30 s:" >&2; journalctl -u plat-worker -n 30 --no-pager >&2; exit 1; fi
+  sleep 1
+done
+systemctl --no-pager --lines=0 status plat-worker | sed -n '1,4p'
+
 echo "== i. nginx"
 SITE=/etc/nginx/sites-enabled/$DOM
 escrever_nginx() {
@@ -174,4 +194,5 @@ echo "https://$DOM/saude -> HTTP $CODIGO · $ROBOTS · $HSTS"
 [ "$CODIGO" = "200" ] || { echo "esperado 200 em https://$DOM/saude" >&2; exit 4; }
 printf '%s' "$ROBOTS" | grep -qi noindex || { echo "X-Robots-Tag sem noindex" >&2; exit 4; }
 printf '%s' "$HSTS" | grep -q 'max-age=31536000' || { echo "sem Strict-Transport-Security no bloco 443" >&2; exit 4; }
-echo "== instalado em $((SECONDS - INICIO)) s: https://$DOM (serviço $UNIDADE, porta $PORTA)"
+curl -fsS -m 5 "https://$DOM/saude" | grep -q '"workers_vivos": *[1-9]' || { echo "/saude sem worker vivo (fila.workers_vivos)" >&2; exit 4; }
+echo "== instalado em $((SECONDS - INICIO)) s: https://$DOM (serviços $UNIDADE :$PORTA e plat-worker :8153)"

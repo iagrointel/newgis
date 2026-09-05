@@ -1,0 +1,31 @@
+[Unit]
+Description=plat — worker da fila de jobs (:8153). Interno. Análise / beta privado.
+After=network.target postgresql.service plat-api.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=APP_USER
+Group=APP_USER
+WorkingDirectory=APP_DIR
+# nunca ~/.local de ninguém: só a venv e os pacotes dpkg (ADR 0001 seção 2.1)
+Environment=PYTHONNOUSERSITE=1
+ExecStart=APP_DIR/venv/bin/python -m app.jobs.worker
+# sem job o worker só termina por sinal: qualquer saída é anômala (ADR 0003 seção 4.5)
+Restart=always
+RestartSec=3
+# SIGTERM só ao pai (que devolve os jobs e manda SIGTERM ao filho); SIGKILL ao cgroup inteiro em TimeoutStopSec
+TimeoutStopSec=40
+KillMode=mixed
+# filho morto pelo OOM do cgroup não derruba o serviço: o pai lê o código -9 e marca o job falhou
+OOMPolicy=continue
+MemoryHigh=1536M
+MemoryMax=2G
+Nice=5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
