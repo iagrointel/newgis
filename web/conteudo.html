@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Conteúdo · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/conteudo.css">
+</head>
+<body class="tela conteudo">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="catalogo.titulo">Conteúdo</h1>
+    <div class="linha-ferramentas" id="ferramentas"></div>
+    <plat-aviso id="aviso"></plat-aviso>
+    <div class="abas" role="tablist" id="abas"></div>
+    <div id="grupo-seletor" class="filtros" hidden></div>
+    <div id="busca-linha" class="busca-linha">
+      <button type="button" id="busca-ajuda-botao" class="pequeno" aria-expanded="false" aria-controls="busca-ajuda"></button>
+      <label class="ordenar"><span data-i18n="catalogo.ordenar">ordenar</span> <select id="ordenar"></select></label>
+      <div class="vistas" role="group" id="vistas"></div>
+    </div>
+    <p id="busca-erro" class="erro-campo" role="alert" hidden></p>
+    <section id="busca-ajuda" class="cartao busca-ajuda" hidden aria-labelledby="busca-ajuda-titulo">
+      <h2 id="busca-ajuda-titulo" data-i18n="catalogo.busca_ajuda_titulo">sintaxe da busca</h2>
+      <div id="busca-ajuda-corpo"></div>
+    </section>
+    <div class="conteudo-grade" id="conteudo-grade">
+      <details class="coluna" id="coluna-pastas" open>
+        <summary data-i18n="catalogo.pastas">pastas</summary>
+        <div id="pastas"></div>
+      </details>
+      <details class="coluna" id="coluna-filtros" open>
+        <summary data-i18n="catalogo.filtros">filtros</summary>
+        <div id="filtros"></div>
+      </details>
+      <section class="coluna-lista" id="lista-area" aria-labelledby="lista-titulo">
+        <h2 id="lista-titulo" class="sr-only" data-i18n="catalogo.lista_itens">itens</h2>
+        <p id="aproximado" class="aproximado" hidden></p>
+        <div id="lote" class="lote" hidden></div>
+        <plat-aviso id="lista-aviso"></plat-aviso>
+        <div id="lista" class="lista" aria-live="polite" aria-busy="false"></div>
+        <div class="rodape-lista">
+          <span id="contagem" class="contagem" aria-live="polite"></span>
+          <button type="button" id="carregar-mais" class="pequeno" hidden></button>
+        </div>
+      </section>
+    </div>
+    <section id="lixeira-area" class="lixeira" hidden aria-labelledby="lixeira-titulo">
+      <h2 id="lixeira-titulo" class="sr-only" data-i18n="catalogo.aba_lixeira">Lixeira</h2>
+      <div class="linha-ferramentas" id="lixeira-ferramentas"></div>
+      <plat-aviso id="lixeira-aviso"></plat-aviso>
+      <plat-tabela id="lixeira-tabela"></plat-tabela>
+      <plat-paginacao id="lixeira-paginacao"></plat-paginacao>
+    </section>
+  </main>
+</div>
+<plat-dialogo id="painel" modo="lateral"></plat-dialogo>
+<script src="/static/vendor/dompurify-3.4.14.js"></script>
+<script type="module" src="/static/js/catalogo/conteudo.js"></script>
+</body>
+</html>

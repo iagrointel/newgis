@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Item compartilhado · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/conteudo.css">
+</head>
+<body class="tela">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal compartilhado-pagina" tabindex="-1">
+    <h1 data-i18n="catalogo.compartilhado_titulo">Item compartilhado</h1>
+    <p class="aviso-beta" data-i18n="app.beta">análise / beta privado</p>
+    <plat-aviso id="aviso"></plat-aviso>
+    <section id="item" class="cartao" hidden></section>
+    <section id="incluidos" class="cartao" hidden>
+      <h2 data-i18n="catalogo.link_incluidos">itens incluídos</h2>
+      <plat-tabela id="incluidos-tabela"></plat-tabela>
+    </section>
+  </main>
+</div>
+<script src="/static/vendor/dompurify-3.4.14.js"></script>
+<script type="module" src="/static/js/catalogo/compartilhado.js"></script>
+</body>
+</html>
