@@ -2,44 +2,201 @@
  "item": "L0-02-tenant-auth",
  "medidas": {
   "rotas_total": {
-   "valor": 56,
+   "valor": 73,
    "unidade": "rotas",
    "comando": "len(paths×methods) de docs/openapi.json"
   },
   "rotas_cobertas": {
-   "valor": 56,
+   "valor": 73,
    "unidade": "rotas",
    "comando": "rotas do OpenAPI com caso em tests/api/cruzado_casos.py"
   },
   "custo_log_acesso_ms": {
-   "valor": 0.98,
+   "valor": 0.67,
    "unidade": "ms",
    "comando": "mediana de 30 GET /api/eu com log_registrar menos mediana de 30 sem (TestClient)"
   },
   "login_inexistente_vs_senha_errada_ms": {
    "valor": [
-    124.0,
-    124.7
+    123.0,
+    123.3
    ],
    "unidade": "ms",
    "comando": "mediana de 4 POST /api/login: usuário inexistente × senha errada (tempo constante)"
   },
   "latencia_login_ms": {
-   "valor": 129.0,
+   "valor": 128.7,
    "unidade": "ms",
    "comando": "mediana de 3 POST /api/login com senha certa pelo TestClient (inclui pbkdf2 600k)"
   },
   "tempo_revogacao_s": {
-   "valor": 0.01,
+   "valor": 0.012,
    "unidade": "s",
    "comando": "DELETE /api/tokens/{id} até o 401 token_revogado (TestClient)"
   },
   "latencia_auth_token_ms": {
-   "valor": 2.94,
+   "valor": 3.16,
    "unidade": "ms",
    "comando": "mediana de 50 GET /api/eu com Bearer menos mediana de 50 GET /api/versao (TestClient)"
+  },
+  "pagina_pronta_ms_2fa": {
+   "valor": 8.7,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "pagina_pronta_ms_conta": {
+   "valor": 40.7,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "pagina_pronta_ms_grupos": {
+   "valor": 57.9,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "pagina_pronta_ms_log": {
+   "valor": 113.4,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "pagina_pronta_ms_login": {
+   "valor": 51.5,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "pagina_pronta_ms_papeis": {
+   "valor": 66.5,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "pagina_pronta_ms_tokens": {
+   "valor": 124.9,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "tempo_revogacao_ms_e2e": {
+   "valor": 6.3,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "pagina_pronta_ms_usuarios": {
+   "valor": 130.5,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "testador_rotas_total_vivo": {
+   "valor": 73,
+   "unidade": "rotas",
+   "comando": "len(paths×methods) de https://plat.iagrointel.com/api/openapi.json (vivo), 05/09 16:30 UTC"
+  },
+  "testador_rotas_varridas_cruzado_vivo": {
+   "valor": 73,
+   "unidade": "rotas",
+   "comando": "varredura_viva.py do testador: para CADA rota, sessão A · token A · sessão A+X-Plat-Inquilino · anônimo · genérica com id de B · POST com tenant de B"
+  },
+  "testador_chamadas_cruzadas_vivo": {
+   "valor": 411,
+   "unidade": "chamadas",
+   "comando": "total de chamadas HTTP da varredura viva"
+  },
+  "testador_2xx_cruzados_indevidos": {
+   "valor": 0,
+   "unidade": "chamadas",
+   "comando": "2xx que expõem ou alteram dado de B (após descontar: eco do nome em criação em A, /api/login/provedores público, 404 de /api/plataforma para anônimo, 429 do nginx) — 7 linhas marcadas pelo script, todas conferidas como não-vazamento"
+  },
+  "testador_linhas_de_B_alteradas": {
+   "valor": 0,
+   "unidade": "linhas",
+   "comando": "md5 como postgres das linhas de B criadas pelo testador (usuário, grupo, membros, papel, token, job, agenda, nº de sessões) antes × depois da varredura"
+  },
+  "testador_login_ms_20_uvicorn": {
+   "valor": {
+    "mediana": 129.2,
+    "p95": 145.4,
+    "max": 156.6
+   },
+   "unidade": "ms",
+   "comando": "20 POST /api/login direto no uvicorn :8150 (Host/X-Forwarded-Proto como o nginx): mediana, p95 (19ª), máximo"
+  },
+  "testador_login_ms_3_nginx": {
+   "valor": [
+    142.9,
+    141.7,
+    146.0
+   ],
+   "unidade": "ms",
+   "comando": "3 POST /api/login pela URL pública (nginx + TLS), individuais"
+  },
+  "testador_auth_token_ms": {
+   "valor": {
+    "api_eu_bearer_mediana": 3.67,
+    "api_versao_mediana": 1.17,
+    "diferenca": 2.5
+   },
+   "unidade": "ms",
+   "comando": "mediana de 20 GET /api/eu com Bearer e de 20 GET /api/versao, direto no uvicorn; diferença = custo da autenticação por token"
+  },
+  "testador_tempo_constante_ms": {
+   "valor": [
+    121.7,
+    123.2
+   ],
+   "unidade": "ms",
+   "comando": "mediana de 6 logins com usuário inexistente × 6 com senha errada, direto no uvicorn"
+  },
+  "testador_token_revogado_s": {
+   "valor": 0.02,
+   "unidade": "s",
+   "comando": "DELETE /api/tokens/{id} até o 401 token_revogado pela URL pública"
+  },
+  "testador_plat_api_memoria_bytes": {
+   "valor": 122781696,
+   "unidade": "bytes",
+   "comando": "systemctl show plat-api -p MemoryCurrent (cgroup: mestre + 2 workers)"
+  },
+  "testador_nginx_login_10rpm": {
+   "valor": "10 × 401 depois 429 (burst 10; 1 a cada 6 s)",
+   "unidade": "sequência",
+   "comando": "25 POST /api/login em 15 s de OUTRO IP (GPU box): 401 401 401 429 ... (bucket já parcialmente gasto pela rodada anterior); /api/login/2fa idem; GET /api/eu sem limite"
+  },
+  "testador_e2e_identidade": {
+   "valor": "9 passaram, 0 falharam",
+   "unidade": "testes",
+   "comando": "make e2e 05/09 16:03-16:27 UTC: tests/e2e/test_{login×2,2fa,conta,usuarios,grupos,papeis,tokens,log}.py; as 7 falhas da rodada são de tests/api/jobs e tests/e2e/test_tarefas (trilha B)"
+  },
+  "testador_make_teste": {
+   "valor": "407 passaram, 2 falharam, 21 deselecionados, 103 s",
+   "unidade": "testes",
+   "comando": "make teste 05/09 16:32 UTC (2ª rodada; a 1ª recebeu SIGTERM externo aos 77 s): falhas = tests/api/jobs/test_jobs_fila (B) e tests/api/test_usuarios::test_ultimo_admin (A, resíduo GrupoB em demo2 criado 16:03:38 por script fora do repositório)"
+  },
+  "testador_placeholders": {
+   "valor": 0,
+   "unidade": "linhas",
+   "comando": "grep -rnI -E -f tests/marcadores.regex em app web db docs deploy install.sh Makefile *.md tests (fora vendor/venv/.git) = 0 fora da própria regex e de tests/medidas/L0-01-repo.json"
+  },
+  "testador_nomes_de_cliente": {
+   "valor": 0,
+   "unidade": "linhas",
+   "comando": "grep -rnIi de fgr|cbre|novaterra|certel|certaja|sicredi|neoenergia|daiichi|arayara|ineep|corporate|gestao 360|edp|state grid|jamel|robson em app web db docs deploy tests install.sh *.md = 0 (1 ocorrência é a própria descrição do comando em tests/medidas/L0-01-repo.json)"
+  },
+  "testador_chaves_i18n_faltando": {
+   "valor": [
+    "conta.apos_pendencia"
+   ],
+   "unidade": "chaves",
+   "comando": "t('...') e data-i18n em web/js e web/**/*.html × web/js/i18n/pt-BR.json: 306 usadas, 1 ausente (aparece crua na tela Minha conta, captura L0-02-tenant-auth_2fa.png); paginacao.anterior/proxima existem mas aparecem cruas na tela Log (componente renderiza antes de carregar())"
+  },
+  "testador_secdef_sem_public": {
+   "valor": "51 SECURITY DEFINER de 60 funções em plat; 0 com EXECUTE para PUBLIC; 0 com grantee fora de plat_app/plat_worker/postgres",
+   "unidade": "funções",
+   "comando": "pg_proc × aclexplode(proacl) grantee=0, 05/09 16:04 UTC (inclui as 9 da trilha B)"
+  },
+  "testador_rls": {
+   "valor": "22 de 22 tabelas/partições com tenant_id têm relrowsecurity=t; relforcerowsecurity=f em todas (dono postgres; plat_app não é dono, logo a RLS vale para ele)",
+   "unidade": "tabelas",
+   "comando": "pg_class × pg_attribute no schema plat, 05/09 16:03 UTC"
   }
  },
- "gerado_em": "2026-09-05T15:58:50Z",
- "git_sha": "441069ca6475"
+ "gerado_em": "2026-09-05T17:13:57Z",
+ "git_sha": "ffedc053429b"
 }
