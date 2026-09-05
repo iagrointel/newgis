@@ -206,7 +206,7 @@ function abrirEditor(titulo, f) {
 
 function editorTags() {
   return async () => {
-    const f = h('plat-formulario');
+    const f = h('div', { class: 'form' });
     const atual = [...(item.tags || [])];
     const chips = h('div', { class: 'chips', id: 'tags-chips' });
     const entrada = h('input', { type: 'text', id: 'tags-entrada', 'aria-label': t('catalogo.tags_nova'), maxlength: LIMITES.tag, autocomplete: 'off', list: 'tags-sugestoes' });

@@ -30,6 +30,11 @@ def _dialogo_aberto(page, id_):
     return page.locator(f"#{id_} dialog[open]")
 
 
+def _limpar_aviso(page, seletor="#aviso"):
+    """o aviso guarda o estado da ação anterior; limpar antes de esperar o 'ok' da próxima evita esperar um ok velho."""
+    page.evaluate(f"() => document.querySelector('{seletor}')?.limpar()")
+
+
 def test_conteudo_fluxo_completo(page, base_url, credenciais_demo, admin_api, api_catalogo, playwright, medida):
     slug, admin_login, senha_admin = credenciais_demo
     s = sufixo()
@@ -60,6 +65,7 @@ def test_conteudo_fluxo_completo(page, base_url, credenciais_demo, admin_api, ap
         page.click("#pasta-nova")
         d = page.locator("plat-dialogo dialog[open]").last
         d.locator("input[name='nome']").fill(nome_pasta)
+        _limpar_aviso(page, "#aviso")
         d.locator("button[type='submit']").click()
         page.wait_for_selector("#aviso[data-tipo='ok']", timeout=15000)
         arvore = tela.api("GET", "/api/pastas/arvore").json()
@@ -74,6 +80,7 @@ def test_conteudo_fluxo_completo(page, base_url, credenciais_demo, admin_api, ap
         page.click("#novo-mapa")
         d = _dialogo_aberto(page, "painel-novo")
         d.locator("input[name='titulo']").fill(titulo)
+        _limpar_aviso(page, "#aviso")
         d.locator("button[type='submit']").click()
         page.wait_for_selector("#aviso[data-tipo='ok']", timeout=15000)
         page.wait_for_selector("#painel dialog[open] #item-titulo", timeout=15000)
@@ -105,6 +112,7 @@ def test_conteudo_fluxo_completo(page, base_url, credenciais_demo, admin_api, ap
         page.click("#item-compartilhar")
         d = _dialogo_aberto(page, "painel-compartilhar")
         d.locator("#acesso-inquilino").check()
+        _limpar_aviso(page, "#compartilhar-aviso")
         d.locator("#compartilhar-aplicar").click()
         page.wait_for_selector("#compartilhar-aviso[data-tipo='ok']", timeout=15000)
         d.locator("#link-novo").click()
@@ -116,6 +124,7 @@ def test_conteudo_fluxo_completo(page, base_url, credenciais_demo, admin_api, ap
         anon = playwright.request.new_context(base_url=base_url)
         try:
             assert anon.get(f"/api/compartilhado/{token}").status == 200
+            _limpar_aviso(page, "#compartilhar-aviso")
             d.locator("#links-tabela button", has_text="Revogar").first.click()
             page.wait_for_selector("#compartilhar-aviso[data-tipo='ok']", timeout=15000)
             assert anon.get(f"/api/compartilhado/{token}").status == 404
@@ -164,22 +173,26 @@ def test_conteudo_fluxo_completo(page, base_url, credenciais_demo, admin_api, ap
         page.click("#item-mais")
         page.click("#item-mover")
         d = page.locator("plat-dialogo dialog[open]").last
+        _limpar_aviso(page, "#item-aviso")
         d.locator("select[name='pasta_id']").select_option(pasta_id)
         d.locator("button[type='submit']").click()
         page.wait_for_selector("#item-aviso[data-tipo='ok']", timeout=15000)
         it = tela.api("GET", f"/api/itens/{item_id}").json()
         assert it["pasta"] and it["pasta"]["id"] == pasta_id and it["id"] == item_id, it
         # apagar -> lixeira -> restaurar (mesmo uuid) -> apagar de novo -> apagar agora
+        _limpar_aviso(page, "#aviso")
         page.click("#item-mais")
         page.click("#item-apagar")
-        page.locator("plat-dialogo dialog[open] button", has_text="Apagar").last.click()
+        page.wait_for_selector("#painel-editar dialog[open] .dialogo-botoes button", timeout=15000)
+        page.locator("#painel-editar dialog[open] .dialogo-botoes button", has_text="Apagar").click()
         page.wait_for_selector("#aviso[data-tipo='ok']", timeout=15000)
         tela.esperar_status(404)
         assert tela.api("GET", f"/api/itens/{item_id}").status == 404
         page.click("#aba-lixeira")
-        page.wait_for_selector("#lixeira-tabela tbody tr", timeout=15000)
+        page.wait_for_selector(f"#lixeira-tabela tbody tr:has-text({json.dumps(titulo_novo)})", timeout=15000)
         assert page.locator("#lixeira-tabela tbody tr", has_text=titulo_novo).count() == 1
         tela.capturar("lixeira")
+        _limpar_aviso(page, "#aviso")
         page.locator("#lixeira-tabela tbody tr", has_text=titulo_novo).locator("button", has_text="Restaurar").click()
         page.wait_for_selector("#aviso[data-tipo='ok']", timeout=15000)
         it = tela.api("GET", f"/api/itens/{item_id}").json()
@@ -187,10 +200,11 @@ def test_conteudo_fluxo_completo(page, base_url, credenciais_demo, admin_api, ap
         assert tela.api("DELETE", f"/api/itens/{item_id}").status == 204
         page.click("#aba-meus")
         page.click("#aba-lixeira")
-        page.wait_for_selector("#lixeira-tabela tbody tr", timeout=15000)
+        page.wait_for_selector(f"#lixeira-tabela tbody tr:has-text({json.dumps(titulo_novo)})", timeout=15000)
         linha_lix = page.locator("#lixeira-tabela tbody tr", has_text=titulo_novo)
+        _limpar_aviso(page, "#aviso")
         linha_lix.locator("button", has_text="Apagar agora").click()
-        page.locator("plat-dialogo dialog[open] button", has_text="Apagar agora").last.click()
+        page.locator("plat-dialogo dialog[open] .dialogo-botoes button", has_text="Apagar agora").last.click()
         page.wait_for_selector("#aviso[data-tipo='ok']", timeout=15000)
         item_id = None
         tela.verificar()
