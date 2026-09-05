@@ -3,5 +3,9 @@ __pycache__/
 *.pyc
 node_modules/
 tests/e2e/capturas/*.png
+tests/credenciais.txt
 .env*
+!.env.exemplo
 *.log
+.pytest_cache/
+.ruff_cache/

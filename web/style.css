@@ -1,0 +1,16 @@
+/* plat — estilo base (painel de instrumento: chrome escuro, texto claro). */
+:root { --fundo: #14171c; --painel: #1d2129; --borda: #2c323d; --texto: #e6e9ee; --fraco: #9aa3b2; --ok: #3fb950; --falha: #f85149; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fundo); color: var(--texto); font: 14px/1.5 "IBM Plex Sans", system-ui, sans-serif; }
+.painel { max-width: 720px; margin: 3rem auto; padding: 0 1rem; }
+header h1 { margin: 0; font-size: 2rem; letter-spacing: .04em; }
+.aviso { margin: .25rem 0 1.5rem; color: var(--fraco); text-transform: lowercase; }
+section { background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+dl { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: 0; }
+dt { color: var(--fraco); }
+dd { margin: 0; font-family: "IBM Plex Mono", ui-monospace, monospace; }
+h2 { margin: 0 0 .5rem; font-size: 1rem; display: flex; align-items: center; gap: .5rem; }
+.estado { font-size: .8rem; padding: .1rem .5rem; border-radius: 999px; border: 1px solid var(--borda); color: var(--fraco); }
+.estado.ok { color: var(--ok); border-color: var(--ok); }
+.estado.falha { color: var(--falha); border-color: var(--falha); }
+pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: 12px/1.5 "IBM Plex Mono", ui-monospace, monospace; color: var(--texto); }

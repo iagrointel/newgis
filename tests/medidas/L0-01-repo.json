@@ -1,0 +1,27 @@
+{
+ "item": "L0-01-repo",
+ "medidas": {
+  "latencia_saude_ms": {
+   "valor": 1.67,
+   "unidade": "ms",
+   "comando": "mediana de 20 GET /saude pelo TestClient (tests/api/test_saude.py)"
+  },
+  "latencia_versao_ms": {
+   "valor": 0.73,
+   "unidade": "ms",
+   "comando": "mediana de 20 GET /api/versao pelo TestClient (tests/api/test_saude.py)"
+  },
+  "pagina_pronta_ms": {
+   "valor": 49.2,
+   "unidade": "ms",
+   "comando": "goto('/') até body[data-pronto=1] no chromium do playwright"
+  },
+  "primeira_pintura_ms": {
+   "valor": 36,
+   "unidade": "ms",
+   "comando": "performance.getEntriesByType('paint') first-contentful-paint no chromium do playwright"
+  }
+ },
+ "gerado_em": "2026-09-05T12:41:37Z",
+ "git_sha": "a1d0c20be345"
+}

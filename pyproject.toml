@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = ["lento: e2e ou medição demorada; excluído do driver (pytest -m 'not lento')", "e2e: playwright contra a URL interna"]
+addopts = "-q --strict-markers"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["venv", "web/vendor"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I"]

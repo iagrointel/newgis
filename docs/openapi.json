@@ -1,0 +1,41 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "plat",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/saude": {
+   "get": {
+    "summary": "Saude",
+    "operationId": "saude_saude_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/versao": {
+   "get": {
+    "summary": "Api Versao",
+    "operationId": "api_versao_api_versao_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,3 @@
+# nome · versão · sha256 · licença · origem (ADR 0001 seção 11.2 regra 3). Uma cópia por versão.
+maplibre-gl.js   4.7.1  be9633c4d870e26fb37f1cfe5c5a77181667114003ea16207ac7850d8da8add1  BSD-3-Clause  https://github.com/maplibre/maplibre-gl-js/releases/tag/v4.7.1 (cópia do arquivo em uso em fgr/sig)
+maplibre-gl.css  4.7.1  576b085fdd9487a65a19215328c1e086c07ce5bf6da09b666b3806d3d008dae9  BSD-3-Clause  https://github.com/maplibre/maplibre-gl-js/releases/tag/v4.7.1 (cópia do arquivo em uso em fgr/sig)

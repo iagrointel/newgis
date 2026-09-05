@@ -1,0 +1,6 @@
+# Só o que foi instalado por cima do Python do sistema (venv com --system-site-packages; ADR 0001 seção 2.1).
+# fastapi, uvicorn, psycopg2, httpx, python-dotenv vêm do sistema.
+pytest==9.1.1
+pytest-playwright==0.9.0
+playwright==1.59.0
+ruff==0.16.6
