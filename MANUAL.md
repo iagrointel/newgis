@@ -1,3 +1,157 @@
-# Manual do usuário
+# Manual do `plat`
 
-(uma seção por tela, com captura real, escrita pelo cronista a cada item entregue)
+Uma seção por tela ou operação, sempre com a captura real produzida pelo teste e2e do item. Em 0.1.0
+existe uma tela (a página inicial de saúde) e uma operação de administração (instalar e atualizar).
+Tudo o mais que o produto virá a fazer está em `/home/dev/plataforma/laco/PAINEL.md`, não aqui.
+
+Estado: análise / beta privado. A URL é interna, marcada `noindex`, e não deve ser linkada de lugar
+público.
+
+---
+
+## 1. Acesso e saúde do serviço
+
+### 1.1 URL interna
+
+`https://plat.iagrointel.com`. HTTP redireciona para HTTPS (301). Não há login em 0.1.0: a página
+inicial e as duas rotas de saúde são públicas para quem conhece o endereço, e nenhuma delas devolve
+dado de inquilino.
+
+Captura do e2e (`tests/e2e/capturas/L0-01-repo_inicio.png`, gerada por
+`tests/e2e/test_saude_pagina.py` no chromium do playwright; o PNG fica fora do git e é regravado a cada
+`make e2e`):
+
+![Página inicial do plat: versão, git, ambiente e o JSON de /saude com estado ok](tests/e2e/capturas/L0-01-repo_inicio.png)
+
+O que a tela mostra, de cima para baixo: o nome `plat` e o aviso "análise / beta privado"; um painel
+com `versão` (conteúdo do arquivo `VERSAO`), `git` (12 primeiros caracteres do commit em execução) e
+`ambiente` (`producao` ou `dev`), lidos de `/api/versao`; um painel `saúde` com o estado (`ok` em verde,
+ou o código HTTP e o estado do banco em vermelho) e o JSON completo de `/saude`. A tela não tem botão.
+
+### 1.2 O que `/saude` devolve
+
+`GET https://plat.iagrointel.com/saude` (também `HEAD`, para sondas com `curl -sI`):
+
+```json
+{
+  "versao": "0.1.0",
+  "git_sha": "3b53c24e4c12",
+  "ambiente": "producao",
+  "banco": "ok",
+  "migracoes_aplicadas": 2,
+  "migracoes_pendentes": 0,
+  "ultima_migracao": "002_identidade",
+  "servicos": {"martin": "ausente", "titiler": "ausente", "garage": "ok"},
+  "tempo_ms": 1.6,
+  "em": "2026-09-05T12:56:47Z"
+}
+```
+
+| campo | como ler |
+|---|---|
+| `versao` | versão do produto (arquivo `VERSAO`). Deve ser igual ao `versão` da tela e ao `CHANGELOG.md`. |
+| `git_sha` | commit em execução. Compare com `git -C /home/dev/plataforma/enterprise rev-parse --short=12 HEAD`. Se diferir, alguém comitou sem reiniciar o serviço: `sudo systemctl restart plat-api`. |
+| `ambiente` | `producao` na URL interna. `dev` só em instalação de desenvolvimento. |
+| `banco` | `ok` = o banco respondeu e todas as migrações do repositório estão aplicadas. `desatualizado` = há arquivo em `db/migracoes/` sem registro no banco; rode `sudo bash install.sh plat.iagrointel.com 8150` (ou `make migrar`). `erro` = o banco não respondeu; veja `journalctl -u plat-api -o cat`. |
+| `migracoes_aplicadas` / `migracoes_pendentes` / `ultima_migracao` | contagem em `plat.versao_migracao` contra os arquivos em disco. Pendentes tem de ser 0. |
+| `servicos` | `martin` e `titiler` estão `ausente` porque os serviços ainda não existem (portas 8151 e 8152 reservadas); `garage` é o armazenamento de objetos já ativo na máquina, sondado com timeout de 1 s. Nenhum dos três muda o status HTTP em 0.1.0. |
+| `tempo_ms` | tempo da rota, da entrada à montagem do JSON. |
+| `em` | instante da resposta, UTC. |
+
+O status HTTP é **200 só com `banco = ok`**; `desatualizado` e `erro` devolvem **503** com o mesmo JSON.
+Um monitor deve tratar 503 como falha, não como "respondeu".
+
+`GET /api/versao` devolve só `versao`, `git_sha`, `ambiente` e `em`, sem tocar o banco, sempre 200.
+Serve para conferir que a página e a API são a mesma implantação.
+
+Toda resposta traz `X-Robots-Tag: noindex, nofollow` (medido em 11 de 11 rotas, incluindo 404 e
+arquivos estáticos; `tests/medidas/L0-01-repo.json`, `x_robots_tag_rotas_com_noindex`) e a API traz
+`X-Req-Id`, um identificador de 16 caracteres hexadecimais que aparece na linha JSON do journal.
+
+### 1.3 Conferência rápida pela linha de comando
+
+```
+curl -sS https://plat.iagrointel.com/saude | python3 -m json.tool     # 200 e banco ok
+curl -sI https://plat.iagrointel.com/saude | grep -i x-robots-tag     # noindex, nofollow
+systemctl status plat-api --no-pager | sed -n 1,6p                    # active (running), NRestarts
+journalctl -u plat-api -o cat -n 20 | jq .                            # últimas linhas JSON
+```
+
+Latência de referência, medida do próprio servidor, 20 chamadas (`curl -s -o /dev/null -w
+%{time_total}`): mediana 19,9 ms com conexão TLS nova, 1,7 ms com conexão reaproveitada. Um usuário
+remoto verá o tempo de rede somado a isso.
+
+---
+
+## 2. Instalação e atualização
+
+### 2.1 Comando
+
+```
+cd /home/dev/plataforma/enterprise
+sudo bash install.sh plat.iagrointel.com 8150
+```
+
+O script é idempotente: roda em máquina nova e roda de novo depois de cada `git pull` ou commit, sem
+passo manual. É o único caminho de instalação e de atualização; o que ele não faz, não existe.
+
+### 2.2 O que ele cria
+
+| onde | o quê |
+|---|---|
+| banco `iagro_sat` | extensões `postgis` e `pgcrypto`; schema `plat`; role `plat_app` (sem BYPASSRLS, sem posse); migrações de `db/migracoes/` registradas em `plat.versao_migracao` com sha256; inquilinos `demo` e `demo2` com um administrador cada |
+| `/etc/postgresql/16/main/pg_hba.conf` | linha `host iagro_sat plat_app 127.0.0.1/32 scram-sha-256` (uma vez) e `pg_reload_conf()` |
+| repositório | `.env` (modo 600) com senha da role, `PLAT_SECRET`, ambiente e URL; `venv/` com as dependências de `requirements.txt`; `tests/credenciais.txt` (modo 600) com as senhas dos administradores `demo admin` e `demo2 admin` |
+| `/etc/systemd/system/plat-api.service` | unidade habilitada e reiniciada; espera até 30 s por `/saude` = 200 na porta local |
+| `/etc/nginx/sites-enabled/plat.iagrointel.com` | bloco gerado de `deploy/nginx.conf`, preservando as linhas do certbot; `nginx -t` e `reload` |
+| `/etc/letsencrypt/live/plat.iagrointel.com/` | só na primeira vez, via `certbot --nginx` |
+
+A senha da role no banco é sempre realinhada à do `.env`; apagar o `.env` e reinstalar gera senha e
+segredo novos (a senha antiga deixa de autenticar). As senhas dos administradores de demonstração só
+são geradas se `tests/credenciais.txt` não existir; apagar o arquivo e reinstalar rotaciona as duas.
+
+### 2.3 Como conferir
+
+A última linha do script é `== instalado em N s: https://plat.iagrointel.com (serviço plat-api, porta
+8150)`. Antes dela, o passo j imprime `https://plat.iagrointel.com/saude -> HTTP 200 · X-Robots-Tag:
+noindex, nofollow`; qualquer outro código encerra o script com erro (código de saída 1 no serviço, 3 em
+migração divergente, 4 na conferência pública).
+
+Depois:
+
+```
+make check                     # ruff + varredura de marcador + 57 testes rápidos + 1 e2e, em ~3 s
+sudo -u postgres psql -d iagro_sat -Atc "select nome, left(sha256,12), aplicada_em from plat.versao_migracao"
+sudo grep -c plat_app /etc/postgresql/16/main/pg_hba.conf      # 1
+systemctl show plat-api -p NRestarts -p MemoryCurrent
+```
+
+Números do testador para esta instalação (`tests/medidas/L0-01-repo.json`): do zero, com schema e role
+apagados, 6,24 s; com `.env`, credenciais e linha do pg_hba também apagados, 9,14 s; repetida em seguida,
+4,69 s; `make check` 2,72 s, rc=0 nas três rodadas; 58 testes coletados, 57 rápidos e 1 e2e passando;
+serviço com 90,0 MB no cgroup e 0 reinícios.
+
+### 2.4 Atualizar
+
+```
+cd /home/dev/plataforma/enterprise && git pull && sudo bash install.sh plat.iagrointel.com 8150
+```
+
+O `install.sh` aplica as migrações novas, reinstala dependências, reinicia o serviço e reconfere a URL.
+Se `/saude` mostrar `banco: desatualizado` (HTTP 503), a migração não foi aplicada: veja a saída do
+passo c. Se `git_sha` de `/saude` não bater com `git rev-parse HEAD`, o serviço não foi reiniciado.
+
+### 2.5 Limites conhecidos em 0.1.0 (commit `3b53c24`)
+
+- Em máquina ou usuário novo o serviço não sobe: `fastapi`, `starlette`, `pydantic` e `python-dotenv`
+  vêm hoje do diretório do usuário `dev`, não do sistema nem de `requirements.txt` (achado do
+  adversário do turno 1).
+- O passo do certbot em domínio sem certificado não foi exercitado nesta máquina (o certificado já
+  existia).
+- A senha dos administradores de demonstração passa por argumento de `sudo` no passo g e fica no
+  journal do sistema; use essas contas só para teste.
+
+Os dois primeiros e o terceiro têm correção na árvore de trabalho, ainda sem commit no momento em que
+este manual foi escrito (`ARQUITETURA.md`, seção 12). Quando comitada, o `install.sh` passa a exigir
+`Strict-Transport-Security` no passo j e a última linha do passo j passa a mostrar também esse
+cabeçalho.

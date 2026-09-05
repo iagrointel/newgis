@@ -1,15 +1,47 @@
-# plat — plataforma SIG corporativa, pilha aberta
+# plat — plataforma SIG corporativa, pilha aberta (0.1.0)
 
-Substitui o ArcGIS Enterprise para o cliente: imagens (COG/STAC/tiles por inquilino), plataforma de
-dado do cliente (catálogo, mapas, edição, serviços Esri-compatíveis e OGC, análise, painéis, campo,
-migração), motor multicritério explicável, rede de utilidades (modelo, traçado, edição com regras,
-BDGD), construtores arrasta-e-solta (app, fluxo, formulário, narrativa), acervo e conectores, operação.
+Codinome `plat`. Objetivo do laço que o constrói: substituir o ArcGIS Enterprise para o cliente, em pilha
+100 % aberta. Este README descreve só o que EXISTE no repositório; o que ainda não existe está em
+`/home/dev/plataforma/laco/PAINEL.md` e na seção final de `ARQUITETURA.md`, nunca aqui.
 
-Construído pelo laço `plataforma/laco/` (estado, portões, adversário, ledger). Este README descreve o que
-EXISTE; o que ainda não existe está em `plataforma/laco/PAINEL.md`, nunca aqui.
+Estado: análise / beta privado. URL interna `https://plat.iagrointel.com` (noindex, nunca linkar de
+lugar público).
 
-- `ARQUITETURA.md` — componentes, portas, esquema, decisões (ADR em `docs/adr/`).
-- `MANUAL.md` — uma seção por tela, com captura real.
-- `CHANGELOG.md` — por turno.
-- `docs/PARIDADE.md` — tabela viva feito/parcial/fora contra o ArcGIS Enterprise.
-- `install.sh` — instalação idempotente; `make check` — suíte inteira.
+## O que existe em 0.1.0
+
+- Serviço `plat-api` (FastAPI, 127.0.0.1:8150) com `/saude`, `/api/versao`, página inicial e `/api/docs`.
+- nginx com HTTPS, `noindex` em toda resposta, estático servido do disco.
+- Schema `plat` no banco `iagro_sat`: role `plat_app`, tabelas de inquilino, usuário, sessão, token de
+  serviço e log de acesso, todas com RLS; funções de autenticação prontas no banco (a API ainda não as
+  chama).
+- Migrações versionadas por sha256 (`db/migrar.sh`), instalador idempotente (`install.sh`), suíte
+  `make check` (ruff, varredura de marcador, 57 testes rápidos, 1 e2e playwright).
+
+## Arquivos
+
+| arquivo | conteúdo |
+|---|---|
+| `ARQUITETURA.md` | componentes e portas, schema `plat`, migrações, `install.sh` passo a passo, systemd, nginx, contrato de `/saude`, convenções, o que ainda não existe |
+| `MANUAL.md` | acesso e saúde do serviço; instalação e atualização (com a captura do e2e) |
+| `CHANGELOG.md` | uma entrada por turno, com medições e commits |
+| `docs/adr/0001-fundacao.md` | decisões da fundação e seus motivos |
+| `docs/openapi.json` | gerado por `make openapi`; comitado |
+| `docs/PARIDADE.md` | tabela viva contra o ArcGIS Enterprise (só cabeçalho: nenhuma capacidade de usuário ainda) |
+| `install.sh` | `sudo bash install.sh <dominio> [porta]`; idempotente |
+| `Makefile` | `check`, `check-rapido`, `lint`, `sem-marcador`, `teste`, `e2e`, `migrar`, `openapi` |
+| `app/` | API |
+| `db/` | `migrar.sh` e `migracoes/NNN_*.sql` |
+| `deploy/` | modelos da unidade systemd e do bloco nginx |
+| `web/` | página inicial (módulos ES, sem bundler) e `vendor/` com sha256 e licença |
+| `tests/` | `unit/`, `api/`, `e2e/`, `medidas/<item>.json` (único lugar de onde documento cita número) |
+
+## Comandos
+
+```
+sudo bash install.sh plat.iagrointel.com 8150   # instala ou atualiza
+make check                                       # suíte inteira
+curl -sS https://plat.iagrointel.com/saude       # 200 e banco ok
+```
+
+Construído pelo laço `/home/dev/plataforma/laco/` (estado, portões, adversário, ledger, handoffs por
+turno). Regras do laço: `~/.claude/skills/plataforma-enterprise/SKILL.md`.
