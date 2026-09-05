@@ -45,5 +45,6 @@ def sessao_de(auth: Auth) -> Sessao:
 
 
 def dependencia_jobs():
-    """Dependência FastAPI das rotas da fila: sessão ou token com o privilégio jobs.executar."""
-    return autenticado(PRIVILEGIO_JOBS)
+    """Dependência FastAPI das rotas da fila: sessão, ou token com escopo jobs:executar (admin:inquilino cobre),
+    sempre com o privilégio jobs.executar no dono."""
+    return autenticado(PRIVILEGIO_JOBS, escopo_token="jobs:executar")

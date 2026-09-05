@@ -45,4 +45,14 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/plataforma/inquilinos"): ["inquilinos/criar"],
     ("POST", "/api/plataforma/inquilinos/{id}/suspender"): ["inquilinos/suspender"],
     ("POST", "/api/plataforma/inquilinos/{id}/reativar"): ["inquilinos/reativar"],
+    # ---- fila de jobs (L0-05; vocabulário na migração 007)
+    ("POST", "/api/jobs"): ["jobs/criar"],
+    ("POST", "/api/jobs/{job_id}/cancelar"): ["jobs/cancelar"],
+    ("POST", "/api/jobs/{job_id}/repetir"): ["jobs/criar"],
+    ("POST", "/api/agendas"): ["agendas/criar"],
+    ("PUT", "/api/agendas/{agenda_id}"): ["agendas/atualizar"],
+    ("DELETE", "/api/agendas/{agenda_id}"): ["agendas/apagar"],
+    ("POST", "/api/agendas/{agenda_id}/pausar"): ["agendas/pausar"],
+    ("POST", "/api/agendas/{agenda_id}/retomar"): ["agendas/retomar"],
+    ("POST", "/api/agendas/{agenda_id}/rodar-agora"): ["jobs/criar"],
 }

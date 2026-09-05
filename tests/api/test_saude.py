@@ -1,7 +1,9 @@
 import re
 import statistics
 import time
+from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[2]
 CAMPOS = {"versao", "git_sha", "ambiente", "banco", "migracoes_aplicadas", "migracoes_pendentes",
           "ultima_migracao", "servicos", "fila", "tempo_ms", "em"}
 
@@ -13,8 +15,9 @@ def test_saude_200_com_json_do_contrato(cliente):
     assert set(j) == CAMPOS
     assert j["banco"] == "ok"
     assert j["migracoes_pendentes"] == 0
-    assert j["migracoes_aplicadas"] >= 5
-    assert j["ultima_migracao"] == "006_jobs_transicoes"
+    migracoes = sorted(p.stem for p in (ROOT / "db" / "migracoes").glob("[0-9][0-9][0-9]_*.sql"))
+    assert j["migracoes_aplicadas"] == len(migracoes)
+    assert j["ultima_migracao"] == migracoes[-1]  # a última em disco, qualquer que seja a trilha que a criou
     assert re.fullmatch(r"\d+\.\d+\.\d+", j["versao"])
     assert re.fullmatch(r"[0-9a-f]{7,12}", j["git_sha"])
     assert j["ambiente"] in ("producao", "dev")

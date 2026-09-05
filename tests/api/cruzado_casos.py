@@ -39,6 +39,8 @@ class Preparacao:
     token_b: dict
     sessao_b_id: str
     criados_em_a: list = field(default_factory=list)
+    job_b: dict = field(default_factory=dict)  # job pendente de B (L0-05; agendado para 2099, nunca roda)
+    agenda_b: dict = field(default_factory=dict)  # agenda de B (L0-05)
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -69,12 +71,24 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     token_b = r.json()
     sessao_b_id = next(s["id"] for s in sessao_b.get("/api/eu/sessoes").json() if s["atual"])
     inquilino_b = next(t["id"] for t in sessao_plat.get("/api/plataforma/inquilinos").json() if t["slug"] == "demo2")
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id)
+    # L0-05: um job pendente e uma agenda em B, alvos das 17 rotas de /api/jobs e /api/agendas
+    r = sessao_b.post("/api/jobs", json=JOB_PENDENTE)
+    assert r.status_code == 201, r.text
+    job_b = r.json()
+    r = sessao_b.post("/api/agendas", json={**AGENDA_BASE, "nome": f"{PREFIXO}agenda-{sufixo}"})
+    assert r.status_code == 201, r.text
+    agenda_b = r.json()
+    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
+                      job_b=job_b, agenda_b=agenda_b)
 
 
 def desfazer(p: Preparacao) -> None:
     for metodo, url in reversed(p.criados_em_a):
         p.sessao_a.request(metodo, url)
+    if p.job_b:
+        p.sessao_b.post(f"/api/jobs/{p.job_b['id']}/cancelar")
+    if p.agenda_b:
+        p.sessao_b.delete(f"/api/agendas/{p.agenda_b['id']}")
     p.sessao_b.delete(f"/api/grupos/{p.grupo_b['id']}")
     p.sessao_b.delete(f"/api/tokens/{p.token_b['id']}")
     p.sessao_b.delete(f"/api/papeis/{p.papel_b['id']}")
@@ -109,7 +123,21 @@ def _apagar_criado(metodo_url):
     return limpar
 
 
+JOB_PENDENTE = {"tipo": "prova.progresso", "parametros": {"duracao_s": 0, "passos": 1},
+                "agendado_para": "2099-01-01T00:00:00Z"}  # fica pendente: nunca ocupa o worker
+AGENDA_BASE = {"tipo": "prova.progresso", "parametros": {"duracao_s": 0, "passos": 1}, "cron": "0 3 1 1 *"}
+
+
+def _cancelar_criado(p: Preparacao, j: Any) -> None:
+    """Job criado em A pela chamada 2xx: cancelado logo depois (202) para não sobrar pendente."""
+    if isinstance(j, dict) and j.get("id") is not None:
+        r = p.sessao_a.post(f"/api/jobs/{j['id']}/cancelar")
+        assert r.status_code in (202, 404, 409), r.text
+
+
 G = "/api/grupos/{id}"
+J = "/api/jobs/{job_id}"
+AG = "/api/agendas/{agenda_id}"
 U = "/api/usuarios/{id}"
 T = "/api/tokens/{id}"
 CASOS: dict[tuple[str, str], Caso] = {
@@ -276,6 +304,44 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/plataforma/inquilinos/{id}/reativar"): Caso(
         lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/reativar"
     ),
+    # ---- L0-05 fila de jobs: leituras e criação agem só no chamador (RLS + filtro de dono); alvos de B = 404
+    ("GET", "/api/jobs"): Caso(
+        lambda p: "/api/jobs?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("GET", "/api/jobs/resumo"): Caso(
+        lambda p: "/api/jobs/resumo", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("GET", "/api/jobs/tipos"): Caso(
+        lambda p: "/api/jobs/tipos", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("POST", "/api/jobs"): Caso(
+        lambda p: "/api/jobs", lambda p: JOB_PENDENTE, proprio=True, aceita=frozenset({201}), verificar=_so_a,
+        limpar=_cancelar_criado,
+    ),
+    ("GET", J): Caso(lambda p: f"/api/jobs/{p.job_b['id']}"),
+    ("POST", J + "/cancelar"): Caso(lambda p: f"/api/jobs/{p.job_b['id']}/cancelar"),
+    ("POST", J + "/repetir"): Caso(
+        lambda p: f"/api/jobs/{p.job_b['id']}/repetir", lambda p: {"parametros": {"passos": 2}}
+    ),
+    ("GET", J + "/log"): Caso(lambda p: f"/api/jobs/{p.job_b['id']}/log"),
+    ("GET", J + "/eventos"): Caso(lambda p: f"/api/jobs/{p.job_b['id']}/eventos"),
+    ("GET", "/api/agendas"): Caso(
+        lambda p: "/api/agendas", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("POST", "/api/agendas"): Caso(
+        lambda p: "/api/agendas",
+        lambda p: {**AGENDA_BASE, "nome": f"{PREFIXO}agenda-a-{secrets.token_hex(3)}"},
+        proprio=True,
+        aceita=frozenset({201}),
+        verificar=_so_a,
+        limpar=_apagar_criado(("DELETE", "/api/agendas/{id}")),
+    ),
+    ("GET", AG): Caso(lambda p: f"/api/agendas/{p.agenda_b['id']}"),
+    ("PUT", AG): Caso(lambda p: f"/api/agendas/{p.agenda_b['id']}", lambda p: {"nome": "invadido"}),
+    ("DELETE", AG): Caso(lambda p: f"/api/agendas/{p.agenda_b['id']}"),
+    ("POST", AG + "/pausar"): Caso(lambda p: f"/api/agendas/{p.agenda_b['id']}/pausar"),
+    ("POST", AG + "/retomar"): Caso(lambda p: f"/api/agendas/{p.agenda_b['id']}/retomar"),
+    ("POST", AG + "/rodar-agora"): Caso(lambda p: f"/api/agendas/{p.agenda_b['id']}/rodar-agora"),
 }
 
 

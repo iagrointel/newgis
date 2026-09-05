@@ -2832,7 +2832,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    },
    "post": {
     "tags": [
@@ -2933,7 +2935,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    }
   },
   "/api/jobs/resumo": {
@@ -3024,7 +3028,9 @@
        }
       }
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    }
   },
   "/api/jobs/tipos": {
@@ -3119,7 +3125,9 @@
        }
       }
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    }
   },
   "/api/jobs/{job_id}": {
@@ -3222,7 +3230,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    }
   },
   "/api/jobs/{job_id}/cancelar": {
@@ -3325,7 +3335,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    }
   },
   "/api/jobs/{job_id}/repetir": {
@@ -3446,7 +3458,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    }
   },
   "/api/jobs/{job_id}/log": {
@@ -3588,7 +3602,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    }
   },
   "/api/jobs/{job_id}/eventos": {
@@ -3691,7 +3707,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    }
   },
   "/api/agendas": {
@@ -3839,7 +3857,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    },
    "post": {
     "tags": [
@@ -3940,7 +3960,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    }
   },
   "/api/agendas/{agenda_id}": {
@@ -4043,7 +4065,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    },
    "put": {
     "tags": [
@@ -4156,7 +4180,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    },
    "delete": {
     "tags": [
@@ -4250,7 +4276,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    }
   },
   "/api/agendas/{agenda_id}/pausar": {
@@ -4353,7 +4381,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    }
   },
   "/api/agendas/{agenda_id}/retomar": {
@@ -4456,7 +4486,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    }
   },
   "/api/agendas/{agenda_id}/rodar-agora": {
@@ -4559,7 +4591,9 @@
       },
       "description": "Too Many Requests"
      }
-    }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
    }
   }
  },
