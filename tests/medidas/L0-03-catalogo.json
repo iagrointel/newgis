@@ -1,0 +1,67 @@
+{
+ "item": "L0-03-catalogo",
+ "medidas": {
+  "pagina_conteudo_ms": {
+   "valor": 234.9,
+   "unidade": "ms",
+   "comando": "playwright chromium 1280x800 contra a URL interna (tests/e2e/test_conteudo.py)"
+  },
+  "primeira_pintura_conteudo_ms": {
+   "valor": 24,
+   "unidade": "ms",
+   "comando": "playwright chromium 1280x800 contra a URL interna (tests/e2e/test_conteudo.py)"
+  },
+  "soma_modulos_kb": {
+   "valor": 229.6,
+   "unidade": "kB",
+   "comando": "playwright chromium 1280x800 contra a URL interna (tests/e2e/test_conteudo.py)"
+  },
+  "busca_p95_ms": {
+   "valor": 66.2,
+   "unidade": "ms",
+   "comando": "GET /api/itens?q=municipio&limite=50, 20 execuções, corpus 10 mil (mediana 60.8)"
+  },
+  "lista_tipo_p95_ms": {
+   "valor": 48.6,
+   "unidade": "ms",
+   "comando": "GET /api/itens?tipo=mapa&limite=50, 20 execuções, corpus 10 mil (mediana 47.1)"
+  },
+  "revogacao_nega_ms": {
+   "valor": 15.4,
+   "unidade": "ms",
+   "comando": "DELETE link + GET /api/compartilhado/<token> → 404"
+  },
+  "expurgo_s": {
+   "valor": 0.32,
+   "unidade": "s",
+   "comando": "POST /api/jobs catalogo.lixeira_expurgar (1 camada apagada há 31 dias) até concluido"
+  },
+  "miniatura_job_s": {
+   "valor": 0.33,
+   "unidade": "s",
+   "comando": "POST /api/itens/{id}/miniatura/gerar até job concluido (30 polígonos)"
+  },
+  "usado_por_medio_ms": {
+   "valor": 11.9,
+   "unidade": "ms",
+   "comando": "GET /api/itens/{id}/usado-por, média de 20 chamadas HTTP (grafo de 3)"
+  },
+  "versao_custo_ms": {
+   "valor": 0.361,
+   "unidade": "ms",
+   "comando": "mediana(UPDATE resumo, com versão) - mediana(UPDATE tamanho_bytes, sem versão), 1.000 pares como plat_app"
+  },
+  "busca_trgm_p95_ms": {
+   "valor": 133.3,
+   "unidade": "ms",
+   "comando": "GET /api/itens?q=municpio (trigram de reserva), 10 execuções"
+  },
+  "facetas_p95_ms": {
+   "valor": 25.8,
+   "unidade": "ms",
+   "comando": "GET /api/itens/facetas?tipo=mapa, 10 execuções"
+  }
+ },
+ "gerado_em": "2026-09-05T20:51:03Z",
+ "git_sha": "4bde64f148df"
+}
