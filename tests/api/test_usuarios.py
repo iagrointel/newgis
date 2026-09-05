@@ -5,7 +5,7 @@ import secrets
 
 from app import limites
 from app.auth import privilegios as priv
-from tests.api.conftest import PREFIXO_TESTE, novo_cliente
+from tests.api.conftest import PREFIXO_TESTE, entrar, novo_cliente
 
 
 def test_listar_com_filtros_e_campos_por_privilegio(sessao_a, usuarios_a):
@@ -80,32 +80,39 @@ def test_so_admin_cria_altera_e_apaga_admin(sessao_a, usuarios_a):
     assert sessao_a.delete(f"/api/papeis/{papel['id']}").status_code == 204
 
 
-def test_ultimo_admin_nao_se_desabilita_rebaixa_nem_apaga(sessao_b, ids):
-    admin_b = ids["b"]["id"]
-    for corpo in ({"ativo": False}, {"perfil": "editor"}):
-        r = sessao_b.put(f"/api/usuarios/{admin_b}", json=corpo)
-        assert r.status_code == 409 and r.json()["erro"] in ("ultimo_admin", "proprio_usuario"), (corpo, r.text)
-    # por outro admin: cria um segundo admin, rebaixa o primeiro para provar que a regra é do último, não do próprio
-    c_out = novo_cliente()
-    r = sessao_b.post(
+def test_ultimo_admin_nao_se_desabilita_rebaixa_nem_apaga(inquilino_temporario):
+    """Inquilino temporário (sem resíduo de outra rodada): o admin é o único; a regra é do último admin ativo."""
+    inq = inquilino_temporario
+    adm, meu = inq.admin, inq.admin_id
+    r = adm.put(f"/api/usuarios/{meu}", json={"perfil": "editor"})
+    assert r.status_code == 409 and r.json()["erro"] == "ultimo_admin", r.text
+    r = adm.put(f"/api/usuarios/{meu}", json={"ativo": False})
+    assert r.status_code == 409 and r.json()["erro"] == "proprio_usuario", r.text
+    # segundo admin: agora o primeiro pode ser rebaixado; o segundo vira o último e não se rebaixa nem se apaga
+    r = adm.post(
         "/api/usuarios",
         json={"login": f"{PREFIXO_TESTE}adm{secrets.token_hex(2)}", "nome": "Segundo", "perfil": "admin"},
     )
-    segundo = r.json()["usuario"]
-    from tests.api.conftest import entrar
-
-    assert entrar(c_out, "demo2", segundo["login"], r.json()["senha_temporaria"]).status_code == 200
-    assert (
-        c_out.put("/api/eu/senha", json={"atual": r.json()["senha_temporaria"], "nova": "Senha-forte-99"}).status_code
-        == 204
-    )
-    r = c_out.put(f"/api/usuarios/{segundo['id']}", json={"perfil": "editor"})  # ele mesmo, há outro admin: ok
-    assert r.status_code == 200 and r.json()["perfil"] == "editor"
-    r = sessao_b.put(f"/api/usuarios/{admin_b}", json={"perfil": "editor"})  # agora é o último de novo
-    assert r.status_code == 409 and r.json()["erro"] == "ultimo_admin"
-    r = sessao_b.delete(f"/api/usuarios/{admin_b}")
+    assert r.status_code == 201, r.text
+    segundo, temporaria = r.json()["usuario"], r.json()["senha_temporaria"]
+    c2 = novo_cliente()
+    assert entrar(c2, inq.slug, segundo["login"], temporaria).status_code == 200
+    assert c2.put("/api/eu/senha", json={"atual": temporaria, "nova": "Senha-forte-99"}).status_code == 204
+    r = c2.put(f"/api/usuarios/{meu}", json={"perfil": "editor"})
+    assert r.status_code == 200 and r.json()["perfil"] == "editor", r.text
+    r = c2.put(f"/api/usuarios/{segundo['id']}", json={"perfil": "editor"})
+    assert r.status_code == 409 and r.json()["erro"] == "ultimo_admin", r.text
+    r = c2.put(f"/api/usuarios/{meu}", json={"ativo": False})  # editor: pode (não é admin)
+    assert r.status_code == 200 and r.json()["ativo"] is False
+    r = c2.put(f"/api/usuarios/{meu}", json={"ativo": True, "perfil": "admin"})
+    assert r.status_code == 200 and r.json()["perfil"] == "admin"
+    assert adm.get("/api/eu").status_code == 401  # desabilitar apagou as sessões do primeiro admin
+    assert entrar(adm, inq.slug, "admin", inq.senha).status_code == 200
+    r = c2.put(f"/api/usuarios/{segundo['id']}", json={"ativo": False})
     assert r.status_code == 409 and r.json()["erro"] == "proprio_usuario"
-    assert sessao_b.delete(f"/api/usuarios/{segundo['id']}").status_code == 204
+    assert adm.delete(f"/api/usuarios/{segundo['id']}").status_code == 204  # há outro admin: pode
+    r = adm.delete(f"/api/usuarios/{meu}")
+    assert r.status_code == 409 and r.json()["erro"] == "proprio_usuario"
 
 
 def test_redefinir_senha_desligar_2fa_e_desbloquear(sessao_a, usuarios_a):

@@ -14,7 +14,7 @@ def test_senha_de_demonstracao_entra_por_stdin_nunca_por_argv():
     assert "gerar_hash(sys.stdin.read())" in INSTALL
     assert "gerar_hash(sys.argv" not in INSTALL
     linha = next(li for li in INSTALL.splitlines() if "gerar_hash(sys.stdin.read())" in li)
-    assert linha.strip().startswith('HASH=$(printf \'%s\' "$senha" |'), linha
+    assert linha.strip().startswith("HASH=$(printf '%s' \"$senha\" |"), linha
     assert '"$senha")' not in INSTALL
 
 
@@ -41,9 +41,19 @@ def test_hsts_em_todo_bloco_de_add_header_do_modelo():
     assert locais == 4 and hsts == locais + 1, (locais, hsts)
 
 
+def test_referrer_policy_em_todo_bloco_de_add_header_do_modelo():
+    """Achado do testador do T2: declarado no server{} não chegava às rotas (add_header no bloco cancela o herdado)."""
+    locais = NGINX.count("location ")
+    assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == locais + 1, locais
+
+
+def test_instalador_limpa_residuos_de_teste_so_em_dev():
+    assert "grep -qE '^PLAT_AMBIENTE=dev$' .env" in INSTALL and "plat.tenant_apagar_interno" in INSTALL
+
+
 def test_logins_com_limite_por_ip_e_zona_escrita_pelo_instalador():
     for rota in ("location = /api/login {", "location = /api/login/2fa {"):
-        bloco = NGINX[NGINX.index(rota):]
+        bloco = NGINX[NGINX.index(rota) :]
         bloco = bloco[: bloco.index("}")]
         assert "limit_req zone=plat_login burst=10 nodelay;" in bloco and "limit_req_status 429;" in bloco, rota
         assert "proxy_pass http://127.0.0.1:PORTA;" in bloco

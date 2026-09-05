@@ -45,7 +45,7 @@ def test_pendencia_trocar_senha_fecha_o_resto(usuarios_a):
     assert r.status_code == 403 and r.json()["erro"] == "pendencia" and r.json()["detalhe"] == ["trocar_senha"]
     assert c.get("/api/eu").status_code == 200
     # token criado com pendência não funciona (nem a criação: /api/tokens está fora da lista)
-    assert c.post("/api/tokens", json={"nome": "x", "escopos": ["catalogo:ler"]}).status_code == 403
+    assert c.post("/api/tokens", json={"nome": "zt-pendencia", "escopos": ["catalogo:ler"]}).status_code == 403
     r = c.put("/api/eu/senha", json={"atual": temporaria, "nova": "Senha-nova-2026"})
     assert r.status_code == 204
     assert c.get("/api/eu").json()["pendencias"] == [] and c.get("/api/grupos").status_code == 200

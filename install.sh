@@ -145,6 +145,19 @@ done < "$CRED"
 # partições do mês corrente e dos 3 seguintes para log_acesso e evento (ADR 0002 seções 9.2 e 9.4; o L0-05-d agenda)
 "${PSQL[@]}" -Atc "SELECT plat.log_particao_garantir((date_trunc('month', now()) + make_interval(months => m))::date), plat.evento_particao_garantir((date_trunc('month', now()) + make_interval(months => m))::date) FROM generate_series(0, 3) AS m" | tr '\n' ' '; echo
 echo "partições de log_acesso e evento garantidas"
+# em dev (PLAT_AMBIENTE=dev no .env) a suíte pode ter deixado resíduo zt-* (rodada abortada): inquilinos zt-inq-*,
+# usuários/grupos/papéis/tokens zt-* dos inquilinos de demonstração somem aqui; em producao nada é tocado
+if grep -qE '^PLAT_AMBIENTE=dev$' .env; then
+  "${PSQL[@]}" -f - <<'SQL'
+SELECT plat.tenant_apagar_interno(id) FROM plat.tenant WHERE slug LIKE 'zt-%';
+UPDATE plat.token_servico SET revogado_em = now() WHERE nome LIKE 'zt%' AND revogado_em IS NULL;
+DELETE FROM plat.grupo WHERE nome LIKE 'zt%';
+UPDATE plat.usuario SET papel_id = NULL WHERE login LIKE 'zt%' OR papel_id IN (SELECT id FROM plat.papel_personalizado WHERE nome LIKE 'zt%');
+DELETE FROM plat.usuario WHERE login LIKE 'zt%';
+DELETE FROM plat.papel_personalizado WHERE nome LIKE 'zt%';
+SQL
+  echo "resíduos zt-* de teste apagados (modo dev)"
+fi
 
 # inquilinos de demonstração: cota diária de jobs alta (a suíte cria centenas por rodada; padrão de produto = 1.000, ADR 0003)
 "${PSQL[@]}" -Atc "UPDATE plat.tenant SET config = config || '{\"cota_jobs_dia\": 100000}' WHERE slug IN ('demo', 'demo2') AND coalesce((config->>'cota_jobs_dia')::int, 0) < 100000" >/dev/null

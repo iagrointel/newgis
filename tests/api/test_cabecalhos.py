@@ -15,8 +15,19 @@ def http(base_url, url_publica_resolve):
         yield c
 
 
-@pytest.mark.parametrize("rota", ["/", "/saude", "/api/versao", "/static/app.js", "/static/js/core.js",
-                                  "/static/vendor/maplibre-gl-4.7.1.js", "/api/docs", "/api/openapi.json"])
+@pytest.mark.parametrize(
+    "rota",
+    [
+        "/",
+        "/saude",
+        "/api/versao",
+        "/static/app.js",
+        "/static/js/core.js",
+        "/static/vendor/maplibre-gl-4.7.1.js",
+        "/api/docs",
+        "/api/openapi.json",
+    ],
+)
 def test_noindex_em_toda_rota(http, rota):
     r = http.get(rota)
     assert r.status_code == 200, (rota, r.status_code)
@@ -57,6 +68,17 @@ def test_http_redireciona_para_https(base_url, url_publica_resolve):
     r = httpx.get(base_url.replace("https://", "http://") + "/saude", timeout=10, follow_redirects=False)
     assert r.status_code == 301
     assert r.headers["location"].startswith("https://")
+
+
+@pytest.mark.parametrize(
+    "rota",
+    ["/", "/saude", "/api/versao", "/api/docs", "/entrar", "/static/app.js", "/api/login/provedores?inquilino=demo"],
+)
+def test_referrer_policy_em_toda_rota(http, rota):
+    """Achado do testador do T2: o cabeçalho existia no server{} mas nenhuma location o repetia."""
+    r = http.get(rota)
+    assert r.status_code == 200, rota
+    assert r.headers.get("referrer-policy") == "strict-origin-when-cross-origin", rota
 
 
 def test_x_frame_options_deny(http):

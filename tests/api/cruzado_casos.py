@@ -301,6 +301,7 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/plataforma/inquilinos/{id}/suspender"): Caso(
         lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/suspender"
     ),
+    ("DELETE", "/api/plataforma/inquilinos/{id}"): Caso(lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}"),
     ("POST", "/api/plataforma/inquilinos/{id}/reativar"): Caso(
         lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/reativar"
     ),

@@ -71,6 +71,15 @@ def test_listar_criar_suspender(sessao_plat, cred):
     assert c.get("/api/eu").status_code == 200
     tipos = {e["tipo"] for e in sessao_plat.get("/api/eventos?limite=20").json()["itens"]}
     assert {"inquilinos/criar", "inquilinos/suspender", "inquilinos/reativar"} <= tipos
+    # apagar: o inquilino some com tudo (a sessão do admin dele morre), o slug fica livre, plataforma não se apaga
+    c.post("/api/grupos", json={"nome": "zt-grupo-do-inquilino"})
+    assert sessao_plat.delete(f"/api/plataforma/inquilinos/{novo['id']}").status_code == 204
+    assert sessao_plat.delete(f"/api/plataforma/inquilinos/{novo['id']}").status_code == 404
+    assert c.get("/api/eu").status_code == 401
+    assert slug not in {t["slug"] for t in sessao_plat.get("/api/plataforma/inquilinos").json()}
+    r = sessao_plat.delete(f"/api/plataforma/inquilinos/{slugs['plataforma']['id']}")
+    assert r.status_code == 409 and r.json()["erro"] == "plataforma_nao_apaga"
+    assert "inquilinos/apagar" in {e["tipo"] for e in sessao_plat.get("/api/eventos?limite=5").json()["itens"]}
 
 
 def test_superadmin_so_no_inquilino_plataforma(conexao_plat_app):

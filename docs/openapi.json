@@ -2576,6 +2576,44 @@
     "x-privilegio": "superadmin"
    }
   },
+  "/api/plataforma/inquilinos/{id}": {
+   "delete": {
+    "tags": [
+     "plataforma"
+    ],
+    "summary": "Apagar",
+    "description": "Apaga o inquilino inteiro (usuários, sessões, tokens, grupos, papéis, log, eventos, jobs) pela função\nplat.tenant_apagar; `plataforma` não se apaga (409). Sem lixeira: é operação do superadmin, com evento.",
+    "operationId": "apagar_api_plataforma_inquilinos__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   }
+  },
   "/api/plataforma/inquilinos/{id}/reativar": {
    "post": {
     "tags": [

@@ -29,6 +29,8 @@ ERROS_DO_BANCO = {
     "slug_reservado": (409, "este identificador é reservado"),
     "inquilino_inexistente": (404, "inquilino inexistente"),
     "plataforma_nao_suspende": (409, "o inquilino da plataforma não se suspende"),
+    "plataforma_nao_apaga": (409, "o inquilino da plataforma não se apaga"),
+    "inquilino_com_dependencias": (409, "o inquilino ainda tem dados referenciados; tente de novo"),
     "usuario_de_outro_inquilino": (404, "usuário inexistente"),
     "dono_de_outro_inquilino": (422, "o dono precisa ser membro do inquilino"),
     "grupo_de_outro_inquilino": (404, "grupo inexistente"),

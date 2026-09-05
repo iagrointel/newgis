@@ -82,6 +82,24 @@ def suspender(id: int, request: Request, auth: Auth = autenticado(superadmin=Tru
     return _suspender(auth, request, id, False)
 
 
+@router.delete("/inquilinos/{id}", status_code=204, response_class=Response, openapi_extra=SUPER)
+def apagar(id: int, request: Request, auth: Auth = autenticado(superadmin=True, so_sessao=True)):
+    """Apaga o inquilino inteiro (usuários, sessões, tokens, grupos, papéis, log, eventos, jobs) pela função
+    plat.tenant_apagar; `plataforma` não se apaga (409). Sem lixeira: é operação do superadmin, com evento."""
+    try:
+        with db.db() as cur:
+            cur.execute("SELECT slug FROM plat.tenant_listar(%s) WHERE id = %s", (auth.sessao_hash, id))
+            r = cur.fetchone()
+            if r is None:
+                raise ErroAPI(404, "inquilino_inexistente", "inquilino inexistente")
+            cur.execute("SELECT plat.tenant_apagar(%s, %s)", (auth.sessao_hash, id))
+        with db.db(auth.contexto()) as cur:
+            registrar_evento(cur, request, "inquilinos/apagar", "inquilino", id, {"slug": r["slug"]})
+    except psycopg2.Error as e:
+        raise erro_do_banco(e) from e
+    return Response(status_code=204)
+
+
 @router.post("/inquilinos/{id}/reativar", status_code=204, response_class=Response, openapi_extra=SUPER)
 def reativar(id: int, request: Request, auth: Auth = autenticado(superadmin=True, so_sessao=True)):
     return _suspender(auth, request, id, True)

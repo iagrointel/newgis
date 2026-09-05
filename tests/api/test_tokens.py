@@ -70,7 +70,7 @@ def test_escopos(sessao_a, usuarios_a, cliente):
     adm = _criar(sessao_a, escopos=["admin:inquilino"]).json()
     assert com_token(cliente, adm["token"], "GET", "/api/usuarios").status_code == 200
     c_ed, u, _ = usuarios_a.sessao("editor")
-    r = c_ed.post("/api/tokens", json={"nome": "x", "escopos": ["admin:inquilino"]})
+    r = c_ed.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-teto", "escopos": ["admin:inquilino"]})
     assert r.status_code == 422 and r.json()["erro"] == "escopo_fora_do_teto"
     for t in (tok, adm):
         sessao_a.delete(f"/api/tokens/{t['id']}")
@@ -136,7 +136,7 @@ def test_log_do_token_com_ip_rota_bytes_e_query_redigida(sessao_a, cliente):
 
 def test_dono_ve_so_os_seus_e_gerir_todos_ve_todos(sessao_a, usuarios_a):
     c_ed, u, _ = usuarios_a.sessao("editor")
-    r = c_ed.post("/api/tokens", json={"nome": "do-editor", "escopos": ["catalogo:ler"]})
+    r = c_ed.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-do-editor", "escopos": ["catalogo:ler"]})
     assert r.status_code == 201
     tid = r.json()["id"]
     assert c_ed.get("/api/tokens?todos=1").status_code == 403
@@ -152,10 +152,10 @@ def test_limite_de_tokens_por_usuario(usuarios_a):
     c, u, _ = usuarios_a.sessao("visualizador")
     ids = []
     for i in range(limites.TOKENS_POR_USUARIO):
-        r = c.post("/api/tokens", json={"nome": f"t{i}", "escopos": ["catalogo:ler"]})
+        r = c.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-t{i}", "escopos": ["catalogo:ler"]})
         assert r.status_code == 201, r.text
         ids.append(r.json()["id"])
-    r = c.post("/api/tokens", json={"nome": "extra", "escopos": ["catalogo:ler"]})
+    r = c.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-extra", "escopos": ["catalogo:ler"]})
     assert r.status_code == 422 and r.json()["erro"] == "limite_tokens"
     for i in ids:
         c.delete(f"/api/tokens/{i}")
@@ -193,7 +193,7 @@ def test_token_malformado_e_401(cliente, valor):
 
 def test_dono_desabilitado_invalida_token_na_hora(sessao_a, usuarios_a, cliente):
     c, u, _ = usuarios_a.sessao("editor")
-    tok = c.post("/api/tokens", json={"nome": "x", "escopos": ["catalogo:ler"]}).json()
+    tok = c.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-dono", "escopos": ["catalogo:ler"]}).json()
     assert com_token(cliente, tok["token"], "GET", "/api/eu").status_code == 200
     assert sessao_a.put(f"/api/usuarios/{u['id']}", json={"ativo": False}).status_code == 200
     assert com_token(cliente, tok["token"], "GET", "/api/eu").status_code == 401

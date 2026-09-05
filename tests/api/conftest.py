@@ -176,7 +176,7 @@ class Usuarios:
         slug = self.admin.get("/api/eu").json()["inquilino"]["slug"]
         r = entrar(c, slug, u["login"], temporaria)
         assert r.status_code == 200 and r.json()["usuario"]["pendencias"] == ["trocar_senha"], r.text
-        senha = "Senha-definitiva-" + secrets.token_hex(3)
+        senha = "Senha-definitiva-1" + secrets.token_hex(3)  # dígito fixo: hex só com letras reprovaria
         r = c.put("/api/eu/senha", json={"atual": temporaria, "nova": senha})
         assert r.status_code == 204, r.text
         return c, u, senha
@@ -210,6 +210,65 @@ def token_a(sessao_a):
     tok = r.json()
     yield tok
     sessao_a.delete(f"/api/tokens/{tok['id']}")
+
+
+class InquilinoTemporario:
+    """Inquilino zt-inq-* criado pelo superadmin, com o admin já logado e com senha definitiva; apagado no fim
+    (DELETE /api/plataforma/inquilinos/{id}): o teste nunca depende de estado limpo dos inquilinos de demonstração."""
+
+    def __init__(self, sessao_plat, config=None):
+        self.slug = f"{PREFIXO_TESTE}-inq-{secrets.token_hex(3)}"
+        r = sessao_plat.post(
+            "/api/plataforma/inquilinos",
+            json={
+                "slug": self.slug,
+                "nome": f"Inquilino de teste {self.slug}",
+                "admin_login": "admin",
+                "admin_nome": "Administrador de teste",
+                "config": config or {},
+            },
+        )
+        assert r.status_code == 201, r.text
+        self.id = r.json()["id"]
+        self.admin_id = r.json()["admin"]["id"]
+        temporaria = r.json()["senha_temporaria"]
+        self.admin = novo_cliente()
+        assert entrar(self.admin, self.slug, "admin", temporaria).status_code == 200
+        self.senha = "Senha-do-admin-1" + secrets.token_hex(3)
+        assert self.admin.put("/api/eu/senha", json={"atual": temporaria, "nova": self.senha}).status_code == 204
+        self._plat = sessao_plat
+
+    def apagar(self):
+        self._plat.delete(f"/api/plataforma/inquilinos/{self.id}")
+
+
+@pytest.fixture
+def inquilino_temporario(sessao_plat):
+    inq = InquilinoTemporario(sessao_plat)
+    yield inq
+    inq.apagar()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def limpeza_de_residuos(sessao_a, sessao_b, sessao_plat):
+    """No fim da sessão de testes: revoga tokens, apaga grupos, papéis e usuários zt-* dos inquilinos de demonstração
+    e apaga inquilinos zt-inq-* (o que uma rodada abortada deixou; o install.sh em dev faz o mesmo)."""
+    yield
+    for s in (sessao_a, sessao_b):
+        for t in s.get("/api/tokens?todos=1").json():
+            if t["nome"].startswith(PREFIXO_TESTE) and t["revogado_em"] is None:
+                s.delete(f"/api/tokens/{t['id']}")
+        for g in s.get(f"/api/grupos?q={PREFIXO_TESTE}&limite=200").json()["itens"]:
+            s.delete(f"/api/grupos/{g['id']}")
+        for u in s.get(f"/api/usuarios?q={PREFIXO_TESTE}&limite=200").json()["itens"]:
+            if u["login"].startswith(PREFIXO_TESTE):
+                s.delete(f"/api/usuarios/{u['id']}")
+        for p in s.get("/api/papeis").json()["personalizados"]:
+            if p["nome"].startswith(PREFIXO_TESTE):
+                s.delete(f"/api/papeis/{p['id']}")
+    for t in sessao_plat.get("/api/plataforma/inquilinos").json():
+        if t["slug"].startswith(f"{PREFIXO_TESTE}-inq-"):
+            sessao_plat.delete(f"/api/plataforma/inquilinos/{t['id']}")
 
 
 def com_token(cliente, token: str, metodo: str, url: str, **kw):
