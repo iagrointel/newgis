@@ -65,6 +65,8 @@ def semear(con, slug: str, n: int) -> int:
             (ids[slug], PREFIXO, adm, faltam, TIPOS, [DADOS[t] for t in TIPOS], TITULOS, SUFIXOS),
         )
     con.commit()
+    with con.cursor() as cur:  # sem estatística o planejador ignora o índice de texto (p95 medido: 2,8 s -> ms)
+        cur.execute("ANALYZE plat.item")
     return faltam
 
 

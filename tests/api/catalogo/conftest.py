@@ -9,6 +9,7 @@ import psycopg2.extras
 import pytest
 
 from tests.api.conftest import PREFIXO_TESTE
+from tests.api.semear_catalogo import PREFIXO as SEMENTE
 from tests.api.test_rls import contexto, ids_por_slug
 
 DADOS_POR_TIPO = {
@@ -72,11 +73,18 @@ def _expurgar_zt(env, slug: str) -> None:
         contexto(con, ids[slug], usuario_id=adm, login="admin")
         with con.cursor() as cur:
             cur.execute("SELECT set_config('plat.lixeira', 'on', true)")
+            # o corpus de escala (zt-semente, 10 mil em demo e 1 mil em demo2) NÃO é apagado: semeá-lo custa minutos
+            # a cada rodada e é dele que saem as medidas de busca. Para removê-lo à mão:
+            # venv/bin/python -m tests.api.semear_catalogo 0
             cur.execute(
-                "UPDATE plat.item SET protegido = false, status = NULL WHERE titulo LIKE %s AND protegido",
-                (PREFIXO_TESTE + "%",),
+                "UPDATE plat.item SET protegido = false, status = NULL "
+                "WHERE titulo LIKE %s AND titulo NOT LIKE %s AND protegido",
+                (PREFIXO_TESTE + "%", SEMENTE + "%"),
             )
-            cur.execute("SELECT id FROM plat.item WHERE titulo LIKE %s", (PREFIXO_TESTE + "%",))
+            cur.execute(
+                "SELECT id FROM plat.item WHERE titulo LIKE %s AND titulo NOT LIKE %s",
+                (PREFIXO_TESTE + "%", SEMENTE + "%"),
+            )
             for r in cur.fetchall():
                 cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (r["id"],))
                 cur.execute("SELECT plat.item_expurgar(%s::uuid)", (r["id"],))

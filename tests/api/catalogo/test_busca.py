@@ -86,7 +86,7 @@ def test_tag_por_api_aparece_na_requisicao_seguinte(sessao_a, itens_a):
 
 def test_doze_consultas_por_campo(sessao_a, itens_a, ids, corpus):
     mapa = itens_a.criar(
-        "mapa", titulo=titulo_zt("Rodovia federal"), tags=["zt-campo"], resumo="resumo campo", status=None
+        "mapa", titulo=titulo_zt("Rodovia federal"), tags=["zt-campo"], resumo="resumo campo"
     )
     r = sessao_a.post("/api/pastas", json={"nome": titulo_zt("Campo")})
     pasta = r.json()
