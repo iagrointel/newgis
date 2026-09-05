@@ -72,8 +72,11 @@ def test_relogio_dispara_cada_ocorrencia_uma_vez_com_dois_relogios(cliente_demo,
                 t.start()
             for t in threads:
                 t.join()
-            assert len(resultados) == 1, f"ocorrência {k}: {len(resultados)} jobs enfileirados por 2 relógios"
-            criados += resultados
+            # o relógio enfileira TODA agenda vencida (inclusive as de outras sessões de teste): conta-se só a desta
+            meus = [j["id"] for j in cliente_demo.get("/api/jobs", params={"agenda_id": agenda["id"], "limite": 50})
+                    .json()["itens"]]
+            assert len(meus) == k + 1, f"ocorrência {k}: {len(meus)} jobs desta agenda (2 relógios; ids {resultados})"
+            criados = meus
         lista = cliente_demo.get("/api/jobs", params={"agenda_id": agenda["id"], "limite": 50}).json()
         assert lista["total"] == 3 and {j["id"] for j in lista["itens"]} == set(criados)
         programados = sorted(j["programado_para"] for j in lista["itens"])
@@ -99,9 +102,11 @@ def test_cinco_falhas_seguidas_pausam_a_agenda(cliente_demo, worker_vivo, env, n
     con.autocommit = True
     try:
         for k in range(5):
-            criados = mod_agenda.tick(con, proxima + datetime.timedelta(minutes=15 * k, seconds=5))
-            assert len(criados) == 1
-            assert esperar(cliente_demo, criados[0], timeout=60)["estado"] == "falhou"
+            mod_agenda.tick(con, proxima + datetime.timedelta(minutes=15 * k, seconds=5))
+            meus = cliente_demo.get("/api/jobs", params={"agenda_id": agenda["id"], "ordenar": "criado_em:desc",
+                                                         "limite": 5}).json()["itens"]
+            assert len(meus) == k + 1, meus
+            assert esperar(cliente_demo, meus[0]["id"], timeout=60)["estado"] == "falhou"
             a = cliente_demo.get(f"/api/agendas/{agenda['id']}").json()
             assert a["falhas_seguidas"] == k + 1
         assert a["ativa"] is False and a["proxima_em"] is None
@@ -110,7 +115,9 @@ def test_cinco_falhas_seguidas_pausam_a_agenda(cliente_demo, worker_vivo, env, n
         retomada = cliente_demo.post(f"/api/agendas/{agenda['id']}/retomar").json()
         assert retomada["ativa"] is True and retomada["falhas_seguidas"] == 0 and retomada["proxima_em"]
         assert retomada["proxima_em"] > antes.strftime("%Y-%m-%dT%H:%M:%S"), "retomar recomeça do relógio real"
-        assert mod_agenda.tick(con, antes) == [], "agenda retomada não pode reenfileirar ocorrências antigas"
+        mod_agenda.tick(con, antes)
+        depois = cliente_demo.get("/api/jobs", params={"agenda_id": agenda["id"]}).json()["total"]
+        assert depois == 5, "agenda retomada não pode reenfileirar ocorrências antigas"
     finally:
         con.close()
         _apagar(cliente_demo, agenda["id"])
@@ -138,10 +145,11 @@ def test_rodar_agora_pausar_retomar_atualizar(cliente_demo, worker_vivo, nome):
 
 
 def test_cota_de_agendas_413_e_rls(cliente_demo, cliente_demo2, conexao_plat_app, sessao_demo2, nome):
-    with conexao_plat_app.cursor() as cur:
+    existentes = cliente_demo2.get("/api/agendas", params={"limite": 200}).json()["total"]
+    with conexao_plat_app.cursor() as cur:  # cota = o que B já tem + 1 (outra rodada pode ter agenda viva em B)
         jobs_sessao.contexto(cur, sessao_demo2[1], sessao_demo2[2], "admin")
-        cur.execute("UPDATE plat.tenant SET config = config || '{\"cota_agendas\": 1}' WHERE id = %s",
-                    (sessao_demo2[1],))
+        cur.execute("UPDATE plat.tenant SET config = config || jsonb_build_object('cota_agendas', %s) WHERE id = %s",
+                    (existentes + 1, sessao_demo2[1]))
     conexao_plat_app.commit()
     a = None
     try:
@@ -149,7 +157,7 @@ def test_cota_de_agendas_413_e_rls(cliente_demo, cliente_demo2, conexao_plat_app
         assert r.status_code == 201, r.text
         a = r.json()
         r2 = _criar(cliente_demo2, nome + "-2")
-        assert r2.status_code == 413 and r2.json()["erro"] == "cota_agendas"
+        assert r2.status_code == 413 and r2.json()["erro"] == "cota_agendas", r2.text
         assert cliente_demo.get(f"/api/agendas/{a['id']}").status_code == 404, "agenda de demo2 visível para demo"
         assert cliente_demo.post(f"/api/agendas/{a['id']}/pausar").status_code == 404
     finally:
