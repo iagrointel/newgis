@@ -221,6 +221,19 @@ rodam na sessão de `plat_worker`. O filho continua `plat_app` dentro do inquili
 Limite escrito: RLS por GUC continua sendo o limite de tudo o que é `plat_app` (quem tem a senha da role escolhe o
 inquilino); a separação nova é entre **quem executa tarefas** e **quem muda estado de job**.
 
+**Alterado em T2 (correção 3): semeadura de demonstração, migração `014_jobs_semear_demo.sql`.** O e2e da primeira
+pintura com 1.000 jobs semeava por `INSERT` direto de job já `concluido` como `plat_app` — o que a 006 passou a
+barrar, corretamente. Em vez de abrir exceção no gatilho, existe agora `plat.jobs_semear_demo(quantos, tipo,
+parametros, estado)` (`SECURITY DEFINER`, `EXECUTE` só para `plat_app`) com quatro guardas: interruptor
+`plat.ambiente.semear_demo` (tabela nova, uma linha, escrita só pelo `install.sh` a partir de `PLAT_AMBIENTE=dev`
+ou `PLAT_SEMENTE_DEMO=sim`; `plat_app` só lê), inquilino de demonstração (`demo`, `demo2`, `zt-%`), estado
+**terminal** (nunca `pendente` visível ao worker nem `rodando`) e teto de 5.000 por chamada com a marca
+`parametros.semente_demo = true`. **A 006 não é afrouxada**: a função insere o job `pendente` e limpo, como o ramo
+de INSERT do gatilho já permite a qualquer chamador, e só então transiciona pelo mesmo caminho do worker
+(`plat.via_worker_ligar` dentro do `SECURITY DEFINER`). Limite escrito: o GUC `plat.via_worker` é de prefixo livre e
+qualquer role consegue defini-lo; o que impede a forja é o `REVOKE UPDATE ON plat.job FROM plat_app` mais o ramo de
+INSERT do gatilho, não o GUC. Provado por `tests/api/jobs/test_jobs_semente_demo.py`.
+
 Regra que este ADR fixa e o teste `tests/api/test_jobs_rls.py` prova: **a API nunca chama as funções do worker**, e
 **o filho que executa a tarefa roda sob `set_config('plat.tenant_id', <tenant do job>)`**, ou seja, o código de
 qualquer tipo de job enxerga só o inquilino dono do job (uma importação que tentasse gravar na camada de outro
