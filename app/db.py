@@ -1,5 +1,5 @@
 """Pool psycopg2 com reconexão e contexto por inquilino (ADR 0001 seção 3.2). Substância copiada de
-fgr/sig/app/main.py: só a PREPARAÇÃO repete (até 9 vezes); a consulta do chamador roda uma única vez.
+main.py do SIG de teste interno: só a PREPARAÇÃO repete (até 9 vezes); a consulta do chamador roda uma única vez.
 Conexão que falhou na preparação é descartada (putconn close=True), nunca reaproveitada."""
 
 import threading

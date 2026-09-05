@@ -3,7 +3,7 @@
 Estado: aceito (arquiteto, turno T1, setembro de 2026). Toda decisão abaixo traz o motivo em uma
 das três formas admitidas pelo laço: MEDIDO nesta máquina (comando e saída em
 `laco/handoffs/T1/20_arquitetura.md`), LIDO em código que já roda em produção nesta máquina
-(`/home/dev/fgr/sig`, serviço `sigcorp`, só leitura) ou DOCUMENTO OFICIAL. Nenhuma decisão vale
+(`SIG de teste interno`, serviço `SIG de teste interno`, só leitura) ou DOCUMENTO OFICIAL. Nenhuma decisão vale
 por moda. Quando uma decisão custa caro para mudar, o custo está escrito.
 
 Contexto fixo (lido em `laco/estado.json` e em `DOC.md` seção 17.2): codinome `plat`; schema
@@ -62,16 +62,16 @@ systemd `plat-*`; URL interna `https://plat.iagrointel.com` com `noindex`. Máqu
 
 Motivo, por parte:
 
-- `app/` e `web/` separados, `web/` servido pelo nginx direto do disco. LIDO em `fgr/sig`: o
-  `sigcorp` serve `web/` pelo `StaticFiles` do FastAPI por trás do nginx; funciona, mas cada
+- `app/` e `web/` separados, `web/` servido pelo nginx direto do disco. LIDO em `SIG de teste interno`: o
+  `SIG de teste interno` serve `web/` pelo `StaticFiles` do FastAPI por trás do nginx; funciona, mas cada
   arquivo estático passa por um worker Python. Aqui o nginx faz `alias` para `web/` (seção 4.3),
   e a API só responde `/api/`, `/saude` e, no futuro, `/svc/`. Custo de mudar depois: zero
   (os dois caminhos coexistem; a decisão está em uma `location` do nginx).
 - `db/migracoes/NNN_*.sql` em vez de `schema.sql` + `schema_v2.sql` + `schema_v3.sql`. LIDO em
-  `fgr/sig/db/`: três arquivos aplicados sempre na mesma ordem pelo `install.sh`, sem registro do
+  `SIG de teste interno/db/`: três arquivos aplicados sempre na mesma ordem pelo `install.sh`, sem registro do
   que já foi aplicado nem do conteúdo aplicado. A tabela `plat.versao_migracao` (seção 5) resolve
   os dois buracos: sabe-se o que está aplicado e detecta-se arquivo editado depois de aplicado.
-- `deploy/` com modelos em vez de heredoc dentro do `install.sh`. LIDO em `fgr/sig/install.sh`:
+- `deploy/` com modelos em vez de heredoc dentro do `install.sh`. LIDO em `install.sh do SIG de teste interno`:
   a unidade e o nginx vivem dentro de um heredoc de 60 linhas com `\$` escapado; revisar e
   testar (`nginx -t`) é mais difícil. Modelo em arquivo é lido por qualquer um e pode ser
   comparado com `diff` contra o que está em `/etc`.
@@ -86,13 +86,13 @@ Motivo, por parte:
 
 | camada | escolha | motivo (forma admitida) |
 |---|---|---|
-| API | FastAPI 0.138.0 + uvicorn 0.27.1 (já na venv, `pip list`) | LIDO: `sigcorp` e `cbresig` rodam a mesma pilha em produção nesta máquina; MEDIDO: `sigcorp` com 2 workers ocupa 167 MB (`MemoryCurrent`) e pico de 251 MB (`MemoryPeak`), 0 reinícios |
-| banco | psycopg2 2.9.9 (venv e sistema, mesma versão) com `ThreadedConnectionPool` | LIDO: `fgr/sig/app/main.py` linhas 36-68, pool com reconexão que já sobreviveu a 3 OOM do Postgres (CLAUDE.md, seção FGR); psycopg2 é síncrono, e o FastAPI roda rota `def` em threadpool, então 2 workers × 8 conexões bastam para este item |
-| esquema | `plat` em `iagro_sat`, role `plat_app` LOGIN sem BYPASSRLS e sem ser dona das tabelas | LIDO: `fgr/sig/db/schema.sql` final: "sem BYPASSRLS, nao e dono" é o que faz a RLS valer (doc PostgreSQL: dono da tabela e superusuário ignoram RLS salvo FORCE) |
+| API | FastAPI 0.138.0 + uvicorn 0.27.1 (já na venv, `pip list`) | LIDO: `SIG de teste interno` e `segundo SIG de teste interno` rodam a mesma pilha em produção nesta máquina; MEDIDO: `SIG de teste interno` com 2 workers ocupa 167 MB (`MemoryCurrent`) e pico de 251 MB (`MemoryPeak`), 0 reinícios |
+| banco | psycopg2 2.9.9 (venv e sistema, mesma versão) com `ThreadedConnectionPool` | LIDO: `main.py do SIG de teste interno` linhas 36-68, pool com reconexão que já sobreviveu a 3 OOM do Postgres (CLAUDE.md, seção o SIG de teste interno); psycopg2 é síncrono, e o FastAPI roda rota `def` em threadpool, então 2 workers × 8 conexões bastam para este item |
+| esquema | `plat` em `iagro_sat`, role `plat_app` LOGIN sem BYPASSRLS e sem ser dona das tabelas | LIDO: `esquema do SIG de teste interno` final: "sem BYPASSRLS, nao e dono" é o que faz a RLS valer (doc PostgreSQL: dono da tabela e superusuário ignoram RLS salvo FORCE) |
 | tiles vetoriais | Martin em :8151 (item L2-01) | DOC.md 17.2: em produção no observatório; aqui só reserva de porta e campo em /saude |
 | tiles raster | TiTiler + pgstac em :8152 (item L1-01/L1-02) | DOC.md 17.2, medido 36-56 ms/tile em `plataforma/pipeline`; aqui só reserva de porta e campo em /saude |
 | objetos | Garage, já ativo em :3900 (`plataforma-garage`, MEDIDO: `systemctl is-active` = active; `GET /` = HTTP 403, esperado sem assinatura S3) | DOC.md 17.2 |
-| front | MapLibre GL JS 4.7.1 em `web/vendor/` (cópia do arquivo que roda em `fgr/sig`, 803.086 bytes) + módulos ES sem bundler | seção 6, decisão por medição |
+| front | MapLibre GL JS 4.7.1 em `web/vendor/` (cópia do arquivo que roda em `SIG de teste interno`, 803.086 bytes) + módulos ES sem bundler | seção 6, decisão por medição |
 | fila | Postgres como fila (item L0-05) em :8153 | DOC.md 17.2 (Procrastinate ou própria); fora deste item |
 
 ### 2.1 Versões e segurança de dependência
@@ -126,7 +126,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA plat GRANT USAGE, SELECT ON
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA plat GRANT EXECUTE ON FUNCTIONS TO plat_app;
 ```
 
-Motivo do `ALTER DEFAULT PRIVILEGES`: LIDO em `fgr/sig`: cada `schema_vN.sql` repete o bloco de
+Motivo do `ALTER DEFAULT PRIVILEGES`: LIDO em `SIG de teste interno`: cada `schema_vN.sql` repete o bloco de
 `GRANT ... ON ALL TABLES` no fim porque tabela criada depois do GRANT nasce sem permissão. Com
 privilégio padrão declarado uma vez, toda migração futura cria tabela já acessível à role. Doc
 PostgreSQL: `ALTER DEFAULT PRIVILEGES` aplica-se a objetos criados depois, pelo papel indicado,
@@ -140,7 +140,7 @@ host    iagro_sat       plat_app        127.0.0.1/32            scram-sha-256
 ```
 
 Motivo: regra da casa (CLAUDE.md e SKILL): role nova sem linha no pg_hba sobe e quebra na primeira
-consulta. MEDIDO em 05/09/2026: `grep -n` no pg_hba mostra `sigcorp_app` (linha 24), `cbresig_app`
+consulta. MEDIDO em 05/09/2026: `grep -n` no pg_hba mostra `SIG de teste interno_app` (linha 24), `segundo SIGsig_app`
 (25) e `plataforma_com_app` (30) com exatamente esse formato; `plat_app` ainda não existe
 (`SELECT rolname FROM pg_roles WHERE rolname LIKE 'plat%'` devolveu só `plataforma_com_app`).
 O `install.sh` faz `grep -q "plat_app" pg_hba.conf || append`, e o teste `tests/api/test_banco.py`
@@ -148,7 +148,7 @@ abre conexão com o `PLAT_DSN` (TCP 127.0.0.1, não socket) para provar que a li
 
 ### 3.2 Pool com reconexão (armadilha da casa)
 
-Contrato de `app/db.py`, copiado em substância de `fgr/sig/app/main.py` (linhas 36-68) e
+Contrato de `app/db.py`, copiado em substância de `main.py do SIG de teste interno` (linhas 36-68) e
 generalizado:
 
 ```python
@@ -186,13 +186,13 @@ CREATE OR REPLACE FUNCTION plat.usuario_atual() RETURNS int LANGUAGE sql STABLE 
 
 - Toda tabela com `tenant_id` tem `ENABLE ROW LEVEL SECURITY` e uma política `p_<tabela>`
   `FOR ALL TO plat_app USING (tenant_id = plat.tenant_atual()) WITH CHECK (tenant_id = plat.tenant_atual())`.
-  `WITH CHECK` explícito: LIDO em `fgr/sig`: as políticas só têm `USING`; a doc PostgreSQL diz que
+  `WITH CHECK` explícito: LIDO em `SIG de teste interno`: as políticas só têm `USING`; a doc PostgreSQL diz que
   sem `WITH CHECK` o `USING` vale para escrita também, mas explícito evita que alguém "corrija"
   para `FOR SELECT` e abra a escrita.
 - Sem contexto (`plat.tenant_atual()` = NULL) a política devolve NULL = falso: nenhuma linha.
   Isso é o comportamento desejado e é testado (`test_rls_sem_contexto_ve_zero`).
 - Autenticação roda ANTES de existir inquilino na sessão, por funções `SECURITY DEFINER` com
-  `SET search_path = plat, public` (padrão do `fgr/sig`, funções `auth_*`). São as únicas funções
+  `SET search_path = plat, public` (padrão do `SIG de teste interno`, funções `auth_*`). São as únicas funções
   que enxergam além do inquilino, e cada uma devolve só o necessário.
 - Migração roda como `postgres` (dona, ignora RLS): é assim que se semeia o primeiro inquilino.
   Nenhum teste de RLS pode conectar como `postgres`; o fixture `conexao_plat_app` do `conftest.py`
@@ -204,7 +204,7 @@ CREATE OR REPLACE FUNCTION plat.usuario_atual() RETURNS int LANGUAGE sql STABLE 
 
 ### 4.1 Unidade systemd `plat-api` (modelo em `deploy/plat-api.service`)
 
-Copiada de `systemctl cat sigcorp` (LIDO) com três acréscimos, cada um com motivo:
+Copiada de `systemctl cat SIG de teste interno` (LIDO) com três acréscimos, cada um com motivo:
 
 ```ini
 [Unit]
@@ -231,11 +231,11 @@ WantedBy=multi-user.target
 
 - `--no-access-log`: o middleware da seção 9 escreve a linha de acesso em JSON; o log de acesso
   do uvicorn duplicaria em texto livre.
-- `MemoryHigh=768M` / `MemoryMax=1G`: MEDIDO: `sigcorp` (mesma pilha, 2 workers) pico 251 MB.
+- `MemoryHigh=768M` / `MemoryMax=1G`: MEDIDO: `SIG de teste interno` (mesma pilha, 2 workers) pico 251 MB.
   1 GB é 4× o pico medido e protege uma máquina com 3 GB disponíveis; o OOM de 30/08 derrubou o
   Postgres por falta de limite em processos vizinhos (CLAUDE.md).
 - `Wants=postgresql.service` além de `After`: sem `Wants`, `After` só ordena, não puxa o Postgres.
-- `--workers 2`: igual ao `sigcorp`; o item L7-02 mede e ajusta.
+- `--workers 2`: igual ao `SIG de teste interno`; o item L7-02 mede e ajusta.
 
 `plat-martin`, `plat-titiler`, `plat-worker` seguem o mesmo modelo quando os itens L2-01, L1-01 e
 L0-05 os criarem; este item não os cria (plano do turno: "nenhum serviço além de /saude").
@@ -248,15 +248,15 @@ inicial do gerente: `location / { return 503; }`), o certificado
 `https://plat.iagrointel.com/saude` responde HTTP 503 (esperado: sem API ainda). O `install.sh`
 reescreve o bloco inteiro a partir do modelo, preserva as linhas do certbot e roda `nginx -t`
 antes de `systemctl reload nginx`; se o certificado não existir (máquina nova), chama
-`certbot --nginx -d DOMINIO --non-interactive --agree-tos --redirect` como o `fgr/sig/install.sh`.
+`certbot --nginx -d DOMINIO --non-interactive --agree-tos --redirect` como o `install.sh do SIG de teste interno`.
 
-Modelo (copiado de `/etc/nginx/sites-enabled/fgrsig.iagrointel.com`, LIDO, com as diferenças
+Modelo (copiado de `/etc/nginx/sites-enabled/SIG de teste internosig.iagrointel.com`, LIDO, com as diferenças
 marcadas):
 
 ```nginx
 server {
     server_name DOMINIO;
-    client_max_body_size 200m;                       # fgr/sig usa 200m; upload de camada vem em L0-04
+    client_max_body_size 200m;                       # SIG de teste interno usa 200m; upload de camada vem em L0-04
     add_header X-Robots-Tag "noindex, nofollow" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "DENY" always;
@@ -296,7 +296,7 @@ em cada `location`, como o `fgrsig` faz. O teste `tests/api/test_cabecalhos.py` 
 
 ### 4.3 Por que nginx `alias` e não `StaticFiles`
 
-LIDO em `fgr/sig/app/main.py` linha 421: `app.mount('/static', StaticFiles(directory=web))`. Cada
+LIDO em `main.py do SIG de teste interno` linha 421: `app.mount('/static', StaticFiles(directory=web))`. Cada
 pedido de módulo passa pelo worker Python. Com `alias`, o nginx serve do disco e os workers
 ficam para a API. Custo de mudar: uma `location`. Consequência para os testes: os testes `api/`
 que rodam com `TestClient` não enxergam `/static/`; quem testa estático é `test_cabecalhos.py`
@@ -351,7 +351,7 @@ Migrações deste item, na ordem:
 
 ## 6. Esquema base do `plat` (contrato para L0-02)
 
-Origem: `fgr/sig/db/schema.sql` + `schema_v2.sql` (api_token) + `schema_v3.sql` (tenant.config,
+Origem: `esquema do SIG de teste interno` + `schema_v2.sql` (api_token) + `schema_v3.sql` (tenant.config,
 usuario.totp/bloqueio/superadmin, sessao.ip/agente, login_audit), LIDOS e generalizados. O que
 mudou em relação ao modelo e por quê está depois do DDL.
 
@@ -446,7 +446,7 @@ RLS (todas com `ENABLE ROW LEVEL SECURITY`, políticas `FOR ALL TO plat_app`):
 | versao_migracao | sem RLS (não tem tenant_id); `plat_app` só lê |
 
 Funções `SECURITY DEFINER` (`SET search_path = plat, public`), assinaturas que o L0-02 implementa
-e a API chama; os corpos seguem os de `fgr/sig/db/schema_v3.sql` linhas 204-245:
+e a API chama; os corpos seguem os de `esquema do SIG de teste interno` linhas 204-245:
 
 ```
 plat.auth_login(p_tenant text, p_login text)        -> usuario_id, tenant_id, senha_hash, perfil, nome, tenant_nome, totp_ativo, totp_secret, bloqueado_ate, falhas_login, superadmin
@@ -457,28 +457,28 @@ plat.auth_sessao(p_hash text)                        -> usuario_id, tenant_id, l
 plat.auth_sessao_encerrar(p_hash text)               -> void
 plat.auth_token(p_hash text, p_ip text)              -> usuario_id, tenant_id, login, perfil, escopos, restricao, token_id   (só se revogado_em IS NULL e (expira_em IS NULL OR expira_em > now()))
 plat.log_registrar(p_tenant int, p_usuario int, p_token int, p_ip text, p_metodo text, p_rota text, p_status int, p_bytes bigint, p_tempo_ms int, p_agente text, p_resultado text) -> void
-plat.tenant_criar(p_slug text, p_nome text, p_config jsonb, p_admin_login text, p_admin_nome text, p_senha_hash text) -> tenant_id, usuario_id   (exige superadmin na sessão, como fgr plat_criar_tenant)
+plat.tenant_criar(p_slug text, p_nome text, p_config jsonb, p_admin_login text, p_admin_nome text, p_senha_hash text) -> tenant_id, usuario_id   (exige superadmin na sessão, como SIG de teste interno plat_criar_tenant)
 ```
 
-O que mudou em relação ao `fgr/sig` e por quê:
+O que mudou em relação ao `SIG de teste interno` e por quê:
 
-1. `sessao.token` em claro virou `sessao.token_hash`. LIDO: o `fgr` guarda o token da sessão em
+1. `sessao.token` em claro virou `sessao.token_hash`. LIDO: o `SIG de teste interno` guarda o token da sessão em
    claro e o do API token em hash; um dump do banco entregaria sessões válidas. Custo: um
    `hashlib.sha256` por requisição, sem dependência.
 2. `sessao` ganhou `tenant_id` denormalizado: a política de RLS vira uma comparação direta em
-   vez da subconsulta `usuario_id IN (SELECT ...)` do `fgr` (executada em toda leitura de sessão).
+   vez da subconsulta `usuario_id IN (SELECT ...)` do `SIG de teste interno` (executada em toda leitura de sessão).
 3. Perfis `admin, editor, visualizador, campo` no lugar de `admin, tecnico, consulta, cliente`.
    Os quatro nomes são os papéis que o produto expõe (plano do laço: edição, visualização e
    coleta em campo, item L2-07). `campo` só usa formulários e a PWA; `visualizador` não edita.
    A tabela de permissão fina por camada e por item do catálogo é do L0-03 (não nasce aqui).
-4. `token_servico.escopos` e `restricao`: o `fgr` tem token sem escopo; o portão P6 exige "token
+4. `token_servico.escopos` e `restricao`: o `SIG de teste interno` tem token sem escopo; o portão P6 exige "token
    com escopo e log". O vocabulário de escopos é decisão do L0-02 e vai para o `docs/openapi.json`.
-5. `log_acesso` unifica o `login_audit` do `fgr` (só login) com o log de leitura por token que o
+5. `log_acesso` unifica o `login_audit` do `SIG de teste interno` (só login) com o log de leitura por token que o
    portão do L0-02 pede ("token de serviço aparece no log com IP/rota/bytes"). Uma tabela, um
    índice por inquilino e um por token. Retenção e particionamento são do L7.
 6. `senha_hash` continua `pbkdf2_sha256` da biblioteca padrão, com 600.000 iterações (OWASP
    Password Storage Cheat Sheet, versão vigente em 2026, recomenda 600.000 para PBKDF2-HMAC-SHA256).
-   Motivo de não usar bcrypt: zero dependência nova e o `fgr` já valida esse formato.
+   Motivo de não usar bcrypt: zero dependência nova e o `SIG de teste interno` já valida esse formato.
 7. `email` nullable e `slug` com CHECK de formato: o slug vai para URL e para o nome do bucket
    Garage (L1-01); um CHECK evita corrigir depois.
 
@@ -527,7 +527,7 @@ precisar de coluna nova, é `003_*.sql`, nunca edição da 002.
 `GET /api/versao` (sem banco, sempre 200): `{"versao","git_sha","ambiente","em"}`. Serve para o
 front mostrar a versão e para o e2e confirmar que a página e a API são a mesma implantação.
 
-`GET /api/openapi.json` e `GET /api/docs`: expostos como no `fgr` (`docs_url='/api/docs'`),
+`GET /api/openapi.json` e `GET /api/docs`: expostos como no `SIG de teste interno` (`docs_url='/api/docs'`),
 atrás do `noindex` do nginx.
 
 ---
@@ -535,7 +535,7 @@ atrás do `noindex` do nginx.
 ## 8. Configuração (`.env`)
 
 Arquivo `.env` na raiz do repositório, modo `600`, dono `dev`, criado pelo `install.sh` se não
-existir (senha da role gerada com `openssl rand -hex 16`, como o `fgr/sig/install.sh`). Lido por
+existir (senha da role gerada com `openssl rand -hex 16`, como o `install.sh do SIG de teste interno`). Lido por
 `app/settings.py` com `python-dotenv` (1.2.2, no sistema); toda chave obrigatória ausente aborta
 a partida com mensagem que nomeia a chave. `.env.exemplo` é comitado com todas as chaves e
 valores de exemplo; `.gitignore` já tem `.env*`, e o backend acrescenta `!.env.exemplo`.
@@ -639,7 +639,7 @@ openapi: ; $(VENV)/python -c "import json; from app.main import app; json.dump(a
 
 Projeto Vite mínimo (`vite ^6.3.5` + `maplibre-gl ^5.6.0`, um `index.html`, um `main.js`):
 
-| grandeza | Vite | vanilla (o que `fgr/sig` faz hoje) |
+| grandeza | Vite | vanilla (o que `SIG de teste interno` faz hoje) |
 |---|---|---|
 | `node_modules` | 78 MB, 1.660 arquivos | 0 |
 | cache do npm gerado pelo install | 95 MB | 0 |
@@ -659,16 +659,16 @@ Custos fixos desta máquina que pesam na conta: 3 GB de RAM disponíveis e 13 GB
 mantêm a porta aberta para bundler e para construtores grandes:
 
 1. Todo módulo é ESM padrão com importação relativa (`./js/x.js`), sem variável global além de
-   `maplibregl` (carregado por `<script>` clássico antes do módulo de entrada, como `fgr`).
+   `maplibregl` (carregado por `<script>` clássico antes do módulo de entrada, como `SIG de teste interno`).
    Consequência MEDIDA: esse layout é exatamente o que o Vite consome sem alteração
    (`index.html` como entrada); ligar o Vite depois custa um `package.json` e um alvo no
    `Makefile`, e nenhuma linha de código muda.
 2. Nunca `?v=` em `import`. O cache é `no-store` no nginx (seção 4.2). Regra da casa, com o
-   incidente de 01/09/2026 documentado no `fgr/sig/pipeline/publicar.sh`.
+   incidente de 01/09/2026 documentado no `publicar.sh do SIG de teste interno`.
 3. Bibliotecas de terceiros entram como ESM ou UMD em `web/vendor/<nome>-<versão>.js`, com
    linha em `web/vendor/VERSOES.txt` (nome, versão, sha256, licença, URL de origem). Licenças
    admitidas: BSD, MIT, Apache 2.0, ISC. Primeira entrada: `maplibre-gl 4.7.1`, BSD-3, cópia do
-   arquivo que roda em `fgr/sig` (803.086 bytes; versão lida no cabeçalho do arquivo).
+   arquivo que roda em `SIG de teste interno` (803.086 bytes; versão lida no cabeçalho do arquivo).
    Atualizar para 5.x é troca de arquivo + e2e, no item L2-01, quando houver mapa para testar.
 4. Orçamento: módulo próprio ≤ 60 kB; primeira pintura da tela medida no e2e e gravada em
    `tests/medidas/`. Quando um módulo passar do orçamento, divide-se; quando a soma dos módulos
@@ -701,7 +701,7 @@ resposta da interação, número de defeitos), nunca por preferência.
 1. Número em documento, README, MANUAL ou PARIDADE sai de `tests/medidas/*.json`, com o comando
    que o gerou. Número digitado à mão é erro de revisão.
 2. Português nos identificadores expostos (rotas, colunas, mensagens de erro, nomes de teste);
-   inglês só onde a biblioteca exige (`tenant_id` fica por herança do `fgr` e por ser o nome que
+   inglês só onde a biblioteca exige (`tenant_id` fica por herança do `SIG de teste interno` e por ser o nome que
    o mercado usa em RLS; `token`, `slug`, `hash` idem).
 3. Nenhum nome de cliente, parceiro ou piloto no código, dado de exemplo, teste ou captura
    (portão P7). O dado de demonstração é aberto e pequeno; o primeiro inquilino de teste chama-se

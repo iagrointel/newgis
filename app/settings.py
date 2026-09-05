@@ -89,7 +89,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
 
 
 def valores_do_ambiente() -> dict[str, str | None]:
-    """.env da raiz, com o ambiente do processo por cima (o ambiente vence, como no fgr/sig)."""
+    """.env da raiz, com o ambiente do processo por cima (o ambiente vence, como no SIG de teste interno)."""
     valores: dict[str, str | None] = dict(dotenv_values(ROOT / ".env"))
     for chave in Settings.__dataclass_fields__:
         if chave in os.environ:

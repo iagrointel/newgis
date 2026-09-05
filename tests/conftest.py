@@ -78,6 +78,8 @@ def medida():
         caminho = MEDIDAS / f"{item}.json"
 
         def gravar(nome: str, valor, unidade: str, comando: str) -> None:
+            if os.environ.get("PLAT_GRAVAR_MEDIDAS") != "1":
+                return  # a suite nao pode sujar a arvore; o testador grava com PLAT_GRAVAR_MEDIDAS=1
             MEDIDAS.mkdir(parents=True, exist_ok=True)
             dados = {"item": item, "medidas": {}}
             if caminho.exists():

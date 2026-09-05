@@ -1,5 +1,5 @@
 -- 002_identidade: tenant, usuario, sessao, token_servico, log_acesso; RLS por inquilino; funções auth_*
--- SECURITY DEFINER (ADR 0001 seção 6; corpos seguem fgr/sig/db/schema_v3.sql, adaptados a token_hash e a
+-- SECURITY DEFINER (ADR 0001 seção 6; corpos seguem esquema do SIG de teste interno, adaptados a token_hash e a
 -- tenant_id em sessao). Semeia os inquilinos demo e demo2; os administradores nascem no install.sh
 -- (senha nunca em SQL do repositório). Idempotente. Sem BEGIN/COMMIT.
 
