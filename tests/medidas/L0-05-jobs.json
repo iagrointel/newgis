@@ -2,31 +2,131 @@
  "item": "L0-05-jobs",
  "medidas": {
   "cancelamento_s": {
-   "valor": 0.428,
+   "valor": 0.426,
    "unidade": "s",
    "comando": "POST /api/jobs/{id}/cancelar em prova.progresso rodando até estado=cancelado (tests/api/jobs/test_jobs_cancelamento.py)"
   },
   "jobs_vazios_por_min": {
-   "valor": 3180.8,
+   "valor": 2135.9,
    "unidade": "jobs/min",
    "comando": "100 prova.progresso(duracao_s=0) criados pela API e concluídos por 2 workers (plat-worker 1 processo + worker extra 2 processos); tests/api/jobs/test_jobs_fila.py"
   },
   "rss_worker_kb": {
-   "valor": 40768,
+   "valor": 40556,
    "unidade": "kB",
    "comando": "VmRSS do processo pai do worker lido em GET :8153/saude depois do job de memória (tests/api/jobs/test_jobs_memoria.py); MemoryPeak da unidade é do testador"
   },
   "latencia_progresso_s": {
-   "valor": 1.005,
+   "valor": 0.065,
    "unidade": "s",
    "comando": "menor diferença entre o heartbeat_em gravado pelo filho e a chegada do evento estado no cliente SSE (TestClient; granularidade de 1 s do carimbo)"
   },
   "sse_primeiro_evento_publico_s": {
-   "valor": 0.025,
+   "valor": 0.022,
    "unidade": "s",
    "comando": "GET https://plat.iagrointel.com/api/jobs/{id}/eventos até o primeiro evento estado (nginx + uvicorn)"
+  },
+  "cancelamento_forcado_s": {
+   "valor": 40.5,
+   "unidade": "s",
+   "comando": "prova.ignora_cancelamento: pedido até SIGTERM (30 s) + SIGKILL (10 s) e estado cancelado"
+  },
+  "tempo_job_5min_s": {
+   "valor": 300.4,
+   "unidade": "s",
+   "comando": "prova.progresso(300 s, 60 passos) da criação ao evento fim pelo SSE"
+  },
+  "heartbeat_intervalo_max_s": {
+   "valor": 5.0,
+   "unidade": "s",
+   "comando": "maior intervalo entre heartbeat_em consecutivos vistos nos eventos estado do job de 5 min"
+  },
+  "eventos_estado_job_5min": {
+   "valor": 62,
+   "unidade": "eventos",
+   "comando": "eventos estado recebidos pelo SSE no job de 5 min"
+  },
+  "reinicio_retomada_s": {
+   "valor": 1.0,
+   "unidade": "s",
+   "comando": "systemctl restart plat-worker no meio de prova.progresso até o job voltar a pendente/rodando com reinicios=1 (tests/api/jobs/test_jobs_reinicio.py)"
+  },
+  "pagina_tarefas_pronta_ms": {
+   "valor": 142.9,
+   "unidade": "ms",
+   "comando": "goto('/tarefas') até body[data-pronto=1] (chromium)"
+  },
+  "linha_nova_aparece_s": {
+   "valor": 10.3,
+   "unidade": "s",
+   "comando": "POST /api/jobs pela API até tr[data-id] na tela sem recarregar"
+  },
+  "progresso_valores_distintos": {
+   "valor": 2,
+   "unidade": "valores",
+   "comando": "leituras distintas de .c-progresso .valor na linha durante o job de 60 s"
+  },
+  "cancelamento_tela_s": {
+   "valor": 0.24,
+   "unidade": "s",
+   "comando": "clique em cancelar + confirmação até tr[data-estado=cancelado] (job pendente ou rodando)"
+  },
+  "sse_publico_primeiro_evento_s": {
+   "valor": 0.006,
+   "unidade": "s",
+   "comando": "sse_latencia.py: GET https://plat.iagrointel.com/api/jobs/{id}/eventos (httpx, nginx+uvicorn) até o 1º evento estado; job prova.progresso(300 s, 60 passos) 88b084f1, 17:29:01-17:34:01Z"
+  },
+  "sse_publico_latencia_heartbeat_mediana_s": {
+   "valor": 0.005,
+   "unidade": "s",
+   "comando": "sse_latencia.py: mediana de (chegada do evento estado no cliente - heartbeat_em gravado pelo filho, carimbo do banco em ms) nos 62 eventos do job de 5 min pela URL pública; mínimo 0,004 s"
+  },
+  "sse_publico_intervalo_medio_eventos_s": {
+   "valor": 4.922,
+   "unidade": "s",
+   "comando": "sse_latencia.py: intervalo médio entre eventos estado consecutivos no job de 5 min (= passo do job, 300/60 = 5 s); máximo 5,024 s; 61 valores distintos de progresso, crescentes; fim concluido com marcador"
+  },
+  "jobs_vazios_por_min_1_worker": {
+   "valor": 1613.7,
+   "unidade": "jobs/min",
+   "comando": "vazao_1worker.py 100: 100 prova.progresso(duracao_s=0) pela URL pública, só a unidade plat-worker com PLAT_WORKER_PROCESSOS=1 (configuração padrão); criação 0,91 s, tudo concluído em 3,7 s"
+  },
+  "memoria_cgroup_worker_peak_mb": {
+   "valor": 27.3,
+   "unidade": "MB",
+   "comando": "systemctl show plat-worker -p MemoryPeak (17:35Z, instância desde 17:24:35 que rodou o job de memória e o restante da suíte); instância anterior 26,1 MB (journal Consumed); amostra_mem.sh 16:04-17:05: memory.current máx 25,3 MB; limite MemoryMax=2G, MemoryHigh=1536M"
+  },
+  "rls_rotas_jobs_agendas_conferidas": {
+   "valor": 15,
+   "unidade": "rotas",
+   "comando": "cruzado_jobs.py: toda rota /api/jobs* e /api/agendas* do OpenAPI público chamada com sessão de demo2 sobre recurso de demo: 15 rotas, 0 falhas (404 nas rotas com id; listas/resumo sem o recurso de A); 17 de 17 chamadas sem sessão = 401"
+  },
+  "primeira_pintura_tarefas_ms": {
+   "valor": 48,
+   "unidade": "ms",
+   "comando": "mil_jobs.py: 1.000 prova.progresso(0 s) criados pela API pública (cota de 200 pendentes respeitada: 20 respostas 429 fila_cheia) e concluídos pelo worker em 39 s; first-contentful-paint de /tarefas com período tudo (2.214 jobs no inquilino, 50 na página), chromium 1280x800; substitui o test_primeira_pintura_com_mil_jobs, cuja semeadura por SQL a migração 006 barra"
+  },
+  "pagina_tarefas_mil_pronta_ms": {
+   "valor": 182.9,
+   "unidade": "ms",
+   "comando": "mil_jobs.py: goto(/tarefas) até body[data-pronto=1] com 2.214 jobs no inquilino"
+  },
+  "reinicio_com_tela_aberta_s": {
+   "valor": 1.36,
+   "unidade": "s",
+   "comando": "e2e_extra.py reinicio: sudo systemctl restart plat-worker no meio de prova.progresso(300 s) com /tarefas aberta; a linha passou a pendente em 1,25 s e a rodando em 1,36 s sem recarregar; API reinicios=1 tentativa=1; nunca concluído na tela; 0 erro de console"
+  },
+  "polling_de_reserva_progressos_vistos": {
+   "valor": 3,
+   "unidade": "valores",
+   "comando": "e2e_extra.py polling: rota /api/jobs/*/eventos abortada no navegador (page.route); detalhe mostrou 'atualização a cada 3 s' e a linha mostrou 20 %, 23 %, 30 % pela reserva por polling; 0 erro de console fora do abort da própria rota"
+  },
+  "worker_homonimo_012_devolucoes": {
+   "valor": 0,
+   "unidade": "devoluções",
+   "comando": "prova_012.py 17:58:07-17:59:56Z: worker manual fora do systemd com PLAT_WORKER_NOME = hostname (mesmo nome-base da unidade) durante job de 240 s na unidade: reinicios ficou 0 e o progresso subiu de 3 para 20 em 35 s; kill -9 no manual com job de 240 s rodando: ceifado pela unidade 68,4 s depois (heartbeat vencido, limite 60 s), nunca antes de 55 s; estado pendente, erro 'worker sem sinal'"
   }
  },
- "gerado_em": "2026-09-05T15:21:43Z",
- "git_sha": "1668d7659f03"
+ "gerado_em": "2026-09-05T18:03:40Z",
+ "git_sha": "05a41cd29d5e"
 }
