@@ -1,4 +1,4 @@
--- 016_catalogo_apagar_usuario (achado do teste de transferência do L0-03-j): depois de transferir TODOS os itens
+-- 016_catalogo_apagar_usuario (achado do teste de transferência do L0-03-j): depois de transferir todos os itens
 -- de um usuário, apagá-lo ainda falhava com 409 em_uso (item_criado_por_fkey). criado_por, modificado_por e
 -- apagado_por são rastro histórico, não posse: passam a ON DELETE SET NULL. dono_id continua NOT NULL e continua
 -- barrando a exclusão — é para isso que existe a transferência. O mesmo vale para quem criou um link.
