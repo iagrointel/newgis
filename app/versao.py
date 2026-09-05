@@ -41,16 +41,28 @@ def _sha_do_git() -> str | None:
     return None
 
 
+def _sha_configurado() -> str | None:
+    """PLAT_GIT_SHA do ambiente do processo ou do .env (que o install.sh grava a cada execução)."""
+    valor = os.environ.get("PLAT_GIT_SHA", "")
+    if not valor.strip():
+        from app import settings as configuracao  # importação tardia: evita ciclo e dispensa .env nos testes de unidade
+
+        try:
+            valor = configuracao.obter().PLAT_GIT_SHA or ""
+        except configuracao.ErroConfiguracao:
+            valor = ""
+    valor = valor.strip().lower()
+    return valor if _HEX.match(valor) else None
+
+
 @lru_cache(maxsize=1)
 def git_sha() -> str:
-    """Sha completo do commit atual; fora de um clone, lê PLAT_GIT_SHA do ambiente (.env)."""
-    sha = _sha_do_git()
-    if sha:
-        return sha
-    alternativa = os.environ.get("PLAT_GIT_SHA", "").strip().lower()
-    if _HEX.match(alternativa):
-        return alternativa
-    raise RuntimeError("git_sha indisponível: sem .git legível e sem PLAT_GIT_SHA no ambiente")
+    """Sha completo do commit atual; fora de um clone (instalação por tarball), PLAT_GIT_SHA do .env ou do ambiente."""
+    return _sha_do_git() or _sha_configurado() or _sem_sha()
+
+
+def _sem_sha() -> str:
+    raise RuntimeError("git_sha indisponível: sem .git legível e sem PLAT_GIT_SHA no .env ou no ambiente")
 
 
 def git_sha_curto(tamanho: int = 12) -> str:

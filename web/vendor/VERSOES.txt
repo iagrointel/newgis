@@ -1,3 +1,6 @@
-# nome · versão · sha256 · licença · origem (ADR 0001 seção 11.2 regra 3). Uma cópia por versão.
-maplibre-gl.js   4.7.1  be9633c4d870e26fb37f1cfe5c5a77181667114003ea16207ac7850d8da8add1  BSD-3-Clause  https://github.com/maplibre/maplibre-gl-js/releases/tag/v4.7.1 (cópia do arquivo em uso em SIG de teste interno)
-maplibre-gl.css  4.7.1  576b085fdd9487a65a19215328c1e086c07ce5bf6da09b666b3806d3d008dae9  BSD-3-Clause  https://github.com/maplibre/maplibre-gl-js/releases/tag/v4.7.1 (cópia do arquivo em uso em SIG de teste interno)
+# nome · versão · sha256 · licença · origem (ADR 0001 seção 11.2 regra 3). Uma cópia por versão, versão no nome do arquivo.
+# Conferir: cd web/vendor && grep -v '^#' VERSOES.txt | awk '{print $3"  "$1}' | sha256sum -c
+maplibre-gl-4.7.1.js   4.7.1  be9633c4d870e26fb37f1cfe5c5a77181667114003ea16207ac7850d8da8add1  BSD-3-Clause  https://github.com/maplibre/maplibre-gl-js/releases/tag/v4.7.1 (cópia do arquivo em uso em SIG de teste interno)
+maplibre-gl-4.7.1.css  4.7.1  576b085fdd9487a65a19215328c1e086c07ce5bf6da09b666b3806d3d008dae9  BSD-3-Clause  https://github.com/maplibre/maplibre-gl-js/releases/tag/v4.7.1 (cópia do arquivo em uso em SIG de teste interno)
+swagger-ui-bundle-5.32.15.js  5.32.15  a7e344f2770b2f07527ce828e0951626983b8f2dcdb7a826689c0232023f995b  Apache-2.0  https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.32.15.tgz (npm pack swagger-ui-dist@5.32.15, 05/09/2026; arquivo package/swagger-ui-bundle.js)
+swagger-ui-5.32.15.css  5.32.15  d7f39f764aa18c7b47dd05b9af5613e373e4ac0f3557c2693d52d0abc2464d76  Apache-2.0  https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.32.15.tgz (npm pack swagger-ui-dist@5.32.15, 05/09/2026; arquivo package/swagger-ui.css)

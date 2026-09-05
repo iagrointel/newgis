@@ -24,8 +24,9 @@ systemd `plat-*`; URL interna `https://plat.iagrointel.com` com `noindex`. Máqu
   MANUAL.md              uma seção por tela, captura real
   CHANGELOG.md           por turno
   install.sh             instalação idempotente (root); seção 4
-  Makefile               alvos: check, check-rapido, migrar, lint, e2e, medidas, openapi
+  Makefile               alvos: check, check-rapido, migrar, lint, e2e, medidas, openapi, vendor (alterado em T1: `vendor` confere sha256 de web/vendor; `medidas` implementado)
   pyproject.toml         configuração de ruff e pytest (marcadores, testpaths)
+  requirements.txt       toda dependência da aplicação e da suíte fixada com == (seção 2.1, alterada em T1)
   .env.exemplo           todas as chaves de configuração, sem segredo (seção 8)
   .env                   segredo real, modo 600, fora do git
   app/                   API FastAPI (pacote Python `app`)
@@ -102,6 +103,22 @@ A venv foi criada com `--system-site-packages`; isso é aceito para não duplica
 psycopg2 (já no sistema, disco a 98 %). Consequência escrita: `pip list` da venv mostra o que é do
 sistema; `requirements.txt` fixa só o que instalamos por cima (pytest, pytest-playwright, ruff,
 python-dotenv e o que vier). O item L7-03 põe o varredor de CVE no `make check`.
+
+**Alterado em T1: motivo** — o adversário mostrou (`refutacao.json`, ataque 6b) que `fastapi`,
+`starlette`, `pydantic` e `python-dotenv` vinham de `/home/dev/.local` (pip `--user` de quem
+instalou), não do sistema nem do `requirements.txt`; com `PYTHONNOUSERSITE=1` a aplicação não
+importava. A regra passa a ser:
+
+1. "Do sistema" só significa **pacote dpkg**: `python3-uvicorn` (0.27.1) e `python3-psycopg2`
+   (2.9.9), conferidos por nome no passo f do `install.sh` (`dpkg -s`), que aborta nomeando o pacote
+   que falta. Tudo o mais que `app/` ou `tests/` importa está fixado com `==` em `requirements.txt`
+   (fastapi 0.138.0, starlette 1.3.1, pydantic 2.13.4, python-dotenv 1.2.2, httpx 0.28.1 e as
+   transitivas). O teste `tests/unit/test_dependencias.py` reprova linha sem `==`.
+2. **`PYTHONNOUSERSITE=1` em todo Python da aplicação**: `Environment=` na unidade systemd,
+   `export` no `Makefile` (a suíte prova o mesmo ambiente do serviço) e `env` explícito em cada
+   `sudo -u` do `install.sh` (o `sudo` zera o ambiente). O site do usuário nunca entra no caminho.
+3. Prova executável, além do teste: o passo f do `install.sh` faz `python -c "import app.main"`
+   com `PYTHONNOUSERSITE=1` e exige que `fastapi.__file__` esteja dentro de `venv/`.
 
 ---
 
@@ -190,7 +207,8 @@ CREATE OR REPLACE FUNCTION plat.usuario_atual() RETURNS int LANGUAGE sql STABLE 
   sem `WITH CHECK` o `USING` vale para escrita também, mas explícito evita que alguém "corrija"
   para `FOR SELECT` e abra a escrita.
 - Sem contexto (`plat.tenant_atual()` = NULL) a política devolve NULL = falso: nenhuma linha.
-  Isso é o comportamento desejado e é testado (`test_rls_sem_contexto_ve_zero`).
+  Isso é o comportamento desejado e é testado (`tests/api/test_rls.py`; alterado em T1: o nome
+  citado aqui era anterior ao arquivo, vale o nome que está no teste).
 - Autenticação roda ANTES de existir inquilino na sessão, por funções `SECURITY DEFINER` com
   `SET search_path = plat, public` (padrão do `SIG de teste interno`, funções `auth_*`). São as únicas funções
   que enxergam além do inquilino, e cada uma devolve só o necessário.
@@ -290,9 +308,19 @@ server {
 
 Armadilha documentada do nginx (doc oficial de `add_header`): um `add_header` dentro de
 `location` cancela todos os `add_header` herdados do `server`. Por isso `X-Robots-Tag` é repetido
-em cada `location`, como o `fgrsig` faz. O teste `tests/api/test_cabecalhos.py` confere
+em cada `location`, como o `SIG de teste interno` faz. O teste `tests/api/test_cabecalhos.py` confere
 `X-Robots-Tag: noindex, nofollow` em `/`, `/saude`, `/api/versao` e `/static/app.js`, e
 `Cache-Control: no-store` em `/static/app.js`.
+
+**Alterado em T1: HSTS.** O adversário apontou a ausência de `Strict-Transport-Security`. O modelo
+`deploy/nginx.conf` traz `add_header Strict-Transport-Security "max-age=31536000" always;` no
+`server` e em cada `location` (mesma armadilha do `add_header`). O cabeçalho só vale no bloco 443:
+quando ainda não há certificado, o `install.sh` escreve o bloco em `:80` **removendo** essas linhas
+(`grep -v`), chama o certbot e reescreve o bloco de novo com o certificado (passo i3). A conferência
+pública do passo j exige `max-age=31536000` em `/saude`; `test_cabecalhos.py` confere o cabeçalho em
+toda rota HTTPS e a ausência dele na resposta 301 do bloco `:80`. Sem `includeSubDomains` e sem
+`preload`: o domínio é interno e outros subdomínios da casa não são deste produto. Também em T1: o
+`install.sh` guarda o bloco anterior e o restaura se `nginx -t` reprovar (risco 2 da refutação).
 
 ### 4.3 Por que nginx `alias` e não `StaticFiles`
 
@@ -522,13 +550,23 @@ precisar de coluna nova, é `003_*.sql`, nunca edição da 002.
 - `git_sha`: lido uma vez na partida, de `.git/HEAD` e do arquivo de ref apontado (sem
   subprocesso); se o repositório não tiver `.git` (instalação por tarball), lê `PLAT_GIT_SHA` do
   `.env`, que o `install.sh` grava. Nunca "desconhecido" em produção: o teste `test_versao` exige
-  7 a 40 caracteres hexadecimais.
+  7 a 40 caracteres hexadecimais. **Alterado em T1:** o `install.sh` deixava `PLAT_GIT_SHA=` vazio;
+  agora grava `git rev-parse HEAD` no `.env` a cada execução (passo d) e, sem `.git`, aborta se o
+  `.env` não trouxer um sha válido. `app/versao.py` lê o ambiente do processo e, se vazio, o
+  `PLAT_GIT_SHA` do `.env` via `settings` (importação tardia). Três testes de unidade cobrem os
+  três caminhos (ambiente, `.env`, nenhum).
 
 `GET /api/versao` (sem banco, sempre 200): `{"versao","git_sha","ambiente","em"}`. Serve para o
 front mostrar a versão e para o e2e confirmar que a página e a API são a mesma implantação.
 
 `GET /api/openapi.json` e `GET /api/docs`: expostos como no `SIG de teste interno` (`docs_url='/api/docs'`),
-atrás do `noindex` do nginx.
+atrás do `noindex` do nginx. **Alterado em T1:** o `docs_url` padrão do FastAPI carrega o Swagger UI
+de CDN e o favicon de `fastapi.tiangolo.com`, o que contradiz a seção 11.4. A rota `/api/docs` é
+própria (`get_swagger_ui_html`) com `swagger-ui-bundle-5.32.15.js`, `swagger-ui-5.32.15.css` e
+`favicon.svg` servidos de `web/` pelo nginx (sha256 em `web/vendor/VERSOES.txt`, licença
+Apache-2.0, origem `npm pack swagger-ui-dist@5.32.15`), `validatorUrl` nulo (sem consulta a
+`validator.swagger.io`) e `redoc_url=None` (o ReDoc padrão também vinha de CDN). O teste
+`tests/api/test_docs.py` reprova qualquer `http://` ou `https://` no HTML.
 
 ---
 
@@ -554,6 +592,14 @@ valores de exemplo; `.gitignore` já tem `.env*`, e o backend acrescenta `!.env.
 
 Regra: segredo nunca em argumento de linha de comando nem em unidade systemd (aparece em `ps` e
 em `systemctl show`); só no `.env` 600. Porta e caminho não são segredo e ficam na unidade.
+**Alterado em T1: motivo** — o passo g do `install.sh` quebrava esta regra: a senha de
+demonstração ia em `argv` de `sudo -u ... python -c`, e o `sudo` grava `COMMAND=` inteiro no
+journal (18 linhas em claro achadas pelo adversário). Agora a senha entra por `stdin`
+(`printf '%s' "$senha" | python -c "... gerar_hash(sys.stdin.read())"`; `printf` é builtin e não
+aparece em `ps`), o hash resultante vai ao `psql` por heredoc, e `tests/unit/test_instalador.py`
+reprova qualquer `gerar_hash(sys.argv`. As senhas semeadas antes da correção foram trocadas
+(`tests/credenciais.txt` regenerado) porque o journal antigo continua legível por root e pelos
+grupos `systemd-journal`/`adm`.
 
 ---
 
@@ -571,6 +617,12 @@ em `systemctl show`); só no `.env` 600. Porta e caminho não são segredo e fic
   30 min). Custo de um INSERT local por requisição: o testador mede em `tests/medidas/L0-01-repo.json`
   (`latencia_saude_ms` sem log e `latencia_versao_ms` sem log servem de base; a rota com log entra
   no L0-02).
+  **Decisão explícita (alterado em T1):** neste item o middleware escreve **só** a linha JSON no
+  journal; a gravação em `plat.log_acesso` fica para o item **L0-02**, porque hoje não existe rota
+  autenticada e a linha só faz sentido com `tenant_id`/`usuario_id`/`token_id` resolvidos pela
+  sessão ou pelo token, que o L0-02 cria. Não é omissão: `app/main.py` não chama
+  `plat.log_registrar` de propósito, e o L0-02 tem de entregar a chamada junto com o teste
+  "token de serviço aparece no log com IP/rota/bytes" do seu portão.
 - Nível `DEBUG` nunca em `producao` (o `settings.py` rebaixa para `INFO` e avisa).
 
 ---
@@ -606,23 +658,31 @@ select = ["E", "F", "W", "B", "I"]
   nome fixo por tela para o MANUAL apontar; `.gitignore` já exclui os PNG.
 - Medidas: fixture `medida(nome, valor, unidade)` em `conftest.py` escreve/atualiza
   `tests/medidas/<item>.json` como `{"item","gerado_em","git_sha","medidas":{nome:{valor,unidade,comando}}}`.
-  Documento cita número só por esse caminho (guardrail do estado).
+  Documento cita número só por esse caminho (guardrail do estado). **Alterado em T1:** a fixture só
+  grava com `PLAT_GRAVAR_MEDIDAS=1` (a suíte não pode sujar a árvore); o alvo `make medidas` roda a
+  suíte inteira com essa variável e é o único caminho que o testador usa para regravar o arquivo.
 - `Makefile`:
 
 ```make
 VENV=venv/bin
+export PYTHONNOUSERSITE=1                   # alterado em T1: a suíte roda no mesmo ambiente do serviço
 check: lint sem-marcador teste e2e          ## suíte inteira (portão P3)
 check-rapido: lint sem-marcador teste       ## o que o driver roda
 lint: ; $(VENV)/ruff check app tests
 teste: ; $(VENV)/pytest -m "not lento"
 e2e: ; $(VENV)/pytest -m lento --base-url $(shell grep ^PLAT_URL_PUBLICA .env | cut -d= -f2)
-sem-marcador: ; ! grep -rnI --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=tests --exclude-dir=.git --exclude-dir=venv -E -f tests/marcadores.regex app web db docs deploy install.sh Makefile
+medidas: ; PLAT_GRAVAR_MEDIDAS=1 $(VENV)/pytest --base-url ...   # alterado em T1: implementado
+vendor: ; cd web/vendor && ... | sha256sum -c                     # alterado em T1: confere VERSOES.txt
+sem-marcador: ; ! grep -rnI --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=tests --exclude-dir=.git --exclude-dir=venv -E -f tests/marcadores.regex app web db docs deploy install.sh Makefile requirements.txt pyproject.toml *.md
 migrar: ; sudo bash db/migrar.sh
 openapi: ; $(VENV)/python -c "import json; from app.main import app; json.dump(app.openapi(), open('docs/openapi.json','w'), ensure_ascii=False, indent=1)"
 ```
 
   O alvo `sem-marcador` usa a mesma expressão do `laco/driver.sh` (LIDA), copiada para
-  `tests/marcadores.regex` (uma linha). Motivo de o padrão viver em `tests/`: o driver e o alvo
+  `tests/marcadores.regex` (uma linha). **Alterado em T1:** a varredura passou a incluir os `.md`
+  da raiz (README, ARQUITETURA, MANUAL, CHANGELOG), `requirements.txt` e `pyproject.toml`; `docs/`
+  já era varrido. Motivo: o adversário achou os quatro `.md` como cascas fora da varredura.
+  Motivo de o padrão viver em `tests/`: o driver e o alvo
   excluem `tests/` da varredura, então o arquivo com as palavras proibidas não se autoacusa; se a
   expressão ficasse dentro do `Makefile` ou deste ADR, a varredura reprovaria o próprio
   repositório (conferido: o grep do driver rodado sobre a primeira versão deste ADR acusou a
@@ -670,6 +730,11 @@ mantêm a porta aberta para bundler e para construtores grandes:
    admitidas: BSD, MIT, Apache 2.0, ISC. Primeira entrada: `maplibre-gl 4.7.1`, BSD-3, cópia do
    arquivo que roda em `SIG de teste interno` (803.086 bytes; versão lida no cabeçalho do arquivo).
    Atualizar para 5.x é troca de arquivo + e2e, no item L2-01, quando houver mapa para testar.
+   **Alterado em T1:** os arquivos passaram a seguir a convenção (`maplibre-gl-4.7.1.js`,
+   `maplibre-gl-4.7.1.css`) e entraram `swagger-ui-bundle-5.32.15.js` e `swagger-ui-5.32.15.css`
+   (Apache-2.0, seção 7). `tests/unit/test_vendor.py` reprova nome fora de `<nome>-<versão>.js|css`,
+   arquivo sem linha em `VERSOES.txt`, sha256 divergente e licença fora da lista; `make vendor` faz
+   a mesma conferência por `sha256sum -c`.
 4. Orçamento: módulo próprio ≤ 60 kB; primeira pintura da tela medida no e2e e gravada em
    `tests/medidas/`. Quando um módulo passar do orçamento, divide-se; quando a soma dos módulos
    de uma tela passar de 400 kB, o item que causou isso reavalia esta seção em ADR novo.

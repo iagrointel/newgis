@@ -8,6 +8,8 @@ Type=simple
 User=APP_USER
 Group=APP_USER
 WorkingDirectory=APP_DIR
+# nunca ~/.local de ninguém: só a venv e os pacotes dpkg (ADR 0001 seção 2.1, alterado em T1)
+Environment=PYTHONNOUSERSITE=1
 ExecStart=APP_DIR/venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port PORTA --workers 2 --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-access-log
 Restart=on-failure
 RestartSec=3
