@@ -1,7 +1,7 @@
 /* <plat-dialogo [modo="lateral"]> — sobre <dialog> nativo (foco preso, Escape, backdrop). abrir({titulo, corpo, botoes}) -> Promise<id|null>.
    corpo: Node. botoes: [{id, rotulo, classe}]. fechar(resultado). Devolve o foco a quem abriu. confirmar() é o atalho de sim/não. */
 import { h, limpar } from '../dom.js';
-import { t } from '../i18n.js';
+import { aoTraduzir, t } from '../i18n.js';
 
 let seq = 0;
 export class PlatDialogo extends HTMLElement {
@@ -20,7 +20,9 @@ export class PlatDialogo extends HTMLElement {
     this._dlg.addEventListener('cancel', (e) => { e.preventDefault(); this.fechar(null); });
     this._dlg.addEventListener('close', () => this._resolver?.(this._resultado ?? null));
     this.append(this._dlg);
+    this._cancelar = aoTraduzir(() => this._fechar.setAttribute('aria-label', t('dialogo.fechar')));
   }
+  disconnectedCallback() { this._cancelar?.(); }
   get corpo() { return this._corpo; }
   get aberto() { return !!this._dlg?.open; }
   abrir({ titulo, corpo, botoes = [] }) {

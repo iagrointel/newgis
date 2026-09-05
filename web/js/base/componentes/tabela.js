@@ -2,7 +2,7 @@
    linhas [], chave ('id'), selecionavel (bool), acoes (linha -> [{id, rotulo, classe, titulo}]) , vazio (texto).
    Eventos: 'acao' {id, linha}, 'selecao' {ids}. Getter selecionados; limparSelecao(). Sem HTML em string. */
 import { h, limpar } from '../dom.js';
-import { t } from '../i18n.js';
+import { aoTraduzir, t } from '../i18n.js';
 
 export class PlatTabela extends HTMLElement {
   constructor() {
@@ -20,7 +20,9 @@ export class PlatTabela extends HTMLElement {
     this._tabela.append(this._thead, this._tbody);
     this.append(this._tabela);
     this.render();
+    this._cancelar = aoTraduzir(() => this.render());
   }
+  disconnectedCallback() { this._cancelar?.(); }
   set colunas(v) { this._colunas = v || []; this.render(); }
   get colunas() { return this._colunas; }
   set linhas(v) { this._linhas = Array.isArray(v) ? v : []; this._sel.clear(); this.render(); this._emitirSelecao(); }

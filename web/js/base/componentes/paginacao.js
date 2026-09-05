@@ -1,6 +1,6 @@
 /* <plat-paginacao> — "1–50 de 123" + Anterior/Próxima; evento 'mudar' {deslocamento}. atualizar({total, limite, deslocamento}). */
 import { h } from '../dom.js';
-import { formatarNumero, t } from '../i18n.js';
+import { aoTraduzir, formatarNumero, t } from '../i18n.js';
 
 export class PlatPaginacao extends HTMLElement {
   connectedCallback() {
@@ -16,7 +16,14 @@ export class PlatPaginacao extends HTMLElement {
     this._prox.addEventListener('click', () => this._ir(this._desl + this._lim));
     this.append(this._texto, this._ant, this._prox);
     this.atualizar({ total: 0, limite: 50, deslocamento: 0 });
+    this._cancelar = aoTraduzir(() => {
+      this.setAttribute('aria-label', t('paginacao.rotulo'));
+      this._ant.textContent = t('paginacao.anterior');
+      this._prox.textContent = t('paginacao.proxima');
+      this.atualizar({ total: this._tot, limite: this._lim, deslocamento: this._desl });
+    });
   }
+  disconnectedCallback() { this._cancelar?.(); }
   _ir(d) {
     const novo = Math.max(0, d);
     this.dispatchEvent(new CustomEvent('mudar', { detail: { deslocamento: novo } }));

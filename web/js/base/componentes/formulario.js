@@ -4,12 +4,18 @@
    valores() / definir(obj) / erro(nome, texto) / limparErros() / ocupado / mensagem(texto, tipo). Rótulo ligado por for/id;
    erro por aria-describedby + aria-invalid; senha com botão mostrar/ocultar (aria-pressed). */
 import { h, limpar } from '../dom.js';
-import { t } from '../i18n.js';
+import { aoTraduzir, t } from '../i18n.js';
 
 let seq = 0;
 export class PlatFormulario extends HTMLElement {
   constructor() { super(); this._campos = []; this._botoes = []; this._els = {}; this._erros = {}; this._id = `f${++seq}`; }
-  connectedCallback() { if (this._montado) return; this._montado = true; this.render(); }
+  connectedCallback() {
+    if (this._montado) return;
+    this._montado = true;
+    this.render();
+    this._cancelar = aoTraduzir(() => { if (this._campos.length && !this._ocupado) this.render(); });
+  }
+  disconnectedCallback() { this._cancelar?.(); }
   set campos(v) { this._campos = v || []; this.render(); }
   get campos() { return this._campos; }
   set botoes(v) { this._botoes = v || []; this.render(); }

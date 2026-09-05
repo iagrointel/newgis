@@ -4,13 +4,28 @@
 
 let dicionario = {};
 let idioma = 'pt-BR';
+let carregado = false;
+export const EVENTO = 'plat:i18n';
 
 export async function carregar(id) {
   idioma = id || document.documentElement.lang || 'pt-BR';
   const resp = await fetch(`/static/js/i18n/${idioma}.json`, { cache: 'no-store', credentials: 'same-origin' });
   dicionario = resp.ok ? await resp.json() : {};
+  carregado = true;
   aplicar(document);
+  // componentes que traduziram antes do dicionário chegar (renderizam no connectedCallback) re-traduzem por este evento
+  document.dispatchEvent(new CustomEvent(EVENTO, { detail: { idioma } }));
   return dicionario;
+}
+
+export function pronto() { return carregado; }
+
+/* fn roda agora se o dicionário já chegou e de novo a cada carga (troca de idioma); devolve a função que cancela */
+export function aoTraduzir(fn) {
+  const h = () => fn();
+  document.addEventListener(EVENTO, h);
+  if (carregado) fn();
+  return () => document.removeEventListener(EVENTO, h);
 }
 
 export function t(chave, params = {}) {
