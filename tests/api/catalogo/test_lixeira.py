@@ -68,9 +68,10 @@ def test_protegido_admin_do_inquilino_nao_apaga_superadmin_apaga_com_evento(sess
         if e["tipo"] == "itens/apagar" and e["alvo_id"] == iid
     ]
     assert ev and ev[0]["propriedades"]["forcado"] is True and ev[0]["propriedades"]["protegido_em"] is True
-    # o ator é o superadmin, que pertence ao inquilino plataforma: dentro de demo não há linha em plat.usuario para
-    # ele, então o evento sai com ator nulo. O rastro de quem apagou está no log de acesso (L0-02), não aqui.
-    assert ev[0]["ator"] is None
+    # o ator é o superadmin, que pertence ao inquilino plataforma: o id fica gravado, mas o login não resolve dentro
+    # de demo (a junção com plat.usuario roda sob a RLS do inquilino). Quem apagou aparece por inteiro no log de
+    # acesso (L0-02), não neste evento.
+    assert ev[0]["ator"]["id"] == sessao_plat.get("/api/eu").json()["id"] and ev[0]["ator"]["login"] is None
     assert sessao_a.post(f"/api/lixeira/{iid}/restaurar").status_code == 200
     assert sessao_a.put(f"/api/itens/{iid}", json={"protegido": False}).status_code == 200
     # a variável plat.superadmin sozinha não basta (usuário comum forjando set_config)
@@ -144,11 +145,12 @@ def test_expurgo_com_relogio_simulado_apaga_tabela_fisica(sessao_a, itens_a, con
     assert sessao_a.delete(f"/api/itens/{it['id']}").status_code == 204
     # o relógio não se simula: o worker roda na unidade systemd, em PLAT_AMBIENTE=producao, e o parâmetro `agora` da
     # tarefa só é aceito em dev (ExpurgoParametros._so_em_dev). Envelhece-se o registro: apagado_em 31 dias atrás.
+    contexto(conexao_plat_app, ids["demo"], usuario_id=adm, login="admin")  # o commit acima zerou o contexto local
     with conexao_plat_app.cursor() as cur:
         cur.execute("SELECT set_config('plat.lixeira', 'on', true)")
-        cur.execute(
-            "UPDATE plat.item SET apagado_em = now() - interval '31 days' WHERE id = %s::uuid", (it["id"],)
-        )
+        cur.execute("UPDATE plat.item SET apagado_em = now() - interval '31 days' WHERE id = %s::uuid RETURNING id",
+                    (it["id"],))
+        assert cur.fetchall(), "o item apagado tem de estar visível para envelhecer (contexto + plat.lixeira)"
     conexao_plat_app.commit()
     t0 = time.perf_counter()
     r = sessao_a.post(

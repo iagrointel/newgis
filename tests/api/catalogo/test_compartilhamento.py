@@ -53,7 +53,7 @@ def test_niveis_e_grupo(sessao_a, itens_a, editor_a, editor2_a, visualizador_a, 
     # migração 003) → 403; o admin, com o inquilino sem compartilhar_publico ligado → 400 publico_desligado.
     it2 = itens_a.criar("mapa", sessao=dono_c)
     r = dono_c.put(f"/api/itens/{it2['id']}/compartilhamento", json={"acesso": "publico"})
-    assert r.status_code == 403 and r.json()["erro"] == "sem_privilegio", r.text
+    assert r.status_code == 403 and r.json()["erro"] == "sem_permissao", r.text
     it3 = itens_a.criar("mapa")
     r = sessao_a.put(f"/api/itens/{it3['id']}/compartilhamento", json={"acesso": "publico"})
     assert r.status_code == 400 and r.json()["erro"] == "publico_desligado", r.text

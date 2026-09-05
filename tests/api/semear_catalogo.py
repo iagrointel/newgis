@@ -57,10 +57,10 @@ def semear(con, slug: str, n: int) -> int:
                    t.dados::jsonb,
                    CASE WHEN g %% 4 = 0 THEN 'inquilino' ELSE 'privado' END
             FROM generate_series(1, %s) g
-            JOIN LATERAL (SELECT (ARRAY[%s])[1 + g %% 7] AS tipo) tp ON true
-            JOIN LATERAL (SELECT tp.tipo, (ARRAY[%s])[1 + g %% 7] AS dados) t ON true
-            JOIN LATERAL (SELECT (ARRAY[%s])[1 + g %% 7] AS t) tit ON true
-            JOIN LATERAL (SELECT (ARRAY[%s])[1 + g %% 5] AS s) suf ON true
+            JOIN LATERAL (SELECT (%s::text[])[1 + g %% 7] AS tipo) tp ON true
+            JOIN LATERAL (SELECT tp.tipo, (%s::text[])[1 + g %% 7] AS dados) t ON true
+            JOIN LATERAL (SELECT (%s::text[])[1 + g %% 7] AS t) tit ON true
+            JOIN LATERAL (SELECT (%s::text[])[1 + g %% 5] AS s) suf ON true
             """,
             (ids[slug], PREFIXO, adm, faltam, TIPOS, [DADOS[t] for t in TIPOS], TITULOS, SUFIXOS),
         )
