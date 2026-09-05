@@ -1,0 +1,161 @@
+{
+ "modelo": "inspire",
+ "fonte": "Diretiva INSPIRE 2007/2/CE, anexos I (9), II (4) e III (21) = 34 temas",
+ "url": "https://inspire.ec.europa.eu/Themes/Data-Specifications/2892",
+ "anexos": [
+  {
+   "codigo": "anexo_i",
+   "nome": "Anexo I",
+   "temas": [
+    [
+     "ad",
+     "Endereços"
+    ],
+    [
+     "au",
+     "Unidades administrativas"
+    ],
+    [
+     "cp",
+     "Parcelas cadastrais"
+    ],
+    [
+     "gn",
+     "Nomes geográficos"
+    ],
+    [
+     "hy",
+     "Hidrografia"
+    ],
+    [
+     "ps",
+     "Sítios protegidos"
+    ],
+    [
+     "rs",
+     "Sistemas de referência"
+    ],
+    [
+     "gg",
+     "Sistemas de quadrículas geográficas"
+    ],
+    [
+     "tn",
+     "Redes de transporte"
+    ]
+   ]
+  },
+  {
+   "codigo": "anexo_ii",
+   "nome": "Anexo II",
+   "temas": [
+    [
+     "el",
+     "Elevação"
+    ],
+    [
+     "ge",
+     "Geologia"
+    ],
+    [
+     "lc",
+     "Ocupação do solo"
+    ],
+    [
+     "oi",
+     "Ortoimagens"
+    ]
+   ]
+  },
+  {
+   "codigo": "anexo_iii",
+   "nome": "Anexo III",
+   "temas": [
+    [
+     "af",
+     "Instalações agrícolas e aquícolas"
+    ],
+    [
+     "am",
+     "Zonas de gestão, restrição ou regulamentação e unidades de referência"
+    ],
+    [
+     "ac",
+     "Condições atmosféricas"
+    ],
+    [
+     "br",
+     "Regiões biogeográficas"
+    ],
+    [
+     "bu",
+     "Edifícios"
+    ],
+    [
+     "er",
+     "Recursos energéticos"
+    ],
+    [
+     "ef",
+     "Instalações de monitorização do ambiente"
+    ],
+    [
+     "hb",
+     "Habitats e biótopos"
+    ],
+    [
+     "hh",
+     "Saúde humana e segurança"
+    ],
+    [
+     "lu",
+     "Uso do solo"
+    ],
+    [
+     "mf",
+     "Características meteorológicas"
+    ],
+    [
+     "mr",
+     "Recursos minerais"
+    ],
+    [
+     "nz",
+     "Zonas de risco natural"
+    ],
+    [
+     "of",
+     "Características oceanográficas"
+    ],
+    [
+     "pd",
+     "Distribuição da população"
+    ],
+    [
+     "pf",
+     "Instalações industriais"
+    ],
+    [
+     "sr",
+     "Regiões marinhas"
+    ],
+    [
+     "so",
+     "Solo"
+    ],
+    [
+     "sd",
+     "Distribuição das espécies"
+    ],
+    [
+     "su",
+     "Unidades estatísticas"
+    ],
+    [
+     "us",
+     "Serviços de utilidade pública e do Estado"
+    ]
+   ]
+  }
+ ]
+}

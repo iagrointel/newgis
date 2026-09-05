@@ -1,0 +1,29 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "Classificação por sigilo",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "sigilo"
+ ],
+ "properties": {
+  "sigilo": {
+   "type": "string",
+   "enum": [
+    "publico",
+    "interno",
+    "restrito",
+    "pessoal"
+   ]
+  },
+  "base_legal": {
+   "type": "string",
+   "maxLength": 500
+  },
+  "retencao_meses": {
+   "type": "integer",
+   "minimum": 0,
+   "maximum": 1200
+  }
+ }
+}

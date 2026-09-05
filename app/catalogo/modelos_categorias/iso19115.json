@@ -1,0 +1,83 @@
+{
+ "modelo": "iso19115",
+ "fonte": "ISO 19115-1 MD_TopicCategoryCode (19 categorias temáticas)",
+ "url": "https://standards.iso.org/iso/19115/resources/Codelists/cat/codelists.html",
+ "categorias": [
+  {
+   "codigo": "farming",
+   "nome": "Agricultura e pecuária"
+  },
+  {
+   "codigo": "biota",
+   "nome": "Biota"
+  },
+  {
+   "codigo": "boundaries",
+   "nome": "Limites"
+  },
+  {
+   "codigo": "climatologyMeteorologyAtmosphere",
+   "nome": "Climatologia, meteorologia e atmosfera"
+  },
+  {
+   "codigo": "economy",
+   "nome": "Economia"
+  },
+  {
+   "codigo": "elevation",
+   "nome": "Elevação"
+  },
+  {
+   "codigo": "environment",
+   "nome": "Meio ambiente"
+  },
+  {
+   "codigo": "geoscientificInformation",
+   "nome": "Informação geocientífica"
+  },
+  {
+   "codigo": "health",
+   "nome": "Saúde"
+  },
+  {
+   "codigo": "imageryBaseMapsEarthCover",
+   "nome": "Imagens, mapas base e cobertura da terra"
+  },
+  {
+   "codigo": "intelligenceMilitary",
+   "nome": "Inteligência e defesa"
+  },
+  {
+   "codigo": "inlandWaters",
+   "nome": "Águas interiores"
+  },
+  {
+   "codigo": "location",
+   "nome": "Localização"
+  },
+  {
+   "codigo": "oceans",
+   "nome": "Oceanos"
+  },
+  {
+   "codigo": "planningCadastre",
+   "nome": "Planejamento e cadastro"
+  },
+  {
+   "codigo": "society",
+   "nome": "Sociedade"
+  },
+  {
+   "codigo": "structure",
+   "nome": "Estruturas"
+  },
+  {
+   "codigo": "transportation",
+   "nome": "Transporte"
+  },
+  {
+   "codigo": "utilitiesCommunication",
+   "nome": "Utilidades e comunicação"
+  }
+ ]
+}
