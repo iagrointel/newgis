@@ -145,6 +145,15 @@ done < "$CRED"
 # partições do mês corrente e dos 3 seguintes para log_acesso e evento (ADR 0002 seções 9.2 e 9.4; o L0-05-d agenda)
 "${PSQL[@]}" -Atc "SELECT plat.log_particao_garantir((date_trunc('month', now()) + make_interval(months => m))::date), plat.evento_particao_garantir((date_trunc('month', now()) + make_interval(months => m))::date) FROM generate_series(0, 3) AS m" | tr '\n' ' '; echo
 echo "partições de log_acesso e evento garantidas"
+# o banco passa a saber em que ambiente está (plat.ambiente, migração 014). semear_demo liga plat.jobs_semear_demo
+# (semeadura de jobs terminais nos inquilinos de demonstração, usada pelo e2e dos 1.000 jobs): true só quando o .env
+# diz PLAT_AMBIENTE=dev ou PLAT_SEMENTE_DEMO=sim. Numa instalação de cliente as duas chaves faltam e fica false.
+AMB=$(grep -E '^PLAT_AMBIENTE=' .env | head -n1 | cut -d= -f2)
+SEM=$(grep -E '^PLAT_SEMENTE_DEMO=' .env | head -n1 | cut -d= -f2)
+if [ "${AMB:-producao}" = dev ] || [ "${SEM:-}" = sim ]; then SEMEAR=true; else SEMEAR=false; fi
+"${PSQL[@]}" -Atc "INSERT INTO plat.ambiente (unico, nome, semear_demo) VALUES (true, '${AMB:-producao}', $SEMEAR) ON CONFLICT (unico) DO UPDATE SET nome = EXCLUDED.nome, semear_demo = EXCLUDED.semear_demo, definido_em = now()" >/dev/null
+echo "plat.ambiente = ${AMB:-producao} (semear_demo = $SEMEAR)"
+
 # em dev (PLAT_AMBIENTE=dev no .env) a suíte pode ter deixado resíduo zt-* (rodada abortada): inquilinos zt-inq-*,
 # usuários/grupos/papéis/tokens zt-* dos inquilinos de demonstração somem aqui; em producao nada é tocado
 if grep -qE '^PLAT_AMBIENTE=dev$' .env; then

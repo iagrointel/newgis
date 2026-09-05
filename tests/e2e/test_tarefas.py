@@ -2,7 +2,8 @@
 
 Prova: (1) job disparado pela API aparece na lista SEM recarregar, o progresso sobe (dois valores distintos), termina
 concluído e o detalhe mostra resultado e log; (2) cancelar pela tela → cancelado; (3) filtro por estado bate com a
-API; (4) 1.000 jobs semeados por SQL (como plat_app, no inquilino demo) → primeira pintura ≤ 1 s; (5) agendas:
+API; (4) 1.000 jobs semeados pela função de demonstração plat.jobs_semear_demo (migração 014; INSERT direto
+de job já concluído é barrado pela 006 e continua barrado) → primeira pintura ≤ 1 s; (5) agendas:
 criar (cron inválida recusada campo a campo), pausar, retomar, apagar. Capturas em tests/e2e/capturas/L0-05-jobs_*.png;
 0 erro de console; nenhuma resposta ≥ 400 além das que o teste provoca. Medidas pela fixture `medida`
 (gravadas só com PLAT_GRAVAR_MEDIDAS=1). Sem /api/jobs no OpenAPI a suíte é pulada com a razão escrita."""
@@ -266,15 +267,19 @@ def test_primeira_pintura_com_mil_jobs(pagina, base_url, env, sessao, medida):
             cur.execute("SELECT to_regclass('plat.job') AS t")
             if cur.fetchone()["t"] is None:
                 pytest.skip("plat.job ainda não existe (migração 004 do backend não aplicada)")
+            cur.execute("SELECT plat.semente_demo_habilitada() AS ligada")
+            if not cur.fetchone()["ligada"]:
+                pytest.skip(
+                    "plat.ambiente.semear_demo = false: a semeadura de demonstração está desligada nesta "
+                    "instalação (ligar com PLAT_AMBIENTE=dev ou PLAT_SEMENTE_DEMO=sim no .env e rodar install.sh)"
+                )
+            # semeadura pela função SECURITY DEFINER de demonstração (migração 014): cria jobs TERMINAIS no
+            # inquilino de demonstração do contexto; INSERT direto por plat_app é barrado pela 006, e é para
+            # continuar barrado (o teste não afrouxa o produto para caber em si mesmo)
             cur.execute(
-                "INSERT INTO plat.job (tenant_id, usuario_id, tipo, parametros, estado, pesado, memoria_mb, timeout_s, "
-                "progresso, iniciado_em, terminado_em, criado_em, resultado) "
-                "SELECT %s, %s, 'prova.progresso', %s::jsonb, 'concluido', false, 256, 60, 100, "
-                "now() - interval '2 minutes', now() - interval '1 minute', now() - (g || ' seconds')::interval, "
-                "'{\"passos\": 1}'::jsonb FROM generate_series(1, 1000) g",
-                (tenant_id, usuario_id, '{"semente_e2e": 1, "duracao_s": 0, "passos": 1}'),
+                "SELECT plat.jobs_semear_demo(%s, %s, %s::jsonb) AS n",
+                (1000, "prova.progresso", '{"duracao_s": 0, "passos": 1}'),
             )
-            cur.execute("SELECT count(*) AS n FROM plat.job WHERE parametros->>'semente_e2e' = '1'")
             semeados = cur.fetchone()["n"]
         con.commit()
         assert semeados >= 1000, semeados
@@ -294,7 +299,8 @@ def test_primeira_pintura_com_mil_jobs(pagina, base_url, env, sessao, medida):
             conferir_limpo(page)
             gravar = medida(ITEM)
             gravar("primeira_pintura_tarefas_ms", round(pintura, 1), "ms",
-                   "first-contentful-paint de /tarefas com 1.000 jobs semeados por SQL no inquilino demo (chromium)")
+                   "first-contentful-paint de /tarefas com 1.000 jobs semeados por plat.jobs_semear_demo no inquilino "
+                   "de demonstração (chromium)")
             gravar("pagina_tarefas_mil_pronta_ms", pronto_ms, "ms",
                    "goto('/tarefas') até body[data-pronto=1] com 1.000 jobs semeados")
             assert pintura <= 1000, f"primeira pintura {pintura:.0f} ms > 1.000 ms (portão do item)"
@@ -306,7 +312,7 @@ def test_primeira_pintura_com_mil_jobs(pagina, base_url, env, sessao, medida):
                 "set_config('plat.login', %s, true)",
                     (str(tenant_id), str(usuario_id), "admin"),
                 )
-                cur.execute("DELETE FROM plat.job WHERE parametros->>'semente_e2e' = '1'")
+                cur.execute("DELETE FROM plat.job WHERE parametros->>'semente_demo' = 'true'")
             con.commit()
     finally:
         con.close()
