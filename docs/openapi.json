@@ -5960,7 +5960,7 @@
      },
      "senha": {
       "type": "string",
-      "maxLength": 129,
+      "maxLength": 4096,
       "minLength": 1,
       "title": "Senha"
      }
@@ -6393,7 +6393,7 @@
     "properties": {
      "senha": {
       "type": "string",
-      "maxLength": 129,
+      "maxLength": 4096,
       "title": "Senha"
      },
      "codigo": {
@@ -6414,12 +6414,12 @@
     "properties": {
      "atual": {
       "type": "string",
-      "maxLength": 129,
+      "maxLength": 4096,
       "title": "Atual"
      },
      "nova": {
       "type": "string",
-      "maxLength": 129,
+      "maxLength": 4096,
       "title": "Nova"
      }
     },
@@ -6435,7 +6435,7 @@
     "properties": {
      "senha": {
       "type": "string",
-      "maxLength": 129,
+      "maxLength": 4096,
       "title": "Senha"
      }
     },
