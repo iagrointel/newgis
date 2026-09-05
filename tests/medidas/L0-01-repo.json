@@ -1,27 +1,169 @@
 {
  "item": "L0-01-repo",
+ "assinado_por": "testador (turno T1, handoff 40_testes.md)",
+ "gerado_em": "2026-09-05T12:50:12Z",
+ "git_sha": "b22761e1c785",
+ "maquina": "12 vCPU, 23 GB RAM (3 GB disponíveis), disco / a 98 % (13 GB livres); PostgreSQL 16 + PostGIS 3.6 em iagro_sat; 12+ sessões concorrentes na máquina",
  "medidas": {
-  "latencia_saude_ms": {
-   "valor": 1.77,
+  "tempo_install_zero_s": {
+   "valor": 6.24,
+   "unidade": "s",
+   "comando": "sudo systemctl stop plat-api; DROP SCHEMA plat CASCADE; DROP OWNED BY plat_app; DROP ROLE plat_app; /usr/bin/time -f %e sudo bash install.sh plat.iagrointel.com 8150 (mantendo .env, pg_hba e credenciais); rc=0"
+  },
+  "tempo_install_nunca_viu_s": {
+   "valor": 9.14,
+   "unidade": "s",
+   "comando": "mesmo DROP + rm .env tests/credenciais.txt + sed -i da linha plat_app no pg_hba.conf; install.sh imprimiu '.env criado', 'linha acrescentada em pg_hba.conf', 'tests/credenciais.txt criado'; rc=0; senha antiga deixa de autenticar"
+  },
+  "tempo_install_repetido_s": {
+   "valor": 4.69,
+   "unidade": "s",
+   "comando": "segunda execução seguida: rc=0, 0 migrações novas (iguais 2), pg_hba com 1 linha plat_app (linha 35), NRestarts=0, 5 linhas do certbot preservadas"
+  },
+  "install_execucoes_rc0": {
+   "valor": 3,
+   "unidade": "execuções",
+   "comando": "3 execuções pelo testador (do zero, repetida, nunca-viu), todas rc=0 e passo j = HTTP 200 + X-Robots-Tag noindex"
+  },
+  "testes_coletados": {
+   "valor": 58,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest --collect-only -q: unit 17 (settings 10, versao 3, log 2, senha 2) · api 40 (cabecalhos 18, rls 7, banco 5, migracoes 5, saude 5) · e2e 1; 43 funções def test_ (parametrizadas)"
+  },
+  "testes_rapidos_passando": {
+   "valor": 57,
+   "unidade": "testes",
+   "comando": "make check → venv/bin/pytest -m 'not lento': 57 passed, 1 deselected, 1 warning (StarletteDeprecationWarning httpx)"
+  },
+  "testes_e2e_passando": {
+   "valor": 1,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest -m lento --base-url https://plat.iagrointel.com: 1 passed; captura tests/e2e/capturas/L0-01-repo_inicio.png conferida a olho (versão 0.1.0, git b22761e1c785, saúde ok)"
+  },
+  "make_check_rc": {
+   "valor": 0,
+   "unidade": "rc",
+   "comando": "make check rodado 3 vezes (antes do drop, após install do zero, após install nunca-viu): rc=0 nas três"
+  },
+  "make_check_tempo_s": {
+   "valor": 2.72,
+   "unidade": "s",
+   "comando": "/usr/bin/time -f %e make check (ruff + varredura de marcador + 57 rápidos + 1 e2e); as 3 rodadas: 2,72 · 2,69 · 2,68"
+  },
+  "placeholders_linhas": {
+   "valor": 0,
+   "unidade": "linhas",
+   "comando": "grep -rnI --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=tests --exclude-dir=.git --exclude-dir=venv -E 'TODO|FIXME|XXX|lorem ipsum|em breve|coming soon|placeholder|mock[A-Z_(]|not implemented|NotImplemented' app db web install.sh Makefile | grep -v laco/ | wc -l (mesma expressão do driver.sh); repositório inteiro também 0"
+  },
+  "saude_http_status": {
+   "valor": 200,
+   "unidade": "código HTTP",
+   "comando": "curl -sSI https://plat.iagrointel.com/saude (HEAD) e curl -sS (GET) → 200, JSON {versao 0.1.0, git_sha b22761e1c785 = git rev-parse HEAD, banco ok, migracoes_aplicadas 2, pendentes 0}"
+  },
+  "x_robots_tag_rotas_com_noindex": {
+   "valor": 11,
+   "unidade": "rotas de 11",
+   "comando": "curl -sI em / /saude /api/versao /static/app.js /static/vendor/maplibre-gl.js /static/style.css /static/js/core.js /api/docs /api/openapi.json /naoexiste(404) /static/naoexiste.js(404): todas com 'X-Robots-Tag: noindex, nofollow'; http:// → 301 para https"
+  },
+  "latencia_saude_publica_conexao_nova_mediana_ms": {
+   "valor": 19.9,
    "unidade": "ms",
-   "comando": "mediana de 20 GET /saude pelo TestClient (tests/api/test_saude.py)"
+   "comando": "20 × curl -s -o /dev/null -w %{time_total} https://plat.iagrointel.com/saude, conexão TLS nova a cada chamada, do próprio servidor; 20/20 = 200"
+  },
+  "latencia_saude_publica_conexao_nova_p95_ms": {
+   "valor": 22.4,
+   "unidade": "ms",
+   "comando": "idem, p95 (mín 19,3 · máx 23,9)"
+  },
+  "latencia_saude_publica_conexao_reaproveitada_mediana_ms": {
+   "valor": 1.7,
+   "unidade": "ms",
+   "comando": "20 URLs numa só invocação de curl (TLS reaproveitado) contra https://plat.iagrointel.com/saude"
+  },
+  "latencia_saude_publica_conexao_reaproveitada_p95_ms": {
+   "valor": 2.7,
+   "unidade": "ms",
+   "comando": "idem, p95 (mín 1,6 · máx 20,5 = a 1ª chamada com aperto de mão)"
+  },
+  "latencia_saude_local_8150_mediana_ms": {
+   "valor": 1.4,
+   "unidade": "ms",
+   "comando": "20 × curl http://127.0.0.1:8150/saude sem nginx/TLS; p95 1,9 ms"
+  },
+  "rss_servico_cgroup_mb": {
+   "valor": 90.0,
+   "unidade": "MB",
+   "comando": "systemctl show plat-api -p MemoryCurrent = 94.416.896 bytes (pico 94.937.088) com 2 workers uvicorn; NRestarts=0; TasksCurrent=8"
+  },
+  "rss_servico_soma_processos_mb": {
+   "valor": 147.5,
+   "unidade": "MB",
+   "comando": "soma de ps -o rss dos 4 processos do cgroup (mestre 25,7 MB + resource_tracker 13,0 + 2 workers 56,1/56,2) = 151.020 kB; páginas compartilhadas contadas mais de uma vez, por isso maior que o cgroup"
+  },
+  "rls_tabelas_com_tenant_id": {
+   "valor": 4,
+   "unidade": "tabelas",
+   "comando": "pg_class × pg_attribute tenant_id no schema plat: log_acesso, sessao, token_servico, usuario — todas relrowsecurity=t e 1 política; plat.tenant tem RLS por id (p_tenant); versao_migracao sem tenant_id e sem RLS (só leitura para plat_app, INSERT negado)"
+  },
+  "rls_linhas_sem_contexto": {
+   "valor": 0,
+   "unidade": "linhas",
+   "comando": "psql como plat_app (DSN do .env) sem set_config: count(*) em tenant, usuario, sessao, token_servico, log_acesso = 0 0 0 0 0; como postgres: tenant 2, usuario 2"
+  },
+  "rls_insert_cruzado_bloqueado": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "set_config('plat.tenant_id','1') + INSERT plat.usuario tenant_id=2 → ERROR new row violates row-level security policy (rc=3 com ON_ERROR_STOP); UPDATE/DELETE cruzados = 0 linhas; UPDATE mudando tenant_id do próprio registro para 2 → mesmo erro; INSERT próprio (tenant 1) passa; contexto demo vê só demo, demo2 só demo2"
+  },
+  "role_plat_app_bypassrls": {
+   "valor": 0,
+   "unidade": "booleano",
+   "comando": "pg_roles: rolsuper f, rolbypassrls f, rolcreatedb f, rolcreaterole f, rolcanlogin t; SET ROLE postgres negado; 0 objetos (pg_class, pg_proc, pg_namespace) de posse de plat_app no banco; schema, 6 tabelas, 4 sequências e 11 funções de posse de postgres; 0 privilégios de tabela fora de plat"
+  },
+  "pg_hba_linhas_plat_app": {
+   "valor": 1,
+   "unidade": "linhas",
+   "comando": "sudo grep -c plat_app /etc/postgresql/16/main/pg_hba.conf após 2 execuções seguidas e após o caminho nunca-viu (linha 35, 35 linhas no arquivo, antes e depois)"
+  },
+  "migracoes_aplicadas": {
+   "valor": 2,
+   "unidade": "migrações",
+   "comando": "plat.versao_migracao: 001_fundacao, 002_identidade; 2ª execução do install: aplicadas 0, iguais 2"
+  },
+  "journal_erros": {
+   "valor": 0,
+   "unidade": "linhas",
+   "comando": "journalctl -u plat-api | grep -ciE 'nivel.*(ERROR|WARNING)|Traceback|error' = 0"
+  },
+  "alias_estatico_travessia": {
+   "valor": 404,
+   "unidade": "código HTTP",
+   "comando": "curl --path-as-is https://plat.iagrointel.com/static/../.env → 404 (JSON do FastAPI, não o arquivo); /static/..%2F.env e %2e%2e também 404; /static/vendor/ → 403 (sem autoindex)"
+  },
+  "latencia_saude_ms": {
+   "valor": 1.7,
+   "unidade": "ms",
+   "comando": "mediana de 20 GET /saude pelo TestClient (tests/api/test_saude.py) — chave gravada pela fixture medida(), não pelo testador"
   },
   "latencia_versao_ms": {
-   "valor": 0.78,
+   "valor": 0.75,
    "unidade": "ms",
-   "comando": "mediana de 20 GET /api/versao pelo TestClient (tests/api/test_saude.py)"
+   "comando": "mediana de 20 GET /api/versao pelo TestClient (tests/api/test_saude.py) — chave gravada pela fixture medida()"
   },
   "pagina_pronta_ms": {
-   "valor": 49.9,
+   "valor": 53.5,
    "unidade": "ms",
-   "comando": "goto('/') até body[data-pronto=1] no chromium do playwright"
+   "comando": "goto('/') até body[data-pronto=1] no chromium do playwright — chave gravada pela fixture medida()"
   },
   "primeira_pintura_ms": {
-   "valor": 36,
+   "valor": 52,
    "unidade": "ms",
-   "comando": "performance.getEntriesByType('paint') first-contentful-paint no chromium do playwright"
+   "comando": "performance.getEntriesByType('paint') first-contentful-paint no chromium do playwright — chave gravada pela fixture medida()"
   }
  },
- "gerado_em": "2026-09-05T12:42:26Z",
- "git_sha": "904a849d81a0"
+ "nao_passa": [
+  "ARQUITETURA.md (3 linhas), MANUAL.md (3), CHANGELOG.md (2) são esboços vazios no momento do teste; cronista (60) ainda não rodou",
+  "P7: nome de cliente em código e docs entregues: app/settings.py:92, app/db.py:2, db/migracoes/002_identidade.sql:2 ('fgr/sig'), docs/adr/0001-fundacao.md (34 linhas com fgr/cbre)",
+  "make check reescreve tests/medidas/L0-01-repo.json (versionado) a cada rodada: repositório fica sujo depois da suíte"
+ ]
 }
