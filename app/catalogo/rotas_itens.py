@@ -6,6 +6,7 @@ token catalogo:ler; escritas por token exigem admin:inquilino."""
 import uuid
 
 import psycopg2
+import pydantic
 from fastapi import APIRouter, Body, Query, Request, Response
 from jsonschema import Draft202012Validator
 
@@ -107,6 +108,20 @@ def filtros_da_query(auth: Auth, p: dict, lixeira: bool = False) -> tuple[list[s
             if nome == "tipo":
                 for v in valores:
                     tipos.obter(v)
+            if nome == "status":
+                # o status "sem status" é NULL na coluna; a faceta o conta como 'nenhum' (coalesce) e é esse o valor
+                # que o cliente devolve no filtro. Sem este ramo, ?status=nenhum comparava com ANY e dava 0.
+                for v in valores:
+                    if v not in mod_busca.STATUS:
+                        raise ErroAPI(422, "campo_invalido", f"status inválido: {v}", {"campo": "status", "valor": v})
+                reais = [v for v in valores if v != "nenhum"]
+                partes = ["i.status IS NULL"] if "nenhum" in valores else []
+                if reais:
+                    partes.append("i.status = ANY (%s)")
+                    params.append(reais)
+                cond.append("(" + " OR ".join(partes) + ")")
+                chave[nome] = valores
+                continue
             cond.append(f"{coluna} = ANY (%s)")
             params.append(valores)
             chave[nome] = valores
@@ -374,18 +389,27 @@ def facetas(request: Request, auth: Auth = autenticado(escopo_token="catalogo:le
         cond, params, _chave, _consulta = filtros_da_query(auth, p)
         onde = " WHERE " + " AND ".join(cond)
         saida = {}
-        for nome, expr, _extra in (
-            ("tipo", "i.tipo", ""),
-            ("familia", "t.familia", ""),
-            ("status", "coalesce(i.status, 'nenhum')", ""),
-            ("acesso", "i.acesso", ""),
-            ("dono", "d.login", ""),
+        for nome, expr in (
+            ("tipo", "i.tipo"),
+            ("familia", "t.familia"),
+            ("status", "coalesce(i.status, 'nenhum')"),
+            ("acesso", "i.acesso"),
         ):
             cur.execute(
                 f"SELECT {expr} AS valor, count(*) AS n {FROM_LISTA}{onde} GROUP BY 1 ORDER BY n DESC, 1 LIMIT 100",
                 params,
             )
             saida[nome] = [{"valor": r["valor"], "n": r["n"]} for r in cur.fetchall()]
+        # dono: o filtro lateral é ?dono_id=<int>, logo a faceta devolve o id junto com o login e o nome. Sem o id,
+        # dono sem item na página carregada sumia da lista (o cliente resolvia o id pelo objeto dono da lista).
+        cur.execute(
+            f"SELECT d.id, d.login, d.nome, count(*) AS n {FROM_LISTA}{onde} "
+            "GROUP BY 1, 2, 3 ORDER BY n DESC, 2 LIMIT 100",
+            params,
+        )
+        saida["dono"] = [
+            {"valor": r["login"], "id": r["id"], "rotulo": r["nome"], "n": r["n"]} for r in cur.fetchall()
+        ]
         cur.execute(
             f"SELECT tag AS valor, count(*) AS n FROM (SELECT unnest(i.tags) AS tag {FROM_LISTA}{onde}) x "
             "GROUP BY 1 ORDER BY n DESC, 1 LIMIT 30",
@@ -552,7 +576,25 @@ def editar_item(
 ) -> dict:
     """Núcleo do PUT/PATCH e da restauração de versão: valida, grava, sincroniza relações, registra eventos."""
     r = exigir_edicao(cur, iid)
-    e = ItemEditar.model_validate(campos)
+    try:
+        e = ItemEditar.model_validate(campos)
+    except pydantic.ValidationError as exc:
+        # o corpo do PUT/PATCH já passou pelo modelo da rota; aqui entram os campos que só o núcleo conhece
+        # (categorias, classificacao, dados de restauração de versão): o erro tem de sair no mesmo contrato 422
+        # do tratador de app/erros.py, nunca como 500
+        raise ErroAPI(
+            422,
+            "validacao",
+            "pedido inválido: corpo ou parâmetros fora do esquema",
+            [
+                {
+                    "campo": ".".join(str(x) for x in d.get("loc", ())),
+                    "erro": d.get("msg", ""),
+                    "tipo": d.get("type", ""),
+                }
+                for d in exc.errors()
+            ],
+        ) from exc
     campos = e.model_dump(exclude_unset=True)
     if "versao_atual" in campos:
         if campos["versao_atual"] is not None and campos["versao_atual"] != r["versao_atual"]:

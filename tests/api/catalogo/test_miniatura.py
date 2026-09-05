@@ -137,7 +137,10 @@ def test_job_de_camada_semeada(sessao_a, itens_a, conexao_plat_app, medida, work
     r = sessao_a.get(f"/api/itens/{it['id']}/miniatura")
     assert r.status_code == 200
     im = Image.open(io.BytesIO(r.content)).convert("RGB")
-    assert im.size == (600, 400) and im.getpixel((300, 200)) != (245, 246, 248)  # há desenho no centro
+    # há desenho: os 30 polígonos ficam em fila, com vão entre eles, e o pixel central pode cair num vão;
+    # o que se mede é quantos pixels saíram do fundo
+    fundo = sum(1 for px in im.getdata() if px == (245, 246, 248))
+    assert im.size == (600, 400) and (600 * 400 - fundo) > 1000, f"pixels fora do fundo: {600 * 400 - fundo}"
     mapa = itens_a.criar("mapa")
     r = sessao_a.post(f"/api/itens/{mapa['id']}/miniatura/gerar")
     assert r.status_code == 409 and r.json()["erro"] == "tipo_sem_gerador"
@@ -148,6 +151,7 @@ def test_job_de_camada_semeada(sessao_a, itens_a, conexao_plat_app, medida, work
 
 def test_adaptador_de_objetos_e_url_assinada(cliente, tmp_path, monkeypatch):
     from app import objetos
+    from app.settings import settings
 
     monkeypatch.setenv("PLAT_DADOS_DIR", str(tmp_path))
     iid = "00000000-0000-0000-0000-000000000001"
@@ -159,8 +163,11 @@ def test_adaptador_de_objetos_e_url_assinada(cliente, tmp_path, monkeypatch):
     r = cliente.get(url)
     assert r.status_code == 200 and r.content == b"abc" and r.headers["content-type"] == "image/png"
     assert cliente.get(url.replace("assinatura=", "assinatura=0")).status_code == 404
-    vencida = objetos.url_assinada(o["chave"], -100)
-    assert cliente.get(vencida).status_code == 404
+    # url_assinada nunca emite validade no passado (max(1, segundos)); a URL vencida é assinada à mão, com o mesmo
+    # segredo, para provar que o servidor recusa assinatura correta mas com prazo vencido
+    passado = int(time.time()) - 100
+    firma = objetos._assinar(o["chave"], passado, settings.PLAT_SECRET)
+    assert cliente.get(f"/api/objetos/{o['chave']}?ate={passado}&assinatura={firma}").status_code == 404
     with pytest.raises(objetos.ChaveInvalida):
         objetos.ler("../../etc/passwd")
     assert cliente.get("/api/objetos/../../etc/passwd?ate=1&assinatura=x").status_code in (404, 422)

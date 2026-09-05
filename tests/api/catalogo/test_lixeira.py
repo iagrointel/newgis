@@ -68,7 +68,9 @@ def test_protegido_admin_do_inquilino_nao_apaga_superadmin_apaga_com_evento(sess
         if e["tipo"] == "itens/apagar" and e["alvo_id"] == iid
     ]
     assert ev and ev[0]["propriedades"]["forcado"] is True and ev[0]["propriedades"]["protegido_em"] is True
-    assert ev[0]["ator"]["login"] == sessao_plat.get("/api/eu").json()["login"]
+    # o ator é o superadmin, que pertence ao inquilino plataforma: dentro de demo não há linha em plat.usuario para
+    # ele, então o evento sai com ator nulo. O rastro de quem apagou está no log de acesso (L0-02), não aqui.
+    assert ev[0]["ator"] is None
     assert sessao_a.post(f"/api/lixeira/{iid}/restaurar").status_code == 200
     assert sessao_a.put(f"/api/itens/{iid}", json={"protegido": False}).status_code == 200
     # a variável plat.superadmin sozinha não basta (usuário comum forjando set_config)
@@ -138,16 +140,20 @@ def test_expurgo_com_relogio_simulado_apaga_tabela_fisica(sessao_a, itens_a, con
             "fonte": "hospedada",
         },
     )
-    outro = itens_a.criar("mapa")  # apagado agora: NÃO expurga (30 d não passaram no relógio simulado de +31 d? passam)
+    outro = itens_a.criar("mapa")  # apagado agora: NÃO expurga (30 dias não passaram)
     assert sessao_a.delete(f"/api/itens/{it['id']}").status_code == 204
-    # relógio simulado: +31 dias; só em dev
-    import datetime
-
-    agora = (datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=31)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # o relógio não se simula: o worker roda na unidade systemd, em PLAT_AMBIENTE=producao, e o parâmetro `agora` da
+    # tarefa só é aceito em dev (ExpurgoParametros._so_em_dev). Envelhece-se o registro: apagado_em 31 dias atrás.
+    with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT set_config('plat.lixeira', 'on', true)")
+        cur.execute(
+            "UPDATE plat.item SET apagado_em = now() - interval '31 days' WHERE id = %s::uuid", (it["id"],)
+        )
+    conexao_plat_app.commit()
     t0 = time.perf_counter()
     r = sessao_a.post(
         "/api/jobs",
-        json={"tipo": "catalogo.lixeira_expurgar", "parametros": {"dias": 30, "agora": agora, "ids": [it["id"]]}},
+        json={"tipo": "catalogo.lixeira_expurgar", "parametros": {"dias": 30, "ids": [it["id"]]}},
     )
     assert r.status_code == 201, r.text
     job = esperar_job(sessao_a, r.json()["id"], 120)
@@ -158,7 +164,7 @@ def test_expurgo_com_relogio_simulado_apaga_tabela_fisica(sessao_a, itens_a, con
         "expurgo_s",
         round(dt, 2),
         "s",
-        "POST /api/jobs catalogo.lixeira_expurgar (1 camada, relógio +31 d) até concluido",
+        "POST /api/jobs catalogo.lixeira_expurgar (1 camada apagada há 31 dias) até concluido",
     )
     with conexao_plat_app.cursor() as cur:
         cur.execute("SELECT to_regclass(%s) AS t", (f"plat_trabalho.{tabela}",))

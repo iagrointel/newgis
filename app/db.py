@@ -3,6 +3,7 @@ main.py do SIG de teste interno: só a PREPARAÇÃO repete (até 9 vezes); a con
 Conexão que falhou na preparação é descartada (putconn close=True), nunca reaproveitada."""
 
 import threading
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,6 +17,7 @@ from app.settings import settings
 ROOT = Path(__file__).resolve().parents[1]
 DIR_MIGRACOES = ROOT / "db" / "migracoes"
 TENTATIVAS = 9
+POOL_ESPERA_S = 5.0  # espera por conexão livre antes de desistir (rajada > maxconn não vira 500; medido no L0-03)
 
 _pool: psycopg2.pool.ThreadedConnectionPool | None = None
 _trava = threading.Lock()
@@ -36,6 +38,23 @@ def pool() -> psycopg2.pool.ThreadedConnectionPool:
             if _pool is None:
                 _pool = psycopg2.pool.ThreadedConnectionPool(1, 8, settings.PLAT_DSN)
     return _pool
+
+
+def obter_conexao(p: psycopg2.pool.ThreadedConnectionPool):
+    """getconn que ESPERA por uma conexão livre em vez de estourar na rajada.
+
+    O ThreadedConnectionPool do psycopg2 levanta PoolError assim que passa de maxconn; sem esta espera, 20 pedidos
+    simultâneos (medido no L0-03 com 20 clientes no mesmo link) derrubavam com 500 os que passassem de 8. A espera é
+    limitada: passado POOL_ESPERA_S o PoolError sobe como antes.
+    """
+    limite = time.monotonic() + POOL_ESPERA_S
+    while True:
+        try:
+            return p.getconn()
+        except psycopg2.pool.PoolError:
+            if time.monotonic() >= limite:
+                raise
+            time.sleep(0.01)
 
 
 def _preparar(con, ctx: Contexto | None, somente_leitura: bool = False):
@@ -62,7 +81,7 @@ def db(ctx: Contexto | None = None, somente_leitura: bool = False):
     p = pool()
     con = cur = None
     for tentativa in range(TENTATIVAS):
-        con = p.getconn()
+        con = obter_conexao(p)
         try:
             cur = _preparar(con, ctx, somente_leitura)
             break

@@ -2872,7 +2872,7 @@
      }
     },
     "x-auth": "S/T",
-    "x-privilegio": "jobs.executar"
+    "x-privilegio": "jobs.ver"
    },
    "post": {
     "tags": [
@@ -3068,7 +3068,7 @@
      }
     },
     "x-auth": "S/T",
-    "x-privilegio": "jobs.executar"
+    "x-privilegio": "jobs.ver"
    }
   },
   "/api/jobs/tipos": {
@@ -3165,7 +3165,7 @@
      }
     },
     "x-auth": "S/T",
-    "x-privilegio": "jobs.executar"
+    "x-privilegio": "jobs.ver"
    }
   },
   "/api/jobs/{job_id}": {
@@ -3270,7 +3270,7 @@
      }
     },
     "x-auth": "S/T",
-    "x-privilegio": "jobs.executar"
+    "x-privilegio": "jobs.ver"
    }
   },
   "/api/jobs/{job_id}/cancelar": {
@@ -3642,7 +3642,7 @@
      }
     },
     "x-auth": "S/T",
-    "x-privilegio": "jobs.executar"
+    "x-privilegio": "jobs.ver"
    }
   },
   "/api/jobs/{job_id}/eventos": {
@@ -3747,7 +3747,7 @@
      }
     },
     "x-auth": "S/T",
-    "x-privilegio": "jobs.executar"
+    "x-privilegio": "jobs.ver"
    }
   },
   "/api/agendas": {
@@ -3897,7 +3897,7 @@
      }
     },
     "x-auth": "S/T",
-    "x-privilegio": "jobs.executar"
+    "x-privilegio": "jobs.ver"
    },
    "post": {
     "tags": [
@@ -4105,7 +4105,7 @@
      }
     },
     "x-auth": "S/T",
-    "x-privilegio": "jobs.executar"
+    "x-privilegio": "jobs.ver"
    },
    "put": {
     "tags": [

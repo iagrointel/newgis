@@ -214,8 +214,9 @@ def test_tipo_item_e_vocabulario_sem_escrita(conexao_plat_app, cliente, sessao_a
 
 
 def test_lista_paginada_com_cursor_e_deslocamento(sessao_a, itens_a):
-    for i in range(5):
-        itens_a.criar("conexao", titulo=titulo_zt(f"cursor{i}"))
+    for _ in range(5):
+        # o mesmo termo "cursor" em todos: o FTS indexa palavra inteira (cursor0 não casa com cursor)
+        itens_a.criar("conexao", titulo=titulo_zt("cursor"))
     r = sessao_a.get("/api/itens?q=cursor&tipo=conexao&limite=2&ordenar=titulo&direcao=asc")
     assert r.status_code == 200
     j = r.json()

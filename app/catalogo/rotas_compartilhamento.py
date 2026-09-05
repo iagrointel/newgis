@@ -74,7 +74,7 @@ def _link_json(r: dict) -> dict:
 
 SQL_LINK = (
     "SELECT k.*, ARRAY(SELECT li.item_id FROM plat.compartilhamento_link_item li WHERE li.link_id = "
-    "k.id) AS itens_incluidos "
+    "k.id)::text[] AS itens_incluidos "
     "FROM plat.compartilhamento_link k WHERE k.item_id = %s::uuid"
 )
 

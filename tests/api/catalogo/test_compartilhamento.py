@@ -49,10 +49,14 @@ def test_niveis_e_grupo(sessao_a, itens_a, editor_a, editor2_a, visualizador_a, 
     assert r.status_code == 200 and r.json()["acesso"] == "inquilino"
     assert fora_c.get(f"/api/itens/{iid}").status_code == 200
     assert fora_c.get(f"/api/itens/{iid}/compartilhamento").json()["links"] == []  # sem edição, sem detalhe
-    # visualizador não tem compartilhar.inquilino
+    # público: o privilégio vem antes da configuração do inquilino. Editor não tem compartilhar.publico (só admin,
+    # migração 003) → 403; o admin, com o inquilino sem compartilhar_publico ligado → 400 publico_desligado.
     it2 = itens_a.criar("mapa", sessao=dono_c)
     r = dono_c.put(f"/api/itens/{it2['id']}/compartilhamento", json={"acesso": "publico"})
-    assert r.status_code == 400 and r.json()["erro"] == "publico_desligado"
+    assert r.status_code == 403 and r.json()["erro"] == "sem_privilegio", r.text
+    it3 = itens_a.criar("mapa")
+    r = sessao_a.put(f"/api/itens/{it3['id']}/compartilhamento", json={"acesso": "publico"})
+    assert r.status_code == 400 and r.json()["erro"] == "publico_desligado", r.text
     assert sessao_a.get(f"/api/itens/{iid}").json()["compartilhado_com_grupos"] == 1
     # apagar o grupo remove o compartilhamento; o item continua
     assert dono_c.delete(f"/api/grupos/{g['id']}").status_code == 204

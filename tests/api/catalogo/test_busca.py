@@ -15,7 +15,7 @@ ITEM = "L0-03-catalogo"
 
 
 @pytest.fixture(scope="module")
-def corpus(conexao_plat_app, env):
+def corpus(env):
     import psycopg2
     import psycopg2.extras
 
@@ -156,6 +156,17 @@ def test_facetas_batem_com_a_contagem(sessao_a, corpus):
         assert n == faceta["n"], faceta
     for faceta in f["acesso"]:
         n = sessao_a.get(f"/api/itens?q={PREFIXO}&acesso={faceta['valor']}&limite=1").json()["total"]
+        assert n == faceta["n"], faceta
+    # status: a faceta conta o NULL como 'nenhum'; o filtro ?status=nenhum tem de devolver a MESMA contagem
+    # (achado do frontend: comparação por ANY dava 0 porque o valor está gravado como NULL)
+    for faceta in f["status"]:
+        n = sessao_a.get(f"/api/itens?q={PREFIXO}&status={faceta['valor']}&limite=1").json()["total"]
+        assert n == faceta["n"], faceta
+    assert sessao_a.get(f"/api/itens?q={PREFIXO}&status=inventado").status_code == 422
+    # dono: a faceta traz o id porque o filtro lateral é ?dono_id=<int> (achado do frontend)
+    for faceta in f["dono"]:
+        assert isinstance(faceta["id"], int) and faceta["valor"] and "rotulo" in faceta
+        n = sessao_a.get(f"/api/itens?q={PREFIXO}&dono_id={faceta['id']}&limite=1").json()["total"]
         assert n == faceta["n"], faceta
 
 

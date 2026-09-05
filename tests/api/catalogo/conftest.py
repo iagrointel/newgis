@@ -80,12 +80,15 @@ def _expurgar_zt(env, slug: str) -> None:
             for r in cur.fetchall():
                 cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (r["id"],))
                 cur.execute("SELECT plat.item_expurgar(%s::uuid)", (r["id"],))
-            cur.execute(
-                "DELETE FROM plat.pasta WHERE nome LIKE %s "
-                "AND NOT EXISTS (SELECT 1 FROM plat.pasta f WHERE f.pai_id = plat.pasta.id)",
-                (PREFIXO_TESTE + "%",),
-            )
-            cur.execute("DELETE FROM plat.pasta WHERE nome LIKE %s", (PREFIXO_TESTE + "%",))
+            # o gatilho pasta_vazia recusa apagar pasta com filha: das folhas para a raiz, até não sobrar nenhuma
+            for _ in range(10):
+                cur.execute(
+                    "DELETE FROM plat.pasta WHERE nome LIKE %s "
+                    "AND NOT EXISTS (SELECT 1 FROM plat.pasta f WHERE f.pai_id = plat.pasta.id) RETURNING id",
+                    (PREFIXO_TESTE + "%",),
+                )
+                if not cur.fetchall():
+                    break
             cur.execute("DELETE FROM plat.categoria WHERE nome LIKE %s AND nivel = 3", (PREFIXO_TESTE + "%",))
             cur.execute("DELETE FROM plat.categoria WHERE nome LIKE %s AND nivel = 2", (PREFIXO_TESTE + "%",))
             cur.execute("DELETE FROM plat.categoria WHERE nome LIKE %s", (PREFIXO_TESTE + "%",))

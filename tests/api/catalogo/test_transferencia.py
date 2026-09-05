@@ -9,7 +9,7 @@ from tests.api.conftest import novo_cliente
 
 def test_plano_com_falha_e_solucao(sessao_a, itens_a, usuarios_a, editor_a):
     dono_c, dono = editor_a
-    novo_c, novo = usuarios_a.sessao("editor")
+    novo_c, novo, _ = usuarios_a.sessao("editor")
     g = dono_c.post("/api/grupos", json={"nome": titulo_zt("g-transf"), "entrada": "convite"}).json()
     a, b, c = (itens_a.criar("mapa", sessao=dono_c) for _ in range(3))
     assert dono_c.put(f"/api/itens/{c['id']}/compartilhamento", json={"grupos": [g["id"]]}).status_code == 200
@@ -56,7 +56,7 @@ def test_plano_com_falha_e_solucao(sessao_a, itens_a, usuarios_a, editor_a):
 
 
 def test_camada_arrasta_vistas_e_vista_sozinha_recusa(sessao_a, itens_a, usuarios_a):
-    novo_c, novo = usuarios_a.sessao("editor")
+    novo_c, novo, _ = usuarios_a.sessao("editor")
     cam = itens_a.criar("camada_vetorial")
     v1 = itens_a.criar("vista_de_camada", dados={"camada_id": cam["id"]})
     v2 = itens_a.criar("vista_de_camada", dados={"camada_id": cam["id"]})
@@ -74,8 +74,8 @@ def test_camada_arrasta_vistas_e_vista_sozinha_recusa(sessao_a, itens_a, usuario
 
 
 def test_tudo_de_um_usuario_e_apagar_usuario(sessao_a, itens_a, usuarios_a):
-    origem_c, origem = usuarios_a.sessao("editor")
-    destino_c, destino = usuarios_a.sessao("editor")
+    origem_c, origem, _ = usuarios_a.sessao("editor")
+    destino_c, destino, _ = usuarios_a.sessao("editor")
     for _ in range(2):
         itens_a.criar("mapa", sessao=origem_c)
     r = sessao_a.post(
@@ -92,11 +92,11 @@ def test_tudo_de_um_usuario_e_apagar_usuario(sessao_a, itens_a, usuarios_a):
 
 def test_recusas(sessao_a, sessao_b, itens_a, itens_b, usuarios_a, ids):
     it = itens_a.criar("mapa")
-    inativo_c, inativo = usuarios_a.sessao("editor")
+    inativo_c, inativo, _ = usuarios_a.sessao("editor")
     assert sessao_a.put(f"/api/usuarios/{inativo['id']}", json={"ativo": False}).status_code == 200
     r = sessao_a.post("/api/itens/transferir", json={"ids": [it["id"]], "novo_dono_id": inativo["id"], "simular": True})
     assert r.status_code == 422 and r.json()["erro"] == "novo_dono_inativo"
-    vis_c, vis = usuarios_a.sessao("visualizador")
+    vis_c, vis, _ = usuarios_a.sessao("visualizador")
     r = sessao_a.post("/api/itens/transferir", json={"ids": [it["id"]], "novo_dono_id": vis["id"], "simular": True})
     assert r.status_code == 422 and r.json()["erro"] == "novo_dono_sem_privilegio"
     de_b = itens_b.criar("mapa")
