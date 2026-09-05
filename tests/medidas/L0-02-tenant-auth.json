@@ -1,0 +1,45 @@
+{
+ "item": "L0-02-tenant-auth",
+ "medidas": {
+  "rotas_total": {
+   "valor": 56,
+   "unidade": "rotas",
+   "comando": "len(paths×methods) de docs/openapi.json"
+  },
+  "rotas_cobertas": {
+   "valor": 56,
+   "unidade": "rotas",
+   "comando": "rotas do OpenAPI com caso em tests/api/cruzado_casos.py"
+  },
+  "custo_log_acesso_ms": {
+   "valor": 0.98,
+   "unidade": "ms",
+   "comando": "mediana de 30 GET /api/eu com log_registrar menos mediana de 30 sem (TestClient)"
+  },
+  "login_inexistente_vs_senha_errada_ms": {
+   "valor": [
+    124.0,
+    124.7
+   ],
+   "unidade": "ms",
+   "comando": "mediana de 4 POST /api/login: usuário inexistente × senha errada (tempo constante)"
+  },
+  "latencia_login_ms": {
+   "valor": 129.0,
+   "unidade": "ms",
+   "comando": "mediana de 3 POST /api/login com senha certa pelo TestClient (inclui pbkdf2 600k)"
+  },
+  "tempo_revogacao_s": {
+   "valor": 0.01,
+   "unidade": "s",
+   "comando": "DELETE /api/tokens/{id} até o 401 token_revogado (TestClient)"
+  },
+  "latencia_auth_token_ms": {
+   "valor": 2.94,
+   "unidade": "ms",
+   "comando": "mediana de 50 GET /api/eu com Bearer menos mediana de 50 GET /api/versao (TestClient)"
+  }
+ },
+ "gerado_em": "2026-09-05T15:58:50Z",
+ "git_sha": "441069ca6475"
+}
