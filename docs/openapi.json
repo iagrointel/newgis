@@ -842,7 +842,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/Pagina"
+         "$ref": "#/components/schemas/app__auth__modelos__Pagina"
         }
        }
       }
@@ -914,7 +914,7 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/LoteEntrada"
+        "$ref": "#/components/schemas/app__auth__modelos__LoteEntrada"
        }
       }
      },
@@ -926,7 +926,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/LoteSaida"
+         "$ref": "#/components/schemas/app__auth__modelos__LoteSaida"
         }
        }
       }
@@ -1268,7 +1268,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/Pagina"
+         "$ref": "#/components/schemas/app__auth__modelos__Pagina"
         }
        }
       }
@@ -2146,7 +2146,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/Pagina"
+         "$ref": "#/components/schemas/app__auth__modelos__Pagina"
         }
        }
       }
@@ -2319,7 +2319,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/Pagina"
+         "$ref": "#/components/schemas/app__auth__modelos__Pagina"
         }
        },
        "text/csv": {}
@@ -2451,7 +2451,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/Pagina"
+         "$ref": "#/components/schemas/app__auth__modelos__Pagina"
         }
        }
       }
@@ -4633,6 +4633,2707 @@
     "x-auth": "S/T",
     "x-privilegio": "jobs.executar"
    }
+  },
+  "/api/itens/transferir": {
+   "post": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Transferir",
+    "operationId": "transferir_api_itens_transferir_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TransferenciaEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Transferencia"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.transferir|conteudo.criar"
+   }
+  },
+  "/api/itens/{id}/miniatura": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Ver Miniatura",
+    "operationId": "ver_miniatura_api_itens__id__miniatura_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "image/png": {}
+      }
+     },
+     "204": {
+      "description": "No Content"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Enviar Miniatura",
+    "operationId": "enviar_miniatura_api_itens__id__miniatura_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MiniaturaEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Miniatura"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   },
+   "delete": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Apagar Miniatura",
+    "operationId": "apagar_miniatura_api_itens__id__miniatura_delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/itens/{id}/miniatura/gerar": {
+   "post": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Gerar Miniatura",
+    "operationId": "gerar_miniatura_api_itens__id__miniatura_gerar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobCriado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/tipos-item": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Tipos Item",
+    "operationId": "tipos_item_api_tipos_item_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/TipoItem"
+         },
+         "type": "array",
+         "title": "Response Tipos Item Api Tipos Item Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "vocabulario"
+   }
+  },
+  "/api/itens": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_itens_get",
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "name": "ordenar",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Ordenar"
+      }
+     },
+     {
+      "name": "direcao",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Direcao"
+      }
+     },
+     {
+      "name": "tipo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tipo"
+      }
+     },
+     {
+      "name": "familia",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Familia"
+      }
+     },
+     {
+      "name": "dono_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Dono Id"
+      }
+     },
+     {
+      "name": "tags",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tags"
+      }
+     },
+     {
+      "name": "categoria",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Categoria"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "acesso",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Acesso"
+      }
+     },
+     {
+      "name": "pasta_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Pasta Id"
+      }
+     },
+     {
+      "name": "origem",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Origem"
+      }
+     },
+     {
+      "name": "criado_de",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Criado De"
+      }
+     },
+     {
+      "name": "criado_ate",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Criado Ate"
+      }
+     },
+     {
+      "name": "modificado_de",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Modificado De"
+      }
+     },
+     {
+      "name": "modificado_ate",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Modificado Ate"
+      }
+     },
+     {
+      "name": "bbox",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Bbox"
+      }
+     },
+     {
+      "name": "grupo_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Grupo Id"
+      }
+     },
+     {
+      "name": "favoritos",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Favoritos"
+      }
+     },
+     {
+      "name": "meus",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Meus"
+      }
+     },
+     {
+      "name": "prefixo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Prefixo"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     },
+     {
+      "name": "cursor",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Cursor"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/app__catalogo__modelos__Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_itens_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ItemEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar"
+   }
+  },
+  "/api/itens/facetas": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Facetas",
+    "operationId": "facetas_api_itens_facetas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/itens/tags": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Tags Sugerir",
+    "operationId": "tags_sugerir_api_itens_tags_get",
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "",
+       "title": "Q"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/itens/{id}": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_itens__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "put": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Editar",
+    "operationId": "editar_api_itens__id__put",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Corpo"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   },
+   "patch": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Editar Parcial",
+    "operationId": "editar_parcial_api_itens__id__patch",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Corpo"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   },
+   "delete": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_itens__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "cascata",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Cascata"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.apagar_tudo"
+   }
+  },
+  "/api/itens/lote": {
+   "post": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Lote",
+    "operationId": "lote_api_itens_lote_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/app__catalogo__modelos__LoteEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/app__catalogo__modelos__LoteSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/itens/{id}/mover": {
+   "post": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Mover",
+    "operationId": "mover_api_itens__id__mover_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MoverEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/itens/{id}/versoes": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Versoes",
+    "operationId": "versoes_api_itens__id__versoes_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/app__catalogo__modelos__Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/itens/{id}/versoes/{n}": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Versao",
+    "operationId": "versao_api_itens__id__versoes__n__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "n",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "N"
+      }
+     },
+     {
+      "name": "diff_de",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Diff De"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VersaoCompleta"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/itens/{id}/versoes/{n}/restaurar": {
+   "post": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Restaurar Versao",
+    "operationId": "restaurar_versao_api_itens__id__versoes__n__restaurar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "n",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "N"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/RestaurarVersaoEntrada"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Corpo"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/itens/{id}/versoes/{n}/publicar": {
+   "post": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Publicar Versao",
+    "operationId": "publicar_versao_api_itens__id__versoes__n__publicar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "n",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "N"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/itens/{id}/usado-por": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Usado Por",
+    "operationId": "usado_por_api_itens__id__usado_por_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "profundidade",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 2,
+       "title": "Profundidade"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/UsadoPor"
+         },
+         "title": "Response Usado Por Api Itens  Id  Usado Por Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/itens/{id}/criado-a-partir-de": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Criado A Partir De",
+    "operationId": "criado_a_partir_de_api_itens__id__criado_a_partir_de_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/UsadoPor"
+         },
+         "title": "Response Criado A Partir De Api Itens  Id  Criado A Partir De Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/itens/{id}/ordem-de-exclusao": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Ordem De Exclusao",
+    "operationId": "ordem_de_exclusao_api_itens__id__ordem_de_exclusao_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OrdemExclusao"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/itens/{id}/relacoes": {
+   "put": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Relacoes Definir",
+    "operationId": "relacoes_definir_api_itens__id__relacoes_put",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RelacoesEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/UsadoPor"
+         },
+         "title": "Response Relacoes Definir Api Itens  Id  Relacoes Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/itens/{id}/compartilhamento": {
+   "get": {
+    "tags": [
+     "compartilhamento"
+    ],
+    "summary": "Ver Compartilhamento",
+    "operationId": "ver_compartilhamento_api_itens__id__compartilhamento_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Compartilhamento"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "put": {
+    "tags": [
+     "compartilhamento"
+    ],
+    "summary": "Alterar Compartilhamento",
+    "operationId": "alterar_compartilhamento_api_itens__id__compartilhamento_put",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CompartilhamentoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Compartilhamento"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "compartilhar.grupo|compartilhar.inquilino|compartilhar.publico"
+   }
+  },
+  "/api/itens/{id}/links": {
+   "post": {
+    "tags": [
+     "compartilhamento"
+    ],
+    "summary": "Criar Link",
+    "operationId": "criar_link_api_itens__id__links_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LinkEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LinkCriado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "compartilhar.link"
+   },
+   "get": {
+    "tags": [
+     "compartilhamento"
+    ],
+    "summary": "Listar Links",
+    "operationId": "listar_links_api_itens__id__links_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Link"
+         },
+         "title": "Response Listar Links Api Itens  Id  Links Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/itens/{id}/links/{lid}": {
+   "delete": {
+    "tags": [
+     "compartilhamento"
+    ],
+    "summary": "Revogar Link",
+    "operationId": "revogar_link_api_itens__id__links__lid__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "lid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Lid"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/compartilhado/{token}": {
+   "get": {
+    "tags": [
+     "compartilhamento"
+    ],
+    "summary": "Compartilhado",
+    "operationId": "compartilhado_api_compartilhado__token__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Compartilhado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/compartilhado/{token}/itens/{id}": {
+   "get": {
+    "tags": [
+     "compartilhamento"
+    ],
+    "summary": "Compartilhado Item",
+    "operationId": "compartilhado_item_api_compartilhado__token__itens__id__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/compartilhado/{token}/itens/{id}/miniatura": {
+   "get": {
+    "tags": [
+     "compartilhamento"
+    ],
+    "summary": "Compartilhado Miniatura",
+    "operationId": "compartilhado_miniatura_api_compartilhado__token__itens__id__miniatura_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/publico/itens/{id}": {
+   "get": {
+    "tags": [
+     "compartilhamento"
+    ],
+    "summary": "Publico Item",
+    "operationId": "publico_item_api_publico_itens__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/publico/itens/{id}/miniatura": {
+   "get": {
+    "tags": [
+     "compartilhamento"
+    ],
+    "summary": "Publico Miniatura",
+    "operationId": "publico_miniatura_api_publico_itens__id__miniatura_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/objetos/{chave}": {
+   "get": {
+    "tags": [
+     "compartilhamento"
+    ],
+    "summary": "Objeto Assinado",
+    "operationId": "objeto_assinado_api_objetos__chave__get",
+    "parameters": [
+     {
+      "name": "chave",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Chave"
+      }
+     },
+     {
+      "name": "ate",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 0,
+       "title": "Ate"
+      }
+     },
+     {
+      "name": "assinatura",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "",
+       "title": "Assinatura"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/pastas": {
+   "get": {
+    "tags": [
+     "pastas"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_pastas_get",
+    "parameters": [
+     {
+      "name": "pai_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Pai Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Pasta"
+         },
+         "title": "Response Listar Api Pastas Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "pastas"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_pastas_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PastaEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pasta"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar"
+   }
+  },
+  "/api/pastas/arvore": {
+   "get": {
+    "tags": [
+     "pastas"
+    ],
+    "summary": "Arvore",
+    "operationId": "arvore_api_pastas_arvore_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PastaArvore"
+         },
+         "type": "array",
+         "title": "Response Arvore Api Pastas Arvore Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/pastas/{id}": {
+   "put": {
+    "tags": [
+     "pastas"
+    ],
+    "summary": "Editar",
+    "operationId": "editar_api_pastas__id__put",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PastaEditar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pasta"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   },
+   "delete": {
+    "tags": [
+     "pastas"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_pastas__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/categorias": {
+   "get": {
+    "tags": [
+     "categorias"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_categorias_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Categorias"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "put": {
+    "tags": [
+     "categorias"
+    ],
+    "summary": "Definir",
+    "operationId": "definir_api_categorias_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CategoriasEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Categorias"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.categorias"
+   }
+  },
+  "/api/categorias/importar": {
+   "post": {
+    "tags": [
+     "categorias"
+    ],
+    "summary": "Importar",
+    "operationId": "importar_api_categorias_importar_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ImportarCategorias"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImportadoCategorias"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.categorias"
+   }
+  },
+  "/api/favoritos": {
+   "get": {
+    "tags": [
+     "favoritos"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_favoritos_get",
+    "parameters": [
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/app__catalogo__modelos__Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/favoritos/{item_id}": {
+   "put": {
+    "tags": [
+     "favoritos"
+    ],
+    "summary": "Adicionar",
+    "operationId": "adicionar_api_favoritos__item_id__put",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "delete": {
+    "tags": [
+     "favoritos"
+    ],
+    "summary": "Remover",
+    "operationId": "remover_api_favoritos__item_id__delete",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/lixeira": {
+   "get": {
+    "tags": [
+     "lixeira"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_lixeira_get",
+    "parameters": [
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/app__catalogo__modelos__Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.apagar_tudo"
+   }
+  },
+  "/api/lixeira/{id}/restaurar": {
+   "post": {
+    "tags": [
+     "lixeira"
+    ],
+    "summary": "Restaurar",
+    "operationId": "restaurar_api_lixeira__id__restaurar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.apagar_tudo"
+   }
+  },
+  "/api/lixeira/esvaziar": {
+   "post": {
+    "tags": [
+     "lixeira"
+    ],
+    "summary": "Esvaziar",
+    "operationId": "esvaziar_api_lixeira_esvaziar_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/EsvaziarEntrada"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Corpo"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobCriado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.apagar_tudo"
+   }
   }
  },
  "components": {
@@ -4770,6 +7471,99 @@
     ],
     "title": "Agenda"
    },
+   "CategoriaNo": {
+    "properties": {
+     "id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "codigo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 64
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Codigo"
+     },
+     "filhas": {
+      "items": {
+       "$ref": "#/components/schemas/CategoriaNo"
+      },
+      "type": "array",
+      "title": "Filhas"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome"
+    ],
+    "title": "CategoriaNo"
+   },
+   "Categorias": {
+    "properties": {
+     "arvore": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Arvore"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "maximo": {
+      "type": "integer",
+      "title": "Maximo"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "arvore",
+     "total",
+     "maximo"
+    ],
+    "title": "Categorias"
+   },
+   "CategoriasEntrada": {
+    "properties": {
+     "arvore": {
+      "items": {
+       "$ref": "#/components/schemas/CategoriaNo"
+      },
+      "type": "array",
+      "maxItems": 900,
+      "title": "Arvore"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "arvore"
+    ],
+    "title": "CategoriasEntrada"
+   },
    "CodigoEntrada": {
     "properties": {
      "codigo": {
@@ -4801,6 +7595,145 @@
      "codigos_recuperacao"
     ],
     "title": "CodigosRecuperacao"
+   },
+   "Compartilhado": {
+    "properties": {
+     "item": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Item"
+     },
+     "itens_incluidos": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Itens Incluidos"
+     },
+     "permite_download": {
+      "type": "boolean",
+      "title": "Permite Download"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "item",
+     "itens_incluidos",
+     "permite_download"
+    ],
+    "title": "Compartilhado"
+   },
+   "Compartilhamento": {
+    "properties": {
+     "acesso": {
+      "type": "string",
+      "title": "Acesso"
+     },
+     "grupos": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Grupos"
+     },
+     "links": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Links"
+     },
+     "publico_permitido": {
+      "type": "boolean",
+      "title": "Publico Permitido"
+     },
+     "dependencias": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Dependencias"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "acesso",
+     "grupos",
+     "links",
+     "publico_permitido",
+     "dependencias"
+    ],
+    "title": "Compartilhamento"
+   },
+   "CompartilhamentoEntrada": {
+    "properties": {
+     "acesso": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(privado|inquilino|publico)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Acesso"
+     },
+     "grupos": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 512
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Grupos"
+     },
+     "destaques": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 24
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Destaques"
+     },
+     "aplicar_a_dependencias": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 5000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Aplicar A Dependencias"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "CompartilhamentoEntrada"
    },
    "Convite": {
     "properties": {
@@ -4918,6 +7851,28 @@
      "estado"
     ],
     "title": "Estado"
+   },
+   "EsvaziarEntrada": {
+    "properties": {
+     "ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 100
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ids"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "EsvaziarEntrada"
    },
    "Eu": {
     "properties": {
@@ -5439,6 +8394,40 @@
     "type": "object",
     "title": "HTTPValidationError"
    },
+   "ImportadoCategorias": {
+    "properties": {
+     "criadas": {
+      "type": "integer",
+      "title": "Criadas"
+     },
+     "existentes": {
+      "type": "integer",
+      "title": "Existentes"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "criadas",
+     "existentes"
+    ],
+    "title": "ImportadoCategorias"
+   },
+   "ImportarCategorias": {
+    "properties": {
+     "modelo": {
+      "type": "string",
+      "pattern": "^(iso19115|inspire)$",
+      "title": "Modelo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "modelo"
+    ],
+    "title": "ImportarCategorias"
+   },
    "Iniciar2FA": {
     "properties": {
      "segredo": {
@@ -5600,6 +8589,243 @@
      "admin_nome"
     ],
     "title": "InquilinoCriar"
+   },
+   "Item": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "familia": {
+      "type": "string",
+      "title": "Familia"
+     },
+     "titulo": {
+      "type": "string",
+      "title": "Titulo"
+     },
+     "tags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Tags"
+     },
+     "dono": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Dono"
+     },
+     "acesso": {
+      "type": "string",
+      "title": "Acesso"
+     },
+     "protegido": {
+      "type": "boolean",
+      "title": "Protegido"
+     },
+     "pontuacao": {
+      "type": "integer",
+      "title": "Pontuacao"
+     },
+     "versao_atual": {
+      "type": "integer",
+      "title": "Versao Atual"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "tipo",
+     "familia",
+     "titulo",
+     "tags",
+     "dono",
+     "acesso",
+     "protegido",
+     "pontuacao",
+     "versao_atual"
+    ],
+    "title": "Item"
+   },
+   "ItemEntrada": {
+    "properties": {
+     "tipo": {
+      "type": "string",
+      "maxLength": 41,
+      "minLength": 2,
+      "pattern": "^[a-z][a-z0-9_]{1,40}$",
+      "title": "Tipo"
+     },
+     "titulo": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 1,
+      "title": "Titulo"
+     },
+     "resumo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2048
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Resumo"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 65536
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "tags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 50,
+      "title": "Tags"
+     },
+     "creditos": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2048
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Creditos"
+     },
+     "termos_de_uso": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 65536
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Termos De Uso"
+     },
+     "pasta_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pasta Id"
+     },
+     "extent": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Extent"
+     },
+     "extent_origem": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(dado|usuario|inquilino)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Extent Origem"
+     },
+     "categorias": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 20,
+      "title": "Categorias"
+     },
+     "classificacao": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Classificacao"
+     },
+     "url": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2048,
+        "pattern": "^https?://"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Url"
+     },
+     "origem": {
+      "type": "string",
+      "pattern": "^(hospedado|referenciado)$",
+      "title": "Origem",
+      "default": "hospedado"
+     },
+     "dados": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Dados"
+     },
+     "id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Id"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "tipo",
+     "titulo"
+    ],
+    "title": "ItemEntrada"
    },
    "Job": {
     "properties": {
@@ -5875,6 +9101,20 @@
     ],
     "title": "Job"
    },
+   "JobCriado": {
+    "properties": {
+     "job_id": {
+      "type": "string",
+      "title": "Job Id"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "job_id"
+    ],
+    "title": "JobCriado"
+   },
    "LinhaLog": {
     "properties": {
      "id": {
@@ -5902,6 +9142,226 @@
      "mensagem"
     ],
     "title": "LinhaLog"
+   },
+   "Link": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "prefixo": {
+      "type": "string",
+      "title": "Prefixo"
+     },
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     },
+     "expira_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expira Em"
+     },
+     "revogado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Revogado Em"
+     },
+     "acessos": {
+      "type": "integer",
+      "title": "Acessos"
+     },
+     "itens_incluidos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Itens Incluidos"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "prefixo",
+     "nome",
+     "criado_em",
+     "expira_em",
+     "revogado_em",
+     "acessos",
+     "itens_incluidos"
+    ],
+    "title": "Link"
+   },
+   "LinkCriado": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "prefixo": {
+      "type": "string",
+      "title": "Prefixo"
+     },
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     },
+     "expira_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expira Em"
+     },
+     "revogado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Revogado Em"
+     },
+     "acessos": {
+      "type": "integer",
+      "title": "Acessos"
+     },
+     "itens_incluidos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Itens Incluidos"
+     },
+     "token": {
+      "type": "string",
+      "title": "Token"
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "prefixo",
+     "nome",
+     "criado_em",
+     "expira_em",
+     "revogado_em",
+     "acessos",
+     "itens_incluidos",
+     "token",
+     "url"
+    ],
+    "title": "LinkCriado"
+   },
+   "LinkEntrada": {
+    "properties": {
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 128
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "expira_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expira Em"
+     },
+     "itens_incluidos": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 5000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Itens Incluidos"
+     },
+     "permite_download": {
+      "type": "boolean",
+      "title": "Permite Download",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "LinkEntrada"
    },
    "ListaAgendas": {
     "properties": {
@@ -6103,77 +9563,6 @@
     ],
     "title": "LoginSaida"
    },
-   "LoteEntrada": {
-    "properties": {
-     "ids": {
-      "items": {
-       "type": "integer"
-      },
-      "type": "array",
-      "maxItems": 1000,
-      "minItems": 1,
-      "title": "Ids"
-     },
-     "acao": {
-      "type": "string",
-      "pattern": "^(perfil|papel|desabilitar|reabilitar)$",
-      "title": "Acao"
-     },
-     "perfil": {
-      "anyOf": [
-       {
-        "type": "string",
-        "pattern": "^(admin|editor|visualizador|campo)$"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Perfil"
-     },
-     "papel_id": {
-      "anyOf": [
-       {
-        "type": "integer"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Papel Id"
-     }
-    },
-    "additionalProperties": false,
-    "type": "object",
-    "required": [
-     "ids",
-     "acao"
-    ],
-    "title": "LoteEntrada"
-   },
-   "LoteSaida": {
-    "properties": {
-     "alterados": {
-      "type": "integer",
-      "title": "Alterados"
-     },
-     "recusados": {
-      "items": {
-       "additionalProperties": true,
-       "type": "object"
-      },
-      "type": "array",
-      "title": "Recusados"
-     }
-    },
-    "additionalProperties": true,
-    "type": "object",
-    "required": [
-     "alterados",
-     "recusados"
-    ],
-    "title": "LoteSaida"
-   },
    "Membro": {
     "properties": {
      "usuario": {
@@ -6211,25 +9600,95 @@
     ],
     "title": "Membro"
    },
-   "Pagina": {
+   "Miniatura": {
     "properties": {
-     "total": {
-      "type": "integer",
-      "title": "Total"
+     "miniatura": {
+      "type": "string",
+      "title": "Miniatura"
      },
-     "itens": {
-      "items": {},
-      "type": "array",
-      "title": "Itens"
+     "sha256": {
+      "type": "string",
+      "title": "Sha256"
      }
     },
     "additionalProperties": true,
     "type": "object",
     "required": [
-     "total",
-     "itens"
+     "miniatura",
+     "sha256"
     ],
-    "title": "Pagina"
+    "title": "Miniatura"
+   },
+   "MiniaturaEntrada": {
+    "properties": {
+     "conteudo": {
+      "type": "string",
+      "maxLength": 13981029,
+      "minLength": 1,
+      "title": "Conteudo"
+     },
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 255
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "conteudo"
+    ],
+    "title": "MiniaturaEntrada",
+    "description": "Imagem em base64 (JSON: o CSRF sob cookie exige application/json; multipart entra com o L0-11)."
+   },
+   "MoverEntrada": {
+    "properties": {
+     "pasta_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pasta Id"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "MoverEntrada"
+   },
+   "OrdemExclusao": {
+    "properties": {
+     "ordem": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Ordem"
+     },
+     "ocultos": {
+      "type": "integer",
+      "title": "Ocultos"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "ordem",
+     "ocultos"
+    ],
+    "title": "OrdemExclusao"
    },
    "Papeis": {
     "properties": {
@@ -6370,6 +9829,211 @@
     ],
     "title": "PapelMembroEntrada"
    },
+   "Pasta": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "pai_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pai Id"
+     },
+     "profundidade": {
+      "type": "integer",
+      "title": "Profundidade"
+     },
+     "ancestrais": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Ancestrais"
+     },
+     "itens_visiveis": {
+      "type": "integer",
+      "title": "Itens Visiveis"
+     },
+     "dono": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Dono"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "pai_id",
+     "profundidade",
+     "ancestrais",
+     "itens_visiveis",
+     "dono",
+     "criado_em"
+    ],
+    "title": "Pasta"
+   },
+   "PastaArvore": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "pai_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pai Id"
+     },
+     "profundidade": {
+      "type": "integer",
+      "title": "Profundidade"
+     },
+     "ancestrais": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Ancestrais"
+     },
+     "itens_visiveis": {
+      "type": "integer",
+      "title": "Itens Visiveis"
+     },
+     "dono": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Dono"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     },
+     "filhas": {
+      "items": {},
+      "type": "array",
+      "title": "Filhas",
+      "default": []
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "pai_id",
+     "profundidade",
+     "ancestrais",
+     "itens_visiveis",
+     "dono",
+     "criado_em"
+    ],
+    "title": "PastaArvore"
+   },
+   "PastaEditar": {
+    "properties": {
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 128,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "pai_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pai Id"
+     },
+     "para_raiz": {
+      "type": "boolean",
+      "title": "Para Raiz",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "PastaEditar"
+   },
+   "PastaEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "pai_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pai Id"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome"
+    ],
+    "title": "PastaEntrada"
+   },
    "Privilegio": {
     "properties": {
      "nome": {
@@ -6427,6 +10091,76 @@
      "login_local"
     ],
     "title": "Provedores"
+   },
+   "RelacaoEntrada": {
+    "properties": {
+     "destino": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Destino"
+     },
+     "tipo": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Tipo"
+     },
+     "posicao": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Posicao"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "destino",
+     "tipo"
+    ],
+    "title": "RelacaoEntrada"
+   },
+   "RelacoesEntrada": {
+    "properties": {
+     "relacoes": {
+      "items": {
+       "$ref": "#/components/schemas/RelacaoEntrada"
+      },
+      "type": "array",
+      "maxItems": 5000,
+      "title": "Relacoes"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "relacoes"
+    ],
+    "title": "RelacoesEntrada"
+   },
+   "RestaurarVersaoEntrada": {
+    "properties": {
+     "comentario": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Comentario"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "RestaurarVersaoEntrada"
    },
    "Resumo": {
     "properties": {
@@ -6610,6 +10344,74 @@
      "atual"
     ],
     "title": "Sessao"
+   },
+   "TipoItem": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "familia": {
+      "type": "string",
+      "title": "Familia"
+     },
+     "rotulo": {
+      "type": "string",
+      "title": "Rotulo"
+     },
+     "descricao": {
+      "type": "string",
+      "title": "Descricao"
+     },
+     "esquema": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Esquema"
+     },
+     "esquema_versao": {
+      "type": "integer",
+      "title": "Esquema Versao"
+     },
+     "icone": {
+      "type": "string",
+      "title": "Icone"
+     },
+     "modulo_front": {
+      "type": "string",
+      "title": "Modulo Front"
+     },
+     "abre_em": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Abre Em"
+     },
+     "tem_dado_fisico": {
+      "type": "boolean",
+      "title": "Tem Dado Fisico"
+     },
+     "linha_dona": {
+      "type": "string",
+      "title": "Linha Dona"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "nome",
+     "familia",
+     "rotulo",
+     "descricao",
+     "esquema",
+     "esquema_versao",
+     "icone",
+     "modulo_front",
+     "abre_em",
+     "tem_dado_fisico",
+     "linha_dona"
+    ],
+    "title": "TipoItem"
    },
    "TipoJob": {
     "properties": {
@@ -6918,6 +10720,144 @@
      "escopos"
     ],
     "title": "TokenCriar"
+   },
+   "Transferencia": {
+    "properties": {
+     "plano": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Plano"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "com_falha": {
+      "type": "integer",
+      "title": "Com Falha"
+     },
+     "novo_dono": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Novo Dono"
+     },
+     "executado": {
+      "type": "boolean",
+      "title": "Executado"
+     },
+     "transferidos": {
+      "type": "integer",
+      "title": "Transferidos"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "plano",
+     "total",
+     "com_falha",
+     "novo_dono",
+     "executado",
+     "transferidos"
+    ],
+    "title": "Transferencia"
+   },
+   "TransferenciaEntrada": {
+    "properties": {
+     "ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 100,
+        "minItems": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ids"
+     },
+     "usuario_origem_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Usuario Origem Id"
+     },
+     "novo_dono_id": {
+      "type": "integer",
+      "title": "Novo Dono Id"
+     },
+     "simular": {
+      "type": "boolean",
+      "title": "Simular",
+      "default": true
+     },
+     "pastas": {
+      "type": "string",
+      "pattern": "^(manter|unica)$",
+      "title": "Pastas",
+      "default": "manter"
+     },
+     "pasta_unica_nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 128,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pasta Unica Nome"
+     },
+     "adicionar_aos_grupos": {
+      "type": "boolean",
+      "title": "Adicionar Aos Grupos",
+      "default": false
+     },
+     "forcar_parcial": {
+      "type": "boolean",
+      "title": "Forcar Parcial",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "novo_dono_id"
+    ],
+    "title": "TransferenciaEntrada"
+   },
+   "UsadoPor": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "oculto": {
+      "type": "boolean",
+      "title": "Oculto",
+      "default": false
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id"
+    ],
+    "title": "UsadoPor"
    },
    "Usuario": {
     "properties": {
@@ -7245,6 +11185,391 @@
      "type"
     ],
     "title": "ValidationError"
+   },
+   "VersaoCompleta": {
+    "properties": {
+     "versao": {
+      "type": "integer",
+      "title": "Versao"
+     },
+     "sha256": {
+      "type": "string",
+      "title": "Sha256"
+     },
+     "autor": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Autor"
+     },
+     "rotulo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rotulo"
+     },
+     "comentario": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Comentario"
+     },
+     "compactou": {
+      "type": "integer",
+      "title": "Compactou"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     },
+     "corpo": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Corpo"
+     },
+     "diff": {
+      "anyOf": [
+       {
+        "items": {
+         "additionalProperties": true,
+         "type": "object"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Diff"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "versao",
+     "sha256",
+     "autor",
+     "rotulo",
+     "comentario",
+     "compactou",
+     "criado_em",
+     "corpo"
+    ],
+    "title": "VersaoCompleta"
+   },
+   "app__auth__modelos__LoteEntrada": {
+    "properties": {
+     "ids": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "maxItems": 1000,
+      "minItems": 1,
+      "title": "Ids"
+     },
+     "acao": {
+      "type": "string",
+      "pattern": "^(perfil|papel|desabilitar|reabilitar)$",
+      "title": "Acao"
+     },
+     "perfil": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(admin|editor|visualizador|campo)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Perfil"
+     },
+     "papel_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Papel Id"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "ids",
+     "acao"
+    ],
+    "title": "LoteEntrada"
+   },
+   "app__auth__modelos__LoteSaida": {
+    "properties": {
+     "alterados": {
+      "type": "integer",
+      "title": "Alterados"
+     },
+     "recusados": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Recusados"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "alterados",
+     "recusados"
+    ],
+    "title": "LoteSaida"
+   },
+   "app__auth__modelos__Pagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {},
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "Pagina"
+   },
+   "app__catalogo__modelos__LoteEntrada": {
+    "properties": {
+     "ids": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Ids"
+     },
+     "acao": {
+      "type": "string",
+      "pattern": "^(mover|apagar|restaurar|tags|categorias|proteger|desproteger|status|compartilhar)$",
+      "title": "Acao"
+     },
+     "pasta_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pasta Id"
+     },
+     "tags": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 50
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tags"
+     },
+     "de": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 128
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "De"
+     },
+     "para": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 128
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Para"
+     },
+     "categorias": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 20
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Categorias"
+     },
+     "status": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(autoritativo|obsoleto|nenhum)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Status"
+     },
+     "acesso": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(privado|inquilino|publico)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Acesso"
+     },
+     "grupos": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 512
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Grupos"
+     },
+     "cascata": {
+      "type": "boolean",
+      "title": "Cascata",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "ids",
+     "acao"
+    ],
+    "title": "LoteEntrada"
+   },
+   "app__catalogo__modelos__LoteSaida": {
+    "properties": {
+     "feitos": {
+      "type": "integer",
+      "title": "Feitos"
+     },
+     "recusados": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Recusados"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "feitos",
+     "recusados"
+    ],
+    "title": "LoteSaida"
+   },
+   "app__catalogo__modelos__Pagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {},
+      "type": "array",
+      "title": "Itens"
+     },
+     "proximo_cursor": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Proximo Cursor"
+     },
+     "aproximado": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Aproximado"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "Pagina"
    }
   }
  }

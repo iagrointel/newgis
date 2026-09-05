@@ -19,6 +19,11 @@ PAGINAS = {
     "/admin/papeis": "admin/papeis.html",
     "/admin/tokens": "admin/tokens.html",
     "/admin/log": "admin/log.html",
+    # --- catálogo (L0-03)
+    "/conteudo": "conteudo.html",
+    "/conteudo/lixeira": "conteudo_lixeira.html",
+    "/conteudo/{id}": "conteudo_item.html",
+    "/c/{token}": "compartilhado.html",
 }
 router = APIRouter()
 

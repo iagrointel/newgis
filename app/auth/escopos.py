@@ -49,3 +49,19 @@ def exigir_escopo(auth, base: str, uuid: str | None = None) -> None:
             f"o token não tem o escopo {exigido}",
             {"exigido": exigido, "token_tem": list(auth.escopos)},
         )
+
+
+# --- catálogo (L0-03; ADR 0004 seção 13): o <uuid> de camada:ler/camada:editar/tiles:ler tem de existir e ser
+# legível pelo dono do token na criação (422 escopo_item_inexistente); a função vem do catálogo para não acoplar
+COM_UUID = re.compile(rf"^(camada:(ler|editar)|tiles:ler):({UUID})$")
+
+
+def uuids_inexistentes(auth, escopos: list[str]) -> list[str]:
+    from app.catalogo import item_legivel
+
+    ruins = []
+    for e in escopos:
+        m = COM_UUID.match(e)
+        if m and not item_legivel(auth, m.group(3)):
+            ruins.append(e)
+    return ruins

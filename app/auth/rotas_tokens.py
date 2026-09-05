@@ -148,6 +148,10 @@ def criar(corpo: TokenCriar, request: Request, auth: Auth = autenticado("tokens.
     ruins = esc.invalidos(corpo.escopos)
     if ruins:
         raise ErroAPI(422, "escopo_invalido", "escopo fora do vocabulário", ruins)
+    # --- catálogo (L0-03): escopo com <uuid> exige item existente e legível pelo dono do token
+    sem_item = esc.uuids_inexistentes(auth, corpo.escopos)
+    if sem_item:
+        raise ErroAPI(422, "escopo_item_inexistente", "item do escopo inexistente ou sem acesso", {"escopos": sem_item})
     if "admin:inquilino" in corpo.escopos and auth.perfil != "admin":
         raise ErroAPI(422, "escopo_fora_do_teto", "admin:inquilino só para dono com perfil admin")
     restricao = _validar_restricao(corpo.restricao)

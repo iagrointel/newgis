@@ -14,6 +14,16 @@ from app import erros, paginas
 from app import log as plat_log
 from app.auth import middleware as auth_middleware
 from app.auth import rotas_eu, rotas_grupos, rotas_log, rotas_login, rotas_plataforma, rotas_tokens, rotas_usuarios
+from app.catalogo import (
+    rotas_categorias,
+    rotas_compartilhamento,
+    rotas_favoritos,
+    rotas_itens,
+    rotas_lixeira,
+    rotas_miniatura,
+    rotas_pastas,
+    transferencia,
+)
 from app.jobs.rotas import router as rotas_jobs
 from app.saude import router as rotas_saude
 from app.settings import settings
@@ -44,6 +54,15 @@ ROUTERS = [
     rotas_plataforma.router,
     # --- fila de jobs (L0-05): /api/jobs, /api/agendas, /tarefas
     rotas_jobs,
+    # --- catálogo (L0-03): /api/itens, /api/pastas, /api/categorias, /api/favoritos, /api/lixeira, /api/compartilhado
+    transferencia.router,  # /api/itens/transferir antes de /api/itens/{id}
+    rotas_miniatura.router,
+    rotas_itens.router,
+    rotas_compartilhamento.router,
+    rotas_pastas.router,
+    rotas_categorias.router,
+    rotas_favoritos.router,
+    rotas_lixeira.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
