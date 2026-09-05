@@ -52,6 +52,18 @@ def criar_usuario_temporario(con, tenant_id: int, admin_id: int, login: str, per
     return int(uid)
 
 
+def sessao_de_usuario(con, tenant_id: int, usuario_id: int, login: str, horas: int = 2) -> str:
+    """Token de sessão de um usuário já existente do inquilino (sem senha), pelas funções SECURITY DEFINER."""
+    with con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        assinatura = _assinatura_criar(cur)
+        contexto(cur, tenant_id, usuario_id, login)
+        dias_ou_horas = max(1, -(-horas // 24)) if "p_max_dias" in assinatura else horas
+        cur.execute("SELECT plat.auth_sessao_criar(%s, %s, '127.0.0.1', 'pytest') AS tok", (usuario_id, dias_ou_horas))
+        tok = cur.fetchone()["tok"]
+    con.commit()
+    return tok
+
+
 def apagar_usuario_temporario(con, tenant_id: int, admin_id: int, login: str) -> None:
     with con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         contexto(cur, tenant_id, admin_id, "admin")

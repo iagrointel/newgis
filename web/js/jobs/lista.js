@@ -10,7 +10,7 @@ import { INTERVALO_POLLING_MS, assinar, cancelarAssinatura } from './eventos.js'
 import {
   FINAIS, csv, data, dataHora, duracao, duracaoJob, estado as fmtEstado, numero, quem, textoProgresso,
 } from './formato.js';
-import { aviso, baixar, opcoes, porId } from './util.js';
+import { aviso, baixar, opcoes, podeExecutar, porId } from './util.js';
 
 export const LIMITE_PAGINA = 50;
 export const INTERVALO_RESUMO_MS = 10000;
@@ -113,6 +113,10 @@ async function repetirJob(job) {
 
 function celulaAcoes(job) {
   const caixa = h('div', { class: 'acoes-linha' });
+  if (!podeExecutar()) {
+    caixa.append(botao('abrir', 'texto acao-abrir', () => abrir(job.id)));
+    return h('td', { class: 'c-acoes' }, caixa);
+  }
   if (!FINAIS.has(job.estado)) {
     caixa.append(botao(job.cancelar_solicitado ? 'cancelando' : 'cancelar', 'perigo acao-cancelar',
       (ev) => cancelarJob(job, ev.currentTarget), { disabled: Boolean(job.cancelar_solicitado) }));

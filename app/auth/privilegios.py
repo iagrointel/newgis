@@ -54,7 +54,10 @@ PRIVILEGIOS: tuple[tuple[str, str, str, bool, tuple[str, ...]], ...] = (
     ("analise.raster", "analise", "análise de imagem", False, (E, A)),
     ("rede.tracar", "rede", "traçado e subrede", False, (E, A)),
     ("rede.editar", "rede", "editar rede de utilidades", False, (E, A)),
-    ("jobs.executar", "jobs", "ver e cancelar os próprios jobs", False, (C, E, A)),
+    ("jobs.ver", "jobs", "ver a lista, o detalhe, o log e os tipos de job do inquilino (leitura)", False,
+     QUATRO_PERFIS),  # acrescentado em T2 (migração 015): sem ele o visualizador tomava 403 na tela Tarefas
+    ("jobs.executar", "jobs", "criar, cancelar e repetir os próprios jobs, e gerir agendas", False,
+     (C, E, A)),
     ("jobs.gerir_todos", "jobs", "ver e cancelar jobs de qualquer membro", True, (A,)),
     ("tokens.gerar", "tokens", "criar e revogar os próprios tokens de serviço", False, QUATRO_PERFIS),
     ("tokens.gerir_todos", "tokens", "ver e revogar tokens de qualquer membro", True, (A,)),

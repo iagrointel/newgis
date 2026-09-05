@@ -11,7 +11,8 @@ from app.auth.sessao import Auth, autenticado
 from app.erros import ErroAPI
 
 COOKIE_SESSAO = "plat_sessao"
-PRIVILEGIO_JOBS = "jobs.executar"        # ver, criar e cancelar os próprios jobs (campo, editor, admin)
+PRIVILEGIO_VER = "jobs.ver"              # LER lista, detalhe, log, tipos e agendas do inquilino (os 4 perfis)
+PRIVILEGIO_JOBS = "jobs.executar"        # criar, cancelar e repetir os próprios jobs, e gerir agendas
 PRIVILEGIO_GERIR = "jobs.gerir_todos"    # ver e cancelar jobs de qualquer membro (admin)
 
 
@@ -45,6 +46,13 @@ def sessao_de(auth: Auth) -> Sessao:
 
 
 def dependencia_jobs():
-    """Dependência FastAPI das rotas da fila: sessão, ou token com escopo jobs:executar (admin:inquilino cobre),
-    sempre com o privilégio jobs.executar no dono."""
+    """Dependência FastAPI das rotas de EXECUÇÃO da fila (criar, cancelar, repetir, agendas): sessão, ou token com
+    escopo jobs:executar (admin:inquilino cobre), sempre com o privilégio jobs.executar no dono."""
     return autenticado(PRIVILEGIO_JOBS, escopo_token="jobs:executar")
+
+
+def dependencia_jobs_ver():
+    """Dependência FastAPI das rotas de LEITURA da fila (T2, migração 015): mesmo escopo de token (jobs:executar
+    continua sendo o escopo da fila; não há escopo novo), mas o privilégio exigido no dono é jobs.ver, que os
+    quatro perfis têm. O filtro de dono do ADR 0003 seção 9 não muda: sem jobs.gerir_todos só se vê o que é seu."""
+    return autenticado(PRIVILEGIO_VER, escopo_token="jobs:executar")

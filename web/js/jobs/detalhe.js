@@ -10,7 +10,7 @@ import { assinar, cancelarAssinatura } from './eventos.js';
 import {
   FINAIS, NIVEIS, dataHora, duracao, duracaoJob, estado as fmtEstado, hora, linhasLog, numero,
 } from './formato.js';
-import { aviso, baixar, porId } from './util.js';
+import { aviso, baixar, podeExecutar, porId } from './util.js';
 
 const s = {
   id: null,
@@ -78,10 +78,10 @@ function renderizarCabecalho() {
 
   const final = FINAIS.has(job.estado);
   const btnCancelar = porId('detalhe-cancelar');
-  btnCancelar.hidden = final;
+  btnCancelar.hidden = final || !podeExecutar();
   btnCancelar.disabled = Boolean(job.cancelar_solicitado);
   btnCancelar.textContent = job.cancelar_solicitado ? 'cancelando' : 'cancelar';
-  porId('detalhe-repetir').hidden = !final;
+  porId('detalhe-repetir').hidden = !final || !podeExecutar();
   porId('detalhe-baixar-log').disabled = !(job.linhas_log > 0 || s.linhas.length > 0);
 
   porId('detalhe-parametros').textContent = job.parametros ? formatarJSON(job.parametros) : '—';

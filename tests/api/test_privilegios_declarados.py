@@ -48,7 +48,7 @@ def test_vocabulario_python_igual_ao_banco(conexao_plat_app):
         tetos = {}
         for r in cur.fetchall():
             tetos.setdefault(r["perfil"], set()).add(r["privilegio"])
-    assert set(banco) == set(priv.NOMES) and len(banco) == 46
+    assert set(banco) == set(priv.NOMES) and len(banco) == 47  # 46 + jobs.ver (T2, migração 015)
     for nome, grupo, _descricao, adm, _perfis in priv.PRIVILEGIOS:
         assert banco[nome]["grupo"] == grupo and banco[nome]["administrativo"] is adm, nome
     for perfil in priv.PERFIS:

@@ -215,7 +215,8 @@ implementar. Os ~70 da Esri que ficaram fora estão nomeados no fim da tabela co
 | analise | `analise.raster` | análise de imagem (L1-04/L1-05) | não | | | x | x |
 | rede | `rede.tracar` | traçado e subrede (L4-02/L4-04) | não | | | x | x |
 | rede | `rede.editar` | editar rede de utilidades (L4-03) | não | | | x | x |
-| jobs | `jobs.executar` | ver e cancelar os próprios jobs (L0-05) | não | | x | x | x |
+| jobs | `jobs.ver` | ver a lista, o detalhe, o log e os tipos de job do inquilino (leitura) — **alterado em T2**: motivo = todas as rotas de `/api/jobs` exigiam `jobs.executar` e o perfil `visualizador` tomava 403 na tela Tarefas (achado do testador do L0-05); migração 015 | não | x | x | x | x |
+| jobs | `jobs.executar` | criar, cancelar e repetir os próprios jobs, e gerir agendas (L0-05) — **alterado em T2**: motivo = a leitura saiu para `jobs.ver`; este passa a ser o privilégio de execução | não | | x | x | x |
 | jobs | `jobs.gerir_todos` | ver e cancelar jobs de qualquer membro | sim | | | | x |
 | tokens | `tokens.gerar` | criar e revogar os próprios tokens de serviço | não | x | x | x | x |
 | tokens | `tokens.gerir_todos` | ver e revogar tokens de qualquer membro (E12: Find API key, token) | sim | | | | x |
@@ -224,7 +225,7 @@ implementar. Os ~70 da Esri que ficaram fora estão nomeados no fim da tabela co
 | org | `org.exportar` | exportar o inquilino (L0-06-d), relatórios (L0-07-e) | sim | | | | x |
 | org | `org.integracoes` | SSO (L0-08), SMTP (L0-07-d), webhooks (L7-08), CORS | sim | | | | x |
 
-V = visualizador · C = campo · E = editor · A = admin. Contagem: 46 privilégios, 18 administrativos.
+V = visualizador · C = campo · E = editor · A = admin. Contagem: **47 privilégios** (46 em T1 + `jobs.ver` na migração 015 do T2), 18 administrativos (a contagem linha a linha dá 20; ver `tests/api/test_privilegios_declarados.py`).
 
 Fora do vocabulário, com motivo: `Take ArcGIS Pro license offline`, `Manage licenses` (sem licença por assento);
 `Publish hosted scene layers` (L2-09 decide se 3D entra e acrescenta `conteudo.publicar_cena` por migração);
@@ -542,7 +543,7 @@ verificação nesta máquina. Mudar o algoritmo depois = novo prefixo, re-hash n
 | `camada:ler` · `camada:ler:<uuid>` | ler feições/atributos de qualquer camada legível pelo dono · só a camada `<uuid>` | L2-04, L0-04-h |
 | `camada:editar` · `camada:editar:<uuid>` | `applyEdits`/OGC edição (exige `feicoes.editar` no dono) | L2-03, L2-04 |
 | `tiles:ler` · `tiles:ler:<uuid>` | tiles vetoriais e raster | L1-02, L2-01 |
-| `jobs:executar` | criar e ler os próprios jobs (exige `jobs.executar` no dono) | L0-05 |
+| `jobs:executar` | criar e ler os próprios jobs (leitura exige `jobs.ver` no dono, escrita exige `jobs.executar`; **alterado em T2**, migração 015 — não há escopo novo) | L0-05 |
 | `admin:inquilino` | tudo o que o dono pode fazer pela API, exceto o que a seção 8.1 proíbe | CLI L0-14, laço agêntico |
 
 Regras: escopo sem `:<uuid>` cobre os com `<uuid>`; `admin:inquilino` só para dono `admin` (`422

@@ -368,3 +368,69 @@ def test_agendas_criar_pausar_retomar_apagar(pagina, base_url):
     api = page.request.get(f"{base_url}/api/agendas?limite=200").json()
     assert not [a for a in api["itens"] if a["nome"] == nome]
     conferir_limpo(page)
+
+
+# ---------------------------------------------------------------- perfil visualizador (correção T2 (3))
+
+@pytest.fixture
+def sessao_visualizador(env, sessao):
+    """Usuário `visualizador` temporário no inquilino demo + token de sessão; apagado no fim.
+    Antes da migração 015 este perfil tomava 403 em /api/jobs* e a tela ficava em '…' com 4 erros de console."""
+    from tests import jobs_sessao
+
+    _, tenant_id, admin_id = sessao
+    login = "zt-vis-tarefas"
+    con = jobs_sessao.conectar(env["PLAT_DSN"])
+    try:
+        uid = jobs_sessao.criar_usuario_temporario(con, tenant_id, admin_id, login, "visualizador")
+        token = jobs_sessao.sessao_de_usuario(con, tenant_id, uid, login)
+        yield token, tenant_id, uid
+    finally:
+        try:
+            jobs_sessao.apagar_usuario_temporario(con, tenant_id, admin_id, login)
+        finally:
+            con.close()
+
+
+@pytest.fixture
+def pagina_visualizador(page, base_url, sessao_visualizador):
+    u = urlparse(base_url)
+    page.context.add_cookies([{
+        "name": COOKIE, "value": sessao_visualizador[0], "domain": u.hostname, "path": "/", "httpOnly": True,
+        "secure": u.scheme == "https", "sameSite": "Lax",
+    }])
+    erros, respostas = [], []
+    page.on("console", lambda m: erros.append(f"console.{m.type}: {m.text}") if m.type == "error" else None)
+    page.on("pageerror", lambda e: erros.append(f"pageerror: {e}"))
+    page.on("response", lambda r: respostas.append((r.url, r.status)))
+    page.erros = erros
+    page.respostas = respostas
+    return page
+
+
+def test_visualizador_le_a_tela_em_modo_so_leitura(pagina_visualizador, base_url):
+    """P1 para o perfil `visualizador`: a tela Tarefas pinta, lista em modo só-leitura e não tem erro de console.
+    Modo só-leitura = sem cancelar, sem repetir, sem a seção de agendas (todas exigem jobs.executar)."""
+    page = pagina_visualizador
+    abrir_tarefas(page)
+    assert page.text_content("h1").strip() == "Tarefas"
+
+    # a lista carregou de verdade (não ficou em "…"): o contador tem número e a tabela existe
+    page.wait_for_function("() => /\\d/.test(document.querySelector('#lista-total').textContent)", timeout=10000)
+    assert re.search(r"\d", page.text_content("#lista-total"))
+    assert page.locator("#lista").is_visible()
+
+    # nenhuma rota de leitura da fila devolveu 403 (era o defeito)
+    proibidas = [(u, s) for u, s in page.respostas if s == 403 and "/api/" in u]
+    assert proibidas == [], proibidas
+    lidas = {u.split(base_url)[-1].split("?")[0] for u, s in page.respostas if s == 200 and "/api/jobs" in u}
+    assert {"/api/jobs", "/api/jobs/resumo", "/api/jobs/tipos"} <= lidas, lidas
+
+    # só-leitura: nenhum botão de execução na tela, seção de agendas oculta
+    assert page.locator("#lista-corpo button.acao-cancelar").count() == 0
+    assert page.locator("#lista-corpo button.acao-repetir").count() == 0
+    assert page.locator("#agendas").is_hidden()
+    assert page.locator("#f-quem").is_hidden()  # filtro "quem" é de admin
+
+    page.screenshot(path=str(CAPTURAS / f"{ITEM}_visualizador.png"), full_page=False)
+    conferir_limpo(page)

@@ -578,6 +578,16 @@ Neste item existe só a coluna, o CHECK, o campo do decorador e a recusa na impo
 
 ## 9. Contrato de API (todas as rotas exigem sessão; erros no formato D18 `{erro, mensagem, detalhe?, req_id}`)
 
+**Alterado em T2 (correção 3, achado do testador).** As rotas de LEITURA (`GET /api/jobs`, `/api/jobs/resumo`,
+`/api/jobs/tipos`, `/api/jobs/{id}`, `/api/jobs/{id}/log`, `/api/jobs/{id}/eventos`, `GET /api/agendas`,
+`GET /api/agendas/{id}`) exigem o privilégio **`jobs.ver`**, que os quatro perfis têm (migração 015). As rotas de
+EXECUÇÃO (`POST /api/jobs`, `cancelar`, `repetir`, e criar/alterar/apagar/pausar/retomar/rodar-agora de agenda)
+seguem exigindo **`jobs.executar`** (campo, editor, admin). Motivo: com um privilégio só, o perfil `visualizador`
+tomava 403 em `/api/jobs`, `/api/jobs/resumo` e `/api/jobs/tipos` e a tela Tarefas ficava em "…" com 4 erros de
+console — P1 reprovado para um perfil legítimo. O filtro de dono desta seção **não muda**: quem não tem
+`jobs.gerir_todos` continua vendo só os próprios jobs, logo o visualizador, que não cria job, lê uma lista vazia,
+em modo só-leitura e sem erro. O escopo de token continua sendo `jobs:executar` (não há escopo novo).
+
 | método e rota | entrada | resposta | códigos |
 |---|---|---|---|
 | `GET /api/jobs` | `estado`, `tipo`, `usuario_id`, `de`, `ate` (ISO 8601), `agenda_id`, `limite` (≤ 200, padrão 50), `deslocamento`, `ordenar` (`criado_em:desc` padrão; `iniciado_em`, `terminado_em`, `estado`, `tipo`) | `{"itens": [job...], "total": n}`; `admin` vê todos os jobs do inquilino, os demais só os próprios (`usuario_id = plat.usuario_atual()`) | 200, 401, 422 |

@@ -7,7 +7,7 @@ import { h } from '../base/dom.js';
 import * as api from './api.js';
 import { cronTemCincoCampos, data, dataHora, fusoValido } from './formato.js';
 import { marcaEstado } from './lista.js';
-import { aviso, porId } from './util.js';
+import { aviso, podeExecutar, porId } from './util.js';
 
 const s = { tipos: [], usuario: null, itens: [], editando: null, aoNovoJob: null, form: null, tabela: null };
 const CAMPOS = ['nome', 'tipo', 'parametros', 'cron', 'fuso', 'expira_em'];
@@ -199,8 +199,9 @@ export async function iniciar({ usuario = null, tipos = [], aoNovoJob = null } =
   s.tipos = tipos;
   s.aoNovoJob = aoNovoJob;
   const sec = porId('agendas');
-  const perfil = usuario && usuario.perfil;
-  if (perfil && !['admin', 'editor'].includes(perfil)) {
+  // agenda é execução (POST/PUT/DELETE exigem jobs.executar): quem só tem jobs.ver não vê a seção. Critério por
+  // PRIVILÉGIO e não por perfil (T2): antes o perfil `campo`, que executa, também ficava sem a seção.
+  if (!podeExecutar()) {
     sec.hidden = true;
     return;
   }

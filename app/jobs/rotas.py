@@ -1,6 +1,7 @@
-"""Rotas /api/jobs, /api/agendas e as páginas /tarefas (ADR 0003 seção 9). Toda rota exige o privilégio
-`jobs.executar` pela dependência da trilha A (`app.auth.sessao.autenticado`: cookie ou token, CSRF sob cookie,
-pendências); erros no formato D18 pelo tratador global de `app.erros`. Modelos pydantic de resposta em toda rota."""
+"""Rotas /api/jobs, /api/agendas e as páginas /tarefas (ADR 0003 seção 9). Duas dependências da trilha A
+(`app.auth.sessao.autenticado`: cookie ou token, CSRF sob cookie, pendências): as rotas de LEITURA exigem
+`jobs.ver` (os quatro perfis; T2, migração 015) e as de EXECUÇÃO exigem `jobs.executar` (campo, editor, admin).
+Erros no formato D18 pelo tratador global de `app.erros`. Modelos pydantic de resposta em toda rota."""
 
 import uuid
 from typing import Any
@@ -15,13 +16,15 @@ from app import paginas
 from app.auth.comum import registrar_evento
 from app.auth.sessao import Auth
 from app.jobs import eventos, servico
-from app.jobs.contexto import ErroServico, Sessao, dependencia_jobs, sessao_de
+from app.jobs.contexto import ErroServico, Sessao, dependencia_jobs, dependencia_jobs_ver, sessao_de
 
 router = APIRouter()
-AUTH = dependencia_jobs()  # singleton de módulo: cookie ou token com privilégio jobs.executar
+AUTH = dependencia_jobs()       # singleton de módulo: cookie ou token com privilégio jobs.executar (execução)
+AUTH_VER = dependencia_jobs_ver()  # idem com jobs.ver (leitura; os quatro perfis, inclusive visualizador)
 # declaração no OpenAPI (ADR 0002 seção 3.4): S/T = sessão ou token; o filtro de dono (jobs.gerir_todos vê o inquilino
-# inteiro) está no serviço; todas as rotas exigem o mesmo privilégio
+# inteiro) está no serviço e não muda com esta separação
 X = {"x-auth": "S/T", "x-privilegio": "jobs.executar"}
+XV = {"x-auth": "S/T", "x-privilegio": "jobs.ver"}
 
 
 def _evento(request: Request, s: Sessao, tipo: str, alvo_tipo: str, alvo_id, propriedades: dict | None = None) -> None:
@@ -164,8 +167,8 @@ def _sem_cache(dados, status: int = 200) -> JSONResponse:
 
 
 # ---------------------------------------------------------------- jobs
-@router.get("/api/jobs", response_model=ListaJobs, responses=ERROS, openapi_extra=X, tags=["jobs"])
-def listar_jobs(request: Request, auth: Auth = AUTH, estado: str | None = None, tipo: str | None = None,
+@router.get("/api/jobs", response_model=ListaJobs, responses=ERROS, openapi_extra=XV, tags=["jobs"])
+def listar_jobs(request: Request, auth: Auth = AUTH_VER, estado: str | None = None, tipo: str | None = None,
                 usuario_id: int | None = None,
                 de: str | None = None, ate: str | None = None, agenda_id: str | None = None,
                 limite: int = Query(50, ge=1, le=200), deslocamento: int = Query(0, ge=0),
@@ -185,18 +188,18 @@ def criar_job(request: Request, corpo: dict = Body(...), auth: Auth = AUTH):  # 
     return _sem_cache(job, 201)
 
 
-@router.get("/api/jobs/resumo", response_model=Resumo, responses=ERROS, openapi_extra=X, tags=["jobs"])
-def resumo_jobs(request: Request, auth: Auth = AUTH):
+@router.get("/api/jobs/resumo", response_model=Resumo, responses=ERROS, openapi_extra=XV, tags=["jobs"])
+def resumo_jobs(request: Request, auth: Auth = AUTH_VER):
     return _sem_cache(servico.resumo(sessao_de(auth)))
 
 
-@router.get("/api/jobs/tipos", response_model=list[TipoJob], responses=ERROS, openapi_extra=X, tags=["jobs"])
-def tipos_de_job(request: Request, auth: Auth = AUTH):
+@router.get("/api/jobs/tipos", response_model=list[TipoJob], responses=ERROS, openapi_extra=XV, tags=["jobs"])
+def tipos_de_job(request: Request, auth: Auth = AUTH_VER):
     return _sem_cache(servico.tipos())
 
 
-@router.get("/api/jobs/{job_id}", response_model=Job, responses=ERROS, openapi_extra=X, tags=["jobs"])
-def obter_job(request: Request, job_id: uuid.UUID, auth: Auth = AUTH):
+@router.get("/api/jobs/{job_id}", response_model=Job, responses=ERROS, openapi_extra=XV, tags=["jobs"])
+def obter_job(request: Request, job_id: uuid.UUID, auth: Auth = AUTH_VER):
     return _sem_cache(servico.obter(sessao_de(auth), job_id))
 
 
@@ -221,15 +224,15 @@ def repetir_job(request: Request, job_id: uuid.UUID, corpo: dict | None = Body(N
     return _sem_cache(job, 201)
 
 
-@router.get("/api/jobs/{job_id}/log", response_model=Log, responses=ERROS, openapi_extra=X, tags=["jobs"])
+@router.get("/api/jobs/{job_id}/log", response_model=Log, responses=ERROS, openapi_extra=XV, tags=["jobs"])
 def log_do_job(request: Request, job_id: uuid.UUID, apos: int = Query(0, ge=0), nivel: str | None = None,
-               limite: int = Query(500, ge=1, le=2000), auth: Auth = AUTH):
+               limite: int = Query(500, ge=1, le=2000), auth: Auth = AUTH_VER):
     return _sem_cache(servico.log(sessao_de(auth), job_id, apos, nivel, limite))
 
 
 @router.get("/api/jobs/{job_id}/eventos", responses={**ERROS, 200: {"content": {"text/event-stream": {}}}},
-            openapi_extra=X, tags=["jobs"])
-async def eventos_do_job(request: Request, job_id: uuid.UUID, auth: Auth = AUTH):
+            openapi_extra=XV, tags=["jobs"])
+async def eventos_do_job(request: Request, job_id: uuid.UUID, auth: Auth = AUTH_VER):
     """SSE: primeiro evento `estado`, depois `log`/`estado`, `fim` no estado final; Last-Event-ID reenvia o log."""
     s = sessao_de(auth)
     job = await run_in_threadpool(servico.obter, s, job_id)
@@ -243,10 +246,10 @@ async def eventos_do_job(request: Request, job_id: uuid.UUID, auth: Auth = AUTH)
 
 
 # ---------------------------------------------------------------- agendas
-@router.get("/api/agendas", response_model=ListaAgendas, responses=ERROS, openapi_extra=X, tags=["agendas"])
+@router.get("/api/agendas", response_model=ListaAgendas, responses=ERROS, openapi_extra=XV, tags=["agendas"])
 def listar_agendas(request: Request, ativa: bool | None = None, tipo: str | None = None,
                    limite: int = Query(50, ge=1, le=200), deslocamento: int = Query(0, ge=0),
-                   auth: Auth = AUTH):
+                   auth: Auth = AUTH_VER):
     return _sem_cache(servico.agendas_listar(sessao_de(auth), ativa, tipo, limite, deslocamento))
 
 
@@ -260,8 +263,8 @@ def criar_agenda(request: Request, corpo: dict = Body(...), auth: Auth = AUTH): 
     return _sem_cache(a, 201)
 
 
-@router.get("/api/agendas/{agenda_id}", response_model=Agenda, responses=ERROS, openapi_extra=X, tags=["agendas"])
-def obter_agenda(request: Request, agenda_id: uuid.UUID, auth: Auth = AUTH):
+@router.get("/api/agendas/{agenda_id}", response_model=Agenda, responses=ERROS, openapi_extra=XV, tags=["agendas"])
+def obter_agenda(request: Request, agenda_id: uuid.UUID, auth: Auth = AUTH_VER):
     return _sem_cache(servico.agenda_obter(sessao_de(auth), agenda_id))
 
 
