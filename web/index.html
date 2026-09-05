@@ -9,23 +9,31 @@
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<main class="painel">
-  <header>
-    <h1>plat</h1>
-    <p class="aviso">análise / beta privado</p>
-  </header>
-  <section id="versao" aria-label="versão">
-    <dl>
-      <dt>versão</dt><dd id="versao-numero">…</dd>
-      <dt>git</dt><dd id="versao-git">…</dd>
-      <dt>ambiente</dt><dd id="versao-ambiente">…</dd>
-    </dl>
-  </section>
-  <section id="saude" aria-label="saúde">
-    <h2>saúde <span id="saude-estado" class="estado">…</span></h2>
-    <pre id="saude-json">…</pre>
-  </section>
-</main>
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main class="painel" id="principal" tabindex="-1">
+    <header>
+      <h1>plat</h1>
+      <p class="aviso">análise / beta privado</p>
+    </header>
+    <section id="entrada" aria-label="entrada" hidden>
+      <p id="entrada-texto"></p>
+      <div class="grade-atalhos" id="atalhos"></div>
+    </section>
+    <section id="versao" aria-label="versão">
+      <dl>
+        <dt>versão</dt><dd id="versao-numero">…</dd>
+        <dt>git</dt><dd id="versao-git">…</dd>
+        <dt>ambiente</dt><dd id="versao-ambiente">…</dd>
+      </dl>
+    </section>
+    <section id="saude" aria-label="saúde">
+      <h2>saúde <span id="saude-estado" class="estado">…</span></h2>
+      <pre id="saude-json">…</pre>
+    </section>
+  </main>
+</div>
 <script type="module" src="/static/app.js"></script>
 </body>
 </html>
