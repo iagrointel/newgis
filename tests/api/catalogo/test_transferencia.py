@@ -5,6 +5,7 @@ mapa que usa a camada NÃO muda de dono."""
 
 from tests.api.catalogo.conftest import titulo_zt
 from tests.api.conftest import novo_cliente
+from tests.api.test_rls import contexto, ids_por_slug
 
 
 def test_plano_com_falha_e_solucao(sessao_a, itens_a, usuarios_a, editor_a):
@@ -53,6 +54,22 @@ def test_plano_com_falha_e_solucao(sessao_a, itens_a, usuarios_a, editor_a):
     assert novo_cliente().get(f"/api/compartilhado/{tok}").status_code == 200  # o link sobrevive
     ev = [e for e in sessao_a.get("/api/eventos?limite=20").json()["itens"] if e["tipo"] == "itens/transferir"]
     assert len(ev) >= 3 and ev[0]["propriedades"]["de"] == dono["id"] and ev[0]["propriedades"]["para"] == novo["id"]
+
+
+def test_transferencia_ligada_nao_abre_outro_inquilino(conexao_plat_app, sessao_a, sessao_b, itens_b, ids):
+    """A 018 deixa a política de leitura aceitar a linha enquanto plat.transferencia está ligada. O recorte por
+    inquilino continua sendo a primeira condição: com a variável ligada à força, o inquilino A não vê item de B."""
+    it = itens_b.criar("mapa")
+    ids_slug = ids_por_slug(conexao_plat_app)
+    with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT usuario_id FROM plat.auth_login('demo', 'admin')")
+        adm = cur.fetchone()["usuario_id"]
+    contexto(conexao_plat_app, ids_slug["demo"], usuario_id=adm, login="admin")
+    with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT set_config('plat.transferencia', 'on', true)")
+        cur.execute("SELECT count(*) AS n FROM plat.item WHERE id = %s::uuid", (it["id"],))
+        assert cur.fetchone()["n"] == 0, "plat.transferencia não pode atravessar a fronteira de inquilino"
+    conexao_plat_app.rollback()
 
 
 def test_camada_arrasta_vistas_e_vista_sozinha_recusa(sessao_a, itens_a, usuarios_a):
