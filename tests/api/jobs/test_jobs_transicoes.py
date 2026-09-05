@@ -56,7 +56,7 @@ def test_plat_app_nao_executa_as_funcoes_do_worker(conexao_plat_app, sessao_demo
         "SELECT * FROM plat.job_pegar('forjado', true)",
         "SELECT plat.job_terminar(%s, 'forjado', 'concluido', '{}', NULL, NULL)",
         "SELECT plat.job_devolver(%s, 'forjado', 'x', false, 0, 5, NULL)",
-        "SELECT plat.job_ceifar(0, NULL, 5)",
+        "SELECT plat.job_ceifar(60, 5)",
         "SELECT plat.worker_registrar('forjado', 1, 'x', 'x', 1)",
         "SELECT * FROM plat.agenda_vencidas(now())",
         "SELECT plat.via_worker_ligar()",

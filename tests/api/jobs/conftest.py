@@ -90,32 +90,61 @@ def esperar(cliente, job_id: str, estados=FINAIS, timeout: float = 60, condicao=
     pytest.fail(f"job {job_id} não chegou a {estados} em {timeout} s: {json.dumps(ultimo)[:600]}")
 
 
-@pytest.fixture
-def worker_extra(env):
-    """Segundo worker (nome teste-extra, 2 processos, /saude em :18159) em subprocesso; encerrado no fim do teste."""
-    ambiente = {k: v for k, v in os.environ.items()}
-    ambiente.update({k: v for k, v in env.items() if v is not None})
-    ambiente.update({"PYTHONNOUSERSITE": "1", "PLAT_WORKER_NOME": f"teste-extra-{os.getpid()}",
-                     "PLAT_WORKER_PROCESSOS": "2", "PLAT_WORKER_URL": f"http://127.0.0.1:{PORTA_WORKER_EXTRA}"})
-    proc = subprocess.Popen([sys.executable, "-m", "app.jobs.worker"], cwd=ROOT, env=ambiente,
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    try:
+class WorkerExtra:
+    """Worker em subprocesso (só para teste; sempre encerrado no fim). `nome` é a identidade `<base>:<pid>` que o
+    processo registra; `saude()` lê o /saude dele."""
+
+    def __init__(self, env: dict, nome_base: str, processos: int = 1, porta: int = PORTA_WORKER_EXTRA):
+        ambiente = {k: v for k, v in os.environ.items()}
+        ambiente.update({k: v for k, v in env.items() if v is not None})
+        ambiente.update({"PYTHONNOUSERSITE": "1", "PLAT_WORKER_NOME": nome_base,
+                         "PLAT_WORKER_PROCESSOS": str(processos), "PLAT_WORKER_URL": f"http://127.0.0.1:{porta}"})
+        self.nome_base = nome_base
+        self.porta = porta
+        self.proc = subprocess.Popen([sys.executable, "-m", "app.jobs.worker"], cwd=ROOT, env=ambiente,
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(50):
             try:
-                with urllib.request.urlopen(f"http://127.0.0.1:{PORTA_WORKER_EXTRA}/saude", timeout=1) as resp:
-                    if resp.status == 200:
-                        break
+                self.saude()
+                break
             except OSError:
-                pass
-            time.sleep(0.2)
+                time.sleep(0.2)
         else:
-            proc.kill()
-            pytest.fail("worker extra não respondeu em /saude em 10 s")
-        yield ambiente["PLAT_WORKER_NOME"]
-    finally:
-        proc.terminate()
+            self.proc.kill()
+            pytest.fail(f"worker extra {nome_base} não respondeu em /saude (:{porta}) em 10 s")
+        self.nome = self.saude()["worker"]
+
+    def saude(self) -> dict:
+        with urllib.request.urlopen(f"http://127.0.0.1:{self.porta}/saude", timeout=1) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    def parar(self, sinal: str = "TERM") -> None:
+        if self.proc.poll() is not None:
+            return
+        (self.proc.kill if sinal == "KILL" else self.proc.terminate)()
         try:
-            proc.wait(timeout=30)
+            self.proc.wait(timeout=30)
         except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait()
+            self.proc.kill()
+            self.proc.wait()
+
+
+@pytest.fixture
+def iniciar_worker(env):
+    """Fábrica: iniciar_worker(nome_base, processos, porta) -> WorkerExtra; todos encerrados no fim do teste."""
+    vivos: list[WorkerExtra] = []
+
+    def _iniciar(nome_base: str, processos: int = 1, porta: int = PORTA_WORKER_EXTRA) -> WorkerExtra:
+        w = WorkerExtra(env, nome_base, processos, porta)
+        vivos.append(w)
+        return w
+
+    yield _iniciar
+    for w in vivos:
+        w.parar()
+
+
+@pytest.fixture
+def worker_extra(iniciar_worker):
+    """Segundo worker (2 processos, /saude em :18159); devolve a identidade `<base>:<pid>`."""
+    return iniciar_worker(f"teste-extra-{os.getpid()}", 2).nome

@@ -49,7 +49,8 @@ def test_100_jobs_executados_exatamente_uma_vez(cliente_demo, worker_vivo, worke
                                       if j["estado"] != "concluido"}
     assert all(j["tentativa"] == 1 and j["reinicios"] == 0 for j in jobs.values())
     workers = {j["worker"] for j in jobs.values()}
-    assert worker_extra in workers, f"o worker extra não pegou nenhum job: {workers}"
+    assert worker_extra in workers, f"o worker extra ({worker_extra}) não pegou nenhum job: {workers}"
+    assert all(":" in w and w.rsplit(":", 1)[1].isdigit() for w in workers), workers  # identidade <base>:<pid>
     with conexao_plat_app.cursor() as cur:
         cur.execute("SELECT job_id, count(*) AS n FROM plat_trabalho.marcadores WHERE job_id = ANY(%s::uuid[]) "
                     "GROUP BY job_id", (ids,))

@@ -1,6 +1,8 @@
 """Worker da fila (`python -m app.jobs.worker`; unidade plat-worker; ADR 0003 seção 4). Processo pai com UMA conexão
 própria autocommit (nunca o pool de app.db) como a role plat_worker (PLAT_DSN_WORKER; única com EXECUTE nas funções
-que mudam estado, migração 006) em LISTEN plat_worker; laço de ≤ 1 s por select(); job_pegar por
+que mudam estado, migração 006) em LISTEN plat_worker; identidade `<PLAT_WORKER_NOME ou hostname>:<pid>` (012: dois
+processos com o mesmo nome-base nunca roubam jobs um do outro; a ceifa é só por heartbeat vencido); laço de ≤ 1 s por
+select(); job_pegar por
 SKIP LOCKED; fork por job com pipe; heartbeat de 10 s; cancelamento por escalonamento (30 s SIGTERM, +10 s SIGKILL);
 timeout_s; "1 pesado por vez" por advisory lock de sessão; ceifa de órfãos a cada 30 s; relógio das agendas; parada
 limpa (SIGTERM: devolve os jobs com reinicios += 1, SIGTERM ao filho, 20 s, SIGKILL). /saude em 127.0.0.1:8153
@@ -83,7 +85,9 @@ class Filho:
 
 class Worker:
     def __init__(self):
-        self.nome = settings.PLAT_WORKER_NOME or socket.gethostname()
+        # identidade única por processo (correção T2 (2)): dois workers com o mesmo nome-base nunca se confundem
+        self.nome_base = settings.PLAT_WORKER_NOME or socket.gethostname()
+        self.nome = f"{self.nome_base}:{os.getpid()}"
         self.processos = settings.PLAT_WORKER_PROCESSOS
         self.dir_jobs = Path(settings.PLAT_JOBS_DIR) if settings.PLAT_JOBS_DIR else ROOT / "var" / "jobs"
         self.max_reinicios = settings.PLAT_JOB_MAX_REINICIOS
@@ -137,7 +141,8 @@ class Worker:
         self._conectar()
         self.sql("SELECT plat.worker_registrar(%s, %s, %s, %s, %s)",
                  (self.nome, os.getpid(), versao(), git_sha_curto(), self.processos))
-        orfaos = self.um("SELECT plat.job_ceifar(%s, %s, %s) AS n", (LIMITE_SEM_SINAL_S, self.nome, self.max_reinicios))
+        # ceifa na partida só por heartbeat vencido (do job e do worker dono), nunca por nome (migração 012)
+        orfaos = self.um("SELECT plat.job_ceifar(%s, %s) AS n", (LIMITE_SEM_SINAL_S, self.max_reinicios))
         log.info("worker iniciado: nome=%s processos=%s porta=%s tipos=%s orfaos_devolvidos=%s",
                  self.nome, self.processos, self.porta, len(REGISTRO), orfaos["n"] if orfaos else 0)
         try:
@@ -213,7 +218,7 @@ class Worker:
 
     # ---------------------------------------------------------------- ceifa e agendas (a cada 30 s)
     def _ceifar(self) -> None:
-        r = self.um("SELECT plat.job_ceifar(%s, NULL, %s) AS n", (LIMITE_SEM_SINAL_S, self.max_reinicios))
+        r = self.um("SELECT plat.job_ceifar(%s, %s) AS n", (LIMITE_SEM_SINAL_S, self.max_reinicios))
         if r and r["n"]:
             log.warning("ceifa: %s jobs sem sinal devolvidos", r["n"])
         w = self.um("SELECT plat.worker_ceifar(%s) AS n", (LIMITE_WORKER_S,))
@@ -454,7 +459,8 @@ class Worker:
 
     def estado_saude(self) -> dict:
         return {
-            "worker": self.nome, "pid": os.getpid(), "versao": versao(), "git_sha": git_sha_curto(),
+            "worker": self.nome, "nome_base": self.nome_base, "pid": os.getpid(), "versao": versao(),
+            "git_sha": git_sha_curto(),
             "processos": self.processos, "rodando": [str(f.job["id"]) for f in self.filhos.values()],
             "pesado_em_curso": any(f.pesado for f in self.filhos.values()), "ultimo_tick_ms": self.ultimo_tick_ms,
             "rss_kb": rss_kb(), "em": _iso(datetime.datetime.now(UTC)),

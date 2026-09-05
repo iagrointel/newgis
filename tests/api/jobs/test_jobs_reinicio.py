@@ -1,6 +1,7 @@
 """Sobrevivência a reinício (lento; refutação do item): no meio de um job, `systemctl restart plat-worker` devolve o
 job (reinicios=1, tentativa segue 1) e o worker novo o termina; `kill -9` no pai mata o filho (PDEATHSIG), a ceifa
-na partida devolve e o job conclui; 5 × kill -9 = falhou "devolvido 5 vezes"; em nenhum momento `concluido` sem o
+por heartbeat vencido (nunca por nome, 012) devolve em até ~90 s e o job conclui; 5 × kill -9 = falhou "devolvido 5
+vezes"; em nenhum momento `concluido` sem o
 marcador do último passo. Exige `sudo -n systemctl`; pula com mensagem quando não há sudo."""
 
 import json
@@ -81,7 +82,8 @@ def test_kill_9_no_pai_mata_o_filho_e_a_ceifa_na_partida_retoma(cliente_demo, wo
     r = _systemctl("kill", "-s", "KILL")
     assert r.returncode == 0, r.stderr
     _pid_worker(env)
-    devolvido = esperar(cliente_demo, job["id"], timeout=60,
+    # kill -9: ninguém devolve na hora; a ceifa por heartbeat vencido (60 s, a cada 30 s) recoloca em até ~90 s (012)
+    devolvido = esperar(cliente_demo, job["id"], timeout=150,
                         condicao=lambda j: j["reinicios"] >= 1 and j["estado"] in ("pendente", "rodando"))
     assert devolvido["reinicios"] == 1 and devolvido["estado"] != "concluido"
     fim = esperar(cliente_demo, job["id"], timeout=120)
@@ -93,11 +95,11 @@ def test_kill_9_no_pai_mata_o_filho_e_a_ceifa_na_partida_retoma(cliente_demo, wo
 def test_cinco_kill_9_marcam_falhou_devolvido_5_vezes(cliente_demo, worker_vivo, conexao_plat_app, env):
     job = criar_job(cliente_demo, "prova.progresso", {"duracao_s": 600, "passos": 600})
     for k in range(5):
-        esperar(cliente_demo, job["id"], timeout=90,
+        esperar(cliente_demo, job["id"], timeout=150,
                 condicao=lambda j, k=k: j["estado"] == "rodando" and j["reinicios"] == k and j["progresso"] >= 1)
         assert _systemctl("kill", "-s", "KILL").returncode == 0
         _pid_worker(env)
-    fim = esperar(cliente_demo, job["id"], timeout=90)
+    fim = esperar(cliente_demo, job["id"], timeout=150)
     assert fim["estado"] == "falhou" and fim["reinicios"] == 5
     assert fim["erro"].startswith("devolvido 5 vezes sem terminar")
     assert _marcadores(conexao_plat_app, job["id"]) == []
