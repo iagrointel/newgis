@@ -10,3 +10,4 @@ tests/credenciais.txt
 .pytest_cache/
 .ruff_cache/
 var/
+tests/credenciais_totp.txt

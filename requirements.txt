@@ -37,3 +37,6 @@ ruff==0.16.6
 croniter==6.2.4
 python-dateutil==2.9.0.post0
 six==1.17.0
+#
+# identidade (app/auth/totp.py gera o QR do TOTP em SVG; cryptography vem do dpkg python3-cryptography)
+qrcode==8.2

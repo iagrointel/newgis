@@ -11,3 +11,8 @@ extend-exclude = ["venv", "web/vendor"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "B", "I"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Depends()/Body() em valor padrão é a forma do FastAPI; autenticado()/exigir() devolvem um Depends
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Body", "fastapi.Query", "fastapi.Header",
+                          "app.auth.sessao.autenticado", "app.auth.sessao.exigir"]

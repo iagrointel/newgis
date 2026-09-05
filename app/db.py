@@ -38,7 +38,7 @@ def pool() -> psycopg2.pool.ThreadedConnectionPool:
     return _pool
 
 
-def _preparar(con, ctx: Contexto | None):
+def _preparar(con, ctx: Contexto | None, somente_leitura: bool = False):
     if con.closed:
         raise psycopg2.OperationalError("conexão do pool já estava fechada")
     con.autocommit = False
@@ -50,18 +50,21 @@ def _preparar(con, ctx: Contexto | None):
             "set_config('plat.login', %s, true)",
             (str(ctx.tenant_id), str(ctx.usuario_id), ctx.login),
         )
+    if somente_leitura:
+        # superadmin lendo outro inquilino (ADR 0002 seção 10): a transação inteira é só leitura
+        cur.execute("SET LOCAL transaction_read_only = on")
     return cur
 
 
 @contextmanager
-def db(ctx: Contexto | None = None):
+def db(ctx: Contexto | None = None, somente_leitura: bool = False):
     """Cursor RealDict dentro de uma transação; commit no fim, rollback em exceção."""
     p = pool()
     con = cur = None
     for tentativa in range(TENTATIVAS):
         con = p.getconn()
         try:
-            cur = _preparar(con, ctx)
+            cur = _preparar(con, ctx, somente_leitura)
             break
         except (psycopg2.OperationalError, psycopg2.InterfaceError):
             try:
