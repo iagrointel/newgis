@@ -133,5 +133,5 @@ def test_privilegios_de_e_tem_respeitam_rls(conexao_plat_app):
     with conexao_plat_app.cursor() as cur:
         cur.execute("SELECT cardinality(plat.privilegios_de(%s)) AS n, plat.tem('membros.gerir') AS t", (u1,))
         r = cur.fetchone()
-    assert r["n"] == 46 and r["t"] is True
+    assert r["n"] == 47 and r["t"] is True  # 46 + jobs.ver (T2, migração 015)
     conexao_plat_app.rollback()

@@ -171,7 +171,7 @@ def test_apagar_com_grupos_e_404_de_outro_inquilino(sessao_a, usuarios_a, ids):
 
 def test_privilegios_e_papeis(sessao_a, usuarios_a):
     privs = sessao_a.get("/api/privilegios").json()
-    assert len(privs) == 46 and {p["nome"] for p in privs} == set(priv.NOMES)
+    assert len(privs) == 47 and {p["nome"] for p in privs} == set(priv.NOMES)  # 46 + jobs.ver (T2, migração 015)
     papeis = sessao_a.get("/api/papeis").json()
     assert [p["perfil"] for p in papeis["perfis"]] == list(priv.PERFIS)
     assert set(papeis["perfis"][0]["privilegios"]) == set(priv.teto("visualizador"))

@@ -7,6 +7,7 @@ lendo e executando; o filtro de dono do ADR 0003 seção 9 não muda (o visualiz
 import pytest
 
 from app.auth import privilegios as priv
+from tests.api.conftest import PREFIXO_TESTE, com_token
 from tests.api.jobs.conftest import criar_job
 
 LEITURA = ("/api/jobs", "/api/jobs/resumo", "/api/jobs/tipos", "/api/agendas")
@@ -92,3 +93,21 @@ def test_openapi_declara_os_dois_privilegios_da_fila():
     for (metodo, caminho), privilegio in esperado.items():
         op = spec["paths"][caminho][metodo]
         assert op["x-privilegio"] == privilegio, (metodo, caminho, op.get("x-privilegio"))
+
+
+def test_token_de_visualizador_le_e_nao_executa(visualizador, cliente):
+    """Token de serviço com escopo jobs:executar cujo dono é visualizador: o escopo passa, o privilégio decide.
+    Lê (200, exige jobs.ver, que ele tem) e não executa (403, exige jobs.executar, que ele não tem)."""
+    c, _ = visualizador
+    r = c.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-vis-jobs", "escopos": ["jobs:executar"]})
+    assert r.status_code == 201, r.text
+    tok, tid = r.json()["token"], r.json()["id"]
+    try:
+        for rota in LEITURA:
+            resp = com_token(cliente, tok, "GET", rota)
+            assert resp.status_code == 200, (rota, resp.status_code, resp.text)
+        resp = com_token(cliente, tok, "POST", "/api/jobs",
+                         json={"tipo": "prova.progresso", "parametros": {"duracao_s": 0, "passos": 1}})
+        assert resp.status_code == 403 and resp.json()["detalhe"]["exigido"] == "jobs.executar"
+    finally:
+        c.delete(f"/api/tokens/{tid}")
