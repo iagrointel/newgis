@@ -1,16 +1,20 @@
-# Arquitetura do `plat` (o que existe em 0.1.0)
+# Arquitetura do `plat` (o que existe no fim do turno 2)
 
 Este documento descreve o que está construído, instalado e testado no repositório
-`/home/dev/plataforma/enterprise` no fim do turno 1 do laço PLATAFORMA ENTERPRISE (setembro de 2026).
-Decisões e motivos estão em `docs/adr/0001-fundacao.md`; aqui está o resultado. O que ainda não existe
-está na seção final e em `/home/dev/plataforma/laco/PAINEL.md`, nunca misturado ao que existe.
+`/home/dev/plataforma/enterprise` no fim do turno 2 do laço PLATAFORMA ENTERPRISE (setembro de 2026): a fundação
+do turno 1 (item L0-01), a identidade e o acesso (item L0-02) e a fila de trabalhos (item L0-05). Decisões e
+motivos estão nos ADRs `docs/adr/0001-fundacao.md`, `0002-identidade-e-acesso.md` e `0003-fila-de-jobs.md`; aqui
+está o resultado. O que ainda não existe está na seção final e em `/home/dev/plataforma/laco/PAINEL.md`, nunca
+misturado ao que existe. O catálogo de conteúdo (item L0-03, ADR 0004, migração 011) está em construção por outra
+trilha e é descrito aqui só onde já toca o banco.
 
-Todo número citado vem de `tests/medidas/L0-01-repo.json` (rodada 2 do testador sobre o HEAD `8ffe950`,
-commit `3083366`; instalação, RLS e pg_hba são da rodada 1, marcadas assim no campo `comando`), com o
-comando que o gerou entre parênteses. Nenhum número foi digitado de cabeça.
+Todo número citado vem de `tests/medidas/L0-01-repo.json` (turno 1), `tests/medidas/L0-02-tenant-auth.json` e
+`tests/medidas/L0-05-jobs.json` (gerados às 17:28 UTC de 05/09/2026 sobre o commit `90d03c0`; as chaves
+`testador_*` são medições próprias do testador feitas por `curl`, `psql` e `systemctl`), ou dos vereditos do
+adversário em `laco/handoffs/T2/L0-02-tenant-auth/refutacao.json`, com o comando entre parênteses.
 
-Estado: análise / beta privado. URL interna `https://plat.iagrointel.com`, `noindex` em toda resposta,
-nunca linkada de lugar público.
+Estado: análise / beta privado. URL interna `https://plat.iagrointel.com`, `noindex` em toda resposta, nunca
+linkada de lugar público.
 
 ---
 
@@ -18,456 +22,623 @@ nunca linkada de lugar público.
 
 | componente | porta | existe hoje | o que é |
 |---|---|---|---|
-| `plat-api` | 127.0.0.1:8150 | sim | FastAPI 0.138.0 sob uvicorn 0.27.1, 2 workers, unidade systemd `plat-api` |
-| nginx | 443 / 80 | sim | `server_name plat.iagrointel.com`; `/static/` servido do disco (`alias` para `web/`), o resto em proxy para :8150; HTTP 80 redireciona para HTTPS |
-| PostgreSQL 16.13 + PostGIS 3.6.3 | 5432 | sim (banco `iagro_sat`, compartilhado) | schema `plat`, role `plat_app` |
-| Garage (objetos S3) | 3900 | sim, serviço `plataforma-garage` já existente na máquina | só sondado por `/saude`; nenhum bucket do `plat` ainda |
+| `plat-api` | 127.0.0.1:8150 | sim | FastAPI sob uvicorn, 2 workers, unidade systemd `plat-api` (`MemoryMax=1G`); 74 rotas em 55 caminhos no OpenAPI |
+| `plat-worker` | 127.0.0.1:8153 (só `/saude`) | sim | processo pai da fila de jobs (`python -m app.jobs.worker`), unidade `plat-worker` (`MemoryMax=2G`); um processo filho por job |
+| nginx | 443 / 80 | sim | `server_name plat.iagrointel.com`; `/static/` do disco; o resto em proxy para :8150; limite por IP nos logins; HTTP redireciona |
+| PostgreSQL 16 + PostGIS 3.6 | 5432 | sim (banco `iagro_sat`, compartilhado) | schemas `plat` e `plat_trabalho`; roles `plat_app` (API e filhos) e `plat_worker` (processo pai da fila) |
+| Garage (objetos S3) | 3900 | sim, serviço `plataforma-garage` já existente | só sondado por `/saude` |
 | `plat-martin` (tiles vetoriais) | 8151 | **não existe** | porta reservada; `/saude` devolve `"martin": "ausente"` |
 | `plat-titiler` (tiles raster) | 8152 | **não existe** | porta reservada; `/saude` devolve `"titiler": "ausente"` |
-| `plat-worker` (fila de trabalhos) | 8153 | **não existe** | porta reservada; item L0-05 |
 
-Faixa reservada ao produto: 8150-8159. Serviços vizinhos da máquina que o `plat` nunca toca: 8125, 8126,
-8091, 8127-8135, 8141 (lista na skill do laço).
+Faixa reservada ao produto: 8150-8159. Serviços vizinhos da máquina que o `plat` nunca toca: 8125, 8126, 8091,
+8127-8135, 8141.
 
-Fluxo de uma requisição hoje:
+Fluxo de uma requisição:
 
 ```
 navegador --HTTPS--> nginx (443)
-   /static/*  -> disco: web/  (Cache-Control: no-store; X-Robots-Tag: noindex)
-   /          -> proxy 127.0.0.1:8150 -> FastAPI
-                    GET /            -> web/index.html
-                    GET /saude       -> banco (plat.versao_migracao) + sondas HTTP (martin, titiler, garage)
-                    GET /api/versao  -> VERSAO + sha do git
-                    GET /api/docs, /api/openapi.json (gerados pelo FastAPI)
+   /static/*                 -> disco: web/ (Cache-Control: no-store; noindex; HSTS; Referrer-Policy)
+   = /api/login, /api/login/2fa -> limit_req zone=plat_login (10 r/min por IP, burst 10, 429) -> proxy :8150
+   /                         -> proxy 127.0.0.1:8150 -> FastAPI
+        páginas  /  /entrar  /conta  /admin/{usuarios,grupos,papeis,tokens,log}  /tarefas  /tarefas/{id}
+        API      /saude  /api/versao  /api/login*  /api/logout  /api/eu*  /api/privilegios  /api/papeis*
+                 /api/usuarios*  /api/grupos*  /api/tokens*  /api/log  /api/eventos  /api/plataforma/*
+                 /api/jobs*  /api/agendas*  /api/docs  /api/openapi.json
+plat-worker --LISTEN plat_worker--> banco --fork--> filho (plat_app, contexto do inquilino do job)
+plat-api    --LISTEN plat_job-----> banco --SSE---> navegador (/api/jobs/{id}/eventos)
 ```
 
-Memória do serviço em repouso: 88,5 MB no cgroup (`systemctl show plat-api -p MemoryCurrent` =
-92.827.648 bytes, pico 93.818.880, 2 workers, NRestarts=0). A soma de RSS dos 4 processos é 145,7 MB
-porque páginas compartilhadas contam mais de uma vez; o número a citar é o do cgroup.
+Memória medida pelo testador: `plat-api` 122.781.696 bytes no cgroup, mestre mais 2 workers
+(`testador_plat_api_memoria_bytes`, `systemctl show plat-api -p MemoryCurrent`); processo pai do worker
+40.556 kB de RSS (`rss_worker_kb`, lido em `GET :8153/saude` depois do job de memória).
 
 ---
 
 ## 2. Repositório
 
 ```
-VERSAO                 0.1.0 (uma linha, semver); lido por /api/versao
-README.md              o que existe
-ARQUITETURA.md         este arquivo
-MANUAL.md              acesso, saúde, instalação (uma seção por tela quando houver tela)
-CHANGELOG.md           por turno
-install.sh             instalador idempotente (root)
-Makefile               check, check-rapido, lint, sem-marcador, teste, e2e, medidas, vendor, migrar, openapi
-pyproject.toml         pytest (marcadores, pythonpath) e ruff
-requirements.txt       toda dependência da aplicação e da suíte fixada com ==; uvicorn e psycopg2 do sistema (dpkg)
-.env.exemplo           todas as chaves de configuração, sem segredo
-.env                   segredos reais, modo 600, fora do git (criado pelo install.sh)
-app/                   API (pacote Python `app`)
-  main.py              aplicação, middleware X-Req-Id + linha JSON de acesso, rota /
-  settings.py          leitura e validação do .env
-  db.py                pool psycopg2 com reconexão e contexto por inquilino
-  log.py               logging JSON por linha
-  versao.py            VERSAO e sha do git lidos sem subprocesso
-  saude.py             /saude e /api/versao
-  senha.py             hash pbkdf2_sha256 (600.000 iterações)
+VERSAO                 versão (semver); lido por /api/versao
+README.md · ARQUITETURA.md · MANUAL.md · CHANGELOG.md
+install.sh             instalador idempotente (root), passos a-j (h2 = worker)
+Makefile               check, check-rapido, lint, sem-marcador, teste, e2e, medidas, vendor, migrar, openapi, worker, e2e-worker
+requirements.txt       42 linhas fixadas com == (aplicação e suíte); uvicorn e psycopg2 do sistema; qrcode 8.2, croniter 6.2.4,
+                       python-dateutil 2.9.0.post0, six 1.17.0 entraram neste turno
+.env.exemplo           todas as chaves (seção 10.1); .env real fora do git
+app/
+  main.py              aplicação; lista ROUTERS (uma linha por trilha); middleware de identidade; /api/docs
+  settings.py · db.py (pool, contexto, somente_leitura) · log.py · versao.py · saude.py · senha.py
+  erros.py             ErroAPI e os tratadores: {erro, mensagem, detalhe?, req_id}
+  limites.py           padrões e faixas (identidade; a trilha do catálogo acrescentou a seção dela)
+  paginas.py           PAGINAS: /entrar, /conta, /admin/usuarios, /admin/grupos, /admin/papeis, /admin/tokens, /admin/log
+  auth/                politica.py, totp.py, redigir.py, escopos.py, privilegios.py (46 nomes), sessao.py (dependências),
+                       middleware.py (X-Req-Id, log JSON, plat.log_acesso), modelos.py, comum.py,
+                       rotas_login.py, rotas_eu.py, rotas_usuarios.py, rotas_grupos.py, rotas_tokens.py, rotas_log.py, rotas_plataforma.py
+  jobs/                registro.py (@tarefa), contexto_job.py, filho.py, worker.py, agenda.py, periodicos.py, tipos_prova.py,
+                       tipos.py, contexto.py (adaptador Auth -> Sessao), servico.py, eventos.py (SSE), rotas.py
 db/
-  migrar.sh            aplicador de migrações por sha256
-  migracoes/001_fundacao.sql
-  migracoes/002_identidade.sql
-deploy/
-  plat-api.service     modelo da unidade systemd (APP_DIR, APP_USER, PORTA substituídos)
-  nginx.conf           modelo do server block (DOMINIO, APP_DIR, PORTA substituídos)
+  migrar.sh            aplicador por sha256
+  migracoes/           001 002 003 004 006 007 008 009 010 (011 em construção pela trilha do catálogo)
+deploy/                plat-api.service, plat-worker.service, nginx.conf
 web/
-  index.html, app.js, js/core.js, style.css, favicon.svg
-  vendor/maplibre-gl-4.7.1.js, maplibre-gl-4.7.1.css, swagger-ui-bundle-5.32.15.js, swagger-ui-5.32.15.css,
-  vendor/VERSOES.txt (nome, versão, sha256, licença, origem; `make vendor` confere os sha256)
+  index.html, login.html, conta.html, tarefas.html, admin/{usuarios,grupos,papeis,tokens,log}.html
+  style.css (tema único), tarefas.css, app.js, js/core.js
+  js/base/             api.js, estado.js, i18n.js, dom.js, layout.js, componentes.js + componentes/{aviso,busca,dialogo,formulario,paginacao,tabela}.js
+  js/auth/             sessao.js, login.js, conta.js, usuarios.js, grupos.js, papeis.js, tokens.js, log.js, comum.js
+  js/jobs/             api.js, eventos.js, formato.js, util.js, lista.js, detalhe.js, agendas.js, tarefas.js
+  js/i18n/pt-BR.json   dicionário (chave ausente aparece crua; o e2e test_i18n_cru.py reprova)
+  vendor/              maplibre-gl 4.7.1, swagger-ui 5.32.15, dompurify 3.4.14; VERSOES.txt com sha256 e licença
 docs/
-  adr/0001-fundacao.md decisões da fundação
-  openapi.json         gerado por `make openapi`, comitado
-  PARIDADE.md          tabela viva contra o ArcGIS Enterprise (vazia: nenhuma capacidade de usuário ainda)
+  adr/0001 0002 0003 (0004 e 0005 são preparação de L0-03 e L0-04)
+  openapi.json         gerado por make openapi, comitado; PARIDADE.md (tabela viva)
 tests/
-  conftest.py          fixtures: env, cliente (TestClient), conexao_plat_app, base_url, medida
-  unit/  api/  e2e/    ver seção 9.3
-  medidas/<item>.json  números medidos; único lugar de onde documento cita número
-  marcadores.regex     expressão da varredura de marcador de pendência (a mesma do driver do laço)
+  conftest.py          fixtures: env, cliente, conexao_plat_app, base_url, medida
+  unit/ api/ api/jobs/ e2e/   seção 10.3
+  medidas/<item>.json  único lugar de onde documento cita número
+  marcadores.regex · jobs_sessao.py · credenciais.txt (600, fora do git) · credenciais_totp.txt (600, fora do git)
   e2e/capturas/        PNG do e2e (fora do git)
-  credenciais.txt      senhas dos administradores de demonstração (600, fora do git)
+var/jobs/              diretório de trabalho dos jobs (fora do git)
 ```
 
 ---
 
-## 3. Banco: schema `plat`
+## 3. Banco: schemas `plat` e `plat_trabalho`
 
-### 3.1 Role e permissões
+### 3.1 Roles
 
-- `plat_app`: `LOGIN NOBYPASSRLS NOSUPERUSER NOCREATEDB NOCREATEROLE`. Não é dona de nada
-  (`pg_roles`: rolsuper f, rolbypassrls f; 0 objetos de posse de `plat_app` em `pg_class`, `pg_proc`,
-  `pg_namespace`; schema, 6 tabelas, 4 sequências e 11 funções são de `postgres`). Sem posse e sem
-  BYPASSRLS a RLS vale para ela.
-- Senha: nunca no SQL do repositório; o `install.sh` faz `ALTER ROLE plat_app PASSWORD` com o valor lido
-  do `.env` a cada execução (a senha do banco é sempre a do `.env`).
-- `pg_hba.conf`: linha `host iagro_sat plat_app 127.0.0.1/32 scram-sha-256`, acrescentada pelo
-  `install.sh` se não existir, seguida de `pg_reload_conf()`. Conferido: 1 linha após três execuções
-  (`sudo grep -c plat_app /etc/postgresql/16/main/pg_hba.conf` = 1).
-- Grants: `USAGE` no schema; `SELECT, INSERT, UPDATE, DELETE` nas tabelas; `USAGE, SELECT` nas sequências;
-  `EXECUTE` nas funções; `ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA plat` para que tabela
-  criada por migração futura nasça acessível. Exceções: `versao_migracao` e `log_acesso` têm
-  `REVOKE INSERT, UPDATE, DELETE` (a primeira só o aplicador escreve; a segunda só a função
-  `plat.log_registrar`).
+| role | quem a usa | pode |
+|---|---|---|
+| `plat_app` | API (`PLAT_DSN`) e o processo filho de cada job | `SELECT/INSERT/UPDATE/DELETE` nas tabelas de inquilino sob RLS; `EXECUTE` nas funções da aplicação; **sem `UPDATE` em `plat.job`** (migração 006); `CREATE` em `plat_trabalho` |
+| `plat_worker` | processo pai da fila (`PLAT_DSN_WORKER`) | nenhum privilégio de tabela; `EXECUTE` só nas funções que mudam estado de job e de worker (`job_pegar`, `job_pid`, `job_heartbeat`, `job_terminar`, `job_devolver`, `job_ceifar`, `worker_*`, `agenda_vencidas`, `agenda_enfileirar`, `agenda_periodica_sincronizar`, `jobs_no_dia`) |
+| `postgres` | migrações, `install.sh` | dono de tudo |
 
-### 3.2 Tabelas
+As duas roles são `LOGIN NOBYPASSRLS NOSUPERUSER`, sem posse de objeto (adversário, `pg_roles` e `pg_class`:
+`rolsuper=f rolbypassrls=f`; dono de todas as tabelas = `postgres`). Linhas no `pg_hba.conf` acrescentadas pelo
+`install.sh`, uma por role. Privilégio padrão do schema: função nova nasce com `EXECUTE` para `plat_app` e sem
+`PUBLIC` (a 003 fez `ALTER DEFAULT PRIVILEGES ... REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC`); as três funções de
+gatilho da 004, que nasceram antes disso, foram corrigidas pela 010. Regressão encontrada pela trilha da fila
+depois da reinstalação destrutiva: a migração `011_catalogo` (em construção) faz `GRANT EXECUTE ON ALL FUNCTIONS IN
+SCHEMA plat TO plat_app`, padrão copiado da 001, e devolve a `plat_app` o `EXECUTE` nas funções do worker, inclusive
+`via_worker_ligar`, desfazendo a separação da 006; a correção `013_jobs_execute_reafirma` está na árvore de trabalho,
+sem commit, e a regra nova é "grant explícito por função, nunca `ON ALL FUNCTIONS` depois da 006"
+(`tests/api/jobs/test_jobs_transicoes.py::test_plat_app_nao_executa_as_funcoes_do_worker` é a rede de segurança).
 
-| tabela | chave | tenant_id | RLS | política | observação |
-|---|---|---|---|---|---|
-| `versao_migracao` | `nome` | não | não | — | `sha256`, `aplicada_em`, `duracao_ms`, `aplicada_por`; só leitura para `plat_app` |
-| `tenant` | `id` serial | (é o próprio `id`) | sim | `p_tenant`: `id = plat.tenant_atual()` USING e WITH CHECK | `slug` com CHECK `^[a-z0-9][a-z0-9-]{1,38}$`, `config jsonb`, `cota_bytes` (20 GiB) |
-| `usuario` | `id` serial | sim | sim | `p_usuario` FOR ALL | `login` minúsculo, `senha_hash`, `perfil` em (`admin`,`editor`,`visualizador`,`campo`), `superadmin`, `totp_*`, `falhas_login`, `bloqueado_ate`; UNIQUE (tenant_id, login) |
-| `sessao` | `token_hash` | sim | sim | `p_sessao` FOR ALL | guarda sha256 do token, nunca o token; `expira_em`, `ip`, `agente` |
-| `token_servico` | `id` serial | sim | sim | `p_token_servico` FOR ALL | `token_hash` UNIQUE, `prefixo`, `escopos text[]`, `restricao jsonb`, `expira_em`, `revogado_em` |
-| `log_acesso` | `id` bigserial | sim (nulo antes de autenticar) | sim | `p_log_acesso` FOR SELECT | escrita só por `plat.log_registrar`; índices por (tenant_id, em) e (token_id, em) |
+Medido pelo testador (`testador_secdef_sem_public`, `pg_proc × aclexplode(proacl)`, 16:04 UTC): 51 funções
+`SECURITY DEFINER` de 60 no schema, 0 com `EXECUTE` para `PUBLIC`, 0 com grantee fora de `plat_app`, `plat_worker`
+e `postgres`. O adversário repetiu na instalação nova (17:15 UTC): 0 funções com `PUBLIC`, 27 tabelas, 60 funções,
+25 políticas, 2 tabelas em `plat_trabalho` (antes da migração 011 do catálogo).
 
-Medido: 4 tabelas com coluna `tenant_id`, todas com `relrowsecurity = t` e 1 política, mais `tenant` com
-RLS por `id` (`pg_class × pg_attribute` no schema `plat`). Sem contexto de inquilino, `plat_app` vê 0
-linhas nas 5 tabelas (`psql` como `plat_app` sem `set_config`: `count(*)` = 0 0 0 0 0; como `postgres`:
-tenant 2, usuario 2). INSERT com `tenant_id` de outro inquilino falha com `new row violates row-level
-security policy`; UPDATE/DELETE cruzados devolvem 0 linhas; UPDATE que muda o `tenant_id` do próprio
-registro falha da mesma forma.
+### 3.2 Tabelas e RLS
 
-Dado semeado pela migração 002 (aberto, sem nome de cliente): inquilinos `demo` e `demo2`. Os
-administradores `admin` de cada um nascem no `install.sh` (passo g), com senha em `tests/credenciais.txt`.
+| tabela | tenant_id | RLS | conteúdo |
+|---|---|---|---|
+| `versao_migracao` | não | não | controle das migrações (só leitura para `plat_app`) |
+| `tenant` | é o `id` | sim (`id = plat.tenant_atual()`) | inquilino: `slug`, `nome`, `ativo`, `config jsonb` (seção 4.7), `cota_bytes` |
+| `usuario` | sim | sim | login, `senha_hash` (pbkdf2, 600.000 iterações), `perfil`, `papel_id`, `superadmin`, `origem`, `trocar_senha`, `falhas_login`/`falhas_desde`/`bloqueado_ate`, `totp_secret` cifrado, `totp_ativo`, `totp_ultimo_passo`, `codigos_recuperacao`, `desafio_2fa_hash`/`_ate`, `ultimo_login`, `ultimo_ip` |
+| `sessao` | sim | sim | `token_hash` (sha256 do cookie), `criado_em`, `ultimo_uso`, `expira_em`, `ip`, `agente` |
+| `token_servico` | sim | sim | `token_hash`, `prefixo`, `escopos text[]`, `restricao jsonb`, `expira_em`, `revogado_em`, `renovado_por`, `ultimo_uso`, `ultimo_ip` |
+| `senha_historico` | via `usuario` | sim | os 5 últimos hashes por usuário |
+| `privilegio`, `perfil_privilegio` | não | não | vocabulário de 46 privilégios e o teto por perfil (só leitura) |
+| `papel_personalizado`, `papel_privilegio` | sim / via papel | sim | papéis por inquilino e seus privilégios |
+| `grupo`, `grupo_membro` | sim | sim (leitura por visibilidade com `plat.tem`) | grupos, papéis de grupo (dono/gerente/membro), estado (ativo/convidado/pedido) |
+| `log_acesso` (particionada por mês) | sim (nulo antes de autenticar) | sim, inclusive nas partições | uma linha por requisição autenticada; escrita só por `plat.log_registrar` |
+| `evento_tipo` | não | não | vocabulário de eventos de domínio (identidade + fila) |
+| `evento` (particionada por mês) | sim | sim | eventos append-only; escrita só por `plat.evento_registrar` (exige contexto) |
+| `job` | sim | sim | fila (seção 5.1); `plat_app` sem `UPDATE` |
+| `job_log` | sim | sim | linhas de log por job (teto 10.000; `linhas_log` contado por gatilho) |
+| `worker` | não | não; `REVOKE ALL FROM plat_app` | workers vivos (nome, pid, versão, heartbeat, rss); leitura por `plat.fila_estado()` |
+| `agenda` | sim | sim | agendamentos cron por inquilino |
+| `plat_trabalho.passos`, `plat_trabalho.marcadores` | por `job_id` | não (schema de trabalho) | efeito parcial e marcador de fim das tarefas de prova; expurgados por `plat.jobs_expurgar` |
+
+Medido pelo testador (`testador_rls`, `pg_class × pg_attribute`, 16:03 UTC): 22 de 22 tabelas e partições com
+`tenant_id` têm `relrowsecurity = t`; `papel_privilegio`, `senha_historico` e `tenant` têm política por junção;
+0 tabelas com `tenant_id` sem RLS. O adversário confirmou o mesmo na instalação nova.
 
 ### 3.3 Contexto por inquilino
 
-A aplicação define o inquilino da transação com `set_config('plat.tenant_id', ..., true)`,
-`plat.usuario_id` e `plat.login` (o `true` = `SET LOCAL`; a conexão devolvida ao pool não carrega o
-inquilino da requisição anterior). Duas funções `STABLE` leem esses valores:
+A API define o inquilino da transação com `set_config('plat.tenant_id', ..., true)`, `plat.usuario_id` e
+`plat.login` (`SET LOCAL`; a conexão volta ao pool sem contexto). `plat.tenant_atual()` e `plat.usuario_atual()`
+leem esses valores; toda política de RLS os usa. `app/db.py`: `ThreadedConnectionPool(1, 8)` por worker; `db(ctx)`
+repete só a preparação (até 9 vezes, descartando conexão morta), nunca a consulta; `somente_leitura` faz
+`SET LOCAL transaction_read_only = on` (usado pela leitura do superadmin com `X-Plat-Inquilino`).
 
-```sql
-plat.tenant_atual()  RETURNS int  -- NULLIF(current_setting('plat.tenant_id', true), '')::int
-plat.usuario_atual() RETURNS int
+Limite escrito nos ADRs e provado pelo adversário: o contexto é um GUC que a própria role define; quem tem a senha
+de `plat_app` escolhe o inquilino. A separação nova do turno 2 é entre quem executa tarefas (`plat_app`, dentro do
+inquilino) e quem muda estado de job (`plat_worker`). Todo SQL da API é parametrizado e o contexto só é definido em
+`app/db.py`.
+
+---
+
+## 4. Identidade e acesso (item L0-02, ADR 0002, migrações 003 e 009)
+
+### 4.1 Modelo
+
+Inquilino → usuário → perfil (`admin`, `editor`, `visualizador`, `campo`) = teto de privilégios e papel padrão →
+46 privilégios em vocabulário fechado (`app/auth/privilegios.py` e `plat.privilegio`, o teste
+`test_vocabulario_python_igual_ao_banco` compara os dois; 20 são administrativos e obrigam perfil `admin`) → papel
+personalizado = subconjunto do teto → grupos com papéis dono/gerente/membro. `plat.privilegios_de(usuario)` e
+`plat.tem(privilegio)` servem às rotas e às políticas. Toda rota declara `x-auth` e `x-privilegio` no OpenAPI
+(`tests/api/test_privilegios_declarados.py` reprova rota sem declaração), e toda rota de escrita declara o evento
+que registra (`tests/api/eventos_esperados.py`).
+
+### 4.2 Sessão
+
+Cookie `plat_sessao` = 64 hexadecimais gerados no banco por `plat.auth_sessao_criar`; o banco guarda só o sha256.
+Atributos `HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800`. Validade absoluta `sessao_max_dias` (7) e
+deslizante `sessao_ociosa_horas` (12), por inquilino; `plat.auth_sessao(hash, ociosa_horas)` atualiza `ultimo_uso`
+só quando válida. Troca de senha, redefinição, desabilitação e desligamento do segundo fator pelo administrador
+apagam todas as sessões do usuário (`plat.sessoes_encerrar_usuario`). CSRF: `SameSite=Lax` mais a exigência de
+`Content-Type: application/json` em escrita sob cookie (`415`) e a conferência de `Origin` quando presente
+(`403 origem_invalida`). Cookie e `Authorization: Bearer` juntos = `400 autenticacao_ambigua`. Pendências
+(`trocar_senha`, `configurar_2fa`) limitam a sessão às rotas de conta (`403 pendencia`).
+
+Adversário (rodada 1): fixação de sessão recusada (o login ignora cookie pré-existente e emite outro); usuário
+desativado perde a sessão na hora; cookie após logout = 401; troca de senha por uma sessão derruba a outra.
+
+### 4.3 Senha e bloqueio
+
+Hash `pbkdf2_sha256$600000$...` (`app/senha.py`). Política em `app/auth/politica.py` lida de `tenant.config.auth`
+com corte para a faixa; recusa nomeia a regra. Bloqueio por usuário no banco (`plat.auth_falha`: 5 falhas em 15 min
+→ 15 min; `plat.auth_ok` zera), contado no banco porque a API tem 2 workers; falhas de TOTP e de código de
+recuperação contam no mesmo contador. Usuário inexistente é conferido contra `HASH_FANTASMA` (gerado na partida)
+para o tempo ser constante: medido 122,3 ms para inexistente contra 123,6 ms para senha errada
+(`login_inexistente_vs_senha_errada_ms`); o adversário mediu 137,5 contra 140,2 ms em 60 amostras. Por IP, o nginx
+limita `/api/login` e `/api/login/2fa` a 10 r/min com rajada 10 (`/etc/nginx/conf.d/plat_limites.conf`).
+
+### 4.4 Segundo fator (TOTP)
+
+RFC 6238, HMAC-SHA1, 30 s, 6 dígitos, janela de um passo, implementação de biblioteca padrão conferida contra o
+vetor da RFC (`T=59 → 287082`, `tests/unit/test_totp.py`). Segredo de 20 bytes em base32, guardado como
+`enc:v1:<base64(nonce + AES-GCM)>` com chave `sha256(PLAT_SECRET || "totp")` (`cryptography` do sistema).
+Anti-replay por `totp_ultimo_passo`. Oito códigos de recuperação de uso único. Desafio de login com hash e validade
+de 5 min no banco (`plat.auth_desafio_2fa_criar/resolver`), por isso funciona com 2 workers. QR em SVG gerado no
+servidor por `qrcode==8.2` e inserido na tela por DOMPurify. `exigir_2fa` por inquilino vira pendência de sessão, não
+expulsão.
+
+### 4.5 Token de serviço
+
+`plat_` + 43 caracteres; sha256 no banco; `prefixo` para a lista. Escopos fechados (`app/auth/escopos.py`),
+restrições de origem e IP (`ipaddress`; o IP é `request.client.host` com `--proxy-headers` e
+`--forwarded-allow-ips 127.0.0.1`, isto é, o `X-Forwarded-For` que o nginx local escreve; o adversário confirmou
+que um `X-Forwarded-For` forjado pela URL pública devolve `401 ip_nao_permitido` e que o spoof só valeria se :8150
+fosse exposto sem nginx). Validade padrão 90 dias, máximo 365; rotação com sobreposição de 24 h; revogação sem
+cache. `plat.auth_token(hash, ip)` resolve o token e grava `ultimo_uso`/`ultimo_ip`. Latência medida: 3,0 ms
+(`latencia_auth_token_ms`); revogação até o 401: 0,01 s (`tempo_revogacao_s`).
+
+### 4.6 Log de acesso e eventos
+
+`app/auth/middleware.py`: `X-Req-Id`, linha JSON no journal (com `Cookie`, `Authorization`, `senha`, `codigo`,
+`desafio` e `token` redigidos por `app/auth/redigir.py`) e, depois do último byte da resposta, `plat.log_registrar`
+com `bytes` contados no `body_iterator`, em `run_in_threadpool`. Rotas excluídas: `/saude`, `/api/versao`, `/`,
+`/api/docs`, `/api/openapi.json`. `log_acesso` foi recriada pela 003 particionada por mês (`PARTITION BY RANGE (em)`,
+chave `(id, em)`), com a guarda "só recria se `relkind = 'r'` e `count(*) = 0`" (o ramo `DROP + CREATE` rodou com 0
+linhas, 13:45 UTC); `plat.log_particao_garantir(mês)` e `plat.log_expurgar(12)` cuidam das partições; o `install.sh`
+garante 4 meses. Custo medido: 0,66 ms por requisição (`custo_log_acesso_ms`). O adversário contou 30.882 linhas com
+0 valores de token ou cookie na rota e 1.481 linhas com `token_id`, nenhuma com `ip` ou `bytes` nulos.
+
+`plat.evento` (particionada, append-only) recebe os eventos de domínio por `plat.evento_registrar` (exige contexto;
+sem contexto, exceção). Vocabulário em `plat.evento_tipo`: identidade (`usuarios/*`, `papeis/*`, `grupos/*`,
+`tokens/*`, `sessoes/revogar`, `inquilinos/*`, inclusive `inquilinos/leitura_superadmin` e `inquilinos/apagar`) e
+fila (migração 007: eventos de `/api/jobs` e `/api/agendas`). `GET /api/eventos` e a aba Eventos da tela Log leem
+por inquilino.
+
+### 4.7 Superadmin e inquilino técnico `plataforma`
+
+Só usuários do inquilino `plataforma` podem ter `superadmin = true` (gatilho `usuario_superadmin_so_plataforma`);
+o inquilino nasce na 003 com `config.auth.exigir_2fa = true`. As funções `plat.tenant_criar`, `tenant_listar`,
+`tenant_suspender`, `tenant_apagar` e `plataforma_tenant_id` recebem o hash da sessão e resolvem o operador por
+`plat.plataforma_operador(hash)`, nunca por GUC (o adversário forjou `plat.usuario_id` e chamou `tenant_criar`:
+`ERROR so_superadmin`). Rotas `/api/plataforma/*` respondem `404` a quem não é superadmin. Apagar inquilino
+(migração 009): `plat.tenant_apagar_interno(id)` (só `postgres`; desliga o gatilho do último administrador dentro
+da própria transação e apaga toda tabela com `tenant_id` em passes até as chaves estrangeiras fecharem) e
+`plat.tenant_apagar(hash, id)` para o superadmin, recusando `plataforma`. `X-Plat-Inquilino` abre o contexto de
+outro inquilino só para leitura em rotas marcadas e gera evento no inquilino lido.
+
+`tenant.config.auth` (padrões e faixas em `app/limites.py`, `AUTH_PADROES`): `senha_min` 8 (8-64),
+`senha_maiuscula`/`senha_minuscula`/`senha_simbolo` false, `senha_historico` 5 (0-24), `senha_expira_dias` 0 (0 ou
+30-365), `bloqueio_tentativas` 5 (3-10), `bloqueio_minutos` 15 (5-60), `sessao_ociosa_horas` 12 (1-24),
+`sessao_max_dias` 7 (1-30), `exigir_2fa` false, `token_max_dias` 365 (1-365), `token_padrao_dias` 90,
+`dominios_email` [] (até 20), `compartilhar_publico` false (D24).
+
+### 4.8 Funções `SECURITY DEFINER` da identidade
+
+Todas de posse de `postgres`, `SET search_path = plat, public`, `EXECUTE` só para `plat_app`. Dois grupos:
+
+- **Pré-contexto, chaveadas por segredo**: `auth_login(slug, login)` (filtra por `t.slug` e `u.login`, devolve o hash
+  para a API comparar), `auth_sessao(hash, ociosa_horas)`, `auth_token(hash, ip)`, `auth_desafio_2fa_resolver(hash)`,
+  `auth_sessao_encerrar(hash)`, `tenant_publico(slug)`, `plataforma_operador(hash)`. Rodam antes de haver inquilino
+  na sessão; a chave é o próprio segredo.
+- **Com contexto obrigatório**: `auth_sessao_criar`, `auth_falha`, `auth_ok`, `auth_desafio_2fa_criar`,
+  `sessoes_encerrar_usuario`, `evento_registrar`, `log_registrar`, `log/evento_particao_garantir`, `tenant_*` de
+  superadmin, `job_cancelar`, `job_progresso`, `jobs_expurgar`: chamam `plat.contexto_confere(usuario)` ou
+  `plat.tenant_atual()`. Chamadas com contexto de `demo` sobre usuário de `demo2` falham com
+  `contexto_de_outro_inquilino` (`tests/api/test_funcoes_seguras.py`; adversário por `psql` como `plat_app`).
+
+---
+
+## 5. Fila de trabalhos (item L0-05, ADR 0003, migrações 004, 006, 007, 008, 010)
+
+### 5.1 `plat.job`
+
+Colunas principais: `id uuid`, `tenant_id`, `usuario_id` (nulo em job de agenda), `tipo`, `parametros jsonb`,
+`estado` (`pendente`, `rodando`, `concluido`, `falhou`, `cancelado`), `prioridade` 1-9, `chave` (lock lógico: mesma
+chave nunca roda em paralelo), `pesado`, `memoria_mb`, `timeout_s`, `executor` (`local`; `gpu` reservado ao L1-05),
+`max_tentativas`, `tentativa`, `reinicios`, `agendado_para`, `agenda_id` + `programado_para` (UNIQUE),
+`iniciado_em`, `heartbeat_em`, `terminado_em`, `worker`, `processo_pid`, `progresso` 0-100, `mensagem` (≤ 200),
+`cancelar_solicitado`, `cancelado_por/em`, `resultado jsonb`, `erro`, `proveniencia jsonb` (versão, commit, GDAL
+quando declarado, entradas com sha256, `repetido_de`, `reinicios`), `linhas_log`. Índices para a retirada
+(`prioridade, agendado_para, criado_em WHERE pendente`), para a ceifa (`heartbeat_em WHERE rodando`), por inquilino e
+por chave. `pesado`, `memoria_mb`, `timeout_s`, `executor` e `max_tentativas` são copiados do registro do tipo na
+criação (o job é auditável depois que o código mudou).
+
+### 5.2 Quem muda o quê (migração 006, achado do testador)
+
+O testador provou, com `ROLLBACK`, que `plat_app` com contexto de inquilino levava um job `pendente → rodando →
+concluido` com resultado forjado, sem worker (o gatilho da 004 só protegia o estado final). Correção em três
+camadas, verificáveis por `tests/api/jobs/test_jobs_transicoes.py`:
+
+1. role `plat_worker` (seção 3.1) é a única com `EXECUTE` nas funções que mudam estado; `plat_app` perdeu;
+2. `REVOKE UPDATE ON plat.job FROM plat_app`: a API cancela por `plat.job_cancelar(id, usuario)` (pendente →
+   cancelado; rodando → `cancelar_solicitado`; exige o contexto do inquilino do job) e o filho reporta por
+   `plat.job_progresso(id, worker, pct, mensagem)` (só progresso, mensagem e heartbeat do job rodando deste worker e
+   deste inquilino);
+3. gatilho `plat.job_transicao` BEFORE INSERT OR UPDATE: job nasce `pendente` e limpo; entrar em `rodando`,
+   `concluido` ou `falhou`, ou mudar `resultado`, `tentativa`, `reinicios`, `worker`, `iniciado_em`, `proveniencia`,
+   `processo_pid`, exige o GUC `plat.via_worker = 'sim'`, ligado e desligado só dentro das funções do worker
+   (`via_worker_ligar/desligar`, sem `EXECUTE` para ninguém além de `postgres`).
+
+Depois da 006 o testador repetiu o ataque: `UPDATE` como `plat_app` = `permission denied for table job`; `INSERT`
+já `concluido` = recusado pelo gatilho; `job_pegar`/`job_terminar` como `plat_app` = `permission denied`;
+`plat_worker` com `SELECT` ou `UPDATE` direto em `plat.job` = `permission denied`.
+
+### 5.3 Máquina de estados
+
+```
+pendente --(job_pegar: tentativa += 1)--> rodando --(job_terminar)--> concluido | falhou | cancelado
+   ^                                          |
+   |   job_devolver / job_ceifar (reinício, worker sem sinal; desfaz o incremento de tentativa: migração 008;
+   |   reinicios += 1; reinicios >= PLAT_JOB_MAX_REINICIOS (5) --> falhou "devolvido 5 vezes sem terminar")
+   +------------------------------------------+
+pendente --(job_cancelar)--> cancelado
 ```
 
-Consequência que o adversário do turno 1 registrou e que vale como regra para os itens seguintes: o
-contexto é um GUC que a própria role define. Todo SQL da API é parametrizado e o contexto só é definido
-em `app/db.py`; uma rota que aceitasse SQL do cliente trocaria de inquilino sem passar pela RLS.
+Exceção comum na tarefa: `job_devolver(conta_tentativa = true)` com espera `2^tentativa` s (2, 4, 8) até
+`max_tentativas`, depois `falhou` com o traceback em `job_log` nível `ERRO`. `FalhaDefinitiva` (código 4): `falhou`
+sem retentativa. `timeout_s`: SIGTERM, +10 s SIGKILL, `falhou "tempo esgotado"`. `MemoryError` (código 5) ou −9 pelo
+cgroup: `falhou "memória excedida (limite N MB)"`. Estado final é imutável (gatilho `job_estado_final_imutavel`;
+"repetir" cria job novo). Gatilhos `job_notificar` e `job_log_notificar` fazem `pg_notify` em `plat_job` (para o
+SSE) e `plat_worker` (pendente novo, cancelamento).
 
-### 3.4 Funções `SECURITY DEFINER` (`SET search_path = plat, public`)
+Medido pelo testador na rodada 17:15-17:29 UTC (`40_testes.md`, seção 3, `psql` sobre `plat.job` e journal da
+unidade): `systemctl restart plat-worker` no meio do job → devolvido "worker reiniciado", retomado com `tentativa 1`,
+`reinicios 1` (`reinicio_retomada_s` 1,0 s); `kill -9` no pai → filho morto por PDEATHSIG, ceifa na partida
+devolveu, concluído com marcador; 5 × `kill -9` → `falhou "devolvido 5 vezes sem terminar (worker sem sinal)"`;
+`prova.memoria(600)` com limite 256 MB → `falhou "memória excedida"` com o mesmo pid do worker antes e depois
+(`NRestarts` da unidade só contou os reinícios do teste). O marcador de `prova.progresso` (gravado só no último
+passo) existiu em todo job `concluido` e em nenhum `cancelado` ou `falhou`: nunca `concluido` sem execução inteira,
+que é a refutação literal do item.
 
-Todas de posse de `postgres`; `plat_app` tem `EXECUTE`. São as únicas que enxergam além do inquilino, e
-existem porque a autenticação roda antes de haver inquilino na sessão.
+### 5.4 Worker (`app/jobs/worker.py`, unidade `plat-worker`)
 
-| função | devolve | uso previsto |
+Processo pai com conexão própria (`plat_worker`, autocommit, nunca o pool da API), `LISTEN plat_worker`, laço por
+`select()` de até 1 s acordado também por self-pipe de `SIGCHLD`/`SIGTERM`. Por tick: `worker_heartbeat`; a cada
+30 s `job_ceifar(60)`, `worker_ceifar(90)` e o relógio das agendas; para cada filho vivo `job_heartbeat` a cada 10 s
+(devolve `cancelar_solicitado` → 30 s SIGTERM, +10 s SIGKILL) e o `timeout_s`; se há vaga (`PLAT_WORKER_PROCESSOS`,
+padrão 1), `job_pegar(nome, pesado_ok)` com `pesado_ok = pg_try_advisory_lock(hashtext('plat.job.pesado'))`
+("1 pesado por vez" por banco). Job recebido → `fork`. Parada por SIGTERM: devolve os filhos vivos
+(`conta_tentativa = false`), SIGTERM ao filho, 20 s, SIGKILL, `worker_desregistrar`. Partida: `job_ceifar` imediato
+dos jobs com `worker = meu nome`, `agenda_periodica_sincronizar`. `GET 127.0.0.1:8153/saude` atendido no próprio
+laço: `{worker, pid, versao, git_sha, processos, rodando[], pesado_em_curso, ultimo_tick_ms, rss_kb, em}`.
+
+Processo filho (`app/jobs/filho.py`): `prctl(PR_SET_PDEATHSIG, SIGKILL)`; `OPENBLAS/OMP/MKL_NUM_THREADS =
+threads_blas` (1); `resource.setrlimit(RLIMIT_DATA, memoria_mb)` (não `RLIMIT_AS`: numpy e OpenBLAS reservam
+endereço por thread e travam sob 256/512 MB, medido no ADR); `app.db._pool = None`; SIGTERM vira `Cancelado` na
+próxima checagem; conexão própria como `plat_app` sob `set_config('plat.tenant_id', <tenant do job>)` — o código
+de qualquer tipo de job enxerga só o inquilino dono do job; `ContextoJob.progresso()` (no máximo 1×/s, chama
+`plat.job_progresso`, levanta `Cancelado` quando pedido), `log()`, `entrada()`, `subprocesso()`, `db()`; códigos de
+saída 0 concluído, 3 cancelado, 4 falha definitiva, 5 memória, 1 outra exceção; sempre `os._exit`. Trabalho longo
+fica fora do bloco `with ctx.db()` porque o servidor tem `idle_in_transaction_session_timeout = 60 s`.
+
+Unidade `deploy/plat-worker.service`: `Restart=always`, `RestartSec=3`, `TimeoutStopSec=40`, `KillMode=mixed`
+(SIGTERM só ao pai; SIGKILL ao cgroup no timeout), `OOMPolicy=continue` (filho morto pelo OOM não derruba o
+serviço), `MemoryHigh=1536M`, `MemoryMax=2G`, `Nice=5`, `PYTHONNOUSERSITE=1`. Limite de RAM declarado:
+`PLAT_WORKER_MEMORIA_MB=1536` é o teto que o registro aceita para `memoria_mb`; tipo leve até 1024.
+
+Registro de tipos (`app/jobs/registro.py`): `@tarefa(nome, descricao, parametros (pydantic), pesado, memoria_mb,
+timeout_s, tentativas, chave, executor, versao, threads_blas, perfil_minimo, ferramentas)`; recusa na importação
+nome repetido ou fora do padrão `a.b`, `memoria_mb` fora de `[128, PLAT_WORKER_MEMORIA_MB]`, `executor='gpu'` sem
+`pesado` ou sem `PLAT_GPU_SSH`. `GET /api/jobs/tipos` expõe o registro com `parametros_schema`. Tipos deste turno:
+`prova.progresso`, `prova.memoria`, `prova.falha`, `prova.ignora_cancelamento`, `prova.pesado`,
+`prova.tempo_esgotado` e o periódico `jobs.expurgo`.
+
+Vazão medida: 2.135,9 jobs vazios por minuto com 2 workers (unidade + worker extra do teste, 3 processos;
+`jobs_vazios_por_min`, `tests/api/jobs/test_jobs_fila.py`); o testador mediu 1.613,7 por minuto só com a unidade,
+1 processo, pela URL pública (100 jobs em 3,7 s, `vazao_1worker.py` no `40_testes.md`, seção 6).
+
+### 5.5 Progresso em tempo real (SSE)
+
+`GET /api/jobs/{id}/eventos` (`app/jobs/eventos.py`): um thread `LISTEN plat_job` por processo da API, iniciado na
+primeira conexão, com fan-out por `job_id` em filas `asyncio`; rota `async` (não gasta token do threadpool).
+Eventos `estado` (mesmo JSON do `GET /api/jobs/{id}`; o primeiro é sempre lido do banco), `log` (`{id, em, nivel,
+mensagem}`, `Last-Event-ID` reenvia as linhas perdidas) e `fim`; keepalive a cada 15 s; conexão fechada em 30 min;
+10 conexões por usuário por processo (`429`); job de outro inquilino = `404`. Cabeçalho `X-Accel-Buffering: no` é
+enviado pela API e **consumido pelo nginx** (lista padrão de `proxy_hide_header`); o teste o confere direto em
+`:8150` e mede o efeito pela URL pública: primeiro evento em 0,022 s (`sse_primeiro_evento_publico_s`). Latência do
+heartbeat gravado pelo filho até o evento no cliente: 0,065 s (`latencia_progresso_s`); o testador mediu mediana de
+5 ms pela URL pública num job de 300 s (`sse_latencia.py`, 62 eventos `estado`, 61 progressos distintos crescentes).
+O front (`web/js/jobs/eventos.js`) cai para consulta a cada 3 s depois de dois erros seguidos e limita 10
+assinaturas por página.
+
+### 5.6 Agendas e periódicos
+
+`plat.agenda`: nome único por inquilino, tipo, parâmetros, `cron` (5 campos, croniter 6.2.4), `fuso` (IANA,
+`zoneinfo`), `ativa`, `proxima_em`, `ultima_em`, `ultimo_job_id`, `ultimo_estado`, `falhas_seguidas`, `expira_em`.
+O worker é o relógio (a cada 30 s): `agenda_vencidas()` com `FOR UPDATE SKIP LOCKED` → `agenda_enfileirar` (a
+ocorrência vencida mais recente; `UNIQUE (agenda_id, programado_para)` como segunda trava; sem recuperar atraso);
+5 falhas seguidas → `ativa = false`. Limites: intervalo mínimo 15 min, `cota_agendas` 50 por inquilino,
+`cota_jobs_dia` 1.000 (checada no `POST /api/jobs` com `413` e pelo relógio). `pg_cron` não é usado. Periódicos da
+plataforma vivem em código (`app/jobs/periodicos.py`) e são sincronizados para `plat.agenda` do inquilino
+`plataforma` na partida do worker: neste turno só `jobs.expurgo` (`30 3 * * *` America/Sao_Paulo: apaga `job` > 90
+dias, `job_log` > 30 dias, diretórios órfãos > 7 dias e marcadores/passos órfãos de `plat_trabalho`; só roda no
+contexto de `plataforma`). `PLAT_RELOGIO_TESTE` substitui `now()` do relógio só em `PLAT_AMBIENTE=dev`
+(`tests/api/jobs/test_jobs_agenda.py`: 3 ocorrências com 2 relógios = 1 job cada).
+
+### 5.7 API da fila
+
+`GET/POST /api/jobs`, `GET /api/jobs/resumo`, `GET /api/jobs/tipos`, `GET /api/jobs/{id}`, `POST .../cancelar`
+(`202`), `POST .../repetir` (`201`), `GET .../log`, `GET .../eventos`; `GET/POST /api/agendas`,
+`GET/PUT/DELETE /api/agendas/{id}`, `POST .../pausar`, `.../retomar`, `.../rodar-agora`; páginas `/tarefas` e
+`/tarefas/{id}`. Todas exigem sessão ou token com `jobs.executar`; `jobs.gerir_todos` vê o inquilino inteiro;
+o perfil mínimo do tipo é checado além do privilégio (`403 perfil_insuficiente`). Erros no formato de `app/erros.py`.
+O testador varreu as 15 rotas por id com sessão de outro inquilino: 15 × `404`, 0 vazamento em lista, 17 × `401`
+sem sessão (`cruzado_jobs.py`, `40_testes.md` seção 5).
+
+---
+
+## 6. Migrações
+
+Arquivos `db/migracoes/NNN_nome.sql`, idempotentes, sem `BEGIN/COMMIT` (o aplicador `db/migrar.sh` abre uma
+transação por arquivo, registra o sha256 em `plat.versao_migracao` e para com código 3 se um arquivo aplicado
+mudou). O número é escolhido na hora de criar o arquivo (regra do turno 2, depois de uma colisão); 005 não existe
+(número reservado no plano e não usado). Estado ao vivo em 05/09/2026 17:36 UTC: 10 aplicadas, 0 pendentes,
+`ultima_migracao = 011_catalogo`.
+
+| migração | sha256 (`sha256sum db/migracoes/*.sql`, igual ao da tabela) | o que faz |
 |---|---|---|
-| `auth_login(p_tenant, p_login)` | usuario_id, tenant_id, senha_hash, perfil, nome, tenant_nome, totp_ativo, totp_secret, bloqueado_ate, falhas_login, superadmin | login (item L0-02) |
-| `auth_falha(p_usuario, p_max, p_min)` | void | incrementa falhas e bloqueia |
-| `auth_ok(p_usuario)` | void | zera falhas, `ultimo_login = now()` |
-| `auth_sessao_criar(p_usuario, p_horas, p_ip, p_agente)` | token em claro (grava só o hash) | cookie de sessão |
-| `auth_sessao(p_hash)` | usuario_id, tenant_id, login, perfil, nome, tenant_slug, tenant_nome, superadmin, config | resolve cookie |
-| `auth_sessao_encerrar(p_hash)` | void | logout |
-| `auth_token(p_hash, p_ip)` | usuario_id, tenant_id, login, perfil, escopos, restricao, token_id | token de serviço |
-| `log_registrar(...)` | void | única escrita em `log_acesso` |
-| `tenant_criar(p_slug, p_nome, p_config, p_admin_login, p_admin_nome, p_senha_hash)` | tenant_id, usuario_id | exige `superadmin` no contexto |
+| `001_fundacao` | `74fcdc90a28c…` | schema `plat`, role `plat_app`, `versao_migracao`, `tenant_atual()`, `usuario_atual()`, grants e privilégios padrão |
+| `002_identidade` | `418736611e8a…` | `tenant`, `usuario`, `sessao`, `token_servico`, `log_acesso`; RLS; 9 funções `auth_*`; inquilinos `demo` e `demo2` |
+| `003_identidade_acesso` | `725192af189b…` | 46 privilégios e tetos por perfil; papéis personalizados; colunas novas de `usuario`; `senha_historico`; grupos e membros; gatilhos do último administrador, do superadmin só em `plataforma` e da coerência de grupo; `evento_tipo` e `evento` particionada; `log_acesso` recriada particionada (guarda `count(*) = 0`); inquilino `plataforma` com 2FA obrigatório; funções `SECURITY DEFINER` reescritas com `contexto_confere`, `plataforma_operador`, `tenant_publico`; `REVOKE EXECUTE FROM PUBLIC` em todas e no privilégio padrão |
+| `004_jobs` | `ddc21b358ed9…` | `job`, `job_log`, `worker`, `agenda`; RLS; gatilhos de estado final e de NOTIFY; funções do worker, cotas, `fila_estado`, agendas; schema `plat_trabalho` com `passos` e `marcadores` |
+| `006_jobs_transicoes` | `3b181c883a16…` | role `plat_worker`; `REVOKE UPDATE` em `job` para `plat_app`; `job_cancelar`, `job_progresso`, gatilho `job_transicao` com `via_worker`; `jobs_expurgar` apaga órfãos de `plat_trabalho` (achado 1 do testador) |
+| `007_jobs_eventos` | `558bc552b15c…` | vocabulário de eventos da fila em `evento_tipo` (integração com a identidade) |
+| `008_jobs_tentativa` | `92357250951c…` | devolução por reinício ou ceifa desfaz o incremento de `tentativa` feito por `job_pegar` (reinício não consome tentativa) |
+| `009_inquilino_apagar` | `68f4506b5a41…` | `tenant_apagar_interno` (só `postgres`) e `tenant_apagar` (superadmin por hash de sessão); rota `DELETE /api/plataforma/inquilinos/{id}` (achado do testador: inquilinos de teste sem rota de apagar) |
+| `010_jobs_gatilhos_execute` | `ef54d52b29c5…` | revoga `EXECUTE` de `PUBLIC` e `plat_app` nas três funções de gatilho da 004 (achado de `test_funcoes_seguras`) |
+| `011_catalogo` | `b997b0c26d8a…` (arquivo em disco, 17:36 UTC) | catálogo de conteúdo do item L0-03 (ADR 0004): `item`, `tipo_item`, versões, relações, compartilhamento, busca, pastas, categorias, favoritos, lixeira. **Em construção por outra trilha: aplicada no banco (17:26 UTC), ainda não comitada**; o sha da tabela (`34c960aa24dd…`) difere do arquivo em disco porque a trilha continua editando; o aplicador vai exigir o registro certo antes do commit dela |
+| `012_jobs_identidade_worker` | em construção (não comitada, não aplicada) | achado 2 do testador do L0-05: identidade do worker passa a `<nome-base>:<pid>`, registrada em `plat.worker`; `job_ceifar(limite, max_reinicios)` devolve só jobs com heartbeat vencido cujo worker dono está sem sinal, nunca por igualdade de nome; `app/jobs/worker.py` alterado na árvore |
+| `013_jobs_execute_reafirma` | em construção (não comitada, não aplicada) | reafirma `EXECUTE` só para `plat_worker` nas funções que mudam estado, desfeito pelo `GRANT ... ON ALL FUNCTIONS` da 011 (seção 3.1) |
 
-Hoje **nenhuma rota chama essas funções**: não há login, sessão nem token na API. Elas foram criadas e
-testadas no banco para o item L0-02. O adversário do turno 1 mostrou que, chamadas com um `usuario_id`
-de outro inquilino, elas obedecem (é o desenho de `SECURITY DEFINER`); o isolamento depende da API passar
-o identificador certo, e essa é a obrigação do L0-02.
-
-### 3.5 Pool e reconexão (`app/db.py`)
-
-`ThreadedConnectionPool(1, 8)` por worker, criado na primeira chamada. `db(ctx)` é um gerenciador de
-contexto que devolve um cursor `RealDictCursor` dentro de uma transação (commit no fim, rollback em
-exceção). Só a preparação (pegar conexão, testar `closed`, `SET search_path = plat, public`,
-`set_config` do contexto) repete, até 9 vezes, descartando a conexão que falhou (`putconn(close=True)`);
-a consulta do chamador roda uma única vez, porque repetir cegamente um INSERT duplica. É o padrão que
-sobreviveu a três quedas do Postgres por falta de memória nesta máquina.
+`tests/api/test_migracoes.py` roda o aplicador duas vezes e exige 0 linhas novas; enquanto a 011 estiver aplicada
+sem estar no repositório em estado final, esse teste falha (registrado pelo testador do L0-05).
 
 ---
 
-## 4. Migrações
+## 7. `install.sh`
 
-- Arquivos `db/migracoes/NNN_nome.sql`, idempotentes por construção (`CREATE TABLE IF NOT EXISTS`,
-  `DROP POLICY IF EXISTS` + `CREATE POLICY`, `CREATE OR REPLACE FUNCTION`, `ON CONFLICT DO NOTHING`).
-  Sem `BEGIN/COMMIT` dentro do arquivo: o aplicador abre uma transação por arquivo.
-- `db/migrar.sh` roda como `postgres` (`sudo -u postgres psql -X -q -v ON_ERROR_STOP=1`), lista os
-  arquivos em ordem lexicográfica, calcula `sha256sum` e, para cada um: ausente na tabela = aplica o
-  arquivo mais o `INSERT` em `plat.versao_migracao` na **mesma** transação (`psql -1 -f -` por stdin);
-  presente com o mesmo sha = `igual`, pula; presente com sha diferente = **para com código 3** (arquivo
-  aplicado é imutável; correção vem em arquivo novo), salvo se a primeira linha for `-- reaplicavel`
-  (só para arquivos que contêm apenas `CREATE OR REPLACE`), caso em que reaplica e atualiza o sha.
-- A tabela de controle é criada pelo aplicador antes de ler (mesmo DDL da 001), para que a primeira
-  migração não dependa dela.
-- `/saude` compara os arquivos em disco com a tabela: pendência > 0 = `banco: desatualizado` = HTTP 503.
+Uso: `sudo bash install.sh <dominio> [porta]`. Root, idempotente, `set -euo pipefail`. Passos a-j descritos no
+`MANUAL.md` seção 11.2; o que mudou no turno 2:
 
-Aplicadas hoje (`sha256sum db/migracoes/*.sql` e `SELECT nome, sha256 FROM plat.versao_migracao`,
-iguais nos dois lados):
+- d: `.env` ganha `PLAT_WORKER_URL`, `PLAT_WORKER_PROCESSOS`, `PLAT_WORKER_MEMORIA_MB`, `PLAT_DSN_WORKER`; a senha
+  de `plat_worker` é gerada e realinhada a cada execução (`ALTER ROLE` por stdin), como a de `plat_app`.
+- e: segunda linha no `pg_hba.conf`, para `plat_worker`.
+- f: confere `python3-cryptography` (dpkg).
+- g: semeia `plataforma/admin` (superadmin) e `demo`/`demo2` sem superadmin; reinicia 2FA, senha temporária e
+  bloqueio dos semeados; apaga `tests/credenciais_totp.txt`; garante partições de `log_acesso` e `evento` de 4
+  meses; em `dev` apaga resíduos `zt-*`; `cota_jobs_dia = 100000` nos inquilinos de demonstração.
+- h2: `var/jobs`, unidade `plat-worker`, espera `:8153/saude`.
+- i: `/etc/nginx/conf.d/plat_limites.conf` (zona `plat_login`); `location = /api/login` e `= /api/login/2fa` com
+  `limit_req`; `Referrer-Policy` em toda `location` (commit `abbb03d`; chega ao ar na próxima execução).
+- j: além de 200, `noindex` e HSTS, exige `fila.workers_vivos >= 1` em `/saude`.
 
-| migração | sha256 | conteúdo |
+Tempo medido pelo adversário do L0-02 na reinstalação destrutiva do zero (schemas `plat` e `plat_trabalho` e as
+duas roles apagados): "instalado em 50 s", serviço indisponível cerca de 63 s (17:14:17 a 17:15:20 UTC); depois,
+27 tabelas, 60 funções, 25 políticas, partições de setembro a dezembro, três inquilinos, `/saude` 200 com `noindex`
+e HSTS, login real pelo playwright com a senha regenerada e varredura cruzada de 34 rotas sem nenhum 2xx cruzado
+(`refutacao.json`, rodada 2). No turno 1 o instalador do zero levava 6,24 s; a diferença é o DDL da 003 (24,2 s na
+tabela `versao_migracao`) e da 002 (9,5 s) nesta instância compartilhada com disco a 98 %.
+
+---
+
+## 8. systemd e nginx
+
+`plat-api`: `uvicorn app.main:app --host 127.0.0.1 --port 8150 --workers 2 --proxy-headers --forwarded-allow-ips
+127.0.0.1 --no-access-log`, `Restart=on-failure`, `MemoryHigh=768M`, `MemoryMax=1G`, `PYTHONNOUSERSITE=1`.
+`plat-worker`: seção 5.4. `NRestarts` do worker cresce com os testes lentos (`kill -9` do `test_jobs_reinicio.py`);
+não é sinal de falha por si.
+
+nginx (`deploy/nginx.conf` + `plat_limites.conf`): cabeçalhos `X-Robots-Tag: noindex, nofollow`,
+`Strict-Transport-Security: max-age=31536000`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+`Referrer-Policy: strict-origin-when-cross-origin` repetidos em cada `location` (um `add_header` dentro de
+`location` cancela os herdados; o testador pegou a ausência de `Referrer-Policy` em `/api/*` por isso e o commit
+`abbb03d` a repetiu nas 4 `location`, com teste vivo em `test_cabecalhos.py`); `Cache-Control: no-store` em
+`/static/` e no proxy; `client_max_body_size 200m`; `proxy_read_timeout 120s` (maior que o keepalive de 15 s do
+SSE). `X-Accel-Buffering` da API é consumido pelo nginx e não chega ao cliente; o efeito (sem buffer) está medido.
+`Cache-Control` do SSE sai duplicado pela URL pública (`no-store, no-store, must-revalidate`).
+
+---
+
+## 9. Contratos
+
+### 9.1 `/saude`
+
+Ver `MANUAL.md` seção 1.2. Campos novos do turno 2: `servicos.worker` (sonda `PLAT_WORKER_URL`) e `fila`
+(`plat.fila_estado()`: `pendentes`, `rodando`, `workers_vivos`, `ultimo_heartbeat`). Informativos: não mudam o
+status HTTP (o L7-06 decide alerta).
+
+### 9.2 Erros da API (`app/erros.py`)
+
+Toda resposta de erro é `{"erro": "<codigo_curto>", "mensagem": "<frase em português>", "detalhe": <opcional>,
+"req_id": "<16 hex>"}`; `RequestValidationError` vira `422 validacao` com o detalhe do pydantic; 404 também para
+recurso de outro inquilino e para rota de superadmin chamada por quem não é. Paginação `limite` (padrão 50, máximo
+1.000; 200 na fila) e `deslocamento`, resposta `{total, itens}`. Datas ISO 8601 UTC com `Z`. Cookie OU Bearer,
+nunca os dois.
+
+### 9.3 OpenAPI
+
+`docs/openapi.json` gerado por `make openapi` e comitado; igual ao servido em `/api/openapi.json` (adversário: 74/74
+rotas idênticas em `abbb03d`). Cada rota traz `x-auth` (`-`, `S`, `T`, `S/T`) e `x-privilegio`. É a lista que o teste
+cruzado (`tests/api/test_cruzado.py` com `cruzado_casos.py`) varre com 4 vetores por rota (sessão A, token A com
+`admin:inquilino`, sessão A com `X-Plat-Inquilino`, anônimo) comparando o digest md5 de todo o dado de B antes e
+depois; rota sem caso = teste falha. Medido: 74 rotas no OpenAPI, 73 com caso (`rotas_total`, `rotas_cobertas`,
+sobre `90d03c0`; o caso da rota `DELETE /api/plataforma/inquilinos/{id}` entrou em `abbb03d`, e o adversário rerodou
+o teste isolado nesse commit com 80 aprovados). Ao vivo, o testador varreu 73 rotas com 411 chamadas e 0 acesso
+cruzado indevido, md5 das linhas de B intacto (`testador_rotas_varridas_cruzado_vivo`,
+`testador_chamadas_cruzadas_vivo`, `testador_2xx_cruzados_indevidos`, `testador_linhas_de_B_alteradas`).
+
+---
+
+## 10. Configuração, log, testes e medidas
+
+### 10.1 `.env` (`app/settings.py`)
+
+| chave | obrigatória | uso |
 |---|---|---|
-| `001_fundacao` | `74fcdc90a28c470953f952b190168c75fe712dde78a09b0a5fbf32bbbbe4b3eb` | role, schema, `versao_migracao`, `tenant_atual()`, `usuario_atual()`, grants e privilégios padrão |
-| `002_identidade` | `418736611e8a1256e95603b7cdf188a008d6da579606d778393e9450648ddce2` | 5 tabelas, 4 índices, RLS, 9 funções `SECURITY DEFINER`, inquilinos `demo` e `demo2` |
+| `PLAT_DSN`, `PLAT_SECRET`, `PLAT_AMBIENTE`, `PLAT_URL_PUBLICA` | sim | como no turno 1; `PLAT_SECRET` também deriva a chave do segredo TOTP |
+| `PLAT_DSN_WORKER` | sim para o worker | `postgresql://plat_worker:...`; role do processo pai da fila |
+| `PLAT_GIT_SHA`, `PLAT_MARTIN_URL`, `PLAT_TITILER_URL`, `PLAT_GARAGE_URL`, `PLAT_LOG_NIVEL` | não | como no turno 1 |
+| `PLAT_WORKER_URL` | não | sonda de `/saude` (`http://127.0.0.1:8153`) |
+| `PLAT_WORKER_NOME` | não | nome-base do worker; padrão = nome do host; hoje o nome registrado é esse valor puro (ver seção 13); a correção 012 em construção o transforma em `<nome-base>:<pid>` |
+| `PLAT_WORKER_PROCESSOS` | não | filhos simultâneos (1) |
+| `PLAT_WORKER_MEMORIA_MB` | não | teto de `memoria_mb` aceito pelo registro (1536) |
+| `PLAT_JOBS_DIR` | não | diretório de trabalho (`var/jobs`) |
+| `PLAT_JOB_MAX_REINICIOS` | não | devoluções sem terminar até `falhou` (5) |
+| `PLAT_GPU_SSH`, `PLAT_GPU_DIR` | não | reservadas ao executor remoto (L1-05); ausentes, tipos `gpu` são recusados na importação |
+| `PLAT_RELOGIO_TESTE` | não | relógio injetado das agendas, só em `dev` |
+| `PLAT_DADOS_DIR` | não | acrescentada pela trilha do catálogo (L0-03, em construção) |
 
-Medido: 2 migrações aplicadas; segunda execução do instalador = `aplicadas 0 · iguais 2`
-(`plat.versao_migracao` e saída do `install.sh`). O teste `tests/api/test_migracoes.py` roda o aplicador
-duas vezes e exige 0 linhas novas, e edita uma cópia em diretório temporário para provar o código 3.
+Variáveis de teste lidas do ambiente do processo só em `dev`: `PLAT_TESTE_BLOQUEIO_MIN`, `PLAT_TESTE_OCIOSA_S`;
+da suíte: `PLAT_OPENAPI_ARQUIVO`, `PLAT_GRAVAR_MEDIDAS`.
 
----
+### 10.2 Log
 
-## 5. `install.sh` passo a passo
+Uma linha JSON por evento em stdout, recolhida pelo journal (`app/log.py`): `ts`, `nivel`, `msg`, `logger`; na
+linha de acesso `req_id`, `metodo`, `rota` (redigida), `status`, `tempo_ms`, `ip`; no worker `job_id`, `tipo`,
+`tenant_id`, `pid_filho`. Segredos nunca aparecem: o adversário leu 3 h de journal (1.290 linhas) com 0 valor de
+cookie ou token; o testador, 15 min (1.034 linhas) com senha, cookie e tokens ausentes.
 
-Uso: `sudo bash install.sh <dominio> [porta]`, por exemplo `sudo bash install.sh plat.iagrointel.com 8150`.
-Root, idempotente, `set -euo pipefail`. Variáveis de ambiente opcionais: `APP_DIR` (padrão: diretório do
-script), `APP_USER` (padrão: dono do diretório), `PLAT_DB` (`iagro_sat`), `PG_HBA`
-(`/etc/postgresql/16/main/pg_hba.conf`).
+### 10.3 Testes
 
-| passo | o que faz | como conferir |
-|---|---|---|
-| a | imprime disco (`df -h /`), memória (`free -g`), diretório, usuário, banco, porta, domínio | saída do script |
-| b | `CREATE EXTENSION IF NOT EXISTS postgis; pgcrypto` | `\dx` no banco |
-| c | `bash db/migrar.sh` | `SELECT * FROM plat.versao_migracao` |
-| d | cria `.env` (modo 600, dono `APP_USER`) se não existir, com senha da role (`openssl rand -hex 16`) e `PLAT_SECRET` (`openssl rand -hex 32`), `PLAT_AMBIENTE=producao`, `PLAT_URL_PUBLICA=https://<dominio>`; **sempre** realinha a senha de `plat_app` à do `.env` (`ALTER ROLE`, via stdin do psql, nunca em argumento); grava `PLAT_GIT_SHA=<sha do HEAD>` no `.env` a cada execução (sem `.git` e sem sha válido no `.env`, para com 1) | `ls -la .env`; `grep PLAT_GIT_SHA .env`; conectar com o `PLAT_DSN` |
-| e | acrescenta a linha `host <banco> plat_app 127.0.0.1/32 scram-sha-256` ao `pg_hba.conf` se não existir; `pg_reload_conf()` | `sudo grep -c plat_app <pg_hba>` = 1 |
-| f | confere os pacotes dpkg `python3-uvicorn`, `python3-psycopg2`, `python3-venv` (falta = para com 1); cria a venv (`python3 -m venv --system-site-packages venv`) se não existir; `pip install -r requirements.txt` com `PYTHONNOUSERSITE=1`; prova `import app.main, fastapi, dotenv` sem o site do usuário e exige que `fastapi` venha da venv | saída `venv: Python 3.12.3 · fastapi 0.138.0 da venv · pytest 9.1.1` |
-| g | cria `tests/credenciais.txt` (600) com senhas aleatórias para `demo admin` e `demo2 admin` se não existir; semeia ou atualiza os dois administradores (`ON CONFLICT DO UPDATE`), hash calculado por `app/senha.py` com a senha entregue por stdin (nada em argumento, nada no journal do `sudo`) | `SELECT tenant_id, login, perfil, superadmin FROM plat.usuario` como `postgres` |
-| h | gera `/etc/systemd/system/plat-api.service` do modelo, `daemon-reload`, `enable`, `restart`; espera até 30 s por HTTP 200 em `http://127.0.0.1:<porta>/saude`; em falha imprime o journal e sai com 1 | `systemctl status plat-api` |
-| i | gera `/etc/nginx/sites-enabled/<dominio>` do modelo (com `Strict-Transport-Security`); se já houver bloco do certbot, preserva as linhas `# managed by Certbot` do bloco 443 e o bloco 80 inteiro; sem certificado, escreve bloco em :80 sem HSTS; troca atômica: guarda o bloco anterior, `nginx -t`, e se reprovar restaura o anterior e sai com 5; `systemctl reload nginx` | `sudo nginx -t`; `diff` contra o modelo |
-| i2 | só se `/etc/letsencrypt/live/<dominio>` não existir: `certbot --nginx -d <dominio> --non-interactive --agree-tos --redirect` | `ls /etc/letsencrypt/live/` |
-| i3 | só depois do i2: reescreve o bloco de novo, agora em 443 com HSTS | idem i |
-| j | até 15 tentativas (o reload do nginx é assíncrono) de `curl -sI https://<dominio>/saude`; exige HTTP 200, `X-Robots-Tag` com `noindex` e `Strict-Transport-Security` com `max-age=31536000`; senão sai com 4 | a última linha do script: `instalado em N s` |
+`make check` = `lint` (ruff) → `sem-marcador` (grep de `tests/marcadores.regex` em `app web db docs deploy
+install.sh Makefile requirements.txt pyproject.toml *.md`) → `teste` (`pytest -m "not lento"`) → `e2e` (`pytest -m
+lento --base-url`). `make e2e-worker` roda só os lentos da fila. `make medidas` grava `tests/medidas/*.json`
+(`PLAT_GRAVAR_MEDIDAS=1`). Regra da casa: qualquer `pytest` roda sob `flock /home/dev/plataforma/laco/.pytest.lock`
+(dois em paralelo na mesma árvore invalidam sessões de demonstração e disputam o único slot do worker).
 
-Tempos medidos pelo testador na rodada 1 (`/usr/bin/time -f %e sudo bash install.sh plat.iagrointel.com 8150`):
-do zero após `DROP SCHEMA plat CASCADE; DROP OWNED BY plat_app; DROP ROLE plat_app` = 6,24 s; com
-`.env`, `tests/credenciais.txt` e a linha do `pg_hba.conf` também apagados = 9,14 s; segunda execução
-seguida = 4,69 s. Três execuções com rc=0 e passo j com HTTP 200 + noindex. O tempo carrega a variação do
-DDL da 002 numa instância compartilhada (1,4 s a 3,5 s entre rodadas) e não é métrica estável.
+| diretório | o que prova |
+|---|---|
+| `tests/unit/` | settings, versão, instalador (inclusive `Referrer-Policy` em todo bloco), dependências, log, senha, vendor, política de senha (12 recusas nomeadas), TOTP (vetor RFC, janela, replay, cifra), redação, escopos, erros, registro de tipos, cron (fuso, troca de horário, intervalo mínimo) |
+| `tests/api/` | saúde, banco, migrações, RLS, cabeçalhos HTTP vivos, docs, páginas, login (códigos, força bruta, tempo constante, bloqueio que expira), sessão (cookie, alterado, após logout, ambíguo, 415, origem), `/api/eu`, tokens (escopo, restrição, revogação, rotação), usuários (último admin, lote, domínio de e-mail), grupos, papéis, log e eventos, log de acesso por `User-Agent` único, plataforma (criar, suspender, reativar, apagar inquilino), funções seguras (0 `PUBLIC`; chamadas cruzadas por `psql`), privilégios declarados, eventos declarados, varredura cruzada gerada do OpenAPI |
+| `tests/api/jobs/` | fila (100 jobs exatamente uma vez com 2 workers, retentativa 2/4/8, falha definitiva, chave, pesado), cancelamento (cooperativo, pendente, final = 409, ignora a flag, timeout), memória, RLS A→B, agendas com dois relógios, SSE local e público, progresso do job de 5 min (lento), reinício e `kill -9` (lento), transições (006), identidade (x-auth/x-privilegio) |
+| `tests/e2e/` | saúde, login (2), 2FA, conta, usuários, grupos, papéis, tokens, log, chaves de tradução cruas (`test_i18n_cru.py`), tarefas (5: lista com progresso ao vivo e detalhe, cancelar pela tela, filtro = API, 1.000 jobs, agendas) |
 
-O adversário reinstalou do zero sobre `8ffe950` em 9,66 s (`refutacao.json`, rodada 2) com 82 testes
-verdes depois. Limite que fica: a "máquina que nunca viu o repositório" é simulada nesta (a prova é
-`PYTHONNOUSERSITE=1` + origem dos módulos + unidade viva; venv, `.env` e certificado foram
-reaproveitados); os caminhos i2 (certbot emitindo), i3 e a restauração do bloco nginx após `nginx -t`
-reprovar foram lidos, não exercitados. Ver seção 12.
+Estado da suíte inteira no fim do turno (P3): o testador do L0-02 obteve 407 aprovados e 2 falhas em `make teste`
+(16:32 UTC; as 2 por resíduo de outra sessão) e o adversário 402 aprovados e 7 falhas em `make check` na instalação
+nova (17:2x UTC; 4 em `tests/api/jobs` sob contenção do próprio `make check`, 3 por corrida da árvore compartilhada,
+rerodadas isoladas em `abbb03d` com 80 aprovados). O testador do L0-05 obteve 422 aprovados e 8 falhas em `make
+medidas` (17:15-17:28 UTC; nenhuma do produto, seção 1 do `40_testes.md` dele). A suíte inteira ainda não ficou
+verde numa rodada única: o gerente reavalia P3 no fechamento do turno.
 
----
+### 10.4 Medidas
 
-## 6. systemd
-
-Unidade `plat-api` (gerada de `deploy/plat-api.service`):
-
-```
-[Unit]     After=network.target postgresql.service · Wants=postgresql.service
-[Service]  User/Group=dev · WorkingDirectory=/home/dev/plataforma/enterprise
-           ExecStart=venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8150 --workers 2
-                     --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-access-log
-           Environment=PYTHONNOUSERSITE=1 (nunca o site do usuário: só venv e pacotes dpkg)
-           Restart=on-failure · RestartSec=3 · MemoryHigh=768M · MemoryMax=1G · saída no journal
-```
-
-`--no-access-log` porque o middleware da aplicação escreve a linha de acesso em JSON; o log de acesso do
-uvicorn duplicaria em texto livre. Comandos: `systemctl status plat-api`, `journalctl -u plat-api -o cat`.
-Quem comita sem reiniciar deixa `/saude` um commit atrás (o sha é lido uma vez na partida):
-`sudo systemctl restart plat-api` ou `install.sh`.
+Fixture `medida(item)(nome, valor, unidade, comando)` grava `tests/medidas/<item>.json` só com
+`PLAT_GRAVAR_MEDIDAS=1`. `L0-02-tenant-auth.json` tem 35 chaves (16 do backend e da fixture, 19 `testador_*`);
+`L0-05-jobs.json` tem 14. Os dois arquivos da árvore de trabalho (17:28 UTC, `90d03c0`) ainda não foram comitados
+pelo testador; a versão comitada de `L0-02` (`12b2c2e`, sobre `ffedc05`) traz 73 rotas cobertas de 73, login
+128,7 ms, log 0,67 ms e token 3,16 ms, valores que diferem dos citados aqui por décimos de milissegundo.
 
 ---
 
-## 7. nginx
+## 11. Front (`web/`)
 
-Arquivo `/etc/nginx/sites-enabled/plat.iagrointel.com`, gerado de `deploy/nginx.conf` mais as linhas do
-certbot. Cabeçalhos no bloco `server` e **repetidos em cada `location`**, porque um `add_header` dentro de
-`location` cancela os herdados (doc do nginx):
+Módulos ES nativos sem bundler, importação relativa, nunca `?v=` (cache resolvido por `no-store`). Tema único em
+`style.css` (painel de instrumento: chrome escuro, barra lateral de 232 px que vira barra superior abaixo de 800 px,
+IBM Plex se instalada). Base reutilizável em `js/base/`: `api.js` (`chamar/obter/enviar/alterar/apagar`, contrato
+de erro), `estado.js` (loja sobre `EventTarget`, `tem(privilegio)`), `i18n.js` (`carregar/t/aplicar`, evento
+`plat:i18n` para componentes que renderizam antes do dicionário), `dom.js` (`h()` sem HTML em texto, `htmlSeguro`
+por DOMPurify, `copiar`), componentes `plat-aviso`, `plat-busca`, `plat-paginacao`, `plat-tabela`,
+`plat-formulario`, `plat-dialogo` (Custom Elements com rótulo por `for/id`, `aria-live`, foco devolvido, Escape),
+`layout.js` (`TELAS` por privilégio, `montarLayout`, `pronto`). `js/auth/sessao.js`: `exigirSessao` (401 →
+`/entrar?inquilino=&proximo=`; pendência → `/conta#senha|#2fa`; privilégio ausente → "sem permissão"). A tela
+Tarefas usa a mesma base. Orçamento de 60 kB por módulo: o maior é `grupos.js` (17,9 kB). Vendor: MapLibre GL
+4.7.1 (ainda não carregado por nenhuma tela), Swagger UI 5.32.15, DOMPurify 3.4.14; `make vendor` confere 5 sha256.
 
-- `X-Robots-Tag: noindex, nofollow` em toda resposta, inclusive 404 e estático. Medido: 11 de 11 rotas
-  testadas (`curl -sI` em `/`, `/saude`, `/api/versao`, `/static/app.js`, `/static/vendor/maplibre-gl-4.7.1.js`,
-  `/static/style.css`, `/static/js/core.js`, `/api/docs`, `/api/openapi.json`, `/naoexiste`,
-  `/static/naoexiste.js`); `http://` devolve 301 para `https://`.
-- `Strict-Transport-Security: max-age=31536000` no bloco 443 e em cada `location`. Medido: 11 de 11 rotas
-  HTTPS (inclui 404 e o 405 de `HEAD /api/docs`); ausente no 301 de `http://`, como deve ser. O
-  `install.sh` remove a linha quando o bloco só escuta em 80 (sem certificado).
-- `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`.
-- `location /static/`: `alias <APP_DIR>/web/`, `Cache-Control: no-store` (regra da casa: nunca `?v=` em
-  importação de módulo ES; o cache é resolvido aqui). Travessia de caminho conferida:
-  `curl --path-as-is .../static/../.env` = 404, `/static/vendor/` = 403.
-- `location /`: `proxy_pass http://127.0.0.1:8150`, `X-Forwarded-For`, `X-Forwarded-Proto`,
-  `proxy_read_timeout 120s`, `Cache-Control: no-store, must-revalidate`.
-- `client_max_body_size 200m` (upload de camada entra no item L0-04).
+Páginas prontas no chromium do playwright (`pagina_pronta_ms_*`, `goto` até `body[data-pronto=1]`): login 54,3 ms,
+conta 37,8, 2FA 9,7, usuários 59,4, grupos 60,8, papéis 58,7, tokens 78,9, log 73,7; tarefas 142,9
+(`pagina_tarefas_pronta_ms`).
 
 ---
 
-## 8. Contrato de `/saude` e `/api/versao`
+## 12. Convenções que valem para todo item
 
-`GET /saude` e `HEAD /saude` (sem autenticação, sem log de acesso em nível INFO, `Cache-Control: no-store`):
-
-```json
-{
-  "versao": "0.1.0",
-  "git_sha": "8ffe950516f5",
-  "ambiente": "producao",
-  "banco": "ok",
-  "migracoes_aplicadas": 2,
-  "migracoes_pendentes": 0,
-  "ultima_migracao": "002_identidade",
-  "servicos": {"martin": "ausente", "titiler": "ausente", "garage": "ok"},
-  "tempo_ms": 1.7,
-  "em": "2026-09-05T13:14:45Z"
-}
-```
-
-- `banco`: `ok` (leitura de `plat.versao_migracao` respondeu e nada pendente), `desatualizado` (arquivo em
-  `db/migracoes/` sem linha na tabela) ou `erro` (exceção; a mensagem vai para o log, não para a resposta).
-- HTTP **200 só com `banco = ok`**; `desatualizado` e `erro` devolvem **503** com o mesmo JSON. O driver
-  do laço faz `curl -fsS /saude` e trata 503 como falha visível.
-- `servicos.<nome>`: `ausente` quando `PLAT_<NOME>_URL` não está no `.env`; `ok` quando um GET com
-  timeout de 1 s devolve status < 500 (o Garage responde 403 sem assinatura, por isso o critério é
-  "< 500"); `erro` caso contrário. Hoje os três são informativos e não mudam o status HTTP.
-- `git_sha`: 12 primeiros caracteres do commit, lidos de `.git/HEAD` e da ref (ou `packed-refs`) na
-  partida; sem `.git` (instalação por tarball), lê `PLAT_GIT_SHA` do ambiente ou do `.env`, que o
-  `install.sh` grava a cada execução. Sem nenhum dos dois a aplicação não sobe. Medido: `git_sha` de
-  `/saude` = `git rev-parse HEAD` = `8ffe950516f5`.
-- `tempo_ms`: da entrada da rota à montagem do JSON.
-
-`GET /api/versao` e `HEAD /api/versao` (sem banco, sempre 200):
-`{"versao", "git_sha", "ambiente", "em"}`.
-
-`GET /api/openapi.json` (2 caminhos: `/saude`, `/api/versao`) e `GET /api/docs` (só GET; `HEAD` devolve
-405). O `docs/openapi.json` comitado é gerado por `make openapi` e igual ao servido. A interface Swagger
-é servida de `web/vendor/swagger-ui-bundle-5.32.15.js` e `swagger-ui-5.32.15.css` (Apache-2.0, sha256 em
-`VERSOES.txt`), com o validador externo desligado: 0 URL externa no HTML de `/api/docs` (medido pelo
-testador e, em chromium real, pelo adversário); `/docs` e `/redoc` devolvem 404.
-
-Latências medidas pelo testador (rodada 2, 20 chamadas cada, do próprio servidor):
-`/saude` pela URL pública com conexão TLS nova a cada chamada = mediana 19,8 ms, p95 21,0 ms
-(`curl -s -o /dev/null -w %{time_total}`); com conexão reaproveitada = mediana 1,9 ms, p95 2,8 ms;
-direto em `http://127.0.0.1:8150/saude` = mediana 1,4 ms (rodada 1). Pelo `TestClient`
-(`tests/api/test_saude.py`): `/saude` 1,87 ms, `/api/versao` 0,85 ms (medianas). Nenhuma dessas medidas representa um usuário remoto.
-
----
-
-## 9. Configuração, log, testes e medidas
-
-### 9.1 `.env` (`app/settings.py`)
-
-Lido com `python-dotenv`; variável de ambiente do processo vence o arquivo. Chave obrigatória ausente ou
-inválida aborta a partida nomeando a chave (`ErroConfiguracao`).
-
-| chave | obrigatória | validação |
-|---|---|---|
-| `PLAT_DSN` | sim | começa com `postgresql://` |
-| `PLAT_SECRET` | sim | 64 caracteres hexadecimais |
-| `PLAT_AMBIENTE` | sim | `producao` ou `dev` |
-| `PLAT_URL_PUBLICA` | sim | começa com `https://` |
-| `PLAT_GIT_SHA` | não | gravado pelo `install.sh` com o sha do HEAD a cada execução; só é lido quando não há `.git` |
-| `PLAT_MARTIN_URL`, `PLAT_TITILER_URL`, `PLAT_GARAGE_URL` | não | sondas de `/saude` |
-| `PLAT_LOG_NIVEL` | não | `DEBUG`/`INFO`/`WARNING`/`ERROR`; `DEBUG` em `producao` é rebaixado para `INFO` com aviso |
-
-Segredo nunca em argumento de linha de comando nem na unidade systemd: a senha do banco vai por stdin
-ao `psql` e a senha dos administradores de demonstração vai por stdin ao Python (o adversário da rodada
-1 tinha encontrado essa senha no `COMMAND=` que o `sudo` grava no journal; na rodada 2, 0 ocorrências
-durante e depois da reinstalação).
-
-### 9.2 Log (`app/log.py`, `app/main.py`)
-
-Uma linha JSON por evento em stdout, recolhida pelo journal: `ts` (ISO 8601 UTC), `nivel`, `msg`,
-`logger`; na linha de acesso, `req_id` (16 hex, também devolvido no cabeçalho `X-Req-Id`), `metodo`,
-`rota`, `status`, `tempo_ms`, `ip`; exceção em `exc`. `/saude` e `/api/versao` são registradas em
-`DEBUG` (o driver do laço as chama a cada 30 min). Leitura: `journalctl -u plat-api -o cat | jq`.
-Medido na rodada 2: 3 linhas `ERROR` no journal, todas `saude: banco em erro` nos instantes em que outro
-papel apagava o schema com o serviço no ar (a refutação destrutiva); o contrato devolveu 503, como deve.
-Quem for reinstalar do zero para o serviço antes do `DROP` se quiser journal sem ruído.
-
-O middleware **não grava** em `plat.log_acesso`; a função `plat.log_registrar` existe e está testada, e a
-gravação por rota autenticada entra com o item L0-02.
-
-### 9.3 venv e `make check`
-
-- `venv/` criada com `--system-site-packages` (Python 3.12.3) para reaproveitar os pacotes dpkg
-  (`python3-uvicorn 0.27.1`, `python3-psycopg2 2.9.9`), mas sempre com `PYTHONNOUSERSITE=1` (Makefile,
-  unidade, `install.sh`): nada vem do diretório do usuário. `requirements.txt` fixa com `==` toda
-  dependência da aplicação (`fastapi 0.138.0`, `starlette 1.3.1`, `pydantic 2.13.4`, `python-dotenv
-  1.2.2` e transitivas) e da suíte (`httpx 0.28.1`, `pytest 9.1.1`, `pytest-playwright 0.9.0`,
-  `playwright 1.59.0`, `ruff 0.16.6` e transitivas).
-- `make check` = `lint` (ruff em `app` e `tests`) → `sem-marcador` (grep com `tests/marcadores.regex`
-  sobre `app web db docs deploy install.sh Makefile requirements.txt pyproject.toml *.md`; qualquer
-  linha encontrada reprova) → `teste` (`pytest -m "not lento"`) → `e2e` (`pytest -m lento --base-url
-  <PLAT_URL_PUBLICA>`). `make check-rapido` é o mesmo sem e2e (é o que o driver roda). `make medidas`
-  roda a suíte inteira com `PLAT_GRAVAR_MEDIDAS=1`; `make vendor` confere os sha256 de `web/vendor/`
-  contra `VERSOES.txt`.
-- Medido (rodada 2, sobre `8ffe950`): 82 testes coletados (`pytest --collect-only -q`: unit 31, api 50,
-  e2e 1); 81 rápidos passando + 1 e2e passando; `make check` rc=0, 2,86 s (`/usr/bin/time -f %e make
-  check`); árvore limpa depois (`git status --short` = 0 linhas); 0 linhas de marcador de pendência com
-  a expressão do driver no escopo ampliado; `make vendor` = 4 arquivos OK.
-
-| diretório | o que prova | precisa de |
-|---|---|---|
-| `tests/unit/` | `settings` (10), `versao` (6), `instalador` (5), `dependencias` (4), `log` (2), `senha` (2), `vendor` (2) | nada |
-| `tests/api/test_saude.py` | contrato de `/saude` e `/api/versao`, `Cache-Control`, `X-Req-Id`, mesma implantação | `.env`, banco |
-| `tests/api/test_banco.py` | conexão TCP como `plat_app` (prova da linha do pg_hba), sem posse, sem BYPASSRLS, extensões, `versao_migracao` só leitura | banco |
-| `tests/api/test_migracoes.py` | duas rodadas do `migrar.sh` = 0 linhas novas; cópia editada = código 3 e tabela intacta; toda tabela com `tenant_id` tem RLS e política | `sudo -u postgres` sem senha |
-| `tests/api/test_rls.py` | 0 linhas sem contexto; `demo` só vê `demo`; INSERT cruzado falha; contexto morre no rollback; `log_acesso` só pela função | banco |
-| `tests/api/test_cabecalhos.py` | HTTP real na URL pública (26 casos): noindex, HSTS, `no-store`, `nosniff`, `X-Req-Id` só na API (prova do `alias`), 301 do http | DNS e HTTPS (pulado se o nome não resolver) |
-| `tests/api/test_docs.py` | `/api/docs` servido do disco, sem URL externa | `.env` |
-| `tests/e2e/test_saude_pagina.py` | chromium do playwright em `/`: 0 erro de console, 0 resposta ≥ 400, versão da tela = `/api/versao`, captura `tests/e2e/capturas/L0-01-repo_inicio.png` | DNS e HTTPS |
-
-### 9.4 Medidas
-
-Fixture `medida(item)(nome, valor, unidade, comando)` em `tests/conftest.py` grava
-`tests/medidas/<item>.json` (`{"item", "gerado_em", "git_sha", "medidas": {nome: {valor, unidade,
-comando}}}`) **só com `PLAT_GRAVAR_MEDIDAS=1`** no ambiente, para que a suíte não suje a árvore do git
-(o testador grava com `make medidas`; o driver e o `make check` não: `git status` fica limpo). O arquivo
-`L0-01-repo.json` atual foi assinado pelo testador na rodada 2 e traz, além das medidas do teste, as
-que ele fez por `curl`, `psql` e `systemctl`, cada uma com o comando e a rodada. Documento cita número
-só por esse caminho.
-
----
-
-## 10. Front (`web/`)
-
-Módulos ES nativos sem bundler (`app.js` importa `./js/core.js`), MapLibre GL JS 4.7.1 (BSD-3-Clause) e
-Swagger UI 5.32.15 (Apache-2.0) em `web/vendor/`, com a versão no nome do arquivo e sha256 em
-`VERSOES.txt` (`make vendor` confere), servidos pelo nginx com `no-store`; `favicon.svg` próprio. A única tela é a página
-inicial: nome, aviso "análise / beta privado", versão/git/ambiente de `/api/versao` e o JSON de `/saude`
-com o estado colorido; marca `body[data-pronto=1]` quando as duas chamadas terminam. Nenhum botão,
-nenhum mapa (o MapLibre está no repositório, mas nenhuma tela o carrega ainda). Medido no chromium do
-playwright (rodada 2): página pronta em 62,6 ms (`goto('/')` até `body[data-pronto=1]`), primeira
-pintura de conteúdo em 48 ms (`performance.getEntriesByType('paint')`).
-
-Regras: importação relativa, nunca `?v=`; biblioteca nova entra em `vendor/` com linha em `VERSOES.txt`
-(licença BSD, MIT, Apache 2.0 ou ISC); módulo próprio ≤ 60 kB.
-
----
-
-## 11. Convenções que valem para todo item
-
-1. Número em README, MANUAL, ARQUITETURA ou PARIDADE sai de `tests/medidas/*.json`, com o comando.
-2. Identificadores expostos em português (rotas, colunas, mensagens, nomes de teste); inglês só onde a
-   biblioteca exige ou onde o mercado usa o termo (`tenant_id`, `token`, `slug`, `hash`).
-3. Nenhum nome de cliente, parceiro ou piloto em código, dado, teste, captura ou documento; o serviço de
-   referência desta máquina é chamado "SIG de teste interno". Inquilinos de demonstração: `demo`, `demo2`.
+1. Número em README, MANUAL, ARQUITETURA ou PARIDADE sai de `tests/medidas/*.json` ou de `refutacao.json`, com o
+   comando.
+2. Identificadores expostos em português; inglês só onde a biblioteca ou o mercado exigem (`tenant_id`, `token`,
+   `slug`, `hash`, `cron`).
+3. Nenhum nome de cliente, parceiro ou piloto em código, dado, teste, captura ou documento. Inquilinos de
+   demonstração: `demo`, `demo2`; inquilino técnico: `plataforma`.
 4. Nada manual fora de script: o que o `install.sh` não faz, não existe.
-5. Serviço novo = unidade `plat-<nome>` em `deploy/`, porta da faixa 8150-8159, campo em `/saude`, linha
-   na seção 1 deste arquivo, no mesmo turno.
-6. Migração aplicada é imutável; correção vem em arquivo novo. Toda tabela com `tenant_id` nasce com
-   `ENABLE ROW LEVEL SECURITY` e política `FOR ALL TO plat_app USING ... WITH CHECK ...`.
-7. Toda função visível tem e2e playwright com captura em `tests/e2e/capturas/<item>_<tela>.png`.
+5. Serviço novo = unidade `plat-<nome>` em `deploy/`, porta da faixa 8150-8159, campo em `/saude`, linha na seção 1,
+   no mesmo turno.
+6. Migração aplicada é imutável; correção vem em arquivo novo, numerado na hora de criar. Toda tabela com
+   `tenant_id` nasce com RLS `FOR ALL TO plat_app USING ... WITH CHECK ...`; partição herda política própria.
+7. Função `SECURITY DEFINER` nova: `REVOKE EXECUTE FROM PUBLIC`, `GRANT` só à role que a chama, e checagem de
+   contexto quando há contexto (`plat.contexto_confere`); superadmin sempre por hash de sessão, nunca por GUC.
+8. Toda rota declara `x-auth`, `x-privilegio`, `response_model` e, se escreve, o evento em `eventos_esperados.py`;
+   toda rota tem caso em `cruzado_casos.py`.
+9. Toda tarefa de job tem de poder recomeçar do zero; efeito parcial em área de trabalho e entrada atômica no fim.
+10. Toda função visível tem e2e playwright com captura em `tests/e2e/capturas/<item>_<tela>.png`; 0 erro de console;
+    nenhuma chave de tradução crua na tela.
 
 ---
 
-## 12. O que ainda não existe
+## 13. O que ainda não existe
 
-Este repositório, em 0.1.0, é fundação: instala, sobe, responde saúde e isola inquilinos no banco. Não
-tem login, catálogo, camada, mapa, tile, edição, serviço OGC ou Esri-compatível, fila, motor
-multicritério, rede de utilidades, construtor, conector nem operação. Nomeadamente:
+- Catálogo de conteúdo, camadas, mapa, tiles, edição, serviços OGC e Esri-compatíveis, motor multicritério, rede de
+  utilidades, construtores, conectores, operação (linhas L0-03 em diante; o L0-03 está em construção nesta árvore).
+- `plat-martin` (8151) e `plat-titiler` (8152): portas reservadas, serviços inexistentes.
+- Tela de configuração do inquilino (L0-07-a), console do superadmin (L0-07-f), e-mail (L0-07-d), relatórios
+  (L0-07-e), login externo SAML/OIDC/LDAP/gov.br (L0-08), apagar usuário com transferência de conteúdo (L0-03-j),
+  perfil estendido do membro (L0-02-g), CLI de administração (L0-14), `docs/LIMITES.md` gerado de `app/limites.py`
+  (L0-12).
+- Periódicos além do expurgo de jobs (expurgo de sessões, partições futuras de `log_acesso` e `evento`, retenção de
+  12 meses): as funções existem, o registro em `app/jobs/periodicos.py` é o L0-05-d.
+- Executor remoto no GPU box (`executor='gpu'`): só a coluna, o CHECK e a recusa na importação (L1-05).
+- Identidade única do worker por processo (cláusula acrescentada ao portão do L0-05 pelo achado 2 do testador): no
+  HEAD `abbb03d` o nome é o do host e `job_ceifar` devolve por igualdade de nome; a correção (migrações 012 e 013,
+  `worker.py`, `tests/api/jobs/test_jobs_identidade.py`) está na árvore de trabalho sem commit nem veredito; ver
+  `CHANGELOG.md`.
+- `Content-Security-Policy` (L7-03); rotas `/svc/`, `/ogc/`, `/tiles/` que aceitam `?token=` (L2-04, L1-02);
+  `Referrer-Policy` no ar depende da próxima execução do `install.sh`.
+- Paridade com ArcGIS Pro e ArcGIS Online reais: pendente da decisão D20 (credencial de teste).
 
-- `plat-martin` (8151), `plat-titiler` (8152) e `plat-worker` (8153): portas reservadas, serviços
-  inexistentes (itens L2-01, L1-01, L0-05).
-- Rotas autenticadas, cookie de sessão, 2FA, token de serviço com escopo, gravação em `log_acesso`
-  (item L0-02); as funções SQL existem, a API não as chama.
-- `docs/PARIDADE.md` só com cabeçalho: não há capacidade de usuário para comparar com o ArcGIS
-  Enterprise. A paridade-alvo dos itens L0-02 e L0-03 está escrita no handoff
-  `laco/handoffs/T1/21_esri.md` e entra na tabela quando esses itens forem entregues.
-- Teste automático do modo `-- reaplicavel` do `migrar.sh` (entra com a primeira migração que o use).
-- Medição em máquina realmente nova (a "máquina que nunca viu o repositório" foi simulada nesta, com
-  venv e certificado já existentes); caminhos do `install.sh` só lidos: `.env` inexistente na rodada 2,
-  certbot emitindo (i2/i3), `nginx -t` reprovando.
-- Carga, concorrência e memória sob uso (só o repouso foi medido; item L7-02).
-
-O placar do laço, a tabela dos 57 itens do backlog e a fronteira por linha (o que o produto NÃO faz ainda)
-estão em `/home/dev/plataforma/laco/PAINEL.md`, gerado por `laco/gera_painel.py` a partir de
-`laco/estado.json`.
+O placar do laço, a tabela dos itens do backlog e a fronteira por linha estão em
+`/home/dev/plataforma/laco/PAINEL.md`, gerado por `laco/gera_painel.py` a partir de `laco/estado.json`.
