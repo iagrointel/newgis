@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+node_modules/
+tests/e2e/capturas/*.png
+.env*
+*.log
