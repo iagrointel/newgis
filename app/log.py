@@ -7,7 +7,8 @@ import logging
 import secrets
 import sys
 
-CAMPOS_REQ = ("req_id", "metodo", "rota", "status", "tempo_ms", "ip", "tenant_id", "usuario_id", "token_id")
+CAMPOS_REQ = ("req_id", "metodo", "rota", "status", "tempo_ms", "ip", "tenant_id", "usuario_id", "token_id",
+              "job_id", "tipo", "pid_filho")  # os três últimos: worker da fila (ADR 0003 seção 4.1)
 
 
 class FormatadorJSON(logging.Formatter):

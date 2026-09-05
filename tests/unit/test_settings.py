@@ -52,4 +52,4 @@ def test_opcionais_vazias_viram_none_e_url_sem_barra_final():
     s = carregar({**BASE, "PLAT_GARAGE_URL": "", "PLAT_MARTIN_URL": "  "})
     assert s.PLAT_GARAGE_URL is None and s.PLAT_MARTIN_URL is None
     assert s.PLAT_URL_PUBLICA == "https://exemplo.invalido"
-    assert s.servicos() == {"martin": None, "titiler": None, "garage": None}
+    assert s.servicos() == {"martin": None, "titiler": None, "garage": None, "worker": None}

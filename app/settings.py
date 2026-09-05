@@ -34,13 +34,24 @@ class Settings:
     PLAT_TITILER_URL: str | None
     PLAT_GARAGE_URL: str | None
     PLAT_LOG_NIVEL: str
+    # fila de jobs e worker plat-worker (ADR 0003 seção 11); acrescentados ao fim pela trilha B
+    PLAT_WORKER_URL: str | None
+    PLAT_WORKER_NOME: str | None
+    PLAT_WORKER_PROCESSOS: int
+    PLAT_WORKER_MEMORIA_MB: int
+    PLAT_JOBS_DIR: str | None
+    PLAT_JOB_MAX_REINICIOS: int
+    PLAT_GPU_SSH: str | None
+    PLAT_GPU_DIR: str | None
+    PLAT_RELOGIO_TESTE: str | None
 
     @property
     def producao(self) -> bool:
         return self.PLAT_AMBIENTE == "producao"
 
     def servicos(self) -> dict[str, str | None]:
-        return {"martin": self.PLAT_MARTIN_URL, "titiler": self.PLAT_TITILER_URL, "garage": self.PLAT_GARAGE_URL}
+        return {"martin": self.PLAT_MARTIN_URL, "titiler": self.PLAT_TITILER_URL, "garage": self.PLAT_GARAGE_URL,
+                "worker": self.PLAT_WORKER_URL}
 
 
 def _obrigatoria(valores: Mapping[str, str | None], chave: str) -> str:
@@ -53,6 +64,19 @@ def _obrigatoria(valores: Mapping[str, str | None], chave: str) -> str:
 def _opcional(valores: Mapping[str, str | None], chave: str) -> str | None:
     v = (valores.get(chave) or "").strip()
     return v or None
+
+
+def _inteiro(valores: Mapping[str, str | None], chave: str, padrao: int, minimo: int) -> int:
+    v = _opcional(valores, chave)
+    if v is None:
+        return padrao
+    try:
+        n = int(v)
+    except ValueError as e:
+        raise ErroConfiguracao(f"{chave} inválida: {v!r}; exige inteiro >= {minimo}") from e
+    if n < minimo:
+        raise ErroConfiguracao(f"{chave} inválida: {n}; exige inteiro >= {minimo}")
+    return n
 
 
 def carregar(valores: Mapping[str, str | None]) -> Settings:
@@ -85,6 +109,15 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_TITILER_URL=_opcional(valores, "PLAT_TITILER_URL"),
         PLAT_GARAGE_URL=_opcional(valores, "PLAT_GARAGE_URL"),
         PLAT_LOG_NIVEL=nivel,
+        PLAT_WORKER_URL=_opcional(valores, "PLAT_WORKER_URL"),
+        PLAT_WORKER_NOME=_opcional(valores, "PLAT_WORKER_NOME"),
+        PLAT_WORKER_PROCESSOS=_inteiro(valores, "PLAT_WORKER_PROCESSOS", 1, 1),
+        PLAT_WORKER_MEMORIA_MB=_inteiro(valores, "PLAT_WORKER_MEMORIA_MB", 1536, 128),
+        PLAT_JOBS_DIR=_opcional(valores, "PLAT_JOBS_DIR"),
+        PLAT_JOB_MAX_REINICIOS=_inteiro(valores, "PLAT_JOB_MAX_REINICIOS", 5, 1),
+        PLAT_GPU_SSH=_opcional(valores, "PLAT_GPU_SSH"),
+        PLAT_GPU_DIR=_opcional(valores, "PLAT_GPU_DIR"),
+        PLAT_RELOGIO_TESTE=_opcional(valores, "PLAT_RELOGIO_TESTE"),
     )
 
 

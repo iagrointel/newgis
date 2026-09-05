@@ -9,3 +9,4 @@ tests/credenciais.txt
 *.log
 .pytest_cache/
 .ruff_cache/
+var/

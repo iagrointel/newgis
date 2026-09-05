@@ -32,3 +32,9 @@ migrar:
 
 openapi:
 	$(VENV)/python -c "import json; from app.main import app; json.dump(app.openapi(), open('docs/openapi.json','w'), ensure_ascii=False, indent=1)"
+
+worker:                                     ## worker da fila em primeiro plano (desenvolvimento; em produção é a unidade plat-worker)
+	$(VENV)/python -m app.jobs.worker
+
+e2e-worker:                                 ## testes lentos da fila (reinício por systemctl, morte do pai, job de 5 min)
+	$(VENV)/pytest -m lento tests/api/jobs

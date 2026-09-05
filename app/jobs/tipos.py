@@ -1,0 +1,7 @@
+"""Importa cada módulo de tipos (o registro é preenchido na importação) e expõe REGISTRO. Linhas futuras
+acrescentam aqui a importação do seu módulo de tarefas (ex.: app.ingestao.tarefas no L0-04)."""
+
+from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos
+from app.jobs.registro import REGISTRO
+
+__all__ = ["REGISTRO"]
