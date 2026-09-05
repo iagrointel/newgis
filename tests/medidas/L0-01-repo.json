@@ -1,169 +1,197 @@
 {
  "item": "L0-01-repo",
- "assinado_por": "testador (turno T1, handoff 40_testes.md)",
- "gerado_em": "2026-09-05T12:54:00Z",
- "git_sha": "ca61ea1ea31c",
+ "assinado_por": "testador (turno T1, handoff 40_testes.md; rodada 2 sobre 8ffe950 — sem reinstalação destrutiva, feita pelo adversário)",
+ "gerado_em": "2026-09-05T13:14:00Z",
+ "git_sha": "8ffe950516f5",
  "maquina": "12 vCPU, 23 GB RAM (3 GB disponíveis), disco / a 98 % (13 GB livres); PostgreSQL 16 + PostGIS 3.6 em iagro_sat; 12+ sessões concorrentes na máquina",
  "medidas": {
   "tempo_install_zero_s": {
    "valor": 6.24,
    "unidade": "s",
-   "comando": "sudo systemctl stop plat-api; DROP SCHEMA plat CASCADE; DROP OWNED BY plat_app; DROP ROLE plat_app; /usr/bin/time -f %e sudo bash install.sh plat.iagrointel.com 8150 (mantendo .env, pg_hba e credenciais); rc=0"
+   "comando": "rodada 1 (sobre b22761e; não repetido na rodada 2 porque o adversário estava reinstalando): sudo systemctl stop plat-api; DROP SCHEMA plat CASCADE; DROP OWNED BY plat_app; DROP ROLE plat_app; /usr/bin/time -f %e sudo bash install.sh plat.iagrointel.com 8150 (mantendo .env, pg_hba e credenciais); rc=0"
   },
   "tempo_install_nunca_viu_s": {
    "valor": 9.14,
    "unidade": "s",
-   "comando": "mesmo DROP + rm .env tests/credenciais.txt + sed -i da linha plat_app no pg_hba.conf; install.sh imprimiu '.env criado', 'linha acrescentada em pg_hba.conf', 'tests/credenciais.txt criado'; rc=0; senha antiga deixa de autenticar"
+   "comando": "rodada 1 (sobre b22761e; não repetido na rodada 2 porque o adversário estava reinstalando): mesmo DROP + rm .env tests/credenciais.txt + sed -i da linha plat_app no pg_hba.conf; install.sh imprimiu '.env criado', 'linha acrescentada em pg_hba.conf', 'tests/credenciais.txt criado'; rc=0; senha antiga deixa de autenticar"
   },
   "tempo_install_repetido_s": {
    "valor": 4.69,
    "unidade": "s",
-   "comando": "segunda execução seguida: rc=0, 0 migrações novas (iguais 2), pg_hba com 1 linha plat_app (linha 35), NRestarts=0, 5 linhas do certbot preservadas"
+   "comando": "rodada 1 (sobre b22761e; não repetido na rodada 2 porque o adversário estava reinstalando): segunda execução seguida: rc=0, 0 migrações novas (iguais 2), pg_hba com 1 linha plat_app (linha 35), NRestarts=0, 5 linhas do certbot preservadas"
   },
   "install_execucoes_rc0": {
    "valor": 3,
    "unidade": "execuções",
-   "comando": "3 execuções pelo testador (do zero, repetida, nunca-viu), todas rc=0 e passo j = HTTP 200 + X-Robots-Tag noindex"
+   "comando": "rodada 1 (sobre b22761e; não repetido na rodada 2 porque o adversário estava reinstalando): 3 execuções pelo testador (do zero, repetida, nunca-viu), todas rc=0 e passo j = HTTP 200 + X-Robots-Tag noindex"
   },
   "testes_coletados": {
-   "valor": 58,
+   "valor": 82,
    "unidade": "testes",
-   "comando": "venv/bin/pytest --collect-only -q: unit 17 (settings 10, versao 3, log 2, senha 2) · api 40 (cabecalhos 18, rls 7, banco 5, migracoes 5, saude 5) · e2e 1; 43 funções def test_ (parametrizadas)"
+   "comando": "rodada 2: venv/bin/pytest --collect-only -q sobre 8ffe950: unit 31 (settings 10, versao 6, instalador 5, dependencias 4, log 2, senha 2, vendor 2) · api 50 (cabecalhos 26, rls 7, banco 5, migracoes 5, saude 5, docs 2) · e2e 1 (rodada 1: 58)"
   },
   "testes_rapidos_passando": {
-   "valor": 57,
+   "valor": 81,
    "unidade": "testes",
-   "comando": "make check → venv/bin/pytest -m 'not lento': 57 passed, 1 deselected, 1 warning (StarletteDeprecationWarning httpx)"
+   "comando": "rodada 2: make check → pytest -m 'not lento': 81 passed, 1 deselected, 1 warning em 1,45 s (rodada 1: 57)"
   },
   "testes_e2e_passando": {
    "valor": 1,
    "unidade": "testes",
-   "comando": "venv/bin/pytest -m lento --base-url https://plat.iagrointel.com: 1 passed; captura tests/e2e/capturas/L0-01-repo_inicio.png conferida a olho (versão 0.1.0, git b22761e1c785, saúde ok)"
+   "comando": "rodada 2: pytest -m lento --base-url https://plat.iagrointel.com: 1 passed em 0,60 s; captura L0-01-repo_inicio.png regravada 13:11"
   },
   "make_check_rc": {
    "valor": 0,
    "unidade": "rc",
-   "comando": "make check rodado 3 vezes (antes do drop, após install do zero, após install nunca-viu): rc=0 nas três"
+   "comando": "rodada 2: make check rc=0 sobre 8ffe950 (rodada 1: rc=0 × 3)"
   },
   "make_check_tempo_s": {
-   "valor": 2.72,
+   "valor": 2.86,
    "unidade": "s",
-   "comando": "/usr/bin/time -f %e make check (ruff + varredura de marcador + 57 rápidos + 1 e2e); as 3 rodadas: 2,72 · 2,69 · 2,68"
+   "comando": "rodada 2: /usr/bin/time -f %e make check = 2,86 s (rodada 1: 2,72 · 2,69 · 2,68)"
   },
   "placeholders_linhas": {
    "valor": 0,
    "unidade": "linhas",
-   "comando": "grep -rnI --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=tests --exclude-dir=.git --exclude-dir=venv -E 'TODO|FIXME|XXX|lorem ipsum|em breve|coming soon|placeholder|mock[A-Z_(]|not implemented|NotImplemented' app db web install.sh Makefile | grep -v laco/ | wc -l (mesma expressão do driver.sh); repositório inteiro também 0"
+   "comando": "rodada 2: grep com a expressão do driver em app web db docs deploy install.sh Makefile requirements.txt pyproject.toml *.md (escopo novo do Makefile) = 0 (rodada 1: 0)"
   },
   "saude_http_status": {
    "valor": 200,
    "unidade": "código HTTP",
-   "comando": "curl -sSI https://plat.iagrointel.com/saude (HEAD) e curl -sS (GET) → 200, JSON {versao 0.1.0, git_sha b22761e1c785 = git rev-parse HEAD, banco ok, migracoes_aplicadas 2, pendentes 0}"
+   "comando": "rodada 2: HEAD e GET 200; JSON git_sha 8ffe950516f5 = git rev-parse HEAD, banco ok, migracoes_pendentes 0; cabeçalhos X-Req-Id, HSTS, X-Robots-Tag"
   },
   "x_robots_tag_rotas_com_noindex": {
    "valor": 11,
    "unidade": "rotas de 11",
-   "comando": "curl -sI em / /saude /api/versao /static/app.js /static/vendor/maplibre-gl.js /static/style.css /static/js/core.js /api/docs /api/openapi.json /naoexiste(404) /static/naoexiste.js(404): todas com 'X-Robots-Tag: noindex, nofollow'; http:// → 301 para https"
+   "comando": "rodada 2: mesmas 11 rotas (vendor agora maplibre-gl-4.7.1.js): todas com X-Robots-Tag noindex, nofollow; /api/docs = 200 no GET e 405 no HEAD (rota só GET, sem promessa de HEAD)"
   },
   "latencia_saude_publica_conexao_nova_mediana_ms": {
-   "valor": 19.9,
+   "valor": 19.8,
    "unidade": "ms",
-   "comando": "20 × curl -s -o /dev/null -w %{time_total} https://plat.iagrointel.com/saude, conexão TLS nova a cada chamada, do próprio servidor; 20/20 = 200"
+   "comando": "rodada 2: 20 × curl -s -o /dev/null -w %{time_total} https://plat.iagrointel.com/saude, conexão TLS nova, do próprio servidor; 20/20 = 200 (rodada 1: 19,9)"
   },
   "latencia_saude_publica_conexao_nova_p95_ms": {
-   "valor": 22.4,
+   "valor": 21.0,
    "unidade": "ms",
-   "comando": "idem, p95 (mín 19,3 · máx 23,9)"
+   "comando": "rodada 2: idem, p95 (mín 19,0 · máx 21,0) (rodada 1: 22,4)"
   },
   "latencia_saude_publica_conexao_reaproveitada_mediana_ms": {
-   "valor": 1.7,
+   "valor": 1.9,
    "unidade": "ms",
-   "comando": "20 URLs numa só invocação de curl (TLS reaproveitado) contra https://plat.iagrointel.com/saude"
+   "comando": "rodada 2: 20 URLs numa só invocação de curl (TLS reaproveitado) (rodada 1: 1,7)"
   },
   "latencia_saude_publica_conexao_reaproveitada_p95_ms": {
-   "valor": 2.7,
+   "valor": 2.8,
    "unidade": "ms",
-   "comando": "idem, p95 (mín 1,6 · máx 20,5 = a 1ª chamada com aperto de mão)"
+   "comando": "rodada 2: idem, p95 (mín 1,5 · máx 20,8 = 1ª chamada com aperto de mão) (rodada 1: 2,7)"
   },
   "latencia_saude_local_8150_mediana_ms": {
    "valor": 1.4,
    "unidade": "ms",
-   "comando": "20 × curl http://127.0.0.1:8150/saude sem nginx/TLS; p95 1,9 ms"
+   "comando": "rodada 1 (sobre b22761e; não repetido na rodada 2 porque o adversário estava reinstalando): 20 × curl http://127.0.0.1:8150/saude sem nginx/TLS; p95 1,9 ms"
   },
   "rss_servico_cgroup_mb": {
-   "valor": 90.0,
+   "valor": 88.5,
    "unidade": "MB",
-   "comando": "systemctl show plat-api -p MemoryCurrent = 94.416.896 bytes (pico 94.937.088) com 2 workers uvicorn; NRestarts=0; TasksCurrent=8"
+   "comando": "rodada 2: systemctl show plat-api -p MemoryCurrent = 92.827.648 bytes (pico 93.818.880), 2 workers, NRestarts=0, TasksCurrent=8, ativo desde 13:11:09 (rodada 1: 90,0)"
   },
   "rss_servico_soma_processos_mb": {
-   "valor": 147.5,
+   "valor": 145.7,
    "unidade": "MB",
-   "comando": "soma de ps -o rss dos 4 processos do cgroup (mestre 25,7 MB + resource_tracker 13,0 + 2 workers 56,1/56,2) = 151.020 kB; páginas compartilhadas contadas mais de uma vez, por isso maior que o cgroup"
+   "comando": "rodada 2: soma de ps -o rss dos 4 processos do cgroup (25.468 + 12.836 + 55.560 + 55.316 kB = 149.180 kB); páginas compartilhadas contadas mais de uma vez (rodada 1: 147,5)"
   },
   "rls_tabelas_com_tenant_id": {
    "valor": 4,
    "unidade": "tabelas",
-   "comando": "pg_class × pg_attribute tenant_id no schema plat: log_acesso, sessao, token_servico, usuario — todas relrowsecurity=t e 1 política; plat.tenant tem RLS por id (p_tenant); versao_migracao sem tenant_id e sem RLS (só leitura para plat_app, INSERT negado)"
+   "comando": "rodada 1 (sobre b22761e; não repetido na rodada 2 porque o adversário estava reinstalando): pg_class × pg_attribute tenant_id no schema plat: log_acesso, sessao, token_servico, usuario — todas relrowsecurity=t e 1 política; plat.tenant tem RLS por id (p_tenant); versao_migracao sem tenant_id e sem RLS (só leitura para plat_app, INSERT negado)"
   },
   "rls_linhas_sem_contexto": {
    "valor": 0,
    "unidade": "linhas",
-   "comando": "psql como plat_app (DSN do .env) sem set_config: count(*) em tenant, usuario, sessao, token_servico, log_acesso = 0 0 0 0 0; como postgres: tenant 2, usuario 2"
+   "comando": "rodada 1 (sobre b22761e; não repetido na rodada 2 porque o adversário estava reinstalando): psql como plat_app (DSN do .env) sem set_config: count(*) em tenant, usuario, sessao, token_servico, log_acesso = 0 0 0 0 0; como postgres: tenant 2, usuario 2"
   },
   "rls_insert_cruzado_bloqueado": {
    "valor": 1,
    "unidade": "booleano",
-   "comando": "set_config('plat.tenant_id','1') + INSERT plat.usuario tenant_id=2 → ERROR new row violates row-level security policy (rc=3 com ON_ERROR_STOP); UPDATE/DELETE cruzados = 0 linhas; UPDATE mudando tenant_id do próprio registro para 2 → mesmo erro; INSERT próprio (tenant 1) passa; contexto demo vê só demo, demo2 só demo2"
+   "comando": "rodada 1 (sobre b22761e; não repetido na rodada 2 porque o adversário estava reinstalando): set_config('plat.tenant_id','1') + INSERT plat.usuario tenant_id=2 → ERROR new row violates row-level security policy (rc=3 com ON_ERROR_STOP); UPDATE/DELETE cruzados = 0 linhas; UPDATE mudando tenant_id do próprio registro para 2 → mesmo erro; INSERT próprio (tenant 1) passa; contexto demo vê só demo, demo2 só demo2"
   },
   "role_plat_app_bypassrls": {
    "valor": 0,
    "unidade": "booleano",
-   "comando": "pg_roles: rolsuper f, rolbypassrls f, rolcreatedb f, rolcreaterole f, rolcanlogin t; SET ROLE postgres negado; 0 objetos (pg_class, pg_proc, pg_namespace) de posse de plat_app no banco; schema, 6 tabelas, 4 sequências e 11 funções de posse de postgres; 0 privilégios de tabela fora de plat"
+   "comando": "rodada 1 (sobre b22761e; não repetido na rodada 2 porque o adversário estava reinstalando): pg_roles: rolsuper f, rolbypassrls f, rolcreatedb f, rolcreaterole f, rolcanlogin t; SET ROLE postgres negado; 0 objetos (pg_class, pg_proc, pg_namespace) de posse de plat_app no banco; schema, 6 tabelas, 4 sequências e 11 funções de posse de postgres; 0 privilégios de tabela fora de plat"
   },
   "pg_hba_linhas_plat_app": {
    "valor": 1,
    "unidade": "linhas",
-   "comando": "sudo grep -c plat_app /etc/postgresql/16/main/pg_hba.conf após 2 execuções seguidas e após o caminho nunca-viu (linha 35, 35 linhas no arquivo, antes e depois)"
+   "comando": "rodada 1 (sobre b22761e; não repetido na rodada 2 porque o adversário estava reinstalando): sudo grep -c plat_app /etc/postgresql/16/main/pg_hba.conf após 2 execuções seguidas e após o caminho nunca-viu (linha 35, 35 linhas no arquivo, antes e depois)"
   },
   "migracoes_aplicadas": {
    "valor": 2,
    "unidade": "migrações",
-   "comando": "plat.versao_migracao: 001_fundacao, 002_identidade; 2ª execução do install: aplicadas 0, iguais 2"
+   "comando": "rodada 1 (sobre b22761e; não repetido na rodada 2 porque o adversário estava reinstalando): plat.versao_migracao: 001_fundacao, 002_identidade; 2ª execução do install: aplicadas 0, iguais 2"
   },
   "journal_erros": {
-   "valor": 0,
+   "valor": 3,
    "unidade": "linhas",
-   "comando": "journalctl -u plat-api | grep -ciE 'nivel.*(ERROR|WARNING)|Traceback|error' = 0"
+   "comando": "rodada 2: journalctl -u plat-api | grep '\"nivel\": \"ERROR\"' = 3, todas 'saude: banco em erro' com 'SELECT nome FROM plat.versao_migracao' às 12:53:47, 12:56:08 e 13:11:00 = /saude chamado enquanto outro papel apagava o schema com o serviço no ar (o das 13:11:00 coincide com install.sh do adversário no journal do sudo); /saude devolve 503 nesse estado, como o contrato manda; 0 Traceback fora disso"
   },
   "alias_estatico_travessia": {
    "valor": 404,
    "unidade": "código HTTP",
-   "comando": "curl --path-as-is https://plat.iagrointel.com/static/../.env → 404 (JSON do FastAPI, não o arquivo); /static/..%2F.env e %2e%2e também 404; /static/vendor/ → 403 (sem autoindex)"
+   "comando": "rodada 1 (sobre b22761e; não repetido na rodada 2 porque o adversário estava reinstalando): curl --path-as-is https://plat.iagrointel.com/static/../.env → 404 (JSON do FastAPI, não o arquivo); /static/..%2F.env e %2e%2e também 404; /static/vendor/ → 403 (sem autoindex)"
   },
   "latencia_saude_ms": {
-   "valor": 1.73,
+   "valor": 1.87,
    "unidade": "ms",
    "comando": "mediana de 20 GET /saude pelo TestClient (tests/api/test_saude.py)"
   },
   "latencia_versao_ms": {
-   "valor": 0.79,
+   "valor": 0.85,
    "unidade": "ms",
    "comando": "mediana de 20 GET /api/versao pelo TestClient (tests/api/test_saude.py)"
   },
   "pagina_pronta_ms": {
-   "valor": 50.9,
+   "valor": 62.6,
    "unidade": "ms",
    "comando": "goto('/') até body[data-pronto=1] no chromium do playwright"
   },
   "primeira_pintura_ms": {
-   "valor": 36,
+   "valor": 48,
    "unidade": "ms",
    "comando": "performance.getEntriesByType('paint') first-contentful-paint no chromium do playwright"
+  },
+  "make_check_suja_arvore": {
+   "valor": 0,
+   "unidade": "arquivos",
+   "comando": "rodada 2: git status --short depois de make check = 0 linhas (rodada 1: 1, a fixture medida() reescrevia este JSON; agora só grava com PLAT_GRAVAR_MEDIDAS=1)"
+  },
+  "make_medidas_rc": {
+   "valor": 0,
+   "unidade": "rc",
+   "comando": "rodada 2: make medidas (PLAT_GRAVAR_MEDIDAS=1, 82 passed em 1,96 s) regravou só as 4 chaves da fixture + gerado_em/git_sha; as chaves do testador sobreviveram"
+  },
+  "nomes_de_cliente_linhas": {
+   "valor": 0,
+   "unidade": "linhas",
+   "comando": "rodada 2 (P7): grep -rniE 'fgr|cbre|novaterra|certel|certaja|edp[^a-z]|robson|jamel|sigcorp|cbresig|fgrsig' no repositório (fora venv/.git/vendor/caches) = 0 (rodada 1: 3 arquivos de código + 34 linhas no ADR)"
+  },
+  "hsts_rotas_https": {
+   "valor": 11,
+   "unidade": "rotas de 11",
+   "comando": "rodada 2: Strict-Transport-Security: max-age=31536000 nas 11 rotas HTTPS (inclui 404 e 405); ausente no 301 de http://; /docs e /redoc = 404; 0 URL externa no HTML de /api/docs; make vendor = 4 sha256 OK"
+  },
+  "docs_frases_defasadas_do_head": {
+   "valor": 26,
+   "unidade": "linhas",
+   "comando": "rodada 2: grep -nE 'commit pendente|árvore de trabalho|sem commit|3b53c24|57 testes|58 testes|57 rápidos|maplibre-gl\\.(js|css)[^-]|ca61ea1|\\(este\\)' README.md ARQUITETURA.md MANUAL.md CHANGELOG.md = 26 linhas: os documentos (475/157/82/47 linhas, escritos sobre 3b53c24) descrevem as correções de 8ffe950 como 'árvore de trabalho, commit pendente' e citam 57/58 testes e o vendor sem versão no nome"
   }
  },
  "nao_passa": [
-  "ARQUITETURA.md (3 linhas), MANUAL.md (3), CHANGELOG.md (2) são esboços vazios no momento do teste; cronista (60) ainda não rodou",
-  "P7: nome de cliente em código e docs entregues: app/settings.py:92, app/db.py:2, db/migracoes/002_identidade.sql:2 ('SIG de teste interno'), docs/adr/0001-fundacao.md (34 linhas com SIGs de teste interno)",
-  "make check reescreve tests/medidas/L0-01-repo.json (versionado) a cada rodada: repositório fica sujo depois da suíte"
+  "P9/cláusula docs: ARQUITETURA.md, MANUAL.md, CHANGELOG.md e README.md existem e têm conteúdo (475/157/82/47 linhas), mas foram escritos sobre 3b53c24 e descrevem as correções do HEAD 8ffe950 como 'árvore de trabalho, commit pendente' (26 linhas defasadas; contagem de testes 57/58 em vez de 81/82; vendor maplibre-gl.js sem versão; git_sha 3b53c24e4c12 nos exemplos)"
+ ],
+ "passou_na_rodada_2": [
+  "P7: 0 linhas com nome de cliente/parceiro no repositório",
+  "make check não suja mais a árvore (git status limpo depois); make medidas grava sob PLAT_GRAVAR_MEDIDAS=1",
+  "81 rápidos + 1 e2e verdes; 0 placeholder no escopo ampliado (inclui *.md); HSTS em 11/11 rotas HTTPS; Swagger local sem URL externa; vendor com sha256 OK"
  ]
 }
