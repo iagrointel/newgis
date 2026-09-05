@@ -153,6 +153,28 @@ def test_conteudo_fluxo_completo(page, base_url, credenciais_demo, admin_api, ap
         page.fill("#busca input", "")
         page.press("#busca input", "Enter")
         page.wait_for_function("() => !document.querySelector('#lista .vazio')", timeout=15000)
+        # facetas: o valor que a faceta mostra tem de ser o que o filtro aceita (dono_id inteiro, categoria uuid);
+        # um valor de rótulo devolveria 422, que reprova em tela.verificar()
+        dic = json.loads((RAIZ / "web" / "js" / "i18n" / "pt-BR.json").read_text(encoding="utf-8"))
+        if not page.locator("#coluna-filtros[open]").count():
+            page.click("#coluna-filtros summary")
+        # o item recém-criado é do admin: a faceta de dono aparece quando as contagens da busca limpa chegam
+        page.wait_for_selector(
+            f"#filtros section.faceta[aria-label={json.dumps(dic['catalogo.col_dono'])}] input[type=checkbox]",
+            timeout=15000)
+        for chave in ("catalogo.col_dono", "catalogo.categorias"):
+            sec = page.locator(f"#filtros section.faceta[aria-label={json.dumps(dic[chave])}]")
+            if not sec.count() or not sec.locator("input[type=checkbox]").count():
+                continue  # categoria só aparece quando algum item da lista tem categoria
+            rotulo = sec.locator("label .rotulo").first.inner_text().strip()
+            assert rotulo and not rotulo.isdigit(), (chave, rotulo)
+            sec.locator("input[type=checkbox]").first.check()
+            page.wait_for_selector("#filtros .filtros-ativos .chip", timeout=15000)
+            if chave == "catalogo.col_dono":
+                page.wait_for_selector(f"#lista tr[data-id='{item_id}']", timeout=15000)
+            page.click("#filtros-limpar")
+            page.wait_for_function("() => !document.querySelector('#filtros .filtros-ativos')", timeout=15000)
+        page.wait_for_selector(f"#lista tr[data-id='{item_id}']", timeout=15000)
         # favoritar pela linha e ver na aba Favoritos
         linha = page.locator("#lista tr", has_text=titulo_novo)
         linha.locator("button.favorito").click()

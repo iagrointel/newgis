@@ -5,7 +5,7 @@ import { h, limpar } from '../base/dom.js';
 import { t } from '../base/i18n.js';
 import * as api from './api.js';
 import { ctx, parametrosLista, rotuloTipo, definirFiltro, alternarFiltro, limparFiltros, filtrosAtivos } from './contexto.js';
-import { rotuloStatus } from './formato.js';
+import { nomeDono, rotuloStatus } from './formato.js';
 
 let seq = 0;
 let aoMudar = () => {};
@@ -16,7 +16,57 @@ const el = (id) => document.getElementById(id);
 export function iniciar({ mudou }) {
   aoMudar = mudou;
   ctx.assinar(() => render(), ['filtros', 'tipos']);
+  // a lista traz {id, login, nome} de cada dono; quando chega um dono novo a faceta de dono passa a ter o id do filtro
+  ctx.assinar(() => { if (aprenderDonos() && el('coluna-filtros').open) render(); }, ['itens']);
   el('coluna-filtros').addEventListener('toggle', () => { if (el('coluna-filtros').open) carregar(); });
+}
+
+/* As facetas devolvem o RÓTULO, não o valor que o filtro aceita: dono vem como login e GET /api/itens?dono_id exige
+   inteiro; categoria vem como caminho e ?categoria exige uuid (que a faceta manda em `id`). Normaliza antes de
+   desenhar: sem isso o clique na faceta devolve 422 em vez de filtrar. */
+const donosPorLogin = new Map();
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function aprenderDonos() {
+  let novo = false;
+  for (const it of ctx.ler('itens') || []) {
+    const d = it && it.dono;
+    if (d && d.login && d.id !== null && d.id !== undefined && !donosPorLogin.has(String(d.login))) {
+      donosPorLogin.set(String(d.login), d);
+      novo = true;
+    }
+  }
+  return novo;
+}
+
+function facetaDono(valores) {
+  const saida = [];
+  for (const v of valores) {
+    if (v.id !== null && v.id !== undefined) { saida.push({ ...v, valor: v.id, rotulo: v.rotulo || v.nome || String(v.valor) }); continue; }
+    if (/^\d+$/.test(String(v.valor))) { saida.push(v); continue; }
+    const d = donosPorLogin.get(String(v.valor));
+    // dono cujo id ainda não apareceu na lista fica de fora: mandar o login em dono_id daria 422
+    if (d) saida.push({ ...v, valor: d.id, rotulo: nomeDono(d) });
+  }
+  return saida;
+}
+
+function facetaCategoria(valores) {
+  const saida = [];
+  for (const v of valores) {
+    if (v.id !== null && v.id !== undefined) saida.push({ ...v, valor: v.id, rotulo: v.rotulo || v.caminho || String(v.valor) });
+    else if (UUID.test(String(v.valor))) saida.push(v);
+  }
+  return saida;
+}
+
+/* valores de uma faceta já na forma que o filtro aceita (mesma lista para os quadrados e para os chips) */
+function conjuntoFaceta(chave) {
+  const bruto = facetas[chave === 'dono_id' ? 'dono' : chave];
+  if (!Array.isArray(bruto)) return [];
+  if (chave === 'dono_id') return facetaDono(bruto);
+  if (chave === 'categoria') return facetaCategoria(bruto);
+  return bruto;
 }
 
 /* chamada por quem recarrega a lista: refaz as contagens quando a gaveta está aberta */
@@ -87,7 +137,7 @@ function chipsAtivos() {
   };
   for (const k of ['tipo', 'familia', 'status', 'acesso', 'tags', 'categoria', 'dono_id']) {
     for (const v of f[k] || []) {
-      const conjunto = facetas[k === 'dono_id' ? 'dono' : k] || [];
+      const conjunto = conjuntoFaceta(k);
       const achado = conjunto.find((x) => String(x.valor) === String(v));
       const texto = achado ? rotuloDe(k, achado) : (k === 'tipo' ? rotuloTipo(v) : k === 'status' ? rotuloStatus(v) : k === 'acesso' ? t(`catalogo.acesso_${v}`) : String(v));
       area.append(chip(texto, () => alternarFiltro(k, v)));
@@ -99,6 +149,7 @@ function chipsAtivos() {
 
 function render() {
   const raiz = el('filtros');
+  aprenderDonos();
   limpar(raiz);
   const ativos = filtrosAtivos();
   if (ativos) {
@@ -109,9 +160,9 @@ function render() {
   const f = ctx.ler('filtros');
   const partes = [
     faceta('tipo', t('catalogo.col_tipo'), facetas.tipo || (ctx.ler('tipos') || []).map((x) => ({ valor: x.nome, n: null }))),
-    faceta('dono_id', t('catalogo.col_dono'), facetas.dono),
+    faceta('dono_id', t('catalogo.col_dono'), conjuntoFaceta('dono_id')),
     faceta('tags', t('catalogo.tags'), facetas.tags, { limite: 10 }),
-    faceta('categoria', t('catalogo.categorias'), facetas.categoria),
+    faceta('categoria', t('catalogo.categorias'), conjuntoFaceta('categoria')),
     faceta('status', t('catalogo.status'), facetas.status || [{ valor: 'autoritativo', n: null }, { valor: 'obsoleto', n: null }]),
     ctx.ler('aba') === 'inquilino' ? null : faceta('acesso', t('catalogo.col_acesso'), facetas.acesso || ['privado', 'inquilino', 'publico'].map((v) => ({ valor: v, n: null }))),
     campoData('modificado', t('catalogo.col_modificado')),
