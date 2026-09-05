@@ -118,8 +118,9 @@ As duas roles são `LOGIN NOBYPASSRLS NOSUPERUSER`, sem posse de objeto (advers�
 gatilho da 004, que nasceram antes disso, foram corrigidas pela 010. Regressão encontrada pela trilha da fila
 depois da reinstalação destrutiva: a migração `011_catalogo` (em construção) faz `GRANT EXECUTE ON ALL FUNCTIONS IN
 SCHEMA plat TO plat_app`, padrão copiado da 001, e devolve a `plat_app` o `EXECUTE` nas funções do worker, inclusive
-`via_worker_ligar`, desfazendo a separação da 006; a correção `013_jobs_execute_reafirma` está na árvore de trabalho,
-sem commit, e a regra nova é "grant explícito por função, nunca `ON ALL FUNCTIONS` depois da 006"
+`via_worker_ligar`, desfazendo a separação da 006; a correção `013_jobs_execute_reafirma` (commit `9be9c6a`, aplicada
+às 17:51 UTC) reafirma o `EXECUTE` só de `plat_worker`, e a regra nova é "grant explícito por função, nunca
+`ON ALL FUNCTIONS` depois da 006"
 (`tests/api/jobs/test_jobs_transicoes.py::test_plat_app_nao_executa_as_funcoes_do_worker` é a rede de segurança).
 
 Medido pelo testador (`testador_secdef_sem_public`, `pg_proc × aclexplode(proacl)`, 16:04 UTC): 51 funções
@@ -331,7 +332,8 @@ SSE) e `plat_worker` (pendente novo, cancelamento).
 Medido pelo testador na rodada 17:15-17:29 UTC (`40_testes.md`, seção 3, `psql` sobre `plat.job` e journal da
 unidade): `systemctl restart plat-worker` no meio do job → devolvido "worker reiniciado", retomado com `tentativa 1`,
 `reinicios 1` (`reinicio_retomada_s` 1,0 s); `kill -9` no pai → filho morto por PDEATHSIG, ceifa na partida
-devolveu, concluído com marcador; 5 × `kill -9` → `falhou "devolvido 5 vezes sem terminar (worker sem sinal)"`;
+devolveu, concluído com marcador (medido em `90d03c0`; desde a migração 012 a partida não devolve nada por nome e o
+job de um pai morto por `kill -9` é recolhido pela ceifa por heartbeat vencido em até cerca de 90 s); 5 × `kill -9` → `falhou "devolvido 5 vezes sem terminar (worker sem sinal)"`;
 `prova.memoria(600)` com limite 256 MB → `falhou "memória excedida"` com o mesmo pid do worker antes e depois
 (`NRestarts` da unidade só contou os reinícios do teste). O marcador de `prova.progresso` (gravado só no último
 passo) existiu em todo job `concluido` e em nenhum `cancelado` ou `falhou`: nunca `concluido` sem execução inteira,
@@ -345,8 +347,11 @@ Processo pai com conexão própria (`plat_worker`, autocommit, nunca o pool da A
 (devolve `cancelar_solicitado` → 30 s SIGTERM, +10 s SIGKILL) e o `timeout_s`; se há vaga (`PLAT_WORKER_PROCESSOS`,
 padrão 1), `job_pegar(nome, pesado_ok)` com `pesado_ok = pg_try_advisory_lock(hashtext('plat.job.pesado'))`
 ("1 pesado por vez" por banco). Job recebido → `fork`. Parada por SIGTERM: devolve os filhos vivos
-(`conta_tentativa = false`), SIGTERM ao filho, 20 s, SIGKILL, `worker_desregistrar`. Partida: `job_ceifar` imediato
-dos jobs com `worker = meu nome`, `agenda_periodica_sincronizar`. `GET 127.0.0.1:8153/saude` atendido no próprio
+(`conta_tentativa = false`), SIGTERM ao filho, 20 s, SIGKILL, `worker_desregistrar`. Partida (migração 012, commit `9be9c6a`): identidade `<nome-base>:<pid>` (`nome_base` = `PLAT_WORKER_NOME` ou
+nome do host) registrada em `plat.worker`; `job_ceifar(limite, max_reinicios)` devolve só job com heartbeat vencido
+cujo worker dono também está sem sinal em `plat.worker` no mesmo prazo, nunca por igualdade de nome; dois workers com
+o mesmo nome-base não roubam jobs um do outro (`tests/api/jobs/test_jobs_identidade.py`);
+`agenda_periodica_sincronizar`. `GET 127.0.0.1:8153/saude` atendido no próprio
 laço: `{worker, pid, versao, git_sha, processos, rodando[], pesado_em_curso, ultimo_tick_ms, rss_kb, em}`.
 
 Processo filho (`app/jobs/filho.py`): `prctl(PR_SET_PDEATHSIG, SIGKILL)`; `OPENBLAS/OMP/MKL_NUM_THREADS =
@@ -419,8 +424,9 @@ sem sessão (`cruzado_jobs.py`, `40_testes.md` seção 5).
 Arquivos `db/migracoes/NNN_nome.sql`, idempotentes, sem `BEGIN/COMMIT` (o aplicador `db/migrar.sh` abre uma
 transação por arquivo, registra o sha256 em `plat.versao_migracao` e para com código 3 se um arquivo aplicado
 mudou). O número é escolhido na hora de criar o arquivo (regra do turno 2, depois de uma colisão); 005 não existe
-(número reservado no plano e não usado). Estado ao vivo em 05/09/2026 17:36 UTC: 10 aplicadas, 0 pendentes,
-`ultima_migracao = 011_catalogo`.
+(número reservado no plano e não usado). Estado ao vivo em 05/09/2026 17:54 UTC: 12 aplicadas, 0 pendentes,
+`ultima_migracao = 013_jobs_execute_reafirma`; `git_sha` de `/saude` ainda `abbb03d` (API sem reinício desde então;
+o worker já roda `a06ca71`).
 
 | migração | sha256 (`sha256sum db/migracoes/*.sql`, igual ao da tabela) | o que faz |
 |---|---|---|
@@ -433,9 +439,9 @@ mudou). O número é escolhido na hora de criar o arquivo (regra do turno 2, dep
 | `008_jobs_tentativa` | `92357250951c…` | devolução por reinício ou ceifa desfaz o incremento de `tentativa` feito por `job_pegar` (reinício não consome tentativa) |
 | `009_inquilino_apagar` | `68f4506b5a41…` | `tenant_apagar_interno` (só `postgres`) e `tenant_apagar` (superadmin por hash de sessão); rota `DELETE /api/plataforma/inquilinos/{id}` (achado do testador: inquilinos de teste sem rota de apagar) |
 | `010_jobs_gatilhos_execute` | `ef54d52b29c5…` | revoga `EXECUTE` de `PUBLIC` e `plat_app` nas três funções de gatilho da 004 (achado de `test_funcoes_seguras`) |
-| `011_catalogo` | `b997b0c26d8a…` (arquivo em disco, 17:36 UTC) | catálogo de conteúdo do item L0-03 (ADR 0004): `item`, `tipo_item`, versões, relações, compartilhamento, busca, pastas, categorias, favoritos, lixeira. **Em construção por outra trilha: aplicada no banco (17:26 UTC), ainda não comitada**; o sha da tabela (`34c960aa24dd…`) difere do arquivo em disco porque a trilha continua editando; o aplicador vai exigir o registro certo antes do commit dela |
-| `012_jobs_identidade_worker` | em construção (não comitada, não aplicada) | achado 2 do testador do L0-05: identidade do worker passa a `<nome-base>:<pid>`, registrada em `plat.worker`; `job_ceifar(limite, max_reinicios)` devolve só jobs com heartbeat vencido cujo worker dono está sem sinal, nunca por igualdade de nome; `app/jobs/worker.py` alterado na árvore |
-| `013_jobs_execute_reafirma` | em construção (não comitada, não aplicada) | reafirma `EXECUTE` só para `plat_worker` nas funções que mudam estado, desfeito pelo `GRANT ... ON ALL FUNCTIONS` da 011 (seção 3.1) |
+| `011_catalogo` | `9da0bf91dfa3…` (arquivo em disco, 17:54 UTC) | catálogo de conteúdo do item L0-03 (ADR 0004): `item`, `tipo_item`, versões, relações, compartilhamento, busca, pastas, categorias, favoritos, lixeira. **Em construção por outra trilha: aplicada no banco (17:26 UTC), ainda não comitada**; o sha da tabela (`b997b0c26d8a…`, reaplicada 17:42 UTC) já difere de novo do arquivo em disco (`9da0bf91dfa3…`) porque a trilha continua editando; o aplicador vai exigir o registro certo antes do commit dela |
+| `012_jobs_identidade_worker` | `a5ff04ed9343…` (commit `9be9c6a`, aplicada 17:40 UTC) | achado 2 do testador do L0-05: identidade do worker passa a `<nome-base>:<pid>`, registrada em `plat.worker`; `job_ceifar(limite, max_reinicios)` devolve só jobs com heartbeat vencido cujo worker dono está sem sinal, nunca por igualdade de nome; a assinatura por nome foi removida |
+| `013_jobs_execute_reafirma` | `81b94d28421c…` (commit `9be9c6a`, aplicada 17:51 UTC) | reafirma `EXECUTE` só para `plat_worker` nas funções que mudam estado, desfeito pelo `GRANT ... ON ALL FUNCTIONS` da 011 (seção 3.1) |
 
 `tests/api/test_migracoes.py` roda o aplicador duas vezes e exige 0 linhas novas; enquanto a 011 estiver aplicada
 sem estar no repositório em estado final, esse teste falha (registrado pelo testador do L0-05).
@@ -526,7 +532,7 @@ cruzado indevido, md5 das linhas de B intacto (`testador_rotas_varridas_cruzado_
 | `PLAT_DSN_WORKER` | sim para o worker | `postgresql://plat_worker:...`; role do processo pai da fila |
 | `PLAT_GIT_SHA`, `PLAT_MARTIN_URL`, `PLAT_TITILER_URL`, `PLAT_GARAGE_URL`, `PLAT_LOG_NIVEL` | não | como no turno 1 |
 | `PLAT_WORKER_URL` | não | sonda de `/saude` (`http://127.0.0.1:8153`) |
-| `PLAT_WORKER_NOME` | não | nome-base do worker; padrão = nome do host; hoje o nome registrado é esse valor puro (ver seção 13); a correção 012 em construção o transforma em `<nome-base>:<pid>` |
+| `PLAT_WORKER_NOME` | não | nome-base do worker; padrão = nome do host; a identidade registrada é `<nome-base>:<pid>` (migração 012) |
 | `PLAT_WORKER_PROCESSOS` | não | filhos simultâneos (1) |
 | `PLAT_WORKER_MEMORIA_MB` | não | teto de `memoria_mb` aceito pelo registro (1536) |
 | `PLAT_JOBS_DIR` | não | diretório de trabalho (`var/jobs`) |
@@ -632,10 +638,9 @@ conta 37,8, 2FA 9,7, usuários 59,4, grupos 60,8, papéis 58,7, tokens 78,9, log
 - Periódicos além do expurgo de jobs (expurgo de sessões, partições futuras de `log_acesso` e `evento`, retenção de
   12 meses): as funções existem, o registro em `app/jobs/periodicos.py` é o L0-05-d.
 - Executor remoto no GPU box (`executor='gpu'`): só a coluna, o CHECK e a recusa na importação (L1-05).
-- Identidade única do worker por processo (cláusula acrescentada ao portão do L0-05 pelo achado 2 do testador): no
-  HEAD `abbb03d` o nome é o do host e `job_ceifar` devolve por igualdade de nome; a correção (migrações 012 e 013,
-  `worker.py`, `tests/api/jobs/test_jobs_identidade.py`) está na árvore de trabalho sem commit nem veredito; ver
-  `CHANGELOG.md`.
+- Veredito do testador e do adversário sobre a correção 012/013 (identidade única do worker, cláusula acrescentada
+  ao portão do L0-05 pelo achado 2): o código e o teste estão comitados em `9be9c6a`, mas o `40_testes.md` do L0-05
+  ainda não os cobre e o adversário do item não rodou; ver `CHANGELOG.md`.
 - `Content-Security-Policy` (L7-03); rotas `/svc/`, `/ogc/`, `/tiles/` que aceitam `?token=` (L2-04, L1-02);
   `Referrer-Policy` no ar depende da próxima execução do `install.sh`.
 - Paridade com ArcGIS Pro e ArcGIS Online reais: pendente da decisão D20 (credencial de teste).

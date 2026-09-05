@@ -66,6 +66,9 @@ arquivo `VERSAO` ainda diz `0.1.0`; o gerente o sobe para `0.2.0` no fechamento 
     `PUBLIC` e `plat_app` pelo privilégio padrão da 001; revogado (achado de `test_funcoes_seguras`).
   - `007_jobs_eventos` e integração com a identidade (commit `ffedc05`): `x-auth`/`x-privilegio` nas rotas da
     fila, eventos declarados, casos cruzados das 17 rotas.
+  - `012_jobs_identidade_worker` e `013_jobs_execute_reafirma` (commit `9be9c6a`, depois do passe do cronista ter
+    começado): identidade do worker por processo e ceifa só por heartbeat; `EXECUTE` do worker reafirmado contra o
+    `GRANT ON ALL FUNCTIONS` da 011. Sem veredito do testador e do adversário neste turno.
 
 ### Medições (`tests/medidas/L0-02-tenant-auth.json`, gerado às 17:28 UTC sobre `90d03c0`)
 
@@ -123,12 +126,14 @@ arquivo `VERSAO` ainda diz `0.1.0`; o gerente o sobe para `0.2.0` no fechamento 
   fora do systemd (nome padrão = host) fez `job_ceifar` devolver os jobs do worker vivo, que foram reexecutados do
   zero; o portão passa a exigir identidade de worker única por processo e ceifa só por heartbeat vencido, com teste
   de dois workers. O adversário do L0-05 ainda não rodou; o item foi devolvido a `pendente` pelo driver às 17:30 UTC
-  (sessão do gerente interrompida). No momento deste passe a trilha está corrigindo na árvore de trabalho, sem commit:
+  (sessão do gerente interrompida). A correção entrou no commit `9be9c6a` (17:52 UTC), sem veredito ainda:
   migração `012_jobs_identidade_worker` (identidade `<nome-base>:<pid>`, ceifa só por heartbeat vencido do job e do
-  worker dono, `worker.py` e `test_jobs_identidade.py`) e `013_jobs_execute_reafirma`, motivada por outra regressão
-  achada depois da reinstalação destrutiva: a `011_catalogo` (em construção) faz `GRANT EXECUTE ON ALL FUNCTIONS IN
-  SCHEMA plat TO plat_app` e devolve a `plat_app` as funções do worker, inclusive `via_worker_ligar`, desfazendo a
-  006. Até o commit e o veredito, o estado do item é o descrito acima.
+  worker dono, assinatura por nome removida; a partida não devolve nada por nome e um `kill -9` no pai é recolhido
+  pela ceifa em até cerca de 90 s; `worker.py`, `test_jobs_identidade.py` com dois workers do mesmo nome-base) e
+  `013_jobs_execute_reafirma`, motivada por outra regressão achada depois da reinstalação destrutiva: a
+  `011_catalogo` (em construção) faz `GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA plat TO plat_app` e devolvia a
+  `plat_app` as funções do worker, inclusive `via_worker_ligar`, desfazendo a 006. Testador e adversário ainda não
+  conferiram a correção; até lá o estado do item é o descrito acima.
 - Ressalvas registradas: `auth_login`, `auth_sessao` e `auth_token` são pré-contexto por chave-segredo (o portão as
   cita como "checam o inquilino"; a checagem acontece na função seguinte, `auth_sessao_criar`); "expiração
   configurável" é por `tenant.config.auth`, não por `.env`; `X-Forwarded-For` só é confiável atrás do nginx
@@ -164,7 +169,9 @@ arquivo `VERSAO` ainda diz `0.1.0`; o gerente o sobe para `0.2.0` no fechamento 
 | `7824846` | Fila (L0-05): funções de gatilho da 004 sem EXECUTE para PUBLIC e plat_app (010) |
 | `abbb03d` | Correção T2 do L0-02 (achados do testador): apagar inquilino, fixtures sem resíduo, log por chamada, Referrer-Policy em toda location |
 | `41c1dd9`, `a06ca71` | Tela Conteúdo e e2e do L0-03-catalogo (outra trilha, em curso; documentada no passe do cronista desse item) |
-| (este) | Documentação do turno 2: MANUAL, ARQUITETURA, CHANGELOG, PARIDADE e README |
+| `7cd0327` | Documentação do turno 2 (cronista): MANUAL, ARQUITETURA, CHANGELOG 0.2.0, PARIDADE, README |
+| `9be9c6a` | Correção T2 (2) da fila (L0-05, achado do testador): identidade do worker por processo e ceifa só por heartbeat (012, 013) |
+| (este) | Documentação do turno 2, passe 2: absorve 012/013 e o commit 9be9c6a |
 
 ## 0.1.0 — turno 1, setembro de 2026 (item L0-01-repo: fundação)
 

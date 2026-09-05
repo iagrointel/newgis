@@ -521,13 +521,13 @@ em área de trabalho e só entra no fim).
 - A fila roda com um processo por padrão (`PLAT_WORKER_PROCESSOS=1`): a execução é serial e sem justiça entre
   inquilinos; a cota `cota_jobs_simultaneos` só faz efeito com mais de um processo. O testador observou 4 jobs
   curtos de um inquilino esperando 14 minutos atrás de dois jobs de 5 minutos de outro.
-- O nome do worker é o nome do host por padrão (`PLAT_WORKER_NOME`). Um segundo worker com o mesmo nome no mesmo
-  banco (por exemplo `make worker` na mesma máquina) devolve, ao nascer, os jobs do worker da unidade, que são
-  reexecutados do zero. O testador flagrou o caso; o portão do item L0-05 ganhou a cláusula "identidade do worker
-  única por processo". No momento deste passe a trilha da fila está corrigindo na árvore de trabalho (migração
-  `012_jobs_identidade_worker`: identidade `<nome-base>:<pid>` e ceifa só por heartbeat vencido; `013` reafirma os
-  `EXECUTE` do worker), ainda sem commit nem veredito; até o commit, não rodar `make worker` numa máquina que tem a
-  unidade ativa.
+- Identidade do worker: até o commit `abbb03d` o nome era o do host e um segundo worker com o mesmo nome (por
+  exemplo `make worker` na mesma máquina) devolvia, ao nascer, os jobs do worker da unidade, que eram reexecutados do
+  zero; o testador flagrou o caso e o portão do item L0-05 ganhou a cláusula "identidade do worker única por
+  processo". O commit `9be9c6a` (migrações 012 e 013) corrige: identidade `<nome-base>:<pid>` e ceifa só por
+  heartbeat vencido do job e do worker dono; consequência a conhecer: depois de um `kill -9` no processo pai, o job
+  fica `rodando` até a ceifa o recolher, em até cerca de 90 s (um `systemctl restart` limpo continua devolvendo na
+  hora). A correção ainda não tem veredito do testador nem do adversário.
 - Um job devolvido 5 vezes termina `falhou` com `tentativa = 0` na tela (a devolução desfaz o incremento de
   `job_pegar`); o texto "tentativa 0 de 3" num job que rodou 5 vezes confunde e fica registrado para o gerente.
 - O cabeçalho `Cache-Control` do SSE sai duplicado pela URL pública (`no-store, no-store, must-revalidate`): o nginx
