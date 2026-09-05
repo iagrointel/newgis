@@ -41,11 +41,18 @@ class Preparacao:
     criados_em_a: list = field(default_factory=list)
     job_b: dict = field(default_factory=dict)  # job pendente de B (L0-05; agendado para 2099, nunca roda)
     agenda_b: dict = field(default_factory=dict)  # agenda de B (L0-05)
+    item_b: dict = field(default_factory=dict)  # L0-03: item de B (mapa privado do admin de B)
+    pasta_b: dict = field(default_factory=dict)  # L0-03: pasta de B
+    link_b: dict = field(default_factory=dict)  # L0-03: link por token de B (token em claro só aqui)
+    categoria_b: dict = field(default_factory=dict)  # L0-03: categoria de B
 
     @property
     def marcas_de_b(self) -> list[str]:
         """Strings que só existem em B: se aparecerem numa resposta de A, houve vazamento."""
-        return [self.usuario_b["login"], self.grupo_b["nome"], self.papel_b["nome"], self.token_b["prefixo"], "demo2"]
+        marcas = [self.usuario_b["login"], self.grupo_b["nome"], self.papel_b["nome"], self.token_b["prefixo"], "demo2"]
+        if self.item_b:
+            marcas += [self.item_b["titulo"], self.pasta_b["nome"]]
+        return marcas
 
 
 def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
@@ -78,8 +85,30 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_b.post("/api/agendas", json={**AGENDA_BASE, "nome": f"{PREFIXO}agenda-{sufixo}"})
     assert r.status_code == 201, r.text
     agenda_b = r.json()
+    # L0-03: item, pasta, link e categoria de B, alvos das rotas do catálogo
+    r = sessao_b.post("/api/itens", json={"tipo": "mapa", "titulo": f"{PREFIXO}item-{sufixo}",
+                                          "dados": {"esquema_versao": 1, "corpo": {}}})
+    assert r.status_code == 201, r.text
+    item_b = r.json()
+    r = sessao_b.post("/api/pastas", json={"nome": f"{PREFIXO}pasta-{sufixo}"})
+    assert r.status_code == 201, r.text
+    pasta_b = r.json()
+    r = sessao_b.post(f"/api/itens/{item_b['id']}/links", json={"nome": f"{PREFIXO}link"})
+    assert r.status_code == 201, r.text
+    link_b = r.json()
+    arvore = sessao_b.get("/api/categorias").json()["arvore"]
+    r = sessao_b.put("/api/categorias", json={"arvore": [_no_categoria(n) for n in arvore]
+                                               + [{"nome": f"{PREFIXO}cat-{sufixo}", "filhas": []}]})
+    assert r.status_code == 200, r.text
+    categoria_b = r.json()["arvore"][-1]
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b)
+                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
+                      categoria_b=categoria_b)
+
+
+def _no_categoria(no: dict) -> dict:
+    return {"id": no["id"], "nome": no["nome"], "codigo": no.get("codigo"),
+            "filhas": [_no_categoria(f) for f in no.get("filhas", [])]}
 
 
 def desfazer(p: Preparacao) -> None:
@@ -87,6 +116,15 @@ def desfazer(p: Preparacao) -> None:
         p.sessao_a.request(metodo, url)
     if p.job_b:
         p.sessao_b.post(f"/api/jobs/{p.job_b['id']}/cancelar")
+    if p.categoria_b:
+        arvore = p.sessao_b.get("/api/categorias").json()["arvore"]
+        restante = [_no_categoria(n) for n in arvore if n["id"] != p.categoria_b["id"]]
+        p.sessao_b.put("/api/categorias", json={"arvore": restante})
+    if p.item_b:
+        p.sessao_b.put(f"/api/itens/{p.item_b['id']}", json={"protegido": False})
+        p.sessao_b.delete(f"/api/itens/{p.item_b['id']}?cascata=true")
+    if p.pasta_b:
+        p.sessao_b.delete(f"/api/pastas/{p.pasta_b['id']}")
     if p.agenda_b:
         p.sessao_b.delete(f"/api/agendas/{p.agenda_b['id']}")
     p.sessao_b.delete(f"/api/grupos/{p.grupo_b['id']}")
@@ -140,6 +178,7 @@ J = "/api/jobs/{job_id}"
 AG = "/api/agendas/{agenda_id}"
 U = "/api/usuarios/{id}"
 T = "/api/tokens/{id}"
+IT = "/api/itens/{id}"  # L0-03
 CASOS: dict[tuple[str, str], Caso] = {
     # ---- públicas (o caso prova que não devolvem dado de inquilino além do nome do próprio inquilino)
     ("GET", "/saude"): Caso(lambda p: "/saude", publico=True, aceita=frozenset({200}), verificar=_sem_marca),
@@ -343,8 +382,125 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", AG + "/pausar"): Caso(lambda p: f"/api/agendas/{p.agenda_b['id']}/pausar"),
     ("POST", AG + "/retomar"): Caso(lambda p: f"/api/agendas/{p.agenda_b['id']}/retomar"),
     ("POST", AG + "/rodar-agora"): Caso(lambda p: f"/api/agendas/{p.agenda_b['id']}/rodar-agora"),
+    # ---- L0-03 catálogo: alvos de B = 404 (não 403: não confirma existência); leituras de lista agem só no chamador
+    ("GET", "/api/tipos-item"): Caso(lambda p: "/api/tipos-item", proprio=True, aceita=frozenset({200}),
+                                     verificar=_sem_marca),
+    ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
+                                verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
+    ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,
+                                        aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/api/itens/tags"): Caso(lambda p: f"/api/itens/tags?q={PREFIXO}", proprio=True, aceita=frozenset({200}),
+                                     verificar=_sem_marca),
+    ("POST", "/api/itens"): Caso(
+        lambda p: "/api/itens",
+        lambda p: {"tipo": "mapa", "titulo": f"{PREFIXO}novo", "pasta_id": p.pasta_b["id"],
+                   "dados": {"esquema_versao": 1, "corpo": {}}},
+    ),
+    ("POST", "/api/itens/lote"): Caso(
+        lambda p: "/api/itens/lote", lambda p: {"ids": [p.item_b["id"]], "acao": "proteger"}, proprio=True,
+        aceita=frozenset({200}), verificar=lambda p, j: _lote_itens_recusado(p, j),
+    ),
+    ("POST", "/api/itens/transferir"): Caso(
+        lambda p: "/api/itens/transferir",
+        lambda p: {"ids": [p.item_b["id"]], "novo_dono_id": p.ids["a"]["id"], "simular": True},
+    ),
+    ("GET", IT): Caso(lambda p: f"/api/itens/{p.item_b['id']}"),
+    ("PUT", IT): Caso(lambda p: f"/api/itens/{p.item_b['id']}", lambda p: {"titulo": "invadido"}),
+    ("PATCH", IT): Caso(lambda p: f"/api/itens/{p.item_b['id']}", lambda p: {"titulo": "invadido"}),
+    ("DELETE", IT): Caso(lambda p: f"/api/itens/{p.item_b['id']}"),
+    ("POST", IT + "/mover"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/mover", lambda p: {"pasta_id": None}),
+    ("GET", IT + "/miniatura"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/miniatura"),
+    ("POST", IT + "/miniatura"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/miniatura",
+                                      lambda p: {"conteudo": "AAAA"}),
+    ("POST", IT + "/miniatura/gerar"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/miniatura/gerar"),
+    ("DELETE", IT + "/miniatura"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/miniatura"),
+    ("GET", IT + "/versoes"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/versoes"),
+    ("GET", IT + "/versoes/{n}"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/versoes/1"),
+    ("POST", IT + "/versoes/{n}/restaurar"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/versoes/1/restaurar",
+                                                  lambda p: {}),
+    ("POST", IT + "/versoes/{n}/publicar"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/versoes/1/publicar"),
+    ("GET", IT + "/usado-por"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/usado-por"),
+    ("GET", IT + "/criado-a-partir-de"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/criado-a-partir-de"),
+    ("GET", IT + "/ordem-de-exclusao"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/ordem-de-exclusao"),
+    ("PUT", IT + "/relacoes"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/relacoes", lambda p: {"relacoes": []}),
+    ("GET", IT + "/compartilhamento"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/compartilhamento"),
+    ("PUT", IT + "/compartilhamento"): Caso(
+        lambda p: f"/api/itens/{p.item_b['id']}/compartilhamento",
+        lambda p: {"acesso": "inquilino", "grupos": [p.grupo_b["id"]]},
+    ),
+    ("POST", IT + "/links"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/links", lambda p: {"nome": "x"}),
+    ("GET", IT + "/links"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/links"),
+    ("DELETE", IT + "/links/{lid}"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/links/{p.link_b['id']}"),
+    # link é anônimo por desenho: a sessão de A não ganha nada além do link (o item vem sem dono.login e sem pode_*)
+    ("GET", "/api/compartilhado/{token}"): Caso(
+        lambda p: f"/api/compartilhado/{p.link_b['token']}", publico=True, aceita=frozenset({200}),
+        verificar=lambda p, j: _link_so_o_item(p, j),
+    ),
+    ("GET", "/api/compartilhado/{token}/itens/{id}"): Caso(
+        lambda p: f"/api/compartilhado/{p.link_b['token']}/itens/{p.item_b['id']}", publico=True,
+        aceita=frozenset({200}),
+        verificar=lambda p, j: _link_so_o_item(p, {"item": j}),
+    ),
+    ("GET", "/api/compartilhado/{token}/itens/{id}/miniatura"): Caso(
+        lambda p: f"/api/compartilhado/{p.link_b['token']}/itens/{p.item_b['id']}/miniatura", publico=True,
+        aceita=frozenset({204}),
+    ),
+    # público: o inquilino B não liga compartilhar_publico → 404 sempre
+    ("GET", "/api/publico/itens/{id}"): Caso(lambda p: f"/api/publico/itens/{p.item_b['id']}", publico=True),
+    ("GET", "/api/publico/itens/{id}/miniatura"): Caso(lambda p: f"/api/publico/itens/{p.item_b['id']}/miniatura",
+                                                       publico=True),
+    ("GET", "/api/objetos/{chave}"): Caso(
+        lambda p: f"/api/objetos/miniatura/{p.item_b['id']}/{'0' * 64}.png?ate=1&assinatura=x", publico=True
+    ),
+    # pastas, categorias, favoritos, lixeira
+    ("GET", "/api/pastas"): Caso(lambda p: f"/api/pastas?pai_id={p.pasta_b['id']}", proprio=True,
+                                 aceita=frozenset({200}), verificar=lambda p, j: [_sem_marca(p, j), _vazio(j)]),
+    ("GET", "/api/pastas/arvore"): Caso(lambda p: "/api/pastas/arvore", proprio=True, aceita=frozenset({200}),
+                                        verificar=_sem_marca),
+    ("POST", "/api/pastas"): Caso(lambda p: "/api/pastas",
+                                  lambda p: {"nome": f"{PREFIXO}nova", "pai_id": p.pasta_b["id"]}),
+    ("PUT", "/api/pastas/{id}"): Caso(lambda p: f"/api/pastas/{p.pasta_b['id']}", lambda p: {"nome": "invadida"}),
+    ("DELETE", "/api/pastas/{id}"): Caso(lambda p: f"/api/pastas/{p.pasta_b['id']}"),
+    ("GET", "/api/categorias"): Caso(lambda p: "/api/categorias", proprio=True, aceita=frozenset({200}),
+                                     verificar=_sem_marca),
+    ("PUT", "/api/categorias"): Caso(
+        lambda p: "/api/categorias",
+        lambda p: {"arvore": [{"id": p.categoria_b["id"], "nome": "invadida", "filhas": []}]},
+    ),
+    ("POST", "/api/categorias/importar"): Caso(
+        lambda p: "/api/categorias/importar", lambda p: {"modelo": "iso19115"}, proprio=True, aceita=frozenset({200}),
+        verificar=_sem_marca,
+    ),
+    ("GET", "/api/favoritos"): Caso(lambda p: f"/api/favoritos?q=id:{p.item_b['id']}", proprio=True,
+                                    aceita=frozenset({200}), verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
+    ("PUT", "/api/favoritos/{item_id}"): Caso(lambda p: f"/api/favoritos/{p.item_b['id']}"),
+    ("DELETE", "/api/favoritos/{item_id}"): Caso(lambda p: f"/api/favoritos/{p.item_b['id']}", proprio=True,
+                                                 aceita=frozenset({204})),
+    ("GET", "/api/lixeira"): Caso(lambda p: f"/api/lixeira?q=id:{p.item_b['id']}", proprio=True,
+                                  aceita=frozenset({200}), verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
+    ("POST", "/api/lixeira/{id}/restaurar"): Caso(lambda p: f"/api/lixeira/{p.item_b['id']}/restaurar"),
+    ("POST", "/api/lixeira/esvaziar"): Caso(
+        lambda p: "/api/lixeira/esvaziar", lambda p: {"ids": [p.item_b["id"]]}, proprio=True, aceita=frozenset({202}),
+        verificar=_sem_marca, limpar=lambda p, j: p.sessao_a.post(f"/api/jobs/{j['job_id']}/cancelar"),
+    ),
 }
 
 
 def _zero(j: Any) -> None:
     assert j["total"] == 0 and j["itens"] == [], "A vê linhas de log/evento de um usuário de B"
+
+
+def _vazio(j: Any) -> None:
+    assert j == [], "A vê pastas de B"
+
+
+def _lote_itens_recusado(p: Preparacao, j: Any) -> None:
+    assert j["feitos"] == 0 and [x["erro"] for x in j["recusados"]] == ["item_inexistente"], j
+
+
+def _link_so_o_item(p: Preparacao, j: Any) -> None:
+    """Pelo link vê-se só o item incluído: sem login do dono, sem pode_*, sem slug do inquilino, sem outras marcas."""
+    item = j["item"]
+    assert "login" not in item["dono"] and "pode_editar" not in item and item["id"] == p.item_b["id"]
+    for marca in (p.usuario_b["login"], p.grupo_b["nome"], p.papel_b["nome"], p.token_b["prefixo"], "demo2"):
+        assert marca not in str(j), marca
