@@ -50,18 +50,15 @@ class ContextoJob:
             self.verificar()
             return
         self._ultimo_progresso = agora
-        with self.db() as cur:
-            cur.execute(
-                "UPDATE plat.job SET progresso = %s, mensagem = left(%s, 200), heartbeat_em = now() "
-                "WHERE id = %s AND estado = 'rodando' AND worker = %s RETURNING cancelar_solicitado",
-                (pct, mensagem or None, str(self.job_id), self.worker),
-            )
+        with self.db() as cur:  # plat.job_progresso: só progresso/mensagem/heartbeat, só do job deste worker (006)
+            cur.execute("SELECT plat.job_progresso(%s, %s, %s, %s) AS cancelar",
+                        (str(self.job_id), self.worker, pct, mensagem or None))
             linha = cur.fetchone()
         self._ultima_checagem = agora
-        if linha is None:
+        if linha is None or linha["cancelar"] is None:
             self._flag = True
             raise Cancelado("o job deixou de estar rodando neste worker (devolvido ou ceifado)")
-        self._flag = bool(linha["cancelar_solicitado"])
+        self._flag = bool(linha["cancelar"])
         if self._flag or self.sinal_parar:
             raise Cancelado("cancelamento solicitado")
 
@@ -111,7 +108,6 @@ class ContextoJob:
                 "INSERT INTO plat.job_log(job_id, tenant_id, nivel, mensagem) VALUES (%s, %s, %s, left(%s, 4000))",
                 (str(self.job_id), self.tenant_id, nivel, str(mensagem)),
             )
-            cur.execute("UPDATE plat.job SET linhas_log = linhas_log + 1 WHERE id = %s", (str(self.job_id),))
 
     def entrada(self, item_id: uuid.UUID | str | None, sha256: str, descricao: str = "") -> None:
         self.entradas.append({"item_id": str(item_id) if item_id else None, "sha256": sha256,

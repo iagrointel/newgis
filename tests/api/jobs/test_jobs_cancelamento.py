@@ -53,14 +53,14 @@ def test_cancelar_concluido_e_409_e_estado_final_e_imutavel(cliente_demo, worker
     assert fim["estado"] == "concluido" and fim["progresso"] == 100
     r = cliente_demo.post(f"/api/jobs/{job['id']}/cancelar")
     assert r.status_code == 409 and r.json()["erro"] == "estado_final"
-    # nem sob o contexto do próprio inquilino um estado final muda (gatilho job_estado_final_imutavel)
+    # nem sob o contexto do próprio inquilino plat_app altera plat.job (006: REVOKE UPDATE; cancelar é por função)
     import psycopg2
 
     from tests import jobs_sessao
 
     with conexao_plat_app.cursor() as cur:
         jobs_sessao.contexto(cur, sessao_demo[1], sessao_demo[2], "admin")
-        with pytest.raises(psycopg2.errors.CheckViolation, match="estado final"):
+        with pytest.raises(psycopg2.errors.InsufficientPrivilege, match="permission denied"):
             cur.execute("UPDATE plat.job SET estado = 'pendente' WHERE id = %s", (job["id"],))
     conexao_plat_app.rollback()
 

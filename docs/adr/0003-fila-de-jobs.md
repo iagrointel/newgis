@@ -202,6 +202,25 @@ Motivos das escolhas que não são óbvias:
 | worker | sem RLS; `REVOKE ALL ... FROM plat_app`; leitura por `plat.fila_estado()` | funções `worker_registrar`, `worker_heartbeat`, `worker_ceifar` |
 | agenda | `tenant_id = plat.tenant_atual()` | `agenda_vencidas()` e `agenda_enfileirar()` (o relógio do worker vê todos os inquilinos) |
 
+**Alterado em T2 (correção após o testador; migração `006_jobs_transicoes.sql`): motivo** — a role `plat_app` com
+contexto de inquilino conseguia, por SQL, levar um job `pendente → rodando → concluido` com resultado forjado, sem
+worker: o gatilho da 004 só protegia o estado FINAL. Passa a valer, em três camadas verificáveis por
+`tests/api/jobs/test_jobs_transicoes.py`: (1) **role própria `plat_worker`** (LOGIN, sem BYPASSRLS, sem privilégio de
+tabela; `PLAT_DSN_WORKER` no `.env`, senha e linha no `pg_hba.conf` pelo `install.sh`) é a única com EXECUTE em
+`job_pegar`, `job_pid`, `job_heartbeat`, `job_terminar`, `job_devolver`, `job_ceifar`, `worker_*`, `agenda_vencidas`,
+`agenda_enfileirar`, `agenda_periodica_sincronizar`, `jobs_no_dia`; `plat_app` perde o EXECUTE nelas; (2) **`REVOKE
+UPDATE ON plat.job FROM plat_app`**: a API cancela por `plat.job_cancelar(id, usuario)` (pendente → cancelado; rodando →
+`cancelar_solicitado`; exige o contexto do inquilino do job) e o filho reporta por `plat.job_progresso(id, worker, pct,
+mensagem)` (só progresso/mensagem/heartbeat do job rodando deste worker e deste inquilino; `linhas_log` passa a ser
+contado por gatilho SECURITY DEFINER); (3) **gatilho `plat.job_transicao`** BEFORE INSERT OR UPDATE: job nasce
+`pendente` e limpo (sem resultado, tentativa 0, sem worker, sem datas) e toda transição para `rodando`/`concluido`/
+`falhou` ou mudança de `resultado`/`tentativa`/`reinicios`/`worker`/`iniciado_em`/`proveniencia`/`processo_pid` exige o
+GUC `plat.via_worker = 'sim'`, que só as funções SECURITY DEFINER do worker ligam e desligam dentro da própria
+transação (`plat.via_worker_ligar/desligar`, sem EXECUTE para ninguém). O `pg_try_advisory_lock` e o `LISTEN` do worker
+rodam na sessão de `plat_worker`. O filho continua `plat_app` dentro do inquilino do job (a tarefa é dado do inquilino).
+Limite escrito: RLS por GUC continua sendo o limite de tudo o que é `plat_app` (quem tem a senha da role escolhe o
+inquilino); a separação nova é entre **quem executa tarefas** e **quem muda estado de job**.
+
 Regra que este ADR fixa e o teste `tests/api/test_jobs_rls.py` prova: **a API nunca chama as funções do worker**, e
 **o filho que executa a tarefa roda sob `set_config('plat.tenant_id', <tenant do job>)`**, ou seja, o código de
 qualquer tipo de job enxerga só o inquilino dono do job (uma importação que tentasse gravar na camada de outro
@@ -457,8 +476,10 @@ Decisão: **`GET /api/jobs/{id}/eventos` em SSE é o canal principal; `GET /api/
 para polling de 3 s depois de dois erros seguidos do `EventSource`, e volta ao SSE ao reconectar). Regras:
 
 - Cabeçalhos: `Content-Type: text/event-stream`, `Cache-Control: no-store`, `X-Accel-Buffering: no` (DOCUMENTO nginx:
-  desliga `proxy_buffering` para a resposta sem tocar no `nginx.conf`); `proxy_read_timeout 120s` já existente >
-  keepalive de 15 s (`: keepalive`).
+  desliga `proxy_buffering` para a resposta sem tocar no `nginx.conf`; **alterado em T2**: o nginx consome o cabeçalho
+  e não o repassa ao cliente — `X-Accel-*` estão na lista padrão de `proxy_hide_header` —, por isso o teste o confere
+  direto em `:8150` e, pela URL pública, mede o efeito: primeiro evento em 0,025 s); `proxy_read_timeout 120s` já
+  existente > keepalive de 15 s (`: keepalive`).
 - Eventos: `estado` (instantâneo do job, mesmo JSON do `GET`), `log` (`{id, em, nivel, mensagem}`), `fim` (estado
   final; o servidor fecha). Primeiro evento é sempre `estado` lido do banco (o cliente nunca perde o estado atual por
   ter conectado depois do NOTIFY). `Last-Event-ID` = último `job_log.id`; ao reconectar o servidor reenvia as linhas
@@ -489,8 +510,11 @@ para polling de 3 s depois de dois erros seguidos do `EventSource`, e volta ao S
 Regra de escrita das tarefas (obriga L0-04, L1-01, L2-05, L3, L5-02, L6-02): **toda tarefa tem de poder recomeçar do
 zero** (reinício = reexecução). Efeito parcial fica em tabela/arquivo de trabalho e entra por troca atômica no fim
 (`ALTER TABLE ... RENAME` numa transação; objeto no bucket nomeado por sha256), como o B9 manda. A tarefa de prova
-`prova.progresso` cria uma tabela `plat_trabalho.<job_id>` no início e a apaga na limpeza; o teste de cancelamento
-prova que ela não sobra.
+`prova.progresso` grava o efeito parcial em linhas de `plat_trabalho.passos` chaveadas por `job_id` e as apaga na
+limpeza; o teste de cancelamento prova que não sobram (**alterado em T2**: o desenho original era uma tabela por job;
+MEDIDO nesta máquina, `CREATE TABLE` custa 528–1.030 ms — catálogo com 3,2 mil objetos, disco a 98 % — e escondia a
+vazão da fila; regra para autores de tipos escrita na 004: efeito parcial pequeno vai em linhas de tabela
+compartilhada, DDL só quando o tipo realmente cria uma camada).
 
 ---
 
@@ -517,12 +541,14 @@ prova que ela não sobra.
 - Periódicos da plataforma (L0-05-d: expurgo de sessões, uploads incompletos, lixeira, `job` > 90 dias, `job_log` >
   30 dias, diretórios de trabalho órfãos) precisam de um `tenant_id`, porque a política de RLS de `agenda`, `job` e
   `job_log` exige a coluna preenchida e uma política alternativa para `NULL` teria de existir em toda tabela. Decisão:
-  a migração 004 cria o **inquilino técnico `plataforma`** (`plat.tenant` com `slug = 'plataforma'`, `ativo = false`,
-  sem usuários: ninguém faz login nele) e os periódicos são declarados em código (`app/jobs/periodicos.py`, lista de
+  a migração 004 garante o **inquilino técnico `plataforma`** (**alterado em T2**: a 003 da trilha A o governa —
+  superadmin vive nele, ativo, 2FA obrigatório — e a 004 só faz `INSERT ... ON CONFLICT DO NOTHING`, sem `ativo`/`config`) e os periódicos são declarados em código (`app/jobs/periodicos.py`, lista de
   `(nome, cron, tipo, parametros)`), sincronizados para `plat.agenda` desse inquilino na partida do worker
   (`INSERT ... ON CONFLICT (tenant_id, nome) DO UPDATE` só de `cron`/`parametros`) e enfileirados pelo mesmo relógio.
   A RLS continua valendo para tudo e o superadmin vê esses jobs no console (L0-07-f). Este item entrega **um**
-  periódico: `jobs.expurgo` (diário 03:30, apaga `job` > 90 dias, `job_log` > 30 dias e diretórios órfãos).
+  periódico: `jobs.expurgo` (diário 03:30, apaga `job` > 90 dias, `job_log` > 30 dias, diretórios órfãos e, **alterado
+  em T2** (o testador mediu 1.255 marcadores acumulados), marcadores e passos órfãos de `plat_trabalho`; a função
+  `plat.jobs_expurgar` só roda no contexto do inquilino `plataforma`).
 
 ---
 
@@ -641,6 +667,7 @@ módulos `api.js`, `eventos.js` (EventSource + reserva por polling), `lista.js`,
 | PLAT_JOBS_DIR | não | `APP_DIR/var/jobs` | `dir_trabalho` (`.gitignore`: `var/`) |
 | PLAT_JOB_MAX_REINICIOS | não | 5 | teto de devoluções sem terminar |
 | PLAT_GPU_SSH, PLAT_GPU_DIR | não | vazio | seção 8 (só L1-05) |
+| PLAT_DSN_WORKER | sim para o worker | `postgresql://plat_worker:<senha>@127.0.0.1:5432/iagro_sat` | **alterado em T2**: role do processo pai (seção 2.2); `install.sh` gera a senha e a linha do `pg_hba.conf` |
 
 ---
 

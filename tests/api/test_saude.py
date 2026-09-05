@@ -13,8 +13,8 @@ def test_saude_200_com_json_do_contrato(cliente):
     assert set(j) == CAMPOS
     assert j["banco"] == "ok"
     assert j["migracoes_pendentes"] == 0
-    assert j["migracoes_aplicadas"] >= 4
-    assert j["ultima_migracao"] == "004_jobs"
+    assert j["migracoes_aplicadas"] >= 5
+    assert j["ultima_migracao"] == "006_jobs_transicoes"
     assert re.fullmatch(r"\d+\.\d+\.\d+", j["versao"])
     assert re.fullmatch(r"[0-9a-f]{7,12}", j["git_sha"])
     assert j["ambiente"] in ("producao", "dev")

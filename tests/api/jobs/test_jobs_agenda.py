@@ -54,7 +54,8 @@ def test_relogio_dispara_cada_ocorrencia_uma_vez_com_dois_relogios(cliente_demo,
     assert r.status_code == 201, r.text
     agenda = r.json()
     proxima = datetime.datetime.fromisoformat(agenda["proxima_em"].replace("Z", "+00:00"))
-    cons = [psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor) for _ in range(2)]
+    # o relógio é do worker: só a role plat_worker executa agenda_vencidas/agenda_enfileirar (006)
+    cons = [psycopg2.connect(env["PLAT_DSN_WORKER"], cursor_factory=psycopg2.extras.RealDictCursor) for _ in range(2)]
     for c in cons:
         c.autocommit = True
     try:
@@ -94,7 +95,7 @@ def test_cinco_falhas_seguidas_pausam_a_agenda(cliente_demo, worker_vivo, env, n
     assert r.status_code == 201, r.text
     agenda = r.json()
     proxima = datetime.datetime.fromisoformat(agenda["proxima_em"].replace("Z", "+00:00"))
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(env["PLAT_DSN_WORKER"], cursor_factory=psycopg2.extras.RealDictCursor)
     con.autocommit = True
     try:
         for k in range(5):
@@ -176,12 +177,16 @@ def test_cota_diaria_de_jobs_413(cliente_demo2, conexao_plat_app, sessao_demo2):
         conexao_plat_app.commit()
 
 
-def test_periodico_expurgo_sincronizado_no_inquilino_plataforma(conexao_plat_app):
-    """O worker faz o upsert na partida; a leitura aqui é pela função SECURITY DEFINER de vencidas com data futura."""
-    with conexao_plat_app.cursor() as cur:
-        cur.execute("SELECT nome, tipo, cron, fuso, tenant_id FROM plat.agenda_vencidas(now() + interval '2 days') "
-                    "WHERE nome = 'expurgo diário'")
-        r = cur.fetchone()
-    conexao_plat_app.rollback()
+def test_periodico_expurgo_sincronizado_no_inquilino_plataforma(env):
+    """O worker faz o upsert na partida; a leitura aqui é pela função de vencidas (role do worker) com data futura."""
+    con = psycopg2.connect(env["PLAT_DSN_WORKER"], cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        with con.cursor() as cur:
+            cur.execute("SELECT nome, tipo, cron, fuso, tenant_id FROM plat.agenda_vencidas(now() + interval '2 days') "
+                        "WHERE nome = 'expurgo diário'")
+            r = cur.fetchone()
+        con.rollback()
+    finally:
+        con.close()
     assert r is not None, "worker não sincronizou o periódico 'expurgo diário' (partida do plat-worker)"
     assert r["tipo"] == "jobs.expurgo" and r["cron"] == "30 3 * * *" and r["fuso"] == "America/Sao_Paulo"

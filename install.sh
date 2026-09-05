@@ -62,6 +62,15 @@ chmod 600 .env; chown "$APP_USER":"$APP_USER" .env
 for chave in PLAT_WORKER_URL=http://127.0.0.1:8153 PLAT_WORKER_PROCESSOS=1 PLAT_WORKER_MEMORIA_MB=1536; do
   grep -q "^${chave%%=*}=" .env || echo "$chave" >> .env
 done
+# role do worker (migração 006): senha própria no .env, alinhada à role a cada execução, como a de plat_app
+if ! grep -q '^PLAT_DSN_WORKER=' .env; then
+  printf 'PLAT_DSN_WORKER=postgresql://plat_worker:%s@127.0.0.1:5432/%s\n' "$(openssl rand -hex 16)" "$DB" >> .env
+  echo "PLAT_DSN_WORKER gravado no .env"
+fi
+SENHA_WORKER=$(sed -nE 's#^PLAT_DSN_WORKER=postgresql://plat_worker:([^@]+)@.*#\1#p' .env)
+[ -n "$SENHA_WORKER" ] || { echo "PLAT_DSN_WORKER no .env não tem a forma postgresql://plat_worker:<senha>@..." >&2; exit 1; }
+printf "ALTER ROLE plat_worker PASSWORD '%s';\n" "$SENHA_WORKER" | "${PSQL[@]}" -f -
+echo "senha de plat_worker alinhada ao .env"
 SENHA=$(sed -nE 's#^PLAT_DSN=postgresql://plat_app:([^@]+)@.*#\1#p' .env)
 [ -n "$SENHA" ] || { echo "PLAT_DSN no .env não tem a forma postgresql://plat_app:<senha>@..." >&2; exit 1; }
 # sempre: a senha do banco passa a ser a do .env (idempotência de verdade; ADR risco 6)
@@ -82,6 +91,12 @@ if grep -qE "^host\s+$DB\s+plat_app\s" "$PG_HBA"; then
 else
   printf 'host    %-15s plat_app        127.0.0.1/32            scram-sha-256\n' "$DB" >> "$PG_HBA"
   echo "linha acrescentada em $PG_HBA"
+fi
+if grep -qE "^host\s+$DB\s+plat_worker\s" "$PG_HBA"; then
+  echo "linha de plat_worker já existe em $PG_HBA"
+else
+  printf 'host    %-15s plat_worker     127.0.0.1/32            scram-sha-256\n' "$DB" >> "$PG_HBA"
+  echo "linha de plat_worker acrescentada em $PG_HBA"
 fi
 "${PSQL[@]}" -Atc "SELECT pg_reload_conf()" >/dev/null
 

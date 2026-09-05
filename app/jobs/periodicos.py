@@ -1,6 +1,6 @@
 """Periódicos da plataforma (ADR 0003 seção 7): declarados aqui, sincronizados para `plat.agenda` do inquilino
 técnico `plataforma` na partida do worker. Este item entrega um: `jobs.expurgo` (job terminado há > 90 dias,
-job_log > 30 dias, diretórios de trabalho órfãos > 7 dias)."""
+job_log > 30 dias, marcadores e passos órfãos em plat_trabalho, diretórios de trabalho órfãos > 7 dias)."""
 
 import shutil
 import time
@@ -28,7 +28,8 @@ def jobs_expurgo(ctx, dias_job: int = DIAS_JOB, dias_log: int = DIAS_LOG, dias_d
         cur.execute("SELECT * FROM plat.jobs_expurgar(%s, %s)", (dias_job, dias_log))
         r = cur.fetchone()
     rodando = {str(x) for x in (r["rodando"] or [])}
-    ctx.progresso(50, f"banco: {r['jobs_apagados']} jobs e {r['logs_apagados']} linhas de log apagados")
+    ctx.progresso(50, f"banco: {r['jobs_apagados']} jobs, {r['logs_apagados']} linhas de log, "
+                      f"{r['marcadores_apagados']} marcadores e {r['passos_apagados']} passos órfãos apagados")
     dir_jobs: Path = ctx.dir_trabalho.parent
     limite = time.time() - dias_diretorio * 86400
     apagados = 0
@@ -42,7 +43,9 @@ def jobs_expurgo(ctx, dias_job: int = DIAS_JOB, dias_log: int = DIAS_LOG, dias_d
         except OSError as e:
             ctx.log("AVISO", f"não apagou {d.name}: {e}")
     ctx.progresso(100, f"diretórios apagados: {apagados}")
-    return {"jobs_apagados": r["jobs_apagados"], "logs_apagados": r["logs_apagados"], "diretorios_apagados": apagados}
+    return {"jobs_apagados": r["jobs_apagados"], "logs_apagados": r["logs_apagados"],
+            "marcadores_apagados": r["marcadores_apagados"], "passos_apagados": r["passos_apagados"],
+            "diretorios_apagados": apagados}
 
 
 PERIODICOS: list[tuple[str, str, str, dict]] = [

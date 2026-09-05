@@ -212,20 +212,12 @@ def tipos() -> list[dict]:
 
 
 def cancelar(sessao: Sessao, job_id) -> dict:
-    job = obter(sessao, job_id)
-    with banco.db(sessao.ctx) as cur:
-        cur.execute("UPDATE plat.job SET estado = 'cancelado', cancelado_por = %s, cancelado_em = now(), "
-                    "terminado_em = now(), erro = 'cancelado antes de iniciar' "
-                    "WHERE id = %s AND estado = 'pendente' RETURNING id",
-                    (sessao.usuario_id, str(job_id)))
-        if cur.fetchone() is None:
-            cur.execute("UPDATE plat.job SET cancelar_solicitado = true, cancelado_por = coalesce(cancelado_por, %s), "
-                        "cancelado_em = coalesce(cancelado_em, now()) "
-                        "WHERE id = %s AND estado = 'rodando' RETURNING id",
-                        (sessao.usuario_id, str(job_id)))
-            if cur.fetchone() is None:
-                raise ErroServico(409, "estado_final",
-                                  f"job já está em estado final ({job['estado']}); repetir cria job novo")
+    obter(sessao, job_id)  # 404 e filtro de dono
+    with banco.db(sessao.ctx) as cur:  # plat_app não tem UPDATE em plat.job (006): cancela pela função
+        cur.execute("SELECT plat.job_cancelar(%s, %s) AS r", (str(job_id), sessao.usuario_id))
+        r = cur.fetchone()["r"]
+    if r not in ("cancelado", "solicitado"):
+        raise ErroServico(409, "estado_final", f"job já está em estado final ({r}); repetir cria job novo")
     return obter(sessao, job_id)
 
 

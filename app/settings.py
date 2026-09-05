@@ -44,6 +44,7 @@ class Settings:
     PLAT_GPU_SSH: str | None
     PLAT_GPU_DIR: str | None
     PLAT_RELOGIO_TESTE: str | None
+    PLAT_DSN_WORKER: str | None  # role plat_worker (006): só ela muda estado de job
 
     @property
     def producao(self) -> bool:
@@ -77,6 +78,13 @@ def _inteiro(valores: Mapping[str, str | None], chave: str, padrao: int, minimo:
     if n < minimo:
         raise ErroConfiguracao(f"{chave} inválida: {n}; exige inteiro >= {minimo}")
     return n
+
+
+def _dsn_worker(valores: Mapping[str, str | None]) -> str | None:
+    v = _opcional(valores, "PLAT_DSN_WORKER")
+    if v is not None and not v.startswith("postgresql://plat_worker:"):
+        raise ErroConfiguracao("PLAT_DSN_WORKER inválida: deve começar com postgresql://plat_worker:")
+    return v
 
 
 def carregar(valores: Mapping[str, str | None]) -> Settings:
@@ -118,6 +126,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_GPU_SSH=_opcional(valores, "PLAT_GPU_SSH"),
         PLAT_GPU_DIR=_opcional(valores, "PLAT_GPU_DIR"),
         PLAT_RELOGIO_TESTE=_opcional(valores, "PLAT_RELOGIO_TESTE"),
+        PLAT_DSN_WORKER=_dsn_worker(valores),
     )
 
 

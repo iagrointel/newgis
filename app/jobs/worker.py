@@ -1,5 +1,6 @@
 """Worker da fila (`python -m app.jobs.worker`; unidade plat-worker; ADR 0003 seção 4). Processo pai com UMA conexão
-própria autocommit (nunca o pool de app.db) em LISTEN plat_worker; laço de ≤ 1 s por select(); job_pegar por
+própria autocommit (nunca o pool de app.db) como a role plat_worker (PLAT_DSN_WORKER; única com EXECUTE nas funções
+que mudam estado, migração 006) em LISTEN plat_worker; laço de ≤ 1 s por select(); job_pegar por
 SKIP LOCKED; fork por job com pipe; heartbeat de 10 s; cancelamento por escalonamento (30 s SIGTERM, +10 s SIGKILL);
 timeout_s; "1 pesado por vez" por advisory lock de sessão; ceifa de órfãos a cada 30 s; relógio das agendas; parada
 limpa (SIGTERM: devolve os jobs com reinicios += 1, SIGTERM ao filho, 20 s, SIGKILL). /saude em 127.0.0.1:8153
@@ -100,7 +101,10 @@ class Worker:
 
     # ---------------------------------------------------------------- banco
     def _conectar(self) -> None:
-        self.con = psycopg2.connect(settings.PLAT_DSN, cursor_factory=psycopg2.extras.RealDictCursor)
+        if not settings.PLAT_DSN_WORKER:
+            raise RuntimeError("chave obrigatória ausente para o worker: PLAT_DSN_WORKER "
+                               "(role plat_worker; o install.sh grava)")
+        self.con = psycopg2.connect(settings.PLAT_DSN_WORKER, cursor_factory=psycopg2.extras.RealDictCursor)
         self.con.autocommit = True
         with self.con.cursor() as cur:
             cur.execute("SET search_path = plat, public")
