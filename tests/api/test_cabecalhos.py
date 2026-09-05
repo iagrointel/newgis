@@ -1,4 +1,5 @@
-"""HTTP real na URL pública (nginx + TLS): noindex em toda rota, no-store nos módulos, X-Req-Id da API.
+"""HTTP real na URL pública (nginx + TLS): noindex em toda rota, no-store nos módulos, X-Req-Id da API e
+**um Cache-Control só** por resposta (correção T2 (3): o nginx acrescentava o dele ao da aplicação e saíam dois).
 Exige rede; pulado só se o nome público não resolver."""
 
 import re
@@ -105,3 +106,24 @@ def test_recursos_da_documentacao_servidos_pelo_nginx(http):
     for ref in re.findall(r'(?:src|href)="([^"]+)"', html):
         r = http.get(ref)
         assert r.status_code == 200 and "x-req-id" not in r.headers, ref
+
+
+# ---------------------------------------------------------------- Cache-Control com uma origem só (T2)
+
+@pytest.mark.parametrize("rota", ["/", "/saude", "/api/versao", "/tarefas", "/entrar", "/api/openapi.json"])
+def test_um_unico_cache_control_nas_rotas_da_aplicacao(http, rota):
+    """A origem é a APLICAÇÃO (middleware de app/auth/middleware.py dá o piso; a rota que quiser outro valor
+    declara o seu). O nginx não acrescenta o dele em location proxiada — se acrescentar, aparecem dois."""
+    r = http.get(rota)
+    valores = r.headers.get_list("cache-control")
+    assert len(valores) == 1, (rota, valores)
+    assert "no-store" in valores[0], (rota, valores)
+
+
+@pytest.mark.parametrize("rota", ["/static/app.js", "/static/style.css"])
+def test_um_unico_cache_control_no_estatico(http, rota):
+    """Em /static/ o nginx É a origem do corpo e continua sendo a origem do cabeçalho: um só, também."""
+    r = http.get(rota)
+    valores = r.headers.get_list("cache-control")
+    assert len(valores) == 1, (rota, valores)
+    assert "no-store" in valores[0], (rota, valores)

@@ -41,6 +41,11 @@ def instalar(app: FastAPI) -> None:
         inicio = time.perf_counter()
         resposta = await call_next(request)
         resposta.headers["X-Req-Id"] = rid
+        # Cache-Control com UMA origem só (decisão T2): a aplicação. O nginx não acrescenta o dele nas rotas
+        # proxiadas (add_header ACRESCENTA, nunca substitui: saíam dois cabeçalhos, e uma rota que precisa de
+        # cache — miniatura `private, max-age=300` — sairia contradita). Aqui fica o PISO; a rota que declara o
+        # seu vence, porque setdefault não sobrescreve.
+        resposta.headers.setdefault("Cache-Control", "no-store, must-revalidate")
         caminho = request.url.path
         rota = rota_redigida(caminho, request.url.query)
         estado = request.state

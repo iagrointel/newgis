@@ -297,7 +297,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 120s;
-        add_header Cache-Control "no-store, must-revalidate" always;
+        # Cache-Control NÃO sai daqui (alterado em T2): quem declara é a aplicação
         add_header X-Robots-Tag "noindex, nofollow" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "DENY" always;
@@ -311,6 +311,16 @@ Armadilha documentada do nginx (doc oficial de `add_header`): um `add_header` de
 em cada `location`, como o `SIG de teste interno` faz. O teste `tests/api/test_cabecalhos.py` confere
 `X-Robots-Tag: noindex, nofollow` em `/`, `/saude`, `/api/versao` e `/static/app.js`, e
 `Cache-Control: no-store` em `/static/app.js`.
+
+**Alterado em T2: `Cache-Control` tem uma origem só — a aplicação.** O testador do L0-05 mediu o cabeçalho
+duplicado na resposta SSE pela URL pública (`no-store, no-store, must-revalidate`). A causa é a mesma armadilha do
+`add_header`: ele **acrescenta**, nunca substitui, então toda rota em que a aplicação já declarava o cabeçalho
+saía com dois (MEDIDO em `/saude` e `/tarefas`), e uma rota que precisa de cache — a miniatura do catálogo declara
+`private, max-age=300` — sairia contradita por um `no-store` que o serviço não teria como remover. Decisão: nas
+`location` proxiadas o `Cache-Control` sai do nginx; o piso `no-store, must-revalidate` passa a ser posto pelo
+middleware de `app/auth/middleware.py` em toda resposta que não declare o seu (`setdefault`), e a rota que quiser
+outro valor declara na própria rota. Em `/static/` o nginx continua sendo a origem, porque ali o corpo é dele.
+Conferido por `tests/api/test_cabecalhos.py` (um único `Cache-Control` em 6 rotas da aplicação e 2 estáticas).
 
 **Alterado em T1: HSTS.** O adversário apontou a ausência de `Strict-Transport-Security`. O modelo
 `deploy/nginx.conf` traz `add_header Strict-Transport-Security "max-age=31536000" always;` no

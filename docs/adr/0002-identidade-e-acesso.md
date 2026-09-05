@@ -903,7 +903,7 @@ além dos gerais). Todas em `/api/`.
 | POST | `/plataforma/inquilinos` | S | superadmin | `{slug, nome, config?, admin_login, admin_nome}` | `201 {id, slug, admin: {id, login}, senha_temporaria}` | `409 slug_existente` · `409 slug_reservado` · `422` · `404` |
 | POST | `/plataforma/inquilinos/{id}/suspender` · `/reativar` | S | superadmin | | `204` | `409 plataforma_nao_suspende` · `404` |
 
-Cabeçalhos: toda resposta da API leva `X-Req-Id` (já existe) e `Cache-Control: no-store` (nginx). Rotas de escrita
+Cabeçalhos: toda resposta da API leva `X-Req-Id` (já existe) e `Cache-Control` — **alterado em T2**: a origem é a APLICAÇÃO, não o nginx (piso `no-store, must-revalidate` no middleware, a rota que quiser outro valor declara o seu; motivo e medição no ADR 0001). Rotas de escrita
 sob cookie exigem `Content-Type: application/json` (`415`). `OPTIONS`/CORS: fora deste item (L0-12: lista por
 inquilino); hoje só mesma origem.
 
