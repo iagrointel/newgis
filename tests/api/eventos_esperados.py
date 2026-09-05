@@ -1,0 +1,48 @@
+"""Evento(s) de domínio que cada rota de escrita do L0-02 registra (ADR 0002 seção 9.4). Rota de escrita no
+OpenAPI sem entrada aqui = falha em test_eventos.py. Lista vazia = a rota, por decisão, não gera evento
+(login falho comum, logout sem sessão, leituras) e o motivo está ao lado."""
+
+EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
+    ("POST", "/api/login"): ["usuarios/entrar", "usuarios/falha_login"],
+    ("POST", "/api/login/2fa"): ["usuarios/entrar", "usuarios/falha_login"],
+    ("POST", "/api/logout"): ["usuarios/sair"],
+    ("PUT", "/api/eu"): ["usuarios/atualizar"],
+    ("PUT", "/api/eu/senha"): ["usuarios/trocar_senha"],
+    ("DELETE", "/api/eu/sessoes"): ["sessoes/revogar"],
+    ("DELETE", "/api/eu/sessoes/{id}"): ["sessoes/revogar"],
+    ("POST", "/api/eu/2fa/iniciar"): [],  # só liga no confirmar; iniciar sem confirmar não muda o estado da conta
+    ("POST", "/api/eu/2fa/confirmar"): ["usuarios/2fa_ligar"],
+    ("POST", "/api/eu/2fa/desativar"): ["usuarios/2fa_desligar"],
+    ("POST", "/api/eu/2fa/codigos"): ["usuarios/2fa_codigos"],
+    ("POST", "/api/papeis"): ["papeis/criar"],
+    ("PUT", "/api/papeis/{id}"): ["papeis/atualizar"],
+    ("DELETE", "/api/papeis/{id}"): ["papeis/apagar"],
+    ("POST", "/api/usuarios"): ["usuarios/criar"],
+    ("POST", "/api/usuarios/lote"): ["usuarios/papel", "usuarios/desabilitar", "usuarios/reabilitar"],
+    ("PUT", "/api/usuarios/{id}"): [
+        "usuarios/atualizar",
+        "usuarios/papel",
+        "usuarios/desabilitar",
+        "usuarios/reabilitar",
+    ],
+    ("DELETE", "/api/usuarios/{id}"): ["usuarios/apagar"],
+    ("POST", "/api/usuarios/{id}/senha"): ["usuarios/redefinir_senha"],
+    ("POST", "/api/usuarios/{id}/2fa/desativar"): ["usuarios/2fa_desligar"],
+    ("POST", "/api/usuarios/{id}/desbloquear"): ["usuarios/desbloquear"],
+    ("POST", "/api/grupos"): ["grupos/criar"],
+    ("PUT", "/api/grupos/{id}"): ["grupos/atualizar", "grupos/transferir"],
+    ("DELETE", "/api/grupos/{id}"): ["grupos/apagar"],
+    ("POST", "/api/grupos/{id}/membros"): ["grupos/convidar"],
+    ("POST", "/api/grupos/{id}/entrar"): ["grupos/entrar", "grupos/pedir"],
+    ("POST", "/api/grupos/{id}/aceitar"): ["grupos/entrar"],
+    ("POST", "/api/grupos/{id}/recusar"): ["grupos/recusar"],
+    ("POST", "/api/grupos/{id}/membros/{uid}/aprovar"): ["grupos/aprovar"],
+    ("PUT", "/api/grupos/{id}/membros/{uid}"): ["grupos/papel"],
+    ("DELETE", "/api/grupos/{id}/membros/{uid}"): ["grupos/sair", "grupos/remover"],
+    ("POST", "/api/tokens"): ["tokens/criar"],
+    ("POST", "/api/tokens/{id}/renovar"): ["tokens/renovar"],
+    ("DELETE", "/api/tokens/{id}"): ["tokens/revogar"],
+    ("POST", "/api/plataforma/inquilinos"): ["inquilinos/criar"],
+    ("POST", "/api/plataforma/inquilinos/{id}/suspender"): ["inquilinos/suspender"],
+    ("POST", "/api/plataforma/inquilinos/{id}/reativar"): ["inquilinos/reativar"],
+}
