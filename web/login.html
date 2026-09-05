@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Entrar · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="tela">
+<main class="entrar" id="principal">
+  <div class="cartao">
+    <div class="marca"><strong data-i18n="app.nome">plat</strong> <span class="aviso-beta" data-i18n="app.beta">análise / beta privado</span></div>
+    <p class="inquilino-nome" id="inquilino-nome" hidden><span data-i18n="login.entrar_em">Entrar em:</span> <strong id="inquilino-rotulo"></strong></p>
+    <plat-aviso id="aviso"></plat-aviso>
+    <form id="form-senha" class="form" novalidate autocomplete="on">
+      <div class="campo" id="campo-inquilino">
+        <label for="inquilino" data-i18n="login.inquilino">inquilino</label>
+        <input id="inquilino" name="inquilino" type="text" autocomplete="organization" autocapitalize="none" spellcheck="false" required>
+      </div>
+      <div class="campo">
+        <label for="login" data-i18n="login.usuario">usuário</label>
+        <input id="login" name="login" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      </div>
+      <div class="campo">
+        <label for="senha" data-i18n="login.senha">senha</label>
+        <div class="linha-senha">
+          <input id="senha" name="senha" type="password" autocomplete="current-password" required>
+          <button type="button" id="mostrar-senha" class="pequeno" aria-pressed="false" aria-controls="senha" data-i18n="form.mostrar">mostrar</button>
+        </div>
+      </div>
+      <div class="botoes"><button type="submit" id="entrar" class="primario" data-i18n="login.entrar">Entrar</button></div>
+    </form>
+    <div class="provedores" id="provedores" aria-label="provedores de login"></div>
+    <form id="form-2fa" class="form" novalidate hidden>
+      <div class="campo">
+        <label for="codigo" id="codigo-rotulo" data-i18n="login.codigo">código do autenticador</label>
+        <input id="codigo" name="codigo" type="text" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" required>
+      </div>
+      <p class="contador" id="contador" aria-live="polite"></p>
+      <div class="botoes">
+        <button type="submit" id="confirmar" class="primario" data-i18n="login.confirmar">Confirmar</button>
+        <button type="button" id="alternar-recuperacao" class="texto" data-i18n="login.usar_recuperacao">usar código de recuperação</button>
+        <button type="button" id="voltar" class="texto" data-i18n="login.voltar">voltar</button>
+      </div>
+    </form>
+    <p class="rodape" data-i18n="login.esqueci">Esqueceu a senha? Peça ao administrador do seu inquilino.</p>
+  </div>
+</main>
+<script type="module" src="/static/js/auth/login.js"></script>
+</body>
+</html>

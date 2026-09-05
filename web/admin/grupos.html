@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Grupos · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="tela">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="grupos.titulo">Grupos</h1>
+    <div class="linha-ferramentas" id="ferramentas"></div>
+    <plat-aviso id="aviso"></plat-aviso>
+    <div class="abas" role="tablist" id="abas"></div>
+    <div role="tabpanel" id="painel-lista">
+      <plat-tabela id="tabela" legenda="grupos"></plat-tabela>
+      <plat-paginacao id="paginacao"></plat-paginacao>
+    </div>
+  </main>
+</div>
+<plat-dialogo id="painel" modo="lateral"></plat-dialogo>
+<script type="module" src="/static/js/auth/grupos.js"></script>
+</body>
+</html>

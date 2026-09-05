@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Minha conta · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<script src="/static/vendor/dompurify-3.4.14.js"></script>
+</head>
+<body class="tela">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="conta.titulo">Minha conta</h1>
+    <div id="pendencia"></div>
+    <section class="cartao" id="dados" aria-labelledby="t-dados">
+      <h2 id="t-dados" data-i18n="conta.dados">Dados</h2>
+      <plat-formulario id="form-dados"></plat-formulario>
+      <details class="espaco"><summary data-i18n="conta.privilegios">privilégios</summary><ul class="privilegios-lista espaco" id="lista-privilegios"></ul></details>
+    </section>
+    <section class="cartao" id="senha" aria-labelledby="t-senha">
+      <h2 id="t-senha" data-i18n="conta.senha">Senha</h2>
+      <plat-formulario id="form-senha"></plat-formulario>
+    </section>
+    <section class="cartao" id="2fa" aria-labelledby="t-2fa">
+      <h2 id="t-2fa"><span data-i18n="conta.segundo_fator">Segundo fator</span> <span class="estado" id="estado-2fa"></span></h2>
+      <p id="texto-2fa"></p>
+      <div id="area-2fa"></div>
+      <div class="botoes" id="botoes-2fa"></div>
+    </section>
+    <section class="cartao" id="sessoes" aria-labelledby="t-sessoes">
+      <h2 id="t-sessoes" data-i18n="conta.sessoes">Sessões</h2>
+      <plat-aviso id="aviso-sessoes"></plat-aviso>
+      <plat-tabela id="tabela-sessoes" legenda="sessões ativas"></plat-tabela>
+      <div class="botoes espaco"><button type="button" id="encerrar-outras" data-i18n="conta.encerrar_outras">Encerrar as outras</button></div>
+    </section>
+    <section class="cartao" id="convites" aria-labelledby="t-convites">
+      <h2 id="t-convites" data-i18n="conta.convites">Convites</h2>
+      <plat-aviso id="aviso-convites"></plat-aviso>
+      <plat-tabela id="tabela-convites" legenda="convites pendentes"></plat-tabela>
+    </section>
+    <section class="cartao" id="tokens" aria-labelledby="t-tokens">
+      <h2 id="t-tokens" data-i18n="conta.tokens">Tokens de serviço</h2>
+      <p><a href="/admin/tokens" data-i18n="conta.ir_tokens">gerir os meus tokens de serviço</a></p>
+    </section>
+  </main>
+</div>
+<plat-dialogo id="dialogo"></plat-dialogo>
+<script type="module" src="/static/js/auth/conta.js"></script>
+</body>
+</html>
