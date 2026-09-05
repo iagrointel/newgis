@@ -118,6 +118,10 @@ SQL
   echo "admin de $slug semeado"
 done < "$CRED"
 
+# inquilinos de demonstração: cota diária de jobs alta (a suíte cria centenas por rodada; padrão de produto = 1.000, ADR 0003)
+"${PSQL[@]}" -Atc "UPDATE plat.tenant SET config = config || '{\"cota_jobs_dia\": 100000}' WHERE slug IN ('demo', 'demo2') AND coalesce((config->>'cota_jobs_dia')::int, 0) < 100000" >/dev/null
+echo "cota_jobs_dia dos inquilinos de demonstração garantida (100000)"
+
 echo "== h. systemd $UNIDADE"
 sed -e "s#APP_DIR#$APP_DIR#g" -e "s#APP_USER#$APP_USER#g" -e "s#PORTA#$PORTA#g" deploy/plat-api.service > /etc/systemd/system/$UNIDADE.service
 systemctl daemon-reload
