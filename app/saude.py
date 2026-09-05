@@ -35,6 +35,20 @@ def sondar_servico(url: str | None) -> str:
         return "erro"
 
 
+def estado_fila() -> dict:
+    """plat.fila_estado() (ADR 0003 seção 4.6): informativo neste item, não muda o status HTTP."""
+    try:
+        with db.db() as cur:
+            cur.execute("SELECT * FROM plat.fila_estado()")
+            r = cur.fetchone()
+    except Exception:
+        log.exception("saude: fila em erro")
+        return {"erro": True}
+    hb = r["ultimo_heartbeat"]
+    return {"pendentes": r["pendentes"], "rodando": r["rodando"], "workers_vivos": r["workers_vivos"],
+            "ultimo_heartbeat": hb.astimezone(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ") if hb else None}
+
+
 def estado_banco() -> tuple[str, int, int, str | None]:
     try:
         aplicadas, pendentes, ultima = db.migracoes_estado()
@@ -58,6 +72,7 @@ def saude():
         "migracoes_pendentes": pendentes,
         "ultima_migracao": ultima,
         "servicos": servicos,
+        "fila": estado_fila() if banco == "ok" else {"erro": True},
         "tempo_ms": round((time.perf_counter() - inicio) * 1000, 1),
         "em": agora_iso(),
     }

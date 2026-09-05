@@ -1,0 +1,32 @@
+{
+ "item": "L0-05-jobs",
+ "medidas": {
+  "cancelamento_s": {
+   "valor": 0.428,
+   "unidade": "s",
+   "comando": "POST /api/jobs/{id}/cancelar em prova.progresso rodando até estado=cancelado (tests/api/jobs/test_jobs_cancelamento.py)"
+  },
+  "jobs_vazios_por_min": {
+   "valor": 3180.8,
+   "unidade": "jobs/min",
+   "comando": "100 prova.progresso(duracao_s=0) criados pela API e concluídos por 2 workers (plat-worker 1 processo + worker extra 2 processos); tests/api/jobs/test_jobs_fila.py"
+  },
+  "rss_worker_kb": {
+   "valor": 40768,
+   "unidade": "kB",
+   "comando": "VmRSS do processo pai do worker lido em GET :8153/saude depois do job de memória (tests/api/jobs/test_jobs_memoria.py); MemoryPeak da unidade é do testador"
+  },
+  "latencia_progresso_s": {
+   "valor": 1.005,
+   "unidade": "s",
+   "comando": "menor diferença entre o heartbeat_em gravado pelo filho e a chegada do evento estado no cliente SSE (TestClient; granularidade de 1 s do carimbo)"
+  },
+  "sse_primeiro_evento_publico_s": {
+   "valor": 0.025,
+   "unidade": "s",
+   "comando": "GET https://plat.iagrointel.com/api/jobs/{id}/eventos até o primeiro evento estado (nginx + uvicorn)"
+  }
+ },
+ "gerado_em": "2026-09-05T15:21:43Z",
+ "git_sha": "1668d7659f03"
+}

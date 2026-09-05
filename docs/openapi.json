@@ -36,6 +36,7144 @@
      }
     }
    }
+  },
+  "/api/login/provedores": {
+   "get": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Provedores",
+    "operationId": "provedores_api_login_provedores_get",
+    "parameters": [
+     {
+      "name": "inquilino",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Inquilino"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Provedores"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/login": {
+   "post": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Login",
+    "operationId": "login_api_login_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoginEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoginSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/login/2fa": {
+   "post": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Login 2Fa",
+    "operationId": "login_2fa_api_login_2fa_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/Login2FAEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoginSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/logout": {
+   "post": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Logout",
+    "operationId": "logout_api_logout_post",
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/eu": {
+   "get": {
+    "tags": [
+     "eu"
+    ],
+    "summary": "Eu",
+    "operationId": "eu_api_eu_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Eu"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "put": {
+    "tags": [
+     "eu"
+    ],
+    "summary": "Editar Eu",
+    "operationId": "editar_eu_api_eu_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": true,
+        "type": "object",
+        "title": "Corpo"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Eu"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/eu/senha": {
+   "put": {
+    "tags": [
+     "eu"
+    ],
+    "summary": "Trocar Senha",
+    "operationId": "trocar_senha_api_eu_senha_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SenhaEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/eu/sessoes": {
+   "get": {
+    "tags": [
+     "eu"
+    ],
+    "summary": "Sessoes",
+    "operationId": "sessoes_api_eu_sessoes_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Sessao"
+         },
+         "title": "Response Sessoes Api Eu Sessoes Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   },
+   "delete": {
+    "tags": [
+     "eu"
+    ],
+    "summary": "Encerrar Outras",
+    "operationId": "encerrar_outras_api_eu_sessoes_delete",
+    "parameters": [
+     {
+      "name": "outras",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 0,
+       "title": "Outras"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/eu/sessoes/{id}": {
+   "delete": {
+    "tags": [
+     "eu"
+    ],
+    "summary": "Encerrar Sessao",
+    "operationId": "encerrar_sessao_api_eu_sessoes__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/eu/2fa/iniciar": {
+   "post": {
+    "tags": [
+     "eu"
+    ],
+    "summary": "Iniciar 2Fa",
+    "operationId": "iniciar_2fa_api_eu_2fa_iniciar_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Iniciar2FA"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/eu/2fa/confirmar": {
+   "post": {
+    "tags": [
+     "eu"
+    ],
+    "summary": "Confirmar 2Fa",
+    "operationId": "confirmar_2fa_api_eu_2fa_confirmar_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CodigoEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CodigosRecuperacao"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/eu/2fa/desativar": {
+   "post": {
+    "tags": [
+     "eu"
+    ],
+    "summary": "Desativar 2Fa",
+    "operationId": "desativar_2fa_api_eu_2fa_desativar_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SenhaCodigoEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/eu/2fa/codigos": {
+   "post": {
+    "tags": [
+     "eu"
+    ],
+    "summary": "Novos Codigos",
+    "operationId": "novos_codigos_api_eu_2fa_codigos_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SenhaSoEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CodigosRecuperacao"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/eu/convites": {
+   "get": {
+    "tags": [
+     "eu"
+    ],
+    "summary": "Convites",
+    "operationId": "convites_api_eu_convites_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/Convite"
+         },
+         "type": "array",
+         "title": "Response Convites Api Eu Convites Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/privilegios": {
+   "get": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Listar Privilegios",
+    "operationId": "listar_privilegios_api_privilegios_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/Privilegio"
+         },
+         "type": "array",
+         "title": "Response Listar Privilegios Api Privilegios Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "vocabulario"
+   }
+  },
+  "/api/papeis": {
+   "get": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Listar Papeis",
+    "operationId": "listar_papeis_api_papeis_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Papeis"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "vocabulario"
+   },
+   "post": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Criar Papel",
+    "operationId": "criar_papel_api_papeis_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PapelEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Papel"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "papeis.gerir"
+   }
+  },
+  "/api/papeis/{id}": {
+   "put": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Editar Papel",
+    "operationId": "editar_papel_api_papeis__id__put",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PapelEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Papel"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "papeis.gerir"
+   },
+   "delete": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Apagar Papel",
+    "operationId": "apagar_papel_api_papeis__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "papeis.gerir"
+   }
+  },
+  "/api/usuarios": {
+   "get": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Listar Usuarios",
+    "operationId": "listar_usuarios_api_usuarios_get",
+    "parameters": [
+     {
+      "name": "perfil",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Perfil"
+      }
+     },
+     {
+      "name": "ativo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "boolean"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Ativo"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     },
+     {
+      "name": "ordenar",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "login",
+       "title": "Ordenar"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "membros.ver"
+   },
+   "post": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Criar Usuario",
+    "operationId": "criar_usuario_api_usuarios_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UsuarioCriar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UsuarioCriado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "membros.gerir"
+   }
+  },
+  "/api/usuarios/lote": {
+   "post": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Lote",
+    "operationId": "lote_api_usuarios_lote_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoteEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoteSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "membros.gerir|membros.papel"
+   }
+  },
+  "/api/usuarios/{id}": {
+   "get": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Ver Usuario",
+    "operationId": "ver_usuario_api_usuarios__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Usuario"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "membros.ver"
+   },
+   "put": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Editar Usuario",
+    "operationId": "editar_usuario_api_usuarios__id__put",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UsuarioEditar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Usuario"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "membros.gerir|membros.papel"
+   },
+   "delete": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Apagar Usuario",
+    "operationId": "apagar_usuario_api_usuarios__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "membros.apagar"
+   }
+  },
+  "/api/usuarios/{id}/senha": {
+   "post": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Redefinir Senha",
+    "operationId": "redefinir_senha_api_usuarios__id__senha_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SenhaTemporaria"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "membros.gerir"
+   }
+  },
+  "/api/usuarios/{id}/2fa/desativar": {
+   "post": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Desativar 2Fa De",
+    "operationId": "desativar_2fa_de_api_usuarios__id__2fa_desativar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "membros.gerir"
+   }
+  },
+  "/api/usuarios/{id}/desbloquear": {
+   "post": {
+    "tags": [
+     "usuarios"
+    ],
+    "summary": "Desbloquear",
+    "operationId": "desbloquear_api_usuarios__id__desbloquear_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "membros.gerir"
+   }
+  },
+  "/api/grupos": {
+   "get": {
+    "tags": [
+     "grupos"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_grupos_get",
+    "parameters": [
+     {
+      "name": "meus",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 0,
+       "title": "Meus"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "grupos"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_grupos_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/GrupoCriar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Grupo"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "grupos.criar"
+   }
+  },
+  "/api/grupos/{id}": {
+   "get": {
+    "tags": [
+     "grupos"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_grupos__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Grupo"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "put": {
+    "tags": [
+     "grupos"
+    ],
+    "summary": "Editar",
+    "operationId": "editar_api_grupos__id__put",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/GrupoEditar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Grupo"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "grupo:dono|gerente|grupos.gerir_todos"
+   },
+   "delete": {
+    "tags": [
+     "grupos"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_grupos__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "grupo:dono|grupos.gerir_todos"
+   }
+  },
+  "/api/grupos/{id}/membros": {
+   "get": {
+    "tags": [
+     "grupos"
+    ],
+    "summary": "Membros",
+    "operationId": "membros_api_grupos__id__membros_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Membro"
+         },
+         "title": "Response Membros Api Grupos  Id  Membros Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "grupo:membro|grupos.gerir_todos"
+   },
+   "post": {
+    "tags": [
+     "grupos"
+    ],
+    "summary": "Convidar",
+    "operationId": "convidar_api_grupos__id__membros_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConviteEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Estado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "grupo:dono|gerente"
+   }
+  },
+  "/api/grupos/{id}/entrar": {
+   "post": {
+    "tags": [
+     "grupos"
+    ],
+    "summary": "Entrar",
+    "operationId": "entrar_api_grupos__id__entrar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Estado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "grupos.entrar"
+   }
+  },
+  "/api/grupos/{id}/aceitar": {
+   "post": {
+    "tags": [
+     "grupos"
+    ],
+    "summary": "Aceitar",
+    "operationId": "aceitar_api_grupos__id__aceitar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Estado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "grupo:convidado"
+   }
+  },
+  "/api/grupos/{id}/recusar": {
+   "post": {
+    "tags": [
+     "grupos"
+    ],
+    "summary": "Recusar",
+    "operationId": "recusar_api_grupos__id__recusar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "grupo:convidado"
+   }
+  },
+  "/api/grupos/{id}/membros/{uid}/aprovar": {
+   "post": {
+    "tags": [
+     "grupos"
+    ],
+    "summary": "Aprovar",
+    "operationId": "aprovar_api_grupos__id__membros__uid__aprovar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "uid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Uid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Estado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "grupo:dono|gerente"
+   }
+  },
+  "/api/grupos/{id}/membros/{uid}": {
+   "put": {
+    "tags": [
+     "grupos"
+    ],
+    "summary": "Papel Membro",
+    "operationId": "papel_membro_api_grupos__id__membros__uid__put",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "uid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Uid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PapelMembroEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Estado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "grupo:dono|gerente"
+   },
+   "delete": {
+    "tags": [
+     "grupos"
+    ],
+    "summary": "Remover",
+    "operationId": "remover_api_grupos__id__membros__uid__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "uid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Uid"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "grupo:proprio|dono|gerente"
+   }
+  },
+  "/api/tokens": {
+   "get": {
+    "tags": [
+     "tokens"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_tokens_get",
+    "parameters": [
+     {
+      "name": "todos",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 0,
+       "title": "Todos"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Token"
+         },
+         "title": "Response Listar Api Tokens Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "tokens.gerar"
+   },
+   "post": {
+    "tags": [
+     "tokens"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_tokens_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TokenCriar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TokenCriado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "tokens.gerar"
+   }
+  },
+  "/api/tokens/{id}": {
+   "get": {
+    "tags": [
+     "tokens"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_tokens__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Token"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "token:dono|tokens.gerir_todos"
+   },
+   "delete": {
+    "tags": [
+     "tokens"
+    ],
+    "summary": "Revogar",
+    "operationId": "revogar_api_tokens__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "token:dono|tokens.gerir_todos"
+   }
+  },
+  "/api/tokens/{id}/renovar": {
+   "post": {
+    "tags": [
+     "tokens"
+    ],
+    "summary": "Renovar",
+    "operationId": "renovar_api_tokens__id__renovar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TokenCriado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "token:dono"
+   }
+  },
+  "/api/tokens/{id}/log": {
+   "get": {
+    "tags": [
+     "tokens"
+    ],
+    "summary": "Log Do Token",
+    "operationId": "log_do_token_api_tokens__id__log_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "desde",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Desde"
+      }
+     },
+     {
+      "name": "ate",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Ate"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "token:dono|tokens.gerir_todos"
+   }
+  },
+  "/api/log": {
+   "get": {
+    "tags": [
+     "log"
+    ],
+    "summary": "Log Acesso",
+    "operationId": "log_acesso_api_log_get",
+    "parameters": [
+     {
+      "name": "usuario_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Usuario Id"
+      }
+     },
+     {
+      "name": "token_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Token Id"
+      }
+     },
+     {
+      "name": "rota",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Rota"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "desde",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Desde"
+      }
+     },
+     {
+      "name": "ate",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Ate"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "json",
+       "title": "Formato"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pagina"
+        }
+       },
+       "text/csv": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.log_ver"
+   }
+  },
+  "/api/eventos": {
+   "get": {
+    "tags": [
+     "log"
+    ],
+    "summary": "Eventos",
+    "operationId": "eventos_api_eventos_get",
+    "parameters": [
+     {
+      "name": "tipo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tipo"
+      }
+     },
+     {
+      "name": "ator_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Ator Id"
+      }
+     },
+     {
+      "name": "desde",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Desde"
+      }
+     },
+     {
+      "name": "ate",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Ate"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.log_ver"
+   }
+  },
+  "/api/plataforma/inquilinos": {
+   "get": {
+    "tags": [
+     "plataforma"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_plataforma_inquilinos_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/Inquilino"
+         },
+         "type": "array",
+         "title": "Response Listar Api Plataforma Inquilinos Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   },
+   "post": {
+    "tags": [
+     "plataforma"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_plataforma_inquilinos_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/InquilinoCriar"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/InquilinoCriado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   }
+  },
+  "/api/plataforma/inquilinos/{id}/suspender": {
+   "post": {
+    "tags": [
+     "plataforma"
+    ],
+    "summary": "Suspender",
+    "operationId": "suspender_api_plataforma_inquilinos__id__suspender_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   }
+  },
+  "/api/plataforma/inquilinos/{id}/reativar": {
+   "post": {
+    "tags": [
+     "plataforma"
+    ],
+    "summary": "Reativar",
+    "operationId": "reativar_api_plataforma_inquilinos__id__reativar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   }
+  },
+  "/api/jobs": {
+   "get": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Listar Jobs",
+    "operationId": "listar_jobs_api_jobs_get",
+    "parameters": [
+     {
+      "name": "estado",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Estado"
+      }
+     },
+     {
+      "name": "tipo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tipo"
+      }
+     },
+     {
+      "name": "usuario_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Usuario Id"
+      }
+     },
+     {
+      "name": "de",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "De"
+      }
+     },
+     {
+      "name": "ate",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Ate"
+      }
+     },
+     {
+      "name": "agenda_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Agenda Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 50,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     },
+     {
+      "name": "ordenar",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "criado_em:desc",
+       "title": "Ordenar"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ListaJobs"
+        }
+       }
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Criar Job",
+    "operationId": "criar_job_api_jobs_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Corpo"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Job"
+        }
+       }
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   }
+  },
+  "/api/jobs/resumo": {
+   "get": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Resumo Jobs",
+    "operationId": "resumo_jobs_api_jobs_resumo_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Resumo"
+        }
+       }
+      }
+     },
+     "401": {
+      "description": "Unauthorized",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Forbidden",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not Found",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Conflict",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Request Entity Too Large",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Unprocessable Entity",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Too Many Requests",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/jobs/tipos": {
+   "get": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Tipos De Job",
+    "operationId": "tipos_de_job_api_jobs_tipos_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/TipoJob"
+         },
+         "type": "array",
+         "title": "Response Tipos De Job Api Jobs Tipos Get"
+        }
+       }
+      }
+     },
+     "401": {
+      "description": "Unauthorized",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Forbidden",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not Found",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Conflict",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     },
+     "413": {
+      "description": "Request Entity Too Large",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Unprocessable Entity",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     },
+     "429": {
+      "description": "Too Many Requests",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/jobs/{job_id}": {
+   "get": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Obter Job",
+    "operationId": "obter_job_api_jobs__job_id__get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Job"
+        }
+       }
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   }
+  },
+  "/api/jobs/{job_id}/cancelar": {
+   "post": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Cancelar Job",
+    "operationId": "cancelar_job_api_jobs__job_id__cancelar_post",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Job"
+        }
+       }
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   }
+  },
+  "/api/jobs/{job_id}/repetir": {
+   "post": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Repetir Job",
+    "operationId": "repetir_job_api_jobs__job_id__repetir_post",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "type": "object",
+          "additionalProperties": true
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Corpo"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Job"
+        }
+       }
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   }
+  },
+  "/api/jobs/{job_id}/log": {
+   "get": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Log Do Job",
+    "operationId": "log_do_job_api_jobs__job_id__log_get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Job Id"
+      }
+     },
+     {
+      "name": "apos",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Apos"
+      }
+     },
+     {
+      "name": "nivel",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Nivel"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 2000,
+       "minimum": 1,
+       "default": 500,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Log"
+        }
+       }
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   }
+  },
+  "/api/jobs/{job_id}/eventos": {
+   "get": {
+    "tags": [
+     "jobs"
+    ],
+    "summary": "Eventos Do Job",
+    "description": "SSE: primeiro evento `estado`, depois `log`/`estado`, `fim` no estado final; Last-Event-ID reenvia o log.",
+    "operationId": "eventos_do_job_api_jobs__job_id__eventos_get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "text/event-stream": {}
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   }
+  },
+  "/api/agendas": {
+   "get": {
+    "tags": [
+     "agendas"
+    ],
+    "summary": "Listar Agendas",
+    "operationId": "listar_agendas_api_agendas_get",
+    "parameters": [
+     {
+      "name": "ativa",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "boolean"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Ativa"
+      }
+     },
+     {
+      "name": "tipo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tipo"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 50,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ListaAgendas"
+        }
+       }
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "agendas"
+    ],
+    "summary": "Criar Agenda",
+    "operationId": "criar_agenda_api_agendas_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Corpo"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Agenda"
+        }
+       }
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   }
+  },
+  "/api/agendas/{agenda_id}": {
+   "get": {
+    "tags": [
+     "agendas"
+    ],
+    "summary": "Obter Agenda",
+    "operationId": "obter_agenda_api_agendas__agenda_id__get",
+    "parameters": [
+     {
+      "name": "agenda_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Agenda Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Agenda"
+        }
+       }
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "agendas"
+    ],
+    "summary": "Atualizar Agenda",
+    "operationId": "atualizar_agenda_api_agendas__agenda_id__put",
+    "parameters": [
+     {
+      "name": "agenda_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Agenda Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Corpo"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Agenda"
+        }
+       }
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "agendas"
+    ],
+    "summary": "Apagar Agenda",
+    "operationId": "apagar_agenda_api_agendas__agenda_id__delete",
+    "parameters": [
+     {
+      "name": "agenda_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Agenda Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   }
+  },
+  "/api/agendas/{agenda_id}/pausar": {
+   "post": {
+    "tags": [
+     "agendas"
+    ],
+    "summary": "Pausar Agenda",
+    "operationId": "pausar_agenda_api_agendas__agenda_id__pausar_post",
+    "parameters": [
+     {
+      "name": "agenda_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Agenda Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Agenda"
+        }
+       }
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   }
+  },
+  "/api/agendas/{agenda_id}/retomar": {
+   "post": {
+    "tags": [
+     "agendas"
+    ],
+    "summary": "Retomar Agenda",
+    "operationId": "retomar_agenda_api_agendas__agenda_id__retomar_post",
+    "parameters": [
+     {
+      "name": "agenda_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Agenda Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Agenda"
+        }
+       }
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   }
+  },
+  "/api/agendas/{agenda_id}/rodar-agora": {
+   "post": {
+    "tags": [
+     "agendas"
+    ],
+    "summary": "Rodar Agenda Agora",
+    "operationId": "rodar_agenda_agora_api_agendas__agenda_id__rodar_agora_post",
+    "parameters": [
+     {
+      "name": "agenda_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Agenda Id"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Job"
+        }
+       }
+      }
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Not Found"
+     },
+     "409": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Conflict"
+     },
+     "413": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Request Entity Too Large"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Unprocessable Entity"
+     },
+     "429": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Erro"
+        }
+       }
+      },
+      "description": "Too Many Requests"
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "Agenda": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "parametros": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Parametros"
+     },
+     "cron": {
+      "type": "string",
+      "title": "Cron"
+     },
+     "fuso": {
+      "type": "string",
+      "title": "Fuso"
+     },
+     "ativa": {
+      "type": "boolean",
+      "title": "Ativa"
+     },
+     "proxima_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Proxima Em"
+     },
+     "ultima_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultima Em"
+     },
+     "ultimo_job_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Job Id"
+     },
+     "ultimo_estado": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Estado"
+     },
+     "falhas_seguidas": {
+      "type": "integer",
+      "title": "Falhas Seguidas"
+     },
+     "expira_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expira Em"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "usuario_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Usuario Id"
+     },
+     "usuario_login": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Usuario Login"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "tipo",
+     "parametros",
+     "cron",
+     "fuso",
+     "ativa",
+     "falhas_seguidas",
+     "criado_em"
+    ],
+    "title": "Agenda"
+   },
+   "CodigoEntrada": {
+    "properties": {
+     "codigo": {
+      "type": "string",
+      "maxLength": 16,
+      "title": "Codigo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "codigo"
+    ],
+    "title": "CodigoEntrada"
+   },
+   "CodigosRecuperacao": {
+    "properties": {
+     "codigos_recuperacao": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Codigos Recuperacao"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "codigos_recuperacao"
+    ],
+    "title": "CodigosRecuperacao"
+   },
+   "Convite": {
+    "properties": {
+     "grupo": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Grupo"
+     },
+     "papel": {
+      "type": "string",
+      "title": "Papel"
+     },
+     "convidado_por": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Convidado Por"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "grupo",
+     "papel",
+     "convidado_por",
+     "criado_em"
+    ],
+    "title": "Convite"
+   },
+   "ConviteEntrada": {
+    "properties": {
+     "usuario_id": {
+      "type": "integer",
+      "title": "Usuario Id"
+     },
+     "papel": {
+      "type": "string",
+      "pattern": "^(gerente|membro)$",
+      "title": "Papel",
+      "default": "membro"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "usuario_id"
+    ],
+    "title": "ConviteEntrada"
+   },
+   "Erro": {
+    "properties": {
+     "erro": {
+      "type": "string",
+      "title": "Erro"
+     },
+     "mensagem": {
+      "type": "string",
+      "title": "Mensagem"
+     },
+     "detalhe": {
+      "anyOf": [
+       {},
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Detalhe"
+     },
+     "req_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Req Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "erro",
+     "mensagem"
+    ],
+    "title": "Erro"
+   },
+   "Estado": {
+    "properties": {
+     "estado": {
+      "type": "string",
+      "title": "Estado"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "estado"
+    ],
+    "title": "Estado"
+   },
+   "Eu": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "login": {
+      "type": "string",
+      "title": "Login"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "perfil": {
+      "type": "string",
+      "title": "Perfil"
+     },
+     "papel": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Papel"
+     },
+     "ativo": {
+      "type": "boolean",
+      "title": "Ativo"
+     },
+     "origem": {
+      "type": "string",
+      "title": "Origem"
+     },
+     "ultimo_login": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Login"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     },
+     "email": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Email"
+     },
+     "superadmin": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Superadmin"
+     },
+     "totp_ativo": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Totp Ativo"
+     },
+     "trocar_senha": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Trocar Senha"
+     },
+     "bloqueado_ate": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bloqueado Ate"
+     },
+     "ultimo_ip": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Ip"
+     },
+     "codigos_recuperacao_restantes": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Codigos Recuperacao Restantes"
+     },
+     "privilegios": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Privilegios"
+     },
+     "inquilino": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Inquilino"
+     },
+     "pendencias": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Pendencias"
+     },
+     "sessao": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sessao"
+     },
+     "token": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Token"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "login",
+     "nome",
+     "perfil",
+     "ativo",
+     "origem",
+     "privilegios",
+     "inquilino",
+     "pendencias"
+    ],
+    "title": "Eu"
+   },
+   "Grupo": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "resumo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Resumo"
+     },
+     "tags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Tags"
+     },
+     "visibilidade": {
+      "type": "string",
+      "title": "Visibilidade"
+     },
+     "entrada": {
+      "type": "string",
+      "title": "Entrada"
+     },
+     "contribuicao": {
+      "type": "string",
+      "title": "Contribuicao"
+     },
+     "atualizacao_compartilhada": {
+      "type": "boolean",
+      "title": "Atualizacao Compartilhada"
+     },
+     "administrativo": {
+      "type": "boolean",
+      "title": "Administrativo"
+     },
+     "protegido": {
+      "type": "boolean",
+      "title": "Protegido"
+     },
+     "dono": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Dono"
+     },
+     "membros": {
+      "type": "integer",
+      "title": "Membros"
+     },
+     "meu_papel": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Meu Papel"
+     },
+     "meu_estado": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Meu Estado"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "resumo",
+     "tags",
+     "visibilidade",
+     "entrada",
+     "contribuicao",
+     "atualizacao_compartilhada",
+     "administrativo",
+     "protegido",
+     "dono",
+     "membros",
+     "meu_papel",
+     "meu_estado"
+    ],
+    "title": "Grupo"
+   },
+   "GrupoCriar": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "resumo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2048
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Resumo"
+     },
+     "tags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 50,
+      "title": "Tags"
+     },
+     "visibilidade": {
+      "type": "string",
+      "pattern": "^(membros|inquilino)$",
+      "title": "Visibilidade",
+      "default": "membros"
+     },
+     "entrada": {
+      "type": "string",
+      "pattern": "^(convite|pedido|livre)$",
+      "title": "Entrada",
+      "default": "convite"
+     },
+     "contribuicao": {
+      "type": "string",
+      "pattern": "^(todos|dono_gerentes)$",
+      "title": "Contribuicao",
+      "default": "todos"
+     },
+     "atualizacao_compartilhada": {
+      "type": "boolean",
+      "title": "Atualizacao Compartilhada",
+      "default": false
+     },
+     "administrativo": {
+      "type": "boolean",
+      "title": "Administrativo",
+      "default": false
+     },
+     "protegido": {
+      "type": "boolean",
+      "title": "Protegido",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome"
+    ],
+    "title": "GrupoCriar"
+   },
+   "GrupoEditar": {
+    "properties": {
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 128,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "resumo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2048
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Resumo"
+     },
+     "tags": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 50
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tags"
+     },
+     "visibilidade": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(membros|inquilino)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Visibilidade"
+     },
+     "entrada": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(convite|pedido|livre)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Entrada"
+     },
+     "contribuicao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(todos|dono_gerentes)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Contribuicao"
+     },
+     "atualizacao_compartilhada": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atualizacao Compartilhada"
+     },
+     "administrativo": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Administrativo"
+     },
+     "protegido": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Protegido"
+     },
+     "dono_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dono Id"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "GrupoEditar"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "Iniciar2FA": {
+    "properties": {
+     "segredo": {
+      "type": "string",
+      "title": "Segredo"
+     },
+     "uri": {
+      "type": "string",
+      "title": "Uri"
+     },
+     "qr_svg": {
+      "type": "string",
+      "title": "Qr Svg"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "segredo",
+     "uri",
+     "qr_svg"
+    ],
+    "title": "Iniciar2FA"
+   },
+   "Inquilino": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "slug": {
+      "type": "string",
+      "title": "Slug"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "ativo": {
+      "type": "boolean",
+      "title": "Ativo"
+     },
+     "usuarios": {
+      "type": "integer",
+      "title": "Usuarios"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     },
+     "ultimo_acesso": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Acesso"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "slug",
+     "nome",
+     "ativo",
+     "usuarios",
+     "criado_em",
+     "ultimo_acesso"
+    ],
+    "title": "Inquilino"
+   },
+   "InquilinoCriado": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "slug": {
+      "type": "string",
+      "title": "Slug"
+     },
+     "admin": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Admin"
+     },
+     "senha_temporaria": {
+      "type": "string",
+      "title": "Senha Temporaria"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "slug",
+     "admin",
+     "senha_temporaria"
+    ],
+    "title": "InquilinoCriado"
+   },
+   "InquilinoCriar": {
+    "properties": {
+     "slug": {
+      "type": "string",
+      "maxLength": 39,
+      "minLength": 2,
+      "title": "Slug"
+     },
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "config": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Config"
+     },
+     "admin_login": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._@-]*$",
+      "title": "Admin Login"
+     },
+     "admin_nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Admin Nome"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "slug",
+     "nome",
+     "admin_login",
+     "admin_nome"
+    ],
+    "title": "InquilinoCriar"
+   },
+   "Job": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "estado": {
+      "type": "string",
+      "title": "Estado"
+     },
+     "progresso": {
+      "type": "integer",
+      "title": "Progresso"
+     },
+     "mensagem": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mensagem"
+     },
+     "prioridade": {
+      "type": "integer",
+      "title": "Prioridade"
+     },
+     "pesado": {
+      "type": "boolean",
+      "title": "Pesado"
+     },
+     "executor": {
+      "type": "string",
+      "title": "Executor"
+     },
+     "usuario_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Usuario Id"
+     },
+     "usuario_login": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Usuario Login"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "agendado_para": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Agendado Para"
+     },
+     "iniciado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Iniciado Em"
+     },
+     "heartbeat_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Heartbeat Em"
+     },
+     "terminado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Terminado Em"
+     },
+     "duracao_s": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Duracao S"
+     },
+     "tentativa": {
+      "type": "integer",
+      "title": "Tentativa"
+     },
+     "max_tentativas": {
+      "type": "integer",
+      "title": "Max Tentativas"
+     },
+     "reinicios": {
+      "type": "integer",
+      "title": "Reinicios"
+     },
+     "cancelar_solicitado": {
+      "type": "boolean",
+      "title": "Cancelar Solicitado"
+     },
+     "cancelado_por": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cancelado Por"
+     },
+     "cancelado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cancelado Em"
+     },
+     "worker": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Worker"
+     },
+     "chave": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Chave"
+     },
+     "agenda_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Agenda Id"
+     },
+     "programado_para": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Programado Para"
+     },
+     "resultado": {
+      "anyOf": [
+       {},
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Resultado"
+     },
+     "erro": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Erro"
+     },
+     "linhas_log": {
+      "type": "integer",
+      "title": "Linhas Log"
+     },
+     "parametros": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Parametros"
+     },
+     "proveniencia": {
+      "anyOf": [
+       {},
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Proveniencia"
+     },
+     "memoria_mb": {
+      "type": "integer",
+      "title": "Memoria Mb"
+     },
+     "timeout_s": {
+      "type": "integer",
+      "title": "Timeout S"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "tipo",
+     "estado",
+     "progresso",
+     "prioridade",
+     "pesado",
+     "executor",
+     "criado_em",
+     "tentativa",
+     "max_tentativas",
+     "reinicios",
+     "cancelar_solicitado",
+     "linhas_log",
+     "parametros",
+     "memoria_mb",
+     "timeout_s"
+    ],
+    "title": "Job"
+   },
+   "LinhaLog": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "em": {
+      "type": "string",
+      "title": "Em"
+     },
+     "nivel": {
+      "type": "string",
+      "title": "Nivel"
+     },
+     "mensagem": {
+      "type": "string",
+      "title": "Mensagem"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "em",
+     "nivel",
+     "mensagem"
+    ],
+    "title": "LinhaLog"
+   },
+   "ListaAgendas": {
+    "properties": {
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/Agenda"
+      },
+      "type": "array",
+      "title": "Itens"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     }
+    },
+    "type": "object",
+    "required": [
+     "itens",
+     "total"
+    ],
+    "title": "ListaAgendas"
+   },
+   "ListaJobs": {
+    "properties": {
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/Job"
+      },
+      "type": "array",
+      "title": "Itens"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "limite": {
+      "type": "integer",
+      "title": "Limite"
+     },
+     "deslocamento": {
+      "type": "integer",
+      "title": "Deslocamento"
+     }
+    },
+    "type": "object",
+    "required": [
+     "itens",
+     "total",
+     "limite",
+     "deslocamento"
+    ],
+    "title": "ListaJobs"
+   },
+   "Log": {
+    "properties": {
+     "linhas": {
+      "items": {
+       "$ref": "#/components/schemas/LinhaLog"
+      },
+      "type": "array",
+      "title": "Linhas"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     }
+    },
+    "type": "object",
+    "required": [
+     "linhas",
+     "total"
+    ],
+    "title": "Log"
+   },
+   "Login2FAEntrada": {
+    "properties": {
+     "desafio": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Desafio"
+     },
+     "codigo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 16
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Codigo"
+     },
+     "codigo_recuperacao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 16
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Codigo Recuperacao"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "desafio"
+    ],
+    "title": "Login2FAEntrada"
+   },
+   "LoginEntrada": {
+    "properties": {
+     "inquilino": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Inquilino"
+     },
+     "login": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Login"
+     },
+     "senha": {
+      "type": "string",
+      "maxLength": 129,
+      "minLength": 1,
+      "title": "Senha"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "inquilino",
+     "login",
+     "senha"
+    ],
+    "title": "LoginEntrada"
+   },
+   "LoginSaida": {
+    "properties": {
+     "ok": {
+      "type": "boolean",
+      "title": "Ok"
+     },
+     "usuario": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Eu"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "exige_2fa": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Exige 2Fa"
+     },
+     "desafio": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Desafio"
+     },
+     "recuperacao_disponivel": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Recuperacao Disponivel"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "ok"
+    ],
+    "title": "LoginSaida"
+   },
+   "LoteEntrada": {
+    "properties": {
+     "ids": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "maxItems": 1000,
+      "minItems": 1,
+      "title": "Ids"
+     },
+     "acao": {
+      "type": "string",
+      "pattern": "^(perfil|papel|desabilitar|reabilitar)$",
+      "title": "Acao"
+     },
+     "perfil": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(admin|editor|visualizador|campo)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Perfil"
+     },
+     "papel_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Papel Id"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "ids",
+     "acao"
+    ],
+    "title": "LoteEntrada"
+   },
+   "LoteSaida": {
+    "properties": {
+     "alterados": {
+      "type": "integer",
+      "title": "Alterados"
+     },
+     "recusados": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Recusados"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "alterados",
+     "recusados"
+    ],
+    "title": "LoteSaida"
+   },
+   "Membro": {
+    "properties": {
+     "usuario": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Usuario"
+     },
+     "papel": {
+      "type": "string",
+      "title": "Papel"
+     },
+     "estado": {
+      "type": "string",
+      "title": "Estado"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "usuario",
+     "papel",
+     "estado",
+     "criado_em"
+    ],
+    "title": "Membro"
+   },
+   "Pagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {},
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "Pagina"
+   },
+   "Papeis": {
+    "properties": {
+     "perfis": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Perfis"
+     },
+     "personalizados": {
+      "items": {
+       "$ref": "#/components/schemas/Papel"
+      },
+      "type": "array",
+      "title": "Personalizados"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "perfis",
+     "personalizados"
+    ],
+    "title": "Papeis"
+   },
+   "Papel": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "perfil_minimo": {
+      "type": "string",
+      "title": "Perfil Minimo"
+     },
+     "privilegios": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Privilegios"
+     },
+     "usuarios": {
+      "type": "integer",
+      "title": "Usuarios"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "descricao",
+     "perfil_minimo",
+     "privilegios",
+     "usuarios"
+    ],
+    "title": "Papel"
+   },
+   "PapelEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 250
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "privilegios": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 64,
+      "minItems": 1,
+      "title": "Privilegios"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "privilegios"
+    ],
+    "title": "PapelEntrada"
+   },
+   "PapelMembroEntrada": {
+    "properties": {
+     "papel": {
+      "type": "string",
+      "pattern": "^(gerente|membro)$",
+      "title": "Papel"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "papel"
+    ],
+    "title": "PapelMembroEntrada"
+   },
+   "Privilegio": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "grupo": {
+      "type": "string",
+      "title": "Grupo"
+     },
+     "descricao": {
+      "type": "string",
+      "title": "Descricao"
+     },
+     "administrativo": {
+      "type": "boolean",
+      "title": "Administrativo"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "nome",
+     "grupo",
+     "descricao",
+     "administrativo"
+    ],
+    "title": "Privilegio"
+   },
+   "Provedores": {
+    "properties": {
+     "inquilino": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Inquilino"
+     },
+     "provedores": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Provedores"
+     },
+     "login_local": {
+      "type": "boolean",
+      "title": "Login Local"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "inquilino",
+     "provedores",
+     "login_local"
+    ],
+    "title": "Provedores"
+   },
+   "Resumo": {
+    "properties": {
+     "pendente": {
+      "type": "integer",
+      "title": "Pendente"
+     },
+     "rodando": {
+      "type": "integer",
+      "title": "Rodando"
+     },
+     "concluido_24h": {
+      "type": "integer",
+      "title": "Concluido 24H"
+     },
+     "falhou_24h": {
+      "type": "integer",
+      "title": "Falhou 24H"
+     },
+     "cancelado_24h": {
+      "type": "integer",
+      "title": "Cancelado 24H"
+     }
+    },
+    "type": "object",
+    "required": [
+     "pendente",
+     "rodando",
+     "concluido_24h",
+     "falhou_24h",
+     "cancelado_24h"
+    ],
+    "title": "Resumo"
+   },
+   "SenhaCodigoEntrada": {
+    "properties": {
+     "senha": {
+      "type": "string",
+      "maxLength": 129,
+      "title": "Senha"
+     },
+     "codigo": {
+      "type": "string",
+      "maxLength": 16,
+      "title": "Codigo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "senha",
+     "codigo"
+    ],
+    "title": "SenhaCodigoEntrada"
+   },
+   "SenhaEntrada": {
+    "properties": {
+     "atual": {
+      "type": "string",
+      "maxLength": 129,
+      "title": "Atual"
+     },
+     "nova": {
+      "type": "string",
+      "maxLength": 129,
+      "title": "Nova"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "atual",
+     "nova"
+    ],
+    "title": "SenhaEntrada"
+   },
+   "SenhaSoEntrada": {
+    "properties": {
+     "senha": {
+      "type": "string",
+      "maxLength": 129,
+      "title": "Senha"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "senha"
+    ],
+    "title": "SenhaSoEntrada"
+   },
+   "SenhaTemporaria": {
+    "properties": {
+     "senha_temporaria": {
+      "type": "string",
+      "title": "Senha Temporaria"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "senha_temporaria"
+    ],
+    "title": "SenhaTemporaria"
+   },
+   "Sessao": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     },
+     "ultimo_uso": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Uso"
+     },
+     "expira_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expira Em"
+     },
+     "ip": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ip"
+     },
+     "agente": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Agente"
+     },
+     "atual": {
+      "type": "boolean",
+      "title": "Atual"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "criado_em",
+     "ultimo_uso",
+     "expira_em",
+     "ip",
+     "agente",
+     "atual"
+    ],
+    "title": "Sessao"
+   },
+   "TipoJob": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "descricao": {
+      "type": "string",
+      "title": "Descricao"
+     },
+     "pesado": {
+      "type": "boolean",
+      "title": "Pesado"
+     },
+     "memoria_mb": {
+      "type": "integer",
+      "title": "Memoria Mb"
+     },
+     "timeout_s": {
+      "type": "integer",
+      "title": "Timeout S"
+     },
+     "tentativas": {
+      "type": "integer",
+      "title": "Tentativas"
+     },
+     "executor": {
+      "type": "string",
+      "title": "Executor"
+     },
+     "versao": {
+      "type": "integer",
+      "title": "Versao"
+     },
+     "perfil_minimo": {
+      "type": "string",
+      "title": "Perfil Minimo"
+     },
+     "parametros_schema": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Parametros Schema"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome",
+     "descricao",
+     "pesado",
+     "memoria_mb",
+     "timeout_s",
+     "tentativas",
+     "executor",
+     "versao",
+     "perfil_minimo",
+     "parametros_schema"
+    ],
+    "title": "TipoJob"
+   },
+   "Token": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "prefixo": {
+      "type": "string",
+      "title": "Prefixo"
+     },
+     "escopos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Escopos"
+     },
+     "restricao": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Restricao"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     },
+     "expira_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expira Em"
+     },
+     "revogado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Revogado Em"
+     },
+     "ultimo_uso": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Uso"
+     },
+     "ultimo_ip": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Ip"
+     },
+     "dono": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Dono"
+     },
+     "renovado_por": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Renovado Por"
+     },
+     "acessos_30d": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Acessos 30D"
+     },
+     "ultimo_status": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Status"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "prefixo",
+     "escopos",
+     "restricao",
+     "criado_em",
+     "expira_em",
+     "revogado_em",
+     "ultimo_uso",
+     "ultimo_ip",
+     "dono",
+     "renovado_por"
+    ],
+    "title": "Token"
+   },
+   "TokenCriado": {
+    "properties": {
+     "token": {
+      "type": "string",
+      "title": "Token"
+     },
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "prefixo": {
+      "type": "string",
+      "title": "Prefixo"
+     },
+     "escopos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Escopos"
+     },
+     "expira_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expira Em"
+     },
+     "antigo_expira_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Antigo Expira Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "token",
+     "id",
+     "prefixo",
+     "escopos",
+     "expira_em"
+    ],
+    "title": "TokenCriado"
+   },
+   "TokenCriar": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "escopos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 32,
+      "minItems": 1,
+      "title": "Escopos"
+     },
+     "restricao": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "items": {
+          "type": "string"
+         },
+         "type": "array"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Restricao"
+     },
+     "validade_dias": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 100000.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Validade Dias"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "escopos"
+    ],
+    "title": "TokenCriar"
+   },
+   "Usuario": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "login": {
+      "type": "string",
+      "title": "Login"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "perfil": {
+      "type": "string",
+      "title": "Perfil"
+     },
+     "papel": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Papel"
+     },
+     "ativo": {
+      "type": "boolean",
+      "title": "Ativo"
+     },
+     "origem": {
+      "type": "string",
+      "title": "Origem"
+     },
+     "ultimo_login": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Login"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     },
+     "email": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Email"
+     },
+     "superadmin": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Superadmin"
+     },
+     "totp_ativo": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Totp Ativo"
+     },
+     "trocar_senha": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Trocar Senha"
+     },
+     "bloqueado_ate": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bloqueado Ate"
+     },
+     "ultimo_ip": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Ip"
+     },
+     "codigos_recuperacao_restantes": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Codigos Recuperacao Restantes"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "login",
+     "nome",
+     "perfil",
+     "ativo",
+     "origem"
+    ],
+    "title": "Usuario"
+   },
+   "UsuarioCriado": {
+    "properties": {
+     "usuario": {
+      "$ref": "#/components/schemas/Usuario"
+     },
+     "senha_temporaria": {
+      "type": "string",
+      "title": "Senha Temporaria"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "usuario",
+     "senha_temporaria"
+    ],
+    "title": "UsuarioCriado"
+   },
+   "UsuarioCriar": {
+    "properties": {
+     "login": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._@-]*$",
+      "title": "Login"
+     },
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "email": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 254
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Email"
+     },
+     "perfil": {
+      "type": "string",
+      "pattern": "^(admin|editor|visualizador|campo)$",
+      "title": "Perfil"
+     },
+     "papel_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Papel Id"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "login",
+     "nome",
+     "perfil"
+    ],
+    "title": "UsuarioCriar"
+   },
+   "UsuarioEditar": {
+    "properties": {
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "email": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 254
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Email"
+     },
+     "perfil": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(admin|editor|visualizador|campo)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Perfil"
+     },
+     "papel_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Papel Id"
+     },
+     "ativo": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ativo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "UsuarioEditar"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   }
   }
  }
 }

@@ -3,7 +3,7 @@ import statistics
 import time
 
 CAMPOS = {"versao", "git_sha", "ambiente", "banco", "migracoes_aplicadas", "migracoes_pendentes",
-          "ultima_migracao", "servicos", "tempo_ms", "em"}
+          "ultima_migracao", "servicos", "fila", "tempo_ms", "em"}
 
 
 def test_saude_200_com_json_do_contrato(cliente):
@@ -13,13 +13,17 @@ def test_saude_200_com_json_do_contrato(cliente):
     assert set(j) == CAMPOS
     assert j["banco"] == "ok"
     assert j["migracoes_pendentes"] == 0
-    assert j["migracoes_aplicadas"] >= 2
-    assert j["ultima_migracao"] == "002_identidade"
+    assert j["migracoes_aplicadas"] >= 4
+    assert j["ultima_migracao"] == "004_jobs"
     assert re.fullmatch(r"\d+\.\d+\.\d+", j["versao"])
     assert re.fullmatch(r"[0-9a-f]{7,12}", j["git_sha"])
     assert j["ambiente"] in ("producao", "dev")
-    assert set(j["servicos"]) == {"martin", "titiler", "garage"}
+    assert set(j["servicos"]) == {"martin", "titiler", "garage", "worker"}
     assert all(v in ("ausente", "ok", "erro") for v in j["servicos"].values())
+    # fila (ADR 0003 seção 4.6): a unidade plat-worker tem de estar viva e alcançável em PLAT_WORKER_URL
+    assert set(j["fila"]) == {"pendentes", "rodando", "workers_vivos", "ultimo_heartbeat"}, j["fila"]
+    assert j["fila"]["workers_vivos"] >= 1, j["fila"]
+    assert j["servicos"]["worker"] == "ok", j["servicos"]
     assert isinstance(j["tempo_ms"], int | float) and j["tempo_ms"] >= 0
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", j["em"])
     assert r.headers["Cache-Control"] == "no-store"
