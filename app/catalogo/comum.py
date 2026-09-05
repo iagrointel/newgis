@@ -76,8 +76,8 @@ def uuid_ok(valor: str, codigo: str = "item_inexistente", mensagem: str = "item 
 
 
 def item_json(r: dict, auth=None, completo: bool = True, publico: bool = False) -> dict:
-    """Objeto item (13.2). Lista omite descricao/descricao_html/dados/termos_de_uso; público omite "
-    "dono.login e pode_*."""
+    """Objeto item (13.2). Lista omite descricao/descricao_html/dados/termos_de_uso; público devolve só o que
+    descreve o conteúdo: sem nome nem login de ninguém, sem pode_*, sem estado interno do inquilino."""
     extent = None if r["xmin"] is None else [r["xmin"], r["ymin"], r["xmax"], r["ymax"]]
     pode_editar = bool(r["pode_editar"])
     pode_apagar = pode_editar or bool(auth is not None and auth.tem("conteudo.apagar_tudo"))
@@ -137,7 +137,17 @@ def item_json(r: dict, auth=None, completo: bool = True, publico: bool = False) 
         "criado_a_partir_de": r["criado_a_partir_de"] or 0,
     }
     if publico:
+        # anônimo pelo link ou pela rota pública: fica o que descreve o CONTEÚDO, sai tudo o que identifica pessoa
+        # (nome e login de dono, de quem criou, alterou ou apagou) e tudo o que é estado interno do inquilino
+        # (favorito, contagem de grupos e de links, proteção, pontuação, versão, quando foi apagado)
+        j["dono"] = {"id": r["dono_id"]}
         j["favorito"] = False
+        for campo in ("criado_por", "modificado_por", "apagado_por", "apagado_em"):
+            j[campo] = None
+        for campo in ("compartilhado_com_grupos", "links_ativos", "pontuacao", "usado_por", "criado_a_partir_de"):
+            j[campo] = 0
+        j["protegido"] = False
+        j["versao_publicada"] = None
     else:
         j.update({"pode_editar": pode_editar, "pode_apagar": pode_apagar, "pode_compartilhar": pode_compartilhar})
     if completo:

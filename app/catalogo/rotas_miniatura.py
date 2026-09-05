@@ -32,6 +32,9 @@ def ver_miniatura(id: str, request: Request, auth: Auth = autenticado(escopo_tok
 )
 def enviar_miniatura(id: str, corpo: MiniaturaEntrada, request: Request, auth: Auth = autenticado(so_sessao=True)):
     iid = uuid_ok(id)
+    # o acesso vem ANTES de olhar o conteúdo: quem não enxerga o item recebe 404, nunca 415 sobre o formato da imagem
+    with db.db(auth.contexto()) as cur:
+        exigir_edicao(cur, iid)
     dados = miniatura.decodificar_base64(corpo.conteudo)
     png = miniatura.normalizar(dados)
     with db.db(auth.contexto()) as cur:
