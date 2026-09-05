@@ -10,12 +10,13 @@ lugar público).
 ## O que existe em 0.1.0
 
 - Serviço `plat-api` (FastAPI, 127.0.0.1:8150) com `/saude`, `/api/versao`, página inicial e `/api/docs`.
-- nginx com HTTPS, `noindex` em toda resposta, estático servido do disco.
+- nginx com HTTPS, `noindex` e HSTS em toda resposta, estático servido do disco; `/api/docs` sem CDN.
 - Schema `plat` no banco `iagro_sat`: role `plat_app`, tabelas de inquilino, usuário, sessão, token de
   serviço e log de acesso, todas com RLS; funções de autenticação prontas no banco (a API ainda não as
   chama).
-- Migrações versionadas por sha256 (`db/migrar.sh`), instalador idempotente (`install.sh`), suíte
-  `make check` (ruff, varredura de marcador, 57 testes rápidos, 1 e2e playwright).
+- Migrações versionadas por sha256 (`db/migrar.sh`), instalador idempotente (`install.sh`), dependências
+  fixadas em `requirements.txt`, suíte `make check` (ruff, varredura de marcador, 81 testes rápidos,
+  1 e2e playwright).
 
 ## Arquivos
 
@@ -28,11 +29,11 @@ lugar público).
 | `docs/openapi.json` | gerado por `make openapi`; comitado |
 | `docs/PARIDADE.md` | tabela viva contra o ArcGIS Enterprise (só cabeçalho: nenhuma capacidade de usuário ainda) |
 | `install.sh` | `sudo bash install.sh <dominio> [porta]`; idempotente |
-| `Makefile` | `check`, `check-rapido`, `lint`, `sem-marcador`, `teste`, `e2e`, `migrar`, `openapi` |
+| `Makefile` | `check`, `check-rapido`, `lint`, `sem-marcador`, `teste`, `e2e`, `medidas`, `vendor`, `migrar`, `openapi` |
 | `app/` | API |
 | `db/` | `migrar.sh` e `migracoes/NNN_*.sql` |
 | `deploy/` | modelos da unidade systemd e do bloco nginx |
-| `web/` | página inicial (módulos ES, sem bundler) e `vendor/` com sha256 e licença |
+| `web/` | página inicial (módulos ES, sem bundler) e `vendor/` (MapLibre 4.7.1, Swagger UI 5.32.15) com versão no nome, sha256 e licença |
 | `tests/` | `unit/`, `api/`, `e2e/`, `medidas/<item>.json` (único lugar de onde documento cita número) |
 
 ## Comandos

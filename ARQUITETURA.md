@@ -5,8 +5,9 @@ Este documento descreve o que está construído, instalado e testado no reposit�
 Decisões e motivos estão em `docs/adr/0001-fundacao.md`; aqui está o resultado. O que ainda não existe
 está na seção final e em `/home/dev/plataforma/laco/PAINEL.md`, nunca misturado ao que existe.
 
-Todo número citado vem de `tests/medidas/L0-01-repo.json` (assinado pelo testador, commit `ca61ea1`),
-com o comando que o gerou entre parênteses. Nenhum número foi digitado de cabeça.
+Todo número citado vem de `tests/medidas/L0-01-repo.json` (rodada 2 do testador sobre o HEAD `8ffe950`,
+commit `3083366`; instalação, RLS e pg_hba são da rodada 1, marcadas assim no campo `comando`), com o
+comando que o gerou entre parênteses. Nenhum número foi digitado de cabeça.
 
 Estado: análise / beta privado. URL interna `https://plat.iagrointel.com`, `noindex` em toda resposta,
 nunca linkada de lugar público.
@@ -40,8 +41,8 @@ navegador --HTTPS--> nginx (443)
                     GET /api/docs, /api/openapi.json (gerados pelo FastAPI)
 ```
 
-Memória do serviço em repouso: 90,0 MB no cgroup (`systemctl show plat-api -p MemoryCurrent` =
-94.416.896 bytes, pico 94.937.088, 2 workers, NRestarts=0). A soma de RSS dos 4 processos é 147,5 MB
+Memória do serviço em repouso: 88,5 MB no cgroup (`systemctl show plat-api -p MemoryCurrent` =
+92.827.648 bytes, pico 93.818.880, 2 workers, NRestarts=0). A soma de RSS dos 4 processos é 145,7 MB
 porque páginas compartilhadas contam mais de uma vez; o número a citar é o do cgroup.
 
 ---
@@ -55,9 +56,9 @@ ARQUITETURA.md         este arquivo
 MANUAL.md              acesso, saúde, instalação (uma seção por tela quando houver tela)
 CHANGELOG.md           por turno
 install.sh             instalador idempotente (root)
-Makefile               check, check-rapido, lint, sem-marcador, teste, e2e, migrar, openapi
+Makefile               check, check-rapido, lint, sem-marcador, teste, e2e, medidas, vendor, migrar, openapi
 pyproject.toml         pytest (marcadores, pythonpath) e ruff
-requirements.txt       o que é instalado na venv por cima do Python do sistema
+requirements.txt       toda dependência da aplicação e da suíte fixada com ==; uvicorn e psycopg2 do sistema (dpkg)
 .env.exemplo           todas as chaves de configuração, sem segredo
 .env                   segredos reais, modo 600, fora do git (criado pelo install.sh)
 app/                   API (pacote Python `app`)
@@ -76,15 +77,16 @@ deploy/
   plat-api.service     modelo da unidade systemd (APP_DIR, APP_USER, PORTA substituídos)
   nginx.conf           modelo do server block (DOMINIO, APP_DIR, PORTA substituídos)
 web/
-  index.html, app.js, js/core.js, style.css
-  vendor/maplibre-gl.js, maplibre-gl.css, VERSOES.txt (nome, versão, sha256, licença, origem)
+  index.html, app.js, js/core.js, style.css, favicon.svg
+  vendor/maplibre-gl-4.7.1.js, maplibre-gl-4.7.1.css, swagger-ui-bundle-5.32.15.js, swagger-ui-5.32.15.css,
+  vendor/VERSOES.txt (nome, versão, sha256, licença, origem; `make vendor` confere os sha256)
 docs/
   adr/0001-fundacao.md decisões da fundação
   openapi.json         gerado por `make openapi`, comitado
   PARIDADE.md          tabela viva contra o ArcGIS Enterprise (vazia: nenhuma capacidade de usuário ainda)
 tests/
   conftest.py          fixtures: env, cliente (TestClient), conexao_plat_app, base_url, medida
-  unit/  api/  e2e/    ver seção 9
+  unit/  api/  e2e/    ver seção 9.3
   medidas/<item>.json  números medidos; único lugar de onde documento cita número
   marcadores.regex     expressão da varredura de marcador de pendência (a mesma do driver do laço)
   e2e/capturas/        PNG do e2e (fora do git)
@@ -222,27 +224,27 @@ script), `APP_USER` (padrão: dono do diretório), `PLAT_DB` (`iagro_sat`), `PG_
 | a | imprime disco (`df -h /`), memória (`free -g`), diretório, usuário, banco, porta, domínio | saída do script |
 | b | `CREATE EXTENSION IF NOT EXISTS postgis; pgcrypto` | `\dx` no banco |
 | c | `bash db/migrar.sh` | `SELECT * FROM plat.versao_migracao` |
-| d | cria `.env` (modo 600, dono `APP_USER`) se não existir, com senha da role (`openssl rand -hex 16`) e `PLAT_SECRET` (`openssl rand -hex 32`), `PLAT_AMBIENTE=producao`, `PLAT_URL_PUBLICA=https://<dominio>`; **sempre** realinha a senha de `plat_app` à do `.env` (`ALTER ROLE`, via stdin do psql, nunca em argumento) | `ls -la .env`; conectar com o `PLAT_DSN` |
+| d | cria `.env` (modo 600, dono `APP_USER`) se não existir, com senha da role (`openssl rand -hex 16`) e `PLAT_SECRET` (`openssl rand -hex 32`), `PLAT_AMBIENTE=producao`, `PLAT_URL_PUBLICA=https://<dominio>`; **sempre** realinha a senha de `plat_app` à do `.env` (`ALTER ROLE`, via stdin do psql, nunca em argumento); grava `PLAT_GIT_SHA=<sha do HEAD>` no `.env` a cada execução (sem `.git` e sem sha válido no `.env`, para com 1) | `ls -la .env`; `grep PLAT_GIT_SHA .env`; conectar com o `PLAT_DSN` |
 | e | acrescenta a linha `host <banco> plat_app 127.0.0.1/32 scram-sha-256` ao `pg_hba.conf` se não existir; `pg_reload_conf()` | `sudo grep -c plat_app <pg_hba>` = 1 |
-| f | cria a venv (`python3 -m venv --system-site-packages venv`) se não existir; `pip install -r requirements.txt` | `venv/bin/python --version`, `venv/bin/pytest --version` |
-| g | cria `tests/credenciais.txt` (600) com senhas aleatórias para `demo admin` e `demo2 admin` se não existir; semeia ou atualiza os dois administradores (`ON CONFLICT DO UPDATE`), hash calculado por `app/senha.py` | `SELECT tenant_id, login, perfil, superadmin FROM plat.usuario` como `postgres` |
+| f | confere os pacotes dpkg `python3-uvicorn`, `python3-psycopg2`, `python3-venv` (falta = para com 1); cria a venv (`python3 -m venv --system-site-packages venv`) se não existir; `pip install -r requirements.txt` com `PYTHONNOUSERSITE=1`; prova `import app.main, fastapi, dotenv` sem o site do usuário e exige que `fastapi` venha da venv | saída `venv: Python 3.12.3 · fastapi 0.138.0 da venv · pytest 9.1.1` |
+| g | cria `tests/credenciais.txt` (600) com senhas aleatórias para `demo admin` e `demo2 admin` se não existir; semeia ou atualiza os dois administradores (`ON CONFLICT DO UPDATE`), hash calculado por `app/senha.py` com a senha entregue por stdin (nada em argumento, nada no journal do `sudo`) | `SELECT tenant_id, login, perfil, superadmin FROM plat.usuario` como `postgres` |
 | h | gera `/etc/systemd/system/plat-api.service` do modelo, `daemon-reload`, `enable`, `restart`; espera até 30 s por HTTP 200 em `http://127.0.0.1:<porta>/saude`; em falha imprime o journal e sai com 1 | `systemctl status plat-api` |
-| i | gera `/etc/nginx/sites-enabled/<dominio>` do modelo; se já houver bloco do certbot, preserva as linhas `# managed by Certbot` do bloco 443 e o bloco 80 inteiro; `nginx -t`; `systemctl reload nginx` | `sudo nginx -t`; `diff` contra o modelo |
+| i | gera `/etc/nginx/sites-enabled/<dominio>` do modelo (com `Strict-Transport-Security`); se já houver bloco do certbot, preserva as linhas `# managed by Certbot` do bloco 443 e o bloco 80 inteiro; sem certificado, escreve bloco em :80 sem HSTS; troca atômica: guarda o bloco anterior, `nginx -t`, e se reprovar restaura o anterior e sai com 5; `systemctl reload nginx` | `sudo nginx -t`; `diff` contra o modelo |
 | i2 | só se `/etc/letsencrypt/live/<dominio>` não existir: `certbot --nginx -d <dominio> --non-interactive --agree-tos --redirect` | `ls /etc/letsencrypt/live/` |
-| j | até 15 tentativas (o reload do nginx é assíncrono) de `curl -sI https://<dominio>/saude`; exige HTTP 200 e `X-Robots-Tag` com `noindex`; senão sai com 4 | a última linha do script: `instalado em N s` |
+| i3 | só depois do i2: reescreve o bloco de novo, agora em 443 com HSTS | idem i |
+| j | até 15 tentativas (o reload do nginx é assíncrono) de `curl -sI https://<dominio>/saude`; exige HTTP 200, `X-Robots-Tag` com `noindex` e `Strict-Transport-Security` com `max-age=31536000`; senão sai com 4 | a última linha do script: `instalado em N s` |
 
-Tempos medidos pelo testador (`/usr/bin/time -f %e sudo bash install.sh plat.iagrointel.com 8150`):
+Tempos medidos pelo testador na rodada 1 (`/usr/bin/time -f %e sudo bash install.sh plat.iagrointel.com 8150`):
 do zero após `DROP SCHEMA plat CASCADE; DROP OWNED BY plat_app; DROP ROLE plat_app` = 6,24 s; com
 `.env`, `tests/credenciais.txt` e a linha do `pg_hba.conf` também apagados = 9,14 s; segunda execução
 seguida = 4,69 s. Três execuções com rc=0 e passo j com HTTP 200 + noindex. O tempo carrega a variação do
 DDL da 002 numa instância compartilhada (1,4 s a 3,5 s entre rodadas) e não é métrica estável.
 
-Limite conhecido, registrado pelo adversário do turno 1: nesta máquina `fastapi`, `starlette`,
-`pydantic` e `python-dotenv` vêm do diretório do usuário (`pip --user`), não do sistema nem do
-`requirements.txt`; `PYTHONNOUSERSITE=1 venv/bin/python -c 'import app.main'` falha com
-`ModuleNotFoundError: No module named 'fastapi'`. Em máquina ou usuário novo o serviço não sobe até o
-`requirements.txt` fixar essas dependências. O passo i2 (certbot) e a criação da venv do zero não foram
-exercitados em instalação limpa. Ver seções 12 e 13.
+O adversário reinstalou do zero sobre `8ffe950` em 9,66 s (`refutacao.json`, rodada 2) com 82 testes
+verdes depois. Limite que fica: a "máquina que nunca viu o repositório" é simulada nesta (a prova é
+`PYTHONNOUSERSITE=1` + origem dos módulos + unidade viva; venv, `.env` e certificado foram
+reaproveitados); os caminhos i2 (certbot emitindo), i3 e a restauração do bloco nginx após `nginx -t`
+reprovar foram lidos, não exercitados. Ver seção 12.
 
 ---
 
@@ -255,6 +257,7 @@ Unidade `plat-api` (gerada de `deploy/plat-api.service`):
 [Service]  User/Group=dev · WorkingDirectory=/home/dev/plataforma/enterprise
            ExecStart=venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8150 --workers 2
                      --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-access-log
+           Environment=PYTHONNOUSERSITE=1 (nunca o site do usuário: só venv e pacotes dpkg)
            Restart=on-failure · RestartSec=3 · MemoryHigh=768M · MemoryMax=1G · saída no journal
 ```
 
@@ -272,9 +275,12 @@ certbot. Cabeçalhos no bloco `server` e **repetidos em cada `location`**, porqu
 `location` cancela os herdados (doc do nginx):
 
 - `X-Robots-Tag: noindex, nofollow` em toda resposta, inclusive 404 e estático. Medido: 11 de 11 rotas
-  testadas (`curl -sI` em `/`, `/saude`, `/api/versao`, `/static/app.js`, `/static/vendor/maplibre-gl.js`,
+  testadas (`curl -sI` em `/`, `/saude`, `/api/versao`, `/static/app.js`, `/static/vendor/maplibre-gl-4.7.1.js`,
   `/static/style.css`, `/static/js/core.js`, `/api/docs`, `/api/openapi.json`, `/naoexiste`,
   `/static/naoexiste.js`); `http://` devolve 301 para `https://`.
+- `Strict-Transport-Security: max-age=31536000` no bloco 443 e em cada `location`. Medido: 11 de 11 rotas
+  HTTPS (inclui 404 e o 405 de `HEAD /api/docs`); ausente no 301 de `http://`, como deve ser. O
+  `install.sh` remove a linha quando o bloco só escuta em 80 (sem certificado).
 - `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`.
 - `location /static/`: `alias <APP_DIR>/web/`, `Cache-Control: no-store` (regra da casa: nunca `?v=` em
   importação de módulo ES; o cache é resolvido aqui). Travessia de caminho conferida:
@@ -282,8 +288,6 @@ certbot. Cabeçalhos no bloco `server` e **repetidos em cada `location`**, porqu
 - `location /`: `proxy_pass http://127.0.0.1:8150`, `X-Forwarded-For`, `X-Forwarded-Proto`,
   `proxy_read_timeout 120s`, `Cache-Control: no-store, must-revalidate`.
 - `client_max_body_size 200m` (upload de camada entra no item L0-04).
-
-Ainda sem `Strict-Transport-Security` (achado do adversário; item L7-03).
 
 ---
 
@@ -294,15 +298,15 @@ Ainda sem `Strict-Transport-Security` (achado do adversário; item L7-03).
 ```json
 {
   "versao": "0.1.0",
-  "git_sha": "3b53c24e4c12",
+  "git_sha": "8ffe950516f5",
   "ambiente": "producao",
   "banco": "ok",
   "migracoes_aplicadas": 2,
   "migracoes_pendentes": 0,
   "ultima_migracao": "002_identidade",
   "servicos": {"martin": "ausente", "titiler": "ausente", "garage": "ok"},
-  "tempo_ms": 1.6,
-  "em": "2026-09-05T12:56:47Z"
+  "tempo_ms": 1.7,
+  "em": "2026-09-05T13:14:45Z"
 }
 ```
 
@@ -314,21 +318,25 @@ Ainda sem `Strict-Transport-Security` (achado do adversário; item L7-03).
   timeout de 1 s devolve status < 500 (o Garage responde 403 sem assinatura, por isso o critério é
   "< 500"); `erro` caso contrário. Hoje os três são informativos e não mudam o status HTTP.
 - `git_sha`: 12 primeiros caracteres do commit, lidos de `.git/HEAD` e da ref (ou `packed-refs`) na
-  partida; sem `.git`, lê `PLAT_GIT_SHA` do ambiente. Sem nenhum dos dois a aplicação não sobe.
+  partida; sem `.git` (instalação por tarball), lê `PLAT_GIT_SHA` do ambiente ou do `.env`, que o
+  `install.sh` grava a cada execução. Sem nenhum dos dois a aplicação não sobe. Medido: `git_sha` de
+  `/saude` = `git rev-parse HEAD` = `8ffe950516f5`.
 - `tempo_ms`: da entrada da rota à montagem do JSON.
 
 `GET /api/versao` e `HEAD /api/versao` (sem banco, sempre 200):
 `{"versao", "git_sha", "ambiente", "em"}`.
 
-`GET /api/openapi.json` (2 caminhos: `/saude`, `/api/versao`) e `GET /api/docs`. O `docs/openapi.json`
-comitado é gerado por `make openapi` e igual ao servido. Observação do adversário: `/api/docs` carrega a
-interface Swagger de um CDN externo; em rede fechada essa página não abre (a API abre).
+`GET /api/openapi.json` (2 caminhos: `/saude`, `/api/versao`) e `GET /api/docs` (só GET; `HEAD` devolve
+405). O `docs/openapi.json` comitado é gerado por `make openapi` e igual ao servido. A interface Swagger
+é servida de `web/vendor/swagger-ui-bundle-5.32.15.js` e `swagger-ui-5.32.15.css` (Apache-2.0, sha256 em
+`VERSOES.txt`), com o validador externo desligado: 0 URL externa no HTML de `/api/docs` (medido pelo
+testador e, em chromium real, pelo adversário); `/docs` e `/redoc` devolvem 404.
 
-Latências medidas pelo testador (20 chamadas cada, do próprio servidor):
-`/saude` pela URL pública com conexão TLS nova a cada chamada = mediana 19,9 ms, p95 22,4 ms
-(`curl -s -o /dev/null -w %{time_total}`); com conexão reaproveitada = mediana 1,7 ms, p95 2,7 ms;
-direto em `http://127.0.0.1:8150/saude` = mediana 1,4 ms. Pelo `TestClient` (`tests/api/test_saude.py`):
-`/saude` 1,73 ms, `/api/versao` 0,79 ms (medianas). Nenhuma dessas medidas representa um usuário remoto.
+Latências medidas pelo testador (rodada 2, 20 chamadas cada, do próprio servidor):
+`/saude` pela URL pública com conexão TLS nova a cada chamada = mediana 19,8 ms, p95 21,0 ms
+(`curl -s -o /dev/null -w %{time_total}`); com conexão reaproveitada = mediana 1,9 ms, p95 2,8 ms;
+direto em `http://127.0.0.1:8150/saude` = mediana 1,4 ms (rodada 1). Pelo `TestClient`
+(`tests/api/test_saude.py`): `/saude` 1,87 ms, `/api/versao` 0,85 ms (medianas). Nenhuma dessas medidas representa um usuário remoto.
 
 ---
 
@@ -345,15 +353,14 @@ inválida aborta a partida nomeando a chave (`ErroConfiguracao`).
 | `PLAT_SECRET` | sim | 64 caracteres hexadecimais |
 | `PLAT_AMBIENTE` | sim | `producao` ou `dev` |
 | `PLAT_URL_PUBLICA` | sim | começa com `https://` |
-| `PLAT_GIT_SHA` | não | só usado sem `.git` (o `install.sh` grava a chave vazia) |
+| `PLAT_GIT_SHA` | não | gravado pelo `install.sh` com o sha do HEAD a cada execução; só é lido quando não há `.git` |
 | `PLAT_MARTIN_URL`, `PLAT_TITILER_URL`, `PLAT_GARAGE_URL` | não | sondas de `/saude` |
 | `PLAT_LOG_NIVEL` | não | `DEBUG`/`INFO`/`WARNING`/`ERROR`; `DEBUG` em `producao` é rebaixado para `INFO` com aviso |
 
-Segredo nunca em argumento de linha de comando nem na unidade systemd. Exceção que o adversário
-encontrou e que fica registrada até o conserto: o passo g do `install.sh` passa a senha do
-administrador de demonstração como argumento de `sudo -u ... python -c`, e o `sudo` grava o comando
-completo no journal (legível por root e pelos grupos `systemd-journal`/`adm`). A senha do banco não
-vaza por esse caminho (vai por stdin).
+Segredo nunca em argumento de linha de comando nem na unidade systemd: a senha do banco vai por stdin
+ao `psql` e a senha dos administradores de demonstração vai por stdin ao Python (o adversário da rodada
+1 tinha encontrado essa senha no `COMMAND=` que o `sudo` grava no journal; na rodada 2, 0 ocorrências
+durante e depois da reinstalação).
 
 ### 9.2 Log (`app/log.py`, `app/main.py`)
 
@@ -361,31 +368,41 @@ Uma linha JSON por evento em stdout, recolhida pelo journal: `ts` (ISO 8601 UTC)
 `logger`; na linha de acesso, `req_id` (16 hex, também devolvido no cabeçalho `X-Req-Id`), `metodo`,
 `rota`, `status`, `tempo_ms`, `ip`; exceção em `exc`. `/saude` e `/api/versao` são registradas em
 `DEBUG` (o driver do laço as chama a cada 30 min). Leitura: `journalctl -u plat-api -o cat | jq`.
-Medido: 0 linhas de `ERROR`/`WARNING`/`Traceback` no journal após as três instalações do testador.
+Medido na rodada 2: 3 linhas `ERROR` no journal, todas `saude: banco em erro` nos instantes em que outro
+papel apagava o schema com o serviço no ar (a refutação destrutiva); o contrato devolveu 503, como deve.
+Quem for reinstalar do zero para o serviço antes do `DROP` se quiser journal sem ruído.
 
 O middleware **não grava** em `plat.log_acesso`; a função `plat.log_registrar` existe e está testada, e a
 gravação por rota autenticada entra com o item L0-02.
 
 ### 9.3 venv e `make check`
 
-- `venv/` criada com `--system-site-packages` (Python 3.12.3). `requirements.txt` fixa só o que é
-  instalado por cima: `pytest 9.1.1`, `pytest-playwright 0.9.0`, `playwright 1.59.0`, `ruff 0.16.6`.
+- `venv/` criada com `--system-site-packages` (Python 3.12.3) para reaproveitar os pacotes dpkg
+  (`python3-uvicorn 0.27.1`, `python3-psycopg2 2.9.9`), mas sempre com `PYTHONNOUSERSITE=1` (Makefile,
+  unidade, `install.sh`): nada vem do diretório do usuário. `requirements.txt` fixa com `==` toda
+  dependência da aplicação (`fastapi 0.138.0`, `starlette 1.3.1`, `pydantic 2.13.4`, `python-dotenv
+  1.2.2` e transitivas) e da suíte (`httpx 0.28.1`, `pytest 9.1.1`, `pytest-playwright 0.9.0`,
+  `playwright 1.59.0`, `ruff 0.16.6` e transitivas).
 - `make check` = `lint` (ruff em `app` e `tests`) → `sem-marcador` (grep com `tests/marcadores.regex`
-  sobre `app web db docs deploy install.sh Makefile`; qualquer linha encontrada reprova) → `teste`
-  (`pytest -m "not lento"`) → `e2e` (`pytest -m lento --base-url <PLAT_URL_PUBLICA>`).
-  `make check-rapido` é o mesmo sem e2e (é o que o driver roda).
-- Medido: 58 testes coletados (`pytest --collect-only -q`: unit 17, api 40, e2e 1); 57 rápidos passando +
-  1 e2e passando; `make check` rc=0 em 3 rodadas, 2,72 s cada (`/usr/bin/time -f %e make check`);
-  0 linhas de marcador de pendência com a expressão do driver.
+  sobre `app web db docs deploy install.sh Makefile requirements.txt pyproject.toml *.md`; qualquer
+  linha encontrada reprova) → `teste` (`pytest -m "not lento"`) → `e2e` (`pytest -m lento --base-url
+  <PLAT_URL_PUBLICA>`). `make check-rapido` é o mesmo sem e2e (é o que o driver roda). `make medidas`
+  roda a suíte inteira com `PLAT_GRAVAR_MEDIDAS=1`; `make vendor` confere os sha256 de `web/vendor/`
+  contra `VERSOES.txt`.
+- Medido (rodada 2, sobre `8ffe950`): 82 testes coletados (`pytest --collect-only -q`: unit 31, api 50,
+  e2e 1); 81 rápidos passando + 1 e2e passando; `make check` rc=0, 2,86 s (`/usr/bin/time -f %e make
+  check`); árvore limpa depois (`git status --short` = 0 linhas); 0 linhas de marcador de pendência com
+  a expressão do driver no escopo ampliado; `make vendor` = 4 arquivos OK.
 
 | diretório | o que prova | precisa de |
 |---|---|---|
-| `tests/unit/` | `settings` (10), `versao` (3), `log` (2), `senha` (2) | nada |
+| `tests/unit/` | `settings` (10), `versao` (6), `instalador` (5), `dependencias` (4), `log` (2), `senha` (2), `vendor` (2) | nada |
 | `tests/api/test_saude.py` | contrato de `/saude` e `/api/versao`, `Cache-Control`, `X-Req-Id`, mesma implantação | `.env`, banco |
 | `tests/api/test_banco.py` | conexão TCP como `plat_app` (prova da linha do pg_hba), sem posse, sem BYPASSRLS, extensões, `versao_migracao` só leitura | banco |
 | `tests/api/test_migracoes.py` | duas rodadas do `migrar.sh` = 0 linhas novas; cópia editada = código 3 e tabela intacta; toda tabela com `tenant_id` tem RLS e política | `sudo -u postgres` sem senha |
 | `tests/api/test_rls.py` | 0 linhas sem contexto; `demo` só vê `demo`; INSERT cruzado falha; contexto morre no rollback; `log_acesso` só pela função | banco |
-| `tests/api/test_cabecalhos.py` | HTTP real na URL pública: noindex, `no-store`, `nosniff`, `X-Req-Id` só na API (prova do `alias`), 301 do http | DNS e HTTPS (pulado se o nome não resolver) |
+| `tests/api/test_cabecalhos.py` | HTTP real na URL pública (26 casos): noindex, HSTS, `no-store`, `nosniff`, `X-Req-Id` só na API (prova do `alias`), 301 do http | DNS e HTTPS (pulado se o nome não resolver) |
+| `tests/api/test_docs.py` | `/api/docs` servido do disco, sem URL externa | `.env` |
 | `tests/e2e/test_saude_pagina.py` | chromium do playwright em `/`: 0 erro de console, 0 resposta ≥ 400, versão da tela = `/api/versao`, captura `tests/e2e/capturas/L0-01-repo_inicio.png` | DNS e HTTPS |
 
 ### 9.4 Medidas
@@ -393,21 +410,23 @@ gravação por rota autenticada entra com o item L0-02.
 Fixture `medida(item)(nome, valor, unidade, comando)` em `tests/conftest.py` grava
 `tests/medidas/<item>.json` (`{"item", "gerado_em", "git_sha", "medidas": {nome: {valor, unidade,
 comando}}}`) **só com `PLAT_GRAVAR_MEDIDAS=1`** no ambiente, para que a suíte não suje a árvore do git
-(o testador grava; o driver não). O arquivo `L0-01-repo.json` atual foi assinado pelo testador e traz,
-além das medidas do teste, as que ele fez por `curl`, `psql` e `systemctl`, cada uma com o comando.
-Documento cita número só por esse caminho.
+(o testador grava com `make medidas`; o driver e o `make check` não: `git status` fica limpo). O arquivo
+`L0-01-repo.json` atual foi assinado pelo testador na rodada 2 e traz, além das medidas do teste, as
+que ele fez por `curl`, `psql` e `systemctl`, cada uma com o comando e a rodada. Documento cita número
+só por esse caminho.
 
 ---
 
 ## 10. Front (`web/`)
 
-Módulos ES nativos sem bundler (`app.js` importa `./js/core.js`), MapLibre GL JS 4.7.1 (BSD-3-Clause) em
-`web/vendor/` com sha256 em `VERSOES.txt`, servidos pelo nginx com `no-store`. A única tela é a página
+Módulos ES nativos sem bundler (`app.js` importa `./js/core.js`), MapLibre GL JS 4.7.1 (BSD-3-Clause) e
+Swagger UI 5.32.15 (Apache-2.0) em `web/vendor/`, com a versão no nome do arquivo e sha256 em
+`VERSOES.txt` (`make vendor` confere), servidos pelo nginx com `no-store`; `favicon.svg` próprio. A única tela é a página
 inicial: nome, aviso "análise / beta privado", versão/git/ambiente de `/api/versao` e o JSON de `/saude`
 com o estado colorido; marca `body[data-pronto=1]` quando as duas chamadas terminam. Nenhum botão,
 nenhum mapa (o MapLibre está no repositório, mas nenhuma tela o carrega ainda). Medido no chromium do
-playwright: página pronta em 50,9 ms (`goto('/')` até `body[data-pronto=1]`), primeira pintura de
-conteúdo em 36 ms (`performance.getEntriesByType('paint')`).
+playwright (rodada 2): página pronta em 62,6 ms (`goto('/')` até `body[data-pronto=1]`), primeira
+pintura de conteúdo em 48 ms (`performance.getEntriesByType('paint')`).
 
 Regras: importação relativa, nunca `?v=`; biblioteca nova entra em `vendor/` com linha em `VERSOES.txt`
 (licença BSD, MIT, Apache 2.0 ou ISC); módulo próprio ≤ 60 kB.
@@ -430,27 +449,7 @@ Regras: importação relativa, nunca `?v=`; biblioteca nova entra em `vendor/` c
 
 ---
 
-## 12. Correções em curso no turno 1 (árvore de trabalho, commit pendente)
-
-As seções 1 a 11 descrevem o commit `3b53c24`. No momento em que este documento foi escrito
-(05/09/2026, 13:05 UTC) a árvore de trabalho já carregava, sem commit, as correções dos achados do
-adversário, com `make check` verde (57 rápidos + 1 e2e) sobre elas. Quando o gerente as comitar, as
-frases abaixo passam a valer e substituem as correspondentes nas seções indicadas:
-
-| o que muda | seção afetada |
-|---|---|
-| `requirements.txt` fixa `fastapi 0.138.0`, `starlette 1.3.1`, `pydantic 2.13.4`, `python-dotenv 1.2.2`, `httpx 0.28.1` e dependências; `uvicorn` e `psycopg2` continuam do sistema (pacotes dpkg conferidos pelo `install.sh`, passo f); `PYTHONNOUSERSITE=1` no Makefile, na unidade systemd e em cada chamada Python do `install.sh`; o passo f prova `import app.main` sem o site do usuário | 5, 6, 9.3, 12 |
-| `install.sh` passo d grava `PLAT_GIT_SHA=<sha>` no `.env` a cada execução; sem `.git` e sem sha válido, para com 1 | 5, 8, 9.1 |
-| passo g: a senha do administrador de demonstração vai por stdin ao Python (não aparece mais no journal do `sudo`) | 5, 9.1 |
-| passo i: troca atômica do bloco nginx com volta ao anterior se `nginx -t` reprovar (código 5); `Strict-Transport-Security: max-age=31536000` no bloco 443 e em cada `location`, removido quando o bloco escuta só em 80; passo i3 reescreve o bloco depois do certbot; passo j exige HSTS | 5, 7 |
-| `/api/docs` serve a interface Swagger de `web/vendor/swagger-ui-bundle-5.32.15.js` e `swagger-ui-5.32.15.css` (Apache-2.0, sha256 em `VERSOES.txt`), sem CDN; `validatorUrl` desligado; `web/favicon.svg` | 8, 10 |
-| bibliotecas em `web/vendor/` com versão no nome: `maplibre-gl-4.7.1.js`, `maplibre-gl-4.7.1.css`; alvo `make vendor` confere os sha256 contra `VERSOES.txt` | 10 |
-| alvo `make medidas` (suíte inteira com `PLAT_GRAVAR_MEDIDAS=1`); `make sem-marcador` varre também `requirements.txt`, `pyproject.toml` e os `.md` da raiz | 9.3, 9.4 |
-
-Nenhum número novo foi medido sobre essas correções; os da seção anterior continuam sendo os do
-commit `ca61ea1`.
-
-## 13. O que ainda não existe
+## 12. O que ainda não existe
 
 Este repositório, em 0.1.0, é fundação: instala, sobe, responde saúde e isola inquilinos no banco. Não
 tem login, catálogo, camada, mapa, tile, edição, serviço OGC ou Esri-compatível, fila, motor
@@ -463,12 +462,11 @@ multicritério, rede de utilidades, construtor, conector nem operação. Nomeada
 - `docs/PARIDADE.md` só com cabeçalho: não há capacidade de usuário para comparar com o ArcGIS
   Enterprise. A paridade-alvo dos itens L0-02 e L0-03 está escrita no handoff
   `laco/handoffs/T1/21_esri.md` e entra na tabela quando esses itens forem entregues.
-- No commit `3b53c24`: `requirements.txt` sem `fastapi`, `starlette`, `pydantic`, `python-dotenv`
-  (máquina nova não sobe), sem `Strict-Transport-Security`, Swagger de CDN, senha de demonstração no
-  argumento do `sudo`. As correções estão na árvore de trabalho (seção 12) e valem quando comitadas.
 - Teste automático do modo `-- reaplicavel` do `migrar.sh` (entra com a primeira migração que o use).
 - Medição em máquina realmente nova (a "máquina que nunca viu o repositório" foi simulada nesta, com
-  venv e certificado já existentes).
+  venv e certificado já existentes); caminhos do `install.sh` só lidos: `.env` inexistente na rodada 2,
+  certbot emitindo (i2/i3), `nginx -t` reprovando.
+- Carga, concorrência e memória sob uso (só o repouso foi medido; item L7-02).
 
 O placar do laço, a tabela dos 57 itens do backlog e a fronteira por linha (o que o produto NÃO faz ainda)
 estão em `/home/dev/plataforma/laco/PAINEL.md`, gerado por `laco/gera_painel.py` a partir de

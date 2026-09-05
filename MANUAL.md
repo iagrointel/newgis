@@ -35,15 +35,15 @@ ou o código HTTP e o estado do banco em vermelho) e o JSON completo de `/saude`
 ```json
 {
   "versao": "0.1.0",
-  "git_sha": "3b53c24e4c12",
+  "git_sha": "8ffe950516f5",
   "ambiente": "producao",
   "banco": "ok",
   "migracoes_aplicadas": 2,
   "migracoes_pendentes": 0,
   "ultima_migracao": "002_identidade",
   "servicos": {"martin": "ausente", "titiler": "ausente", "garage": "ok"},
-  "tempo_ms": 1.6,
-  "em": "2026-09-05T12:56:47Z"
+  "tempo_ms": 1.7,
+  "em": "2026-09-05T13:14:45Z"
 }
 ```
 
@@ -64,21 +64,21 @@ Um monitor deve tratar 503 como falha, não como "respondeu".
 `GET /api/versao` devolve só `versao`, `git_sha`, `ambiente` e `em`, sem tocar o banco, sempre 200.
 Serve para conferir que a página e a API são a mesma implantação.
 
-Toda resposta traz `X-Robots-Tag: noindex, nofollow` (medido em 11 de 11 rotas, incluindo 404 e
-arquivos estáticos; `tests/medidas/L0-01-repo.json`, `x_robots_tag_rotas_com_noindex`) e a API traz
-`X-Req-Id`, um identificador de 16 caracteres hexadecimais que aparece na linha JSON do journal.
+Toda resposta traz `X-Robots-Tag: noindex, nofollow` e `Strict-Transport-Security: max-age=31536000`
+(medido em 11 de 11 rotas HTTPS, incluindo 404 e arquivos estáticos; `tests/medidas/L0-01-repo.json`,
+`x_robots_tag_rotas_com_noindex` e `hsts_rotas_https`) e a API traz `X-Req-Id`, um identificador de 16 caracteres hexadecimais que aparece na linha JSON do journal.
 
 ### 1.3 Conferência rápida pela linha de comando
 
 ```
 curl -sS https://plat.iagrointel.com/saude | python3 -m json.tool     # 200 e banco ok
-curl -sI https://plat.iagrointel.com/saude | grep -i x-robots-tag     # noindex, nofollow
+curl -sI https://plat.iagrointel.com/saude | grep -iE 'x-robots-tag|strict'   # noindex, nofollow · max-age=31536000
 systemctl status plat-api --no-pager | sed -n 1,6p                    # active (running), NRestarts
 journalctl -u plat-api -o cat -n 20 | jq .                            # últimas linhas JSON
 ```
 
 Latência de referência, medida do próprio servidor, 20 chamadas (`curl -s -o /dev/null -w
-%{time_total}`): mediana 19,9 ms com conexão TLS nova, 1,7 ms com conexão reaproveitada. Um usuário
+%{time_total}`, rodada 2): mediana 19,8 ms com conexão TLS nova, 1,9 ms com conexão reaproveitada. Um usuário
 remoto verá o tempo de rede somado a isso.
 
 ---
@@ -101,9 +101,9 @@ passo manual. É o único caminho de instalação e de atualização; o que ele 
 |---|---|
 | banco `iagro_sat` | extensões `postgis` e `pgcrypto`; schema `plat`; role `plat_app` (sem BYPASSRLS, sem posse); migrações de `db/migracoes/` registradas em `plat.versao_migracao` com sha256; inquilinos `demo` e `demo2` com um administrador cada |
 | `/etc/postgresql/16/main/pg_hba.conf` | linha `host iagro_sat plat_app 127.0.0.1/32 scram-sha-256` (uma vez) e `pg_reload_conf()` |
-| repositório | `.env` (modo 600) com senha da role, `PLAT_SECRET`, ambiente e URL; `venv/` com as dependências de `requirements.txt`; `tests/credenciais.txt` (modo 600) com as senhas dos administradores `demo admin` e `demo2 admin` |
+| repositório | `.env` (modo 600) com senha da role, `PLAT_SECRET`, ambiente, URL e `PLAT_GIT_SHA` do commit instalado; `venv/` com todas as dependências de `requirements.txt` (sem nada do diretório do usuário: `PYTHONNOUSERSITE=1`); `tests/credenciais.txt` (modo 600) com as senhas dos administradores `demo admin` e `demo2 admin`, entregues ao gerador de hash por stdin |
 | `/etc/systemd/system/plat-api.service` | unidade habilitada e reiniciada; espera até 30 s por `/saude` = 200 na porta local |
-| `/etc/nginx/sites-enabled/plat.iagrointel.com` | bloco gerado de `deploy/nginx.conf`, preservando as linhas do certbot; `nginx -t` e `reload` |
+| `/etc/nginx/sites-enabled/plat.iagrointel.com` | bloco gerado de `deploy/nginx.conf` (noindex e HSTS em toda `location`), preservando as linhas do certbot; troca atômica: se `nginx -t` reprovar, o bloco anterior volta e o script para com 5 |
 | `/etc/letsencrypt/live/plat.iagrointel.com/` | só na primeira vez, via `certbot --nginx` |
 
 A senha da role no banco é sempre realinhada à do `.env`; apagar o `.env` e reinstalar gera senha e
@@ -114,13 +114,15 @@ são geradas se `tests/credenciais.txt` não existir; apagar o arquivo e reinsta
 
 A última linha do script é `== instalado em N s: https://plat.iagrointel.com (serviço plat-api, porta
 8150)`. Antes dela, o passo j imprime `https://plat.iagrointel.com/saude -> HTTP 200 · X-Robots-Tag:
-noindex, nofollow`; qualquer outro código encerra o script com erro (código de saída 1 no serviço, 3 em
-migração divergente, 4 na conferência pública).
+noindex, nofollow · Strict-Transport-Security: max-age=31536000`; qualquer outro resultado encerra o
+script com erro (código de saída 1 no serviço ou na venv, 3 em migração divergente, 4 na conferência
+pública, 5 em bloco nginx reprovado).
 
 Depois:
 
 ```
-make check                     # ruff + varredura de marcador + 57 testes rápidos + 1 e2e, em ~3 s
+make check                     # ruff + varredura de marcador + 81 testes rápidos + 1 e2e, em ~3 s
+make vendor                    # sha256 de web/vendor contra VERSOES.txt
 sudo -u postgres psql -d iagro_sat -Atc "select nome, left(sha256,12), aplicada_em from plat.versao_migracao"
 sudo grep -c plat_app /etc/postgresql/16/main/pg_hba.conf      # 1
 systemctl show plat-api -p NRestarts -p MemoryCurrent
@@ -128,8 +130,9 @@ systemctl show plat-api -p NRestarts -p MemoryCurrent
 
 Números do testador para esta instalação (`tests/medidas/L0-01-repo.json`): do zero, com schema e role
 apagados, 6,24 s; com `.env`, credenciais e linha do pg_hba também apagados, 9,14 s; repetida em seguida,
-4,69 s; `make check` 2,72 s, rc=0 nas três rodadas; 58 testes coletados, 57 rápidos e 1 e2e passando;
-serviço com 90,0 MB no cgroup e 0 reinícios.
+4,69 s (rodada 1); reinstalação do zero pelo adversário sobre `8ffe950`, 9,66 s; `make check` 2,86 s,
+rc=0; 82 testes coletados, 81 rápidos e 1 e2e passando; serviço com 88,5 MB no cgroup e 0 reinícios
+(rodada 2).
 
 ### 2.4 Atualizar
 
@@ -141,17 +144,11 @@ O `install.sh` aplica as migrações novas, reinstala dependências, reinicia o 
 Se `/saude` mostrar `banco: desatualizado` (HTTP 503), a migração não foi aplicada: veja a saída do
 passo c. Se `git_sha` de `/saude` não bater com `git rev-parse HEAD`, o serviço não foi reiniciado.
 
-### 2.5 Limites conhecidos em 0.1.0 (commit `3b53c24`)
+### 2.5 Limites conhecidos em 0.1.0
 
-- Em máquina ou usuário novo o serviço não sobe: `fastapi`, `starlette`, `pydantic` e `python-dotenv`
-  vêm hoje do diretório do usuário `dev`, não do sistema nem de `requirements.txt` (achado do
-  adversário do turno 1).
-- O passo do certbot em domínio sem certificado não foi exercitado nesta máquina (o certificado já
-  existia).
-- A senha dos administradores de demonstração passa por argumento de `sudo` no passo g e fica no
-  journal do sistema; use essas contas só para teste.
-
-Os dois primeiros e o terceiro têm correção na árvore de trabalho, ainda sem commit no momento em que
-este manual foi escrito (`ARQUITETURA.md`, seção 12). Quando comitada, o `install.sh` passa a exigir
-`Strict-Transport-Security` no passo j e a última linha do passo j passa a mostrar também esse
-cabeçalho.
+- A "máquina que nunca viu o repositório" foi simulada nesta máquina (venv, `.env` e certificado
+  reaproveitados; a prova é a importação da aplicação sem o diretório do usuário). Uma instalação em
+  outro servidor ainda não foi feita.
+- Os passos do certbot em domínio sem certificado (i2/i3) e a restauração do bloco nginx quando
+  `nginx -t` reprova foram lidos, não exercitados.
+- As contas `demo` e `demo2` são de teste; as senhas ficam só em `tests/credenciais.txt` (modo 600).
