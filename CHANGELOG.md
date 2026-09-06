@@ -3,6 +3,80 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L7-03-b-antivirus-anexos: varredura de anexo e entrega segura)
+
+Conserto dos achados 22 a 25 do adversário independente do turno 3 (`laco/handoffs/T3/ataque-g6-ADVERSARIO.md`),
+que refutaram a camada de varredura de anexo: o polyglot (imagem válida com script colado depois) passava,
+`Content-Type` fora da tabela desligava a varredura inteira, só os primeiros 8 KiB eram olhados e zip/kmz não
+era aberto.
+
+**A varredura deixou de depender do que o remetente declara.** `app/varredura_conteudo.py` passou de uma
+checagem (família declarada x tipo do `libmagic`) para cinco, na ordem: família declarada x tipo real; lista de
+negação determinística válida sob QUALQUER `Content-Type`, inclusive vazio, inventado e
+`application/octet-stream` (shebang, assinatura de executável conferida à mão, tipo real de script/HTML sobre
+bytes que são texto); busca de carga executável no corpo inteiro entregue pelo chamador, com emenda entre as
+partes do multipart; integridade estrutural de imagem (PNG termina em `IEND`, JPEG em `FFD9`, GIF em `0x3B` —
+byte depois do fim recusa); e lista de entradas do zip/kmz (extensão de script/executável ou conteúdo que
+começa com shebang). Tipo declarado desconhecido deixou de significar "não examinar" e passou a significar
+rigor máximo. Nenhuma regra usa o RÓTULO do `libmagic` para binário, porque ~0,9% dos blocos aleatórios saem
+rotulados como outra coisa (MEDIDO, 18/2000): executável exige a assinatura mágica real no início — no caso do
+`MZ`, com o `PE\0\0` conferido no deslocamento que o próprio arquivo declara em 0x3C — e script/HTML exige que
+os bytes sejam texto. Limite declarado: as checagens de cabeçalho, estrutura e zip valem sobre a primeira parte
+do envio (8 MiB); a busca de carga vale sobre o corpo inteiro.
+
+**O conteúdo enviado por cliente volta como anexo, nunca como página.** `GET /api/arquivos/{sha256}` devolvia o
+byte com o mesmo `Content-Type` que o remetente escolhera e sem `Content-Disposition` — um arquivo enviado como
+`text/html` renderizava na origem da aplicação. `app/entrega_conteudo.py` rebaixa para
+`application/octet-stream` tudo que não está no vocabulário fechado de `app/objetos.EXTENSOES`, força
+`Content-Disposition: attachment` (nas duas formas da RFC 6266) e manda `X-Content-Type-Options: nosniff`; vale
+para `GET /api/arquivos/{sha256}` e para a rota anônima `GET /api/objetos/{chave}`. A miniatura de item recebe
+só o `nosniff`, porque é um PNG redesenhado pelo Pillow servido dentro de `<img>`.
+
+Os 9 testes que o adversário deixou como `xfail(strict=True)` em
+`tests/adversario/test_g6_varredura_anexos.py` passaram a reprovar de verdade e a marca saiu (o texto do ataque
+ficou como comentário). `tests/unit/test_varredura_conteudo_polyglot.py` (24 testes) cobre os quatro grupos, a
+entrega segura e — para que nenhuma regra volte a depender de sorte — 300 amostras de `os.urandom` sob
+`application/octet-stream` e 100 sob `text/plain`, todas aceitas. Detalhe em `docs/SEGURANCA.md` §8.2 e §8.6.
+
+## turno 3, setembro de 2026 (itens L7-31 e L7-19: credencial de armazenamento por ambiente, segredo em claro)
+
+Conserto dos achados 11, 17 e 18 do adversário independente do turno 3
+(`laco/handoffs/T3/ataque-g6-ADVERSARIO.md`).
+
+**Homologação deixa de compartilhar a credencial raiz do armazenamento.** O `PLAT_GARAGE_ADMIN_TOKEN` era
+byte a byte o mesmo nos dois ambientes (sha256 `e36bc0be9a6500d9` dos dois lados) e com ele o adversário
+listou e leu os buckets de produção `plat-demo` (84 objetos, 127.026.292 bytes) e `plat-demo2`. Homologação
+passa a ter uma chave S3 própria, sem poder de administração, criada e mantida pelo passo de operador
+`scripts/garage_homolog_provisionar.sh`; `db/homolog_bootstrap.sh` chama esse passo em vez de copiar o token
+do `.env` de produção. `app/objetos.py` ganha o modo de chave própria: sem token de administração e com
+`PLAT_GARAGE_CHAVE_ID`/`PLAT_GARAGE_CHAVE_SEGREDO`, o bucket do inquilino nasce pelo `CreateBucket` do S3.
+MEDIDO no Garage v2.3.0 desta máquina: bucket assim criado tem alias LOCAL da chave (não entra no espaço de
+nomes global) e a chave recebe `403 AccessDenied` em qualquer bucket de que não seja dona. Produção não
+declara essas chaves e segue no modo de administração, sem mudança de comportamento.
+`tests/unit/test_isolamento_homologacao.py` (8 testes, só leitura, pulam com motivo se o Garage estiver
+parado) prova: nenhum valor de credencial repetido entre os dois ambientes; nenhum token de administração
+em homologação nem na configuração EFETIVA (que herda o `.env` de produção); `ListBuckets` da chave de
+homologação sem bucket de produção; `403` ao listar `plat-demo` e `plat-demo2`; recusa da API de
+administração ao segredo de homologação. Limitações declaradas do modo sem administração, em
+`docs/AMBIENTES.md`: não há par RW/RO distinto, a cota não é gravada no Garage (só a checagem da aplicação
+barra) e o uso em bytes vem de listagem.
+
+**`PLAT_DSN` e `PLAT_GARAGE_ADMIN_TOKEN` preparados para sair do `.env`.** `app/settings.py` já lia qualquer
+campo de `Settings` do `LoadCredential=` do systemd; ganha `SEGREDOS` (lista canônica) e
+`segredos_em_claro()` (devolve nome, nunca valor). `install.sh` migra os dois para `/etc/plat/segredos/` no
+mesmo padrão dos dois anteriores e passa a alinhar a senha de `plat_app` pelo credential;
+`deploy/plat-api.service` e `deploy/plat-worker.service` declaram os dois `LoadCredential=`; o `Makefile`
+injeta os quatro na suíte. `scripts/rotacionar_segredo.sh` cobre agora cinco nomes — os dois antigos mais
+`PLAT_DSN`, `PLAT_GARAGE_ADMIN_TOKEN` (token gerenciado do Garage v2) e `PLAT_GARAGE_S3 <slug>`, esta última
+a única sem reinício, porque a aplicação lê as chaves S3 do banco a cada chamada.
+`deploy/plataforma-garage-segredos.conf` tira `rpc_secret` e `admin_token` do `garage.toml`; MEDIDO que o
+binário aceita a forma por arquivo (`GARAGE_RPC_SECRET_FILE` com config sem a linha `rpc_secret` fala com o
+daemon vivo). **A troca de valor em produção NÃO foi executada**: derruba serviço vivo e são os passos 1 a 3
+de `docs/AMBIENTES.md` §5, com comando exato e como voltar atrás. Por isso o teste do adversário
+`test_env_de_producao_nao_pode_ter_segredo_em_claro` e o `test_garage_toml_nao_pode_ter_token_em_claro`
+continuam `xfail(strict=True)`; as duas marcas retiradas foram as de
+`test_producao_e_homologacao_nao_compartilham_segredo` e `test_rotacao_cobre_os_cinco_segredos_do_portao`.
+
 ## turno 3, setembro de 2026 (nome de migração por carimbo de tempo — ADR 0014)
 
 Migração nova passa a se chamar `db/migracoes/YYYYMMDDTHHMM_<slug>.sql` (carimbo UTC, mais 3 hexadecimais
