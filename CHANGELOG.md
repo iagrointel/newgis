@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L0-13-dado-demonstracao: conjunto aberto de demonstração)
+
+O produto passa a trazer o próprio dado para se mostrar: 11 arquivos abertos e pequenos (1,19 MB no total)
+em `dados_demo/arquivos/`, comitados no repositório, com fonte, órgão, endereço, licença e data de acesso
+por arquivo em `dados_demo/catalogo.json` e em `docs/DADO_DEMO.md`. São limites municipais de dois estados
+e ponto representativo por município (IBGE), rodovias federais de dois estados (DNIT/SNV), hidrografia de
+uma otto-bacia (ANA/BHO 2017), cadastro de estações do INMET em CSV e em XLSX, um GeoPackage com três
+camadas e uma planta de exemplo em DXF desenhada pela casa. `scripts/semear_dado_demo.py` semeia pela
+PRÓPRIA API — envia o arquivo, registra o item, cria a importação e confirma a proposta —, é idempotente
+(reconhece pelo título) e é chamado pelo `install.sh` (seção h2b) só quando a instalação é de demonstração.
+`demo` e `demo2` recebem conjuntos DIFERENTES, que é como o isolamento entre inquilinos aparece na tela.
+Cada item semeado carrega a licença em `termos_de_uso`, o órgão em `creditos` e o endereço em `url`.
+Correção de infraestrutura junto: o advisory lock de "um job pesado por vez" era global no banco
+(`plat.job.pesado`) e passa a levar o nome do schema, para que homologação e trilhas isoladas não disputem
+a vaga com o worker de produção.
+
 ## turno 3, setembro de 2026 (nome de migração por carimbo de tempo — ADR 0014)
 
 Migração nova passa a se chamar `db/migracoes/YYYYMMDDTHHMM_<slug>.sql` (carimbo UTC, mais 3 hexadecimais

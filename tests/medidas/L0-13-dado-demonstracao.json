@@ -1,0 +1,42 @@
+{
+ "item": "L0-13-dado-demonstracao",
+ "medidas": {
+  "arquivos_com_fonte_url_licenca_data": {
+   "valor": 11,
+   "unidade": "arquivos",
+   "comando": "pytest tests/api/test_dado_demo.py -k documento"
+  },
+  "conjunto_de_demonstracao": {
+   "valor": 1.19,
+   "unidade": "MB",
+   "comando": "du -sb dados_demo/arquivos"
+  },
+  "repositorio_medido": {
+   "valor": 151.91,
+   "unidade": "MB",
+   "comando": "árvore de trabalho versionada mais /home/dev/plataforma/enterprise/.git (59.0 MB); limite 3221 MB"
+  },
+  "itens_semeados_em_demo": {
+   "valor": 15,
+   "unidade": "itens",
+   "comando": "6 camadas carregadas pela ingestão e 1 na lixeira (pytest tests/api/test_dado_demo.py::test_demo_tem_a_contagem_fixa_de_itens)"
+  },
+  "itens_semeados_em_demo2": {
+   "valor": 6,
+   "unidade": "itens",
+   "comando": "0 itens de demo vistos em demo2 (pytest tests/api/test_dado_demo.py::test_demo2_tem_conjunto_diferente_e_nao_ve_o_de_demo)"
+  },
+  "segundos_da_semeadura": {
+   "valor": 124.74,
+   "unidade": "s",
+   "comando": "scripts/semear_dado_demo.py --medida (criou 21 itens; alvo do portão: 90 s)"
+  },
+  "ocorrencias_de_nome_proibido": {
+   "valor": 0,
+   "unidade": "ocorrências",
+   "comando": "grep de 21 nomes em 15 arquivos (pytest tests/api/test_dado_demo.py::test_nenhum_nome_de_cliente_parceiro_ou_piloto)"
+  }
+ },
+ "gerado_em": "2026-09-06T16:23:31Z",
+ "git_sha": "90d03c07da0c"
+}

@@ -299,6 +299,21 @@ for i in $(seq 1 30); do
 done
 systemctl --no-pager --lines=0 status plat-worker | sed -n '1,4p'
 
+echo "== h2b. dado de demonstração (item L0-13): semeado pela PRÓPRIA API, só nos inquilinos de demonstração"
+# Só roda quando este é um ambiente de demonstração/desenvolvimento (mesma chave que decide plat.ambiente
+# acima: PLAT_AMBIENTE=dev ou PLAT_SEMENTE_DEMO=sim). Numa instalação de cliente nada é semeado.
+# O script sobe cada arquivo de dados_demo/arquivos/ pela API (POST /api/arquivos -> /api/itens ->
+# /api/importacoes), confirma a proposta e espera o job; é idempotente (reconhece pelo título).
+if [ "$SEMEAR" = true ]; then
+  MEDIDA_DEMO=tests/medidas/semente_dado_demo.json
+  sudo -u "$APP_USER" env PYTHONNOUSERSITE=1 PLAT_CREDENCIAIS_ARQUIVO="$APP_DIR/$CRED" \
+    venv/bin/python scripts/semear_dado_demo.py --base-url "http://127.0.0.1:$PORTA" --medida "$MEDIDA_DEMO" \
+    || { echo "semeadura do dado de demonstração falhou (item L0-13)" >&2; exit 6; }
+  chown "$APP_USER":"$APP_USER" "$MEDIDA_DEMO" 2>/dev/null || true
+else
+  echo "instalação sem semente de demonstração (plat.ambiente.semear_demo = false): dado de demonstração NÃO semeado"
+fi
+
 echo "== h3. systemd plat-osrm-guarulhos (item L2-11-c; recorte de teste <= 50 MB, nunca as bases de outra frente)"
 if [ ! -f osrm/guarulhos.osrm ]; then
   echo "osrm/guarulhos.osrm ausente — rode osrm/PROVENIENCIA.md (osmium+ogr2ogr+docker osrm-extract/partition/customize) antes do install.sh" >&2

@@ -1,0 +1,34 @@
+{
+  "segundos": 124.74,
+  "inquilinos": [
+    {
+      "inquilino": "demo",
+      "arquivo": 9,
+      "camada": 6,
+      "reaproveitados": 0,
+      "grupos": 2,
+      "segundos_por_arquivo": {
+        "municipios_ap_rr.zip": 14.38,
+        "pontos_municipais_ap_rr.geojson": 13.33,
+        "rodovias_federais_rr.geojson": 14.54,
+        "hidrografia_bacia_4668.geojson": 16.92,
+        "estacoes_inmet_norte.csv": 9.26,
+        "demonstracao_3_camadas.gpkg": 11.42,
+        "estacoes_inmet_norte.xlsx": 0.02,
+        "planta_exemplo.dxf": 0.05
+      }
+    },
+    {
+      "inquilino": "demo2",
+      "arquivo": 3,
+      "camada": 3,
+      "reaproveitados": 0,
+      "segundos_por_arquivo": {
+        "municipios_ac.zip": 17.02,
+        "rodovias_federais_ac.geojson": 14.5,
+        "estacoes_inmet_centro_oeste.csv": 12.64
+      }
+    }
+  ],
+  "arquivos_no_catalogo": 11
+}
