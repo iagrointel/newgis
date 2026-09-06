@@ -58,7 +58,7 @@ def estado_banco() -> tuple[str, int, int, str | None]:
     return ("desatualizado" if pendentes else "ok"), aplicadas, pendentes, ultima
 
 
-@router.get("/saude")
+@router.get("/saude", openapi_extra={"x-auth": "-", "x-privilegio": "publico"})
 def saude():
     inicio = time.perf_counter()
     banco, aplicadas, pendentes, ultima = estado_banco()
@@ -79,7 +79,7 @@ def saude():
     return JSONResponse(corpo, status_code=200 if banco == "ok" else 503, headers={"Cache-Control": "no-store"})
 
 
-@router.get("/api/versao")
+@router.get("/api/versao", openapi_extra={"x-auth": "-", "x-privilegio": "publico"})
 def api_versao():
     return {"versao": versao(), "git_sha": git_sha_curto(), "ambiente": settings.PLAT_AMBIENTE, "em": agora_iso()}
 

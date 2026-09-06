@@ -105,7 +105,10 @@ def _criar_item_arquivo(cur, auth: Auth, nome_original: str, resultado: dict) ->
 
 
 @router.get("/api/uploads/tipos", openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"})
-def tipos_aceitos():
+def tipos_aceitos(auth: Auth = autenticado(escopo_token=None)):
+    # a rota declara `x-auth: S/T` e respondia sem credencial nenhuma (achado G1-e1 do adversário do turno 3):
+    # o guarda comum agora faz o que a declaração diz. `escopo_token=None` porque é vocabulário, não dado — vale
+    # para qualquer token do inquilino, como em GET /api/privilegios.
     return [{"tipo": t.nome, "extensoes": list(t.extensoes), "rotulo": t.rotulo} for t in tipos_upload.TIPOS.values()]
 
 

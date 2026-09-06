@@ -359,12 +359,29 @@ def autenticado(
     permitir_pendencia: bool = False,
     superadmin_pode_ler: bool = False,
     superadmin: bool = False,
+    token_por_querystring: bool = False,
 ):
     """Fábrica de dependência. Ordem: credencial → só sessão? → CSRF sob cookie → X-Plat-Inquilino → pendências →
-    escopo do token → privilégio → superadmin (404, não 403, para não confirmar a rota)."""
+    escopo do token → privilégio → superadmin (404, não 403, para não confirmar a rota).
+
+    `token_por_querystring=True` aceita, além do cabeçalho/cookie, o token de serviço em `?token=` — é o
+    protocolo REST da Esri, que não manda cabeçalho Authorization (GeocodeServer, FeatureServer publicados).
+    Existe aqui, e não numa função de autenticação paralela dentro do router, porque toda rota autenticada tem
+    de passar por ESTA porta: o achado G1-c1 do adversário do turno 3 mostrou 7 rotas do GeocodeServer que
+    autenticavam por fora e escapavam de três guardas de uma vez (pendência de 2FA obrigatório, CSRF sob cookie
+    e a checagem de X-Plat-Inquilino). tests/api/test_contrato_guarda.py reprova quem escapar de novo.
+    """
 
     def dependencia(request: Request) -> Auth:
         auth = resolver(request)
+        if auth is None and token_por_querystring:
+            tok = request.query_params.get("token")
+            if tok:
+                auth = _auth_de_token(request, tok)
+                request.state.auth = auth
+                request.state.tenant_id = auth.tenant_id
+                request.state.usuario_id = auth.usuario_id
+                request.state.token_id = auth.token_id
         if auth is None:
             if superadmin:
                 raise ErroAPI(404, "nao_encontrado", "recurso inexistente")

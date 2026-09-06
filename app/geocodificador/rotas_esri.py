@@ -24,7 +24,6 @@ import logging
 from fastapi import APIRouter, Request
 
 from app import db
-from app.auth import escopos as esc
 from app.auth import sessao as auth_sessao
 from app.erros import ErroAPI
 from app.geocodificador import motor
@@ -46,21 +45,15 @@ ADDR_TYPE = {
 }
 
 
-def _autenticar(request: Request):
-    """Sessão/cabeçalho Authorization normal OU `?token=`/form `token=` (protocolo Esri)."""
-    try:
-        auth = auth_sessao.resolver(request)
-    except ErroAPI:
-        auth = None
-    if auth is None:
-        tok = request.query_params.get("token")
-        if not tok:
-            raise ErroAPI(401, "token_requerido", "informe token=<token de serviço plat> (protocolo Esri) ou "
-                           "o cabeçalho Authorization: Bearer")
-        auth = auth_sessao._auth_de_token(request, tok)  # noqa: SLF001 — reuso deliberado, ver docstring
-        request.state.auth = auth
-    esc.exigir_escopo(auth, ESCOPO)
-    return auth
+# Autenticação destas 7 rotas: a MESMA porta de todo o resto da plataforma (app.auth.sessao.autenticado), com
+# a única concessão que o protocolo Esri exige — o token de serviço também pode vir em `?token=`. Antes deste
+# turno havia aqui um `_autenticar` próprio que chamava `resolver()` direto; ele autenticava, mas pulava três
+# guardas do decorador comum: pendência de conta (2FA obrigatório do inquilino), CSRF sob cookie e a checagem
+# de X-Plat-Inquilino. Achado G1-c1 do adversário do turno 3; tests/api/test_contrato_guarda.py agora reprova
+# qualquer rota autenticada que volte a autenticar por fora.
+AUTENTICADO = dict(escopo_token=ESCOPO, token_por_querystring=True)
+X = {"x-auth": "S/T", "x-privilegio": "proprio"}
+X_PUBLICO = {"x-auth": "-", "x-privilegio": "publico"}
 
 
 async def _parametros(request: Request) -> dict:
@@ -99,8 +92,10 @@ def _campos_de(p: dict) -> dict:
             "cep": cep}
 
 
-@router.get(PREFIXO, openapi_extra={"x-auth": "S/T"}, operation_id="geocodificador_esri_descritor_get")
-@router.post(PREFIXO, openapi_extra={"x-auth": "S/T"}, operation_id="geocodificador_esri_descritor_post")
+# descritor do locator: metadado do serviço, sem dado de inquilino. Declarava `x-auth: S/T` e respondia sem
+# credencial (achado G1-e1); a declaração agora diz o que o código faz, e é isso que o portão do L0-02-e mede.
+@router.get(PREFIXO, openapi_extra=X_PUBLICO, operation_id="geocodificador_esri_descritor_get")
+@router.post(PREFIXO, openapi_extra=X_PUBLICO, operation_id="geocodificador_esri_descritor_post")
 async def descritor_servico(request: Request):
     """Descritor do locator (ADR 0013 seção 5.1) — mínimo para o QGIS/ArcGIS reconhecerem o serviço como
     GeocodeServer (capabilities, candidateFields, spatialReference); não exige autenticação (só metadado)."""
@@ -126,12 +121,11 @@ async def descritor_servico(request: Request):
     }
 
 
-@router.get(f"{PREFIXO}/findAddressCandidates", openapi_extra={"x-auth": "S/T"},
+@router.get(f"{PREFIXO}/findAddressCandidates", openapi_extra=X,
             operation_id="geocodificador_esri_find_address_candidates_get")
-@router.post(f"{PREFIXO}/findAddressCandidates", openapi_extra={"x-auth": "S/T"},
+@router.post(f"{PREFIXO}/findAddressCandidates", openapi_extra=X,
              operation_id="geocodificador_esri_find_address_candidates_post")
-async def find_address_candidates(request: Request):
-    _autenticar(request)
+async def find_address_candidates(request: Request, auth: auth_sessao.Auth = auth_sessao.autenticado(**AUTENTICADO)):
     p = await _parametros(request)
     campos = _campos_de(p)
     if not any([campos["logradouro"], campos["bairro"], campos["municipio"], campos["cep"]]):
@@ -159,12 +153,11 @@ async def find_address_candidates(request: Request):
     return {"spatialReference": {"wkid": 4326}, "candidates": saida}
 
 
-@router.get(f"{PREFIXO}/reverseGeocode", openapi_extra={"x-auth": "S/T"},
+@router.get(f"{PREFIXO}/reverseGeocode", openapi_extra=X,
             operation_id="geocodificador_esri_reverse_geocode_get")
-@router.post(f"{PREFIXO}/reverseGeocode", openapi_extra={"x-auth": "S/T"},
+@router.post(f"{PREFIXO}/reverseGeocode", openapi_extra=X,
              operation_id="geocodificador_esri_reverse_geocode_post")
-async def reverse_geocode(request: Request):
-    _autenticar(request)
+async def reverse_geocode(request: Request, auth: auth_sessao.Auth = auth_sessao.autenticado(**AUTENTICADO)):
     p = await _parametros(request)
     loc = p.get("location")
     if not loc:
@@ -196,10 +189,9 @@ async def reverse_geocode(request: Request):
     }
 
 
-@router.api_route(f"{PREFIXO}/suggest", methods=["GET"], openapi_extra={"x-auth": "S/T"},
+@router.api_route(f"{PREFIXO}/suggest", methods=["GET"], openapi_extra=X,
                    operation_id="geocodificador_esri_suggest")
-async def suggest(request: Request):
-    _autenticar(request)
+async def suggest(request: Request, auth: auth_sessao.Auth = auth_sessao.autenticado(**AUTENTICADO)):
     p = await _parametros(request)
     texto = p.get("text")
     if not texto or len(texto) < 2:
@@ -210,15 +202,14 @@ async def suggest(request: Request):
     return {"suggestions": [{"text": s["texto"], "magicKey": s["chave"], "isCollection": False} for s in sugestoes]}
 
 
-@router.api_route(f"{PREFIXO}/geocodeAddresses", methods=["POST"], openapi_extra={"x-auth": "S/T"},
+@router.api_route(f"{PREFIXO}/geocodeAddresses", methods=["POST"], openapi_extra=X,
                    operation_id="geocodificador_esri_geocode_addresses")
-async def geocode_addresses(request: Request):
+async def geocode_addresses(request: Request, auth: auth_sessao.Auth = auth_sessao.autenticado(**AUTENTICADO)):
     """Lote (item L2-11-a-geocodificacao-csv reusa este mesmo caminho para o motor, não esta rota HTTP).
     Corpo: {"addresses": {"records": [{"attributes": {"OBJECTID": 1, "SingleLine": "..."}}]}} — igual ao
     parâmetro `addresses` do geocodeAddresses da Esri (aqui já como JSON de corpo, não form-encoded, porque
     o único cliente medido neste turno é o teste HTTP direto; um cliente Esri real manda form/querystring —
     registrado como pendência em docs/PARIDADE.md, não como feito)."""
-    _autenticar(request)
     corpo = await request.json()
     registros = (corpo.get("addresses") or {}).get("records") or []
     if not registros:

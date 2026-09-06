@@ -225,5 +225,6 @@ def apagar(id: str, auth: Auth = autenticado("conteudo.publicar_camada")):
 
 
 @router.get("/api/importacoes/formatos", openapi_extra=LER)
-def formatos_aceitos():
+def formatos_aceitos(auth: Auth = autenticado(escopo_token=None)):
+    # mesmo caso de GET /api/uploads/tipos (achado G1-e1): declarava credencial e não exigia nenhuma.
     return [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo} for f in FORMATOS.values()]
