@@ -1,0 +1,42 @@
+{
+  "item": "FK-CLASSE-CONSERTO",
+  "gerado_em": "2026-09-06T19:17:23Z",
+  "git_sha": "76d44dbd7661",
+  "medidas": {
+    "achados_antes_do_conserto": {
+      "valor": 44,
+      "unidade": "FKs simples entre tabelas com tenant_id",
+      "comando": "venv/bin/python3 varredura de pg_constraint em plat_tfkclasse ANTES de 20260906T1847_fk_por_inquilino_classe.sql (ver handoffs/T3/FK-CLASSE-CONSERTO.md secão 'levantamento')"
+    },
+    "achados_listados_na_varredura_do_handoff_original": {
+      "valor": 55,
+      "unidade": "FKs (44 em tabelas que já existem em master + 11 em tabelas de trilhas ainda não mescladas)",
+      "comando": "handoffs/T3/L4-01-a-CONSERTO.md secão 'fora do escopo', mesma varredura de pg_constraint que gerou test_fk_composta_por_inquilino.py"
+    },
+    "achados_depois_do_conserto": {
+      "valor": 0,
+      "unidade": "FKs simples entre tabelas com tenant_id em plat_tfkclasse",
+      "comando": "set -a; source laco/var/trilha/fkclasse.env; set +a; venv/bin/pytest tests/api/test_fk_composta_por_inquilino.py -q  # 10 passed, PERMITIDAS={}"
+    },
+    "tabelas_unique_tenant_id_id_criadas": {
+      "valor": 10,
+      "unidade": "tabelas (usuario, item, pasta, grupo, categoria, conexao, job, token_servico, compartilhamento_link, papel_personalizado)",
+      "comando": "grep -c '_tenant_id_id_key' db/migracoes/20260906T1847_fk_por_inquilino_classe.sql  # 2 (declaração + uso no EXECUTE, 1 bloco DO cobrindo as 10)"
+    },
+    "fks_recompostas": {
+      "valor": 44,
+      "unidade": "ALTER TABLE ... ADD CONSTRAINT (tenant_id, col) REFERENCES alvo(tenant_id, id)",
+      "comando": "grep -c 'FOREIGN KEY' db/migracoes/20260906T1847_fk_por_inquilino_classe.sql  # 44"
+    },
+    "teste_cruzado_casos_provados": {
+      "valor": 5,
+      "unidade": "pares tabela.coluna com prova A->B direto como plat_app (item.pasta_id, pasta.pai_id auto-ref, favorito.item_id, compartilhamento_link_item.item_id em cadeia, token_servico.renovado_por auto-ref inteiro)",
+      "comando": "venv/bin/pytest tests/unit/test_fk_por_inquilino_classe_conserto.py -q  # 5 passed"
+    },
+    "mensagem_de_recusa_identica_id_inexistente_vs_id_de_outro_inquilino": {
+      "valor": true,
+      "unidade": "booleano (assert por caso em test_fk_por_inquilino_classe_conserto.py)",
+      "comando": "cada um dos 5 casos compara str(erro_uuid_inventado) == str(erro_uuid_de_a) e o TIPO da exceção"
+    }
+  }
+}
