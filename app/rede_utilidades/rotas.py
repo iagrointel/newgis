@@ -54,7 +54,7 @@ CONTAGENS = (
     "(SELECT count(*) FROM plat.rede_regra rg WHERE rg.rede_id = r.id) AS n_regras"
 )
 SQL_BASE = (
-    "SELECT r.id, r.nome, r.disciplina, r.descricao, r.pacote_codigo, r.pacote_nome, r.pacote_versao, "
+    "SELECT r.id, r.nome, r.disciplina, r.descricao, r.tolerancia_m, r.pacote_codigo, r.pacote_nome, r.pacote_versao, "
     "r.pacote_esquema_versao, r.pacote_fonte, r.pacote_sha256, r.pacote_bytes, r.importado_em, r.criado_em, "
     f"r.atualizado_em, r.dono_id, u.login AS dono_login, u.nome AS dono_nome, {CONTAGENS} "
     "FROM plat.rede r JOIN plat.usuario u ON u.id = r.dono_id"
@@ -74,6 +74,7 @@ def _json(r: dict) -> dict:
         "nome": r["nome"],
         "disciplina": r["disciplina"],
         "descricao": r["descricao"],
+        "tolerancia_m": float(r["tolerancia_m"]),
         "pacote": pacote,
         "contagens": {s: r[f"n_{s}"] for s in pacote_mod.SECOES},
         "dono": {"id": r["dono_id"], "login": r["dono_login"], "nome": r["dono_nome"]},
@@ -144,9 +145,10 @@ def criar(corpo: RedeEntrada, request: Request, auth: Auth = autenticado("rede.e
     with db.db(auth.contexto()) as cur:
         try:
             cur.execute(
-                "INSERT INTO plat.rede(tenant_id, nome, disciplina, descricao, dono_id) "
-                "VALUES (%s, %s, %s, %s, %s) RETURNING id",
-                (auth.tenant_id, " ".join(corpo.nome.split()), corpo.disciplina, corpo.descricao, auth.usuario_id),
+                "INSERT INTO plat.rede(tenant_id, nome, disciplina, descricao, tolerancia_m, dono_id) "
+                "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+                (auth.tenant_id, " ".join(corpo.nome.split()), corpo.disciplina, corpo.descricao,
+                 corpo.tolerancia_m, auth.usuario_id),
             )
             rede_id = str(cur.fetchone()["id"])
         except psycopg2.errors.UniqueViolation as e:
