@@ -184,6 +184,7 @@ class ResultadoBusca:
     url_final: str
     latencia_ms: int
     saltos: int
+    corpo: bytes = b""  # só preenchido quando `guardar_corpo=True` (item L6-05): teste de saúde nunca guarda
 
 
 def buscar_seguro(
@@ -195,10 +196,16 @@ def buscar_seguro(
     max_redirects: int = limites.CONEXAO_REDIRECT_MAX,
     max_bytes: int = limites.CONEXAO_RESPOSTA_MAX_BYTES,
     cabecalhos: dict[str, str] | None = None,
+    guardar_corpo: bool = False,
 ) -> ResultadoBusca:
     """GET/HEAD seguro contra SSRF, com corpo limitado e redirecionamento revalidado hop a hop. Nunca levanta
     `ErroURLInsegura` para fora: qualquer recusa de validação vira `ResultadoBusca(ok=False, status=None, ...)`
-    com o motivo em `mensagem` — quem chama (rota de teste de saúde) nunca precisa distinguir os dois."""
+    com o motivo em `mensagem` — quem chama (rota de teste de saúde) nunca precisa distinguir os dois.
+
+    `guardar_corpo=True` (item L6-05-proveniencia-camada-externa: ler o que o serviço declara — GetCapabilities,
+    `f=json`, catálogo STAC) acumula os bytes lidos (até `max_bytes`, o mesmo teto do teste de saúde) em
+    `ResultadoBusca.corpo`; por padrão fica `b""` (o teste de saúde de L6-02-a nunca precisou do corpo, só do
+    status)."""
     import time
 
     inicio = time.monotonic()
@@ -215,6 +222,7 @@ def buscar_seguro(
             try:
                 with cliente.stream(metodo, alvo, headers=cabecalhos or {}) as r:
                     lido = 0
+                    pedacos: list[bytes] = []
                     for pedaco in r.iter_bytes():
                         lido += len(pedaco)
                         if lido > max_bytes:
@@ -222,7 +230,10 @@ def buscar_seguro(
                                 ok=False, status=r.status_code, mensagem="resposta_excede_limite_de_bytes",
                                 url_final=alvo, latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
                             )
+                        if guardar_corpo:
+                            pedacos.append(pedaco)
                     status = r.status_code
+                    corpo = b"".join(pedacos) if guardar_corpo else b""
             except httpx.TimeoutException:
                 return ResultadoBusca(
                     ok=False, status=None, mensagem="tempo_esgotado", url_final=alvo,
@@ -245,7 +256,7 @@ def buscar_seguro(
             continue
         return ResultadoBusca(
             ok=200 <= status < 400, status=status, mensagem=f"http_{status}", url_final=alvo,
-            latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
+            latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto, corpo=corpo,
         )
     return ResultadoBusca(
         ok=False, status=None, mensagem="redirecionamentos_demais", url_final=alvo,

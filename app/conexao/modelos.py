@@ -49,6 +49,12 @@ class ConexaoCartao(Saida):
     url: str
     saude: str
     saude_verificada_em: str | None = None
+    # estado agregado (item L6-02-l-saude; plat.v_conexao_saude): "nunca_testada" | "ok" | "degradado" | "fora" —
+    # "fora" é a última verificação falhando; "degradado" é a última passando mas alguma das últimas 5 falhando;
+    # "ok" é as últimas 5 (ou menos, sem 5 ainda) passando. Nunca dois estados ao mesmo tempo (ver 036).
+    estado_saude: str = "nunca_testada"
+    disponibilidade_30d_pct: float | None = None
+    disponibilidade_30d_total: int = 0
 
 
 class Conexao(ConexaoCartao):
@@ -73,3 +79,19 @@ class ConexaoTeste(Saida):
     latencia_ms: int
     saude: str
     saude_verificada_em: str
+
+
+class SaudeHistoricoItem(Saida):
+    verificada_em: str
+    ok: bool
+    status: int | None = None
+    mensagem: str | None = None
+    latencia_ms: int | None = None
+
+
+class SaudeHistoricoPagina(Saida):
+    itens: list[SaudeHistoricoItem]
+
+
+class PublicarCamadaEntrada(Modelo):
+    titulo: str | None = Field(default=None, min_length=1, max_length=250)

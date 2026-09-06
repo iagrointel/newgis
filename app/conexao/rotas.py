@@ -10,6 +10,7 @@ log (a credencial NUNCA aparece em `request`/`response` deste módulo depois de 
 corpo de `_testar`, e some do escopo ao final da função)."""
 
 import json
+import uuid
 
 import psycopg2
 from fastapi import APIRouter, Request
@@ -17,10 +18,22 @@ from fastapi import APIRouter, Request
 from app import db, limites
 from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
+from app.catalogo import comum as catalogo_comum
+from app.catalogo import documento as catalogo_documento
+from app.catalogo import tipos as catalogo_tipos
 from app.catalogo.comum import registrar_evento, uuid_ok
+from app.catalogo.modelos import Item as ItemSaida
 from app.conexao import credencial as credencial_mod
-from app.conexao import seguranca
-from app.conexao.modelos import Conexao, ConexaoEditar, ConexaoEntrada, ConexaoPagina, ConexaoTeste
+from app.conexao import proveniencia, seguranca
+from app.conexao.modelos import (
+    Conexao,
+    ConexaoEditar,
+    ConexaoEntrada,
+    ConexaoPagina,
+    ConexaoTeste,
+    PublicarCamadaEntrada,
+    SaudeHistoricoPagina,
+)
 from app.erros import ErroAPI
 from app.settings import settings
 
@@ -28,14 +41,22 @@ router = APIRouter(prefix="/api/conexoes", tags=["conexoes"])
 LER = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade"}
 CRIAR = {"x-auth": "S/T", "x-privilegio": "conteudo.registrar_fonte"}
 EDITAR = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"}
+HISTORICO_LIMITE_PADRAO = 10
+HISTORICO_LIMITE_MAX = 30  # o mesmo teto de guarda de plat.conexao_saude_historico (036)
 
 # nunca inclui credencial_cifrada
 CAMPOS = (
     "c.id, c.tipo, c.modo, c.nome, c.url, c.config, (c.credencial_cifrada IS NOT NULL) AS tem_credencial, "
     "c.saude, c.saude_mensagem, c.saude_latencia_ms, c.saude_verificada_em, c.criado_em, c.atualizado_em, "
-    "c.dono_id, u.login AS dono_login, u.nome AS dono_nome"
+    "c.dono_id, u.login AS dono_login, u.nome AS dono_nome, "
+    "v.estado_saude, v.disponibilidade_30d_pct, v.disponibilidade_30d_total"
 )
-SQL_BASE = f"SELECT {CAMPOS} FROM plat.conexao c JOIN plat.usuario u ON u.id = c.dono_id"  # noqa: S608
+# LEFT JOIN (nunca INNER): a view sempre tem 1 linha por conexão (FROM plat.conexao), mas o LEFT deixa explícito
+# que a ausência de histórico não pode sumir com a conexão da listagem (item L6-02-l-saude).
+SQL_BASE = (
+    f"SELECT {CAMPOS} FROM plat.conexao c JOIN plat.usuario u ON u.id = c.dono_id "  # noqa: S608
+    "LEFT JOIN plat.v_conexao_saude v ON v.conexao_id = c.id"
+)
 
 
 def _json(r: dict) -> dict:
@@ -51,6 +72,11 @@ def _json(r: dict) -> dict:
         "saude_mensagem": r["saude_mensagem"],
         "saude_latencia_ms": r["saude_latencia_ms"],
         "saude_verificada_em": iso(r["saude_verificada_em"]),
+        "estado_saude": r.get("estado_saude") or "nunca_testada",
+        "disponibilidade_30d_pct": (
+            float(r["disponibilidade_30d_pct"]) if r.get("disponibilidade_30d_pct") is not None else None
+        ),
+        "disponibilidade_30d_total": r.get("disponibilidade_30d_total") or 0,
         "dono": {"id": r["dono_id"], "login": r["dono_login"], "nome": r["dono_nome"]},
         "criado_em": iso(r["criado_em"]),
         "atualizado_em": iso(r["atualizado_em"]),
@@ -216,11 +242,13 @@ def testar(id: str, request: Request, auth: Auth = autenticado()):
     )
     saude = "ok" if resultado.ok else "erro"
     with db.db(auth.contexto()) as cur:
+        # plat.conexao_saude_registrar (036) grava saude/saude_mensagem/... E o histórico (item L6-02-l-saude)
+        # numa função só, com a poda de 30 linhas — o UPDATE direto de antes nunca alimentava o histórico.
         cur.execute(
-            "UPDATE plat.conexao SET saude = %s, saude_mensagem = %s, saude_latencia_ms = %s, "
-            "saude_verificada_em = now() WHERE id = %s::uuid RETURNING saude_verificada_em",
-            (saude, resultado.mensagem, resultado.latencia_ms, cid),
+            "SELECT plat.conexao_saude_registrar(%s::uuid, %s, %s, %s, %s)",
+            (cid, resultado.ok, resultado.status, resultado.mensagem, resultado.latencia_ms),
         )
+        cur.execute("SELECT saude_verificada_em FROM plat.conexao WHERE id = %s::uuid", (cid,))
         verificada_em = cur.fetchone()["saude_verificada_em"]
         registrar_evento(
             cur, request, "conexoes/testar", "conexao", cid,
@@ -230,3 +258,86 @@ def testar(id: str, request: Request, auth: Auth = autenticado()):
         "ok": resultado.ok, "status": resultado.status, "mensagem": resultado.mensagem,
         "latencia_ms": resultado.latencia_ms, "saude": saude, "saude_verificada_em": iso(verificada_em),
     }
+
+
+@router.get("/{id}/saude-historico", response_model=SaudeHistoricoPagina, openapi_extra=LER)
+def saude_historico(
+    id: str, limite: int = HISTORICO_LIMITE_PADRAO, auth: Auth = autenticado(escopo_token="catalogo:ler")
+):
+    """Últimos testes de saúde da conexão (item L6-02-l-saude), mais recente primeiro; `limite` (padrão 10, teto
+    30 — o mesmo teto de guarda de `plat.conexao_saude_historico`) evita que a tela peça mais do que existe."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    limite = max(1, min(limite, HISTORICO_LIMITE_MAX))
+    with db.db(auth.contexto()) as cur:
+        _carregar(cur, cid)  # 404 se a conexão não existe ou não é visível a este inquilino (RLS)
+        cur.execute(
+            "SELECT verificada_em, ok, status, mensagem, latencia_ms FROM plat.conexao_saude_historico "
+            "WHERE conexao_id = %s::uuid ORDER BY verificada_em DESC LIMIT %s",
+            (cid, limite),
+        )
+        itens = [
+            {
+                "verificada_em": iso(row["verificada_em"]), "ok": row["ok"], "status": row["status"],
+                "mensagem": row["mensagem"], "latencia_ms": row["latencia_ms"],
+            }
+            for row in cur.fetchall()
+        ]
+    return {"itens": itens}
+
+
+@router.post("/{id}/publicar", response_model=ItemSaida, status_code=201, openapi_extra=CRIAR)
+def publicar_camada(
+    id: str, request: Request, corpo: PublicarCamadaEntrada | None = None,
+    auth: Auth = autenticado("conteudo.criar"),
+):
+    """Cria um item de catálogo (tipo `conexao`, `dados.parametros.conexao_id` apontando para esta linha) com a
+    ficha de procedência preenchida do que o SERVIÇO EXTERNO declara agora (item L6-05-proveniencia-camada-
+    externa) — nunca um valor padrão; campo que o serviço não declara fica `None` (a tela mostra "não
+    registrado"). `creditos` do item recebe a atribuição lida (o mais perto de "legenda" que existe hoje: o
+    L6-02-b, que desenha a camada no mapa de verdade, ainda não foi construído)."""
+    if not auth.tem("conteudo.registrar_fonte"):
+        raise ErroAPI(
+            403, "sem_privilegio", "a operação exige o privilégio conteudo.registrar_fonte",
+            {"exigido": "conteudo.registrar_fonte"},
+        )
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    with db.db(auth.contexto()) as cur:
+        r = _carregar(cur, cid)
+
+    descoberta = proveniencia.descobrir(r)  # I/O de rede FORA da transação (mesma regra de ContextoJob)
+    dados_item = {
+        "protocolo": r["tipo"], "url": r["url"], "parametros": {"conexao_id": cid},
+        "procedencia": descoberta.procedencia,
+    }
+    catalogo_tipos.validar("conexao", dados_item)
+    catalogo_documento.validar_grafo("conexao", dados_item)
+    titulo = ((corpo.titulo if corpo else None) or r["nome"]).strip()[:250]
+    atribuicao = (descoberta.atribuicao or "")[:2048] or None
+    iid = str(uuid.uuid4())
+    with db.db(auth.contexto()) as cur:
+        cur.execute(
+            "SELECT plat.cota_itens(%s) AS cota, (SELECT count(*) FROM plat.item WHERE tenant_id = %s) AS n",
+            (auth.tenant_id, auth.tenant_id),
+        )
+        rc = cur.fetchone()
+        if rc["n"] >= rc["cota"]:
+            raise ErroAPI(
+                413, "cota_itens", f"cota de itens do inquilino esgotada ({rc['cota']})", {"cota": rc["cota"]}
+            )
+        try:
+            cur.execute(
+                "INSERT INTO plat.item(id, tenant_id, tipo, titulo, creditos, dono_id, dados, origem, url, "
+                "criado_por, modificado_por) "
+                "VALUES (%s::uuid, %s, 'conexao', %s, %s, %s, %s, 'referenciado', %s, %s, %s)",
+                (
+                    iid, auth.tenant_id, titulo, atribuicao, auth.usuario_id, catalogo_comum.jsonb(dados_item),
+                    r["url"], auth.usuario_id, auth.usuario_id,
+                ),
+            )
+        except psycopg2.Error as e:
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(
+            cur, request, "conexoes/publicar_camada", "item", iid,
+            {"conexao_id": cid, "tipo": r["tipo"], "licenca_declarada": bool(descoberta.procedencia.get("licenca"))},
+        )
+        return catalogo_comum.item_json(catalogo_comum.item_ou_404(cur, iid), auth)

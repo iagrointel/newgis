@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Conexões · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/tarefas.css">
+</head>
+<body class="tela conexoes">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <div id="ferramentas" class="linha-ferramentas">
+      <h1>Conexões</h1>
+    </div>
+    <p class="aviso-beta">análise / beta privado</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" id="lista-cartao" aria-labelledby="t-lista">
+      <h2 id="t-lista">conexões externas <span id="lista-total" class="contagem">…</span></h2>
+      <p class="ajuda">estado calculado das últimas verificações de saúde: <span class="marcador ok">ok</span>
+        (as últimas passaram), <span class="marcador atencao">degradado</span> (a mais recente passou, mas
+        alguma das últimas 5 falhou), <span class="marcador falha">fora</span> (a mais recente falhou),
+        <span class="marcador info">nunca testada</span>.</p>
+      <div class="linha-ferramentas">
+        <button type="button" id="conexao-nova" class="primario">nova conexão</button>
+      </div>
+      <plat-aviso id="lista-aviso"></plat-aviso>
+      <div class="tabela-rolagem">
+        <table id="lista" class="tabela">
+          <caption class="sr-only">conexões externas do inquilino</caption>
+          <thead>
+            <tr>
+              <th scope="col">nome</th>
+              <th scope="col">tipo</th>
+              <th scope="col">modo</th>
+              <th scope="col">estado</th>
+              <th scope="col">disponibilidade (30 d)</th>
+              <th scope="col">última verificação</th>
+              <th scope="col"><span class="sr-only">ações</span></th>
+            </tr>
+          </thead>
+          <tbody id="lista-corpo"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <plat-dialogo id="dialogo"></plat-dialogo>
+  </main>
+</div>
+<script type="module" src="/static/js/conexoes/conexoes.js"></script>
+</body>
+</html>

@@ -4,6 +4,7 @@ acrescentam aqui a importação do seu módulo de tarefas (ex.: app.ingestao.tar
 from app.catalogo import (
     tarefas as catalogo_tarefas,  # noqa: F401 — L0-03: 6 tipos catalogo.* e os periódicos do catálogo
 )
+from app.conexao import tarefas as conexao_tarefas  # noqa: F401 — L6-02-l: conexoes.saude_verificar + periódico
 from app.ingestao import tarefas as ingestao_tarefas  # noqa: F401 — L0-04: ingestao.inspecionar/ingestao.carregar
 from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos
 from app.jobs.registro import REGISTRO

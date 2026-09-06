@@ -171,3 +171,169 @@ def test_testar_conexao_publica_atualiza_saude(sessao_a, limpar_conexoes):
     r_ver = sessao_a.get(f"/api/conexoes/{cid}")
     assert r_ver.json()["saude"] == "ok"
     assert r_ver.json()["saude_verificada_em"] is not None
+
+
+# ---------------------------------------------------------------- L6-02-l-saude: histórico + estado agregado
+URL_404_ESTAVEL = "https://api.github.com/repos/inexistente-zt-l6-02-l/tambem-inexistente"  # API estável, 404 rápido
+URL_ESRI_CENSUS = "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Census/MapServer"  # amostra da Esri
+URL_ESRI_FREEWAY = "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/USA_Freeway_System/FeatureServer"  # noqa: E501
+URL_STAC_S2 = "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a"
+URL_WMS_OSM = "https://ows.terrestris.de/osm/service"
+
+
+@pytest.mark.lento
+def test_saude_historico_vazio_antes_do_primeiro_teste(sessao_a, limpar_conexoes):
+    r = _criar(sessao_a, "historico-vazio")
+    cid = r.json()["id"]
+    limpar_conexoes.append(cid)
+    r_hist = sessao_a.get(f"/api/conexoes/{cid}/saude-historico")
+    assert r_hist.status_code == 200, r_hist.text
+    assert r_hist.json()["itens"] == []
+    assert sessao_a.get(f"/api/conexoes/{cid}").json()["estado_saude"] == "nunca_testada"
+
+
+@pytest.mark.lento
+def test_saude_historico_grava_apos_testar_e_estado_fica_ok(sessao_a, limpar_conexoes):
+    r = _criar(sessao_a, "historico-ok")
+    cid = r.json()["id"]
+    limpar_conexoes.append(cid)
+    assert sessao_a.post(f"/api/conexoes/{cid}/testar").status_code == 200
+
+    r_hist = sessao_a.get(f"/api/conexoes/{cid}/saude-historico")
+    itens = r_hist.json()["itens"]
+    assert len(itens) == 1
+    assert itens[0]["ok"] is True
+    assert itens[0]["status"] == 200
+    assert itens[0]["verificada_em"] is not None
+
+    r_ver = sessao_a.get(f"/api/conexoes/{cid}")
+    assert r_ver.json()["estado_saude"] == "ok"
+    assert r_ver.json()["disponibilidade_30d_pct"] == 100.0
+    assert r_ver.json()["disponibilidade_30d_total"] == 1
+
+
+@pytest.mark.lento
+def test_conexao_com_url_que_responde_404_fica_fora_em_1_teste(sessao_a, limpar_conexoes):
+    """Refutação do item: "URL inválida fica vermelha em <= 1 ciclo" — aqui "1 ciclo" é o 1º teste (manual ou
+    periódico); URL real (passa na validação de SSRF na entrada) mas que sempre responde 404."""
+    r = _criar(sessao_a, "fora-do-ar", url=URL_404_ESTAVEL)
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    limpar_conexoes.append(cid)
+    assert sessao_a.get(f"/api/conexoes/{cid}").json()["estado_saude"] == "nunca_testada"
+
+    r_teste = sessao_a.post(f"/api/conexoes/{cid}/testar")
+    assert r_teste.status_code == 200, r_teste.text
+    assert r_teste.json()["ok"] is False
+    assert r_teste.json()["saude"] == "erro"
+
+    r_ver = sessao_a.get(f"/api/conexoes/{cid}")
+    assert r_ver.json()["estado_saude"] == "fora"
+    r_hist = sessao_a.get(f"/api/conexoes/{cid}/saude-historico").json()["itens"]
+    assert len(r_hist) == 1 and r_hist[0]["ok"] is False and r_hist[0]["status"] == 404
+
+
+@pytest.mark.lento
+def test_conexao_degradada_quando_a_mais_recente_passa_mas_uma_das_5_falhou(sessao_a, limpar_conexoes):
+    r = _criar(sessao_a, "degradado", url=URL_404_ESTAVEL)
+    cid = r.json()["id"]
+    limpar_conexoes.append(cid)
+    assert sessao_a.post(f"/api/conexoes/{cid}/testar").status_code == 200  # falha (404) -> fora
+    assert sessao_a.get(f"/api/conexoes/{cid}").json()["estado_saude"] == "fora"
+
+    assert sessao_a.patch(f"/api/conexoes/{cid}", json={"url": URL_PUBLICA}).status_code == 200
+    assert sessao_a.post(f"/api/conexoes/{cid}/testar").status_code == 200  # passa (200) -> degradado (falhou antes)
+    r_ver = sessao_a.get(f"/api/conexoes/{cid}")
+    assert r_ver.json()["estado_saude"] == "degradado"
+    assert r_ver.json()["disponibilidade_30d_total"] == 2
+    assert r_ver.json()["disponibilidade_30d_pct"] == 50.0
+
+
+def test_saude_historico_limite_e_teto(sessao_a, limpar_conexoes):
+    r = _criar(sessao_a, "limite-historico")
+    cid = r.json()["id"]
+    limpar_conexoes.append(cid)
+    r0 = sessao_a.get(f"/api/conexoes/{cid}/saude-historico")
+    assert r0.status_code == 200
+    r1 = sessao_a.get(f"/api/conexoes/{cid}/saude-historico?limite=0")
+    assert r1.status_code == 200  # limite < 1 é grampeado para 1, nunca 422 (a tela nunca quebra por isso)
+    r2 = sessao_a.get(f"/api/conexoes/{cid}/saude-historico?limite=9999")
+    assert r2.status_code == 200  # grampeado para o teto (30), nunca um erro
+
+
+def test_saude_historico_rls_cruzada_404(sessao_a, sessao_b, limpar_conexoes):
+    r = _criar(sessao_a, "historico-rls")
+    cid = r.json()["id"]
+    limpar_conexoes.append(cid)
+    assert sessao_b.get(f"/api/conexoes/{cid}/saude-historico").status_code == 404
+
+
+# ---------------------------------------------------------------- L6-05-proveniencia-camada-externa
+@pytest.mark.lento
+def test_publicar_camada_le_licenca_declarada_do_arcgis_rest(sessao_a, limpar_conexoes):
+    r = _criar(sessao_a, "publicar-esri", url=URL_ESRI_CENSUS, tipo="esri_rest")
+    cid = r.json()["id"]
+    limpar_conexoes.append(cid)
+    r_pub = sessao_a.post(f"/api/conexoes/{cid}/publicar")
+    assert r_pub.status_code == 201, r_pub.text
+    item = r_pub.json()
+    assert item["tipo"] == "conexao"
+    proc = item["dados"]["procedencia"]
+    assert proc["licenca"] == "US Bureau of the Census: http://www.census.gov"
+    assert proc["url"] == URL_ESRI_CENSUS
+    assert proc["data_do_dado"] is None  # referenciada, nunca copiada: não existe "data do dado"
+    assert proc["sha256"]  # hash do corpo lido, prova de que algo foi de fato baixado e conferido
+    assert item["dados"]["parametros"]["conexao_id"] == cid
+    assert item["creditos"] == proc["licenca"]  # atribuicao = licenca quando o esri_rest so declara copyrightText
+
+
+@pytest.mark.lento
+def test_publicar_camada_licenca_nao_e_valor_padrao(sessao_a, limpar_conexoes):
+    """Refutação do item: confere que a licença é a do SERVIÇO (duas conexões, dois protocolos, dois textos
+    DIFERENTES e verificáveis contra o que o serviço de fato devolve — nunca um valor fixo do nosso código)."""
+    r1 = _criar(sessao_a, "licenca-esri", url=URL_ESRI_FREEWAY, tipo="esri_rest")
+    r2 = _criar(sessao_a, "licenca-stac", url=URL_STAC_S2, tipo="stac")
+    c1, c2 = r1.json()["id"], r2.json()["id"]
+    limpar_conexoes.extend([c1, c2])
+    proc1 = sessao_a.post(f"/api/conexoes/{c1}/publicar").json()["dados"]["procedencia"]
+    proc2 = sessao_a.post(f"/api/conexoes/{c2}/publicar").json()["dados"]["procedencia"]
+    assert proc1["licenca"] and proc2["licenca"]
+    assert proc1["licenca"] != proc2["licenca"]
+    assert "Esri" in proc1["licenca"]
+    assert proc2["licenca"] == "proprietary"
+
+
+@pytest.mark.lento
+def test_publicar_camada_wms_le_access_constraints_e_titulo(sessao_a, limpar_conexoes):
+    r = _criar(sessao_a, "publicar-wms", url=URL_WMS_OSM, tipo="wms")
+    cid = r.json()["id"]
+    limpar_conexoes.append(cid)
+    item = sessao_a.post(f"/api/conexoes/{cid}/publicar").json()
+    proc = item["dados"]["procedencia"]
+    assert proc["licenca"] and "OpenStreetMap" in proc["licenca"]
+    assert item["creditos"] and "OpenStreetMap" in item["creditos"]
+
+
+def test_publicar_camada_campo_nao_declarado_fica_none_nao_valor_padrao(sessao_a, limpar_conexoes):
+    """protocolo sem sondagem (http) nunca INVENTA licença/fonte: fica None, e a ressalva explica por quê."""
+    r = _criar(sessao_a, "publicar-http", url=URL_PUBLICA, tipo="http")
+    cid = r.json()["id"]
+    limpar_conexoes.append(cid)
+    item = sessao_a.post(f"/api/conexoes/{cid}/publicar").json()
+    proc = item["dados"]["procedencia"]
+    assert proc["licenca"] is None
+    assert proc["fonte"] is None
+    assert proc["limites"] and any("não tem metadado padronizado" in m for m in proc["limites"])
+
+
+def test_publicar_conexao_inexistente_404(sessao_a):
+    assert sessao_a.post("/api/conexoes/00000000-0000-0000-0000-000000000000/publicar").status_code == 404
+
+
+def test_publicar_credencial_nunca_aparece_na_procedencia(sessao_a, limpar_conexoes):
+    segredo = "segredo-l6-05-nao-e-real-XYZ"
+    r = _criar(sessao_a, "publicar-com-credencial", url=URL_PUBLICA, tipo="http", credencial=segredo)
+    cid = r.json()["id"]
+    limpar_conexoes.append(cid)
+    item = sessao_a.post(f"/api/conexoes/{cid}/publicar")
+    assert segredo not in item.text

@@ -462,6 +462,10 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("DELETE", "/api/conexoes/{id}"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}"),
     ("POST", "/api/conexoes/{id}/testar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/testar"),
+    # L6-02-l/L6-05: mesma regra (conexão de B é cross-tenant puro para A) — nenhuma das duas cria nada em A
+    # quando o alvo é de B (a rota lê a conexão pelo RLS de _carregar ANTES de qualquer efeito colateral).
+    ("GET", "/api/conexoes/{id}/saude-historico"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/saude-historico"),
+    ("POST", "/api/conexoes/{id}/publicar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar"),
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,
