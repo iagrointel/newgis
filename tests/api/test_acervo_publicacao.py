@@ -11,6 +11,14 @@ nomeia. No registro VIVO desta casa a fonte `sfb-sicar-nacional-perimetros-e-cam
 escrita, logo `acervo_sync.py` a classifica `pendente_de_licenca` e o publicador NÃO a publicaria hoje (regra
 D17). O que estes testes medem é o MECANISMO de publicação e o porteiro; publicar CAR de verdade depende de o
 item L6-01-g escrever a licença.
+
+Consequência do item L6-01-e-assinatura-e-uso (desta mesma família): a rota POST de assinatura passou a exigir
+licença curada da fonte e o aceite por clique do texto — e a fonte do CAR não tem licença curada (decisão
+registrada do item L6-01-g), então a assinatura destes testes NÃO pode mais vir da API. Como o que este arquivo
+mede é a view e o porteiro (que só olham a existência da linha em plat.acervo_assinatura), a assinatura passa a
+ser semeada DIRETO no banco, como postgres — a mesma identidade que semeia o registro da camada — com o rótulo
+honesto 'sem-licenca-curada' em licenca_tipo. A prova do aceite por clique com licença curada de verdade mora em
+tests/api/test_acervo_assinatura_uso.py.
 """
 
 import json
@@ -85,11 +93,28 @@ def camada_publicada():
     yield VIEW
 
 
+def _assinar_direto_sql(tenant_slug: str = "demo") -> None:
+    """Assinatura da camada de teste semeada DIRETO no banco (como postgres), não pelo clique da API — ver o
+    cabeçalho do arquivo: desde L6-01-e a rota POST exige licença curada, que a fonte do CAR não tem. O
+    porteiro `acervo_pode_ler` só olha a existência da linha, então o mecanismo continua provado de ponta a
+    ponta. licenca_tipo 'sem-licenca-curada' confessa a origem da linha."""
+    s = _schema()
+    _psql(
+        f"INSERT INTO {s}.acervo_assinatura(tenant_id, acervo_camada_id, assinado_por, "
+        f"licenca_tipo, licenca_texto, licenca_url, licenca_sha256) "
+        f"SELECT t.id, '{CAMADA_ID}', NULL, 'sem-licenca-curada', "
+        f"'assinatura semeada por SQL para provar o porteiro (item L6-01-b); a fonte do CAR nao tem licenca "
+        f"curada e o aceite por clique com licenca de verdade e provado no item L6-01-e', '', '' "
+        f"FROM {s}.tenant t WHERE t.slug = '{tenant_slug}' "
+        f"ON CONFLICT (tenant_id, acervo_camada_id) DO NOTHING"
+    )
+
+
 @pytest.fixture
 def assinatura_a(camada_publicada, sessao_a):
-    """Inquilino A (demo) assina a camada pela API e cancela no fim — a assinatura é o objeto do portão."""
-    r = sessao_a.post(f"/api/acervo/camadas/{VIEW}/assinatura")
-    assert r.status_code == 201, r.text
+    """Inquilino A (demo) com assinatura da camada (semeada por SQL, ver acima) e cancelamento pela API no
+    fim — a assinatura é o objeto do portão."""
+    _assinar_direto_sql("demo")
     yield
     sessao_a.delete(f"/api/acervo/camadas/{VIEW}/assinatura")
 
@@ -234,15 +259,15 @@ def test_porteiro_vira_filtro_de_uma_vez_e_nao_varre_a_tabela(camada_publicada, 
 
 
 def test_api_403_sem_assinatura_e_200_com_assinatura(camada_publicada, sessao_a, sessao_b):
-    """Inquilino B (demo2) sem assinatura: 403 em feições e em tile. Inquilino A assina e passa a ler."""
+    """Inquilino B (demo2) sem assinatura: 403 em feições e em tile. Inquilino A com assinatura (semeada por
+    SQL, ver o cabeçalho) passa a ler; cancelada pela API, a porta fecha na hora."""
     r = sessao_b.get(f"/api/acervo/camadas/{VIEW}/feicoes?bbox={BBOX}&limite=10")
     assert r.status_code == 403, r.text
     assert r.json()["erro"] == "sem_assinatura"
     r = sessao_b.get(f"/api/acervo/camadas/{VIEW}/tiles/10/379/580.mvt")
     assert r.status_code == 403, r.text
 
-    r = sessao_a.post(f"/api/acervo/camadas/{VIEW}/assinatura")
-    assert r.status_code == 201, r.text
+    _assinar_direto_sql("demo")
     try:
         r = sessao_a.get(f"/api/acervo/camadas/{VIEW}/feicoes?bbox={BBOX}&limite=10")
         assert r.status_code == 200, r.text
@@ -269,7 +294,7 @@ def test_lista_de_camadas_mostra_assinatura_do_proprio_inquilino(camada_publicad
     assert VIEW in de_b and de_b[VIEW]["assinada"] is False
     assert COLUNA_FORA_DA_LISTA not in de_b[VIEW]["colunas"]
 
-    assert sessao_a.post(f"/api/acervo/camadas/{VIEW}/assinatura").status_code == 201
+    _assinar_direto_sql("demo")
     try:
         de_a = {c["view_nome"]: c for c in sessao_a.get("/api/acervo/camadas").json()["camadas"]}
         assert de_a[VIEW]["assinada"] is True

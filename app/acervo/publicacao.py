@@ -221,6 +221,38 @@ def _caixa(bbox: str | None) -> tuple[float, float, float, float] | None:
     return oeste, sul, leste, norte
 
 
+def _buscar_linhas(cur, pub: dict, caixa: tuple[float, float, float, float] | None,
+                   limite: int) -> list[dict]:
+    """Linhas da view publicada no recorte pedido, com a geometria em GeoJSON. Consulta única de
+    `feicoes` (resposta direta) e `exportar` (pacote .zip): os dois servem exatamente as mesmas feições
+    para os mesmos parâmetros. Identificadores vêm do REGISTRO (validados por _NOME_VIEW e pela lista de
+    colunas da view), nunca do chamador; ainda assim vão citados por _ident, que é a citação do próprio
+    servidor."""
+    colunas = [c for c in pub["colunas"] if c != pub["coluna_geom"]]
+    lista = ", ".join(_ident(c) for c in colunas)
+    geom = _ident(pub["coluna_geom"])
+    onde, params = "true", []
+    if caixa:
+        onde = f"{geom} && ST_MakeEnvelope(%s, %s, %s, %s, 4326)"
+        params = list(caixa)
+    sql = (
+        f"SELECT {lista}, ST_AsGeoJSON({geom})::json AS geometria "
+        f'FROM {_ident(_schema_views())}.{_ident(pub["view_nome"])} WHERE {onde} LIMIT %s'
+    )
+    cur.execute(sql, [*params, limite])
+    return cur.fetchall()
+
+
+def _colecao_geojson(camada: str, linhas: list[dict]) -> dict:
+    """FeatureCollection das linhas lidas da view — a mesma montagem para a resposta de `feicoes` e para
+    o arquivo .geojson do pacote de exportação."""
+    feats = []
+    for li in linhas:
+        g = li.pop("geometria")
+        feats.append({"type": "Feature", "geometry": g, "properties": {k: _json_ok(v) for k, v in li.items()}})
+    return {"type": "FeatureCollection", "camada": camada, "total": len(feats), "features": feats}
+
+
 @router.get("/api/acervo/camadas/{camada}/feicoes", response_model=AcervoFeicoes, openapi_extra=LER)
 def feicoes(
     camada: str,
@@ -231,28 +263,9 @@ def feicoes(
     with db.db(auth.contexto()) as cur:
         pub = _publicacao(cur, camada)
         _exigir_assinatura(cur, pub)
-        caixa = _caixa(bbox)
-        colunas = [c for c in pub["colunas"] if c != pub["coluna_geom"]]
-        # identificadores vêm do REGISTRO (validados por _NOME_VIEW e pela lista de colunas da view), nunca do
-        # chamador; ainda assim vão citados por format_ident, que é a citação do próprio servidor.
-        lista = ", ".join(_ident(c) for c in colunas)
-        geom = _ident(pub["coluna_geom"])
-        onde, params = "true", []
-        if caixa:
-            onde = f"{geom} && ST_MakeEnvelope(%s, %s, %s, %s, 4326)"
-            params = list(caixa)
-        sql = (
-            f"SELECT {lista}, ST_AsGeoJSON({geom})::json AS geometria "
-            f'FROM {_ident(_schema_views())}.{_ident(pub["view_nome"])} WHERE {onde} LIMIT %s'
-        )
-        cur.execute(sql, [*params, limite])
-        linhas = cur.fetchall()
+        linhas = _buscar_linhas(cur, pub, _caixa(bbox), limite)
         _registrar_uso(cur, auth.tenant_id, pub["acervo_camada_id"], len(linhas))
-    feats = []
-    for li in linhas:
-        g = li.pop("geometria")
-        feats.append({"type": "Feature", "geometry": g, "properties": {k: _json_ok(v) for k, v in li.items()}})
-    return {"type": "FeatureCollection", "camada": camada, "total": len(feats), "features": feats}
+    return _colecao_geojson(camada, linhas)
 
 
 @router.get("/api/acervo/camadas/{camada}/tiles/{z}/{x}/{y}.mvt", openapi_extra=LER)
@@ -334,25 +347,19 @@ def exportar(
         registrar_evento(cur, request, "acervo/exportar", "acervo_camada", None,
                          {"camada": camada, "acervo_camada_id": pub["acervo_camada_id"],
                           "feicoes": len(linhas), "licenca_tipo": ficha["licenca_tipo"]})
-    feats = []
-    for li in linhas:
-        g = li.pop("geometria")
-        feats.append({"type": "Feature", "geometry": g, "properties": {k: _json_ok(v) for k, v in li.items()}})
-    geojson = json.dumps(
-        {"type": "FeatureCollection", "camada": camada, "total": len(feats), "features": feats},
-        ensure_ascii=False,
-    )
-    truncado = len(feats) == limite
+    feats = _colecao_geojson(camada, [dict(li) for li in linhas])
+    geojson = json.dumps(feats, ensure_ascii=False)
+    truncado = feats["total"] == limite
     aviso = ficha["licenca_texto"] + (
         "\n--\n\n"
-        f"Pacote exportado da plataforma em {__import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()}.\n"
+        f"Pacote exportado da plataforma em {datetime.now(timezone.utc).isoformat()}.\n"
         f"Camada: {pub['view_nome']} ({pub['acervo_camada_id']}).\n"
         f"Inquilino: {inquilino}. Assinatura registrada em {aceite['assinado_em'].isoformat()} "
         f"(licença {aceite['licenca_tipo']}, sha256 do texto aceito {aceite['licenca_sha256']}).\n"
     )
     if aceite["licenca_sha256"] != ficha["licenca_sha256"]:
         aviso += "O texto da licença mudou depois da assinatura; este pacote carrega o texto ATUAL.\n"
-    aviso += f"Feições neste pacote: {len(feats)}.\n"
+    aviso += f"Feições neste pacote: {feats['total']}.\n"
     if truncado:
         aviso += f"O pacote foi truncado no limite de {limite} feições; refine a caixa envolvente.\n"
     memoria = io.BytesIO()
