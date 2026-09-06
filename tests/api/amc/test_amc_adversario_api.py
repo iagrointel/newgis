@@ -23,7 +23,6 @@ import pytest
 from shapely.geometry import shape
 from shapely.ops import transform
 
-from app import db as banco
 from app.amc import unidades as mod_unidades
 from app.settings import settings
 from tests.api.amc import exemplos
@@ -334,9 +333,10 @@ def test_adv_nan_e_corpo_gigante_dao_422_e_413_nunca_500(sessao_a):
     assert r.status_code == 413 and r.json()["erro"] == "corpo_grande", r.text
 
 
-@pytest.mark.xfail(strict=True, reason="ATAQUE QUE PASSOU: chave repetida no JSON cru é aceita em silêncio — a "
-                                       "primeira ocorrência é descartada pelo parser e o modelo é gravado com a "
-                                       "última. Quem enviou não sabe qual das duas valeu")
+# CONSERTADO em 06/09/2026 (achado 5 do laudo): as três rotas de modelo passam por
+# app.amc.rotas.corpo_json_sem_chave_repetida e devolvem 422 `json_ambiguo`. Era: "chave repetida no JSON cru é
+# aceita em silêncio — a primeira ocorrência é descartada pelo parser e o modelo é gravado com a última; quem
+# enviou não sabe qual das duas valeu". A marca xfail(strict) saiu.
 def test_adv_chave_repetida_no_corpo_cru_deveria_ser_recusada(sessao_a):
     texto = json.dumps({"definicao": exemplos.modelo_valido()}, ensure_ascii=False)
     alvo = '"nome": "modelo de teste interno"'
@@ -344,8 +344,8 @@ def test_adv_chave_repetida_no_corpo_cru_deveria_ser_recusada(sessao_a):
     assert r.status_code == 422, r.text
 
 
-@pytest.mark.xfail(strict=True, reason="ATAQUE QUE PASSOU: transformação linear com mínimo maior que o máximo entra "
-                                       "no modelo, no hash e na execução sem uma violação")
+# CONSERTADO em 06/09/2026 (achado 2 do laudo). Era: "transformação linear com mínimo maior que o máximo entra
+# no modelo, no hash e na execução sem uma violação". A marca xfail(strict) saiu.
 def test_adv_transformacao_invertida_deveria_ser_recusada_pela_api(sessao_a):
     m = exemplos.modelo_valido()
     m["fatores"][0]["transformacao"] = {"tipo": "linear", "minimo": 30, "maximo": 0, "direcao": "crescente"}
@@ -362,9 +362,9 @@ def _area_geodesica_m2(geojson: dict) -> float:
     """Área geodésica com buraco descontado. `Geod.geometry_area_perimeter` SOMA o valor absoluto dos anéis
     internos (conferido: polígono com buraco dá exterior + buraco), então os anéis são somados um a um."""
     def _do_poligono(pol) -> float:
-        fora = abs(GEOD.polygon_area_perimeter(*zip(*pol.exterior.coords))[0])
+        fora = abs(GEOD.polygon_area_perimeter(*zip(*pol.exterior.coords, strict=True))[0])
         for anel in pol.interiors:
-            fora -= abs(GEOD.polygon_area_perimeter(*zip(*anel.coords))[0])
+            fora -= abs(GEOD.polygon_area_perimeter(*zip(*anel.coords, strict=True))[0])
         return fora
 
     g = shape(geojson)
@@ -534,16 +534,15 @@ def test_adv_area_que_cruza_duas_zonas_declara_crs_e_distorcao_na_ficha(sessao_a
 
 
 # ================================================================ 5. o schema do ambiente
-@pytest.mark.xfail(settings.PLAT_SCHEMA != "plat", strict=True,
-                   reason="ATAQUE QUE PASSOU: `app/amc/unidades.py::gravar_feicoes` é o ÚNICO ponto da aplicação "
-                          "que usa `psycopg2.extras.execute_values`. Essa função monta o comando final e chama "
-                          "`cur.execute(bytes)`; `CursorSchemaAmbiente.execute` só reescreve `plat.` quando a "
-                          "consulta é `str`, então o literal `plat.amc_unidade` chega ao servidor. Fora do schema "
-                          "`plat` (ambiente de homologação, item L7-31) o conjunto do tipo 'feicoes' morre, e o "
-                          "erro que o cliente vê é 403 'operação fora do inquilino da sessão' — que não é o que "
-                          "aconteceu (foi 'permission denied for schema plat')")
+# CONSERTADO em 06/09/2026 (achado 1 do laudo), nos dois níveis: `gravar_feicoes` não usa mais
+# `psycopg2.extras.execute_values` (um `cur.execute` em TEXTO com `jsonb_to_recordset`), e
+# `app/schema_ambiente.py` passou a reescrever `bytes` além de `str` — e `executemany`, `callproc`, `mogrify` e
+# `copy_expert` além de `execute`. Era: "o conjunto do tipo 'feicoes' morre fora do schema `plat` e o erro que o
+# cliente vê é 403 'operação fora do inquilino da sessão' — que não é o que aconteceu (foi 'permission denied for
+# schema plat')". A mensagem enganosa também foi consertada (app/auth/comum._erro_de_privilegio). A marca
+# xfail(strict), que era condicional a PLAT_SCHEMA != "plat", saiu: agora o teste tem de passar em QUALQUER schema.
 def test_adv_conjunto_de_feicoes_funciona_em_qualquer_schema(sessao_a):
-    """Passa no schema de produção; falha em qualquer outro. É a prova de que o item quebra a homologação."""
+    """Passa em produção E em qualquer schema de ambiente. É a prova de que o item não quebra a homologação."""
     colecao = {"type": "FeatureCollection", "features": [
         {"type": "Feature", "id": "f1", "properties": {},
          "geometry": exemplos.area_retangulo(-49.30, -16.70, 0.01, 0.01)}]}
@@ -554,18 +553,29 @@ def test_adv_conjunto_de_feicoes_funciona_em_qualquer_schema(sessao_a):
 
 
 def test_adv_execute_values_e_o_unico_desvio_da_reescrita_de_schema():
-    """A causa, isolada: a reescrita de schema só age sobre consulta em texto; `execute_values` manda bytes.
-    Este teste não depende do ambiente — mede o mecanismo."""
+    """O MESMO teste, refeito depois do conserto — o autor deixou escrito "a guarda mudou; refazer este teste" na
+    asserção que dependia da forma da guarda, e a guarda mudou. Antes ele media a CAUSA do defeito (a reescrita só
+    agia sobre texto e `execute_values` manda bytes); agora mede o conserto, sem depender do ambiente:
+
+    1. `app/amc/unidades.py` não usa mais `execute_values` em lugar nenhum — a gravação de feições é um
+       `cur.execute` em TEXTO, que passa pela reescrita como qualquer outra consulta;
+    2. a reescrita cobre texto E bytes, e o mesmo mecanismo vale para `executemany`/`callproc`/`mogrify`/
+       `copy_expert`, não só `execute` (a trava que impede um caminho novo de escapar está em
+       tests/unit/test_schema_ambiente.py)."""
     import inspect
 
-    from app.schema_ambiente import CursorSchemaAmbiente, reescrever_schema
+    from app.schema_ambiente import CursorSchemaAmbiente, MixinReescritaSchema, reescrever_schema
 
-    fonte = inspect.getsource(CursorSchemaAmbiente.execute)
-    assert "isinstance(query, str)" in fonte, "a guarda mudou; refazer este teste"
+    fonte_unidades = inspect.getsource(mod_unidades)
+    assert "execute_values" not in fonte_unidades.replace("`psycopg2.extras.execute_values`", ""), \
+        "voltou um execute_values em app/amc/unidades.py: a consulta escapa da reescrita de schema"
+    assert "plat.amc_unidade" in inspect.getsource(mod_unidades.gravar_feicoes), "a consulta mudou; refazer o teste"
+
     assert reescrever_schema("SELECT 1 FROM plat.amc_unidade", "plat_homolog") == \
         "SELECT 1 FROM plat_homolog.amc_unidade"
-    fonte_unidades = inspect.getsource(mod_unidades.gravar_feicoes)
-    assert "execute_values" in fonte_unidades and "plat.amc_unidade" in fonte_unidades
+    # a mesma consulta em bytes, que era o buraco
+    assert CursorSchemaAmbiente._reescrever is MixinReescritaSchema._reescrever
+    assert set(MixinReescritaSchema.METODOS_COM_CONSULTA) >= {"execute", "executemany", "callproc"}
 
 
 @pytest.mark.lento
@@ -578,7 +588,11 @@ def test_adv_o_milhao_de_celulas_que_nao_foi_gerado(sessao_a, conexao_plat_app):
     livre_gb = shutil.disk_usage("/mnt/pgdata").free / 1e9
     if livre_gb < 8:
         pytest.skip(f"/mnt/pgdata com {livre_gb:.1f} GB livres: não se gera 1 milhão de células aqui")
-    area = exemplos.area_retangulo(-49.9, -17.3, 0.92, 0.92)
+    # 0,92° dava 1.000.175 células com o teto em 1.000.000: desde o conserto do achado 4 (06/09/2026) o teto vale
+    # para a CONTAGEM REAL, e um conjunto que passa dele é recusado e limpo. A área encolheu 0,5 % em cada lado
+    # para caber; a escala do portão (100 m sobre ~9.400 km², perto de 1 milhão de células) continua a mesma e
+    # nenhuma asserção deste teste mudou.
+    area = exemplos.area_retangulo(-49.9, -17.3, 0.915, 0.915)
     conjunto, segundos = _gerar(sessao_a, conexao_plat_app, "milhao", "quadrada", 100.0, area)
     try:
         n = conjunto["n_unidades"]
@@ -597,10 +611,11 @@ def test_adv_o_milhao_de_celulas_que_nao_foi_gerado(sessao_a, conexao_plat_app):
         sessao_a.delete(f"/api/amc/conjuntos/{conjunto['id']}")
 
 
-@pytest.mark.xfail(strict=True, reason="ATAQUE QUE PASSOU: o teto de unidades por conjunto (AMC_UNIDADES_MAX) é "
-                                       "conferido sobre a ESTIMATIVA área/área-da-célula, nunca sobre o resultado. "
-                                       "As células de borda entram recortadas e o conjunto termina acima do teto "
-                                       "declarado — medido de verdade: 1.000.175 unidades com o teto em 1.000.000")
+# CONSERTADO em 06/09/2026 (achado 4 do laudo): `app.amc.unidades.gerar_grade` confere AMC_UNIDADES_MAX sobre a
+# CONTAGEM REAL depois de gerar; passou do teto, apaga as unidades, marca o conjunto 'falhou' com o motivo, e a
+# tarefa `amc.gerar_unidades` levanta FalhaDefinitiva. Era: "o teto é conferido sobre a ESTIMATIVA
+# área/área-da-célula, nunca sobre o resultado; as células de borda entram recortadas e o conjunto termina acima do
+# teto declarado — medido de verdade: 1.000.175 unidades com o teto em 1.000.000". A marca xfail(strict) saiu.
 def test_adv_teto_de_unidades_vale_para_a_contagem_real(sessao_a, conexao_plat_app, monkeypatch):
     """Teto baixado por monkeypatch para provar a mecânica sem gerar um milhão de células."""
     from app import limites

@@ -13,10 +13,40 @@ unidade de análise cuja área não dependa de em que parte do país ela está.
 ## Decisão
 
 **1. O modelo é um documento JSON, e a versão dele é o sha256 do JSON canônico.** Canônico =
-`json.dumps(definicao, sort_keys=True, separators=(",", ":"), ensure_ascii=False)` em UTF-8. O documento é validado
-contra `docs/esquemas/amc_modelo.v1.json` (JSON Schema Draft 2020-12) mais três regras que o esquema não expressa:
-id de fator único, soma dos pesos maior que zero e, no combinador `percentual`, pesos que fecham 100. Toda violação
-sai junta, com a cláusula, o caminho e a frase em português (422 `modelo_invalido`).
+`json.dumps(normalizar_numeros(definicao), sort_keys=True, separators=(",", ":"), ensure_ascii=False)` em UTF-8. O
+documento é validado contra `docs/esquemas/amc_modelo.v1.json` (JSON Schema Draft 2020-12) mais as regras que o
+esquema não expressa: id de fator único, soma dos pesos maior que zero, no combinador `percentual` pesos que fecham
+100, e a coerência INTERNA de cada transformação (ver decisão 1.b). Toda violação sai junta, com a cláusula, o
+caminho e a frase em português (422 `modelo_invalido`).
+
+**1.a. Normalização numérica do JSON canônico** (acrescentada em 06/09/2026, depois da refutação do item). Em JSON
+`3` e `3.0` são o MESMO número; sem normalizar, reenviar o mesmo modelo com o peso escrito como inteiro criava uma
+versão nova que não mudara nada. A regra é uma só, e é esta: **todo número de ponto flutuante com parte fracionária
+zero e magnitude menor que 2^53 vira inteiro; nada mais muda.** `0,5` continua `0,5`, `1e30` continua `1e30`,
+booleano nunca é número (em Python `True == 1`, e a regra testa `isinstance(v, bool)` primeiro), e `-0.0` vira `0`.
+A implementação é iterativa, não recursiva, porque `extrator.parametros` é objeto livre no esquema e um documento
+com milhares de níveis de aninhamento é aceito.
+
+A normalização é aplicada **também ao documento que vai ao banco**, não só ao texto que entra no sha256. É essa
+escolha que mantém a auditoria por fora possível: quem ler `plat.amc_modelo_versao.definicao` e recomputar o hash
+com a regra simples (`json.dumps` com `sort_keys`/`separators`, sem normalizar nada) chega ao mesmo valor gravado.
+Custo declarado: o hash de um documento com float integral MUDA em relação à regra anterior. Medido em 06/09/2026
+antes de decidir: os 53 modelos existentes em `plat` são todos resíduo de teste (`zt-*` e "modelo de teste
+interno"), então nenhum histórico real foi invalidado.
+
+**1.b. Coerência interna da transformação.** O `allOf` do esquema descreve os campos obrigatórios de 4 dos 16 tipos
+de transformação, então faixa invertida (`minimo` ≥ `maximo`), faixa degenerada, número de notas incompatível com o
+de quebras (`len(notas)` tem de ser `len(quebras) + 1`), quebras e bandas fora de ordem crescente e função contínua
+sem nenhum parâmetro entravam no modelo, ganhavam hash e só quebrariam — ou dariam nota errada em silêncio — quando
+o motor do item L3-01-d fosse executá-las. Passaram a ser violação com cláusula própria. A regra da função contínua
+é deliberadamente fraca (**pelo menos um parâmetro numérico além de `tipo`, `abaixo`, `acima` e `metodo`**) porque a
+lista de parâmetros de cada curva do Rescale by Function só fica fechada no L3-01-d: apertar mais agora seria
+inventar contrato.
+
+**1.c. Corpo JSON ambíguo é recusado.** Chave repetida no mesmo objeto (`{"nome": "A", "nome": "B"}`) é legal para
+`json.loads`, que fica em silêncio com a última ocorrência. Num documento cuja VERSÃO é o hash dele mesmo, aceitar
+texto ambíguo sem avisar é buraco de auditoria: as três rotas de modelo releem o corpo cru com `object_pairs_hook` e
+devolvem 422 `json_ambiguo` com a chave. Corpo malformado continua sendo assunto do parser do FastAPI.
 
 `plat.amc_modelo` é a cabeça editável; `plat.amc_modelo_versao` guarda toda versão que já existiu e é imutável para
 a aplicação (gatilho no banco: só um superusuário passa). Editar cria versão e move a cabeça. Uma execução aponta
@@ -70,6 +100,23 @@ Alternativa a `feições do usuário`: o id vem de `feature.id` ou de uma propri
 - L2-01 pode recolorir a camada no cliente a partir de um vetor de `(unidade_id, favorabilidade)`, porque o id da
   unidade é estável e a geometria já está em 4326.
 - L3-07 (agregação) tem de reprojetar para `srid_trabalho` antes de medir área ou distância — nunca medir em 4326.
-- Teto declarado em `app/limites.py`: 1.000.000 de unidades por conjunto. Medido nesta máquina: 250 mil células de
-  100 m levam 8,6 s e ocupam ~186 MB de tabela e índices; 1 milhão não foi gerado porque `/mnt/pgdata` está a 99 %
-  (13 GB livres) — a extrapolação está gravada como extrapolação em `tests/medidas/L3-01-b.json`.
+- Teto declarado em `app/limites.py`: 1.000.000 de unidades por conjunto. Ele vale para a CONTAGEM REAL, não para
+  a estimativa área/área-da-célula: a célula de borda entra recortada e o conjunto pode passar do teto (medido:
+  1.000.175 unidades com o teto em 1.000.000). Quando passa, `gerar_grade` apaga as unidades, marca o conjunto como
+  `falhou` com o motivo, e a tarefa `amc.gerar_unidades` levanta `FalhaDefinitiva` — o operador não pode ver
+  "concluído" sobre um conjunto recusado. A guarda da estimativa continua na entrada, para recusar barato o que já
+  se sabe grande demais.
+- Medido nesta máquina: 250 mil células de 100 m levam 8,6 s e ocupam ~186 MB de tabela e índices. A escala de
+  1 milhão de células, que no fecho do item não tinha sido gerada, foi gerada depois (adversário do item, com 43 GB
+  livres em `/mnt/pgdata`): **1.000.175 células em 30,97 s**, desvio de contagem +0,201 %; a re-medição depois do
+  conserto do teto deu 989.334 células em 33,55 s. A projeção linear de 34,3 s que estava no lugar era conservadora
+  — errou cerca de 10 % para mais. A única linha ainda marcada `EXTRAPOLADO` em `tests/medidas/L3-01-b.json` é a de
+  bytes para 1 milhão, que ninguém mediu.
+- A reescrita de schema de `app/schema_ambiente.py` é infraestrutura de que este item depende, e o item abriu a
+  primeira exceção a ela ao usar `psycopg2.extras.execute_values` (que entrega `bytes` ao cursor). A exceção foi
+  fechada como classe, não como remendo: ver `app/schema_ambiente.MixinReescritaSchema`, que declara em
+  `METODOS_COM_CONSULTA` o que cobre (`execute`, `executemany`, `callproc`, `mogrify`, `copy_expert`, em texto e em
+  bytes) e em `METODOS_FORA_DE_COBERTURA` o que não cobre e por quê (`copy_from` e `copy_to` recebem NOME de tabela
+  e a casa não os usa — varrido em `app/`, `scripts/` e `db/`; `psycopg2.sql.Composed` passa cru, e a casa também
+  não o usa). `tests/unit/test_schema_ambiente.py` reprova se um ponto de entrada novo aparecer sem decisão escrita
+  e se alguém passar a usar um dos excluídos.

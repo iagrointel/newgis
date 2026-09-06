@@ -2,6 +2,7 @@
 de exceção do banco (gatilhos e funções levantam códigos curtos) para ErroAPI, paginação, cookie de sessão."""
 
 import json
+import logging
 from typing import Any
 
 import psycopg2
@@ -12,6 +13,8 @@ from app import limites
 from app.auth.sessao import COOKIE, Auth, ip_de, iso
 from app.erros import ErroAPI
 from app.settings import settings
+
+log = logging.getLogger("plat.auth")
 
 SQL_USUARIO = """
 SELECT u.id, u.login, u.nome, u.email, u.perfil, u.superadmin, u.ativo, u.origem, u.totp_ativo, u.trocar_senha,
@@ -102,6 +105,26 @@ def registrar_evento(
     )
 
 
+def _erro_de_privilegio(e: Exception) -> ErroAPI:
+    """O SQLSTATE 42501 tem dois donos muito diferentes e até 06/09/2026 os dois saíam como a mesma mensagem:
+
+    - RLS: `new row violates row-level security policy for table ...` — o pedido cruzou a fronteira do inquilino.
+      Continua 403 `sem_permissao`, que é a verdade.
+    - GRANT: `permission denied for schema/table/function ...` — a role da aplicação não tem privilégio no banco.
+      Isso é erro de INSTALAÇÃO (migração não aplicada, schema de ambiente sem GRANT), não fronteira de inquilino;
+      dizer ao operador que ele saiu do inquilino manda-o investigar o lugar errado (achado do adversário do item
+      L3-01-b, que viu `permission denied for schema plat` sair como 403 "operação fora do inquilino da sessão").
+      Sai 500 `privilegio_do_banco`, com o objeto negado no detalhe e a frase do servidor só no log."""
+    texto = (getattr(e, "diag", None) and e.diag.message_primary or "").strip()
+    if "row-level security" in texto.lower():
+        return ErroAPI(403, "sem_permissao", "operação fora do inquilino da sessão")
+    log.error("privilegio_do_banco: %s", texto or e)
+    return ErroAPI(500, "privilegio_do_banco",
+                   "a aplicação não tem privilégio no banco para esta operação; é erro de instalação do ambiente, "
+                   "não de inquilino — o detalhe está no log do servidor",
+                   {"objeto": e.diag.schema_name or e.diag.table_name if getattr(e, "diag", None) else None})
+
+
 def erro_do_banco(e: Exception) -> ErroAPI:
     """RaiseException com código curto → ErroAPI; violação de unicidade/CHECK/FK → 409/422."""
     if isinstance(e, psycopg2.errors.RaiseException):
@@ -117,7 +140,7 @@ def erro_do_banco(e: Exception) -> ErroAPI:
     if isinstance(e, psycopg2.errors.ForeignKeyViolation):
         return ErroAPI(409, "em_uso", "registro referenciado por outro", {"restricao": e.diag.constraint_name})
     if isinstance(e, psycopg2.errors.InsufficientPrivilege):
-        return ErroAPI(403, "sem_permissao", "operação fora do inquilino da sessão")
+        return _erro_de_privilegio(e)
     if isinstance(e, psycopg2.errors.ReadOnlySqlTransaction):
         return ErroAPI(403, "somente_leitura", "leitura de outro inquilino não permite escrita")
     raise e
