@@ -58,6 +58,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/agendas/{agenda_id}/rodar-agora"): ["jobs/criar"],
     # ---- catálogo (L0-03; vocabulário na migração 011)
     ("POST", "/api/itens"): ["itens/adicionar"],
+    ("POST", "/api/acervo/{fonte_id}/adicionar"): ["itens/adicionar"],
     ("PUT", "/api/itens/{id}"): ["itens/atualizar", "itens/status", "itens/proteger", "itens/desproteger"],
     ("PATCH", "/api/itens/{id}"): ["itens/atualizar", "itens/status", "itens/proteger", "itens/desproteger"],
     ("DELETE", "/api/itens/{id}"): ["itens/apagar"],

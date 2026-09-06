@@ -7334,10 +7334,551 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade|conteudo.apagar_tudo"
    }
+  },
+  "/api/acervo": {
+   "get": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_acervo_get",
+    "parameters": [
+     {
+      "name": "dominio",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Dominio"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 200
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AcervoPagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/acervo/{fonte_id}": {
+   "get": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_acervo__fonte_id__get",
+    "parameters": [
+     {
+      "name": "fonte_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Fonte Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AcervoFicha"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/acervo/{fonte_id}/adicionar": {
+   "post": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Adicionar",
+    "operationId": "adicionar_api_acervo__fonte_id__adicionar_post",
+    "parameters": [
+     {
+      "name": "fonte_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Fonte Id"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar|conteudo.registrar_fonte"
+   }
   }
  },
  "components": {
   "schemas": {
+   "AcervoCartao": {
+    "properties": {
+     "fonte_id": {
+      "type": "string",
+      "title": "Fonte Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "orgao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Orgao"
+     },
+     "dominio": {
+      "type": "string",
+      "title": "Dominio"
+     },
+     "licenca": {
+      "type": "string",
+      "title": "Licenca"
+     },
+     "frescor": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Frescor"
+     },
+     "numero_tabelas": {
+      "type": "integer",
+      "title": "Numero Tabelas"
+     },
+     "registros_estimados": {
+      "type": "integer",
+      "title": "Registros Estimados"
+     },
+     "procedencia_pontuacao": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Procedencia Pontuacao"
+     },
+     "proxima_verificacao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Proxima Verificacao"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "fonte_id",
+     "nome",
+     "dominio",
+     "licenca",
+     "numero_tabelas",
+     "registros_estimados"
+    ],
+    "title": "AcervoCartao"
+   },
+   "AcervoFicha": {
+    "properties": {
+     "fonte_id": {
+      "type": "string",
+      "title": "Fonte Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "orgao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Orgao"
+     },
+     "dominio": {
+      "type": "string",
+      "title": "Dominio"
+     },
+     "licenca": {
+      "type": "string",
+      "title": "Licenca"
+     },
+     "frescor": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Frescor"
+     },
+     "numero_tabelas": {
+      "type": "integer",
+      "title": "Numero Tabelas"
+     },
+     "registros_estimados": {
+      "type": "integer",
+      "title": "Registros Estimados"
+     },
+     "procedencia_pontuacao": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Procedencia Pontuacao"
+     },
+     "proxima_verificacao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Proxima Verificacao"
+     },
+     "url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Url"
+     },
+     "url_http": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Url Http"
+     },
+     "url_conferida_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Url Conferida Em"
+     },
+     "data_dado": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data Dado"
+     },
+     "data_acesso": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data Acesso"
+     },
+     "script_gerador": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Script Gerador"
+     },
+     "sha256": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sha256"
+     },
+     "comando_reexecucao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Comando Reexecucao"
+     },
+     "metodo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Metodo"
+     },
+     "confianca": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Confianca"
+     },
+     "limites": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Limites"
+     },
+     "bytes": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bytes"
+     },
+     "procedencia_campos": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Procedencia Campos"
+     },
+     "procedencia_campos_possiveis": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Procedencia Campos Possiveis"
+     },
+     "atualizado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atualizado Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "fonte_id",
+     "nome",
+     "dominio",
+     "licenca",
+     "numero_tabelas",
+     "registros_estimados"
+    ],
+    "title": "AcervoFicha"
+   },
+   "AcervoPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/AcervoCartao"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "AcervoPagina"
+   },
    "Agenda": {
     "properties": {
      "id": {

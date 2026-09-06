@@ -45,6 +45,7 @@ class Preparacao:
     pasta_b: dict = field(default_factory=dict)  # L0-03: pasta de B
     link_b: dict = field(default_factory=dict)  # L0-03: link por token de B (token em claro só aqui)
     categoria_b: dict = field(default_factory=dict)  # L0-03: categoria de B
+    fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -101,9 +102,14 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
                                                + [{"nome": f"{PREFIXO}cat-{sufixo}", "filhas": []}]})
     assert r.status_code == 200, r.text
     categoria_b = r.json()["arvore"][-1]
+    # L6-01-a: acervo é registro compartilhado (não pertence a A nem a B); só precisa de UMA fonte com licença
+    # escrita (regra D17) para os casos de GET/POST — qualquer sessão vê a mesma lista.
+    r = sessao_a.get("/api/acervo?limite=1")
+    assert r.status_code == 200, r.text
+    fonte_acervo = r.json()["itens"][0]["fonte_id"]
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b)
+                      categoria_b=categoria_b, fonte_acervo=fonte_acervo)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -385,6 +391,16 @@ CASOS: dict[tuple[str, str], Caso] = {
     # ---- L0-03 catálogo: alvos de B = 404 (não 403: não confirma existência); leituras de lista agem só no chamador
     ("GET", "/api/tipos-item"): Caso(lambda p: "/api/tipos-item", proprio=True, aceita=frozenset({200}),
                                      verificar=_sem_marca),
+    # ---- L6-01-a acervo da casa: registro compartilhado (não é de A nem de B); só fonte com licença escrita
+    # aparece (regra D17); "adicionar" cria item SÓ no inquilino do chamador (mesma trava do resto do catálogo)
+    ("GET", "/api/acervo"): Caso(lambda p: "/api/acervo?limite=5", proprio=True, aceita=frozenset({200}),
+                                 verificar=_sem_marca),
+    ("GET", "/api/acervo/{fonte_id}"): Caso(lambda p: f"/api/acervo/{p.fonte_acervo}", proprio=True,
+                                            aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/acervo/{fonte_id}/adicionar"): Caso(
+        lambda p: f"/api/acervo/{p.fonte_acervo}/adicionar", proprio=True, aceita=frozenset({201}),
+        verificar=_sem_marca, limpar=_apagar_criado(("DELETE", "/api/itens/{id}")),
+    ),
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,

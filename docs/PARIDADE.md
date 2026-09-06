@@ -53,3 +53,18 @@ handoff próprio para este item; a coluna "Esri" abaixo vem do ADR. O adversári
 | tela de acompanhamento por organização | histórico de jobs no serviço de GP; sem tela de usuário final equivalente no Portal | tela Tarefas: lista ao vivo, filtros, detalhe com log, cancelar, repetir, CSV, agendas; administrador vê tudo, os demais só os próprios | feito | testador T2 (e2e 4 de 5: a prova com 1.000 jobs semeados falhou por semeadura do próprio teste, não do produto) | 2026-09-05 | pendente (D20) |
 | job remoto em GPU / executor externo | GeoAnalytics/Notebook Server | só a coluna `executor`, o CHECK e a recusa na importação sem `PLAT_GPU_SSH` | fora (L1-05) | — | 2026-09-05 | pendente (D20) |
 | cotas por organização | créditos e limites de serviço | `cota_jobs_simultaneos` (2), `cota_jobs_dia` (1.000, 413), `cota_agendas` (50, 413), > 200 pendentes = 429; com 1 processo a cota de simultâneos não tem efeito | parcial (serial com 1 processo) | testador T2 | 2026-09-05 | pendente (D20) |
+
+## Acervo da casa (item L6-01-a-procedencia-acervo)
+
+Referência Esri: Living Atlas em ArcGIS Enterprise 11.4 "referencia" conteúdo do ArcGIS Online quando há
+internet e publica camadas de limites diretamente no portal quando não há (`what-is-living-atlas.htm`, 11.4);
+"users are responsible for adhering to the terms of use for each item" (Business Analyst,
+`understand-arcgis-living-atlas.htm`). Este item cobre só a FICHA de procedência por fonte (metadado: licença,
+frescor, sha256, comando de reexecução, nº de tabelas, registros) e o "adicionar ao catálogo" que referencia a
+fonte sem copiar dado; a tela de navegação (L6-01-c), a view por CAMADA de dado com RLS por assinatura
+(L6-01-b) e a licença curada em vocabulário fechado (L6-01-g) são itens à parte, ainda pendentes.
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| ficha de procedência por fonte/camada do catálogo curado | "terms of use" por item; metadado de item (licença, créditos, data) | `plat.acervo_ficha` (migração 021): view `SECURITY INVOKER` sobre `acervo.fonte`/`acervo.v_completude` (376 fontes medidas; nunca escrita pela plataforma), licença, frescor, sha256, comando de reexecução, nº de tabelas e registros (estimativa, `acervo.fonte.linhas_est`); `GET /api/acervo` (lista por domínio e busca) e `GET /api/acervo/{fonte_id}` (ficha completa); regra D17 — só fonte com `licenca IS NOT NULL` aparece (68 de 376 medido em 06/09/2026), nunca GRANT à role PUBLIC | parcial (mecanismo completo; sem tela — L6-01-c; licença ainda é o texto livre de `acervo.fonte`, não o vocabulário fechado do L6-01-g) | arquiteto/backend nesta sessão (6 testes próprios verdes); **sem adversário independente do turno** | 2026-09-06 | pendente (D20) |
+| "adicionar" ao conteúdo próprio sem copiar dado | Add Item by URL / referenced content | `POST /api/acervo/{fonte_id}/adicionar` cria item `plat.item` tipo `conexao` (protocolo `acervo`, `dados.parametros.fonte_id`); 404 se a fonte não tem licença escrita (mesma resposta de "não existe", regra D17); RLS de `plat.item` garante que só o inquilino que chamou vê o item criado | parcial (cria a referência; não resolve tiles/FeatureServer a partir dela — isso é o L6-01-b) | arquiteto/backend nesta sessão (teste cruzado A→B: dono lê, outro inquilino recebe 404); **sem adversário independente do turno** | 2026-09-06 | pendente (D20) |
