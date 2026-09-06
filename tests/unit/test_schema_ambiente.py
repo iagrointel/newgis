@@ -8,7 +8,7 @@ inquilinos passou a rodar contra o schema errado.
 
 Este arquivo fecha a classe do defeito em vez de tapar buraco por buraco:
 
-1. `test_todo_ponto_de_entrada_com_consulta_esta_declarado` reprova se o cursor do psycopg2 tiver um método que
+1. `test_cada_ponto_de_entrada_com_consulta_esta_declarado` reprova se o cursor do psycopg2 tiver um método que
    carrega comando SQL e que não esteja nem coberto nem declarado como fora de cobertura com a razão escrita;
 2. `test_a_casa_nao_usa_ponto_de_entrada_fora_de_cobertura` reprova se alguém começar a usar, no código de
    produção, um dos pontos que hoje ficam de fora (`copy_from`, `copy_to`);
@@ -96,11 +96,11 @@ def no_schema_padrao(monkeypatch):
 
 
 # ================================================================ 1. a trava
-def test_todo_ponto_de_entrada_com_consulta_esta_declarado():
+def test_cada_ponto_de_entrada_com_consulta_esta_declarado():
     """Se o driver tiver um método que carrega comando e a casa não o cobrir nem declarar por que não cobre, este
     teste reprova. É o que impede o defeito de voltar por um caminho novo."""
-    cobertos = set(MixinReescritaSchema.METODOS_COM_CONSULTA)
-    declarados_de_fora = set(MixinReescritaSchema.METODOS_FORA_DE_COBERTURA)
+    cobertos = set(MixinReescritaSchema.PONTOS_COM_CONSULTA)
+    declarados_de_fora = set(MixinReescritaSchema.PONTOS_FORA_DE_COBERTURA)
     assert not (cobertos & declarados_de_fora), "método coberto e declarado fora ao mesmo tempo"
 
     # (a) tudo o que a lista do driver traz está num dos dois lados
@@ -115,13 +115,13 @@ def test_todo_ponto_de_entrada_com_consulta_esta_declarado():
             f"{nome} foi sobrescrito sem chamar a reescrita"
 
     # (c) toda razão de exclusão é uma frase escrita, não um vazio
-    for nome, razao in MixinReescritaSchema.METODOS_FORA_DE_COBERTURA.items():
+    for nome, razao in MixinReescritaSchema.PONTOS_FORA_DE_COBERTURA.items():
         assert isinstance(razao, str) and len(razao) > 30, f"{nome}: razão de exclusão vaga ou ausente"
 
     # (d) e nenhum método público do mixin ficou de fora da lista (o que fecha o outro lado da porta)
     publicos = {n for n, f in vars(MixinReescritaSchema).items()
-                if callable(f) and not n.startswith("_") and n not in ("METODOS_COM_CONSULTA",
-                                                                       "METODOS_FORA_DE_COBERTURA")}
+                if callable(f) and not n.startswith("_") and n not in ("PONTOS_COM_CONSULTA",
+                                                                       "PONTOS_FORA_DE_COBERTURA")}
     assert publicos == cobertos, f"método público do mixin fora da lista declarada: {sorted(publicos ^ cobertos)}"
 
 
@@ -135,7 +135,7 @@ def test_a_casa_nao_usa_ponto_de_entrada_fora_de_cobertura():
     for pasta in ("app", "scripts", "db"):
         for arquivo in (raiz / pasta).rglob("*.py"):
             texto = arquivo.read_text(encoding="utf-8")
-            for nome in MixinReescritaSchema.METODOS_FORA_DE_COBERTURA:
+            for nome in MixinReescritaSchema.PONTOS_FORA_DE_COBERTURA:
                 if f".{nome}(" in texto:
                     ofensas.append(f"{arquivo.relative_to(raiz)}: usa .{nome}(")
     assert not ofensas, "ponto de entrada fora de cobertura em uso: " + "; ".join(ofensas)
@@ -152,7 +152,7 @@ CONSULTA = "SELECT 1 FROM plat.papel_privilegio JOIN plat_trabalho.tmp USING (id
 ESPERADO = f"SELECT 1 FROM {SCHEMA_DE_TESTE}.papel_privilegio JOIN {SCHEMA_TRABALHO_DE_TESTE}.tmp USING (id)"
 
 
-@pytest.mark.parametrize("metodo", sorted(MixinReescritaSchema.METODOS_COM_CONSULTA))
+@pytest.mark.parametrize("metodo", sorted(MixinReescritaSchema.PONTOS_COM_CONSULTA))
 @pytest.mark.parametrize("tipo", ["texto", "bytes"])
 def test_cada_metodo_coberto_entrega_a_consulta_reescrita(fora_do_schema_padrao, metodo, tipo):
     cur = CursorEspiao()
@@ -193,7 +193,7 @@ def test_tipo_desconhecido_passa_cru(fora_do_schema_padrao):
 
 
 # ================================================================ 3. produção não muda
-@pytest.mark.parametrize("metodo", sorted(MixinReescritaSchema.METODOS_COM_CONSULTA))
+@pytest.mark.parametrize("metodo", sorted(MixinReescritaSchema.PONTOS_COM_CONSULTA))
 def test_no_op_no_schema_padrao(no_schema_padrao, metodo):
     """No schema padrão a consulta sai IDÊNTICA — o mesmo objeto, sem passar por regex nenhuma."""
     cur = CursorEspiao()
