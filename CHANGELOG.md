@@ -3,6 +3,52 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
+
+SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
+cifrada AES-GCM com rótulo próprio `plat-smtp`); `GET/PUT /api/org/smtp` e `POST /api/org/smtp/testar`
+(envio síncrono, erro legível, nunca a senha). E-mail sempre por job `correio.enviar` (fila do L0-05),
+`somente_sistema=True` (campo novo em `app/jobs/registro.py`) impede a criação via `POST /api/jobs` mesmo
+por admin — fecharia canhão de spam com o SMTP do inquilino; só `app/jobs/sistema.py::enfileirar` cria.
+Convite de membro (`plat.convite`, migração 047): o link carrega só o token, nunca o e-mail — o servidor
+sempre lê o que o convite guarda (`ConviteAceitarEntrada` é `extra="forbid"`, um `email` extra no corpo
+vira 422 antes de tocar o banco); token de uso único (sha256), validade 7 dias, aceitar roda numa função
+SQL `SECURITY DEFINER` com `FOR UPDATE` que cria a conta e marca o convite usado na mesma transação. Sem
+SMTP, a resposta devolve `link_manual` (mesmo padrão de senha temporária mostrada uma vez). Redefinição de
+senha por e-mail (`plat.redefinicao_senha` + `plat.redefinicao_pedido`): solicitar sempre devolve
+`202 {"ok":true}`, exista ou não a conta; limite de taxa por (inquilino, e-mail), 5 pedidos a cada 15
+minutos, contado mesmo para e-mail inexistente (senão o próprio limite revelaria existência); aplicar
+reusa a mesma rotina de troca de senha/histórico/sessões de `PUT /api/eu/senha`. Telas: `/admin/organizacao`
+(seção SMTP), `/admin/usuarios` (convidar + lista de pendentes), `/aceitar-convite` e `/redefinir-senha`
+(públicas). ADR 0017.
+
+Três defeitos reais achados rodando de verdade contra `https://plat.iagrointel.com` com um servidor SMTP
+de captura em stdlib puro (`tests/api/util_smtp_captura.py` — `aiosmtpd` está ausente) e o `plat-worker`
+real, corrigidos ANTES do adversário (migrações 048/049): (1) variável PL/pgSQL `chave` ambígua contra a
+coluna homônima em `plat.redefinicao_pedido` — todo `POST /api/senha/redefinir/solicitar` caía em 500;
+(2) sete tipos de evento novos nunca inseridos em `plat.evento_tipo` — toda `registrar_evento` correspondente
+violava a FK (500 em `PUT/DELETE /api/org/smtp`, `POST /api/convites`, aceitar convite, aplicar
+redefinição); (3) duas consultas a `plat.tenant` sem contexto de inquilino (a conta ainda não existe)
+caíam na RLS e devolviam `None` em vez da linha; (4) `correio.enviar` com `memoria_mb=192` estourava de
+verdade o `RLIMIT_DATA` do filho (cryptography importado pela primeira vez depois do fork), subiu para 512.
+Medido, com o worker/API reais e o servidor de captura: convite chega e-mail→resolver→aceitar→conta
+criada→login funciona; link usado de novo e expirado (7 dias simulados por UPDATE direto) dão `410`
+nos dois casos; e-mail malicioso extra no corpo do aceite vira `422` e nunca altera o e-mail da conta
+criada (sempre o do convite); redefinição ponta a ponta com o mesmo padrão; 12 pedidos seguidos de
+redefinição para o mesmo e-mail estouram o limite de taxa antes do fim (refutação do item); `testar envio`
+com host inexistente devolve erro legível em menos de 1 s; a senha SMTP em claro NUNCA aparece no
+`journalctl` real de `plat-worker`/`plat-api` (grep direto no log real, não simulado);
+`POST /api/jobs {"tipo":"correio.enviar"}` recusa `403` mesmo para o admin do inquilino; isolamento
+cruzado confirmado (admin de outro inquilino recebe `404` ao tentar cancelar convite alheio).
+`tests/api/test_smtp_convites.py` + `tests/unit/test_correio_cifra.py` + `test_correio_cliente.py`:
+21/21 passam contra o schema `plat` de produção. **Pendência nomeada**: o e2e de navegador
+(`tests/e2e/test_convite.py`, escrito e com lint limpo) não foi executado neste turno — swap da
+máquina em 7,7/8,0 GiB no momento do fechamento (contenção de múltiplos agentes concorrentes no laço,
+não desta mudança), e a casa já teve OOM por lançar Chromium sob essa pressão; roda no próximo `make e2e`
+com RAM livre. Fora do portão literal deste turno (hipótese do item, registrado no ADR 0017 §D5): avisos
+de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail — o job `correio.enviar` já serve,
+falta só o gatilho periódico cross-tenant.
+
 ## turno 3, setembro de 2026 (nome de migração por carimbo de tempo — ADR 0014)
 
 Migração nova passa a se chamar `db/migracoes/YYYYMMDDTHHMM_<slug>.sql` (carimbo UTC, mais 3 hexadecimais
