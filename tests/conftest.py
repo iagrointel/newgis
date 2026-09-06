@@ -52,7 +52,11 @@ def cliente(env):
 
 @pytest.fixture
 def conexao_plat_app(env):
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    # CursorSchemaAmbiente (não RealDictCursor puro): o teste escreve `plat.` na mão e o ambiente de
+    # homologação/trilha roda noutro schema — sem a reescrita, "permission denied for schema plat".
+    from app.schema_ambiente import CursorSchemaAmbiente
+
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     con.autocommit = False
     try:
         yield con
