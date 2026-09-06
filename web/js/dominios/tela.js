@@ -15,7 +15,7 @@ import { carregar, t } from '../base/i18n.js';
 import '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
-import { dominioDoCampo, opcoes, rotulo } from './valores.js';
+import { dominioDoCampo, opcoes, rotulo, rotuloSubtipo } from './valores.js';
 
 const ITEM_ID = location.pathname.split('/')[2] || '';
 
@@ -181,7 +181,8 @@ async function montarTabela() {
     corpo.append(h('tr', { dataset: { fid: String(f.fid) } },
       h('td', {}, String(f.fid)),
       ...dados.campos.map((c) => h('td', { title: f[c.nome] === null ? '' : String(f[c.nome]) },
-        rotulo(dados.ligacoes, c.nome, f[c.nome], sub)))));
+        c.nome === campoSub ? rotuloSubtipo(dados.subtipo, f[c.nome])
+          : rotulo(dados.ligacoes, c.nome, f[c.nome], sub)))));
   }
   tabela.append(corpo);
   alvo.append(tabela);

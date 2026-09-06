@@ -558,3 +558,38 @@ def test_importar_de_featureserver_cria_liga_e_reaproveita(camada, sessao):
         sessao.delete(f"/api/camadas/{camada.item_id}/subtipos")
         for c in saida["criados"]:
             sessao.delete(f"/api/dominios/{c['id']}")
+
+
+def test_banco_regenera_o_gatilho_sem_a_api(camada, dominios, sessao, con, inquilino):
+    """O adversário liga um domínio escrevendo direto em plat.dominio_campo, sem passar pela API: o gatilho da
+    tabela tem de aparecer do mesmo jeito (é o gatilho AFTER da migração 20260906T1620 que regenera). O mesmo
+    vale ao desligar."""
+    d = dominios(tipo="codificado", tipo_campo="text", valores=codificado(2))
+    camada.contexto()
+    with con.cursor() as cur:
+        cur.execute(
+            "INSERT INTO plat.dominio_campo (tenant_id, item_id, campo, dominio_id) "
+            "VALUES (plat.tenant_atual(), %s::uuid, 'uf', %s::uuid)",
+            (camada.item_id, d["id"]),
+        )
+    with pytest.raises(psycopg2.errors.RaiseException) as e:
+        camada.inserir(uf="XX")
+    assert e.value.diag.message_primary == "valor_fora_do_dominio"
+    con.rollback()
+
+    camada.contexto()
+    with con.cursor() as cur:
+        cur.execute(
+            "INSERT INTO plat.dominio_campo (tenant_id, item_id, campo, dominio_id) "
+            "VALUES (plat.tenant_atual(), %s::uuid, 'uf', %s::uuid)",
+            (camada.item_id, d["id"]),
+        )
+        cur.execute("SELECT count(*) AS n FROM pg_trigger tg JOIN pg_class c ON c.oid = tg.tgrelid "
+                    "WHERE c.relname = %s AND tg.tgname = 'tg_dominio'", (camada.tabela,))
+        assert cur.fetchone()["n"] == 1
+        cur.execute("DELETE FROM plat.dominio_campo WHERE item_id = %s::uuid", (camada.item_id,))
+        cur.execute("SELECT count(*) AS n FROM pg_trigger tg JOIN pg_class c ON c.oid = tg.tgrelid "
+                    "WHERE c.relname = %s AND tg.tgname = 'tg_dominio'", (camada.tabela,))
+        assert cur.fetchone()["n"] == 0        # sem ligação, sem gatilho: camada limpa não paga nada
+    assert camada.inserir(uf="XX") > 0
+    con.rollback()

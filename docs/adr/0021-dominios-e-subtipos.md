@@ -17,8 +17,8 @@ compartilhado por quantas camadas quiserem. A ligação campo -> domínio é que
 (`plat.dominio_campo`), e admite uma linha por subtipo além da linha padrão. Uma lista de UF escrita uma vez
 vale em todas as camadas; corrigir a descrição de um código corrige em todas.
 
-**2. A regra vale no banco, por gatilho, e não por CHECK.** `plat.feicao_validar_dominio` roda BEFORE INSERT
-OR UPDATE em cada tabela de camada que tenha ligação ou subtipo. Três razões:
+**2. A regra vale no banco, por gatilho, e não por CHECK.** `tg_dominio` roda BEFORE INSERT OR UPDATE em cada
+tabela de camada que tenha ligação ou subtipo. Três razões:
 - mudar a lista de valores não pode exigir `ALTER TABLE` (com CHECK, exigiria, e travaria a tabela);
 - a mensagem de erro precisa dizer o campo e o valor: `campo "uf": o valor 'ZZ' não pertence ao domínio
   "UF"`, com o nome do campo também em `COLUMN` (o `diag.column_name` que a API repassa em `detalhe.campo`);
@@ -27,8 +27,20 @@ OR UPDATE em cada tabela de camada que tenha ligação ou subtipo. Três razões
 
 **3. O gatilho só existe onde é preciso.** `plat.camada_dominios_aplicar(item_id)` instala `tg_dominio` na
 tabela quando a camada ganha a primeira ligação ou subtipo, e o REMOVE quando perde a última. Camada sem
-domínio não paga nada por linha. Toda rota que mexe em ligação ou subtipo chama essa função na mesma
-transação.
+domínio não paga nada por linha.
+
+**3b. O gatilho é GERADO por camada, não genérico — e a medida é a razão.** A primeira versão era uma função
+única que lia os campos com `to_jsonb(NEW)`, a única forma de um plpgsql genérico acessar campo por nome.
+Medido em 10 mil inserções: 1,72 s sem gatilho contra 3,11 s com, **razão 1,80x**, acima do teto de 1,5x do
+item. Um gatilho que só faz `to_jsonb(NEW)` e retorna já custa cerca de 129 us por linha, porque converte a
+linha inteira — a geometria inclusive. `plat.camada_dominios_aplicar` passou a ESCREVER uma função por camada
+(`plat.dominio_v_<item>`) com `NEW.uf` no código. Fica embutido só o que muda por DDL (campo, id do domínio,
+lista de subtipos, mínimo e máximo); a lista de códigos continua sendo lida em `plat.dominio_valor` a cada
+linha, porque pode ter milhares de itens e muda com frequência.
+
+**3c. Quem mantém a função gerada em dia é o banco, não a API.** Gatilhos AFTER em `plat.dominio_campo`,
+`plat.camada_subtipo` e `plat.dominio` chamam o gerador sozinhos. Nenhuma rota instala gatilho; quem alterar
+uma ligação por `psql` regenera do mesmo jeito. Regra que só a API mantivesse não seria regra.
 
 **4. `plat.dominio_valor` é índice derivado, não segunda fonte de verdade.** A forma declarada e devolvida
 pela API é `plat.dominio.valores` (jsonb). O gatilho `plat.dominio_sincronizar` (AFTER) reescreve a tabela

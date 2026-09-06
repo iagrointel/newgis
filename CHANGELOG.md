@@ -62,6 +62,44 @@ carimbo) e o cabeçalho opcional `-- depende: <arquivo>`; `db/migrar.sh`, `db/mi
 reprova nome fora do padrão, três dígitos novos e dependência que vem depois na ordem;
 `tests/api/test_saude.py` deixa de casar o glob de três dígitos e escreve o que "última migração" passa a
 significar (a de autoria mais recente pela chave, não a maior string nem a última aplicada no relógio).
+## turno 3, setembro de 2026 (item L2-10-a-dominios-subtipos: domínios de atributo e subtipos por camada)
+
+Domínio de atributo como objeto do inquilino (`plat.dominio`: codificado com lista de códigos, ou intervalo
+com mínimo e máximo), ligação campo -> domínio por camada e por subtipo (`plat.dominio_campo`), subtipo como
+campo inteiro designado da camada (`plat.camada_subtipo`). **ADR 0021**; migrações
+`20260906T1548_dominios_subtipos.sql` e `20260906T1620_dominios_gatilho_gerado.sql`.
+
+- **A regra vale no banco.** Um INSERT direto na tabela da camada como `plat_app`, sem passar pela API, é
+  recusado com `campo "uf": o valor 'ZZ' não pertence ao domínio "UF"` e com o nome do campo em `COLUMN` —
+  a API repassa isso em `detalhe.campo`. Domínio de intervalo recusa abaixo do mínimo e acima do máximo
+  (`campo "altura": o valor -0.1 está fora do intervalo 0.0 a 10.0`). Medido em
+  `tests/medidas/L2-10-a-dominios-subtipos.json`.
+- **Subtipo troca o domínio do mesmo campo.** Com dois subtipos ligados ao campo `situacao`, `terra` passa no
+  subtipo 2 e é recusado no 1; sem subtipo vale o domínio padrão da camada; subtipo fora da lista é recusado.
+- **Remover valor em uso = 409 com a contagem.** Quem conta é `plat.dominio_uso_contar`, a mesma função que
+  responde `GET /api/dominios/{id}/uso`: quatro feições usando `C1` dão
+  `{"erro": "valor_em_uso", "detalhe": {"codigo": "C1", "usos": 4}}`. Valor não usado sai sem drama.
+- **Custo do gatilho, medido e corrigido.** A primeira versão, genérica, lia a linha com `to_jsonb(NEW)` e
+  custou **1,80x** (10 mil inserções: 1,72 s sem gatilho, 3,11 s com) — acima do teto de 1,5x do item. Um
+  gatilho que só faz `to_jsonb(NEW)` já custa cerca de 129 us por linha, porque converte a linha inteira, com
+  geometria. O gatilho passou a ser GERADO por camada (`plat.dominio_v_<item>`, com `NEW.uf` no código), e
+  três gatilhos AFTER (em `plat.dominio_campo`, `plat.camada_subtipo` e `plat.dominio`) regeneram a função
+  sozinhos — nenhuma rota instala gatilho, e quem mexe por `psql` regenera do mesmo jeito.
+- **FeatureServer com domains e types.** `GET /rest/services/{item_id}/FeatureServer/0` publica
+  `fields[].domain` (codedValue e range) e `types[]` com `domains` por subtipo e `templates` com os valores
+  padrão; conferido contra o que `GET /api/camadas/{id}/dominios` devolve do banco. É só o METADADO: `/query`
+  e `/applyEdits` são da linha L2-08.
+- **Tela `/camadas/{id}/dominios`.** Campo com domínio codificado vira lista de escolha que mostra a descrição
+  e grava o código; trocar o subtipo refaz os campos dependentes e aplica os padrões; a tabela de feições usa
+  a mesma tradução (`web/js/dominios/valores.js`, a função única do formulário, da tabela e — quando o painel
+  de camada existir — do popup).
+- **CSV de ida e volta** (`GET /api/dominios.csv`, `POST /api/dominios/csv`) e **importação do `fields`/`types`
+  de um FeatureServer/FGDB** (`POST /api/dominios/importar`), que reaproveita domínio de mesmo nome em vez de
+  duplicar.
+
+Testes: `tests/api/test_dominios_subtipos.py` (inclui a refutação exigida: domínio de outro inquilino = 404,
+50 mil códigos = 422, código duplicado recusado na API e no banco, trocar o tipo de campo com domínio ligado
+= 409) e `tests/e2e/test_dominios.py` (playwright, com capturas).
 
 ## turno 3, setembro de 2026 (item L0-04-a-upload-arquivo: upload retomável pelo navegador)
 
