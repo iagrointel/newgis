@@ -877,7 +877,7 @@ além dos gerais). Todas em `/api/`.
 | POST | `/usuarios/{id}/senha` | S/T | `membros.gerir` | | `200 {senha_temporaria}` | `403 so_admin_altera_admin` · `409 login_externo` |
 | POST | `/usuarios/{id}/2fa/desativar` | S/T | `membros.gerir` | | `204` | idem |
 | POST | `/usuarios/{id}/desbloquear` | S/T | `membros.gerir` | | `204` | |
-| DELETE | `/usuarios/{id}` | S/T | `membros.apagar` | | `204` | `409 ultimo_admin` · `409 possui_grupos {detalhe: [{id,nome}]}` · `403 so_admin_apaga_admin` · `409 proprio_usuario` |
+| DELETE | `/usuarios/{id}` | S/T | `membros.apagar` | | `204` | `409 ultimo_admin` · `409 possui_grupos {detalhe: [{id,nome}]}` · `409 possui_itens {detalhe: [{id,titulo}]}` (T3, `plat.item.dono_id` é FK sem `ON DELETE`) · `403 so_admin_apaga_admin` · `409 proprio_usuario` |
 | POST | `/usuarios/lote` | S/T | `membros.gerir` / `membros.papel` | `{ids[≤100], acao: "perfil"\|"papel"\|"desabilitar"\|"reabilitar", perfil?, papel_id?}` | `200 {alterados: n, recusados: [{id, erro}]}` | `422 lote_acima_de_100` |
 | GET | `/grupos?meus&q&limite&deslocamento` | S/T | (RLS de visibilidade) | | `200 {total, itens: [{id, nome, resumo, tags, visibilidade, entrada, contribuicao, atualizacao_compartilhada, administrativo, protegido, dono: {id,nome}, membros: n, meu_papel, meu_estado}]}` | |
 | POST | `/grupos` | S/T | `grupos.criar` (+ `grupos.atualizacao_compartilhada` / `grupos.administrativo` conforme flags) | `{nome, resumo?, tags?, visibilidade, entrada, contribuicao, atualizacao_compartilhada?, administrativo?, protegido?}` | `201 grupo` | `409 nome_existente` · `422 atualizacao_exige_convite_ou_pedido` · `422 limite_grupos` |
