@@ -98,8 +98,12 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             raise FalhaDefinitiva("o arquivo de origem não existe mais")
         cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (ctx.tenant_id,))
         slug = cur.fetchone()["slug"]
+        # o prefixo do schema de dado inclui a INSTALAÇÃO (plat.camada_schema_prefixo, migração
+        # 20260906T1615): sem ele produção, homologação e as trilhas escreviam todas em d_<slug>
+        cur.execute("SELECT plat.camada_schema_prefixo() AS p")
+        prefixo = cur.fetchone()["p"]
 
-    schema = f"d_{slug}"
+    schema = f"{prefixo}{slug}"
     proposta = imp["proposta"] or {}
     confirmacao = imp["confirmacao"] or {}
     tabela = proposta.get("nome_tabela") or tabela_de(imp["item_id"])
@@ -314,10 +318,13 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
                 "'arquivo_de_camada', %s) ON CONFLICT DO NOTHING",
                 (imp["arquivo_id"], item_id, ctx.tenant_id),
             )
+            # uso_bytes NÃO é somado aqui: quem contabiliza é o gatilho plat.item_uso_bytes (migração
+            # 20260906T1615), que soma no INSERT do item e DEVOLVE no DELETE. Antes a soma vivia neste
+            # ponto e não havia caminho nenhum de devolução — a cota do inquilino só subia.
             cur.execute(
-                "UPDATE plat.tenant SET uso_reservado_bytes = greatest(0, uso_reservado_bytes - %s), "
-                "uso_bytes = uso_bytes + %s WHERE id = %s",
-                (reservado, tamanho_bytes, ctx.tenant_id),
+                "UPDATE plat.tenant SET uso_reservado_bytes = greatest(0, uso_reservado_bytes - %s) "
+                "WHERE id = %s",
+                (reservado, ctx.tenant_id),
             )
             cur.execute(
                 "UPDATE plat.importacao SET estado = 'concluida', relatorio = %s, item_id = %s::uuid, "
