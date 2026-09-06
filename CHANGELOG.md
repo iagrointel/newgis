@@ -478,7 +478,7 @@ próprios; falta só o item na varredura genérica. Ver `docs/PARIDADE.md` e `la
 | (este) | Metadado ISO 19139 por item e catálogo externo OGC API Records (item L0-09-metadado-catalogo) |
 ## turno 3, setembro de 2026 (itens L3-01-a-modelo-dado e L3-01-b-unidades: motor multicritério — modelo, proveniência e unidade de análise)
 
-Migração `044_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
 editável) e `amc_modelo_versao` (toda versão que já existiu, imutável para a aplicação por gatilho), `amc_conjunto_unidade`
 e `amc_unidade`, `amc_execucao` (proveniência congelada), `amc_fator_bruto` e `amc_resultado` — linhas por (execução,
 unidade, fator), nunca uma coluna por fator. `amc_resultado` tem `CHECK` que impede unidade vetada de carregar número na
@@ -498,8 +498,12 @@ feições é síncrono e preserva o id do usuário.
 Medido (`tests/medidas/L3-01-b.json`, `PLAT_GRAVAR_MEDIDAS=1 pytest tests/api/amc/test_unidades.py -m lento`): grade
 quadrada de 250 m sobre 2.000 km² = **32.374 células em 1,14 s** (teto do portão: 60 s), com desvio de **1,175 %** da
 contagem teórica calculada por fora com shapely/pyproj (teto: 2 %). Grade de 100 m sobre 2.500 km² = **250.986 células
-em 8,61 s**, em 3 faixas, ocupando **186 MB** de tabela e índices. **1 milhão de células NÃO foi gerado** — `/mnt/pgdata`
-está a 99 % com 13 GB livres —; a projeção linear (34,3 s e ~741 MB) está gravada com `EXTRAPOLADO` no nome do campo.
+em 8,61 s**, em 3 faixas, ocupando **186 MB** de tabela e índices. A escala de 1 milhão de células, que no fecho do item
+não tinha sido gerada (`/mnt/pgdata` a 99 %, 13 GB livres) e entrou como projeção linear marcada `EXTRAPOLADO`, foi
+**GERADA depois**: o adversário do item mediu **1.000.175 células em 30,97 s** (desvio de contagem +0,201 %) com 43 GB
+livres, e a re-medição depois do conserto do teto deu **989.334 células em 33,55 s** (+0,202 %). A projeção de 34,3 s
+era conservadora: errou ~10 % para mais. A linha de bytes para 1 milhão continua marcada `EXTRAPOLADO` porque essa
+ninguém mediu.
 
 Refutações escritas como teste: editar um modelo já executado cria versão nova e a execução antiga continua apontando
 para a versão antiga, com o resultado inalterado (`test_refutacao_editar_modelo_executado_nao_muda_a_execucao_nem_o_resultado`);
@@ -507,9 +511,46 @@ para a versão antiga, com o resultado inalterado (`test_refutacao_editar_modelo
 área total conferidas contra pyproj/shapely fora do banco; A não lê modelo, conjunto, execução nem resultado de B — 11
 rotas por id direto e as seis tabelas pela role da aplicação com o contexto do outro inquilino.
 
-45 testes novos (`tests/unit/test_amc_esquema.py`, `tests/unit/test_amc_crs.py`, `tests/api/amc/`), verdes; a varredura
+Testes do item, contados com `pytest <os quatro arquivos> --collect-only -q` (a linha por arquivo do rodapé, que
+conta CASO, não função — os `parametrize` expandem): `tests/unit/test_amc_esquema.py` 11 + `tests/unit/test_amc_crs.py`
+8 + `tests/api/amc/test_modelo.py` 16 + `tests/api/amc/test_unidades.py` 12 = **47 casos** (38 funções `def test_`).
+A entrada anterior dizia "45 testes novos" e o painel do laço dizia "207 testes": **os dois números estavam errados** e
+nenhum dos dois saía de artefato nenhum — quem apontou foi o adversário do item. Depois do conserto de 06/09/2026 os
+mesmos quatro arquivos somam **73 casos**, mais 40 do adversário e 22 da trava de reescrita de schema. A varredura
 cruzada do OpenAPI cobre as 18 rotas novas (`tests/api/cruzado_casos.py`). ADR
 `docs/adr/0016-motor-amc-modelo-e-unidades.md`.
+
+### conserto depois da refutação (`laco/handoffs/T3/L3-01-CONSERTO.md`)
+
+O laudo `laco/handoffs/T3/L3-01-ADVERSARIO.md` refutou o item em cinco frentes; as duas cláusulas centrais do portão
+(imutabilidade do modelo já executado e isolamento entre inquilinos) resistiram. Consertado:
+
+1. **Reescrita de schema fechada como classe** (`app/schema_ambiente.py`). Era só `execute` com `str`; passou a cobrir
+   `str` e `bytes` em `execute`, `executemany`, `callproc`, `mogrify` e `copy_expert`, com `copy_from`/`copy_to`
+   declarados fora de cobertura com a razão escrita. Três defeitos do mesmo tipo apareceram no mesmo dia: o `bytes` de
+   `psycopg2.extras.execute_values` (que quebrava o conjunto do tipo `feicoes` fora do schema `plat`), as conexões de
+   teste (commit `c311aa7`) e o `executemany` de `POST`/`PUT /api/papeis` (que fazia a prova de isolamento entre
+   inquilinos rodar contra o schema de produção). `tests/unit/test_schema_ambiente.py` (22 casos) reprova se aparecer
+   um ponto de entrada novo sem reescrita. `app/amc/unidades.gravar_feicoes` não usa mais `execute_values`.
+2. **Erro de privilégio deixou de mentir** (`app/auth/comum._erro_de_privilegio`): o SQLSTATE 42501 por política de
+   inquilino continua 403 `sem_permissao`; por falta de GRANT passa a 500 `privilegio_do_banco` — é erro de instalação
+   do ambiente e o 403 mandava o operador investigar o lugar errado.
+3. **Coerência interna da transformação** (`app/amc/esquema._violacoes_transformacao`): faixa invertida ou degenerada,
+   número de notas incompatível com o de quebras, quebras e bandas fora de ordem crescente e função contínua sem
+   parâmetro passavam pelo `allOf` do esquema (que descreve 4 dos 16 tipos), entravam no hash e só quebrariam no motor.
+4. **`zonas_utm_cobertas`** (`app/amc/crs.py`) enumera todas as zonas do intervalo; de −60° a −42° declarava
+   `[21, 22, 24]` e "cruza 3 zonas".
+5. **Teto de unidades sobre a contagem real** (`app/amc/unidades.gerar_grade`): era conferido só sobre a estimativa
+   área/área-da-célula e a célula de borda passava do teto (medido: 1.000.175 com o teto em 1.000.000). Passou do teto,
+   as unidades são apagadas, o conjunto vai a `falhou` com o motivo e a tarefa levanta `FalhaDefinitiva`.
+6. **JSON canônico**: chave repetida no corpo cru sai 422 `json_ambiguo` (era aceita em silêncio, com a primeira
+   ocorrência descartada pelo parser), e os números são normalizados antes do hash — `3` e `3.0` são o mesmo número em
+   JSON e davam versões diferentes. O documento gravado é o normalizado, para o hash continuar recomputável por fora
+   com a regra simples. Medido: os 53 modelos que existem em `plat` são todos resíduo de teste (`zt-*` e "modelo de
+   teste interno"), então a mudança de regra não invalida histórico de ninguém.
+
+Os 12 `xfail(strict=True)` do adversário viraram prova permanente (as marcas saíram; nenhuma asserção foi afrouxada).
+A migração `044_amc.sql` foi renumerada para **`045_amc.sql`**: a árvore principal publicou `044_uploads.sql`.
 
 ## turno 3, setembro de 2026 (item L0-08-d-ldap: LDAP/Active Directory como provedor de login externo)
 

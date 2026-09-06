@@ -33,11 +33,54 @@ def _validador() -> Draft202012Validator:
     return Draft202012Validator(s, format_checker=Draft202012Validator.FORMAT_CHECKER)
 
 
+FUNCOES_CONTINUAS = ("exponencial", "gaussiana", "grande", "logaritmo", "decaimento_logistico",
+                     "crescimento_logistico", "ms_grande", "ms_pequena", "proxima", "potencia", "pequena",
+                     "linear_simetrica")
+# campos da transformação que NÃO são parâmetro da curva (comuns a todos os tipos)
+CAMPOS_NAO_PARAMETRO = ("tipo", "abaixo", "acima", "metodo")
+
+
+def _escalar_normalizado(v):
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, float) and v.is_integer() and abs(v) < 2.0 ** 53:
+        return int(v)
+    return v
+
+
+def normalizar_numeros(valor):
+    """Normalização numérica do JSON canônico (regra A1, acrescentada em 06/09/2026): em JSON `3` e `3.0` são o
+    MESMO número, e antes disso davam hashes diferentes — reenviar o mesmo modelo com o peso escrito como inteiro
+    criava uma versão nova que não mudara nada (achado do adversário do item L3-01-a). A regra é: todo número de
+    ponto flutuante com parte fracionária zero e magnitude exatamente representável (< 2^53) vira inteiro; nada
+    mais muda (0,5 continua 0,5; 1e30 continua 1e30; booleano nunca é número). É aplicada ao documento ANTES de
+    gravar, então o que está no banco é o que foi hasheado — quem recomputar o hash sobre a definição gravada
+    com a regra simples (json.dumps sort_keys/separators) chega ao mesmo valor."""
+    if not isinstance(valor, (dict, list)):
+        return _escalar_normalizado(valor)
+    raiz = {} if isinstance(valor, dict) else []
+    # pilha explícita, não recursão: `extrator.parametros` é um objeto livre no esquema e um documento com
+    # milhares de níveis de aninhamento (que a validação aceita) estouraria a pilha do Python
+    pilha = [(valor, raiz)]
+    while pilha:
+        origem, destino = pilha.pop()
+        if isinstance(destino, list):
+            destino.extend([None] * len(origem))
+        for chave, v in (origem.items() if isinstance(origem, dict) else enumerate(origem)):
+            if isinstance(v, (dict, list)):
+                novo = {} if isinstance(v, dict) else []
+                pilha.append((v, novo))
+            else:
+                novo = _escalar_normalizado(v)
+            destino[chave] = novo
+    return raiz
+
+
 def canonico(definicao) -> bytes:
-    """JSON canônico do documento (chaves ordenadas, sem espaço, UTF-8). NaN/Infinity são recusados (não são JSON)."""
-    return json.dumps(definicao, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode(
-        "utf-8"
-    )
+    """JSON canônico do documento (números normalizados, chaves ordenadas, sem espaço, UTF-8). NaN/Infinity são
+    recusados (não são JSON)."""
+    return json.dumps(normalizar_numeros(definicao), sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                      allow_nan=False).encode("utf-8")
 
 
 def hash_modelo(definicao) -> str:
@@ -81,6 +124,59 @@ def _violacao_schema(e) -> dict:
     return {"clausula": _clausula(e), "caminho": _caminho(e), "mensagem": traduzir(e) if traduzir else e.message}
 
 
+def _numero(x) -> bool:
+    return isinstance(x, (int, float)) and not isinstance(x, bool)
+
+
+def _violacoes_transformacao(t, caminho: str) -> list[dict]:
+    """Coerência INTERNA da transformação, que o JSON Schema não expressa (o `allOf` do esquema só descreve os
+    campos obrigatórios de 4 dos 16 tipos). Sem isto, um documento com faixa invertida, faixa degenerada, número
+    de notas incompatível com o de quebras ou quebras/bandas fora de ordem entrava no modelo e no hash e só
+    quebraria — ou daria nota errada em silêncio — quando o motor (item L3-01-d) fosse executá-lo. Achado do
+    adversário do item L3-01-a em 06/09/2026."""
+    v: list[dict] = []
+    if not isinstance(t, dict):
+        return v
+    tipo = t.get("tipo")
+    minimo, maximo = t.get("minimo"), t.get("maximo")
+    if _numero(minimo) and _numero(maximo) and minimo >= maximo:
+        v.append({"clausula": "transformacao: minimo < maximo", "caminho": f"{caminho}.minimo",
+                  "mensagem": f"faixa vazia ou invertida: minimo {minimo:g} não é menor que maximo {maximo:g}"})
+    if tipo == "faixas":
+        quebras, notas = t.get("quebras"), t.get("notas")
+        if isinstance(quebras, list) and all(_numero(q) for q in quebras):
+            fora = [i for i in range(1, len(quebras)) if quebras[i] <= quebras[i - 1]]
+            if fora:
+                v.append({"clausula": "transformacao faixas: quebras em ordem crescente",
+                          "caminho": f"{caminho}.quebras[{fora[0]}]",
+                          "mensagem": f"quebras fora de ordem crescente: {quebras}"})
+            if isinstance(notas, list) and len(notas) != len(quebras) + 1:
+                v.append({"clausula": "transformacao faixas: len(notas) = len(quebras) + 1",
+                          "caminho": f"{caminho}.notas",
+                          "mensagem": f"{len(quebras)} quebra(s) fazem {len(quebras) + 1} faixa(s), mas vieram "
+                                      f"{len(notas)} nota(s)"})
+    if tipo == "degraus":
+        bandas = t.get("bandas")
+        if isinstance(bandas, list) and all(isinstance(b, dict) and _numero(b.get("ate")) for b in bandas):
+            fora = [i for i in range(1, len(bandas)) if bandas[i]["ate"] <= bandas[i - 1]["ate"]]
+            if fora:
+                v.append({"clausula": "transformacao degraus: bandas em ordem crescente de 'ate'",
+                          "caminho": f"{caminho}.bandas[{fora[0]}].ate",
+                          "mensagem": f"banda {fora[0]} tem 'ate' {bandas[fora[0]]['ate']:g}, que não é maior que o "
+                                      f"da banda anterior ({bandas[fora[0] - 1]['ate']:g})"})
+    if tipo in FUNCOES_CONTINUAS:
+        parametros = [k for k in t if k not in CAMPOS_NAO_PARAMETRO]
+        if not parametros:
+            v.append({"clausula": f"transformacao {tipo}: pelo menos um parâmetro", "caminho": caminho,
+                      "mensagem": f"função contínua '{tipo}' sem nenhum parâmetro: a curva não fica definida "
+                                  f"(esperado ao menos um campo além de {', '.join(CAMPOS_NAO_PARAMETRO)})"})
+        for k in parametros:
+            if not _numero(t[k]):
+                v.append({"clausula": f"transformacao {tipo}: parâmetro numérico", "caminho": f"{caminho}.{k}",
+                          "mensagem": f"parâmetro '{k}' não é número: {t[k]!r}"})
+    return v
+
+
 def _violacoes_semanticas(definicao: dict) -> list[dict]:
     """O que o JSON Schema não diz: id único entre fatores e restrições, soma dos pesos > 0, percentual fecha 100."""
     v: list[dict] = []
@@ -109,6 +205,8 @@ def _violacoes_semanticas(definicao: dict) -> list[dict]:
         if "transformacao" not in f:
             v.append({"clausula": "fatores[].transformacao obrigatória", "caminho": f"$.fatores[{i}].transformacao",
                       "mensagem": f"fator '{fid}' sem transformação (valor bruto → favorabilidade)"})
+        else:
+            v.extend(_violacoes_transformacao(f["transformacao"], f"$.fatores[{i}].transformacao"))
     if fatores and all(isinstance(f, dict) for f in fatores) and soma <= 0:
         v.append({"clausula": "soma(fatores[].peso) > 0", "caminho": "$.fatores",
                   "mensagem": f"soma dos pesos é {soma:g}: nenhum fator pesa"})
@@ -151,7 +249,9 @@ def validar(definicao) -> dict:
     except ValueError as e:  # NaN/Infinity
         raise ErroAPI(422, "modelo_invalido", f"modelo inválido: número não representável em JSON ({e})",
                       {"violacoes": [{"clausula": "números finitos", "caminho": "$", "mensagem": str(e)}]}) from e
-    return definicao
+    # devolve o documento JÁ NORMALIZADO: é ele que é gravado, para o que está no banco ser exatamente o que foi
+    # hasheado (ver normalizar_numeros)
+    return normalizar_numeros(definicao)
 
 
 def validar_pesos(definicao: dict, pesos: dict | None) -> dict:
