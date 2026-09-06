@@ -57,7 +57,7 @@ def reescrever_schema(sql: str, schema: str = SCHEMA_PADRAO, schema_trabalho: st
 
 
 class MixinReescritaSchema:
-    """Reescrita de schema em TODO ponto de entrada do cursor que carrega um comando SQL, e não só no `execute`
+    """Reescrita de schema em cada ponto de entrada do cursor que carrega um comando SQL, e não só no `execute`
     com texto. Fica separada do cursor do psycopg2 de propósito: assim `tests/unit/test_schema_ambiente.py`
     monta a mesma reescrita sobre uma base espiã, sem banco, e confere método a método o que chegou ao driver.
 
@@ -68,12 +68,12 @@ class MixinReescritaSchema:
     disfarçado de "operação fora do inquilino da sessão". Uma prova de isolamento entre inquilinos que roda
     contra o schema errado não prova nada.
 
-    `METODOS_COM_CONSULTA` é a lista fechada do que é coberto; `METODOS_FORA_DE_COBERTURA` diz o que ficou de
+    `PONTOS_COM_CONSULTA` é a lista fechada do que é coberto; `PONTOS_FORA_DE_COBERTURA` diz o que ficou de
     fora e por quê. O teste de unidade reprova se aparecer um ponto de entrada novo que não esteja num dos dois."""
 
     # nome do método -> posição do argumento que carrega o comando (todos são o primeiro depois de self)
-    METODOS_COM_CONSULTA = ("execute", "executemany", "callproc", "mogrify", "copy_expert")
-    METODOS_FORA_DE_COBERTURA = {
+    PONTOS_COM_CONSULTA = ("execute", "executemany", "callproc", "mogrify", "copy_expert")
+    PONTOS_FORA_DE_COBERTURA = {
         "copy_from": "recebe NOME de tabela (e a casa não usa: varrido em 06/09/2026 em app/, scripts/, db/ e "
                      "tests/). Se passar a usar, cobrir aqui — o nome também leva o prefixo do schema.",
         "copy_to": "recebe NOME de tabela e a casa não usa (mesma varredura de copy_from, 06/09/2026).",
@@ -146,5 +146,5 @@ class MixinReescritaSchema:
 
 class CursorSchemaAmbiente(MixinReescritaSchema, psycopg2.extras.RealDictCursor):
     """RealDictCursor que reescreve o texto da consulta para settings.PLAT_SCHEMA/PLAT_SCHEMA_TRABALHO antes de
-    mandar ao servidor, em todos os pontos de entrada listados em `MixinReescritaSchema.METODOS_COM_CONSULTA`.
+    mandar ao servidor, em todos os pontos de entrada listados em `MixinReescritaSchema.PONTOS_COM_CONSULTA`.
     O mixin vem primeiro na MRO para que `super()` caia no cursor do psycopg2."""
