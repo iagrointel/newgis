@@ -309,18 +309,34 @@ class Worker:
             f.eof = True
 
     def _pegar(self) -> None:
+        # Achado do adversário G3 (recurso partilhado, achado do gerente 06/09): `pesado_ok` só refletia a
+        # aquisição FRESCA do lock ("if not self.lock_pesado: ... pesado_ok = ..."); se `self.lock_pesado`
+        # já era True de uma volta anterior, `pesado_ok` ficava em False pelo resto da função — e as duas
+        # únicas chamadas de `_soltar_pesado()` exigem `pesado_ok` verdadeiro. Um worker que segurava o
+        # lock e ficava sem trabalho pesado próprio NUNCA MAIS o soltava (medido ao vivo: a trilha
+        # `destrava` chamando `job_pegar(nome, false)` com o lock ainda preso, travando "1 pesado por vez"
+        # para toda trilha e para produção — advisory lock é do BANCO, não do schema).
+        #
+        # `pesado_em_curso` é a segunda metade, achada testando o conserto acima com PLAT_WORKER_PROCESSOS
+        # > 1 (`worker_extra`, tests/api/jobs/test_jobs_fila.py::test_pesado_nunca_em_paralelo_com_pesado):
+        # advisory lock do Postgres é REENTRANTE na mesma sessão — chamar `pg_try_advisory_lock` de novo na
+        # MESMA conexão devolve `true` de novo, mesmo já segurando. Sem checar se já há um filho pesado em
+        # curso, um worker com 2 processos pedia (e recebia) um SEGUNDO job pesado para si mesmo enquanto o
+        # primeiro ainda rodava — dois pesados em paralelo, no MESMO worker, sem nenhuma outra trilha
+        # envolvida. `pesado_ok` só vale quando o lock está preso E não há pesado nosso em curso; o estado
+        # REAL (lock + filhos) decide tanto o pedido quanto a devolução, nunca só o que mudou nesta volta.
         while len(self.filhos) < self.processos and not self.parando:
-            pesado_ok = False
             if not self.lock_pesado:
                 r = self.um("SELECT pg_try_advisory_lock(hashtext(%s)) AS ok", (LOCK_PESADO,))
-                pesado_ok = bool(r and r["ok"])
-                self.lock_pesado = pesado_ok
+                self.lock_pesado = bool(r and r["ok"])
+            pesado_em_curso = any(f.pesado for f in self.filhos.values())
+            pesado_ok = self.lock_pesado and not pesado_em_curso
             job = self.um("SELECT * FROM plat.job_pegar(%s, %s)", (self.nome, pesado_ok))
             if job is None or job.get("id") is None:
-                if pesado_ok:
+                if self.lock_pesado and not pesado_em_curso:
                     self._soltar_pesado()
                 return
-            if not job["pesado"] and pesado_ok:
+            if self.lock_pesado and not job["pesado"] and not pesado_em_curso:
                 self._soltar_pesado()
             self._lancar(job)
 
