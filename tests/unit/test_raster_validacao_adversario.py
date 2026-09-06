@@ -8,6 +8,11 @@ Leitura do resultado:
   Cada um desses é um achado, com a explicação na razão do marcador. Quando o buraco for tapado, o `strict`
   transforma o xpass em falha e o marcador tem de sair — é assim que o achado não se perde.
 
+ESTADO EM 06/09/2026 (turno 3): os 9 achados foram consertados no ramo `wt/valida` (ADR 0015, seção "conserto
+do turno 3"). Os 9 marcadores `xfail(strict=True)` saíram, e o texto de cada achado ficou como comentário em
+cima do teste correspondente. Nenhum caso foi apagado, afrouxado ou reescrito: os 23 testes deste arquivo são
+os mesmos do commit b62d88a e agora todos passam.
+
 Sem banco, sem worker, sem rede externa (o único socket é um ouvinte em 127.0.0.1 criado pelo próprio teste
 para medir se a validação sai à rede)."""
 
@@ -25,7 +30,6 @@ import zipfile
 from pathlib import Path
 
 import numpy as np
-import pytest
 import rasterio
 from rasterio.transform import from_origin
 
@@ -80,9 +84,11 @@ def bytes_no_diretorio(raiz: Path) -> int:
 
 
 # =========================================================== ATAQUE 1 — fuga do isolamento
-@pytest.mark.xfail(strict=True, reason="ACHADO 1: a conferência de fonte do VRT só olha o VRT ENVIADO. Um VRT "
-                                       "que aponta para outro VRT local passa, e o segundo aponta para caminho "
-                                       "absoluto fora do envio: o GDAL lê o arquivo de fora DENTRO da validação.")
+# CONSERTADO (turno 3, ADR 0015): o achado abaixo foi tapado e este teste passa; o marcador
+# xfail(strict=True) do adversário saiu porque o conserto o transformaria em falha. O texto do
+# achado fica aqui para que nada se perca.
+# ACHADO 1: a conferência de fonte do VRT só olha o VRT ENVIADO. Um VRT que aponta para outro VRT local passa, e o
+# segundo aponta para caminho absoluto fora do envio: o GDAL lê o arquivo de fora DENTRO da validação.
 def test_vrt_aninhado_nao_deve_ler_arquivo_fora_do_envio(tmp_path: Path) -> None:
     envio, fora = tmp_path / "envio", tmp_path / "fora"
     tif(envio / "bom.tif", valor=1)
@@ -96,9 +102,11 @@ def test_vrt_aninhado_nao_deve_ler_arquivo_fora_do_envio(tmp_path: Path) -> None
     assert relatorio["estado"] == "recusado", relatorio["estado"]
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO 2: _conferir_vrt lê só os primeiros 1 MiB do XML. Com 1 MiB de "
-                                       "comentário antes dela, a segunda banda aponta para caminho absoluto fora "
-                                       "do envio e o arquivo é ACEITO.")
+# CONSERTADO (turno 3, ADR 0015): o achado abaixo foi tapado e este teste passa; o marcador
+# xfail(strict=True) do adversário saiu porque o conserto o transformaria em falha. O texto do
+# achado fica aqui para que nada se perca.
+# ACHADO 2: _conferir_vrt lê só os primeiros 1 MiB do XML. Com 1 MiB de comentário antes dela, a segunda banda aponta
+# para caminho absoluto fora do envio e o arquivo é ACEITO.
 def test_vrt_com_fonte_depois_de_1mib_de_texto_nao_deve_passar(tmp_path: Path) -> None:
     envio, fora = tmp_path / "envio", tmp_path / "fora"
     tif(envio / "bom.tif", valor=1)
@@ -114,8 +122,11 @@ def test_vrt_com_fonte_depois_de_1mib_de_texto_nao_deve_passar(tmp_path: Path) -
     assert relatorio["estado"] == "recusado", f"{relatorio['estado']}, {relatorio['info'].get('bandas')} bandas"
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO 3: o link simbólico é recusado no arquivo ENVIADO e nas entradas "
-                                       "do zip, mas não na FONTE do VRT: origem.tif -> caminho de fora é aceito.")
+# CONSERTADO (turno 3, ADR 0015): o achado abaixo foi tapado e este teste passa; o marcador
+# xfail(strict=True) do adversário saiu porque o conserto o transformaria em falha. O texto do
+# achado fica aqui para que nada se perca.
+# ACHADO 3: o link simbólico é recusado no arquivo ENVIADO e nas entradas do zip, mas não na FONTE do VRT: origem.tif
+# -> caminho de fora é aceito.
 def test_vrt_com_fonte_por_link_simbolico_nao_deve_passar(tmp_path: Path) -> None:
     envio, fora = tmp_path / "envio", tmp_path / "fora"
     segredo = tif(fora / "segredo.tif", valor=177)
@@ -128,9 +139,11 @@ def test_vrt_com_fonte_por_link_simbolico_nao_deve_passar(tmp_path: Path) -> Non
     assert relatorio["estado"] == "recusado", relatorio["estado"]
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO 4: pelo VRT aninhado a validação SAI À REDE. A lista branca "
-                                       "CPL_VSIL_CURL_ALLOWED_EXTENSIONS tem uma extensão inventada, e quem "
-                                       "escreve a URL escolhe a extensão; 'http://' direto também conecta.")
+# CONSERTADO (turno 3, ADR 0015): o achado abaixo foi tapado e este teste passa; o marcador
+# xfail(strict=True) do adversário saiu porque o conserto o transformaria em falha. O texto do
+# achado fica aqui para que nada se perca.
+# ACHADO 4: pelo VRT aninhado a validação SAI À REDE. A lista branca CPL_VSIL_CURL_ALLOWED_EXTENSIONS tem uma
+# extensão inventada, e quem escreve a URL escolhe a extensão; 'http://' direto também conecta.
 def test_validacao_nao_deve_abrir_conexao_de_rede(tmp_path: Path) -> None:
     pedidos: list[str] = []
     ouvinte = socket.socket()
@@ -216,9 +229,11 @@ def test_arquivo_vizinho_aux_xml_e_ignorado(tmp_path: Path) -> None:
 
 
 # =========================================================== ATAQUE 2 — aceitação silenciosa
-@pytest.mark.xfail(strict=True, reason="ACHADO 5: NoData NaN (comum em float32) entra no relatório como NaN, que "
-                                       "não é JSON válido. psycopg2.extras.Json produz 'NaN' e o jsonb do "
-                                       "Postgres recusa — o relatório não chega a ser gravado no job.")
+# CONSERTADO (turno 3, ADR 0015): o achado abaixo foi tapado e este teste passa; o marcador
+# xfail(strict=True) do adversário saiu porque o conserto o transformaria em falha. O texto do
+# achado fica aqui para que nada se perca.
+# ACHADO 5: NoData NaN (comum em float32) entra no relatório como NaN, que não é JSON válido. psycopg2.extras.Json
+# produz 'NaN' e o jsonb do Postgres recusa — o relatório não chega a ser gravado no job.
 def test_relatorio_com_nodata_nan_tem_de_ser_json_valido(tmp_path: Path) -> None:
     alvo = tif(tmp_path / "nan.tif", dtype="float32", nodata=float("nan"))
     relatorio = v.validar(alvo)
@@ -226,9 +241,11 @@ def test_relatorio_com_nodata_nan_tem_de_ser_json_valido(tmp_path: Path) -> None
     json.dumps(relatorio, allow_nan=False)   # é isto que o jsonb exige
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO 6: extensão impossível (latitude 7.400.000° num CRS geográfico) "
-                                       "sai como AVISO e o arquivo é aceito. 'fora do Brasil' e 'coordenada que "
-                                       "não existe' recebem o mesmo tratamento.")
+# CONSERTADO (turno 3, ADR 0015): o achado abaixo foi tapado e este teste passa; o marcador
+# xfail(strict=True) do adversário saiu porque o conserto o transformaria em falha. O texto do
+# achado fica aqui para que nada se perca.
+# ACHADO 6: extensão impossível (latitude 7.400.000° num CRS geográfico) sai como AVISO e o arquivo é aceito. 'fora
+# do Brasil' e 'coordenada que não existe' recebem o mesmo tratamento.
 def test_extensao_geografica_impossivel_nao_deve_ser_aceita(tmp_path: Path) -> None:
     alvo = tif(tmp_path / "utm.tif", crs=None, transformacao=from_origin(300000.0, 7400000.0, 10.0, 10.0))
     relatorio = v.validar(alvo, respostas={"crs": 4674})
@@ -354,10 +371,11 @@ def test_bigtiff_esparso_de_95_gb_recusado_com_arquivo_proprio(tmp_path: Path) -
     assert decorrido < 5, decorrido
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO 7: a conta de bomba zip é uma RAZÃO (50×). Um zip a 42× é "
-                                       "extraído inteiro para o disco ANTES de qualquer checagem de raster: o "
-                                       "que limita a escrita é a cota do inquilino (4 GiB por omissão), não o "
-                                       "tamanho do envio.")
+# CONSERTADO (turno 3, ADR 0015): o achado abaixo foi tapado e este teste passa; o marcador
+# xfail(strict=True) do adversário saiu porque o conserto o transformaria em falha. O texto do
+# achado fica aqui para que nada se perca.
+# ACHADO 7: a conta de bomba zip é uma RAZÃO (50×). Um zip a 42× é extraído inteiro para o disco ANTES de qualquer
+# checagem de raster: o que limita a escrita é a cota do inquilino (4 GiB por omissão), não o tamanho do envio.
 def test_zip_abaixo_da_razao_nao_deveria_escrever_dezenas_de_mb(tmp_path: Path) -> None:
     dentro = tmp_path / "fonte"
     pequeno = tif(dentro / "a.tif").read_bytes()
@@ -431,10 +449,12 @@ def test_tif_que_e_png_nao_abre_subprocesso(tmp_path: Path) -> None:
 
 
 # =========================================================== ATAQUE 4 — mensagem
-@pytest.mark.xfail(strict=True, reason="ACHADO 8: um GeoTIFF sem geotransform com CRS respondido derruba o filho "
-                                       "por exceção NÃO capturada (rasterio._err.CPLE_AppDefinedError não é "
-                                       "RasterioError nem ValueError). A recusa sai com a linha crua do "
-                                       "traceback, em inglês, e sem dizer o que fazer.")
+# CONSERTADO (turno 3, ADR 0015): o achado abaixo foi tapado e este teste passa; o marcador
+# xfail(strict=True) do adversário saiu porque o conserto o transformaria em falha. O texto do
+# achado fica aqui para que nada se perca.
+# ACHADO 8: um GeoTIFF sem geotransform com CRS respondido derruba o filho por exceção NÃO capturada
+# (rasterio._err.CPLE_AppDefinedError não é RasterioError nem ValueError). A recusa sai com a linha crua do
+# traceback, em inglês, e sem dizer o que fazer.
 def test_arquivo_sem_geotransform_tem_de_sair_com_mensagem_em_portugues(tmp_path: Path) -> None:
     from rasterio.transform import Affine
     alvo = tif(tmp_path / "sem_transform.tif", transformacao=Affine.identity())
@@ -444,10 +464,11 @@ def test_arquivo_sem_geotransform_tem_de_sair_com_mensagem_em_portugues(tmp_path
     assert relatorio["subprocesso"]["codigo_saida"] == 0, problema
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO 9: um zip legítimo com 200 GeoTIFF pequenos é recusado por causa "
-                                       "do RLIMIT_NOFILE=64 (todos os arquivos são abertos ao mesmo tempo), com "
-                                       "mensagem em inglês do GDAL e com o CAMINHO ABSOLUTO do servidor dentro "
-                                       "dela.")
+# CONSERTADO (turno 3, ADR 0015): o achado abaixo foi tapado e este teste passa; o marcador
+# xfail(strict=True) do adversário saiu porque o conserto o transformaria em falha. O texto do
+# achado fica aqui para que nada se perca.
+# ACHADO 9: um zip legítimo com 200 GeoTIFF pequenos é recusado por causa do RLIMIT_NOFILE=64 (todos os arquivos são
+# abertos ao mesmo tempo), com mensagem em inglês do GDAL e com o CAMINHO ABSOLUTO do servidor dentro dela.
 def test_zip_com_200_rasters_legitimos_nao_deve_ser_recusado_em_ingles(tmp_path: Path) -> None:
     pequeno = tif(tmp_path / "fonte" / "a.tif").read_bytes()
     alvo = tmp_path / "muitos.zip"
