@@ -1,0 +1,22 @@
+{
+ "item": "L2-01-a",
+ "medidas": {
+  "completo_10_camadas_p95_ms": {
+   "valor": 14.7,
+   "unidade": "ms",
+   "comando": "venv/bin/pytest tests/api/catalogo/test_mapas.py::test_completo_de_mapa_com_10_camadas_p95"
+  },
+  "completo_10_camadas_mediana_ms": {
+   "valor": 13.1,
+   "unidade": "ms",
+   "comando": "idem"
+  },
+  "completo_10_camadas_chamadas": {
+   "valor": 50,
+   "unidade": "chamadas",
+   "comando": "idem"
+  }
+ },
+ "gerado_em": "2026-09-06T16:01:14Z",
+ "git_sha": "90d03c07da0c"
+}
