@@ -97,8 +97,9 @@ def test_prova_de_a_reusada_como_prova_de_b_nao_le_b(env, leitor, camadas):
 
 
 def test_token_amplo_de_a_nao_alcanca_b(env, leitor, camadas):
-    """`admin:inquilino` é escopo, não inquilino: um token amplo de A não muda o inquilino do contexto. Nem a
-    função de tile de B (levanta `tile_de_outro_inquilino`), nem a leitura direta de B (0 linhas)."""
+    """Escopo não é inquilino: o token AMPLO de A (escopo `camada:ler` sem pin de item, criado pela fixture do
+    construtor) passa a validação de escopo, mas não muda o inquilino do contexto. Na função de tile de B
+    levanta `tile_de_outro_inquilino`; na leitura direta de B, o contexto continua o inquilino de A e B dá 0."""
     a, b = camadas["demo"], camadas["demo2"]
     with leitor.cursor() as cur, pytest.raises(psycopg2.Error) as e:
         cur.execute(f'SELECT "{b["esquema"]}"."{b["funcao"]}"(0,0,0,%s::json)',
@@ -106,8 +107,8 @@ def test_token_amplo_de_a_nao_alcanca_b(env, leitor, camadas):
     assert "tile_de_outro_inquilino" in str(e.value)
     leitor.rollback()
     with leitor.cursor() as cur:
-        cur.execute("SELECT plat.contexto_por_token(%s, NULL, NULL, NULL, 'admin:inquilino') AS t",
-                    (a["token_amplo"],))
+        # escopo padrão 'camada:ler' sem item: é o que o token amplo cobre. O inquilino resolvido é o de A.
+        cur.execute("SELECT plat.contexto_por_token(%s, NULL, NULL) AS t", (a["token_amplo"],))
         assert cur.fetchone()["t"] == a["tenant_id"]
         assert _conta(cur, b) == 0
     leitor.rollback()
