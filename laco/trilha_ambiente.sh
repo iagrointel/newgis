@@ -6,6 +6,13 @@
 set -euo pipefail
 T=${1:?uso: trilha_ambiente.sh <nome>}
 REPO=/home/dev/plataforma/enterprise
+# 06/09: as migrações vêm do WORKTREE da trilha quando ele existe (2º argumento, ou /home/dev/plataforma/wt/<nome>).
+# Antes, vinham só da árvore principal; sem as próprias migrações na base isolada, os agentes recorriam
+# ao db/migrar.sh de produção — foi a causa raiz das 6 migrações de ramo aplicadas em produção hoje.
+FONTE=${2:-}
+[ -z "$FONTE" ] && [ -d "/home/dev/plataforma/wt/$T" ] && FONTE="/home/dev/plataforma/wt/$T"
+[ -z "$FONTE" ] && FONTE="$REPO"
+[ -d "$FONTE/db/migracoes" ] || { echo "sem db/migracoes em $FONTE" >&2; exit 2; }
 LACO=/home/dev/plataforma/laco
 DB=${PLAT_DB:-iagro_sat}
 PG_HBA=${PG_HBA:-/etc/postgresql/16/main/pg_hba.conf}
@@ -34,7 +41,7 @@ listar_migracoes() {
 }
 
 shopt -s nullglob
-mapfile -t ARQS_MIG < <(listar_migracoes "$REPO/db/migracoes")
+mapfile -t ARQS_MIG < <(listar_migracoes "$FONTE/db/migracoes")
 for arq in "${ARQS_MIG[@]}"; do
   nome=$(basename "$arq" .sql); tmp=$(mktemp)
   TRILHA=$T "$LACO/trilha_reescrever.py" "$arq" > "$tmp"
