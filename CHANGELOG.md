@@ -513,7 +513,7 @@ Migração `044_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RL
 Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
 ## turno 3, setembro de 2026 (itens L3-01-a-modelo-dado e L3-01-b-unidades: motor multicritério — modelo, proveniência e unidade de análise)
 
-Migração `044_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
 editável) e `amc_modelo_versao` (toda versão que já existiu, imutável para a aplicação por gatilho), `amc_conjunto_unidade`
 e `amc_unidade`, `amc_execucao` (proveniência congelada), `amc_fator_bruto` e `amc_resultado` — linhas por (execução,
 unidade, fator), nunca uma coluna por fator. `amc_resultado` tem `CHECK` que impede unidade vetada de carregar número na
