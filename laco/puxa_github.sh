@@ -10,7 +10,16 @@ for ref in $(git for-each-ref --format='%(refname:short)' 'refs/remotes/origin/w
   if git show-ref --verify --quiet "refs/heads/$ramo"; then
     # ramo já existe localmente: se o remoto avançou, avisa (não sobrescreve trabalho local)
     l=$(git rev-parse "$ramo"); r=$(git rev-parse "$ref")
-    [ "$l" != "$r" ] && git merge-base --is-ancestor "$l" "$r" && echo "[puxa] $ramo avançou no remoto ($r) — atualize o worktree com git pull"
+    if [ "$l" != "$r" ] && git merge-base --is-ancestor "$l" "$r"; then
+      # 06/09: segunda versão do mesmo ramo vinda de fora ANTES só imprimia aviso e não entrava na fila.
+      # Agora: se o worktree local está limpo, avança rápido e reenfileira; se tem trabalho local, avisa.
+      if [ -d "$W/$nome" ] && [ -z "$(git -C "$W/$nome" status --porcelain | grep -vE 'venv|\.env')" ]; then
+        git -C "$W/$nome" merge -q --ff-only "$ref" && bash "$L/fila_merge.sh" entrar "$ramo" "$nome" >/dev/null 2>&1 \
+          && echo "[puxa] $ramo atualizado do remoto (${r:0:7}) e reenfileirado" && novos=$((novos+1))
+      else
+        echo "[puxa] $ramo avançou no remoto (${r:0:7}) mas o worktree local tem trabalho não commitado — não toquei"
+      fi
+    fi
     continue
   fi
   git branch -q --track "$ramo" "$ref" && git worktree add -q "$W/$nome" "$ramo" 2>/dev/null \
