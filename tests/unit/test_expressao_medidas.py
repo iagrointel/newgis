@@ -19,6 +19,8 @@ from app.expressao.avaliador_py import (
 
 ROOT = Path(__file__).resolve().parents[2]
 VETORES = ROOT / "tests" / "expressoes" / "vetores.json"
+VETORES_CONVERGENCIA = ROOT / "tests" / "expressoes" / "vetores_convergencia.json"
+DOC = ROOT / "docs" / "EXPRESSAO.md"
 
 
 def test_medidas_do_nucleo_da_linguagem_de_expressao(medida):
@@ -32,6 +34,31 @@ def test_medidas_do_nucleo_da_linguagem_de_expressao(medida):
         len(vetores),
         "vetores",
         "len(json.load(tests/expressoes/vetores.json)) — extensão exige ≥ 200",
+    )
+
+    convergencia = json.loads(VETORES_CONVERGENCIA.read_text(encoding="utf-8"))
+    grava(
+        "vetores_de_convergencia_pos_adversario",
+        len(convergencia),
+        "vetores",
+        "len(json.load(tests/expressoes/vetores_convergencia.json)) — os casos em que os dois avaliadores "
+        "divergiam no ataque de 06/09 (resto, ponto de código, algarismo não-ASCII, fração de milissegundo) "
+        "viraram vetor compartilhado; rodam junto dos 309 em test_expressao_equivalencia.py",
+    )
+
+    secao10 = DOC.read_text(encoding="utf-8").split("## 10. Paridade")[1].split("## 11.")[0]
+    estados = [
+        c[2]
+        for c in ([x.strip() for x in linha.strip().strip("|").split("|")] for linha in secao10.splitlines())
+        if len(c) >= 3 and c[2] in {"feito", "parcial", "fora"}
+    ]
+    grava(
+        "linhas_feito_na_paridade_arcade",
+        estados.count("feito"),
+        f"linhas de {len(estados)}",
+        "linhas marcadas `feito` na seção 10 de docs/EXPRESSAO.md depois da revisão de 06/09 (eram 29; "
+        "toda linha `feito` precisa de vetor de teste e de nenhuma diferença escrita — "
+        "test_expressao_paridade.py)",
     )
 
     t0 = time.perf_counter()

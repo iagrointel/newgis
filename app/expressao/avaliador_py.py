@@ -29,6 +29,7 @@ passagem — não há função que os produza ou consuma aqui.
 
 from __future__ import annotations
 
+import decimal
 import math
 import re
 import time
@@ -552,6 +553,10 @@ def ast_de_json(d: dict, _profundidade: int = 1) -> No:
         }
         if type(t) is not str or t not in required or not required[t].issubset(d):
             _falha("no_desconhecido")
+        # campo extra dentro do nó é RECUSADO, não ignorado: uma AST gravada no documento tem forma
+        # fechada, e um campo a mais é sinal de que quem a montou não é este avaliador.
+        if set(d) != required[t] | {"tipo"}:
+            _falha("no_desconhecido")
         if t == "literal":
             return Literal(d["tipo_valor"], d["valor"])
         if t == "campo":
@@ -608,9 +613,15 @@ def _decimal_fixo(n: float, casas: int) -> str:
     longe de zero — é a regra do `toFixed` do JavaScript. `f"{n:.6f}"` do Python arredonda empate
     para o par e diverge do JS em `0.0078125` (`'0.007812'` × `'0.007813'`): por isso `Decimal`,
     que carrega o binário exato, com `ROUND_HALF_UP`."""
-    from decimal import ROUND_HALF_UP, Decimal
+    from decimal import ROUND_HALF_UP, Decimal, localcontext
 
-    return format(Decimal(n).quantize(Decimal(1).scaleb(-casas), rounding=ROUND_HALF_UP), "f")
+    # O contexto PADRÃO do módulo `decimal` tem 28 dígitos significativos: `1e20` com 8 casas já passa
+    # disso e o `quantize` levanta `decimal.InvalidOperation` CRUA. `toFixed` do JavaScript não tem esse
+    # teto, então a precisão aqui é a que o contrato permite: 1e21 (limite de `TextoNumero`) = 21 dígitos
+    # inteiros + 15 casas + folga.
+    with localcontext() as ctx:
+        ctx.prec = 60
+        return format(Decimal(n).quantize(Decimal(1).scaleb(-casas), rounding=ROUND_HALF_UP), "f")
 
 
 def _arredondar(x: float, casas: int) -> float:
@@ -770,6 +781,20 @@ def _potencia(a, b):
         _falha("numero_invalido")
 
 
+_SUBSTITUTA_RE = re.compile("[\ud800-\udfff]")
+
+
+def _texto_pareado(s: str) -> str:
+    """Forma canônica do TEXTO nos dois avaliadores (docs/EXPRESSAO.md §3.1): sequência de PONTOS DE
+    CÓDIGO, com o par substituto alto+baixo contando como UM. O `str` do Python guarda ponto de código
+    e aceita meia-substituta solta; o `String` do JavaScript é UTF-16 e junta o par sozinho — sem esta
+    normalização `Contagem(Concatenar('\\ud83c','\\udf0d'))` daria 2 no Python e 1 no JavaScript.
+    Custa uma varredura só quando há substituta no texto (é o caso raro)."""
+    if not _SUBSTITUTA_RE.search(s):
+        return s
+    return s.encode("utf-16-le", "surrogatepass").decode("utf-16-le", "surrogatepass")
+
+
 def _valor_seguro(valor, contador):
     nos = texto = 0
 
@@ -784,6 +809,7 @@ def _valor_seguro(valor, contador):
         if type(v) in (int, float):
             return _finito(float(v))
         if type(v) is str:
+            v = _texto_pareado(v)
             texto += len(v)
             if texto > MAX_VALOR_TEXTO:
                 _falha("valor_grande")
@@ -798,8 +824,7 @@ def _valor_seguro(valor, contador):
         for k, a in v.items():
             if type(k) is not str:
                 _falha()
-            copiar(k, p + 1)
-            out[k] = copiar(a, p + 1)
+            out[copiar(k, p + 1)] = copiar(a, p + 1)
         return out
 
     return copiar(valor, 0)
@@ -997,6 +1022,7 @@ def _dias_desde_epoca(ms: int) -> int:
 def _ano_mes_dia_utc(ms: float) -> tuple[int, int, int]:
     import datetime
 
+    ms = math.floor(ms)  # data arredonda SEMPRE para baixo (§3.1); timedelta arredondaria ao µs mais próximo
     if ms < -62135596800000 or ms >= 253402300800000:
         _falha("numero_invalido")
     dt = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc) + datetime.timedelta(milliseconds=ms)
@@ -1075,9 +1101,9 @@ def _chamar_funcao(nome: str, args: list[Any], onde_erro: dict) -> Any:
             return 1 if v else 0
         if isinstance(v, str):
             texto = v.strip()
-            if re.fullmatch(r"-?\d+", texto):
+            if re.fullmatch(r"-?[0-9]+", texto):
                 return _finito(float(texto))
-            if re.fullmatch(r"-?\d+\.\d+", texto):
+            if re.fullmatch(r"-?[0-9]+\.[0-9]+", texto):
                 return float(texto)
             return None
         return None
@@ -1124,7 +1150,9 @@ def avaliar(
     def v(nodo: No) -> Any:
         try:
             return _valor_seguro(executar(nodo), contador)
-        except (OverflowError, ValueError, ZeroDivisionError):
+        except (OverflowError, ValueError, ZeroDivisionError, decimal.DecimalException):
+            # `decimal.DecimalException` (ArithmeticError) entra na lista porque `_decimal_fixo`
+            # trabalha com `Decimal`: qualquer estouro de contexto vira erro NOMEADO, nunca exceção crua.
             _falha("numero_invalido")
 
     def executar(nodo: No) -> Any:
@@ -1246,7 +1274,9 @@ def avaliar(
         if op == "%":
             if b == 0:
                 raise ErroExpressao("divisao_por_zero", "resto da divisão por zero", {})
-            return a % b
+            # sinal do DIVIDENDO (resto truncado), a convenção do JavaScript/SQL — o '%' do
+            # Python daria o sinal do divisor e os dois avaliadores divergiriam.
+            return math.fmod(a, b)
         if op == "^":
             return _potencia(a, b)
         raise ErroExpressao("operador_desconhecido", f"operador desconhecido: {op}")  # pragma: no cover

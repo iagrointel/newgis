@@ -163,6 +163,41 @@ DIVERGENCIAS_MEDIDAS = {
 }
 
 
+# CONSERTO de 06/09/2026 (laco/handoffs/T3/L2-10-c-CONSERTO.md): as 26 divergências acima foram
+# fechadas fixando a convenção NO CÓDIGO dos dois lados e escrevendo-a em docs/EXPRESSAO.md §3.1
+# (resto com sinal do dividendo · texto em ponto de código com pareamento UTF-16 · `Numero` só com
+# algarismo ASCII · data arredondada para baixo). Esta tabela é o valor que os DOIS avaliadores
+# passaram a devolver — a de cima fica como registro do que se media antes.
+CONVERGENCIA_APOS_CONSERTO = {
+    "resto -7 por 3": "-1",
+    "resto 7 por -3": "1",
+    "resto -1 por 2": "-1",
+    "resto 5 por -2": "1",
+    "resto -0,5 por 2": "-0.5",
+    "resto literal negativo": "-1",
+    "resto dentro de Texto": '"-1"',
+    "resto decide ramo do Se": '"n"',
+    "Find de meia-substituta baixa": "-1",
+    "Find de meia-substituta alta": "-1",
+    "Split por meia-substituta": '["a\\ud83c\\udf0db"]',
+    "Replace de meia-substituta": '"a\\ud83c\\udf0db"',
+    "Contagem de par montado de duas metades": "1",
+    "Left de par montado de duas metades": '"\\ud83c\\udf0d"',
+    "menor que entre emoji e caractere BMP": "false",
+    "menor ou igual entre emoji e BMP": "false",
+    "maior ou igual entre emoji e BMP": "true",
+    "menor que entre plano 1 e BMP alto": "false",
+    "Numero com algarismo arábico-índico": "null",
+    "Numero com algarismo devanágari": "null",
+    "Numero com algarismo de largura inteira": "null",
+    "Numero com algarismo matemático": "null",
+    "Ano de milissegundo fracionário negativo": "1969",
+    "Mes de milissegundo fracionário negativo": "12",
+    "Dia de milissegundo fracionário negativo": "31",
+    "Ano de -0,4 milissegundo": "1969",
+}
+
+
 @pytest.fixture(scope="module")
 def resultados_js() -> dict[str, str]:
     entrada = [{"entrada": e, "contexto": c} for _apelido, e, c in CASOS_NOVOS]
@@ -209,7 +244,6 @@ def test_ataque_2_casos_em_que_python_e_javascript_concordam(apelido, entrada, c
     [c for c in CASOS_NOVOS if c[0] in DIVERGENCIAS_MEDIDAS],
     ids=[c[0] for c in CASOS_NOVOS if c[0] in DIVERGENCIAS_MEDIDAS],
 )
-@pytest.mark.xfail(strict=True, reason="ACHADO 1: Python e JavaScript divergem fora dos 309 vetores")
 def test_ataque_2_python_e_javascript_tem_de_concordar(apelido, entrada, contexto, resultados_js):
     """Ataque 2 que PASSOU. O contrato (docs/EXPRESSAO.md §6) diz que os dois avaliadores dão o
     MESMO resultado para o mesmo texto e o mesmo contexto. Estes 26 casos provam que não dão.
@@ -219,14 +253,15 @@ def test_ataque_2_python_e_javascript_tem_de_concordar(apelido, entrada, context
     (c) `Numero` — o `\\d` do Python casa dígito Unicode de qualquer escrita, o do JavaScript não;
     (d) `Ano`/`Mes`/`Dia` com milissegundo fracionário negativo — `datetime.timedelta` arredonda
     para o microssegundo mais próximo (vai para 1969) e `new Date` trunca para zero (fica em 1970).
-    Quando estiver corrigido, apagar a marca xfail."""
-    esperado_py, esperado_js = DIVERGENCIAS_MEDIDAS[apelido]
+    CONSERTADO em 06/09 (marca xfail retirada): a asserção agora é dupla e mais estreita que a do
+    ataque — além de os dois lados terem de concordar, o valor comum tem de ser exatamente o que a
+    convenção de docs/EXPRESSAO.md §3.1 manda. Trocar a convenção sem trocar o documento reprova aqui."""
     obtido_py, obtido_js = _python(entrada, contexto), resultados_js[apelido]
-    assert (obtido_py, obtido_js) == (esperado_py, esperado_js), "a divergência medida mudou de forma"
-    assert obtido_py == obtido_js
+    assert obtido_py == obtido_js, "os dois avaliadores voltaram a divergir neste caso"
+    assert obtido_py == CONVERGENCIA_APOS_CONSERTO[apelido], "o valor convencionado em §3.1 mudou"
+    assert DIVERGENCIAS_MEDIDAS[apelido][0] != DIVERGENCIAS_MEDIDAS[apelido][1]  # registro do que era
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO 2: TextoNumero levanta decimal.InvalidOperation crua")
 @pytest.mark.parametrize(
     "valor,casas",
     [(1e13, 15), (1e14, 14), (1e20, 8), (1e20, 15), (1e15, 14)],
@@ -238,10 +273,26 @@ def test_ataque_2_texto_numero_devolve_erro_nomeado_e_nao_excecao_crua(valor, ca
     `quantize` levanta `decimal.InvalidOperation`, que NÃO é `ErroExpressao` nem está na lista
     que `avaliar` captura (`OverflowError, ValueError, ZeroDivisionError`) — a exceção sobe crua
     para quem chamou. O guarda `abs(n) >= 1e21` não pega: 1e20 com 8 casas já estoura. O lado
-    JavaScript, com `toFixed`, devolve o texto normalmente — logo é também divergência."""
+    JavaScript, com `toFixed`, devolve o texto normalmente — logo é também divergência.
+
+    CONSERTADO em 06/09 (marca xfail retirada): `_decimal_fixo` passou a usar `decimal.localcontext`
+    com 60 dígitos (o suficiente para o teto de `TextoNumero`: 1e21 com 15 casas) e `avaliar` passou a
+    capturar `decimal.DecimalException` como `numero_invalido`. A asserção ficou mais estreita que a do
+    ataque: além de não subir exceção crua, o lado Python tem de devolver o MESMO texto do JavaScript."""
     entrada, contexto = f"TextoNumero($x,{casas})", {"x": valor}
     resultado = _python(entrada, contexto)
     assert not resultado.startswith("ERRO:EXCECAO_NAO_TRATADA"), resultado
+    r = subprocess.run(
+        ["node", str(EXECUTOR_JS), "--stdin"],
+        input=json.dumps([{"entrada": entrada, "contexto": contexto}]),
+        capture_output=True,
+        text=True,
+        timeout=60,
+        cwd=str(RAIZ),
+        check=True,
+    )
+    item = json.loads(r.stdout)[0]
+    assert resultado == _serializar(item["resultado"], item["erro"])
 
 
 # ---------------------------------------------------------------- ataque 1: custo por passo
@@ -395,13 +446,32 @@ def test_ataque_3_ast_bem_formada_mas_fora_do_contrato_falha_na_avaliacao(apelid
     assert excecao.value.codigo == codigo
 
 
-def test_ataque_3_campo_extra_no_no_e_ignorado_nos_dois_lados():
-    """Único ponto do ataque 3 em que o contrato é TOLERANTE: campo desconhecido dentro de um nó
-    (inclusive uma chave literal `__proto__` vinda de JSON) é ignorado, não recusado. Não muda
-    comportamento nem polui protótipo — mas está registrado, porque uma AST assinada com campo
-    extra não é rejeitada."""
+def test_ataque_3_campo_extra_no_no_e_recusado_nos_dois_lados():
+    """Ponto em que o contrato ERA tolerante e deixou de ser (conserto de 06/09): campo desconhecido
+    dentro de um nó — inclusive uma chave literal `__proto__` vinda de `JSON.parse` — é RECUSADO com
+    `no_desconhecido`, não ignorado. A forma do nó é fechada: uma AST assinada com campo a mais não
+    é a AST que este avaliador exporta. O teste do adversário registrava a tolerância; agora registra
+    a recusa, nos dois lados."""
     dados = json.loads('{"tipo":"literal","tipo_valor":"numero","valor":7,"extra":"x","__proto__":{"p":1}}')
-    assert avaliar(ast_de_json(dados), {}) == 7
+    with pytest.raises(ErroExpressao) as excecao:
+        ast_de_json(dados)
+    assert excecao.value.codigo == "no_desconhecido"
+    saida = _node_modulo(
+        """
+const r={};
+const d=JSON.parse('{"tipo":"literal","tipo_valor":"numero","valor":7,"extra":"x","__proto__":{"p":1}}');
+try{ r.extra=['ok',avaliar(astDeJson(d),{})]; }
+catch(e){ r.extra=[(e instanceof ErroExpressao)?'erro':'excecao_crua',e.codigo||e.message]; }
+const limpo=JSON.parse('{"tipo":"literal","tipo_valor":"numero","valor":7}');
+try{ r.limpo=['ok',avaliar(astDeJson(limpo),{})]; }
+catch(e){ r.limpo=[(e instanceof ErroExpressao)?'erro':'excecao_crua',e.codigo||e.message]; }
+r.prototipo_poluido=Object.prototype.p===undefined;
+process.stdout.write(JSON.stringify(r));
+"""
+    )
+    assert saida["extra"] == ["erro", "no_desconhecido"]
+    assert saida["limpo"] == ["ok", 7], "o nó BEM formado continua avaliando"
+    assert saida["prototipo_poluido"] is True
 
 
 # ---------------------------------------------------------------- ataque 4: contexto hostil no JS
@@ -489,7 +559,6 @@ process.stdout.write(JSON.stringify(r));
     assert saida["ast_com_getter"] == ["erro", "no_desconhecido"]
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO 4: contexto Proxy no JS resolve qualquer campo e roda armadilha")
 def test_ataque_4_contexto_exotico_deveria_ser_recusado_como_no_python():
     """Ataque 4 que PASSOU em parte. `avaliar` do Python confere `type(contexto) is not dict` e
     recusa qualquer objeto exótico. O JavaScript não confere nada no contexto de TOPO: um `Proxy`
@@ -497,7 +566,12 @@ def test_ataque_4_contexto_exotico_deveria_ser_recusado_como_no_python():
     `has`/`getOwnPropertyDescriptor` executam código de quem montou o contexto, e `$qualquerCampo`
     resolve. A lista branca de campos, no JavaScript, vale só até o objeto passado ser simples.
     O mesmo vale para uma AST entregue como `Proxy`. Correção: aplicar ao contexto de topo o mesmo
-    teste de protótipo que `valorSeguro` já aplica a dicionário aninhado."""
+    teste de protótipo que `valorSeguro` já aplica a dicionário aninhado.
+
+    CONSERTADO em 06/09 (marca xfail retirada): `contextoSimples()` recusa contexto que não é objeto
+    simples e, no Node, recusa `Proxy` por `util.types.isProxy` — nenhuma armadilha chega a rodar. A
+    importação da AST passou a ler cada campo por DESCRITOR, então nem o `get` de um `Proxy` de AST
+    dispara. Limitação escrita em docs/EXPRESSAO.md §7: no NAVEGADOR não há como detectar `Proxy`."""
     saida = _node_modulo(
         """
 const r={};
@@ -615,23 +689,26 @@ def test_ataque_6_a_tabela_de_paridade_existe_e_tem_as_linhas_conferidas():
 
 
 @pytest.mark.parametrize("arcade", sorted(LINHAS_FEITO_QUE_NAO_SAO_FEITO), ids=sorted(LINHAS_FEITO_QUE_NAO_SAO_FEITO))
-@pytest.mark.xfail(strict=True, reason="ACHADO 3: linha marcada 'feito' que não é 'feito'")
 def test_ataque_6_nenhuma_destas_linhas_pode_estar_marcada_feito(arcade):
     """Ataque 6, que PASSOU. Conferi 17 das linhas `feito` contra a documentação oficial do Arcade
     (developers.arcgis.com/arcade/function-reference/, lida em 06/09/2026); 6 delas não são `feito`.
     Cada uma vale como promessa em documento de paridade — é o defeito mais grave desta entrega.
-    Quando a linha for corrigida para `parcial`/`fora`, este teste passa e a marca xfail sai."""
+    CONSERTADO em 06/09 (marca xfail retirada): as seis viraram `parcial` com a diferença escrita, e
+    a tabela inteira foi revista com o mesmo critério (18 linhas caíram de `feito`). `tests/unit/
+    test_expressao_paridade.py` passou a exigir vetor de teste para toda linha `feito`."""
     estados = {estado for nome, _nosso, estado in _linhas_da_secao_10() if nome == arcade}
     assert "feito" not in estados, LINHAS_FEITO_QUE_NAO_SAO_FEITO[arcade][0]
 
 
-def test_ataque_6_o_mesmo_nome_do_arcade_carrega_estados_contraditorios():
-    """Achado menor da mesma varredura: `DefaultValue` aparece em três categorias com três estados
+def test_ataque_6_o_mesmo_nome_do_arcade_nao_carrega_estados_contraditorios():
+    """Achado menor da mesma varredura: `DefaultValue` aparecia em quatro linhas com dois estados
     (`parcial` para `SeNulo`, `parcial` para `Obter(lista, i, padrão)` e `feito` para
     `Obter(dic, chave, padrão)`), sendo uma função só no Arcade — `DefaultValue(value, defaultValue)`,
-    substituição de nulo/vazio, nunca busca por chave. Registro do fato, sem corrigir."""
+    substituição de nulo/vazio, nunca busca por chave. CONSERTADO em 06/09: a linha do dicionário virou
+    `parcial` e diz que o equivalente do `DefaultValue` aqui é o `SeNulo`. Nenhuma linha de
+    `DefaultValue` pode voltar a `feito` enquanto o mapeamento for para `Obter`."""
     estados = sorted({estado for nome, _nosso, estado in _linhas_da_secao_10() if nome == "DefaultValue"})
-    assert estados == ["feito", "parcial"], estados
+    assert estados == ["parcial"], estados
 
 
 # ---------------------------------------------------------------- ataque 7: conferência dos números

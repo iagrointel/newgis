@@ -20,6 +20,10 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 VETORES = ROOT / "tests" / "expressoes" / "vetores.json"
+# Vetores acrescentados depois do ataque adversarial de 06/09 (laco/handoffs/T3/L2-10-c-ADVERSARIO.md):
+# cada um é um caso em que os dois avaliadores DIVERGIAM porque a operação era entregue ao operador da
+# língua. Ficam em arquivo separado para não mexer na contagem de 309 que o teste do adversário confere.
+VETORES_CONVERGENCIA = ROOT / "tests" / "expressoes" / "vetores_convergencia.json"
 RUNNER_JS = ROOT / "tests" / "expressoes" / "executar_js.mjs"
 
 sys.path.insert(0, str(ROOT))
@@ -27,7 +31,9 @@ from app.expressao.avaliador_py import ErroExpressao, avaliar_texto  # noqa: E40
 
 
 def _vetores() -> list[dict]:
-    return json.loads(VETORES.read_text(encoding="utf-8"))
+    return json.loads(VETORES.read_text(encoding="utf-8")) + json.loads(
+        VETORES_CONVERGENCIA.read_text(encoding="utf-8")
+    )
 
 
 def _canonicalizar(valor):
@@ -55,14 +61,31 @@ def resultados_js() -> list[dict]:
     e mapeia na mesma ordem, nunca pelo texto da expressão (duas linhas podem ter o MESMO texto com
     contexto diferente, como "SeNulo com valor presente"/"ausente" abaixo; casar pelo texto juntaria
     o resultado errado com o vetor errado)."""
+    entrada = [{"entrada": v["entrada"], "contexto": v.get("contexto") or {}} for v in _vetores()]
     r = subprocess.run(
-        ["node", str(RUNNER_JS)], capture_output=True, text=True, timeout=30, cwd=str(ROOT), check=True
+        ["node", str(RUNNER_JS), "--stdin"],
+        input=json.dumps(entrada, ensure_ascii=True),  # ensure_ascii: meia-substituta não codifica em UTF-8
+        capture_output=True,
+        text=True,
+        timeout=60,
+        cwd=str(ROOT),
+        check=True,
     )
     return json.loads(r.stdout)
 
 
 def test_ao_menos_200_vetores_compartilhados():
     assert len(_vetores()) >= 200, "extensão do núcleo: ≥ 200 expressões nos dois avaliadores"
+
+
+def test_vetores_de_convergencia_cobrem_as_quatro_convencoes_fixadas():
+    """Os casos que o ataque adversarial de 06/09 achou divergindo viram vetor COMPARTILHADO: se
+    alguém devolver o `%` ao operador da língua, a comparação de texto à unidade UTF-16, o `\\d` ao
+    Python ou a data ao `timedelta`/`new Date`, estes reprovam nos dois lados."""
+    vetores = json.loads(VETORES_CONVERGENCIA.read_text(encoding="utf-8"))
+    assert len(vetores) >= 26
+    entradas = " ".join(v["entrada"] for v in vetores)
+    assert "%" in entradas and "Numero(" in entradas and "Ano(" in entradas and "Find(" in entradas
 
 
 def test_vetores_e_resultados_js_no_mesmo_numero_e_ordem(resultados_js):
@@ -170,7 +193,7 @@ def test_ast_exportada_pelo_python_reimportada_no_javascript_avalia_igual_em_tod
         for v in vetores
     ]
     r = subprocess.run(
-        ["node", str(RUNNER_JS), "--stdin", "--ast"], input=json.dumps(entrada, ensure_ascii=False),
+        ["node", str(RUNNER_JS), "--stdin", "--ast"], input=json.dumps(entrada, ensure_ascii=True),
         capture_output=True, text=True, timeout=30, cwd=str(ROOT), check=True,
     )
     saida = json.loads(r.stdout)

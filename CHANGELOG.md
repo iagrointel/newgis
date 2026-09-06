@@ -3,6 +3,39 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L2-10-c-linguagem-expressao: conserto das três refutações do adversário)
+
+O ataque adversarial (`laco/handoffs/T3/L2-10-c-ADVERSARIO.md`) refutou o item em três cláusulas. As três
+foram consertadas no código e no documento; os 38 testes que o adversário deixou como `xfail(strict=True)`
+passam sem que nenhum tenha sido apagado ou afrouxado (`venv/bin/pytest tests/unit/test_expressao_*.py`
+= 1.652 casos, 0 falha, 0 xfail).
+
+1. **Equivalência Python × JavaScript.** As 26 divergências que ele mediu fora dos 309 vetores vinham todas
+do mesmo lugar: operação entregue ao operador ou à biblioteca da língua. A semântica passou a ser do
+CONTRATO, escrita à mão nos dois lados e publicada em `docs/EXPRESSAO.md` §3.1 — resto (`%`) com o sinal do
+DIVIDENDO (`math.fmod`, como o JavaScript/C/SQL); texto medido, cortado, comparado e casado em PONTO DE
+CÓDIGO, com par substituto contando como um; `Numero` só com algarismo ASCII; data arredondada sempre para
+baixo. Os 26 casos viraram vetor compartilhado em `tests/expressoes/vetores_convergencia.json` (30 vetores,
+`vetores_de_convergencia_pos_adversario`), rodados junto dos 309 pelo teste de equivalência.
+
+2. **Exceção crua.** `TextoNumero($x,15)` com 1e13 levantava `decimal.InvalidOperation` (contexto padrão de
+28 dígitos). `_decimal_fixo` passou a usar `decimal.localcontext` com 60 dígitos e `avaliar` a capturar
+`decimal.DecimalException` como `numero_invalido`: o Python agora formata o mesmo texto que o `toFixed` do
+JavaScript nos cinco casos do ataque.
+
+3. **Tabela de paridade com o Arcade.** A tabela inteira (134 linhas em 7 categorias) foi revista com o
+critério estreito — `feito` só sem NENHUMA diferença conhecida e com vetor de teste da nossa função. As 6
+linhas que o adversário derrubou (`Month`, `Now`, `Abs`, `Reverse`, `Back`, `Front`) e mais 12 viraram
+`parcial` com a diferença escrita; `DefaultValue` deixou de ter estado contraditório. De **29 feito · 24
+parcial · 81 fora** para **11 feito · 42 parcial · 81 fora** (`linhas_feito_na_paridade_arcade`).
+`tests/unit/test_expressao_paridade.py` (novo) impede a volta da mentira: linha `feito` sem vetor reprova,
+contagem de cabeçalho que não bate com as linhas reprova, `docs/PARIDADE.md` fora de sincronia reprova.
+
+Também consertado (gravidade baixa, mesmo laudo): contexto de topo do lado JavaScript recusa objeto que não
+é dicionário simples e, no Node, recusa `Proxy` (`util.types.isProxy`) — no navegador não há detecção
+possível e isso está escrito em §7; campo desconhecido dentro de nó de AST passou a ser RECUSADO
+(`no_desconhecido`) em vez de ignorado, e a importação lê cada campo por descritor, sem disparar getter.
+
 ## turno 3, setembro de 2026 (item L0-02-g-perfil-usuario: perfil próprio — foto, idioma, unidades, formato de data, visibilidade)
 
 Conferido antes de escrever (portão da hipótese vs. o que já existia): a tela `/conta` herdada do

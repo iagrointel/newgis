@@ -16,6 +16,11 @@ export const MAX_ARGUMENTOS = 64;
 export const MAX_PASSOS_PADRAO = 100_000;
 export const LIMITE_MS_CLIENTE = 50; // orçamento do cliente (o servidor usa 500 ms, ver avaliador_py.py)
 
+// `util.types.isProxy` só existe no Node (onde os testes rodam); no navegador o import falha e o
+// detector fica nulo — ver contextoSimples() e docs/EXPRESSAO.md §7.
+let detectorProxy = null;
+try { detectorProxy = (await import('node:util')).types.isProxy; } catch { detectorProxy = null; }
+
 const OPERADORES = ['<=', '>=', '==', '!=', '&&', '||', '<', '>', '+', '-', '*', '/', '%', '^', '!'];
 const PALAVRAS_CHAVE = new Set(['verdadeiro', 'falso', 'nulo']);
 
@@ -407,16 +412,23 @@ export function astDeJson(d, profundidade=1) {
     if(count>MAX_TOKENS) falha('expressao_grande');
     astDados(d);
     const required={literal:['tipo_valor','valor'],campo:['nome'],unario:['operador','operando'],binario:['operador','esquerda','direita'],chamada:['nome','argumentos']};
-    if(!possui(d,'tipo') || typeof d.tipo!=='string' || !possui(required,d.tipo) || !required[d.tipo].every(k=>possui(d,k))) falha('no_desconhecido');
-    if(d.tipo==='literal') return {no:'literal',tipoValor:d.tipo_valor,valor:d.valor};
-    if(d.tipo==='campo') return {no:'campo',nome:d.nome};
-    if(d.tipo==='unario') return {no:'unario',operador:d.operador,operando:build(d.operando,p+1)};
-    if(d.tipo==='binario') return {no:'binario',operador:d.operador,esquerda:build(d.esquerda,p+1),direita:build(d.direita,p+1)};
-    if(!Array.isArray(d.argumentos)) falha('no_desconhecido');
-    if(d.argumentos.length>MAX_ARGUMENTOS) falha('expressao_grande');
+    if(!possui(d,'tipo') || !possui(required,proprio(d,'tipo'))) falha('no_desconhecido');
+    // todo campo do nó é lido por DESCRITOR (nunca `d.x`): um objeto com getter ou uma armadilha de
+    // Proxy não roda código nosso. E a forma é FECHADA: campo a mais no nó é recusado, não ignorado.
+    const tipo=proprio(d,'tipo');
+    const esperados=['tipo',...required[tipo]];
+    const chaves=Object.getOwnPropertyNames(d);
+    if(chaves.length!==esperados.length || !chaves.every(k=>esperados.includes(k))) falha('no_desconhecido');
+    if(tipo==='literal') return {no:'literal',tipoValor:proprio(d,'tipo_valor'),valor:proprio(d,'valor')};
+    if(tipo==='campo') return {no:'campo',nome:proprio(d,'nome')};
+    if(tipo==='unario') return {no:'unario',operador:proprio(d,'operador'),operando:build(proprio(d,'operando'),p+1)};
+    if(tipo==='binario') return {no:'binario',operador:proprio(d,'operador'),esquerda:build(proprio(d,'esquerda'),p+1),direita:build(proprio(d,'direita'),p+1)};
+    const argumentos=proprio(d,'argumentos');
+    if(!Array.isArray(argumentos)) falha('no_desconhecido');
+    if(argumentos.length>MAX_ARGUMENTOS) falha('expressao_grande');
     const args=[];
-    for(let i=0;i<d.argumentos.length;i++) args.push(build(proprio(d.argumentos,String(i)),p+1));
-    return {no:'chamada',nome:d.nome,argumentos:args};
+    for(let i=0;i<argumentos.length;i++) args.push(build(proprio(argumentos,String(i)),p+1));
+    return {no:'chamada',nome:proprio(d,'nome'),argumentos:args};
   }
   const result=build(d,profundidade); validarAst(result); return result;
 }
@@ -500,6 +512,7 @@ function diasDesdeEpoca(ms) {
 }
 
 function anoMesDiaUtc(ms) {
+  ms = Math.floor(ms); // data arredonda SEMPRE para baixo (EXPRESSAO.md §3.1); `new Date` truncaria para zero
   if(ms < -62135596800000 || ms >= 253402300800000) falha('numero_invalido');
   const d = new Date(ms);
   return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()];
@@ -534,6 +547,53 @@ const possui = (o,k) => Object.prototype.hasOwnProperty.call(o,k);
 function falha(codigo='tipo_invalido') { throw new ErroExpressao(codigo,'valor ou operação fora do contrato'); }
 function finito(n) { if (!Number.isFinite(n)) falha('numero_invalido'); return n; }
 function potenciaSegura(a,b) { if (Math.abs(b)>1024) falha('numero_invalido'); return finito(a ** b); }
+// ---- texto medido em PONTO DE CÓDIGO (EXPRESSAO.md §3.1). O `String` do JavaScript é UTF-16: `<`,
+// `indexOf` e `split` trabalham em UNIDADE, casam meia-substituta e ordenam emoji antes de U+E000–U+FFFF.
+// O `str` do Python trabalha em ponto de código. As funções abaixo dão a semântica do Python ao lado JS.
+const TEM_SUBSTITUTA = /[\uD800-\uDFFF]/;
+function compararTexto(a,b) {
+  if (a===b) return 0;
+  if (!TEM_SUBSTITUTA.test(a) && !TEM_SUBSTITUTA.test(b)) return a<b?-1:1; // sem substituta, unidade = ponto de código
+  const A=Array.from(a), B=Array.from(b), n=Math.min(A.length,B.length);
+  for (let i=0;i<n;i++) { const x=A[i].codePointAt(0), y=B[i].codePointAt(0); if(x!==y) return x<y?-1:1; }
+  return A.length===B.length?0:(A.length<B.length?-1:1);
+}
+function alta(c) { return c>=0xD800 && c<=0xDBFF; }
+function baixa(c) { return c>=0xDC00 && c<=0xDFFF; }
+function acharAlinhado(t,agulha,desde) {
+  // índice UTF-16 da agulha, recusando casamento que parta um par substituto (= o que o Python não casa)
+  if (!TEM_SUBSTITUTA.test(t) && !TEM_SUBSTITUTA.test(agulha)) return t.indexOf(agulha,desde);
+  let i=t.indexOf(agulha,desde);
+  while (i>=0) {
+    const fim=i+agulha.length;
+    const inicioOk = !(baixa(t.charCodeAt(i)) && i>0 && alta(t.charCodeAt(i-1)));
+    const fimOk = !(alta(t.charCodeAt(fim-1)) && fim<t.length && baixa(t.charCodeAt(fim)));
+    if (inicioOk && fimOk) return i;
+    i=t.indexOf(agulha,i+1);
+  }
+  return -1;
+}
+function dividirAlinhado(t,sep,limite) {
+  // `limite` undefined = sem limite (String.prototype.split converteria Infinity para 0)
+  if (!TEM_SUBSTITUTA.test(t) && !TEM_SUBSTITUTA.test(sep)) return limite===undefined?t.split(sep):t.split(sep,limite);
+  const out=[]; let i=0;
+  for(;;) {
+    const j=acharAlinhado(t,sep,i);
+    if (j<0 || (limite!==undefined && out.length>=limite-1)) { out.push(t.slice(i)); return out; }
+    out.push(t.slice(i,j)); i=j+sep.length;
+  }
+}
+/* O contexto de TOPO tem de ser objeto simples, como o `type(contexto) is not dict` do Python:
+   dicionário de dados, sem protótipo estranho, sem armadilha. `detectorProxy` só existe no Node
+   (`util.types.isProxy`); NO NAVEGADOR NÃO HÁ COMO DETECTAR UM Proxy — lá a defesa é o contrato de
+   que o contexto é montado pela aplicação, mais a lista branca por campo e a leitura por descritor
+   (que nunca executa getter). Está escrito assim em docs/EXPRESSAO.md §7. */
+function contextoSimples(c) {
+  if (c===null || typeof c!=='object' || Array.isArray(c)) falha('tipo_invalido');
+  const proto=Object.getPrototypeOf(c);
+  if (proto!==Object.prototype && proto!==null) falha('tipo_invalido');
+  if (detectorProxy && detectorProxy(c)) falha('tipo_invalido');
+}
 function proprio(o,k) {
   const d=Object.getOwnPropertyDescriptor(o,k);
   if (!d || !possui(d,'value')) falha('tipo_invalido');
@@ -605,17 +665,17 @@ function extFuncao(nome,a,contador) {
     if(nome==='Find') {
       const start=a.length===3?indice(a[2]):0, textPoints=Array.from(a[1]);
       if(start>textPoints.length) return -1;
-      const offset=textPoints.slice(0,start).join('').length, idx=a[1].indexOf(t,offset);
+      const offset=textPoints.slice(0,start).join('').length, idx=acharAlinhado(a[1],t,offset);
       return idx<0?-1:Array.from(a[1].slice(0,idx)).length;
     }
     if(nome==='Split') {
-      const out=a[1]?t.split(a[1],MAX_COLECAO+1):points;
+      const out=a[1]?dividirAlinhado(t,a[1],MAX_COLECAO+1):points;
       if(out.length>MAX_COLECAO) falha('valor_grande');
       return out;
     }
     if(typeof a[2]!=='string') falha();
     if(!a[1]) return t;
-    const parts=t.split(a[1]);
+    const parts=dividirAlinhado(t,a[1],undefined);
     const size=points.length+(parts.length-1)*(Array.from(a[2]).length-Array.from(a[1]).length);
     if(size>MAX_VALOR_TEXTO) falha('valor_grande');
     return parts.join(a[2]);
@@ -791,6 +851,7 @@ function igual(a, b) {
  * `LIMITE_MS_CLIENTE` (50 ms), o servidor com 500 ms (avaliador_py.py). */
 export function avaliar(no, contexto, opcoes) {
   contexto = contexto || {};
+  contextoSimples(contexto);
   const limitePassos = (opcoes && opcoes.limitePassos) ?? MAX_PASSOS_PADRAO;
   const limiteMs = (opcoes && opcoes.limiteMs) ?? LIMITE_MS_CLIENTE;
   const contador = new Contador(limitePassos, limiteMs);
@@ -885,6 +946,13 @@ export function avaliar(no, contexto, opcoes) {
           `'${op}' espera dois números ou dois textos, recebeu ${tipoNome(esquerda)}/${tipoNome(direita)}`,
           { operador: op },
         );
+      }
+      if (typeof a === 'string') { // ordem por PONTO DE CÓDIGO, não por unidade UTF-16 (§3.1)
+        const c = compararTexto(a,b);
+        if (op === '<') return c<0;
+        if (op === '<=') return c<=0;
+        if (op === '>') return c>0;
+        return c>=0;
       }
       if (op === '<') return a < b;
       if (op === '<=') return a <= b;

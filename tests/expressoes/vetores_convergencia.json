@@ -1,0 +1,246 @@
+[
+ {
+  "descricao": "resto: sinal do dividendo (-7 % 3)",
+  "entrada": "$a % $b",
+  "contexto": {
+   "a": -7,
+   "b": 3
+  },
+  "saida": -1
+ },
+ {
+  "descricao": "resto: divisor negativo (7 % -3)",
+  "entrada": "$a % $b",
+  "contexto": {
+   "a": 7,
+   "b": -3
+  },
+  "saida": 1
+ },
+ {
+  "descricao": "resto: dividendo negativo pequeno",
+  "entrada": "$a % $b",
+  "contexto": {
+   "a": -1,
+   "b": 2
+  },
+  "saida": -1
+ },
+ {
+  "descricao": "resto: dividendo positivo, divisor negativo",
+  "entrada": "$a % $b",
+  "contexto": {
+   "a": 5,
+   "b": -2
+  },
+  "saida": 1
+ },
+ {
+  "descricao": "resto com fra\u00e7\u00e3o negativa",
+  "entrada": "$a % $b",
+  "contexto": {
+   "a": -0.5,
+   "b": 2
+  },
+  "saida": -0.5
+ },
+ {
+  "descricao": "resto de literal negativo entre par\u00eanteses",
+  "entrada": "(0-7) % 3",
+  "contexto": {},
+  "saida": -1
+ },
+ {
+  "descricao": "resto negativo formatado por Texto",
+  "entrada": "Texto((0-10) % 3)",
+  "contexto": {},
+  "saida": "-1"
+ },
+ {
+  "descricao": "resto negativo decidindo o ramo do Se",
+  "entrada": "Se($a % $b > 0,'p','n')",
+  "contexto": {
+   "a": -7,
+   "b": 3
+  },
+  "saida": "n"
+ },
+ {
+  "descricao": "Find n\u00e3o casa meia-substituta baixa",
+  "entrada": "Find($a,$b)",
+  "contexto": {
+   "a": "\udf0d",
+   "b": "\ud83c\udf0d"
+  },
+  "saida": -1
+ },
+ {
+  "descricao": "Find n\u00e3o casa meia-substituta alta",
+  "entrada": "Find($a,$b)",
+  "contexto": {
+   "a": "\ud83c",
+   "b": "\ud83c\udf0d"
+  },
+  "saida": -1
+ },
+ {
+  "descricao": "Split n\u00e3o separa em meia-substituta",
+  "entrada": "Split($t,$s)",
+  "contexto": {
+   "t": "a\ud83c\udf0db",
+   "s": "\udf0d"
+  },
+  "saida": [
+   "a\ud83c\udf0db"
+  ]
+ },
+ {
+  "descricao": "Replace n\u00e3o substitui meia-substituta",
+  "entrada": "Replace($t,$s,'X')",
+  "contexto": {
+   "t": "a\ud83c\udf0db",
+   "s": "\udf0d"
+  },
+  "saida": "a\ud83c\udf0db"
+ },
+ {
+  "descricao": "Contagem pareia duas metades substitutas como um ponto de c\u00f3digo",
+  "entrada": "Contagem(Concatenar($a,$b))",
+  "contexto": {
+   "a": "\ud83c",
+   "b": "\udf0d"
+  },
+  "saida": 1
+ },
+ {
+  "descricao": "Left devolve o par montado inteiro",
+  "entrada": "Left(Concatenar($a,$b),1)",
+  "contexto": {
+   "a": "\ud83c",
+   "b": "\udf0d"
+  },
+  "saida": "\ud83c\udf0d"
+ },
+ {
+  "descricao": "ordem por ponto de c\u00f3digo: emoji n\u00e3o \u00e9 menor que U+FFFD",
+  "entrada": "$a < $b",
+  "contexto": {
+   "a": "\ud83c\udf0d",
+   "b": "\ufffd"
+  },
+  "saida": false
+ },
+ {
+  "descricao": "ordem por ponto de c\u00f3digo: menor ou igual entre emoji e BMP",
+  "entrada": "$a <= $b",
+  "contexto": {
+   "a": "\ud83c\udf0d",
+   "b": "\ufffd"
+  },
+  "saida": false
+ },
+ {
+  "descricao": "ordem por ponto de c\u00f3digo: maior ou igual entre emoji e BMP",
+  "entrada": "$a >= $b",
+  "contexto": {
+   "a": "\ud83c\udf0d",
+   "b": "\ufffd"
+  },
+  "saida": true
+ },
+ {
+  "descricao": "ordem por ponto de c\u00f3digo: plano 1 contra BMP alto",
+  "entrada": "$a < $b",
+  "contexto": {
+   "a": "\ud800\udc00",
+   "b": "\uff00"
+  },
+  "saida": false
+ },
+ {
+  "descricao": "Numero recusa algarismo ar\u00e1bico-\u00edndico",
+  "entrada": "Numero($t)",
+  "contexto": {
+   "t": "\u0664\u0662"
+  },
+  "saida": null
+ },
+ {
+  "descricao": "Numero recusa algarismo devan\u00e1gari",
+  "entrada": "Numero($t)",
+  "contexto": {
+   "t": "\u0967\u0968"
+  },
+  "saida": null
+ },
+ {
+  "descricao": "Numero recusa algarismo de largura inteira",
+  "entrada": "Numero($t)",
+  "contexto": {
+   "t": "\uff11\uff12"
+  },
+  "saida": null
+ },
+ {
+  "descricao": "Numero recusa algarismo matem\u00e1tico",
+  "entrada": "Numero($t)",
+  "contexto": {
+   "t": "\ud835\udfd9\ud835\udfda"
+  },
+  "saida": null
+ },
+ {
+  "descricao": "Ano com milissegundo fracion\u00e1rio negativo (arredonda para baixo)",
+  "entrada": "Ano(0-0.5)",
+  "contexto": {},
+  "saida": 1969
+ },
+ {
+  "descricao": "Mes com milissegundo fracion\u00e1rio negativo",
+  "entrada": "Mes(0-0.5)",
+  "contexto": {},
+  "saida": 12
+ },
+ {
+  "descricao": "Dia com milissegundo fracion\u00e1rio negativo",
+  "entrada": "Dia(0-0.5)",
+  "contexto": {},
+  "saida": 31
+ },
+ {
+  "descricao": "Ano com -0,4 milissegundo",
+  "entrada": "Ano(0-0.4)",
+  "contexto": {},
+  "saida": 1969
+ },
+ {
+  "descricao": "AgoraUTC devolve a \u00e9poca em milissegundos (posterior a 01/09/2026)",
+  "entrada": "AgoraUTC() > 1756684800000",
+  "contexto": {},
+  "saida": true
+ },
+ {
+  "descricao": "TextoNumero com 15 casas sobre 1e13 (contexto decimal pr\u00f3prio)",
+  "entrada": "TextoNumero($x,15)",
+  "contexto": {
+   "x": 10000000000000.0
+  },
+  "saida": "10.000.000.000.000,000000000000000"
+ },
+ {
+  "descricao": "TextoNumero com 8 casas sobre 1e20",
+  "entrada": "TextoNumero($x,8)",
+  "contexto": {
+   "x": 1e+20
+  },
+  "saida": "100.000.000.000.000.000.000,00000000"
+ },
+ {
+  "descricao": "TextoNumero com 14 casas sobre 1e14",
+  "entrada": "TextoNumero($x,14)",
+  "contexto": {
+   "x": 100000000000000.0
+  },
+  "saida": "100.000.000.000.000,00000000000000"
+ }
+]

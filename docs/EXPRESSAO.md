@@ -101,6 +101,31 @@ formulário/popup, de outro item.
   que receber `nulo` onde espera um valor concreto propaga `nulo` (ex.: `Arredondar(nulo)` → `nulo`)
   — EXCETO `SeNulo` e `EhNulo`, que existem exatamente para tratar nulo.
 
+### 3.1 Convenções fixadas (o que a língua hospedeira decidiria sozinha, e aqui não decide)
+
+Toda operação que os dois avaliadores entregassem ao operador ou à biblioteca da língua divergiria:
+o Python e o JavaScript não concordam em resto de divisão, em unidade de texto, em algarismo e em
+arredondamento de data. As quatro convenções abaixo são do CONTRATO, estão escritas à mão nos dois
+lados e têm vetor de teste em `tests/expressoes/vetores_convergencia.json`.
+
+1. **Resto (`%`) tem o sinal do DIVIDENDO** (resto truncado, como no JavaScript, no C e no SQL), não
+   o sinal do divisor (que é o que o `%` do Python daria). `(0-7) % 3` é `-1`, `7 % (0-3)` é `1`,
+   `(0-0.5) % 2` é `-0.5`. O lado Python usa `math.fmod`, nunca o operador `%` da língua.
+2. **Texto é medido, cortado, comparado e casado em PONTO DE CÓDIGO**, e um par substituto alto+baixo
+   conta como UM ponto de código, mesmo quando chega ao contexto como duas metades soltas (é a regra
+   do UTF-16, que o `String` do JavaScript aplica sozinho e o `str` do Python não). Vale para
+   `Contagem`, `Left`, `Mid`, `Right`, `Find`, `Split`, `Replace` e para a ordem `< <= > >=` entre
+   textos: emoji vem DEPOIS de `U+E000`–`U+FFFF`, e nenhuma busca casa meia-substituta. O lado Python
+   normaliza o texto (`_texto_pareado`); o lado JavaScript compara e corta por ponto de código, nunca
+   por unidade UTF-16 (`compararTexto`, `acharAlinhado`, `dividirAlinhado`).
+3. **`Numero` aceita só algarismo ASCII `0`–`9`.** `Numero('٤٢')` (algarismo arábico-índico) é `nulo`,
+   como qualquer texto que não seja número. O `\d` do Python casaria dígito decimal de qualquer
+   escrita e o do JavaScript não.
+4. **Data arredonda SEMPRE para baixo.** `Ano`, `Mes`, `Dia`, `Weekday`, `TextoData` e `DiferencaDias`
+   aplicam `floor` ao milissegundo antes de qualquer conta, então `Ano(0-0.5)` é `1969` nos dois lados
+   (o `timedelta` do Python arredondaria ao microssegundo mais próximo e o `new Date` truncaria para
+   zero, que é o que dava `1969` de um lado e `1970` do outro).
+
 ## 4. Curto-circuito (o ramo não avaliado não roda)
 
 - **`Se(condicao, entao, senao)`**: `condicao` tem de avaliar para booleano estrito (`nulo` ou
@@ -275,6 +300,15 @@ nunca `nulo` silencioso — o avaliador nunca faz `getattr` em objeto do chamado
 `globals()`/`vars()`/protótipo: a única leitura é `contexto[nome]` (dicionário), e um nome fora
 dele é sempre recusado.
 
+O **contexto de topo** tem de ser dicionário simples nos dois lados: o Python recusa o que não é
+`dict` exato (`tipo_invalido`); o JavaScript recusa o que não é objeto de protótipo `Object.prototype`
+ou nulo, recusa lista, e recusa `Proxy` quando roda em Node (`util.types.isProxy`). **No navegador não
+existe forma de detectar um `Proxy`** — lá a defesa é o contrato de que quem monta o contexto é a
+aplicação, mais a lista branca por campo e a leitura por DESCRITOR (`Object.getOwnPropertyDescriptor`,
+que exige descritor de dado e por isso nunca executa um getter do chamador). Está escrito aqui porque
+é a única assimetria conhecida entre os dois avaliadores. Pelo mesmo motivo, **campo desconhecido
+dentro de um nó de AST é recusado** (`no_desconhecido`), não ignorado: a forma do nó é fechada.
+
 ## 8. Catálogo de erros nomeados
 
 | código | quando |
@@ -322,25 +356,25 @@ Vocabulário de nós (campo `"tipo"`):
 
 ## 10. Paridade com o Arcade function reference, função por função
 
-Lista de nomes lida das páginas oficiais (`developers.arcgis.com/arcade/function-reference/`) em setembro de 2026: **269 funções em 17 categorias**. Estado por função: **feito** = mesma semântica para os casos que os vetores cobrem; **parcial** = existe com assinatura ou regra mais estreita (dito na observação); **fora** = não existe. Nas 7 categorias com correspondência: **29 feito · 24 parcial · 81 fora** de 134; as outras 10 categorias (135 funções) ficam inteiras de fora, com o motivo. O nome nosso é sempre outro (português): paridade aqui é de CAPACIDADE, nunca promessa de rodar um script Arcade sem adaptação. Gerado por `laco/handoffs/T3/codex-L2-10-c/gerar_paridade.py`.
+Lista de nomes lida das páginas oficiais (`developers.arcgis.com/arcade/function-reference/`) em setembro de 2026: **269 funções em 17 categorias**. Estado por função: **feito** = mesma semântica, sem NENHUMA diferença conhecida contra a documentação oficial, e com pelo menos um vetor de teste que exercita a nossa função (`test_expressao_paridade.py` reprova a linha `feito` que não tiver vetor, e reprova a contagem do cabeçalho que não bater com as linhas); **parcial** = existe com assinatura ou regra mais estreita (dito na observação); **fora** = não existe. Nas 7 categorias com correspondência: **11 feito · 42 parcial · 81 fora** de 134; as outras 10 categorias (135 funções) ficam inteiras de fora, com o motivo. O nome nosso é sempre outro (português): paridade aqui é de CAPACIDADE, nunca promessa de rodar um script Arcade sem adaptação. Gerado por `laco/handoffs/T3/codex-L2-10-c/gerar_paridade.py`.
 
-### Texto (8 feito · 4 parcial · 10 fora)
+### Texto (2 feito · 10 parcial · 10 fora)
 
 | Arcade | nós | estado | observação |
 |---|---|---|---|
-| Concatenate | `Concatenar` | feito | nulo vira texto vazio, como no Arcade |
-| Count | `Contagem` | feito | pontos de código, não unidades UTF-16 |
-| Find | `Find` | feito | índice em pontos de código; −1 se ausente |
+| Concatenate | `Concatenar` | parcial | junta argumentos soltos (nulo vira texto vazio, como no Arcade); a forma do Arcade com lista + separador é a nossa `Juntar` |
+| Count | `Contagem` | parcial | conta PONTO DE CÓDIGO (§3.1); o Arcade não documenta a unidade e roda sobre UTF-16 |
+| Find | `Find` | parcial | índice e início em ponto de código, e não casa meia-substituta (§3.1); −1 se ausente |
 | FromCharCode | — | fora |  |
 | FromCodePoint | — | fora |  |
 | Guid | — | fora | sem aleatoriedade: os dois avaliadores têm de dar o mesmo resultado |
-| Left | `Left` | feito |  |
+| Left | `Left` | parcial | corta em ponto de código (§3.1) |
 | Lower | `Minuscula` | feito |  |
-| Mid | `Mid` | feito | sem quantidade vai até o fim |
+| Mid | `Mid` | parcial | corta em ponto de código (§3.1); sem quantidade vai até o fim |
 | Proper | — | fora | regra de capitalização por locale ainda não escrita |
-| Replace | `Replace` | parcial | sempre todas as ocorrências; o Arcade tem o 3º argumento `allReplacements` |
-| Right | `Right` | feito |  |
-| Split | `Split` | parcial | sem `limit`/`removeEmpty` |
+| Replace | `Replace` | parcial | sempre todas as ocorrências (o Arcade tem o 3º argumento `allReplacements`); casa em ponto de código (§3.1) |
+| Right | `Right` | parcial | corta em ponto de código (§3.1) |
+| Split | `Split` | parcial | sem `limit`/`removeEmpty`; separa em ponto de código (§3.1) |
 | StandardizeFilename | — | fora |  |
 | StandardizeGuid | — | fora |  |
 | Text | `Texto` · `TextoNumero` · `TextoData` | parcial | sem máscara livre (`#,###.00`, `DD/MM/Y`); pt-BR com casas e 4 formatos fixos de data, UTC |
@@ -351,11 +385,11 @@ Lista de nomes lida das páginas oficiais (`developers.arcgis.com/arcade/functio
 | Upper | `Maiuscula` | feito |  |
 | UrlEncode | — | fora |  |
 
-### Matemática (4 feito · 8 parcial · 14 fora)
+### Matemática (1 feito · 11 parcial · 14 fora)
 
 | Arcade | nós | estado | observação |
 |---|---|---|---|
-| Abs | `Absoluto` | feito |  |
+| Abs | `Absoluto` | parcial | o Arcade devolve 0 para nulo; `Absoluto(nulo)` é `tipo_invalido` |
 | Acos | — | fora |  |
 | Asin | — | fora |  |
 | Atan | — | fora |  |
@@ -372,17 +406,17 @@ Lista de nomes lida das páginas oficiais (`developers.arcgis.com/arcade/functio
 | Mean | `Media` | parcial | só lista |
 | Min | `Minimo` | parcial | argumentos soltos; não aceita lista |
 | Number | `Numero` | parcial | sem padrão de formato; texto inválido vira nulo, nunca NaN |
-| Pow | `Potencia` | feito | |expoente| ≤ 1024, resultado finito |
+| Pow | `Potencia` | parcial | |expoente| ≤ 1024 e resultado finito; o Arcade não tem esse teto |
 | Random | — | fora | sem aleatoriedade (determinismo dos dois avaliadores) |
 | Round | `Arredondar` | feito | meio-para-longe-de-zero, escrito à mão nos dois lados |
 | Sin | — | fora |  |
-| Sqrt | `Sqrt` | feito | negativo é `numero_invalido`, não NaN |
+| Sqrt | `Sqrt` | parcial | negativo é `numero_invalido`; o Arcade devolve NaN |
 | Stdev | — | fora |  |
 | Sum | `Soma` | parcial | só lista |
 | Tan | — | fora |  |
 | Variance | — | fora |  |
 
-### Data (6 feito · 3 parcial · 17 fora)
+### Data (1 feito · 8 parcial · 17 fora)
 
 | Arcade | nós | estado | observação |
 |---|---|---|---|
@@ -391,7 +425,7 @@ Lista de nomes lida das páginas oficiais (`developers.arcgis.com/arcade/functio
 | DateAdd | aritmética | parcial | `$data + n * 86400000` soma dias; sem unidade mês/ano |
 | DateDiff | `DiferencaDias` | parcial | só dias corridos completos |
 | DateOnly | — | fora |  |
-| Day | `Dia` | feito | UTC |
+| Day | `Dia` | parcial | sempre UTC; no Arcade o valor sai no fuso do contexto de execução |
 | Hour | — | fora | `TextoData(x, 'data_hora')` exibe; não devolve o número |
 | ISOMonth | — | fora |  |
 | ISOWeek | — | fora |  |
@@ -399,8 +433,8 @@ Lista de nomes lida das páginas oficiais (`developers.arcgis.com/arcade/functio
 | ISOYear | — | fora |  |
 | Millisecond | — | fora |  |
 | Minute | — | fora |  |
-| Month | `Mes` | feito | UTC, 1-12 |
-| Now | `AgoraUTC` | feito | sempre UTC |
+| Month | `Mes` | parcial | o Arcade numera 0-11 (janeiro = 0); o nosso `Mes` numera 1-12 e é sempre UTC |
+| Now | `AgoraUTC` | parcial | o Arcade devolve a hora LOCAL do contexto de execução; `AgoraUTC` é sempre UTC (o equivalente exato é o `Timestamp`) |
 | Second | — | fora |  |
 | Time | — | fora |  |
 | Timestamp | `AgoraUTC` | feito | é o `Now` em UTC |
@@ -410,15 +444,15 @@ Lista de nomes lida das páginas oficiais (`developers.arcgis.com/arcade/functio
 | ToUTC | — | fora |  |
 | Today | aritmética | parcial | `Floor(AgoraUTC() / 86400000) * 86400000` |
 | Week | — | fora |  |
-| Weekday | `Weekday` | feito | domingo 0 … sábado 6, UTC |
-| Year | `Ano` | feito | UTC |
+| Weekday | `Weekday` | parcial | domingo 0 … sábado 6, sempre UTC; no Arcade o dia sai no fuso do contexto |
+| Year | `Ano` | parcial | sempre UTC; no Arcade o valor sai no fuso do contexto de execução |
 
 ### Lógica (2 feito · 3 parcial · 4 fora)
 
 | Arcade | nós | estado | observação |
 |---|---|---|---|
 | Boolean | — | fora | sem conversão implícita para booleano |
-| Decode | `Decode` | feito | igualdade estrutural; só o resultado escolhido é avaliado |
+| Decode | `Decode` | feito | escolha por igualdade estrutural, com valor padrão no fim (a avaliação preguiçosa do ramo escolhido está na §4) |
 | DefaultValue | `SeNulo` | parcial | só nulo conta como vazio; texto vazio não |
 | Equals | — | fora | identidade de geometria |
 | IIf | `Se` | feito | condição booleana estrita; curto-circuito |
@@ -427,21 +461,21 @@ Lista de nomes lida das páginas oficiais (`developers.arcgis.com/arcade/functio
 | TypeOf | — | fora |  |
 | When | `Se` aninhado | parcial | sem forma plana `When(c1, r1, c2, r2, padrao)` |
 
-### Lista (7 feito · 3 parcial · 16 fora)
+### Lista (4 feito · 6 parcial · 16 fora)
 
 | Arcade | nós | estado | observação |
 |---|---|---|---|
 | All | — | fora | sem função por elemento |
 | Any | — | fora | sem função por elemento |
 | Array | `Lista` | parcial | cria com valores; não cria por tamanho |
-| Back | `Ultimo` | feito |  |
+| Back | `Ultimo` | parcial | no Arcade a avaliação FALHA em lista vazia; `Ultimo(Lista())` devolve nulo |
 | Count | `Contagem` | feito |  |
 | DefaultValue | `Obter(lista, i, padrao)` | parcial | por índice, não pela lista inteira |
 | Distinct | `Unicos` | feito | igualdade estrutural, primeira ocorrência |
 | Erase | — | fora | listas são imutáveis |
 | Filter | — | fora | sem função por elemento (pendência nomeada do item) |
 | First | `Primeiro` | feito |  |
-| Front | `Primeiro` | feito |  |
+| Front | `Primeiro` | parcial | no Arcade a avaliação falha em lista vazia; `Primeiro(Lista())` devolve nulo (esse é o `First`, que tem linha própria) |
 | HasValue | `Obter(lista, i, sentinela)` | parcial | no Arcade é "tem valor no índice i", não pertinência; sem sentinela, índice presente com nulo não se distingue de ausente |
 | Includes | `Contem` | feito | igualdade estrutural estrita |
 | IndexOf | — | fora |  |
@@ -452,18 +486,18 @@ Lista de nomes lida das páginas oficiais (`developers.arcgis.com/arcade/functio
 | Push | — | fora | imutável |
 | Reduce | — | fora |  |
 | Resize | — | fora | imutável |
-| Reverse | `Reverter` | feito | devolve cópia |
+| Reverse | `Reverter` | parcial | o Arcade inverte NO LUGAR (a lista de entrada muda); o nosso devolve cópia — listas aqui são imutáveis |
 | Slice | — | fora |  |
 | Sort | — | fora |  |
 | Splice | — | fora |  |
 | Top | — | fora |  |
 
-### Dicionário (2 feito · 1 parcial · 7 fora)
+### Dicionário (1 feito · 2 parcial · 7 fora)
 
 | Arcade | nós | estado | observação |
 |---|---|---|---|
 | Count | `Contagem` | feito | chaves próprias |
-| DefaultValue | `Obter(dic, chave, padrao)` | feito |  |
+| DefaultValue | `Obter(dic, chave, padrao)` | parcial | no Arcade `DefaultValue(valor, padrão)` substitui nulo/vazio e NÃO busca por chave; o equivalente dele aqui é o `SeNulo` (linha de Lógica) |
 | Dictionary | — | fora | sem construtor; dicionário vem do contexto |
 | Erase | — | fora | imutável |
 | FromJSON | — | fora |  |
