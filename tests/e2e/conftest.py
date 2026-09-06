@@ -5,6 +5,7 @@ import httpx
 import pytest
 
 from tests.e2e.apoio import credenciais
+from tests.e2e.apoio_catalogo import ROTAS_CATALOGO
 
 
 @pytest.fixture(scope="session")
@@ -41,6 +42,17 @@ def credenciais_demo(api_auth) -> tuple[str, str, str]:
     if "demo" not in c:
         pytest.skip("tests/credenciais.txt sem a linha do inquilino demo (rode install.sh)")
     return ("demo", *c["demo"])
+
+
+@pytest.fixture(scope="session")
+def api_catalogo(api_auth) -> set[str]:
+    """as rotas do catálogo (ADR 0004) existem no OpenAPI da URL interna; usada pelos e2e de /conteudo
+    (item L0-03-catalogo e L0-03-f-tela-conteudo) — fixture compartilhada para não precisar importar
+    função de outro módulo de teste (o que o ruff marca como redefinição, F811)."""
+    faltam = [r for r in ROTAS_CATALOGO if r not in api_auth]
+    if faltam:
+        pytest.skip(f"backend ainda sem {faltam} no OpenAPI (rotas do ADR 0004)")
+    return api_auth
 
 
 @pytest.fixture
