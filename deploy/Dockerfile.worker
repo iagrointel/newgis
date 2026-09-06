@@ -43,7 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # a2) PORTÃO DE CONSTRUÇÃO: a imagem não existe se o GDAL dela não servir para a ingestão. Confere as duas
 # coisas que o executor precisa e que a base bookworm não tinha: `ogrinfo -json` (como app/ingestao/
-# inspecionar.py lê TODO arquivo) e os drivers dos formatos declarados em app/ingestao/formatos.py. Falhar
+# inspecionar.py lê cada arquivo) e os drivers dos formatos declarados em app/ingestao/formatos.py. Falhar
 # aqui é barato; falhar em produção é um job de inspeção morto por imagem errada.
 RUN set -eu; \
     ogrinfo --version; \

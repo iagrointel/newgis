@@ -17,6 +17,7 @@ from fastapi.routing import APIRoute
 
 from app.main import app
 
+
 def _achatar(rotas) -> list[APIRoute]:
     """Ordem REAL de resolução. Esta versão do FastAPI embrulha cada `include_router` num `_IncludedRouter`
     com as rotas dentro; o roteador desce nele na ordem em que foi incluído, então a lista achatada em
