@@ -2,7 +2,7 @@
  "item": "L2-10-a-dominios-subtipos",
  "medidas": {
   "codificado_mensagem_do_gatilho": {
-   "valor": "campo \"uf\": o valor 'ZZ' não pertence ao domínio \"zt dominio b612376b\"",
+   "valor": "campo \"uf\": o valor 'ZZ' não pertence ao domínio \"zt dominio dfb3ff81\"",
    "unidade": "",
    "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
   },
@@ -52,17 +52,17 @@
    "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
   },
   "segundos_sem_gatilho": {
-   "valor": 1.707,
+   "valor": 1.513,
    "unidade": "s",
    "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
   },
   "segundos_com_gatilho": {
-   "valor": 1.796,
+   "valor": 1.696,
    "unidade": "s",
    "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
   },
   "razao_com_sobre_sem": {
-   "valor": 1.053,
+   "valor": 1.121,
    "unidade": "x",
    "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
   },
@@ -93,8 +93,28 @@
    ],
    "unidade": "códigos",
    "comando": "page.eval_on_selector_all('#campo-uf option') no e2e"
+  },
+  "injecao_dollar_tag_no_nome_recusada": {
+   "valor": true,
+   "unidade": "",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "nomes_hostis_testados": {
+   "valor": 235,
+   "unidade": "nomes",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "nomes_hostis_recusados": {
+   "valor": 229,
+   "unidade": "nomes",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "nomes_hostis_seguros_aceitos_e_validados": {
+   "valor": 6,
+   "unidade": "nomes",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
   }
  },
- "gerado_em": "2026-09-06T16:32:38Z",
+ "gerado_em": "2026-09-06T18:41:11Z",
  "git_sha": "90d03c07da0c"
 }
