@@ -8,7 +8,7 @@ import time
 import psycopg2
 import pytest
 
-from tests.api.catalogo.conftest import esperar_job, titulo_zt
+from tests.api.catalogo.conftest import documento_mapa, esperar_job, titulo_zt
 from tests.api.test_rls import contexto, ids_por_slug
 
 ITEM = "L0-03-catalogo"
@@ -190,7 +190,7 @@ def test_expurgo_com_relogio_simulado_apaga_tabela_fisica(sessao_a, itens_a, con
 
 def test_camada_usada_por_mapa_nao_apaga_sem_cascata(sessao_a, itens_a):
     cam = itens_a.criar("camada_vetorial")
-    itens_a.criar("mapa", dados={"esquema_versao": 1, "corpo": {"camadas": [cam["id"]]}})
+    itens_a.criar("mapa", dados=documento_mapa(cam["id"]))
     r = sessao_a.delete(f"/api/itens/{cam['id']}")
     assert r.status_code == 409 and r.json()["erro"] == "possui_dependentes"
     r = sessao_a.post("/api/itens/lote", json={"ids": [cam["id"]], "acao": "apagar"})

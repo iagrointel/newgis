@@ -399,3 +399,72 @@ não medição. A coluna "Pro/AGOL real" segue `pendente` até a decisão D20 (c
 | esquema levado de uma organização para outra | *asset package* / *staging geodatabase*, com ferramenta de importação e geodatabase intermediário | pacote JSON versionado, importado e exportado por rota HTTP; exportação reconstruída das tabelas e conferida byte a byte contra o arquivo importado | feito | `test_importa_e_exporta_byte_a_byte` e `test_exportar_de_um_inquilino_e_reimportar_no_outro_nao_leva_nada_do_primeiro` (T3) | 2026-09-06 | pendente (D20) |
 | *foundation* pronto por disciplina | Electric/Water/Gas Utility Network Foundation, com esquema e mapas prontos | dois pacotes entregues: `eletrica-br` (13 camadas de rede da BDGD, Módulo 10 do PRODIST) e `agua-epanet` (EPANET 2.2); gás, esgoto e telecom ainda não têm pacote | parcial (2 disciplinas de 5; o formato já aceita as outras três) | `test_eletrica_br_cobre_as_13_camadas_de_rede_da_bdgd`, `test_agua_epanet_tem_os_seis_grupos_do_modelo` (T3) | 2026-09-06 | pendente (D20) |
 | topologia de rede, traçado e subrede | *Enable Network Topology*, *Trace*, *Update Subnetwork* | não existe ainda: este item entrega só o catálogo do esquema | fora (itens seguintes da linha L4) | — | 2026-09-06 | pendente (D20) |
+
+## Documento de mapa: Web Map Specification → documento do plat (item L2-01-a-documento-mapa, turno 3; ADR 0022)
+
+De-para chave a chave. A coluna "Esri" é a chave da **Web Map Specification** lida em 06/09/2026 nas páginas
+`objects/webmap/`, `objects/operationalLayers/`, `objects/featureLayer/`, `objects/groupLayer/` e
+`objects/baseMap/` (as URLs estão nas fontes do item); a coluna "nosso" é o caminho no documento publicado em
+`docs/esquemas/mapa-v1.json`. Estado: **feito** (existe campo equivalente, validado pelo esquema e devolvido por
+`GET /api/mapas/{id}/completo`) · **parcial** (existe algo mais estreito) · **fora** (decisão de escopo ou item
+seguinte, nomeado).
+
+Diferença de fundo, que vale por toda a tabela: na Esri a camada do mapa se referencia por **URL absoluta**
+(`url`) ou por `itemId` do portal; no nosso documento a camada é sempre `ref` = uuid do item do catálogo, e a
+URL é resolvida na leitura (`/completo`). É o conserto da irritação nº 1 anotada no L0-03-a sobre migração de
+Web Map (URL do portal congelada dentro de cada JSON).
+
+### `webmap` (raiz)
+
+| Esri | nosso | estado | nota |
+|---|---|---|---|
+| `operationalLayers[]` | `corpo.camadas[]` | feito | lista ordenada do fundo para o topo, como na Esri |
+| `baseMap` | `corpo.mapa_base` | parcial | `{id}` de base local ou `{ref}` de item; sem `baseMapLayers[]` empilhadas (item L2-01-e) |
+| `initialState` (extensão inicial) | `corpo.extensao_inicial` + `corpo.rotacao` | parcial | extensão em graus (EPSG:4326) e rotação; sem `viewpoint` nem `timeExtent` inicial |
+| `bookmarks[]` | `corpo.favoritos[]` | feito | nome + extensão + `camadas_visiveis[]` (a Esri não guarda visibilidade no favorito) |
+| `spatialReference` | `corpo.crs_exibicao` | parcial (por decisão) | fixo em 3857 (C12 do L2_CONCEITO); o CRS do DADO é livre, o da exibição não |
+| `version` | `esquema_versao` | feito | inteiro; a migração de versão é a do L5-05 |
+| `authoringApp`, `authoringAppVersion` | — | fora | o item do catálogo já guarda criado_por/modificado_por e versão imutável |
+| `tables[]` | — | fora | tabela sem geometria entra como camada com `geometria: "nenhuma"` (L0-04-c) |
+| `widgets`, `applicationProperties`, `presentation` | — | fora | configuração de aplicação é o documento de app (L5-01), não o de mapa |
+| `mapRangeInfo`, `referenceScale` | — | fora | item L2-01-f (navegação) |
+| `mapFloorInfo`, `mapIPSInfo`, `parcelFabric`, `utilityNetworks`, `geotriggersInfo` | — | fora | sem andar, sem posicionamento indoor e sem parcel fabric; rede de utilidade é a linha L4, fora do documento de mapa |
+| `background` | — | fora | a cor de fundo vem do estilo do mapa-base |
+| `timeZone` | — | fora | item L2-01-j (tempo) |
+
+### `operationalLayers[]` (chaves do `featureLayer`, que é o caso comum, e do `groupLayer`)
+
+| Esri | nosso | estado | nota |
+|---|---|---|---|
+| `id` | `camadas[].id` | feito | ULID gerado pelo cliente; a MESMA camada pode entrar duas vezes no mapa |
+| `url` | — (resolvido) | fora (por decisão) | a URL nunca é gravada no documento; sai em `/completo` como `tiles.padrao` |
+| `itemId` | `camadas[].ref` | feito | uuid do item do catálogo; de outro inquilino = 404 ao salvar |
+| `layerType` | — (derivado) | feito | vem do `tipo` do item referenciado (camada_vetorial, vista_de_camada, raster, rede, conexao) |
+| `title` | `camadas[].titulo` | feito | ausente = título do item |
+| `visibility` | `camadas[].visivel` | feito | |
+| `opacity` | `camadas[].opacidade` | feito | 0 a 1, como na Esri |
+| `minScale` / `maxScale` (no `layerDefinition`, e direto no `groupLayer`) | `camadas[].escala_max` / `camadas[].escala_min` | feito | invertidos de propósito: aqui `escala_min` é o MENOR denominador (mais perto) e `escala_max` o maior; a regra é `escala_min <= denominador <= escala_max` |
+| `layerDefinition.definitionExpression` | `camadas[].filtro` | parcial | CQL2-JSON em vez de SQL; a gramática é validada pelo item L2-01-h, aqui só a forma de objeto |
+| `layerDefinition.drawingInfo` (renderer) | `camadas[].estilo` | feito | `{ref}` para item do tipo `estilo` ou `{embutido}`; o formato do estilo é MapLibre Style Spec (C2), conversão para/da Esri é L2-02-a e L2-04-b |
+| `popupInfo` | `camadas[].popup` | parcial | `{ref}` ou `{embutido}`; a forma do popup é o item L2-01-d |
+| `showLabels` | `camadas[].rotulos` | parcial | campo, visibilidade, tamanho e cor; sem expressão de rótulo (L2-02-e) |
+| `refreshInterval` (minutos) | `camadas[].atualizacao_s` (segundos) | feito | segundos, não minutos |
+| `timeAnimation` / `timeInfo` | `camadas[].hora` | parcial | campo de início e de fim; a linha do tempo é o item L2-01-j |
+| `visibleLayers[]` | — | fora | subcamada de serviço (WMS/MapService); item L6-02 |
+| `layers[]` (do `groupLayer`) | `corpo.grupos[]` + `camadas[].grupo` | feito | lista achatada com `pai`, em vez de árvore aninhada: aninhamento até 3 níveis, ciclo recusado (a Esri não documenta limite de profundidade) |
+| `visibilityMode` (do `groupLayer`) | — | fora | sem grupo exclusivo (rádio) nesta passagem |
+| `blendMode`, `effect`, `featureEffect`, `screenSizePerspective` | — | fora | efeito de composição é item de estilo (L2-02) |
+| `charts[]` | — | fora | item L2-01-i (gráficos de camada) |
+| `attributeTableInfo` | — | fora | item L2-01-g (tabela de atributos) |
+| `formInfo`, `capabilities`, `mode`, `subtypeCode` | — | fora | edição é a linha L2-05; `mode` (snapshot/on-demand) não existe: o cliente sempre lê por tile ou por consulta |
+| `featureCollection`, `featureCollectionType` | — | fora | feição guardada dentro do documento não existe; todo dado é item do catálogo |
+| `customParameters`, `token` | — | fora (por decisão) | segredo nunca entra no documento; o acesso é por sessão ou token de serviço (L0-02) |
+| `disablePopup`, `showLegend` | — | fora | item L2-01-c (lista de camadas e legenda) e L2-01-d |
+| `visibilityTimeExtent` | — | fora | item L2-01-j |
+
+### `baseMap`
+
+| Esri | nosso | estado | nota |
+|---|---|---|---|
+| `baseMapLayers[]` | `corpo.mapa_base.id` ou `.ref` | parcial | uma base por vez (a local em PMTiles ou um item do catálogo); sem empilhar camadas de base nem camada de referência por cima (item L2-01-e) |
+| `title` | `corpo.mapa_base.titulo` | feito | ausente = título do item referenciado |
