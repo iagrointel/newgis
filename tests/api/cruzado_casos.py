@@ -491,6 +491,16 @@ CASOS: dict[tuple[str, str], Caso] = {
     # quando o alvo é de B (a rota lê a conexão pelo RLS de _carregar ANTES de qualquer efeito colateral).
     ("GET", "/api/conexoes/{id}/saude-historico"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/saude-historico"),
     ("POST", "/api/conexoes/{id}/publicar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar"),
+    # L6-02-c (conector WFS/OGC API): as três rotas de leitura do modo referenciado. A conexão de B é
+    # cross-tenant puro — `_carregar` (RLS) roda ANTES de qualquer ida ao serviço externo, então a rota nem
+    # chega a abrir conexão de rede quando o id é de outro inquilino.
+    ("GET", "/api/conexoes/{id}/colecoes"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes"),
+    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/campos"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/campos"
+    ),
+    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/feicoes"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/feicoes"
+    ),
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,
@@ -649,6 +659,27 @@ CASOS: dict[tuple[str, str], Caso] = {
     # nunca recebe id de inquilino na URL — age só sobre `plat.tenant_atual()` (proprio). O corpo do PUT
     # ecoa exatamente o que o próprio GET de A acabou de devolver (full-replace sem mudar nada de verdade),
     # então não precisa de `limpar`; o logotipo enviado É apagado no fim (1×1 PNG, não é dado de B).
+    # ---- rede de utilidades (L4-01-a-pacote-de-ativos): o catálogo /api/rede/pacotes vem com a instalação e
+    # não é de inquilino nenhum (proprio); tudo em /api/rede/{rede_id} aponta a rede de B e tem de dar 404.
+    ("GET", "/api/rede"): Caso(lambda p: "/api/rede", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/rede"): Caso(
+        lambda p: "/api/rede",
+        lambda p: {"nome": f"{PREFIXO}rede-a-{secrets.token_hex(4)}", "disciplina": "eletrica"},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/rede/{id}")),
+    ),
+    ("GET", "/api/rede/pacotes"): Caso(
+        lambda p: "/api/rede/pacotes", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/rede/pacotes/{codigo}"): Caso(
+        lambda p: "/api/rede/pacotes/agua-epanet", proprio=True, aceita=frozenset({200}),
+    ),
+    ("GET", "/api/rede/{rede_id}"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}"),
+    ("DELETE", "/api/rede/{rede_id}"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}"),
+    ("GET", "/api/rede/{rede_id}/pacote"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/pacote"),
+    ("POST", "/api/rede/{rede_id}/pacote"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: {"esquema": "plat.rede.pacote"},
+    ),
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
     ("PUT", "/api/org"): Caso(
         lambda p: "/api/org", _corpo_org_atual, proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
