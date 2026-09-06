@@ -12,12 +12,12 @@
    "comando": "len(json.load(tests/expressoes/vetores.json)) — extensão exige ≥ 200"
   },
   "tempo_ataque_cadeia_900_termos_ms": {
-   "valor": 4.18,
+   "valor": 4.27,
    "unidade": "ms",
    "comando": "analisar('1'+'+1'*900) até levantar profundidade_excedida"
   },
   "tempo_ataque_string_10mb_ms": {
-   "valor": 19.15,
+   "valor": 22.85,
    "unidade": "ms",
    "comando": "analisar(\"'\" + 'a'*10_000_000 + \"'\") até levantar expressao_grande"
   },
@@ -37,17 +37,17 @@
    "comando": "executar_js.mjs: astParaJson → JSON → astDeJson → avaliar == avaliar direto; Python idem em test_ast_ida_e_volta_avalia_igual_em_todos_os_vetores; cruzado (AST do Python lida no JS) em test_ast_exportada_pelo_python_reimportada_no_javascript_avalia_igual_em_todos_os_vetores"
   },
   "tempo_corte_relogio_50ms_python_ms": {
-   "valor": 50.63,
+   "valor": 50.65,
    "unidade": "ms",
    "comando": "40 × Contagem(Unicos($x)) com 1.024 dicionários, limite_passos=10^9, limite_ms=50 → tempo_excedido (test_expressao_extensao.medir_corte_python_ms)"
   },
   "tempo_corte_relogio_50ms_javascript_ms": {
-   "valor": 53.65,
+   "valor": 51.55,
    "unidade": "ms",
    "comando": "mesmo ataque com avaliador.js, limiteMs=LIMITE_MS_CLIENTE (50) → tempo_excedido (test_expressao_extensao.medir_corte_javascript_ms)"
   },
   "tempo_corte_relogio_500ms_servidor_ms": {
-   "valor": 500.69,
+   "valor": 500.74,
    "unidade": "ms",
    "comando": "mesmo ataque (40 × Contagem(Unicos($x)) com 1.024 dicionários) com limite_ms=LIMITE_MS_SERVIDOR (500) → tempo_excedido; mede o teto do servidor, não o do cliente"
   },
@@ -55,8 +55,19 @@
    "valor": 100000,
    "unidade": "passos",
    "comando": "LIMITE_PASSOS do avaliador; o mesmo ataque com relógio folgado (limite_ms=10^6) para em limite_passos, provando que os dois orçamentos cortam de forma independente"
+  },
+  "vetores_de_convergencia_pos_adversario": {
+   "valor": 30,
+   "unidade": "vetores",
+   "comando": "len(json.load(tests/expressoes/vetores_convergencia.json)) — os casos em que os dois avaliadores divergiam no ataque de 06/09 (resto, ponto de código, algarismo não-ASCII, fração de milissegundo) viraram vetor compartilhado; rodam junto dos 309 em test_expressao_equivalencia.py"
+  },
+  "linhas_feito_na_paridade_arcade": {
+   "valor": 11,
+   "unidade": "linhas de 134",
+   "comando": "linhas marcadas `feito` na seção 10 de docs/EXPRESSAO.md depois da revisão de 06/09 (eram 29; toda linha `feito` precisa de vetor de teste e de nenhuma diferença escrita — test_expressao_paridade.py)"
   }
  },
- "gerado_em": "2026-09-06T13:26:04Z",
- "git_sha": "9df2cff208eb"
+ "gerado_em": "2026-09-06T14:28:04Z",
+ "git_sha": "4a0524ff5c58",
+ "observacao": "git_sha é o HEAD no momento da geração: este arquivo é gerado DEPOIS do commit do código que ele descreve (na entrega anterior o carimbo apontava para o commit anterior, achado do adversário) e commitado em seguida, sozinho."
 }
