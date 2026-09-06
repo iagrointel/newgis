@@ -3,7 +3,7 @@ plano mostra e adicionar_aos_grupos resolve; camada leva 2 vistas; só a vista =
 usuário e apagá-lo em seguida; uuid e compartilhamentos iguais; link sobrevive; desabilitado 422; outro inquilino 404;
 mapa que usa a camada NÃO muda de dono."""
 
-from tests.api.catalogo.conftest import titulo_zt
+from tests.api.catalogo.conftest import documento_mapa, titulo_zt
 from tests.api.conftest import novo_cliente
 from tests.api.test_rls import contexto, ids_por_slug
 
@@ -77,7 +77,7 @@ def test_camada_arrasta_vistas_e_vista_sozinha_recusa(sessao_a, itens_a, usuario
     cam = itens_a.criar("camada_vetorial")
     v1 = itens_a.criar("vista_de_camada", dados={"camada_id": cam["id"]})
     v2 = itens_a.criar("vista_de_camada", dados={"camada_id": cam["id"]})
-    mapa = itens_a.criar("mapa", dados={"esquema_versao": 1, "corpo": {"camadas": [cam["id"]]}})
+    mapa = itens_a.criar("mapa", dados=documento_mapa(cam["id"]))
     r = sessao_a.post("/api/itens/transferir", json={"ids": [v1["id"]], "novo_dono_id": novo["id"], "simular": True})
     assert r.json()["plano"][0]["falhas"][0]["codigo"] == "vista_sem_camada"
     r = sessao_a.post("/api/itens/transferir", json={"ids": [v1["id"]], "novo_dono_id": novo["id"], "simular": False})
