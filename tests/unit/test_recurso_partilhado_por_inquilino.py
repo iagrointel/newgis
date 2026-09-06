@@ -134,7 +134,26 @@ def orcamento_de_conexoes() -> tuple[bool, str]:
         if efetivo > teto:
             return False, (f"teto por {rotulo}: publicado {teto}, real {efetivo} "
                            f"({eventos.cota_por_processo(teto)} por processo × {processos} processos)")
-    return True, f"tetos {eventos.POR_USUARIO_MAX}/{eventos.POR_INQUILINO_MAX}/{eventos.TOTAL_MAX}, {processos} processos"
+    return True, (f"tetos {eventos.POR_USUARIO_MAX}/{eventos.POR_INQUILINO_MAX}/{eventos.TOTAL_MAX}, "
+                 f"{processos} processos")
+
+
+def lock_de_pesado() -> tuple[bool, str]:
+    """Sexto ponto (achado do gerente, 06/09, fora dos cinco do laudo original): "1 pesado por vez" é um
+    advisory lock do BANCO inteiro, não do schema — produção, homologação e toda trilha por
+    `laco/trilha_ambiente.sh` competem pelo mesmo semáforo quando o nome é fixo. Medido ao vivo: a trilha
+    `destrava` segurou o lock por horas com a fila da própria base vazia, e `job_pegar(nome, false)` foi
+    chamado com o lock ainda preso — a mesma classe de defeito dos cinco pontos acima, num lugar novo."""
+    fonte = (RAIZ / "app" / "jobs" / "worker.py").read_text(encoding="utf-8")
+    if re.search(r'LOCK_PESADO\s*=\s*"plat\.job\.pesado"\s*$', fonte, re.M):
+        return False, "LOCK_PESADO é o texto fixo 'plat.job.pesado', sem o schema da instalação"
+    if "settings.PLAT_SCHEMA" not in re.search(r"LOCK_PESADO\s*=.*", fonte).group(0):
+        return False, "LOCK_PESADO não carrega settings.PLAT_SCHEMA"
+    corpo = fonte[fonte.index("def _pegar("): fonte.index("def _soltar_pesado(")]
+    if "pesado_ok = self.lock_pesado" not in " ".join(corpo.split()).replace(" = ", " = "):
+        return False, ("_pegar() não recalcula pesado_ok a partir do estado real do lock a cada volta "
+                       "(um worker ocioso que segurou o lock uma vez nunca mais o soltaria sozinho)")
+    return True, "LOCK_PESADO por schema de instalação; pesado_ok sempre reflete self.lock_pesado"
 
 
 PONTOS = {
@@ -143,6 +162,7 @@ PONTOS = {
     "contador de cota": contador_de_cota,
     "fila de trabalhos": justica_da_fila,
     "orçamento de conexões de eventos": orcamento_de_conexoes,
+    "lock de job pesado": lock_de_pesado,
 }
 
 
