@@ -51,6 +51,12 @@ listar_migracoes() {
   } | LC_ALL=C sort -t "$(printf '\t')" -k1,1 -k2,2 | cut -f2
 }
 
+# pgstac (item L1-01-a): instalado por `pypgstac migrate`, não por um .sql desta pasta (o pacote cria o
+# próprio schema `pgstac`, nome fixo). Roda ANTES do laço de .sql abaixo porque a migração
+# 20260906T1900_pgstac_privilegios.sql concede pgstac_read/pgstac_ingest a plat_app e precisa dos dois papéis
+# já existentes. Idempotente (db/pgstac_instalar.sh só reaplica se a versão instalada mudou).
+PLAT_DB="$DB" PLAT_SCHEMA=plat bash "$(dirname "${BASH_SOURCE[0]}")/pgstac_instalar.sh"
+
 aplicadas=0; puladas=0; reaplicadas=0
 shopt -s nullglob
 mapfile -t arquivos < <(listar_migracoes "$DIR")
