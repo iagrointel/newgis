@@ -21,7 +21,10 @@ anyio==4.13.0
 idna==3.13
 python-dotenv==1.2.2
 #
-# suíte (tests/ importa httpx, pytest, playwright)
+# httpx/httpcore: app/rede/osrm.py (L2-11-c) e app/conexao/seguranca.py (L6-02-a) importam direto (não é só
+# suíte); httpcore em particular porque app/conexao/seguranca.py monta um httpcore.ConnectionPool próprio com
+# network_backend pinado no IP já validado (defesa de SSRF) — depende da API interna estar estável nesta
+# versão exata. tests/ também importa os dois (playwright usa httpx por baixo).
 httpx==0.28.1
 httpcore==1.0.9
 h11==0.16.0

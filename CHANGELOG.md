@@ -3,6 +3,47 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (itens L6-01-a-registro · L6-02-a-modelo-conexao-e-seguranca: registro de camadas do acervo + modelo genérico de conexão externa com defesa de SSRF)
+
+Dois itens da linha L6, ADR 0012. **L6-01-a-registro** é FILHO DIFERENTE do já entregue
+L6-01-a-procedencia-acervo (migração 021): aquele é a ficha da FONTE (376 linhas, sem geometria); este é o
+registro de CAMADA — `plat.acervo_camada` (migração 030, renumerada de 028 por colisão com a trilha
+concorrente do documento de construtor), uma linha por tabela canônica com geometria, populada por
+`scripts/acervo_sync.py` (roda como `postgres`, psycopg2 do dpkg, sem venv). Medido 06/09/2026: 462
+candidatas (270 em `public`) via `geometry_columns`×`acervo.objeto`; `COUNT(*)` exato com timeout de 25 s
+(nunca `reltuples`); tabela fantasma é regra DINÂMICA (estimativa > 0 e exata = 0), nunca lista de nomes —
+cobre as 2 fantasmas conhecidas do registro (`public.prodes_yearly_all_indexed`,
+`farma.djen_pub_termo`) sem citá-las em código. Lista branca de colunas por nome (rede mínima, provisória —
+o reforço por conteúdo é o item L6-01-f, ainda não construído). Duas rodadas completas medidas: 274,9s e
+286,0s (ambas sob o portão de 5 min), com a máquina disputada por outro job pesado da casa (REFRESH
+MATERIALIZED VIEW de 3h + COUNT(*) de 18 min concorrentes); ordem de processamento por "há mais tempo sem
+sincronizar" prova convergência entre rodadas (81→172 expostas da 1ª para a 2ª). Achado ao testar: `--limite`
+de depuração estava apagando o registro completo de rodadas anteriores (a poda comparava contra o que a
+rodada limitada processou, não contra o universo real de candidatas) — corrigido antes de qualquer uso além
+de teste. 6 testes em `tests/api/test_acervo_camada.py` (+ 1 `lento` rodando o universo inteiro).
+
+**L6-02-a-modelo-conexao-e-seguranca**: `plat.conexao` (tenant_id+RLS; mesma migração 030) — tipo em
+vocabulário fechado (WMS/WMTS/WFS/OGC API/ArcGIS REST/STAC/GeoParquet/PMTiles/postgres_fdw/s3/http), `config`
+JSONB, credencial cifrada com AES-GCM (`app/conexao/credencial.py`, prefixo `encconexao:v1:`, mesmo padrão do
+TOTP e do bind LDAP — nunca `pgp_sym_encrypt`, que deixaria a chave passar pelo SQL). Só o MODELO e a
+segurança nesta trilha — os 15 conectores concretos são itens futuros. `app/conexao/seguranca.py` defende
+contra SSRF: esquema só http/https, sem userinfo, resolve o host com timeout numa thread separada, recusa IP
+privado/loopback/link-local (inclui `169.254.169.254`)/CGNAT(100.64.0.0/10, gap medido de
+`ipaddress.is_private`)/reservado/multicast, conecta PINADO no IP já validado (subclasse de
+`httpcore.SyncBackend`; o TLS continua verificando o hostname original via `server_hostname`, então
+DNS-rebinding não passa), e revalida CADA redirecionamento do zero (nunca segue automático) até 5 saltos.
+Provado com servidor de teste bindado no IP PÚBLICO REAL desta máquina (nunca loopback, para não confundir
+com o caso 1) redirecionando para `169.254.169.254`: aceita o hop 0, recusa só o hop 1. `POST /api/conexoes/
+{id}/testar` roda o teste de saúde com timeout curto (conectar 3s/ler 6s) contra um endpoint público real
+(IBGE, dado aberto); a credencial nunca aparece em resposta de API nem em log (provado com `caplog`). 25
+testes em `tests/unit/test_conexao_seguranca.py` (os 8 casos do portão) + 13 em `tests/api/test_conexoes.py`
+(CRUD, RLS cruzada A→B, unicidade de nome, tamanho de `config`, credencial oculta).
+
+`make check` rodado sob `flock laco/.pytest.lock`; migração `030_conexao.sql` aplicada via `db/migrar.sh`
+(registrada em `plat.versao_migracao`, junto com `027_acervo_camada.sql` e as migrações da trilha
+concorrente que já estavam no disco). Documentação: `docs/adr/0012-registro-do-acervo-e-conexao-externa.md`,
+`docs/PARIDADE.md` (2 seções novas).
+
 ## turno 3, setembro de 2026 (item L5-05-documento-versoes: documento de construtor — grafo de nós com ULID)
 
 Base genérica que qualquer construtor do L5 (app, painel, e depois formulário, fluxo) vai usar para gravar um
@@ -83,6 +124,16 @@ _expurgar_zt`, confirma que a exclusão passa a funcionar).
 Achado colateral, não deste item: `GET /saude` respondeu 503 durante a varredura porque outra trilha do turno
 tinha uma migração (`028_documento_grafo`, depois `029_ingestao_vetor`) pendente de aplicar no banco
 compartilhado — não é regressão de L0-02-e/f, é o estado normal de trilhas paralelas no mesmo turno.
+
+**Adversário independente do turno**: PASSA em L0-02-e (43+19 testes filtrados; GUC forjado, cross-tenant e
+rota-sem-caso todos bloqueados/reprovados como esperado). Achou um escalonamento de privilégio real em L0-02-f
+(não cross-tenant): `POST /api/usuarios` checava admin só por `auth.perfil`, nunca por `membros.papel` — um
+segundo admin com papel restrito a `{membros.ver, membros.gerir}` fabricava um admin PLENO. Corrigido nesta
+mesma sessão (`criar_usuario` agora exige `membros.papel` para `perfil≠visualizador` ou `papel_id`), com
+regressão própria (`test_criar_usuario_com_perfil_ou_papel_exige_membros_papel`) e sem falha nova na suíte
+alvo. Pendência nomeada, não bloqueante: `papel_id` atribuído (na criação OU na edição) ainda não checa se o
+ATOR possui os privilégios daquele papel — mesmo princípio que `_validar_papel` já aplica na criação de papéis,
+ausente na atribuição de um papel já existente; fica para o dono decidir se abre item novo.
 
 ## turno 3, setembro de 2026 (item L0-09-metadado-catalogo: metadado ISO 19139 por item + catálogo externo OGC API Records)
 

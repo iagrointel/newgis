@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 PREFIXO = "zt-cruzado-"
+# L6-02-a: dado aberto federal (IBGE), nunca nome de cliente/parceiro; passa pela defesa de SSRF na criação
+URL_CONEXAO_TESTE = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/35"
 PADRAO = frozenset({401, 403, 404})
 
 
@@ -46,6 +48,7 @@ class Preparacao:
     link_b: dict = field(default_factory=dict)  # L0-03: link por token de B (token em claro só aqui)
     categoria_b: dict = field(default_factory=dict)  # L0-03: categoria de B
     fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
+    conexao_b: dict = field(default_factory=dict)  # L6-02-a: conexão externa de B
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -53,6 +56,8 @@ class Preparacao:
         marcas = [self.usuario_b["login"], self.grupo_b["nome"], self.papel_b["nome"], self.token_b["prefixo"], "demo2"]
         if self.item_b:
             marcas += [self.item_b["titulo"], self.pasta_b["nome"]]
+        if self.conexao_b:
+            marcas.append(self.conexao_b["nome"])
         return marcas
 
 
@@ -107,9 +112,17 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_a.get("/api/acervo?limite=1")
     assert r.status_code == 200, r.text
     fonte_acervo = r.json()["itens"][0]["fonte_id"]
+    # L6-02-a: conexão externa de B, alvo das rotas de /api/conexoes (URL pública real — passa pela defesa de
+    # SSRF na criação; dado aberto federal, nunca nome de cliente/parceiro)
+    r = sessao_b.post(
+        "/api/conexoes",
+        json={"tipo": "ogc_api", "nome": f"{PREFIXO}conexao-{sufixo}", "url": URL_CONEXAO_TESTE},
+    )
+    assert r.status_code == 201, r.text
+    conexao_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo)
+                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -131,6 +144,8 @@ def desfazer(p: Preparacao) -> None:
         p.sessao_b.delete(f"/api/itens/{p.item_b['id']}?cascata=true")
     if p.pasta_b:
         p.sessao_b.delete(f"/api/pastas/{p.pasta_b['id']}")
+    if p.conexao_b:
+        p.sessao_b.delete(f"/api/conexoes/{p.conexao_b['id']}")
     if p.agenda_b:
         p.sessao_b.delete(f"/api/agendas/{p.agenda_b['id']}")
     p.sessao_b.delete(f"/api/grupos/{p.grupo_b['id']}")
@@ -413,6 +428,24 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/acervo/{p.fonte_acervo}/adicionar", proprio=True, aceita=frozenset({201}),
         verificar=_sem_marca, limpar=_apagar_criado(("DELETE", "/api/itens/{id}")),
     ),
+    # ---- L6-02-a modelo de conexão externa: conexão é do INQUILINO (tenant_id + RLS), diferente do acervo
+    # acima; GET/POST agem só sobre o próprio chamador (o POST usa o MESMO nome de B para provar que a
+    # unicidade de nome é por inquilino, não global); GET/PATCH/DELETE/testar por id de B são cross-tenant puro
+    ("GET", "/api/conexoes"): Caso(lambda p: "/api/conexoes", proprio=True, aceita=frozenset({200}),
+                                   verificar=_sem_marca),
+    ("POST", "/api/conexoes"): Caso(
+        lambda p: "/api/conexoes",
+        lambda p: {"tipo": "ogc_api", "nome": p.conexao_b["nome"], "url": URL_CONEXAO_TESTE},
+        proprio=True, aceita=frozenset({201}), verificar=lambda p, j: None,  # mesmo nome de B: prova que a
+        # unicidade é por inquilino (não global) — por isso não checa _sem_marca (o nome É de propósito igual)
+        limpar=_apagar_criado(("DELETE", "/api/conexoes/{id}")),
+    ),
+    ("GET", "/api/conexoes/{id}"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}"),
+    ("PATCH", "/api/conexoes/{id}"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}", lambda p: {"nome": f"{PREFIXO}invadida"}
+    ),
+    ("DELETE", "/api/conexoes/{id}"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}"),
+    ("POST", "/api/conexoes/{id}/testar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/testar"),
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,

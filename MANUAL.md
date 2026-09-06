@@ -823,3 +823,59 @@ de volta — o evento `itens/esquema_migrado` fica no log.
 dentro dele mas não reproduzível fora sem reimplementar a serialização do banco). Ver `app/catalogo/
 documento.py` para o comando exato de reprodução. Detalhe técnico e decisões em `docs/adr/0011-documento-
 de-construtor.md`.
+
+## 18. Registro de camadas do acervo e modelo de conexão externa (itens L6-01-a-registro e
+L6-02-a-modelo-conexao-e-seguranca) — API pronta, sem tela ainda
+
+Dois modelos de fundo da linha L6 (conectores e acervo). Nenhum dos dois tem tela própria ainda (frontend é
+item futuro: L6-01-c para o acervo, L6-02-b em diante para os conectores concretos); hoje são consumidos por
+API. Ver `docs/adr/0012-registro-do-acervo-e-conexao-externa.md` para as decisões e o que ficou de fora.
+
+### 18.1 Registro de camadas do acervo (`plat.acervo_camada`)
+
+Diferença do que já existe (seção "Acervo da casa", item L6-01-a-procedencia-acervo, `GET /api/acervo`): aquilo
+é a ficha da FONTE (376 linhas de metadado — licença, frescor, sha256); isto é o registro de CAMADA — uma
+linha por TABELA canônica com geometria no servidor principal, candidata a virar camada só-leitura no mapa do
+inquilino (a view com RLS por assinatura é o próximo item, L6-01-b, ainda não construído — por isso ainda não
+há rota HTTP para `acervo_camada`, só a tabela e o script que a povoa).
+
+`sudo -u postgres python3 scripts/acervo_sync.py` (idempotente; ~275-290 s para o universo inteiro nesta
+máquina, medido 06/09/2026 com ~462 candidatas) preenche `plat.acervo_camada`: schema/tabela, coluna e SRID
+da geometria, lista branca de colunas (nega por nome — `cpf`, `nome`, `email`, `telefone`... — rede mínima até
+o item L6-01-f existir e checar por conteúdo), `COUNT(*)` exato com timeout de 25 s (nunca a estimativa de
+`reltuples`), e o estado: `exposta` (tem licença escrita e contagem concluída), `pendente_de_licenca`
+(licença ainda não registrada em `acervo.fonte`, regra D17) ou `bloqueada` (contagem não concluiu a tempo, ou
+é tabela fantasma — estimativa positiva com contagem exata zero). Rodar de novo processa primeiro o que há
+mais tempo não sincroniza, então uma rodada que não dá tempo de cobrir tudo (a máquina pode estar ocupada com
+outro job pesado da casa) avança em tabelas diferentes na próxima vez, em vez de sempre travar nas mesmas.
+
+### 18.2 Conexão externa (`plat.conexao`) e defesa de SSRF
+
+```
+POST   /api/conexoes                 {"tipo": "ogc_api", "nome": "...", "url": "https://...", "modo": "referenciada",
+                                       "config": {}, "credencial": "..."}   # credencial nunca volta em nenhuma resposta
+GET    /api/conexoes                 # lista do inquilino (RLS)
+GET    /api/conexoes/{id}
+PATCH  /api/conexoes/{id}
+DELETE /api/conexoes/{id}
+POST   /api/conexoes/{id}/testar     # teste de saúde: GET seguro contra a URL gravada, timeout curto
+```
+
+`tipo` é um vocabulário fechado (`wms`, `wmts`, `wfs`, `ogc_api`, `esri_rest`, `stac`, `geoparquet`,
+`pmtiles`, `postgres_fdw`, `s3`, `http`) — esta trilha entrega só o MODELO e a segurança; cada conector
+concreto (que sabe LER o serviço de verdade — listar camadas WMS, paginar um OGC API Features, etc.) é item
+futuro. `credencial` é cifrada (AES-GCM) antes de gravar e nunca decifrada de volta para a API — só o teste
+de saúde a usa, em memória, para autenticar o pedido.
+
+Toda URL passa pela defesa de SSRF (`app/conexao/seguranca.py`) ANTES de gravar (criar ou editar) e de novo
+a cada teste de saúde: recusa esquema fora de `http`/`https`, host ausente, usuário/senha na URL, e qualquer
+IP resolvido que seja privado, loopback, link-local (inclui o metadado de nuvem, `169.254.169.254`), CGNAT
+ou reservado. A conexão real nunca resolve o host de novo depois de validado (fixada no IP já conferido), e
+todo redirecionamento é revalidado do zero, salto a salto — um serviço público que redireciona para um IP
+interno é aceito no primeiro salto e recusado no segundo, nunca no primeiro.
+
+### 18.3 Limites desta fatia
+
+Sem tela em nenhum dos dois; `acervo_camada` ainda não tem rota HTTP própria (só a tabela); lista branca de
+coluna do acervo é por nome, não por conteúdo (L6-01-f); os 15 conectores concretos (o que de fato busca e
+traduz WMS/WFS/STAC/... para camada do mapa) são itens futuros, L6-02-b em diante.

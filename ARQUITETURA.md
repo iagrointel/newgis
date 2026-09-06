@@ -783,3 +783,44 @@ regeradas. Novo endpoint `GET /api/itens/{id}/integridade`: recomputa em SQL (`d
 e compara com o `sha256` gravado — detecta edição direta em `plat.item_versao` por fora do gatilho (que só
 quem tem acesso de superusuário ao Postgres consegue: `plat_app` tem INSERT/UPDATE/DELETE revogados na
 tabela desde a 011).
+
+## 15. Registro de camadas do acervo e modelo de conexão externa (itens L6-01-a-registro e
+L6-02-a-modelo-conexao-e-seguranca, ADR 0012)
+
+Dois modelos independentes que compartilham a mesma pergunta ("como uma camada de fora entra no catálogo sem
+virar risco"), construídos no mesmo turno.
+
+**`plat.acervo_camada`** (migração 030, renumerada de 028 por colisão com a migração `028_documento_grafo`
+da trilha concorrente — "migração numerada na hora", nunca reservada) é registro GLOBAL, sem `tenant_id`/RLS,
+do mesmo tipo de `plat.acervo_ficha` (021): metadado da CASA, igual para todo inquilino. Diferença: a ficha
+(021) é por FONTE (376 linhas, sem geometria); `acervo_camada` é por TABELA canônica com geometria — join de
+`acervo.objeto` (`tipo='fonte'`, `canonico`) com `geometry_columns`. Escrita só por
+`scripts/acervo_sync.py`, um processo Python fora da API (roda como `postgres`, psycopg2 do dpkg, sem venv —
+não depende de FastAPI); `plat_app` tem só `SELECT` (mesmo padrão de `plat.versao_migracao`). `COUNT(*)`
+exato com `SET LOCAL statement_timeout = 25000` por tabela (nunca `reltuples`); tabela fantasma é regra
+dinâmica (`linhas_exatas = 0 AND linhas_estimadas > 0`), nunca lista de nomes. Prazo duro de 270 s dentro do
+script (`PRAZO_TOTAL_S`): candidatas que sobram entram como `bloqueada`/`nao_processada_no_prazo`; a ordem de
+processamento é por `sincronizado_em` mais antigo primeiro, para que rodadas sucessivas cubram tabelas
+diferentes sob carga da máquina. A poda de linhas obsoletas (`DELETE ... WHERE acervo_camada_id <> ALL(...)`)
+compara contra o universo COMPLETO de candidatas (antes de qualquer `--limite` de depuração), nunca contra o
+que a rodada atual processou — um `--limite` pequeno chegou a apagar o registro inteiro antes dessa correção.
+
+**`plat.conexao`** (mesma migração 030) é dado do INQUILINO (`tenant_id` + RLS, políticas por dono/
+`conteudo.editar_tudo`, mesmo padrão de `plat.pasta`): tipo em vocabulário fechado (`wms`, `wmts`, `wfs`,
+`ogc_api`, `esri_rest`, `stac`, `geoparquet`, `pmtiles`, `postgres_fdw`, `s3`, `http`), `config` JSONB livre
+(validação por tipo é dos itens de conector futuros), `credencial_cifrada` (AES-GCM, `app/conexao/
+credencial.py`, mesmo padrão de `app/auth/totp.py`/`app/auth/ldap.py` — chave derivada de `PLAT_SECRET`,
+nunca `pgp_sym_encrypt`). Rotas em `app/conexao/rotas.py` (`/api/conexoes`); nenhuma delas faz `SELECT
+credencial_cifrada` para responder. `app/conexao/seguranca.py` é o núcleo de defesa: `validar_url` resolve o
+host (thread com timeout — `getaddrinfo` da stdlib não tem timeout nativo) e recusa qualquer IP resolvido
+que seja privado/loopback/link-local/CGNAT (100.64.0.0/10, gap de `ipaddress.is_private` nesta versão do
+Python)/reservado/multicast; `_BackendPinado` (subclasse de `httpcore.SyncBackend`) troca, só para o
+`(host, porta)` já validado, o alvo de `connect_tcp` pelo IP resolvido — o TLS continua verificando o
+hostname ORIGINAL (`server_hostname`, inalterado), fechando DNS-rebinding sem reimplementar TLS;
+`buscar_seguro` nunca segue redirecionamento automático, revalida cada `Location` do zero. `POST /api/
+conexoes/{id}/testar` chama `buscar_seguro` com timeout curto e grava `saude`/`saude_mensagem`/
+`saude_latencia_ms`/`saude_verificada_em`.
+
+Ambos os itens entregam só o MODELO; a view com RLS por assinatura sobre a tabela original do acervo
+(L6-01-b) e os 15 conectores concretos que de fato leem WMS/WFS/STAC/... (L6-02-b em diante) ficam para os
+próximos turnos.
