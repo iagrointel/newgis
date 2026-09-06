@@ -35,6 +35,8 @@ PAGINAS = {
     "/redefinir-senha": "redefinir_senha.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
+    # --- migração de Portal/AGOL (L2-08-a-leitor-portal-inventario)
+    "/migracao": "migracao.html",
 }
 router = APIRouter()
 

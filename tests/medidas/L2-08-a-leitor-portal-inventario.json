@@ -1,0 +1,52 @@
+{
+ "item": "L2-08-a-leitor-portal-inventario",
+ "medidas": {
+  "itens_inventariados": {
+   "valor": 59,
+   "unidade": "itens",
+   "comando": "tarefa migracao.inventariar contra tests/migracao/portal_falso.py"
+  },
+  "pedidos_http_do_inventario": {
+   "valor": 203,
+   "unidade": "pedidos",
+   "comando": "mesma execução"
+  },
+  "segundos_do_inventario": {
+   "valor": 0.44,
+   "unidade": "s",
+   "comando": "mesma execução"
+  },
+  "feicoes_contadas": {
+   "valor": 237057,
+   "unidade": "feições",
+   "comando": "query returnCountOnly=true por camada"
+  },
+  "pedidos_do_zero": {
+   "valor": 203,
+   "unidade": "pedidos",
+   "comando": "inventário completo do portal de mentira"
+  },
+  "pedidos_na_retomada": {
+   "valor": 177,
+   "unidade": "pedidos",
+   "comando": "segunda tentativa depois de corte de rede no 30º pedido"
+  },
+  "segundos_para_dez_mil_itens": {
+   "valor": 8.4,
+   "unidade": "s",
+   "comando": "portal de mentira com itens_sinteticos=10000 (refutação do item)"
+  },
+  "pedidos_para_dez_mil_itens": {
+   "valor": 107,
+   "unidade": "pedidos",
+   "comando": "mesma execução"
+  },
+  "pagina_migracao_ms": {
+   "valor": 86.2,
+   "unidade": "ms",
+   "comando": "playwright chromium contra a API da trilha (tests/e2e/test_migracao.py)"
+  }
+ },
+ "gerado_em": "2026-09-06T16:06:54Z",
+ "git_sha": "2fe849d88a4a"
+}
