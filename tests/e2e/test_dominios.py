@@ -39,6 +39,32 @@ class TelaDominios(Tela):
 
 
 @pytest.fixture(scope="session")
+def browser_context_args(browser_context_args):
+    """O servidor desta trilha é um uvicorn com certificado autoassinado (não há nginx no worktree). O TLS é
+    necessário, e não enfeite: `checar_escrita_sob_cookie` compara o `Origin` do navegador com
+    PLAT_URL_PUBLICA, e PLAT_URL_PUBLICA só aceita https — sem isso toda escrita sob cookie sai 403
+    `origem_invalida` e o formulário não teria como ser testado."""
+    return {**browser_context_args, "ignore_https_errors": True}
+
+
+@pytest.fixture(scope="session")
+def rotas_api(base_url, url_publica_resolve) -> set[str]:
+    """Igual à do conftest, só que sem verificar o certificado: o servidor da trilha é autoassinado
+    (ver `browser_context_args` acima). Nada além do OpenAPI é lido por aqui."""
+    import httpx
+
+    if not url_publica_resolve:
+        pytest.skip(f"{base_url} não resolve nesta máquina")
+    try:
+        r = httpx.get(f"{base_url}/api/openapi.json", timeout=15, verify=False)
+    except httpx.HTTPError as e:
+        pytest.skip(f"{base_url}/api/openapi.json inacessível: {e}")
+    if r.status_code != 200:
+        pytest.skip(f"{base_url}/api/openapi.json devolveu {r.status_code}")
+    return set(r.json().get("paths", {}))
+
+
+@pytest.fixture(scope="session")
 def api_dominios(api_auth):
     faltam = [r for r in ROTAS if r not in api_auth]
     if faltam:
@@ -161,6 +187,7 @@ def test_formulario_mostra_descricao_e_grava_codigo(page, base_url, cenario, med
         primeira = page.eval_on_selector_all(
             "#tabela-feicoes tbody tr:first-child td", "ts => ts.map(t => t.textContent.trim())")
         assert "São Paulo" in primeira and "Terra" in primeira, primeira
+        assert "Rural" in primeira, primeira      # o campo de subtipo também sai pelo nome, não pelo código
         assert "SP" not in primeira, primeira
         assert page.get_attribute("#tabela-feicoes tbody tr:first-child td:nth-child(2)", "title") == "SP"
 

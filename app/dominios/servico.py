@@ -1,9 +1,10 @@
 """Regras de domínio/subtipo compartilhadas pelas rotas (item L2-10-a): carga, tradução de erro do banco,
 contagem de uso e instalação do gatilho na tabela da camada.
 
-Ordem que vale em toda rota de escrita: alterar `plat.dominio_campo`/`plat.camada_subtipo` e SÓ ENTÃO chamar
-`plat.camada_dominios_aplicar` — a função lê as duas tabelas para decidir se o gatilho fica ou sai, e ela roda
-na MESMA transação, então uma falha depois desfaz as duas coisas juntas."""
+Nenhuma rota instala gatilho na tabela de camada: quem faz isso é o BANCO. Gatilhos AFTER em
+`plat.dominio_campo`, `plat.camada_subtipo` e `plat.dominio` chamam `plat.camada_dominios_aplicar`, que
+escreve a função de validação da camada (migração 20260906T1620, ADR 0021). Uma rota que mudasse a ligação
+sem passar por essas tabelas simplesmente não existe, e quem mexer por `psql` regenera do mesmo jeito."""
 
 from __future__ import annotations
 
@@ -119,12 +120,6 @@ def tipos_compativeis(tipo_pg: str, tipo_dominio: str) -> bool:
     if a in numericos and b in numericos:
         return True
     return a == b
-
-
-def aplicar(cur, item_id: str) -> bool:
-    """(Re)instala ou remove o gatilho da tabela da camada; devolve True se a camada ficou com gatilho."""
-    cur.execute("SELECT plat.camada_dominios_aplicar(%s::uuid) AS tem", (item_id,))
-    return bool(cur.fetchone()["tem"])
 
 
 def uso_do_dominio(cur, dominio_id: str) -> dict:

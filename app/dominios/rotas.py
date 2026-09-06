@@ -5,8 +5,8 @@ Esri); `/api/camadas/{item_id}/dominios` é a ligação campo -> domínio dessa 
 `/api/camadas/{item_id}/subtipos` designa o campo inteiro de subtipo e a lista de códigos.
 
 Duas regras que aparecem em quase toda rota:
-1. Toda escrita que muda ligação ou subtipo termina em `servico.aplicar()`, na MESMA transação — é ela que
-   instala ou remove o gatilho `tg_dominio` na tabela da camada.
+1. Nenhuma rota instala gatilho: escrever em `plat.dominio_campo`/`plat.camada_subtipo` já faz o banco
+   regenerar a função de validação da camada (gatilhos AFTER da migração 20260906T1620; ADR 0021).
 2. Item que não é camada vetorial do inquilino da sessão responde 404, nunca 403 nem 500: é o que faz
    "ligar domínio do inquilino A a campo de camada do inquilino B" dar 404 (a RLS esconde os dois lados)."""
 
@@ -261,8 +261,6 @@ def importar_de_servico(corpo: ImportarEntrada, request: Request,
             elif valores_sub:
                 ignorados.append({"motivo": "types sem campo_subtipo: os subtipos não foram gravados",
                                   "quantos": len(valores_sub)})
-        if item is not None:
-            servico.aplicar(cur, str(item["id"]))
         registrar_evento(cur, request, "dominios/importar", "item", corpo.item_id,
                          {"criados": len(criados), "reaproveitados": len(reaproveitados),
                           "ligados": len(ligados), "ignorados": len(ignorados)})
@@ -454,7 +452,6 @@ def ligar(item_id: str, corpo: LigacaoEntrada, request: Request,
         except psycopg2.Error as e:
             raise servico.erro_do_banco(e) from e
         ligacao_id = str(cur.fetchone()["id"])
-        servico.aplicar(cur, str(item["id"]))
         registrar_evento(cur, request, "dominios/ligar", "item", item["id"],
                          {"campo": corpo.campo, "dominio": d["nome"], "subtipo": corpo.subtipo_codigo})
     return {"id": ligacao_id, "item_id": str(item["id"]), "campo": corpo.campo,
@@ -472,7 +469,6 @@ def desligar(item_id: str, ligacao_id: str, request: Request,
         r = cur.fetchone()
         if r is None:
             raise ErroAPI(404, "ligacao_inexistente", "ligação inexistente")
-        servico.aplicar(cur, str(item["id"]))
         registrar_evento(cur, request, "dominios/desligar", "item", item["id"], {"campo": r["campo"]})
     return Response(status_code=204)
 
@@ -523,7 +519,6 @@ def definir_subtipos(item_id: str, corpo: SubtipoEntrada, request: Request,
             (str(item["id"]), corpo.campo, jsonb(valores)),
         )
         r = cur.fetchone()
-        servico.aplicar(cur, str(item["id"]))
         registrar_evento(cur, request, "subtipos/definir", "item", item["id"],
                          {"campo": corpo.campo, "quantos": len(valores)})
     return {"item_id": str(item["id"]), "campo": r["campo"], "valores": r["valores"]}
@@ -539,7 +534,6 @@ def apagar_subtipos(item_id: str, request: Request, auth: Auth = autenticado("co
             raise ErroAPI(409, "subtipo_com_ligacao",
                           "há ligações de domínio por subtipo nesta camada; desligue-as antes")
         cur.execute("DELETE FROM plat.camada_subtipo WHERE item_id = %s::uuid", (str(item["id"]),))
-        servico.aplicar(cur, str(item["id"]))
         registrar_evento(cur, request, "subtipos/definir", "item", item["id"], {"apagado": True})
     return Response(status_code=204)
 

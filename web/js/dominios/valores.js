@@ -35,6 +35,13 @@ export function opcoes(dominio) {
     .map((v) => ({ codigo: v.codigo, descricao: v.descricao }));
 }
 
+/* o campo de subtipo também é código na tabela e nome na tela: 2 vira "Rural" */
+export function rotuloSubtipo(subtipo, valor) {
+  if (valor === null || valor === undefined || valor === '') return '';
+  const achado = ((subtipo && subtipo.valores) || []).find((v) => String(v.codigo) === String(valor));
+  return achado ? achado.nome : `${valor} (fora da lista de subtipos)`;
+}
+
 export function faixa(dominio) {
   return dominio && dominio.tipo === 'intervalo' ? dominio.valores : null;
 }
