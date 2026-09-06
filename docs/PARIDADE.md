@@ -400,6 +400,27 @@ não medição. A coluna "Pro/AGOL real" segue `pendente` até a decisão D20 (c
 | *foundation* pronto por disciplina | Electric/Water/Gas Utility Network Foundation, com esquema e mapas prontos | dois pacotes entregues: `eletrica-br` (13 camadas de rede da BDGD, Módulo 10 do PRODIST) e `agua-epanet` (EPANET 2.2); gás, esgoto e telecom ainda não têm pacote | parcial (2 disciplinas de 5; o formato já aceita as outras três) | `test_eletrica_br_cobre_as_13_camadas_de_rede_da_bdgd`, `test_agua_epanet_tem_os_seis_grupos_do_modelo` (T3) | 2026-09-06 | pendente (D20) |
 | topologia de rede, traçado e subrede | *Enable Network Topology*, *Trace*, *Update Subnetwork* | não existe ainda: este item entrega só o catálogo do esquema | fora (itens seguintes da linha L4) | — | 2026-09-06 | pendente (D20) |
 
+## Fachada `unitIdentifiers` do UtilityNetworkServer 12.1 (item L4-28-identificadores-e-numeracao, turno 4; ADR 20260906T2121)
+
+De-para da API REST `.../UtilityNetworkServer/unitIdentifiers` (páginas `unitIdentifiers-`,
+`query-unitIdentifiers-` e `reserve-unitIdentifiers-` de developers.arcgis.com, lidas em 06/09/2026;
+recurso introduzido na 12.1, descrito pela Esri para a rede de TELECOM — aqui serve qualquer disciplina do
+pacote de ativos). Implementação em `app/rede_utilidades/rotas_esri_un.py` sobre as tabelas
+`plat.rede_numeracao`/`rede_faixa`/`rede_ativo`/`rede_ativo_renomeacao`.
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| *unit-identifiable object* | objeto da rede de telecom que recebe identificadores de unidade (`globalId` + `sourceId`) | nosso **tipo de ativo** (`plat.rede_tipo`): `globalId` = uuid do tipo, `sourceId` livre ecoado de volta, como a Esri | feito | `test_fachada_esri_descritor_reserve_e_query` | 2026-09-06 | pendente (D20) |
+| `unitIdentifiers` (descritor do recurso) | GET devolve operações suportadas e versão | GET devolve `{"operations": ["query", "reserve"], "currentVersion": 12.1}` | feito | mesmo teste | 2026-09-06 | pendente (D20) |
+| `reserve` com `firstUnit`/`lastUnit` (bloco exato) | reserva o bloco pedido; erro se sobreposto | reserva o bloco exato; sobreposição de faixa aberta = 409, número já usado por ativo = 409; o contador avança para depois do bloco | feito | mesmo teste (bloco [1050,1200] sobre [1001,1100] recusado) | 2026-09-06 | pendente (D20) |
+| `reserve` sem bloco exato | não documentado | **extensão** `count=N`: aloca o próximo bloco livre (a forma de campo) | feito (acima da Esri) | mesmo teste (`count=50`) | 2026-09-06 | pendente (D20) |
+| `query` | por objeto: faixas e `gaps` do espaço alocado | `unitIdentifiers` = faixas abertas (firstUnit/lastUnit, globalId = uuid da faixa); `gaps` = números alocados que ainda não viraram ativo | feito | mesmo teste (lacuna [51,1000] entre as duas reservas) | 2026-09-06 | pendente (D20) |
+| autenticação do protocolo | token de portal na URL ou cabeçalho | `?token=` de serviço plat **ou** sessão/cabeçalho; serviço resolvido por uuid OU nome exato da rede | feito | `test_fachada_esri_resolve_servico_por_nome_e_token_na_url` (sem token = 401) | 2026-09-06 | pendente (D20) |
+| envelope de erro | `{"success": false, "error": {...}}` | contrato da plataforma: HTTP 4xx + `{"erro": ...}` | fora (por decisão; ver ADR) | — | 2026-09-06 | pendente (D20) |
+| `gdbVersion`, `sessionID`, `moment` | versionamento de geodatabase | aceitos e ignorados: não há versionamento de geodatabase nesta plataforma | fora (por decisão) | — | 2026-09-06 | pendente (D20) |
+| `reset` / `resize` | zera o contador / muda o tamanho de faixa | não existem: o contador nunca anda para trás e o tamanho de uma faixa não muda (libera-se e reserva-se outra) — é o que torna o histórico auditável | fora (por decisão) | — | 2026-09-06 | pendente (D20) |
+| resposta do `reserve` | envelope `serviceEdits` (interno da tabela de UN deles) | forma do `query`: `unitIdentifiers` com first/last por objeto | parcial (forma equivalente, envelope divergente declarado) | `test_fachada_esri_descritor_reserve_e_query` | 2026-09-06 | pendente (D20) |
+
 ## Documento de mapa: Web Map Specification → documento do plat (item L2-01-a-documento-mapa, turno 3; ADR 0022)
 
 De-para chave a chave. A coluna "Esri" é a chave da **Web Map Specification** lida em 06/09/2026 nas páginas
