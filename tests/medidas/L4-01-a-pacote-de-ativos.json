@@ -2,7 +2,7 @@
  "item": "L4-01-a-pacote-de-ativos",
  "assinado_por": "redes+arquiteto+dados+backend (turno T3, handoff laco/handoffs/T3/L4-01-a-pacote-de-ativos.md)",
  "gerado_em": "2026-09-06T16:20:00Z",
- "git_sha": "pendente-do-commit-deste-item",
+ "git_sha": "1d0040b8d465b9d844eee58564cda43d32b4965b",
  "maquina": "12 vCPU, 23 GB RAM, disco / a 98%; PostgreSQL 16 em iagro_sat; base própria da trilha (schema plat_tt401a, laco/trilha_ambiente.sh t401a), com outras sessões da casa na mesma máquina",
  "medidas": {
   "pacote_eletrica_br_bytes": {
