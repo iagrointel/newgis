@@ -57,6 +57,18 @@ def estado_banco() -> tuple[str, int, int, str | None]:
         return "erro", 0, 0, None
     return ("desatualizado" if pendentes else "ok"), aplicadas, pendentes, ultima
 
+def estado_modo() -> dict:
+    """Modo de manutenção global (L7-33): informativo aqui, nunca muda o status HTTP — /saude segue 200
+    durante a manutenção (portão do item). É também o ponto de leitura do silenciamento de alerta
+    (L7-06-b): enquanto `manutencao.ativo`, alerta da plataforma fica suprimido."""
+    try:
+        with db.db() as cur:
+            cur.execute("SELECT plat.modo_ler(NULL) AS m")
+            return dict(cur.fetchone()["m"])
+    except Exception:
+        log.exception("saude: modo em erro")
+        return {"erro": True}
+
 
 @router.get("/saude")
 def saude():
@@ -73,6 +85,7 @@ def saude():
         "ultima_migracao": ultima,
         "servicos": servicos,
         "fila": estado_fila() if banco == "ok" else {"erro": True},
+        "manutencao": estado_modo() if banco == "ok" else {"erro": True},
         "tempo_ms": round((time.perf_counter() - inicio) * 1000, 1),
         "em": agora_iso(),
     }

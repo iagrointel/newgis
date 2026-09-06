@@ -5,6 +5,7 @@ import { chamar, obter, mensagemDe } from '../base/api.js';
 import { h, limpar } from '../base/dom.js';
 import { loja, tem } from '../base/estado.js';
 import { t } from '../base/i18n.js';
+import { aplicarFaixaModo } from '../base/modo.js';
 
 export const CHAVE_INQUILINO = 'plat_inquilino';
 export const CHAVE_SESSAO = 'plat_sessao';
@@ -63,6 +64,7 @@ export async function exigirSessao({ privilegio, permitirPendencia = false } = {
   marcarSessao(true);
   if (usuario.inquilino?.slug) lembrarInquilino(usuario.inquilino.slug);
   loja.definir({ usuario });
+  aplicarFaixaModo();  // L7-33: faixa com o motivo quando a plataforma/o inquilino está em manutenção
   const destino = caminhoPendencia(usuario.pendencias);
   if (destino && !permitirPendencia) { location.replace(destino); return null; }
   if (privilegio && !tem(privilegio, usuario)) { semPermissao(privilegio); return null; }

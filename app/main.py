@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse
 
-from app import erros, limite_corpo, paginas
+from app import erros, limite_corpo, modo, paginas
 from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
 from app.auth import ldap as rotas_ldap
@@ -62,6 +62,9 @@ plat_log.configurar(settings.PLAT_LOG_NIVEL)
 
 app = FastAPI(title="plat", version=versao(), docs_url=None, redoc_url=None, openapi_url="/api/openapi.json")
 erros.instalar(app)
+# modo de manutenção (L7-33) ANTES do middleware de log: na pilha do Starlette ele roda DEPOIS dele,
+# então a escrita bloqueada sai com X-Req-Id e linha em plat.log_acesso (recusa auditável)
+modo.instalar(app)
 auth_middleware.instalar(app)
 # acrescentado por último: no empilhamento do Starlette isso o torna o mais externo, executando ANTES do
 # middleware de log/sessão acima (ADR 0001 seção 12; app/limite_corpo.py) — corpo grande nunca chega à sessão.
@@ -86,6 +89,8 @@ ROUTERS = [
     rotas_smtp,
     rotas_convites.router,
     rotas_redefinicao.router,
+    # --- modo de manutenção (L7-33): GET /api/modo público (a faixa do front consulta o motivo aqui)
+    modo.router,
     # --- fila de jobs (L0-05): /api/jobs, /api/agendas, /tarefas
     rotas_jobs,
     # --- catálogo (L0-03): /api/itens, /api/pastas, /api/categorias, /api/favoritos, /api/lixeira, /api/compartilhado
