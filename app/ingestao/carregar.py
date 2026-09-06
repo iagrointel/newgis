@@ -16,7 +16,8 @@ import psycopg2.extras
 from pydantic import BaseModel
 
 from app import limites, objetos
-from app.ingestao.inspecionar import PREPARADORES, tabela_de
+from app.ingestao import georreferencia
+from app.ingestao.inspecionar import PREPARADORES, _cfg, tabela_de
 from app.jobs.registro import Cancelado, FalhaDefinitiva, tarefa
 from app.settings import settings
 
@@ -140,7 +141,11 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         ctx.progresso(15, "preparando a fonte")
         encoding_confirmada = ((confirmacao.get("codificacao") or {}).get("valor")
                                or proposta.get("codificacao", {}).get("valor"))
-        prep = PREPARADORES[formato](ctx, dados, encoding_confirmada)
+        respostas_cad = {k: v for k, v in (confirmacao.get("cad") or {}).items() if v is not None}
+        if formato in ("dxf", "dwg"):
+            prep = PREPARADORES[formato](ctx, dados, encoding_confirmada, respostas_cad)
+        else:
+            prep = PREPARADORES[formato](ctx, dados, encoding_confirmada)
 
         srid = int((confirmacao.get("crs") or {}).get("srid") or proposta.get("crs", {}).get("srid") or 0)
         if not srid:
@@ -152,6 +157,17 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         tipo_escolhido_raw = geom.get("escolhida") or "Geometry"  # o que a inspeção/usuário resolveu
         camada_origem = proposta.get("camada_origem") or prep.get("layer")
         sql_origem = f'SELECT {select_sql} FROM "{camada_origem}"'
+        # DXF/DWG: o usuário escolhe QUAIS camadas do desenho entram (a lista veio na proposta). Sem escolha,
+        # entram todas — nunca um recorte silencioso.
+        camadas_escolhidas = respostas_cad.get("camadas") if formato in ("dxf", "dwg") else None
+        if camadas_escolhidas:
+            disponiveis = set(proposta.get("camadas_desenho") or [])
+            desconhecidas = [c for c in camadas_escolhidas if c not in disponiveis]
+            if desconhecidas:
+                raise FalhaDefinitiva(
+                    f"camada do desenho que não existe na proposta: {desconhecidas[0][:80]}")
+            lista = ", ".join("'" + c.replace("'", "''") + "'" for c in camadas_escolhidas)
+            sql_origem += f" WHERE Layer IN ({lista})"
 
         # PROMOTE_TO_MULTI (e não o tipo singular): ST_MakeValid pode fragmentar um Polygon/LineString
         # inválido em várias partes (MEDIDO com dado real: buraco tocando o contorno em cobertura do solo de
@@ -166,6 +182,7 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             oo_args += ["-oo", o]
         argv = [
             "ogr2ogr", "-f", "PostgreSQL", _pg_conninfo(),
+            *_cfg(prep.get("config")),
             *oo_args,
             prep["caminho"],
             "-nln", f"{schema}.{tabela}", "-nlt", nlt,
@@ -194,6 +211,34 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
                      "GEOMETRY": "Geometry", "GEOMETRYCOLLECTION": "Geometry"}
         tipo_escolhido_raw = mapa_tipo.get((r_tipo["type"] if r_tipo else "").upper(), tipo_escolhido_raw)
         tipo_escolhido_nlt = tipo_escolhido_raw.upper()
+
+        # ------------------------------------------------------------ georreferência do desenho (CAD)
+        # O DXF vem em coordenada de desenho. A semelhança 2D ajustada nos pontos de controle (ou, na falta
+        # deles, a escala da unidade declarada) é aplicada AQUI, na tabela já carregada, com `ST_Affine` — o
+        # desenho original não é reescrito. O RMSE do ajuste vai para o relatório da importação.
+        georref = None
+        if formato in ("dxf", "dwg"):
+            pedido = respostas_cad.get("georreferencia") or {}
+            pontos = pedido.get("pontos") or []
+            if pontos:
+                origem = [(float(p["desenho"][0]), float(p["desenho"][1])) for p in pontos]
+                destino = [(float(p["terreno"][0]), float(p["terreno"][1])) for p in pontos]
+                try:
+                    georref = georreferencia.ajustar(origem, destino)
+                except (georreferencia.PontosInsuficientes, georreferencia.AjusteImpossivel) as e:
+                    raise FalhaDefinitiva(f"georreferência recusada: {e}") from e
+                georref["origem"] = "pontos_de_controle"
+            else:
+                unidade = ((proposta.get("cad") or {}).get("unidade") or {})
+                metros = respostas_cad.get("metros_por_unidade") or unidade.get("metros_por_unidade")
+                georref = georreferencia.escala_de_unidade(metros)
+                if georref:
+                    georref["origem"] = "unidade_declarada"
+            if georref:
+                ctx.progresso(40, "aplicando a georreferência")
+                with ctx.db() as cur:
+                    cur.execute(f'UPDATE "{schema}"."{tabela}" SET geom = '
+                                f'{georreferencia.sql_geometria(georref)} WHERE geom IS NOT NULL')
 
         # ------------------------------------------------------------ validade (ST_MakeValid)
         ctx.progresso(45, "validando geometria")
@@ -297,6 +342,13 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             "estatisticas": estatisticas,
             "importacao": {"importacao_id": iid, "job_id": str(ctx.job_id), "relatorio": relatorio},
         }
+        if formato in ("dxf", "dwg"):
+            item_dados["cad"] = {"desenho": (proposta.get("cad") or {}).get("totais"),
+                                 "versao": (proposta.get("cad") or {}).get("versao"),
+                                 "unidade": (proposta.get("cad") or {}).get("unidade"),
+                                 "camadas_importadas": camadas_escolhidas or proposta.get("camadas_desenho"),
+                                 "georreferencia": georref}
+            relatorio["georreferencia"] = georref
         titulo = (confirmacao.get("titulo") or proposta.get("titulo") or "camada")[:250]
         with ctx.db() as cur:
             cur.execute(
@@ -330,7 +382,8 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             )
         ctx.progresso(100, "concluído")
         return {"item_id": item_id, "feicoes": int(est["feicoes"]), "corrigidas": relatorio["corrigidas"],
-                "descartadas": relatorio["descartadas"], "avisos": proposta.get("avisos", [])}
+                "descartadas": relatorio["descartadas"], "avisos": proposta.get("avisos", []),
+                "rmse": (relatorio.get("georreferencia") or {}).get("rmse")}
     except Cancelado:
         if tabela_criada:
             _limpar_orfao(ctx, schema, tabela, item_id)

@@ -15,7 +15,7 @@ from shapely.geometry import shape
 from shapely.validation import explain_validity
 
 from app import limites, objetos
-from app.ingestao import csv_normalizar, formatos, geometria, nomes, tipos_campo
+from app.ingestao import cad, csv_normalizar, formatos, geometria, nomes, tipos_campo
 from app.jobs.registro import FalhaDefinitiva, tarefa
 
 AMOSTRA_VALIDADE = limites.INGESTAO_AMOSTRA_VALIDADE
@@ -43,8 +43,18 @@ def _extent_sugere_srid(extent: list[float] | None) -> int | None:
     return 4326
 
 
-def _ogrinfo_json(ctx, caminho: str, layer: str | None, oo: list[str]) -> dict:
-    argv = ["ogrinfo", "-ro", "-json", "-so"]
+def _cfg(config: list[str] | None) -> list[str]:
+    """`--config CHAVE VALOR` repetido. O driver DXF do GDAL ignora `-oo` para DXF_INLINE_BLOCKS e
+    DXF_ENCODING (MEDIDO, ADR 0020 seção 3): só a opção de configuração vale."""
+    argv = []
+    for par in config or []:
+        chave, _, valor = par.partition("=")
+        argv += ["--config", chave, valor]
+    return argv
+
+
+def _ogrinfo_json(ctx, caminho: str, layer: str | None, oo: list[str], config: list[str] | None = None) -> dict:
+    argv = ["ogrinfo", "-ro", "-json", "-so", *_cfg(config)]
     for o in oo:
         argv += ["-oo", o]
     argv.append(caminho)
@@ -60,8 +70,9 @@ def _ogrinfo_json(ctx, caminho: str, layer: str | None, oo: list[str]) -> dict:
         raise FalhaDefinitiva(f"ogrinfo não devolveu JSON válido: {e}") from e
 
 
-def _tipos_por_varredura(ctx, caminho: str, layer: str, oo: list[str]) -> dict[str, int]:
-    argv = ["ogrinfo", "-ro", "-json"]
+def _tipos_por_varredura(ctx, caminho: str, layer: str, oo: list[str],
+                         config: list[str] | None = None) -> dict[str, int]:
+    argv = ["ogrinfo", "-ro", "-json", *_cfg(config)]
     for o in oo:
         argv += ["-oo", o]
     argv += ["-dialect", "OGRSQL", "-sql", f'SELECT OGR_GEOMETRY, COUNT(*) AS n FROM "{layer}" GROUP BY OGR_GEOMETRY',
@@ -82,10 +93,11 @@ def _tipos_por_varredura(ctx, caminho: str, layer: str, oo: list[str]) -> dict[s
     return saida
 
 
-def _amostra_validade(ctx, caminho: str, layer: str | None, oo: list[str]) -> tuple[int, int, str | None]:
+def _amostra_validade(ctx, caminho: str, layer: str | None, oo: list[str],
+                      config: list[str] | None = None) -> tuple[int, int, str | None]:
     """(amostra, invalidas, exemplo) lendo até AMOSTRA_VALIDADE feições como GeoJSON e checando com shapely
     (evita depender do dialeto SQLite/SpatiaLite do GDAL)."""
-    argv = ["ogr2ogr", "-f", "GeoJSON", "/vsistdout/"]
+    argv = ["ogr2ogr", "-f", "GeoJSON", "/vsistdout/", *_cfg(config)]
     for o in oo:
         argv += ["-oo", o]
     argv += ["-limit", str(AMOSTRA_VALIDADE), caminho]
@@ -219,11 +231,35 @@ def _preparar_csv(ctx, dados: bytes) -> dict:
             "csv_colunas": resultado.colunas}
 
 
+def _preparar_cad(ctx, dados: bytes, formato: str, respostas: dict | None = None) -> dict:
+    """DXF/DWG: grava o envio, converte o DWG com o LibreDWG em processo ISOLADO (ADR 0015/0018) e lê camadas,
+    unidade, codificação e contagens com o GDAL, também isolado. Nunca abre o arquivo do cliente no processo do
+    worker."""
+    extensao = ".dwg" if formato == "dwg" else ".dxf"
+    caminho = ctx.dir_trabalho / f"original{extensao}"
+    caminho.write_bytes(dados)
+    rel = cad.inspecionar(caminho, ctx.dir_trabalho, formato=formato, respostas=respostas or {},
+                          medir_isolamento=True)
+    if rel.estado == "recusado":
+        raise FalhaDefinitiva(rel.problemas[0] if rel.problemas else "o desenho não pôde ser lido")
+    codificacao = {"origem": rel.codificacao.get("origem", "bytes"), "valor": rel.codificacao.get("valor", "UTF-8"),
+                   "perguntar": bool(rel.codificacao.get("perguntar")), "sugestao": None}
+    crs = {"origem": "nenhum", "srid": None, "perguntar": True, "wkt": None, "sugestao": None}
+    inline = rel.totais.get("blocos_modo") == "explodido"
+    config = [f"DXF_INLINE_BLOCKS={'TRUE' if inline else 'FALSE'}",
+              f"DXF_ENCODING={codificacao['valor']}"]
+    return {"caminho": rel.caminho_dxf, "layer": "entities", "oo": [], "config": config, "crs": crs,
+            "codificacao": codificacao, "csv": None, "titulo_origem": None, "driver": "DXF",
+            "origem_e_normalizada": False, "cad": rel.json()}
+
+
 PREPARADORES = {
     "shapefile.zip": lambda ctx, dados, enc: _preparar_shapefile(ctx, dados, enc),
     "gpkg": lambda ctx, dados, enc: _preparar_gpkg(ctx, dados),
     "geojson": lambda ctx, dados, enc: _preparar_geojson(ctx, dados),
     "csv": lambda ctx, dados, enc: _preparar_csv(ctx, dados),
+    "dxf": lambda ctx, dados, enc, respostas=None: _preparar_cad(ctx, dados, "dxf", respostas),
+    "dwg": lambda ctx, dados, enc, respostas=None: _preparar_cad(ctx, dados, "dwg", respostas),
 }
 
 
@@ -281,7 +317,7 @@ def ingestao_inspecionar(ctx, importacao_id: uuid.UUID) -> dict:
         prep = preparador(ctx, dados, None)
 
         ctx.progresso(35, "ogrinfo")
-        info = _ogrinfo_json(ctx, prep["caminho"], prep["layer"], prep["oo"])
+        info = _ogrinfo_json(ctx, prep["caminho"], prep["layer"], prep["oo"], prep.get("config"))
         camadas = info.get("layers") or []
         if not camadas:
             raise FalhaDefinitiva("o arquivo não contém camada vetorial")
@@ -305,7 +341,8 @@ def ingestao_inspecionar(ctx, importacao_id: uuid.UUID) -> dict:
                          "sem_geometria": 0}
         elif geom_fields:
             ctx.progresso(45, "varrendo o tipo real de geometria")
-            tipos_contagem = _tipos_por_varredura(ctx, prep["caminho"], nome_camada_origem, prep["oo"])
+            tipos_contagem = _tipos_por_varredura(ctx, prep["caminho"], nome_camada_origem, prep["oo"],
+                                                  prep.get("config"))
             resolvido = geometria.resolver(tipos_contagem or {"NULL": feicoes})
         else:
             resolvido = {"tipos": {}, "escolhida": None, "perguntar": False, "opcoes": [], "z": False,
@@ -354,7 +391,8 @@ def ingestao_inspecionar(ctx, importacao_id: uuid.UUID) -> dict:
         ctx.progresso(70, "amostrando validade")
         amostra, invalidas, exemplo = (0, 0, None)
         if resolvido.get("escolhida"):
-            amostra, invalidas, exemplo = _amostra_validade(ctx, prep["caminho"], nome_camada_origem, prep["oo"])
+            amostra, invalidas, exemplo = _amostra_validade(ctx, prep["caminho"], nome_camada_origem,
+                                                            prep["oo"], prep.get("config"))
 
         perguntas = []
         if crs.get("perguntar"):
@@ -363,12 +401,20 @@ def ingestao_inspecionar(ctx, importacao_id: uuid.UUID) -> dict:
             perguntas.append("codificacao")
         if resolvido.get("perguntar"):
             perguntas.append("geometria")
+        cad_info = prep.get("cad")
+        if cad_info:
+            if (cad_info.get("unidade") or {}).get("perguntar"):
+                perguntas.append("unidade")
+            perguntas.append("georreferencia")   # o desenho não traz projeção: EPSG ou pontos de controle
 
         avisos_gerais = []
         if crs.get("aviso"):
             avisos_gerais.append(crs.pop("aviso"))
         if resolvido.get("sem_geometria"):
             avisos_gerais.append(f"{resolvido['sem_geometria']} feições sem geometria")
+        if cad_info:
+            avisos_gerais.extend(cad_info.get("avisos") or [])
+            avisos_gerais.extend(cad_info.get("pendencias") or [])
 
         item_id = imp["item_id"]
         proposta = {
@@ -383,6 +429,9 @@ def ingestao_inspecionar(ctx, importacao_id: uuid.UUID) -> dict:
                          "acao": "corrigir" if invalidas else None},
             "avisos": avisos_gerais, "perguntas": perguntas,
         }
+        if prep.get("cad"):
+            proposta["cad"] = prep["cad"]
+            proposta["camadas_desenho"] = [c["nome"] for c in prep["cad"].get("camadas", [])]
         with ctx.db() as cur:
             cur.execute(
                 "UPDATE plat.importacao SET estado = 'proposta', proposta = %s, atualizado_em = now() "
