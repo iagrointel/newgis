@@ -16,7 +16,6 @@ from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import busca as mod_busca
 from app.catalogo import comum, diff, relacoes, texto, tipos
 from app.catalogo.comum import (
-    SQL_ITEM,
     carregar,
     exigir_edicao,
     item_json,
@@ -312,11 +311,25 @@ def listar_ids(cur, auth: Auth, p: dict, lixeira: bool = False) -> tuple[int, li
     return total, [str(r["id"]) for r in linhas], proximo, aproximado
 
 
+_CONTAGENS_VAZIAS = {"usado_por": 0, "criado_a_partir_de": 0, "grupos": 0, "links_ativos": 0}
+
+
 def carregar_varios(cur, ids: list[str], auth: Auth, completo: bool = False) -> list[dict]:
+    """Uma consulta para os N itens (sem as contagens por LATERAL nem os campos pesados, ver SQL_ITEM_LISTA) + UMA
+    consulta em lote para usado_por/criado_a_partir_de/grupos/links_ativos dos N (comum.contagens_lote) — nunca N
+    chamadas de função. completo=True não tem hoje nenhum chamador (rotas_itens/rotas_favoritos/rotas_lixeira usam
+    o padrão False); se algum dia precisar, cai para SQL_ITEM cheio em vez de devolver descricao/dados vazios."""
     if not ids:
         return []
-    cur.execute(SQL_ITEM + " WHERE i.id = ANY (%s::uuid[])", (ids,))
+    cur.execute((comum.SQL_ITEM if completo else comum.SQL_ITEM_LISTA) + " WHERE i.id = ANY (%s::uuid[])", (ids,))
     por_id = {str(r["id"]): r for r in cur.fetchall()}
+    contagens = comum.contagens_lote(cur, ids)
+    for iid, r in por_id.items():
+        c = contagens.get(iid, _CONTAGENS_VAZIAS)
+        r["usado_por"] = c["usado_por"]
+        r["criado_a_partir_de"] = c["criado_a_partir_de"]
+        r["compartilhado_com_grupos"] = c["grupos"]
+        r["links_ativos"] = c["links_ativos"]
     return [item_json(por_id[i], auth, completo=completo) for i in ids if i in por_id]
 
 

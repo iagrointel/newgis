@@ -22,9 +22,9 @@
    "comando": "GET /api/itens?q=municipio&limite=50, 20 execuções, corpus 10 mil (mediana 102.6)"
   },
   "lista_tipo_p95_ms": {
-   "valor": 203.0,
+   "valor": 50.8,
    "unidade": "ms",
-   "comando": "GET /api/itens?tipo=mapa&limite=50, 20 execuções, corpus 10 mil (mediana 199.7)"
+   "comando": "GET /api/itens?tipo=mapa&limite=50, 20 execuções, corpus 10 mil (mediana 23.8)"
   },
   "revogacao_nega_ms": {
    "valor": 15.3,
@@ -57,11 +57,11 @@
    "comando": "GET /api/itens?q=municpio (trigram de reserva), 10 execuções"
   },
   "facetas_p95_ms": {
-   "valor": 25.8,
+   "valor": 25.5,
    "unidade": "ms",
    "comando": "GET /api/itens/facetas?tipo=mapa, 10 execuções"
   }
  },
- "gerado_em": "2026-09-06T00:25:07Z",
- "git_sha": "65a9fc2c0869"
+ "gerado_em": "2026-09-06T00:48:46Z",
+ "git_sha": "94a669c6601f"
 }

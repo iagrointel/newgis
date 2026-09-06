@@ -67,6 +67,44 @@ LEFT JOIN plat.pasta p ON p.id = i.pasta_id
 LEFT JOIN LATERAL plat.item_contagens(i.id) c ON true
 """
 
+# Mesma consulta, sem as 4 contagens por LATERAL e sem os campos pesados que item_json() só usa quando completo=True
+# ("Lista omite descricao/descricao_html/dados/termos_de_uso", ver docstring de item_json): usada pela LISTA
+# (carregar_varios), que busca N itens de uma vez. Duas causas medidas para o piso fixo de ~200 ms em
+# GET /api/itens?tipo=mapa&limite=50 contra o portão de <100 ms (L0-03):
+#   1. `plat.item_contagens` é STABLE mas o planejador estima 1.000 linhas por chamada (função de saída múltipla) e,
+#      multiplicado pelas N linhas candidatas de uma página, empurra o custo total estimado da consulta acima de
+#      jit_above_cost — o que dispara compilação JIT EM TODA CHAMADA (medido: ~40-60 ms só de "Emission" no EXPLAIN
+#      ANALYZE). Corrigido com `plat.item_contagens_lote` (uma consulta agregada para os N ids, ~1-5 ms) em vez de
+#      N chamadas de função — o mesmo padrão de N+1 que a migração 017 já tinha corrigido para `pode_ler`.
+#   2. `i.dados` (jsonb) mede em média 58 KB e chegou a 2,8 MB num item do corpus semeado; `descricao`/
+#      `descricao_html`/`termos_de_uso*` também nunca aparecem na lista. EXPLAIN ANALYZE da consulta cheia media só
+#      ~12-95 ms de "Execution Time", mas o round-trip real (psql \timing, mesma consulta) media 92-185 ms — a
+#      diferença é a formatação/detoast e o envio dessas colunas grandes pela conexão, que o EXPLAIN não conta
+#      (ele materializa as linhas mas não as serializa e envia ao cliente). Buscar 50 itens sem elas eliminou esse
+#      custo: a rota de item único (GET /api/itens/{id}) continua usando SQL_ITEM, que as inclui, porque ali é 1
+#      item por chamada, não 50.
+SQL_ITEM_LISTA = (
+    SQL_ITEM.replace(
+        ",\n       c.usado_por, c.criado_a_partir_de, c.grupos AS compartilhado_com_grupos, c.links_ativos", ""
+    )
+    .replace("\nLEFT JOIN LATERAL plat.item_contagens(i.id) c ON true\n", "\n")
+    .replace(
+        "i.resumo, i.descricao, i.descricao_html, i.tags,\n       i.creditos, i.termos_de_uso, "
+        "i.termos_de_uso_html, i.dono_id,",
+        "i.resumo, NULL::text AS descricao, NULL::text AS descricao_html, i.tags,\n       i.creditos, "
+        "NULL::text AS termos_de_uso, NULL::text AS termos_de_uso_html, i.dono_id,",
+    )
+    .replace("i.miniatura_sha256, i.dados, i.acesso,", "i.miniatura_sha256, NULL::jsonb AS dados, i.acesso,")
+)
+
+
+def contagens_lote(cur, ids: list[str]) -> dict[str, dict]:
+    """(usado_por, criado_a_partir_de, grupos, links_ativos) para todos os `ids` em UMA consulta agregada."""
+    if not ids:
+        return {}
+    cur.execute("SELECT * FROM plat.item_contagens_lote(%s::uuid[])", (ids,))
+    return {str(r["item_id"]): r for r in cur.fetchall()}
+
 
 def uuid_ok(valor: str, codigo: str = "item_inexistente", mensagem: str = "item inexistente") -> str:
     try:
