@@ -746,6 +746,8 @@
  "nav.mapa_desc": "mapa-base local em MapLibre, camadas e navegação",
  "nav.conexoes": "Conexões",
  "nav.conexoes_desc": "conexões a serviços externos: saúde, histórico e camadas publicadas com procedência",
+ "nav.acervo": "Acervo",
+ "nav.acervo_desc": "camadas do acervo da casa e o estado de verificação de frescor de cada uma",
  "mapa.titulo": "Mapa",
  "mapa.camada_base": "camada base",
  "mapa.base_osm_guarulhos": "OSM aberto — recorte Guarulhos (ODbL 1.0)",

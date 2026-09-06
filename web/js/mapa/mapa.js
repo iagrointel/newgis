@@ -14,6 +14,9 @@ import { carregar as carregarIdioma, t } from '../base/i18n.js';
 import { montarLayout, pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
 import { construirEstilo } from './estilo.js';
+import * as api from '../base/api.js';
+import { h, limpar } from '../base/dom.js';
+import { AVISO_VENCIDA, selo } from '../acervo/frescor.js';
 
 const BASES = [
   { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
@@ -52,6 +55,33 @@ function montarCoordenadas(map) {
   mostrarCentro();
 }
 
+/* item L6-01-h-frescor-verificacao: lista as camadas EXPOSTAS do acervo com o estado de verificação, para que
+   quem for usar uma camada veja o aviso ANTES de confiar nela. O selo e o texto vêm de web/js/acervo/frescor.js
+   — o mesmo módulo que a ficha em /acervo usa, para o aviso não divergir entre as duas telas. O painel fica
+   escondido quando a API não responde ou quando não há camada exposta: painel vazio não é informação. */
+async function montarPainelAcervo() {
+  const painel = el('painel-acervo');
+  if (!painel) return { total: 0, vencidas: 0 };
+  const r = await api.obter('/api/acervo/camadas?limite=50');
+  if (r.status !== 200 || !r.json || !Array.isArray(r.json.itens) || !r.json.itens.length) {
+    painel.hidden = true;
+    return { total: 0, vencidas: 0 };
+  }
+  const { itens, total, vencidas } = r.json;
+  el('acervo-resumo').textContent = vencidas
+    ? `${vencidas} de ${total} com ${AVISO_VENCIDA}`
+    : `${total} camada(s), nenhuma com ${AVISO_VENCIDA}`;
+  const lista = el('acervo-lista');
+  limpar(lista);
+  for (const c of itens) {
+    lista.append(h('li', { 'data-camada': c.acervo_camada_id, 'data-vencida': c.verificacao_vencida ? '1' : '0' },
+      h('code', { title: `${c.fonte_nome || c.fonte_id}` }, `${c.schema_nome}.${c.tabela}`),
+      selo(c, h)));
+  }
+  painel.hidden = false;
+  return { total, vencidas };
+}
+
 async function iniciarMapa() {
   if (!window.maplibregl || !window.pmtiles) {
     el('aviso').erro(t('mapa.erro_biblioteca'));
@@ -82,6 +112,11 @@ async function iniciarMapa() {
   });
 
   await new Promise((resolve) => map.once('load', resolve));
+  try {
+    await montarPainelAcervo();
+  } catch (e) {
+    el('aviso').mostrar(`camadas do acervo indisponíveis: ${(e && e.message) || e}`, 'atencao');
+  }
   document.body.dataset.pronto = '1';
 }
 

@@ -31,6 +31,15 @@ class AcervoCartao(Saida):
     proxima_verificacao: str | None = None
     risco_pii: bool = False
     risco_pii_motivo: str | None = None
+    # item L6-01-h: aviso de frescor agregado das camadas EXPOSTAS da fonte (plat.v_acervo_fonte_frescor).
+    # Fonte sem camada exposta fica com camadas_expostas = 0 e verificacao_vencida = false — "não se aplica",
+    # nunca "em dia" (a tela distingue os dois pelo número de camadas).
+    verificacao_vencida: bool = False
+    motivo_vencida: str | None = None
+    camadas_expostas: int = 0
+    camadas_vencidas: int = 0
+    verificada_em: str | None = None
+    endpoints_mortos: int = 0
 
 
 class AcervoEndpoint(Saida):
@@ -86,3 +95,96 @@ class AcervoAdicionarEntrada(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     confirma_risco_pii: bool = False
+
+
+# ---------------------------------------------------------------- frescor (item L6-01-h-frescor-verificacao)
+class AcervoCamadaFrescor(Saida):
+    """Uma camada do registro com o estado de verificação. `linhas_exatas` é NULL quando a contagem não coube
+    no prazo de 25 s — a tela escreve "não contado no prazo", nunca zero, e `reltuples` não aparece aqui."""
+
+    acervo_camada_id: str
+    fonte_id: str
+    schema_nome: str
+    tabela: str
+    estado: str
+    fonte_nome: str | None = None
+    fonte_dominio: str | None = None
+    fonte_licenca: str | None = None
+    fonte_frescor: str | None = None
+    proxima_verificacao: str | None = None
+    verificada_em: str | None = None
+    contagem_estado: str | None = None
+    linhas_exatas: int | None = None
+    linhas_anteriores: int | None = None
+    variacao_pct: float | None = None
+    mudanca_relevante: bool | None = None
+    hash_estado: str | None = None
+    endpoints_testados: int = 0
+    endpoints_mortos: int = 0
+    endpoint_morto: bool = False
+    prazo_da_fonte_vencido: bool = False
+    nunca_verificada: bool = True
+    verificacao_antiga: bool = False
+    verificacao_vencida: bool = False
+    motivo_vencida: str | None = None
+
+
+class AcervoCamadaFrescorPagina(Saida):
+    total: int
+    vencidas: int
+    itens: list[AcervoCamadaFrescor]
+
+
+class AcervoVerificacao(Saida):
+    verificada_em: str
+    contagem_estado: str
+    linhas_exatas: int | None = None
+    linhas_anteriores: int | None = None
+    variacao_pct: float | None = None
+    mudanca_relevante: bool = False
+    hash_estado: str
+    hash_valor: str | None = None
+    duracao_ms: int = 0
+    execucao_id: int | None = None
+
+
+class AcervoVerificacaoHistorico(Saida):
+    camada: AcervoCamadaFrescor
+    total: int
+    verificacoes: list[AcervoVerificacao]
+
+
+class AcervoMudanca(Saida):
+    acervo_camada_id: str
+    fonte_id: str
+    schema_nome: str
+    tabela: str
+    verificada_em: str
+    linhas_anteriores: int | None = None
+    linhas_exatas: int | None = None
+    variacao_pct: float | None = None
+    execucao_id: int | None = None
+
+
+class AcervoMudancaPagina(Saida):
+    total: int
+    limiar_pct: float
+    itens: list[AcervoMudanca]
+
+
+class AcervoExecucao(Saida):
+    id: int
+    iniciada_em: str
+    concluida_em: str | None = None
+    duracao_ms: int | None = None
+    camadas_expostas: int = 0
+    camadas_verificadas: int = 0
+    camadas_nao_contadas: int = 0
+    endpoints_testados: int = 0
+    endpoints_responderam: int = 0
+    mudancas: int = 0
+
+
+class AcervoExecucaoPagina(Saida):
+    total: int
+    itens: list[AcervoExecucao]

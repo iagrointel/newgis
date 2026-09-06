@@ -48,6 +48,7 @@ class Preparacao:
     link_b: dict = field(default_factory=dict)  # L0-03: link por token de B (token em claro só aqui)
     categoria_b: dict = field(default_factory=dict)  # L0-03: categoria de B
     fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
+    camada_acervo: str = ""  # L6-01-h: uma camada exposta do registro (vazio quando o registro ainda não rodou)
     conexao_b: dict = field(default_factory=dict)  # L6-02-a: conexão externa de B
 
     @property
@@ -112,6 +113,11 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_a.get("/api/acervo?limite=1")
     assert r.status_code == 200, r.text
     fonte_acervo = r.json()["itens"][0]["fonte_id"]
+    # L6-01-h: uma camada exposta, para a rota de histórico. O registro pode estar vazio numa base recém-criada
+    # (scripts/acervo_sync.py ainda não rodou nela): nesse caso o caso de teste usa um id inexistente e aceita 404.
+    rc = sessao_a.get("/api/acervo/camadas?limite=1")
+    camada_acervo = (rc.json()["itens"][0]["acervo_camada_id"] if rc.status_code == 200 and rc.json()["itens"]
+                     else "")
     # L6-02-a: conexão externa de B, alvo das rotas de /api/conexoes (URL pública real — passa pela defesa de
     # SSRF na criação; dado aberto federal, nunca nome de cliente/parceiro)
     r = sessao_b.post(
@@ -122,7 +128,8 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     conexao_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b)
+                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, camada_acervo=camada_acervo,
+                      conexao_b=conexao_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -454,6 +461,19 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/acervo/{p.fonte_acervo}/adicionar", proprio=True, aceita=frozenset({201}),
         verificar=_sem_marca, limpar=_apagar_criado(("DELETE", "/api/itens/{id}")),
     ),
+    # ---- L6-01-h frescor do acervo: as quatro leituras são do REGISTRO COMPARTILHADO (mesma natureza do
+    # /api/acervo acima: não é dado de A nem de B, e nenhuma delas aceita escrita). O identificador de camada
+    # tem barra dentro (slug `<fonte_id>/<schema>.<tabela>`), por isso o caminho é `:path` no FastAPI.
+    ("GET", "/api/acervo/camadas"): Caso(lambda p: "/api/acervo/camadas?limite=5", proprio=True,
+                                         aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/api/acervo/camadas/{acervo_camada_id}/verificacoes"): Caso(
+        lambda p: f"/api/acervo/camadas/{p.camada_acervo}/verificacoes" if p.camada_acervo
+        else "/api/acervo/camadas/inexistente/inexistente.inexistente/verificacoes",
+        proprio=True, aceita=frozenset({200, 404}), verificar=_sem_marca),
+    ("GET", "/api/acervo/frescor/mudancas"): Caso(lambda p: "/api/acervo/frescor/mudancas?limite=5", proprio=True,
+                                                  aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/api/acervo/frescor/execucoes"): Caso(lambda p: "/api/acervo/frescor/execucoes?limite=5", proprio=True,
+                                                   aceita=frozenset({200}), verificar=_sem_marca),
     # ---- L6-02-a modelo de conexão externa: conexão é do INQUILINO (tenant_id + RLS), diferente do acervo
     # acima; GET/POST agem só sobre o próprio chamador (o POST usa o MESMO nome de B para provar que a
     # unicidade de nome é por inquilino, não global); GET/PATCH/DELETE/testar por id de B são cross-tenant puro

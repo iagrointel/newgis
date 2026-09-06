@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 from app import erros, limite_corpo, paginas
 from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
+from app.acervo import rotas_frescor as rotas_acervo_frescor
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import (
@@ -100,6 +101,9 @@ ROUTERS = [
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar
+    # --- frescor do acervo (L6-01-h): /api/acervo/camadas e /api/acervo/frescor/*; ANTES de rotas_acervo,
+    # senão /api/acervo/{fonte_id} engoliria os dois caminhos (o FastAPI resolve pela ordem de inclusão)
+    rotas_acervo_frescor.router,
     rotas_acervo.router,
     # --- conexão externa (L6-02-a): /api/conexoes, /api/conexoes/{id}, /api/conexoes/{id}/testar
     rotas_conexao.router,

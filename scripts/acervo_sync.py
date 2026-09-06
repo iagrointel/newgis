@@ -35,6 +35,7 @@ sucesso, mas também nunca é uma trava sem fim.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from datetime import UTC, datetime
@@ -128,7 +129,15 @@ def _contar_exato(conn, schema: str, tabela: str) -> int | None:
         return None
 
 
-def sincronizar(dsn_kwargs: dict, servidor: str, banco: str, limite: int | None = None) -> dict:
+def _no_schema(sql: str, schema: str) -> str:
+    """Mesma troca de `app.schema_ambiente.reescrever_schema`, para o script escrever no schema do AMBIENTE em
+    vez de sempre em `plat`. Sem isto, rodar este script dentro de uma trilha/homologação grava no registro de
+    PRODUÇÃO — achado do item L6-01-h ao precisar do registro populado numa base própria."""
+    return sql if schema == "plat" else sql.replace("plat.", f"{schema}.")
+
+
+def sincronizar(dsn_kwargs: dict, servidor: str, banco: str, limite: int | None = None,
+                schema: str = "plat") -> dict:
     inicio = time.monotonic()
     inicio_iso = datetime.now(UTC)
     conn = psycopg2.connect(cursor_factory=psycopg2.extras.RealDictCursor, **dsn_kwargs)
@@ -137,7 +146,7 @@ def sincronizar(dsn_kwargs: dict, servidor: str, banco: str, limite: int | None 
         with conn.cursor() as cur:
             cur.execute(SQL_CANDIDATAS, {"servidor": servidor, "banco": banco})
             candidatas = cur.fetchall()
-            cur.execute("SELECT acervo_camada_id, sincronizado_em FROM plat.acervo_camada")
+            cur.execute(_no_schema("SELECT acervo_camada_id, sincronizado_em FROM plat.acervo_camada", schema))
             ultima_sinc = {r["acervo_camada_id"]: r["sincronizado_em"] for r in cur.fetchall()}
         conn.commit()
 
@@ -169,7 +178,7 @@ def sincronizar(dsn_kwargs: dict, servidor: str, banco: str, limite: int | None 
                 if time.monotonic() - inicio > PRAZO_TOTAL_S:
                     estourou_prazo = True
                     cur.execute(
-                        SQL_UPSERT,
+                        _no_schema(SQL_UPSERT, schema),
                         {
                             "id": acervo_camada_id, "fonte_id": row["fonte_id"], "servidor": row["servidor"],
                             "banco": row["banco"], "schema_nome": row["schema_nome"], "tabela": row["tabela"],
@@ -213,7 +222,7 @@ def sincronizar(dsn_kwargs: dict, servidor: str, banco: str, limite: int | None 
                     expostas += 1
 
                 cur.execute(
-                    SQL_UPSERT,
+                    _no_schema(SQL_UPSERT, schema),
                     {
                         "id": acervo_camada_id, "fonte_id": row["fonte_id"], "servidor": row["servidor"],
                         "banco": row["banco"], "schema_nome": row["schema_nome"], "tabela": row["tabela"],
@@ -232,7 +241,7 @@ def sincronizar(dsn_kwargs: dict, servidor: str, banco: str, limite: int | None 
             removidas = 0
             if todos_os_ids_candidatos:
                 cur.execute(
-                    "DELETE FROM plat.acervo_camada WHERE acervo_camada_id <> ALL(%s)",
+                    _no_schema("DELETE FROM plat.acervo_camada WHERE acervo_camada_id <> ALL(%s)", schema),
                     (list(todos_os_ids_candidatos),),
                 )
                 removidas = cur.rowcount
@@ -246,9 +255,10 @@ def sincronizar(dsn_kwargs: dict, servidor: str, banco: str, limite: int | None 
         }
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO plat.acervo_camada_execucao "
-                "(iniciado_em, concluido_em, duracao_ms, candidatas, expostas, bloqueadas, pendentes, "
-                " fantasmas, nao_concluidas) VALUES (%s, now(), %s, %s, %s, %s, %s, %s, %s)",
+                _no_schema(
+                    "INSERT INTO plat.acervo_camada_execucao "
+                    "(iniciado_em, concluido_em, duracao_ms, candidatas, expostas, bloqueadas, pendentes, "
+                    " fantasmas, nao_concluidas) VALUES (%s, now(), %s, %s, %s, %s, %s, %s, %s)", schema),
                 (
                     inicio_iso, int((fim - inicio) * 1000), stats["candidatas"], expostas, bloqueadas,
                     pendentes, fantasmas, nao_concluidas,
@@ -265,9 +275,11 @@ def main() -> int:
     ap.add_argument("--banco", default="iagro_sat")
     ap.add_argument("--servidor", default="vultr", help="acervo.objeto.servidor desta máquina (medido: 'vultr')")
     ap.add_argument("--limite", type=int, default=None, help="só as N primeiras candidatas (depuração/teste)")
+    ap.add_argument("--schema", default=os.environ.get("PLAT_SCHEMA", "plat"),
+                    help="schema de destino (default: PLAT_SCHEMA do ambiente, ou plat)")
     args = ap.parse_args()
 
-    stats = sincronizar({"dbname": args.banco}, args.servidor, args.banco, args.limite)
+    stats = sincronizar({"dbname": args.banco}, args.servidor, args.banco, args.limite, args.schema)
     _log(
         f"candidatas={stats['candidatas']} expostas={stats['expostas']} bloqueadas={stats['bloqueadas']} "
         f"pendentes_de_licenca={stats['pendentes']} fantasmas={stats['fantasmas']} "

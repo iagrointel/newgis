@@ -29,14 +29,22 @@ from app.erros import ErroAPI
 
 router = APIRouter(tags=["acervo"])
 LER = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade"}
+# item L6-01-h-frescor-verificacao: o aviso "verificação vencida" na ficha e no cartão da lista vem da mesma
+# view por fonte que o mapa consome (plat.v_acervo_fonte_frescor), nunca de um cálculo repetido em Python.
+CAMPOS_FRESCOR = (
+    "coalesce(fr.verificacao_vencida, false) AS verificacao_vencida, fr.motivo_vencida, "
+    "coalesce(fr.camadas_expostas, 0) AS camadas_expostas, coalesce(fr.camadas_vencidas, 0) AS camadas_vencidas, "
+    "fr.verificada_em, coalesce(fr.endpoints_mortos, 0) AS endpoints_mortos"
+)
 CAMPOS_FICHA = (
     "f.fonte_id, f.nome, f.orgao, f.dominio, f.url, f.url_http, f.url_conferida_em, f.licenca, f.frescor, "
     "f.data_dado, f.data_acesso, f.script_gerador, f.sha256, f.comando_reexecucao, f.metodo, f.confianca, "
     "f.limites, f.proxima_verificacao, f.numero_tabelas, f.registros_estimados, f.bytes, f.procedencia_campos, "
     "f.procedencia_campos_possiveis, f.procedencia_pontuacao, f.atualizado_em, "
-    "coalesce(l.risco_pii, false) AS risco_pii, l.motivo AS risco_pii_motivo"
+    "coalesce(l.risco_pii, false) AS risco_pii, l.motivo AS risco_pii_motivo, " + CAMPOS_FRESCOR
 )
-CAMPOS_FICHA_DE = "plat.acervo_ficha f LEFT JOIN plat.acervo_lgpd l ON l.fonte_id = f.fonte_id"
+CAMPOS_FICHA_DE = ("plat.acervo_ficha f LEFT JOIN plat.acervo_lgpd l ON l.fonte_id = f.fonte_id "
+                   "LEFT JOIN plat.v_acervo_fonte_frescor fr ON fr.fonte_id = f.fonte_id")
 
 
 def _completude_texto(r: dict) -> str | None:
@@ -50,7 +58,7 @@ def _completude_texto(r: dict) -> str | None:
 
 def _iso_datas(r: dict) -> dict:
     j = dict(r)
-    for campo in ("url_conferida_em", "data_acesso", "proxima_verificacao", "testado_em"):
+    for campo in ("url_conferida_em", "data_acesso", "proxima_verificacao", "testado_em", "verificada_em"):
         if j.get(campo) is not None:
             j[campo] = j[campo].isoformat()
     if j.get("atualizado_em") is not None:
@@ -81,7 +89,7 @@ def listar(
         cur.execute(
             f"SELECT f.fonte_id, f.nome, f.orgao, f.dominio, f.licenca, f.frescor, f.numero_tabelas, "
             f"f.registros_estimados, f.procedencia_pontuacao, f.proxima_verificacao, "
-            f"coalesce(l.risco_pii, false) AS risco_pii, l.motivo AS risco_pii_motivo "
+            f"coalesce(l.risco_pii, false) AS risco_pii, l.motivo AS risco_pii_motivo, {CAMPOS_FRESCOR} "
             f"FROM {CAMPOS_FICHA_DE} WHERE {filtro} "
             f"ORDER BY f.dominio, f.nome LIMIT %s OFFSET %s",
             [*params, lim, desl],
