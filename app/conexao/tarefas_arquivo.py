@@ -221,7 +221,10 @@ def conexoes_arquivo_sincronizar(ctx, conexao_id: uuid.UUID) -> dict:
 @tarefa(
     nome="conexoes.arquivo_sincronizar_vencidas",
     descricao="Enfileira a sincronização das conexões de arquivo por URL cujo intervalo venceu (todos os inquilinos)",
-    parametros=VencidasParametros, pesado=False, memoria_mb=256, timeout_s=300, tentativas=1,
+    # 512 MB e não 256: MEDIDO nesta máquina em 06/09/2026 — a execução de 16:16 falhou com "memória excedida
+    # (limite 256 MB)". O processo filho já carrega o app inteiro (~107 MB de RSS só de import, com GDAL/
+    # shapely/pyproj no caminho) antes de rodar uma linha da tarefa; 256 MB não deixa folga sob pressão.
+    parametros=VencidasParametros, pesado=False, memoria_mb=512, timeout_s=300, tentativas=1,
     chave=lambda p: "arquivo_sincronizar_vencidas", perfil_minimo="admin",
 )
 def conexoes_arquivo_sincronizar_vencidas(ctx, limite: int = limites.CONEXAO_ARQUIVO_LOTE_PERIODICO) -> dict:
