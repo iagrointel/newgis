@@ -1,0 +1,332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "corpo": {
+      "additionalProperties": false,
+      "properties": {
+        "camadas": {
+          "description": "ordem da lista = ordem de desenho, do fundo para o topo",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "atualizacao_s": {
+                "description": "intervalo de reconsulta em segundos; 0 = nunca",
+                "maximum": 86400,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "escala_max": {
+                "description": "maior denominador de escala em que a camada desenha (mais longe); 0 = sem limite. Visível quando escala_min <= denominador <= escala_max",
+                "maximum": 1000000000,
+                "minimum": 0,
+                "type": "number"
+              },
+              "escala_min": {
+                "description": "menor denominador de escala em que a camada desenha (mais perto); 0 = sem limite",
+                "maximum": 1000000000,
+                "minimum": 0,
+                "type": "number"
+              },
+              "estilo": {
+                "additionalProperties": false,
+                "description": "estilo por referência a item do tipo estilo (ref) ou embutido (L2-02-a)",
+                "maxProperties": 1,
+                "minProperties": 1,
+                "properties": {
+                  "embutido": {
+                    "type": "object"
+                  },
+                  "ref": {
+                    "format": "uuid",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "filtro": {
+                "description": "CQL2-JSON; a gramática é validada pelo item que executa o filtro (L2-01-h)",
+                "type": "object"
+              },
+              "grupo": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "id de um grupo de corpo.grupos"
+              },
+              "hora": {
+                "additionalProperties": false,
+                "properties": {
+                  "campo_fim": {
+                    "anyOf": [
+                      {
+                        "maxLength": 63,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "campo_inicio": {
+                    "maxLength": 63,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "campo_inicio"
+                ],
+                "type": "object"
+              },
+              "id": {
+                "description": "identificador da entrada no documento (ULID); a MESMA camada do catálogo pode entrar duas vezes",
+                "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                "type": "string"
+              },
+              "opacidade": {
+                "default": 1,
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              "popup": {
+                "additionalProperties": false,
+                "description": "popup por referência a item de documento (ref) ou embutido (L2-01-d)",
+                "maxProperties": 1,
+                "minProperties": 1,
+                "properties": {
+                  "embutido": {
+                    "type": "object"
+                  },
+                  "ref": {
+                    "format": "uuid",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "ref": {
+                "description": "uuid do item do catálogo (camada_vetorial, vista_de_camada, raster, rede ou conexao do acervo); NUNCA uma URL",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "rotulos": {
+                "additionalProperties": false,
+                "properties": {
+                  "campo": {
+                    "maxLength": 63,
+                    "type": "string"
+                  },
+                  "cor": {
+                    "pattern": "^#[0-9a-fA-F]{6}$",
+                    "type": "string"
+                  },
+                  "tamanho": {
+                    "maximum": 72,
+                    "minimum": 4,
+                    "type": "number"
+                  },
+                  "visivel": {
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              },
+              "titulo": {
+                "description": "rótulo no mapa; ausente = título do item",
+                "maxLength": 250,
+                "type": "string"
+              },
+              "visivel": {
+                "default": true,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "ref"
+            ],
+            "type": "object"
+          },
+          "maxItems": 200,
+          "type": "array"
+        },
+        "crs_exibicao": {
+          "const": 3857,
+          "description": "CRS de exibição fixo (C12 do L2_CONCEITO); o CRS do dado é livre"
+        },
+        "extensao_inicial": {
+          "description": "[oeste, sul, leste, norte] em graus (EPSG:4326)",
+          "items": false,
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            },
+            {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            },
+            {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "favoritos": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "camadas_visiveis": {
+                "items": {
+                  "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              "extensao": {
+                "description": "[oeste, sul, leste, norte] em graus (EPSG:4326)",
+                "items": false,
+                "maxItems": 4,
+                "minItems": 4,
+                "prefixItems": [
+                  {
+                    "maximum": 180,
+                    "minimum": -180,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 90,
+                    "minimum": -90,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 180,
+                    "minimum": -180,
+                    "type": "number"
+                  },
+                  {
+                    "maximum": 90,
+                    "minimum": -90,
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              "nome": {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "nome",
+              "extensao"
+            ],
+            "type": "object"
+          },
+          "maxItems": 50,
+          "type": "array"
+        },
+        "grupos": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "aberto": {
+                "default": true,
+                "type": "boolean"
+              },
+              "id": {
+                "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                "type": "string"
+              },
+              "pai": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "titulo": {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "titulo"
+            ],
+            "type": "object"
+          },
+          "maxItems": 100,
+          "type": "array"
+        },
+        "mapa_base": {
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "id": {
+              "description": "identificador de mapa-base local (web/js/mapa/bases.js)",
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            "ref": {
+              "description": "uuid de um item de camada/raster usado como base",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "titulo": {
+              "maxLength": 250,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "rotacao": {
+          "maximum": 360,
+          "minimum": -360,
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "esquema_versao": {
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "esquema_versao",
+    "corpo"
+  ],
+  "title": "documento de mapa do plat_tstac (mapa-v1)",
+  "type": "object"
+}
