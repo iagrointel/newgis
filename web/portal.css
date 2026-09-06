@@ -1,0 +1,80 @@
+/* plat — portal da API (item L7-08-d). Folha PRÓPRIA da tela, escopada a `body.portal`: nenhuma regra
+   aqui tem seletor que alcance outra tela, pela mesma razão que a identidade nova entrou escopada a
+   `body.instrumento` (web/style.css, comentário do bloco "instrumento"). As variáveis (--painel, --acento,
+   --mono, --e2..--e6) vêm de lá; esta folha só arruma o que é específico de um portal de API: duas colunas
+   com índice de rota rolando à esquerda, verbo colorido, bloco de código legível e o painel de resposta. */
+
+body.portal .portal-app { display: grid; grid-template-columns: 22rem 1fr; min-height: 100vh; }
+body.portal .portal-lateral { overflow-y: auto; gap: var(--e3); }
+body.portal .portal-principal { max-width: 62rem; }
+
+/* --- campo da chave e filtro, dentro da barra */
+body.portal .portal-chave, body.portal .portal-busca { padding: var(--e3) var(--e4); display: grid; gap: var(--e2); }
+body.portal .portal-chave { border-bottom: 1px solid var(--borda); }
+body.portal .portal-chave label, body.portal .portal-busca label {
+  font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--fraco);
+}
+body.portal .portal-chave input, body.portal .portal-busca input { width: 100%; font-family: var(--mono); font-size: .85rem; }
+body.portal .portal-chave-estado { font-size: .75rem; color: var(--fraco); margin: 0; }
+
+/* --- índice */
+body.portal .portal-grupo {
+  font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--fraco);
+  margin: var(--e3) 0 var(--e2); padding: 0 var(--e4);
+}
+body.portal .portal-lista { list-style: none; margin: 0; padding: 0; }
+body.portal .portal-rota {
+  display: grid; grid-template-columns: 3.4rem 1fr; grid-template-areas: "verbo caminho" ". escopo";
+  gap: 0 var(--e2); width: 100%; text-align: left; background: none; border: 0;
+  border-left: 3px solid transparent; padding: var(--e2) var(--e4); color: var(--texto); cursor: pointer;
+}
+body.portal .portal-rota:hover, body.portal .portal-rota:focus-visible { background: var(--painel); border-left-color: var(--acento); }
+body.portal .portal-caminho { grid-area: caminho; font-size: .8rem; overflow-wrap: anywhere; }
+body.portal .portal-escopo { grid-area: escopo; font-size: .7rem; color: var(--fraco); }
+
+/* --- verbo: forma antes de cor (borda + peso), para não depender de enxergar a cor */
+body.portal .portal-verbo {
+  grid-area: verbo; font-family: var(--mono); font-size: .65rem; font-weight: 500; letter-spacing: .06em;
+  border: 1px solid currentColor; border-radius: 3px; padding: 0 .2rem; text-align: center; align-self: start;
+}
+body.portal .v-get { color: var(--ok); }
+body.portal .v-post { color: var(--acento); }
+body.portal .v-put, body.portal .v-patch { color: var(--atencao); }
+body.portal .v-delete { color: var(--falha); }
+
+/* --- rota escolhida */
+body.portal .portal-resumo { color: var(--fraco); margin: 0 0 var(--e3); }
+body.portal .portal-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--e3); margin: 0 0 var(--e4); }
+body.portal .portal-meta dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--fraco); }
+body.portal .portal-meta dd { margin: 0; font-size: .85rem; }
+body.portal .portal-parametros, body.portal .portal-perfis, body.portal .portal-exemplos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
+body.portal .portal-em { color: var(--fraco); font-size: .8rem; }
+body.portal .portal-experimentar { display: grid; gap: var(--e3); margin-bottom: var(--e3); }
+body.portal .portal-dica { color: var(--fraco); font-size: .8rem; }
+
+/* --- resposta e blocos de código */
+body.portal .portal-resposta { border-top: 1px solid var(--borda); padding-top: var(--e3); }
+body.portal .portal-resposta-linha { display: flex; gap: var(--e3); align-items: center; flex-wrap: wrap; margin: 0 0 var(--e2); font-size: .8rem; color: var(--fraco); }
+body.portal .portal-resposta-linha .etiqueta { font-family: var(--mono); font-weight: 500; border: 1px solid currentColor; border-radius: 3px; padding: 0 .35rem; }
+body.portal [data-faixa="ok"] { color: var(--ok); }
+body.portal [data-faixa="recusa"] { color: var(--atencao); }
+body.portal [data-faixa="falha"] { color: var(--falha); }
+body.portal .portal-corpo {
+  background: var(--fundo); border: 1px solid var(--borda); border-radius: var(--raio);
+  padding: var(--e3); margin: 0; max-height: 26rem; overflow: auto; font-size: .8rem; line-height: 1.5;
+  white-space: pre; tab-size: 2;
+}
+
+/* --- exemplos */
+body.portal .portal-abas { display: flex; gap: var(--e2); margin-bottom: var(--e3); }
+body.portal .portal-abas button { background: none; border: 1px solid var(--borda); border-radius: var(--raio); color: var(--fraco); padding: var(--e2) var(--e3); cursor: pointer; }
+body.portal .portal-abas button[aria-selected="true"] { color: var(--acento); border-color: var(--acento); font-weight: 600; }
+body.portal .portal-exemplos summary { cursor: pointer; display: flex; gap: var(--e3); align-items: baseline; flex-wrap: wrap; padding: var(--e2) 0; }
+body.portal .portal-exemplo-nome { font-size: .8rem; color: var(--acento); }
+body.portal .portal-exemplo-titulo { font-size: .85rem; }
+body.portal .portal-descricao p { margin: 0 0 var(--e2); }
+
+@media (max-width: 60rem) {
+  body.portal .portal-app { grid-template-columns: 1fr; }
+  body.portal .portal-lateral { height: auto; position: static; }
+}
