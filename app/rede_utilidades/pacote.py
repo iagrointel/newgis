@@ -373,6 +373,16 @@ def _conferir_regras_v2(bruto: str, doc: dict) -> list[dict]:
         elif tipo == "juncao_juncao":
             _papel(i, r, "de", GEOMETRIA_JUNCAO, "uma junção")
             _papel(i, r, "para", GEOMETRIA_JUNCAO, "uma junção")
+        if tipo != "juncao_aresta":
+            # terminal só faz sentido no lado da junção da junção-aresta; o resto é o item L4-03-b-terminais
+            for lado in ("de", "para", "via"):
+                ref = r.get(lado)
+                if isinstance(ref, dict) and ref.get("terminal") is not None:
+                    problemas.append(_problema(
+                        bruto, ["regras", i, lado, "terminal"], "terminal_nao_se_aplica",
+                        f"terminal no lado {lado!r} não se aplica à regra {tipo!r} (só a junção-aresta "
+                        f"declara terminal, e só no lado 'de')",
+                    ))
     return problemas
 
 
