@@ -48,6 +48,7 @@ class Preparacao:
     link_b: dict = field(default_factory=dict)  # L0-03: link por token de B (token em claro só aqui)
     categoria_b: dict = field(default_factory=dict)  # L0-03: categoria de B
     fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
+    camada_acervo: str = ""  # L6-01-b: view publicada em plat_acervo; "" quando nada está publicado nesta base
     conexao_b: dict = field(default_factory=dict)  # L6-02-a: conexão externa de B
 
     @property
@@ -112,6 +113,12 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_a.get("/api/acervo?limite=1")
     assert r.status_code == 200, r.text
     fonte_acervo = r.json()["itens"][0]["fonte_id"]
+    # L6-01-b: camada publicada (view em plat_acervo). O registro é da CASA, não de A nem de B; se nada estiver
+    # publicado nesta base, os casos apontam um nome inexistente e o esperado vira 404 — que já está no PADRÃO.
+    r = sessao_a.get("/api/acervo/camadas")
+    assert r.status_code == 200, r.text
+    publicadas = r.json()["camadas"]
+    camada_acervo = publicadas[0]["view_nome"] if publicadas else ""
     # L6-02-a: conexão externa de B, alvo das rotas de /api/conexoes (URL pública real — passa pela defesa de
     # SSRF na criação; dado aberto federal, nunca nome de cliente/parceiro)
     r = sessao_b.post(
@@ -122,7 +129,8 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     conexao_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b)
+                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, camada_acervo=camada_acervo,
+                      conexao_b=conexao_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -158,6 +166,12 @@ def _sem_marca(p: Preparacao, j: Any) -> None:
     texto = str(j)
     for marca in p.marcas_de_b:
         assert marca not in texto, f"resposta de A carrega dado de B: {marca}"
+
+
+def _cancelar_assinatura(p: Preparacao, j: Any) -> None:
+    """L6-01-b: desfaz a assinatura que a chamada 2xx de A criou (a rota não devolve id para _apagar_criado)."""
+    if p.camada_acervo:
+        p.sessao_a.delete(f"/api/acervo/camadas/{p.camada_acervo}/assinatura")
 
 
 def _so_a(p: Preparacao, j: Any) -> None:
@@ -454,6 +468,22 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/acervo/{p.fonte_acervo}/adicionar", proprio=True, aceita=frozenset({201}),
         verificar=_sem_marca, limpar=_apagar_criado(("DELETE", "/api/itens/{id}")),
     ),
+    # ---- L6-01-b publicação sem cópia: a camada é da CASA (compartilhada); a ASSINATURA é do inquilino.
+    # A assina para si e cancela na limpeza; ler feição/tile sem assinatura é 403, que já está no PADRÃO.
+    ("GET", "/api/acervo/camadas"): Caso(lambda p: "/api/acervo/camadas", proprio=True,
+                                         aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/acervo/camadas/{camada}/assinatura"): Caso(
+        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/assinatura", proprio=True,
+        aceita=frozenset({201}), verificar=_sem_marca, limpar=_cancelar_assinatura,
+    ),
+    ("DELETE", "/api/acervo/camadas/{camada}/assinatura"): Caso(
+        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/assinatura", proprio=True,
+        aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/acervo/camadas/{camada}/feicoes"): Caso(
+        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/feicoes?limite=1"),
+    ("GET", "/api/acervo/camadas/{camada}/tiles/{z}/{x}/{y}.mvt"): Caso(
+        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/tiles/10/379/580.mvt"),
     # ---- L6-02-a modelo de conexão externa: conexão é do INQUILINO (tenant_id + RLS), diferente do acervo
     # acima; GET/POST agem só sobre o próprio chamador (o POST usa o MESMO nome de B para provar que a
     # unicidade de nome é por inquilino, não global); GET/PATCH/DELETE/testar por id de B são cross-tenant puro
