@@ -166,6 +166,13 @@ ORG_LOGO_PIXELS_MAX = 25_000_000          # mesma defesa de bomba de descompress
 ORG_LOGO_LADO = 300                       # canvas quadrado 300×300 (portão do item-pai)
 ORG_COTA_BYTES_MIN = 100 * 1024 * 1024    # 100 MiB: abaixo disso o próprio inquilino de demonstração não sobe
 ORG_COTA_USUARIOS_MIN = 1
+# Teto ABSOLUTO da instalação (achados G4-04/G4-05: o admin do inquilino passou de 20 GiB para 9e18 bytes e de
+# 2.000 para 1e9 assentos com HTTP 200, e a cota chegou ao bucket do Garage). Quem escolhe o teto de CADA
+# inquilino é a plataforma (`PUT /api/plataforma/inquilinos/{id}/cotas`, superadmin, grava
+# plat.tenant.cota_bytes_teto/cota_usuarios_teto); o inquilino só escolhe abaixo do próprio teto. Estes dois
+# números são o limite que nem a plataforma passa, e estão repetidos em plat.tenant_cotas_teto_definir.
+ORG_COTA_BYTES_TETO_MAX = 1024 * 1024 * 1024 * 1024   # 1 TiB
+ORG_COTA_USUARIOS_TETO_MAX = 100_000
 ORG_COTA_USUARIOS_PADRAO = 2000           # bem acima do maior lote (LOTE_MAX=100) e do uso medido em demo (T3: 59)
 
 # --- perfil próprio do usuário (L0-02-g-perfil-usuario; POST/PUT /api/eu, app/auth/rotas_eu.py): idioma,
