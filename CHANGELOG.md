@@ -3,6 +3,50 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L0-09-metadado-catalogo: metadado ISO 19139 por item + catálogo externo OGC API Records)
+
+`GET /api/itens/{id}/metadado.xml` (`app/catalogo/metadado.py`) gera `gmd:MD_Metadata` (ISO 19139/GMD — o
+perfil que o Perfil MGB 2.0/GeoNetwork da INDE consomem) a partir do próprio item (título, resumo/descrição,
+palavras-chave, créditos, termos de uso, extensão geográfica, dono como `pointOfContact`, inquilino como
+`contact`) e de `dados.procedencia` quando existir (vira `dataQualityInfo`/`lineage`, D17 do L0_CONCEITO); o
+servidor VALIDA o XML contra o XSD oficial antes de responder — nunca confia em si mesmo. O XSD (perfil
+`schemas.opengis.net/iso/19139/20070417`, 57 arquivos, 796 KB) é baixado uma vez por
+`docs/xsd/baixar_iso19139.py`, que reescreve todo `schemaLocation` absoluto para caminho relativo dentro do
+próprio cache — depois de rodado, a validação nunca mais toca rede (comitado em `docs/xsd/cache/`, refeito
+pelo `install.sh`; prova: a validação passa com o `socket.socket` da máquina bloqueado de propósito).
+
+Catálogo externo por protocolo padrão: **OGC API Records** (OGC 20-004r1) em `/ogc/records`
+(`app/catalogo/rotas_ogc.py`) — pouso, `/conformance`, uma coleção (`catalogo`, o catálogo inteiro do
+inquilino), `/items` (GeoJSON, filtros `q`/`bbox`/`tipo`/`tags`, paginação cursor, reaproveitando
+`listar_ids`/`carregar_varios` de `rotas_itens.py`) e `/items/{id}`, com link para o metadado ISO acima. CSW
+fica de fora desta passagem (justificativa no próprio módulo: RAM da máquina no limite, nenhuma biblioteca
+CSW instalada, protocolo legado frente à API REST — custo de mudar registrado como médio). As duas rotas
+exigem sempre `catalogo:ler` (sessão OU token de serviço do L0-02) — nunca abertas, nem a página de pouso; o
+isolamento por inquilino é o MESMO mecanismo de RLS de `plat.item` que `GET /api/itens` já usa (nenhum filtro
+novo escrito nas rotas), o que é também a prova mais forte da refutação do item.
+
+9 testes próprios verdes (`tests/api/catalogo/test_metadado_ogc.py`): item completo e item mínimo (só
+obrigatórios) validam contra o XSD; item inexistente e de outro inquilino → `404`; token `catalogo:ler` lê o
+próprio inquilino e nunca o outro (nem por XML nem pelo registro OGC); as duas rotas OGC recusam chamada sem
+autenticação (`401`); coleção e conformidade respondem; o registro do item aponta para o seu próprio
+metadado.xml. Sem migração: nada disto precisou de coluna nova em `plat.item` (o bloco `dados.procedencia`
+que a exportação usa já é do modelo existente da ADR 0004).
+
+**Pendências nomeadas** (não escondidas): ISO 19115-3 (só 19139 nesta passagem); CSW; e a varredura cruzada
+A→B AUTOMÁTICA das duas rotas novas via `docs/openapi.json`/`tests/api/cruzado_casos.py` — este turno tinha
+outras trilhas regravando esses dois arquivos ao vivo (concorrência real no mesmo repositório: `app/main.py`
+e `app/catalogo/rotas_itens.py` também mudaram por baixo durante a construção, por outro item —
+`L0-04-ingestao` e `L5-05-documento-versoes` — sem colisão real de linha graças a `git update-index` cirúrgico
+em vez de `git add` cru); regenerar `docs/openapi.json` agora capturaria estado parcial de trilhas alheias,
+por isso fica para a integração final do turno. O isolamento por inquilino já está PROVADO pelos 9 testes
+próprios; falta só o item na varredura genérica. Ver `docs/PARIDADE.md` e `laco/handoffs/T3/L0-09-metadado.md`.
+
+### Commits
+
+| sha | mensagem |
+|---|---|
+| (este) | Metadado ISO 19139 por item e catálogo externo OGC API Records (item L0-09-metadado-catalogo) |
+
 ## turno 3, setembro de 2026 (item L0-08-d-ldap: LDAP/Active Directory como provedor de login externo)
 
 Módulo isolado `app/auth/ldap.py` (`ldap3` 2.9.1, puro Python, sem dependência de sistema — só a venv):

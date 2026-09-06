@@ -217,8 +217,12 @@ administrador cria outro administrador (`403 so_admin_cria_admin`). Login repeti
 recebida: o último administrador ativo não se desabilita, não se rebaixa nem se apaga (`409 ultimo_admin`); ninguém
 desabilita a própria conta (`409 proprio_usuario`); só administrador altera administrador
 (`403 so_admin_altera_admin`); quem possui grupos não é rebaixado nem apagado antes de transferir os grupos
-(`409 possui_grupos`, com a lista dos grupos). Desabilitar apaga as sessões do usuário na hora; `Reabilitar` desfaz.
-`Apagar` pede confirmação e não tem volta.
+(`409 possui_grupos`, com a lista dos grupos); quem possui itens do catálogo (mapas, camadas, pastas) não é apagado
+antes de transferi-los ou apagá-los (`409 possui_itens`, com a lista dos títulos — `plat.item.dono_id` é chave
+estrangeira sem `ON DELETE`, então sem esta checagem o banco recusaria com um erro genérico em vez de nomear o que
+falta resolver; a transferência em massa é o item L0-03-j, `POST /api/itens/transferir`). Desabilitar apaga as
+sessões do usuário na hora (medido em `desabilitar_para_401_ms`, bem abaixo de 1 s); `Reabilitar` desfaz. `Apagar`
+pede confirmação e não tem volta.
 
 ### 4.3 Redefinir senha, desligar segundo fator, desbloquear
 
@@ -742,3 +746,46 @@ Sem StartTLS testado contra um diretório real (só contra o de teste, sem certi
 configuração nem botão de entrada (frontend, L0-08-f); contador de força bruta do bind é em memória de
 processo (não compartilhado entre os `--workers 2`, não sobrevive a reinício — nomeado, não escondido). Ver
 `docs/adr/0008-ldap-ad.md` e `laco/handoffs/T3/L0-08-d-ldap.md`.
+
+## 16. Metadado ISO e catálogo externo (item L0-09-metadado-catalogo)
+
+### 16.1 Exportar o metadado ISO 19139 de um item
+
+```
+GET /api/itens/{id}/metadado.xml
+```
+
+Devolve `gmd:MD_Metadata` (ISO 19139/GMD — o mesmo perfil que o Perfil MGB 2.0/INDE consome), montado a partir
+do próprio item (título, resumo/descrição, palavras-chave, créditos, termos de uso, extensão geográfica, dono
+como `pointOfContact`) e do bloco `dados.procedencia` quando existir (vira `dataQualityInfo`/`lineage`). O
+servidor valida o XML contra o XSD oficial ANTES de responder — se algum dia isso falhar é erro de build do
+gerador (`500 metadado_invalido`), nunca do pedido. Aceita sessão OU token de serviço com escopo `catalogo:ler`
+(`POST /api/tokens {"escopos": ["catalogo:ler"]}`, seção 7); nunca anônimo. Item de outro inquilino: `404`,
+igual a qualquer outra rota do catálogo (a RLS de `plat.item` decide, não um filtro escrito na rota).
+
+O XSD fica cacheado OFFLINE em `docs/xsd/cache/` (baixado uma vez por `venv/bin/python
+docs/xsd/baixar_iso19139.py`, comitado no repositório e refeito pelo `install.sh`); a rota nunca depende de
+rede para validar.
+
+### 16.2 Catálogo externo por protocolo padrão: OGC API Records
+
+```
+GET /ogc/records                                          # pouso
+GET /ogc/records/conformance
+GET /ogc/records/collections                              # 1 coleção: "catalogo"
+GET /ogc/records/collections/catalogo/items?q=...&bbox=...&tipo=...&tags=...&limit=...
+GET /ogc/records/collections/catalogo/items/{id}
+```
+
+Descoberta do catálogo por um cliente OGC padrão (OGC API — Records, Parte 1: Core, 20-004r1), sempre
+autenticada (mesmo escopo `catalogo:ler` da seção 16.1) — nunca aberta, mesmo a página de pouso. Cada registro
+(GeoJSON) traz `links` para o item na API própria e para o metadado ISO da seção 16.1. Os mesmos filtros
+simples da lista de itens (`GET /api/itens`) valem aqui: `q` (busca), `bbox`, `tipo`, `tags`; a paginação usa
+`limit`/`offset` e o link `rel=next` com `cursor` para a página seguinte. Isolamento por inquilino: o registro
+de um item nunca aparece para o token/sessão de outro inquilino (mesma RLS da seção 16.1, provada em
+`tests/api/catalogo/test_metadado_ogc.py`).
+
+CSW (Catalog Service for the Web) fica de fora desta passagem — decisão registrada em
+`app/catalogo/rotas_ogc.py` e em `docs/PARIDADE.md`: RAM desta máquina no limite, nenhuma biblioteca CSW
+instalada, e o protocolo é legado frente ao OGC API Records. Ver `laco/handoffs/T3/L0-09-metadado.md`.
+

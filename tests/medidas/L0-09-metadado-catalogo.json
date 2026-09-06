@@ -1,0 +1,22 @@
+{
+ "item": "L0-09-metadado-catalogo",
+ "medidas": {
+  "mediana_5_metadado_xml_ms": {
+   "valor": 10.4,
+   "unidade": "ms",
+   "comando": "mediana de 5x GET /api/itens/{id}/metadado.xml (gera + valida contra o XSD)"
+  },
+  "xsd_cache_arquivos": {
+   "valor": 57,
+   "unidade": "arquivos",
+   "comando": "len(docs/xsd/cache/MANIFESTO.json['arquivos']) — árvore ISO 19139 baixada 1x, offline depois"
+  },
+  "xsd_cache_bytes": {
+   "valor": 611925,
+   "unidade": "bytes",
+   "comando": "soma de bytes de docs/xsd/cache/MANIFESTO.json['arquivos']"
+  }
+ },
+ "gerado_em": "2026-09-06T12:30:34Z",
+ "git_sha": "e30515b57814"
+}

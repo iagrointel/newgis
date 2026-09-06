@@ -744,6 +744,17 @@ conta 37,8, 2FA 9,7, usuários 59,4, grupos 60,8, papéis 58,7, tokens 78,9, log
   rótulo, formulário, regra de atributo, restrição/validação (isso é `L5-11` e outros itens do L2-10); sem
   tipos lista/dicionário/geometria; sem os ≥ 40 funções e ≥ 200 vetores da hipótese cheia; sem tabela de
   paridade completa com o Arcade function reference — ver `laco/handoffs/T3/L2-10-c-expressao.md`.
+- `L0-09-metadado-catalogo`: só a exportação ISO 19139 por item (`GET /api/itens/{id}/metadado.xml`,
+  `app/catalogo/metadado.py`, XSD oficial cacheado offline em `docs/xsd/cache/`) e o catálogo externo **OGC
+  API Records** (`/ogc/records`, `app/catalogo/rotas_ogc.py`) existem — os dois autenticados por
+  `catalogo:ler` (sessão ou token de serviço), nunca abertos; isolamento por inquilino vem da RLS de
+  `plat.item` já existente (mesmo mecanismo de `GET /api/itens`), provado em
+  `tests/api/catalogo/test_metadado_ogc.py`. Sem: editor de metadado na tela (`dados.procedencia` e os demais
+  campos MGB 2.0 ainda são escritos por API, não por formulário), ISO 19115-3 (só 19139), **CSW** (decisão
+  registrada em `app/catalogo/rotas_ogc.py`: RAM no limite, nenhuma lib CSW instalada, protocolo legado),
+  varredura cruzada A→B automática das duas rotas novas (pendente de `make openapi` + `cruzado_casos.py`,
+  adiado porque outras trilhas do turno regravavam os dois arquivos ao vivo) — ver
+  `laco/handoffs/T3/L0-09-metadado.md`.
 
 O placar do laço, a tabela dos itens do backlog e a fronteira por linha estão em
 `/home/dev/plataforma/laco/PAINEL.md`, gerado por `laco/gera_painel.py` a partir de `laco/estado.json`.

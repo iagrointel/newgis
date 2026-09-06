@@ -14,7 +14,7 @@ from app import db, limites
 from app.auth.comum import campos_json, paginacao
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import busca as mod_busca
-from app.catalogo import comum, diff, relacoes, texto, tipos
+from app.catalogo import comum, diff, metadado, relacoes, texto, tipos
 from app.catalogo.comum import (
     carregar,
     exigir_edicao,
@@ -43,6 +43,7 @@ from app.catalogo.modelos import (
     VersaoCompleta,
 )
 from app.erros import ErroAPI
+from app.settings import settings
 
 router = APIRouter(tags=["catalogo"])
 LER = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade"}
@@ -582,6 +583,24 @@ def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteu
 def ver(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
     with db.db(auth.contexto()) as cur:
         return item_json(item_ou_404(cur, id), auth)
+
+
+@router.get("/api/itens/{id}/metadado.xml", openapi_extra=LER)
+def metadado_iso(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Metadado ISO 19139/GMD do item (item L0-09-metadado-catalogo; ADR 0004 D17). Validado contra o XSD
+    oficial ANTES de sair (docs/xsd/cache/, baixado por docs/xsd/baixar_iso19139.py); `item_ou_404` + RLS de
+    `plat.item` garantem que o token/sessão de um inquilino nunca gera o XML de item de outro."""
+    with db.db(auth.contexto()) as cur:
+        r = item_ou_404(cur, id)
+    try:
+        xml = metadado.gerar_xml(r, auth.tenant_nome, settings.PLAT_URL_PUBLICA.rstrip("/"))
+        metadado.validar(xml)
+    except metadado.ErroXSDAusente as e:
+        raise ErroAPI(503, "indisponivel", "cache do XSD ISO 19139 ausente nesta máquina") from e
+    except metadado.ErroMetadadoInvalido as e:
+        # nunca deveria acontecer para um item bem formado; erro de build do gerador, não do pedido do cliente
+        raise ErroAPI(500, "metadado_invalido", "metadado gerado não validou contra o XSD", e.erros) from e
+    return Response(content=xml, media_type="application/xml")
 
 
 def editar_item(
