@@ -102,20 +102,32 @@ def registrar_evento(
     )
 
 
-def erro_do_banco(e: Exception) -> ErroAPI:
-    """RaiseException com código curto → ErroAPI; violação de unicidade/CHECK/FK → 409/422."""
+def erro_do_banco(e: Exception, *, expor_restricao: bool = True) -> ErroAPI:
+    """RaiseException com código curto → ErroAPI; violação de unicidade/CHECK/FK → 409/422.
+
+    `expor_restricao=False` em ROTA PÚBLICA (sem credencial): o nome do índice/constraint é topologia interna do
+    banco e não vai para quem ainda não se autenticou (achado G1-l3 do adversário do turno 3, em
+    POST /api/login/ldap). Em rota autenticada o nome continua saindo — ele é o que deixa o administrador
+    entender qual regra recusou a operação.
+    """
+
+    def _detalhe(nome: str | None) -> dict | None:
+        return {"restricao": nome} if expor_restricao else None
+
     if isinstance(e, psycopg2.errors.RaiseException):
         codigo = (e.diag.message_primary or "").strip()
         if codigo in ERROS_DO_BANCO:
             status, mensagem = ERROS_DO_BANCO[codigo]
             return ErroAPI(status, codigo, mensagem)
+        if not expor_restricao:
+            return ErroAPI(409, "regra_do_banco", "a operação foi recusada por uma regra da plataforma")
         return ErroAPI(409, "regra_do_banco", codigo or "regra do banco recusou a operação")
     if isinstance(e, psycopg2.errors.UniqueViolation):
-        return ErroAPI(409, "conflito", "já existe um registro com esse valor", {"restricao": e.diag.constraint_name})
+        return ErroAPI(409, "conflito", "já existe um registro com esse valor", _detalhe(e.diag.constraint_name))
     if isinstance(e, psycopg2.errors.CheckViolation):
-        return ErroAPI(422, "validacao", "valor fora do permitido", {"restricao": e.diag.constraint_name})
+        return ErroAPI(422, "validacao", "valor fora do permitido", _detalhe(e.diag.constraint_name))
     if isinstance(e, psycopg2.errors.ForeignKeyViolation):
-        return ErroAPI(409, "em_uso", "registro referenciado por outro", {"restricao": e.diag.constraint_name})
+        return ErroAPI(409, "em_uso", "registro referenciado por outro", _detalhe(e.diag.constraint_name))
     if isinstance(e, psycopg2.errors.InsufficientPrivilege):
         return ErroAPI(403, "sem_permissao", "operação fora do inquilino da sessão")
     if isinstance(e, psycopg2.errors.ReadOnlySqlTransaction):

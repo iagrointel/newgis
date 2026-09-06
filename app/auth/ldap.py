@@ -22,6 +22,7 @@ import base64
 import hashlib
 import logging
 import os
+import re
 import secrets
 import threading
 import time
@@ -77,6 +78,40 @@ def decifrar_bind_senha(armazenado: str, plat_secret: str) -> str:
 # sempre-verdadeiro (RFC 4515 seção 3); é o ataque nomeado na refutação do item.
 def montar_filtro(template: str, login: str) -> str:
     return template.replace("{login}", escape_filter_chars(login))
+
+
+# ---------------------------------------------------------------- atributo CANÔNICO do login (achado G1-l3 do
+# adversário do turno 3). O texto que o cliente digita é só uma CHAVE DE BUSCA: quem manda no nome da identidade
+# local é o diretório. `filtro_usuario` já diz qual atributo é a chave — em `(uid={login})` é `uid`, em
+# `(cn={login})` é `cn` — então é dele que sai o login local. Sem isso, um diretório que case `ana.silva*` com a
+# entrada de ana.silva (glauth do próprio item; qualquer diretório com matching frouxo) deixa uma requisição NÃO
+# AUTENTICADA criar a conta local `ana.silva*` amarrada ao DN de ana.silva e trancar o login canônico.
+_ATRIBUTO_DO_FILTRO = re.compile(r"\(\s*([A-Za-z][A-Za-z0-9;.\-]*)\s*=\s*\{login\}")
+
+
+def atributo_login_do_filtro(template: str) -> str | None:
+    """Nome do atributo comparado com `{login}` no filtro do provedor (None se o filtro não tiver essa forma)."""
+    m = _ATRIBUTO_DO_FILTRO.search(template or "")
+    return m.group(1) if m else None
+
+
+def _primeiro_rdn(dn: str) -> str | None:
+    """Valor do primeiro RDN do DN (`cn=ana.silva,ou=...` -> `ana.silva`): último recurso quando o filtro não
+    nomeia atributo nenhum ou a entrada não devolve o atributo pedido."""
+    primeiro = (dn or "").split(",", 1)[0]
+    return primeiro.split("=", 1)[1].strip() or None if "=" in primeiro else None
+
+
+def login_canonico(entrada, dn: str, filtro_usuario: str, login_digitado: str) -> str:
+    """Login LOCAL da conta provisionada. Ordem: atributo nomeado no filtro -> uid -> primeiro RDN do DN ->
+    (só se nada disso existir) o texto digitado. Nunca é o texto digitado quando o diretório respondeu algo."""
+    for nome in (atributo_login_do_filtro(filtro_usuario), "uid"):
+        if not nome:
+            continue
+        valores = _atributo(entrada, nome)
+        if valores and str(valores[0]).strip():
+            return str(valores[0]).strip()
+    return _primeiro_rdn(dn) or login_digitado.strip()
 
 
 # ---------------------------------------------------------------- mapeamento de grupo -> perfil (D5 do
@@ -228,11 +263,17 @@ def _autenticar_e_buscar_grupos_interno(
         if not busca.bind():
             raise ErroLdap(f"bind_servico_falhou:{busca.result}")
         filtro = montar_filtro(filtro_usuario, login)
+        # o atributo que o filtro usa como chave entra na lista de leitura: é dele que sai o login LOCAL
+        # (login_canonico); sem pedi-lo, a entrada volta sem ele e sobraria o texto digitado pelo cliente
+        atributos = ["cn", "uid", "displayName", "mail", atributo_grupos]
+        chave = atributo_login_do_filtro(filtro_usuario)
+        if chave and chave not in atributos:
+            atributos.append(chave)
         ok = busca.search(
             search_base=base_dn,
             search_filter=filtro,
             search_scope=ldap3.SUBTREE,
-            attributes=["cn", "displayName", "mail", atributo_grupos],
+            attributes=atributos,
             size_limit=limites.LDAP_BUSCA_MAX + 1,
         )
         entradas = list(busca.entries) if ok else []
@@ -267,6 +308,7 @@ def _autenticar_e_buscar_grupos_interno(
 
     return {
         "dn": dn_usuario,
+        "login": login_canonico(entrada, dn_usuario, filtro_usuario, login),
         "nome": _valor("displayName") or _valor("cn") or login,
         "email": _valor("mail"),
         "grupos": [str(g) for g in _atributo(entrada, atributo_grupos)],
@@ -338,6 +380,9 @@ def login_ldap(corpo: LoginEntrada, request: Request, resposta: Response):
         request.state.resultado = "credenciais_invalidas"
         raise ErroAPI(401, "credenciais_invalidas", "inquilino, usuário ou senha inválidos") from e
     _limpar_falhas_bind(r["tenant_id"], login)
+    # daqui para a frente o texto digitado NÃO é mais usado como identidade: vale o que o diretório respondeu
+    # (achado G1-l3). `login` só serve ainda para o contador de falhas, que é por chave de busca.
+    login_local = achado["login"].strip().lower()  # plat.ldap_provisionar grava em minúsculas
     perfil = perfil_por_grupos(achado["grupos"], r["mapa_grupo_perfil"] or {}, r["perfil_padrao"])
     if perfil is None:
         request.state.resultado = "sem_grupo_mapeado"
@@ -350,21 +395,31 @@ def login_ldap(corpo: LoginEntrada, request: Request, resposta: Response):
         with db.db() as cur:
             cur.execute(
                 "SELECT * FROM plat.ldap_provisionar(%s, %s, %s, %s, %s, %s, true)",
-                (r["tenant_id"], login, achado["nome"], achado["email"], perfil, achado["dn"]),
+                (r["tenant_id"], login_local, achado["nome"], achado["email"], perfil, achado["dn"]),
             )
             prov = cur.fetchone()
-            cur.execute("SELECT * FROM plat.auth_login(%s, %s)", (tenant_slug, login))
+            cur.execute("SELECT * FROM plat.auth_login(%s, %s)", (tenant_slug, login_local))
             linha = cur.fetchone()
     except psycopg2.errors.RaiseException as e:
-        if (e.diag.message_primary or "").strip() == "login_em_uso_local":
+        codigo = (e.diag.message_primary or "").strip()
+        if codigo == "login_em_uso_local":
             request.state.resultado = "login_em_uso_local"
             raise ErroAPI(
                 409, "login_em_uso_local", "já existe uma conta local com este login; fale com o administrador"
             ) from e
-        raise erro_do_banco(e) from e
+        if codigo == "login_em_uso_externo":
+            request.state.resultado = "login_em_uso_externo"
+            raise ErroAPI(
+                409,
+                "login_em_uso_externo",
+                "este login já pertence a outra identidade do diretório neste inquilino; peça ao administrador "
+                "para desfazer o vínculo (DELETE /api/usuarios/{id}/vinculo-externo)",
+            ) from e
+        raise erro_do_banco(e, expor_restricao=False) from e
     except psycopg2.Error as e:
-        raise erro_do_banco(e) from e
-    ctx = db.Contexto(linha["tenant_id"], linha["usuario_id"], login)
+        # rota PÚBLICA e não autenticada: nome de restrição/índice do banco nunca sai daqui (achado G1-l3)
+        raise erro_do_banco(e, expor_restricao=False) from e
+    ctx = db.Contexto(linha["tenant_id"], linha["usuario_id"], login_local.lower())
     with db.db(ctx) as cur:
         registrar_evento(
             cur,
@@ -375,6 +430,8 @@ def login_ldap(corpo: LoginEntrada, request: Request, resposta: Response):
             {"origem": "ldap", "perfil": perfil, "perfil_anterior": prov["perfil_anterior"]},
         )
     politica_sessao = politica_de(linha["config"], tenant_slug)
+    # None de propósito: conta de origem 'ldap' não tem senha local, logo não há expiração de senha a
+    # aplicar (a política de senha do diretório é do diretório). Ver NAO_INFORMADO em rotas_login.py.
     return _abrir_sessao(request, resposta, ctx, linha["usuario_id"], politica_sessao, "ldap", None)
 
 

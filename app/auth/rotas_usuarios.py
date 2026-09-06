@@ -555,6 +555,43 @@ def desbloquear(id: int, request: Request, auth: Auth = autenticado("membros.ger
 
 
 @router.delete(
+    "/usuarios/{id}/vinculo-externo",
+    status_code=204,
+    response_class=Response,
+    openapi_extra={"x-auth": "S/T", "x-privilegio": "membros.gerir"},
+)
+def remover_vinculo_externo(id: int, request: Request, auth: Auth = autenticado("membros.gerir")):
+    """Desfaz o vínculo entre uma conta local e a identidade do diretório (`usuario.sujeito_externo`).
+
+    Existe por causa do achado G1-l3 do adversário do turno 3: enquanto o login LDAP nascia do texto cru do
+    cliente, um vínculo errado podia tomar o DN de outra pessoa e não havia caminho administrativo para
+    desfazer — a conta legítima ficava trancada. O conserto principal é provisionar pelo atributo canônico do
+    diretório; esta rota é a saída para os vínculos que já estejam errados (e para qualquer troca de identidade
+    no diretório). Não apaga a conta nem os itens dela: a conta fica sem vínculo externo e desabilitada, porque
+    conta de origem 'ldap' não tem senha local e sem vínculo não teria como entrar; reabilitar é o caminho
+    normal de PUT /api/usuarios/{id} depois do vínculo novo.
+    """
+    with db.db(auth.contexto()) as cur:
+        alvo = usuario_ou_404(cur, id)
+        so_admin_sobre_admin(auth, alvo["perfil"], None, "so_admin_altera_admin")
+        if alvo["origem"] == "local":
+            raise ErroAPI(409, "sem_vinculo_externo", "esta conta é local; não há vínculo com diretório a desfazer")
+        cur.execute(
+            "UPDATE plat.usuario SET sujeito_externo = NULL, ativo = false WHERE id = %s "
+            "AND sujeito_externo IS NOT NULL",
+            (id,),
+        )
+        if cur.rowcount == 0:
+            raise ErroAPI(409, "sem_vinculo_externo", "esta conta não tem vínculo com diretório a desfazer")
+        cur.execute("SELECT plat.sessoes_encerrar_usuario(%s, NULL)", (id,))
+        registrar_evento(
+            cur, request, "usuarios/vinculo_externo_remover", "usuario", id,
+            {"login": alvo["login"], "origem": alvo["origem"]},
+        )
+    return Response(status_code=204)
+
+
+@router.delete(
     "/usuarios/{id}",
     status_code=204,
     response_class=Response,
