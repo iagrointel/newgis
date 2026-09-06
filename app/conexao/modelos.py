@@ -95,3 +95,52 @@ class SaudeHistoricoPagina(Saida):
 
 class PublicarCamadaEntrada(Modelo):
     titulo: str | None = Field(default=None, min_length=1, max_length=250)
+
+
+# --- conector de feição externa (item L6-02-c-wfs-ogcapi): WFS 2.0 e OGC API - Features no modo REFERENCIADO.
+# A cópia (modo copiado) não tem rota própria: é o job `conexao.copiar_vetor` por `POST /api/jobs`, como toda
+# tarefa pesada da plataforma.
+
+
+class ColecaoSaida(Saida):
+    nome: str
+    titulo: str | None = None
+    crs_nativo: str | None = None       # verbatim do serviço ("urn:ogc:def:crs:EPSG::4674"); None = não declarou
+    srid_nativo: int | None = None
+    srid_entregue: int
+    extent_4326: list[float] | None = None
+    formatos: list[str] = []
+
+
+class ColecoesPagina(Saida):
+    total: int
+    itens: list[ColecaoSaida]
+    do_cache: bool = False
+
+
+class CampoSaida(Saida):
+    nome: str            # já normalizado (o mesmo normalizador da ingestão de arquivo)
+    origem: str          # nome como o serviço o chama
+    tipo: str            # tipo de coluna PostgreSQL a que ele corresponde
+    tipo_declarado: str  # o que o serviço declarou, verbatim
+    origem_do_tipo: str  # describefeaturetype | queryables | amostra (inferido, nunca declarado)
+
+
+class CamposSaida(Saida):
+    colecao: str
+    itens: list[CampoSaida]
+    do_cache: bool = False
+
+
+class FeicoesSaida(Saida):
+    """GeoJSON + o que a paginação apurou. `numero_matched` é o total DECLARADO pelo serviço (pode ser None:
+    nem todo serviço declara) e `numberReturned` é o que veio nesta resposta — os dois juntos, nunca um só."""
+
+    type: str = "FeatureCollection"
+    features: list[dict]
+    numberReturned: int  # noqa: N815 — nome do padrão OGC API - Features, não do repositório
+    numberMatched: int | None = None  # noqa: N815
+    colecao: str
+    srid_entregue: int
+    do_cache: bool = False
+    avisos: list[str] = []
