@@ -280,6 +280,39 @@ def test_api_recusa_classe_invalida_e_corpo_vazio(cliente, sessao_a):
         sessao_a.delete(f"/api/tokens/{tok['id']}")
 
 
+def test_api_recusa_script_disfarcado_de_jpeg(cliente, sessao_a):
+    """Item L7-03-b-antivirus-anexos, cláusula literal do portão: Content-Type declarado `image/jpeg` (a
+    escolha do cliente, equivalente a nomear o arquivo `.jpg`), bytes reais de um script de shell — 415, nunca
+    201; o objeto nunca chega a existir no Garage (não há chave para conferir, a varredura corre ANTES do PUT)."""
+    tok = sessao_a.post("/api/tokens", json={"nome": "zt-arquivos-d", "escopos": ["admin:inquilino"]}).json()
+    try:
+        h = {"Authorization": f"Bearer {tok['token']}", "content-type": "image/jpeg"}
+        r = cliente.post("/api/arquivos?classe=zt_disfarcado", content=b"#!/bin/sh\necho pwned\n", headers=h)
+        assert r.status_code == 415, r.text
+        corpo = r.json()
+        assert corpo["erro"] == "conteudo_recusado"
+        assert corpo["detalhe"]["tipo_detectado"] == "text/x-shellscript"
+    finally:
+        sessao_a.delete(f"/api/tokens/{tok['id']}")
+
+
+def test_api_recusa_script_grande_disfarcado_de_png_antes_do_multipart(cliente, sessao_a):
+    """Mesma cláusula, mas grande o bastante (> ARQUIVO_PARTE_BYTES) para abrir o caminho multipart: a
+    varredura roda na 1ª parte, ANTES de `objetos.parte_iniciar` — nenhum multipart chega a abrir no Garage."""
+    from app import limites
+
+    tok = sessao_a.post("/api/tokens", json={"nome": "zt-arquivos-e", "escopos": ["admin:inquilino"]}).json()
+    try:
+        h = {"Authorization": f"Bearer {tok['token']}", "content-type": "image/png"}
+        grande = b"#!/bin/sh\n" + b"echo pwned\n" * (limites.ARQUIVO_PARTE_BYTES // 10)
+        assert len(grande) > limites.ARQUIVO_PARTE_BYTES
+        r = cliente.post("/api/arquivos?classe=zt_disfarcado_grande", content=grande, headers=h)
+        assert r.status_code == 415, r.text
+        assert r.json()["erro"] == "conteudo_recusado"
+    finally:
+        sessao_a.delete(f"/api/tokens/{tok['id']}")
+
+
 def test_api_uso_e_cota(sessao_a):
     r = sessao_a.get("/api/arquivos")
     assert r.status_code == 200

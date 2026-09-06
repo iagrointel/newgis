@@ -1,0 +1,5 @@
+{
+ "_formato": "cada exceção suspende o bloqueio de UM cve/pacote em `make seguranca-deps` (scripts/varredura_dependencias.py) até `prazo` (ISO 8601); depois do prazo volta a bloquear sozinha, sem editar nada aqui. Ver docs/SEGURANCA.md seção 7.",
+ "_campos": {"cve": "id OSV/CVE/GHSA como aparece no achado", "pacote": "nome do pacote (requirements.txt)", "motivo": "por que não corrige agora", "prazo": "data limite YYYY-MM-DD", "registrado_em": "data em que a exceção foi aberta", "quem": "quem abriu"},
+ "excecoes": []
+}

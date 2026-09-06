@@ -40,3 +40,26 @@ six==1.17.0
 #
 # identidade (app/auth/totp.py gera o QR do TOTP em SVG; cryptography vem do dpkg python3-cryptography)
 qrcode==8.2
+#
+# segurança (scripts/varredura_dependencias.py chama o binário `pip-audit` da venv em subprocesso; item
+# L7-03-f, docs/SEGURANCA.md seção 7 justifica a escolha vs `safety`; rich/requests/pygments/markdown-it-py
+# que pip-audit também precisa vêm do dpkg — python3-rich, python3-requests, python3-pygments — já instalados
+# nesta máquina por outro produto da casa, mesmo raciocínio de uvicorn/psycopg2 do install.sh; se um dia
+# faltarem, `pip install -r requirements.txt` os resolve sozinho dentro da venv)
+pip-audit==2.10.1
+cyclonedx-python-lib==11.12.0
+pip-requirements-parser==32.0.1
+pip-api==0.0.34
+packageurl-python==0.17.6
+py-serializable==2.1.0
+license-expression==30.4.4
+boolean.py==5.0
+CacheControl==0.14.4
+defusedxml==0.7.1
+filelock==3.32.5
+msgpack==1.2.2
+platformdirs==4.11.7
+sortedcontainers==2.4.0
+tomli==2.4.1
+tomli_w==1.2.0
+Markdown==3.10.2

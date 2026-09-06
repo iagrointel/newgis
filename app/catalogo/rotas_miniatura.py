@@ -40,9 +40,8 @@ def enviar_miniatura(id: str, corpo: MiniaturaEntrada, request: Request, auth: A
     with db.db(auth.contexto()) as cur:
         exigir_edicao(cur, iid)
         o = miniatura.guardar(cur, iid, png)
-        registrar_evento(
-            cur, request, "itens/miniatura", "item", iid, {"acao": "enviar", "sha256": o["sha256"], "bytes": o["bytes"]}
-        )
+        detalhe = {"acao": "enviar", "sha256": o["sha256"], "bytes": o["bytes"]}
+        registrar_evento(cur, request, "itens/miniatura", "item", iid, detalhe)
     return {"miniatura": f"/api/itens/{iid}/miniatura", "sha256": o["sha256"]}
 
 

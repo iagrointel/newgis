@@ -19,7 +19,13 @@ contexto de sessão — a entrega por URL assinada (`GET /api/objetos/{chave}`) 
 
 Nome do objeto = sha256 do conteúdo: duas gravações do mesmo conteúdo (mesma classe/referência) caem na mesma
 chave (`HEAD` antes de `PUT`: se já existe, não regrava — nunca sobrescreve com conteúdo diferente, porque a
-chave SÓ é a mesma quando o conteúdo é o mesmo)."""
+chave SÓ é a mesma quando o conteúdo é o mesmo).
+
+Item L7-03-b-antivirus-anexos (`app/varredura_conteudo.py`): `guardar()` em si NÃO varre conteúdo — ver a nota
+no próprio docstring da função sobre por quê (adaptador genérico, chamado também com conteúdo já validado por
+Pillow e com conteúdo sintético de teste). Quem recebe byte cru de fora varre na borda, antes de chamar
+`guardar()`: `app/rotas_arquivos.py::enviar()` é o único caminho que grava byte de cliente sem passar por
+outra validação primeiro."""
 
 from __future__ import annotations
 
@@ -34,6 +40,7 @@ from typing import Any
 from app import db
 from app.garage import ClienteAdmin, ClienteS3, ErroGarage
 from app.settings import settings
+from app.varredura_conteudo import ConteudoRecusado, escanear_cabecalho  # noqa: F401 — reexportado (item L7-03-b)
 
 log = logging.getLogger("plat.objetos")
 
@@ -211,7 +218,13 @@ def guardar(
     cur, classe: str, dados: bytes, content_type: str, item_id: Any = None, usuario_id: int | None = None
 ) -> dict:
     """`{chave, sha256, bytes, content_type}`. `item_id=None` = objeto genérico (chave sem segmento de referência,
-    dedup só por sha256 dentro da classe — é o caminho de `POST /api/arquivos`)."""
+    dedup só por sha256 dentro da classe — é o caminho de `POST /api/arquivos`). NÃO varre conteúdo aqui de
+    propósito (item L7-03-b): este adaptador também é chamado com conteúdo já validado por outro meio (Pillow
+    reencoda miniatura para PNG limpo antes de chegar aqui) e com conteúdo sintético de teste da própria
+    suíte (`tests/api/catalogo/test_miniatura.py::test_adaptador_de_objetos_e_url_assinada` grava `b"abc"` sob
+    `image/png` de propósito, para testar só o contrato de armazenamento) — variar o comportamento do
+    adaptador conforme quem chama seria mais frágil que varrer na BORDA onde bytes não confiáveis de verdade
+    entram: `app/rotas_arquivos.py::enviar()` chama `escanear_cabecalho()` antes de qualquer PUT/multipart."""
     tenant_id, tenant_slug = _tenant_atual(cur)
     bucket = garantir_bucket(cur, tenant_id, tenant_slug)
     sha = hashlib.sha256(dados).hexdigest()

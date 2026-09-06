@@ -1,8 +1,10 @@
-# Segurança — segredos e certificados
+# Segurança — segredos, certificados, dependências e upload
 
-Item L7-19-segredos-e-certificados. Esta seção é o mapa: onde cada segredo mora, como rotacionar sem
+Item L7-19-segredos-e-certificados (§1-6). Esta seção é o mapa: onde cada segredo mora, como rotacionar sem
 derrubar o produto, e como o certificado TLS se renova sozinho. Ela não repete o que já está no
-`docs/adr/0001-fundacao.md` seção 8 (contrato de `.env`) — só o que mudou e o que é operação.
+`docs/adr/0001-fundacao.md` seção 8 (contrato de `.env`) — só o que mudou e o que é operação. Estendida com
+o item L7-03-f-dependencias-cve-log-correcoes (§7, varredura de dependência + log de correções) e o item
+L7-03-b-antivirus-anexos (§8, varredura de conteúdo em upload de anexo/miniatura).
 
 ## 1. Onde cada segredo mora
 
@@ -194,3 +196,191 @@ sudo certbot renew --cert-name plat.iagrointel.com --force-renewal
 `blackbox` avisando 14 dias antes — fonte `PROM-blackbox` em `laco/estado.json`); com a renovação
 automática em 30 dias de folga o risco real é o *timer* parar (ex.: máquina desligada por mais de 30
 dias) — `systemctl status certbot.timer` acima é hoje a única checagem, manual.
+
+## 7. Varredura de dependência com CVE conhecido (item L7-03-f-dependencias-cve-log-correcoes)
+
+`requirements.txt` fixa toda dependência (§ADR 0001 seção 2.1); isso impede deriva de versão, mas por si só
+não avisa quando uma versão fixada **ganha** um CVE novo depois de fixada. Este item cobre esse segundo
+relógio: `scripts/varredura_dependencias.py` roda `pip-audit` contra `requirements.txt`, classifica cada
+achado por severidade e reprova (`make seguranca-deps`) quando há CVE crítico ou alto sem exceção viva.
+
+### 7.1 Por que `pip-audit`, não `safety`
+
+Medido/lido em 06/09/2026 antes de escolher:
+
+| | `pip-audit` 2.10.1 | `safety` (CLI atual, `safety scan`) |
+|---|---|---|
+| mantenedor | PyPA (mesma organização do `pip`/`packaging`) | pyup.io, empresa |
+| licença | Apache-2.0 | MIT no pacote, mas o comando principal (`safety scan`) **exige login/API key** da pyup para o banco de vulnerabilidade atual; o comando antigo sem conta (`safety check`, banco livre) está **descontinuado** pelo próprio projeto |
+| fonte de CVE | OSV.dev (agregador aberto, sem chave) | banco proprietário pyup, atrás de conta |
+| roda sem credencial nem rede paga | sim | não (a varredura completa exige conta) |
+| formato de saída p/ script | `--format json` estável, documentado | também tem `--json`, mas atrás do mesmo gate de conta |
+
+`make seguranca-deps` tem de rodar numa máquina que nunca cadastrou nada (mesmo espírito do §3 do ADR 0001,
+"máquina que nunca viu o repo") — um scanner que para de funcionar sem conta paga reprovaria o build por
+motivo errado. `pip-audit` não tem esse problema: é só `pip install pip-audit` (pinado em `requirements.txt`)
+e roda contra qualquer `requirements.txt`, sem chave.
+
+### 7.2 O que o script faz
+
+```
+$ make seguranca-deps
+venv/bin/python scripts/varredura_dependencias.py --json var/seguranca/ultima_varredura.json
+[      media] idna==3.13  PYSEC-2026-215  fix=['3.15']  (cvss:PYSEC-2026-215=5.3)  ok
+varredura_dependencias: nenhum achado grave sem exceção — ok
+```
+
+(saída real, MEDIDA em 06/09/2026 contra o `requirements.txt` deste repositório — o único achado hoje é uma
+CVE de negação de serviço em `idna` 3.13→3.15, nota CVSS 5.3, classificada "média": não bloqueia.)
+
+Passo a passo (`scripts/varredura_dependencias.py`):
+
+1. `pip-audit -r requirements.txt --format json` (via `venv/bin/pip-audit`, nunca `~/.local`) — lista pacote,
+   versão, id do achado (CVE/GHSA/PYSEC), `fix_versions`.
+2. **Severidade** de cada achado: primeiro tenta um rótulo pronto (`database_specific.severity` do registro
+   OSV.dev do próprio id; quando o id é um `PYSEC-*` sem rótulo, tenta o mesmo campo no *alias* `GHSA-*` —
+   MEDIDO: o par `PYSEC-2026-215`/`GHSA-65pc-fj4g-8rjx` da tabela acima só tem o rótulo `"MODERATE"` gravado
+   no registro do GHSA, o do PYSEC vem com `database_specific` nulo). Sem rótulo pronto, calcula a nota CVSS
+   v3.1 do vetor (`cvss_v3_nota`, fórmula oficial do FIRST, testada contra três vetores publicados em
+   `tests/unit/test_varredura_dependencias.py` — inclusive o vetor exato do Log4Shell, nota 10.0) e mapeia
+   ≥9,0 crítica / ≥7,0 alta / ≥4,0 média / abaixo baixa. Sem rótulo E sem CVSS (rede fora, ou OSV sem dado) →
+   severidade **desconhecida**, tratada como grave por padrão-seguro (nunca passa em silêncio).
+3. **Exceção**: um achado grave (crítico/alto/desconhecido) só deixa de bloquear se houver uma entrada viva
+   em `docs/excecoes_cve.json` que bata `cve` (id OU qualquer alias) e `pacote`, com `prazo` no futuro —
+   depois do prazo a exceção some sozinha e o achado volta a bloquear, sem editar nada.
+4. Sai `0` (nada grave sem exceção), `1` (bloqueia — CI/terminal veem o motivo) ou `2` (o próprio `pip-audit`
+   não rodou: binário ausente, timeout, `requirements.txt` inexistente — nunca vira silenciosamente "0 CVE").
+
+Cache local do OSV em `var/cache/osv/<id>.json` (gitignorado): a 2ª execução do dia não bate a rede de novo
+para o mesmo achado.
+
+### 7.3 Como abrir uma exceção
+
+```json
+{
+  "excecoes": [
+    {"cve": "GHSA-xxxx-yyyy-zzzz", "pacote": "nome-do-pacote", "motivo": "sem versão corrigida ainda / correção quebra X",
+     "prazo": "2026-10-15", "registrado_em": "2026-09-06", "quem": "quem decidiu"}
+  ]
+}
+```
+
+Em `docs/excecoes_cve.json`. `cve` casa com o id do achado OU qualquer alias (CVE/GHSA/PYSEC costumam
+apontar para o mesmo problema); `prazo` é obrigatório na prática — sem ele a exceção nunca expira sozinha,
+o que o portão deste item não permite ficar sem revisão.
+
+### 7.4 `make seguranca-deps` é opcional hoje, não bloqueia `make check`
+
+Por decisão explícita desta passagem (item pequeno, entrega de hoje): o alvo existe e funciona, mas **não**
+está na cadeia de `check`/`check-rapido` ainda — rodar `make seguranca-deps` é manual (ou de um timer futuro
+diário, ainda não construído nesta passagem). Ligar ao `check` principal é o próximo passo natural do item,
+registrado aqui para não se perder: nesta janela o risco de um `pip-audit` que depende de rede (OSV.dev)
+bloquear o `check` de todo mundo, numa hora ruim de rede, pesou mais que o ganho de rodar em toda passagem.
+
+### 7.5 Log de correções
+
+Tabela viva, preenchida à mão a cada correção de CVE aplicada (formato pronto; começa vazia — nenhuma
+correção foi necessária ainda, o único achado de hoje, §7.2, é média e não crítica/alta):
+
+| CVE | pacote | versão corrigida | data | quem aplicou |
+|---|---|---|---|---|
+| _(vazio — primeira correção entra aqui)_ | | | | |
+
+
+## 8. Varredura de conteúdo em upload de anexo (item L7-03-b-antivirus-anexos)
+
+Pedido do dono: os dois caminhos de upload de anexo do catálogo — `POST /api/arquivos` (L0-11-arquivos-
+objetos) e `POST /api/itens/{id}/miniatura` (L0-03-catalogo) — precisavam de varredura de conteúdo. Medido
+antes de construir: **L0-11 aceitava qualquer sequência de bytes sob o `Content-Type` que o cliente
+declarasse** (a extensão/tipo é escolha de quem envia; nada conferia se o CONTEÚDO batia) — essa é a lacuna
+real que este item fecha com uma camada mínima (`app/varredura_conteudo.py`) na espera de um motor melhor
+(ClamAV, ver §8.1). **L0-03 (miniatura) já tinha barreira antes deste item** — `miniatura.normalizar()`
+decodifica os bytes com Pillow e SÓ aceita PNG/JPEG/GIF de verdade, reencodando para um PNG novo sem
+metadado; é mais forte que checar assinatura de bytes, então este item formaliza isso como a resposta de
+L0-03 em vez de duplicar a checagem (ver §8.2, por que duplicar quebraria um teste do L0-11 sem ganhar nada).
+
+### 8.1 Por que não é ClamAV nesta passagem — D21
+
+`laco/estado.json` já tem D21 aberta desde 05/09/2026 ("disco: os dois servidores estão a 98%... qualquer dado
+de rede/imagem além disso exige decisão"). MEDIDO de novo em 06/09/2026, antes de decidir por esta passagem:
+
+```
+$ df -h / /mnt/pgdata
+/dev/vda2  469G  452G   13G  98% /
+/dev/vdb   688G  675G   14G  99% /mnt/pgdata
+$ free -h
+               total   used   free  shared  buff/cache  available
+Mem:            23Gi    20Gi  323Mi    6.1Gi        9.2Gi        3.1Gi
+Swap:          8.0Gi   8.0Gi  248Ki
+```
+
+O pacote `clamav-daemon` em si é pequeno (~1 MB instalado); o custo real é a base de assinaturas do
+`freshclam` (`main.cvd`+`daily.cvd`+`bytecode.cvd`), que o `clamd` mantém **carregada em RAM** — na ordem de
+1,3-1,5 GiB residentes, a mesma estimativa que a hipótese original do item já registrava. Com 323 MiB livres e
+o swap (8 GiB) inteiro já ocupado, subir `clamd` agora tem risco real e concreto de repetir o incidente já
+registrado na casa (`reference_oom-derrubou-postgres`: 20 sessões de 370 MiB cada derrubaram o Postgres
+compartilhado). Por decisão desta passagem — dentro do espírito de D21, não uma decisão nova —
+**ClamAV fica de fora até o disco/RAM da máquina mudar** (D21 resolver, ou servidor dedicado do D37).
+
+### 8.2 A camada mínima que fica no lugar
+
+`app/varredura_conteudo.py`: identifica o tipo REAL do arquivo pelos primeiros `CABECALHO_BYTES` (8 KiB, o
+bastante para `libmagic`/`python3-magic` decidir — já dpkg nesta máquina, ver `deploy/pacotes_apt.txt` do item
+L7-14/L0-04-a, que o cita pelo mesmo motivo: "confere o tipo declarado no upload contra o que o arquivo
+realmente é") e recusa quando o tipo detectado não bate com a família esperada do `Content-Type` declarado
+(`TIPOS_PERMITIDOS`, mesmas chaves de `app/objetos.EXTENSOES`). Isso já cobre o polyglot óbvio do portão: um
+arquivo com assinatura de imagem que também é reconhecido como HTML/script continua batendo a checagem porque
+o tipo que o `libmagic` reconhece primeiro já não é o da família declarada.
+
+**Por que NÃO existe também um denylist "tipo perigoso, seja qual for o `Content-Type`"** — MEDIDO antes de
+escrever a regra (`tests/unit/test_varredura_conteudo.py::test_binario_generico_aleatorio_nunca_e_recusado_
+por_assinatura`): `libmagic` classifica ~0,9% de bytes PURAMENTE ALEATÓRIOS (18/2000 amostras de 4 KiB) como
+algo diferente de `application/octet-stream`, inclusive `application/x-dosexec` por coincidência de assinatura.
+Um denylist que valesse mesmo sob `Content-Type` genérico reprovaria upload binário legítimo (CAD, dado
+proprietário) ao acaso — o oposto de P5 (reprodutível) e P3 (suíte sempre verde). Por isso o `Content-Type`
+genérico (`application/octet-stream`) passa sem exame de assinatura nesta camada: é exatamente onde ClamAV
+faria a diferença de verdade (assinatura de conteúdo malicioso conhecido, não heurística de tipo).
+
+Onde a varredura entra (nunca depois de já ter gasto uma chamada ao Garage) — **de propósito na BORDA, não
+dentro de `objetos.guardar()`**: esse adaptador é genérico (ADR 0004/0006) e também é chamado com conteúdo já
+validado por outro meio (miniatura) ou sintético (a própria suíte grava `b"abc"` sob `image/png` em
+`tests/api/catalogo/test_miniatura.py::test_adaptador_de_objetos_e_url_assinada` para testar só o contrato de
+armazenamento) — varrer ali quebraria esse teste sem ganhar segurança nenhuma (o conteúdo real de produção
+que chega em `guardar()` pela miniatura já passou por uma validação mais forte, ver linha 2 da tabela):
+
+| caminho | onde a varredura corre | quem varre |
+|---|---|---|
+| `POST /api/arquivos`, arquivo pequeno (1 PUT só) | em `enviar()`, logo antes de chamar `objetos.guardar()` | `app/rotas_arquivos.py::enviar` |
+| `POST /api/arquivos`, arquivo grande (multipart) | na 1ª parte do streaming, antes de `objetos.parte_iniciar` | `app/rotas_arquivos.py::enviar` |
+| `POST /api/itens/{id}/miniatura` | não chama `app/varredura_conteudo.py` — a barreira já é `miniatura.normalizar()` (Pillow decodifica pixel real e reencoda para PNG limpo; mais forte que assinatura de bytes, existia antes deste item) | `app/catalogo/miniatura.py` |
+
+`ConteudoRecusado` (nova exceção em `app/varredura_conteudo.py`, reexportada por `app/objetos.py` como
+`objetos.ConteudoRecusado`, mesmo padrão de `objetos.CotaExcedida`) vira `415 conteudo_recusado` com
+`detalhe.tipo_detectado` na rota de `POST /api/arquivos`.
+
+### 8.3 O gancho para trocar por ClamAV depois
+
+`app/varredura_conteudo.py` define `Motor` (`Protocol`, um único método `escanear(cabecalho, content_type) ->
+Resultado`) e `MOTOR_ATIVO` (hoje `MotorAssinaturaBasica()`). Um `MotorClamAV` futuro implementa a mesma
+interface (fala com `clamd` por socket unix — `INSTREAM` do protocolo do ClamAV, que também só precisa dos
+primeiros bytes até achar o marcador de fim, não do arquivo inteiro) e troca `MOTOR_ATIVO`; nenhuma das três
+rotas do §8.2 muda — todas conhecem só `escanear_cabecalho()`.
+
+### 8.4 Teste do portão
+
+```
+$ pytest tests/unit/test_varredura_conteudo.py tests/api/test_arquivos.py -k "script or disfarcado" -v
+```
+
+`test_extensao_jpg_com_conteudo_de_script_e_recusado` (unitário) e `test_api_recusa_script_disfarcado_de_jpeg`
+(fim a fim, API real): `Content-Type: image/jpeg` com corpo `#!/bin/sh\necho pwned\n` → `415 conteudo_recusado`,
+`tipo_detectado: text/x-shellscript`. `test_api_recusa_script_grande_disfarcado_de_png_antes_do_multipart` prova
+o mesmo acima do teto de uma parte (nunca abre multipart no Garage para um conteúdo já recusado).
+
+### 8.5 O que fica de fora desta passagem (não esquecido)
+
+- ClamAV de verdade — §8.1, D21.
+- Varredura de conteúdo dentro de arquivos compostos (abrir o zip do KMZ e varrer cada entrada) — hoje só o
+  contêiner externo é conferido.
+- O caminho de sincronização da PWA de campo (L2-07, ainda não construído) precisará da mesma barreira quando
+  existir; `objetos.guardar()` já cobre automaticamente qualquer chamador futuro que passe por ele.

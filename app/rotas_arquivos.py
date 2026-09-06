@@ -3,8 +3,12 @@ cru, `Content-Type` do arquivo, `?classe=`) grava por streaming com teto de tama
 quando o corpo passa de `limites.ARQUIVO_BUFFER_UNICO_BYTES`; `GET/DELETE /api/arquivos/{sha256}` leem o metadado
 em `plat.arquivo` (RLS: o inquilino da sessão nunca vê o sha256 de outro) e entregam pela API — nunca uma URL do
 Garage; `GET /api/arquivos` devolve uso × cota; `GET /api/arquivos/_varredura` roda a varredura de órfãos do
-próprio inquilino. Isento do limite de corpo padrão (`app/limite_corpo.py`): a rota aplica o próprio teto em
-streaming, nunca bufferizando mais que uma parte (`limites.ARQUIVO_PARTE_BYTES`) de RAM por vez."""
+próprio inquilino (não confundir com a varredura de CONTEÚDO abaixo). Isento do limite de corpo padrão
+(`app/limite_corpo.py`): a rota aplica o próprio teto em streaming, nunca bufferizando mais que uma parte
+(`limites.ARQUIVO_PARTE_BYTES`) de RAM por vez. Item L7-03-b-antivirus-anexos: todo envio passa pela varredura
+de conteúdo (`app/varredura_conteudo.py`) antes de tocar o Garage — na 1ª parte (multipart) ou dentro de
+`objetos.guardar` (arquivo pequeno, 1 PUT só); 415 `conteudo_recusado` quando os bytes não batem com o
+`Content-Type` declarado."""
 
 import re
 
@@ -97,6 +101,14 @@ async def enviar(request: Request, classe: str = "objeto", auth: Auth = autentic
             raise ErroAPI(413, "arquivo_grande", f"corpo acima do limite de {limite} bytes")
         buffer += pedaco
         if len(buffer) >= tamanho_parte:
+            if upload_id is None:
+                # 1ª parte antes de abrir o multipart: varredura de conteúdo (item L7-03-b) aqui, nunca depois —
+                # um arquivo grande recusado não chega a gastar upload multipart no Garage
+                try:
+                    objetos.escanear_cabecalho(bytes(buffer), content_type)
+                except objetos.ConteudoRecusado as e:
+                    detalhe = {"tipo_detectado": e.resultado.tipo_detectado}
+                    raise ErroAPI(415, "conteudo_recusado", str(e), detalhe) from e
             try:
                 with db.db(ctx) as cur:
                     if upload_id is None:
@@ -115,7 +127,10 @@ async def enviar(request: Request, classe: str = "objeto", auth: Auth = autentic
 
     try:
         if upload_id is None:
-            # nunca abriu multipart: cabe tudo numa parte só, 1 PUT direto (contrato objetos.guardar)
+            # nunca abriu multipart: cabe tudo numa parte só, 1 PUT direto (contrato objetos.guardar). A
+            # varredura de conteúdo (item L7-03-b) roda AQUI, na borda onde o byte cru do cliente entra —
+            # objetos.guardar() não varre (é adaptador de armazenamento genérico, ver seu próprio docstring)
+            objetos.escanear_cabecalho(bytes(buffer), content_type)
             with db.db(ctx) as cur:
                 resultado = objetos.guardar(cur, classe, bytes(buffer), content_type, usuario_id=auth.usuario_id)
         else:
@@ -128,6 +143,12 @@ async def enviar(request: Request, classe: str = "objeto", auth: Auth = autentic
     except objetos.CotaExcedida as e:
         abortar_se_aberto()
         raise ErroAPI(413, "cota_excedida", str(e)) from e
+    except objetos.ConteudoRecusado as e:
+        # só o caminho de 1 PUT (upload_id is None) chega aqui vindo de objetos.guardar(): o caminho multipart
+        # já escaneou a 1ª parte acima, antes de abrir o upload
+        abortar_se_aberto()
+        detalhe = {"tipo_detectado": e.resultado.tipo_detectado}
+        raise ErroAPI(415, "conteudo_recusado", str(e), detalhe) from e
     except Exception:
         abortar_se_aberto()
         raise
