@@ -21,7 +21,8 @@ from tests.api.jobs.conftest import WorkerExtra
 from tests.servidor_arquivo import ServidorArquivos
 from tests.unit.test_conexao_arquivo_url import CSV_TROCADO, CSV_VIRGULA, GEOJSON, GEORSS, GPX, KML, kmz
 
-PORTA_WORKER = 18163
+# porta livre por rodada: worker órfão de uma rodada anterior não confunde o /saude desta
+PORTA_WORKER = 18163 + (uuid.uuid4().int % 300)
 SUFIXO = uuid.uuid4().hex[:6]   # nome de conexão é único por inquilino: uma rodada não colide com a anterior
 FORMATOS = {
     "csv": (CSV_VIRGULA, "text/csv", "dados.csv"),
@@ -57,7 +58,10 @@ def servidor():
 
 @pytest.fixture(scope="module")
 def worker(env):
-    w = WorkerExtra(env, f"teste-l602h-{PORTA_WORKER}", processos=1, porta=PORTA_WORKER)
+    # 2 processos de propósito: o periódico `conexoes.saude_verificar` (item L6-02-l) roda no mesmo banco de
+    # teste e testa TODAS as conexões de todos os inquilinos, uma a uma, com timeout de 3 s cada — com um
+    # processo só ele segura a fila por minutos e os jobos deste arquivo ficam pendentes sem nunca rodar.
+    w = WorkerExtra(env, f"teste-l602h-{PORTA_WORKER}", processos=2, porta=PORTA_WORKER)
     yield w
     w.parar()
 
@@ -208,7 +212,10 @@ def test_atualizacao_agendada_com_etag_nao_recarrega_arquivo_inalterado(fonte, s
              "geometry": {"type": "Point", "coordinates": [-46.63, -23.55]}},
         ],
     }).encode("utf-8")
+    # trocar o corpo E o Last-Modified: um servidor que muda o conteúdo sem mexer no Last-Modified está
+    # mentindo, e o cliente acredita nele (responde 304 pelo If-Modified-Since). Aqui o servidor é honesto.
     servidor.recursos["/agendado/dados.geojson"].corpo = novo
+    servidor.recursos["/agendado/dados.geojson"].last_modified = "Thu, 04 Sep 2026 11:00:00 GMT"
     terceira = f.sincronizar()
     assert terceira["estado"] == "concluido"
     assert terceira["resultado"]["recarregou"] is True
@@ -317,7 +324,7 @@ def test_conexao_referenciada_nao_aceita_arquivo_por_url(cliente_demo_modulo, se
     try:
         r = cliente_demo_modulo.put(f"/api/conexoes/{cid}/arquivo", json={"agendado": False})
         assert r.status_code == 422, r.text
-        assert r.json()["codigo"] == "conexao_incompativel"
+        assert r.json()["erro"] == "conexao_incompativel"
     finally:
         cliente_demo_modulo.delete(f"/api/conexoes/{cid}")
 
@@ -332,6 +339,6 @@ def test_sincronizar_sem_configurar_e_404(cliente_demo_modulo, servidor):
     try:
         r = cliente_demo_modulo.post(f"/api/conexoes/{cid}/arquivo/sincronizar")
         assert r.status_code == 404, r.text
-        assert r.json()["codigo"] == "arquivo_nao_configurado"
+        assert r.json()["erro"] == "arquivo_nao_configurado"
     finally:
         cliente_demo_modulo.delete(f"/api/conexoes/{cid}")

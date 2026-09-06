@@ -7,7 +7,7 @@
     "feicoes": 2,
     "srid": 4674,
     "bytes_baixados": 87,
-    "item_id": "e8cee894-3636-4eb6-9951-7ad6f56cb482"
+    "item_id": "45fd7ec0-18ca-44b2-afb5-f5b660b372d0"
    },
    "unidade": "json",
    "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
@@ -18,7 +18,7 @@
     "feicoes": 1,
     "srid": 4326,
     "bytes_baixados": 157,
-    "item_id": "b939b72d-5f43-4f4f-aa11-3280f34c5af0"
+    "item_id": "a58e8b9d-1320-4b32-b982-36e96ec5698c"
    },
    "unidade": "json",
    "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
@@ -29,7 +29,7 @@
     "feicoes": 1,
     "srid": 4326,
     "bytes_baixados": 215,
-    "item_id": "3d5ad7d5-b4c8-4978-a53d-c2ea06821fde"
+    "item_id": "d126b5b6-8ca9-43c0-bf16-f497dd02550f"
    },
    "unidade": "json",
    "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
@@ -40,7 +40,7 @@
     "feicoes": 1,
     "srid": 4326,
     "bytes_baixados": 263,
-    "item_id": "a7d40735-f112-4631-bb95-fd45e4fea565"
+    "item_id": "c0a2bf07-278b-4cb4-9f9b-77a2826fc674"
    },
    "unidade": "json",
    "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
@@ -51,7 +51,7 @@
     "feicoes": 1,
     "srid": 4326,
     "bytes_baixados": 213,
-    "item_id": "7acfd506-3991-415e-9ef3-dbf3e64afee3"
+    "item_id": "fd70de18-41e3-4494-958a-5891366312b6"
    },
    "unidade": "json",
    "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
@@ -62,7 +62,7 @@
     "feicoes": 1,
     "srid": 4326,
     "bytes_baixados": 172,
-    "item_id": "a49ae4ee-d82f-404c-87c6-d4674bcba6f2"
+    "item_id": "fde6868d-8bb0-4bf3-98cb-5ae4cdfce02f"
    },
    "unidade": "json",
    "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
@@ -82,8 +82,36 @@
    },
    "unidade": "json",
    "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
+  },
+  "redirect_interno_recusado": {
+   "valor": {
+    "erro": "o endereço não entregou o arquivo: url_insegura:ip_bloqueado:link_local:169.254.169.254"
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
+  },
+  "etag_nao_recarrega": {
+   "valor": {
+    "passagens": 3,
+    "recargas": 2,
+    "resultado_da_passagem_sem_mudanca": "nao_modificada",
+    "status_da_passagem_sem_mudanca": 304
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
+  },
+  "refutacao_kml_200mil": {
+   "valor": {
+    "bytes": 20984171,
+    "estado": "concluido",
+    "erro": null,
+    "feicoes": 200000,
+    "segundos": 14.2
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
   }
  },
- "gerado_em": "2026-09-06T16:14:26Z",
+ "gerado_em": "2026-09-06T16:29:09Z",
  "git_sha": "90d03c07da0c"
 }
