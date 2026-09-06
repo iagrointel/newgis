@@ -108,6 +108,15 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ARQUIVO_PARTE_BYTES` | `8388608` | 8 MiB por parte S3 (mínimo do protocolo é 5 MiB, exceto a última) |
 | `ARQUIVO_BUFFER_UNICO_BYTES` | `8388608` | até aqui: 1 PUT só, sem abrir multipart |
 
+## upload retomável (L0-04-a-upload-arquivo; ADR 0005 seção 3): parte de 16 MiB fixa (não cresce com o
+
+| nome | valor | explicação |
+|---|---|---|
+| `UPLOAD_BYTES_MAX` | `2147483648` | 2 GiB |
+| `UPLOAD_PARTE_BYTES` | `16777216` | 16 MiB (ADR 0005 seção 3.1; distinto de ARQUIVO_PARTE_BYTES acima, |
+| `UPLOAD_EXPIRA_HORAS` | `24` | — |
+| `UPLOAD_NOME_MAX` | `255` | — |
+
 ## rede de rota (L2-11-c): OSRM isolado `plat-osrm-guarulhos` (:5010; recorte de teste ≤ 50 MB — nunca os
 
 | nome | valor | explicação |
@@ -181,3 +190,27 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `PERFIL_FOTO_BYTES_MAX` | `1048576` | 1 MiB (portão do item: "foto > 1 MB recusada") |
 | `PERFIL_FOTO_PIXELS_MAX` | `25000000` | mesma defesa de bomba de descompressão do org_logo/miniatura |
 | `PERFIL_FOTO_LADO` | `200` | canvas quadrado 200×200 (hipótese do item) |
+
+## SMTP, convite de membro e redefinição de senha por e-mail (L0-07-d-smtp-convites; privilégio
+
+| nome | valor | explicação |
+|---|---|---|
+| `SMTP_HOST_MAX` | `255` | — |
+| `SMTP_USUARIO_MAX` | `255` | — |
+| `SMTP_SENHA_MAX` | `1024` | antes de cifrar; a cifra em si (AES-GCM) é maior no banco |
+| `SMTP_REMETENTE_MAX` | `255` | — |
+| `SMTP_ROTULO_MAX` | `100` | — |
+| `SMTP_PORTA_MIN` | `1` | — |
+| `SMTP_PORTA_MAX` | `65535` | — |
+| `SMTP_CONECTAR_TIMEOUT_S` | `6.0` | teste de envio: curto de propósito, nunca prende a requisição |
+| `SMTP_ENVIAR_TIMEOUT_S` | `15.0` | dentro do job (worker), pode ser mais folgado que o teste síncrono |
+| `SMTP_ASSUNTO_MAX` | `200` | — |
+| `SMTP_TEXTO_MAX` | `20000` | — |
+| `CONVITE_VALIDADE_DIAS` | `7` | portão do item: link após 7 dias = 410 |
+| `CONVITE_LOGIN_MAX` | `128` | — |
+| `CONVITE_NOME_MAX` | `128` | — |
+| `CONVITE_LISTA_MAX` | `200` | — |
+| `REDEFINICAO_VALIDADE_HORAS` | `1` | portão do item-pai (ADR 0002 seção 6.3): token de 1 hora |
+| `REDEFINICAO_JANELA_MIN` | `15` | limite de taxa (refutação do item: 1.000 pedidos/min p/ o mesmo e-mail) |
+| `REDEFINICAO_MAX_JANELA` | `5` | no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN |
+| `AVISO_EXPIRACAO_DIAS` | `(90, 30, 7, 1)` | avisos de expiração de token de serviço (hipótese do item; como a Esri) |
