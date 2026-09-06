@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from urllib.parse import urlencode, urlsplit, urlunsplit
 from xml.etree.ElementTree import ParseError
 
@@ -128,6 +128,37 @@ def _junta_caminho(url: str, sufixo: str) -> str:
     partes = urlsplit(url)
     caminho = partes.path.rstrip("/") + "/" + sufixo.lstrip("/")
     return urlunsplit((partes.scheme, partes.netloc, caminho, partes.query, partes.fragment))
+
+
+# cabeçalhos que carregam segredo e nunca podem atravessar um link ESCOLHIDO PELO SERVIDOR (`rel=next` etc.)
+# que mude de origem — mesmo conjunto de `app.conexao.seguranca._CABECALHOS_CREDENCIAL` (achado do adversário,
+# item L6-02-c, turno 3: conserto do L6-02-c-CONSERTO).
+_CABECALHOS_CREDENCIAL_LINK = frozenset({"authorization", "cookie", "proxy-authorization"})
+
+
+def _origem(url: str) -> tuple[str, str, int]:
+    """esquema+host+porta em minúsculas, com a porta padrão do esquema quando omitida — a mesma noção de
+    origem usada por `app.conexao.seguranca` para o mesmo problema em redirecionamento."""
+    partes = urlsplit(url)
+    porta = partes.port or (443 if partes.scheme.lower() == "https" else 80)
+    return (partes.scheme.lower(), (partes.hostname or "").lower(), porta)
+
+
+def _conector_para_link(conector: Conector, url: str) -> Conector:
+    """Um link vindo do documento do servidor (`rel=next`, e qualquer outro href que este módulo vier a seguir
+    — `rel=items`, `rel=data`, link de coleção) é escolhido pelo SERVIDOR, não por nós. `buscar_seguro`
+    continua validando a URL contra SSRF (IP bloqueado, rebinding etc.); isto aqui protege o SEGREDO: a
+    credencial da conexão só atravessa se o link continuar na MESMA ORIGEM (esquema+host+porta) da URL
+    original da conexão (`conector.url`). Achado do adversário (L6-02-c, turno 3): sem isso, um `rel=next`
+    apontando para outro host — hostil, comprometido, ou só um coletor de terceiro — recebe de graça o
+    Bearer/Cookie da casa. `buscar_seguro` já faz o mesmo para redirecionamento (item L6-02-a); aqui é o
+    CHAMADOR que decide, porque o link não passa por dentro de `buscar_seguro`."""
+    if not conector.cabecalhos or _origem(url) == _origem(conector.url):
+        return conector
+    limpos = {k: v for k, v in conector.cabecalhos.items() if k.lower() not in _CABECALHOS_CREDENCIAL_LINK}
+    if len(limpos) == len(conector.cabecalhos):
+        return conector
+    return replace(conector, cabecalhos=limpos or None)
 
 
 def _buscar(conector: Conector, url: str, *, max_bytes: int) -> bytes:
@@ -484,10 +515,11 @@ class Paginador:
             params["datetime"] = self.datahora
         return _com_parametros(_url_itens(self.conector, self.colecao), params)
 
-    def _buscar_pagina(self, url: str) -> _PaginaBruta:
-        if self.conector.tipo == "ogc_api":
-            return _pagina_ogc(self.conector, url)
-        corpo = _buscar(self.conector, url, max_bytes=limites.CONEXAO_VETOR_PAGINA_MAX_BYTES)
+    def _buscar_pagina(self, url: str, conector: Conector | None = None) -> _PaginaBruta:
+        conector = conector or self.conector
+        if conector.tipo == "ogc_api":
+            return _pagina_ogc(conector, url)
+        corpo = _buscar(conector, url, max_bytes=limites.CONEXAO_VETOR_PAGINA_MAX_BYTES)
         if self.formato_json:
             doc = _json(corpo)
             feicoes = [f for f in (doc.get("features") or []) if isinstance(f, dict)]
@@ -559,10 +591,11 @@ class Paginador:
     def paginas_json(self) -> Iterator[list[dict]]:
         """Páginas já como lista de feições GeoJSON, respeitando `limite` na última."""
         alvo = self._primeira_pagina_wfs() if self.conector.tipo == "wfs" else self._primeira_pagina_ogc()
+        conector_pagina = self.conector  # o link `rel=next` pode trocar de origem; ver `_conector_para_link`
         lidas = 0
         assinatura_anterior: str | None = None
         for _ in range(limites.CONEXAO_VETOR_PAGINAS_MAX):
-            pagina = self._buscar_pagina(alvo)
+            pagina = self._buscar_pagina(alvo, conector_pagina)
             self.relatorio.paginas += 1
             self.relatorio.bytes += pagina.bytes
             if self.relatorio.numero_matched is None and pagina.numero_matched is not None:
@@ -600,6 +633,13 @@ class Paginador:
                 if not pagina.proximo:
                     return
                 alvo = pagina.proximo
+                nova = _conector_para_link(self.conector, alvo)
+                if nova.cabecalhos != conector_pagina.cabecalhos:
+                    self.relatorio.avisos.append(
+                        f"o link seguinte do serviço mudou de origem ({alvo}): a credencial da conexão não "
+                        f"foi reenviada"
+                    )
+                conector_pagina = nova
             else:
                 alvo = _url_getfeature(self.conector, self.colecao, formato=self.formato_json,
                                        count=self.tam_pagina, start=lidas,
