@@ -40,6 +40,25 @@ def _pg_conninfo() -> str:
     return f"PG:{pares} application_name=plat-ingestao"
 
 
+def camada_origem_sem_geom(proposta: dict) -> str:
+    return proposta.get("camada_origem") or "camada"
+
+
+def _proposta_efetiva(proposta: dict, confirmacao: dict) -> dict:
+    """A proposta DA CAMADA que o usuário escolheu. Arquivo com N camadas guarda a proposta de cada uma em
+    `proposta["camadas"]` e copia a primeira com dado para o topo; escolher outra na confirmação tem de trocar
+    campos, geometria, CRS e validade junto — usar o topo aqui carregaria os campos da camada errada."""
+    nome = (confirmacao.get("camada") or {}).get("escolhida")
+    if not nome:
+        return proposta
+    for c in proposta.get("camadas") or []:
+        if c.get("camada_origem") == nome:
+            return {**proposta, **{k: v for k, v in c.items()
+                                   if k in ("camada_origem", "feicoes", "geometria", "crs", "campos",
+                                            "validade", "titulo")}}
+    return proposta
+
+
 def _marcar_falha(ctx, importacao_id: str, erro: str) -> None:
     with ctx.db() as cur:
         cur.execute(
@@ -100,7 +119,7 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         slug = cur.fetchone()["slug"]
 
     schema = f"d_{slug}"
-    proposta = imp["proposta"] or {}
+    proposta = _proposta_efetiva(imp["proposta"] or {}, imp["confirmacao"] or {})
     confirmacao = imp["confirmacao"] or {}
     tabela = proposta.get("nome_tabela") or tabela_de(imp["item_id"])
     item_id = str(imp["item_id"])
@@ -142,6 +161,12 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
                                or proposta.get("codificacao", {}).get("valor"))
         prep = PREPARADORES[formato](ctx, dados, encoding_confirmada)
 
+        if not (proposta.get("geometria") or {}).get("escolhida"):
+            raise FalhaDefinitiva(
+                f"a camada {camada_origem_sem_geom(proposta)!r} não tem geometria. Esta passagem só carrega "
+                "camada com geometria; tabela sem coluna espacial (planilha, CSV sem coluna de coordenada, "
+                "tabela de atributo de GeoPackage) está fora do escopo do item L0-04-c e nada foi criado."
+            )
         srid = int((confirmacao.get("crs") or {}).get("srid") or proposta.get("crs", {}).get("srid") or 0)
         if not srid:
             raise FalhaDefinitiva("CRS não confirmado: SRID ausente")
@@ -150,7 +175,8 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         select_sql, campos_usados = _select_campos(prep, campos)
         geom = confirmacao.get("geometria") or proposta.get("geometria") or {}
         tipo_escolhido_raw = geom.get("escolhida") or "Geometry"  # o que a inspeção/usuário resolveu
-        camada_origem = proposta.get("camada_origem") or prep.get("layer")
+        camada_origem = ((confirmacao.get("camada") or {}).get("escolhida")
+                         or proposta.get("camada_origem") or prep.get("layer"))
         sql_origem = f'SELECT {select_sql} FROM "{camada_origem}"'
 
         # PROMOTE_TO_MULTI (e não o tipo singular): ST_MakeValid pode fragmentar um Polygon/LineString

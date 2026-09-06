@@ -15,7 +15,15 @@
 # 3.12 desta imagem. Por isso o contêiner NÃO usa --system-site-packages: todas as dependências Python vêm
 # do pip, versão fixada, dentro da própria venv (mesmo requirements.txt do host + os pacotes que lá vêm do
 # dpkg, aqui como wheel).
-FROM python:3.12-slim-bookworm
+# BASE: Debian TRIXIE, não bookworm. Motivo medido no turno 3 (adversário do grupo G3): o `gdal-bin` do
+# bookworm é o GDAL 3.6.2, e nele a opção `-json` do `ogrinfo` NÃO EXISTE ("FAILURE: Unknown option name
+# '-json'"). Toda a inspeção de arquivo da ingestão vetorial (app/ingestao/inspecionar.py, item L0-04-b) é
+# construída sobre `ogrinfo -ro -json -so`; um worker com GDAL 3.6.2 reprova em todo job
+# `ingestao.inspecionar` que caia nele. `bookworm-backports` não traz gdal-bin (conferido: só 3.6.2+dfsg-1+b2
+# do bookworm/main). O trixie traz 3.10.3, com `-json` e com os drivers LIBKML/GPX/XLSX/GML/FlatGeobuf/DXF/
+# OpenFileGDB que os formatos do L0-04-d/b usam. O host roda GDAL 3.8.4; a diferença 3.8 -> 3.10 é para MAIS
+# recurso, nunca para menos, e o passo (a2) abaixo prova a compatibilidade na hora da construção.
+FROM python:3.12-slim-trixie
 
 LABEL org.opencontainers.image.title="plat-worker" \
       org.opencontainers.image.description="Worker da fila de jobs do plat, em contêiner (item L0-05-e). Interno. Análise / beta privado."
@@ -32,6 +40,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libmagic1 \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# a2) PORTÃO DE CONSTRUÇÃO: a imagem não existe se o GDAL dela não servir para a ingestão. Confere as duas
+# coisas que o executor precisa e que a base bookworm não tinha: `ogrinfo -json` (como app/ingestao/
+# inspecionar.py lê cada arquivo) e os drivers dos formatos declarados em app/ingestao/formatos.py. Falhar
+# aqui é barato; falhar em produção é um job de inspeção morto por imagem errada.
+RUN set -eu; \
+    ogrinfo --version; \
+    printf '%s' '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"a":1},"geometry":{"type":"Point","coordinates":[-46.5,-23.4]}}]}' > /tmp/portao.geojson; \
+    ogrinfo -ro -json -so /tmp/portao.geojson > /dev/null; \
+    for drv in "ESRI Shapefile" GPKG GeoJSON GeoJSONSeq CSV LIBKML GPX XLSX GML FlatGeobuf DXF OpenFileGDB; do \
+        ogrinfo --formats | grep -q -- "$drv" || { echo "driver ausente na imagem: $drv" >&2; exit 1; }; \
+    done; \
+    rm -f /tmp/portao.geojson
 
 # usuário sem privilégio (nunca root: fork()/prctl(PR_SET_PDEATHSIG)/setrlimit(RLIMIT_DATA, para BAIXAR o
 # teto) não exigem privilégio nenhum — MEDIDO neste item, seção de teste do handoff)

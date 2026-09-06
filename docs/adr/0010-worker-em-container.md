@@ -182,3 +182,51 @@ quebra a segunda chamada). `make check` completo NÃO passou neste turno por mot
 (concorrência de outras trilhas no mesmo repositório deixou `app/settings.py`/`app.main` momentaneamente
 inconsistentes; ver o handoff). A unidade systemd `plat-worker` de produção NUNCA foi parada nem reiniciada
 para este item — todo teste rodou contra um executor em contêiner adicional, com nome e porta distintos.
+
+## 10. Adendo do turno 3 (conserto do achado do adversário): o portão do item e a base da imagem
+
+O adversário do grupo G3 derrubou este item por duas coisas ao mesmo tempo.
+
+**(a) O item estava marcado `entregue` com o portão ainda por escrever.** O texto em
+`laco/estado.json` era, literalmente, "portão a fixar pelo arquiteto no turno em que o item que a pediu
+entrar (registrar aqui antes de construir)". Construir antes de escrever o portão é exatamente o que o laço
+proíbe: sem portão, "entregue" não quer dizer nada. O portão fica escrito aqui, e é este o texto que deve
+substituir o texto provisório no `estado.json` (a edição do arquivo de estado é do gerente, não desta trilha):
+
+> A imagem `plat-worker` constrói, e a própria construção reprova se o GDAL dela não tiver `ogrinfo -json`
+> nem todos os drivers dos formatos declarados em `app/ingestao/formatos.py`. Um contêiner subido pelo
+> `deploy/docker-compose.worker.yml` pega, na MESMA fila `plat.job` da unidade systemd, um job
+> `ingestao.inspecionar` e um `ingestao.carregar` de arquivo real, e produz a mesma proposta e a mesma
+> contagem de feições que o executor por processo. O contêiner roda como usuário sem privilégio (uid 10001)
+> e o teto de memória do cgroup é lido por `app/jobs/filho.py`. Matar o contêiner no meio de um job devolve
+> o job à fila e não deixa tabela órfã. A imagem é reproduzível a partir do repositório: comando de
+> construção, versão do GDAL e sha256 do Dockerfile gravados em
+> `tests/medidas/L0-05-e-worker-em-container.json`.
+
+Refutação correspondente: o adversário roda `ingestao.inspecionar` dos formatos declarados DENTRO do
+contêiner e compara com o executor por processo; divergência de proposta, ou opção de GDAL ausente, refuta.
+
+**(b) O executor entregue não roda a tarefa que o outro item do grupo precisa.** A imagem era
+`python:3.12-slim-bookworm` + `apt-get install gdal-bin`, que no bookworm é **GDAL 3.6.2** — e nele
+`ogrinfo -json` não existe:
+
+```
+$ docker run --rm python:3.12-slim-bookworm bash -lc 'apt-get update -qq && \
+    apt-get install -y -qq --no-install-recommends gdal-bin; ogrinfo --version; ogrinfo -ro -json -so /tmp/a.geojson'
+GDAL 3.6.2, released 2023/01/02
+FAILURE: Unknown option name '-json'
+```
+
+`app/ingestao/inspecionar.py` lê cada arquivo com `ogrinfo -ro -json -so`: qualquer job
+`ingestao.inspecionar` que caísse neste executor falharia. `bookworm-backports` não resolve — não há
+`gdal-bin` lá (medido: o candidato continua `3.6.2+dfsg-1+b2` do `bookworm/main`).
+
+A base passa a ser **`python:3.12-slim-trixie`** (Debian 13), cujo `gdal-bin` é **GDAL 3.10.3**, com `-json`
+e com os drivers LIBKML, GPX, XLSX, GML, FlatGeobuf, DXF e OpenFileGDB que os formatos do L0-04-b/d usam. O
+host roda 3.8.4; a diferença 3.8 → 3.10 é para mais recurso, nunca para menos. O raciocínio da seção 2 (não
+usar `--system-site-packages` no contêiner) continua valendo: o Python de sistema do trixie é 3.13, ainda
+diferente do 3.12 da imagem, então todas as dependências Python seguem vindo do pip.
+
+Para que isto não volte a passar despercebido, o Dockerfile ganhou um **portão de construção** (passo `a2`):
+a imagem não é produzida se `ogrinfo -json` falhar ou se faltar qualquer um dos 12 drivers da lista. É a
+diferença entre descobrir na construção e descobrir num job de produção que morre sem explicação.
