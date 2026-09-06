@@ -1,0 +1,314 @@
+{
+ "item": "L0-04-e-formatos-cad",
+ "medidas": {
+  "dxf_blocos": {
+   "valor": {
+    "camadas": 2,
+    "entidades": 7,
+    "cotas": 0,
+    "textos": 0,
+    "hachuras": 0,
+    "blocos": 7,
+    "versao": "R2010",
+    "unidade": "metro",
+    "por_camada": {
+     "HIDRANTE": 3,
+     "MOBILIARIO": 4
+    },
+    "ogrinfo": {
+     "HIDRANTE": 3,
+     "MOBILIARIO": 4
+    }
+   },
+   "unidade": "contagem",
+   "comando": "venv/bin/pytest tests/unit/test_cad_formatos.py -k blocos"
+  },
+  "dxf_polilinhas": {
+   "valor": {
+    "camadas": 2,
+    "entidades": 12,
+    "cotas": 0,
+    "textos": 0,
+    "hachuras": 0,
+    "blocos": 0,
+    "versao": "R2010",
+    "unidade": "metro",
+    "por_camada": {
+     "QUADRA": 8,
+     "TALUDE_3D": 4
+    },
+    "ogrinfo": {
+     "QUADRA": 8,
+     "TALUDE_3D": 4
+    }
+   },
+   "unidade": "contagem",
+   "comando": "venv/bin/pytest tests/unit/test_cad_formatos.py -k polilinhas"
+  },
+  "dxf_textos": {
+   "valor": {
+    "camadas": 4,
+    "entidades": 48,
+    "cotas": 4,
+    "textos": 13,
+    "hachuras": 3,
+    "blocos": 0,
+    "versao": "R2010",
+    "unidade": "metro",
+    "por_camada": {
+     "COTA": 24,
+     "Defpoints": 12,
+     "HACHURA": 3,
+     "ROTULO": 9
+    },
+    "ogrinfo": {
+     "COTA": 24,
+     "Defpoints": 12,
+     "HACHURA": 3,
+     "ROTULO": 9
+    }
+   },
+   "unidade": "contagem",
+   "comando": "venv/bin/pytest tests/unit/test_cad_formatos.py -k textos"
+  },
+  "dxf_camada_longa": {
+   "valor": {
+    "camadas": 2,
+    "entidades": 9,
+    "cotas": 0,
+    "textos": 0,
+    "hachuras": 0,
+    "blocos": 0,
+    "versao": "R2010",
+    "unidade": "metro",
+    "por_camada": {
+     "0-CURTA": 2,
+     "EIXO_DE_ARRUAMENTO_PROJETADO_COM_MEIO_FIO_E_SARJETA_REVISAO_EIXO_DE_ARRUAMENTO_PROJETADO_COM_MEIO_FIO_E_SARJETA_REVISAO_EIXO_DE_ARRUAMENTO_PROJETADO_COM_MEIO_FIO_E_SARJETA_REVISAO_EIXO_DE_AR ÁGUA PLUVIAL": 7
+    },
+    "ogrinfo": {
+     "0-CURTA": 2,
+     "EIXO_DE_ARRUAMENTO_PROJETADO_COM_MEIO_FIO_E_SARJETA_REVISAO_EIXO_DE_ARRUAMENTO_PROJETADO_COM_MEIO_FIO_E_SARJETA_REVISAO_EIXO_DE_ARRUAMENTO_PROJETADO_COM_MEIO_FIO_E_SARJETA_REVISAO_EIXO_DE_AR ÁGUA PLUVIAL": 7
+    }
+   },
+   "unidade": "contagem",
+   "comando": "venv/bin/pytest tests/unit/test_cad_formatos.py -k camada_longa"
+  },
+  "bloco_aninhado": {
+   "valor": {
+    "ezdxf_necessario": false,
+    "partes_por_insercao": [
+     5,
+     5,
+     5,
+     5
+    ],
+    "blocos_definidos": [
+     "CONJUNTO_ILUMINACAO",
+     "POSTE",
+     "_ARCHTICK",
+     "_CLOSEDBLANK",
+     "_CLOSEDFILLED"
+    ]
+   },
+   "unidade": "partes",
+   "comando": "venv/bin/pytest tests/unit/test_cad_formatos.py -k bloco_aninhado"
+  },
+  "dwg_R2000": {
+   "valor": {
+    "versao": "R2000",
+    "marca": "AC1015",
+    "conversor": "dwg2dxf 0.14.8583",
+    "bytes_dxf": 62247,
+    "tempo_s": 0.01,
+    "ram_pico_kb": 53896,
+    "entidades": 12,
+    "camadas": 2
+   },
+   "unidade": "conversao",
+   "comando": "venv/bin/pytest tests/unit/test_cad_formatos.py -k dwg_convertido"
+  },
+  "dwg_R2018": {
+   "valor": {
+    "versao": "R2018",
+    "marca": "AC1032",
+    "conversor": "dwg2dxf 0.14.8583",
+    "bytes_dxf": 114658,
+    "tempo_s": 0.011,
+    "ram_pico_kb": 53900,
+    "entidades": 1,
+    "camadas": 1
+   },
+   "unidade": "conversao",
+   "comando": "venv/bin/pytest tests/unit/test_cad_formatos.py -k dwg_convertido"
+  },
+  "isolamento": {
+   "valor": {
+    "seccomp": 2,
+    "no_new_privs": 1,
+    "rede": "bloqueada no processo (seccomp: socket AF_INET/AF_INET6 devolve EAFNOSUPPORT)",
+    "rlimit_as_mb": 768,
+    "rlimit_cpu_s": 60,
+    "timeout_s": 90,
+    "gdal": "GDAL 3.8.4, released 2024/02/08"
+   },
+   "unidade": "proc",
+   "comando": "venv/bin/pytest tests/unit/test_cad_formatos.py -k isolamento"
+  },
+  "georreferencia_3_pontos": {
+   "valor": {
+    "escala": 2.499999999505754,
+    "rotacao_graus": 16.999999963567884,
+    "rmse": 0.0,
+    "residuo_maximo": 0.0,
+    "graus_de_liberdade": 2
+   },
+   "unidade": "metro",
+   "comando": "venv/bin/pytest tests/unit/test_georreferencia.py -k tres_pontos"
+  },
+  "georreferencia_rmse_com_erro": {
+   "valor": {
+    "erro_injetado_m": 0.4,
+    "rmse": 0.135873,
+    "residuos": [
+     0.16641,
+     0.092308,
+     0.138461
+    ]
+   },
+   "unidade": "metro",
+   "comando": "venv/bin/pytest tests/unit/test_georreferencia.py -k rmse_cresce"
+  },
+  "dxf_2_milhoes_de_entidades": {
+   "valor": {
+    "entidades": 2000000,
+    "bytes": 189567147,
+    "segundos": 10.5,
+    "estado": "pendente",
+    "camadas": 1
+   },
+   "unidade": "segundo",
+   "comando": "PLAT_CAD_GRANDE=<arquivo> venv/bin/pytest tests/unit/test_cad_formatos.py -k dois_milhoes"
+  },
+  "corpus_dwg": {
+   "valor": {
+    "corpus": "conjunto de teste do GNU LibreDWG (test/test-data), no GPU box",
+    "arquivos": 141,
+    "conversor": "dwg2dxf 0.14.8583",
+    "segundos": 4.5,
+    "libredwg_falha": 0,
+    "libredwg_falha_pct": 0.0,
+    "gdal_sem_feicao": 29,
+    "gdal_sem_feicao_pct": 20.57,
+    "gdal_sem_feicao_nomes": [
+     "Cone.dwg",
+     "ConstructionLine.dwg",
+     "Helix.dwg",
+     "PolyLine2D.dwg",
+     "RAY.dwg",
+     "Spline.dwg",
+     "Underlay.dwg",
+     "block.dwg",
+     "dim.dwg"
+    ],
+    "feicoes_totais": 5556,
+    "por_versao": {
+     "R2000": {
+      "total": 24,
+      "libredwg_ok": 24,
+      "gdal_com_feicao": 18
+     },
+     "R2004": {
+      "total": 22,
+      "libredwg_ok": 22,
+      "gdal_com_feicao": 17
+     },
+     "R2007": {
+      "total": 19,
+      "libredwg_ok": 19,
+      "gdal_com_feicao": 15
+     },
+     "R2010": {
+      "total": 19,
+      "libredwg_ok": 19,
+      "gdal_com_feicao": 15
+     },
+     "R2013": {
+      "total": 20,
+      "libredwg_ok": 20,
+      "gdal_com_feicao": 16
+     },
+     "R2018": {
+      "total": 21,
+      "libredwg_ok": 21,
+      "gdal_com_feicao": 17
+     },
+     "R13": {
+      "total": 1,
+      "libredwg_ok": 1,
+      "gdal_com_feicao": 1
+     },
+     "R14": {
+      "total": 4,
+      "libredwg_ok": 4,
+      "gdal_com_feicao": 4
+     },
+     "R1.4": {
+      "total": 1,
+      "libredwg_ok": 1,
+      "gdal_com_feicao": 1
+     },
+     "R10": {
+      "total": 2,
+      "libredwg_ok": 2,
+      "gdal_com_feicao": 2
+     },
+     "R11/R12": {
+      "total": 3,
+      "libredwg_ok": 3,
+      "gdal_com_feicao": 3
+     },
+     "R2.10": {
+      "total": 2,
+      "libredwg_ok": 2,
+      "gdal_com_feicao": 1
+     },
+     "R2.6": {
+      "total": 2,
+      "libredwg_ok": 2,
+      "gdal_com_feicao": 1
+     },
+     "R9": {
+      "total": 1,
+      "libredwg_ok": 1,
+      "gdal_com_feicao": 1
+     }
+    },
+    "clausula_oda": "nao acionada: o portao pede decisao do dono se o LibreDWG falhar em mais de 10% do corpus; a falha medida do LibreDWG e 0%"
+   },
+   "unidade": "arquivos",
+   "comando": "python3 scripts/medir_corpus_dwg.py <raiz do corpus> corpus_dwg.json /opt/plat/libredwg/bin/dwg2dxf"
+  },
+  "e2e_dwg_r2000": {
+   "valor": {
+    "versao": "R2000",
+    "feicoes": 12,
+    "conversor": "dwg2dxf 0.14.8583"
+   },
+   "unidade": "feicoes",
+   "comando": "venv/bin/pytest tests/api/ingestao/test_ingestao_cad.py -k dwg_r2000"
+  },
+  "e2e_dxf": {
+   "valor": {
+    "passos": 5,
+    "feicoes": 8,
+    "srid": 31983,
+    "rmse": 0.0,
+    "captura": "/home/dev/plataforma/wt/garage/tests/capturas/L0-04-e-formatos-cad_dxf_com_pontos_de_controle.json"
+   },
+   "unidade": "passos",
+   "comando": "venv/bin/pytest tests/api/ingestao/test_ingestao_cad.py -k fluxo_completo"
+  }
+ },
+ "gerado_em": "2026-09-06T16:38:26Z",
+ "git_sha": "42232e8f2ae1"
+}

@@ -1,0 +1,100 @@
+{
+ "item": "L2-10-a-dominios-subtipos",
+ "medidas": {
+  "codificado_mensagem_do_gatilho": {
+   "valor": "campo \"uf\": o valor 'ZZ' não pertence ao domínio \"zt dominio b612376b\"",
+   "unidade": "",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "codificado_coluna_no_erro": {
+   "valor": "uf",
+   "unidade": "",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "intervalo_recusa_abaixo_e_acima": {
+   "valor": true,
+   "unidade": "",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "subtipos_no_mesmo_campo": {
+   "valor": 2,
+   "unidade": "",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "dominios_distintos_ligados_ao_campo_situacao": {
+   "valor": 3,
+   "unidade": "",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "remocao_de_valor_em_uso_status": {
+   "valor": 409,
+   "unidade": "",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "remocao_de_valor_em_uso_contagem": {
+   "valor": 4,
+   "unidade": "feições",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "featureserver_campos_com_domain": {
+   "valor": 2,
+   "unidade": "",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "featureserver_types": {
+   "valor": 1,
+   "unidade": "",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "insercoes_medidas": {
+   "valor": 10000,
+   "unidade": "linhas",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "segundos_sem_gatilho": {
+   "valor": 1.707,
+   "unidade": "s",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "segundos_com_gatilho": {
+   "valor": 1.796,
+   "unidade": "s",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "razao_com_sobre_sem": {
+   "valor": 1.053,
+   "unidade": "x",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "teto_do_portao": {
+   "valor": 1.5,
+   "unidade": "x",
+   "comando": "set -a; source /home/dev/plataforma/laco/var/trilha/t210a.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/test_dominios_subtipos.py -q"
+  },
+  "pagina_dominios_ms": {
+   "valor": 76.7,
+   "unidade": "ms",
+   "comando": "playwright chromium (tests/e2e/test_dominios.py) com --base-url próprio"
+  },
+  "formulario_opcoes_com_descricao": {
+   "valor": [
+    "São Paulo",
+    "Rio de Janeiro",
+    "Minas Gerais"
+   ],
+   "unidade": "rótulos",
+   "comando": "page.eval_on_selector_all('#campo-uf option') no e2e"
+  },
+  "formulario_valores_gravados": {
+   "valor": [
+    "SP",
+    "RJ",
+    "MG"
+   ],
+   "unidade": "códigos",
+   "comando": "page.eval_on_selector_all('#campo-uf option') no e2e"
+  }
+ },
+ "gerado_em": "2026-09-06T16:32:38Z",
+ "git_sha": "90d03c07da0c"
+}

@@ -1,9 +1,9 @@
-"""Formatos aceitos nesta passagem (ADR 0005 seção 3.3 e 10.1, reduzido a 4 pelo escopo do turno): shapefile
-zipado, GeoPackage, GeoJSON, CSV/TXT (lat/lon). Cada um tem: extensões aceitas, prova pelo CONTEÚDO (nunca só a
-extensão — a mesma regra do L0-11/L7-03-b, aqui aplicada ao tipo declarado no upload), e o driver GDAL usado na
-inspeção/carga. O que falta (KML/KMZ, GPX, XLSX, DXF, DWG, FileGDB, FlatGeobuf, GML, MapInfo, GeoParquet) está
-documentado no ADR 0005 seções 10-12 e no handoff do item; `formato_nao_suportado` é a recusa para qualquer um
-deles nesta passagem."""
+"""Formatos aceitos: shapefile zipado, GeoPackage, GeoJSON, CSV/TXT (lat/lon) — ADR 0005 seções 3.3 e 10.1 — e
+os dois de CAD, DXF e DWG (ADR 0020, item L0-04-e). Cada um tem: extensões aceitas, prova pelo CONTEÚDO (nunca
+só a extensão — a mesma regra do L0-11/L7-03-b, aqui aplicada ao tipo declarado no upload), e o driver GDAL
+usado na inspeção/carga. O que ainda falta (KML/KMZ, GPX, XLSX, FileGDB, FlatGeobuf, GML, MapInfo, GeoParquet)
+está documentado no ADR 0005 seções 10-12 e no handoff do item; `formato_nao_suportado` é a recusa para
+qualquer um deles."""
 
 from __future__ import annotations
 
@@ -30,6 +30,8 @@ FORMATOS: dict[str, Formato] = {
     "gpkg": Formato("gpkg", (".gpkg",), "GeoPackage", "GPKG"),
     "geojson": Formato("geojson", (".geojson", ".json"), "GeoJSON", "GeoJSON"),
     "csv": Formato("csv", (".csv", ".txt", ".tsv", ".psv"), "CSV / texto delimitado", "CSV"),
+    "dxf": Formato("dxf", (".dxf",), "DXF (desenho CAD)", "DXF"),
+    "dwg": Formato("dwg", (".dwg",), "DWG (desenho CAD)", "DXF"),
 }
 
 
@@ -106,6 +108,25 @@ def verificar_conteudo(tipo_declarado: str, dados: bytes) -> None:
             raise ConteudoNaoCorresponde(
                 "conteúdo não corresponde ao tipo geojson: o arquivo é " + _o_que_e(dados)
             )
+    elif tipo_declarado in ("dxf", "dwg"):
+        from app.ingestao import cad
+
+        visto = cad.assinatura(dados[:8192])
+        if tipo_declarado == "dwg":
+            if visto != "dwg":
+                raise ConteudoNaoCorresponde(
+                    "conteúdo não corresponde ao tipo dwg: os bytes iniciais não trazem a marca de versão do "
+                    "DWG (AC10xx)")
+        elif visto == "dxf_binario":
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo dxf: o arquivo é um DXF BINÁRIO, formato que o leitor de DXF "
+                "do GDAL não abre; grave como DXF de texto (ASCII)")
+        elif visto == "dwg":
+            _marca, versao = cad.versao_dwg(dados[:8192])
+            raise ConteudoNaoCorresponde(
+                f"conteúdo não corresponde ao tipo dxf: o arquivo é um DWG na versão {versao}; declare o tipo dwg")
+        elif visto != "dxf":
+            raise ConteudoNaoCorresponde("conteúdo não corresponde ao tipo dxf: o arquivo é " + _o_que_e(dados))
     elif tipo_declarado == "csv":
         amostra = dados[:65536]
         if b"\x00" in amostra:

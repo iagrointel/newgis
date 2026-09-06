@@ -196,6 +196,44 @@ origem conferida contra uma extração real** (11 camadas) e **60 são declarado
 conferência** (`SUB`, `UNSEMT`, `UNCRMT`, `UNREMT`, `UGMT_tab`); o pacote de água é inteiramente declarado.
 Nenhum atributo com `conferida = false` deve decidir carga de dado sem antes conferir o dicionário da entrega.
 Topologia, traçado e subrede não existem ainda — este item entrega só o catálogo do esquema.
+## turno 3, setembro de 2026 (item L2-10-a-dominios-subtipos: domínios de atributo e subtipos por camada)
+
+Domínio de atributo como objeto do inquilino (`plat.dominio`: codificado com lista de códigos, ou intervalo
+com mínimo e máximo), ligação campo -> domínio por camada e por subtipo (`plat.dominio_campo`), subtipo como
+campo inteiro designado da camada (`plat.camada_subtipo`). **ADR 0021**; migrações
+`20260906T1548_dominios_subtipos.sql` e `20260906T1620_dominios_gatilho_gerado.sql`.
+
+- **A regra vale no banco.** Um INSERT direto na tabela da camada como `plat_app`, sem passar pela API, é
+  recusado com `campo "uf": o valor 'ZZ' não pertence ao domínio "UF"` e com o nome do campo em `COLUMN` —
+  a API repassa isso em `detalhe.campo`. Domínio de intervalo recusa abaixo do mínimo e acima do máximo
+  (`campo "altura": o valor -0.1 está fora do intervalo 0.0 a 10.0`). Medido em
+  `tests/medidas/L2-10-a-dominios-subtipos.json`.
+- **Subtipo troca o domínio do mesmo campo.** Com dois subtipos ligados ao campo `situacao`, `terra` passa no
+  subtipo 2 e é recusado no 1; sem subtipo vale o domínio padrão da camada; subtipo fora da lista é recusado.
+- **Remover valor em uso = 409 com a contagem.** Quem conta é `plat.dominio_uso_contar`, a mesma função que
+  responde `GET /api/dominios/{id}/uso`: quatro feições usando `C1` dão
+  `{"erro": "valor_em_uso", "detalhe": {"codigo": "C1", "usos": 4}}`. Valor não usado sai sem drama.
+- **Custo do gatilho, medido e corrigido.** A primeira versão, genérica, lia a linha com `to_jsonb(NEW)` e
+  custou **1,80x** (10 mil inserções: 1,72 s sem gatilho, 3,11 s com) — acima do teto de 1,5x do item. Um
+  gatilho que só faz `to_jsonb(NEW)` já custa cerca de 129 us por linha, porque converte a linha inteira, com
+  geometria. O gatilho passou a ser GERADO por camada (`plat.dominio_v_<item>`, com `NEW.uf` no código), e
+  três gatilhos AFTER (em `plat.dominio_campo`, `plat.camada_subtipo` e `plat.dominio`) regeneram a função
+  sozinhos — nenhuma rota instala gatilho, e quem mexe por `psql` regenera do mesmo jeito.
+- **FeatureServer com domains e types.** `GET /rest/services/{item_id}/FeatureServer/0` publica
+  `fields[].domain` (codedValue e range) e `types[]` com `domains` por subtipo e `templates` com os valores
+  padrão; conferido contra o que `GET /api/camadas/{id}/dominios` devolve do banco. É só o METADADO: `/query`
+  e `/applyEdits` são da linha L2-08.
+- **Tela `/camadas/{id}/dominios`.** Campo com domínio codificado vira lista de escolha que mostra a descrição
+  e grava o código; trocar o subtipo refaz os campos dependentes e aplica os padrões; a tabela de feições usa
+  a mesma tradução (`web/js/dominios/valores.js`, a função única do formulário, da tabela e — quando o painel
+  de camada existir — do popup).
+- **CSV de ida e volta** (`GET /api/dominios.csv`, `POST /api/dominios/csv`) e **importação do `fields`/`types`
+  de um FeatureServer/FGDB** (`POST /api/dominios/importar`), que reaproveita domínio de mesmo nome em vez de
+  duplicar.
+
+Testes: `tests/api/test_dominios_subtipos.py` (inclui a refutação exigida: domínio de outro inquilino = 404,
+50 mil códigos = 422, código duplicado recusado na API e no banco, trocar o tipo de campo com domínio ligado
+= 409) e `tests/e2e/test_dominios.py` (playwright, com capturas).
 
 ## turno 3, setembro de 2026 (item L0-04-a-upload-arquivo: upload retomável pelo navegador)
 
@@ -517,6 +555,51 @@ Latência medida: mediana de 30 `PUT /api/itens/{id}` (painel, 2 nós) = **17,3 
 `/api/tipos-item`; `/api/itens/{id}/integridade` como alvo padrão 401/403/404).
 
 Decisões em `docs/adr/0011-documento-de-construtor.md`. Detalhe: `MANUAL.md` seção 17, `ARQUITETURA.md` seção 14.
+
+## turno 3, setembro de 2026 (item L1-01-d-garage-por-inquilino: balde por inquilino com cota dupla, chave só-leitura e COG por Range)
+
+Constrói sobre o adaptador do L0-11 (ADR 0006) o que a linha de imagens precisa. **ADR 0016**; migração
+`20260906T1547_garage_inquilino.sql` (a reserva original era 034, e depois 042, mas a árvore principal já tinha commitado 034/036/040/041/042
+— renumerada e registrada no handoff).
+
+- **Cota dupla.** `plat.tenant.cota_objetos` e `plat.arquivo_bucket.cota_objetos` novas; `UpdateBucket` do Garage
+  passa a receber `quotas: {maxSize, maxObjects}`. Medido: com `maxObjects` na conta exata, o PUT seguinte volta
+  403 e a mensagem que chega à API é **"o Garage recusou a gravação: a cota de objetos do inquilino foi atingida
+  (limite do balde: N objetos)"** — em português, com o limite que o próprio Garage citou
+  (`app/garage.traduzir_erro_s3`, classe `CotaGarage`). Para bytes a instância mediu **"o Garage recusou a
+  gravação: a cota de armazenamento do inquilino foi atingida"** — sem número, porque essa mensagem do Garage não
+  cita o limite. `POST /api/arquivos` acima da cota devolve **413 `cota_excedida`**; a frase que chega ali é a da
+  checagem prévia ("cota de 500 bytes excedida: uso atual 138906, objeto de 2048 bytes"), porque ela corre antes e
+  é mais informativa — a do Garage é a que sobe quando a prévia deixa passar.
+- **Semeadura de instalação.** Passo `g3` do `install.sh` (`python -m app.baldes_semear`): balde, duas chaves,
+  as duas cotas e o endpoint web por inquilino ativo. Medido no inquilino de teste: 1ª execução **1
+  criado/alterado**, 2ª **0 criados/alterados**. A semeadura lê o balde de volta pela Admin API e reaplica quando
+  o Garage discorda do banco — foi assim que se descobriu `plat-demo` com `maxObjects: null` no Garage e 200000
+  no banco.
+- **Objeto nomeado por conteúdo, nunca sobrescrito.** `app/objetos_raster.py`: `<item_id>/<asset>_<sha8>.<ext>`,
+  `HEAD` antes de gravar, `ObjetoJaExiste` na segunda gravação do mesmo conteúdo; conteúdo novo produz chave nova
+  (medido: `demo/zt_sobrescrita/cog_c9e41e3e.tif` → `cog_ebd6a855.tif`, a versão 1 intacta). A expressão da chave
+  não admite ponto nem barra no item/asset: dez formas erradas (`..`, `../../etc`, maiúscula, sha curto) recusadas
+  no teste unitário.
+- **Chave só-leitura que sai de casa.** `GET /api/arquivos/_chave-leitura` (sessão + `org.integracoes`) entrega a
+  credencial S3 RO do balde para a conexão do ArcGIS Pro e o `/vsis3` do TiTiler; a chave RW nunca sai. Refutação
+  medida com boto3: com a chave RO, `PutObject` **403**, `DeleteObject` **403**, `CopyObject` no mesmo balde
+  **403**, `CopyObject` entre baldes **403**, `CreateMultipartUpload` **403**; `ListBuckets` responde 200 mas
+  mostra só `['plat-demo']` (o balde do outro inquilino não aparece). Contra o balde do vizinho, `GetObject`,
+  `HeadObject` e `ListObjectsV2` = **403** cada.
+- **COG por HTTPS com Range.** Bloco `/svc/<token>/cog/<slug>/...` em `deploy/nginx.conf` (`slice 1m`, cache das
+  fatias, `auth_request` contra `GET /api/arquivos/_cog/autorizar`). Provado contra um nginx PRÓPRIO de teste
+  (porta 8162, certificado autoassinado): objeto de 3.146.505 bytes, `Range: bytes=1048576-1048591` responde
+  **206** com `Content-Range: bytes 1048576-1048591/3146505`, 16 bytes conferidos contra o conteúdo gravado;
+  token inválido no caminho = **403** antes de o Garage ver a requisição. **O bloco NÃO foi aplicado no nginx do
+  sistema neste turno** — quem aplica é o gerente.
+- **Apagar devolve a cota.** `objetos_raster.apagar_item` mediu 72 objetos/138.095 bytes antes → 75/153.095 com
+  3 objetos gravados → 72/138.095 depois, com os contadores do próprio Garage (GetBucketInfo). Segunda chamada
+  devolve zeros. `objetos.apagar_bucket_do_inquilino` desfaz o balde inteiro (objetos, as duas chaves, o balde e
+  a linha), porque `plat.inquilino_apagar` só limpa o banco.
+
+Medidas em `tests/medidas/L1-01-d.json`. Testes: `tests/unit/test_objetos_raster.py` (30) e
+`tests/api/test_garage_inquilino.py`.
 
 ## turno 3, setembro de 2026 (itens L0-02-e-varredura-cruzada-rls · L0-02-f-tela-usuarios: fechamento com evidência fresca + gap real corrigido)
 

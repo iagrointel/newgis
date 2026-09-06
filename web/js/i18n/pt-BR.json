@@ -899,5 +899,20 @@
  "catalogo.filtro_licenca": "Licença",
  "catalogo.filtro_procedencia": "Procedência mínima",
  "catalogo.licenca_nenhuma": "sem licença registrada",
- "catalogo.busca_erro_numero_0_10": "{campo} vai de 0 a 10"
+ "catalogo.busca_erro_numero_0_10": "{campo} vai de 0 a 10",
+ "dominios.titulo": "Domínios da camada",
+ "dominios.ligacoes": "Campos e domínios",
+ "dominios.formulario": "Nova feição",
+ "dominios.tabela": "Feições da camada",
+ "dominios.campo": "campo",
+ "dominios.tipo_do_campo": "tipo",
+ "dominios.dominio": "domínio",
+ "dominios.subtipo": "subtipo",
+ "dominios.sem_dominio": "sem domínio",
+ "dominios.padrao": "padrão da camada",
+ "dominios.valores": "valores",
+ "dominios.campo_de_subtipo": "campo de subtipo",
+ "dominios.escolha": "escolha",
+ "dominios.gravar": "Gravar feição",
+ "dominios.gravada": "feição gravada"
 }

@@ -10,6 +10,8 @@ FAMILIAS = {
     "Polygon": "Polygon", "MultiPolygon": "Polygon",
 }
 MULTI_DE = {"Point": "MultiPoint", "LineString": "MultiLineString", "Polygon": "MultiPolygon"}
+# MULTI_DE é indexado pelo TIPO; esta é a mesma tabela indexada pela FAMÍLIA (FAMILIAS.values())
+MULTI_DA_FAMILIA = {"Point": "MultiPoint", "Line": "MultiLineString", "Polygon": "MultiPolygon"}
 TIPOS_CONCRETOS = set(FAMILIAS)
 
 
@@ -53,6 +55,12 @@ def resolver(tipos_contagem: dict[str, int]) -> dict:
                 "opcoes": ["separar em camadas", "descartar um tipo", "geometria genérica"], "z": z,
                 "sem_geometria": sem_geometria}
     familia = next(iter(familias))
-    escolhida = MULTI_DE[familia] if len(limpos) > 1 or any(k.startswith("Multi") for k in limpos) else familia
+    # o único tipo-base visto, quando há só um: devolver a FAMÍLIA aqui daria "Line", que não é tipo de
+    # geometria nenhum e quebrava o `-nlt` do ogr2ogr (achado do item L0-04-e, com DXF só de polilinha)
+    unico = next(iter(limpos))
+    if len(limpos) > 1 or any(k.startswith("Multi") for k in limpos):
+        escolhida = MULTI_DA_FAMILIA[familia]
+    else:
+        escolhida = unico
     return {"tipos": tipos_contagem, "escolhida": escolhida, "perguntar": False, "opcoes": [escolhida], "z": z,
             "sem_geometria": sem_geometria}

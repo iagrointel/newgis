@@ -1,0 +1,155 @@
+{
+ "item": "L0-04-e-formatos-cad",
+ "fluxo": "dxf_com_pontos_de_controle",
+ "passos": [
+  {
+   "passo": 1,
+   "titulo": "enviar arquivo",
+   "pedido": {
+    "arquivo": "polilinhas.dxf",
+    "bytes": 40550
+   },
+   "resposta": {
+    "sha256": "8a52a6cb7201a9c1…"
+   }
+  },
+  {
+   "passo": 2,
+   "titulo": "criar importação",
+   "pedido": {
+    "formato": "dxf"
+   },
+   "resposta": {
+    "job_id": "0a8fcc01-3a0f-4fe7-8b21-6532755825a6"
+   }
+  },
+  {
+   "passo": 3,
+   "titulo": "proposta da inspeção",
+   "pedido": {
+    "importacao_id": "73cbb917-6f7b-4cb7-9239-f15fa3e3e350"
+   },
+   "resposta": {
+    "estado": "proposta",
+    "perguntas": [
+     "crs",
+     "georreferencia"
+    ],
+    "camadas_desenho": [
+     "QUADRA",
+     "TALUDE_3D"
+    ],
+    "cad": {
+     "versao": "R2010",
+     "unidade": {
+      "nome": "metro",
+      "codigo": 6,
+      "origem": "cabecalho",
+      "perguntar": false,
+      "metros_por_unidade": 1.0
+     },
+     "totais": {
+      "cotas": 0,
+      "blocos": 0,
+      "textos": 0,
+      "camadas": 2,
+      "hachuras": 0,
+      "entidades": 12,
+      "blocos_modo": "ponto"
+     },
+     "camadas": [
+      {
+       "nome": "QUADRA",
+       "cotas": 0,
+       "blocos": 0,
+       "textos": 0,
+       "hachuras": 0,
+       "entidades": 8,
+       "blocos_distintos": 0
+      },
+      {
+       "nome": "TALUDE_3D",
+       "cotas": 0,
+       "blocos": 0,
+       "textos": 0,
+       "hachuras": 0,
+       "entidades": 4,
+       "blocos_distintos": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "passo": 4,
+   "titulo": "confirmar",
+   "pedido": {
+    "crs": {
+     "srid": 31983
+    },
+    "cad": {
+     "unidade": 6,
+     "camadas": [
+      "QUADRA"
+     ],
+     "georreferencia": {
+      "pontos": [
+       {
+        "desenho": [
+         0.0,
+         0.0
+        ],
+        "terreno": [
+         330000.0,
+         7390000.0
+        ]
+       },
+       {
+        "desenho": [
+         200.0,
+         0.0
+        ],
+        "terreno": [
+         330195.62952014676,
+         7390041.582338164
+        ]
+       },
+       {
+        "desenho": [
+         0.0,
+         30.0
+        ],
+        "terreno": [
+         329993.7626492755,
+         7390029.344428022
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "resposta": {
+    "estado": "concluida",
+    "rmse": 0.0,
+    "escala": 1.000000000026778,
+    "rotacao_graus": 12.000000006242882
+   }
+  },
+  {
+   "passo": 5,
+   "titulo": "tabela no banco",
+   "pedido": {
+    "schema": "d_zt583f0cdf",
+    "tabela": "c_61cadd798ca9403b"
+   },
+   "resposta": {
+    "feicoes": 8,
+    "srid": 31983,
+    "centro": [
+     330114.25903672323,
+     7390039.621616927
+    ]
+   }
+  }
+ ]
+}

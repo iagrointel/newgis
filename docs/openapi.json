@@ -8781,6 +8781,7 @@
      "arquivos"
     ],
     "summary": "Uso",
+    "description": "Uso × cota do balde do inquilino, lido do PRÓPRIO Garage (GetBucketInfo), nas DUAS dimensões que o balde\ntem desde o item L1-01-d: bytes e número de objetos. `cota_bytes` continua no corpo com o mesmo nome e o\nmesmo significado de antes (item L0-11); `objetos_usados`/`cota_objetos` são os campos novos.",
     "operationId": "uso_api_arquivos_get",
     "responses": {
      "200": {
@@ -8836,6 +8837,45 @@
     },
     "x-auth": "T",
     "x-privilegio": "proprio"
+   }
+  },
+  "/api/arquivos/_chave-leitura": {
+   "get": {
+    "tags": [
+     "arquivos"
+    ],
+    "summary": "Chave Leitura",
+    "description": "A chave S3 SÓ-LEITURA do balde do inquilino: é o que a conexão S3 do ArcGIS Pro (`Create Cloud Storage\nConnection File`, provedor S3 compatível, endereçamento por caminho) e o TiTiler (`/vsis3`) precisam para ler\no COG direto do Garage, sem passar byte por esta API. Nunca a chave de escrita — essa só existe dentro do\nprocesso da API e do worker (ADR 0016 seção 4). Só sob sessão e com `org.integracoes`: um token de serviço\nnão troca a si mesmo por uma credencial de armazenamento.",
+    "operationId": "chave_leitura_api_arquivos__chave_leitura_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "org.integracoes"
+   }
+  },
+  "/api/arquivos/_cog/autorizar": {
+   "get": {
+    "tags": [
+     "arquivos"
+    ],
+    "summary": "Cog Autorizar",
+    "description": "Subrequisição `auth_request` do bloco `/svc/<token>/cog/<slug>/...` do nginx (deploy/nginx.conf). Recebe o\ncaminho original em `X-Original-URI` e responde 204 (o nginx serve a fatia do Garage) ou 403 (não serve).\nAutoriza quando: o caminho está na forma esperada, o token existe, não está revogado nem expirado, e o\ninquilino do token é o dono do `<slug>` do caminho. Nunca diz QUAL das condições falhou — a resposta é a\nmesma 403 para token inexistente e para token de outro inquilino, senão a rota vira oráculo de token.\nÉ rota pública de propósito: a subrequisição do nginx não carrega cookie nem `Authorization`.",
+    "operationId": "cog_autorizar_api_arquivos__cog_autorizar_get",
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     }
+    },
+    "x-auth": "publico",
+    "x-privilegio": "publico"
    }
   },
   "/api/arquivos/{sha256}": {
