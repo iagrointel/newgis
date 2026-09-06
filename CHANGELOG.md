@@ -49,6 +49,25 @@ com RAM livre. Fora do portão literal deste turno (hipótese do item, registrad
 de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail — o job `correio.enviar` já serve,
 falta só o gatilho periódico cross-tenant.
 
+## turno 3, setembro de 2026 (item L6-01-b-view-so-leitura: publicação sem cópia do acervo)
+
+Cada camada exposta do registro do acervo (`plat.acervo_camada`, item L6-01-a) passa a ter uma VIEW em
+`plat_acervo`, com só as colunas da lista branca e o porteiro `plat.acervo_pode_ler('<camada>')` no `WHERE`.
+Nenhum byte é copiado: a view lê a tabela original e usa o índice GiST dela. A leitura só passa quando o
+inquilino tem linha em `plat.acervo_assinatura` — sem assinatura a view devolve zero linha e a API devolve
+403. `plat_app` continua sem privilégio nenhum no schema `public`: quem tem `SELECT` na tabela de origem é o
+papel `plat_acervo_publicador`, dono das views, que recebe uma tabela por vez. A view tem só `GRANT SELECT`,
+então escrita é recusada pelo próprio Postgres, não pela ausência de rota. Rotas novas:
+`GET /api/acervo/camadas`, `POST`/`DELETE /api/acervo/camadas/{camada}/assinatura`,
+`GET /api/acervo/camadas/{camada}/feicoes` (GeoJSON por caixa envolvente) e
+`GET /api/acervo/camadas/{camada}/tiles/{z}/{x}/{y}.mvt`. Publicador: `scripts/acervo_publicar.py` (roda como
+`postgres`, idempotente, despublica sozinho quem sai de `exposta`). Medido sobre `public.car_area_imovel`
+(8.406.837 linhas por `COUNT(*)`; 7.357.920 é a estimativa `reltuples`): consulta de mapa por caixa
+envolvente em 1,5 ms de mediana. Duas cláusulas da hipótese caíram na medição e estão no ADR 0018:
+`SECURITY INVOKER` é incompatível com "nenhum GRANT direto a plat_app" (o Postgres recusa), e
+`security_barrier` derruba o índice GiST porque o `&&` de geometria não é `LEAKPROOF` — o que protege é o
+porteiro virar `One-Time Filter`, com o nó do índice `(never executed)`.
+
 ## turno 3, setembro de 2026 (nome de migração por carimbo de tempo — ADR 0014)
 
 Migração nova passa a se chamar `db/migracoes/YYYYMMDDTHHMM_<slug>.sql` (carimbo UTC, mais 3 hexadecimais
