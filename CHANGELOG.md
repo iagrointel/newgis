@@ -3,6 +3,48 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (DESTRAVA dos 4 pais parciais: L0-05-jobs · L0-04-c-tabela-camada · L0-02-tenant-auth · L0-04-ingest-vetor)
+
+Retomada de queda por cota (worktree `wt/destrava`), tarefa de maior alavanca do laço: conferir cláusula por
+cláusula, contra o código de hoje (HEAD já igual ao da árvore principal, 8c2c63c), os 4 itens que travavam 73
+dependentes. Achado central: os bloqueios registrados no `estado.json` estavam **defasados** — os "3 consertos
+em curso" do L0-05-jobs (semeadura e2e, perfil visualizador, Cache-Control) e a trilha B (catálogo) que o L0-02
+esperava já tinham chegado ao HEAD havia dias; o texto do bloqueio nunca foi atualizado.
+
+Quatro defeitos reais, pequenos e cirúrgicos, corrigidos com prova (nenhum tocou `app/main.py`, `app/jobs/tipos.py`,
+`app/limites.py` nem `app/catalogo/rotas_itens.py`):
+1. **`app/schema_ambiente.py`** — `CursorSchemaAmbiente` só reescrevia `execute()`/`callproc()`; o `executemany()`
+   usado por `POST/PUT /api/papeis` (lote de `papel_privilegio`) ia com `plat.` literal e quebrava em qualquer
+   trilha/homologação (403 "operação fora do inquilino"). Achado já estava escrito e não commitado no worktree
+   (agente anterior morreu no meio); revisado, confirmado com `tests/api/test_usuarios.py` (11/11) e commitado.
+2. **`app/catalogo/tarefas.py`** — `catalogo.lixeira_expurgar` calculava `bytes_liberados` por item mas nunca
+   escrevia de volta em `plat.tenant.uso_bytes`: a cota do inquilino só subia (achado do adversário G3). Corrigido
+   só para `tipo='camada_vetorial'` (o único que a carga incrementa). Medido manualmente: sobe 188.416 na
+   importação, volta ao valor exato de antes depois de apagar + expurgar.
+3. **Migração `20260906T1812_ingestao_slug_com_hifen.sql`** — `plat.tenant.slug` aceita hífen, mas
+   `camada_schema_garantir`/`camada_preparar` (029) e o `pattern` de "schema" no esquema JSON de `camada_vetorial`
+   recusavam qualquer slug com hífen (outro achado do G3): um inquilino como `zt-inq-xxxxxx` (o formato do próprio
+   fixture `InquilinoTemporario`) nunca conseguia importar camada nenhuma. Relaxado; teste novo
+   `test_inquilino_com_hifen_no_slug_importa` prova a importação de ponta a ponta.
+4. **`tests/api/test_sessao.py::test_sessao_ociosa_expira`** — `plat.auth_sessao` só usa o parâmetro de teste
+   `PLAT_TESTE_OCIOSA_S` quando o inquilino não tem `config.auth.sessao_ociosa_horas` explícito; o `demo` de
+   instalação passou a nascer com essa chave preenchida (12 h), travando o teste sempre em 200. Corrigido para
+   remover a chave por baixo do bloqueio e devolvê-la no fim (try/finally) — não é defeito do mecanismo de sessão.
+
+Medida nova gravada: `tests/medidas/L0-04-c-tabela-camada.json` — `tempo_import_100k_s = 14,0 s` (teto do portão:
+60 s; shapefile dos 100.000 primeiros setores censitários de SP, IBGE Censo 2022, EPSG:4674).
+
+Achado no worktree, não escrito por este turno, revisado e mantido: `db/migrar.sh` ganhou uma guarda que recusa
+rodar (código 9) a partir de um `wt/*` sem `PLAT_TRILHA_ALVO` — protege exatamente o incidente descrito em
+`BRIEF_WORKTREES.md` item 5 (migração de trilha aplicada em `plat` de produção). Efeito colateral aceito, não uma
+regressão: `tests/api/test_migracoes.py` (2 testes) chamam o script direto e agora recusam de dentro de um
+worktree — continuam passando a partir da árvore principal, onde a P3 "suíte inteira verde" é de fato avaliada.
+
+Veredito por item (portão literal, cláusula a cláusula — detalhe completo em
+`laco/handoffs/T3/DESTRAVA-pais-parciais.md`): os 4 itens permanecem **parcial** — nenhum tinha todas as cláusulas
+prontas para virar `entregue` hoje, mas cada um saiu com pelo menos uma cláusula fechada com prova nova e o
+bloqueio reescrito com a cláusula exata que falta (nunca deixado em branco).
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
