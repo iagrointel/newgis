@@ -515,6 +515,7 @@ Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RL
 
 Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
 Migração `044_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
 editável) e `amc_modelo_versao` (toda versão que já existiu, imutável para a aplicação por gatilho), `amc_conjunto_unidade`
 e `amc_unidade`, `amc_execucao` (proveniência congelada), `amc_fator_bruto` e `amc_resultado` — linhas por (execução,
 unidade, fator), nunca uma coluna por fator. `amc_resultado` tem `CHECK` que impede unidade vetada de carregar número na
@@ -631,6 +632,38 @@ A migração `044_amc.sql` foi renumerada para **`045_amc.sql`**: a árvore prin
 45 testes novos (`tests/unit/test_amc_esquema.py`, `tests/unit/test_amc_crs.py`, `tests/api/amc/`), verdes; a varredura
 cruzada do OpenAPI cobre as 18 rotas novas (`tests/api/cruzado_casos.py`). ADR
 `docs/adr/0016-motor-amc-modelo-e-unidades.md`.
+
+### conserto depois da refutação (`laco/handoffs/T3/L3-01-CONSERTO.md`)
+
+O laudo `laco/handoffs/T3/L3-01-ADVERSARIO.md` refutou o item em cinco frentes; as duas cláusulas centrais do portão
+(imutabilidade do modelo já executado e isolamento entre inquilinos) resistiram. Consertado:
+
+1. **Reescrita de schema fechada como classe** (`app/schema_ambiente.py`). Era só `execute` com `str`; passou a cobrir
+   `str` e `bytes` em `execute`, `executemany`, `callproc`, `mogrify` e `copy_expert`, com `copy_from`/`copy_to`
+   declarados fora de cobertura com a razão escrita. Três defeitos do mesmo tipo apareceram no mesmo dia: o `bytes` de
+   `psycopg2.extras.execute_values` (que quebrava o conjunto do tipo `feicoes` fora do schema `plat`), as conexões de
+   teste (commit `c311aa7`) e o `executemany` de `POST`/`PUT /api/papeis` (que fazia a prova de isolamento entre
+   inquilinos rodar contra o schema de produção). `tests/unit/test_schema_ambiente.py` (22 casos) reprova se aparecer
+   um ponto de entrada novo sem reescrita. `app/amc/unidades.gravar_feicoes` não usa mais `execute_values`.
+2. **Erro de privilégio deixou de mentir** (`app/auth/comum._erro_de_privilegio`): o SQLSTATE 42501 por política de
+   inquilino continua 403 `sem_permissao`; por falta de GRANT passa a 500 `privilegio_do_banco` — é erro de instalação
+   do ambiente e o 403 mandava o operador investigar o lugar errado.
+3. **Coerência interna da transformação** (`app/amc/esquema._violacoes_transformacao`): faixa invertida ou degenerada,
+   número de notas incompatível com o de quebras, quebras e bandas fora de ordem crescente e função contínua sem
+   parâmetro passavam pelo `allOf` do esquema (que descreve 4 dos 16 tipos), entravam no hash e só quebrariam no motor.
+4. **`zonas_utm_cobertas`** (`app/amc/crs.py`) enumera todas as zonas do intervalo; de −60° a −42° declarava
+   `[21, 22, 24]` e "cruza 3 zonas".
+5. **Teto de unidades sobre a contagem real** (`app/amc/unidades.gerar_grade`): era conferido só sobre a estimativa
+   área/área-da-célula e a célula de borda passava do teto (medido: 1.000.175 com o teto em 1.000.000). Passou do teto,
+   as unidades são apagadas, o conjunto vai a `falhou` com o motivo e a tarefa levanta `FalhaDefinitiva`.
+6. **JSON canônico**: chave repetida no corpo cru sai 422 `json_ambiguo` (era aceita em silêncio, com a primeira
+   ocorrência descartada pelo parser), e os números são normalizados antes do hash — `3` e `3.0` são o mesmo número em
+   JSON e davam versões diferentes. O documento gravado é o normalizado, para o hash continuar recomputável por fora
+   com a regra simples. Medido: os 53 modelos que existem em `plat` são todos resíduo de teste (`zt-*` e "modelo de
+   teste interno"), então a mudança de regra não invalida histórico de ninguém.
+
+Os 12 `xfail(strict=True)` do adversário viraram prova permanente (as marcas saíram; nenhuma asserção foi afrouxada).
+A migração `044_amc.sql` foi renumerada para **`045_amc.sql`**: a árvore principal publicou `044_uploads.sql`.
 
 ## turno 3, setembro de 2026 (item L0-08-d-ldap: LDAP/Active Directory como provedor de login externo)
 
