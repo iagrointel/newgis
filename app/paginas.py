@@ -30,6 +30,11 @@ PAGINAS = {
     "/mapa": "mapa.html",
     # --- conexões externas (L6-02-a/L6-02-l/L6-05)
     "/conexoes": "conexoes.html",
+    # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
+    "/aceitar-convite": "aceitar_convite.html",
+    "/redefinir-senha": "redefinir_senha.html",
+    # --- upload retomável (L0-04-a-upload-arquivo)
+    "/uploads": "uploads.html",
 }
 router = APIRouter()
 
