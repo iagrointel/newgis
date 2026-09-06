@@ -10,6 +10,14 @@ Group=APP_USER
 WorkingDirectory=APP_DIR
 # nunca ~/.local de ninguém: só a venv e os pacotes dpkg (ADR 0001 seção 2.1, alterado em T1)
 Environment=PYTHONNOUSERSITE=1
+# segredo fora do .env (item L7-19, docs/SEGURANCA.md): o systemd lê como root de /etc/plat/segredos/
+# (0600, dono root) e expõe uma cópia em $CREDENTIALS_DIRECTORY, nunca em argv/Environment=/journal.
+# MEDIDO nesta máquina (systemd 255, sem DynamicUser=): a cópia é liberada por ACL só ao usuário/grupo
+# desta unidade (User=/Group=, hoje APP_USER) — outro usuário do sistema recebe Permission denied, mas
+# outro processo rodando como o MESMO APP_USER (todo produto desta máquina roda como esse usuário) lê
+# se souber o caminho. Isolamento por-unidade de verdade pediria DynamicUser= (usuário efêmero por
+# serviço); fora de escopo aqui por reescrever a dono de toda a árvore do repositório. Ver docs/SEGURANCA.md §1.
+LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
 ExecStart=APP_DIR/venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port PORTA --workers 2 --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-access-log
 Restart=on-failure
 RestartSec=3

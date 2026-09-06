@@ -10,6 +10,12 @@ Group=APP_USER
 WorkingDirectory=APP_DIR
 # nunca ~/.local de ninguém: só a venv e os pacotes dpkg (ADR 0001 seção 2.1)
 Environment=PYTHONNOUSERSITE=1
+# segredo fora do .env (item L7-19, docs/SEGURANCA.md): mesmo mecanismo do plat-api (ver comentário lá
+# e docs/SEGURANCA.md §1 para o que a ACL do LoadCredential= isola e o que não isola nesta máquina).
+# PLAT_DSN_WORKER é a senha da role plat_worker, autoridade total sobre estado de job de todos os
+# inquilinos (achado do adversário no T2, L0-05) — sai do .env, dono root 0600 em /etc/plat/segredos/.
+LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
+LoadCredential=PLAT_DSN_WORKER:/etc/plat/segredos/PLAT_DSN_WORKER
 ExecStart=APP_DIR/venv/bin/python -m app.jobs.worker
 # sem job o worker só termina por sinal: qualquer saída é anômala (ADR 0003 seção 4.5)
 Restart=always

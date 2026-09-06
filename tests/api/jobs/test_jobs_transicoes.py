@@ -69,7 +69,9 @@ def test_plat_app_nao_executa_as_funcoes_do_worker(conexao_plat_app, sessao_demo
 
 
 def test_worker_nao_le_plat_job_direto_mas_pega_pela_funcao(env, cliente_demo, worker_vivo):
-    assert env.get("PLAT_DSN_WORKER"), "PLAT_DSN_WORKER ausente no .env (install.sh grava)"
+    assert env.get("PLAT_DSN_WORKER"), (
+        "PLAT_DSN_WORKER ausente (item L7-19: mora em /etc/plat/segredos/PLAT_DSN_WORKER, injetado pelo Makefile)"
+    )
     w = psycopg2.connect(env["PLAT_DSN_WORKER"], cursor_factory=psycopg2.extras.RealDictCursor)
     w.autocommit = True
     try:

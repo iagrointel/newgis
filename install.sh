@@ -12,6 +12,9 @@ APP_DIR=${APP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}
 APP_USER=${APP_USER:-$(stat -c %U "$APP_DIR")}
 DB=${PLAT_DB:-iagro_sat}
 PG_HBA=${PG_HBA:-/etc/postgresql/16/main/pg_hba.conf}
+# segredos fora do .env (item L7-19): mesmo caminho que deploy/plat-api.service e plat-worker.service
+# usam em LoadCredential=; não é parâmetro do script de propósito (o caminho tem de bater nos dois lados)
+CRED_DIR=/etc/plat/segredos
 UNIDADE=plat-api
 [ "$(id -u)" -eq 0 ] || { echo "rode como root: sudo bash install.sh $DOM $PORTA" >&2; exit 1; }
 cd "$APP_DIR"
@@ -35,13 +38,11 @@ SQL
 echo "== c. migrações"
 bash db/migrar.sh
 
-echo "== d. .env e senha da role"
+echo "== d. .env"
 if [ ! -f .env ]; then
   SENHA=$(openssl rand -hex 16)
-  SEGREDO=$(openssl rand -hex 32)
   cat > .env <<ENV
 PLAT_DSN=postgresql://plat_app:$SENHA@127.0.0.1:5432/$DB
-PLAT_SECRET=$SEGREDO
 PLAT_AMBIENTE=producao
 PLAT_URL_PUBLICA=https://$DOM
 PLAT_GIT_SHA=
@@ -62,15 +63,49 @@ chmod 600 .env; chown "$APP_USER":"$APP_USER" .env
 for chave in PLAT_WORKER_URL=http://127.0.0.1:8153 PLAT_WORKER_PROCESSOS=1 PLAT_WORKER_MEMORIA_MB=1536; do
   grep -q "^${chave%%=*}=" .env || echo "$chave" >> .env
 done
-# role do worker (migração 006): senha própria no .env, alinhada à role a cada execução, como a de plat_app
-if ! grep -q '^PLAT_DSN_WORKER=' .env; then
-  printf 'PLAT_DSN_WORKER=postgresql://plat_worker:%s@127.0.0.1:5432/%s\n' "$(openssl rand -hex 16)" "$DB" >> .env
-  echo "PLAT_DSN_WORKER gravado no .env"
+echo "== d2. segredos fora do .env (item L7-19, docs/SEGURANCA.md)"
+# PLAT_SECRET e a senha da role plat_worker (PLAT_DSN_WORKER) moram em arquivo fora do repositório, dono
+# root, modo 600; só o systemd (LoadCredential=, deploy/plat-api.service e plat-worker.service) entrega
+# uma cópia a cada unidade (achado do adversário no T2, L0-05: PLAT_DSN_WORKER em .env é autoridade
+# total sobre job de qualquer inquilino). MEDIDO nesta máquina: a cópia some do .env, do argv, do
+# journal e de qualquer usuário do sistema que não seja root ou o dono da unidade — não isola de outro
+# PROCESSO rodando como o mesmo dono (todo produto desta máquina roda como o mesmo usuário; isolamento
+# completo pediria DynamicUser=, fora de escopo aqui); ver docs/SEGURANCA.md §1 para o detalhe medido.
+# Retrocompatível nos dois sentidos: instalação do zero nunca escreve os dois no .env; instalação
+# anterior ao L7-19 que ainda os tem lá é migrada aqui, uma vez, e a linha some do .env.
+install -d -m 0700 -o root -g root "$CRED_DIR"
+if [ ! -s "$CRED_DIR/PLAT_SECRET" ]; then
+  install -m 0600 -o root -g root /dev/null "$CRED_DIR/PLAT_SECRET"
+  if grep -q '^PLAT_SECRET=' .env; then
+    sed -nE 's/^PLAT_SECRET=//p' .env | head -n1 > "$CRED_DIR/PLAT_SECRET"
+    echo "PLAT_SECRET migrado do .env para $CRED_DIR (instalação anterior ao L7-19)"
+  else
+    openssl rand -hex 32 > "$CRED_DIR/PLAT_SECRET"
+    echo "PLAT_SECRET novo gerado em $CRED_DIR"
+  fi
+else
+  echo "$CRED_DIR/PLAT_SECRET já existe (mantido)"
 fi
-SENHA_WORKER=$(sed -nE 's#^PLAT_DSN_WORKER=postgresql://plat_worker:([^@]+)@.*#\1#p' .env)
-[ -n "$SENHA_WORKER" ] || { echo "PLAT_DSN_WORKER no .env não tem a forma postgresql://plat_worker:<senha>@..." >&2; exit 1; }
+sed -i '/^PLAT_SECRET=/d' .env
+if [ ! -s "$CRED_DIR/PLAT_DSN_WORKER" ]; then
+  install -m 0600 -o root -g root /dev/null "$CRED_DIR/PLAT_DSN_WORKER"
+  if grep -q '^PLAT_DSN_WORKER=' .env; then
+    sed -nE 's/^PLAT_DSN_WORKER=//p' .env | head -n1 > "$CRED_DIR/PLAT_DSN_WORKER"
+    echo "PLAT_DSN_WORKER migrado do .env para $CRED_DIR (instalação anterior ao L7-19)"
+  else
+    printf 'postgresql://plat_worker:%s@127.0.0.1:5432/%s' "$(openssl rand -hex 16)" "$DB" > "$CRED_DIR/PLAT_DSN_WORKER"
+    echo "PLAT_DSN_WORKER novo gerado em $CRED_DIR"
+  fi
+else
+  echo "$CRED_DIR/PLAT_DSN_WORKER já existe (mantido)"
+fi
+sed -i '/^PLAT_DSN_WORKER=/d' .env
+
+echo "== d3. senha das roles alinhada aos credentials/.env"
+SENHA_WORKER=$(sed -nE 's#^postgresql://plat_worker:([^@]+)@.*#\1#p' "$CRED_DIR/PLAT_DSN_WORKER")
+[ -n "$SENHA_WORKER" ] || { echo "$CRED_DIR/PLAT_DSN_WORKER não tem a forma postgresql://plat_worker:<senha>@..." >&2; exit 1; }
 printf "ALTER ROLE plat_worker PASSWORD '%s';\n" "$SENHA_WORKER" | "${PSQL[@]}" -f -
-echo "senha de plat_worker alinhada ao .env"
+echo "senha de plat_worker alinhada ao credential"
 SENHA=$(sed -nE 's#^PLAT_DSN=postgresql://plat_app:([^@]+)@.*#\1#p' .env)
 [ -n "$SENHA" ] || { echo "PLAT_DSN no .env não tem a forma postgresql://plat_app:<senha>@..." >&2; exit 1; }
 # sempre: a senha do banco passa a ser a do .env (idempotência de verdade; ADR risco 6)
@@ -107,8 +142,12 @@ for pacote in python3-uvicorn python3-psycopg2 python3-venv python3-cryptography
 done
 [ -x venv/bin/python ] || sudo -u "$APP_USER" python3 -m venv --system-site-packages venv
 "${PIP[@]}" install -q --disable-pip-version-check -r requirements.txt
-# prova da cláusula "máquina que nunca viu o repo": a aplicação importa sem o site do usuário
-"${PY[@]}" -c "import app.main, fastapi, dotenv; assert fastapi.__file__.startswith('$APP_DIR/venv/'), fastapi.__file__" \
+# prova da cláusula "máquina que nunca viu o repo": a aplicação importa sem o site do usuário. PLAT_SECRET
+# agora mora em $CRED_DIR (0600, dono root; d2 acima) e o "$APP_USER" que roda este import não é root —
+# de propósito, não lê o segredo de verdade aqui. Um valor sintético de 64 hex só serve para settings.py
+# aceitar o formato e a importação prosseguir; nunca é usado por um serviço de verdade (o systemd entrega
+# o de verdade via LoadCredential=) e não é segredo, então tanto faz aparecer em `ps`.
+"${PY[@]}" -c "import os; os.environ.setdefault('PLAT_SECRET', 'a' * 64); import app.main, fastapi, dotenv; assert fastapi.__file__.startswith('$APP_DIR/venv/'), fastapi.__file__" \
   || { echo "app.main não importa com PYTHONNOUSERSITE=1: requirements.txt incompleto" >&2; exit 1; }
 echo "venv: $(venv/bin/python --version) · fastapi $("${PY[@]}" -c 'import fastapi; print(fastapi.__version__)') da venv · pytest $(venv/bin/pytest --version 2>&1 | awk '{print $2}')"
 

@@ -2,6 +2,13 @@ VENV=venv/bin
 # nunca ~/.local: a suíte prova o que a venv + dpkg fornecem, igual à unidade systemd
 export PYTHONNOUSERSITE=1
 URL_PUBLICA=$(shell grep ^PLAT_URL_PUBLICA .env 2>/dev/null | cut -d= -f2)
+# PLAT_SECRET e PLAT_DSN_WORKER não estão mais no .env (item L7-19: LoadCredential do systemd,
+# /etc/plat/segredos, dono root, 0600); fora do systemd só root lê, por isso o `sudo cat` — mesmo
+# privilégio que install.sh e `make migrar` já exigem, nunca em argumento de linha de comando visível
+# em `ps` (só o valor lido entra no ambiente do pytest/uvicorn filho, como já era com o .env). Só
+# exporta quando o credential existe: numa máquina que ainda não rodou a migração (arquivo ausente,
+# `sudo cat` devolve vazio) isso NÃO pisa no PLAT_SECRET/PLAT_DSN_WORKER que ainda estiverem no `.env`.
+SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); PLAT_DSN_WORKER=$$(sudo cat /etc/plat/segredos/PLAT_DSN_WORKER 2>/dev/null); [ -n "$$PLAT_SECRET" ] && export PLAT_SECRET; [ -n "$$PLAT_DSN_WORKER" ] && export PLAT_DSN_WORKER;
 
 .PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites
 
@@ -19,13 +26,13 @@ sem-marcador:                               ## mesma expressão do laco/driver.s
 	! grep -rnI --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=tests --exclude-dir=.git --exclude-dir=venv -E -f tests/marcadores.regex app web db docs deploy install.sh Makefile requirements.txt pyproject.toml *.md
 
 teste:
-	$(VENV)/pytest -m "not lento"
+	$(SEGREDOS) $(VENV)/pytest -m "not lento"
 
 e2e:
-	$(VENV)/pytest -m lento --base-url $(URL_PUBLICA)
+	$(SEGREDOS) $(VENV)/pytest -m lento --base-url $(URL_PUBLICA)
 
 medidas:                                    ## suíte inteira gravando tests/medidas/<item>.json (ADR 0001 seção 10)
-	PLAT_GRAVAR_MEDIDAS=1 $(VENV)/pytest --base-url $(URL_PUBLICA)
+	$(SEGREDOS) PLAT_GRAVAR_MEDIDAS=1 $(VENV)/pytest --base-url $(URL_PUBLICA)
 
 vendor:                                     ## confere sha256 de web/vendor contra VERSOES.txt
 	cd web/vendor && grep -v '^\#' VERSOES.txt | awk '{print $$3"  "$$1}' | sha256sum -c
@@ -34,10 +41,10 @@ migrar:
 	sudo bash db/migrar.sh
 
 openapi:
-	$(VENV)/python -c "import json; from app.main import app; json.dump(app.openapi(), open('docs/openapi.json','w'), ensure_ascii=False, indent=1)"
+	$(SEGREDOS) $(VENV)/python -c "import json; from app.main import app; json.dump(app.openapi(), open('docs/openapi.json','w'), ensure_ascii=False, indent=1)"
 
 worker:                                     ## worker da fila em primeiro plano (desenvolvimento; em produção é a unidade plat-worker)
-	$(VENV)/python -m app.jobs.worker
+	$(SEGREDOS) $(VENV)/python -m app.jobs.worker
 
 e2e-worker:                                 ## testes lentos da fila (reinício por systemctl, morte do pai, job de 5 min)
-	$(VENV)/pytest -m lento tests/api/jobs
+	$(SEGREDOS) $(VENV)/pytest -m lento tests/api/jobs

@@ -130,9 +130,30 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
     )
 
 
+def _credenciais_systemd() -> dict[str, str]:
+    """Segredos entregues por `LoadCredential=` do systemd (item L7-19; docs/SEGURANCA.md §1 tem o que
+    isso isola e o que não isola, medido nesta máquina). O systemd exporta `$CREDENTIALS_DIRECTORY` só
+    dentro da unidade que declarou o `LoadCredential=`; cada arquivo ali cujo nome bate com um campo de
+    `Settings` vira o valor daquela chave, por cima do `.env`. Fora do systemd (dev, pytest, CLI) a
+    variável não existe: a função devolve vazio e o `.env`/ambiente do processo mandam como antes —
+    retrocompatível com quem já tinha tudo no `.env` (P5)."""
+    diretorio = os.environ.get("CREDENTIALS_DIRECTORY")
+    if not diretorio:
+        return {}
+    valores: dict[str, str] = {}
+    for chave in Settings.__dataclass_fields__:
+        caminho = Path(diretorio) / chave
+        if caminho.is_file():
+            valores[chave] = caminho.read_text().strip()
+    return valores
+
+
 def valores_do_ambiente() -> dict[str, str | None]:
-    """.env da raiz, com o ambiente do processo por cima (o ambiente vence, como no SIG de teste interno)."""
+    """`.env` da raiz, depois os segredos do `LoadCredential=` do systemd (L7-19), depois o ambiente do
+    processo por cima (o ambiente vence, como no SIG de teste interno — é assim que a suíte injeta
+    PLAT_SECRET/PLAT_DSN_WORKER sem journal nem arquivo, ver `Makefile`)."""
     valores: dict[str, str | None] = dict(dotenv_values(ROOT / ".env"))
+    valores.update(_credenciais_systemd())
     for chave in Settings.__dataclass_fields__:
         if chave in os.environ:
             valores[chave] = os.environ[chave]

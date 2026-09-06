@@ -4,10 +4,13 @@ PYTHONNOUSERSITE=1 na unidade, HSTS em todo add_header do bloco 443 e removido d
 import re
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 INSTALL = (ROOT / "install.sh").read_text(encoding="utf-8")
 NGINX = (ROOT / "deploy" / "nginx.conf").read_text(encoding="utf-8")
 UNIDADE = (ROOT / "deploy" / "plat-api.service").read_text(encoding="utf-8")
+UNIDADE_WORKER = (ROOT / "deploy" / "plat-worker.service").read_text(encoding="utf-8")
 
 
 def test_senha_de_demonstracao_entra_por_stdin_nunca_por_argv():
@@ -66,3 +69,71 @@ def test_instalador_semeia_plataforma_sem_superadmin_nos_demos_e_confere_cryptog
     assert "('$slug' = 'plataforma')" in INSTALL and "('$slug' = 'demo')" not in INSTALL
     assert "rm -f tests/credenciais_totp.txt" in INSTALL
     assert "plat.log_particao_garantir" in INSTALL and "plat.evento_particao_garantir" in INSTALL
+
+
+# item L7-19-segredos-e-certificados: PLAT_SECRET e PLAT_DSN_WORKER nunca em .env, sempre por
+# LoadCredential= do systemd (docs/SEGURANCA.md). Achado do adversário do turno T3: faltava um teste
+# automatizado que provasse isso (só tinha `grep` manual) — esta seção fecha a lacuna.
+
+
+def test_instalacao_do_zero_nunca_escreve_plat_secret_ou_dsn_worker_no_env():
+    """O heredoc de instalação do zero (bloco `cat > .env <<ENV ... ENV`) não pode conter as duas
+    chaves — hoje elas só existem em /etc/plat/segredos/, geradas na seção d2."""
+    inicio = INSTALL.index("cat > .env <<ENV")
+    fim = INSTALL.index("\nENV\n", inicio)
+    heredoc = INSTALL[inicio:fim]
+    assert "PLAT_SECRET=" not in heredoc, heredoc
+    assert "PLAT_DSN_WORKER=" not in heredoc, heredoc
+
+
+def test_instalador_migra_e_remove_os_dois_segredos_do_env_existente():
+    """Instalação anterior ao L7-19 (segredo ainda no `.env`): a migração para `/etc/plat/segredos/`
+    tem de terminar apagando a linha do `.env` — sem isso o `.env` de quem já tinha o segredo nunca
+    fica limpo, mesmo depois de reinstalar."""
+    assert "sed -i '/^PLAT_SECRET=/d' .env" in INSTALL
+    assert "sed -i '/^PLAT_DSN_WORKER=/d' .env" in INSTALL
+    # a remoção vem DEPOIS de gravar o valor no credential (nunca perde o segredo no meio do caminho)
+    assert INSTALL.index('install -m 0600 -o root -g root /dev/null "$CRED_DIR/PLAT_SECRET"') < INSTALL.index(
+        "sed -i '/^PLAT_SECRET=/d' .env"
+    )
+    assert INSTALL.index('install -m 0600 -o root -g root /dev/null "$CRED_DIR/PLAT_DSN_WORKER"') < INSTALL.index(
+        "sed -i '/^PLAT_DSN_WORKER=/d' .env"
+    )
+
+
+def test_credential_dir_fica_fora_do_repositorio_dono_root_modo_600():
+    assert 'install -d -m 0700 -o root -g root "$CRED_DIR"' in INSTALL
+    assert 'install -m 0600 -o root -g root /dev/null "$CRED_DIR/PLAT_SECRET"' in INSTALL
+    assert 'install -m 0600 -o root -g root /dev/null "$CRED_DIR/PLAT_DSN_WORKER"' in INSTALL
+    assert "CRED_DIR=/etc/plat/segredos" in INSTALL  # fora de APP_DIR: settings.py nunca o lê por caminho relativo
+
+
+def test_unidades_declaram_loadcredential_e_nunca_o_valor_do_segredo():
+    assert "LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET" in UNIDADE
+    assert "LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET" in UNIDADE_WORKER
+    assert "LoadCredential=PLAT_DSN_WORKER:/etc/plat/segredos/PLAT_DSN_WORKER" in UNIDADE_WORKER
+    # regra do ADR 0001 §8: segredo nunca em Environment=/argv da unidade — só o caminho aparece
+    for unidade in (UNIDADE, UNIDADE_WORKER):
+        for linha in unidade.splitlines():
+            if linha.startswith(("Environment=", "ExecStart=")):
+                assert "/etc/plat/segredos/" not in linha, linha  # só em LoadCredential=, nunca aqui
+
+
+def test_env_exemplo_nao_ensina_a_colocar_os_dois_segredos_no_env():
+    exemplo = (ROOT / ".env.exemplo").read_text(encoding="utf-8")
+    assert "PLAT_SECRET=" not in exemplo, (
+        "achado do adversário T3: .env.exemplo ainda ensinava a colocar PLAT_SECRET no .env"
+    )
+    assert "PLAT_DSN_WORKER=" not in exemplo, "idem para PLAT_DSN_WORKER"
+    assert "PLAT_SECRET" in exemplo and "docs/SEGURANCA.md" in exemplo  # ainda documentado, só que fora do .env
+
+
+def test_env_real_desta_maquina_nao_tem_mais_os_dois_segredos():
+    """Prova viva (não só estática): o `.env` de verdade desta instalação, se existir, não pode conter
+    PLAT_SECRET= nem PLAT_DSN_WORKER= — é exatamente o `grep -c` que o portão do item pede, automatizado."""
+    env_path = ROOT / ".env"
+    if not env_path.is_file():
+        pytest.skip("sem .env nesta máquina (checkout limpo, nunca instalado)")
+    linhas = env_path.read_text(encoding="utf-8").splitlines()
+    achados = [li for li in linhas if li.startswith(("PLAT_SECRET=", "PLAT_DSN_WORKER="))]
+    assert achados == [], achados
