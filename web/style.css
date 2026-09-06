@@ -199,3 +199,44 @@ details summary { cursor: pointer; color: var(--info); }
 .direita { text-align: right; }
 .resultado-lote { margin-top: var(--e2); }
 .sem-permissao { max-width: 560px; }
+
+/* ---------- instrumento (L0-14-identidade-visual, decisão do dono 06/09/2026: "instrumento", não painel
+   administrativo genérico) — remapeamento ESCOPADO a `body.instrumento`, layout base para a identidade nova.
+   Nenhuma regra abaixo tem seletor sem esse escopo e nenhuma variável do :root acima foi tocada: as 8 telas
+   que ainda não levam `class="instrumento"` no <body> continuam pixel a pixel como estavam (cláusula "sem
+   quebrar as 9 telas" do portão de pronto). Primeira e única tela nesta fatia: web/login.html. Tokens em
+   web/estilo/tokens.css (`--i-*`); esta folha só liga as variáveis antigas (`--fundo`, `--painel`, `--acento`
+   etc., usadas em toda regra acima, inclusive layout de barra lateral/botão/formulário/tabela) às novas — uma
+   tela que ganhar `class="instrumento"` amanhã herda o restante da folha sem nenhuma regra nova. */
+body.instrumento {
+  --fundo: var(--i-fundo);
+  --fundo-2: var(--i-fundo);
+  --painel: var(--i-superficie);
+  --painel-2: var(--i-superficie-2);
+  --borda: var(--i-linha);
+  --borda-forte: var(--i-linha);
+  --texto: var(--i-texto);
+  --fraco: var(--i-texto-fraco);
+  --ok: var(--i-sucesso);
+  --atencao: var(--i-aviso);
+  --falha: var(--i-erro);
+  --info: var(--i-acento);
+  --acento: var(--i-acento);
+  --acento-texto: var(--i-acento-texto);
+  --foco: var(--i-acento);
+  --sombra: var(--i-sombra);
+  --sans: var(--i-fonte-texto);
+  --mono: var(--i-fonte-dado);
+  --raio: var(--i-raio);
+  --e1: var(--i-e1); --e2: var(--i-e2); --e3: var(--i-e3); --e4: var(--i-e4); --e5: var(--i-e5); --e6: var(--i-e6);
+  color-scheme: light dark;
+}
+body.instrumento .marca strong, body.instrumento h1, body.instrumento h2 {
+  font-family: var(--i-fonte-titulo);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+body.instrumento dd, body.instrumento .mono, body.instrumento .tabela td.mono, body.instrumento .codigo {
+  font-variant-numeric: tabular-nums;
+}

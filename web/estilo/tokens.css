@@ -1,0 +1,169 @@
+/* plat — tokens "instrumento" (item L0-14-identidade-visual, decisão do dono 06/09/2026: "instrumento" — painel
+   escuro, denso, preciso, como um cockpit operado o dia inteiro, nunca um painel administrativo genérico).
+
+   O QUE É ISTO: a fonte única de verdade dos tokens visuais novos (cor, tipografia, raio, densidade). Esta
+   folha NÃO redefine --fundo/--painel/--acento etc. usados hoje em web/style.css (isso quebraria as 9 telas
+   que já usam essas variáveis com a paleta azul do turno T2). Em vez disso define um segundo conjunto,
+   namespaced `--i-*`, e web/style.css remapeia `--i-*` -> nomes antigos SÓ dentro de `body.instrumento`
+   (ver "layout base: remapeamento" no fim de web/style.css). Uma tela adota a identidade nova só com
+   `class="instrumento"` no <body>; sem essa classe, nada muda — é assim que a tela de entrada (web/login.html)
+   pôde virar a primeira fatia sem mexer nas outras 8 telas.
+
+   Tipografia (par com motivo, três papéis):
+   - "Big Shoulders Display" 700/800 — título/rótulo de destaque: condensada e industrial, letra de placa de
+     instrumento (marca, h1, número grande de destaque). Nunca para texto de corrida (é condensada demais
+     para parágrafo).
+   - "IBM Plex Sans" 400/500/600 — texto de corrida e formulário: neutra, legível em texto longo, contraste
+     deliberado com o título (a mesma fonte para tudo é o "painel genérico" que o dono rejeitou).
+   - "IBM Plex Mono" 400/500 — todo dado tabular/numérico/código: algarismos de largura fixa
+     (font-variant-numeric: tabular-nums já ligado abaixo), para número alinhar em coluna como em um
+     mostrador digital.
+   Vendorizadas em web/vendor/ (ADR 0001 seção 11.2 regra 3, estendida): big-shoulders-display-2.002.woff2,
+   ibm-plex-sans-3.201.woff2, ibm-plex-mono-regular-2.3.woff2, ibm-plex-mono-medium-2.3.woff2 — sha256 e
+   licença OFL-1.1 em web/vendor/VERSOES.txt.
+
+   Tema: três estados, regra da casa (system/claro/escuro) — "sistema" (nenhum atributo, `prefers-color-scheme`
+   decide), escolha explícita via `data-theme="light"` ou `data-theme="dark"` no <html> (vence os dois outros
+   estados nas suas respectivas direções). */
+
+@font-face {
+  font-family: "Big Shoulders Display";
+  font-style: normal;
+  font-weight: 700 800;
+  font-display: swap;
+  src: url("/static/vendor/big-shoulders-display-2.002.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/static/vendor/ibm-plex-sans-3.201.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/static/vendor/ibm-plex-mono-regular-2.3.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/static/vendor/ibm-plex-mono-medium-2.3.woff2") format("woff2");
+}
+
+:root {
+  /* ---- paleta escura (padrão do produto — instrumento operado de noite tanto quanto de dia) ---- */
+  --i-fundo: #0b0f10;
+  --i-superficie: #12181a;
+  --i-superficie-2: #1a2224;
+  --i-linha: #263133;
+  --i-texto: #e7ece9;
+  --i-texto-fraco: #8fa19c;
+  --i-acento: #d98a2b;       /* âmbar de instrumento — ponteiro, luz de aviso; NUNCA azul de sistema */
+  --i-acento-texto: #1a1002; /* texto sobre botão/etiqueta preenchida a âmbar, contraste AA */
+  --i-sucesso: #4f9e6e;
+  --i-aviso: #e0a24a;
+  --i-erro: #d9614f;
+  --i-foco: var(--i-acento);
+  --i-sombra: 0 12px 40px rgba(0, 0, 0, .55);
+
+  /* ---- tipografia ---- */
+  --i-fonte-titulo: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --i-fonte-texto: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --i-fonte-dado: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* ---- motivo: cantos retos, densidade alta ---- */
+  --i-raio: 2px;             /* nunca maior — instrumento não é app consumidor arredondado */
+  --i-tique: 10px;           /* comprimento do traço em L nos 4 cantos dos painéis-chave */
+  --i-tique-espessura: 1px;
+  --i-e1: .2rem; --i-e2: .4rem; --i-e3: .6rem; --i-e4: .85rem; --i-e5: 1.25rem; --i-e6: 1.75rem;
+}
+
+/* ---- paleta clara (sistema em modo claro; nenhum <html data-theme> explícito) ---- */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --i-fundo: #eef1f0;
+    --i-superficie: #ffffff;
+    --i-superficie-2: #e4e9e7;
+    --i-linha: #ccd4d1;
+    --i-texto: #12181a;
+    --i-texto-fraco: #4d5b57;
+    --i-acento: #a8641c;      /* âmbar escurecido para contraste AA sobre fundo claro */
+    --i-acento-texto: #fff6ec;
+    --i-sucesso: #2f7a4c;
+    --i-aviso: #8a5a12;
+    --i-erro: #a83c2e;
+    --i-sombra: 0 8px 28px rgba(18, 24, 26, .12);
+  }
+}
+
+/* ---- escolha explícita, vence os dois estados acima nas suas direções ---- */
+:root[data-theme="light"] {
+  --i-fundo: #eef1f0;
+  --i-superficie: #ffffff;
+  --i-superficie-2: #e4e9e7;
+  --i-linha: #ccd4d1;
+  --i-texto: #12181a;
+  --i-texto-fraco: #4d5b57;
+  --i-acento: #a8641c;
+  --i-acento-texto: #fff6ec;
+  --i-sucesso: #2f7a4c;
+  --i-aviso: #8a5a12;
+  --i-erro: #a83c2e;
+  --i-sombra: 0 8px 28px rgba(18, 24, 26, .12);
+}
+
+:root[data-theme="dark"] {
+  --i-fundo: #0b0f10;
+  --i-superficie: #12181a;
+  --i-superficie-2: #1a2224;
+  --i-linha: #263133;
+  --i-texto: #e7ece9;
+  --i-texto-fraco: #8fa19c;
+  --i-acento: #d98a2b;
+  --i-acento-texto: #1a1002;
+  --i-sucesso: #4f9e6e;
+  --i-aviso: #e0a24a;
+  --i-erro: #d9614f;
+  --i-sombra: 0 12px 40px rgba(0, 0, 0, .55);
+}
+
+/* ---- marca d'água de instrumento: tique de canto (moldura de mostrador) ----
+   um traço em L nos 4 cantos de um painel-chave, como a moldura de um mostrador. Cor = --i-acento (o âmbar
+   de instrumento, "ponteiro, luz de aviso" da especificação) — testado primeiro com a cor da borda (--i-linha)
+   e DESCARTADO, ficava indistinguível do canto do border de 1px (mesma cor). Vive num `::before` próprio, não
+   na propriedade `background` do painel: um `.cartao { background: var(--painel) }` que caísse depois na
+   cascata (mesma especificidade, `background` é atalho e reseta `background-image` para `none`) apagaria o
+   tique — MEDIDO acontecendo na primeira versão desta regra contra `web/style.css` linha ~59. Aplicar a
+   classe `.instrumento-moldura` a qualquer painel-chave (o `.cartao` da tela de entrada é o primeiro);
+   exige `position: relative` (ou `static` mesmo, o `::before` vira absoluto contra o próprio elemento). */
+.instrumento-moldura { position: relative; }
+.instrumento-moldura::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--i-acento), var(--i-acento)), linear-gradient(var(--i-acento), var(--i-acento)),
+    linear-gradient(var(--i-acento), var(--i-acento)), linear-gradient(var(--i-acento), var(--i-acento)),
+    linear-gradient(var(--i-acento), var(--i-acento)), linear-gradient(var(--i-acento), var(--i-acento)),
+    linear-gradient(var(--i-acento), var(--i-acento)), linear-gradient(var(--i-acento), var(--i-acento));
+  background-repeat: no-repeat;
+  background-size:
+    var(--i-tique-espessura) var(--i-tique), var(--i-tique) var(--i-tique-espessura),
+    var(--i-tique-espessura) var(--i-tique), var(--i-tique) var(--i-tique-espessura),
+    var(--i-tique-espessura) var(--i-tique), var(--i-tique) var(--i-tique-espessura),
+    var(--i-tique-espessura) var(--i-tique), var(--i-tique) var(--i-tique-espessura);
+  background-position:
+    top left, top left,
+    top right, top right,
+    bottom left, bottom left,
+    bottom right, bottom right;
+}
