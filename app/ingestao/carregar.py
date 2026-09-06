@@ -303,21 +303,32 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
                 if -180 <= min(xs) and max(xs) <= 180 and -90 <= min(ys) and max(ys) <= 90:
                     extent_4326 = [min(xs), min(ys), max(xs), max(ys)]
             por_campo = {}
+            # A autoridade sobre o tipo da coluna é o BANCO, não a proposta — o mesmo princípio já usado
+            # acima para o tipo da geometria. O `ogr2ogr` cria a coluna com o tipo dele: um DXF traz
+            # `PaperSpace` como boolean e `BlockScale`/`BlockOCSCoords` como `double precision[]`, e
+            # `min(boolean)` e `max(length(double precision[]))` NÃO EXISTEM no Postgres (os dois derrubaram
+            # a carga no item L0-04-e). Agora a agregação é escolhida pelo tipo real.
+            cur.execute(
+                "SELECT column_name, data_type FROM information_schema.columns "
+                "WHERE table_schema = %s AND table_name = %s", (schema, tabela),
+            )
+            tipo_real = {r["column_name"]: r["data_type"] for r in cur.fetchall()}
+            ORDENAVEIS = ("smallint", "integer", "bigint", "numeric", "real", "double precision", "money",
+                          "date", "time without time zone", "time with time zone",
+                          "timestamp without time zone", "timestamp with time zone", "interval")
             for c in campos_usados:
-                if c["tipo"] in ("text",):
-                    cur.execute(
-                        f'SELECT count(*) FILTER (WHERE {c["nome"]} IS NULL) AS nulos, '
-                        f'count(DISTINCT {c["nome"]}) AS distintos, max(length({c["nome"]})) AS max_len '
-                        f'FROM "{schema}"."{tabela}"'
-                    )
-                else:
-                    cur.execute(
-                        f'SELECT count(*) FILTER (WHERE {c["nome"]} IS NULL) AS nulos, '
-                        f'count(DISTINCT {c["nome"]}) AS distintos, min({c["nome"]}) AS minimo, '
-                        f'max({c["nome"]}) AS maximo '
-                        f'FROM "{schema}"."{tabela}"'
-                    )
+                tipo_pg = tipo_real.get(c["nome"], c["tipo"])
+                base = (f'SELECT count(*) FILTER (WHERE {c["nome"]} IS NULL) AS nulos, '
+                        f'count(DISTINCT {c["nome"]}) AS distintos, ')
+                if tipo_pg in ("text", "character varying", "character"):
+                    extra = f'max(length({c["nome"]})) AS max_len '
+                elif tipo_pg in ORDENAVEIS:
+                    extra = f'min({c["nome"]}) AS minimo, max({c["nome"]}) AS maximo '
+                else:  # boolean, bytea, ARRAY, USER-DEFINED (geometry, json…): só contagem
+                    extra = "NULL AS minimo, NULL AS maximo "
+                cur.execute(base + extra + f'FROM "{schema}"."{tabela}"')
                 por_campo[c["nome"]] = {k: v for k, v in cur.fetchone().items()}
+                por_campo[c["nome"]]["tipo_real"] = tipo_pg
             cur.execute('SELECT pg_total_relation_size(%s::regclass) AS b', (f'"{schema}"."{tabela}"',))
             tamanho_bytes = int(cur.fetchone()["b"])
 

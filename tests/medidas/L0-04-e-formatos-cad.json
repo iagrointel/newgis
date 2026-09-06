@@ -287,8 +287,28 @@
    },
    "unidade": "arquivos",
    "comando": "python3 scripts/medir_corpus_dwg.py <raiz do corpus> corpus_dwg.json /opt/plat/libredwg/bin/dwg2dxf"
+  },
+  "e2e_dwg_r2000": {
+   "valor": {
+    "versao": "R2000",
+    "feicoes": 12,
+    "conversor": "dwg2dxf 0.14.8583"
+   },
+   "unidade": "feicoes",
+   "comando": "venv/bin/pytest tests/api/ingestao/test_ingestao_cad.py -k dwg_r2000"
+  },
+  "e2e_dxf": {
+   "valor": {
+    "passos": 5,
+    "feicoes": 8,
+    "srid": 31983,
+    "rmse": 0.0,
+    "captura": "/home/dev/plataforma/wt/garage/tests/capturas/L0-04-e-formatos-cad_dxf_com_pontos_de_controle.json"
+   },
+   "unidade": "passos",
+   "comando": "venv/bin/pytest tests/api/ingestao/test_ingestao_cad.py -k fluxo_completo"
   }
  },
- "gerado_em": "2026-09-06T16:14:43Z",
- "git_sha": "08b3fe88421f"
+ "gerado_em": "2026-09-06T16:38:26Z",
+ "git_sha": "42232e8f2ae1"
 }

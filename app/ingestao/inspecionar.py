@@ -250,7 +250,7 @@ def _preparar_cad(ctx, dados: bytes, formato: str, respostas: dict | None = None
               f"DXF_ENCODING={codificacao['valor']}"]
     return {"caminho": rel.caminho_dxf, "layer": "entities", "oo": [], "config": config, "crs": crs,
             "codificacao": codificacao, "csv": None, "titulo_origem": None, "driver": "DXF",
-            "origem_e_normalizada": False, "cad": rel.json()}
+            "origem_e_normalizada": False, "cad": rel.json(), "tipos_geometria": dict(rel.tipos_geometria)}
 
 
 PREPARADORES = {
@@ -339,6 +339,10 @@ def ingestao_inspecionar(ctx, importacao_id: uuid.UUID) -> dict:
             resolvido = {"tipos": {tipo_bruto: feicoes}, "escolhida": base_tipo, "perguntar": False,
                          "opcoes": [base_tipo], "z": "Z" in (tipo_bruto or "") or "25D" in (tipo_bruto or ""),
                          "sem_geometria": 0}
+        elif prep.get("tipos_geometria"):
+            # DXF/DWG: os tipos já vieram contados pelo leitor de CAD, com o dialeto SQLITE (o OGR SQL não tem
+            # GROUP BY e a varredura genérica devolveria vazio em silêncio)
+            resolvido = geometria.resolver(dict(prep["tipos_geometria"]))
         elif geom_fields:
             ctx.progresso(45, "varrendo o tipo real de geometria")
             tipos_contagem = _tipos_por_varredura(ctx, prep["caminho"], nome_camada_origem, prep["oo"],

@@ -100,6 +100,7 @@ class Relatorio:
     camadas: list = field(default_factory=list)
     totais: dict = field(default_factory=dict)
     blocos: list = field(default_factory=list)
+    tipos_geometria: dict = field(default_factory=dict)
     extensao: list | None = None
     problemas: list = field(default_factory=list)
     pendencias: list = field(default_factory=list)
@@ -370,6 +371,38 @@ def contar_por_camada(caminho_dxf: str, dir_trabalho: str | os.PathLike, *, inli
     return camadas
 
 
+# GeometryType() do dialeto SQLITE devolve o nome em maiúsculas ("LINESTRING", "POINT Z"); o resolvedor de
+# geometria da ingestão (app/ingestao/geometria.py) fala em "LineString"/"Point". A tradução é aqui, uma vez.
+_TIPOS_OGR = {"POINT": "Point", "MULTIPOINT": "MultiPoint", "LINESTRING": "LineString",
+              "MULTILINESTRING": "MultiLineString", "POLYGON": "Polygon", "MULTIPOLYGON": "MultiPolygon",
+              "GEOMETRYCOLLECTION": "GeometryCollection"}
+
+
+def contar_tipos_geometria(caminho_dxf: str, dir_trabalho: str | os.PathLike, *, inline_blocos: bool = False,
+                           codificacao: str = "UTF-8") -> dict[str, int]:
+    """{tipo de geometria: nº de feições}, com o sufixo Z preservado. Existe porque a varredura genérica da
+    ingestão usa `GROUP BY` no dialeto OGRSQL, e o OGR SQL não tem `GROUP BY` — devolve vazio em silêncio, e a
+    proposta ficaria sem saber que geometria o desenho tem."""
+    caminho_dxf = isolamento.caminho_dentro(caminho_dxf, dir_trabalho)
+    alvo = Path(dir_trabalho) / "tipos_geometria.jsonl"
+    if alvo.exists():
+        alvo.unlink()
+    argv = ["ogr2ogr", "-f", "GeoJSONSeq", str(alvo), caminho_dxf, *_config(inline_blocos, codificacao),
+            "-dialect", "SQLITE",
+            "-sql", "SELECT GeometryType(geometry) AS t, COUNT(*) AS n FROM entities GROUP BY GeometryType(geometry)"]
+    r = isolamento.executar(argv, raiz=dir_trabalho)
+    if not r.ok or not alvo.exists():
+        return {}
+    saida: dict[str, int] = {}
+    for p in _ler_jsonl(alvo):
+        bruto = (p.get("t") or "NULL").strip()
+        base, sufixo = (bruto.split(" ", 1) + [""])[:2]
+        nome = _TIPOS_OGR.get(base.upper())
+        chave = "NULL" if nome is None else (nome + (" " + sufixo if sufixo else ""))
+        saida[chave] = saida.get(chave, 0) + int(p.get("n") or 0)
+    return saida
+
+
 def listar_blocos(caminho_dxf: str, dir_trabalho: str | os.PathLike, *, codificacao: str = "UTF-8") -> list[dict]:
     """Definições de bloco do desenho (camada `blocks` do GDAL, que só existe com `DXF_INLINE_BLOCKS=FALSE`)."""
     caminho_dxf = isolamento.caminho_dentro(caminho_dxf, dir_trabalho)
@@ -493,6 +526,8 @@ def inspecionar(caminho: str | os.PathLike, dir_trabalho: str | os.PathLike, *, 
             "hachuras": sum(c["hachuras"] for c in rel.camadas), "blocos": sum(c["blocos"] for c in rel.camadas),
             "blocos_modo": "explodido" if inline else "ponto",
         }
+        rel.tipos_geometria = contar_tipos_geometria(caminho_dxf, dir_trabalho, inline_blocos=inline,
+                                                     codificacao=rel.codificacao["valor"])
         if not inline:
             rel.blocos = listar_blocos(caminho_dxf, dir_trabalho, codificacao=rel.codificacao["valor"])
         if cab.get("extmin") and cab.get("extmax"):

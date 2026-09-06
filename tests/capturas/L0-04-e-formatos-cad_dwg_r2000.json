@@ -1,0 +1,95 @@
+{
+ "item": "L0-04-e-formatos-cad",
+ "fluxo": "dwg_r2000",
+ "passos": [
+  {
+   "passo": 1,
+   "titulo": "enviar arquivo",
+   "pedido": {
+    "arquivo": "r2000.dwg",
+    "bytes": 20918
+   },
+   "resposta": {
+    "sha256": "ff5d73aff4796f51…"
+   }
+  },
+  {
+   "passo": 2,
+   "titulo": "criar importação",
+   "pedido": {
+    "formato": "dwg"
+   },
+   "resposta": {
+    "job_id": "93366c1e-3e34-41e8-99d3-218ea944a380"
+   }
+  },
+  {
+   "passo": 3,
+   "titulo": "proposta da inspeção",
+   "pedido": {
+    "importacao_id": "ad2b0f19-56f0-4a31-9151-ffe1c1636f57"
+   },
+   "resposta": {
+    "estado": "proposta",
+    "perguntas": [
+     "crs",
+     "georreferencia"
+    ],
+    "camadas_desenho": [
+     "QUADRA",
+     "TALUDE_3D"
+    ],
+    "cad": {
+     "versao": "R2000",
+     "unidade": {
+      "nome": "metro",
+      "codigo": 6,
+      "origem": "cabecalho",
+      "perguntar": false,
+      "metros_por_unidade": 1.0
+     },
+     "totais": {
+      "cotas": 0,
+      "blocos": 0,
+      "textos": 0,
+      "camadas": 2,
+      "hachuras": 0,
+      "entidades": 12,
+      "blocos_modo": "ponto"
+     },
+     "camadas": [
+      {
+       "nome": "QUADRA",
+       "cotas": 0,
+       "blocos": 0,
+       "textos": 0,
+       "hachuras": 0,
+       "entidades": 8,
+       "blocos_distintos": 0
+      },
+      {
+       "nome": "TALUDE_3D",
+       "cotas": 0,
+       "blocos": 0,
+       "textos": 0,
+       "hachuras": 0,
+       "entidades": 4,
+       "blocos_distintos": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "passo": 4,
+   "titulo": "carga",
+   "pedido": {
+    "formato": "dwg"
+   },
+   "resposta": {
+    "estado": "concluida",
+    "feicoes": 12
+   }
+  }
+ ]
+}

@@ -13,10 +13,14 @@ from __future__ import annotations
 import json
 import math
 import os
+import secrets
 from pathlib import Path
 
-from tests.api.ingestao.conftest import esperar_job
-from tests.api.test_rls import contexto, ids_por_slug
+import pytest
+
+from tests.api.conftest import entrar, novo_cliente
+from tests.api.ingestao.conftest import Ingestor, esperar_job
+from tests.api.test_rls import contexto
 
 ITEM = "L0-04-e-formatos-cad"
 DADOS = Path(__file__).resolve().parents[2] / "dados" / "cad"
@@ -75,6 +79,19 @@ def _importar_cad(ing, nome: str, formato: str, captura: Captura | None = None):
     return imp["id"], imp
 
 
+def _porque_falhou(ing, final: dict) -> str:
+    """Mensagem de falha útil: o estado da importação NÃO diz por quê; o erro está no job de carga."""
+    if final.get("estado") == "concluida":
+        return ""
+    partes = [f"importação em {final.get('estado')!r}", f"erro da importação: {final.get('erro')!r}"]
+    if final.get("job_carga"):
+        r = ing.sessao.get(f"/api/jobs/{final['job_carga']}")
+        if r.status_code == 200:
+            j = r.json()
+            partes.append(f"job de carga {j.get('estado')}: {str(j.get('erro'))[:400]}")
+    return " | ".join(partes)
+
+
 def _tabela_de(cur, item_id: str) -> tuple[str, str]:
     cur.execute("SELECT dados->>'schema' AS schema, dados->>'tabela' AS tabela FROM plat.item WHERE id=%s::uuid",
                 (item_id,))
@@ -82,25 +99,64 @@ def _tabela_de(cur, item_id: str) -> tuple[str, str]:
     return r["schema"], r["tabela"]
 
 
-def _admin(con, slug: str = "demo"):
-    ids = ids_por_slug(con)
-    with con.cursor() as cur:
-        cur.execute("SELECT usuario_id FROM plat.auth_login(%s, 'admin')", (slug,))
-        adm = cur.fetchone()["usuario_id"]
-    contexto(con, ids[slug], usuario_id=adm, login="admin")
+class InquilinoDeCarga:
+    """Inquilino criado só para este teste, com slug SEM hífen. Dois motivos, os dois medidos aqui:
+
+    * `plat.camada_schema_garantir` exige `^[a-z][a-z0-9_]{0,60}$` no slug — o `inquilino_temporario` do
+      conftest usa `zt-inq-<hex>`, com hífen, e a carga morre com `slug_invalido` antes de criar a tabela;
+    * o schema de dados é `d_<slug>` e **não** é reescrito por `laco/trilha_ambiente.sh`: rodar a carga no
+      inquilino `demo` de uma trilha bate em `permission denied for schema d_demo`, que é da produção.
+
+    Apagar o inquilino no fim leva junto a tabela da camada e o schema."""
+
+    def __init__(self, sessao_plat):
+        self.slug = f"zt{secrets.token_hex(4)}"
+        r = sessao_plat.post("/api/plataforma/inquilinos", json={
+            "slug": self.slug, "nome": f"Inquilino de carga CAD {self.slug}",
+            "admin_login": "admin", "admin_nome": "Administrador de teste", "config": {}})
+        assert r.status_code == 201, r.text
+        self.id = r.json()["id"]
+        self.admin_id = r.json()["admin"]["id"]
+        temporaria = r.json()["senha_temporaria"]
+        self.admin = novo_cliente()
+        assert entrar(self.admin, self.slug, "admin", temporaria).status_code == 200
+        senha = "Senha-do-admin-1" + secrets.token_hex(3)
+        assert self.admin.put("/api/eu/senha", json={"atual": temporaria, "nova": senha}).status_code == 204
+        self._plat = sessao_plat
+
+    def apagar(self):
+        self._plat.delete(f"/api/plataforma/inquilinos/{self.id}")
 
 
-def test_dxf_fluxo_completo_com_pontos_de_controle(ingestor_a, conexao_plat_app, medida):
+@pytest.fixture
+def ingestor_cad(sessao_plat):
+    inq = InquilinoDeCarga(sessao_plat)
+    ing = Ingestor(inq.admin)
+    ing.inquilino = inq
+    try:
+        yield ing
+    finally:
+        ing.liberar_token()
+        inq.apagar()
+
+
+def _admin(con, inq):
+    contexto(con, inq.id, usuario_id=inq.admin_id, login="admin")
+
+
+def test_dxf_fluxo_completo_com_pontos_de_controle(ingestor_cad, conexao_plat_app, medida):
     """O fluxo inteiro, do envio à tabela: 3 pontos de controle, RMSE reportado antes da carga, e a geometria
     no banco cai onde os pontos mandaram."""
     captura = Captura("dxf_com_pontos_de_controle")
-    importacao_id, imp = _importar_cad(ingestor_a, "polilinhas.dxf", "dxf", captura)
+    importacao_id, imp = _importar_cad(ingestor_cad, "polilinhas.dxf", "dxf", captura)
     proposta = imp["proposta"]
     assert imp["estado"] == "proposta", imp
     assert proposta["driver"] == "DXF"
     assert proposta["cad"]["versao"] == "R2010"
     assert proposta["cad"]["unidade"]["nome"] == "metro"
     assert sorted(proposta["camadas_desenho"]) == ["QUADRA", "TALUDE_3D"]
+    assert proposta["geometria"]["tipos"] == {"LineString": 8, "LineString Z": 4}, proposta["geometria"]
+    assert proposta["geometria"]["escolhida"] in ("LineString", "MultiLineString"), proposta["geometria"]
     assert "crs" in proposta["perguntas"] and "georreferencia" in proposta["perguntas"]
     assert proposta["cad"]["isolamento"]["seccomp"] == 2, "o subprocesso do GDAL rodou sem seccomp"
 
@@ -109,18 +165,18 @@ def test_dxf_fluxo_completo_com_pontos_de_controle(ingestor_a, conexao_plat_app,
               {"desenho": [0.0, 30.0], "terreno": _terreno(0.0, 30.0)}]
     corpo = {"crs": {"srid": SRID_ALVO}, "cad": {"unidade": 6, "camadas": ["QUADRA"],
                                                  "georreferencia": {"pontos": pontos}}}
-    final = ingestor_a.confirmar(importacao_id, corpo, timeout=300)
-    assert final["estado"] == "concluida", final
+    final = ingestor_cad.confirmar(importacao_id, corpo, timeout=300)
+    assert final.get("estado") == "concluida", _porque_falhou(ingestor_cad, final) or final
     ajuste = final["confirmacao"]["cad"]["georreferencia"]["ajuste"]
     assert ajuste["pontos"] == 3 and ajuste["rmse"] < 1e-6
     assert abs(ajuste["rotacao_graus"] - ANGULO) < 1e-6
     captura.passo("confirmar", corpo, {"estado": final["estado"], "rmse": ajuste["rmse"],
                                        "escala": ajuste["escala"], "rotacao_graus": ajuste["rotacao_graus"]})
 
-    _admin(conexao_plat_app)
+    _admin(conexao_plat_app, ingestor_cad.inquilino)
     with conexao_plat_app.cursor() as cur:
         schema, tabela = _tabela_de(cur, final["item_id"])
-        cur.execute(f'SELECT count(*) AS n, ST_SRID(geom) AS srid, '
+        cur.execute(f'SELECT count(*) AS n, max(ST_SRID(geom)) AS srid, '
                     f'ST_X(ST_Centroid(ST_Extent(geom)::geometry)) AS cx, '
                     f'ST_Y(ST_Centroid(ST_Extent(geom)::geometry)) AS cy FROM "{schema}"."{tabela}"')
         r = cur.fetchone()
@@ -138,15 +194,15 @@ def test_dxf_fluxo_completo_com_pontos_de_controle(ingestor_a, conexao_plat_app,
                  "passos", "venv/bin/pytest tests/api/ingestao/test_ingestao_cad.py -k fluxo_completo")
 
 
-def test_dwg_r2000_importa_pelo_conversor(ingestor_a, conexao_plat_app, medida):
+def test_dwg_r2000_importa_pelo_conversor(ingestor_cad, conexao_plat_app, medida):
     captura = Captura("dwg_r2000")
-    importacao_id, imp = _importar_cad(ingestor_a, "r2000.dwg", "dwg", captura)
+    importacao_id, imp = _importar_cad(ingestor_cad, "r2000.dwg", "dwg", captura)
     proposta = imp["proposta"]
     assert proposta["cad"]["versao"] == "R2000"
     assert proposta["cad"]["conversao"]["codigo"] == 0
-    final = ingestor_a.confirmar(importacao_id, {"crs": {"srid": SRID_ALVO}, "cad": {"unidade": 6}}, timeout=300)
-    assert final["estado"] == "concluida", final
-    _admin(conexao_plat_app)
+    final = ingestor_cad.confirmar(importacao_id, {"crs": {"srid": SRID_ALVO}, "cad": {"unidade": 6}}, timeout=300)
+    assert final.get("estado") == "concluida", _porque_falhou(ingestor_cad, final) or final
+    _admin(conexao_plat_app, ingestor_cad.inquilino)
     with conexao_plat_app.cursor() as cur:
         schema, tabela = _tabela_de(cur, final["item_id"])
         cur.execute(f'SELECT count(*) AS n FROM "{schema}"."{tabela}"')
@@ -158,53 +214,53 @@ def test_dwg_r2000_importa_pelo_conversor(ingestor_a, conexao_plat_app, medida):
                  "feicoes", "venv/bin/pytest tests/api/ingestao/test_ingestao_cad.py -k dwg_r2000")
 
 
-def test_unidade_nao_declarada_bloqueia_a_confirmacao(ingestor_a):
+def test_unidade_nao_declarada_bloqueia_a_confirmacao(ingestor_cad):
     """`$INSUNITS = 0`: confirmar sem responder a unidade tem de dar 422 nomeando a pergunta que falta."""
-    importacao_id, imp = _importar_cad(ingestor_a, "polegada.dxf", "dxf")
+    importacao_id, imp = _importar_cad(ingestor_cad, "polegada.dxf", "dxf")
     assert "unidade" in imp["proposta"]["perguntas"]
-    r = ingestor_a.sessao.put(f"/api/importacoes/{importacao_id}/confirmar", json={"crs": {"srid": SRID_ALVO}})
+    r = ingestor_cad.sessao.put(f"/api/importacoes/{importacao_id}/confirmar", json={"crs": {"srid": SRID_ALVO}})
     assert r.status_code == 422, r.text
+    assert r.json()["erro"] == "perguntas_pendentes"
     assert r.json()["detalhe"]["perguntas"] == ["unidade"], r.json()
-    r = ingestor_a.sessao.put(f"/api/importacoes/{importacao_id}/confirmar",
+    r = ingestor_cad.sessao.put(f"/api/importacoes/{importacao_id}/confirmar",
                               json={"crs": {"srid": SRID_ALVO}, "cad": {"unidade": 1}})
     assert r.status_code == 202, r.text
-    esperar_job(ingestor_a.sessao, r.json()["job_id"], timeout=300)
-    r = ingestor_a.sessao.get(f"/api/importacoes/{importacao_id}")
+    esperar_job(ingestor_cad.sessao, r.json()["job_id"], timeout=300)
+    r = ingestor_cad.sessao.get(f"/api/importacoes/{importacao_id}")
     final = r.json()
-    assert final["estado"] == "concluida", final
-    ingestor_a.camadas.append(final["item_id"])
+    assert final.get("estado") == "concluida", _porque_falhou(ingestor_cad, final) or final
     assert final["confirmacao"]["cad"]["metros_por_unidade"] == 0.0254
 
 
-def test_dxf_binario_recusado_na_criacao_da_importacao(ingestor_a):
-    obj = ingestor_a.enviar_arquivo(DADOS / "binario.dxf")
-    item_id = ingestor_a.item_arquivo(obj, "binario.dxf")
-    r = ingestor_a.sessao.post("/api/importacoes", json={"arquivo_id": item_id, "formato": "dxf"})
+def test_dxf_binario_recusado_na_criacao_da_importacao(ingestor_cad):
+    obj = ingestor_cad.enviar_arquivo(DADOS / "binario.dxf")
+    item_id = ingestor_cad.item_arquivo(obj, "binario.dxf")
+    r = ingestor_cad.sessao.post("/api/importacoes", json={"arquivo_id": item_id, "formato": "dxf"})
     assert r.status_code == 422, r.text
     assert "BINÁRIO" in json.dumps(r.json(), ensure_ascii=False)
 
 
-def test_camada_do_desenho_que_nao_existe_e_recusada(ingestor_a):
-    importacao_id, imp = _importar_cad(ingestor_a, "polilinhas.dxf", "dxf")
-    r = ingestor_a.sessao.put(f"/api/importacoes/{importacao_id}/confirmar",
+def test_camada_do_desenho_que_nao_existe_e_recusada(ingestor_cad):
+    importacao_id, imp = _importar_cad(ingestor_cad, "polilinhas.dxf", "dxf")
+    r = ingestor_cad.sessao.put(f"/api/importacoes/{importacao_id}/confirmar",
                               json={"crs": {"srid": SRID_ALVO}, "cad": {"camadas": ["NAO_EXISTE"]}})
     assert r.status_code == 422, r.text
-    assert r.json()["codigo"] == "camada_desconhecida"
+    assert r.json()["erro"] == "camada_desconhecida", r.json()
 
 
-def test_pontos_de_controle_degenerados_recusados_com_mensagem(ingestor_a):
-    importacao_id, _imp = _importar_cad(ingestor_a, "polilinhas.dxf", "dxf")
+def test_pontos_de_controle_degenerados_recusados_com_mensagem(ingestor_cad):
+    importacao_id, _imp = _importar_cad(ingestor_cad, "polilinhas.dxf", "dxf")
     iguais = [{"desenho": [0.0, 0.0], "terreno": [1.0, 1.0]}] * 3
-    r = ingestor_a.sessao.put(f"/api/importacoes/{importacao_id}/confirmar",
+    r = ingestor_cad.sessao.put(f"/api/importacoes/{importacao_id}/confirmar",
                               json={"crs": {"srid": SRID_ALVO},
                                     "cad": {"georreferencia": {"pontos": iguais}}})
     assert r.status_code == 422, r.text
-    assert r.json()["codigo"] == "georreferencia_invalida"
+    assert r.json()["erro"] == "georreferencia_invalida", r.json()
     assert "colineares" in r.json()["mensagem"] or "coincidentes" in r.json()["mensagem"]
 
 
-def test_formatos_publicados_incluem_dxf_e_dwg(ingestor_a):
-    r = ingestor_a.sessao.get("/api/importacoes/formatos")
+def test_formatos_publicados_incluem_dxf_e_dwg(ingestor_cad):
+    r = ingestor_cad.sessao.get("/api/importacoes/formatos")
     assert r.status_code == 200
     tipos = {f["tipo"]: f for f in r.json()}
     assert tipos["dxf"]["extensoes"] == [".dxf"] and tipos["dwg"]["extensoes"] == [".dwg"]
