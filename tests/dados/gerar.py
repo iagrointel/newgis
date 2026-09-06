@@ -125,6 +125,79 @@ def gerar_csv_aspas_desbalanceadas() -> None:
     (SAIDA / "csv_aspas.csv").write_text(texto, encoding="utf-8")
 
 
+N_FORMATOS_NOVOS = 10  # item L6-02-o: recortes pequenos de propósito (disco apertado, ver bancada)
+
+
+def gerar_cobertura_nomeada(cobertura_geojson: Path) -> Path:
+    """`N_FORMATOS_NOVOS` feições do recorte de cobertura que TÊM `name` preenchido (achado: as 10 primeiras da
+    ordem original só têm `natural` — GeoJSON omite chave com valor nulo, então o teste de ida e volta dos
+    formatos novos precisa de um recorte com atributo garantido para comparar, não só geometria)."""
+    destino = SAIDA / "_cobertura_nomeada.geojson"
+    _ogr2ogr("-f", "GeoJSON", str(destino), str(cobertura_geojson), "-t_srs", "EPSG:4674",
+             "-dialect", "OGRSQL", "-sql",
+             f'SELECT * FROM cobertura WHERE name IS NOT NULL ORDER BY name LIMIT {N_FORMATOS_NOVOS}')
+    return destino
+
+
+def gerar_geojsonseq(cobertura_nomeada: Path) -> None:
+    """GeoJSONSeq/NDJSON, `N_FORMATOS_NOVOS` feições COM `name` (item L6-02-o)."""
+    destino = SAIDA / "cobertura.geojsonl"
+    _ogr2ogr("-f", "GeoJSONSeq", str(destino), str(cobertura_nomeada))
+
+
+def gerar_kml(cobertura_nomeada: Path) -> None:
+    """KML, mesmo recorte nomeado; campo `select` (palavra reservada) tirado porque o LIBKML não aceita ponto no
+    nome do jeito que a proposta espera — mantém só os campos "normais" para o teste de ida e volta."""
+    destino = SAIDA / "cobertura.kml"
+    _ogr2ogr("-f", "LIBKML", str(destino), str(cobertura_nomeada), "-select", "landuse,leisure,natural,name")
+
+
+def gerar_dxf(cobertura_nomeada: Path) -> None:
+    """DXF: só geometria sobrevive (o driver não aceita campo arbitrário, ver docstring de `_preparar_dxf`)."""
+    destino = SAIDA / "cobertura.dxf"
+    _ogr2ogr("-f", "DXF", str(destino), str(cobertura_nomeada))
+
+
+def gerar_xlsx(lugares_geojson: Path) -> None:
+    """XLSX com colunas `latitude`/`longitude` (reconhecidas por `csv_normalizar.NOMES_LAT/NOMES_LON`) — mesmo
+    recorte de lugares do CSV, convertido via CSV intermediário (o próprio `_preparar_xlsx` faz o caminho
+    inverso: XLSX -> CSV -> `_preparar_csv`)."""
+    dados = json.loads(lugares_geojson.read_text(encoding="utf-8"))
+    linhas_csv = ["nome,place,latitude,longitude"]
+    for f in dados["features"][:N_FORMATOS_NOVOS]:
+        geom = f.get("geometry")
+        if not geom or geom.get("type") not in ("Point", "MultiPoint"):
+            continue
+        coords = geom["coordinates"]
+        lon, lat = (coords[0][0], coords[0][1]) if geom["type"] == "MultiPoint" else (coords[0], coords[1])
+        nome = (f["properties"].get("name") or "sem nome").replace(",", " ")
+        place = f["properties"].get("place") or ""
+        linhas_csv.append(f"{nome},{place},{lat:.6f},{lon:.6f}")
+    csv_tmp = SAIDA / "_xlsx_tmp.csv"
+    csv_tmp.write_text("\n".join(linhas_csv) + "\n", encoding="utf-8")
+    destino = SAIDA / "lugares.xlsx"
+    destino.unlink(missing_ok=True)
+    _ogr2ogr("-f", "XLSX", str(destino), str(csv_tmp), "-oo", "AUTODETECT_TYPE=YES")
+    csv_tmp.unlink()
+
+
+def gerar_filegdb(cobertura_nomeada: Path) -> None:
+    """File Geodatabase zipada (driver OpenFileGDB, escrita): gera a pasta `.gdb` num tmp e zipa — mesmo padrão
+    do `cobertura_shp.zip` (a pasta em si não vai para o git, só o zip)."""
+    dir_tmp = SAIDA / "_gdb_tmp"
+    shutil.rmtree(dir_tmp, ignore_errors=True)
+    dir_tmp.mkdir()
+    caminho_gdb = dir_tmp / "cobertura.gdb"
+    _ogr2ogr("-f", "OpenFileGDB", str(caminho_gdb), str(cobertura_nomeada), "-nln", "cobertura")
+    caminho_zip = SAIDA / "cobertura_gdb.zip"
+    caminho_zip.unlink(missing_ok=True)
+    with zipfile.ZipFile(caminho_zip, "w", zipfile.ZIP_DEFLATED) as zf:
+        for arq in sorted(caminho_gdb.rglob("*")):
+            if arq.is_file():
+                zf.write(arq, arq.relative_to(dir_tmp))
+    shutil.rmtree(dir_tmp)
+
+
 def main() -> None:
     if not PMTILES.exists():
         raise SystemExit(f"ausente: {PMTILES} (dado da casa, não deveria faltar)")
@@ -137,6 +210,13 @@ def main() -> None:
     gerar_gravata()
     gerar_csv(lugares)
     gerar_csv_aspas_desbalanceadas()
+    cobertura_nomeada = gerar_cobertura_nomeada(cobertura)
+    gerar_geojsonseq(cobertura_nomeada)
+    gerar_kml(cobertura_nomeada)
+    gerar_dxf(cobertura_nomeada)
+    gerar_xlsx(lugares)
+    gerar_filegdb(cobertura_nomeada)
+    cobertura_nomeada.unlink()
     cobertura.unlink()
     lugares.unlink()
     shutil.rmtree(SAIDA / "_shp_tmp", ignore_errors=True)

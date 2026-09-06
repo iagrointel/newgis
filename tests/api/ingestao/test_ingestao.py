@@ -150,9 +150,12 @@ def test_geojson_poligono_autointersectado_e_corrigido_com_relatorio(ingestor_a)
 
 
 def test_formato_nao_suportado_recusa_antes_de_qualquer_job(ingestor_a):
+    # "gml" nunca entrou em `FORMATOS` (item L6-02-o ampliou para geojsonseq/kml/dxf/filegdb.zip/xlsx, mas GML
+    # continua fora — decisão de escopo, não medição pendente); "kml" NÃO serve mais de exemplo aqui desde que
+    # o L6-02-o o suportou de verdade.
     obj = ingestor_a.enviar_arquivo(GERADOS / "cobertura.gpkg")
     item_id = ingestor_a.item_arquivo(obj, "cobertura.gpkg")
-    r = ingestor_a.sessao.post("/api/importacoes", json={"arquivo_id": item_id, "formato": "kml"})
+    r = ingestor_a.sessao.post("/api/importacoes", json={"arquivo_id": item_id, "formato": "gml"})
     assert r.status_code == 422 and r.json()["erro"] == "formato_nao_suportado"
 
 

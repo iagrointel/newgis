@@ -141,10 +141,7 @@ class Ingestor:
         return final
 
 
-@pytest.fixture
-def ingestor_a(sessao_a, env):
-    ing = Ingestor(sessao_a)
-    yield ing
+def _limpar_ingestor(ing: "Ingestor", env, slug: str) -> None:
     ing.liberar_token()
     if not (ing.camadas or ing.arquivos):
         return
@@ -152,9 +149,9 @@ def ingestor_a(sessao_a, env):
     try:
         ids = ids_por_slug(con)
         with con.cursor() as cur:
-            cur.execute("SELECT usuario_id FROM plat.auth_login('demo', 'admin')")
+            cur.execute("SELECT usuario_id FROM plat.auth_login(%s, 'admin')", (slug,))
             adm = cur.fetchone()["usuario_id"]
-        contexto(con, ids["demo"], usuario_id=adm, login="admin")
+        contexto(con, ids[slug], usuario_id=adm, login="admin")
         with con.cursor() as cur:
             cur.execute("SELECT set_config('plat.lixeira', 'on', true)")
             # plat.importacao.arquivo_id referencia plat.item SEM cascade de propósito (RESTRICT protege um
@@ -180,3 +177,19 @@ def ingestor_a(sessao_a, env):
         con.commit()
     finally:
         con.close()
+
+
+@pytest.fixture
+def ingestor_a(sessao_a, env):
+    ing = Ingestor(sessao_a)
+    yield ing
+    _limpar_ingestor(ing, env, "demo")
+
+
+@pytest.fixture
+def ingestor_b(sessao_b, env):
+    """Mesma fábrica de `ingestor_a`, para o inquilino `demo2` (item L6-02-o: teste de isolamento entre
+    inquilinos na exportação precisa de uma camada de cada lado)."""
+    ing = Ingestor(sessao_b)
+    yield ing
+    _limpar_ingestor(ing, env, "demo2")

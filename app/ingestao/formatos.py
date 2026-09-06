@@ -1,9 +1,14 @@
-"""Formatos aceitos nesta passagem (ADR 0005 seção 3.3 e 10.1, reduzido a 4 pelo escopo do turno): shapefile
-zipado, GeoPackage, GeoJSON, CSV/TXT (lat/lon). Cada um tem: extensões aceitas, prova pelo CONTEÚDO (nunca só a
-extensão — a mesma regra do L0-11/L7-03-b, aqui aplicada ao tipo declarado no upload), e o driver GDAL usado na
-inspeção/carga. O que falta (KML/KMZ, GPX, XLSX, DXF, DWG, FileGDB, FlatGeobuf, GML, MapInfo, GeoParquet) está
-documentado no ADR 0005 seções 10-12 e no handoff do item; `formato_nao_suportado` é a recusa para qualquer um
-deles nesta passagem."""
+"""Formatos aceitos (ADR 0005 seção 3.3 e 10.1; item L6-02-o-importacao-exportacao-formatos): os 4 da fundação
+(shapefile zipado, GeoPackage, GeoJSON, CSV/TXT lat/lon) mais os que o `L6-02-o` acrescentou depois de MEDIR os
+drivers reais do GDAL desta máquina (`ogr --formats`, 05/09 e reconferido nesta passagem: todos presentes e com
+DCAP_CREATE=YES) — GeoJSONSeq (NDJSON), KML/LIBKML, DXF (CAD), XLSX (tabular, sem geometria nativa: ver
+`app/ingestao/xlsx_geom.py`) e FileGDB zipada (driver OpenFileGDB, mesmo truque `/vsizip` do shapefile.zip). MVT,
+PMTiles e MSSQLSpatial são só destino de EXPORTAÇÃO (`app/ingestao/exportar.py`) — não entram aqui porque não são
+fonte de importação de camada nesta plataforma (mosaico de tiles e banco externo, não arquivo de origem). GPX,
+DWG binário, GML, MapInfo, FlatGeobuf e GeoParquet continuam fora (não medidos/decisão de escopo); Apache
+Parquet/GeoParquet e Oracle Spatial (OCI) NÃO existem no GDAL desta instalação — nunca prometer os dois.
+Cada formato tem: extensões aceitas, prova pelo CONTEÚDO (nunca só a extensão — a mesma regra do L0-11/L7-03-b,
+aqui aplicada ao tipo declarado no upload), e o driver GDAL usado na inspeção/carga."""
 
 from __future__ import annotations
 
@@ -30,6 +35,21 @@ FORMATOS: dict[str, Formato] = {
     "gpkg": Formato("gpkg", (".gpkg",), "GeoPackage", "GPKG"),
     "geojson": Formato("geojson", (".geojson", ".json"), "GeoJSON", "GeoJSON"),
     "csv": Formato("csv", (".csv", ".txt", ".tsv", ".psv"), "CSV / texto delimitado", "CSV"),
+    "geojsonseq": Formato("geojsonseq", (".geojsonl", ".geojsons", ".ndjson"), "GeoJSON sequencial (NDJSON)",
+                          "GeoJSONSeq"),
+    "kml": Formato("kml", (".kml",), "KML", "LIBKML"),
+    "dxf": Formato("dxf", (".dxf",), "DXF (CAD)", "DXF"),
+    "xlsx": Formato("xlsx", (".xlsx",), "Excel (XLSX)", "XLSX"),
+    "filegdb.zip": Formato("filegdb.zip", (".zip",), "File Geodatabase (zip)", "OpenFileGDB"),
+}
+
+# formatos que só existem como DESTINO de exportação (app/ingestao/exportar.py); nunca aparecem em FORMATOS de
+# importação nem em `GET /api/importacoes/formatos` — não são fonte de carga nesta plataforma.
+FORMATOS_EXPORTACAO: dict[str, Formato] = {
+    **FORMATOS,
+    "mvt": Formato("mvt", (), "Mapbox Vector Tiles (mosaico)", "MVT"),
+    "pmtiles": Formato("pmtiles", (), "PMTiles", "PMTiles"),
+    "mssqlspatial": Formato("mssqlspatial", (), "Microsoft SQL Server (MSSQLSpatial)", "MSSQLSpatial"),
 }
 
 
@@ -87,6 +107,23 @@ def _shapefile_no_zip(zf: zipfile.ZipFile) -> list[str]:
     return [b for b, exts in por_base.items() if {"shp", "shx", "dbf"} <= exts]
 
 
+def _gdb_no_zip(zf: zipfile.ZipFile) -> str | None:
+    """Nome do primeiro `<algo>.gdb/` no zip que tem ao menos um `a*.gdbtable` dentro (catálogo do FileGDB)."""
+    diretorios: dict[str, int] = {}
+    for info in zf.infolist():
+        nome = info.filename.replace("\\", "/")
+        m = nome.lower().find(".gdb/")
+        if m == -1:
+            continue
+        base = nome[: m + 4]
+        if nome.lower().endswith(".gdbtable"):
+            diretorios[base] = diretorios.get(base, 0) + 1
+    for base, n in diretorios.items():
+        if n:
+            return base
+    return None
+
+
 def verificar_conteudo(tipo_declarado: str, dados: bytes) -> None:
     """Levanta ConteudoNaoCorresponde quando os bytes não provam `tipo_declarado`."""
     if tipo_declarado == "shapefile.zip":
@@ -94,6 +131,13 @@ def verificar_conteudo(tipo_declarado: str, dados: bytes) -> None:
         if not _shapefile_no_zip(zf):
             raise ConteudoNaoCorresponde(
                 "conteúdo não corresponde ao tipo shapefile.zip: nenhum trio .shp/.shx/.dbf encontrado no zip"
+            )
+    elif tipo_declarado == "filegdb.zip":
+        zf = conferir_zip(dados)
+        if _gdb_no_zip(zf) is None:
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo filegdb.zip: nenhuma pasta <nome>.gdb com catálogo "
+                "(a*.gdbtable) encontrada no zip"
             )
     elif tipo_declarado == "gpkg":
         if dados[:16] != b"SQLite format 3\x00":
@@ -105,6 +149,35 @@ def verificar_conteudo(tipo_declarado: str, dados: bytes) -> None:
         if not inicio.startswith(b"{") or b'"type"' not in dados[:4096]:
             raise ConteudoNaoCorresponde(
                 "conteúdo não corresponde ao tipo geojson: o arquivo é " + _o_que_e(dados)
+            )
+    elif tipo_declarado == "geojsonseq":
+        primeira = dados[:65536].lstrip(b"\x1e \t\r\n")
+        if not primeira.startswith(b"{") or b'"type"' not in primeira[:4096] or b"\x00" in dados[:65536]:
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo geojsonseq: a primeira linha não é um objeto GeoJSON"
+            )
+    elif tipo_declarado == "kml":
+        inicio = dados[:4096]
+        if b"<kml" not in inicio or (b"<?xml" not in inicio and not inicio.lstrip().startswith(b"<kml")):
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo kml: falta a tag <kml> no início do arquivo"
+            )
+    elif tipo_declarado == "dxf":
+        amostra = dados[:4096]
+        if b"\x00" in amostra:
+            raise ConteudoNaoCorresponde("conteúdo não corresponde ao tipo dxf: o arquivo tem bytes nulos (DXF "
+                                         "binário não é aceito, só o formato texto)")
+        linhas = [ln.strip() for ln in amostra.replace(b"\r\n", b"\n").split(b"\n") if ln.strip()][:4]
+        if not (b"SECTION" in amostra[:2048] and b"0" in linhas):
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo dxf: não achou o par de códigos de grupo '0'/'SECTION' no início"
+            )
+    elif tipo_declarado == "xlsx":
+        e_zip = dados[:4] == b"PK\x03\x04"
+        tem_indicio_ooxml = b"xl/workbook.xml" in dados[:65536] or b"[Content_Types]" in dados[:2048]
+        if not e_zip or not tem_indicio_ooxml:
+            raise ConteudoNaoCorresponde(
+                "conteúdo não corresponde ao tipo xlsx: não é um pacote OOXML (zip com xl/workbook.xml)"
             )
     elif tipo_declarado == "csv":
         amostra = dados[:65536]
