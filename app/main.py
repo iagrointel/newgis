@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 
 from app import erros, limite_corpo, paginas
 from app import log as plat_log
+from app.acervo import publicacao as rotas_acervo_publicacao
 from app.acervo import rotas as rotas_acervo
 from app.amc.rotas import router as rotas_amc
 from app.amc.rotas_similaridade import router as rotas_similaridade
@@ -102,6 +103,8 @@ ROUTERS = [
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar
+    # publicacao ANTES de rotas_acervo: /api/acervo/camadas casaria com /api/acervo/{fonte_id} se viesse depois
+    rotas_acervo_publicacao.router,
     rotas_acervo.router,
     # --- conexão externa (L6-02-a): /api/conexoes, /api/conexoes/{id}, /api/conexoes/{id}/testar
     rotas_conexao.router,

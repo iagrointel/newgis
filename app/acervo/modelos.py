@@ -86,3 +86,35 @@ class AcervoAdicionarEntrada(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     confirma_risco_pii: bool = False
+
+
+class AcervoCamadaPublicada(Saida):
+    """Uma view de `plat_acervo` (item L6-01-b). `assinada` é deste inquilino: a RLS de
+    plat.acervo_assinatura já recorta o LEFT JOIN, então nunca vaza a assinatura de outro."""
+
+    view_nome: str
+    acervo_camada_id: str
+    fonte_id: str
+    schema_origem: str
+    tabela_origem: str
+    coluna_geom: str
+    srid: int
+    colunas: list[str]
+    linhas_exatas: int | None = None
+    tipo_geom: str | None = None
+    assinada: bool
+
+
+class AcervoCamadaPagina(Saida):
+    total: int
+    camadas: list[AcervoCamadaPublicada]
+
+
+class AcervoFeicoes(Saida):
+    """GeoJSON de uma camada publicada. `features` fica vazio quando o filtro não achou nada — nunca quando
+    falta assinatura: aí a rota já devolveu 403 antes de consultar."""
+
+    type: str
+    camada: str
+    total: int
+    features: list[dict]

@@ -821,9 +821,34 @@ hostname ORIGINAL (`server_hostname`, inalterado), fechando DNS-rebinding sem re
 conexoes/{id}/testar` chama `buscar_seguro` com timeout curto e grava `saude`/`saude_mensagem`/
 `saude_latencia_ms`/`saude_verificada_em`.
 
-Ambos os itens entregam só o MODELO; a view com RLS por assinatura sobre a tabela original do acervo
-(L6-01-b) e os 15 conectores concretos que de fato leem WMS/WFS/STAC/... (L6-02-b em diante) ficam para os
-próximos turnos.
+Ambos os itens entregaram só o MODELO; os 15 conectores concretos que de fato leem WMS/WFS/STAC/...
+(L6-02-b em diante) ficam para os próximos turnos. A publicação da camada em si é a seção 15.1.
+
+### 15.1 Publicação sem cópia (item L6-01-b-view-so-leitura)
+
+Migração `20260906T15521aa_acervo_publicacao.sql`. Cada camada `estado = 'exposta'` do registro vira uma VIEW
+em **`plat_acervo`**, criada por `scripts/acervo_publicar.py` (roda como `postgres`, idempotente; camada que
+sai de `exposta` perde a view na rodada seguinte). A view tem só as colunas de `colunas_expostas` mais a
+geometria, é dona do papel `NOLOGIN` **`plat_acervo_publicador`** (que recebe `SELECT` de uma tabela de origem
+por vez) e leva `plat.acervo_pode_ler('<acervo_camada_id>')` no `WHERE`. `plat_app` recebe `GRANT SELECT` só
+da view — nada em `public`, e nada de escrita: `INSERT`/`UPDATE`/`DELETE` na view são recusados pelo Postgres.
+
+**`plat.acervo_assinatura`** (RLS por `tenant_id`, sem policy de `UPDATE`: assina ou cancela) é o que o
+porteiro consulta; **`plat.acervo_publicacao`** registra o que está publicado (view, colunas, SRID), escrita
+só pelo publicador. Rotas: `GET /api/acervo/camadas`, `POST`/`DELETE /api/acervo/camadas/{camada}/assinatura`
+(privilégio `conteudo.registrar_fonte`), `GET /api/acervo/camadas/{camada}/feicoes` e
+`GET /api/acervo/camadas/{camada}/tiles/{z}/{x}/{y}.mvt`. O caminho usa `view_nome` ([a-z0-9_]), não o
+`acervo_camada_id` (que tem `/` e `.`).
+
+Duas decisões medidas, detalhadas em `docs/adr/0018-publicacao-sem-copia-do-acervo.md`: a view **não** é
+`security_invoker` (seria negada, porque o privilégio checado passaria a ser o da tabela de origem) e **não**
+leva `security_barrier` (o `&&` de geometria não é `LEAKPROOF`, o índice GiST cai e a consulta vira varredura
+sequencial). O que protege é o porteiro ser argumento constante sem coluna: vira `One-Time Filter` e, sem
+assinatura, o nó do índice sai do plano como `(never executed)`. Medido sobre `public.car_area_imovel`
+(8.406.837 linhas, `COUNT(*)`): 1,5 ms de mediana na consulta por caixa envolvente.
+
+O que NÃO existe: `plat-martin` (porta 8151 reservada, seção 2) — o SQL de tile que ele publicaria é servido
+pela própria API; FeatureServer/OGC API de feição (L2-04); camada do catálogo no visualizador (L2-01).
 
 ## 16. Ficha do acervo completa e gate de LGPD (itens L6-01-d-ficha-fonte e L6-01-f-lgpd)
 
