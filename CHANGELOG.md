@@ -3,6 +3,50 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L0-07-b-papeis-privilegios: vocabulário fino, conferência Esri e gate de rebaixamento)
+
+O grosso de privilégios/papéis já existia do L0-02 (vocabulário fechado, papéis personalizados, tela `/admin/papeis`,
+`plat.tem`/`plat.privilegios_de`); este item fechou o que faltava do portão. `docs/gerar_privilegios.py` lê
+`plat.privilegio`/`plat.perfil_privilegio` AO VIVO no banco (nunca `app/auth/privilegios.py`) e escreve
+`docs/PRIVILEGIOS.md` (47 privilégios, 12 grupos, 20 administrativos), com `tests/api/test_privilegios_doc.py`
+provando que o comitado bate com o banco agora. `tests/api/test_privilegios_matriz.py` chama toda rota do OpenAPI
+vivo cujo `x-privilegio` é um nome puro do vocabulário (sozinho ou em composição `a|b`) com um usuário que
+provadamente não o tem, e exige `403` em todas — dois clientes só bastam (um só com `tokens.gerar`, outro só com
+`membros.ver`, a interseção perfil×papel do ADR 0002 faz o resto); a exceção nomeada (`PUT
+/api/itens/{id}/compartilhamento`, que checa posse do item ANTES do privilégio de compartilhar) ganhou teste à
+parte provando o gate real com o dono do item.
+
+Achado do adversário: rebaixar o perfil de um usuário que possui itens do catálogo não era recusado —
+`_editar` (`app/auth/rotas_usuarios.py`) só checava grupos (`409 possui_grupos`); a regra da Esri (E12-members)
+é "não possui conteúdo NEM grupos". Corrigido com o mesmo padrão (`409 possui_itens`, listando os itens);
+`tests/api/test_usuarios.py::test_rebaixar_perfil_com_itens_e_recusado` prova a recusa, que promover não
+esbarra na regra, e que a purga do item destrava o rebaixamento.
+
+Paridade linha a linha contra a lista de privilégios da Esri 11.4 (E12-priv, `laco/handoffs/T1/21_esri.md` §1.3):
+43 gerais + 33 administrativos = 76 privilégios Esri, **35 feito · 11 parcial · 30 fora** — cada `fora` é uma
+decisão de escopo já nomeada em outro item (notebook, app OAuth, pipeline, versionamento de dado, colaboração
+entre organizações, licença/assento, vídeo, grafo de conhecimento, relatório de uso), nunca uma lacuna descoberta
+agora. Tabela completa em `docs/PARIDADE.md` seção "Privilégios e papéis personalizados".
+
+e2e novo (`tests/e2e/test_papeis.py::test_papel_curador_categoriza_mas_nao_publica`, captura
+`L0-02-tenant-auth_papel_curador.png`): papel "Curador" (`conteudo.criar` + `conteudo.categorias`, este último
+administrativo — só cabe em perfil `admin`) criado pela tela, atribuído a um usuário novo; ele reescreve a árvore
+de categorias e cria conteúdo comum, mas uma tentativa de criar/publicar camada vetorial nega com `403
+sem_privilegio` (`exigido: conteudo.publicar_camada`).
+
+Refutação própria (papel esri+backend+frontend+testador+adversário, sem subagentes — item pequeno o bastante
+para uma sessão): papel administrativo atribuído a perfil abaixo do teto → `422 papel_incompativel` (já provado
+em `test_so_admin_cria_altera_e_apaga_admin`); ninguém concede privilégio que não tem → `403
+privilegio_proprio_insuficiente` (`test_privilegios_e_papeis`); apagar papel em uso → `409 papel_em_uso`; as
+~40 rotas de privilégio puro do OpenAPI vivo, uma a uma, sem o privilégio declarado → `403` em todas
+(`test_privilegios_matriz.py`). Nenhuma reprovação nova encontrada além da já corrigida (`possui_itens`).
+
+Pendente, registrado no handoff: teste automatizado do downgrade de tipo Esri "Creator → Viewer com conteúdo"
+não tem equivalente 1:1 (nossa spec não tem tipo separado de perfil — decisão D5/D16 já registrada); relatório
+de uso administrativo (`Content: Create and manage administrative reports`) e alguns privilégios de
+colaboração/servidor seguem `fora` por decisão de escopo, não por falta de tempo.
+
+
 ## turno 3, setembro de 2026 (item L2-11-b-geocodificador-brasil: geocodificador próprio sobre CNEFE 2022)
 
 Geocodificador PRÓPRIO em PostgreSQL/PostGIS (sem Nominatim/Pelias, decisão D28 sobre disco), base = CNEFE
