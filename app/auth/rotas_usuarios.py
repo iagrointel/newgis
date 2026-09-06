@@ -75,6 +75,37 @@ def _papel_compativel(cur, papel_id: int | None, perfil: str) -> None:
         )
 
 
+def _privilegios_concedidos(cur, perfil: str, papel_id: int | None) -> set[str]:
+    """Privilégios efetivos que o alvo passa a ter com (perfil, papel_id).
+
+    É a MESMA conta de `plat.privilegios_de` (migração 003, seção 12.10): teto do perfil interseção com o
+    papel personalizado, que só restringe, nunca amplia. Lê do banco, não da lista em Python, para não haver
+    duas verdades sobre o teto de cada perfil."""
+    cur.execute(
+        """
+        SELECT pp.privilegio FROM plat.perfil_privilegio pp
+         WHERE pp.perfil = %s
+           AND (%s::int IS NULL
+                OR EXISTS (SELECT 1 FROM plat.papel_privilegio x
+                            WHERE x.papel_id = %s AND x.privilegio = pp.privilegio))""",
+        (perfil, papel_id, papel_id),
+    )
+    return {r["privilegio"] for r in cur.fetchall()}
+
+
+def _nao_conceder_alem_do_proprio(cur, auth: Auth, perfil: str, papel_id: int | None) -> None:
+    """Ninguém concede privilégio que não tem (item L0-02-g-checagem-privilegio-papel-id).
+
+    O papel personalizado é uma RESTRIÇÃO do teto do perfil, então um administrador restrito por um papel
+    tinha, até aqui, dois caminhos de escalonamento: atribuir a outro (ou a si mesmo) um papel mais amplo,
+    ou tirar o papel (papel_id nulo), o que devolve o teto inteiro do perfil. As rotas de papel já barravam
+    isso na CRIAÇÃO do papel (`_validar_papel`); faltava barrar na ATRIBUIÇÃO. Vale para perfil e papel
+    juntos, porque promover de editor para admin com papel nulo concede exatamente o mesmo conjunto."""
+    sobra = sorted(_privilegios_concedidos(cur, perfil, papel_id) - set(auth.privilegios))
+    if sobra:
+        raise ErroAPI(403, "privilegio_proprio_insuficiente", "não se concede privilégio que não se tem", sobra)
+
+
 def _grupos_do_dono(cur, usuario_id: int) -> list[dict]:
     cur.execute("SELECT id, nome FROM plat.grupo WHERE dono_id = %s ORDER BY nome", (usuario_id,))
     return [{"id": str(r["id"]), "nome": r["nome"]} for r in cur.fetchall()]
@@ -122,6 +153,7 @@ def _editar(cur, auth: Auth, request: Request, alvo: dict, campos: dict) -> dict
     papel_id = campos["papel_id"] if "papel_id" in campos else alvo["papel_id"]
     if "perfil" in campos or "papel_id" in campos:
         _papel_compativel(cur, papel_id, novo_perfil)
+        _nao_conceder_alem_do_proprio(cur, auth, novo_perfil, papel_id)
     cur.execute(
         """
         UPDATE plat.usuario SET nome = %s, email = %s, perfil = %s, papel_id = %s, ativo = %s WHERE id = %s""",
@@ -391,6 +423,7 @@ def criar_usuario(corpo: UsuarioCriar, request: Request, auth: Auth = autenticad
                     {"cota": cota["cota"]},
                 )
             _papel_compativel(cur, corpo.papel_id, corpo.perfil)
+            _nao_conceder_alem_do_proprio(cur, auth, corpo.perfil, corpo.papel_id)
             cur.execute(
                 """
                 INSERT INTO plat.usuario(tenant_id, login, nome, email, senha_hash, perfil, papel_id, trocar_senha)
