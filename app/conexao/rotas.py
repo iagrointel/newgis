@@ -23,9 +23,12 @@ from app.catalogo import documento as catalogo_documento
 from app.catalogo import tipos as catalogo_tipos
 from app.catalogo.comum import registrar_evento, uuid_ok
 from app.catalogo.modelos import Item as ItemSaida
+from app.catalogo.modelos import JobCriado
 from app.conexao import credencial as credencial_mod
 from app.conexao import proveniencia, seguranca
 from app.conexao.modelos import (
+    ArquivoUrlEntrada,
+    ArquivoUrlEstado,
     Conexao,
     ConexaoEditar,
     ConexaoEntrada,
@@ -341,3 +344,78 @@ def publicar_camada(
             {"conexao_id": cid, "tipo": r["tipo"], "licenca_declarada": bool(descoberta.procedencia.get("licenca"))},
         )
         return catalogo_comum.item_json(catalogo_comum.item_ou_404(cur, iid), auth)
+
+
+# ------------------------------------------------------------------ arquivo por URL (item L6-02-h)
+def _arquivo_json(r: dict) -> dict:
+    return {
+        "conexao_id": str(r["conexao_id"]), "formato": r["formato"], "etag": r["etag"],
+        "last_modified": r["last_modified"], "sha256": r["sha256"], "bytes": r["bytes"],
+        "item_id": str(r["item_id"]) if r["item_id"] else None,
+        "importacao_id": str(r["importacao_id"]) if r["importacao_id"] else None,
+        "intervalo_s": r["intervalo_s"], "agendado": r["agendado"], "proximo_em": iso(r["proximo_em"]),
+        "ultimo_em": iso(r["ultimo_em"]), "ultimo_resultado": r["ultimo_resultado"],
+        "ultimo_detalhe": r["ultimo_detalhe"], "sincronizacoes": r["sincronizacoes"], "recargas": r["recargas"],
+    }
+
+
+def _arquivo_estado(cur, cid: str) -> dict:
+    cur.execute("SELECT * FROM plat.conexao_arquivo WHERE conexao_id = %s::uuid", (cid,))
+    r = cur.fetchone()
+    if r is None:
+        raise ErroAPI(
+            404, "arquivo_nao_configurado",
+            "a conexão não está configurada como arquivo por URL; use POST /api/conexoes/{id}/arquivo",
+        )
+    return r
+
+
+@router.put("/{id}/arquivo", response_model=ArquivoUrlEstado, openapi_extra=EDITAR)
+def arquivo_configurar(id: str, corpo: ArquivoUrlEntrada, request: Request,
+                       auth: Auth = autenticado("conteudo.publicar_camada")):
+    """Marca a conexão como fonte de arquivo por URL e define o intervalo da atualização agendada (item
+    L6-02-h). Só faz sentido em conexão `http` no modo `copiada`: `referenciada` significa que o dado FICA no
+    serviço de origem, e este item copia o arquivo para dentro da plataforma."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    with db.db(auth.contexto()) as cur:
+        r = _carregar(cur, cid)
+        if r["tipo"] != "http" or r["modo"] != "copiada":
+            raise ErroAPI(
+                422, "conexao_incompativel",
+                f"arquivo por URL exige conexão de tipo 'http' no modo 'copiada'; esta é {r['tipo']!r}/{r['modo']!r}",
+                {"tipo": r["tipo"], "modo": r["modo"]},
+            )
+        cur.execute("SELECT plat.conexao_arquivo_configurar(%s::uuid, %s, %s)",
+                    (cid, corpo.intervalo_s, corpo.agendado))
+        registrar_evento(cur, request, "conexoes/sincronizar_arquivo", "conexao", cid,
+                         {"acao": "configurar", "intervalo_s": corpo.intervalo_s, "agendado": corpo.agendado})
+        return _arquivo_json(_arquivo_estado(cur, cid))
+
+
+@router.get("/{id}/arquivo", response_model=ArquivoUrlEstado, openapi_extra=LER)
+def arquivo_ver(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Estado da sincronização: formato reconhecido, ETag/Last-Modified guardados, camada gerada, e os dois
+    contadores que separam CONFERIR a URL de RECARREGAR o dado (`sincronizacoes` x `recargas`)."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    with db.db(auth.contexto()) as cur:
+        _carregar(cur, cid)
+        return _arquivo_json(_arquivo_estado(cur, cid))
+
+
+@router.post("/{id}/arquivo/sincronizar", response_model=JobCriado, status_code=202, openapi_extra=EDITAR)
+def arquivo_sincronizar(id: str, request: Request, auth: Auth = autenticado("conteudo.publicar_camada")):
+    """Enfileira uma passagem de sincronização agora. O job é `somente_sistema` de propósito: o privilégio é
+    gasto AQUI (o usuário precisa de `conteudo.publicar_camada` e a conexão precisa ser deste inquilino), nunca
+    em `POST /api/jobs` com uma URL qualquer no parâmetro."""
+    from app.jobs import sistema
+
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    with db.db(auth.contexto()) as cur:
+        _carregar(cur, cid)
+        _arquivo_estado(cur, cid)
+    job_id = sistema.enfileirar(auth.tenant_id, "conexoes.arquivo_sincronizar", {"conexao_id": cid},
+                                usuario_id=auth.usuario_id)
+    with db.db(auth.contexto()) as cur:
+        registrar_evento(cur, request, "conexoes/sincronizar_arquivo", "conexao", cid,
+                         {"acao": "sincronizar", "job_id": job_id})
+    return {"job_id": job_id}
