@@ -26,6 +26,8 @@ from app.schema_ambiente import reescrever_schema  # noqa: E402
 _PAPEL_APP = re.compile(r"\bplat_app\b")
 _PAPEL_WORKER = re.compile(r"\bplat_worker\b")
 _CANAL_JOB = re.compile(r"\bplat_job\b")
+_PAPEL_LEITOR = re.compile(r"\bplat_leitor\b")  # papel de leitura só-SELECT do item L2-04-a: sem reescrita, a trilha
+# testava contra o papel GLOBAL e não via resíduo inseguro (achado F2 do adversário, 06/09)
 
 
 def nomes(trilha: str) -> dict[str, str]:
@@ -33,7 +35,7 @@ def nomes(trilha: str) -> dict[str, str]:
         raise SystemExit("TRILHA precisa ser minúscula, começar por letra, até 11 caracteres")
     p = f"plat_t{trilha}"
     return {"schema": p, "schema_trabalho": f"plat_trabalho_t{trilha}",
-            "app": f"{p}_app", "worker": f"{p}_worker", "job": f"{p}_job"}
+            "app": f"{p}_app", "worker": f"{p}_worker", "job": f"{p}_job", "leitor": f"{p}_leitor"}
 
 
 def reescrever(sql: str, trilha: str) -> str:
@@ -42,6 +44,7 @@ def reescrever(sql: str, trilha: str) -> str:
     sql = _PAPEL_APP.sub(n["app"], sql)
     sql = _PAPEL_WORKER.sub(n["worker"], sql)
     sql = _CANAL_JOB.sub(n["job"], sql)
+    sql = _PAPEL_LEITOR.sub(n["leitor"], sql)
     return sql
 
 

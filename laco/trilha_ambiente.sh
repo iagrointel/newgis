@@ -78,8 +78,10 @@ echo "== c2. privilégio nos schemas de dado d_<slug> (achado 06/09)"
 # (item de recurso partilhado, em conserto), a trilha precisa de privilégio nos schemas que já
 # existem, senão QUALQUER teste que crie camada morre com `permission denied for schema d_demo`.
 for d in $("${PSQL[@]}" -Atc "select nspname from pg_namespace where nspname like 'd\_%'"); do
-  "${PSQL[@]}" -c "GRANT USAGE, CREATE ON SCHEMA \"$d\" TO $APP, $WORKER" >/dev/null 2>&1
-  "${PSQL[@]}" -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA \"$d\" TO $APP, $WORKER" >/dev/null 2>&1
+  # `|| true` + 2 tentativas: GRANT em schema compartilhado dá `tuple concurrently updated` quando outra
+  # trilha faz DDL no mesmo instante (set -e derrubava a criação da trilha inteira por isso)
+  for tent in 1 2; do "${PSQL[@]}" -c "GRANT USAGE, CREATE ON SCHEMA \"$d\" TO $APP, $WORKER" >/dev/null 2>&1 && break; sleep 1; done || true
+  for tent in 1 2; do "${PSQL[@]}" -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA \"$d\" TO $APP, $WORKER" >/dev/null 2>&1 && break; sleep 1; done || true
 done
 echo "  privilégio dado nos schemas de dado existentes"
 
