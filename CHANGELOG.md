@@ -327,7 +327,7 @@ Decisões em `docs/adr/0011-documento-de-construtor.md`. Detalhe: `MANUAL.md` se
 ## turno 3, setembro de 2026 (item L1-01-d-garage-por-inquilino: balde por inquilino com cota dupla, chave só-leitura e COG por Range)
 
 Constrói sobre o adaptador do L0-11 (ADR 0006) o que a linha de imagens precisa. **ADR 0016**; migração
-`042_garage_inquilino.sql` (a reserva original era 034, mas a árvore principal já tinha commitado 034/036/040/041
+`20260906T1547_garage_inquilino.sql` (a reserva original era 034, e depois 042, mas a árvore principal já tinha commitado 034/036/040/041/042
 — renumerada e registrada no handoff).
 
 - **Cota dupla.** `plat.tenant.cota_objetos` e `plat.arquivo_bucket.cota_objetos` novas; `UpdateBucket` do Garage
