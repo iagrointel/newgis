@@ -2,9 +2,11 @@
 sem JSON = 415 e Origin estranha = 403; sessão ociosa expira (PLAT_TESTE_OCIOSA_S em dev); pendências fecham as
 rotas fora de /api/eu; X-Plat-Inquilino só para superadmin."""
 
+import json
 import time
 
 from tests.api.conftest import entrar, novo_cliente
+from tests.api.test_rls import contexto, ids_por_slug
 
 
 def test_cookie_alterado_em_um_caractere_e_401(cred):
@@ -82,20 +84,43 @@ def test_sessoes_listar_e_revogar(usuarios_a):
 
 
 def test_sessao_ociosa_expira(cred, monkeypatch, conexao_plat_app):
-    """PLAT_TESTE_OCIOSA_S=2 (dev): sem uso por 2 s a sessão morre; o expurgo a remove do banco."""
-    monkeypatch.setenv("PLAT_TESTE_OCIOSA_S", "2")
-    login, senha = cred["demo"]
-    c = novo_cliente()
-    assert entrar(c, "demo", login, senha).status_code == 200
-    assert c.get("/api/eu").status_code == 200
-    time.sleep(2.5)
-    r = c.get("/api/eu")
-    assert r.status_code == 401 and r.json()["erro"] == "sessao_expirada"
-    monkeypatch.delenv("PLAT_TESTE_OCIOSA_S")
+    """PLAT_TESTE_OCIOSA_S=2 (dev): sem uso por 2 s a sessão morre; o expurgo a remove do banco.
+
+    `plat.auth_sessao` (003) só usa o parâmetro de teste (`p_ociosa_horas`) quando o inquilino NÃO tem
+    `config.auth.sessao_ociosa_horas` explícito — com a chave presente, o valor é sempre cortado para
+    1–24 h (GREATEST/LEAST), nunca segundos. O inquilino `demo` de instalação passou a nascer com essa
+    chave já preenchida (12 h, provavelmente desde que a tela de configurações da organização — L0-07-a —
+    passou a gravar o objeto inteiro), o que travava este teste sempre em 200 (achado desta rodada, não
+    do código de sessão em si): a chave é removida por baixo do bloqueio de teste e devolvida no fim."""
+    ids = ids_por_slug(conexao_plat_app)
+    contexto(conexao_plat_app, ids["demo"], usuario_id=0, login="teste")
     with conexao_plat_app.cursor() as cur:
-        cur.execute("SELECT plat.sessoes_expurgar() AS n")
-        assert cur.fetchone()["n"] >= 0
-    conexao_plat_app.rollback()
+        cur.execute("SELECT config FROM plat.tenant WHERE id = %s", (ids["demo"],))
+        config_antes = cur.fetchone()["config"]
+        cur.execute("UPDATE plat.tenant SET config = config - 'auth' || "
+                    "jsonb_build_object('auth', (config->'auth') - 'sessao_ociosa_horas') WHERE id = %s",
+                    (ids["demo"],))
+    conexao_plat_app.commit()
+    try:
+        monkeypatch.setenv("PLAT_TESTE_OCIOSA_S", "2")
+        login, senha = cred["demo"]
+        c = novo_cliente()
+        assert entrar(c, "demo", login, senha).status_code == 200
+        assert c.get("/api/eu").status_code == 200
+        time.sleep(2.5)
+        r = c.get("/api/eu")
+        assert r.status_code == 401 and r.json()["erro"] == "sessao_expirada"
+        monkeypatch.delenv("PLAT_TESTE_OCIOSA_S")
+        with conexao_plat_app.cursor() as cur:
+            cur.execute("SELECT plat.sessoes_expurgar() AS n")
+            assert cur.fetchone()["n"] >= 0
+        conexao_plat_app.rollback()
+    finally:
+        contexto(conexao_plat_app, ids["demo"], usuario_id=0, login="teste")
+        with conexao_plat_app.cursor() as cur:
+            cur.execute("UPDATE plat.tenant SET config = %s::jsonb WHERE id = %s",
+                        (json.dumps(config_antes), ids["demo"]))
+        conexao_plat_app.commit()
 
 
 def test_sessao_de_demo_nao_serve_para_demo2(sessao_a, ids):
