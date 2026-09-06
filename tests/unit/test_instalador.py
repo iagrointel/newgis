@@ -38,17 +38,26 @@ def test_instalador_grava_plat_git_sha_e_confere_hsts():
     assert "grep -q 'max-age=31536000'" in INSTALL  # conferência pública
 
 
+def _locais_do_modelo() -> tuple[int, int]:
+    """(locations que respondem ao cliente, locations internas). `internal` só é alcançável por subrequisição
+    do próprio nginx (o auth_request do COG, item L1-01-d): nada dela chega ao navegador, e por isso ela não
+    leva cabeçalho de segurança — a resposta que sai é a do bloco que a chamou."""
+    total = NGINX.count("location ")
+    internas = NGINX.count("        internal;")
+    return total - internas, internas
+
+
 def test_hsts_em_todo_bloco_de_add_header_do_modelo():
-    locais = NGINX.count("location ")
+    externas, internas = _locais_do_modelo()
     hsts = NGINX.count('add_header Strict-Transport-Security "max-age=31536000" always;')
-    # 5 desde o item L2-01-a (location nova para o PMTiles do mapa-base, deploy/nginx.conf)
-    assert locais == 5 and hsts == locais + 1, (locais, hsts)
+    # 6 desde o item L1-01-d (location nova para o COG por Range); antes eram 5, desde o L2-01-a (PMTiles)
+    assert (externas, internas) == (6, 1) and hsts == externas + 1, (externas, internas, hsts)
 
 
 def test_referrer_policy_em_todo_bloco_de_add_header_do_modelo():
     """Achado do testador do T2: declarado no server{} não chegava às rotas (add_header no bloco cancela o herdado)."""
-    locais = NGINX.count("location ")
-    assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == locais + 1, locais
+    externas, _ = _locais_do_modelo()
+    assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == externas + 1, externas
 
 
 def test_instalador_limpa_residuos_de_teste_so_em_dev():
