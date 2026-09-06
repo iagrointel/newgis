@@ -3,6 +3,36 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L6-02-c-wfs-ogcapi: conector WFS 2.0 e OGC API - Features)
+
+Primeiro conector que LÊ dado de serviço de terceiro (ADR 0018). WFS 2.0 (GetCapabilities, DescribeFeatureType,
+GetFeature com `COUNT`/`STARTINDEX`/`BBOX`, `RESULTTYPE=hits`, saída GeoJSON e GML 3.2) e OGC API - Features
+(`/collections`, `/queryables`, `/items` com `limit`, `bbox`, `datetime` e link `rel=next`), nos dois modos:
+
+- **referenciado** — `GET /api/conexoes/{id}/colecoes`, `.../colecoes/{c}/campos` e `.../colecoes/{c}/feicoes`,
+  ao vivo, com cache de 30 s no processo (`app/conexao/cache.py`); editar ou apagar a conexão esquece o cache.
+- **copiado** — job `conexao.copiar_vetor` (`POST /api/jobs`), que traz a coleção para uma tabela PostGIS do
+  inquilino com item `camada_vetorial`, procedência e as mesmas colunas obrigatórias/RLS da ingestão de arquivo.
+
+Regra dura do desenho: **todo I/O de rede passa por `app.conexao.seguranca.buscar_seguro`** (item L6-02-a) —
+os drivers `WFS:`/`OAPIF:` do GDAL foram recusados de propósito, porque fariam a requisição fora da defesa
+contra requisição forjada pelo servidor. O `ogr2ogr` só entra depois, sobre arquivo LOCAL, e roda com
+`GDAL_HTTP_PROXY` apontando para porta fechada, de modo que nenhuma requisição sua possa sair da máquina.
+
+Medido (`tests/medidas/L6-02-c-wfs-ogcapi.json`): 50 mil feições copiadas de um WFS 2.0, com o tempo de
+download e o de carga separados; paginação conferida contra o `numberMatched` declarado; tipos de atributo
+(`xsd:int`, `xsd:double`, `xsd:boolean`, `xsd:date`) preservados como o serviço os declarou; geometria
+reprojetada de EPSG:31983 para 4326 com o CRS nativo gravado na ficha.
+
+Refutação do adversário provada: um WFS que declara 5.000.000 de feições e ignora `COUNT`/`STARTINDEX` faz a
+cópia parar no limite declarado, gravar o aviso na procedência da camada e devolver o worker à fila — três
+travas independentes (limite, página maior do que a pedida, página repetida) além dos tetos de bytes e de
+páginas.
+
+Novo em `app/conexao/seguranca.py`: `PLAT_TESTE_CONEXAO_ALVOS`, par `host:porta` exato aceito só fora de
+produção, para que a suíte fale com um WFS e um OGC API DE VERDADE subidos no loopback
+(`tests/api/conexao/servidor_ogc.py`) em vez de depender do serviço de um órgão estar de pé.
+
 ## turno 3, setembro de 2026 (item L0-09-a-procedencia: bloco de procedência em todo item de dado)
 
 Todo item que carrega dado passa a ter um bloco de procedência com o vocabulário que a casa já usa no registro
