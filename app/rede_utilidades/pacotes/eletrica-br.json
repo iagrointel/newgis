@@ -3302,6 +3302,11 @@
    "nome": "Controlador"
   },
   {
+   "codigo": "derivacao",
+   "descricao": "Ponto de derivação no meio do trecho (equivalente ao 'subnetwork tap' do modelo Esri): a derivação sai da linha principal e o traçado de subrede para nela. Só pode ser atribuída a tipo de ativo de ponto com um único terminal.",
+   "nome": "Derivação"
+  },
+  {
    "codigo": "dispositivo_de_protecao",
    "descricao": "Interrompe sozinho diante de defeito.",
    "nome": "Dispositivo de proteção"
@@ -3512,7 +3517,7 @@
   "disciplina": "eletrica",
   "fonte": "https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd",
   "nome": "Elétrica de distribuição (Brasil, BDGD Módulo 10)",
-  "versao": "1.0.0"
+  "versao": "1.1.0"
  },
  "regras": [
   {
@@ -4064,6 +4069,7 @@
   {
    "categorias": [
     "consumo",
+    "derivacao",
     "medicao"
    ],
    "chave": "consumidor_de_baixa_tensao",

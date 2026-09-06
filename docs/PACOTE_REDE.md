@@ -148,12 +148,12 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 
 | campo | valor |
 |---|---|
-| versão do pacote | 1.0.0 |
+| versão do pacote | 1.1.0 |
 | versão do esquema | 1 |
 | disciplina | eletrica |
 | fonte | https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd |
-| tamanho | 96042 bytes |
-| sha256 | `8bc3786c221e3ed5f0a40a85401301c266b15495c7444d5e64fa738f4d612663` |
+| tamanho | 96372 bytes |
+| sha256 | `036423f672a5f1710e41624fa707561924999e68fde7e8de691c19d491de74c1` |
 
 ### Redes de domínio e tiers
 
@@ -171,6 +171,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | `conducao` | Condução | Conduz sem transformar nem interromper. |
 | `consumo` | Consumo | Ponto final que retira energia da rede. |
 | `controlador` | Controlador | Ajusta grandeza elétrica (tensão, reativo) sem interromper o circuito. |
+| `derivacao` | Derivação | Ponto de derivação no meio do trecho (equivalente ao 'subnetwork tap' do modelo Esri): a derivação sai da linha principal e o traçado de subrede para nela. Só pode ser atribuída a tipo de ativo de ponto com um único terminal. |
 | `dispositivo_de_protecao` | Dispositivo de proteção | Interrompe sozinho diante de defeito. |
 | `estrutura_de_suporte` | Estrutura de suporte | Sustenta o condutor e o equipamento; não conduz. |
 | `fonte` | Fonte | Onde a energia entra na rede; o traçado a montante termina aqui. |
@@ -215,7 +216,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | `transformador_de_distribuicao` | ponto | UNTRMT | 3 | `transformador_nao_classificado` | Transformador ainda não classificado | media_tensao | transformacao | — |
 | `trecho_de_baixa_tensao` | linha | SSDBT | 1 | `trecho_de_baixa_tensao` | Trecho de baixa tensão | baixa_tensao | conducao | — |
 | `trecho_de_media_tensao` | linha | SSDMT | 1 | `trecho_de_media_tensao` | Trecho de média tensão | media_tensao | conducao | — |
-| `unidade_consumidora` | ponto | UCBT_tab, UCMT_tab | 1 | `consumidor_de_baixa_tensao` | Consumidor de baixa tensão | baixa_tensao | consumo, medicao | — |
+| `unidade_consumidora` | ponto | UCBT_tab, UCMT_tab | 1 | `consumidor_de_baixa_tensao` | Consumidor de baixa tensão | baixa_tensao | consumo, derivacao, medicao | — |
 | `unidade_consumidora` | ponto | UCBT_tab, UCMT_tab | 2 | `consumidor_de_media_tensao` | Consumidor de média tensão | baixa_tensao | consumo, medicao | — |
 
 ### Atributos: mapeamento coluna a coluna
