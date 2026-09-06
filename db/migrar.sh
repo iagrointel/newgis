@@ -7,6 +7,20 @@
 #    linha do arquivo for `-- reaplicavel` (só CREATE OR REPLACE): reaplica e atualiza o sha.
 # Uso: bash db/migrar.sh            (variáveis: PLAT_DB=iagro_sat, PLAT_MIGRACOES=<dir>)
 set -euo pipefail
+
+# --- GUARDA (06/09/2026): migração de TRILHA nunca vai para o schema plat de produção.
+# Seis migrações de ramos ainda não juntados foram aplicadas em produção hoje, apesar da regra escrita.
+# Regra escrita não segura; a ferramenta segura. Se este script roda a partir de um worktree
+# (/home/dev/plataforma/wt/...), o alvo tem de ser uma base de trilha (trilha_ambiente.sh), nunca este.
+_raiz="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+case "$_raiz" in /home/dev/plataforma/wt/*)
+  if [ -z "${PLAT_TRILHA_ALVO:-}" ]; then
+    echo "RECUSADO: db/migrar.sh a partir de worktree ($_raiz) escreveria no schema plat de PRODUÇÃO." >&2
+    echo "Use a base da sua trilha: bash /home/dev/plataforma/laco/trilha_ambiente.sh <nome>" >&2
+    echo "(ela aplica as migrações do SEU worktree reescritas para plat_t<nome>)." >&2
+    exit 9
+  fi ;;
+esac
 DB=${PLAT_DB:-iagro_sat}
 DIR=${PLAT_MIGRACOES:-"$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/migracoes"}
 if [ "$(id -un)" = postgres ]; then PSQL=(psql); else PSQL=(sudo -u postgres psql); fi
