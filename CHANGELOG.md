@@ -39,6 +39,52 @@ declarando **65.535 bandas** (recusado, RSS abaixo do limite). Provas de isolame
 Fora deste turno de propósito: o e2e do job `raster.validar` (fila real) — a trilha rodou em worktree e não
 sobe worker que dispute a fila de produção; o registro do tipo é provado por teste de unidade.
 
+### conserto do laudo do adversário (mesmo turno)
+
+Um adversário independente REFUTOU a primeira versão com 9 achados (`laco/handoffs/T3/L1-01-b-ADVERSARIO.md`,
+23 casos em `tests/unit/test_raster_validacao_adversario.py`, 9 deles `xfail(strict=True)`). Os 9 foram
+consertados e os 23 casos passam, sem nenhum ser apagado ou afrouxado — o texto de cada achado ficou como
+comentário em cima do teste que o registrou. O que mudou:
+
+* **A rede fecha no processo, não por variável.** O filho recebe um filtro **seccomp** (BPF clássico montado
+  com `ctypes` sobre a libc; nenhuma dependência nova) que faz `socket(AF_INET/AF_INET6)` devolver
+  `EAFNOSUPPORT`, com `PR_SET_NO_NEW_PRIVS` para sobreviver ao `execve`. Antes, `CPL_VSIL_CURL_ALLOWED_
+  EXTENSIONS` aceitava qualquer extensão que o remetente escrevesse na URL e o `http://` direto nem passava
+  por ela: o adversário recebeu `HEAD /x.nenhuma-extensao-permitida` e `GET /y.tif` num ouvinte em
+  127.0.0.1. Medido depois do conserto, com o mesmo ouvinte e quatro caminhos de ataque (`/vsicurl` e
+  `http://`, direto e por VRT aninhado): **0 pedido recebido**. Provado também com a camada de conferência
+  DESLIGADA (chamando o GDAL direto no filho): 0 pedido, e `socket()` cru devolve erro. O filho MEDE o
+  próprio isolamento em `/proc/self/status` e grava `info.isolamento` (`seccomp: 2`, `no_new_privs: 1`) no
+  relatório. Namespace de rede foi testado e recusado: funciona, mas o kernel desta máquina não deixa
+  escrever `uid_map`, e o filho passaria a valer como `nobody` para permissão de arquivo.
+* **VRT conferido RECURSIVAMENTE.** Toda `SourceFilename` é resolvida com `os.path.realpath` (desfaz `..` e
+  **ligação simbólica**) e tem de cair dentro do diretório do envio; VRT que aponta para VRT é conferido até
+  5 níveis, com referência circular recusada. O XML é lido INTEIRO até 16 MiB — o corte de 1 MiB escondia
+  uma segunda banda atrás de um comentário grande. Fechou os achados 1, 2 e 3 (leitura de arquivo de fora do
+  envio por três caminhos).
+* **`NaN` não derruba mais a gravação.** NoData `NaN` (comum em float32) virava `NaN` no JSON, que o `jsonb`
+  do Postgres recusa: o relatório não chegava a ser gravado no job. Agora `NaN`/`±Infinity` viram o texto
+  declarado `"NaN"`/`"Infinity"`/`"-Infinity"` na única saída do relatório, e há teste que **atravessa o
+  `jsonb` de verdade** (`psycopg2.extras.Json` → `SELECT %s::jsonb`) com a role da aplicação.
+* **Teto de VOLUME no zip**, além da razão de 50× e da cota: `min(cota, 8 × tamanho do envio + 8 MiB)`. Antes,
+  um envio de 1,4 MB escrevia 60 MB no diretório de trabalho (42× o enviado) sem violar regra nenhuma.
+* **Coordenada impossível vira PERGUNTA.** Latitude de 7.400.000° (resposta de CRS errada num arquivo em
+  metros) saía como aviso e o arquivo era aceito; agora é pendência de `crs`, com a sugestão de UTM.
+  "Fora do Brasil" continua aviso.
+* **Nenhum defeito do arquivo sai como traceback.** `rasterio._err.CPLE_AppDefinedError` não é
+  `RasterioError` nem `ValueError` e escapava do `except`, devolvendo ao usuário a última linha do traceback
+  em inglês. Três redes novas (por operação, no `_inspecionar` inteiro e no `main` do filho) e um
+  `_sem_caminho()` que tira caminho absoluto do servidor de toda mensagem vinda do GDAL/SO.
+* **Zip legítimo de 200 rasters volta a ser aceito.** O código abria todos os arquivos ao mesmo tempo e
+  batia no `RLIMIT_NOFILE=64` a partir de ~55 arquivos, recusando envio válido com `Too many open files` e o
+  caminho do servidor na mensagem. Agora abre **um de cada vez** (cabeçalho numa passagem, janela de prova
+  noutra) e o teto subiu para 256 como folga.
+* **`complex64`/`int64` declarados.** Continuam aceitos (o arquivo está íntegro), mas o relatório passa a
+  trazer `info.tipo_convertivel: false`: nenhum COG ou tile serve esses tipos, e a recusa é da conversão.
+
+Suíte dos dois arquivos juntos: **55 passed** (32 do construtor, 23 do adversário), `ruff` limpo,
+`make sem-marcador` limpo.
+
 ## turno 3, setembro de 2026 (item L0-08-d-ldap: LDAP/Active Directory como provedor de login externo)
 
 Módulo isolado `app/auth/ldap.py` (`ldap3` 2.9.1, puro Python, sem dependência de sistema — só a venv):
