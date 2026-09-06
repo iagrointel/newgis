@@ -9302,6 +9302,259 @@
     "x-auth": "S/T",
     "x-privilegio": "proprio"
    }
+  },
+  "/api/acervo/camadas": {
+   "get": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Listar Camadas",
+    "operationId": "listar_camadas_api_acervo_camadas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AcervoCamadaPagina"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/acervo/camadas/{camada}/assinatura": {
+   "post": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Assinar",
+    "operationId": "assinar_api_acervo_camadas__camada__assinatura_post",
+    "parameters": [
+     {
+      "name": "camada",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.registrar_fonte"
+   },
+   "delete": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Cancelar Assinatura",
+    "operationId": "cancelar_assinatura_api_acervo_camadas__camada__assinatura_delete",
+    "parameters": [
+     {
+      "name": "camada",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.registrar_fonte"
+   }
+  },
+  "/api/acervo/camadas/{camada}/feicoes": {
+   "get": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Feicoes",
+    "operationId": "feicoes_api_acervo_camadas__camada__feicoes_get",
+    "parameters": [
+     {
+      "name": "camada",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada"
+      }
+     },
+     {
+      "name": "bbox",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "oeste,sul,leste,norte em graus (EPSG:4326)",
+       "title": "Bbox"
+      },
+      "description": "oeste,sul,leste,norte em graus (EPSG:4326)"
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 5000,
+       "minimum": 1,
+       "default": 500,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AcervoFeicoes"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/acervo/camadas/{camada}/tiles/{z}/{x}/{y}.mvt": {
+   "get": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Tile",
+    "description": "Tile vetorial (MVT) da MESMA view — é este o SQL que o Martin publicaria como função. Sem assinatura,\n403; e mesmo que alguém chegue ao SQL por fora, a view devolve zero feição (o porteiro está nela).",
+    "operationId": "tile_api_acervo_camadas__camada__tiles__z___x___y__mvt_get",
+    "parameters": [
+     {
+      "name": "camada",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada"
+      }
+     },
+     {
+      "name": "z",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "maximum": 22,
+       "minimum": 0,
+       "title": "Z"
+      }
+     },
+     {
+      "name": "x",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "title": "X"
+      }
+     },
+     {
+      "name": "y",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "title": "Y"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
   }
  },
  "components": {
@@ -9318,6 +9571,108 @@
     "type": "object",
     "title": "AcervoAdicionarEntrada",
     "description": "Corpo opcional de POST /api/acervo/{fonte_id}/adicionar (item L6-01-f-lgpd). Fonte marcada em\n`plat.acervo_lgpd.risco_pii` exige `confirma_risco_pii=true` explícito; sem isso a rota recusa com 409\nantes de criar qualquer item. Default false: nunca se confirma sozinho."
+   },
+   "AcervoCamadaPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "camadas": {
+      "items": {
+       "$ref": "#/components/schemas/AcervoCamadaPublicada"
+      },
+      "type": "array",
+      "title": "Camadas"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "camadas"
+    ],
+    "title": "AcervoCamadaPagina"
+   },
+   "AcervoCamadaPublicada": {
+    "properties": {
+     "view_nome": {
+      "type": "string",
+      "title": "View Nome"
+     },
+     "acervo_camada_id": {
+      "type": "string",
+      "title": "Acervo Camada Id"
+     },
+     "fonte_id": {
+      "type": "string",
+      "title": "Fonte Id"
+     },
+     "schema_origem": {
+      "type": "string",
+      "title": "Schema Origem"
+     },
+     "tabela_origem": {
+      "type": "string",
+      "title": "Tabela Origem"
+     },
+     "coluna_geom": {
+      "type": "string",
+      "title": "Coluna Geom"
+     },
+     "srid": {
+      "type": "integer",
+      "title": "Srid"
+     },
+     "colunas": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Colunas"
+     },
+     "linhas_exatas": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Linhas Exatas"
+     },
+     "tipo_geom": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo Geom"
+     },
+     "assinada": {
+      "type": "boolean",
+      "title": "Assinada"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "view_nome",
+     "acervo_camada_id",
+     "fonte_id",
+     "schema_origem",
+     "tabela_origem",
+     "coluna_geom",
+     "srid",
+     "colunas",
+     "assinada"
+    ],
+    "title": "AcervoCamadaPublicada",
+    "description": "Uma view de `plat_acervo` (item L6-01-b). `assinada` é deste inquilino: a RLS de\nplat.acervo_assinatura já recorta o LEFT JOIN, então nunca vaza a assinatura de outro."
    },
    "AcervoCartao": {
     "properties": {
@@ -9513,6 +9868,40 @@
      "vivo"
     ],
     "title": "AcervoEndpoint"
+   },
+   "AcervoFeicoes": {
+    "properties": {
+     "type": {
+      "type": "string",
+      "title": "Type"
+     },
+     "camada": {
+      "type": "string",
+      "title": "Camada"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "features": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Features"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "type",
+     "camada",
+     "total",
+     "features"
+    ],
+    "title": "AcervoFeicoes",
+    "description": "GeoJSON de uma camada publicada. `features` fica vazio quando o filtro não achou nada — nunca quando\nfalta assinatura: aí a rota já devolveu 403 antes de consultar."
    },
    "AcervoFicha": {
     "properties": {

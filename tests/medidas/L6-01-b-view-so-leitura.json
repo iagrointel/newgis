@@ -1,0 +1,42 @@
+{
+ "item": "L6-01-b-view-so-leitura",
+ "medidas": {
+  "consulta_mapa_mediana_ms": {
+   "valor": 1.534,
+   "unidade": "ms",
+   "comando": "mediana de 5 EXPLAIN ANALYZE da consulta por caixa envolvente na view, cache quente"
+  },
+  "feicoes_http_ms": {
+   "valor": 391.2,
+   "unidade": "ms",
+   "comando": "GET /api/acervo/camadas/<view>/feicoes?bbox=... (inclui GeoJSON e cliente de teste; fora do portão)"
+  },
+  "tile_mvt_bytes": {
+   "valor": 115621,
+   "unidade": "bytes",
+   "comando": "GET /api/acervo/camadas/<view>/tiles/10/379/580.mvt com assinatura"
+  },
+  "linhas_da_tabela_original_count_exato": {
+   "valor": 8406837,
+   "unidade": "linhas",
+   "comando": "SELECT count(*) FROM public.car_area_imovel (índice-only, 196 ms) — não é reltuples"
+  },
+  "linhas_da_tabela_original_reltuples": {
+   "valor": 7357920,
+   "unidade": "linhas",
+   "comando": "SELECT reltuples FROM pg_class — a estimativa de onde vem o '7,36 mi' do portão; nunca vai a documento"
+  },
+  "security_invoker_negado": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "CREATE VIEW WITH (security_invoker=true) + GRANT SELECT a plat_app -> permission denied for table car_area_imovel"
+  },
+  "security_barrier_perde_o_indice": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "EXPLAIN da mesma consulta em duas views iguais: com security_barrier sai Seq Scan, sem barrier sai Index Scan no idx_car_area_imovel_geom"
+  }
+ },
+ "gerado_em": "2026-09-06T16:09:43Z",
+ "git_sha": "90d03c07da0c"
+}
