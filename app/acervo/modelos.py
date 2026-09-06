@@ -11,7 +11,7 @@ sha256, método, confiança, limites, próxima_verificação) já existiam em `A
 (exemplos lidos em acervo.fonte.limites: "0 vendidos lidos; só o tempo resolve", "só fluxo, sem estoque
 RAIS") — não duplicado sob outro nome para não abrir campo que o adversário possa achar "inventado"."""
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Saida(BaseModel):
@@ -90,7 +90,10 @@ class AcervoAdicionarEntrada(BaseModel):
 
 class AcervoCamadaPublicada(Saida):
     """Uma view de `plat_acervo` (item L6-01-b). `assinada` é deste inquilino: a RLS de
-    plat.acervo_assinatura já recorta o LEFT JOIN, então nunca vaza a assinatura de outro."""
+    plat.acervo_assinatura já recorta o LEFT JOIN, então nunca vaza a assinatura de outro.
+    Item L6-01-e: os campos `licenca_*` são o que a tela mostra e o que o aceite grava — o
+    `licenca_sha256` é o que o chamador ecoa no POST de assinatura para provar que clicou no texto que o
+    servidor gravou. Todos None quando a fonte não tem licença curada (aí a assinatura é recusada)."""
 
     view_nome: str
     acervo_camada_id: str
@@ -103,6 +106,10 @@ class AcervoCamadaPublicada(Saida):
     linhas_exatas: int | None = None
     tipo_geom: str | None = None
     assinada: bool
+    licenca_tipo: str | None = None
+    licenca_texto: str | None = None
+    licenca_url: str | None = None
+    licenca_sha256: str | None = None
 
 
 class AcervoCamadaPagina(Saida):
@@ -118,3 +125,52 @@ class AcervoFeicoes(Saida):
     camada: str
     total: int
     features: list[dict]
+
+
+class AcervoAssinaturaEntrada(BaseModel):
+    """Corpo OBRIGATÓRIO de POST /api/acervo/camadas/{camada}/assinatura (item L6-01-e). O clique na
+    licença chega como `aceite_licenca=true` + o sha256 do texto que estava na tela: o servidor só grava se
+    o sha bater com o texto atual da fonte — sha defasado é 409 (a tela relê e mostra o texto novo).
+    Default False/"": nunca se aceita sozinho."""
+
+    model_config = ConfigDict(extra="forbid")
+    aceite_licenca: bool = False
+    licenca_sha256: str = Field(default="", max_length=64)
+
+
+class AcervoAssinaturaSaida(Saida):
+    """Resposta do POST de assinatura: o que ficou gravado (quem/quando vivem em plat.acervo_assinatura;
+    `assinado_em` volta aqui para a tela mostrar sem nova consulta)."""
+
+    camada: str
+    assinada: bool
+    licenca_tipo: str | None = None
+    licenca_sha256: str | None = None
+    assinado_em: str | None = None
+
+
+class AcervoUsoLinha(Saida):
+    """Uso de uma camada pelo inquilino no recorte pedido (dia ou mês)."""
+
+    view_nome: str | None = None
+    acervo_camada_id: str
+    consultas: int
+    feicoes: int
+    dias: int | None = None  # só no recorte mensal: em quantos dias do mês houve leitura
+
+
+class AcervoUsoDia(Saida):
+    dia: str
+    total_consultas: int
+    total_feicoes: int
+    camadas: list[AcervoUsoLinha]
+
+
+class AcervoUsoMensal(Saida):
+    """Relatório mensal de uso do acervo pelo inquilino — entrada do item L7-09."""
+
+    ano: int
+    mes: int
+    total_consultas: int
+    total_feicoes: int
+    camadas: list[AcervoUsoLinha]
