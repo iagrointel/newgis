@@ -29,14 +29,14 @@
       "comando": "grep -c 'FOREIGN KEY' db/migracoes/20260906T1847_fk_por_inquilino_classe.sql  # 44"
     },
     "teste_cruzado_casos_provados": {
-      "valor": 5,
-      "unidade": "pares tabela.coluna com prova A->B direto como plat_app (item.pasta_id, pasta.pai_id auto-ref, favorito.item_id, compartilhamento_link_item.item_id em cadeia, token_servico.renovado_por auto-ref inteiro)",
-      "comando": "venv/bin/pytest tests/unit/test_fk_por_inquilino_classe_conserto.py -q  # 5 passed"
+      "valor": 12,
+      "unidade": "pares tabela.coluna com prova A->B direto como plat_app, um por TABELA ALVO das 10 (usuario, item, pasta, grupo, categoria, papel_personalizado, compartilhamento_link, conexao, job, token_servico) + as 2 auto-referências (pasta.pai_id, categoria.pai_id, token_servico.renovado_por) e a cadeia compartilhamento_link_item provada nos dois sentidos (item_id e link_id)",
+      "comando": "venv/bin/pytest tests/unit/test_fk_por_inquilino_classe_conserto.py -q  # 12 passed"
     },
     "mensagem_de_recusa_identica_id_inexistente_vs_id_de_outro_inquilino": {
       "valor": true,
-      "unidade": "booleano (assert por caso em test_fk_por_inquilino_classe_conserto.py)",
-      "comando": "cada um dos 5 casos compara str(erro_uuid_inventado) == str(erro_uuid_de_a) e o TIPO da exceção"
+      "unidade": "booleano (assert por caso em test_fk_por_inquilino_classe_conserto.py, 12/12)",
+      "comando": "cada um dos 12 casos compara str(erro_uuid_inventado) == str(erro_uuid_de_a) e o TIPO da exceção"
     }
   }
 }
