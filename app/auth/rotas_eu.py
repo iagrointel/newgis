@@ -288,7 +288,7 @@ def encerrar_sessao(id: str, request: Request, auth: Auth = autenticado(so_sessa
 
 
 @router.post("/2fa/iniciar", response_model=Iniciar2FA, openapi_extra=S)
-def iniciar_2fa(auth: Auth = autenticado(so_sessao=True, permitir_pendencia=True)):
+def iniciar_2fa(request: Request, auth: Auth = autenticado(so_sessao=True, permitir_pendencia=True)):
     _so_local(auth)
     if auth.totp_ativo:
         raise ErroAPI(409, "ja_ativo", "o segundo fator já está ligado")
@@ -298,6 +298,9 @@ def iniciar_2fa(auth: Auth = autenticado(so_sessao=True, permitir_pendencia=True
             "UPDATE plat.usuario SET totp_secret = %s, totp_ativo = false, totp_ultimo_passo = NULL WHERE id = %s",
             (totp.cifrar(segredo, settings.PLAT_SECRET), auth.usuario_id),
         )
+        # A rota GRAVA (segredo TOTP novo na conta), então tem evento — a declaração vazia de antes escondia
+        # uma escrita real atrás de "só liga no confirmar" (achado G4-03). O segredo NUNCA entra no evento.
+        registrar_evento(cur, request, "usuarios/2fa_iniciar", "usuario", auth.usuario_id, {"proprio": True})
     uri = totp.uri(segredo, auth.tenant_slug, auth.login)
     return {"segredo": segredo, "uri": uri, "qr_svg": totp.qr_svg(uri)}
 

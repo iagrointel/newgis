@@ -6,7 +6,7 @@ import secrets
 from pathlib import Path
 
 from tests.api.conftest import PREFIXO_TESTE, arquivo_openapi
-from tests.api.eventos_esperados import EVENTOS_POR_ROTA
+from tests.api.eventos_esperados import EVENTOS_POR_ROTA, ROTAS_SEM_EVENTO
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -49,14 +49,19 @@ VOCABULARIO_ADR = {
 }
 
 
-def test_toda_rota_de_escrita_tem_evento_declarado(conexao_plat_app):
+def rotas_de_escrita() -> set[tuple[str, str]]:
     spec = arquivo_openapi()
-    escrita = {
+    return {
         (m.upper(), c) for c, ms in spec["paths"].items() for m in ms if m.upper() in ("POST", "PUT", "DELETE", "PATCH")
     }
-    faltando = sorted(escrita - set(EVENTOS_POR_ROTA))
+
+
+def test_toda_rota_de_escrita_tem_evento_declarado(conexao_plat_app):
+    escrita = rotas_de_escrita()
+    declaradas = set(EVENTOS_POR_ROTA) | set(ROTAS_SEM_EVENTO)
+    faltando = sorted(escrita - declaradas)
     assert faltando == [], faltando
-    sobrando = sorted(set(EVENTOS_POR_ROTA) - escrita)
+    sobrando = sorted(declaradas - escrita)
     assert sobrando == [], sobrando
     with conexao_plat_app.cursor() as cur:
         cur.execute("SELECT nome FROM plat.evento_tipo")
@@ -64,6 +69,34 @@ def test_toda_rota_de_escrita_tem_evento_declarado(conexao_plat_app):
     citados = {t for lista in EVENTOS_POR_ROTA.values() for t in lista}
     assert citados <= tipos, citados - tipos
     assert VOCABULARIO_ADR <= tipos, VOCABULARIO_ADR - tipos
+
+
+def test_declaracao_de_evento_nunca_e_vazia():
+    """Achado G4-03: a cobertura media DECLARAÇÃO e aceitava lista vazia — `POST` e `DELETE /api/arquivos`
+    estavam registrados como 'sem evento' e o guardião aprovava destruição de objeto do inquilino sem rastro."""
+    vazias = sorted(k for k, v in EVENTOS_POR_ROTA.items() if not v)
+    assert vazias == [], f"declaração vazia em EVENTOS_POR_ROTA (use ROTAS_SEM_EVENTO com motivo): {vazias}"
+
+
+def test_rota_sem_evento_tem_motivo_escrito_e_nao_se_repete():
+    """A saída de emergência existe, mas é cara: motivo escrito por extenso, uma lista só, sem sobreposição."""
+    repetidas = sorted(set(EVENTOS_POR_ROTA) & set(ROTAS_SEM_EVENTO))
+    assert repetidas == [], repetidas
+    curtos = sorted(k for k, motivo in ROTAS_SEM_EVENTO.items() if len((motivo or "").strip()) < 40)
+    assert curtos == [], f"motivo ausente ou curto demais em ROTAS_SEM_EVENTO: {curtos}"
+
+
+def test_todo_tipo_declarado_aparece_no_codigo():
+    """Mede FATO, não só declaração: cada tipo citado tem de existir como literal em `app/` (a chamada que o
+    grava) ou em `db/migracoes/` (os eventos que o próprio banco registra, como o login)."""
+    fontes = ""
+    for base in (ROOT / "app", ROOT / "db" / "migracoes"):
+        for arq in base.rglob("*"):
+            if arq.suffix in (".py", ".sql"):
+                fontes += arq.read_text(encoding="utf-8")
+    citados = {t for lista in EVENTOS_POR_ROTA.values() for t in lista}
+    ausentes = sorted(t for t in citados if f'"{t}"' not in fontes and f"'{t}'" not in fontes)
+    assert ausentes == [], f"tipo declarado que nenhuma linha de código grava: {ausentes}"
 
 
 def test_sequencia_real_gera_eventos_com_antes_depois_e_sem_segredo(sessao_a, usuarios_a):

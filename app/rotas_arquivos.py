@@ -2,8 +2,11 @@
 cru, `Content-Type` do arquivo, `?classe=`) grava por streaming com teto de tamanho e multipart real no Garage
 quando o corpo passa de `limites.ARQUIVO_BUFFER_UNICO_BYTES`; `GET/DELETE /api/arquivos/{sha256}` leem o metadado
 em `plat.arquivo` (RLS: o inquilino da sessão nunca vê o sha256 de outro) e entregam pela API — nunca uma URL do
-Garage; `GET /api/arquivos` devolve uso × cota; `GET /api/arquivos/_varredura` roda a varredura de órfãos do
-próprio inquilino (não confundir com a varredura de CONTEÚDO abaixo). Isento do limite de corpo padrão
+Garage — e exigem ser DONO do objeto (`plat.arquivo.criado_por`) ou ter o privilégio administrativo do verbo
+(`conteudo.ver_tudo` para ler, `conteudo.apagar_tudo` para apagar); apagar registra o evento `arquivos/apagar`
+e enviar registra `arquivos/enviar`; `GET /api/arquivos` devolve uso × cota; `GET /api/arquivos/_varredura`
+roda a varredura de órfãos do próprio inquilino (não confundir com a varredura de CONTEÚDO abaixo). Isento
+do limite de corpo padrão
 (`app/limite_corpo.py`): a rota aplica o próprio teto em streaming, nunca bufferizando mais que uma parte
 (`limites.ARQUIVO_PARTE_BYTES`) de RAM por vez. Item L7-03-b-antivirus-anexos: todo envio passa pela varredura
 de conteúdo (`app/varredura_conteudo.py`) antes de tocar o Garage — na 1ª parte (multipart) ou dentro de
@@ -15,6 +18,7 @@ import re
 from fastapi import APIRouter, Request, Response
 
 from app import db, limites, objetos
+from app.auth.comum import registrar_evento
 from app.auth.sessao import Auth, autenticado
 from app.erros import ErroAPI
 
@@ -38,11 +42,32 @@ def _sha256_ok(sha256: str) -> str:
 
 def _linha(cur, tenant_id: int, classe: str, sha256: str) -> dict | None:
     cur.execute(
-        "SELECT chave, content_type, bytes FROM plat.arquivo WHERE tenant_id=%s AND classe=%s AND "
+        "SELECT id, chave, content_type, bytes, criado_por FROM plat.arquivo WHERE tenant_id=%s AND classe=%s AND "
         "referencia IS NULL AND sha256=%s AND apagado_em IS NULL",
         (tenant_id, classe, sha256),
     )
     return cur.fetchone()
+
+
+# Privilégio administrativo exigido de quem NÃO é o dono do objeto (achados G4-06 e G4-07: as duas rotas
+# exigiam só `autenticado()`, e um perfil `visualizador` leu e apagou o logotipo da organização). A regra é a
+# mesma que o catálogo já usa para item de outro membro: o dono faz o que quiser com o que é dele; quem não é
+# dono precisa do privilégio administrativo correspondente ao verbo.
+PRIV_LER_DE_OUTRO = "conteudo.ver_tudo"
+PRIV_APAGAR_DE_OUTRO = "conteudo.apagar_tudo"
+
+
+def _exigir_dono_ou_privilegio(auth: Auth, linha: dict, privilegio: str, verbo: str) -> None:
+    if linha["criado_por"] is not None and linha["criado_por"] == auth.usuario_id:
+        return
+    if auth.tem(privilegio):
+        return
+    raise ErroAPI(
+        403,
+        "sem_privilegio",
+        f"{verbo} objeto de outro membro exige o privilégio {privilegio}",
+        {"exigido": privilegio},
+    )
 
 
 # ---------------------------------------------------------------- rotas literais ANTES de /{sha256} (ordem de
@@ -139,7 +164,7 @@ async def enviar(request: Request, classe: str = "objeto", auth: Auth = autentic
                     etag = objetos.parte_enviar(cur, upload_id, numero, bytes(buffer))
                 partes.append((numero, etag))
             with db.db(ctx) as cur:
-                resultado = objetos.parte_concluir(cur, upload_id, partes)
+                resultado = objetos.parte_concluir(cur, upload_id, partes, usuario_id=auth.usuario_id)
     except objetos.CotaExcedida as e:
         abortar_se_aberto()
         raise ErroAPI(413, "cota_excedida", str(e)) from e
@@ -152,6 +177,11 @@ async def enviar(request: Request, classe: str = "objeto", auth: Auth = autentic
     except Exception:
         abortar_se_aberto()
         raise
+    with db.db(ctx) as cur:
+        registrar_evento(
+            cur, request, "arquivos/enviar", "arquivo", resultado["sha256"],
+            {"classe": classe, "bytes": resultado["bytes"], "content_type": resultado["content_type"]},
+        )
     return resultado
 
 
@@ -164,6 +194,7 @@ def ler(sha256: str, classe: str = "objeto", auth: Auth = autenticado()):
         r = _linha(cur, auth.tenant_id, classe, sha256)
     if r is None:
         raise ErroAPI(404, "objeto_inexistente", "objeto inexistente")
+    _exigir_dono_ou_privilegio(auth, r, PRIV_LER_DE_OUTRO, "ler")
     try:
         dados = objetos.ler(r["chave"])
     except (FileNotFoundError, objetos.ChaveInvalida) as e:
@@ -180,11 +211,17 @@ def ler(sha256: str, classe: str = "objeto", auth: Auth = autenticado()):
 
 
 @router.delete("/api/arquivos/{sha256}", status_code=204, response_class=Response, openapi_extra=X)
-def apagar(sha256: str, classe: str = "objeto", auth: Auth = autenticado()):
+def apagar(sha256: str, request: Request, classe: str = "objeto", auth: Auth = autenticado()):
     classe, sha256 = _classe_ok(classe), _sha256_ok(sha256)
     with db.db(auth.contexto()) as cur:
         r = _linha(cur, auth.tenant_id, classe, sha256)
     if r is None:
         raise ErroAPI(404, "objeto_inexistente", "objeto inexistente")
-    objetos.apagar(r["chave"])
+    _exigir_dono_ou_privilegio(auth, r, PRIV_APAGAR_DE_OUTRO, "apagar")
+    existia = objetos.apagar(r["chave"])
+    with db.db(auth.contexto()) as cur:
+        registrar_evento(
+            cur, request, "arquivos/apagar", "arquivo", r["id"],
+            {"classe": classe, "sha256": sha256, "bytes": r["bytes"], "existia_no_armazenamento": existia},
+        )
     return Response(status_code=204)

@@ -276,11 +276,17 @@ def apagar(chave: str) -> bool:
     existia = cli.head(bucket["bucket_alias"], obj_key) is not None
     if existia:
         cli.delete(bucket["bucket_alias"], obj_key)
+        # O inquilino é ARGUMENTO, não GUC: esta função é chamada fora de qualquer sessão (destruidores do
+        # catálogo, tarefas do worker, rota de arquivo), e o `UPDATE` direto caía na política RLS `p_arquivo`
+        # (`tenant_id = plat.tenant_atual()`), casava com zero linhas e sumia em silêncio — a linha ficava viva
+        # apontando para um objeto que já não existia, e a varredura de órfãos acusava toda exclusão legítima
+        # (achado G4-09). `plat.arquivo_apagado_marcar` é SECURITY DEFINER e filtra pelo tenant_id do bucket
+        # resolvido a partir do SLUG da própria chave — o mesmo caminho que já autoriza a leitura.
         with db.db() as cur:
-            cur.execute(
-                "UPDATE plat.arquivo SET apagado_em = now() WHERE tenant_id = %s AND chave = %s AND apagado_em IS NULL",
-                (bucket["tenant_id"], chave),
-            )
+            cur.execute("SELECT plat.arquivo_apagado_marcar(%s, %s) AS n", (bucket["tenant_id"], chave))
+            marcadas = cur.fetchone()["n"]
+        if marcadas == 0:
+            log.warning("objetos: objeto %s apagado no Garage sem linha viva em plat.arquivo", chave)
     return existia
 
 
@@ -342,7 +348,7 @@ def parte_enviar(cur, upload_id: str, numero: int, dados: bytes) -> str:
     return cli.multipart_enviar_parte(bucket["bucket_alias"], linha["chave_temp"], upload_id, numero, dados)
 
 
-def parte_concluir(cur, upload_id: str, partes: list[tuple[int, str]]) -> dict:
+def parte_concluir(cur, upload_id: str, partes: list[tuple[int, str]], usuario_id: int | None = None) -> dict:
     """Fecha o multipart, lê o objeto de volta EM STREAM para calcular o sha256 real (o ETag multipart do
     S3 não é um sha256 do conteúdo), copia para a chave definitiva por conteúdo e apaga o temporário.
     `{chave, sha256, bytes}`."""
@@ -367,7 +373,8 @@ def parte_concluir(cur, upload_id: str, partes: list[tuple[int, str]]) -> dict:
     cur.execute("DELETE FROM plat.arquivo_upload WHERE upload_id = %s", (upload_id,))
     chave = f"{tenant_slug}/{obj_key}"
     _registrar_metadado(
-        cur, linha["tenant_id"], linha["classe"], referencia, sha, tamanho, linha["content_type"], chave
+        cur, linha["tenant_id"], linha["classe"], referencia, sha, tamanho, linha["content_type"], chave,
+        usuario_id,
     )
     return {"chave": chave, "sha256": sha, "bytes": tamanho, "content_type": linha["content_type"]}
 

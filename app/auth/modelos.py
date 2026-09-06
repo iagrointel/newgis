@@ -316,3 +316,20 @@ class InquilinoCriado(Saida):
     slug: str
     admin: dict
     senha_temporaria: str
+
+
+class InquilinoCotasEntrada(Modelo):
+    """Teto de cota de UM inquilino, escrito só pela plataforma (achados G4-04/G4-05). O `le` aqui é o teto
+    absoluto da instalação (`app/limites.py`), repetido em `plat.tenant_cotas_teto_definir`."""
+
+    cota_bytes_teto: int = Field(ge=limites.ORG_COTA_BYTES_MIN, le=limites.ORG_COTA_BYTES_TETO_MAX)
+    cota_usuarios_teto: int = Field(ge=limites.ORG_COTA_USUARIOS_MIN, le=limites.ORG_COTA_USUARIOS_TETO_MAX)
+
+
+class InquilinoCotas(Saida):
+    id: int
+    slug: str
+    cota_bytes: int
+    cota_bytes_teto: int
+    cota_usuarios: int
+    cota_usuarios_teto: int

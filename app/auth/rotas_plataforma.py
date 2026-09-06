@@ -9,7 +9,13 @@ from fastapi import APIRouter, Request, Response
 
 from app import db, limites, senha
 from app.auth.comum import erro_do_banco, registrar_evento
-from app.auth.modelos import Inquilino, InquilinoCriado, InquilinoCriar
+from app.auth.modelos import (
+    Inquilino,
+    InquilinoCotas,
+    InquilinoCotasEntrada,
+    InquilinoCriado,
+    InquilinoCriar,
+)
 from app.auth.sessao import Auth, autenticado, iso
 from app.erros import ErroAPI
 
@@ -100,6 +106,54 @@ def apagar(id: int, request: Request, auth: Auth = autenticado(superadmin=True, 
     return Response(status_code=204)
 
 
+def _cotas(auth: Auth, id: int) -> dict:
+    """Cota vigente e teto de um inquilino, lidos pela função de plataforma (o superadmin não tem RLS de outro
+    inquilino: a leitura passa por plat.tenant_cotas, SECURITY DEFINER, que confere a sessão)."""
+    try:
+        with db.db() as cur:
+            cur.execute("SELECT * FROM plat.tenant_cotas(%s, %s)", (auth.sessao_hash, id))
+            r = cur.fetchone()
+    except psycopg2.Error as e:
+        raise erro_do_banco(e) from e
+    if r is None:
+        raise ErroAPI(404, "nao_encontrado", "inquilino inexistente")
+    return dict(r)
+
+
 @router.post("/inquilinos/{id}/reativar", status_code=204, response_class=Response, openapi_extra=SUPER)
 def reativar(id: int, request: Request, auth: Auth = autenticado(superadmin=True, so_sessao=True)):
     return _suspender(auth, request, id, True)
+
+
+@router.get("/inquilinos/{id}/cotas", response_model=InquilinoCotas, openapi_extra=SUPER)
+def cotas_ler(id: int, auth: Auth = autenticado(superadmin=True, so_sessao=True)):
+    return _cotas(auth, id)
+
+
+@router.put("/inquilinos/{id}/cotas", response_model=InquilinoCotas, openapi_extra=SUPER)
+def cotas_gravar(
+    id: int, corpo: InquilinoCotasEntrada, request: Request,
+    auth: Auth = autenticado(superadmin=True, so_sessao=True),
+):
+    """Teto de cota de um inquilino (achados G4-04/G4-05 do ataque ao G4). O admin do inquilino escolhe a cota
+    ABAIXO deste teto por `PUT /api/org`; o teto só muda aqui, e `plat.tenant_cotas_teto_definir` ainda o
+    limita ao teto absoluto da instalação. Baixar o teto abaixo da cota vigente baixa a cota junto."""
+    try:
+        with db.db() as cur:
+            cur.execute(
+                "SELECT plat.tenant_cotas_teto_definir(%s, %s, %s, %s)",
+                (auth.sessao_hash, id, corpo.cota_bytes_teto, corpo.cota_usuarios_teto),
+            )
+    except psycopg2.errors.RaiseException as e:
+        if "inquilino_inexistente" in str(e):
+            raise ErroAPI(404, "nao_encontrado", "inquilino inexistente") from e
+        raise ErroAPI(422, "validacao", "teto fora do intervalo aceito pela instalação") from e
+    except psycopg2.Error as e:
+        raise erro_do_banco(e) from e
+    saida = _cotas(auth, id)
+    with db.db(auth.contexto()) as cur:
+        registrar_evento(
+            cur, request, "inquilinos/cotas_teto", "inquilino", id,
+            {"cota_bytes_teto": saida["cota_bytes_teto"], "cota_usuarios_teto": saida["cota_usuarios_teto"]},
+        )
+    return saida
