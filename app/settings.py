@@ -48,6 +48,9 @@ class Settings:
     PLAT_WORKER_URL: str | None
     PLAT_WORKER_NOME: str | None
     PLAT_WORKER_PROCESSOS: int
+    # processos da API (uvicorn --workers em deploy/plat-api.service): o orçamento de conexões de eventos é
+    # da INSTALAÇÃO e precisa saber por quantos processos se reparte (app/jobs/eventos.py)
+    PLAT_API_PROCESSOS: int
     PLAT_WORKER_MEMORIA_MB: int
     PLAT_JOBS_DIR: str | None
     PLAT_JOB_MAX_REINICIOS: int
@@ -198,6 +201,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_WORKER_URL=_opcional(valores, "PLAT_WORKER_URL"),
         PLAT_WORKER_NOME=_opcional(valores, "PLAT_WORKER_NOME"),
         PLAT_WORKER_PROCESSOS=_inteiro(valores, "PLAT_WORKER_PROCESSOS", 1, 1),
+        PLAT_API_PROCESSOS=_inteiro(valores, "PLAT_API_PROCESSOS", 2, 1),
         PLAT_WORKER_MEMORIA_MB=_inteiro(valores, "PLAT_WORKER_MEMORIA_MB", 1536, 128),
         PLAT_JOBS_DIR=_opcional(valores, "PLAT_JOBS_DIR"),
         PLAT_JOB_MAX_REINICIOS=_inteiro(valores, "PLAT_JOB_MAX_REINICIOS", 5, 1),

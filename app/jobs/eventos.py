@@ -1,7 +1,14 @@
 """Progresso em tempo real por SSE (ADR 0003 seção 5): um thread LISTEN plat_job por processo, iniciado na primeira
 conexão (sem hook de startup), fan-out por job_id para filas asyncio via call_soon_threadsafe; gerador que manda
 `estado` (lido do banco), `log` e `fim`; keepalive 15 s; reenvio do log a partir de Last-Event-ID; 30 min no máximo;
-10 conexões por usuário por processo; reconexão do LISTEN com a mesma disciplina do pool (refaz só a preparação)."""
+reconexão do LISTEN com a mesma disciplina do pool (refaz só a preparação).
+
+Orçamento de conexões (achado do adversário G3, 06/09): antes havia UM contador, por usuário, em memória de
+processo — sem dimensão de inquilino (um inquilino com muitos usuários consumia toda a máquina) e sem contar
+que a unidade sobe `--workers N` (o limite publicado valia N vezes). Agora são três tetos, todos da
+INSTALAÇÃO inteira (app/limites.py), repartidos pelo número de processos da API antes de virar teto local:
+por usuário, por inquilino e total. `cota_por_processo` é a única conta que faz essa repartição, e o teste
+da trava confere que o produto teto_local × processos não passa do teto publicado."""
 
 import asyncio
 import collections
@@ -15,6 +22,7 @@ import time
 import psycopg2
 from starlette.concurrency import run_in_threadpool
 
+from app import limites
 from app.jobs import servico
 from app.jobs.contexto import ErroServico, Sessao
 from app.settings import settings
@@ -22,12 +30,25 @@ from app.settings import settings
 log = logging.getLogger("plat.eventos")
 KEEPALIVE_S = 15
 DURACAO_MAX_S = 1800
-POR_USUARIO_MAX = 10
 FINAIS = ("concluido", "falhou", "cancelado")
+
+# tetos da INSTALAÇÃO (não do processo): app/limites.py, seção "eventos em tempo real"
+POR_USUARIO_MAX = limites.SSE_POR_USUARIO
+POR_INQUILINO_MAX = limites.SSE_POR_INQUILINO
+TOTAL_MAX = limites.SSE_TOTAL
+
+
+def cota_por_processo(teto_instalacao: int) -> int:
+    """Fatia do teto da instalação que cabe a ESTE processo. A unidade sobe `uvicorn --workers N`
+    (deploy/plat-api.service); sem esta divisão o teto publicado valeria N vezes."""
+    return max(1, teto_instalacao // max(1, settings.PLAT_API_PROCESSOS))
+
 
 _trava = threading.Lock()
 _assinantes: dict[str, set[tuple[asyncio.AbstractEventLoop, asyncio.Queue]]] = collections.defaultdict(set)
 _por_usuario: collections.Counter = collections.Counter()
+_por_inquilino: collections.Counter = collections.Counter()
+_abertas = 0
 _thread: threading.Thread | None = None
 
 
@@ -86,18 +107,36 @@ def _sse(evento: str, dados, id_: int | None = None) -> bytes:
 
 
 def reservar(sessao: Sessao) -> None:
+    """Três tetos, do mais estreito ao mais largo: usuário, inquilino e instalação. O do inquilino é o que
+    impede um inquilino de consumir o orçamento inteiro da máquina com muitos usuários."""
+    global _abertas
     chave = (sessao.tenant_id, sessao.usuario_id)
     with _trava:
-        if _por_usuario[chave] >= POR_USUARIO_MAX:
+        if _por_usuario[chave] >= cota_por_processo(POR_USUARIO_MAX):
             raise ErroServico(429, "sse_limite",
-                              f"máximo de {POR_USUARIO_MAX} conexões de eventos por usuário neste processo")
+                              f"máximo de {POR_USUARIO_MAX} conexões de eventos por usuário nesta instalação")
+        if _por_inquilino[sessao.tenant_id] >= cota_por_processo(POR_INQUILINO_MAX):
+            raise ErroServico(429, "sse_limite_inquilino",
+                              f"máximo de {POR_INQUILINO_MAX} conexões de eventos por inquilino nesta instalação")
+        if _abertas >= cota_por_processo(TOTAL_MAX):
+            raise ErroServico(429, "sse_limite_instalacao",
+                              f"máximo de {TOTAL_MAX} conexões de eventos abertas nesta instalação")
         _por_usuario[chave] += 1
+        _por_inquilino[sessao.tenant_id] += 1
+        _abertas += 1
 
 
 def _liberar(sessao: Sessao) -> None:
+    global _abertas
     chave = (sessao.tenant_id, sessao.usuario_id)
     with _trava:
         _por_usuario[chave] = max(0, _por_usuario[chave] - 1)
+        if not _por_usuario[chave]:
+            _por_usuario.pop(chave, None)
+        _por_inquilino[sessao.tenant_id] = max(0, _por_inquilino[sessao.tenant_id] - 1)
+        if not _por_inquilino[sessao.tenant_id]:
+            _por_inquilino.pop(sessao.tenant_id, None)
+        _abertas = max(0, _abertas - 1)
 
 
 async def gerar(sessao: Sessao, job: dict, ultimo_id: int | None):

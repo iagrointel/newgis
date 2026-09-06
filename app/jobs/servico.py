@@ -5,6 +5,8 @@ resumo, agendas. Tudo sob RLS pela sessão; nenhuma função do worker é chamad
 import datetime
 import decimal
 import json
+import logging
+import time
 import uuid
 
 import psycopg2
@@ -13,6 +15,7 @@ import psycopg2.extras
 from pydantic import ValidationError
 
 from app import db as banco
+from app import limites
 from app.jobs import agenda as mod_agenda
 from app.jobs.contexto import ErroServico, Sessao
 from app.jobs.registro import REGISTRO, Tarefa, chave_de, descrever, ordem_perfil, validar_parametros
@@ -26,6 +29,34 @@ LIMITE_MAX = 200
 LOG_LIMITE_MAX = 2000
 PENDENTES_MAX = 200
 NIVEIS = ("DEBUG", "INFO", "AVISO", "ERRO")
+
+log = logging.getLogger("plat.jobs.servico")
+_ceifa_em = 0.0
+
+
+def ceifar_vencidos(sessao: Sessao) -> None:
+    """Ceifa os trabalhos do PRÓPRIO inquilino que estão `rodando` sem sinal e sem executor vivo.
+
+    Por que a leitura ceifa: `plat.job_ceifar` só era chamada de dentro do laço do worker, e o `GRANT
+    EXECUTE` era só de plat_worker. Com nenhum executor vivo ninguém ceifava — o adversário G3 mediu o
+    trabalho ainda em `rodando` 68 s depois do SIGKILL, oito segundos além do limite de sinal, e a tela
+    mostrando execução que não existia. `plat.job_ceifar_vencidos` (migração 20260906T1615) é da API, tem
+    piso de 60 s e enxerga só o inquilino do contexto. Estrangulado a uma chamada por processo a cada
+    CEIFA_API_INTERVALO_S e nunca deixa a leitura falhar por causa dela."""
+    global _ceifa_em
+    agora = time.monotonic()
+    if agora - _ceifa_em < limites.CEIFA_API_INTERVALO_S:
+        return
+    _ceifa_em = agora
+    try:
+        with banco.db(sessao.ctx) as cur:
+            cur.execute("SELECT plat.job_ceifar_vencidos(%s) AS n", (limites.CEIFA_LIMITE_S,))
+            n = cur.fetchone()["n"]
+        if n:
+            log.warning("ceifa pela API: %s trabalhos sem sinal devolvidos", n,
+                        extra={"tenant_id": sessao.tenant_id})
+    except Exception as e:  # noqa: BLE001 — a ceifa é higiene: nunca derruba a leitura da fila
+        log.warning("ceifa pela API falhou: %s", str(e).strip()[:200])
 
 SQL_JOB = """
 SELECT j.id, j.tipo, j.estado, j.progresso, j.mensagem, j.prioridade, j.pesado, j.executor, j.usuario_id,
@@ -142,6 +173,7 @@ def criar(sessao: Sessao, tipo: str, parametros, prioridade: int = 5, agendado_p
 
 
 def obter(sessao: Sessao, job_id) -> dict:
+    ceifar_vencidos(sessao)
     dono, params = _filtro_dono(sessao)
     with banco.db(sessao.ctx) as cur:
         cur.execute(SQL_JOB + " WHERE j.id = %s" + dono, [str(job_id), *params])
@@ -153,6 +185,7 @@ def obter(sessao: Sessao, job_id) -> dict:
 
 def listar(sessao: Sessao, estado=None, tipo=None, usuario_id=None, de=None, ate=None, agenda_id=None,
            limite: int = 50, deslocamento: int = 0, ordenar: str = "criado_em:desc") -> dict:
+    ceifar_vencidos(sessao)
     cond, params = [], []
     dono, p = _filtro_dono(sessao)
     if dono:
