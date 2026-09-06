@@ -216,7 +216,7 @@ mudar de origem. Aqui o redirecionamento é seguido À MÃO — de propósito, p
 essa proteção. Regra que fica: toda vez que se reimplementa um comportamento de biblioteca por segurança,
 lista-se o que a biblioteca fazia ALÉM do motivo da troca.
 
-Provas: `tests/unit/test_conexao_credencial_redirect.py` (13 casos: host, porta, esquema nos dois sentidos, cadeia de dois
+Provas: `tests/unit/test_conexao_credencial_redirect.py` (12 casos: host, porta, esquema nos dois sentidos, cadeia de dois
 saltos, volta à origem, mesma origem, cookie/proxy/cabeçalho secreto declarado, caixa do nome, sem
 credencial, dicionário do chamador intacto) e `tests/adversario/test_g5_adversario.py` — o teste do
 adversário, palavra por palavra, sem a marca `xfail(strict=True)` que valia enquanto o achado estava aberto.

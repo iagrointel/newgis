@@ -11,9 +11,9 @@
    "comando": "venv/bin/pytest tests/adversario/test_g5_adversario.py -q -o addopts='' → 1 passed (o mesmo teste que estava xfail(strict=True) em e62f3db9, palavra por palavra; só a marca saiu)"
   },
   "casos_de_retirada_de_credencial": {
-   "valor": 13,
+   "valor": 12,
    "unidade": "testes",
-   "comando": "venv/bin/pytest tests/unit/test_conexao_credencial_redirect.py -q -o addopts='' → 13 passed: host, porta, porta padrão explícita (mesma origem), https→http, http→https, cadeia de 2 saltos, volta à origem inicial, mesma origem com Location relativo, Cookie+Proxy-Authorization+cabeçalho secreto declarado, caixa do nome, sem credencial, dicionário do chamador intacto"
+   "comando": "venv/bin/pytest tests/unit/test_conexao_credencial_redirect.py -q -o addopts='' → 12 passed: host, porta, porta padrão explícita (mesma origem), https→http, http→https, cadeia de 2 saltos, volta à origem inicial, mesma origem com Location relativo, Cookie+Proxy-Authorization+cabeçalho secreto declarado, caixa do nome, sem credencial, dicionário do chamador intacto"
   },
   "casos_de_ssrf_do_portao_ainda_verdes": {
    "valor": 26,
