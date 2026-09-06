@@ -2,7 +2,8 @@
 aplicados pelo `app/jobs/filho.py`) para `d_<slug>.c_<uuid16>`, `ST_MakeValid` com relatório, colunas obrigatórias +
 RLS FORCE + índices por `plat.camada_preparar()`, estatísticas e item de catálogo `camada_vetorial` com
 proveniência. Falha ou cancelamento em qualquer passo derruba a tabela e o item (nunca sobra órfão dos dois
-lados — invariante testada em `tests/api/ingestao/test_orfaos.py`)."""
+lados — invariante testada em `tests/api/ingestao/test_ingestao.py::test_cota_excedida_nao_cria_tabela`; teste
+de morte do worker (SIGKILL) fica para o L0-04-c completo, ver handoff do item)."""
 
 from __future__ import annotations
 

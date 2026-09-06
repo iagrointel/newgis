@@ -18,24 +18,24 @@
   },
   "login_inexistente_vs_senha_errada_ms": {
    "valor": [
-    124.0,
-    122.3
+    121.4,
+    123.0
    ],
    "unidade": "ms",
    "comando": "mediana de 4 POST /api/login: usuário inexistente × senha errada (tempo constante)"
   },
   "latencia_login_ms": {
-   "valor": 162.7,
+   "valor": 163.1,
    "unidade": "ms",
    "comando": "mediana de 3 POST /api/login com senha certa pelo TestClient (inclui pbkdf2 600k)"
   },
   "tempo_revogacao_s": {
-   "valor": 0.009,
+   "valor": 0.01,
    "unidade": "s",
    "comando": "DELETE /api/tokens/{id} até o 401 token_revogado (TestClient)"
   },
   "latencia_auth_token_ms": {
-   "valor": 3.27,
+   "valor": 3.22,
    "unidade": "ms",
    "comando": "mediana de 50 GET /api/eu com Bearer menos mediana de 50 GET /api/versao (TestClient)"
   },
@@ -202,6 +202,6 @@
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   }
  },
- "gerado_em": "2026-09-06T12:29:40Z",
- "git_sha": "e30515b57814"
+ "gerado_em": "2026-09-06T13:00:50Z",
+ "git_sha": "e2d5f9164f6b"
 }
