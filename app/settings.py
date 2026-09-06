@@ -86,6 +86,11 @@ class Settings:
     # .env de trilha grava PLAT_POOL_MAX=2 (ver laco/trilha_ambiente.sh).
     PLAT_POOL_MIN: int
     PLAT_POOL_MAX: int
+    # item L6-02-i-google-sheets: origem aceita para URL de planilha e base da URL de exportação CSV
+    # (app/conexao/google_sheets.py). Produção NUNCA declara: o padrão é o docs.google.com. A chave existe
+    # para o teste de integração, que aponta para um servidor local no IP público da máquina falando os
+    # dois protocolos (exportação CSV e troca de token OAuth2) de verdade — mesma técnica do L6-02-h.
+    PLAT_SHEETS_EXPORTACAO_PREFIXO: str
 
     @property
     def producao(self) -> bool:
@@ -223,6 +228,9 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SMTP_ROTULO=_opcional(valores, "PLAT_SMTP_ROTULO"),
         PLAT_POOL_MIN=pool_min,
         PLAT_POOL_MAX=pool_max,
+        PLAT_SHEETS_EXPORTACAO_PREFIXO=(
+            _opcional(valores, "PLAT_SHEETS_EXPORTACAO_PREFIXO") or "https://docs.google.com"
+        ).rstrip("/"),
     )
 
 
