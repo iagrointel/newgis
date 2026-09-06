@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L2-08-a-leitor-portal-inventario: leitor de inventário de Portal/AGOL)
+
+Leitura só-leitura do Portal for ArcGIS / ArcGIS Online do cliente, como job retomável
+(`migracao.inventariar`): `portals/self`, `search` paginado, item, `item/data`, `item/resources`,
+`relatedItems`, grupos com membros, usuários, e contagem de feições por camada dos serviços hospedados
+(`query?returnCountOnly=true`). Grava em `plat.migracao_inventario` / `migracao_item` / `migracao_grupo` /
+`migracao_usuario` (migração `20260906T1540_migracao_inventario_portal.sql`, RLS por inquilino), com
+classificação prévia migra / migra parcial / não migra por tipo de item — tipo fora da tabela vira
+`desconhecido`, nunca chute. Tela `/migracao` (escolher a conexão, ler, ver o relatório por tipo e por item)
+e `GET /api/migracao/inventarios/{id}/relatorio.csv`. Rede pelo `app.conexao.seguranca` do L6-02-a (SSRF,
+IP pinado, sem seguir redirecionamento sozinho); token em cabeçalho `X-Esri-Authorization`, nunca em URL;
+429 com espera pelo `Retry-After`; corte de rede no meio retoma do ponto gravado sem reler o que já entrou.
+`plat.migracao_usuario` não tem coluna de e-mail, nome ou telefone: o dado pessoal que o portal devolve não
+tem onde ser gravado. ADR 0018. ⛔ a prova contra Portal REAL fica pendente da decisão D20 do dono
+(credencial do parceiro) — `tests/migracao/PORTAL_DE_TESTE.md` diz o que a prova atual sustenta e o que não.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
