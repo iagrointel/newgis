@@ -157,6 +157,23 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     amc_execucao_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
+    # L3-01-a/b: modelo, conjunto de unidades e execução de B (a camada do modelo é o item de B, que já existe)
+    definicao = amc_exemplos.modelo_sem_camada_externa()
+    definicao["nome"] = f"{PREFIXO}amc-{sufixo}"
+    definicao["fatores"][0]["camada"] = {"tipo": "item", "id": item_b["id"], "banda": 1}
+    r = sessao_b.post("/api/amc/modelos", json={"definicao": definicao})
+    assert r.status_code == 201, r.text
+    amc_modelo_b = r.json()
+    r = sessao_b.post("/api/amc/conjuntos", json={"nome": f"{PREFIXO}amc-conj-{sufixo}", "tipo": "feicoes",
+                                                  "feicoes": amc_feicoes("b1")})
+    assert r.status_code == 201, r.text
+    amc_conjunto_b = r.json()
+    r = sessao_b.post("/api/amc/execucoes", json={"modelo_id": amc_modelo_b["id"],
+                                                  "conjunto_id": amc_conjunto_b["id"]})
+    assert r.status_code == 201, r.text
+    amc_execucao_b = r.json()
+    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
+                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, amc_modelo_b=amc_modelo_b,
                       amc_conjunto_b=amc_conjunto_b, amc_execucao_b=amc_execucao_b)
 
