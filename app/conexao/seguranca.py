@@ -22,6 +22,13 @@ Mecanismo (os 8 casos do adversário do item, na ordem do portão):
   8. DNS que muda entre a validação e a conexão (rebinding)               → `cliente_pinado` conecta ao(s) IP(s)
      já validados, nunca resolve de novo no momento da conexão (o backend customizado do httpcore não chama
      `getaddrinfo` outra vez para este host)
+  9. redirecionamento que troca de ORIGEM levando a credencial junto      → `buscar_seguro` RETIRA todo cabeçalho
+     de credencial (`Authorization`, `Cookie`, `Proxy-Authorization` e os nomes passados em
+     `cabecalhos_secretos`) no primeiro salto em que esquema, host ou porta deixam de ser os da URL original,
+     e NÃO devolve a credencial se a cadeia voltar à origem inicial (retirada é definitiva — ver ADR 0012,
+     "Decisão: credencial nunca atravessa mudança de origem"). É o que `requests` e `httpx` fazem por padrão;
+     sem isso, um destino com redirecionamento aberto exfiltra a credencial do inquilino (achado do
+     adversário G5, turno 3)
 """
 
 from __future__ import annotations
@@ -45,6 +52,9 @@ _ESQUEMAS_PERMITIDOS = {"http", "https"}
 # gap mais citado (100.64.0.0/10, usado por alguns provedores e por metadado de nuvem alternativo)
 _REDES_EXTRAS_BLOQUEADAS = (ipaddress.ip_network("100.64.0.0/10"),)
 _RESOLVEDOR = ThreadPoolExecutor(max_workers=8, thread_name_prefix="plat-conexao-dns")
+# cabeçalhos que carregam segredo e NUNCA podem atravessar uma mudança de origem num redirecionamento
+# (comparação sempre em minúsculas: nome de cabeçalho HTTP não diferencia maiúscula de minúscula)
+_CABECALHOS_CREDENCIAL = frozenset({"authorization", "cookie", "proxy-authorization"})
 
 
 class ErroURLInsegura(ValueError):
@@ -176,6 +186,18 @@ def cliente_pinado(validada: URLValidada, *, timeout_conectar: float, timeout_le
     return httpx.Client(transport=transporte, timeout=timeout, follow_redirects=False, trust_env=False)
 
 
+def _origem(validada: URLValidada) -> tuple[str, str, int]:
+    """Origem no sentido do RFC 6454: esquema + host + porta (porta já normalizada pelo `validar_url`, que
+    preenche 80/443 quando a URL não a declara — assim `https://h/` e `https://h:443/` são a MESMA origem, e
+    `https://h/` e `http://h/` não são)."""
+    return (validada.esquema, validada.host.lower(), validada.porta)
+
+
+def _sem_credenciais(cabecalhos: dict[str, str], secretos: frozenset[str]) -> dict[str, str]:
+    """Cópia dos cabeçalhos sem nenhum que carregue segredo. Não altera o dicionário do chamador."""
+    return {k: v for k, v in cabecalhos.items() if k.lower() not in secretos}
+
+
 @dataclass(frozen=True)
 class ResultadoBusca:
     ok: bool
@@ -185,6 +207,9 @@ class ResultadoBusca:
     latencia_ms: int
     saltos: int
     corpo: bytes = b""  # só preenchido quando `guardar_corpo=True` (item L6-05): teste de saúde nunca guarda
+    # True quando algum salto de redirecionamento trocou de origem e a credencial foi retirada (achado G5):
+    # serve para o chamador saber que um `http_401` depois de redirecionamento é esperado, não senha errada
+    credencial_retirada: bool = False
 
 
 def buscar_seguro(
@@ -196,11 +221,17 @@ def buscar_seguro(
     max_redirects: int = limites.CONEXAO_REDIRECT_MAX,
     max_bytes: int = limites.CONEXAO_RESPOSTA_MAX_BYTES,
     cabecalhos: dict[str, str] | None = None,
+    cabecalhos_secretos: typing.Iterable[str] | None = None,
     guardar_corpo: bool = False,
 ) -> ResultadoBusca:
     """GET/HEAD seguro contra SSRF, com corpo limitado e redirecionamento revalidado hop a hop. Nunca levanta
     `ErroURLInsegura` para fora: qualquer recusa de validação vira `ResultadoBusca(ok=False, status=None, ...)`
     com o motivo em `mensagem` — quem chama (rota de teste de saúde) nunca precisa distinguir os dois.
+
+    `cabecalhos` são enviados no salto 0 e mantidos enquanto a origem (esquema+host+porta) não mudar; ao
+    mudar, todo cabeçalho de credencial sai e não volta mais (caso 9 da docstring do módulo).
+    `cabecalhos_secretos` acrescenta nomes próprios do conector à lista que é retirada (ex.: `X-Api-Key`,
+    `api-key`) — `Authorization`, `Cookie` e `Proxy-Authorization` já entram sempre.
 
     `guardar_corpo=True` (item L6-05-proveniencia-camada-externa: ler o que o serviço declara — GetCapabilities,
     `f=json`, catálogo STAC) acumula os bytes lidos (até `max_bytes`, o mesmo teto do teste de saúde) em
@@ -210,6 +241,10 @@ def buscar_seguro(
 
     inicio = time.monotonic()
     alvo = url
+    secretos = _CABECALHOS_CREDENCIAL | frozenset(n.lower() for n in (cabecalhos_secretos or ()))
+    enviar = dict(cabecalhos or {})
+    origem_inicial: tuple[str, str, int] | None = None
+    retirada = False
     for salto in range(max_redirects + 1):
         try:
             validada = validar_url(alvo)
@@ -217,10 +252,22 @@ def buscar_seguro(
             return ResultadoBusca(
                 ok=False, status=None, mensagem=f"url_insegura:{e.motivo}", url_final=alvo,
                 latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
+                credencial_retirada=retirada,
             )
+        # Caso 9 do modelo (achado G5): a credencial só vale para a origem que o inquilino cadastrou. Se o
+        # destino redireciona para outro esquema/host/porta, os cabeçalhos de segredo saem AQUI, antes de
+        # abrir a conexão. A retirada é definitiva: se a cadeia voltar à origem inicial, a credencial NÃO
+        # volta junto (quem escolheu o desvio foi o servidor de destino, não o inquilino).
+        origem = _origem(validada)
+        if origem_inicial is None:
+            origem_inicial = origem
+        elif origem != origem_inicial and not retirada:
+            if any(k.lower() in secretos for k in enviar):
+                retirada = True
+            enviar = _sem_credenciais(enviar, secretos)
         with cliente_pinado(validada, timeout_conectar=timeout_conectar, timeout_ler=timeout_ler) as cliente:
             try:
-                with cliente.stream(metodo, alvo, headers=cabecalhos or {}) as r:
+                with cliente.stream(metodo, alvo, headers=enviar) as r:
                     lido = 0
                     pedacos: list[bytes] = []
                     for pedaco in r.iter_bytes():
@@ -229,6 +276,7 @@ def buscar_seguro(
                             return ResultadoBusca(
                                 ok=False, status=r.status_code, mensagem="resposta_excede_limite_de_bytes",
                                 url_final=alvo, latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
+                                credencial_retirada=retirada,
                             )
                         if guardar_corpo:
                             pedacos.append(pedaco)
@@ -238,11 +286,13 @@ def buscar_seguro(
                 return ResultadoBusca(
                     ok=False, status=None, mensagem="tempo_esgotado", url_final=alvo,
                     latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
+                    credencial_retirada=retirada,
                 )
             except httpx.HTTPError as e:
                 return ResultadoBusca(
                     ok=False, status=None, mensagem=f"erro_de_conexao:{type(e).__name__}", url_final=alvo,
                     latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
+                    credencial_retirada=retirada,
                 )
         if status in (301, 302, 303, 307, 308):
             local = r.headers.get("location")
@@ -250,6 +300,7 @@ def buscar_seguro(
                 return ResultadoBusca(
                     ok=False, status=status, mensagem="redirecionamento_sem_location", url_final=alvo,
                     latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
+                    credencial_retirada=retirada,
                 )
             # Location relativo vira absoluto contra a URL atual, do mesmo jeito que um navegador faria
             alvo = httpx.URL(alvo).join(local).__str__()
@@ -257,8 +308,10 @@ def buscar_seguro(
         return ResultadoBusca(
             ok=200 <= status < 400, status=status, mensagem=f"http_{status}", url_final=alvo,
             latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto, corpo=corpo,
+            credencial_retirada=retirada,
         )
     return ResultadoBusca(
         ok=False, status=None, mensagem="redirecionamentos_demais", url_final=alvo,
         latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=max_redirects,
+        credencial_retirada=retirada,
     )
