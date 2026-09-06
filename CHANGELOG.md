@@ -496,6 +496,7 @@ próprios; falta só o item na varredura genérica. Ver `docs/PARIDADE.md` e `la
 ## turno 3, setembro de 2026 (itens L3-01-a-modelo-dado e L3-01-b-unidades: motor multicritério — modelo, proveniência e unidade de análise)
 
 Migração `20260907T1206_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+Migração `044_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
 editável) e `amc_modelo_versao` (toda versão que já existiu, imutável para a aplicação por gatilho), `amc_conjunto_unidade`
 e `amc_unidade`, `amc_execucao` (proveniência congelada), `amc_fator_bruto` e `amc_resultado` — linhas por (execução,
 unidade, fator), nunca uma coluna por fator. `amc_resultado` tem `CHECK` que impede unidade vetada de carregar número na
@@ -521,6 +522,8 @@ não tinha sido gerada (`/mnt/pgdata` a 99 %, 13 GB livres) e entrou como proje�
 livres, e a re-medição depois do conserto do teto deu **989.334 células em 33,55 s** (+0,202 %). A projeção de 34,3 s
 era conservadora: errou ~10 % para mais. A linha de bytes para 1 milhão continua marcada `EXTRAPOLADO` porque essa
 ninguém mediu.
+em 8,61 s**, em 3 faixas, ocupando **186 MB** de tabela e índices. **1 milhão de células NÃO foi gerado** — `/mnt/pgdata`
+está a 99 % com 13 GB livres —; a projeção linear (34,3 s e ~741 MB) está gravada com `EXTRAPOLADO` no nome do campo.
 
 Refutações escritas como teste: editar um modelo já executado cria versão nova e a execução antiga continua apontando
 para a versão antiga, com o resultado inalterado (`test_refutacao_editar_modelo_executado_nao_muda_a_execucao_nem_o_resultado`);
@@ -572,6 +575,9 @@ na junção com `master`, para **`20260907T1206_amc.sql`**: a numeração de tr�
 `app.migracoes.ULTIMO_LEGADO`), e `045` já era usado por `045_geocodificador.sql` na árvore principal. Conferido antes
 do renome: `045_amc.sql` nunca foi aplicado sob esse nome em nenhum ambiente (produção `plat`, homologação nem
 qualquer schema de trilha `plat_t*`) — o renome é seguro, sem entrada órfã para limpar em `versao_migracao`.
+45 testes novos (`tests/unit/test_amc_esquema.py`, `tests/unit/test_amc_crs.py`, `tests/api/amc/`), verdes; a varredura
+cruzada do OpenAPI cobre as 18 rotas novas (`tests/api/cruzado_casos.py`). ADR
+`docs/adr/0016-motor-amc-modelo-e-unidades.md`.
 
 ## turno 3, setembro de 2026 (item L0-08-d-ldap: LDAP/Active Directory como provedor de login externo)
 
