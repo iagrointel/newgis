@@ -339,6 +339,26 @@ def test_conexao_que_nao_e_esri_rest_e_recusada_na_rota(sessao_a, limpar):
     assert r2.json()["erro"] == "conexao_nao_e_portal"
 
 
+# --------------------------------------------------------------------- trava cruzada A -> B
+def test_inventario_de_a_nao_aparece_nem_abre_para_b(sessao_a, sessao_b, env, portal, limpar):
+    """A varredura cruzada do `tests/api/test_cruzado.py` lê `docs/openapi.json` COMITADO, que está velho
+    (faltam 26 caminhos, 22 deles de outras trilhas) — então estas rotas ainda não entram lá. Enquanto o
+    gerente não roda `make openapi`, a trava A→B destas rotas é provada aqui, à mão."""
+    inv, job, tenant, usuario = _preparar(sessao_a, env, portal, limpar)
+    _rodar(inv, job, tenant, usuario)
+
+    assert inv not in {i["id"] for i in sessao_b.get("/api/migracao/inventarios").json()["itens"]}
+    for caminho in (f"/api/migracao/inventarios/{inv}",
+                    f"/api/migracao/inventarios/{inv}/itens",
+                    f"/api/migracao/inventarios/{inv}/relatorio.csv"):
+        r = sessao_b.get(caminho)
+        assert r.status_code == 404, (caminho, r.status_code, r.text)
+        assert r.json()["erro"] == "inventario_inexistente"
+    assert sessao_b.delete(f"/api/migracao/inventarios/{inv}").status_code == 404
+    # e o inventário de A continua inteiro depois de tudo isso
+    assert sessao_a.get(f"/api/migracao/inventarios/{inv}").json()["totais"]["itens"] == len(acervo()["itens"])
+
+
 # --------------------------------------------------------------------- limite de uso (429) com espera
 def test_limite_de_uso_do_portal_espera_e_termina(sessao_a, env, limpar):
     """429 nos 3 primeiros pedidos: o leitor espera o `Retry-After` e conclui, sem perder item nenhum. Três é
