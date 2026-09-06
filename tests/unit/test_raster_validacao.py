@@ -1,4 +1,4 @@
-"""Portão de pronto do item L1-01-b (validação e isolamento da entrada raster; ADR 0012), cláusula a cláusula, cada
+"""Portão de pronto do item L1-01-b (validação e isolamento da entrada raster; ADR 0015), cláusula a cláusula, cada
 caso com um arquivo SINTÉTICO pequeno gerado em tmp_path (rasterio/GDAL ou cabeçalho TIFF/zip fabricado à mão).
 Cada caso importa certo ou recusa/pede com a mensagem exata em português — nunca silêncio. Sem banco. Os 3 casos
 do adversário (IFD circular, JP2 truncado, 65.535 bandas) estão aqui. Tempo e pico de RSS do subprocesso de cada
@@ -381,6 +381,121 @@ def test_adversario_geotiff_65535_bandas(tmp_path):
     assert rel["estado"] == "recusado"
     assert rel["problemas"][0].startswith(("65535 bandas; o máximo aceito é 512", "o GDAL não abriu bandas.tif"))
     assert rel["subprocesso"]["morte"] is None and rel["subprocesso"]["ram_pico_kb"] < 768 * 1024
+
+
+# ------------------------------------------------------------------ conserto do turno 3 (laudo do adversário)
+def test_vrt_aninhado_so_e_aceito_dentro_do_envio(tmp_path):
+    """ACHADO 1/3: a conferência de fonte agora é RECURSIVA e resolve com realpath. VRT → VRT dentro do envio
+    passa; a mesma cadeia apontando para fora, ou por ligação simbólica, é recusada."""
+    envio, fora = tmp_path / "envio", tmp_path / "fora"
+    envio.mkdir()
+    fora.mkdir()
+    tif(envio / "bom.tif", count=1)
+    tif(fora / "segredo.tif", count=1)
+    (envio / "b.vrt").write_text(_vrt_texto("bom.tif", relativo="1"))
+    rel = validar("vrt_aninhado_dentro", _envolver(envio / "a.vrt", "b.vrt"),
+                  respostas={"data_aquisicao": "2026-08-01"})
+    assert rel["estado"] == "aceito", rel["problemas"]
+    (envio / "b.vrt").write_text(_vrt_texto(str(fora / "segredo.tif"), relativo="0"))
+    rel = validar("vrt_aninhado_fora", envio / "a.vrt")
+    assert rel["estado"] == "recusado"
+    assert rel["problemas"][0].startswith("VRT com fonte fora do diretório do envio ou remota")
+    (envio / "link.tif").symlink_to(fora / "segredo.tif")
+    (envio / "b.vrt").write_text(_vrt_texto("link.tif", relativo="1"))
+    rel = validar("vrt_fonte_symlink", envio / "a.vrt")
+    assert rel["estado"] == "recusado"
+    assert rel["problemas"][0].startswith("VRT com fonte fora do diretório do envio ou remota")
+
+
+def test_vrt_circular_e_profundo_demais_recusados(tmp_path):
+    envio = tmp_path / "envio"
+    envio.mkdir()
+    tif(envio / "bom.tif", count=1)
+    (envio / "a.vrt").write_text(_vrt_texto("b.vrt"))
+    (envio / "b.vrt").write_text(_vrt_texto("a.vrt"))
+    rel = validar("vrt_circular", envio / "a.vrt")
+    assert rel["estado"] == "recusado" and "referência circular" in rel["problemas"][0]
+    for i in range(9):
+        (envio / f"n{i}.vrt").write_text(_vrt_texto(f"n{i + 1}.vrt"))
+    (envio / "n9.vrt").write_text(_vrt_texto("bom.tif"))
+    rel = validar("vrt_profundo", envio / "n0.vrt")
+    assert rel["estado"] == "recusado"
+    assert rel["problemas"][0].startswith(f"VRT aninhado além de {v.VRT_PROFUNDIDADE_MAX} níveis")
+
+
+def test_vrt_com_xml_acima_do_teto_recusado(tmp_path):
+    """ACHADO 2: o XML é lido INTEIRO (o corte de 1 MiB escondia a segunda banda); acima do teto, recusa."""
+    envio = tmp_path / "envio"
+    envio.mkdir()
+    tif(envio / "bom.tif", count=1)
+    gordo = envio / "gordo.vrt"
+    gordo.write_text(_vrt_texto("bom.tif").replace("</VRTDataset>",
+                                                   f"<!--{'A' * (v.VRT_XML_MAX + 1024)}--></VRTDataset>"))
+    rel = validar("vrt_xml_gordo", gordo)
+    assert rel["estado"] == "recusado"
+    assert rel["problemas"][0].startswith("o XML do VRT 'gordo.vrt' tem") and "máximo aceito é 16.0 MB" \
+        in rel["problemas"][0]
+
+
+def test_rede_fechada_no_processo_e_medida_no_proc_do_filho(tmp_path):
+    """ACHADO 4: o filho recebe filtro seccomp; `Seccomp: 2` é lido no /proc dele PRÓPRIO e vai ao relatório."""
+    rel = validar("isolamento_rede", tif(tmp_path / "ok.tif", count=1))
+    isolamento = rel["info"]["isolamento"]
+    assert isolamento["seccomp"] == 2 and isolamento["no_new_privs"] == 1
+    assert isolamento["rede"].startswith("bloqueada no processo (seccomp")
+
+
+def test_nodata_nan_grava_no_jsonb_do_banco(tmp_path, conexao_plat_app):
+    """ACHADO 5: float32 com NoData NaN. O relatório sai com o texto 'NaN' declarado e ATRAVESSA o jsonb —
+    é este o caminho que o `raster.validar` usa (psycopg2.extras.Json em coluna jsonb)."""
+    import psycopg2.extras
+    p = tif(tmp_path / "nan.tif", dtype="float32", nodata=float("nan"), count=1)
+    rel = validar("nodata_nan", p)
+    assert rel["estado"] == "aceito"
+    assert rel["info"]["nodata"] == {"valor": "NaN", "origem": "arquivo"}
+    json.dumps(rel, allow_nan=False)
+    with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT %s::jsonb AS r", (psycopg2.extras.Json({"validacao": rel}),))
+        gravado = cur.fetchone()["r"]
+    assert gravado["validacao"]["info"]["nodata"]["valor"] == "NaN"
+
+
+def test_zip_com_volume_desproporcional_ao_envio_recusado(tmp_path):
+    """ACHADO 7: teto de VOLUME ligado ao tamanho do envio, além da razão de 50× e da cota."""
+    z = tmp_path / "grande.zip"
+    with zipfile.ZipFile(z, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("a.tif", b"\0" * (37 << 20) + os.urandom(3 << 20))
+    with zipfile.ZipFile(z) as zf:
+        infos = zf.infolist()
+    assert sum(i.file_size for i in infos) / sum(i.compress_size for i in infos) < v.ZIP_RAZAO_MAX
+    rel = validar("zip_volume_desproporcional", z, dir_trabalho=tmp_path / "trabalho")
+    assert rel["estado"] == "recusado"
+    assert "acima do teto de" in rel["problemas"][0] and "8× o enviado" in rel["problemas"][0]
+    assert not (tmp_path / "trabalho" / "zip_extraido").exists()
+
+
+def test_tipo_sem_conversao_e_declarado_no_relatorio(tmp_path):
+    """Fronteira apontada pelo adversário: complex64/int64 passam na VALIDAÇÃO (o arquivo está íntegro), mas o
+    relatório declara `tipo_convertivel: false` — a recusa é da conversão, não daqui (ADR 0015 seção 9)."""
+    p = tif(tmp_path / "complexo.tif", dtype="complex64", count=1)
+    rel = validar("tipo_complex64", p)
+    assert rel["estado"] == "aceito" and rel["info"]["tipo_convertivel"] is False
+    ok = validar("tipo_uint8", tif(tmp_path / "normal.tif", count=1))
+    assert ok["info"]["tipo_convertivel"] is True
+
+
+def _vrt_texto(fonte: str, relativo: str = "1") -> str:
+    return ('<VRTDataset rasterXSize="32" rasterYSize="32">'
+            '<SRS>EPSG:4674</SRS><GeoTransform>-48.0, 0.001, 0.0, -15.0, 0.0, -0.001</GeoTransform>'
+            '<VRTRasterBand dataType="Byte" band="1"><NoDataValue>0</NoDataValue><SimpleSource>'
+            f'<SourceFilename relativeToVRT="{relativo}">{fonte}</SourceFilename><SourceBand>1</SourceBand>'
+            '<SrcRect xOff="0" yOff="0" xSize="32" ySize="32"/><DstRect xOff="0" yOff="0" xSize="32" ySize="32"/>'
+            '</SimpleSource></VRTRasterBand></VRTDataset>')
+
+
+def _envolver(caminho: Path, fonte: str) -> Path:
+    caminho.write_text(_vrt_texto(fonte))
+    return caminho
 
 
 # ------------------------------------------------------------------ registro do tipo de job
