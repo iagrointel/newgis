@@ -286,6 +286,7 @@ class Token(Saida):
     revogado_em: str | None
     ultimo_uso: str | None
     ultimo_ip: str | None
+    usos: int = 0
     dono: dict
     renovado_por: int | None
     acessos_30d: int | None = None
