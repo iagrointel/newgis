@@ -58,6 +58,13 @@ def _falhou(request: Request, ctx: db.Contexto, usuario_id: int, politica: Polit
     request.state.resultado = resultado
 
 
+# sentinela para "quem chama não trouxe a data de troca de senha; leia do banco". Existe porque o caminho do
+# segundo fator (plat.auth_desafio_2fa_resolver) não devolve `senha_alterada_em`, e passar None ali significava
+# "nunca expira" — quem ligava o 2FA ficava com a política de senha MAIS FRACA da plataforma (achado G1-b2 do
+# adversário do turno 3). `None` continua sendo o valor legítimo de quem não tem senha local (LDAP).
+NAO_INFORMADO = object()
+
+
 def _abrir_sessao(
     request: Request,
     resposta: Response,
@@ -70,6 +77,10 @@ def _abrir_sessao(
     try:
         with db.db(ctx) as cur:
             cur.execute("SELECT plat.auth_ok(%s, %s)", (usuario_id, ip_de(request)))
+            if senha_alterada_em is NAO_INFORMADO:
+                cur.execute("SELECT senha_alterada_em FROM plat.usuario WHERE id = %s", (usuario_id,))
+                linha_senha = cur.fetchone()
+                senha_alterada_em = linha_senha["senha_alterada_em"] if linha_senha else None
             if (
                 politica.senha_expira_dias
                 and senha_alterada_em is not None
@@ -212,7 +223,9 @@ def login_2fa(corpo: Login2FAEntrada, request: Request, resposta: Response):
     if fator is None:
         _falhou(request, ctx, r["usuario_id"], politica, resultado)
         raise ErroAPI(401, "codigo_invalido", "código inválido")
-    return _abrir_sessao(request, resposta, ctx, r["usuario_id"], politica, fator, None)
+    # a política de senha do inquilino vale nos DOIS caminhos: o segundo fator é uma prova A MAIS, nunca uma
+    # dispensa da expiração (achado G1-b2). A data vem do banco porque o desafio não a traz.
+    return _abrir_sessao(request, resposta, ctx, r["usuario_id"], politica, fator, NAO_INFORMADO)
 
 
 @router.post(
