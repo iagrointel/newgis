@@ -571,10 +571,9 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/lixeira"): Caso(lambda p: f"/api/lixeira?q=id:{p.item_b['id']}", proprio=True,
                                   aceita=frozenset({200}), verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("POST", "/api/lixeira/{id}/restaurar"): Caso(lambda p: f"/api/lixeira/{p.item_b['id']}/restaurar"),
-    ("POST", "/api/lixeira/esvaziar"): Caso(
-        lambda p: "/api/lixeira/esvaziar", lambda p: {"ids": [p.item_b["id"]]}, proprio=True, aceita=frozenset({202}),
-        verificar=_sem_marca, limpar=lambda p, j: p.sessao_a.post(f"/api/jobs/{j['job_id']}/cancelar"),
-    ),
+    # o pedido nomeia um item de B: nada resolve para A e a rota RECUSA (404) em vez de enfileirar lista vazia,
+    # que a tarefa lia como "expurgar tudo" (achado G2-4 do adversário do grupo G2)
+    ("POST", "/api/lixeira/esvaziar"): Caso(lambda p: "/api/lixeira/esvaziar", lambda p: {"ids": [p.item_b["id"]]}),
     # ---- arquivos/objetos (L0-11): a rota nunca recebe id de inquilino na URL (o bucket vem do auth.tenant_id),
     # então "o recurso de B" para GET/DELETE por sha256 é qualquer sha256 que A também não tem — 404 garantido
     # sem precisar upar nada como B (a suíte própria do item, tests/api/test_arquivos.py, prova o isolamento com

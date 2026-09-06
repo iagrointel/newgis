@@ -6,7 +6,7 @@ import { h, limpar, marcador } from '../base/dom.js';
 import { t } from '../base/i18n.js';
 import { mensagemDe } from '../base/api.js';
 import * as api from './api.js';
-import { ctx, parametrosLista, rotuloTipo, tipoDe, selecionado, alternarSelecao, limparSelecao } from './contexto.js';
+import { ctx, parametrosLista, rotuloTipo, tipoDe, selecionado, alternarSelecao, limparSelecao, marcaFavoritos, marcarFavoritoLocal, aplicarFavoritosLocais } from './contexto.js';
 import { elipse, quando, rotuloAcesso, nomeDono, LIMITES } from './formato.js';
 import { icone, iconeDoTipo } from './icones.js';
 
@@ -29,6 +29,7 @@ export function iniciar({ abrir }) {
 export async function carregar({ mais = false } = {}) {
   const aviso = el('lista-aviso');
   const meu = ++seq;
+  const marcaAntes = marcaFavoritos();   // estado dos favoritos ANTES do pedido (achado G2-9)
   const p = parametrosLista();
   if (mais) { if (!ctx.ler('cursor')) return; p.cursor = ctx.ler('cursor'); } else limparSelecao();
   ctx.definir({ carregando: true });
@@ -45,7 +46,7 @@ export async function carregar({ mais = false } = {}) {
   }
   if (meu !== seq) return; // resposta atrasada: a lista nunca volta no tempo
   aviso.limpar();
-  const novos = Array.isArray(r.itens) ? r.itens : [];
+  const novos = aplicarFavoritosLocais(Array.isArray(r.itens) ? r.itens : [], marcaAntes);
   const itens = mais ? [...ctx.ler('itens'), ...novos] : novos;
   ctx.definir({ itens, total: r.total ?? itens.length, cursor: r.proximo_cursor || null, aproximado: !!r.aproximado, carregando: false });
   const ap = el('aproximado');
@@ -82,13 +83,20 @@ function botaoFavorito(item) {
   b.addEventListener('click', async (e) => {
     e.stopPropagation();
     b.disabled = true;
+    const querer = !item.favorito;
+    // a intenção é registrada ANTES da chamada: se um GET /api/itens pedido antes do clique chegar no meio, a
+    // lista repintada não volta ao estado velho (achado G2-9). Em erro, a marca é desfeita.
+    marcarFavoritoLocal(item.id, querer);
+    b.setAttribute('aria-pressed', String(querer));
+    b.setAttribute('aria-label', querer ? t('catalogo.desfavoritar') : t('catalogo.favoritar'));
     try {
-      if (item.favorito) await api.desfavoritar(item.id); else await api.favoritar(item.id);
-      item.favorito = !item.favorito;
-      b.setAttribute('aria-pressed', String(item.favorito));
-      b.setAttribute('aria-label', item.favorito ? t('catalogo.desfavoritar') : t('catalogo.favoritar'));
-      if (ctx.ler('aba') === 'favoritos' && !item.favorito) ctx.definir({ itens: ctx.ler('itens').filter((x) => x.id !== item.id), total: Math.max(0, ctx.ler('total') - 1) });
+      if (querer) await api.favoritar(item.id); else await api.desfavoritar(item.id);
+      item.favorito = querer;
+      if (ctx.ler('aba') === 'favoritos' && !querer) ctx.definir({ itens: ctx.ler('itens').filter((x) => x.id !== item.id), total: Math.max(0, ctx.ler('total') - 1) });
     } catch (err) {
+      marcarFavoritoLocal(item.id, !querer);
+      b.setAttribute('aria-pressed', String(!querer));
+      b.setAttribute('aria-label', !querer ? t('catalogo.desfavoritar') : t('catalogo.favoritar'));
       el('lista-aviso').erro(err.message);
     } finally { b.disabled = false; }
   });

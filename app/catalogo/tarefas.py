@@ -104,12 +104,20 @@ class ExpurgoParametros(BaseModel):
 def catalogo_lixeira_expurgar(
     ctx, dias: int = 30, ids: list[uuid.UUID] | None = None, agora: datetime.datetime | None = None
 ) -> dict:
+    # `ids` ausente (None) = varredura por idade, que é o periódico; `ids` presente e VAZIO = pedido que não
+    # resolveu nenhum item, e nunca "expurgar tudo" (achado G2-4: `if ids else None` transformava [] em NULL e
+    # plat.lixeira_expurgar(0, now(), NULL) devolvia a lixeira inteira do inquilino; o expurgo é físico).
+    if ids is not None and len(ids) == 0:
+        raise FalhaDefinitiva("lista de itens vazia: o expurgo por lista nunca significa 'toda a lixeira'")
+    alvo = None if ids is None else [str(x) for x in ids]
     with ctx.db() as cur:
         cur.execute(
             "SELECT * FROM plat.lixeira_expurgar(%s, %s, %s::uuid[])",
-            (dias, agora or datetime.datetime.now(datetime.UTC), [str(x) for x in ids] if ids else None),
+            (dias, agora or datetime.datetime.now(datetime.UTC), alvo),
         )
         candidatos = cur.fetchall()
+    if alvo is not None and len(candidatos) > len(alvo):
+        raise FalhaDefinitiva(f"{len(candidatos)} candidatos para uma lista de {len(alvo)} itens: pedido recusado")
     ctx.log("INFO", f"{len(candidatos)} itens a expurgar (dias={dias}, agora={agora or 'now'})")
     expurgados, recusados, bytes_total = 0, [], 0
     for n, c in enumerate(candidatos, 1):
@@ -143,14 +151,40 @@ def catalogo_lixeira_expurgar(
 
 
 # ---------------------------------------------------------------- catalogo.versoes_compactar
+LINHAS_MAX_POR_ITEM = 50  # teto de linhas de plat.item_versao por item (refutação do L0-03-l), ADR 0004 seção 11.4
+PASSOS_MAX_COMPACTACAO = 12  # cada passada divide o excedente por 10: 12 passadas cobrem 10^12 versões
+
+
 class CompactarParametros(BaseModel):
-    manter: int = Field(50, ge=1, le=1000)
+    manter: int = Field(LINHAS_MAX_POR_ITEM, ge=1, le=1000, description="teto de LINHAS por item depois da passagem")
     item_id: uuid.UUID | None = None
+
+
+def compactar_item(cur, item_id: str, teto: int = LINHAS_MAX_POR_ITEM, passos_max: int = PASSOS_MAX_COMPACTACAO):
+    """Compacta as versões de um item ATÉ ESTABILIZAR e devolve (removidas, linhas_restantes).
+
+    plat.item_versoes_compactar(item, manter) guarda as `manter` versões mais recentes e resume cada bloco de 10
+    das antigas numa linha: uma passada sobre N versões deixa manter + ceil((N - manter)/10) linhas — 146 depois de
+    1.000 PUTs com manter = 50 (achado G2-3), e o periódico rodava uma passada por dia. Repetindo a passada, o
+    excedente cai por um fator de 10 a cada vez e converge em `manter` + 1 linha (a linha compactada que resume
+    tudo o que veio antes). Por isso o teto de LINHAS é `manter` + 1: pedimos manter = teto - 1 e o item fica com
+    no máximo `teto` linhas. A função do banco não é tocada aqui (varredura das funções SECURITY DEFINER corre em
+    outra trilha)."""
+    manter = max(1, teto - 1)
+    removidas = 0
+    for _ in range(passos_max):
+        cur.execute("SELECT plat.item_versoes_compactar(%s::uuid, %s) AS n", (item_id, manter))
+        n = cur.fetchone()["n"] or 0
+        removidas += n
+        if n == 0:
+            break
+    cur.execute("SELECT count(*) AS n FROM plat.item_versao WHERE item_id = %s::uuid", (item_id,))
+    return removidas, cur.fetchone()["n"]
 
 
 @tarefa(
     nome="catalogo.versoes_compactar",
-    descricao="Compacta versões antigas de item (mantém as 50 mais recentes; blocos de 10 viram uma)",
+    descricao="Compacta versões antigas de item até o teto de 50 linhas (blocos de 10 viram uma, até estabilizar)",
     parametros=CompactarParametros,
     pesado=False,
     memoria_mb=256,
@@ -159,20 +193,24 @@ class CompactarParametros(BaseModel):
     chave=lambda p: "versoes_compactar",
     perfil_minimo="admin",
 )
-def catalogo_versoes_compactar(ctx, manter: int = 50, item_id: uuid.UUID | None = None) -> dict:
+def catalogo_versoes_compactar(
+    ctx, manter: int = LINHAS_MAX_POR_ITEM, item_id: uuid.UUID | None = None
+) -> dict:
     with ctx.db() as cur:
         if item_id:
             itens = [str(item_id)]
         else:
             cur.execute("SELECT plat.itens_com_versoes_acima(%s) AS id", (manter,))
             itens = [str(r["id"]) for r in cur.fetchall()]
-    removidas = 0
+    removidas, acima = 0, []
     for n, iid in enumerate(itens, 1):
         with ctx.db() as cur:
-            cur.execute("SELECT plat.item_versoes_compactar(%s::uuid, %s) AS n", (iid, manter))
-            removidas += cur.fetchone()["n"]
+            r, linhas = compactar_item(cur, iid, manter)
+            removidas += r
+            if linhas > manter:
+                acima.append({"item_id": iid, "linhas": linhas})
         ctx.progresso(int(n * 100 / max(1, len(itens))), f"{n} de {len(itens)} itens")
-    return {"itens": len(itens), "versoes_removidas": removidas}
+    return {"itens": len(itens), "versoes_removidas": removidas, "teto_linhas": manter, "acima_do_teto": acima}
 
 
 # ---------------------------------------------------------------- catalogo.tags_renomear
@@ -290,6 +328,8 @@ class ExportarParametros(BaseModel):
     perfil_minimo="editor",
 )
 def catalogo_exportar_lista(ctx, formato: str = "csv", ids: list[uuid.UUID] | None = None) -> dict:
+    if ids is not None and len(ids) == 0:
+        raise FalhaDefinitiva("lista de itens vazia: a exportação por lista nunca significa 'todos os itens'")
     with ctx.db() as cur:
         if ids:
             cur.execute(
