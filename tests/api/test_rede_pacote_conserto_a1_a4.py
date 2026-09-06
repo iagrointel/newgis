@@ -243,22 +243,22 @@ def test_nul_no_pacote_e_recusado_com_422(sessao_a, limpar_redes, onde):
 # ----------------------------------------------------------------------------------------- semântica da ida e volta
 
 def test_numero_3_0_e_codigo_01_entram_e_saem_normalizados(sessao_a, limpar_redes):
-    """Não é achado, é fronteira medida: `ordem: 3.0` e `de: "grupo/01"` passam no esquema e voltam como `3` e
-    `grupo/1`. A ida e volta é canônica, como o handoff admite; fica registrado que a normalização é silenciosa
-    (o evento grava o sha256 do arquivo ENVIADO, que nunca mais bate com a exportação)."""
+    """Não é achado, é fronteira medida: `ordem: 3.0` e `tipo: 1.0` no lado de uma regra passam no esquema e
+    voltam como `3` e `1`. A ida e volta é canônica, como o handoff admite; fica registrado que a
+    normalização é silenciosa (o evento grava o sha256 do arquivo ENVIADO, que nunca mais bate com a
+    exportação). (Versão 2 do esquema, item L4-03-a: o lado da regra virou objeto {grupo, tipo, terminal?};
+    o caso "grupo/01" da versão 1 não existe mais porque `tipo` é inteiro JSON.)"""
     rid = _criar(sessao_a, "norm")
     limpar_redes.append((sessao_a, rid))
     doc = _doc()
     doc["tiers"][0]["ordem"] = float(doc["tiers"][0]["ordem"])
-    regra = doc["regras"][0]
-    g, _, c = regra["de"].partition("/")
-    regra["de"] = f"{g}/0{c}"
+    doc["regras"][0]["de"]["tipo"] = float(doc["regras"][0]["de"]["tipo"])
     bruto = _bytes(doc)
     r = _importar(sessao_a, rid, bruto)
     assert r.status_code == 201, r.text
     volta = json.loads(sessao_a.get(f"/api/rede/{rid}/pacote").content)
     assert isinstance(volta["tiers"][0]["ordem"], int)
-    assert all(not re.search(r"/0\d", x["de"]) for x in volta["regras"])
+    assert all(isinstance(x["de"]["tipo"], int) for x in volta["regras"])
     assert r.json()["sha256"] != sessao_a.get(f"/api/rede/{rid}/pacote").headers["ETag"].strip('"')
 
 

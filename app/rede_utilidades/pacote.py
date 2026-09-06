@@ -16,9 +16,23 @@ import json
 from jsonschema import Draft202012Validator
 
 from app.rede_utilidades import localizador
-from app.rede_utilidades.esquema import ESQUEMA, ESQUEMA_VERSAO
+from app.rede_utilidades.esquema import (
+    ESQUEMAS,
+    ESQUEMA_VERSAO,
+    GEOMETRIA_ARESTA,
+    GEOMETRIA_JUNCAO,
+)
 
 SECOES = ("dominios", "tiers", "categorias", "terminais", "grupos", "tipos", "atributos", "regras")
+
+
+def _chave_ref(ref: dict) -> tuple:
+    """Chave de ordenação/unicidade de um lado de regra na versão 2 (objeto {grupo, tipo, terminal?})."""
+    if not isinstance(ref, dict):
+        return ("", 0, "")
+    return (ref.get("grupo", ""), ref.get("tipo", 0), ref.get("terminal") or "")
+
+
 # chave de ordenação de cada lista na forma canônica; é sempre única depois da conferência de repetição
 ORDEM = {
     "dominios": lambda d: (d.get("codigo", ""),),
@@ -28,7 +42,8 @@ ORDEM = {
     "grupos": lambda d: (d.get("dominio", ""), d.get("codigo", "")),
     "tipos": lambda d: (d.get("grupo", ""), d.get("codigo", 0)),
     "atributos": lambda d: (d.get("grupo", ""), d.get("tipo") or 0, d.get("codigo", "")),
-    "regras": lambda d: (d.get("tipo", ""), d.get("de", ""), d.get("para", "")),
+    "regras": lambda d: (d.get("tipo", ""), *_chave_ref(d.get("de")), *_chave_ref(d.get("via")),
+                         *_chave_ref(d.get("para"))),
 }
 
 
@@ -140,7 +155,10 @@ def _procurar_nul(bruto: str, no, caminho: list) -> list[dict]:
     return problemas
 
 
-def _conferir_referencias(bruto: str, doc: dict) -> list[dict]:
+def _conferir_comum(bruto: str, doc: dict) -> list[dict]:
+    """Conferências iguais nas duas versões do esquema: repetição de código e referência entre as seções de
+    catálogo (domínio, tier, categoria, terminal, grupo, tipo, atributo). Regra fica de fora — muda de forma
+    entre a versão 1 e a 2 e cada uma tem a sua conferência."""
     problemas: list[dict] = _chave_repetida(bruto) + _procurar_nul(bruto, doc, [])
     dominios = {d.get("codigo") for d in doc.get("dominios", []) if isinstance(d, dict)}
     categorias = {c.get("codigo") for c in doc.get("categorias", []) if isinstance(c, dict)}
@@ -166,9 +184,6 @@ def _conferir_referencias(bruto: str, doc: dict) -> list[dict]:
     problemas += _repetidos(
         bruto, "atributos", doc.get("atributos", []),
         lambda d: (d["grupo"], d.get("tipo"), d["codigo"]), "código de atributo dentro do grupo",
-    )
-    problemas += _repetidos(
-        bruto, "regras", doc.get("regras", []), lambda d: (d["tipo"], d["de"], d["para"]), "regra",
     )
 
     for i, t in enumerate(doc.get("tiers", [])):
@@ -238,6 +253,19 @@ def _conferir_referencias(bruto: str, doc: dict) -> list[dict]:
                 f"o atributo {a.get('codigo')!r} aponta para o tipo de ativo {a['tipo']} do grupo "
                 f"{a.get('grupo')!r}, que não existe neste pacote",
             ))
+    return problemas
+
+
+def _conferir_regras_v1(bruto: str, doc: dict) -> list[dict]:
+    """Regra da versão 1: par solto `de`/`para` em texto "grupo/codigo"."""
+    problemas: list[dict] = []
+    tipos_por_grupo: dict = {}
+    for t in doc.get("tipos", []):
+        if isinstance(t, dict):
+            tipos_por_grupo.setdefault(t.get("grupo"), set()).add(t.get("codigo"))
+    problemas += _repetidos(
+        bruto, "regras", doc.get("regras", []), lambda d: (d["tipo"], d["de"], d["para"]), "regra",
+    )
     for i, r in enumerate(doc.get("regras", []) or []):
         if not isinstance(r, dict):
             continue
@@ -253,8 +281,154 @@ def _conferir_referencias(bruto: str, doc: dict) -> list[dict]:
     return problemas
 
 
+def _mapa_terminais(doc: dict) -> dict:
+    """(grupo, codigo do tipo) -> conjunto dos NOMES de terminal da configuração que o tipo usa."""
+    configs = {t.get("codigo"): {x.get("nome") for x in t.get("terminais", []) if isinstance(x, dict)}
+               for t in doc.get("terminais", []) if isinstance(t, dict)}
+    mapa: dict = {}
+    for t in doc.get("tipos", []):
+        if isinstance(t, dict):
+            mapa[(t.get("grupo"), t.get("codigo"))] = configs.get(t.get("terminal"), set())
+    return mapa
+
+
+def _conferir_ref(bruto: str, doc: dict, caminho: list, ref, tipos_por_grupo: dict,
+                  terminais: dict, problemas: list[dict]) -> None:
+    """Um lado de regra na versão 2: {grupo, tipo, terminal?}. Confere existência e terminal."""
+    if not isinstance(ref, dict):
+        return
+    grupo, codigo = ref.get("grupo"), ref.get("tipo")
+    if codigo not in tipos_por_grupo.get(grupo, set()):
+        problemas.append(_problema(
+            bruto, caminho, "tipo_inexistente",
+            f"a regra aponta para o tipo de ativo {codigo!r} do grupo {grupo!r}, "
+            f"que não existe neste pacote",
+        ))
+        return
+    terminal = ref.get("terminal")
+    if terminal is not None and terminal not in terminais.get((grupo, codigo), set()):
+        problemas.append(_problema(
+            bruto, [*caminho, "terminal"], "terminal_inexistente",
+            f"o terminal {terminal!r} não existe na configuração de terminal do tipo de ativo "
+            f"{codigo!r} do grupo {grupo!r}",
+        ))
+
+
+def _conferir_regras_v2(bruto: str, doc: dict) -> list[dict]:
+    """Regra da versão 2: lados {grupo, tipo, terminal?}, lado VIA só na aresta-junção-aresta, e PAPEL de
+    geometria por tipo de regra (junção de um lado, aresta do outro)."""
+    problemas: list[dict] = []
+    tipos_por_grupo: dict = {}
+    for t in doc.get("tipos", []):
+        if isinstance(t, dict):
+            tipos_por_grupo.setdefault(t.get("grupo"), set()).add(t.get("codigo"))
+    terminais = _mapa_terminais(doc)
+    geometrias = {g.get("codigo"): g.get("geometria") for g in doc.get("grupos", []) if isinstance(g, dict)}
+
+    problemas += _repetidos(
+        bruto, "regras", doc.get("regras", []),
+        lambda d: (d["tipo"], _chave_ref(d["de"]), _chave_ref(d.get("via")), _chave_ref(d["para"])), "regra",
+    )
+
+    def _papel(i: int, r: dict, lado: str, esperadas: tuple, rotulo: str) -> None:
+        ref = r.get(lado)
+        if isinstance(ref, dict) and geometrias.get(ref.get("grupo")) not in esperadas:
+            problemas.append(_problema(
+                bruto, ["regras", i, lado], "papel_errado",
+                f"o lado {lado!r} de uma regra {r.get('tipo')!r} tem de ser {rotulo}, mas o grupo "
+                f"{ref.get('grupo')!r} tem geometria {geometrias.get(ref.get('grupo'))!r}",
+            ))
+
+    for i, r in enumerate(doc.get("regras", []) or []):
+        if not isinstance(r, dict):
+            continue
+        tipo = r.get("tipo")
+        for lado in ("de", "para", "via"):
+            if lado in r:
+                _conferir_ref(bruto, doc, ["regras", i, lado], r.get(lado), tipos_por_grupo, terminais, problemas)
+        if tipo == "aresta_juncao_aresta":
+            if "via" not in r:
+                problemas.append(_problema(
+                    bruto, ["regras", i], "via_obrigatorio",
+                    "a regra aresta-junção-aresta exige o lado 'via' (a junção do meio)",
+                ))
+            else:
+                _papel(i, r, "via", GEOMETRIA_JUNCAO, "uma junção")
+            _papel(i, r, "de", GEOMETRIA_ARESTA, "uma aresta")
+            _papel(i, r, "para", GEOMETRIA_ARESTA, "uma aresta")
+        else:
+            if "via" in r:
+                problemas.append(_problema(
+                    bruto, ["regras", i, "via"], "via_proibido",
+                    f"o lado 'via' só existe na regra aresta-junção-aresta, não em {tipo!r}",
+                ))
+        if tipo == "juncao_aresta":
+            _papel(i, r, "de", GEOMETRIA_JUNCAO, "uma junção")
+            _papel(i, r, "para", GEOMETRIA_ARESTA, "uma aresta")
+            if isinstance(r.get("para"), dict) and r["para"].get("terminal") is not None:
+                problemas.append(_problema(
+                    bruto, ["regras", i, "para", "terminal"], "terminal_nao_se_aplica",
+                    "na regra junção-aresta o terminal fica no lado 'de' (a junção); a aresta não tem terminal",
+                ))
+        elif tipo == "juncao_juncao":
+            _papel(i, r, "de", GEOMETRIA_JUNCAO, "uma junção")
+            _papel(i, r, "para", GEOMETRIA_JUNCAO, "uma junção")
+    return problemas
+
+
+# tradução do vocabulário da versão 1 para o da 2
+_TIPO_V1_PARA_V2 = {
+    "conectividade_no_trecho": "juncao_aresta",
+    "conectividade_entre_nos": "juncao_juncao",
+    "fixacao_estrutural": "estrutura",
+    "contencao": "contencao",
+}
+
+
+def _converter_v1(bruto: str, doc: dict) -> dict:
+    """Pacote da versão 1 -> forma 2. As seções de catálogo passam intactas; cada regra vira lados
+    {grupo, tipo}. Na `conectividade_no_trecho` a junção vai para o lado `de` (a versão 1 não marcava
+    qual era qual); regra em que os dois lados têm a mesma geometria não tem como normalizar e é recusada
+    com a linha apontada — caso medido no pacote elétrico 1.0.0 (ramal->trecho), que por isso foi
+    reescrito em versão 2 (1.1.0)."""
+    geometrias = {g.get("codigo"): g.get("geometria") for g in doc.get("grupos", []) if isinstance(g, dict)}
+    problemas: list[dict] = []
+    regras = []
+    for i, r in enumerate(doc.get("regras", []) or []):
+        de_g, _, de_c = str(r.get("de", "")).partition("/")
+        pa_g, _, pa_c = str(r.get("para", "")).partition("/")
+        if not (de_c.isdigit() and pa_c.isdigit()):
+            continue  # já saiu como problema na conferência da versão 1
+        de_ref, para_ref = {"grupo": de_g, "tipo": int(de_c)}, {"grupo": pa_g, "tipo": int(pa_c)}
+        tipo = _TIPO_V1_PARA_V2[r["tipo"]]
+        if tipo == "juncao_aresta":
+            de_eh_juncao = geometrias.get(de_g) in GEOMETRIA_JUNCAO
+            para_eh_juncao = geometrias.get(pa_g) in GEOMETRIA_JUNCAO
+            if para_eh_juncao and not de_eh_juncao:
+                de_ref, para_ref = para_ref, de_ref
+            elif de_eh_juncao == para_eh_juncao:
+                problemas.append(_problema(
+                    bruto, ["regras", i, "de"], "regra_sem_lado_juncao",
+                    f"a regra {r['de']!r} -> {r['para']!r} não tem um lado junção e outro aresta "
+                    f"(geometrias {geometrias.get(de_g)!r} e {geometrias.get(pa_g)!r}); na versão 2 a "
+                    f"junção-aresta exige um lado de cada — reescreva a regra já em versão 2",
+                ))
+                continue
+        nova = {"tipo": tipo, "de": de_ref, "para": para_ref}
+        if r.get("descricao") is not None:
+            nova["descricao"] = r["descricao"]
+        regras.append(nova)
+    if problemas:
+        raise ErroPacote(problemas)
+    convertido = dict(doc)
+    convertido["esquema_versao"] = ESQUEMA_VERSAO
+    convertido["regras"] = regras
+    return convertido
+
+
 def ler(bruto: bytes) -> dict:
-    """bytes recebidos -> dicionário validado. Levanta ErroPacote com a lista inteira de problemas."""
+    """bytes recebidos -> dicionário validado, SEMPRE na forma da versão corrente do esquema (pacote da
+    versão 1 sai daqui convertido). Levanta ErroPacote com a lista inteira de problemas."""
     try:
         texto = bruto.decode("utf-8")
     except UnicodeDecodeError as e:
@@ -269,16 +443,27 @@ def ler(bruto: bytes) -> dict:
         raise ErroPacote([{"caminho": "(raiz)", "linha": 1, "erro": "raiz_nao_e_objeto",
                            "mensagem": "a raiz do pacote tem de ser um objeto JSON"}])
 
+    versao = doc.get("esquema_versao")
+    if versao not in ESQUEMAS:
+        raise ErroPacote([{"caminho": "esquema_versao", "linha": localizador.linha(texto, ["esquema_versao"]),
+                           "erro": "esquema_versao_desconhecida",
+                           "mensagem": f"esquema_versao {versao!r} não é aceita; este serviço lê as versões "
+                                       f"{sorted(ESQUEMAS)} do esquema plat.rede.pacote"}])
+
     problemas = []
-    for erro in sorted(Draft202012Validator(ESQUEMA).iter_errors(doc), key=lambda e: list(e.absolute_path)):
+    for erro in sorted(Draft202012Validator(ESQUEMAS[versao]).iter_errors(doc),
+                     key=lambda e: list(e.absolute_path)):
         caminho = list(erro.absolute_path)
         problemas.append(_problema(texto, caminho, "esquema", erro.message))
     if problemas:
         raise ErroPacote(problemas)
 
-    problemas = _conferir_referencias(texto, doc)
+    problemas = _conferir_comum(texto, doc)
+    problemas += _conferir_regras_v1(texto, doc) if versao == 1 else _conferir_regras_v2(texto, doc)
     if problemas:
         raise ErroPacote(problemas)
+    if versao == 1:
+        return _converter_v1(texto, doc)
     return doc
 
 

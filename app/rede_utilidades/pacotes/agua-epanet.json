@@ -672,7 +672,7 @@
   }
  ],
  "esquema": "plat.rede.pacote",
- "esquema_versao": 1,
+ "esquema_versao": 2,
  "grupos": [
   {
    "camadas_fonte": [
@@ -741,104 +741,200 @@
   "disciplina": "agua",
   "fonte": "https://www.epa.gov/water-research/epanet",
   "nome": "Água de abastecimento (modelo EPANET 2.2)",
-  "versao": "1.0.0"
+  "versao": "1.0.1"
  },
  "regras": [
   {
-   "de": "tubulacao/1",
+   "de": {
+    "grupo": "bomba",
+    "tipo": 1
+   },
    "descricao": "bomba em série na tubulação",
-   "para": "bomba/1",
-   "tipo": "conectividade_no_trecho"
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
   },
   {
-   "de": "tubulacao/1",
+   "de": {
+    "grupo": "bomba",
+    "tipo": 2
+   },
    "descricao": "bomba em série na tubulação",
-   "para": "bomba/2",
-   "tipo": "conectividade_no_trecho"
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
   },
   {
-   "de": "tubulacao/1",
+   "de": {
+    "grupo": "no",
+    "tipo": 1
+   },
    "descricao": "tubulação ligada ao nó",
-   "para": "no/1",
-   "tipo": "conectividade_no_trecho"
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
   },
   {
-   "de": "tubulacao/1",
+   "de": {
+    "grupo": "no",
+    "tipo": 1
+   },
+   "descricao": "tubulação com válvula de retenção ligada ao nó",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 2
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "no",
+    "tipo": 2
+   },
    "descricao": "tubulação ligada ao nó",
-   "para": "no/2",
-   "tipo": "conectividade_no_trecho"
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
   },
   {
-   "de": "tubulacao/1",
+   "de": {
+    "grupo": "no",
+    "tipo": 2
+   },
+   "descricao": "tubulação com válvula de retenção ligada ao nó",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 2
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "reservatorio_de_nivel_fixo",
+    "tipo": 1
+   },
    "descricao": "tubulação ligada ao nó",
-   "para": "reservatorio_de_nivel_fixo/1",
-   "tipo": "conectividade_no_trecho"
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
   },
   {
-   "de": "tubulacao/1",
+   "de": {
+    "grupo": "reservatorio_de_nivel_fixo",
+    "tipo": 1
+   },
+   "descricao": "tubulação com válvula de retenção ligada ao nó",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 2
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "reservatorio_de_nivel_variavel",
+    "tipo": 1
+   },
    "descricao": "tubulação ligada ao nó",
-   "para": "reservatorio_de_nivel_variavel/1",
-   "tipo": "conectividade_no_trecho"
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
   },
   {
-   "de": "tubulacao/1",
-   "descricao": "válvula em série na tubulação",
-   "para": "valvula/1",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "tubulacao/1",
-   "descricao": "válvula em série na tubulação",
-   "para": "valvula/2",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "tubulacao/1",
-   "descricao": "válvula em série na tubulação",
-   "para": "valvula/3",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "tubulacao/1",
-   "descricao": "válvula em série na tubulação",
-   "para": "valvula/4",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "tubulacao/1",
-   "descricao": "válvula em série na tubulação",
-   "para": "valvula/5",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "tubulacao/1",
-   "descricao": "válvula em série na tubulação",
-   "para": "valvula/6",
-   "tipo": "conectividade_no_trecho"
-  },
-  {
-   "de": "tubulacao/2",
+   "de": {
+    "grupo": "reservatorio_de_nivel_variavel",
+    "tipo": 1
+   },
    "descricao": "tubulação com válvula de retenção ligada ao nó",
-   "para": "no/1",
-   "tipo": "conectividade_no_trecho"
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 2
+   },
+   "tipo": "juncao_aresta"
   },
   {
-   "de": "tubulacao/2",
-   "descricao": "tubulação com válvula de retenção ligada ao nó",
-   "para": "no/2",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "valvula",
+    "tipo": 1
+   },
+   "descricao": "válvula em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
   },
   {
-   "de": "tubulacao/2",
-   "descricao": "tubulação com válvula de retenção ligada ao nó",
-   "para": "reservatorio_de_nivel_fixo/1",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "valvula",
+    "tipo": 2
+   },
+   "descricao": "válvula em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
   },
   {
-   "de": "tubulacao/2",
-   "descricao": "tubulação com válvula de retenção ligada ao nó",
-   "para": "reservatorio_de_nivel_variavel/1",
-   "tipo": "conectividade_no_trecho"
+   "de": {
+    "grupo": "valvula",
+    "tipo": 3
+   },
+   "descricao": "válvula em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "valvula",
+    "tipo": 4
+   },
+   "descricao": "válvula em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "valvula",
+    "tipo": 5
+   },
+   "descricao": "válvula em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "valvula",
+    "tipo": 6
+   },
+   "descricao": "válvula em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
   }
  ],
  "terminais": [
