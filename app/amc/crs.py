@@ -63,7 +63,10 @@ def ficha_crs(pontos: list[tuple[float, float]], bbox: tuple[float, float, float
     dist_min = (min(escalas) - 1.0) * 100.0
     dist_max = (max(escalas) - 1.0) * 100.0
     xmin, _ymin, xmax, _ymax = bbox
-    zonas = sorted({zona_utm(xmin), zona_utm(xmax), zona})
+    # TODAS as zonas do intervalo, não só as pontas: uma área de -60° a -42° cobre 21, 22, 23 e 24, e até
+    # 06/09/2026 a ficha declarava [21, 22, 24] e dizia "cruza 3 zonas" (achado do adversário do item L3-01-b).
+    z_esquerda, z_direita = sorted((zona_utm(xmin), zona_utm(xmax)))
+    zonas = sorted(set(range(z_esquerda, z_direita + 1)) | {zona})
     mc = meridiano_central(zona)
     afastamento = max(abs(xmin - mc), abs(xmax - mc))
     avisos = []

@@ -136,7 +136,7 @@ def test_reenviar_a_mesma_definicao_nao_cria_versao(sessao_a, modelo_a):
 
 
 def test_versao_gravada_e_imutavel_para_a_aplicacao(conexao_plat_app, sessao_a, modelo_a):
-    """Nem a role da aplicação edita ou apaga uma versão: o gatilho da migração 044 recusa."""
+    """Nem a role da aplicação edita ou apaga uma versão: o gatilho da migração 045 recusa."""
     import psycopg2
 
     modelo, _ = modelo_a
@@ -342,3 +342,95 @@ def test_rls_no_banco_esconde_amc_de_outro_inquilino(conexao_plat_app, sessao_a,
             cur.execute("DELETE FROM plat.amc_resultado WHERE execucao_id = %s::uuid", (execucao["id"],))
         conexao_plat_app.commit()
         sessao_a.delete(f"/api/amc/execucoes/{execucao['id']}")
+
+
+# ================================================================ conserto do laudo L3-01-ADVERSARIO (06/09/2026)
+def test_chave_repetida_no_corpo_cru_sai_422_json_ambiguo(sessao_a):
+    """Achado 5: `json.loads` fica em silêncio com a ÚLTIMA ocorrência da chave repetida. Num documento cuja versão
+    é o hash do próprio documento, aceitar um texto ambíguo sem avisar é buraco de auditoria."""
+    definicao = _modelo_com_itens(sessao_a)
+    texto = json.dumps({"definicao": definicao}, ensure_ascii=False)
+    alvo = f'"nome": "{definicao["nome"]}"'
+    assert alvo in texto
+    ambiguo = texto.replace(alvo, '"nome": "MODELO QUE NAO VALE", ' + alvo, 1)
+    cabecalho = {"content-type": "application/json"}
+    for rota in ("/api/amc/modelos/validar", "/api/amc/modelos"):
+        r = sessao_a.post(rota, content=ambiguo, headers=cabecalho)
+        assert r.status_code == 422 and r.json()["erro"] == "json_ambiguo", (rota, r.text)
+        assert r.json()["detalhe"]["chave"] == "nome"
+    # o mesmo corpo sem a repetição continua sendo aceito
+    r = sessao_a.post("/api/amc/modelos", content=texto, headers=cabecalho)
+    assert r.status_code == 201, r.text
+    mid = r.json()["id"]
+    try:
+        r = sessao_a.put(f"/api/amc/modelos/{mid}", content=ambiguo, headers=cabecalho)
+        assert r.status_code == 422 and r.json()["erro"] == "json_ambiguo", r.text
+    finally:
+        sessao_a.delete(f"/api/amc/modelos/{mid}")
+
+
+def test_peso_inteiro_e_peso_real_iguais_nao_criam_versao_nova(sessao_a):
+    """Achado 5: `3` e `3.0` são o mesmo número em JSON. Reenviar o modelo com o peso escrito como inteiro não pode
+    criar uma versão nova, e o que fica gravado é o documento normalizado."""
+    definicao = _modelo_com_itens(sessao_a)
+    definicao["fatores"][0]["peso"] = 3.0
+    r = sessao_a.post("/api/amc/modelos", json={"definicao": definicao})
+    assert r.status_code == 201, r.text
+    modelo = r.json()
+    try:
+        como_inteiro = json.loads(json.dumps(definicao))
+        como_inteiro["fatores"][0]["peso"] = 3
+        r = sessao_a.put(f"/api/amc/modelos/{modelo['id']}", json={"definicao": como_inteiro})
+        assert r.status_code == 200, r.text
+        assert r.json()["versao_nova"] is False, "3 e 3.0 criaram versão nova"
+        assert r.json()["versao_hash"] == modelo["versao_hash"]
+        assert sessao_a.get(f"/api/amc/modelos/{modelo['id']}").json()["n_versoes"] == 1
+        # e mudar o peso de verdade continua criando versão
+        outro = json.loads(json.dumps(definicao))
+        outro["fatores"][0]["peso"] = 4
+        assert sessao_a.put(f"/api/amc/modelos/{modelo['id']}",
+                            json={"definicao": outro}).json()["versao_nova"] is True
+    finally:
+        sessao_a.delete(f"/api/amc/modelos/{modelo['id']}")
+
+
+def test_transformacao_incoerente_recusada_pela_api(sessao_a):
+    """Achado 2 pela API: o 422 traz a cláusula violada, como nos quatro defeitos que o item já pegava."""
+    definicao = _modelo_com_itens(sessao_a)
+    definicao["fatores"][0]["transformacao"] = {"tipo": "linear", "minimo": 30, "maximo": 0}
+    for rota in ("/api/amc/modelos/validar", "/api/amc/modelos"):
+        r = sessao_a.post(rota, json={"definicao": definicao})
+        assert r.status_code == 422 and r.json()["erro"] == "modelo_invalido", (rota, r.text)
+        clausulas = [v["clausula"] for v in r.json()["detalhe"]["violacoes"]]
+        assert "transformacao: minimo < maximo" in clausulas, clausulas
+
+
+def test_erro_de_privilegio_do_banco_nao_vira_403_de_inquilino(conexao_plat_app):
+    """Achado 1 do laudo, terceira parte: o SQLSTATE 42501 tem dois donos e os dois saíam com a MESMA frase.
+    Violar a política de inquilino continua sendo 403 'operação fora do inquilino da sessão'; faltar GRANT no
+    banco é erro de INSTALAÇÃO e passa a sair 500 `privilegio_do_banco` — dizer ao operador que ele saiu do
+    inquilino mandava-o investigar o lugar errado."""
+    import psycopg2
+
+    from app.auth.comum import erro_do_banco
+
+    ids = ids_por_slug(conexao_plat_app)
+    contexto(conexao_plat_app, ids["demo"])
+    # (a) fronteira de inquilino: RLS recusa o INSERT com tenant alheio
+    with conexao_plat_app.cursor() as cur, pytest.raises(psycopg2.errors.InsufficientPrivilege) as e:
+        cur.execute("INSERT INTO plat.amc_modelo(tenant_id, nome, versao_hash, criado_por, atualizado_por) "
+                    "VALUES (%s, 'zt-amc rls', %s, 0, 0)", (ids["demo2"], "0" * 64))
+    conexao_plat_app.rollback()
+    assert "row-level security" in str(e.value)
+    erro = erro_do_banco(e.value)
+    assert erro.status_code == 403 and erro.erro == "sem_permissao"
+
+    # (b) falta de GRANT: mesmo SQLSTATE, outra causa, outra resposta
+    contexto(conexao_plat_app, ids["demo"])
+    with conexao_plat_app.cursor() as cur, pytest.raises(psycopg2.errors.InsufficientPrivilege) as e:
+        cur.execute("SELECT 1 FROM pg_catalog.pg_authid")
+    conexao_plat_app.rollback()
+    assert "permission denied" in str(e.value)
+    erro = erro_do_banco(e.value)
+    assert erro.status_code == 500 and erro.erro == "privilegio_do_banco", (erro.status_code, erro.erro)
+    assert "inquilino" not in erro.mensagem.split("não de inquilino")[0], erro.mensagem
