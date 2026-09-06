@@ -21,7 +21,7 @@ from app import db, limites
 from app.auth.comum import campos_json, paginacao
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import busca as mod_busca
-from app.catalogo import comum, diff, documento, metadado, relacoes, texto, tipos
+from app.catalogo import comum, diff, documento, metadado, procedencia, relacoes, texto, tipos
 from app.catalogo.comum import (
     carregar,
     exigir_edicao,
@@ -188,6 +188,33 @@ def filtros_da_query(auth: Auth, p: dict, lixeira: bool = False) -> tuple[list[s
         cond.append("i.extent && ST_MakeEnvelope(%s, %s, %s, %s, 4326)")
         params.extend([xmin, ymin, xmax, ymax])
         chave["bbox"] = [xmin, ymin, xmax, ymax]
+    # item L0-09-a: filtro lateral por licença registrada no bloco de procedência e por pontuação mínima
+    licencas = _lista_str(p.get("licenca"))
+    if licencas:
+        partes, valores = [], []
+        for v in licencas:
+            if v.lower() in ("nenhuma", "ausente"):
+                partes.append("plat.procedencia_licenca(i.dados) IS NULL")
+            else:
+                partes.append("plat.procedencia_licenca(i.dados) ILIKE '%%' || %s || '%%'")
+                valores.append(v)
+        cond.append("(" + " OR ".join(partes) + ")")
+        params.extend(valores)
+        chave["licenca"] = licencas
+    if p.get("procedencia_min") not in (None, ""):
+        try:
+            minimo = float(str(p["procedencia_min"]).replace(",", "."))
+        except ValueError as e:
+            raise ErroAPI(
+                422, "campo_invalido", "procedencia_min exige número de 0 a 10", {"campo": "procedencia_min"}
+            ) from e
+        if not 0 <= minimo <= 10:
+            raise ErroAPI(
+                422, "campo_invalido", "procedencia_min vai de 0 a 10", {"campo": "procedencia_min"}
+            )
+        cond.append("plat.procedencia_pontuacao(i.dados) >= %s")
+        params.append(minimo)
+        chave["procedencia_min"] = minimo
     if p.get("favoritos"):
         cond.append("EXISTS (SELECT 1 FROM plat.favorito f WHERE f.item_id = i.id AND f.usuario_id = %s)")
         params.append(auth.usuario_id)
@@ -344,7 +371,7 @@ def carregar_varios(cur, ids: list[str], auth: Auth, completo: bool = False) -> 
 def _params_lista(request: Request, limite, deslocamento) -> dict:
     p = {}
     for chave, valor in request.query_params.multi_items():
-        if chave in ("tipo", "familia", "dono_id", "tags", "categoria", "status", "acesso"):
+        if chave in ("tipo", "familia", "dono_id", "tags", "categoria", "status", "acesso", "licenca"):
             p.setdefault(chave, []).append(valor)
         else:
             p[chave] = valor
@@ -417,6 +444,8 @@ def listar(
     modificado_ate: str | None = None,
     bbox: str | None = None,
     grupo_id: str | None = None,
+    licenca: list[str] | None = Query(None),
+    procedencia_min: float | None = None,
     favoritos: bool = False,
     meus: bool = False,
     prefixo: bool = False,
@@ -478,6 +507,14 @@ def facetas(request: Request, auth: Auth = autenticado(escopo_token="catalogo:le
             params,
         )
         saida["categoria"] = [{"id": str(r["id"]), "valor": r["valor"], "n": r["n"]} for r in cur.fetchall()]
+        # item L0-09-a: licença REGISTRADA no bloco de procedência (o valor 'nenhuma' é o item sem licença
+        # escrita, que é justamente o que o filtro precisa achar — regra D17 do acervo aplicada ao catálogo)
+        cur.execute(
+            "SELECT coalesce(plat.procedencia_licenca(i.dados), 'nenhuma') AS valor, count(*) AS n "
+            f"{FROM_LISTA}{onde} GROUP BY 1 ORDER BY n DESC, 1 LIMIT 100",
+            params,
+        )
+        saida["licenca"] = [{"valor": r["valor"], "n": r["n"]} for r in cur.fetchall()]
     return saida
 
 
@@ -556,6 +593,9 @@ def _publicar_tipo(auth: Auth, tipo: str) -> None:
 def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteudo.criar")):
     tipos.obter(corpo.tipo)
     _publicar_tipo(auth, corpo.tipo)
+    # item L0-09-a: o bloco de procedência é canonizado ANTES do JSON Schema (licenca='' vira null, apelido do
+    # acervo vira nome canônico, origem declarado|medido é conferida) — o que o banco guarda é o já normalizado.
+    corpo.dados = procedencia.normalizar_em_dados(corpo.dados)
     tipos.validar(corpo.tipo, corpo.dados)
     documento.validar_grafo(corpo.tipo, corpo.dados)
     _classificacao(auth, corpo.classificacao, novo=True)
@@ -692,6 +732,7 @@ def editar_item(
         raise ErroAPI(422, "validacao", "nada a alterar")
     dados = campos.get("dados", r["dados"])
     if "dados" in campos:
+        dados = campos["dados"] = procedencia.normalizar_em_dados(dados)  # item L0-09-a (mesma regra do POST)
         tipos.validar(r["tipo"], dados)
         documento.validar_grafo(r["tipo"], dados)
     if "classificacao" in campos:

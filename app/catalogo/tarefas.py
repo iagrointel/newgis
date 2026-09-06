@@ -279,6 +279,55 @@ class ExportarParametros(BaseModel):
     ids: list[uuid.UUID] | None = Field(None, max_length=100000)
 
 
+# item L0-09-a: a exportação leva a procedência. Licença registrada, pontuação 0-10 (a régua da
+# acervo.v_completude, calculada em SQL), campos preenchidos, hash do conteúdo e gerador saem em coluna
+# própria; o bloco inteiro sai no JSON. Lista exportada sem procedência é lista que ninguém consegue
+# auditar depois — é o que o portão do item chama de "exportação leva a procedência".
+COLUNAS_EXPORTACAO = (
+    "id", "tipo", "titulo", "resumo", "tags", "dono", "acesso", "status", "criado_em", "modificado_em",
+    "licenca", "procedencia_pontuacao", "procedencia_campos", "procedencia_sha256", "procedencia_gerador",
+)
+_SELECT_EXPORTACAO = (
+    "SELECT i.id, i.tipo, i.titulo, i.resumo, i.tags, u.login AS dono, i.acesso, "
+    "i.status, i.criado_em, i.modificado_em, "
+    "plat.procedencia_licenca(i.dados) AS licenca, "
+    "plat.procedencia_pontuacao(i.dados) AS procedencia_pontuacao, "
+    "plat.procedencia_campos(i.dados) AS procedencia_campos, "
+    "plat.procedencia_campo(plat.procedencia_bloco(i.dados), 'sha256') AS procedencia_sha256, "
+    "plat.procedencia_campo(plat.procedencia_bloco(i.dados), 'gerador', 'script_gerador') AS procedencia_gerador, "
+    "plat.procedencia_bloco(i.dados) AS procedencia "
+    "FROM plat.item i JOIN plat.usuario u ON u.id = i.dono_id WHERE i.apagado_em IS NULL"
+)
+
+
+def linhas_exportacao(cur, ids: list[uuid.UUID] | None = None) -> list[dict]:
+    """Linhas da exportação da lista (a mesma consulta do job, isolada para poder ser conferida em teste
+    sem subir worker nem armazenamento)."""
+    if ids:
+        cur.execute(
+            _SELECT_EXPORTACAO.replace("WHERE i.apagado_em IS NULL", "WHERE i.id = ANY (%s::uuid[]) "
+                                       "AND i.apagado_em IS NULL") + " ORDER BY i.titulo",
+            ([str(x) for x in ids],),
+        )
+    else:
+        cur.execute(_SELECT_EXPORTACAO + " ORDER BY i.titulo")
+    return [dict(r) for r in cur.fetchall()]
+
+
+def serializar_exportacao(linhas: list[dict], formato: str) -> tuple[bytes, str]:
+    if formato == "csv":
+        buf = io.StringIO()
+        w = csv.DictWriter(buf, fieldnames=list(COLUNAS_EXPORTACAO))
+        w.writeheader()
+        for r in linhas:
+            linha = dict(r)
+            linha["tags"] = ";".join(linha.get("tags") or [])
+            # o bloco inteiro só cabe no JSON; no CSV ficam as colunas, que é o que se filtra numa planilha
+            w.writerow({k: linha.get(k) for k in COLUNAS_EXPORTACAO})
+        return buf.getvalue().encode("utf-8"), "text/csv"
+    return json.dumps(linhas, ensure_ascii=False, default=str).encode("utf-8"), "application/json"
+
+
 @tarefa(
     nome="catalogo.exportar_lista",
     descricao="Exporta a lista de itens (csv/json) para um objeto do armazenamento",
@@ -291,45 +340,8 @@ class ExportarParametros(BaseModel):
 )
 def catalogo_exportar_lista(ctx, formato: str = "csv", ids: list[uuid.UUID] | None = None) -> dict:
     with ctx.db() as cur:
-        if ids:
-            cur.execute(
-                "SELECT i.id, i.tipo, i.titulo, i.resumo, i.tags, u.login AS dono, i.acesso, "
-                "i.status, i.criado_em, i.modificado_em "
-                "FROM plat.item i JOIN plat.usuario u ON u.id = i.dono_id WHERE i.id = ANY "
-                "(%s::uuid[]) AND i.apagado_em IS NULL ORDER BY i.titulo",
-                ([str(x) for x in ids],),
-            )
-        else:
-            cur.execute(
-                "SELECT i.id, i.tipo, i.titulo, i.resumo, i.tags, u.login AS dono, i.acesso, "
-                "i.status, i.criado_em, i.modificado_em "
-                "FROM plat.item i JOIN plat.usuario u ON u.id = i.dono_id WHERE i.apagado_em IS NULL ORDER BY i.titulo"
-            )
-        linhas = [dict(r) for r in cur.fetchall()]
-    if formato == "csv":
-        buf = io.StringIO()
-        w = csv.DictWriter(
-            buf,
-            fieldnames=[
-                "id",
-                "tipo",
-                "titulo",
-                "resumo",
-                "tags",
-                "dono",
-                "acesso",
-                "status",
-                "criado_em",
-                "modificado_em",
-            ],
-        )
-        w.writeheader()
-        for r in linhas:
-            r["tags"] = ";".join(r["tags"] or [])
-            w.writerow({k: r[k] for k in w.fieldnames})
-        dados, ct = buf.getvalue().encode("utf-8"), "text/csv"
-    else:
-        dados, ct = json.dumps(linhas, ensure_ascii=False, default=str).encode("utf-8"), "application/json"
+        linhas = linhas_exportacao(cur, ids)
+    dados, ct = serializar_exportacao(linhas, formato)
     with ctx.db() as cur:
         o = objetos.guardar(cur, "exportacao", dados, ct, item_id=ctx.job_id)
     ctx.progresso(100, f"{len(linhas)} itens exportados")
