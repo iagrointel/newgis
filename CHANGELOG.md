@@ -3,6 +3,31 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (conserto do grupo G4: dono de objeto, teto de cota, expurgo de rastro, contrato comitado)
+
+Cinco achados do ataque adversarial independente (`laco/handoffs/T3/ataque-g4-ADVERSARIO.md`, ramo `wt/adv4`)
+consertados nesta trilha (`wt/g4fix`); decisões em `docs/adr/20260906T1747-g4-conserto-seguranca.md`.
+`GET`/`DELETE /api/arquivos/{sha256}` agora exigem ser DONO do objeto ou ter `conteudo.ver_tudo`/
+`conteudo.apagar_tudo` (G4-06, G4-07; um visualizador lia e apagava o logotipo da organização). Apagar objeto
+grava evento (`arquivos/apagar`) e marca a linha como apagada por `plat.arquivo_apagado_marcar`, `SECURITY
+DEFINER` com o inquilino como argumento explícito — não mais um `UPDATE` que a RLS engolia em silêncio fora de
+sessão (G4-08, G4-09; a varredura de órfãos parou de acusar toda exclusão legítima). `plat.tenant` ganhou
+`cota_bytes_teto`/`cota_usuarios_teto` (padrão 20 GiB / 2000, teto absoluto da instalação 1 TiB / 100.000);
+`PUT /api/org` recusa com `422 cota_acima_do_teto` acima do teto do inquilino, e só a plataforma move o teto
+(`PUT /api/plataforma/inquilinos/{id}/cotas`, superadmin) — três camadas independentes (esquema, rota,
+gatilho `tg_tenant_cota_guarda`) fecham o que antes deixava um admin de inquilino subir a cota a `9×10¹⁸`
+bytes com `200 OK` (G4-04, G4-05). `plat.evento_expurgar`/`log_expurgar` agora validam `p_meses` (1-1200, nunca
+alcança o mês corrente) e perderam `EXECUTE` de `plat_app`/`plat_worker`; expurgo por UM inquilino é caminho
+separado (`*_expurgar_inquilino`, `EXECUTE` só para `plat_worker`) que apaga linha, nunca partição — antes,
+`evento_expurgar(-1)` derrubava a partição do mês corrente para todos os inquilinos (G4-10). `docs/openapi.json`
+regerado e `tests/api/test_openapi_contrato.py` novo compara o arquivo comitado com `app.openapi()` a cada
+rodada — estava 28 rotas atrás, o que fazia a cobertura de evento e a varredura cruzada de isolamento
+enxergarem menos rotas do que a aplicação tem (G4-01). Migração
+`db/migracoes/20260906T1601_g4_conserto_seguranca.sql`. `tests/api/test_g4_adversario.py` (ramo `wt/adv4`,
+copiado) teve as marcas `xfail` destes oito achados trocadas por teste comum; `tests/api/test_g4_conserto.py`
+cobre o que o ataque não podia medir de fora (ciclo completo do apagar, permissão de banco, caminho legítimo
+do teto). Os demais 16 achados do laudo (G4-02/03/11 a 24) pertencem a outros itens/trilhas e ficam de fora.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
