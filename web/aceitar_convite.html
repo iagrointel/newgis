@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Aceitar convite · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="tela instrumento">
+<main class="entrar" id="principal">
+  <div class="cartao instrumento-moldura">
+    <div class="marca"><strong data-i18n="app.nome">plat</strong> <span class="aviso-beta" data-i18n="app.beta">análise / beta privado</span></div>
+    <h1 data-i18n="aceitar_convite.titulo">Aceitar convite</h1>
+    <plat-aviso id="aviso"></plat-aviso>
+    <p id="convite-info" hidden><span data-i18n="aceitar_convite.convidado_para">Convite para</span> <strong id="convite-tenant"></strong>, <span id="convite-email"></span></p>
+    <form id="form-aceitar" class="form" novalidate hidden autocomplete="off">
+      <div class="campo">
+        <label for="login" data-i18n="login.usuario">usuário</label>
+        <input id="login" name="login" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="128" pattern="^[a-z0-9][a-z0-9._@-]*$">
+      </div>
+      <div class="campo">
+        <label for="nome" data-i18n="campo.nome">nome</label>
+        <input id="nome" name="nome" type="text" autocomplete="name" required maxlength="200">
+      </div>
+      <div class="campo">
+        <label for="senha" data-i18n="aceitar_convite.senha">escolha uma senha</label>
+        <div class="linha-senha">
+          <input id="senha" name="senha" type="password" autocomplete="new-password" required>
+          <button type="button" id="mostrar-senha" class="pequeno" aria-pressed="false" aria-controls="senha" data-i18n="form.mostrar">mostrar</button>
+        </div>
+      </div>
+      <div class="botoes"><button type="submit" id="aceitar" class="primario" data-i18n="aceitar_convite.criar_conta">Criar conta</button></div>
+    </form>
+    <div id="concluido" hidden>
+      <p data-i18n="aceitar_convite.concluido">Conta criada. Você já pode entrar.</p>
+      <a id="link-entrar" class="botao primario" href="/entrar" data-i18n="login.entrar">Entrar</a>
+    </div>
+  </div>
+</main>
+<script type="module" src="/static/js/auth/aceitar_convite.js"></script>
+</body>
+</html>

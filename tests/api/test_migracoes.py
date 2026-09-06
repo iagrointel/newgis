@@ -6,6 +6,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from app.db import migracoes_em_disco
+
 ROOT = Path(__file__).resolve().parents[2]
 MIGRAR = ROOT / "db" / "migrar.sh"
 MIGRACOES = ROOT / "db" / "migracoes"
@@ -30,12 +32,12 @@ def test_migrar_duas_vezes_nao_insere_linha(conexao_plat_app):
     assert r2.returncode == 0, r2.stderr
     assert linhas(conexao_plat_app) == antes
     assert "pendentes 0" in r2.stdout and "aplicadas 0" in r2.stdout
-    assert r2.stdout.count("igual ") == len(list(MIGRACOES.glob("[0-9][0-9][0-9]_*.sql")))
+    assert r2.stdout.count("igual ") == len(migracoes_em_disco())
 
 
 def test_tabela_reflete_os_arquivos_em_disco(conexao_plat_app):
     nomes = {n for n, _ in linhas(conexao_plat_app)}
-    assert nomes == {p.stem for p in MIGRACOES.glob("[0-9][0-9][0-9]_*.sql")}
+    assert nomes == set(migracoes_em_disco())
 
 
 def test_arquivo_aplicado_editado_devolve_codigo_3(tmp_path, conexao_plat_app):

@@ -107,6 +107,10 @@ def _filtro_dono(sessao: Sessao) -> tuple[str, list]:
 def criar(sessao: Sessao, tipo: str, parametros, prioridade: int = 5, agendado_para: str | None = None,
           repetido_de: str | None = None, agenda_id=None, programado_para=None) -> dict:
     t = tipo_registrado(tipo)
+    if t.somente_sistema:
+        # item L0-07-d-smtp-convites: tipo que só o backend enfileira (app/jobs/sistema.py) — nunca por esta rota,
+        # nem para admin (evita usar o SMTP do inquilino como canhão de e-mail arbitrário via /api/jobs).
+        raise ErroServico(403, "tipo_somente_sistema", f"{t.nome} só é criado internamente, nunca por esta rota")
     _exigir_perfil(sessao, t.perfil_minimo, f"criar job {t.nome}")
     params = _parametros(t, parametros)
     if not isinstance(prioridade, int) or not 1 <= prioridade <= 9:

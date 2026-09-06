@@ -46,6 +46,7 @@ class Tarefa:
     threads_blas: int
     perfil_minimo: str
     ferramentas: tuple[str, ...]
+    somente_sistema: bool
 
 
 REGISTRO: dict[str, Tarefa] = {}
@@ -70,8 +71,14 @@ def ordem_perfil(perfil: str) -> int:
 def tarefa(*, nome: str, descricao: str, parametros: type[BaseModel], pesado: bool = False, memoria_mb: int = 256,
            timeout_s: int = 3600, tentativas: int = 3, chave: Callable[[dict], str | None] | None = None,
            executor: str = "local", versao: int = 1, threads_blas: int = 1, perfil_minimo: str = "editor",
-           ferramentas: tuple[str, ...] = ()):
-    """Decorador de registro. Recusa na importação (ErroRegistro) tudo o que a seção 3.1 do ADR 0003 proíbe."""
+           ferramentas: tuple[str, ...] = (), somente_sistema: bool = False):
+    """Decorador de registro. Recusa na importação (ErroRegistro) tudo o que a seção 3.1 do ADR 0003 proíbe.
+
+    `somente_sistema=True` (item L0-07-d-smtp-convites) marca um tipo que só o PRÓPRIO backend enfileira
+    (`app/jobs/sistema.py::enfileirar`), nunca `POST /api/jobs`: sem a marca, qualquer usuário com
+    `jobs.executar` poderia criar `correio.enviar` com destinatário/assunto/texto arbitrários e usar o SMTP
+    do inquilino como canhão de spam/phishing — `app/jobs/servico.py::criar` recusa com 403 antes de chegar
+    à fila (achado desta sessão ao desenhar o item, não do adversário — registrado aqui para não se repetir)."""
     if not PADRAO_NOME.match(nome):
         raise ErroRegistro(f"nome de tipo fora do padrão <area>.<verbo>: {nome!r}")
     if nome in REGISTRO:
@@ -105,6 +112,7 @@ def tarefa(*, nome: str, descricao: str, parametros: type[BaseModel], pesado: bo
             nome=nome, descricao=descricao, parametros=parametros, funcao=funcao, pesado=pesado,
             memoria_mb=memoria_mb, timeout_s=timeout_s, tentativas=tentativas, chave=chave, executor=executor,
             versao=versao, threads_blas=threads_blas, perfil_minimo=perfil_minimo, ferramentas=tuple(ferramentas),
+            somente_sistema=somente_sistema,
         )
         return funcao
 
@@ -133,4 +141,5 @@ def descrever(t: Tarefa) -> dict:
         "nome": t.nome, "descricao": t.descricao, "pesado": t.pesado, "memoria_mb": t.memoria_mb,
         "timeout_s": t.timeout_s, "tentativas": t.tentativas, "executor": t.executor, "versao": t.versao,
         "perfil_minimo": t.perfil_minimo, "parametros_schema": esquema_parametros(t),
+        "somente_sistema": t.somente_sistema,
     }
