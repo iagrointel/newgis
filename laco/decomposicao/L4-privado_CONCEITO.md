@@ -30,7 +30,7 @@ existem ainda** — ver C12 (veredito).
   `dist_rede_mt_m`/`rede_mt_dentro_m` — que são distância à rede de MÉDIA TENSÃO PÚBLICA da concessionária, não à rede
   interna do condomínio. Nenhuma tabela guarda tubo, poço de visita, caixa de passagem, poste ou luminária do
   empreendimento.
-- **A própria pesquisa que gerou o SIG de teste já registrou o gap e chamou pelo nome certo.** `DOSSIE_FGR_SIG.md`
+- **A própria pesquisa que gerou o SIG de teste já registrou o gap e chamou pelo nome certo.** `DOSSIE_incorporadora-de-teste_SIG.md`
   seção 5 (T1/T2/T3): "T3 — pesquisa/digitalização. Apontar e ver a rede hidráulica/elétrica exige as-built
   georreferenciado das REDES. [O cliente] provavelmente tem isso só em DWG 2D, sem georreferência consistente e sem
   padrão de layer. O custo e o prazo aqui são de DIGITALIZAÇÃO, não de software. Nunca prometer T3 antes de abrir um
@@ -198,7 +198,7 @@ existem ainda** — ver C12 (veredito).
   automaticamente × o que precisa de revisão manual — nunca "pronto" sem o relatório; (b) prometer digitalização
   automática completa; (c) recusar qualquer DWG sem padrão e pedir para o cliente refazer o levantamento.
 - Custo de mudar: (b) já foi a lição aprendida em outro produto da casa e queimou a demonstração (regra dura já
-  registrada: "nunca prometer T3 antes de abrir um DWG deles" — `DOSSIE_FGR_SIG.md` seção 5); (c) fecha a porta para
+  registrada: "nunca prometer T3 antes de abrir um DWG deles" — `DOSSIE_incorporadora-de-teste_SIG.md` seção 5); (c) fecha a porta para
   o cliente mais comum (a maioria não tem as-built em padrão nem georreferenciado).
 - Recomendação: **(a)**, com preço e prazo cotados como ETAPA SEPARADA (o mesmo padrão de "Fase 0" que o caso lido já
   usa: diagnóstico pago primeiro, antes de qualquer promessa sobre o resultado).
@@ -216,7 +216,7 @@ existem ainda** — ver C12 (veredito).
   precisa ver TODA a infraestrutura comum, nunca o dado privado dos lotes individuais) sob o mesmo modelo de permissão,
   que quebra a primeira vez que uma incorporadora quiser vender o módulo separado da administradora; (c) inviabiliza
   o modelo de receita descrito em C11 (a assinatura é de quem realmente usa e paga por décadas).
-- Recomendação: **(a)**. É o comprador que justifica a receita recorrente (`DOSSIE_FGR_SIG.md` seção 5: "a rede...
+- Recomendação: **(a)**. É o comprador que justifica a receita recorrente (`DOSSIE_incorporadora-de-teste_SIG.md` seção 5: "a rede...
   é mantida por décadas pelo condomínio/administradora... isso muda o modelo de receita: entrega única para a
   incorporadora, assinatura para cada condomínio entregue"). Sem esse perfil o produto não tem para quem cobrar depois
   da entrega.
