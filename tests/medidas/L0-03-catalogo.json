@@ -60,8 +60,23 @@
    "valor": 25.5,
    "unidade": "ms",
    "comando": "GET /api/itens/facetas?tipo=mapa, 10 execuções"
+  },
+  "sino_consulta_p95_ms": {
+   "valor": 0.384,
+   "unidade": "ms",
+   "comando": "SELECT count(*) FROM plat.notificacao WHERE usuario_id = ? AND lida_em IS NULL, 20 execuções"
+  },
+  "sino_http_p95_ms": {
+   "valor": 19.93,
+   "unidade": "ms",
+   "comando": "GET /api/notificacoes/contagem, 20 execuções"
+  },
+  "versoes_linhas_apos_compactacao": {
+   "valor": 50,
+   "unidade": "linhas",
+   "comando": "1.000 PUTs no mesmo item (21,4 s) e compactar_item(cur, item, 50) até estabilizar: removeu 951, sobraram 50 linhas em 40 ms; a passagem seguinte removeu 0"
   }
  },
- "gerado_em": "2026-09-06T00:48:46Z",
- "git_sha": "94a669c6601f"
+ "gerado_em": "2026-09-06T16:24:31Z",
+ "git_sha": "90d03c07da0c"
 }

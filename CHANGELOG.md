@@ -3,6 +3,41 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (consertos do ataque G2 ao catálogo — trilha wt/g2fix; ADR 20260906T1623)
+
+O adversário independente do grupo G2 refutou 6 dos 12 itens do catálogo (`laco/handoffs/T3/ataque-g2-ADVERSARIO.md`).
+Seis dos nove achados estão consertados e os testes dele perderam a marca `xfail`, passando a exigir o
+comportamento certo:
+
+- **Perda de dado (G2-4).** `POST /api/lixeira/esvaziar` com identificador que a segurança de linha não resolvia
+  enfileirava `ids: []`; a tarefa lia `[]` como `NULL` e `plat.lixeira_expurgar(0, now(), NULL)` devolvia a
+  lixeira INTEIRA do inquilino, com expurgo físico. Agora a rota recusa (404 `nenhum_item_na_lixeira`; 409
+  `lixeira_vazia` quando não há nada), a tarefa recusa lista vazia e recusa quando o banco devolve mais
+  candidatos do que a lista pediu. Mesma correção em `catalogo.exportar_lista`.
+- **Auditoria falsa (G2-5).** Uma atualização barrada pela segurança de linha afeta zero linhas sem erro, e a
+  transferência de dono gravava `itens/transferir` de item arrastado que não mudou de dono. A pré-checagem
+  passou a declarar a falha `arrasto_sem_edicao` e a execução levanta 409 `transferencia_sem_efeito` quando o
+  UPDATE afeta zero linhas.
+- **Teto da compactação (G2-3).** A compactação deixava 146 linhas depois de mil gravações contra o teto de 50,
+  e o periódico rodava uma vez por dia. `compactar_item` repete a passada até estabilizar e pede
+  `manter = teto - 1` (o ponto fixo é `manter + 1` linha); o periódico passou a rodar de hora em hora. A função
+  `plat.item_versoes_compactar` não foi tocada.
+- **Cache do link (G2-6).** A miniatura entregue por link e pela rota pública sai com `no-store,
+  must-revalidate`, como as outras rotas do link; era `private, max-age=300`, e o link revogado continuava
+  servindo do cache do navegador por cinco minutos.
+- **Estrela de favorito (G2-9).** A tela mostrava o contrário do que o servidor guardou quando havia recarga de
+  lista em voo. A intenção passa a ser registrada antes da chamada, com número de ordem, e a lista reconcilia
+  toda resposta pedida antes dela.
+- **Notificação interna (G2-7).** A metade de notificação do item L0-03-k não existia. Foram construídos a
+  tabela `plat.notificacao` (dedup por chave, segurança de linha por usuário, teto por minuto, expurgo de 90
+  dias), as rotas `/api/notificacoes`, a emissão em convite de grupo, pedido de entrada e fim de job, e o sino
+  na barra lateral. **O item segue PARCIAL**: "item compartilhado comigo" e "prazo de token" ainda não emitem.
+
+Continuam `xfail` de propósito, com a trilha das funções definidoras: G2-1 e G2-2 (`plat.item_versoes_compactar`
+apaga versão de item de outro inquilino, e a fila aceita o pedido) e G2-8 (13 funções do schema com EXECUTE para
+PUBLIC). A cláusula "nome de item de 2.048 caracteres" do portão do L0-03-f é insatisfazível — o banco para em
+250 — e a decisão registrada no ADR é manter o banco e corrigir a cláusula.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
