@@ -190,6 +190,29 @@ reprova nome fora do padrão, três dígitos novos e dependência que vem depois
 `tests/api/test_saude.py` deixa de casar o glob de três dígitos e escreve o que "última migração" passa a
 significar (a de autoria mais recente pela chave, não a maior string nem a última aplicada no relógio).
 ## turno 3, setembro de 2026 (item L6-02-c-wfs-ogcapi: conector WFS 2.0 e OGC API - Features)
+## turno 4, setembro de 2026 (item L4-28-identificadores-e-numeracao: identidade de ativo com faixa reservada para campo)
+
+O ativo de rede de utilidades ganha as três identidades de uma vez, todas garantidas no banco
+(`db/migracoes/20260906T2121_rede_identificadores.sql`, ADR `20260906T2121-rede-identificadores`):
+**global_id** (uuid) interno e estável, que nunca muda nem na renomeação; **código externo** do cliente
+(o `COD_ID` da BDGD) único por rede — índice único parcial, duplicado = 409; e **numeração automática por
+tipo** com faixa reservada por usuário para criação desconectada, o conceito dos *unit identifiers* da
+Esri. A reserva faz o contador do tipo pular a faixa numa instrução só
+(`INSERT ... ON CONFLICT DO UPDATE ... RETURNING`, trava de linha até o commit), então conectado e
+desconectado nunca colidem e duas reservas simultâneas recebem blocos disjuntos — a refutação do item
+(10 reservas concorrentes em duas sessões) virou teste permanente. Renomear o código externo é PATCH: o
+global_id fica e cada troca grava linha em `plat.rede_ativo_renomeacao`.
+
+Rotas internas em `/api/rede/{rede_id}/ativos` e `.../faixas`; fachada compatível em
+`/rest/services/{servico}/UtilityNetworkServer/unitIdentifiers` com `query` e `reserve` (bloco exato
+`firstUnit`/`lastUnit` ou a extensão `count` para o próximo bloco livre), `?token=` e resolução do serviço
+por uuid ou nome — o mesmo desenho do GeocodeServer compatível. Divergências da Esri declaradas em
+`docs/PARIDADE.md`: erro no contrato da plataforma, `gdbVersion`/`sessionID`/`moment` ignorados, sem
+`reset`/`resize` (o contador nunca anda para trás e número entregue nunca é reutilizado). Medidas em
+`tests/medidas/L4-28-identificadores-e-numeracao.json` (10 testes na base da trilha + fumaça HTTP ao
+vivo: faixa de 100 reservada, 100 ativos criados dentro dela sem colisão, duplicado 409, renomeação com
+histórico).
+
 ## turno 3, setembro de 2026 (item L0-04-h-exportar: tirar o dado da plataforma, em 11 formatos)
 
 Exportação de camada vetorial como job (`POST /api/exportacoes` → 202; `GET /api/exportacoes[/{id}]`;

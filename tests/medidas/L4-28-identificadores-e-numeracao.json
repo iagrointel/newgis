@@ -1,0 +1,50 @@
+{
+ "item": "L4-28-identificadores-e-numeracao",
+ "descricao": "Portão literal, cláusula a cláusula. Suíte própria (tests/api/test_rede_identificadores.py, 10 testes) rodada na base da trilha plat_til428identi (SEM flock), mais fumaça HTTP ao vivo contra uvicorn próprio na porta 8212 (PLAT_GIT_SHA exportado; worktree não tem .git legível pelo app/versao.py).",
+ "sha_medido": "7789f78ee4a07b1200298bd3326ca35f3be97a8d",
+ "clausulas": {
+  "reservar faixa de 100 códigos para um usuário e criar 100 ativos offline sem colisão": {
+   "estado": "passou",
+   "comando": "venv/bin/pytest tests/api/test_rede_identificadores.py::test_reserva_100_e_cria_100_offline_sem_colisao -q",
+   "resultado": "faixa [1,100] reservada numa chamada; 100 POSTs /api/rede/{id}/ativos com numero dentro da faixa -> 201, 100 global_ids distintos e 100 números distintos; número 101 -> 422 numero_fora_de_faixa; repetir número 1 -> 409 numero_em_uso; faixa consta esgotada com consumidos=100",
+   "duracao_s": {"valor": 1.13, "unidade": "s", "obs": "call do teste (100 POSTs HTTP via TestClient + a faixa); setup da rede com pacote 1,43 s"},
+   "prova_ao_vivo": "fumaça HTTP na porta 8212: faixa [1,100] pela fachada Esri reserve count=100 e 100 POSTs com numero -> 100 global_ids distintos"
+  },
+  "código externo duplicado recusado": {
+   "estado": "passou",
+   "comando": "venv/bin/pytest tests/api/test_rede_identificadores.py::test_codigo_externo_duplicado_recusado tests/api/test_rede_identificadores.py::test_codigo_externo_mesmo_codigo_em_outra_rede_e_aceito -q",
+   "resultado": "segundo POST com o mesmo codigo_externo na MESMA rede -> 409 codigo_externo_existente; mesmo código em OUTRA rede do mesmo inquilino -> 201; mesmo código em outro inquilino -> 201 (único por rede, isolamento por RLS). Garantia no banco: índice único parcial ux_rede_ativo_codigo_externo (rede_id, codigo_externo) WHERE codigo_externo IS NOT NULL",
+   "duracao_s": {"valor": 0.11, "unidade": "s", "obs": "call do teste do duplicado"},
+   "prova_ao_vivo": "fumaça: POST com FUM-000 já existente -> 409 codigo_externo_existente"
+  },
+  "renomear mantém o global_id e grava histórico": {
+   "estado": "passou",
+   "comando": "venv/bin/pytest tests/api/test_rede_identificadores.py::test_renomear_mantem_global_id_e_grava_historico -q",
+   "resultado": "duas renomeações seguidas: global_id idêntico nas duas respostas; GET .../renomeacoes -> total=2 na ordem (ANTIGO-1->NOVO-1, NOVO-1->NOVO-2); código liberado volta a ser aceito em ativo novo (201); renomear PARA código em uso -> 409; renomear pelo MESMO código -> 200 idempotente sem linha nova de histórico",
+   "prova_ao_vivo": "fumaça: PATCH FUM-RENOMEADO manteve o global_id e o histórico gravou 1 linha com o código novo"
+  },
+  "API unitIdentifiers da fachada Esri mapeada": {
+   "estado": "passou",
+   "comando": "venv/bin/pytest tests/api/test_rede_identificadores.py::test_fachada_esri_descritor_reserve_e_query tests/api/test_rede_identificadores.py::test_fachada_esri_resolve_servico_por_nome_e_token_na_url -q",
+   "resultado": "GET /rest/services/{s}/UtilityNetworkServer/unitIdentifiers -> {operations: [query, reserve], currentVersion: 12.1}; reserve com extensão count=50 -> bloco contíguo de 50; reserve com firstUnit=1001/lastUnit=1100 -> bloco exato; bloco exato sobreposto [1050,1200] -> 409; query devolve as duas faixas como unitIdentifiers e a lacuna {start: 51, end: 1000} como gap; serviço resolvido por uuid OU nome exato; ?token= de serviço (escopo catalogo:ler) aceito; sem credencial -> 401. De-para completo em docs/PARIDADE.md (seção da fachada) com divergências declaradas (envelope de erro, gdbVersion/sessionID/moment ignorados, sem reset/resize, resposta do reserve na forma do query)",
+   "prova_ao_vivo": "fumaça: descritor + reserve count=100 pela fachada contra uvicorn real -> faixa [1,100]"
+  },
+  "teste automatizado": {
+   "estado": "passou",
+   "comando": "timeout 600 venv/bin/pytest tests/api/test_rede_identificadores.py -q -p no:cacheprovider",
+   "resultado": "10 passed (base própria plat_til428identi, sem flock). Travas adjacentes também verdes: tests/api/test_fk_composta_por_inquilino.py (as 4 tabelas novas com FK composta) e tests/unit/test_nomes.py (nome de migração por carimbo)"
+  },
+  "refutação: adversário reserva a mesma faixa em dois clientes e confere que o segundo recebe outra": {
+   "estado": "passou (refutação não se sustentou)",
+   "comando": "venv/bin/pytest tests/api/test_rede_identificadores.py::test_reservas_concorrentes_recebem_faixas_disjuntas -q",
+   "resultado": "10 reservas de 10 números em ThreadPoolExecutor(10) alternando DUAS sessões (dois usuários): as 10 faixas recebidas são disjuntas duas a duas (f1 < i2 após ordenar) e somam exatamente 100 números distintos. Por construção: alocação é INSERT ... ON CONFLICT DO UPDATE ... RETURNING numa linha só do contador (trava de linha até o commit), e o banco ainda impõe EXCLUDE gist de int8range sobre faixas abertas do mesmo tipo",
+   "duracao_s": {"valor": 0.99, "unidade": "s", "obs": "call do teste de corrida"}
+  }
+ },
+ "ambiente": {
+  "base": "plat_til428identi (schema próprio da trilha, migrações 50 aplicadas / 0 pendentes, última 20260906T2121_rede_identificadores)",
+  "porta_api": 8212,
+  "uvicorn": "venv/bin/python -m uvicorn app.main:app --port 8212 (o venv do worktree não tem o binário uvicorn; PLAT_GIT_SHA exportado à mão porque app/versao.py não lê o .git-arquivo de worktree)"
+ },
+ "gerado_em": "2026-09-06T22:15:00Z"
+}
