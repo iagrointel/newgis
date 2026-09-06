@@ -3,6 +3,51 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
+
+Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,
+`app/multiescala/{crs,motor}.py` ainda sem rota nenhuma). Duas execuções ligadas: `POST
+/api/multiescala/conjuntos/{id}/macro` gera a grade grosseira sobre a área de estudo inteira e roda a
+combinação; `POST /api/multiescala/execucoes/{id}/micro` gera a grade fina SÓ dentro das células macro
+aprovadas (aritmético — a query de geração junta a região aprovada ANTES de expandir as sub-células, nunca
+gera tudo para descartar depois) e roda a mesma combinação nela. `GET /api/multiescala/execucoes/{id}`
+devolve o relatório por fator com `escala`/`escala_grosseira`/`razao_escala`, calculado pelo motor a partir
+de `resolucao_fonte_m` (declarada no fator) x `resolucao_grade_m` (da execução) — o cliente nunca envia
+esse campo. CRUD completo: `/conjuntos`, `/fatores`, `/fatores/{id}/amostras` (carga em lote),
+`/execucoes`; `DELETE` de conjunto e fator (cascata pelas FKs da migração), acrescentados neste turno para
+a varredura cruzada ter como limpar o que cria. Escopo de token novo `multiescala:usar`
+(`app/auth/escopos.py`). ADR `docs/adr/20260906T1640-grades-aninhadas-multiescala.md`.
+
+Um defeito de FRAMEWORK achado e corrigido, fora do arquivo deste item mas bloqueando-o:
+`app/schema_ambiente.py::CursorSchemaAmbiente` reescreve `plat.` → `plat_t<trilha>.` em `execute` e
+`callproc`, mas não em `executemany` (psycopg2 implementa em C e não chama `execute` de volta) —
+`POST /api/multiescala/fatores/{id}/amostras` falhava com `permission denied for schema plat` em qualquer
+trilha. A MESMA lacuna já quebrava `POST /api/papeis` (não deste item), convertida por `erro_do_banco` num
+403 "operação fora do inquilino da sessão" que parecia RLS cruzada e não era — reproduzido e confirmado
+antes de mexer. Corrigido na classe (um método a mais, mesmo corpo de `execute`), vale para as duas rotas.
+
+Um defeito do próprio teste (não do motor) achado rodando de verdade: uma área de estudo desenhada só um
+pouco maior que a resolução da grade (~1,35-1,47 km sobre 1 km) produz uma célula-fatia cujo CENTRO
+nominal (usado para achar o bloco de dado) cai FORA da extensão real da amostra — 2 das 4 células macro
+ficavam sem nota, não por bug, porque nenhuma amostra alcançava o bloco que aquela célula ia procurar.
+Corrigido aumentando a área de teste para 1.900 x 1.900 m (documentado no ADR, decisão B, para o próximo
+teste desta família não tropeçar na mesma coisa).
+
+Medido de verdade (`PLAT_GRAVAR_MEDIDAS=1`, `tests/medidas/L3-19-multiescala.json`), 10/10 testes passam
+duas vezes seguidas: grade macro de 1 km sobre estudo de 1.900x1.900 m dá 4 células, top_pct 50% aprova 2;
+grade micro de 100 m (k=10) gera exatamente 200 células (2 aprovadas × 10²) contra 400 possíveis (4×10²) —
+economia de 50,0%; o mesmo fator (1.000 m de escala nativa) sai `própria` na grade de 1 km e `grosseira`
+na grade de 100 m da MESMA execução ligada, sem o cliente declarar nada de diferente — é a refutação do
+item. `tests/api/multiescala/test_multiescala.py`: 10/10.
+
+**Fora do portão deste turno, registrado no ADR**: `docs/openapi.json` comitado não inclui
+`/api/multiescala/*` (regeneração é pendência do gerente após os merges); os 11 casos da varredura cruzada
+já estão em `tests/api/cruzado_casos.py` (conferidos à mão contra o app rodando — todas as 11 rotas
+recusam ou isolam o cross-tenant corretamente) e passam a valer em `test_cobertura_100_por_cento`/
+`test_rota_nao_cruza` assim que `make openapi` rodar contra a árvore juntada. `L3-01-b-unidades`
+(dependência declarada) segue PARCIAL num ramo não juntado (`wt/amc`); este item não depende dele em
+código (CRS resolvido de forma própria em `app/multiescala/crs.py`), só na hipótese conceitual.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

@@ -11,6 +11,11 @@ from typing import Any, Callable
 PREFIXO = "zt-cruzado-"
 # L6-02-a: dado aberto federal (IBGE), nunca nome de cliente/parceiro; passa pela defesa de SSRF na criação
 URL_CONEXAO_TESTE = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/35"
+# L3-19-multiescala: polígono pequeno dentro da cobertura SIRGAS 2000 UTM (zona 23S), perto de São Paulo
+AREA_MULTIESCALA_TESTE = {
+    "type": "Polygon",
+    "coordinates": [[[-46.61, -23.51], [-46.59, -23.51], [-46.59, -23.49], [-46.61, -23.49], [-46.61, -23.51]]],
+}
 PADRAO = frozenset({401, 403, 404})
 UUID_NULO = "00000000-0000-0000-0000-000000000000"  # id que não é de A nem de B: 404 garantido pela RLS/dono
 
@@ -51,6 +56,9 @@ class Preparacao:
     fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
     conexao_b: dict = field(default_factory=dict)  # L6-02-a: conexão externa de B
     convite_b: dict = field(default_factory=dict)  # L0-07-d: convite pendente de B
+    conjunto_b: dict = field(default_factory=dict)  # L3-19-multiescala: área de estudo de B
+    fator_b: dict = field(default_factory=dict)  # L3-19-multiescala: fator de B
+    execucao_b: dict = field(default_factory=dict)  # L3-19-multiescala: execução macro de B (sobre conjunto_b)
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -62,6 +70,8 @@ class Preparacao:
             marcas.append(self.conexao_b["nome"])
         if self.convite_b:
             marcas.append(self.convite_b["email"])
+        if self.conjunto_b:
+            marcas += [self.conjunto_b["nome"], self.fator_b["nome"]]
         return marcas
 
 
@@ -129,10 +139,27 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     )
     assert r.status_code == 201, r.text
     conexao_b = r.json()
+    # L3-19-multiescala: conjunto + fator + execução macro de B (sem amostra: 0 aprovadas, mas a execução
+    # existe de verdade para os casos GET/POST cross-tenant de /execucoes e /execucoes/{id}/micro)
+    r = sessao_b.post("/api/multiescala/conjuntos",
+                      json={"nome": f"{PREFIXO}conjunto-{sufixo}", "area": AREA_MULTIESCALA_TESTE})
+    assert r.status_code == 201, r.text
+    conjunto_b = r.json()
+    r = sessao_b.post("/api/multiescala/fatores",
+                      json={"nome": f"{PREFIXO}fator-{sufixo}", "resolucao_fonte_m": 100.0, "papel": "atrai"})
+    assert r.status_code == 201, r.text
+    fator_b = r.json()
+    r = sessao_b.post(f"/api/multiescala/conjuntos/{conjunto_b['id']}/macro", json={
+        "resolucao_m": 1000.0, "fatores": [{"fator_id": fator_b["id"], "peso": 1.0}],
+        "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0,
+    })
+    assert r.status_code == 201, r.text
+    execucao_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b)
+                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -158,6 +185,9 @@ def desfazer(p: Preparacao) -> None:
         p.sessao_b.delete(f"/api/pastas/{p.pasta_b['id']}")
     if p.conexao_b:
         p.sessao_b.delete(f"/api/conexoes/{p.conexao_b['id']}")
+    if p.conjunto_b:
+        p.sessao_b.delete(f"/api/multiescala/conjuntos/{p.conjunto_b['id']}")  # cascata apaga a execução também
+        p.sessao_b.delete(f"/api/multiescala/fatores/{p.fator_b['id']}")
     if p.agenda_b:
         p.sessao_b.delete(f"/api/agendas/{p.agenda_b['id']}")
     p.sessao_b.delete(f"/api/grupos/{p.grupo_b['id']}")
@@ -488,6 +518,46 @@ CASOS: dict[tuple[str, str], Caso] = {
     # quando o alvo é de B (a rota lê a conexão pelo RLS de _carregar ANTES de qualquer efeito colateral).
     ("GET", "/api/conexoes/{id}/saude-historico"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/saude-historico"),
     ("POST", "/api/conexoes/{id}/publicar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar"),
+    # ---- L3-19-multiescala: conjunto/fator/execução são do INQUILINO (tenant_id + RLS, mesma classe da
+    # conexão acima, não do registro compartilhado do acervo); GET/POST/DELETE de lista agem só sobre o
+    # próprio chamador, GET/DELETE/POST por id de B são cross-tenant puro (404, a RLS nunca deixa ver a linha).
+    ("GET", "/api/multiescala/conjuntos"): Caso(lambda p: "/api/multiescala/conjuntos", proprio=True,
+                                                aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/multiescala/conjuntos"): Caso(
+        lambda p: "/api/multiescala/conjuntos",
+        lambda p: {"nome": f"{PREFIXO}conjunto-a-{secrets.token_hex(3)}", "area": AREA_MULTIESCALA_TESTE},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/multiescala/conjuntos/{id}")),
+    ),
+    ("GET", "/api/multiescala/conjuntos/{id}"): Caso(lambda p: f"/api/multiescala/conjuntos/{p.conjunto_b['id']}"),
+    ("DELETE", "/api/multiescala/conjuntos/{id}"): Caso(lambda p: f"/api/multiescala/conjuntos/{p.conjunto_b['id']}"),
+    ("POST", "/api/multiescala/conjuntos/{id}/macro"): Caso(
+        lambda p: f"/api/multiescala/conjuntos/{p.conjunto_b['id']}/macro",
+        lambda p: {"resolucao_m": 1000.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
+                   "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
+    ),
+    ("GET", "/api/multiescala/fatores"): Caso(lambda p: "/api/multiescala/fatores", proprio=True,
+                                              aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/multiescala/fatores"): Caso(
+        lambda p: "/api/multiescala/fatores",
+        lambda p: {"nome": f"{PREFIXO}fator-a-{secrets.token_hex(3)}", "resolucao_fonte_m": 100.0, "papel": "atrai"},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/multiescala/fatores/{id}")),
+    ),
+    ("GET", "/api/multiescala/fatores/{id}"): Caso(lambda p: f"/api/multiescala/fatores/{p.fator_b['id']}"),
+    ("DELETE", "/api/multiescala/fatores/{id}"): Caso(lambda p: f"/api/multiescala/fatores/{p.fator_b['id']}"),
+    ("POST", "/api/multiescala/fatores/{id}/amostras"): Caso(
+        lambda p: f"/api/multiescala/fatores/{p.fator_b['id']}/amostras",
+        lambda p: {"amostras": [{"lon": -46.60, "lat": -23.50, "valor": 1.0}]},
+    ),
+    ("GET", "/api/multiescala/execucoes"): Caso(lambda p: "/api/multiescala/execucoes", proprio=True,
+                                                aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/api/multiescala/execucoes/{id}"): Caso(lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}"),
+    ("POST", "/api/multiescala/execucoes/{id}/micro"): Caso(
+        lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}/micro",
+        lambda p: {"resolucao_m": 100.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
+                   "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
+    ),
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,
