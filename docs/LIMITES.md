@@ -15,6 +15,7 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `TOTP_JANELA_PASSOS` | `1` | — |
 | `CODIGOS_RECUPERACAO` | `8` | — |
 | `SENHA_TEMPORARIA_TAMANHO` | `12` | — |
+| `TOKEN_PREFIXO_TAMANHO` | `8` | "plat_" + 3 do segredo; o portão do L0-02-d declara 8 (achado G1-d1) |
 | `TOKENS_POR_USUARIO` | `20` | — |
 | `GRUPOS_POR_USUARIO` | `512` | — |
 | `GRUPO_TAGS_MAX` | `50` | — |
@@ -36,7 +37,7 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 
 | chave | padrão | mínimo | máximo |
 |---|---|---|---|
-| `senha_min` | `8` | `8` | `64` |
+| `senha_min` | `10` | `8` | `64` |
 | `senha_maiuscula` | `False` | `None` | `None` |
 | `senha_minuscula` | `False` | `None` | `None` |
 | `senha_simbolo` | `False` | `None` | `None` |

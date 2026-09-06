@@ -79,13 +79,10 @@ def test_t2_nenhuma_security_definer_executavel_por_public(conexao_plat_app):
         assert [r["proname"] for r in cur.fetchall()] == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-T3: o commit master 90ab545 não importa. app/main.py referencia app/auth/rotas_convites.py, "
-    "rotas_redefinicao.py, modelos_convite.py, modelos_redefinicao.py, app/correio/, app/uploads/ e "
-    "app/migracoes.py, que nunca foram comitados. Um checkout limpo do repositório não sobe a API, logo nenhum "
-    "portão deste grupo é reproduzível a partir do repositório.",
-)
+# CONSERTADO (turno 3, ramo wt/g1fix): os seis módulos foram comitados e uma cópia limpa do ramo sobe a
+# aplicação. A marca sai porque o defeito saiu. O que NÃO existia e agora existe é a garantia:
+# tests/unit/test_arvore_limpa_importa.py faz `git archive HEAD` para um diretório temporário e importa
+# app.main lá dentro — a janela que este achado mediu não volta em silêncio.
 def test_t3_todo_modulo_importado_esta_versionado():
     versionados = set(
         subprocess.run(
@@ -144,25 +141,27 @@ def test_a_cookie_apos_logout_alterado_e_de_outro_inquilino(cred, usuarios_a):
     assert c2.get("/api/usuarios", headers={"X-Plat-Inquilino": "demo2"}).status_code == 403  # cookie de A em B
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-a1: plat.sessoes_expurgar() apaga por `ultimo_uso < now() - interval '24 hours'` FIXO, "
-    "enquanto a sessão passa a devolver 401 pela política do inquilino (12 h por padrão, 1 h no mínimo "
-    "configurável). Medido: sessão com ultimo_uso de 13 h devolve 401 e o periódico devolve 0 e a linha "
-    "continua na tabela; só some com 25 h. A cláusula do portão é 'devolve 401 E a linha é apagada pelo "
-    "periódico'.",
-)
+# CONSERTADO (turno 3, ramo wt/g1fix): plat.sessoes_expurgar() deixou de cortar por `interval '24 hours'`
+# fixo e passa a usar o MESMO corte por inquilino que plat.auth_sessao já usava para devolver 401
+# (config.auth.sessao_ociosa_horas, padrão 12 h, faixa 1–24 h). Migração
+# db/migracoes/20260906T1611_g1_identidade_conserto.sql (CREATE OR REPLACE: as ACL não mudam).
 def test_a1_sessao_ociosa_alem_da_politica_some_no_periodico(usuarios_a, conexao_plat_app):
     import hashlib
 
+    from tests.api.test_rls import contexto, ids_por_slug
+
     c, _u, _s = usuarios_a.sessao()
     h = hashlib.sha256(c.cookies.get("plat_sessao").encode()).hexdigest()
-    with conexao_plat_app.cursor() as cur:
-        cur.execute("SET LOCAL ROLE NONE")
     con = conexao_plat_app
+    # o `SET LOCAL ROLE NONE` original não sobrevivia ao rollback seguinte, e sem contexto de inquilino a
+    # política p_sessao faz o UPDATE casar 0 linhas EM SILÊNCIO — a pré-condição do teste caía junto com o
+    # defeito, e o xfail podia estar verde pelo motivo errado. Contexto posto como o resto do arquivo já faz
+    # (_config_do_demo), rowcount conferido. A AFIRMAÇÃO do adversário abaixo continua idêntica.
     con.rollback()
+    contexto(con, ids_por_slug(con)["demo"])
     with con.cursor() as cur:
         cur.execute("UPDATE plat.sessao SET ultimo_uso = now() - interval '13 hours' WHERE token_hash = %s", (h,))
+        assert cur.rowcount == 1, "a sessão não foi envelhecida (contexto de RLS errado)"
     con.commit()
     assert c.get("/api/eu").status_code == 401
     with con.cursor() as cur:
@@ -176,26 +175,19 @@ def test_a1_sessao_ociosa_alem_da_politica_some_no_periodico(usuarios_a, conexao
 
 # ====================================================================== L0-02-b política de senha e bloqueio
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-b1: a hipótese do item diz 'mínimo 10 caracteres com pelo menos uma letra e um número' "
-    "(regra herdada do SIG de teste interno). O produto entrega mínimo 8: limites.AUTH_PADROES['senha_min'] = "
-    "(8, 8, 64) e Politica.senha_min = 8. Medido: PUT /api/eu/senha com 'Abcdefg1' (8 caracteres) devolve 204.",
-)
+# CONSERTADO (turno 3, ramo wt/g1fix): o padrão da plataforma virou 10, como o portão do item declara
+# (limites.AUTH_PADROES['senha_min'] = (10, 8, 64) e Politica.senha_min = 10). O PISO configurável segue
+# em 8 — mínimo do NIST SP 800-63B §3.1.1.2 para senha escolhida pelo usuário —, então um inquilino que
+# queira 8 escreve 8 em config.auth; quem não escreve nada recebe 10.
 def test_b1_senha_de_oito_caracteres_e_recusada(usuarios_a):
     c, _u, senha = usuarios_a.sessao()
     r = c.put("/api/eu/senha", json={"atual": senha, "nova": "Abcdefg1"})
     assert r.status_code == 422, f"senha de 8 caracteres aceita: {r.status_code}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-b2: a expiração de senha (config.auth.senha_expira_dias) só é avaliada no caminho de senha; "
-    "app/auth/rotas_login.py::login_2fa chama _abrir_sessao(..., senha_alterada_em=None), logo quem tem segundo "
-    "fator ligado NUNCA recebe a pendência trocar_senha. Medido com senha_expira_dias=30 e senha de 60 dias: "
-    "usuário sem 2FA -> pendencias ['trocar_senha']; usuário com 2FA -> pendencias []. A conta mais forte fica "
-    "com a política mais fraca.",
-)
+# CONSERTADO (turno 3, ramo wt/g1fix): login_2fa passa a sentinela NAO_INFORMADO em vez de None, e
+# _abrir_sessao lê senha_alterada_em do banco quando ela não vem do chamador. A política de senha do
+# inquilino vale nos dois caminhos; o segundo fator é prova A MAIS, nunca dispensa da expiração.
 def test_b2_expiracao_de_senha_vale_tambem_para_quem_tem_2fa(usuarios_a, conexao_plat_app, cred):
     from tests.api.conftest import ligar_2fa
 
@@ -243,15 +235,11 @@ def test_b_bloqueio_por_usuario_nao_nega_o_inquilino(cred):
 
 # ====================================================================== L0-02-c segundo fator
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-c1: com config.auth.exigir_2fa ligado, a pendência 'configurar_2fa' fecha as rotas que "
-    "passam por app.auth.sessao.autenticado(), mas as 7 rotas /rest/services/Geocodificador/GeocodeServer/* "
-    "autenticam por app/geocodificador/rotas_esri.py::_autenticar, que chama resolver() direto e nunca olha "
-    "pendências (nem CSRF sob cookie, nem X-Plat-Inquilino). Medido: /api/usuarios -> 403 pendencia e "
-    "/rest/services/Geocodificador/GeocodeServer/suggest?text=rua -> 200 para o MESMO usuário sem 2FA. "
-    "Cláusula do portão: 'usuário sem 2FA cai na tela de configuração antes de qualquer rota'.",
-)
+# CONSERTADO (turno 3, ramo wt/g1fix): as 7 rotas do GeocodeServer deixaram de ter autenticação própria e
+# passam pelo guarda comum, app.auth.sessao.autenticado(..., token_por_querystring=True) — o `?token=` do
+# protocolo Esri virou uma opção DENTRO da porta única, não uma porta paralela. Com isso voltam as três
+# guardas que escapavam: pendência de conta, CSRF sob cookie e X-Plat-Inquilino.
+# tests/unit/test_contrato_guarda.py varre o contrato e reprova a próxima rota que autenticar por fora.
 def test_c1_pendencia_de_2fa_fecha_tambem_o_geocodeserver(sessao_plat):
     slug = f"{PREFIXO_TESTE}-inq-{secrets.token_hex(3)}"
     r = sessao_plat.post(
@@ -301,11 +289,8 @@ def test_c_forca_bruta_replay_e_relogio(usuarios_a, sessao_a):
 
 # ====================================================================== L0-02-d token de serviço
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-d1: o portão pede 'prefixo de 8 caracteres na lista'; app/auth/rotas_tokens.py::_inserir "
-    "grava prefixo = valor[:12], ou seja 'plat_' + 7 caracteres do próprio segredo. Medido: len(prefixo) = 12.",
-)
+# CONSERTADO (turno 3, ramo wt/g1fix): o prefixo gravado passou de valor[:12] para
+# valor[:limites.TOKEN_PREFIXO_TAMANHO] = 8, como o portão do L0-02-d declara.
 def test_d1_prefixo_do_token_tem_oito_caracteres(sessao_a):
     r = sessao_a.post("/api/tokens", json={"nome": f"{PREFIXO_TESTE}-adv-prefixo", "escopos": ["catalogo:ler"]})
     assert r.status_code == 201, r.text
@@ -377,22 +362,16 @@ def test_d_leitura_por_token_aparece_no_log_com_token_id(sessao_a):
 
 # ====================================================================== L0-02-e varredura cruzada
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-e1: GET /api/uploads/tipos declara x-auth 'S/T' no OpenAPI e responde 200 SEM credencial "
-    "nenhuma. Rota nova, fora de docs/openapi.json, logo fora da varredura cruzada e fora do teste de "
-    "privilégio declarado.",
-)
+# CONSERTADO (turno 3, ramo wt/g1fix): GET /api/uploads/tipos e GET /api/importacoes/formatos declaravam
+# `x-auth: S/T` e respondiam sem credencial; agora passam pelo guarda comum (escopo_token=None, porque são
+# vocabulário e não dado). O contrato inteiro é varrido por tests/unit/test_contrato_guarda.py.
 def test_e1_rota_declarada_com_auth_exige_credencial():
     assert novo_cliente().get("/api/uploads/tipos").status_code == 401
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-e2: as 7 rotas /rest/services/Geocodificador/GeocodeServer* não declaram x-privilegio no "
-    "openapi_extra. test_privilegios_declarados.py existe para reprovar isso, mas lê docs/openapi.json (parado) "
-    "e não vê as rotas novas.",
-)
+# CONSERTADO (turno 3, ramo wt/g1fix): as 7 rotas do GeocodeServer passaram a declarar x-privilegio — as 6
+# autenticadas com 'proprio' (o mesmo de /api/geocodificar) e o descritor do locator com 'publico', que é o
+# que ele sempre fez. A varredura aqui é sobre o app VIVO, então não depende de docs/openapi.json.
 def test_e2_toda_rota_viva_declara_privilegio():
     from app.main import app
 

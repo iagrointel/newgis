@@ -111,7 +111,10 @@ def _inserir(cur, auth: Auth, nome: str, escopos: list[str], restricao: dict, di
             auth.usuario_id,
             nome,
             sha256_hex(valor),
-            valor[:12],
+            # 8 caracteres, como o portão do item declara: "plat_" + 3 do segredo. Eram 12 (7 do segredo)
+            # — achado G1-d1 do adversário do turno 3. O prefixo existe para o dono reconhecer o token na
+            # lista, não para identificá-lo com certeza; entropia guardada em claro é entropia dada de graça.
+            valor[:limites.TOKEN_PREFIXO_TAMANHO],
             escopos,
             __import__("json").dumps(restricao),
             dias,
