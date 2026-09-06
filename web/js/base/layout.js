@@ -9,6 +9,7 @@ import { sair } from '../auth/sessao.js';
 export const TELAS = [
   { caminho: '/', chave: 'nav.inicio' },
   { caminho: '/conteudo', chave: 'nav.conteudo' },
+  { caminho: '/mapa', chave: 'nav.mapa' },
   { caminho: '/conta', chave: 'nav.conta' },
   { caminho: '/admin/usuarios', chave: 'nav.usuarios', privilegio: 'membros.ver' },
   { caminho: '/admin/grupos', chave: 'nav.grupos' },

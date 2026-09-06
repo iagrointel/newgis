@@ -24,6 +24,8 @@ PAGINAS = {
     "/conteudo/lixeira": "conteudo_lixeira.html",
     "/conteudo/{id}": "conteudo_item.html",
     "/c/{token}": "compartilhado.html",
+    # --- mapa (L2-01-a)
+    "/mapa": "mapa.html",
 }
 router = APIRouter()
 

@@ -725,5 +725,12 @@
  "catalogo.versoes_texto": "cada edição grava uma versão imutável; restaurar cria uma versão nova",
  "catalogo.restaurar_versao_confirma": "restaurar a versão {n}? Uma versão nova é criada com o conteúdo dela.",
  "catalogo.versao_restaurada": "versão {n} restaurada como versão {nova}",
- "catalogo.versao_publicada": "versão {n} publicada"
+ "catalogo.versao_publicada": "versão {n} publicada",
+ "nav.mapa": "Mapa",
+ "nav.mapa_desc": "mapa-base local em MapLibre, camadas e navegação",
+ "mapa.titulo": "Mapa",
+ "mapa.camada_base": "camada base",
+ "mapa.base_osm_guarulhos": "OSM aberto — recorte Guarulhos (ODbL 1.0)",
+ "mapa.erro_biblioteca": "biblioteca de mapa não carregou (MapLibre ou PMTiles ausente)",
+ "mapa.erro_carregar": "não foi possível carregar o mapa"
 }
