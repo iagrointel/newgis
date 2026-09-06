@@ -129,6 +129,27 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 3, setembro de 2026 (item FK-CLASSE-CONSERTO: FK composta por inquilino no resto do schema `plat`)
+
+Mesma classe do achado A1 de `L4-01-a-pacote-de-ativos` (FK simples entre duas tabelas com `tenant_id` não é
+filtrada pela RLS — a checagem de referência do Postgres roda com o privilégio do dono da tabela, ignora a
+política), fora de `plat.rede_*` (já corrigida em `20260906T1815_rede_fk_por_inquilino.sql`). A varredura de
+`pg_constraint` daquele item achou 55 ocorrências fora da rede, listadas como "fora do escopo" na trava
+`tests/api/test_fk_composta_por_inquilino.py`; 44 delas já existem no schema `master` (as outras 11 pertencem
+a tabelas de trilhas ainda não mescladas — `exportacao`, `geocodificacao*`, `raster_item`, `raster_colecao`,
+`rede.dono_id`/`rede.importado_por`). `db/migracoes/20260906T1847_fk_por_inquilino_classe.sql` dá `UNIQUE
+(tenant_id, id)` a 10 tabelas-alvo (`usuario`, `papel_personalizado`, `item`, `grupo`, `pasta`, `categoria`,
+`compartilhamento_link`, `conexao`, `job`, `token_servico`) e recompõe as 44 FKs como `(tenant_id, col)
+REFERENCES alvo (tenant_id, id)`, preservando o `ON DELETE` original de cada uma — as 9 que eram `SET NULL`
+usam a sintaxe de lista de colunas do Postgres 15+ (`ON DELETE SET NULL (col)`) para nulificar só a coluna da
+FK, nunca `tenant_id` (que é `NOT NULL` em toda tabela do schema; testado em produção rasa: apagar um usuário
+referenciado só zera a coluna dele, o `tenant_id` da linha filha não muda). `PERMITIDAS` da trava fica vazio —
+zero FKs simples entre tabelas com `tenant_id` no schema inteiro, dívida paga (as 11 restantes reaparecem
+como achado novo quando a trilha que as introduz mesclar, e quem mesclar aplica o mesmo padrão).
+`tests/unit/test_fk_por_inquilino_classe_conserto.py` prova 5 casos concretos como `plat_app` (alvo comum,
+auto-referência uuid, auto-referência inteira, cadeia de duas tabelas): o inquilino B nunca grava apontando
+para uma linha de A, e a mensagem de recusa do Postgres é IDÊNTICA para "id não existe" e "id é de outro
+inquilino" — mata o oráculo de existência do achado A1. Medidas em `tests/medidas/fk-por-inquilino.json`.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
