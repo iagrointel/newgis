@@ -47,6 +47,19 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
             query = self._reescrever(query)
         return super().execute(query, *args, **kwargs)
 
+    def executemany(self, query, *args, **kwargs):
+        # sem esta sobrecarga o INSERT em lote de papel_privilegio (app/auth/rotas_usuarios.py) ia ao
+        # servidor com o literal `plat.` e o ambiente de homologação/trilha respondia
+        # InsufficientPrivilege — que o app traduz para 403 "operação fora do inquilino da sessão".
+        if isinstance(query, str):
+            query = self._reescrever(query)
+        return super().executemany(query, *args, **kwargs)
+
+    def mogrify(self, query, *args, **kwargs):
+        if isinstance(query, str):
+            query = self._reescrever(query)
+        return super().mogrify(query, *args, **kwargs)
+
     def callproc(self, procname, *args, **kwargs):
         if isinstance(procname, str):
             procname = self._reescrever(procname)
