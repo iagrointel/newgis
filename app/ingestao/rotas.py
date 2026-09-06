@@ -19,7 +19,7 @@ from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import jsonb, registrar_evento, uuid_ok
 from app.catalogo.modelos import UUID_PADRAO, JobCriado, Modelo
 from app.erros import ErroAPI
-from app.ingestao.formatos import FORMATOS, ConteudoNaoCorresponde
+from app.ingestao.formatos import FORMATOS, FORMATOS_QUE_DEPENDEM_DE_LICENCA, ArquivoRecusado
 from app.ingestao.formatos import verificar_conteudo as _verificar_conteudo
 from app.jobs import servico
 from app.jobs.contexto import sessao_de
@@ -41,6 +41,7 @@ class ConfirmarEntrada(Modelo):
     contra a proposta gravada dentro da rota (nunca um esquema fixo — a proposta é que dá as opções válidas)."""
 
     titulo: str | None = Field(default=None, min_length=1, max_length=250)
+    camada: dict | None = None
     crs: dict | None = None
     codificacao: dict | None = None
     geometria: dict | None = None
@@ -72,9 +73,10 @@ def _carregar(cur, auth: Auth, importacao_id: str) -> dict:
 @router.post("/api/importacoes", status_code=202, openapi_extra=PUBLICAR)
 def criar(corpo: ImportacaoEntrada, request: Request, auth: Auth = autenticado("conteudo.publicar_camada")):
     if corpo.formato not in FORMATOS:
+        motivo = FORMATOS_QUE_DEPENDEM_DE_LICENCA.get(corpo.formato)
         raise ErroAPI(
             422, "formato_nao_suportado",
-            f"formato {corpo.formato!r} não suportado nesta instalação; aceitos: {sorted(FORMATOS)}",
+            motivo or f"formato {corpo.formato!r} não suportado nesta instalação; aceitos: {sorted(FORMATOS)}",
             {"aceitos": sorted(FORMATOS)},
         )
     arquivo_id = uuid_ok(corpo.arquivo_id)
@@ -90,8 +92,12 @@ def criar(corpo: ImportacaoEntrada, request: Request, auth: Auth = autenticado("
         raise ErroAPI(404, "objeto_inexistente", "o objeto do arquivo não existe mais no armazenamento") from e
     try:
         _verificar_conteudo(corpo.formato, dados)
-    except ConteudoNaoCorresponde as e:
-        raise ErroAPI(422, "conteudo_nao_corresponde", str(e)) from e
+    except ArquivoRecusado as e:
+        # ArquivoRecusado é a MÃE de ConteudoNaoCorresponde E de ZipSuspeito. Capturar só a primeira deixava
+        # um zip malformado ("File is not a zip file") escapar como 500 com rastro (achado do adversário do
+        # turno 3). Toda recusa nova de conteúdo herda de ArquivoRecusado e cai aqui.
+        codigo = "zip_suspeito" if type(e).__name__ == "ZipSuspeito" else "conteudo_nao_corresponde"
+        raise ErroAPI(422, codigo, str(e)) from e
 
     item_id = str(uuid.uuid4())
     with db.db(auth.contexto()) as cur:
@@ -130,6 +136,21 @@ def listar(limite: int = 50, deslocamento: int = 0, auth: Auth = autenticado(esc
     return {"itens": [_importacao_json(r) for r in linhas], "total": len(linhas)}
 
 
+# ATENÇÃO À ORDEM: rota de caminho LITERAL vem sempre ANTES da rota com parâmetro do mesmo prefixo. O
+# roteador do Starlette casa na ORDEM DE DECLARAÇÃO e `/api/importacoes/{id}` casa a palavra "formatos" —
+# declarada depois, esta rota respondia 404 "importação inexistente" (achado do adversário do turno 3).
+# `tests/api/test_rotas_sombreadas.py` reprova qualquer rota nova que caia nessa armadilha.
+@router.get("/api/importacoes/formatos", openapi_extra=LER)
+def formatos_aceitos():
+    """Formatos que ESTA instalação aceita, com as extensões e o rótulo de tela. `nao_aceitos` diz o que a
+    plataforma conhece e não traz, com o motivo — nunca silêncio."""
+    return {
+        "aceitos": [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo, "driver": f.driver}
+                    for f in FORMATOS.values()],
+        "nao_aceitos": [{"tipo": t, "motivo": m} for t, m in FORMATOS_QUE_DEPENDEM_DE_LICENCA.items()],
+    }
+
+
 @router.get("/api/importacoes/{id}", openapi_extra=LER)
 def ver(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
     with db.db(auth.contexto()) as cur:
@@ -148,6 +169,30 @@ def confirmar(id: str, corpo: ConfirmarEntrada, request: Request,
 
         confirmacao: dict = {}
         perguntas_pendentes = list(proposta.get("perguntas") or [])
+
+        # ------------------------------------------------------------ camada do arquivo (multi-camada)
+        # A inspeção grava a proposta de TODAS as camadas em `proposta["camadas"]` e copia a primeira com dado
+        # para o topo. Quando há mais de uma, "camada" é pergunta obrigatória: nada é escolhido em silêncio.
+        # Escolher outra camada troca os campos/geometria/CRS validados abaixo pelos DAQUELA camada.
+        camadas = proposta.get("camadas") or []
+        if corpo.camada is not None and corpo.camada.get("escolhida"):
+            nome = corpo.camada["escolhida"]
+            opcoes = [c["camada_origem"] for c in camadas] or [proposta.get("camada_origem")]
+            if nome not in opcoes:
+                raise ErroAPI(422, "camada_nao_permitida",
+                              f"camada {nome!r} não está no arquivo; opções: {opcoes}", {"opcoes": opcoes})
+            confirmacao["camada"] = {"escolhida": nome}
+            escolhida = next((c for c in camadas if c["camada_origem"] == nome), None)
+            if escolhida is not None:
+                proposta = {**proposta, **{k: v for k, v in escolhida.items()
+                                           if k in ("camada_origem", "feicoes", "geometria", "crs", "campos",
+                                                    "validade")},
+                            "camada_escolhida": nome}
+                confirmacao["titulo"] = escolhida.get("titulo")
+                # as perguntas pendentes passam a ser as DA CAMADA ESCOLHIDA (mais a de camada, já respondida)
+                perguntas_pendentes = list(escolhida.get("perguntas") or [])
+            if "camada" in perguntas_pendentes:
+                perguntas_pendentes.remove("camada")
 
         if corpo.crs is not None:
             srid = corpo.crs.get("srid")
@@ -202,6 +247,19 @@ def confirmar(id: str, corpo: ConfirmarEntrada, request: Request,
             raise ErroAPI(422, "perguntas_pendentes", "há perguntas sem resposta na proposta",
                           {"perguntas": perguntas_pendentes})
 
+        # Recusa explícita (nunca silêncio, nunca job que morre no meio): camada sem geometria não é carregada
+        # nesta passagem. Fica dito o que não entra e por quê — a tabela sem coluna espacial é a cláusula que
+        # falta do portão do L0-04-d ("CSV sem coluna de coordenada vira tabela sem geom"), registrada no
+        # handoff do turno 3 como pendência do item, não como defeito escondido.
+        if not ((proposta.get("geometria") or {}).get("escolhida")):
+            raise ErroAPI(
+                422, "camada_sem_geometria",
+                f"a camada {proposta.get('camada_origem')!r} não tem geometria; esta passagem só carrega "
+                "camada com geometria. Tabela sem coluna espacial (planilha, CSV sem coluna de coordenada, "
+                "tabela de atributo de GeoPackage) ainda não é importada — nada foi criado.",
+                {"camada": proposta.get("camada_origem")},
+            )
+
         cur.execute(
             "UPDATE plat.importacao SET estado = 'confirmada', confirmacao = %s, atualizado_em = now() "
             "WHERE id = %s::uuid",
@@ -223,7 +281,3 @@ def apagar(id: str, auth: Auth = autenticado("conteudo.publicar_camada")):
         cur.execute("DELETE FROM plat.importacao WHERE id = %s::uuid", (r["id"],))
     return Response(status_code=204)
 
-
-@router.get("/api/importacoes/formatos", openapi_extra=LER)
-def formatos_aceitos():
-    return [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo} for f in FORMATOS.values()]
