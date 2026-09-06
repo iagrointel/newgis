@@ -186,10 +186,28 @@ def gerar_grade(ctx, conjunto_id: str) -> dict:
             "funcao": "ST_HexagonGrid" if tipo == "hexagonal" else "ST_SquareGrid",
             "recorte": "célula inteira dentro da área mantida; célula de borda recortada (ST_Intersection)",
         })
+        n = int(r["n"])
+        if n > limites.AMC_UNIDADES_MAX:
+            # `preparar_grade` compara o teto com a ESTIMATIVA área/área-da-célula; a célula de borda entra
+            # recortada e o resultado pode passar do teto (o adversário do item mediu 1.000.175 unidades com o
+            # teto em 1.000.000). Aqui o teto é conferido sobre a CONTAGEM REAL: passou, limpa e recusa.
+            motivo = (f"{n:,} unidades geradas passam do teto de {limites.AMC_UNIDADES_MAX:,} por conjunto (a "
+                      f"estimativa antes de gerar era {esperado:,.0f}); aumente o lado ou reduza a área de estudo")
+            cur.execute("DELETE FROM plat.amc_unidade WHERE conjunto_id = %s", (conjunto_id,))
+            ficha.update({"recusado": True, "motivo_recusa": motivo, "n_unidades_geradas": n, "n_unidades": 0,
+                          "teto_unidades": limites.AMC_UNIDADES_MAX, "area_total_geodesica_m2": 0.0})
+            cur.execute(
+                "UPDATE plat.amc_conjunto_unidade SET estado = 'falhou', n_unidades = 0, area_total_m2 = 0, "
+                "ficha = %s, erro = %s, pronto_em = NULL WHERE id = %s",
+                (psycopg2.extras.Json(ficha), motivo, conjunto_id),
+            )
+            ctx.log("ERRO", motivo)
+            ctx.progresso(100, "recusado: teto de unidades por conjunto")
+            return ficha
         cur.execute(
             "UPDATE plat.amc_conjunto_unidade SET estado = 'pronto', n_unidades = %s, area_total_m2 = %s, ficha = %s, "
             "pronto_em = now(), erro = NULL WHERE id = %s",
-            (int(r["n"]), float(r["a"]), psycopg2.extras.Json(ficha), conjunto_id),
+            (n, float(r["a"]), psycopg2.extras.Json(ficha), conjunto_id),
         )
     ctx.progresso(100, f"{int(r['n']):,} unidades")
     return ficha
@@ -241,19 +259,28 @@ def validar_feicoes(colecao, campo_id: str | None) -> list[tuple[str, dict]]:
     return saida
 
 
+PAGINA_FEICOES = 500  # feições por comando (mesmo tamanho de lote de antes; agora em UM texto de consulta)
+
+# Consulta em TEXTO de propósito: `psycopg2.extras.execute_values` montaria o comando final em bytes e escaparia da
+# reescrita de schema de app/schema_ambiente.py, mandando o literal `plat.` ao servidor mesmo em homologação ou numa
+# base por trilha (defeito achado pelo adversário do item L3-01-b em 06/09/2026). O lote entra como UM parâmetro
+# jsonb e vira linhas com `jsonb_to_recordset`, o que também evita montar VALUES de tamanho variável.
+SQL_GRAVAR_FEICOES = """
+INSERT INTO plat.amc_unidade (conjunto_id, tenant_id, unidade_id, geom, area_m2)
+SELECT %s::uuid, %s::int, v.uid, g, ST_Area(g::geography)
+FROM jsonb_to_recordset(%s::jsonb) AS v(uid text, gj jsonb),
+LATERAL (SELECT ST_Multi(ST_CollectionExtract(
+           ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(v.gj::text), 4326)), 3)) AS g) s
+WHERE NOT ST_IsEmpty(g)
+"""
+
+
 def gravar_feicoes(cur, conjunto_id: str, tenant_id: int, feicoes: list[tuple[str, dict]]) -> dict:
     """Insere as feições (ST_MakeValid, MultiPolygon, 4326) e fecha a ficha (CRS pelo centróide da união dos bboxes)."""
     t0 = time.monotonic()
-    linhas = [(conjunto_id, tenant_id, uid, json.dumps(g)) for uid, g in feicoes]
-    psycopg2.extras.execute_values(
-        cur,
-        "INSERT INTO plat.amc_unidade (conjunto_id, tenant_id, unidade_id, geom, area_m2) "
-        "SELECT v.cid, v.tid, v.uid, g, ST_Area(g::geography) FROM (VALUES %s) AS v(cid, tid, uid, gj), "
-        "LATERAL (SELECT ST_Multi(ST_CollectionExtract("
-        "  ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(v.gj), 4326)), 3)) AS g) s "
-        "WHERE NOT ST_IsEmpty(g)",
-        linhas, template="(%s::uuid, %s::int, %s, %s)", page_size=500,
-    )
+    for inicio in range(0, len(feicoes), PAGINA_FEICOES):
+        lote = [{"uid": uid, "gj": g} for uid, g in feicoes[inicio:inicio + PAGINA_FEICOES]]
+        cur.execute(SQL_GRAVAR_FEICOES, (conjunto_id, tenant_id, json.dumps(lote)))
     cur.execute(
         "SELECT n, a, ST_XMin(e) AS xmin, ST_YMin(e) AS ymin, ST_XMax(e) AS xmax, ST_YMax(e) AS ymax, "
         "ST_X(ST_Centroid(e)) AS cx, ST_Y(ST_Centroid(e)) AS cy FROM ("

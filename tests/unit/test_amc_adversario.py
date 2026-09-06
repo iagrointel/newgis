@@ -44,9 +44,10 @@ def test_hash_muda_quando_o_documento_muda():
     assert mod_esquema.hash_modelo(outro) != mod_esquema.hash_modelo(m)
 
 
-@pytest.mark.xfail(strict=True, reason="ATAQUE QUE PASSOU: 3 e 3.0 são o mesmo número em JSON e dão hashes "
-                                       "diferentes; reenviar o mesmo modelo com o peso escrito como inteiro cria "
-                                       "uma versão nova que não mudou nada")
+# CONSERTADO em 06/09/2026 (achado 5 do laudo): o JSON canônico normaliza o número antes do hash — float com parte
+# fracionária zero e magnitude < 2^53 vira inteiro (app.amc.esquema.normalizar_numeros, ADR 0016 §"normalização
+# numérica"). Era: "3 e 3.0 são o mesmo número em JSON e dão hashes diferentes; reenviar o mesmo modelo com o peso
+# escrito como inteiro cria uma versão nova que não mudou nada". A marca xfail(strict) saiu; o teste é prova.
 def test_hash_igual_para_numeros_json_iguais_escritos_de_forma_diferente():
     m = exemplos.modelo_valido()
     inteiro = copy.deepcopy(m)
@@ -110,7 +111,8 @@ def test_aninhamento_profundo_nao_derruba_a_validacao():
 
 
 # ================================================================ 3. validação: o que o produto NÃO defende
-DEFEITOS_ACEITOS = {
+# Cada linha era um documento ACEITO até 06/09/2026; desde o conserto do achado 2 todas dão 422 com a cláusula.
+TRANSFORMACOES_INCOERENTES = {
     "linear com faixa invertida": {"tipo": "linear", "minimo": 30, "maximo": 0, "direcao": "crescente"},
     "linear com mínimo igual ao máximo": {"tipo": "linear", "minimo": 5, "maximo": 5},
     "faixas com notas a menos": {"tipo": "faixas", "quebras": [1, 2, 3, 4, 5], "notas": [0, 100]},
@@ -120,14 +122,15 @@ DEFEITOS_ACEITOS = {
 }
 
 
-@pytest.mark.parametrize("nome", sorted(DEFEITOS_ACEITOS))
-@pytest.mark.xfail(strict=True, reason="ATAQUE QUE PASSOU: a transformação é validada só na FORMA (tipo e campos "
-                                       "obrigatórios de 4 dos 16 tipos); faixa invertida, faixa degenerada, número "
-                                       "de notas incompatível com o número de quebras e quebras/bandas fora de "
-                                       "ordem entram no modelo e no hash sem uma única violação")
+@pytest.mark.parametrize("nome", sorted(TRANSFORMACOES_INCOERENTES))
+# CONSERTADO em 06/09/2026 (achado 2 do laudo): app.amc.esquema._violacoes_transformacao confere a coerência
+# INTERNA da transformação (faixa invertida ou degenerada, len(notas) = len(quebras) + 1, quebras e bandas em ordem
+# crescente, função contínua com pelo menos um parâmetro numérico). Era: "a transformação é validada só na FORMA
+# (tipo e campos obrigatórios de 4 dos 16 tipos) e o documento incoerente entra no modelo e no hash sem uma única
+# violação". A marca xfail(strict) saiu; os seis casos são prova.
 def test_transformacao_incoerente_deveria_ser_recusada(nome):
     m = exemplos.modelo_valido()
-    m["fatores"][0]["transformacao"] = DEFEITOS_ACEITOS[nome]
+    m["fatores"][0]["transformacao"] = TRANSFORMACOES_INCOERENTES[nome]
     assert _violacao(m) is not None, f"{nome}: aceito"
 
 
@@ -149,10 +152,10 @@ def test_area_que_cruza_duas_zonas_declara_o_aviso():
     assert ficha["avisos"], "cruzar zona sem aviso na ficha"
 
 
-@pytest.mark.xfail(strict=True, reason="ATAQUE QUE PASSOU: `zonas_utm_cobertas` é o conjunto {zona(xmin), "
-                                       "zona(xmax), zona(centróide)} — as zonas do MEIO somem. Uma área de -60° a "
-                                       "-42° cobre as zonas 21, 22, 23 e 24 e a ficha declara três, dizendo ao "
-                                       "leitor que a área 'cruza 3 zonas UTM'")
+# CONSERTADO em 06/09/2026 (achado 3 do laudo): app.amc.crs.ficha_crs enumera TODAS as zonas do intervalo
+# (range de zona(xmin) a zona(xmax), mais a do centróide). Era: "`zonas_utm_cobertas` é o conjunto {zona(xmin),
+# zona(xmax), zona(centróide)} — as zonas do MEIO somem; uma área de -60° a -42° cobre 21, 22, 23 e 24 e a ficha
+# declara três, dizendo ao leitor que a área 'cruza 3 zonas UTM'". A marca xfail(strict) saiu.
 def test_zonas_utm_cobertas_lista_todas_as_zonas_da_area():
     pontos = [(-60.0, -20.0), (-42.0, -20.0), (-42.0, -19.0), (-60.0, -19.0)]
     ficha = mod_crs.ficha_crs(pontos, (-60.0, -20.0, -42.0, -19.0), (-51.0, -19.5))
