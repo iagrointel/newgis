@@ -3,6 +3,32 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L0-14-identidade-visual: sistema de design "instrumento" e a régua)
+
+Identidade visual do produto sobre uma fonte única de tokens (`web/estilo/tokens.css`: 108 tokens `--i-*`, cor
+em claro e escuro, escala tipográfica, grade de 4 px com três densidades, raio, fio, sombra, larguras). Folhas
+`web/estilo/base.css` e `web/estilo/componentes.css` substituem `web/style.css`; as folhas de tela
+(`tarefas.css`, `conteudo.css`, `mapa.css`) e o estilo MapLibre (`web/js/mapa/estilo.js`, agora lê `--i-carta-*`
+por `getComputedStyle`) só usam `var(--i-*)`. A varredura `tests/unit/test_estilo_tokens.py` reprova cor ou
+medida de ritmo escrita à mão em css/js fora dos tokens, glifo ou emoji fora da família de ícones, tela sem
+as três folhas e o `tema.js`. Par tipográfico com motivo em `docs/IDENTIDADE.md` (Big Shoulders Display ·
+IBM Plex Sans · IBM Plex Mono, vendorizadas com sha256, OFL-1.1). Família única de ícones em
+`web/js/base/icones.js` (84 ícones desenhados por DOM); os glifos de texto do produto (marcas, setas,
+bolinhas, reticências, o "x" do diálogo) viraram ícones. Os 6 componentes de base têm os 7 estados (repouso,
+foco visível, ativo, desativado, carregando, vazio, erro) em CSS e em código (`plat-tabela.ocupado/erro`,
+`plat-busca.ocupado/erro/limpar`, `plat-paginacao.ocupado/erro`, `plat-dialogo.ocupado/erro`, `plat-aviso.carregando`).
+Página viva `/estilo` (`web/estilo.html`, `web/js/estilo/estilo.js`) lê o arquivo de tokens pela rede e desenha
+paleta com razão de contraste medida no navegador, escala, grade, forma, ícones e os 6 × 7 estados com os
+elementos reais; tema (sistema/claro/escuro) e densidade escolhíveis, guardados em `localStorage` e aplicados
+antes da primeira pintura por `web/js/base/tema.js`. Traço próprio: a RÉGUA — todo número mostrado carrega a
+procedência (rota, instante, comando) em `data-procedencia` e `aria-label`, com a linha de procedência das
+últimas chamadas à API no rodapé de toda tela (`web/js/base/regua.js`, `registrarChamada` em `api.js`).
+Medido (`tests/medidas/L0-14.json`): 0 nó de texto abaixo de AA em 2.235 nós (escuro) e 2.234 (claro) nas 16
+telas; axe-core sem violação crítica ou séria (7 menores por tema); capturas antes/depois em
+`tests/e2e/capturas/L0-14_*`. Achados de passagem corrigidos: zona morta temporal de `smtpAtual` em
+`web/js/auth/organizacao.js` (erro de página em `/admin/organizacao`) e o `<input type=file>` de `/uploads` sem
+rótulo. `scripts/servir_local.py` sobe API + `/static/` de um worktree para abrir as telas sem nginx.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

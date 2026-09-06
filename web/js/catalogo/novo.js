@@ -2,6 +2,7 @@
    parte_bytes em octet-stream, concluir cria o item 'arquivo'), Conexão por URL, Mapa em branco, Pasta e "Outro
    tipo" (título + tipo + formulário gerado do JSON Schema). Todos criam de verdade e abrem o item criado. */
 import { h, limpar } from '../base/dom.js';
+import { icone } from '../base/icones.js';
 import { t } from '../base/i18n.js';
 import { tem } from '../base/estado.js';
 import { pedir } from '../base/componentes.js';
@@ -17,7 +18,7 @@ const el = (id) => document.getElementById(id);
 export function botaoNovo({ criado, rotas = new Set() }) {
   aoCriado = criado;
   const wrap = h('div', { class: 'menu-mais novo-menu' });
-  const b = h('button', { type: 'button', class: 'primario', id: 'novo-item', 'aria-haspopup': 'true', 'aria-expanded': 'false' }, t('catalogo.novo_item'), ' ▾');
+  const b = h('button', { type: 'button', class: 'primario', id: 'novo-item', 'aria-haspopup': 'true', 'aria-expanded': 'false' }, t('catalogo.novo_item'), icone('chevron_baixo', { tamanho: 14 }));
   const ul = h('ul', { role: 'menu', hidden: true });
   const op = (id, rotulo, fn) => { const bt = h('button', { type: 'button', role: 'menuitem', id: `novo-${id}` }, rotulo); bt.addEventListener('click', () => { fechar(); fn(); }); ul.append(h('li', {}, bt)); };
   if (rotas.has('/api/uploads')) op('arquivo', t('catalogo.novo_arquivo'), novoArquivo);

@@ -2,8 +2,11 @@
    tipos: texto | senha | email | numero | select | caixa | caixas | area | lista | info | oculto
    botoes: [{id, rotulo, tipo: 'submit'|'button', classe}]. Eventos: 'enviar' {valores}, 'botao' {id}.
    valores() / definir(obj) / erro(nome, texto) / limparErros() / ocupado / mensagem(texto, tipo). Rótulo ligado por for/id;
-   erro por aria-describedby + aria-invalid; senha com botão mostrar/ocultar (aria-pressed). */
+   erro por aria-describedby + aria-invalid; senha com botão mostrar/ocultar (aria-pressed, ícone da família).
+   Estados: repouso, foco (campo), ativo, desativado (campo.desabilitado ou ocupado), carregando (ocupado = aria-busy,
+   botões e campos desativados), vazio (sem campos: linha "formulário sem campos"), erro (por campo e geral). */
 import { h, limpar } from '../dom.js';
+import { icone } from '../icones.js';
 import { aoTraduzir, t } from '../i18n.js';
 
 let seq = 0;
@@ -23,6 +26,9 @@ export class PlatFormulario extends HTMLElement {
     this._ocupado = !!v;
     this.querySelectorAll('button, input, select, textarea').forEach((el) => { el.disabled = this._ocupado || el.dataset.fixo === '1'; });
     this.setAttribute('aria-busy', String(this._ocupado));
+    /* carregando: o botão de envio mostra o giro (estado visível), os campos ficam desativados; sem opacidade no
+       bloco inteiro, que derrubava o contraste do texto de ajuda */
+    this.querySelectorAll('button[type="submit"]').forEach((b) => { if (this._ocupado) b.setAttribute('aria-busy', 'true'); else b.removeAttribute('aria-busy'); });
   }
   get ocupado() { return !!this._ocupado; }
   mensagem(texto, tipo = 'info') { if (this._aviso) { if (texto) this._aviso.mostrar(texto, tipo); else this._aviso.limpar(); } }
@@ -36,6 +42,7 @@ export class PlatFormulario extends HTMLElement {
     limpar(this);
     this._els = {}; this._erros = {};
     this._form = h('form', { class: 'form', novalidate: true, autocomplete: this.getAttribute('autocompletar') || 'off' });
+    if (!this._campos.length) this._form.append(h('p', { class: 'form-vazio' }, icone('vazio', { tamanho: 16 }), t('form.vazio')));
     for (const c of this._campos) this._form.append(this._campoEl(c));
     this._aviso = h('plat-aviso');
     this._form.append(this._aviso);
@@ -114,12 +121,12 @@ export class PlatFormulario extends HTMLElement {
         const tipo = { texto: 'text', senha: 'password', email: 'email', numero: 'number' }[c.tipo] || 'text';
         input = h('input', { ...base, type: tipo, value: c.padrao ?? '' });
         if (c.tipo === 'senha' && c.mostrar !== false) {
-          const bt = h('button', { type: 'button', class: 'pequeno', 'aria-pressed': 'false', 'aria-controls': id }, t('form.mostrar'));
+          const bt = h('button', { type: 'button', class: 'pequeno', 'aria-pressed': 'false', 'aria-controls': id }, icone('olho', { tamanho: 14 }), t('form.mostrar'));
           bt.addEventListener('click', () => {
             const ver = input.type === 'password';
             input.type = ver ? 'text' : 'password';
             bt.setAttribute('aria-pressed', String(ver));
-            bt.textContent = ver ? t('form.ocultar') : t('form.mostrar');
+            limpar(bt).append(icone(ver ? 'olho_fechado' : 'olho', { tamanho: 14 }), ver ? t('form.ocultar') : t('form.mostrar'));
           });
           wrap.append(rot, h('div', { class: 'linha-senha' }, input, bt));
           if (c.ajuda) wrap.append(h('span', { class: 'ajuda', id: `${id}-ajuda` }, c.ajuda));
@@ -178,7 +185,7 @@ export class PlatFormulario extends HTMLElement {
     const id = `${this._id}-${nome}-erro`;
     let el = e.wrap.querySelector('.erro-campo');
     if (!el) { el = h('span', { class: 'erro-campo', id, role: 'alert' }); e.wrap.append(el); }
-    el.textContent = texto;
+    limpar(el).append(icone('erro', { tamanho: 12 }), texto);
     if (e.input) {
       e.input.setAttribute('aria-invalid', 'true');
       const desc = (e.input.getAttribute('aria-describedby') || '').split(' ').filter(Boolean);

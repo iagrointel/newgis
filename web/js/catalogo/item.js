@@ -1,5 +1,5 @@
 /* plat · catálogo — painel do item (/conteudo/{id}, ADR 0004 seção 15.2) no <plat-dialogo modo="lateral">: cabeçalho
-   (miniatura, título, tipo, dono, acesso, status, uuid/URL copiáveis, favorito, Abrir em, menu ⋯), pontuação 0-10 com
+   (miniatura, título, tipo, dono, acesso, status, uuid/URL copiáveis, favorito, Abrir em, menu botão de mais ações), pontuação 0-10 com
    o que falta, abas Visão geral (metadado editável em linha por PATCH) · Dados (formulário do JSON Schema, PUT) ·
    Configurações (extent, proteção, status, pasta, dono, miniatura) · Versões · Relações · Compartilhamento.
    A descrição chega saneada do servidor (descricao_html) e passa de novo pelo DOMPurify aqui (L5 D23). */
@@ -90,7 +90,7 @@ function pontuacao() {
 
 function menuMais() {
   const wrap = h('div', { class: 'menu-mais' });
-  const b = h('button', { type: 'button', class: 'pequeno', id: 'item-mais', 'aria-haspopup': 'true', 'aria-expanded': 'false', 'aria-label': t('catalogo.mais_acoes') }, '⋯');
+  const b = h('button', { type: 'button', class: 'pequeno', id: 'item-mais', 'aria-haspopup': 'true', 'aria-expanded': 'false', 'aria-label': t('catalogo.mais_acoes') }, icone('reticencias', { tamanho: 16 }));
   const ul = h('ul', { role: 'menu', hidden: true });
   const fechar = () => { ul.hidden = true; b.setAttribute('aria-expanded', 'false'); };
   const op = (id, rotulo, fn, classe = '') => { const bt = h('button', { type: 'button', role: 'menuitem', class: classe, id: `item-${id}` }, rotulo); bt.addEventListener('click', () => { fechar(); fn(); }); ul.append(h('li', {}, bt)); };

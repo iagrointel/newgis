@@ -3,6 +3,7 @@
    log (GET /api/jobs/{id}/log?limite=2000 em texto); blocos de parâmetros, resultado (link para o item quando
    resultado.item_id existe) e proveniência; cancelar e repetir. */
 import { confirmar } from '../base/componentes.js';
+import { icone } from '../base/icones.js';
 import { h, limpar } from '../base/dom.js';
 import { formatarJSON } from '../core.js';
 import * as api from './api.js';
@@ -63,7 +64,7 @@ function renderizarCabecalho() {
   porId('detalhe-tipo').textContent = job.tipo || '—';
   const marc = porId('detalhe-estado');
   marc.className = `estado-job ${e.classe}`;
-  limpar(marc).append(h('span', { class: 'simbolo', 'aria-hidden': 'true' }, e.simbolo), ' ', e.rotulo);
+  limpar(marc).append(icone(e.icone, { tamanho: 14 }), e.rotulo);
   const partes = [`${job.progresso ?? 0} %`, `tentativa ${job.tentativa ?? 0} de ${job.max_tentativas ?? '—'}`];
   if (job.reinicios) partes.push(`${job.reinicios} ${job.reinicios === 1 ? 'reinício' : 'reinícios'}`);
   partes.push(`worker ${job.worker || '—'}`, `criado ${dataHora(job.criado_em)}`);

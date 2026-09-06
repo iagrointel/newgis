@@ -1070,3 +1070,22 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+---
+
+## 21. Identidade visual, tema e a régua (item L0-14-identidade-visual)
+
+A página `/estilo` (com ou sem sessão) é o sistema de design vivo: lê `web/estilo/tokens.css` no momento em que
+abre e desenha a paleta do tema em uso com a razão de contraste medida no navegador, a escala tipográfica, a
+grade de espaçamento, a forma, a família de ícones inteira e os 6 componentes de base nos 7 estados. O que se lê
+nela é o que está no arquivo; não existe cópia.
+
+Tema: os três botões na barra lateral (sistema, claro, escuro) valem para todas as telas e ficam guardados no
+navegador (`localStorage`, chave `plat_tema`); "sistema" segue a preferência do sistema operacional. Densidade
+(compacta, normal, confortável) escolhe-se em `/estilo` (chave `plat_densidade`).
+
+A régua: todo número mostrado com uma régua embaixo (traços em âmbar) carrega a procedência. Passe o cursor ou
+leve o foco de teclado até ele para ver a rota que o produziu, o instante (UTC) e, quando existe, o comando de
+conferência na linha de comando. No rodapé de toda tela com sessão, a linha "régua" lista as últimas chamadas à
+API da tela (rota, código HTTP, hora UTC, duração). Regras completas em `docs/IDENTIDADE.md`; medidas em
+`tests/medidas/L0-14.json`.

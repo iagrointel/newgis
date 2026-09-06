@@ -60,7 +60,7 @@ async function montarTela() {
     ...tipos.map((tp) => h('option', { value: tp.tipo }, `${tp.rotulo} (${tp.extensoes.join(', ')})`)),
   );
 
-  const entrada = h('input', { type: 'file', id: 'upload-arquivo', class: 'sr-only' });
+  const entrada = h('input', { type: 'file', id: 'upload-arquivo', class: 'sr-only', 'aria-label': t('upload.escolher') });
   const nomeArquivo = h('p', { id: 'upload-nome' }, t('upload.nenhum_arquivo'));
   const dropzone = h(
     'div', { id: 'upload-dropzone', class: 'upload-dropzone', tabindex: '0', role: 'button',

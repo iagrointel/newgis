@@ -6,6 +6,7 @@
    (não há campo "arquivo" no componente declarativo) — mesmo padrão de web/js/auth/organizacao.js::montarLogo,
    só que POST/DELETE /api/eu/foto em vez de /api/org/logo. */
 import { obter, enviar, alterar, apagar, mensagemDe } from '../base/api.js';
+import { icone } from '../base/icones.js';
 import { h, limpar, htmlSeguro, botaoCopiar, marcador } from '../base/dom.js';
 import { carregar, t, formatarData } from '../base/i18n.js';
 import { loja } from '../base/estado.js';
@@ -398,7 +399,7 @@ function listarPrivilegios(todos) {
   const lista = todos.length ? todos : [...meus].map((nome) => ({ nome }));
   for (const p of lista) {
     const temEste = meus.has(p.nome);
-    ul.append(h('li', { class: temEste ? '' : 'sem', title: p.descricao }, temEste ? '✓ ' : '– ', p.nome));
+    ul.append(h('li', { class: temEste ? '' : 'sem', title: p.descricao }, icone(temEste ? 'ok' : 'menos', { tamanho: 12 }), p.nome));
   }
   if (!lista.length) ul.append(h('li', {}, t('conta.sem_privilegios')));
 }

@@ -1,30 +1,23 @@
-/* plat — tokens "instrumento" (item L0-14-identidade-visual, decisão do dono 06/09/2026: "instrumento" — painel
-   escuro, denso, preciso, como um cockpit operado o dia inteiro, nunca um painel administrativo genérico).
+/* plat — TOKENS (item L0-14-identidade-visual). Fonte única de toda cor, medida, tipo, raio, sombra e densidade
+   do produto. Nenhum outro arquivo css/js pode escrever cor ou medida à mão: tests/unit/test_estilo_tokens.py
+   varre web/ e reprova literal fora daqui. Documento de identidade: docs/IDENTIDADE.md.
 
-   O QUE É ISTO: a fonte única de verdade dos tokens visuais novos (cor, tipografia, raio, densidade). Esta
-   folha NÃO redefine --fundo/--painel/--acento etc. usados hoje em web/style.css (isso quebraria as 9 telas
-   que já usam essas variáveis com a paleta azul do turno T2). Em vez disso define um segundo conjunto,
-   namespaced `--i-*`, e web/style.css remapeia `--i-*` -> nomes antigos SÓ dentro de `body.instrumento`
-   (ver "layout base: remapeamento" no fim de web/style.css). Uma tela adota a identidade nova só com
-   `class="instrumento"` no <body>; sem essa classe, nada muda — é assim que a tela de entrada (web/login.html)
-   pôde virar a primeira fatia sem mexer nas outras 8 telas.
+   Direção (decisão do dono, 06/09/2026): "instrumento" — painel escuro por padrão, denso, cantos retos, âmbar de
+   instrumento no lugar do azul de sistema, número em algarismo de largura fixa. O traço próprio do produto é a
+   RÉGUA: todo número que a tela mostra carrega a sua procedência (rota, instante, comando) — ver .regua em
+   web/estilo/base.css e web/js/base/regua.js.
 
-   Tipografia (par com motivo, três papéis):
-   - "Big Shoulders Display" 700/800 — título/rótulo de destaque: condensada e industrial, letra de placa de
-     instrumento (marca, h1, número grande de destaque). Nunca para texto de corrida (é condensada demais
-     para parágrafo).
-   - "IBM Plex Sans" 400/500/600 — texto de corrida e formulário: neutra, legível em texto longo, contraste
-     deliberado com o título (a mesma fonte para tudo é o "painel genérico" que o dono rejeitou).
-   - "IBM Plex Mono" 400/500 — todo dado tabular/numérico/código: algarismos de largura fixa
-     (font-variant-numeric: tabular-nums já ligado abaixo), para número alinhar em coluna como em um
-     mostrador digital.
-   Vendorizadas em web/vendor/ (ADR 0001 seção 11.2 regra 3, estendida): big-shoulders-display-2.002.woff2,
-   ibm-plex-sans-3.201.woff2, ibm-plex-mono-regular-2.3.woff2, ibm-plex-mono-medium-2.3.woff2 — sha256 e
-   licença OFL-1.1 em web/vendor/VERSOES.txt.
+   Tipografia (par com motivo, três papéis; vendorizadas em web/vendor/, sha256 e OFL-1.1 em VERSOES.txt):
+   - "Big Shoulders Display" 700/800 — exibição: condensada e industrial, letra de placa de instrumento (marca,
+     h1, h2, número de destaque). Nunca em texto de corrida: condensada demais para parágrafo.
+   - "IBM Plex Sans" 400/500/600 — texto de corrida e formulário: humanista-neutra, legível em texto longo,
+     contraste deliberado com a exibição (a mesma fonte para tudo é o painel genérico que o dono rejeitou).
+   - "IBM Plex Mono" 400/500 — dado tabular, número, código, coordenada: algarismos de largura fixa
+     (tabular-nums ligado em base.css), para número alinhar em coluna como em um mostrador digital.
 
-   Tema: três estados, regra da casa (system/claro/escuro) — "sistema" (nenhum atributo, `prefers-color-scheme`
-   decide), escolha explícita via `data-theme="light"` ou `data-theme="dark"` no <html> (vence os dois outros
-   estados nas suas respectivas direções). */
+   Tema em três estados (regra da casa): "sistema" (nenhum atributo; prefers-color-scheme decide), escolha
+   explícita via html[data-theme="light"|"dark"] (vence os dois outros estados). Densidade em três estados:
+   html[data-densidade="compacta"|"normal"|"confortavel"] muda só o passo da grade de espaçamento. */
 
 @font-face {
   font-family: "Big Shoulders Display";
@@ -58,66 +51,72 @@
   src: url("/static/vendor/ibm-plex-mono-medium-2.3.woff2") format("woff2");
 }
 
+/* =====================================================================================================
+   1. COR — paleta escura (padrão: instrumento operado de noite tanto quanto de dia)
+   Todo par texto × superfície abaixo foi medido >= 4,5:1 (WCAG AA) por tests/e2e/test_estilo.py.
+   ===================================================================================================== */
 :root {
-  /* ---- paleta escura (padrão do produto — instrumento operado de noite tanto quanto de dia) ---- */
-  --i-fundo: #0b0f10;
-  --i-superficie: #12181a;
-  --i-superficie-2: #1a2224;
-  --i-linha: #263133;
+  --i-fundo: #0b0f10;            /* fundo da tela e da barra lateral */
+  --i-superficie: #12181a;       /* cartão, tabela, diálogo */
+  --i-superficie-2: #1a2224;     /* campo, botão, linha em foco, faixa de aviso */
+  --i-linha: #263133;            /* borda de cartão e de tabela */
+  --i-linha-forte: #3a4a4d;      /* borda de campo e de botão */
   --i-texto: #e7ece9;
-  --i-texto-fraco: #8fa19c;
-  --i-acento: #d98a2b;       /* âmbar de instrumento — ponteiro, luz de aviso; NUNCA azul de sistema */
-  --i-acento-texto: #1a1002; /* texto sobre botão/etiqueta preenchida a âmbar, contraste AA */
+  --i-texto-fraco: #8fa19c;      /* rótulo, ajuda, metadado — 6,6:1 sobre superfície */
+  --i-acento: #d98a2b;           /* âmbar de instrumento: ponteiro, luz de aviso, foco, link. Nunca azul */
+  --i-acento-texto: #1a1002;     /* texto sobre botão preenchido a âmbar */
   --i-sucesso: #4f9e6e;
   --i-aviso: #e0a24a;
-  --i-erro: #d9614f;
-  --i-foco: var(--i-acento);
+  --i-erro: #e46b58;
+  --i-sobre-estado: #0b0f10;     /* texto sobre sucesso/aviso/erro preenchidos */
+  --i-veu: rgba(0, 0, 0, .55);   /* pano de fundo de diálogo */
   --i-sombra: 0 12px 40px rgba(0, 0, 0, .55);
-
-  /* ---- tipografia ---- */
-  --i-fonte-titulo: "Big Shoulders Display", "Arial Narrow", sans-serif;
-  --i-fonte-texto: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --i-fonte-dado: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-
-  /* ---- motivo: cantos retos, densidade alta ---- */
-  --i-raio: 2px;             /* nunca maior — instrumento não é app consumidor arredondado */
-  --i-tique: 10px;           /* comprimento do traço em L nos 4 cantos dos painéis-chave */
-  --i-tique-espessura: 1px;
-  --i-e1: .2rem; --i-e2: .4rem; --i-e3: .6rem; --i-e4: .85rem; --i-e5: 1.25rem; --i-e6: 1.75rem;
+  --i-sombra-leve: 0 2px 8px rgba(0, 0, 0, .35);
+  color-scheme: dark;
 }
 
-/* ---- paleta clara (sistema em modo claro; nenhum <html data-theme> explícito) ---- */
+/* ---- paleta clara (sistema em modo claro; nenhum html[data-theme]) ---- */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     --i-fundo: #eef1f0;
     --i-superficie: #ffffff;
     --i-superficie-2: #e4e9e7;
     --i-linha: #ccd4d1;
+    --i-linha-forte: #9fadaa;
     --i-texto: #12181a;
     --i-texto-fraco: #4d5b57;
-    --i-acento: #a8641c;      /* âmbar escurecido para contraste AA sobre fundo claro */
+    --i-acento: #8f5416;         /* âmbar escurecido: 6,1:1 sobre branco, 5,0:1 sobre superfície-2 */
     --i-acento-texto: #fff6ec;
-    --i-sucesso: #2f7a4c;
-    --i-aviso: #8a5a12;
+    --i-sucesso: #2a6e43;
+    --i-aviso: #805310;
     --i-erro: #a83c2e;
-    --i-sombra: 0 8px 28px rgba(18, 24, 26, .12);
+    --i-sobre-estado: #ffffff;
+    --i-veu: rgba(18, 24, 26, .45);
+    --i-sombra: 0 8px 28px rgba(18, 24, 26, .16);
+    --i-sombra-leve: 0 2px 8px rgba(18, 24, 26, .12);
+    color-scheme: light;
   }
 }
 
-/* ---- escolha explícita, vence os dois estados acima nas suas direções ---- */
+/* ---- escolha explícita: vence os dois estados acima nas suas direções ---- */
 :root[data-theme="light"] {
   --i-fundo: #eef1f0;
   --i-superficie: #ffffff;
   --i-superficie-2: #e4e9e7;
   --i-linha: #ccd4d1;
+  --i-linha-forte: #9fadaa;
   --i-texto: #12181a;
   --i-texto-fraco: #4d5b57;
-  --i-acento: #a8641c;
+  --i-acento: #8f5416;
   --i-acento-texto: #fff6ec;
-  --i-sucesso: #2f7a4c;
-  --i-aviso: #8a5a12;
+  --i-sucesso: #2a6e43;
+  --i-aviso: #805310;
   --i-erro: #a83c2e;
-  --i-sombra: 0 8px 28px rgba(18, 24, 26, .12);
+  --i-sobre-estado: #ffffff;
+  --i-veu: rgba(18, 24, 26, .45);
+  --i-sombra: 0 8px 28px rgba(18, 24, 26, .16);
+  --i-sombra-leve: 0 2px 8px rgba(18, 24, 26, .12);
+  color-scheme: light;
 }
 
 :root[data-theme="dark"] {
@@ -125,45 +124,171 @@
   --i-superficie: #12181a;
   --i-superficie-2: #1a2224;
   --i-linha: #263133;
+  --i-linha-forte: #3a4a4d;
   --i-texto: #e7ece9;
   --i-texto-fraco: #8fa19c;
   --i-acento: #d98a2b;
   --i-acento-texto: #1a1002;
   --i-sucesso: #4f9e6e;
   --i-aviso: #e0a24a;
-  --i-erro: #d9614f;
+  --i-erro: #e46b58;
+  --i-sobre-estado: #0b0f10;
+  --i-veu: rgba(0, 0, 0, .55);
   --i-sombra: 0 12px 40px rgba(0, 0, 0, .55);
+  --i-sombra-leve: 0 2px 8px rgba(0, 0, 0, .35);
+  color-scheme: dark;
 }
 
-/* ---- marca d'água de instrumento: tique de canto (moldura de mostrador) ----
-   um traço em L nos 4 cantos de um painel-chave, como a moldura de um mostrador. Cor = --i-acento (o âmbar
-   de instrumento, "ponteiro, luz de aviso" da especificação) — testado primeiro com a cor da borda (--i-linha)
-   e DESCARTADO, ficava indistinguível do canto do border de 1px (mesma cor). Vive num `::before` próprio, não
-   na propriedade `background` do painel: um `.cartao { background: var(--painel) }` que caísse depois na
-   cascata (mesma especificidade, `background` é atalho e reseta `background-image` para `none`) apagaria o
-   tique — MEDIDO acontecendo na primeira versão desta regra contra `web/style.css` linha ~59. Aplicar a
-   classe `.instrumento-moldura` a qualquer painel-chave (o `.cartao` da tela de entrada é o primeiro);
-   exige `position: relative` (ou `static` mesmo, o `::before` vira absoluto contra o próprio elemento). */
-.instrumento-moldura { position: relative; }
-.instrumento-moldura::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(var(--i-acento), var(--i-acento)), linear-gradient(var(--i-acento), var(--i-acento)),
-    linear-gradient(var(--i-acento), var(--i-acento)), linear-gradient(var(--i-acento), var(--i-acento)),
-    linear-gradient(var(--i-acento), var(--i-acento)), linear-gradient(var(--i-acento), var(--i-acento)),
-    linear-gradient(var(--i-acento), var(--i-acento)), linear-gradient(var(--i-acento), var(--i-acento));
-  background-repeat: no-repeat;
-  background-size:
-    var(--i-tique-espessura) var(--i-tique), var(--i-tique) var(--i-tique-espessura),
-    var(--i-tique-espessura) var(--i-tique), var(--i-tique) var(--i-tique-espessura),
-    var(--i-tique-espessura) var(--i-tique), var(--i-tique) var(--i-tique-espessura),
-    var(--i-tique-espessura) var(--i-tique), var(--i-tique) var(--i-tique-espessura);
-  background-position:
-    top left, top left,
-    top right, top right,
-    bottom left, bottom left,
-    bottom right, bottom right;
+/* =====================================================================================================
+   2. COR DERIVADA — tintas fracas para seleção, faixa e realce (mistura do acento com transparência,
+   por isso funcionam nos dois temas sem um segundo valor). Cor da cartografia é FIXA: um mapa não muda
+   de paleta com o sistema operacional; o painel que fica sobre o canvas usa --i-carta-*.
+   ===================================================================================================== */
+:root {
+  --i-acento-fraco: color-mix(in srgb, var(--i-acento) 14%, transparent);
+  --i-acento-medio: color-mix(in srgb, var(--i-acento) 28%, transparent);
+  --i-sucesso-fraco: color-mix(in srgb, var(--i-sucesso) 14%, transparent);
+  --i-aviso-fraco: color-mix(in srgb, var(--i-aviso) 14%, transparent);
+  --i-erro-fraco: color-mix(in srgb, var(--i-erro) 14%, transparent);
+  --i-foco: var(--i-acento);
+  --i-qr-fundo: #ffffff;         /* QR de segundo fator: módulo escuro sobre branco, exigência do leitor */
+
+  --i-carta-fundo: #0b0f10;
+  --i-carta-agua: #12303a;
+  --i-carta-cobertura: #182420;
+  --i-carta-edificacao: #1a2224;
+  --i-carta-edificacao-borda: #263133;
+  --i-carta-via-menor: #4d5b57;
+  --i-carta-via-media: #8fa19c;
+  --i-carta-via-maior: #d98a2b;
+  --i-carta-lugar: #d98a2b;
+  --i-carta-painel: rgba(18, 24, 26, .88);
+  --i-carta-painel-borda: #3a4550;
+  --i-carta-texto: #e7ece9;
+  --i-carta-texto-fraco: #9aa8ae;
+}
+
+/* =====================================================================================================
+   3. TIPOGRAFIA — famílias, escala (razão 1,125 sobre 14 px), pesos, entrelinha
+   ===================================================================================================== */
+:root {
+  --i-fonte-titulo: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --i-fonte-texto: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --i-fonte-dado: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --i-base: 14px;    /* tamanho-raiz: 1rem = 14 px em toda a escala abaixo */
+  --i-t-1: .72rem;   /* 11,5 px — micro-rótulo, tique de régua */
+  --i-t0: .8rem;     /* 12,8 px — ajuda, metadado, célula de código */
+  --i-t1: .875rem;   /* 14 px — rótulo, tabela, botão pequeno */
+  --i-t2: 1rem;      /* 16 px — corpo (o html fica em 14 px, ver base.css) */
+  --i-t3: 1.125rem;  /* 18 px — h3, cabeçalho de diálogo */
+  --i-t4: 1.3rem;    /* 20,8 px — h2 de cartão */
+  --i-t5: 1.7rem;    /* 27 px — h1 de tela */
+  --i-t6: 2.4rem;    /* 38 px — marca na tela de entrada, número de destaque */
+
+  --i-peso-normal: 400;
+  --i-peso-medio: 500;
+  --i-peso-forte: 600;
+  --i-peso-titulo: 800;
+
+  --i-entrelinha: 1.5;
+  --i-entrelinha-justa: 1.25;
+  --i-entrelinha-titulo: 1.05;
+  --i-espaco-letra-titulo: .04em;
+}
+
+/* =====================================================================================================
+   4. GRADE DE ESPAÇAMENTO — passo de 4 px multiplicado pela densidade; --i-e0..--i-e8
+   ===================================================================================================== */
+:root {
+  --i-densidade: 1;
+  --i-passo: calc(.25rem * var(--i-densidade));
+  --i-e0: calc(var(--i-passo) * .5);   /* 2 px */
+  --i-e1: var(--i-passo);              /* 4 px */
+  --i-e2: calc(var(--i-passo) * 2);    /* 8 px */
+  --i-e3: calc(var(--i-passo) * 3);    /* 12 px */
+  --i-e4: calc(var(--i-passo) * 4);    /* 16 px */
+  --i-e5: calc(var(--i-passo) * 6);    /* 24 px */
+  --i-e6: calc(var(--i-passo) * 8);    /* 32 px */
+  --i-e7: calc(var(--i-passo) * 12);   /* 48 px */
+  --i-e8: calc(var(--i-passo) * 16);   /* 64 px */
+}
+:root[data-densidade="compacta"] { --i-densidade: .75; }
+:root[data-densidade="confortavel"] { --i-densidade: 1.25; }
+
+/* =====================================================================================================
+   5. FORMA — raio, fio, foco, tique, régua, tempo, larguras de leiaute
+   ===================================================================================================== */
+:root {
+  --i-raio: 2px;                 /* cantos retos: instrumento, não app consumidor arredondado */
+  --i-raio-pilula: 999px;        /* marcador e barra de progresso */
+  --i-raio-redondo: 50%;         /* foto de perfil */
+  --i-fio: 1px;
+  --i-fio-forte: 2px;
+  --i-fio-marca: 3px;            /* marca de item ativo na navegação e na aba */
+  --i-foco-largura: 2px;
+  --i-foco-recuo: 2px;
+  --i-tique: 10px;               /* comprimento do traço em L nos cantos da moldura */
+  --i-regua-passo: 4px;          /* distância entre os traços da régua sob um número */
+  --i-regua-altura: 4px;
+  --i-tempo: .15s;
+  --i-tempo-lento: .3s;
+
+  --i-icone: 20px;
+  --i-icone-pequeno: 14px;
+  --i-icone-grande: 32px;
+  --i-traco-icone: 1.6;
+
+  --i-largura-lateral: 232px;
+  --i-largura-leitura: 720px;
+  --i-largura-tela: 1280px;
+  --i-largura-entrada: 420px;
+  --i-largura-dialogo: 560px;
+  --i-largura-painel: 520px;
+  --i-largura-painel-largo: 760px;
+  --i-largura-campo: 220px;
+  --i-largura-filtro: 140px;
+  --i-largura-coluna: 200px;
+  --i-largura-detalhe: 360px;
+  --i-largura-aviso: 560px;
+  --i-largura-upload: 640px;
+  --i-mini-largura: 60px;
+  --i-mini-altura: 40px;
+  --i-mini-grande: 150px;
+  --i-mini-grande-altura: 100px;
+  --i-mini-cartao-altura: 120px;
+  --i-qr-lado: 220px;
+  --i-barra-altura: 8px;
+  --i-barra-grossa: 10px;
+  --i-corte-tela: 800px;         /* abaixo disto a barra lateral vira barra superior */
+  --i-corte-largo: 1200px;       /* acima disto lista | detalhe ficam lado a lado */
+  --i-corte-colunas: 900px;      /* abaixo disto as colunas do catálogo viram gavetas */
+}
+
+/* =====================================================================================================
+   6. NOMES DE COMPATIBILIDADE — as folhas das telas anteriores ao L0-14 usam estes nomes; apontam para
+   os tokens acima (um só valor por cor). Nunca defina valor literal aqui: só var().
+   ===================================================================================================== */
+:root {
+  --fundo: var(--i-fundo);
+  --fundo-2: var(--i-fundo);
+  --painel: var(--i-superficie);
+  --painel-2: var(--i-superficie-2);
+  --borda: var(--i-linha);
+  --borda-forte: var(--i-linha-forte);
+  --texto: var(--i-texto);
+  --fraco: var(--i-texto-fraco);
+  --ok: var(--i-sucesso);
+  --atencao: var(--i-aviso);
+  --falha: var(--i-erro);
+  --info: var(--i-acento);
+  --acento: var(--i-acento);
+  --acento-texto: var(--i-acento-texto);
+  --foco: var(--i-foco);
+  --sombra: var(--i-sombra);
+  --sans: var(--i-fonte-texto);
+  --mono: var(--i-fonte-dado);
+  --raio: var(--i-raio);
+  --lateral-largura: var(--i-largura-lateral);
+  --e1: var(--i-e1); --e2: var(--i-e2); --e3: var(--i-e3); --e4: var(--i-e4); --e5: var(--i-e5); --e6: var(--i-e6);
 }

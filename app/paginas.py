@@ -35,6 +35,8 @@ PAGINAS = {
     "/redefinir-senha": "redefinir_senha.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
+    # --- identidade visual (L0-14): página viva do sistema de design, gerada dos tokens em web/estilo/tokens.css
+    "/estilo": "estilo.html",
 }
 router = APIRouter()
 

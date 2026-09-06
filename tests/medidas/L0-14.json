@@ -1,0 +1,64 @@
+{
+ "item": "L0-14",
+ "assinado_por": "frontend+testador (item L0-14-identidade-visual, worktree wt/mapaweb, base de trilha plat_tmapaweb, servidor local scripts/servir_local.py :8171)",
+ "maquina": "12 vCPU, 23 GB RAM, carga 9-11 (8 bancadas em paralelo); chromium do playwright 1280x800; axe-core lido de /home/dev/tribuna/node_modules (fora do repositório)",
+ "capturas": "tests/e2e/capturas/L0-14_<tela>_{antes,depois_escuro,depois_claro}.png (antes = https://plat.iagrointel.com em 06/09/2026; 15 telas; /estilo sem antes porque não existia)",
+ "gerado_em": "2026-09-06T19:35:49Z",
+ "git_sha": "90d03c07da0c",
+ "medidas": {
+  "contraste_escuro_nos_medidos": {
+   "valor": 2235,
+   "unidade": "nós de texto",
+   "comando": "tests/e2e/test_estilo.py JS_CONTRASTE em 16 telas, color_scheme=escuro, chromium do playwright"
+  },
+  "contraste_escuro_violacoes_aa": {
+   "valor": 0,
+   "unidade": "nós abaixo de 4,5:1 (3:1 texto grande)",
+   "comando": "mesma varredura; fórmula (L1+0,05)/(L2+0,05) sobre cor calculada e fundo composto pelos ancestrais"
+  },
+  "axe_escuro_violacoes": {
+   "valor": {
+    "minor": 7
+   },
+   "unidade": "violações por impacto",
+   "comando": "axe.run(document, runOnly color-contrast+nomes+rótulos) com /home/dev/tribuna/node_modules/axe-core/axe.min.js injetado por add_script_tag"
+  },
+  "contraste_claro_nos_medidos": {
+   "valor": 2234,
+   "unidade": "nós de texto",
+   "comando": "tests/e2e/test_estilo.py JS_CONTRASTE em 16 telas, color_scheme=claro, chromium do playwright"
+  },
+  "contraste_claro_violacoes_aa": {
+   "valor": 0,
+   "unidade": "nós abaixo de 4,5:1 (3:1 texto grande)",
+   "comando": "mesma varredura; fórmula (L1+0,05)/(L2+0,05) sobre cor calculada e fundo composto pelos ancestrais"
+  },
+  "axe_claro_violacoes": {
+   "valor": {
+    "minor": 7
+   },
+   "unidade": "violações por impacto",
+   "comando": "axe.run(document, runOnly color-contrast+nomes+rótulos) com /home/dev/tribuna/node_modules/axe-core/axe.min.js injetado por add_script_tag"
+  },
+  "tokens_no_arquivo": {
+   "valor": 108,
+   "unidade": "tokens --i-*",
+   "comando": "grep -o -- '--i-[a-z0-9-]*:' web/estilo/tokens.css | sort -u | wc -l"
+  },
+  "icones_na_familia": {
+   "valor": 84,
+   "unidade": "ícones",
+   "comando": "grep -cE '^  [a-z_]+: \\[' web/js/base/icones.js"
+  },
+  "componentes_x_estados": {
+   "valor": 42,
+   "unidade": "caixas em /estilo",
+   "comando": "playwright: [data-componente] [data-estado] count por par"
+  },
+  "regua_telas_com_linha_de_procedencia": {
+   "valor": 14,
+   "unidade": "telas",
+   "comando": "montarLayout() chama reguaTela() em toda tela com sessão (web/js/base/layout.js)"
+  }
+ }
+}

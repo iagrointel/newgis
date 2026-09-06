@@ -4,6 +4,7 @@
    quando o número de ativos muda), cancelar/repetir por linha e CSV da página atual gerado no navegador.
    A tabela é própria (não <plat-tabela>) porque as linhas mudam uma a uma ao vivo e o cabeçalho ordena. */
 import { confirmar } from '../base/componentes.js';
+import { icone } from '../base/icones.js';
 import { h, limpar } from '../base/dom.js';
 import * as api from './api.js';
 import { INTERVALO_POLLING_MS, assinar, cancelarAssinatura } from './eventos.js';
@@ -61,7 +62,7 @@ function casaComFiltros(job) {
 
 export function marcaEstado(nome) {
   const e = fmtEstado(nome);
-  return h('span', { class: `estado-job ${e.classe}` }, h('span', { class: 'simbolo', 'aria-hidden': 'true' }, e.simbolo), ' ', e.rotulo);
+  return h('span', { class: `estado-job ${e.classe}` }, icone(e.icone, { tamanho: 14 }), e.rotulo);
 }
 
 function celulaProgresso(job) {
@@ -182,7 +183,10 @@ function renderizar() {
   renderizarPaginacao();
   const [campo, dir] = s.ordenar.split(':');
   for (const th of document.querySelectorAll('#lista th[data-campo]')) {
-    th.setAttribute('aria-sort', th.dataset.campo === campo ? (dir === 'asc' ? 'ascending' : 'descending') : 'none');
+    const ativa = th.dataset.campo === campo;
+    th.setAttribute('aria-sort', ativa ? (dir === 'asc' ? 'ascending' : 'descending') : 'none');
+    th.querySelector('.icone')?.remove();
+    th.append(' ', icone(ativa ? (dir === 'asc' ? 'ordenar_asc' : 'ordenar_desc') : 'ordenar', { tamanho: 12 }));
   }
   assinaturas();
 }

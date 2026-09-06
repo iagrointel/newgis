@@ -1,12 +1,12 @@
-/* plat · tarefas — formatação em pt-BR: datas relativas, durações, estados com símbolo e texto, números, CSV.
+/* plat · tarefas — formatação em pt-BR: datas relativas, durações, estados com ícone (nome na família web/js/base/icones.js) e texto, números, CSV.
    Puro (sem DOM, sem rede) para ser testável e reutilizável por outras telas. */
 
 export const ESTADOS = {
-  pendente: { simbolo: '○', rotulo: 'pendente', classe: 'pendente' },
-  rodando: { simbolo: '●', rotulo: 'rodando', classe: 'rodando' },
-  concluido: { simbolo: '✓', rotulo: 'concluído', classe: 'concluido' },
-  falhou: { simbolo: '✗', rotulo: 'falhou', classe: 'falhou' },
-  cancelado: { simbolo: '—', rotulo: 'cancelado', classe: 'cancelado' },
+  pendente: { icone: 'pendente', rotulo: 'pendente', classe: 'pendente' },
+  rodando: { icone: 'rodando', rotulo: 'rodando', classe: 'rodando' },
+  concluido: { icone: 'concluido', rotulo: 'concluído', classe: 'concluido' },
+  falhou: { icone: 'falhou', rotulo: 'falhou', classe: 'falhou' },
+  cancelado: { icone: 'cancelado', rotulo: 'cancelado', classe: 'cancelado' },
 };
 export const FINAIS = new Set(['concluido', 'falhou', 'cancelado']);
 export const NIVEIS = ['DEBUG', 'INFO', 'AVISO', 'ERRO'];
@@ -14,7 +14,7 @@ export const NIVEIS = ['DEBUG', 'INFO', 'AVISO', 'ERRO'];
 const dois = (n) => String(n).padStart(2, '0');
 
 export function estado(nome) {
-  return ESTADOS[nome] || { simbolo: '?', rotulo: nome || '—', classe: 'desconhecido' };
+  return ESTADOS[nome] || { icone: 'desconhecido', rotulo: nome || '—', classe: 'desconhecido' };
 }
 
 export function numero(n) {

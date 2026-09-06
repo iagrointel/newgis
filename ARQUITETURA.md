@@ -81,7 +81,7 @@ db/
 deploy/                plat-api.service, plat-worker.service, nginx.conf
 web/
   index.html, login.html, conta.html, tarefas.html, admin/{usuarios,grupos,papeis,tokens,log}.html
-  style.css (tema único), tarefas.css, app.js, js/core.js
+  estilo/tokens.css + estilo/base.css + estilo/componentes.css (item L0-14; substituem style.css), tarefas.css, app.js, js/core.js
   js/base/             api.js, estado.js, i18n.js, dom.js, layout.js, componentes.js + componentes/{aviso,busca,dialogo,formulario,paginacao,tabela}.js
   js/auth/             sessao.js, login.js, conta.js, usuarios.js, grupos.js, papeis.js, tokens.js, log.js, comum.js
   js/jobs/             api.js, eventos.js, formato.js, util.js, lista.js, detalhe.js, agendas.js, tarefas.js
@@ -658,7 +658,7 @@ pelo testador; a versão comitada de `L0-02` (`12b2c2e`, sobre `ffedc05`) traz 7
 ## 11. Front (`web/`)
 
 Módulos ES nativos sem bundler, importação relativa, nunca `?v=` (cache resolvido por `no-store`). Tema único em
-`style.css` (painel de instrumento: chrome escuro, barra lateral de 232 px que vira barra superior abaixo de 800 px,
+`web/estilo/` (tokens, base e componentes; antes `style.css`) (painel de instrumento: chrome escuro, barra lateral de 232 px que vira barra superior abaixo de 800 px,
 IBM Plex se instalada). Base reutilizável em `js/base/`: `api.js` (`chamar/obter/enviar/alterar/apagar`, contrato
 de erro), `estado.js` (loja sobre `EventTarget`, `tem(privilegio)`), `i18n.js` (`carregar/t/aplicar`, evento
 `plat:i18n` para componentes que renderizam antes do dicionário), `dom.js` (`h()` sem HTML em texto, `htmlSeguro`
@@ -918,7 +918,7 @@ propósitos diferentes, não um esquecimento.
 `web/js/auth/organizacao.js::montarLogo()` (mesmo padrão, endpoint diferente). `web/js/base/layout.js::
 montarLayout()` ganha um `<img id="pessoa-foto" class="foto-perfil">` opcional dentro de um novo
 `.pessoa-topo` (sem foto: nenhum `<img>`, nunca um ícone genérico fingindo ser a foto de alguém) — CSS novo
-em `web/style.css` (`.foto-perfil { border-radius: 50%; object-fit: cover }`).
+em `web/estilo/base.css` (`.foto-perfil { border-radius: var(--i-raio-redondo); object-fit: cover }`).
 
 **Cobertura de teste**: `tests/api/test_eu.py` ganhou os testes de preferências (edição válida/inválida,
 persistência), foto (enviar/ler/remover, SVG recusado, >1 MiB recusado), escalada de acesso

@@ -30,7 +30,27 @@ export function normalizarErro(status, json, reqId) {
   };
 }
 
+/* registro de procedência (item L0-14, RÉGUA): toda chamada fica anotada com método, caminho, status, instante
+   (cabeçalho Date da resposta quando existe, senão o relógio local) e duração; web/js/base/regua.js lê daqui.
+   Só os últimos 50; nunca guarda corpo nem cabeçalho de autenticação. */
+const REGISTRO = [];
+const ALVO = new EventTarget();
+export function chamadas() { return REGISTRO.slice(); }
+export function ultimaChamada() { return REGISTRO.length ? REGISTRO[REGISTRO.length - 1] : null; }
+export function aoChamar(fn) { const g = (e) => fn(e.detail); ALVO.addEventListener('chamada', g); return () => ALVO.removeEventListener('chamada', g); }
+export function registrarChamada(metodo, url, status, ms, data) {
+  let caminho = url;
+  try { caminho = new URL(url, location.origin).pathname; } catch { /* url relativa sem origem válida: fica como veio */ }
+  const em = data && !Number.isNaN(new Date(data).getTime()) ? new Date(data).toISOString() : new Date().toISOString();
+  const item = { metodo, caminho, status, ms: Math.round(ms), em };
+  REGISTRO.push(item);
+  if (REGISTRO.length > 50) REGISTRO.shift();
+  ALVO.dispatchEvent(new CustomEvent('chamada', { detail: item }));
+  return item;
+}
+
 export async function chamar(metodo, url, corpo, opcoes = {}) {
+  const t0 = performance.now();
   const init = { method: metodo, credentials: 'same-origin', cache: 'no-store', headers: { ...(opcoes.headers || {}) } };
   if (metodo !== 'GET' && metodo !== 'HEAD') {
     // escrita sob cookie exige Content-Type application/json (ADR 0002 seção 5.3); DELETE vai sem corpo
@@ -42,8 +62,10 @@ export async function chamar(metodo, url, corpo, opcoes = {}) {
   try {
     resp = await fetch(url, init);
   } catch {
+    registrarChamada(metodo, url, 0, performance.now() - t0, null);
     return { status: 0, json: normalizarErro(0, null, null) };
   }
+  registrarChamada(metodo, url, resp.status, performance.now() - t0, resp.headers.get('Date'));
   let json = null;
   const tipo = resp.headers.get('content-type') || '';
   if (resp.status !== 204 && tipo.includes('json')) {

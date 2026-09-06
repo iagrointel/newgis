@@ -15,6 +15,10 @@ import { exigirSessao } from './sessao.js';
 const IDIOMAS = [{ valor: 'pt-BR', rotulo: 'Português (Brasil)' }];
 let atual = null;
 
+/* declarado antes de qualquer await de topo: iniciar() chega em carregarSmtp() antes de a linha do `let` executar
+   (zona morta temporal, achado pelo e2e do L0-14 em /admin/organizacao) */
+let smtpAtual = null;
+
 await carregar();
 const usuario = await exigirSessao({ privilegio: 'org.configurar' });
 if (usuario) await iniciar();
@@ -207,8 +211,6 @@ document.getElementById('logo-remover').addEventListener('click', async () => {
 /* ---------------------------------------------------------------- SMTP (item L0-07-d-smtp-convites):
    endpoint PRÓPRIO (/api/org/smtp), fora de /api/org — a senha nunca volta na resposta (só
    senha_configurada: bool); "host" vazio apaga o override do inquilino (volta à instalação/caminho manual). */
-let smtpAtual = null;
-
 async function carregarSmtp() {
   const r = await obter('/api/org/smtp');
   if (r.status !== 200) { document.getElementById('aviso').erro(`${t('smtp.erro_carregar')}: ${mensagemDe(r)}`); return; }
