@@ -3,6 +3,20 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (conserto de segurança L6-02-a: credencial não atravessa mudança de origem)
+
+`app/conexao/seguranca.buscar_seguro` retira `Authorization`, `Cookie`, `Proxy-Authorization` e qualquer nome
+declarado em `cabecalhos_secretos` no primeiro salto de redirecionamento em que esquema, host ou porta deixam
+de ser os da URL original; a retirada é definitiva (cadeia a→b→a não devolve a credencial) e redirecionamento
+na mesma origem continua autenticado. `ResultadoBusca` ganhou o campo `credencial_retirada`. Conserta o achado
+do adversário do grupo G5 (turno 3): a rota `POST /api/conexoes/{id}/testar` e o periódico
+`conexoes.saude_verificar` decifram a credencial do inquilino, e um serviço cadastrado que respondesse 302
+para outro host recebia esse segredo. `requests` e `httpx` já retiram a credencial nessa situação; a casa
+seguia o redirecionamento à mão (para revalidar SSRF a cada salto) e não tinha herdado a proteção.
+Provas: `tests/unit/test_conexao_credencial_redirect.py` (13 casos) e `tests/adversario/test_g5_adversario.py`
+(o teste do adversário, agora sem a marca `xfail`). ADR 0012, seção "a credencial nunca atravessa uma mudança
+de origem".
+
 ## turno 3, setembro de 2026 (nome de migração por carimbo de tempo — ADR 0014)
 
 Migração nova passa a se chamar `db/migracoes/YYYYMMDDTHHMM_<slug>.sql` (carimbo UTC, mais 3 hexadecimais

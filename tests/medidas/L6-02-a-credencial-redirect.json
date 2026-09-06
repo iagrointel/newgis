@@ -1,0 +1,43 @@
+{
+ "item": "L6-02-a-modelo-conexao-e-seguranca (conserto do achado G5-1 do adversário)",
+ "assinado_por": "trilha wt/cred (turno T3)",
+ "gerado_em": "2026-09-06T15:54:24Z",
+ "git_sha_base": "13b419fb7a20",
+ "maquina": "12 vCPU, 23 GB RAM; base própria da trilha (schema plat_tcred), nunca o schema plat de produção",
+ "medidas": {
+  "teste_do_adversario_sem_xfail": {
+   "valor": 1,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/adversario/test_g5_adversario.py -q -o addopts='' → 1 passed (o mesmo teste que estava xfail(strict=True) em e62f3db9, palavra por palavra; só a marca saiu)"
+  },
+  "casos_de_retirada_de_credencial": {
+   "valor": 13,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/unit/test_conexao_credencial_redirect.py -q -o addopts='' → 13 passed: host, porta, porta padrão explícita (mesma origem), https→http, http→https, cadeia de 2 saltos, volta à origem inicial, mesma origem com Location relativo, Cookie+Proxy-Authorization+cabeçalho secreto declarado, caixa do nome, sem credencial, dicionário do chamador intacto"
+  },
+  "casos_de_ssrf_do_portao_ainda_verdes": {
+   "valor": 26,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/unit/test_conexao_seguranca.py -q -o addopts='' → 26 passed (os 8 casos do portão e a pinagem de IP não foram tocados)"
+  },
+  "rota_e_periodico_de_conexao_verdes": {
+   "valor": 64,
+   "unidade": "testes",
+   "comando": "set -a; source laco/var/trilha/cred.env; set +a; venv/bin/pytest tests/api/test_conexoes.py tests/unit/test_conexao_seguranca.py tests/unit/test_conexao_credencial_redirect.py tests/adversario -q -o addopts='' → 64 passed em 6,52 s"
+  },
+  "caminhos_da_casa_que_fazem_http_de_saida": {
+   "valor": 4,
+   "unidade": "módulos",
+   "comando": "grep -rln 'import requests|import httpx|urllib.request|import http.client|aiohttp' --include=*.py app → app/conexao/seguranca.py, app/garage.py, app/rede/osrm.py, app/saude.py; só seguranca.py recebe credencial de inquilino"
+  },
+  "lint_e_marcadores_iguais_ao_master": {
+   "valor": 0,
+   "unidade": "regressões",
+   "comando": "ruff check nos 3 arquivos tocados = All checks passed; ruff check app tests = 11 erros iguais aos de master (13b419f); make sem-marcador aponta as mesmas 2 linhas de master"
+  }
+ },
+ "nao_passa": [
+  "o cenário fim-a-fim pela rota HTTP (POST /api/conexoes/{id}/testar contra um servidor externo que redireciona de verdade) não foi montado: a prova é no nível de buscar_seguro, que é onde os dois chamadores credenciados entram",
+  "app/garage.py segue redirecionamento (requests, allow_redirects padrão) levando Authorization; não foi alterado — ver handoff, seção 3"
+ ]
+}
