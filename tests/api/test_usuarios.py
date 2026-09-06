@@ -259,6 +259,43 @@ def test_apagar_com_2_itens_do_catalogo_recusa_listando_os_2(sessao_a, usuarios_
     usuarios_a.criados.remove(u["id"])
 
 
+def test_rebaixar_perfil_com_itens_e_recusado(sessao_a, usuarios_a, conexao_plat_app, ids):
+    """Regra da Esri (E12-members): só se rebaixa o tipo de usuário se ele "não possui conteúdo nem grupos".
+    `_editar` já recusava com grupos (`possui_grupos`); achado do adversário do item L0-07-b-papeis-privilegios:
+    conteúdo (itens do catálogo) não era checado — um admin dono de mapa virava visualizador sem aviso e o
+    perfil novo não alcançava mais `conteudo.criar`, então o dono nem podia mais editar/apagar o próprio item."""
+    from tests.api.test_rls import contexto, ids_por_slug
+
+    c, u, _ = usuarios_a.sessao("editor")
+    r = c.post(
+        "/api/itens",
+        json={
+            "tipo": "mapa",
+            "titulo": f"{PREFIXO_TESTE}-rebaixa-{secrets.token_hex(2)}",
+            "dados": {"esquema_versao": 1, "corpo": {}},
+        },
+    )
+    assert r.status_code == 201, r.text
+    item = r.json()
+    r = sessao_a.put(f"/api/usuarios/{u['id']}", json={"perfil": "visualizador"})
+    assert r.status_code == 409 and r.json()["erro"] == "possui_itens", r.text
+    assert r.json()["detalhe"][0]["id"] == item["id"]
+    assert sessao_a.get(f"/api/usuarios/{u['id']}").json()["perfil"] == "editor"  # não mudou nada
+    # subir de perfil não esbarra na regra, mesmo com item — só descer é que exige "sem conteúdo"
+    assert sessao_a.put(f"/api/usuarios/{u['id']}", json={"perfil": "admin"}).status_code == 200
+    r = sessao_a.put(f"/api/usuarios/{u['id']}", json={"perfil": "editor"})  # admin -> editor também desce
+    assert r.status_code == 409 and r.json()["erro"] == "possui_itens", r.text
+    # purga física do item (mesmo caminho de test_apagar_com_2_itens...): sem ele, o rebaixamento passa
+    tenant_id = ids_por_slug(conexao_plat_app)["demo"]
+    contexto(conexao_plat_app, tenant_id, usuario_id=ids["a"]["id"], login="admin")
+    with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (item["id"],))
+        cur.execute("SELECT plat.item_expurgar(%s::uuid)", (item["id"],))
+    conexao_plat_app.commit()
+    r = sessao_a.put(f"/api/usuarios/{u['id']}", json={"perfil": "visualizador"})
+    assert r.status_code == 200 and r.json()["perfil"] == "visualizador", r.text
+
+
 def test_privilegios_e_papeis(sessao_a, usuarios_a):
     privs = sessao_a.get("/api/privilegios").json()
     assert len(privs) == 47 and {p["nome"] for p in privs} == set(priv.NOMES)  # 46 + jobs.ver (T2, migração 015)
