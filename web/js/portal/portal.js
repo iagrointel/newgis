@@ -9,6 +9,12 @@
 import '../base/componentes.js';
 import { obterJSON } from '../core.js';
 
+// web/style.css esconde `.lateral` até `montarLayout()` (app/js/base/layout.js) marcar `body.com-lateral` —
+// gate contra flash de barra lateral com usuário errado. O portal não chama `montarLayout()` (ADR 0018
+// decisão 1: tela própria, sem sessão de usuário na barra) e a marca do índice de rotas já nasce estática
+// no HTML, então a revelação é imediata, sem depender de nenhuma resposta assíncrona.
+document.body.classList.add('com-lateral');
+
 const ESPECIAIS = {
   publico: 'rota aberta, sem credencial',
   sessao: 'só cookie de sessão; chave de API recebe 403',
@@ -146,6 +152,10 @@ async function experimentar(evento) {
     aviso.erro('o caminho tem de começar com barra e ficar nesta origem');
     return;
   }
+  // esconde a resposta ANTES do fetch: repetir a mesma rota (ex. depois de revogar a chave) sem trocar de
+  // rota deixava `#resposta` já visível da vez anterior, e quem espera "#resposta:not([hidden])" (e2e e
+  // qualquer leitor de tela) via a resposta VELHA achando que já era a nova.
+  el('resposta').hidden = true;
   const cabecalhos = { Accept: 'application/json' };
   const k = chave();
   if (k && selecionada.escopo !== 'publico') cabecalhos.Authorization = `Bearer ${k}`;
