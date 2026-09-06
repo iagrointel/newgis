@@ -1,8 +1,11 @@
 """ADVERSÁRIO INDEPENDENTE do item L4-01-a-pacote-de-ativos (commits 1d0040b/838cbd8 do ramo wt/stac).
 
-Cada `xfail(strict=True)` é um ACHADO: o teste descreve o comportamento que o item deveria ter e falha
-porque o produto não o tem. Quando alguém consertar, o teste passa e o `strict` obriga a tirar a marca.
-Nada aqui é conserto. Base própria da trilha (`laco/trilha_ambiente.sh advl4`), nunca o schema `plat`.
+CONSERTADO no turno 3 (handoffs/T3/L4-01-a-CONSERTO.md): os 6 `xfail(strict=True)` (A1, A2, A2b, A3×2, A4)
+viraram teste normal — cada um marcado `# CONSERTADO` acima, apontando o arquivo do conserto. Rodado com
+`--runxfail` antes da troca para confirmar que cada asserção passa de verdade, não só por preparo. Cópia
+permanente em `wt/stac/tests/api/test_rede_pacote_conserto_a1_a4.py` (o item leva o teste consigo).
+
+Base própria da trilha (`laco/trilha_ambiente.sh advl4`), nunca o schema `plat`.
 
 Ataques do prompt: cruzado A→B nas 10 tabelas (API e `plat_app` direto), código que colide, ida e volta
 que passa byte a byte mas muda a semântica, arquivo com 100 mil linhas ou seção repetida, `rede.editar`
@@ -132,10 +135,7 @@ def test_cruzado_a_b_nas_dez_tabelas_por_api_e_por_plat_app(sessao_a, sessao_b, 
     assert sessao_a.get(f"/api/rede/{rid_a}/pacote").content == instalados.bruto("agua-epanet")
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO A1: chave estrangeira não é filtrada pela RLS — B, como plat_app "
-                   "no próprio contexto, pendura linha própria em tipo/dominio de A (a FK aceita o uuid alheio; "
-                   "um uuid inventado é recusado, logo B tem um oráculo de existência dos ids de A) e a própria "
-                   "exportação de B passa a dar 500 (KeyError em deposito.exportar)")
+# CONSERTADO no item (turno 3, handoffs/T3/L4-01-a-CONSERTO.md) — achado A1.
 def test_fk_de_b_nao_alcanca_linha_de_a_como_plat_app(sessao_a, sessao_b, limpar_redes, env):
     rid_a = _rede_com_pacote(sessao_a, limpar_redes, "fk-a")
     rid_b = _rede_com_pacote(sessao_b, limpar_redes, "fk-b")
@@ -193,8 +193,7 @@ def _texto_com_secao_repetida(doc: dict, secao: str, primeira: list, segunda: li
     return (partes + f',\n "{secao}": ' + p1 + f',\n "{secao}": ' + p2 + "\n}\n").encode("utf-8")
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO A2: seção repetida no arquivo é aceita em silêncio — a primeira "
-                   "é descartada pelo json.loads (fica a última) e o pacote entra com 201")
+# CONSERTADO no item (turno 3, handoffs/T3/L4-01-a-CONSERTO.md) — achado A2.
 def test_secao_repetida_e_recusada(sessao_a, limpar_redes):
     rid = _criar(sessao_a, "secao-rep")
     limpar_redes.append((sessao_a, rid))
@@ -207,9 +206,7 @@ def test_secao_repetida_e_recusada(sessao_a, limpar_redes):
     assert r.status_code == 422, f"pacote com 'tiers' duas vezes entrou: {r.status_code} {r.text[:200]}"
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO A2b: com a seção repetida, a LINHA apontada na recusa é a da "
-                   "primeira ocorrência (descartada), não a da que foi validada — a linha apontada não contém "
-                   "o valor recusado")
+# CONSERTADO no item (turno 3, handoffs/T3/L4-01-a-CONSERTO.md) — achado A2b.
 def test_linha_apontada_e_da_secao_que_foi_validada(sessao_a, limpar_redes):
     rid = _criar(sessao_a, "secao-linha")
     limpar_redes.append((sessao_a, rid))
@@ -227,9 +224,7 @@ def test_linha_apontada_e_da_secao_que_foi_validada(sessao_a, limpar_redes):
 
 # ----------------------------------------------------------------------------------------- 500 por dado válido
 
-@pytest.mark.xfail(strict=True, reason="ACHADO A3: pacote que passa no esquema JSON (NUL em `nome` de texto, "
-                   "NUL dentro de lista jsonb) derruba a importação com exceção não tratada (500): psycopg2 "
-                   "levanta ValueError para NUL em text e DataError em jsonb, e erro_do_banco re-levanta")
+# CONSERTADO no item (turno 3, handoffs/T3/L4-01-a-CONSERTO.md) — achado A3.
 @pytest.mark.parametrize("onde", ["nome_texto", "codigos_fonte_jsonb"])
 def test_nul_no_pacote_e_recusado_com_422(sessao_a, limpar_redes, onde):
     rid = _criar(sessao_a, f"nul-{onde}")
@@ -366,11 +361,7 @@ def _pacote_com_n_problemas(n: int) -> bytes:
     return _bytes(doc)
 
 
-@pytest.mark.xfail(strict=True, reason="ACHADO A4: a rota de importação é `async def` e valida/grava de forma "
-                   "síncrona no laço de eventos; a localização de linha é quadrática no número de problemas "
-                   "(500→0,3 s, 1000→1,0 s, 2000→3,7 s medidos). Um pacote de 1,2 MB com 4 mil tipos errados "
-                   "(bem abaixo do teto de 8 MiB) segura /saude e toda a API, de qualquer inquilino, por dezenas de "
-                   "segundos")
+# CONSERTADO no item (turno 3, handoffs/T3/L4-01-a-CONSERTO.md) — achado A4.
 def test_pacote_ruim_nao_segura_o_servidor_para_os_outros(servidor_real, limpar_redes, medida):
     c = _sessao_http(servidor_real)
     r = c.post("/api/rede", json={"nome": f"{PREFIXO_TESTE}-adv-laco-{uuid.uuid4().hex[:6]}", "disciplina": "agua"})
