@@ -7,7 +7,7 @@ import uuid
 import psycopg2
 from fastapi import APIRouter, Request, Response
 
-from app import db, limites
+from app import db, limites, notificacoes
 from app.auth.comum import erro_do_banco, paginacao, registrar_evento
 from app.auth.modelos import ConviteEntrada, Estado, Grupo, GrupoCriar, GrupoEditar, Membro, Pagina, PapelMembroEntrada
 from app.auth.sessao import Auth, autenticado, iso
@@ -319,6 +319,19 @@ def convidar(id: str, corpo: ConviteEntrada, request: Request, auth: Auth = aute
             registrar_evento(
                 cur, request, "grupos/convidar", "usuario", corpo.usuario_id, {"grupo": gid, "papel": corpo.papel}
             )
+            # notificação interna do convidado (L0-03-k): dedup por grupo, some se o convite for refeito
+            notificacoes.notificar(
+                cur,
+                auth.tenant_id,
+                corpo.usuario_id,
+                "grupos/convite",
+                f"Convite para o grupo {r['nome']}",
+                f"grupos/convite:{gid}",
+                corpo=f"Você foi convidado como {corpo.papel}.",
+                url="/grupos",
+                alvo_tipo="grupo",
+                alvo_id=gid,
+            )
     except psycopg2.Error as e:
         raise erro_do_banco(e) from e
     return {"estado": "convidado"}
@@ -342,6 +355,25 @@ def entrar(id: str, request: Request, resposta: Response, auth: Auth = autentica
                 (gid, auth.tenant_id, auth.usuario_id, estado),
             )
             registrar_evento(cur, request, "grupos/entrar" if estado == "ativo" else "grupos/pedir", "grupo", gid)
+            if estado == "pedido":
+                # quem gere o grupo precisa saber do pedido (L0-03-k)
+                cur.execute(
+                    "SELECT usuario_id FROM plat.grupo_membro WHERE grupo_id = %s AND estado = 'ativo' "
+                    "AND papel IN ('dono','gerente')",
+                    (gid,),
+                )
+                for m in cur.fetchall():
+                    notificacoes.notificar(
+                        cur,
+                        auth.tenant_id,
+                        m["usuario_id"],
+                        "grupos/pedido",
+                        f"Pedido de entrada no grupo {r['nome']}",
+                        f"grupos/pedido:{gid}:{auth.usuario_id}",
+                        url="/grupos",
+                        alvo_tipo="grupo",
+                        alvo_id=gid,
+                    )
     except psycopg2.Error as e:
         raise erro_do_banco(e) from e
     resposta.status_code = 200 if estado == "ativo" else 202

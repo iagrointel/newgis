@@ -18,10 +18,6 @@ Reproduzir:
   venv/bin/pytest tests/api/catalogo/test_adversario_g2.py -q -rx
 """
 
-import datetime
-import json
-import time
-
 import pytest
 
 from tests.api.catalogo.conftest import titulo_zt
@@ -167,7 +163,7 @@ def test_g2_5_evento_de_transferencia_so_do_que_mudou(sessao_a, itens_a, editor_
     plano = dono_c.post(
         "/api/itens/transferir", json={"ids": [camada["id"]], "novo_dono_id": admin_id, "simular": True}
     ).json()
-    codigos = [f["codigo"] for l in plano["plano"] for f in l["falhas"]]
+    codigos = [f["codigo"] for linha in plano["plano"] for f in linha["falhas"]]
     assert "arrasto_sem_edicao" in codigos, plano
     assert plano["com_falha"] == 1, plano
 
@@ -204,15 +200,18 @@ def test_g2_6_miniatura_por_link_sem_cache(sessao_a, itens_a):
 
 
 # ---------------------------------------------------------------- L0-03-k
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G2-7: metade do item não existe. Não há rota, tabela, migração nem código de "
-    "notificação interna (grep por 'notific' em app/, db/ e web/ = 0); o item declara sino na barra, "
-    "lida/não lida, dedup por chave, expurgo em 90 dias e medida 'sino consulta <= 20 ms'.",
-)
 def test_g2_7_notificacoes_internas_existem(sessao_a):
-    codigos = {rota: sessao_a.get(rota).status_code for rota in ("/api/notificacoes", "/api/eu/notificacoes")}
-    assert any(c != 404 for c in codigos.values()), codigos
+    """ACHADO G2-7 (consertado): metade do item L0-03-k não existia — nenhuma rota, tabela, migração ou linha de
+    código de notificação interna. Agora existem a tabela plat.notificacao (migração 20260906T1607), as rotas
+    /api/notificacoes (sino, lista, marcar lida, apagar), o sino na barra lateral, a dedup por chave, o teto por
+    minuto e o expurgo por idade. O comportamento fica coberto por tests/api/catalogo/test_notificacoes.py; aqui
+    fica só o que o adversário mediu: a rota existe e responde."""
+    r = sessao_a.get("/api/notificacoes/contagem")
+    assert r.status_code == 200, r.text
+    assert isinstance(r.json()["nao_lidas"], int)
+    lista = sessao_a.get("/api/notificacoes")
+    assert lista.status_code == 200, lista.text
+    assert {"total", "nao_lidas", "itens"} <= set(lista.json())
 
 
 # ---------------------------------------------------------------- transversal (segurança de esquema)

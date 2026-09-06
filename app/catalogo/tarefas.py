@@ -12,7 +12,7 @@ import uuid
 
 from pydantic import BaseModel, Field, field_validator
 
-from app import objetos
+from app import limites, objetos
 from app.catalogo import destruidores, miniatura, tipos
 from app.jobs.registro import FalhaDefinitiva, tarefa
 
@@ -211,6 +211,44 @@ def catalogo_versoes_compactar(
                 acima.append({"item_id": iid, "linhas": linhas})
         ctx.progresso(int(n * 100 / max(1, len(itens))), f"{n} de {len(itens)} itens")
     return {"itens": len(itens), "versoes_removidas": removidas, "teto_linhas": manter, "acima_do_teto": acima}
+
+
+# ---------------------------------------------------------------- catalogo.notificacoes_expurgar
+class NotificacoesExpurgoParametros(BaseModel):
+    dias: int = Field(limites.NOTIFICACOES_DIAS, ge=1, le=3650)
+    agora: datetime.datetime | None = Field(None, description="relógio simulado; só em PLAT_AMBIENTE=dev")
+
+    @field_validator("agora")
+    @classmethod
+    def _so_em_dev(cls, v):
+        if v is not None:
+            from app import settings as cfg
+
+            if cfg.obter().producao:
+                raise ValueError("o parâmetro agora só é aceito em ambiente dev")
+        return v
+
+
+@tarefa(
+    nome="catalogo.notificacoes_expurgar",
+    descricao="Apaga notificações internas com mais de N dias (padrão 90; item L0-03-k)",
+    parametros=NotificacoesExpurgoParametros,
+    pesado=False,
+    memoria_mb=256,
+    timeout_s=600,
+    tentativas=1,
+    chave=lambda p: "notificacoes_expurgar",
+    perfil_minimo="admin",
+)
+def catalogo_notificacoes_expurgar(ctx, dias: int = limites.NOTIFICACOES_DIAS, agora=None) -> dict:
+    with ctx.db() as cur:
+        cur.execute(
+            "SELECT plat.notificacoes_expurgar(%s, %s) AS n",
+            (dias, agora or datetime.datetime.now(datetime.UTC)),
+        )
+        n = cur.fetchone()["n"]
+    ctx.progresso(100, f"{n} notificações apagadas")
+    return {"apagadas": int(n), "dias": dias}
 
 
 # ---------------------------------------------------------------- catalogo.tags_renomear

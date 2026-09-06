@@ -71,6 +71,11 @@ VERSOES_VIVAS = 50
 VERSOES_BLOCO_COMPACTACAO = 10
 VERSAO_COMENTARIO_MAX = 500
 FAVORITOS_POR_USUARIO = 500
+# notificações internas (L0-03-k): dedup por chave no banco; teto por minuto por usuário contra enxurrada
+# de uma origem só (refutação "10 mil notificações para um usuário em 1 min"); expurgo por idade
+NOTIFICACOES_POR_MINUTO = 60
+NOTIFICACOES_DIAS = 90
+NOTIFICACOES_PAGINA_MAX = 100
 DESTAQUES_POR_GRUPO = 24
 BUSCA_Q_MAX = 1000
 BUSCA_TERMOS_MAX = 200

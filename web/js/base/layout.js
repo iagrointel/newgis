@@ -5,6 +5,7 @@ import { h, limpar } from './dom.js';
 import { t } from './i18n.js';
 import { tem } from './estado.js';
 import { sair } from '../auth/sessao.js';
+import { montarSino } from './notificacoes.js';
 
 export const TELAS = [
   { caminho: '/', chave: 'nav.inicio' },
@@ -39,6 +40,7 @@ export function montarLayout({ usuario, ativo = location.pathname }) {
     ul.append(h('li', {}, a));
   }
   aside.append(h('nav', { 'aria-label': t('nav.rotulo') }, ul));
+  montarSino(aside);   /* sino de notificações (item L0-03-k) */
   const btSair = h('button', { type: 'button', class: 'pequeno', id: 'sair' }, t('nav.sair'));
   btSair.addEventListener('click', () => sair());
   /* item L0-02-g-perfil-usuario: "ver a foto na barra" — a mesma foto de /conta; sem foto, sem <img> nenhum
