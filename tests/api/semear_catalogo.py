@@ -10,7 +10,6 @@ import psycopg2
 import psycopg2.extras
 
 from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
-
 from tests.api.test_rls import contexto, ids_por_slug
 from tests.conftest import valores_env
 
