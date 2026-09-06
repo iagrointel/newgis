@@ -20,7 +20,7 @@ from app.migracao.portal import ClientePortal, ErroPortal, ErroRede
 from app.settings import settings
 
 MOTIVOS_DEFINITIVOS = ("nao_e_portal", "credencial_recusada", "url_insegura", "inventario_inexistente",
-                       "token_nao_emitido")
+                       "token_nao_emitido", "resposta_grande_demais")  # achado B3: repetir não encolhe a página
 
 
 class InventariarParametros(BaseModel):
@@ -73,8 +73,17 @@ def migracao_inventariar(ctx, inventario_id: str) -> dict:
         if definitivo:
             raise FalhaDefinitiva(mensagem) from e
         raise
+    except Exception as e:
+        # achado B2: qualquer falha que NÃO seja ErroPortal (campo do portal de terceiro fora do
+        # esperado) não pode deixar o inventário `rodando` para sempre sem mensagem — vira `falhou`,
+        # com mensagem em português, e não se tenta de novo (o mesmo item quebraria do mesmo jeito).
+        mensagem = motor.mensagem_de_erro(e, token)
+        with ctx.db() as cur:
+            cur.execute("UPDATE plat.migracao_inventario SET estado = 'falhou', mensagem = %s, "
+                        "terminado_em = now() WHERE id = %s::uuid", (mensagem, inventario_id))
+        raise FalhaDefinitiva(mensagem) from e
 
     with ctx.db() as cur:
         cur.execute("UPDATE plat.migracao_inventario SET estado = 'concluido', terminado_em = now(), "
-                    "mensagem = NULL WHERE id = %s::uuid", (inventario_id,))
+                    "mensagem = %s WHERE id = %s::uuid", (totais.get("aviso"), inventario_id))
     return totais
