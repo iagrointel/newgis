@@ -93,6 +93,7 @@ def test_evento_registrar_sem_contexto_levanta(conexao_plat_app):
         "INSERT INTO plat.evento_tipo VALUES ('x/y', 'z')",
         "DELETE FROM plat.privilegio",
         "UPDATE plat.evento SET tipo = 'usuarios/sair'",
+        "DELETE FROM plat.evento",
         "DELETE FROM plat.log_acesso",
     ],
 )
