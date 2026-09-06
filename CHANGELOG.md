@@ -4,6 +4,50 @@ Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/med
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
+## turno 3, setembro de 2026 (item L0-02-g-checagem-privilegio-papel-id: quem concede papel tem de ter o papel)
+
+Fecha um escalonamento de privilégio real na tela de usuários. O papel personalizado RESTRINGE o teto do perfil
+(`plat.privilegios_de` é a interseção entre os dois), mas `POST /api/usuarios` e `PUT /api/usuarios/{id}`
+conferiam apenas se o papel CABIA no perfil do alvo, nunca se o ATOR tinha o que estava concedendo. Um
+administrador restrito por papel podia atribuir a outro um papel mais amplo que o seu, ou zerar o `papel_id` de
+alguém — inclusive o próprio — e recuperar o teto inteiro do perfil, ou ainda promover um editor a administrador
+sem papel, e fazer qualquer um dos três em massa pelo lote. `_nao_conceder_alem_do_proprio` (ADR 0016) recusa
+com 403 `privilegio_proprio_insuficiente` e devolve no `detalhe` a lista do que sobraria. Vale para perfil e
+papel juntos, porque promover a admin com papel nulo concede exatamente o mesmo conjunto.
+
+A refutação exigida foi rodada na forma completa, não em um caso: para **cada um dos 47 privilégios** do
+vocabulário, o papel do ator passa a ser "todos menos ele" e o papel oferecido passa a ser "todos" — um
+privilégio a mais. **94 chamadas (POST e PUT), 94 respostas 403, nenhuma 2xx**; 92 pela conferência nova
+(`privilegio_proprio_insuficiente`) e 2 pelo portão de privilégio (`sem_privilegio`), que são exatamente os
+casos em que o privilégio retirado do ator era `membros.gerir` ou `membros.papel`. Retirando as duas chamadas
+da conferência, 7 dos 10 testes do arquivo reprovam — a prova de que mordem.
+
+Varredura de privilégio rota por rota, em duas camadas, sobre as **138 rotas** de `docs/openapi.json`. A
+estática lê o fecho da dependência `autenticado(...)` de cada rota viva e compara com o declarado: **41 rotas**
+cobram na dependência exatamente o privilégio nomeado que declaram, **72** declaram valor especial ou
+alternativa e cobram no corpo, **8** cobram na dependência um privilégio que a declaração não menciona. A
+dinâmica prova as 41 com chamada real: um administrador de inquilino descartável recebe um papel com todos os
+privilégios menos um e **as 41 rotas respondem 403 `sem_privilegio` com `exigido` igual ao declarado**; com o
+papel completo, nenhuma delas responde `sem_privilegio` (controle positivo). Fronteira declarada: **31 rotas**
+de privilégio alternativo cobrado depois de carregar o recurso ficam fora do alcance deste item — a medida
+`rotas_alternativas_nao_provadas` guarda o número, e as duas de `/api/usuarios` que o item alcança foram
+provadas.
+
+As 8 rotas de declaração incompleta (`/api/tokens/{id}` e `/renovar` cobrando `tokens.gerar` sem declarar,
+`/api/acervo/{fonte_id}/adicionar` cobrando `conteudo.criar` numa declaração que promete alternativa,
+`/api/itens/{id}/miniatura/gerar` e `/api/lixeira/esvaziar` cobrando `jobs.executar`, e `POST /api/logout` sem
+dependência) **apertam** o acesso em vez de afrouxá-lo: exigem mais do que a documentação promete, então não são
+falha de segurança, e sim documentação errada. O conserto é do dono de cada rota. A lista está CONGELADA em
+`DIVERGENCIAS_CONHECIDAS` no teste: divergência nova reprova.
+
+De quebra, um defeito que impedia a homologação inteira: `CursorSchemaAmbiente` não sobrescrevia `executemany`,
+então o INSERT em lote de `plat.papel_privilegio` ia ao servidor com o literal `plat.` e todo ambiente fora do
+schema de produção respondia 403 "operação fora do inquilino da sessão" nas rotas de papel. Corrigido junto com
+`mogrify`, com guarda em `tests/unit/test_schema_ambiente_metodos.py` que varre `app/` atrás de método de cursor
+usado sem sobrescrita. O cursor de `conexao_plat_app` passou a ser o mesmo, senão nenhum teste que escreve
+`plat.` na mão roda fora de produção.
+
+## turno 3, setembro de 2026 (item L1-01-b-validacao-e-isolamento-da-entrada: validação de raster)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
 medição honesta achou nela. `PLAT_DSN`, `PLAT_GARAGE_ADMIN_TOKEN` e `PLAT_SECRET_ANTERIOR` saíram do
