@@ -674,3 +674,71 @@ inquilino — L4); sem `/mais-proximo` nem `/ajuste-de-trajeto` (map matching); 
 medido e um teste de 5.000×5.000 pelo adversário); isócrona testada só a 10 min contra a própria API de rota
 (o portão completo pede 200 pontos amostrados nas faixas de 15/30/45 min). Ver
 `laco/handoffs/T3/L2-11-c-rota.md` para o estado exato e o que a próxima trilha retoma.
+
+## 15. LDAP/Active Directory (item L0-08-d-ldap) — API pronta, sem tela ainda
+
+Login federado por LDAP/Active Directory, por inquilino. Ainda sem botão na tela de entrada nem formulário de
+configuração em `/admin` (isso é o `L0-08-f`, item de frontend à parte); hoje é consumido por API — um
+integrador (ou a equipe, via `curl`/Postman) configura e testa direto pelas rotas abaixo.
+
+### 15.1 Configurar o provedor (administrador do inquilino, privilégio `org.integracoes`)
+
+```
+PUT /api/org/ldap
+{
+  "habilitado": true,
+  "url": "ldap://ad.empresa.org:389",      // ou "ldaps://..."; omitido usa o padrão do ambiente
+  "base_dn": "dc=empresa,dc=org",
+  "start_tls": true,                        // StartTLS sobre "ldap://"; ignorado com "ldaps://"
+  "bind_dn": "cn=servico-plat,ou=svc,dc=empresa,dc=org",   // null = busca anônima
+  "bind_senha": "...",                      // só na escrita; nunca devolvido (GET traz "tem_bind_senha": true)
+  "filtro_usuario": "(sAMAccountName={login})",   // Active Directory; OpenLDAP costuma ser "(uid={login})"
+  "atributo_grupos": "memberOf",
+  "perfil_padrao": null,                    // perfil de quem não bate em nenhum grupo mapeado (ou null = recusa)
+  "mapa_grupo_perfil": {
+    "CN=Administradores TI,OU=Grupos,DC=empresa,DC=org": "admin",
+    "CN=Editores GIS,OU=Grupos,DC=empresa,DC=org": "editor"
+  }
+}
+```
+
+`GET /api/org/ldap` devolve a mesma forma sem a senha (`tem_bind_senha` no lugar). A chave do
+`mapa_grupo_perfil` aceita o DN inteiro do grupo (como o diretório devolve em `memberOf`) OU só o valor do
+primeiro RDN (o "nome" do grupo) — útil quando o administrador não quer copiar o DN inteiro.
+
+### 15.2 Entrar
+
+```
+POST /api/login/ldap
+{"inquilino": "empresa", "login": "maria.silva", "senha": "..."}
+```
+
+Mesmo formato de resposta do login local (`{"ok": true, "usuario": {...}}` + cookie `plat_sessao`). Se a
+senha estiver errada, `401 credenciais_invalidas` (a mesma mensagem genérica do login local — nunca revela se
+o problema foi login inexistente, senha errada ou 0/2+ resultados na busca). Se o diretório estiver fora do
+ar, `503 ldap_indisponivel` — **o login local continua funcionando normalmente** (é outra rota, outro
+caminho; nunca compartilha estado). Se o usuário existir no diretório mas nenhum grupo dele estiver mapeado
+(e não houver `perfil_padrao`), `403 sem_grupo_mapeado`. Se já existir uma conta LOCAL com o mesmo login,
+`409 login_em_uso_local` — o LDAP nunca assume uma conta local homônima.
+
+No primeiro login bem-sucedido, o usuário é criado automaticamente (`origem: "ldap"`, sem senha local) com o
+perfil calculado dos grupos; logins seguintes atualizam nome/e-mail/perfil se mudaram no diretório.
+
+### 15.3 Importar um grupo em massa
+
+```
+POST /api/org/ldap/importar
+{"grupo_dn": "CN=Editores GIS,OU=Grupos,DC=empresa,DC=org", "atributo_membro": "memberOf",
+ "atributo_login": "sAMAccountName", "perfil": "editor"}
+```
+
+Cria um usuário local **desabilitado** (`ativo: false`) para cada membro do grupo que ainda não existe;
+usuários já provisionados (por login anterior ou importação anterior) só são contados, não recriados. A conta
+importada ativa sozinha no primeiro login bem-sucedido pela rota 15.2 — não é preciso reabilitar à mão.
+
+### 15.4 Limites desta fatia
+
+Sem StartTLS testado contra um diretório real (só contra o de teste, sem certificado); sem tela de
+configuração nem botão de entrada (frontend, L0-08-f); contador de força bruta do bind é em memória de
+processo (não compartilhado entre os `--workers 2`, não sobrevive a reinício — nomeado, não escondido). Ver
+`docs/adr/0008-ldap-ad.md` e `laco/handoffs/T3/L0-08-d-ldap.md`.

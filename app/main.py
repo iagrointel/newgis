@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 from app import erros, limite_corpo, paginas
 from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
+from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import rotas_eu, rotas_grupos, rotas_log, rotas_login, rotas_plataforma, rotas_tokens, rotas_usuarios
 from app.catalogo import (
@@ -58,6 +59,8 @@ ROUTERS = [
     rotas_tokens.router,
     rotas_log.router,
     rotas_plataforma.router,
+    # --- LDAP/Active Directory (L0-08-d): POST /api/login/ldap; GET/PUT /api/org/ldap; POST /api/org/ldap/importar
+    rotas_ldap.router,
     # --- fila de jobs (L0-05): /api/jobs, /api/agendas, /tarefas
     rotas_jobs,
     # --- catálogo (L0-03): /api/itens, /api/pastas, /api/categorias, /api/favoritos, /api/lixeira, /api/compartilhado

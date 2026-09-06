@@ -3,6 +3,62 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L0-08-d-ldap: LDAP/Active Directory como provedor de login externo)
+
+Módulo isolado `app/auth/ldap.py` (`ldap3` 2.9.1, puro Python, sem dependência de sistema — só a venv):
+`POST /api/login/ldap` faz bind de serviço opcional (ou anônimo) contra o diretório do inquilino, busca o
+usuário por um filtro sempre ESCAPADO (`escape_filter_chars`, RFC 4515 — a refutação do item pedia
+`*)(uid=*`; neutralizado), exige exatamente 1 resultado, faz bind do usuário com a senha informada (nunca
+com senha vazia: recusada antes de abrir qualquer conexão) e mapeia `memberOf` para um dos 4 perfis da
+plataforma via `plat.provedor_ldap.mapa_grupo_perfil` (maior alcance quando mais de um grupo mapeado bate).
+Provisiona o usuário local automaticamente (`plat.ldap_provisionar`, migração `025_provedor_ldap.sql`) sem
+nunca gravar a senha do LDAP e sem nunca sobrescrever uma conta `origem='local'` homônima (`409
+login_em_uso_local`); depois do bind validado, **reaproveita** `app.auth.rotas_login._abrir_sessao` para
+abrir a sessão — zero duplicação da lógica de cookie/política/evento do login local, e
+`app/auth/rotas_login.py` não foi tocado (só `app/main.py` ganhou o registro da rota). Administração por
+inquilino (privilégio `org.integracoes`, já reservado pela ADR 0002): `GET/PUT /api/org/ldap` (nunca devolve
+a senha de bind, só cifrada em repouso — AES-GCM sob `PLAT_SECRET`) e `POST /api/org/ldap/importar` (grupo do
+diretório → N usuários locais desabilitados, ativados no primeiro login — a opção do portão). Força bruta
+contra o bind: contador em memória por processo, reaproveitando `bloqueio_tentativas`/`bloqueio_minutos` da
+política do PRÓPRIO inquilino (cobre também login que ainda não existe localmente).
+
+Servidor de teste: contêiner Docker `glauth` efêmero (imagem 98,9 MB medida; disco/RAM conferidos antes —
+12 GiB livres, ~2,5 GiB disponíveis), nunca em produção (`tests/ldap_fixture/`), 4 usuários sintéticos (um
+por perfil + um dedicado ao teste de colisão) + 1 conta de serviço + 4 grupos. Decisões e o formato de DN
+medido (glauth usa `ou=` no RDN de grupo, não `cn=`) em `docs/adr/0008-ldap-ad.md`.
+
+14 testes em `tests/api/ldap/test_login_ldap.py` (marcados `lento`), todos verdes: bind OK cai no perfil
+certo (3 perfis); senha errada recusada; senha vazia nunca tenta bind; injeção de filtro neutralizada; grupo
+não mapeado recusa com `403`; colisão com conta local recusa com `409`; **diretório fora do ar não derruba o
+login local** (para o contêiner, LDAP responde `503`, login local no mesmo processo responde `200`, religa);
+6ª tentativa errada de bind bloqueia como o login local (`423`); importação em massa cria desabilitado e
+ativa no primeiro login; admin nunca vê a senha de bind; perfil inválido recusado; teste cruzado A/B
+(`org.integracoes` de um inquilino nunca é o de outro); sem privilégio toma `403`. Latência medida:
+mediana de 5 logins completos (bind de serviço + busca + bind do usuário + provisionamento + sessão) =
+**12,2 ms** (`tests/medidas/L0-08-d-ldap.json`, `mediana_5_logins_ldap_ms`).
+
+A suíte INTEIRA (não só a do item) apontou 3 lacunas que o teste próprio não cobria, todas corrigidas antes do
+commit: (1) `CREATE FUNCTION` concede `EXECUTE` a PUBLIC por padrão — as 3 funções novas ganharam `REVOKE
+EXECUTE ... FROM PUBLIC` explícito na própria migração, mesmo padrão da 003; (2) `tests/api/eventos_esperados.py`
+e `tests/api/cruzado_casos.py` são listas fechadas por rota (o portão P6 do laço, teste cruzado A→B automático
+gerado do OpenAPI) — as 3 rotas novas ganharam entrada nas duas.
+
+**Incidente durante a construção (não escondido):** o contador de bloqueio local do superadmin `plataforma`
+foi atingido por colisões de código TOTP entre rodadas de teste concorrentes desta sessão contra a MESMA
+conta compartilhada por todas as trilhas do turno, e travou `make check-rapido` inteiro (503 erros em cascata
+por causa da fixture `sessao_plat`, autouse). Diagnosticado (o segredo TOTP cacheado em
+`tests/credenciais_totp.txt` estava desatualizado em relação ao do banco) e corrigido pelo mesmo caminho que
+o `install.sh` já documenta (reset do 2FA da conta + remoção do cache; a suíte religou o 2FA sozinha na
+rodada seguinte, novo segredo cacheado) — sem editar nenhum teste alheio. `tests/api/ldap/conftest.py`
+também passou a sobrescrever a fixture `limpeza_de_residuos` só para o próprio diretório, para os testes de
+LDAP nunca mais dependerem de `sessao_plat` (conta mais disputada da árvore).
+
+### Commits
+
+| sha | mensagem |
+|---|---|
+| (este) | LDAP/Active Directory como provedor de login externo por inquilino (item L0-08-d-ldap) |
+
 ## turno 3, setembro de 2026 (item L0-05-e-worker-em-container: worker da fila em contêiner)
 
 Segundo executor da fila de jobs (ADR 0003), em contêiner Docker, ao lado da unidade systemd `plat-worker`
@@ -37,7 +93,6 @@ ponta em subprocesso isolado (`resource.setrlimit(RLIMIT_DATA)` só baixa o teto
 testes no mesmo processo do pytest quebrariam o segundo). A unidade systemd `plat-worker` de produção nunca foi
 parada nem reiniciada para este item. Detalhe completo: ADR `docs/adr/0010-worker-em-container.md`,
 `ARQUITETURA.md` seção 5.8, handoff `laco/handoffs/T3/L0-05-e-worker-container.md`.
-
 
 ## turno 3, setembro de 2026 (item L2-10-c-linguagem-expressao: linguagem de expressão própria — PARCIAL, só o núcleo)
 

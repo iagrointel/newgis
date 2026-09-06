@@ -46,6 +46,10 @@ six==1.17.0
 # identidade (app/auth/totp.py gera o QR do TOTP em SVG; cryptography vem do dpkg python3-cryptography)
 qrcode==8.2
 #
+# LDAP/Active Directory (app/auth/ldap.py; item L0-08-d): puro Python (sem libldap/openldap-dev no sistema);
+# pyasn1 já vem do dpkg (python3-pyasn1), a venv só acrescenta o pacote ldap3 em si
+ldap3==2.9.1
+#
 # segurança (scripts/varredura_dependencias.py chama o binário `pip-audit` da venv em subprocesso; item
 # L7-03-f, docs/SEGURANCA.md seção 7 justifica a escolha vs `safety`; rich/requests/pygments/markdown-it-py
 # que pip-audit também precisa vêm do dpkg — python3-rich, python3-requests, python3-pygments — já instalados

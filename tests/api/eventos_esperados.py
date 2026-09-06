@@ -94,4 +94,10 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/rota"): [],
     ("POST", "/api/matriz"): [],
     ("POST", "/api/isocrona"): [],
+    # ---- LDAP/Active Directory (L0-08-d): login registra a MESMA sequência do login local, reaproveitada de
+    # _abrir_sessao ("usuarios/entrar"), mais o provisionamento automático (criação ou sincronização do
+    # usuário a partir do diretório); administração do provedor tem vocabulário próprio ("org/*")
+    ("POST", "/api/login/ldap"): ["usuarios/criar", "usuarios/atualizar", "usuarios/entrar"],
+    ("PUT", "/api/org/ldap"): ["org/ldap_configurar"],
+    ("POST", "/api/org/ldap/importar"): ["org/ldap_importar"],
 }

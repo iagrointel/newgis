@@ -537,6 +537,30 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"ponto": [-46.5330, -23.4628], "minutos": 10, "perfil": "carro"},
         proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # ---- LDAP/Active Directory (L0-08-d): login é público (mesmo padrão de /api/login); a configuração do
+    # provedor age só sobre o inquilino do chamador (proprio), nunca sobre B
+    ("POST", "/api/login/ldap"): Caso(
+        lambda p: "/api/login/ldap",
+        lambda p: {"inquilino": "demo2", "login": p.usuario_b["login"], "senha": "Senha-errada-1"},
+        publico=True,
+    ),
+    ("GET", "/api/org/ldap"): Caso(lambda p: "/api/org/ldap", proprio=True, aceita=frozenset({200}),
+                                   verificar=_sem_marca),
+    ("PUT", "/api/org/ldap"): Caso(
+        lambda p: "/api/org/ldap",
+        lambda p: {"habilitado": False},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+        limpar=lambda p, j: p.sessao_a.put("/api/org/ldap", json={"habilitado": False}),
+    ),
+    ("POST", "/api/org/ldap/importar"): Caso(
+        lambda p: "/api/org/ldap/importar",
+        lambda p: {"grupo_dn": "cn=inexistente,dc=zz", "atributo_membro": "memberOf", "atributo_login": "uid",
+                   "perfil": "visualizador"},
+        # sem provedor configurado (ou desabilitado pela suíte de LDAP, que sempre desliga no fim) → 409;
+        # se por acaso ficou habilitado apontando para um glauth de teste já derrubado → 503; nunca um 2xx
+        # aqui (não há credencial de bind válida contra nenhum diretório real neste teste)
+        proprio=True, aceita=frozenset({409, 503}),
+    ),
 }
 
 

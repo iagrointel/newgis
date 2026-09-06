@@ -1,0 +1,21 @@
+{
+ "item": "L0-08-d-ldap",
+ "medidas": {
+  "latencia_login_ldap_ms": {
+   "valor": [
+    15.4,
+    13.6,
+    12.4
+   ],
+   "unidade": "ms",
+   "comando": "3x POST /api/login/ldap (bind de serviço + busca + bind do usuário + provisionamento + sessão)"
+  },
+  "mediana_5_logins_ldap_ms": {
+   "valor": 12.2,
+   "unidade": "ms",
+   "comando": "mediana de 5x POST /api/login/ldap"
+  }
+ },
+ "gerado_em": "2026-09-06T11:05:40Z",
+ "git_sha": "19c4cb309029"
+}

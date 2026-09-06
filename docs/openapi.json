@@ -2651,6 +2651,160 @@
     "x-privilegio": "superadmin"
    }
   },
+  "/api/login/ldap": {
+   "post": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Login Ldap",
+    "operationId": "login_ldap_api_login_ldap_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoginEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/org/ldap": {
+   "get": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Org Ldap Ler",
+    "operationId": "org_ldap_ler_api_org_ldap_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "anyOf": [
+          {
+           "$ref": "#/components/schemas/ProvedorLdapSaida"
+          },
+          {
+           "type": "null"
+          }
+         ],
+         "title": "Response Org Ldap Ler Api Org Ldap Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes"
+   },
+   "put": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Org Ldap Gravar",
+    "operationId": "org_ldap_gravar_api_org_ldap_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProvedorLdapEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProvedorLdapSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes"
+   }
+  },
+  "/api/org/ldap/importar": {
+   "post": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Org Ldap Importar",
+    "operationId": "org_ldap_importar_api_org_ldap_importar_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ImportarGrupoEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes"
+   }
+  },
   "/api/jobs": {
    "get": {
     "tags": [
@@ -9274,6 +9428,41 @@
     ],
     "title": "ImportarCategorias"
    },
+   "ImportarGrupoEntrada": {
+    "properties": {
+     "grupo_dn": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 1,
+      "title": "Grupo Dn"
+     },
+     "atributo_membro": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Atributo Membro",
+      "default": "member"
+     },
+     "atributo_login": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Atributo Login",
+      "default": "uid"
+     },
+     "perfil": {
+      "type": "string",
+      "title": "Perfil"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "grupo_dn",
+     "perfil"
+    ],
+    "title": "ImportarGrupoEntrada"
+   },
    "Iniciar2FA": {
     "properties": {
      "segredo": {
@@ -11036,6 +11225,191 @@
      "administrativo"
     ],
     "title": "Privilegio"
+   },
+   "ProvedorLdapEntrada": {
+    "properties": {
+     "habilitado": {
+      "type": "boolean",
+      "title": "Habilitado",
+      "default": true
+     },
+     "url": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 250
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Url"
+     },
+     "base_dn": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 250
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Base Dn"
+     },
+     "start_tls": {
+      "type": "boolean",
+      "title": "Start Tls",
+      "default": true
+     },
+     "bind_dn": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 250
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bind Dn"
+     },
+     "bind_senha": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 250
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bind Senha"
+     },
+     "filtro_usuario": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 3,
+      "title": "Filtro Usuario",
+      "default": "(uid={login})"
+     },
+     "atributo_grupos": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Atributo Grupos",
+      "default": "memberOf"
+     },
+     "perfil_padrao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Perfil Padrao"
+     },
+     "mapa_grupo_perfil": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Mapa Grupo Perfil"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "ProvedorLdapEntrada"
+   },
+   "ProvedorLdapSaida": {
+    "properties": {
+     "habilitado": {
+      "type": "boolean",
+      "title": "Habilitado"
+     },
+     "url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Url"
+     },
+     "base_dn": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Base Dn"
+     },
+     "start_tls": {
+      "type": "boolean",
+      "title": "Start Tls"
+     },
+     "bind_dn": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bind Dn"
+     },
+     "tem_bind_senha": {
+      "type": "boolean",
+      "title": "Tem Bind Senha"
+     },
+     "filtro_usuario": {
+      "type": "string",
+      "title": "Filtro Usuario"
+     },
+     "atributo_grupos": {
+      "type": "string",
+      "title": "Atributo Grupos"
+     },
+     "perfil_padrao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Perfil Padrao"
+     },
+     "mapa_grupo_perfil": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Mapa Grupo Perfil"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "habilitado",
+     "url",
+     "base_dn",
+     "start_tls",
+     "bind_dn",
+     "tem_bind_senha",
+     "filtro_usuario",
+     "atributo_grupos",
+     "perfil_padrao",
+     "mapa_grupo_perfil"
+    ],
+    "title": "ProvedorLdapSaida"
    },
    "Provedores": {
     "properties": {
