@@ -9302,6 +9302,292 @@
     "x-auth": "S/T",
     "x-privilegio": "proprio"
    }
+  },
+  "/api/rede": {
+   "get": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_rede_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RedePagina"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_rede_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RedeEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Rede"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/pacotes": {
+   "get": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Listar Pacotes Instalados",
+    "description": "Pacotes de ativos entregues com a instalação. Não lê nem escreve dado de inquilino.",
+    "operationId": "listar_pacotes_instalados_api_rede_pacotes_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PacoteInstaladoLista"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/rede/pacotes/{codigo}": {
+   "get": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Baixar Pacote Instalado",
+    "description": "O arquivo do pacote instalado, byte a byte como está no disco (é o que se envia de volta na importação).",
+    "operationId": "baixar_pacote_instalado_api_rede_pacotes__codigo__get",
+    "parameters": [
+     {
+      "name": "codigo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Codigo"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/rede/{rede_id}": {
+   "get": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_rede__rede_id__get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Rede"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "delete": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_rede__rede_id__delete",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/pacote": {
+   "post": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Importar Pacote",
+    "description": "Importa o pacote de ativos. Substitui o catálogo INTEIRO da rede, numa transação: ou entra tudo, ou nada.",
+    "operationId": "importar_pacote_api_rede__rede_id__pacote_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImportacaoResultado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades"
+    ],
+    "summary": "Exportar Pacote",
+    "description": "O pacote da rede, reconstruído das tabelas e serializado na forma canônica — nunca o arquivo recebido.",
+    "operationId": "exportar_pacote_api_rede__rede_id__pacote_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
   }
  },
  "components": {
@@ -15302,6 +15588,261 @@
      "itens"
     ],
     "title": "Pagina"
+   },
+   "PacoteInstaladoLista": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/PacoteInstalado"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "PacoteInstaladoLista"
+   },
+   "Rede": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "disciplina": {
+      "type": "string",
+      "title": "Disciplina"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "pacote": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pacote"
+     },
+     "contagens": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Contagens"
+     },
+     "dono": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Dono"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "atualizado_em": {
+      "type": "string",
+      "title": "Atualizado Em"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "disciplina",
+     "descricao",
+     "pacote",
+     "contagens",
+     "dono",
+     "criado_em",
+     "atualizado_em"
+    ],
+    "title": "Rede"
+   },
+   "RedePagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/Rede"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "RedePagina"
+   },
+   "RedeEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "disciplina": {
+      "type": "string",
+      "pattern": "^(eletrica|agua|gas|esgoto|telecom|estrutura)$",
+      "title": "Disciplina"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome",
+     "disciplina"
+    ],
+    "title": "RedeEntrada"
+   },
+   "PacoteInstalado": {
+    "properties": {
+     "codigo": {
+      "type": "string",
+      "title": "Codigo"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "versao": {
+      "type": "string",
+      "title": "Versao"
+     },
+     "disciplina": {
+      "type": "string",
+      "title": "Disciplina"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "fonte": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fonte"
+     },
+     "bytes": {
+      "type": "integer",
+      "title": "Bytes"
+     },
+     "sha256": {
+      "type": "string",
+      "title": "Sha256"
+     },
+     "contagens": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Contagens"
+     }
+    },
+    "type": "object",
+    "required": [
+     "codigo",
+     "nome",
+     "versao",
+     "disciplina",
+     "bytes",
+     "sha256",
+     "contagens"
+    ],
+    "title": "PacoteInstalado"
+   },
+   "ImportacaoResultado": {
+    "properties": {
+     "rede_id": {
+      "type": "string",
+      "title": "Rede Id"
+     },
+     "codigo": {
+      "type": "string",
+      "title": "Codigo"
+     },
+     "versao": {
+      "type": "string",
+      "title": "Versao"
+     },
+     "esquema_versao": {
+      "type": "integer",
+      "title": "Esquema Versao"
+     },
+     "sha256": {
+      "type": "string",
+      "title": "Sha256"
+     },
+     "bytes": {
+      "type": "integer",
+      "title": "Bytes"
+     },
+     "contagens": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Contagens"
+     }
+    },
+    "type": "object",
+    "required": [
+     "rede_id",
+     "codigo",
+     "versao",
+     "esquema_versao",
+     "sha256",
+     "bytes",
+     "contagens"
+    ],
+    "title": "ImportacaoResultado"
    }
   }
  }
