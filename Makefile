@@ -22,6 +22,9 @@ lint:
 limites:                                    ## docs/LIMITES.md == app/limites.py (item L0-12); falha se divergir
 	$(VENV)/python docs/gerar_limites.py --check
 
+privilegios:                                 ## docs/PRIVILEGIOS.md == plat.privilegio no banco (item L0-07-b); GERA (não confere) — make check confere via tests/api/test_privilegios_doc.py
+	$(VENV)/python docs/gerar_privilegios.py
+
 sem-marcador:                               ## mesma expressão do laco/driver.sh (tests/marcadores.regex); inclui os .md da raiz e docs/
 	! grep -rnI --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=tests --exclude-dir=.git --exclude-dir=venv -E -f tests/marcadores.regex app web db docs deploy install.sh Makefile requirements.txt pyproject.toml *.md
 
