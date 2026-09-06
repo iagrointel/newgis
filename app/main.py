@@ -46,6 +46,7 @@ from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
+from app.rotas_notificacoes import router as rotas_notificacoes
 from app.saude import router as rotas_saude
 from app.settings import settings
 from app.uploads.rotas import router as rotas_uploads
@@ -97,6 +98,8 @@ ROUTERS = [
     rotas_categorias.router,
     rotas_favoritos.router,
     rotas_lixeira.router,
+    # --- notificações internas (L0-03-k): /api/notificacoes (sino, lista, marcar lida, apagar)
+    rotas_notificacoes,
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar

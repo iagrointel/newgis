@@ -574,6 +574,16 @@ CASOS: dict[tuple[str, str], Caso] = {
     # o pedido nomeia um item de B: nada resolve para A e a rota RECUSA (404) em vez de enfileirar lista vazia,
     # que a tarefa lia como "expurgar tudo" (achado G2-4 do adversário do grupo G2)
     ("POST", "/api/lixeira/esvaziar"): Caso(lambda p: "/api/lixeira/esvaziar", lambda p: {"ids": [p.item_b["id"]]}),
+    # ---- notificações internas (L0-03-k): a RLS é por usuario_id, então "o recurso de B" é qualquer uuid que
+    # A também não tem (404 garantido); a lista e a contagem são do próprio chamador e não podem trazer marca de B
+    ("GET", "/api/notificacoes"): Caso(lambda p: "/api/notificacoes?limite=20", proprio=True,
+                                       aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/api/notificacoes/contagem"): Caso(lambda p: "/api/notificacoes/contagem", proprio=True,
+                                                aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/notificacoes/lidas"): Caso(
+        lambda p: "/api/notificacoes/lidas", lambda p: {"ids": ["00000000-0000-0000-0000-0000000000fe"]},
+    ),
+    ("DELETE", "/api/notificacoes/{id}"): Caso(lambda p: "/api/notificacoes/00000000-0000-0000-0000-0000000000fe"),
     # ---- arquivos/objetos (L0-11): a rota nunca recebe id de inquilino na URL (o bucket vem do auth.tenant_id),
     # então "o recurso de B" para GET/DELETE por sha256 é qualquer sha256 que A também não tem — 404 garantido
     # sem precisar upar nada como B (a suíte própria do item, tests/api/test_arquivos.py, prova o isolamento com

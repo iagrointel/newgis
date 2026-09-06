@@ -272,3 +272,16 @@ body.instrumento dd, body.instrumento .mono, body.instrumento .tabela td.mono, b
 #upload-progresso::-webkit-progress-value { background: var(--acento); border-radius: 999px; }
 #upload-rotulo-progresso { font-family: var(--mono); font-size: .85rem; color: var(--fraco); }
 .upload-ok { color: var(--ok); }
+
+/* --- sino de notificações na barra lateral (item L0-03-k) */
+.lateral .sino-area { position: relative; padding: 0 var(--e4) var(--e2); }
+.lateral .sino { display: inline-flex; align-items: center; gap: var(--e1, .25rem); }
+.sino-contagem { background: var(--acento); color: #fff; border-radius: 999px; padding: 0 .4rem; font-size: .75rem; font-family: var(--mono); }
+.sino-painel { position: absolute; left: var(--e4); bottom: 100%; z-index: 40; width: 22rem; max-width: 80vw; max-height: 24rem; overflow: auto; background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio, 6px); padding: var(--e2); }
+.sino-topo { display: flex; align-items: center; justify-content: space-between; gap: var(--e2); margin-bottom: var(--e2); }
+ul.notificacoes { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
+ul.notificacoes li { display: flex; align-items: flex-start; gap: var(--e2); border-bottom: 1px solid var(--borda); padding-bottom: var(--e2); }
+ul.notificacoes li.nao-lida { border-left: 3px solid var(--acento); padding-left: var(--e2); }
+ul.notificacoes li.vazia { color: var(--fraco); border: none; }
+.notificacao-texto { display: grid; gap: .15rem; min-width: 0; }
+.notificacao-texto small { color: var(--fraco); font-family: var(--mono); font-size: .75rem; }

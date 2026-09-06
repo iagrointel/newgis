@@ -8,6 +8,7 @@ from app.jobs import periodicos as base
 PERIODICOS: list[tuple[str, str, str, dict]] = [
     ("lixeira diária", "50 3 * * *", "catalogo.lixeira_expurgar", {"dias": 30}),
     ("versões de hora em hora", "40 * * * *", "catalogo.versoes_compactar", {"manter": 50}),
+    ("notificações diárias", "20 4 * * *", "catalogo.notificacoes_expurgar", {"dias": 90}),
 ]
 
 for _p in PERIODICOS:

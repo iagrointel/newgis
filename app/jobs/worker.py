@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 import psycopg2
 import psycopg2.extras
 
+from app import limites
 from app import log as plat_log
 from app.jobs import agenda as mod_agenda
 from app.jobs import filho as mod_filho
@@ -373,7 +374,23 @@ class Worker:
         ok = bool(r and r["ok"])
         if not ok:
             log.warning("job_terminar recusado (job já não era deste worker)", extra={"job_id": str(job["id"])})
+        elif estado in ("concluido", "falhou") and job.get("usuario_id"):
+            self._notificar_dono(job, estado, erro)
         return ok
+
+    def _notificar_dono(self, job: dict, estado: str, erro: str | None) -> None:
+        """Notificação interna de quem pediu o job (item L0-03-k). O worker não tem privilégio de tabela: quem
+        escreve é plat.notificar, SECURITY DEFINER com GRANT para plat_worker. Falhar aqui nunca derruba o
+        encerramento do job — o job já terminou; o sino é efeito colateral."""
+        titulo = f"Tarefa {job['tipo']} {'concluída' if estado == 'concluido' else 'falhou'}"
+        try:
+            self.um("SELECT plat.notificar(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) AS id",
+                    (job["tenant_id"], job["usuario_id"], f"jobs/{estado}", titulo, f"jobs/{job['id']}",
+                     (erro or None) and str(erro)[:1000], "/tarefas", "job", str(job["id"]),
+                     limites.NOTIFICACOES_POR_MINUTO))
+        except Exception as e:  # noqa: BLE001 — o sino nunca derruba o worker
+            log.warning("notificação do job não gravada: %s", str(e).strip()[:200],
+                        extra={"job_id": str(job["id"])})
 
     def _finalizar(self, f: Filho, codigo: int) -> None:
         job = f.job

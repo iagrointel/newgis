@@ -82,6 +82,9 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `VERSOES_BLOCO_COMPACTACAO` | `10` | — |
 | `VERSAO_COMENTARIO_MAX` | `500` | — |
 | `FAVORITOS_POR_USUARIO` | `500` | — |
+| `NOTIFICACOES_POR_MINUTO` | `60` | — |
+| `NOTIFICACOES_DIAS` | `90` | — |
+| `NOTIFICACOES_PAGINA_MAX` | `100` | — |
 | `DESTAQUES_POR_GRUPO` | `24` | — |
 | `BUSCA_Q_MAX` | `1000` | — |
 | `BUSCA_TERMOS_MAX` | `200` | — |

@@ -8,6 +8,8 @@ mostra o item como NÃO favoritado. O clique seguinte manda outro PUT (não o DE
 ou seja, a tela também não desfavorita. O e2e do próprio repositório para nisto
 (tests/e2e/test_conteudo.py:181, determinístico em duas execuções).
 
+Turno de conserto (trilha g2fix): a marca xfail saiu; o teste agora exige que a tela e o servidor concordem.
+
 Este teste sobe sozinho o contexto do navegador (certificado autoassinado do harness local é aceito) e
 é pulado quando não há --base-url apontando para uma instância viva.
 """
@@ -47,13 +49,12 @@ def pagina_adv2(browser, base_url):
     ctx.close()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G2-9: na tela Conteúdo, depois de aplicar e limpar um filtro, o clique na estrela grava "
-    "o favorito no servidor (PUT 204) mas a linha continua com aria-pressed=false porque o GET "
-    "/api/itens em voo recarrega a lista com o estado anterior; a tela mostra o contrário do que o "
-    "servidor guardou e o clique seguinte repete o PUT em vez de desfavoritar.",
-)
+# ACHADO G2-9 (consertado): o clique na estrela registrava o favorito no servidor, mas a resposta de um
+# GET /api/itens pedido ANTES do clique chegava depois e repintava a linha com o estado velho — a tela mostrava
+# o contrário do que o servidor guardou e o clique seguinte repetia o PUT em vez de desfavoritar. Conserto em
+# web/js/catalogo/contexto.js (marcaFavoritos/marcarFavoritoLocal/aplicarFavoritosLocais) e lista.js: a intenção
+# é registrada antes da chamada, com número de ordem, e a lista reconcilia toda resposta pedida antes dela.
+# O teste continua segurando a resposta do GET por 2 s para a corrida acontecer sempre.
 def test_g2_9_favorito_na_lista_apos_ciclo_de_filtro(pagina_adv2, base_url, credenciais_demo_adv2):
     pagina, (login, senha) = pagina_adv2, credenciais_demo_adv2
     pagina.goto(f"{base_url}/entrar?inquilino=demo&proximo=/conteudo", wait_until="domcontentloaded")
