@@ -67,6 +67,25 @@ se mediu. `typeKeywords` manda no `type` em dois casos medidos: "Hosted Service"
 limite de uso do portal do cliente, sem trazer nada para um CSV ou um pacote do ArcGIS Pro. Medido: 10 mil
 itens simples custaram 107 pedidos e 8,4 s.
 
+### 7. Conserto pós-adversário (turno 3): a credencial só vai para a origem do portal
+
+O adversário independente (`laco/handoffs/T3/ataque-L4-portal-ADVERSARIO.md`, B1/B1b) mediu que
+`ClientePortal` mandava `X-Esri-Authorization` para QUALQUER host presente no campo `url` de um item — e
+que o cabeçalho acompanhava um 302 até um terceiro host. O campo `url` de um item é escrito por qualquer
+membro da organização do cliente ao registrar um item; a credencial do inventário é de administrador. O
+conserto (`ClientePortal._cabecalhos(alvo)`) só inclui o token quando `alvo` tem a mesma origem
+(esquema+host+porta) de `self.base`, recalculado a cada salto de redirecionamento — nunca comparado ao
+salto anterior, sempre à origem configurada. A função `seguranca._mesma_origem_de_confianca` foi copiada
+(mesma lógica) do conserto equivalente que o item de conexão externa fez para o mesmo problema em
+`buscar_seguro`; não foi reinventada. Efeito colateral aceito e documentado: um portal enterprise com
+serviços federados em HOST DIFERENTE do portal (comum em AGOL, onde o portal é `org.maps.arcgis.com` e o
+serviço hospedado vive em `servicesN.arcgis.com`) não recebe token do inventário — o serviço só é lido se
+for público. É o padrão seguro por omissão; ampliar para uma lista de hosts de confiança do portal
+(equivalente ao "trusted servers" da Esri) fica para quando D20 (credencial de um Portal real) destravar a
+prova. Os achados B2-B7 (item malformado, página grande, retomada que perde item, injeção de fórmula no
+CSV, `size:-1`, inventário órfão de editor sem privilégio) estão descritos e consertados no handoff
+`laco/handoffs/T3/L2-08-a-CONSERTO.md`.
+
 ## O que fica de fora deste item
 
 - Prova contra Portal real: pendente da decisão D20 do dono. `tests/migracao/PORTAL_DE_TESTE.md` registra a
