@@ -44,10 +44,41 @@ def test_python_e_javascript_documentam_a_mesma_lista_de_funcoes():
     assert nomes_js == set(TABELA_FUNCOES)
 
 
-def test_portao_ao_menos_15_funcoes_documentadas():
+def test_portao_ao_menos_40_funcoes_documentadas():
     texto_doc = DOC.read_text(encoding="utf-8")
     nomes_doc = set(NOME_FUNCAO_NA_TABELA_MD.findall(texto_doc))
-    assert len(nomes_doc) >= 15
+    assert len(nomes_doc) >= 40
+
+
+def _bloco_ebnf_do_documento() -> str:
+    m = re.search(r"```ebnf\n(.*?)```", DOC.read_text(encoding="utf-8"), re.S)
+    assert m, "EXPRESSAO.md sem bloco ```ebnf"
+    return m.group(1)
+
+
+def test_ebnf_do_documento_e_a_gerada_das_tabelas_do_parser():
+    """Portão "EBNF publicada e gerada a partir da tabela de tokens": o bloco ```ebnf do documento tem
+    de ser, byte a byte, o texto que `ebnf()` gera das tabelas `_PRECEDENCIA_*`/`_PALAVRAS_CHAVE` que
+    o PARSER usa — mudar um operador no código sem regerar o documento reprova aqui."""
+    from app.expressao.avaliador_py import ebnf
+
+    assert _bloco_ebnf_do_documento() == ebnf() + "\n"
+
+
+def test_todo_operador_do_tokenizador_esta_na_ebnf_e_vice_versa():
+    """O tokenizador (`_OPERADORES`) e a gramática têm de ter exatamente o mesmo vocabulário de
+    operadores — um token aceito que nenhuma regra consome (ou o inverso) é divergência."""
+    from app.expressao.avaliador_py import _OPERADORES, ebnf
+
+    na_ebnf = set(re.findall(r'"([^"a-z$(),\'_.]{1,2})"', ebnf()))  # '.' é da regra numero, não operador
+    assert na_ebnf == set(_OPERADORES), (na_ebnf ^ set(_OPERADORES))
+
+
+def test_palavras_chave_do_tokenizador_estao_na_ebnf():
+    from app.expressao.avaliador_py import _PALAVRAS_CHAVE, ebnf
+
+    for palavra in _PALAVRAS_CHAVE:
+        assert f'"{palavra}"' in ebnf()
 
 
 def test_todos_os_codigos_de_erro_do_avaliador_estao_no_catalogo_do_documento():

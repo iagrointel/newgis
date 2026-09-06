@@ -2,36 +2,61 @@
  "item": "L2-10-c-expressao",
  "medidas": {
   "funcoes_implementadas": {
-   "valor": 18,
+   "valor": 43,
    "unidade": "funções",
    "comando": "len(TABELA_FUNCOES) em avaliador_py.py"
   },
   "vetores_de_equivalencia": {
-   "valor": 41,
+   "valor": 309,
    "unidade": "vetores",
-   "comando": "len(json.load(tests/expressoes/vetores.json)) — portão do item pede ≥ 20"
+   "comando": "len(json.load(tests/expressoes/vetores.json)) — extensão exige ≥ 200"
   },
   "tempo_ataque_cadeia_900_termos_ms": {
-   "valor": 3.81,
+   "valor": 4.18,
    "unidade": "ms",
    "comando": "analisar('1'+'+1'*900) até levantar profundidade_excedida"
   },
   "tempo_ataque_string_10mb_ms": {
-   "valor": 19.56,
+   "valor": 19.15,
    "unidade": "ms",
    "comando": "analisar(\"'\" + 'a'*10_000_000 + \"'\") até levantar expressao_grande"
   },
   "tempo_ataque_500_parenteses_ms": {
-   "valor": 1.32,
+   "valor": 0.53,
    "unidade": "ms",
    "comando": "analisar('('*500 + '1' + ')'*500) até levantar profundidade_excedida"
   },
   "vetores_avaliados_sem_erro_no_lado_javascript": {
-   "valor": 41,
+   "valor": 309,
    "unidade": "vetores",
    "comando": "executar_js.mjs sobre tests/expressoes/vetores.json — cada um também comparado byte a byte com o resultado Python em test_expressao_equivalencia.py"
+  },
+  "vetores_ast_ida_e_volta_nos_dois_lados": {
+   "valor": 309,
+   "unidade": "vetores",
+   "comando": "executar_js.mjs: astParaJson → JSON → astDeJson → avaliar == avaliar direto; Python idem em test_ast_ida_e_volta_avalia_igual_em_todos_os_vetores; cruzado (AST do Python lida no JS) em test_ast_exportada_pelo_python_reimportada_no_javascript_avalia_igual_em_todos_os_vetores"
+  },
+  "tempo_corte_relogio_50ms_python_ms": {
+   "valor": 50.63,
+   "unidade": "ms",
+   "comando": "40 × Contagem(Unicos($x)) com 1.024 dicionários, limite_passos=10^9, limite_ms=50 → tempo_excedido (test_expressao_extensao.medir_corte_python_ms)"
+  },
+  "tempo_corte_relogio_50ms_javascript_ms": {
+   "valor": 53.65,
+   "unidade": "ms",
+   "comando": "mesmo ataque com avaliador.js, limiteMs=LIMITE_MS_CLIENTE (50) → tempo_excedido (test_expressao_extensao.medir_corte_javascript_ms)"
+  },
+  "tempo_corte_relogio_500ms_servidor_ms": {
+   "valor": 500.69,
+   "unidade": "ms",
+   "comando": "mesmo ataque (40 × Contagem(Unicos($x)) com 1.024 dicionários) com limite_ms=LIMITE_MS_SERVIDOR (500) → tempo_excedido; mede o teto do servidor, não o do cliente"
+  },
+  "orcamento_de_passos_padrao": {
+   "valor": 100000,
+   "unidade": "passos",
+   "comando": "LIMITE_PASSOS do avaliador; o mesmo ataque com relógio folgado (limite_ms=10^6) para em limite_passos, provando que os dois orçamentos cortam de forma independente"
   }
  },
- "gerado_em": "2026-09-06T10:52:32Z",
- "git_sha": "c5135e5df6e6"
+ "gerado_em": "2026-09-06T13:26:04Z",
+ "git_sha": "9df2cff208eb"
 }

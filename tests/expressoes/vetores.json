@@ -1,43 +1,2826 @@
 [
-  {"descricao": "aritmética com precedência", "entrada": "1 + 2 * 3", "contexto": {}, "saida": 7},
-  {"descricao": "parênteses mudam a precedência", "entrada": "(1 + 2) * 3", "contexto": {}, "saida": 9},
-  {"descricao": "potência associa à direita", "entrada": "2 ^ 3 ^ 2", "contexto": {}, "saida": 512},
-  {"descricao": "divisão real", "entrada": "10 / 4", "contexto": {}, "saida": 2.5},
-  {"descricao": "resto", "entrada": "10 % 3", "contexto": {}, "saida": 1},
-  {"descricao": "unário negativo aninhado", "entrada": "-(3 + 2) * -1", "contexto": {}, "saida": 5},
-  {"descricao": "E lógico", "entrada": "Verdadeiro && Falso", "contexto": {}, "saida": false},
-  {"descricao": "OU lógico", "entrada": "Falso || Verdadeiro", "contexto": {}, "saida": true},
-  {"descricao": "negação", "entrada": "!(1 > 2)", "contexto": {}, "saida": true},
-  {"descricao": "comparação numérica", "entrada": "$area >= 300", "contexto": {"area": 450.5}, "saida": true},
-  {"descricao": "comparação de texto", "entrada": "'abacate' < 'banana'", "contexto": {}, "saida": true},
-  {"descricao": "igualdade número/texto nunca é verdadeira", "entrada": "1 == '1'", "contexto": {}, "saida": false},
-  {"descricao": "nulo == nulo", "entrada": "Nulo == Nulo", "contexto": {}, "saida": true},
-  {"descricao": "nulo != valor", "entrada": "Nulo != 1", "contexto": {}, "saida": true},
-  {"descricao": "propagação de nulo na aritmética", "entrada": "$x + 1", "contexto": {"x": null}, "saida": null},
-  {"descricao": "campo do contexto", "entrada": "$licencas_vencendo * 2", "contexto": {"licencas_vencendo": 191}, "saida": 382},
-  {"descricao": "Maiuscula", "entrada": "Maiuscula('sítio bom retiro')", "contexto": {}, "saida": "SÍTIO BOM RETIRO"},
-  {"descricao": "Minuscula", "entrada": "Minuscula('CAR')", "contexto": {}, "saida": "car"},
-  {"descricao": "Concatenar mistura tipos e trata nulo como vazio", "entrada": "Concatenar('lote ', 12, '-', Nulo, 'A')", "contexto": {}, "saida": "lote 12-A"},
-  {"descricao": "Texto de número inteiro não mostra ponto", "entrada": "Texto(3.0)", "contexto": {}, "saida": "3"},
-  {"descricao": "Texto de número decimal", "entrada": "Texto(3.5)", "contexto": {}, "saida": "3.5"},
-  {"descricao": "Arredondar com casas decimais", "entrada": "Arredondar(2.345, 2)", "contexto": {}, "saida": 2.35},
-  {"descricao": "Arredondar meio-para-cima em negativo", "entrada": "Arredondar(-2.5, 0)", "contexto": {}, "saida": -3},
-  {"descricao": "Absoluto", "entrada": "Absoluto(-17.5)", "contexto": {}, "saida": 17.5},
-  {"descricao": "Minimo variádico", "entrada": "Minimo(9, 4, 1, 7)", "contexto": {}, "saida": 1},
-  {"descricao": "Maximo variádico", "entrada": "Maximo(9, 4, 1, 7)", "contexto": {}, "saida": 9},
-  {"descricao": "Numero converte texto", "entrada": "Numero('42') + 1", "contexto": {}, "saida": 43},
-  {"descricao": "Numero devolve nulo se não é número", "entrada": "EhNulo(Numero('abc'))", "contexto": {}, "saida": true},
-  {"descricao": "Potencia", "entrada": "Potencia(2, 10)", "contexto": {}, "saida": 1024},
-  {"descricao": "Ano de uma data (epoch ms UTC)", "entrada": "Ano($vencimento)", "contexto": {"vencimento": 1788652800000}, "saida": 2026},
-  {"descricao": "Mes de uma data", "entrada": "Mes($vencimento)", "contexto": {"vencimento": 1788652800000}, "saida": 9},
-  {"descricao": "Dia de uma data", "entrada": "Dia($vencimento)", "contexto": {"vencimento": 1798675200000}, "saida": 31},
-  {"descricao": "DiferencaDias entre duas datas", "entrada": "DiferencaDias($a, $b)", "contexto": {"a": 1788652800000, "b": 1791244800000}, "saida": 30},
-  {"descricao": "SeNulo com valor presente", "entrada": "SeNulo($nome, 'sem nome')", "contexto": {"nome": "Fazenda Retiro"}, "saida": "Fazenda Retiro"},
-  {"descricao": "SeNulo com valor ausente", "entrada": "SeNulo($nome, 'sem nome')", "contexto": {"nome": null}, "saida": "sem nome"},
-  {"descricao": "SeNulo é curto-circuito (o 2º ramo nunca é avaliado)", "entrada": "SeNulo($x, 10 / 0)", "contexto": {"x": 5}, "saida": 5},
-  {"descricao": "EhNulo verdadeiro", "entrada": "EhNulo($x)", "contexto": {"x": null}, "saida": true},
-  {"descricao": "EhNulo falso", "entrada": "EhNulo($x)", "contexto": {"x": 0}, "saida": false},
-  {"descricao": "Se escolhe o ramo certo", "entrada": "Se($area > 300, 'grande', 'pequena')", "contexto": {"area": 450}, "saida": "grande"},
-  {"descricao": "Se é curto-circuito (o ramo não escolhido nunca é avaliado)", "entrada": "Se($x > 0, 1, 10 / 0)", "contexto": {"x": 5}, "saida": 1},
-  {"descricao": "expressão composta de licenciamento", "entrada": "Se(EhNulo($vencimento), 'sem data', Concatenar('vence em ', Texto(DiferencaDias($hoje, $vencimento)), ' dias'))", "contexto": {"hoje": 1788652800000, "vencimento": 1791244800000}, "saida": "vence em 30 dias"}
+  {
+    "descricao": "aritmética com precedência",
+    "entrada": "1 + 2 * 3",
+    "contexto": {},
+    "saida": 7
+  },
+  {
+    "descricao": "parênteses mudam a precedência",
+    "entrada": "(1 + 2) * 3",
+    "contexto": {},
+    "saida": 9
+  },
+  {
+    "descricao": "potência associa à direita",
+    "entrada": "2 ^ 3 ^ 2",
+    "contexto": {},
+    "saida": 512
+  },
+  {
+    "descricao": "divisão real",
+    "entrada": "10 / 4",
+    "contexto": {},
+    "saida": 2.5
+  },
+  {
+    "descricao": "resto",
+    "entrada": "10 % 3",
+    "contexto": {},
+    "saida": 1
+  },
+  {
+    "descricao": "unário negativo aninhado",
+    "entrada": "-(3 + 2) * -1",
+    "contexto": {},
+    "saida": 5
+  },
+  {
+    "descricao": "E lógico",
+    "entrada": "Verdadeiro && Falso",
+    "contexto": {},
+    "saida": false
+  },
+  {
+    "descricao": "OU lógico",
+    "entrada": "Falso || Verdadeiro",
+    "contexto": {},
+    "saida": true
+  },
+  {
+    "descricao": "negação",
+    "entrada": "!(1 > 2)",
+    "contexto": {},
+    "saida": true
+  },
+  {
+    "descricao": "comparação numérica",
+    "entrada": "$area >= 300",
+    "contexto": {
+      "area": 450.5
+    },
+    "saida": true
+  },
+  {
+    "descricao": "comparação de texto",
+    "entrada": "'abacate' < 'banana'",
+    "contexto": {},
+    "saida": true
+  },
+  {
+    "descricao": "igualdade número/texto nunca é verdadeira",
+    "entrada": "1 == '1'",
+    "contexto": {},
+    "saida": false
+  },
+  {
+    "descricao": "nulo == nulo",
+    "entrada": "Nulo == Nulo",
+    "contexto": {},
+    "saida": true
+  },
+  {
+    "descricao": "nulo != valor",
+    "entrada": "Nulo != 1",
+    "contexto": {},
+    "saida": true
+  },
+  {
+    "descricao": "propagação de nulo na aritmética",
+    "entrada": "$x + 1",
+    "contexto": {
+      "x": null
+    },
+    "saida": null
+  },
+  {
+    "descricao": "campo do contexto",
+    "entrada": "$licencas_vencendo * 2",
+    "contexto": {
+      "licencas_vencendo": 191
+    },
+    "saida": 382
+  },
+  {
+    "descricao": "Maiuscula",
+    "entrada": "Maiuscula('sítio bom retiro')",
+    "contexto": {},
+    "saida": "SÍTIO BOM RETIRO"
+  },
+  {
+    "descricao": "Minuscula",
+    "entrada": "Minuscula('CAR')",
+    "contexto": {},
+    "saida": "car"
+  },
+  {
+    "descricao": "Concatenar mistura tipos e trata nulo como vazio",
+    "entrada": "Concatenar('lote ', 12, '-', Nulo, 'A')",
+    "contexto": {},
+    "saida": "lote 12-A"
+  },
+  {
+    "descricao": "Texto de número inteiro não mostra ponto",
+    "entrada": "Texto(3.0)",
+    "contexto": {},
+    "saida": "3"
+  },
+  {
+    "descricao": "Texto de número decimal",
+    "entrada": "Texto(3.5)",
+    "contexto": {},
+    "saida": "3.5"
+  },
+  {
+    "descricao": "Arredondar com casas decimais",
+    "entrada": "Arredondar(2.345, 2)",
+    "contexto": {},
+    "saida": 2.35
+  },
+  {
+    "descricao": "Arredondar meio-para-cima em negativo",
+    "entrada": "Arredondar(-2.5, 0)",
+    "contexto": {},
+    "saida": -3
+  },
+  {
+    "descricao": "Absoluto",
+    "entrada": "Absoluto(-17.5)",
+    "contexto": {},
+    "saida": 17.5
+  },
+  {
+    "descricao": "Minimo variádico",
+    "entrada": "Minimo(9, 4, 1, 7)",
+    "contexto": {},
+    "saida": 1
+  },
+  {
+    "descricao": "Maximo variádico",
+    "entrada": "Maximo(9, 4, 1, 7)",
+    "contexto": {},
+    "saida": 9
+  },
+  {
+    "descricao": "Numero converte texto",
+    "entrada": "Numero('42') + 1",
+    "contexto": {},
+    "saida": 43
+  },
+  {
+    "descricao": "Numero devolve nulo se não é número",
+    "entrada": "EhNulo(Numero('abc'))",
+    "contexto": {},
+    "saida": true
+  },
+  {
+    "descricao": "Potencia",
+    "entrada": "Potencia(2, 10)",
+    "contexto": {},
+    "saida": 1024
+  },
+  {
+    "descricao": "Ano de uma data (epoch ms UTC)",
+    "entrada": "Ano($vencimento)",
+    "contexto": {
+      "vencimento": 1788652800000
+    },
+    "saida": 2026
+  },
+  {
+    "descricao": "Mes de uma data",
+    "entrada": "Mes($vencimento)",
+    "contexto": {
+      "vencimento": 1788652800000
+    },
+    "saida": 9
+  },
+  {
+    "descricao": "Dia de uma data",
+    "entrada": "Dia($vencimento)",
+    "contexto": {
+      "vencimento": 1798675200000
+    },
+    "saida": 31
+  },
+  {
+    "descricao": "DiferencaDias entre duas datas",
+    "entrada": "DiferencaDias($a, $b)",
+    "contexto": {
+      "a": 1788652800000,
+      "b": 1791244800000
+    },
+    "saida": 30
+  },
+  {
+    "descricao": "SeNulo com valor presente",
+    "entrada": "SeNulo($nome, 'sem nome')",
+    "contexto": {
+      "nome": "Fazenda Retiro"
+    },
+    "saida": "Fazenda Retiro"
+  },
+  {
+    "descricao": "SeNulo com valor ausente",
+    "entrada": "SeNulo($nome, 'sem nome')",
+    "contexto": {
+      "nome": null
+    },
+    "saida": "sem nome"
+  },
+  {
+    "descricao": "SeNulo é curto-circuito (o 2º ramo nunca é avaliado)",
+    "entrada": "SeNulo($x, 10 / 0)",
+    "contexto": {
+      "x": 5
+    },
+    "saida": 5
+  },
+  {
+    "descricao": "EhNulo verdadeiro",
+    "entrada": "EhNulo($x)",
+    "contexto": {
+      "x": null
+    },
+    "saida": true
+  },
+  {
+    "descricao": "EhNulo falso",
+    "entrada": "EhNulo($x)",
+    "contexto": {
+      "x": 0
+    },
+    "saida": false
+  },
+  {
+    "descricao": "Se escolhe o ramo certo",
+    "entrada": "Se($area > 300, 'grande', 'pequena')",
+    "contexto": {
+      "area": 450
+    },
+    "saida": "grande"
+  },
+  {
+    "descricao": "Se é curto-circuito (o ramo não escolhido nunca é avaliado)",
+    "entrada": "Se($x > 0, 1, 10 / 0)",
+    "contexto": {
+      "x": 5
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "expressão composta de licenciamento",
+    "entrada": "Se(EhNulo($vencimento), 'sem data', Concatenar('vence em ', Texto(DiferencaDias($hoje, $vencimento)), ' dias'))",
+    "contexto": {
+      "hoje": 1788652800000,
+      "vencimento": 1791244800000
+    },
+    "saida": "vence em 30 dias"
+  },
+  {
+    "descricao": "Left vazio 0",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "",
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Right vazio 0",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "",
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Left vazio 1",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "",
+      "n": 1
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Right vazio 1",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "",
+      "n": 1
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Left vazio 2",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "",
+      "n": 2
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Right vazio 2",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "",
+      "n": 2
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Left vazio 20",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "",
+      "n": 20
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Right vazio 20",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "",
+      "n": 20
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid vazio 0/0",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "",
+      "start": 0,
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid vazio 0/2",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "",
+      "start": 0,
+      "n": 2
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid vazio 1/2",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "",
+      "start": 1,
+      "n": 2
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid vazio 3/1",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "",
+      "start": 3,
+      "n": 1
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid vazio 20/3",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "",
+      "start": 20,
+      "n": 3
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid até fim vazio",
+    "entrada": "Mid($s,1)",
+    "contexto": {
+      "s": ""
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Contagem texto vazio",
+    "entrada": "Contagem($s)",
+    "contexto": {
+      "s": ""
+    },
+    "saida": 0
+  },
+  {
+    "descricao": "Left ascii 0",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "abc def",
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Right ascii 0",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "abc def",
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Left ascii 1",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "abc def",
+      "n": 1
+    },
+    "saida": "a"
+  },
+  {
+    "descricao": "Right ascii 1",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "abc def",
+      "n": 1
+    },
+    "saida": "f"
+  },
+  {
+    "descricao": "Left ascii 2",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "abc def",
+      "n": 2
+    },
+    "saida": "ab"
+  },
+  {
+    "descricao": "Right ascii 2",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "abc def",
+      "n": 2
+    },
+    "saida": "ef"
+  },
+  {
+    "descricao": "Left ascii 20",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "abc def",
+      "n": 20
+    },
+    "saida": "abc def"
+  },
+  {
+    "descricao": "Right ascii 20",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "abc def",
+      "n": 20
+    },
+    "saida": "abc def"
+  },
+  {
+    "descricao": "Mid ascii 0/0",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "abc def",
+      "start": 0,
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid ascii 0/2",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "abc def",
+      "start": 0,
+      "n": 2
+    },
+    "saida": "ab"
+  },
+  {
+    "descricao": "Mid ascii 1/2",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "abc def",
+      "start": 1,
+      "n": 2
+    },
+    "saida": "bc"
+  },
+  {
+    "descricao": "Mid ascii 3/1",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "abc def",
+      "start": 3,
+      "n": 1
+    },
+    "saida": " "
+  },
+  {
+    "descricao": "Mid ascii 20/3",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "abc def",
+      "start": 20,
+      "n": 3
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid até fim ascii",
+    "entrada": "Mid($s,1)",
+    "contexto": {
+      "s": "abc def"
+    },
+    "saida": "bc def"
+  },
+  {
+    "descricao": "Contagem texto ascii",
+    "entrada": "Contagem($s)",
+    "contexto": {
+      "s": "abc def"
+    },
+    "saida": 7
+  },
+  {
+    "descricao": "Left acentos 0",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "ação",
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Right acentos 0",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "ação",
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Left acentos 1",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "ação",
+      "n": 1
+    },
+    "saida": "a"
+  },
+  {
+    "descricao": "Right acentos 1",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "ação",
+      "n": 1
+    },
+    "saida": "o"
+  },
+  {
+    "descricao": "Left acentos 2",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "ação",
+      "n": 2
+    },
+    "saida": "aç"
+  },
+  {
+    "descricao": "Right acentos 2",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "ação",
+      "n": 2
+    },
+    "saida": "ão"
+  },
+  {
+    "descricao": "Left acentos 20",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "ação",
+      "n": 20
+    },
+    "saida": "ação"
+  },
+  {
+    "descricao": "Right acentos 20",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "ação",
+      "n": 20
+    },
+    "saida": "ação"
+  },
+  {
+    "descricao": "Mid acentos 0/0",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "ação",
+      "start": 0,
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid acentos 0/2",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "ação",
+      "start": 0,
+      "n": 2
+    },
+    "saida": "aç"
+  },
+  {
+    "descricao": "Mid acentos 1/2",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "ação",
+      "start": 1,
+      "n": 2
+    },
+    "saida": "çã"
+  },
+  {
+    "descricao": "Mid acentos 3/1",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "ação",
+      "start": 3,
+      "n": 1
+    },
+    "saida": "o"
+  },
+  {
+    "descricao": "Mid acentos 20/3",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "ação",
+      "start": 20,
+      "n": 3
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid até fim acentos",
+    "entrada": "Mid($s,1)",
+    "contexto": {
+      "s": "ação"
+    },
+    "saida": "ção"
+  },
+  {
+    "descricao": "Contagem texto acentos",
+    "entrada": "Contagem($s)",
+    "contexto": {
+      "s": "ação"
+    },
+    "saida": 4
+  },
+  {
+    "descricao": "Left unicode 0",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "a🌍ç",
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Right unicode 0",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "a🌍ç",
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Left unicode 1",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "a🌍ç",
+      "n": 1
+    },
+    "saida": "a"
+  },
+  {
+    "descricao": "Right unicode 1",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "a🌍ç",
+      "n": 1
+    },
+    "saida": "ç"
+  },
+  {
+    "descricao": "Left unicode 2",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "a🌍ç",
+      "n": 2
+    },
+    "saida": "a🌍"
+  },
+  {
+    "descricao": "Right unicode 2",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "a🌍ç",
+      "n": 2
+    },
+    "saida": "🌍ç"
+  },
+  {
+    "descricao": "Left unicode 20",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "a🌍ç",
+      "n": 20
+    },
+    "saida": "a🌍ç"
+  },
+  {
+    "descricao": "Right unicode 20",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "a🌍ç",
+      "n": 20
+    },
+    "saida": "a🌍ç"
+  },
+  {
+    "descricao": "Mid unicode 0/0",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "a🌍ç",
+      "start": 0,
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid unicode 0/2",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "a🌍ç",
+      "start": 0,
+      "n": 2
+    },
+    "saida": "a🌍"
+  },
+  {
+    "descricao": "Mid unicode 1/2",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "a🌍ç",
+      "start": 1,
+      "n": 2
+    },
+    "saida": "🌍ç"
+  },
+  {
+    "descricao": "Mid unicode 3/1",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "a🌍ç",
+      "start": 3,
+      "n": 1
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid unicode 20/3",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "a🌍ç",
+      "start": 20,
+      "n": 3
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid até fim unicode",
+    "entrada": "Mid($s,1)",
+    "contexto": {
+      "s": "a🌍ç"
+    },
+    "saida": "🌍ç"
+  },
+  {
+    "descricao": "Contagem texto unicode",
+    "entrada": "Contagem($s)",
+    "contexto": {
+      "s": "a🌍ç"
+    },
+    "saida": 3
+  },
+  {
+    "descricao": "Left aspas 0",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "d'água",
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Right aspas 0",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "d'água",
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Left aspas 1",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "d'água",
+      "n": 1
+    },
+    "saida": "d"
+  },
+  {
+    "descricao": "Right aspas 1",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "d'água",
+      "n": 1
+    },
+    "saida": "a"
+  },
+  {
+    "descricao": "Left aspas 2",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "d'água",
+      "n": 2
+    },
+    "saida": "d'"
+  },
+  {
+    "descricao": "Right aspas 2",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "d'água",
+      "n": 2
+    },
+    "saida": "ua"
+  },
+  {
+    "descricao": "Left aspas 20",
+    "entrada": "Left($s,$n)",
+    "contexto": {
+      "s": "d'água",
+      "n": 20
+    },
+    "saida": "d'água"
+  },
+  {
+    "descricao": "Right aspas 20",
+    "entrada": "Right($s,$n)",
+    "contexto": {
+      "s": "d'água",
+      "n": 20
+    },
+    "saida": "d'água"
+  },
+  {
+    "descricao": "Mid aspas 0/0",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "d'água",
+      "start": 0,
+      "n": 0
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid aspas 0/2",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "d'água",
+      "start": 0,
+      "n": 2
+    },
+    "saida": "d'"
+  },
+  {
+    "descricao": "Mid aspas 1/2",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "d'água",
+      "start": 1,
+      "n": 2
+    },
+    "saida": "'á"
+  },
+  {
+    "descricao": "Mid aspas 3/1",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "d'água",
+      "start": 3,
+      "n": 1
+    },
+    "saida": "g"
+  },
+  {
+    "descricao": "Mid aspas 20/3",
+    "entrada": "Mid($s,$start,$n)",
+    "contexto": {
+      "s": "d'água",
+      "start": 20,
+      "n": 3
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Mid até fim aspas",
+    "entrada": "Mid($s,1)",
+    "contexto": {
+      "s": "d'água"
+    },
+    "saida": "'água"
+  },
+  {
+    "descricao": "Contagem texto aspas",
+    "entrada": "Contagem($s)",
+    "contexto": {
+      "s": "d'água"
+    },
+    "saida": 6
+  },
+  {
+    "descricao": "Trim ''",
+    "entrada": "Trim($s)",
+    "contexto": {
+      "s": ""
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Trim '  abc  '",
+    "entrada": "Trim($s)",
+    "contexto": {
+      "s": "  abc  "
+    },
+    "saida": "abc"
+  },
+  {
+    "descricao": "Trim '\\tá\\r\\n'",
+    "entrada": "Trim($s)",
+    "contexto": {
+      "s": "\tá\r\n"
+    },
+    "saida": "á"
+  },
+  {
+    "descricao": "Trim '\\xa0abc\\xa0'",
+    "entrada": "Trim($s)",
+    "contexto": {
+      "s": " abc "
+    },
+    "saida": " abc "
+  },
+  {
+    "descricao": "Trim ' \\x0b\\x0c '",
+    "entrada": "Trim($s)",
+    "contexto": {
+      "s": " \u000b\f "
+    },
+    "saida": ""
+  },
+  {
+    "descricao": "Trim ' a b '",
+    "entrada": "Trim($s)",
+    "contexto": {
+      "s": " a b "
+    },
+    "saida": "a b"
+  },
+  {
+    "descricao": "Find 'a'/'banana'/0",
+    "entrada": "Find($needle,$s,$start)",
+    "contexto": {
+      "needle": "a",
+      "s": "banana",
+      "start": 0
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Find 'a'/'banana'/2",
+    "entrada": "Find($needle,$s,$start)",
+    "contexto": {
+      "needle": "a",
+      "s": "banana",
+      "start": 2
+    },
+    "saida": 3
+  },
+  {
+    "descricao": "Find 'x'/'banana'/0",
+    "entrada": "Find($needle,$s,$start)",
+    "contexto": {
+      "needle": "x",
+      "s": "banana",
+      "start": 0
+    },
+    "saida": -1
+  },
+  {
+    "descricao": "Find '🌍'/'a🌍b'/0",
+    "entrada": "Find($needle,$s,$start)",
+    "contexto": {
+      "needle": "🌍",
+      "s": "a🌍b",
+      "start": 0
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Find 'b'/'a🌍b'/0",
+    "entrada": "Find($needle,$s,$start)",
+    "contexto": {
+      "needle": "b",
+      "s": "a🌍b",
+      "start": 0
+    },
+    "saida": 2
+  },
+  {
+    "descricao": "Find ''/'abc'/3",
+    "entrada": "Find($needle,$s,$start)",
+    "contexto": {
+      "needle": "",
+      "s": "abc",
+      "start": 3
+    },
+    "saida": 3
+  },
+  {
+    "descricao": "Find ''/'abc'/4",
+    "entrada": "Find($needle,$s,$start)",
+    "contexto": {
+      "needle": "",
+      "s": "abc",
+      "start": 4
+    },
+    "saida": -1
+  },
+  {
+    "descricao": "Find ''/''/0",
+    "entrada": "Find($needle,$s,$start)",
+    "contexto": {
+      "needle": "",
+      "s": "",
+      "start": 0
+    },
+    "saida": 0
+  },
+  {
+    "descricao": "Split 'a,b,c'/','",
+    "entrada": "Split($s,$sep)",
+    "contexto": {
+      "s": "a,b,c",
+      "sep": ","
+    },
+    "saida": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  {
+    "descricao": "Split 'a,,b,'/','",
+    "entrada": "Split($s,$sep)",
+    "contexto": {
+      "s": "a,,b,",
+      "sep": ","
+    },
+    "saida": [
+      "a",
+      "",
+      "b",
+      ""
+    ]
+  },
+  {
+    "descricao": "Split ''/'/'",
+    "entrada": "Split($s,$sep)",
+    "contexto": {
+      "s": "",
+      "sep": "/"
+    },
+    "saida": [
+      ""
+    ]
+  },
+  {
+    "descricao": "Split 'abc'/''",
+    "entrada": "Split($s,$sep)",
+    "contexto": {
+      "s": "abc",
+      "sep": ""
+    },
+    "saida": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  {
+    "descricao": "Split 'a🌍b'/''",
+    "entrada": "Split($s,$sep)",
+    "contexto": {
+      "s": "a🌍b",
+      "sep": ""
+    },
+    "saida": [
+      "a",
+      "🌍",
+      "b"
+    ]
+  },
+  {
+    "descricao": "Split ''/''",
+    "entrada": "Split($s,$sep)",
+    "contexto": {
+      "s": "",
+      "sep": ""
+    },
+    "saida": []
+  },
+  {
+    "descricao": "Split 'a::b::c'/'::'",
+    "entrada": "Split($s,$sep)",
+    "contexto": {
+      "s": "a::b::c",
+      "sep": "::"
+    },
+    "saida": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  {
+    "descricao": "Split 'abc'/'x'",
+    "entrada": "Split($s,$sep)",
+    "contexto": {
+      "s": "abc",
+      "sep": "x"
+    },
+    "saida": [
+      "abc"
+    ]
+  },
+  {
+    "descricao": "Replace 'aaa'/'a'/'bb'",
+    "entrada": "Replace($s,$old,$new)",
+    "contexto": {
+      "s": "aaa",
+      "old": "a",
+      "new": "bb"
+    },
+    "saida": "bbbbbb"
+  },
+  {
+    "descricao": "Replace 'abc'/''/'x'",
+    "entrada": "Replace($s,$old,$new)",
+    "contexto": {
+      "s": "abc",
+      "old": "",
+      "new": "x"
+    },
+    "saida": "abc"
+  },
+  {
+    "descricao": "Replace '🌍a🌍'/'🌍'/'ç'",
+    "entrada": "Replace($s,$old,$new)",
+    "contexto": {
+      "s": "🌍a🌍",
+      "old": "🌍",
+      "new": "ç"
+    },
+    "saida": "çaç"
+  },
+  {
+    "descricao": "Replace 'aaaa'/'aa'/'b'",
+    "entrada": "Replace($s,$old,$new)",
+    "contexto": {
+      "s": "aaaa",
+      "old": "aa",
+      "new": "b"
+    },
+    "saida": "bb"
+  },
+  {
+    "descricao": "Replace 'abc'/'x'/''",
+    "entrada": "Replace($s,$old,$new)",
+    "contexto": {
+      "s": "abc",
+      "old": "x",
+      "new": ""
+    },
+    "saida": "abc"
+  },
+  {
+    "descricao": "Replace 'abc'/'b'/''",
+    "entrada": "Replace($s,$old,$new)",
+    "contexto": {
+      "s": "abc",
+      "old": "b",
+      "new": ""
+    },
+    "saida": "ac"
+  },
+  {
+    "descricao": "Floor -2.5",
+    "entrada": "Floor($x)",
+    "contexto": {
+      "x": -2.5
+    },
+    "saida": -3
+  },
+  {
+    "descricao": "Ceil -2.5",
+    "entrada": "Ceil($x)",
+    "contexto": {
+      "x": -2.5
+    },
+    "saida": -2
+  },
+  {
+    "descricao": "Floor -1",
+    "entrada": "Floor($x)",
+    "contexto": {
+      "x": -1
+    },
+    "saida": -1
+  },
+  {
+    "descricao": "Ceil -1",
+    "entrada": "Ceil($x)",
+    "contexto": {
+      "x": -1
+    },
+    "saida": -1
+  },
+  {
+    "descricao": "Floor -0.5",
+    "entrada": "Floor($x)",
+    "contexto": {
+      "x": -0.5
+    },
+    "saida": -1
+  },
+  {
+    "descricao": "Ceil -0.5",
+    "entrada": "Ceil($x)",
+    "contexto": {
+      "x": -0.5
+    },
+    "saida": 0
+  },
+  {
+    "descricao": "Floor 0",
+    "entrada": "Floor($x)",
+    "contexto": {
+      "x": 0
+    },
+    "saida": 0
+  },
+  {
+    "descricao": "Ceil 0",
+    "entrada": "Ceil($x)",
+    "contexto": {
+      "x": 0
+    },
+    "saida": 0
+  },
+  {
+    "descricao": "Floor 0.5",
+    "entrada": "Floor($x)",
+    "contexto": {
+      "x": 0.5
+    },
+    "saida": 0
+  },
+  {
+    "descricao": "Ceil 0.5",
+    "entrada": "Ceil($x)",
+    "contexto": {
+      "x": 0.5
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Floor 2.5",
+    "entrada": "Floor($x)",
+    "contexto": {
+      "x": 2.5
+    },
+    "saida": 2
+  },
+  {
+    "descricao": "Ceil 2.5",
+    "entrada": "Ceil($x)",
+    "contexto": {
+      "x": 2.5
+    },
+    "saida": 3
+  },
+  {
+    "descricao": "Floor 1234.125",
+    "entrada": "Floor($x)",
+    "contexto": {
+      "x": 1234.125
+    },
+    "saida": 1234
+  },
+  {
+    "descricao": "Ceil 1234.125",
+    "entrada": "Ceil($x)",
+    "contexto": {
+      "x": 1234.125
+    },
+    "saida": 1235
+  },
+  {
+    "descricao": "Sqrt 0",
+    "entrada": "Sqrt($x)",
+    "contexto": {
+      "x": 0
+    },
+    "saida": 0
+  },
+  {
+    "descricao": "Sqrt 1",
+    "entrada": "Sqrt($x)",
+    "contexto": {
+      "x": 1
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Sqrt 4",
+    "entrada": "Sqrt($x)",
+    "contexto": {
+      "x": 4
+    },
+    "saida": 2
+  },
+  {
+    "descricao": "Sqrt 9",
+    "entrada": "Sqrt($x)",
+    "contexto": {
+      "x": 9
+    },
+    "saida": 3
+  },
+  {
+    "descricao": "Sqrt 0.25",
+    "entrada": "Sqrt($x)",
+    "contexto": {
+      "x": 0.25
+    },
+    "saida": 0.5
+  },
+  {
+    "descricao": "Sqrt 144",
+    "entrada": "Sqrt($x)",
+    "contexto": {
+      "x": 144
+    },
+    "saida": 12
+  },
+  {
+    "descricao": "Weekday dia -8",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": -691200000
+    },
+    "saida": 3
+  },
+  {
+    "descricao": "Weekday dia -7",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": -604800000
+    },
+    "saida": 4
+  },
+  {
+    "descricao": "Weekday dia -6",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": -518400000
+    },
+    "saida": 5
+  },
+  {
+    "descricao": "Weekday dia -5",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": -432000000
+    },
+    "saida": 6
+  },
+  {
+    "descricao": "Weekday dia -4",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": -345600000
+    },
+    "saida": 0
+  },
+  {
+    "descricao": "Weekday dia -3",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": -259200000
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Weekday dia -2",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": -172800000
+    },
+    "saida": 2
+  },
+  {
+    "descricao": "Weekday dia -1",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": -86400000
+    },
+    "saida": 3
+  },
+  {
+    "descricao": "Weekday dia 0",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": 0
+    },
+    "saida": 4
+  },
+  {
+    "descricao": "Weekday dia 1",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": 86400000
+    },
+    "saida": 5
+  },
+  {
+    "descricao": "Weekday dia 2",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": 172800000
+    },
+    "saida": 6
+  },
+  {
+    "descricao": "Weekday dia 3",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": 259200000
+    },
+    "saida": 0
+  },
+  {
+    "descricao": "Weekday dia 4",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": 345600000
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Weekday dia 5",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": 432000000
+    },
+    "saida": 2
+  },
+  {
+    "descricao": "Weekday dia 6",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": 518400000
+    },
+    "saida": 3
+  },
+  {
+    "descricao": "Weekday dia 7",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": 604800000
+    },
+    "saida": 4
+  },
+  {
+    "descricao": "Weekday dia 8",
+    "entrada": "Weekday($ms)",
+    "contexto": {
+      "ms": 691200000
+    },
+    "saida": 5
+  },
+  {
+    "descricao": "Contagem lista 0",
+    "entrada": "Contagem($x)",
+    "contexto": {
+      "x": []
+    },
+    "saida": 0
+  },
+  {
+    "descricao": "Primeiro 0",
+    "entrada": "Primeiro($x)",
+    "contexto": {
+      "x": []
+    },
+    "saida": null
+  },
+  {
+    "descricao": "Ultimo 0",
+    "entrada": "Ultimo($x)",
+    "contexto": {
+      "x": []
+    },
+    "saida": null
+  },
+  {
+    "descricao": "Reverter 0",
+    "entrada": "Reverter($x)",
+    "contexto": {
+      "x": []
+    },
+    "saida": []
+  },
+  {
+    "descricao": "Obter índice zero 0",
+    "entrada": "Obter($x,0)",
+    "contexto": {
+      "x": []
+    },
+    "saida": null
+  },
+  {
+    "descricao": "Obter ausente 0",
+    "entrada": "Obter($x,99,'ausente')",
+    "contexto": {
+      "x": []
+    },
+    "saida": "ausente"
+  },
+  {
+    "descricao": "Contagem lista 1",
+    "entrada": "Contagem($x)",
+    "contexto": {
+      "x": [
+        1
+      ]
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Primeiro 1",
+    "entrada": "Primeiro($x)",
+    "contexto": {
+      "x": [
+        1
+      ]
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Ultimo 1",
+    "entrada": "Ultimo($x)",
+    "contexto": {
+      "x": [
+        1
+      ]
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Reverter 1",
+    "entrada": "Reverter($x)",
+    "contexto": {
+      "x": [
+        1
+      ]
+    },
+    "saida": [
+      1
+    ]
+  },
+  {
+    "descricao": "Obter índice zero 1",
+    "entrada": "Obter($x,0)",
+    "contexto": {
+      "x": [
+        1
+      ]
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Obter ausente 1",
+    "entrada": "Obter($x,99,'ausente')",
+    "contexto": {
+      "x": [
+        1
+      ]
+    },
+    "saida": "ausente"
+  },
+  {
+    "descricao": "Contagem lista 2",
+    "entrada": "Contagem($x)",
+    "contexto": {
+      "x": [
+        1,
+        2,
+        3
+      ]
+    },
+    "saida": 3
+  },
+  {
+    "descricao": "Primeiro 2",
+    "entrada": "Primeiro($x)",
+    "contexto": {
+      "x": [
+        1,
+        2,
+        3
+      ]
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Ultimo 2",
+    "entrada": "Ultimo($x)",
+    "contexto": {
+      "x": [
+        1,
+        2,
+        3
+      ]
+    },
+    "saida": 3
+  },
+  {
+    "descricao": "Reverter 2",
+    "entrada": "Reverter($x)",
+    "contexto": {
+      "x": [
+        1,
+        2,
+        3
+      ]
+    },
+    "saida": [
+      3,
+      2,
+      1
+    ]
+  },
+  {
+    "descricao": "Obter índice zero 2",
+    "entrada": "Obter($x,0)",
+    "contexto": {
+      "x": [
+        1,
+        2,
+        3
+      ]
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Obter ausente 2",
+    "entrada": "Obter($x,99,'ausente')",
+    "contexto": {
+      "x": [
+        1,
+        2,
+        3
+      ]
+    },
+    "saida": "ausente"
+  },
+  {
+    "descricao": "Contagem lista 3",
+    "entrada": "Contagem($x)",
+    "contexto": {
+      "x": [
+        null,
+        true,
+        "x"
+      ]
+    },
+    "saida": 3
+  },
+  {
+    "descricao": "Primeiro 3",
+    "entrada": "Primeiro($x)",
+    "contexto": {
+      "x": [
+        null,
+        true,
+        "x"
+      ]
+    },
+    "saida": null
+  },
+  {
+    "descricao": "Ultimo 3",
+    "entrada": "Ultimo($x)",
+    "contexto": {
+      "x": [
+        null,
+        true,
+        "x"
+      ]
+    },
+    "saida": "x"
+  },
+  {
+    "descricao": "Reverter 3",
+    "entrada": "Reverter($x)",
+    "contexto": {
+      "x": [
+        null,
+        true,
+        "x"
+      ]
+    },
+    "saida": [
+      "x",
+      true,
+      null
+    ]
+  },
+  {
+    "descricao": "Obter índice zero 3",
+    "entrada": "Obter($x,0)",
+    "contexto": {
+      "x": [
+        null,
+        true,
+        "x"
+      ]
+    },
+    "saida": null
+  },
+  {
+    "descricao": "Obter ausente 3",
+    "entrada": "Obter($x,99,'ausente')",
+    "contexto": {
+      "x": [
+        null,
+        true,
+        "x"
+      ]
+    },
+    "saida": "ausente"
+  },
+  {
+    "descricao": "Contagem lista 4",
+    "entrada": "Contagem($x)",
+    "contexto": {
+      "x": [
+        1,
+        true,
+        1,
+        false,
+        0
+      ]
+    },
+    "saida": 5
+  },
+  {
+    "descricao": "Primeiro 4",
+    "entrada": "Primeiro($x)",
+    "contexto": {
+      "x": [
+        1,
+        true,
+        1,
+        false,
+        0
+      ]
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Ultimo 4",
+    "entrada": "Ultimo($x)",
+    "contexto": {
+      "x": [
+        1,
+        true,
+        1,
+        false,
+        0
+      ]
+    },
+    "saida": 0
+  },
+  {
+    "descricao": "Reverter 4",
+    "entrada": "Reverter($x)",
+    "contexto": {
+      "x": [
+        1,
+        true,
+        1,
+        false,
+        0
+      ]
+    },
+    "saida": [
+      0,
+      false,
+      1,
+      true,
+      1
+    ]
+  },
+  {
+    "descricao": "Obter índice zero 4",
+    "entrada": "Obter($x,0)",
+    "contexto": {
+      "x": [
+        1,
+        true,
+        1,
+        false,
+        0
+      ]
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Obter ausente 4",
+    "entrada": "Obter($x,99,'ausente')",
+    "contexto": {
+      "x": [
+        1,
+        true,
+        1,
+        false,
+        0
+      ]
+    },
+    "saida": "ausente"
+  },
+  {
+    "descricao": "Contagem lista 5",
+    "entrada": "Contagem($x)",
+    "contexto": {
+      "x": [
+        {
+          "a": 1
+        },
+        {
+          "a": 1
+        },
+        {
+          "a": 2
+        }
+      ]
+    },
+    "saida": 3
+  },
+  {
+    "descricao": "Primeiro 5",
+    "entrada": "Primeiro($x)",
+    "contexto": {
+      "x": [
+        {
+          "a": 1
+        },
+        {
+          "a": 1
+        },
+        {
+          "a": 2
+        }
+      ]
+    },
+    "saida": {
+      "a": 1
+    }
+  },
+  {
+    "descricao": "Ultimo 5",
+    "entrada": "Ultimo($x)",
+    "contexto": {
+      "x": [
+        {
+          "a": 1
+        },
+        {
+          "a": 1
+        },
+        {
+          "a": 2
+        }
+      ]
+    },
+    "saida": {
+      "a": 2
+    }
+  },
+  {
+    "descricao": "Reverter 5",
+    "entrada": "Reverter($x)",
+    "contexto": {
+      "x": [
+        {
+          "a": 1
+        },
+        {
+          "a": 1
+        },
+        {
+          "a": 2
+        }
+      ]
+    },
+    "saida": [
+      {
+        "a": 2
+      },
+      {
+        "a": 1
+      },
+      {
+        "a": 1
+      }
+    ]
+  },
+  {
+    "descricao": "Obter índice zero 5",
+    "entrada": "Obter($x,0)",
+    "contexto": {
+      "x": [
+        {
+          "a": 1
+        },
+        {
+          "a": 1
+        },
+        {
+          "a": 2
+        }
+      ]
+    },
+    "saida": {
+      "a": 1
+    }
+  },
+  {
+    "descricao": "Obter ausente 5",
+    "entrada": "Obter($x,99,'ausente')",
+    "contexto": {
+      "x": [
+        {
+          "a": 1
+        },
+        {
+          "a": 1
+        },
+        {
+          "a": 2
+        }
+      ]
+    },
+    "saida": "ausente"
+  },
+  {
+    "descricao": "Contagem lista 6",
+    "entrada": "Contagem($x)",
+    "contexto": {
+      "x": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          1
+        ]
+      ]
+    },
+    "saida": 3
+  },
+  {
+    "descricao": "Primeiro 6",
+    "entrada": "Primeiro($x)",
+    "contexto": {
+      "x": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          1
+        ]
+      ]
+    },
+    "saida": [
+      1
+    ]
+  },
+  {
+    "descricao": "Ultimo 6",
+    "entrada": "Ultimo($x)",
+    "contexto": {
+      "x": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          1
+        ]
+      ]
+    },
+    "saida": [
+      1
+    ]
+  },
+  {
+    "descricao": "Reverter 6",
+    "entrada": "Reverter($x)",
+    "contexto": {
+      "x": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          1
+        ]
+      ]
+    },
+    "saida": [
+      [
+        1
+      ],
+      [
+        2
+      ],
+      [
+        1
+      ]
+    ]
+  },
+  {
+    "descricao": "Obter índice zero 6",
+    "entrada": "Obter($x,0)",
+    "contexto": {
+      "x": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          1
+        ]
+      ]
+    },
+    "saida": [
+      1
+    ]
+  },
+  {
+    "descricao": "Obter ausente 6",
+    "entrada": "Obter($x,99,'ausente')",
+    "contexto": {
+      "x": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          1
+        ]
+      ]
+    },
+    "saida": "ausente"
+  },
+  {
+    "descricao": "Soma 0",
+    "entrada": "Soma($x)",
+    "contexto": {
+      "x": []
+    },
+    "saida": 0
+  },
+  {
+    "descricao": "Media 0",
+    "entrada": "Media($x)",
+    "contexto": {
+      "x": []
+    },
+    "saida": null
+  },
+  {
+    "descricao": "Soma 1",
+    "entrada": "Soma($x)",
+    "contexto": {
+      "x": [
+        1,
+        2,
+        3
+      ]
+    },
+    "saida": 6
+  },
+  {
+    "descricao": "Media 1",
+    "entrada": "Media($x)",
+    "contexto": {
+      "x": [
+        1,
+        2,
+        3
+      ]
+    },
+    "saida": 2.0
+  },
+  {
+    "descricao": "Soma 2",
+    "entrada": "Soma($x)",
+    "contexto": {
+      "x": [
+        -2,
+        2
+      ]
+    },
+    "saida": 0
+  },
+  {
+    "descricao": "Media 2",
+    "entrada": "Media($x)",
+    "contexto": {
+      "x": [
+        -2,
+        2
+      ]
+    },
+    "saida": 0.0
+  },
+  {
+    "descricao": "Soma 3",
+    "entrada": "Soma($x)",
+    "contexto": {
+      "x": [
+        0.25,
+        0.75
+      ]
+    },
+    "saida": 1.0
+  },
+  {
+    "descricao": "Media 3",
+    "entrada": "Media($x)",
+    "contexto": {
+      "x": [
+        0.25,
+        0.75
+      ]
+    },
+    "saida": 0.5
+  },
+  {
+    "descricao": "Soma 4",
+    "entrada": "Soma($x)",
+    "contexto": {
+      "x": [
+        null,
+        1
+      ]
+    },
+    "saida": null
+  },
+  {
+    "descricao": "Media 4",
+    "entrada": "Media($x)",
+    "contexto": {
+      "x": [
+        null,
+        1
+      ]
+    },
+    "saida": null
+  },
+  {
+    "descricao": "Lista()",
+    "entrada": "Lista()",
+    "contexto": {},
+    "saida": []
+  },
+  {
+    "descricao": "Lista(1,nulo,verdadeiro)",
+    "entrada": "Lista(1,nulo,verdadeiro)",
+    "contexto": {},
+    "saida": [
+      1,
+      null,
+      true
+    ]
+  },
+  {
+    "descricao": "Lista(Lista(1),Lista(2))",
+    "entrada": "Lista(Lista(1),Lista(2))",
+    "contexto": {},
+    "saida": [
+      [
+        1
+      ],
+      [
+        2
+      ]
+    ]
+  },
+  {
+    "descricao": "Unicos(Lista(1,verdadeiro,1,falso,0))",
+    "entrada": "Unicos(Lista(1,verdadeiro,1,falso,0))",
+    "contexto": {},
+    "saida": [
+      1,
+      true,
+      false,
+      0
+    ]
+  },
+  {
+    "descricao": "Juntar(Lista('a',nulo,3),'/')",
+    "entrada": "Juntar(Lista('a',nulo,3),'/')",
+    "contexto": {},
+    "saida": "a//3"
+  },
+  {
+    "descricao": "Juntar(Lista(1,2,3))",
+    "entrada": "Juntar(Lista(1,2,3))",
+    "contexto": {},
+    "saida": "123"
+  },
+  {
+    "descricao": "Decode(2,1,'a',2,'b','c')",
+    "entrada": "Decode(2,1,'a',2,'b','c')",
+    "contexto": {},
+    "saida": "b"
+  },
+  {
+    "descricao": "Decode(9,1,'a',2,'b','c')",
+    "entrada": "Decode(9,1,'a',2,'b','c')",
+    "contexto": {},
+    "saida": "c"
+  },
+  {
+    "descricao": "Decode(nulo,nulo,'sim','não')",
+    "entrada": "Decode(nulo,nulo,'sim','não')",
+    "contexto": {},
+    "saida": "sim"
+  },
+  {
+    "descricao": "Decode(verdadeiro,1,'número','booleano')",
+    "entrada": "Decode(verdadeiro,1,'número','booleano')",
+    "contexto": {},
+    "saida": "booleano"
+  },
+  {
+    "descricao": "Decode(1,1,7,1/0)",
+    "entrada": "Decode(1,1,7,1/0)",
+    "contexto": {},
+    "saida": 7
+  },
+  {
+    "descricao": "Decode(1,1,7,$negado,0,1/0)",
+    "entrada": "Decode(1,1,7,$negado,0,1/0)",
+    "contexto": {},
+    "saida": 7
+  },
+  {
+    "descricao": "Obter($x,'a')",
+    "entrada": "Obter($x,'a')",
+    "contexto": {
+      "x": {
+        "a": 1
+      }
+    },
+    "saida": 1
+  },
+  {
+    "descricao": "Obter($x,'z',4)",
+    "entrada": "Obter($x,'z',4)",
+    "contexto": {
+      "x": {
+        "a": 1
+      }
+    },
+    "saida": 4
+  },
+  {
+    "descricao": "Obter($x,'a',4)",
+    "entrada": "Obter($x,'a',4)",
+    "contexto": {
+      "x": {
+        "a": null
+      }
+    },
+    "saida": null
+  },
+  {
+    "descricao": "Contagem($x)",
+    "entrada": "Contagem($x)",
+    "contexto": {
+      "x": {
+        "a": 1,
+        "b": null
+      }
+    },
+    "saida": 2
+  },
+  {
+    "descricao": "Contem($x,verdadeiro)",
+    "entrada": "Contem($x,verdadeiro)",
+    "contexto": {
+      "x": [
+        1
+      ]
+    },
+    "saida": false
+  },
+  {
+    "descricao": "Contem($x,nulo)",
+    "entrada": "Contem($x,nulo)",
+    "contexto": {
+      "x": [
+        null
+      ]
+    },
+    "saida": true
+  },
+  {
+    "descricao": "Contem($x,$y)",
+    "entrada": "Contem($x,$y)",
+    "contexto": {
+      "x": [
+        {
+          "a": 1,
+          "b": [
+            2
+          ]
+        }
+      ],
+      "y": {
+        "b": [
+          2
+        ],
+        "a": 1
+      }
+    },
+    "saida": true
+  },
+  {
+    "descricao": "Unicos($x)",
+    "entrada": "Unicos($x)",
+    "contexto": {
+      "x": [
+        {
+          "a": 1,
+          "b": 2
+        },
+        {
+          "b": 2,
+          "a": 1
+        }
+      ]
+    },
+    "saida": [
+      {
+        "a": 1,
+        "b": 2
+      }
+    ]
+  },
+  {
+    "descricao": "Obter(Obter($x,'a'),0)",
+    "entrada": "Obter(Obter($x,'a'),0)",
+    "contexto": {
+      "x": {
+        "a": [
+          7
+        ]
+      }
+    },
+    "saida": 7
+  },
+  {
+    "descricao": "Trim propaga nulo",
+    "entrada": "Trim(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "Floor propaga nulo",
+    "entrada": "Floor(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "Ceil propaga nulo",
+    "entrada": "Ceil(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "Sqrt propaga nulo",
+    "entrada": "Sqrt(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "Weekday propaga nulo",
+    "entrada": "Weekday(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "Contagem propaga nulo",
+    "entrada": "Contagem(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "Primeiro propaga nulo",
+    "entrada": "Primeiro(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "Ultimo propaga nulo",
+    "entrada": "Ultimo(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "Soma propaga nulo",
+    "entrada": "Soma(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "Media propaga nulo",
+    "entrada": "Media(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "Reverter propaga nulo",
+    "entrada": "Reverter(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "Unicos propaga nulo",
+    "entrada": "Unicos(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "Juntar propaga nulo",
+    "entrada": "Juntar(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "Texto empate binário exato longe de zero",
+    "entrada": "Texto(0.0078125)",
+    "contexto": {},
+    "saida": "0.007813"
+  },
+  {
+    "descricao": "Texto empate negativo longe de zero",
+    "entrada": "Texto(-0.0078125)",
+    "contexto": {},
+    "saida": "-0.007813"
+  },
+  {
+    "descricao": "Texto inteiro acima de 1e21 com dígitos exatos",
+    "entrada": "Texto(Potencia(10,21))",
+    "contexto": {},
+    "saida": "1000000000000000000000"
+  },
+  {
+    "descricao": "Texto 1.005 não é empate (binário abaixo)",
+    "entrada": "Texto(1.005)",
+    "contexto": {},
+    "saida": "1.005"
+  },
+  {
+    "descricao": "TextoNumero(1234567.891,2)",
+    "entrada": "TextoNumero(1234567.891,2)",
+    "contexto": {},
+    "saida": "1.234.567,89"
+  },
+  {
+    "descricao": "TextoNumero(0,2)",
+    "entrada": "TextoNumero(0,2)",
+    "contexto": {},
+    "saida": "0,00"
+  },
+  {
+    "descricao": "TextoNumero(-1234.5,1)",
+    "entrada": "TextoNumero(-1234.5,1)",
+    "contexto": {},
+    "saida": "-1.234,5"
+  },
+  {
+    "descricao": "TextoNumero(1234.5)",
+    "entrada": "TextoNumero(1234.5)",
+    "contexto": {},
+    "saida": "1.234,50"
+  },
+  {
+    "descricao": "TextoNumero(999,0)",
+    "entrada": "TextoNumero(999,0)",
+    "contexto": {},
+    "saida": "999"
+  },
+  {
+    "descricao": "TextoNumero(1000,0)",
+    "entrada": "TextoNumero(1000,0)",
+    "contexto": {},
+    "saida": "1.000"
+  },
+  {
+    "descricao": "TextoNumero(2.5,0)",
+    "entrada": "TextoNumero(2.5,0)",
+    "contexto": {},
+    "saida": "3"
+  },
+  {
+    "descricao": "TextoNumero(-2.5,0)",
+    "entrada": "TextoNumero(-2.5,0)",
+    "contexto": {},
+    "saida": "-3"
+  },
+  {
+    "descricao": "TextoNumero(0.125,2)",
+    "entrada": "TextoNumero(0.125,2)",
+    "contexto": {},
+    "saida": "0,13"
+  },
+  {
+    "descricao": "TextoNumero(1.005,2)",
+    "entrada": "TextoNumero(1.005,2)",
+    "contexto": {},
+    "saida": "1,00"
+  },
+  {
+    "descricao": "TextoNumero(-0.001,2)",
+    "entrada": "TextoNumero(-0.001,2)",
+    "contexto": {},
+    "saida": "0,00"
+  },
+  {
+    "descricao": "TextoNumero(1000000000000000,0)",
+    "entrada": "TextoNumero(1000000000000000,0)",
+    "contexto": {},
+    "saida": "1.000.000.000.000.000"
+  },
+  {
+    "descricao": "TextoNumero(0.1+0.2,3)",
+    "entrada": "TextoNumero(0.1+0.2,3)",
+    "contexto": {},
+    "saida": "0,300"
+  },
+  {
+    "descricao": "TextoNumero(123456789.987654321,4)",
+    "entrada": "TextoNumero(123456789.987654321,4)",
+    "contexto": {},
+    "saida": "123.456.789,9877"
+  },
+  {
+    "descricao": "TextoNumero(-1000000,2)",
+    "entrada": "TextoNumero(-1000000,2)",
+    "contexto": {},
+    "saida": "-1.000.000,00"
+  },
+  {
+    "descricao": "TextoNumero(12,15)",
+    "entrada": "TextoNumero(12,15)",
+    "contexto": {},
+    "saida": "12,000000000000000"
+  },
+  {
+    "descricao": "TextoNumero(nulo,2)",
+    "entrada": "TextoNumero(nulo,2)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "TextoNumero(3.14159,nulo)",
+    "entrada": "TextoNumero(3.14159,nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "TextoNumero(Soma(Lista(1000,234.567)),2)",
+    "entrada": "TextoNumero(Soma(Lista(1000,234.567)),2)",
+    "contexto": {},
+    "saida": "1.234,57"
+  },
+  {
+    "descricao": "TextoData 0 data",
+    "entrada": "TextoData($ms,'data')",
+    "contexto": {
+      "ms": 0
+    },
+    "saida": "01/01/1970"
+  },
+  {
+    "descricao": "TextoData 0 data_hora",
+    "entrada": "TextoData($ms,'data_hora')",
+    "contexto": {
+      "ms": 0
+    },
+    "saida": "01/01/1970 00:00"
+  },
+  {
+    "descricao": "TextoData 1788652800000 data",
+    "entrada": "TextoData($ms,'data')",
+    "contexto": {
+      "ms": 1788652800000
+    },
+    "saida": "06/09/2026"
+  },
+  {
+    "descricao": "TextoData 1788702307999 data_hora_segundos",
+    "entrada": "TextoData($ms,'data_hora_segundos')",
+    "contexto": {
+      "ms": 1788702307999
+    },
+    "saida": "06/09/2026 13:45:07"
+  },
+  {
+    "descricao": "TextoData 1788652800000 extenso",
+    "entrada": "TextoData($ms,'extenso')",
+    "contexto": {
+      "ms": 1788652800000
+    },
+    "saida": "6 de setembro de 2026"
+  },
+  {
+    "descricao": "TextoData 1709164800000 data",
+    "entrada": "TextoData($ms,'data')",
+    "contexto": {
+      "ms": 1709164800000
+    },
+    "saida": "29/02/2024"
+  },
+  {
+    "descricao": "TextoData 1709164800000 extenso",
+    "entrada": "TextoData($ms,'extenso')",
+    "contexto": {
+      "ms": 1709164800000
+    },
+    "saida": "29 de fevereiro de 2024"
+  },
+  {
+    "descricao": "TextoData -86400000 data",
+    "entrada": "TextoData($ms,'data')",
+    "contexto": {
+      "ms": -86400000
+    },
+    "saida": "31/12/1969"
+  },
+  {
+    "descricao": "TextoData -1 data_hora_segundos",
+    "entrada": "TextoData($ms,'data_hora_segundos')",
+    "contexto": {
+      "ms": -1
+    },
+    "saida": "31/12/1969 23:59:59"
+  },
+  {
+    "descricao": "TextoData 253402300799999 data_hora_segundos",
+    "entrada": "TextoData($ms,'data_hora_segundos')",
+    "contexto": {
+      "ms": 253402300799999
+    },
+    "saida": "31/12/9999 23:59:59"
+  },
+  {
+    "descricao": "TextoData -62135596800000 data",
+    "entrada": "TextoData($ms,'data')",
+    "contexto": {
+      "ms": -62135596800000
+    },
+    "saida": "01/01/0001"
+  },
+  {
+    "descricao": "TextoData -62135596800000 extenso",
+    "entrada": "TextoData($ms,'extenso')",
+    "contexto": {
+      "ms": -62135596800000
+    },
+    "saida": "1 de janeiro de 0001"
+  },
+  {
+    "descricao": "TextoData 951782400000 data_hora",
+    "entrada": "TextoData($ms,'data_hora')",
+    "contexto": {
+      "ms": 951782400000
+    },
+    "saida": "29/02/2000 00:00"
+  },
+  {
+    "descricao": "TextoData 1788652859999 data_hora",
+    "entrada": "TextoData($ms,'data_hora')",
+    "contexto": {
+      "ms": 1788652859999
+    },
+    "saida": "06/09/2026 00:00"
+  },
+  {
+    "descricao": "TextoData formato padrão é 'data'",
+    "entrada": "TextoData($ms)",
+    "contexto": {
+      "ms": 1788652800000
+    },
+    "saida": "06/09/2026"
+  },
+  {
+    "descricao": "TextoData com fração de milissegundo usa o piso",
+    "entrada": "TextoData($ms,'data_hora_segundos')",
+    "contexto": {
+      "ms": 999.9
+    },
+    "saida": "01/01/1970 00:00:00"
+  },
+  {
+    "descricao": "TextoData propaga nulo",
+    "entrada": "TextoData(nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "TextoData formato nulo propaga nulo",
+    "entrada": "TextoData(0,nulo)",
+    "contexto": {},
+    "saida": null
+  },
+  {
+    "descricao": "data formatada dentro de Concatenar",
+    "entrada": "Concatenar('vence em ', TextoData($v), ' (', TextoNumero($area,1), ' ha)')",
+    "contexto": {
+      "v": 1791244800000,
+      "area": 1503.45
+    },
+    "saida": "vence em 06/10/2026 (1.503,5 ha)"
+  }
 ]

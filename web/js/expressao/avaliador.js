@@ -237,11 +237,12 @@ class Parser {
     return esquerda;
   }
   potencia(p) {
+    this.profundidadeOk(p, this.olha()?.posicao ?? this.texto.length);
     const esquerda = this.unario(p);
     const tok = this.olha();
     if (tok !== null && tok.tipo === 'op' && PREC_POTENCIA.has(tok.valor)) {
       this.i += 1;
-      const direita = this.potencia(p); // associatividade à direita
+      const direita = this.potencia(p + 1); // associatividade à direita
       return { no: 'binario', operador: '^', esquerda, direita };
     }
     return esquerda;
@@ -368,32 +369,56 @@ export function astParaJson(no) {
 // entrada NÃO CONFIÁVEL da mesma classe que o texto (mesmo comentário de avaliador_py.py): aplica
 // os MESMOS limites de profundidade e aridade que `analisar` aplica ao texto, para um JSON
 // fabricado à mão não contornar os dois guarda-corpos do lado texto.
-export function astDeJson(d, profundidade = 1) {
-  if (profundidade > MAX_PROFUNDIDADE) {
-    throw new ErroExpressao('profundidade_excedida', `AST acima de ${MAX_PROFUNDIDADE} níveis`, { limite: MAX_PROFUNDIDADE });
+function astDados(d) {
+  if(!d || typeof d!=='object' || Array.isArray(d) || (Object.getPrototypeOf(d)!==Object.prototype && Object.getPrototypeOf(d)!==null)) falha('no_desconhecido');
+  for(const k of Object.keys(d)) if(!possui(Object.getOwnPropertyDescriptor(d,k),'value')) falha('no_desconhecido');
+}
+function validarAst(no) {
+  const stack=[[no,1]]; let count=0;
+  while(stack.length) {
+    const [n,p]=stack.pop(); count++;
+    if(p>MAX_PROFUNDIDADE) falha('profundidade_excedida');
+    if(count>MAX_TOKENS) falha('expressao_grande');
+    astDados(n);
+    if(!possui(n,'no')) falha('no_desconhecido');
+    const ident=x=>typeof x==='string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(x);
+    if(n.no==='literal') {
+      const valid={nulo:n.valor===null,numero:typeof n.valor==='number',texto:typeof n.valor==='string',booleano:typeof n.valor==='boolean'};
+      if(!possui(n,'valor') || !possui(valid,n.tipoValor) || !valid[n.tipoValor]) falha('no_desconhecido');
+    } else if(n.no==='campo') { if(!ident(n.nome)) falha('no_desconhecido'); }
+    else if(n.no==='unario') {
+      if(!['-','!'].includes(n.operador)) falha('no_desconhecido');
+      stack.push([n.operando,p+1]);
+    } else if(n.no==='binario') {
+      if(!['+','-','*','/','%','^','==','!=','<','<=','>','>=','&&','||'].includes(n.operador)) falha('no_desconhecido');
+      stack.push([n.esquerda,p+1],[n.direita,p+1]);
+    } else if(n.no==='chamada') {
+      if(!ident(n.nome) || !Array.isArray(n.argumentos)) falha('no_desconhecido');
+      if(n.argumentos.length>MAX_ARGUMENTOS) falha('expressao_grande');
+      for(let i=0;i<n.argumentos.length;i++) stack.push([proprio(n.argumentos,String(i)),p+1]);
+    } else falha('no_desconhecido');
   }
-  if (typeof d !== 'object' || d === null || !('tipo' in d)) {
-    throw new ErroExpressao('no_desconhecido', 'JSON de AST malformado');
+}
+export function astDeJson(d, profundidade=1) {
+  let count=0;
+  function build(d,p) {
+    count++;
+    if(p>MAX_PROFUNDIDADE) falha('profundidade_excedida');
+    if(count>MAX_TOKENS) falha('expressao_grande');
+    astDados(d);
+    const required={literal:['tipo_valor','valor'],campo:['nome'],unario:['operador','operando'],binario:['operador','esquerda','direita'],chamada:['nome','argumentos']};
+    if(!possui(d,'tipo') || typeof d.tipo!=='string' || !possui(required,d.tipo) || !required[d.tipo].every(k=>possui(d,k))) falha('no_desconhecido');
+    if(d.tipo==='literal') return {no:'literal',tipoValor:d.tipo_valor,valor:d.valor};
+    if(d.tipo==='campo') return {no:'campo',nome:d.nome};
+    if(d.tipo==='unario') return {no:'unario',operador:d.operador,operando:build(d.operando,p+1)};
+    if(d.tipo==='binario') return {no:'binario',operador:d.operador,esquerda:build(d.esquerda,p+1),direita:build(d.direita,p+1)};
+    if(!Array.isArray(d.argumentos)) falha('no_desconhecido');
+    if(d.argumentos.length>MAX_ARGUMENTOS) falha('expressao_grande');
+    const args=[];
+    for(let i=0;i<d.argumentos.length;i++) args.push(build(proprio(d.argumentos,String(i)),p+1));
+    return {no:'chamada',nome:d.nome,argumentos:args};
   }
-  if (d.tipo === 'literal') return { no: 'literal', tipoValor: d.tipo_valor, valor: d.valor ?? null };
-  if (d.tipo === 'campo') return { no: 'campo', nome: d.nome };
-  if (d.tipo === 'unario') {
-    return { no: 'unario', operador: d.operador, operando: astDeJson(d.operando, profundidade + 1) };
-  }
-  if (d.tipo === 'binario') {
-    return {
-      no: 'binario', operador: d.operador,
-      esquerda: astDeJson(d.esquerda, profundidade + 1), direita: astDeJson(d.direita, profundidade + 1),
-    };
-  }
-  if (d.tipo === 'chamada') {
-    const argumentos = d.argumentos || [];
-    if (argumentos.length > MAX_ARGUMENTOS) {
-      throw new ErroExpressao('expressao_grande', `mais de ${MAX_ARGUMENTOS} argumentos em '${d.nome}'`, { limite: MAX_ARGUMENTOS });
-    }
-    return { no: 'chamada', nome: d.nome, argumentos: argumentos.map((a) => astDeJson(a, profundidade + 1)) };
-  }
-  throw new ErroExpressao('no_desconhecido', `tipo de nó desconhecido: ${d.tipo}`);
+  const result=build(d,profundidade); validarAst(result); return result;
 }
 
 // =================================================================== 4. avaliador
@@ -409,13 +434,61 @@ function tipoNome(v) {
 }
 
 function formatarNumero(n) {
-  if (Number.isInteger(n)) return String(n);
+  // inteiro: dígitos exatos também acima de 1e21 (String(1e21) daria '1e+21'; o Python dá str(int(n)))
+  if (Number.isInteger(n)) return Math.abs(n) < 1e21 ? String(n) : BigInt(n).toString();
+  // toFixed arredonda o valor binário EXATO com empate para longe de zero — o Python replica com Decimal
   let s = n.toFixed(6);
   s = s.replace(/0+$/, '').replace(/\.$/, '');
   return s;
 }
 
+const MESES_PT = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro',
+  'outubro', 'novembro', 'dezembro'];
+const FORMATOS_DATA = ['data', 'data_hora', 'data_hora_segundos', 'extenso'];
+
+/** pt-BR: milhar '.', decimal ',', exatamente `casas` decimais (0-15), empate para longe de zero
+ * sobre o valor binário exato (toFixed); zero nunca leva sinal. Mesmo algoritmo de _texto_numero_pt. */
+function textoNumeroPt(n, casas) {
+  if (casas > 15 || Math.abs(n) >= 1e21) falha('numero_invalido');
+  const fixo = Math.abs(n).toFixed(casas);
+  const [inteiroBruto, fracao] = fixo.split('.');
+  let inteiro = inteiroBruto;
+  const grupos = [];
+  while (inteiro.length > 3) { grupos.unshift(inteiro.slice(-3)); inteiro = inteiro.slice(0, -3); }
+  grupos.unshift(inteiro);
+  const texto = grupos.join('.') + (casas ? ',' + fracao : '');
+  const negativo = n < 0 && /[1-9]/.test(texto);
+  return (negativo ? '-' : '') + texto;
+}
+
+function textoDataPt(ms, formato) {
+  anoMesDiaUtc(ms); // mesma faixa (anos 1-9999) e mesmo erro nomeado que Ano/Mes/Dia/Weekday
+  const d = new Date(Math.floor(ms));
+  const p2 = (x) => String(x).padStart(2, '0');
+  const ano = String(d.getUTCFullYear()).padStart(4, '0');
+  if (formato === 'extenso') return `${d.getUTCDate()} de ${MESES_PT[d.getUTCMonth()]} de ${ano}`;
+  const texto = `${p2(d.getUTCDate())}/${p2(d.getUTCMonth() + 1)}/${ano}`;
+  if (formato === 'data_hora') return `${texto} ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
+  if (formato === 'data_hora_segundos') {
+    return `${texto} ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}:${p2(d.getUTCSeconds())}`;
+  }
+  return texto;
+}
+
+/** Valor de SAÍDA como o JSON o carrega: -0 vira 0 (JSON.stringify(-0) é '0'; o Python devolve int 0). */
+function canonico(v) {
+  if (typeof v === 'number') return Object.is(v, -0) ? 0 : v;
+  if (Array.isArray(v)) return v.map(canonico);
+  if (v && typeof v === 'object') {
+    const out = Object.create(null);
+    for (const k of Object.keys(v)) out[k] = canonico(v[k]);
+    return out;
+  }
+  return v;
+}
+
 function arredondarNumero(x, casas) {
+  if (Math.abs(casas)>15) falha('numero_invalido');
   const fator = 10 ** casas;
   if (x >= 0) return Math.floor(x * fator + 0.5) / fator;
   return Math.ceil(x * fator - 0.5) / fator;
@@ -427,13 +500,14 @@ function diasDesdeEpoca(ms) {
 }
 
 function anoMesDiaUtc(ms) {
+  if(ms < -62135596800000 || ms >= 253402300800000) falha('numero_invalido');
   const d = new Date(ms);
   return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()];
 }
 
 function exigirNumero(v, onde) {
   if (!ehNumero(v)) throw new ErroExpressao('tipo_invalido', `${onde} espera número, recebeu ${tipoNome(v)}`, { onde });
-  return v;
+  return finito(v);
 }
 
 // nome → [minArgs, maxArgs (null=variádico), descrição, exemplo] — mesmo conteúdo de TABELA_FUNCOES
@@ -446,8 +520,153 @@ export const TABELA_FUNCOES = {
   Se: [3, 3],
 };
 
+export const MAX_COLECAO = 1024;
+export const MAX_VALOR_NOS = 4096;
+export const MAX_VALOR_TEXTO = 20000;
+export const MAX_VALOR_PROFUNDIDADE = 20;
+const PROIBIDOS = new Set(['__proto__', 'prototype', 'constructor']);
+const EXT_ARIDADES = {Trim:[1,1],Left:[2,2],Right:[2,2],Mid:[2,3],Find:[2,3],Split:[2,2],Replace:[3,3],
+  Floor:[1,1],Ceil:[1,1],Sqrt:[1,1],Weekday:[1,1],Decode:[4,null],Lista:[0,null],Contagem:[1,1],
+  Primeiro:[1,1],Ultimo:[1,1],Obter:[2,3],Contem:[2,2],Soma:[1,1],Media:[1,1],Reverter:[1,1],Unicos:[1,1],Juntar:[1,2],
+  TextoNumero:[1,2],TextoData:[1,2]};
+Object.assign(TABELA_FUNCOES, EXT_ARIDADES);
+const possui = (o,k) => Object.prototype.hasOwnProperty.call(o,k);
+function falha(codigo='tipo_invalido') { throw new ErroExpressao(codigo,'valor ou operação fora do contrato'); }
+function finito(n) { if (!Number.isFinite(n)) falha('numero_invalido'); return n; }
+function potenciaSegura(a,b) { if (Math.abs(b)>1024) falha('numero_invalido'); return finito(a ** b); }
+function proprio(o,k) {
+  const d=Object.getOwnPropertyDescriptor(o,k);
+  if (!d || !possui(d,'value')) falha('tipo_invalido');
+  return d.value;
+}
+function valorSeguro(valor,contador) {
+  let nos=0, texto=0;
+  function copiar(v,p) {
+    contador.passo(); nos++;
+    if (nos>MAX_VALOR_NOS || p>MAX_VALOR_PROFUNDIDADE) falha('valor_grande');
+    if (v===null || typeof v==='boolean') return v;
+    if (typeof v==='number') return finito(v);
+    if (typeof v==='string') {
+      if (v.length>MAX_VALOR_TEXTO*2) falha('valor_grande');
+      texto+=Array.from(v).length;
+      if (texto>MAX_VALOR_TEXTO) falha('valor_grande');
+      return v;
+    }
+    if (!v || typeof v!=='object') falha();
+    if (Array.isArray(v)) {
+      if (v.length>MAX_COLECAO) falha('valor_grande');
+      const out=[];
+      for(let i=0;i<v.length;i++) out.push(copiar(proprio(v,String(i)),p+1));
+      return out;
+    }
+    if (Object.getPrototypeOf(v)!==Object.prototype && Object.getPrototypeOf(v)!==null) falha();
+    const keys=Object.keys(v);
+    if(keys.length>MAX_COLECAO) falha('valor_grande');
+    const out=Object.create(null);
+    for(const k of keys) { copiar(k,p+1); out[k]=copiar(proprio(v,k),p+1); }
+    return out;
+  }
+  return copiar(valor,0);
+}
+function igualJson(a,b,contador) {
+  contador.passo();
+  if (a===null || b===null || typeof a!=='object' || typeof b!=='object') return a===b;
+  if (Array.isArray(a)!==Array.isArray(b)) return false;
+  const ka=Object.keys(a), kb=Object.keys(b);
+  return ka.length===kb.length && ka.every(k=>possui(b,k) && igualJson(a[k],b[k],contador));
+}
+function indice(a) { if(typeof a!=='number' || !Number.isInteger(a) || a<0) falha(); return a; }
+function extFuncao(nome,a,contador) {
+  const [min,max]=EXT_ARIDADES[nome];
+  if(a.length<min || (max!==null && a.length>max)) falha('aridade_invalida');
+  if(nome==='Lista') return a;
+  if(nome==='Obter') {
+    const [c,k]=a, def=a.length===3?a[2]:null;
+    if(c===null) return def;
+    if(Array.isArray(c)) { indice(k); return k<c.length?c[k]:def; }
+    if(typeof c!=='object' || typeof k!=='string') falha();
+    if(PROIBIDOS.has(k)) falha('campo_nao_permitido');
+    return possui(c,k)?proprio(c,k):def;
+  }
+  if(nome==='Contem') {
+    if(a[0]===null) return null;
+    if(!Array.isArray(a[0])) falha();
+    return a[0].some(x=>igualJson(x,a[1],contador));
+  }
+  if(a.some(x=>x===null)) return null;
+  if(['Trim','Left','Right','Mid','Find','Split','Replace'].includes(nome)) {
+    if(typeof a[0]!=='string') falha();
+    const t=a[0], points=Array.from(t);
+    if(nome==='Trim') return t.replace(/^[ \t\r\n\f\v]+|[ \t\r\n\f\v]+$/g,'');
+    if(nome==='Left') return points.slice(0,indice(a[1])).join('');
+    if(nome==='Right') { const n=indice(a[1]); return n?points.slice(-n).join(''):''; }
+    if(nome==='Mid') { const n=indice(a[1]); return points.slice(n,a.length===3?n+indice(a[2]):undefined).join(''); }
+    if(typeof a[1]!=='string') falha();
+    if(nome==='Find') {
+      const start=a.length===3?indice(a[2]):0, textPoints=Array.from(a[1]);
+      if(start>textPoints.length) return -1;
+      const offset=textPoints.slice(0,start).join('').length, idx=a[1].indexOf(t,offset);
+      return idx<0?-1:Array.from(a[1].slice(0,idx)).length;
+    }
+    if(nome==='Split') {
+      const out=a[1]?t.split(a[1],MAX_COLECAO+1):points;
+      if(out.length>MAX_COLECAO) falha('valor_grande');
+      return out;
+    }
+    if(typeof a[2]!=='string') falha();
+    if(!a[1]) return t;
+    const parts=t.split(a[1]);
+    const size=points.length+(parts.length-1)*(Array.from(a[2]).length-Array.from(a[1]).length);
+    if(size>MAX_VALOR_TEXTO) falha('valor_grande');
+    return parts.join(a[2]);
+  }
+  if(nome==='TextoNumero') return textoNumeroPt(exigirNumero(a[0],nome), a.length===2?indice(a[1]):2);
+  if(nome==='TextoData') {
+    const formato=a.length===2?a[1]:'data';
+    if(typeof formato!=='string' || !FORMATOS_DATA.includes(formato)) falha();
+    return textoDataPt(exigirNumero(a[0],nome), formato);
+  }
+  if(['Floor','Ceil','Sqrt','Weekday'].includes(nome)) {
+    const n=exigirNumero(a[0],nome);
+    if(nome==='Floor') return Math.floor(n);
+    if(nome==='Ceil') return Math.ceil(n);
+    if(nome==='Sqrt') return finito(Math.sqrt(n));
+    anoMesDiaUtc(n); return ((Math.floor(n/DIA_MS)+4)%7+7)%7;
+  }
+  const c=a[0];
+  if(nome==='Contagem') {
+    if(typeof c==='string') return Array.from(c).length;
+    if(typeof c!=='object') falha();
+    return Array.isArray(c)?c.length:Object.keys(c).length;
+  }
+  if(!Array.isArray(c)) falha();
+  if(nome==='Primeiro') return c.length?c[0]:null;
+  if(nome==='Ultimo') return c.length?c[c.length-1]:null;
+  if(nome==='Reverter') return c.slice().reverse();
+  if(nome==='Soma'||nome==='Media') {
+    if(c.some(x=>x===null)) return null;
+    let sum=0;
+    for(const x of c) { contador.passo(); sum=finito(sum+exigirNumero(x,nome)); }
+    return nome==='Soma'?sum:c.length?sum/c.length:null;
+  }
+  if(nome==='Unicos') {
+    const out=[];
+    for(const x of c) if(!out.some(y=>igualJson(x,y,contador))) out.push(x);
+    return out;
+  }
+  if(nome==='Juntar') {
+    const sep=a.length===2?a[1]:'';
+    if(typeof sep!=='string') falha();
+    const parts=c.map(x=>chamarFuncao('Texto',[x]));
+    const size=parts.reduce((n,x)=>n+Array.from(x).length,0)+Array.from(sep).length*Math.max(0,c.length-1);
+    if(size>MAX_VALOR_TEXTO) falha('valor_grande');
+    return parts.join(sep);
+  }
+  falha('funcao_desconhecida');
+}
+
 function chamarFuncao(nome, args) {
-  if (!(nome in TABELA_FUNCOES)) {
+  if (!possui(TABELA_FUNCOES, nome)) {
     throw new ErroExpressao('funcao_desconhecida', `função desconhecida: ${nome}`, { nome });
   }
   const [minimo, maximo] = TABELA_FUNCOES[nome];
@@ -505,7 +724,7 @@ function chamarFuncao(nome, args) {
       return null;
     }
     case 'Potencia':
-      return exigirNumero(args[0], 'Potencia') ** exigirNumero(args[1], 'Potencia');
+      return potenciaSegura(exigirNumero(args[0], 'Potencia'), exigirNumero(args[1], 'Potencia'));
     case 'AgoraUTC':
       return Date.now();
     case 'Ano': case 'Mes': case 'Dia': {
@@ -539,14 +758,13 @@ class Contador {
         'limite_passos', `avaliação acima de ${this.limitePassos} passos`, { limite: this.limitePassos },
       );
     }
-    if (this.passos % 256 === 0) {
-      const agora = (typeof performance !== 'undefined' ? performance.now() : Date.now());
-      const decorridoMs = agora - this.inicio;
-      if (decorridoMs > this.limiteMs) {
-        throw new ErroExpressao(
-          'tempo_excedido', `avaliação acima de ${this.limiteMs} ms`, { limite_ms: this.limiteMs },
-        );
-      }
+    // relógio conferido a CADA passo (uma operação de coleção custa mais do que um nó; amostrar a
+    // cada N passos deixaria um único `Unicos` de 1.024 elementos passar do orçamento)
+    const agora = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    if (agora - this.inicio > this.limiteMs) {
+      throw new ErroExpressao(
+        'tempo_excedido', `avaliação acima de ${this.limiteMs} ms`, { limite_ms: this.limiteMs },
+      );
     }
   }
 }
@@ -573,18 +791,20 @@ function igual(a, b) {
  * `LIMITE_MS_CLIENTE` (50 ms), o servidor com 500 ms (avaliador_py.py). */
 export function avaliar(no, contexto, opcoes) {
   contexto = contexto || {};
-  const limitePassos = (opcoes && opcoes.limitePassos) || MAX_PASSOS_PADRAO;
-  const limiteMs = (opcoes && opcoes.limiteMs) || LIMITE_MS_CLIENTE;
+  const limitePassos = (opcoes && opcoes.limitePassos) ?? MAX_PASSOS_PADRAO;
+  const limiteMs = (opcoes && opcoes.limiteMs) ?? LIMITE_MS_CLIENTE;
   const contador = new Contador(limitePassos, limiteMs);
 
-  function v(nodo) {
+  validarAst(no);
+  function v(nodo) { return valorSeguro(executar(nodo),contador); }
+  function executar(nodo) {
     contador.passo();
     if (nodo.no === 'literal') return nodo.valor;
     if (nodo.no === 'campo') {
-      if (!Object.prototype.hasOwnProperty.call(contexto, nodo.nome)) {
+      if (PROIBIDOS.has(nodo.nome) || !possui(contexto, nodo.nome)) {
         throw new ErroExpressao('campo_nao_permitido', `campo não permitido: ${nodo.nome}`, { campo: nodo.nome });
       }
-      return contexto[nodo.nome];
+      return proprio(contexto,nodo.nome);
     }
     if (nodo.no === 'unario') {
       const operando = v(nodo.operando);
@@ -614,7 +834,15 @@ export function avaliar(no, contexto, opcoes) {
         const primeiro = v(nodo.argumentos[0]);
         return (primeiro === null || primeiro === undefined) ? v(nodo.argumentos[1]) : primeiro;
       }
+      if(nodo.nome==='Decode') {
+        const a=nodo.argumentos;
+        if(a.length<4 || a.length%2) falha('aridade_invalida');
+        const valor=v(a[0]);
+        for(let i=1;i<a.length-1;i+=2) if(igualJson(valor,v(a[i]),contador)) return v(a[i+1]);
+        return v(a[a.length-1]);
+      }
       const args = nodo.argumentos.map(v);
+      if(possui(EXT_ARIDADES,nodo.nome)) return extFuncao(nodo.nome,args,contador);
       return chamarFuncao(nodo.nome, args);
     }
     throw new ErroExpressao('no_desconhecido', 'nó de AST fora dos tipos esperados'); // pragma: no cover
@@ -677,11 +905,11 @@ export function avaliar(no, contexto, opcoes) {
       if (b === 0) throw new ErroExpressao('divisao_por_zero', 'resto da divisão por zero', {});
       return a % b;
     }
-    if (op === '^') return a ** b;
+    if (op === '^') return potenciaSegura(a, b);
     throw new ErroExpressao('operador_desconhecido', `operador desconhecido: ${op}`); // pragma: no cover
   }
 
-  return v(no);
+  return canonico(v(no));
 }
 
 export function avaliarTexto(texto, contexto, opcoes) {

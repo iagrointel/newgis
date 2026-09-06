@@ -37,6 +37,10 @@ def _canonicalizar(valor):
         if isinstance(valor, float) and valor.is_integer():
             return int(valor)
         return valor
+    if isinstance(valor, list):
+        return [_canonicalizar(v) for v in valor]
+    if isinstance(valor, dict):
+        return {k: _canonicalizar(v) for k, v in valor.items()}
     raise AssertionError(f"tipo fora do esperado nesta passagem: {type(valor)}")  # pragma: no cover
 
 
@@ -57,8 +61,8 @@ def resultados_js() -> list[dict]:
     return json.loads(r.stdout)
 
 
-def test_ao_menos_20_vetores_compartilhados():
-    assert len(_vetores()) >= 20, "portão do item: ≥ 20 expressões nos dois avaliadores"
+def test_ao_menos_200_vetores_compartilhados():
+    assert len(_vetores()) >= 200, "extensão do núcleo: ≥ 200 expressões nos dois avaliadores"
 
 
 def test_vetores_e_resultados_js_no_mesmo_numero_e_ordem(resultados_js):
@@ -130,6 +134,50 @@ process.stdout.write(JSON.stringify(avaliar(no, {json.dumps(contexto)})));
     finally:
         arq.unlink(missing_ok=True)
     assert _canonicalizar(resultado_js) == _canonicalizar(avaliar_py(no, contexto))
+
+
+@pytest.mark.parametrize("indice,vetor", list(enumerate(_vetores())), ids=[v["descricao"] for v in _vetores()])
+def test_ast_ida_e_volta_avalia_igual_em_todos_os_vetores(indice, vetor, resultados_js):
+    """Portão "AST exportado e reimportado avalia igual", com os ≥ 200 vetores e não só com um exemplo:
+    (1) Python: analisar → ast_para_json → json.dumps/loads → ast_de_json → avaliar == avaliar direto;
+    (2) JavaScript: o mesmo caminho dentro do runner (`resultado_ida_e_volta`);
+    (3) o JSON da AST exportada pelos dois lados é idêntico byte a byte (o que se grava no documento
+    não depende de qual avaliador o gravou)."""
+    from app.expressao.avaliador_py import analisar, ast_de_json, ast_para_json
+    from app.expressao.avaliador_py import avaliar as avaliar_py
+
+    contexto = vetor.get("contexto") or {}
+    no = analisar(vetor["entrada"])
+    d = ast_para_json(no)
+    reimportada = ast_de_json(json.loads(json.dumps(d, ensure_ascii=False)))
+    assert _serializar(avaliar_py(reimportada, contexto)) == _serializar(avaliar_py(no, contexto))
+    js = resultados_js[indice]
+    assert js["erro_ida_e_volta"] is None, f"{vetor['entrada']}: {js['erro_ida_e_volta']}"
+    assert _serializar(js["resultado_ida_e_volta"]) == _serializar(js["resultado"])
+    assert json.dumps(_canonicalizar(js["ast"]), sort_keys=True, ensure_ascii=False) == json.dumps(
+        _canonicalizar(d), sort_keys=True, ensure_ascii=False
+    ), f"{vetor['entrada']}: AST exportada difere entre Python e JavaScript"
+
+
+def test_ast_exportada_pelo_python_reimportada_no_javascript_avalia_igual_em_todos_os_vetores(resultados_js):
+    """Cruzado: a AST gravada pelo PYTHON (é o que o servidor grava no documento) é lida pelo
+    JAVASCRIPT (é o que o navegador lê) — um processo Node para todos os vetores (`--stdin --ast`)."""
+    from app.expressao.avaliador_py import analisar, ast_para_json
+
+    vetores = _vetores()
+    entrada = [
+        {"entrada": v["entrada"], "contexto": v.get("contexto") or {}, "ast": ast_para_json(analisar(v["entrada"]))}
+        for v in vetores
+    ]
+    r = subprocess.run(
+        ["node", str(RUNNER_JS), "--stdin", "--ast"], input=json.dumps(entrada, ensure_ascii=False),
+        capture_output=True, text=True, timeout=30, cwd=str(ROOT), check=True,
+    )
+    saida = json.loads(r.stdout)
+    assert len(saida) == len(vetores)
+    for vetor, item, direto in zip(vetores, saida, resultados_js, strict=True):
+        assert item["erro"] is None, f"{vetor['entrada']}: {item['erro']}"
+        assert _serializar(item["resultado"]) == _serializar(direto["resultado"]), vetor["entrada"]
 
 
 def test_erro_de_sintaxe_devolve_linha_e_coluna():

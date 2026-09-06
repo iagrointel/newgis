@@ -3,6 +3,49 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L2-10-c-linguagem-expressao: extensão do núcleo — 43 funções, 309 vetores Python=JavaScript, listas e dicionários, formatação pt-BR)
+
+Continuação do núcleo entregue no mesmo turno (18 funções, 41 vetores). Passa a **43 funções**
+(`tests/medidas/L2-10-c-expressao.json`, `funcoes_implementadas`), com texto (`Trim`, `Left`, `Right`,
+`Mid`, `Find`, `Split`, `Replace`), número (`Floor`, `Ceil`, `Sqrt`), data (`Weekday`), escolha
+(`Decode`), onze de coleção (`Lista`, `Contagem`, `Primeiro`, `Ultimo`, `Obter`, `Contem`, `Soma`,
+`Media`, `Reverter`, `Unicos`, `Juntar`) e formatação pt-BR (`TextoNumero`, `TextoData`). Os tipos
+**lista e dicionário** entram como valor de primeira classe, sem gramática de literal: a lista vem de
+`Lista(...)` e o dicionário vem do contexto — o que fecha o caminho de um literal grande no texto da
+expressão virar custo de análise.
+
+**309 vetores** (`vetores_de_equivalencia`) rodam nos dois avaliadores e são comparados byte a byte
+(`test_expressao_equivalencia.py`); os mesmos 309 passam pelo AST exportado → JSON → reimportado em
+Python, em JavaScript e CRUZADO (AST escrita pelo Python, lida pelo JavaScript), com resultado idêntico
+(`vetores_ast_ida_e_volta_nos_dois_lados` = 309). Erro nomeado igual nos dois runtimes em 46 casos de
+ataque de tipo, limite e chave proibida (`test_expressao_extensao.py`); `__proto__`, `prototype` e
+`constructor` são `campo_nao_permitido`, e o lado JavaScript não lê propriedade herdada nem executa
+getter (medido: 0 leituras).
+
+Limites medidos SOB ATAQUE, com o custo escondido dentro de uma chamada (comparação estrutural
+quadrática em `Unicos` sobre 1.024 dicionários, 40 termos ≈ 21 milhões de comparações), não só com
+árvore funda: corte pelo relógio em **50,63 ms** no Python e **53,65 ms** no JavaScript contra o teto de
+50 ms do cliente, e **500,69 ms** contra o teto de 500 ms do servidor; com o relógio folgado o mesmo
+ataque para em `limite_passos` (10^5), provando que os dois orçamentos cortam de forma independente.
+Novos tetos por VALOR (1.024 itens por coleção, 4.096 nós, 20.000 pontos de código, profundidade 20)
+recusam com `valor_grande` antes de a memória crescer.
+
+**Paridade função a função com o Arcade function reference** (269 funções em 17 categorias, lido em
+setembro de 2026) na seção 10 de `docs/EXPRESSAO.md`, resumida por categoria em `docs/PARIDADE.md`:
+29 feito · 24 parcial · 81 fora nas 7 categorias com correspondência; as outras 10 categorias
+(135 funções — FeatureSet, geometria, pixel, voxel, trajetória, portal, grafo, IA, depuração, empresa)
+ficam inteiras de fora, cada uma com o motivo. Paridade de CAPACIDADE, nunca promessa de rodar script
+Arcade sem adaptação: todo nome nosso é em português.
+
+A EBNF do documento continua GERADA das tabelas de precedência do parser e conferida byte a byte
+(`test_expressao_doc_sincronizada.py`), o que pegou nesta passagem uma divergência real: a ordem dos
+operadores de comparação mudou no código e o documento ficou para trás.
+
+FICA DE FORA e está escrito na seção 11: geometria, `Filter`/`Map`, domínio, `FeatureSetByRelationship`,
+integração com popup/rótulo/formulário (L5-11), fuso horário do usuário e máscara livre de formatação.
+A cláusula do portão "expressão que acessa camada de outro inquilino = erro de permissão" **não foi
+provada**: não há camada ligada à expressão, logo não há caminho de acesso para atacar.
+
 ## turno 3, setembro de 2026 (itens L6-01-a-registro · L6-02-a-modelo-conexao-e-seguranca: registro de camadas do acervo + modelo genérico de conexão externa com defesa de SSRF)
 
 Dois itens da linha L6, ADR 0012. **L6-01-a-registro** é FILHO DIFERENTE do já entregue

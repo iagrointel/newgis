@@ -149,14 +149,13 @@ def _tokenizar(texto: str) -> list[Token]:
             j = i
             while j < n and texto[j].isdigit():
                 j += 1
-            eh_float = False
             if j < n and texto[j] == "." and j + 1 < n and texto[j + 1].isdigit():
-                eh_float = True
                 j += 1
                 while j < n and texto[j].isdigit():
                     j += 1
             bruto = texto[i:j]
-            tokens.append(Token("numero", float(bruto) if eh_float else int(bruto), posicao=i))
+            # todo número é float (double), como no JavaScript; a saída de `avaliar` canonicaliza inteiros
+            tokens.append(Token("numero", _finito(float(bruto)), posicao=i))
             i = j
             continue
         if c.isalpha() or c == "_":
@@ -218,6 +217,7 @@ _PRECEDENCIA_COMPARACAO = {"<", "<=", ">", ">="}
 _PRECEDENCIA_ADITIVA = {"+", "-"}
 _PRECEDENCIA_MULTIPLICATIVA = {"*", "/", "%"}
 _PRECEDENCIA_POTENCIA = {"^"}
+_OPERADORES_UNARIOS = {"-", "!"}
 
 
 class _Parser:
@@ -257,9 +257,7 @@ class _Parser:
         no = self.ou(0)
         sobra = self._olha()
         if sobra is not None:
-            raise ErroExpressao(
-                "sintaxe_invalida", "texto após o fim da expressão", self._erro_posicao(sobra.posicao)
-            )
+            raise ErroExpressao("sintaxe_invalida", "texto após o fim da expressão", self._erro_posicao(sobra.posicao))
         return no
 
     # precedência (do menor para o maior): || && == != < <= > >= + - * / % ^ unário chamada/primário
@@ -316,13 +314,14 @@ class _Parser:
         esquerda = self.unario(p)
         if (tok := self._olha()) is not None and tok.tipo == "op" and tok.valor in _PRECEDENCIA_POTENCIA:
             self.i += 1
-            direita = self.potencia(p)  # associatividade à direita
+            self._profundidade_ok(p + 1, tok.posicao)
+            direita = self.potencia(p + 1)  # associatividade à direita
             return Binario("^", esquerda, direita)
         return esquerda
 
     def unario(self, p: int) -> No:
         tok = self._olha()
-        if tok is not None and tok.tipo == "op" and tok.valor in ("-", "!"):
+        if tok is not None and tok.tipo == "op" and tok.valor in _OPERADORES_UNARIOS:
             self._profundidade_ok(p + 1, tok.posicao)
             self.i += 1
             operando = self.unario(p + 1)
@@ -376,9 +375,7 @@ class _Parser:
                     argumentos.append(self.ou(p + 1))
             self._espera(")")
             return Chamada(nome, argumentos)
-        raise ErroExpressao(
-            "sintaxe_invalida", f"token inesperado: '{tok.tipo}'", self._erro_posicao(tok.posicao)
-        )
+        raise ErroExpressao("sintaxe_invalida", f"token inesperado: '{tok.tipo}'", self._erro_posicao(tok.posicao))
 
 
 def _profundidade_da_arvore(no: No) -> int:
@@ -422,9 +419,7 @@ def analisar(texto: str) -> No:
         raise ErroExpressao("expressao_grande", f"expressão maior que {MAX_TEXTO} caracteres", {"limite": MAX_TEXTO})
     tokens = _tokenizar(texto)
     if len(tokens) > MAX_TOKENS:
-        raise ErroExpressao(
-            "expressao_grande", f"expressão com mais de {MAX_TOKENS} tokens", {"limite": MAX_TOKENS}
-        )
+        raise ErroExpressao("expressao_grande", f"expressão com mais de {MAX_TOKENS} tokens", {"limite": MAX_TOKENS})
     no = _Parser(tokens, texto).analisar_tudo()
     profundidade = _profundidade_da_arvore(no)
     if profundidade > MAX_PROFUNDIDADE:
@@ -434,6 +429,43 @@ def analisar(texto: str) -> No:
             {"limite": MAX_PROFUNDIDADE, "medido": profundidade},
         )
     return no
+
+
+def ebnf() -> str:
+    """A gramática publicada em `docs/EXPRESSAO.md` seção 1 é ESTE texto, gerado das mesmas tabelas
+    que o parser usa (`_PRECEDENCIA_*`, `_PALAVRAS_CHAVE`) — `test_expressao_doc_sincronizada.py`
+    compara byte a byte; e `_OPERADORES` (tokenizador) tem de ser exatamente o conjunto de
+    operadores que aparece aqui, senão o tokenizador aceitaria um token que a gramática não tem."""
+
+    def alt(ops: set[str]) -> str:
+        ordenados = sorted(ops, key=lambda o: _OPERADORES.index(o))
+        dentro = " | ".join(f'"{o}"' for o in ordenados)
+        return f'"{ordenados[0]}"' if len(ordenados) == 1 else f"( {dentro} )"
+
+    palavras = " | ".join(f'"{p}"' for p in sorted(_PALAVRAS_CHAVE, key=len, reverse=True))
+    return "\n".join(
+        [
+            "expressao     = ou ;",
+            f'ou            = "e" , {{ {alt(_PRECEDENCIA_LOGICA_OU)} , "e" }} ;',
+            f"e             = igualdade , {{ {alt(_PRECEDENCIA_LOGICA_E)} , igualdade }} ;",
+            f"igualdade     = comparacao , {{ {alt(_PRECEDENCIA_IGUALDADE)} , comparacao }} ;",
+            f"comparacao    = aditiva , {{ {alt(_PRECEDENCIA_COMPARACAO)} , aditiva }} ;",
+            f"aditiva       = multiplicativa , {{ {alt(_PRECEDENCIA_ADITIVA)} , multiplicativa }} ;",
+            f"multiplicativa= potencia , {{ {alt(_PRECEDENCIA_MULTIPLICATIVA)} , potencia }} ;",
+            f"potencia      = unario , [ {alt(_PRECEDENCIA_POTENCIA)} , potencia ] ;"
+            + "              (* associa à direita *)",
+            f"unario        = {alt(_OPERADORES_UNARIOS)} , unario | primario ;",
+            f"primario      = numero | string | {palavras}",
+            "              | campo",
+            '              | identificador , "(" , [ expressao , { "," , expressao } ] , ")"',
+            '              | "(" , expressao , ")" ;',
+            "",
+            'campo          = "$" , identificador ;',
+            'identificador  = ( letra | "_" ) , { letra | digito | "_" } ;',
+            'numero         = digitos , [ "." , digitos ] | "." , digitos ;',
+            'string         = "\'" , { qualquer_caractere_exceto_aspa_simples | "\'\'" } , "\'" ;',
+        ]
+    )
 
 
 # =================================================================== 3. AST ↔ JSON (exportável)
@@ -458,48 +490,86 @@ def ast_para_json(no: No) -> dict:
     raise ErroExpressao("no_desconhecido", "nó de AST fora dos tipos esperados")  # pragma: no cover
 
 
-def ast_de_json(d: dict, _profundidade: int = 1) -> No:
-    """`dict` (de `ast_para_json`, ou gravado por outro avaliador da mesma gramática) → AST tipada.
-    Não confia em campos extras nem em tipos fora do vocabulário — recusa com `no_desconhecido`.
+def _validar_ast(no):
+    stack = [(no, 1)]
+    count = 0
+    while stack:
+        n, depth = stack.pop()
+        count += 1
+        if depth > MAX_PROFUNDIDADE:
+            _falha("profundidade_excedida")
+        if count > MAX_TOKENS:
+            _falha("expressao_grande")
+        if type(n) is Literal:
+            valid = {
+                "nulo": n.valor is None,
+                "booleano": type(n.valor) is bool,
+                "texto": type(n.valor) is str,
+                "numero": _eh_numero(n.valor),
+            }
+            if type(n.tipo_valor) is not str or not valid.get(n.tipo_valor, False):
+                _falha("no_desconhecido")
+        elif type(n) is Campo:
+            if type(n.nome) is not str or not IDENT_RE.fullmatch(n.nome):
+                _falha("no_desconhecido")
+        elif type(n) is Unario:
+            if n.operador not in _OPERADORES_UNARIOS:
+                _falha("no_desconhecido")
+            stack.append((n.operando, depth + 1))
+        elif type(n) is Binario:
+            if n.operador not in _OPERADORES:
+                _falha("no_desconhecido")
+            stack.extend([(n.esquerda, depth + 1), (n.direita, depth + 1)])
+        elif type(n) is Chamada:
+            if type(n.nome) is not str or not IDENT_RE.fullmatch(n.nome) or type(n.argumentos) is not list:
+                _falha("no_desconhecido")
+            if len(n.argumentos) > MAX_ARGUMENTOS:
+                _falha("expressao_grande")
+            stack.extend((a, depth + 1) for a in n.argumentos)
+        else:
+            _falha("no_desconhecido")
 
-    Isto é ENTRADA NÃO CONFIÁVEL da mesma classe que o texto: quem grava a AST (C6 do
-    L2_CONCEITO.md: "AST em JSON... é o que se grava no documento junto com o texto") pode não ser
-    quem a leu depois, e nada garante que ela veio de `ast_para_json` — por isso esta função aplica
-    OS MESMOS limites de profundidade e aridade que `analisar` aplica ao texto (`_profundidade`
-    conta a descida a cada nó, do mesmo jeito que o parser conta a cada parêntese/unário/chamada);
-    sem isto, um JSON fabricado à mão contornaria os dois guarda-corpos de `analisar` por completo
-    — um nó `binario` aninhado 100 mil vezes nunca passa por tokenizador nenhum."""
-    if _profundidade > MAX_PROFUNDIDADE:
-        raise ErroExpressao(
-            "profundidade_excedida",
-            f"AST acima de {MAX_PROFUNDIDADE} níveis",
-            {"limite": MAX_PROFUNDIDADE},
-        )
-    if not isinstance(d, dict) or "tipo" not in d:
-        raise ErroExpressao("no_desconhecido", "JSON de AST malformado")
-    tipo = d["tipo"]
-    if tipo == "literal":
-        return Literal(d["tipo_valor"], d.get("valor"))
-    if tipo == "campo":
-        return Campo(d["nome"])
-    if tipo == "unario":
-        return Unario(d["operador"], ast_de_json(d["operando"], _profundidade + 1))
-    if tipo == "binario":
-        return Binario(
-            d["operador"],
-            ast_de_json(d["esquerda"], _profundidade + 1),
-            ast_de_json(d["direita"], _profundidade + 1),
-        )
-    if tipo == "chamada":
-        argumentos = d.get("argumentos", [])
-        if len(argumentos) > MAX_ARGUMENTOS:
-            raise ErroExpressao(
-                "expressao_grande",
-                f"mais de {MAX_ARGUMENTOS} argumentos em '{d.get('nome')}'",
-                {"limite": MAX_ARGUMENTOS},
-            )
-        return Chamada(d["nome"], [ast_de_json(a, _profundidade + 1) for a in argumentos])
-    raise ErroExpressao("no_desconhecido", f"tipo de nó desconhecido: {tipo!r}")
+
+def ast_de_json(d: dict, _profundidade: int = 1) -> No:
+    count = 0
+
+    def build(d, p):
+        nonlocal count
+        count += 1
+        if p > MAX_PROFUNDIDADE:
+            _falha("profundidade_excedida")
+        if count > MAX_TOKENS:
+            _falha("expressao_grande")
+        if type(d) is not dict:
+            _falha("no_desconhecido")
+        t = d.get("tipo")
+        required = {
+            "literal": {"tipo_valor", "valor"},
+            "campo": {"nome"},
+            "unario": {"operador", "operando"},
+            "binario": {"operador", "esquerda", "direita"},
+            "chamada": {"nome", "argumentos"},
+        }
+        if type(t) is not str or t not in required or not required[t].issubset(d):
+            _falha("no_desconhecido")
+        if t == "literal":
+            return Literal(d["tipo_valor"], d["valor"])
+        if t == "campo":
+            return Campo(d["nome"])
+        if t == "unario":
+            return Unario(d["operador"], build(d["operando"], p + 1))
+        if t == "binario":
+            return Binario(d["operador"], build(d["esquerda"], p + 1), build(d["direita"], p + 1))
+        a = d["argumentos"]
+        if type(a) is not list:
+            _falha("no_desconhecido")
+        if len(a) > MAX_ARGUMENTOS:
+            _falha("expressao_grande")
+        return Chamada(d["nome"], [build(x, p + 1) for x in a])
+
+    result = build(d, _profundidade)
+    _validar_ast(result)
+    return result
 
 
 # =================================================================== 4. avaliador
@@ -528,15 +598,26 @@ def _formatar_numero(n: float) -> str:
     direita. Nunca usa `str()`/`repr()` puro nem `toFixed` isolado — os dois divergem entre as
     línguas para o mesmo número (1.0 vira "1.0" em Python e "1" em JavaScript)."""
     if float(n).is_integer():
-        return str(int(n))
-    s = f"{n:.6f}"
-    s = s.rstrip("0").rstrip(".")
-    return s
+        return str(int(n))  # exato também acima de 1e21 (o JS usa BigInt no mesmo caso)
+    s = _decimal_fixo(n, 6)
+    return s.rstrip("0").rstrip(".")
+
+
+def _decimal_fixo(n: float, casas: int) -> str:
+    """`n` com exatamente `casas` decimais, arredondado sobre o VALOR BINÁRIO EXATO com empate para
+    longe de zero — é a regra do `toFixed` do JavaScript. `f"{n:.6f}"` do Python arredonda empate
+    para o par e diverge do JS em `0.0078125` (`'0.007812'` × `'0.007813'`): por isso `Decimal`,
+    que carrega o binário exato, com `ROUND_HALF_UP`."""
+    from decimal import ROUND_HALF_UP, Decimal
+
+    return format(Decimal(n).quantize(Decimal(1).scaleb(-casas), rounding=ROUND_HALF_UP), "f")
 
 
 def _arredondar(x: float, casas: int) -> float:
     """Meio-para-longe-de-zero (não é o banker's rounding do `round()` do Python nem o arredonda-
     para-cima do `Math.round` do JavaScript para negativos): a MESMA fórmula nas duas línguas."""
+    if abs(casas) > 15:
+        _falha("numero_invalido")
     fator = 10.0**casas
     if x >= 0:
         return math.floor(x * fator + 0.5) / fator
@@ -558,12 +639,13 @@ class _Contador:
             raise ErroExpressao(
                 "limite_passos", f"avaliação acima de {self.limite_passos} passos", {"limite": self.limite_passos}
             )
-        if self.passos % 256 == 0:  # relógio não é grátis: só confere a cada 256 passos
-            decorrido_ms = (time.perf_counter() - self.inicio) * 1000.0
-            if decorrido_ms > self.limite_ms:
-                raise ErroExpressao(
-                    "tempo_excedido", f"avaliação acima de {self.limite_ms:.0f} ms", {"limite_ms": self.limite_ms}
-                )
+        # relógio conferido a CADA passo (operações de coleção fazem um passo custar mais do que um nó;
+        # amostrar a cada N passos deixaria um único `Unicos` de 1.024 elementos passar do orçamento)
+        decorrido_ms = (time.perf_counter() - self.inicio) * 1000.0
+        if decorrido_ms > self.limite_ms:
+            raise ErroExpressao(
+                "tempo_excedido", f"avaliação acima de {self.limite_ms:.0f} ms", {"limite_ms": self.limite_ms}
+            )
 
 
 # nome → (min_args, max_args ou None=variádico, descrição de 1 linha, exemplo)
@@ -593,6 +675,318 @@ TABELA_FUNCOES: dict[str, tuple[int, int | None, str, str]] = {
     "Se": (3, 3, "condição booleana decide qual ramo é avaliado (curto-circuito)", "Se($a > 0, 'pos', 'neg')"),
 }
 
+# Bounded JSON values and collection functions share the evaluator's operation budget.
+MAX_COLECAO = 1024
+MAX_VALOR_NOS = 4096
+MAX_VALOR_TEXTO = 20000
+MAX_VALOR_PROFUNDIDADE = 20
+_PROIBIDOS = {"__proto__", "prototype", "constructor"}
+_EXT_FUNCOES: dict[str, tuple[int, int | None, str, str]] = {
+    # texto (índices e contagens em pontos de código Unicode, base zero)
+    "Trim": (1, 1, "remove espaços ASCII das pontas", "Trim(' a ') → 'a'"),
+    "Left": (2, 2, "primeiros N pontos de código", "Left('a🌍b', 2) → 'a🌍'"),
+    "Right": (2, 2, "últimos N pontos de código (0 devolve vazio)", "Right('abc', 1) → 'c'"),
+    "Mid": (2, 3, "trecho a partir de um índice; sem quantidade vai até o fim", "Mid('abcd', 1, 2) → 'bc'"),
+    "Find": (2, 3, "índice da 1ª ocorrência a partir de um início; −1 se ausente", "Find('b', 'abc') → 1"),
+    "Split": (2, 2, "divide por separador literal (vazio divide em pontos de código)", "Split('a,b', ',')"),
+    "Replace": (3, 3, "troca todas as ocorrências literais", "Replace('aba', 'a', 'x') → 'xbx'"),
+    # número
+    "Floor": (1, 1, "maior inteiro ≤ número", "Floor(-1.5) → -2"),
+    "Ceil": (1, 1, "menor inteiro ≥ número", "Ceil(-1.5) → -1"),
+    "Sqrt": (1, 1, "raiz quadrada (negativo é numero_invalido)", "Sqrt(9) → 3"),
+    # data
+    "Weekday": (1, 1, "dia da semana UTC, domingo 0 … sábado 6", "Weekday(0) → 4"),
+    # escolha
+    "Decode": (4, None, "pares caso/resultado e padrão; só o resultado escolhido é avaliado", "Decode(1, 1, 'a', 'z')"),
+    # coleções
+    "Lista": (0, None, "lista nova com os argumentos (preserva nulos)", "Lista(1, nulo)"),
+    "Contagem": (1, 1, "tamanho de lista, texto (pontos de código) ou dicionário", "Contagem(Lista(1, 2)) → 2"),
+    "Primeiro": (1, 1, "primeiro elemento (nulo se vazia)", "Primeiro(Lista(4, 5)) → 4"),
+    "Ultimo": (1, 1, "último elemento (nulo se vazia)", "Ultimo(Lista(4, 5)) → 5"),
+    "Obter": (
+        2,
+        3,
+        "lista por índice ou dicionário por chave própria; ausente → padrão/nulo",
+        "Obter(Lista(4), 0) → 4",
+    ),
+    "Contem": (2, 2, "presença por igualdade estrutural estrita", "Contem(Lista(1), verdadeiro) → falso"),
+    "Soma": (1, 1, "soma de números (vazia → 0; membro nulo → nulo)", "Soma(Lista(1, 2)) → 3"),
+    "Media": (1, 1, "média de números (vazia ou membro nulo → nulo)", "Media(Lista(1, 2)) → 1.5"),
+    "Reverter": (1, 1, "cópia em ordem inversa", "Reverter(Lista(1, 2))"),
+    "Unicos": (1, 1, "sem repetições, preservando a 1ª ocorrência", "Unicos(Lista(1, 1))"),
+    "Juntar": (1, 2, "texto dos escalares com separador (nulo vira vazio)", "Juntar(Lista(1, 2), '/') → '1/2'"),
+    # formatação pt-BR (sempre UTC; algoritmo único, seção 6 de EXPRESSAO.md)
+    "TextoNumero": (
+        1,
+        2,
+        "número em pt-BR: milhar '.', decimal ',', N casas (padrão 2)",
+        "TextoNumero(1234.5) → '1.234,50'",
+    ),
+    "TextoData": (
+        1,
+        2,
+        "data UTC em pt-BR: 'data' (padrão), 'data_hora', 'data_hora_segundos', 'extenso'",
+        "TextoData(0) → '01/01/1970'",
+    ),
+}
+_EXT_ARIDADES = {nome: (minimo, maximo) for nome, (minimo, maximo, _d, _e) in _EXT_FUNCOES.items()}
+TABELA_FUNCOES.update(_EXT_FUNCOES)
+_MESES_PT = (
+    "janeiro",
+    "fevereiro",
+    "março",
+    "abril",
+    "maio",
+    "junho",
+    "julho",
+    "agosto",
+    "setembro",
+    "outubro",
+    "novembro",
+    "dezembro",
+)
+_FORMATOS_DATA = ("data", "data_hora", "data_hora_segundos", "extenso")
+
+
+def _falha(codigo="tipo_invalido"):
+    raise ErroExpressao(codigo, "valor ou operação fora do contrato")
+
+
+def _finito(n):
+    try:
+        if not math.isfinite(n):
+            _falha("numero_invalido")
+    except (OverflowError, TypeError):
+        _falha("numero_invalido")
+    return n
+
+
+def _potencia(a, b):
+    if abs(b) > 1024:
+        _falha("numero_invalido")
+    try:
+        return _finito(math.pow(a, b))
+    except (OverflowError, ValueError):
+        _falha("numero_invalido")
+
+
+def _valor_seguro(valor, contador):
+    nos = texto = 0
+
+    def copiar(v, p):
+        nonlocal nos, texto
+        contador.passo()
+        nos += 1
+        if nos > MAX_VALOR_NOS or p > MAX_VALOR_PROFUNDIDADE:
+            _falha("valor_grande")
+        if v is None or type(v) is bool:
+            return v
+        if type(v) in (int, float):
+            return _finito(float(v))
+        if type(v) is str:
+            texto += len(v)
+            if texto > MAX_VALOR_TEXTO:
+                _falha("valor_grande")
+            return v
+        if type(v) not in (list, dict):
+            _falha()
+        if len(v) > MAX_COLECAO:
+            _falha("valor_grande")
+        if type(v) is list:
+            return [copiar(a, p + 1) for a in v]
+        out = {}
+        for k, a in v.items():
+            if type(k) is not str:
+                _falha()
+            copiar(k, p + 1)
+            out[k] = copiar(a, p + 1)
+        return out
+
+    return copiar(valor, 0)
+
+
+def _igual_json(a, b, contador):
+    contador.passo()
+    if type(a) is bool or type(b) is bool:
+        return type(a) is type(b) and a == b
+    if _eh_numero(a) and _eh_numero(b):
+        return a == b
+    if type(a) is not type(b):
+        return False
+    if type(a) is list:
+        return len(a) == len(b) and all(_igual_json(x, y, contador) for x, y in zip(a, b, strict=True))
+    if type(a) is dict:
+        return a.keys() == b.keys() and all(_igual_json(a[k], b[k], contador) for k in a)
+    return a == b
+
+
+def _indice(a):
+    if not _eh_numero(a) or a < 0 or a != math.floor(a):
+        _falha()
+    return int(a)
+
+
+def _ext_funcao(nome, a, contador):
+    minimo, maximo = _EXT_ARIDADES[nome]
+    if len(a) < minimo or (maximo is not None and len(a) > maximo):
+        _falha("aridade_invalida")
+    if nome == "Lista":
+        return a
+    if nome == "Obter":
+        c, k = a[:2]
+        default = a[2] if len(a) == 3 else None
+        if c is None:
+            return default
+        if type(c) is list:
+            k = _indice(k)
+            return c[k] if k < len(c) else default
+        if type(c) is not dict or type(k) is not str:
+            _falha()
+        if k in _PROIBIDOS:
+            _falha("campo_nao_permitido")
+        return c.get(k, default)
+    if nome == "Contem":
+        if a[0] is None:
+            return None
+        if type(a[0]) is not list:
+            _falha()
+        return any(_igual_json(x, a[1], contador) for x in a[0])
+    if any(x is None for x in a):
+        return None
+    if nome in ("Trim", "Left", "Right", "Mid", "Find", "Split", "Replace"):
+        if type(a[0]) is not str:
+            _falha()
+        t = a[0]
+        if nome == "Trim":
+            return t.strip(" \t\r\n\f\v")
+        if nome == "Left":
+            return t[: _indice(a[1])]
+        if nome == "Right":
+            n = _indice(a[1])
+            return t[-n:] if n else ""
+        if nome == "Mid":
+            n = _indice(a[1])
+            return t[n : n + _indice(a[2])] if len(a) == 3 else t[n:]
+        if type(a[1]) is not str:
+            _falha()
+        if nome == "Find":
+            return a[1].find(t, _indice(a[2]) if len(a) == 3 else 0)
+        if nome == "Split":
+            r = t.split(a[1]) if a[1] else list(t)
+            if len(r) > MAX_COLECAO:
+                _falha("valor_grande")
+            return r
+        if type(a[2]) is not str:
+            _falha()
+        if not a[1]:
+            return t
+        if len(t) + t.count(a[1]) * (len(a[2]) - len(a[1])) > MAX_VALOR_TEXTO:
+            _falha("valor_grande")
+        return t.replace(a[1], a[2])
+    if nome == "TextoNumero":
+        return _texto_numero_pt(_exigir_numero(a[0], nome), _indice(a[1]) if len(a) == 2 else 2)
+    if nome == "TextoData":
+        formato = a[1] if len(a) == 2 else "data"
+        if type(formato) is not str or formato not in _FORMATOS_DATA:
+            _falha()
+        return _texto_data_pt(_exigir_numero(a[0], nome), formato)
+    if nome in ("Floor", "Ceil", "Sqrt", "Weekday"):
+        n = _exigir_numero(a[0], nome)
+        if nome == "Floor":
+            return math.floor(n)
+        if nome == "Ceil":
+            return math.ceil(n)
+        if nome == "Sqrt":
+            if n < 0:
+                _falha("numero_invalido")
+            return math.sqrt(n)
+        _ano_mes_dia_utc(n)
+        return (math.floor(n / _EPOCA_MS_POR_DIA) + 4) % 7
+    c = a[0]
+    if nome == "Contagem":
+        if type(c) not in (list, dict, str):
+            _falha()
+        return len(c)
+    if type(c) is not list:
+        _falha()
+    if nome == "Primeiro":
+        return c[0] if c else None
+    if nome == "Ultimo":
+        return c[-1] if c else None
+    if nome == "Reverter":
+        return c[::-1]
+    if nome in ("Soma", "Media"):
+        if any(x is None for x in c):
+            return None
+        soma = 0.0
+        for x in c:
+            contador.passo()
+            soma = _finito(soma + _exigir_numero(x, nome))
+        return soma if nome == "Soma" else soma / len(c) if c else None
+    if nome == "Unicos":
+        out = []
+        for x in c:
+            if not any(_igual_json(x, y, contador) for y in out):
+                out.append(x)
+        return out
+    if nome == "Juntar":
+        sep = a[1] if len(a) == 2 else ""
+        if type(sep) is not str:
+            _falha()
+        partes = [_chamar_funcao("Texto", [x], {}) for x in c]
+        if sum(map(len, partes)) + len(sep) * max(0, len(c) - 1) > MAX_VALOR_TEXTO:
+            _falha("valor_grande")
+        return sep.join(partes)
+    _falha("funcao_desconhecida")
+
+
+def _texto_numero_pt(n: float, casas: int) -> str:
+    """pt-BR: separador de milhar '.', decimal ',', exatamente `casas` decimais (0–15), arredondado
+    sobre o valor binário exato com empate para longe de zero (= `toFixed`); zero nunca leva sinal."""
+    if casas > 15 or abs(n) >= 1e21:
+        _falha("numero_invalido")
+    fixo = _decimal_fixo(abs(n), casas)
+    inteiro, _, fracao = fixo.partition(".")
+    grupos = []
+    while len(inteiro) > 3:
+        grupos.insert(0, inteiro[-3:])
+        inteiro = inteiro[:-3]
+    grupos.insert(0, inteiro)
+    texto = ".".join(grupos) + ("," + fracao if casas else "")
+    negativo = n < 0 and any(c not in "0.," for c in texto)
+    return ("-" if negativo else "") + texto
+
+
+def _texto_data_pt(ms: float, formato: str) -> str:
+    import datetime
+
+    _ano_mes_dia_utc(ms)  # mesma faixa (anos 1–9999) e mesmo erro nomeado que Ano/Mes/Dia/Weekday
+    dt = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc) + datetime.timedelta(milliseconds=math.floor(ms))
+    if formato == "extenso":
+        return f"{dt.day} de {_MESES_PT[dt.month - 1]} de {dt.year:04d}"
+    texto = f"{dt.day:02d}/{dt.month:02d}/{dt.year:04d}"
+    if formato == "data_hora":
+        return f"{texto} {dt.hour:02d}:{dt.minute:02d}"
+    if formato == "data_hora_segundos":
+        return f"{texto} {dt.hour:02d}:{dt.minute:02d}:{dt.second:02d}"
+    return texto
+
+
+def _canonico(v):
+    """Valor de SAÍDA na forma que o JSON dos dois lados produz: número inteiro (até 2^53, exato em
+    double) vira `int`, `-0.0` vira `0` — `JSON.stringify(7)` é `7`, e `json.dumps(7.0)` seria `7.0`.
+    Só na saída de `avaliar`; por dentro a aritmética é toda em `float`, como o double do JS."""
+    if type(v) is float:
+        if v.is_integer() and abs(v) < 9007199254740992.0:
+            return int(v)
+        return v
+    if type(v) is list:
+        return [_canonico(x) for x in v]
+    if type(v) is dict:
+        return {k: _canonico(x) for k, x in v.items()}
+    return v
+
+
 _FUNCOES_PREGUICOSAS = {"Se", "SeNulo"}  # não avaliam todos os argumentos de antemão
 
 
@@ -603,6 +997,8 @@ def _dias_desde_epoca(ms: int) -> int:
 def _ano_mes_dia_utc(ms: float) -> tuple[int, int, int]:
     import datetime
 
+    if ms < -62135596800000 or ms >= 253402300800000:
+        _falha("numero_invalido")
     dt = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc) + datetime.timedelta(milliseconds=ms)
     return dt.year, dt.month, dt.day
 
@@ -610,7 +1006,7 @@ def _ano_mes_dia_utc(ms: float) -> tuple[int, int, int]:
 def _exigir_numero(v: Any, onde: str) -> float:
     if not _eh_numero(v):
         raise ErroExpressao("tipo_invalido", f"{onde} espera número, recebeu {_tipo_nome(v)}", {"onde": onde})
-    return v
+    return _finito(v)
 
 
 def _chamar_funcao(nome: str, args: list[Any], onde_erro: dict) -> Any:
@@ -680,7 +1076,7 @@ def _chamar_funcao(nome: str, args: list[Any], onde_erro: dict) -> Any:
         if isinstance(v, str):
             texto = v.strip()
             if re.fullmatch(r"-?\d+", texto):
-                return int(texto)
+                return _finito(float(texto))
             if re.fullmatch(r"-?\d+\.\d+", texto):
                 return float(texto)
             return None
@@ -688,7 +1084,7 @@ def _chamar_funcao(nome: str, args: list[Any], onde_erro: dict) -> Any:
     if nome == "Potencia":
         base = _exigir_numero(args[0], "Potencia")
         expoente = _exigir_numero(args[1], "Potencia")
-        return base**expoente
+        return _potencia(base, expoente)
     if nome == "AgoraUTC":
         return int(time.time() * 1000)
     if nome in ("Ano", "Mes", "Dia"):
@@ -718,18 +1114,26 @@ def avaliar(
     nó consome pelo menos 1 passo do orçamento (`limite_passos`) e o relógio de parede é conferido
     periodicamente contra `limite_ms` — os dois cortam laço/recursão profunda com erro nomeado,
     nunca com estouro de pilha ou travamento (refutação do item-pai)."""
-    contexto = contexto or {}
+    contexto = {} if contexto is None else contexto
+    if type(contexto) is not dict:
+        _falha()
     contador = _Contador(limite_passos, limite_ms)
 
+    _validar_ast(no)
+
     def v(nodo: No) -> Any:
+        try:
+            return _valor_seguro(executar(nodo), contador)
+        except (OverflowError, ValueError, ZeroDivisionError):
+            _falha("numero_invalido")
+
+    def executar(nodo: No) -> Any:
         contador.passo()
         if isinstance(nodo, Literal):
             return nodo.valor
         if isinstance(nodo, Campo):
-            if nodo.nome not in contexto:
-                raise ErroExpressao(
-                    "campo_nao_permitido", f"campo não permitido: {nodo.nome}", {"campo": nodo.nome}
-                )
+            if nodo.nome in _PROIBIDOS or nodo.nome not in contexto:
+                raise ErroExpressao("campo_nao_permitido", f"campo não permitido: {nodo.nome}", {"campo": nodo.nome})
             return contexto[nodo.nome]
         if isinstance(nodo, Unario):
             operando = v(nodo.operando)
@@ -763,7 +1167,17 @@ def avaliar(
                     raise ErroExpressao("aridade_invalida", "SeNulo espera 2 argumentos", {"nome": "SeNulo"})
                 primeiro = v(nodo.argumentos[0])
                 return v(nodo.argumentos[1]) if primeiro is None else primeiro
+            if nodo.nome == "Decode":
+                if len(nodo.argumentos) < 4 or len(nodo.argumentos) % 2:
+                    _falha("aridade_invalida")
+                valor = v(nodo.argumentos[0])
+                for i in range(1, len(nodo.argumentos) - 1, 2):
+                    if _igual_json(valor, v(nodo.argumentos[i]), contador):
+                        return v(nodo.argumentos[i + 1])
+                return v(nodo.argumentos[-1])
             args = [v(a) for a in nodo.argumentos]
+            if nodo.nome in _EXT_ARIDADES:
+                return _ext_funcao(nodo.nome, args, contador)
             return _chamar_funcao(nodo.nome, args, {"nome": nodo.nome})
         raise ErroExpressao("no_desconhecido", "nó de AST fora dos tipos esperados")  # pragma: no cover
 
@@ -834,7 +1248,7 @@ def avaliar(
                 raise ErroExpressao("divisao_por_zero", "resto da divisão por zero", {})
             return a % b
         if op == "^":
-            return a**b
+            return _potencia(a, b)
         raise ErroExpressao("operador_desconhecido", f"operador desconhecido: {op}")  # pragma: no cover
 
     def _exigir_booleano_ou_nulo(valor: Any, op: str) -> None:
@@ -856,7 +1270,7 @@ def avaliar(
             return a == b
         return False
 
-    return v(no)
+    return _canonico(v(no))
 
 
 def avaliar_texto(
