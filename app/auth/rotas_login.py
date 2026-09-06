@@ -3,6 +3,7 @@
 → auth_falha/auth_ok → 2FA? desafio : sessão + cookie → evento usuarios/entrar → resultado no log_acesso."""
 
 import datetime
+from urllib.parse import urlsplit
 
 import psycopg2
 from fastapi import APIRouter, Request, Response
@@ -104,8 +105,22 @@ def provedores(inquilino: str):
         t = cur.fetchone()
     if t is None:
         raise ErroAPI(404, "inquilino_inexistente", "inquilino inexistente")
-    # provedores externos nascem no L0-08; a lista vazia é o estado real, não um dado fixo
-    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": [], "login_local": True}
+    # provedores federados habilitados (L0-08-sso): OIDC e SAML entram como botão de redirecionamento
+    # (a tela /entrar renderiza {tipo, nome, url}); o LDAP fica fora de propósito — o fluxo dele é
+    # formulário com senha na própria tela, não botão que sai da página (L0-08-d)
+    externos = []
+    with db.db() as cur:
+        for tipo in ("oidc", "saml"):
+            cur.execute("SELECT * FROM plat.provedor_sso_de(%s, %s)", (t["slug"], tipo))
+            p = cur.fetchone()
+            if p is None or not p["habilitado"]:
+                continue
+            if tipo == "oidc":
+                nome = urlsplit(p["emissor"]).hostname or p["emissor"]
+            else:
+                nome = p["idp_entidade"]
+            externos.append({"tipo": tipo, "nome": nome, "url": f"/api/login/{tipo}/iniciar?inquilino={t['slug']}"})
+    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": externos, "login_local": True}
 
 
 @router.post(

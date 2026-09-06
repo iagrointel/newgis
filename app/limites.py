@@ -124,6 +124,16 @@ LDAP_IMPORTAR_MAX = 2000            # tamanho máximo de uma importação de gru
 # AUTH_PADROES["bloqueio_tentativas"/"bloqueio_minutos"] do MESMO inquilino (nunca um número novo aqui) — vale
 # inclusive para login que ainda não existe localmente (o adversário do item testa exatamente 1.000 binds/min)
 
+# --- SSO OIDC/SAML 2.0 (L0-08-sso; app/auth/sso.py): login federado por inquilino, sem biblioteca de SAML
+# (validação XML-DSig própria sobre lxml+cryptography — signxml exigiria trocar a versão de lxml/cryptography
+# do ambiente, trocada que o laço proíbe). Tempos curtos de propósito: provedor fora do ar nunca prende a
+# requisição nem derruba o login local (portão do item)
+SSO_TIMEOUT_S = 5                # timeout de TODA chamada HTTP ao IdP (descoberta, JWKS, troca de código)
+SSO_TRANSACAO_MINUTOS = 10       # validade do state/nonce/PKCE (OIDC) e do pedido (SAML) em plat.sso_transacao
+SSO_DESVIO_RELOGIO_S = 60        # folga de relógio aceita em exp/iat (OIDC) e NotBefore/NotOnOrAfter (SAML)
+SSO_DESCOBERTA_CACHE_S = 600     # cache em memória do documento de descoberta OIDC e das chaves JWKS
+SSO_RESPOSTA_MAX = 262144        # teto do corpo SAMLResponse decodificado (256 KB; assertion típica < 30 KB)
+
 # --- conexão externa e SSRF (L6-02-a-modelo-conexao-e-seguranca; app/conexao/): modelo genérico de conexão
 # a serviço externo (WMS/WMTS/WFS/OGC API/ArcGIS REST/STAC/GeoParquet/PMTiles — só o MODELO nesta trilha, os
 # conectores em si são itens futuros). Tempos curtos de propósito: o teste de saúde nunca prende a requisição
