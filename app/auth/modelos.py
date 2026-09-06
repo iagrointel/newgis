@@ -157,6 +157,11 @@ class Eu(Usuario):
     pendencias: list[str]
     sessao: dict | None = None
     token: dict | None = None
+    idioma_preferido: str
+    unidades: str
+    formato_data: str
+    visibilidade_perfil: str
+    foto_url: str | None = None
 
 
 class LoginSaida(Saida):

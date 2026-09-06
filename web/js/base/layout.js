@@ -40,8 +40,15 @@ export function montarLayout({ usuario, ativo = location.pathname }) {
   aside.append(h('nav', { 'aria-label': t('nav.rotulo') }, ul));
   const btSair = h('button', { type: 'button', class: 'pequeno', id: 'sair' }, t('nav.sair'));
   btSair.addEventListener('click', () => sair());
+  /* item L0-02-g-perfil-usuario: "ver a foto na barra" — a mesma foto de /conta; sem foto, sem <img> nenhum
+     (nunca um ícone genérico fingindo ser a foto de alguém) */
+  const foto = usuario.foto_url
+    ? h('img', { class: 'foto-perfil', src: usuario.foto_url, alt: '', width: 32, height: 32, id: 'pessoa-foto' })
+    : null;
   aside.append(h('div', { class: 'pessoa' },
-    h('a', { href: '/conta', id: 'pessoa-nome' }, usuario.nome || usuario.login, h('small', {}, `${usuario.login} · ${t(`perfil.${usuario.perfil}`)}`)),
+    h('div', { class: 'pessoa-topo' },
+      foto,
+      h('a', { href: '/conta', id: 'pessoa-nome' }, usuario.nome || usuario.login, h('small', {}, `${usuario.login} · ${t(`perfil.${usuario.perfil}`)}`))),
     btSair));
 }
 

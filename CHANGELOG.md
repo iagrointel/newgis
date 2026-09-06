@@ -3,6 +3,47 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L0-02-g-perfil-usuario: perfil próprio — foto, idioma, unidades, formato de data, visibilidade)
+
+Conferido antes de escrever (portão da hipótese vs. o que já existia): a tela `/conta` herdada do
+L0-02-tenant-auth já cobria 2 das 8 cláusulas do portão deste item (domínio de e-mail recusado com mensagem;
+`login`/`perfil`/`papel_id`/`ativo` já fora da whitelist de `PUT /api/eu`) — as outras 6 (idioma, unidades,
+formato de data, foto com limite de tamanho e recodificação, visibilidade) não tinham uma linha de código
+(`grep` de `idioma_preferido`/`unidades`/`formato_data`/`foto_perfil`/`visibilidade_perfil` em `app/`, `web/`,
+`db/migracoes/` = 0 ocorrências, handoff `laco/handoffs/T3/L0-02g-L0-05c.md` do turno anterior). Migração 042
+acrescenta as 5 colunas a `plat.usuario` (idioma_preferido, unidades, formato_data, visibilidade_perfil,
+foto_sha256), todas com `CHECK` de vocabulário fechado. `PUT /api/eu` ganha os 4 campos novos na MESMA
+whitelist de `campos_json` (nunca uma segunda checagem: o mecanismo que já impedia escalar perfil/login é o
+mesmo que agora valida os campos novos). `POST/DELETE /api/eu/foto` reaproveita o adaptador do L0-11
+(`app/objetos.py::guardar`, classe `usuario_foto`) e o MESMO truque de base64 sob cookie que
+`POST /api/org/logo` (L0-07-a) já usa — recorte central 200×200 pelo Pillow (`ImageOps.fit`, não `contain`
+como o logotipo: rosto fica melhor cortado que emoldurado), sem metadado, sem os bytes originais do cliente.
+
+Refutação do próprio item testada e passando: um SVG com `<script>` como foto nunca chega a ser interpretado
+(o Pillow não abre SVG, recusa com `415 formato_nao_aceito` antes de qualquer gravação); tentativa de
+`login`/`perfil`/`papel_id`/`ativo`/`superadmin` no `PUT /api/eu` continua `400 campo_nao_editavel`; e-mail
+fora do domínio do PRÓPRIO inquilino (testado restringindo `demo`, não só o teste unitário de
+`email_permitido`) continua `422 email_dominio` nomeando a lista. Foto acima de 1 MiB é `413 foto_grande`
+(ou `422` quando o próprio limite do corpo em base64 já corta antes). e2e novo em `tests/e2e/test_conta.py`
+(`test_perfil_nome_unidades_foto_na_barra_e_email_fora_do_dominio`) prova edição de nome/unidades, envio de
+foto com aparição na barra lateral SEM recarregar (`#pessoa-foto`), e a mensagem de domínio recusado —
+captura `L0-02-tenant-auth_perfil.png`, verificada visualmente. 20 testes de API novos em
+`tests/api/test_eu.py` + 2 casos novos em `tests/api/cruzado_casos.py` (varredura cruzada A→B de
+`POST/DELETE /api/eu/foto`, mesmo padrão do `org_logo`).
+
+Bloqueio ambiental encontrado e NÃO causado por este item: o fixture `autouse` de sessão
+`limpeza_de_residuos` (`tests/api/conftest.py`) depende de `sessao_plat` (superadmin do inquilino
+`plataforma`, 2FA obrigatório) e o segredo TOTP guardado em `tests/credenciais_totp.txt` não bate mais com
+o que está no banco — bloqueia `pytest` de TODA a suíte de API (não só deste item) até alguém religar o 2FA
+do superadmin pela via legítima. A API completa foi verificada por um script equivalente fora do pytest
+(mesmo `TestClient`, mesmo banco, autenticando como admin do inquilino `demo`, que não exige 2FA) — ver o
+handoff do turno. `docs/openapi.json` e `docs/LIMITES.md` regenerados; `plat-api` (systemd) reiniciado para
+servir o código novo aos e2e (verificado antes e depois: RAM estável, sem incidente). Docs: `MANUAL.md` §3.1a,
+`ARQUITETURA.md`, `docs/PARIDADE.md`. Pendente, nomeado (não prometido como feito): consumo de
+`unidades`/`formato_data` para reformatar número/data em outras telas e uma tela de "perfil de outro
+usuário" que leia `visibilidade_perfil` — nenhuma das duas existe hoje; `idioma_preferido` é preferência
+guardada, a aplicação de fato é o item `L7-10-a-i18n-pt-en-es` (pendente).
+
 ## turno 3, setembro de 2026 (itens L6-01-d-ficha-fonte · L6-01-f-lgpd: ficha do acervo completa + gate de LGPD no "adicionar")
 
 Conferido antes de escrever: a ficha (`GET /api/acervo/{fonte_id}`, migração 021, item anterior) já tinha os

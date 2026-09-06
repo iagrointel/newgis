@@ -50,8 +50,10 @@ body:not(.com-lateral) .lateral { display: none; }
 .lateral nav a:hover { background: var(--painel); }
 .lateral nav a[aria-current="page"] { border-left-color: var(--acento); background: var(--painel); font-weight: 600; }
 .lateral .pessoa { padding: var(--e4); border-top: 1px solid var(--borda); display: grid; gap: var(--e2); }
-.lateral .pessoa a { color: var(--texto); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lateral .pessoa-topo { display: flex; align-items: center; gap: var(--e2); min-width: 0; }
+.lateral .pessoa a { color: var(--texto); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .lateral .pessoa small { color: var(--fraco); display: block; }
+.foto-perfil { border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .principal { padding: var(--e5) var(--e6); max-width: 1280px; width: 100%; }
 .principal > h1 { margin: 0 0 var(--e4); font-size: 1.5rem; letter-spacing: .02em; display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap; }
 .principal > h1 .contagem { font-size: .9rem; color: var(--fraco); font-weight: 400; }

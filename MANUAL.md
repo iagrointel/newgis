@@ -153,6 +153,26 @@ com o botão `Encerrar`; abaixo, `Encerrar as outras`), Convites (vazio) e Token
 (`PUT /api/eu`); e-mail fora dos domínios permitidos pelo inquilino (`dominios_email`) é recusado com
 `422 email_dominio`. O detalhe `privilégios` lista os privilégios da sessão.
 
+### 3.1a Perfil próprio: foto, idioma, unidades, formato de data, visibilidade (item L0-02-g-perfil-usuario)
+
+Captura `tests/e2e/capturas/L0-02-tenant-auth_perfil.png` (`tests/e2e/test_conta.py`,
+`test_perfil_nome_unidades_foto_na_barra_e_email_fora_do_dominio`): o cartão Dados ganha uma foto redonda (ou o
+aviso "sem foto"), os botões `Enviar foto`/`Remover foto`, e quatro campos novos no mesmo formulário — Idioma
+(pt-BR/en/es), Unidades (métrico/imperial), Formato de data (dd/mm/aaaa, mm/dd/aaaa, aaaa-mm-dd) e Visibilidade do
+perfil (visível a quem está no inquilino / privado) — tudo pelo mesmo `PUT /api/eu` que já grava nome e e-mail
+(campos novos na mesma whitelist do servidor; `login`, `perfil`, `papel_id` e `ativo` continuam fora dela — o
+próprio usuário nunca escala o próprio acesso nem troca o login por aqui).
+
+A foto é `POST /api/eu/foto` (JSON `{conteudo: base64}`, mesmo truque de base64 sob cookie que o logotipo da
+organização já usa) e `DELETE /api/eu/foto`: o servidor decodifica, REDESENHA com o Pillow num recorte central
+200×200 (nunca os bytes originais do cliente) e recusa com `415 formato_nao_aceito` qualquer coisa que não seja
+PNG/JPEG/GIF/WEBP de verdade — inclusive um SVG com `<script>`, que o Pillow nunca chega a abrir. Acima de 1 MiB é
+`413 foto_grande`. A foto aparece também na barra lateral (`#pessoa-foto`), ao lado do nome, sem recarregar a
+página. `idioma_preferido` grava a preferência mas a tradução da tela ainda não a segue (isso é o item
+`L7-10-a-i18n-pt-en-es`, pendente); os outros três campos (unidades, formato de data, visibilidade do perfil) só
+persistem — nenhuma tela ainda lê `unidades`/`formato_data` para reformatar número/data, e não existe hoje uma
+tela de "perfil de outro usuário" que leia `visibilidade_perfil`; a landing desses dois é o próximo consumidor.
+
 ### 3.2 Senha
 
 Exige a senha atual e a nova (`PUT /api/eu/senha`). A regra aparece abaixo do campo e é conferida no servidor:

@@ -1,6 +1,10 @@
 /* plat — tela /conta (ADR 0002 seção 15.2): dados, senha (regra ao vivo da política do inquilino), 2FA (QR do servidor
    por DOMPurify, segredo em texto, códigos de recuperação uma vez), sessões, convites. Âncoras #senha e #2fa abrem a
-   seção e mostram o aviso de pendência. */
+   seção e mostram o aviso de pendência.
+   Item L0-02-g-perfil-usuario (auto-atendimento): idioma/unidades/formato de data/visibilidade viajam dentro do
+   MESMO `form-dados` (mesmo PUT /api/eu, campos novos na whitelist do servidor); foto é fora do plat-formulario
+   (não há campo "arquivo" no componente declarativo) — mesmo padrão de web/js/auth/organizacao.js::montarLogo,
+   só que POST/DELETE /api/eu/foto em vez de /api/org/logo. */
 import { obter, enviar, alterar, apagar, mensagemDe } from '../base/api.js';
 import { h, limpar, htmlSeguro, botaoCopiar, marcador } from '../base/dom.js';
 import { carregar, t, formatarData } from '../base/i18n.js';
@@ -9,6 +13,31 @@ import '../base/componentes.js';
 import { pedir } from '../base/componentes.js';
 import { montarLayout, pronto } from '../base/layout.js';
 import { exigirSessao, caminhoPendencia } from './sessao.js';
+
+const IDIOMAS = [
+  { valor: 'pt-BR', rotulo: 'Português (Brasil)' },
+  { valor: 'en', rotulo: 'English' },
+  { valor: 'es', rotulo: 'Español' },
+];
+const FORMATOS_DATA = [
+  { valor: 'dd/mm/aaaa', rotulo: 'dd/mm/aaaa' },
+  { valor: 'mm/dd/aaaa', rotulo: 'mm/dd/aaaa' },
+  { valor: 'aaaa-mm-dd', rotulo: 'aaaa-mm-dd' },
+];
+/* rótulos vêm de t() — precisam do dicionário já carregado, por isso são função (chamada depois de carregar()),
+   nunca constante de módulo (o dicionário chega de um fetch assíncrono, ver base/i18n.js::carregar) */
+function unidadesOpcoes() {
+  return [
+    { valor: 'metrico', rotulo: t('conta.unidades_metrico') },
+    { valor: 'imperial', rotulo: t('conta.unidades_imperial') },
+  ];
+}
+function visibilidadesOpcoes() {
+  return [
+    { valor: 'inquilino', rotulo: t('conta.visibilidade_inquilino') },
+    { valor: 'privado', rotulo: t('conta.visibilidade_privado') },
+  ];
+}
 
 await carregar();
 let usuario = await exigirSessao({ permitirPendencia: true });
@@ -82,6 +111,7 @@ async function carregarResto() {
 
 async function iniciar() {
   mostrarPendencia();
+  montarFoto();
   montarDados();
   montarSenha();
   montar2fa();
@@ -98,16 +128,75 @@ function montarDados() {
     { nome: 'nome', rotulo: t('campo.nome'), tipo: 'texto', obrigatorio: true, padrao: usuario.nome || '', atributos: { maxlength: 128, autocomplete: 'name' } },
     { nome: 'email', rotulo: t('campo.email'), tipo: 'email', padrao: usuario.email || '', atributos: { maxlength: 254, autocomplete: 'email' },
       ajuda: p.dominios.length ? t('campo.email_dominios', { lista: p.dominios.join(', ') }) : undefined },
+    { nome: 'idioma_preferido', rotulo: t('conta.idioma'), tipo: 'select', padrao: usuario.idioma_preferido, opcoes: IDIOMAS,
+      ajuda: t('conta.idioma_ajuda') },
+    { nome: 'unidades', rotulo: t('conta.unidades'), tipo: 'select', padrao: usuario.unidades, opcoes: unidadesOpcoes() },
+    { nome: 'formato_data', rotulo: t('conta.formato_data'), tipo: 'select', padrao: usuario.formato_data, opcoes: FORMATOS_DATA },
+    { nome: 'visibilidade_perfil', rotulo: t('conta.visibilidade'), tipo: 'select', padrao: usuario.visibilidade_perfil, opcoes: visibilidadesOpcoes() },
   ];
   f.botoes = [{ id: 'salvar', rotulo: t('acao.salvar'), tipo: 'submit' }];
   f.addEventListener('enviar', async (e) => {
     f.ocupado = true;
-    const r = await alterar('/api/eu', { nome: e.detail.valores.nome, email: e.detail.valores.email });
+    const v = e.detail.valores;
+    const r = await alterar('/api/eu', {
+      nome: v.nome, email: v.email, idioma_preferido: v.idioma_preferido, unidades: v.unidades,
+      formato_data: v.formato_data, visibilidade_perfil: v.visibilidade_perfil,
+    });
     f.ocupado = false;
     if (r.status === 200) { usuario = r.json; loja.definir({ usuario }); montarLayout({ usuario, ativo: '/conta' }); f.mensagem(t('conta.dados_salvos'), 'ok'); return; }
     if (r.json.erro === 'email_dominio') f.erro('email', mensagemDe(r)); else f.mensagem(mensagemDe(r), 'erro');
   });
 }
+
+/* ---------------------------------------------------------------- foto de perfil (POST/DELETE /api/eu/foto,
+   fora do plat-formulario: mesmo padrão de web/js/auth/organizacao.js::montarLogo) */
+function montarFoto() {
+  const img = document.getElementById('foto-preview');
+  const vazio = document.getElementById('foto-vazio');
+  if (usuario.foto_url) {
+    img.src = usuario.foto_url;
+    img.hidden = false;
+    vazio.hidden = true;
+  } else {
+    img.hidden = true;
+    vazio.hidden = false;
+  }
+}
+
+function lerComoBase64(arquivo) {
+  return new Promise((resolve, reject) => {
+    const leitor = new FileReader();
+    leitor.onload = () => resolve(String(leitor.result).split(',', 2)[1] || '');
+    leitor.onerror = () => reject(leitor.error);
+    leitor.readAsDataURL(arquivo);
+  });
+}
+
+document.getElementById('foto-arquivo').addEventListener('change', async (e) => {
+  const arquivo = e.target.files?.[0];
+  e.target.value = '';
+  if (!arquivo) return;
+  const f = document.getElementById('form-dados');
+  const conteudo = await lerComoBase64(arquivo);
+  const r = await enviar('/api/eu/foto', { conteudo });
+  if (r.status !== 200) { f.mensagem(mensagemDe(r), 'erro'); return; }
+  usuario = { ...usuario, foto_url: r.json.foto_url };
+  loja.definir({ usuario });
+  montarLayout({ usuario, ativo: '/conta' });
+  montarFoto();
+  f.mensagem(t('conta.foto_enviada'), 'ok');
+});
+
+document.getElementById('foto-remover').addEventListener('click', async () => {
+  const f = document.getElementById('form-dados');
+  const r = await apagar('/api/eu/foto');
+  if (r.status !== 200) { f.mensagem(mensagemDe(r), 'erro'); return; }
+  usuario = { ...usuario, foto_url: null };
+  loja.definir({ usuario });
+  montarLayout({ usuario, ativo: '/conta' });
+  montarFoto();
+  f.mensagem(t('conta.foto_removida'), 'ok');
+});
 
 function montarSenha() {
   const f = document.getElementById('form-senha');

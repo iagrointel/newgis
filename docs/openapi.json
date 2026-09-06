@@ -210,6 +210,7 @@
      "eu"
     ],
     "summary": "Editar Eu",
+    "description": "Whitelist `_CAMPOS_EU`: perfil, papel_id, ativo e login NUNCA entram aqui (regra da refutação do item\nL0-02-g — o próprio usuário não escala o próprio perfil de acesso nem troca o login pelo PUT de perfil).",
     "operationId": "editar_eu_api_eu_put",
     "requestBody": {
      "content": {
@@ -240,6 +241,70 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/eu/foto": {
+   "post": {
+    "tags": [
+     "eu"
+    ],
+    "summary": "Enviar Foto",
+    "operationId": "enviar_foto_api_eu_foto_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FotoEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FotoSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   },
+   "delete": {
+    "tags": [
+     "eu"
+    ],
+    "summary": "Remover Foto",
+    "operationId": "remover_foto_api_eu_foto_delete",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FotoSaida"
         }
        }
       }
@@ -8647,11 +8712,18 @@
      }
     ],
     "requestBody": {
-     "required": true,
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/PublicarCamadaEntrada"
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/PublicarCamadaEntrada"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Corpo"
        }
       }
      }
@@ -10968,6 +11040,33 @@
        }
       ],
       "title": "Token"
+     },
+     "idioma_preferido": {
+      "type": "string",
+      "title": "Idioma Preferido"
+     },
+     "unidades": {
+      "type": "string",
+      "title": "Unidades"
+     },
+     "formato_data": {
+      "type": "string",
+      "title": "Formato Data"
+     },
+     "visibilidade_perfil": {
+      "type": "string",
+      "title": "Visibilidade Perfil"
+     },
+     "foto_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Foto Url"
      }
     },
     "additionalProperties": true,
@@ -10981,9 +11080,50 @@
      "origem",
      "privilegios",
      "inquilino",
-     "pendencias"
+     "pendencias",
+     "idioma_preferido",
+     "unidades",
+     "formato_data",
+     "visibilidade_perfil"
     ],
     "title": "Eu"
+   },
+   "FotoEntrada": {
+    "properties": {
+     "conteudo": {
+      "type": "string",
+      "maxLength": 1398117,
+      "minLength": 1,
+      "title": "Conteudo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "conteudo"
+    ],
+    "title": "FotoEntrada"
+   },
+   "FotoSaida": {
+    "properties": {
+     "foto_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Foto Url"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "foto_url"
+    ],
+    "title": "FotoSaida"
    },
    "Grupo": {
     "properties": {

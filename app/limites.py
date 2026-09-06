@@ -157,3 +157,16 @@ ORG_LOGO_LADO = 300                       # canvas quadrado 300×300 (portão do
 ORG_COTA_BYTES_MIN = 100 * 1024 * 1024    # 100 MiB: abaixo disso o próprio inquilino de demonstração não sobe
 ORG_COTA_USUARIOS_MIN = 1
 ORG_COTA_USUARIOS_PADRAO = 2000           # bem acima do maior lote (LOTE_MAX=100) e do uso medido em demo (T3: 59)
+
+# --- perfil próprio do usuário (L0-02-g-perfil-usuario; POST/PUT /api/eu, app/auth/rotas_eu.py): idioma,
+# unidades, formato de data, visibilidade e foto (mesmo padrão do org_logo do L0-07-a — reaproveita
+# app/objetos.py, classe 'usuario_foto', sha256 guardado numa coluna). PERFIL_IDIOMAS é maior que ORG_IDIOMAS
+# de propósito: a APLICAÇÃO da tradução (troca de dicionário no cliente) é o item L7-10-a-i18n-pt-en-es, ainda
+# pendente — guardar a preferência agora não promete tela traduzida hoje.
+PERFIL_IDIOMAS = ("pt-BR", "en", "es")
+PERFIL_UNIDADES = ("metrico", "imperial")
+PERFIL_FORMATOS_DATA = ("dd/mm/aaaa", "mm/dd/aaaa", "aaaa-mm-dd")
+PERFIL_VISIBILIDADES = ("privado", "inquilino")
+PERFIL_FOTO_BYTES_MAX = 1 * 1024 * 1024   # 1 MiB (portão do item: "foto > 1 MB recusada")
+PERFIL_FOTO_PIXELS_MAX = 25_000_000       # mesma defesa de bomba de descompressão do org_logo/miniatura
+PERFIL_FOTO_LADO = 200                    # canvas quadrado 200×200 (hipótese do item)

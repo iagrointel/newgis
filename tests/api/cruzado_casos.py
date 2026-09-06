@@ -279,6 +279,16 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/eu/convites"): Caso(
         lambda p: "/api/eu/convites", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
     ),
+    # ---- L0-02-g-perfil-usuario: foto de perfil, mesmo padrão do POST/DELETE /api/org/logo acima
+    ("POST", "/api/eu/foto"): Caso(
+        lambda p: "/api/eu/foto",
+        lambda p: {"conteudo": _PNG_1X1_B64},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+        limpar=lambda p, j: p.sessao_a.delete("/api/eu/foto"),
+    ),
+    ("DELETE", "/api/eu/foto"): Caso(
+        lambda p: "/api/eu/foto", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
     # ---- vocabulário e papéis
     ("GET", "/api/privilegios"): Caso(
         lambda p: "/api/privilegios", proprio=True, aceita=frozenset({200}), verificar=_sem_marca

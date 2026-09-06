@@ -1,12 +1,34 @@
 """/api/eu (ADR 0002 seções 6.1, 6.3, 7.3, 14): objeto completo; PUT com campo não editável = 400; e-mail fora do
 domínio = 422; troca de senha com histórico (5 últimas = 422 historico) e 12 senhas fracas com detalhe.regra;
 2FA: iniciar/confirmar/desativar/códigos; segredo TOTP nunca em claro no banco (SELECT direto na coluna); token
-não mexe em nada disso (403 so_sessao)."""
+não mexe em nada disso (403 so_sessao).
+
+Item L0-02-g-perfil-usuario (auto-atendimento — distinto do L0-02-f-tela-usuarios, que é o ADMIN editando OUTRO
+usuário): preferências próprias (idioma, unidades, formato de data, visibilidade) por PUT /api/eu, e foto de
+perfil por POST/DELETE /api/eu/foto (mesmo adaptador de arquivo do L0-11, mesmo padrão de POST /api/org/logo).
+Refutação do item: SVG com script como foto (tem de ser recodificada — na prática, recusada porque o Pillow
+nunca abre SVG), e-mail de domínio fora da lista do PRÓPRIO inquilino, login/perfil/papel/ativo continuam fora
+da whitelist do PUT."""
+
+import base64
+import io
 
 import pytest
+from PIL import Image
 
 from app.auth import totp
 from tests.api.conftest import com_token, ligar_2fa, novo_cliente
+
+
+def _png(largura=64, altura=64, cor=(30, 90, 200)) -> bytes:
+    im = Image.new("RGB", (largura, altura), cor)
+    buf = io.BytesIO()
+    im.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def _b64(dados: bytes) -> str:
+    return base64.b64encode(dados).decode()
 
 SENHAS_FRACAS = [
     ("", "minimo"),
@@ -58,6 +80,118 @@ def test_put_eu_campo_nao_editavel_e_dominio(sessao_a):
     assert r.status_code == 400 and r.json()["erro"] == "campo_nao_editavel"
     r = sessao_a.put("/api/eu", json={"nome": "Administrador demo", "email": "admin@demo.exemplo"})
     assert r.status_code == 200 and r.json()["email"] == "admin@demo.exemplo"
+
+
+@pytest.mark.parametrize(
+    "campo,valor",
+    [
+        ("login", "outro-login"), ("perfil", "admin"), ("papel_id", 1), ("ativo", False), ("superadmin", True),
+        ("foto_sha256", "0" * 64),  # tenta apontar a própria foto p/ um sha256 alheio sem passar pelo recorte
+    ],
+)
+def test_put_eu_nunca_escala_acesso_nem_troca_login(usuarios_a, campo, valor):
+    """Refutação do item L0-02-g: 'login novo no PUT' e qualquer campo de acesso próprio — a whitelist de
+    `campos_json` (`_CAMPOS_EU`) recusa ANTES de tocar o banco (400), então não existe caminho de 'aceito e
+    ignorado silenciosamente': o pedido inteiro é rejeitado e nada muda. `foto_sha256` também fica de fora da
+    whitelist: a única forma de a coluna mudar é `POST /api/eu/foto`, que sempre recorta a imagem pelo Pillow —
+    nunca um sha256 escrito à mão apontando para um objeto que o usuário não enviou."""
+    c, u, _senha = usuarios_a.sessao("editor")
+    r = c.put("/api/eu", json={"nome": u["nome"], campo: valor})
+    assert r.status_code == 400 and r.json()["erro"] == "campo_nao_editavel" and campo in r.json()["detalhe"]
+    depois = c.get("/api/eu").json()
+    assert depois["login"] == u["login"] and depois["perfil"] == u["perfil"] and depois["ativo"] == u["ativo"]
+    assert depois["superadmin"] == u["superadmin"] and depois["foto_url"] is None
+
+
+def test_put_eu_email_fora_do_dominio_do_proprio_inquilino(sessao_a):
+    """Portão do item: 'e-mail com domínio fora da lista recusado com mensagem'. Restringe os domínios do
+    PRÓPRIO inquilino (demo) e confirma que a mensagem nomeia a lista — não é só o teste unitário de
+    `email_permitido` (tests/unit/test_politica.py), é o caminho HTTP inteiro."""
+    original = sessao_a.get("/api/org").json()
+    from tests.api.test_org import _corpo
+
+    try:
+        corpo = _corpo(original)
+        corpo["auth"] = {**original["auth"], "dominios_email": ["exemplo-permitido.com.br"]}
+        assert sessao_a.put("/api/org", json=corpo).status_code == 200
+        antes = sessao_a.get("/api/eu").json()["email"]
+        r = sessao_a.put("/api/eu", json={"email": "gente@fora-da-lista.com"})
+        assert r.status_code == 422 and r.json()["erro"] == "email_dominio", r.text
+        assert r.json()["detalhe"]["dominios"] == ["exemplo-permitido.com.br"]
+        assert sessao_a.get("/api/eu").json()["email"] == antes  # nada mudou
+    finally:
+        sessao_a.put("/api/org", json=_corpo(original))
+
+
+def test_put_eu_preferencias_idioma_unidades_formato_visibilidade(usuarios_a):
+    c, u, _senha = usuarios_a.sessao("editor")
+    original = c.get("/api/eu").json()
+    assert original["idioma_preferido"] == "pt-BR" and original["unidades"] == "metrico"
+    assert original["formato_data"] == "dd/mm/aaaa" and original["visibilidade_perfil"] == "inquilino"
+    novo = {
+        "idioma_preferido": "en", "unidades": "imperial",
+        "formato_data": "mm/dd/aaaa", "visibilidade_perfil": "privado",
+    }
+    r = c.put("/api/eu", json=novo)
+    assert r.status_code == 200, r.text
+    assert r.json()["idioma_preferido"] == "en" and r.json()["unidades"] == "imperial"
+    assert r.json()["formato_data"] == "mm/dd/aaaa" and r.json()["visibilidade_perfil"] == "privado"
+    relido = c.get("/api/eu").json()  # persistiu (nova requisição, novo Auth resolvido do zero)
+    assert relido["idioma_preferido"] == "en" and relido["visibilidade_perfil"] == "privado"
+    # nome não enviado neste PUT: continua o mesmo (não foi zerado)
+    assert relido["nome"] == original["nome"]
+
+
+@pytest.mark.parametrize(
+    "campo,invalido",
+    [
+        ("idioma_preferido", "klingon"), ("unidades", "jarda"),
+        ("formato_data", "dd-mm"), ("visibilidade_perfil", "publico"),
+    ],
+)
+def test_put_eu_preferencias_invalidas_422(usuarios_a, campo, invalido):
+    c, u, _senha = usuarios_a.sessao("visualizador")
+    r = c.put("/api/eu", json={campo: invalido})
+    assert r.status_code == 422 and r.json()["erro"] == "validacao" and r.json()["detalhe"]["campo"] == campo
+
+
+def test_foto_enviar_ler_e_remover(usuarios_a):
+    c, u, _senha = usuarios_a.sessao("editor")
+    assert c.get("/api/eu").json()["foto_url"] is None
+    r = c.post("/api/eu/foto", json={"conteudo": _b64(_png())})
+    assert r.status_code == 200, r.text
+    url = r.json()["foto_url"]
+    assert url == c.get("/api/eu").json()["foto_url"]
+    sha = url.split("/api/arquivos/", 1)[1].split("?", 1)[0]
+    assert len(sha) == 64
+    r_obj = c.get(url)
+    assert r_obj.status_code == 200 and r_obj.headers["content-type"] == "image/png"
+    im = Image.open(io.BytesIO(r_obj.content))
+    assert im.size == (200, 200) and im.format == "PNG"
+    r_del = c.delete("/api/eu/foto")
+    assert r_del.status_code == 200 and r_del.json()["foto_url"] is None
+    assert c.get("/api/eu").json()["foto_url"] is None
+
+
+def test_foto_svg_com_script_e_recusada(usuarios_a):
+    """Refutação do item: 'adversário envia SVG com script como foto'. O Pillow não sabe abrir SVG (não é um
+    formato raster) — a rota recusa com 415 ANTES de qualquer gravação no Garage; não existe caminho em que o
+    conteúdo do SVG chegue a ser servido de volta como se fosse uma imagem."""
+    c, u, _senha = usuarios_a.sessao("visualizador")
+    svg = b'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(document.cookie)</script></svg>'
+    r = c.post("/api/eu/foto", json={"conteudo": _b64(svg)})
+    assert r.status_code == 415 and r.json()["erro"] == "formato_nao_aceito", r.text
+    assert c.get("/api/eu").json()["foto_url"] is None
+
+
+def test_foto_acima_de_1mb_recusada(usuarios_a):
+    c, u, _senha = usuarios_a.sessao("visualizador")
+    grande = b"\x00" * (1024 * 1024 + 1024)
+    r = c.post("/api/eu/foto", json={"conteudo": _b64(grande)})
+    assert r.status_code in (413, 422), r.status_code
+    if r.status_code == 413:
+        assert r.json()["erro"] == "foto_grande"
+    assert c.get("/api/eu").json()["foto_url"] is None
 
 
 @pytest.fixture(scope="module")
@@ -157,6 +291,8 @@ def test_token_nao_mexe_em_conta(cliente, token_a):
         ("GET", "/api/eu/sessoes"),
         ("POST", "/api/eu/2fa/iniciar"),
         ("GET", "/api/eu/convites"),
+        ("POST", "/api/eu/foto"),
+        ("DELETE", "/api/eu/foto"),
         ("GET", "/api/tokens"),
         ("POST", "/api/tokens"),
     ):

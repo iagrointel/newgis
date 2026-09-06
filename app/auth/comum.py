@@ -17,6 +17,7 @@ SQL_USUARIO = """
 SELECT u.id, u.login, u.nome, u.email, u.perfil, u.superadmin, u.ativo, u.origem, u.totp_ativo, u.trocar_senha,
        u.bloqueado_ate, u.ultimo_login, u.ultimo_ip, u.criado_em, u.papel_id, u.senha_alterada_em,
        cardinality(coalesce(u.codigos_recuperacao, '{}'::text[])) AS codigos_restantes,
+       u.idioma_preferido, u.unidades, u.formato_data, u.visibilidade_perfil, u.foto_sha256,
        p.nome AS papel_nome
 FROM plat.usuario u LEFT JOIN plat.papel_personalizado p ON p.id = u.papel_id
 """
@@ -169,9 +170,17 @@ CONFIG_PUBLICA = ("centro", "zoom", "basemap", "srid_padrao", "cor", "logo")
 
 
 def eu_json(cur, auth: Auth) -> dict:
-    """Objeto de /api/eu (ADR 0002 seção 14): usuário completo + privilégios + inquilino + pendências + sessão/token."""
+    """Objeto de /api/eu (ADR 0002 seção 14): usuário completo + privilégios + inquilino + pendências + sessão/token.
+    Item L0-02-g-perfil-usuario: idioma/unidades/formato_data/visibilidade_perfil/foto_url só aparecem AQUI
+    (nunca em `usuario_json`, que a listagem de admin em rotas_usuarios.py também usa) — são preferências do
+    PRÓPRIO usuário, não um dado que o admin edita sobre outro."""
     r = usuario_ou_404(cur, auth.usuario_id)
     u = usuario_json(r, completo=True)
+    u["idioma_preferido"] = r["idioma_preferido"]
+    u["unidades"] = r["unidades"]
+    u["formato_data"] = r["formato_data"]
+    u["visibilidade_perfil"] = r["visibilidade_perfil"]
+    u["foto_url"] = f"/api/arquivos/{r['foto_sha256']}?classe=usuario_foto" if r.get("foto_sha256") else None
     u["privilegios"] = list(auth.privilegios)
     config_publica = {k: v for k, v in (auth.config or {}).items() if k in CONFIG_PUBLICA}
     config_publica["auth"] = auth.politica.publica()

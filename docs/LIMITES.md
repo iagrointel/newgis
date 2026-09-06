@@ -169,3 +169,15 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ORG_COTA_BYTES_MIN` | `104857600` | 100 MiB: abaixo disso o próprio inquilino de demonstração não sobe |
 | `ORG_COTA_USUARIOS_MIN` | `1` | — |
 | `ORG_COTA_USUARIOS_PADRAO` | `2000` | bem acima do maior lote (LOTE_MAX=100) e do uso medido em demo (T3: 59) |
+
+## perfil próprio do usuário (L0-02-g-perfil-usuario; POST/PUT /api/eu, app/auth/rotas_eu.py): idioma,
+
+| nome | valor | explicação |
+|---|---|---|
+| `PERFIL_IDIOMAS` | `('pt-BR', 'en', 'es')` | — |
+| `PERFIL_UNIDADES` | `('metrico', 'imperial')` | — |
+| `PERFIL_FORMATOS_DATA` | `('dd/mm/aaaa', 'mm/dd/aaaa', 'aaaa-mm-dd')` | — |
+| `PERFIL_VISIBILIDADES` | `('privado', 'inquilino')` | — |
+| `PERFIL_FOTO_BYTES_MAX` | `1048576` | 1 MiB (portão do item: "foto > 1 MB recusada") |
+| `PERFIL_FOTO_PIXELS_MAX` | `25000000` | mesma defesa de bomba de descompressão do org_logo/miniatura |
+| `PERFIL_FOTO_LADO` | `200` | canvas quadrado 200×200 (hipótese do item) |

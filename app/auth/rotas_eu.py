@@ -1,10 +1,28 @@
-"""/api/eu: a própria conta (dados, senha, sessões, 2FA, convites). Tudo sob sessão, exceto GET /api/eu (S/T).
-ADR 0002 seções 5.1, 6.3, 7.3, 14."""
+"""/api/eu: a própria conta (dados, senha, sessões, 2FA, convites, perfil). Tudo sob sessão, exceto GET /api/eu
+(S/T). ADR 0002 seções 5.1, 6.3, 7.3, 14.
+
+Item L0-02-g-perfil-usuario (auto-atendimento, distinto do L0-02-f-tela-usuarios que é o ADMIN editando OUTRO
+usuário): `PUT /api/eu` ganha idioma_preferido/unidades/formato_data/visibilidade_perfil, sempre pela MESMA
+whitelist de `campos_json` que já protegia nome/email — perfil, papel_id, ativo e login continuam fora dela,
+então a defesa contra auto-escalada (regra da refutação do item) é o mesmo mecanismo, não um novo. `POST/DELETE
+/api/eu/foto` reaproveita o adaptador genérico de arquivo do L0-11 (`app/objetos.py::guardar`, classe
+`usuario_foto`) e o MESMO truque de base64 sob JSON que `POST /api/org/logo` já usa (CSRF sob cookie de sessão
+exige `application/json` em todo verbo de escrita, ADR 0002 seção 5.3): a imagem é revalidada e REDESENHADA pelo
+Pillow (recorte 200×200, sem EXIF/ICC) antes de gravar — nunca os bytes originais do cliente, então um SVG com
+script (ou qualquer coisa que não seja PNG/JPEG/GIF/WEBP de verdade) nunca chega a ser interpretado: o Pillow
+recusa abrir e a rota devolve 415 antes de qualquer gravação."""
+
+import base64
+import binascii
+import io
+import warnings
 
 import psycopg2
 from fastapi import APIRouter, Body, Request, Response
+from PIL import Image, ImageOps
+from pydantic import Field
 
-from app import db, limites, senha
+from app import db, limites, objetos, senha
 from app.auth import totp
 from app.auth.comum import campos_json, erro_do_banco, eu_json, registrar_evento
 from app.auth.modelos import (
@@ -13,6 +31,8 @@ from app.auth.modelos import (
     Convite,
     Eu,
     Iniciar2FA,
+    Modelo,
+    Saida,
     SenhaCodigoEntrada,
     SenhaEntrada,
     SenhaSoEntrada,
@@ -25,6 +45,8 @@ from app.settings import settings
 
 router = APIRouter(prefix="/api/eu", tags=["eu"])
 S = {"x-auth": "S", "x-privilegio": "proprio"}
+_CAMPOS_EU = {"nome", "email", "idioma_preferido", "unidades", "formato_data", "visibilidade_perfil"}
+_FORMATOS_FOTO = {"PNG", "JPEG", "GIF", "WEBP"}
 
 
 def _so_local(auth: Auth) -> None:
@@ -48,9 +70,18 @@ def eu(auth: Auth = autenticado(escopo_token=None, permitir_pendencia=True)):
         return eu_json(cur, auth)
 
 
+def _opcao_ok(campos: dict, campo: str, opcoes: tuple[str, ...]) -> str | None:
+    valor = campos.get(campo)
+    if valor is not None and valor not in opcoes:
+        raise ErroAPI(422, "validacao", f"{campo} precisa ser um de {list(opcoes)}", {"campo": campo})
+    return valor
+
+
 @router.put("", response_model=Eu, response_model_exclude_unset=True, openapi_extra=S)
 def editar_eu(request: Request, corpo: dict = Body(...), auth: Auth = autenticado(so_sessao=True)):
-    campos = campos_json(corpo, {"nome", "email"})
+    """Whitelist `_CAMPOS_EU`: perfil, papel_id, ativo e login NUNCA entram aqui (regra da refutação do item
+    L0-02-g — o próprio usuário não escala o próprio perfil de acesso nem troca o login pelo PUT de perfil)."""
+    campos = campos_json(corpo, _CAMPOS_EU)
     if "email" in campos and campos["email"] is not None and not email_permitido(campos["email"], auth.politica):
         raise ErroAPI(
             422,
@@ -61,16 +92,113 @@ def editar_eu(request: Request, corpo: dict = Body(...), auth: Auth = autenticad
     nome = (campos.get("nome") or auth.nome).strip()
     if not nome:
         raise ErroAPI(422, "validacao", "nome não pode ser vazio", {"campo": "nome"})
+    idioma = _opcao_ok(campos, "idioma_preferido", limites.PERFIL_IDIOMAS)
+    unidades = _opcao_ok(campos, "unidades", limites.PERFIL_UNIDADES)
+    formato_data = _opcao_ok(campos, "formato_data", limites.PERFIL_FORMATOS_DATA)
+    visibilidade = _opcao_ok(campos, "visibilidade_perfil", limites.PERFIL_VISIBILIDADES)
     with db.db(auth.contexto()) as cur:
         cur.execute(
-            "UPDATE plat.usuario SET nome = %s, email = CASE WHEN %s THEN %s ELSE email END WHERE id = %s",
-            (nome[:200], "email" in campos, campos.get("email"), auth.usuario_id),
+            "UPDATE plat.usuario SET nome = %s, email = CASE WHEN %s THEN %s ELSE email END, "
+            "idioma_preferido = CASE WHEN %s THEN %s ELSE idioma_preferido END, "
+            "unidades = CASE WHEN %s THEN %s ELSE unidades END, "
+            "formato_data = CASE WHEN %s THEN %s ELSE formato_data END, "
+            "visibilidade_perfil = CASE WHEN %s THEN %s ELSE visibilidade_perfil END "
+            "WHERE id = %s",
+            (
+                nome[:200],
+                "email" in campos, campos.get("email"),
+                "idioma_preferido" in campos, idioma,
+                "unidades" in campos, unidades,
+                "formato_data" in campos, formato_data,
+                "visibilidade_perfil" in campos, visibilidade,
+                auth.usuario_id,
+            ),
         )
         registrar_evento(
             cur, request, "usuarios/atualizar", "usuario", auth.usuario_id, {"campos": sorted(campos), "proprio": True}
         )
         auth.nome = nome
         return eu_json(cur, auth)
+
+
+# ---------------------------------------------------------------- foto de perfil (reaproveita o L0-11, mesmo
+# padrão de app/auth/rotas_org.py::org_logo_enviar/remover)
+class FotoEntrada(Modelo):
+    conteudo: str = Field(min_length=1, max_length=limites.PERFIL_FOTO_BYTES_MAX * 4 // 3 + 16)
+
+
+class FotoSaida(Saida):
+    foto_url: str | None
+
+
+def _decodificar_base64_foto(conteudo: str) -> bytes:
+    if len(conteudo) * 3 // 4 > limites.PERFIL_FOTO_BYTES_MAX + 4:
+        raise ErroAPI(413, "foto_grande", f"foto acima de {limites.PERFIL_FOTO_BYTES_MAX // 1024} KB")
+    if conteudo.startswith("data:"):
+        conteudo = conteudo.split(",", 1)[-1]
+    try:
+        dados = base64.b64decode(conteudo, validate=True)
+    except (binascii.Error, ValueError) as e:
+        raise ErroAPI(422, "validacao", "conteudo precisa ser base64 válido", {"campo": "conteudo"}) from e
+    if len(dados) > limites.PERFIL_FOTO_BYTES_MAX:
+        raise ErroAPI(413, "foto_grande", f"foto acima de {limites.PERFIL_FOTO_BYTES_MAX // 1024} KB")
+    return dados
+
+
+def _normalizar_foto(dados: bytes) -> bytes:
+    """Bytes de PNG/JPEG/GIF/WEBP → PNG 200×200 (recorte central, sem letterbox — diferente do contain do
+    org_logo: um rosto fica melhor cortado que emoldurado), sem metadado. Um SVG (ou qualquer coisa que não seja
+    imagem raster de verdade) nunca abre no Pillow e cai no `except Exception` abaixo → 415, ANTES de qualquer
+    gravação: é a defesa contra a refutação do item ("SVG com script como foto")."""
+    if len(dados) > limites.PERFIL_FOTO_BYTES_MAX:
+        raise ErroAPI(413, "foto_grande", f"foto acima de {limites.PERFIL_FOTO_BYTES_MAX // 1024} KB")
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            im = Image.open(io.BytesIO(dados))
+            formato = (im.format or "").upper()
+            if formato not in _FORMATOS_FOTO:
+                raise ErroAPI(415, "formato_nao_aceito", "só PNG, JPEG, GIF ou WEBP", {"formato": formato or None})
+            largura, altura = im.size
+            if largura * altura > limites.PERFIL_FOTO_PIXELS_MAX:
+                raise ErroAPI(422, "imagem_grande", "imagem com pixels demais",
+                              {"largura": largura, "altura": altura, "maximo_px": limites.PERFIL_FOTO_PIXELS_MAX})
+            im.load()
+            im = ImageOps.exif_transpose(im)
+            im = im.convert("RGBA")
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning) as e:
+        raise ErroAPI(422, "imagem_grande", "imagem com pixels demais",
+                      {"maximo_px": limites.PERFIL_FOTO_PIXELS_MAX}) from e
+    except ErroAPI:
+        raise
+    except Exception as e:  # noqa: BLE001 — Pillow não abriu: não é imagem aceita (inclusive SVG)
+        raise ErroAPI(415, "formato_nao_aceito", "só PNG, JPEG, GIF ou WEBP", {"motivo": str(e)[:200]}) from e
+    lado = limites.PERFIL_FOTO_LADO
+    quadro = ImageOps.fit(im, (lado, lado), method=Image.Resampling.LANCZOS)
+    saida = io.BytesIO()
+    quadro.save(saida, format="PNG", optimize=True)
+    return saida.getvalue()
+
+
+@router.post("/foto", response_model=FotoSaida, openapi_extra=S)
+def enviar_foto(corpo: FotoEntrada, request: Request, auth: Auth = autenticado(so_sessao=True)):
+    dados = _decodificar_base64_foto(corpo.conteudo)
+    png = _normalizar_foto(dados)
+    with db.db(auth.contexto()) as cur:
+        o = objetos.guardar(cur, "usuario_foto", png, "image/png", usuario_id=auth.usuario_id)
+        cur.execute("UPDATE plat.usuario SET foto_sha256 = %s WHERE id = %s", (o["sha256"], auth.usuario_id))
+        registrar_evento(
+            cur, request, "usuarios/foto_enviar", "usuario", auth.usuario_id, {"sha256": o["sha256"], "proprio": True}
+        )
+    return {"foto_url": f"/api/arquivos/{o['sha256']}?classe=usuario_foto"}
+
+
+@router.delete("/foto", response_model=FotoSaida, openapi_extra=S)
+def remover_foto(request: Request, auth: Auth = autenticado(so_sessao=True)):
+    with db.db(auth.contexto()) as cur:
+        cur.execute("UPDATE plat.usuario SET foto_sha256 = NULL WHERE id = %s", (auth.usuario_id,))
+        registrar_evento(cur, request, "usuarios/foto_remover", "usuario", auth.usuario_id, {"proprio": True})
+    return {"foto_url": None}
 
 
 @router.put("/senha", status_code=204, response_class=Response, openapi_extra=S)

@@ -18,6 +18,14 @@
     <div id="pendencia"></div>
     <section class="cartao" id="dados" aria-labelledby="t-dados">
       <h2 id="t-dados" data-i18n="conta.dados">Dados</h2>
+      <div class="botoes">
+        <img id="foto-preview" class="foto-perfil" alt="" width="96" height="96" hidden>
+        <span id="foto-vazio" class="fraco" data-i18n="conta.foto_sem">sem foto</span>
+        <label class="botao pequeno" for="foto-arquivo"><span data-i18n="conta.foto_enviar">Enviar foto</span>
+          <input type="file" id="foto-arquivo" accept="image/png,image/jpeg,image/gif,image/webp" hidden></label>
+        <button type="button" id="foto-remover" class="pequeno perigo" data-i18n="conta.foto_remover">Remover foto</button>
+      </div>
+      <p class="fraco" data-i18n="conta.foto_ajuda">PNG, JPEG, GIF ou WEBP, até 1 MB; a imagem é recortada num quadro de 200×200</p>
       <plat-formulario id="form-dados"></plat-formulario>
       <details class="espaco"><summary data-i18n="conta.privilegios">privilégios</summary><ul class="privilegios-lista espaco" id="lista-privilegios"></ul></details>
     </section>

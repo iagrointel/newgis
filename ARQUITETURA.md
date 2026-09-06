@@ -866,3 +866,79 @@ reconheça como já aplicadas (mesmo nome, mesmo sha) e pule sem reaplicar.
 
 Limite desta fatia: sem classificação por COLUNA em `plat.acervo_camada` (só por nome, ainda); sem tela
 (L6-01-c).
+
+## 17. Perfil próprio do usuário (item L0-02-g-perfil-usuario)
+
+Filho do L0-02-tenant-auth: a tela `/conta` (auto-atendimento) já existia; o L0-02-f-tela-usuarios é o irmão
+que dá ao ADMIN uma tela para editar OUTRO usuário (`/admin/usuarios`, `app/auth/rotas_usuarios.py`) — este
+item nunca toca naquele arquivo, é só sobre o PRÓPRIO usuário.
+
+**`plat.usuario` ganha 5 colunas (migração 042)**: `idioma_preferido`, `unidades`, `formato_data`,
+`visibilidade_perfil` (texto com `CHECK` de vocabulário fechado, `NOT NULL DEFAULT`) e `foto_sha256`
+(nullable, `CHECK` de formato hex64 — sem `FK` para `plat.arquivo`: mesmo padrão não-normalizado que
+`plat.tenant.config->logo` já usa desde o L0-07-a, porque o valor é só uma referência de leitura, nunca uma
+junção). `app/auth/comum.py::SQL_USUARIO` ganhou as 5 colunas no `SELECT`, mas só `eu_json()` (não
+`usuario_json()`, que `rotas_usuarios.py` também chama para a listagem do admin) as expõe — são
+preferências do PRÓPRIO usuário, nunca um campo que o admin vê/edita sobre outro. `app/auth/modelos.py::Eu`
+(não `Usuario`) ganha os campos correspondentes.
+
+**`PUT /api/eu` (`app/auth/rotas_eu.py::editar_eu`)**: a whitelist de `campos_json` (`_CAMPOS_EU`) cresce de
+`{nome, email}` para incluir `idioma_preferido, unidades, formato_data, visibilidade_perfil` — o mesmo
+mecanismo (não um novo) continua recusando `login`/`perfil`/`papel_id`/`ativo`/`superadmin` com
+`400 campo_nao_editavel` antes de tocar o banco. Cada campo novo é validado contra a tupla correspondente em
+`app/limites.py` (`PERFIL_IDIOMAS`, `PERFIL_UNIDADES`, `PERFIL_FORMATOS_DATA`, `PERFIL_VISIBILIDADES`) por
+`_opcao_ok()`, que devolve `422 validacao` nomeando o campo. O `UPDATE` usa o mesmo padrão
+`CASE WHEN %s THEN %s ELSE coluna END` que o e-mail já usava, um `%s` de presença por campo — só os campos
+que vieram no corpo mudam, os outros mantêm o valor atual (permite `PUT` parcial sem reler o estado antes).
+
+`PERFIL_IDIOMAS = ('pt-BR', 'en', 'es')` é maior que `ORG_IDIOMAS = ('pt-BR',)` DE PROPÓSITO: guardar a
+preferência não promete tela traduzida — isso é o item `L7-10-a-i18n-pt-en-es` (pendente); o campo existe
+para não obrigar uma segunda migração quando aquele item chegar.
+
+**`POST/DELETE /api/eu/foto`**: reaproveita literalmente o padrão de `POST/DELETE /api/org/logo`
+(`app/auth/rotas_org.py`, item L0-07-a) — JSON `{"conteudo": "<base64>"}` sob cookie de sessão (o CSRF do
+ADR 0002 §5.3 exige `application/json` em todo verbo de escrita; bytes crus ficariam reservados à rota de
+token de serviço `POST /api/arquivos`), decodificado e limitado a `PERFIL_FOTO_BYTES_MAX` (1 MiB) ANTES de
+tentar abrir como imagem, e então revalidado/REDESENHADO pelo Pillow: `im.load()` dentro de
+`warnings.catch_warnings()` com `DecompressionBombWarning` como erro (mesma defesa da miniatura/logo),
+`formato not in {'PNG','JPEG','GIF','WEBP'}` → `415`, `EXIF` removido (`exif_transpose`) e a imagem final é
+sempre um PNG nascido do Pillow, nunca os bytes do cliente — por isso um SVG com `<script>` nunca é servido
+de volta como imagem: o Pillow simplesmente não sabe abrir SVG (não é raster), cai no `except Exception` e
+vira `415` antes de qualquer gravação em `app/objetos.py::guardar` (classe `usuario_foto`, sem `item_id`:
+mesmo objeto genérico por conteúdo que o logo usa, dedup por sha256 dentro da classe).
+
+Única diferença de propósito vs. o logo: `ImageOps.fit(im, (200, 200))` (recorte central que preenche o
+quadro) em vez de `ImageOps.contain` (encaixa sem cortar, com fundo transparente) — um rosto cortado fica
+melhor que emoldurado com barras; o logotipo de uma organização, ao contrário, não pode perder conteúdo nas
+bordas. `PERFIL_FOTO_LADO = 200` (a hipótese do item), `ORG_LOGO_LADO = 300` — números diferentes por
+propósitos diferentes, não um esquecimento.
+
+**Front**: `web/js/auth/conta.js::montarFoto()`/`lerComoBase64()`/os dois `addEventListener` de
+`#foto-arquivo`/`#foto-remover` são uma cópia quase literal de
+`web/js/auth/organizacao.js::montarLogo()` (mesmo padrão, endpoint diferente). `web/js/base/layout.js::
+montarLayout()` ganha um `<img id="pessoa-foto" class="foto-perfil">` opcional dentro de um novo
+`.pessoa-topo` (sem foto: nenhum `<img>`, nunca um ícone genérico fingindo ser a foto de alguém) — CSS novo
+em `web/style.css` (`.foto-perfil { border-radius: 50%; object-fit: cover }`).
+
+**Cobertura de teste**: `tests/api/test_eu.py` ganhou os testes de preferências (edição válida/inválida,
+persistência), foto (enviar/ler/remover, SVG recusado, >1 MiB recusado), escalada de acesso
+(`login`/`perfil`/`papel_id`/`ativo`/`superadmin` continuam fora da whitelist) e domínio de e-mail do PRÓPRIO
+inquilino (não só o teste unitário de `email_permitido` em `tests/unit/test_politica.py` — o caminho HTTP
+inteiro, restringindo e restaurando o inquilino `demo`). `tests/api/cruzado_casos.py` ganhou os dois casos de
+`POST/DELETE /api/eu/foto` na varredura cruzada A→B (mesmo padrão do `org_logo`). `tests/e2e/test_conta.py`
+ganhou `test_perfil_nome_unidades_foto_na_barra_e_email_fora_do_dominio` (captura
+`L0-02-tenant-auth_perfil.png`, verificada visualmente: foto redonda no cartão Dados E na barra lateral,
+quatro selects novos, mensagem de domínio recusado no campo).
+
+**Bloqueio ambiental encontrado (não causado por este item)**: o fixture `autouse` de sessão
+`limpeza_de_residuos` (`tests/api/conftest.py`) depende de `sessao_plat` (superadmin do inquilino
+`plataforma`), e o segredo TOTP guardado em `tests/credenciais_totp.txt` não bate mais com o que está no
+banco — toda tentativa de login (mesmo com o retry anti-replay já embutido em `conftest.entrar`) devolve
+`401 codigo_invalido`, e tentativas repetidas (inclusive as deste turno, ao diagnosticar) acionam o bloqueio
+de força bruta (`423`, ver `plat.auth_falha`). Isso bloqueia `pytest tests/api/` inteiro — não só este item —
+até alguém religar o 2FA do superadmin pela via legítima (login com o segredo certo, ou um admin da
+plataforma desligando e religando o fator). A cobertura de API acima foi confirmada por um script equivalente
+fora do pytest, usando o MESMO `TestClient` e o MESMO banco, autenticado como admin do inquilino `demo` (que
+não exige 2FA) — suficiente porque nenhuma rota nova deste item depende do superadmin. Os e2e (que batem no
+serviço `plat-api` ao vivo, não no `TestClient`) não são afetados por este bloqueio; o serviço foi reiniciado
+uma vez (`systemctl restart plat-api`) para servir o código novo, com RAM conferida antes e depois.
