@@ -44,7 +44,12 @@ LIMITE_WORKER_S = 90
 GRACA_CANCELAMENTO_S = 30
 GRACA_KILL_S = 10
 ESPERA_PARADA_S = 20
-LOCK_PESADO = "plat.job.pesado"
+# "1 pesado por vez" é por INSTALAÇÃO, não por banco: o advisory lock é global no PostgreSQL, e com o
+# nome fixo "plat.job.pesado" o worker de homologação (item L7-31) e o de cada trilha isolada disputavam a
+# mesma vaga com o worker de produção — job pesado de uma base ficava pendente esperando outra base
+# terminar (medido em 06/09: carga de ingestão parada 180 s com a fila da própria base vazia). Em produção
+# o schema é `plat` e o nome do lock continua exatamente o mesmo de antes.
+LOCK_PESADO = f"{settings.PLAT_SCHEMA}.job.pesado"
 UTC = datetime.UTC
 
 
