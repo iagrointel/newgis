@@ -115,8 +115,8 @@ Alternativa a `feições do usuário`: o id vem de `feature.id` ou de uma propri
 - A reescrita de schema de `app/schema_ambiente.py` é infraestrutura de que este item depende, e o item abriu a
   primeira exceção a ela ao usar `psycopg2.extras.execute_values` (que entrega `bytes` ao cursor). A exceção foi
   fechada como classe, não como remendo: ver `app/schema_ambiente.MixinReescritaSchema`, que declara em
-  `METODOS_COM_CONSULTA` o que cobre (`execute`, `executemany`, `callproc`, `mogrify`, `copy_expert`, em texto e em
-  bytes) e em `METODOS_FORA_DE_COBERTURA` o que não cobre e por quê (`copy_from` e `copy_to` recebem NOME de tabela
+  `PONTOS_COM_CONSULTA` o que cobre (`execute`, `executemany`, `callproc`, `mogrify`, `copy_expert`, em texto e em
+  bytes) e em `PONTOS_FORA_DE_COBERTURA` o que não cobre e por quê (`copy_from` e `copy_to` recebem NOME de tabela
   e a casa não os usa — varrido em `app/`, `scripts/` e `db/`; `psycopg2.sql.Composed` passa cru, e a casa também
   não o usa). `tests/unit/test_schema_ambiente.py` reprova se um ponto de entrada novo aparecer sem decisão escrita
   e se alguém passar a usar um dos excluídos.
