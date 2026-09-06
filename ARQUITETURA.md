@@ -758,3 +758,28 @@ conta 37,8, 2FA 9,7, usuários 59,4, grupos 60,8, papéis 58,7, tokens 78,9, log
 
 O placar do laço, a tabela dos itens do backlog e a fronteira por linha estão em
 `/home/dev/plataforma/laco/PAINEL.md`, gerado por `laco/gera_painel.py` a partir de `laco/estado.json`.
+
+## 14. Documento de construtor (item L5-05-documento-versoes, ADR 0011)
+
+Não é um mecanismo novo: é `plat.item.dados` (o envelope `{tipo, esquema_versao, corpo}`) + `plat.tipo_item.
+esquema`/`esquema_versao` (JSON Schema por tipo, ADR 0004) + `plat.item_versao` (versão imutável com sha256,
+publicar = `versao_publicada`), todos de L0-03, reaproveitados por inteiro. `app/catalogo/documento.py`
+acrescenta só o que JSON Schema puro não expressa: unicidade de id de nó e referência pendente entre nós
+(`validar_grafo`, chamado logo depois de `tipos.validar` em `criar`/`editar_item`), migração de esquema
+`migrar_<tipo>_v<N>_v<N+1>` aplicada NA LEITURA (`ver()`, nunca gravada de volta), e um hash canônico
+`sha256_canonico` (json.dumps ordenado, sem espaço) separado do `sha256` de `item_versao` (que é o de
+`corpo::text` do jsonb do Postgres — estável dentro dele, não reproduzível fora sem reimplementar a
+serialização do banco: ordena chave por comprimento-depois-alfabeto, espaço depois de `:`/`,`, MEDIDO
+diretamente nesta máquina antes de decidir por um hash à parte).
+
+Migração `028_documento_grafo.sql` substitui o esquema trivial de `app`/`painel` (`corpo:{}`) por um esquema
+de grafo (`corpo.nos`/`corpo.ligacoes` opcionais — documento sem nó nenhum continua válido; quando `nos`
+existe, cada um precisa de `id` ULID); `corpo.mapas`/`mapa_id` continuam declarados porque são o contrato já
+entregue de `app/catalogo/relacoes.py::_app` (item L0-03-i, "usado-por" de app/painel→mapa) — a migração NÃO
+podia quebrá-lo. `docs/gerar_esquemas.py` espelha o esquema vigente de cada tipo com `familia` em
+`documento.FAMILIAS_GRAFO` para `docs/esquemas/<tipo>-v<N>.json` (mesma disciplina de `docs/gerar_limites.py`:
+arquivo é `repr()` do banco, `--check` falha se divergir); versões históricas (v1) são mantidas à mão, nunca
+regeradas. Novo endpoint `GET /api/itens/{id}/integridade`: recomputa em SQL (`digest(corpo::text,'sha256')`)
+e compara com o `sha256` gravado — detecta edição direta em `plat.item_versao` por fora do gatilho (que só
+quem tem acesso de superusuário ao Postgres consegue: `plat_app` tem INSERT/UPDATE/DELETE revogados na
+tabela desde a 011).

@@ -1,0 +1,12 @@
+{
+ "item": "L5-05-documento-versoes",
+ "medidas": {
+  "latencia_salvar_versao_ms": {
+   "valor": 17.309,
+   "unidade": "ms",
+   "comando": "mediana de 30 PUT /api/itens/{id} (painel, 2 nós, TestClient in-process)"
+  }
+ },
+ "gerado_em": "2026-09-06T12:29:01Z",
+ "git_sha": "e30515b57814"
+}

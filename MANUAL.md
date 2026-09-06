@@ -789,3 +789,33 @@ CSW (Catalog Service for the Web) fica de fora desta passagem — decisão regis
 `app/catalogo/rotas_ogc.py` e em `docs/PARIDADE.md`: RAM desta máquina no limite, nenhuma biblioteca CSW
 instalada, e o protocolo é legado frente ao OGC API Records. Ver `laco/handoffs/T3/L0-09-metadado.md`.
 
+## 17. Documento de construtor (item L5-05-documento-versoes)
+
+Base que qualquer construtor do L5 (app, painel, e depois formulário, fluxo) usa para gravar um grafo: o
+documento vive dentro de `dados` do item, no envelope `{tipo, esquema_versao, corpo}`; `corpo.nos` é a lista de
+nós, cada um com `id` **ULID** (26 caracteres, nunca reaproveitado, nunca derivado de posição) e `tipo`;
+`corpo.ligacoes` referencia nós por `id` (`origem`/`alvo`). Reaproveita por inteiro o mecanismo de versão do
+catálogo (seção anterior a esta, item L0-03): salvar cria versão nova e imutável; publicar aponta
+`versao_publicada`; a versão anterior continua legível.
+
+```
+GET  /api/esquemas                          # tipos com JSON Schema publicado (nome, família, esquema_versao)
+GET  /api/esquemas/{tipo}?versao=N          # esquema (N ausente = versão vigente; versões antigas em docs/esquemas/)
+GET  /api/itens/{id}/integridade            # recomputa o sha256 de cada versão a partir do corpo GRAVADO e
+                                             # compara com o sha256 da linha — corrupção direta no banco aparece aqui
+```
+
+Hoje `app` e `painel` têm esquema de grafo publicado (`docs/esquemas/app-v2.json`, `painel-v2.json`; as
+versões v1, triviais, ficam arquivadas para registro). `POST/PUT /api/itens` com um desses tipos recusa
+(`422 grafo_invalido`) dois nós com o mesmo id ou uma ligação apontando para um id que não está em `corpo.nos`
+— regra que o JSON Schema sozinho não expressa (precisa olhar a lista inteira), em `app/catalogo/
+documento.py::validar_grafo`. Documento gravado com `esquema_versao` antiga (os itens semeados em demo/demo2
+antes desta migração, `corpo:{}`) chega **já migrado** em toda leitura (`GET /api/itens/{id}`), nunca gravado
+de volta — o evento `itens/esquema_migrado` fica no log.
+
+`GET /api/itens/{id}/versoes/{n}` traz, para todo tipo cujo `dados` tenha um `corpo` objeto, um campo extra
+`sha256_canonico`: hash de `dados.corpo` numa forma canônica (chaves ordenadas, sem espaço) que qualquer
+`sha256sum` externo reproduz — diferente do `sha256` da versão inteira (que é do jsonb do Postgres, estável
+dentro dele mas não reproduzível fora sem reimplementar a serialização do banco). Ver `app/catalogo/
+documento.py` para o comando exato de reprodução. Detalhe técnico e decisões em `docs/adr/0011-documento-
+de-construtor.md`.

@@ -1,9 +1,16 @@
 """Rotas /api/itens (ADR 0004 seção 13): lista com busca, filtros laterais, facetas, tags, cursor; CRUD com JSON
 Schema por tipo; lote; mover; versões (imutáveis, restaurar, publicar); relações (usado-por, criado-a-partir-de,
 ordem de exclusão, PUT relacoes); lixeira lógica por DELETE. Toda rota declara x-auth/x-privilegio. Leituras aceitam
-token catalogo:ler; escritas por token exigem admin:inquilino."""
+token catalogo:ler; escritas por token exigem admin:inquilino.
 
+Documento de construtor (item L5-05-documento-versoes): `validar_grafo` roda logo depois de `tipos.validar` nas
+duas rotas que gravam `dados` (id de nó ULID, sem duplicata, sem ligação pendente); `ver` migra o documento na
+leitura quando `esquema_versao` do item está atrasada em relação ao tipo (`app/catalogo/documento.py`) e registra
+o evento; `/api/esquemas` serve os mesmos JSON Schema que `tipos.validar` usa, para o editor e para o agente."""
+
+import json
 import uuid
+from pathlib import Path
 
 import psycopg2
 import pydantic
@@ -14,7 +21,7 @@ from app import db, limites
 from app.auth.comum import campos_json, paginacao
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import busca as mod_busca
-from app.catalogo import comum, diff, metadado, relacoes, texto, tipos
+from app.catalogo import comum, diff, documento, metadado, relacoes, texto, tipos
 from app.catalogo.comum import (
     carregar,
     exigir_edicao,
@@ -354,6 +361,40 @@ def tipos_item(auth: Auth = autenticado(escopo_token="catalogo:ler")):
     return [dict(t) for t in tipos.todos().values()]
 
 
+_RAIZ = Path(__file__).resolve().parents[2]
+_ESQUEMAS_HISTORICOS = _RAIZ / "docs" / "esquemas"
+
+
+@router.get(
+    "/api/esquemas",
+    openapi_extra={"x-auth": "S/T", "x-privilegio": "vocabulario"},
+)
+def esquemas_listar(auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Lista dos tipos com JSON Schema publicado (item L5-05-documento-versoes, D2 do L5_CONCEITO): a mesma
+    fonte que `tipos.validar` usa, para o editor construir o painel de propriedades e para o agente escrever
+    documento contra o mesmo contrato."""
+    return [
+        {"tipo": t["nome"], "familia": t["familia"], "esquema_versao": t["esquema_versao"]}
+        for t in sorted(tipos.todos().values(), key=lambda t: t["nome"])
+    ]
+
+
+@router.get(
+    "/api/esquemas/{tipo}",
+    openapi_extra={"x-auth": "S/T", "x-privilegio": "vocabulario"},
+)
+def esquema_ver(tipo: str, versao: int | None = None, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    t = tipos.obter(tipo)
+    if versao is None or versao == t["esquema_versao"]:
+        return t["esquema"]
+    caminho = _ESQUEMAS_HISTORICOS / f"{tipo}-v{versao}.json"
+    if not caminho.is_file():
+        raise ErroAPI(
+            404, "esquema_inexistente", f"esquema {tipo} v{versao} inexistente", {"tipo": tipo, "versao": versao}
+        )
+    return json.loads(caminho.read_text(encoding="utf-8"))
+
+
 @router.get("/api/itens", response_model=Pagina, openapi_extra=LER)
 def listar(
     request: Request,
@@ -516,6 +557,7 @@ def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteu
     tipos.obter(corpo.tipo)
     _publicar_tipo(auth, corpo.tipo)
     tipos.validar(corpo.tipo, corpo.dados)
+    documento.validar_grafo(corpo.tipo, corpo.dados)
     _classificacao(auth, corpo.classificacao, novo=True)
     iid = str(uuid.UUID(corpo.id)) if corpo.id else str(uuid.uuid4())
     ext_sql, ext_params = _extent_sql(corpo.extent)
@@ -580,9 +622,18 @@ def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteu
 
 
 @router.get("/api/itens/{id}", response_model=Item, openapi_extra=LER)
-def ver(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+def ver(id: str, request: Request, auth: Auth = autenticado(escopo_token="catalogo:ler")):
     with db.db(auth.contexto()) as cur:
-        return item_json(item_ou_404(cur, id), auth)
+        r = item_ou_404(cur, id)
+        j = item_json(r, auth)
+        if isinstance(j.get("dados"), dict):
+            migrado, mudou, de, para = documento.migrar_para_leitura(r["tipo"], j["dados"])
+            if mudou:
+                j["dados"] = migrado
+                registrar_evento(
+                    cur, request, "itens/esquema_migrado", "item", r["id"], {"tipo": r["tipo"], "de": de, "para": para}
+                )
+        return j
 
 
 @router.get("/api/itens/{id}/metadado.xml", openapi_extra=LER)
@@ -642,6 +693,7 @@ def editar_item(
     dados = campos.get("dados", r["dados"])
     if "dados" in campos:
         tipos.validar(r["tipo"], dados)
+        documento.validar_grafo(r["tipo"], dados)
     if "classificacao" in campos:
         _classificacao(auth, campos["classificacao"], novo=False)
     cats = (
@@ -866,10 +918,23 @@ def mover(id: str, corpo: MoverEntrada, request: Request, auth: Auth = autentica
 
 
 # ---------------------------------------------------------------- versões
+def _sha256_canonico_da_versao(r: dict) -> str | None:
+    """`item_versao.sha256` (trigger `plat.tg_item_versao`) vem de `corpo::text` do jsonb inteiro — estável
+    DENTRO deste Postgres, mas a serialização de jsonb (ordem de chave por comprimento, espaço depois de
+    ':'/',') não é o que um `sha256sum` de fora reproduz sem reimplementar o formato interno do jsonb (item
+    L5-05-documento-versoes, `app/catalogo/documento.py`). `sha256_canonico` é a conta À PARTE, sobre
+    `dados.corpo` (json.dumps(sort_keys=True, separators=(",", ":"))) — reproduzível por qualquer ferramenta
+    padrão. Vale para todo tipo cujo `dados` tenha um `corpo` objeto (não só as famílias de grafo: é genérico)."""
+    dados = (r.get("corpo") or {}).get("dados")
+    corpo = dados.get("corpo") if isinstance(dados, dict) else None
+    return documento.sha256_canonico(corpo) if isinstance(corpo, dict) else None
+
+
 def _versao_json(r: dict) -> dict:
     return {
         "versao": r["versao"],
         "sha256": r["sha256"],
+        "sha256_canonico": _sha256_canonico_da_versao(r),
         "autor": None if r["autor_id"] is None else {"id": r["autor_id"], "login": r["autor_login"]},
         "rotulo": r["rotulo"],
         "comentario": r["comentario"],
@@ -956,6 +1021,26 @@ def publicar_versao(id: str, n: int, request: Request, auth: Auth = autenticado(
         cur.execute("UPDATE plat.item SET versao_publicada = %s WHERE id = %s::uuid", (n, iid))
         registrar_evento(cur, request, "itens/versao_publicar", "item", iid, {"versao": n})
         return item_json(item_ou_404(cur, iid), auth)
+
+
+@router.get("/api/itens/{id}/integridade", openapi_extra=LER)
+def integridade(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """item L5-05-documento-versoes: recomputa `sha256` de cada versão a partir do `corpo` GRAVADO em
+    `plat.item_versao` e compara com o `sha256` da própria linha. As duas colunas só nascem juntas pelo gatilho
+    `plat.tg_item_versao` (`app/catalogo/documento.py` explica por que o hash não é reproduzível por `sha256sum`
+    puro fora deste Postgres — é `dados.corpo`, não `item_versao.corpo` inteiro, que tem o hash canônico
+    externo); editar `corpo` direto no banco, por fora do gatilho, é exatamente o que este endpoint pega."""
+    iid = uuid_ok(id)
+    with db.db(auth.contexto()) as cur:
+        item_ou_404(cur, iid)
+        cur.execute(
+            "SELECT versao, sha256 = encode(digest(corpo::text, 'sha256'), 'hex') AS integro "
+            "FROM plat.item_versao WHERE item_id = %s::uuid ORDER BY versao",
+            (iid,),
+        )
+        linhas = cur.fetchall()
+        corrompidas = [r["versao"] for r in linhas if not r["integro"]]
+        return {"integro": not corrompidas, "versoes": len(linhas), "versoes_corrompidas": corrompidas}
 
 
 # ---------------------------------------------------------------- relações

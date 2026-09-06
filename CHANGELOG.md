@@ -3,6 +3,48 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L5-05-documento-versoes: documento de construtor — grafo de nós com ULID)
+
+Base genérica que qualquer construtor do L5 (app, painel, e depois formulário, fluxo) vai usar para gravar um
+grafo: reaproveita por inteiro `plat.item.dados`/`plat.tipo_item.esquema`/`plat.item_versao` de L0-03 (nenhuma
+tabela nova). `app/catalogo/documento.py` acrescenta o que JSON Schema puro não expressa: `validar_grafo`
+recusa (`422 grafo_invalido`) dois nós com o mesmo `id` ULID ou uma ligação apontando para um nó inexistente
+em `corpo.nos`; `migrar_para_leitura` aplica `migrar_<tipo>_v<N>_v<N+1>` **na leitura** (nunca grava de volta
+no banco) e registra o evento `itens/esquema_migrado`; `sha256_canonico` (json.dumps ordenado, sem espaço) é
+um hash À PARTE do `sha256` de `item_versao`, reproduzível fora do banco por qualquer `sha256sum` — o
+`sha256` de `item_versao` vem de `corpo::text` do jsonb do Postgres, MEDIDO nesta máquina como NÃO
+reproduzível fora sem reimplementar a serialização interna do banco (ordena chave por comprimento-depois-
+alfabeto, espaço depois de `:`/`,`).
+
+Migração `028_documento_grafo.sql`: esquema de `app`/`painel` passa de trivial (`corpo:{}`) para grafo
+(`corpo.nos`/`corpo.ligacoes` — os dois OPCIONAIS, então os 1.573/1.571 itens já semeados em demo/demo2
+continuam válidos sem migração de escrita); `corpo.mapas`/`mapa_id` continuam aceitos porque são o contrato
+já entregue de `app/catalogo/relacoes.py::_app` (item L0-03-i) — quebrar esse campo quebraria "usado-por" de
+app/painel→mapa. Endpoints novos: `GET /api/esquemas` (lista de tipos com esquema publicado), `GET
+/api/esquemas/{tipo}?versao=N` (serve o mesmo JSON Schema que valida `dados`, para o editor e para o agente
+escreverem contra o mesmo contrato), `GET /api/itens/{id}/integridade` (recomputa o sha256 de cada versão a
+partir do `corpo` gravado e compara com o `sha256` da linha — detecta edição direta em `plat.item_versao` por
+fora do gatilho; só quem tem acesso de superusuário ao Postgres consegue fazer isso, `plat_app` tem
+INSERT/UPDATE/DELETE revogados na tabela desde a 011). `docs/gerar_esquemas.py` espelha o esquema vigente de
+`app`/`painel` em `docs/esquemas/<tipo>-v2.json` (mesma disciplina de `docs/gerar_limites.py`, `--check`
+falha se divergir do banco); `docs/esquemas/<tipo>-v1.json` ficam como registro histórico, nunca regerados.
+
+10 testes em `tests/api/catalogo/test_documento.py`: grafo válido cria e a versão traz `sha256_canonico`;
+hash reproduzido fora do banco com `sha256sum` de verdade (subprocesso Python + hashlib, bate byte a byte);
+nó sem ULID / ULID repetido / ligação pendente recusados na criação E na edição; rascunho nunca muda a versão
+publicada até publicar explicitamente (e a versão anterior continua legível depois de publicar a seguinte);
+ULID de nó nunca se repete em nenhuma versão ao longo de 5 edições; migração de esquema_versao=1 para 2 na
+leitura, com o evento gravado, e a linha do banco continua em 1 (a migração não gravou de volta); RLS cruzado
+(versões e integridade de um documento de outro inquilino = `404`); `plat_app` não consegue editar
+`plat.item_versao` direto (confere a premissa do teste de corrupção); corrupção direta na linha de versão
+(`sudo -u postgres psql`, simulando acesso de superusuário) aparece em `/api/itens/{id}/integridade`.
+Latência medida: mediana de 30 `PUT /api/itens/{id}` (painel, 2 nós) = **17,3 ms**
+(`tests/medidas/L5-05-documento-versoes.json`, `latencia_salvar_versao_ms`). Rotas novas cadastradas em
+`tests/api/cruzado_casos.py` (P6: `/api/esquemas`, `/api/esquemas/{tipo}` como vocabulário — mesmo padrão de
+`/api/tipos-item`; `/api/itens/{id}/integridade` como alvo padrão 401/403/404).
+
+Decisões em `docs/adr/0011-documento-de-construtor.md`. Detalhe: `MANUAL.md` seção 17, `ARQUITETURA.md` seção 14.
+
 ## turno 3, setembro de 2026 (itens L0-02-e-varredura-cruzada-rls · L0-02-f-tela-usuarios: fechamento com evidência fresca + gap real corrigido)
 
 Os dois itens já tinham quase todo o mecanismo construído desde a fundação do `L0-02-tenant-auth` (turno 2);

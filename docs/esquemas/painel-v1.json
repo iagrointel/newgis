@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "_nota": "histórico: esquema vigente de 'painel' de 011_catalogo.sql (turno 1) até 028_documento_grafo.sql (item L5-05, turno 3). Nunca regerado por docs/gerar_esquemas.py — arquivo morto, mantido como registro do que existia antes da migração de esquema. Documentos gravados sob esta versão (esquema_versao=1, corpo:{}) são migrados NA LEITURA para v2 por app/catalogo/documento.py::migrar_para_leitura.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tipo", "esquema_versao", "corpo"],
+  "properties": {
+    "tipo": {"const": "painel"},
+    "esquema_versao": {"type": "integer", "minimum": 1},
+    "corpo": {"type": "object"}
+  }
+}

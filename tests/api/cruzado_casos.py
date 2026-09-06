@@ -398,6 +398,11 @@ CASOS: dict[tuple[str, str], Caso] = {
     # ---- L0-03 catálogo: alvos de B = 404 (não 403: não confirma existência); leituras de lista agem só no chamador
     ("GET", "/api/tipos-item"): Caso(lambda p: "/api/tipos-item", proprio=True, aceita=frozenset({200}),
                                      verificar=_sem_marca),
+    # ---- L5-05 documento de construtor: vocabulário do tipo (mesmo esquema para A e B, não é dado de inquilino)
+    ("GET", "/api/esquemas"): Caso(lambda p: "/api/esquemas", proprio=True, aceita=frozenset({200}),
+                                   verificar=_sem_marca),
+    ("GET", "/api/esquemas/{tipo}"): Caso(lambda p: "/api/esquemas/app", proprio=True, aceita=frozenset({200}),
+                                         verificar=_sem_marca),
     # ---- L6-01-a acervo da casa: registro compartilhado (não é de A nem de B); só fonte com licença escrita
     # aparece (regra D17); "adicionar" cria item SÓ no inquilino do chamador (mesma trava do resto do catálogo)
     ("GET", "/api/acervo"): Caso(lambda p: "/api/acervo?limite=5", proprio=True, aceita=frozenset({200}),
@@ -442,6 +447,7 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", IT + "/versoes/{n}/restaurar"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/versoes/1/restaurar",
                                                   lambda p: {}),
     ("POST", IT + "/versoes/{n}/publicar"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/versoes/1/publicar"),
+    ("GET", IT + "/integridade"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/integridade"),
     ("GET", IT + "/usado-por"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/usado-por"),
     ("GET", IT + "/criado-a-partir-de"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/criado-a-partir-de"),
     ("GET", IT + "/ordem-de-exclusao"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/ordem-de-exclusao"),
