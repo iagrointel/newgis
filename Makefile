@@ -10,7 +10,7 @@ URL_PUBLICA=$(shell grep ^PLAT_URL_PUBLICA .env 2>/dev/null | cut -d= -f2)
 # `sudo cat` devolve vazio) isso NÃO pisa no PLAT_SECRET/PLAT_DSN_WORKER que ainda estiverem no `.env`.
 SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); PLAT_DSN_WORKER=$$(sudo cat /etc/plat/segredos/PLAT_DSN_WORKER 2>/dev/null); [ -n "$$PLAT_SECRET" ] && export PLAT_SECRET; [ -n "$$PLAT_DSN_WORKER" ] && export PLAT_DSN_WORKER;
 
-.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps
+.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps homolog
 
 check: lint sem-marcador limites teste e2e  ## suíte inteira (portão P3)
 
@@ -51,3 +51,6 @@ worker:                                     ## worker da fila em primeiro plano 
 
 e2e-worker:                                 ## testes lentos da fila (reinício por systemctl, morte do pai, job de 5 min)
 	$(SEGREDOS) $(VENV)/pytest -m lento tests/api/jobs
+
+homolog:                                    ## item L7-31 (docs/HOMOLOGACAO.md): migra plat_homolog, sobe API+worker em :8154 e roda o e2e isolado; derruba tudo ao final
+	bash scripts/homolog_e2e.sh

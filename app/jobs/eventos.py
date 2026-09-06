@@ -46,7 +46,7 @@ def _escutar() -> None:
             con = psycopg2.connect(settings.PLAT_DSN)
             con.autocommit = True
             with con.cursor() as cur:
-                cur.execute("LISTEN plat_job")
+                cur.execute(f"LISTEN {settings.PLAT_CANAL_JOB}")
             while True:
                 if select.select([con], [], [], 5.0) == ([], [], []):
                     continue
@@ -55,7 +55,7 @@ def _escutar() -> None:
                     n = con.notifies.pop(0)
                     _distribuir(n.payload)
         except Exception as e:  # noqa: BLE001 — reconecta: só a preparação repete
-            log.warning("LISTEN plat_job caiu: %s; reconectando em 1 s", str(e).strip()[:200])
+            log.warning("LISTEN %s caiu: %s; reconectando em 1 s", settings.PLAT_CANAL_JOB, str(e).strip()[:200])
             try:
                 if con is not None:
                     con.close()

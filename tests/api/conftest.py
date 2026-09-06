@@ -14,7 +14,10 @@ import pytest
 os.environ.setdefault("PLAT_AMBIENTE", "dev")
 
 ROOT = Path(__file__).resolve().parents[2]
-CREDENCIAIS = ROOT / "tests" / "credenciais.txt"
+# item L7-31: PLAT_CREDENCIAIS_ARQUIVO aponta para tests/credenciais_homolog.txt quando a suíte roda contra
+# o schema de homologação (db/homolog_bootstrap.sh semeia os admins lá; nunca os mesmos de produção) — mesmo
+# padrão de PLAT_OPENAPI_ARQUIVO logo abaixo.
+CREDENCIAIS = Path(os.environ.get("PLAT_CREDENCIAIS_ARQUIVO") or (ROOT / "tests" / "credenciais.txt"))
 CREDENCIAIS_TOTP = ROOT / "tests" / "credenciais_totp.txt"
 PREFIXO_TESTE = "zt"  # logins/nomes criados pela suíte começam assim (limpeza por prefixo)
 

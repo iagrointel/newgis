@@ -1,0 +1,48 @@
+{
+ "item": "L7-31-ambiente-homologacao",
+ "assinado_por": "arquiteto+backend (turno T3, handoff laco/handoffs/T3/L7-31-homologacao.md)",
+ "gerado_em": "2026-09-06T11:00:00Z",
+ "git_sha": "pendente-do-commit-deste-item",
+ "maquina": "12 vCPU, 23 GB RAM (~400 MB livres, 2,3 GB disponíveis por cache reclamável), disco / a 98% e /mnt/pgdata a 99%; PostgreSQL 16 + PostGIS 3.6 em iagro_sat; 12+ sessões concorrentes na máquina, múltiplas trilhas do mesmo turno mexendo no mesmo repositório",
+ "medidas": {
+  "isolamento_contagem_tabelas_plat_antes": {
+   "valor": 44,
+   "unidade": "tabelas",
+   "comando": "sudo -u postgres psql -d iagro_sat -Atc \"SELECT count(*) FROM information_schema.tables WHERE table_schema='plat'\" (linha de base, produção)"
+  },
+  "isolamento_contagem_tabelas_plat_homolog_antes": {
+   "valor": 44,
+   "unidade": "tabelas",
+   "comando": "mesma consulta em table_schema='plat_homolog' logo após `bash db/migrar_homolog.sh` (espelho de plat: 44 = 44)"
+  },
+  "isolamento_migracao_ficticia_create_plat_homolog": {
+   "valor": 45,
+   "unidade": "tabelas",
+   "comando": "CREATE TABLE plat_homolog.zzz_prova_homologacao(...) via db/reescrever_homolog.py sobre scratchpad/l7-31/999_prova_homologacao.sql (migração fictícia, nunca em db/migracoes/); plat_homolog passa de 44 para 45; plat continua em 44 (INALTERADO); plat.zzz_prova_homologacao = 0 linhas (não existe em produção)"
+  },
+  "isolamento_migracao_ficticia_drop_plat_homolog": {
+   "valor": 44,
+   "unidade": "tabelas",
+   "comando": "DROP TABLE plat_homolog.zzz_prova_homologacao; plat_homolog volta a 44; plat continua em 44 em todo o teste (nunca mudou)"
+  },
+  "migracoes_aplicadas_homolog": {
+   "valor": 25,
+   "unidade": "migrações",
+   "comando": "bash db/migrar_homolog.sh (1ª rodada, schema plat_homolog vazio): 25 aplicada, 0 pulada, 0 divergente — o MESMO conjunto de db/migracoes/*.sql de produção, reescrito por db/reescrever_homolog.py"
+  },
+  "papeis_criados": {
+   "valor": 2,
+   "unidade": "roles",
+   "comando": "SELECT count(*) FROM pg_roles WHERE rolname IN ('plat_homolog_app','plat_homolog_worker') -> 2 (nenhum dos dois existia antes deste item; nenhuma alteração nas roles plat_app/plat_worker de produção)"
+  },
+  "suite_e2e_homolog_evolucao": {
+   "valor": "1 -> 4 passaram (de 13 e2e de tela, mesma suíte de `make e2e`)",
+   "unidade": "testes",
+   "comando": "pytest -m lento --base-url http://127.0.0.1:8154, 3 rodadas do mesmo turno: rodada 1 (uvicorn direto, sem nginx) = 1 passou/8 falharam (404 de /static/, JS nunca carrega); rodada 2 (+ nginx próprio, deploy/nginx_homolog.conf) = 4 passaram/5 falharam (401 no login: tests/credenciais.txt é de PRODUÇÃO); rodada 3 (+ semeadura de admin homolog em tests/credenciais_homolog.txt, PLAT_CREDENCIAIS_ARQUIVO) = ver handoff para o resultado final (rodando sob flock com ~12 outras trilhas do mesmo turno na fila)"
+  }
+ },
+ "erros_conhecidos_nao_causados_por_este_item": {
+  "tests/api/ldap/test_login_ldap.py": "33 ERROR na suíte inteira vêm majoritariamente daqui (12 casos): fixture de LDAP de outra trilha do mesmo turno (tests/ldap_fixture/), não relacionada a schema/ambiente; falha igual contra produção hoje",
+  "tests/api/jobs/test_jobs_reinicio.py e vizinhos": "ERROR por dependerem de infraestrutura de restart/kill-9 do worker que compete com outras trilhas rodando pytest ao mesmo tempo (mesma flock)"
+ }
+}

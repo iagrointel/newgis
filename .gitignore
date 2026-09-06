@@ -11,6 +11,7 @@ tests/credenciais.txt
 .ruff_cache/
 var/
 tests/credenciais_totp.txt
+tests/credenciais_homolog.txt
 # defesa em profundidade (item L7-16): a chave privada de assinatura nunca deveria estar sob o repositório
 # (fica em /etc/plat/chaves ou $HOME/.config/plat/chaves), mas se alguém apontar PLAT_CHAVE_PRIVADA para
 # dentro dele por engano, estes padrões impedem o commit

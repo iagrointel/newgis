@@ -5,6 +5,7 @@ contexto do navegador (mesmo cookie). Nenhum número digitado: o que se mede vai
 import base64
 import hashlib
 import hmac
+import os
 import re
 import secrets
 import struct
@@ -36,9 +37,11 @@ def esperar_proximo_passo(passo_usado: int) -> None:
 
 
 def credenciais() -> dict[str, tuple[str, str]]:
-    """{slug: (login, senha)} lido de tests/credenciais.txt (escrito pelo install.sh; fora do git)."""
+    """{slug: (login, senha)} lido de tests/credenciais.txt (escrito pelo install.sh; fora do git). Item
+    L7-31: PLAT_CREDENCIAIS_ARQUIVO aponta para tests/credenciais_homolog.txt (db/homolog_bootstrap.sh
+    semeia os admins do schema plat_homolog lá — nunca os mesmos usuário/senha de produção)."""
     out = {}
-    caminho = RAIZ / "tests" / "credenciais.txt"
+    caminho = Path(os.environ.get("PLAT_CREDENCIAIS_ARQUIVO") or (RAIZ / "tests" / "credenciais.txt"))
     if not caminho.exists():
         return out
     for linha in caminho.read_text(encoding="utf-8").splitlines():

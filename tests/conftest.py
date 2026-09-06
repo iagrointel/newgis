@@ -23,7 +23,11 @@ def valores_env() -> dict[str, str | None]:
     (`sudo cat /etc/plat/segredos/...`), por isso entram sempre pela lista explícita, não só quando já
     estavam no dicionário do .env."""
     v = dict(dotenv_values(ROOT / ".env"))
-    chaves = list(v) + ["PLAT_URL_PUBLICA", "PLAT_DSN", "PLAT_SECRET", "PLAT_DSN_WORKER"]
+    # item L7-31 (docs/HOMOLOGACAO.md): make homolog roda esta MESMA suíte com PLAT_SCHEMA/etc no
+    # ambiente do processo (scripts/homolog_e2e.sh), nunca no .env real — entram pela lista explícita
+    # pelo mesmo motivo de PLAT_SECRET/PLAT_DSN_WORKER acima.
+    chaves = list(v) + ["PLAT_URL_PUBLICA", "PLAT_DSN", "PLAT_SECRET", "PLAT_DSN_WORKER",
+                        "PLAT_SCHEMA", "PLAT_SCHEMA_TRABALHO", "PLAT_CANAL_JOB", "PLAT_CANAL_WORKER"]
     v.update({k: os.environ[k] for k in chaves if k in os.environ})
     return v
 

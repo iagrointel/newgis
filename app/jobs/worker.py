@@ -29,6 +29,7 @@ from app import log as plat_log
 from app.jobs import agenda as mod_agenda
 from app.jobs import filho as mod_filho
 from app.jobs.tipos import REGISTRO
+from app.schema_ambiente import CursorSchemaAmbiente
 from app.settings import settings
 from app.versao import git_sha_curto, versao
 
@@ -108,11 +109,11 @@ class Worker:
         if not settings.PLAT_DSN_WORKER:
             raise RuntimeError("chave obrigatória ausente para o worker: PLAT_DSN_WORKER "
                                "(role plat_worker; o install.sh grava)")
-        self.con = psycopg2.connect(settings.PLAT_DSN_WORKER, cursor_factory=psycopg2.extras.RealDictCursor)
+        self.con = psycopg2.connect(settings.PLAT_DSN_WORKER, cursor_factory=CursorSchemaAmbiente)
         self.con.autocommit = True
         with self.con.cursor() as cur:
-            cur.execute("SET search_path = plat, public")
-            cur.execute("LISTEN plat_worker")
+            cur.execute(f"SET search_path = {settings.PLAT_SCHEMA}, public")
+            cur.execute(f"LISTEN {settings.PLAT_CANAL_WORKER}")
         self.lock_pesado = False  # sessão nova: o advisory lock anterior morreu com a sessão anterior
 
     def sql(self, consulta: str, params=()) -> list[dict]:

@@ -12,6 +12,7 @@ import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 
+from app.schema_ambiente import CursorSchemaAmbiente
 from app.settings import settings
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -61,8 +62,8 @@ def _preparar(con, ctx: Contexto | None, somente_leitura: bool = False):
     if con.closed:
         raise psycopg2.OperationalError("conexão do pool já estava fechada")
     con.autocommit = False
-    cur = con.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SET search_path = plat, public")
+    cur = con.cursor(cursor_factory=CursorSchemaAmbiente)
+    cur.execute(f"SET search_path = {settings.PLAT_SCHEMA}, public")
     if ctx is not None:
         cur.execute(
             "SELECT set_config('plat.tenant_id', %s, true), set_config('plat.usuario_id', %s, true), "

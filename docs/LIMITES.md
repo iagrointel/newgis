@@ -123,5 +123,5 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | nome | valor | explicação |
 |---|---|---|
 | `LDAP_TIMEOUT_S` | `5` | connect_timeout e receive_timeout do ldap3 (bind de serviço e bind do usuário) |
-| `LDAP_BUSCA_MAX` | `1` | a busca por login tem de casar EXATAMENTE 1 entrada; 0 ou 2+ = credenciais inválidas |
+| `LDAP_BUSCA_MAX` | `1` | a busca por login casa EXATAMENTE 1 entrada; 0 ou 2+ = credenciais inválidas |
 | `LDAP_IMPORTAR_MAX` | `2000` | tamanho máximo de uma importação de grupo em massa (POST /api/org/ldap/importar) |
