@@ -164,6 +164,7 @@ async function acaoLinha(id, u) {
     if (r.status === 204) { await carregarLista(); aviso.ok(t('usuarios.apagado', { login: u.login })); return; }
     let m = mensagemDe(r);
     if (r.json.erro === 'possui_grupos' && Array.isArray(r.json.detalhe)) m += ` — ${t('usuarios.possui_grupos')}: ${r.json.detalhe.map((g) => g.nome).join(', ')}`;
+    if (r.json.erro === 'possui_itens' && Array.isArray(r.json.detalhe)) m += ` — ${t('usuarios.possui_itens')}: ${r.json.detalhe.map((i) => i.titulo).join(', ')}`;
     aviso.erro(m);
   }
 }

@@ -2,12 +2,12 @@
  "item": "L0-02-tenant-auth",
  "medidas": {
   "rotas_total": {
-   "valor": 123,
+   "valor": 138,
    "unidade": "rotas",
    "comando": "len(paths×methods) de docs/openapi.json"
   },
   "rotas_cobertas": {
-   "valor": 123,
+   "valor": 138,
    "unidade": "rotas",
    "comando": "rotas do OpenAPI com caso em tests/api/cruzado_casos.py"
   },
@@ -80,7 +80,7 @@
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
   "pagina_pronta_ms_usuarios": {
-   "valor": 67.3,
+   "valor": 70.9,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
@@ -195,8 +195,13 @@
    "valor": "22 de 22 tabelas/partições com tenant_id têm relrowsecurity=t; relforcerowsecurity=f em todas (dono postgres; plat_app não é dono, logo a RLS vale para ele)",
    "unidade": "tabelas",
    "comando": "pg_class × pg_attribute no schema plat, 05/09 16:03 UTC"
+  },
+  "desabilitar_para_401_ms": {
+   "valor": 73.1,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   }
  },
- "gerado_em": "2026-09-06T10:38:03Z",
- "git_sha": "a108eeb3e240"
+ "gerado_em": "2026-09-06T12:29:40Z",
+ "git_sha": "e30515b57814"
 }

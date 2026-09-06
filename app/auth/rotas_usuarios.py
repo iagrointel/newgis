@@ -80,6 +80,17 @@ def _grupos_do_dono(cur, usuario_id: int) -> list[dict]:
     return [{"id": str(r["id"]), "nome": r["nome"]} for r in cur.fetchall()]
 
 
+def _itens_do_dono(cur, usuario_id: int) -> list[dict]:
+    """Itens do catálogo (mapas, camadas, pastas) que o usuário ainda possui — inclusive na lixeira, porque
+    `plat.item.dono_id` é FK sem `ON DELETE`: sem esta checagem a exclusão cairia num `409 em_uso` genérico do
+    banco (nome da constraint, não os títulos). Transferir é o item L0-03-j (`POST /api/itens/transferir`)."""
+    cur.execute(
+        "SELECT id, titulo FROM plat.item WHERE dono_id = %s ORDER BY titulo LIMIT 50",
+        (usuario_id,),
+    )
+    return [{"id": str(r["id"]), "titulo": r["titulo"]} for r in cur.fetchall()]
+
+
 def _editar(cur, auth: Auth, request: Request, alvo: dict, campos: dict) -> dict:
     """Aplica {nome, email, perfil, papel_id, ativo} a um usuário já carregado; levanta ErroAPI; devolve a linha."""
     if any(k in campos for k in ("nome", "email", "ativo")) and not auth.tem("membros.gerir"):
@@ -523,6 +534,14 @@ def apagar_usuario(id: int, request: Request, auth: Auth = autenticado("membros.
             grupos = _grupos_do_dono(cur, id)
             if grupos:
                 raise ErroAPI(409, "possui_grupos", "o usuário possui grupos; transfira-os antes", grupos)
+            itens = _itens_do_dono(cur, id)
+            if itens:
+                raise ErroAPI(
+                    409,
+                    "possui_itens",
+                    "o usuário possui itens; transfira-os antes (POST /api/itens/transferir) ou apague-os",
+                    itens,
+                )
             registrar_evento(
                 cur, request, "usuarios/apagar", "usuario", id, {"login": alvo["login"], "perfil": alvo["perfil"]}
             )

@@ -54,13 +54,20 @@ def preparacao(sessao_a, sessao_b, sessao_plat, ids):
 
 
 def test_cobertura_100_por_cento(medida):
+    """Portão do item L0-02-e (filho de L0-02-tenant-auth): rotas_total = rotas_cobertas em
+    tests/medidas/L0-02-e.json. A mesma medida também é gravada em L0-02-tenant-auth.json (convenção do item-pai,
+    usada por MANUAL.md/ARQUITETURA.md/CHANGELOG.md desde o turno 2 para todo o bloco de identidade e acesso)."""
     rotas = _rotas_do_openapi()
     faltando = [r for r in rotas if r not in cc.CASOS]
     sobrando = [r for r in cc.CASOS if r not in rotas]
-    medida("L0-02-tenant-auth")("rotas_total", len(rotas), "rotas", "len(paths×methods) de docs/openapi.json")
-    medida("L0-02-tenant-auth")(
-        "rotas_cobertas", len(rotas) - len(faltando), "rotas", "rotas do OpenAPI com caso em tests/api/cruzado_casos.py"
-    )
+    for item in ("L0-02-tenant-auth", "L0-02-e"):
+        medida(item)("rotas_total", len(rotas), "rotas", "len(paths×methods) de docs/openapi.json")
+        medida(item)(
+            "rotas_cobertas",
+            len(rotas) - len(faltando),
+            "rotas",
+            "rotas do OpenAPI com caso em tests/api/cruzado_casos.py",
+        )
     assert faltando == [], f"rotas sem caso cruzado: {faltando}"
     assert sobrando == [], f"casos de rota inexistente: {sobrando}"
 

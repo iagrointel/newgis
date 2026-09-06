@@ -169,6 +169,41 @@ def test_apagar_com_grupos_e_404_de_outro_inquilino(sessao_a, usuarios_a, ids):
     assert sessao_a.put(f"/api/usuarios/{ids['b']['id']}", json={"nome": "x"}).status_code == 404
 
 
+def test_apagar_com_2_itens_do_catalogo_recusa_listando_os_2(sessao_a, usuarios_a, conexao_plat_app, ids):
+    """`plat.item.dono_id` é FK sem `ON DELETE`: sem a checagem em `apagar_usuario` (`_itens_do_dono`) o banco
+    recusaria com um `409 em_uso` genérico (nome da constraint, não os títulos) — este teste prova o texto certo,
+    a lista dos 2 itens, e que a transferência/purga (L0-03-j) destrava a exclusão de verdade."""
+    from tests.api.test_rls import contexto, ids_por_slug
+
+    c, u, _ = usuarios_a.sessao("editor")
+    itens = []
+    for i in range(2):
+        r = c.post(
+            "/api/itens",
+            json={
+                "tipo": "mapa",
+                "titulo": f"{PREFIXO_TESTE}-item-{i}-{secrets.token_hex(2)}",
+                "dados": {"esquema_versao": 1, "corpo": {}},
+            },
+        )
+        assert r.status_code == 201, r.text
+        itens.append(r.json())
+    r = sessao_a.delete(f"/api/usuarios/{u['id']}")
+    assert r.status_code == 409 and r.json()["erro"] == "possui_itens", r.text
+    assert {x["titulo"] for x in r.json()["detalhe"]} == {it["titulo"] for it in itens}
+    # purga física dos 2 itens (mesmo caminho de tests/api/catalogo/conftest.py::_expurgar_zt): sem eles, o
+    # usuário passa a se apagar de verdade
+    tenant_id = ids_por_slug(conexao_plat_app)["demo"]
+    contexto(conexao_plat_app, tenant_id, usuario_id=ids["a"]["id"], login="admin")
+    with conexao_plat_app.cursor() as cur:
+        for it in itens:
+            cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (it["id"],))
+            cur.execute("SELECT plat.item_expurgar(%s::uuid)", (it["id"],))
+    conexao_plat_app.commit()
+    assert sessao_a.delete(f"/api/usuarios/{u['id']}").status_code == 204
+    usuarios_a.criados.remove(u["id"])
+
+
 def test_privilegios_e_papeis(sessao_a, usuarios_a):
     privs = sessao_a.get("/api/privilegios").json()
     assert len(privs) == 47 and {p["nome"] for p in privs} == set(priv.NOMES)  # 46 + jobs.ver (T2, migração 015)

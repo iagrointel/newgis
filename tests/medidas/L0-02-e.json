@@ -1,0 +1,17 @@
+{
+ "item": "L0-02-e",
+ "medidas": {
+  "rotas_total": {
+   "valor": 138,
+   "unidade": "rotas",
+   "comando": "len(paths×methods) de docs/openapi.json"
+  },
+  "rotas_cobertas": {
+   "valor": 138,
+   "unidade": "rotas",
+   "comando": "rotas do OpenAPI com caso em tests/api/cruzado_casos.py"
+  }
+ },
+ "gerado_em": "2026-09-06T12:23:52Z",
+ "git_sha": "e30515b57814"
+}

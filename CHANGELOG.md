@@ -3,6 +3,45 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (itens L0-02-e-varredura-cruzada-rls · L0-02-f-tela-usuarios: fechamento com evidência fresca + gap real corrigido)
+
+Os dois itens já tinham quase todo o mecanismo construído desde a fundação do `L0-02-tenant-auth` (turno 2);
+esta passagem mediu de novo com o código de HOJE (outras trilhas do turno adicionaram rotas por baixo desde a
+última medição) e fechou o único gap real encontrado.
+
+**L0-02-e (varredura cruzada A→B):** `tests/api/test_cruzado.py::test_cobertura_100_por_cento` rodado agora —
+**138 rotas no `docs/openapi.json` vivo, 138 com caso em `tests/api/cruzado_casos.py`** (era 123 na última
+medição gravada; o OpenAPI cresceu com LDAP e outros itens de T3, e `cruzado_casos.py` já tinha acompanhado).
+Gravado em `tests/medidas/L0-02-e.json` (nome exigido pelo portão) e mantido também em
+`tests/medidas/L0-02-tenant-auth.json` (convenção do item-pai, usada por `MANUAL.md`/`ARQUITETURA.md` desde o
+turno 2 para o bloco inteiro de identidade e acesso). `tests/api/test_funcoes_seguras.py` (REVOKE EXECUTE de
+PUBLIC em toda função SECURITY DEFINER do schema `plat`, `tenant_criar` por GUC forjado levanta
+`so_superadmin`) roda dentro da mesma suíte e passou.
+
+**L0-02-f (tela Usuários):** a tela (`web/admin/usuarios.html` + `web/js/auth/usuarios.js`) já tinha TUDO
+construído — criar, editar, desabilitar/reabilitar, redefinir senha, desligar 2FA, desbloquear, lote até 100
+(mudar perfil/desabilitar/reabilitar), recusa do último admin — mas só um e2e cobria a fatia
+criar/editar/senha/lote-desabilitar/último-admin. Escrito `tests/e2e/test_usuarios.py::
+test_usuarios_perfil_lote_2fa_desbloquear_apagar_com_grupos_e_401`, cobrindo pela INTERFACE o que faltava:
+mudar perfil em massa (3 usuários), desligar 2FA, desbloquear (com bloqueio real de 5 senhas erradas antes),
+apagar recusado listando 2 grupos, e o tempo entre desabilitar e o 401 do próprio usuário na próxima
+requisição — **medido 73,1 ms** (`desabilitar_para_401_ms`, bem abaixo do 1 s do portão).
+
+**Gap real encontrado e corrigido:** `apagar_usuario` só recusava por grupos possuídos; `plat.item.dono_id` é
+FK sem `ON DELETE`, então um usuário com itens do catálogo (mapas, camadas, pastas) na verdade causava um
+`409 em_uso` genérico do banco (nome da constraint, nunca os títulos) em vez da recusa nomeada que o portão
+pede ("recusa listando os 2"). Adicionado `_itens_do_dono` (mesmo padrão de `_grupos_do_dono`) em
+`app/auth/rotas_usuarios.py`, novo erro `409 possui_itens` com a lista de títulos, chave de i18n
+`usuarios.possui_itens` e o mesmo tratamento no JS que já existia para `possui_grupos`. Provado por
+`tests/api/test_usuarios.py::test_apagar_com_2_itens_do_catalogo_recusa_listando_os_2` (cria 2 itens, recusa
+409 listando os 2 títulos, purga os itens pelo mesmo caminho de `tests/api/catalogo/conftest.py::
+_expurgar_zt`, confirma que a exclusão passa a funcionar).
+
+`docs/PARIDADE.md` linha "gestão de membros" atualizada (apagar recusa por grupos E itens, não só grupos).
+Achado colateral, não deste item: `GET /saude` respondeu 503 durante a varredura porque outra trilha do turno
+tinha uma migração (`028_documento_grafo`, depois `029_ingestao_vetor`) pendente de aplicar no banco
+compartilhado — não é regressão de L0-02-e/f, é o estado normal de trilhas paralelas no mesmo turno.
+
 ## turno 3, setembro de 2026 (item L0-09-metadado-catalogo: metadado ISO 19139 por item + catálogo externo OGC API Records)
 
 `GET /api/itens/{id}/metadado.xml` (`app/catalogo/metadado.py`) gera `gmd:MD_Metadata` (ISO 19139/GMD — o
