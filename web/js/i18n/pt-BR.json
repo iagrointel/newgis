@@ -690,6 +690,7 @@
  "catalogo.falha_novo_dono_fora_do_grupo": "novo dono fora do grupo",
  "catalogo.falha_novo_dono_sem_contribuicao": "novo dono não contribui no grupo",
  "catalogo.falha_vista_sem_camada": "vista sem a camada primária",
+ "catalogo.falha_arrasto_sem_edicao": "item dependente de outro dono: sem permissão para editá-lo",
  "catalogo.falha_novo_dono_inativo": "novo dono desabilitado",
  "catalogo.ok": "ok",
  "catalogo.miniatura_enviar": "Enviar miniatura",

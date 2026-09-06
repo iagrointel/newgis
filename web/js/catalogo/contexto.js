@@ -81,6 +81,29 @@ export function alternarSelecao(id, forcar) {
 }
 export function limparSelecao() { if (ctx.ler('selecionados').length) ctx.definir({ selecionados: [] }); }
 
+/* favorito: reconciliação com resposta de lista em voo.
+   A estrela grava no servidor na hora, mas um GET /api/itens pedido ANTES do clique pode chegar DEPOIS e repintar
+   a linha com o estado velho — a tela passava a mostrar o contrário do que o servidor guardou e o clique seguinte
+   repetia o PUT em vez de desfavoritar (achado G2-9). Cada mudança local recebe um número de ordem; quem carrega
+   a lista guarda a marca de antes do pedido e aplica de volta as mudanças que aconteceram depois dela. */
+let relogioFavorito = 0;
+const favoritosLocais = new Map();
+
+export function marcaFavoritos() { return relogioFavorito; }
+
+export function marcarFavoritoLocal(id, valor) { favoritosLocais.set(id, { valor: !!valor, em: ++relogioFavorito }); }
+
+export function aplicarFavoritosLocais(itens, desde) {
+  if (!favoritosLocais.size) return itens;
+  return itens.map((x) => {
+    const o = favoritosLocais.get(x.id);
+    if (!o) return x;
+    if (o.em > desde) return { ...x, favorito: o.valor };   // mudou depois do pedido: a tela manda
+    if (!!x.favorito === o.valor) favoritosLocais.delete(x.id); // o servidor já confirmou: descarta a marca
+    return x;
+  });
+}
+
 /* substitui/insere um item na lista carregada (depois de editar no painel) */
 export function atualizarItemNaLista(item) {
   const itens = ctx.ler('itens');

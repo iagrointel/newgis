@@ -62,6 +62,7 @@ def restaurar(id: str, request: Request, auth: Auth = autenticado()):
 @router.post("/esvaziar", response_model=JobCriado, status_code=202, openapi_extra=X)
 def esvaziar(request: Request, corpo: EsvaziarEntrada | None = None, auth: Auth = autenticado("jobs.executar")):
     ids = [uuid_ok(x) for x in (corpo.ids if corpo and corpo.ids else [])]
+    pediu_ids = bool(ids)
     with db.db(auth.contexto()) as cur:
         ligar_lixeira(cur)
         if ids:
@@ -76,6 +77,12 @@ def esvaziar(request: Request, corpo: EsvaziarEntrada | None = None, auth: Auth 
                 "SELECT id FROM plat.item WHERE id = ANY (%s::uuid[]) AND dono_id = %s", (alvo, auth.usuario_id)
             )
             alvo = [str(r["id"]) for r in cur.fetchall()]
+    # lista vazia NUNCA vira "tudo": se o pedido nomeou ids e nenhum deles resolveu (não existe, não está na
+    # lixeira, é de outro inquilino ou de outro dono), o pedido é recusado em vez de virar expurgo do inquilino.
+    if pediu_ids and not alvo:
+        raise ErroAPI(404, "nenhum_item_na_lixeira", "nenhum dos itens informados está na lixeira deste usuário")
+    if not alvo:
+        raise ErroAPI(409, "lixeira_vazia", "a lixeira já está vazia")
     job = servico.criar(sessao_de(auth), "catalogo.lixeira_expurgar", {"dias": 0, "ids": alvo})
     with db.db(auth.contexto()) as cur:
         registrar_evento(cur, request, "lixeira/esvaziar", "item", None, {"job_id": job["id"], "itens": len(alvo)})

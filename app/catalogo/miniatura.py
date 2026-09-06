@@ -84,13 +84,20 @@ def guardar(cur, item_id: str, png: bytes) -> dict:
     return o
 
 
-def entregar(r: dict, request: Request) -> Response:
-    """GET da miniatura: 204 sem miniatura; ETag = sha256; 304 quando o cliente já tem."""
+CACHE_SESSAO = "private, max-age=300"
+# rota aberta por token ou por "público": a revogação tem de valer no ato, então o cliente pergunta sempre
+# (achado G2-6: com max-age=300 o navegador de quem tinha o link continuava mostrando a miniatura por 5 min)
+CACHE_SEM = "no-store, must-revalidate"
+
+
+def entregar(r: dict, request: Request, cache: str = CACHE_SESSAO) -> Response:
+    """GET da miniatura: 204 sem miniatura; ETag = sha256; 304 quando o cliente já tem. `cache` é o Cache-Control:
+    CACHE_SESSAO nas rotas com sessão, CACHE_SEM nas rotas anônimas (link por token e público)."""
     if not r["miniatura_chave"]:
-        return Response(status_code=204)
+        return Response(status_code=204, headers={"Cache-Control": cache})
     etag = f'"{r["miniatura_sha256"]}"'
     if request.headers.get("if-none-match") == etag:
-        return Response(status_code=304, headers={"ETag": etag, "Cache-Control": "private, max-age=300"})
+        return Response(status_code=304, headers={"ETag": etag, "Cache-Control": cache})
     try:
         dados = objetos.ler(r["miniatura_chave"])
     except (FileNotFoundError, objetos.ChaveInvalida) as e:
@@ -98,7 +105,7 @@ def entregar(r: dict, request: Request) -> Response:
     return Response(
         dados,
         media_type="image/png",
-        headers={"ETag": etag, "Cache-Control": "private, max-age=300", "X-Robots-Tag": "noindex, nofollow"},
+        headers={"ETag": etag, "Cache-Control": cache, "X-Robots-Tag": "noindex, nofollow"},
     )
 
 
