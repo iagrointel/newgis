@@ -16,6 +16,7 @@ from app.acervo import rotas as rotas_acervo
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import (
+    rotas_auditoria,
     rotas_convites,
     rotas_eu,
     rotas_grupos,
@@ -76,6 +77,8 @@ ROUTERS = [
     rotas_grupos.router,
     rotas_tokens.router,
     rotas_log.router,
+    # --- trilha de auditoria (L7-20): GET /api/auditoria (+ CSV/JSON), GET/PUT /api/auditoria/config
+    rotas_auditoria.router,
     rotas_plataforma.router,
     # --- configurações da organização (L0-07-a-configuracoes-org): GET/PUT /api/org; POST/DELETE /api/org/logo
     rotas_org.router,

@@ -8,7 +8,7 @@ import time
 from fastapi import FastAPI, Request
 from starlette.concurrency import run_in_threadpool
 
-from app import db
+from app import auditoria, db
 from app import log as plat_log
 from app.auth.redigir import rota_redigida
 
@@ -38,6 +38,10 @@ def instalar(app: FastAPI) -> None:
     async def requisicao(request: Request, call_next):
         rid = plat_log.req_id()
         request.state.req_id = rid
+        # item L7-20: o contexto da requisição precisa chegar a app/db.py, que prepara o cursor longe da rota
+        # e não recebe o Request. A rota redigida (nunca a query crua) é a mesma que já vai ao log de acesso.
+        auditoria.definir(rid, request.method, rota_redigida(request.url.path, request.url.query),
+                          request.client.host if request.client else None)
         inicio = time.perf_counter()
         resposta = await call_next(request)
         resposta.headers["X-Req-Id"] = rid

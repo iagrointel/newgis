@@ -12,6 +12,7 @@ import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 
+from app import auditoria
 from app.migracoes import chave_migracao
 from app.migracoes import listar as listar_migracoes
 from app.schema_ambiente import CursorSchemaAmbiente
@@ -39,7 +40,11 @@ def pool() -> psycopg2.pool.ThreadedConnectionPool:
     if _pool is None:
         with _trava:
             if _pool is None:
-                _pool = psycopg2.pool.ThreadedConnectionPool(1, 8, settings.PLAT_DSN)
+                # o teto do pool é orçamento de recurso PARTILHADO: max_connections do servidor é 100 e o
+                # banco é o mesmo de outros projetos da casa. settings já lia PLAT_POOL_MIN/PLAT_POOL_MAX
+                # (padrão 1/8) e o pool ignorava as duas — cada trilha abria 8 conexões fixas.
+                _pool = psycopg2.pool.ThreadedConnectionPool(
+                    settings.PLAT_POOL_MIN, settings.PLAT_POOL_MAX, settings.PLAT_DSN)
     return _pool
 
 
@@ -72,6 +77,15 @@ def _preparar(con, ctx: Contexto | None, somente_leitura: bool = False):
             "set_config('plat.login', %s, true)",
             (str(ctx.tenant_id), str(ctx.usuario_id), ctx.login),
         )
+    # trilha de auditoria (item L7-20): o contexto da requisição vira GUC de transação, para que a trigger de
+    # plat.evento e plat.auditoria_cobrir() gravem req_id/ip/token/método/rota sem que a rota passe nada.
+    req = auditoria.atual()
+    cur.execute(
+        "SELECT set_config('plat.req_id', %s, true), set_config('plat.ip', %s, true), "
+        "set_config('plat.token_id', %s, true), set_config('plat.metodo', %s, true), "
+        "set_config('plat.rota', %s, true)",
+        (req.req_id, req.ip, req.token_id, req.metodo, req.rota),
+    )
     if somente_leitura:
         # superadmin lendo outro inquilino (ADR 0002 seção 10): a transação inteira é só leitura
         cur.execute("SET LOCAL transaction_read_only = on")
@@ -98,6 +112,10 @@ def db(ctx: Contexto | None = None, somente_leitura: bool = False):
                 raise
     try:
         yield cur
+        if not somente_leitura:
+            # item L7-20: nenhuma transação de escrita fecha sem linha de auditoria. Transação só leitura
+            # (superadmin lendo outro inquilino) não pode nem tentar: o INSERT erraria por read-only.
+            auditoria.cobrir(cur)
         con.commit()
     except Exception:
         try:

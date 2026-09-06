@@ -19,6 +19,8 @@ PAGINAS = {
     "/admin/papeis": "admin/papeis.html",
     "/admin/tokens": "admin/tokens.html",
     "/admin/log": "admin/log.html",
+    # --- trilha de auditoria (L7-20)
+    "/admin/auditoria": "admin/auditoria.html",
     # --- configurações da organização (L0-07-a-configuracoes-org)
     "/admin/organizacao": "admin/organizacao.html",
     # --- catálogo (L0-03)

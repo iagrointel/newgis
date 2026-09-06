@@ -39,6 +39,13 @@ LOG_JANELA_DIAS = 92
 LOG_LIMITE_MAX = 1000
 LOG_CSV_MAX = 100_000
 LOG_RETENCAO_MESES = 12
+# --- trilha de auditoria (L7-20). Padrão de 2 anos porque a trilha responde por ATO DE NEGÓCIO, não por
+# requisição: o log de acesso continua com 12 meses. O PISO de 90 dias não é conforto — é o que impede o
+# administrador do inquilino de encolher a retenção até apagar a própria trilha (refutação do item).
+AUDITORIA_RETENCAO_PADRAO_DIAS = 730
+AUDITORIA_RETENCAO_MIN_DIAS = 90
+AUDITORIA_RETENCAO_MAX_DIAS = 3650
+AUDITORIA_EXPORTA_MAX = 100_000
 PAGINA_PADRAO = 50
 PAGINA_MAX = 1000
 RESTRICAO_MAX = 20

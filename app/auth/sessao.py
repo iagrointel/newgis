@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 import psycopg2
 from fastapi import Depends, Request
 
-from app import db, limites
+from app import auditoria, db, limites
 from app.auth import escopos as esc
 from app.auth.politica import Politica, politica_de
 from app.erros import ErroAPI
@@ -301,6 +301,7 @@ def resolver(request: Request) -> Auth | None:
     request.state.tenant_id = auth.tenant_id
     request.state.usuario_id = auth.usuario_id
     request.state.token_id = auth.token_id
+    auditoria.definir_token(auth.token_id)  # item L7-20: a linha de auditoria diz se o ato veio por token
     return auth
 
 
