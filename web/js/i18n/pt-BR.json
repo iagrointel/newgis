@@ -847,6 +847,8 @@
  "redefinir_senha.invalido": "este link não existe ou não pode mais ser usado",
  "redefinir_senha.expirado": "este link expirou",
  "nav.uploads": "Enviar arquivo",
+ "nav.migracao": "Migração de Portal",
+ "nav.migracao_desc": "leitura só-leitura de um Portal/AGOL: inventário do que existe, por tipo, com contagem e classificação prévia",
  "upload.titulo": "Enviar arquivo",
  "upload.tipo": "tipo do arquivo",
  "upload.tipo_detectar": "detectar pela extensão",

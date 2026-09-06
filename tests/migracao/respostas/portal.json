@@ -1,0 +1,2500 @@
+{
+ "org_id": "00000000000000000000000000000001",
+ "self": {
+  "id": "00000000000000000000000000000001",
+  "name": "SIG de teste interno",
+  "urlKey": "sig-de-teste-interno",
+  "currentVersion": "11.4",
+  "portalName": "ArcGIS Online",
+  "isPortal": false,
+  "access": "public",
+  "user": {
+   "username": "ana.tec",
+   "role": "org_admin"
+  }
+ },
+ "raiz": {
+  "currentVersion": 11.4,
+  "fullVersion": "11.4"
+ },
+ "itens": [
+  {
+   "id": "804fbeeed48dce7e2ef53c44d7f1334e",
+   "owner": "bruno.gis",
+   "created": 1700086400000,
+   "modified": 1700090000000,
+   "lastViewed": 1700093600000,
+   "title": "Feature Service de teste 1",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_1/FeatureServer",
+   "access": "public",
+   "size": 14336,
+   "numViews": 11
+  },
+  {
+   "id": "ac9f1139c3655103031d429aff226540",
+   "owner": "carla.campo",
+   "created": 1700172800000,
+   "modified": 1700176400000,
+   "lastViewed": 1700180000000,
+   "title": "Feature Service de teste 2",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_2/FeatureServer",
+   "access": "public",
+   "size": 27648,
+   "numViews": 22
+  },
+  {
+   "id": "28c3154850007c21603e48fecb530417",
+   "owner": "diego.dados",
+   "created": 1700259200000,
+   "modified": 1700262800000,
+   "lastViewed": 1700266400000,
+   "title": "Feature Service de teste 3",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_3/FeatureServer",
+   "access": "org",
+   "size": 40960,
+   "numViews": 33
+  },
+  {
+   "id": "7dacfe6167233b0f8f272610e21bd51a",
+   "owner": "ana.tec",
+   "created": 1700345600000,
+   "modified": 1700349200000,
+   "lastViewed": 1700352800000,
+   "title": "Feature Service de teste 4",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_4/FeatureServer",
+   "access": "public",
+   "size": 54272,
+   "numViews": 44
+  },
+  {
+   "id": "6344adc7d60723f02cc58ba4c2525040",
+   "owner": "bruno.gis",
+   "created": 1700432000000,
+   "modified": 1700435600000,
+   "lastViewed": 1700439200000,
+   "title": "Feature Service de teste 5",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_5/FeatureServer",
+   "access": "public",
+   "size": 67584,
+   "numViews": 55
+  },
+  {
+   "id": "1cc8165960cf3dd6cbb4d77de13d4224",
+   "owner": "carla.campo",
+   "created": 1700518400000,
+   "modified": 1700522000000,
+   "lastViewed": 1700525600000,
+   "title": "Feature Service de teste 6",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_6/FeatureServer",
+   "access": "org",
+   "size": 80896,
+   "numViews": 66
+  },
+  {
+   "id": "cd0a560c7a55255ef270048386e99443",
+   "owner": "diego.dados",
+   "created": 1700604800000,
+   "modified": 1700608400000,
+   "lastViewed": 1700612000000,
+   "title": "Feature Service de teste 7",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_7/FeatureServer",
+   "access": "public",
+   "size": 94208,
+   "numViews": 77
+  },
+  {
+   "id": "9e9ba5d24a087065d65ea69452c4678b",
+   "owner": "ana.tec",
+   "created": 1700691200000,
+   "modified": 1700694800000,
+   "lastViewed": 1700698400000,
+   "title": "Feature Service de teste 8",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_8/FeatureServer",
+   "access": "public",
+   "size": 107520,
+   "numViews": 88
+  },
+  {
+   "id": "1e2d2bcf957b082db19383850bf4d112",
+   "owner": "bruno.gis",
+   "created": 1700777600000,
+   "modified": 1700781200000,
+   "lastViewed": 1700784800000,
+   "title": "Feature Service de teste 9",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_9/FeatureServer",
+   "access": "org",
+   "size": 120832,
+   "numViews": 99
+  },
+  {
+   "id": "6f6e69d7ba7afaf737792ea97794a513",
+   "owner": "carla.campo",
+   "created": 1700864000000,
+   "modified": 1700867600000,
+   "lastViewed": 1700871200000,
+   "title": "Feature Service de teste 10",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_10/FeatureServer",
+   "access": "public",
+   "size": 134144,
+   "numViews": 110
+  },
+  {
+   "id": "bdebdb10b01c8e7fe4d580e9f69188b6",
+   "owner": "diego.dados",
+   "created": 1700950400000,
+   "modified": 1700954000000,
+   "lastViewed": 1700957600000,
+   "title": "Feature Service de teste 11",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_11/FeatureServer",
+   "access": "public",
+   "size": 147456,
+   "numViews": 121
+  },
+  {
+   "id": "5848c4d7e918169b34a9175d4a0f0e0a",
+   "owner": "ana.tec",
+   "created": 1701036800000,
+   "modified": 1701040400000,
+   "lastViewed": 1701044000000,
+   "title": "Feature Service de teste 12",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_12/FeatureServer",
+   "access": "org",
+   "size": 160768,
+   "numViews": 132
+  },
+  {
+   "id": "d18cafaa44d52dd4dc3ffa020ef15ae5",
+   "owner": "bruno.gis",
+   "created": 1701123200000,
+   "modified": 1701126800000,
+   "lastViewed": 1701130400000,
+   "title": "Feature Service de teste 1",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r1_1/FeatureServer",
+   "access": "public",
+   "size": 174080,
+   "numViews": 143
+  },
+  {
+   "id": "d3965d10ed52fec497e4d200f84d019a",
+   "owner": "carla.campo",
+   "created": 1701209600000,
+   "modified": 1701213200000,
+   "lastViewed": 1701216800000,
+   "title": "Feature Service de teste 2",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r1_2/FeatureServer",
+   "access": "public",
+   "size": 187392,
+   "numViews": 154
+  },
+  {
+   "id": "6c29d4f9253a268f0ddbc1ad47ff95d8",
+   "owner": "diego.dados",
+   "created": 1701296000000,
+   "modified": 1701299600000,
+   "lastViewed": 1701303200000,
+   "title": "Feature Service de teste 3",
+   "type": "Feature Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Feature Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r1_3/FeatureServer",
+   "access": "org",
+   "size": 200704,
+   "numViews": 165
+  },
+  {
+   "id": "c1439792364025e8ebf79423b916441c",
+   "owner": "ana.tec",
+   "created": 1701382400000,
+   "modified": 1701386000000,
+   "lastViewed": 1701389600000,
+   "title": "Table de teste 1",
+   "type": "Table",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Table",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/table_r2_1/FeatureServer",
+   "access": "public",
+   "size": 214016,
+   "numViews": 176
+  },
+  {
+   "id": "4add513f1503e5b6772e9b8282a23950",
+   "owner": "bruno.gis",
+   "created": 1701468800000,
+   "modified": 1701472400000,
+   "lastViewed": 1701476000000,
+   "title": "Table de teste 2",
+   "type": "Table",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Feature Access",
+    "Table",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/table_r2_2/FeatureServer",
+   "access": "public",
+   "size": 227328,
+   "numViews": 187
+  },
+  {
+   "id": "e15b296ec4ca19c25a9f47ec03180d2a",
+   "owner": "carla.campo",
+   "created": 1701555200000,
+   "modified": 1701558800000,
+   "lastViewed": 1701562400000,
+   "title": "Map Service de teste 1",
+   "type": "Map Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Map Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/map_service_r3_1/MapServer",
+   "access": "org",
+   "size": 240640,
+   "numViews": 198
+  },
+  {
+   "id": "8967da96f34cdec7899b0a8bc06f9852",
+   "owner": "diego.dados",
+   "created": 1701641600000,
+   "modified": 1701645200000,
+   "lastViewed": 1701648800000,
+   "title": "Map Service de teste 2",
+   "type": "Map Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Map Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": "https://sig-de-teste-interno.invalido/server/rest/services/map_service_r3_2/MapServer",
+   "access": "public",
+   "size": 253952,
+   "numViews": 209
+  },
+  {
+   "id": "405a03f7f934d278f9084abdeaea4ba9",
+   "owner": "ana.tec",
+   "created": 1701728000000,
+   "modified": 1701731600000,
+   "lastViewed": 1701735200000,
+   "title": "Image Service de teste 1",
+   "type": "Image Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Image Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 267264,
+   "numViews": 220
+  },
+  {
+   "id": "bbc6790763bc63298f64acf0f9173561",
+   "owner": "bruno.gis",
+   "created": 1701814400000,
+   "modified": 1701818000000,
+   "lastViewed": 1701821600000,
+   "title": "Image Service de teste 2",
+   "type": "Image Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Image Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "org",
+   "size": 280576,
+   "numViews": 231
+  },
+  {
+   "id": "6203bb5a8be908fe74be0304cb836de1",
+   "owner": "carla.campo",
+   "created": 1701900800000,
+   "modified": 1701904400000,
+   "lastViewed": 1701908000000,
+   "title": "Vector Tile Service de teste 1",
+   "type": "Vector Tile Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Vector Tile Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 293888,
+   "numViews": 242
+  },
+  {
+   "id": "13072defe0b9c30ba8a20b3d10271d06",
+   "owner": "diego.dados",
+   "created": 1701987200000,
+   "modified": 1701990800000,
+   "lastViewed": 1701994400000,
+   "title": "Vector Tile Service de teste 2",
+   "type": "Vector Tile Service",
+   "typeKeywords": [
+    "ArcGIS Server",
+    "Data",
+    "Vector Tile Service",
+    "Hosted Service"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 307200,
+   "numViews": 253
+  },
+  {
+   "id": "30cb636003ad39f5550fffe4d542a514",
+   "owner": "ana.tec",
+   "created": 1702073600000,
+   "modified": 1702077200000,
+   "lastViewed": 1702080800000,
+   "title": "WMS de teste 1",
+   "type": "WMS",
+   "typeKeywords": [
+    "Data",
+    "Service",
+    "OGC",
+    "WMS"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "org",
+   "size": 320512,
+   "numViews": 264
+  },
+  {
+   "id": "f2943eab670d3bf85e2cb6881db1b748",
+   "owner": "bruno.gis",
+   "created": 1702160000000,
+   "modified": 1702163600000,
+   "lastViewed": 1702167200000,
+   "title": "WMS de teste 2",
+   "type": "WMS",
+   "typeKeywords": [
+    "Data",
+    "Service",
+    "OGC",
+    "WMS"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 333824,
+   "numViews": 275
+  },
+  {
+   "id": "af73c69c245f767827662c01467a38f4",
+   "owner": "carla.campo",
+   "created": 1702246400000,
+   "modified": 1702250000000,
+   "lastViewed": 1702253600000,
+   "title": "Web Map de teste 1",
+   "type": "Web Map",
+   "typeKeywords": [
+    "ArcGIS Online",
+    "Explorer Web Map",
+    "Map",
+    "Web Map"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 347136,
+   "numViews": 286
+  },
+  {
+   "id": "5315905ce2eddbb29d1d9c861d80a655",
+   "owner": "diego.dados",
+   "created": 1702332800000,
+   "modified": 1702336400000,
+   "lastViewed": 1702340000000,
+   "title": "Web Map de teste 2",
+   "type": "Web Map",
+   "typeKeywords": [
+    "ArcGIS Online",
+    "Explorer Web Map",
+    "Map",
+    "Web Map"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "org",
+   "size": 360448,
+   "numViews": 297
+  },
+  {
+   "id": "7681eab5fddaf1a60b38471eab9567c4",
+   "owner": "ana.tec",
+   "created": 1702419200000,
+   "modified": 1702422800000,
+   "lastViewed": 1702426400000,
+   "title": "Web Map de teste 3",
+   "type": "Web Map",
+   "typeKeywords": [
+    "ArcGIS Online",
+    "Explorer Web Map",
+    "Map",
+    "Web Map"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 373760,
+   "numViews": 308
+  },
+  {
+   "id": "7081fa6152e01e9b5aac5869b9dd14b4",
+   "owner": "bruno.gis",
+   "created": 1702505600000,
+   "modified": 1702509200000,
+   "lastViewed": 1702512800000,
+   "title": "Web Map de teste 4",
+   "type": "Web Map",
+   "typeKeywords": [
+    "ArcGIS Online",
+    "Explorer Web Map",
+    "Map",
+    "Web Map"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 387072,
+   "numViews": 319
+  },
+  {
+   "id": "ed2c28214777eab2bccf413a5e833874",
+   "owner": "carla.campo",
+   "created": 1702592000000,
+   "modified": 1702595600000,
+   "lastViewed": 1702599200000,
+   "title": "Web Map de teste 5",
+   "type": "Web Map",
+   "typeKeywords": [
+    "ArcGIS Online",
+    "Explorer Web Map",
+    "Map",
+    "Web Map"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "org",
+   "size": 400384,
+   "numViews": 330
+  },
+  {
+   "id": "3670c37e4faba6c308f0960587cbde9a",
+   "owner": "diego.dados",
+   "created": 1702678400000,
+   "modified": 1702682000000,
+   "lastViewed": 1702685600000,
+   "title": "Web Map de teste 6",
+   "type": "Web Map",
+   "typeKeywords": [
+    "ArcGIS Online",
+    "Explorer Web Map",
+    "Map",
+    "Web Map"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 413696,
+   "numViews": 341
+  },
+  {
+   "id": "dd30ec2440687de56e1a9b2ea6c32638",
+   "owner": "ana.tec",
+   "created": 1702764800000,
+   "modified": 1702768400000,
+   "lastViewed": 1702772000000,
+   "title": "Web Map de teste 7",
+   "type": "Web Map",
+   "typeKeywords": [
+    "ArcGIS Online",
+    "Explorer Web Map",
+    "Map",
+    "Web Map"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 427008,
+   "numViews": 352
+  },
+  {
+   "id": "cf1fe71bae28511e7024b9cc9e3bccea",
+   "owner": "bruno.gis",
+   "created": 1702851200000,
+   "modified": 1702854800000,
+   "lastViewed": 1702858400000,
+   "title": "Web Map de teste 8",
+   "type": "Web Map",
+   "typeKeywords": [
+    "ArcGIS Online",
+    "Explorer Web Map",
+    "Map",
+    "Web Map"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "org",
+   "size": 440320,
+   "numViews": 363
+  },
+  {
+   "id": "26b846118e2c8e699ab31471142da8b1",
+   "owner": "carla.campo",
+   "created": 1702937600000,
+   "modified": 1702941200000,
+   "lastViewed": 1702944800000,
+   "title": "Dashboard de teste 1",
+   "type": "Dashboard",
+   "typeKeywords": [
+    "Dashboard",
+    "Operations Dashboard"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 453632,
+   "numViews": 374
+  },
+  {
+   "id": "a4da17b449e94c805bcac10d05ede3aa",
+   "owner": "diego.dados",
+   "created": 1703024000000,
+   "modified": 1703027600000,
+   "lastViewed": 1703031200000,
+   "title": "Dashboard de teste 2",
+   "type": "Dashboard",
+   "typeKeywords": [
+    "Dashboard",
+    "Operations Dashboard"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 466944,
+   "numViews": 385
+  },
+  {
+   "id": "61d5eec69f85dcb261e346c601b1fc84",
+   "owner": "ana.tec",
+   "created": 1703110400000,
+   "modified": 1703114000000,
+   "lastViewed": 1703117600000,
+   "title": "Dashboard de teste 3",
+   "type": "Dashboard",
+   "typeKeywords": [
+    "Dashboard",
+    "Operations Dashboard"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "org",
+   "size": 480256,
+   "numViews": 396
+  },
+  {
+   "id": "376fe7f544477d91ea49a9327d72a2b8",
+   "owner": "bruno.gis",
+   "created": 1703196800000,
+   "modified": 1703200400000,
+   "lastViewed": 1703204000000,
+   "title": "Dashboard de teste 4",
+   "type": "Dashboard",
+   "typeKeywords": [
+    "Dashboard",
+    "Operations Dashboard"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 493568,
+   "numViews": 407
+  },
+  {
+   "id": "762465a290df853225292e56146d8a56",
+   "owner": "carla.campo",
+   "created": 1703283200000,
+   "modified": 1703286800000,
+   "lastViewed": 1703290400000,
+   "title": "Web Mapping Application de teste 1",
+   "type": "Web Mapping Application",
+   "typeKeywords": [
+    "JavaScript",
+    "Map",
+    "Online Map",
+    "Web Map"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 506880,
+   "numViews": 418
+  },
+  {
+   "id": "01f52c4e630e59a23ca43a61a590bb22",
+   "owner": "diego.dados",
+   "created": 1703369600000,
+   "modified": 1703373200000,
+   "lastViewed": 1703376800000,
+   "title": "Web Mapping Application de teste 2",
+   "type": "Web Mapping Application",
+   "typeKeywords": [
+    "JavaScript",
+    "Map",
+    "Online Map",
+    "Web Map"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "org",
+   "size": 520192,
+   "numViews": 429
+  },
+  {
+   "id": "c0123fb52a832272921aecc887396c3d",
+   "owner": "ana.tec",
+   "created": 1703456000000,
+   "modified": 1703459600000,
+   "lastViewed": 1703463200000,
+   "title": "Web Mapping Application de teste 3",
+   "type": "Web Mapping Application",
+   "typeKeywords": [
+    "JavaScript",
+    "Map",
+    "Online Map",
+    "Web Map"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 533504,
+   "numViews": 440
+  },
+  {
+   "id": "ece37c7955f8558e3eba20ee6beda388",
+   "owner": "bruno.gis",
+   "created": 1703542400000,
+   "modified": 1703546000000,
+   "lastViewed": 1703549600000,
+   "title": "Web Experience de teste 1",
+   "type": "Web Experience",
+   "typeKeywords": [
+    "EXB Experience",
+    "JavaScript",
+    "Web Experience"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 546816,
+   "numViews": 451
+  },
+  {
+   "id": "c074bad5e47aa2b4807ea8d6c715f06d",
+   "owner": "carla.campo",
+   "created": 1703628800000,
+   "modified": 1703632400000,
+   "lastViewed": 1703636000000,
+   "title": "Web Experience de teste 2",
+   "type": "Web Experience",
+   "typeKeywords": [
+    "EXB Experience",
+    "JavaScript",
+    "Web Experience"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "org",
+   "size": 560128,
+   "numViews": 462
+  },
+  {
+   "id": "0927ea03c00a327c4349b5d9264afd92",
+   "owner": "diego.dados",
+   "created": 1703715200000,
+   "modified": 1703718800000,
+   "lastViewed": 1703722400000,
+   "title": "StoryMap de teste 1",
+   "type": "StoryMap",
+   "typeKeywords": [
+    "arcgis-storymaps",
+    "StoryMap",
+    "Web Application"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 573440,
+   "numViews": 473
+  },
+  {
+   "id": "5ece2d4d7fd91e1a6e50fceab021258b",
+   "owner": "ana.tec",
+   "created": 1703801600000,
+   "modified": 1703805200000,
+   "lastViewed": 1703808800000,
+   "title": "StoryMap de teste 2",
+   "type": "StoryMap",
+   "typeKeywords": [
+    "arcgis-storymaps",
+    "StoryMap",
+    "Web Application"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 586752,
+   "numViews": 484
+  },
+  {
+   "id": "4d6b46ff4ecfc4dfc1c6af616007233a",
+   "owner": "bruno.gis",
+   "created": 1703888000000,
+   "modified": 1703891600000,
+   "lastViewed": 1703895200000,
+   "title": "Notebook de teste 1",
+   "type": "Notebook",
+   "typeKeywords": [
+    "Notebook",
+    "Python"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "org",
+   "size": 600064,
+   "numViews": 495
+  },
+  {
+   "id": "6aaa5ddb77ca8c264f7a21b16beb3227",
+   "owner": "carla.campo",
+   "created": 1703974400000,
+   "modified": 1703978000000,
+   "lastViewed": 1703981600000,
+   "title": "Notebook de teste 2",
+   "type": "Notebook",
+   "typeKeywords": [
+    "Notebook",
+    "Python"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 613376,
+   "numViews": 506
+  },
+  {
+   "id": "d5cf0683e237e2db529627f0a46fe6b1",
+   "owner": "diego.dados",
+   "created": 1704060800000,
+   "modified": 1704064400000,
+   "lastViewed": 1704068000000,
+   "title": "Form de teste 1",
+   "type": "Form",
+   "typeKeywords": [
+    "Form",
+    "Survey123",
+    "xForm"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 626688,
+   "numViews": 517
+  },
+  {
+   "id": "a321aa2a69d84d5df8d8b4ef35d84aa2",
+   "owner": "ana.tec",
+   "created": 1704147200000,
+   "modified": 1704150800000,
+   "lastViewed": 1704154400000,
+   "title": "Form de teste 2",
+   "type": "Form",
+   "typeKeywords": [
+    "Form",
+    "Survey123",
+    "xForm"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "org",
+   "size": 640000,
+   "numViews": 528
+  },
+  {
+   "id": "1fd4198d3e715eb44fb6d05888fcb004",
+   "owner": "bruno.gis",
+   "created": 1704233600000,
+   "modified": 1704237200000,
+   "lastViewed": 1704240800000,
+   "title": "CSV de teste 1",
+   "type": "CSV",
+   "typeKeywords": [
+    "CSV"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 653312,
+   "numViews": 539
+  },
+  {
+   "id": "09443fb25de71d1e6f6577661038deb9",
+   "owner": "carla.campo",
+   "created": 1704320000000,
+   "modified": 1704323600000,
+   "lastViewed": 1704327200000,
+   "title": "CSV de teste 2",
+   "type": "CSV",
+   "typeKeywords": [
+    "CSV"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 666624,
+   "numViews": 550
+  },
+  {
+   "id": "4df56748461ce66bbfd22407a6803030",
+   "owner": "diego.dados",
+   "created": 1704406400000,
+   "modified": 1704410000000,
+   "lastViewed": 1704413600000,
+   "title": "CSV de teste 3",
+   "type": "CSV",
+   "typeKeywords": [
+    "CSV"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "org",
+   "size": 679936,
+   "numViews": 561
+  },
+  {
+   "id": "91399ed82761e7315b2a8d80be68d41a",
+   "owner": "ana.tec",
+   "created": 1704492800000,
+   "modified": 1704496400000,
+   "lastViewed": 1704500000000,
+   "title": "Shapefile de teste 1",
+   "type": "Shapefile",
+   "typeKeywords": [
+    "Shapefile"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 693248,
+   "numViews": 572
+  },
+  {
+   "id": "5984a16a0823b8d146dcad9f0f939c05",
+   "owner": "bruno.gis",
+   "created": 1704579200000,
+   "modified": 1704582800000,
+   "lastViewed": 1704586400000,
+   "title": "Shapefile de teste 2",
+   "type": "Shapefile",
+   "typeKeywords": [
+    "Shapefile"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 706560,
+   "numViews": 583
+  },
+  {
+   "id": "2d27ae824d5b1c79274c3d6cd53138d4",
+   "owner": "carla.campo",
+   "created": 1704665600000,
+   "modified": 1704669200000,
+   "lastViewed": 1704672800000,
+   "title": "File Geodatabase de teste 1",
+   "type": "File Geodatabase",
+   "typeKeywords": [
+    "FGDB",
+    "File Geodatabase"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "org",
+   "size": 719872,
+   "numViews": 594
+  },
+  {
+   "id": "d9bea572c929073f6dce2c4b3c8d1256",
+   "owner": "diego.dados",
+   "created": 1704752000000,
+   "modified": 1704755600000,
+   "lastViewed": 1704759200000,
+   "title": "File Geodatabase de teste 2",
+   "type": "File Geodatabase",
+   "typeKeywords": [
+    "FGDB",
+    "File Geodatabase"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 733184,
+   "numViews": 605
+  },
+  {
+   "id": "5c743016cb27eede45f045ef3d22322c",
+   "owner": "ana.tec",
+   "created": 1704838400000,
+   "modified": 1704842000000,
+   "lastViewed": 1704845600000,
+   "title": "Insights Workbook de teste 1",
+   "type": "Insights Workbook",
+   "typeKeywords": [
+    "Insights",
+    "Workbook"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 746496,
+   "numViews": 616
+  },
+  {
+   "id": "865ad7ba7fecd9a0f3800611bb13eed7",
+   "owner": "bruno.gis",
+   "created": 1704924800000,
+   "modified": 1704928400000,
+   "lastViewed": 1704932000000,
+   "title": "Workflow de teste 1",
+   "type": "Workflow",
+   "typeKeywords": [
+    "Workflow Manager"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "org",
+   "size": 759808,
+   "numViews": 627
+  },
+  {
+   "id": "48a3d6f8076c8e74dc3d623ee4230ec3",
+   "owner": "carla.campo",
+   "created": 1705011200000,
+   "modified": 1705014800000,
+   "lastViewed": 1705018400000,
+   "title": "Hub Site Application de teste 1",
+   "type": "Hub Site Application",
+   "typeKeywords": [
+    "Hub",
+    "Hub Site",
+    "OpenData"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 773120,
+   "numViews": 638
+  },
+  {
+   "id": "1d3ee5037e5c234db307f2edda482c17",
+   "owner": "diego.dados",
+   "created": 1705097600000,
+   "modified": 1705101200000,
+   "lastViewed": 1705104800000,
+   "title": "Quantum Widget de teste 1",
+   "type": "Quantum Widget",
+   "typeKeywords": [
+    "Tipo que a tabela desta casa não conhece"
+   ],
+   "description": "acervo fictício do SIG de teste interno",
+   "tags": [
+    "teste",
+    "inventario"
+   ],
+   "snippet": null,
+   "url": null,
+   "access": "public",
+   "size": 786432,
+   "numViews": 649
+  }
+ ],
+ "dados": {
+  "af73c69c245f767827662c01467a38f4": {
+   "operationalLayers": [
+    {
+     "id": "camada_0",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "804fbeeed48dce7e2ef53c44d7f1334e",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_1/FeatureServer",
+     "title": "camada 0",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_1",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "ac9f1139c3655103031d429aff226540",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_2/FeatureServer",
+     "title": "camada 1",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_2",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "28c3154850007c21603e48fecb530417",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_3/FeatureServer",
+     "title": "camada 2",
+     "opacity": 1,
+     "visibility": true
+    }
+   ],
+   "baseMap": {
+    "baseMapLayers": [
+     {
+      "id": "base",
+      "layerType": "VectorTileLayer",
+      "styleUrl": "https://basemaps.invalido/style.json"
+     }
+    ],
+    "title": "Base"
+   },
+   "spatialReference": {
+    "wkid": 4326
+   },
+   "version": "2.27"
+  },
+  "5315905ce2eddbb29d1d9c861d80a655": {
+   "operationalLayers": [
+    {
+     "id": "camada_0",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "ac9f1139c3655103031d429aff226540",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_2/FeatureServer",
+     "title": "camada 0",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_1",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "28c3154850007c21603e48fecb530417",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_3/FeatureServer",
+     "title": "camada 1",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_2",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "7dacfe6167233b0f8f272610e21bd51a",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_4/FeatureServer",
+     "title": "camada 2",
+     "opacity": 1,
+     "visibility": true
+    }
+   ],
+   "baseMap": {
+    "baseMapLayers": [
+     {
+      "id": "base",
+      "layerType": "VectorTileLayer",
+      "styleUrl": "https://basemaps.invalido/style.json"
+     }
+    ],
+    "title": "Base"
+   },
+   "spatialReference": {
+    "wkid": 4326
+   },
+   "version": "2.27"
+  },
+  "7681eab5fddaf1a60b38471eab9567c4": {
+   "operationalLayers": [
+    {
+     "id": "camada_0",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "28c3154850007c21603e48fecb530417",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_3/FeatureServer",
+     "title": "camada 0",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_1",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "7dacfe6167233b0f8f272610e21bd51a",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_4/FeatureServer",
+     "title": "camada 1",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_2",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "6344adc7d60723f02cc58ba4c2525040",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_5/FeatureServer",
+     "title": "camada 2",
+     "opacity": 1,
+     "visibility": true
+    }
+   ],
+   "baseMap": {
+    "baseMapLayers": [
+     {
+      "id": "base",
+      "layerType": "VectorTileLayer",
+      "styleUrl": "https://basemaps.invalido/style.json"
+     }
+    ],
+    "title": "Base"
+   },
+   "spatialReference": {
+    "wkid": 4326
+   },
+   "version": "2.27"
+  },
+  "7081fa6152e01e9b5aac5869b9dd14b4": {
+   "operationalLayers": [
+    {
+     "id": "camada_0",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "7dacfe6167233b0f8f272610e21bd51a",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_4/FeatureServer",
+     "title": "camada 0",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_1",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "6344adc7d60723f02cc58ba4c2525040",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_5/FeatureServer",
+     "title": "camada 1",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_2",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "1cc8165960cf3dd6cbb4d77de13d4224",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_6/FeatureServer",
+     "title": "camada 2",
+     "opacity": 1,
+     "visibility": true
+    }
+   ],
+   "baseMap": {
+    "baseMapLayers": [
+     {
+      "id": "base",
+      "layerType": "VectorTileLayer",
+      "styleUrl": "https://basemaps.invalido/style.json"
+     }
+    ],
+    "title": "Base"
+   },
+   "spatialReference": {
+    "wkid": 4326
+   },
+   "version": "2.27"
+  },
+  "ed2c28214777eab2bccf413a5e833874": {
+   "operationalLayers": [
+    {
+     "id": "camada_0",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "6344adc7d60723f02cc58ba4c2525040",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_5/FeatureServer",
+     "title": "camada 0",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_1",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "1cc8165960cf3dd6cbb4d77de13d4224",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_6/FeatureServer",
+     "title": "camada 1",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_2",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "cd0a560c7a55255ef270048386e99443",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_7/FeatureServer",
+     "title": "camada 2",
+     "opacity": 1,
+     "visibility": true
+    }
+   ],
+   "baseMap": {
+    "baseMapLayers": [
+     {
+      "id": "base",
+      "layerType": "VectorTileLayer",
+      "styleUrl": "https://basemaps.invalido/style.json"
+     }
+    ],
+    "title": "Base"
+   },
+   "spatialReference": {
+    "wkid": 4326
+   },
+   "version": "2.27"
+  },
+  "3670c37e4faba6c308f0960587cbde9a": {
+   "operationalLayers": [
+    {
+     "id": "camada_0",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "1cc8165960cf3dd6cbb4d77de13d4224",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_6/FeatureServer",
+     "title": "camada 0",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_1",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "cd0a560c7a55255ef270048386e99443",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_7/FeatureServer",
+     "title": "camada 1",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_2",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "9e9ba5d24a087065d65ea69452c4678b",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_8/FeatureServer",
+     "title": "camada 2",
+     "opacity": 1,
+     "visibility": true
+    }
+   ],
+   "baseMap": {
+    "baseMapLayers": [
+     {
+      "id": "base",
+      "layerType": "VectorTileLayer",
+      "styleUrl": "https://basemaps.invalido/style.json"
+     }
+    ],
+    "title": "Base"
+   },
+   "spatialReference": {
+    "wkid": 4326
+   },
+   "version": "2.27"
+  },
+  "dd30ec2440687de56e1a9b2ea6c32638": {
+   "operationalLayers": [
+    {
+     "id": "camada_0",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "cd0a560c7a55255ef270048386e99443",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_7/FeatureServer",
+     "title": "camada 0",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_1",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "9e9ba5d24a087065d65ea69452c4678b",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_8/FeatureServer",
+     "title": "camada 1",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_2",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "1e2d2bcf957b082db19383850bf4d112",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_9/FeatureServer",
+     "title": "camada 2",
+     "opacity": 1,
+     "visibility": true
+    }
+   ],
+   "baseMap": {
+    "baseMapLayers": [
+     {
+      "id": "base",
+      "layerType": "VectorTileLayer",
+      "styleUrl": "https://basemaps.invalido/style.json"
+     }
+    ],
+    "title": "Base"
+   },
+   "spatialReference": {
+    "wkid": 4326
+   },
+   "version": "2.27"
+  },
+  "cf1fe71bae28511e7024b9cc9e3bccea": {
+   "operationalLayers": [
+    {
+     "id": "camada_0",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "9e9ba5d24a087065d65ea69452c4678b",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_8/FeatureServer",
+     "title": "camada 0",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_1",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "1e2d2bcf957b082db19383850bf4d112",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_9/FeatureServer",
+     "title": "camada 1",
+     "opacity": 1,
+     "visibility": true
+    },
+    {
+     "id": "camada_2",
+     "layerType": "ArcGISFeatureLayer",
+     "itemId": "6f6e69d7ba7afaf737792ea97794a513",
+     "url": "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_10/FeatureServer",
+     "title": "camada 2",
+     "opacity": 1,
+     "visibility": true
+    }
+   ],
+   "baseMap": {
+    "baseMapLayers": [
+     {
+      "id": "base",
+      "layerType": "VectorTileLayer",
+      "styleUrl": "https://basemaps.invalido/style.json"
+     }
+    ],
+    "title": "Base"
+   },
+   "spatialReference": {
+    "wkid": 4326
+   },
+   "version": "2.27"
+  },
+  "26b846118e2c8e699ab31471142da8b1": {
+   "version": 50,
+   "widgets": [
+    {
+     "type": "mapWidget",
+     "itemId": "af73c69c245f767827662c01467a38f4"
+    }
+   ],
+   "values": {
+    "webmap": "af73c69c245f767827662c01467a38f4"
+   }
+  },
+  "a4da17b449e94c805bcac10d05ede3aa": {
+   "version": 50,
+   "widgets": [
+    {
+     "type": "mapWidget",
+     "itemId": "5315905ce2eddbb29d1d9c861d80a655"
+    }
+   ],
+   "values": {
+    "webmap": "5315905ce2eddbb29d1d9c861d80a655"
+   }
+  },
+  "61d5eec69f85dcb261e346c601b1fc84": {
+   "version": 50,
+   "widgets": [
+    {
+     "type": "mapWidget",
+     "itemId": "7681eab5fddaf1a60b38471eab9567c4"
+    }
+   ],
+   "values": {
+    "webmap": "7681eab5fddaf1a60b38471eab9567c4"
+   }
+  },
+  "376fe7f544477d91ea49a9327d72a2b8": {
+   "version": 50,
+   "widgets": [
+    {
+     "type": "mapWidget",
+     "itemId": "7081fa6152e01e9b5aac5869b9dd14b4"
+    }
+   ],
+   "values": {
+    "webmap": "7081fa6152e01e9b5aac5869b9dd14b4"
+   }
+  },
+  "762465a290df853225292e56146d8a56": {
+   "version": 50,
+   "widgets": [
+    {
+     "type": "mapWidget",
+     "itemId": "ed2c28214777eab2bccf413a5e833874"
+    }
+   ],
+   "values": {
+    "webmap": "ed2c28214777eab2bccf413a5e833874"
+   }
+  },
+  "01f52c4e630e59a23ca43a61a590bb22": {
+   "version": 50,
+   "widgets": [
+    {
+     "type": "mapWidget",
+     "itemId": "3670c37e4faba6c308f0960587cbde9a"
+    }
+   ],
+   "values": {
+    "webmap": "3670c37e4faba6c308f0960587cbde9a"
+   }
+  },
+  "c0123fb52a832272921aecc887396c3d": {
+   "version": 50,
+   "widgets": [
+    {
+     "type": "mapWidget",
+     "itemId": "dd30ec2440687de56e1a9b2ea6c32638"
+    }
+   ],
+   "values": {
+    "webmap": "dd30ec2440687de56e1a9b2ea6c32638"
+   }
+  }
+ },
+ "servicos": {
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_1/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r0_1",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r0_1_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1000
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_2/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r0_2",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r0_2_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 1,
+     "name": "feature_service_r0_2_camada_1",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1007,
+    "1": 2007
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_3/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r0_3",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r0_3_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 1,
+     "name": "feature_service_r0_3_camada_1",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 2,
+     "name": "feature_service_r0_3_camada_2",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1014,
+    "1": 2014,
+    "2": 3014
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_4/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r0_4",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r0_4_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1021
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_5/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r0_5",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r0_5_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 1,
+     "name": "feature_service_r0_5_camada_1",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1028,
+    "1": 2028
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_6/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r0_6",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r0_6_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 1,
+     "name": "feature_service_r0_6_camada_1",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 2,
+     "name": "feature_service_r0_6_camada_2",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1035,
+    "1": 2035,
+    "2": 3035
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_7/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r0_7",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r0_7_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1042
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_8/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r0_8",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r0_8_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 1,
+     "name": "feature_service_r0_8_camada_1",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1049,
+    "1": 2049
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_9/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r0_9",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r0_9_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 1,
+     "name": "feature_service_r0_9_camada_1",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 2,
+     "name": "feature_service_r0_9_camada_2",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1056,
+    "1": 2056,
+    "2": 3056
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_10/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r0_10",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r0_10_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1063
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_11/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r0_11",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r0_11_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 1,
+     "name": "feature_service_r0_11_camada_1",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1070,
+    "1": 2070
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r0_12/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r0_12",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r0_12_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 1,
+     "name": "feature_service_r0_12_camada_1",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 2,
+     "name": "feature_service_r0_12_camada_2",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1077,
+    "1": 2077,
+    "2": 3077
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r1_1/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r1_1",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r1_1_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1000
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r1_2/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r1_2",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r1_2_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 1,
+     "name": "feature_service_r1_2_camada_1",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1007,
+    "1": 2007
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/feature_service_r1_3/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço feature_service_r1_3",
+   "layers": [
+    {
+     "id": 0,
+     "name": "feature_service_r1_3_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 1,
+     "name": "feature_service_r1_3_camada_1",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 2,
+     "name": "feature_service_r1_3_camada_2",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1014,
+    "1": 2014,
+    "2": 3014
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/table_r2_1/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço table_r2_1",
+   "layers": [],
+   "tables": [
+    {
+     "id": 90,
+     "name": "table_r2_1_tabela",
+     "type": "Table"
+    }
+   ],
+   "contagens": {
+    "90": 91000
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/table_r2_2/FeatureServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço table_r2_2",
+   "layers": [],
+   "tables": [
+    {
+     "id": 90,
+     "name": "table_r2_2_tabela",
+     "type": "Table"
+    }
+   ],
+   "contagens": {
+    "90": 91007
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/map_service_r3_1/MapServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço map_service_r3_1",
+   "layers": [
+    {
+     "id": 0,
+     "name": "map_service_r3_1_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1000
+   }
+  },
+  "https://sig-de-teste-interno.invalido/server/rest/services/map_service_r3_2/MapServer": {
+   "currentVersion": 11.4,
+   "serviceDescription": "serviço map_service_r3_2",
+   "layers": [
+    {
+     "id": 0,
+     "name": "map_service_r3_2_camada_0",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    },
+    {
+     "id": 1,
+     "name": "map_service_r3_2_camada_1",
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPolygon"
+    }
+   ],
+   "tables": [],
+   "contagens": {
+    "0": 1007,
+    "1": 2007
+   }
+  }
+ },
+ "grupos": [
+  {
+   "id": "52ba001b419830755ebbd41879ea1ee9",
+   "title": "Grupo de teste 1",
+   "owner": "bruno.gis",
+   "access": "org",
+   "isInvitationOnly": false
+  },
+  {
+   "id": "bb14792ba1daddc9d94718be92512db0",
+   "title": "Grupo de teste 2",
+   "owner": "carla.campo",
+   "access": "org",
+   "isInvitationOnly": false
+  },
+  {
+   "id": "96cf42bbe476482b50e6681edb72e2f9",
+   "title": "Grupo de teste 3",
+   "owner": "diego.dados",
+   "access": "org",
+   "isInvitationOnly": false
+  }
+ ],
+ "membros": {
+  "52ba001b419830755ebbd41879ea1ee9": {
+   "owner": "bruno.gis",
+   "admins": [
+    "bruno.gis"
+   ],
+   "users": [
+    "ana.tec",
+    "bruno.gis",
+    "carla.campo",
+    "diego.dados"
+   ],
+   "usersDetails": [
+    {
+     "username": "ana.tec",
+     "fullName": "Nome Completo ana.tec",
+     "email": "ana.tec@exemplo.invalido"
+    },
+    {
+     "username": "bruno.gis",
+     "fullName": "Nome Completo bruno.gis",
+     "email": "bruno.gis@exemplo.invalido"
+    },
+    {
+     "username": "carla.campo",
+     "fullName": "Nome Completo carla.campo",
+     "email": "carla.campo@exemplo.invalido"
+    },
+    {
+     "username": "diego.dados",
+     "fullName": "Nome Completo diego.dados",
+     "email": "diego.dados@exemplo.invalido"
+    }
+   ]
+  },
+  "bb14792ba1daddc9d94718be92512db0": {
+   "owner": "carla.campo",
+   "admins": [
+    "carla.campo"
+   ],
+   "users": [
+    "ana.tec",
+    "bruno.gis",
+    "carla.campo",
+    "diego.dados"
+   ],
+   "usersDetails": [
+    {
+     "username": "ana.tec",
+     "fullName": "Nome Completo ana.tec",
+     "email": "ana.tec@exemplo.invalido"
+    },
+    {
+     "username": "bruno.gis",
+     "fullName": "Nome Completo bruno.gis",
+     "email": "bruno.gis@exemplo.invalido"
+    },
+    {
+     "username": "carla.campo",
+     "fullName": "Nome Completo carla.campo",
+     "email": "carla.campo@exemplo.invalido"
+    },
+    {
+     "username": "diego.dados",
+     "fullName": "Nome Completo diego.dados",
+     "email": "diego.dados@exemplo.invalido"
+    }
+   ]
+  },
+  "96cf42bbe476482b50e6681edb72e2f9": {
+   "owner": "diego.dados",
+   "admins": [
+    "diego.dados"
+   ],
+   "users": [
+    "ana.tec",
+    "bruno.gis",
+    "carla.campo",
+    "diego.dados"
+   ],
+   "usersDetails": [
+    {
+     "username": "ana.tec",
+     "fullName": "Nome Completo ana.tec",
+     "email": "ana.tec@exemplo.invalido"
+    },
+    {
+     "username": "bruno.gis",
+     "fullName": "Nome Completo bruno.gis",
+     "email": "bruno.gis@exemplo.invalido"
+    },
+    {
+     "username": "carla.campo",
+     "fullName": "Nome Completo carla.campo",
+     "email": "carla.campo@exemplo.invalido"
+    },
+    {
+     "username": "diego.dados",
+     "fullName": "Nome Completo diego.dados",
+     "email": "diego.dados@exemplo.invalido"
+    }
+   ]
+  }
+ },
+ "usuarios": [
+  {
+   "username": "ana.tec",
+   "fullName": "Nome Completo ana.tec",
+   "firstName": "Nome",
+   "lastName": "Completo",
+   "email": "ana.tec@exemplo.invalido",
+   "role": "org_admin",
+   "userLicenseTypeId": "creatorUT",
+   "disabled": false,
+   "lastLogin": 1700000000000,
+   "description": "descrição pessoal que não deve ser gravada"
+  },
+  {
+   "username": "bruno.gis",
+   "fullName": "Nome Completo bruno.gis",
+   "firstName": "Nome",
+   "lastName": "Completo",
+   "email": "bruno.gis@exemplo.invalido",
+   "role": "org_publisher",
+   "userLicenseTypeId": "creatorUT",
+   "disabled": false,
+   "lastLogin": 1700003600000,
+   "description": "descrição pessoal que não deve ser gravada"
+  },
+  {
+   "username": "carla.campo",
+   "fullName": "Nome Completo carla.campo",
+   "firstName": "Nome",
+   "lastName": "Completo",
+   "email": "carla.campo@exemplo.invalido",
+   "role": "org_publisher",
+   "userLicenseTypeId": "creatorUT",
+   "disabled": false,
+   "lastLogin": 1700007200000,
+   "description": "descrição pessoal que não deve ser gravada"
+  },
+  {
+   "username": "diego.dados",
+   "fullName": "Nome Completo diego.dados",
+   "firstName": "Nome",
+   "lastName": "Completo",
+   "email": "diego.dados@exemplo.invalido",
+   "role": "org_publisher",
+   "userLicenseTypeId": "creatorUT",
+   "disabled": false,
+   "lastLogin": 1700010800000,
+   "description": "descrição pessoal que não deve ser gravada"
+  }
+ ]
+}
