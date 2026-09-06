@@ -1,6 +1,7 @@
 """/api/eu (ADR 0002 seções 6.1, 6.3, 7.3, 14): objeto completo; PUT com campo não editável = 400; e-mail fora do
 domínio = 422; troca de senha com histórico (5 últimas = 422 historico) e 12 senhas fracas com detalhe.regra;
-2FA: iniciar/confirmar/desativar/códigos; token não mexe em nada disso (403 so_sessao)."""
+2FA: iniciar/confirmar/desativar/códigos; segredo TOTP nunca em claro no banco (SELECT direto na coluna); token
+não mexe em nada disso (403 so_sessao)."""
 
 import pytest
 
@@ -122,6 +123,23 @@ def test_2fa_desativar_com_segredo_conhecido(usuarios_a):
     assert r.status_code == 204, r.text
     assert c.get("/api/eu").json()["totp_ativo"] is False
     assert c.post("/api/eu/2fa/desativar", json={"senha": senha, "codigo": "000000"}).json()["erro"] == "nao_ativo"
+
+
+def test_totp_secret_nunca_em_claro_no_banco(usuarios_a, conexao_plat_app):
+    """Portão L0-02-c: 'segredo nunca em claro no banco (SELECT mostra prefixo enc:)' — prova direta na coluna,
+    não só na função de cifra (ADR 0002 seção 7)."""
+    from tests.api.test_rls import contexto, ids_por_slug
+
+    c, u, _senha = usuarios_a.sessao("visualizador")
+    segredo, _codigos = ligar_2fa(c)
+    ids = ids_por_slug(conexao_plat_app)
+    contexto(conexao_plat_app, ids["demo"])
+    with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT totp_secret FROM plat.usuario WHERE id = %s", (u["id"],))
+        armazenado = cur.fetchone()["totp_secret"]
+    conexao_plat_app.rollback()
+    assert armazenado.startswith("enc:")
+    assert segredo not in armazenado
 
 
 def test_2fa_obrigatorio_na_plataforma_nao_se_desliga(sessao_plat, cred):

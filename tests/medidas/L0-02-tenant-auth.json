@@ -2,85 +2,85 @@
  "item": "L0-02-tenant-auth",
  "medidas": {
   "rotas_total": {
-   "valor": 73,
+   "valor": 123,
    "unidade": "rotas",
    "comando": "len(paths×methods) de docs/openapi.json"
   },
   "rotas_cobertas": {
-   "valor": 73,
+   "valor": 123,
    "unidade": "rotas",
    "comando": "rotas do OpenAPI com caso em tests/api/cruzado_casos.py"
   },
   "custo_log_acesso_ms": {
-   "valor": 0.67,
+   "valor": 1.1,
    "unidade": "ms",
    "comando": "mediana de 30 GET /api/eu com log_registrar menos mediana de 30 sem (TestClient)"
   },
   "login_inexistente_vs_senha_errada_ms": {
    "valor": [
-    123.0,
-    123.3
+    124.0,
+    122.3
    ],
    "unidade": "ms",
    "comando": "mediana de 4 POST /api/login: usuário inexistente × senha errada (tempo constante)"
   },
   "latencia_login_ms": {
-   "valor": 128.7,
+   "valor": 162.7,
    "unidade": "ms",
    "comando": "mediana de 3 POST /api/login com senha certa pelo TestClient (inclui pbkdf2 600k)"
   },
   "tempo_revogacao_s": {
-   "valor": 0.012,
+   "valor": 0.009,
    "unidade": "s",
    "comando": "DELETE /api/tokens/{id} até o 401 token_revogado (TestClient)"
   },
   "latencia_auth_token_ms": {
-   "valor": 3.16,
+   "valor": 3.27,
    "unidade": "ms",
    "comando": "mediana de 50 GET /api/eu com Bearer menos mediana de 50 GET /api/versao (TestClient)"
   },
   "pagina_pronta_ms_2fa": {
-   "valor": 8.7,
+   "valor": 6.1,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
   "pagina_pronta_ms_conta": {
-   "valor": 40.7,
+   "valor": 41.6,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
   "pagina_pronta_ms_grupos": {
-   "valor": 57.9,
+   "valor": 66.8,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
   "pagina_pronta_ms_log": {
-   "valor": 113.4,
+   "valor": 73.7,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
   "pagina_pronta_ms_login": {
-   "valor": 51.5,
+   "valor": 48.4,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
   "pagina_pronta_ms_papeis": {
-   "valor": 66.5,
+   "valor": 58.7,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
   "pagina_pronta_ms_tokens": {
-   "valor": 124.9,
+   "valor": 194.8,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
   "tempo_revogacao_ms_e2e": {
-   "valor": 6.3,
+   "valor": 6.2,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
   "pagina_pronta_ms_usuarios": {
-   "valor": 130.5,
+   "valor": 67.3,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
@@ -197,6 +197,6 @@
    "comando": "pg_class × pg_attribute no schema plat, 05/09 16:03 UTC"
   }
  },
- "gerado_em": "2026-09-05T17:13:57Z",
- "git_sha": "ffedc053429b"
+ "gerado_em": "2026-09-06T10:38:03Z",
+ "git_sha": "a108eeb3e240"
 }
