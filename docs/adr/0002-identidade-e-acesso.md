@@ -871,7 +871,7 @@ além dos gerais). Todas em `/api/`.
 | PUT | `/papeis/{id}` | S/T | `papeis.gerir` | idem | `200 papel` | idem · `404` |
 | DELETE | `/papeis/{id}` | S/T | `papeis.gerir` | | `204` | `409 papel_em_uso` · `404` |
 | GET | `/usuarios?perfil&ativo&q&limite&deslocamento&ordenar` | S/T | `membros.ver` (campos V) · `membros.ver_tudo` (todos) | | `200 {total, itens}` | |
-| POST | `/usuarios` | S/T | `membros.gerir` | `{login, nome, email?, perfil, papel_id?}` | `201 {usuario, senha_temporaria}` | `409 login_existente` · `422 email_dominio` · `422 papel_incompativel` · `403 so_admin_cria_admin` |
+| POST | `/usuarios` | S/T | `membros.gerir` (+ `membros.papel` se `perfil≠visualizador` ou `papel_id` informado — T3) | `{login, nome, email?, perfil, papel_id?}` | `201 {usuario, senha_temporaria}` | `409 login_existente` · `422 email_dominio` · `422 papel_incompativel` · `403 so_admin_cria_admin` · `403 sem_privilegio` |
 | GET | `/usuarios/{id}` | S/T | `membros.ver` | | `200 usuario` | `404` |
 | PUT | `/usuarios/{id}` | S/T | `membros.gerir` (nome, email, ativo) · `membros.papel` (perfil, papel_id) | `{nome?, email?, perfil?, papel_id?, ativo?}` | `200 usuario` | `409 ultimo_admin` · `403 so_admin_altera_admin` · `409 possui_grupos` (rebaixar) · `422` |
 | POST | `/usuarios/{id}/senha` | S/T | `membros.gerir` | | `200 {senha_temporaria}` | `403 so_admin_altera_admin` · `409 login_externo` |

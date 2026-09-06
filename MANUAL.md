@@ -209,7 +209,11 @@ para administradores".
 `Novo usuário` abre o painel lateral com login (só `a-z`, `0-9`, `.`, `_`, `@`, `-`, minúsculas), nome, e-mail,
 perfil (`admin`, `editor`, `visualizador`, `campo`) e papel personalizado opcional. A resposta traz a senha
 temporária, mostrada uma única vez ("senha temporária de <login>; o usuário troca no primeiro acesso"). Só um
-administrador cria outro administrador (`403 so_admin_cria_admin`). Login repetido no inquilino: `409 login_existente`.
+administrador cria outro administrador (`403 so_admin_cria_admin`); criar com perfil diferente de
+`visualizador`, ou atribuir papel personalizado, exige `membros.papel` além de `membros.gerir` (`403
+sem_privilegio`) — sem essa checagem um admin deliberadamente restrito a `membros.gerir` conseguia fabricar um
+admin pleno pela criação, mesmo sem poder editar perfil de ninguém (achado do adversário, T3). Login repetido
+no inquilino: `409 login_existente`.
 
 ### 4.2 Editar, desabilitar, apagar
 

@@ -80,6 +80,61 @@ def test_so_admin_cria_altera_e_apaga_admin(sessao_a, usuarios_a):
     assert sessao_a.delete(f"/api/papeis/{papel['id']}").status_code == 204
 
 
+def test_criar_usuario_com_perfil_ou_papel_exige_membros_papel(sessao_a, usuarios_a):
+    """Achado do adversário T3: `membros.gerir` sozinho (sem `membros.papel`) bastava para criar um admin PLENO
+    pela rota de CRIAR, mesmo que o criador não pudesse editar perfil de ninguém — a checagem de admin
+    (`so_admin_cria_admin`) olha só `auth.perfil`, nunca `membros.papel`, e a criação nunca tinha o gate que
+    `_editar` já tem para perfil/papel_id. Reproduz o cenário exato do adversário (admin de perfil, mas
+    restrito a {membros.ver, membros.gerir} por papel personalizado) e prova que ele só cria no piso
+    (visualizador, sem papel_id) depois da correção."""
+    r = sessao_a.post(
+        "/api/papeis",
+        json={
+            "nome": f"{PREFIXO_TESTE}-restrito-{secrets.token_hex(2)}",
+            "privilegios": ["membros.ver", "membros.gerir"],
+        },
+    )
+    assert r.status_code == 201, r.text
+    papel_restrito = r.json()
+    assert papel_restrito["perfil_minimo"] == "admin"
+    c_restrito, admin_restrito, _ = usuarios_a.sessao("admin", papel_id=papel_restrito["id"])
+    assert set(c_restrito.get("/api/eu").json()["privilegios"]) == {"membros.ver", "membros.gerir"}
+    # não fabrica admin pleno
+    r = c_restrito.post(
+        "/api/usuarios", json={"login": f"{PREFIXO_TESTE}{secrets.token_hex(3)}", "nome": "x", "perfil": "admin"}
+    )
+    assert r.status_code == 403 and r.json()["erro"] == "sem_privilegio", r.text
+    # nem qualquer perfil acima do piso (editor, campo) — não é só a regra de admin
+    r = c_restrito.post(
+        "/api/usuarios", json={"login": f"{PREFIXO_TESTE}{secrets.token_hex(3)}", "nome": "x", "perfil": "editor"}
+    )
+    assert r.status_code == 403 and r.json()["erro"] == "sem_privilegio", r.text
+    # nem atribui papel_id de terceiro, mesmo criando no perfil piso
+    outro_papel = sessao_a.post(
+        "/api/papeis", json={"nome": f"{PREFIXO_TESTE}-p2-{secrets.token_hex(2)}", "privilegios": ["conteudo.criar"]}
+    ).json()
+    r = c_restrito.post(
+        "/api/usuarios",
+        json={
+            "login": f"{PREFIXO_TESTE}{secrets.token_hex(3)}",
+            "nome": "x",
+            "perfil": "visualizador",
+            "papel_id": outro_papel["id"],
+        },
+    )
+    assert r.status_code == 403 and r.json()["erro"] == "sem_privilegio", r.text
+    # continua criando no piso: visualizador, sem papel — o que membros.gerir sozinho ainda cobre
+    r = c_restrito.post(
+        "/api/usuarios", json={"login": f"{PREFIXO_TESTE}{secrets.token_hex(3)}", "nome": "x", "perfil": "visualizador"}
+    )
+    assert r.status_code == 201, r.text
+    usuarios_a.criados.append(r.json()["usuario"]["id"])
+    assert sessao_a.delete(f"/api/papeis/{outro_papel['id']}").status_code == 204
+    assert sessao_a.delete(f"/api/usuarios/{admin_restrito['id']}").status_code == 204
+    usuarios_a.criados.remove(admin_restrito["id"])
+    assert sessao_a.delete(f"/api/papeis/{papel_restrito['id']}").status_code == 204
+
+
 def test_ultimo_admin_nao_se_desabilita_rebaixa_nem_apaga(inquilino_temporario):
     """Inquilino temporário (sem resíduo de outra rodada): o admin é o único; a regra é do último admin ativo."""
     inq = inquilino_temporario

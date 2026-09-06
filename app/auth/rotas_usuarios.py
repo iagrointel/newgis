@@ -350,6 +350,16 @@ def listar_usuarios(
 def criar_usuario(corpo: UsuarioCriar, request: Request, auth: Auth = autenticado("membros.gerir")):
     if corpo.perfil == "admin" and auth.perfil != "admin":
         raise ErroAPI(403, "so_admin_cria_admin", "só um administrador cria outro administrador")
+    # achado do adversário T3: só `membros.gerir` (sem `membros.papel`) bastava para criar um admin pleno, ou um
+    # usuário com QUALQUER papel_id — igual à edição (_editar exige membros.papel para mexer em perfil/papel_id),
+    # a criação tem de exigir o mesmo; "visualizador" sem papel é o piso que membros.gerir sozinho ainda cobre.
+    if (corpo.perfil != "visualizador" or corpo.papel_id is not None) and not auth.tem("membros.papel"):
+        raise ErroAPI(
+            403,
+            "sem_privilegio",
+            "criar com perfil diferente de visualizador, ou com papel, exige membros.papel",
+            {"exigido": "membros.papel"},
+        )
     _email_ok(corpo.email, auth)
     temporaria = _senha_temporaria()
     try:
