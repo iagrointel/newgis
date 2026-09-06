@@ -235,10 +235,20 @@ def guardar(
     chave = f"{tenant_slug}/{obj_key}"
     cli = _cliente(bucket)
     if cli.head(bucket["bucket_alias"], obj_key) is None:
-        usado = _admin().info_bucket(bucket["bucket_id"]).get("bytes", 0)
-        if usado + len(dados) > bucket["cota_bytes"]:
+        # cota checada sob SELECT ... FOR UPDATE na linha do tenant (item L0-07-c-cotas-uso, refutação "20
+        # uploads paralelos"): o uso lógico é a soma dos bytes VIVOS de plat.arquivo (plat.arquivo_uso_bytes,
+        # migração 20260906T2124) — sem contador novo que possa dessincronizar, mesmo princípio da reserva do
+        # upload retomável (046). A trava serializa dois guardar concorrentes do mesmo inquilino: o 2º só lê
+        # depois do 1º commitar (e o INSERT do metadado abaixo acontece na MESMA transação). A cota maxSize do
+        # bucket no Garage segue como último obstáculo físico (objeto fantasma fora de plat.arquivo).
+        cur.execute("SELECT cota_bytes FROM plat.tenant WHERE id = %s FOR UPDATE", (tenant_id,))
+        cota = int(cur.fetchone()["cota_bytes"])
+        cur.execute("SELECT plat.arquivo_uso_bytes(%s) AS u", (tenant_id,))
+        usado = int(cur.fetchone()["u"])
+        if usado + len(dados) > cota:
             raise CotaExcedida(
-                f"cota de {bucket['cota_bytes']} bytes excedida: uso atual {usado}, objeto de {len(dados)} bytes"
+                f"cota de armazenamento excedida: uso atual {usado} bytes + objeto de {len(dados)} bytes "
+                f"passa do limite de {cota} bytes"
             )
         cli.put(bucket["bucket_alias"], obj_key, dados, content_type)
     _registrar_metadado(cur, tenant_id, classe, referencia, sha, len(dados), content_type, chave, usuario_id)

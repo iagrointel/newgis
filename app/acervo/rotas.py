@@ -180,7 +180,9 @@ def adicionar(
         cota = cur.fetchone()
         if cota["n"] >= cota["cota"]:
             raise ErroAPI(
-                413, "cota_itens", f"cota de itens do inquilino esgotada ({cota['cota']})", {"cota": cota["cota"]}
+                413, "cota_itens",
+                f"cota de itens esgotada: uso atual {cota['n']} de {cota['cota']} itens",
+                {"cota": cota["cota"], "uso": cota["n"]},
             )
         dados = {
             "protocolo": "acervo",

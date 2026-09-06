@@ -171,7 +171,8 @@ def test_cota_de_agendas_413_e_rls(cliente_demo, cliente_demo2, conexao_plat_app
             _apagar(cliente_demo2, a["id"])
 
 
-def test_cota_diaria_de_jobs_413(cliente_demo2, conexao_plat_app, sessao_demo2):
+def test_cota_diaria_de_jobs_429(cliente_demo2, conexao_plat_app, sessao_demo2):
+    # 429 (cota de taxa diária), não 413: mudança do item L0-07-c-cotas-uso; a mensagem traz uso atual e limite
     with conexao_plat_app.cursor() as cur:
         jobs_sessao.contexto(cur, sessao_demo2[1], sessao_demo2[2], "admin")
         cur.execute("UPDATE plat.tenant SET config = config || '{\"cota_jobs_dia\": 0}' WHERE id = %s",
@@ -179,7 +180,7 @@ def test_cota_diaria_de_jobs_413(cliente_demo2, conexao_plat_app, sessao_demo2):
     conexao_plat_app.commit()
     try:
         r = cliente_demo2.post("/api/jobs", json={"tipo": "prova.progresso", "parametros": {"duracao_s": 0}})
-        assert r.status_code == 413 and r.json()["erro"] == "cota_jobs_dia" and r.json()["detalhe"]["cota"] == 0
+        assert r.status_code == 429 and r.json()["erro"] == "cota_jobs_dia" and r.json()["detalhe"]["cota"] == 0
     finally:
         with conexao_plat_app.cursor() as cur:
             jobs_sessao.contexto(cur, sessao_demo2[1], sessao_demo2[2], "admin")
