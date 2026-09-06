@@ -19,7 +19,7 @@ depois deles.
 | login / logout | sign-in com token de sessão; logout não é registrado | login e logout pelo navegador (e2e com captura); cookie com hash no banco; logout registrado em `log_acesso` com `resultado = logout` | feito (registra logout, que a Esri não registra) | testador (e2e 9/9) e adversário T2 (login real no playwright) | 2026-09-05 | pendente (D20) |
 | tipos de usuário e licença por membro | tipo define apps e teto; licença `.json` por membro | perfil (`admin`, `editor`, `visualizador`, `campo`) = teto de privilégios; não há licença nem assento por membro (decisão da spec) | fora (decisão) | — | 2026-09-05 | pendente (D20) |
 | papéis padrão (Viewer, Data Editor, User, Publisher, Administrator) | 5 papéis fixos | 4 perfis; o que a Esri chama Publisher é o privilégio `conteudo.publicar_*` dentro de `editor` | parcial (declarado; sem papel Publisher separado) | testador T2 (tela Papéis: 46/26/7/11 privilégios por perfil) | 2026-09-05 | pendente (D20) |
-| papéis personalizados com lista de privilégios | ~70 privilégios gerais e administrativos | 46 privilégios em vocabulário fechado; papéis por inquilino pela API e pela tela Papéis (criar, editar, apagar; perfil mínimo calculado; papel em uso não se apaga); conferência linha a linha dos 46 contra a lista Esri é o L0-07-b | parcial (vocabulário menor; conferência pendente) | testador T2 (e2e `test_papeis`) | 2026-09-05 | pendente (D20) |
+| papéis personalizados com lista de privilégios | ~74 privilégios gerais e administrativos (seção abaixo) | 47 privilégios em vocabulário fechado (`docs/PRIVILEGIOS.md`, gerado do banco); papéis por inquilino pela API e pela tela Papéis (criar, editar, apagar; perfil mínimo calculado; papel em uso não se apaga); conferência linha a linha contra a lista Esri = seção "Privilégios e papéis personalizados" abaixo (item L0-07-b, T3) | parcial (vocabulário menor por decisão — sem notebook/OAuth app/pipeline/versionamento; ver seção abaixo) | testador T2 (e2e `test_papeis`) e T3 (`test_privilegios_matriz.py`: toda rota do OpenAPI vivo chamada sem o privilégio declarado dá 403; `test_privilegios_doc.py`: documento == banco) | 2026-09-06 | pendente (D20) |
 | MFA por app TOTP; admin desliga; exigir para todos | TOTP opcional por membro; "Enforce MFA" com isenções; exige e-mail | TOTP por usuário com QR, 8 códigos de recuperação e anti-replay; admin desliga; `exigir_2fa` por inquilino vira pendência de sessão (entra só para configurar); sem lista de isenção; sem e-mail | feito (sem isenção individual) | testador (replay, passo +10, recuperação reusada = 401) e adversário T2 | 2026-09-05 | pendente (D20) |
 | política de senha e bloqueio | ≥ 8 com letra e número; complexidade, expiração, histórico; lockout 5/15 min | ≥ 8 com letra e número, máximo 128, ≠ login, histórico 5, expiração opcional; bloqueio 5 falhas/15 min por usuário no banco + 10 r/min por IP no nginx; configurável em `tenant.config.auth`; tela de configuração é o L0-07-a | feito (tela de política parcial) | testador (regras nomeadas, 6ª certa = 423, inquilino com `bloqueio_tentativas = 3`) e adversário T2 | 2026-09-05 | pendente (D20) |
 | reset de senha pelo admin, senha temporária, e-mail | Reset password; e-mail se SMTP | `POST /api/usuarios/{id}/senha` gera senha temporária mostrada uma vez, marca `trocar_senha`, apaga sessões; sem e-mail (L0-07-d) | parcial (sem e-mail) | testador e adversário T2 (201 com `senha_temporaria` e `trocar_senha = t`) | 2026-09-05 | pendente (D20) |
@@ -32,6 +32,120 @@ depois deles.
 | gestão de membros: adicionar, desabilitar, apagar com transferência, transferir membro | Members tab, Disable, Delete (transferir ou apagar conteúdo), Transfer member | criar, editar, desabilitar, reabilitar, redefinir senha, desligar 2FA, desbloquear, lote até 100 (mudar perfil/desabilitar/reabilitar); apagar sem transferência recusa nomeando o que falta resolver — grupos (`409 possui_grupos`) OU itens do catálogo (`409 possui_itens`, item L0-02-f, T3); transferência de conteúdo em massa é o L0-03-j (`POST /api/itens/transferir`, já `entregue`) | parcial (mecanismo completo e testado pela API e pela tela; falta só o botão único "transferir e apagar" num só fluxo — hoje são duas telas) | testador T2 (e2e `test_usuarios`, último admin = 409); testador T3 (e2e `test_usuarios_perfil_lote_2fa_desbloquear_apagar_com_grupos_e_401`: lote de perfil, 2FA, desbloqueio e 401 em 73,1 ms pela tela; api `test_apagar_com_2_itens_do_catalogo_recusa_listando_os_2`) | 2026-09-06 | pendente (D20) |
 | perfil do membro: nome, foto, bio, visibilidade, idioma, unidades, página inicial | My profile / My settings | nome, e-mail, foto (recorte 200×200, sem EXIF), idioma preferido, unidades, formato de data e visibilidade (privado/inquilino) em Minha conta (`PUT /api/eu`, `POST/DELETE /api/eu/foto`); sem bio nem página inicial configurável; `idioma_preferido` grava mas a tela ainda não traduz por ele (L7-10-a); `unidades`/`formato_data` ainda não são lidos por nenhuma outra tela; `visibilidade_perfil` ainda não tem consumidor (não existe tela de "ver perfil de outro membro") | parcial (sem bio/página inicial; 3 dos 4 campos novos são preferência guardada sem consumidor ainda) | testador T3 (e2e `test_conta.py::test_perfil_nome_unidades_foto_na_barra_e_email_fora_do_dominio`, captura `L0-02-tenant-auth_perfil.png`; api `test_eu.py` — preferências válidas/inválidas, foto enviar/ler/remover, SVG recusado por não abrir no Pillow, >1 MiB recusado, escalada de acesso e domínio de e-mail do próprio inquilino continuam bloqueados) | 2026-09-06 | pendente (D20) |
 | ao menos um administrador por organização; só admin muda papel de admin | regra literal | gatilho `usuario_ultimo_admin` + API (`409 ultimo_admin`, `403 so_admin_altera_admin`) + teste; superadmin só no inquilino técnico `plataforma`, por hash de sessão | feito | testador (inquilino temporário) e adversário T2 (`superadmin:true` = 422; `/api/plataforma` = 404) | 2026-09-05 | pendente (D20) |
+
+## Privilégios e papéis personalizados (item L0-07-b-papeis-privilegios, turno 3; ADR 0002 seções 2.3, 3)
+
+Paridade linha a linha contra a lista completa de privilégios da Esri (`laco/handoffs/T1/21_esri.md` §1.3,
+fonte E12-priv, testada por HTTP em 05/09/2026) — os dois blocos "Privilégios GERAIS" e "Privilégios
+ADMINISTRATIVOS" do doc, um privilégio Esri por linha. `docs/PRIVILEGIOS.md` é o vocabulário completo gerado do
+banco; aqui é só o DE-PARA. Contagem: **43 gerais + 33 administrativos = 76 privilégios Esri**, um por marcador do doc; dos 47 nossos,
+todos aparecem em pelo menos uma linha abaixo. Estado: **feito** (privilégio equivalente existe e a rota que o
+usa está testada) · **parcial** (existe algo próximo, mais estreito ou mais largo) · **fora** (sem equivalente;
+decisão consciente de escopo, não esquecimento).
+
+### Privilégios gerais
+
+| Esri (E12-priv) | nosso privilégio | estado | nota |
+|---|---|---|---|
+| Members: View | `membros.ver` | feito | |
+| Members: Take ArcGIS Pro license offline | — | fora | sem licença/assento por membro (decisão da spec, D5/D16) |
+| Groups: Create, update, and delete | `grupos.criar` | feito | |
+| Groups: Join organizational groups | `grupos.entrar` | feito | |
+| Groups: View groups shared with organization | `grupos.ver_inquilino` | feito | |
+| Content: Create, update, and delete | `conteudo.criar` | feito | |
+| Content: Publish hosted feature layers | `conteudo.publicar_camada` | feito | |
+| Content: Publish hosted tile layers | `conteudo.publicar_tiles` | feito | |
+| Content: Publish hosted scene layers | — | fora | sem camada de cena/3D (roadmap L2) |
+| Content: Publish hosted dynamic imagery layers | `conteudo.publicar_raster` | parcial | publica raster; não distingue "dynamic imagery" nem exige extensão própria de análise |
+| Content: Publish server-based layers | `conteudo.registrar_fonte` | parcial | registra fonte externa; não há um "ArcGIS Server" externo para publicar EM CIMA |
+| Content: Publish hosted knowledge graphs | — | fora | sem grafo de conhecimento |
+| Content: View content shared with organization | `conteudo.ver_inquilino` | feito | |
+| Content: Register data stores | `conteudo.registrar_fonte` | feito | |
+| Content: Create feature layers in bulk from a data store | — | fora | ingestão vetorial é item a item (L0-04); sem "em lote a partir de data store" |
+| Content: View location tracks | — | fora | `campo.localizacao` é o PRÓPRIO usuário compartilhar a trilha, não ver a de terceiros |
+| Content: Create and edit notebooks | — | fora | sem notebook (decisão de escopo) |
+| Content: Schedule notebooks | — | fora | idem |
+| Content: Reassign content | `conteudo.transferir` | feito | |
+| Content: Receive content | `conteudo.transferir` | parcial | não há um privilégio separado para "receber"; quem transfere precisa poder editar a origem |
+| Content: Create and run data pipelines | — | fora | `jobs.executar` é fila genérica, não pipeline ETL nomeado |
+| Content: Publish livestream video | — | fora | sem vídeo |
+| Content: Publish video | — | fora | sem vídeo |
+| Content: Generate API keys | `tokens.gerar` | parcial | token de serviço com escopo cobre o uso; não é uma "API key" de app OAuth |
+| Content: Assign privileges to OAuth 2.0 applications | — | fora | sem app OAuth registrável |
+| Content: Create workflow item | — | fora | sem Workflow Manager |
+| Sharing: Share with groups | `compartilhar.grupo` | feito | |
+| Sharing: Share with portal | `compartilhar.inquilino` | feito | |
+| Sharing: Share with public | `compartilhar.publico` | parcial | na Esri é geral (User+); na nossa spec é **administrativo** (só com `tenant.config.compartilhar_publico`, D24) — divergência deliberada, não lacuna |
+| Sharing: Make groups visible to portal | `grupos.criar` | parcial | é campo do formulário do grupo (`visibilidade`), não um privilégio à parte |
+| Sharing: Make groups visible to public | — | fora | grupo só tem visibilidade `membros`/`inquilino`, nunca `publico` |
+| Content and Analysis: Geocoding | `analise.geocodificar` | feito | |
+| Content and Analysis: Network Analysis | `analise.rotas` | feito | |
+| Content and Analysis: Standard Feature Analysis | `analise.executar` | parcial | geoprocessamento sobre dado próprio existe; catálogo de ferramentas não replica o da Esri |
+| Content and Analysis: GeoEnrichment | — | fora | sem enriquecimento demográfico |
+| Content and Analysis: Imagery Analysis | `analise.raster` | feito | |
+| Content and Analysis: Advanced notebooks | — | fora | |
+| Content and Analysis: Run web tools | — | fora | sem geoprocessamento publicado como ferramenta web |
+| Content and Analysis: Reality Mapping | — | fora | |
+| Features: Edit | `feicoes.editar` | feito | |
+| Features: Edit with full control | `feicoes.editar_total` | feito | |
+| Version Management: Manage all | — | fora | sem versionamento de dado (branch versioning) |
+| Webhooks: Feature layer | — | fora | webhook só existe amplo (`org.integracoes`), não por camada |
+
+### Privilégios administrativos
+
+| Esri (E12-priv) | nosso privilégio | estado | nota |
+|---|---|---|---|
+| Members: View all | `membros.ver_tudo` | feito | |
+| Members: Update (inclui reset de senha e categorias de membro) | `membros.gerir` | feito | "categorias de membro" não existe (só categoria de CONTEÚDO, `conteudo.categorias`) |
+| Members: Delete | `membros.apagar` | feito | |
+| Members: Add | `membros.gerir` | feito | Esri separa Add de Update; nós usamos o mesmo privilégio para os dois |
+| Members: Disable | `membros.gerir` | feito | idem |
+| Members: Change roles | `membros.papel` | feito | |
+| Members: Manage licenses | — | fora | sem licença/assento (mesma decisão da spec) |
+| Members: Manage categories | — | fora | categoria de MEMBRO não existe (só de conteúdo) |
+| Groups: View all | `grupos.gerir_todos` | parcial | não há um "ver todos" separado de "editar todos"; quem gere qualquer grupo também vê |
+| Groups: Update | `grupos.gerir_todos` | feito | |
+| Groups: Delete | `grupos.gerir_todos` | feito | |
+| Groups: Reassign ownership | `grupos.gerir_todos` | feito | |
+| Groups: Assign members | `grupos.gerir_todos` | feito | |
+| Groups: Link to organization-specific group | — | fora | sem colaboração entre organizações (decisão, ver "Collaborations" abaixo) |
+| Groups: Create with leaving disallowed | `grupos.administrativo` | feito | |
+| Groups: Create with update capabilities | `grupos.atualizacao_compartilhada` | parcial | na Esri é administrativo por padrão; na nossa spec é liberado a partir do perfil `editor` — divergência deliberada |
+| Content: View all | `conteudo.ver_tudo` | feito | |
+| Content: Update (inclui editar dado de qualquer camada hospedada) | `conteudo.editar_tudo` + `feicoes.editar_total` | feito | a Esri junta metadado e dado num privilégio; nós separamos em dois nomes |
+| Content: Delete | `conteudo.apagar_tudo` | feito | |
+| Content: Reassign ownership | `conteudo.transferir` | feito | mesmo alvo de "Reassign content" na lista geral — o doc Esri nomeia a ação duas vezes, uma por categoria |
+| Content: Manage categories | `conteudo.categorias` | feito | |
+| Content: Publish web tools | — | fora | sem geoprocessamento publicável como ferramenta |
+| Content: Share member content with organization | — | fora | não há "compartilhar em nome de outro membro"; só o dono do item ou quem tem `conteudo.editar_tudo` |
+| Content: Share member content with public | — | fora | idem |
+| Content: Create and manage administrative reports | — | fora | relatórios de uso ainda não existem (item L0-07-e) |
+| Webhooks: Geoprocessing | — | fora | |
+| Portal settings: Security and infrastructure | `org.configurar` | parcial | política de senha/2FA/domínio de e-mail sim; certificado/infraestrutura de rede não |
+| Portal settings: Organization website | `org.configurar` | parcial | logotipo sim (item L0-07-a); branding/website completo não |
+| Portal settings: Collaborations | — | fora | sem colaboração entre organizações (decisão de escopo) |
+| Portal settings: Member roles | `papeis.gerir` | feito | |
+| Portal settings: Servers | — | fora | sem registro de ArcGIS Server externo (pilha é própria) |
+| Portal settings: Utility services | — | fora | sem geocoding/rotas de terceiro configurável como serviço utilitário |
+| Portal settings: Organization webhooks | `org.integracoes` | feito | |
+
+**Contagem**: 17 feito · 7 parcial · 19 fora (gerais, 43 linhas) + 18 feito · 4 parcial · 11 fora
+(administrativos, 33 linhas) = **35 feito · 11 parcial · 30 fora de 76** (46,1% / 14,5% / 39,5%; contagem
+linha a linha, `grep -c` na tabela acima antes de publicar, sem arredondar). Nenhuma linha `fora` é lacuna
+acidental: cada uma é notebook, app OAuth, pipeline, versionamento de dado, colaboração entre organizações,
+licença/assento, vídeo, grafo de conhecimento ou relatório de uso — todas já nomeadas como decisão de escopo em
+outro item do backlog (D5/D16, L0-07-e, ou "roadmap L2/L5") antes desta conferência, nunca descobertas por ela.
+
+### Regras testadas (refutação do item)
+
+| regra | evidência |
+|---|---|
+| papel com privilégio administrativo só cabe em `perfil_minimo = admin` | `tests/api/test_usuarios.py::test_so_admin_cria_altera_e_apaga_admin` (papel com `membros.gerir` etc. calcula `perfil_minimo = admin`; atribuí-lo a um usuário `editor` é `422 papel_incompativel`) |
+| ninguém concede a si mesmo privilégio que não tem | `tests/api/test_usuarios.py::test_privilegios_e_papeis` (admin restrito a `{membros.ver, papeis.gerir}` tenta criar papel com `org.log_ver` → `403 privilegio_proprio_insuficiente`) |
+| apagar papel em uso é recusado | mesmo teste (`409 papel_em_uso`, com a contagem de usuários no `detalhe`) |
+| rebaixar perfil de quem possui conteúdo é recusado | `tests/api/test_usuarios.py::test_rebaixar_perfil_com_itens_e_recusado` (novo nesta sessão — a rota só checava grupos; achado do adversário) |
+| toda rota do OpenAPI vivo com privilégio "puro" nega 403 a quem não o tem | `tests/api/test_privilegios_matriz.py` (168 operações vivas; ~40 com privilégio de vocabulário fechado, todas testadas; exceção nomeada e testada à parte é `PUT /api/itens/{id}/compartilhamento`, cujo gate real é ownership-antes-de-privilégio) |
+| `docs/PRIVILEGIOS.md` é gerado, nunca escrito à mão | `tests/api/test_privilegios_doc.py` + `docs/gerar_privilegios.py --check` |
 
 ## Fila de trabalhos (item L0-05-jobs, turno 2; ADR 0003)
 
@@ -221,3 +335,28 @@ comparou contra `item-details.htm`/`configure-item-details.htm`/`items-and-item-
 | paginação de lista com filtro por tipo, cursor e contagem total | `num`/`start` com `nextStart`; sem filtro de tipo isolado sem busca de texto | `GET /api/itens` com `limite`/`deslocamento` OU `cursor` opaco, `total`, `link rel="next"`, filtro `tipo=` isolado; `deslocamento` acima de 10.000 → `422 deslocamento_alto` (a paginação profunda troca por cursor) | feito | `test_lista_paginada_com_cursor_e_deslocamento` | 2026-09-06 | pendente (D20) |
 | desempenho de listagem em escala (não documentado pela Esri para instalação própria) | não se aplica | corpus semeado de 10.000 itens (inquilino demo) + 1.000 (demo2); `GET /api/itens?tipo=mapa&limite=50` | feito — **p95 medido 50,8 ms (mediana 23,8 ms) contra o portão de <100 ms**, 20 execuções | `tests/api/catalogo/test_busca.py::test_lista_por_tipo_p95` (`tests/medidas/L0-03-catalogo.json`, campo `lista_tipo_p95_ms`); corpus confirmado ao vivo nesta sessão (`SELECT count(*) FROM plat.item` = 11.414 no schema de demonstração) | 2026-09-06 | pendente (D20) |
 | OpenAPI publicado das rotas de conteúdo | REST `/sharing/rest` documentado | `GET/POST /api/itens`, `GET/PUT/PATCH/DELETE /api/itens/{id}`, `GET /api/tipos-item` em `docs/openapi.json` | feito | conferência desta sessão: `app.openapi()` recarregado ao vivo bate exatamente com `docs/openapi.json` para todo path `/api/itens*` e `/api/tipos-item` (uma trilha concorrente do turno mexe em `/api/eu/foto`, fora do escopo deste item — não regravado aqui para não capturar o estado parcial dela) | 2026-09-06 | pendente (D20) |
+
+## Geocodificador (item L2-11-b-geocodificador-brasil, turno 3; ADR 0013)
+
+A referência Esri é o `GeocodeServer` (`developers.arcgis.com/rest/services-reference/enterprise/geocode-service`,
+`find-address-candidates`, `reverse-geocode`, `suggest`, `geocode-addresses`, doc datada 06/09/2026, papel
+pesquisador+dados+backend+adversário deste turno). Base de dado: CNEFE 2022 do IBGE, UF instalada nesta
+demo = Roraima (260.515 pontos, 15 municípios; escolhida por ser o MENOR arquivo entre as 27 UFs, medido por
+`HEAD` antes de baixar). Sem ArcGIS Pro/AGOL reais para comparar (D20, aberta para toda a plataforma).
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| geocodificação de endereço único (linha única ou multifield) → candidatos com localização e score | `findAddressCandidates` (`SingleLine` ou `address`/`city`/`region`/`postal`); `Match_addr`, `Addr_type`, `Score`, `location` | `POST /api/geocodificar` (nativa) e `GET/POST .../GeocodeServer/findAddressCandidates` (compatível); hierarquia de recuo com `tipo_acerto` (número exato → interpolado na face → aproximado por logradouro/bairro/CEP/município), score 0-100 por semelhança trigram menos penalidade do degrau de recuo | feito | `tests/api/geocodificador/test_geocodificador.py` (50 endereços reais do CNEFE, 3+ municípios: erro mediano **0,0 m**, acerto número/face **98,0%** — portão pede ≤30 m/≥90%) e `test_geocodificador_esri.py::test_find_address_candidates_*` | 2026-09-06 | pendente (D20) |
+| ambiguidade de nome repetido entre municípios ("Rua A" em várias cidades) | vários candidatos, sem erro | sem filtro de município, `buscar()` devolve um candidato por município que casa — nunca escolhe um arbitrariamente; medido com `RUA A`, que se repete em 8 dos 15 municípios de Roraima (substituto medido de "Rua A em São Paulo": SP é o MAIOR arquivo de UF do CNEFE, fora do teto de disco D28 — nunca carregado, registrado como tal, não disfarçado) | feito | `test_ambiguidade_rua_a_devolve_varios_municipios` (10 candidatos, ≥3 municípios distintos) | 2026-09-06 | pendente (D20) |
+| CEP/UF inconsistente com o município pedido | não documentado como validação explícita | `resolver_lugar()` roda antes da busca por logradouro; CEP e município (ou CEP e UF) que apontam para lugares diferentes → `422 cep_municipio_inconsistente`/`cep_uf_inconsistente`, nomeando o lugar correto do CEP | feito (supera a Esri, que não declara essa checagem) | `test_cep_de_outro_municipio_recusa_inconsistencia` | 2026-09-06 | pendente (D20) |
+| geocodificação reversa (ponto → endereço) | `reverseGeocode` (`location=x,y`; `distance`) | `POST /api/reverso` e `.../GeocodeServer/reverseGeocode`; KNN por índice GiST (`geom <->`), sem teto de raio na busca (o raio só marca `fora_do_raio`, não descarta o vizinho) | feito | `test_reverso_50_pontos_logradouro_certo` (**100% de acerto do logradouro** em 50 pontos reais, portão pede ≥90%); `test_reverse_geocode`/`test_reverse_geocode_location_json` | 2026-09-06 | pendente (D20) |
+| sugestão/autocomplete por prefixo | `suggest` (`text`; resposta com `magicKey` reaproveitável no findAddressCandidates) | `GET /api/sugerir` e `.../GeocodeServer/suggest`; índice GIN trigram; `chave` (equivalente ao `magicKey`) não é reconsumida no `findAddressCandidates` desta versão (gap nomeado abaixo) | parcial (`magicKey` só devolvido, ainda não aceito de volta) | `test_sugestao_p95_100ms` (**p95 33,1 ms** contra o portão de ≤100 ms, 100 chamadas) | 2026-09-06 | pendente (D20) |
+| geocodificação em lote (`geocodeAddresses`) | até `SuggestedBatchSize` (500) por chamada; `Status` M/U/T | `POST .../GeocodeServer/geocodeAddresses`; JSON de corpo (não form/querystring — ver gap abaixo); `Status` M/U implementado, T (tied, múltiplos empates) não distinguido | parcial | `test_geocode_addresses_lote` (2 registros, 1 `M` 1 `U`), `test_geocode_addresses_lote_vazio_e_422` | 2026-09-06 | pendente (D20) |
+| API própria em paralelo à compatível Esri | não se aplica (só REST Esri) | `/api/geocodificar`, `/api/reverso`, `/api/sugerir` — mesmo motor, nomes/campos em português | feito (a Esri não tem equivalente) | mesma suíte acima | 2026-09-06 | — |
+| descritor do serviço (`?f=json` no recurso do locator) | `currentVersion`, `addressFields`, `candidateFields`, `capabilities`, `spatialReference` | `GET /rest/services/Geocodificador/GeocodeServer` sem autenticação (só metadado) | feito | `test_descritor_servico_sem_autenticacao` | 2026-09-06 | pendente (D20) |
+| autenticação por `token=` na querystring (protocolo real do locator publicado) | `generateToken`/token de portal passado em `token=` | reaproveita o token de serviço do plat (escopo `geocodificar:usar`, novo) por querystring nas rotas `GeocodeServer/*`, além do `Authorization: Bearer` normal nas rotas próprias | feito | `test_find_address_candidates_singleline_por_querystring_token`, `test_escopo_errado_e_403` | 2026-09-06 | pendente (D20) |
+| instalação por UF com tamanho/tempo/disco medidos antes e depois | não se aplica (a Esri não instala do zero; usa um locator já publicado) | `scripts/geocodificador_instalar_uf.py`: `HEAD` mede o zip antes (teto D28 200 MB), `COPY` em lotes; RR = 4,52 MB comprimidos, 42,05 MB de CSV, 260.515 linhas, 15 municípios, **10,4 s**, tabela final **126 MB com índices** | feito | `test_instalacao_rr_tempo_e_disco_medidos` (lê `plat.geo_instalacao`, grava em `tests/medidas/L2-11-b-geocodificador-brasil.json`) | 2026-09-06 | — |
+| nenhuma coluna de dado pessoal (CNEFE não tem; cláusula literal do portão) | não se aplica | grep de `information_schema.columns` sobre `plat.geo_*` por `nome_pessoa`/`cpf`/`nome_morador`/`responsavel` — nenhuma coluna encontrada | feito | `test_cnefe_sem_coluna_de_pessoa` | 2026-09-06 | — |
+| QGIS como localizador (`?f=json` do GeocodeServer configurado como serviço de locator externo) | plugin nativo "ArcGIS geocoder"/locator externo | **não medido**: esta máquina não tem QGIS instalado nem ambiente gráfico (mesma limitação do Chrome headless já registrada em `CLAUDE.md`); o protocolo foi provado por chamada HTTP direta simulando exatamente as chamadas que o QGIS faria (`findAddressCandidates`/`suggest`/`reverseGeocode` com os mesmos parâmetros e `token=`) | **pendência** (nunca "feito"; ver ADR 0013 seção 9) | testes HTTP diretos acima cobrem o protocolo, não a integração do produto QGIS | 2026-09-06 | pendente (D20) |
+| `outSR`, `searchExtent`, boost por `location=`, `category`, `langCode`, paginação `search/start/num` | parâmetros documentados do `findAddressCandidates` | fora desta versão (saída sempre 4326; sem filtro geográfico nem boost de proximidade) | fora | — | 2026-09-06 | pendente (D20) |
+| geocodificação em lote de planilha/CSV do usuário (upload → coluna de endereço → resultado) | não é o `GeocodeServer`; é uma ferramenta de geoprocessamento separada (`Geocode Addresses` do Pro/ArcMap) | item-irmão `L2-11-a-geocodificacao-csv`, ainda não construído (reusa `motor.buscar()`) | fora (item separado) | — | 2026-09-06 | pendente (D20) |

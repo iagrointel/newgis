@@ -16,12 +16,14 @@ from app.acervo import rotas as rotas_acervo
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import (
+    rotas_convites,
     rotas_eu,
     rotas_grupos,
     rotas_log,
     rotas_login,
     rotas_org,
     rotas_plataforma,
+    rotas_redefinicao,
     rotas_tokens,
     rotas_usuarios,
 )
@@ -37,12 +39,16 @@ from app.catalogo import (
     transferencia,
 )
 from app.conexao import rotas as rotas_conexao
+from app.correio.rotas_smtp import router as rotas_smtp
+from app.geocodificador.rotas import router as rotas_geocodificador
+from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
+from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -75,6 +81,11 @@ ROUTERS = [
     rotas_org.router,
     # --- LDAP/Active Directory (L0-08-d): POST /api/login/ldap; GET/PUT /api/org/ldap; POST /api/org/ldap/importar
     rotas_ldap.router,
+    # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): GET/PUT /api/org/smtp,
+    # POST /api/org/smtp/testar; /api/convites (+ /resolver e /aceitar públicos); /api/senha/redefinir/*
+    rotas_smtp,
+    rotas_convites.router,
+    rotas_redefinicao.router,
     # --- fila de jobs (L0-05): /api/jobs, /api/agendas, /tarefas
     rotas_jobs,
     # --- catálogo (L0-03): /api/itens, /api/pastas, /api/categorias, /api/favoritos, /api/lixeira, /api/compartilhado
@@ -95,10 +106,17 @@ ROUTERS = [
     # --- arquivos/objetos (L0-11): /api/arquivos genérico por inquilino; /api/objetos/{chave} já vem do catálogo
     # (rotas_compartilhamento, entrega por URL assinada)
     rotas_arquivos,
+    # --- upload retomável (L0-04-a): /api/uploads (partes, retomada, tipo x conteúdo) -- antes de /api/itens
+    # na ordem de import só por clareza (FastAPI resolve por path completo, sem colisão de prefixo)
+    rotas_uploads,
     # --- ingestão vetorial (L0-04): /api/importacoes (upload -> inspeção -> confirmação -> carga -> camada)
     rotas_ingestao,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
+    # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
+    # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
+    rotas_geocodificador,
+    rotas_geocodificador_esri,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

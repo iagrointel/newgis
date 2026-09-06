@@ -1,0 +1,52 @@
+{
+ "item": "L2-11-b-geocodificador-brasil",
+ "medidas": {
+  "geocodificar_erro_mediano": {
+   "valor": 0.0,
+   "unidade": "m",
+   "comando": "test_50_enderecos_3_municipios_erro_mediano_e_acerto_numero"
+  },
+  "geocodificar_acerto_numero_face": {
+   "valor": 98.0,
+   "unidade": "%",
+   "comando": "test_50_enderecos_3_municipios_erro_mediano_e_acerto_numero"
+  },
+  "reverso_acerto_logradouro": {
+   "valor": 100.0,
+   "unidade": "%",
+   "comando": "test_reverso_50_pontos_logradouro_certo"
+  },
+  "sugestao_p95": {
+   "valor": 33.7,
+   "unidade": "ms",
+   "comando": "test_sugestao_p95_100ms (100 chamadas)"
+  },
+  "instalacao_rr_arquivo_bytes": {
+   "valor": 4520527,
+   "unidade": "bytes",
+   "comando": "test_instalacao_rr_tempo_e_disco_medidos"
+  },
+  "instalacao_rr_linhas": {
+   "valor": 260515,
+   "unidade": "linhas",
+   "comando": "test_instalacao_rr_tempo_e_disco_medidos"
+  },
+  "instalacao_rr_municipios": {
+   "valor": 15,
+   "unidade": "municipios",
+   "comando": "test_instalacao_rr_tempo_e_disco_medidos"
+  },
+  "instalacao_rr_duracao_s": {
+   "valor": 10.433832506649196,
+   "unidade": "s",
+   "comando": "test_instalacao_rr_tempo_e_disco_medidos"
+  },
+  "instalacao_rr_tabela_bytes": {
+   "valor": 132087808,
+   "unidade": "bytes",
+   "comando": "test_instalacao_rr_tempo_e_disco_medidos"
+  }
+ },
+ "gerado_em": "2026-09-06T15:05:11Z",
+ "git_sha": "9a69cebb2476"
+}

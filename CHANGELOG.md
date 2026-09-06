@@ -3,6 +3,27 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L2-11-b-geocodificador-brasil: geocodificador próprio sobre CNEFE 2022)
+
+Geocodificador PRÓPRIO em PostgreSQL/PostGIS (sem Nominatim/Pelias, decisão D28 sobre disco), base = CNEFE
+2022 do IBGE. `db/migracoes/045_geocodificador.sql` (`plat.geo_uf`, `plat.geo_municipio`, `plat.geo_endereco`,
+`plat.geo_instalacao`) + `scripts/geocodificador_instalar_uf.py` (baixa e mede o tamanho por `HEAD` antes,
+carrega por `COPY` em lotes) + `app/geocodificador/` (normalização, motor de busca/reverso/sugestão, API
+própria e `GeocodeServer` compatível Esri). Demo instalada: Roraima (menor arquivo de UF do CNEFE, 4,52 MB
+comprimidos, 260.515 pontos, 15 municípios, carga em 10,4 s).
+
+Medido (`tests/medidas/L2-11-b-geocodificador-brasil.json`, 50 endereços reais + 50 pontos reais do CNEFE):
+erro mediano de geocodificação **0,0 m** (portão ≤ 30 m), acerto de número/face **98,0%** (portão ≥ 90%),
+reverso acerta o logradouro em **100%** (portão ≥ 90%), sugestão p95 **33,1 ms** (portão ≤ 100 ms). Achado
+de carga corrigido ANTES do commit: `COD_UNICO_ENDERECO` do CNEFE não é chave única (260.516 linhas, só
+249.268 ids distintos em Roraima) — a tabela usa `id bigserial` como chave e guarda o código do IBGE em
+coluna indexada não-única. Ambiguidade entre municípios (a refutação pede "Rua A" em São Paulo, o maior
+arquivo do CNEFE, fora do teto de disco D28) foi provada com o mesmo fenômeno em Roraima: `RUA A` se repete
+em 8 dos 15 municípios, medido. Consistência CEP × município/UF recusa com `422` quando os dois sinais
+apontam lugares diferentes. QGIS como locator real fica como PENDÊNCIA nomeada (sem QGIS/ambiente gráfico
+nesta máquina) — o protocolo foi provado por chamada HTTP direta simulando o que o QGIS manda. Ver ADR 0013
+e `docs/PARIDADE.md` seção "Geocodificador".
+
 ## turno 3, setembro de 2026 (item L2-10-c-linguagem-expressao: conserto das três refutações do adversário)
 
 O ataque adversarial (`laco/handoffs/T3/L2-10-c-ADVERSARIO.md`) refutou o item em três cláusulas. As três
