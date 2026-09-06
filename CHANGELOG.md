@@ -603,6 +603,41 @@ próprios; falta só o item na varredura genérica. Ver `docs/PARIDADE.md` e `la
 | sha | mensagem |
 |---|---|
 | (este) | Metadado ISO 19139 por item e catálogo externo OGC API Records (item L0-09-metadado-catalogo) |
+## turno 3, setembro de 2026 (item L1-01-b-validacao-e-isolamento-da-entrada: validação de raster)
+
+Abre a linha L1 (imagens) com o portão que fica ANTES de qualquer conversão: `app/raster/validacao.py` (ADR
+0015) roda toda a inspeção do arquivo do cliente em **subprocesso separado**, com `RLIMIT_AS` 768 MB,
+`RLIMIT_CPU` 60 s, `RLIMIT_NOFILE` 64, `RLIMIT_CORE` 0, relógio de parede de 90 s (SIGKILL no grupo de
+processos) e ambiente GDAL sem leitura de diretório (`GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR`), sem
+`/vsicurl` (nenhuma extensão permitida ao driver HTTP), sem `.aux.xml`, sem `VRTRawRasterBand` e sem função
+de pixel. O processo pai **nunca importa rasterio para olhar o arquivo do cliente**: só lê os 64 primeiros
+bytes e confere a ASSINATURA de formato contra a extensão declarada (um PNG renomeado para `.tif` é recusado
+sem sequer abrir subprocesso). Qualquer morte do filho — memória, CPU, relógio, sinal, saída sem JSON — vira
+relatório `recusado` com a causa em português, nunca exceção subindo pela fila.
+
+Três estados no mesmo relatório JSON, gravado inteiro no resultado do job `raster.validar`
+(`app/raster/tarefas.py`): `recusado` (defeito do arquivo, mensagem exata), **`pendente`** (falta o que só o
+usuário sabe — CRS, NoData, data de aquisição, escala para reduzir 16 bits a 8 no perfil visual: a
+plataforma PERGUNTA e grava a resposta em `respostas`, **nunca assume um CRS**) e `aceito` (avisos não
+impedem: CRS sem EPSG resolvível é aceito com o WKT2 inteiro gravado; extensão fora do Brasil vira aviso).
+O tamanho descompactado é estimado pelo CABEÇALHO (`largura × altura × bandas × itemsize`) e comparado com a
+cota do inquilino antes de ler um pixel; no zip só o diretório central é lido antes de decidir (nº de
+entradas, soma declarada contra a cota, razão declarado/comprimido ≥ 50× = recusa, nome de caminho, link
+simbólico, zip aninhado) e **nada é extraído antes de aprovado**.
+
+Medido (`tests/medidas/L1-01-b.json`, 33 casos com arquivo sintético gerado em `tmp_path`, 31 deles com
+subprocesso): tempo do subprocesso mediana **0,294 s**, máximo 0,406 s fora do caso que prova o relógio;
+pico de RSS do subprocesso entre **87,1 MB e 130,4 MB**, ou seja 17 % do `RLIMIT_AS` declarado.
+Um BigTIFF esparso de **320.000 × 320.000** (95,4 GB descompactados estimados, **menos de 200 kB em disco**)
+é recusado em 0,3 s sem derrubar o pai; um TIFF fabricado à mão de 400.000 × 400.000 (menos de 1 kB) idem.
+Os três casos de invenção do adversário estão na suíte e passam: TIFF com IFD circular (o laço não trava —
+o relatório sai em menos de 10 s), JP2 truncado pela metade (recusado ao ler a janela de prova) e GeoTIFF
+declarando **65.535 bandas** (recusado, RSS abaixo do limite). Provas de isolamento: filho que tenta alocar
+2 GB morre e o pai devolve `morte=memoria`; filho em laço infinito é morto por relógio em 2,01 s com
+`codigo_saida=-9`.
+
+Fora deste turno de propósito: o e2e do job `raster.validar` (fila real) — a trilha rodou em worktree e não
+sobe worker que dispute a fila de produção; o registro do tipo é provado por teste de unidade.
 
 ## turno 3, setembro de 2026 (item L0-08-d-ldap: LDAP/Active Directory como provedor de login externo)
 
