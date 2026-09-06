@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 from app import erros, limite_corpo, paginas
 from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
+from app.amc import rotas as rotas_amc
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import (
@@ -138,6 +139,8 @@ ROUTERS = [
     rotas_consulta_servico,
     rotas_ogc_features,
     rotas_wfs,
+    # --- motor de análise multicritério (L3-01-a): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
+    rotas_amc.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
