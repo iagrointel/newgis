@@ -88,6 +88,7 @@ export async function carregar() {
 
 function rotuloDe(chave, v) {
   if (chave === 'tipo') return rotuloTipo(v.valor);
+  if (chave === 'licenca') return String(v.valor) === 'nenhuma' ? t('catalogo.licenca_nenhuma') : String(v.valor);
   if (chave === 'status') return rotuloStatus(v.valor);
   if (chave === 'acesso') return t(`catalogo.acesso_${v.valor}`);
   if (chave === 'familia') return t(`catalogo.familia_${v.valor}`) === `catalogo.familia_${v.valor}` ? v.valor : t(`catalogo.familia_${v.valor}`);
@@ -135,7 +136,7 @@ function chipsAtivos() {
     b.addEventListener('click', () => { remover(); aoMudar(); });
     return h('span', { class: 'chip' }, h('span', { class: 'nome' }, texto), b);
   };
-  for (const k of ['tipo', 'familia', 'status', 'acesso', 'tags', 'categoria', 'dono_id']) {
+  for (const k of ['tipo', 'familia', 'status', 'acesso', 'tags', 'categoria', 'dono_id', 'licenca']) {
     for (const v of f[k] || []) {
       const conjunto = conjuntoFaceta(k);
       const achado = conjunto.find((x) => String(x.valor) === String(v));
@@ -144,6 +145,7 @@ function chipsAtivos() {
     }
   }
   for (const k of ['origem', 'criado_de', 'criado_ate', 'modificado_de', 'modificado_ate', 'bbox']) if (f[k]) area.append(chip(`${t(`catalogo.f_${k}`)}: ${f[k]}`, () => definirFiltro(k, '')));
+  if (f.procedencia_min) area.append(chip(`${t('catalogo.filtro_procedencia')}: ${f.procedencia_min}`, () => definirFiltro('procedencia_min', '')));
   return area.childElementCount ? area : null;
 }
 
@@ -165,6 +167,7 @@ function render() {
     faceta('categoria', t('catalogo.categorias'), conjuntoFaceta('categoria')),
     faceta('status', t('catalogo.status'), facetas.status || [{ valor: 'autoritativo', n: null }, { valor: 'obsoleto', n: null }]),
     ctx.ler('aba') === 'inquilino' ? null : faceta('acesso', t('catalogo.col_acesso'), facetas.acesso || ['privado', 'inquilino', 'publico'].map((v) => ({ valor: v, n: null }))),
+    faceta('licenca', t('catalogo.filtro_licenca'), facetas.licenca),
     campoData('modificado', t('catalogo.col_modificado')),
     campoData('criado', t('catalogo.f_criado')),
   ];
@@ -183,4 +186,13 @@ function render() {
     definirFiltro('bbox', v.join(',')); aoMudar();
   });
   raiz.append(h('section', { class: 'faceta', 'aria-label': t('catalogo.f_bbox') }, h('h3', {}, t('catalogo.f_bbox')), bbox, h('span', { class: 'ajuda' }, t('catalogo.f_bbox_ajuda'))));
+  // item L0-09-a: pontuação mínima de procedência (0-10, a régua do registro do acervo)
+  const proc = h('input', { type: 'number', min: '0', max: '10', step: '0.5', 'aria-label': t('catalogo.filtro_procedencia'), value: f.procedencia_min || '' });
+  proc.addEventListener('change', () => {
+    const v = proc.value.trim();
+    if (v !== '' && (Number(v) < 0 || Number(v) > 10 || Number.isNaN(Number(v)))) { proc.setAttribute('aria-invalid', 'true'); return; }
+    proc.removeAttribute('aria-invalid');
+    definirFiltro('procedencia_min', v); aoMudar();
+  });
+  raiz.append(h('section', { class: 'faceta', 'aria-label': t('catalogo.filtro_procedencia') }, h('h3', {}, t('catalogo.filtro_procedencia')), proc, h('span', { class: 'ajuda' }, t('catalogo.procedencia_ajuda'))));
 }

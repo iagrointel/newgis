@@ -13,6 +13,7 @@ import psycopg2.extras
 from app import db
 from app.auth import comum as auth_comum
 from app.auth.sessao import iso
+from app.catalogo import procedencia as mod_procedencia
 from app.erros import ErroAPI
 
 ERROS_DO_BANCO_CATALOGO = {
@@ -44,6 +45,7 @@ SELECT i.id, i.tenant_id, i.tipo, t.familia, t.abre_em, i.titulo, i.resumo, i.de
        i.creditos, i.termos_de_uso, i.termos_de_uso_html, i.dono_id, i.pasta_id, i.extent_origem, i.miniatura_chave,
        i.miniatura_sha256, i.dados, i.acesso, i.status, i.protegido, i.classificacao,
        i.categorias::text[] AS categorias,
+       plat.procedencia_resumo(i.dados) AS procedencia_resumo,   -- item L0-09-a (a lista não leva i.dados)
        i.origem, i.url,
        i.tamanho_bytes, i.versao_atual, i.versao_publicada, i.pontuacao, i.criado_por, i.criado_em, i.modificado_por,
        i.modificado_em, i.apagado_em, i.apagado_por,
@@ -173,6 +175,9 @@ def item_json(r: dict, auth=None, completo: bool = True, publico: bool = False) 
         "abre_em": list(r["abre_em"] or []),
         "usado_por": r["usado_por"] or 0,
         "criado_a_partir_de": r["criado_a_partir_de"] or 0,
+        # item L0-09-a: resumo da procedência (pontuação 0-10 da acervo.v_completude, campos preenchidos e
+        # licença) vai na lista TAMBÉM, não só na ficha: é o que deixa a tela mostrar o selo sem 1 pedido por item
+        "procedencia": mod_procedencia.resumo_de_linha(r),
     }
     if publico:
         # anônimo pelo link ou pela rota pública: fica o que descreve o CONTEÚDO, sai tudo o que identifica pessoa

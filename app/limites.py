@@ -142,6 +142,27 @@ CONEXAO_REDIRECT_MAX = 5                 # cada hop é revalidado do zero (host 
 CONEXAO_RESPOSTA_MAX_BYTES = 1 * 1024 * 1024  # 1 MiB: o teste de saúde confere status/corpo curto
                                                 # (nunca baixa o serviço inteiro)
 
+# --- conectores de feição externa WFS 2.0 / OGC API - Features (L6-02-c-wfs-ogcapi; app/conexao/vetor_externo.py
+# e app/conexao/copia.py). Os tetos existem para o caso do adversário do item: serviço que declara 5 milhões de
+# feições e ignora a paginação. Nenhum deles é negociado com o serviço — quem decide é a plataforma.
+CONEXAO_VETOR_LER_TIMEOUT_S = 30.0            # página de feições é maior que o teste de saúde (6 s),
+                                              # mas nunca ilimitada
+CONEXAO_VETOR_METADADO_MAX_BYTES = 32 * 1024 * 1024  # GetCapabilities/DescribeFeatureType/collections.
+                                              # MEDIDO 06/09/2026: o GetCapabilities do GeoServer do IBGE
+                                              # (geoservicos.ibge.gov.br/geoserver/ows) tem 11.602.903 bytes
+                                              # em 2,3 s — 8 MiB recusava um serviço público legítimo.
+CONEXAO_VETOR_PAGINA_MAX_BYTES = 48 * 1024 * 1024    # corpo de UMA página de feições
+CONEXAO_VETOR_PAGINA_PADRAO = 1000            # feições por página quando quem chama não escolhe
+CONEXAO_VETOR_PAGINA_MAX = 10_000             # teto do que se pede por página (COUNT / limit)
+CONEXAO_VETOR_PAGINAS_MAX = 2_000             # teto de requisições de UMA cópia (com 10 mil/página dá 20 mi)
+CONEXAO_VETOR_LIMITE_PADRAO = 100_000         # feições que a cópia aceita quando quem chama não declara
+CONEXAO_VETOR_LIMITE_MAX = 2_000_000          # teto absoluto do limite declarável numa cópia
+CONEXAO_VETOR_PREVIA_MAX = 1000               # feições que a consulta REFERENCIADA devolve por vez
+CONEXAO_VETOR_CACHE_TTL_S = 30.0              # cache curto da consulta referenciada (item: "cache curto")
+CONEXAO_VETOR_CACHE_ENTRADAS = 128            # entradas guardadas no processo; a mais velha sai
+COPIA_MEMORIA_MB = 1024                       # job conexao.copiar_vetor (ogr2ogr + reprojeção)
+COPIA_TIMEOUT_S = 3600
+
 # --- ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 INGESTAO_AMOSTRA_VALIDADE = 1000          # feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR)
 INGESTAO_MEMORIA_MB = 768                 # job ingestao.inspecionar (cobre GeoJSON de 64 MiB, ADR seção 0.4)

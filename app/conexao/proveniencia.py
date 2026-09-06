@@ -23,6 +23,7 @@ from xml.etree.ElementTree import ParseError  # só o TIPO da exceção; o parse
 import defusedxml.ElementTree as ET_seguro
 
 from app import limites
+from app.catalogo import procedencia as procedencia_canonica
 from app.conexao import seguranca
 
 TIMEOUT_SONDA_S = 5.0
@@ -166,5 +167,20 @@ def descobrir(conexao: dict) -> Descoberta:
         "comando_reexecucao": f"GET {url_sondada}" if url_sondada else None,
         "limites": avisos or None,
         "responsavel": None,
+        # item L0-09-a: `origem` diz, campo a campo, quem afirmou. O que veio do GetCapabilities/f=json é
+        # DECLARADO pelo serviço externo; o que esta máquina calculou (hash do corpo lido, data de acesso,
+        # método e limites da sondagem) é MEDIDO. Sem isso, ler a ficha não distingue as duas coisas.
+        "origem": {
+            "fonte": "declarado",
+            "licenca": "declarado",
+            "url": "declarado",
+            "data_de_acesso": "medido",
+            "metodo": "medido",
+            "confianca": "medido",
+            "frescor": "medido",
+            "sha256": "medido",
+            "comando_reexecucao": "medido",
+            "limites": "medido",
+        },
     }
-    return Descoberta(procedencia=procedencia, atribuicao=atribuicao)
+    return Descoberta(procedencia=procedencia_canonica.normalizar(procedencia), atribuicao=atribuicao)

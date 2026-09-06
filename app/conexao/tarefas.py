@@ -63,4 +63,7 @@ def conexoes_saude_verificar(ctx, limite: int = LIMITE_POR_EXECUCAO) -> dict:
     return {"candidatas": len(candidatas), "ok": ok, "erro": erro}
 
 
-from app.conexao import periodicos  # noqa: E402,F401 — importar registra o periódico da saúde na lista do worker
+from app.conexao import (  # noqa: E402,F401 — importar registra o periódico da saúde e o job de cópia
+    copia,  # item L6-02-c-wfs-ogcapi: job conexao.copiar_vetor
+    periodicos,  # item L6-02-l-saude: periódico conexoes.saude_verificar na lista do worker
+)
