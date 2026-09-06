@@ -2,12 +2,17 @@
 `fim` fecha; Last-Event-ID reenvia o log; pela URL pública (nginx) chega `X-Accel-Buffering: no` e o primeiro
 evento em menos de 2 s; latência NOTIFY → cliente medida pelo instante do evento."""
 
+import asyncio
 import json
 import time
+import uuid
 
 import httpx
 import pytest
 
+from app import db as banco
+from app.jobs import eventos as mod_eventos
+from app.jobs.contexto import Sessao
 from tests.api.jobs.conftest import criar_job, esperar
 
 
@@ -80,6 +85,63 @@ def test_job_de_outro_inquilino_e_404_e_limite_por_usuario(cliente_demo, cliente
     r = cliente_demo2.get(f"/api/jobs/{job['id']}/eventos")
     assert r.status_code == 404 and r.json()["erro"] == "job_inexistente"
     esperar(cliente_demo, job["id"], timeout=60)
+
+
+def test_limite_de_conexoes_por_usuario_e_liberado_ao_fechar():
+    """Achado do testador T3 (gap do portão L0-05-b): a refutação pede '200 conexões no mesmo job (limite por
+    usuário)'; o mecanismo (`app/jobs/eventos.py::reservar/_liberar`, `POR_USUARIO_MAX = 10`) nunca tinha teste.
+
+    MEDIDO nesta sessão: `starlette.testclient` (aviso de depreciação no topo do arquivo) não sustenta N conexões
+    SSE **realmente concorrentes** de um processo síncrono — `with cliente.stream(...)` só devolve o controle
+    depois que o gerador do lado do servidor TERMINA (a 1ª chamada contra um job de 30 s levou os 30 s inteiros
+    antes de eu conseguir abrir a 2ª; as 12 chamadas seguintes vieram em ~3 ms cada porque o job já tinha
+    concluído). Abrir 200 conexões de verdade por HTTP exigiria threads reais contra a URL pública (fora do
+    escopo desta correção). O que se testa aqui é o MECANISMO em si, direto (`reservar`/`_liberar` são a função
+    que a rota chama antes/depois do `StreamingResponse`, `app/jobs/rotas.py::eventos_do_job`): 10 reservas
+    cabem, a 11ª levanta `ErroServico(429, "sse_limite", ...)`; liberar uma abre vaga para a próxima."""
+    sessao_fake = Sessao(ctx=banco.Contexto(tenant_id=999999999, usuario_id=999999999, login="teste-sse-limite"),
+                        perfil="admin", superadmin=False, tenant_slug="teste", nome="teste", admin=True)
+    chave = (sessao_fake.tenant_id, sessao_fake.usuario_id)
+    mod_eventos._por_usuario.pop(chave, None)
+    try:
+        for _ in range(mod_eventos.POR_USUARIO_MAX):
+            mod_eventos.reservar(sessao_fake)
+        assert mod_eventos._por_usuario[chave] == mod_eventos.POR_USUARIO_MAX
+        with pytest.raises(mod_eventos.ErroServico) as exc:
+            mod_eventos.reservar(sessao_fake)
+        assert exc.value.status_code == 429 and exc.value.erro == "sse_limite"
+        assert mod_eventos._por_usuario[chave] == mod_eventos.POR_USUARIO_MAX, "a reserva recusada não incrementou"
+        mod_eventos._liberar(sessao_fake)
+        assert mod_eventos._por_usuario[chave] == mod_eventos.POR_USUARIO_MAX - 1
+        mod_eventos.reservar(sessao_fake)  # a vaga liberada permite uma nova reserva
+        assert mod_eventos._por_usuario[chave] == mod_eventos.POR_USUARIO_MAX
+    finally:
+        mod_eventos._por_usuario.pop(chave, None)
+
+
+def test_conexao_fecha_sozinha_apos_a_duracao_maxima(monkeypatch):
+    """Achado do testador T3: `DURACAO_MAX_S = 1800` (30 min) nunca foi exercitado (esperar 30 min de verdade não
+    cabe na suíte). Chama `eventos.gerar()` direto (sem HTTP, sem worker: o caminho testado nunca lê o banco
+    porque nenhum NOTIFY chega — só os keepalives até estourar a duração) com a constante monkeypatchada para
+    frações de segundo; confirma o evento `fim` com o motivo exato que o portão e o ADR descrevem."""
+    monkeypatch.setattr(mod_eventos, "DURACAO_MAX_S", 0.3)
+    monkeypatch.setattr(mod_eventos, "KEEPALIVE_S", 0.05)
+    job = {"id": str(uuid.uuid4()), "tenant_id": 999999, "estado": "rodando", "progresso": 1}
+    sessao = Sessao(ctx=banco.Contexto(tenant_id=999999, usuario_id=1, login="teste"), perfil="admin",
+                    superadmin=False, tenant_slug="teste", nome="teste", admin=True)
+
+    async def coletar():
+        pedacos = []
+        async for pedaco in mod_eventos.gerar(sessao, job, None):
+            pedacos.append(pedaco)
+        return pedacos
+
+    t0 = time.perf_counter()
+    pedacos = asyncio.run(coletar())
+    duracao = time.perf_counter() - t0
+    texto = b"".join(pedacos).decode("utf-8")
+    assert "event: fim" in texto and "tempo máximo da conexão (30 min); reconecte" in texto, texto
+    assert duracao < 5.0, duracao
 
 
 def test_sse_pela_url_publica_com_x_accel_buffering(base_url, url_publica_resolve, sessao_demo, cliente_demo,

@@ -370,6 +370,66 @@ def test_agendas_criar_pausar_retomar_apagar(pagina, base_url):
     conferir_limpo(page)
 
 
+# ---------------------------------------------------------------- periódicos (item L0-05-d, achado do testador T3)
+# os periódicos da plataforma (expurgo/sessões/manutenção/lixeira/versões) são linhas de `plat.agenda` do
+# inquilino TÉCNICO `plataforma` (ADR 0003 seção 7): o admin de um inquilino comum nunca as vê (RLS), então a
+# tela só mostra "os periódicos" para quem loga como admin de `plataforma` — sessão própria aqui, sem senha,
+# pelas mesmas funções SECURITY DEFINER que `sessao`/`sessao_visualizador` já usam.
+
+@pytest.fixture(scope="session")
+def sessao_plataforma_e2e(env, api_jobs_disponivel):
+    from tests import jobs_sessao
+
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        r = jobs_sessao.criar_sessao(con, "plataforma", "admin")
+        con.commit()
+        return r
+    finally:
+        con.close()
+
+
+@pytest.fixture
+def pagina_plataforma(page, base_url, sessao_plataforma_e2e):
+    u = urlparse(base_url)
+    page.context.add_cookies([{
+        "name": COOKIE, "value": sessao_plataforma_e2e[0], "domain": u.hostname, "path": "/",
+        "httpOnly": True, "secure": u.scheme == "https", "sameSite": "Lax",
+    }])
+    erros, respostas = [], []
+    page.on("console", lambda m: erros.append(f"console.{m.type}: {m.text}") if m.type == "error" else None)
+    page.on("pageerror", lambda e: erros.append(f"pageerror: {e}"))
+    page.on("response", lambda r: respostas.append((r.url, r.status)))
+    page.erros = erros
+    page.respostas = respostas
+    return page
+
+
+def test_tela_lista_os_periodicos_e_rodar_agora_admin_plataforma(pagina_plataforma, base_url):
+    """Portão literal L0-05-d: 'tela lista os periódicos e permite rodar agora (admin)'. Usa `manutenção semanal`
+    (ANALYZE nas tabelas centrais, migração 026) porque é o mais seguro de disparar fora de hora: só lê/atualiza
+    estatística do planejador, nunca apaga nada."""
+    page = pagina_plataforma
+    abrir_tarefas(page)
+    if not page.locator("#agendas").is_visible():
+        pytest.skip("seção de agendas oculta para este perfil")
+    for nome_p in ("expurgo diário", "sessões vencidas", "manutenção semanal", "lixeira diária", "versões diárias"):
+        page.locator(f"#agendas-tabela tr:has-text('{nome_p}')").first.wait_for(timeout=10000)
+    antes = page.request.get(f"{base_url}/api/jobs",
+                             params={"tipo": "jobs.manutencao_analyze", "limite": 1}).json()["total"]
+    row = page.locator("#agendas-tabela tr:has-text('manutenção semanal')")
+    row.locator("button.acao-rodar").click()
+    page.wait_for_function(
+        "async ([base, antes]) => {"
+        "  const r = await fetch(`${base}/api/jobs?tipo=jobs.manutencao_analyze&limite=1`);"
+        "  const j = await r.json();"
+        "  return j.total > antes;"
+        "}",
+        arg=[base_url, antes], timeout=15000)
+    page.screenshot(path=str(CAPTURAS / f"{ITEM}_periodicos.png"), full_page=True)
+    conferir_limpo(page)
+
+
 # ---------------------------------------------------------------- perfil visualizador (correção T2 (3))
 
 @pytest.fixture

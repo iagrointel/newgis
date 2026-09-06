@@ -37,6 +37,17 @@ def sessao_demo2(env):
         con.close()
 
 
+@pytest.fixture(scope="session")
+def sessao_plataforma(env):
+    """Admin do inquilino técnico `plataforma` (tests/credenciais.txt): é onde os periódicos (L0-05-d) vivem —
+    testar `jobs.expurgo` fora deste contexto levanta (a função recusa; migração 006)."""
+    con = jobs_sessao.conectar(env["PLAT_DSN"])
+    try:
+        return jobs_sessao.criar_sessao(con, "plataforma", "admin")
+    finally:
+        con.close()
+
+
 def _cliente_com_cookie(token: str):
     from fastapi.testclient import TestClient
 
@@ -54,6 +65,12 @@ def cliente_demo(env, sessao_demo):
 @pytest.fixture(scope="session")
 def cliente_demo2(env, sessao_demo2):
     with _cliente_com_cookie(sessao_demo2[0]) as c:
+        yield c
+
+
+@pytest.fixture(scope="session")
+def cliente_plataforma(env, sessao_plataforma):
+    with _cliente_com_cookie(sessao_plataforma[0]) as c:
         yield c
 
 

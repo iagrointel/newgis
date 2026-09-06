@@ -102,6 +102,24 @@ def test_progresso_so_do_proprio_job_e_worker(conexao_plat_app, sessao_demo, cli
     assert esperar(cliente_demo, job["id"], timeout=30)["estado"] == "cancelado"
 
 
+def test_progresso_acima_de_100_e_grampeado_em_100(conexao_plat_app, sessao_demo, cliente_demo, worker_vivo):
+    """Refutação do portão L0-05-b ('envia progresso 150%', achado do testador T3: nunca tinha teste). O worker
+    certo (nome real do job em execução) chamando com 150 tem de gravar 100, nunca 150 nem erro: `plat.
+    job_progresso` grampeia com `greatest(0, least(100, p_progresso))` (migração 006) e a coluna tem `CHECK
+    (progresso BETWEEN 0 AND 100)` como segunda trava (migração 004)."""
+    job = criar_job(cliente_demo, "prova.progresso", {"duracao_s": 30, "passos": 30})
+    rodando = esperar(cliente_demo, job["id"], timeout=60,
+                      condicao=lambda j: j["estado"] == "rodando" and j["progresso"] >= 1)
+    cur = _ctx(conexao_plat_app, sessao_demo)
+    cur.execute("SELECT plat.job_progresso(%s, %s, 150, 'acima do limite') AS r", (job["id"], rodando["worker"]))
+    assert cur.fetchone()["r"] is not None, "job_progresso recusou o worker certo do próprio job"
+    cur.execute("SELECT progresso FROM plat.job WHERE id = %s", (job["id"],))
+    assert cur.fetchone()["progresso"] == 100, "progresso de 150 não foi grampeado em 100"
+    conexao_plat_app.rollback()  # não commita por cima do worker de verdade que segue rodando o mesmo job
+    assert cliente_demo.post(f"/api/jobs/{job['id']}/cancelar").status_code == 202
+    assert esperar(cliente_demo, job["id"], timeout=30)["estado"] == "cancelado"
+
+
 def test_cancelar_pela_api_continua_funcionando_e_estado_final_nao_volta(cliente_demo, worker_vivo, conexao_plat_app,
                                                                         sessao_demo):
     job = criar_job(cliente_demo, "prova.progresso", {"duracao_s": 0, "passos": 1})

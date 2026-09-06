@@ -558,10 +558,25 @@ compartilhada, DDL só quando o tipo realmente cria uma camada).
   superadmin vive nele, ativo, 2FA obrigatório — e a 004 só faz `INSERT ... ON CONFLICT DO NOTHING`, sem `ativo`/`config`) e os periódicos são declarados em código (`app/jobs/periodicos.py`, lista de
   `(nome, cron, tipo, parametros)`), sincronizados para `plat.agenda` desse inquilino na partida do worker
   (`INSERT ... ON CONFLICT (tenant_id, nome) DO UPDATE` só de `cron`/`parametros`) e enfileirados pelo mesmo relógio.
-  A RLS continua valendo para tudo e o superadmin vê esses jobs no console (L0-07-f). Este item entrega **um**
-  periódico: `jobs.expurgo` (diário 03:30, apaga `job` > 90 dias, `job_log` > 30 dias, diretórios órfãos e, **alterado
-  em T2** (o testador mediu 1.255 marcadores acumulados), marcadores e passos órfãos de `plat_trabalho`; a função
-  `plat.jobs_expurgar` só roda no contexto do inquilino `plataforma`).
+  A RLS continua valendo para tudo e o superadmin vê esses jobs no console (L0-07-f, ainda não construído — até lá,
+  quem quer ver os periódicos loga como admin do inquilino técnico `plataforma`, a mesma tela "Agendas" da seção 10:
+  são linhas de `plat.agenda` como outra qualquer, só que do inquilino `plataforma`).
+  **Alterado em T3 (achado do testador: o portão do item pedia 5 periódicos, só 3 estavam registrados)**: este item
+  entrega **cinco**: `jobs.expurgo` (diário 03:30, apaga `job` > 90 dias, `job_log` > 30 dias, diretórios órfãos e,
+  alterado em T2 — o testador mediu 1.255 marcadores acumulados —, marcadores e passos órfãos de `plat_trabalho`; a
+  função `plat.jobs_expurgar` só roda no contexto do inquilino `plataforma`), `catalogo.lixeira_expurgar` (diário
+  03:50) e `catalogo.versoes_compactar` (diário 03:40) — os dois do L0-03, somados a esta lista na importação de
+  `app/catalogo/periodicos.py` —, e dois novos: `jobs.sessoes_expurgar` (a cada hora; chama `plat.sessoes_expurgar()`
+  da migração 003, que já existia sem nenhum periódico que a chamasse — sem `tenant_id`, roda em qualquer contexto,
+  por isso a chave de lock fixa `sessoes_expurgar` evita corrida entre execuções) e `jobs.manutencao_analyze`
+  (semanal, domingo 04:00; `ANALYZE` nas tabelas centrais do plat — `job`, `job_log`, `item`, `item_versao`,
+  `agenda`, `usuario`, `evento` — via a função nova `plat.manutencao_analyze`, migração 026, SECURITY DEFINER
+  porque `ANALYZE` exige ser dono da tabela ou ter o privilégio `MAINTAIN`, que nem existe nesta versão do Postgres,
+  e `plat_app` não é dono de nada). Prova: `tests/api/jobs/test_jobs_periodicos.py` (5 registrados, cada um dispara
+  uma vez com 2 relógios concorrentes no contexto `plataforma`, e um periódico que falha não bloqueia nem atrasa
+  outro devido no mesmo instante) e o e2e da tela em `tests/e2e/test_tarefas.py`
+  (`test_tela_lista_os_periodicos_e_rodar_agora_admin_plataforma`: login como admin de `plataforma`, os 5 nomes
+  aparecem na tela "Agendas", "rodar agora" cria job real).
 
 ---
 
