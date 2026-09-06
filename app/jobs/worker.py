@@ -337,12 +337,13 @@ class Worker:
             fechar.append(self.sock.fileno())
         sys.stdout.flush()
         sys.stderr.flush()
+        pid_pai_esperado = os.getpid()  # medido ANTES do fork (item L0-05-e: ver o comentário de mod_filho._pdeathsig)
         pid = os.fork()
         if pid == 0:
             try:
                 signal.set_wakeup_fd(-1)
                 signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-                mod_filho.executar(job, tarefa, w, self.dir_jobs, self.nome, fechar)
+                mod_filho.executar(job, tarefa, w, self.dir_jobs, self.nome, fechar, pid_pai_esperado)
             finally:
                 os._exit(1)
         os.close(w)
@@ -465,6 +466,9 @@ class Worker:
             "processos": self.processos, "rodando": [str(f.job["id"]) for f in self.filhos.values()],
             "pesado_em_curso": any(f.pesado for f in self.filhos.values()), "ultimo_tick_ms": self.ultimo_tick_ms,
             "rss_kb": rss_kb(), "em": _iso(datetime.datetime.now(UTC)),
+            # item L0-05-e: teto do cgroup v2 do worker (contêiner Docker ou MemoryMax da unidade systemd),
+            # None quando não há teto; é o mesmo número que app.jobs.filho aplica ao RLIMIT_DATA dos filhos
+            "cgroup_memoria_max_mb": mod_filho.limite_memoria_cgroup_mb(),
         }
 
     def _atender_saude(self) -> None:

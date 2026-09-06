@@ -1,0 +1,13 @@
+# Contexto de build do deploy/Dockerfile.worker (item L0-05-e). Este repositório tem várias trilhas
+# concorrentes escrevendo no diretório raiz ao mesmo tempo (laco/estado.json descreve o modelo); a lista de
+# NEGAÇÃO (excluir X) já quebrou uma vez neste item por um diretório novo e alheio (osrm/, dono root, permissão
+# 700 num arquivo) que o daemon não conseguia nem LER para decidir se ignorava. Por isso a regra é a inversa:
+# ignora TUDO, e só os três caminhos que o Dockerfile realmente copia (COPY app/, requirements.txt, VERSAO)
+# voltam a entrar no contexto. Um diretório novo de outra trilha nunca mais quebra este build.
+*
+!app
+!app/**
+!requirements.txt
+!VERSAO
+!deploy
+!deploy/entrypoint-worker.sh

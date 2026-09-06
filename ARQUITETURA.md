@@ -443,6 +443,36 @@ o perfil mínimo do tipo é checado além do privilégio (`403 perfil_insuficien
 O testador varreu as 15 rotas por id com sessão de outro inquilino: 15 × `404`, 0 vazamento em lista, 17 × `401`
 sem sessão (`cruzado_jobs.py`, `40_testes.md` seção 5).
 
+### 5.8 Worker em contêiner (item L0-05-e, ADR 0010) — quando usar cada executor
+
+O worker existe em DOIS executores possíveis para a MESMA fila: a unidade systemd `plat-worker` (padrão,
+seção 8) e um contêiner Docker (`deploy/Dockerfile.worker` + `deploy/docker-compose.worker.yml`). Não é uma
+substituição — é o mesmo pai, os mesmos filhos por fork() com `RLIMIT_DATA`, a mesma tabela `plat.job`; os
+dois podem rodar ao mesmo tempo apontando para o mesmo banco (`job_pegar` com `FOR UPDATE SKIP LOCKED` já
+resolve dois workers concorrentes, seção 5.3), desde que tenham `PLAT_WORKER_NOME` e porta de saúde distintos.
+
+| | unidade systemd (padrão) | contêiner (`--worker-container`) |
+|---|---|---|
+| quando usar | produção hoje; menor superfície, `install.sh` já instala e verifica | quando o item que pede exigir isolamento de recursos POR EXECUÇÃO que uma unidade única não separa (hoje `MemoryMax=2G` é do worker inteiro, não por job — ex.: L2-16-b/c, um contêiner por job) ou uma imagem versionada para rodar noutra máquina sem repetir `install.sh` inteiro |
+| dependências Python | `--system-site-packages` reaproveita dpkg (psycopg2/GDAL/cryptography/magic do sistema, Python 3.12 = o do host) | tudo via pip na própria venv (a base `python:3.12-slim` é Debian bookworm, Python de sistema 3.11 — apt e venv não combinam); só `gdal-bin`/`libmagic1`/`ca-certificates` continuam vindo de apt |
+| rede | acesso direto (mesma máquina) | `network_mode: host` (Postgres/Garage só escutam 127.0.0.1; uma rede em ponte chegaria de outro IP e nem autenticaria — seção 3 do ADR 0010) |
+| segredos | `LoadCredential=` do systemd (ajusta dono/ACL para o usuário da unidade) | os MESMOS arquivos (`/etc/plat/segredos/*`) montados como `secrets:` do Compose; como o Compose preserva o dono/permissão de origem (root:600), o contêiner PARTE como root e `deploy/entrypoint-worker.sh` lê os segredos e solta o privilégio (`setpriv`) antes de rodar uma linha do worker — o worker nunca roda como root |
+| memória | `MemoryHigh=1536M`/`MemoryMax=2G` na unidade | `mem_limit`/`memswap_limit: 2g` no Compose — MESMO mecanismo de cgroup v2; `app/jobs/filho.limite_memoria_cgroup_mb()` lê o teto de qualquer um dos dois sem distinguir código e nunca deixa um filho pedir mais `RLIMIT_DATA` do que o cgroup tem (reserva fixa de 96 MB) |
+| paridade Esri | nenhuma (não aplicável) | nenhuma (não aplicável) |
+
+**O que a containerização corrigiu** (bug pré-existente, só aparece em contêiner): `app/jobs/filho._pdeathsig()`
+decidia "meu pai morreu" checando `os.getppid() == 1`, certo fora de contêiner (reparentado para o init do
+sistema) mas **sempre falso dentro de um contêiner sem `--init`, onde o próprio worker roda como PID 1** —
+100% dos jobs falhavam, imediatamente, sem log. Corrigido comparando contra o PID que era o pai medido ANTES
+do `fork()` (ADR 0010 seção 4), correto nos dois ambientes.
+
+**Instalação**: `sudo bash install.sh <dominio> [porta] [--worker-container]`. Sem a flag, nada muda (só a
+unidade systemd, como sempre). Com ela, ALÉM da unidade systemd (nunca no lugar dela), builda e sobe o
+contêiner com `PLAT_WORKER_NOME=worker-container` e `PLAT_WORKER_URL=http://127.0.0.1:8155` (8154/8158 são
+permanentes do ambiente de homologação, `docs/HOMOLOGACAO.md`; 8151/8152 de `martin`/`titiler`, reservadas).
+Exige `docker`/`docker compose` (plugin v2) já instalados — o script confere e para com mensagem clara, nunca
+instala Docker sozinho.
+
 ---
 
 ## 6. Migrações
@@ -493,6 +523,10 @@ Uso: `sudo bash install.sh <dominio> [porta]`. Root, idempotente, `set -euo pipe
 - e2 (turno 3, item L7-14): pacotes apt lidos de `deploy/pacotes_apt.txt` (7 no total — os 4 já conferidos
   antes mais `gdal-bin`, `python3-gdal`, `python3-magic`); `dpkg -s` antes e depois de `apt-get install -y`
   no que faltar. Detalhe e o que ficou fora de propósito: ADR 0007 seção 1.
+- h4 (turno 3, item L0-05-e, opcional, flag `--worker-container`): builda e sobe o worker também em contêiner
+  Docker, ALÉM da unidade systemd de h2 (nunca no lugar dela). Sem a flag, o passo é pulado e nada muda — o
+  comportamento padrão é bit a bit o de antes. Detalhe, tabela de decisão e o que a containerização corrigiu:
+  seção 5.8 e ADR 0010.
 
 Tempo medido pelo adversário do L0-02 na reinstalação destrutiva do zero (schemas `plat` e `plat_trabalho` e as
 duas roles apagados): "instalado em 50 s", serviço indisponível cerca de 63 s (17:14:17 a 17:15:20 UTC); depois,

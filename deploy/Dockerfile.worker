@@ -1,0 +1,88 @@
+# syntax=docker/dockerfile:1
+# Imagem do worker da fila de jobs, EM CONTÊINER (item L0-05-e-worker-em-container; ADR 0003 fixa o executor
+# por processo filho fork() + RLIMIT_DATA + PR_SET_PDEATHSIG — este Dockerfile empacota o MESMO worker
+# (`python -m app.jobs.worker`), registrado na mesma fila SQL, como um segundo executor possível ao lado da
+# unidade systemd `plat-worker` (deploy/plat-worker.service). Não é um protocolo novo: é o mesmo pai, os
+# mesmos filhos, agora dentro de um cgroup de contêiner em vez de (ou além d)o cgroup da unidade systemd —
+# app/jobs/filho.py lê o teto de qualquer um dos dois do mesmo jeito (limite_memoria_cgroup_mb()).
+#
+# Base mínima de propósito: python:3.12-slim (Debian bookworm), só os pacotes apt que o worker chama como
+# BINÁRIO/biblioteca C (nunca duplicado pelo pip mais abaixo). Decisão importante (docs/ARQUITETURA.md tem a
+# versão longa): a venv do HOST usa `--system-site-packages` para reaproveitar pacotes dpkg (python3-psycopg2,
+# python3-gdal, python3-cryptography, python3-magic) porque o Python do sistema no host é 3.12 (Ubuntu 24.04) —
+# a MESMA versão da venv. A base `python:3.12-slim` é Debian bookworm, cujo Python de sistema é o 3.11; um
+# `apt-get install python3-psycopg2` aqui instalaria um binding compilado para o 3.11, incompatível com o
+# 3.12 desta imagem. Por isso o contêiner NÃO usa --system-site-packages: todas as dependências Python vêm
+# do pip, versão fixada, dentro da própria venv (mesmo requirements.txt do host + os pacotes que lá vêm do
+# dpkg, aqui como wheel).
+FROM python:3.12-slim-bookworm
+
+LABEL org.opencontainers.image.title="plat-worker" \
+      org.opencontainers.image.description="Worker da fila de jobs do plat, em contêiner (item L0-05-e). Interno. Análise / beta privado."
+
+# a) pacotes de sistema: gdal-bin dá `ogr2ogr`/`ogrinfo`, chamados por subprocesso pelo worker e pelas tarefas
+# de ingestão vetorial (ADR 0003 seção 4.3 e ADR 0005) — nunca os bindings Python do GDAL, que nenhuma tarefa
+# registrada importa hoje (grep -rn "ferramentas=" app/ confere: só o binário é usado, via ctx.subprocesso).
+# libmagic1 é a biblioteca C que o pacote pip `python-magic` carrega em tempo de execução (ctypes.CDLL);
+# sem ela o import não quebra, mas toda chamada de app.varredura_conteudo quebraria em runtime.
+# --no-install-recommends e a limpeza de /var/lib/apt/lists NA MESMA camada: imagem mínima, disco do host a
+# 98% no dia deste item (06/09/2026) — ver o registro do item em laco/estado.json.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gdal-bin \
+        libmagic1 \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# usuário sem privilégio (nunca root: fork()/prctl(PR_SET_PDEATHSIG)/setrlimit(RLIMIT_DATA, para BAIXAR o
+# teto) não exigem privilégio nenhum — MEDIDO neste item, seção de teste do handoff)
+RUN groupadd --gid 10001 plat && useradd --uid 10001 --gid plat --no-create-home --shell /usr/sbin/nologin plat
+
+WORKDIR /app
+
+# b) dependências Python. requirements.txt é o MESMO do host (fonte única, ADR 0001). As 5 linhas fixas abaixo
+# são o que, no host, a venv --system-site-packages resolve sozinha a partir de pacotes dpkg (psycopg2,
+# cryptography, python-magic) MAIS duas que nenhum lugar deste repositório declarava antes deste item —
+# achado da containerização, não um objetivo dela: `app/catalogo/tipos.py` importa `jsonschema` e
+# `app/catalogo/miniatura.py` importa `PIL` (Pillow) na cadeia `python -m app.jobs.worker` -> app.jobs.tipos ->
+# app.catalogo.tarefas -> app.catalogo.{tipos,miniatura}; no host isso só funciona porque uma instalação pip
+# GLOBAL de outro produto da máquina (fora de dpkg, fora desta venv, em /usr/local/lib/python3.12/dist-packages
+# e /home/dev/.local) deixou as duas por acaso alcançáveis. Reproduzir esse acaso aqui violaria o portão P5
+# (reprodutível): as duas entram como dependência de primeira classe da imagem, versão travada na medida feita
+# no host em 06/09/2026 (jsonschema 4.26.0; Pillow 12.2.0). O CONSERTO do requirements.txt do host (declarar
+# as duas lá também) fica para o item dono de app/catalogo — não misturado a este, que só constrói o contêiner
+# (duas outras trilhas já mexiam em requirements.txt/settings.py quando este item rodou; risco de colisão).
+# psycopg2-binary/cryptography/python-magic: sem equivalente dpkg utilizável nesta base (ver acima), versão
+# fixada na resolução mais recente do pip no dia da construção desta imagem (registrada no handoff do item).
+COPY requirements.txt VERSAO ./
+RUN python3 -m venv venv \
+    && PYTHONNOUSERSITE=1 venv/bin/pip install --no-cache-dir --upgrade pip \
+    && PYTHONNOUSERSITE=1 venv/bin/pip install --no-cache-dir \
+        psycopg2-binary==2.9.12 \
+        cryptography==50.0.1 \
+        python-magic==0.4.27 \
+        Pillow==12.2.0 \
+        jsonschema==4.26.0 \
+    && PYTHONNOUSERSITE=1 venv/bin/pip install --no-cache-dir -r requirements.txt \
+    && find venv -name '__pycache__' -type d -prune -exec rm -rf {} + \
+    && rm -rf /root/.cache
+
+COPY app ./app
+COPY deploy/entrypoint-worker.sh ./entrypoint-worker.sh
+
+RUN mkdir -p var/jobs && chown -R plat:plat /app && chmod 0755 entrypoint-worker.sh
+# o CONTÊINER PARTE COMO ROOT DE PROPÓSITO (nunca `USER plat` aqui): o entrypoint lê os segredos montados
+# root:root 0600 (docker-compose.worker.yml) e solta o privilégio para `plat` via setpriv ANTES de importar
+# uma linha do worker — ver o comentário de deploy/entrypoint-worker.sh. O worker em si nunca roda como root.
+
+ENV PYTHONNOUSERSITE=1 \
+    PYTHONUNBUFFERED=1 \
+    PLAT_WORKER_URL=http://127.0.0.1:8153
+
+EXPOSE 8153
+
+# GET /saude do próprio worker (mesmo contrato da unidade systemd, ADR 0003 seção 4.6); a porta segue
+# PLAT_WORKER_URL para bater com o que o docker-compose.worker.yml define
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
+    CMD venv/bin/python -c "import os,urllib.request as u; u.urlopen((os.environ.get('PLAT_WORKER_URL') or 'http://127.0.0.1:8153')+'/saude', timeout=2).read()" || exit 1
+
+ENTRYPOINT ["./entrypoint-worker.sh"]

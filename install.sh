@@ -321,7 +321,7 @@ if [ "$WORKER_CONTAINER" -eq 1 ]; then
   df -h / | tail -1
   docker compose -f deploy/docker-compose.worker.yml up -d --build
   for i in $(seq 1 60); do
-    if curl -fsS -m 2 "http://127.0.0.1:8154/saude" >/dev/null 2>&1; then echo "/saude do worker em contêiner respondeu 200 em ${i} s"; break; fi
+    if curl -fsS -m 2 "http://127.0.0.1:8155/saude" >/dev/null 2>&1; then echo "/saude do worker em contêiner respondeu 200 em ${i} s"; break; fi
     if [ "$i" -eq 60 ]; then echo "worker em contêiner não respondeu em 60 s:" >&2; docker compose -f deploy/docker-compose.worker.yml logs --tail=40 >&2; exit 1; fi
     sleep 1
   done

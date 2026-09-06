@@ -531,6 +531,19 @@ como usuário comum); rotação de chave sempre distribui a pública nova numa v
 assinar qualquer pacote com a nova (`tests/unit/test_assinatura_pacote.py` prova as duas pontas — cedo recusa,
 tarde aceita). Detalhe completo: ADR 0007.
 
+### 11.6 Worker também em contêiner (item L0-05-e, opcional, ADR 0010)
+
+```
+sudo bash install.sh plat.iagrointel.com 8150 --worker-container
+```
+
+Builda `deploy/Dockerfile.worker` e sobe `deploy/docker-compose.worker.yml` como um SEGUNDO executor da fila,
+ao lado da unidade systemd `plat-worker` (nunca no lugar dela — a instalação sem a flag continua exatamente
+como antes). Exige `docker` e o plugin `docker compose` (v2) já instalados; o script confere e para com
+mensagem clara se faltar. Saúde do executor em contêiner: `curl http://127.0.0.1:8155/saude`. Quando usar um
+ou outro (tabela de decisão) e o bug que só aparece dentro de contêiner (worker como PID 1): `ARQUITETURA.md`
+seção 5.8 e o ADR.
+
 ---
 
 ## 12. Limites conhecidos neste turno

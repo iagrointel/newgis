@@ -1,0 +1,78 @@
+# Worker da fila de jobs em contêiner (item L0-05-e-worker-em-container). Executor ALTERNATIVO ao lado da
+# unidade systemd `plat-worker` (deploy/plat-worker.service), nunca um substituto silencioso: os dois podem
+# apontar para o MESMO banco (job_pegar por SKIP LOCKED já resolve dois workers concorrentes, ADR 0003 seção
+# 4.4) desde que tenham nomes e portas de saúde distintos — é o que este arquivo faz (porta 8155, nome
+# `worker-container`; a unidade systemd em produção usa 8153 e o hostname da máquina).
+#
+# uso local/teste: docker compose -f deploy/docker-compose.worker.yml up --build
+# (a partir da raiz do repositório, ou com --project-directory .. se rodado de dentro de deploy/)
+#
+# Decisões que valem a pena ler antes de mexer aqui (docs/ARQUITETURA.md tem a versão longa):
+#
+# 1. `network_mode: host` (não uma rede em ponte própria): Postgres e Garage nesta máquina escutam SÓ em
+#    127.0.0.1 (postgresql.conf: listen_addresses = '127.0.0.1'; pg_hba.conf: as roles plat_app/plat_worker
+#    só têm linha para 127.0.0.1/32 — MEDIDO 06/09/2026) e o .env do repositório já usa esses mesmos
+#    endereços (PLAT_DSN, PLAT_GARAGE_URL). Um contêiner em rede-ponte chegaria de outro IP (o gateway da
+#    ponte, ex. 172.17.0.1) — a conexão TCP nem chegaria a autenticar, e abrir esse caminho exigiria mexer em
+#    listen_addresses/pg_hba.conf de um Postgres compartilhado por 20 bancos de outros produtos da casa, fora
+#    do escopo deste item. O custo aceito: o contêiner enxerga toda porta do host (perde o isolamento de rede
+#    que uma ponte daria) — mitigado pelo isolamento que já existe por PROCESSO (RLIMIT_DATA + cgroup em
+#    app/jobs/filho.py), que é o que este item constrói, não isolamento de rede.
+#
+# 2. Segredos (PLAT_SECRET, PLAT_DSN_WORKER): os MESMOS arquivos que a unidade systemd lê via LoadCredential=
+#    (/etc/plat/segredos/*, dono root, modo 600, docs/SEGURANCA.md), montados aqui como `secrets:` do Compose.
+#    MEDIDO 06/09/2026: fora do modo swarm, o Compose bind-monta o arquivo de origem preservando dono e
+#    permissão — um processo não-root dentro do contêiner não conseguiria ler nenhum dos dois. Por isso o
+#    contêiner PARTE como root (deploy/Dockerfile.worker não declara `USER` antes do ENTRYPOINT) e
+#    deploy/entrypoint-worker.sh lê os dois arquivos como root, exporta como variável de ambiente e só então
+#    troca para o usuário `plat` (setpriv) antes de importar uma linha do worker — o worker em si nunca roda
+#    como root. `CREDENTIALS_DIRECTORY=/run/secrets` é o mesmo nome de variável que o systemd usa com
+#    LoadCredential=; app/settings.py já sabia ler as duas formas (_credenciais_systemd()), nada novo lá.
+#
+# 3. `mem_limit`/`memswap_limit` (não `deploy.resources.limits`, que é só para modo swarm): espelha
+#    MemoryMax=2G da unidade systemd (deploy/plat-worker.service) — mudar os dois juntos. O cgroup v2 que o
+#    Docker cria para essa cota é o mesmo mecanismo que app/jobs/filho.limite_memoria_cgroup_mb() lê para
+#    nunca deixar um filho pedir mais RLIMIT_DATA do que o contêiner tem (item L0-05-e).
+#
+# 4. `restart: "no"` de propósito (este arquivo é o executor de TESTE/demonstração do item, não a definição
+#    operacional): quem operar isto como executor permanente ao lado do systemd troca para `unless-stopped`
+#    ou `always` e decide separadamente a política de reinício (fora do escopo deste item).
+services:
+  worker-container:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.worker
+    image: plat-worker:local
+    container_name: plat-worker-container
+    hostname: plat-worker-container
+    network_mode: host
+    env_file:
+      - ../.env
+    environment:
+      # 8150 plat-api · 8151/8152 martin/titiler (reservadas, sem serviço) · 8153 plat-worker (systemd,
+      # produção) · 8154/8158 nginx/uvicorn do ambiente de HOMOLOGAÇÃO (docs/HOMOLOGACAO.md — permanentes,
+      # nunca reusar). 8155 é a saúde deste executor alternativo (confira com `ss -tlnp | grep 815` antes
+      # de mudar: a faixa 8150-8159 é compartilhada por várias frentes do mesmo produto).
+      PLAT_WORKER_URL: http://127.0.0.1:8155
+      PLAT_WORKER_NOME: worker-container
+      # NÃO declarar CREDENTIALS_DIRECTORY aqui: deploy/entrypoint-worker.sh já lê os dois segredos como
+      # root e os exporta como PLAT_SECRET/PLAT_DSN_WORKER de verdade antes de soltar o privilégio (setpriv).
+      # Se o worker (já como `plat`) visse CREDENTIALS_DIRECTORY, app/settings._credenciais_systemd() tentaria
+      # reabrir os MESMOS arquivos — que continuam dono root:600 dentro do contêiner (o bind do Compose
+      # preserva a permissão de origem) — e `plat` não tem como lê-los: `PermissionError` não capturada,
+      # worker morre na partida. MEDIDO 06/09/2026 (traceback em app/settings.py:_credenciais_systemd). O
+      # caminho comum (LoadCredential= do systemd) nunca bate nisso porque o systemd ajusta o dono/ACL do
+      # diretório de credenciais para o usuário da unidade; o bind mount do Compose não replica esse ajuste.
+    secrets:
+      - PLAT_SECRET
+      - PLAT_DSN_WORKER
+    mem_limit: 2g
+    memswap_limit: 2g
+    restart: "no"
+    stop_grace_period: 40s   # mesmo TimeoutStopSec da unidade systemd (seção 4.5 do ADR 0003)
+
+secrets:
+  PLAT_SECRET:
+    file: /etc/plat/segredos/PLAT_SECRET
+  PLAT_DSN_WORKER:
+    file: /etc/plat/segredos/PLAT_DSN_WORKER

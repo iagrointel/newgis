@@ -20,21 +20,93 @@ from app.jobs.registro import Cancelado, FalhaDefinitiva, Tarefa
 
 PR_SET_PDEATHSIG = 1
 CODIGO_OK, CODIGO_ERRO, CODIGO_CANCELADO, CODIGO_DEFINITIVA, CODIGO_MEMORIA = 0, 1, 3, 4, 5
+CAMINHO_PROC_CGROUP = Path("/proc/self/cgroup")  # nomes em constantes (não inline) para o teste de unidade
+RAIZ_CGROUP = Path("/sys/fs/cgroup")              # trocar por um diretório de teste via monkeypatch
+# Reserva subtraída do teto do cgroup antes de virar RLIMIT_DATA (item L0-05-e): RLIMIT_DATA conta segmento de
+# dados + mmap anônimo privado do PRÓPRIO filho; o cgroup conta RSS + cache de página do CGROUP INTEIRO (pai +
+# todos os filhos vivos). Valor fixo, não medido nesta rodada (RSS do pai medido no ADR 0003 = 25.920 kB;
+# 96 MB dá folga de ~3,7× esse número para o pai e para o overhead do runtime do contêiner) — reavaliar com
+# `docker stats`/`MemoryPeak` se algum job legítimo passar a ser clampado sem necessidade.
+RESERVA_CGROUP_MB = 96
 
 
-def _pdeathsig() -> None:
+def _pdeathsig(pid_pai_esperado: int) -> None:
+    """`pid_pai_esperado` é o PID do worker medido ANTES do fork (worker.py captura `os.getpid()` e repassa).
+    MEDIDO 06/09/2026 (item L0-05-e): checar `os.getppid() == 1` para decidir "o pai morreu entre o fork e o
+    prctl" só vale fora de contêiner. Dentro de um contêiner Docker sem `--init`, o PRÓPRIO WORKER roda como
+    PID 1 do contêiner (visto em GET /saude: "pid": 1) — todo filho reparentado por morte do pai vai para
+    PID 1 tanto faz onde ele mora, mas aqui PID 1 É o pai vivo, não o init do sistema; a checagem antiga
+    confundia as duas coisas e matava todo filho, sempre, no contêiner (reproduzido: 100% dos jobs falhavam
+    com código de saída 1, sem log, sem traceback — o processo morre aqui, antes de qualquer coisa que
+    escreva em algum lugar). A comparação certa, dentro ou fora de contêiner, é contra o PID que era o pai
+    ANTES do fork: se mudou, o pai de verdade morreu; se PID 1 sempre foi o pai (contêiner sem --init), nada
+    mudou e o filho segue."""
     libc = ctypes.CDLL("libc.so.6", use_errno=True)
     if libc.prctl(PR_SET_PDEATHSIG, int(signal.SIGKILL), 0, 0, 0) != 0:
         raise OSError(ctypes.get_errno(), "prctl(PR_SET_PDEATHSIG) falhou")
-    if os.getppid() == 1:  # o pai morreu entre o fork e o prctl
+    if os.getppid() != pid_pai_esperado:  # o pai morreu entre o fork e o prctl (reparentado para outro pid)
         os._exit(CODIGO_ERRO)
 
 
-def preparar_ambiente(memoria_mb: int, threads_blas: int) -> None:
+def limite_memoria_cgroup_mb() -> int | None:
+    """Teto de memória do cgroup v2 do processo atual, em MB, ou `None` se não houver cgroup v2 unificado, se o
+    cgroup não tiver teto (`memory.max` = `max`) ou se o arquivo não puder ser lido.
+
+    MEDIDO nesta máquina 06/09/2026: o caminho do cgroup do processo NÃO é sempre `/sys/fs/cgroup/memory.max` —
+    só é, por coincidência, quando o cgroup é remontado na raiz por um namespace de cgroup próprio (é o caso de
+    um contêiner Docker padrão: `/proc/self/cgroup` mostra `0::/` dentro dele). Fora de contêiner (sessão desta
+    máquina, ou a unidade `plat-worker` do systemd) o processo vive num cgroup filho: sessão de usuário mostrou
+    `0::/user.slice/user-0.slice/session-192870.scope` (`memory.max` = `max`, sem teto); a unidade em produção
+    mostrou `0::/system.slice/plat-worker.service` com `memory.max` = 2147483648 (os 2 GiB do `MemoryMax=2G` do
+    `deploy/plat-worker.service`) — o mesmo mecanismo de cgroup v2 serve o contêiner e a unidade systemd sem
+    distinção de código. Por isso o caminho é sempre resolvido via `/proc/self/cgroup`, nunca hardcoded."""
+    try:
+        linhas = CAMINHO_PROC_CGROUP.read_text().splitlines()
+    except OSError:
+        return None
+    caminho_relativo = None
+    for linha in linhas:
+        partes = linha.split(":", 2)
+        if len(partes) == 3 and partes[0] == "0" and partes[1] == "":  # cgroup v2 unificado (hierarquia única)
+            caminho_relativo = partes[2]
+            break
+    if caminho_relativo is None:
+        return None  # só cgroup v1 (hierarquias múltiplas) ou /proc/self/cgroup em formato inesperado
+    caminho = RAIZ_CGROUP / caminho_relativo.lstrip("/") / "memory.max"
+    try:
+        conteudo = caminho.read_text().strip()
+    except OSError:
+        return None
+    if conteudo == "max":
+        return None
+    try:
+        return int(conteudo) // (1024 * 1024)
+    except ValueError:
+        return None
+
+
+def memoria_efetiva_mb(memoria_mb: int) -> int:
+    """Aritmética pura do clamp (sem tocar em RLIMIT — testável sem subprocesso, já que `setrlimit(RLIMIT_DATA)`
+    só pode BAIXAR o teto no processo que o chama; testar a syscall de verdade duas vezes no mesmo processo de
+    teste falha com 'not allowed to raise maximum limit'). `memoria_mb` do job nunca vence o teto do cgroup."""
+    efetivo_mb = int(memoria_mb)
+    teto_cgroup = limite_memoria_cgroup_mb()
+    if teto_cgroup is not None:
+        teto_util = max(1, teto_cgroup - RESERVA_CGROUP_MB)
+        efetivo_mb = min(efetivo_mb, teto_util)
+    return efetivo_mb
+
+
+def preparar_ambiente(memoria_mb: int, threads_blas: int) -> int:
+    """Aplica RLIMIT_DATA e devolve o limite efetivo em MB (item L0-05-e: nunca acima do teto do cgroup,
+    contêiner ou unidade systemd — `memoria_mb` do job é o pedido; o cgroup é o que existe de verdade). Chamado
+    uma vez por filho recém-forkado (nunca duas vezes no mesmo processo: RLIMIT_DATA só desce, não sobe)."""
     for chave in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
         os.environ[chave] = str(threads_blas)
-    limite = int(memoria_mb) * 1024 * 1024
+    efetivo_mb = memoria_efetiva_mb(memoria_mb)
+    limite = efetivo_mb * 1024 * 1024
     resource.setrlimit(resource.RLIMIT_DATA, (limite, limite))
+    return efetivo_mb
 
 
 def _escrever(pipe_w: int, saida: dict) -> None:
@@ -52,23 +124,28 @@ def _escrever(pipe_w: int, saida: dict) -> None:
             pass
 
 
-def executar(job: dict, tarefa: Tarefa, pipe_w: int, dir_jobs: Path, worker: str, fds_fechar: list[int]) -> None:
-    """Corpo do filho; nunca retorna."""
+def executar(job: dict, tarefa: Tarefa, pipe_w: int, dir_jobs: Path, worker: str, fds_fechar: list[int],
+             pid_pai_esperado: int) -> None:
+    """Corpo do filho; nunca retorna. `pid_pai_esperado` = `os.getpid()` do worker, medido ANTES do fork
+    (worker.py o repassa) — ver o comentário de `_pdeathsig`."""
     codigo = CODIGO_ERRO
     saida: dict = {"estado": "falhou", "erro": "filho terminou sem resultado"}
     ctx = None
     try:
-        _pdeathsig()
+        _pdeathsig(pid_pai_esperado)
         for fd in fds_fechar:
             try:
                 os.close(fd)
             except OSError:
                 pass
-        preparar_ambiente(int(job["memoria_mb"]), tarefa.threads_blas)
+        memoria_mb_efetiva = preparar_ambiente(int(job["memoria_mb"]), tarefa.threads_blas)
         banco._pool = None  # nunca herdar o pool (sockets partilhados entre pai e filho)
         dir_trabalho = dir_jobs / str(job["id"])
         dir_trabalho.mkdir(parents=True, exist_ok=True)
         ctx = ContextoJob(job, dir_trabalho, worker)
+        if memoria_mb_efetiva < int(job["memoria_mb"]):
+            ctx.log("AVISO", f"RLIMIT_DATA reduzido de {job['memoria_mb']} MB para {memoria_mb_efetiva} MB "
+                             f"pelo teto do cgroup (contêiner ou MemoryMax da unidade)")
 
         def ao_sigterm(_sinal, _quadro):
             ctx.sinal_parar = True
@@ -92,7 +169,7 @@ def executar(job: dict, tarefa: Tarefa, pipe_w: int, dir_jobs: Path, worker: str
             codigo = CODIGO_DEFINITIVA
         except MemoryError:
             gc.collect()
-            mensagem = f"memória excedida (limite {job['memoria_mb']} MB)"
+            mensagem = f"memória excedida (limite {memoria_mb_efetiva} MB)"
             try:
                 ctx.log("ERRO", mensagem)
             except Exception:  # noqa: BLE001 — sem memória para logar; o pai marca pelo código de saída
