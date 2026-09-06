@@ -1,0 +1,42 @@
+{
+ "item": "L0-05-e-worker-em-container",
+ "gerado_em": "2026-09-06T16:23:39Z",
+ "git_sha": "1409076da35d",
+ "medidas": {
+  "gdal_da_imagem": {
+   "valor": "3.10.3",
+   "unidade": "versão",
+   "comando": "docker run --rm --entrypoint bash plat-worker:g3fix -lc 'ogrinfo --version'"
+  },
+  "gdal_da_imagem_anterior_bookworm": {
+   "valor": "3.6.2",
+   "unidade": "versão",
+   "comando": "docker run --rm python:3.12-slim-bookworm bash -lc 'apt-get install -y gdal-bin; ogrinfo --version' — sem a opção -json"
+  },
+  "ogrinfo_json_funciona_na_imagem": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "portão de construção, passo a2 de deploy/Dockerfile.worker (a imagem não constrói sem isso)"
+  },
+  "arquivos_com_mesma_leitura_no_host_e_no_conteiner": {
+   "valor": "13/13",
+   "unidade": "arquivos",
+   "comando": "ogrinfo -ro -json -so dos 13 formatos declarados, host (GDAL 3.8.4) x contêiner (3.10.3); nome de camada e contagem de feições idênticos"
+  },
+  "diferenca_conhecida": {
+   "valor": "LIBKML do 3.10 expõe 1 campo a mais no KML e no KMZ (16 x 15 e 12 x 11); camadas e contagens iguais",
+   "unidade": "observação",
+   "comando": "mesma comparação acima"
+  },
+  "sha256_do_dockerfile": {
+   "valor": "5b8e5942ffda9fefa380aa7f311952f14079dc7e92e3cdeae28a696820bcb765",
+   "unidade": "sha256",
+   "comando": "sha256sum deploy/Dockerfile.worker"
+  },
+  "comando_de_construcao": {
+   "valor": "docker build -f deploy/Dockerfile.worker -t plat-worker:<tag> .",
+   "unidade": "comando",
+   "comando": "a imagem foi APAGADA depois de medida (disco a 92 %)"
+  }
+ }
+}

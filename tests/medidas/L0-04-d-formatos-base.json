@@ -1,0 +1,37 @@
+{
+ "item": "L0-04-d-formatos-base",
+ "gerado_em": "2026-09-06T16:23:39Z",
+ "git_sha": "1409076da35d",
+ "medidas": {
+  "formatos_aceitos": {
+   "valor": 13,
+   "unidade": "formatos",
+   "comando": "GET /api/importacoes/formatos (csv, dxf, flatgeobuf, gdb, geojson, geojsonseq, gml, gpkg, gpx, kml, kmz, shapefile.zip, xlsx)"
+  },
+  "formatos_do_portao_do_L0_04_d": {
+   "valor": 9,
+   "unidade": "formatos",
+   "comando": "shapefile.zip, gpkg, geojson, geojsonseq, kml, kmz, csv, gpx, xlsx — todos aceitos"
+  },
+  "formatos_a_mais_do_portao_do_L0_04_b": {
+   "valor": 4,
+   "unidade": "formatos",
+   "comando": "gml, flatgeobuf, dxf, gdb — todos aceitos"
+  },
+  "formatos_que_dependem_de_licenca_de_terceiro": {
+   "valor": 1,
+   "unidade": "formatos",
+   "comando": "dwg: ODA File Converter (licença própria) ou LibreDWG (GPL-3); decisão do dono, item L0-04-e"
+  },
+  "gdal_do_host": {
+   "valor": "3.8.4",
+   "unidade": "versão",
+   "comando": "ogrinfo --version"
+  },
+  "drivers_presentes": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "ogrinfo --formats: ESRI Shapefile, GPKG, GeoJSON, GeoJSONSeq, CSV, LIBKML, GPX, XLSX, GML, FlatGeobuf, DXF, OpenFileGDB — nada precisou ser instalado"
+  }
+ }
+}
