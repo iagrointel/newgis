@@ -19,6 +19,7 @@ import uuid as uuid_mod
 
 import psycopg2
 from fastapi import APIRouter, Request, Response
+from starlette.concurrency import run_in_threadpool
 
 from app import db
 from app.auth import comum as auth_comum
@@ -96,6 +97,19 @@ def _carregar(cur, rede_id: str) -> dict:
     return r
 
 
+def _travar_rede(cur, rede_id: str) -> None:
+    """`FOR UPDATE` na linha da rede antes de substituir o catálogo inteiro. Achado do turno 3 (item
+    L4-01-a-pacote-de-ativos, achado A4): mover a importação para o threadpool corrige o laço de eventos
+    travado, mas também torna REAL a concorrência que antes só existia no papel — duas importações na
+    MESMA rede podem, de fato, apagar e gravar as 9 tabelas filhas ao mesmo tempo. Sem esta trava, isso às
+    vezes vira `DeadlockDetected` (não é `psycopg2.errors.UniqueViolation`/`ForeignKeyViolation`/etc., logo
+    `erro_do_banco` não tem para onde mapear e a resposta é 500). A trava faz a segunda importação ESPERAR
+    a primeira terminar (commit ou rollback) e só então prosseguir — nunca as duas ao mesmo tempo."""
+    cur.execute("SELECT 1 FROM plat.rede WHERE id = %s::uuid FOR UPDATE", (rede_id,))
+    if cur.fetchone() is None:
+        raise ErroAPI(404, "rede_inexistente", "rede inexistente")
+
+
 @router.get("/pacotes", response_model=PacoteInstaladoLista, openapi_extra=INSTALADO)
 def listar_pacotes_instalados(auth: Auth = autenticado(escopo_token="catalogo:ler")):
     """Pacotes de ativos entregues com a instalação. Não lê nem escreve dado de inquilino."""
@@ -160,11 +174,11 @@ def apagar(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar
     return Response(status_code=204)
 
 
-@router.post("/{rede_id}/pacote", response_model=ImportacaoResultado, status_code=201, openapi_extra=EDITAR)
-async def importar_pacote(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar")):
-    """Importa o pacote de ativos. Substitui o catálogo INTEIRO da rede, numa transação: ou entra tudo, ou nada."""
-    rid = _uuid_ok(rede_id)
-    bruto = await request.body()
+def _importar_pacote_sincrono(rid: str, bruto: bytes, auth: Auth, request: Request) -> dict:
+    """Validação (CPU) e gravação (psycopg2, bloqueante) do pacote — tudo o que `importar_pacote` fazia dentro
+    do laço de eventos (achado A4, `L4-01-a-pacote-de-ativos`, adversário do turno 3). Um pacote de 1,15 MB com
+    4 mil problemas segurava `/saude` da API inteira, de qualquer inquilino, por 13,5 s; roda em thread à parte
+    para o laço de eventos continuar respondendo a todo mundo."""
     if len(bruto) > PACOTE_MAX_BYTES:
         raise ErroAPI(413, "pacote_grande_demais",
                       f"o pacote passa de {PACOTE_MAX_BYTES} bytes ({len(bruto)})")
@@ -175,7 +189,7 @@ async def importar_pacote(rede_id: str, request: Request, auth: Auth = autentica
                       f"o pacote foi recusado: {len(e.problemas)} problema(s)", e.problemas) from e
     sha = hashlib.sha256(bruto).hexdigest()
     with db.db(auth.contexto()) as cur:
-        _carregar(cur, rid)  # 404 antes de apagar coisa alguma
+        _travar_rede(cur, rid)  # 404 antes de apagar coisa alguma; FOR UPDATE serializa importações concorrentes
         try:
             contagens = deposito.importar(cur, auth.tenant_id, rid, doc, auth.usuario_id, sha, len(bruto))
         except LookupError as e:
@@ -189,6 +203,15 @@ async def importar_pacote(rede_id: str, request: Request, auth: Auth = autentica
         "rede_id": rid, "codigo": doc["pacote"]["codigo"], "versao": doc["pacote"]["versao"],
         "esquema_versao": doc["esquema_versao"], "sha256": sha, "bytes": len(bruto), "contagens": contagens,
     }
+
+
+@router.post("/{rede_id}/pacote", response_model=ImportacaoResultado, status_code=201, openapi_extra=EDITAR)
+async def importar_pacote(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar")):
+    """Importa o pacote de ativos. Substitui o catálogo INTEIRO da rede, numa transação: ou entra tudo, ou nada.
+    Só a leitura do corpo fica no laço de eventos (rápida, I/O); validação e gravação vão para o threadpool."""
+    rid = _uuid_ok(rede_id)
+    bruto = await request.body()
+    return await run_in_threadpool(_importar_pacote_sincrono, rid, bruto, auth, request)
 
 
 @router.get("/{rede_id}/pacote", openapi_extra=LER, response_class=Response)
