@@ -1,0 +1,52 @@
+{
+ "item": "L3-01-b",
+ "medidas": {
+  "grade_250m_2000km2_segundos": {
+   "valor": 1.14,
+   "unidade": "s",
+   "comando": "pytest tests/api/amc/test_unidades.py -k 250m"
+  },
+  "grade_250m_2000km2_celulas": {
+   "valor": 32374,
+   "unidade": "células",
+   "comando": "SELECT count(*) FROM plat.amc_unidade WHERE conjunto_id = ..."
+  },
+  "grade_250m_2000km2_desvio_contagem_pct": {
+   "valor": 1.175,
+   "unidade": "%",
+   "comando": "(n_unidades − area_plano/area_celula) / (area_plano/area_celula) × 100, área por shapely/pyproj"
+  },
+  "grade_100m_2500km2_segundos": {
+   "valor": 8.61,
+   "unidade": "s",
+   "comando": "pytest tests/api/amc/test_unidades.py -k 100m"
+  },
+  "grade_100m_2500km2_celulas": {
+   "valor": 250986,
+   "unidade": "células",
+   "comando": "ficha.n_unidades do conjunto"
+  },
+  "grade_100m_faixas": {
+   "valor": 3,
+   "unidade": "faixas de 100 mil células",
+   "comando": "ficha.faixas"
+  },
+  "grade_100m_1milhao_celulas_EXTRAPOLADO": {
+   "valor": 34.3,
+   "unidade": "s (extrapolação linear, NÃO medido)",
+   "comando": "segundos × 1.000.000 / n_unidades — 1 mi de células não foi gerado: /mnt/pgdata a 99 %"
+  },
+  "amc_unidade_bytes_com_250mil_celulas": {
+   "valor": 185958400,
+   "unidade": "bytes (tabela + índices, inclui espaço já reservado por rodadas anteriores)",
+   "comando": "SELECT pg_total_relation_size('plat.amc_unidade')"
+  },
+  "amc_unidade_bytes_1milhao_EXTRAPOLADO": {
+   "valor": 740911445,
+   "unidade": "bytes (extrapolação linear, NÃO medido)",
+   "comando": "bytes × 1.000.000 / n_unidades"
+  }
+ },
+ "gerado_em": "2026-09-06T13:44:40Z",
+ "git_sha": "90d03c07da0c"
+}
