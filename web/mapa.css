@@ -61,3 +61,23 @@ body.mapa .mapa-painel-base { top: var(--e4); display: flex; align-items: center
 body.mapa .mapa-painel-base label { color: var(--mapa-texto-fraco); text-transform: lowercase; }
 body.mapa .mapa-painel-base select { background: #1a2224; color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: .2rem .4rem; }
 body.mapa .mapa-coordenadas { top: calc(var(--e4) + 2.4rem); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+
+/* item L6-01-h-frescor-verificacao: painel das camadas do acervo, canto inferior esquerdo acima da escala.
+   Mesmas variáveis --mapa-* do resto do painel (cor FIXA sobre o canvas, nunca var(--texto) do tema: é o
+   achado que já está registrado no cabeçalho deste arquivo). O selo de vencida reusa .marcador de style.css,
+   mas com a cor forçada para o fundo escuro do painel. */
+body.mapa .mapa-painel-acervo {
+  bottom: calc(var(--e4) + 2.2rem);
+  max-width: 22rem;
+  max-height: 40vh;
+  overflow: auto;
+  font-family: var(--sans);
+}
+body.mapa .mapa-painel-acervo h2 { margin: 0 0 var(--e1); font-size: .85rem; color: var(--mapa-texto); }
+body.mapa .mapa-painel-acervo .acervo-resumo { margin: 0 0 var(--e2); color: var(--mapa-texto-fraco); font-size: .75rem; }
+body.mapa .mapa-painel-acervo ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e1); }
+body.mapa .mapa-painel-acervo li { display: flex; align-items: baseline; gap: var(--e2); justify-content: space-between; }
+body.mapa .mapa-painel-acervo code { font-family: var(--mono); font-size: .72rem; color: var(--mapa-texto); }
+body.mapa .mapa-painel-acervo .marcador { font-size: .68rem; white-space: nowrap; }
+body.mapa .mapa-painel-acervo .marcador.falha { background: #5a1f22; color: #ffd9d9; border-color: #8d3338; }
+body.mapa .mapa-painel-acervo .marcador.ok { background: #1d3a2a; color: #cdebd8; border-color: #2f6a48; }

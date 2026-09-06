@@ -1,0 +1,47 @@
+{
+ "item": "L6-01-h-frescor-verificacao",
+ "medidas": {
+  "camadas_expostas": {
+   "valor": 109,
+   "unidade": "camadas",
+   "comando": "SELECT count(*) FROM plat.acervo_camada WHERE estado = 'exposta'"
+  },
+  "camadas_cobertas_pelo_job": {
+   "valor": 109,
+   "unidade": "camadas",
+   "comando": "retorno de acervo.frescor_verificar (tests/api/test_acervo_frescor.py)"
+  },
+  "duracao_do_job_min": {
+   "valor": 0.41,
+   "unidade": "min",
+   "comando": "time.monotonic() em volta de acervo_frescor_verificar(limite_endpoints=0, intervalo_dias=0)"
+  },
+  "camadas_nao_contadas_no_prazo": {
+   "valor": 0,
+   "unidade": "camadas",
+   "comando": "contagem_estado <> 'contado' na rodada (COUNT(*) que estourou 25 s), nunca zero por omissão"
+  },
+  "camadas_com_variacao_acima_de_5pct": {
+   "valor": 0,
+   "unidade": "camadas",
+   "comando": "mudanca_relevante = true na rodada (|variacao_pct| > 5 contra a verificação anterior)"
+  },
+  "verificacoes_no_historico_por_camada": {
+   "valor": 12,
+   "unidade": "verificações",
+   "comando": "15 chamadas a plat.acervo_frescor_registrar_camada(..., p_manter=12) seguidas de COUNT(*)"
+  },
+  "endpoints_testados_por_http": {
+   "valor": 10,
+   "unidade": "endereços",
+   "comando": "acervo.frescor_verificar(limite_endpoints=10) contra os endereços confirmados de acervo.endpoint"
+  },
+  "endpoints_que_responderam": {
+   "valor": 8,
+   "unidade": "endereços",
+   "comando": "buscar_seguro (app/conexao/seguranca.py) com User-Agent da plataforma; resposta HTTP com ok=true"
+  }
+ },
+ "gerado_em": "2026-09-06T17:54:54Z",
+ "git_sha": "90d03c07da0c"
+}

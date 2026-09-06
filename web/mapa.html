@@ -27,6 +27,14 @@
         <select id="seletor-base"></select>
       </div>
       <div class="mapa-painel mapa-coordenadas" id="coordenadas" aria-live="off">—</div>
+      <!-- item L6-01-h-frescor-verificacao: as camadas do acervo que o mapa pode oferecer, com o estado de
+           verificação de cada uma. O aviso "verificação vencida" é o MESMO selo da ficha (/acervo), do mesmo
+           módulo web/js/acervo/frescor.js — quem for desenhar a camada no mapa vê antes que ela está vencida. -->
+      <div class="mapa-painel mapa-painel-acervo" id="painel-acervo" hidden>
+        <h2 id="acervo-titulo">camadas do acervo</h2>
+        <p id="acervo-resumo" class="acervo-resumo"></p>
+        <ul id="acervo-lista" aria-labelledby="acervo-titulo"></ul>
+      </div>
     </div>
   </main>
 </div>

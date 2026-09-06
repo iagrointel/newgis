@@ -95,7 +95,12 @@ def _contexto_job(tipo: str = "acervo.frescor_verificar"):
 
 
 def _limpar_job(jid: str) -> None:
-    _psql(f"UPDATE plat.job SET estado = 'concluido', terminado_em = now() WHERE id = '{jid}'::uuid")
+    """Mesmo caminho de `_contexto_job`: o gatilho `plat.job_transicao` só deixa ir para `concluido` com o GUC
+    `plat.via_worker` ligado, e cada `_psql()` é uma sessão psql NOVA (o `set_config(..., false)` de uma
+    chamada anterior não sobrevive para esta) — sem `via_worker_ligar()` aqui a limpeza do job de teste falha
+    com 'transição para concluido só pelo worker' e a suíte não fecha o `finally`."""
+    _psql(f"SELECT plat.via_worker_ligar(); "
+          f"UPDATE plat.job SET estado = 'concluido', terminado_em = now() WHERE id = '{jid}'::uuid")
 
 
 def _camadas_expostas() -> int:
@@ -259,21 +264,32 @@ def test_historico_mantem_doze_verificacoes_por_camada(env, registro_populado, s
 # ---------------------------------------------------------------- contagem: prazo, nunca zero, nunca reltuples
 def test_contagem_que_estoura_o_prazo_nao_vira_zero(env, registro_populado):
     """O portão do item nasce de um achado da casa (01/09): duas tabelas contadas por estimativa não existiam.
-    Aqui o prazo é forçado a 1 ms para provar que o estouro vira ESTADO, não zero."""
-    from app.acervo.tarefas import acervo_frescor_verificar
+    Aqui o prazo é forçado a 1 ms para provar que o estouro vira ESTADO, não zero.
+
+    Achado ao rodar de verdade (06/09): `limite_camadas=3` pega as 3 candidatas por ORDEM DE VERIFICAÇÃO
+    (`acervo_frescor_candidatas`, `verificada_em ASC NULLS FIRST, acervo_camada_id`), não por tamanho — nesta
+    base as primeiras alfabeticamente são tabelas de poucas dezenas a milhares de linhas, e `COUNT(*)` sobre
+    elas às vezes termina em menos de 1 ms antes do Postgres checar a interrupção (`CHECK_FOR_INTERRUPTS`),
+    o que tornava o teste instável (às vezes 'contado', não por bug, por sorte do dado). A correção mira a
+    função privada `_contar` direto contra a maior tabela EXPOSTA desta base (centenas de milhares de linhas
+    medidas abaixo) — 1 ms nunca basta para isso, em qualquer máquina."""
+    from app.acervo.tarefas import _contar
+
+    linhas, _ = _psql(
+        "SELECT acervo_camada_id, linhas_estimadas FROM plat.acervo_camada "
+        "WHERE estado = 'exposta' ORDER BY linhas_estimadas DESC NULLS LAST LIMIT 1"
+    )
+    if not linhas or int(linhas[0][1] or 0) < 50_000:
+        pytest.skip("nenhuma camada exposta grande o bastante (>= 50 mil linhas estimadas) nesta base")
+    camada_id, estimadas = linhas[0]
 
     ctx, jid = _contexto_job()
     try:
-        r = acervo_frescor_verificar(ctx, limite_camadas=3, limite_endpoints=0, intervalo_dias=0,
-                                     timeout_contagem_ms=1)
+        estado, valor = _contar(ctx, camada_id, timeout_ms=1)
     finally:
         _limpar_job(jid)
-    assert r["camadas_verificadas"] >= 1
-    linhas, _ = _psql("SELECT contagem_estado, coalesce(linhas_exatas::text, 'NULO') "
-                      f"FROM plat.acervo_camada_verificacao WHERE execucao_id = {r['execucao_id']}")
-    assert linhas, r
-    assert all(x[0] == "nao_contado_no_prazo" for x in linhas), linhas
-    assert all(x[1] == "NULO" for x in linhas), "prazo estourado virou número: nunca"
+    assert estado == "nao_contado_no_prazo", (camada_id, estimadas, estado, valor)
+    assert valor is None, "prazo estourado virou número: nunca"
 
 
 def test_historico_nao_guarda_estimativa(env):

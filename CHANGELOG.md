@@ -3,6 +3,66 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L6-01-h-frescor-verificacao: verificação periódica de frescor do acervo)
+
+Job semanal `acervo.frescor_verificar` (`app/acervo/tarefas.py`, periódico domingo 05:20 em
+`app/acervo/periodicos.py`), retomado do RESGATE da sessão executora derrubada por cota e fechado neste turno:
+por camada EXPOSTA do registro (`plat.acervo_camada`, L6-01-a), `COUNT(*)` exato sob `SET LOCAL
+statement_timeout` de 25 s (estouro vira o estado `nao_contado_no_prazo`, nunca zero — é o achado da casa de
+01/09 que deu origem ao item), hash de conteúdo próprio quando há comando de reexecução declarado, e teste
+HTTP (com defesa de SSRF de `app/conexao/seguranca.py`) dos endereços confirmados, com teto de 40 por rodada.
+Tudo gravado em `plat` por funções `SECURITY DEFINER` (migração `20260906T1617_acervo_frescor.sql`) que só
+rodam no inquilino técnico `plataforma`; trinco de rodada COM dimensão de inquilino (`plat.acervo_frescor_execucao`,
+índice único parcial por `tenant_id`) — lição do L0-05-d, não a chave global de `plat.job`. `GET
+/api/acervo/camadas` (com `vencida=true`), `GET /api/acervo/camadas/{id}/verificacoes` (12 mais recentes),
+`GET /api/acervo/frescor/mudancas` (variação > 5 %) e `GET /api/acervo/frescor/execucoes`
+(`app/acervo/rotas_frescor.py`); ficha do acervo e mapa (`/mapa`, painel `mapa-painel-acervo`) mostram o
+mesmo selo `verificação vencida` de um módulo único (`web/js/acervo/frescor.js`), com o motivo (endereço
+morto, prazo da fonte vencido, nunca verificada, verificação com mais de 14 dias).
+
+Um defeito real corrigido rodando a suíte de verdade: `tests/api/test_acervo_frescor.py::_limpar_job`
+tentava `UPDATE plat.job SET estado='concluido'` numa sessão `psql` NOVA sem religar o GUC
+`plat.via_worker` daquela sessão (o gatilho `plat.job_transicao` só deixa a transição ir pelo worker) —
+derrubava os quatro testes que chamam `acervo_frescor_verificar` de verdade. Corrigido religando o GUC no
+mesmo comando, mesmo padrão de `_contexto_job`. Um teste reescrito por ser estatisticamente instável, não
+por engano de lógica: `test_contagem_que_estoura_o_prazo_nao_vira_zero` forçava 1 ms de prazo sobre as 3
+primeiras candidatas por ORDEM DE VERIFICAÇÃO, que nesta base são tabelas de poucas dezenas a milhares de
+linhas — `COUNT(*)` às vezes terminava antes do Postgres checar a interrupção. Passa a chamar a função
+privada `_contar` direto contra a maior tabela exposta da base (353.894 linhas medidas), onde 1 ms nunca
+basta em nenhuma máquina. Uma lacuna de RLS achada por `tests/api/test_migracoes.py`: a migração do RESGATE
+dava `GRANT SELECT` de `plat.acervo_frescor_execucao` a `plat_app` sem nunca ligar `ROW LEVEL SECURITY` —
+qualquer inquilino leria a execução de rodada de outro (na prática só o inquilino técnico grava lá, mas o
+invariante da casa exige a política mesmo assim). Corrigido em migração NOVA (a aplicada não se edita):
+`20260906T1804_acervo_frescor_rls.sql`, mesmo padrão de `plat.conexao_saude_historico` (036).
+
+Medido de verdade contra a base da trilha (`PLAT_GRAVAR_MEDIDAS=1`, `tests/medidas/L6-01-h-frescor-verificacao.json`):
+**109/109 camadas expostas cobertas em 0,41 min** (portão: ≤ 30 min), 10 endereços testados por HTTP com 8
+respostas, histórico de 12 verificações por camada confirmado após 15 gravações, 0 mudanças acima de 5 %
+nesta rodada. `tests/api/test_acervo_frescor.py`: 13/13 passam duas vezes seguidas contra `plat_tt4fres`.
+Refutação do item (adversário derruba um endpoint na fixture e confere o aviso) coberta por
+`test_endpoint_derrubado_acende_o_aviso`: o aviso `endpoint_morto` aparece na ficha e no filtro `vencida=true`
+e SOME quando o endereço volta a responder.
+
+**Achados registrados, fora do portão deste item — não corrigidos aqui**: (1) incidente de produção — a
+migração `20260906T1617_acervo_frescor` apareceu em `plat.versao_migracao` de PRODUÇÃO às 18:03:00 UTC deste
+turno, junto com cinco migrações de outros ramos ainda não juntados (aviso do gerente); as verificações desta
+sessão mostram que nenhum comando desta trilha escreveria lá (`trilha_ambiente.sh`/`trilha_reescrever.py`
+reescrevem todo `plat.` para `plat_tt4fres.` antes de executar, e os `psql` diretos desta sessão foram só
+leitura) — a origem mais provável é outro processo que rodou `db/migrar.sh`/`install.sh` fora de worktree ou
+com o schema de outro ramo já copiado para a árvore principal; é idempotente e se reconcilia na junção real,
+e a migração `20260906T1804` desta entrada corrige a lacuna de RLS também em produção quando aplicada lá.
+(2) `laco/trilha_ambiente.sh` lê `listar_migracoes "$REPO/db/migracoes"` (a árvore principal
+`/home/dev/plataforma/enterprise`, compartilhada e mexida por outras sessões o tempo todo), não
+`"$FONTE/db/migracoes"` (o worktree da própria trilha) apesar do comentário do script dizer o contrário —
+nesta rodada isso trouxe para o schema `plat_tt4fres` uma migração de outro ramo
+(`20260906T1615_revoke_public_uploads_expirar`) que não existe no `db/migracoes` deste worktree, e quebrou
+`tests/api/test_migracoes.py::test_tabela_reflete_os_arquivos_em_disco` (não é um defeito deste item; é um
+defeito do script de trilha, fora do escopo de arquivo do L6-01-h — script mora em `laco/`, não no worktree).
+(3) `tests/api/test_migracoes.py::test_migrar_duas_vezes_nao_insere_linha` e
+`test_arquivo_aplicado_editado_devolve_codigo_3` passaram a falhar depois que a guarda nova de
+`db/migrar.sh` (inserida pelo gerente nesta mesma janela, código de saída 9 ao rodar de dentro de um
+worktree) mudou o comportamento que esses dois testes esperavam (código 3); também fora do escopo deste item.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

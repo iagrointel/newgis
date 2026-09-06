@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Acervo · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/tarefas.css">
+</head>
+<body class="tela acervo">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <div id="ferramentas" class="linha-ferramentas">
+      <h1>Acervo</h1>
+    </div>
+    <p class="aviso-beta">análise / beta privado</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" id="camadas-cartao" aria-labelledby="t-camadas">
+      <h2 id="t-camadas">camadas expostas <span id="camadas-total" class="contagem">…</span></h2>
+      <p class="ajuda">o frescor é reexecutado toda semana pelo job <code>acervo.frescor_verificar</code>:
+        <code>COUNT(*)</code> exato com prazo de 25 s por tabela, hash de conteúdo e teste HTTP dos endereços.
+        Uma camada recebe o aviso <span class="marcador falha">verificação vencida</span> quando um endereço
+        parou de responder, quando o prazo declarado pela fonte passou, quando ela nunca foi verificada ou
+        quando a última verificação tem mais de 14 dias. Contagem que não termina em 25 s fica como
+        <span class="marcador atencao">não contado no prazo</span> — nunca como zero.</p>
+      <div class="linha-ferramentas">
+        <label for="filtro-vencida">mostrar</label>
+        <select id="filtro-vencida">
+          <option value="">todas as camadas</option>
+          <option value="true">só as com verificação vencida</option>
+          <option value="false">só as em dia</option>
+        </select>
+        <span id="camadas-vencidas" class="ajuda"></span>
+      </div>
+      <plat-aviso id="camadas-aviso"></plat-aviso>
+      <div class="tabela-rolagem">
+        <table id="camadas" class="tabela">
+          <caption class="sr-only">camadas do acervo com o estado de verificação de frescor</caption>
+          <thead>
+            <tr>
+              <th scope="col">camada</th>
+              <th scope="col">fonte</th>
+              <th scope="col">estado da verificação</th>
+              <th scope="col">linhas (COUNT exato)</th>
+              <th scope="col">variação</th>
+              <th scope="col">última verificação</th>
+              <th scope="col"><span class="sr-only">ações</span></th>
+            </tr>
+          </thead>
+          <tbody id="camadas-corpo"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="cartao" id="mudancas-cartao" aria-labelledby="t-mudancas">
+      <h2 id="t-mudancas">mudanças de contagem acima de 5 % <span id="mudancas-total" class="contagem">…</span></h2>
+      <p class="ajuda">comparação entre a contagem desta verificação e a da verificação imediatamente anterior
+        da MESMA camada. Sem as duas pontas contadas não há variação: a linha fica de fora em vez de aparecer
+        como 0 %.</p>
+      <plat-aviso id="mudancas-aviso"></plat-aviso>
+      <div class="tabela-rolagem">
+        <table id="mudancas" class="tabela">
+          <caption class="sr-only">camadas cuja contagem variou mais de 5 % desde a verificação anterior</caption>
+          <thead>
+            <tr>
+              <th scope="col">camada</th>
+              <th scope="col">antes</th>
+              <th scope="col">agora</th>
+              <th scope="col">variação</th>
+              <th scope="col">quando</th>
+            </tr>
+          </thead>
+          <tbody id="mudancas-corpo"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <plat-dialogo id="dialogo"></plat-dialogo>
+  </main>
+</div>
+<script type="module" src="/static/js/acervo/acervo.js"></script>
+</body>
+</html>
