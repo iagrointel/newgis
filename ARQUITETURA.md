@@ -274,6 +274,32 @@ Todas de posse de `postgres`, `SET search_path = plat, public`, `EXECUTE` só pa
   `plat.tenant_atual()`. Chamadas com contexto de `demo` sobre usuário de `demo2` falham com
   `contexto_de_outro_inquilino` (`tests/api/test_funcoes_seguras.py`; adversário por `psql` como `plat_app`).
 
+### 4.9 LDAP/Active Directory (item L0-08-d-ldap, ADR 0008, migração 025)
+
+Módulo isolado `app/auth/ldap.py` (`ldap3` puro Python, sem dependência de sistema): `POST /api/login/ldap`
+faz bind de serviço opcional (ou anônimo) contra o diretório do inquilino → busca por `filtro_usuario` com o
+login sempre escapado (`ldap3.utils.conv.escape_filter_chars`, RFC 4515 — sem isso `*)(uid=*` viraria um
+filtro sempre-verdadeiro) → exige exatamente 1 resultado → bind do usuário com a senha informada (nunca com
+senha vazia: corta antes de abrir qualquer conexão) → `memberOf` mapeado para 1 dos 4 perfis via
+`plat.provedor_ldap.mapa_grupo_perfil` (maior alcance quando mais de um grupo mapeado bate,
+`app.auth.privilegios.ORDEM_PERFIL`) → upsert em `plat.usuario` (`plat.ldap_provisionar`, nunca sobrescreve
+conta `origem='local'` homônima: `409 login_em_uso_local`) → `plat.auth_login` de novo (mesmo formato do
+login local) → **reaproveita** `app.auth.rotas_login._abrir_sessao` para abrir a sessão, sem duplicar
+cookie/política/evento. Tabela `plat.provedor_ldap` (RLS por inquilino, como `papel_personalizado`): url,
+base_dn, start_tls, bind_dn/bind_senha_cifrada (AES-GCM sob `PLAT_SECRET`, nunca texto puro), filtro_usuario,
+atributo_grupos, perfil_padrao, mapa_grupo_perfil; `PLAT_LDAP_URL`/`PLAT_LDAP_BASE_DN` (env) são só o PADRÃO
+usado quando a linha do inquilino não informa os seus. Rotas de administração (privilégio `org.integracoes`,
+já reservado pela ADR 0002): `GET/PUT /api/org/ldap` (nunca devolve a senha de bind, só `tem_bind_senha`) e
+`POST /api/org/ldap/importar` (grupo do diretório → usuários locais desabilitados, ativados no 1º login).
+Força bruta contra o bind: contador em memória por processo, chave `(tenant_id, login)`, reaproveitando
+`bloqueio_tentativas`/`bloqueio_minutos` da política do PRÓPRIO inquilino (cobre também login ainda não
+provisionado localmente). Diretório de teste: contêiner Docker `glauth` efêmero (`tests/ldap_fixture/`, nunca
+em produção), 4 usuários sintéticos + 1 conta de serviço, 3 grupos (um por perfil); 14 testes em
+`tests/api/ldap/test_login_ldap.py` (marcados `lento`) provam bind OK com mapeamento de perfil, senha errada
+recusada, injeção de filtro neutralizada, bind com senha vazia nunca tentado, força bruta bloqueada como o
+login local, colisão com conta local recusada, importação em massa (desabilitado → ativo no 1º login), e o
+portão duro do item: **desligar o contêiner LDAP não derruba o login local** (outra rota, outro caminho).
+
 ---
 
 ## 5. Fila de trabalhos (item L0-05, ADR 0003, migrações 004, 006, 007, 008, 010)
@@ -648,9 +674,14 @@ conta 37,8, 2FA 9,7, usuários 59,4, grupos 60,8, papéis 58,7, tokens 78,9, log
   utilidades, construtores, conectores, operação (linhas L0-03 em diante; o L0-03 está em construção nesta árvore).
 - `plat-martin` (8151) e `plat-titiler` (8152): portas reservadas, serviços inexistentes.
 - Tela de configuração do inquilino (L0-07-a), console do superadmin (L0-07-f), e-mail (L0-07-d), relatórios
-  (L0-07-e), login externo SAML/OIDC/LDAP/gov.br (L0-08), apagar usuário com transferência de conteúdo (L0-03-j),
-  perfil estendido do membro (L0-02-g), CLI de administração (L0-14), `docs/LIMITES.md` gerado de `app/limites.py`
-  (L0-12).
+  (L0-07-e), login externo SAML/OIDC/gov.br (L0-08-a/b/c), apagar usuário com transferência de conteúdo
+  (L0-03-j), perfil estendido do membro (L0-02-g), CLI de administração (L0-14), `docs/LIMITES.md` gerado de
+  `app/limites.py` (L0-12).
+- `L0-08-d-ldap` (LDAP/Active Directory): construído (seção 4.9), mas sem tela — a rota
+  `GET /api/login/provedores` ainda não lista o LDAP (é fluxo próprio, `POST /api/login/ldap`, não o "botão de
+  provedor" genérico do L0-08-a/b/c); botão na tela de entrada e formulário de configuração em `/admin` são o
+  `L0-08-f` (frontend), fora deste item; StartTLS e `sAMAccountName` (Active Directory de verdade) não foram
+  testados contra um diretório real, só contra o glauth de teste (`tests/ldap_fixture/`).
 - Periódicos além do expurgo de jobs (expurgo de sessões, partições futuras de `log_acesso` e `evento`, retenção de
   12 meses): as funções existem, o registro em `app/jobs/periodicos.py` é o L0-05-d.
 - Executor remoto no GPU box (`executor='gpu'`): só a coluna, o CHECK e a recusa na importação (L1-05).
@@ -664,6 +695,21 @@ conta 37,8, 2FA 9,7, usuários 59,4, grupos 60,8, papéis 58,7, tokens 78,9, log
   impressão) — só a fatia `L2-01-a-basemap-local-pmtiles` existe (seção 11 e `MANUAL.md` seção 13). Sem base
   cartográfica nacional (D27, travado por disco); sem rótulo de texto no mapa (glifos, `L2-02-e`); `plat-martin`
   (8151) segue porta reservada, serviço inexistente.
+- `L2-11-c-rota-matriz-isocrona`: só `/api/rota`, `/api/matriz` e `/api/isocrona` sobre um OSRM de teste com
+  perfil `carro` (`MANUAL.md` seção 14). Sem pgRouting instalado, sem `/mais-proximo`/`/ajuste-de-trajeto`,
+  sem perfil pé/bicicleta, sem NAServer Esri-compatível, sem UI no mapa (isso é o `L2-05-f`), sem teste de
+  1.000×1.000 nem a validação de 200 pontos amostrados do portão completo — ver `laco/handoffs/T3/L2-11-c-rota.md`.
+  Exceção à convenção 5 abaixo: o serviço `plat-osrm-guarulhos` fala o protocolo próprio do `osrm-routed`
+  (não HTTP da API do produto), por isso segue a numeração 50xx que as outras 4 frentes de OSRM da casa já
+  usam (5000-5003), em vez da faixa 8150-8159 — documentado, não é porta reservada esquecida.
+- `L2-10-c-linguagem-expressao` (linguagem de expressão própria, equivalente ao Arcade da Esri): só o NÚCLEO
+  existe — gramática publicada (`docs/EXPRESSAO.md`), AST tipada + avaliador em `app/expressao/avaliador_py.py`
+  e o MESMO analisador em `web/js/expressao/avaliador.js` (os dois sem `eval`/`exec`/`compile`/`Function`
+  dinâmico), 18 funções, 41 vetores comparados byte a byte entre os dois avaliadores
+  (`tests/expressoes/vetores.json`, `tests/unit/test_expressao_equivalencia.py`). Sem integração com popup,
+  rótulo, formulário, regra de atributo, restrição/validação (isso é `L5-11` e outros itens do L2-10); sem
+  tipos lista/dicionário/geometria; sem os ≥ 40 funções e ≥ 200 vetores da hipótese cheia; sem tabela de
+  paridade completa com o Arcade function reference — ver `laco/handoffs/T3/L2-10-c-expressao.md`.
 
 O placar do laço, a tabela dos itens do backlog e a fronteira por linha estão em
 `/home/dev/plataforma/laco/PAINEL.md`, gerado por `laco/gera_painel.py` a partir de `laco/estado.json`.

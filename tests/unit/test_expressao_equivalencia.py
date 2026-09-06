@@ -1,0 +1,139 @@
+"""Prova do C6 (L2_CONCEITO.md): os dois avaliadores da linguagem de expressão — Python
+(`app/expressao/avaliador_py.py`) e JavaScript (`web/js/expressao/avaliador.js`) — têm de concordar
+byte a byte para os MESMOS vetores (`tests/expressoes/vetores.json`, ≥ 20 casos, compartilhados
+com o L5-11 quando esse item existir). O runner do lado JavaScript é `tests/expressoes/
+executar_js.mjs`, chamado por subprocesso — nenhum dos dois lados sabe do outro em tempo de
+execução, só o teste compara.
+
+Canonicalização: JSON não distingue inteiro de decimal; Python distingue (`json.dumps(5.0)` →
+"5.0", `json.dumps(5)` → "5") e JavaScript não (todo número é `number`). Para a comparação ser
+byte a byte de verdade sem que essa diferença de representação vire falso negativo, todo número
+PY que tem parte fracionária zero vira `int` antes de serializar — é convenção do TESTE, não do
+avaliador (o avaliador já normaliza a maior parte dos casos sozinho; isto é rede de segurança)."""
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+VETORES = ROOT / "tests" / "expressoes" / "vetores.json"
+RUNNER_JS = ROOT / "tests" / "expressoes" / "executar_js.mjs"
+
+sys.path.insert(0, str(ROOT))
+from app.expressao.avaliador_py import ErroExpressao, avaliar_texto  # noqa: E402
+
+
+def _vetores() -> list[dict]:
+    return json.loads(VETORES.read_text(encoding="utf-8"))
+
+
+def _canonicalizar(valor):
+    if isinstance(valor, bool) or valor is None or isinstance(valor, str):
+        return valor
+    if isinstance(valor, (int, float)):
+        if isinstance(valor, float) and valor.is_integer():
+            return int(valor)
+        return valor
+    raise AssertionError(f"tipo fora do esperado nesta passagem: {type(valor)}")  # pragma: no cover
+
+
+def _serializar(valor) -> str:
+    return json.dumps(_canonicalizar(valor), ensure_ascii=False, sort_keys=True)
+
+
+@pytest.fixture(scope="module")
+def resultados_js() -> list[dict]:
+    """1 processo Node para todos os vetores (rodar `node` uma vez por vetor seria N× o custo à
+    toa). A correspondência com `_vetores()` é por POSIÇÃO — `executar_js.mjs` lê o mesmo arquivo
+    e mapeia na mesma ordem, nunca pelo texto da expressão (duas linhas podem ter o MESMO texto com
+    contexto diferente, como "SeNulo com valor presente"/"ausente" abaixo; casar pelo texto juntaria
+    o resultado errado com o vetor errado)."""
+    r = subprocess.run(
+        ["node", str(RUNNER_JS)], capture_output=True, text=True, timeout=30, cwd=str(ROOT), check=True
+    )
+    return json.loads(r.stdout)
+
+
+def test_ao_menos_20_vetores_compartilhados():
+    assert len(_vetores()) >= 20, "portão do item: ≥ 20 expressões nos dois avaliadores"
+
+
+def test_vetores_e_resultados_js_no_mesmo_numero_e_ordem(resultados_js):
+    vetores = _vetores()
+    assert len(resultados_js) == len(vetores)
+    assert [r["entrada"] for r in resultados_js] == [v["entrada"] for v in vetores]
+
+
+@pytest.mark.parametrize("vetor", _vetores(), ids=lambda v: v["descricao"])
+def test_python_bate_com_saida_esperada(vetor):
+    resultado = avaliar_texto(vetor["entrada"], vetor.get("contexto") or {})
+    assert _canonicalizar(resultado) == _canonicalizar(vetor["saida"]), vetor["entrada"]
+
+
+@pytest.mark.parametrize("indice,vetor", list(enumerate(_vetores())), ids=[v["descricao"] for v in _vetores()])
+def test_javascript_bate_com_saida_esperada(indice, vetor, resultados_js):
+    item = resultados_js[indice]
+    assert item["erro"] is None, f"{vetor['entrada']}: {item['erro']}"
+    assert _canonicalizar(item["resultado"]) == _canonicalizar(vetor["saida"]), vetor["entrada"]
+
+
+@pytest.mark.parametrize("indice,vetor", list(enumerate(_vetores())), ids=[v["descricao"] for v in _vetores()])
+def test_python_e_javascript_concordam_byte_a_byte(indice, vetor, resultados_js):
+    """A prova em si (portão do item-pai, C6): não compara com o vetor, compara UM avaliador
+    contra o OUTRO — o texto JSON serializado tem de ser idêntico caractere a caractere."""
+    py_resultado = avaliar_texto(vetor["entrada"], vetor.get("contexto") or {})
+    js_item = resultados_js[indice]
+    assert js_item["erro"] is None, f"{vetor['entrada']}: avaliador JS levantou {js_item['erro']}"
+    py_json = _serializar(py_resultado)
+    js_json = _serializar(js_item["resultado"])
+    assert py_json == js_json, f"{vetor['entrada']}: python={py_json!r} javascript={js_json!r}"
+
+
+def test_tabela_de_funcoes_igual_nos_dois_avaliadores():
+    """A lista de nomes de função tem de ser a MESMA — uma função que existe só num lado dos dois
+    avaliadores é o tipo de divergência que este item existe para impedir."""
+    from app.expressao.avaliador_py import TABELA_FUNCOES
+
+    r = subprocess.run(
+        ["node", str(RUNNER_JS), "--nomes-funcoes"], capture_output=True, text=True, timeout=15, check=True
+    )
+    nomes_js = set(json.loads(r.stdout))
+    nomes_py = set(TABELA_FUNCOES)
+    assert nomes_js == nomes_py
+
+
+def test_ast_exportada_e_reimportada_avalia_igual_nos_dois_lados():
+    from app.expressao.avaliador_py import analisar, ast_de_json, ast_para_json
+    from app.expressao.avaliador_py import avaliar as avaliar_py
+
+    texto = "Se($area > 300, Concatenar('grande: ', Texto($area)), 'pequena')"
+    contexto = {"area": 450.5}
+    no = analisar(texto)
+    d = ast_para_json(no)
+    no2 = ast_de_json(d)
+    assert avaliar_py(no, contexto) == avaliar_py(no2, contexto)
+
+    # o MESMO JSON de AST, avaliado pelo lado JavaScript, chega ao mesmo valor
+    script = f"""
+import {{ astDeJson, avaliar }} from '{RUNNER_JS.parent.parent.parent / "web/js/expressao/avaliador.js"}';
+const no = astDeJson({json.dumps(d)});
+process.stdout.write(JSON.stringify(avaliar(no, {json.dumps(contexto)})));
+"""
+    arq = ROOT / "tests" / "expressoes" / "_tmp_ast_roundtrip.mjs"
+    arq.write_text(script, encoding="utf-8")
+    try:
+        r = subprocess.run(["node", str(arq)], capture_output=True, text=True, timeout=15, check=True)
+        resultado_js = json.loads(r.stdout)
+    finally:
+        arq.unlink(missing_ok=True)
+    assert _canonicalizar(resultado_js) == _canonicalizar(avaliar_py(no, contexto))
+
+
+def test_erro_de_sintaxe_devolve_linha_e_coluna():
+    with pytest.raises(ErroExpressao) as exc:
+        avaliar_texto("1 + + 2", {})
+    assert exc.value.detalhe.get("linha") == 1
+    assert "coluna" in exc.value.detalhe

@@ -1,0 +1,6 @@
+{
+  "name": "plat-expressao",
+  "private": true,
+  "type": "module",
+  "description": "escopo mínimo para o Node tratar avaliador.js como módulo ES quando os testes o importam (tests/expressoes/executar_js.mjs); não afeta o navegador, que decide módulo por <script type=module>."
+}

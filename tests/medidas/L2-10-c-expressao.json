@@ -1,0 +1,37 @@
+{
+ "item": "L2-10-c-expressao",
+ "medidas": {
+  "funcoes_implementadas": {
+   "valor": 18,
+   "unidade": "funções",
+   "comando": "len(TABELA_FUNCOES) em avaliador_py.py"
+  },
+  "vetores_de_equivalencia": {
+   "valor": 41,
+   "unidade": "vetores",
+   "comando": "len(json.load(tests/expressoes/vetores.json)) — portão do item pede ≥ 20"
+  },
+  "tempo_ataque_cadeia_900_termos_ms": {
+   "valor": 3.81,
+   "unidade": "ms",
+   "comando": "analisar('1'+'+1'*900) até levantar profundidade_excedida"
+  },
+  "tempo_ataque_string_10mb_ms": {
+   "valor": 19.56,
+   "unidade": "ms",
+   "comando": "analisar(\"'\" + 'a'*10_000_000 + \"'\") até levantar expressao_grande"
+  },
+  "tempo_ataque_500_parenteses_ms": {
+   "valor": 1.32,
+   "unidade": "ms",
+   "comando": "analisar('('*500 + '1' + ')'*500) até levantar profundidade_excedida"
+  },
+  "vetores_avaliados_sem_erro_no_lado_javascript": {
+   "valor": 41,
+   "unidade": "vetores",
+   "comando": "executar_js.mjs sobre tests/expressoes/vetores.json — cada um também comparado byte a byte com o resultado Python em test_expressao_equivalencia.py"
+  }
+ },
+ "gerado_em": "2026-09-06T10:52:32Z",
+ "git_sha": "c5135e5df6e6"
+}
