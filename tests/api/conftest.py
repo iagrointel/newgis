@@ -18,7 +18,13 @@ ROOT = Path(__file__).resolve().parents[2]
 # o schema de homologação (db/homolog_bootstrap.sh semeia os admins lá; nunca os mesmos de produção) — mesmo
 # padrão de PLAT_OPENAPI_ARQUIVO logo abaixo.
 CREDENCIAIS = Path(os.environ.get("PLAT_CREDENCIAIS_ARQUIVO") or (ROOT / "tests" / "credenciais.txt"))
-CREDENCIAIS_TOTP = ROOT / "tests" / "credenciais_totp.txt"
+# PLAT_CREDENCIAIS_TOTP_ARQUIVO segue o MESMO padrão de PLAT_CREDENCIAIS_ARQUIVO: sem ela, todo ambiente
+# (produção, homologação e qualquer trilha) escreve no mesmo tests/credenciais_totp.txt do repositório — o
+# segredo TOTP do superadmin de `plataforma` de uma trilha sobrescreve o de outra e o próximo login 401
+# com codigo_invalido porque o segredo do arquivo já não é o do banco (achado real, corrida entre trilhas
+# concorrentes ligando o 2FA quase ao mesmo tempo). Cada ambiente isolado (schema/base próprios) precisa do
+# seu próprio arquivo.
+CREDENCIAIS_TOTP = Path(os.environ.get("PLAT_CREDENCIAIS_TOTP_ARQUIVO") or (ROOT / "tests" / "credenciais_totp.txt"))
 PREFIXO_TESTE = "zt"  # logins/nomes criados pela suíte começam assim (limpeza por prefixo)
 
 
