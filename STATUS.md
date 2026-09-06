@@ -1,4 +1,4 @@
-# Status da corrida — 06/09/2026 17:50 UTC
+# Status da corrida — 06/09/2026 17:51 UTC
 
 Gerado de `laco/estado.json` pelo supervisor. `#` provado (portão passou e adversário não refutou) · `~` parcial (cláusula pendente nomeada) · `!` refutado pelo adversário, conserto em curso · `.` não iniciado.
 
@@ -33,14 +33,14 @@ ADVERSÁRIO  agente separado que não viu a construção · suposições transve
 
 ## Leitura honesta
 
-O vermelho não é trabalho perdido. São itens que estavam marcados como prontos e caíram quando um adversário independente os verificou: de 60 itens declarados entregues ou parciais no início de 06/09, só 8 tinham laudo; dos verificados, 7 em 8 caíram, com achados de segurança reais (validação de imagem que saía para a rede, segredo de banco vazando para processo filho, cadeia de assinatura de pacote que aceitava chave de terceiro, segredo de armazenamento igual em produção e homologação). Cada conserto entra com o teste do ataque junto.
+O vermelho não é trabalho perdido. São itens que estavam marcados como prontos e caíram quando um adversário independente os verificou: de 60 itens declarados entregues ou parciais no início de 06/09, só 8 tinham laudo; dos verificados, 7 em 8 caíram, com achados de segurança reais. Cada conserto entra com o teste do ataque junto.
 
 O padrão que explica quase tudo o que caiu: **o que é protegido por linha aguentou todos os ataques; o que é recurso partilhado (fila, trinco, schema de dados, contador de cota, porta, nome de tarefa agendada, permissão de função) não tinha dimensão de inquilino nenhuma.**
 
 ## Onde está cada coisa
 
-- `PLANO_DA_CORRIDA.md` — o plano aprovado pelo dono (tiro único, repartição por modelo, fases).
+- `PLANO_DA_CORRIDA.md` — o plano aprovado pelo dono.
 - `docs/adr/` — decisões de arquitetura, uma por arquivo.
 - `CHANGELOG.md` — o que mudou, por item.
-- `db/migracoes/` — migrações; as novas usam carimbo de tempo (`YYYYMMDDTHHMM_<nome>.sql`), o legado numérico é imutável.
+- `db/migracoes/` — as novas usam carimbo de tempo; o legado numérico é imutável.
 - Ramos `wt/<item>` — um worktree por item; entram em `master` só pela fila de junção.
