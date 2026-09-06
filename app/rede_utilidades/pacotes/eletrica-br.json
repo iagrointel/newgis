@@ -1,0 +1,4093 @@
+{
+ "atributos": [
+  {
+   "codigo": "ctmt_cod_id",
+   "grupo": "alimentador",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "CTMT",
+    "coluna": "COD_ID",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ctmt_dist",
+   "grupo": "alimentador",
+   "nome": "código da distribuidora na ANEEL",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "CTMT",
+    "coluna": "DIST",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ctmt_sub",
+   "grupo": "alimentador",
+   "nome": "subestação a que pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "CTMT",
+    "coluna": "SUB",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ctmt_ten_nom",
+   "grupo": "alimentador",
+   "nome": "tensão nominal",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "CTMT",
+    "coluna": "TEN_NOM",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "kV"
+  },
+  {
+   "codigo": "ctmt_ten_ope",
+   "grupo": "alimentador",
+   "nome": "tensão de operação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "CTMT",
+    "coluna": "TEN_OPE",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "kV"
+  },
+  {
+   "codigo": "uncrmt_cod_id",
+   "grupo": "banco_de_capacitores",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "UNCRMT",
+    "coluna": "COD_ID",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "uncrmt_ctmt",
+   "grupo": "banco_de_capacitores",
+   "nome": "circuito de média tensão (alimentador)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNCRMT",
+    "coluna": "CTMT",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "uncrmt_dat_con",
+   "grupo": "banco_de_capacitores",
+   "nome": "data de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNCRMT",
+    "coluna": "DAT_CON",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "data",
+   "unidade": null
+  },
+  {
+   "codigo": "uncrmt_fas_con",
+   "grupo": "banco_de_capacitores",
+   "nome": "fases conectadas",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNCRMT",
+    "coluna": "FAS_CON",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "uncrmt_pac_1",
+   "grupo": "banco_de_capacitores",
+   "nome": "ponto de atendimento da conexão 1",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNCRMT",
+    "coluna": "PAC_1",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "uncrmt_pot_nom",
+   "grupo": "banco_de_capacitores",
+   "nome": "potência nominal",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNCRMT",
+    "coluna": "POT_NOM",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "real",
+   "unidade": "kVA"
+  },
+  {
+   "codigo": "uncrmt_sit_ativ",
+   "grupo": "banco_de_capacitores",
+   "nome": "situação de ativação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNCRMT",
+    "coluna": "SIT_ATIV",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "uncrmt_sub",
+   "grupo": "banco_de_capacitores",
+   "nome": "subestação a que pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNCRMT",
+    "coluna": "SUB",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "uncrmt_ten_nom",
+   "grupo": "banco_de_capacitores",
+   "nome": "tensão nominal",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNCRMT",
+    "coluna": "TEN_NOM",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "real",
+   "unidade": "kV"
+  },
+  {
+   "codigo": "uncrmt_tip_unid",
+   "grupo": "banco_de_capacitores",
+   "nome": "tipo de unidade de cadastro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNCRMT",
+    "coluna": "TIP_UNID",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "uncrmt_uni_tr_at",
+   "grupo": "banco_de_capacitores",
+   "nome": "unidade transformadora de alta tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNCRMT",
+    "coluna": "UNI_TR_AT",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "uncrmt_x",
+   "grupo": "banco_de_capacitores",
+   "nome": "longitude do ponto",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNCRMT",
+    "coluna": "X",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "derivada da geometria do ponto pela extração"
+   },
+   "tipo_dado": "real",
+   "unidade": "graus"
+  },
+  {
+   "codigo": "uncrmt_y",
+   "grupo": "banco_de_capacitores",
+   "nome": "latitude do ponto",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNCRMT",
+    "coluna": "Y",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "derivada da geometria do ponto pela extração"
+   },
+   "tipo_dado": "real",
+   "unidade": "graus"
+  },
+  {
+   "codigo": "unsemt_cod_id",
+   "grupo": "chave_de_media_tensao",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "COD_ID",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unsemt_ctmt",
+   "grupo": "chave_de_media_tensao",
+   "nome": "circuito de média tensão (alimentador)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "CTMT",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unsemt_dat_con",
+   "grupo": "chave_de_media_tensao",
+   "nome": "data de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "DAT_CON",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "data",
+   "unidade": null
+  },
+  {
+   "codigo": "unsemt_fas_con",
+   "grupo": "chave_de_media_tensao",
+   "nome": "fases conectadas",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "FAS_CON",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unsemt_p_n_ope",
+   "grupo": "chave_de_media_tensao",
+   "nome": "posição normal de operação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "P_N_OPE",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unsemt_pac_1",
+   "grupo": "chave_de_media_tensao",
+   "nome": "ponto de atendimento da conexão 1",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "PAC_1",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unsemt_pac_2",
+   "grupo": "chave_de_media_tensao",
+   "nome": "ponto de atendimento da conexão 2",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "PAC_2",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unsemt_pos",
+   "grupo": "chave_de_media_tensao",
+   "nome": "posição",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "POS",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unsemt_sit_ativ",
+   "grupo": "chave_de_media_tensao",
+   "nome": "situação de ativação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "SIT_ATIV",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unsemt_sub",
+   "grupo": "chave_de_media_tensao",
+   "nome": "subestação a que pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "SUB",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unsemt_tip_unid",
+   "grupo": "chave_de_media_tensao",
+   "nome": "tipo de unidade de cadastro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "TIP_UNID",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unsemt_uni_tr_at",
+   "grupo": "chave_de_media_tensao",
+   "nome": "unidade transformadora de alta tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "UNI_TR_AT",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unsemt_x",
+   "grupo": "chave_de_media_tensao",
+   "nome": "longitude do ponto",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "X",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "derivada da geometria do ponto pela extração"
+   },
+   "tipo_dado": "real",
+   "unidade": "graus"
+  },
+  {
+   "codigo": "unsemt_y",
+   "grupo": "chave_de_media_tensao",
+   "nome": "latitude do ponto",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNSEMT",
+    "coluna": "Y",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "derivada da geometria do ponto pela extração"
+   },
+   "tipo_dado": "real",
+   "unidade": "graus"
+  },
+  {
+   "codigo": "eqtrmt_cod_id",
+   "grupo": "equipamento_do_transformador",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "EQTRMT",
+    "coluna": "COD_ID",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "eqtrmt_fas_con",
+   "grupo": "equipamento_do_transformador",
+   "nome": "fases conectadas",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "EQTRMT",
+    "coluna": "FAS_CON",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "eqtrmt_per_fer",
+   "grupo": "equipamento_do_transformador",
+   "nome": "perdas no ferro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "EQTRMT",
+    "coluna": "PER_FER",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "kW"
+  },
+  {
+   "codigo": "eqtrmt_per_tot",
+   "grupo": "equipamento_do_transformador",
+   "nome": "perdas totais",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "EQTRMT",
+    "coluna": "PER_TOT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "kW"
+  },
+  {
+   "codigo": "eqtrmt_pot_nom",
+   "grupo": "equipamento_do_transformador",
+   "nome": "potência nominal",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "EQTRMT",
+    "coluna": "POT_NOM",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "kVA"
+  },
+  {
+   "codigo": "eqtrmt_ten_pri",
+   "grupo": "equipamento_do_transformador",
+   "nome": "tensão do primário",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "EQTRMT",
+    "coluna": "TEN_PRI",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "kV"
+  },
+  {
+   "codigo": "eqtrmt_ten_sec",
+   "grupo": "equipamento_do_transformador",
+   "nome": "tensão do secundário",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "EQTRMT",
+    "coluna": "TEN_SEC",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "kV"
+  },
+  {
+   "codigo": "eqtrmt_uni_tr_mt",
+   "grupo": "equipamento_do_transformador",
+   "nome": "unidade transformadora de média tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "EQTRMT",
+    "coluna": "UNI_TR_MT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugbt_ceg_gd",
+   "grupo": "geracao_distribuida",
+   "nome": "código do empreendimento de geração distribuída",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "CEG_GD",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugbt_cnae",
+   "grupo": "geracao_distribuida",
+   "nome": "atividade econômica (CNAE)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "CNAE",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugbt_cod_id",
+   "grupo": "geracao_distribuida",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "COD_ID",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugbt_conj",
+   "grupo": "geracao_distribuida",
+   "nome": "conjunto elétrico",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "CONJ",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugbt_ctmt",
+   "grupo": "geracao_distribuida",
+   "nome": "circuito de média tensão (alimentador)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "CTMT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugbt_dat_con",
+   "grupo": "geracao_distribuida",
+   "nome": "data de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "DAT_CON",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "data",
+   "unidade": null
+  },
+  {
+   "codigo": "ugbt_ene_sum",
+   "grupo": "geracao_distribuida",
+   "nome": "energia anual",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "ENE_SUM",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "soma de ENE_01..ENE_12 feita pela extração"
+   },
+   "tipo": 1,
+   "tipo_dado": "real",
+   "unidade": "MWh"
+  },
+  {
+   "codigo": "ugbt_ene_zero",
+   "grupo": "geracao_distribuida",
+   "nome": "meses com energia zero",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "ENE_ZERO",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "contagem sobre ENE_01..ENE_12 feita pela extração"
+   },
+   "tipo": 1,
+   "tipo_dado": "inteiro",
+   "unidade": "meses"
+  },
+  {
+   "codigo": "ugbt_mun",
+   "grupo": "geracao_distribuida",
+   "nome": "município (código IBGE)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "MUN",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugbt_pn_con",
+   "grupo": "geracao_distribuida",
+   "nome": "ponto notável de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "PN_CON",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugbt_pot_sum",
+   "grupo": "geracao_distribuida",
+   "nome": "potência anual da geração",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "POT_SUM",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "soma de POT_01..POT_12 feita pela extração"
+   },
+   "tipo": 1,
+   "tipo_dado": "real",
+   "unidade": "kW"
+  },
+  {
+   "codigo": "ugbt_pot_zero",
+   "grupo": "geracao_distribuida",
+   "nome": "meses com potência zero",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "POT_ZERO",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "contagem sobre POT_01..POT_12 feita pela extração"
+   },
+   "tipo": 1,
+   "tipo_dado": "inteiro",
+   "unidade": "meses"
+  },
+  {
+   "codigo": "ugbt_sit_ativ",
+   "grupo": "geracao_distribuida",
+   "nome": "situação de ativação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "SIT_ATIV",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugbt_sub",
+   "grupo": "geracao_distribuida",
+   "nome": "subestação a que pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "SUB",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugbt_uni_tr_mt",
+   "grupo": "geracao_distribuida",
+   "nome": "unidade transformadora de média tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGBT_tab",
+    "coluna": "UNI_TR_MT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugmt_ceg_gd",
+   "grupo": "geracao_distribuida",
+   "nome": "código do empreendimento de geração distribuída",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGMT_tab",
+    "coluna": "CEG_GD",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugmt_cnae",
+   "grupo": "geracao_distribuida",
+   "nome": "atividade econômica (CNAE)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGMT_tab",
+    "coluna": "CNAE",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugmt_cod_id",
+   "grupo": "geracao_distribuida",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "UGMT_tab",
+    "coluna": "COD_ID",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugmt_conj",
+   "grupo": "geracao_distribuida",
+   "nome": "conjunto elétrico",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGMT_tab",
+    "coluna": "CONJ",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugmt_ctmt",
+   "grupo": "geracao_distribuida",
+   "nome": "circuito de média tensão (alimentador)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGMT_tab",
+    "coluna": "CTMT",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugmt_dat_con",
+   "grupo": "geracao_distribuida",
+   "nome": "data de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGMT_tab",
+    "coluna": "DAT_CON",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo": 2,
+   "tipo_dado": "data",
+   "unidade": null
+  },
+  {
+   "codigo": "ugmt_ene_sum",
+   "grupo": "geracao_distribuida",
+   "nome": "energia anual",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGMT_tab",
+    "coluna": "ENE_SUM",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "soma de ENE_01..ENE_12 feita pela extração"
+   },
+   "tipo": 2,
+   "tipo_dado": "real",
+   "unidade": "MWh"
+  },
+  {
+   "codigo": "ugmt_mun",
+   "grupo": "geracao_distribuida",
+   "nome": "município (código IBGE)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGMT_tab",
+    "coluna": "MUN",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugmt_pn_con",
+   "grupo": "geracao_distribuida",
+   "nome": "ponto notável de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGMT_tab",
+    "coluna": "PN_CON",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugmt_pot_inst",
+   "grupo": "geracao_distribuida",
+   "nome": "potência instalada",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGMT_tab",
+    "coluna": "POT_INST",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo": 2,
+   "tipo_dado": "real",
+   "unidade": "kVA"
+  },
+  {
+   "codigo": "ugmt_sit_ativ",
+   "grupo": "geracao_distribuida",
+   "nome": "situação de ativação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGMT_tab",
+    "coluna": "SIT_ATIV",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ugmt_sub",
+   "grupo": "geracao_distribuida",
+   "nome": "subestação a que pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UGMT_tab",
+    "coluna": "SUB",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pip_are_loc",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "área de localização",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "ARE_LOC",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pip_car_inst",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "carga instalada",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "CAR_INST",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "kW"
+  },
+  {
+   "codigo": "pip_clas_sub",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "classe e subclasse de consumo",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "CLAS_SUB",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pip_cod_id",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "COD_ID",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pip_conj",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "conjunto elétrico",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "CONJ",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pip_controle",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "tipo de controle do acionamento",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "CONTROLE",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pip_ctmt",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "circuito de média tensão (alimentador)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "CTMT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pip_ene_sum",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "energia anual",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "ENE_SUM",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "soma de ENE_01..ENE_12 feita pela extração"
+   },
+   "tipo_dado": "real",
+   "unidade": "MWh"
+  },
+  {
+   "codigo": "pip_ene_zero",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "meses com energia zero",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "ENE_ZERO",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "contagem sobre ENE_01..ENE_12 feita pela extração"
+   },
+   "tipo_dado": "inteiro",
+   "unidade": "meses"
+  },
+  {
+   "codigo": "pip_mun",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "município (código IBGE)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "MUN",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pip_pn_con",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "ponto notável de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "PN_CON",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pip_sub",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "subestação a que pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "SUB",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pip_tipo_lamp",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "tipo de lâmpada",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "TIPO_LAMP",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "pip_uni_tr_mt",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "unidade transformadora de média tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PIP",
+    "coluna": "UNI_TR_MT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_alt",
+   "grupo": "ponto_notavel",
+   "nome": "altura",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "ALT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "ponnot_are_loc",
+   "grupo": "ponto_notavel",
+   "nome": "área de localização",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "ARE_LOC",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_cod_id",
+   "grupo": "ponto_notavel",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "COD_ID",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_conj",
+   "grupo": "ponto_notavel",
+   "nome": "conjunto elétrico",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "CONJ",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_dist",
+   "grupo": "ponto_notavel",
+   "nome": "código da distribuidora na ANEEL",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "DIST",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_esf",
+   "grupo": "ponto_notavel",
+   "nome": "esforço nominal",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "ESF",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_estr",
+   "grupo": "ponto_notavel",
+   "nome": "estrutura",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "ESTR",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_mat",
+   "grupo": "ponto_notavel",
+   "nome": "material",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "MAT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_mun",
+   "grupo": "ponto_notavel",
+   "nome": "município (código IBGE)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "MUN",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_pos",
+   "grupo": "ponto_notavel",
+   "nome": "posição",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "POS",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_sitcont",
+   "grupo": "ponto_notavel",
+   "nome": "situação contábil",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "SITCONT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_tip_inst",
+   "grupo": "ponto_notavel",
+   "nome": "tipo de instalação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "TIP_INST",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_tip_pn",
+   "grupo": "ponto_notavel",
+   "nome": "tipo de ponto notável",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "TIP_PN",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_tuc",
+   "grupo": "ponto_notavel",
+   "nome": "tipo de unidade de cadastro (TUC)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "TUC",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ponnot_x",
+   "grupo": "ponto_notavel",
+   "nome": "longitude do ponto",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "X",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "derivada da geometria do ponto pela extração"
+   },
+   "tipo_dado": "real",
+   "unidade": "graus"
+  },
+  {
+   "codigo": "ponnot_y",
+   "grupo": "ponto_notavel",
+   "nome": "latitude do ponto",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "PONNOT",
+    "coluna": "Y",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "derivada da geometria do ponto pela extração"
+   },
+   "tipo_dado": "real",
+   "unidade": "graus"
+  },
+  {
+   "codigo": "ramlig_cod_id",
+   "grupo": "ramal_de_ligacao",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "RAMLIG",
+    "coluna": "COD_ID",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ramlig_comp",
+   "grupo": "ramal_de_ligacao",
+   "nome": "comprimento do trecho",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "RAMLIG",
+    "coluna": "COMP",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "km"
+  },
+  {
+   "codigo": "ramlig_ctmt",
+   "grupo": "ramal_de_ligacao",
+   "nome": "circuito de média tensão (alimentador)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "RAMLIG",
+    "coluna": "CTMT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ramlig_fas_con",
+   "grupo": "ramal_de_ligacao",
+   "nome": "fases conectadas",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "RAMLIG",
+    "coluna": "FAS_CON",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ramlig_tip_cnd",
+   "grupo": "ramal_de_ligacao",
+   "nome": "tipo de condutor (código do cadastro de condutores)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "RAMLIG",
+    "coluna": "TIP_CND",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ramlig_uni_tr_mt",
+   "grupo": "ramal_de_ligacao",
+   "nome": "unidade transformadora de média tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "RAMLIG",
+    "coluna": "UNI_TR_MT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ramlig_wkt",
+   "grupo": "ramal_de_ligacao",
+   "nome": "geometria do trecho",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "RAMLIG",
+    "coluna": "WKT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "geometria da linha serializada em WKT pela extração"
+   },
+   "tipo_dado": "geometria",
+   "unidade": null
+  },
+  {
+   "codigo": "unremt_cod_id",
+   "grupo": "regulador_de_tensao",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "COD_ID",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unremt_ctmt",
+   "grupo": "regulador_de_tensao",
+   "nome": "circuito de média tensão (alimentador)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "CTMT",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unremt_dat_con",
+   "grupo": "regulador_de_tensao",
+   "nome": "data de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "DAT_CON",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "data",
+   "unidade": null
+  },
+  {
+   "codigo": "unremt_fas_con",
+   "grupo": "regulador_de_tensao",
+   "nome": "fases conectadas",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "FAS_CON",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unremt_pac_1",
+   "grupo": "regulador_de_tensao",
+   "nome": "ponto de atendimento da conexão 1",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "PAC_1",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unremt_pac_2",
+   "grupo": "regulador_de_tensao",
+   "nome": "ponto de atendimento da conexão 2",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "PAC_2",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unremt_pot_nom",
+   "grupo": "regulador_de_tensao",
+   "nome": "potência nominal",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "POT_NOM",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "real",
+   "unidade": "kVA"
+  },
+  {
+   "codigo": "unremt_sit_ativ",
+   "grupo": "regulador_de_tensao",
+   "nome": "situação de ativação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "SIT_ATIV",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unremt_sub",
+   "grupo": "regulador_de_tensao",
+   "nome": "subestação a que pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "SUB",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unremt_ten_reg",
+   "grupo": "regulador_de_tensao",
+   "nome": "tensão de regulação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "TEN_REG",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "real",
+   "unidade": "kV"
+  },
+  {
+   "codigo": "unremt_tip_unid",
+   "grupo": "regulador_de_tensao",
+   "nome": "tipo de unidade de cadastro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "TIP_UNID",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unremt_uni_tr_at",
+   "grupo": "regulador_de_tensao",
+   "nome": "unidade transformadora de alta tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "UNI_TR_AT",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "unremt_x",
+   "grupo": "regulador_de_tensao",
+   "nome": "longitude do ponto",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "X",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "derivada da geometria do ponto pela extração"
+   },
+   "tipo_dado": "real",
+   "unidade": "graus"
+  },
+  {
+   "codigo": "unremt_y",
+   "grupo": "regulador_de_tensao",
+   "nome": "latitude do ponto",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNREMT",
+    "coluna": "Y",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "derivada da geometria do ponto pela extração"
+   },
+   "tipo_dado": "real",
+   "unidade": "graus"
+  },
+  {
+   "codigo": "sub_cod_id",
+   "grupo": "subestacao",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "SUB",
+    "coluna": "COD_ID",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "sub_dist",
+   "grupo": "subestacao",
+   "nome": "código da distribuidora na ANEEL",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SUB",
+    "coluna": "DIST",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "sub_mun",
+   "grupo": "subestacao",
+   "nome": "município (código IBGE)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SUB",
+    "coluna": "MUN",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "sub_nome",
+   "grupo": "subestacao",
+   "nome": "nome da instalação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SUB",
+    "coluna": "NOME",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "sub_pos",
+   "grupo": "subestacao",
+   "nome": "posição",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SUB",
+    "coluna": "POS",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "coluna declarada do Módulo 10, ainda não conferida contra extração real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "sub_x",
+   "grupo": "subestacao",
+   "nome": "longitude do ponto",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SUB",
+    "coluna": "X",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "derivada da geometria do ponto pela extração"
+   },
+   "tipo_dado": "real",
+   "unidade": "graus"
+  },
+  {
+   "codigo": "sub_y",
+   "grupo": "subestacao",
+   "nome": "latitude do ponto",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SUB",
+    "coluna": "Y",
+    "conferida": false,
+    "esquema": "bdgd_modulo_10",
+    "nota": "derivada da geometria do ponto pela extração"
+   },
+   "tipo_dado": "real",
+   "unidade": "graus"
+  },
+  {
+   "codigo": "untrmt_are_loc",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "área de localização",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "ARE_LOC",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_banc",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "identificação do banco de transformadores",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "BANC",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_cap_elo",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "capacidade do elo fusível",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "CAP_ELO",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_cod_id",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "COD_ID",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_conf",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "configuração de ligação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "CONF",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_conj",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "conjunto elétrico",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "CONJ",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_ctmt",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "circuito de média tensão (alimentador)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "CTMT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_dat_con",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "data de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "DAT_CON",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "data",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_dist",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "código da distribuidora na ANEEL",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "DIST",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_mun",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "município (código IBGE)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "MUN",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_pac_1",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "ponto de atendimento da conexão 1",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "PAC_1",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_pac_2",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "ponto de atendimento da conexão 2",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "PAC_2",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_pac_3",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "ponto de atendimento da conexão 3",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "PAC_3",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_per_fer",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "perdas no ferro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "PER_FER",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "kW"
+  },
+  {
+   "codigo": "untrmt_per_tot",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "perdas totais",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "PER_TOT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "kW"
+  },
+  {
+   "codigo": "untrmt_pos",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "posição",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "POS",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_posto",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "tipo de posto",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "POSTO",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_pot_nom",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "potência nominal",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "POT_NOM",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "kVA"
+  },
+  {
+   "codigo": "untrmt_sit_ativ",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "situação de ativação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "SIT_ATIV",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_sub",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "subestação a que pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "SUB",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_ten_lin_se",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "tensão de linha na saída da subestação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "TEN_LIN_SE",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "kV"
+  },
+  {
+   "codigo": "untrmt_tip_trafo",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "tipo de transformador",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "TIP_TRAFO",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_tip_unid",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "tipo de unidade de cadastro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "TIP_UNID",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_uni_tr_at",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "unidade transformadora de alta tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "UNI_TR_AT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "untrmt_x",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "longitude do ponto",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "X",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "derivada da geometria do ponto pela extração"
+   },
+   "tipo_dado": "real",
+   "unidade": "graus"
+  },
+  {
+   "codigo": "untrmt_y",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "latitude do ponto",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UNTRMT",
+    "coluna": "Y",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "derivada da geometria do ponto pela extração"
+   },
+   "tipo_dado": "real",
+   "unidade": "graus"
+  },
+  {
+   "codigo": "ssdbt_cod_id",
+   "grupo": "trecho_de_baixa_tensao",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "SSDBT",
+    "coluna": "COD_ID",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ssdbt_comp",
+   "grupo": "trecho_de_baixa_tensao",
+   "nome": "comprimento do trecho",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDBT",
+    "coluna": "COMP",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "km"
+  },
+  {
+   "codigo": "ssdbt_ctmt",
+   "grupo": "trecho_de_baixa_tensao",
+   "nome": "circuito de média tensão (alimentador)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDBT",
+    "coluna": "CTMT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ssdbt_fas_con",
+   "grupo": "trecho_de_baixa_tensao",
+   "nome": "fases conectadas",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDBT",
+    "coluna": "FAS_CON",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ssdbt_tip_cnd",
+   "grupo": "trecho_de_baixa_tensao",
+   "nome": "tipo de condutor (código do cadastro de condutores)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDBT",
+    "coluna": "TIP_CND",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ssdbt_uni_tr_mt",
+   "grupo": "trecho_de_baixa_tensao",
+   "nome": "unidade transformadora de média tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDBT",
+    "coluna": "UNI_TR_MT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ssdbt_wkt",
+   "grupo": "trecho_de_baixa_tensao",
+   "nome": "geometria do trecho",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDBT",
+    "coluna": "WKT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "geometria da linha serializada em WKT pela extração"
+   },
+   "tipo_dado": "geometria",
+   "unidade": null
+  },
+  {
+   "codigo": "ssdmt_cod_id",
+   "grupo": "trecho_de_media_tensao",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "SSDMT",
+    "coluna": "COD_ID",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ssdmt_comp",
+   "grupo": "trecho_de_media_tensao",
+   "nome": "comprimento do trecho",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDMT",
+    "coluna": "COMP",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "real",
+   "unidade": "km"
+  },
+  {
+   "codigo": "ssdmt_conj",
+   "grupo": "trecho_de_media_tensao",
+   "nome": "conjunto elétrico",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDMT",
+    "coluna": "CONJ",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ssdmt_ctmt",
+   "grupo": "trecho_de_media_tensao",
+   "nome": "circuito de média tensão (alimentador)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDMT",
+    "coluna": "CTMT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ssdmt_fas_con",
+   "grupo": "trecho_de_media_tensao",
+   "nome": "fases conectadas",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDMT",
+    "coluna": "FAS_CON",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ssdmt_pos",
+   "grupo": "trecho_de_media_tensao",
+   "nome": "posição",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDMT",
+    "coluna": "POS",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ssdmt_sub",
+   "grupo": "trecho_de_media_tensao",
+   "nome": "subestação a que pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDMT",
+    "coluna": "SUB",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ssdmt_uni_tr_at",
+   "grupo": "trecho_de_media_tensao",
+   "nome": "unidade transformadora de alta tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDMT",
+    "coluna": "UNI_TR_AT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ssdmt_wkt",
+   "grupo": "trecho_de_media_tensao",
+   "nome": "geometria do trecho",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "SSDMT",
+    "coluna": "WKT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "geometria da linha serializada em WKT pela extração"
+   },
+   "tipo_dado": "geometria",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_are_loc",
+   "grupo": "unidade_consumidora",
+   "nome": "área de localização",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "ARE_LOC",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_brr",
+   "grupo": "unidade_consumidora",
+   "nome": "bairro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "BRR",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_car_inst",
+   "grupo": "unidade_consumidora",
+   "nome": "carga instalada",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "CAR_INST",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "real",
+   "unidade": "kW"
+  },
+  {
+   "codigo": "ucbt_ceg_gd",
+   "grupo": "unidade_consumidora",
+   "nome": "código do empreendimento de geração distribuída",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "CEG_GD",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_cep",
+   "grupo": "unidade_consumidora",
+   "nome": "CEP",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "CEP",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_clas_sub",
+   "grupo": "unidade_consumidora",
+   "nome": "classe e subclasse de consumo",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "CLAS_SUB",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_cnae",
+   "grupo": "unidade_consumidora",
+   "nome": "atividade econômica (CNAE)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "CNAE",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_cod_id",
+   "grupo": "unidade_consumidora",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "COD_ID",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_conj",
+   "grupo": "unidade_consumidora",
+   "nome": "conjunto elétrico",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "CONJ",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_ctmt",
+   "grupo": "unidade_consumidora",
+   "nome": "circuito de média tensão (alimentador)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "CTMT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_dat_con",
+   "grupo": "unidade_consumidora",
+   "nome": "data de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "DAT_CON",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "data",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_dic_sum",
+   "grupo": "unidade_consumidora",
+   "nome": "DIC anual",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "DIC_SUM",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "soma de DIC_01..DIC_12 feita pela extração"
+   },
+   "tipo": 1,
+   "tipo_dado": "real",
+   "unidade": "h"
+  },
+  {
+   "codigo": "ucbt_dic_zero",
+   "grupo": "unidade_consumidora",
+   "nome": "meses com DIC zero",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "DIC_ZERO",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "contagem sobre DIC_01..DIC_12 feita pela extração"
+   },
+   "tipo": 1,
+   "tipo_dado": "inteiro",
+   "unidade": "meses"
+  },
+  {
+   "codigo": "ucbt_ene_sum",
+   "grupo": "unidade_consumidora",
+   "nome": "energia anual",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "ENE_SUM",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "soma de ENE_01..ENE_12 feita pela extração"
+   },
+   "tipo": 1,
+   "tipo_dado": "real",
+   "unidade": "MWh"
+  },
+  {
+   "codigo": "ucbt_ene_zero",
+   "grupo": "unidade_consumidora",
+   "nome": "meses com energia zero",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "ENE_ZERO",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "contagem sobre ENE_01..ENE_12 feita pela extração"
+   },
+   "tipo": 1,
+   "tipo_dado": "inteiro",
+   "unidade": "meses"
+  },
+  {
+   "codigo": "ucbt_fas_con",
+   "grupo": "unidade_consumidora",
+   "nome": "fases conectadas",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "FAS_CON",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_fic_sum",
+   "grupo": "unidade_consumidora",
+   "nome": "FIC anual",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "FIC_SUM",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "soma de FIC_01..FIC_12 feita pela extração"
+   },
+   "tipo": 1,
+   "tipo_dado": "real",
+   "unidade": "interrupções"
+  },
+  {
+   "codigo": "ucbt_fic_zero",
+   "grupo": "unidade_consumidora",
+   "nome": "meses com FIC zero",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "FIC_ZERO",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "contagem sobre FIC_01..FIC_12 feita pela extração"
+   },
+   "tipo": 1,
+   "tipo_dado": "inteiro",
+   "unidade": "meses"
+  },
+  {
+   "codigo": "ucbt_gru_tar",
+   "grupo": "unidade_consumidora",
+   "nome": "grupo tarifário",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "GRU_TAR",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_gru_ten",
+   "grupo": "unidade_consumidora",
+   "nome": "grupo de tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "GRU_TEN",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_liv",
+   "grupo": "unidade_consumidora",
+   "nome": "consumidor livre",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "LIV",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_mun",
+   "grupo": "unidade_consumidora",
+   "nome": "município (código IBGE)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "MUN",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_pn_con",
+   "grupo": "unidade_consumidora",
+   "nome": "ponto notável de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "PN_CON",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_semred",
+   "grupo": "unidade_consumidora",
+   "nome": "unidade sem rede",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "SEMRED",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_sit_ativ",
+   "grupo": "unidade_consumidora",
+   "nome": "situação de ativação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "SIT_ATIV",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_sub",
+   "grupo": "unidade_consumidora",
+   "nome": "subestação a que pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "SUB",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_tip_cc",
+   "grupo": "unidade_consumidora",
+   "nome": "tipo de contrato de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "TIP_CC",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_tip_sist",
+   "grupo": "unidade_consumidora",
+   "nome": "tipo de sistema de atendimento",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "TIP_SIST",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucbt_uni_tr_mt",
+   "grupo": "unidade_consumidora",
+   "nome": "unidade transformadora de média tensão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCBT_tab",
+    "coluna": "UNI_TR_MT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_are_loc",
+   "grupo": "unidade_consumidora",
+   "nome": "área de localização",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "ARE_LOC",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_brr",
+   "grupo": "unidade_consumidora",
+   "nome": "bairro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "BRR",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_car_inst",
+   "grupo": "unidade_consumidora",
+   "nome": "carga instalada",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "CAR_INST",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "real",
+   "unidade": "kW"
+  },
+  {
+   "codigo": "ucmt_ceg_gd",
+   "grupo": "unidade_consumidora",
+   "nome": "código do empreendimento de geração distribuída",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "CEG_GD",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_cep",
+   "grupo": "unidade_consumidora",
+   "nome": "CEP",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "CEP",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_clas_sub",
+   "grupo": "unidade_consumidora",
+   "nome": "classe e subclasse de consumo",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "CLAS_SUB",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_cnae",
+   "grupo": "unidade_consumidora",
+   "nome": "atividade econômica (CNAE)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "CNAE",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_cod_id",
+   "grupo": "unidade_consumidora",
+   "nome": "código do objeto",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "COD_ID",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_conj",
+   "grupo": "unidade_consumidora",
+   "nome": "conjunto elétrico",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "CONJ",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_ctmt",
+   "grupo": "unidade_consumidora",
+   "nome": "circuito de média tensão (alimentador)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "CTMT",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_dat_con",
+   "grupo": "unidade_consumidora",
+   "nome": "data de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "DAT_CON",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "data",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_ene_sum",
+   "grupo": "unidade_consumidora",
+   "nome": "energia anual",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "ENE_SUM",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "soma de ENE_01..ENE_12 feita pela extração"
+   },
+   "tipo": 2,
+   "tipo_dado": "real",
+   "unidade": "MWh"
+  },
+  {
+   "codigo": "ucmt_ene_zero",
+   "grupo": "unidade_consumidora",
+   "nome": "meses com energia zero",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "ENE_ZERO",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": "contagem sobre ENE_01..ENE_12 feita pela extração"
+   },
+   "tipo": 2,
+   "tipo_dado": "inteiro",
+   "unidade": "meses"
+  },
+  {
+   "codigo": "ucmt_gru_tar",
+   "grupo": "unidade_consumidora",
+   "nome": "grupo tarifário",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "GRU_TAR",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_mun",
+   "grupo": "unidade_consumidora",
+   "nome": "município (código IBGE)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "MUN",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_pn_con",
+   "grupo": "unidade_consumidora",
+   "nome": "ponto notável de conexão",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "PN_CON",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_sit_ativ",
+   "grupo": "unidade_consumidora",
+   "nome": "situação de ativação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "SIT_ATIV",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ucmt_sub",
+   "grupo": "unidade_consumidora",
+   "nome": "subestação a que pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "UCMT_tab",
+    "coluna": "SUB",
+    "conferida": true,
+    "esquema": "bdgd_modulo_10",
+    "nota": ""
+   },
+   "tipo": 2,
+   "tipo_dado": "texto",
+   "unidade": null
+  }
+ ],
+ "categorias": [
+  {
+   "codigo": "conducao",
+   "descricao": "Conduz sem transformar nem interromper.",
+   "nome": "Condução"
+  },
+  {
+   "codigo": "consumo",
+   "descricao": "Ponto final que retira energia da rede.",
+   "nome": "Consumo"
+  },
+  {
+   "codigo": "controlador",
+   "descricao": "Ajusta grandeza elétrica (tensão, reativo) sem interromper o circuito.",
+   "nome": "Controlador"
+  },
+  {
+   "codigo": "dispositivo_de_protecao",
+   "descricao": "Interrompe sozinho diante de defeito.",
+   "nome": "Dispositivo de proteção"
+  },
+  {
+   "codigo": "estrutura_de_suporte",
+   "descricao": "Sustenta o condutor e o equipamento; não conduz.",
+   "nome": "Estrutura de suporte"
+  },
+  {
+   "codigo": "fonte",
+   "descricao": "Onde a energia entra na rede; o traçado a montante termina aqui.",
+   "nome": "Fonte"
+  },
+  {
+   "codigo": "geracao",
+   "descricao": "Ponto que injeta energia na rede de distribuição.",
+   "nome": "Geração"
+  },
+  {
+   "codigo": "iluminacao",
+   "descricao": "Carga de iluminação pública, faturada por estimativa.",
+   "nome": "Iluminação pública"
+  },
+  {
+   "codigo": "medicao",
+   "descricao": "Ponto onde a energia é medida para faturamento.",
+   "nome": "Medição"
+  },
+  {
+   "codigo": "seccionamento",
+   "descricao": "Abre ou fecha o circuito por manobra.",
+   "nome": "Seccionamento"
+  },
+  {
+   "codigo": "transformacao",
+   "descricao": "Muda o nível de tensão e separa duas subredes.",
+   "nome": "Transformação"
+  }
+ ],
+ "dominios": [
+  {
+   "codigo": "eletrica_distribuicao",
+   "descricao": "Rede elétrica de distribuição no recorte do Módulo 10 do PRODIST (BDGD).",
+   "disciplina": "eletrica",
+   "nome": "Elétrica de distribuição",
+   "ordem": 2,
+   "tipo": "dominio"
+  },
+  {
+   "codigo": "estrutura",
+   "descricao": "Rede de estrutura, comum a qualquer disciplina: suporte, contenção e fixação.",
+   "disciplina": "estrutura",
+   "nome": "Estrutura",
+   "ordem": 1,
+   "tipo": "estrutura"
+  }
+ ],
+ "esquema": "plat.rede.pacote",
+ "esquema_versao": 1,
+ "grupos": [
+  {
+   "camadas_fonte": [
+    "CTMT"
+   ],
+   "codigo": "alimentador",
+   "descricao": "Circuito de média tensão que sai da subestação; define a subrede da qual todo o resto é jusante.",
+   "dominio": "eletrica_distribuicao",
+   "geometria": "sem_geometria",
+   "nome": "Alimentador de média tensão"
+  },
+  {
+   "camadas_fonte": [
+    "UNCRMT"
+   ],
+   "codigo": "banco_de_capacitores",
+   "descricao": "Unidade compensadora de reativos ligada ao circuito de média tensão.",
+   "dominio": "eletrica_distribuicao",
+   "geometria": "ponto",
+   "nome": "Banco de capacitores"
+  },
+  {
+   "camadas_fonte": [
+    "UNSEMT"
+   ],
+   "codigo": "chave_de_media_tensao",
+   "descricao": "Unidade seccionadora: separa ou protege parte do circuito de média tensão.",
+   "dominio": "eletrica_distribuicao",
+   "geometria": "ponto",
+   "nome": "Chave de média tensão"
+  },
+  {
+   "camadas_fonte": [
+    "EQTRMT"
+   ],
+   "codigo": "equipamento_do_transformador",
+   "descricao": "Placa e perdas de cada unidade que compõe o transformador (um banco tem mais de uma).",
+   "dominio": "eletrica_distribuicao",
+   "geometria": "sem_geometria",
+   "nome": "Equipamento do transformador"
+  },
+  {
+   "camadas_fonte": [
+    "UGBT_tab",
+    "UGMT_tab"
+   ],
+   "codigo": "geracao_distribuida",
+   "descricao": "Unidade geradora conectada à rede de distribuição, em baixa ou em média tensão.",
+   "dominio": "eletrica_distribuicao",
+   "geometria": "ponto",
+   "nome": "Geração distribuída"
+  },
+  {
+   "camadas_fonte": [
+    "PIP"
+   ],
+   "codigo": "ponto_de_iluminacao_publica",
+   "descricao": "Luminária faturada como iluminação pública.",
+   "dominio": "eletrica_distribuicao",
+   "geometria": "ponto",
+   "nome": "Ponto de iluminação pública"
+  },
+  {
+   "camadas_fonte": [
+    "RAMLIG"
+   ],
+   "codigo": "ramal_de_ligacao",
+   "descricao": "Trecho que liga a rede de baixa tensão ao ponto de entrega da unidade consumidora.",
+   "dominio": "eletrica_distribuicao",
+   "geometria": "linha",
+   "nome": "Ramal de ligação"
+  },
+  {
+   "camadas_fonte": [
+    "UNREMT"
+   ],
+   "codigo": "regulador_de_tensao",
+   "descricao": "Unidade reguladora que corrige a tensão ao longo do alimentador.",
+   "dominio": "eletrica_distribuicao",
+   "geometria": "ponto",
+   "nome": "Regulador de tensão"
+  },
+  {
+   "camadas_fonte": [
+    "SUB"
+   ],
+   "codigo": "subestacao",
+   "descricao": "Instalação onde a alta tensão é transformada em média tensão; ponto de origem dos circuitos.",
+   "dominio": "eletrica_distribuicao",
+   "geometria": "ponto",
+   "nome": "Subestação"
+  },
+  {
+   "camadas_fonte": [
+    "UNTRMT"
+   ],
+   "codigo": "transformador_de_distribuicao",
+   "descricao": "Unidade transformadora que separa a média da baixa tensão.",
+   "dominio": "eletrica_distribuicao",
+   "geometria": "ponto",
+   "nome": "Transformador de distribuição"
+  },
+  {
+   "camadas_fonte": [
+    "SSDBT"
+   ],
+   "codigo": "trecho_de_baixa_tensao",
+   "descricao": "Segmento condutor de baixa tensão a jusante do transformador de distribuição.",
+   "dominio": "eletrica_distribuicao",
+   "geometria": "linha",
+   "nome": "Trecho de baixa tensão"
+  },
+  {
+   "camadas_fonte": [
+    "SSDMT"
+   ],
+   "codigo": "trecho_de_media_tensao",
+   "descricao": "Segmento condutor de média tensão entre dois pontos notáveis.",
+   "dominio": "eletrica_distribuicao",
+   "geometria": "linha",
+   "nome": "Trecho de média tensão"
+  },
+  {
+   "camadas_fonte": [
+    "UCBT_tab",
+    "UCMT_tab"
+   ],
+   "codigo": "unidade_consumidora",
+   "descricao": "Ponto de consumo faturado, em baixa ou em média tensão.",
+   "dominio": "eletrica_distribuicao",
+   "geometria": "ponto",
+   "nome": "Unidade consumidora"
+  },
+  {
+   "camadas_fonte": [
+    "PONNOT"
+   ],
+   "codigo": "ponto_notavel",
+   "descricao": "Estrutura de suporte da rede (poste, torre e afins); é o que sustenta, não o que conduz.",
+   "dominio": "estrutura",
+   "geometria": "ponto",
+   "nome": "Ponto notável"
+  }
+ ],
+ "pacote": {
+  "codigo": "eletrica-br",
+  "descricao": "Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 13 camadas de rede da BDGD (Módulo 10 do PRODIST). Dez camadas têm mapeamento coluna a coluna conferido contra uma extração real de distribuidora; cinco camadas (SUB, UNSEMT, UNCRMT, UNREMT, UGMT_tab) trazem colunas declaradas do Módulo 10, ainda não conferidas — cada atributo diz qual é o seu caso em origem.conferida.",
+  "disciplina": "eletrica",
+  "fonte": "https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd",
+  "nome": "Elétrica de distribuição (Brasil, BDGD Módulo 10)",
+  "versao": "1.0.0"
+ },
+ "regras": [
+  {
+   "de": "ramal_de_ligacao/1",
+   "descricao": "ramal derivado do trecho de baixa tensão",
+   "para": "trecho_de_baixa_tensao/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ramal_de_ligacao/1",
+   "descricao": "consumidor de baixa tensão ligado pelo ramal",
+   "para": "unidade_consumidora/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_baixa_tensao/1",
+   "descricao": "geração em baixa tensão ligada ao trecho de baixa tensão",
+   "para": "geracao_distribuida/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_baixa_tensao/1",
+   "descricao": "luminária ligada ao trecho de baixa tensão",
+   "para": "ponto_de_iluminacao_publica/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_baixa_tensao/1",
+   "descricao": "secundário do transformador no trecho de baixa tensão",
+   "para": "transformador_de_distribuicao/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_baixa_tensao/1",
+   "descricao": "secundário do banco no trecho de baixa tensão",
+   "para": "transformador_de_distribuicao/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_media_tensao/1",
+   "descricao": "banco de capacitores derivado do trecho de média tensão",
+   "para": "banco_de_capacitores/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_media_tensao/1",
+   "descricao": "chave em série no trecho de média tensão",
+   "para": "chave_de_media_tensao/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_media_tensao/1",
+   "descricao": "chave fusível em série no trecho de média tensão",
+   "para": "chave_de_media_tensao/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_media_tensao/1",
+   "descricao": "religador em série no trecho de média tensão",
+   "para": "chave_de_media_tensao/3",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_media_tensao/1",
+   "descricao": "disjuntor em série no trecho de média tensão",
+   "para": "chave_de_media_tensao/4",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_media_tensao/1",
+   "descricao": "seccionalizador em série no trecho de média tensão",
+   "para": "chave_de_media_tensao/5",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_media_tensao/1",
+   "descricao": "regulador em série no trecho de média tensão",
+   "para": "regulador_de_tensao/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_media_tensao/1",
+   "descricao": "saída da subestação alimenta o trecho de média tensão",
+   "para": "subestacao/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_media_tensao/1",
+   "descricao": "primário do transformador no trecho de média tensão",
+   "para": "transformador_de_distribuicao/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_media_tensao/1",
+   "descricao": "primário do banco no trecho de média tensão",
+   "para": "transformador_de_distribuicao/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "trecho_de_media_tensao/1",
+   "descricao": "consumidor de média tensão ligado ao trecho de média tensão",
+   "para": "unidade_consumidora/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "subestacao/1",
+   "descricao": "disjuntor contido na subestação",
+   "para": "chave_de_media_tensao/4",
+   "tipo": "contencao"
+  },
+  {
+   "de": "subestacao/1",
+   "descricao": "regulador contido na subestação",
+   "para": "regulador_de_tensao/1",
+   "tipo": "contencao"
+  },
+  {
+   "de": "ponto_notavel/1",
+   "descricao": "luminária fixada no poste",
+   "para": "ponto_de_iluminacao_publica/1",
+   "tipo": "fixacao_estrutural"
+  },
+  {
+   "de": "ponto_notavel/1",
+   "descricao": "transformador fixado no poste",
+   "para": "transformador_de_distribuicao/1",
+   "tipo": "fixacao_estrutural"
+  },
+  {
+   "de": "ponto_notavel/1",
+   "descricao": "trecho de baixa tensão fixado no poste",
+   "para": "trecho_de_baixa_tensao/1",
+   "tipo": "fixacao_estrutural"
+  },
+  {
+   "de": "ponto_notavel/1",
+   "descricao": "trecho de média tensão fixado no poste",
+   "para": "trecho_de_media_tensao/1",
+   "tipo": "fixacao_estrutural"
+  },
+  {
+   "de": "ponto_notavel/2",
+   "descricao": "trecho de média tensão fixado na torre",
+   "para": "trecho_de_media_tensao/1",
+   "tipo": "fixacao_estrutural"
+  }
+ ],
+ "terminais": [
+  {
+   "caminhos_validos": [
+    {
+     "de": 1,
+     "nome": "fechado",
+     "para": 2
+    }
+   ],
+   "codigo": "dois_terminais",
+   "nome": "Dois terminais",
+   "terminais": [
+    {
+     "id": 1,
+     "montante": true,
+     "nome": "lado_1"
+    },
+    {
+     "id": 2,
+     "montante": false,
+     "nome": "lado_2"
+    }
+   ]
+  },
+  {
+   "caminhos_validos": [
+    {
+     "de": 1,
+     "nome": "alta_para_baixa",
+     "para": 2
+    }
+   ],
+   "codigo": "dois_terminais_transformador",
+   "nome": "Dois terminais (alta e baixa)",
+   "terminais": [
+    {
+     "id": 1,
+     "montante": true,
+     "nome": "alta"
+    },
+    {
+     "id": 2,
+     "montante": false,
+     "nome": "baixa"
+    }
+   ]
+  },
+  {
+   "caminhos_validos": [],
+   "codigo": "sem_terminal",
+   "nome": "Sem terminal",
+   "terminais": []
+  },
+  {
+   "caminhos_validos": [],
+   "codigo": "um_terminal",
+   "nome": "Um terminal",
+   "terminais": [
+    {
+     "id": 1,
+     "montante": true,
+     "nome": "conexao"
+    }
+   ]
+  }
+ ],
+ "tiers": [
+  {
+   "codigo": "subtransmissao",
+   "descricao": "Alta tensão até a subestação de distribuição.",
+   "dominio": "eletrica_distribuicao",
+   "nome": "Subtransmissão",
+   "ordem": 1,
+   "tipo": "hierarquico"
+  },
+  {
+   "codigo": "media_tensao",
+   "descricao": "Da saída da subestação ao primário do transformador de distribuição; a subrede é o alimentador.",
+   "dominio": "eletrica_distribuicao",
+   "nome": "Média tensão",
+   "ordem": 2,
+   "tipo": "hierarquico"
+  },
+  {
+   "codigo": "baixa_tensao",
+   "descricao": "Do secundário do transformador de distribuição ao ponto de entrega.",
+   "dominio": "eletrica_distribuicao",
+   "nome": "Baixa tensão",
+   "ordem": 3,
+   "tipo": "hierarquico"
+  },
+  {
+   "codigo": "estrutura",
+   "descricao": "Rede de estrutura: o que sustenta a rede elétrica, sem energia própria.",
+   "dominio": "estrutura",
+   "nome": "Estrutura",
+   "ordem": 1,
+   "tipo": "particionado"
+  }
+ ],
+ "tipos": [
+  {
+   "categorias": [
+    "fonte"
+   ],
+   "chave": "alimentador_de_distribuicao",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "",
+   "grupo": "alimentador",
+   "nome": "Alimentador de distribuição",
+   "terminal": "sem_terminal",
+   "tier": "media_tensao"
+  },
+  {
+   "categorias": [
+    "controlador"
+   ],
+   "chave": "banco_de_capacitores",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "",
+   "grupo": "banco_de_capacitores",
+   "nome": "Banco de capacitores",
+   "terminal": "um_terminal",
+   "tier": "media_tensao"
+  },
+  {
+   "categorias": [
+    "seccionamento"
+   ],
+   "chave": "chave_faca",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "classe de equipamento do Módulo 10, sem código conferido",
+   "grupo": "chave_de_media_tensao",
+   "nome": "Chave faca",
+   "terminal": "dois_terminais",
+   "tier": "media_tensao"
+  },
+  {
+   "categorias": [
+    "dispositivo_de_protecao",
+    "seccionamento"
+   ],
+   "chave": "chave_fusivel",
+   "codigo": 2,
+   "codigos_fonte": [],
+   "descricao": "classe de equipamento do Módulo 10, sem código conferido",
+   "grupo": "chave_de_media_tensao",
+   "nome": "Chave fusível",
+   "terminal": "dois_terminais",
+   "tier": "media_tensao"
+  },
+  {
+   "categorias": [
+    "controlador",
+    "dispositivo_de_protecao"
+   ],
+   "chave": "religador",
+   "codigo": 3,
+   "codigos_fonte": [],
+   "descricao": "classe de equipamento do Módulo 10, sem código conferido",
+   "grupo": "chave_de_media_tensao",
+   "nome": "Religador",
+   "terminal": "dois_terminais",
+   "tier": "media_tensao"
+  },
+  {
+   "categorias": [
+    "dispositivo_de_protecao"
+   ],
+   "chave": "disjuntor",
+   "codigo": 4,
+   "codigos_fonte": [],
+   "descricao": "classe de equipamento do Módulo 10, sem código conferido",
+   "grupo": "chave_de_media_tensao",
+   "nome": "Disjuntor",
+   "terminal": "dois_terminais",
+   "tier": "media_tensao"
+  },
+  {
+   "categorias": [
+    "dispositivo_de_protecao",
+    "seccionamento"
+   ],
+   "chave": "seccionalizador",
+   "codigo": 5,
+   "codigos_fonte": [],
+   "descricao": "classe de equipamento do Módulo 10, sem código conferido",
+   "grupo": "chave_de_media_tensao",
+   "nome": "Seccionalizador",
+   "terminal": "dois_terminais",
+   "tier": "media_tensao"
+  },
+  {
+   "categorias": [
+    "transformacao"
+   ],
+   "chave": "equipamento_do_transformador",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "",
+   "grupo": "equipamento_do_transformador",
+   "nome": "Equipamento do transformador",
+   "terminal": "sem_terminal",
+   "tier": "media_tensao"
+  },
+  {
+   "categorias": [
+    "geracao",
+    "medicao"
+   ],
+   "chave": "geracao_em_baixa_tensao",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "camada UGBT_tab",
+   "grupo": "geracao_distribuida",
+   "nome": "Geração em baixa tensão",
+   "terminal": "um_terminal",
+   "tier": "baixa_tensao"
+  },
+  {
+   "categorias": [
+    "geracao",
+    "medicao"
+   ],
+   "chave": "geracao_em_media_tensao",
+   "codigo": 2,
+   "codigos_fonte": [],
+   "descricao": "camada UGMT_tab",
+   "grupo": "geracao_distribuida",
+   "nome": "Geração em média tensão",
+   "terminal": "um_terminal",
+   "tier": "baixa_tensao"
+  },
+  {
+   "categorias": [
+    "consumo",
+    "iluminacao"
+   ],
+   "chave": "ponto_de_iluminacao_publica",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "",
+   "grupo": "ponto_de_iluminacao_publica",
+   "nome": "Ponto de iluminação pública",
+   "terminal": "um_terminal",
+   "tier": "baixa_tensao"
+  },
+  {
+   "categorias": [
+    "estrutura_de_suporte"
+   ],
+   "chave": "poste",
+   "codigo": 1,
+   "codigos_fonte": [
+    "POS"
+   ],
+   "descricao": "código POS de TIP_PN observado na extração",
+   "grupo": "ponto_notavel",
+   "nome": "Poste",
+   "terminal": "sem_terminal",
+   "tier": "estrutura"
+  },
+  {
+   "categorias": [
+    "estrutura_de_suporte"
+   ],
+   "chave": "torre",
+   "codigo": 2,
+   "codigos_fonte": [
+    "TOR"
+   ],
+   "descricao": "código TOR de TIP_PN observado na extração",
+   "grupo": "ponto_notavel",
+   "nome": "Torre",
+   "terminal": "sem_terminal",
+   "tier": "estrutura"
+  },
+  {
+   "categorias": [
+    "estrutura_de_suporte"
+   ],
+   "chave": "ponto_notavel_nao_classificado",
+   "codigo": 3,
+   "codigos_fonte": [],
+   "descricao": "os demais códigos de TIP_PN observados (DRV, FLT, PFL, PIS, PMF, PSA, PSB, PSE) ficam aqui até o dicionário da safra ser conferido",
+   "grupo": "ponto_notavel",
+   "nome": "Ponto notável ainda não classificado",
+   "terminal": "sem_terminal",
+   "tier": "estrutura"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "ramal_de_ligacao",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "",
+   "grupo": "ramal_de_ligacao",
+   "nome": "Ramal de ligação",
+   "terminal": "dois_terminais",
+   "tier": "baixa_tensao"
+  },
+  {
+   "categorias": [
+    "controlador"
+   ],
+   "chave": "regulador_de_tensao",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "",
+   "grupo": "regulador_de_tensao",
+   "nome": "Regulador de tensão",
+   "terminal": "dois_terminais",
+   "tier": "media_tensao"
+  },
+  {
+   "categorias": [
+    "fonte"
+   ],
+   "chave": "subestacao_de_distribuicao",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "",
+   "grupo": "subestacao",
+   "nome": "Subestação de distribuição",
+   "terminal": "um_terminal",
+   "tier": "subtransmissao"
+  },
+  {
+   "categorias": [
+    "transformacao"
+   ],
+   "chave": "transformador_de_distribuicao",
+   "codigo": 1,
+   "codigos_fonte": [
+    "T"
+   ],
+   "descricao": "código T de TIP_TRAFO observado na extração",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "Transformador de distribuição",
+   "terminal": "dois_terminais_transformador",
+   "tier": "media_tensao"
+  },
+  {
+   "categorias": [
+    "transformacao"
+   ],
+   "chave": "banco_de_transformadores",
+   "codigo": 2,
+   "codigos_fonte": [
+    "B"
+   ],
+   "descricao": "unidade cujo campo BANC identifica o banco; código B de TIP_TRAFO observado na extração",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "Banco de transformadores",
+   "terminal": "dois_terminais_transformador",
+   "tier": "media_tensao"
+  },
+  {
+   "categorias": [
+    "transformacao"
+   ],
+   "chave": "transformador_nao_classificado",
+   "codigo": 3,
+   "codigos_fonte": [],
+   "descricao": "os demais códigos de TIP_TRAFO observados (DA, DF, M, MT) ficam aqui até o dicionário da safra ser conferido",
+   "grupo": "transformador_de_distribuicao",
+   "nome": "Transformador ainda não classificado",
+   "terminal": "dois_terminais_transformador",
+   "tier": "media_tensao"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "trecho_de_baixa_tensao",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "",
+   "grupo": "trecho_de_baixa_tensao",
+   "nome": "Trecho de baixa tensão",
+   "terminal": "dois_terminais",
+   "tier": "baixa_tensao"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "trecho_de_media_tensao",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "",
+   "grupo": "trecho_de_media_tensao",
+   "nome": "Trecho de média tensão",
+   "terminal": "dois_terminais",
+   "tier": "media_tensao"
+  },
+  {
+   "categorias": [
+    "consumo",
+    "medicao"
+   ],
+   "chave": "consumidor_de_baixa_tensao",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "camada UCBT_tab",
+   "grupo": "unidade_consumidora",
+   "nome": "Consumidor de baixa tensão",
+   "terminal": "um_terminal",
+   "tier": "baixa_tensao"
+  },
+  {
+   "categorias": [
+    "consumo",
+    "medicao"
+   ],
+   "chave": "consumidor_de_media_tensao",
+   "codigo": 2,
+   "codigos_fonte": [],
+   "descricao": "camada UCMT_tab",
+   "grupo": "unidade_consumidora",
+   "nome": "Consumidor de média tensão",
+   "terminal": "um_terminal",
+   "tier": "baixa_tensao"
+  }
+ ]
+}
