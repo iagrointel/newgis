@@ -514,6 +514,7 @@ Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RL
 ## turno 3, setembro de 2026 (itens L3-01-a-modelo-dado e L3-01-b-unidades: motor multicritério — modelo, proveniência e unidade de análise)
 
 Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+Migração `044_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
 editável) e `amc_modelo_versao` (toda versão que já existiu, imutável para a aplicação por gatilho), `amc_conjunto_unidade`
 e `amc_unidade`, `amc_execucao` (proveniência congelada), `amc_fator_bruto` e `amc_resultado` — linhas por (execução,
 unidade, fator), nunca uma coluna por fator. `amc_resultado` tem `CHECK` que impede unidade vetada de carregar número na
@@ -627,6 +628,9 @@ O laudo `laco/handoffs/T3/L3-01-ADVERSARIO.md` refutou o item em cinco frentes; 
 
 Os 12 `xfail(strict=True)` do adversário viraram prova permanente (as marcas saíram; nenhuma asserção foi afrouxada).
 A migração `044_amc.sql` foi renumerada para **`045_amc.sql`**: a árvore principal publicou `044_uploads.sql`.
+45 testes novos (`tests/unit/test_amc_esquema.py`, `tests/unit/test_amc_crs.py`, `tests/api/amc/`), verdes; a varredura
+cruzada do OpenAPI cobre as 18 rotas novas (`tests/api/cruzado_casos.py`). ADR
+`docs/adr/0016-motor-amc-modelo-e-unidades.md`.
 
 ## turno 3, setembro de 2026 (item L0-08-d-ldap: LDAP/Active Directory como provedor de login externo)
 
