@@ -2,12 +2,12 @@
  "item": "L0-03-catalogo",
  "medidas": {
   "pagina_conteudo_ms": {
-   "valor": 234.9,
+   "valor": 231.8,
    "unidade": "ms",
    "comando": "playwright chromium 1280x800 contra a URL interna (tests/e2e/test_conteudo.py)"
   },
   "primeira_pintura_conteudo_ms": {
-   "valor": 24,
+   "valor": 16,
    "unidade": "ms",
    "comando": "playwright chromium 1280x800 contra a URL interna (tests/e2e/test_conteudo.py)"
   },
@@ -17,17 +17,17 @@
    "comando": "playwright chromium 1280x800 contra a URL interna (tests/e2e/test_conteudo.py)"
   },
   "busca_p95_ms": {
-   "valor": 66.2,
+   "valor": 109.0,
    "unidade": "ms",
-   "comando": "GET /api/itens?q=municipio&limite=50, 20 execuções, corpus 10 mil (mediana 60.8)"
+   "comando": "GET /api/itens?q=municipio&limite=50, 20 execuções, corpus 10 mil (mediana 102.6)"
   },
   "lista_tipo_p95_ms": {
-   "valor": 48.6,
+   "valor": 203.0,
    "unidade": "ms",
-   "comando": "GET /api/itens?tipo=mapa&limite=50, 20 execuções, corpus 10 mil (mediana 47.1)"
+   "comando": "GET /api/itens?tipo=mapa&limite=50, 20 execuções, corpus 10 mil (mediana 199.7)"
   },
   "revogacao_nega_ms": {
-   "valor": 15.4,
+   "valor": 15.3,
    "unidade": "ms",
    "comando": "DELETE link + GET /api/compartilhado/<token> → 404"
   },
@@ -42,17 +42,17 @@
    "comando": "POST /api/itens/{id}/miniatura/gerar até job concluido (30 polígonos)"
   },
   "usado_por_medio_ms": {
-   "valor": 11.9,
+   "valor": 11.6,
    "unidade": "ms",
    "comando": "GET /api/itens/{id}/usado-por, média de 20 chamadas HTTP (grafo de 3)"
   },
   "versao_custo_ms": {
-   "valor": 0.361,
+   "valor": 0.347,
    "unidade": "ms",
    "comando": "mediana(UPDATE resumo, com versão) - mediana(UPDATE tamanho_bytes, sem versão), 1.000 pares como plat_app"
   },
   "busca_trgm_p95_ms": {
-   "valor": 133.3,
+   "valor": 171.0,
    "unidade": "ms",
    "comando": "GET /api/itens?q=municpio (trigram de reserva), 10 execuções"
   },
@@ -62,6 +62,6 @@
    "comando": "GET /api/itens/facetas?tipo=mapa, 10 execuções"
   }
  },
- "gerado_em": "2026-09-05T20:51:03Z",
- "git_sha": "4bde64f148df"
+ "gerado_em": "2026-09-06T00:25:07Z",
+ "git_sha": "65a9fc2c0869"
 }
