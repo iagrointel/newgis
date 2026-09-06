@@ -23,9 +23,15 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = papel) THEN
     EXECUTE format('CREATE ROLE %I NOLOGIN', papel);
   END IF;
-  -- nunca dona de tabela, nunca superusuária, nunca com BYPASSRLS: é a cláusula do item
-  EXECUTE format('ALTER ROLE %I NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOINHERIT', papel);
-  EXECUTE format('GRANT USAGE ON SCHEMA plat TO %I', papel);
+  -- nunca dona de tabela, nunca superusuária, nunca com BYPASSRLS: é a cláusula do item. Só altera se
+  -- estiver diferente, pelo mesmo motivo do GRANT abaixo (não reescrever linha de catálogo à toa).
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = papel
+             AND (rolsuper OR rolcreatedb OR rolcreaterole OR rolbypassrls OR rolinherit)) THEN
+    EXECUTE format('ALTER ROLE %I NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOINHERIT', papel);
+  END IF;
+  IF NOT has_schema_privilege(papel, 'plat', 'USAGE') THEN
+    EXECUTE format('GRANT USAGE ON SCHEMA plat TO %I', papel);
+  END IF;
   -- schemas de camada já existentes deste ambiente (novos ganham em plat.camada_schema_garantir).
   -- Só concede o que falta: um GRANT repetido reescreve a linha de pg_namespace e, com outra sessão fazendo
   -- DDL no MESMO schema (d_<slug> é compartilhado nesta máquina), sai `tuple concurrently updated`.
