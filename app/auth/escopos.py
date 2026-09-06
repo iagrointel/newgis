@@ -13,6 +13,11 @@ ESCOPO = re.compile(
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
     "geocodificar:usar", "multiescala:usar", "admin:inquilino",
+    rf"geocodificar:usar|imagens:(ler|escrever)|admin:inquilino)$"
+)
+ESCOPOS_SEM_UUID = (
+    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
+    "geocodificar:usar", "imagens:ler", "imagens:escrever", "admin:inquilino",
 )
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
@@ -25,6 +30,10 @@ DESCRICAO = {
     "sem PII); mesmo escopo cobre o GeocodeServer compatível Esri",
     "multiescala:usar": "criar área de estudo, fator e amostra, e rodar execução macro/micro do motor "
     "multicritério em grades aninhadas (L3-19-multiescala; dado e execução do próprio inquilino)",
+    "imagens:ler": "buscar e ler coleções/itens STAC do catálogo de imagens do dono (L1-01-a), via "
+    "/svc/<token>/stac/; nunca vê coleção de outro inquilino",
+    "imagens:escrever": "criar coleção e item STAC no catálogo de imagens do dono (L1-01-a); quem tem este "
+    "escopo também lê (checado em app/imagens/rotas_stac.py, não em escopos.cobre)",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 

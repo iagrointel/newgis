@@ -222,3 +222,15 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+# --- imagens/STAC (L1-01-a-pgstac-e-stac-api-por-inquilino; app/imagens/): catálogo é o pgstac (schema
+# `pgstac`, global ao banco), isolado por inquilino por convenção de nome de coleção `<tenant_id>-<slug>`,
+# nunca por RLS do pgstac (ele não tem). STAC_SLUG_MAX é o que sobra de 63 bytes (limite de identificador do
+# Postgres, embora `id` do pgstac seja `text` livre — o teto aqui é POLÍTICA, não do banco) depois do prefixo
+# `<tenant_id>-`: numa instalação com tenant_id de até 6 dígitos, 58 caracteres de slug cabem com folga no
+# CHECK de plat.raster_item.colecao.
+STAC_SLUG_MAX = 58
+STAC_ITEM_ID_MAX = 256
+STAC_PAGINA_PADRAO = 10      # `limit` padrão da busca (mesmo padrão da spec STAC API Item Search)
+STAC_PAGINA_MAX = 1000       # `limit` máximo aceito por pedido (pgstac pagina por token, não por offset)
+STAC_COLECOES_POR_INQUILINO = 500
+STAC_LOTE_ITENS_MAX = 10_000  # POST .../items:lote (semeadura de teste/ingestão em massa; ADR do item L1-01-h)
