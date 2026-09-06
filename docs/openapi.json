@@ -2651,6 +2651,134 @@
     "x-privilegio": "superadmin"
    }
   },
+  "/api/org": {
+   "get": {
+    "tags": [
+     "org"
+    ],
+    "summary": "Org Ler",
+    "operationId": "org_ler_api_org_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OrgSaida"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.configurar"
+   },
+   "put": {
+    "tags": [
+     "org"
+    ],
+    "summary": "Org Gravar",
+    "operationId": "org_gravar_api_org_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OrgEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OrgSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.configurar"
+   }
+  },
+  "/api/org/logo": {
+   "post": {
+    "tags": [
+     "org"
+    ],
+    "summary": "Org Logo Enviar",
+    "operationId": "org_logo_enviar_api_org_logo_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OrgLogoEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OrgLogoSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.configurar"
+   },
+   "delete": {
+    "tags": [
+     "org"
+    ],
+    "summary": "Org Logo Remover",
+    "operationId": "org_logo_remover_api_org_logo_delete",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OrgLogoSaida"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.configurar"
+   }
+  },
   "/api/login/ldap": {
    "post": {
     "tags": [
@@ -8134,6 +8262,23 @@
       }
      }
     ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/AcervoAdicionarEntrada"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Corpo"
+       }
+      }
+     }
+    },
     "responses": {
      "201": {
       "description": "Successful Response",
@@ -8425,6 +8570,116 @@
     },
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/conexoes/{id}/saude-historico": {
+   "get": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Saude Historico",
+    "description": "Últimos testes de saúde da conexão (item L6-02-l-saude), mais recente primeiro; `limite` (padrão 10, teto\n30 — o mesmo teto de guarda de `plat.conexao_saude_historico`) evita que a tela peça mais do que existe.",
+    "operationId": "saude_historico_api_conexoes__id__saude_historico_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 10,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SaudeHistoricoPagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/conexoes/{id}/publicar": {
+   "post": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Publicar Camada",
+    "description": "Cria um item de catálogo (tipo `conexao`, `dados.parametros.conexao_id` apontando para esta linha) com a\nficha de procedência preenchida do que o SERVIÇO EXTERNO declara agora (item L6-05-proveniencia-camada-\nexterna) — nunca um valor padrão; campo que o serviço não declara fica `None` (a tela mostra \"não\nregistrado\"). `creditos` do item recebe a atribuição lida (o mais perto de \"legenda\" que existe hoje: o\nL6-02-b, que desenha a camada no mapa de verdade, ainda não foi construído).",
+    "operationId": "publicar_camada_api_conexoes__id__publicar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PublicarCamadaEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.registrar_fonte"
    }
   },
   "/api/arquivos/_varredura": {
@@ -8979,6 +9234,19 @@
  },
  "components": {
   "schemas": {
+   "AcervoAdicionarEntrada": {
+    "properties": {
+     "confirma_risco_pii": {
+      "type": "boolean",
+      "title": "Confirma Risco Pii",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "AcervoAdicionarEntrada",
+    "description": "Corpo opcional de POST /api/acervo/{fonte_id}/adicionar (item L6-01-f-lgpd). Fonte marcada em\n`plat.acervo_lgpd.risco_pii` exige `confirma_risco_pii=true` explícito; sem isso a rota recusa com 409\nantes de criar qualquer item. Default false: nunca se confirma sozinho."
+   },
    "AcervoCartao": {
     "properties": {
      "fonte_id": {
@@ -9048,6 +9316,22 @@
        }
       ],
       "title": "Proxima Verificacao"
+     },
+     "risco_pii": {
+      "type": "boolean",
+      "title": "Risco Pii",
+      "default": false
+     },
+     "risco_pii_motivo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Risco Pii Motivo"
      }
     },
     "additionalProperties": true,
@@ -9061,6 +9345,102 @@
      "registros_estimados"
     ],
     "title": "AcervoCartao"
+   },
+   "AcervoEndpoint": {
+    "properties": {
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "origem": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Origem"
+     },
+     "http": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Http"
+     },
+     "content_type": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Content Type"
+     },
+     "bytes": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bytes"
+     },
+     "ms": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ms"
+     },
+     "testado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Testado Em"
+     },
+     "confirmado": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Confirmado"
+     },
+     "vivo": {
+      "type": "boolean",
+      "title": "Vivo"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "url",
+     "vivo"
+    ],
+    "title": "AcervoEndpoint"
    },
    "AcervoFicha": {
     "properties": {
@@ -9131,6 +9511,22 @@
        }
       ],
       "title": "Proxima Verificacao"
+     },
+     "risco_pii": {
+      "type": "boolean",
+      "title": "Risco Pii",
+      "default": false
+     },
+     "risco_pii_motivo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Risco Pii Motivo"
      },
      "url": {
       "anyOf": [
@@ -9296,6 +9692,35 @@
        }
       ],
       "title": "Atualizado Em"
+     },
+     "endpoints": {
+      "items": {
+       "$ref": "#/components/schemas/AcervoEndpoint"
+      },
+      "type": "array",
+      "title": "Endpoints",
+      "default": []
+     },
+     "endpoints_total": {
+      "type": "integer",
+      "title": "Endpoints Total",
+      "default": 0
+     },
+     "endpoints_confirmados_vivos": {
+      "type": "integer",
+      "title": "Endpoints Confirmados Vivos",
+      "default": 0
+     },
+     "completude_texto": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Completude Texto"
      }
     },
     "additionalProperties": true,
@@ -9766,6 +10191,27 @@
       ],
       "title": "Saude Verificada Em"
      },
+     "estado_saude": {
+      "type": "string",
+      "title": "Estado Saude",
+      "default": "nunca_testada"
+     },
+     "disponibilidade_30d_pct": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Disponibilidade 30D Pct"
+     },
+     "disponibilidade_30d_total": {
+      "type": "integer",
+      "title": "Disponibilidade 30D Total",
+      "default": 0
+     },
      "config": {
       "additionalProperties": true,
       "type": "object",
@@ -9862,6 +10308,27 @@
        }
       ],
       "title": "Saude Verificada Em"
+     },
+     "estado_saude": {
+      "type": "string",
+      "title": "Estado Saude",
+      "default": "nunca_testada"
+     },
+     "disponibilidade_30d_pct": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Disponibilidade 30D Pct"
+     },
+     "disponibilidade_30d_total": {
+      "type": "integer",
+      "title": "Disponibilidade 30D Total",
+      "default": 0
      }
     },
     "additionalProperties": true,
@@ -12195,6 +12662,224 @@
     ],
     "title": "OrdemExclusao"
    },
+   "OrgEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 55,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "cor": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$",
+      "title": "Cor",
+      "default": "#2463a8"
+     },
+     "idioma_padrao": {
+      "type": "string",
+      "maxLength": 10,
+      "title": "Idioma Padrao",
+      "default": "pt-BR"
+     },
+     "centro": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array",
+        "maxItems": 2,
+        "minItems": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Centro"
+     },
+     "zoom": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 24.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Zoom"
+     },
+     "basemap": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Basemap"
+     },
+     "srid_padrao": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 999999.0,
+        "minimum": 1024.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Srid Padrao"
+     },
+     "cota_bytes": {
+      "type": "integer",
+      "minimum": 104857600.0,
+      "title": "Cota Bytes"
+     },
+     "cota_usuarios": {
+      "type": "integer",
+      "minimum": 1.0,
+      "title": "Cota Usuarios"
+     },
+     "auth": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Auth"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "cota_bytes",
+     "cota_usuarios"
+    ],
+    "title": "OrgEntrada"
+   },
+   "OrgLogoEntrada": {
+    "properties": {
+     "conteudo": {
+      "type": "string",
+      "maxLength": 1398117,
+      "minLength": 1,
+      "title": "Conteudo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "conteudo"
+    ],
+    "title": "OrgLogoEntrada"
+   },
+   "OrgLogoSaida": {
+    "properties": {
+     "logo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo"
+     },
+     "url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Url"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "logo",
+     "url"
+    ],
+    "title": "OrgLogoSaida"
+   },
+   "OrgSaida": {
+    "properties": {
+     "slug": {
+      "type": "string",
+      "title": "Slug"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "ativo": {
+      "type": "boolean",
+      "title": "Ativo"
+     },
+     "cor": {
+      "type": "string",
+      "title": "Cor"
+     },
+     "logo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo"
+     },
+     "idioma_padrao": {
+      "type": "string",
+      "title": "Idioma Padrao"
+     },
+     "mapa": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Mapa"
+     },
+     "armazenamento": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Armazenamento"
+     },
+     "usuarios": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Usuarios"
+     },
+     "auth": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Auth"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "slug",
+     "nome",
+     "ativo",
+     "cor",
+     "logo",
+     "idioma_padrao",
+     "mapa",
+     "armazenamento",
+     "usuarios",
+     "auth"
+    ],
+    "title": "OrgSaida"
+   },
    "Papeis": {
     "properties": {
      "perfis": {
@@ -12910,6 +13595,26 @@
     ],
     "title": "Provedores"
    },
+   "PublicarCamadaEntrada": {
+    "properties": {
+     "titulo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 250,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Titulo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "PublicarCamadaEntrada"
+   },
    "RelacaoEntrada": {
     "properties": {
      "destino": {
@@ -13012,6 +13717,75 @@
      "cancelado_24h"
     ],
     "title": "Resumo"
+   },
+   "SaudeHistoricoItem": {
+    "properties": {
+     "verificada_em": {
+      "type": "string",
+      "title": "Verificada Em"
+     },
+     "ok": {
+      "type": "boolean",
+      "title": "Ok"
+     },
+     "status": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Status"
+     },
+     "mensagem": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mensagem"
+     },
+     "latencia_ms": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latencia Ms"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "verificada_em",
+     "ok"
+    ],
+    "title": "SaudeHistoricoItem"
+   },
+   "SaudeHistoricoPagina": {
+    "properties": {
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/SaudeHistoricoItem"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "itens"
+    ],
+    "title": "SaudeHistoricoPagina"
    },
    "SenhaCodigoEntrada": {
     "properties": {

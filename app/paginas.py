@@ -19,6 +19,8 @@ PAGINAS = {
     "/admin/papeis": "admin/papeis.html",
     "/admin/tokens": "admin/tokens.html",
     "/admin/log": "admin/log.html",
+    # --- configurações da organização (L0-07-a-configuracoes-org)
+    "/admin/organizacao": "admin/organizacao.html",
     # --- catálogo (L0-03)
     "/conteudo": "conteudo.html",
     "/conteudo/lixeira": "conteudo_lixeira.html",
@@ -26,6 +28,8 @@ PAGINAS = {
     "/c/{token}": "compartilhado.html",
     # --- mapa (L2-01-a)
     "/mapa": "mapa.html",
+    # --- conexões externas (L6-02-a/L6-02-l/L6-05)
+    "/conexoes": "conexoes.html",
 }
 router = APIRouter()
 

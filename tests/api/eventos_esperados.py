@@ -100,4 +100,8 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/login/ldap"): ["usuarios/criar", "usuarios/atualizar", "usuarios/entrar"],
     ("PUT", "/api/org/ldap"): ["org/ldap_configurar"],
     ("POST", "/api/org/ldap/importar"): ["org/ldap_importar"],
+    # ---- configurações da organização (L0-07-a-configuracoes-org)
+    ("PUT", "/api/org"): ["org/configurar"],
+    ("POST", "/api/org/logo"): ["org/logo_enviar"],
+    ("DELETE", "/api/org/logo"): ["org/logo_remover"],
 }

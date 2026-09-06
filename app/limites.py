@@ -141,3 +141,19 @@ CARGA_TIMEOUT_S = 3600
 CARGA_FATOR_COTA = 3                      # estimativa = bytes do arquivo × 3 (MEDIDO: shapefile 14 MB -> tabela 45 MB)
 INGESTAO_CAMPOS_MAX = 500                 # mesmo teto do JSON Schema de camada_vetorial (ADR 0004/0005)
 INGESTAO_FIDS_RELATORIO_MAX = 1000        # fids corrigidos listados no relatório de ST_MakeValid
+
+# --- configurações da organização (L0-07-a-configuracoes-org; GET/PUT /api/org): nome, identidade visual
+# (logotipo reaproveitando o adaptador genérico de arquivo do L0-11, classe 'org_logo'), mapa padrão, idioma
+# padrão, cotas de armazenamento/usuários e a política de senha/2FA já lida de tenant.config.auth (app/auth/
+# politica.py, L0-02) — esta tela só EXPÕE aquele esquema, nunca recria um novo.
+ORG_NOME_MAX = 55                         # mesmo teto do "Organization name" da Esri (portão do item-pai L0-07-a)
+ORG_COR_PADRAO = "#2463a8"                # mesmo azul de app/catalogo/miniatura.py TRACO, cor de marca padrão
+ORG_IDIOMAS = ("pt-BR",)                  # só o que existe em web/js/i18n/; L7-10 acrescenta idioma novo aqui
+ORG_ZOOM_MAX = 24                         # teto de zoom de um webmap (padrão MapLibre/Leaflet)
+ORG_BASEMAP_MAX = 100
+ORG_LOGO_BYTES_MAX = 1 * 1024 * 1024      # 1 MiB (portão do item-pai: "logo > 1 MB recusado")
+ORG_LOGO_PIXELS_MAX = 25_000_000          # mesma defesa de bomba de descompressão de app/catalogo/miniatura.py
+ORG_LOGO_LADO = 300                       # canvas quadrado 300×300 (portão do item-pai)
+ORG_COTA_BYTES_MIN = 100 * 1024 * 1024    # 100 MiB: abaixo disso o próprio inquilino de demonstração não sobe
+ORG_COTA_USUARIOS_MIN = 1
+ORG_COTA_USUARIOS_PADRAO = 2000           # bem acima do maior lote (LOTE_MAX=100) e do uso medido em demo (T3: 59)

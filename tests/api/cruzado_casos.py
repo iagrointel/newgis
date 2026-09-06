@@ -189,6 +189,22 @@ def _apagar_arquivo(p: Preparacao, j: Any) -> None:
         assert r.status_code in (204, 404), r.text
 
 
+# ---- L0-07-a-configuracoes-org
+_PNG_1X1_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+
+
+def _corpo_org_atual(p: Preparacao) -> dict:
+    """PUT /api/org é full-replace (mesmo contrato do PUT /api/org/ldap): eco do último GET de A, sem
+    mudar nada — a varredura cruzada só precisa provar que a rota não enxerga nem altera B."""
+    org = p.sessao_a.get("/api/org").json()
+    return {
+        "nome": org["nome"], "cor": org["cor"], "idioma_padrao": org["idioma_padrao"],
+        "centro": org["mapa"]["centro"], "zoom": org["mapa"]["zoom"], "basemap": org["mapa"]["basemap"],
+        "srid_padrao": org["mapa"]["srid_padrao"], "cota_bytes": org["armazenamento"]["cota_bytes"],
+        "cota_usuarios": org["usuarios"]["cota"], "auth": dict(org["auth"]),
+    }
+
+
 JOB_PENDENTE = {"tipo": "prova.progresso", "parametros": {"duracao_s": 0, "passos": 1},
                 "agendado_para": "2099-01-01T00:00:00Z"}  # fica pendente: nunca ocupa o worker
 AGENDA_BASE = {"tipo": "prova.progresso", "parametros": {"duracao_s": 0, "passos": 1}, "cron": "0 3 1 1 *"}
@@ -599,6 +615,23 @@ CASOS: dict[tuple[str, str], Caso] = {
         # se por acaso ficou habilitado apontando para um glauth de teste já derrubado → 503; nunca um 2xx
         # aqui (não há credencial de bind válida contra nenhum diretório real neste teste)
         proprio=True, aceita=frozenset({409, 503}),
+    ),
+    # ---- configurações da organização (L0-07-a-configuracoes-org): igual ao /api/org/ldap acima, a rota
+    # nunca recebe id de inquilino na URL — age só sobre `plat.tenant_atual()` (proprio). O corpo do PUT
+    # ecoa exatamente o que o próprio GET de A acabou de devolver (full-replace sem mudar nada de verdade),
+    # então não precisa de `limpar`; o logotipo enviado É apagado no fim (1×1 PNG, não é dado de B).
+    ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
+    ("PUT", "/api/org"): Caso(
+        lambda p: "/api/org", _corpo_org_atual, proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/api/org/logo"): Caso(
+        lambda p: "/api/org/logo",
+        lambda p: {"conteudo": _PNG_1X1_B64},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+        limpar=lambda p, j: p.sessao_a.delete("/api/org/logo"),
+    ),
+    ("DELETE", "/api/org/logo"): Caso(
+        lambda p: "/api/org/logo", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
 }
 

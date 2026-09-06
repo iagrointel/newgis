@@ -10,6 +10,7 @@ export const TELAS = [
   { caminho: '/', chave: 'nav.inicio' },
   { caminho: '/conteudo', chave: 'nav.conteudo' },
   { caminho: '/mapa', chave: 'nav.mapa' },
+  { caminho: '/conexoes', chave: 'nav.conexoes' },
   { caminho: '/conta', chave: 'nav.conta' },
   { caminho: '/admin/usuarios', chave: 'nav.usuarios', privilegio: 'membros.ver' },
   { caminho: '/admin/grupos', chave: 'nav.grupos' },
@@ -17,6 +18,7 @@ export const TELAS = [
   { caminho: '/admin/papeis', chave: 'nav.papeis', privilegio: 'papeis.gerir' },
   { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar' },
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver' },
+  { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
 ];
 
 export function telasVisiveis(usuario) {

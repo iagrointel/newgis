@@ -15,7 +15,16 @@ from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
-from app.auth import rotas_eu, rotas_grupos, rotas_log, rotas_login, rotas_plataforma, rotas_tokens, rotas_usuarios
+from app.auth import (
+    rotas_eu,
+    rotas_grupos,
+    rotas_log,
+    rotas_login,
+    rotas_org,
+    rotas_plataforma,
+    rotas_tokens,
+    rotas_usuarios,
+)
 from app.catalogo import (
     rotas_categorias,
     rotas_compartilhamento,
@@ -62,6 +71,8 @@ ROUTERS = [
     rotas_tokens.router,
     rotas_log.router,
     rotas_plataforma.router,
+    # --- configurações da organização (L0-07-a-configuracoes-org): GET/PUT /api/org; POST/DELETE /api/org/logo
+    rotas_org.router,
     # --- LDAP/Active Directory (L0-08-d): POST /api/login/ldap; GET/PUT /api/org/ldap; POST /api/org/ldap/importar
     rotas_ldap.router,
     # --- fila de jobs (L0-05): /api/jobs, /api/agendas, /tarefas

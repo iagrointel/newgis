@@ -364,6 +364,20 @@ def criar_usuario(corpo: UsuarioCriar, request: Request, auth: Auth = autenticad
     temporaria = _senha_temporaria()
     try:
         with db.db(auth.contexto()) as cur:
+            # cota de usuários do inquilino (item L0-07-a-configuracoes-org, tenant.config.cota_usuarios): checagem
+            # simples, não atômica sob concorrência — a reserva à prova de corrida (SELECT ... FOR UPDATE, mesmo
+            # padrão que o item de cota de armazenamento/uso exige) é responsabilidade do item L0-07-c-cotas-uso,
+            # que cobre TODAS as cotas do inquilino junto; aqui a cota só deixa de ser um campo sem efeito.
+            cur.execute(
+                "SELECT plat.cota_usuarios(%s) AS cota, plat.usuarios_ativos(%s) AS ativos",
+                (auth.tenant_id, auth.tenant_id),
+            )
+            cota = cur.fetchone()
+            if cota["ativos"] >= cota["cota"]:
+                raise ErroAPI(
+                    413, "cota_usuarios", f"cota de usuários do inquilino esgotada ({cota['cota']})",
+                    {"cota": cota["cota"]},
+                )
             _papel_compativel(cur, corpo.papel_id, corpo.perfil)
             cur.execute(
                 """

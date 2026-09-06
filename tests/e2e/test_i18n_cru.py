@@ -14,7 +14,10 @@ from tests.e2e.apoio import RAIZ, Tela, sufixo
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
 CHAVE = re.compile(r"^[a-z0-9]+\.[a-z0-9_.]+$")
-TELAS = ["/", "/conta", "/admin/usuarios", "/admin/grupos", "/admin/papeis", "/admin/tokens", "/admin/log"]
+TELAS = [
+    "/", "/conta", "/admin/usuarios", "/admin/grupos", "/admin/papeis", "/admin/tokens", "/admin/log",
+    "/admin/organizacao",
+]
 
 
 def _dicionario() -> dict:

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Organização · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="tela">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="org.titulo">Organização</h1>
+    <plat-aviso id="aviso"></plat-aviso>
+    <section class="cartao" id="identidade" aria-labelledby="t-identidade">
+      <h2 id="t-identidade" data-i18n="org.identidade">Identidade</h2>
+      <plat-formulario id="form-identidade"></plat-formulario>
+    </section>
+    <section class="cartao" id="logotipo" aria-labelledby="t-logotipo">
+      <h2 id="t-logotipo" data-i18n="org.logo">Logotipo</h2>
+      <p class="fraco" data-i18n="org.logo_ajuda">PNG, JPEG, GIF ou WEBP, até 1 MB; a imagem é ajustada a um quadro de 300×300</p>
+      <div class="botoes">
+        <img id="logo-preview" alt="" width="96" height="96" hidden>
+        <span id="logo-vazio" class="fraco" data-i18n="org.logo_sem">sem logotipo</span>
+        <label class="botao pequeno" for="logo-arquivo"><span data-i18n="org.logo_enviar">Enviar</span>
+          <input type="file" id="logo-arquivo" accept="image/png,image/jpeg,image/gif,image/webp" hidden></label>
+        <button type="button" id="logo-remover" class="pequeno perigo" data-i18n="org.logo_remover">Remover</button>
+      </div>
+    </section>
+    <section class="cartao" id="mapa" aria-labelledby="t-mapa">
+      <h2 id="t-mapa" data-i18n="org.mapa">Mapa padrão</h2>
+      <p class="fraco" data-i18n="org.mapa_ajuda">centro, zoom e mapa-base com que um mapa novo abre neste inquilino</p>
+      <plat-formulario id="form-mapa"></plat-formulario>
+    </section>
+    <section class="cartao" id="cotas" aria-labelledby="t-armazenamento">
+      <h2 id="t-armazenamento" data-i18n="org.armazenamento">Armazenamento</h2>
+      <plat-formulario id="form-armazenamento"></plat-formulario>
+    </section>
+    <section class="cartao" id="usuarios" aria-labelledby="t-usuarios">
+      <h2 id="t-usuarios" data-i18n="org.usuarios">Usuários</h2>
+      <plat-formulario id="form-usuarios"></plat-formulario>
+    </section>
+    <section class="cartao" id="seguranca" aria-labelledby="t-seguranca">
+      <h2 id="t-seguranca" data-i18n="org.seguranca">Senha e segundo fator</h2>
+      <p class="fraco" data-i18n="org.seguranca_ajuda">a mesma política que /conta já mostra a cada membro ao trocar a senha (tenant.config.auth)</p>
+      <plat-formulario id="form-seguranca"></plat-formulario>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/auth/organizacao.js"></script>
+</body>
+</html>
