@@ -265,6 +265,20 @@ entrega só o MODELO + a segurança; os 15 conectores concretos são itens futur
 | credencial nunca sai na resposta nem no log | Portal não expõe a credencial de volta pela API | nenhuma rota faz `SELECT credencial_cifrada` para responder; `_json()` nunca inclui a coluna; testado com `caplog` | feito | `test_credencial_nunca_aparece_na_resposta_nem_no_log` | 2026-09-06 | pendente (D20) |
 | 15 conectores concretos (WMS, WFS, WMTS, OGC API, ArcGIS REST, STAC, GeoParquet, PMTiles, bancos externos) | cada um documentado por protocolo (Map Viewer, GeoServer cascade, Data Pipelines) | fora — itens futuros L6-02-b em diante, cada um valida `config` por JSON Schema próprio | fora | — | 2026-09-06 | pendente (D20) |
 
+## Arquivo por URL pública (item L6-02-h-csv-url-geojson-kml)
+
+Referência Esri: Map Viewer 11.4 "Add layers from files or URLs" aceita CSV, KML, GeoRSS e GeoJSON por
+endereço web (`add-layers-mv.htm`, a mesma página citada na seção anterior); no Portal, "Add item from URL"
+oferece a caixa "Update the item automatically" com a periodicidade da atualização.
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| arquivo por URL vira camada | CSV/KML/GeoRSS/GeoJSON pela web (Map Viewer 11.4) | 6 formatos: CSV, GeoJSON, KML, KMZ, GeoRSS, GPX. Formato pelos BYTES; KML/KMZ/GeoRSS/GPX convertidos para GeoJSON por `ogr2ogr` e carregados pelo pipeline do L0-04 (tabela PostGIS + item `camada_vetorial` + RLS) | feito | `tests/api/conexao/test_arquivo_url.py::test_formato_por_url_publica_vira_camada` (6 casos, contra servidor no IP público desta máquina, worker de verdade) | 2026-09-06 | pendente (D20) |
+| atualização agendada que não recarrega o inalterado | "Update the item automatically" (Portal) | `If-None-Match`/`If-Modified-Since` a partir do ETag/Last-Modified guardados; `304` não recarrega; `200` com o mesmo corpo também não (sha256). Contadores `sincronizacoes` x `recargas` separam conferir de recarregar. Periódico `conexoes.arquivo_sincronizar_vencidas` a cada 15 min, intervalo por conexão (mín. 15 min, padrão 1 dia) | feito | `test_atualizacao_agendada_com_etag_nao_recarrega_arquivo_inalterado`, `test_servidor_que_ignora_o_condicional_tambem_nao_recarrega` | 2026-09-06 | pendente (D20) |
+| CSV com vírgula decimal e ponto-e-vírgula | Esri documenta CSV com "comma, semicolon, or tab" delimitado | reaproveita `app/ingestao/csv_normalizar.py` do L0-04 (separador, vírgula decimal, BOM, coluna de coordenada por nome) | feito | `test_csv_com_virgula_decimal_e_ponto_e_virgula_reconhecido` e o caso `csv` do teste ponta a ponta | 2026-09-06 | pendente (D20) |
+| endereço interno recusado (também por DNS e por redirecionamento) | não se aplica | mesma defesa do L6-02-a, sem exceção neste caminho; provado com IP literal, com nome público que resolve para faixa interna (`localtest.me`, `10.0.0.1.nip.io`) e com redirecionamento de host público para `169.254.169.254` | feito | `test_endereco_interno_recusado_na_entrada`, `test_nome_que_resolve_para_a_rede_local_e_recusado`, `test_redirecionamento_para_endereco_interno_falha_o_job` | 2026-09-06 | pendente (D20) |
+| endereço → geocodificação (CSV sem lat/lon) | Map Viewer geocodifica endereço de CSV | fora desta passagem: depende do L2-11 (geocodificador) estar ligado ao fluxo de ingestão; hoje CSV sem coordenada vira tabela sem geometria | fora | — | 2026-09-06 | pendente (D20) |
+
 ## Ingestão vetorial (item L0-04-ingest-vetor, núcleo T3; ADR 0005) — reduzido a 4 formatos nesta passagem
 
 Referência Esri: "Publish hosted feature layers" e "CSV, TXT, and GPX files" (Enterprise 11.4, citadas pelo

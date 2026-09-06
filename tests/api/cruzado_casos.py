@@ -476,6 +476,16 @@ CASOS: dict[tuple[str, str], Caso] = {
     # quando o alvo é de B (a rota lê a conexão pelo RLS de _carregar ANTES de qualquer efeito colateral).
     ("GET", "/api/conexoes/{id}/saude-historico"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/saude-historico"),
     ("POST", "/api/conexoes/{id}/publicar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar"),
+    # L6-02-h: arquivo por URL. A conexão de B é `ogc_api`/`referenciada`, então mesmo dentro do inquilino
+    # dono estas rotas recusariam; para A o 404 vem antes disso, no _carregar (RLS), e nenhuma linha de
+    # plat.conexao_arquivo nasce em A.
+    ("PUT", "/api/conexoes/{id}/arquivo"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/arquivo", lambda p: {"agendado": False}
+    ),
+    ("GET", "/api/conexoes/{id}/arquivo"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/arquivo"),
+    ("POST", "/api/conexoes/{id}/arquivo/sincronizar"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/arquivo/sincronizar"
+    ),
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,
