@@ -229,6 +229,7 @@ def buscar_seguro(
     max_bytes: int = limites.CONEXAO_RESPOSTA_MAX_BYTES,
     cabecalhos: dict[str, str] | None = None,
     guardar_corpo: bool = False,
+    conteudo: bytes | None = None,
 ) -> ResultadoBusca:
     """GET/HEAD seguro contra SSRF, com corpo limitado e redirecionamento revalidado hop a hop. Nunca levanta
     `ErroURLInsegura` para fora: qualquer recusa de validação vira `ResultadoBusca(ok=False, status=None, ...)`
@@ -237,7 +238,12 @@ def buscar_seguro(
     `guardar_corpo=True` (item L6-05-proveniencia-camada-externa: ler o que o serviço declara — GetCapabilities,
     `f=json`, catálogo STAC) acumula os bytes lidos (até `max_bytes`, o mesmo teto do teste de saúde) em
     `ResultadoBusca.corpo`; por padrão fica `b""` (o teste de saúde de L6-02-a nunca precisou do corpo, só do
-    status)."""
+    status).
+
+    `conteudo` (item L6-02-i-google-sheets: POST de troca de token OAuth2) é o corpo da REQUISIÇÃO. Com corpo,
+    redirecionamento NUNCA é seguido: reenviar um POST com assertion assinada para um `Location` escolhido pelo
+    servidor seria entregar a credencial a outro dono — o 3xx volta para quem chamou decidir (a troca de token
+    do Google responde 200 direto; qualquer redirect ali já é anomalia)."""
     import time
 
     inicio = time.monotonic()
@@ -253,7 +259,7 @@ def buscar_seguro(
             )
         with cliente_pinado(validada, timeout_conectar=timeout_conectar, timeout_ler=timeout_ler) as cliente:
             try:
-                with cliente.stream(metodo, alvo, headers=cabecalhos_do_salto) as r:
+                with cliente.stream(metodo, alvo, headers=cabecalhos_do_salto, content=conteudo) as r:
                     lido = 0
                     pedacos: list[bytes] = []
                     for pedaco in r.iter_bytes():
@@ -277,7 +283,7 @@ def buscar_seguro(
                     ok=False, status=None, mensagem=f"erro_de_conexao:{type(e).__name__}", url_final=alvo,
                     latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
                 )
-        if status in (301, 302, 303, 307, 308):
+        if status in (301, 302, 303, 307, 308) and conteudo is None:
             local = r.headers.get("location")
             if not local:
                 return ResultadoBusca(

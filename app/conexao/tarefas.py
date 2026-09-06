@@ -12,7 +12,7 @@ import datetime
 from pydantic import BaseModel, Field
 
 from app.conexao import credencial as credencial_mod
-from app.conexao import seguranca
+from app.conexao import google_sheets, seguranca
 from app.jobs.registro import tarefa
 from app.limites import CONEXAO_CONECTAR_TIMEOUT_S, CONEXAO_LER_TIMEOUT_S
 from app.settings import settings
@@ -39,16 +39,28 @@ def conexoes_saude_verificar(ctx, limite: int = LIMITE_POR_EXECUCAO) -> dict:
     for i, c in enumerate(candidatas):
         ctx.verificar()  # cancelamento cooperativo entre uma conexão e outra (o job pode ser longo)
         cabecalhos = None
+        falha_credencial = None
         if c["credencial_cifrada"]:
             try:
-                token = credencial_mod.decifrar(c["credencial_cifrada"], settings.PLAT_SECRET)
-                cabecalhos = {"Authorization": f"Bearer {token}"}
+                em_claro = credencial_mod.decifrar(c["credencial_cifrada"], settings.PLAT_SECRET)
             except ValueError:
-                cabecalhos = None  # PLAT_SECRET trocado ou dado corrompido: testa sem credencial, nunca quebra o job
-        resultado = seguranca.buscar_seguro(
-            c["url"], metodo="GET", timeout_conectar=CONEXAO_CONECTAR_TIMEOUT_S, timeout_ler=CONEXAO_LER_TIMEOUT_S,
-            cabecalhos=cabecalhos,
-        )
+                em_claro = None  # PLAT_SECRET trocado ou dado corrompido: testa sem credencial, nunca quebra o job
+            try:
+                # google_sheets (item L6-02-i): troca o JSON da conta de serviço por access token; conta
+                # revogada no Google vira saúde "erro" com a mensagem em português, nunca exceção no job
+                cabecalhos = google_sheets.cabecalhos_auth(c["tipo"], em_claro)
+            except google_sheets.ErroGoogleSheets as e:
+                falha_credencial = e.detalhe
+        if falha_credencial is not None:
+            resultado = seguranca.ResultadoBusca(
+                ok=False, status=None, mensagem=falha_credencial, url_final=c["url"],
+                latencia_ms=0, saltos=0,
+            )
+        else:
+            resultado = seguranca.buscar_seguro(
+                c["url"], metodo="GET", timeout_conectar=CONEXAO_CONECTAR_TIMEOUT_S, timeout_ler=CONEXAO_LER_TIMEOUT_S,
+                cabecalhos=cabecalhos,
+            )
         if resultado.ok:
             ok += 1
         else:

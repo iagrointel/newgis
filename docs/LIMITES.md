@@ -139,7 +139,7 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 
 | nome | valor | explicação |
 |---|---|---|
-| `CONEXAO_TIPOS` | `('wms', 'wmts', 'wfs', 'ogc_api', 'esri_rest', 'stac', 'geoparquet', 'pmtiles', 'postgres_fdw', 's3', 'http')` | — |
+| `CONEXAO_TIPOS` | `('wms', 'wmts', 'wfs', 'ogc_api', 'esri_rest', 'stac', 'geoparquet', 'pmtiles', 'postgres_fdw', 's3', 'http', 'google_sheets')` | — |
 | `CONEXAO_MODOS` | `('referenciada', 'copiada')` | — |
 | `CONEXAO_NOME_MAX` | `200` | — |
 | `CONEXAO_URL_MAX` | `2048` | — |

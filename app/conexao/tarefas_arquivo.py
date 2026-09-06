@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 from app import limites, objetos
 from app.conexao import arquivo_url
 from app.conexao import credencial as credencial_mod
+from app.conexao import google_sheets
 from app.ingestao.carregar import ingestao_carregar
 from app.ingestao.inspecionar import ingestao_inspecionar
 from app.jobs.registro import FalhaDefinitiva, tarefa
@@ -119,16 +120,29 @@ def conexoes_arquivo_sincronizar(ctx, conexao_id: uuid.UUID) -> dict:
             "a conexão não está configurada como arquivo por URL (POST /api/conexoes/{id}/arquivo antes)"
         )
 
-    token = None
-    if conexao["credencial_cifrada"]:
+    # autenticação por tipo (item L6-02-i): google_sheets troca o JSON da conta de serviço por access token
+    # em cabecalhos_auth; os demais usam a credencial como Bearer direto (comportamento do L6-02-h). Conta do
+    # Google revogada/desativada = passagem registrada como 'falhou' — a camada NUNCA mostra dado velho como
+    # se fosse novo (é exatamente o que a refutação do item mede).
+    cabecalhos = None
+    if conexao["tipo"] == "google_sheets":
+        try:
+            em_claro = credencial_mod.decifrar(conexao["credencial_cifrada"], settings.PLAT_SECRET) \
+                if conexao["credencial_cifrada"] else None
+            cabecalhos = google_sheets.cabecalhos_auth("google_sheets", em_claro)
+        except google_sheets.ErroGoogleSheets as e:
+            _registrar(ctx, cid, "falhou", e.detalhe, False)
+            raise FalhaDefinitiva(e.detalhe) from e
+    elif conexao["credencial_cifrada"]:
         try:
             token = credencial_mod.decifrar(conexao["credencial_cifrada"], settings.PLAT_SECRET)
+            cabecalhos = {"Authorization": f"Bearer {token}"}
         except ValueError:
-            token = None  # PLAT_SECRET trocado: tenta sem credencial, mesma decisão do teste de saúde (L6-02-l)
+            cabecalhos = None  # PLAT_SECRET trocado: tenta sem credencial, mesma decisão do teste de saúde (L6-02-l)
 
     ctx.progresso(5, "conferindo o endereço")
     baixado = arquivo_url.baixar(
-        conexao["url"], etag=estado["etag"], last_modified=estado["last_modified"], credencial=token,
+        conexao["url"], etag=estado["etag"], last_modified=estado["last_modified"], cabecalhos=cabecalhos,
     )
     if not baixado.ok:
         _registrar(ctx, cid, "falhou", baixado.mensagem, False)

@@ -130,6 +130,9 @@ LDAP_IMPORTAR_MAX = 2000            # tamanho máximo de uma importação de gru
 # e o proxy nunca vira um jeito de esgotar a máquina com um serviço lento de propósito (ADR 0012).
 CONEXAO_TIPOS = (
     "wms", "wmts", "wfs", "ogc_api", "esri_rest", "stac", "geoparquet", "pmtiles", "postgres_fdw", "s3", "http",
+    # item L6-02-i-google-sheets: planilha do Google como fonte (publicada = exportação CSV sem credencial;
+    # privada = JSON de conta de serviço, trocado por access token na leitura — app/conexao/google_sheets.py)
+    "google_sheets",
 )
 CONEXAO_MODOS = ("referenciada", "copiada")
 CONEXAO_NOME_MAX = 200
