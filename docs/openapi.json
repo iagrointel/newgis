@@ -7522,6 +7522,188 @@
     "x-auth": "S/T",
     "x-privilegio": "conteudo.criar|conteudo.registrar_fonte"
    }
+  },
+  "/api/arquivos/_varredura": {
+   "get": {
+    "tags": [
+     "arquivos"
+    ],
+    "summary": "Varredura",
+    "operationId": "varredura_api_arquivos__varredura_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/arquivos": {
+   "get": {
+    "tags": [
+     "arquivos"
+    ],
+    "summary": "Uso",
+    "operationId": "uso_api_arquivos_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "post": {
+    "tags": [
+     "arquivos"
+    ],
+    "summary": "Enviar",
+    "description": "Corpo cru (não multipart/form-data: o corpo INTEIRO é o arquivo). Streaming com teto de tamanho; acima de\n`limites.ARQUIVO_BUFFER_UNICO_BYTES` abre multipart real no Garage (contrato `objetos.parte_*`, ADR 0005).\nSó token de serviço (`Authorization: Bearer`), nunca cookie de sessão: o CSRF sob cookie (ADR 0002 seção 5.3)\nexige `application/json` em todo verbo de escrita, e o corpo aqui é o arquivo cru — a mesma razão que já fez\na miniatura entrar em base64 (`app/catalogo/rotas_miniatura.py`). Um cliente de navegador troca a sessão por\num token de escopo restrito antes de enviar (rota `POST /api/tokens`, JSON, essa sim sob cookie).",
+    "operationId": "enviar_api_arquivos_post",
+    "parameters": [
+     {
+      "name": "classe",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "objeto",
+       "title": "Classe"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/arquivos/{sha256}": {
+   "get": {
+    "tags": [
+     "arquivos"
+    ],
+    "summary": "Ler",
+    "operationId": "ler_api_arquivos__sha256__get",
+    "parameters": [
+     {
+      "name": "sha256",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sha256"
+      }
+     },
+     {
+      "name": "classe",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "objeto",
+       "title": "Classe"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "application/octet-stream": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "delete": {
+    "tags": [
+     "arquivos"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_arquivos__sha256__delete",
+    "parameters": [
+     {
+      "name": "sha256",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sha256"
+      }
+     },
+     {
+      "name": "classe",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "objeto",
+       "title": "Classe"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
   }
  },
  "components": {

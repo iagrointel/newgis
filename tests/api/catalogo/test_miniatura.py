@@ -149,15 +149,26 @@ def test_job_de_camada_semeada(sessao_a, itens_a, conexao_plat_app, medida, work
     conexao_plat_app.commit()
 
 
-def test_adaptador_de_objetos_e_url_assinada(cliente, tmp_path, monkeypatch):
+def test_adaptador_de_objetos_e_url_assinada(cliente, conexao_plat_app):
+    """Adaptador Garage (L0-11; ADR 0006): guardar precisa de `cur` no contexto do inquilino (RLS de
+    plat.arquivo/plat.arquivo_bucket); ler/apagar/url_assinada continuam só-chave (a chave carrega o slug do
+    inquilino) porque a entrega por URL assinada é uma rota anônima, sem sessão."""
     from app import objetos
     from app.settings import settings
 
-    monkeypatch.setenv("PLAT_DADOS_DIR", str(tmp_path))
+    ids = ids_por_slug(conexao_plat_app)
+    contexto(conexao_plat_app, ids["demo"], usuario_id=0, login="teste")
     iid = "00000000-0000-0000-0000-000000000001"
-    o = objetos.guardar("miniatura", iid, b"abc", "image/png")
-    assert o["chave"].startswith(f"miniatura/{iid}/") and o["bytes"] == 3 and objetos.ler(o["chave"]) == b"abc"
-    assert objetos.guardar("miniatura", iid, b"abc", "image/png") == o  # mesma chave = mesmo conteúdo, não regrava
+    with conexao_plat_app.cursor() as cur:
+        o = objetos.guardar(cur, "miniatura", b"abc", "image/png", item_id=iid)
+    conexao_plat_app.commit()
+    assert o["chave"] == f"demo/miniatura/{iid}/{o['sha256']}.png" and o["bytes"] == 3
+    assert objetos.ler(o["chave"]) == b"abc"
+    contexto(conexao_plat_app, ids["demo"], usuario_id=0, login="teste")  # commit acima limpou o SET LOCAL
+    with conexao_plat_app.cursor() as cur:
+        o2 = objetos.guardar(cur, "miniatura", b"abc", "image/png", item_id=iid)  # mesmo conteúdo, não regrava
+    conexao_plat_app.commit()
+    assert o2 == o
     url = objetos.url_assinada(o["chave"], 60)
     assert url.startswith(f"/api/objetos/{o['chave']}?ate=")
     r = cliente.get(url)

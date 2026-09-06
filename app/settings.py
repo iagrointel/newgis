@@ -33,6 +33,12 @@ class Settings:
     PLAT_MARTIN_URL: str | None
     PLAT_TITILER_URL: str | None
     PLAT_GARAGE_URL: str | None
+    # arquivos/objetos (L0-11; ADR 0006): garage vira obrigatório a partir deste item (saude.py); admin api
+    # (:3903) só é usada pelo backend para criar bucket/chave/cota — nunca chega ao navegador
+    PLAT_GARAGE_ADMIN_URL: str | None
+    PLAT_GARAGE_ADMIN_TOKEN: str | None
+    PLAT_GARAGE_REGIAO: str
+    PLAT_GARAGE_BUCKET_PREFIXO: str
     PLAT_LOG_NIVEL: str
     # fila de jobs e worker plat-worker (ADR 0003 seção 11); acrescentados ao fim pela trilha B
     PLAT_WORKER_URL: str | None
@@ -116,6 +122,10 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_MARTIN_URL=_opcional(valores, "PLAT_MARTIN_URL"),
         PLAT_TITILER_URL=_opcional(valores, "PLAT_TITILER_URL"),
         PLAT_GARAGE_URL=_opcional(valores, "PLAT_GARAGE_URL"),
+        PLAT_GARAGE_ADMIN_URL=_opcional(valores, "PLAT_GARAGE_ADMIN_URL"),
+        PLAT_GARAGE_ADMIN_TOKEN=_opcional(valores, "PLAT_GARAGE_ADMIN_TOKEN"),
+        PLAT_GARAGE_REGIAO=_opcional(valores, "PLAT_GARAGE_REGIAO") or "garage",
+        PLAT_GARAGE_BUCKET_PREFIXO=_opcional(valores, "PLAT_GARAGE_BUCKET_PREFIXO") or "plat-",
         PLAT_LOG_NIVEL=nivel,
         PLAT_WORKER_URL=_opcional(valores, "PLAT_WORKER_URL"),
         PLAT_WORKER_NOME=_opcional(valores, "PLAT_WORKER_NOME"),

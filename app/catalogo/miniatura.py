@@ -76,7 +76,7 @@ def normalizar(dados: bytes) -> bytes:
 
 
 def guardar(cur, item_id: str, png: bytes) -> dict:
-    o = objetos.guardar("miniatura", item_id, png, "image/png")
+    o = objetos.guardar(cur, "miniatura", png, "image/png", item_id=item_id)
     cur.execute(
         "UPDATE plat.item SET miniatura_chave = %s, miniatura_sha256 = %s WHERE id = %s::uuid",
         (o["chave"], o["sha256"], item_id),

@@ -85,3 +85,12 @@ USADO_POR_PROFUNDIDADE_MAX = 5
 # --- contrato de API e limites transversais (L0-12; docs/CONTRATO_API.md e docs/LIMITES.md nascem daqui)
 CORPO_MAX_PADRAO_BYTES = 10 * 1024 * 1024        # 10 MiB; toda rota /api,/svc,/ogc,/tiles fora da lista de upload
 CORPO_MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB (hipótese do item); sem rota isenta ainda (upload = L1-01-e)
+
+# --- arquivos/objetos (L0-11; ADR 0006). PLAT_ARQUIVO_BYTES_MAX bem abaixo de CORPO_MAX_UPLOAD_BYTES de propósito:
+# MEDIDO 06/09/2026, `df -h /` = 12 GiB livres (98% cheio) onde o Garage grava — um teto de 2 GiB por objeto
+# encheria o disco em poucos envios; 512 MiB é o teto ATÉ o disco crescer (revisar junto do L1-01-e, que herda
+# CORPO_MAX_UPLOAD_BYTES para raster). A parte (chunk) do multipart é fixa e NÃO cresce com o arquivo: o envio
+# nunca bufferiza mais que ARQUIVO_PARTE_BYTES de RAM, mesmo para um objeto no teto (streaming, ver app/objetos.py)
+ARQUIVO_BYTES_MAX = 512 * 1024 * 1024
+ARQUIVO_PARTE_BYTES = 8 * 1024 * 1024            # 8 MiB por parte S3 (mínimo do protocolo é 5 MiB, exceto a última)
+ARQUIVO_BUFFER_UNICO_BYTES = ARQUIVO_PARTE_BYTES  # até aqui: 1 PUT só, sem abrir multipart

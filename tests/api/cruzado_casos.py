@@ -167,6 +167,13 @@ def _apagar_criado(metodo_url):
     return limpar
 
 
+def _apagar_arquivo(p: Preparacao, j: Any) -> None:
+    """POST /api/arquivos devolve sha256, não id: apaga pela mesma classe usada no upload (limites.py)."""
+    if isinstance(j, dict) and j.get("sha256"):
+        r = p.sessao_a.delete(f"/api/arquivos/{j['sha256']}")
+        assert r.status_code in (204, 404), r.text
+
+
 JOB_PENDENTE = {"tipo": "prova.progresso", "parametros": {"duracao_s": 0, "passos": 1},
                 "agendado_para": "2099-01-01T00:00:00Z"}  # fica pendente: nunca ocupa o worker
 AGENDA_BASE = {"tipo": "prova.progresso", "parametros": {"duracao_s": 0, "passos": 1}, "cron": "0 3 1 1 *"}
@@ -499,6 +506,20 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: "/api/lixeira/esvaziar", lambda p: {"ids": [p.item_b["id"]]}, proprio=True, aceita=frozenset({202}),
         verificar=_sem_marca, limpar=lambda p, j: p.sessao_a.post(f"/api/jobs/{j['job_id']}/cancelar"),
     ),
+    # ---- arquivos/objetos (L0-11): a rota nunca recebe id de inquilino na URL (o bucket vem do auth.tenant_id),
+    # então "o recurso de B" para GET/DELETE por sha256 é qualquer sha256 que A também não tem — 404 garantido
+    # sem precisar upar nada como B (a suíte própria do item, tests/api/test_arquivos.py, prova o isolamento com
+    # objeto REAL dos dois lados). POST/GET/_varredura agem só sobre o inquilino do chamador (proprio=True).
+    ("POST", "/api/arquivos"): Caso(
+        lambda p: "/api/arquivos", lambda p: {"conteudo": "zt-cruzado"}, proprio=True, aceita=frozenset({201}),
+        verificar=_sem_marca, limpar=_apagar_arquivo,
+    ),
+    ("GET", "/api/arquivos"): Caso(lambda p: "/api/arquivos", proprio=True, aceita=frozenset({200}),
+                                   verificar=_sem_marca),
+    ("GET", "/api/arquivos/_varredura"): Caso(lambda p: "/api/arquivos/_varredura", proprio=True,
+                                               aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/api/arquivos/{sha256}"): Caso(lambda p: f"/api/arquivos/{'0' * 64}?classe=zt_cruzado"),
+    ("DELETE", "/api/arquivos/{sha256}"): Caso(lambda p: f"/api/arquivos/{'0' * 64}?classe=zt_cruzado"),
 }
 
 

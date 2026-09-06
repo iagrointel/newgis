@@ -34,7 +34,10 @@ from app.log import req_id as novo_req_id
 log = logging.getLogger("plat.limites")
 
 PREFIXOS_COM_LIMITE = ("/api/", "/svc/", "/ogc/", "/tiles/")
-PREFIXOS_ISENTOS: tuple[str, ...] = ()  # upload grande (L1-01-e): a rota aplica CORPO_MAX_UPLOAD_BYTES em streaming
+# upload de arquivo (L0-11; ADR 0006): POST /api/arquivos aplica o próprio teto (limites.ARQUIVO_BYTES_MAX) em
+# streaming (app/rotas_arquivos.py), sem bufferizar o corpo aqui — é a rota que este comentário previa desde o
+# L0-12. GET/DELETE do mesmo prefixo não têm corpo grande; ficarem isentos junto não muda nada para eles.
+PREFIXOS_ISENTOS: tuple[str, ...] = ("/api/arquivos",)
 
 
 def limite_para(caminho: str) -> int | None:

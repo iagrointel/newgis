@@ -330,7 +330,8 @@ def catalogo_exportar_lista(ctx, formato: str = "csv", ids: list[uuid.UUID] | No
         dados, ct = buf.getvalue().encode("utf-8"), "text/csv"
     else:
         dados, ct = json.dumps(linhas, ensure_ascii=False, default=str).encode("utf-8"), "application/json"
-    o = objetos.guardar("exportacao", ctx.job_id, dados, ct)
+    with ctx.db() as cur:
+        o = objetos.guardar(cur, "exportacao", dados, ct, item_id=ctx.job_id)
     ctx.progresso(100, f"{len(linhas)} itens exportados")
     return {"linhas": len(linhas), "chave": o["chave"], "sha256": o["sha256"], "bytes": o["bytes"], "formato": formato}
 

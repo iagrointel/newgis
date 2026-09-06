@@ -26,6 +26,7 @@ from app.catalogo import (
     transferencia,
 )
 from app.jobs.rotas import router as rotas_jobs
+from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
 from app.versao import versao
@@ -69,6 +70,9 @@ ROUTERS = [
     rotas_lixeira.router,
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar
     rotas_acervo.router,
+    # --- arquivos/objetos (L0-11): /api/arquivos genérico por inquilino; /api/objetos/{chave} já vem do catálogo
+    # (rotas_compartilhamento, entrega por URL assinada)
+    rotas_arquivos,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

@@ -84,4 +84,9 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/favoritos/{item_id}"): ["favoritos/remover"],
     ("POST", "/api/lixeira/{id}/restaurar"): ["itens/restaurar"],
     ("POST", "/api/lixeira/esvaziar"): ["lixeira/esvaziar"],
+    # ---- arquivos/objetos (L0-11): sem dono humano (usuário/grupo/token) para narrar num evento de domínio; a
+    # auditoria do objeto é a própria linha em plat.arquivo (quem gravou, quando, sha256) + plat.log_acesso da
+    # requisição (rota, ip, bytes, token_id) — o mesmo padrão de decisão já usado acima em /api/eu/2fa/iniciar
+    ("POST", "/api/arquivos"): [],
+    ("DELETE", "/api/arquivos/{sha256}"): [],
 }

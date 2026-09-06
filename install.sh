@@ -49,6 +49,10 @@ PLAT_GIT_SHA=
 PLAT_MARTIN_URL=
 PLAT_TITILER_URL=
 PLAT_GARAGE_URL=http://127.0.0.1:3900
+PLAT_GARAGE_ADMIN_URL=http://127.0.0.1:3903
+PLAT_GARAGE_ADMIN_TOKEN=
+PLAT_GARAGE_REGIAO=garage
+PLAT_GARAGE_BUCKET_PREFIXO=plat-
 PLAT_LOG_NIVEL=INFO
 PLAT_WORKER_URL=http://127.0.0.1:8153
 PLAT_WORKER_PROCESSOS=1
@@ -63,6 +67,27 @@ chmod 600 .env; chown "$APP_USER":"$APP_USER" .env
 for chave in PLAT_WORKER_URL=http://127.0.0.1:8153 PLAT_WORKER_PROCESSOS=1 PLAT_WORKER_MEMORIA_MB=1536; do
   grep -q "^${chave%%=*}=" .env || echo "$chave" >> .env
 done
+# arquivos/objetos (L0-11; ADR 0006): instalação existente ganha as chaves do garage sem perder as demais
+for chave in PLAT_GARAGE_ADMIN_URL=http://127.0.0.1:3903 PLAT_GARAGE_REGIAO=garage PLAT_GARAGE_BUCKET_PREFIXO=plat-; do
+  grep -q "^${chave%%=*}=" .env || echo "$chave" >> .env
+done
+# o admin_token do garage NUNCA é gerado por este script (é o daemon plataforma-garage, compartilhado com
+# plataforma/pipeline, quem o define no garage.toml); lido de lá (LIDO) e gravado só se .env ainda não tiver um
+if ! grep -q '^PLAT_GARAGE_ADMIN_TOKEN=.\+' .env; then
+  GARAGE_TOML=${GARAGE_TOML:-/home/dev/plataforma/pipeline/garage/garage.toml}
+  if [ -f "$GARAGE_TOML" ]; then
+    TOKEN=$(grep -oP 'admin_token\s*=\s*"\K[^"]+' "$GARAGE_TOML" || true)
+    if [ -n "$TOKEN" ]; then
+      sed -i "s#^PLAT_GARAGE_ADMIN_TOKEN=.*#PLAT_GARAGE_ADMIN_TOKEN=$TOKEN#" .env
+      echo "PLAT_GARAGE_ADMIN_TOKEN lido de $GARAGE_TOML"
+    else
+      echo "aviso: admin_token não achado em $GARAGE_TOML; PLAT_GARAGE_ADMIN_TOKEN fica vazio" >&2
+    fi
+  else
+    echo "aviso: $GARAGE_TOML não existe; PLAT_GARAGE_ADMIN_TOKEN fica vazio (defina à mão)" >&2
+  fi
+fi
+
 echo "== d2. segredos fora do .env (item L7-19, docs/SEGURANCA.md)"
 # PLAT_SECRET e a senha da role plat_worker (PLAT_DSN_WORKER) moram em arquivo fora do repositório, dono
 # root, modo 600; só o systemd (LoadCredential=, deploy/plat-api.service e plat-worker.service) entrega

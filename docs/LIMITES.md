@@ -99,3 +99,11 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 |---|---|---|
 | `CORPO_MAX_PADRAO_BYTES` | `10485760` | 10 MiB; toda rota /api,/svc,/ogc,/tiles fora da lista de upload |
 | `CORPO_MAX_UPLOAD_BYTES` | `2147483648` | 2 GiB (hipótese do item); sem rota isenta ainda (upload = L1-01-e) |
+
+## arquivos/objetos (L0-11; ADR 0006). PLAT_ARQUIVO_BYTES_MAX bem abaixo de CORPO_MAX_UPLOAD_BYTES de propósito:
+
+| nome | valor | explicação |
+|---|---|---|
+| `ARQUIVO_BYTES_MAX` | `536870912` | — |
+| `ARQUIVO_PARTE_BYTES` | `8388608` | 8 MiB por parte S3 (mínimo do protocolo é 5 MiB, exceto a última) |
+| `ARQUIVO_BUFFER_UNICO_BYTES` | `8388608` | até aqui: 1 PUT só, sem abrir multipart |
