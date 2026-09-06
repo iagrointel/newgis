@@ -102,6 +102,32 @@ class ClienteS3:
             metodo, url, headers=cabecalhos, data=corpo, timeout=TIMEOUT_S, stream=stream
         )
 
+    # ------------------------------------------------- bucket pela própria API S3 (item L7-31, achado 11)
+    def criar_bucket(self, bucket: str) -> bool:
+        """`CreateBucket` do S3 (`PUT /<bucket>`), sem Admin API. `True` quando o bucket foi criado agora,
+        `False` quando esta MESMA chave já era dona dele (409 `BucketAlreadyOwnedByYou`) — os dois casos são
+        sucesso, o retorno só diz qual foi. Qualquer outro status vira `ErroGarage`; em particular
+        `BucketAlreadyExists` (409 sem `OwnedByYou`) quer dizer que o nome pertence a OUTRA chave e a
+        chamada falha, que é exatamente o que separa homologação de produção.
+
+        MEDIDO nesta instância (Garage v2.3.0) antes de este método entrar: o bucket criado assim nasce com
+        ALIAS LOCAL da chave (`localAliases: [{accessKeyId, alias}]`), não com alias global — ele não aparece
+        no espaço de nomes global e nenhuma outra chave o resolve pelo nome."""
+        r = self._requisicao("PUT", bucket)
+        if r.status_code == 200:
+            return True
+        if r.status_code == 409 and "BucketAlreadyOwnedByYou" in r.text:
+            return False
+        raise ErroGarage(f"CreateBucket {bucket}: {r.status_code} {r.text[:300]}")
+
+    def bytes_usados(self, bucket: str) -> int:
+        """Soma o tamanho de todos os objetos do bucket por `ListObjectsV2`. É a leitura de uso disponível a
+        quem NÃO tem token de administração (homologação, item L7-31): o `GetBucketInfo` da Admin API devolve
+        o mesmo número já somado pelo servidor, mas exige poder de administrador sobre o armazenamento
+        inteiro. Custo: uma listagem por chamada — aceitável no volume de homologação, caro em produção, que
+        continua usando a Admin API."""
+        return sum(int(o["bytes"]) for o in self.listar(bucket))
+
     # ---------------------------------------------------------------- objeto único
     def put(self, bucket: str, chave: str, dados: bytes, content_type: str = "application/octet-stream") -> str:
         r = self._requisicao("PUT", bucket, chave, corpo=dados, extra={"content-type": content_type})

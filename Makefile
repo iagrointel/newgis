@@ -2,13 +2,14 @@ VENV=venv/bin
 # nunca ~/.local: a suíte prova o que a venv + dpkg fornecem, igual à unidade systemd
 export PYTHONNOUSERSITE=1
 URL_PUBLICA=$(shell grep ^PLAT_URL_PUBLICA .env 2>/dev/null | cut -d= -f2)
-# PLAT_SECRET e PLAT_DSN_WORKER não estão mais no .env (item L7-19: LoadCredential do systemd,
+# PLAT_SECRET, PLAT_DSN_WORKER, PLAT_DSN e PLAT_GARAGE_ADMIN_TOKEN não estão mais no .env (item L7-19:
+# os dois últimos saíram no conserto do achado 17 do adversário; LoadCredential do systemd,
 # /etc/plat/segredos, dono root, 0600); fora do systemd só root lê, por isso o `sudo cat` — mesmo
 # privilégio que install.sh e `make migrar` já exigem, nunca em argumento de linha de comando visível
 # em `ps` (só o valor lido entra no ambiente do pytest/uvicorn filho, como já era com o .env). Só
 # exporta quando o credential existe: numa máquina que ainda não rodou a migração (arquivo ausente,
 # `sudo cat` devolve vazio) isso NÃO pisa no PLAT_SECRET/PLAT_DSN_WORKER que ainda estiverem no `.env`.
-SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); PLAT_DSN_WORKER=$$(sudo cat /etc/plat/segredos/PLAT_DSN_WORKER 2>/dev/null); [ -n "$$PLAT_SECRET" ] && export PLAT_SECRET; [ -n "$$PLAT_DSN_WORKER" ] && export PLAT_DSN_WORKER;
+SEGREDOS=for S in PLAT_SECRET PLAT_DSN_WORKER PLAT_DSN PLAT_GARAGE_ADMIN_TOKEN; do V=$$(sudo cat /etc/plat/segredos/$$S 2>/dev/null); [ -n "$$V" ] && export $$S="$$V"; done; true;
 
 .PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps homolog
 

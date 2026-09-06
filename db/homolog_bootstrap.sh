@@ -97,11 +97,12 @@ DELETE FROM plat_homolog.usuario WHERE login LIKE 'zt%';
 SQL
 
 echo "== f. var/homolog/homolog.env"
-# o Garage (:3900/:3903) é infraestrutura compartilhada de propósito (não há disco para uma instância
-# nova); o token admin de produção é reusado só para criar bucket/chave — o isolamento de dado é o
-# PREFIXO homolog-plat- (nunca plat-), nunca o servidor. Lido do .env real a cada bootstrap (nunca
-# copiado para dentro deste script).
-TOKEN_GARAGE=$(grep -m1 '^PLAT_GARAGE_ADMIN_TOKEN=' "$DIR_REPO/.env" | cut -d= -f2-)
+# o daemon do Garage (:3900) é infraestrutura compartilhada de propósito (não há disco para uma instância
+# nova), mas a CREDENCIAL não é mais (item L7-31, achado 11 do adversário no turno 3): até 06/09/2026 este
+# script copiava para cá o PLAT_GARAGE_ADMIN_TOKEN do .env de produção, e com ele homologação listava e lia
+# plat-demo e plat-demo2. Agora homologação recebe uma CHAVE S3 própria, criada e mantida pelo passo de
+# operador scripts/garage_homolog_provisionar.sh (seção f2 abaixo), que só é dona dos buckets que ela mesma
+# cria. Nenhuma linha de segredo de produção é lida aqui.
 cat > "$ENV_HOMOLOG" <<ENV
 PLAT_DSN=postgresql://plat_homolog_app:${SENHA_APP}@127.0.0.1:5432/${DB}
 PLAT_DSN_WORKER=postgresql://plat_homolog_worker:${SENHA_WORKER}@127.0.0.1:5432/${DB}
@@ -114,8 +115,6 @@ PLAT_SCHEMA_TRABALHO=plat_trabalho_homolog
 PLAT_CANAL_JOB=plat_homolog_job
 PLAT_CANAL_WORKER=plat_homolog_worker
 PLAT_GARAGE_URL=http://127.0.0.1:3900
-PLAT_GARAGE_ADMIN_URL=http://127.0.0.1:3903
-PLAT_GARAGE_ADMIN_TOKEN=${TOKEN_GARAGE}
 PLAT_GARAGE_REGIAO=garage
 PLAT_GARAGE_BUCKET_PREFIXO=homolog-plat-
 PLAT_LOG_NIVEL=INFO
@@ -128,6 +127,12 @@ PLAT_CREDENCIAIS_ARQUIVO=${CRED_HOMOLOG}
 ENV
 chmod 600 "$ENV_HOMOLOG"
 echo "gerado $ENV_HOMOLOG (nunca commitado: var/ está no .gitignore)"
+
+echo "== f2. credencial de armazenamento PRÓPRIA de homologação (item L7-31)"
+# acrescenta PLAT_GARAGE_CHAVE_ID/PLAT_GARAGE_CHAVE_SEGREDO ao arquivo acima e garante que nenhum
+# PLAT_GARAGE_ADMIN_TOKEN sobra nele. Sem PLAT_GARAGE_ADMIN_URL/TOKEN a app entra sozinha no modo de chave
+# própria (app/objetos.py::_chave_propria): cria bucket pelo CreateBucket do S3, com alias local da chave.
+bash "$DIR_REPO/scripts/garage_homolog_provisionar.sh" "$ENV_HOMOLOG"
 
 echo "== g. nginx (porta externa $PORTA_EXTERNA -> API interna $PORTA_INTERNA; /static/ direto do disco)"
 # a app nunca serve /static/ sozinha (isso é nginx em produção); sem este bloco todo teste de tela

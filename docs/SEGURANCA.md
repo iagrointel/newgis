@@ -12,7 +12,10 @@ L7-03-b-antivirus-anexos (§8, varredura de conteúdo em upload de anexo/miniatu
 |---|---|---|---|---|
 | `PLAT_SECRET` | `/etc/plat/segredos/PLAT_SECRET` | `plat-api`, `plat-worker` (via `LoadCredential=`) | root | 0600, diretório 0700 |
 | `PLAT_DSN_WORKER` (senha da role `plat_worker`) | `/etc/plat/segredos/PLAT_DSN_WORKER` | `plat-worker` (via `LoadCredential=`) | root | 0600 |
-| `PLAT_DSN` (senha da role `plat_app`) | `.env` na raiz do repositório | `plat-api` | dono do repositório (`APP_USER`) | 0600 — **fora do escopo deste item**, ver §5 |
+| `PLAT_DSN` (senha da role `plat_app`) | `/etc/plat/segredos/PLAT_DSN` | `plat-api`, `plat-worker` (via `LoadCredential=`) | root | 0600 — **preparado, valor ainda no `.env` até o dono rodar o passo 1 de `docs/AMBIENTES.md` §5** |
+| `PLAT_GARAGE_ADMIN_TOKEN` (credencial raiz do armazenamento) | `/etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN` | `plat-api`, `plat-worker` (via `LoadCredential=`) | root | 0600 — **mesma situação, mesmo passo 1** |
+| `rpc_secret` e `admin_token` do daemon Garage | `pipeline/garage/garage.toml`, em claro | `plataforma-garage` | `dev` | 0600 — **drop-in pronto em `deploy/plataforma-garage-segredos.conf`, troca é o passo 2 de `docs/AMBIENTES.md` §5** |
+| `PLAT_GARAGE_CHAVE_SEGREDO` (chave S3 sem administração, só homologação) | `var/homolog/homolog.env` | processos de homologação | `APP_USER` | 0600 |
 | credenciais dos admins semeados (`tests/credenciais.txt`) | arquivo na raiz, gitignorado | `install.sh` (semente) | `APP_USER` | 0600 |
 | segredo TOTP por usuário (`plat.usuario.totp_secret`) | banco, cifrado com `PLAT_SECRET` (`app/auth/totp.py`) | `plat-api` | — | coluna do banco |
 
@@ -77,11 +80,27 @@ continua por cima de tudo (é assim que a suíte injeta valor de teste sem tocar
 Fora do systemd (dev, CLI, pytest fora do `Makefile`) a variável não existe e a função devolve vazio —
 comportamento idêntico ao de antes deste item, retrocompatibilidade P5.
 
+### Segredo por ambiente (item L7-31, achado 11 do adversário no turno 3)
+
+Até 06/09/2026 o `PLAT_GARAGE_ADMIN_TOKEN` era byte a byte o mesmo em produção e em homologação, e com
+o token do arquivo de homologação o adversário listou e leu os buckets de produção `plat-demo` e
+`plat-demo2`. Homologação passou a ter uma chave S3 própria, sem poder de administração, dona apenas
+dos buckets que ela mesma cria. O desenho, o que ainda é compartilhado e por quê, e o procedimento de
+troca em produção estão em **`docs/AMBIENTES.md`**; a prova viva em
+`tests/unit/test_isolamento_homologacao.py`.
+
+`app/settings.SEGREDOS` é a lista canônica dos segredos do produto e
+`app.settings.segredos_em_claro(<arquivo .env>)` devolve, por nome e nunca por valor, os que ainda
+estiverem em claro num arquivo de ambiente.
+
 ## 2. `scripts/rotacionar_segredo.sh` — rotação sem reinstalar
 
 ```
 sudo bash scripts/rotacionar_segredo.sh PLAT_SECRET
 sudo bash scripts/rotacionar_segredo.sh PLAT_DSN_WORKER
+sudo bash scripts/rotacionar_segredo.sh PLAT_DSN
+sudo bash scripts/rotacionar_segredo.sh PLAT_GARAGE_ADMIN_TOKEN
+sudo bash scripts/rotacionar_segredo.sh PLAT_GARAGE_S3 <slug-do-inquilino>
 ```
 
 O que cada rotação faz, em ordem (a ordem importa: nunca existe um instante em que o serviço novo suba
@@ -93,6 +112,17 @@ com um segredo que o outro lado — banco ou processo — ainda não aceita):
    plat-worker` → espera `/saude` responder 200 (mesmo laço de espera do `install.sh`).
 2. **`PLAT_SECRET`**: gera valor novo (`openssl rand -hex 32`) → grava em
    `/etc/plat/segredos/PLAT_SECRET` → `systemctl restart plat-api` → espera `/saude` responder 200.
+3. **`PLAT_DSN`**: mesma ordem do `PLAT_DSN_WORKER`, sobre a role `plat_app` — banco primeiro,
+   credential depois, conferência de que a senha anterior já não autentica, e então DOIS reinícios, um
+   de cada vez, `plat-api` antes de `plat-worker` (as duas unidades leem esse segredo).
+4. **`PLAT_GARAGE_ADMIN_TOKEN`**: cria um token de administração GERENCIADO pelo Garage
+   (`garage admin-token create`, existe a partir da v2) → grava no credential → confere que o token
+   novo é aceito em `/v2/ListBuckets` → reinicia `plat-api` e `plat-worker` → apaga os tokens
+   gerenciados anteriores com o mesmo prefixo de nome. O token ESTÁTICO do `garage.toml` não é tocado:
+   ele só morre quando sai do arquivo (passo 2 de `docs/AMBIENTES.md` §5).
+5. **`PLAT_GARAGE_S3 <slug>`**: cria o par RW/RO novo de um bucket, dá permissão a cada um, grava em
+   `plat.arquivo_bucket` e apaga as chaves anteriores do Garage. É a única rotação **sem reinício e sem
+   janela de indisponibilidade**: a aplicação lê essas chaves do banco a cada chamada.
 
 Downtime = o tempo do `systemctl restart` daquela unidade só (poucos segundos; `plat-worker` devolve os
 jobs em andamento ao receber `SIGTERM`, `TimeoutStopSec=40`, e o `plat-api` tem `Restart=on-failure`).
@@ -322,39 +352,70 @@ registrado na casa (`reference_oom-derrubou-postgres`: 20 sessões de 370 MiB ca
 compartilhado). Por decisão desta passagem — dentro do espírito de D21, não uma decisão nova —
 **ClamAV fica de fora até o disco/RAM da máquina mudar** (D21 resolver, ou servidor dedicado do D37).
 
-### 8.2 A camada mínima que fica no lugar
+### 8.2 A camada que fica no lugar (versão de 06/09/2026, depois da refutação)
 
-`app/varredura_conteudo.py`: identifica o tipo REAL do arquivo pelos primeiros `CABECALHO_BYTES` (8 KiB, o
-bastante para `libmagic`/`python3-magic` decidir — já dpkg nesta máquina, ver `deploy/pacotes_apt.txt` do item
-L7-14/L0-04-a, que o cita pelo mesmo motivo: "confere o tipo declarado no upload contra o que o arquivo
-realmente é") e recusa quando o tipo detectado não bate com a família esperada do `Content-Type` declarado
-(`TIPOS_PERMITIDOS`, mesmas chaves de `app/objetos.EXTENSOES`). Isso já cobre o polyglot óbvio do portão: um
-arquivo com assinatura de imagem que também é reconhecido como HTML/script continua batendo a checagem porque
-o tipo que o `libmagic` reconhece primeiro já não é o da família declarada.
+A primeira versão desta camada comparava só "família declarada x tipo devolvido pelo `libmagic`" e foi
+**REFUTADA por adversário independente** no mesmo dia (laço, handoff T3, achados 22-25): o polyglot passava
+(arquivo que COMEÇA com assinatura de imagem válida e carrega script depois recebe do `libmagic` exatamente a
+família declarada); `Content-Type` fora da tabela significava "não examinar", ou seja, quem decidia se a
+varredura rodava era o remetente; só os primeiros 8 KiB eram olhados; e zip/kmz não era aberto. `app/
+varredura_conteudo.py` agora roda cinco checagens, na ordem abaixo, e a primeira que recusar decide:
 
-**Por que NÃO existe também um denylist "tipo perigoso, seja qual for o `Content-Type`"** — MEDIDO antes de
-escrever a regra (`tests/unit/test_varredura_conteudo.py::test_binario_generico_aleatorio_nunca_e_recusado_
-por_assinatura`): `libmagic` classifica ~0,9% de bytes PURAMENTE ALEATÓRIOS (18/2000 amostras de 4 KiB) como
-algo diferente de `application/octet-stream`, inclusive `application/x-dosexec` por coincidência de assinatura.
-Um denylist que valesse mesmo sob `Content-Type` genérico reprovaria upload binário legítimo (CAD, dado
-proprietário) ao acaso — o oposto de P5 (reprodutível) e P3 (suíte sempre verde). Por isso o `Content-Type`
-genérico (`application/octet-stream`) passa sem exame de assinatura nesta camada: é exatamente onde ClamAV
-faria a diferença de verdade (assinatura de conteúdo malicioso conhecido, não heurística de tipo).
+| # | checagem | o que pega |
+|---|---|---|
+| 1 | família declarada x tipo real (`TIPOS_PERMITIDOS`, mesmas chaves de `app/objetos.EXTENSOES`) | script puro declarado `image/jpeg`; zip declarado `application/pdf` |
+| 2 | lista de NEGAÇÃO determinística, válida sob QUALQUER `Content-Type` (inclusive vazio, inventado e `application/octet-stream`): shebang no início, assinatura de executável conferida à mão, tipo real de script/HTML quando os bytes são texto | script declarado `text/plain`, `text/html` ou `application/x-inventado`; ELF/PE sob tipo genérico |
+| 3 | busca de carga executável no CORPO INTEIRO entregue pelo chamador (`<script`, `<iframe`, `<?php`, `<!doctype html`, `#!/bin/`, `#!/usr/`), com emenda entre as partes do multipart | polyglot imagem+script; carga além dos 8 KiB |
+| 4 | integridade estrutural de imagem: PNG termina no chunk `IEND`, JPEG no marcador `FFD9`, GIF no byte `0x3B`; byte depois do fim = recusa | qualquer coisa colada depois de uma imagem válida, mesmo carga que não está na lista da linha 3 |
+| 5 | lista de entradas do zip/kmz: extensão de script/executável, ou entrada cujo conteúdo começa com shebang | `carga.sh` dentro de um kmz |
+
+**Tipo declarado desconhecido virou rigor máximo, não isenção.** Antes, `TIPOS_PERMITIDOS.get(declarado, None)`
+devolvia `None` para qualquer tipo fora da tabela e `None` queria dizer "não examinar". Agora `None` quer dizer
+só "não há família para comparar na linha 1"; as linhas 2-5 valem para todo mundo. A rota `POST /api/arquivos`
+continua aceitando `Content-Type` fora de `app/objetos.EXTENSOES` (a suíte envia `text/plain`, e a chave no
+Garage cai na extensão `.bin`), mas esse arquivo é varrido com o mesmo rigor e é ENTREGUE de volta como anexo
+genérico (§8.6).
+
+**A armadilha que a regra tem de contornar, e como.** MEDIDO nesta máquina: `libmagic` classifica ~0,9% de
+bytes PURAMENTE ALEATÓRIOS (18/2000 amostras de 4 KiB) como algo diferente de `application/octet-stream`,
+inclusive `application/x-dosexec` por coincidência de assinatura. Recusar pelo RÓTULO faria o upload binário
+legítimo (CAD, dado proprietário, e o `os.urandom` que a própria suíte envia) reprovar de vez em quando — o
+oposto de P5 (reprodutível) e de P3 (suíte sempre verde). Por isso nenhuma checagem depende do rótulo para
+binário:
+
+- família de executável só recusa com a assinatura mágica REAL no início dos bytes: `\x7fELF`, Mach-O, Wasm,
+  Dalvik e `MZ` **com o `PE\0\0` conferido no deslocamento que o próprio arquivo declara em 0x3C** (dois bytes
+  `MZ` sozinhos aparecem por acaso em 1 de cada 65 mil blocos aleatórios; o `PE\0\0` fecha isso);
+- família de script/HTML só recusa quando os bytes são texto de verdade (sem byte nulo e decodificáveis em
+  UTF-8, ou 99% de ASCII imprimível) — 4 KiB aleatórios não passam nessa porta;
+- todo padrão da busca de carga tem 5 bytes ou mais (o mais curto, `<?php`, dá probabilidade da ordem de 3e-8
+  por amostra de 4 KiB);
+- o shebang exige `#!` mais um caminho ASCII plausível na primeira linha, nunca os dois bytes sozinhos.
+
+`tests/unit/test_varredura_conteudo_polyglot.py` roda 300 amostras aleatórias sob `application/octet-stream` e
+100 sob `text/plain` justamente para que uma regra que volte a depender de sorte comece a falhar.
+
+**Quanto do arquivo é varrido, honestamente.** A varredura só enxerga o que o chamador entrega. `POST /api/
+arquivos` entrega o corpo inteiro quando ele cabe em uma parte (`limites.ARQUIVO_BUFFER_UNICO_BYTES`, 8 MiB) e,
+acima disso, parte por parte (8 MiB de cada vez, com 32 bytes de emenda entre elas), sem nunca carregar o
+arquivo inteiro em RAM. As checagens 1, 2, 4 e 5 valem sobre a primeira parte; a 3 vale sobre o corpo inteiro.
+Um zip de mais de 8 MiB não tem o diretório central na primeira parte: a checagem 5 não dá veredito nele (as
+outras continuam valendo) — é o limite declarado desta camada, não um esquecimento.
 
 Onde a varredura entra (nunca depois de já ter gasto uma chamada ao Garage) — **de propósito na BORDA, não
 dentro de `objetos.guardar()`**: esse adaptador é genérico (ADR 0004/0006) e também é chamado com conteúdo já
 validado por outro meio (miniatura) ou sintético (a própria suíte grava `b"abc"` sob `image/png` em
 `tests/api/catalogo/test_miniatura.py::test_adaptador_de_objetos_e_url_assinada` para testar só o contrato de
 armazenamento) — varrer ali quebraria esse teste sem ganhar segurança nenhuma (o conteúdo real de produção
-que chega em `guardar()` pela miniatura já passou por uma validação mais forte, ver linha 2 da tabela):
+que chega em `guardar()` pela miniatura já passou por uma validação mais forte, ver linha 3 da tabela):
 
 | caminho | onde a varredura corre | quem varre |
 |---|---|---|
-| `POST /api/arquivos`, arquivo pequeno (1 PUT só) | em `enviar()`, logo antes de chamar `objetos.guardar()` | `app/rotas_arquivos.py::enviar` |
-| `POST /api/arquivos`, arquivo grande (multipart) | na 1ª parte do streaming, antes de `objetos.parte_iniciar` | `app/rotas_arquivos.py::enviar` |
+| `POST /api/arquivos`, arquivo pequeno (1 PUT só) | em `enviar()`, logo antes de chamar `objetos.guardar()`, sobre o corpo inteiro | `app/rotas_arquivos.py::enviar` |
+| `POST /api/arquivos`, arquivo grande (multipart) | na 1ª parte, antes de `objetos.parte_iniciar`; nas partes seguintes, busca de carga com emenda entre blocos | `app/rotas_arquivos.py::enviar` |
 | `POST /api/itens/{id}/miniatura` | não chama `app/varredura_conteudo.py` — a barreira já é `miniatura.normalizar()` (Pillow decodifica pixel real e reencoda para PNG limpo; mais forte que assinatura de bytes, existia antes deste item) | `app/catalogo/miniatura.py` |
 
-`ConteudoRecusado` (nova exceção em `app/varredura_conteudo.py`, reexportada por `app/objetos.py` como
+`ConteudoRecusado` (exceção de `app/varredura_conteudo.py`, reexportada por `app/objetos.py` como
 `objetos.ConteudoRecusado`, mesmo padrão de `objetos.CotaExcedida`) vira `415 conteudo_recusado` com
 `detalhe.tipo_detectado` na rota de `POST /api/arquivos`.
 
@@ -369,8 +430,14 @@ rotas do §8.2 muda — todas conhecem só `escanear_cabecalho()`.
 ### 8.4 Teste do portão
 
 ```
-$ pytest tests/unit/test_varredura_conteudo.py tests/api/test_arquivos.py -k "script or disfarcado" -v
+$ pytest tests/unit/test_varredura_conteudo.py tests/unit/test_varredura_conteudo_polyglot.py \
+         tests/adversario/test_g6_varredura_anexos.py tests/api/test_arquivos.py
 ```
+
+Os quatro grupos que o adversário deixou como `xfail(strict=True)` em
+`tests/adversario/test_g6_varredura_anexos.py` passaram a reprovar de verdade em 06/09/2026 e a marca saiu
+(polyglot GIF/JPEG/PNG + script; script sob `text/html`, `application/x-inventado`, `""` e `text/plain`; carga
+além de 8 KiB; `carga.sh` dentro de um kmz). O registro do ataque ficou no arquivo, como comentário.
 
 `test_extensao_jpg_com_conteudo_de_script_e_recusado` (unitário) e `test_api_recusa_script_disfarcado_de_jpeg`
 (fim a fim, API real): `Content-Type: image/jpeg` com corpo `#!/bin/sh\necho pwned\n` → `415 conteudo_recusado`,
@@ -379,8 +446,41 @@ o mesmo acima do teto de uma parte (nunca abre multipart no Garage para um conte
 
 ### 8.5 O que fica de fora desta passagem (não esquecido)
 
-- ClamAV de verdade — §8.1, D21.
-- Varredura de conteúdo dentro de arquivos compostos (abrir o zip do KMZ e varrer cada entrada) — hoje só o
-  contêiner externo é conferido.
+- ClamAV de verdade — §8.1, D21. Nada aqui procura assinatura de malware conhecido: esta camada recusa CLASSE
+  de conteúdo (script, executável, HTML, imagem com carga colada), não vírus por nome.
+- Do zip/kmz é aberta a LISTA de entradas (nome e primeiros bytes de cada uma), não o conteúdo de cada entrada
+  inteira; e só quando o pacote cabe na primeira parte do envio (8 MiB), porque acima disso o diretório central
+  do zip não está no que o chamador entrega.
+- A busca de carga é por padrão literal em texto: conteúdo malicioso ofuscado ou comprimido dentro de um
+  formato binário legítimo não é alcançado por ela (é o que ClamAV faria).
+- O preço da checagem 3, declarado: um arquivo LEGÍTIMO que carregue um desses padrões literalmente (uma
+  coluna de CSV com `<script`, um PDF com JavaScript embutido) é recusado com `415 conteudo_recusado` e a
+  mensagem diz qual padrão e em que deslocamento. É escolha desta camada — o mesmo padrão é a carga de XSS
+  quando o arquivo volta pelo navegador — e não há exceção por inquilino; se um cliente real precisar enviar
+  esse conteúdo, a decisão volta ao dono, não se afrouxa a regra em silêncio.
 - O caminho de sincronização da PWA de campo (L2-07, ainda não construído) precisará da mesma barreira quando
   existir; `objetos.guardar()` já cobre automaticamente qualquer chamador futuro que passe por ele.
+
+### 8.6 Entrega segura: o conteúdo do cliente volta como anexo, nunca como página
+
+Medido pelo adversário no mesmo ataque (achado 23, cadeia): `GET /api/arquivos/{sha256}` devolvia o conteúdo
+com `media_type=r["content_type"]` — o MESMO `Content-Type` que o remetente escolheu — e sem
+`Content-Disposition`. Um arquivo enviado como `text/html` voltava renderizando como HTML na própria origem da
+aplicação, onde a sessão do usuário vale; `X-Content-Type-Options: nosniff` não resolve esse caso, porque o
+tipo declarado É `text/html` (não há adivinhação para desligar).
+
+`app/entrega_conteudo.py` aplica três regras juntas em toda rota que devolve byte que veio de fora:
+
+1. **tipo de mídia por lista fechada**: só os tipos de `app/objetos.EXTENSOES` voltam como foram declarados;
+   qualquer outro — `text/html`, `application/xhtml+xml`, `image/svg+xml`, JavaScript, tipo inventado — é
+   rebaixado para `application/octet-stream`. Lista fechada, não lista de proibidos: tipo novo já nasce
+   rebaixado, sem ninguém precisar lembrar de acrescentá-lo.
+2. **`Content-Disposition: attachment`** com nome saneado, nas duas formas da RFC 6266 (`filename=` só ASCII e
+   `filename*=UTF-8''...` da RFC 5987).
+3. **`X-Content-Type-Options: nosniff`**.
+
+| rota | tratamento |
+|---|---|
+| `GET /api/arquivos/{sha256}` | tipo da lista fechada + anexo + nosniff |
+| `GET /api/objetos/{chave}` (URL assinada, anônima) | tipo da lista fechada + anexo + nosniff |
+| `GET /api/itens/{id}/miniatura` (e as variantes pública/compartilhada) | só nosniff: o conteúdo é um PNG REDESENHADO pelo Pillow, nunca os bytes do cliente, e é servido dentro de `<img>` na aplicação — forçar download quebraria a tela sem fechar risco nenhum |

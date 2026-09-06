@@ -142,3 +142,38 @@ def test_env_real_desta_maquina_nao_tem_mais_os_dois_segredos():
     linhas = env_path.read_text(encoding="utf-8").splitlines()
     achados = [li for li in linhas if li.startswith(("PLAT_SECRET=", "PLAT_DSN_WORKER="))]
     assert achados == [], achados
+
+
+# Conserto do achado 17 do adversário no turno 3 (L7-19): PLAT_DSN (senha da role plat_app) e
+# PLAT_GARAGE_ADMIN_TOKEN (credencial raiz do armazenamento) também saem do .env, pelo mesmo mecanismo.
+# O valor só sai da máquina de produção quando o dono roda o passo 1 de docs/AMBIENTES.md §5 — o que estes
+# testes provam é que o instalador, as unidades e a rotação já estão prontos para esse passo.
+SEGREDOS_NOVOS = ("PLAT_DSN", "PLAT_GARAGE_ADMIN_TOKEN")
+
+
+@pytest.mark.parametrize("segredo", SEGREDOS_NOVOS)
+def test_instalador_migra_plat_dsn_e_token_do_garage_para_o_credential(segredo):
+    """Mesmo padrão dos dois já migrados: cria o arquivo em $CRED_DIR (0600, dono root), migra o valor que
+    estiver no .env e só DEPOIS apaga a linha de lá — nessa ordem, senão a migração perde o valor."""
+    criar = f'install -m 0600 -o root -g root /dev/null "$CRED_DIR/{segredo}"'
+    apagar = f"sed -i '/^{segredo}=/d' .env"
+    assert criar in INSTALL, f"install.sh não cria o credential de {segredo}"
+    assert apagar in INSTALL, f"install.sh não remove {segredo} do .env"
+    assert INSTALL.index(criar) < INSTALL.index(apagar), f"{segredo}: apaga do .env antes de migrar o valor"
+
+
+@pytest.mark.parametrize("segredo", SEGREDOS_NOVOS)
+def test_unidades_leem_plat_dsn_e_token_do_garage_por_credencial(segredo):
+    """As duas unidades leem os dois segredos (o worker também abre conexão de aplicação e fala com o
+    armazenamento). Se o arquivo faltar, o systemd recusa iniciar — é de propósito: segredo ausente tem de
+    parar a partida, não virar volta silenciosa ao .env."""
+    linha = f"LoadCredential={segredo}:/etc/plat/segredos/{segredo}"
+    assert linha in UNIDADE, f"plat-api.service não declara {segredo}"
+    assert linha in UNIDADE_WORKER, f"plat-worker.service não declara {segredo}"
+
+
+def test_instalador_alinha_a_senha_de_plat_app_pelo_credential_e_nao_pelo_env():
+    """Depois da migração o `.env` não tem mais PLAT_DSN; a seção d3 tem de ler a senha do credential, senão
+    a instalação passa a falhar (ou pior: realinha a role com um valor velho)."""
+    assert 'sed -nE \'s#^postgresql://plat_app:([^@]+)@.*#\\1#p\' "$CRED_DIR/PLAT_DSN"' in INSTALL
+    assert "^PLAT_DSN=postgresql://plat_app:" not in INSTALL

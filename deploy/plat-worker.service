@@ -15,6 +15,13 @@ Environment=PYTHONNOUSERSITE=1
 # PLAT_DSN_WORKER é a senha da role plat_worker, autoridade total sobre estado de job de todos os
 # inquilinos (achado do adversário no T2, L0-05) — sai do .env, dono root 0600 em /etc/plat/segredos/.
 LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
+# item L7-19, achado 17 do adversário no turno 3: PLAT_DSN (senha da role plat_app, credencial de banco de
+# TODA consulta da aplicação) e PLAT_GARAGE_ADMIN_TOKEN (credencial raiz do armazenamento de objetos)
+# estavam em claro no .env. Saem pelo mesmo mecanismo dos dois de cima. Os arquivos são criados/migrados
+# pelo install.sh (seção d2); se algum faltar, o systemd recusa iniciar a unidade — é de propósito, um
+# segredo ausente tem de parar a partida, não virar fallback silencioso para o .env.
+LoadCredential=PLAT_DSN:/etc/plat/segredos/PLAT_DSN
+LoadCredential=PLAT_GARAGE_ADMIN_TOKEN:/etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN
 LoadCredential=PLAT_DSN_WORKER:/etc/plat/segredos/PLAT_DSN_WORKER
 ExecStart=APP_DIR/venv/bin/python -m app.jobs.worker
 # sem job o worker só termina por sinal: qualquer saída é anômala (ADR 0003 seção 4.5)

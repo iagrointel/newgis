@@ -22,6 +22,7 @@ import argparse
 import csv
 import hashlib
 import io
+import os
 import sys
 import time
 import zipfile
@@ -57,12 +58,17 @@ def _log(msg: str) -> None:
 
 
 def _dsn() -> str:
-    """PLAT_DSN do .env direto (não usa app.settings: este script não precisa de PLAT_SECRET/segredos
-    systemd, que desde o item L7-19 não moram mais no .env — exigi-los aqui quebraria a carga sem motivo)."""
-    v = dotenv_values(ROOT / ".env")
-    dsn = v.get("PLAT_DSN")
+    """PLAT_DSN do ambiente do processo, e só então do .env (não usa app.settings: este script não precisa de
+    PLAT_SECRET nem dos outros segredos do systemd, que desde o item L7-19 não moram mais no .env — exigi-los
+    aqui quebraria a carga sem motivo). O ambiente vem primeiro porque o próprio PLAT_DSN saiu do .env no
+    conserto do achado 17: hoje ele mora em /etc/plat/segredos/PLAT_DSN e quem roda este script à mão o
+    injeta com `PLAT_DSN=$(sudo cat /etc/plat/segredos/PLAT_DSN) venv/bin/python scripts/...`."""
+    dsn = os.environ.get("PLAT_DSN") or dotenv_values(ROOT / ".env").get("PLAT_DSN")
     if not dsn:
-        raise SystemExit("PLAT_DSN ausente em .env")
+        raise SystemExit(
+            "PLAT_DSN ausente: informe no ambiente (PLAT_DSN=$(sudo cat /etc/plat/segredos/PLAT_DSN) ...) "
+            "ou deixe-o no .env"
+        )
     return dsn
 
 

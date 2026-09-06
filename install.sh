@@ -143,17 +143,48 @@ else
   echo "$CRED_DIR/PLAT_DSN_WORKER já existe (mantido)"
 fi
 sed -i '/^PLAT_DSN_WORKER=/d' .env
+# PLAT_DSN e PLAT_GARAGE_ADMIN_TOKEN (item L7-19, achado 17 do adversário no turno 3): mesmo mecanismo, dois
+# segredos a mais. PLAT_DSN é a senha da role plat_app; PLAT_GARAGE_ADMIN_TOKEN é a credencial raiz do
+# armazenamento de objetos. Migração de instalação existente: o valor sai do .env e a linha some.
+if [ ! -s "$CRED_DIR/PLAT_DSN" ]; then
+  install -m 0600 -o root -g root /dev/null "$CRED_DIR/PLAT_DSN"
+  if grep -q '^PLAT_DSN=' .env; then
+    sed -nE 's/^PLAT_DSN=//p' .env | head -n1 > "$CRED_DIR/PLAT_DSN"
+    echo "PLAT_DSN migrado do .env para $CRED_DIR"
+  else
+    printf 'postgresql://plat_app:%s@127.0.0.1:5432/%s' "$(openssl rand -hex 16)" "$DB" > "$CRED_DIR/PLAT_DSN"
+    echo "PLAT_DSN novo gerado em $CRED_DIR"
+  fi
+else
+  echo "$CRED_DIR/PLAT_DSN já existe (mantido)"
+fi
+sed -i '/^PLAT_DSN=/d' .env
+if [ ! -s "$CRED_DIR/PLAT_GARAGE_ADMIN_TOKEN" ]; then
+  install -m 0600 -o root -g root /dev/null "$CRED_DIR/PLAT_GARAGE_ADMIN_TOKEN"
+  if grep -q '^PLAT_GARAGE_ADMIN_TOKEN=.\+' .env; then
+    sed -nE 's/^PLAT_GARAGE_ADMIN_TOKEN=//p' .env | head -n1 > "$CRED_DIR/PLAT_GARAGE_ADMIN_TOKEN"
+    echo "PLAT_GARAGE_ADMIN_TOKEN migrado do .env para $CRED_DIR"
+  elif [ -n "${TOKEN:-}" ]; then
+    printf '%s' "$TOKEN" > "$CRED_DIR/PLAT_GARAGE_ADMIN_TOKEN"
+    echo "PLAT_GARAGE_ADMIN_TOKEN lido do garage.toml e gravado em $CRED_DIR"
+  else
+    echo "PLAT_GARAGE_ADMIN_TOKEN sem valor conhecido: grave-o à mão em $CRED_DIR/PLAT_GARAGE_ADMIN_TOKEN (0600, dono root)" >&2
+  fi
+else
+  echo "$CRED_DIR/PLAT_GARAGE_ADMIN_TOKEN já existe (mantido)"
+fi
+sed -i '/^PLAT_GARAGE_ADMIN_TOKEN=/d' .env
 
-echo "== d3. senha das roles alinhada aos credentials/.env"
+echo "== d3. senha das roles alinhada aos credentials"
 SENHA_WORKER=$(sed -nE 's#^postgresql://plat_worker:([^@]+)@.*#\1#p' "$CRED_DIR/PLAT_DSN_WORKER")
 [ -n "$SENHA_WORKER" ] || { echo "$CRED_DIR/PLAT_DSN_WORKER não tem a forma postgresql://plat_worker:<senha>@..." >&2; exit 1; }
 printf "ALTER ROLE plat_worker PASSWORD '%s';\n" "$SENHA_WORKER" | "${PSQL[@]}" -f -
 echo "senha de plat_worker alinhada ao credential"
-SENHA=$(sed -nE 's#^PLAT_DSN=postgresql://plat_app:([^@]+)@.*#\1#p' .env)
-[ -n "$SENHA" ] || { echo "PLAT_DSN no .env não tem a forma postgresql://plat_app:<senha>@..." >&2; exit 1; }
-# sempre: a senha do banco passa a ser a do .env (idempotência de verdade; ADR risco 6)
+SENHA=$(sed -nE 's#^postgresql://plat_app:([^@]+)@.*#\1#p' "$CRED_DIR/PLAT_DSN")
+[ -n "$SENHA" ] || { echo "$CRED_DIR/PLAT_DSN não tem a forma postgresql://plat_app:<senha>@<host>/<db>" >&2; exit 1; }
+# sempre: a senha do banco passa a ser a do credential (idempotência de verdade; ADR risco 6)
 printf "ALTER ROLE plat_app PASSWORD '%s';\n" "$SENHA" | "${PSQL[@]}" -f -
-echo "senha de plat_app alinhada ao .env"
+echo "senha de plat_app alinhada ao credential"
 # PLAT_GIT_SHA: /saude usa quando não há .git (instalação por tarball); gravado a cada execução (ADR 0001 seção 7)
 if SHA=$(sudo -u "$APP_USER" git -C "$APP_DIR" rev-parse HEAD 2>/dev/null); then
   grep -q '^PLAT_GIT_SHA=' .env && sed -i "s/^PLAT_GIT_SHA=.*/PLAT_GIT_SHA=$SHA/" .env || printf 'PLAT_GIT_SHA=%s\n' "$SHA" >> .env
@@ -206,8 +237,10 @@ echo "== f. venv"
 # agora mora em $CRED_DIR (0600, dono root; d2 acima) e o "$APP_USER" que roda este import não é root —
 # de propósito, não lê o segredo de verdade aqui. Um valor sintético de 64 hex só serve para settings.py
 # aceitar o formato e a importação prosseguir; nunca é usado por um serviço de verdade (o systemd entrega
-# o de verdade via LoadCredential=) e não é segredo, então tanto faz aparecer em `ps`.
-"${PY[@]}" -c "import os; os.environ.setdefault('PLAT_SECRET', 'a' * 64); import app.main, fastapi, dotenv; assert fastapi.__file__.startswith('$APP_DIR/venv/'), fastapi.__file__" \
+# o de verdade via LoadCredential=) e não é segredo, então tanto faz aparecer em `ps`. Desde o conserto do
+# achado 17 (L7-19) o PLAT_DSN também saiu do .env, e este import precisa de um valor só para o formato:
+# nada aqui abre conexão (o pool de app/db.py é preguiçoso), então o DSN sintético nunca é usado.
+"${PY[@]}" -c "import os; os.environ.setdefault('PLAT_SECRET', 'a' * 64); os.environ.setdefault('PLAT_DSN', 'postgresql://plat_app:sintetico@127.0.0.1:5432/x'); import app.main, fastapi, dotenv; assert fastapi.__file__.startswith('$APP_DIR/venv/'), fastapi.__file__" \
   || { echo "app.main não importa com PYTHONNOUSERSITE=1: requirements.txt incompleto" >&2; exit 1; }
 echo "venv: $(venv/bin/python --version) · fastapi $("${PY[@]}" -c 'import fastapi; print(fastapi.__version__)') da venv · pytest $(venv/bin/pytest --version 2>&1 | awk '{print $2}')"
 
@@ -320,7 +353,9 @@ if [ "$WORKER_CONTAINER" -eq 1 ]; then
   echo "   nunca no lugar dela — a API sempre exige pelo menos um worker vivo)"
   command -v docker >/dev/null 2>&1 || { echo "docker não instalado; --worker-container exige Docker (o script nunca instala Docker sozinho, decisão do dono)" >&2; exit 1; }
   docker compose version >/dev/null 2>&1 || { echo "'docker compose' (plugin v2) ausente; --worker-container exige o plugin, não o binário standalone docker-compose v1" >&2; exit 1; }
-  [ -r "$CRED_DIR/PLAT_SECRET" ] && [ -r "$CRED_DIR/PLAT_DSN_WORKER" ] || { echo "$CRED_DIR/PLAT_SECRET ou PLAT_DSN_WORKER ausente — rode a seção 'd' deste script antes (gera as duas)" >&2; exit 1; }
+  for SEG in PLAT_SECRET PLAT_DSN_WORKER PLAT_DSN PLAT_GARAGE_ADMIN_TOKEN; do
+    [ -r "$CRED_DIR/$SEG" ] || { echo "$CRED_DIR/$SEG ausente — rode a seção 'd' deste script antes (gera todos)" >&2; exit 1; }
+  done
   df -h / | tail -1
   docker compose -f deploy/docker-compose.worker.yml up -d --build
   for i in $(seq 1 60); do
