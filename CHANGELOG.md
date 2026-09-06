@@ -62,6 +62,39 @@ carimbo) e o cabeçalho opcional `-- depende: <arquivo>`; `db/migrar.sh`, `db/mi
 reprova nome fora do padrão, três dígitos novos e dependência que vem depois na ordem;
 `tests/api/test_saude.py` deixa de casar o glob de três dígitos e escreve o que "última migração" passa a
 significar (a de autoria mais recente pela chave, não a maior string nem a última aplicada no relógio).
+## turno 3, setembro de 2026 (item L0-09-a-procedencia: bloco de procedência em todo item de dado)
+
+Todo item que carrega dado passa a ter um bloco de procedência com o vocabulário que a casa já usa no registro
+do acervo (`acervo.fonte`, 376 fontes) e no catálogo de camadas do motor logístico: fonte, endereço, licença,
+data do dado, data de acesso, gerador, sha256, comando de reexecução, método, confiança, limites, frescor,
+próxima verificação e responsável. Cada campo pode declarar a `origem`: `declarado` (alguém afirmou) ou
+`medido` (a máquina calculou). O vocabulário campo a campo está em `docs/PROCEDENCIA.md`.
+
+A pontuação é a régua da `acervo.v_completude`, sem peso novo: `round(campos / campos_possiveis * 10, 1)` sobre
+os mesmos 10 campos. Item sem bloco tem pontuação nula, nunca `0,0` — ausência de registro não é medida de zero.
+A conta existe em Python (`app/catalogo/procedencia.py`) e em SQL (`plat.procedencia_pontuacao`), e um teste
+compara as duas em 7 blocos, porque a lista do catálogo não trafega `dados` (jsonb de 58 KB em média) e lê o
+selo direto do banco.
+
+Medido (`tests/medidas/L0-09-a-procedencia.json`): camada importada por arquivo nasce com os **4 campos que a
+máquina mede** — sha256 do arquivo lido de volta, data de acesso, gerador e método — sem ninguém digitar;
+licença e endereço ficam nulos de propósito, porque deduzi-los do nome do arquivo seria a procedência errada
+que a regra D17 proíbe.
+
+Onde aparece: ficha e lista (`procedencia` no objeto item), busca (`licenca:CC`, `licenca:nenhuma`,
+`procedencia:[5 TO 10]`), filtro lateral (`?licenca=`, `?procedencia_min=`, faceta de licença) e exportação da
+lista (colunas `licenca`, `procedencia_pontuacao`, `procedencia_campos`, `procedencia_sha256`,
+`procedencia_gerador` no CSV; bloco inteiro no JSON).
+
+Refutação do adversário provada em teste: o mesmo arquivo importado duas vezes dá o mesmo sha256 (e igual ao
+`sha256sum` do arquivo de origem); um byte a mais dá hash diferente; licença preenchida com texto vazio vira
+`null`, nunca string vazia — na criação e na edição.
+
+Fronteira honesta: a exportação do inquilino inteiro em GeoPackage (`L0-06-d-exportar-inquilino`) ainda não
+existe, então a cláusula "exportação leva a procedência" está cumprida na exportação que existe hoje, a da
+lista do catálogo. A tela do item mostra o bloco e a pontuação, mas ainda não os EDITA (isso é o
+`L0-09-b-editor-iso-mgb`); hoje a edição é pelo formulário de `dados` do próprio item.
+
 ## turno 3, setembro de 2026 (item L2-04-a-leitor-rls-martin: quem serve o tile não sabe o que é inquilino)
 
 O servidor de tiles vetoriais fala direto com o PostGIS e não tem noção de sessão, privilégio ou inquilino.

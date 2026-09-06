@@ -151,7 +151,8 @@ def test_autoritativo_antes_de_comum_e_obsoleto_depois(sessao_a, itens_a):
 
 def test_facetas_batem_com_a_contagem(sessao_a, corpus):
     f = sessao_a.get(f"/api/itens/facetas?q={PREFIXO}").json()
-    assert set(f) == {"tipo", "familia", "tags", "dono", "status", "categoria", "acesso"}
+    # "licenca" entrou com o item L0-09-a (licença registrada no bloco de procedência; 'nenhuma' = sem licença)
+    assert set(f) == {"tipo", "familia", "tags", "dono", "status", "categoria", "acesso", "licenca"}
     for faceta in f["tipo"]:
         n = sessao_a.get(f"/api/itens?q={PREFIXO}&tipo={faceta['valor']}&limite=1").json()["total"]
         assert n == faceta["n"], faceta
@@ -164,6 +165,9 @@ def test_facetas_batem_com_a_contagem(sessao_a, corpus):
         n = sessao_a.get(f"/api/itens?q={PREFIXO}&status={faceta['valor']}&limite=1").json()["total"]
         assert n == faceta["n"], faceta
     assert sessao_a.get(f"/api/itens?q={PREFIXO}&status=inventado").status_code == 422
+    for faceta in f["licenca"]:
+        n = sessao_a.get(f"/api/itens?q={PREFIXO}&licenca={faceta['valor']}&limite=1").json()["total"]
+        assert n == faceta["n"], faceta
     # dono: a faceta traz o id porque o filtro lateral é ?dono_id=<int> (achado do frontend)
     for faceta in f["dono"]:
         assert isinstance(faceta["id"], int) and faceta["valor"] and "rotulo" in faceta
