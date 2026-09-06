@@ -44,6 +44,49 @@ Veredito por item (portão literal, cláusula a cláusula — detalhe completo e
 `laco/handoffs/T3/DESTRAVA-pais-parciais.md`): os 4 itens permanecem **parcial** — nenhum tinha todas as cláusulas
 prontas para virar `entregue` hoje, mas cada um saiu com pelo menos uma cláusula fechada com prova nova e o
 bloqueio reescrito com a cláusula exata que falta (nunca deixado em branco).
+## turno 3, setembro de 2026 (recurso partilhado sem dimensão de inquilino — laudo `ataque-g3-ADVERSARIO.md`)
+
+Sete achados do adversário G3, todos sobre RECURSO PARTILHADO (o que é por linha já estava protegido por
+RLS; o que é da instalação/máquina inteira não tinha dimensão de inquilino nenhuma), consertados em
+`db/migracoes/20260906T1615a3f_recurso_partilhado_por_inquilino.sql` + código: (1) chave do trinco
+(`plat.job.chave`) passou a ser comparada por `(tenant_id, chave)` — um inquilino não congela mais o
+trabalho de outro; (2) fila reparte por inquilino (menos trabalho rodando, depois mais tempo de espera)
+antes de olhar a prioridade escolhida pelo usuário — medido: inquilino que chegou 1º saiu da posição 21ª
+para a 1ª; (3) `plat.job_ceifar_vencidos` novo permite a API ceifar trabalho sem executor vivo (antes,
+68 s depois de um SIGKILL sem nenhum worker de pé, o trabalho seguia "rodando" na tela); (4) morte do
+executor sem sinal (`job_ceifar`) passa a consumir TENTATIVA, não reinício — 3 SIGKILL seguidos no mesmo
+trabalho fecham "falhou" na 3ª (nunca "concluído"; reproduzido ao vivo,
+`tests/api/adversario_g3/g3_sigkill_worker.py`: veredito PASSA); reinício limpo do worker
+(`systemctl restart`) continua contando como reinício; (5) `plat.tenant.uso_bytes` virou gatilho simétrico
+em `plat.item` (soma no INSERT, devolve no DELETE) em vez de soma manual em `app/ingestao/carregar.py` —
+medido: 188.416 → 376.832 → 0 depois de apagar e expurgar (antes ficava em 376.832 para sempre); (6) o
+schema de dado do inquilino carrega o prefixo da INSTALAÇÃO (`plat.camada_schema_prefixo()`) — produção,
+homologação e as trilhas do laço deixam de escrever todas em `d_<slug>`; (7) orçamento de conexões SSE
+(`app/jobs/eventos.py`) virou teto da INSTALAÇÃO com três níveis (usuário/inquilino/total), repartido por
+`PLAT_API_PROCESSOS` — antes o teto por usuário era por PROCESSO e a unidade sobe `--workers 2` (o limite
+real valia o dobro do publicado, sem nenhum teto por inquilino).
+
+Achado extra, fora do laudo original, do próprio gerente medindo o efeito colateral em produção: o
+advisory lock "1 pesado por vez" (`app/jobs/worker.py::_pegar`) também é recurso partilhado — sem
+namespace de instalação (`LOCK_PESADO`, cherry-pick `9eb88b9` de `wt/stac`) e com um defeito de disciplina
+próprio (`pesado_ok` só refletia a aquisição FRESCA do lock: um worker que já o segurava de uma volta
+anterior nunca mais o soltava sozinho — medido ao vivo, a trilha `destrava` segurando o lock horas com a
+fila vazia). Testando o conserto apareceu uma TERCEIRA metade do mesmo defeito: advisory lock é reentrante
+na mesma sessão, então um worker com `PLAT_WORKER_PROCESSOS > 1` que já tinha um pesado em curso pedia (e
+recebia) um SEGUNDO pesado para si mesmo — dois pesados em paralelo no MESMO worker, sem nenhuma outra
+trilha envolvida (`tests/api/jobs/test_jobs_fila.py::test_pesado_nunca_em_paralelo_com_pesado`, que já
+existia e não tinha essa regressão até este achado). `tests/unit/test_worker_lock_pesado.py` (4 testes)
+prova as três metades directement contra a classe `Worker`, sem banco.
+
+`tests/unit/test_recurso_partilhado_por_inquilino.py` (a trava de classe que já existia, virada de
+`xfail(strict=True)` para prova de cada um dos 5 pontos do laudo) ganhou um 6º ponto (o lock de pesado) e
+reprova qualquer recurso partilhado novo que perca a dimensão de inquilino/instalação.
+
+Achado colateral fora de escopo (registrado, não consertado aqui): `tests/api/jobs/test_jobs_memoria.py`
+falha mesmo alocando só 64 MB sob um `RLIMIT_DATA` de 256 MB — confirmado com `git stash` que a falha É
+PRÉ-EXISTENTE (reproduz sem nenhuma mudança desta trilha). Medido: o worker, ANTES de forkar qualquer job,
+já tem `VmData` (`/proc/<pid>/status`) de ~483 MB — acima do teto de 256 MB que o filho herda por COW no
+fork. É item do dono do L0-05-e/memória (RLIMIT_DATA x VmData herdado do pai), não de recurso partilhado.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
