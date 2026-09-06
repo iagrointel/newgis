@@ -1,0 +1,12 @@
+{
+ "item": "L2-01-a-documento-mapa",
+ "medidas": {
+  "ordem_apos_recarga_igual_a_salva": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "venv/bin/pytest tests/e2e/test_mapa_documento.py --base-url https://127.0.0.1:8172"
+  }
+ },
+ "gerado_em": "2026-09-06T16:09:25Z",
+ "git_sha": "90d03c07da0c"
+}
