@@ -214,3 +214,14 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `REDEFINICAO_JANELA_MIN` | `15` | limite de taxa (refutação do item: 1.000 pedidos/min p/ o mesmo e-mail) |
 | `REDEFINICAO_MAX_JANELA` | `5` | no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN |
 | `AVISO_EXPIRACAO_DIAS` | `(90, 30, 7, 1)` | avisos de expiração de token de serviço (hipótese do item; como a Esri) |
+
+## recurso partilhado com dimensão de inquilino (conserto de classe 06/09, laudos ataque-g2/g3/g4/g6).
+
+| nome | valor | explicação |
+|---|---|---|
+| `SSE_POR_USUARIO` | `10` | conexões de eventos abertas por usuário (era 10 POR PROCESSO = 20 na unidade) |
+| `SSE_POR_INQUILINO` | `40` | teto novo: sem ele um inquilino com muitos usuários consome a máquina inteira |
+| `SSE_TOTAL` | `200` | teto novo: orçamento da instalação, independente de quantos inquilinos existem |
+| `CEIFA_API_INTERVALO_S` | `30` | a API ceifa os jobs sem sinal do PRÓPRIO inquilino no máximo a cada 30 s |
+| `CEIFA_LIMITE_S` | `60` | mesmo LIMITE_SEM_SINAL_S do worker (app/jobs/worker.py); piso na função SQL |
+| `CHAVE_RESERVADA` | `'sys:'` | espaço de nome das chaves de trinco dos periódicos da plataforma |
