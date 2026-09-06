@@ -19,6 +19,7 @@ from app import objetos
 from tests.api.conftest import PREFIXO_TESTE, novo_cliente
 from tests.api.test_rls import contexto as _rls_contexto
 from tests.api.test_rls import ids_por_slug
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 
 
 class Uploader:
@@ -227,7 +228,7 @@ def test_cota_insuficiente_413_antes_de_qualquer_byte(sessao_b, env):
     suíte -- outros testes o usam, mas a suíte inteira roda serializada por um `flock` só, então a janela de
     mutação nunca é concorrente com outro `pytest`)."""
     up_b = Uploader(sessao_b)
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     # SEM autocommit: `set_config(..., true)` (LOCAL) só vale dentro da transação corrente -- com autocommit
     # cada instrução vira sua própria transação e o contexto de RLS desapareceria antes da próxima consulta.
     try:
@@ -424,7 +425,7 @@ def test_concluir_com_partes_faltando_409(up_a):
 def test_abortar_libera_a_reserva_de_cota(up_a, env):
     """A cota reservada por um upload em curso soma no cálculo de `POST /api/uploads` seguinte; abortar libera
     (a reserva É a soma de bytes_declarado com estado='iniciado', não um contador separado -- ver a migração)."""
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
         tenant_id = ids_por_slug(con)["demo"]
     finally:
@@ -456,7 +457,7 @@ def test_upload_incompleto_some_em_24h_pelo_periodico(up_a, env):
     upload_id = r.json()["id"]
     up_a.uploads.remove(upload_id)  # o periódico o apaga; não sobra pro teardown tentar de novo
 
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
         tenant_id = ids_por_slug(con)["demo"]
         _rls_contexto(con, tenant_id)
