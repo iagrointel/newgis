@@ -31,10 +31,26 @@
    "unidade": "faixas de 100 mil células",
    "comando": "ficha.faixas"
   },
-  "grade_100m_1milhao_celulas_EXTRAPOLADO": {
-   "valor": 34.3,
-   "unidade": "s (extrapolação linear, NÃO medido)",
-   "comando": "segundos × 1.000.000 / n_unidades — 1 mi de células não foi gerado: /mnt/pgdata a 99 %"
+  "grade_100m_1milhao_celulas_segundos": {
+   "valor": 33.55,
+   "unidade": "s (MEDIDO, não mais extrapolado)",
+   "comando": "pytest tests/api/amc/test_amc_adversario_api.py::test_adv_o_milhao_de_celulas_que_nao_foi_gerado -s (schema de trilha; imprime '[adversario] MEDIDO: 989,334 células em 33.55 s')",
+   "nota": "a escala do portão (100 m sobre ~9.400 km², perto de 1 milhão de células) foi GERADA de verdade, não extrapolada. Quem primeiro gerou foi o ADVERSÁRIO do item, em 06/09/2026, com /mnt/pgdata já com 43 GB livres: 1.000.175 células em 30,97 s, desvio de contagem +0,201 %. O conserto do achado 4 do laudo passou a conferir o teto de 1.000.000 sobre a contagem REAL, então a área do teste dele encolheu 0,5 % em cada lado para caber no teto; esta linha é a re-medição depois do conserto, no mesmo teste dele."
+  },
+  "grade_100m_1milhao_celulas_contagem": {
+   "valor": 989334,
+   "unidade": "células",
+   "comando": "mesmo teste; medição do adversário antes do conserto do teto: 1.000.175 células"
+  },
+  "grade_100m_1milhao_desvio_contagem_pct": {
+   "valor": 0.202,
+   "unidade": "% (contagem real × área/área-da-célula por shapely/pyproj)",
+   "comando": "mesmo teste; o adversário mediu +0,201 % com 1.000.175 células"
+  },
+  "grade_100m_extrapolacao_antiga_erro_pct": {
+   "valor": -9.6,
+   "unidade": "% (o quanto a extrapolação linear ERROU, para mais)",
+   "comando": "34,3 s projetados para 1.000.175 células × 30,97 s medidos pelo adversário = 0,90×; a extrapolação declarada era conservadora"
   },
   "amc_unidade_bytes_com_250mil_celulas": {
    "valor": 185958400,
@@ -47,6 +63,7 @@
    "comando": "bytes × 1.000.000 / n_unidades"
   }
  },
- "gerado_em": "2026-09-06T13:44:40Z",
- "git_sha": "90d03c07da0c"
+ "gerado_em": "2026-09-06T16:20:00Z",
+ "git_sha": "0b0d47a182a1",
+ "nota": "medidas do item L3-01-b. As linhas de 1 milhão de células deixaram de ser extrapolação em 06/09/2026: quem gerou a escala foi o adversário do item (laco/handoffs/T3/L3-01-ADVERSARIO.md §5), e a linha gravada aqui é a re-medição depois do conserto do teto (laco/handoffs/T3/L3-01-CONSERTO.md)."
 }

@@ -35,5 +35,9 @@ def amc_gerar_unidades(ctx, conjunto_id: uuid.UUID) -> dict:
             cur.execute("UPDATE plat.amc_conjunto_unidade SET estado = 'falhou', erro = %s WHERE id = %s",
                         (e.mensagem, cid))
         raise FalhaDefinitiva(e.mensagem) from e
+    if ficha.get("recusado"):
+        # `gerar_grade` já limpou as unidades e marcou o conjunto como 'falhou' com o motivo; aqui o JOB também
+        # falha, para o operador não ver "concluído" sobre um conjunto que foi recusado (achado 4 do adversário).
+        raise FalhaDefinitiva(ficha["motivo_recusa"])
     return {"conjunto_id": cid, "n_unidades": ficha["n_unidades"], "tempo_geracao_s": ficha["tempo_geracao_s"],
             "srid_trabalho": ficha["srid_trabalho"]}
