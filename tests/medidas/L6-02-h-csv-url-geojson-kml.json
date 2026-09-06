@@ -1,0 +1,89 @@
+{
+ "item": "L6-02-h-csv-url-geojson-kml",
+ "medidas": {
+  "camada_csv": {
+   "valor": {
+    "formato": "csv",
+    "feicoes": 2,
+    "srid": 4674,
+    "bytes_baixados": 87,
+    "item_id": "e8cee894-3636-4eb6-9951-7ad6f56cb482"
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
+  },
+  "camada_geojson": {
+   "valor": {
+    "formato": "geojson",
+    "feicoes": 1,
+    "srid": 4326,
+    "bytes_baixados": 157,
+    "item_id": "b939b72d-5f43-4f4f-aa11-3280f34c5af0"
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
+  },
+  "camada_kml": {
+   "valor": {
+    "formato": "kml",
+    "feicoes": 1,
+    "srid": 4326,
+    "bytes_baixados": 215,
+    "item_id": "3d5ad7d5-b4c8-4978-a53d-c2ea06821fde"
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
+  },
+  "camada_kmz": {
+   "valor": {
+    "formato": "kmz",
+    "feicoes": 1,
+    "srid": 4326,
+    "bytes_baixados": 263,
+    "item_id": "a7d40735-f112-4631-bb95-fd45e4fea565"
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
+  },
+  "camada_georss": {
+   "valor": {
+    "formato": "georss",
+    "feicoes": 1,
+    "srid": 4326,
+    "bytes_baixados": 213,
+    "item_id": "7acfd506-3991-415e-9ef3-dbf3e64afee3"
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
+  },
+  "camada_gpx": {
+   "valor": {
+    "formato": "gpx",
+    "feicoes": 1,
+    "srid": 4326,
+    "bytes_baixados": 172,
+    "item_id": "a49ae4ee-d82f-404c-87c6-d4674bcba6f2"
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
+  },
+  "sha256_segura_recarga": {
+   "valor": {
+    "status": 200,
+    "recargas": 1
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
+  },
+  "refutacao_lat_lon_trocadas": {
+   "valor": {
+    "estado": "falhou",
+    "erro": "a coluna de latitude 'lat' tem valor fora da faixa -90..90 (exemplos: -146.6333) em 2 linhas lidas. Os valores da coluna de latitude caberiam numa longitude: confira se as duas colunas estão trocadas no arquivo de origem. A plataforma não troca as colunas sozinha."
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; venv/bin/pytest tests/api/conexao/test_arquivo_url.py -q"
+  }
+ },
+ "gerado_em": "2026-09-06T16:14:26Z",
+ "git_sha": "90d03c07da0c"
+}

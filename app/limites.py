@@ -172,6 +172,10 @@ CARGA_TIMEOUT_S = 3600
 CARGA_FATOR_COTA = 3                      # estimativa = bytes do arquivo × 3 (MEDIDO: shapefile 14 MB -> tabela 45 MB)
 INGESTAO_CAMPOS_MAX = 500                 # mesmo teto do JSON Schema de camada_vetorial (ADR 0004/0005)
 INGESTAO_FIDS_RELATORIO_MAX = 1000        # fids corrigidos listados no relatório de ST_MakeValid
+# camada de 1 ponto: a envoltória tem largura zero e o polígono correspondente é inválido (o CHECK
+# item_extent_check de plat.item recusa). O lado nulo é afastado deste tanto, em graus (~1 cm no equador);
+# só afeta o retângulo guardado no item, nunca a geometria da feição.
+INGESTAO_EPSILON_ENVOLTORIA = 1e-7
 
 # --- configurações da organização (L0-07-a-configuracoes-org; GET/PUT /api/org): nome, identidade visual
 # (logotipo reaproveitando o adaptador genérico de arquivo do L0-11, classe 'org_logo'), mapa padrão, idioma
