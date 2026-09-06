@@ -6,8 +6,15 @@ de progresso reconciliar depois de recarregar a página); `GET /api/uploads/tipo
 
 Só sob TOKEN de serviço (nunca cookie de sessão), na mesma razão de `app.rotas_arquivos`: o corpo de
 `PUT .../partes/{n}` é o BYTE CRU da parte, e o CSRF sob cookie (ADR 0002 seção 5.3) exige `application/json`
-em todo verbo de escrita — um cliente de navegador troca a sessão por um token de escopo restrito (`POST
-/api/tokens`, essa sim sob cookie) antes de começar o envio.
+em todo verbo de escrita — um cliente de navegador troca a sessão por um token de escopo `conteudo:criar`
+(`POST /api/tokens`, essa sim sob cookie) antes de começar o envio.
+
+Achado do adversário T3: o escopo aqui NÃO é `admin:inquilino` (o padrão de `autenticado()`) — um editor comum
+(perfil com o privilégio `conteudo.criar`, não só admin) também envia arquivo pela tela, então o token que a
+tela pede tem de caber no teto dele. `admin:inquilino` deixaria a funcionalidade inteira inacessível a quem
+não é admin do inquilino (`app/auth/rotas_tokens.py` só emite `admin:inquilino` para `perfil == "admin"`).
+O escopo `conteudo:criar` (vocabulário em `app/auth/escopos.py`) tem teto por PRIVILÉGIO, não por perfil: só
+quem já tem `conteudo.criar` (editor ou admin) consegue se emitir um token com ele.
 
 Diferença assumida em relação à hipótese de cota do ADR 0005 seção 3.1 (documentada em detalhe no handoff do
 item, seção "cota"): a reserva não usa `tenant.uso_reservado_bytes` (aquela coluna já é o contador de
@@ -110,7 +117,9 @@ def tipos_aceitos():
 
 
 @router.post("/api/uploads", status_code=201, openapi_extra=X)
-def iniciar(corpo: UploadCriar, request: Request, auth: Auth = autenticado("conteudo.criar")):
+def iniciar(
+    corpo: UploadCriar, request: Request, auth: Auth = autenticado("conteudo.criar", escopo_token="conteudo:criar")
+):
     if corpo.bytes > limites.UPLOAD_BYTES_MAX:
         raise ErroAPI(
             413, "arquivo_grande",
@@ -162,7 +171,7 @@ def iniciar(corpo: UploadCriar, request: Request, auth: Auth = autenticado("cont
 
 
 @router.get("/api/uploads/{id}", openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"})
-def ver(id: str, auth: Auth = autenticado()):
+def ver(id: str, auth: Auth = autenticado(escopo_token="conteudo:criar")):
     with db.db(auth.contexto()) as cur:
         up = _carregar(cur, auth, id)
         cur.execute("SELECT n FROM plat.upload_parte WHERE upload_id = %s::uuid ORDER BY n", (up["id"],))
@@ -174,7 +183,9 @@ def ver(id: str, auth: Auth = autenticado()):
 
 
 @router.put("/api/uploads/{id}/partes/{n}", openapi_extra=X)
-async def enviar_parte(id: str, n: int, request: Request, auth: Auth = autenticado()):
+async def enviar_parte(
+    id: str, n: int, request: Request, auth: Auth = autenticado(escopo_token="conteudo:criar")
+):
     _exige_token(auth)
     if n < 1:
         raise ErroAPI(422, "parte_invalida", "número de parte deve ser >= 1", {"n": n})
@@ -241,7 +252,9 @@ async def enviar_parte(id: str, n: int, request: Request, auth: Auth = autentica
 
 
 @router.post("/api/uploads/{id}/concluir", status_code=202, openapi_extra=X)
-def concluir(id: str, corpo: ConcluirEntrada, request: Request, auth: Auth = autenticado()):
+def concluir(
+    id: str, corpo: ConcluirEntrada, request: Request, auth: Auth = autenticado(escopo_token="conteudo:criar")
+):
     _exige_token(auth)
     with db.db(auth.contexto()) as cur:
         try:
@@ -309,7 +322,7 @@ def concluir(id: str, corpo: ConcluirEntrada, request: Request, auth: Auth = aut
 
 
 @router.delete("/api/uploads/{id}", status_code=204, response_class=Response, openapi_extra=X)
-def abortar(id: str, request: Request, auth: Auth = autenticado()):
+def abortar(id: str, request: Request, auth: Auth = autenticado(escopo_token="conteudo:criar")):
     _exige_token(auth)
     with db.db(auth.contexto()) as cur:
         up = _carregar(cur, auth, id)

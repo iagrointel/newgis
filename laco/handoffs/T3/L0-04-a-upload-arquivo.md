@@ -244,3 +244,53 @@ fechar o turno como um todo.
 
 **Commits**: `e407d1a` (entrega principal, 18 arquivos) e `15575a5` (correção do bug real
 achado pelo e2e: `credentials: 'omit'` nas chamadas sob token).
+
+## Addendum T4 — conserto do achado do adversário (`handoffs/T3/L0-04-a-ADVERSARIO.md`)
+
+Item estava `estado: "refutado"` no ledger: nenhum usuário que não fosse admin do inquilino conseguia
+usar o upload, porque toda rota de `app/uploads/rotas.py` caía no padrão `escopo_token="admin:inquilino"`
+de `autenticado()`, e `POST /api/tokens` só emite `admin:inquilino` para `perfil == "admin"`
+(`app/auth/rotas_tokens.py`). A tela (`web/js/uploads/enviar.js`) já verificava `conteudo.criar` na entrada
+(qualquer editor passava), mas depois pedia um token que só admin recebia — quebra total para editor.
+
+**Conserto**: novo escopo `conteudo:criar` no vocabulário fechado (`app/auth/escopos.py`, regex +
+`ESCOPOS_SEM_UUID` + `DESCRICAO` + `ESCOPO_EXIGE_PRIVILEGIO`), com teto por PRIVILÉGIO em vez de por perfil
+fixo: `app/auth/rotas_tokens.py::criar` agora recusa (`422 escopo_fora_do_teto`) qualquer escopo de
+`ESCOPO_EXIGE_PRIVILEGIO` cujo privilégio mapeado o dono do token não tenha — generaliza o mesmo padrão que
+já existia só para `admin:inquilino`. As 5 rotas de `app/uploads/rotas.py` (`iniciar`, `ver`, `enviar_parte`,
+`concluir`, `abortar`) passaram a exigir `escopo_token="conteudo:criar"` em vez do padrão `admin:inquilino`
+(admin continua funcionando: `admin:inquilino` cobre qualquer escopo, `esc.cobre()`). `web/js/uploads/enviar.js`
+passou a pedir `escopos: ['conteudo:criar']`.
+
+**Prova** (`tests/api/uploads/test_uploads.py`, novas):
+- `test_editor_comum_sobe_arquivo_pelo_proprio_token` — cria editor comum (`usuarios_a.sessao("editor")`),
+  emite token `conteudo:criar`, roda o fluxo inteiro (iniciar → parte → concluir) até `202`, e confere que o
+  MESMO editor continua recusado (`422 escopo_fora_do_teto`) ao pedir `admin:inquilino` — a correção não
+  afrouxou o teto original.
+- `test_perfil_sem_conteudo_criar_nao_ganha_token_de_upload` — simetria: perfil `visualizador` (sem
+  `conteudo.criar`) também não consegue emitir token `conteudo:criar`.
+
+Rodado isolado (fora da fila `flock`, ambiente próprio via `trilha_ambiente.sh edicao`):
+`tests/api/uploads` (19/19), `tests/unit/test_escopos.py` (18/18), `tests/api/test_tokens.py` (15/15) — todos
+verdes. `ruff check` limpo nos arquivos tocados (o aviso `I001` em `test_uploads.py` é import pré-existente,
+não introduzido aqui — confirmado com `git stash`). `tests/marcadores.regex` limpo.
+
+**Achado não corrigido aqui (fora do escopo deste item)**: `app/rotas_arquivos.py` linha ~65
+(`POST /api/arquivos`, item L0-11-arquivos-objetos) tem a MESMA causa raiz (escopo padrão `admin:inquilino`)
+e já está registrada como bloqueio do L0-11 no estado.json. Como esse item está em progresso por outra
+trilha (`wt/g4fix` aparece no histórico do L0-11), não toquei nele para não colidir — mas agora que o escopo
+`conteudo:criar` existe no vocabulário, a correção de L0-11 é a mesma troca de uma linha
+(`escopo_token="conteudo:criar"`), sem precisar inventar um escopo novo.
+
+**Flake observado, não deste item**: `test_duas_sessoes_enviando_partes_diferentes_ao_mesmo_tempo` falhou
+2/3 vezes numa rodada e passou nas duas rodadas seguintes; reproduzido IDÊNTICO no código original sem
+minhas mudanças (`git stash`), com a máquina sob `load average` 6,7–8,3 em 12 núcleos e ~10 processos
+`pytest` de outras trilhas simultâneos. É contenção de máquina compartilhada (thread real, timing de duas
+requisições concorrentes), não regressão deste conserto.
+
+**Medida atualizada**: `taxa_upload_mb_s` = 90,87 MB/s (era 92,1; mesma ordem de grandeza, variação normal de
+máquina compartilhada) — `tests/medidas/L0-04-a-upload-arquivo.json`.
+
+Commits: (a aplicar por quem revisar/commitar este turno) `app/auth/escopos.py`, `app/auth/rotas_tokens.py`,
+`app/uploads/rotas.py`, `web/js/uploads/enviar.js`, `tests/api/uploads/test_uploads.py`,
+`tests/medidas/L0-04-a-upload-arquivo.json`.

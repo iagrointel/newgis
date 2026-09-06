@@ -8,12 +8,15 @@ from app.erros import ErroAPI
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 ESCOPO = re.compile(
     rf"^(catalogo:ler|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|rota:usar|"
-    rf"geocodificar:usar|admin:inquilino)$"
+    rf"geocodificar:usar|conteudo:criar|admin:inquilino)$"
 )
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "admin:inquilino",
+    "geocodificar:usar", "conteudo:criar", "admin:inquilino",
 )
+# achado do adversário T3 (L0-04-a/L0-11): escopo cujo teto NÃO é "admin" (perfil), mas sim um privilégio —
+# quem já tem o privilégio no perfil pode se emitir um token com este escopo. `rotas_tokens.criar` consulta.
+ESCOPO_EXIGE_PRIVILEGIO = {"conteudo:criar": "conteudo.criar"}
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
     "camada:ler": "ler feições e atributos de camada legível pelo dono (opcional :<uuid> de uma camada)",
@@ -23,6 +26,8 @@ DESCRICAO = {
     "rota:usar": "calcular rota, matriz origem-destino e isócrona (L2-11-c; dado de teste, sem PII)",
     "geocodificar:usar": "geocodificar, geocodificar reverso e sugerir endereço (L2-11-b; dado aberto CNEFE, "
     "sem PII); mesmo escopo cobre o GeocodeServer compatível Esri",
+    "conteudo:criar": "criar/editar os próprios itens por token (upload de arquivo em partes, L0-04-a): exige "
+    "que o dono do token já tenha o privilégio conteudo.criar (editor ou admin), não é exclusivo de admin",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 

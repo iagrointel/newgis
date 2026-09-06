@@ -1,9 +1,10 @@
 /* plat — tela /uploads (item L0-04-a-upload-arquivo; ADR 0005 seção 3): upload retomável em partes de 16 MiB,
    com barra de progresso, cota do inquilino e recusa por tipo x conteúdo. A sessão (cookie) só assina
    `POST /api/uploads` (JSON, CSRF-seguro); o envio das partes e a conclusão exigem um TOKEN de serviço — a
-   própria tela troca a sessão por um token de escopo restrito (`POST /api/tokens`, uma vez por carregamento de
-   página, igual ao que `app.rotas_arquivos`/`app.uploads.rotas` documentam no backend) e usa esse token só em
-   memória, nunca localStorage: um recarregamento de página pede um token novo. */
+   própria tela troca a sessão por um token de escopo `conteudo:criar` (`POST /api/tokens`, uma vez por
+   carregamento de página; achado do adversário T3 — NUNCA `admin:inquilino`, que deixaria a tela inteira
+   inacessível a quem não é admin do inquilino) e usa esse token só em memória, nunca localStorage: um
+   recarregamento de página pede um token novo. */
 import { obter, enviar } from '../base/api.js';
 import { h, limpar } from '../base/dom.js';
 import { carregar, t } from '../base/i18n.js';
@@ -22,7 +23,7 @@ let tokenServico = null;
 
 async function token() {
   if (tokenServico) return tokenServico;
-  const r = await enviar('/api/tokens', { nome: NOME_TOKEN, escopos: ['admin:inquilino'], validade_dias: 1 });
+  const r = await enviar('/api/tokens', { nome: NOME_TOKEN, escopos: ['conteudo:criar'], validade_dias: 1 });
   if (r.status !== 201) throw new Error(r.json.mensagem || 'não foi possível preparar o envio');
   tokenServico = r.json.token;
   return tokenServico;

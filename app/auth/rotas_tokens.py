@@ -154,6 +154,14 @@ def criar(corpo: TokenCriar, request: Request, auth: Auth = autenticado("tokens.
         raise ErroAPI(422, "escopo_item_inexistente", "item do escopo inexistente ou sem acesso", {"escopos": sem_item})
     if "admin:inquilino" in corpo.escopos and auth.perfil != "admin":
         raise ErroAPI(422, "escopo_fora_do_teto", "admin:inquilino só para dono com perfil admin")
+    # achado do adversário T3 (L0-04-a/L0-11): escopos com teto por PRIVILÉGIO (não por perfil fixo) — quem já
+    # tem o privilégio no próprio perfil/papel pode se emitir o token, senão o upload por token nunca funciona
+    # para um editor comum (mesma causa raiz do 422 acima, generalizada)
+    for escopo, privilegio in esc.ESCOPO_EXIGE_PRIVILEGIO.items():
+        if escopo in corpo.escopos and not auth.tem(privilegio):
+            raise ErroAPI(
+                422, "escopo_fora_do_teto", f"{escopo} exige o privilégio {privilegio}, que este usuário não tem"
+            )
     restricao = _validar_restricao(corpo.restricao)
     dias = _validade(corpo.validade_dias, auth)
     try:
