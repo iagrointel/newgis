@@ -2,12 +2,12 @@
  "item": "L2-04-a-leitor-rls-martin",
  "medidas": {
   "tile_bytes_3_feicoes": {
-   "valor": 353,
+   "valor": 352,
    "unidade": "bytes",
    "comando": "SELECT d_demo.t_<camada>(0,0,0,'{\"token\":...}') como papel de leitura"
   },
   "revogacao_ate_zero_linhas_s": {
-   "valor": 0.0022,
+   "valor": 0.0023,
    "unidade": "s",
    "comando": "UPDATE token_servico SET revogado_em -> contexto_por_token recusa e SELECT devolve 0"
   },
@@ -57,6 +57,6 @@
    "comando": "tiles não vazios devolvidos a token de outro inquilino"
   }
  },
- "gerado_em": "2026-09-06T16:08:27Z",
+ "gerado_em": "2026-09-06T16:26:43Z",
  "git_sha": "90d03c07da0c"
 }

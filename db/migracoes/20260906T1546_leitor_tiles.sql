@@ -26,10 +26,14 @@ BEGIN
   -- nunca dona de tabela, nunca superusuária, nunca com BYPASSRLS: é a cláusula do item
   EXECUTE format('ALTER ROLE %I NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOINHERIT', papel);
   EXECUTE format('GRANT USAGE ON SCHEMA plat TO %I', papel);
-  -- schemas de camada já existentes deste ambiente (novos ganham em plat.camada_schema_garantir)
+  -- schemas de camada já existentes deste ambiente (novos ganham em plat.camada_schema_garantir).
+  -- Só concede o que falta: um GRANT repetido reescreve a linha de pg_namespace e, com outra sessão fazendo
+  -- DDL no MESMO schema (d_<slug> é compartilhado nesta máquina), sai `tuple concurrently updated`.
   EXECUTE (SELECT coalesce(string_agg(format('GRANT USAGE ON SCHEMA %I TO %I;', 'd_' || slug, papel), ' '),
                            'SELECT 1')
-           FROM plat.tenant);
+           FROM plat.tenant
+           WHERE to_regnamespace('d_' || slug) IS NOT NULL
+             AND NOT has_schema_privilege(papel, 'd_' || slug, 'USAGE'));
 END $$;
 
 -- ---------------------------------------------------------------- escopo de token dentro do banco
@@ -257,8 +261,12 @@ $f$,
   EXECUTE format('COMMENT ON FUNCTION %I.%I(integer,integer,integer,json) IS %L', p_schema, nome,
                  'tile MVT da camada ' || p_tabela || ' (item L2-04-a); contexto por token');
   EXECUTE format('REVOKE ALL ON FUNCTION %I.%I(integer,integer,integer,json) FROM PUBLIC', p_schema, nome);
-  EXECUTE format('GRANT USAGE ON SCHEMA %I TO %I', p_schema, papel);
-  EXECUTE format('GRANT SELECT ON %I.%I TO %I', p_schema, p_tabela, papel);
+  IF NOT has_schema_privilege(papel, p_schema, 'USAGE') THEN            -- ver nota do GRANT acima
+    EXECUTE format('GRANT USAGE ON SCHEMA %I TO %I', p_schema, papel);
+  END IF;
+  IF NOT has_table_privilege(papel, format('%I.%I', p_schema, p_tabela), 'SELECT') THEN
+    EXECUTE format('GRANT SELECT ON %I.%I TO %I', p_schema, p_tabela, papel);
+  END IF;
   EXECUTE format('GRANT EXECUTE ON FUNCTION %I.%I(integer,integer,integer,json) TO %I, plat_app',
                  p_schema, nome, papel);
   RETURN nome;

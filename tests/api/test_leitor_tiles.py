@@ -527,3 +527,74 @@ def test_varredura_cruzada_nas_funcoes_de_tile(env, leitor, camadas, medida):
         "tiles não vazios devolvidos a token de outro inquilino")
     assert com_dado == 0
     assert sem_token >= 2
+
+
+# ------------------------------------------------------------------ restrição de Referer e de IP
+# A hipótese do item diz que a restrição do token (L0-02-d) vale TAMBÉM por aqui. Como o servidor de tiles não
+# repassa cabeçalho HTTP, quem injeta `ip` e `origem` em query_params é o proxy na frente; a função aplica o
+# que recebeu e, quando o token exige e o valor não veio, recusa (falha fechada).
+
+
+@pytest.fixture
+def token_restrito(env, camadas):
+    """Cria um token de demo com a restrição pedida e o apaga no fim."""
+    con = _conectar_app(env)
+    a = camadas["demo"]
+    criados = []
+
+    def criar(restricao: dict) -> str:
+        valor, hash_ = token_novo()
+        with con.cursor() as cur:
+            contexto(con, a["tenant_id"], a["usuario_id"], "admin")
+            cur.execute(
+                "INSERT INTO plat.token_servico(tenant_id, usuario_id, nome, token_hash, prefixo, escopos, "
+                "restricao) VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb) RETURNING id",
+                (a["tenant_id"], a["usuario_id"], f"zt-leitor-restrito-{secrets.token_hex(3)}", hash_,
+                 valor[:8], ["camada:ler"], json.dumps(restricao)),
+            )
+            criados.append(cur.fetchone()["id"])
+        con.commit()
+        return valor
+
+    yield criar
+    with con.cursor() as cur:
+        contexto(con, a["tenant_id"], a["usuario_id"], "admin")
+        cur.execute("DELETE FROM plat.token_servico WHERE id = ANY(%s)", (criados,))
+    con.commit()
+    con.close()
+
+
+def _contexto(cur, token, ip=None, origem=None):
+    cur.execute("SELECT plat.contexto_por_token(%s, %s, %s) AS t", (token, ip, origem))
+    return cur.fetchone()["t"]
+
+
+def test_restricao_de_ip_do_token_vale_na_funcao_de_contexto(leitor, camadas, token_restrito):
+    token = token_restrito({"ip": ["10.0.0.0/8"]})
+    with leitor.cursor() as cur, pytest.raises(psycopg2.Error) as e:
+        _contexto(cur, token, ip="127.0.0.1")
+    assert "ip_nao_permitido" in str(e.value)
+    leitor.rollback()
+    with leitor.cursor() as cur, pytest.raises(psycopg2.Error) as e:
+        _contexto(cur, token)                       # sem IP nenhum: falha fechada
+    assert "ip_nao_permitido" in str(e.value)
+    leitor.rollback()
+    with leitor.cursor() as cur:
+        assert _contexto(cur, token, ip="10.1.2.3") == camadas["demo"]["tenant_id"]
+    leitor.rollback()
+
+
+def test_restricao_de_referer_do_token_vale_na_funcao_de_contexto(leitor, camadas, token_restrito):
+    """Mesma regra de app/auth/sessao.py: `https://*.exemplo.gov.br` casa subdomínio e NÃO casa o ápice."""
+    token = token_restrito({"referer": ["https://*.exemplo.gov.br"]})
+    with leitor.cursor() as cur:
+        assert _contexto(cur, token, origem="https://mapa.exemplo.gov.br") == camadas["demo"]["tenant_id"]
+    leitor.rollback()
+    for origem, esperado in (("https://exemplo.gov.br", "referer_nao_permitido"),
+                             ("http://mapa.exemplo.gov.br", "referer_nao_permitido"),
+                             ("https://mapa.exemplo.gov.br.invasor.com", "referer_nao_permitido"),
+                             (None, "referer_ausente")):
+        with leitor.cursor() as cur, pytest.raises(psycopg2.Error) as e:
+            _contexto(cur, token, origem=origem)
+        assert esperado in str(e.value), (origem, str(e.value))
+        leitor.rollback()
