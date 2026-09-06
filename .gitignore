@@ -19,3 +19,9 @@ tests/credenciais_homolog.txt
 *_priv.pem
 chaves_privadas/
 tests/dados/gerados/
+
+# runtime do laco: nunca versionar
+laco/var/
+laco/vivo/
+laco/*.lock
+laco/*.log

@@ -1,0 +1,11 @@
+{
+  "item": "L0-03-catalogo",
+  "veredito": "passa",
+  "evidencia": [
+    "Link: criado item 9097ebed via POST /api/itens (201), link criado via POST /api/itens/{id}/links (201, token 64 hex). GET /api/compartilhado/{token} anonimo -> 200 antes de revogar. DELETE /api/itens/{id}/links/{lid} -> 204. GET /api/compartilhado/{token} apos revogar -> 404 link_invalido em 30 ms. 20 requisicoes concorrentes apos revogacao: 20x404, 0x200.",
+    "Link anonimo nao entrega identidade: no corpo de /api/compartilhado/{token} o campo dono aparece so como {\"id\":1} (sem login/nome) e criado_por/modificado_por/apagado_por vem null; confirma o conserto do commit a591581 (antes vazava nome+login do dono e de quem alterou).",
+    "Cruzado A->B: 23 chamadas (sessao demo/admin contra id de item, pasta e versao do inquilino demo2) cobrindo GET/PUT/PATCH/DELETE/POST em /api/itens/{id}, /compartilhamento, /versoes, /versoes/{n}, /versoes/{n}/publicar, /versoes/{n}/restaurar, /miniatura, /miniatura/gerar, /links, /usado-por, /criado-a-partir-de, /ordem-de-exclusao, /mover, /relacoes, /favoritos/{id}, /itens/lote, /itens/transferir, /pastas/{id} (PUT/DELETE) -> 0x200/201/204, todas 404 (item_inexistente ou pasta_inexistente), sem vazar existencia.",
+    "Apagar item protegido: PATCH protegido=true, DELETE -> 409 item_protegido com mensagem de onde desligar. Apagar item do qual outros dependem (1a34d2aa..., usado por 3: 2 vista_de_camada + 1 mapa) -> 409 possui_dependentes com a arvore completa de quem depende; POST /api/itens/lote com a mesma acao devolve recusados:[...] em vez de feitos. Item confirmado intacto depois (apagado_em continua null).",
+    "Forjar UPDATE de versao imutavel como plat_app: information_schema.role_table_grants mostra plat_app com SO SELECT em plat.item_versao. UPDATE/INSERT/DELETE diretos via psql (postgresql://plat_app@127.0.0.1:5432/iagro_sat) contra plat.item_versao -> 'ERROR: permission denied for table item_versao' nos tres casos (alterar corpo existente, inserir versao 9999 forjada, apagar uma versao)."
+  ]
+}
