@@ -1070,3 +1070,96 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+---
+
+## 22. Portal da API (`/portal`, item L7-08-d-portal-api-chaves)
+
+Página pública da instalação (sem sessão) que mostra a API inteira: o que existe, com que escopo de chave,
+e um botão para executar a requisição na hora. Serve para quem vai programar contra a plataforma. A
+referência crua do esquema continua em `/api/docs` (Swagger UI); o portal é a leitura de trabalho.
+
+Nada vem de fora: folha, módulo e fonte saem de `/static/`, e a resposta de `/portal` traz uma Política de
+Segurança de Conteúdo (`Content-Security-Policy`) com `default-src 'none'` mais `script-src 'self'`,
+`style-src 'self'`, `font-src 'self'`, `connect-src 'self'` e `frame-ancestors 'none'`. Medido no e2e com
+o navegador interceptando toda requisição: **0 recurso externo** (`recursos_externos_carregados_pelo_portal`).
+
+### 22.1 Como usar
+
+À esquerda: o campo **chave de API**, o filtro de rota e o índice. O índice vem de `/api/openapi.json` e
+mostra, por rota, o verbo, o caminho e o escopo que a chave precisa ter. A chave colada fica na memória da
+aba e não é gravada em lugar nenhum — recarregar a página a apaga.
+
+Ao clicar numa rota abre a ficha: escopo exigido, credencial aceita, privilégio que o dono da chave
+precisa ter, parâmetros, o bloco **Experimentar** e o `curl` equivalente. `Experimentar` faz a requisição
+de verdade contra esta instalação e mostra o código HTTP, o tipo de conteúdo, o tempo e o corpo.
+
+Rota marcada `publico` responde sem chave. Rota marcada `sessao` só aceita cookie de navegador e devolve
+`403 so_sessao` a qualquer chave. Rota marcada `superadmin` responde `404` a quem não é operador da
+plataforma (não confirma que a rota existe).
+
+### 22.2 Escopo de cada rota no esquema
+
+Toda operação de `/api/openapi.json` traz `x-plat-escopo`. O valor é derivado da dependência de
+autenticação da própria rota, não escrito à mão (ADR 0018, decisão 2), então não tem como divergir do que
+o servidor confere. Vocabulário: `publico`, `sessao`, `superadmin`, `token:qualquer` ou um escopo de
+chave. Medido: **197 rotas no esquema, 197 com `x-plat-escopo`, 0 sem**.
+
+Varredura de regressão (`tests/api/test_portal_chaves.py`): uma chave de perfil `leitura` é usada em toda
+rota que exige outro escopo — **0 resposta 200 indevida**. A mesma varredura sem credencial nenhuma
+também não devolve 200 em rota não-pública.
+
+### 22.3 Perfis de chave
+
+Na criação da chave (`/admin/tokens` ou `POST /api/tokens`), quatro conjuntos nomeados poupam escolher
+escopo a escopo. São apelidos, não escopos novos:
+
+| perfil | escopos | para quê |
+|---|---|---|
+| `leitura` | `catalogo:ler` `camada:ler` `tiles:ler` | ler catálogo, feições e tiles; nenhuma escrita |
+| `edicao` | os de leitura mais `camada:editar` `jobs:executar` | editar feições e executar jobs |
+| `tiles` | `tiles:ler` | chave de aplicação de mapa |
+| `admin` | `admin:inquilino` | tudo pela API, exceto gerir chave, senha, 2FA e sessão |
+
+### 22.4 Prazo, contagem e revogação da chave
+
+Toda chave tem prazo: padrão 90 dias, máximo 365 (`400 validade_acima_do_maximo` acima disso). Desde a
+migração `20260906T1617_chaves_api.sql` isso é garantido pelo **banco**, não só pela rota: `expira_em` é
+`NOT NULL` com `CHECK (expira_em <= criado_em + 366 dias)`, e `plat.auth_token` já não tem o ramo que
+aceitava prazo nulo. Chave eterna é impossível por qualquer caminho, inclusive por SQL direto.
+
+`GET /api/tokens` e `GET /api/tokens/{id}` trazem `usos` (quantas requisições a chave já autenticou) além
+de `ultimo_uso` e `ultimo_ip`. O contador é incrementado na mesma atualização que grava o último uso.
+
+Revogar (`DELETE /api/tokens/{id}`) vale na requisição seguinte. Medido de ponta a ponta pelo botão
+`Experimentar` do portal: **abaixo de 5 s** (`segundos_revogar_ate_negar_no_portal`). A resposta é
+`401 token_revogado`, não 403 — credencial que deixou de existir é problema de autenticação (ADR 0018,
+seção "divergência assumida").
+
+### 22.5 Formato de erro (RFC 9457)
+
+Toda resposta de erro é `application/problem+json` com `type` (`urn:plat:erro:<codigo>`), `title`,
+`status`, `detail` e `instance`, mais os campos da casa `erro`, `mensagem`, `detalhe` e `req_id` como
+extensão. Chave expirada devolve `401` com `erro: token_expirado`; chave de leitura em rota de escrita
+devolve `403` com `erro: escopo_insuficiente`, `detalhe.exigido` e `detalhe.token_tem`.
+
+### 22.6 Exemplos executáveis
+
+O portal lista 20 programas — 10 em Python (biblioteca padrão) e 10 em JavaScript (Node 18 ou mais novo,
+`fetch` nativo) — lidos de `exemplos/python/` e `exemplos/js/`. Não são texto de documentação: a suíte os
+executa contra a API viva (`tests/e2e/test_portal.py::test_os_vinte_exemplos_rodam_de_verdade`), então
+exemplo que apodrecer reprova o e2e. Duas variáveis: `PLAT_URL` e `PLAT_CHAVE`.
+
+    PLAT_URL=https://exemplo PLAT_CHAVE=plat_... python3 exemplos/python/03_catalogo_listar.py
+    PLAT_URL=https://exemplo PLAT_CHAVE=plat_... node exemplos/js/03_catalogo_listar.mjs
+
+Os de número 09 e 10 são exemplos de recusa: o 09 prova que uma chave de leitura não escreve, o 10 prova
+o formato de erro. Terminam com código 0 quando a recusa acontece.
+
+### 22.7 O que este item NÃO resolveu
+
+Duas rotas declaram `x-auth: S/T` no esquema e respondem 200 sem credencial nenhuma:
+`GET /api/uploads/tipos` e `GET /api/importacoes/formatos`. As duas devolvem só vocabulário estático (tipos
+de arquivo aceitos), sem nenhum dado de inquilino, então não há vazamento — mas a etiqueta `x-auth` delas
+está errada, e o `x-plat-escopo` derivado diz a verdade (`publico`). O conserto é dos itens donos desses
+arquivos (L0-04-a e L0-04), não deste.

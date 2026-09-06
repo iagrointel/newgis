@@ -3,6 +3,49 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L7-08-d-portal-api-chaves: portal da API e chaves de API)
+
+Portal em `/portal`: página própria da casa (sistema visual `web/estilo/tokens.css`, `body.instrumento`),
+não Scalar nem Redoc — identidade visual é regra de build, e a página da casa faz três requisições, todas
+para a própria origem (ADR 0018 decisão 1). Índice de rota vindo de `/api/openapi.json` com o escopo de
+cada uma, botão `Experimentar` que faz a requisição de verdade com a chave colada, e os 20 exemplos
+executáveis. Resposta de `/portal` traz `Content-Security-Policy: default-src 'none'` mais `'self'` para
+script/estilo/fonte/conexão e `frame-ancestors 'none'`. Medido com o navegador interceptando toda
+requisição: **0 recurso externo** (`recursos_externos_carregados_pelo_portal`).
+
+`x-plat-escopo` em **197 de 197 rotas** do OpenAPI, **derivado** da dependência `autenticado(...)` de cada
+rota (`app/portal/openapi.py`), nunca escrito à mão — etiqueta escrita à mão envelhece em silêncio, e foi
+o que a varredura achou no primeiro dia: `GET /api/uploads/tipos` e `GET /api/importacoes/formatos`
+declaram `x-auth: S/T` e respondem 200 a anônimo (só vocabulário estático, sem dado de inquilino; a
+etiqueta é que está errada, e o conserto é do item dono), e o descritor do GeocodeServer compatível Esri
+declarava exigir escopo sem exigir (é metadado por decisão do ADR 0013 — corrigido para `publico`).
+Varredura de regressão da refutação do item: chave de perfil `leitura` em toda rota que exige outro
+escopo, **0 resposta 200 indevida** (`respostas_200_indevidas`); a mesma varredura sem credencial nenhuma
+também não devolve 200 em rota não-pública.
+
+Chave de API endurecida (migração `20260906T1617_chaves_api.sql`): `plat.token_servico.expira_em` era
+**anulável** e `plat.auth_token` aceitava `expira_em IS NULL OR expira_em > now()` — chave sem prazo
+valeria para sempre. A API nunca gravou NULL, mas o banco admitia. Agora `NOT NULL` com
+`CHECK (expira_em <= criado_em + 366 dias)` e sem o ramo do NULL na função; provado por SQL direto em
+`test_banco_recusa_chave_sem_prazo`. Coluna `usos` conta cada requisição autenticada, na mesma linha de
+UPDATE que já gravava `ultimo_uso`. Perfis nomeados de chave (`leitura`, `edicao`, `tiles`, `admin`) são
+apelidos de conjuntos do vocabulário existente, não escopos novos.
+
+Erro da API passa a ser Problem Details da RFC 9457 por **acréscimo**: `application/problem+json` com
+`type` (`urn:plat:erro:<codigo>`), `title`, `status`, `detail`, `instance`, e `erro`/`mensagem`/`detalhe`/
+`req_id` intactos como membros de extensão. Decisão D18 embrulhada, não revogada; nenhum cliente da casa
+mudou.
+
+Vinte exemplos executáveis em `exemplos/` (10 Python de biblioteca padrão, 10 JavaScript com `fetch`
+nativo do Node), lidos do disco pelo portal e **executados pela suíte** contra a API viva —
+`exemplos_executados_com_sucesso` = 20, `exemplos_que_falharam` = 0. Exemplo que apodrecer reprova o e2e
+em vez de virar documentação errada.
+
+Divergência assumida do portão: o portão pedia "revogar → 403 em ≤ 5 s"; a plataforma responde **401
+`token_revogado`**, que é o certo para credencial que deixou de existir e é o contrato do L0-02 já provado
+em `tests/e2e/test_tokens.py`. O prazo foi medido e cumprido (`segundos_revogar_ate_negar_no_portal`).
+ADR 0018, MANUAL seção 22.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
