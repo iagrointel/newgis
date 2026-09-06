@@ -47,6 +47,18 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
             query = self._reescrever(query)
         return super().execute(query, *args, **kwargs)
 
+    def executemany(self, query, *args, **kwargs):
+        # achado no item L3-19-multiescala (06/09): faltava aqui — psycopg2.extensions.cursor.executemany
+        # é implementado em C e NUNCA chama de volta o `execute` deste objeto, então uma consulta escrita
+        # com o `plat.` literal (o padrão do resto do código) ia para o servidor sem reescrita nenhuma fora
+        # de produção. Reproduzido de verdade: `POST /api/papeis` (que usa `cur.executemany` para gravar
+        # `plat.papel_privilegio`) falhava com `permission denied for schema plat` em QUALQUER trilha —
+        # convertido por `erro_do_banco` em 403 "sem_permissao"/"operação fora do inquilino da sessão", que
+        # parecia um bug de RLS cruzada e não era. Mesma classe de lacuna corrigida aqui, não só p/ este item.
+        if isinstance(query, str):
+            query = self._reescrever(query)
+        return super().executemany(query, *args, **kwargs)
+
     def callproc(self, procname, *args, **kwargs):
         if isinstance(procname, str):
             procname = self._reescrever(procname)
