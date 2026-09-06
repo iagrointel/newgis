@@ -1,0 +1,22 @@
+{
+ "item": "L0-04-c-tabela-camada",
+ "medidas": {
+  "tempo_import_100k_s": {
+   "valor": 14.0,
+   "unidade": "s",
+   "comando": "PUT /api/importacoes/{id}/confirmar até a camada aparecer em GET /api/itens?tipo=camada_vetorial; shapefile dos 100.000 primeiros setores censitários de São Paulo (IBGE, Censo 2022, EPSG:4674); tests/api/ingestao/test_ingestao_100k.py"
+  },
+  "tempo_upload_100k_s": {
+   "valor": 1.0,
+   "unidade": "s",
+   "comando": "POST /api/arquivos do zip de 75,2 MiB (fora do relógio da cláusula, medido à parte)"
+  },
+  "tempo_inspecao_100k_s": {
+   "valor": 2.3,
+   "unidade": "s",
+   "comando": "POST /api/importacoes até o job ingestao.inspecionar concluir (fora do relógio da cláusula)"
+  }
+ },
+ "gerado_em": "2026-09-06T18:11:51Z",
+ "git_sha": "8c2c63cbe0ea"
+}
