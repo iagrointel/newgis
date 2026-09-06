@@ -1,0 +1,62 @@
+{
+ "item": "L2-04-a-leitor-rls-martin",
+ "medidas": {
+  "tile_bytes_3_feicoes": {
+   "valor": 353,
+   "unidade": "bytes",
+   "comando": "SELECT d_demo.t_<camada>(0,0,0,'{\"token\":...}') como papel de leitura"
+  },
+  "revogacao_ate_zero_linhas_s": {
+   "valor": 0.0022,
+   "unidade": "s",
+   "comando": "UPDATE token_servico SET revogado_em -> contexto_por_token recusa e SELECT devolve 0"
+  },
+  "linhas_log_por_chamada_de_contexto": {
+   "valor": 1.0,
+   "unidade": "linhas",
+   "comando": "count(*) em plat.log_acesso por token_id antes e depois de 5 chamadas aceitas"
+  },
+  "linhas_log_de_recusa_persistidas": {
+   "valor": 0,
+   "unidade": "linhas",
+   "comando": "contexto_por_token com escopo insuficiente: linhas que sobram em plat.log_acesso"
+  },
+  "mudancas_2a_execucao_instalador": {
+   "valor": 0,
+   "unidade": "mudanças",
+   "comando": "sudo bash db/leitor_instalar.sh (2a execução seguida)"
+  },
+  "linhas_com_guc_forjada": {
+   "valor": 0,
+   "unidade": "linhas",
+   "comando": "set_config('plat.tenant_id', <inquilino>, true) como papel de leitura, depois SELECT na camada"
+  },
+  "log_bytes_por_1000_chamadas": {
+   "valor": 113000,
+   "unidade": "bytes",
+   "comando": "pg_column_size de uma linha de plat.log_acesso x 1000"
+  },
+  "particoes_de_log": {
+   "valor": 4,
+   "unidade": "partições",
+   "comando": "pg_inherits de plat.log_acesso (expurgo por plat.log_expurgar(meses))"
+  },
+  "camadas_do_catalogo_com_funcao_de_tile": {
+   "valor": 2,
+   "unidade": "camadas",
+   "comando": "itens camada_vetorial hospedados dos inquilinos de demonstração com t_<tabela> em pg_proc"
+  },
+  "chamadas_cruzadas_em_funcao_de_tile": {
+   "valor": 6,
+   "unidade": "chamadas",
+   "comando": "cada camada do catálogo dos 2 inquilinos x (token amplo do outro, token por item do outro, sem token)"
+  },
+  "chamadas_cruzadas_com_dado": {
+   "valor": 0,
+   "unidade": "chamadas",
+   "comando": "tiles não vazios devolvidos a token de outro inquilino"
+  }
+ },
+ "gerado_em": "2026-09-06T16:08:27Z",
+ "git_sha": "90d03c07da0c"
+}
