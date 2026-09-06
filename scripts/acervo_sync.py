@@ -231,9 +231,13 @@ def sincronizar(dsn_kwargs: dict, servidor: str, banco: str, limite: int | None 
 
             removidas = 0
             if todos_os_ids_candidatos:
+                # item L6-01-j-multi-servidor: a poda é SÓ do servidor LOCAL (o desta rodada). Linhas
+                # de servidor remoto (modo_acesso 'fdw'/'indisponivel', escritas por acervo_fdw_sync.py)
+                # nunca são candidatas aqui e não podem sumir por isso.
                 cur.execute(
-                    "DELETE FROM plat.acervo_camada WHERE acervo_camada_id <> ALL(%s)",
-                    (list(todos_os_ids_candidatos),),
+                    "DELETE FROM plat.acervo_camada WHERE servidor = %(servidor)s "
+                    "AND acervo_camada_id <> ALL(%(ids)s)",
+                    {"servidor": servidor, "ids": list(todos_os_ids_candidatos)},
                 )
                 removidas = cur.rowcount
                 conn.commit()
