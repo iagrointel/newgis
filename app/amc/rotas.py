@@ -1,7 +1,7 @@
 """Rotas /api/amc (itens L3-01-a-modelo-dado e L3-01-b-unidades). Três recursos:
 
 - MODELO (`/api/amc/modelos`): documento JSON validado contra `docs/esquemas/amc_modelo.v1.json` e versionado pelo
-  sha256 do JSON canônico (A1). Editar cria versão nova e move a cabeça; versão nunca muda (gatilho na migração 044),
+  sha256 do JSON canônico (A1). Editar cria versão nova e move a cabeça; versão nunca muda (gatilho na migração 045),
   então execução antiga continua apontando para a versão que rodou.
 - CONJUNTO DE UNIDADES (`/api/amc/conjuntos`): grade hexagonal/quadrada em UTM SIRGAS 2000 da zona do centróide
   (A7) gerada como job `amc.gerar_unidades`, ou feições do usuário com o id preservado (síncrono). A ficha do
@@ -18,7 +18,7 @@ import uuid
 
 import psycopg2
 import psycopg2.extras
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 
 from app import db, limites
@@ -57,6 +57,47 @@ def _jsonb(valor):
 
 
 # ================================================================ modelos
+class _ChaveRepetida(ValueError):
+    def __init__(self, chave: str):
+        super().__init__(chave)
+        self.chave = chave
+
+
+def _pares_unicos(pares):
+    vistos = set()
+    for k, _v in pares:
+        if k in vistos:
+            raise _ChaveRepetida(k)
+        vistos.add(k)
+    return dict(pares)
+
+
+async def corpo_json_sem_chave_repetida(request: Request) -> None:
+    """Recusa corpo JSON com chave repetida no MESMO objeto. `json.loads` fica em silêncio com a última ocorrência,
+    então `{"nome": "A", "nome": "B"}` era aceito, gravado como "B" e hasheado como "B" sem que quem enviou soubesse
+    que "A" foi descartado (achado do adversário do item L3-01-a em 06/09/2026). Num documento cuja VERSÃO é o hash,
+    aceitar texto ambíguo em silêncio é buraco de auditoria. Corpo malformado não é assunto desta guarda: quem
+    reclama dele é o parser do FastAPI, com a mensagem dele."""
+    try:
+        bruto = await request.body()
+    except Exception:  # noqa: BLE001 — corpo indisponível: o parser do FastAPI dá a mensagem
+        return
+    if not bruto:
+        return
+    try:
+        json.loads(bruto.decode("utf-8"), object_pairs_hook=_pares_unicos)
+    except _ChaveRepetida as e:
+        raise ErroAPI(422, "json_ambiguo",
+                      f"chave repetida no corpo JSON: '{e.chave}'. Duas ocorrências da mesma chave no mesmo objeto "
+                      f"deixam o documento ambíguo e o modelo é versionado pelo hash do documento; envie uma só",
+                      {"chave": e.chave}) from e
+    except (ValueError, UnicodeDecodeError):
+        return
+
+
+SEM_CHAVE_REPETIDA = Depends(corpo_json_sem_chave_repetida)
+
+
 class ModeloEntrada(BaseModel):
     nome: str | None = Field(None, max_length=250)
     definicao: dict
@@ -67,13 +108,13 @@ class ValidarEntrada(BaseModel):
 
 
 @router.post("/modelos/validar", openapi_extra=ESCREVER)
-def validar_modelo(corpo: ValidarEntrada, auth: Auth = autenticado("analise.amc")):
+def validar_modelo(corpo: ValidarEntrada, auth: Auth = autenticado("analise.amc"), _cru=SEM_CHAVE_REPETIDA):
     """Valida sem gravar: devolve o hash que o documento teria. Modelo inválido sai 422 com todas as violações."""
-    mod_esquema.validar(corpo.definicao)
+    definicao = mod_esquema.validar(corpo.definicao)
     return {"valido": True, "esquema": mod_esquema.ESQUEMA_NOME,
-            "versao_hash": mod_esquema.hash_modelo(corpo.definicao),
-            "fatores": len(corpo.definicao.get("fatores") or []),
-            "restricoes": len(corpo.definicao.get("restricoes") or [])}
+            "versao_hash": mod_esquema.hash_modelo(definicao),
+            "fatores": len(definicao.get("fatores") or []),
+            "restricoes": len(definicao.get("restricoes") or [])}
 
 
 def _modelo_json(r: dict, definicao=None) -> dict:
@@ -101,7 +142,8 @@ def _modelo_ou_404(cur, mid: str, com_definicao: bool = False) -> tuple[dict, di
 
 
 @router.post("/modelos", status_code=201, openapi_extra=ESCREVER)
-def criar_modelo(corpo: ModeloEntrada, request: Request, auth: Auth = autenticado("analise.amc")):
+def criar_modelo(corpo: ModeloEntrada, request: Request, auth: Auth = autenticado("analise.amc"),
+                 _cru=SEM_CHAVE_REPETIDA):
     definicao = mod_esquema.validar(corpo.definicao)
     versao_hash = mod_esquema.hash_modelo(definicao)
     nome = (corpo.nome or definicao["nome"]).strip()
@@ -156,7 +198,7 @@ def obter_modelo(modelo_id: str, auth: Auth = autenticado("analise.amc", escopo_
 
 @router.put("/modelos/{modelo_id}", openapi_extra=ESCREVER)
 def atualizar_modelo(modelo_id: str, corpo: ModeloEntrada, request: Request,
-                     auth: Auth = autenticado("analise.amc")):
+                     auth: Auth = autenticado("analise.amc"), _cru=SEM_CHAVE_REPETIDA):
     """Edita: grava versão NOVA e move a cabeça. A versão anterior fica; execução que a usou não muda de resultado."""
     mid = _uuid(modelo_id, "modelo_id")
     definicao = mod_esquema.validar(corpo.definicao)

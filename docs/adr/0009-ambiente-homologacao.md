@@ -101,3 +101,34 @@ banco novo (catálogo do Postgres, WAL próprio) não vale o risco numa máquina
 - Risco aceito e nomeado: o advisory lock do job pesado é compartilhado entre os dois ambientes
   (item 5 acima); se algum dia isso incomodar de verdade, a correção é a mesma convenção de nome
   aplicada a `LOCK_PESADO`.
+
+## Adendo de 06/09/2026 — a reescrita cobre a classe, não só `execute(str)`
+
+Num único dia o mesmo defeito apareceu três vezes: `psycopg2.extras.execute_values` entrega `bytes` ao cursor (o
+conjunto do tipo `feicoes` do item L3-01-b morria fora do schema `plat`); as conexões cruas da suíte usavam
+`RealDictCursor` em vez de `CursorSchemaAmbiente` (commit `c311aa7`); e `executemany` não passava pela reescrita, o
+que fazia `POST`/`PUT /api/papeis` baterem no schema de produção e a prova de isolamento entre inquilinos
+(`tests/api/test_cruzado.py`) não rodar em base por trilha. Nos três casos o servidor devolvia 42501 e a aplicação
+o traduzia como 403 "operação fora do inquilino da sessão" — uma mensagem que manda o operador investigar o lugar
+errado. Cada um deles fez uma prova de isolamento passar por engano.
+
+Decisão: a reescrita virou `MixinReescritaSchema`, separado do cursor do psycopg2 para poder ser testado sem banco.
+Ele declara o que cobre e o que não cobre:
+
+| ponto de entrada | situação |
+|---|---|
+| `execute` | coberto, em `str` e em `bytes` |
+| `executemany` | coberto, em `str` e em `bytes` |
+| `callproc` | coberto (o nome do procedimento leva o schema) |
+| `mogrify` | coberto |
+| `copy_expert` | coberto (o comando COPY inteiro é texto) |
+| `copy_from`, `copy_to` | **fora**: recebem NOME de tabela e a casa não os usa (varrido em `app/`, `scripts/`, `db/`) |
+| `psycopg2.sql.Composed` e afins | **fora**: passa cru, como sempre passou; a casa não usa `psycopg2.sql` |
+
+`tests/unit/test_schema_ambiente.py` (22 casos) reprova se: aparecer um ponto de entrada do driver sem decisão
+escrita; um método coberto for sobrescrito sem chamar a reescrita; alguém passar a usar `copy_from`/`copy_to` em
+código de produção; a ordem da MRO mudar; ou o no-op de produção deixar de devolver o MESMO objeto que entrou.
+
+O erro do banco também deixou de mentir: `app/auth/comum._erro_de_privilegio` separa 42501 por política de
+inquilino (403 `sem_permissao`, que é a verdade) de 42501 por falta de GRANT (500 `privilegio_do_banco`, com a
+frase do servidor só no log). Erro de instalação do ambiente não é fronteira de inquilino.

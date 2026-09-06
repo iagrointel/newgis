@@ -18,6 +18,7 @@ O worker de produção só conhece um tipo de job depois do merge, então aqui a
 """
 
 import time
+import uuid
 
 import pyproj
 import pytest
@@ -322,3 +323,40 @@ def test_conjunto_usado_por_execucao_nao_se_apaga(sessao_a, conexao_plat_app):
         sessao_a.delete(f"/api/amc/execucoes/{execucao['id']}")
         sessao_a.delete(f"/api/amc/conjuntos/{conjunto['id']}")
         sessao_a.delete(f"/api/amc/modelos/{modelo['id']}")
+
+
+# ================================================================ conserto do laudo L3-01-ADVERSARIO (06/09/2026)
+def test_teto_de_unidades_vale_para_a_contagem_real_e_o_job_falha(sessao_a, conexao_plat_app, monkeypatch):
+    """Achado 4: o teto era conferido só sobre a ESTIMATIVA área/área-da-célula. A célula de borda entra recortada,
+    então o conjunto terminava acima do teto declarado (o adversário mediu 1.000.175 com o teto em 1.000.000).
+    Aqui o teto é baixado por monkeypatch para provar a mecânica sem gerar um milhão de células: a estimativa passa
+    na guarda de entrada, a contagem real não, e o conjunto tem de terminar VAZIO e marcado como falhou — e o job
+    tem de falhar junto, para o operador não ver 'concluído' sobre um conjunto recusado."""
+    from app import limites
+    from app.amc import tarefas as amc_tarefas
+    from app.jobs.registro import FalhaDefinitiva
+
+    tenant = ids_por_slug(conexao_plat_app)["demo"]
+    externo = [[-49.50, -16.90], [-49.40, -16.90], [-49.40, -16.80], [-49.50, -16.80], [-49.50, -16.90]]
+    buraco = [[-49.47, -16.87], [-49.43, -16.87], [-49.43, -16.83], [-49.47, -16.83], [-49.47, -16.87]]
+    monkeypatch.setattr(limites, "AMC_UNIDADES_MAX", 420)  # estimativa ≈ 396: passa na guarda de entrada
+    r = sessao_a.post("/api/amc/conjuntos", json={"nome": f"{PREFIXO} teto real", "tipo": "quadrada",
+                                                  "lado_m": 500.0,
+                                                  "area_estudo": {"type": "Polygon",
+                                                                  "coordinates": [externo, buraco]}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    try:
+        assert r.json()["ficha"]["contagem_esperada"] <= 420, "a estimativa já passava do teto; refazer o caso"
+        with pytest.raises(FalhaDefinitiva) as e:
+            amc_tarefas.amc_gerar_unidades(ContextoDeTeste(tenant), uuid.UUID(cid))
+        assert "teto" in str(e.value)
+        conjunto = sessao_a.get(f"/api/amc/conjuntos/{cid}").json()
+        assert conjunto["estado"] == "falhou", conjunto["estado"]
+        assert conjunto["n_unidades"] == 0 and conjunto["erro"]
+        assert conjunto["ficha"]["recusado"] is True
+        assert conjunto["ficha"]["n_unidades_geradas"] > 420, conjunto["ficha"]["n_unidades_geradas"]
+        # e as unidades foram limpas de verdade, não só descontadas na ficha
+        assert sessao_a.get(f"/api/amc/conjuntos/{cid}/unidades").json()["total"] == 0
+    finally:
+        sessao_a.delete(f"/api/amc/conjuntos/{cid}")
