@@ -682,6 +682,64 @@ A extração foi refeita com `ogr2ogr` (streaming, GDAL, pico de RSS medido ~500
   pacote apt nesta distribuição; a cláusula "chave privada nunca no git" foi provada com uma varredura direta
   do histórico (`git log --all -p`) à procura do cabeçalho PEM.
 
+## turno 3, setembro de 2026 (itens L0-04-d-formatos-base · L0-04-b-inspecao · L0-04-c-tabela-camada · L0-04-ingest-vetor · L0-05-e-worker-em-container: conserto dos achados FUNCIONAIS do adversário G3)
+
+O ataque adversarial do grupo G3 (`laco/handoffs/T3/ataque-g3-ADVERSARIO.md`) refutou os cinco itens acima.
+Esta passagem consertou a parte FUNCIONAL (formatos, rotas, camadas, medidas, portão do contêiner); os
+achados de recurso partilhado (chave de trinco global, schema `d_<slug>` sem prefixo de instalação, cota que
+só sobe, justiça da fila, orçamento de SSE) são de outra trilha (`wt/partilha`).
+
+- **9 formatos do portão viravam 4**: a instalação anunciava só shapefile/gpkg/geojson/csv. O GDAL do host
+  (3.8.4) já tinha driver para os 9 do L0-04-d e para os 4 a mais do L0-04-b (GML, FlatGeobuf, DXF, File
+  Geodatabase zipada) — nada precisou ser instalado. `app/ingestao/formatos.py` passa a anunciar 13, com o
+  DWG declarado à parte em `FORMATOS_QUE_DEPENDEM_DE_LICENCA` (decisão do dono, item L0-04-e).
+- **`GET /api/importacoes/formatos` respondia 404**: estava declarada depois de `GET /api/importacoes/{id}`,
+  e o roteador do Starlette casa na ordem de declaração — o parâmetro livre engolia a palavra "formatos". A
+  rota literal passou para antes; `tests/unit/test_rotas_sombreadas.py` reprova qualquer rota nova do
+  repositório inteiro que caia na mesma armadilha.
+- **Pacote com várias camadas perdia todas menos a primeira, em silêncio**: `inspecionar.py` usava
+  `camada = camadas[0]`. `_inspecionar_camada` roda agora para TODAS as camadas; a proposta lista cada uma
+  em `proposta["camadas"]`, pergunta qual entra quando há mais de uma e avisa quais ficam de fora.
+- **CSV de 300 colunas e 0 linhas terminava em `proposta` sem aviso nenhum**: camada com zero feições agora
+  sai com aviso explícito citando o número de campos.
+- **Inquilino com hífen no slug nunca importava**: `plat.tenant.slug` aceita hífen e dígito inicial desde a
+  migração 002; `plat.camada_schema_garantir` (migração 029) recusava os dois. Migração
+  `20260906T1607_slug_ingestao_reconciliado.sql` reconcilia o alfabeto (a criação do inquilino é a
+  autoridade); `tests/api/ingestao/test_slug_alfabeto.py` exercita as duas funções ao vivo em vez de repetir
+  as regras escritas à mão.
+- **Zip malformado devolvia 500 em vez de 422**: `ZipSuspeito` e `ConteudoNaoCorresponde` eram classes irmãs
+  sem mãe comum, e a rota só capturava a segunda. As duas passam a herdar de `ArquivoRecusado`, que é o que
+  a rota captura.
+- **As duas medidas nomeadas pelos portões não existiam**: `tests/api/ingestao/test_medidas_100k.py`
+  (marcado `lento`) gera 100 mil feições derivadas de dado aberto já no repositório (disco não permitia
+  baixar dado novo), mede `tempo_inspecao_s` (portão do L0-04-b, ≤ 5 s) e `tempo_import_100k_s` (portão do
+  L0-04-c, ≤ 60 s) e grava em `tests/medidas/L0-04-b-inspecao.json` e `tests/medidas/L0-04-c-tabela-camada.json`.
+- **L0-05-e estava `entregue` com o portão ainda como "a fixar pelo arquiteto"**: o texto do portão de
+  verdade ficou escrito na seção 10 do ADR 0010. De caminho, a imagem do worker em contêiner (base
+  `python:3.12-slim-bookworm`) tinha GDAL 3.6.2, sem `ogrinfo -json` — todo job de inspeção cairia nesse
+  executor. A base passou a `python:3.12-slim-trixie` (GDAL 3.10.3) e o Dockerfile ganhou um portão de
+  construção que reprova sem `-json` ou sem qualquer um dos 12 drivers.
+- **Ponta de `master` que não importava**: entre dois commits, `app/main.py` importava
+  `app.auth.rotas_convites`, que não tinha entrado no commit — um `git clone` não subia, embora a árvore de
+  trabalho de quem programou funcionasse (arquivo presente no disco, só não versionado).
+  `tests/unit/test_app_versionada.py` fecha isso por dois caminhos: fumaça (a aplicação importa e tem mais
+  de 100 rotas) e todo módulo `app.*` carregado ao importar `app.main` tem de estar em `git ls-files`.
+
+Sete testes de `tests/api/adversario_g3/test_g3_ingestao.py` perdem o `xfail(strict=True)` porque o defeito
+que reproduziam foi consertado (nenhum teste apagado, nenhuma asserção enfraquecida). O teste do slug com
+hífen, que escrevia as duas regras à mão e por isso nunca poderia virar prova, passa a ler o CHECK de
+`plat.tenant` e o corpo de `plat.camada_schema_garantir` ao vivo e comparar os dois. Os dois achados de
+recurso partilhado (schema sem prefixo de instalação, cota que só sobe) continuam `xfail`: são de outra
+trilha.
+
+### Commits
+
+| sha | mensagem |
+|---|---|
+| `1409076` | Ingestão vetorial: 13 formatos, todas as camadas do arquivo e recusa explícita no lugar do silêncio |
+| `b24fefa` | Worker em contêiner com GDAL que serve à ingestão, e o portão do item escrito |
+| `072270c` | Troca as marcas dos testes do adversário que passaram a valer, e faz o do slug ler a regra viva |
+
 ## 0.2.0 — turno 2, setembro de 2026 (itens L0-02-tenant-auth: identidade e acesso · L0-05-jobs: fila de trabalhos)
 
 O produto passa a ter login com senha e segundo fator, sessão, usuários, grupos, papéis, tokens de serviço, log de

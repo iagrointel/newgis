@@ -150,9 +150,14 @@ def test_geojson_poligono_autointersectado_e_corrigido_com_relatorio(ingestor_a)
 
 
 def test_formato_nao_suportado_recusa_antes_de_qualquer_job(ingestor_a):
+    """'kml' era o exemplo histórico de formato não suportado; desde o conserto do turno 3 (adversário G3,
+    achado do L0-04-d) a instalação passou a anunciar 13 formatos, e 'kml' é um deles — usá-lo aqui faria a
+    recusa cair em 'conteudo_nao_corresponde' (os bytes do gpkg não são KML), não em 'formato_nao_suportado'.
+    'dwg' continua fora de `app/ingestao/formatos.FORMATOS` de propósito (depende de conversor de terceiro
+    com licença própria; decisão do dono, item L0-04-e) — é o formato que ainda prova esta cláusula."""
     obj = ingestor_a.enviar_arquivo(GERADOS / "cobertura.gpkg")
     item_id = ingestor_a.item_arquivo(obj, "cobertura.gpkg")
-    r = ingestor_a.sessao.post("/api/importacoes", json={"arquivo_id": item_id, "formato": "kml"})
+    r = ingestor_a.sessao.post("/api/importacoes", json={"arquivo_id": item_id, "formato": "dwg"})
     assert r.status_code == 422 and r.json()["erro"] == "formato_nao_suportado"
 
 

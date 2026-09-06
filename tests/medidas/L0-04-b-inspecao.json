@@ -1,0 +1,22 @@
+{
+ "item": "L0-04-b-inspecao",
+ "medidas": {
+  "tempo_inspecao_s": {
+   "valor": 1.31,
+   "unidade": "s",
+   "comando": "pytest tests/api/ingestao/test_medidas_100k.py -m lento"
+  },
+  "feicoes_do_arquivo_medido": {
+   "valor": 100000,
+   "unidade": "feições",
+   "comando": "grade derivada da cobertura do solo de Guarulhos (OSM/ODbL)"
+  },
+  "bytes_do_shapefile_zipado": {
+   "valor": 3118005,
+   "unidade": "bytes",
+   "comando": "pytest tests/api/ingestao/test_medidas_100k.py -m lento"
+  }
+ },
+ "gerado_em": "2026-09-06T18:13:13Z",
+ "git_sha": "90d03c07da0c"
+}
