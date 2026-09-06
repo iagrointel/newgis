@@ -102,7 +102,7 @@ async function montarTela() {
   botaoCancelar.addEventListener('click', async () => {
     if (!uploadEmCurso) return;
     try {
-      await fetch(`/api/uploads/${uploadEmCurso}`, { method: 'DELETE', headers: { authorization: `Bearer ${await token()}` } });
+      await fetch(`/api/uploads/${uploadEmCurso}`, { method: 'DELETE', credentials: 'omit', headers: { authorization: `Bearer ${await token()}` } });
     } catch { /* melhor esforço: o periódico de 24h limpa se isto falhar */ }
     aviso.mostrar(t('upload.cancelado'), 'info');
     resetar();
@@ -169,6 +169,7 @@ async function enviarArquivo(arquivo, tipoDeclarado, { aoIniciar, aoProgredir })
     const pedaco = arquivo.slice(inicio, inicio + parteBytes);
     const resp = await fetch(`/api/uploads/${id}/partes/${n}`, {
       method: 'PUT',
+      credentials: 'omit',
       headers: { authorization: `Bearer ${tk}`, 'content-type': 'application/octet-stream' },
       body: pedaco,
     });
@@ -181,6 +182,7 @@ async function enviarArquivo(arquivo, tipoDeclarado, { aoIniciar, aoProgredir })
 
   const respConcluir = await fetch(`/api/uploads/${id}/concluir`, {
     method: 'POST',
+    credentials: 'omit',
     headers: { authorization: `Bearer ${tk}`, 'content-type': 'application/json' },
     body: '{}',
   });
