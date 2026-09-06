@@ -905,11 +905,40 @@ ou reservado. A conexão real nunca resolve o host de novo depois de validado (f
 todo redirecionamento é revalidado do zero, salto a salto — um serviço público que redireciona para um IP
 interno é aceito no primeiro salto e recusado no segundo, nunca no primeiro.
 
-### 18.3 Limites desta fatia
+### 18.3 Publicar uma camada do acervo e assinar (item L6-01-b-view-so-leitura)
 
-Sem tela em nenhum dos dois; `acervo_camada` ainda não tem rota HTTP própria (só a tabela); lista branca de
-coluna do acervo é por nome, não por conteúdo (L6-01-f); os 15 conectores concretos (o que de fato busca e
-traduz WMS/WFS/STAC/... para camada do mapa) são itens futuros, L6-02-b em diante.
+Publicar é criar a VIEW; assinar é ganhar o direito de lê-la. São dois passos com donos diferentes.
+
+1. **A casa publica** (uma vez por camada, como `postgres`):
+
+       sudo -u postgres python3 scripts/acervo_publicar.py --schema plat --banco iagro_sat
+
+   Cria uma view em `plat_acervo` para cada camada `estado = 'exposta'` do registro, com só as colunas da
+   lista branca. É idempotente e derruba a view de quem saiu de `exposta`. Nada é copiado: a view lê a tabela
+   original e usa o índice espacial dela.
+
+2. **O inquilino assina** (precisa do privilégio `conteudo.registrar_fonte`):
+
+       GET    /api/acervo/camadas                                  o que está publicado; `assinada` é do seu
+       POST   /api/acervo/camadas/<view>/assinatura                passa a poder ler
+       DELETE /api/acervo/camadas/<view>/assinatura                deixa de poder ler
+
+3. **Lê**:
+
+       GET /api/acervo/camadas/<view>/feicoes?bbox=oeste,sul,leste,norte&limite=500     GeoJSON
+       GET /api/acervo/camadas/<view>/tiles/{z}/{x}/{y}.mvt                             tile vetorial
+
+   Sem assinatura, as duas devolvem 403 `sem_assinatura` — e a view por baixo devolve zero linha, mesmo para
+   quem chegasse ao SQL por fora. Só leitura: qualquer verbo de escrita nestes caminhos é 405, e a view não
+   tem `GRANT` de escrita para o papel da aplicação, então o próprio banco recusa.
+
+### 18.4 Limites desta fatia
+
+Sem tela em nenhum dos dois; lista branca de coluna do acervo é por nome, não por conteúdo (L6-01-f); os 15
+conectores concretos (o que de fato busca e traduz WMS/WFS/STAC/... para camada do mapa) são itens futuros,
+L6-02-b em diante. Da publicação: `plat-martin` não existe nesta máquina (o SQL de tile é servido pela própria
+API), FeatureServer e OGC API de feição não existem (L2-04) e o visualizador ainda não recebe camada do
+catálogo (L2-01), então "adicionar ao mapa" é por API, não por tela.
 
 ## 19. Ficha do acervo completa e gate de LGPD (itens L6-01-d-ficha-fonte e L6-01-f-lgpd)
 
