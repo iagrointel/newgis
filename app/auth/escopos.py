@@ -8,11 +8,11 @@ from app.erros import ErroAPI
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 ESCOPO = re.compile(
     rf"^(catalogo:ler|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|rota:usar|"
-    rf"geocodificar:usar|admin:inquilino)$"
+    rf"geocodificar:usar|campo:usar|admin:inquilino)$"
 )
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "admin:inquilino",
+    "geocodificar:usar", "campo:usar", "admin:inquilino",
 )
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
@@ -23,6 +23,8 @@ DESCRICAO = {
     "rota:usar": "calcular rota, matriz origem-destino e isócrona (L2-11-c; dado de teste, sem PII)",
     "geocodificar:usar": "geocodificar, geocodificar reverso e sugerir endereço (L2-11-b; dado aberto CNEFE, "
     "sem PII); mesmo escopo cobre o GeocodeServer compatível Esri",
+    "campo:usar": "PWA de campo (L2-07-a): ler os mapas de campo do dono e sincronizar coletas; "
+    "emitido por POST /api/campo/sessao com validade de 30 dias, revogável como todo token de serviço",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 
