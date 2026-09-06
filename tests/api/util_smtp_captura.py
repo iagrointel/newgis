@@ -9,24 +9,36 @@ Sem AUTH: os testes configuram o SMTP do inquilino SEM usuário/senha, então `c
 
 import asyncio
 import threading
+from email import message_from_string, policy
 
 
 class Mensagem:
+    """`dados` é a mensagem RFC 822 CRUA (cabeçalhos + corpo) tal como chegou pela fio; `assunto`/`corpo`
+    decodificam de verdade (`email.message_from_string` + `get_content()`) — texto em português força
+    `Content-Transfer-Encoding: quoted-printable` (acentos) ou `base64`, e o link do convite/redefinição
+    pode nascer QUEBRADO NO MEIO por causa da dobra de linha do quoted-printable em 76 colunas (achado
+    desta verificação: ler a mensagem crua como string ingênua rompe o token no meio). Um cliente de
+    e-mail de verdade decodifica isso do jeito certo (é para isso que o MIME existe); o mock tinha que
+    decodificar do mesmo jeito para não acusar um bug que não existe do lado do produto."""
+
     def __init__(self, mail_from: str, rcpt_to: list[str], dados: str):
         self.mail_from = mail_from
         self.rcpt_to = rcpt_to
         self.dados = dados
+        self._msg = message_from_string(dados, policy=policy.default)
 
     @property
     def assunto(self) -> str:
-        for linha in self.dados.splitlines():
-            if linha.lower().startswith("subject:"):
-                return linha.split(":", 1)[1].strip()
-        return ""
+        return str(self._msg.get("Subject", ""))
 
     @property
     def corpo(self) -> str:
-        return self.dados.split("\n\n", 1)[-1]
+        if self._msg.is_multipart():
+            for parte in self._msg.walk():
+                if parte.get_content_type() == "text/plain":
+                    return parte.get_content()
+            return ""
+        return self._msg.get_content()
 
 
 class ServidorSMTPCaptura:

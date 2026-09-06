@@ -161,10 +161,10 @@ def aceitar(corpo: ConviteAceitarEntrada, request: Request):
     if info["motivo"] != "ok":
         raise ErroAPI(410, f"convite_{info['motivo']}", "este convite não pode mais ser usado",
                       {"motivo": info["motivo"]})
-    with db.db() as cur:
-        cur.execute("SELECT config FROM plat.tenant WHERE slug = %s", (info["tenant_slug"],))
-        config = cur.fetchone()["config"]
-    politica = politica_de(config, info["tenant_slug"])
+    # a política de senha vem do MESMO resultado (convite_resolver já faz LEFT JOIN com plat.tenant): uma
+    # segunda consulta sem contexto de inquilino (a conta ainda não existe) cairia na RLS de plat.tenant e
+    # devolveria None em vez da linha (achado desta verificação, migração 049).
+    politica = politica_de(info["config"], info["tenant_slug"])
     regra = regra_da_senha(corpo.senha, politica, corpo.login, info["tenant_slug"], corpo.nome)
     if regra:
         raise ErroAPI(422, "senha_fraca", mensagem_da_regra(regra, politica), {"regra": regra})

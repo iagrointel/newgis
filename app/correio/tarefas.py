@@ -29,7 +29,10 @@ class CorreioEnviarParametros(BaseModel):
     descricao="Envia um e-mail pelo SMTP efetivo do inquilino (ou o da instalação); nunca criável por POST /api/jobs",
     parametros=CorreioEnviarParametros,
     pesado=False,
-    memoria_mb=192,
+    memoria_mb=512,  # 192 e 256 MB estouravam na prática (RLIMIT_DATA do filho, item L0-05-e): a cifra AES-GCM
+                     # (app/correio/cifra.py) é o primeiro tipo de job a importar `cryptography` DEPOIS do fork
+                     # (outros tipos ou já a tinham carregada por outro caminho, ou não a usam); medido com o
+                     # worker real desta máquina, "memória excedida (limite 192 MB)" e depois "(limite 256 MB)"
     timeout_s=30,
     tentativas=3,
     perfil_minimo="admin",
