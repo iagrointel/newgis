@@ -1,0 +1,50 @@
+{
+ "item": "L6-02-c-wfs-ogcapi",
+ "medidas": {
+  "servicos_publicos_lidos": {
+   "valor": {
+    "IBGE GeoServer (WFS 2.0)": {
+     "url": "https://geoservicos.ibge.gov.br/geoserver/ows",
+     "colecoes": 9708,
+     "exemplo": "BDIA:geol_area",
+     "ms": 3021
+    },
+    "pygeoapi demo (OGC API - Features)": {
+     "url": "https://demo.pygeoapi.io/master",
+     "colecoes": 17,
+     "exemplo": "obs",
+     "ms": 1437
+    }
+   },
+   "unidade": "coleções por serviço",
+   "comando": "pytest tests/api/conexao/test_wfs_ogcapi.py::test_medida_servicos_publicos_reais"
+  },
+  "copia_50k_feicoes_s": {
+   "valor": 10.19,
+   "unidade": "segundos",
+   "comando": "pytest tests/api/conexao/test_wfs_ogcapi.py::test_copia_50_mil_feicoes_com_tempo_medido"
+  },
+  "copia_50k_download_s": {
+   "valor": 0.781,
+   "unidade": "segundos",
+   "comando": "resultado do job"
+  },
+  "copia_50k_carga_ogr2ogr_s": {
+   "valor": 1.648,
+   "unidade": "segundos",
+   "comando": "resultado do job"
+  },
+  "copia_50k_paginas": {
+   "valor": 10,
+   "unidade": "requisições",
+   "comando": "resultado do job"
+  },
+  "refutacao_5mi_sem_paginacao_s": {
+   "valor": 7.46,
+   "unidade": "segundos",
+   "comando": "pytest tests/api/conexao/test_wfs_ogcapi.py::test_wfs_de_5_milhoes_sem_paginacao_para_no_limite_e_avisa"
+  }
+ },
+ "gerado_em": "2026-09-06T16:27:50Z",
+ "git_sha": "90d03c07da0c"
+}
