@@ -575,7 +575,7 @@ def test_adv_execute_values_e_o_unico_desvio_da_reescrita_de_schema():
         "SELECT 1 FROM plat_homolog.amc_unidade"
     # a mesma consulta em bytes, que era o buraco
     assert CursorSchemaAmbiente._reescrever is MixinReescritaSchema._reescrever
-    assert set(MixinReescritaSchema.METODOS_COM_CONSULTA) >= {"execute", "executemany", "callproc"}
+    assert set(MixinReescritaSchema.PONTOS_COM_CONSULTA) >= {"execute", "executemany", "callproc"}
 
 
 @pytest.mark.lento
