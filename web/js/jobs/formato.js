@@ -84,9 +84,15 @@ export function linhasLog(n) {
 /* texto curto da coluna "progresso" conforme o estado */
 export function textoProgresso(job) {
   switch (job.estado) {
-    case 'pendente':
-      return job.cancelar_solicitado ? 'cancelando' : (job.agendado_para && new Date(job.agendado_para) > new Date()
-        ? `na fila até ${data(job.agendado_para)}` : 'na fila');
+    case 'pendente': {
+      if (job.cancelar_solicitado) return 'cancelando';
+      // item L0-05-e: posição na fila do inquilino (1 = o próximo quando chegar a vez dele); entre inquilinos
+      // a ordem é decidida pelo rodízio a cada retirada, logo não há posição global a mostrar
+      const pos = Number(job.posicao_fila);
+      const rotuloPos = Number.isInteger(pos) && pos > 0 ? ` · posição ${pos} na fila` : '';
+      return job.agendado_para && new Date(job.agendado_para) > new Date()
+        ? `na fila até ${data(job.agendado_para)}${rotuloPos}` : `na fila${rotuloPos}`;
+    }
     case 'rodando':
       return `${job.progresso ?? 0} %${job.mensagem ? ` · ${job.mensagem}` : ''}${job.cancelar_solicitado ? ' · cancelando' : ''}`;
     case 'concluido':

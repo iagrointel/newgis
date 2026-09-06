@@ -24,16 +24,27 @@ def versao() -> str:
 
 def _sha_do_git() -> str | None:
     git = ROOT / ".git"
+    if not git.is_dir():
+        # worktree (git worktree add): .git é um ARQUIVO "gitdir: <caminho>"; o HEAD fica no gitdir da
+        # worktree, mas as refs e o packed-refs ficam no diretório comum apontado por <gitdir>/commondir
+        ponteiro = _ler(git) or ""
+        if not ponteiro.startswith("gitdir:"):
+            return None
+        git = Path(ponteiro.split(":", 1)[1].strip())
     head = _ler(git / "HEAD")
     if not head:
         return None
     if not head.startswith("ref:"):
         return head if _HEX.match(head) else None
     ref = head.split(":", 1)[1].strip()
-    direto = _ler(git / ref)
+    comum = git
+    nome_comum = _ler(git / "commondir")
+    if nome_comum:
+        comum = (git / nome_comum).resolve()
+    direto = _ler(comum / ref) or _ler(git / ref)
     if direto and _HEX.match(direto):
         return direto
-    empacotadas = _ler(git / "packed-refs") or ""
+    empacotadas = _ler(comum / "packed-refs") or ""
     for linha in empacotadas.splitlines():
         partes = linha.split()
         if len(partes) == 2 and partes[1] == ref and _HEX.match(partes[0]):

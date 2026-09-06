@@ -1,0 +1,32 @@
+{
+ "item": "L0-05-e-justica-entre-inquilinos",
+ "medidas": {
+  "portao_espera_a_s": {
+   "valor": 0.2,
+   "unidade": "s",
+   "comando": "2 × prova.progresso(300 s) de demo2 + 1 × prova.progresso(1 s) de demo, worker 1 processo; B em curso cancelado para liberar o worker; espera = iniciado_em(A) − criado_em(A)"
+  },
+  "portao_jobs_b_antes_de_a": {
+   "valor": 1,
+   "unidade": "jobs",
+   "comando": "contagem dos jobs de demo2 criados pelo teste com iniciado_em <= iniciado_em(A); portão: <= 1"
+  },
+  "adversario50_espera_a_s": {
+   "valor": 0.2,
+   "unidade": "s",
+   "comando": "50 × prova.progresso(300 s) de demo2 + 1 × prova.progresso(1 s) de demo, worker 1 processo; B em curso cancelado para liberar o worker; espera = iniciado_em(A) − criado_em(A)"
+  },
+  "adversario50_jobs_b_antes_de_a": {
+   "valor": 1,
+   "unidade": "jobs",
+   "comando": "contagem dos jobs de demo2 criados pelo teste com iniciado_em <= iniciado_em(A); portão: <= 1"
+  },
+  "cota_simultaneos_sobreposicao_inquilinos_s": {
+   "valor": 3.1,
+   "unidade": "s",
+   "comando": "worker 2 processos, demo com cota_jobs_simultaneos=1: 2 jobs de demo em série (inicio2 >= fim1) e demo x demo2 em paralelo (sobreposição > 0); tests/api/jobs/test_jobs_justica.py"
+  }
+ },
+ "gerado_em": "2026-09-06T21:32:43Z",
+ "git_sha": "099fc463e1c7"
+}

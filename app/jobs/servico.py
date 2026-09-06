@@ -34,8 +34,17 @@ SELECT j.id, j.tipo, j.estado, j.progresso, j.mensagem, j.prioridade, j.pesado, 
             ELSE extract(epoch FROM (coalesce(j.terminado_em, now()) - j.iniciado_em)) END AS duracao_s,
        j.tentativa, j.max_tentativas, j.reinicios, j.cancelar_solicitado, j.cancelado_por, j.cancelado_em,
        j.worker, j.chave, j.agenda_id, j.programado_para, j.resultado, j.erro, j.linhas_log, j.parametros,
-       j.proveniencia, j.memoria_mb, j.timeout_s
+       j.proveniencia, j.memoria_mb, j.timeout_s, pos.posicao_fila
 FROM plat.job j LEFT JOIN plat.usuario u ON u.id = j.usuario_id
+LEFT JOIN LATERAL (
+  -- item L0-05-e-justica-entre-inquilinos: posição do job pendente na fila DO INQUILINO (1 = o próximo a rodar
+  -- quando chegar a vez dele), pela mesma chave que ordena a fila interna do inquilino no job_pegar
+  -- (prioridade, agendado_para, criado_em, id). Entre inquilinos não existe posição fixa: o rodízio por
+  -- inquilino (turno = max(iniciado_em)) decide a vez a cada retirada.
+  SELECT count(*) + 1 AS posicao_fila FROM plat.job a
+  WHERE a.estado = 'pendente' AND a.tenant_id = j.tenant_id
+    AND (a.prioridade, a.agendado_para, a.criado_em, a.id) < (j.prioridade, j.agendado_para, j.criado_em, j.id)
+) pos ON j.estado = 'pendente'
 """
 SQL_AGENDA = """
 SELECT a.id, a.nome, a.tipo, a.parametros, a.cron, a.fuso, a.ativa, a.proxima_em, a.ultima_em, a.ultimo_job_id,
