@@ -6,6 +6,8 @@ import secrets
 
 import psycopg2
 import psycopg2.extras
+
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 import pytest
 
 from tests.api.conftest import PREFIXO_TESTE
@@ -64,7 +66,7 @@ class Itens:
 
 def _expurgar_zt(env, slug: str) -> None:
     """Limpeza física dos itens/pastas/categorias zt* do inquilino: como plat_app no contexto do admin."""
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
         ids = ids_por_slug(con)
         with con.cursor() as cur:

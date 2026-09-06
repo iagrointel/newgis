@@ -9,6 +9,8 @@ import time
 import psycopg2
 import psycopg2.extras
 
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
+
 from tests.api.test_rls import contexto, ids_por_slug
 from tests.conftest import valores_env
 
@@ -72,7 +74,7 @@ def semear(con, slug: str, n: int) -> int:
 
 def main(n_demo: int = 10_000, n_demo2: int = 1_000) -> None:
     env = valores_env()
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
         t0 = time.perf_counter()
         a = semear(con, "demo", n_demo)
@@ -104,7 +106,7 @@ if __name__ == "__main__":
     args = [int(x) for x in sys.argv[1:]]
     if args and args[0] == 0:
         env = valores_env()
-        con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+        con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
         print("apagados", apagar(con, "demo") + apagar(con, "demo2"))
     else:
         main(*args)

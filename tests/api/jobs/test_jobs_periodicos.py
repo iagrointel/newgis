@@ -13,6 +13,8 @@ import time
 
 import psycopg2
 import psycopg2.extras
+
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 import pytest
 
 from app.jobs import agenda as mod_agenda
@@ -83,7 +85,7 @@ def test_cada_periodico_registrado_dispara_uma_vez_com_dois_relogios(indice, cli
     assert r.status_code == 201, r.text
     agenda = r.json()
     proxima = datetime.datetime.fromisoformat(agenda["proxima_em"].replace("Z", "+00:00"))
-    cons = [psycopg2.connect(env["PLAT_DSN_WORKER"], cursor_factory=psycopg2.extras.RealDictCursor) for _ in range(2)]
+    cons = [psycopg2.connect(env["PLAT_DSN_WORKER"], cursor_factory=CursorSchemaAmbiente) for _ in range(2)]
     for c in cons:
         c.autocommit = True
     try:
@@ -115,7 +117,7 @@ def test_periodico_que_falha_nao_bloqueia_nem_atrasa_outro_no_mesmo_instante(cli
     bom = _criar_com_parametros_exatos(cliente_plataforma, f"{nome}-bom", "prova.progresso",
                                        {"duracao_s": 0, "passos": 1}).json()
     proxima = datetime.datetime.fromisoformat(ruim["proxima_em"].replace("Z", "+00:00"))
-    con = psycopg2.connect(env["PLAT_DSN_WORKER"], cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(env["PLAT_DSN_WORKER"], cursor_factory=CursorSchemaAmbiente)
     con.autocommit = True
     try:
         for k in range(3):

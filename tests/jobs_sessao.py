@@ -5,6 +5,8 @@ Usado pelos testes de API (cookie no TestClient) e pelo e2e (`context.add_cookie
 import psycopg2
 import psycopg2.extras
 
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
+
 COOKIE_SESSAO = "plat_sessao"
 
 
@@ -24,7 +26,7 @@ def contexto(cur, tenant_id: int, usuario_id: int, login: str) -> None:
 
 def criar_sessao(con, slug: str = "demo", login: str = "admin", horas: int = 2) -> tuple[str, int, int]:
     """Devolve (token em claro, tenant_id, usuario_id). A conexão deve estar com autocommit=False; faz commit."""
-    with con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+    with con.cursor(cursor_factory=CursorSchemaAmbiente) as cur:
         cur.execute("SELECT usuario_id, tenant_id FROM plat.auth_login(%s, %s)", (slug, login))
         r = cur.fetchone()
         assert r is not None, f"usuário {login} de {slug} não semeado (rode install.sh)"
@@ -42,7 +44,7 @@ def criar_sessao(con, slug: str = "demo", login: str = "admin", horas: int = 2) 
 
 def criar_usuario_temporario(con, tenant_id: int, admin_id: int, login: str, perfil: str = "editor") -> int:
     """Cria (ou reaproveita) um usuário do inquilino sob RLS, com hash inválido (nunca faz login por senha)."""
-    with con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+    with con.cursor(cursor_factory=CursorSchemaAmbiente) as cur:
         contexto(cur, tenant_id, admin_id, "admin")
         cur.execute("INSERT INTO plat.usuario(tenant_id, login, nome, senha_hash, perfil) VALUES (%s, %s, %s, 'x', %s) "
                     "ON CONFLICT (tenant_id, login) DO UPDATE SET perfil = EXCLUDED.perfil, ativo = true RETURNING id",
@@ -54,7 +56,7 @@ def criar_usuario_temporario(con, tenant_id: int, admin_id: int, login: str, per
 
 def sessao_de_usuario(con, tenant_id: int, usuario_id: int, login: str, horas: int = 2) -> str:
     """Token de sessão de um usuário já existente do inquilino (sem senha), pelas funções SECURITY DEFINER."""
-    with con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+    with con.cursor(cursor_factory=CursorSchemaAmbiente) as cur:
         assinatura = _assinatura_criar(cur)
         contexto(cur, tenant_id, usuario_id, login)
         dias_ou_horas = max(1, -(-horas // 24)) if "p_max_dias" in assinatura else horas
@@ -65,7 +67,7 @@ def sessao_de_usuario(con, tenant_id: int, usuario_id: int, login: str, horas: i
 
 
 def apagar_usuario_temporario(con, tenant_id: int, admin_id: int, login: str) -> None:
-    with con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+    with con.cursor(cursor_factory=CursorSchemaAmbiente) as cur:
         contexto(cur, tenant_id, admin_id, "admin")
         cur.execute("DELETE FROM plat.job WHERE usuario_id IN (SELECT id FROM plat.usuario WHERE login = %s)", (login,))
         cur.execute("DELETE FROM plat.usuario WHERE login = %s AND tenant_id = %s", (login, tenant_id))
@@ -73,6 +75,6 @@ def apagar_usuario_temporario(con, tenant_id: int, admin_id: int, login: str) ->
 
 
 def conectar(dsn: str):
-    con = psycopg2.connect(dsn, cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(dsn, cursor_factory=CursorSchemaAmbiente)
     con.autocommit = False
     return con

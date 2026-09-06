@@ -52,7 +52,13 @@ def cliente(env):
 
 @pytest.fixture
 def conexao_plat_app(env):
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    # CursorSchemaAmbiente, não RealDictCursor: esta conexão faz SQL cru com `plat.` literal, e sem a
+    # reescrita ela ignora PLAT_SCHEMA e vai bater no schema de produção. É subclasse de RealDictCursor
+    # e no-op quando o schema é o padrão, logo produção não muda em nada; sem isto, `make homolog` e as
+    # bases por trilha (laco/trilha_ambiente.sh) erram por privilégio em vez de rodar isolados.
+    from app.schema_ambiente import CursorSchemaAmbiente
+
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     con.autocommit = False
     try:
         yield con

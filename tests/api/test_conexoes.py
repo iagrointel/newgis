@@ -7,6 +7,8 @@ sai na resposta, e a mesma trava cruzada A→B (RLS) do resto do catálogo."""
 import json
 
 import psycopg2.extras
+
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 import pytest
 
 from tests.api.conftest import PREFIXO_TESTE
@@ -16,7 +18,7 @@ URL_PUBLICA = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/35"
 
 
 def _conexao_direta(env):
-    return psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    return psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
 
 
 @pytest.fixture

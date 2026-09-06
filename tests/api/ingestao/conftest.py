@@ -10,6 +10,8 @@ from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
+
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 import pytest
 
 from app.catalogo import destruidores
@@ -146,7 +148,7 @@ def ingestor_a(sessao_a, env):
     ing.liberar_token()
     if not (ing.camadas or ing.arquivos):
         return
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
         ids = ids_por_slug(con)
         with con.cursor() as cur:

@@ -16,6 +16,8 @@ from urllib.parse import urlparse
 
 import psycopg2
 import psycopg2.extras
+
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 import pytest
 
 CAPTURAS = Path(__file__).resolve().parent / "capturas"
@@ -52,7 +54,7 @@ def api_jobs_disponivel(base_url, url_publica_resolve, playwright):
 def _sessao_propria(dsn: str, slug: str = "demo", login: str = "admin", dias: int = 1):
     """Sessão pelas funções SECURITY DEFINER (002/003; sem senha, sem conectar como postgres). A 003 exige o
     contexto do inquilino do usuário antes de auth_sessao_criar (contexto_confere) e recebe a validade em dias."""
-    con = psycopg2.connect(dsn, cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(dsn, cursor_factory=CursorSchemaAmbiente)
     try:
         with con.cursor() as cur:
             cur.execute("SELECT usuario_id, tenant_id FROM plat.auth_login(%s, %s)", (slug, login))
@@ -79,7 +81,7 @@ def sessao(env, api_jobs_disponivel):
     try:
         from tests.jobs_sessao import criar_sessao  # entregue pelo backend (handoff 30, passo 23)
 
-        con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+        con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
         try:
             r = criar_sessao(con)
             con.commit()
@@ -255,7 +257,7 @@ def test_filtro_por_estado_bate_com_api(pagina, base_url):
 def test_primeira_pintura_com_mil_jobs(pagina, base_url, env, sessao, medida):
     page = pagina
     _, tenant_id, usuario_id = sessao
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
         with con.cursor() as cur:
             cur.execute("SET search_path = plat, public")
@@ -380,7 +382,7 @@ def test_agendas_criar_pausar_retomar_apagar(pagina, base_url):
 def sessao_plataforma_e2e(env, api_jobs_disponivel):
     from tests import jobs_sessao
 
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
         r = jobs_sessao.criar_sessao(con, "plataforma", "admin")
         con.commit()

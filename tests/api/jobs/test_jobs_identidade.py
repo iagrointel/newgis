@@ -7,6 +7,8 @@ do worker que está executando o job e prova que o job não muda de dono, não v
 import psycopg2
 import psycopg2.extras
 
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
+
 from tests.api.jobs.conftest import PORTA_WORKER_EXTRA, criar_job, esperar
 
 
@@ -35,7 +37,7 @@ def test_ceifa_e_so_por_heartbeat_vencido_nunca_por_nome(env, cliente_demo, work
     """Com o worker dono vivo (heartbeat recente), job_ceifar não devolve nada dele; não existe assinatura por nome."""
     job = criar_job(cliente_demo, "prova.progresso", {"duracao_s": 12, "passos": 12})
     rodando = esperar(cliente_demo, job["id"], timeout=90, condicao=lambda j: j["estado"] == "rodando")
-    w = psycopg2.connect(env["PLAT_DSN_WORKER"], cursor_factory=psycopg2.extras.RealDictCursor)
+    w = psycopg2.connect(env["PLAT_DSN_WORKER"], cursor_factory=CursorSchemaAmbiente)
     w.autocommit = True
     try:
         with w.cursor() as cur:

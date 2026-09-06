@@ -8,6 +8,8 @@ import uuid
 
 import psycopg2
 import psycopg2.extras
+
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 import pytest
 
 from tests import jobs_sessao
@@ -72,7 +74,7 @@ def test_worker_nao_le_plat_job_direto_mas_pega_pela_funcao(env, cliente_demo, w
     assert env.get("PLAT_DSN_WORKER"), (
         "PLAT_DSN_WORKER ausente (item L7-19: mora em /etc/plat/segredos/PLAT_DSN_WORKER, injetado pelo Makefile)"
     )
-    w = psycopg2.connect(env["PLAT_DSN_WORKER"], cursor_factory=psycopg2.extras.RealDictCursor)
+    w = psycopg2.connect(env["PLAT_DSN_WORKER"], cursor_factory=CursorSchemaAmbiente)
     w.autocommit = True
     try:
         with w.cursor() as cur:

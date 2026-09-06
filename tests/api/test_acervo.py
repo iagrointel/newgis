@@ -4,6 +4,8 @@ ficam de fora e confirmam que a ficha de uma sem licença nunca aparece. O `adic
 inquilino de quem chamou, provado com a mesma trava cruzada A→B do resto do catálogo (RLS por `tenant_id`)."""
 
 import psycopg2.extras
+
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 import pytest
 
 from tests.api.conftest import PREFIXO_TESTE
@@ -11,7 +13,7 @@ from tests.api.test_rls import contexto, ids_por_slug
 
 
 def _admin_contexto(env, slug):
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     ids = ids_por_slug(con)
     with con.cursor() as cur:
         cur.execute("SELECT usuario_id FROM plat.auth_login(%s, 'admin')", (slug,))
@@ -44,7 +46,7 @@ def item_acervo_a(env):
 
 
 def _conexao_direta(env):
-    return psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    return psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
 
 
 def test_lista_so_fontes_com_licenca_e_conta_as_de_fora(sessao_a, env):

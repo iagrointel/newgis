@@ -10,6 +10,7 @@ import pytest
 
 from tests.api.catalogo.conftest import titulo_zt
 from tests.api.semear_catalogo import PREFIXO, semear
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 
 ITEM = "L0-03-catalogo"
 
@@ -19,7 +20,7 @@ def corpus(env):
     import psycopg2
     import psycopg2.extras
 
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
         semear(con, "demo", 10_000)
         semear(con, "demo2", 1_000)
