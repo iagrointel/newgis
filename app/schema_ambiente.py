@@ -103,6 +103,11 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
 
         return bytes(query).decode(_ext.encodings[self.connection.encoding])
 
+    def mogrify(self, query, *args, **kwargs):
+        if isinstance(query, str):
+            query = self._reescrever(query)
+        return super().mogrify(query, *args, **kwargs)
+
     def callproc(self, procname, *args, **kwargs):
         if isinstance(procname, str):
             procname = self._reescrever(procname)
