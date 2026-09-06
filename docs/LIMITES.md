@@ -214,3 +214,11 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `REDEFINICAO_JANELA_MIN` | `15` | limite de taxa (refutação do item: 1.000 pedidos/min p/ o mesmo e-mail) |
 | `REDEFINICAO_MAX_JANELA` | `5` | no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN |
 | `AVISO_EXPIRACAO_DIAS` | `(90, 30, 7, 1)` | avisos de expiração de token de serviço (hipótese do item; como a Esri) |
+
+## motor multicritério, modelo (L3-01-a-modelo-dado; laco/decomposicao/L3L6_CONCEITO.md decisões A1/A4/A10).
+
+| nome | valor | explicação |
+|---|---|---|
+| `AMC_NOME_MAX` | `250` | mesmo teto de ITEM_TITULO_MAX |
+| `AMC_FATORES_MAX` | `50` | mesmo teto de docs/esquemas/amc_modelo.v1.json fatores.maxItems |
+| `AMC_CAMADAS_MAX` | `50` | camadas de entrada declaradas por execução (A10) |

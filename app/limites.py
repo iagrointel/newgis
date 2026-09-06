@@ -204,3 +204,11 @@ REDEFINICAO_VALIDADE_HORAS = 1            # portão do item-pai (ADR 0002 seçã
 REDEFINICAO_JANELA_MIN = 15               # limite de taxa (refutação do item: 1.000 pedidos/min p/ o mesmo e-mail)
 REDEFINICAO_MAX_JANELA = 5                # no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN
 AVISO_EXPIRACAO_DIAS = (90, 30, 7, 1)     # avisos de expiração de token de serviço (hipótese do item; como a Esri)
+
+# --- motor multicritério, modelo (L3-01-a-modelo-dado; laco/decomposicao/L3L6_CONCEITO.md decisões A1/A4/A10).
+# Vocabulário e tetos do documento em docs/esquemas/amc_modelo.v1.json nascem daqui quando o número é livre
+# (o que é vocabulário FECHADO — tipos de transformação, combinador — mora só no JSON Schema, que é o contrato
+# público; aqui só os tetos de tamanho, que são os mesmos limites transversais do resto da casa).
+AMC_NOME_MAX = 250                # mesmo teto de ITEM_TITULO_MAX
+AMC_FATORES_MAX = 50              # mesmo teto de docs/esquemas/amc_modelo.v1.json fatores.maxItems
+AMC_CAMADAS_MAX = 50              # camadas de entrada declaradas por execução (A10)
