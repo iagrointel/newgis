@@ -152,6 +152,17 @@ CARGA_FATOR_COTA = 3                      # estimativa = bytes do arquivo × 3 (
 INGESTAO_CAMPOS_MAX = 500                 # mesmo teto do JSON Schema de camada_vetorial (ADR 0004/0005)
 INGESTAO_FIDS_RELATORIO_MAX = 1000        # fids corrigidos listados no relatório de ST_MakeValid
 
+# --- intercâmbio de formatos (L6-02-o-importacao-exportacao-formatos; exportação por camada e escrow do
+# inquilino em GeoPackage + manifesto JSON, app/intercambio/)
+INTERCAMBIO_EXPORTACAO_BYTES_MAX = 2 * 1024 * 1024 * 1024   # 2 GiB: pacote final guardado no Garage
+INTERCAMBIO_DISCO_FOLGA = 3               # disco livre exigido = estimativa do pacote × 3 (disco a 98%)
+INTERCAMBIO_CAMADAS_ESCROW_MAX = 500      # teto de camadas vetoriais num escrow (job único, timeout 3600 s)
+INTERCAMBIO_XLSX_LINHAS_MAX = 500_000     # importação XLSX: acima disso a conversão p/ CSV estoura a memória
+INTERCAMBIO_DBF_LARGURA_MAX = 254         # largura máxima de campo texto em DBF (limite do formato)
+INTERCAMBIO_MVT_ZOOM = 14                 # zoom de geração/leitura de mbtiles/pmtiles (declarado no relatório)
+EXPORTACAO_MEMORIA_MB = 1024              # job intercambio.exportar_camada / exportar_inquilino
+EXPORTACAO_TIMEOUT_S = 3600
+
 # --- configurações da organização (L0-07-a-configuracoes-org; GET/PUT /api/org): nome, identidade visual
 # (logotipo reaproveitando o adaptador genérico de arquivo do L0-11, classe 'org_logo'), mapa padrão, idioma
 # padrão, cotas de armazenamento/usuários e a política de senha/2FA já lida de tenant.config.auth (app/auth/
