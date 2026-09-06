@@ -3,6 +3,28 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L2-08-a-leitor-portal-inventario: conserto de segurança, B1-B7 do adversário)
+
+Sete achados do adversário independente (`laco/handoffs/T3/ataque-L4-portal-ADVERSARIO.md`, seção 2)
+consertados; os 15 `xfail(strict=True)` de `tests/api/test_migracao_adversario.py` viraram teste normal
+(marca retirada, achado por achado). **B1/B1b (crítico)**: `ClientePortal._cabecalhos(alvo)` só põe
+`X-Esri-Authorization` quando `alvo` é a MESMA origem do portal configurado
+(`seguranca._mesma_origem_de_confianca`, copiada com atribuição da defesa que o item L6-02-h fez para
+redirecionamento) — nunca para o host de um item de terceiro nem para onde um 302 aponte; `_requisitar`
+recalcula os cabeçalhos a cada salto. **B2 (alto)**: título com NUL e `numViews` não numérico agora são
+SANEADOS antes do INSERT (`_sanear`, `_inteiro_nao_negativo`) — o item fica no inventário; quando o campo
+é irrecuperável (não adapta para a coluna) o item é registrado e PULADO (`Totais.itens_pulados`, AVISO no
+log do job), nunca trava o lote. **B3 (alto)**: `resposta_grande_demais` (página > 8 MiB) entrou em
+`MOTIVOS_DEFINITIVOS` — falha limpa em `falhou` já na 1ª tentativa, não fica `rodando` para sempre.
+**B4 (médio)**: quando a ordem do portal muda entre tentativas e a retomada perde itens, `Totais.aviso`
+registra a contagem esperada x obtida e some para a coluna `mensagem` mesmo com o job `concluido`
+(recuperar os itens perdidos fica fora do escopo do conserto — só detectar e avisar). **B5 (médio)**:
+`relatorio._texto` neutraliza injeção de fórmula no CSV (`'` na frente de células que começam com
+`=`/`+`/`-`/`@`). **B6 (baixo)**: `size: -1` do AGOL vira NULL, não entra mais somado em
+`bytes_declarados`. **B7 (médio)**: `POST /api/migracao/inventarios` confere o perfil mínimo do job
+(`servico.tipo_registrado` + `ordem_perfil`) ANTES de gravar a linha do inventário — editor sem privilégio
+nunca cria mais um inventário órfão. Handoff: `laco/handoffs/T3/L2-08-a-CONSERTO.md`.
+
 ## turno 3, setembro de 2026 (item L2-08-a-leitor-portal-inventario: leitor de inventário de Portal/AGOL)
 
 Leitura só-leitura do Portal for ArcGIS / ArcGIS Online do cliente, como job retomável
