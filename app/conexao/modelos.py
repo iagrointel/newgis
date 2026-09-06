@@ -95,3 +95,34 @@ class SaudeHistoricoPagina(Saida):
 
 class PublicarCamadaEntrada(Modelo):
     titulo: str | None = Field(default=None, min_length=1, max_length=250)
+
+
+# --------------------------------------------------------------- arquivo por URL (item L6-02-h)
+class ArquivoUrlEntrada(Modelo):
+    """Configuração da conexão como fonte de ARQUIVO por URL. `intervalo_s` só é usado quando `agendado`;
+    os limites vêm de `app/limites.py` (mínimo 15 min, o mesmo mínimo do agendador do L0-05)."""
+
+    intervalo_s: int = Field(
+        default=limites.CONEXAO_ARQUIVO_INTERVALO_PADRAO_S,
+        ge=limites.CONEXAO_ARQUIVO_INTERVALO_MIN_S, le=limites.CONEXAO_ARQUIVO_INTERVALO_MAX_S,
+    )
+    agendado: bool = False
+
+
+class ArquivoUrlEstado(Saida):
+    conexao_id: str
+    formato: str | None = None
+    etag: str | None = None
+    last_modified: str | None = None
+    sha256: str | None = None
+    bytes: int | None = None
+    item_id: str | None = None
+    importacao_id: str | None = None
+    intervalo_s: int
+    agendado: bool
+    proximo_em: str | None = None
+    ultimo_em: str | None = None
+    ultimo_resultado: str | None = None
+    ultimo_detalhe: str | None = None
+    sincronizacoes: int
+    recargas: int

@@ -150,6 +150,21 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `CONEXAO_REDIRECT_MAX` | `5` | cada hop é revalidado do zero (host novo pode ser interno) |
 | `CONEXAO_RESPOSTA_MAX_BYTES` | `1048576` | 1 MiB: o teste de saúde confere status/corpo curto |
 
+## arquivo por URL (L6-02-h-csv-url-geojson-kml; app/conexao/arquivo_url.py): CSV/GeoJSON/KML/KMZ/GeoRSS/GPX
+
+| nome | valor | explicação |
+|---|---|---|
+| `CONEXAO_ARQUIVO_FORMATOS` | `('csv', 'geojson', 'kml', 'kmz', 'georss', 'gpx')` | — |
+| `CONEXAO_ARQUIVO_MAX_BYTES` | `67108864` | teto geral do download (mesmo teto de GeoJSON do ADR 0005) |
+| `CONEXAO_ARQUIVO_XML_MAX_BYTES` | `41943040` | ~480 MiB de pico medido, dentro do orçamento do job |
+| `CONEXAO_ARQUIVO_LER_TIMEOUT_S` | `60.0` | baixar arquivo é mais lento que testar saúde (6 s lá) |
+| `CONEXAO_ARQUIVO_INTERVALO_MIN_S` | `900` | atualização agendada: 15 min é o mínimo do agendador (L0-05) |
+| `CONEXAO_ARQUIVO_INTERVALO_PADRAO_S` | `86400` | padrão: uma vez por dia |
+| `CONEXAO_ARQUIVO_INTERVALO_MAX_S` | `2592000` | — |
+| `CONEXAO_ARQUIVO_LOTE_PERIODICO` | `20` | conexões sincronizadas por execução do periódico |
+| `CONEXAO_ARQUIVO_LAT_MAX` | `90.0` | — |
+| `CONEXAO_ARQUIVO_LON_MAX` | `180.0` | — |
+
 ## ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 
 | nome | valor | explicação |

@@ -22,6 +22,10 @@ Mecanismo (os 8 casos do adversário do item, na ordem do portão):
   8. DNS que muda entre a validação e a conexão (rebinding)               → `cliente_pinado` conecta ao(s) IP(s)
      já validados, nunca resolve de novo no momento da conexão (o backend customizado do httpcore não chama
      `getaddrinfo` outra vez para este host)
+  9. credencial reenviada a outro host num redirecionamento               → `_sem_credencial_em_outro_host`
+     (acrescentado no item L6-02-h): `Authorization`/`Cookie`/`Proxy-Authorization`/`X-Api-Key` só seguem
+     quando o `Location` aponta para o MESMO host, mesma porta e sem cair de https para http. Este era o
+     achado do adversário do L6-02-a que deixou aquele item marcado REFUTADO
 """
 
 from __future__ import annotations
@@ -32,7 +36,7 @@ import ssl
 import typing
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturoTimeoutError
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
 import httpcore
@@ -185,6 +189,34 @@ class ResultadoBusca:
     latencia_ms: int
     saltos: int
     corpo: bytes = b""  # só preenchido quando `guardar_corpo=True` (item L6-05): teste de saúde nunca guarda
+    # cabeçalhos de resposta do ÚLTIMO salto, em minúsculas (item L6-02-h: ETag/Last-Modified/Content-Type do
+    # arquivo baixado). Só leitura; nunca inclui cabeçalho de requisição nem credencial.
+    cabecalhos: dict[str, str] = field(default_factory=dict)
+
+
+# Cabeçalhos que provam quem é o cliente: seguem para o host que o USUÁRIO escolheu, nunca para um terceiro
+# que apareça num `Location`. Sem isto, um serviço público que a casa configurou com token consegue redirecionar
+# para um servidor do atacante e receber o token de graça (achado do adversário do item L6-02-a, consertado aqui
+# no item L6-02-h, que é o primeiro a mandar credencial para URL de terceiro em volume).
+CABECALHOS_DE_CREDENCIAL = ("authorization", "cookie", "proxy-authorization", "x-api-key")
+
+
+def _mesma_origem_de_confianca(anterior: str, novo: str) -> bool:
+    """Mesmo host (case-insensitive) E não é uma queda de https para http. Porta diferente já é outro serviço."""
+    a, b = urlsplit(anterior), urlsplit(novo)
+    if (a.hostname or "").lower() != (b.hostname or "").lower():
+        return False
+    if a.scheme.lower() == "https" and b.scheme.lower() != "https":
+        return False
+    porta_a = a.port or (443 if a.scheme.lower() == "https" else 80)
+    porta_b = b.port or (443 if b.scheme.lower() == "https" else 80)
+    return porta_a == porta_b
+
+
+def _sem_credencial_em_outro_host(cabecalhos: dict[str, str], anterior: str, novo: str) -> dict[str, str]:
+    if _mesma_origem_de_confianca(anterior, novo):
+        return cabecalhos
+    return {k: v for k, v in cabecalhos.items() if k.lower() not in CABECALHOS_DE_CREDENCIAL}
 
 
 def buscar_seguro(
@@ -210,6 +242,7 @@ def buscar_seguro(
 
     inicio = time.monotonic()
     alvo = url
+    cabecalhos_do_salto = dict(cabecalhos or {})
     for salto in range(max_redirects + 1):
         try:
             validada = validar_url(alvo)
@@ -220,7 +253,7 @@ def buscar_seguro(
             )
         with cliente_pinado(validada, timeout_conectar=timeout_conectar, timeout_ler=timeout_ler) as cliente:
             try:
-                with cliente.stream(metodo, alvo, headers=cabecalhos or {}) as r:
+                with cliente.stream(metodo, alvo, headers=cabecalhos_do_salto) as r:
                     lido = 0
                     pedacos: list[bytes] = []
                     for pedaco in r.iter_bytes():
@@ -252,11 +285,14 @@ def buscar_seguro(
                     latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto,
                 )
             # Location relativo vira absoluto contra a URL atual, do mesmo jeito que um navegador faria
+            anterior = alvo
             alvo = httpx.URL(alvo).join(local).__str__()
+            cabecalhos_do_salto = _sem_credencial_em_outro_host(cabecalhos_do_salto, anterior, alvo)
             continue
         return ResultadoBusca(
             ok=200 <= status < 400, status=status, mensagem=f"http_{status}", url_final=alvo,
             latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=salto, corpo=corpo,
+            cabecalhos={k.lower(): v for k, v in r.headers.items()},
         )
     return ResultadoBusca(
         ok=False, status=None, mensagem="redirecionamentos_demais", url_final=alvo,

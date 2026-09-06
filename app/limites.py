@@ -142,6 +142,27 @@ CONEXAO_REDIRECT_MAX = 5                 # cada hop é revalidado do zero (host 
 CONEXAO_RESPOSTA_MAX_BYTES = 1 * 1024 * 1024  # 1 MiB: o teste de saúde confere status/corpo curto
                                                 # (nunca baixa o serviço inteiro)
 
+# --- arquivo por URL (L6-02-h-csv-url-geojson-kml; app/conexao/arquivo_url.py): CSV/GeoJSON/KML/KMZ/GeoRSS/GPX
+# baixados de uma URL pública pela MESMA `app.conexao.seguranca.buscar_seguro` do teste de saúde (nunca um
+# cliente HTTP próprio), convertidos para GeoJSON quando o formato não é um dos 4 que a ingestão do L0-04 já
+# lê, e carregados pelo pipeline de importação existente.
+CONEXAO_ARQUIVO_FORMATOS = ("csv", "geojson", "kml", "kmz", "georss", "gpx")
+CONEXAO_ARQUIVO_MAX_BYTES = 64 * 1024 * 1024   # teto geral do download (mesmo teto de GeoJSON do ADR 0005)
+# MEDIDO nesta máquina (06/09/2026, GDAL 3.8.4): KML de 200 mil pontos = 35,5 MB de arquivo -> `ogr2ogr -f
+# GeoJSON` gasta 2,42 s e 417 MiB de RSS (razão ~12x o tamanho do arquivo, porque o driver KML/GPX/GeoRSS lê o
+# documento XML inteiro na memória). Com o teto geral de 64 MiB o pico passaria de 780 MiB e estouraria o
+# RLIMIT do job (INGESTAO_MEMORIA_MB=768). Por isso os formatos XML têm teto PRÓPRIO, menor:
+CONEXAO_ARQUIVO_XML_MAX_BYTES = 40 * 1024 * 1024   # ~480 MiB de pico medido, dentro do orçamento do job
+CONEXAO_ARQUIVO_LER_TIMEOUT_S = 60.0           # baixar arquivo é mais lento que testar saúde (6 s lá)
+CONEXAO_ARQUIVO_INTERVALO_MIN_S = 900          # atualização agendada: 15 min é o mínimo do agendador (L0-05)
+CONEXAO_ARQUIVO_INTERVALO_PADRAO_S = 86400     # padrão: uma vez por dia
+CONEXAO_ARQUIVO_INTERVALO_MAX_S = 30 * 86400
+CONEXAO_ARQUIVO_LOTE_PERIODICO = 20            # conexões sincronizadas por execução do periódico
+# faixas de coordenada geográfica: usadas para RECUSAR (nunca para corrigir sozinho) CSV com latitude e
+# longitude trocadas — ver `app/conexao/arquivo_url.py::conferir_faixa_coordenada`.
+CONEXAO_ARQUIVO_LAT_MAX = 90.0
+CONEXAO_ARQUIVO_LON_MAX = 180.0
+
 # --- ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 INGESTAO_AMOSTRA_VALIDADE = 1000          # feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR)
 INGESTAO_MEMORIA_MB = 768                 # job ingestao.inspecionar (cobre GeoJSON de 64 MiB, ADR seção 0.4)
