@@ -6,5 +6,6 @@ from app.catalogo import (
 )
 from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos
 from app.jobs.registro import REGISTRO
+from app.raster import tarefas as raster_tarefas  # noqa: F401 — L1-01-b: raster.validar
 
 __all__ = ["REGISTRO"]
