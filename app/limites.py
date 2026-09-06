@@ -81,3 +81,7 @@ ITENS_DESLOCAMENTO_MAX = 10_000
 LIXEIRA_DIAS = 30
 COTA_ITENS = 100_000  # padrão por inquilino, tenant.config.catalogo.cota_itens
 USADO_POR_PROFUNDIDADE_MAX = 5
+
+# --- contrato de API e limites transversais (L0-12; docs/CONTRATO_API.md e docs/LIMITES.md nascem daqui)
+CORPO_MAX_PADRAO_BYTES = 10 * 1024 * 1024        # 10 MiB; toda rota /api,/svc,/ogc,/tiles fora da lista de upload
+CORPO_MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB (hipótese do item); sem rota isenta ainda (upload = L1-01-e)

@@ -3,14 +3,17 @@ VENV=venv/bin
 export PYTHONNOUSERSITE=1
 URL_PUBLICA=$(shell grep ^PLAT_URL_PUBLICA .env 2>/dev/null | cut -d= -f2)
 
-.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor
+.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites
 
-check: lint sem-marcador teste e2e          ## suíte inteira (portão P3)
+check: lint sem-marcador limites teste e2e  ## suíte inteira (portão P3)
 
-check-rapido: lint sem-marcador teste       ## o que o driver roda
+check-rapido: lint sem-marcador limites teste  ## o que o driver roda
 
 lint:
-	$(VENV)/ruff check app tests
+	$(VENV)/ruff check app tests docs/gerar_limites.py
+
+limites:                                    ## docs/LIMITES.md == app/limites.py (item L0-12); falha se divergir
+	$(VENV)/python docs/gerar_limites.py --check
 
 sem-marcador:                               ## mesma expressão do laco/driver.sh (tests/marcadores.regex); inclui os .md da raiz e docs/
 	! grep -rnI --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=tests --exclude-dir=.git --exclude-dir=venv -E -f tests/marcadores.regex app web db docs deploy install.sh Makefile requirements.txt pyproject.toml *.md

@@ -10,8 +10,9 @@ from fastapi import FastAPI
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse
 
-from app import erros, paginas
+from app import erros, limite_corpo, paginas
 from app import log as plat_log
+from app.acervo import rotas as rotas_acervo
 from app.auth import middleware as auth_middleware
 from app.auth import rotas_eu, rotas_grupos, rotas_log, rotas_login, rotas_plataforma, rotas_tokens, rotas_usuarios
 from app.catalogo import (
@@ -41,6 +42,9 @@ plat_log.configurar(settings.PLAT_LOG_NIVEL)
 app = FastAPI(title="plat", version=versao(), docs_url=None, redoc_url=None, openapi_url="/api/openapi.json")
 erros.instalar(app)
 auth_middleware.instalar(app)
+# acrescentado por último: no empilhamento do Starlette isso o torna o mais externo, executando ANTES do
+# middleware de log/sessão acima (ADR 0001 seção 12; app/limite_corpo.py) — corpo grande nunca chega à sessão.
+limite_corpo.instalar(app)
 
 ROUTERS = [
     rotas_saude,
@@ -63,6 +67,8 @@ ROUTERS = [
     rotas_categorias.router,
     rotas_favoritos.router,
     rotas_lixeira.router,
+    # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar
+    rotas_acervo.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
