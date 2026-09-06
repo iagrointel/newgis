@@ -26,10 +26,19 @@ COLUNAS = (
 )
 
 
+CARACTERES_DE_FORMULA = ("=", "+", "-", "@", "\t", "\r")
+
+
 def _texto(valor) -> str:
+    """Célula do CSV, com a defesa padrão contra injeção de fórmula (achado B5): título/motivo/url são
+    texto de TERCEIRO; se começar com `=`, `+`, `-` ou `@` (gatilho de fórmula no Excel/Sheets), leva um
+    apóstrofo na frente, exatamente como o Excel faz ao colar texto puro."""
     if valor is None:
         return ""
-    return str(valor)
+    texto = str(valor)
+    if texto and texto[0] in CARACTERES_DE_FORMULA:
+        return "'" + texto
+    return texto
 
 
 def csv_de_itens(linhas) -> bytes:

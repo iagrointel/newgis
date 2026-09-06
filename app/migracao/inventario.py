@@ -50,13 +50,41 @@ class Totais:
     bytes_declarados: int = 0
     pedidos_http: int = 0
     esperas_429: int = 0
+    itens_pulados: int = 0    # achado B2: malformado (nunca trava o lote), contado, não escondido
+    aviso: str | None = None  # achado B4: contagem esperada x obtida quando a ordem do portal muda
 
     def como_json(self) -> dict:
-        return {
+        d = {
             "itens": self.itens, "grupos": self.grupos, "usuarios": self.usuarios,
             "feicoes": self.feicoes, "bytes_declarados": self.bytes_declarados,
             "pedidos_http": self.pedidos_http, "esperas_429": self.esperas_429,
+            "itens_pulados": self.itens_pulados,
         }
+        if self.aviso:
+            d["aviso"] = self.aviso
+        return d
+
+
+def _sanear(obj):
+    """Tira NUL de toda string dentro de um valor vindo do portal de terceiro (achado B2: título com \x00
+    derruba o INSERT com ValueError do psycopg2, e o mesmo vale dentro de jsonb)."""
+    if isinstance(obj, str):
+        return obj.replace("\x00", "")
+    if isinstance(obj, dict):
+        return {k: _sanear(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanear(v) for v in obj]
+    return obj
+
+
+def _inteiro_nao_negativo(valor) -> int | None:
+    """Cast seguro para inteiro >= 0. `numViews: "muitos"` (achado B2) e `size: -1` do AGOL para "sem
+    arquivo" (achado B6) viram None em vez de derrubar o INSERT ou entrar somado como bytes negativos."""
+    try:
+        n = int(valor)
+    except (TypeError, ValueError):
+        return None
+    return n if n >= 0 else None
 
 
 def _ms_para_iso(valor) -> str | None:
@@ -140,6 +168,7 @@ class Inventario:
         self._verificar = verificar or (lambda: None)
         self._progresso = progresso or (lambda pct, msg: None)
         self.totais = Totais()
+        self._total_itens_declarado = 0   # achado B4: o que o portal disse no último `total` visto
 
     # ------------------------------------------------------------------ estado no banco
     def _ler_estado(self) -> dict:
@@ -218,11 +247,12 @@ class Inventario:
         url = resultado.get("url")
         if url and tipo in ("Feature Service", "Map Service", "Table"):
             camadas, contagem_total = camadas_do_servico(self.cliente, str(url))
+        camadas = _sanear(camadas)
 
         dados = {}
         if tipo in TIPOS_COM_DOCUMENTO:
             dados = self.cliente.item_dados(item_id)
-        dependencias = dependencias_de(dados, item_id) if dados else []
+        dependencias = _sanear(dependencias_de(dados, item_id) if dados else [])
 
         recursos = []
         relacionados = []
@@ -245,6 +275,8 @@ class Inventario:
             for lig in ligados:
                 if isinstance(lig, dict) and lig.get("id"):
                     relacionados.append({"relacao": relacao, "alvo": str(lig["id"])})
+        recursos = _sanear(recursos)
+        relacionados = _sanear(relacionados)
 
         with self.bd() as cur:
             cur.execute(
@@ -255,10 +287,10 @@ class Inventario:
                 "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, "
                 " %s::jsonb, %s::jsonb) "
                 "ON CONFLICT (inventario_id, item_esri_id) DO NOTHING",
-                (self.inventario_id, self.tenant_id, item_id, tipo, resultado.get("title"),
-                 resultado.get("owner"), url, resultado.get("size"),
+                (self.inventario_id, self.tenant_id, item_id, tipo, _sanear(resultado.get("title")),
+                 _sanear(resultado.get("owner")), _sanear(url), _inteiro_nao_negativo(resultado.get("size")),
                  _ms_para_iso(resultado.get("created")), _ms_para_iso(resultado.get("modified")),
-                 _ms_para_iso(resultado.get("lastViewed")), resultado.get("numViews"),
+                 _ms_para_iso(resultado.get("lastViewed")), _inteiro_nao_negativo(resultado.get("numViews")),
                  decisao.classe, decisao.motivo, contagem_total,
                  json.dumps(camadas), json.dumps(dependencias), json.dumps(recursos),
                  json.dumps(relacionados)),
@@ -273,12 +305,22 @@ class Inventario:
             resposta = self.cliente.buscar_itens(consulta, inicio=pagina_inicio)
             resultados = resposta.get("results") or []
             total = int(resposta.get("total") or 0)
+            if total:
+                self._total_itens_declarado = total
             for resultado in resultados:
                 self._verificar()
                 item_id = str(resultado.get("id") or "")
                 if not item_id or item_id in ja:
                     continue
-                self._gravar_item(resultado)
+                try:
+                    self._gravar_item(resultado)
+                except ErroRede:
+                    raise
+                except Exception as e:
+                    # achado B2: item com campo fora do esperado (título com NUL, numViews texto, etc.)
+                    # é registrado e PULADO — nunca trava o lote nem deixa o inventário rodando para sempre.
+                    self.totais.itens_pulados += 1
+                    self._registrar("AVISO", f"item {item_id} pulado ({type(e).__name__}): {e}"[:400])
                 ja.add(item_id)
             proxima = int(resposta.get("nextStart") or -1)
             self._contar()
@@ -379,6 +421,15 @@ class Inventario:
         if fase == "itens":
             self._registrar("INFO", "fase de itens (busca paginada)")
             self.fase_itens(portal_id, int(retomada.get("start") or 1))
+            # achado B4: a retomada confia na ordem do portal; se o portal declarou mais itens do que
+            # ficaram gravados, avisa em vez de terminar "concluido" em silêncio.
+            if self._total_itens_declarado and self.totais.itens < self._total_itens_declarado:
+                self.totais.aviso = (
+                    f"o portal declarou {self._total_itens_declarado} itens mas só "
+                    f"{self.totais.itens} foram gravados (a ordem da busca pode ter mudado durante "
+                    f"a leitura); confira o inventário e rode de novo se precisar dos que faltam"
+                )
+                self._registrar("AVISO", self.totais.aviso)
             fase = "grupos"
             self._gravar_retomada({"fase": "grupos", "start": 1})
 

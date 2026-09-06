@@ -95,14 +95,19 @@ class ClientePortal:
     esperas_429: int = field(default=0, init=False)
 
     # ------------------------------------------------------------------ transporte
-    def _cabecalhos(self) -> dict[str, str]:
+    def _cabecalhos(self, alvo: str) -> dict[str, str]:
+        """Cabeçalhos do pedido para `alvo`. O token só entra quando `alvo` é a MESMA origem do portal
+        configurado (`self.base`) — nunca para o host de um item de terceiro (achado B1) nem para onde um
+        redirecionamento aponte (achado B1b); ver `seguranca._mesma_origem_de_confianca`."""
         c = {"Accept": "application/json", "User-Agent": "plat-migracao/1 (inventario somente leitura)"}
-        if self.token:
+        if self.token and seguranca._mesma_origem_de_confianca(self.base, alvo):
             c["X-Esri-Authorization"] = f"Bearer {self.token}"
         return c
 
     def _requisitar(self, metodo: str, url: str, dados: dict | None = None) -> tuple[int, bytes, dict]:
-        """Um pedido HTTP seguro (validação de SSRF + IP pinado), sem seguir redirecionamento sozinho."""
+        """Um pedido HTTP seguro (validação de SSRF + IP pinado), sem seguir redirecionamento sozinho.
+        Cada salto recalcula os cabeçalhos contra o `alvo` DAQUELE salto — a credencial nunca acompanha um
+        redirecionamento para fora da origem do portal."""
         alvo = url
         for _ in range(REDIRECT_MAX + 1):
             try:
@@ -113,7 +118,7 @@ class ClientePortal:
                 validada, timeout_conectar=TIMEOUT_CONECTAR_S, timeout_ler=TIMEOUT_LER_S
             ) as cliente:
                 try:
-                    with cliente.stream(metodo, alvo, headers=self._cabecalhos(), data=dados) as r:
+                    with cliente.stream(metodo, alvo, headers=self._cabecalhos(alvo), data=dados) as r:
                         lido = 0
                         pedacos = []
                         for pedaco in r.iter_bytes():

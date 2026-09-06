@@ -22,6 +22,7 @@ from app.conexao import credencial as credencial_mod
 from app.erros import ErroAPI
 from app.jobs import servico
 from app.jobs.contexto import sessao_de
+from app.jobs.registro import ordem_perfil
 from app.migracao import relatorio
 from app.migracao.classificacao import CLASSES
 from app.migracao.modelos import (
@@ -148,6 +149,14 @@ def relatorio_csv(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")
 
 @router.post("/inventarios", status_code=201, openapi_extra=CRIAR)
 def criar(corpo: InventarioEntrada, request: Request, auth: Auth = autenticado("conteudo.registrar_fonte")):
+    # achado B7: `conteudo.registrar_fonte` (perfil editor) não é suficiente para o JOB
+    # `migracao.inventariar` (perfil_minimo="admin"); conferir ANTES de gravar qualquer linha, senão
+    # sobra inventário órfão (job_id NULL, nunca vai rodar) depois do 403 do serviço de job.
+    tipo_job = servico.tipo_registrado("migracao.inventariar")
+    if not auth.superadmin and ordem_perfil(auth.perfil) < ordem_perfil(tipo_job.perfil_minimo):
+        raise ErroAPI(403, "perfil_insuficiente",
+                      f"criar inventário exige perfil {tipo_job.perfil_minimo} ou superior "
+                      f"(o seu é {auth.perfil})")
     cid = uuid_ok(corpo.conexao_id, "conexao_inexistente", "conexão inexistente")
     with db.db(auth.contexto()) as cur:
         cur.execute("SELECT id, tipo, url, credencial_cifrada FROM plat.conexao WHERE id = %s::uuid", (cid,))

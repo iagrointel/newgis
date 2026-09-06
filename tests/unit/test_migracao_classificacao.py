@@ -86,10 +86,12 @@ def test_o_token_viaja_em_cabecalho_e_nunca_na_url():
     """Se o token fosse `?token=...`, toda URL em log de job, log de acesso e mensagem de erro carregaria a
     credencial do cliente. A prova de ponta a ponta está no teste de API; aqui é a unidade."""
     cliente = p.ClientePortal(base="https://portal.invalido/portal", token="tok-secreto")
-    cabecalhos = cliente._cabecalhos()
-    assert cabecalhos["X-Esri-Authorization"] == "Bearer tok-secreto"
     url = p._juntar("https://portal.invalido/portal", "sharing/rest/search", {"q": "orgid:1", "f": "json"})
+    cabecalhos = cliente._cabecalhos(url)
+    assert cabecalhos["X-Esri-Authorization"] == "Bearer tok-secreto"
     assert "tok-secreto" not in url and url.startswith("https://portal.invalido/portal/sharing/rest/search?")
+    # achado B1/B1b (conserto): a MESMA credencial não viaja para um host que não é o portal configurado
+    assert "X-Esri-Authorization" not in cliente._cabecalhos("https://outro-host.invalido/servico")
 
 
 def test_modulo_so_monta_caminho_de_leitura():
