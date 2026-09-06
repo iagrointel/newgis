@@ -13,7 +13,7 @@ evento", de modo que o guardião aprovava destruição de dado sem rastro):
   listas, e rota que aparece aqui apesar de o seu módulo chamar `registrar_evento`.
 
 Rota de escrita do OpenAPI que não esteja em uma das duas = falha em `test_eventos.py`. E, desde o mesmo
-conserto, `tests/api/test_contrato_openapi.py` garante que o OpenAPI comitado é o da aplicação viva — sem ele
+conserto, `tests/api/test_openapi_contrato.py` garante que o OpenAPI comitado é o da aplicação viva — sem ele
 a cobertura media um arquivo velho (achado G4-01).
 """
 
