@@ -98,3 +98,37 @@ gerente foi barrado contra a declaração de outro agente (`destrava`). Enquanto
 o gancho vale como aviso confiável e a saída é `git commit --no-verify` com o motivo escrito na
 mensagem. Conserto certo: o arrendamento é escolhido pelo diretório de trabalho do commit (a árvore),
 não pelo horário do arquivo.
+
+## Não editar script bash que está rodando (incidente da fila, 06/09)
+O processador da fila de junção ficou 3 h em laço com 5.552 rodadas de "bisseção": ele havia sido
+lançado com a versão do script em que as mensagens de progresso iam para stdout — o MESMO canal que a
+função usa para DEVOLVER o ramo culpado — e o conserto entrou no arquivo ENQUANTO ele rodava. Bash lê
+o script aos poucos; editar arquivo em execução mistura versões. Regra: conserto em `laco/*.sh` só
+depois de confirmar `pgrep -af <script>` vazio, ou o processo em curso é encerrado pelo PID antes.
+
+## `make teste`/`make openapi`/`make e2e` injetam os segredos de PRODUÇÃO (06/09 19:50)
+Esses alvos do Makefile prependem `$(SEGREDOS)` = `sudo cat /etc/plat/segredos/*`, que SOBRESCREVE o
+ambiente da sua trilha (PLAT_DSN_WORKER de produção não casa com o prefixo `plat_t<nome>_worker` e a
+aplicação recusa). Em base de trilha, rode os comandos DIRETO: `venv/bin/pytest ...` e a geração do
+openapi por `venv/bin/python -c ...`, depois de `set -a; source laco/var/trilha/<nome>.env; set +a`.
+Só `make lint`, `make sem-marcador`, `make limites` e `make vendor` são secos e seguros em trilha.
+
+## Modelo do dono: Kimi K3 (06/09 20:30)
+A cota da conta Anthropic derrubou agentes em massa três vezes num dia. O dono forneceu chave própria
+da Moonshot, e o laço passou a poder rodar agentes nela:
+
+    bash /home/dev/plataforma/laco/lanca_kimi.sh <id-do-item>   # um agente no prompt já gerado
+
+Medido em 06/09: `kimi-k3` responde pelo endpoint compatível com Anthropic
+(`https://api.moonshot.ai/anthropic`), usa as ferramentas do Claude Code (leu `estado.json` e acertou
+os números) e declara **janela de 1.048.576 tokens** (lida de `/v1/models`, gravada em
+`CLAUDE_CODE_MAX_CONTEXT_TOKENS`; sem ela o Claude Code assume 200k e compacta cedo demais).
+Modelos disponíveis: `kimi-k3` (1 Mi), `kimi-k2.7-code`, `kimi-k2.7-code-highspeed`, `kimi-k2.6` (256k).
+
+A chave vive em `laco/var/kimi.env`, modo 600, **fora do git** — `laco/var/` está no `.gitignore` e o
+repositório é público. Nunca commitar, nunca ecoar em log. O `driver.sh` (turno autônomo) e o
+`supervisor.py` (função `ambiente_do_agente`) carregam esse arquivo sozinhos quando ele existe, e
+removem `ANTHROPIC_API_KEY` do ambiente do filho — a chave da conta anularia a do dono.
+
+O Claude Code avisa `unrecognized_model` para esses nomes; é só o catálogo local não os conhecer, e
+não impede nada.

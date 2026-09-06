@@ -80,6 +80,24 @@ QUENTES = [
 ]
 
 
+# --- modelo do dono (06/09): se laco/var/kimi.env existir, todo agente lançado pelo supervisor roda
+# no Kimi K3 (janela 1.048.576) em vez de gastar a cota da conta Anthropic, que derrubou agentes em
+# massa três vezes hoje. O arquivo fica em laco/var/ (fora do git; o repositório é público).
+def ambiente_do_agente():
+    env = dict(os.environ)
+    cam = f"{LACO}/var/kimi.env" if "LACO" in globals() else "/home/dev/plataforma/laco/var/kimi.env"
+    try:
+        for linha in open(cam, encoding="utf-8"):
+            linha = linha.strip()
+            if linha and not linha.startswith("#") and "=" in linha:
+                k, _, v = linha.partition("=")
+                env[k.strip()] = v.strip()
+        env.pop("ANTHROPIC_API_KEY", None)  # a chave da conta anularia a do dono
+    except OSError:
+        pass
+    return env
+
+
 def agora_iso():
     return datetime.datetime.now().isoformat(timespec="seconds")
 
@@ -191,12 +209,18 @@ class Supervisor:
                 m[p[0].rstrip(":")] = int(p[1]) // 1024
         conex = None
         dsn = None
-        try:
-            for l in open(f"{REPO}/.env", encoding="utf-8"):
-                if l.startswith("PLAT_DSN="):
-                    dsn = l.split("=", 1)[1].strip()
-        except OSError:
-            pass
+        try:  # 06/09: cofre primeiro (segredos saíram do .env no conserto G6), .env de reserva
+            import subprocess
+            dsn = subprocess.run(["sudo", "cat", "/etc/plat/segredos/PLAT_DSN"], capture_output=True, text=True, timeout=5).stdout.strip() or None
+        except Exception:
+            dsn = None
+        if not dsn:
+            try:
+                for l in open(f"{REPO}/.env", encoding="utf-8"):
+                    if l.startswith("PLAT_DSN="):
+                        dsn = l.split("=", 1)[1].strip()
+            except OSError:
+                pass
         if dsn:
             try:
                 import psycopg2
@@ -468,7 +492,7 @@ class Supervisor:
             p = subprocess.Popen([CLAUDE, "-p", prompt, "--dangerously-skip-permissions"],
                                  cwd="/home/dev/plataforma", stdout=saida_log,
                                  stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                                 start_new_session=True)
+                                 start_new_session=True, env=ambiente_do_agente())
         reg = {"id": aid, "item": item["id"], "pid": p.pid,
                "starttime": stat_proc(p.pid), "inicio": agora_iso(),
                "inicio_ts": time.time(), "log": log, "prompt": cam,
