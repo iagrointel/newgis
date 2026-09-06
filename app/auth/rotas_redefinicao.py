@@ -54,6 +54,9 @@ def solicitar(corpo: RedefinicaoSolicitarEntrada, request: Request):
     with db.db(ctx) as cur:
         cur.execute("SELECT config FROM plat.tenant WHERE id = plat.tenant_atual()")
         config = cur.fetchone()["config"]
+        # Evento só quando o pedido resolveu um usuário: quem não existe não gera rastro e a resposta é a mesma
+        # dos dois lados (não revela existência de conta). O rastro é do inquilino do usuário, nunca de quem pediu.
+        registrar_evento(cur, request, "usuarios/redefinir_senha_pedido", "usuario", r["usuario_id"], {})
     if smtp_efetivo(config, settings) is not None:
         jobs_sistema.enfileirar(
             r["tenant_id"], "correio.enviar",

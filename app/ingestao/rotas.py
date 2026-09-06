@@ -215,12 +215,13 @@ def confirmar(id: str, corpo: ConfirmarEntrada, request: Request,
 
 
 @router.delete("/api/importacoes/{id}", status_code=204, response_class=Response, openapi_extra=PUBLICAR)
-def apagar(id: str, auth: Auth = autenticado("conteudo.publicar_camada")):
+def apagar(id: str, request: Request, auth: Auth = autenticado("conteudo.publicar_camada")):
     with db.db(auth.contexto()) as cur:
         r = _carregar(cur, auth, id)
         if r["estado"] not in ESTADOS_APAGAVEIS:
             raise ErroAPI(409, "estado_invalido", f"importação em estado {r['estado']!r} não pode ser apagada")
         cur.execute("DELETE FROM plat.importacao WHERE id = %s::uuid", (r["id"],))
+        registrar_evento(cur, request, "importacoes/apagar", "importacao", str(r["id"]), {"estado": r["estado"]})
     return Response(status_code=204)
 
 

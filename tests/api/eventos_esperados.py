@@ -1,6 +1,21 @@
-"""Evento(s) de domínio que cada rota de escrita do L0-02 registra (ADR 0002 seção 9.4). Rota de escrita no
-OpenAPI sem entrada aqui = falha em test_eventos.py. Lista vazia = a rota, por decisão, não gera evento
-(login falho comum, logout sem sessão, leituras) e o motivo está ao lado."""
+"""Evento(s) de domínio que cada rota de escrita do L0-02 registra (ADR 0002 seção 9.4).
+
+Duas listas, e nenhuma das duas aceita silêncio (achado G4-03 do ataque ao grupo G4: a lista VAZIA era aceita,
+e `POST`/`DELETE /api/arquivos` — que criam e destroem objeto do inquilino — estavam declarados como "sem
+evento", de modo que o guardião aprovava destruição de dado sem rastro):
+
+- `EVENTOS_POR_ROTA`: rota que altera estado. **Lista vazia é proibida** (`test_eventos.py` reprova); toda
+  entrada tem pelo menos um tipo, e todo tipo citado tem de existir como literal no código de `app/` e como
+  linha em `plat.evento_tipo`.
+- `ROTAS_SEM_EVENTO`: as poucas rotas de verbo de escrita que NÃO alteram estado (cálculo puro, protocolo Esri
+  que usa POST para leitura, parte de um envio que já é narrado pelo início e pela conclusão). Cada entrada
+  carrega o MOTIVO escrito, e `test_eventos.py` reprova motivo curto ou ausente, entrada repetida nas duas
+  listas, e rota que aparece aqui apesar de o seu módulo chamar `registrar_evento`.
+
+Rota de escrita do OpenAPI que não esteja em uma das duas = falha em `test_eventos.py`. E, desde o mesmo
+conserto, `tests/api/test_contrato_openapi.py` garante que o OpenAPI comitado é o da aplicação viva — sem ele
+a cobertura media um arquivo velho (achado G4-01).
+"""
 
 EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/login"): ["usuarios/entrar", "usuarios/falha_login"],
@@ -10,7 +25,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/eu/senha"): ["usuarios/trocar_senha"],
     ("DELETE", "/api/eu/sessoes"): ["sessoes/revogar"],
     ("DELETE", "/api/eu/sessoes/{id}"): ["sessoes/revogar"],
-    ("POST", "/api/eu/2fa/iniciar"): [],  # só liga no confirmar; iniciar sem confirmar não muda o estado da conta
     ("POST", "/api/eu/2fa/confirmar"): ["usuarios/2fa_ligar"],
     ("POST", "/api/eu/2fa/desativar"): ["usuarios/2fa_desligar"],
     ("POST", "/api/eu/2fa/codigos"): ["usuarios/2fa_codigos"],
@@ -84,16 +98,10 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/favoritos/{item_id}"): ["favoritos/remover"],
     ("POST", "/api/lixeira/{id}/restaurar"): ["itens/restaurar"],
     ("POST", "/api/lixeira/esvaziar"): ["lixeira/esvaziar"],
-    # ---- arquivos/objetos (L0-11): sem dono humano (usuário/grupo/token) para narrar num evento de domínio; a
-    # auditoria do objeto é a própria linha em plat.arquivo (quem gravou, quando, sha256) + plat.log_acesso da
-    # requisição (rota, ip, bytes, token_id) — o mesmo padrão de decisão já usado acima em /api/eu/2fa/iniciar
-    ("POST", "/api/arquivos"): [],
-    ("DELETE", "/api/arquivos/{sha256}"): [],
-    # ---- rede de rota (L2-11-c): cálculo sobre dado aberto (OSM), sem escrita em `plat.*` e sem dono humano —
-    # não há o que narrar num evento de domínio (mesma decisão de /api/arquivos acima)
-    ("POST", "/api/rota"): [],
-    ("POST", "/api/matriz"): [],
-    ("POST", "/api/isocrona"): [],
+    # ---- arquivos/objetos (L0-11): gravar e apagar objeto do inquilino são eventos de domínio. A decisão
+    # anterior ("sem dono humano para narrar") deixava a destruição de dado sem rastro — foi o achado G4-08.
+    ("POST", "/api/arquivos"): ["arquivos/enviar"],
+    ("DELETE", "/api/arquivos/{sha256}"): ["arquivos/apagar"],
     # ---- LDAP/Active Directory (L0-08-d): login registra a MESMA sequência do login local, reaproveitada de
     # _abrir_sessao ("usuarios/entrar"), mais o provisionamento automático (criação ou sincronização do
     # usuário a partir do diretório); administração do provedor tem vocabulário próprio ("org/*")
@@ -104,4 +112,66 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/org"): ["org/configurar"],
     ("POST", "/api/org/logo"): ["org/logo_enviar"],
     ("DELETE", "/api/org/logo"): ["org/logo_remover"],
+    # ---- teto de cota, escrito só pela plataforma (conserto dos achados G4-04/G4-05)
+    ("PUT", "/api/plataforma/inquilinos/{id}/cotas"): ["inquilinos/cotas_teto"],
+    # ---- convite de membro por e-mail (L0-07-d-smtp-convites)
+    ("POST", "/api/convites"): ["convites/criar"],
+    ("DELETE", "/api/convites/{id}"): ["convites/cancelar"],
+    ("POST", "/api/convites/aceitar"): ["usuarios/convite_aceito"],
+    # ---- redefinição de senha por e-mail (L0-07-d-smtp-convites)
+    ("POST", "/api/senha/redefinir/solicitar"): ["usuarios/redefinir_senha_pedido"],
+    ("POST", "/api/senha/redefinir/aplicar"): ["usuarios/redefinir_senha_email"],
+    # ---- SMTP por inquilino (L0-07-d-smtp-convites)
+    ("PUT", "/api/org/smtp"): ["org/smtp_configurar", "org/smtp_remover"],
+    ("POST", "/api/org/smtp/testar"): ["org/smtp_testar"],
+    # ---- foto do próprio perfil (L0-02)
+    ("POST", "/api/eu/foto"): ["usuarios/foto_enviar"],
+    ("DELETE", "/api/eu/foto"): ["usuarios/foto_remover"],
+    # ---- 2FA: iniciar não muda a conta, mas registra a tentativa (não há mais declaração vazia)
+    ("POST", "/api/eu/2fa/iniciar"): ["usuarios/2fa_iniciar"],
+    # ---- envio retomável em partes (L0-04-a-upload-arquivo)
+    ("POST", "/api/uploads"): ["uploads/iniciar"],
+    ("POST", "/api/uploads/{id}/concluir"): ["uploads/concluir"],
+    ("DELETE", "/api/uploads/{id}"): ["uploads/abortar"],
+    # ---- fontes externas registradas (conexões)
+    ("POST", "/api/conexoes"): ["conexoes/criar"],
+    ("PATCH", "/api/conexoes/{id}"): ["conexoes/editar"],
+    ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
+    ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
+    ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
+    # ---- importação de arquivo vetorial
+    ("POST", "/api/importacoes"): ["importacoes/criar"],
+    ("PUT", "/api/importacoes/{id}/confirmar"): ["importacoes/confirmar"],
+    ("DELETE", "/api/importacoes/{id}"): ["importacoes/apagar"],
+}
+
+# Verbo de escrita que NÃO altera estado. Cada motivo é conferido por test_eventos.py (tamanho mínimo, sem
+# repetição na outra lista, e o módulo da rota não pode chamar registrar_evento). Esta lista é curta de
+# propósito: crescer aqui é a forma mais fácil de reabrir o buraco do G4-03.
+ROTAS_SEM_EVENTO: dict[tuple[str, str], str] = {
+    ("POST", "/api/rota"):
+        "cálculo de rota sobre dado aberto (OSM) pelo OSRM: nenhuma escrita em plat.*, nenhum objeto criado; "
+        "o uso fica em plat.log_acesso (rota, ip, tempo, token_id)",
+    ("POST", "/api/matriz"):
+        "matriz de distância pelo OSRM: mesmo caso do POST /api/rota, cálculo sem escrita",
+    ("POST", "/api/isocrona"):
+        "isócrona pelo OSRM: mesmo caso do POST /api/rota, cálculo sem escrita",
+    ("POST", "/api/geocodificar"):
+        "consulta ao gazetteer: leitura pura, é POST só porque o pedido é um corpo JSON grande demais para a "
+        "linha de consulta; o uso fica em plat.log_acesso",
+    ("POST", "/api/reverso"):
+        "geocodificação reversa: leitura pura, mesmo caso do POST /api/geocodificar",
+    ("POST", "/rest/services/Geocodificador/GeocodeServer"):
+        "descritor do serviço no protocolo Esri: o mesmo documento do GET, que o cliente ArcGIS também pede "
+        "por POST; nenhuma escrita",
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/findAddressCandidates"):
+        "busca de endereço no protocolo Esri: leitura pura, o cliente ArcGIS usa GET ou POST conforme o "
+        "tamanho do pedido",
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/reverseGeocode"):
+        "geocodificação reversa no protocolo Esri: leitura pura, mesmo caso de findAddressCandidates",
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/geocodeAddresses"):
+        "geocodificação em lote no protocolo Esri: leitura pura, só existe como POST porque o lote vai no corpo",
+    ("PUT", "/api/uploads/{id}/partes/{n}"):
+        "uma parte de um envio retomável: o envio inteiro já é narrado por uploads/iniciar, uploads/concluir e "
+        "uploads/abortar; um evento por parte encheria a auditoria de ruído (um arquivo de 1 GiB são 128 partes)",
 }
