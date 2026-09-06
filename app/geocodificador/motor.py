@@ -204,7 +204,7 @@ def buscar(cur, *, logradouro: str | None, numero: int | None, bairro: str | Non
     """Busca com hierarquia de recuo (ver `_buscar_interna`); aqui só se acrescenta o AVISO em português
     de cada tipo de acerto degradado (`AVISO_TIPO_ACERTO`), num único lugar, para nenhum dos 4 caminhos de
     retorno internos esquecer de preencher `avisos` — campo teria ficado sempre vazio (achado do papel
-    adversário desta sessão: lista vazia sem nenhum caminho que a populasse é um sintoma de placeholder)."""
+    adversário desta sessão: lista vazia sem nenhum caminho que a populasse é sintoma de campo nunca preenchido)."""
     candidatos = _buscar_interna(
         cur, logradouro=logradouro, numero=numero, bairro=bairro, municipio=municipio, uf=uf, cep=cep,
         max_locations=max_locations,

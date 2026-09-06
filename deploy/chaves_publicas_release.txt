@@ -1,13 +1,17 @@
 # Chaves públicas Ed25519 confiáveis para verificar pacote de atualização assinado (item L7-16, ADR 0007
-# seção 2). Formato: "<chave_id> <chave_publica_base64> [nota]" — uma linha por chave, gerado por
-# `scripts/assinar_pacote.sh` (subcomando `gerar-chave` de scripts/plat_assinatura.py), nunca escrito à
-# mão. A chave PRIVADA correspondente NUNCA está neste repositório.
+# seção 2). Formato: "<chave_id> <chave_publica_base64> [nota]" — uma linha por chave. A chave PRIVADA
+# correspondente NUNCA está neste repositório.
 #
-# Rotação: para assinar com uma chave nova, a linha dela entra aqui primeiro, numa versão distribuída e
-# instalada com `install.sh`/atualização ASSINADA COM A CHAVE ANTIGA; só depois disso um pacote assinado
-# com a chave nova é aceito em `scripts/verificar_pacote.sh` (senão o appliance ainda não a conhece e
-# recusa — é o comportamento correto, testado em tests/unit/test_assinatura_pacote.py).
+# Este arquivo é DADO DE INSTALAÇÃO: quem verifica lê daqui, e quem ASSINA não escreve aqui (endurecimento
+# de 06/09/2026, ataque adversarial ao grupo G6 — antes scripts/assinar_pacote.sh acrescentava a própria
+# chave nova, o que fazia qualquer pessoa que rodasse a ferramenta virar origem confiável). Acrescentar
+# chave é o ato explícito de `bash scripts/confiar_chave_release.sh <id> <publica_b64> --confirmo`, seguido
+# de git add + commit + revisão. A única exceção é a ÂNCORA INICIAL: numa instalação cuja lista esteja
+# vazia, a primeira chave é registrada com aviso em stderr. Por isso este arquivo NUNCA pode voltar a ficar
+# sem chave — tests/unit/test_release_seguranca.py reprova se ficar.
 #
-# Vazio até o primeiro release real ser cortado (nenhuma chave de demonstração é fixada aqui de propósito
-# — os testes usam um arquivo de confiança próprio, fora do repositório, para não precisar de uma chave
-# real versionada).
+# Rotação: a linha da chave nova entra aqui primeiro, numa versão distribuída e instalada com uma
+# atualização ASSINADA COM A CHAVE ANTIGA; só depois um pacote assinado com a nova é aceito por
+# scripts/verificar_pacote.sh. A mesma lista é a âncora da etiqueta git assinada do release
+# (scripts/preparar_release.sh gera var/releases/allowed_signers a partir dela).
+kac795e8afb7af013 rRHDs0X8+u/oXMgMnDgQkLrM3KLli3dUIfz5Fa0RtO8= ancora inicial da linha plat, gerada em 2026-09-06T16:01:35Z na maquina de corte de release

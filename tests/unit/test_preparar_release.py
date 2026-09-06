@@ -41,9 +41,12 @@ def repo(tmp_path) -> Path:
     (r / "CHANGELOG.md").write_text("# Changelog\n\n", encoding="utf-8")
     (r / "app").mkdir()
     (r / "app" / "principal.py").write_text("VERSAO = '0.1.0'\n", encoding="utf-8")
+    # o Makefile sintético imprime um resumo no formato do pytest ("N passed"): desde o endurecimento de
+    # 06/09/2026 o manifesto registra quantos testes o comando contou, e publicar_release.sh recusa
+    # release cujo comando não tenha contado teste nenhum (achado 5 do adversário).
     (r / "Makefile").write_text(
-        "check:\n\ttest ! -f .falhar_check\n\ttouch .check_rodou\n\nhomolog:\n\ttest ! -f .falhar_homolog\n"
-        "\ttouch .homolog_rodou\n",
+        "check:\n\ttest ! -f .falhar_check\n\ttouch .check_rodou\n\t@echo '7 passed in 0.10s'\n\n"
+        "homolog:\n\ttest ! -f .falhar_homolog\n\ttouch .homolog_rodou\n\t@echo '3 passed in 0.20s'\n",
         encoding="utf-8",
     )
     _git(r, "config", "user.email", "t@t.t")
@@ -59,7 +62,7 @@ def _rodar_preparar(repo: Path, versao: str, *, hotfix: bool = False, env_extra:
         "PATH": "/usr/bin:/bin:/usr/local/bin",
         "PLAT_CHAVE_PRIVADA": str(repo / ".chaves" / "priv.pem"),
         "PLAT_CHAVES_CONFIAVEIS": str(repo / ".chaves" / "confiaveis.txt"),
-        "PLAT_ASSINAR_SCRIPT": str(SCRIPTS / "assinar_pacote.sh"),
+        "PLAT_AMBIENTE": "dev",
         "HOME": str(repo),
     }
     if env_extra:
@@ -74,8 +77,8 @@ def _rodar_publicar(repo: Path, pacote: Path):
     env = {
         "APP_DIR": str(repo),
         "PATH": "/usr/bin:/bin:/usr/local/bin",
-        "PLAT_VERIFICAR_SCRIPT": str(SCRIPTS / "verificar_pacote.sh"),
         "PLAT_CHAVES_CONFIAVEIS": str(repo / ".chaves" / "confiaveis.txt"),
+        "PLAT_AMBIENTE": "dev",
         "HOME": str(repo),
     }
     return subprocess.run(
@@ -124,7 +127,13 @@ def test_release_patch_minor_e_hotfix_sinteticas_com_evidencia(repo):
     assert pacote_patch.exists()
     assert Path(str(pacote_patch) + ".sig").exists()
     m = _manifesto_do_pacote(pacote_patch)
-    assert m["versao"] == "0.1.1" and m["make_check"] == "passou" and m["make_homolog"] == "passou"
+    assert m["versao"] == "0.1.1"
+    # evidência, não texto fixo: comando canônico, código 0 e testes contados de verdade
+    assert m["etapas"]["check"]["comando"] == "make check"
+    assert m["etapas"]["check"]["codigo_saida"] == 0
+    assert m["etapas"]["check"]["testes_contados"] == 7
+    assert m["etapas"]["homolog"]["comando"] == "make homolog"
+    assert m["etapas"]["homolog"]["testes_contados"] == 3
     assert _git(repo, "tag", "-l", "v0.1.1") == "v0.1.1"
     changelog_patch = (repo / "var" / "releases" / "0.1.1.changelog.md").read_text(encoding="utf-8")
     assert "## [0.1.1]" in changelog_patch and "### Corrigido" in changelog_patch
@@ -217,6 +226,7 @@ def test_publicar_recusa_pacote_sem_manifesto_mesmo_assinado_de_verdade(repo, tm
         "APP_DIR": str(RAIZ), "PATH": "/usr/bin:/bin:/usr/local/bin", "HOME": str(repo),
         "PLAT_CHAVE_PRIVADA": str(repo / ".chaves" / "priv.pem"),
         "PLAT_CHAVES_CONFIAVEIS": str(repo / ".chaves" / "confiaveis.txt"),
+        "PLAT_AMBIENTE": "dev",
     }
     assinar = subprocess.run(
         ["bash", str(SCRIPTS / "assinar_pacote.sh"), str(pacote)],

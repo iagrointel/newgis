@@ -42,18 +42,23 @@ que ter `## [X.Y.Z]` no changelog, e vice-versa — a checagem que a refutação
    vai para produção sem ter passado por homologação **com o mesmo pacote** (mesmo sha256) — é por isso que o
    pacote só é montado DEPOIS do `make homolog` passar, nunca antes.
 3. **Pacote assinado** — `scripts/assinar_pacote.sh` (item L7-16, Ed25519). Automatizado. O pacote carrega
-   `RELEASE_MANIFEST.json` (versão, commit, quando, `make_check`/`make_homolog` = "passou") DENTRO do próprio
-   arquivo assinado — a assinatura cobre o manifesto junto com o resto, então um pacote que nunca passou pelos
-   passos 1-2 não tem como ganhar um manifesto "aprovado" válido sem a chave privada do release.
+   `RELEASE_MANIFEST.json` DENTRO do próprio arquivo assinado, e desde 06/09/2026 esse manifesto é EVIDÊNCIA,
+   não declaração: para cada etapa (`check`, `homolog`) grava o comando que rodou de verdade, o código de
+   saída, quantos testes a saída contou, a duração e o sha256 do log (`var/releases/<versao>.<etapa>.log`).
+   Antes os campos eram o texto fixo `"passou"`, escrito sem olhar resultado nenhum: bastava
+   `PLAT_RELEASE_CHECK_CMD=true` para um pacote que nunca rodou teste sair "aprovado para produção" (medido
+   pelo adversário, achado 5 do laudo `laco/handoffs/T3/ataque-g6-ADVERSARIO.md`).
 4. **Ambiente de homologação validado antes de produção** — o mesmo `make homolog` do passo 2 É a validação;
    não há passo separado. O QUE FICA MANUAL: decidir que o resultado do e2e de homologação foi bom o
    suficiente para prosseguir (o script não julga qualidade de resultado, só pass/fail de exit code).
 5. **Revisar e colar o changelog** — manual (rascunho pronto no passo anterior).
-6. **Publicar** — `scripts/publicar_release.sh <pacote>`: confere assinatura + manifesto e, só se os dois
-   baterem, aprova o pacote para produção. Não roda `install.sh` sozinho (root, domínio e a decisão de QUANDO
-   tirar o site do ar por alguns segundos são sempre humanas). Recusa (saída 4/5/6, causas distintas) qualquer
-   pacote que não prove ter passado pela linha inteira — inclusive um assinado à mão, fora de
-   `preparar_release.sh`, sem o manifesto.
+6. **Publicar** — `scripts/publicar_release.sh <pacote>`: confere assinatura + evidência do manifesto +
+   piso de versão e, só se os três baterem, aprova o pacote para produção. Não roda `install.sh` sozinho
+   (root, domínio e a decisão de QUANDO tirar o site do ar por alguns segundos são sempre humanas). Saídas:
+   `4` assinatura (pacote alterado, RENOMEADO ou chave não confiável) · `5` sem `RELEASE_MANIFEST.json` ·
+   `6` manifesto sem prova (comando substituído, código != 0, nenhum teste contado, ou formato antigo) ·
+   `7` versão repetida ou menor que a última publicada. Cada aprovação é anexada a
+   `var/releases_publicados.jsonl` — é esse registro que faz repetição e regressão de versão serem recusadas.
 
 ## Hotfix
 
@@ -73,6 +78,35 @@ bash scripts/conferir_changelog_releases.sh       # auditoria isolada, a qualque
 
 `scripts/release.sh` é o mesmo comando que `preparar_release.sh` (alias — nome do portão original do item no
 backlog do laço).
+
+```
+bash scripts/confiar_chave_release.sh k<16hex> <publica_b64> "nota" --confirmo   # rotação de chave
+```
+
+## Cadeia de confiança da atualização (endurecimento de 06/09/2026)
+
+O adversário independente do turno 3 derrubou os três elos. O que vale agora:
+
+| elo | antes (medido pelo adversário) | agora |
+|---|---|---|
+| quem é confiável | `assinar_pacote.sh` escrevia a própria chave pública em `deploy/chaves_publicas_release.txt`, o mesmo arquivo que a verificação lê | assinar NUNCA escreve na lista com âncora; confiar é o ato explícito de `confiar_chave_release.sh --confirmo`, commitado e revisado |
+| lista de confiança | trocável por `PLAT_CHAVES_CONFIAVEIS` ou por `APP_DIR` | dado de instalação, versionado; a variável só ACRESCENTA em ambiente declarado `dev`/`teste`/`homolog`, sempre com aviso em stderr; em produção é ignorada, também com aviso; `APP_DIR` não a alcança |
+| o que a assinatura cobre | só os bytes do pacote (o nome e o tamanho no `.sig` podiam mentir) | uma declaração canônica com nome, tamanho, sha256, versão e data; o `.sig` recusa campo fora do formato |
+| quem verifica | `PLAT_VERIFICAR_SCRIPT` trocava o verificador por `/bin/true` | a variável não existe mais |
+| prova de teste | texto fixo `"passou"` | comando, código de saída, testes contados e sha256 do log |
+| repetição/regressão | aceitas, sem registro | recusadas contra `var/releases_publicados.jsonl` (saída 7) |
+| etiqueta git | `git tag -a` (anotada); `git tag -v` respondia "no signature found" | `git tag -s` com assinatura SSH derivada da MESMA chave Ed25519 do release, conferida contra `var/releases/allowed_signers`, gerado da lista de confiança |
+
+**A âncora inicial é a única exceção**: numa instalação cuja lista esteja SEM NENHUMA chave, a primeira é
+registrada com aviso em stderr — senão não haveria como começar. O repositório do produto ships com a âncora
+preenchida e `tests/unit/test_release_seguranca.py` reprova se ela sumir, então em produção esse caminho
+nunca está aberto.
+
+**Rotação de chave** (procedimento, não convenção): na máquina que corta o release, gere a chave nova
+(`scripts/assinar_pacote.sh` gera na primeira execução, ou `plat_assinatura.py gerar-chave`); leve só o par
+`chave_id`/`publica_b64` para o repositório; rode `scripts/confiar_chave_release.sh <id> <publica> --confirmo`;
+`git add deploy/chaves_publicas_release.txt && git commit`; distribua ESSA versão assinada com a chave
+ANTIGA; só então corte um release com a nova. A chave privada nunca sai da máquina de release.
 
 ## Três releases sintéticas (prova do mecanismo)
 
