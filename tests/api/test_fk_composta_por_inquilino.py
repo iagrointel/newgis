@@ -74,6 +74,9 @@ PERMITIDAS: dict[tuple[str, str], str] = {
     ("redefinicao_senha", "usuario_id"): "fora do escopo de L4-01-a",
     ("rede", "dono_id"): "fora do escopo de L4-01-a — aponta para usuario, não para outra plat.rede_*",
     ("rede", "importado_por"): "fora do escopo de L4-01-a — aponta para usuario, não para outra plat.rede_*",
+    ("rede_topo_resumo", "construido_por"): "mesmo padrão de rede.dono_id/importado_por (item L4-01-b) — "
+        "aponta para usuario, não para outra plat.rede_topo_*; as tabelas de topologia (no/aresta/resumo/"
+        "feicao_ponto/feicao_linha) já são compostas entre si (20260906T2000)",
     ("sessao", "usuario_id"): "fora do escopo de L4-01-a",
     ("token_servico", "renovado_por"): "fora do escopo de L4-01-a",
     ("token_servico", "usuario_id"): "fora do escopo de L4-01-a",
