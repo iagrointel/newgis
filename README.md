@@ -10,6 +10,8 @@ fechamento.
 
 ## Acompanhamento da construção
 
+- **`SISTEMA.md` — comece por aqui: o objetivo final e o sistema inteiro de ponta a ponta**, em 395 linhas, com a fonte de cada número.
+
 - `STATUS.md` — placar por linha de produto, regenerado pelo supervisor a cada rodada.
 - `PLANO_DA_CORRIDA.md` — o plano aprovado para a corrida contínua (papéis por modelo, fases, o que só o dono destrava).
 - Página viva do progresso: publicada como artifact privado pelo supervisor; o endereço fica com o dono.
