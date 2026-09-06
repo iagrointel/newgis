@@ -3,6 +3,57 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (grupo G1: conserto de identidade, sessão, segundo fator e login externo)
+
+Resposta ao ataque adversarial do turno 3 (`laco/handoffs/T3/ataque-g1-ADVERSARIO.md`, 6 de 8 itens
+refutados). Nove marcas `xfail(strict=True)` do adversário viraram teste verde, com a afirmação dele
+intacta; sete continuam, porque não foram consertadas aqui (T1, T2, e3, g1, l1, l2, l4).
+
+**Login por diretório (achado G1-l3, o mais grave).** `POST /api/login/ldap` provisionava a conta local com
+o texto cru enviado pelo cliente. Num diretório com casamento frouxo (o glauth do próprio item), `ana.silva*`
+autenticava como ana.silva e criava a conta local `ana.silva*` amarrada ao DN dela; a partir daí o login
+canônico recebia 409 com o nome do índice do banco numa rota pública, e a conta legítima ficava trancada sem
+rota administrativa. Três consertos: (1) a conta nasce com o atributo CANÔNICO do diretório — o que o próprio
+`filtro_usuario` usa como chave, depois `uid`, depois o primeiro RDN do DN; (2) `plat.ldap_provisionar`
+procura a identidade pelo sujeito externo (o DN) antes do login, então o mesmo DN atualiza a linha em vez de
+estourar o índice único, e a colisão que sobra vira o código curto `login_em_uso_externo`; (3)
+`erro_do_banco(expor_restricao=False)` nas rotas públicas — nome de restrição do banco só sai para quem já
+está autenticado. Caminho para desfazer: `DELETE /api/usuarios/{id}/vinculo-externo` (`membros.gerir`),
+que apaga o vínculo, desabilita a conta, encerra as sessões e grava `usuarios/vinculo_externo_remover`.
+
+**Expiração de senha e segundo fator (G1-b2).** `login_2fa` passava `senha_alterada_em=None` e a verificação
+de expiração dependia desse parâmetro: quem ligava o 2FA recebia a política de senha mais fraca da
+plataforma. Sentinela `NAO_INFORMADO` — `_abrir_sessao` lê a data do banco quando ela não vem do chamador.
+
+**Guarda única para toda rota autenticada (G1-c1).** As 7 rotas do GeocodeServer autenticavam por
+`sessao.resolver()` direto e escapavam de três guardas: pendência de conta (2FA obrigatório do inquilino),
+CSRF sob cookie e a checagem de `X-Plat-Inquilino`. `autenticado()` ganhou `token_por_querystring`, e o
+`?token=` do protocolo Esri virou opção DENTRO da porta única. `tests/unit/test_contrato_guarda.py` varre o
+app vivo e reprova rota que declare credencial sem passar pelo guarda (e o inverso). A varredura pegou mais
+duas: `GET /api/uploads/tipos` e `GET /api/importacoes/formatos` declaravam `x-auth: S/T` e respondiam sem
+credencial (achado G1-e1); `POST /api/logout` é a única exceção nomeada, com o motivo escrito.
+
+**Três divergências portão × código, todas consertadas no código.** `plat.sessoes_expurgar()` cortava a
+ociosidade em `interval '24 hours'` fixo e agora usa o mesmo corte por inquilino de `plat.auth_sessao`
+(G1-a1). O mínimo de senha padrão passou de 8 para 10, como a hipótese do item declara, com o piso
+configurável em 8 (mínimo do NIST SP 800-63B §3.1.1.2) — `docs/LIMITES.md` regerado (G1-b1). O prefixo do
+token de serviço passou de 12 para 8 caracteres (G1-d1).
+
+**Teste de fumaça da árvore limpa.** Dois adversários seguidos esbarraram em "o ramo principal não importa".
+`tests/unit/test_arvore_limpa_importa.py` faz `git archive HEAD` para um diretório temporário e importa
+`app.main` num subprocesso com ambiente sintético, monta o `app.openapi()` lá dentro, e confere que todo
+módulo `app.*` carregado está em `git ls-files`.
+
+Achado de teste: `test_a1` do adversário envelhecia a sessão com `SET LOCAL ROLE NONE` seguido de rollback,
+que descarta o `SET LOCAL`; sem contexto de inquilino a política `p_sessao` fazia o `UPDATE` casar 0 linhas
+em silêncio, e o xfail podia estar verde pela pré-condição quebrada, não pelo defeito. Corrigida só a
+plumbing (contexto e `rowcount` conferido); a afirmação continua idêntica.
+
+Migração `20260906T1611_g1_identidade_conserto.sql`, toda com `CREATE OR REPLACE` e assinatura inalterada:
+nenhum `GRANT`/`REVOKE` novo, as ACL das funções ficam as que 003/025 escreveram. `docs/openapi.json` NÃO foi
+regerado neste ramo de propósito (arquivo de colisão alta entre trilhas): quem juntar roda `make openapi`
+uma vez, depois do merge.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
