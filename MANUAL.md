@@ -879,3 +879,62 @@ interno é aceito no primeiro salto e recusado no segundo, nunca no primeiro.
 Sem tela em nenhum dos dois; `acervo_camada` ainda não tem rota HTTP própria (só a tabela); lista branca de
 coluna do acervo é por nome, não por conteúdo (L6-01-f); os 15 conectores concretos (o que de fato busca e
 traduz WMS/WFS/STAC/... para camada do mapa) são itens futuros, L6-02-b em diante.
+
+## 19. Ficha do acervo completa e gate de LGPD (itens L6-01-d-ficha-fonte e L6-01-f-lgpd)
+
+### 19.1 Ficha de procedência (`GET /api/acervo/{fonte_id}`)
+
+Os 10 campos de procedência da hipótese do item (url, licença, frescor, data do dado, script gerador, sha256,
+método, confiança, limites, próxima verificação) já estavam expostos desde o item anterior
+(L6-01-a-procedencia-acervo, migração 021) — conferido por leitura antes de somar código. `limites` já É "o
+que este dado não sustenta" em conteúdo real (ex.: "só fluxo, sem estoque RAIS", "0 vendidos lidos; só o
+tempo resolve"); não foi duplicado sob outro nome. O que faltava e foi somado nesta passagem:
+
+- **`endpoints`** (lista) + **`endpoints_total`** + **`endpoints_confirmados_vivos`**: `plat.acervo_endpoint`
+  (migração 040), view sobre `acervo.endpoint` com a mesma regra D17 (só fonte com licença escrita). "Vivo"
+  replica a definição que a própria casa já usa: `confirmado = true AND http = '200'`. O total é contado à
+  parte da lista (que trunca em 200 itens) — nunca "total" mentindo por causa do truncamento da lista.
+- **`completude_texto`**: "4,5/10" por extenso a partir de `procedencia_pontuacao`; `None` (nunca "0/10")
+  quando a view não tem base de cálculo — campo ausente é responsabilidade de quem EXIBE ("não registrado"),
+  a API nunca fabrica um número.
+- **`risco_pii` / `risco_pii_motivo`**: ver 19.2.
+
+Verificado campo a campo contra `acervo.fonte`/`acervo.endpoint` para 20 fontes licenciadas
+(`tests/api/test_acervo.py::test_ficha_confere_20_fontes_campo_a_campo_incluindo_endpoints_e_completude`) e
+que um campo ausente (`sha256 IS NULL` em 33 das 68 fontes licenciadas) chega como `None`, nunca fabricado
+(`test_campo_ausente_na_ficha_nunca_e_fabricado`). **Sem tela própria ainda** (a lista/ficha só existe como
+API — item L6-01-c, não construído nesta passagem); o portão completo do item (e2e no navegador) fica
+pendente até essa trilha de frontend.
+
+### 19.2 Gate de LGPD no "adicionar" (`plat.acervo_lgpd`, migração 041)
+
+`acervo.fonte` não tem nenhum campo de classificação de risco de dado pessoal (conferido por `\d acervo.fonte`
+antes de escrever qualquer coisa — a coluna mais próxima, `cliente_ve`, é sobre visibilidade comercial, não
+LGPD). Como `acervo.*` só é escrito pelos scripts da casa (nunca pela plataforma — regra repetida três vezes
+no ADR 0012), a classificação vive numa tabela própria da plataforma: `plat.acervo_lgpd` (`fonte_id`,
+`risco_pii`, `motivo` NOT NULL, `decidido_por`, `decidido_em`), curada à mão — sem GRANT de escrita para
+`plat_app`, só `INSERT`/`UPDATE` literal em migração ou acesso direto ao banco. Nunca calculada.
+
+Curadoria (evidência, não suposição): das 68 fontes licenciadas, uma varredura de
+`information_schema.columns` nas 219 tabelas canônicas ligadas a elas (contra um padrão amplo de nome de
+coluna — cpf/cnpj/nome/email/telefone/endereço/titular/...) achou 114 colunas suspeitas; lidas uma a uma, a
+esmagadora maioria é nome de LUGAR (`zona_nome`, `nome_municipio`), CNPJ de FUNDO (não de pessoa física) ou
+endereço de IMÓVEL já público por natureza (leilão/edital). Um caso quase enganou: `cbre.cad_gu_face_pgv`
+tem `telefone`/`telefone_p`, mas são FLAGS de infraestrutura de rua (a rua tem rede telefônica?), não contato
+de pessoa. O único achado real: **`onr`** (ONR/matrículas) — a tabela ingerida não guarda nome do titular,
+mas `url_mat` aponta para o visualizador de matrícula do cartório, que guarda. Marcada `risco_pii = true`.
+
+`POST /api/acervo/{fonte_id}/adicionar` consulta `plat.acervo_lgpd` (LEFT JOIN, `coalesce(risco_pii,
+false)`); fonte marcada e sem `{"confirma_risco_pii": true}` no corpo recusa com **409
+`confirmacao_pii_exigida`** ANTES de tocar `plat.item` — e a recusa fica registrada como evento
+(`acervo/adicionar_recusado_pii`) em transação PRÓPRIA (mesmo padrão de `_falhou()` em
+`app/auth/rotas_login.py`: registrar dentro do bloco que vai levantar a exceção faria `db.db` dar rollback e
+apagar o próprio evento da auditoria). Confirmando, o item criado grava `parametros.confirma_risco_pii: true`
+(a chave nem aparece quando a fonte nunca precisou de confirmação — nunca `false` fingindo confirmação que
+não foi pedida).
+
+**Isto NÃO é o portão inteiro do backlog** (`estado.json`, item L6-01-f-lgpd): falta a classificação POR
+COLUNA (lista negra + regex de conteúdo sobre amostra) em TODA view exposta, incluindo `plat.acervo_camada`
+(L6-01-a-registro) — hoje só `colunas_expostas`/`colunas_bloqueadas` por nome, comentado como provisório
+naquele item. O que foi entregue é o gate no fluxo de "adicionar fonte" descrito no pedido desta passagem;
+o resto fica registrado como pendência, não prometido como feito.

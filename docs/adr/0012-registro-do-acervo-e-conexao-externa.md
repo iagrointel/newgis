@@ -173,3 +173,59 @@ RESOLVIDO, sempre.
 Os 15 conectores concretos (cada um lê `plat.conexao.config` com um JSON Schema próprio, ainda a
 escrever); a materialização em modo "copiada" (hoje só o campo `modo` existe, sem agendamento —
 isso é L0-05/L6-02-k); a reconciliação entre o `tipo_item` de catálogo `conexao` e esta tabela.
+
+## Parte 3 — ficha completa (item L6-01-d-ficha-fonte) e Parte 4 — gate de LGPD no "adicionar" (item L6-01-f-lgpd)
+
+Estado: aceito (arquiteto+backend, turno T3, setembro de 2026).
+
+### Parte 3: o que faltava na ficha, e só isso
+
+Conferido antes de escrever qualquer coisa: `app/acervo/rotas.py::ver` (então lendo só `plat.acervo_ficha`,
+migração 021) já devolvia os 10 campos de procedência da hipótese do item — não havia nada para "completar"
+nesses dez. O gap real, medido contra a hipótese completa do item em `estado.json`, era só:
+"endpoints confirmados e vivos (`acervo.endpoint`)" e "completude x/10 exibida" (a pontuação já existia como
+número cru, `procedencia_pontuacao`, mas não como texto pronto). `plat.acervo_endpoint` (migração 040) segue
+o padrão exato de `plat.acervo_ficha` (`security_invoker`, GRANT só a `plat_app`, filtro D17 pela mesma
+junção com `acervo.fonte`); "vivo" foi definido igual ao que a casa já usa fora da plataforma
+(`confirmado = true AND http = '200'`), não inventado. `completude_texto` é derivado em Python
+(`_completude_texto`), não em SQL, porque é só formatação de exibição — `None` propagado sem fabricar zero.
+
+### Parte 4: por que a classificação NÃO entrou em `acervo.fonte`
+
+A hipótese do item (`estado.json`) sugere um campo do tipo "identidade_resolvente" na própria fonte. Decisão:
+NÃO alterar `acervo.fonte` — o ADR 0012 (Parte 1) já registrava a regra "`acervo.*` é escrito só pelos
+scripts da casa" três vezes; adicionar uma coluna ali pela plataforma quebraria essa invariante para sempre
+(a próxima recontagem/varredura da casa, rodada fora da plataforma, não saberia preservar a coluna). A
+classificação foi para `plat.acervo_lgpd`, tabela própria da plataforma, com FK de leitura para
+`acervo.fonte(fonte_id)` mas gravação só por migração/acesso direto — mesmo padrão já usado em
+`plat.acervo_camada` (Parte 1) para "curado à mão, nunca pela API".
+
+A curadoria em si não foi um exercício de suposição: rodou-se uma varredura real de
+`information_schema.columns` sobre as 219 tabelas canônicas (`acervo.objeto`, `canonico = true`) das 68
+fontes licenciadas, com um padrão de nome de coluna deliberadamente LARGO (a mesma lição da Parte 1 sobre
+lista branca "grossa e provisória, por nome, nunca por conteúdo" — aqui invertida: usar o nome como
+PRIMEIRO filtro, depois ler o conteúdo de verdade antes de decidir). 114 colunas bateram; cada uma foi
+inspecionada (`\d` da tabela, contagem de preenchimento quando havia dúvida real, como em
+`cbre.cad_gu_face_pgv.id_responsavel`, preenchida em 1 de 25.436 linhas — não é cadastro de contato pessoal,
+é flag de infraestrutura de rua ao lado de `agua`/`luz`/`esgoto`). Achado único: `onr`, por um caminho que a
+varredura de NOME não pegaria sozinha — a tabela ingerida (`cbre.onr_matricula`) não guarda o nome do
+titular, mas guarda `url_mat`, um link para o documento de matrícula real no cartório, que guarda. A decisão
+de marcar `onr` não veio da regex; veio de abrir o link e ver o que está do outro lado.
+
+Isto é DELIBERADAMENTE mais estreito que o portão completo do item em `estado.json` ("teste automatizado
+percorre TODA view exposta e falha se existir coluna cujo nome case com a lista negra ou cujo conteúdo case
+com regex de CPF/CNPJ em amostra de 1.000 linhas; `make check` inclui o teste"): essa varredura genérica e
+automática, medida ao vivo nesta mesma passagem, produz mais ruído do que sinal sem revisão humana por
+tabela (114 colunas suspeitas, 1 achado real) — automatizar o BLOQUEIO em cima dessa regex, sem a mesma
+leitura manual, teria bloqueado `cad_gu_face_pgv` e uma dúzia de tabelas de nome de lugar por engano, e
+ainda assim não teria pego `onr` (cujo risco está no link, não na coluna). O que se entrega aqui é o gate
+no fluxo específico pedido ("bloqueie POST /adicionar para fontes marcadas sem confirmação explícita");
+a varredura automática de TODA view exposta (incluindo `plat.acervo_camada`, que já tem
+`colunas_bloqueadas` por nome desde a Parte 1) fica registrada como pendência, não prometida como feita.
+
+### O que fica para os itens seguintes
+
+L6-01-c (tela de navegação do acervo — nenhuma das duas partes tem front); a classificação por CONTEÚDO em
+`plat.acervo_camada.colunas_expostas` (hoje só por nome); a varredura automática de toda view exposta contra
+o padrão de LGPD (o portão completo do item L6-01-f); revisão periódica de `plat.acervo_lgpd` quando novas
+fontes ganharem licença (a curadoria de hoje cobre as 68 fontes licenciadas em 06/09/2026, não as futuras).

@@ -824,3 +824,45 @@ conexoes/{id}/testar` chama `buscar_seguro` com timeout curto e grava `saude`/`s
 Ambos os itens entregam só o MODELO; a view com RLS por assinatura sobre a tabela original do acervo
 (L6-01-b) e os 15 conectores concretos que de fato leem WMS/WFS/STAC/... (L6-02-b em diante) ficam para os
 próximos turnos.
+
+## 16. Ficha do acervo completa e gate de LGPD (itens L6-01-d-ficha-fonte e L6-01-f-lgpd)
+
+**`plat.acervo_endpoint`** (migração 040): view `SECURITY INVOKER` sobre `acervo.endpoint`, mesma regra D17
+de `plat.acervo_ficha` (join com `acervo.fonte`, só licença escrita). `vivo` é coluna calculada na view
+(`confirmado AND http = '200'`), não em Python — evita duas definições divergentes de "vivo" no código.
+
+**`plat.acervo_lgpd`** (migração 041): tabela curada à mão (`fonte_id` PK com FK para `acervo.fonte`,
+`risco_pii boolean NOT NULL`, `motivo`/`decidido_por` `NOT NULL` com `CHECK (btrim(...) <> '')` — nunca
+marcada, nem limpa, sem razão escrita). Sem GRANT de escrita a `plat_app` (mesmo padrão de
+`plat.acervo_camada`, migração 027): só migração ou acesso direto ao banco escreve. `app/acervo/rotas.py`
+faz `LEFT JOIN` desta tabela em `CAMPOS_FICHA`/`CAMPOS_FICHA_DE`, com `coalesce(risco_pii, false)` — fonte
+sem linha em `acervo_lgpd` (67 das 68 licenciadas) nunca precisa de confirmação.
+
+Novo evento de domínio: `acervo/adicionar_recusado_pii` (`plat.evento_tipo`, migração 041 — `plat.evento.tipo`
+tem FK para essa tabela; sem a linha, o `INSERT` de `registrar_evento` quebraria com violação de FK na
+primeira fonte marcada). `tests/api/eventos_esperados.py` ganhou a entrada para
+`("POST", "/api/acervo/{fonte_id}/adicionar")`.
+
+**Padrão de transação para "recusar e ainda assim auditar"** (`app/acervo/rotas.py::_recusar_pii`, copiado de
+`app/auth/rotas_login.py::_falhou`/`_bloqueado`): `db.db()` faz `rollback()` em qualquer exceção não tratada
+dentro do `with` — levantar `ErroAPI` no MESMO bloco que chamou `registrar_evento()` apagaria o evento junto
+com o rollback. A rota faz o SELECT da ficha num bloco, fecha o bloco, decide fora dele, e — só se for
+recusar — abre um bloco NOVO só para o evento (que fecha e comita normalmente) antes de levantar o erro.
+Achado ao escrever o teste (`test_adicionar_fonte_marcada_risco_pii_sem_confirmacao_recusa`): a primeira
+versão registrava e levantava no mesmo `with`, e o evento nunca aparecia em `GET /api/eventos` — corrigido
+antes de declarar o item pronto.
+
+**Migração numerada ao vivo, três vezes na mesma passagem**: a árvore tinha 4 trilhas concorrentes disputando
+números (031 batido por duas, 034/036/037 batidos por outras) — os dois arquivos desta passagem nasceram
+`034`/`035`, foram renumerados para `036`/`037` (colisão com uma trilha de conexão), e de novo para
+`040`/`041` (colisão nova, incluindo uma aplicada ANTES da minha no mesmo slot 037) — sempre conferindo
+`ls db/migracoes` + `SELECT nome FROM plat.versao_migracao` ao vivo antes de cada tentativa, nunca reservando
+número com antecedência. `db/migrar.sh` não pôde ser usado diretamente numa dessas rodadas porque
+`030_conexao.sql` estava DIVERGENTE (sha aplicado ≠ sha do arquivo, causado por outra trilha) e o script para
+no primeiro divergente — as duas migrações desta passagem foram aplicadas manualmente
+(`cat arquivo | psql -1 -f -` + `INSERT ... plat.versao_migracao`), replicando exatamente o que `migrar.sh`
+faria, para que uma rodada futura do script (depois que a trilha dona do 030 resolver o próprio problema) as
+reconheça como já aplicadas (mesmo nome, mesmo sha) e pule sem reaplicar.
+
+Limite desta fatia: sem classificação por COLUNA em `plat.acervo_camada` (só por nome, ainda); sem tela
+(L6-01-c).

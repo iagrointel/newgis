@@ -3,6 +3,29 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (itens L6-01-d-ficha-fonte · L6-01-f-lgpd: ficha do acervo completa + gate de LGPD no "adicionar")
+
+Conferido antes de escrever: a ficha (`GET /api/acervo/{fonte_id}`, migração 021, item anterior) já tinha os
+10 campos de procedência da hipótese (url, licença, frescor, data do dado, script gerador, sha256, método,
+confiança, limites, próxima verificação) — `limites` já é "o que este dado não sustenta" em conteúdo real.
+Somado nesta passagem: **`endpoints`/`endpoints_total`/`endpoints_confirmados_vivos`**
+(`plat.acervo_endpoint`, migração 040, sobre `acervo.endpoint`, "vivo" = `confirmado AND http = '200'`) e
+**`completude_texto`** ("4,5/10" por extenso; `None` nunca fabricado quando falta base de cálculo).
+
+`acervo.fonte` não tinha campo de classificação de risco de dado pessoal (conferido por `\d`) — criada
+**`plat.acervo_lgpd`** (migração 041), curada à mão (sem GRANT de escrita a `plat_app`), depois de uma
+varredura real de 219 tabelas canônicas das 68 fontes licenciadas contra um padrão amplo de coluna (114
+batidas, lidas uma a uma — a maioria nome de lugar ou CNPJ de fundo, não pessoa física). Achado real único:
+**`onr`** (matrículas) — `url_mat` aponta para o documento de cartório com o nome do titular, mesmo a tabela
+ingerida não guardando o nome. `POST /api/acervo/{fonte_id}/adicionar` recusa com 409
+`confirmacao_pii_exigida` para fonte marcada sem `{"confirma_risco_pii": true}` no corpo, registrando a
+recusa como evento (`acervo/adicionar_recusado_pii`) em transação própria (mesmo padrão de
+`_falhou()`/`_bloqueado()` do login — registrar e levantar no mesmo bloco de `db.db()` apagaria o evento no
+rollback). 16 testes novos/estendidos em `tests/api/test_acervo.py` (ficha de 20 fontes campo a campo,
+campo ausente nunca fabricado, gate de LGPD com e sem confirmação, regressão da maioria sem curadoria).
+**Sem tela ainda** (L6-01-c) e sem a classificação por COLUNA em `plat.acervo_camada` (fica pendente, não
+prometida como feita). Docs: `MANUAL.md` §19, `ARQUITETURA.md` §16, `docs/PARIDADE.md`.
+
 ## turno 3, setembro de 2026 (item L2-10-c-linguagem-expressao: extensão do núcleo — 43 funções, 309 vetores Python=JavaScript, listas e dicionários, formatação pt-BR)
 
 Continuação do núcleo entregue no mesmo turno (18 funções, 41 vetores). Passa a **43 funções**
