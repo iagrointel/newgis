@@ -5035,6 +5035,86 @@
     "x-privilegio": "vocabulario"
    }
   },
+  "/api/esquemas": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Esquemas Listar",
+    "description": "Lista dos tipos com JSON Schema publicado (item L5-05-documento-versoes, D2 do L5_CONCEITO): a mesma\nfonte que `tipos.validar` usa, para o editor construir o painel de propriedades e para o agente escrever\ndocumento contra o mesmo contrato.",
+    "operationId": "esquemas_listar_api_esquemas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "vocabulario"
+   }
+  },
+  "/api/esquemas/{tipo}": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Esquema Ver",
+    "operationId": "esquema_ver_api_esquemas__tipo__get",
+    "parameters": [
+     {
+      "name": "tipo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tipo"
+      }
+     },
+     {
+      "name": "versao",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Versao"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "vocabulario"
+   }
+  },
   "/api/itens": {
    "get": {
     "tags": [
@@ -5759,6 +5839,49 @@
     "x-privilegio": "rls:visibilidade|conteudo.apagar_tudo"
    }
   },
+  "/api/itens/{id}/metadado.xml": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Metadado Iso",
+    "description": "Metadado ISO 19139/GMD do item (item L0-09-metadado-catalogo; ADR 0004 D17). Validado contra o XSD\noficial ANTES de sair (docs/xsd/cache/, baixado por docs/xsd/baixar_iso19139.py); `item_ou_404` + RLS de\n`plat.item` garantem que o token/sessão de um inquilino nunca gera o XML de item de outro.",
+    "operationId": "metadado_iso_api_itens__id__metadado_xml_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/itens/lote": {
    "post": {
     "tags": [
@@ -6122,6 +6245,49 @@
     },
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/itens/{id}/integridade": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Integridade",
+    "description": "item L5-05-documento-versoes: recomputa `sha256` de cada versão a partir do `corpo` GRAVADO em\n`plat.item_versao` e compara com o `sha256` da própria linha. As duas colunas só nascem juntas pelo gatilho\n`plat.tg_item_versao` (`app/catalogo/documento.py` explica por que o hash não é reproduzível por `sha256sum`\npuro fora deste Postgres — é `dados.corpo`, não `item_versao.corpo` inteiro, que tem o hash canônico\nexterno); editar `corpo` direto no banco, por fora do gatilho, é exatamente o que este endpoint pega.",
+    "operationId": "integridade_api_itens__id__integridade_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
    }
   },
   "/api/itens/{id}/usado-por": {
@@ -7489,6 +7655,323 @@
     "x-privilegio": "rls:visibilidade|conteudo.apagar_tudo"
    }
   },
+  "/ogc/records": {
+   "get": {
+    "tags": [
+     "ogc-records"
+    ],
+    "summary": "Pouso",
+    "operationId": "pouso_ogc_records_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/ogc/records/conformance": {
+   "get": {
+    "tags": [
+     "ogc-records"
+    ],
+    "summary": "Conformidade",
+    "operationId": "conformidade_ogc_records_conformance_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/ogc/records/collections": {
+   "get": {
+    "tags": [
+     "ogc-records"
+    ],
+    "summary": "Colecoes",
+    "operationId": "colecoes_ogc_records_collections_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/ogc/records/collections/{colecao_id}": {
+   "get": {
+    "tags": [
+     "ogc-records"
+    ],
+    "summary": "Colecao",
+    "operationId": "colecao_ogc_records_collections__colecao_id__get",
+    "parameters": [
+     {
+      "name": "colecao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Colecao Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/ogc/records/collections/{colecao_id}/items": {
+   "get": {
+    "tags": [
+     "ogc-records"
+    ],
+    "summary": "Itens Da Colecao",
+    "description": "GetRecords equivalente: mesmos filtros simples de `GET /api/itens` (q, bbox, tipo, tags); paginação\n`limit`/`offset` no vocabulário OGC (mapeados aos `limite`/`deslocamento` internos), `cursor` para a\npágina seguinte (link `rel=next`). RLS de `plat.item` garante que só itens do inquilino do token/sessão\naparecem — nunca de outro (refutação do item).",
+    "operationId": "itens_da_colecao_ogc_records_collections__colecao_id__items_get",
+    "parameters": [
+     {
+      "name": "colecao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Colecao Id"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "name": "bbox",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Bbox"
+      }
+     },
+     {
+      "name": "tipo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tipo"
+      }
+     },
+     {
+      "name": "tags",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tags"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Offset"
+      }
+     },
+     {
+      "name": "cursor",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Cursor"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/ogc/records/collections/{colecao_id}/items/{item_id}": {
+   "get": {
+    "tags": [
+     "ogc-records"
+    ],
+    "summary": "Item Da Colecao",
+    "operationId": "item_da_colecao_ogc_records_collections__colecao_id__items__item_id__get",
+    "parameters": [
+     {
+      "name": "colecao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Colecao Id"
+      }
+     },
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/acervo": {
    "get": {
     "tags": [
@@ -7677,6 +8160,273 @@
     "x-privilegio": "conteudo.criar|conteudo.registrar_fonte"
    }
   },
+  "/api/conexoes": {
+   "get": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_conexoes_get",
+    "parameters": [
+     {
+      "name": "tipo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tipo"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConexaoPagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_conexoes_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConexaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Conexao"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.registrar_fonte"
+   }
+  },
+  "/api/conexoes/{id}": {
+   "get": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_conexoes__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Conexao"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "patch": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Editar",
+    "operationId": "editar_api_conexoes__id__patch",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConexaoEditar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Conexao"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   },
+   "delete": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_conexoes__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/conexoes/{id}/testar": {
+   "post": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Testar",
+    "operationId": "testar_api_conexoes__id__testar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConexaoTeste"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
   "/api/arquivos/_varredura": {
    "get": {
     "tags": [
@@ -7851,6 +8601,250 @@
         "schema": {
          "$ref": "#/components/schemas/HTTPValidationError"
         }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/importacoes": {
+   "post": {
+    "tags": [
+     "ingestao"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_importacoes_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ImportacaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "conteudo.publicar_camada"
+   },
+   "get": {
+    "tags": [
+     "ingestao"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_importacoes_get",
+    "parameters": [
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 50,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/importacoes/{id}": {
+   "get": {
+    "tags": [
+     "ingestao"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_importacoes__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "delete": {
+    "tags": [
+     "ingestao"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_importacoes__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "conteudo.publicar_camada"
+   }
+  },
+  "/api/importacoes/{id}/confirmar": {
+   "put": {
+    "tags": [
+     "ingestao"
+    ],
+    "summary": "Confirmar",
+    "operationId": "confirmar_api_importacoes__id__confirmar_put",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConfirmarEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobCriado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "conteudo.publicar_camada"
+   }
+  },
+  "/api/importacoes/formatos": {
+   "get": {
+    "tags": [
+     "ingestao"
+    ],
+    "summary": "Formatos Aceitos",
+    "operationId": "formatos_aceitos_api_importacoes_formatos_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
        }
       }
      }
@@ -8735,6 +9729,430 @@
     "type": "object",
     "title": "CompartilhamentoEntrada"
    },
+   "Conexao": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "modo": {
+      "type": "string",
+      "title": "Modo"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "saude": {
+      "type": "string",
+      "title": "Saude"
+     },
+     "saude_verificada_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Saude Verificada Em"
+     },
+     "config": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Config"
+     },
+     "tem_credencial": {
+      "type": "boolean",
+      "title": "Tem Credencial"
+     },
+     "saude_mensagem": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Saude Mensagem"
+     },
+     "saude_latencia_ms": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Saude Latencia Ms"
+     },
+     "dono": {
+      "$ref": "#/components/schemas/Dono"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "atualizado_em": {
+      "type": "string",
+      "title": "Atualizado Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "tipo",
+     "modo",
+     "nome",
+     "url",
+     "saude",
+     "config",
+     "tem_credencial",
+     "dono",
+     "criado_em",
+     "atualizado_em"
+    ],
+    "title": "Conexao"
+   },
+   "ConexaoCartao": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "modo": {
+      "type": "string",
+      "title": "Modo"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "saude": {
+      "type": "string",
+      "title": "Saude"
+     },
+     "saude_verificada_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Saude Verificada Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "tipo",
+     "modo",
+     "nome",
+     "url",
+     "saude"
+    ],
+    "title": "ConexaoCartao"
+   },
+   "ConexaoEditar": {
+    "properties": {
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "url": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2048,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Url"
+     },
+     "modo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(referenciada|copiada)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Modo"
+     },
+     "config": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Config"
+     },
+     "credencial": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 4096
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Credencial"
+     },
+     "remover_credencial": {
+      "type": "boolean",
+      "title": "Remover Credencial",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "ConexaoEditar"
+   },
+   "ConexaoEntrada": {
+    "properties": {
+     "tipo": {
+      "type": "string",
+      "pattern": "^(wms|wmts|wfs|ogc_api|esri_rest|stac|geoparquet|pmtiles|postgres_fdw|s3|http)$",
+      "title": "Tipo"
+     },
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "url": {
+      "type": "string",
+      "maxLength": 2048,
+      "minLength": 1,
+      "title": "Url"
+     },
+     "modo": {
+      "type": "string",
+      "pattern": "^(referenciada|copiada)$",
+      "title": "Modo",
+      "default": "referenciada"
+     },
+     "config": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Config"
+     },
+     "credencial": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 4096
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Credencial"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "tipo",
+     "nome",
+     "url"
+    ],
+    "title": "ConexaoEntrada"
+   },
+   "ConexaoPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/ConexaoCartao"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "ConexaoPagina"
+   },
+   "ConexaoTeste": {
+    "properties": {
+     "ok": {
+      "type": "boolean",
+      "title": "Ok"
+     },
+     "status": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Status"
+     },
+     "mensagem": {
+      "type": "string",
+      "title": "Mensagem"
+     },
+     "latencia_ms": {
+      "type": "integer",
+      "title": "Latencia Ms"
+     },
+     "saude": {
+      "type": "string",
+      "title": "Saude"
+     },
+     "saude_verificada_em": {
+      "type": "string",
+      "title": "Saude Verificada Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "ok",
+     "mensagem",
+     "latencia_ms",
+     "saude",
+     "saude_verificada_em"
+    ],
+    "title": "ConexaoTeste"
+   },
+   "ConfirmarEntrada": {
+    "properties": {
+     "titulo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 250,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Titulo"
+     },
+     "crs": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Crs"
+     },
+     "codificacao": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Codificacao"
+     },
+     "geometria": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Geometria"
+     },
+     "campos": {
+      "anyOf": [
+       {
+        "items": {
+         "additionalProperties": true,
+         "type": "object"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Campos"
+     },
+     "validade": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Validade"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "ConfirmarEntrada",
+    "description": "O corpo é a proposta EDITADA (ADR 0005 seção 5): só os campos que a tela deixa mudar. Cada um é validado\ncontra a proposta gravada dentro da rota (nunca um esquema fixo — a proposta é que dá as opções válidas)."
+   },
    "Convite": {
     "properties": {
      "grupo": {
@@ -8799,6 +10217,36 @@
      "usuario_id"
     ],
     "title": "ConviteEntrada"
+   },
+   "Dono": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "login": {
+      "type": "string",
+      "title": "Login"
+     },
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "login"
+    ],
+    "title": "Dono"
    },
    "Erro": {
     "properties": {
@@ -9393,6 +10841,28 @@
     },
     "type": "object",
     "title": "HTTPValidationError"
+   },
+   "ImportacaoEntrada": {
+    "properties": {
+     "arquivo_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Arquivo Id"
+     },
+     "formato": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Formato"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "arquivo_id",
+     "formato"
+    ],
+    "title": "ImportacaoEntrada"
    },
    "ImportadoCategorias": {
     "properties": {

@@ -125,3 +125,31 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `LDAP_TIMEOUT_S` | `5` | connect_timeout e receive_timeout do ldap3 (bind de serviço e bind do usuário) |
 | `LDAP_BUSCA_MAX` | `1` | a busca por login casa EXATAMENTE 1 entrada; 0 ou 2+ = credenciais inválidas |
 | `LDAP_IMPORTAR_MAX` | `2000` | tamanho máximo de uma importação de grupo em massa (POST /api/org/ldap/importar) |
+
+## conexão externa e SSRF (L6-02-a-modelo-conexao-e-seguranca; app/conexao/): modelo genérico de conexão
+
+| nome | valor | explicação |
+|---|---|---|
+| `CONEXAO_TIPOS` | `('wms', 'wmts', 'wfs', 'ogc_api', 'esri_rest', 'stac', 'geoparquet', 'pmtiles', 'postgres_fdw', 's3', 'http')` | — |
+| `CONEXAO_MODOS` | `('referenciada', 'copiada')` | — |
+| `CONEXAO_NOME_MAX` | `200` | — |
+| `CONEXAO_URL_MAX` | `2048` | — |
+| `CONEXAO_CONFIG_MAX_BYTES` | `8192` | tamanho máximo do JSON de `config` (json.dumps, utf-8) |
+| `CONEXAO_DNS_TIMEOUT_S` | `3.0` | socket.getaddrinfo (validação do host antes de qualquer conexão) |
+| `CONEXAO_CONECTAR_TIMEOUT_S` | `3.0` | — |
+| `CONEXAO_LER_TIMEOUT_S` | `6.0` | teste de saúde: curto de propósito (POST /api/conexoes/{id}/testar) |
+| `CONEXAO_REDIRECT_MAX` | `5` | cada hop é revalidado do zero (host novo pode ser interno) |
+| `CONEXAO_RESPOSTA_MAX_BYTES` | `1048576` | 1 MiB: o teste de saúde confere status/corpo curto |
+
+## ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
+
+| nome | valor | explicação |
+|---|---|---|
+| `INGESTAO_AMOSTRA_VALIDADE` | `1000` | feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR) |
+| `INGESTAO_MEMORIA_MB` | `768` | job ingestao.inspecionar (cobre GeoJSON de 64 MiB, ADR seção 0.4) |
+| `INGESTAO_TIMEOUT_S` | `300` | — |
+| `CARGA_MEMORIA_MB` | `1024` | job ingestao.carregar (ogr2ogr + ST_MakeValid) |
+| `CARGA_TIMEOUT_S` | `3600` | — |
+| `CARGA_FATOR_COTA` | `3` | estimativa = bytes do arquivo × 3 (MEDIDO: shapefile 14 MB -> tabela 45 MB) |
+| `INGESTAO_CAMPOS_MAX` | `500` | mesmo teto do JSON Schema de camada_vetorial (ADR 0004/0005) |
+| `INGESTAO_FIDS_RELATORIO_MAX` | `1000` | fids corrigidos listados no relatório de ST_MakeValid |

@@ -17,3 +17,4 @@ tests/credenciais_homolog.txt
 # dentro dele por engano, estes padrões impedem o commit
 *_priv.pem
 chaves_privadas/
+tests/dados/gerados/
