@@ -98,7 +98,15 @@ def entregar(r: dict, request: Request) -> Response:
     return Response(
         dados,
         media_type="image/png",
-        headers={"ETag": etag, "Cache-Control": "private, max-age=300", "X-Robots-Tag": "noindex, nofollow"},
+        # nosniff (item L7-03-b): o conteúdo é um PNG REDESENHADO pelo Pillow, nunca os bytes do cliente, e
+        # é servido dentro de <img> na aplicação — por isso aqui não se força download, só se fecha a
+        # adivinhação de tipo no navegador
+        headers={
+            "ETag": etag,
+            "Cache-Control": "private, max-age=300",
+            "X-Robots-Tag": "noindex, nofollow",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

@@ -12,7 +12,7 @@ import psycopg2
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 
-from app import db, limites, objetos
+from app import db, entrega_conteudo, limites, objetos
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import comum, miniatura, relacoes
 from app.catalogo.comum import (
@@ -441,6 +441,13 @@ def objeto_assinado(chave: str, ate: int = 0, assinatura: str = ""):
         "json": "application/json",
         "csv": "text/csv",
     }.get(chave.rsplit(".", 1)[-1], "application/octet-stream")
+    # entrega segura (item L7-03-b, 2ª metade): esta rota é ANÔNIMA e devolve byte que veio do cliente —
+    # tipo de mídia da lista fechada e download forçado, nunca renderização na origem da aplicação
+    nome = entrega_conteudo.nome_saneado(chave.rsplit("/", 1)[-1])
     return Response(
-        dados, media_type=tipo, headers={"Cache-Control": "private, max-age=60", "X-Robots-Tag": "noindex, nofollow"}
+        dados,
+        media_type=entrega_conteudo.tipo_de_entrega(tipo),
+        headers=entrega_conteudo.cabecalhos_de_anexo(
+            nome, {"Cache-Control": "private, max-age=60", "X-Robots-Tag": "noindex, nofollow"}
+        ),
     )
