@@ -37,10 +37,29 @@ def reescrever_schema(sql: str, schema: str = SCHEMA_PADRAO, schema_trabalho: st
     return sql
 
 
-class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
-    """RealDictCursor que reescreve o texto da consulta para settings.PLAT_SCHEMA/PLAT_SCHEMA_TRABALHO
-    antes de mandar ao servidor. Import de app.settings é tardio (dentro do método) para não criar
-    ciclo — app/settings.py não importa este módulo."""
+class MixinReescritaSchema:
+    """Reescrita de schema em TODO ponto de entrada do cursor que carrega um comando SQL, e não só no `execute`
+    com texto. Fica separada do cursor do psycopg2 de propósito: assim `tests/unit/test_schema_ambiente.py`
+    monta a mesma reescrita sobre uma base espiã, sem banco, e confere método a método o que chegou ao driver.
+
+    Por que a classe inteira e não um método de cada vez: em 06/09/2026 o mesmo defeito apareceu três vezes num
+    dia (o `bytes` de `psycopg2.extras.execute_values`, as conexões de teste e o `executemany` de
+    `POST`/`PUT /api/papeis`), e nas três a consequência foi a mesma — a consulta ia para o schema `plat` de
+    produção mesmo com `PLAT_SCHEMA` apontando para outro lugar, e o 42501 que voltava chegava ao cliente
+    disfarçado de "operação fora do inquilino da sessão". Uma prova de isolamento entre inquilinos que roda
+    contra o schema errado não prova nada.
+
+    `METODOS_COM_CONSULTA` é a lista fechada do que é coberto; `METODOS_FORA_DE_COBERTURA` diz o que ficou de
+    fora e por quê. O teste de unidade reprova se aparecer um ponto de entrada novo que não esteja num dos dois."""
+
+    # nome do método -> posição do argumento que carrega o comando (todos são o primeiro depois de self)
+    METODOS_COM_CONSULTA = ("execute", "executemany", "callproc", "mogrify", "copy_expert")
+    METODOS_FORA_DE_COBERTURA = {
+        "copy_from": "recebe NOME de tabela (e a casa não usa: varrido em 06/09/2026 em app/, scripts/, db/ e "
+                     "tests/). Se passar a usar, cobrir aqui — o nome também leva o prefixo do schema.",
+        "copy_to": "recebe NOME de tabela e a casa não usa (mesma varredura de copy_from, 06/09/2026).",
+        "stream_factory": "não existe no psycopg2 2.x; anotado para o caso de troca de driver.",
+    }
 
     def execute(self, query, *args, **kwargs):
         # `psycopg2.extras.execute_values` (usado pelos importadores em lote da rede de utilidades,
@@ -74,14 +93,39 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
         return super().executemany(query, vars_list)
 
     def callproc(self, procname, *args, **kwargs):
-        if isinstance(procname, str):
-            procname = self._reescrever(procname)
-        return super().callproc(procname, *args, **kwargs)
+        return super().callproc(self._reescrever(procname), *args, **kwargs)
+
+    def mogrify(self, query, *args, **kwargs):
+        return super().mogrify(self._reescrever(query), *args, **kwargs)
+
+    def copy_expert(self, sql, *args, **kwargs):
+        return super().copy_expert(self._reescrever(sql), *args, **kwargs)
 
     @staticmethod
-    def _reescrever(sql: str) -> str:
+    def _reescrever(consulta):
+        """Reescreve texto OU bytes, devolvendo o mesmo tipo que entrou; qualquer outro tipo (por exemplo um
+        `psycopg2.sql.Composed`, que a casa não usa) passa cru, como sempre passou. No-op quando os dois schemas
+        já são o padrão: é o que garante que produção não paga nem uma regex.
+
+        O caminho de bytes existe porque `psycopg2.extras.execute_values` monta o comando final com
+        `b"".join(...)` e chama `cur.execute(bytes)`; o de `executemany` porque o `POST`/`PUT /api/papeis` grava
+        os privilégios do papel por essa via."""
         from app.settings import settings  # tardio: evita ciclo settings <-> schema_ambiente
 
         if settings.PLAT_SCHEMA == SCHEMA_PADRAO and settings.PLAT_SCHEMA_TRABALHO == SCHEMA_TRABALHO_PADRAO:
-            return sql  # caminho de produção: nenhuma regex roda
-        return reescrever_schema(sql, settings.PLAT_SCHEMA, settings.PLAT_SCHEMA_TRABALHO)
+            return consulta  # caminho de produção: nenhuma regex roda, nem sobre texto nem sobre bytes
+        if isinstance(consulta, str):
+            return reescrever_schema(consulta, settings.PLAT_SCHEMA, settings.PLAT_SCHEMA_TRABALHO)
+        if isinstance(consulta, (bytes, bytearray)):
+            try:
+                texto = bytes(consulta).decode("utf-8")
+            except UnicodeDecodeError:
+                return consulta  # não é SQL em UTF-8: melhor mandar cru do que corromper o comando
+            return reescrever_schema(texto, settings.PLAT_SCHEMA, settings.PLAT_SCHEMA_TRABALHO).encode("utf-8")
+        return consulta
+
+
+class CursorSchemaAmbiente(MixinReescritaSchema, psycopg2.extras.RealDictCursor):
+    """RealDictCursor que reescreve o texto da consulta para settings.PLAT_SCHEMA/PLAT_SCHEMA_TRABALHO antes de
+    mandar ao servidor, em todos os pontos de entrada listados em `MixinReescritaSchema.METODOS_COM_CONSULTA`.
+    O mixin vem primeiro na MRO para que `super()` caia no cursor do psycopg2."""

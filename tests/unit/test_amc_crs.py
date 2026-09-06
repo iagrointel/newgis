@@ -93,3 +93,17 @@ def test_area_pequena_no_meridiano_central_tem_distorcao_pequena_e_negativa():
     ficha = _ficha(poligono)
     assert -0.09 < ficha["distorcao_area_max_pct"] < -0.07
     assert ficha["cruza_zonas_utm"] is False and ficha["avisos"] == []
+
+
+def test_zonas_utm_cobertas_nao_perde_as_zonas_do_meio():
+    """Achado 3 do laudo (06/09/2026): a ficha montava `zonas_utm_cobertas` como {zona(xmin), zona(xmax),
+    zona(centróide)}, então uma área larga perdia as zonas do MEIO e o aviso contava zona a menos. Aqui a área vai
+    de −60° a −42° (quatro zonas) e de −66° a −36° (seis)."""
+    largo = Polygon([(-60.0, -20.0), (-42.0, -20.0), (-42.0, -19.0), (-60.0, -19.0)])
+    ficha = _ficha(largo)
+    assert ficha["zonas_utm_cobertas"] == [21, 22, 23, 24]
+    assert ficha["cruza_zonas_utm"] is True
+    assert "cruza 4 zonas UTM (21, 22, 23, 24)" in ficha["avisos"][0]
+
+    ainda_maior = Polygon([(-66.0, -12.0), (-36.0, -12.0), (-36.0, -11.0), (-66.0, -11.0)])
+    assert _ficha(ainda_maior)["zonas_utm_cobertas"] == [20, 21, 22, 23, 24, 25]
