@@ -1,0 +1,34 @@
+# Pacotes apt (dpkg) que o `plat` já exige ou vai exigir em curto prazo (item L7-14-instalacoes-apt-
+# desta-linha, ADR 0007 secao 1). Formato: um pacote por linha (o nome exato do dpkg), comentario com
+# '#'; a versao entre parenteses e so o numero MEDIDO nesta maquina em 06/09/2026 (dpkg -s), nunca um
+# pin do apt (quem fixa versao de biblioteca Python e o requirements.txt com '=='). `install.sh` le este
+# arquivo com `grep -v '^#' | awk '{print $1}'` e roda `apt-get install -y` so no que faltar.
+#
+# Ja exigidos hoje e conferidos por nome no install.sh antes deste item (ADR 0001 secao 2.1): servidor
+# ASGI, driver de banco, criador de venv e biblioteca de criptografia (identidade/2FA no ADR 0002 e
+# assinatura de pacote no item L7-16).
+python3-uvicorn        # 0.27.1-1
+python3-psycopg2       # 2.9.9-1build1
+python3-venv           # 3.12.3-0ubuntu2.1
+python3-cryptography   # 41.0.7-4ubuntu0.4
+#
+# Ingestao vetorial (ADR 0005): `ogrinfo`/`ogr2ogr` chamados por subprocesso no worker
+# (app/jobs/worker.py:_versao_gdal) e o modulo `osgeo` importado pela venv --system-site-packages
+# (ADR 0001 secao 2.1: "nao duplicar GDAL, rasterio e psycopg2, ja no sistema").
+gdal-bin               # 3.8.4+dfsg-3ubuntu3
+python3-gdal           # 3.8.4+dfsg-3ubuntu3
+#
+# Sniff de tipo por conteudo, byte a byte (ADR 0005 secao 0.5, item L0-04-a: confere o tipo declarado
+# no upload contra o que o arquivo realmente e).
+python3-magic          # 2:0.4.27-3
+#
+# Fora desta lista de proposito (nao e escopo deste item, colisao evitada com o item que ja e dono):
+# - pgRouting, pgstac, pg_partman, tds_fdw/oracle_fdw -> item L7-14-extensoes-fdw (extensoes de banco
+#   com portao e adversario proprios, dependente de L7-01-a-compose-perfis).
+# - ezdxf, LibreDWG (dwg2dxf/dwg2dxf) -> decisao D23 do ADR 0005 secao 12.4 ainda aberta (o LibreDWG
+#   mediu perda de entidades na volta DWG->DXF); nao ha decisao de instalar ainda, entao nao entram
+#   aqui como "vai precisar" — quando o L0-04-e decidir, o pacote entra nesta lista com o commit da
+#   decisao.
+# - gitleaks/pip-audit/osv-scanner/trivy -> item de varredura de vulnerabilidade (L7 seguranca, ainda
+#   pendente na fila); gitleaks tambem nao tem pacote apt nesta distribuicao (binario Go de release do
+#   GitHub), por isso o item L7-16 usa uma varredura propria do historico do git (ver ADR 0007 secao 3).

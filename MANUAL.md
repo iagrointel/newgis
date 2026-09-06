@@ -472,7 +472,8 @@ atualização.
 | a-c | mostra a máquina; extensões `postgis` e `pgcrypto`; migrações de `db/migracoes/` por `db/migrar.sh` (sha256 por arquivo, uma transação por arquivo; arquivo aplicado que mudou = parada com código 3) |
 | d | `.env` (modo 600) com senha da role `plat_app`, `PLAT_SECRET`, ambiente, URL pública, `PLAT_GIT_SHA`, `PLAT_WORKER_URL`, `PLAT_WORKER_PROCESSOS=1`, `PLAT_WORKER_MEMORIA_MB=1536` e `PLAT_DSN_WORKER` (role `plat_worker`); as senhas das duas roles são realinhadas ao `.env` a cada execução |
 | e | linhas `host iagro_sat plat_app 127.0.0.1/32 scram-sha-256` e a equivalente de `plat_worker` no `pg_hba.conf`, uma vez cada, e `pg_reload_conf()` |
-| f | confere os pacotes dpkg (`python3-uvicorn`, `python3-psycopg2`, `python3-venv`, `python3-cryptography`); cria a venv e instala `requirements.txt` com `PYTHONNOUSERSITE=1`; prova a importação da aplicação |
+| e2 | pacotes apt de `deploy/pacotes_apt.txt` (item L7-14): confere com `dpkg -s` e só chama `apt-get install -y` no que faltar (idempotente); lista fechada de 7 — `python3-uvicorn`, `python3-psycopg2`, `python3-venv`, `python3-cryptography`, `gdal-bin`, `python3-gdal`, `python3-magic` |
+| f | cria a venv (`--system-site-packages`) e instala `requirements.txt` com `PYTHONNOUSERSITE=1`; prova a importação da aplicação |
 | g | `tests/credenciais.txt` (600) com `plataforma admin`, `demo admin` e `demo2 admin`; semeia os três administradores (senha por stdin; o de `plataforma` com `superadmin`, os outros sem), reinicia o segundo fator deles e apaga `tests/credenciais_totp.txt`; garante as partições de `log_acesso` e `evento` do mês e dos 3 seguintes; em `PLAT_AMBIENTE=dev` apaga resíduos `zt-*` das suítes; cota diária de jobs dos inquilinos de demonstração = 100.000 |
 | h | unidade `plat-api`, espera `/saude` = 200 na porta local |
 | h2 | diretório `var/jobs`, unidade `plat-worker`, espera `http://127.0.0.1:8153/saude` = 200 |
@@ -506,6 +507,30 @@ Reinicia `plat-api` e `plat-worker`. Ao reiniciar o worker, os jobs em execuçã
 `reinicios + 1` e são retomados do zero pelo worker novo (toda tarefa tem de poder recomeçar; o efeito parcial fica
 em área de trabalho e só entra no fim).
 
+### 11.5 Assinatura de pacote (item L7-16, ADR 0007 seção 2-3)
+
+Todo pacote de atualização (tar/zip de release) é assinado com Ed25519 antes de sair para um appliance sem
+internet; a verificação roda offline, sem depender de rede nem de um serviço externo (`cosign` keyless exigiria as
+duas).
+
+```
+# quem corta o release (nunca no appliance do cliente)
+bash scripts/assinar_pacote.sh plat-1.2.0.tar
+# gera deploy/chaves_publicas_release.txt na 1ª vez — commitar essa linha ANTES de distribuir o pacote assinado
+git add deploy/chaves_publicas_release.txt && git commit -m "chave de release k…"
+
+# no appliance, antes de aplicar a atualização
+bash scripts/verificar_pacote.sh plat-1.2.0.tar   # lê plat-1.2.0.tar.sig ao lado
+```
+
+`verificar_pacote.sh` sai com código 2 (`.sig` ausente ou malformado), 3 (chave que assinou não está em
+`deploy/chaves_publicas_release.txt` desta versão — rotação pendente) ou 4 (assinatura não confere: o arquivo foi
+alterado); só sai 0 quando o pacote é exatamente o que foi assinado por uma chave que esta versão já conhece. A
+chave privada nunca fica no repositório (fica em `/etc/plat/chaves/…` como root, ou `$HOME/.config/plat/chaves/…`
+como usuário comum); rotação de chave sempre distribui a pública nova numa versão assinada com a antiga, antes de
+assinar qualquer pacote com a nova (`tests/unit/test_assinatura_pacote.py` prova as duas pontas — cedo recusa,
+tarde aceita). Detalhe completo: ADR 0007.
+
 ---
 
 ## 12. Limites conhecidos neste turno
@@ -536,3 +561,57 @@ em área de trabalho e só entra no fim).
   teste foi barrada pelo gatilho da migração 006 (o teste inseria jobs já `concluido` como `plat_app`); é defeito do
   teste, não do produto, e a medida não está em `tests/medidas/L0-05-jobs.json`.
 - Limites e demais números de referência: `app/limites.py` (identidade e catálogo) e a seção 11 do ADR 0003 (fila).
+
+
+---
+
+## 13. Mapa (`/mapa`, item L2-01-a-basemap-local-pmtiles)
+
+Primeira tela de mapa do produto: MapLibre GL JS 4.7.1 (vendorizado, já presente no repositório desde o turno 2)
+mais o protocolo `pmtiles-4.5.0.js` (novo, BSD-3-Clause), lendo um PMTiles estático servido pelo próprio nginx do
+appliance por Range HTTP — sem Martin, sem serviço de tiles dinâmico, sem chave de terceiro. É a fatia mínima do
+item `L2-01-mapa-web` (visualizador completo: camadas do catálogo, legenda, popup, busca, impressão), que fica
+para os itens seguintes da linha.
+
+### 13.1 Mapa-base
+
+`web/dados/basemap/guarulhos.pmtiles` (18,4 MiB): recorte de OpenStreetMap (ODbL 1.0) da área de Guarulhos-SP,
+extraído com `ogr2ogr` (streaming, baixo consumo de memória) de um `.pbf` regional já presente na máquina e
+ladrilhado com `tippecanoe` em 4 camadas (estradas, edificações, cobertura do solo, lugares). Proveniência
+completa, com sha256 e comando de reprodução, em `web/dados/basemap/PROVENIENCIA.md`. Nginx serve o arquivo em
+`/static/dados/basemap/guarulhos.pmtiles` com suporte a Range (206) e `gzip off` (obrigatório: gzip on-the-fly
+quebra Range); a resposta a `Range: bytes=0-99` foi medida devolvendo `206 Partial Content` com
+`Content-Range: bytes 0-99/19272343`.
+
+### 13.2 Tela
+
+Tela cheia (sem a barra de ferramentas larga das outras telas): mapa MapLibre ocupando toda a área principal,
+barra lateral padrão do produto à esquerda. Controles: navegação (zoom/pan por arrastar/roda do mouse + botões
+`+`/`−`/bússola do `NavigationControl`), escala (`ScaleControl`, canto inferior esquerdo), atribuição ODbL
+(`AttributionControl`, canto inferior direito, sempre visível — licença do dado é obrigação, não opção), painel
+de coordenadas do cursor (latitude, longitude e zoom, atualiza a cada `mousemove` e a cada mudança de zoom) e
+seletor de camada base (uma opção hoje, `OSM aberto — recorte Guarulhos (ODbL 1.0)`; o mecanismo é uma lista
+(`BASES` em `web/js/mapa/mapa.js`) já pronta para receber a próxima base sem mudar a fiação). Estilo cartográfico
+próprio (não é o estilo de nenhum provedor externo): fundo escuro, água e cobertura do solo diferenciadas, vias
+coloridas por classe (via principal em âmbar, o acento do produto), edificações visíveis a partir do zoom 12 —
+cores copiadas à mão da paleta escura de `web/estilo/tokens.css` (documentado em `web/js/mapa/estilo.js`, já que
+o MapLibre lê JSON puro e não `var()` de CSS). Rótulos de nome de rua/bairro ficam para
+`L2-02-e-simbolos-sprites-glifos` (exige servidor de glifos); a camada `lugares` está no tileset mas não é
+desenhada como texto nesta fatia.
+
+### 13.3 Prova (e2e)
+
+`tests/e2e/test_mapa.py`: (1) o nginx devolve 206/Content-Range para o PMTiles, sem `content-encoding: gzip`;
+(2) o canvas WebGL do MapLibre realmente desenha — `readPixels` sobre o canvas conta mais de 50 pixels com cor
+diferente da do canto (0,0), afastando a hipótese de tela em branco; (3) os controles de navegação, escala,
+coordenadas e camada base existem e reagem (clicar no `+` do zoom muda a leitura do painel de coordenadas);
+(4) 0 erro de console, 0 resposta HTTP ≥ 400 não esperada. Captura em
+`tests/e2e/capturas/L2-01-a-basemap-local-pmtiles_mapa.png`.
+
+### 13.4 Limites desta fatia
+
+Sem camadas do catálogo do inquilino (isso é o resto do `L2-01-mapa-web`: Martin/vetor por RLS, raster por
+tiles, legenda, popup, busca de endereço/coordenada, impressão). Sem rótulo de texto (glifos, L2-02-e). Sem
+segunda base (a lista está pronta; falta a segunda entrada). Mapa-base cobre só a área de teste de Guarulhos-SP,
+não o território nacional — isso é o D27 do dono (`L2_CONCEITO.md`), travado por disco (98 % em `/`), não por
+esta fatia.

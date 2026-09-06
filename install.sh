@@ -2,8 +2,9 @@
 # Instalador do plat (ADR 0001 seção 4). Root, idempotente: pode rodar quantas vezes for preciso.
 # Uso: sudo bash install.sh <dominio> [porta]     ex.: sudo bash install.sh plat.iagrointel.com 8150
 # Faz: extensões, migrações (db/migrar.sh), .env 600 + senha da role realinhada, linha no pg_hba.conf,
-# venv, unidade systemd plat-api, nginx (preservando as linhas do certbot), certbot só sem certificado,
-# e confere https://<dominio>/saude com X-Robots-Tag. O que este script não faz, não existe (portão P5).
+# pacotes apt de deploy/pacotes_apt.txt (item L7-14), venv, unidade systemd plat-api, nginx (preservando
+# as linhas do certbot), certbot só sem certificado, e confere https://<dominio>/saude com X-Robots-Tag.
+# O que este script não faz, não existe (portão P5).
 set -euo pipefail
 INICIO=$SECONDS
 DOM=${1:?uso: sudo bash install.sh <dominio> [porta]}
@@ -160,11 +161,28 @@ else
 fi
 "${PSQL[@]}" -Atc "SELECT pg_reload_conf()" >/dev/null
 
-echo "== f. venv"
-# uvicorn e psycopg2 vêm do sistema por decisão (ADR 0001 seção 2.1): pacotes dpkg, conferidos aqui com nome
-for pacote in python3-uvicorn python3-psycopg2 python3-venv python3-cryptography; do
-  dpkg -s "$pacote" >/dev/null 2>&1 || { echo "falta o pacote do sistema $pacote (apt install $pacote)" >&2; exit 1; }
+echo "== e2. pacotes apt (deploy/pacotes_apt.txt, item L7-14)"
+# Lista fechada e comentada em deploy/pacotes_apt.txt (ADR 0007 seção 1): servidor ASGI, driver de banco,
+# criador de venv, criptografia (ADR 0002/L7-16), GDAL (ADR 0005, subprocesso do worker) e sniff de tipo
+# por conteúdo (ADR 0005 seção 0.5). Idempotente: só instala o que faltar; nunca falha por já instalado.
+PACOTES_ARQUIVO="$APP_DIR/deploy/pacotes_apt.txt"
+mapfile -t PACOTES < <(grep -v '^\s*#' "$PACOTES_ARQUIVO" | awk 'NF{print $1}')
+FALTAM=()
+for pacote in "${PACOTES[@]}"; do
+  dpkg -s "$pacote" >/dev/null 2>&1 || FALTAM+=("$pacote")
 done
+if [ "${#FALTAM[@]}" -gt 0 ]; then
+  echo "instalando pacotes que faltam: ${FALTAM[*]}"
+  DEBIAN_FRONTEND=noninteractive apt-get install -y "${FALTAM[@]}"
+else
+  echo "todos os ${#PACOTES[@]} pacotes de $PACOTES_ARQUIVO já instalados"
+fi
+for pacote in "${PACOTES[@]}"; do
+  dpkg -s "$pacote" >/dev/null 2>&1 || { echo "pacote $pacote ainda ausente depois do apt-get install -y (repositório sem candidato ou falha silenciosa)" >&2; exit 1; }
+done
+echo "conferidos: ${PACOTES[*]}"
+
+echo "== f. venv"
 [ -x venv/bin/python ] || sudo -u "$APP_USER" python3 -m venv --system-site-packages venv
 "${PIP[@]}" install -q --disable-pip-version-check -r requirements.txt
 # prova da cláusula "máquina que nunca viu o repo": a aplicação importa sem o site do usuário. PLAT_SECRET

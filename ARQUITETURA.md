@@ -464,6 +464,9 @@ Uso: `sudo bash install.sh <dominio> [porta]`. Root, idempotente, `set -euo pipe
 - i: `/etc/nginx/conf.d/plat_limites.conf` (zona `plat_login`); `location = /api/login` e `= /api/login/2fa` com
   `limit_req`; `Referrer-Policy` em toda `location` (commit `abbb03d`; chega ao ar na próxima execução).
 - j: além de 200, `noindex` e HSTS, exige `fila.workers_vivos >= 1` em `/saude`.
+- e2 (turno 3, item L7-14): pacotes apt lidos de `deploy/pacotes_apt.txt` (7 no total — os 4 já conferidos
+  antes mais `gdal-bin`, `python3-gdal`, `python3-magic`); `dpkg -s` antes e depois de `apt-get install -y`
+  no que faltar. Detalhe e o que ficou fora de propósito: ADR 0007 seção 1.
 
 Tempo medido pelo adversário do L0-02 na reinstalação destrutiva do zero (schemas `plat` e `plat_trabalho` e as
 duas roles apagados): "instalado em 50 s", serviço indisponível cerca de 63 s (17:14:17 a 17:15:20 UTC); depois,
@@ -471,6 +474,15 @@ duas roles apagados): "instalado em 50 s", serviço indisponível cerca de 63 s 
 e HSTS, login real pelo playwright com a senha regenerada e varredura cruzada de 34 rotas sem nenhum 2xx cruzado
 (`refutacao.json`, rodada 2). No turno 1 o instalador do zero levava 6,24 s; a diferença é o DDL da 003 (24,2 s na
 tabela `versao_migracao`) e da 002 (9,5 s) nesta instância compartilhada com disco a 98 %.
+
+### 7.1 `scripts/` (ferramentas de operação)
+
+`rotacionar_segredo.sh` (item L7-19, já existia) e, do turno 3 (item L7-16, ADR 0007 seção 2-3):
+`assinar_pacote.sh` + `verificar_pacote.sh`, finos wrappers de `plat_assinatura.py` (Ed25519 via
+`cryptography`). Assinar roda fora do appliance, gera o par de chaves na 1ª execução (privada fora do
+repositório, pública registrada em `deploy/chaves_publicas_release.txt`); verificar roda no appliance, sem
+rede, contra as chaves fixadas nesse arquivo. `chave_id = "k" + sha256(pública_crua)[:16]`; `.sig` é JSON
+com `algoritmo`, `chave_id`, `assinatura_b64`.
 
 ---
 
@@ -595,7 +607,11 @@ por DOMPurify, `copiar`), componentes `plat-aviso`, `plat-busca`, `plat-paginaca
 `layout.js` (`TELAS` por privilégio, `montarLayout`, `pronto`). `js/auth/sessao.js`: `exigirSessao` (401 →
 `/entrar?inquilino=&proximo=`; pendência → `/conta#senha|#2fa`; privilégio ausente → "sem permissão"). A tela
 Tarefas usa a mesma base. Orçamento de 60 kB por módulo: o maior é `grupos.js` (17,9 kB). Vendor: MapLibre GL
-4.7.1 (ainda não carregado por nenhuma tela), Swagger UI 5.32.15, DOMPurify 3.4.14; `make vendor` confere 5 sha256.
+4.7.1 e `pmtiles-4.5.0.js` (item L2-01-a; primeira tela a carregá-los é `/mapa`, por `<script>` clássico — os
+dois expõem `window.maplibregl`/`window.pmtiles`, não são módulo ES), Swagger UI 5.32.15, DOMPurify 3.4.14;
+`make vendor` confere 6 sha256. `js/mapa/` (`mapa.js`, `estilo.js`): mapa MapLibre sobre PMTiles local; painel
+de identidade visual "instrumento" (`web/estilo/tokens.css`, `class="instrumento"` no `<body>`, item L0-14) —
+`/mapa` é a primeira tela do produto a nascer já com ele, sem passar pelo tema azul antigo.
 
 Páginas prontas no chromium do playwright (`pagina_pronta_ms_*`, `goto` até `body[data-pronto=1]`): login 54,3 ms,
 conta 37,8, 2FA 9,7, usuários 59,4, grupos 60,8, papéis 58,7, tokens 78,9, log 73,7; tarefas 142,9
@@ -644,6 +660,10 @@ conta 37,8, 2FA 9,7, usuários 59,4, grupos 60,8, papéis 58,7, tokens 78,9, log
 - `Content-Security-Policy` (L7-03); rotas `/svc/`, `/ogc/`, `/tiles/` que aceitam `?token=` (L2-04, L1-02);
   `Referrer-Policy` no ar depende da próxima execução do `install.sh`.
 - Paridade com ArcGIS Pro e ArcGIS Online reais: pendente da decisão D20 (credencial de teste).
+- `L2-01-mapa-web` (visualizador completo: camadas do catálogo por Martin/RLS, raster, legenda, popup, busca,
+  impressão) — só a fatia `L2-01-a-basemap-local-pmtiles` existe (seção 11 e `MANUAL.md` seção 13). Sem base
+  cartográfica nacional (D27, travado por disco); sem rótulo de texto no mapa (glifos, `L2-02-e`); `plat-martin`
+  (8151) segue porta reservada, serviço inexistente.
 
 O placar do laço, a tabela dos itens do backlog e a fronteira por linha estão em
 `/home/dev/plataforma/laco/PAINEL.md`, gerado por `laco/gera_painel.py` a partir de `laco/estado.json`.

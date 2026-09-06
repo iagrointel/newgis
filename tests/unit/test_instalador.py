@@ -41,7 +41,8 @@ def test_instalador_grava_plat_git_sha_e_confere_hsts():
 def test_hsts_em_todo_bloco_de_add_header_do_modelo():
     locais = NGINX.count("location ")
     hsts = NGINX.count('add_header Strict-Transport-Security "max-age=31536000" always;')
-    assert locais == 4 and hsts == locais + 1, (locais, hsts)
+    # 5 desde o item L2-01-a (location nova para o PMTiles do mapa-base, deploy/nginx.conf)
+    assert locais == 5 and hsts == locais + 1, (locais, hsts)
 
 
 def test_referrer_policy_em_todo_bloco_de_add_header_do_modelo():
@@ -65,7 +66,11 @@ def test_logins_com_limite_por_ip_e_zona_escrita_pelo_instalador():
 
 
 def test_instalador_semeia_plataforma_sem_superadmin_nos_demos_e_confere_cryptography():
-    assert "python3-cryptography" in INSTALL
+    # item L7-14: a lista de pacotes apt saiu do install.sh (hardcoded) para deploy/pacotes_apt.txt
+    # (lida em tempo de execução, seção "e2"); a conferência de python3-cryptography passou a valer
+    # por ali — este teste confere as duas pontas (o arquivo tem a linha, o instalador lê o arquivo).
+    assert "python3-cryptography" in (ROOT / "deploy" / "pacotes_apt.txt").read_text(encoding="utf-8")
+    assert "deploy/pacotes_apt.txt" in INSTALL and "dpkg -s" in INSTALL
     assert "('$slug' = 'plataforma')" in INSTALL and "('$slug' = 'demo')" not in INSTALL
     assert "rm -f tests/credenciais_totp.txt" in INSTALL
     assert "plat.log_particao_garantir" in INSTALL and "plat.evento_particao_garantir" in INSTALL

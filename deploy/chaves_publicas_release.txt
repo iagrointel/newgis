@@ -1,0 +1,13 @@
+# Chaves públicas Ed25519 confiáveis para verificar pacote de atualização assinado (item L7-16, ADR 0007
+# seção 2). Formato: "<chave_id> <chave_publica_base64> [nota]" — uma linha por chave, gerado por
+# `scripts/assinar_pacote.sh` (subcomando `gerar-chave` de scripts/plat_assinatura.py), nunca escrito à
+# mão. A chave PRIVADA correspondente NUNCA está neste repositório.
+#
+# Rotação: para assinar com uma chave nova, a linha dela entra aqui primeiro, numa versão distribuída e
+# instalada com `install.sh`/atualização ASSINADA COM A CHAVE ANTIGA; só depois disso um pacote assinado
+# com a chave nova é aceito em `scripts/verificar_pacote.sh` (senão o appliance ainda não a conhece e
+# recusa — é o comportamento correto, testado em tests/unit/test_assinatura_pacote.py).
+#
+# Vazio até o primeiro release real ser cortado (nenhuma chave de demonstração é fixada aqui de propósito
+# — os testes usam um arquivo de confiança próprio, fora do repositório, para não precisar de uma chave
+# real versionada).
