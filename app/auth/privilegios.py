@@ -34,6 +34,7 @@ PRIVILEGIOS: tuple[tuple[str, str, str, bool, tuple[str, ...]], ...] = (
     ("conteudo.publicar_tiles", "conteudo", "publicar tiles vetoriais", False, (E, A)),
     ("conteudo.publicar_raster", "conteudo", "publicar imagem/raster", False, (E, A)),
     ("conteudo.registrar_fonte", "conteudo", "registrar fonte de dado externa", False, (E, A)),
+    ("conteudo.exportar", "conteudo", "exportar camada/vista para arquivo (job exportacao.camada)", False, (E, A)),
     ("conteudo.categorias", "conteudo", "gerir categorias do inquilino", True, (A,)),
     ("conteudo.ver_tudo", "conteudo", "ver qualquer item do inquilino, inclusive privado", True, (A,)),
     ("conteudo.editar_tudo", "conteudo", "editar metadado e dado de qualquer item", True, (A,)),
