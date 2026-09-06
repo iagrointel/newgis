@@ -20,14 +20,14 @@
     "formato": "dwg"
    },
    "resposta": {
-    "job_id": "93366c1e-3e34-41e8-99d3-218ea944a380"
+    "job_id": "6705762b-c999-45ae-98bb-3181b8e94408"
    }
   },
   {
    "passo": 3,
    "titulo": "proposta da inspeção",
    "pedido": {
-    "importacao_id": "ad2b0f19-56f0-4a31-9151-ffe1c1636f57"
+    "importacao_id": "4d80f8b2-8687-4b01-af3b-786d7f1c79f3"
    },
    "resposta": {
     "estado": "proposta",

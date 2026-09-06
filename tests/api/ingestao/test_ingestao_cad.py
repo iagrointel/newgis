@@ -264,3 +264,13 @@ def test_formatos_publicados_incluem_dxf_e_dwg(ingestor_cad):
     assert r.status_code == 200
     tipos = {f["tipo"]: f for f in r.json()}
     assert tipos["dxf"]["extensoes"] == [".dxf"] and tipos["dwg"]["extensoes"] == [".dwg"]
+    # a lista é a MESMA para todo inquilino: nada de nome de inquilino, chave, caminho ou contagem dele
+    texto = json.dumps(r.json(), ensure_ascii=False)
+    assert ingestor_cad.inquilino.slug not in texto and "d_" not in texto
+
+
+def test_formatos_nao_responde_anonimo(cliente):
+    """A rota é catálogo estático, mas exige credencial como as vizinhas: rota sem autenticação por omissão é
+    indistinguível de esquecimento, e este é o padrão que o adversário procura primeiro."""
+    r = cliente.get("/api/importacoes/formatos")
+    assert r.status_code in (401, 403), f"respondeu {r.status_code} sem credencial: {r.text[:200]}"

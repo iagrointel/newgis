@@ -20,14 +20,14 @@
     "formato": "dxf"
    },
    "resposta": {
-    "job_id": "0a8fcc01-3a0f-4fe7-8b21-6532755825a6"
+    "job_id": "e8562bfa-df19-409e-a5f3-8df52a090dcb"
    }
   },
   {
    "passo": 3,
    "titulo": "proposta da inspeção",
    "pedido": {
-    "importacao_id": "73cbb917-6f7b-4cb7-9239-f15fa3e3e350"
+    "importacao_id": "4d1785d8-4a86-476e-b17b-a8ae0c0b6096"
    },
    "resposta": {
     "estado": "proposta",
@@ -139,8 +139,8 @@
    "passo": 5,
    "titulo": "tabela no banco",
    "pedido": {
-    "schema": "d_zt583f0cdf",
-    "tabela": "c_61cadd798ca9403b"
+    "schema": "d_zt58b047d5",
+    "tabela": "c_118678130f5f4c0e"
    },
    "resposta": {
     "feicoes": 8,

@@ -119,8 +119,8 @@
     "marca": "AC1015",
     "conversor": "dwg2dxf 0.14.8583",
     "bytes_dxf": 62247,
-    "tempo_s": 0.01,
-    "ram_pico_kb": 53896,
+    "tempo_s": 0.014,
+    "ram_pico_kb": 119244,
     "entidades": 12,
     "camadas": 2
    },
@@ -133,8 +133,8 @@
     "marca": "AC1032",
     "conversor": "dwg2dxf 0.14.8583",
     "bytes_dxf": 114658,
-    "tempo_s": 0.011,
-    "ram_pico_kb": 53900,
+    "tempo_s": 0.012,
+    "ram_pico_kb": 119252,
     "entidades": 1,
     "camadas": 1
    },
@@ -182,7 +182,7 @@
    "valor": {
     "entidades": 2000000,
     "bytes": 189567147,
-    "segundos": 10.5,
+    "segundos": 14.7,
     "estado": "pendente",
     "camadas": 1
    },
@@ -309,6 +309,6 @@
    "comando": "venv/bin/pytest tests/api/ingestao/test_ingestao_cad.py -k fluxo_completo"
   }
  },
- "gerado_em": "2026-09-06T16:38:26Z",
- "git_sha": "42232e8f2ae1"
+ "gerado_em": "2026-09-06T16:42:49Z",
+ "git_sha": "8a9f347eac8d"
 }
