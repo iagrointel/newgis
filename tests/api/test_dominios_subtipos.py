@@ -11,6 +11,7 @@ roda em produção, e o INSERT "direto na tabela" do portão é um INSERT como `
 from __future__ import annotations
 
 import json
+import re
 import secrets
 import time
 
@@ -592,4 +593,160 @@ def test_banco_regenera_o_gatilho_sem_a_api(camada, dominios, sessao, con, inqui
                     "WHERE c.relname = %s AND tg.tgname = 'tg_dominio'", (camada.tabela,))
         assert cur.fetchone()["n"] == 0        # sem ligação, sem gatilho: camada limpa não paga nada
     assert camada.inserir(uf="XX") > 0
+    con.rollback()
+
+
+# ------------------------------------------------------------------ CONSERTO: injeção pelo nome do domínio
+# Achado do adversário (handoffs/T3/ataque-L2-hoje-ADVERSARIO.md, worktree wt/advl2): o gerador de
+# plat.camada_dominios_aplicar embutia o NOME do domínio, texto do usuário, dentro do corpo delimitado por
+# um dollar-tag FIXO ($corpo_gerado$...$corpo_gerado$). Um nome contendo essa string fechava o corpo no meio
+# e o resto virava SQL solto, executado como postgres. O CHECK do banco só limitava comprimento; só a API
+# barrava "$" — e a migração 20260906T1620 já dizia que a API não é a guarda. Conserto (migração
+# 20260906T1829): (1) o nome nunca mais entra como texto no corpo gerado — a mensagem de erro busca o nome
+# em tempo de execução pelo uuid do domínio; (2) CHECK + gatilho BEFORE em plat.dominio.nome, mesmo padrão
+# da API (NOME_PADRAO), recusam por psql também. Nenhum teste aqui conecta como postgres: tudo é feito com a
+# role da aplicação, exatamente como o adversário fez.
+def test_injecao_dollar_tag_no_nome_recusada_pelo_banco(camada, dominios, sessao, con, anotar):
+    """Reproduz o vetor do adversário pelo gatilho: UPDATE direto em plat.dominio como plat_app, com o nome
+    contendo o dollar-tag do gerador. Antes do conserto isso regenerava a função da camada com sintaxe
+    quebrada (SyntaxError no INSERT seguinte); agora o BEFORE trigger recusa a própria escrita, em
+    português, e a camada continua íntegra e validando."""
+    d = dominios(tipo="codificado", tipo_campo="text",
+                 valores=[{"codigo": "SP", "descricao": "x"}, {"codigo": "RJ", "descricao": "y"}])
+    assert sessao.post(f"/api/camadas/{camada.item_id}/dominios",
+                        json={"campo": "uf", "dominio_id": d["id"]}).status_code == 201
+    assert camada.inserir(uf="SP") > 0
+    con.rollback()
+
+    camada.contexto()
+    with con.cursor() as cur:
+        with pytest.raises(psycopg2.errors.RaiseException) as e:
+            cur.execute("UPDATE plat.dominio SET nome = %s WHERE id = %s::uuid",
+                        ("regiao $corpo_gerado$ x", d["id"]))
+        assert e.value.diag.message_primary == "dominio_nome_invalido"
+    con.rollback()
+
+    # a camada continua íntegra: o nome do domínio não mudou e o gatilho ainda valida certo e errado
+    assert camada.inserir(uf="SP") > 0
+    con.rollback()
+    with pytest.raises(psycopg2.errors.RaiseException) as e:
+        camada.inserir(uf="ZZ")
+    assert e.value.diag.message_primary == "valor_fora_do_dominio"
+    con.rollback()
+    anotar("injecao_dollar_tag_no_nome_recusada", True)
+
+
+HOSTIS = (
+    # dollar-tags: o vetor original e variações
+    "regiao $corpo_gerado$ x", "$corpo_gerado$", "x$corpo_gerado$y", "$$", "a$$b", "$tag$drop table$tag$",
+    "$" * 20, "$corpo_gerado$$corpo_gerado$", "pre$corpo_ger" "ado$pos",
+    # aspas e escape de string
+    "O'Brien", "a''b", "a\"b", "a\\b", "a\\'b", "'; DROP TABLE plat.dominio; --",
+    # comentário e ponto e vírgula
+    "a; DROP TABLE plat.dominio_valor; --", "--comentario", "/*bloco*/", "a/*b*/c", "a;b;c", ";;;",
+    # identificador/format() do postgres
+    "%I", "%L", "%1$I", "%s", "a%%b", '"aspas duplas"',
+    # controle e whitespace
+    "a\nb", "a\tb", "a\rb", "\x01\x02\x03", "\x1b[31m", "a\x0bb", "\x7f",
+    # unicode hostil (RTL override, zero-width, combinação, emoji, look-alike de $ e aspas)
+    "a​b", "‮drop", "é", "\U0001f4a5", "＄corpo_gerado＄", "＇; --", "café com açúcar",
+    # limites de tamanho e vazio-como-espaço
+    "x" * 121, "x" * 500, " ", "",
+    # NUL — psycopg2 recusa no cliente, antes de qualquer round-trip ao servidor
+    "a\x00b", "\x00",
+)
+
+
+def _tentativa_nome(con, inquilino, nome: str):
+    """Tenta criar um domínio com o nome hostil direto no banco, como plat_app (nunca como postgres).
+    Devolve ('recusado', mensagem) | ('recusado_cliente', motivo) | ('aceito', id)."""
+    con.rollback()
+    contexto(con, inquilino.id, usuario_id=inquilino.admin_id, login="admin")
+    try:
+        with con.cursor() as cur:
+            cur.execute(
+                "INSERT INTO plat.dominio (tenant_id, nome, tipo, tipo_campo, valores) "
+                "VALUES (plat.tenant_atual(), %s, 'codificado', 'text', %s::jsonb) RETURNING id",
+                (nome, json.dumps([{"codigo": "A", "descricao": "a"}])),
+            )
+            row = cur.fetchone()
+        con.commit()
+        return ("aceito", row["id"] if row else None)
+    except ValueError as e:
+        con.rollback()
+        return ("recusado_cliente", str(e))          # ex.: NUL byte — psycopg2 recusa antes de ir ao servidor
+    except psycopg2.Error as e:
+        con.rollback()
+        return ("recusado", getattr(e.diag, "message_primary", str(e)))
+
+
+SEGURO = re.compile(r"^[A-Za-z_][A-Za-z0-9_ .\-]{0,119}$")  # mesma regra da API (NOME_PADRAO) e do CHECK
+
+
+def test_200_nomes_hostis_nunca_quebram_a_sintaxe_do_gerador(inquilino, sessao, con, camada, dominios, anotar):
+    """Bateria de pelo menos 200 nomes (aspas, dollar-tags de várias formas, ponto e vírgula, comentário SQL,
+    especificador de format(), controle, unicode e NUL — 51 padrões-base × 5 variações de prefixo/sufixo/
+    repetição). A propriedade provada não é "todo nome é recusado": alguns dos padrões-base (ex. hífen
+    duplo, espaços) usam só caracteres do alfabeto seguro (NOME_PADRAO da API) e são nomes LEGÍTIMOS — o
+    hífen sozinho não abre SQL solto quando o nome nunca é escrito cru fora de aspas/parâmetro. A
+    propriedade é: (1) todo nome com caractere FORA do alfabeto seguro é recusado, sempre pela mesma regra
+    nomeada, nunca por um erro de sintaxe do Postgres vazando pro cliente; (2) todo nome DENTRO do alfabeto
+    é aceito e, ligado a um campo real, o gatilho gerado continua compilando e validando certo."""
+    base = list(HOSTIS)
+    variacoes = []
+    for h in base:
+        variacoes.append(h)
+        variacoes.append(f"prefixo {h}")
+        variacoes.append(f"{h} sufixo")
+        variacoes.append(f"{h}{h}")
+        variacoes.append(f"zt {h} zt")
+    assert len(variacoes) >= 200, len(variacoes)
+
+    recusados = aceitos = 0
+    mensagens_recusa = set()
+    for nome in variacoes:
+        deveria_passar = bool(SEGURO.match(nome))
+        resultado, detalhe = _tentativa_nome(con, inquilino, nome)
+        if deveria_passar:
+            assert resultado == "aceito", f"nome seguro recusado: {nome!r} -> {resultado}/{detalhe}"
+            aceitos += 1
+            # prova de verdade: ligar a um campo real e o gatilho gerado tem de compilar e validar certo,
+            # nunca um erro de sintaxe do Postgres.
+            r = sessao.post(f"/api/camadas/{camada.item_id}/dominios",
+                             json={"campo": "situacao", "dominio_id": detalhe})
+            assert r.status_code in (201, 409, 422), r.text
+            if r.status_code == 201:
+                lig_id = r.json()["id"]
+                assert camada.inserir(situacao="A") > 0
+                con.rollback()
+                with pytest.raises(psycopg2.errors.RaiseException) as e:
+                    camada.inserir(situacao="ZZ")
+                assert e.value.diag.message_primary == "valor_fora_do_dominio"
+                con.rollback()
+                camada.contexto()
+                sessao.delete(f"/api/camadas/{camada.item_id}/dominios/{lig_id}")
+        else:
+            assert resultado in ("recusado", "recusado_cliente"), \
+                f"nome hostil foi aceito: {nome!r} -> {detalhe}"
+            recusados += 1
+            if resultado == "recusado":
+                mensagens_recusa.add(detalhe)
+
+    con.rollback()
+    assert recusados + aceitos == len(variacoes)
+    # a recusa é sempre a mesma regra nomeada — nunca "syntax error at or near" do Postgres vazando pro
+    # cliente, que era exatamente o sintoma do achado do adversário.
+    assert mensagens_recusa <= {"dominio_nome_invalido"}, mensagens_recusa
+    anotar("nomes_hostis_testados", len(variacoes), "nomes")
+    anotar("nomes_hostis_recusados", recusados, "nomes")
+    anotar("nomes_hostis_seguros_aceitos_e_validados", aceitos, "nomes")
+
+    # sanidade final: a camada segue válida e o gatilho gerado continua vivo e correto depois da bateria
+    d = dominios(tipo="codificado", tipo_campo="text", valores=codificado(2))
+    assert sessao.post(f"/api/camadas/{camada.item_id}/dominios",
+                        json={"campo": "uf", "dominio_id": d["id"]}).status_code == 201
+    assert camada.inserir(uf="C0") > 0
+    con.rollback()
+    with pytest.raises(psycopg2.errors.RaiseException):
+        camada.inserir(uf="ZZ")
     con.rollback()
