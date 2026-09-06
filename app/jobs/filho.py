@@ -17,6 +17,7 @@ from pathlib import Path
 from app import db as banco
 from app.jobs.contexto_job import ContextoJob
 from app.jobs.registro import Cancelado, FalhaDefinitiva, Tarefa
+from app.jobs.sanear import sanear
 
 PR_SET_PDEATHSIG = 1
 CODIGO_OK, CODIGO_ERRO, CODIGO_CANCELADO, CODIGO_DEFINITIVA, CODIGO_MEMORIA = 0, 1, 3, 4, 5
@@ -165,7 +166,7 @@ def executar(job: dict, tarefa: Tarefa, pipe_w: int, dir_jobs: Path, worker: str
             codigo = CODIGO_CANCELADO
         except FalhaDefinitiva as e:
             _registrar_erro(ctx, e)
-            saida = {"estado": "falhou", "erro": f"{e}"[:2000], "entradas": ctx.entradas}
+            saida = {"estado": "falhou", "erro": sanear(f"{e}")[:2000], "entradas": ctx.entradas}
             codigo = CODIGO_DEFINITIVA
         except MemoryError:
             gc.collect()
@@ -178,10 +179,11 @@ def executar(job: dict, tarefa: Tarefa, pipe_w: int, dir_jobs: Path, worker: str
             codigo = CODIGO_MEMORIA
         except BaseException as e:  # noqa: BLE001 — qualquer outra exceção da tarefa é falha comum (retenta)
             _registrar_erro(ctx, e)
-            saida = {"estado": "falhou", "erro": f"{type(e).__name__}: {e}"[:2000], "entradas": ctx.entradas}
+            saida = {"estado": "falhou", "erro": sanear(f"{type(e).__name__}: {e}")[:2000],
+                     "entradas": ctx.entradas}
             codigo = CODIGO_ERRO
     except BaseException as e:  # noqa: BLE001 — falha na preparação do filho
-        saida = {"estado": "falhou", "erro": f"preparação do filho: {type(e).__name__}: {e}"[:2000]}
+        saida = {"estado": "falhou", "erro": sanear(f"preparação do filho: {type(e).__name__}: {e}")[:2000]}
         codigo = CODIGO_ERRO
     finally:
         try:
@@ -199,7 +201,7 @@ def _registrar_erro(ctx: ContextoJob | None, e: BaseException) -> None:
     if ctx is None:
         return
     try:
-        ctx.log("ERRO", "".join(traceback.format_exception(type(e), e, e.__traceback__))[-4000:])
+        ctx.log("ERRO", sanear("".join(traceback.format_exception(type(e), e, e.__traceback__)))[-4000:])
     except Exception:  # noqa: BLE001 — o log é auxiliar; a saída pelo pipe é o canal principal
         pass
 
