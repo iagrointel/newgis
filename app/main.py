@@ -46,6 +46,7 @@ from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
+from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
@@ -114,6 +115,9 @@ ROUTERS = [
     rotas_ingestao,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
+    # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
+    # exporta o pacote de ativos) e /api/rede/pacotes (os pacotes entregues com a instalação)
+    rotas_rede_utilidades,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
