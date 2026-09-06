@@ -203,3 +203,21 @@ def test_medida_sino_abaixo_de_20ms(sessao_a, conexao_plat_app, medida):
         "GET /api/notificacoes/contagem, 20 execuções",
     )
     assert p95 <= SINO_MS_MAX, f"p95 da consulta do sino = {p95} ms (teto {SINO_MS_MAX} ms)"
+
+
+def test_titulo_no_teto_de_250_e_recusa_acima(sessao_a, itens_a):
+    """Cláusula impossível do portão do L0-03-f, resolvida no ADR 20260906T1650: a refutação pede "nome de item
+    de 2.048 caracteres", que o banco recusa antes de qualquer tela (CHECK length(titulo) BETWEEN 1 AND 250,
+    migração 011). A decisão foi manter 250 e corrigir a cláusula; o que dá para exercer é o TETO. Aqui: 250
+    caracteres passa e 251 é recusado com 422, nos dois caminhos (criar e renomear)."""
+    from app import limites
+
+    teto = limites.ITEM_TITULO_MAX
+    assert teto == 250
+    it = itens_a.criar("mapa", titulo="z" * teto)
+    assert len(it["titulo"]) == teto
+    r = sessao_a.post(
+        "/api/itens", json={"tipo": "mapa", "titulo": "z" * (teto + 1), "dados": {"esquema_versao": 1, "corpo": {}}}
+    )
+    assert r.status_code == 422, r.text
+    assert sessao_a.put(f"/api/itens/{it['id']}", json={"titulo": "z" * (teto + 1)}).status_code == 422
