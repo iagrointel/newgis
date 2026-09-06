@@ -131,3 +131,11 @@ não o desenho dele.
 * **`tests/dados/cad/r2018.dwg` não é nosso.** O LibreDWG só escreve até r2004, então o arquivo R2018 de teste
   veio do conjunto de teste do GNU LibreDWG (GPL-3); a procedência está em `tests/dados/cad/PROVENIENCIA.md`.
   Os demais arquivos de teste são gerados por `tests/dados/cad/gerar.py` a partir de nada.
+* **`GET /api/importacoes/formatos` exige credencial, decisão registrada.** O conteúdo é estático e igual
+  para todo inquilino (não há dado de inquilino nele), mas a rota ficou, por um turno, sem a dependência
+  `autenticado(...)` que as vizinhas (`listar`, `ver`) têm — destoava, e rota sem autenticação por omissão é
+  indistinguível de esquecimento. Decisão: autenticar como as vizinhas (`escopo_token="catalogo:ler"`), não
+  declarar pública. Motivo: mesmo sem dado de inquilino, a lista revela a superfície de ingestão (que formatos
+  a instalação aceita) a quem não entrou, e não há ganho em publicá-la — nenhuma página pública a consome.
+  `test_formatos_nao_responde_anonimo` prova 401/403 sem credencial; `test_formatos_publicados_incluem_dxf_e_dwg`
+  prova que a resposta não carrega slug, chave nem contagem do inquilino que a pediu.

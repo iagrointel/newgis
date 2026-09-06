@@ -189,7 +189,11 @@ def listar(limite: int = 50, deslocamento: int = 0, auth: Auth = autenticado(esc
 
 
 @router.get("/api/importacoes/formatos", openapi_extra=LER)
-def formatos_aceitos():
+def formatos_aceitos(auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Lista os formatos que ESTA instalação aceita importar. O conteúdo é estático e igual para todo
+    inquilino, mas a rota exige sessão ou token como as vizinhas: sem autenticação ela seria indistinguível
+    de esquecimento, e revelaria a superfície de ingestão da instalação a quem não entrou. A rota vive ANTES
+    de `/api/importacoes/{id}` de propósito — atrás dele o `{id}` casava primeiro e devolvia 404."""
     return [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo} for f in FORMATOS.values()]
 
 
