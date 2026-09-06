@@ -54,7 +54,7 @@ def test_a_rota_de_formatos_responde_e_cobre_os_nove_do_portao(sessao_a):
     r = sessao_a.get("/api/importacoes/formatos")
     assert r.status_code == 200, r.text
     corpo = r.json()
-    tipos = {f["tipo"] for f in corpo["aceitos"]}
+    tipos = {f["tipo"] for f in corpo if f["aceito"]}
     assert {f for f, _, _ in FORMATOS_DO_PORTAO} <= tipos, sorted(tipos)
     assert {f for f, _, _ in FORMATOS_A_MAIS_DO_L0_04_B} <= tipos, sorted(tipos)
 
@@ -64,7 +64,7 @@ def test_o_que_depende_de_licenca_de_terceiro_e_declarado_e_nao_escondido(sessao
     ODA File Converter (licença própria) ou do LibreDWG (GPL-3) — decisão do dono, item L0-04-e. A recusa diz
     isso, em vez de fingir que o tipo não existe."""
     corpo = sessao_a.get("/api/importacoes/formatos").json()
-    nao_aceitos = {f["tipo"]: f["motivo"] for f in corpo["nao_aceitos"]}
+    nao_aceitos = {f["tipo"]: f["motivo"] for f in corpo if not f["aceito"]}
     assert "dwg" in nao_aceitos and "licença" in nao_aceitos["dwg"], nao_aceitos
 
     r = _importar_bruto(ingestor_a, "cobertura.dxf", "dwg")

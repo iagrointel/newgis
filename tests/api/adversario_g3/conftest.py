@@ -3,7 +3,6 @@ ingestão (tests/api/ingestao/conftest.py) sem editá-las: este pacote só ACRES
 
 from __future__ import annotations
 
-import struct
 import subprocess
 import zipfile
 from pathlib import Path
@@ -89,6 +88,7 @@ def geojson_muitos_vertices(arquivos_de_ataque) -> Path:
 def con_pg_adv(env):
     """Conexão psycopg2 no contexto do inquilino demo (para ler plat.tenant.uso_bytes sob RLS)."""
     import psycopg2
+
     from app.schema_ambiente import CursorSchemaAmbiente
     from tests.api.test_rls import contexto, ids_por_slug
 

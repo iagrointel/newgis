@@ -191,7 +191,7 @@ O adversário do grupo G3 derrubou este item por duas coisas ao mesmo tempo.
 `laco/estado.json` era, literalmente, "portão a fixar pelo arquiteto no turno em que o item que a pediu
 entrar (registrar aqui antes de construir)". Construir antes de escrever o portão é exatamente o que o laço
 proíbe: sem portão, "entregue" não quer dizer nada. O portão fica escrito aqui, e é este o texto que deve
-substituir o placeholder no `estado.json` (a edição do arquivo de estado é do gerente, não desta trilha):
+substituir o texto provisório no `estado.json` (a edição do arquivo de estado é do gerente, não desta trilha):
 
 > A imagem `plat-worker` constrói, e a própria construção reprova se o GDAL dela não tiver `ogrinfo -json`
 > nem todos os drivers dos formatos declarados em `app/ingestao/formatos.py`. Um contêiner subido pelo
@@ -217,7 +217,7 @@ GDAL 3.6.2, released 2023/01/02
 FAILURE: Unknown option name '-json'
 ```
 
-`app/ingestao/inspecionar.py` lê TODO arquivo com `ogrinfo -ro -json -so`: qualquer job
+`app/ingestao/inspecionar.py` lê cada arquivo com `ogrinfo -ro -json -so`: qualquer job
 `ingestao.inspecionar` que caísse neste executor falharia. `bookworm-backports` não resolve — não há
 `gdal-bin` lá (medido: o candidato continua `3.6.2+dfsg-1+b2` do `bookworm/main`).
 
