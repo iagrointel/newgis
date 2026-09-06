@@ -16,7 +16,7 @@ sessão do Postgres, não objeto de schema (ver o cabeçalho de app/schema_ambie
 from contextvars import ContextVar
 from dataclasses import dataclass
 
-METODOS_DE_ESCRITA = ("POST", "PUT", "PATCH", "DELETE")
+VERBOS_DE_ESCRITA = ("POST", "PUT", "PATCH", "DELETE")
 
 
 @dataclass(frozen=True)
@@ -52,7 +52,7 @@ def atual() -> Requisicao:
 
 
 def de_escrita() -> bool:
-    return _ATUAL.get().metodo in METODOS_DE_ESCRITA
+    return _ATUAL.get().metodo in VERBOS_DE_ESCRITA
 
 
 def cobrir(cur) -> None:

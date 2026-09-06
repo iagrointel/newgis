@@ -86,9 +86,14 @@ def test_tela_auditoria_filtra_por_usuario_e_periodo(page, base_url, credenciais
     jse = tela.api("GET", href_json)
     assert jse.status == 200 and jse.json()["total"] == len(jse.json()["itens"])
 
-    # a tela NÃO oferece apagar linha (append-only tem de aparecer na interface, não só no banco)
-    corpo = page.locator("#principal").inner_text().lower()
-    assert "apagar" not in corpo and "excluir" not in corpo, corpo[:400]
+    # a tela NÃO oferece apagar linha (append-only tem de aparecer na interface, não só no banco).
+    # #tabela é excluída do texto: ela mostra DADO da trilha, e um ato de negócio legítimo se chama
+    # "usuarios/apagar" — string igual à palavra proibida, mas é conteúdo auditado, não um botão de apagar.
+    fora_da_tabela = page.evaluate(
+        "() => { const c = document.querySelector('#principal').cloneNode(true);"
+        " const t = c.querySelector('#tabela'); if (t) t.remove(); return c.innerText; }"
+    ).lower()
+    assert "apagar" not in fora_da_tabela and "excluir" not in fora_da_tabela, fora_da_tabela[:400]
 
     tela.verificar()
     gravar_medidas_auditoria(medida, tela)

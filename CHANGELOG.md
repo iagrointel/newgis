@@ -3,6 +3,40 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L7-20-trilha-auditoria: trilha de auditoria de negócio)
+
+Tabela `plat.auditoria` (append-only, não particionada, `docs/adr/0031-trilha-auditoria.md`): `REVOKE
+INSERT/UPDATE/DELETE/TRUNCATE` de `plat_app` mais trigger `auditoria_imutavel`/`auditoria_sem_truncate`,
+com exceção só para o próprio expurgo (marca de transação + dono da tabela, as duas ao mesmo tempo).
+Duas escritas cobrem toda rota de escrita do OpenAPI: trigger `AFTER INSERT` sobre `plat.evento` (as
+~97 rotas que já registram evento de domínio) e `plat.auditoria_cobrir()` chamada por `app/db.py` antes
+do commit de toda transação de escrita (as 15 rotas restantes, sem evento de domínio próprio) —
+**112 de 112 rotas de escrita cobertas** (`rotas_de_escrita_cobertas`). Contexto da requisição
+(req_id/IP/token/método/rota) chega ao banco por GUC de transação (`app/auditoria.py`, `ContextVar`,
+porque `app/db.py` prepara o cursor sem receber o `Request`).
+
+Retenção por inquilino (`tenant.config`), padrão 730 dias, piso de 90 e teto de 3.650
+(`limites.AUDITORIA_RETENCAO_*`): o piso é a resposta à refutação do item — sem ele o próprio
+administrador apagaria a trilha encolhendo a retenção a 1 dia. Expurgo por `pg_cron`, nome do job
+DERIVADO de `current_schema()` (nunca constante — é recurso global da máquina; produção agenda
+`plat_auditoria_expurgo`, a trilha `plat_tt4aud_auditoria_expurgo`), idempotente (desagenda antes de
+agendar, `jobs_pg_cron_com_o_nome_do_schema` = 1 depois de agendar duas vezes) e negado a `plat_app`.
+Achado nesta trilha: `ALTER DEFAULT PRIVILEGES ... GRANT EXECUTE ON FUNCTIONS TO plat_app` (migração
+001) dá EXECUTE a toda função nova por padrão — `REVOKE EXECUTE ... FROM PUBLIC` sozinho não bastava
+para impedir `plat_app` de chamar `auditoria_expurgar()`; corrigido com `REVOKE` explícito nomeado por
+papel (ADR 0031 seção D5), provado em `test_funcoes_de_expurgo_e_de_cron_negadas_a_plat_app`.
+
+Exportação CSV/JSON sai da MESMA função (`plat.auditoria_listar`/`auditoria_contar`) que alimenta a
+tela, então a contagem da exportação bate com a contagem em tabela por construção
+(`exportacao_linhas_x_contagem`). Tela `/admin/auditoria` (`org.log_ver`) com filtro por usuário e
+período, cartão de retenção (`org.configurar`) e nunca um botão de apagar linha. Refutação do item —
+adversário edita um item e tenta apagar a própria trilha pela API, por SQL como `plat_app` e por
+expurgo prematuro — reprovada nas três frentes (`test_adversario_nao_apaga_a_propria_trilha`).
+
+Fora do escopo, registrado no ADR: `pgaudit` para DDL (decisão de instância, não de migração), envio a
+SIEM (sem destino escolhido) e auditoria de leitura da camada `pessoal` (L7-12-a ainda não existe;
+gancho pronto com `origem='aplicacao'`).
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

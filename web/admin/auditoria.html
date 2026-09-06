@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Auditoria · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="tela">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="auditoria.titulo">Auditoria</h1>
+    <p class="fraco" data-i18n="auditoria.explicacao">Trilha dos atos de negócio do inquilino. Cada linha é gravada na mesma transação do ato; não há como alterá-la nem apagá-la pela aplicação. A única saída é o expurgo de retenção.</p>
+    <plat-aviso id="aviso"></plat-aviso>
+    <section class="cartao" id="retencao" aria-labelledby="t-retencao" hidden>
+      <h2 id="t-retencao" data-i18n="auditoria.retencao">Retenção</h2>
+      <p class="fraco" id="retencao-ajuda"></p>
+      <div class="botoes">
+        <label for="retencao-dias"><span data-i18n="auditoria.retencao_dias">Dias</span>
+          <input type="number" id="retencao-dias" name="retencao_dias" inputmode="numeric" step="1"></label>
+        <button type="button" id="retencao-gravar" class="primario pequeno" data-i18n="auditoria.retencao_gravar">Gravar</button>
+      </div>
+    </section>
+    <div class="filtros" id="filtros"></div>
+    <plat-tabela id="tabela" legenda="trilha de auditoria"></plat-tabela>
+    <plat-paginacao id="paginacao"></plat-paginacao>
+    <p class="rodape-tela" id="rodape"></p>
+  </main>
+</div>
+<script type="module" src="/static/js/auth/auditoria.js"></script>
+</body>
+</html>
