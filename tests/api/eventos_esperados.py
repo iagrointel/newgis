@@ -29,6 +29,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/usuarios/{id}/senha"): ["usuarios/redefinir_senha"],
     ("POST", "/api/usuarios/{id}/2fa/desativar"): ["usuarios/2fa_desligar"],
     ("POST", "/api/usuarios/{id}/desbloquear"): ["usuarios/desbloquear"],
+    ("DELETE", "/api/usuarios/{id}/vinculo-externo"): ["usuarios/vinculo_externo_remover"],
     ("POST", "/api/grupos"): ["grupos/criar"],
     ("PUT", "/api/grupos/{id}"): ["grupos/atualizar", "grupos/transferir"],
     ("DELETE", "/api/grupos/{id}"): ["grupos/apagar"],

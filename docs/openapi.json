@@ -18,7 +18,9 @@
        }
       }
      }
-    }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
    }
   },
   "/api/versao": {
@@ -34,7 +36,9 @@
        }
       }
      }
-    }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
    }
   },
   "/api/login/provedores": {
