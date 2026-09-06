@@ -12,6 +12,8 @@ import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 
+from app.migracoes import chave_migracao
+from app.migracoes import listar as listar_migracoes
 from app.schema_ambiente import CursorSchemaAmbiente
 from app.settings import settings
 
@@ -108,15 +110,16 @@ def db(ctx: Contexto | None = None, somente_leitura: bool = False):
 
 
 def migracoes_em_disco() -> list[str]:
-    """Nomes (sem .sql) de db/migracoes/NNN_*.sql em ordem lexicográfica."""
-    return sorted(p.stem for p in DIR_MIGRACOES.glob("[0-9][0-9][0-9]_*.sql"))
+    """Nomes (sem .sql) das migrações em db/migracoes/, na ordem de aplicação (ver app/migracoes.py)."""
+    return listar_migracoes(DIR_MIGRACOES)
 
 
 def migracoes_estado() -> tuple[int, int, str | None]:
-    """(aplicadas, pendentes, ultima) comparando o disco com plat.versao_migracao."""
+    """(aplicadas, pendentes, ultima) comparando o disco com plat.versao_migracao.
+    `ultima` é a de autoria mais recente pela chave_migracao, não a maior string."""
     disco = migracoes_em_disco()
     with db() as cur:
-        cur.execute("SELECT nome FROM plat.versao_migracao ORDER BY nome")
-        aplicadas = [r["nome"] for r in cur.fetchall()]
+        cur.execute("SELECT nome FROM plat.versao_migracao")
+        aplicadas = sorted((r["nome"] for r in cur.fetchall()), key=chave_migracao)
     pendentes = [n for n in disco if n not in aplicadas]
     return len(aplicadas), len(pendentes), (aplicadas[-1] if aplicadas else None)

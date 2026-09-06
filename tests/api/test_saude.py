@@ -3,6 +3,8 @@ import statistics
 import time
 from pathlib import Path
 
+from app.db import migracoes_em_disco
+
 ROOT = Path(__file__).resolve().parents[2]
 CAMPOS = {"versao", "git_sha", "ambiente", "banco", "migracoes_aplicadas", "migracoes_pendentes",
           "ultima_migracao", "servicos", "fila", "tempo_ms", "em"}
@@ -15,9 +17,14 @@ def test_saude_200_com_json_do_contrato(cliente):
     assert set(j) == CAMPOS
     assert j["banco"] == "ok"
     assert j["migracoes_pendentes"] == 0
-    migracoes = sorted(p.stem for p in (ROOT / "db" / "migracoes").glob("[0-9][0-9][0-9]_*.sql"))
+    # Duas famílias de nome convivem (ADR 0014): o legado `NNN_slug`, fechado em 048, e o carimbo de
+    # tempo `YYYYMMDDTHHMM_slug` de toda migração nova. `migracoes_em_disco` já devolve as duas na
+    # ordem de aplicação (legado primeiro, depois carimbo).
+    migracoes = migracoes_em_disco()
     assert j["migracoes_aplicadas"] == len(migracoes)
-    assert j["ultima_migracao"] == migracoes[-1]  # a última em disco, qualquer que seja a trilha que a criou
+    # "última" aqui quer dizer A DE AUTORIA MAIS RECENTE (o maior carimbo de tempo; na falta de
+    # carimbo, o maior número do legado), não a maior string nem a última que foi aplicada no banco.
+    assert j["ultima_migracao"] == migracoes[-1]
     assert re.fullmatch(r"\d+\.\d+\.\d+", j["versao"])
     assert re.fullmatch(r"[0-9a-f]{7,12}", j["git_sha"])
     assert j["ambiente"] in ("producao", "dev")
