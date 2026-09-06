@@ -1,0 +1,16 @@
+{
+  "fonte": "OpenStreetMap (ODbL 1.0), recorte area_estudo.osm.pbf da casa (mesma origem do item L2-01-a)",
+  "bbox": [-46.62, -23.53, -46.42, -23.38],
+  "area_referencia": "Guarulhos-SP, area de teste (mesma do mapa-base L2-01-a)",
+  "arquivo": "guarulhos.osm.pbf",
+  "sha256": "aea5af38b5511ce3cbaae3218743c38295bb9948645e6b8ae676b8d623e0d7b2",
+  "bytes": 1669892,
+  "nos": 210065,
+  "vias": 42720,
+  "extraido_em": "2026-09-06",
+  "metodo": "ogr2ogr (lines, highway IS NOT NULL) + sintese propria de .osm XML (gerar_osm_xml.py); osmium extract OOM no .pbf inteiro (RAM ~2,5 GB disponivel)",
+  "osrm_versao": "v5.26.0 (imagem osrm/osrm-backend, mesma da casa)",
+  "perfis": ["carro"],
+  "algoritmo": "MLD",
+  "porta": 5010
+}

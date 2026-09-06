@@ -520,6 +520,23 @@ CASOS: dict[tuple[str, str], Caso] = {
                                                aceita=frozenset({200}), verificar=_sem_marca),
     ("GET", "/api/arquivos/{sha256}"): Caso(lambda p: f"/api/arquivos/{'0' * 64}?classe=zt_cruzado"),
     ("DELETE", "/api/arquivos/{sha256}"): Caso(lambda p: f"/api/arquivos/{'0' * 64}?classe=zt_cruzado"),
+    # ---- L2-11-c rede de rota: cálculo sobre dado aberto (OSM, recorte de teste), não é de A nem de B —
+    # mesmo par (perfil carro, ponto na área de teste de Guarulhos) sempre dá a mesma resposta pública
+    ("POST", "/api/rota"): Caso(
+        lambda p: "/api/rota",
+        lambda p: {"origem": [-46.5330, -23.4628], "destino": [-46.4730, -23.4356], "perfil": "carro"},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/api/matriz"): Caso(
+        lambda p: "/api/matriz",
+        lambda p: {"origens": [[-46.5330, -23.4628]], "destinos": [[-46.4730, -23.4356]], "perfil": "carro"},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/api/isocrona"): Caso(
+        lambda p: "/api/isocrona",
+        lambda p: {"ponto": [-46.5330, -23.4628], "minutos": 10, "perfil": "carro"},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
 }
 
 

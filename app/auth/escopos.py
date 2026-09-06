@@ -7,15 +7,18 @@ from app.erros import ErroAPI
 
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 ESCOPO = re.compile(
-    rf"^(catalogo:ler|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|admin:inquilino)$"
+    rf"^(catalogo:ler|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|rota:usar|admin:inquilino)$"
 )
-ESCOPOS_SEM_UUID = ("catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "admin:inquilino")
+ESCOPOS_SEM_UUID = (
+    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar", "admin:inquilino",
+)
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
     "camada:ler": "ler feições e atributos de camada legível pelo dono (opcional :<uuid> de uma camada)",
     "camada:editar": "editar feições (exige feicoes.editar no dono; opcional :<uuid>)",
     "tiles:ler": "tiles vetoriais e raster (opcional :<uuid>)",
     "jobs:executar": "criar e ler os próprios jobs (exige jobs.executar no dono)",
+    "rota:usar": "calcular rota, matriz origem-destino e isócrona (L2-11-c; dado de teste, sem PII)",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 

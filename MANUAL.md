@@ -615,3 +615,49 @@ tiles, legenda, popup, busca de endereço/coordenada, impressão). Sem rótulo d
 segunda base (a lista está pronta; falta a segunda entrada). Mapa-base cobre só a área de teste de Guarulhos-SP,
 não o território nacional — isso é o D27 do dono (`L2_CONCEITO.md`), travado por disco (98 % em `/`), não por
 esta fatia.
+
+## 14. Rota, matriz e isócrona (item L2-11-c-rota-matriz-isocrona — PARCIAL)
+
+Três rotas de API sobre um serviço OSRM isolado de teste, sem tela própria ainda (a UI no mapa — clicar dois
+pontos, ver instruções, desenhar a isócrona — fica para o `L2-05-f-rede-isocrona-rota-ferramentas`).
+
+### 14.1 `POST /api/rota`
+
+Corpo `{"origem": [lon, lat], "destino": [lon, lat], "perfil": "carro"}`. Devolve distância (m), duração (s),
+geometria (GeoJSON `LineString`), lista de instruções resumidas em português (`app/rede/instrucoes.py`, uma
+frase por passo do OSRM: "Vire à direita em Rua X, siga por 350 m") e a ficha de proveniência do grafo. Só o
+perfil `carro` existe nesta instância de teste (`carro`.lua é o único grafo carregado); pedir `pe` ou
+`bicicleta` devolve 422 nomeando os perfis disponíveis.
+
+### 14.2 `POST /api/matriz`
+
+Corpo `{"origens": [[lon,lat], ...], "destinos": [[lon,lat], ...], "perfil": "carro"}`. Devolve as matrizes de
+duração e distância (N×M). Teto de N×M configurável por `PLAT_ROTA_MATRIZ_MAX` (padrão 625, bate com
+`--max-table-size` do contêiner de teste); pedido maior devolve 422 `matriz_grande_demais` com o teto.
+
+### 14.3 `POST /api/isocrona`
+
+Corpo `{"ponto": [lon, lat], "minutos": N, "perfil": "carro"}`. O OSRM não tem serviço de isócrona nativo (doc
+testada — só route/table/nearest/match/trip/tile); o cálculo é uma grade de pontos ao redor do centro (raio
+inicial estimado, dobrado uma vez se a borda da grade ainda estiver alcançável), o tempo de cada ponto pedido
+de uma vez ao `/table` do OSRM, e o polígono é o casco côncavo (`shapely.concave_hull`) sobre os pontos dentro
+do orçamento de tempo. Resposta traz o polígono (GeoJSON), a resolução e o raio da grade usados, e quantos
+pontos foram amostrados/alcançados — para quem quiser auditar o cálculo sem recomputar.
+
+### 14.4 O serviço por trás: `plat-osrm-guarulhos`
+
+OSRM isolado, só para este item, recorte de Guarulhos-SP ≤ 50 MB (`osrm/guarulhos.osm.pbf`, 1,6 MiB — mesma
+área do mapa-base do item 13), em **127.0.0.1:5010** (unidade systemd `plat-osrm-guarulhos`, instalada pelo
+`install.sh`). Proveniência completa (fonte, sha256, método de extração, o que ficou de fora) em
+`osrm/PROVENIENCIA.md`. **Nunca** é o mesmo processo dos outros 4 contêineres OSRM já ativos nesta máquina
+para outras frentes (portas 5000-5003) — nenhum foi tocado.
+
+### 14.5 Limites desta fatia (o que falta para o item completo do backlog)
+
+pgRouting não foi instalado (a hipótese do item pede `postgresql-16-pgrouting` para rede própria do
+inquilino — L4); sem `/mais-proximo` nem `/ajuste-de-trajeto` (map matching); sem perfil de pé/bicicleta
+(precisaria de um segundo grafo); sem NAServer Esri-compatível (`solve`/`solveServiceArea`/
+`solveClosestFacility`/OD cost matrix síncronos); teste só até matriz 5×5 (o portão do item pede 1.000×1.000
+medido e um teste de 5.000×5.000 pelo adversário); isócrona testada só a 10 min contra a própria API de rota
+(o portão completo pede 200 pontos amostrados nas faixas de 15/30/45 min). Ver
+`laco/handoffs/T3/L2-11-c-rota.md` para o estado exato e o que a próxima trilha retoma.

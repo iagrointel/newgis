@@ -89,4 +89,9 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # requisição (rota, ip, bytes, token_id) — o mesmo padrão de decisão já usado acima em /api/eu/2fa/iniciar
     ("POST", "/api/arquivos"): [],
     ("DELETE", "/api/arquivos/{sha256}"): [],
+    # ---- rede de rota (L2-11-c): cálculo sobre dado aberto (OSM), sem escrita em `plat.*` e sem dono humano —
+    # não há o que narrar num evento de domínio (mesma decisão de /api/arquivos acima)
+    ("POST", "/api/rota"): [],
+    ("POST", "/api/matriz"): [],
+    ("POST", "/api/isocrona"): [],
 }

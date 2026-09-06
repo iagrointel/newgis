@@ -1,0 +1,25 @@
+[Unit]
+Description=plat — OSRM isolado de teste (item L2-11-c-rota-matriz-isocrona), recorte de Guarulhos <= 50 MB.
+Analise / beta privado. NUNCA aponta para os OSRM de outras frentes da casa (portas 5000-5003).
+After=docker.service network.target
+Requires=docker.service
+
+[Service]
+Type=simple
+# docker é o único jeito de rodar osrm-routed nesta máquina (mesmo padrão dos outros 4 contêineres OSRM da
+# casa); "docker run" sem -d fica em primeiro plano e É o processo supervisionado (Type=simple), não uma
+# política de restart do próprio docker — systemd é o único dono do ciclo de vida deste contêiner.
+ExecStartPre=-/usr/bin/docker rm -f plat-osrm-guarulhos
+ExecStart=/usr/bin/docker run --rm --name plat-osrm-guarulhos \
+  --memory=600m --memory-swap=600m \
+  -p 127.0.0.1:5010:5000 \
+  -v APP_DIR/osrm:/data \
+  osrm/osrm-backend osrm-routed --algorithm mld --max-table-size 625 /data/guarulhos.osrm
+ExecStop=/usr/bin/docker stop -t 5 plat-osrm-guarulhos
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

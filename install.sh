@@ -7,7 +7,17 @@
 # O que este script não faz, não existe (portão P5).
 set -euo pipefail
 INICIO=$SECONDS
-DOM=${1:?uso: sudo bash install.sh <dominio> [porta]}
+# --worker-container (item L0-05-e-worker-em-container, opcional, ADR 0010): builda e sobe
+# deploy/docker-compose.worker.yml ALÉM da unidade systemd plat-worker (nunca no lugar dela — a API sempre
+# exige pelo menos um worker vivo). Aceita a flag em qualquer posição entre os argumentos posicionais; sem
+# ela o comportamento é bit a bit o de antes (só a unidade systemd).
+WORKER_CONTAINER=0
+ARGS=()
+for arg in "$@"; do
+  if [ "$arg" = "--worker-container" ]; then WORKER_CONTAINER=1; else ARGS+=("$arg"); fi
+done
+set -- "${ARGS[@]+"${ARGS[@]}"}"
+DOM=${1:?uso: sudo bash install.sh <dominio> [porta] [--worker-container]}
 PORTA=${2:-8150}
 APP_DIR=${APP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}
 APP_USER=${APP_USER:-$(stat -c %U "$APP_DIR")}
@@ -58,6 +68,9 @@ PLAT_LOG_NIVEL=INFO
 PLAT_WORKER_URL=http://127.0.0.1:8153
 PLAT_WORKER_PROCESSOS=1
 PLAT_WORKER_MEMORIA_MB=1536
+PLAT_OSRM_URL=http://127.0.0.1:5010
+PLAT_ROTA_MATRIZ_MAX=625
+PLAT_ROTA_ISOCRONA_MAX_PONTOS=400
 ENV
   echo ".env criado"
 else
@@ -70,6 +83,10 @@ for chave in PLAT_WORKER_URL=http://127.0.0.1:8153 PLAT_WORKER_PROCESSOS=1 PLAT_
 done
 # arquivos/objetos (L0-11; ADR 0006): instalação existente ganha as chaves do garage sem perder as demais
 for chave in PLAT_GARAGE_ADMIN_URL=http://127.0.0.1:3903 PLAT_GARAGE_REGIAO=garage PLAT_GARAGE_BUCKET_PREFIXO=plat-; do
+  grep -q "^${chave%%=*}=" .env || echo "$chave" >> .env
+done
+# rede de rota (L2-11-c): instalação existente ganha as chaves do OSRM de teste sem perder as demais
+for chave in PLAT_OSRM_URL=http://127.0.0.1:5010 PLAT_ROTA_MATRIZ_MAX=625 PLAT_ROTA_ISOCRONA_MAX_PONTOS=400; do
   grep -q "^${chave%%=*}=" .env || echo "$chave" >> .env
 done
 # o admin_token do garage NUNCA é gerado por este script (é o daemon plataforma-garage, compartilhado com
@@ -278,6 +295,40 @@ for i in $(seq 1 30); do
   sleep 1
 done
 systemctl --no-pager --lines=0 status plat-worker | sed -n '1,4p'
+
+echo "== h3. systemd plat-osrm-guarulhos (item L2-11-c; recorte de teste <= 50 MB, nunca as bases de outra frente)"
+if [ ! -f osrm/guarulhos.osrm ]; then
+  echo "osrm/guarulhos.osrm ausente — rode osrm/PROVENIENCIA.md (osmium+ogr2ogr+docker osrm-extract/partition/customize) antes do install.sh" >&2
+  exit 1
+fi
+sed -e "s#APP_DIR#$APP_DIR#g" deploy/plat-osrm-guarulhos.service > /etc/systemd/system/plat-osrm-guarulhos.service
+systemctl daemon-reload
+systemctl enable -q plat-osrm-guarulhos
+systemctl restart plat-osrm-guarulhos
+for i in $(seq 1 30); do
+  if curl -fsS -m 2 "http://127.0.0.1:5010/nearest/v1/driving/-46.5330,-23.4628" >/dev/null 2>&1; then echo "OSRM de teste respondeu em ${i} s"; break; fi
+  if [ "$i" -eq 30 ]; then echo "plat-osrm-guarulhos não respondeu em 30 s:" >&2; journalctl -u plat-osrm-guarulhos -n 30 --no-pager >&2; exit 1; fi
+  sleep 1
+done
+systemctl --no-pager --lines=0 status plat-osrm-guarulhos | sed -n '1,4p'
+
+if [ "$WORKER_CONTAINER" -eq 1 ]; then
+  echo "== h4. worker em contêiner (--worker-container, item L0-05-e, ADR 0010; ALÉM da unidade systemd acima,"
+  echo "   nunca no lugar dela — a API sempre exige pelo menos um worker vivo)"
+  command -v docker >/dev/null 2>&1 || { echo "docker não instalado; --worker-container exige Docker (o script nunca instala Docker sozinho, decisão do dono)" >&2; exit 1; }
+  docker compose version >/dev/null 2>&1 || { echo "'docker compose' (plugin v2) ausente; --worker-container exige o plugin, não o binário standalone docker-compose v1" >&2; exit 1; }
+  [ -r "$CRED_DIR/PLAT_SECRET" ] && [ -r "$CRED_DIR/PLAT_DSN_WORKER" ] || { echo "$CRED_DIR/PLAT_SECRET ou PLAT_DSN_WORKER ausente — rode a seção 'd' deste script antes (gera as duas)" >&2; exit 1; }
+  df -h / | tail -1
+  docker compose -f deploy/docker-compose.worker.yml up -d --build
+  for i in $(seq 1 60); do
+    if curl -fsS -m 2 "http://127.0.0.1:8154/saude" >/dev/null 2>&1; then echo "/saude do worker em contêiner respondeu 200 em ${i} s"; break; fi
+    if [ "$i" -eq 60 ]; then echo "worker em contêiner não respondeu em 60 s:" >&2; docker compose -f deploy/docker-compose.worker.yml logs --tail=40 >&2; exit 1; fi
+    sleep 1
+  done
+  docker compose -f deploy/docker-compose.worker.yml ps
+else
+  echo "== h4. worker em contêiner PULADO (rode com --worker-container para instalar; ver ADR 0010 e docs/ARQUITETURA.md)"
+fi
 
 echo "== i. nginx"
 SITE=/etc/nginx/sites-enabled/$DOM

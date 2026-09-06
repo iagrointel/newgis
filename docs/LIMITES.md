@@ -107,3 +107,21 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ARQUIVO_BYTES_MAX` | `536870912` | — |
 | `ARQUIVO_PARTE_BYTES` | `8388608` | 8 MiB por parte S3 (mínimo do protocolo é 5 MiB, exceto a última) |
 | `ARQUIVO_BUFFER_UNICO_BYTES` | `8388608` | até aqui: 1 PUT só, sem abrir multipart |
+
+## rede de rota (L2-11-c): OSRM isolado `plat-osrm-guarulhos` (:5010; recorte de teste ≤ 50 MB — nunca os
+
+| nome | valor | explicação |
+|---|---|---|
+| `ROTA_MATRIZ_MAX_PADRAO` | `625` | N×M <= isto por pedido de /api/matriz |
+| `ROTA_ISOCRONA_MAX_PONTOS_PADRAO` | `400` | pontos de grade por pedido de /api/isocrona (1 fonte + N destinos) |
+| `ROTA_PERFIS` | `('carro',)` | só car.lua está carregado nesta instância de teste (D-osrm-perfis) |
+| `ROTA_MINUTOS_MAX` | `180` | 3 h; acima disso o polígono satura no limite do recorte de teste |
+| `ROTA_ISOCRONA_RATIO_PADRAO` | `0.3` | parâmetro do casco côncavo (shapely.concave_hull); 0 = casco convexo |
+
+## LDAP/Active Directory (L0-08-d; app/auth/ldap.py): provedor externo por inquilino, sem servidor de
+
+| nome | valor | explicação |
+|---|---|---|
+| `LDAP_TIMEOUT_S` | `5` | connect_timeout e receive_timeout do ldap3 (bind de serviço e bind do usuário) |
+| `LDAP_BUSCA_MAX` | `1` | a busca por login tem de casar EXATAMENTE 1 entrada; 0 ou 2+ = credenciais inválidas |
+| `LDAP_IMPORTAR_MAX` | `2000` | tamanho máximo de uma importação de grupo em massa (POST /api/org/ldap/importar) |

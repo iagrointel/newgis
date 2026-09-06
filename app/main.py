@@ -26,6 +26,7 @@ from app.catalogo import (
     transferencia,
 )
 from app.jobs.rotas import router as rotas_jobs
+from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
@@ -73,6 +74,8 @@ ROUTERS = [
     # --- arquivos/objetos (L0-11): /api/arquivos genérico por inquilino; /api/objetos/{chave} já vem do catálogo
     # (rotas_compartilhamento, entrega por URL assinada)
     rotas_arquivos,
+    # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
+    rotas_rede,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

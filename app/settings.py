@@ -13,6 +13,8 @@ from pathlib import Path
 
 from dotenv import dotenv_values
 
+from app import limites
+
 ROOT = Path(__file__).resolve().parents[1]
 AMBIENTES = ("producao", "dev")
 NIVEIS = ("DEBUG", "INFO", "WARNING", "ERROR")
@@ -51,6 +53,19 @@ class Settings:
     PLAT_GPU_DIR: str | None
     PLAT_RELOGIO_TESTE: str | None
     PLAT_DSN_WORKER: str | None  # role plat_worker (006): só ela muda estado de job
+    # rede de rota (L2-11-c): OSRM isolado plat-osrm-guarulhos (:5010), só recorte de teste ≤ 50 MB;
+    # nunca aponta para os OSRM de outras frentes da casa (5000-5003)
+    PLAT_OSRM_URL: str
+    PLAT_ROTA_MATRIZ_MAX: int
+    PLAT_ROTA_ISOCRONA_MAX_PONTOS: int
+    # item L7-31 (docs/HOMOLOGACAO.md): homologação reusa o MESMO banco iagro_sat, nunca um banco novo (disco a
+    # 98%) — schema e canal de notificação viram configuráveis para que o mesmo código sirva os dois ambientes
+    # sem colisão. Produção nunca declara estas 4 chaves no .env: os padrões abaixo reproduzem bit a bit o que
+    # já rodava (app/schema_ambiente.py só reescreve a consulta quando o schema difere do padrão `plat`).
+    PLAT_SCHEMA: str
+    PLAT_SCHEMA_TRABALHO: str
+    PLAT_CANAL_JOB: str
+    PLAT_CANAL_WORKER: str
 
     @property
     def producao(self) -> bool:
@@ -86,10 +101,24 @@ def _inteiro(valores: Mapping[str, str | None], chave: str, padrao: int, minimo:
     return n
 
 
-def _dsn_worker(valores: Mapping[str, str | None]) -> str | None:
+def _dsn_worker(valores: Mapping[str, str | None], papel_worker: str) -> str | None:
     v = _opcional(valores, "PLAT_DSN_WORKER")
-    if v is not None and not v.startswith("postgresql://plat_worker:"):
-        raise ErroConfiguracao("PLAT_DSN_WORKER inválida: deve começar com postgresql://plat_worker:")
+    prefixo = f"postgresql://{papel_worker}:"
+    if v is not None and not v.startswith(prefixo):
+        raise ErroConfiguracao(f"PLAT_DSN_WORKER inválida: deve começar com {prefixo}")
+    return v
+
+
+_IDENTIFICADOR = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
+
+
+def _identificador(valores: Mapping[str, str | None], chave: str, padrao: str) -> str:
+    """Nome de schema/canal (item L7-31): mesma regra de identificador do Postgres, minúsculo, sem aspas —
+    ele entra em SQL por f-string em app/schema_ambiente.py e nas migrações de homologação, então tem de
+    ser validado aqui, na partida, e não confiado a quem monta o .env."""
+    v = _opcional(valores, chave) or padrao
+    if not _IDENTIFICADOR.match(v):
+        raise ErroConfiguracao(f"{chave} inválido: {v!r}; exige identificador ^[a-z][a-z0-9_]{{0,62}}$")
     return v
 
 
@@ -113,6 +142,9 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
     if ambiente == "producao" and nivel == "DEBUG":
         logging.getLogger("plat.settings").warning("PLAT_LOG_NIVEL=DEBUG não vale em producao; rebaixado para INFO")
         nivel = "INFO"
+    schema = _identificador(valores, "PLAT_SCHEMA", "plat")
+    # o papel do worker segue o schema por convenção (item L7-31): plat -> plat_worker, plat_homolog ->
+    # plat_homolog_worker — é a MESMA troca que db/reescrever_homolog.py faz nas migrações.
     return Settings(
         PLAT_DSN=dsn,
         PLAT_SECRET=segredo,
@@ -136,7 +168,16 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_GPU_SSH=_opcional(valores, "PLAT_GPU_SSH"),
         PLAT_GPU_DIR=_opcional(valores, "PLAT_GPU_DIR"),
         PLAT_RELOGIO_TESTE=_opcional(valores, "PLAT_RELOGIO_TESTE"),
-        PLAT_DSN_WORKER=_dsn_worker(valores),
+        PLAT_DSN_WORKER=_dsn_worker(valores, f"{schema}_worker"),
+        PLAT_OSRM_URL=(_opcional(valores, "PLAT_OSRM_URL") or "http://127.0.0.1:5010").rstrip("/"),
+        PLAT_ROTA_MATRIZ_MAX=_inteiro(valores, "PLAT_ROTA_MATRIZ_MAX", limites.ROTA_MATRIZ_MAX_PADRAO, 1),
+        PLAT_ROTA_ISOCRONA_MAX_PONTOS=_inteiro(
+            valores, "PLAT_ROTA_ISOCRONA_MAX_PONTOS", limites.ROTA_ISOCRONA_MAX_PONTOS_PADRAO, 4
+        ),
+        PLAT_SCHEMA=schema,
+        PLAT_SCHEMA_TRABALHO=_identificador(valores, "PLAT_SCHEMA_TRABALHO", "plat_trabalho"),
+        PLAT_CANAL_JOB=_identificador(valores, "PLAT_CANAL_JOB", "plat_job"),
+        PLAT_CANAL_WORKER=_identificador(valores, "PLAT_CANAL_WORKER", "plat_worker"),
     )
 
 

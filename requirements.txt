@@ -2,6 +2,11 @@
 # Instalar SEMPRE com PYTHONNOUSERSITE=1 (install.sh, Makefile, unidade systemd): a venv tem
 # --system-site-packages para reaproveitar os pacotes dpkg, mas nunca depende de ~/.local de ninguém.
 # Do sistema, por decisão (pacotes dpkg conferidos pelo install.sh): python3-uvicorn 0.27.1, python3-psycopg2 2.9.9.
+# app/rede/isocrona.py (L2-11-c) importa shapely 2.1.2 (concave_hull, GEOS >= 3.11): hoje vem de um pip global
+# em /usr/local/lib/.../dist-packages instalado por OUTRO projeto da casa (geopandas o exige), não de dpkg nem
+# deste requirements.txt — P5 fica PARCIAL até essa decisão: apt tem candidato python3-shapely 2.0.3 (conferido
+# 06/09/2026), mas não foi acrescentado a deploy/pacotes_apt.txt sem o dono decidir (lista fechada, ADR 0007);
+# `install.sh` já falha alto se faltar (o self-check final importa app.main, que importa este módulo).
 #
 # aplicação (app/ importa fastapi, starlette, pydantic, dotenv)
 fastapi==0.138.0
