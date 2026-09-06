@@ -8,6 +8,8 @@ import secrets
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from app.rede_utilidades import instalados
+
 PREFIXO = "zt-cruzado-"
 # L6-02-a: dado aberto federal (IBGE), nunca nome de cliente/parceiro; passa pela defesa de SSRF na criação
 URL_CONEXAO_TESTE = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/35"
@@ -49,6 +51,7 @@ class Preparacao:
     categoria_b: dict = field(default_factory=dict)  # L0-03: categoria de B
     fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
     conexao_b: dict = field(default_factory=dict)  # L6-02-a: conexão externa de B
+    rede_b: dict = field(default_factory=dict)  # L4-01-a: rede de utilidades de B, com pacote de ativos importado
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -58,6 +61,8 @@ class Preparacao:
             marcas += [self.item_b["titulo"], self.pasta_b["nome"]]
         if self.conexao_b:
             marcas.append(self.conexao_b["nome"])
+        if self.rede_b:
+            marcas.append(self.rede_b["nome"])
         return marcas
 
 
@@ -120,9 +125,17 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     )
     assert r.status_code == 201, r.text
     conexao_b = r.json()
+    # L4-01-a: rede de utilidades de B com o pacote de ativos JÁ importado — é o alvo das rotas /api/rede/{rede_id}
+    # (inclusive a exportação, que é onde um vazamento de esquema apareceria)
+    r = sessao_b.post("/api/rede", json={"nome": f"{PREFIXO}rede-{sufixo}", "disciplina": "agua"})
+    assert r.status_code == 201, r.text
+    rede_b = r.json()
+    r = sessao_b.post(f"/api/rede/{rede_b['id']}/pacote", content=instalados.bruto("agua-epanet"),
+                      headers={"Content-Type": "application/json"})
+    assert r.status_code == 201, r.text
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b)
+                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b, rede_b=rede_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -144,6 +157,8 @@ def desfazer(p: Preparacao) -> None:
         p.sessao_b.delete(f"/api/itens/{p.item_b['id']}?cascata=true")
     if p.pasta_b:
         p.sessao_b.delete(f"/api/pastas/{p.pasta_b['id']}")
+    if p.rede_b:
+        p.sessao_b.delete(f"/api/rede/{p.rede_b['id']}")
     if p.conexao_b:
         p.sessao_b.delete(f"/api/conexoes/{p.conexao_b['id']}")
     if p.agenda_b:
@@ -646,6 +661,27 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("DELETE", "/api/org/logo"): Caso(
         lambda p: "/api/org/logo", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    # ---- rede de utilidades (L4-01-a-pacote-de-ativos): o catálogo /api/rede/pacotes vem com a instalação e
+    # não é de inquilino nenhum (proprio); tudo em /api/rede/{rede_id} aponta a rede de B e tem de dar 404.
+    ("GET", "/api/rede"): Caso(lambda p: "/api/rede", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/rede"): Caso(
+        lambda p: "/api/rede",
+        lambda p: {"nome": f"{PREFIXO}rede-a-{secrets.token_hex(4)}", "disciplina": "eletrica"},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/rede/{id}")),
+    ),
+    ("GET", "/api/rede/pacotes"): Caso(
+        lambda p: "/api/rede/pacotes", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/rede/pacotes/{codigo}"): Caso(
+        lambda p: "/api/rede/pacotes/agua-epanet", proprio=True, aceita=frozenset({200}),
+    ),
+    ("GET", "/api/rede/{rede_id}"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}"),
+    ("DELETE", "/api/rede/{rede_id}"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}"),
+    ("GET", "/api/rede/{rede_id}/pacote"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/pacote"),
+    ("POST", "/api/rede/{rede_id}/pacote"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: {"esquema": "plat.rede.pacote"},
     ),
 }
 
