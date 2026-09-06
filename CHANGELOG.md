@@ -3,6 +3,39 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L0-04-a-upload-arquivo: upload retomável pelo navegador)
+
+Upload de arquivo em partes de 16 MiB pelo navegador, retomável (`POST /api/uploads` reserva cota do inquilino
+e abre o multipart no Garage; `PUT /api/uploads/{id}/partes/{n}` aceita partes fora de ordem e reenviadas — o
+`addPart` da Esri; `POST /api/uploads/{id}/concluir` fecha o multipart, confere sha256/tamanho/tipo×conteúdo e
+registra o item `arquivo` no catálogo; `DELETE` aborta). Vocabulário de 14 tipos declarados (shapefile.zip,
+gpkg, geojson, kml, kmz, csv, gpx, xlsx, dxf, dwg, gdb.zip, parquet, fgb, gml, zip) provados pelo CONTEÚDO real,
+nunca só a extensão (`app/uploads/tipos.py`); os zip-baseados usam `app.ingestao.formatos.conferir_zip`
+(arquivo pequeno) ou um parser do formato PKZIP por leitura em intervalo (`app/uploads/zip_remoto.py`, arquivo
+grande — nunca baixa o objeto inteiro para RAM, motivo é a máquina ter pouca RAM livre e o item aceitar até
+2 GiB por arquivo). Periódico `uploads.expirar` (`*/30 * * * *`) apaga upload sem atividade há 24 h em
+qualquer inquilino (SECURITY DEFINER cruzando tenants, mesmo mecanismo de `plat.sessoes_expurgar`). Tela
+`/uploads` (dropzone, barra de progresso nativa, identidade "instrumento").
+
+Decisão registrada: a cota reservada NÃO usa `tenant.uso_reservado_bytes` (a hipótese do ADR 0005) — aquela
+coluna já foi tomada por outra trilha para "armazenamento de tabela carregada", com significado explicitamente
+"independente da cota do bucket Garage". A reserva deste item é a soma de `plat.upload.bytes_declarado` em
+estado `iniciado` do inquilino (`plat.upload_reservado_bytes`), sob o mesmo `SELECT ... FOR UPDATE` da linha
+do tenant.
+
+Achado de processo (não de produto): a migração original (`044_uploads.sql`) colidiu com uma tabela IDÊNTICA
+já aplicada ao banco compartilhado por outra sessão desta árvore, cujo código Python nunca apareceu em lugar
+nenhum encontrado — registrado no handoff para o coordenador verificar se há uma segunda linha de trabalho no
+mesmo item. Renomeada para `046_upload_retomavel.sql`, escrita para ser segura contra o schema já existir.
+
+Testes: `tests/unit/test_uploads_tipos.py` (32, sem banco) + `tests/api/uploads/test_uploads.py` (18, API real:
+100 MB em 7 partes com a 4ª reenviada e sha256 igual; `.gpkg` com zip dentro recusado com a mensagem exata;
+2,1 GiB e cota insuficiente recusados com 413 antes de qualquer byte; zip-bomba de 1.500 entradas e caminho
+`../` recusados; duas conclusões concorrentes — uma vence, a outra vê `ja_concluido`; duas sessões enviando
+partes diferentes ao mesmo tempo — as duas terminam OK; upload esquecido expira em 24 h pelo periódico real)
++ `tests/e2e/test_uploads.py` (playwright contra a URL interna, barra de progresso, 0 erro de console).
+`taxa_upload_mb_s` = 92,1 MB/s (local, `tests/medidas/L0-04-a-upload-arquivo.json`).
+
 ## turno 3, setembro de 2026 (item L0-07-b-papeis-privilegios: vocabulário fino, conferência Esri e gate de rebaixamento)
 
 O grosso de privilégios/papéis já existia do L0-02 (vocabulário fechado, papéis personalizados, tela `/admin/papeis`,
