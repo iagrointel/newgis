@@ -97,26 +97,35 @@ def test_limite_de_conexoes_por_usuario_e_liberado_ao_fechar():
     antes de eu conseguir abrir a 2ª; as 12 chamadas seguintes vieram em ~3 ms cada porque o job já tinha
     concluído). Abrir 200 conexões de verdade por HTTP exigiria threads reais contra a URL pública (fora do
     escopo desta correção). O que se testa aqui é o MECANISMO em si, direto (`reservar`/`_liberar` são a função
-    que a rota chama antes/depois do `StreamingResponse`, `app/jobs/rotas.py::eventos_do_job`): 10 reservas
-    cabem, a 11ª levanta `ErroServico(429, "sse_limite", ...)`; liberar uma abre vaga para a próxima."""
+    que a rota chama antes/depois do `StreamingResponse`, `app/jobs/rotas.py::eventos_do_job`).
+
+    Migração `20260906T1615a3f` (recurso partilhado, achado do adversário G3 no L0-05-b): `POR_USUARIO_MAX`
+    passou a ser o teto da INSTALAÇÃO inteira, repartido por `eventos.cota_por_processo()` entre os
+    processos de `uvicorn --workers N` (`app/settings.py::PLAT_API_PROCESSOS`) — sem isso o teto publicado
+    valeria N vezes. O que cabe NESTE processo é `cota_por_processo(POR_USUARIO_MAX)`, não o valor bruto."""
+    efetivo = mod_eventos.cota_por_processo(mod_eventos.POR_USUARIO_MAX)
     sessao_fake = Sessao(ctx=banco.Contexto(tenant_id=999999999, usuario_id=999999999, login="teste-sse-limite"),
                         perfil="admin", superadmin=False, tenant_slug="teste", nome="teste", admin=True)
     chave = (sessao_fake.tenant_id, sessao_fake.usuario_id)
     mod_eventos._por_usuario.pop(chave, None)
+    mod_eventos._por_inquilino.pop(sessao_fake.tenant_id, None)
     try:
-        for _ in range(mod_eventos.POR_USUARIO_MAX):
+        for _ in range(efetivo):
             mod_eventos.reservar(sessao_fake)
-        assert mod_eventos._por_usuario[chave] == mod_eventos.POR_USUARIO_MAX
+        assert mod_eventos._por_usuario[chave] == efetivo
         with pytest.raises(mod_eventos.ErroServico) as exc:
             mod_eventos.reservar(sessao_fake)
         assert exc.value.status_code == 429 and exc.value.erro == "sse_limite"
-        assert mod_eventos._por_usuario[chave] == mod_eventos.POR_USUARIO_MAX, "a reserva recusada não incrementou"
+        assert mod_eventos._por_usuario[chave] == efetivo, "a reserva recusada não incrementou"
         mod_eventos._liberar(sessao_fake)
-        assert mod_eventos._por_usuario[chave] == mod_eventos.POR_USUARIO_MAX - 1
+        assert mod_eventos._por_usuario[chave] == efetivo - 1
         mod_eventos.reservar(sessao_fake)  # a vaga liberada permite uma nova reserva
-        assert mod_eventos._por_usuario[chave] == mod_eventos.POR_USUARIO_MAX
+        assert mod_eventos._por_usuario[chave] == efetivo
     finally:
+        for _ in range(efetivo):
+            mod_eventos._liberar(sessao_fake)
         mod_eventos._por_usuario.pop(chave, None)
+        mod_eventos._por_inquilino.pop(sessao_fake.tenant_id, None)
 
 
 def test_conexao_fecha_sozinha_apos_a_duracao_maxima(monkeypatch):
