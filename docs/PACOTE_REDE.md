@@ -19,12 +19,12 @@ Pacote de ativos da rede de água de abastecimento no vocabulário do EPANET 2.2
 
 | campo | valor |
 |---|---|
-| versão do pacote | 1.0.0 |
-| versão do esquema | 1 |
+| versão do pacote | 1.0.1 |
+| versão do esquema | 2 |
 | disciplina | agua |
 | fonte | https://www.epa.gov/water-research/epanet |
-| tamanho | 27765 bytes |
-| sha256 | `1a6bbe11731451a38f58df1e0ba264c3b2959666fd5a8ea8eb340937c5a26789` |
+| tamanho | 28661 bytes |
+| sha256 | `848bfec8d59e8703913254bf8acbeb78625c03866da9de31e74951700443d72a` |
 
 ### Redes de domínio e tiers
 
@@ -123,37 +123,37 @@ Total: 41 atributos, 0 com origem conferida em extração real e 41 declarados d
 
 ### Regras de conexão
 
-| tipo de regra | de | para | o que diz |
-|---|---|---|---|
-| conectividade_no_trecho | `tubulacao/1` | `bomba/1` | bomba em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `bomba/2` | bomba em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `no/1` | tubulação ligada ao nó |
-| conectividade_no_trecho | `tubulacao/1` | `no/2` | tubulação ligada ao nó |
-| conectividade_no_trecho | `tubulacao/1` | `reservatorio_de_nivel_fixo/1` | tubulação ligada ao nó |
-| conectividade_no_trecho | `tubulacao/1` | `reservatorio_de_nivel_variavel/1` | tubulação ligada ao nó |
-| conectividade_no_trecho | `tubulacao/1` | `valvula/1` | válvula em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `valvula/2` | válvula em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `valvula/3` | válvula em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `valvula/4` | válvula em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `valvula/5` | válvula em série na tubulação |
-| conectividade_no_trecho | `tubulacao/1` | `valvula/6` | válvula em série na tubulação |
-| conectividade_no_trecho | `tubulacao/2` | `no/1` | tubulação com válvula de retenção ligada ao nó |
-| conectividade_no_trecho | `tubulacao/2` | `no/2` | tubulação com válvula de retenção ligada ao nó |
-| conectividade_no_trecho | `tubulacao/2` | `reservatorio_de_nivel_fixo/1` | tubulação com válvula de retenção ligada ao nó |
-| conectividade_no_trecho | `tubulacao/2` | `reservatorio_de_nivel_variavel/1` | tubulação com válvula de retenção ligada ao nó |
+| tipo de regra | de | via | para | o que diz |
+|---|---|---|---|---|
+| juncao_aresta | `bomba/1` | — | `tubulacao/1` | bomba em série na tubulação |
+| juncao_aresta | `bomba/2` | — | `tubulacao/1` | bomba em série na tubulação |
+| juncao_aresta | `no/1` | — | `tubulacao/1` | tubulação ligada ao nó |
+| juncao_aresta | `no/1` | — | `tubulacao/2` | tubulação com válvula de retenção ligada ao nó |
+| juncao_aresta | `no/2` | — | `tubulacao/1` | tubulação ligada ao nó |
+| juncao_aresta | `no/2` | — | `tubulacao/2` | tubulação com válvula de retenção ligada ao nó |
+| juncao_aresta | `reservatorio_de_nivel_fixo/1` | — | `tubulacao/1` | tubulação ligada ao nó |
+| juncao_aresta | `reservatorio_de_nivel_fixo/1` | — | `tubulacao/2` | tubulação com válvula de retenção ligada ao nó |
+| juncao_aresta | `reservatorio_de_nivel_variavel/1` | — | `tubulacao/1` | tubulação ligada ao nó |
+| juncao_aresta | `reservatorio_de_nivel_variavel/1` | — | `tubulacao/2` | tubulação com válvula de retenção ligada ao nó |
+| juncao_aresta | `valvula/1` | — | `tubulacao/1` | válvula em série na tubulação |
+| juncao_aresta | `valvula/2` | — | `tubulacao/1` | válvula em série na tubulação |
+| juncao_aresta | `valvula/3` | — | `tubulacao/1` | válvula em série na tubulação |
+| juncao_aresta | `valvula/4` | — | `tubulacao/1` | válvula em série na tubulação |
+| juncao_aresta | `valvula/5` | — | `tubulacao/1` | válvula em série na tubulação |
+| juncao_aresta | `valvula/6` | — | `tubulacao/1` | válvula em série na tubulação |
 
 ## `eletrica-br` — Elétrica de distribuição (Brasil, BDGD Módulo 10)
 
-Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 13 camadas de rede da BDGD (Módulo 10 do PRODIST). Dez camadas têm mapeamento coluna a coluna conferido contra uma extração real de distribuidora; cinco camadas (SUB, UNSEMT, UNCRMT, UNREMT, UGMT_tab) trazem colunas declaradas do Módulo 10, ainda não conferidas — cada atributo diz qual é o seu caso em origem.conferida.
+Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 13 camadas de rede da BDGD (Módulo 10 do PRODIST). Dez camadas têm mapeamento coluna a coluna conferido contra uma extração real de distribuidora; cinco camadas (SUB, UNSEMT, UNCRMT, UNREMT, UGMT_tab) trazem colunas declaradas do Módulo 10, ainda não conferidas — cada atributo diz qual é o seu caso em origem.conferida. Desde a versão 1.1.0 as regras seguem o esquema 2: junção-aresta com terminal no lado da junção, aresta-junção-aresta (chave, religador, regulador e transformador entre trechos; ramal derivando do trecho de baixa tensão no poste), junção-junção, contenção (poste e subestação) e estrutura.
 
 | campo | valor |
 |---|---|
-| versão do pacote | 1.0.0 |
-| versão do esquema | 1 |
+| versão do pacote | 1.1.0 |
+| versão do esquema | 2 |
 | disciplina | eletrica |
 | fonte | https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd |
-| tamanho | 96042 bytes |
-| sha256 | `8bc3786c221e3ed5f0a40a85401301c266b15495c7444d5e64fa738f4d612663` |
+| tamanho | 108260 bytes |
+| sha256 | `17bad527b2985864040bec12ccb955cb3a532f613b71e031f02e31a0a67cacb5` |
 
 ### Redes de domínio e tiers
 
@@ -442,29 +442,63 @@ Total: 214 atributos, 154 com origem conferida em extração real e 60 declarado
 
 ### Regras de conexão
 
-| tipo de regra | de | para | o que diz |
-|---|---|---|---|
-| conectividade_no_trecho | `ramal_de_ligacao/1` | `trecho_de_baixa_tensao/1` | ramal derivado do trecho de baixa tensão |
-| conectividade_no_trecho | `ramal_de_ligacao/1` | `unidade_consumidora/1` | consumidor de baixa tensão ligado pelo ramal |
-| conectividade_no_trecho | `trecho_de_baixa_tensao/1` | `geracao_distribuida/1` | geração em baixa tensão ligada ao trecho de baixa tensão |
-| conectividade_no_trecho | `trecho_de_baixa_tensao/1` | `ponto_de_iluminacao_publica/1` | luminária ligada ao trecho de baixa tensão |
-| conectividade_no_trecho | `trecho_de_baixa_tensao/1` | `transformador_de_distribuicao/1` | secundário do transformador no trecho de baixa tensão |
-| conectividade_no_trecho | `trecho_de_baixa_tensao/1` | `transformador_de_distribuicao/2` | secundário do banco no trecho de baixa tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `banco_de_capacitores/1` | banco de capacitores derivado do trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `chave_de_media_tensao/1` | chave em série no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `chave_de_media_tensao/2` | chave fusível em série no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `chave_de_media_tensao/3` | religador em série no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `chave_de_media_tensao/4` | disjuntor em série no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `chave_de_media_tensao/5` | seccionalizador em série no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `regulador_de_tensao/1` | regulador em série no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `subestacao/1` | saída da subestação alimenta o trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `transformador_de_distribuicao/1` | primário do transformador no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `transformador_de_distribuicao/2` | primário do banco no trecho de média tensão |
-| conectividade_no_trecho | `trecho_de_media_tensao/1` | `unidade_consumidora/2` | consumidor de média tensão ligado ao trecho de média tensão |
-| contencao | `subestacao/1` | `chave_de_media_tensao/4` | disjuntor contido na subestação |
-| contencao | `subestacao/1` | `regulador_de_tensao/1` | regulador contido na subestação |
-| fixacao_estrutural | `ponto_notavel/1` | `ponto_de_iluminacao_publica/1` | luminária fixada no poste |
-| fixacao_estrutural | `ponto_notavel/1` | `transformador_de_distribuicao/1` | transformador fixado no poste |
-| fixacao_estrutural | `ponto_notavel/1` | `trecho_de_baixa_tensao/1` | trecho de baixa tensão fixado no poste |
-| fixacao_estrutural | `ponto_notavel/1` | `trecho_de_media_tensao/1` | trecho de média tensão fixado no poste |
-| fixacao_estrutural | `ponto_notavel/2` | `trecho_de_media_tensao/1` | trecho de média tensão fixado na torre |
+| tipo de regra | de | via | para | o que diz |
+|---|---|---|---|---|
+| aresta_juncao_aresta | `ramal_de_ligacao/1` | `ponto_notavel/1` | `trecho_de_baixa_tensao/1` | ramal de baixa tensão deriva do trecho de baixa tensão no poste (a BDGD não tem ponto de derivação) |
+| aresta_juncao_aresta | `trecho_de_baixa_tensao/1` | `ponto_notavel/1` | `trecho_de_baixa_tensao/1` | vãos de baixa tensão se encontram no poste |
+| aresta_juncao_aresta | `trecho_de_media_tensao/1` | `chave_de_media_tensao/1` | `trecho_de_media_tensao/1` | chave faca liga trecho de média tensão a trecho de média tensão |
+| aresta_juncao_aresta | `trecho_de_media_tensao/1` | `chave_de_media_tensao/2` | `trecho_de_media_tensao/1` | chave fusível liga trecho de média tensão a trecho de média tensão |
+| aresta_juncao_aresta | `trecho_de_media_tensao/1` | `chave_de_media_tensao/3` | `trecho_de_media_tensao/1` | religador liga trecho de média tensão a trecho de média tensão |
+| aresta_juncao_aresta | `trecho_de_media_tensao/1` | `chave_de_media_tensao/4` | `trecho_de_media_tensao/1` | disjuntor liga trecho de média tensão a trecho de média tensão |
+| aresta_juncao_aresta | `trecho_de_media_tensao/1` | `chave_de_media_tensao/5` | `trecho_de_media_tensao/1` | seccionalizador liga trecho de média tensão a trecho de média tensão |
+| aresta_juncao_aresta | `trecho_de_media_tensao/1` | `regulador_de_tensao/1` | `trecho_de_media_tensao/1` | regulador de tensão liga trecho de média tensão a trecho de média tensão |
+| aresta_juncao_aresta | `trecho_de_media_tensao/1` | `subestacao/1` | `trecho_de_media_tensao/1` | a subestação é a origem do trecho de média tensão |
+| aresta_juncao_aresta | `trecho_de_media_tensao/1` | `transformador_de_distribuicao/1` | `trecho_de_baixa_tensao/1` | transformador de distribuição liga o trecho de média tensão ao trecho de baixa tensão |
+| aresta_juncao_aresta | `trecho_de_media_tensao/1` | `transformador_de_distribuicao/2` | `trecho_de_baixa_tensao/1` | banco de transformadores liga o trecho de média tensão ao trecho de baixa tensão |
+| aresta_juncao_aresta | `trecho_de_media_tensao/1` | `transformador_de_distribuicao/3` | `trecho_de_baixa_tensao/1` | transformador não classificado liga o trecho de média tensão ao trecho de baixa tensão |
+| contencao | `ponto_notavel/1` | — | `banco_de_capacitores/1` | banco de capacitores contido no poste |
+| contencao | `ponto_notavel/1` | — | `chave_de_media_tensao/1` | chave faca contida no poste |
+| contencao | `ponto_notavel/1` | — | `chave_de_media_tensao/2` | chave fusível contida no poste |
+| contencao | `ponto_notavel/1` | — | `chave_de_media_tensao/3` | religador contida no poste |
+| contencao | `ponto_notavel/1` | — | `chave_de_media_tensao/5` | seccionalizador contida no poste |
+| contencao | `ponto_notavel/1` | — | `ponto_de_iluminacao_publica/1` | luminária contida no poste |
+| contencao | `ponto_notavel/1` | — | `regulador_de_tensao/1` | regulador de tensão contido no poste |
+| contencao | `ponto_notavel/1` | — | `transformador_de_distribuicao/1` | transformador de distribuição contido no poste |
+| contencao | `ponto_notavel/1` | — | `transformador_de_distribuicao/3` | transformador não classificado contido no poste |
+| contencao | `ponto_notavel/1` | — | `unidade_consumidora/1` | medidor de baixa tensão contido no poste |
+| contencao | `ponto_notavel/1` | — | `unidade_consumidora/2` | medidor de média tensão contido no poste |
+| contencao | `subestacao/1` | — | `chave_de_media_tensao/4` | disjuntor contido na subestação |
+| contencao | `subestacao/1` | — | `regulador_de_tensao/1` | regulador contido na subestação |
+| contencao | `subestacao/1` | — | `transformador_de_distribuicao/2` | banco de transformadores contido na subestação |
+| estrutura | `ponto_notavel/1` | — | `ponto_de_iluminacao_publica/1` | luminária fixada no poste |
+| estrutura | `ponto_notavel/1` | — | `transformador_de_distribuicao/1` | transformador fixado no poste |
+| estrutura | `ponto_notavel/1` | — | `trecho_de_baixa_tensao/1` | trecho de baixa tensão fixado no poste |
+| estrutura | `ponto_notavel/1` | — | `trecho_de_media_tensao/1` | trecho de média tensão fixado no poste |
+| estrutura | `ponto_notavel/2` | — | `trecho_de_media_tensao/1` | trecho de média tensão fixado na torre |
+| juncao_aresta | `banco_de_capacitores/1` (terminal `conexao`) | — | `trecho_de_media_tensao/1` | banco de capacitores derivado do trecho de média tensão |
+| juncao_aresta | `chave_de_media_tensao/1` (terminal `lado_1`) | — | `trecho_de_media_tensao/1` | chave faca ligada ao trecho de média tensão pelo terminal lado_1 |
+| juncao_aresta | `chave_de_media_tensao/1` (terminal `lado_2`) | — | `trecho_de_media_tensao/1` | chave faca ligada ao trecho de média tensão pelo terminal lado_2 |
+| juncao_aresta | `chave_de_media_tensao/2` (terminal `lado_1`) | — | `trecho_de_media_tensao/1` | chave fusível ligada ao trecho de média tensão pelo terminal lado_1 |
+| juncao_aresta | `chave_de_media_tensao/2` (terminal `lado_2`) | — | `trecho_de_media_tensao/1` | chave fusível ligada ao trecho de média tensão pelo terminal lado_2 |
+| juncao_aresta | `chave_de_media_tensao/3` (terminal `lado_1`) | — | `trecho_de_media_tensao/1` | religador ligada ao trecho de média tensão pelo terminal lado_1 |
+| juncao_aresta | `chave_de_media_tensao/3` (terminal `lado_2`) | — | `trecho_de_media_tensao/1` | religador ligada ao trecho de média tensão pelo terminal lado_2 |
+| juncao_aresta | `chave_de_media_tensao/4` (terminal `lado_1`) | — | `trecho_de_media_tensao/1` | disjuntor ligada ao trecho de média tensão pelo terminal lado_1 |
+| juncao_aresta | `chave_de_media_tensao/4` (terminal `lado_2`) | — | `trecho_de_media_tensao/1` | disjuntor ligada ao trecho de média tensão pelo terminal lado_2 |
+| juncao_aresta | `chave_de_media_tensao/5` (terminal `lado_1`) | — | `trecho_de_media_tensao/1` | seccionalizador ligada ao trecho de média tensão pelo terminal lado_1 |
+| juncao_aresta | `chave_de_media_tensao/5` (terminal `lado_2`) | — | `trecho_de_media_tensao/1` | seccionalizador ligada ao trecho de média tensão pelo terminal lado_2 |
+| juncao_aresta | `geracao_distribuida/1` (terminal `conexao`) | — | `trecho_de_baixa_tensao/1` | geração em baixa tensão ligada ao trecho de baixa tensão |
+| juncao_aresta | `geracao_distribuida/2` (terminal `conexao`) | — | `trecho_de_media_tensao/1` | geração em média tensão ligada ao trecho de média tensão |
+| juncao_aresta | `ponto_de_iluminacao_publica/1` (terminal `conexao`) | — | `trecho_de_baixa_tensao/1` | luminária ligada ao trecho de baixa tensão |
+| juncao_aresta | `regulador_de_tensao/1` (terminal `lado_1`) | — | `trecho_de_media_tensao/1` | regulador de tensão ligado ao trecho de média tensão pelo terminal lado_1 |
+| juncao_aresta | `regulador_de_tensao/1` (terminal `lado_2`) | — | `trecho_de_media_tensao/1` | regulador de tensão ligado ao trecho de média tensão pelo terminal lado_2 |
+| juncao_aresta | `subestacao/1` (terminal `conexao`) | — | `trecho_de_media_tensao/1` | saída da subestação alimenta o trecho de média tensão |
+| juncao_aresta | `transformador_de_distribuicao/1` (terminal `alta`) | — | `trecho_de_media_tensao/1` | primário (AT) do transformador de distribuição no trecho de média tensão — trecho de MT só liga pelo terminal de AT |
+| juncao_aresta | `transformador_de_distribuicao/1` (terminal `baixa`) | — | `trecho_de_baixa_tensao/1` | secundário (BT) do transformador de distribuição no trecho de baixa tensão |
+| juncao_aresta | `transformador_de_distribuicao/2` (terminal `alta`) | — | `trecho_de_media_tensao/1` | primário (AT) do banco de transformadores no trecho de média tensão — trecho de MT só liga pelo terminal de AT |
+| juncao_aresta | `transformador_de_distribuicao/2` (terminal `baixa`) | — | `trecho_de_baixa_tensao/1` | secundário (BT) do banco de transformadores no trecho de baixa tensão |
+| juncao_aresta | `transformador_de_distribuicao/3` (terminal `alta`) | — | `trecho_de_media_tensao/1` | primário (AT) do transformador não classificado no trecho de média tensão — trecho de MT só liga pelo terminal de AT |
+| juncao_aresta | `transformador_de_distribuicao/3` (terminal `baixa`) | — | `trecho_de_baixa_tensao/1` | secundário (BT) do transformador não classificado no trecho de baixa tensão |
+| juncao_aresta | `unidade_consumidora/1` (terminal `conexao`) | — | `ramal_de_ligacao/1` | consumidor de baixa tensão ligado pelo ramal de ligação |
+| juncao_aresta | `unidade_consumidora/2` (terminal `conexao`) | — | `trecho_de_media_tensao/1` | consumidor de média tensão ligado ao trecho de média tensão |
+| juncao_juncao | `chave_de_media_tensao/2` | — | `transformador_de_distribuicao/1` | chave fusível de proteção coincidente com o transformador |
+| juncao_juncao | `subestacao/1` | — | `chave_de_media_tensao/4` | disjuntor de saída coincidente com a subestação |

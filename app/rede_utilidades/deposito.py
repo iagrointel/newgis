@@ -11,6 +11,8 @@ inclusive como null."""
 
 import json
 
+from app.rede_utilidades.esquema import GEOMETRIA_JUNCAO
+
 CHAVE_PACOTE = ("codigo", "nome", "versao", "disciplina", "descricao", "fonte")
 
 
@@ -117,13 +119,16 @@ def importar(cur, tenant_id: int, rede_id: str, doc: dict, usuario_id: int, sha2
         )
 
     for r in doc["regras"]:
-        de_g, _, de_c = r["de"].partition("/")
-        pa_g, _, pa_c = r["para"].partition("/")
+        via = r.get("via")
         cur.execute(
-            "INSERT INTO plat.rede_regra(tenant_id, rede_id, tipo, de_tipo_id, para_tipo_id, descricao) "
-            "VALUES (%s, %s::uuid, %s, %s, %s, %s)",
-            (tenant_id, rede_id, r["tipo"], tipos[(de_g, int(de_c))], tipos[(pa_g, int(pa_c))],
-             _texto(r.get("descricao"))),
+            "INSERT INTO plat.rede_regra(tenant_id, rede_id, tipo, de_tipo_id, para_tipo_id, via_tipo_id, "
+            "de_terminal, para_terminal, via_terminal, descricao) "
+            "VALUES (%s, %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (tenant_id, rede_id, r["tipo"], tipos[(r["de"]["grupo"], r["de"]["tipo"])],
+             tipos[(r["para"]["grupo"], r["para"]["tipo"])],
+             tipos[(via["grupo"], via["tipo"])] if via else None,
+             _texto(r["de"].get("terminal")), _texto(r["para"].get("terminal")),
+             _texto(via.get("terminal")) if via else None, _texto(r.get("descricao"))),
         )
 
     return {
@@ -173,8 +178,8 @@ def exportar(cur, rede_id: str) -> dict | None:
     cur.execute("SELECT grupo_id, tipo_id, codigo, nome, tipo_dado, unidade, obrigatorio, origem "
                 "FROM plat.rede_atributo WHERE rede_id = %s::uuid", (rede_id,))
     atributos = [dict(r) for r in cur.fetchall()]
-    cur.execute("SELECT tipo, de_tipo_id, para_tipo_id, descricao FROM plat.rede_regra WHERE rede_id = %s::uuid",
-                (rede_id,))
+    cur.execute("SELECT tipo, de_tipo_id, para_tipo_id, via_tipo_id, de_terminal, para_terminal, via_terminal, "
+                "descricao FROM plat.rede_regra WHERE rede_id = %s::uuid", (rede_id,))
     regras = [dict(r) for r in cur.fetchall()]
 
     meta = {"codigo": rede["pacote_codigo"], "nome": rede["pacote_nome"], "versao": rede["pacote_versao"],
@@ -182,9 +187,28 @@ def exportar(cur, rede_id: str) -> dict | None:
     _com(meta, "descricao", rede["pacote_descricao"])
     _com(meta, "fonte", rede["pacote_fonte"])
 
-    def _alvo(tipo_id):
+    def _ref(tipo_id, terminal=None):
+        """Lado de regra na forma 2: {grupo, tipo, terminal?}. Na junção-aresta a JUNÇÃO vai no lado `de`;
+        linha antiga (pré-versão 2) pode ter gravado a aresta em `de` — a exportação normaliza pela
+        geometria do grupo, com a mesma regra da conversão de pacote versão 1."""
         t = tipos[tipo_id]
-        return f"{grupos[t['grupo_id']]['codigo']}/{t['codigo']}"
+        ref = {"grupo": grupos[t["grupo_id"]]["codigo"], "tipo": t["codigo"]}
+        if terminal is not None:
+            ref["terminal"] = terminal
+        return ref
+
+    def _regra(r):
+        de_ref = _ref(r["de_tipo_id"], r["de_terminal"])
+        para_ref = _ref(r["para_tipo_id"], r["para_terminal"])
+        if r["tipo"] == "juncao_aresta":
+            geo_de = grupos[tipos[r["de_tipo_id"]]["grupo_id"]]["geometria"]
+            geo_para = grupos[tipos[r["para_tipo_id"]]["grupo_id"]]["geometria"]
+            if geo_para in GEOMETRIA_JUNCAO and geo_de not in GEOMETRIA_JUNCAO:
+                de_ref, para_ref = para_ref, de_ref
+        doc_r = {"tipo": r["tipo"], "de": de_ref, "para": para_ref}
+        if r["via_tipo_id"] is not None:
+            doc_r["via"] = _ref(r["via_tipo_id"], r["via_terminal"])
+        return _com(doc_r, "descricao", r["descricao"])
 
     return {
         "esquema": "plat.rede.pacote",
@@ -229,9 +253,5 @@ def exportar(cur, rede_id: str) -> dict | None:
                  "origem", a["origem"])
             for a in atributos
         ],
-        "regras": [
-            _com({"tipo": r["tipo"], "de": _alvo(r["de_tipo_id"]), "para": _alvo(r["para_tipo_id"])},
-                 "descricao", r["descricao"])
-            for r in regras
-        ],
+        "regras": [_regra(r) for r in regras],
     }
