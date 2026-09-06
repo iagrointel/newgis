@@ -1,0 +1,62 @@
+{
+ "item": "L7-20-trilha-auditoria",
+ "medidas": {
+  "tentativas_de_escrita_barradas": {
+   "valor": 5,
+   "unidade": "tentativas",
+   "comando": "pytest tests/api/test_auditoria.py::test_update_delete_e_truncate_como_plat_app_falham"
+  },
+  "rotas_de_escrita_do_openapi": {
+   "valor": 112,
+   "unidade": "rotas",
+   "comando": "docs/openapi.json: POST/PUT/PATCH/DELETE"
+  },
+  "rotas_de_escrita_cobertas": {
+   "valor": 112,
+   "unidade": "rotas",
+   "comando": "evento (trigger em plat.evento) + cobertura (plat.auditoria_cobrir em app/db.py)"
+  },
+  "rotas_cobertas_por_evento": {
+   "valor": 97,
+   "unidade": "rotas",
+   "comando": "EVENTOS_POR_ROTA com lista não vazia"
+  },
+  "rotas_cobertas_por_cobertura": {
+   "valor": 15,
+   "unidade": "rotas",
+   "comando": "EVENTOS_POR_ROTA vazia ou ausente"
+  },
+  "rotas_exercidas_com_linha": {
+   "valor": 6,
+   "unidade": "rotas",
+   "comando": "pytest tests/api/test_auditoria.py::test_rotas_de_escrita_exercidas_deixam_linha"
+  },
+  "exportacao_linhas_x_contagem": {
+   "valor": 644,
+   "unidade": "linhas",
+   "comando": "GET /api/auditoria?formato=csv|json_export contra plat.auditoria_contar da mesma janela"
+  },
+  "jobs_pg_cron_com_o_nome_do_schema": {
+   "valor": 1,
+   "unidade": "jobs",
+   "comando": "SELECT count(*) FROM cron.job WHERE jobname = 'plat_tt4aud_auditoria_expurgo' depois de agendar duas vezes"
+  },
+  "expurgo_linhas": {
+   "valor": 2500,
+   "unidade": "linhas",
+   "comando": "SELECT plat.auditoria_expurgar() com 2500 linhas de 800 dias"
+  },
+  "expurgo_ms": {
+   "valor": 61.1,
+   "unidade": "ms",
+   "comando": "perf_counter em volta de SELECT auditoria_expurgar() (2500 linhas)"
+  },
+  "expurgo_linhas_dentro_da_retencao_perdidas": {
+   "valor": 0,
+   "unidade": "linhas",
+   "comando": "count(*) das linhas de 10 dias depois do expurgo, contra as 2500 semeadas"
+  }
+ },
+ "gerado_em": "2026-09-06T16:37:31Z",
+ "git_sha": "90d03c07da0c"
+}

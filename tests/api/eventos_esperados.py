@@ -104,4 +104,53 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/org"): ["org/configurar"],
     ("POST", "/api/org/logo"): ["org/logo_enviar"],
     ("DELETE", "/api/org/logo"): ["org/logo_remover"],
+    # ---- trilha de auditoria (L7-20-trilha-auditoria)
+    ("PUT", "/api/auditoria/config"): ["auditoria/retencao"],
+    # ---- BLOCO ACRESCENTADO NO L7-20 (rotas que já existiam no código e nunca entraram aqui).
+    # `docs/openapi.json` estava parado em 94 rotas de escrita enquanto a aplicação já publicava 112, e por
+    # isso este teste já reprovava em master com 10 rotas faltando. Ao regerar o arquivo (P9: rota nova exige
+    # openapi atualizado) as que faltavam passaram a 27. O evento de cada uma foi LIDO no código, uma a uma,
+    # com `grep -n registrar_evento` no módulo da rota — não é chute. Bloco contíguo de propósito: se outra
+    # trilha declarar as mesmas, o conflito é um pedaço só.
+    # conexões externas (L6-02, app/conexao/rotas.py)
+    ("POST", "/api/conexoes"): ["conexoes/criar"],
+    ("PATCH", "/api/conexoes/{id}"): ["conexoes/editar"],
+    ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
+    ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
+    ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
+    # convites de membro (L0-07-d, app/auth/rotas_convites.py)
+    ("POST", "/api/convites"): ["convites/criar"],
+    ("DELETE", "/api/convites/{id}"): ["convites/cancelar"],
+    ("POST", "/api/convites/aceitar"): ["usuarios/convite_aceito"],
+    # foto do próprio usuário (app/auth/rotas_eu.py)
+    ("POST", "/api/eu/foto"): ["usuarios/foto_enviar"],
+    ("DELETE", "/api/eu/foto"): ["usuarios/foto_remover"],
+    # ingestão vetorial (L0-04, app/ingestao/rotas.py)
+    ("POST", "/api/importacoes"): ["importacoes/criar"],
+    ("PUT", "/api/importacoes/{id}/confirmar"): ["importacoes/confirmar"],
+    # apagar importação ainda não confirmada é descartar rascunho do próprio autor, sem efeito no catálogo: a
+    # linha em plat.importacao e o log_acesso já contam a história (mesma decisão de /api/arquivos acima)
+    ("DELETE", "/api/importacoes/{id}"): [],
+    # upload retomável (L0-04-a, app/uploads/rotas.py)
+    ("POST", "/api/uploads"): ["uploads/iniciar"],
+    ("POST", "/api/uploads/{id}/concluir"): ["uploads/concluir"],
+    ("DELETE", "/api/uploads/{id}"): ["uploads/abortar"],
+    # parte de upload: pedaço de bytes de um upload que já tem evento de início e de conclusão; um evento por
+    # parte encheria a trilha sem acrescentar fato novo
+    ("PUT", "/api/uploads/{id}/partes/{n}"): [],
+    # SMTP do inquilino (L0-07-d, app/correio/rotas_smtp.py)
+    ("PUT", "/api/org/smtp"): ["org/smtp_configurar", "org/smtp_remover"],
+    ("POST", "/api/org/smtp/testar"): ["org/smtp_testar"],
+    # redefinição de senha por e-mail (app/auth/rotas_redefinicao.py). Solicitar é PÚBLICO e responde igual
+    # exista ou não a conta; registrar evento ali diria, para quem lesse a trilha, que o login existe
+    ("POST", "/api/senha/redefinir/solicitar"): [],
+    ("POST", "/api/senha/redefinir/aplicar"): ["usuarios/redefinir_senha_email"],
+    # geocodificação (L2-11-b): consulta sobre dado aberto (CNEFE), POST só por causa do tamanho do corpo;
+    # não muda estado e não tem dono humano — mesma decisão de /api/rota e /api/matriz acima
+    ("POST", "/api/geocodificar"): [],
+    ("POST", "/api/reverso"): [],
+    ("POST", "/rest/services/Geocodificador/GeocodeServer"): [],
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/findAddressCandidates"): [],
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/geocodeAddresses"): [],
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/reverseGeocode"): [],
 }

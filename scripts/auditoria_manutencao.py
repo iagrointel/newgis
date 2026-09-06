@@ -11,7 +11,7 @@ Por que existe: `plat.auditoria_expurgar` e as funções de agendamento são NEG
 opera precisa de um caminho nomeado, e é este — nada de SQL solto no terminal.
 
 ⚠ pg_cron é recurso GLOBAL da máquina: o nome do job sai de `current_schema()`, então `--schema` decide
-qual job se mexe. Ver docs/adr/0021-trilha-auditoria.md, seção "Regra para quem usar pg_cron".
+qual job se mexe. Ver docs/adr/0031-trilha-auditoria.md, seção "Regra para quem usar pg_cron".
 """
 
 import argparse

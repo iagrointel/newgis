@@ -4,11 +4,13 @@ plat.log_acesso: app.auth.middleware) e monta os routers. O nginx serve web/ em 
 (ADR 0001 seção 4.3); a API responde /, as páginas de app.paginas, /saude e /api/.
 Cada trilha acrescenta o seu router na lista ROUTERS (uma linha por trilha; ordem = ordem de montagem)."""
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app import erros, limite_corpo, paginas
 from app import log as plat_log
@@ -125,6 +127,15 @@ ROUTERS = [
 ]
 for _router in ROUTERS:
     app.include_router(_router)
+
+
+# /static/ é do nginx em produção (ADR 0001 seção 4.3) e assim continua. PLAT_SERVIR_ESTATICO=1 monta o
+# diretório na própria aplicação para o caso em que não há nginx na frente: o e2e de uma trilha do laço sobe
+# só o uvicorn numa porta sua, e sem isto toda folha e todo módulo da página dariam 404 no navegador (achado
+# do 1º turno, registrado em scripts/homolog_e2e.sh, que resolveu o mesmo problema pondo um nginx no meio).
+# Recusado em produção mesmo que a variável apareça: lá o nginx é a origem do estático e do Cache-Control.
+if os.environ.get("PLAT_SERVIR_ESTATICO") == "1" and not settings.producao:
+    app.mount("/static", StaticFiles(directory=WEB), name="estatico")
 
 
 @app.get("/api/docs", include_in_schema=False)

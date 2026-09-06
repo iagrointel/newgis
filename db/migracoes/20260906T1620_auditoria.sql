@@ -28,7 +28,7 @@
 --   5. Exportação: `plat.auditoria_exportar` devolve o MESMO conjunto que a listagem, para que a contagem da
 --      exportação bata com a contagem em tabela.
 --
--- ⚠ pg_cron é recurso GLOBAL da máquina (ver docs/adr/0021-trilha-auditoria.md, seção "Regra para quem usar
+-- ⚠ pg_cron é recurso GLOBAL da máquina (ver docs/adr/0031-trilha-auditoria.md, seção "Regra para quem usar
 -- pg_cron"): o nome do job é derivado de `current_schema()`, nunca constante, senão o job de uma trilha de
 -- teste expurga a auditoria de produção. Mesmo defeito de fila/trinco/cota sem dimensão de inquilino.
 --
@@ -284,7 +284,7 @@ GRANT EXECUTE ON FUNCTION plat.auditoria_contar(timestamptz, timestamptz, int, t
 -- pudesse chamá-la, o admin de um inquilino apagaria a própria trilha pela API — a refutação do item.
 
 -- ---------------------------------------------------------------- 8. agendamento pg_cron
--- Ver docs/adr/0021-trilha-auditoria.md, seção "Regra para quem usar pg_cron nesta plataforma".
+-- Ver docs/adr/0031-trilha-auditoria.md, seção "Regra para quem usar pg_cron nesta plataforma".
 -- (a) nome derivado de current_schema(); (b) idempotente (desagenda o mesmo nome antes de agendar);
 -- (c) a trilha desagenda o seu ao terminar; (d) nome de job = recurso partilhado, com dimensão de inquilino
 --     (aqui, de schema) igual à que se exige da fila e do trinco consultivo.
