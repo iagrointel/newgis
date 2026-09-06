@@ -177,6 +177,7 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `CARGA_FATOR_COTA` | `3` | estimativa = bytes do arquivo × 3 (MEDIDO: shapefile 14 MB -> tabela 45 MB) |
 | `INGESTAO_CAMPOS_MAX` | `500` | mesmo teto do JSON Schema de camada_vetorial (ADR 0004/0005) |
 | `INGESTAO_FIDS_RELATORIO_MAX` | `1000` | fids corrigidos listados no relatório de ST_MakeValid |
+| `INGESTAO_EPSILON_ENVOLTORIA` | `1e-07` | — |
 
 ## configurações da organização (L0-07-a-configuracoes-org; GET/PUT /api/org): nome, identidade visual
 

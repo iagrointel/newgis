@@ -22,6 +22,7 @@ from app.settings import settings
 
 CARGA_FATOR_COTA = limites.CARGA_FATOR_COTA
 FIDS_RELATORIO_MAX = limites.INGESTAO_FIDS_RELATORIO_MAX
+EPSILON_ENVOLTORIA = limites.INGESTAO_EPSILON_ENVOLTORIA
 
 
 class CarregarParametros(BaseModel):
@@ -38,6 +39,21 @@ def _pg_conninfo() -> str:
     partes = psycopg2.extensions.parse_dsn(settings.PLAT_DSN)
     pares = " ".join(f"{k}={v}" for k, v in partes.items() if k in ("dbname", "host", "port", "user", "password"))
     return f"PG:{pares} application_name=plat-ingestao"
+
+
+def _envoltoria_nao_degenerada(xmin: float, ymin: float, xmax: float, ymax: float) -> list[float]:
+    """Camada de UM ponto (ou com todas as feições no mesmo ponto) dá uma envoltória de largura zero, e
+    `ST_MakeEnvelope` disso é um POLYGON degenerado que `ST_IsValid` reprova — o CHECK `item_extent_check` de
+    `plat.item` recusava a linha e a carga inteira morria (achado ao carregar camada de 1 ponto por URL, item
+    L6-02-h). Aqui o lado nulo é afastado em EPSILON_ENVOLTORIA graus (~1 cm no equador) para os dois sentidos,
+    sem sair de -180..180 / -90..90. O número é registrado no item como envoltória, não como coordenada da
+    feição: a geometria da feição continua exatamente a que veio no arquivo."""
+    e = EPSILON_ENVOLTORIA
+    if xmax - xmin < e:
+        xmin, xmax = max(-180.0, xmin - e), min(180.0, xmax + e)
+    if ymax - ymin < e:
+        ymin, ymax = max(-90.0, ymin - e), min(90.0, ymax + e)
+    return [xmin, ymin, xmax, ymax]
 
 
 def _marcar_falha(ctx, importacao_id: str, erro: str) -> None:
@@ -244,19 +260,25 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         ctx.progresso(80, "estatísticas")
         with ctx.db() as cur:
             cur.execute(f'ANALYZE "{schema}"."{tabela}"')
+            # ST_XMin/ST_YMin/... em vez de ler as coordenadas do GeoJSON da envoltória: quando a camada tem
+            # UMA feição pontual (ou todas no mesmo ponto), `ST_Extent` degenera para um POINT e o GeoJSON dele
+            # é `[x, y]`, não uma lista de anéis — a leitura antiga levantava "'float' object is not iterable" e
+            # derrubava a carga (achado ao carregar camada de 1 ponto por URL, item L6-02-h). Os quatro
+            # escalares valem para POINT, LINESTRING e POLYGON sem distinção de caso.
             cur.execute(
-                f'SELECT count(*) AS feicoes, '
-                f'ST_AsGeoJSON(ST_Transform(ST_SetSRID(ST_Extent(geom)::geometry, {srid}), 4326)) AS extent_geojson '
-                f'FROM "{schema}"."{tabela}"'
+                f'WITH e AS (SELECT count(*) AS n, '
+                f'  ST_Transform(ST_SetSRID(ST_Extent(geom)::geometry, {srid}), 4326) AS env '
+                f'  FROM "{schema}"."{tabela}") '
+                f'SELECT n AS feicoes, ST_XMin(env) AS xmin, ST_YMin(env) AS ymin, '
+                f'ST_XMax(env) AS xmax, ST_YMax(env) AS ymax FROM e'
             )
             est = cur.fetchone()
             extent_4326 = None
-            if est["extent_geojson"]:
-                coords = json.loads(est["extent_geojson"])["coordinates"][0]
-                xs = [c[0] for c in coords]
-                ys = [c[1] for c in coords]
+            if est is not None and est["xmin"] is not None:
+                xs = [est["xmin"], est["xmax"]]
+                ys = [est["ymin"], est["ymax"]]
                 if -180 <= min(xs) and max(xs) <= 180 and -90 <= min(ys) and max(ys) <= 90:
-                    extent_4326 = [min(xs), min(ys), max(xs), max(ys)]
+                    extent_4326 = _envoltoria_nao_degenerada(min(xs), min(ys), max(xs), max(ys))
             por_campo = {}
             for c in campos_usados:
                 if c["tipo"] in ("text",):

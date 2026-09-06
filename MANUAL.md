@@ -905,6 +905,42 @@ ou reservado. A conexão real nunca resolve o host de novo depois de validado (f
 todo redirecionamento é revalidado do zero, salto a salto — um serviço público que redireciona para um IP
 interno é aceito no primeiro salto e recusado no segundo, nunca no primeiro.
 
+### 18.2.1 Arquivo por URL pública (item L6-02-h): CSV, GeoJSON, KML, KMZ, GeoRSS e GPX
+
+Uma conexão de tipo `http` no modo `copiada` pode ser uma FONTE DE ARQUIVO: a plataforma baixa o arquivo do
+endereço, reconhece o formato pelos bytes, converte o que não for CSV/GeoJSON e carrega como camada pelo
+mesmo caminho da importação manual (seção 12). O equivalente ao "CSV/KML/GeoRSS/GeoJSON pela web" do
+Map Viewer 11.4.
+
+```
+PUT    /api/conexoes/{id}/arquivo              {"intervalo_s": 86400, "agendado": true}
+GET    /api/conexoes/{id}/arquivo              # formato, ETag, sha256, camada gerada, contadores
+POST   /api/conexoes/{id}/arquivo/sincronizar  # 202 + job_id (uma passagem agora)
+```
+
+Formatos aceitos: `csv`, `geojson`, `kml`, `kmz`, `georss`, `gpx`. O formato é decidido pelo CONTEÚDO, nunca
+pela extensão da URL nem pelo `Content-Type` (servidor de arquivo estático erra os dois o tempo todo). KML,
+KMZ, GeoRSS e GPX passam por `ogr2ogr` e viram GeoJSON antes da carga; CSV passa pelo normalizador da
+ingestão (vírgula decimal, ponto-e-vírgula, BOM, coluna de coordenada por nome).
+
+**Atualização agendada sem recarregar igual.** Cada sincronização guarda o `ETag` e o `Last-Modified` da
+resposta; a próxima manda `If-None-Match`/`If-Modified-Since`. Resposta `304` = arquivo inalterado, nada é
+recarregado e a camada continua a mesma. Se o servidor ignorar o condicional e responder `200` com o mesmo
+conteúdo, o `sha256` do corpo segura a recarga do mesmo jeito. Os dois contadores da resposta separam as duas
+coisas: `sincronizacoes` conta quantas vezes a URL foi conferida, `recargas` quantas viraram carga nova.
+`agendado: true` põe a conexão na fila do periódico `conexoes.arquivo_sincronizar_vencidas` (relógio de 15 min;
+quem decide se venceu é o `intervalo_s` de cada conexão, mínimo 15 min, padrão 1 dia).
+
+**O que é recusado.** Endereço interno em qualquer forma (IP privado, loopback, link-local, CGNAT, nome de DNS
+público que RESOLVE para faixa interna, redirecionamento para qualquer um deles) — a mesma defesa da seção
+anterior, sem exceção para este caminho. Arquivo acima do teto (64 MiB no geral, 40 MiB para os formatos XML,
+que o GDAL lê inteiros na memória). CSV cuja coluna de latitude tem valor fora de -90..90 ou de longitude fora
+de -180..180: a plataforma diz que as colunas parecem trocadas e RECUSA — nunca troca sozinha. O limite disso
+está declarado: quando a troca deixa os dois valores dentro de -90..90, não há sinal no dado e o arquivo passa.
+
+**Credencial não atravessa host.** Se a conexão tem credencial, ela vai no `Authorization` do primeiro pedido;
+num redirecionamento para outro host, outra porta, ou de https para http, o cabeçalho é removido.
+
 ### 18.3 Limites desta fatia
 
 Sem tela em nenhum dos dois; `acervo_camada` ainda não tem rota HTTP própria (só a tabela); lista branca de

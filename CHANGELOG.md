@@ -3,6 +3,40 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L6-02-h-csv-url-geojson-kml: arquivo por URL pública vira camada)
+
+Conexão `http` no modo `copiada` passa a ser fonte de ARQUIVO: `PUT /api/conexoes/{id}/arquivo` configura,
+`POST /api/conexoes/{id}/arquivo/sincronizar` enfileira uma passagem e `GET .../arquivo` mostra o estado.
+O job `conexoes.arquivo_sincronizar` baixa pelo MESMO `buscar_seguro` do teste de saúde (nenhum cliente HTTP
+novo), reconhece o formato pelos bytes (`csv`, `geojson`, `kml`, `kmz`, `georss`, `gpx` — nunca pela extensão
+nem pelo Content-Type), converte KML/KMZ/GeoRSS/GPX para GeoJSON com `ogr2ogr` como neto do job e entrega ao
+pipeline de ingestão do L0-04 sem alterar nada dele: a camada nasce `camada_vetorial` com tabela PostGIS, RLS
+e estatísticas, igual à importada à mão. Periódico `conexoes.arquivo_sincronizar_vencidas` (`*/15 * * * *`)
+enfileira as agendadas vencidas, cada uma no inquilino dono.
+
+Atualização agendada que não recarrega igual: `plat.conexao_arquivo` (migração
+`20260906T1549391_conexao_arquivo_url.sql`) guarda ETag/Last-Modified/sha256 e os contadores `sincronizacoes`
+x `recargas`. `304` não recarrega; servidor que ignora o condicional e responde `200` com o mesmo corpo também
+não (o sha256 segura). Medido ponta a ponta contra um servidor no endereço público desta máquina — a defesa de
+SSRF fica ligada e `localhost` continua recusado.
+
+Consertado de caminho, no módulo de conexão: `Authorization`/`Cookie`/`Proxy-Authorization`/`X-Api-Key`
+deixavam de ser removidos num redirecionamento para outro host (achado do adversário do L6-02-a, que deixou
+aquele item marcado REFUTADO). Agora só seguem para o mesmo host, mesma porta e sem queda de https para http.
+`ResultadoBusca` ganhou os cabeçalhos da resposta (é deles que sai o ETag).
+
+Consertados dois defeitos de `app/ingestao/carregar.py` que só apareciam em camada de UM ponto — o caso mais
+comum de arquivo pequeno por URL: a envoltória era lida do GeoJSON de `ST_Extent` (que degenera para `[x, y]`
+e levantava "'float' object is not iterable") e, corrigida essa leitura, o retângulo de largura zero virava um
+polígono inválido que o CHECK `item_extent_check` recusava. Agora a envoltória vem de `ST_XMin/ST_YMin/...` e o
+lado nulo é afastado em `INGESTAO_EPSILON_ENVOLTORIA` (1e-7 grau, ~1 cm) — só o retângulo do item muda, nunca a
+geometria da feição.
+
+Refutação do item: CSV com latitude e longitude trocadas é RECUSADO quando produz valor fora de faixa, com a
+mensagem dizendo que as colunas parecem trocadas; a plataforma nunca troca sozinha. A limitação — troca
+indetectável quando os dois valores cabem em -90..90 — tem teste próprio para ninguém prometer mais do que o
+mecanismo faz. KML de 200 mil pontos não é recusado: é medido.
+
 ## turno 3, setembro de 2026 (nome de migração por carimbo de tempo — ADR 0014)
 
 Migração nova passa a se chamar `db/migracoes/YYYYMMDDTHHMM_<slug>.sql` (carimbo UTC, mais 3 hexadecimais
