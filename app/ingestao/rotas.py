@@ -142,13 +142,16 @@ def listar(limite: int = 50, deslocamento: int = 0, auth: Auth = autenticado(esc
 # `tests/api/test_rotas_sombreadas.py` reprova qualquer rota nova que caia nessa armadilha.
 @router.get("/api/importacoes/formatos", openapi_extra=LER)
 def formatos_aceitos():
-    """Formatos que ESTA instalação aceita, com as extensões e o rótulo de tela. `nao_aceitos` diz o que a
-    plataforma conhece e não traz, com o motivo — nunca silêncio."""
-    return {
-        "aceitos": [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo, "driver": f.driver}
-                    for f in FORMATOS.values()],
-        "nao_aceitos": [{"tipo": t, "motivo": m} for t, m in FORMATOS_QUE_DEPENDEM_DE_LICENCA.items()],
-    }
+    """Lista de formatos. `aceito: true` é o que ESTA instalação importa; `aceito: false` é o que a
+    plataforma conhece e não traz, com o motivo escrito (hoje só o DWG, que depende de conversor de terceiro
+    com licença própria) — a tela mostra o motivo em vez de esconder o tipo."""
+    aceitos = [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo, "driver": f.driver,
+                "aceito": True, "motivo": None}
+               for f in FORMATOS.values()]
+    recusados = [{"tipo": nome, "extensoes": [], "rotulo": nome.upper(), "driver": None,
+                  "aceito": False, "motivo": motivo}
+                 for nome, motivo in FORMATOS_QUE_DEPENDEM_DE_LICENCA.items()]
+    return aceitos + recusados
 
 
 @router.get("/api/importacoes/{id}", openapi_extra=LER)
