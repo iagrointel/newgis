@@ -16,8 +16,10 @@ a tabelas de trilhas ainda não mescladas — `exportacao`, `geocodificacao*`, `
 `compartilhamento_link`, `conexao`, `job`, `token_servico`) e recompõe as 44 FKs como `(tenant_id, col)
 REFERENCES alvo (tenant_id, id)`, preservando o `ON DELETE` original de cada uma — as 9 que eram `SET NULL`
 usam a sintaxe de lista de colunas do Postgres 15+ (`ON DELETE SET NULL (col)`) para nulificar só a coluna da
-FK, nunca `tenant_id` (que é `NOT NULL` em toda tabela do schema; testado em produção rasa: apagar um usuário
-referenciado só zera a coluna dele, o `tenant_id` da linha filha não muda). `PERMITIDAS` da trava fica vazio —
+FK, nunca `tenant_id` (que é `NOT NULL` em toda tabela do schema; verificado na base da trilha `fkclasse`,
+nunca em produção: apagar um usuário referenciado só zera a coluna dele, o `tenant_id` da linha filha não
+muda — sem essa sintaxe o Postgres tentaria nulificar as DUAS colunas da FK composta e o DELETE falharia
+contra o `NOT NULL` de `tenant_id`). `PERMITIDAS` da trava fica vazio —
 zero FKs simples entre tabelas com `tenant_id` no schema inteiro, dívida paga (as 11 restantes reaparecem
 como achado novo quando a trilha que as introduz mesclar, e quem mesclar aplica o mesmo padrão).
 `tests/unit/test_fk_por_inquilino_classe_conserto.py` prova 5 casos concretos como `plat_app` (alvo comum,
