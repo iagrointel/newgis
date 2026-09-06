@@ -26,6 +26,23 @@ DESCRICAO = {
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 
+# --- perfis de chave de API (item L7-08-d): os quatro nomes que o portal oferece na criação de chave são
+# APELIDOS de conjuntos do vocabulário acima, nunca escopos novos. O vocabulário fechado de `ESCOPO` não
+# muda: ele já é o que o servidor confere em `exigir_escopo`, e inventar um segundo eixo de nomes daria
+# duas verdades sobre a mesma chave. `leitura` é o perfil da chave de demonstração do portal.
+PERFIS_DE_CHAVE = {
+    "leitura": (
+        ("catalogo:ler", "camada:ler", "tiles:ler"),
+        "ler catálogo, feições e tiles; nenhuma escrita",
+    ),
+    "edicao": (
+        ("catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar"),
+        "o de leitura mais editar feições e executar jobs",
+    ),
+    "tiles": (("tiles:ler",), "só tiles vetoriais e raster (chave de aplicação de mapa)"),
+    "admin": (("admin:inquilino",), "tudo o que o dono pode fazer pela API, exceto gerir token, senha, 2FA e sessão"),
+}
+
 
 def valido(escopo: str) -> bool:
     return isinstance(escopo, str) and bool(ESCOPO.match(escopo))

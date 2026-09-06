@@ -384,6 +384,13 @@ def autenticado(
             raise ErroAPI(403, "sem_privilegio", f"a operação exige o privilégio {privilegio}", {"exigido": privilegio})
         return auth
 
+    # metadado lido pelo portal de API (item L7-08-d): o `x-plat-escopo` de cada rota do OpenAPI é DERIVADO
+    # daqui, nunca declarado à mão em `openapi_extra` — declaração à mão envelhece em silêncio quando o
+    # escopo do handler muda, e foi assim que 32 itens caíram em 06/09. Ver app/portal/openapi.py.
+    dependencia.plat_escopo_token = escopo_token
+    dependencia.plat_so_sessao = so_sessao
+    dependencia.plat_superadmin = superadmin
+    dependencia.plat_privilegio = privilegio
     return Depends(dependencia)
 
 
