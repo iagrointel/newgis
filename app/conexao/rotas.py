@@ -322,7 +322,9 @@ def publicar_camada(
         rc = cur.fetchone()
         if rc["n"] >= rc["cota"]:
             raise ErroAPI(
-                413, "cota_itens", f"cota de itens do inquilino esgotada ({rc['cota']})", {"cota": rc["cota"]}
+                413, "cota_itens",
+                f"cota de itens esgotada: uso atual {rc['n']} de {rc['cota']} itens",
+                {"cota": rc["cota"], "uso": rc["n"]},
             )
         try:
             cur.execute(

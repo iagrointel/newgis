@@ -92,8 +92,58 @@ def jobs_manutencao_analyze(ctx, tabelas: list[str] | None = None) -> dict:
     return {"tabelas": feitas}
 
 
+class UsoMedirParametros(BaseModel):
+    dia: str | None = Field(
+        None, description="dia medido (AAAA-MM-DD, UTC); default: hoje. Um por execução — para uma série "
+        "retroativa, um job por dia (a cláusula '30 pontos' do portão é exercitada assim nos testes).")
+
+
+@tarefa(nome="jobs.uso_medir",
+        descricao="Medição de uso: um ponto de plat.uso_inquilino por inquilino ativo (banco, bucket, itens, "
+                  "usuários ativos, jobs, requisições) e reconciliação de tenant.uso_bytes",
+        parametros=UsoMedirParametros, pesado=False, memoria_mb=256, timeout_s=1800, tentativas=1,
+        chave=lambda p: f"uso_medir:{p.get('dia') or 'hoje'}", perfil_minimo="admin")
+def jobs_uso_medir(ctx, dia: str | None = None) -> dict:
+    """Um ponto da série por inquilino. Os bytes do bucket vêm da Admin API do Garage (HTTP — por isso o SQL de
+    plat.uso_medir recebe o número de fora); Garage fora do ar NÃO falha o job: o inquilino é medido sem a
+    coluna bytes_bucket (NULL preserva a medição anterior, migração 20260906T2124) e o resultado declara."""
+    from app import objetos  # adiado: o worker importa este módulo mesmo sem Garage configurado
+
+    if dia:
+        try:
+            d = datetime.date.fromisoformat(dia)
+        except ValueError as e:
+            raise ValueError(f"dia deve ser AAAA-MM-DD, recebido {dia!r}") from e
+    else:
+        d = datetime.datetime.now(datetime.UTC).date()
+    with ctx.db() as cur:
+        cur.execute("SELECT plat.uso_tenants_ativos() AS id")
+        tenants = [r["id"] for r in cur.fetchall()]
+        cur.execute("SELECT * FROM plat.uso_buckets_listar()")
+        buckets = {r["tenant_id"]: r["bucket_id"] for r in cur.fetchall()}
+    admin = objetos._admin() if buckets else None
+    medidos, sem_bucket, garage_falhou = 0, 0, 0
+    for i, tenant_id in enumerate(tenants):
+        bytes_bucket = None
+        if tenant_id in buckets:
+            try:
+                bytes_bucket = int(admin.info_bucket(buckets[tenant_id]).get("bytes", 0))
+            except Exception as e:  # noqa: BLE001 — Garage fora não derruba a medição dos demais
+                ctx.log("AVISO", f"Garage não mediu o bucket do inquilino {tenant_id}: {str(e)[:200]}")
+                garage_falhou += 1
+        else:
+            sem_bucket += 1
+        with ctx.db() as cur:
+            cur.execute("SELECT plat.uso_medir(%s, %s, %s) AS m", (tenant_id, d, bytes_bucket))
+        medidos += 1
+        if medidos % 10 == 0 or medidos == len(tenants):
+            ctx.progresso(round(100 * medidos / max(1, len(tenants))), f"{medidos}/{len(tenants)} inquilinos")
+    return {"dia": d.isoformat(), "inquilinos": medidos, "sem_bucket": sem_bucket, "garage_falhou": garage_falhou}
+
+
 PERIODICOS: list[tuple[str, str, str, dict]] = [
     ("expurgo diário", "30 3 * * *", "jobs.expurgo", {}),
     ("sessões vencidas", "0 * * * *", "jobs.sessoes_expurgar", {}),
     ("manutenção semanal", "0 4 * * 0", "jobs.manutencao_analyze", {}),
+    ("medição de uso diária", "47 3 * * *", "jobs.uso_medir", {}),
 ]

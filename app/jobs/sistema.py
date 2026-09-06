@@ -37,7 +37,9 @@ def enfileirar(tenant_id: int, tipo: str, parametros: dict, usuario_id: int | No
         )
         r = cur.fetchone()
         if r["hoje"] >= r["cota"]:
-            raise ErroServico(413, "cota_jobs_dia", f"cota diária de jobs do inquilino esgotada ({r['cota']})",
+            # 429 como em app/jobs/servico.py::criar (item L0-07-c-cotas-uso), com uso atual e limite
+            raise ErroServico(429, "cota_jobs_dia",
+                              f"cota diária de jobs esgotada: uso atual {r['hoje']} de {r['cota']} jobs hoje",
                               {"cota": r["cota"], "hoje": r["hoje"]})
         if r["pendentes"] >= PENDENTES_MAX:
             raise ErroServico(429, "fila_cheia",

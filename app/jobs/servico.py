@@ -124,7 +124,10 @@ def criar(sessao: Sessao, tipo: str, parametros, prioridade: int = 5, agendado_p
                     "(SELECT count(*) FROM plat.job WHERE estado = 'pendente') AS pendentes", (sessao.tenant_id,))
         r = cur.fetchone()
         if r["hoje"] >= r["cota"]:
-            raise ErroServico(413, "cota_jobs_dia", f"cota diária de jobs do inquilino esgotada ({r['cota']})",
+            # 429 (não 413): cota de TAXA diária, não de tamanho — portão do item L0-07-c-cotas-uso; a
+            # mensagem diz o uso atual e o limite, como toda recusa de cota da plataforma
+            raise ErroServico(429, "cota_jobs_dia",
+                              f"cota diária de jobs esgotada: uso atual {r['hoje']} de {r['cota']} jobs hoje",
                               {"cota": r["cota"], "hoje": r["hoje"]})
         if r["pendentes"] >= PENDENTES_MAX:
             raise ErroServico(429, "fila_cheia",

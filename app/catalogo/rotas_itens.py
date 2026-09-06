@@ -570,7 +570,9 @@ def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteu
             r = cur.fetchone()
             if r["n"] >= r["cota"]:
                 raise ErroAPI(
-                    413, "cota_itens", f"cota de itens do inquilino esgotada ({r['cota']})", {"cota": r["cota"]}
+                    413, "cota_itens",
+                    f"cota de itens esgotada: uso atual {r['n']} de {r['cota']} itens",
+                    {"cota": r["cota"], "uso": r["n"]},
                 )
             _pasta_existe(cur, corpo.pasta_id)
             cats = _categorias_existem(cur, corpo.categorias)
