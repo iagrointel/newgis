@@ -476,6 +476,40 @@ próprios; falta só o item na varredura genérica. Ver `docs/PARIDADE.md` e `la
 | sha | mensagem |
 |---|---|
 | (este) | Metadado ISO 19139 por item e catálogo externo OGC API Records (item L0-09-metadado-catalogo) |
+## turno 3, setembro de 2026 (itens L3-01-a-modelo-dado e L3-01-b-unidades: motor multicritério — modelo, proveniência e unidade de análise)
+
+Migração `044_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+editável) e `amc_modelo_versao` (toda versão que já existiu, imutável para a aplicação por gatilho), `amc_conjunto_unidade`
+e `amc_unidade`, `amc_execucao` (proveniência congelada), `amc_fator_bruto` e `amc_resultado` — linhas por (execução,
+unidade, fator), nunca uma coluna por fator. `amc_resultado` tem `CHECK` que impede unidade vetada de carregar número na
+escala sem motivo escrito.
+
+O modelo é um documento JSON validado contra `docs/esquemas/amc_modelo.v1.json` (Draft 2020-12) mais três regras que o
+esquema não expressa; a versão dele é o sha256 do JSON canônico (`sort_keys=True`, `separators=(",", ":")`,
+`ensure_ascii=False`, UTF-8). Modelo inválido devolve 422 `modelo_invalido` com TODAS as violações, cada uma com cláusula,
+caminho e frase em português. `scripts/amc_hash_independente.py` recomputa o mesmo hash sem importar o módulo da
+aplicação, tanto de um arquivo quanto de todas as linhas gravadas de um inquilino.
+
+18 rotas em `/api/amc` (privilégio `analise.amc`, já no vocabulário): modelos (criar, listar, ler, editar, versões,
+apagar, validar sem gravar), conjuntos de unidades (criar, listar, ler, unidades paginadas em GeoJSON, apagar) e
+execuções (criar, listar, ler, resultados, apagar). Conjunto de grade nasce como job `amc.gerar_unidades`; conjunto de
+feições é síncrono e preserva o id do usuário.
+
+Medido (`tests/medidas/L3-01-b.json`, `PLAT_GRAVAR_MEDIDAS=1 pytest tests/api/amc/test_unidades.py -m lento`): grade
+quadrada de 250 m sobre 2.000 km² = **32.374 células em 1,14 s** (teto do portão: 60 s), com desvio de **1,175 %** da
+contagem teórica calculada por fora com shapely/pyproj (teto: 2 %). Grade de 100 m sobre 2.500 km² = **250.986 células
+em 8,61 s**, em 3 faixas, ocupando **186 MB** de tabela e índices. **1 milhão de células NÃO foi gerado** — `/mnt/pgdata`
+está a 99 % com 13 GB livres —; a projeção linear (34,3 s e ~741 MB) está gravada com `EXTRAPOLADO` no nome do campo.
+
+Refutações escritas como teste: editar um modelo já executado cria versão nova e a execução antiga continua apontando
+para a versão antiga, com o resultado inalterado (`test_refutacao_editar_modelo_executado_nao_muda_a_execucao_nem_o_resultado`);
+área que cruza duas zonas UTM é aceita com CRS único e distorção de área DECLARADA na ficha, nunca escondida; contagem e
+área total conferidas contra pyproj/shapely fora do banco; A não lê modelo, conjunto, execução nem resultado de B — 11
+rotas por id direto e as seis tabelas pela role da aplicação com o contexto do outro inquilino.
+
+45 testes novos (`tests/unit/test_amc_esquema.py`, `tests/unit/test_amc_crs.py`, `tests/api/amc/`), verdes; a varredura
+cruzada do OpenAPI cobre as 18 rotas novas (`tests/api/cruzado_casos.py`). ADR
+`docs/adr/0016-motor-amc-modelo-e-unidades.md`.
 
 ## turno 3, setembro de 2026 (item L0-08-d-ldap: LDAP/Active Directory como provedor de login externo)
 
