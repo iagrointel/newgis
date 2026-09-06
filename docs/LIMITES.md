@@ -125,3 +125,18 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `LDAP_TIMEOUT_S` | `5` | connect_timeout e receive_timeout do ldap3 (bind de serviço e bind do usuário) |
 | `LDAP_BUSCA_MAX` | `1` | a busca por login casa EXATAMENTE 1 entrada; 0 ou 2+ = credenciais inválidas |
 | `LDAP_IMPORTAR_MAX` | `2000` | tamanho máximo de uma importação de grupo em massa (POST /api/org/ldap/importar) |
+
+## motor multicritério (L3-01-a/b; ADR 0016, decisões A1/A3/A7 do L3L6_CONCEITO). Os tetos de unidade e de
+
+| nome | valor | explicação |
+|---|---|---|
+| `AMC_LADO_M_MIN` | `10.0` | abaixo disso a grade deixa de ser unidade de análise e vira pixel |
+| `AMC_LADO_M_MAX` | `100000.0` | 100 km: célula maior que isto não cabe em nenhuma zona UTM sem distorcer |
+| `AMC_AREA_ESTUDO_KM2_MAX` | `2000000.0` | ~1/4 do Brasil: acima disso a zona UTM única do centróide perde sentido |
+| `AMC_UNIDADES_MAX` | `1000000` | unidades por conjunto (grade ou feições) |
+| `AMC_FEICOES_INLINE_MAX` | `20000` | feições por envio síncrono de conjunto do tipo 'feicoes' |
+| `AMC_MODELOS_POR_INQUILINO` | `500` | modelos vivos (apagado_em IS NULL) por inquilino |
+| `AMC_CONJUNTOS_POR_INQUILINO` | `200` | conjuntos de unidades por inquilino |
+| `AMC_VERSOES_POR_MODELO` | `500` | versões de um modelo (cada edição cria uma; imutáveis, nunca apagadas) |
+| `AMC_UNIDADES_PAGINA_MAX` | `5000` | unidades por página em GET /api/amc/conjuntos/{id}/unidades |
+| `AMC_RESULTADOS_PAGINA_MAX` | `5000` | linhas por página em GET /api/amc/execucoes/{id}/resultados |
