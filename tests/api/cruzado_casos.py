@@ -8,6 +8,8 @@ import secrets
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from tests.api.amc import exemplos as amc_exemplos
+
 PREFIXO = "zt-cruzado-"
 PADRAO = frozenset({401, 403, 404})
 
@@ -46,6 +48,9 @@ class Preparacao:
     link_b: dict = field(default_factory=dict)  # L0-03: link por token de B (token em claro só aqui)
     categoria_b: dict = field(default_factory=dict)  # L0-03: categoria de B
     fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
+    amc_modelo_b: dict = field(default_factory=dict)      # L3-01-a: modelo multicritério de B
+    amc_conjunto_b: dict = field(default_factory=dict)    # L3-01-b: conjunto de unidades de B
+    amc_execucao_b: dict = field(default_factory=dict)    # L3-01-a: execução de B (proveniência congelada)
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -53,6 +58,8 @@ class Preparacao:
         marcas = [self.usuario_b["login"], self.grupo_b["nome"], self.papel_b["nome"], self.token_b["prefixo"], "demo2"]
         if self.item_b:
             marcas += [self.item_b["titulo"], self.pasta_b["nome"]]
+        if self.amc_modelo_b:
+            marcas += [self.amc_modelo_b["versao_hash"], self.amc_conjunto_b["nome"]]
         return marcas
 
 
@@ -107,9 +114,33 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_a.get("/api/acervo?limite=1")
     assert r.status_code == 200, r.text
     fonte_acervo = r.json()["itens"][0]["fonte_id"]
+    # L3-01-a/b: modelo, conjunto de unidades e execução de B (a camada do modelo é o item de B, que já existe)
+    definicao = amc_exemplos.modelo_sem_camada_externa()
+    definicao["nome"] = f"{PREFIXO}amc-{sufixo}"
+    definicao["fatores"][0]["camada"] = {"tipo": "item", "id": item_b["id"], "banda": 1}
+    r = sessao_b.post("/api/amc/modelos", json={"definicao": definicao})
+    assert r.status_code == 201, r.text
+    amc_modelo_b = r.json()
+    r = sessao_b.post("/api/amc/conjuntos", json={"nome": f"{PREFIXO}amc-conj-{sufixo}", "tipo": "feicoes",
+                                                  "feicoes": amc_feicoes("b1")})
+    assert r.status_code == 201, r.text
+    amc_conjunto_b = r.json()
+    r = sessao_b.post("/api/amc/execucoes", json={"modelo_id": amc_modelo_b["id"],
+                                                  "conjunto_id": amc_conjunto_b["id"]})
+    assert r.status_code == 201, r.text
+    amc_execucao_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo)
+                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, amc_modelo_b=amc_modelo_b,
+                      amc_conjunto_b=amc_conjunto_b, amc_execucao_b=amc_execucao_b)
+
+
+def amc_feicoes(*ids: str) -> dict:
+    """FeatureCollection mínima para um conjunto de unidades do tipo 'feicoes' (quadrados de ~1 km em Goiás)."""
+    return {"type": "FeatureCollection", "features": [
+        {"type": "Feature", "id": i, "properties": {},
+         "geometry": amc_exemplos.area_retangulo(-49.30 + 0.02 * k, -16.70, 0.01, 0.01)}
+        for k, i in enumerate(ids)]}
 
 
 def _no_categoria(no: dict) -> dict:
@@ -126,6 +157,12 @@ def desfazer(p: Preparacao) -> None:
         arvore = p.sessao_b.get("/api/categorias").json()["arvore"]
         restante = [_no_categoria(n) for n in arvore if n["id"] != p.categoria_b["id"]]
         p.sessao_b.put("/api/categorias", json={"arvore": restante})
+    if p.amc_execucao_b:
+        p.sessao_b.delete(f"/api/amc/execucoes/{p.amc_execucao_b['id']}")
+    if p.amc_conjunto_b:
+        p.sessao_b.delete(f"/api/amc/conjuntos/{p.amc_conjunto_b['id']}")
+    if p.amc_modelo_b:
+        p.sessao_b.delete(f"/api/amc/modelos/{p.amc_modelo_b['id']}")
     if p.item_b:
         p.sessao_b.put(f"/api/itens/{p.item_b['id']}", json={"protegido": False})
         p.sessao_b.delete(f"/api/itens/{p.item_b['id']}?cascata=true")
@@ -560,6 +597,59 @@ CASOS: dict[tuple[str, str], Caso] = {
         # se por acaso ficou habilitado apontando para um glauth de teste já derrubado → 503; nunca um 2xx
         # aqui (não há credencial de bind válida contra nenhum diretório real neste teste)
         proprio=True, aceita=frozenset({409, 503}),
+    ),
+    # ---- L3-01-a/b motor multicritério: modelo, conjunto de unidades e execução de B
+    ("POST", "/api/amc/modelos/validar"): Caso(
+        lambda p: "/api/amc/modelos/validar",
+        lambda p: {"definicao": amc_exemplos.modelo_sem_camada_externa()},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/amc/modelos"): Caso(
+        lambda p: "/api/amc/modelos?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("POST", "/api/amc/modelos"): Caso(
+        lambda p: "/api/amc/modelos", lambda p: {"definicao": amc_exemplos.modelo_sem_camada_externa()},
+        proprio=True, aceita=frozenset({201}), verificar=_so_a,
+        limpar=_apagar_criado(("DELETE", "/api/amc/modelos/{id}")),
+    ),
+    ("GET", "/api/amc/modelos/{modelo_id}"): Caso(lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}"),
+    ("PUT", "/api/amc/modelos/{modelo_id}"): Caso(
+        lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}",
+        lambda p: {"definicao": amc_exemplos.modelo_sem_camada_externa()},
+    ),
+    ("DELETE", "/api/amc/modelos/{modelo_id}"): Caso(lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}"),
+    ("GET", "/api/amc/modelos/{modelo_id}/versoes"): Caso(
+        lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}/versoes"
+    ),
+    ("GET", "/api/amc/modelos/{modelo_id}/versoes/{versao_hash}"): Caso(
+        lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}/versoes/{p.amc_modelo_b['versao_hash']}"
+    ),
+    ("GET", "/api/amc/conjuntos"): Caso(
+        lambda p: "/api/amc/conjuntos?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("POST", "/api/amc/conjuntos"): Caso(
+        lambda p: "/api/amc/conjuntos",
+        lambda p: {"nome": f"{PREFIXO}amc-conj-a", "tipo": "feicoes", "feicoes": amc_feicoes("a1")},
+        proprio=True, aceita=frozenset({201}), verificar=_so_a,
+        limpar=_apagar_criado(("DELETE", "/api/amc/conjuntos/{id}")),
+    ),
+    ("GET", "/api/amc/conjuntos/{conjunto_id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.amc_conjunto_b['id']}"),
+    ("DELETE", "/api/amc/conjuntos/{conjunto_id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.amc_conjunto_b['id']}"),
+    ("GET", "/api/amc/conjuntos/{conjunto_id}/unidades"): Caso(
+        lambda p: f"/api/amc/conjuntos/{p.amc_conjunto_b['id']}/unidades?limite=5"
+    ),
+    ("GET", "/api/amc/execucoes"): Caso(
+        lambda p: "/api/amc/execucoes?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    # a execução aponta modelo E conjunto de B: A não pode criar execução sobre o que não é dela
+    ("POST", "/api/amc/execucoes"): Caso(
+        lambda p: "/api/amc/execucoes",
+        lambda p: {"modelo_id": p.amc_modelo_b["id"], "conjunto_id": p.amc_conjunto_b["id"]},
+    ),
+    ("GET", "/api/amc/execucoes/{execucao_id}"): Caso(lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}"),
+    ("DELETE", "/api/amc/execucoes/{execucao_id}"): Caso(lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}"),
+    ("GET", "/api/amc/execucoes/{execucao_id}/resultados"): Caso(
+        lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}/resultados"
     ),
 }
 
