@@ -19,6 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 AMBIENTES = ("producao", "dev")
 NIVEIS = ("DEBUG", "INFO", "WARNING", "ERROR")
 _HEX64 = re.compile(r"^[0-9a-fA-F]{64}$")
+POOL_MIN_PADRAO = 1
+POOL_MAX_PADRAO = 8
 
 
 class ErroConfiguracao(RuntimeError):
@@ -66,6 +68,24 @@ class Settings:
     PLAT_SCHEMA_TRABALHO: str
     PLAT_CANAL_JOB: str
     PLAT_CANAL_WORKER: str
+    # SMTP de instalação (item L0-07-d-smtp-convites; ADR 0013): padrão de TODOS os inquilinos que não têm
+    # override próprio em tenant.config.smtp (app/correio/config.py::smtp_efetivo). Nenhuma chave é obrigatória:
+    # sem PLAT_SMTP_HOST a instalação simplesmente não tem SMTP — o inquilino que precisar configura o dele, e
+    # quem não configurar nada cai no caminho manual (senha temporária mostrada ao admin, já existente).
+    PLAT_SMTP_HOST: str | None
+    PLAT_SMTP_PORTA: int
+    PLAT_SMTP_TLS: bool
+    PLAT_SMTP_USUARIO: str | None
+    PLAT_SMTP_SENHA: str | None
+    PLAT_SMTP_REMETENTE: str | None
+    PLAT_SMTP_ROTULO: str | None
+    # tamanho do pool psycopg2 (app/db.py). O padrão 1/8 reproduz bit a bit o que rodava antes desta chave
+    # existir: produção não muda em nada. A chave existe para as TRILHAS do laço, que rodam dezenas de
+    # instâncias da app contra o MESMO Postgres compartilhado da casa (max_connections=100, 3 reservadas
+    # ao superusuário). Vinte trilhas a 8 conexões pedem 160 — mais do que o servidor inteiro tem. Cada
+    # .env de trilha grava PLAT_POOL_MAX=2 (ver laco/trilha_ambiente.sh).
+    PLAT_POOL_MIN: int
+    PLAT_POOL_MAX: int
 
     @property
     def producao(self) -> bool:
@@ -99,6 +119,18 @@ def _inteiro(valores: Mapping[str, str | None], chave: str, padrao: int, minimo:
     if n < minimo:
         raise ErroConfiguracao(f"{chave} inválida: {n}; exige inteiro >= {minimo}")
     return n
+
+
+def _booleano(valores: Mapping[str, str | None], chave: str, padrao: bool) -> bool:
+    v = _opcional(valores, chave)
+    if v is None:
+        return padrao
+    baixo = v.strip().lower()
+    if baixo in ("1", "true", "verdadeiro", "sim"):
+        return True
+    if baixo in ("0", "false", "falso", "nao", "não"):
+        return False
+    raise ErroConfiguracao(f"{chave} inválida: {v!r}; exige verdadeiro/falso (1/0, true/false)")
 
 
 def _dsn_worker(valores: Mapping[str, str | None], papel_worker: str) -> str | None:
@@ -143,6 +175,10 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         logging.getLogger("plat.settings").warning("PLAT_LOG_NIVEL=DEBUG não vale em producao; rebaixado para INFO")
         nivel = "INFO"
     schema = _identificador(valores, "PLAT_SCHEMA", "plat")
+    pool_min = _inteiro(valores, "PLAT_POOL_MIN", POOL_MIN_PADRAO, 1)
+    pool_max = _inteiro(valores, "PLAT_POOL_MAX", POOL_MAX_PADRAO, 1)
+    if pool_max < pool_min:
+        raise ErroConfiguracao(f"PLAT_POOL_MAX inválida: {pool_max}; exige >= PLAT_POOL_MIN ({pool_min})")
     # o papel do worker segue o schema por convenção (item L7-31): plat -> plat_worker, plat_homolog ->
     # plat_homolog_worker — é a MESMA troca que db/reescrever_homolog.py faz nas migrações.
     return Settings(
@@ -178,6 +214,15 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SCHEMA_TRABALHO=_identificador(valores, "PLAT_SCHEMA_TRABALHO", "plat_trabalho"),
         PLAT_CANAL_JOB=_identificador(valores, "PLAT_CANAL_JOB", "plat_job"),
         PLAT_CANAL_WORKER=_identificador(valores, "PLAT_CANAL_WORKER", "plat_worker"),
+        PLAT_SMTP_HOST=_opcional(valores, "PLAT_SMTP_HOST"),
+        PLAT_SMTP_PORTA=_inteiro(valores, "PLAT_SMTP_PORTA", 587, 1),
+        PLAT_SMTP_TLS=_booleano(valores, "PLAT_SMTP_TLS", True),
+        PLAT_SMTP_USUARIO=_opcional(valores, "PLAT_SMTP_USUARIO"),
+        PLAT_SMTP_SENHA=_opcional(valores, "PLAT_SMTP_SENHA"),
+        PLAT_SMTP_REMETENTE=_opcional(valores, "PLAT_SMTP_REMETENTE"),
+        PLAT_SMTP_ROTULO=_opcional(valores, "PLAT_SMTP_ROTULO"),
+        PLAT_POOL_MIN=pool_min,
+        PLAT_POOL_MAX=pool_max,
     )
 
 
