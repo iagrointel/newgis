@@ -18,6 +18,15 @@ Environment=PYTHONNOUSERSITE=1
 # se souber o caminho. Isolamento por-unidade de verdade pediria DynamicUser= (usuário efêmero por
 # serviço); fora de escopo aqui por reescrever a dono de toda a árvore do repositório. Ver docs/SEGURANCA.md §1.
 LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
+# PLAT_SECRET_ANTERIOR (item L7-19): dupla-chave de rotação, 24h. O arquivo TEM de existir sempre
+# (LoadCredential= falha a subida se o caminho não existir) — install.sh cria vazio quando não há rotação
+# em curso; settings.py trata vazio como ausente. Nunca em Environment=/argv, aqui incluído.
+LoadCredential=PLAT_SECRET_ANTERIOR:/etc/plat/segredos/PLAT_SECRET_ANTERIOR
+# PLAT_DSN (senha da role plat_app) e PLAT_GARAGE_ADMIN_TOKEN (bearer da Admin API do Garage, :3903): mesmo
+# mecanismo, mesma ACL medida acima. PLAT_GARAGE_ADMIN_TOKEN pode legitimamente estar vazio (instalação sem
+# admin_token configurado ainda) — settings.py trata arquivo vazio como chave opcional ausente.
+LoadCredential=PLAT_DSN:/etc/plat/segredos/PLAT_DSN
+LoadCredential=PLAT_GARAGE_ADMIN_TOKEN:/etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN
 ExecStart=APP_DIR/venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port PORTA --workers 2 --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-access-log
 Restart=on-failure
 RestartSec=3
