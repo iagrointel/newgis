@@ -35,6 +35,8 @@ PAGINAS = {
     "/redefinir-senha": "redefinir_senha.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
+    # --- revisão da geocodificação de tabela (L2-11-a-geocodificacao-csv)
+    "/geocodificacoes/{geocodificacao_id}": "geocodificacao.html",
 }
 router = APIRouter()
 

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Revisão da geocodificação · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/vendor/maplibre-gl-4.7.1.css">
+<link rel="stylesheet" href="/static/mapa.css">
+<link rel="stylesheet" href="/static/geocodificacao.css">
+</head>
+<body class="tela instrumento geocodificacao">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <div class="linha-ferramentas" id="ferramentas">
+      <h1>Revisão da geocodificação</h1>
+      <plat-aviso id="aviso"></plat-aviso>
+    </div>
+    <section id="resumo" class="geo-resumo" aria-label="resumo do lote"></section>
+    <div class="geo-corpo">
+      <section class="geo-lista" aria-label="linhas">
+        <div class="geo-filtros" id="filtros"></div>
+        <table class="tabela" id="tabela">
+          <thead><tr>
+            <th>linha</th><th>endereço do arquivo</th><th>estado</th><th>tipo de acerto</th>
+            <th>pontuação</th><th>origem</th><th>motivo</th>
+          </tr></thead>
+          <tbody id="linhas"></tbody>
+        </table>
+      </section>
+      <section class="geo-mapa" aria-label="mapa de revisão">
+        <div id="mapa" role="application" aria-label="mapa"></div>
+        <div class="mapa-painel geo-instrucao" id="instrucao"></div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="/static/vendor/maplibre-gl-4.7.1.js"></script>
+<script src="/static/vendor/pmtiles-4.5.0.js"></script>
+<script type="module" src="/static/js/geocodificacao/revisao.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+/* plat · tela de revisão da geocodificação (item L2-11-a-geocodificacao-csv). Lista à esquerda, mapa à
+   direita; em tela estreita a lista fica em cima e o mapa embaixo. Cores só por token (estilo/tokens.css). */
+.geocodificacao .geo-corpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.geocodificacao .geo-lista { overflow: auto; max-height: 62vh; }
+.geocodificacao .geo-mapa { position: relative; min-height: 62vh; }
+.geocodificacao .geo-mapa #mapa { position: absolute; inset: 0; }
+.geocodificacao .geo-instrucao { position: absolute; left: 8px; bottom: 8px; right: 8px; max-width: none; }
+.geocodificacao .geo-cartoes { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0; }
+.geocodificacao .geo-cartao { display: flex; flex-direction: column; padding: 6px 12px;
+  border: 1px solid var(--i-linha); border-radius: 4px; min-width: 84px; }
+.geocodificacao .geo-cartao-valor { font-size: 1.4rem; font-weight: 600; }
+.geocodificacao .geo-cartao-rotulo { color: var(--i-texto-fraco); font-size: 0.82rem; }
+.geocodificacao .geo-tipos, .geocodificacao .geo-proveniencia { color: var(--i-texto-fraco); font-size: 0.86rem; }
+.geocodificacao .geo-filtros { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.geocodificacao .geo-filtros button.ativo { border-color: var(--i-acento); }
+.geocodificacao #linhas tr { cursor: pointer; }
+.geocodificacao #linhas tr.selecionada { outline: 2px solid var(--i-acento); outline-offset: -2px; }
+@media (max-width: 1000px) { .geocodificacao .geo-corpo { grid-template-columns: 1fr; } }

@@ -1141,3 +1141,67 @@ Três coisas a saber antes de usar:
 WFS 1.0/1.1 (só 2.0.0), filtro CQL2 ou `Filter` OGC (item L6-02-n), agendamento da reexecução da cópia (item
 L6-02-k), desenho da camada referenciada no mapa (item L6-02-b), escrita de volta (WFS-T) e negociação de CRS
 da Parte 2 do OGC API — `/items` é sempre lido em CRS84.
+
+## 23. Geocodificar uma planilha de endereços (item L2-11-a-geocodificacao-csv)
+
+Uma planilha de endereços (CSV, TXT ou XLSX) vira camada de pontos do inquilino em quatro passos: enviar o
+arquivo, confirmar de qual coluna sai cada campo do endereço, esperar o job e revisar o que ficou pendente.
+O motor é o do capítulo 20 — mesmo CNEFE 2022, mesma hierarquia de recuo, mesmo tipo de acerto.
+
+### 23.1 Passo a passo
+
+1. **Enviar o arquivo** — `/uploads` (capítulo do upload retomável) ou `POST /api/arquivos`, e registrar o
+   item `arquivo` com `POST /api/itens`.
+2. **Ver as colunas** — `POST /api/geocodificacoes/colunas` com `{"arquivo_id": "..."}`. Devolve os nomes de
+   coluna do arquivo e um `mapeamento_proposto` por nome de cabeçalho (Logradouro, Nº, Cidade, UF, CEP,
+   "endereço completo"...). A proposta é palpite; quem decide é quem confirma.
+3. **Criar o lote** — `POST /api/geocodificacoes` com `{"arquivo_id", "titulo", "mapeamento"}`. O mapeamento
+   é `{campo: nome da coluna}` e os campos aceitos são `endereco`, `logradouro`, `numero`, `bairro`,
+   `municipio`, `uf`, `cep`. Mapear só `numero` e `uf` é recusado com 422: nenhum dos dois localiza nada.
+   Responde 202 com `geocodificacao_id` e `job_id`.
+4. **Acompanhar** — `GET /api/geocodificacoes/{id}` traz estado, contagens (`resolvidas`, `pendentes`,
+   `malformadas`, `manuais`), o `resumo` com a contagem por tipo de acerto e o tempo medido, e a ficha da
+   base de endereços usada. `GET /api/geocodificacoes/{id}/linhas?estado=pendente` lista as linhas.
+5. **Revisar** — tela `/geocodificacoes/{id}`: lista à esquerda, mapa à direita. Clicar numa linha põe um
+   marcador arrastável; soltar o marcador grava a coordenada com `origem: manual`
+   (`PUT /api/geocodificacoes/{id}/linhas/{n}`). O botão "refazer só as pendentes" chama
+   `POST /api/geocodificacoes/{id}/regeocodificar`, que reprocessa apenas o que não está resolvido e nunca
+   toca no que foi arrastado à mão.
+
+### 23.2 O que a camada publicada carrega
+
+Além dos campos do endereço lidos do arquivo, cada ponto tem `geo_score` (0-100), `geo_tipo_acerto` (o mesmo
+vocabulário do capítulo 20), `geo_origem` (`automatica` ou `manual`), `geo_municipio_cod` e `geo_avisos`.
+A `dados.procedencia` do item traz o sha256 do arquivo de origem, o método, o comando de reexecução e, em
+`base_enderecos`, a versão da base: quais UFs do CNEFE estão instaladas, quantos endereços cada uma tem, o
+sha256 do zip do IBGE e a data da instalação.
+
+Ponto com `geo_tipo_acerto = aproximado_no_municipio` está no CENTRO DO MUNICÍPIO, não no endereço. Ele é
+publicado assim de propósito, marcado e com aviso, e a tela mostra um alerta com a contagem — o que não pode
+existir é um ponto no centróide sem esse rótulo.
+
+### 23.3 Três estados de linha
+
+- **resolvida** — o motor achou um lugar; tem coordenada, pontuação e tipo de acerto.
+- **pendente** — problema de COBERTURA: a UF não está instalada, o logradouro não casou, ou o CEP contradiz o
+  município informado. Melhora instalando UF e mandando refazer.
+- **malformada** — problema do ARQUIVO: a linha tem menos colunas do que o cabeçalho, está em branco, ou não
+  sobrou nenhum campo de endereço. Não melhora com base melhor; a planilha é que precisa de conserto. O
+  motivo vem escrito em português na própria linha.
+
+Linha ruim não derruba o lote: o job conclui e publica a camada com o que deu certo.
+
+### 23.4 Limites desta fatia
+
+- **Só as UFs instaladas existem.** Nesta máquina, Roraima. Endereço de outra UF vira linha pendente.
+- **Tetos**: 32 MiB de arquivo e 200 mil linhas de dado (`docs/LIMITES.md`). Acima disso a criação do lote
+  responde 413 (tamanho) ou o job para com o motivo (linhas), mantendo o que já gravou.
+- **A entrada é um arquivo, não uma tabela já importada.** Geocodificar uma tabela que já está no catálogo
+  depende do item `L0-04-d`; a rota é a mesma quando ele fechar.
+- **O mapa-base local cobre Guarulhos-SP** (item L2-01-a). Fora dali a tela desenha os pontos sobre o fundo,
+  sem imagem de referência, e escreve isso na barra de instrução. O arrasto grava a coordenada certa
+  igualmente.
+- **Sem geocodificação reversa em lote** (coluna de coordenada -> endereço): o motor tem `POST /api/reverso`,
+  o lote não o usa.
+- **CSV latin-1 muito curto** pode ser lido com acento errado (a codificação é adivinhada). O endereço ainda
+  casa, porque a comparação no banco dobra acento com `unaccent`.

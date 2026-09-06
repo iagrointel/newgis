@@ -1,0 +1,62 @@
+{
+ "item": "L2-11-a",
+ "medidas": {
+  "lote_1000_universo": {
+   "valor": 1000,
+   "unidade": "endereços",
+   "comando": "test_1000_enderecos_acerto_numero_exato_a_50_m"
+  },
+  "lote_1000_acerto_numero_exato_50m": {
+   "valor": 97.5,
+   "unidade": "%",
+   "comando": "test_1000_enderecos_acerto_numero_exato_a_50_m"
+  },
+  "lote_1000_fora_do_municipio": {
+   "valor": 0.0,
+   "unidade": "%",
+   "comando": "test_1000_enderecos_acerto_numero_exato_a_50_m"
+  },
+  "lote_1000_erro_mediano": {
+   "valor": 0.0,
+   "unidade": "m",
+   "comando": "test_1000_enderecos_acerto_numero_exato_a_50_m"
+  },
+  "lote_1000_resolvidas": {
+   "valor": 1000,
+   "unidade": "linhas",
+   "comando": "test_1000_enderecos_acerto_numero_exato_a_50_m"
+  },
+  "lote_1000_pendentes": {
+   "valor": 0,
+   "unidade": "linhas",
+   "comando": "test_1000_enderecos_acerto_numero_exato_a_50_m"
+  },
+  "lote_1000_segundos_no_job": {
+   "valor": 84.19,
+   "unidade": "s",
+   "comando": "test_1000_enderecos_tempo_medido"
+  },
+  "lote_1000_segundos_por_1000": {
+   "valor": 84.2,
+   "unidade": "s/1000",
+   "comando": "test_1000_enderecos_tempo_medido"
+  },
+  "lote_1000_segundos_de_parede": {
+   "valor": 88.9,
+   "unidade": "s",
+   "comando": "test_1000_enderecos_tempo_medido"
+  },
+  "lote_1000_arquivo_bytes": {
+   "valor": 49181,
+   "unidade": "bytes",
+   "comando": "test_1000_enderecos_tempo_medido"
+  },
+  "lote_1000_cache_taxa_acerto": {
+   "valor": 0.771,
+   "unidade": "fração",
+   "comando": "test_1000_enderecos_tempo_medido"
+  }
+ },
+ "gerado_em": "2026-09-06T16:35:53Z",
+ "git_sha": "90d03c07da0c"
+}

@@ -1,0 +1,41 @@
+{
+ "item": "L0-04-h-exportar",
+ "medidas": {
+  "tempo_por_formato_s": {
+   "valor": {
+    "gpkg": 1.14,
+    "geojson": 1.59,
+    "shapefile": 1.32,
+    "csv": 0.79,
+    "xlsx": 1.57,
+    "kml": 2.08,
+    "kmz": 2.08,
+    "fgb": 0.8,
+    "gml": 2.34,
+    "dxf": 1.84,
+    "geoparquet": 1.05
+   },
+   "unidade": "s (pedido -> arquivo pronto, 100 mil feições)",
+   "comando": "tests/api/exportacao/test_exportacao.py::test_onze_formatos_da_camada_de_100_mil_feicoes_reabertos_com_a_mesma_contagem"
+  },
+  "feicoes_reabertas_por_formato": {
+   "valor": {
+    "gpkg": 100000,
+    "geojson": 100000,
+    "shapefile": 100000,
+    "csv": 100000,
+    "xlsx": 100000,
+    "kml": 100000,
+    "kmz": 100000,
+    "fgb": 100000,
+    "gml": 100000,
+    "dxf": 100000,
+    "geoparquet": 100000
+   },
+   "unidade": "feições lidas do arquivo baixado",
+   "comando": "ogrinfo -so -al <arquivo> (DuckDB read_parquet no geoparquet)"
+  }
+ },
+ "gerado_em": "2026-09-06T16:40:45Z",
+ "git_sha": "90d03c07da0c"
+}

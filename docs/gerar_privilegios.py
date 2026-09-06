@@ -19,6 +19,8 @@ import psycopg2.extras
 from dotenv import dotenv_values
 
 RAIZ = Path(__file__).resolve().parents[1]
+if str(RAIZ) not in sys.path:  # roda como `python docs/gerar_privilegios.py`, sem PYTHONPATH=.
+    sys.path.insert(0, str(RAIZ))
 DESTINO = RAIZ / "docs" / "PRIVILEGIOS.md"
 PERFIS = ("visualizador", "campo", "editor", "admin")
 ROTULO_PERFIL = {"visualizador": "V", "campo": "C", "editor": "E", "admin": "A"}
@@ -35,7 +37,13 @@ def _dsn() -> str:
 
 
 def _ler_banco() -> tuple[list[dict], dict[str, set[str]]]:
-    con = psycopg2.connect(_dsn(), cursor_factory=psycopg2.extras.RealDictCursor)
+    # CursorSchemaAmbiente, não RealDictCursor: honra PLAT_SCHEMA (make homolog e as bases por trilha do
+    # laco/trilha_ambiente.sh). Sem isto, o gerador lê o schema `plat` de produção mesmo rodando num ambiente
+    # isolado — e numa base de trilha nem lê, dá "permission denied for schema plat" (item L0-04-h). É
+    # no-op quando o schema é o padrão: produção não muda em nada.
+    from app.schema_ambiente import CursorSchemaAmbiente
+
+    con = psycopg2.connect(_dsn(), cursor_factory=CursorSchemaAmbiente)
     try:
         with con.cursor() as cur:
             cur.execute("SELECT nome, grupo, descricao, administrativo FROM plat.privilegio ORDER BY grupo, nome")

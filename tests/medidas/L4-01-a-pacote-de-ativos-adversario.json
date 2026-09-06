@@ -1,0 +1,37 @@
+{
+ "item": "L4-01-a-pacote-de-ativos-adversario",
+ "medidas": {
+  "bytes_do_pacote_ruim": {
+   "valor": 1153314,
+   "unidade": "bytes",
+   "comando": "4000 tipos com grupo inexistente"
+  },
+  "segundos_da_recusa_422": {
+   "valor": 1.2,
+   "unidade": "s",
+   "comando": "POST /api/rede/{id}/pacote"
+  },
+  "pior_latencia_de_saude_durante_a_recusa": {
+   "valor": 0.19,
+   "unidade": "s",
+   "comando": "GET /saude concorrente"
+  },
+  "linhas_do_pacote_valido_grande": {
+   "valor": 150489,
+   "unidade": "linhas",
+   "comando": "10 mil atributos"
+  },
+  "segundos_da_importacao_valida_grande": {
+   "valor": 4.4,
+   "unidade": "s",
+   "comando": "POST pacote"
+  },
+  "pior_latencia_de_saude_durante_importacao_valida": {
+   "valor": 0.16,
+   "unidade": "s",
+   "comando": "GET /saude"
+  }
+ },
+ "gerado_em": "2026-09-06T18:38:02Z",
+ "git_sha": "ded6baf71b78"
+}

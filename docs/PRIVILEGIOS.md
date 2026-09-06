@@ -2,7 +2,7 @@
 
 Gerado de `plat.privilegio` + `plat.perfil_privilegio` (o banco vivo) por `docs/gerar_privilegios.py` (`make privilegios`) — item L0-07-b-papeis-privilegios; não editar à mão. O vocabulário é fechado: toda rota autenticada declara um destes nomes (ou uma composição `a|b`) em `x-privilegio` no OpenAPI, e `plat.tem(privilegio)`/`plat.privilegios_de(usuario_id)` são a única forma de perguntar, em rota e em RLS (ADR 0002 seções 3, 12.1). `app/auth/privilegios.py` espelha esta mesma lista em Python (para cálculo de `perfil_minimo` sem consulta); `tests/api/test_privilegios_declarados.py` prova que os dois batem, nome a nome, teto a teto.
 
-**47 privilégios** em 12 grupos, **20 administrativos** (só entram em papel personalizado com `perfil_minimo = admin`, ou no perfil `admin` inteiro — ADR 0002 seção 3.3).
+**48 privilégios** em 12 grupos, **20 administrativos** (só entram em papel personalizado com `perfil_minimo = admin`, ou no perfil `admin` inteiro — ADR 0002 seção 3.3).
 
 ## Papéis padrão fixos (teto de cada perfil)
 
@@ -12,8 +12,8 @@ Os quatro perfis abaixo são fixos, não são linhas de `plat.papel_personalizad
 |---|---|
 | `visualizador` | 8 |
 | `campo` | 12 |
-| `editor` | 27 |
-| `admin` | 47 |
+| `editor` | 28 |
+| `admin` | 48 |
 
 ## Vocabulário completo
 
@@ -36,6 +36,7 @@ V = visualizador · C = campo · E = editor · A = admin · **adm** = privilégi
 | conteudo | `conteudo.categorias` | gerir categorias do inquilino | **sim** |  |  |  | x |
 | conteudo | `conteudo.criar` | criar, editar e apagar os próprios itens (mapa, app, pasta) | não |  |  | x | x |
 | conteudo | `conteudo.editar_tudo` | editar metadado e dado de qualquer item | **sim** |  |  |  | x |
+| conteudo | `conteudo.exportar` | exportar camada para outros formatos (shapefile, GeoPackage, CSV, ...) | não |  |  | x | x |
 | conteudo | `conteudo.publicar_camada` | publicar camada vetorial hospedada | não |  |  | x | x |
 | conteudo | `conteudo.publicar_raster` | publicar imagem/raster | não |  |  | x | x |
 | conteudo | `conteudo.publicar_tiles` | publicar tiles vetoriais | não |  |  | x | x |

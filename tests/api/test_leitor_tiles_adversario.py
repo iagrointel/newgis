@@ -13,17 +13,20 @@ porque precisam de conexão de superusuário e de um segundo papel, fora do alca
 """
 
 import json
+import secrets
 
 import psycopg2
 import pytest
 
 from tests.api.test_leitor_tiles import (  # noqa: F401  (fixtures usadas por injeção)
+    _admin,
     _schema,
     _tile,
     camadas,
     instalador,
     leitor,
 )
+from tests.api.test_rls import contexto
 
 
 def _conta(cur, c):
@@ -112,3 +115,48 @@ def test_token_amplo_de_a_nao_alcanca_b(env, leitor, camadas):
         assert cur.fetchone()["t"] == a["tenant_id"]
         assert _conta(cur, b) == 0
     leitor.rollback()
+
+
+def test_plat_app_nao_le_o_segredo_nem_forja_a_prova(conexao_plat_app):
+    """Conserto do achado F1: `plat_app` herdava SELECT/EXECUTE de `001_fundacao.sql` (GRANT ... ON ALL
+    TABLES + DEFAULT PRIVILEGES) e conseguia ler `segredo_leitor` e chamar `prova_leitor` de qualquer
+    inquilino — o texto do item promete que só função SECURITY DEFINER lê o segredo. A migração
+    `20260906T1818_leitor_seguranca_padrao` revoga os dois de `plat_app` explicitamente."""
+    con = conexao_plat_app
+    with con.cursor() as cur, pytest.raises(psycopg2.errors.InsufficientPrivilege):
+        cur.execute("SELECT valor FROM plat.segredo_leitor")
+    con.rollback()
+    with con.cursor() as cur, pytest.raises(psycopg2.errors.InsufficientPrivilege):
+        cur.execute("SELECT plat.prova_leitor(1)")
+    con.rollback()
+
+
+def test_camada_preparar_sozinho_nao_habilita_o_leitor(leitor, conexao_plat_app):
+    """Conserto do achado F3: uma camada que passa só por `camada_preparar` (029), sem `camada_tile_garantir`,
+    não pode ficar legível pelo papel de leitura. Antes do conserto a 029 concedia SELECT a `plat_leitor` e o
+    incluía na política ALL — um `SET plat.tenant_id` cru, sem token e sem prova, bastava para ler. Agora
+    `camada_preparar` não concede nada ao leitor: a tentativa falha FECHADA (permissão negada), não aberta."""
+    con = conexao_plat_app
+    with con.cursor() as cur:
+        adm = _admin(con, "demo2")
+    contexto(con, adm["tenant_id"], adm["usuario_id"], "admin")
+    esquema, tabela = "d_demo2", "c_" + secrets.token_hex(8)
+    try:
+        with con.cursor() as cur:
+            cur.execute(f'CREATE TABLE "{esquema}"."{tabela}" '
+                        f'(fid bigserial PRIMARY KEY, nome text, geom geometry(Point, 4326))')
+            cur.execute(f'INSERT INTO "{esquema}"."{tabela}" (nome, geom) VALUES '
+                        f"('sozinha', ST_SetSRID(ST_MakePoint(-47.9, -15.8), 4326))")
+            cur.execute("SELECT plat.camada_preparar(%s, %s, 4326, 'Point', %s)",
+                        (esquema, tabela, adm["usuario_id"]))
+        con.commit()
+
+        with leitor.cursor() as cur:
+            cur.execute("SELECT set_config('plat.tenant_id', %s, true)", (str(adm["tenant_id"]),))
+            with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+                cur.execute(f'SELECT count(*) FROM "{esquema}"."{tabela}"')
+        leitor.rollback()
+    finally:
+        with con.cursor() as cur:
+            cur.execute(f'DROP TABLE IF EXISTS "{esquema}"."{tabela}"')
+        con.commit()
