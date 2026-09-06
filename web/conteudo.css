@@ -163,3 +163,8 @@ button.favorito:hover { color: var(--atencao); }
   .vista-lista .linha-item { grid-template-columns: auto minmax(0, 1fr); }
   .vista-lista .linha-item .mini, .vista-lista .linha-item .mini-icone { display: none; }
 }
+
+/* compartilhar: dependência abaixo do nível escolhido (item L0-03-e) */
+.compartilhar .dependencias tr.abaixo td { background: rgba(210, 153, 34, .08); }
+.compartilhar .dependencias tr.oculto td { font-style: italic; }
+.compartilhar .dependencias .marcador.atencao { font-size: .8rem; margin-left: var(--e1); }

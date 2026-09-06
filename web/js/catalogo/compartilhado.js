@@ -2,7 +2,7 @@
    itens incluídos em contexto só de leitura; 404 (revogado/inexistente) e 410 (expirado) viram mensagem com o código.
    Sem sessão, sem barra lateral; a descrição saneada do servidor passa de novo pelo DOMPurify. */
 import '../base/componentes.js';
-import { h, limpar, htmlSeguro } from '../base/dom.js';
+import { anexar, h, limpar, htmlSeguro } from '../base/dom.js';
 import { carregar as carregarIdioma, t } from '../base/i18n.js';
 import { pronto } from '../base/layout.js';
 import * as api from './api.js';
@@ -31,7 +31,8 @@ async function principal() {
   document.title = `${elipse(it.titulo, 60)} · ${t('app.nome')}`;
   const mini = h('img', { class: 'mini', src: api.compartilhadoMiniaturaUrl(token, it.id), alt: '', width: 600, height: 400 });
   mini.addEventListener('error', () => mini.remove(), { once: true });
-  sec.append(h('h2', {}, it.titulo), it.miniatura ? mini : null, h('p', { class: 'fraco' }, `${it.tipo || ''} · ${dataHora(it.modificado_em)} · ${bytes(it.tamanho_bytes)}`), it.resumo ? h('p', {}, it.resumo) : null);
+  // anexar() (não o append nativo, que escreve o texto "null" para um filho nulo — defeito visto na captura do L0-03-e)
+  anexar(sec, [h('h2', {}, it.titulo), it.miniatura ? mini : null, h('p', { class: 'fraco' }, `${it.tipo || ''} · ${dataHora(it.modificado_em)} · ${bytes(it.tamanho_bytes)}`), it.resumo ? h('p', {}, it.resumo) : null]);
   if (it.descricao_html) { const d = h('div', { class: 'descricao-html' }); d.append(htmlSeguro(it.descricao_html)); sec.append(d); }
   if ((it.tags || []).length) sec.append(h('div', { class: 'chips' }, ...it.tags.map((tg) => h('span', { class: 'chip' }, h('span', { class: 'nome' }, tg)))));
   if (it.creditos) sec.append(h('p', { class: 'fraco' }, `${t('catalogo.creditos')}: ${it.creditos}`));

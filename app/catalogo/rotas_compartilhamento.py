@@ -388,7 +388,8 @@ def compartilhado_miniatura(token: str, id: str, request: Request):
         r = carregar(cur, iid)
         if r is None:
             raise ErroAPI(404, "item_inexistente", "item inexistente")
-    return miniatura.entregar(r, request)
+    # sem cache no cliente (G2-6): link revogado nega em ≤ 1 s também na miniatura, não só no JSON
+    return miniatura.entregar(r, request, cache=SEM_CACHE["Cache-Control"])
 
 
 # ---------------------------------------------------------------- leitura pública (D24: só com o inquilino autorizando)
@@ -421,7 +422,8 @@ def publico_miniatura(id: str, request: Request):
         r = _contexto_publico(cur, iid)
         if r is None:
             raise ErroAPI(404, "item_inexistente", "item inexistente")
-    return miniatura.entregar(r, request)
+    # item que deixa de ser público some do cliente na hora, como o link revogado (mesmo motivo do G2-6)
+    return miniatura.entregar(r, request, cache=SEM_CACHE["Cache-Control"])
 
 
 # ---------------------------------------------------------------- objeto por URL assinada (adaptador local,

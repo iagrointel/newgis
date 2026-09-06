@@ -3,6 +3,20 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L0-03-e-compartilhamento: fechamento com o achado G2-6 e o segredo do link fora do log)
+
+- Miniatura servida por link (`/api/compartilhado/{token}/itens/{id}/miniatura`) e pela rota pública sai com
+  `Cache-Control: no-store` (`miniatura.entregar(cache=...)`): link revogado nega em ≤ 1 s também na imagem (G2-6).
+- O token do link viaja no caminho da URL e ia inteiro para `plat.log_acesso.rota` (lida em /admin/log) e para o
+  journal; `app/auth/redigir.py::caminho_redigido` redige o segmento depois de `/api/compartilhado/` e `/c/`.
+- Diálogo Compartilhar: dependência abaixo do nível escolhido ganha aviso e etiqueta; "elevar ao nível do mapa" e
+  "marcar todas as que posso elevar" são escolha explícita, só aplicadas ao Aplicar; a árvore reflete o nível novo.
+- Página anônima `/c/{token}` escrevia o texto "null" no lugar de miniatura/resumo ausentes (append nativo).
+- Testes novos: varredura cruzada A→B nas 10 rotas de compartilhamento (`test_compartilhamento_cruzado.py`), 404
+  indistinguível de inexistente, público ligado em inquilino descartável, e2e com contexto anônimo do playwright
+  (`tests/e2e/test_compartilhamento.py`, frente HTTP de trilha em `tests/e2e/frente_trilha.py`), medidas em
+  `tests/medidas/L0-03-e.json`; `docs/PARIDADE.md` ganhou a seção "Compartilhamento de item".
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
