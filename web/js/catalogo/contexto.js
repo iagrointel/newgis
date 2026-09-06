@@ -6,6 +6,7 @@ import { LIMITES } from './formato.js';
 export const FILTROS_VAZIOS = () => ({
   tipo: [], familia: [], dono_id: [], tags: [], categoria: [], status: [], acesso: [], origem: '',
   criado_de: '', criado_ate: '', modificado_de: '', modificado_ate: '', bbox: '',
+  licenca: [], procedencia_min: '',   // item L0-09-a: licença registrada e pontuação mínima de procedência
 });
 
 export const ctx = criarLoja({
@@ -43,9 +44,9 @@ export function parametrosLista() {
   if (e.q) p.q = e.q;
   if (e.ordenar) { const [campo, direcao] = e.ordenar.split(':'); p.ordenar = campo; if (direcao) p.direcao = direcao; }
   const f = e.filtros;
-  for (const k of ['tipo', 'familia', 'dono_id', 'tags', 'categoria', 'status']) if (f[k].length) p[k] = f[k];
+  for (const k of ['tipo', 'familia', 'dono_id', 'tags', 'categoria', 'status', 'licenca']) if (f[k].length) p[k] = f[k];
   if (f.acesso.length && e.aba !== 'inquilino') p.acesso = f.acesso;
-  for (const k of ['origem', 'criado_de', 'criado_ate', 'modificado_de', 'modificado_ate', 'bbox']) if (f[k]) p[k] = f[k];
+  for (const k of ['origem', 'criado_de', 'criado_ate', 'modificado_de', 'modificado_ate', 'bbox', 'procedencia_min']) if (f[k]) p[k] = f[k];
   return p;
 }
 

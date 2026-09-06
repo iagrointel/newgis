@@ -150,6 +150,24 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `CONEXAO_REDIRECT_MAX` | `5` | cada hop é revalidado do zero (host novo pode ser interno) |
 | `CONEXAO_RESPOSTA_MAX_BYTES` | `1048576` | 1 MiB: o teste de saúde confere status/corpo curto |
 
+## conectores de feição externa WFS 2.0 / OGC API - Features (L6-02-c-wfs-ogcapi; app/conexao/vetor_externo.py
+
+| nome | valor | explicação |
+|---|---|---|
+| `CONEXAO_VETOR_LER_TIMEOUT_S` | `30.0` | página de feições é maior que o teste de saúde (6 s), |
+| `CONEXAO_VETOR_METADADO_MAX_BYTES` | `33554432` | GetCapabilities/DescribeFeatureType/collections. |
+| `CONEXAO_VETOR_PAGINA_MAX_BYTES` | `50331648` | corpo de UMA página de feições |
+| `CONEXAO_VETOR_PAGINA_PADRAO` | `1000` | feições por página quando quem chama não escolhe |
+| `CONEXAO_VETOR_PAGINA_MAX` | `10000` | teto do que se pede por página (COUNT / limit) |
+| `CONEXAO_VETOR_PAGINAS_MAX` | `2000` | teto de requisições de UMA cópia (com 10 mil/página dá 20 mi) |
+| `CONEXAO_VETOR_LIMITE_PADRAO` | `100000` | feições que a cópia aceita quando quem chama não declara |
+| `CONEXAO_VETOR_LIMITE_MAX` | `2000000` | teto absoluto do limite declarável numa cópia |
+| `CONEXAO_VETOR_PREVIA_MAX` | `1000` | feições que a consulta REFERENCIADA devolve por vez |
+| `CONEXAO_VETOR_CACHE_TTL_S` | `30.0` | cache curto da consulta referenciada (item: "cache curto") |
+| `CONEXAO_VETOR_CACHE_ENTRADAS` | `128` | entradas guardadas no processo; a mais velha sai |
+| `COPIA_MEMORIA_MB` | `1024` | job conexao.copiar_vetor (ogr2ogr + reprojeção) |
+| `COPIA_TIMEOUT_S` | `3600` | — |
+
 ## ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 
 | nome | valor | explicação |

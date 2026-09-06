@@ -44,7 +44,14 @@ LIMITE_WORKER_S = 90
 GRACA_CANCELAMENTO_S = 30
 GRACA_KILL_S = 10
 ESPERA_PARADA_S = 20
-LOCK_PESADO = "plat.job.pesado"
+# "1 pesado por vez" é um advisory lock do BANCO, e o banco é um só para produção, homologação (ADR 0009) e
+# todas as bases por trilha (laco/trilha_ambiente.sh). Com o nome fixo "plat.job.pesado" o semáforo passava a
+# valer entre AMBIENTES: um job pesado da homologação (ou de uma trilha) segurava o único lugar e o job pesado
+# de produção ficava pendente sem nada rodando nele — medido em 06/09, com o worker de uma trilha segurando o
+# lock e o de outra rodando só job leve. O nome carrega o schema, então o semáforo volta a ser o que sempre se
+# quis dizer: um pesado por vez DENTRO de um ambiente. Em produção, onde só existe o schema `plat`, o valor é
+# o mesmo de antes e o comportamento não muda.
+LOCK_PESADO = f"plat.job.pesado:{settings.PLAT_SCHEMA or 'plat'}"
 UTC = datetime.UTC
 
 

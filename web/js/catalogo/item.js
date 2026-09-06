@@ -241,6 +241,38 @@ function descricaoHtml() {
   return div;
 }
 
+/* ---------- procedência (item L0-09-a): o bloco campo a campo, com a etiqueta de origem, e a pontuação 0-10
+   (a mesma régua do registro do acervo da casa). Item sem bloco mostra "sem procedência registrada": ausência
+   de registro não é 0/10. ---------- */
+const CAMPOS_PROCEDENCIA = ['fonte', 'url', 'licenca', 'data_do_dado', 'data_de_acesso', 'gerador', 'sha256',
+  'comando_reexecucao', 'metodo', 'confianca', 'limites', 'frescor', 'proxima_verificacao', 'responsavel'];
+
+function valorProcedencia(v) {
+  if (Array.isArray(v)) return v.join(' · ');
+  return String(v);
+}
+
+function blocoProcedencia() {
+  const proc = (item.dados && item.dados.procedencia) || null;
+  const resumo = item.procedencia || {};
+  const raiz = h('section', { class: 'procedencia', 'data-campo': 'procedencia' });
+  const nota = resumo.completude_texto || null;
+  raiz.append(h('h3', {}, t('catalogo.procedencia'), nota ? h('span', { class: 'chip' }, nota) : null));
+  raiz.append(h('p', { class: 'fraco' }, t('catalogo.procedencia_ajuda')));
+  if (!proc || !Object.keys(proc).length) {
+    raiz.append(h('p', { class: 'fraco vazio' }, t('catalogo.procedencia_sem_bloco')));
+    return raiz;
+  }
+  const origem = proc.origem || {};
+  for (const campo of CAMPOS_PROCEDENCIA) {
+    const v = proc[campo];
+    if (v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)) continue;
+    const marca = origem[campo] ? h('span', { class: 'chip origem', 'data-origem': origem[campo] }, t(`catalogo.procedencia_${origem[campo]}`)) : null;
+    raiz.append(linhaCampo(t(`catalogo.proc_${campo}`), h('span', {}, valorProcedencia(v), marca ? ' ' : '', marca), { chave: `procedencia_${campo}` }));
+  }
+  return raiz;
+}
+
 function abaVisao() {
   const raiz = h('div', { class: 'visao' });
   raiz.append(
@@ -258,6 +290,7 @@ function abaVisao() {
     linhaCampo(t('catalogo.col_modificado'), h('span', {}, dataHora(item.modificado_em), item.modificado_por ? ` · ${item.modificado_por.login || ''}` : '', ` · ${t('catalogo.versao')} ${item.versao_atual ?? 0}`), { chave: 'modificado' }),
     linhaCampo(t('catalogo.usado_por'), h('span', {}, String(item.usado_por ?? 0), ' · ', t('catalogo.criado_a_partir_de'), ' ', String(item.criado_a_partir_de ?? 0)), { chave: 'relacoes' }),
   );
+  raiz.append(blocoProcedencia());
   return raiz;
 }
 
