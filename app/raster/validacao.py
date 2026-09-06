@@ -3,31 +3,42 @@ ANTES de qualquer conversão (COG, pirâmide, tile). Duas metades no mesmo módu
 
 * o PAI (`validar()`), que roda no processo do worker: confere existência, extensão e ASSINATURA de formato (os
   primeiros bytes, nunca o nome), e então lança o filho com `resource.setrlimit` (RLIMIT_AS = RLIMIT_AS_MB,
-  RLIMIT_CPU = RLIMIT_CPU_S, RLIMIT_NOFILE = 64, RLIMIT_CORE = 0), relógio de parede TIMEOUT_S (SIGKILL), ambiente
-  GDAL sem leitura de diretório (`GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR`), sem `/vsicurl` (extensão permitida
-  impossível + caminho recusado no pai e no filho), sem VRT com fonte fora do diretório e sem `VRTRawRasterBand`,
-  cache de 64 MB e 1 thread. Mede tempo e pico de RSS do filho por `os.wait4`. O que quer que aconteça ao filho
-  (estouro de memória, tempo, sinal, saída sem JSON) vira um relatório `recusado` com a causa em português: o
-  pai NUNCA importa rasterio para olhar o arquivo do cliente.
+  RLIMIT_CPU = RLIMIT_CPU_S, RLIMIT_NOFILE, RLIMIT_CORE = 0), FILTRO SECCOMP que faz `socket(AF_INET/AF_INET6)`
+  devolver EAFNOSUPPORT (a rede fecha no processo, não só por variável do GDAL), relógio de parede TIMEOUT_S
+  (SIGKILL), ambiente GDAL sem leitura de diretório (`GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR`), sem driver HTTP
+  (`GDAL_SKIP`), sem PROJ na rede, sem VRT com fonte fora do diretório e sem `VRTRawRasterBand`, cache de 64 MB e
+  1 thread. Mede tempo e pico de RSS do filho por `os.wait4`. O que quer que aconteça ao filho (estouro de
+  memória, tempo, sinal, saída sem JSON) vira um relatório `recusado` com a causa em português: o pai NUNCA
+  importa rasterio para olhar o arquivo do cliente.
 * o FILHO (`python -m app.raster.validacao <json>`), que abre o arquivo com rasterio e produz o relatório:
   formato, dimensões, bandas, tipo, ColorInterp, CRS (EPSG resolvível, WKT2 sem EPSG, ou pendência), NoData
   (declarado, informado, ou pendência), data de aquisição (metadado, informada, ou pendência), extensão em
-  EPSG:4326 (aviso se fora do Brasil), tamanho descompactado ESTIMADO pelo cabeçalho contra a cota (recusa antes de
-  ler um pixel: BigTIFF esparso de 100 GB virtual cai aqui), zip conferido pelo diretório central antes de
-  extrair (nº de entradas, razão de compressão, soma declarada contra a cota, nomes de caminho), leitura de uma
-  janela pequena (JP2 truncado cai aqui). `validate()` de `plataforma/pipeline/ingest.py` foi a base das
-  checagens de CRS/tipo/NoData/extensão (copiado, aquele arquivo não é editado).
+  EPSG:4326 (aviso se fora do Brasil, PENDÊNCIA se a coordenada não existe no planeta), tamanho descompactado
+  ESTIMADO pelo cabeçalho contra a cota (recusa antes de ler um pixel: BigTIFF esparso de 100 GB virtual cai
+  aqui), zip conferido pelo diretório central antes de extrair (nº de entradas, razão de compressão, soma
+  declarada contra a cota E contra o teto de volume ligado ao tamanho do envio, nomes de caminho), VRT conferido
+  RECURSIVAMENTE (toda fonte, resolvida por `os.path.realpath`, tem de cair dentro do diretório do envio),
+  leitura de uma janela pequena com os arquivos abertos UM DE CADA VEZ (JP2 truncado cai aqui).
+  `validate()` de `plataforma/pipeline/ingest.py` foi a base das checagens de CRS/tipo/NoData/extensão (copiado,
+  aquele arquivo não é editado).
+
+Nenhum defeito do arquivo sai como traceback: toda exceção do GDAL (inclusive `CPLE_*`, que não é `RasterioError`)
+vira problema em português, sem caminho absoluto do servidor. NaN e ±Infinity viram texto declarado antes de o
+relatório sair, porque o `jsonb` do Postgres recusa o documento inteiro se houver um.
 
 Relatório (dict serializável, gravado no resultado do job pelo `raster.validar`):
   estado: 'aceito' | 'pendente' (falta resposta do usuário: crs/nodata/data_aquisicao/escala) | 'recusado'
   problemas: [str]   avisos: [str]   pendencias: [{campo, mensagem}]   info: {…}   respostas: {…}
+  info.isolamento: {seccomp, no_new_privs, rede} lido no /proc do próprio filho
   subprocesso: {rlimit_as_mb, rlimit_cpu_s, timeout_s, codigo_saida, tempo_s, ram_pico_kb, morte}
 """
-
 from __future__ import annotations
 
+import ctypes
 import json
+import math
 import os
+import platform
 import re
 import resource
 import signal
@@ -44,7 +55,7 @@ VERSAO = 1
 # --- limites do subprocesso (ADR 0015 seção 2; refletidos em tests/medidas/L1-01-b.json)
 RLIMIT_AS_MB = 768          # ≤ 1 GB por ordem do item; rasterio+numpy+GDAL abrem em 67 MB de RSS medido
 RLIMIT_CPU_S = 60           # segundos de CPU do filho (SIGXCPU → SIGKILL pelo kernel)
-RLIMIT_NOFILE = 64
+RLIMIT_NOFILE = 256         # um zip legítimo de centenas de rasters não pode morrer de "Too many open files"
 TIMEOUT_S = 90              # relógio de parede: o pai mata com SIGKILL
 GDAL_CACHEMAX_MB = 64
 
@@ -55,8 +66,13 @@ LADO_MAX = 200_000                                    # pixels por lado (500 GB 
 ZIP_ENTRADAS_MAX = 1000
 ZIP_RAZAO_MAX = 50                                    # a cláusula do portão: 50× declarado = recusa (>=)
 ZIP_NOME_MAX = 255
+ZIP_VOLUME_FATOR = 8                                  # escrita máxima na extração = 8× o tamanho do ENVIO…
+ZIP_VOLUME_PISO = 8 * 1024 * 1024                     # …com piso de 8 MiB, para o envio minúsculo legítimo
+VRT_XML_MAX = 16 * 1024 * 1024                        # o XML do VRT é lido INTEIRO até este teto
+VRT_PROFUNDIDADE_MAX = 5                              # VRT que aponta para VRT: no máximo 5 níveis
 JANELA_LEITURA = 256                                  # janela lida para provar que os dados abrem
 BRASIL_BBOX = (-76.0, -34.5, -27.0, 6.0)              # (lonmin, latmin, lonmax, latmax), com folga
+TIPOS_SEM_CONVERSAO = ("complex64", "complex128", "complex_int16", "int64", "uint64")
 PERFIS = ("dados", "visual")
 CAMPOS_RESPOSTA = ("crs", "nodata", "data_aquisicao", "escala")
 
@@ -83,6 +99,9 @@ AMBIENTE_FILHO = {
     "GDAL_HTTP_TIMEOUT": "1",
     "GDAL_HTTP_MAX_RETRY": "0",
     "CPL_VSIL_CURL_ALLOWED_EXTENSIONS": ".nenhuma-extensao-permitida",
+    "GDAL_HTTP_CONNECTTIMEOUT": "1",
+    "GDAL_SKIP": "HTTP",          # tira o driver que abre http:// direto (o /vsicurl cai no seccomp)
+    "PROJ_NETWORK": "OFF",        # o PROJ não busca grade de transformação na rede
     "GDAL_PAM_ENABLED": "NO",
     "CPL_DEBUG": "OFF",
 }
@@ -122,13 +141,118 @@ def conferir_assinatura(caminho: Path) -> tuple[str, str | None]:
     return nome, None
 
 
+# --- bloqueio de rede POR PROCESSO (ADR 0015 seção 6). Variável de ambiente do GDAL não fecha a rede: a lista
+# CPL_VSIL_CURL_ALLOWED_EXTENSIONS aceita qualquer extensão que o próprio atacante escreva na URL e o `http://`
+# direto nem passa por ela. Aqui o filho recebe um filtro seccomp que faz `socket(AF_INET|AF_INET6, …)` devolver
+# EAFNOSUPPORT: nenhum soquete de rede chega a ser criado, e o curl do GDAL falha antes de resolver o nome. O
+# filtro é BPF clássico montado à mão (nenhuma dependência nova) e sobrevive ao execve porque vem com
+# PR_SET_NO_NEW_PRIVS. AF_UNIX e AF_NETLINK continuam permitidos (a libc precisa deles).
+_PR_SET_NO_NEW_PRIVS, _PR_SET_SECCOMP, _SECCOMP_MODE_FILTER = 38, 22, 2
+_SECCOMP_ALLOW, _SECCOMP_ERRNO_EAFNOSUPPORT = 0x7FFF0000, 0x00050000 | 97
+_ARQUITETURAS = {"x86_64": (0xC000003E, 41), "aarch64": (0xC00000B7, 198)}   # (AUDIT_ARCH, nº de `socket`)
+
+
+class _FiltroBpf(ctypes.Structure):
+    _fields_ = [("code", ctypes.c_uint16), ("jt", ctypes.c_uint8), ("jf", ctypes.c_uint8), ("k", ctypes.c_uint32)]
+
+
+class _ProgramaBpf(ctypes.Structure):
+    _fields_ = [("len", ctypes.c_ushort), ("filter", ctypes.POINTER(_FiltroBpf))]
+
+
+def _montar_seccomp() -> tuple[object, int] | None:
+    """Devolve (ponteiro do sock_fprog, endereço) ou None quando a máquina não é coberta. Montado no PAI, antes do
+    fork: o preexec_fn só chama prctl()."""
+    par = _ARQUITETURAS.get(platform.machine())
+    if par is None:
+        return None
+    arch, nr_socket = par
+    ld, jeq, ret = 0x20, 0x15, 0x06     # BPF_LD|BPF_W|BPF_ABS, BPF_JMP|BPF_JEQ|BPF_K, BPF_RET|BPF_K
+    programa = [(ld, 0, 0, 4),                      # 0: carrega seccomp_data.arch
+                (jeq, 0, 6, arch),                  # 1: outra arquitetura → permite (nada a filtrar aqui)
+                (ld, 0, 0, 0),                      # 2: carrega seccomp_data.nr
+                (jeq, 0, 4, nr_socket),             # 3: não é socket() → permite
+                (ld, 0, 0, 16),                     # 4: carrega os 32 bits baixos de args[0] (domínio)
+                (jeq, 1, 0, 2),                     # 5: AF_INET  → erro
+                (jeq, 0, 1, 10),                    # 6: AF_INET6 → erro; qualquer outro → permite
+                (ret, 0, 0, _SECCOMP_ERRNO_EAFNOSUPPORT),
+                (ret, 0, 0, _SECCOMP_ALLOW)]
+    vetor = (_FiltroBpf * len(programa))(*[_FiltroBpf(*linha) for linha in programa])
+    prog = _ProgramaBpf(len(programa), vetor)
+    return (vetor, prog), ctypes.cast(ctypes.byref(prog), ctypes.c_void_p).value
+
+
+try:
+    _LIBC = ctypes.CDLL("libc.so.6", use_errno=True)
+    _LIBC.prctl.argtypes = [ctypes.c_int, ctypes.c_ulong, ctypes.c_ulong, ctypes.c_ulong, ctypes.c_ulong]
+    _SECCOMP = _montar_seccomp()
+except OSError:  # pragma: no cover — máquina sem glibc no caminho esperado
+    _LIBC, _SECCOMP = None, None
+
+
+def _fechar_a_rede() -> bool:
+    """Aplica o filtro seccomp no processo corrente. Devolve se conseguiu; nunca levanta (kernel sem seccomp não
+    pode impedir a validação de rodar — nesse caso o relatório diz que a rede está fechada só por variável)."""
+    if _LIBC is None or _SECCOMP is None:
+        return False
+    _vivos, endereco = _SECCOMP
+    try:
+        if _LIBC.prctl(_PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0:
+            return False
+        return _LIBC.prctl(_PR_SET_SECCOMP, _SECCOMP_MODE_FILTER, endereco, 0, 0) == 0
+    except OSError:
+        return False
+
+
 def _preparar_filho() -> None:  # roda no filho, entre o fork e o exec (preexec_fn)
     as_bytes = RLIMIT_AS_MB * 1024 * 1024
     resource.setrlimit(resource.RLIMIT_AS, (as_bytes, as_bytes))
     resource.setrlimit(resource.RLIMIT_CPU, (RLIMIT_CPU_S, RLIMIT_CPU_S))
     resource.setrlimit(resource.RLIMIT_NOFILE, (RLIMIT_NOFILE, RLIMIT_NOFILE))
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    _fechar_a_rede()
     os.setsid()
+
+
+def _isolamento_medido() -> dict:
+    """Lido no /proc do PRÓPRIO filho, não declarado: é o que entra no relatório."""
+    estado = {"seccomp": None, "no_new_privs": None}
+    try:
+        for linha in Path("/proc/self/status").read_text().splitlines():
+            if linha.startswith("Seccomp:"):
+                estado["seccomp"] = int(linha.split()[1])
+            elif linha.startswith("NoNewPrivs:"):
+                estado["no_new_privs"] = int(linha.split()[1])
+    except (OSError, ValueError, IndexError):  # pragma: no cover — /proc sempre existe no alvo
+        pass
+    estado["rede"] = ("bloqueada no processo (seccomp: socket AF_INET/AF_INET6 devolve EAFNOSUPPORT)"
+                      if estado["seccomp"] == 2 else "bloqueada apenas por variável de ambiente do GDAL")
+    return estado
+
+
+def _json_seguro(valor):
+    """NaN e ±Infinity são float legítimos (NoData de float32 costuma ser NaN) e NÃO são JSON: `jsonb` do Postgres
+    recusa o documento inteiro. Trocamos por texto declarado ('NaN', 'Infinity', '-Infinity') antes de sair do
+    relatório — nunca por None, que confundiria 'sem NoData' com 'NoData é NaN'."""
+    if isinstance(valor, float) and not math.isfinite(valor):
+        return "NaN" if math.isnan(valor) else ("Infinity" if valor > 0 else "-Infinity")
+    if isinstance(valor, dict):
+        return {k: _json_seguro(v) for k, v in valor.items()}
+    if isinstance(valor, (list, tuple)):
+        return [_json_seguro(v) for v in valor]
+    return valor
+
+
+_RE_CAMINHO_ABSOLUTO = re.compile(r"(?:/[\w.\-+@]+){2,}")
+
+
+def _sem_caminho(texto: str) -> str:
+    """Tira caminho absoluto do servidor de mensagem vinda do GDAL/SO: o usuário vê o nome do arquivo dele."""
+    return _RE_CAMINHO_ABSOLUTO.sub(lambda m: os.path.basename(m.group(0)), texto)
+
+
+def _detalhe(erro: BaseException) -> str:
+    return _sem_caminho(str(erro).splitlines()[0] if str(erro).strip() else type(erro).__name__)[:200]
 
 
 def _normalizar_respostas(respostas: dict | None) -> dict:
@@ -171,6 +295,7 @@ def validar(caminho: str | os.PathLike, *, perfil: str = "dados", respostas: dic
         relatorio[chave].extend(filho.get(chave, []))
     relatorio["info"].update(filho.get("info", {}))
     return _fechar(relatorio)
+
 
 
 def _executar_filho(argumentos: dict, timeout_s: int) -> dict:
@@ -258,7 +383,8 @@ def _fechar(relatorio: dict) -> dict:
         relatorio["estado"] = "pendente"
     else:
         relatorio["estado"] = "aceito"
-    return relatorio
+    # ÚNICA saída do relatório: aqui NaN/±Infinity viram texto declarado, para o `jsonb` do job aceitar (achado 5)
+    return _json_seguro(relatorio)
 
 
 def resumo(relatorio: dict) -> str:
@@ -278,7 +404,7 @@ def _filho(argumentos: dict) -> dict:
     """Roda sob RLIMIT_AS/CPU/timeout. Devolve o relatório parcial (problemas/avisos/pendencias/info)."""
     for chave, valor in AMBIENTE_FILHO.items():
         os.environ.setdefault(chave, valor)
-    saida: dict = {"problemas": [], "avisos": [], "pendencias": [], "info": {}}
+    saida: dict = {"problemas": [], "avisos": [], "pendencias": [], "info": {"isolamento": _isolamento_medido()}}
     prova = argumentos.get("prova")
     if prova == "memoria":  # usado pelo teste: prova que o RLIMIT_AS derruba o filho e o pai sobrevive
         bloco = bytearray(2 * 1024 * 1024 * 1024)
@@ -312,6 +438,13 @@ def _filho(argumentos: dict) -> dict:
     return saida
 
 
+def _recusa_generica(saida: dict, erro: BaseException) -> dict:
+    saida.setdefault("problemas", []).append(
+        f"a validação não conseguiu interpretar o arquivo ({type(erro).__name__.split('.')[-1]}): "
+        f"{_detalhe(erro)}; nada foi importado")
+    return saida
+
+
 def _abrir_zip(caminho: Path, cota: int, dir_trabalho: Path, saida: dict) -> list[Path]:
     """Só o diretório central é lido antes de decidir; extrai APENAS os rasters, depois de aprovado."""
     try:
@@ -333,6 +466,16 @@ def _abrir_zip(caminho: Path, cota: int, dir_trabalho: Path, saida: dict) -> lis
     if razao >= ZIP_RAZAO_MAX:
         saida["problemas"].append(f"zip declara razão de compressão de {razao:.0f}× (limite {ZIP_RAZAO_MAX}×): "
                                   "suspeita de zip-bomba; nada foi descompactado")
+        return []
+    # teto de VOLUME escrito, ligado ao tamanho do ENVIO (achado 7): a razão de 50× e a cota do inquilino
+    # deixavam um envio de 1,4 MB escrever 60 MB no diretório de trabalho do worker.
+    enviado = caminho.stat().st_size
+    teto = min(cota, ZIP_VOLUME_FATOR * enviado + ZIP_VOLUME_PISO)
+    if total_decl > teto:
+        saida["problemas"].append(
+            f"zip de {_gb(enviado)} declara {_gb(total_decl)} descompactados, acima do teto de {_gb(teto)} para "
+            f"um envio desse tamanho ({ZIP_VOLUME_FATOR}× o enviado mais {_gb(ZIP_VOLUME_PISO)}); nada foi "
+            "descompactado")
         return []
     rasters = []
     for i in infos:
@@ -377,28 +520,63 @@ def _abrir_zip(caminho: Path, cota: int, dir_trabalho: Path, saida: dict) -> lis
     return caminhos
 
 
-_RE_FONTE_VRT = re.compile(r"<SourceFilename[^>]*>(.*?)</SourceFilename>", re.S)
+_RE_FONTE_VRT = re.compile(r"<SourceFilename([^>]*)>(.*?)</SourceFilename>", re.S)
+_RE_RELATIVO = re.compile(r'relativeToVRT\s*=\s*["\']?(\d)')
 
 
-def _conferir_vrt(caminho: Path, saida: dict) -> None:
-    texto = caminho.read_text("utf-8", "replace")[:1 << 20]
+def _conferir_vrt(caminho: Path, saida: dict, raiz: str | None = None, profundidade: int = 0,
+                  vistos: set[str] | None = None) -> None:
+    """Confere o VRT INTEIRO e, RECURSIVAMENTE, todo VRT que ele referencie (achados 1-3 do adversário). Regra:
+    a fonte, depois de resolvida com `os.path.realpath` (o que desfaz ligação simbólica e `..`), tem de cair
+    dentro do diretório do envio. O XML é lido inteiro até VRT_XML_MAX — o corte de 1 MiB deixava passar a
+    segunda banda escondida atrás de um comentário grande."""
+    raiz = raiz if raiz is not None else os.path.realpath(caminho.parent)
+    vistos = vistos if vistos is not None else set()
+    real = os.path.realpath(caminho)
+    if real in vistos:
+        saida["problemas"].append(f"VRT com referência circular: {caminho.name!r} aponta de volta para si mesmo")
+        return
+    vistos.add(real)
+    if profundidade > VRT_PROFUNDIDADE_MAX:
+        saida["problemas"].append(f"VRT aninhado além de {VRT_PROFUNDIDADE_MAX} níveis: cadeia de fontes longa "
+                                  "demais para conferir")
+        return
+    tamanho = caminho.stat().st_size
+    if tamanho > VRT_XML_MAX:
+        saida["problemas"].append(f"o XML do VRT {caminho.name!r} tem {_gb(tamanho)}; o máximo aceito é "
+                                  f"{_gb(VRT_XML_MAX)}")
+        return
+    texto = caminho.read_text("utf-8", "replace")
     if "VRTRawRasterBand" in texto:
         saida["problemas"].append("VRT com VRTRawRasterBand (leitura crua de arquivo arbitrário) não é aceito")
         return
     if "PixelFunction" in texto or "VRTDerivedRasterBand" in texto:
         saida["problemas"].append("VRT com banda derivada (função de pixel) não é aceito")
         return
-    fontes = [f.strip() for f in _RE_FONTE_VRT.findall(texto)]
-    if not fontes:
+    achados = _RE_FONTE_VRT.findall(texto)
+    if not achados:
         saida["problemas"].append("VRT sem SourceFilename: não referencia nenhum raster")
         return
-    for f in fontes:
-        if f.startswith("/vsi") or "://" in f or f.startswith("/") or ".." in Path(f).parts or "\\" in f:
+    for atributos, bruto in achados:
+        f = bruto.strip()
+        marca = _RE_RELATIVO.search(atributos or "")
+        relativo = marca.group(1) == "1" if marca else False
+        if f.startswith("/vsi") or "://" in f or "\\" in f or not f:
             saida["problemas"].append(f"VRT com fonte fora do diretório do envio ou remota: {f[:120]!r}")
             return
-        if not (caminho.parent / f).is_file():
+        base = caminho.parent
+        alvo = base / f if (relativo or not os.path.isabs(f)) else Path(f)
+        destino = os.path.realpath(alvo)
+        if not (destino == raiz or destino.startswith(raiz + os.sep)):
+            saida["problemas"].append(f"VRT com fonte fora do diretório do envio ou remota: {f[:120]!r}")
+            return
+        if not os.path.isfile(destino):
             saida["problemas"].append(f"VRT referencia fonte inexistente: {f[:120]!r}")
             return
+        if destino.lower().endswith(".vrt"):
+            _conferir_vrt(Path(destino), saida, raiz, profundidade + 1, vistos)
+            if saida["problemas"]:
+                return
 
 
 def _gb(n: int) -> str:
@@ -410,27 +588,44 @@ def _gb(n: int) -> str:
 
 
 def _inspecionar(fontes: list[Path], cota: int, perfil: str, respostas: dict, saida: dict) -> None:
+    """Abre UM arquivo de cada vez (achado 9: o zip legítimo de 200 rasters estourava o RLIMIT_NOFILE porque
+    todos ficavam abertos ao mesmo tempo). A 1ª passagem lê só cabeçalho; a 2ª reabre para a janela de prova."""
     import numpy as np
     import rasterio
     from rasterio.crs import CRS
+    from rasterio.enums import MaskFlags
     from rasterio.errors import RasterioError
     from rasterio.windows import Window
 
     info = saida["info"]
     problemas, avisos, pendencias = saida["problemas"], saida["avisos"], saida["pendencias"]
-    datasets = []
+
+    class _Cabecalho:
+        pass
+
+    cabecalhos: list[_Cabecalho] = []
+    primeiro = None
+    for f in fontes:
+        try:
+            with rasterio.open(str(f)) as d:
+                c = _Cabecalho()
+                c.width, c.height, c.count, c.dtypes = d.width, d.height, d.count, list(d.dtypes)
+                c.colorinterp = [ci.name for ci in d.colorinterp]
+                cabecalhos.append(c)
+                if primeiro is None:
+                    primeiro = c
+                    c.driver, c.nodata, c.crs = d.driver, d.nodata, d.crs
+                    c.res, c.bounds, c.tags = tuple(d.res), tuple(d.bounds), dict(d.tags())
+                    c.alpha = MaskFlags.alpha in d.mask_flag_enums[0]
+        except Exception as e:  # noqa: BLE001 — qualquer defeito do ARQUIVO vira recusa em português
+            problemas.append(f"o GDAL não abriu {f.name}: {_detalhe(e)}")
+            return
     try:
-        for f in fontes:
-            try:
-                datasets.append(rasterio.open(str(f)))
-            except (RasterioError, OSError, ValueError) as e:
-                problemas.append(f"o GDAL não abriu {f.name}: {str(e).splitlines()[0][:200]}")
-                return
-        ds = datasets[0]
+        ds = primeiro
         # --- cabeçalho: dimensões, bandas, tipo — TUDO antes de ler um pixel
         tipos = []
         bandas = 0
-        for d in datasets:
+        for d in cabecalhos:
             tipos.extend(d.dtypes)
             bandas += d.count
         info.update({"driver": ds.driver, "largura": ds.width, "altura": ds.height, "bandas": bandas,
@@ -442,7 +637,7 @@ def _inspecionar(fontes: list[Path], cota: int, perfil: str, respostas: dict, sa
         if bandas > BANDAS_MAX:
             problemas.append(f"{bandas} bandas; o máximo aceito é {BANDAS_MAX}")
             return
-        for d in datasets[1:]:
+        for d in cabecalhos[1:]:
             if (d.width, d.height) != (ds.width, ds.height):
                 problemas.append(f"arquivos do zip com dimensões diferentes: {ds.width}×{ds.height} e "
                                  f"{d.width}×{d.height}")
@@ -461,11 +656,12 @@ def _inspecionar(fontes: list[Path], cota: int, perfil: str, respostas: dict, sa
         if ds.width > LADO_MAX or ds.height > LADO_MAX:
             problemas.append(f"dimensões {ds.width}×{ds.height} acima do máximo de {LADO_MAX} pixels por lado")
             return
+        # --- tipo de dado: aceito aqui, mas a conversão (COG/tile) não serve complex/int64 — fica DECLARADO
+        info["tipo_convertivel"] = tipos[0] not in TIPOS_SEM_CONVERSAO
         # --- ColorInterp e NoData
-        interp = [ci.name for d in datasets for ci in d.colorinterp]
+        interp = [nome for d in cabecalhos for nome in d.colorinterp]
         info["colorinterp"] = interp
-        from rasterio.enums import MaskFlags
-        tem_alpha = "alpha" in interp or MaskFlags.alpha in ds.mask_flag_enums[0]
+        tem_alpha = "alpha" in interp or ds.alpha
         nodata = ds.nodata
         if nodata is not None:
             info["nodata"] = {"valor": nodata, "origem": "arquivo"}
@@ -513,15 +709,26 @@ def _inspecionar(fontes: list[Path], cota: int, perfil: str, respostas: dict, sa
                 from rasterio.warp import transform_bounds
                 b = transform_bounds(crs, "EPSG:4326", *ds.bounds, densify_pts=21)
                 info["bbox4326"] = [round(float(x), 6) for x in b]
+                impossivel = (not all(math.isfinite(x) for x in b) or abs(b[0]) > 180 or abs(b[2]) > 180
+                              or abs(b[1]) > 90 or abs(b[3]) > 90)
                 dentro = (BRASIL_BBOX[0] <= b[0] and b[2] <= BRASIL_BBOX[2] and BRASIL_BBOX[1] <= b[1]
                           and b[3] <= BRASIL_BBOX[3])
-                if not dentro:
+                if impossivel:
+                    # não existe latitude fora de [-90, 90] nem longitude fora de [-180, 180]: o CRS está errado,
+                    # e a plataforma PERGUNTA em vez de aceitar com um aviso (achado 6)
+                    pendencias.append({"campo": "crs",
+                                       "mensagem": "a extensão do arquivo no CRS "
+                                                   f"{info['crs']['rotulo']} ({origem}) cai fora do planeta "
+                                                   f"({info['bbox4326']} em graus): confirme o CRS correto — "
+                                                   "coordenada em metros costuma ser UTM (ex.: 31983 SIRGAS 2000 "
+                                                   "/ UTM 23S), não um sistema em graus"})
+                elif not dentro:
                     avisos.append(f"extensão fora do território esperado (Brasil): {info['bbox4326']} em EPSG:4326 "
                                   "— confira o CRS")
-            except (RasterioError, ValueError) as e:
-                avisos.append(f"não foi possível projetar a extensão para EPSG:4326: {str(e)[:120]}")
+            except Exception as e:  # noqa: BLE001 — CPLE_* do GDAL não é RasterioError (achado 8)
+                avisos.append(f"não foi possível projetar a extensão para EPSG:4326: {_detalhe(e)}")
         # --- data de aquisição
-        data, origem_data = _data_aquisicao(ds.tags(), respostas)
+        data, origem_data = _data_aquisicao(ds.tags, respostas)
         if data:
             info["data_aquisicao"] = {"valor": data, "origem": origem_data}
         else:
@@ -547,21 +754,21 @@ def _inspecionar(fontes: list[Path], cota: int, perfil: str, respostas: dict, sa
                                                    "informe [mínimo, máximo] para reescalar a 8 bits"})
         elif bandas == 1 and perfil == "dados":
             info["banda_unica"] = True
-        # --- prova de leitura: uma janela pequena de cada arquivo (JP2 truncado cai aqui)
-        for d, f in zip(datasets, fontes, strict=True):
-            janela = Window(0, 0, min(JANELA_LEITURA, d.width), min(JANELA_LEITURA, d.height))
+        # --- prova de leitura: uma janela pequena de cada arquivo, reaberto um a um (JP2 truncado cai aqui)
+        for c, f in zip(cabecalhos, fontes, strict=True):
+            janela = Window(0, 0, min(JANELA_LEITURA, c.width), min(JANELA_LEITURA, c.height))
             try:
-                d.read(1, window=janela)
-            except (RasterioError, OSError, ValueError) as e:
+                with rasterio.open(str(f)) as d:
+                    d.read(1, window=janela)
+            except Exception as e:  # noqa: BLE001 — inclusive CPLE_* do GDAL, que não é RasterioError
                 problemas.append(f"os dados de {f.name} não puderam ser lidos (arquivo truncado ou corrompido): "
-                                 f"{str(e).splitlines()[0][:200]}")
+                                 f"{_detalhe(e)}")
                 return
-    finally:
-        for d in datasets:
-            try:
-                d.close()
-            except Exception:  # noqa: BLE001 — fechamento é cortesia; o processo termina logo a seguir
-                pass
+    except EntradaInvalida:
+        raise
+    except Exception as e:  # noqa: BLE001 — nenhum defeito do arquivo pode sair como traceback em inglês
+        problemas.append(f"o arquivo não pôde ser interpretado pelo GDAL ({type(e).__name__.split('.')[-1]}): "
+                         f"{_detalhe(e)}; nada foi importado")
 
 
 _RE_DATA = re.compile(r"(\d{4})[-:/](\d{2})[-:/](\d{2})")
@@ -593,7 +800,9 @@ def _principal(argv: list[str]) -> int:
         saida = _filho(argumentos)
     except MemoryError:
         saida = {"morte": "memoria", "etapa": "validacao", "detalhe": "MemoryError"}
-    sys.stdout.write(json.dumps(saida, ensure_ascii=False, default=str))
+    except Exception as erro:  # noqa: BLE001 — o filho NUNCA devolve traceback: devolve relatório em português
+        saida = _recusa_generica({"problemas": [], "avisos": [], "pendencias": [], "info": {}}, erro)
+    sys.stdout.write(json.dumps(_json_seguro(saida), ensure_ascii=False, default=str, allow_nan=False))
     sys.stdout.flush()
     return 0
 
