@@ -7,7 +7,7 @@ auto-intersectado, CSV com vírgula decimal — cada um importa certo ou recusa 
 
 import pytest
 
-from tests.api.ingestao.conftest import GERADOS
+from tests.api.ingestao.conftest import GERADOS, Ingestor
 from tests.api.test_rls import contexto, ids_por_slug
 
 
@@ -243,6 +243,30 @@ def test_cota_excedida_nao_cria_tabela(ingestor_a, conexao_plat_app, env):
         with conexao_plat_app.cursor() as cur:
             cur.execute("UPDATE plat.tenant SET uso_reservado_bytes = %s WHERE id = %s",
                         (antes["uso_reservado_bytes"], ids["demo"]))
+        conexao_plat_app.commit()
+
+
+def test_inquilino_com_hifen_no_slug_importa(inquilino_temporario, conexao_plat_app):
+    """ATAQUE do adversário G3 (achado 2 do L0-04-c): `plat.tenant.slug` aceita hífen (CHECK da 002:
+    '^[a-z0-9][a-z0-9-]{1,38}$', e é exatamente o formato que `InquilinoTemporario` usa: 'zt-inq-xxxxxx'),
+    mas `plat.camada_schema_garantir`/`plat.camada_preparar` (029) recusavam qualquer slug com hífen
+    ('slug_invalido'/'nome_de_tabela_invalido') — um inquilino assim nunca conseguia importar camada
+    nenhuma. Migração 20260906T1812 relaxou as duas funções e o pattern de 'schema' no esquema JSON de
+    camada_vetorial; este teste prova que o slug com hífen do próprio inquilino_temporario importa."""
+    assert "-" in inquilino_temporario.slug
+    ing = Ingestor(inquilino_temporario.admin)
+    try:
+        importacao_id, insp = ing.importar("cobertura.gpkg", "gpkg")
+        assert insp["estado"] == "proposta", insp
+        final = ing.confirmar(importacao_id)
+        assert final["estado"] == "concluida", final
+        assert final["relatorio"]["feicoes_carregadas"] == 80
+    finally:
+        ing.liberar_token()
+        # o schema físico (d_<slug do inquilino temporário>, único por teste) não é limpo pelo
+        # tenant_apagar_interno (só varre `plat.*` com tenant_id) — apagado aqui direto, plat_app é dono.
+        with conexao_plat_app.cursor() as cur:
+            cur.execute(f'DROP SCHEMA IF EXISTS "d_{inquilino_temporario.slug}" CASCADE')
         conexao_plat_app.commit()
 
 

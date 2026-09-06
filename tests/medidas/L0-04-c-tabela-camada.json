@@ -2,6 +2,21 @@
  "item": "L0-04-c-tabela-camada",
  "medidas": {
   "tempo_import_100k_s": {
+   "valor": 14.0,
+   "unidade": "s",
+   "comando": "PUT /api/importacoes/{id}/confirmar até a camada aparecer em GET /api/itens?tipo=camada_vetorial; shapefile dos 100.000 primeiros setores censitários de São Paulo (IBGE, Censo 2022, EPSG:4674); tests/api/ingestao/test_ingestao_100k.py"
+  },
+  "tempo_upload_100k_s": {
+   "valor": 1.0,
+   "unidade": "s",
+   "comando": "POST /api/arquivos do zip de 75,2 MiB (fora do relógio da cláusula, medido à parte)"
+  },
+  "tempo_inspecao_100k_s": {
+   "valor": 2.3,
+   "unidade": "s",
+   "comando": "POST /api/importacoes até o job ingestao.inspecionar concluir (fora do relógio da cláusula)"
+  },
+  "tempo_import_100k_s_medicao_g3fix": {
    "valor": 8.61,
    "unidade": "s",
    "comando": "pytest tests/api/ingestao/test_medidas_100k.py -m lento"
@@ -13,5 +28,6 @@
   }
  },
  "gerado_em": "2026-09-06T18:13:13Z",
- "git_sha": "90d03c07da0c"
+ "git_sha": "90d03c07da0c",
+ "nota_uniao": "merge wt/g3fix + wt/destrava na trilha il004ffgdbp: medidas dos dois lados preservadas"
 }
