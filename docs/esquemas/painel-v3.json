@@ -1,0 +1,363 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "corpo": {
+      "additionalProperties": false,
+      "properties": {
+        "elementos": {
+          "description": "o que a tela desenha; posição e tamanho na grade (x, y em células, origem no canto superior esquerdo)",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "altura": {
+                "description": "altura em linhas da grade",
+                "maximum": 60,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "fonte": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "id de uma entrada de corpo.fontes; obrigatória para todo tipo exceto texto"
+              },
+              "id": {
+                "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                "type": "string"
+              },
+              "largura": {
+                "description": "largura em colunas da grade",
+                "maximum": 24,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "opcoes": {
+                "additionalProperties": true,
+                "description": "forma por tipo, validada campo a campo em app/paineis/documento.py (o que depende dos campos da camada não cabe em JSON Schema)",
+                "type": "object"
+              },
+              "tipo": {
+                "enum": [
+                  "texto",
+                  "indicador",
+                  "grafico",
+                  "tabela"
+                ],
+                "type": "string"
+              },
+              "titulo": {
+                "maxLength": 120,
+                "type": "string"
+              },
+              "x": {
+                "description": "coluna inicial (0 = primeira)",
+                "maximum": 23,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "y": {
+                "description": "linha inicial (0 = primeira)",
+                "maximum": 1000,
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "tipo",
+              "x",
+              "y",
+              "largura",
+              "altura"
+            ],
+            "type": "object"
+          },
+          "maxItems": 200,
+          "type": "array"
+        },
+        "filtros": {
+          "description": "filtros globais: um controle na barra do painel; a condição entra em TODA fonte que tem o campo",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "campo": {
+                "maxLength": 63,
+                "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                "type": "string"
+              },
+              "id": {
+                "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                "type": "string"
+              },
+              "tipo": {
+                "enum": [
+                  "categoria",
+                  "numero",
+                  "data"
+                ],
+                "type": "string"
+              },
+              "titulo": {
+                "maxLength": 80,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "campo",
+              "tipo"
+            ],
+            "type": "object"
+          },
+          "maxItems": 10,
+          "type": "array"
+        },
+        "fontes": {
+          "description": "fontes de dado do painel: o objeto VISTA (camada por ref + filtro CQL2-JSON + campos + ordenação) — a mesma forma que o L5-07 registra como fonte e o L2-01-h executa",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "atualizacao_s": {
+                "default": 0,
+                "description": "intervalo de reconsulta em segundos; 0 = só na abertura e sob ação do usuário",
+                "maximum": 86400,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "camada": {
+                "additionalProperties": false,
+                "properties": {
+                  "ref": {
+                    "description": "uuid do item de camada do catálogo, nunca URL",
+                    "format": "uuid",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ref"
+                ],
+                "type": "object"
+              },
+              "campos": {
+                "description": "campos da camada que a fonte expõe aos elementos (lista branca — nunca SELECT *)",
+                "items": {
+                  "maxLength": 63,
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "minItems": 1,
+                "type": "array"
+              },
+              "filtro": {
+                "description": "CQL2-JSON fixo da vista; executado pelo subconjunto seguro de app/paineis/cql2.py (o L2-01-h amplia a gramática)",
+                "type": "object"
+              },
+              "id": {
+                "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                "type": "string"
+              },
+              "limite": {
+                "default": 200,
+                "description": "máximo de linhas devolvidas por consulta",
+                "maximum": 1000,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "nome": {
+                "maxLength": 80,
+                "type": "string"
+              },
+              "ordenacao": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "campo": {
+                      "maxLength": 63,
+                      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                      "type": "string"
+                    },
+                    "direcao": {
+                      "enum": [
+                        "asc",
+                        "desc"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "campo"
+                  ],
+                  "type": "object"
+                },
+                "maxItems": 4,
+                "type": "array"
+              }
+            },
+            "required": [
+              "id",
+              "camada",
+              "campos"
+            ],
+            "type": "object"
+          },
+          "maxItems": 50,
+          "type": "array"
+        },
+        "grade": {
+          "additionalProperties": false,
+          "properties": {
+            "colunas": {
+              "default": 12,
+              "maximum": 24,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "linha_px": {
+              "default": 36,
+              "description": "altura de uma linha da grade em pixels; em tela estreita (<= 640 px) a grade colapsa para uma coluna e os elementos empilham na ordem do documento",
+              "maximum": 200,
+              "minimum": 8,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "ligacoes": {
+          "items": {
+            "properties": {
+              "alvo": {
+                "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                "type": "string"
+              },
+              "origem": {
+                "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                "type": "string"
+              },
+              "tipo": {
+                "maxLength": 60,
+                "type": "string"
+              }
+            },
+            "required": [
+              "origem",
+              "alvo"
+            ],
+            "type": "object"
+          },
+          "maxItems": 4000,
+          "type": "array"
+        },
+        "mapa_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "mapas": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "nos": {
+          "items": {
+            "properties": {
+              "id": {
+                "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                "type": "string"
+              },
+              "tipo": {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "tipo"
+            ],
+            "type": "object"
+          },
+          "maxItems": 2000,
+          "type": "array"
+        },
+        "parametros_url": {
+          "description": "parâmetros que a URL do painel aceita (?nome=valor) e que viram condição nas fontes que têm o campo; o L5-18 amplia os tipos",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "campo": {
+                "description": "campo das fontes; no tipo geometria é a coluna de geometria (em geral geom) e o valor é o,s,l,n em EPSG:4326",
+                "maxLength": 63,
+                "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                "type": "string"
+              },
+              "nome": {
+                "pattern": "^[a-z][a-z0-9_]{0,30}$",
+                "type": "string"
+              },
+              "obrigatorio": {
+                "default": false,
+                "type": "boolean"
+              },
+              "tipo": {
+                "enum": [
+                  "categoria",
+                  "numero",
+                  "data",
+                  "feicao",
+                  "geometria"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "nome",
+              "campo",
+              "tipo"
+            ],
+            "type": "object"
+          },
+          "maxItems": 20,
+          "type": "array"
+        },
+        "tema": {
+          "additionalProperties": false,
+          "description": "claro/escuro até o L5-10 (temas e marca) existir; aí este objeto ganha referência ao tema",
+          "properties": {
+            "modo": {
+              "enum": [
+                "claro",
+                "escuro"
+              ],
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "esquema_versao": {
+      "const": 3,
+      "type": "integer"
+    },
+    "tipo": {
+      "const": "painel"
+    }
+  },
+  "required": [
+    "tipo",
+    "esquema_versao",
+    "corpo"
+  ],
+  "type": "object"
+}

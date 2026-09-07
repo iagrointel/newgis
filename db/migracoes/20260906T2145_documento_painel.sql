@@ -541,7 +541,7 @@ BEGIN
         jsonb_build_object('id', e[5], 'tipo', 'tabela', 'titulo', 'últimas ocorrências', 'fonte', f1, 'x', 0, 'y', 5, 'largura', 6, 'altura', 6,
           'opcoes', jsonb_build_object('campos', jsonb_build_array('categoria','valor','registrado_em'), 'max_linhas', 8)),
         jsonb_build_object('id', e[6], 'tipo', 'indicador', 'titulo', 'ocorrências de água', 'fonte', f2, 'x', 6, 'y', 8, 'largura', 6, 'altura', 3,
-          'opcoes', jsonb_build_object('agregacao', 'contagem')));
+          'opcoes', jsonb_build_object('agregacao', 'contagem'))));
     INSERT INTO plat.item(id, tenant_id, tipo, titulo, resumo, dono_id, dados, criado_por, modificado_por)
     VALUES (p_id, t_id, 'painel', 'Painel de exemplo',
             'Painel instalado pela semente de demonstração (plat.painel_exemplo_semear): grade de 12 colunas, 6 elementos, 2 fontes sobre a camada de ocorrências sintéticas.',
