@@ -4,6 +4,7 @@ TOTP fica em tests/credenciais_totp.txt, modo 600, fora do git; o install.sh res
 o arquivo), usuários temporários com limpeza. A suíte roda com PLAT_AMBIENTE=dev no ambiente do processo (ADR 0002
 seção 16.4): validade_dias=0 e PLAT_TESTE_* só valem em dev."""
 
+import contextlib
 import os
 import secrets
 import time
@@ -73,6 +74,20 @@ def novo_cliente():
     return TestClient(app, base_url="http://testserver")
 
 
+@contextlib.contextmanager
+def trinco(nome: str):
+    """Trinco de arquivo entre processos (os workers do pytest-xdist são processos irmãos). Cada `nome` é um
+    arquivo próprio em tests/, logo dois trincos diferentes nunca esperam um pelo outro."""
+    import fcntl
+
+    with open(Path(__file__).resolve().parents[1] / nome, "w") as arq:
+        fcntl.flock(arq, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(arq, fcntl.LOCK_UN)
+
+
 def entrar(cliente, slug: str, login: str, senha: str, segredo_totp: str | None = None):
     """Login completo (com 2FA quando exigido e o segredo é conhecido). Devolve a resposta final.
 
@@ -81,14 +96,8 @@ def entrar(cliente, slug: str, login: str, senha: str, segredo_totp: str | None 
     do outro (410 desafio_expirado) e os dois disputam o mesmo passo de 30 s do TOTP (anti-replay).
     Só o trecho login -> 2fa é serializado, por trinco de arquivo; o resto da suíte segue em paralelo.
     """
-    import fcntl
-
-    with open(Path(__file__).resolve().parents[1] / ".login.lock", "w") as trinco:
-        fcntl.flock(trinco, fcntl.LOCK_EX)
-        try:
-            return _entrar(cliente, slug, login, senha, segredo_totp)
-        finally:
-            fcntl.flock(trinco, fcntl.LOCK_UN)
+    with trinco(".login.lock"):
+        return _entrar(cliente, slug, login, senha, segredo_totp)
 
 
 def _entrar(cliente, slug: str, login: str, senha: str, segredo_totp: str | None = None):
@@ -98,8 +107,12 @@ def _entrar(cliente, slug: str, login: str, senha: str, segredo_totp: str | None
     if r.status_code == 200 and r.json().get("exige_2fa"):
         assert segredo_totp, f"{slug}/{login} exige 2FA e o segredo não é conhecido (install.sh reseta o 2FA)"
         r2 = cliente.post("/api/login/2fa", json={"desafio": r.json()["desafio"], "codigo": totp.codigo(segredo_totp)})
-        if r2.status_code == 401 and r2.json().get("erro") == "codigo_invalido":
-            # anti-replay: o código deste passo de 30 s já foi usado por uma rodada anterior da suíte; espera o próximo
+        # anti-replay (app/auth/totp.py::verificar): o passo de 30 s já gasto por outro worker (ou por uma rodada
+        # anterior) devolve codigo_invalido. Espera o passo seguinte e repete — até 3 vezes, porque com 5 workers
+        # entrando ao mesmo tempo dois passos seguidos podem estar gastos.
+        for _ in range(3):
+            if not (r2.status_code == 401 and r2.json().get("erro") == "codigo_invalido"):
+                break
             time.sleep(totp.PASSO_S - (time.time() % totp.PASSO_S) + 0.5)
             r = cliente.post("/api/login", json={"inquilino": slug, "login": login, "senha": senha})
             corpo = {"desafio": r.json()["desafio"], "codigo": totp.codigo(segredo_totp)}
@@ -154,11 +167,17 @@ def sessao_plat(cred):
     """Superadmin (inquilino plataforma). 2FA obrigatório: liga na primeira vez e guarda o segredo fora do git."""
     login, senha = cred["plataforma"]
     c = novo_cliente()
-    r = entrar(c, "plataforma", login, senha, totp_guardado("plataforma"))
-    assert r.status_code == 200 and r.json()["ok"] is True, (r.status_code, r.text)
-    if "configurar_2fa" in r.json()["usuario"]["pendencias"]:
-        segredo, _ = ligar_2fa(c)
-        totp_guardar("plataforma", login, segredo)
+    # 07/09 (xdist): sem trinco os 5 workers ligam o 2FA do MESMO superadmin quase juntos — cada um grava um
+    # segredo por cima do outro no banco e no arquivo, e os que chegam depois recebem 401 codigo_invalido; a
+    # sessão da plataforma morre e todo teste que depende dela vira ERROR. Com o trinco, o primeiro worker liga
+    # o 2FA e grava o segredo; os seguintes RELEEM o arquivo já dentro do trinco e só entram. Trinco próprio
+    # (não o .login.lock), senão `entrar` esperaria por este mesmo processo.
+    with trinco(".2fa_plataforma.lock"):
+        r = entrar(c, "plataforma", login, senha, totp_guardado("plataforma"))
+        assert r.status_code == 200 and r.json()["ok"] is True, (r.status_code, r.text)
+        if "configurar_2fa" in r.json()["usuario"]["pendencias"]:
+            segredo, _ = ligar_2fa(c)
+            totp_guardar("plataforma", login, segredo)
     return c
 
 

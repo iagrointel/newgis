@@ -1,7 +1,9 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-markers = ["lento: e2e ou medição demorada; excluído do driver (pytest -m 'not lento')", "e2e: playwright contra a URL interna"]
+markers = ["lento: e2e ou medição demorada; excluído do driver (pytest -m 'not lento')",
+           "e2e: playwright contra a URL interna",
+           "serial: muda o estado do inquilino de demonstração inteiro (cota, política, provedor de autenticação, suspensão, interruptor da semente); não pode correr ao lado de outro worker do pytest-xdist"]
 addopts = "-q --strict-markers"
 
 [tool.ruff]
