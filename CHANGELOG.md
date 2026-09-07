@@ -129,6 +129,32 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 3, setembro de 2026 (item L2-01-g-tabela-atributos: tabela de atributos acoplada ao mapa)
+
+Tabela de atributos por camada, paginada no servidor: `GET/PUT /api/camadas/{id}/tabela/vista`,
+`GET .../colunas`, `POST .../linhas` e `POST .../estatisticas`. Página de 50, 200 ou 1.000; ordenação por
+coluna com desempate pela chave primária; busca em texto com `unaccent` sobre todas as colunas de texto;
+filtro pela extensão do mapa (`&&` no índice GIST mais `ST_Intersects`); filtro pela seleção vinda do mapa;
+estatísticas por coluna numérica (contagem, soma, média, mínimo, máximo, nulos) calculadas no banco.
+
+A vista fica em `plat.tabela_vista` (migração `20260907T1922_tabela_atributos.sql`), uma linha por item e
+usuário, com política por inquilino e por usuário: ordem, rótulo, coluna oculta, largura e domínio. Coluna
+oculta não sai da API de colunas nem da linha; `GET .../vista` devolve a vista inteira para desfazer.
+
+Nenhum identificador vem do pedido: o nome de coluna pedido é procurado na lista de colunas reais do
+catálogo do banco e, se não estiver lá, é 422 antes de virar SQL.
+
+Na tela do mapa, painel acoplado (`web/js/mapa/tabela.js`): clicar na linha realça e centra a feição,
+clicar na feição filtra a tabela, setas navegam a grade e Enter abre o popup da linha.
+
+Medido em camada de 1.000.000 de feições, com a carga da máquina em 10,7 (acima do teto de 8; passou mesmo
+assim) — `tests/medidas/L2-01-g-tabela-atributos.json`: primeira página com contagem 275,9 ms no percentil
+95; ordenar por coluna indexada 15,2 ms. A contagem passou a ser sob pedido (`contar`, padrão verdadeiro):
+sozinha ela custa 263 ms porque a política de segurança por linha impede a varredura em paralelo — ver
+`docs/adr/20260907T2028-tabela-de-atributos-conta-sob-pedido.md`.
+
+Pendente: os e2e de tela (`tests/e2e/test_mapa_tabela.py`) foram escritos mas não rodaram nesta base de
+trilha, que não tem URL que resolva; ficam pulados com o motivo.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
