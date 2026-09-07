@@ -16,6 +16,7 @@ export const TELAS = [
   { caminho: '/admin/usuarios', chave: 'nav.usuarios', privilegio: 'membros.ver' },
   { caminho: '/admin/grupos', chave: 'nav.grupos' },
   { caminho: '/tarefas', chave: 'nav.tarefas', privilegio: 'jobs.executar' },
+  { caminho: '/analise', chave: 'nav.analise', privilegio: 'analise.executar' },
   { caminho: '/admin/papeis', chave: 'nav.papeis', privilegio: 'papeis.gerir' },
   { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar' },
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver' },
