@@ -1,0 +1,57 @@
+{
+ "item": "L0-04-h-exportar",
+ "medidas": {
+  "tempo_por_formato_s": {
+   "valor": {
+    "gpkg": 1.14,
+    "geojson": 1.57,
+    "shapefile": 1.31,
+    "csv": 0.79,
+    "xlsx": 1.57,
+    "kml": 2.34,
+    "kmz": 2.35,
+    "fgb": 0.8,
+    "gml": 2.36,
+    "dxf": 1.83,
+    "geoparquet": 1.05
+   },
+   "unidade": "s (pedido -> arquivo pronto, 100 mil feições)",
+   "comando": "tests/api/exportacao/test_exportacao.py::test_onze_formatos_da_camada_de_100_mil_feicoes_reabertos_com_a_mesma_contagem"
+  },
+  "feicoes_reabertas_por_formato": {
+   "valor": {
+    "gpkg": 100000,
+    "geojson": 100000,
+    "shapefile": 100000,
+    "csv": 100000,
+    "xlsx": 100000,
+    "kml": 100000,
+    "kmz": 100000,
+    "fgb": 100000,
+    "gml": 100000,
+    "dxf": 100000,
+    "geoparquet": 100000
+   },
+   "unidade": "feições lidas do arquivo baixado",
+   "comando": "ogrinfo -so -al <arquivo> (DuckDB read_parquet no geoparquet)"
+  },
+  "exportar_gpkg_pela_tela_ms": {
+   "valor": 1604.8,
+   "unidade": "ms",
+   "comando": "tests/e2e/test_exportar.py::test_exportar_pela_tela_gera_arquivo_valido"
+  },
+  "capturas_e2e": {
+   "valor": [
+    "L0-04-h-exportar_arquivo_pronto.png",
+    "L0-04-h-exportar_csv_pronto.png",
+    "L0-04-h-exportar_dialogo_aberto.png",
+    "L0-04-h-exportar_opcoes_csv.png",
+    "L0-04-h-exportar_painel_do_item.png"
+   ],
+   "unidade": "arquivos",
+   "comando": "playwright screenshot full_page"
+  }
+ },
+ "gerado_em": "2026-09-07T02:02:35Z",
+ "git_sha": "2382a8e7c5dd"
+}

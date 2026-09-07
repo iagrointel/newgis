@@ -75,3 +75,8 @@ sortedcontainers==2.4.0
 tomli==2.4.1
 tomli_w==1.2.0
 Markdown==3.10.2
+
+# GeoParquet da exportação de camada (item L0-04-h-exportar): o GDAL 3.8.4 desta instalação foi compilado SEM
+# o driver Parquet (conferido com `ogrinfo --formats`), então o Parquet sai pelo DuckDB, que também traz a
+# extensão `spatial` (lida do cache local ~/.duckdb/extensions; sem rede, ver o handoff do item). 21,5 MB.
+duckdb==1.5.5

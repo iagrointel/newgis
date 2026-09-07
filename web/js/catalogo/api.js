@@ -115,6 +115,13 @@ export const linkRevogar = (itemId, linkId) => chamar('DELETE', `${I(itemId)}/li
 export const compartilhado = (token) => chamar('GET', `/api/compartilhado/${id(token)}`);
 export const compartilhadoMiniaturaUrl = (token, itemId) => `/api/compartilhado/${id(token)}/itens/${id(itemId)}/miniatura`;
 
+/* exportação de camada (item L0-04-h-exportar) */
+export const exportacaoFormatos = () => chamar('GET', '/api/exportacoes/formatos');
+export const exportacaoCriar = (corpo) => chamar('POST', '/api/exportacoes', corpo);
+export const exportacaoObter = (exportacaoId) => chamar('GET', `/api/exportacoes/${id(exportacaoId)}`);
+export const exportacaoLista = (filtros = {}) => chamar('GET', `/api/exportacoes${consulta(filtros)}`);
+export const exportacaoApagar = (exportacaoId) => chamar('DELETE', `/api/exportacoes/${id(exportacaoId)}`);
+
 /* pastas */
 export const pastasArvore = () => chamar('GET', '/api/pastas/arvore');
 export const pastaCriar = (nome, paiId) => chamar('POST', '/api/pastas', paiId ? { nome, pai_id: paiId } : { nome });
