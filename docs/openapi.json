@@ -15243,6 +15243,12 @@
       "title": "Geometria",
       "description": "devolve a geometria em GeoJSON 4326 para o mapa desenhar",
       "default": false
+     },
+     "contar": {
+      "type": "boolean",
+      "title": "Contar",
+      "description": "conta o total sob o mesmo filtro; false devolve total nulo",
+      "default": true
      }
     },
     "type": "object",
