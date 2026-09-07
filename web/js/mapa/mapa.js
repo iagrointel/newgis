@@ -207,6 +207,11 @@ async function iniciar(usuario) {
       const medida = desenho.medidaDe(f);
       listaDesenho.append(h('li', { class: 'camada-item', dataset: { desenho: f.id } },
         h('span', { class: 'camada-titulo' }, `${f.properties.tipo_desenho}${medida ? ' · ' + medida : ''}`),
+        h('button', {
+          type: 'button', class: 'botao-mini',
+          'aria-label': t(desenho.editando() === f.id ? 'mapa.desenho_editar_fim' : 'mapa.desenho_editar'),
+          onclick: () => (desenho.editando() === f.id ? desenho.terminarEdicao() : desenho.editar(f.id)),
+        }, desenho.editando() === f.id ? '✓' : '✎'),
         h('button', { type: 'button', class: 'botao-mini', 'aria-label': t('mapa.desenho_mover_cima'), onclick: () => desenho.mover(f.id, -1) }, '↑'),
         h('button', { type: 'button', class: 'botao-mini', 'aria-label': t('mapa.desenho_mover_baixo'), onclick: () => desenho.mover(f.id, 1) }, '↓'),
         h('button', { type: 'button', class: 'botao-mini', 'aria-label': t('mapa.desenho_apagar'), onclick: () => desenho.apagar(f.id) }, '×')));
@@ -229,6 +234,7 @@ async function iniciar(usuario) {
   ['desenho-cor', 'desenho-opacidade', 'desenho-largura', 'desenho-fonte'].forEach((id) => el(id).addEventListener('input', atualizarEstiloAtual));
   atualizarEstiloAtual();
   el('desenho-snap').addEventListener('change', (ev) => desenho.definirSnap(ev.target.checked));
+  el('btn-desenho-editar-fim').addEventListener('click', () => desenho.terminarEdicao());
 
   const salvarDesenho = async () => {
     const corpo = { esquema_versao: 1, corpo: { desenho: { features: desenho.lista() } } };

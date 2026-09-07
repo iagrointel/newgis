@@ -120,7 +120,8 @@ def test_salvar_e_reabrir_identico(mapa, page, base_url):
 
     page.goto(f"{base_url}/mapa?mapa={mapa_id}", wait_until="domcontentloaded")
     page.wait_for_selector("body[data-pronto='1']", timeout=20000)
-    page.wait_for_function("window.plat && window.plat.mapa && window.plat.mapa.desenho.lista().length > 0", timeout=15000)
+    page.wait_for_function("window.plat && window.plat.mapa && window.plat.mapa.desenho.lista().length > 0",
+                           timeout=15000)
     depois = page.evaluate("JSON.stringify(window.plat.mapa.desenho.lista())")
 
     a = sorted(json.loads(antes), key=lambda f: f["id"])
@@ -172,4 +173,65 @@ def test_texto_de_10_mil_caracteres_e_rejeitado_pelo_servidor(mapa, page):
     _clicar_no_mapa(page, 640, 380)
     page.wait_for_timeout(200)
     assert page.evaluate("window.plat.mapa.desenho.lista().length") == 0
+    mapa.verificar()
+
+
+def test_editar_vertice_e_salvar_mantem_id_e_estilo(mapa, page):
+    """Cláusula 'editados' do portão: a feição vai para o modo de edição do terra-draw (mover, arrastar
+    vértice, apagar vértice), volta com o MESMO id/propriedades e a geometria alterada."""
+    _desenhar_poligono(page)
+    antes = page.evaluate("window.plat.mapa.desenho.lista()[0]")
+    fid = antes["id"]
+    assert page.evaluate(f"window.plat.mapa.desenho.editar({fid!r})") is True
+    assert page.evaluate("window.plat.mapa.desenho.editando()") == fid
+
+    canvas = page.locator("#mapa canvas")
+    box = canvas.bounding_box()
+    cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+    page.mouse.click(cx - 80, cy - 80)  # seleciona a feição emprestada ao terra-draw
+    page.wait_for_timeout(150)
+    page.mouse.move(cx - 80, cy - 80)
+    page.mouse.down()
+    page.mouse.move(cx - 40, cy - 30, steps=8)  # arrasta o vértice
+    page.mouse.up()
+    page.wait_for_timeout(150)
+
+    page.evaluate("window.plat.mapa.desenho.terminarEdicao()")
+    assert page.evaluate("window.plat.mapa.desenho.editando()") is None
+    depois = page.evaluate("window.plat.mapa.desenho.lista()[0]")
+    assert depois["id"] == fid
+    assert depois["properties"]["tipo_desenho"] == "poligono"
+    assert depois["properties"]["estilo"] == antes["properties"]["estilo"]
+    assert depois["geometry"]["type"] == "Polygon"
+    assert depois["geometry"] != antes["geometry"], "arrastar o vértice tinha de mudar a geometria"
+    mapa.verificar()
+
+
+def test_encaixe_10px_cai_no_vertice_da_feicao_alvo(mapa, page):
+    """Cláusula de snapping do portão, medida em PIXELS na tela de verdade: com o encaixe ligado, um clique a
+    menos de 10 px de um vértice devolve a coordenada EXATA daquele vértice; a 25 px, não devolve nada."""
+    _desenhar_poligono(page)
+    page.check("#desenho-snap")
+    alvo = page.evaluate("window.plat.mapa.desenho.lista()[0].geometry.coordinates[0][0]")
+    pixel = page.evaluate(
+        "(c) => { const p = window.plat.mapa.map.project({lng: c[0], lat: c[1]}); return [p.x, p.y]; }", alvo)
+    perto = page.evaluate("([x, y]) => window.plat.mapa.desenho.encaixar(x + 6, y + 4)", pixel)
+    longe = page.evaluate("([x, y]) => window.plat.mapa.desenho.encaixar(x + 25, y + 25)", pixel)
+    assert perto is not None, "clique a 7,2 px do vértice tinha de encaixar (tolerância 10 px)"
+    assert abs(perto[0] - alvo[0]) < 1e-9 and abs(perto[1] - alvo[1]) < 1e-9, (perto, alvo)
+    assert longe is None, "clique a 35 px do vértice não pode encaixar"
+    mapa.capturar("encaixe")
+    mapa.verificar()
+
+
+def test_html_no_texto_do_desenho_nao_vira_marcacao(mapa, page):
+    """Refutação do item: HTML no texto do desenho é DADO, nunca marcação. O texto é desenhado pelo MapLibre
+    (`text-field`, que só aceita string) e o rótulo da lista lateral entra por textContent."""
+    bruto = "<img src=x onerror=alert(1)><b>oi</b>"
+    page.once("dialog", lambda d: d.accept(bruto))
+    page.click('[data-desenho="texto"]')
+    _clicar_no_mapa(page, 640, 380)
+    page.wait_for_timeout(200)
+    assert page.evaluate("window.plat.mapa.desenho.lista()[0].properties.texto") == bruto
+    assert page.evaluate("document.querySelectorAll('#lista-desenho img, #lista-desenho b').length") == 0
     mapa.verificar()

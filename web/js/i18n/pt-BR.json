@@ -783,6 +783,8 @@
  "mapa.anotacoes": "Anotações",
  "mapa.desenho": "Desenho",
  "mapa.desenho_apagar": "apagar",
+ "mapa.desenho_editar": "editar (mover, arrastar e apagar vértice)",
+ "mapa.desenho_editar_fim": "terminar edição",
  "mapa.desenho_circulo": "Círculo",
  "mapa.desenho_circulo_polo": "círculo com centro além de ±85° de latitude (degenerado no mapa)",
  "mapa.desenho_cor": "cor",
