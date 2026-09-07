@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L2-07-b-formulario-de-coleta-xlsform: XLSForm vira formulário que grava feição)
+
+`POST /api/formularios/xlsform` importa uma planilha XLSForm (pyxform) como item `formulario` do catálogo,
+cria a camada de destino (e uma camada filha por `begin repeat`, com `pai_globalid`) e traduz relevant,
+constraint, calculation e choice_filter do XPath para a linguagem de expressão própria por tabela de função
+com estado feito/parcial/fora (regex, date, uuid e position ficam fora, com o trecho no aviso; tabela em
+`GET /api/formularios/equivalencia`). A tela `/coleta?formulario=<id>` desenha texto, inteiro, decimal, data,
+hora, data-hora, select_one com busca, select_multiple, cascata de 3 níveis, grupos e repetições, guarda
+rascunho a cada mudança e envia; o servidor recalcula, reaplica relevância (campo não relevante vai NULL),
+restrições e obrigatoriedade e só então grava pela `POST /api/camadas/{id}/edicoes`. Cálculo circular é 422
+`dependencia_circular` na importação e no navegador. Conferido: 102 vetores XLSForm nos dois avaliadores
+(`tests/expressoes/vetores_xlsform.json`), motor JS = motor Python em 13 respostas dos 5 formulários de
+teste, 11 testes de API. Conserto no caminho: gatilho de histórico de feição (L2-03-d) quebrava com geometria
+nula (`20260907T2020_historico_geom_nula.sql`). Fora do brief: geoponto com GPS, foto, áudio, assinatura,
+código de barras, fila off-line.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
