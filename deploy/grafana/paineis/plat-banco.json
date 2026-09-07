@@ -231,7 +231,7 @@
             "uid": "plat-prometheus"
           },
           "refId": "A",
-          "expr": "pg_stat_activity_max_tx_duration{datname=\"iagro_sat\"}",
+          "expr": "max by (state) (pg_stat_activity_max_tx_duration{datname=\"iagro_sat\"})",
           "legendFormat": "{{state}}"
         }
       ],

@@ -177,6 +177,10 @@ sed "s#http://127.0.0.1:9090#http://127.0.0.1:$PORTA_PROM#" \
   "$RAIZ/deploy/grafana/provisioning/datasources/plat-prometheus.yml" \
   > "$TRAB/provisioning/datasources/plat-prometheus.yml"
 cp "$RAIZ/deploy/grafana/provisioning/dashboards/plat.yml" "$TRAB/provisioning/dashboards/plat.yml"
+# CÓPIA dos painéis, não o diretório do repositório: a refutação do item precisa tirar e repor um
+# arquivo para ver o provisionador reagir, e isso não pode mexer no que está versionado.
+mkdir -p "$TRAB/paineis"
+cp "$RAIZ"/deploy/grafana/paineis/*.json "$TRAB/paineis/"
 SENHA_GRAFANA="homolog-$(openssl rand -hex 8)"
 printf '%s' "$SENHA_GRAFANA" > "$TRAB/senha_grafana"
 docker run -d --rm --name "$NOME_GRAFANA" --network host \
@@ -185,7 +189,7 @@ docker run -d --rm --name "$NOME_GRAFANA" --network host \
   -e GF_USERS_ALLOW_SIGN_UP=false -e GF_ANALYTICS_REPORTING_ENABLED=false \
   -e GF_ANALYTICS_CHECK_FOR_UPDATES=false -e GF_NEWS_NEWS_FEED_ENABLED=false \
   -v "$TRAB/provisioning:/etc/grafana/provisioning:ro" \
-  -v "$RAIZ/deploy/grafana/paineis:/var/lib/grafana/dashboards/plat:ro" \
+  -v "$TRAB/paineis:/var/lib/grafana/dashboards/plat:ro" \
   "$IMAGEM_GRAFANA" >/dev/null || { echo "ERRO: docker run do Grafana falhou"; exit 3; }
 
 for _ in $(seq 90); do
@@ -199,6 +203,7 @@ PLAT_PAINEIS_PROM=http://127.0.0.1:$PORTA_PROM
 PLAT_PAINEIS_GRAFANA=http://127.0.0.1:$PORTA_GRAFANA
 PLAT_PAINEIS_GRAFANA_SENHA=$SENHA_GRAFANA
 PLAT_PAINEIS_TRAB=$TRAB
+PLAT_PAINEIS_ARQUIVOS=$TRAB/paineis
 AMB
 
 # ---------------------------------------------------------------- carga curta
