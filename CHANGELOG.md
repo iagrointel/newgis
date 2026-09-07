@@ -145,6 +145,35 @@ isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não 
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
 
+## turno 3, setembro de 2026 (item L2-05-c-sobreposicao-agregacao: relação entre camadas)
+
+Nove ferramentas que relacionam DUAS camadas, no mesmo registro e no mesmo executor dos itens L2-05-a e
+L2-05-b: `juncao_espacial` (um-para-um com regra de mesclagem soma/média/mínimo/máximo/contagem/primeiro/
+concatenar, ou um-para-muitos; relações intersecta, contém, dentro, a X metros e mais próximo, esta com o
+identificador do vizinho e a distância geodésica), `juncao_atributo` (inner e left por igualdade de chave, com
+recusa nomeada quando os tipos das chaves não casam; a geometria da camada juntada não entra),
+`resumir_dentro` (contagem, estatísticas, medida geodésica da parte contida e separação por campo de grupo),
+`contar_dentro`, `resumir_perto` (área de proximidade geodésica em volta da referência), `agregar_pontos` (em
+polígonos existentes ou em grade quadrada/hexagonal desenhada em metros no UTM local e trazida de volta ao
+SRID da camada), `enriquecer_por_area` (repartição de campo numérico por proporção de área geodésica),
+`vizinho_mais_proximo` e `tabela_distancias`.
+
+Três decisões de comportamento, todas escritas no método da procedência do item de saída: o par candidato sai
+de `ST_Subdivide` sobre a camada de polígonos com `DISTINCT`, mas a relação e a medida são conferidas contra a
+geometria original; a contagem dupla que polígonos sobrepostos provocam é contada e declarada, e
+`atribuicao='exclusivo'` a desfaz; feição exatamente na fronteira conta nos dois polígonos vizinhos, como no
+ArcGIS e como no `intersects` do geopandas.
+
+25 testes em `tests/api/ferramentas/test_relacao.py` conferem cada ferramenta contra `geopandas.sjoin`,
+`pandas.merge`, `shapely` e `pyproj.Geod` na mesma entrada, lida de volta do banco — nenhum número esperado
+escrito à mão. Cláusulas do portão medidas: 100 pares do "mais próximo" com a distância geodésica conferida;
+a soma distribuída pela proporção de área bate com a soma original (erro relativo 6,7e-8, tolerância 1e-6).
+A cláusula de 1 milhão de pontos em 5.570 municípios em até 60 s NÃO foi medida na escala do enunciado (disco
+a 93 %, carga acima de 8 e teto de 5 mil feições por teste no brief da corrida): o que ficou medido foi 4.001
+pontos em 400 polígonos, com a carga ao lado, em `tests/medidas/L2-05-c-sobreposicao-agregacao.json`.
+Paridade com "Summarize data" do Map Viewer em `docs/PARIDADE_FERRAMENTAS_RELACAO.md`; ADR
+20260907T2210.
+
 ## turno 3, setembro de 2026 (item L2-05-b-vetor-basico: 19 ferramentas vetoriais elementares em SQL/PostGIS)
 
 As operações que faltavam ao registro de ferramentas do item L2-05-a, todas como expressão SQL executada pelo
