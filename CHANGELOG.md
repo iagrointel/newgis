@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L2-02-c-editor-simbologia-vetor: editor de simbologia no visualizador)
+
+- **Editor de simbologia** (`web/js/mapa/estilo_editor.js`, painel `#painel-estilo` na tela `/mapa`): símbolo
+  único (cor, contorno, tamanho, ícone do sprite, tracejado, seta, padrão de preenchimento), por categoria (valores
+  do servidor, cor/ícone por valor, ordem, rampa qualitativa, "outros" para o que passa de 200), por classe de cor e de
+  tamanho (método e n do L2-02-b, rampas ColorBrewer sequenciais/divergentes com inversão), proporcional, mapa de
+  calor, agrupamento (clusters no tile), efeitos (sombra, brilho; mistura registrada), faixa de escala por camada e por
+  classe; pré-visualização ao vivo pela mesma função que grava (`POST /api/estilos/compilar`); desfazer/refazer;
+  exportar/importar JSON; salvar como item `estilo` ligado à camada (`camada_id` → `estilo_de_camada`).
+- **Visualizador** desenha a camada com o estilo salvo mais recente (`/api/mapa/camadas`), com sprite e glifos do
+  inquilino; `tilejson?agrupar=<raio>` serve clusters pela função `t_<hex>_ag` (migração
+  `20260907T2110_agrupamento_tile.sql`, `plat.camada_agrupar`).
+- Esquema `estilo-v1` estendido só com campos opcionais (migração `20260907T2100_estilo_editor.sql`); compilador com
+  outros, classes de tamanho, ícone, tracejado, padrão, seta, efeitos e escala; ColorBrewer 1.7.0 no vendor com licença.
+  ADR `docs/adr/20260907T2130-editor-de-simbologia.md`; paridade contra "Apply styles" em docs/PARIDADE.md.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
