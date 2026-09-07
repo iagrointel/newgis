@@ -9,12 +9,16 @@
 <script src="/static/js/base/tema_cedo.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="tela instrumento">
+<body class="tela">
 <main class="entrar" id="principal">
   <div class="cartao instrumento-moldura">
-    <div class="marca"><strong data-i18n="app.nome">plat</strong> <span class="aviso-beta" data-i18n="app.beta">análise / beta privado</span></div>
+    <div class="topo">
+      <div class="marca"><strong data-i18n="app.nome">plat</strong> <span class="aviso-beta" data-i18n="app.beta">análise / beta privado</span></div>
+      <plat-idioma id="idioma"></plat-idioma>
+    </div>
     <h1 data-i18n="redefinir_senha.titulo">Redefinir senha</h1>
     <plat-aviso id="aviso"></plat-aviso>
+    <plat-estado id="estado" hidden></plat-estado>
     <form id="form-solicitar" class="form" novalidate hidden autocomplete="off">
       <p class="fraco" data-i18n="redefinir_senha.solicitar_ajuda">informe o inquilino e o e-mail cadastrado; se existir uma conta com esse e-mail, enviaremos um link</p>
       <div class="campo">
@@ -27,21 +31,25 @@
       </div>
       <div class="botoes"><button type="submit" id="solicitar" class="primario" data-i18n="redefinir_senha.enviar_link">Enviar link</button></div>
     </form>
-    <p id="solicitado" hidden data-i18n="redefinir_senha.solicitado">Se existir uma conta com esse e-mail, um link foi enviado. Confira sua caixa de entrada.</p>
+    <div id="solicitado" hidden>
+      <plat-aviso data-tipo="ok" role="status" data-i18n="redefinir_senha.solicitado">Se existir uma conta com esse e-mail, um link foi enviado. Confira sua caixa de entrada.</plat-aviso>
+    </div>
     <form id="form-aplicar" class="form" novalidate hidden autocomplete="off">
       <div class="campo">
         <label for="senha" data-i18n="aceitar_convite.senha">escolha uma senha</label>
         <div class="linha-senha">
-          <input id="senha" name="senha" type="password" autocomplete="new-password" required>
+          <input id="senha" name="senha" type="password" autocomplete="new-password" required aria-describedby="senha-ajuda">
           <button type="button" id="mostrar-senha" class="pequeno" aria-pressed="false" aria-controls="senha" data-i18n="form.mostrar">mostrar</button>
         </div>
+        <span class="ajuda" id="senha-ajuda" data-i18n="senha.regra_generica">pelo menos 8 caracteres, com letra e número</span>
       </div>
       <div class="botoes"><button type="submit" id="aplicar" class="primario" data-i18n="redefinir_senha.trocar">Trocar senha</button></div>
     </form>
     <div id="concluido" hidden>
-      <p data-i18n="redefinir_senha.concluido">Senha trocada. Você já pode entrar.</p>
-      <a class="botao primario" href="/entrar" data-i18n="login.entrar">Entrar</a>
+      <plat-aviso data-tipo="ok" role="status" data-i18n="redefinir_senha.concluido">Senha trocada. Você já pode entrar.</plat-aviso>
+      <p><a class="botao primario" href="/entrar" data-i18n="login.entrar">Entrar</a></p>
     </div>
+    <p class="rodape"><a href="/entrar" id="voltar-entrar" data-i18n="redefinir_senha.voltar_entrar">voltar para a entrada</a></p>
   </div>
 </main>
 <script type="module" src="/static/js/auth/redefinir_senha.js"></script>
