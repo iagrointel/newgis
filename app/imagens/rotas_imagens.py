@@ -18,7 +18,8 @@ from __future__ import annotations
 import io
 import threading
 from collections import OrderedDict
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturoTimeout
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturoTimeout
 
 import morecantile
 import numpy as np

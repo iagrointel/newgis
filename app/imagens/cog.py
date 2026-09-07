@@ -13,13 +13,12 @@ científico sempre leva todas — nada se perde); a seleção é registrada na s
 from __future__ import annotations
 
 import hashlib
-import json
 from dataclasses import dataclass
 from pathlib import Path
 
 import rasterio
-from rio_cogeo.cogeo import cog_validate
 from rio_cogeo import __version__ as RIO_COGEO_VERSAO
+from rio_cogeo.cogeo import cog_validate
 
 from app import limites
 from app.imagens.validacao import RelatorioValidacao, ambiente_isolado
