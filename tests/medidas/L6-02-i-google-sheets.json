@@ -1,0 +1,88 @@
+{
+ "item": "L6-02-i-google-sheets",
+ "medidas": {
+  "credencial_invalida_na_entrada": {
+   "valor": {
+    "status": 422,
+    "erro": {
+     "erro": "credencial_invalida",
+     "mensagem": "o campo obrigatório 'private_key' está ausente ou vazio",
+     "detalhe": {
+      "motivo": "credencial_invalida"
+     },
+     "req_id": "6b04822c158cdad7"
+    }
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/conexao/test_google_sheets.py -q"
+  },
+  "publica_vira_camada": {
+   "valor": {
+    "feicoes": 2,
+    "formato": "csv",
+    "item_id": "5717c57e-f048-4bc4-b10a-18fa082733b5",
+    "url_gravada_e_canonica": true,
+    "cabecalho_authorization_na_exportacao": null
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/conexao/test_google_sheets.py -q"
+  },
+  "atualizacao_agendada_15_min": {
+   "valor": {
+    "intervalo_s": 900,
+    "intervalo_minimo_do_agendador_s": 900,
+    "cadencia_do_periodico": "*/15 * * * *",
+    "proximo_menos_ultimo_s": 900.0,
+    "passagens_pelo_agendador": 2,
+    "recargas": 2,
+    "camada_trocada_na_recarga": true,
+    "feicoes_depois_da_troca": 3
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/conexao/test_google_sheets.py -q"
+  },
+  "privada_conta_de_servico_vira_camada": {
+   "valor": {
+    "feicoes": 2,
+    "jwt_rs256_verificado_pelo_servidor": true,
+    "escopo": "spreadsheets.readonly",
+    "aud": "https://216.238.123.14:38841/oauth2/token",
+    "exportacao_com_bearer_emitido": true,
+    "item_id": "1dc4ebab-3916-4470-b6ac-0c902e662fac"
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/conexao/test_google_sheets.py -q"
+  },
+  "alcance_google_de_verdade": {
+   "valor": {
+    "url": "https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/export?format=csv",
+    "status": 200,
+    "bytes": 1408,
+    "sha256": "c9ce73edd7052aaa8bbf7efb9eb0e10967c4670e725fdd79aedafb87c25e06e6",
+    "formato_reconhecido": "csv",
+    "saltos_de_redirect": 1,
+    "primeira_linha": "Student Name,Gender,Class Level,Home State,Major,Extracurricular Activity"
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/conexao/test_google_sheets.py -q"
+  },
+  "fronteira_privada_no_google_real": {
+   "valor": {
+    "estado": "pendente",
+    "motivo": "a casa não tem conta de serviço do Google; o fluxo privado foi provado ponta a ponta contra servidor que verifica a assinatura RS256 do JWT de verdade"
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/conexao/test_google_sheets.py -q"
+  },
+  "fronteira_planilha_publica_propria": {
+   "valor": {
+    "estado": "pendente",
+    "motivo": "publicar uma planilha de teste da casa exige conta Google, que a casa não tem; a planilha pública de exemplo do Google baixa e é reconhecida como CSV, mas não tem colunas de coordenada e portanto não vira camada"
+   },
+   "unidade": "json",
+   "comando": "set -a; source laco/var/trilha/<t>.env; set +a; PLAT_GRAVAR_MEDIDAS=1 venv/bin/pytest tests/api/conexao/test_google_sheets.py -q"
+  }
+ },
+ "gerado_em": "2026-09-06T22:21:27Z",
+ "git_sha": "976427944ee5"
+}
