@@ -172,6 +172,7 @@ class _Importador:
         self.tipos: dict[tuple[str, int], str] = {}
         self.subredes: dict[tuple[int, str], str] = {}   # (nivel, codigo) -> id
         self.juncoes: dict[str, tuple[str, int]] = {}    # codigo -> (id, seq)
+        self.arquivo: dict[str, int] = {}
         self.importacao_id: str | None = None
 
     # ---------- utilidades ----------
@@ -234,6 +235,7 @@ class _Importador:
     def rodar(self) -> dict:
         t0 = time.monotonic()
         arquivo = inspecionar(self.caminho)
+        self.arquivo = arquivo
         try:
             self.tipos = self._tipos_mapa()
             self._abrir_auditoria(arquivo)
@@ -277,7 +279,17 @@ class _Importador:
         return resultado
 
     def _pontos_notaveis(self) -> dict[str, bytes]:
-        """codigo do ponto de conexão -> WKB (EPSG:4674), da camada PONNOT."""
+        """codigo do ponto de conexão -> WKB (EPSG:4674), da camada PONNOT. GDB sem PONNOT (o
+        esquema da ANEEL a tornou opcional para distribuidora pequena) não é erro: todas as junções
+        entram sem geometria, com o desvio contado uma vez aqui e não ponto a ponto."""
+        if not self.arquivo.get("PONNOT"):
+            self._desvio(
+                "ponnot_ausente",
+                "o GDB não tem a camada PONNOT: toda junção entra sem coordenada (a conectividade, "
+                "que é pelo código do ponto, não é afetada)",
+                None,
+            )
+            return {}
         df = _ler(self.caminho, "PONNOT")
         out = {}
         for _, linha in df.iterrows():
@@ -383,6 +395,9 @@ class _Importador:
                 self.juncoes[r["codigo_externo"]] = (r["id"], int(r["seq"]))
 
     def _trechos(self, camada: str, geometrias: dict[str, bytes]) -> None:
+        if not self.arquivo.get(camada):
+            self.inseridos[camada] = 0  # camada ausente no GDB: 0 declarado, não erro
+            return
         df = _ler(self.caminho, camada, geometria=(camada != "RAMLIG"))
         codigos = set()
         for col in ("PN_CON_1", "PN_CON_2"):
@@ -393,8 +408,14 @@ class _Importador:
 
         tipo_id = self._tipo_id(camada)
         pendentes: list[tuple] = []
+        vistos: set[str] = set()
         for _, linha in df.iterrows():
             cod = _texto(linha.get("COD_ID"))
+            if cod is not None:
+                if cod in vistos:
+                    self._desvio("trecho_duplicado", "COD_ID de trecho repetido dentro do arquivo", cod)
+                    continue
+                vistos.add(cod)
             pn1, pn2 = _texto(linha.get("PN_CON_1")), _texto(linha.get("PN_CON_2"))
             no1 = self.juncoes.get(pn1) if pn1 else None
             no2 = self.juncoes.get(pn2) if pn2 else None
@@ -439,10 +460,7 @@ class _Importador:
             "SELECT count(*) AS n FROM plat.rede_aresta WHERE rede_id = %s::uuid AND tipo_id = %s::uuid",
             (self.rede_id, tipo_id),
         )
-        total = int(self.cur.fetchone()["n"])
-        duplicados = (self.inseridos.get(camada, 0) + len(df) - self._falhas[camada]) - total \
-            if hasattr(self, "_falhas") else 0
-        self.inseridos[camada] = total
+        self.inseridos[camada] = int(self.cur.fetchone()["n"])
 
     def _gravar_arestas(self, tuplas: list[tuple]) -> None:
         # no_origem_seq/no_destino_seq entram como 0: o gatilho rede_aresta_validar copia os seqs
@@ -462,6 +480,9 @@ class _Importador:
         )
 
     def _dispositivos(self, camada: str, geometrias: dict[str, bytes]) -> None:
+        if not self.arquivo.get(camada):
+            self.inseridos[camada] = 0
+            return
         df = _ler(self.caminho, camada)
         if df.empty:
             self.inseridos[camada] = 0
@@ -482,8 +503,18 @@ class _Importador:
                 continue
             estado = "na"
             if camada == "UNSEMT":
-                estado = "aberto" if _texto(linha.get("P_N_OPE")) == "A" else "fechado"
+                # P_N_OPE: posição normal de operação — 'A' normalmente aberta, 'F' normalmente
+                # fechada; qualquer outra coisa (vazio incluso) não afirma estado.
+                pno = _texto(linha.get("P_N_OPE"))
+                estado = {"A": "aberto", "F": "fechado"}.get(pno, "na")
             subrede = self.subredes.get((2, _texto(linha.get("CTMT")) or ""))
+            if camada == "UNTRMT" and subrede is None:
+                self._desvio(
+                    "trafo_sem_alimentador",
+                    "o campo CTMT do transformador não casa com nenhum alimentador carregado: o "
+                    "transformador entra, mas a baixa tensão dele não vira subrede de nível 3",
+                    cod,
+                )
             pendentes.append((
                 self.tenant_id, self.rede_id, tipo_id, cod, estado, subrede,
                 _wkb_ponto(linha.geometry), Json(_atributos(linha)), cod, no[0],
@@ -521,7 +552,9 @@ class _Importador:
                 self._desvio("dispositivo_duplicado", "COD_ID de dispositivo repetido no arquivo", cod)
                 continue
             no_id = por_codigo[cod]
-            if camada == "UNTRMT":
+            if camada == "UNTRMT" and t[5] is not None:
+                # t[5] é a subrede de nível 2 (o alimentador); sem ele o desvio 'trafo_sem_alimentador'
+                # já foi contado e a subrede de nível 3 não é criada (o gatilho recusaria o órfão).
                 self.cur.execute(
                     "INSERT INTO plat.rede_subrede (tenant_id, rede_id, nivel, codigo_externo, "
                     "controlador_no_id, pai_id) VALUES (%s, %s::uuid, 3, %s, %s::uuid, %s::uuid) "
@@ -551,7 +584,10 @@ class _Importador:
                     cod,
                 )
 
-    def _consumidores(self, camada: str) -> None:
+    def _consumidores(self, camada: str, geometrias: dict[str, bytes]) -> None:
+        if not self.arquivo.get(camada):
+            self.inseridos[camada] = 0
+            return
         try:
             df = _ler(self.caminho, camada, geometria=False)
         except ErroBdgd:
@@ -561,9 +597,11 @@ class _Importador:
             self.inseridos[camada] = 0
             return
         # UCBT_tab/UCMT_tab não têm COD_ID nem geometria: o identificador é o OBJECTID da tabela
-        # (índice do dataframe, fid_as_index=True) e o ponto de ligação é o PN_CON.
+        # (índice do dataframe, fid_as_index=True) e o ponto de ligação é o PN_CON. As junções que só
+        # aparecem aqui (ponta de ramal) entram pelo mesmo caminho das demais, com o mesmo desvio de
+        # geometria ausente quando não há PONNOT para elas.
         pns = {_texto(v) for v in df["PN_CON"]} - {None}
-        self._garantir_juncoes_uc(pns)
+        self._garantir_juncoes(pns, geometrias)
         tipo_id = self._tipo_id(camada)
         pendentes: list[tuple] = []
         for idx, linha in df.iterrows():
@@ -592,27 +630,6 @@ class _Importador:
             (self.rede_id, tipo_id),
         )
         self.inseridos[camada] = int(self.cur.fetchone()["n"])
-
-    def _garantir_juncoes_uc(self, pns: set[str]) -> None:
-        """Junções que só aparecem em PN_CON de consumidor (ponta de ramal) — sem geometria, porque
-        a geometria delas viria do PONNOT e o chamador já aplica esse mapa nas fases de trecho."""
-        novas = sorted(p for p in pns if p and p not in self.juncoes)
-        for i in range(0, len(novas), LOTE):
-            fatia = novas[i : i + LOTE]
-            execute_values(
-                self.cur,
-                "INSERT INTO plat.rede_no (tenant_id, rede_id, papel, codigo_externo) VALUES %s "
-                "ON CONFLICT (rede_id, papel, codigo_externo) DO NOTHING",
-                [(self.tenant_id, self.rede_id, "juncao", c) for c in fatia],
-                page_size=LOTE,
-            )
-            self.cur.execute(
-                "SELECT id, seq, codigo_externo FROM plat.rede_no "
-                "WHERE rede_id = %s::uuid AND papel = 'juncao' AND codigo_externo = ANY(%s)",
-                (self.rede_id, fatia),
-            )
-            for r in self.cur.fetchall():
-                self.juncoes[r["codigo_externo"]] = (r["id"], int(r["seq"]))
 
     def _gravar_consumidores(self, tuplas: list[tuple]) -> None:
         inseridos = execute_values(
