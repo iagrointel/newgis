@@ -199,7 +199,9 @@ export class Legenda {
     }
     for (const cam of lista) {
       if (cam.foraDeEscala) continue; // legenda respeita escala: fora da faixa, não aparece
-      const primeiraCamadaComForma = cam.idsDeEstilo.find((id) => this.map.getLayer(id) && analisarCamada(this.map, id));
+      // camadas auxiliares do editor de simbologia (sombra, brilho; item L2-02-c) não representam a camada
+      const auxiliar = (id) => !!((this.map.getLayer(id) || {}).metadata || {})['plat:auxiliar'];
+      const primeiraCamadaComForma = cam.idsDeEstilo.find((id) => this.map.getLayer(id) && !auxiliar(id) && analisarCamada(this.map, id));
       if (!primeiraCamadaComForma) continue;
       const desc = analisarCamada(this.map, primeiraCamadaComForma);
       if (!desc) continue;
