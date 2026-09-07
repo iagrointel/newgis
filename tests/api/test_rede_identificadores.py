@@ -142,7 +142,7 @@ def test_reservas_concorrentes_recebem_faixas_disjuntas(sessao_a, usuarios_a, li
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as ex:
         faixas = list(ex.map(reservar, range(10)))
     faixas.sort()
-    for (i1, f1), (i2, f2) in zip(faixas, faixas[1:]):
+    for (i1, f1), (i2, f2) in zip(faixas, faixas[1:], strict=False):
         assert f1 < i2, f"faixas sobrepostas: [{i1},{f1}] e [{i2},{f2}]"
     # e nenhuma veio vazia ou repetida: 10 blocos de 10 = 100 números distintos
     assert sum(f - i + 1 for i, f in faixas) == 100
@@ -277,7 +277,7 @@ def test_fachada_esri_descritor_reserve_e_query(sessao_a, limpar_redes, tipo_id)
 
 def test_fachada_esri_resolve_servico_por_nome_e_token_na_url(sessao_a, usuarios_a, limpar_redes, tipo_id):
     rid = _rede_com_pacote(sessao_a, limpar_redes, "esri-nome")
-    tid = tipo_id(rid)
+    tipo_id(rid)  # garante que a rede tem tipo cadastrado (fachada resolve por nome, não usa o id aqui)
     nome = sessao_a.get(f"/api/rede/{rid}").json()["nome"]
     r = sessao_a.get(UN.format(s=nome))
     assert r.status_code == 200, r.text
