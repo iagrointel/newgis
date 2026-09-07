@@ -95,12 +95,21 @@ def pico_estimado_mb(n_no_bloco: int, n_fatores: int) -> float:
     return round(BASE_MB + (matriz + ids) / (1024 * 1024), 2)
 
 
-def plano(n_unidades: int, n_fatores: int, *, bloco: int | None = None, orcamento: int | None = None) -> dict:
+def tempo_projetado_extracao_s(n_unidades: int, n_fatores: int) -> float:
+    """Quanto uma extração de `n_unidades × n_fatores` deve levar, à taxa MEDIDA em
+    tests/medidas/L3-16-desempenho-escala.json (`limites.AMC_EXTRACAO_US_POR_UNIDADE_FATOR`). É projeção,
+    não medida do caso completo — e é o que permite recusar antes de gastar meia hora de máquina."""
+    return round(int(n_unidades) * int(n_fatores) * limites.AMC_EXTRACAO_US_POR_UNIDADE_FATOR / 1e6, 1)
+
+
+def plano(n_unidades: int, n_fatores: int, *, tarefa: str = "recombinacao", bloco: int | None = None,
+          orcamento: int | None = None) -> dict:
     """Plano de execução em blocos, ou `ErroEscala` quando o trabalho não cabe nos limites declarados.
 
     Recusa (nunca corta em silêncio): mais unidades que `AMC_UNIDADES_MAX`, mais fatores que o esquema
-    do modelo admite (64, `docs/esquemas/amc_modelo.v1.json`), ou bloco cujo pico estimado passa do
-    orçamento de RAM. A saída é o que o job registra no seu relatório e o que o teste confere.
+    do modelo admite (64, `docs/esquemas/amc_modelo.v1.json`), bloco cujo pico estimado passa do orçamento
+    de RAM e — só quando `tarefa='extracao'` — trabalho cujo tempo PROJETADO passa do prazo do job. A
+    saída é o que o job registra no seu relatório e o que o teste confere.
     """
     n_unidades, n_fatores = int(n_unidades), int(n_fatores)
     if n_unidades <= 0:
@@ -133,8 +142,21 @@ def plano(n_unidades: int, n_fatores: int, *, bloco: int | None = None, orcament
             f"é {teto} MB; reduza o bloco (AMC_BLOCO_UNIDADES) ou o número de fatores",
             {"bloco": bloco, "pico_estimado_mb": pico, "orcamento_mb": teto},
         )
+    projetado_s = tempo_projetado_extracao_s(n_unidades, n_fatores)
+    if tarefa == "extracao" and projetado_s > limites.AMC_EXTRACAO_TIMEOUT_S:
+        raise ErroEscala(
+            "prazo_projetado_estourado",
+            f"extrair {n_unidades} unidades × {n_fatores} fatores deve levar ~{projetado_s:.0f} s à taxa "
+            f"medida ({limites.AMC_EXTRACAO_US_POR_UNIDADE_FATOR} µs por unidade e fator) e o prazo do job "
+            f"é {limites.AMC_EXTRACAO_TIMEOUT_S} s; reduza a grade ou o número de fatores em vez de gastar "
+            f"meia hora de máquina para o relógio matar o job no fim",
+            {"tempo_projetado_s": projetado_s, "timeout_s": limites.AMC_EXTRACAO_TIMEOUT_S,
+             "us_por_unidade_fator": limites.AMC_EXTRACAO_US_POR_UNIDADE_FATOR},
+        )
     n_blocos = (n_unidades + bloco - 1) // bloco
     return {
+        "tarefa": tarefa,
+        "tempo_projetado_extracao_s": projetado_s,
         "n_unidades": n_unidades,
         "n_fatores": n_fatores,
         "bloco": bloco,

@@ -233,3 +233,8 @@ AMC_EXTRACAO_MEMORIA_MB = 4096        # teto DECLARADO do job de extração/reco
                                       # nesta): vale o MENOR dos dois, e é ele que vira RLIMIT_DATA no filho
                                       # (app/jobs/filho.py, item L0-05-e). Ver app.amc.escala.orcamento_mb.
 AMC_EXTRACAO_TIMEOUT_S = 1800         # 30 min: o prazo do portão para 1 mi de células × 15 fatores
+# Custo MEDIDO da extração, por unidade e por fator. Sai de tests/medidas/L3-16-desempenho-escala.json
+# (chave `extracao_por_unidade_por_fator_us`, estatística zonal real sobre GeoTIFF, 07/09/2026) e é o que
+# permite ao plano dizer, ANTES de enfileirar, que um trabalho não termina no prazo. Número deliberadamente
+# conservador: a medida foi feita com parte das unidades fora do raster, que custam menos que a média real.
+AMC_EXTRACAO_US_POR_UNIDADE_FATOR = 719
