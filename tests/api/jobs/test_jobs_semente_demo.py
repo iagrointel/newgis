@@ -9,6 +9,9 @@ import pytest
 
 from tests import jobs_sessao
 
+# serial (07/09): liga e desliga o interruptor da semente de demonstração, que vale para o inquilino inteiro.
+pytestmark = pytest.mark.serial
+
 SEMEAR = "SELECT plat.jobs_semear_demo(%s, %s, %s::jsonb, %s) AS n"
 
 
