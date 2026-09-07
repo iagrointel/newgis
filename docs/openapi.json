@@ -11076,6 +11076,418 @@
     "x-privilegio": "rede.editar"
    }
   },
+  "/api/rede/{rede_id}/controlador": {
+   "post": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Definir Controlador",
+    "description": "Só um tipo de ativo com a categoria de rede `controlador` pode controlar uma subrede, e o controlador\né sempre um TERMINAL do dispositivo — não a feição inteira.",
+    "operationId": "definir_controlador_api_rede__rede_id__controlador_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ControladorEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Controlador"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/controlador/{controlador_id}": {
+   "delete": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Remover Controlador",
+    "operationId": "remover_controlador_api_rede__rede_id__controlador__controlador_id__delete",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "controlador_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Controlador Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Ver Controlador",
+    "description": "A ficha do controlador: qual dispositivo, qual terminal, em que tier, de que subrede, e o nó que ele\nocupa na topologia CORRENTE (`no_id` nulo = a topologia foi reconstruída e não há nó nessa âncora).",
+    "operationId": "ver_controlador_api_rede__rede_id__controlador__controlador_id__get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "controlador_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Controlador Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Controlador"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/controladores": {
+   "get": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Listar Controladores",
+    "operationId": "listar_controladores_api_rede__rede_id__controladores_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/subredes": {
+   "get": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Listar Subredes",
+    "description": "A tabela de subredes: nome, tier, controladores, estado (limpa/suja) e resumo da última atualização.",
+    "operationId": "listar_subredes_api_rede__rede_id__subredes_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/tiers": {
+   "get": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Listar Tiers",
+    "description": "Os tiers da rede na ordem da hierarquia (subestação > alimentador > transformador > baixa tensão no\npacote elétrico), com o tipo (hierárquico ou particionado) e quantas subredes cada um já tem.",
+    "operationId": "listar_tiers_api_rede__rede_id__tiers_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/subredes/{subrede_id}/atualizar": {
+   "post": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Atualizar Subrede",
+    "description": "Refaz o traçado da subrede a partir dos controladores dela, grava o resumo e a devolve `limpa`.",
+    "operationId": "atualizar_subrede_api_rede__rede_id__subredes__subrede_id__atualizar_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "subrede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Subrede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/controladores/importar": {
+   "post": {
+    "tags": [
+     "rede de utilidades — controladores e tiers"
+    ],
+    "summary": "Importar Controladores",
+    "description": "Marca um controlador por alimentador (CTMT) no tier de média tensão e um por transformador de\ndistribuição (UNTRMT) no tier de baixa tensão, a partir do que a importação da BDGD trouxe.",
+    "operationId": "importar_controladores_api_rede__rede_id__controladores_importar_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
   "/api/geocodificar": {
    "post": {
     "tags": [
@@ -12814,6 +13226,220 @@
     "type": "object",
     "title": "ConfirmarEntrada",
     "description": "O corpo é a proposta EDITADA (ADR 0005 seção 5): só os campos que a tela deixa mudar. Cada um é validado\ncontra a proposta gravada dentro da rota (nunca um esquema fixo — a proposta é que dá as opções válidas)."
+   },
+   "Controlador": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "papel": {
+      "type": "string",
+      "title": "Papel"
+     },
+     "origem": {
+      "type": "string",
+      "title": "Origem"
+     },
+     "subrede_id": {
+      "type": "string",
+      "title": "Subrede Id"
+     },
+     "subrede": {
+      "type": "string",
+      "title": "Subrede"
+     },
+     "tier": {
+      "type": "string",
+      "title": "Tier"
+     },
+     "tier_nome": {
+      "type": "string",
+      "title": "Tier Nome"
+     },
+     "tier_tipo": {
+      "type": "string",
+      "title": "Tier Tipo"
+     },
+     "tier_ordem": {
+      "type": "integer",
+      "title": "Tier Ordem"
+     },
+     "feicao_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Feicao Id"
+     },
+     "terminal": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Terminal"
+     },
+     "tipo_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo Id"
+     },
+     "grupo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Grupo"
+     },
+     "tipo_chave": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo Chave"
+     },
+     "tipo_nome": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo Nome"
+     },
+     "no_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "No Id"
+     },
+     "lon": {
+      "type": "number",
+      "title": "Lon"
+     },
+     "lat": {
+      "type": "number",
+      "title": "Lat"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "papel",
+     "origem",
+     "subrede_id",
+     "subrede",
+     "tier",
+     "tier_nome",
+     "tier_tipo",
+     "tier_ordem",
+     "feicao_id",
+     "terminal",
+     "tipo_id",
+     "grupo",
+     "tipo_chave",
+     "tipo_nome",
+     "no_id",
+     "lon",
+     "lat"
+    ],
+    "title": "Controlador"
+   },
+   "ControladorEntrada": {
+    "properties": {
+     "feicao_id": {
+      "type": "string",
+      "maxLength": 36,
+      "minLength": 36,
+      "title": "Feicao Id"
+     },
+     "terminal": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 8.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Terminal"
+     },
+     "subrede": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Subrede"
+     },
+     "tier": {
+      "type": "string",
+      "maxLength": 63,
+      "minLength": 1,
+      "title": "Tier"
+     },
+     "papel": {
+      "type": "string",
+      "pattern": "^(fonte|sumidouro)$",
+      "title": "Papel",
+      "default": "fonte"
+     },
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     }
+    },
+    "type": "object",
+    "required": [
+     "feicao_id",
+     "subrede",
+     "tier"
+    ],
+    "title": "ControladorEntrada",
+    "description": "Marca o terminal de um dispositivo como controlador de uma subrede. `terminal` é obrigatório quando o\ntipo de ativo declara mais de um terminal no pacote. `nome` é o nome DO CONTROLADOR (único dentro do\ntier); sem ele, vale o nome da subrede."
    },
    "Convite": {
     "properties": {
