@@ -106,17 +106,22 @@ def _carregar_esquema(cur, rede_id: str) -> dict:
 
 
 def _carregar_feicoes(cur, rede_id: str) -> tuple[list[dict], list[dict]]:
+    # `AND f.geom IS NOT NULL` (item L4-05-d-epanet-inp): desde que rede_feicao_ponto/linha.geom deixou de ser
+    # NOT NULL (objeto sem coordenada de origem, ex.: nó do .inp sem linha em [COORDINATES]), uma feição sem
+    # geometria não é candidata a nó de topologia — fica de fora do índice derivado (nunca um nó fantasma em
+    # (0,0); ela continua existindo como feição, só não participa desta reconstrução).
     cur.execute(
         "SELECT f.id, f.tipo_id, t.grupo_id, ST_X(ST_StartPoint(f.geom)) AS x0, ST_Y(ST_StartPoint(f.geom)) AS y0, "
         "ST_X(ST_EndPoint(f.geom)) AS x1, ST_Y(ST_EndPoint(f.geom)) AS y1, "
         "ST_Length(f.geom::geography) AS comprimento_m, f.fase_bitmask, f.atributos, ST_AsText(f.geom) AS geom_wkt "
-        "FROM plat.rede_feicao_linha f JOIN plat.rede_tipo t ON t.id = f.tipo_id WHERE f.rede_id = %s::uuid",
+        "FROM plat.rede_feicao_linha f JOIN plat.rede_tipo t ON t.id = f.tipo_id "
+        "WHERE f.rede_id = %s::uuid AND f.geom IS NOT NULL",
         (rede_id,),
     )
     linhas = cur.fetchall()
     cur.execute(
         "SELECT f.id, f.tipo_id, ST_X(f.geom) AS x, ST_Y(f.geom) AS y "
-        "FROM plat.rede_feicao_ponto f WHERE f.rede_id = %s::uuid",
+        "FROM plat.rede_feicao_ponto f WHERE f.rede_id = %s::uuid AND f.geom IS NOT NULL",
         (rede_id,),
     )
     pontos = cur.fetchall()

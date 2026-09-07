@@ -145,6 +145,29 @@ class TracadoResultado(BaseModel):
     duracao_ms: int
 
 
+# --- EPANET .inp (item L4-05-d-epanet-inp) -------------------------------------------------------------
+
+class EpanetImportacao(BaseModel):
+    id: str
+    rede_id: str
+    estado: str
+    nome_arquivo: str | None
+    crs_epsg: int | None
+    arquivo_sha256: str
+    arquivo_bytes_tamanho: int
+    job_id: str | None
+    contagens: dict | None
+    avisos: list | None
+    erro: str | None
+    criado_em: str
+    atualizado_em: str
+
+
+class EpanetImportacaoAceita(BaseModel):
+    importacao_id: str
+    job_id: str
+
+
 class TopoArestaModelo(BaseModel):
     id: str
     grupo_id: str
