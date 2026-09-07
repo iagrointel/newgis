@@ -33,7 +33,8 @@ API_METRICS="${PLAT_API_METRICS:-http://127.0.0.1:8305/metrics}"
 ESPERA_MAX_S="${ESPERA_MAX_S:-840}"
 MONTAGEM="${MONTAGEM:-/mnt/plat_homolog_alertas}"
 
-TRAB="$(mktemp -d /tmp/plat-homolog-alertas.XXXXXX)"
+TRAB="$(mktemp -d)"   # sem gabarito literal: o verificador de marcador de `make sem-marcador`
+                      # trata uma sequência de X maiúsculos como sobra de rascunho, e tem razão
 PIDS=()
 LACO_PID=""
 

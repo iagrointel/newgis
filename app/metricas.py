@@ -166,7 +166,8 @@ class _ColetorFila(Collector):
             dias = _dias_restantes_certificado(caminho_cert)
             certificado = GaugeMetricFamily(
                 "plat_certificado_dias_restantes",
-                "Dias até o certificado TLS configurado vencer (ausente se PLAT_CERTIFICADO_CAMINHO não estiver setado)",
+                "Dias até o certificado TLS configurado vencer (a família só existe se "
+                "PLAT_CERTIFICADO_CAMINHO estiver definido)",
             )
             certificado.add_metric([], dias if dias is not None else _SEM_PRAZO)
             yield certificado

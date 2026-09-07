@@ -1,5 +1,6 @@
 """app/metricas.py (item L7-06-a-metricas-exporters): contrato de cardinalidade e ausência de segredo/token
-no texto exposto. Testes de integração (rota /metrics de verdade, contra a API) ficam em tests/api/test_metricas_rota.py."""
+no texto exposto. Testes de integração (rota /metrics de verdade, contra a API) ficam em
+tests/api/test_metricas_rota.py."""
 
 import re
 

@@ -2,6 +2,9 @@
 mais antigo rodando e horas desde o último backup/drill. As famílias já existiam parcialmente cobertas
 em test_metricas_rota.py; aqui o foco é a FONTE (plat.job/plat.backup_execucao), não a forma do texto."""
 
+import psycopg2
+
+from app.schema_ambiente import CursorSchemaAmbiente
 from tests.api.conftest import InquilinoTemporario
 
 
@@ -12,37 +15,71 @@ def _valor(texto: str, nome_metrica: str) -> float | None:
     return None
 
 
-def test_jobs_rodando_mais_antigo_segundos_sobe_com_job_de_verdade(cliente, conexao_plat_app, sessao_plat):
-    """Sem nenhum job rodando, a família existe e é >= 0; com um job marcado 'rodando' com iniciado_em de
-    35 min atrás (o limiar do portão é 30 min), o valor exposto reflete essa idade de verdade. O inquilino
-    é criado pela via de verdade (POST /api/plataforma/inquilinos, SECURITY DEFINER) — inserir direto em
-    plat.tenant como plat_app esbarra na própria RLS que protege a tabela."""
+def test_jobs_rodando_mais_antigo_segundos_sobe_com_job_de_verdade(cliente, conexao_plat_app, sessao_plat, env):
+    """Sem job rodando a família vale 0; com um job DE VERDADE em estado 'rodando' ela passa a contar a
+    idade dele. É a métrica que alimenta a regra FilaComJobLongo de `deploy/alertas.yml`.
+
+    Cada passo usa o caminho que o produto usa, e cada atalho tentado foi barrado pelo próprio banco —
+    o que é o isolamento funcionando, não obstáculo do teste:
+      · o inquilino nasce por POST /api/plataforma/inquilinos (SECURITY DEFINER); inserir em plat.tenant
+        como plat_app esbarra na RLS da tabela;
+      · o job nasce por INSERT de plat_app COM o contexto do inquilino na sessão (sem ele a política de
+        RLS de plat.job recusa a linha) e SEMPRE em 'pendente' (gatilho plat.job_transicao: "job nasce
+        pendente e sem resultado");
+      · a passagem para 'rodando' é `plat.job_pegar` chamada pela conexão de plat_worker, exatamente
+        como o worker faz: plat_app não tem UPDATE em plat.job nem EXECUTE nessa função, e um UPDATE
+        cru pela conexão de plat_worker não enxergaria a linha (a política de RLS nomeia só plat_app,
+        e quem não está em política nenhuma não vê nada) — a função é SECURITY DEFINER e por isso é o
+        único caminho que funciona, que é o desenho pretendido.
+
+    O limiar de 30 min da regra não é encenado aqui (seria esperar 30 min): ele é provado de duas outras
+    formas — pelo caso determinístico de `deploy/alertas_teste.yml` e pela encenação de verdade de
+    `deploy/alertas_homologacao.sh`, que backdata `iniciado_em` como o postgres e vê o alerta chegar ao
+    canal (93,5 s medidos, `tests/medidas/L7-06-b-alertas.json`).
+    """
     inq = InquilinoTemporario(sessao_plat)
     try:
+        antes = _valor(cliente.get("/metrics").text, "plat_jobs_rodando_mais_antigo_segundos")
+        assert antes is not None and antes >= 0
+
         with conexao_plat_app.cursor() as cur:
-            # O gatilho plat.job_transicao exige que o job NASÇA pendente e que só o worker o mova
-            # para rodando (declarando plat.via_worker). O teste faz exatamente isso em vez de furar
-            # a regra: é o caminho de verdade, e sem ele o INSERT direto com estado='rodando' morre
-            # com "job nasce pendente e sem resultado".
+            cur.execute(
+                "SELECT set_config('plat.tenant_id', %s, false), set_config('plat.usuario_id', %s, false)",
+                (str(inq.id), str(inq.admin_id)),
+            )
             cur.execute(
                 "INSERT INTO plat.job (tenant_id, tipo, parametros, executor, pesado, memoria_mb, "
                 "timeout_s) VALUES (%s, 'teste_alerta', '{}'::jsonb, 'local', false, 256, 60)",
                 (inq.id,),
             )
-            cur.execute("SET LOCAL plat.via_worker = 'sim'")
-            cur.execute(
-                "UPDATE plat.job SET estado = 'rodando', iniciado_em = now() - interval '35 minutes' "
-                "WHERE tenant_id = %s AND tipo = 'teste_alerta'",
-                (inq.id,),
-            )
         conexao_plat_app.commit()
 
-        texto = cliente.get("/metrics").text
-        idade = _valor(texto, "plat_jobs_rodando_mais_antigo_segundos")
+        worker = psycopg2.connect(env["PLAT_DSN_WORKER"], cursor_factory=CursorSchemaAmbiente)
+        try:
+            with worker, worker.cursor() as cur:
+                cur.execute("SELECT (plat.job_pegar('zt-worker-alertas', false)).id AS id")
+                pego = cur.fetchone()["id"]
+        finally:
+            worker.close()
+        assert pego is not None, "plat.job_pegar não pegou nenhum job pendente"
+
+        # a função devolve segundos inteiros: um job recém-pego dá 0, que é indistinguível de "nenhum
+        # job rodando". Dois segundos de espera no próprio banco separam os dois casos sem ambiguidade.
+        with conexao_plat_app.cursor() as cur:
+            cur.execute("SELECT pg_sleep(2)")
+            cur.execute("SELECT plat.fila_job_mais_antigo_rodando_segundos() AS v")
+            do_banco = cur.fetchone()["v"]
+        conexao_plat_app.commit()
+
+        idade = _valor(cliente.get("/metrics").text, "plat_jobs_rodando_mais_antigo_segundos")
         assert idade is not None
-        assert idade >= 35 * 60 - 5, f"esperava >= ~2100s (35 min), achou {idade}"
+        assert idade > 0, "com um job rodando há 2 s, a métrica não pode ser 0"
+        assert idade < 300, f"o job acabou de começar; idade implausível: {idade}"
+        # a métrica é a função, não um número paralelo: as duas leituras são do mesmo relógio
+        assert abs(idade - do_banco) <= 3, (idade, do_banco)
     finally:
         with conexao_plat_app.cursor() as cur:
+            cur.execute("SELECT set_config('plat.tenant_id', %s, false)", (str(inq.id),))
             cur.execute("DELETE FROM plat.job WHERE tenant_id = %s AND tipo = 'teste_alerta'", (inq.id,))
         conexao_plat_app.commit()
         inq.apagar()
