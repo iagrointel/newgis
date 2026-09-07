@@ -269,6 +269,12 @@ CASOS: dict[tuple[str, str], Caso] = {
     # ---- públicas (o caso prova que não devolvem dado de inquilino além do nome do próprio inquilino)
     ("GET", "/saude"): Caso(lambda p: "/saude", publico=True, aceita=frozenset({200}), verificar=_sem_marca),
     ("GET", "/api/versao"): Caso(lambda p: "/api/versao", publico=True, aceita=frozenset({200}), verificar=_sem_marca),
+    # L7-34-saude-profunda: sonda por componente, aberta como /saude. Anônimo (e qualquer sessão que não seja de
+    # superadmin) recebe só nome+estado+tempo de cada componente; 503 é a resposta legítima quando algum
+    # componente não está ok nesta máquina, por isso os dois códigos entram.
+    ("GET", "/saude/profunda"): Caso(
+        lambda p: "/saude/profunda", publico=True, aceita=frozenset({200, 503}), verificar=_sem_marca
+    ),
     ("GET", "/api/login/provedores"): Caso(
         lambda p: "/api/login/provedores?inquilino=demo2",
         publico=True,
