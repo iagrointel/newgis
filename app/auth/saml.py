@@ -337,10 +337,11 @@ def _ler_resposta(saml_response_b64: str) -> etree._Element:
     return raiz
 
 
-def _provedor_da_resposta(raiz: etree._Element) -> tuple[dict, dict | None]:
-    """(provedor, transação | None). InResponseTo → transação de uso único (SP-initiated). Sem ela
-    (IdP-initiated): Audience da asserção em claro tem o entityId do SP, que carrega o provedor_id; por fim
-    o Issuer, quando aponta para um único provedor habilitado."""
+def _provedores_da_resposta(raiz: etree._Element) -> tuple[list[dict], dict | None]:
+    """(candidatos, transação | None). InResponseTo → transação de uso único (SP-initiated): um provedor. Sem ela
+    (IdP-initiated): a Audience da asserção em claro traz o entityId do SP, que carrega o provedor_id; com a
+    asserção CIFRADA a Audience não é legível antes de decifrar, então valem todos os provedores habilitados do
+    Issuer — só a chave do SP certo decifra, e o ACS tenta um a um."""
     in_response_to = raiz.get("InResponseTo")
     if in_response_to:
         with db.db() as cur:
@@ -351,24 +352,20 @@ def _provedor_da_resposta(raiz: etree._Element) -> tuple[dict, dict | None]:
         p = _provedor_por_id(tr["provedor_id"])
         if p is None:
             raise ErroSaml("provedor_da_transacao_sumiu")
-        return p, tr
+        return [p], tr
     for aud in raiz.iterfind(".//saml:Assertion/saml:Conditions/saml:AudienceRestriction/saml:Audience", NS):
         q = parse_qs(urlsplit((aud.text or "").strip()).query)
         if q.get("provedor_id", [""])[0].isdigit():
             p = _provedor_por_id(int(q["provedor_id"][0]))
             if p is not None:
-                return p, None
+                return [p], None
     emissor = raiz.findtext("saml:Issuer", namespaces=NS)
     if emissor:
         with db.db() as cur:
             cur.execute("SELECT * FROM plat.provedores_saml_por_issuer(%s)", (emissor.strip(),))
-            candidatos = list(cur.fetchall())
-        if len(candidatos) == 1:
-            p = _provedor_por_id(candidatos[0]["provedor_id"])
-            if p is not None:
-                return p, None
-        if len(candidatos) > 1:
-            raise ErroSaml("issuer_ambiguo_sem_in_response_to")
+            candidatos = [c for c in (_provedor_por_id(r["provedor_id"]) for r in cur.fetchall()) if c is not None]
+        if candidatos:
+            return candidatos, None
     raise ErroSaml("provedor_nao_identificado")
 
 
@@ -396,24 +393,33 @@ async def sso_saml_acs(request: Request, resposta: Response):
         raise _falha(request, "saml_response_ausente")
     try:
         raiz = _ler_resposta(saml_response)
-        p, transacao = _provedor_da_resposta(raiz)
+        candidatos, transacao = _provedores_da_resposta(raiz)
     except ErroSaml as e:
         raise _falha(request, e.motivo_interno) from e
-    if not p["habilitado"]:
-        raise _falha(request, "provedor_desabilitado")
-    if not p["tenant_ativo"]:
-        raise ErroAPI(503, "inquilino_suspenso", "inquilino suspenso; fale com o operador da plataforma")
-    try:
-        auth = OneLogin_Saml2_Auth(pedido, configuracao(p, _base(request)))
-    except ErroSaml as e:
-        raise ErroAPI(503, "saml_indisponivel", "provedor de login indisponível; tente o login local") from e
     request_id = raiz.get("InResponseTo") if transacao else None
-    try:
-        auth.process_response(request_id=request_id)
-    except Exception as e:  # noqa: BLE001 — a biblioteca levanta OneLogin_Saml2_Error/ValidationError variados
-        raise _falha(request, f"process_response:{str(e)[:160]}") from e
-    if auth.get_errors() or not auth.is_authenticated():
-        raise _falha(request, f"{auth.get_errors()}:{(auth.get_last_error_reason() or '')[:200]}")
+    p, auth, motivo = None, None, "sem_candidato"
+    for candidato in candidatos:
+        if not candidato["habilitado"]:
+            motivo = "provedor_desabilitado"
+            continue
+        if not candidato["tenant_ativo"]:
+            raise ErroAPI(503, "inquilino_suspenso", "inquilino suspenso; fale com o operador da plataforma")
+        try:
+            tentativa = OneLogin_Saml2_Auth(pedido, configuracao(candidato, _base(request)))
+        except ErroSaml as e:
+            raise ErroAPI(503, "saml_indisponivel", "provedor de login indisponível; tente o login local") from e
+        try:
+            tentativa.process_response(request_id=request_id)
+        except Exception as e:  # noqa: BLE001 — a biblioteca levanta OneLogin_Saml2_Error/ValidationError variados
+            motivo = f"process_response:{str(e)[:160]}"
+            continue
+        if tentativa.get_errors() or not tentativa.is_authenticated():
+            motivo = f"{tentativa.get_errors()}:{(tentativa.get_last_error_reason() or '')[:200]}"
+            continue
+        p, auth = candidato, tentativa
+        break
+    if p is None or auth is None:
+        raise _falha(request, motivo)
     if p["assercao_cifrada"] and raiz.find("saml:EncryptedAssertion", NS) is None:
         raise _falha(request, "assercao_em_claro_com_cifra_exigida")
     id_assercao = auth.get_last_assertion_id()
