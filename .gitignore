@@ -25,3 +25,10 @@ laco/var/
 laco/vivo/
 laco/*.lock
 laco/*.log
+
+# bancada de teste manual do item L2-01-b (Martin/nginx locais, PMTiles gerado, logs) -- nunca versionar
+laco_var/
+
+# binário do Martin instalado por deploy/martin_instalar.sh (nunca versionado; sha256 fixado no script)
+bin/
+tests/e2e/capturas/*.pdf
