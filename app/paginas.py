@@ -39,6 +39,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- motor AMC: explicação da nota de uma unidade (L3-01-f-explicacao)
+    "/amc/explicacao/{execucao_id}/{unidade_id}": "amc_explicacao.html",
 }
 router = APIRouter()
 
