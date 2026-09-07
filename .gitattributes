@@ -3,3 +3,9 @@
 # `merge=union` (embutido no git) guarda os dois lados quando ambos só acrescentam.
 # A ordem das linhas do lote fica arbitrária — de propósito: é registro, não contrato.
 CHANGELOG.md merge=union
+
+# Arquivos GERADOS: nunca vale a pena arbitrar conflito neles, a fila regera com `make openapi`
+# depois de montar o lote. `merge=ours` guarda a versão do alvo e o gerador escreve a verdade.
+# (07/09: openapi.json reprovou junção de item cujo código estava correto.)
+docs/openapi.json merge=ours
+docs/PARIDADE.md merge=ours
