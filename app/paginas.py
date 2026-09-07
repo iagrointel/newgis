@@ -37,6 +37,9 @@ PAGINAS = {
     "/uploads": "uploads.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>
     "/construtor": "construtor.html",
+    # --- visualizador em tempo de execução (L5-15-vista-movel-responsivo): ?item=<id>, ou ?preview=1 dentro
+    # do iframe de mesma origem que o construtor monta (web/js/editor/pre_visualizacao.js)
+    "/visualizar": "visualizar.html",
 }
 router = APIRouter()
 

@@ -1,0 +1,42 @@
+{
+ "item": "L5-15-vista-movel-responsivo",
+ "medidas": {
+  "sem_rolagem_horizontal_pixel7": {
+   "valor": 1,
+   "unidade": "bool",
+   "comando": "scrollWidth <= clientWidth em pixel7"
+  },
+  "carregamento_pixel7_ms": {
+   "valor": 5,
+   "unidade": "ms",
+   "comando": "goto /visualizar?item até o mapa aparecer, viewport pixel7"
+  },
+  "sem_rolagem_horizontal_ipad": {
+   "valor": 1,
+   "unidade": "bool",
+   "comando": "scrollWidth <= clientWidth em ipad"
+  },
+  "carregamento_ipad_ms": {
+   "valor": 8.1,
+   "unidade": "ms",
+   "comando": "goto /visualizar?item até o mapa aparecer, viewport ipad"
+  },
+  "sem_rolagem_horizontal_desktop1440": {
+   "valor": 1,
+   "unidade": "bool",
+   "comando": "scrollWidth <= clientWidth em desktop1440"
+  },
+  "carregamento_desktop1440_ms": {
+   "valor": 13.4,
+   "unidade": "ms",
+   "comando": "goto /visualizar?item até o mapa aparecer, viewport desktop1440"
+  },
+  "arrasto_por_toque_ms": {
+   "valor": 148.9,
+   "unidade": "ms",
+   "comando": "PointerEvent sintético pointerType=touch, paleta mapa -> #tela, iPad (gen 7)"
+  }
+ },
+ "gerado_em": "2026-09-07T15:29:21Z",
+ "git_sha": "ec2f1ecb2ff7"
+}

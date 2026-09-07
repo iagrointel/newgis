@@ -123,6 +123,32 @@ def validar_grafo(tipo: str, dados) -> None:
                             "regra": "referencia_pendente",
                         }
                     )
+    # vista móvel (item L5-15-vista-movel-responsivo): cada chave de vista_movel.nos é o id de um nó de RAIZ
+    # (D1 do item: só a raiz tem override manual, um contêiner aninhado herda o reflow do pai) que precisa
+    # existir e não ter `pai`. JSON Schema não expressa "é filho da raiz", por isso entra aqui, junto da
+    # mesma checagem de referência pendente que `ligacoes` já faz.
+    vista_movel = corpo.get("vista_movel")
+    if isinstance(vista_movel, dict):
+        raizes = {n.get("id") for n in nos if isinstance(n, dict) and n.get("pai") is None and n.get("id") in validos}
+        nos_movel = vista_movel.get("nos")
+        if isinstance(nos_movel, dict):
+            for nid in nos_movel:
+                if nid not in validos:
+                    erros.append(
+                        {
+                            "campo": f"corpo.vista_movel.nos.{nid}",
+                            "erro": f"vista móvel aponta para nó inexistente: {nid}",
+                            "regra": "referencia_pendente",
+                        }
+                    )
+                elif nid not in raizes:
+                    erros.append(
+                        {
+                            "campo": f"corpo.vista_movel.nos.{nid}",
+                            "erro": "vista móvel só configura nó de raiz (contêiner aninhado herda o reflow)",
+                            "regra": "vista_movel_fora_da_raiz",
+                        }
+                    )
     if erros:
         raise ErroAPI(422, "grafo_invalido", f"grafo do documento ({tipo}) inválido", erros)
 
@@ -150,10 +176,29 @@ def _migrar_app_v1_v2(dados: dict) -> dict:
     return {**dados, "corpo": corpo, "esquema_versao": 2}
 
 
+def _migrar_painel_v2_v3(dados: dict) -> dict:
+    """v2->v3 (item L5-15-vista-movel-responsivo, `docs/esquemas/painel-v3.json`): documento sem vista móvel
+    configurada ganha o padrão explícito 'reflow puro' (`manual: false`) na LEITURA — o visualizador (item
+    L5-15) já trata a ausência da chave do mesmo jeito, mas gravar o padrão aqui deixa o documento
+    autoexplicativo depois da primeira leitura, igual ao que a 028 já fazia para `nos`/`ligacoes`."""
+    corpo = dict(dados.get("corpo") or {})
+    corpo.setdefault("vista_movel", {"manual": False, "nos": {}})
+    return {**dados, "corpo": corpo, "esquema_versao": 3}
+
+
+def _migrar_app_v2_v3(dados: dict) -> dict:
+    """Mesma migração de `_migrar_painel_v2_v3`, para o tipo `app`."""
+    corpo = dict(dados.get("corpo") or {})
+    corpo.setdefault("vista_movel", {"manual": False, "nos": {}})
+    return {**dados, "corpo": corpo, "esquema_versao": 3}
+
+
 # registro fechado: (tipo, versão de origem) -> função que devolve o documento na versão seguinte
 _MIGRACOES = {
     ("painel", 1): _migrar_painel_v1_v2,
     ("app", 1): _migrar_app_v1_v2,
+    ("painel", 2): _migrar_painel_v2_v3,
+    ("app", 2): _migrar_app_v2_v3,
 }
 
 _TETO_PASSOS = 50  # mesma ordem de grandeza de outras cadeias da casa; documento real nunca chega perto disso

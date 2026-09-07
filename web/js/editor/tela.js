@@ -13,6 +13,7 @@ import '../base/componentes.js';
 import { montarLayout, pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
 import { criarEditor } from './editor.js';
+import { montarPreVisualizacao } from './pre_visualizacao.js';
 import { PALETA_LAYOUT } from './paleta.js';
 import { novoDocumento } from './documento.js';
 
@@ -44,14 +45,23 @@ async function iniciar() {
   const alvo = h('div', { id: 'editor-raiz' });
   const btSalvar = h('button', { type: 'button', id: 'salvar', class: 'primario', disabled: !id }, 'Salvar');
   const estado = h('span', { id: 'estado-salvo', class: 'estado' }, id ? 'sem alterações' : 'sem item: passe ?item=<id>');
-  principal.append(h('div', { class: 'linha-ferramentas' }, btSalvar, estado), alvo);
+  const preVis = h('div', { id: 'pre-visualizacao' });
+  principal.append(h('div', { class: 'linha-ferramentas' }, btSalvar, estado), alvo,
+    h('h2', {}, 'Pré-visualização por dispositivo'), preVis);
 
+  /* `criarEditor` já chama `aoMudar` uma vez, SÍNCRONO, antes de devolver (primeiro desenho) — por isso `pv`
+     nasce `let` e é lido por referência de closure, nunca por `const` (TDZ: `aoMudar` rodaria antes da
+     atribuição, achado ao testar este item). */
+  let pv = null;
   const editor = criarEditor({
     raiz: alvo,
     documento,
     paleta: PALETA_LAYOUT,
-    aoMudar: () => { estado.textContent = 'alterações não gravadas'; },
+    aoMudar: () => { estado.textContent = 'alterações não gravadas'; pv?.atualizar(); },
   });
+  /* mesma origem (precedente Puck, item L5-15-vista-movel-responsivo): iframe carrega /visualizar.html e
+     recebe o documento em edição por postMessage, sem depender de salvar. */
+  pv = montarPreVisualizacao({ raiz: preVis, obterDocumento: () => editor.documento() });
 
   btSalvar.addEventListener('click', async () => {
     if (!item) return;
