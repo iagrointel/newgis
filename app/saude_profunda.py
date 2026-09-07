@@ -295,7 +295,10 @@ def _resumir_anonimo(componentes: dict) -> dict:
     return {nome: {"estado": c["estado"], "tempo_ms": c["tempo_ms"]} for nome, c in componentes.items()}
 
 
-@router.get("/saude/profunda")
+# rota aberta, como `/saude`: declara `x-auth`/`x-privilegio` para os portões transversais
+# (tests/api/test_privilegios_declarados.py). "publico" também a tira da matriz de privilégio
+# (tests/api/test_privilegios_matriz.py), cujo escopo é só rota com privilégio nomeado.
+@router.get("/saude/profunda", openapi_extra={"x-auth": "-", "x-privilegio": "publico"})
 def saude_profunda(request: Request, auth=Depends(auth_opcional)):
     inicio = time.perf_counter()
     componentes = _componentes()
