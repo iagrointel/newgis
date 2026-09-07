@@ -255,7 +255,7 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 
 | nome | valor | explicação |
 |---|---|---|
-| `CLONE_PAGINA` | `1000` | feições por página de query e por lote de INSERT (maxRecordCount típico 1000-2000) |
-| `CLONE_ANEXO_MAX` | `52428800` | bytes por anexo lido do portal (acima disto: aviso no relatório, feição segue) |
+| `CLONE_PAGINA` | `1000` | feições por página de query e por lote de INSERT (maxRecordCount 1000-2000) |
+| `CLONE_ANEXO_MAX` | `52428800` | bytes por anexo lido do portal (acima: aviso no relatório, feição segue) |
 | `CLONE_CAMADAS_MAX` | `200` | camadas + tabelas por serviço numa execução |
 | `CLONE_AMOSTRA` | `100` | feições da amostra comparada por sha256 (geometria normalizada + atributos) |
