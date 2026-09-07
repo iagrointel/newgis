@@ -222,3 +222,12 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# --- descoberta por catálogo CSW 2.0.2 (L6-06-descoberta-csw; app/conexao/csw.py): a INDE devolve ~9 KB por
+# registro ISO 19139 completo, logo 20 registros cabem com folga em CONEXAO_RESPOSTA_MAX_BYTES (1 MiB); o tempo
+# de leitura é maior que o do teste de saúde porque o catálogo monta a resposta (medido 3-8 s na INDE em 07/09).
+CSW_MAX_REGISTROS = 20                   # maxRecords por GetRecords (e teto do que a tela pede)
+CSW_LER_TIMEOUT_S = 20.0                 # leitura de GetRecords/GetRecordById (buscar_seguro)
+CSW_TEXTO_MAX = 1000                     # corte de resumo/licença/linhagem guardados na ficha (config <= 8 KiB)
+CSW_PALAVRAS_MAX = 30                    # palavras-chave guardadas por registro
+CSW_TEXTO_BUSCA_MAX = 200                # tamanho do texto livre da busca (vira AnyText like '%...%')
