@@ -281,7 +281,9 @@ def resolver(request: Request) -> Auth | None:
     if getattr(request.state, "auth", None) is not None:
         return request.state.auth
     cookie = request.cookies.get(COOKIE)
-    cabecalho = request.headers.get("authorization", "")
+    # `X-Esri-Authorization` é o cabeçalho que os clientes Esri (e o nosso leitor de portal, app/migracao/portal.py)
+    # usam para o token de serviço; vale como sinônimo de `Authorization` (item L2-08-b)
+    cabecalho = request.headers.get("authorization") or request.headers.get("x-esri-authorization", "")
     bearer = cabecalho[7:].strip() if cabecalho.lower().startswith("bearer ") else None
     if cookie and bearer:
         raise ErroAPI(400, "autenticacao_ambigua", "use o cookie de sessão OU o cabeçalho Authorization, não os dois")
