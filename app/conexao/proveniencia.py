@@ -129,6 +129,17 @@ def descobrir(conexao: dict) -> Descoberta:
         achados, atribuicao, url_sondada, corpo = _sondar_xml(url, tipo)
     elif tipo in _PROTOCOLOS_JSON:
         achados, atribuicao, url_sondada, corpo = _sondar_json(url, tipo)
+    elif tipo in ("pmtiles", "xyz"):
+        # sem metadado sondável (nem GetCapabilities nem f=json existem para tiles), mas o item
+        # L6-02-g-pmtiles-xyz-tilejson EXIGE atribuição declarada pelo usuário no `config` ao criar a
+        # conexão (app.conexao.ladrilhos.validar_config) — é ela que vira o crédito da legenda, nunca None.
+        config_declarado = conexao.get("config") or {}
+        atribuicao = config_declarado.get("atribuicao")
+        achados = {"licenca": None, "fonte": atribuicao}
+        avisos.append(
+            f"protocolo {tipo!r} não tem metadado padronizado sondável; atribuição vem do config declarado "
+            "na criação da conexão, não de sondagem"
+        )
     else:
         avisos.append(
             f"protocolo {tipo!r} não tem metadado padronizado sondável; ficha só com o que a conexão já guarda"

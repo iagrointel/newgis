@@ -24,7 +24,7 @@ from app.catalogo import tipos as catalogo_tipos
 from app.catalogo.comum import registrar_evento, uuid_ok
 from app.catalogo.modelos import Item as ItemSaida
 from app.conexao import credencial as credencial_mod
-from app.conexao import proveniencia, seguranca
+from app.conexao import ladrilhos, proveniencia, seguranca
 from app.conexao.modelos import (
     Conexao,
     ConexaoEditar,
@@ -114,6 +114,29 @@ def _url_ok(url: str) -> None:
         raise ErroAPI(422, "url_insegura", f"URL recusada: {e.motivo}", {"motivo": e.motivo}) from e
 
 
+def _config_tiles_ok(tipo: str, url: str, config: dict) -> dict:
+    """PMTiles/XYZ (item L6-02-g-pmtiles-xyz-tilejson): `config.atribuicao`/`zoom_min`/`zoom_max` obrigatórios
+    (e `formato`/marcadores `{z}{x}{y}` para xyz) — ver `app.conexao.ladrilhos.validar_config`. Devolve o
+    `config` já normalizado; para qualquer outro tipo devolve o `config` recebido, sem tocar."""
+    try:
+        return ladrilhos.validar_config(tipo, url, config)
+    except ladrilhos.ErroConfigTiles as e:
+        raise ErroAPI(422, e.codigo, str(e), {"campo": e.campo}) from e
+
+
+def _range_pmtiles_ok(url: str) -> None:
+    """PMTiles (item L6-02-g-pmtiles-xyz-tilejson): recusa a conexão ANTES de gravar se o servidor não honrar
+    `Range`/206 — ver `app.conexao.ladrilhos.verificar_range_pmtiles` (a refutação do item: adversário que
+    devolve 200 ignorando o Range)."""
+    resultado = ladrilhos.verificar_range_pmtiles(url)
+    if not resultado.ok:
+        raise ErroAPI(
+            422, "pmtiles_sem_range",
+            f"o servidor não confirmou suporte a Range/206 para PMTiles: {resultado.motivo}",
+            {"motivo": resultado.motivo, "status": resultado.status},
+        )
+
+
 @router.get("", response_model=ConexaoPagina, openapi_extra=LER)
 def listar(tipo: str | None = None, auth: Auth = autenticado(escopo_token="catalogo:ler")):
     onde, params = ["true"], []
@@ -136,6 +159,20 @@ def ver(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
         return _json(_carregar(cur, cid))
 
 
+@router.get("/{id}/tilejson", openapi_extra=LER)
+def tilejson(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """TileJSON 3.0.0 de uma conexão `xyz` (item L6-02-g-pmtiles-xyz-tilejson) — só monta o que a conexão já
+    guarda (`app.conexao.ladrilhos.tilejson`), nunca sonda o serviço de novo."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    with db.db(auth.contexto()) as cur:
+        r = _json(_carregar(cur, cid))
+    if r["tipo"] != "xyz":
+        raise ErroAPI(
+            422, "tipo_sem_tilejson", "TileJSON só existe para conexões do tipo xyz", {"tipo": r["tipo"]}
+        )
+    return ladrilhos.tilejson(r)
+
+
 @router.post("", response_model=Conexao, status_code=201, openapi_extra=CRIAR)
 def criar(corpo: ConexaoEntrada, request: Request, auth: Auth = autenticado("conteudo.criar")):
     if not auth.tem("conteudo.registrar_fonte"):
@@ -145,6 +182,9 @@ def criar(corpo: ConexaoEntrada, request: Request, auth: Auth = autenticado("con
         )
     _url_ok(corpo.url)
     _config_ok(corpo.config)
+    config = _config_tiles_ok(corpo.tipo, corpo.url, corpo.config)
+    if corpo.tipo == "pmtiles":
+        _range_pmtiles_ok(corpo.url)
     credencial_cifrada = credencial_mod.cifrar(corpo.credencial, settings.PLAT_SECRET) if corpo.credencial else None
     with db.db(auth.contexto()) as cur:
         try:
@@ -153,7 +193,7 @@ def criar(corpo: ConexaoEntrada, request: Request, auth: Auth = autenticado("con
                 "VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s, %s) RETURNING id",
                 (
                     auth.tenant_id, corpo.tipo, corpo.modo, " ".join(corpo.nome.split()), corpo.url,
-                    json.dumps(corpo.config, ensure_ascii=False), credencial_cifrada, auth.usuario_id,
+                    json.dumps(config, ensure_ascii=False), credencial_cifrada, auth.usuario_id,
                 ),
             )
             cid = str(cur.fetchone()["id"])
@@ -177,6 +217,7 @@ def editar(id: str, corpo: ConexaoEditar, request: Request, auth: Auth = autenti
         if corpo.nome is not None:
             campos.append("nome = %s")
             params.append(" ".join(corpo.nome.split()))
+        url_nova = corpo.url if corpo.url is not None else r["url"]
         if corpo.url is not None:
             _url_ok(corpo.url)
             campos.append("url = %s")
@@ -187,8 +228,15 @@ def editar(id: str, corpo: ConexaoEditar, request: Request, auth: Auth = autenti
             params.append(corpo.modo)
         if corpo.config is not None:
             _config_ok(corpo.config)
+            config_nova = _config_tiles_ok(r["tipo"], url_nova, corpo.config)
             campos.append("config = %s::jsonb")
-            params.append(json.dumps(corpo.config, ensure_ascii=False))
+            params.append(json.dumps(config_nova, ensure_ascii=False))
+        elif corpo.url is not None and r["tipo"] in ("pmtiles", "xyz"):
+            # a URL mudou mas o config não veio nesta edição: revalida contra o config já gravado (o
+            # `atribuicao`/zoom continuam obrigatórios, e xyz precisa dos marcadores {z}{x}{y} na URL NOVA)
+            _config_tiles_ok(r["tipo"], url_nova, r["config"] or {})
+        if corpo.url is not None and r["tipo"] == "pmtiles":
+            _range_pmtiles_ok(corpo.url)
         if corpo.remover_credencial:
             campos.append("credencial_cifrada = NULL")
         elif corpo.credencial is not None:

@@ -129,7 +129,7 @@ LDAP_IMPORTAR_MAX = 2000            # tamanho máximo de uma importação de gru
 # conectores em si são itens futuros). Tempos curtos de propósito: o teste de saúde nunca prende a requisição
 # e o proxy nunca vira um jeito de esgotar a máquina com um serviço lento de propósito (ADR 0012).
 CONEXAO_TIPOS = (
-    "wms", "wmts", "wfs", "ogc_api", "esri_rest", "stac", "geoparquet", "pmtiles", "postgres_fdw", "s3", "http",
+    "wms", "wmts", "wfs", "ogc_api", "esri_rest", "stac", "geoparquet", "pmtiles", "xyz", "postgres_fdw", "s3", "http",
 )
 CONEXAO_MODOS = ("referenciada", "copiada")
 CONEXAO_NOME_MAX = 200
@@ -141,6 +141,16 @@ CONEXAO_LER_TIMEOUT_S = 6.0              # teste de saúde: curto de propósito 
 CONEXAO_REDIRECT_MAX = 5                 # cada hop é revalidado do zero (host novo pode ser interno)
 CONEXAO_RESPOSTA_MAX_BYTES = 1 * 1024 * 1024  # 1 MiB: o teste de saúde confere status/corpo curto
                                                 # (nunca baixa o serviço inteiro)
+
+# --- PMTiles/XYZ/TileJSON (L6-02-g-pmtiles-xyz-tilejson; app/conexao/ladrilhos.py): dois `CONEXAO_TIPOS` novos
+# (pmtiles já existia no vocabulário desde a 030, sem conector; xyz é novo). Regra da hipótese: PMTiles só entra
+# se o servidor honra `Range`/206 de verdade (byte de cabeçalho lido AGORA, na criação — nunca um palpite);
+# XYZ/TileJSON exigem zoom mínimo/máximo e atribuição DECLARADOS pelo usuário no `config` (nenhum dos dois
+# protocolos tem metadado padronizado sondável, ver app/conexao/proveniencia.py).
+CONEXAO_PMTILES_RANGE_BYTES = 16 * 1024  # bytes pedidos no Range de prova (cobre o cabeçalho fixo do PMTiles v3,
+                                          # 127 bytes, com folga generosa para o directory raiz)
+CONEXAO_TILE_ZOOM_MAX = 24               # teto de bom senso (WebMercator raramente passa de 22-23 na prática)
+CONEXAO_ATRIBUICAO_MAX = 500             # `config.atribuicao`: texto curto de legenda, nunca um parágrafo
 
 # --- ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 INGESTAO_AMOSTRA_VALIDADE = 1000          # feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR)
