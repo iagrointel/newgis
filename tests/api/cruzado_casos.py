@@ -4,6 +4,7 @@ caso que aponta um recurso do inquilino B (demo2) e diz o que A (demo) pode rece
 não carregue dado de B (`verificar`) e B fique intacto (digest antes/depois, em test_cruzado.py). Rota sem caso =
 o teste falha (cobertura 100 % é cláusula)."""
 
+import json
 import secrets
 from dataclasses import dataclass, field
 from typing import Any, Callable
@@ -160,13 +161,11 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     })
     assert r.status_code == 201, r.text
     execucao_b = r.json()
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
     # L4-01-a: rede de utilidades de B com o pacote de ativos JÁ importado — é o alvo das rotas /api/rede/{rede_id}
-    # (inclusive a exportação, que é onde um vazamento de esquema apareceria)
+    # (inclusive a exportação, que é onde um vazamento de esquema apareceria).
+    # ⚠ Aqui havia DOIS `return` depois da junção de dois ramos que cresceram no mesmo ponto: o primeiro,
+    # sem `rede_b`, tornava todo este trecho inalcançável e deixava `p.rede_b` vazio — 12 rotas de rede
+    # caíam com KeyError em vez de provar que não cruzam inquilino. Um `return` só, com tudo.
     r = sessao_b.post("/api/rede", json={"nome": f"{PREFIXO}rede-{sufixo}", "disciplina": "agua"})
     assert r.status_code == 201, r.text
     rede_b = r.json()
@@ -176,7 +175,8 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      rede_b=rede_b, convite_b=convite_b)
+                      convite_b=convite_b, rede_b=rede_b,
+                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -756,8 +756,12 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/rede/{rede_id}"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}"),
     ("DELETE", "/api/rede/{rede_id}"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}"),
     ("GET", "/api/rede/{rede_id}/pacote"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/pacote"),
+    # o corpo é um pacote VÁLIDO de propósito: a rota valida o pacote antes de tocar o banco (decisão do
+    # item L4-01-a, para não segurar o laço de eventos), então um corpo inválido responderia 422 e a
+    # varredura nunca chegaria a provar o que interessa — que a rede de OUTRO inquilino dá 404.
     ("POST", "/api/rede/{rede_id}/pacote"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: {"esquema": "plat.rede.pacote"},
+        lambda p: f"/api/rede/{p.rede_b['id']}/pacote",
+        lambda p: json.loads(instalados.bruto("agua-epanet")),
     ),
     # ---- L4-01-b / L4-02-a / L4-18: as rotas de feição, topologia, traçado e rede simples vieram nos
     # ramos-base desta família e ainda não tinham caso cruzado. Todas apontam a rede de B: a resposta tem de
@@ -786,7 +790,7 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/rede/{rede_id}/topologia/areas-sujas"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/topologia/areas-sujas"),
     ("GET", "/api/rede/{rede_id}/topologia/alcance"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/alcance?lon=0&lat=0"),
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/alcance?no={UUID_NULO}"),
     ("POST", "/api/rede/{rede_id}/tracar"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/tracar",
         lambda p: {"tipo": "conectado", "pontos_partida": [{"lon": 0.0, "lat": 0.0}]}),
