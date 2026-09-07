@@ -104,4 +104,11 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/org"): ["org/configurar"],
     ("POST", "/api/org/logo"): ["org/logo_enviar"],
     ("DELETE", "/api/org/logo"): ["org/logo_remover"],
+    # ---- L4-01-modelo-rede: eventos registrados pelas rotas (vocabulário em db/migracoes da rede)
+    ("POST", "/api/rede"): ["redes/criar"],
+    ("DELETE", "/api/rede/{rede_id}"): ["redes/apagar"],
+    ("POST", "/api/rede/{rede_id}/pacote"): ["redes/importar_pacote"],
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas"): ["redes/feicao_criar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos"): ["redes/feicao_criar"],
+    ("POST", "/api/rede/{rede_id}/topologia/habilitar"): ["redes/topologia_habilitar"],
 }

@@ -679,6 +679,9 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/rede/{rede_id}/pacote"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/pacote"),
     ("POST", "/api/rede/{rede_id}/pacote"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: {"esquema": "plat.rede.pacote"},
+        # o pacote é validado contra o esquema ANTES de resolver a rede: corpo inválido = 422 em toda perna
+        # autenticada, sem tocar em B (digest de B conferido pelo teste); por isso `proprio`
+        proprio=True, aceita=frozenset({422}),
     ),
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
     ("PUT", "/api/org"): Caso(
@@ -692,6 +695,23 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("DELETE", "/api/org/logo"): Caso(
         lambda p: "/api/org/logo", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    # ---- L4-01-modelo-rede: feições e topologia de uma rede de B = 404 (RLS)
+    ("GET", "/api/rede/{rede_id}/feicoes/linhas"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas"),
+    ("GET", "/api/rede/{rede_id}/feicoes/pontos"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos"),
+    ("GET", "/api/rede/{rede_id}/topologia"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia"),
+    ("GET", "/api/rede/{rede_id}/topologia/arestas"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia/arestas"),
+    ("GET", "/api/rede/{rede_id}/topologia/nos"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia/nos"),
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas",
+        lambda p: {"tipo_codigo": 1, "grupo": "trecho", "coordenadas": [[-46.5, -23.5], [-46.51, -23.51]]},
+    ),
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos",
+        lambda p: {"tipo_codigo": 1, "grupo": "no", "lon": -46.5, "lat": -23.5},
+    ),
+    ("POST", "/api/rede/{rede_id}/topologia/habilitar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/habilitar", lambda p: {},
     ),
 }
 
