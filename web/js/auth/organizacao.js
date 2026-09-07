@@ -12,7 +12,11 @@ import '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from './sessao.js';
 
-const IDIOMAS = [{ valor: 'pt-BR', rotulo: 'Português (Brasil)' }];
+const IDIOMAS = [
+  { valor: 'pt-BR', rotulo: 'Português (Brasil)' },
+  { valor: 'en', rotulo: 'English' },
+  { valor: 'es', rotulo: 'Español' },
+];
 let atual = null;
 // declarado ANTES do await de nível de módulo abaixo: carregarSmtp() o atribui durante iniciar(), e um `let` que
 // só aparecesse depois estaria na zona morta temporal (achado UX-01: a página nunca marcava body[data-pronto])
