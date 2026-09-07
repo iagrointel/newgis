@@ -15,9 +15,6 @@ global antiga seria o segundo de B, e A esperaria 600 s — o cenário da hipót
 
 import datetime
 import os
-import time
-
-import pytest
 
 from tests import jobs_sessao
 from tests.api.jobs.conftest import criar_job, esperar
@@ -30,6 +27,15 @@ UTC = datetime.UTC
 
 def _iso(valor: str) -> datetime.datetime:
     return datetime.datetime.fromisoformat(valor.replace("Z", "+00:00"))
+
+
+def _ram_livre_gb() -> float:
+    """Memória disponível agora, em GB (MemAvailable de /proc/meminfo)."""
+    with open("/proc/meminfo", encoding="utf-8") as f:
+        for linha in f:
+            if linha.startswith("MemAvailable:"):
+                return round(int(linha.split()[1]) / 1024 / 1024, 1)
+    return 0.0
 
 
 def _cancelar_pendentes(con, sessao) -> int:
@@ -86,13 +92,19 @@ def _cenario_a_atropelado(cliente_a, cliente_b, iniciar_worker, nome: str, porta
         antes = _jobs_b_antes_de_a(cliente_b, ids_b, fa["iniciado_em"])
         espera_s = round((_iso(fa["iniciado_em"]) - _iso(a["criado_em"])).total_seconds(), 1)
         # na fila global antiga A esperaria os N × 300 s; com o rodízio espera só o job de B em curso
-        assert antes <= 1, f"A esperou {antes} jobs de B (máximo 1): início de A {fa['iniciado_em']}, B1 {b1['iniciado_em']}"
+        assert antes <= 1, (f"A esperou {antes} jobs de B (máximo 1): início de A {fa['iniciado_em']}, "
+                            f"B1 {b1['iniciado_em']}")
         assert espera_s < 60, f"espera de A ({espera_s} s) incompatível com 'no máximo 1 job de B'"
         medida("L0-05-e-justica-entre-inquilinos")(f"{prefixo}_espera_a_s", espera_s, "s",
             f"{longos} × prova.progresso(300 s) de demo2 + 1 × prova.progresso(1 s) de demo, worker 1 processo; "
             "B em curso cancelado para liberar o worker; espera = iniciado_em(A) − criado_em(A)")
         medida("L0-05-e-justica-entre-inquilinos")(f"{prefixo}_jobs_b_antes_de_a", antes, "jobs",
             "contagem dos jobs de demo2 criados pelo teste com iniciado_em <= iniciado_em(A); portão: <= 1")
+        # a espera é medida em segundos: a carga da máquina no instante vai gravada ao lado (regra do laço)
+        medida("L0-05-e-justica-entre-inquilinos")(f"{prefixo}_carga_1min", round(os.getloadavg()[0], 2),
+            "carga", "os.getloadavg()[0] no instante da medida da espera")
+        medida("L0-05-e-justica-entre-inquilinos")(f"{prefixo}_ram_livre_gb", _ram_livre_gb(),
+            "GB", "MemAvailable de /proc/meminfo no instante da medida da espera")
     finally:
         for jid in ids_b:
             cliente_b.post(f"/api/jobs/{jid}/cancelar")
