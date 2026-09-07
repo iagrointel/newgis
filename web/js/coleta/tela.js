@@ -104,7 +104,7 @@ class Tela {
     const valor = this._valorAtual(no, linha);
     const mudou = (v) => { this.motor.definir(no.nome, v, { repeticao, indice }); this.atualizar(); this._guardar(); };
     if (no.tipo === 'select_one') {
-      const busca = h('input', { type: 'search', class: 'coleta-busca', placeholder: 'buscar…', 'aria-label': `buscar ${this.motor.rotulo(no)}`, id: `${idc}-busca` });
+      const busca = h('input', { type: 'search', class: 'coleta-busca', 'aria-label': `buscar ${this.motor.rotulo(no)}`, id: `${idc}-busca`, title: 'buscar na lista' });
       const sel = h('select', { id: idc, name: no.nome });
       caixa._select = sel; caixa._busca = busca;
       sel.addEventListener('change', () => mudou(sel.value || null));
