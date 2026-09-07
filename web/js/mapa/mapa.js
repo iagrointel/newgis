@@ -8,7 +8,8 @@
 
    O que esta tela junta:
      camadas do catálogo (Martin/PMTiles)     catalogo.js
-     lista com ordem, opacidade e legenda     painel.js
+     árvore de camadas (ordem/grupo/escala) ../camadas.js (item L2-01-c)
+     legenda dinâmica do estilo MapLibre     ../legenda.js (item L2-01-c)
      janela de atributos                      atributos.js
      medição geodésica                        medicao.js
      pesquisa de endereço e de coordenada     busca.js
@@ -23,7 +24,8 @@ import { h, limpar } from '../base/dom.js';
 import { exigirSessao } from '../auth/sessao.js';
 import { construirEstilo } from './estilo.js';
 import { Catalogo } from './catalogo.js';
-import { Painel } from './painel.js';
+import { Arvore } from '../camadas.js';
+import { Legenda } from '../legenda.js';
 import { instalarPopup } from './atributos.js';
 import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
@@ -91,16 +93,21 @@ async function iniciar(usuario) {
 
   const catalogo = new Catalogo(map);
   const medicao = new Medicao(map, el('medicao-saida'));
-  const painel = new Painel(catalogo, {
-    raizCamadas: el('lista-camadas'),
-    raizLegenda: el('legenda'),
+  const arvore = new Arvore(catalogo, map, el('lista-camadas'), {
     aoEnquadrar: async (id) => {
       const ext = await catalogo.extensao(id);
       if (ext) map.fitBounds([[ext[0], ext[1]], [ext[2], ext[3]]], { padding: 40, duration: 0 });
     },
     aoErro: (e) => el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`),
+    aoMudarEscala: () => legenda.desenhar(),
   });
+  const legenda = new Legenda(map, el('legenda'), () => arvore.camadasParaLegenda());
   instalarPopup(map, catalogo, maplibregl);
+
+  el('btn-novo-grupo').addEventListener('click', () => {
+    const titulo = window.prompt('nome do grupo', 'grupo novo');
+    if (titulo !== null) arvore.criarGrupo(titulo);
+  });
 
   // troca de mapa-base: refazer o estilo apaga as camadas do catálogo, que são re-somadas em seguida
   const sel = montarSeletorBase(map);
@@ -192,13 +199,13 @@ async function iniciar(usuario) {
 
   await new Promise((resolve) => map.once('load', resolve));
   try {
-    await catalogo.carregar();
-    painel.desenhar();
+    await arvore.carregar();
+    legenda.desenhar();
   } catch (e) {
     el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
   }
   window.plat = window.plat || {};
-  window.plat.mapa = { map, catalogo, medicao, painel };  // ponto de inspeção do e2e, nunca de negócio
+  window.plat.mapa = { map, catalogo, medicao, arvore, legenda };  // ponto de inspeção do e2e, nunca de negócio
   document.body.dataset.pronto = '1';
 }
 
