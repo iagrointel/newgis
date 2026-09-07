@@ -4,10 +4,9 @@ ficam de fora e confirmam que a ficha de uma sem licença nunca aparece. O `adic
 inquilino de quem chamou, provado com a mesma trava cruzada A→B do resto do catálogo (RLS por `tenant_id`)."""
 
 import psycopg2.extras
-
-from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 import pytest
 
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 from tests.api.conftest import PREFIXO_TESTE
 from tests.api.test_rls import contexto, ids_por_slug
 

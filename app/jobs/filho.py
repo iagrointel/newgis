@@ -1,5 +1,6 @@
 """Processo filho: um por job (ADR 0003 seção 4.3). Logo depois do fork: PR_SET_PDEATHSIG=SIGKILL (pai morto leva o
-filho), threads de BLAS = threads_blas do tipo, RLIMIT_DATA = VmData herdado do fork + memoria_mb do job (não RLIMIT_AS: numpy/OpenBLAS
+filho), threads de BLAS = threads_blas do tipo, RLIMIT_DATA = VmData herdado do fork + memoria_mb do job
+(não RLIMIT_AS: numpy/OpenBLAS
 reservam endereço e travam), pool do pai descartado, SIGTERM vira flag lida por progresso()/cancelado(). Códigos
 de saída: 0 concluído · 3 cancelado · 4 FalhaDefinitiva · 5 memória excedida · 1 exceção comum. Sempre os._exit."""
 

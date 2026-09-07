@@ -10,11 +10,10 @@ from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
-
-from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 import pytest
 
 from app.catalogo import destruidores
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 from tests.api.conftest import PREFIXO_TESTE, novo_cliente
 from tests.api.test_rls import contexto, ids_por_slug
 

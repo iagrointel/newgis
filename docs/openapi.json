@@ -9302,6 +9302,257 @@
     "x-auth": "S/T",
     "x-privilegio": "proprio"
    }
+  },
+  "/api/exportacoes/formatos": {
+   "get": {
+    "tags": [
+     "exportacao"
+    ],
+    "summary": "Formatos",
+    "operationId": "formatos_api_exportacoes_formatos_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/exportacoes": {
+   "post": {
+    "tags": [
+     "exportacao"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_exportacoes_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ExportacaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.exportar"
+   },
+   "get": {
+    "tags": [
+     "exportacao"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_exportacoes_get",
+    "parameters": [
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 50,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     },
+     {
+      "name": "item_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/exportacoes/{exportacao_id}": {
+   "get": {
+    "tags": [
+     "exportacao"
+    ],
+    "summary": "Obter",
+    "operationId": "obter_api_exportacoes__exportacao_id__get",
+    "parameters": [
+     {
+      "name": "exportacao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Exportacao Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "delete": {
+    "tags": [
+     "exportacao"
+    ],
+    "summary": "Apagar",
+    "description": "Cancela a que ainda roda (o job é cancelado junto) ou apaga o arquivo da que já está pronta.",
+    "operationId": "apagar_api_exportacoes__exportacao_id__delete",
+    "parameters": [
+     {
+      "name": "exportacao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Exportacao Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/exportacoes/{exportacao_id}/baixar": {
+   "get": {
+    "tags": [
+     "exportacao"
+    ],
+    "summary": "Baixar",
+    "description": "Entrega o arquivo em blocos (`objetos.ler_stream`), nunca lendo o objeto inteiro para a memória: uma\nexportação de camada grande passa fácil de 1 GB e este processo atende outras requisições ao mesmo tempo.",
+    "operationId": "baixar_api_exportacoes__exportacao_id__baixar_get",
+    "parameters": [
+     {
+      "name": "exportacao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Exportacao Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "application/octet-stream": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
   }
  },
  "components": {
@@ -15302,6 +15553,171 @@
      "itens"
     ],
     "title": "Pagina"
+   },
+   "OpcoesCsv": {
+    "properties": {
+     "separador": {
+      "type": "string",
+      "title": "Separador",
+      "default": ","
+     },
+     "decimal": {
+      "type": "string",
+      "title": "Decimal",
+      "default": "."
+     },
+     "coluna_x": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 63
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Coluna X"
+     },
+     "coluna_y": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 63
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Coluna Y"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "OpcoesCsv"
+   },
+   "ExportacaoEntrada": {
+    "properties": {
+     "item_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Item Id"
+     },
+     "formato": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Formato"
+     },
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 120
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "campos": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Campos"
+     },
+     "where": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 4000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Where"
+     },
+     "bbox": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array",
+        "maxItems": 4,
+        "minItems": 4
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bbox"
+     },
+     "srid_saida": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 999999.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Srid Saida"
+     },
+     "codificacao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 20
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Codificacao"
+     },
+     "pasta_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pasta Id"
+     },
+     "csv": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/OpcoesCsv"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "item_id",
+     "formato"
+    ],
+    "title": "ExportacaoEntrada"
    }
   }
  }
