@@ -42,8 +42,8 @@ from app.catalogo import (
 from app.conexao import rotas as rotas_conexao
 from app.consulta import cors_servicos
 from app.consulta.rotas_diretorio import router as rotas_diretorio_esri
-from app.consulta.rotas_ogc_features import router as rotas_ogc_features
 from app.consulta.rotas_edicao_esri import router as rotas_edicao_esri
+from app.consulta.rotas_ogc_features import router as rotas_ogc_features
 from app.consulta.rotas_query import router as rotas_consulta_esri
 from app.consulta.rotas_servico import router as rotas_consulta_servico
 from app.consulta.rotas_wfs import router as rotas_wfs
@@ -59,8 +59,8 @@ from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
-from app.tiles.rotas import router as rotas_tiles
 from app.tiles.exportacao import router as rotas_tiles_exportacao
+from app.tiles.rotas import router as rotas_tiles
 from app.tiles.vector_tile_server import router as rotas_vector_tile_server
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao

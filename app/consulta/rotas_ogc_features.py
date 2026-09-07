@@ -36,12 +36,11 @@ from fastapi import APIRouter, Header, Query, Request, Response
 from fastapi.responses import JSONResponse
 
 from app import db
+from app.auth import escopos as esc
 from app.auth.sessao import Auth, autenticado
 from app.catalogo import comum
 from app.consulta import campos as campos_mod
-from app.consulta import cql2
-from app.consulta import motor
-from app.auth import escopos as esc
+from app.consulta import cql2, motor
 from app.consulta.rotas_query import _autenticar
 from app.consulta.rotas_servico import _camada_e_titulo
 from app.consulta.serializar import GEOM_PG_PARA_ESRI, como_geojson
@@ -109,7 +108,8 @@ def _carregar(cur, item_id: str):
     return schema, tabela, srid, meta, geometria_tipo_esri, titulo
 
 
-def _colecao_json(base: str, item_id: str, titulo: str | None, extent4326: list[float] | None, srid_nativo: int) -> dict:
+def _colecao_json(base: str, item_id: str, titulo: str | None, extent4326: list[float] | None,
+                  srid_nativo: int) -> dict:
     storage_crs = _srid_para_crs_uri(srid_nativo)
     d = {
         "id": COLECAO_ID,

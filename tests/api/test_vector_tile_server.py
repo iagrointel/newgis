@@ -41,7 +41,7 @@ def _porta_livre() -> int:
 
 
 @pytest.fixture(scope="module")
-def martin_vivo(instalador, camada_poligono):
+def martin_vivo(instalador, camada_poligono):  # noqa: F811 -- o parâmetro É a fixture reexportada acima
     """Martin real, apontado para o papel de leitura da trilha, numa porta livre desta máquina."""
     _, dsn_leitor = instalador
     porta = _porta_livre()

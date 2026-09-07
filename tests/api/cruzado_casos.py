@@ -157,8 +157,9 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b)
-                      modelo_amc_b=modelo_amc_b, conjunto_amc_b=conjunto_amc_b, execucao_amc_b=execucao_amc_b)
+                      convite_b=convite_b,
+                      modelo_amc_b=modelo_amc_b, conjunto_amc_b=conjunto_amc_b,
+                      execucao_amc_b=execucao_amc_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -966,6 +967,7 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/deleteAttachments"): Caso(
         lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/1/deleteAttachments",
         lambda p: {"attachmentIds": "1"},
+    ),
     # ---- motor de análise multicritério (L3-01-a-modelo-dado): modelo/conjunto têm ciclo de vida limpo
     # (limpar apaga o que a chamada de A criou); execução/resultado de B são só lidos — nenhuma rota de A
     # resolve o id de B (404 antes de tocar amc_execucao/amc_resultado; ver também o teste dedicado

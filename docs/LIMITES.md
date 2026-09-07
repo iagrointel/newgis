@@ -233,3 +233,11 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `HISTORICO_LISTA_MAX` | `500` | entradas devolvidas por consulta (mais recentes primeiro) |
 | `ANEXO_TAMANHO_MAX` | `7340032` | 7 MiB por anexo — NÃO 10: o envio é JSON com o conteúdo em base64 |
 | `ANEXO_TIPOS_PERMITIDOS` | `('application/pdf', 'image/gif', 'image/jpeg', 'image/png', 'image/webp')` | — |
+
+## motor multicritério, modelo (L3-01-a-modelo-dado; laco/decomposicao/L3L6_CONCEITO.md decisões A1/A4/A10).
+
+| nome | valor | explicação |
+|---|---|---|
+| `AMC_NOME_MAX` | `250` | mesmo teto de ITEM_TITULO_MAX |
+| `AMC_FATORES_MAX` | `50` | mesmo teto de docs/esquemas/amc_modelo.v1.json fatores.maxItems |
+| `AMC_CAMADAS_MAX` | `50` | camadas de entrada declaradas por execução (A10) |
