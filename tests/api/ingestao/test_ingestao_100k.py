@@ -93,3 +93,57 @@ def test_shapefile_de_100_mil_feicoes_importa_e_aparece_na_lista(ingestor_a, con
     gravar("tempo_inspecao_100k_s", round(t_inspecao, 1), "s",
            "POST /api/importacoes até o job ingestao.inspecionar concluir (fora do relógio da cláusula)")
     assert t_import <= TETO_S, f"tempo_import_100k_s = {t_import:.1f} s (teto {TETO_S} s)"
+
+
+def test_job_cancelado_no_meio_nao_deixa_tabela_orfa(ingestor_a, conexao_plat_app):
+    """Cláusula do portão de L0-04-c: "job cancelado deixa 0 tabela órfã (DROP no rollback/limpeza)".
+
+    Usa o mesmo arquivo de 100 mil feições justamente porque a carga demora o bastante para o cancelamento
+    cair NO MEIO (com o arquivo de 80 feições a carga termina antes do pedido chegar)."""
+    from app.ingestao.inspecionar import tabela_de
+
+    sessao = ingestor_a.sessao
+    objeto = ingestor_a.enviar_arquivo(ARQUIVO)
+    item_arquivo = ingestor_a.item_arquivo(objeto, ARQUIVO.name)
+    r = sessao.post("/api/importacoes", json={"arquivo_id": item_arquivo, "formato": "shapefile.zip"})
+    assert r.status_code == 202, r.text
+    importacao_id = r.json()["importacao_id"]
+    esperar_job(sessao, r.json()["job_id"], timeout=300)
+
+    r = sessao.put(f"/api/importacoes/{importacao_id}/confirmar", json={})
+    assert r.status_code == 202, r.text
+    job_id = r.json()["job_id"]
+
+    # espera a carga estar de fato rodando (progresso > 5 = já passou do download e criou/vai criar a tabela)
+    fim = time.monotonic() + 180
+    andando = None
+    while time.monotonic() < fim:
+        andando = sessao.get(f"/api/jobs/{job_id}").json()
+        if andando["estado"] == "rodando" and (andando["progresso"] or 0) > 5:
+            break
+        assert andando["estado"] not in ("concluido", "falhou"), f"a carga terminou antes do cancelamento: {andando}"
+        time.sleep(0.2)
+    assert andando and andando["estado"] == "rodando", andando
+
+    assert sessao.post(f"/api/jobs/{job_id}/cancelar").status_code in (200, 202)
+    fim = time.monotonic() + 120
+    while time.monotonic() < fim:
+        final_job = sessao.get(f"/api/jobs/{job_id}").json()
+        if final_job["estado"] in ("cancelado", "falhou", "concluido"):
+            break
+        time.sleep(0.2)
+    assert final_job["estado"] == "cancelado", final_job
+
+    imp = sessao.get(f"/api/importacoes/{importacao_id}").json()
+    assert imp["estado"] in ("cancelada", "falhou"), imp
+    item_id = imp["item_id"]
+    ingestor_a.arquivos.append(item_arquivo) if item_arquivo not in ingestor_a.arquivos else None
+
+    ids = ids_por_slug(conexao_plat_app)
+    _contexto_admin(conexao_plat_app, ids)
+    with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT to_regclass(%s) AS reg", (f"d_demo.{tabela_de(item_id)}",))
+        assert cur.fetchone()["reg"] is None, "tabela órfã ficou em d_demo depois do cancelamento"
+        cur.execute("SELECT count(*) AS n FROM plat.item WHERE id = %s::uuid AND tipo = 'camada_vetorial'",
+                    (item_id,))
+        assert cur.fetchone()["n"] == 0, "item de camada órfão ficou no catálogo depois do cancelamento"

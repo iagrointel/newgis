@@ -34,12 +34,20 @@ class Contexto:
 
 
 def pool() -> psycopg2.pool.ThreadedConnectionPool:
-    """Cria o pool na primeira chamada (a configuração é lida só então)."""
+    """Cria o pool na primeira chamada (a configuração é lida só então).
+
+    O tamanho vem de PLAT_POOL_MIN/PLAT_POOL_MAX (padrão 1/8 = o que estava fixo aqui antes; produção não muda).
+    O banco iagro_sat é compartilhado com dezenas de frentes da casa e tem max_connections=100 com 3 reservadas
+    ao superusuário: cada trilha de teste do laço grava PLAT_POOL_MAX=2 no seu .env para que 12 trilhas em
+    paralelo caibam no orçamento de conexões (ver laco/governador.sh e laco/trilha_ambiente.sh).
+    """
     global _pool
     if _pool is None:
         with _trava:
             if _pool is None:
-                _pool = psycopg2.pool.ThreadedConnectionPool(1, 8, settings.PLAT_DSN)
+                _pool = psycopg2.pool.ThreadedConnectionPool(
+                    settings.PLAT_POOL_MIN, settings.PLAT_POOL_MAX, settings.PLAT_DSN
+                )
     return _pool
 
 

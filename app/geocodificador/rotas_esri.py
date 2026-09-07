@@ -32,6 +32,9 @@ from app.geocodificador.normalizacao import analisar_linha_unica, expandir_abrev
 
 log = logging.getLogger("plat.geocodificador.esri")
 router = APIRouter(tags=["geocodificador-esri"])
+# Toda rota do OpenAPI declara `x-auth` e `x-privilegio` (ADR 0002 seção 3.4). O `x-privilegio` faltava
+# nestas oito e só apareceu quando o docs/openapi.json foi regerado no item L1-02 (o arquivo comitado
+# estava desatualizado). "proprio" é o mesmo valor das rotas irmãs em app/geocodificador/rotas.py.
 PREFIXO = "/rest/services/Geocodificador/GeocodeServer"
 ESCOPO = "geocodificar:usar"
 
@@ -99,8 +102,8 @@ def _campos_de(p: dict) -> dict:
             "cep": cep}
 
 
-@router.get(PREFIXO, openapi_extra={"x-auth": "S/T"}, operation_id="geocodificador_esri_descritor_get")
-@router.post(PREFIXO, openapi_extra={"x-auth": "S/T"}, operation_id="geocodificador_esri_descritor_post")
+@router.get(PREFIXO, openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"}, operation_id="geocodificador_esri_descritor_get")
+@router.post(PREFIXO, openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"}, operation_id="geocodificador_esri_descritor_post")
 async def descritor_servico(request: Request):
     """Descritor do locator (ADR 0013 seção 5.1) — mínimo para o QGIS/ArcGIS reconhecerem o serviço como
     GeocodeServer (capabilities, candidateFields, spatialReference); não exige autenticação (só metadado)."""
@@ -126,9 +129,9 @@ async def descritor_servico(request: Request):
     }
 
 
-@router.get(f"{PREFIXO}/findAddressCandidates", openapi_extra={"x-auth": "S/T"},
+@router.get(f"{PREFIXO}/findAddressCandidates", openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"},
             operation_id="geocodificador_esri_find_address_candidates_get")
-@router.post(f"{PREFIXO}/findAddressCandidates", openapi_extra={"x-auth": "S/T"},
+@router.post(f"{PREFIXO}/findAddressCandidates", openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"},
              operation_id="geocodificador_esri_find_address_candidates_post")
 async def find_address_candidates(request: Request):
     _autenticar(request)
@@ -159,9 +162,9 @@ async def find_address_candidates(request: Request):
     return {"spatialReference": {"wkid": 4326}, "candidates": saida}
 
 
-@router.get(f"{PREFIXO}/reverseGeocode", openapi_extra={"x-auth": "S/T"},
+@router.get(f"{PREFIXO}/reverseGeocode", openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"},
             operation_id="geocodificador_esri_reverse_geocode_get")
-@router.post(f"{PREFIXO}/reverseGeocode", openapi_extra={"x-auth": "S/T"},
+@router.post(f"{PREFIXO}/reverseGeocode", openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"},
              operation_id="geocodificador_esri_reverse_geocode_post")
 async def reverse_geocode(request: Request):
     _autenticar(request)
@@ -196,7 +199,7 @@ async def reverse_geocode(request: Request):
     }
 
 
-@router.api_route(f"{PREFIXO}/suggest", methods=["GET"], openapi_extra={"x-auth": "S/T"},
+@router.api_route(f"{PREFIXO}/suggest", methods=["GET"], openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"},
                    operation_id="geocodificador_esri_suggest")
 async def suggest(request: Request):
     _autenticar(request)
@@ -210,7 +213,7 @@ async def suggest(request: Request):
     return {"suggestions": [{"text": s["texto"], "magicKey": s["chave"], "isCollection": False} for s in sugestoes]}
 
 
-@router.api_route(f"{PREFIXO}/geocodeAddresses", methods=["POST"], openapi_extra={"x-auth": "S/T"},
+@router.api_route(f"{PREFIXO}/geocodeAddresses", methods=["POST"], openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"},
                    operation_id="geocodificador_esri_geocode_addresses")
 async def geocode_addresses(request: Request):
     """Lote (item L2-11-a-geocodificacao-csv reusa este mesmo caminho para o motor, não esta rota HTTP).

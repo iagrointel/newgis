@@ -967,3 +967,25 @@ gravado é sempre `compilador.compilar(plat_construtor)`. Isso fecha a ida-e-vol
 saves do mesmo construtor são idênticos byte a byte) ao custo de o cliente não poder gravar uma camada
 MapLibre inteiramente à mão fora do vocabulário do construtor — aceitável nesta passagem porque nenhum editor
 visual deste construtor foi construído ainda (a interface é item seguinte).
+## 18. Ladrilho raster por token (item L1-02-tiles-token, ADR 20260907T0300)
+
+Fluxo de uma requisição de ladrilho, do cliente ao pixel:
+
+```
+cliente ->  nginx  ->  auth_request /api/tiles/autorizar  (cache 2 s, chave com o token)
+                   ->  proxy_cache plat_tiles             (chave SEM o token: tipo|item|z/x/y|query)
+                   ->  aplicação  app/imagens/rotas_tiles.py
+                                  -> plat.raster_item (RLS) -> item no pgstac -> asset -> chave do objeto
+                                  -> app/objetos.fonte_gdal -> /vsis3/<balde>/<objeto> + chave só-leitura
+                                  -> app/imagens/tiles.ladrilho (rio-tiler 9.4.3, WebMercatorQuad)
+                                  -> app/imagens/leitura.contar -> plat.tile_leitura (lote de 2 s)
+```
+
+Arquivos: `app/imagens/tiles.py` (motor), `app/imagens/wmts.py` (GetCapabilities gerado da mesma grade
+que serve o ladrilho), `app/imagens/rotas_tiles.py` (rotas e autorização), `app/imagens/leitura.py`
+(registro agregado), migração `20260907T0249_tile_leitura.sql`, bloco `/svc/.../raster|mosaico/` em
+`deploy/nginx.conf` e as duas zonas de cache criadas pelo `install.sh`.
+
+Três decisões que não se refazem sem ler o ADR: token no caminho (não em query, não URL que expira);
+chave de cache sem o token, o que OBRIGA a subrequisição de autorização a conferir também o dono do
+item; e recusa em 403, nunca 401.

@@ -56,6 +56,8 @@ TIPOS: dict[str, Tipo] = {
     "parquet": Tipo("parquet", (".parquet",), "GeoParquet", False, "application/octet-stream"),
     "fgb": Tipo("fgb", (".fgb",), "FlatGeobuf", False, "application/octet-stream"),
     "gml": Tipo("gml", (".gml",), "GML", False, "application/octet-stream"),
+    "geotiff": Tipo("geotiff", (".tif", ".tiff"), "GeoTIFF / raster", False, "image/tiff"),
+    "jp2": Tipo("jp2", (".jp2",), "JPEG 2000 (JP2)", False, "application/octet-stream"),
     "zip": Tipo("zip", (".zip",), "Zip (genérico)", True, "application/zip"),
 }
 
@@ -107,6 +109,10 @@ def _o_que_e(cabecalho: bytes) -> str:
         return "um zip"
     if cabecalho[:16] == b"SQLite format 3\x00":
         return "um SQLite/GeoPackage"
+    if _e_tiff(cabecalho):
+        return "um TIFF/GeoTIFF"
+    if _e_jp2(cabecalho):
+        return "um JPEG 2000"
     if cabecalho[:4] == b"%PDF":
         return "um PDF"
     if cabecalho[:8] == b"\x89PNG\r\n\x1a\n":
@@ -116,6 +122,17 @@ def _o_que_e(cabecalho: bytes) -> str:
     if _texto_comeca_com(cabecalho, b"<?xml", b"<"):
         return "um XML/texto"
     return "um formato não reconhecido pelos bytes iniciais"
+
+
+def _e_tiff(cabecalho: bytes) -> bool:
+    """Assinatura TIFF clássico (II*\\0 / MM\\0*) e BigTIFF (II+\\0 / MM\\0+) — item L1-01."""
+    return cabecalho[:4] in (b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+")
+
+
+def _e_jp2(cabecalho: bytes) -> bool:
+    """Caixa de assinatura do JPEG 2000 (ISO/IEC 15444-2): 12 bytes fixos `....jP  \\r\\n\\x87\\n`.
+    Codorna bruta (.j2k) NÃO é aceita nesta instalação (sem caixas, não há como garantir georreferência)."""
+    return cabecalho[:12] == b"\x00\x00\x00\x0cjP  \r\n\x87\n"
 
 
 def _verificar_zip(tipo: str, chave: str, tamanho: int) -> None:
@@ -205,5 +222,13 @@ def verificar_conteudo(tipo_declarado: str, chave: str, tamanho: int) -> None:
         cauda = _cauda(chave, tamanho, 4)
         if cabecalho[:4] != b"PAR1" or cauda[-4:] != b"PAR1":
             raise ConteudoNaoCorresponde(f"conteúdo não corresponde ao tipo parquet: o arquivo é {_o_que_e(cabecalho)}")
+    elif tipo_declarado == "geotiff":
+        if not _e_tiff(cabecalho):
+            raise ConteudoNaoCorresponde(
+                f"conteúdo não corresponde ao tipo geotiff: o arquivo é {_o_que_e(cabecalho)}"
+            )
+    elif tipo_declarado == "jp2":
+        if not _e_jp2(cabecalho):
+            raise ConteudoNaoCorresponde(f"conteúdo não corresponde ao tipo jp2: o arquivo é {_o_que_e(cabecalho)}")
     else:  # pragma: no cover — TIPOS e o dispatch acima são mantidos em sincronia manualmente
         raise ConteudoNaoCorresponde(f"tipo declarado sem verificação implementada: {tipo_declarado}")

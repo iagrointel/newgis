@@ -8,7 +8,6 @@ import psycopg2
 import psycopg2.extras
 
 from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
-
 from tests.api.jobs.conftest import PORTA_WORKER_EXTRA, criar_job, esperar
 
 
