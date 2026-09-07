@@ -778,6 +778,33 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     # ---- L0-09 metadado ISO 19139 do item: mesmo `item_ou_404` + RLS de `IT` acima.
     ("GET", IT + "/metadado.xml"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/metadado.xml"),
+    # ---- L2-01-mapa-web / L2-01-a / L2-02-b (rotas trazidas pelos ramos juntados no L2-02-c; sem caso até então):
+    # leituras de lista agem só no chamador (RLS); item de B como alvo = 404 em toda perna.
+    ("GET", "/api/mapa/camadas"): Caso(lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}),
+                                       verificar=_sem_marca),
+    ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}"),
+    ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/tilejson"),
+    ("GET", "/api/camadas/{item_id}/classes"): Caso(lambda p: f"/api/camadas/{p.item_b['id']}/classes?campo=x"),
+    ("GET", "/api/mapas"): Caso(lambda p: "/api/mapas?limite=5", proprio=True, aceita=frozenset({200}),
+                                verificar=_sem_marca),
+    ("GET", "/api/mapas/{id}"): Caso(lambda p: f"/api/mapas/{p.item_b['id']}"),
+    ("GET", "/api/mapas/{id}/completo"): Caso(lambda p: f"/api/mapas/{p.item_b['id']}/completo"),
+    ("POST", "/api/mapas"): Caso(
+        lambda p: "/api/mapas", lambda p: {"titulo": PREFIXO + "mapa " + secrets.token_hex(2)}, proprio=True,
+        aceita=frozenset({201}), verificar=_so_a, limpar=lambda p, j: p.sessao_a.delete(f"/api/itens/{j['id']}"),
+    ),
+    ("PUT", "/api/mapas/{id}"): Caso(lambda p: f"/api/mapas/{p.item_b['id']}", lambda p: {"titulo": "x"}),
+    ("GET", "/api/geocodificar"): Caso(
+        lambda p: "/api/geocodificar?endereco=Avenida+Paulista,+Sao+Paulo+-+SP", proprio=True,
+        aceita=frozenset({200, 422}), verificar=_sem_marca,
+    ),
+    # ---- L2-02-c editor de estilo: compilar é cálculo puro (nenhum dado de inquilino entra ou sai)
+    ("POST", "/api/estilos/compilar"): Caso(
+        lambda p: "/api/estilos/compilar",
+        lambda p: {"plat_construtor": {"tipo": "unico", "geometria": "ponto", "versao": 1,
+                                        "simbolo": {"cor": "#4e79a7"}}},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
     # ---- L2-11-b geocodificador próprio (dado aberto CNEFE/IBGE, sem tabela de inquilino, mesmo padrão de
     # /api/rota-/api/matriz-/api/isocrona acima): 422 é resposta de NEGÓCIO (UF/logradouro não instalado
     # nesta trilha), não vazamento — aceito ao lado de 200.
