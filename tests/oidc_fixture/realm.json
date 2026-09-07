@@ -4,8 +4,12 @@
   "sslRequired": "none",
   "registrationAllowed": false,
   "groups": [
-    {"name": "gg-oidc-admin"},
-    {"name": "gg-oidc-leitura"}
+    {
+      "name": "gg-oidc-admin"
+    },
+    {
+      "name": "gg-oidc-leitura"
+    }
   ],
   "users": [
     {
@@ -15,8 +19,16 @@
       "email": "ana.oidc@plataforma-teste.invalido",
       "firstName": "Ana",
       "lastName": "Oidc",
-      "groups": ["/gg-oidc-admin"],
-      "credentials": [{"type": "password", "value": "Teste-oidc-1", "temporary": false}]
+      "groups": [
+        "/gg-oidc-admin"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Teste-oidc-1",
+          "temporary": false
+        }
+      ]
     },
     {
       "username": "bruno.oidc",
@@ -25,8 +37,16 @@
       "email": "bruno.oidc@plataforma-teste.invalido",
       "firstName": "Bruno",
       "lastName": "Oidc",
-      "groups": ["/gg-oidc-leitura"],
-      "credentials": [{"type": "password", "value": "Teste-oidc-2", "temporary": false}]
+      "groups": [
+        "/gg-oidc-leitura"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Teste-oidc-2",
+          "temporary": false
+        }
+      ]
     },
     {
       "username": "carla.oidc",
@@ -36,7 +56,13 @@
       "firstName": "Carla",
       "lastName": "Oidc",
       "groups": [],
-      "credentials": [{"type": "password", "value": "Teste-oidc-3", "temporary": false}]
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Teste-oidc-3",
+          "temporary": false
+        }
+      ]
     }
   ],
   "clients": [
@@ -49,8 +75,14 @@
       "directAccessGrantsEnabled": true,
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["http://127.0.0.1:8234/*", "http://127.0.0.1:*/*", "http://testserver/*"],
-      "webOrigins": ["*"],
+      "redirectUris": [
+        "http://127.0.0.1:8234/*",
+        "http://127.0.0.1:*/*",
+        "http://testserver/*"
+      ],
+      "webOrigins": [
+        "*"
+      ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "http://127.0.0.1:8234/*"
@@ -77,8 +109,14 @@
       "protocol": "openid-connect",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["http://127.0.0.1:8234/*", "http://127.0.0.1:*/*", "http://testserver/*"],
-      "webOrigins": ["*"],
+      "redirectUris": [
+        "http://127.0.0.1:8234/*",
+        "http://127.0.0.1:*/*",
+        "http://testserver/*"
+      ],
+      "webOrigins": [
+        "*"
+      ],
       "attributes": {
         "pkce.code.challenge.method": "S256"
       },
@@ -93,6 +131,130 @@
             "access.token.claim": "true",
             "userinfo.token.claim": "true",
             "claim.name": "groups"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "plat-saml-teste",
+      "enabled": true,
+      "protocol": "saml",
+      "publicClient": false,
+      "frontchannelLogout": true,
+      "redirectUris": [
+        "http://127.0.0.1:*/*",
+        "http://testserver/*",
+        "http://sp.teste.invalido/*"
+      ],
+      "baseUrl": "http://sp.teste.invalido/",
+      "attributes": {
+        "saml.assertion.signature": "true",
+        "saml.server.signature": "true",
+        "saml.signature.algorithm": "RSA_SHA256",
+        "saml.client.signature": "false",
+        "saml.force.post.binding": "true",
+        "saml.authnstatement": "true",
+        "saml_force_name_id_format": "true",
+        "saml_name_id_format": "username",
+        "saml_assertion_consumer_url_post": "http://sp.teste.invalido/api/sso/saml/acs",
+        "saml_single_logout_service_url_redirect": "http://sp.teste.invalido/api/sso/saml/slo",
+        "saml_idp_initiated_sso_url_name": "plat-saml-teste",
+        "saml_idp_initiated_sso_relay_state": "/",
+        "saml.encrypt": "false",
+        "saml.allow.ecp.flow": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "config": {
+            "user.attribute": "email",
+            "attribute.name": "email",
+            "attribute.nameformat": "Basic"
+          }
+        },
+        {
+          "name": "nome",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "config": {
+            "user.attribute": "firstName",
+            "attribute.name": "name",
+            "attribute.nameformat": "Basic"
+          }
+        },
+        {
+          "name": "grupos",
+          "protocol": "saml",
+          "protocolMapper": "saml-group-membership-mapper",
+          "config": {
+            "attribute.name": "groups",
+            "attribute.nameformat": "Basic",
+            "single": "true",
+            "full.path": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "plat-saml-cifrado",
+      "enabled": true,
+      "protocol": "saml",
+      "publicClient": false,
+      "frontchannelLogout": true,
+      "redirectUris": [
+        "http://127.0.0.1:*/*",
+        "http://testserver/*",
+        "http://sp.teste.invalido/*"
+      ],
+      "baseUrl": "http://sp.teste.invalido/",
+      "attributes": {
+        "saml.assertion.signature": "true",
+        "saml.server.signature": "true",
+        "saml.signature.algorithm": "RSA_SHA256",
+        "saml.client.signature": "false",
+        "saml.force.post.binding": "true",
+        "saml.authnstatement": "true",
+        "saml_force_name_id_format": "true",
+        "saml_name_id_format": "username",
+        "saml_assertion_consumer_url_post": "http://sp.teste.invalido/api/sso/saml/acs",
+        "saml_single_logout_service_url_redirect": "http://sp.teste.invalido/api/sso/saml/slo",
+        "saml_idp_initiated_sso_url_name": "plat-saml-cifrado",
+        "saml_idp_initiated_sso_relay_state": "/",
+        "saml.encrypt": "true",
+        "saml.allow.ecp.flow": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "config": {
+            "user.attribute": "email",
+            "attribute.name": "email",
+            "attribute.nameformat": "Basic"
+          }
+        },
+        {
+          "name": "nome",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "config": {
+            "user.attribute": "firstName",
+            "attribute.name": "name",
+            "attribute.nameformat": "Basic"
+          }
+        },
+        {
+          "name": "grupos",
+          "protocol": "saml",
+          "protocolMapper": "saml-group-membership-mapper",
+          "config": {
+            "attribute.name": "groups",
+            "attribute.nameformat": "Basic",
+            "single": "true",
+            "full.path": "false"
           }
         }
       ]
