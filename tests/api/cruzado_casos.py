@@ -882,6 +882,11 @@ CASOS: dict[tuple[str, str], Caso] = {
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # ---- L4-02-a-conectado-e-subrede: traçado sobre rede de B = 404
+    ("POST", "/api/rede/{rede_id}/tracar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/tracar",
+        lambda p: {"tipo": "conectado", "pontos_partida": [{"lon": -46.5, "lat": -23.5}]},
+    ),
 }
 
 
