@@ -27,7 +27,7 @@ linkada de lugar público.
 | nginx | 443 / 80 | sim | `server_name plat.iagrointel.com`; `/static/` do disco; o resto em proxy para :8150; limite por IP nos logins; HTTP redireciona |
 | PostgreSQL 16 + PostGIS 3.6 | 5432 | sim (banco `iagro_sat`, compartilhado) | schemas `plat` e `plat_trabalho`; roles `plat_app` (API e filhos) e `plat_worker` (processo pai da fila) |
 | Garage (objetos S3) | 3900 | sim, serviço `plataforma-garage` já existente | só sondado por `/saude` |
-| `plat-martin` (tiles vetoriais) | 8151 | **não existe** | porta reservada; `/saude` devolve `"martin": "ausente"` |
+| `plat-martin` (tiles vetoriais) | 8151 | sim (`plat-martin.service`, item L2-01-b) | valida token dentro da função SQL; `/_/metrics` nativo (item L7-06-a) |
 | `plat-titiler` (tiles raster) | 8152 | **não existe** | porta reservada; `/saude` devolve `"titiler": "ausente"` |
 
 Faixa reservada ao produto: 8150-8159. Serviços vizinhos da máquina que o `plat` nunca toca: 8125, 8126, 8091,
@@ -706,7 +706,7 @@ conta 37,8, 2FA 9,7, usuários 59,4, grupos 60,8, papéis 58,7, tokens 78,9, log
 
 - Catálogo de conteúdo, camadas, mapa, tiles, edição, serviços OGC e Esri-compatíveis, motor multicritério, rede de
   utilidades, construtores, conectores, operação (linhas L0-03 em diante; o L0-03 está em construção nesta árvore).
-- `plat-martin` (8151) e `plat-titiler` (8152): portas reservadas, serviços inexistentes.
+- `plat-martin` (8151): existe desde o item L2-01-b (corrigido aqui em 07/09/2026 — esta linha estava desatualizada). `plat-titiler` (8152): porta reservada, serviço inexistente.
 - Tela de configuração do inquilino (L0-07-a), console do superadmin (L0-07-f), e-mail (L0-07-d), relatórios
   (L0-07-e), login externo SAML/OIDC/gov.br (L0-08-a/b/c), apagar usuário com transferência de conteúdo
   (L0-03-j), perfil estendido do membro (L0-02-g), CLI de administração (L0-14), `docs/LIMITES.md` gerado de
@@ -727,8 +727,8 @@ conta 37,8, 2FA 9,7, usuários 59,4, grupos 60,8, papéis 58,7, tokens 78,9, log
 - Paridade com ArcGIS Pro e ArcGIS Online reais: pendente da decisão D20 (credencial de teste).
 - `L2-01-mapa-web` (visualizador completo: camadas do catálogo por Martin/RLS, raster, legenda, popup, busca,
   impressão) — só a fatia `L2-01-a-basemap-local-pmtiles` existe (seção 11 e `MANUAL.md` seção 13). Sem base
-  cartográfica nacional (D27, travado por disco); sem rótulo de texto no mapa (glifos, `L2-02-e`); `plat-martin`
-  (8151) segue porta reservada, serviço inexistente.
+  cartográfica nacional (D27, travado por disco); sem rótulo de texto no mapa (glifos, `L2-02-e`). `plat-martin`
+  (8151) está no ar desde o L2-01-b (esta linha estava desatualizada; corrigida em 07/09/2026).
 - `L2-11-c-rota-matriz-isocrona`: só `/api/rota`, `/api/matriz` e `/api/isocrona` sobre um OSRM de teste com
   perfil `carro` (`MANUAL.md` seção 14). Sem pgRouting instalado, sem `/mais-proximo`/`/ajuste-de-trajeto`,
   sem perfil pé/bicicleta, sem NAServer Esri-compatível, sem UI no mapa (isso é o `L2-05-f`), sem teste de

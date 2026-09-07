@@ -80,6 +80,15 @@ def _preparar(con, ctx: Contexto | None, somente_leitura: bool = False):
             "set_config('plat.login', %s, true)",
             (str(ctx.tenant_id), str(ctx.usuario_id), ctx.login),
         )
+        # item L7-06-a-metricas-exporters: application_name é o ÚNICO GUC que pg_stat_activity mostra de
+        # OUTRAS sessões (current_setting só lê a própria); o postgres_exporter usa isso para "conexões por
+        # inquilino" (docs/OBSERVABILIDADE.md) SEM NUNCA tocar no slug — só o tenant_id, que já é opaco.
+        # SET (não set_config local) porque application_name é do backend inteiro, não da transação: sem
+        # resetar no ramo sem contexto, uma conexão do POOL devolvida por um pedido de A e reaproveitada
+        # por um pedido sem contexto ficaria marcada com o inquilino errado até o próximo SET.
+        cur.execute("SET application_name = %s", (f"plat:{ctx.tenant_id}",))
+    else:
+        cur.execute("SET application_name = 'plat'")
     if somente_leitura:
         # superadmin lendo outro inquilino (ADR 0002 seção 10): a transação inteira é só leitura
         cur.execute("SET LOCAL transaction_read_only = on")
