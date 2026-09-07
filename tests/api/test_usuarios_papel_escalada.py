@@ -91,15 +91,21 @@ def test_caminho_2_post_usuario_com_papel_mais_amplo(alerta):
 def test_caminho_3_lote_com_papel_mais_amplo(alerta):
     """3. POST /api/usuarios/lote {acao: papel, papel_id: R2} — no laudo, 200 {"alterados": 1}.
 
-    Agora o lote confere antes de alterar qualquer alvo e recusa o pedido inteiro; nada é alterado."""
-    _nega(
-        alerta["ator"].post(
-            "/api/usuarios/lote",
-            json={"ids": [alerta["alvo_admin"]], "acao": "papel", "papel_id": alerta["papeis"]["r2"]},
-        )
+    Duas formas de conserto são aceitas, porque o que importa é que NADA seja alterado: recusar o pedido
+    inteiro com 403 antes de tocar em qualquer alvo, ou recusar alvo a alvo e devolver 200 com o alvo em
+    `recusados` e `alterados` em zero. O erro nomeado é o mesmo nos dois casos."""
+    r = alerta["ator"].post(
+        "/api/usuarios/lote",
+        json={"ids": [alerta["alvo_admin"]], "acao": "papel", "papel_id": alerta["papeis"]["r2"]},
     )
+    assert r.status_code in (403, 200), r.text[:300]
+    if r.status_code == 403:
+        _nega(r)
+    else:
+        assert r.json()["alterados"] == 0, r.text[:300]
+        assert r.json()["recusados"][0]["erro"] == "privilegio_proprio_insuficiente", r.text[:300]
     depois = alerta["inq"].admin.get(f"/api/usuarios/{alerta['alvo_admin']}").json()
-    assert depois["papel_id"] == alerta["papeis"]["r1"], depois
+    assert depois["papel"]["id"] == alerta["papeis"]["r1"], depois
 
 
 def test_caminho_4_put_papel_mais_amplo_em_si_mesmo(alerta):
