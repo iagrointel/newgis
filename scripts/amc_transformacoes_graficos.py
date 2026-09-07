@@ -52,7 +52,7 @@ CASOS: dict[str, dict] = {
         "transformacao": {"tipo": "degraus", "bandas": [{"ate": 15, "nota": 100}, {"ate": 30, "nota": 80},
                                                         {"ate": 45, "nota": 50}, {"ate": 60, "nota": 30}],
                           "acima": 10},
-        "formula": "nota da 1ª banda com ate ≥ x; acima da última, o valor de 'acima' (motor logístico CBRE)",
+        "formula": "nota da 1ª banda com ate ≥ x; acima da última, o valor de 'acima' (motor logístico de referência)",
         "dominio": (0, 90),
     },
     "potencia": {

@@ -878,7 +878,7 @@ z
      <use xlink:href="#DejaVuSans-75" transform="translate(290.869141 0)"/>
      <use xlink:href="#DejaVuSans-73" transform="translate(354.248047 0)"/>
     </g>
-    <!-- nota da 1ª banda com ate ≥ x; acima da última, o valor de 'acima' (motor logístico CBRE) -->
+    <!-- nota da 1ª banda com ate ≥ x; acima da última, o valor de 'acima' (motor logístico de referência) -->
     <g transform="translate(33.324453 28.148625) scale(0.09 -0.09)">
      <defs>
       <path id="DejaVuSans-6e" d="M 3513 2113 

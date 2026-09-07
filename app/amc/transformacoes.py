@@ -8,7 +8,7 @@ MATERIALIZAR a favorabilidade de milhões de linhas sem trazer nada para o Pytho
 
 Tipos suportados (16): `categoria` (Unique Categories), `faixas` (Range of Classes, com quebra manual
 ou por quantil/intervalo igual/quebras naturais), `linear` (mínimo/máximo/direção), `degraus` (bandas
-do motor logístico, item cbre) e as 12 funções contínuas do Rescale by Function do ArcGIS Pro 3.4:
+do motor logístico de referência da casa) e as 12 funções contínuas do Rescale by Function do ArcGIS Pro 3.4:
 `exponencial`, `gaussiana`, `grande` (Large), `logaritmo`, `decaimento_logistico` (Logistic Decay),
 `crescimento_logistico` (Logistic Growth), `ms_grande` (MSLarge), `ms_pequena` (MSSmall), `proxima`
 (Near), `potencia` (Power), `pequena` (Small), `linear_simetrica` (Symmetric Linear).

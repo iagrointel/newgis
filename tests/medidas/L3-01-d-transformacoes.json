@@ -226,100 +226,100 @@
    "unidade": "valores",
    "comando": "pytest tests/unit/test_amc_transformacoes_desempenho.py::test_previsualizacao_100mil_valores[linear]"
   },
-  "cbre_fator_agua_pct_dentro_de_0.5": {
+  "referencia_fator_agua_pct_dentro_de_0.5": {
    "valor": 100.0,
    "unidade": "%",
-   "comando": "pytest tests/unit/test_amc_transformacoes_cbre.py::test_reproduz_fator_do_hex_fav[agua] (n=73115, max|delta|=0.0000)"
+   "comando": "pytest tests/unit/test_amc_transformacoes_referencia.py::test_reproduz_fator_do_hex_fav[agua] (n=73115, max|delta|=0.0000)"
   },
-  "cbre_fator_decl_pct_dentro_de_0.5": {
+  "referencia_fator_decl_pct_dentro_de_0.5": {
    "valor": 100.0,
    "unidade": "%",
-   "comando": "pytest tests/unit/test_amc_transformacoes_cbre.py::test_reproduz_fator_do_hex_fav[decl] (n=73099, max|delta|=0.5000)"
+   "comando": "pytest tests/unit/test_amc_transformacoes_referencia.py::test_reproduz_fator_do_hex_fav[decl] (n=73099, max|delta|=0.5000)"
   },
-  "cbre_fator_press_pct_dentro_de_0.5": {
+  "referencia_fator_press_pct_dentro_de_0.5": {
    "valor": 100.0,
    "unidade": "%",
-   "comando": "pytest tests/unit/test_amc_transformacoes_cbre.py::test_reproduz_fator_do_hex_fav[press] (n=73115, max|delta|=0.5000)"
+   "comando": "pytest tests/unit/test_amc_transformacoes_referencia.py::test_reproduz_fator_do_hex_fav[press] (n=73115, max|delta|=0.5000)"
   },
-  "cbre_fator_rod_pct_dentro_de_0.5": {
+  "referencia_fator_rod_pct_dentro_de_0.5": {
    "valor": 100.0,
    "unidade": "%",
-   "comando": "pytest tests/unit/test_amc_transformacoes_cbre.py::test_reproduz_fator_do_hex_fav[rod] (n=73115, max|delta|=0.5000)"
+   "comando": "pytest tests/unit/test_amc_transformacoes_referencia.py::test_reproduz_fator_do_hex_fav[rod] (n=73115, max|delta|=0.5000)"
   },
-  "cbre_fator_zon_fora_de_escopo": {
+  "referencia_fator_zon_fora_de_escopo": {
    "valor": "categoria multi-regra: nota depende de v_zona OU de texto livre 'onde a lei foi lida' — duas fontes concorrentes para a mesma célula, não é 1 coluna -> 1 nota",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_gru_fora_de_escopo": {
+  "referencia_fator_gru_fora_de_escopo": {
    "valor": "coluna candidata v_t_gru_ctrl (o nome sugere controle/QA, não a entrada do fator) segue a forma de degraus 15/30/45/60 na maioria das células mas diverge > 0,5 em 3,90% delas (2.731 de 70.001, medido 07/09/2026) — sinal de que não é a mesma entrada que o pipeline do fator usou; apurar a coluna certa é trabalho de outro item",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_se_fora_de_escopo": {
+  "referencia_fator_se_fora_de_escopo": {
    "valor": "coluna candidata v_dist_se tem a forma qualitativa certa (perto=100, longe=20) mas só 19,90% das células batem a ≤ 0,5 (medido 07/09/2026) — a dispersão sugere que a favorabilidade considera mais de uma subestação ou um bônus não documentado; não é uma transformação de 1 valor até isso ser investigado",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_disp_fora_de_escopo": {
+  "referencia_fator_disp_fora_de_escopo": {
    "valor": "combina fração de 4 classes de uso do solo (pasto+agrícola+não-vegetado+mineração) com veto por urbano/floresta antes de virar nota — extração composta, não transformação de 1 valor",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_ener_fora_de_escopo": {
+  "referencia_fator_ener_fora_de_escopo": {
    "valor": "categórico (rede MT na célula/perto) + bônus de +10 por subestação a até 5 km, com teto 100",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_restr_fora_de_escopo": {
+  "referencia_fator_restr_fora_de_escopo": {
    "valor": "nota = MENOR de até 4 regras independentes (manancial/RBCV/UC uso sustentável/borda UC-PI) mais veto por TI/UC integral/embargo/zona núcleo",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_varzea_fora_de_escopo": {
+  "referencia_fator_varzea_fora_de_escopo": {
    "valor": "4 classes com fronteira MISTA (pct=0 fechado à esquerda, pct=0,10 fechado à direita da classe seguinte) — não expressável na convenção única de `faixas` deste item, mais um caminho de proxy declarado quando falta cobertura oficial",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_dens_fora_de_escopo": {
+  "referencia_fator_dens_fora_de_escopo": {
    "valor": "3 trechos com INCLINAÇÕES diferentes (0-500, 500-2.000 platô, 2.000-10.000) — mais de um segmento linear, fora do que um único `linear`/`faixas` representa",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_roubo_fora_de_escopo": {
+  "referencia_fator_roubo_fora_de_escopo": {
    "valor": "nota vem de densidade kernel gaussiana 2 km sobre boletim de ocorrência de duas leituras somadas sem duplicar — o valor bruto em si já é uma extração espacial composta",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_trib_fora_de_escopo": {
+  "referencia_fator_trib_fora_de_escopo": {
    "valor": "combina 3 variáveis com pesos fixos (0,40×ISS + 0,30×IPTU + 0,30×incentivo) min-max por município antes de virar nota — soma ponderada de 3 fatores brutos, não 1",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_renda_fora_de_escopo": {
-   "valor": "percentil por setor censitário não está materializado em `cbre.hex_fav` como coluna bruta própria (é calculado dentro do pipeline do fator) — sem a coluna de entrada não há o que comparar aqui, ainda que a fórmula (100 − percentil) seja um `linear` trivial",
+  "referencia_fator_renda_fora_de_escopo": {
+   "valor": "percentil por setor censitário não está materializado na tabela de células do motor de referência como coluna bruta própria (é calculado dentro do pipeline do fator) — sem a coluna de entrada não há o que comparar aqui, ainda que a fórmula (100 − percentil) seja um `linear` trivial",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_rlapp_fora_de_escopo": {
-   "valor": "fator é POR IMÓVEL (área útil fora de RL/APP ÷ área do imóvel do CAR), não por célula — não existe em `cbre.hex_fav`, que é a grade; comparável só em `cbre.imoveis_fav`",
+  "referencia_fator_rlapp_fora_de_escopo": {
+   "valor": "fator é POR IMÓVEL (área útil fora de RL/APP ÷ área do imóvel do CAR), não por célula — não existe na tabela de células do motor de referência, que é a grade; comparável só na tabela de feições dele",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_polos_fora_de_escopo": {
+  "referencia_fator_polos_fora_de_escopo": {
    "valor": "rampa linear de base MENOS penalidade de −8/polo grande e −4/escola a até 1 km — a penalidade depende de contagem de pontos na vizinhança, não é 1 valor bruto",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_cluster_fora_de_escopo": {
+  "referencia_fator_cluster_fora_de_escopo": {
    "valor": "soma de dois termos (m² de galpão a 2 km + nº de condomínios a 5 km), cada um por si um raio de busca espacial — 2 variáveis compostas, não 1",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   },
-  "cbre_fator_mine_fora_de_escopo": {
+  "referencia_fator_mine_fora_de_escopo": {
    "valor": "nota depende do VEREDITO por imóvel OU da fração de polígono de direito minerário por célula — categórico de fonte composta (ANM + Sentinel), sem coluna de valor contínuo único",
    "unidade": "texto",
-   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py"
+   "comando": "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py"
   }
  },
  "gerado_em": "2026-09-07T16:27:30Z",

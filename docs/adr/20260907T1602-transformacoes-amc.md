@@ -11,7 +11,7 @@ item L3-01-a — `categoria`, `faixas`, `linear`, `degraus` e as 12 funções co
 Function do ArcGIS Pro. O executor (`app/amc/executor.py`, item L6-04) implementava só `linear`,
 com um comentário explícito dizendo que o resto ficava para este item. Faltava: (1) uma segunda
 implementação em SQL, para materializar sem trazer a coluna inteira para o Python; (2) prova de que
-as duas batem; (3) prova de que a curva reproduz o motor logístico real (CBRE) onde ele já faz a
+as duas batem; (3) prova de que a curva reproduz o motor logístico de referência da casa onde ele já faz a
 mesma conta; (4) documentação com fórmula e gráfico.
 
 ## Decisão 1 — a fórmula das funções contínuas é DECLARADA, não engenharia reversa
@@ -37,7 +37,7 @@ possível aqui.
 
 ## Decisão 2 — extensão aditiva `saida_min`/`saida_max`
 
-Vários fatores reais do motor logístico (ex.: `rod` do CBRE: "d ≤ 300 m → 100; rampa até 10 em
+Vários fatores reais do motor logístico (ex.: `rod` do motor de referência: "d ≤ 300 m → 100; rampa até 10 em
 5 km") não têm saída em [0, 100] cheio — a rampa vai de 100 a 10, não de 100 a 0. O esquema não lista
 esses campos, mas também não fecha `additionalProperties` no objeto `transformacao` — logo, gravar
 `saida_min`/`saida_max` numa transformação não quebra nenhum modelo já existente (eles simplesmente
@@ -62,10 +62,11 @@ Erro pego no próprio desenvolvimento deste item: a primeira versão invertia `a
 que `minimo`" e `acima` é sempre "valor maior que `maximo`", **independente de a curva estar subindo
 ou descendo entre as duas pontas** — a direção decide só o formato da curva, não que ponta é qual.
 
-## Decisão 5 — cobertura da reprodução do CBRE é 4 de 19 fatores, não 19 de 19, e o motivo é nomeado
+## Decisão 5 — cobertura da reprodução do motor de referência é 4 de 19 fatores, não 19 de 19, e o motivo é nomeado
 
 Ver `tests/unit/test_amc_transformacoes_cbre.py`. Os "19 fatores" do motor logístico (ordem 1-19 em
-`cbre.fatores`, README do projeto CBRE, "19 fatores" em 29/08/2026) incluem fatores que combinam
+tabela de fatores do motor de referência, documentação interna do piloto, "19 fatores" em
+29/08/2026) incluem fatores que combinam
 várias colunas, aplicam veto, somam bônus, ou (`gru`, `se`) têm uma coluna candidata que segue a
 FORMA certa mas diverge > 0,5 numa fração relevante das células — sinal de que a coluna gravada não é
 o valor que o pipeline do fator usou de fato. Reproduzir os outros 15 exigiria refazer a extração e a
@@ -81,6 +82,6 @@ fingida como passada.
 - Quem materializar favorabilidade em massa (fora do executor, ex. um job de recálculo de camada
   inteira) usa `plat.amc_transformar_num`/`plat.amc_transformar_cat` diretamente em SQL, sem trazer
   a coluna para o Python.
-- Achar a coluna certa para `gru`/`se` no pipeline do CBRE fica pendente para quem tocar aquele
+- Achar a coluna certa para `gru`/`se` no pipeline do motor de referência fica pendente para quem tocar aquele
   projeto — não é um item de trabalho desta trilha (motor territorial genérico), é uma investigação
-  específica do produto CBRE.
+  específica do piloto de referência.

@@ -1,15 +1,21 @@
 """Cláusula do portão de pronto: "as transformações dos 19 fatores do motor logístico reescritas
-neste JSON reproduzem cbre.hex_fav (só leitura) com |Δ| ≤ 0,5 em 100 % das células".
+neste JSON reproduzem a tabela de células do motor logístico de referência (só leitura) com |Δ| ≤ 0,5
+em 100 % das células".
 
-Os "19 fatores" são os de ordem 1-19 em `cbre.fatores` (o motor tinha exatamente 19 fatores em
-29/08/2026 — README.md do projeto CBRE, seção "19 fatores"; cresceu para 26 depois). `cbre.hex_fav`
-é lida SÓ LEITURA (`sudo -u postgres psql`, sem escrever nada) — é o produto de outro projeto
-(`/home/dev/cbre`), não deste item.
+O motor logístico de referência é um produto de OUTRO projeto desta casa, já materializado num schema
+próprio do banco compartilhado. Aqui ele é lido SÓ para leitura e SÓ como oráculo: nenhuma linha é
+escrita, nenhuma tabela é criada. O nome do schema NÃO está escrito neste repositório — vem da variável
+de ambiente `PLAT_MOTOR_REFERENCIA_ESQUEMA`, porque o repositório é público e o schema carrega o nome de
+um cliente. Sem a variável, o módulo inteiro é pulado com essa razão dita em voz alta.
+
+Os "19 fatores" são os de ordem 1-19 na tabela de fatores do motor de referência (ele tinha exatamente
+19 fatores em 29/08/2026, conforme a documentação interna do piloto de referência, seção "19 fatores";
+cresceu para 26 depois).
 
 Cobertura HONESTA, não 19 de 19: dos 19, só os que são uma transformação DECLARATIVA de UMA coluna
 bruta E cuja coluna bruta bate 100 % com a favorabilidade oficial (a prova é ela mesma o filtro) ficam
 verificados aqui — 4: decl, rod, agua, press. `gru` e `se` TÊM coluna bruta candidata (`v_t_gru_ctrl`,
-`v_dist_se`) e a fórmula do README bate na maioria das células, mas ~4 % (`gru`) e a maior parte
+`v_dist_se`) e a fórmula documentada bate na maioria das células, mas ~4 % (`gru`) e a maior parte
 (`se`) divergem mais que a tolerância — sinal de que a coluna gravada não é o mesmo valor que o
 pipeline do fator usou (nome "_ctrl" sugere controle/QA, não a entrada; `se` pode agregar mais de uma
 subestação ou aplicar bônus não documentado) — apurar isso é trabalho de outro item, não deste; ficam
@@ -21,12 +27,19 @@ fator (L3-01-c/L3-01-e), não de transformação de um valor já extraído. Todo
 uma linha nomeada no `tests/medidas/*.json` com o motivo específico."""
 
 import json
+import os
 import subprocess
 
 import numpy as np
 import pytest
 
 from app.amc import transformacoes as tr
+
+ESQUEMA = os.environ.get("PLAT_MOTOR_REFERENCIA_ESQUEMA", "").strip()
+if not ESQUEMA:
+    pytest.skip("PLAT_MOTOR_REFERENCIA_ESQUEMA não definido", allow_module_level=True)
+if not ESQUEMA.replace("_", "").isalnum():
+    raise RuntimeError("PLAT_MOTOR_REFERENCIA_ESQUEMA tem de ser um identificador simples")
 
 TOLERANCIA = 0.5
 EPSILON_PONTO_FLUTUANTE = 1e-6  # f_* é smallint arredondado; sem isto, 54,5 vs 55 falha por erro de fp em x.5
@@ -79,11 +92,13 @@ FORA_DE_ESCOPO = {
              "somadas sem duplicar — o valor bruto em si já é uma extração espacial composta",
     "trib": "combina 3 variáveis com pesos fixos (0,40×ISS + 0,30×IPTU + 0,30×incentivo) min-max por "
             "município antes de virar nota — soma ponderada de 3 fatores brutos, não 1",
-    "renda": "percentil por setor censitário não está materializado em `cbre.hex_fav` como coluna bruta "
-             "própria (é calculado dentro do pipeline do fator) — sem a coluna de entrada não há o que "
-             "comparar aqui, ainda que a fórmula (100 − percentil) seja um `linear` trivial",
+    "renda": "percentil por setor censitário não está materializado na tabela de células do motor de "
+             "referência como coluna bruta própria (é calculado dentro do pipeline do fator) — sem a "
+             "coluna de entrada não há o que comparar aqui, ainda que a fórmula (100 − percentil) seja "
+             "um `linear` trivial",
     "rlapp": "fator é POR IMÓVEL (área útil fora de RL/APP ÷ área do imóvel do CAR), não por célula — "
-             "não existe em `cbre.hex_fav`, que é a grade; comparável só em `cbre.imoveis_fav`",
+             "não existe na tabela de células do motor de referência, que é a grade; comparável só na "
+             "tabela de feições dele",
     "polos": "rampa linear de base MENOS penalidade de −8/polo grande e −4/escola a até 1 km — a "
              "penalidade depende de contagem de pontos na vizinhança, não é 1 valor bruto",
     "cluster": "soma de dois termos (m² de galpão a 2 km + nº de condomínios a 5 km), cada um por si um "
@@ -98,8 +113,8 @@ def test_reproduz_fator_do_hex_fav(env, fator, medida):
     colunas, transformacao, col_fav = CASOS[fator]
     sql_colunas = ", ".join(colunas + [col_fav])
     condicao = " AND ".join(f"{c} IS NOT NULL" for c in colunas + [col_fav])
-    linhas = _psql_json(f"SELECT {sql_colunas} FROM cbre.hex_fav WHERE {condicao}")
-    assert linhas, f"cbre.hex_fav sem nenhuma linha com {colunas}/{col_fav} preenchidos"
+    linhas = _psql_json(f"SELECT {sql_colunas} FROM {ESQUEMA}.hex_fav WHERE {condicao}")
+    assert linhas, f"a tabela de células do motor de referência não tem nenhuma linha com {colunas}/{col_fav}"
     bruto = [li[colunas[0]] for li in linhas]
     if transformacao["tipo"] == "categoria":
         bruto = [str(v) for v in bruto]
@@ -110,8 +125,8 @@ def test_reproduz_fator_do_hex_fav(env, fator, medida):
     n_dentro = int((delta <= TOLERANCIA + EPSILON_PONTO_FLUTUANTE).sum())
     pct = 100.0 * n_dentro / n_total
     medida("L3-01-d-transformacoes")(
-        f"cbre_fator_{fator}_pct_dentro_de_{TOLERANCIA}", round(pct, 4), "%",
-        f"pytest tests/unit/test_amc_transformacoes_cbre.py::test_reproduz_fator_do_hex_fav[{fator}] "
+        f"referencia_fator_{fator}_pct_dentro_de_{TOLERANCIA}", round(pct, 4), "%",
+        f"pytest tests/unit/test_amc_transformacoes_referencia.py::test_reproduz_fator_do_hex_fav[{fator}] "
         f"(n={n_total}, max|delta|={float(delta.max()):.4f})",
     )
     assert pct == 100.0, (
@@ -126,5 +141,6 @@ def test_fora_de_escopo_documentado(medida):
     cobertos = set(CASOS) | set(FORA_DE_ESCOPO)
     assert len(CASOS) == 4 and len(FORA_DE_ESCOPO) == 15 and len(cobertos) == 19, sorted(cobertos)
     for fator, motivo in FORA_DE_ESCOPO.items():
-        medida("L3-01-d-transformacoes")(f"cbre_fator_{fator}_fora_de_escopo", motivo, "texto",
-                                          "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_cbre.py")
+        medida("L3-01-d-transformacoes")(
+            f"referencia_fator_{fator}_fora_de_escopo", motivo, "texto",
+            "ver FORA_DE_ESCOPO em tests/unit/test_amc_transformacoes_referencia.py")
