@@ -3,6 +3,10 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item HARD-01-varredura-de-seguranca-continua: varredura de segurança no portão)
+
+- HARD-01-varredura-de-seguranca-continua: `make seguranca` em `make check` (bandit + pip-audit + npm audit + gitleaks no histórico + trivy; ZAP baseline em `make seguranca-zap` contra instância própria), exceções com prazo em `docs/excecoes_seguranca.json`, binárias fixadas por sha256 (`deploy/ferramentas_binarias.txt`), seção 9 de docs/SEGURANCA.md gerada; consertos: defusedxml no Garage, `server_tokens off`, X-Frame-Options e Content-Security-Policy no nginx.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
