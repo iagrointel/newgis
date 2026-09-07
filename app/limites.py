@@ -226,3 +226,13 @@ EXPORTACAO_CSV_SEPARADORES = (",", ";", "\t", "|")
 EXPORTACAO_CSV_DECIMAIS = (".", ",")
 EXPORTACAO_BLOCO_LEITURA_BYTES = 8 * 1024 * 1024   # leitura do arquivo pronto em blocos (sha256 e envio); NUNCA
                                               # o arquivo inteiro em memória, nem no envio ao Garage nem na entrega
+
+# --- exportação COMPLETA do inquilino (L0-06-d-exportar-inquilino): "Exportar meu inquilino" do admin. Reusa
+# EXPORTACAO_VALIDADE_DIAS (mesmos 7 dias) e EXPORTACAO_MEMORIA_MB do irmão L0-04-h; os limites abaixo são só
+# os que este item acrescenta.
+EXPORTACAO_INQUILINO_TIMEOUT_S = 3600 * 4          # inquilino inteiro pode ter muitas camadas; 4x o de uma só
+EXPORTACAO_INQUILINO_POR_DIA_MAX = 1               # portão do item: pedir a 2ª no mesmo dia UTC devolve 429
+EXPORTACAO_INQUILINO_MANIFESTO_NOME = "manifesto.json"
+EXPORTACAO_INQUILINO_CATALOGO_NOME = "catalogo.json"
+EXPORTACAO_INQUILINO_GPKG_NOME = "dados.gpkg"
+EXPORTACAO_INQUILINO_ARQUIVOS_NOME = "arquivos.zip"
