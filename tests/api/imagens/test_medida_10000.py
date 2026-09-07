@@ -10,6 +10,7 @@ import pytest
 from app import db, limites
 from app.imagens import pgstac as ps
 from app.imagens import raster_item as ri
+from tests.api.imagens import apoio_raster
 
 N_ITENS = 10_000
 # Brasil aproximado; a caixa de busca abaixo é ~1/16 da área total, o bastante para provar que o índice
@@ -32,10 +33,14 @@ def colecao_10k(token_stac_a, tenant_id_a, env):
     não como postgres): ingestão em massa é responsabilidade de um item futuro (L1-01-h), aqui só se prova
     que o catálogo AGUENTA o volume e que a busca por bbox permanece rápida."""
     ctx = db.Contexto(tenant_id_a, 0, "zt-medida")
-    colecao_id = ps.nome_colecao(tenant_id_a, "medida10k")
+    # o schema `pgstac` é global ao banco: sem o nome da trilha na coleção, a trilha que rodar depois
+    # encontra os 10.000 itens da anterior, pula a semeadura e fica sem o espelho em plat.raster_item
+    # da SUA base (o teste então lia 0 no espelho).
+    slug = apoio_raster.slug_da_trilha("medida10k")
+    colecao_id = ps.nome_colecao(tenant_id_a, slug)
     with db.db(ctx) as cur:
         if ps.colecao_obter(cur, tenant_id_a, colecao_id) is None:
-            ps.colecao_criar(cur, tenant_id_a, "medida10k", {})
+            ps.colecao_criar(cur, tenant_id_a, slug, {})
 
     xmin, ymin, xmax, ymax = BBOX_TOTAL
     lado = int(N_ITENS**0.5) + 1  # grade regular, determinística — reproduzível sem estado aleatório
