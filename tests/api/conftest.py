@@ -162,9 +162,7 @@ def sessao_b(cred):
     return _sessao_admin(cred, "demo2")
 
 
-@pytest.fixture(scope="session")
-def sessao_plat(cred):
-    """Superadmin (inquilino plataforma). 2FA obrigatório: liga na primeira vez e guarda o segredo fora do git."""
+def _sessao_superadmin(cred):
     login, senha = cred["plataforma"]
     c = novo_cliente()
     # 07/09 (xdist): sem trinco os 5 workers ligam o 2FA do MESMO superadmin quase juntos — cada um grava um
@@ -179,6 +177,12 @@ def sessao_plat(cred):
             segredo, _ = ligar_2fa(c)
             totp_guardar("plataforma", login, segredo)
     return c
+
+
+@pytest.fixture(scope="session")
+def sessao_plat(cred):
+    """Superadmin (inquilino plataforma). 2FA obrigatório: liga na primeira vez e guarda o segredo fora do git."""
+    return _sessao_superadmin(cred)
 
 
 @pytest.fixture(scope="session")
@@ -294,11 +298,10 @@ def inquilino_temporario(sessao_plat):
     inq.apagar()
 
 
-@pytest.fixture(scope="session", autouse=True)
-def limpeza_de_residuos(sessao_a, sessao_b, sessao_plat):
-    """No fim da sessão de testes: revoga tokens, apaga grupos, papéis e usuários zt-* dos inquilinos de demonstração
-    e apaga inquilinos zt-inq-* (o que uma rodada abortada deixou; o install.sh em dev faz o mesmo)."""
-    yield
+def varrer_residuos(sessao_a, sessao_b, sessao_plat) -> None:
+    """Revoga tokens, apaga grupos, papéis e usuários zt-* dos inquilinos de demonstração e apaga inquilinos
+    zt-inq-*. É uma VARREDURA POR PREFIXO: apaga o resíduo de qualquer rodada, inclusive o que outro worker
+    do pytest-xdist ainda esteja usando — por isso só corre quando não há mais ninguém rodando."""
     for s in (sessao_a, sessao_b):
         for t in s.get("/api/tokens?todos=1").json():
             if t["nome"].startswith(PREFIXO_TESTE) and t["revogado_em"] is None:
@@ -314,6 +317,42 @@ def limpeza_de_residuos(sessao_a, sessao_b, sessao_plat):
     for t in sessao_plat.get("/api/plataforma/inquilinos").json():
         if t["slug"].startswith(f"{PREFIXO_TESTE}-inq-"):
             sessao_plat.delete(f"/api/plataforma/inquilinos/{t['id']}")
+
+
+def sob_xdist() -> bool:
+    """Verdadeiro dentro de um worker do pytest-xdist (a variável é posta pelo próprio xdist)."""
+    return bool(os.environ.get("PYTEST_XDIST_WORKER"))
+
+
+@pytest.fixture(scope="session", autouse=True)
+def limpeza_de_residuos(sessao_a, sessao_b, sessao_plat):
+    """No fim da sessão de testes: varre o resíduo zt-* (o que uma rodada abortada deixou; o install.sh em dev faz
+    o mesmo).
+
+    07/09: sob pytest-xdist esta varredura NÃO corre aqui. Os workers terminam em instantes diferentes e o
+    primeiro a acabar revogava o token `zt-cruzado` e apagava os usuários zt* que os outros ainda estavam
+    usando — daí 401 no lugar de 404 em test_plataforma/test_cruzado, sem relação com o que o teste prova.
+    Quem varre é o processo CONTROLADOR, em pytest_sessionfinish, depois que todos os workers terminaram."""
+    yield
+    if sob_xdist():
+        return
+    varrer_residuos(sessao_a, sessao_b, sessao_plat)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Controlador do pytest-xdist: varre o resíduo zt-* depois que TODOS os workers terminaram (ver
+    limpeza_de_residuos). No processo do worker e na rodada serial não faz nada — lá quem varre é a fixture."""
+    if sob_xdist() or not getattr(session.config.option, "numprocesses", None):
+        return
+    if not session.config.pluginmanager.hasplugin("xdist"):
+        return
+    try:
+        c = credenciais()
+        if not all(slug in c for slug in ("demo", "demo2", "plataforma")):
+            return
+        varrer_residuos(_sessao_admin(c, "demo"), _sessao_admin(c, "demo2"), _sessao_superadmin(c))
+    except Exception as e:  # noqa: BLE001 - limpeza best-effort: nunca derruba a rodada por causa dela
+        print(f"[limpeza] varredura de resíduos zt-* no controlador falhou: {type(e).__name__}: {e}")
 
 
 def com_token(cliente, token: str, metodo: str, url: str, **kw):
