@@ -273,19 +273,21 @@ def test_codigo_de_pacote_igual_em_dois_inquilinos_e_em_duas_redes_nao_colide(se
 
 def test_toda_rota_de_escrita_de_rede_exige_rede_editar_ou_administrar_no_openapi_e_na_pratica(
         sessao_a, usuarios_a, limpar_redes):
-    """Atualizado pelo item L4-03-a-regras-de-conectividade: além das 3 rotas de `rede.editar` de
-    L4-01-a (criar rede, importar pacote, apagar rede), a comporta de regras (`rede.administrar`) abriu
-    mais 4 rotas de escrita — 2 delas (`applyEdits`/`validar`) continuam em `rede.editar` porque são o
-    dia a dia de quem edita feição; as outras 2 (`regras.csv` POST e `regras/ativacao` PUT) exigem
-    `rede.administrar` de propósito: quem edita feição não abre a comporta nem troca o conjunto de
-    regras (ver `app/rede_utilidades/rotas_regras.py`, docstring do módulo, e ADR do item)."""
+    """Atualizado pelo item L4-03-a-regras-de-conectividade (3 rotas de `rede.editar` de L4-01-a — criar
+    rede, importar pacote, apagar rede — mais 4: `applyEdits`/`validar` em `rede.editar`, `regras.csv`
+    POST/`regras/ativacao` PUT em `rede.administrar`) e pelo item L4-03-d-areas-sujas-e-validacao (mais 2:
+    `validar_extensao` em `rede.editar` — é validação, não edição de feição, mas ainda assim escreve
+    `plat.rede_erro`/marca área limpa, o mesmo grau de acesso de `validar` — e `area_sujas/modo` PUT em
+    `rede.administrar`, mesmo padrão de `regras/ativacao`; `tracar` é GET, só leitura, e não entra nesta
+    lista de escrita — ver `app/rede_utilidades/rotas_areas_sujas.py`)."""
     from app.main import app
 
-    ADMINISTRAR = {("/api/rede/{rede_id}/regras.csv", "post"), ("/api/rede/{rede_id}/regras/ativacao", "put")}
+    ADMINISTRAR = {("/api/rede/{rede_id}/regras.csv", "post"), ("/api/rede/{rede_id}/regras/ativacao", "put"),
+                   ("/api/rede/{rede_id}/area_sujas/modo", "put")}
     esquema = app.openapi()
     escritas = [(c, m) for c, ops in esquema["paths"].items() if c.startswith("/api/rede")
                 for m in ops if m in ("post", "put", "patch", "delete")]
-    assert len(escritas) == 7, escritas
+    assert len(escritas) == 9, escritas
     for c, m in escritas:
         privilegio = esquema["paths"][c][m].get("x-privilegio")
         esperado = "rede.administrar" if (c, m) in ADMINISTRAR else "rede.editar"

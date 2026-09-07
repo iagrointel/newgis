@@ -1,0 +1,96 @@
+{
+ "item": "L4-03-d-areas-sujas-e-validacao",
+ "assinado_por": "gerente (retomada após queda por cota da sessão anterior; trabalho em disco recolhido e concluído)",
+ "gerado_em": "2026-09-07T13:20:00Z",
+ "git_sha": "12edbce60d62748860fe6e8e216fb44bef1118b3",
+ "maquina": "12 vCPU, 23 GB RAM (0 GB livres reportado, 13 GB buff/cache, load average 17-19 no momento das medidas de tempo — ver ressalva de carga em cada medida), disco / a 98%; PostgreSQL 16 em iagro_sat; base própria da trilha (schema plat_til403dareas, laco/trilha_ambiente.sh il403dareas)",
+ "medidas": {
+  "testes_dedicados_do_item": {
+   "valor": 19,
+   "unidade": "casos pytest, 0 falhas",
+   "comando": "set -a; source laco/var/trilha/il403dareas.env; set +a; bash laco/roda_teste.sh tests/api/test_areas_sujas_e_validacao.py -q"
+  },
+  "suite_do_item_e_regressao_da_familia": {
+   "valor": "31 casos, 0 falhas (test_rede_pacote_conserto_a1_a4.py + test_regras_conectividade.py + test_regras_csv.py, atualizados para as novas rotas)",
+   "comando": "bash laco/roda_teste.sh tests/api/test_rede_pacote_conserto_a1_a4.py tests/api/test_regras_conectividade.py tests/api/test_regras_csv.py -q"
+  },
+  "regressao_ampla_ja_verde_com_ajuste": {
+   "valor": "test_eventos.py (2 casos) verde após acrescentar as 9 rotas de rede/mapas que faltavam em eventos_esperados.py; test_privilegios_declarados.py e sem-marcador (ARQUITETURA.md) continuam com falha PRE-EXISTENTE, não tocada por este item (ver handoff)",
+   "comando": "bash laco/roda_teste.sh tests/api/test_eventos.py -q"
+  },
+  "editar_1_trecho_cria_1_area_suja": {
+   "valor": 1,
+   "unidade": "área suja por feição com geometria tocada",
+   "portao": "editar 1 trecho cria 1 área suja visível no mapa",
+   "comando": "test_editar_uma_feicao_cria_uma_area_suja_visivel_no_mapa"
+  },
+  "validar_extensao_reconstroi_menos_que_o_total": {
+   "valor": {"feicoes_em_escopo": 2, "feicoes_total": 4, "areas_processadas": 2, "areas_restantes": 2},
+   "unidade": "feições",
+   "portao": "contagem de linhas reescritas ≪ total, medida",
+   "comando": "test_validar_extensao_pequena_limpa_so_a_area_e_reconstroi_menos_que_o_total"
+  },
+  "validar_tudo_tempo_medido": {
+   "valor": 74.1,
+   "unidade": "ms",
+   "carga_1min": 17.26,
+   "ram_livre_gb": 0,
+   "medido_em": "2026-09-07T13:19:28Z",
+   "ressalva": "carga acima do limiar de 8 recomendado pelo brief (12 núcleos); passou com folga larga mesmo assim (74 ms contra um teto informal de segundos) — conta a favor, mas não é medida de máquina calma",
+   "portao": "validar tudo na cooperativa de teste em tempo medido",
+   "comando": "test_validar_tudo_com_extensao_nula_limpa_todas_as_areas_ativas (log de acesso da rota /validar_extensao)"
+  },
+  "codigos_de_erro_documentados": {
+   "valor": 15,
+   "unidade": "códigos",
+   "portao": ">= 15 códigos de erro documentados",
+   "lista": ["sem_regra", "terminal_errado", "regra_inexistente", "terminal_invalido",
+             "terminal_obrigatorio_ausente", "feicao_sem_conexao", "sobreposicao_dispositivo",
+             "ciclo_tier_hierarquico", "subrede_sem_controlador", "atributo_obrigatorio_nulo",
+             "geometria_invalida", "associacao_ciclo", "feicao_duplicada_geometria",
+             "tipo_sem_regra_no_pacote", "atributo_tipo_invalido"],
+   "ressalva": "14 de 15 provocados por teste de ponta a ponta; regra_inexistente é defensivo e inalcançável pela API com a FK corrigida (migração 20260907T1308) — ver ADR seção 'fronteira honesta'",
+   "comando": "app/rede_utilidades/validacao.py (docstring do módulo) + tests/api/test_areas_sujas_e_validacao.py"
+  },
+  "tracado_sobre_area_suja": {
+   "valor": "avisar (200, com polígono) por padrão; bloquear (409, com polígono) por configuração",
+   "portao": "traçado sobre área suja devolve aviso com o polígono",
+   "comando": "test_tracado_sobre_area_suja_avisa_por_padrao_com_o_poligono + test_tracado_sobre_area_suja_bloqueia_no_modo_bloquear"
+  },
+  "refutacao_500_edicoes_em_lote": {
+   "valor": 500,
+   "unidade": "áreas sujas criadas para 500 feições, uma por feição",
+   "portao": "500 edições em lote → nº de áreas sujas ≤ 500",
+   "comando": "test_500_edicoes_em_lote_criam_no_maximo_500_areas_sujas"
+  },
+  "refutacao_checksum_fora_da_extensao_inalterado": {
+   "valor": "md5 idêntico antes/depois de validar_extensao numa extensão pequena",
+   "portao": "validar por extensão pequena não toca o resto (checksum da topologia fora da extensão inalterado)",
+   "comando": "test_validar_extensao_pequena_nao_altera_o_checksum_do_resto_da_rede"
+  },
+  "rotas_de_escrita_de_rede_apos_o_item": {
+   "valor": {"total": 9, "rede.editar": 6, "rede.administrar": 3, "so_leitura_get": "tracar"},
+   "unidade": "rotas HTTP",
+   "comando": "app.main.app.openapi() filtrado por /api/rede e método post/put/patch/delete; test_toda_rota_de_escrita_de_rede_exige_rede_editar_ou_administrar_no_openapi_e_na_pratica atualizado"
+  },
+  "lint": {
+   "valor": "0 erros nos arquivos do item",
+   "comando": "venv/bin/ruff check app/rede_utilidades/areas_sujas.py app/rede_utilidades/validacao.py app/rede_utilidades/rotas_areas_sujas.py app/rede_utilidades/rotas_regras.py app/rede_utilidades/modelos.py"
+  }
+ },
+ "cobertura_do_portao": {
+  "editar_1_trecho_cria_1_area_suja_visivel_no_mapa": "feito — medida editar_1_trecho_cria_1_area_suja + GET /api/rede/{id}/areas_sujas (FeatureCollection)",
+  "validar_a_extensao_limpa_a_area_e_reconstroi_so_dentro_dela_contagem_medida": "feito — medida validar_extensao_reconstroi_menos_que_o_total",
+  "15_codigos_de_erro_documentados": "feito, com ressalva — 15 documentados e implementados, 14 provocados por teste; regra_inexistente é defensivo/inalcançável dado o conserto de FK (ver ADR)",
+  "validar_tudo_em_tempo_medido": "feito, com ressalva de carga — medida validar_tudo_tempo_medido",
+  "tracado_sobre_area_suja_devolve_aviso_com_o_poligono": "feito — medida tracado_sobre_area_suja (avisar/bloquear, os dois com o polígono no corpo)",
+  "refutacao_500_edicoes_areas_sujas_menor_ou_igual_500": "feito — medida refutacao_500_edicoes_em_lote",
+  "refutacao_validar_extensao_pequena_nao_toca_o_resto": "feito — medida refutacao_checksum_fora_da_extensao_inalterado",
+  "refutacao_provoca_cada_um_dos_15_codigos": "parcial — 14 de 15 provocados; regra_inexistente é defensivo, ver ressalva",
+  "paridade_esri_escrita": "feito — docs/PARIDADE.md seção 'área suja e validação incremental'; paridade contra Pro/AGOL reais continua pendente (decisao D20)"
+ },
+ "achados_fora_do_escopo_do_portao_mas_corrigidos": [
+  "migracao 20260907T1308: FK composta (tenant_id, regra_id) com ON DELETE SET NULL zerava tenant_id (NOT NULL) e quebrava com 500 qualquer reimportacao de CSV de regras que removesse uma regra em uso — bug do item L4-03-a, achado e corrigido ao testar regra_inexistente",
+  "tests/api/eventos_esperados.py estava sem NENHUMA rota de /api/rede (item L4-01-a/L4-03-a nunca a atualizaram) — acrescentadas as 9 rotas de rede + 2 de /api/mapas (estas ultimas documentadas como [] por falta de registrar_evento em app/mapas/rotas.py, gap de outro item)"
+ ]
+}

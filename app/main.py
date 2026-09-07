@@ -47,6 +47,7 @@ from app.jobs.rotas import router as rotas_jobs
 from app.mapas.rotas import router as rotas_mapas
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
+from app.rede_utilidades.rotas_areas_sujas import router as rotas_rede_areas_sujas
 from app.rede_utilidades.rotas_regras import router as rotas_rede_regras
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
@@ -124,6 +125,9 @@ ROUTERS = [
     # --- regras de conectividade (L4-03-a): applyEdits com avaliação "sem regra = proibido", validação em
     # lote, CSV de regras nas colunas da Esri e a comporta regras_ativas (só rede.administrar)
     rotas_rede_regras,
+    # --- área suja e validação incremental (L4-03-d): /api/rede/{id}/areas_sujas, /validar_extensao,
+    # /erros, /tracar e a comporta /area_sujas/modo (só rede.administrar)
+    rotas_rede_areas_sujas,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,

@@ -35,7 +35,7 @@ from app import db
 from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
-from app.rede_utilidades import deposito, regras_csv
+from app.rede_utilidades import areas_sujas, deposito, regras_csv
 from app.rede_utilidades import regras as motor
 from app.rede_utilidades.modelos import (
     ApplyEditsEntrada,
@@ -99,7 +99,11 @@ def _ref(f: dict) -> motor.Ref:
 
 
 def _carregar_rede(cur, rid: str) -> dict:
-    cur.execute("SELECT id, regras_ativas, pacote_codigo FROM plat.rede WHERE id = %s::uuid", (rid,))
+    cur.execute(
+        "SELECT id, regras_ativas, pacote_codigo, versao_edicao, tracado_sobre_area_suja_modo "
+        "FROM plat.rede WHERE id = %s::uuid",
+        (rid,),
+    )
     r = cur.fetchone()
     if r is None:
         raise ErroAPI(404, "rede_inexistente", "rede inexistente")
@@ -394,8 +398,11 @@ def _apply_edits_sincrono(rid: str, corpo: ApplyEditsEntrada, auth: Auth, reques
             afetadas.append(f.id)
 
         apagadas = 0
+        geometrias_apagadas: list[tuple[str, str | None]] = []
         for fid in corpo.apagar:
             _carregar_feicao(cur, rid, fid)  # 404 honesto: apagar o que não existe é erro, não silêncio
+            cur.execute("SELECT ST_AsText(geometria) AS wkt FROM plat.rede_feicao WHERE id = %s::uuid", (fid,))
+            geometrias_apagadas.append((fid, cur.fetchone()["wkt"]))
             cur.execute("DELETE FROM plat.rede_feicao WHERE rede_id = %s::uuid AND id = %s::uuid", (rid, fid))
             apagadas += cur.rowcount
 
@@ -436,17 +443,30 @@ def _apply_edits_sincrono(rid: str, corpo: ApplyEditsEntrada, auth: Auth, reques
                 continue
             conexoes += _derivar(cur, auth.tenant_id, rid, fid, regras, ativas)
 
+        # área suja (item L4-03-d-areas-sujas-e-validacao): uma por FEIÇÃO tocada neste lote (adicionada ou
+        # atualizada, se tiver geometria — `registrar_por_feicoes` filtra) mais uma por feição apagada (pela
+        # geometria capturada ANTES do DELETE). Uma única versão de edição para o lote inteiro: é o "por
+        # versão" do portão, e um applyEdits já é uma unidade atômica.
+        area_sujas_criadas = 0
+        if afetadas or geometrias_apagadas:
+            versao = areas_sujas.proxima_versao(cur, rid)
+            area_sujas_criadas += areas_sujas.registrar_por_feicoes(cur, auth.tenant_id, rid, versao, afetadas)
+            for fid, wkt in geometrias_apagadas:
+                area_sujas_criadas += areas_sujas.registrar_para_geometria_apagada(
+                    cur, auth.tenant_id, rid, versao, fid, wkt)
+
         registrar_evento(cur, request, "redes/apply_edits", "rede", rid, {
             "adicionadas": len(adicionadas), "atualizadas": len(corpo.atualizar), "apagadas": apagadas,
             "associacoes_adicionadas": associacoes_adicionadas,
             "associacoes_apagadas": associacoes_apagadas, "conexoes": conexoes,
-            "regras_ativas": ativas,
+            "regras_ativas": ativas, "area_sujas_criadas": area_sujas_criadas,
         })
         return {
             "rede_id": rid, "regras_ativas": ativas, "adicionadas": adicionadas,
             "atualizadas": len(corpo.atualizar), "apagadas": apagadas,
             "associacoes_adicionadas": associacoes_adicionadas,
             "associacoes_apagadas": associacoes_apagadas, "conexoes": conexoes,
+            "area_sujas_criadas": area_sujas_criadas,
         }
 
 

@@ -129,6 +129,7 @@ class ApplyEditsResultado(BaseModel):
     associacoes_adicionadas: int
     associacoes_apagadas: int
     conexoes: int  # conexões derivadas novas (jj + je) gravadas neste lote
+    area_sujas_criadas: int = 0  # item L4-03-d-areas-sujas-e-validacao: 1 por feição tocada com geometria
 
 
 class ValidacaoResultado(BaseModel):
@@ -150,3 +151,45 @@ class ImportacaoRegrasResultado(BaseModel):
     total: int
     sha256: str
     bytes: int
+
+
+# --- áreas sujas e validação incremental (item L4-03-d-areas-sujas-e-validacao) -----------------------------
+
+class ValidacaoExtensaoEntrada(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    extensao: dict[str, Any] | None = None  # GeoJSON de polígono; None = todas as áreas sujas ativas ("tudo")
+
+
+class ValidacaoExtensaoResultado(BaseModel):
+    rede_id: str
+    versao_edicao: int
+    areas_processadas: int
+    areas_ativas_restantes: int
+    feicoes_em_escopo: int
+    feicoes_total: int
+    total_erros: int
+    erros: list[dict]
+    tempo_ms: float
+    carga_1min: float
+    ram_livre_gb: float
+    medido_em: str
+
+
+class TracadoResultado(BaseModel):
+    rede_id: str
+    cruza_area_suja: bool
+    bloqueado: bool
+    modo: str
+    area_suja: dict | None = None
+
+
+class ModoTracadoEntrada(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    modo: str = Field(pattern="^(avisar|bloquear)$")
+
+
+class ModoTracadoResultado(BaseModel):
+    rede_id: str
+    modo: str

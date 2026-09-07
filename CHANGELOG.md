@@ -3,6 +3,35 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L4-03-d-areas-sujas-e-validacao: área suja, validação incremental e feição de erro)
+
+Continuação de L4-03-a: toda feição tocada num `applyEdits` (adicionada, atualizada ou apagada) grava uma
+**área suja** (`plat.rede_area_suja`, polígono envolvente com buffer de 2 m, carimbada com
+`plat.rede.versao_edicao`) — "editar 1 trecho cria 1 área suja visível no mapa" (`GET .../areas_sujas`,
+`FeatureCollection`). `POST .../validar_extensao` valida só a UNIÃO das áreas sujas ativas que tocam a
+extensão pedida (ou todas, com `extensao: null` — "validar tudo"): a topologia é reconstruída só dentro
+do escopo, nunca da rede inteira, e as áreas processadas viram limpas (soft-delete, `limpa_em`). **15
+códigos de erro** (2 já existiam em tempo de escrita — `sem_regra`/`terminal_errado`, L4-03-a — mais 13
+novos: `regra_inexistente`, `terminal_invalido`, `terminal_obrigatorio_ausente`, `feicao_sem_conexao`,
+`sobreposicao_dispositivo`, `ciclo_tier_hierarquico`, `subrede_sem_controlador`,
+`atributo_obrigatorio_nulo`, `geometria_invalida`, `associacao_ciclo`, `feicao_duplicada_geometria`,
+`tipo_sem_regra_no_pacote`, `atributo_tipo_invalido`) gravados como **feição de erro** em
+`plat.rede_erro` (`GET .../erros`, camada). `GET .../tracar` (feição existente ou geometria solta) avisa
+(200) ou recusa (409) quando cruza uma área suja ativa, conforme `PUT .../area_sujas/modo`
+(`avisar`/`bloquear`, `rede.administrar`) — os dois casos citam o polígono.
+
+**Bug achado e corrigido** (migração `20260907T1308_rede_conserta_fk_regra_set_null.sql`): a FK composta
+`(tenant_id, regra_id)` de `rede_conexao`/`rede_associacao` com `ON DELETE SET NULL` (item L4-03-a) zerava
+as DUAS colunas do lado referenciador — inclusive `tenant_id`, que é `NOT NULL` — e qualquer reimportação
+de CSV que removesse uma regra ainda em uso quebrava com `500`. Trocada por FK de uma coluna só
+(`regra_id -> rede_regra.id`). **Fronteira honesta**: com a FK corrigida, `regra_inexistente` fica
+inalcançável pela API (o banco garante `regra_id` sempre NULL-ou-válido) — continua no código como
+validação defensiva, documentado no ADR e não afirmado como provocado no teste. `Verify`/`Repair Network
+Topology` (validação sem gravar erro / reparo automático de geometria) ficam fora deste item. 19 testes
+novos (`tests/api/test_areas_sujas_e_validacao.py`), 2 rotas somadas a `tests/api/eventos_esperados.py`
+que faltavam desde L4-01-a (mais 2 de `/api/mapas`, gap de outro item, documentadas como `[]`), `docs/
+PARIDADE.md` com a seção da capacidade, ADR `20260907T1243-areas-sujas-e-validacao.md`.
+
 ## turno 4, setembro de 2026 (item L4-03-a-regras-de-conectividade: applyEdits, validação em lote e CSV de regras)
 
 O pacote elétrico ganha um QUINTO tipo de regra (`aresta_juncao_aresta`, separado de `juncao_aresta`
