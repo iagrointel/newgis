@@ -47,14 +47,19 @@ export class Catalogo {
     if (r.status !== 200) throw new Error((r.json && r.json.mensagem) || 'falha ao obter o TileJSON');
     const fonte = PREFIXO + id;
     if (!this.map.getSource(fonte)) {
-      this.map.addSource(fonte, {
+      // ARMADILHA MEDIDA: o MapLibre VALIDA a especificação da fonte e recusa a fonte inteira, em
+      // silêncio (só um evento 'error'), quando uma chave existe com valor `undefined` — `attribution:
+      // undefined` bastava para a fonte não ser criada e todas as camadas dela falharem depois com
+      // "source not found". Por isso a chave opcional só entra no objeto quando tem valor.
+      const especificacao = {
         type: 'vector',
         tiles: r.json.tiles,
         minzoom: r.json.minzoom ?? 0,
         maxzoom: r.json.maxzoom ?? 20,
         bounds: r.json.bounds,
-        attribution: f.atribuicao || undefined,
-      });
+      };
+      if (f.atribuicao) especificacao.attribution = f.atribuicao;
+      this.map.addSource(fonte, especificacao);
     }
     for (const camada of f.estilo) {
       if (!this.map.getLayer(camada.id)) this.map.addLayer(camada);

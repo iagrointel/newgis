@@ -9,7 +9,7 @@
    se escreve num mapa; a ordem invertida é detectada quando o primeiro número não cabe em latitude):
      -23.4935, -46.5930      |     -23,4935 -46,5930      |     23°29'36"S 46°35'34"W
    Sem adivinhação silenciosa: o que não casa com um destes formatos é tratado como endereço. */
-import { obter, enviar } from '../base/api.js';
+import { obter, consulta } from '../base/api.js';
 
 const DECIMAL = /^\s*(-?\d{1,3}(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:[.,]\d+)?)\s*$/;
 const GMS = /(\d{1,3})\s*[°º]\s*(\d{1,2})?\s*['′]?\s*(\d{1,2}(?:[.,]\d+)?)?\s*["″]?\s*([NSEWOnsewo])/g;
@@ -50,7 +50,9 @@ export async function sugerir(texto) {
 }
 
 export async function geocodificar(texto) {
-  const r = await enviar('/api/geocodificar', { endereco: texto, max_locations: 1 });
+  // GET, não POST: geocodificar é leitura, e a porta de escrita sob cookie exige a checagem de origem
+  // (ADR 0002 seção 5.3), que recusa quando a URL pública configurada não é a do navegador.
+  const r = await obter(`/api/geocodificar${consulta({ endereco: texto, max_locations: 1 })}`);
   if (r.status !== 200) return null;
   const lista = r.json.candidatos || r.json.candidates || [];
   if (!lista.length) return null;

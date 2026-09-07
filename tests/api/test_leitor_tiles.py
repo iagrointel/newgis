@@ -12,6 +12,7 @@ instalador gera (tmp_path_factory nesta suíte, /etc/plat/segredos em produção
 import hashlib
 import json
 import os
+import pathlib
 import re
 import secrets
 import subprocess
@@ -65,7 +66,14 @@ def instalador(env, tmp_path_factory):
 
     if subprocess.run(["sudo", "-n", "true"], capture_output=True).returncode != 0:
         pytest.skip("sem sudo sem senha: o instalador do papel de leitura mexe no pg_hba.conf")
-    cred = tmp_path_factory.mktemp("cred_leitor")
+    # ACHADO 07/09 (item L2-01-mapa-web): com um credential NOVO a cada rodada, o instalador gera senha
+    # nova e faz ALTER ROLE — o que derruba, no meio do dia, qualquer serviço já ligado com o papel de
+    # leitura desta base (o Martin da trilha e a própria API, que guardam o DSN antigo). Em produção isso
+    # não acontece porque o CRED_DIR é fixo (/etc/plat/segredos) e o script reusa a senha existente.
+    # PLAT_CRED_DIR permite ao ambiente de teste apontar para o MESMO credential dos serviços vivos; sem
+    # ela, o comportamento antigo (diretório temporário) continua valendo.
+    cred = pathlib.Path(os.environ["PLAT_CRED_DIR"]) if os.environ.get("PLAT_CRED_DIR") \
+        else tmp_path_factory.mktemp("cred_leitor")
 
     def rodar():
         return subprocess.run(
