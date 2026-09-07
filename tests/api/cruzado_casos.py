@@ -576,6 +576,7 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}/micro",
         lambda p: {"resolucao_m": 100.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
                    "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
+    ),
     # L6-02-c (conector WFS/OGC API): as três rotas de leitura do modo referenciado. A conexão de B é
     # cross-tenant puro — `_carregar` (RLS) roda ANTES de qualquer ida ao serviço externo, então a rota nem
     # chega a abrir conexão de rede quando o id é de outro inquilino.
