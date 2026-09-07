@@ -1070,3 +1070,47 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Achar tudo o que aconteceu num pedido (item L7-06-c-logs-consulta-req-id)
+
+Toda resposta da plataforma volta com o cabeçalho `X-Req-Id`. Esse identificador nasce no nginx e é o
+mesmo em todos os serviços, o que permite ver, de uma vez, o que cada um escreveu sobre o mesmo pedido:
+
+    scripts/plat logs --req-id 3cf202aaffb6dd447ab01b42dfab0596
+    scripts/plat logs --req-id 3cf202aaffb6dd447ab01b42dfab0596 --desde=-2h --json
+
+A saída traz uma linha por serviço, em ordem de relógio: `nginx` (linha de acesso em JSON, com o estado
+e quem atendeu), `api` (linha JSON da aplicação), `worker` (linha do job que aquele pedido enfileirou) e
+`postgres` (a linha do banco, achada pelo `application_name`, que a aplicação preenche com `plat:` mais
+doze caracteres do identificador). Quem serve tile é o Martin, que não registra identificador de pedido
+próprio: para ele, a linha que vale é a do nginx, onde aparece o endereço do servidor de tiles.
+
+Numa falha em que a aplicação nem chega a responder (o serviço de trás está fora, por exemplo), o cliente
+não recebe `X-Req-Id`. O identificador do pedido está na linha do nginx, e é por ela que se começa.
+
+Na tela **Log de acesso** (`/admin/log`) há a coluna `req_id` e um filtro com o mesmo nome: cola-se ali o
+identificador que o usuário informou. O administrador do inquilino só vê as linhas do próprio inquilino,
+mesmo digitando o identificador de um pedido de outro — a consulta filtra pelo inquilino antes de tudo.
+
+### Aumentar o detalhe do log sem reiniciar nada
+
+    scripts/plat log nivel DEBUG --por 10min                       # tudo, por dez minutos
+    scripts/plat log nivel DEBUG --componente app.db --por 30s     # só um componente
+    scripts/plat log nivel WARNING --componente rota:/api/tiles    # por prefixo de rota, sem prazo
+    scripts/plat log nivel --listar
+    scripts/plat log nivel --remover app.db
+
+Os níveis são `DEBUG`, `INFO`, `WARNING` e `ERROR`. O ajuste vale para o processo inteiro da API e do
+worker (não para um inquilino), passa a valer em segundos e some sozinho quando o prazo acaba. Pela API,
+as mesmas três operações são `GET`, `POST` e `DELETE` em `/api/log/nivel`, só para o superadmin da
+plataforma. Sempre ponha prazo: nível `DEBUG` esquecido enche o disco.
+
+### Por quanto tempo o log fica guardado
+
+O alvo é 90 dias, escrito em `/etc/systemd/journald.conf.d/plat.conf` pelo instalador. Duas ressalvas
+medidas nesta instalação, em setembro de 2026: o journal é compartilhado com o resto da máquina e
+guardava 2,9 dias em 2,34 GB; e o systemd não tem teto por serviço, só por máquina. As unidades da
+plataforma escrevem 0,83 MB por dia somadas, ou seja 90 dias delas caberiam em cerca de 75 MB — o que não
+cabe é o log dos outros serviços do servidor. Guardar 90 dias de verdade exige dar às unidades `plat-*`
+um journal próprio (`LogNamespace=plat`) ou mandar o log para fora.
+

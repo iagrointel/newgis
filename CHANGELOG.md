@@ -3,6 +3,23 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L7-06-c-logs-consulta-req-id: log consultável por pedido)
+
+`plat logs --req-id <id>` (`scripts/plat`) reúne, em ordem de relógio, as linhas que nginx, API, worker e
+Postgres escreveram sobre o MESMO pedido. O identificador nasce no `$request_id` do nginx, vai ao upstream
+em `X-Req-Id` (que sobrescreve o cabeçalho do cliente), a API o adota em vez de cunhar outro, o Postgres o
+recebe em `application_name` (`plat:<12 hex>`, que o `log_line_prefix` já registra em `%a`) e o worker o
+herda de `proveniencia.req_id` do job. Martin e TiTiler não registram identificador próprio: a ligação com
+eles é a linha do nginx que os proxia — está escrito no código para ninguém prometer o contrário.
+`plat.log_acesso` ganhou a coluna `req_id` e `GET /api/log?req_id=` filtra por ela, dentro da RLS do
+inquilino. Nível de log ajustável em tempo de execução, sem reinício, por logger ou prefixo de rota e com
+prazo: `plat log nivel DEBUG --componente app.db --por 10min`, `--listar`, `--remover`; pela API,
+`GET/POST/DELETE /api/log/nivel` (só superadmin: afeta o processo, não um inquilino). Retenção de 90 dias
+em `deploy/journald-plat.conf`. Conserto de segurança que saiu daqui: a mensagem de toda linha JSON passa
+pelo redator, e `?token=`/`?senha=` dentro de uma URL escrita numa mensagem também é redigida — sem isso o
+`httpx` deixava o valor inteiro no journal. `app/versao.py` passou a entender worktree do git.
+
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

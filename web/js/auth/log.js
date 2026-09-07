@@ -11,7 +11,7 @@ import { filtro, seletor } from './comum.js';
 
 const LIMITE = 50;
 const PERIODOS = [['1', '24 h'], ['7', '7 d'], ['30', '30 d'], ['92', '92 d']];
-const f = { periodo: '7', usuario_id: '', token_id: '', rota: '', status: '', deslocamento: 0 };
+const f = { periodo: '7', usuario_id: '', token_id: '', rota: '', status: '', req_id: '', deslocamento: 0 };
 const fe = { periodo: '7', tipo: '', ator_id: '', deslocamento: 0 };
 let usuarios = [];
 let tokens = [];
@@ -63,24 +63,26 @@ function montarFiltros() {
   const usu = seletor('usuario_id', [{ valor: '', rotulo: t('geral.todos') }, ...usuarios.map((u) => ({ valor: String(u.id), rotulo: u.login }))], '');
   const tok = seletor('token_id', [{ valor: '', rotulo: t('geral.todos') }, ...tokens.map((k) => ({ valor: String(k.id), rotulo: `${k.nome} (${k.prefixo})` }))], '');
   const rota = h('input', { type: 'text', name: 'rota', autocomplete: 'off', spellcheck: 'false' });
+  // item L7-06-c: cola-se aqui o req_id que a resposta devolveu (X-Req-Id) para achar a linha do pedido.
+  const reqId = h('input', { type: 'text', name: 'req_id', autocomplete: 'off', spellcheck: 'false', size: '18' });
   const status = seletor('status', [{ valor: '', rotulo: t('geral.todos') }, ...['2xx', '3xx', '4xx', '5xx', '200', '201', '204', '400', '401', '403', '404', '409', '422', '423', '429', '500'].map((s) => ({ valor: s, rotulo: s }))], '');
   const btFiltrar = h('button', { type: 'button', class: 'primario', id: 'filtrar' }, t('log.filtrar'));
   const csv = h('a', { class: 'botao', id: 'exportar-csv', download: 'log_acesso.csv' }, t('log.exportar_csv'));
   const aplicar = () => {
-    f.periodo = periodo.value; f.usuario_id = usu.value; f.token_id = tok.value; f.rota = rota.value.trim(); f.status = status.value; f.deslocamento = 0;
+    f.periodo = periodo.value; f.usuario_id = usu.value; f.token_id = tok.value; f.rota = rota.value.trim(); f.status = status.value; f.req_id = reqId.value.trim(); f.deslocamento = 0;
     carregarLog();
   };
   btFiltrar.addEventListener('click', aplicar);
-  rota.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); aplicar(); } });
+  for (const campo of [rota, reqId]) campo.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); aplicar(); } });
   area.append(filtro(t('log.periodo'), periodo).el);
   if (usuarios.length) area.append(filtro(t('campo.usuario'), usu).el);
-  area.append(filtro(t('log.token'), tok).el, filtro(t('log.rota_comeca'), rota).el, filtro(t('log.status'), status).el, btFiltrar, csv);
+  area.append(filtro(t('log.token'), tok).el, filtro(t('log.rota_comeca'), rota).el, filtro(t('log.status'), status).el, filtro('req_id', reqId).el, btFiltrar, csv);
   document.getElementById('paginacao').addEventListener('mudar', (e) => { f.deslocamento = e.detail.deslocamento; carregarLog(); });
 }
 
 function parametrosLog(formato) {
   const j = janela(f.periodo);
-  return consulta({ usuario_id: f.usuario_id, token_id: f.token_id, rota: f.rota, status: f.status, desde: j.desde, ate: j.ate, limite: LIMITE, deslocamento: f.deslocamento, formato });
+  return consulta({ usuario_id: f.usuario_id, token_id: f.token_id, rota: f.rota, status: f.status, req_id: f.req_id, desde: j.desde, ate: j.ate, limite: LIMITE, deslocamento: f.deslocamento, formato });
 }
 
 function statusMarcador(s) {
@@ -103,6 +105,9 @@ function montarTabela() {
     { chave: 'bytes', titulo: t('log.bytes'), classe: 'num', formatar: (v) => formatarNumero(v) },
     { chave: 'tempo_ms', titulo: t('log.tempo_ms'), classe: 'num', formatar: (v) => formatarNumero(v) },
     { chave: 'resultado', titulo: t('log.resultado'), formatar: (v) => v || '' },
+    // item L7-06-c: identificador do pedido. Título literal de propósito — é um nome técnico que não se
+    // traduz, e é o que se cola em `plat logs --req-id` para ver a linha dos outros serviços.
+    { chave: 'req_id', titulo: 'req_id', classe: 'mono', formatar: (v) => v || '' },
   ];
   tab.vazio = t('log.vazio');
 }

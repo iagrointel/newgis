@@ -1,0 +1,914 @@
+{
+  "item": "L7-06-c-logs-consulta-req-id",
+  "medido_em": "2026-09-07T19:03:11+00:00",
+  "carga_1min": 3.81005859375,
+  "ram_livre_gb": 7,
+  "como_reproduzir": [
+    "set -a; source /home/dev/plataforma/laco/var/trilha/il706clogsc.env; set +a",
+    "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/test_log_req_id.py tests/unit/test_logs_consulta.py tests/unit/test_log_nivel_runtime.py",
+    "venv/bin/python tests/banca_l706c_logs_req_id.py",
+    "bash tests/medida_retencao_l706c.sh 20"
+  ],
+  "clausulas": {
+    "1_quatro_servicos_em_ordem": {
+      "veredito": "passou, com ressalva de escopo",
+      "prova": "tests/banca_l706c_logs_req_id.py sobe nginx, uvicorn e worker reais; o cenário 'um_pedido_quatro_servicos' mostra UM pedido com linha em nginx, api, postgres e worker, mesmo identificador, em ordem de relógio (em_ordem=true).",
+      "ressalva": "o pedido não é de TILE: nesta construção o tile é servido pelo Martin, que não passa pela aplicação nem pela fila e não registra identificador de pedido próprio. O pedido de tile com erro forçado (502) rende linha só no nginx — que é o resultado certo e é o que o operador tem quando o pedido nem chega à aplicação.",
+      "medida": {
+        "medido_em": "2026-09-07T19:04:41+00:00",
+        "carga_1min": 2.76220703125,
+        "postgres_lido_do_arquivo_do_servidor": true,
+        "tile_erro_forcado": {
+          "status_http": 502,
+          "req_id": "759fcf4601e0dadb27482349e66f28e0",
+          "servicos": [
+            "nginx"
+          ],
+          "linhas": [
+            {
+              "servico": "nginx",
+              "em": "2026-09-07T19:04:26+00:00",
+              "texto": "{\"ts\":\"2026-09-07T19:04:26+00:00\",\"req_id\":\"759fcf4601e0dadb27482349e66f28e0\",\"ip\":\"127.0.0.1\",\"metodo\":\"GET\",\"rota\":\"/tiles/plat_teste_interno/1/2/3.pbf\",\"consulta\":\"\",\"status\":502,\"bytes\":166,\"tempo_ms\":0.000,\"upstream\":\"127.0.0.1:8308\",\"upstream_status\":\"502\",\"agente\":\"curl/8.5.0\"}"
+            }
+          ],
+          "em_ordem": true
+        },
+        "criacao_de_job": {
+          "status_http": 201,
+          "req_id": "09603786883d6f3ff93c089c2a51df9a",
+          "servicos": [
+            "api",
+            "nginx",
+            "postgres",
+            "worker"
+          ],
+          "linhas": [
+            {
+              "servico": "nginx",
+              "em": "2026-09-07T19:04:26+00:00",
+              "texto": "{\"ts\":\"2026-09-07T19:04:26+00:00\",\"req_id\":\"09603786883d6f3ff93c089c2a51df9a\",\"ip\":\"127.0.0.1\",\"metodo\":\"POST\",\"rota\":\"/api/jobs\",\"consulta\":\"\",\"status\":201,\"bytes\":741,\"tempo_ms\":0.070,\"upstream\":\"127.0.0.1:8306\",\"upstream_status\":\"201\",\"agente\":\"curl/8.5.0\"}"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.863000+00:00",
+              "texto": "2026-09-07 19:04:26.863 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.015 ms  statement: SET application_name = 'plat:09603786883d'"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.864000+00:00",
+              "texto": "2026-09-07 19:04:26.864 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 1.052 ms  statement: SELECT * FROM plat_til706clogsc.auth_sessao('a2413b2ceb4ed747582933352bce2479436a28e0e3f39367f1ad60bce5f0a148', 12.0)"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.865000+00:00",
+              "texto": "2026-09-07 19:04:26.865 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.224 ms  statement: COMMIT"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.865000+00:00",
+              "texto": "2026-09-07 19:04:26.865 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.014 ms  statement: BEGIN"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.865000+00:00",
+              "texto": "2026-09-07 19:04:26.865 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.105 ms  statement: SET search_path = plat_til706clogsc, public"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.865000+00:00",
+              "texto": "2026-09-07 19:04:26.865 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.018 ms  statement: SET application_name = 'plat:09603786883d'"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.866000+00:00",
+              "texto": "2026-09-07 19:04:26.866 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.112 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.868000+00:00",
+              "texto": "2026-09-07 19:04:26.868 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 1.970 ms  statement: SELECT plat_til706clogsc.cota_jobs_dia(1) AS cota, (SELECT count(*) FROM plat_til706clogsc.job WHERE criado_em >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS hoje, (SELECT count(*) FROM plat_til706clogsc.job WHERE estado = 'pendente') AS pendentes"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.871000+00:00",
+              "texto": "2026-09-07 19:04:26.871 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 2.681 ms  statement: INSERT INTO plat_til706clogsc.job(tenant_id, usuario_id, tipo, parametros, prioridade, chave, pesado, memoria_mb, timeout_s, executor, max_tentativas, agendado_para, proveniencia, agenda_id, programado_para) VALUES (1, 2, 'prova.progresso', '{\"duracao_s\": 2, \"passos\": 2, \"chave\": null}', 5, NULL, false, 256, 7200, 'local', 3, coalesce(NULL, now()), '{\"req_id\": \"09603786883d6f3ff93c089c2a51df9a\"}', NULL, NULL) RETURNING id"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.871000+00:00",
+              "texto": "2026-09-07 19:04:26.871 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.240 ms  statement: COMMIT"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.871000+00:00",
+              "texto": "2026-09-07 19:04:26.871 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.022 ms  statement: BEGIN"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.871000+00:00",
+              "texto": "2026-09-07 19:04:26.871 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.016 ms  statement: SET search_path = plat_til706clogsc, public"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.871000+00:00",
+              "texto": "2026-09-07 19:04:26.871 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.011 ms  statement: SET application_name = 'plat:09603786883d'"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.872000+00:00",
+              "texto": "2026-09-07 19:04:26.872 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.055 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.872000+00:00",
+              "texto": "2026-09-07 19:04:26.872 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.546 ms  statement: "
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.872000+00:00",
+              "texto": "2026-09-07 19:04:26.872 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.018 ms  statement: COMMIT"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.873000+00:00",
+              "texto": "2026-09-07 19:04:26.873 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.011 ms  statement: BEGIN"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.873000+00:00",
+              "texto": "2026-09-07 19:04:26.873 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.012 ms  statement: SET search_path = plat_til706clogsc, public"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.873000+00:00",
+              "texto": "2026-09-07 19:04:26.873 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.008 ms  statement: SET application_name = 'plat:09603786883d'"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.873000+00:00",
+              "texto": "2026-09-07 19:04:26.873 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.037 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.873000+00:00",
+              "texto": "2026-09-07 19:04:26.873 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.259 ms  statement: SELECT plat_til706clogsc.evento_registrar('jobs/criar', 'job', '41b9f48f-965b-48e4-b671-e51cfda6a59b', '{\"tipo\": \"prova.progresso\", \"origem\": \"criar\"}'::jsonb, '127.0.0.1', '09603786883d6f3ff93c089c2a51df9a')"
+            },
+            {
+              "servico": "api",
+              "em": "2026-09-07T19:04:26.874000+00:00",
+              "texto": "{\"ts\": \"2026-09-07T19:04:26.874+00:00\", \"nivel\": \"INFO\", \"msg\": \"acesso\", \"logger\": \"plat.acesso\", \"req_id\": \"09603786883d6f3ff93c089c2a51df9a\", \"metodo\": \"POST\", \"rota\": \"/api/jobs\", \"status\": 201, \"tempo_ms\": 69.5, \"ip\": \"127.0.0.1\", \"tenant_id\": 1, \"usuario_id\": 2}"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.874000+00:00",
+              "texto": "2026-09-07 19:04:26.874 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.158 ms  statement: COMMIT"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.875000+00:00",
+              "texto": "2026-09-07 19:04:26.875 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.016 ms  statement: BEGIN"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.875000+00:00",
+              "texto": "2026-09-07 19:04:26.875 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.012 ms  statement: SET search_path = plat_til706clogsc, public"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:26.875000+00:00",
+              "texto": "2026-09-07 19:04:26.875 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat,client=127.0.0.1 LOG:  duration: 0.158 ms  statement: SELECT plat_til706clogsc.log_registrar(1, 2, NULL, '127.0.0.1', 'POST', '/api/jobs', 201, 741, 69, 'curl/8.5.0', NULL, '09603786883d6f3ff93c089c2a51df9a')"
+            },
+            {
+              "servico": "worker",
+              "em": "2026-09-07T19:04:26.881000+00:00",
+              "texto": "{\"ts\": \"2026-09-07T19:04:26.881+00:00\", \"nivel\": \"INFO\", \"msg\": \"job iniciado\", \"logger\": \"plat.worker\", \"req_id\": \"09603786883d6f3ff93c089c2a51df9a\", \"tenant_id\": 1, \"job_id\": \"41b9f48f-965b-48e4-b671-e51cfda6a59b\", \"tipo\": \"prova.progresso\", \"pid_filho\": 1051005}"
+            },
+            {
+              "servico": "worker",
+              "em": "2026-09-07T19:04:28.922000+00:00",
+              "texto": "{\"ts\": \"2026-09-07T19:04:28.922+00:00\", \"nivel\": \"INFO\", \"msg\": \"job terminou: concluido (código 0)\", \"logger\": \"plat.worker\", \"req_id\": \"09603786883d6f3ff93c089c2a51df9a\", \"tenant_id\": 1, \"job_id\": \"41b9f48f-965b-48e4-b671-e51cfda6a59b\", \"tipo\": \"prova.progresso\", \"pid_filho\": 1051005}"
+            }
+          ],
+          "em_ordem": true
+        },
+        "erro_no_postgres": {
+          "status_http": 500,
+          "req_id": "de63b8c106e4603c12156f9113a2b977",
+          "servicos": [
+            "nginx",
+            "postgres"
+          ],
+          "linhas": [
+            {
+              "servico": "nginx",
+              "em": "2026-09-07T19:04:32+00:00",
+              "texto": "{\"ts\":\"2026-09-07T19:04:32+00:00\",\"req_id\":\"de63b8c106e4603c12156f9113a2b977\",\"ip\":\"127.0.0.1\",\"metodo\":\"GET\",\"rota\":\"/api/log\",\"consulta\":\"limite=1\",\"status\":500,\"bytes\":21,\"tempo_ms\":0.011,\"upstream\":\"127.0.0.1:8306\",\"upstream_status\":\"500\",\"agente\":\"curl/8.5.0\"}"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.929000+00:00",
+              "texto": "2026-09-07 19:04:32.929 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.043 ms  statement: SET application_name = 'plat:de63b8c106e4'"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.930000+00:00",
+              "texto": "2026-09-07 19:04:32.930 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 1.114 ms  statement: SELECT * FROM plat_til706clogsc.auth_sessao('a2413b2ceb4ed747582933352bce2479436a28e0e3f39367f1ad60bce5f0a148', 12.0)"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.930000+00:00",
+              "texto": "2026-09-07 19:04:32.930 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.195 ms  statement: COMMIT"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.931000+00:00",
+              "texto": "2026-09-07 19:04:32.931 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.015 ms  statement: BEGIN"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.931000+00:00",
+              "texto": "2026-09-07 19:04:32.931 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.012 ms  statement: SET search_path = plat_til706clogsc, public"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.931000+00:00",
+              "texto": "2026-09-07 19:04:32.931 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.010 ms  statement: SET application_name = 'plat:de63b8c106e4'"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.931000+00:00",
+              "texto": "2026-09-07 19:04:32.931 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.043 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.932000+00:00",
+              "texto": "2026-09-07 19:04:32.932 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 ERROR:  permission denied for table log_acesso"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.932000+00:00",
+              "texto": "2026-09-07 19:04:32.932 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 STATEMENT:  SELECT count(*) AS n FROM plat_til706clogsc.log_acesso l WHERE l.em >= '2026-08-31T19:04:32.931787+00:00'::timestamptz AND l.em < '2026-09-07T19:04:32.931787+00:00'::timestamptz"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.932000+00:00",
+              "texto": "2026-09-07 19:04:32.932 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.007 ms  statement: ROLLBACK"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.987000+00:00",
+              "texto": "2026-09-07 19:04:32.987 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.075 ms  statement: BEGIN"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.987000+00:00",
+              "texto": "2026-09-07 19:04:32.987 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.023 ms  statement: SET search_path = plat_til706clogsc, public"
+            }
+          ],
+          "em_ordem": true
+        },
+        "um_pedido_quatro_servicos": {
+          "status_http": 201,
+          "req_id": "0ab9a8f2681b7ba73297af3a98243ba9",
+          "servicos": [
+            "api",
+            "nginx",
+            "postgres",
+            "worker"
+          ],
+          "linhas": [
+            {
+              "servico": "nginx",
+              "em": "2026-09-07T19:04:32+00:00",
+              "texto": "{\"ts\":\"2026-09-07T19:04:32+00:00\",\"req_id\":\"0ab9a8f2681b7ba73297af3a98243ba9\",\"ip\":\"127.0.0.1\",\"metodo\":\"POST\",\"rota\":\"/api/jobs\",\"consulta\":\"\",\"status\":201,\"bytes\":741,\"tempo_ms\":0.008,\"upstream\":\"127.0.0.1:8306\",\"upstream_status\":\"201\",\"agente\":\"curl/8.5.0\"}"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.987000+00:00",
+              "texto": "2026-09-07 19:04:32.987 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.013 ms  statement: SET application_name = 'plat:0ab9a8f2681b'"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.988000+00:00",
+              "texto": "2026-09-07 19:04:32.988 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.828 ms  statement: SELECT * FROM plat_til706clogsc.auth_sessao('a2413b2ceb4ed747582933352bce2479436a28e0e3f39367f1ad60bce5f0a148', 12.0)"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.988000+00:00",
+              "texto": "2026-09-07 19:04:32.988 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.194 ms  statement: COMMIT"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.989000+00:00",
+              "texto": "2026-09-07 19:04:32.989 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.014 ms  statement: BEGIN"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.989000+00:00",
+              "texto": "2026-09-07 19:04:32.989 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.012 ms  statement: SET search_path = plat_til706clogsc, public"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.989000+00:00",
+              "texto": "2026-09-07 19:04:32.989 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.007 ms  statement: SET application_name = 'plat:0ab9a8f2681b'"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.989000+00:00",
+              "texto": "2026-09-07 19:04:32.989 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.040 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.990000+00:00",
+              "texto": "2026-09-07 19:04:32.990 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.278 ms  statement: SELECT plat_til706clogsc.cota_jobs_dia(1) AS cota, (SELECT count(*) FROM plat_til706clogsc.job WHERE criado_em >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS hoje, (SELECT count(*) FROM plat_til706clogsc.job WHERE estado = 'pendente') AS pendentes"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.990000+00:00",
+              "texto": "2026-09-07 19:04:32.990 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.299 ms  statement: INSERT INTO plat_til706clogsc.job(tenant_id, usuario_id, tipo, parametros, prioridade, chave, pesado, memoria_mb, timeout_s, executor, max_tentativas, agendado_para, proveniencia, agenda_id, programado_para) VALUES (1, 2, 'prova.progresso', '{\"duracao_s\": 2, \"passos\": 2, \"chave\": null}', 5, NULL, false, 256, 7200, 'local', 3, coalesce(NULL, now()), '{\"req_id\": \"0ab9a8f2681b7ba73297af3a98243ba9\"}', NULL, NULL) RETURNING id"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.990000+00:00",
+              "texto": "2026-09-07 19:04:32.990 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.184 ms  statement: COMMIT"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.990000+00:00",
+              "texto": "2026-09-07 19:04:32.990 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.013 ms  statement: BEGIN"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.990000+00:00",
+              "texto": "2026-09-07 19:04:32.990 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.011 ms  statement: SET search_path = plat_til706clogsc, public"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.991000+00:00",
+              "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.007 ms  statement: SET application_name = 'plat:0ab9a8f2681b'"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.991000+00:00",
+              "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.047 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.991000+00:00",
+              "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.232 ms  statement: "
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.991000+00:00",
+              "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.018 ms  statement: COMMIT"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.991000+00:00",
+              "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.007 ms  statement: BEGIN"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.991000+00:00",
+              "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.009 ms  statement: SET search_path = plat_til706clogsc, public"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.991000+00:00",
+              "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.007 ms  statement: SET application_name = 'plat:0ab9a8f2681b'"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.992000+00:00",
+              "texto": "2026-09-07 19:04:32.992 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.035 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.992000+00:00",
+              "texto": "2026-09-07 19:04:32.992 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.188 ms  statement: SELECT plat_til706clogsc.evento_registrar('jobs/criar', 'job', '3fc4d857-7117-4df9-8b0b-1f0604ef1503', '{\"tipo\": \"prova.progresso\", \"origem\": \"criar\"}'::jsonb, '127.0.0.1', '0ab9a8f2681b7ba73297af3a98243ba9')"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.992000+00:00",
+              "texto": "2026-09-07 19:04:32.992 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.133 ms  statement: COMMIT"
+            },
+            {
+              "servico": "api",
+              "em": "2026-09-07T19:04:32.993000+00:00",
+              "texto": "{\"ts\": \"2026-09-07T19:04:32.993+00:00\", \"nivel\": \"INFO\", \"msg\": \"acesso\", \"logger\": \"plat.acesso\", \"req_id\": \"0ab9a8f2681b7ba73297af3a98243ba9\", \"metodo\": \"POST\", \"rota\": \"/api/jobs\", \"status\": 201, \"tempo_ms\": 6.6, \"ip\": \"127.0.0.1\", \"tenant_id\": 1, \"usuario_id\": 2}"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.993000+00:00",
+              "texto": "2026-09-07 19:04:32.993 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.015 ms  statement: BEGIN"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.993000+00:00",
+              "texto": "2026-09-07 19:04:32.993 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.011 ms  statement: SET search_path = plat_til706clogsc, public"
+            },
+            {
+              "servico": "postgres",
+              "em": "2026-09-07T19:04:32.994000+00:00",
+              "texto": "2026-09-07 19:04:32.994 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat,client=127.0.0.1 LOG:  duration: 0.328 ms  statement: SELECT plat_til706clogsc.log_registrar(1, 2, NULL, '127.0.0.1', 'POST', '/api/jobs', 201, 741, 6, 'curl/8.5.0', NULL, '0ab9a8f2681b7ba73297af3a98243ba9')"
+            },
+            {
+              "servico": "worker",
+              "em": "2026-09-07T19:04:32.995000+00:00",
+              "texto": "{\"ts\": \"2026-09-07T19:04:32.995+00:00\", \"nivel\": \"INFO\", \"msg\": \"job iniciado\", \"logger\": \"plat.worker\", \"req_id\": \"0ab9a8f2681b7ba73297af3a98243ba9\", \"tenant_id\": 1, \"job_id\": \"3fc4d857-7117-4df9-8b0b-1f0604ef1503\", \"tipo\": \"prova.progresso\", \"pid_filho\": 1051367}"
+            },
+            {
+              "servico": "worker",
+              "em": "2026-09-07T19:04:35.036000+00:00",
+              "texto": "{\"ts\": \"2026-09-07T19:04:35.036+00:00\", \"nivel\": \"INFO\", \"msg\": \"job terminou: concluido (código 0)\", \"logger\": \"plat.worker\", \"req_id\": \"0ab9a8f2681b7ba73297af3a98243ba9\", \"tenant_id\": 1, \"job_id\": \"3fc4d857-7117-4df9-8b0b-1f0604ef1503\", \"tipo\": \"prova.progresso\", \"pid_filho\": 1051367}"
+            }
+          ],
+          "em_ordem": true
+        },
+        "servicos_distintos_provados": [
+          "api",
+          "nginx",
+          "postgres",
+          "worker"
+        ]
+      }
+    },
+    "2_nivel_em_runtime_muda_o_volume": {
+      "veredito": "passou",
+      "prova": "tests/unit/test_log_nivel_runtime.py::test_volume_muda_em_tempo_de_execucao_sem_reiniciar",
+      "numeros": {
+        "chamadas_por_lote": 40,
+        "linhas_no_padrao_WARNING": 20,
+        "linhas_com_override_DEBUG": 40,
+        "linhas_com_override_ERROR": 10,
+        "reinicios_do_processo": 0
+      }
+    },
+    "3_retencao": {
+      "veredito": "parcial",
+      "prova": "bash tests/medida_retencao_l706c.sh 20; deploy/journald-plat.conf + passo h5 do install.sh",
+      "medido_em_07_09_2026": {
+        "journal_ocupa_bytes": 2340421632,
+        "journal_ocupa_legivel": "1.6G",
+        "horizonte_guardado_hoje": "2026-09-04T20:52:55Z a 2026-09-07T18:38:07Z (2,9 dias)",
+        "volume_24h_bytes": {
+          "plat-api": 391244,
+          "plat-worker": 129671,
+          "plat-martin": 302310,
+          "nginx": 10674,
+          "postgresql@16-main": 19845
+        },
+        "carga_sintetica_mb": 40,
+        "linhas_da_carga_ainda_legiveis": 36622,
+        "variacao_do_disk_usage": "nenhuma: o journald já tinha o espaço alocado; 40 MB de texto couberam sem crescer o arquivo"
+      },
+      "ressalva": "a configuração de 90 dias está escrita e o install.sh a instala, mas NÃO foi aplicada nesta máquina (regra da trilha: não escrever fora de /home/dev/plataforma). Além disso o journald não tem teto por unidade: 90 dias garantidos para a plataforma exigiriam LogNamespace=plat, que obriga a reiniciar as unidades — não feito. Os 0,83 MB/dia medidos das unidades plat dizem que 90 dias delas cabem em ~75 MB de texto."
+    },
+    "4_isolamento_entre_inquilinos": {
+      "veredito": "passou",
+      "prova": "tests/api/test_log_req_id.py::test_req_id_de_outro_inquilino_nao_vaza — o admin do inquilino B pede a linha do req_id de um pedido do inquilino A e recebe total=0, em JSON e em CSV; o isolamento é o tenant_id da RLS, não o identificador ser secreto."
+    },
+    "5_nenhum_segredo_em_log": {
+      "veredito": "passou, com conserto feito aqui",
+      "prova": "tests/api/test_log_req_id.py::test_nenhum_segredo_na_rota_gravada_nem_na_linha_json procura os VALORES reais (senha do admin, cookie de sessão de 64 hex, token plat_*) na rota gravada em log_acesso, nos eventos e na linha JSON do formatador.",
+      "achado": "antes deste item o formatador NÃO redigia a mensagem: o httpx escrevia 'HTTP Request: GET .../api/eu?token=<64 hex>&senha=<senha>' inteiro no journal. app/log.py passou a chamar linha_redigida na mensagem e na exceção, e app/auth/redigir.py ganhou a redação de parâmetro secreto dentro de URL."
+    },
+    "refutacao_req_id_forjado": {
+      "veredito": "respondida",
+      "prova": "test_req_id_entrante_do_nginx_e_adotado + test_req_id_de_outro_inquilino_nao_vaza: a API adota o identificador entrante (é assim que casa com o nginx), e mesmo assim o pedido com identificador de outro inquilino devolve zero linha. Do lado de fora nem chega: proxy_set_header X-Req-Id $request_id SOBRESCREVE o que o cliente mandou."
+    }
+  },
+  "limitacoes_honestas": [
+    "Numa exceção não tratada a resposta sai do tratador do servidor antes do middleware pôr o X-Req-Id: o cliente fica sem o identificador e quem o guarda é a linha do nginx.",
+    "A escrita de plat.log_acesso acontece depois do corpo, fora do contexto do pedido, então a conexão dessa escrita não leva o identificador no application_name (a coluna req_id da linha leva).",
+    "Martin e TiTiler não registram identificador de pedido; a ligação é a linha do nginx que os proxia.",
+    "Loki não foi construído: está fora do portão e o disco está a 96%.",
+    "A porta 8306 do prompt do item está ocupada pelo prometheus desta máquina; a banca escolhe porta livre."
+  ],
+  "testes": {
+    "arquivos": [
+      "tests/unit/test_log_nivel_runtime.py",
+      "tests/unit/test_logs_consulta.py",
+      "tests/api/test_log_req_id.py"
+    ],
+    "resultado": "58 passaram (com test_log_consulta, test_log_acesso, test_rls e test_funcoes_seguras juntos), 0 falharam"
+  },
+  "banca_processos_reais": {
+    "medido_em": "2026-09-07T19:04:41+00:00",
+    "carga_1min": 2.76220703125,
+    "postgres_lido_do_arquivo_do_servidor": true,
+    "tile_erro_forcado": {
+      "status_http": 502,
+      "req_id": "759fcf4601e0dadb27482349e66f28e0",
+      "servicos": [
+        "nginx"
+      ],
+      "linhas": [
+        {
+          "servico": "nginx",
+          "em": "2026-09-07T19:04:26+00:00",
+          "texto": "{\"ts\":\"2026-09-07T19:04:26+00:00\",\"req_id\":\"759fcf4601e0dadb27482349e66f28e0\",\"ip\":\"127.0.0.1\",\"metodo\":\"GET\",\"rota\":\"/tiles/plat_teste_interno/1/2/3.pbf\",\"consulta\":\"\",\"status\":502,\"bytes\":166,\"tempo_ms\":0.000,\"upstream\":\"127.0.0.1:8308\",\"upstream_status\":\"502\",\"agente\":\"curl/8.5.0\"}"
+        }
+      ],
+      "em_ordem": true
+    },
+    "criacao_de_job": {
+      "status_http": 201,
+      "req_id": "09603786883d6f3ff93c089c2a51df9a",
+      "servicos": [
+        "api",
+        "nginx",
+        "postgres",
+        "worker"
+      ],
+      "linhas": [
+        {
+          "servico": "nginx",
+          "em": "2026-09-07T19:04:26+00:00",
+          "texto": "{\"ts\":\"2026-09-07T19:04:26+00:00\",\"req_id\":\"09603786883d6f3ff93c089c2a51df9a\",\"ip\":\"127.0.0.1\",\"metodo\":\"POST\",\"rota\":\"/api/jobs\",\"consulta\":\"\",\"status\":201,\"bytes\":741,\"tempo_ms\":0.070,\"upstream\":\"127.0.0.1:8306\",\"upstream_status\":\"201\",\"agente\":\"curl/8.5.0\"}"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.863000+00:00",
+          "texto": "2026-09-07 19:04:26.863 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.015 ms  statement: SET application_name = 'plat:09603786883d'"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.864000+00:00",
+          "texto": "2026-09-07 19:04:26.864 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 1.052 ms  statement: SELECT * FROM plat_til706clogsc.auth_sessao('a2413b2ceb4ed747582933352bce2479436a28e0e3f39367f1ad60bce5f0a148', 12.0)"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.865000+00:00",
+          "texto": "2026-09-07 19:04:26.865 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.224 ms  statement: COMMIT"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.865000+00:00",
+          "texto": "2026-09-07 19:04:26.865 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.014 ms  statement: BEGIN"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.865000+00:00",
+          "texto": "2026-09-07 19:04:26.865 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.105 ms  statement: SET search_path = plat_til706clogsc, public"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.865000+00:00",
+          "texto": "2026-09-07 19:04:26.865 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.018 ms  statement: SET application_name = 'plat:09603786883d'"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.866000+00:00",
+          "texto": "2026-09-07 19:04:26.866 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.112 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.868000+00:00",
+          "texto": "2026-09-07 19:04:26.868 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 1.970 ms  statement: SELECT plat_til706clogsc.cota_jobs_dia(1) AS cota, (SELECT count(*) FROM plat_til706clogsc.job WHERE criado_em >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS hoje, (SELECT count(*) FROM plat_til706clogsc.job WHERE estado = 'pendente') AS pendentes"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.871000+00:00",
+          "texto": "2026-09-07 19:04:26.871 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 2.681 ms  statement: INSERT INTO plat_til706clogsc.job(tenant_id, usuario_id, tipo, parametros, prioridade, chave, pesado, memoria_mb, timeout_s, executor, max_tentativas, agendado_para, proveniencia, agenda_id, programado_para) VALUES (1, 2, 'prova.progresso', '{\"duracao_s\": 2, \"passos\": 2, \"chave\": null}', 5, NULL, false, 256, 7200, 'local', 3, coalesce(NULL, now()), '{\"req_id\": \"09603786883d6f3ff93c089c2a51df9a\"}', NULL, NULL) RETURNING id"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.871000+00:00",
+          "texto": "2026-09-07 19:04:26.871 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.240 ms  statement: COMMIT"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.871000+00:00",
+          "texto": "2026-09-07 19:04:26.871 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.022 ms  statement: BEGIN"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.871000+00:00",
+          "texto": "2026-09-07 19:04:26.871 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.016 ms  statement: SET search_path = plat_til706clogsc, public"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.871000+00:00",
+          "texto": "2026-09-07 19:04:26.871 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.011 ms  statement: SET application_name = 'plat:09603786883d'"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.872000+00:00",
+          "texto": "2026-09-07 19:04:26.872 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.055 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.872000+00:00",
+          "texto": "2026-09-07 19:04:26.872 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.546 ms  statement: "
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.872000+00:00",
+          "texto": "2026-09-07 19:04:26.872 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.018 ms  statement: COMMIT"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.873000+00:00",
+          "texto": "2026-09-07 19:04:26.873 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.011 ms  statement: BEGIN"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.873000+00:00",
+          "texto": "2026-09-07 19:04:26.873 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.012 ms  statement: SET search_path = plat_til706clogsc, public"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.873000+00:00",
+          "texto": "2026-09-07 19:04:26.873 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.008 ms  statement: SET application_name = 'plat:09603786883d'"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.873000+00:00",
+          "texto": "2026-09-07 19:04:26.873 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.037 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.873000+00:00",
+          "texto": "2026-09-07 19:04:26.873 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.259 ms  statement: SELECT plat_til706clogsc.evento_registrar('jobs/criar', 'job', '41b9f48f-965b-48e4-b671-e51cfda6a59b', '{\"tipo\": \"prova.progresso\", \"origem\": \"criar\"}'::jsonb, '127.0.0.1', '09603786883d6f3ff93c089c2a51df9a')"
+        },
+        {
+          "servico": "api",
+          "em": "2026-09-07T19:04:26.874000+00:00",
+          "texto": "{\"ts\": \"2026-09-07T19:04:26.874+00:00\", \"nivel\": \"INFO\", \"msg\": \"acesso\", \"logger\": \"plat.acesso\", \"req_id\": \"09603786883d6f3ff93c089c2a51df9a\", \"metodo\": \"POST\", \"rota\": \"/api/jobs\", \"status\": 201, \"tempo_ms\": 69.5, \"ip\": \"127.0.0.1\", \"tenant_id\": 1, \"usuario_id\": 2}"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.874000+00:00",
+          "texto": "2026-09-07 19:04:26.874 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.158 ms  statement: COMMIT"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.875000+00:00",
+          "texto": "2026-09-07 19:04:26.875 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.016 ms  statement: BEGIN"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.875000+00:00",
+          "texto": "2026-09-07 19:04:26.875 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:09603786883d,client=127.0.0.1 LOG:  duration: 0.012 ms  statement: SET search_path = plat_til706clogsc, public"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:26.875000+00:00",
+          "texto": "2026-09-07 19:04:26.875 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat,client=127.0.0.1 LOG:  duration: 0.158 ms  statement: SELECT plat_til706clogsc.log_registrar(1, 2, NULL, '127.0.0.1', 'POST', '/api/jobs', 201, 741, 69, 'curl/8.5.0', NULL, '09603786883d6f3ff93c089c2a51df9a')"
+        },
+        {
+          "servico": "worker",
+          "em": "2026-09-07T19:04:26.881000+00:00",
+          "texto": "{\"ts\": \"2026-09-07T19:04:26.881+00:00\", \"nivel\": \"INFO\", \"msg\": \"job iniciado\", \"logger\": \"plat.worker\", \"req_id\": \"09603786883d6f3ff93c089c2a51df9a\", \"tenant_id\": 1, \"job_id\": \"41b9f48f-965b-48e4-b671-e51cfda6a59b\", \"tipo\": \"prova.progresso\", \"pid_filho\": 1051005}"
+        },
+        {
+          "servico": "worker",
+          "em": "2026-09-07T19:04:28.922000+00:00",
+          "texto": "{\"ts\": \"2026-09-07T19:04:28.922+00:00\", \"nivel\": \"INFO\", \"msg\": \"job terminou: concluido (código 0)\", \"logger\": \"plat.worker\", \"req_id\": \"09603786883d6f3ff93c089c2a51df9a\", \"tenant_id\": 1, \"job_id\": \"41b9f48f-965b-48e4-b671-e51cfda6a59b\", \"tipo\": \"prova.progresso\", \"pid_filho\": 1051005}"
+        }
+      ],
+      "em_ordem": true
+    },
+    "erro_no_postgres": {
+      "status_http": 500,
+      "req_id": "de63b8c106e4603c12156f9113a2b977",
+      "servicos": [
+        "nginx",
+        "postgres"
+      ],
+      "linhas": [
+        {
+          "servico": "nginx",
+          "em": "2026-09-07T19:04:32+00:00",
+          "texto": "{\"ts\":\"2026-09-07T19:04:32+00:00\",\"req_id\":\"de63b8c106e4603c12156f9113a2b977\",\"ip\":\"127.0.0.1\",\"metodo\":\"GET\",\"rota\":\"/api/log\",\"consulta\":\"limite=1\",\"status\":500,\"bytes\":21,\"tempo_ms\":0.011,\"upstream\":\"127.0.0.1:8306\",\"upstream_status\":\"500\",\"agente\":\"curl/8.5.0\"}"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.929000+00:00",
+          "texto": "2026-09-07 19:04:32.929 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.043 ms  statement: SET application_name = 'plat:de63b8c106e4'"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.930000+00:00",
+          "texto": "2026-09-07 19:04:32.930 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 1.114 ms  statement: SELECT * FROM plat_til706clogsc.auth_sessao('a2413b2ceb4ed747582933352bce2479436a28e0e3f39367f1ad60bce5f0a148', 12.0)"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.930000+00:00",
+          "texto": "2026-09-07 19:04:32.930 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.195 ms  statement: COMMIT"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.931000+00:00",
+          "texto": "2026-09-07 19:04:32.931 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.015 ms  statement: BEGIN"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.931000+00:00",
+          "texto": "2026-09-07 19:04:32.931 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.012 ms  statement: SET search_path = plat_til706clogsc, public"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.931000+00:00",
+          "texto": "2026-09-07 19:04:32.931 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.010 ms  statement: SET application_name = 'plat:de63b8c106e4'"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.931000+00:00",
+          "texto": "2026-09-07 19:04:32.931 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.043 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.932000+00:00",
+          "texto": "2026-09-07 19:04:32.932 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 ERROR:  permission denied for table log_acesso"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.932000+00:00",
+          "texto": "2026-09-07 19:04:32.932 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 STATEMENT:  SELECT count(*) AS n FROM plat_til706clogsc.log_acesso l WHERE l.em >= '2026-08-31T19:04:32.931787+00:00'::timestamptz AND l.em < '2026-09-07T19:04:32.931787+00:00'::timestamptz"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.932000+00:00",
+          "texto": "2026-09-07 19:04:32.932 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.007 ms  statement: ROLLBACK"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.987000+00:00",
+          "texto": "2026-09-07 19:04:32.987 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.075 ms  statement: BEGIN"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.987000+00:00",
+          "texto": "2026-09-07 19:04:32.987 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:de63b8c106e4,client=127.0.0.1 LOG:  duration: 0.023 ms  statement: SET search_path = plat_til706clogsc, public"
+        }
+      ],
+      "em_ordem": true
+    },
+    "um_pedido_quatro_servicos": {
+      "status_http": 201,
+      "req_id": "0ab9a8f2681b7ba73297af3a98243ba9",
+      "servicos": [
+        "api",
+        "nginx",
+        "postgres",
+        "worker"
+      ],
+      "linhas": [
+        {
+          "servico": "nginx",
+          "em": "2026-09-07T19:04:32+00:00",
+          "texto": "{\"ts\":\"2026-09-07T19:04:32+00:00\",\"req_id\":\"0ab9a8f2681b7ba73297af3a98243ba9\",\"ip\":\"127.0.0.1\",\"metodo\":\"POST\",\"rota\":\"/api/jobs\",\"consulta\":\"\",\"status\":201,\"bytes\":741,\"tempo_ms\":0.008,\"upstream\":\"127.0.0.1:8306\",\"upstream_status\":\"201\",\"agente\":\"curl/8.5.0\"}"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.987000+00:00",
+          "texto": "2026-09-07 19:04:32.987 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.013 ms  statement: SET application_name = 'plat:0ab9a8f2681b'"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.988000+00:00",
+          "texto": "2026-09-07 19:04:32.988 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.828 ms  statement: SELECT * FROM plat_til706clogsc.auth_sessao('a2413b2ceb4ed747582933352bce2479436a28e0e3f39367f1ad60bce5f0a148', 12.0)"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.988000+00:00",
+          "texto": "2026-09-07 19:04:32.988 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.194 ms  statement: COMMIT"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.989000+00:00",
+          "texto": "2026-09-07 19:04:32.989 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.014 ms  statement: BEGIN"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.989000+00:00",
+          "texto": "2026-09-07 19:04:32.989 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.012 ms  statement: SET search_path = plat_til706clogsc, public"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.989000+00:00",
+          "texto": "2026-09-07 19:04:32.989 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.007 ms  statement: SET application_name = 'plat:0ab9a8f2681b'"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.989000+00:00",
+          "texto": "2026-09-07 19:04:32.989 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.040 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.990000+00:00",
+          "texto": "2026-09-07 19:04:32.990 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.278 ms  statement: SELECT plat_til706clogsc.cota_jobs_dia(1) AS cota, (SELECT count(*) FROM plat_til706clogsc.job WHERE criado_em >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS hoje, (SELECT count(*) FROM plat_til706clogsc.job WHERE estado = 'pendente') AS pendentes"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.990000+00:00",
+          "texto": "2026-09-07 19:04:32.990 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.299 ms  statement: INSERT INTO plat_til706clogsc.job(tenant_id, usuario_id, tipo, parametros, prioridade, chave, pesado, memoria_mb, timeout_s, executor, max_tentativas, agendado_para, proveniencia, agenda_id, programado_para) VALUES (1, 2, 'prova.progresso', '{\"duracao_s\": 2, \"passos\": 2, \"chave\": null}', 5, NULL, false, 256, 7200, 'local', 3, coalesce(NULL, now()), '{\"req_id\": \"0ab9a8f2681b7ba73297af3a98243ba9\"}', NULL, NULL) RETURNING id"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.990000+00:00",
+          "texto": "2026-09-07 19:04:32.990 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.184 ms  statement: COMMIT"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.990000+00:00",
+          "texto": "2026-09-07 19:04:32.990 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.013 ms  statement: BEGIN"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.990000+00:00",
+          "texto": "2026-09-07 19:04:32.990 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.011 ms  statement: SET search_path = plat_til706clogsc, public"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.991000+00:00",
+          "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.007 ms  statement: SET application_name = 'plat:0ab9a8f2681b'"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.991000+00:00",
+          "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.047 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.991000+00:00",
+          "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.232 ms  statement: "
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.991000+00:00",
+          "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.018 ms  statement: COMMIT"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.991000+00:00",
+          "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.007 ms  statement: BEGIN"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.991000+00:00",
+          "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.009 ms  statement: SET search_path = plat_til706clogsc, public"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.991000+00:00",
+          "texto": "2026-09-07 19:04:32.991 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.007 ms  statement: SET application_name = 'plat:0ab9a8f2681b'"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.992000+00:00",
+          "texto": "2026-09-07 19:04:32.992 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.035 ms  statement: SELECT set_config('plat.tenant_id', '1', true), set_config('plat.usuario_id', '2', true), set_config('plat.login', 'admin', true)"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.992000+00:00",
+          "texto": "2026-09-07 19:04:32.992 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.188 ms  statement: SELECT plat_til706clogsc.evento_registrar('jobs/criar', 'job', '3fc4d857-7117-4df9-8b0b-1f0604ef1503', '{\"tipo\": \"prova.progresso\", \"origem\": \"criar\"}'::jsonb, '127.0.0.1', '0ab9a8f2681b7ba73297af3a98243ba9')"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.992000+00:00",
+          "texto": "2026-09-07 19:04:32.992 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.133 ms  statement: COMMIT"
+        },
+        {
+          "servico": "api",
+          "em": "2026-09-07T19:04:32.993000+00:00",
+          "texto": "{\"ts\": \"2026-09-07T19:04:32.993+00:00\", \"nivel\": \"INFO\", \"msg\": \"acesso\", \"logger\": \"plat.acesso\", \"req_id\": \"0ab9a8f2681b7ba73297af3a98243ba9\", \"metodo\": \"POST\", \"rota\": \"/api/jobs\", \"status\": 201, \"tempo_ms\": 6.6, \"ip\": \"127.0.0.1\", \"tenant_id\": 1, \"usuario_id\": 2}"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.993000+00:00",
+          "texto": "2026-09-07 19:04:32.993 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.015 ms  statement: BEGIN"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.993000+00:00",
+          "texto": "2026-09-07 19:04:32.993 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat:0ab9a8f2681b,client=127.0.0.1 LOG:  duration: 0.011 ms  statement: SET search_path = plat_til706clogsc, public"
+        },
+        {
+          "servico": "postgres",
+          "em": "2026-09-07T19:04:32.994000+00:00",
+          "texto": "2026-09-07 19:04:32.994 UTC [1051000] db=iagro_sat,user=plat_til706clogsc_app,app=plat,client=127.0.0.1 LOG:  duration: 0.328 ms  statement: SELECT plat_til706clogsc.log_registrar(1, 2, NULL, '127.0.0.1', 'POST', '/api/jobs', 201, 741, 6, 'curl/8.5.0', NULL, '0ab9a8f2681b7ba73297af3a98243ba9')"
+        },
+        {
+          "servico": "worker",
+          "em": "2026-09-07T19:04:32.995000+00:00",
+          "texto": "{\"ts\": \"2026-09-07T19:04:32.995+00:00\", \"nivel\": \"INFO\", \"msg\": \"job iniciado\", \"logger\": \"plat.worker\", \"req_id\": \"0ab9a8f2681b7ba73297af3a98243ba9\", \"tenant_id\": 1, \"job_id\": \"3fc4d857-7117-4df9-8b0b-1f0604ef1503\", \"tipo\": \"prova.progresso\", \"pid_filho\": 1051367}"
+        },
+        {
+          "servico": "worker",
+          "em": "2026-09-07T19:04:35.036000+00:00",
+          "texto": "{\"ts\": \"2026-09-07T19:04:35.036+00:00\", \"nivel\": \"INFO\", \"msg\": \"job terminou: concluido (código 0)\", \"logger\": \"plat.worker\", \"req_id\": \"0ab9a8f2681b7ba73297af3a98243ba9\", \"tenant_id\": 1, \"job_id\": \"3fc4d857-7117-4df9-8b0b-1f0604ef1503\", \"tipo\": \"prova.progresso\", \"pid_filho\": 1051367}"
+        }
+      ],
+      "em_ordem": true
+    },
+    "servicos_distintos_provados": [
+      "api",
+      "nginx",
+      "postgres",
+      "worker"
+    ]
+  }
+}

@@ -10,6 +10,7 @@ sob o semáforo da suíte. Roda à mão e grava a medida:
 O que ela prova, e o que não prova, está escrito no arquivo de medida que ela grava.
 """
 
+import contextlib
 import datetime
 import json
 import os
@@ -151,6 +152,11 @@ def tamanho_log_postgres() -> int | None:
 def recortar_log_postgres(desde_byte: int | None, destino: Path) -> bool:
     if desde_byte is None:
         return False
+    # o arquivo pode ter sido ROTACIONADO no meio da banca (aconteceu em 07/09): aí o tamanho atual é
+    # menor que o guardado e o recorte por deslocamento devolveria vazio. Nesse caso lê-se do começo.
+    agora = tamanho_log_postgres()
+    if agora is not None and agora < desde_byte:
+        desde_byte = 0
     r = subprocess.run(["sudo", "-n", "tail", "-c", f"+{desde_byte + 1}", LOG_POSTGRES],
                        capture_output=True, text=True, check=False)
     if r.returncode != 0:
@@ -285,10 +291,10 @@ def principal() -> int:
         print("serviços distintos com linha carregando o identificador:", todos)
     finally:
         for proc in (nginx, worker, api):
-            with contextlib_suppress():
+            with contextlib.suppress(Exception):
                 proc.send_signal(signal.SIGTERM)
         for proc in (nginx, worker, api):
-            with contextlib_suppress():
+            with contextlib.suppress(Exception):
                 proc.wait(timeout=20)
         api_log.close()
         worker_log.close()
@@ -303,13 +309,6 @@ def principal() -> int:
         print("medida gravada em", MEDIDA)
     return 0
 
-
-class contextlib_suppress:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        return True
 
 
 if __name__ == "__main__":

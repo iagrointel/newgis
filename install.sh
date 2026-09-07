@@ -333,6 +333,17 @@ else
   echo "== h4. worker em contêiner PULADO (rode com --worker-container para instalar; ver ADR 0010 e docs/ARQUITETURA.md)"
 fi
 
+echo "== h5. retenção do journal (item L7-06-c)"
+JOURNALD=/etc/systemd/journald.conf.d/plat.conf
+mkdir -p /etc/systemd/journald.conf.d
+cp deploy/journald-plat.conf "$JOURNALD.novo"
+if [ -f "$JOURNALD" ] && cmp -s "$JOURNALD" "$JOURNALD.novo"; then
+  rm -f "$JOURNALD.novo"; echo "$JOURNALD já existe (igual)"
+else
+  mv "$JOURNALD.novo" "$JOURNALD"
+  echo "$JOURNALD escrito; vale no próximo: systemctl restart systemd-journald"
+fi
+
 echo "== i. nginx"
 SITE=/etc/nginx/sites-enabled/$DOM
 # zona limit_req própria: 10 tentativas/min por IP em /api/login e /api/login/2fa (ADR 0002 seção 6.2)
