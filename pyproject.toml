@@ -16,3 +16,8 @@ select = ["E", "F", "W", "B", "I"]
 # Depends()/Body() em valor padrão é a forma do FastAPI; autenticado()/exigir() devolvem um Depends
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Body", "fastapi.Query", "fastapi.Header",
                           "app.auth.sessao.autenticado", "app.auth.sessao.exigir"]
+
+[tool.bandit]
+# item HARD-01 (scripts/varredura_seguranca.py, `make seguranca`): alvo é código que roda — app/, scripts/, db/,
+# docs/*.py; tests/ fica de fora (assert e subprocess são a forma dos testes), web/vendor e venv não são nossos.
+exclude_dirs = ["venv", "tests", "web", "var", "node_modules", ".git", "osrm", "laco"]
