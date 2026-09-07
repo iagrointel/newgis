@@ -116,20 +116,44 @@ def test_provisionamento_e_idempotente(api, grafana):
     assert antes == depois, {"antes": antes, "depois": depois}
 
 
-def test_painel_apagado_pela_interface_volta_sozinho(api, grafana):
-    """Refutação exigida pelo item. Apagar pela API do Grafana é o MESMO caminho que o botão da
-    interface usa (DELETE /api/dashboards/uid/...) — é o que o adversário faria com o mouse."""
+def test_painel_nao_pode_ser_apagado_pela_interface(api):
+    """Refutação exigida pelo item, primeira metade. O resultado medido é MAIS forte que o esperado no
+    portão: com `allowUiUpdates: false` o Grafana nem chega a apagar — recusa com 400 'provisioned
+    dashboard cannot be deleted'. É o mesmo caminho que o botão de apagar da tela usa."""
     alvo = "plat-visao-geral"
     r = api.delete(f"/api/dashboards/uid/{alvo}")
-    assert r.status_code in (200, 412), (r.status_code, r.text[:300])
-    if r.status_code == 412:
-        pytest.fail("o Grafana recusou apagar; a refutação precisa que o painel realmente suma")
-    assert api.get(f"/api/dashboards/uid/{alvo}").status_code == 404, "o painel não chegou a sumir"
+    assert r.status_code == 400 and "provisioned dashboard cannot be deleted" in r.text, (
+        r.status_code, r.text[:300])
+    assert api.get(f"/api/dashboards/uid/{alvo}").status_code == 200, "o painel sumiu mesmo assim"
 
-    voltou = None
-    for _ in range(60):
-        time.sleep(2)
-        if api.get(f"/api/dashboards/uid/{alvo}").status_code == 200:
-            voltou = True
-            break
-    assert voltou, "o provisionamento não recriou o painel apagado em 120 s"
+
+def test_painel_removido_do_disco_volta_quando_o_arquivo_volta(api):
+    """Segunda metade: o arquivo é a verdade. Tirar o JSON do diretório provisionado faz o painel sair
+    (é o que `disableDeletion: false` quer dizer); repor o arquivo o traz de volta com o MESMO uid, sem
+    ninguém tocar na interface. Isto é o que sobra da refutação depois que a primeira metade mostrou
+    que apagar pela tela nem é permitido."""
+    arquivos = os.environ.get("PLAT_PAINEIS_ARQUIVOS")
+    if not arquivos:
+        pytest.skip("PLAT_PAINEIS_ARQUIVOS não definido (versão antiga de paineis_homologacao.sh)")
+    alvo = "plat-visao-geral"
+    origem = Path(arquivos) / f"{alvo}.json"
+    guardado = origem.read_bytes()
+    origem.unlink()
+    try:
+        sumiu = any(api.get(f"/api/dashboards/uid/{alvo}").status_code == 404
+                    for _ in _esperar(60))
+        assert sumiu, "o provisionador não retirou o painel cujo arquivo saiu do disco"
+    finally:
+        origem.write_bytes(guardado)
+    voltou = any(api.get(f"/api/dashboards/uid/{alvo}").status_code == 200 for _ in _esperar(60))
+    assert voltou, "o provisionamento não recriou o painel em 120 s depois de o arquivo voltar"
+    d = api.get(f"/api/dashboards/uid/{alvo}").json()
+    assert d["dashboard"]["uid"] == alvo and d["meta"]["provisioned"] is True
+
+
+def _esperar(tentativas: int):
+    """gerador de tentativas com 2 s entre elas (o provedor relê a cada 20 s)."""
+    for i in range(tentativas):
+        if i:
+            time.sleep(2)
+        yield i
