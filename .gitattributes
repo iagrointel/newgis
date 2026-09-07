@@ -26,3 +26,6 @@ app/main.py merge=union
 
 # app/jobs/tipos.py é REGISTRO de tipos de job (um import por módulo de tarefas); mesma família.
 app/jobs/tipos.py merge=union
+
+# tests/api/eventos_esperados.py: registro de eventos por rota, um por item. Sétimo da família.
+tests/api/eventos_esperados.py merge=union
