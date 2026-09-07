@@ -147,4 +147,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
+    # ---- L4-18-rede-simples: eventos registrados pelas rotas (vocabulário em db/migracoes da rede)
+    ("POST", "/api/rede/simples"): ["redes/simples_criar"],
+    ("POST", "/api/rede/{rede_id}/promover"): ["redes/simples_promover"],
 }

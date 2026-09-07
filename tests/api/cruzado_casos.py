@@ -882,6 +882,14 @@ CASOS: dict[tuple[str, str], Caso] = {
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # ---- L4-18-rede-simples: rede simples de B = 404; criar rede simples com camada de B = 404/422
+    ("GET", "/api/rede/{rede_id}/simples"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/simples"),
+    ("POST", "/api/rede/simples"): Caso(
+        lambda p: "/api/rede/simples",
+        lambda p: {"nome": "zt rede simples cruzada", "disciplina": "agua", "camada_linha_id": p.rede_b["id"]},
+        aceita=frozenset({422}),
+    ),
+    ("POST", "/api/rede/{rede_id}/promover"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/promover", lambda p: {}),
 }
 
 
