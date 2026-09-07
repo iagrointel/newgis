@@ -158,4 +158,9 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- galeria de mapas base (L2-01-e-mapas-base): as duas rotas de escrita não têm evento próprio —
+    # elas criam/editam itens comuns do catálogo pelo MESMO caminho de /api/itens (app.catalogo.rotas_itens
+    # criar/editar_item), então quem narra é o vocabulário de itens, já declarado acima.
+    ("POST", "/api/mapas-base/instalar"): ["itens/adicionar"],
+    ("POST", "/api/mapas-base/{id}/tornar-padrao"): ["itens/atualizar"],
 }

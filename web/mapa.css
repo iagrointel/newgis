@@ -61,3 +61,19 @@ body.mapa .mapa-painel-base { top: var(--e4); display: flex; align-items: center
 body.mapa .mapa-painel-base label { color: var(--mapa-texto-fraco); text-transform: lowercase; }
 body.mapa .mapa-painel-base select { background: #1a2224; color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: .2rem .4rem; }
 body.mapa .mapa-coordenadas { top: calc(var(--e4) + 2.4rem); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+
+/* Impressão (item L2-01-e-mapas-base; o layout de impressão completo é o item L2-12, ainda pendente).
+   A atribuição da fonte do mapa base NÃO é enfeite: ODbL 1.0, CC BY-SA 2.0 e a política de dados do
+   Copernicus exigem crédito em qualquer reprodução, papel incluído — por isso ela é o único controle que
+   sobrevive à impressão, e vira texto escuro sobre branco para sair legível. O resto do chrome do
+   instrumento (menu lateral, barra de título, seletor de base, navegação) sai: no papel não se clica. */
+@media print {
+  body.mapa { overflow: visible; }
+  body.mapa .lateral,
+  body.mapa .mapa-barra,
+  body.mapa .mapa-painel-base,
+  body.mapa .maplibregl-ctrl-group { display: none !important; }
+  body.mapa .maplibregl-ctrl-bottom-right { display: block !important; }
+  body.mapa .maplibregl-ctrl-attrib,
+  body.mapa .maplibregl-ctrl-attrib a { background: #fff !important; color: #12181a !important; }
+}
