@@ -3,6 +3,37 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L7-08-b-sdk-python: SDK Python gerado do OpenAPI)
+
+SDK `plat` em `sdk/python/`: `plat_gerado/` gerado por `openapi-python-client` a partir de
+`docs/openapi.json` (nunca editado à mão; `scripts/gerar_sdk.sh` regenera; `sdk/python/config_geracao.yaml`
+é a única fonte de nomes) e `plat/` escrito à mão por cima (`Plataforma(url, token)`, `.itens`, `.camadas`,
+`.mapas` — visões de `.itens` por tipo, não rotas próprias —, `.jobs.esperar()`, `.tokens`, erros como
+Problem Details/RFC 9457 traduzidos do contrato real `{"erro","mensagem","detalhe","req_id"}`, ADR 0002
+§14). `pip install ./sdk/python` empacota os dois pacotes num só `pyproject.toml` (setuptools, `src`
+layout). 10 exemplos executáveis (`sdk/python/exemplos/`) que SÃO os testes (`tests/sdk/test_exemplos.py`,
+19 testes no total com cobertura/regeneração/adversário) rodando contra a API real da trilha (uvicorn de
+verdade em `:8278`, worker real só para o exemplo de jobs) e o inquilino `demo` semeado.
+
+Achado real corrigido, não do SDK e sim do OpenAPI da própria API: três pares de classes Pydantic com
+o MESMO nome Python em módulos diferentes (`Pagina`, `LoteEntrada`, `LoteSaida` — um em
+`app/auth/modelos.py`, outro em `app/catalogo/modelos.py`) tinham o MESMO `title` no schema (FastAPI já
+desambigua a chave do componente, `app__auth__modelos__Pagina` vs `app__catalogo__modelos__Pagina`, mas
+não o `title`), o que impedia QUALQUER geração de SDK (`openapi-python-client` recusa "duplicate models
+with name"). Corrigido com `model_config = ConfigDict(title="...")` explícito nas 6 classes — só o
+`title` do schema muda, nenhum tipo/obrigatoriedade/nome Python — e `docs/openapi.json` regenerado
+(2 linhas de diff). Sem esse conserto não existe SDK gerado possível para esta API, de nenhum gerador.
+
+Medido (`tests/medidas/L7-08-b-sdk-python.json`): 196/196 operações do OpenAPI com módulo gerado
+(`sync_detailed`/`asyncio_detailed`); regeneração byte-a-byte reproduzível (`tests/sdk/test_regeneracao.py`,
+gerado numa pasta irmã do repositório — fora dele o post-hook `ruff format` do gerador usa outro
+`target-version` e o diff vira ruído de ambiente, não do gerador); os 10 exemplos passam contra a API
+real; adversário (token de escopo `catalogo:ler` tentando escrever, token de um inquilino lendo item de
+outro, varredura de rota sem método) — `tests/sdk/refutacao.json`: **PASSA**. Tabela de paridade contra
+`ArcGIS API for Python` em `docs/PARIDADE.md`. Dependência aberta `L2-04-servicos-esri-ogc` (FeatureServer
+real) deixa `features.FeatureLayer.query/edit_features` fora desta trilha, nomeado — `.camadas`/`.mapas`
+não fingem uma rota que não existe. ADR `docs/adr/20260907T1541-sdk-python.md`.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
