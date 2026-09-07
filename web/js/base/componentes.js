@@ -9,6 +9,8 @@ import './componentes/estado.js';
 import './componentes/toast.js';
 import './componentes/painel.js';
 import './componentes/tema.js';
+import './componentes/idioma.js';
 export { confirmar, pedir } from './componentes/dialogo.js';
 export { notificar } from './componentes/toast.js';
 export { aplicarTema, temaAtual } from './componentes/tema.js';
+export { definirIdioma, idiomaAtual } from './i18n.js';
