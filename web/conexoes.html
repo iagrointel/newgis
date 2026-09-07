@@ -49,6 +49,53 @@
       </div>
     </section>
 
+    <section class="cartao" id="csw-cartao" aria-labelledby="t-csw">
+      <h2 id="t-csw">descobrir por catálogo (CSW 2.0.2)</h2>
+      <p class="ajuda">busca por texto e/ou extensão num catálogo de metadados de terceiros (a INDE e geoportais de
+        órgãos publicam CSW). Cada registro ISO 19139 mostra os serviços WMS/WFS/WMTS que declara com endereço; um
+        clique cria as conexões com a ficha de procedência preenchida do registro. Registro sem serviço ligado não
+        cria conexão.</p>
+      <form id="csw-form" class="formulario">
+        <div class="campo">
+          <label for="csw-url">endereço do catálogo CSW</label>
+          <input id="csw-url" name="url" type="url" required maxlength="2048"
+                 value="https://metadados.inde.gov.br/geonetwork/srv/eng/csw">
+          <span class="ajuda">o da INDE respondeu em 07/09/2026 (GetRecords por GET, CQL_TEXT, ISO 19139)</span>
+        </div>
+        <div class="campo">
+          <label for="csw-texto">texto (qualquer campo do registro)</label>
+          <input id="csw-texto" name="texto" type="text" maxlength="200" title="exemplo: hidrografia">
+        </div>
+        <div class="campo">
+          <label for="csw-bbox">extensão [oeste, sul, leste, norte] em graus (opcional)</label>
+          <input id="csw-bbox" name="bbox" type="text" maxlength="80" title="exemplo: -48, -25, -46, -23">
+        </div>
+        <div class="linha-ferramentas">
+          <button type="submit" id="csw-buscar" class="primario">buscar</button>
+          <span id="csw-resumo" class="ajuda"></span>
+        </div>
+      </form>
+      <plat-aviso id="csw-aviso"></plat-aviso>
+      <div class="tabela-rolagem">
+        <table id="csw-lista" class="tabela" hidden>
+          <caption class="sr-only">registros encontrados no catálogo</caption>
+          <thead>
+            <tr>
+              <th scope="col">título</th>
+              <th scope="col">organização</th>
+              <th scope="col">data do dado</th>
+              <th scope="col">serviços</th>
+              <th scope="col"><span class="sr-only">ações</span></th>
+            </tr>
+          </thead>
+          <tbody id="csw-corpo"></tbody>
+        </table>
+      </div>
+      <div class="linha-ferramentas">
+        <button type="button" id="csw-mais" class="pequeno" hidden>mais registros</button>
+      </div>
+    </section>
+
     <plat-dialogo id="dialogo"></plat-dialogo>
   </main>
 </div>
