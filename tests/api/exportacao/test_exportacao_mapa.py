@@ -150,7 +150,7 @@ def test_doze_formatos_da_selecao_de_500_com_contagem_e_crs(inquilino_mapa, cama
                 assert recusa.status_code == 422, (nome, recusa.text)
                 assert recusa.json()["erro"] == "crs_fixo_do_formato", recusa.text
         final = exportar(cliente, pedido, timeout=600)
-        assert final["estado"] == "pronta", (nome, final)
+        assert final["estado"] == "pronta", (nome, final["estado"], final["erro"])
         assert final["feicoes"] == SELECAO, (nome, final["feicoes"])
         caminho = baixar(cliente, final["id"], tmp_path / f"sel_{nome}{f.extensao}")
         saida = ogrinfo(caminho, nome)
@@ -275,10 +275,19 @@ def test_permissao_de_exportar_negada_devolve_403(inquilino_mapa, camada, editor
     usuarios = Usuarios(inquilino_mapa.admin)
     try:
         outro, _u, _s = usuarios.sessao("editor")
+        # item privado é 404 até dentro do mesmo inquilino (a RLS esconde o que não foi compartilhado):
+        # para CHEGAR à checagem de exportação, a camada precisa antes estar visível
+        assert outro.post("/api/exportacoes",
+                          json={"item_id": camada["item_id"], "formato": "gpkg"}).status_code == 404
+        r = inquilino_mapa.admin.put(f"/api/itens/{camada['item_id']}/compartilhamento",
+                                     json={"acesso": "inquilino"})
+        assert r.status_code == 200, r.text
         r = outro.post("/api/exportacoes", json={"item_id": camada["item_id"], "formato": "gpkg"})
         assert r.status_code == 403, r.text
         assert r.json()["erro"] == "exportacao_nao_permitida", r.text
     finally:
+        inquilino_mapa.admin.put(f"/api/itens/{camada['item_id']}/compartilhamento",
+                                 json={"acesso": "privado"})
         usuarios.limpar()
 
 

@@ -63,6 +63,7 @@ class Formato:
     linhas_max: int = 0              # teto de linhas do PRÓPRIO formato (0 = sem teto); XLSX = 1.048.576
     tilado: bool = False             # o arquivo é um conjunto de tiles: a contagem de feições não é a do banco
     nome_camada_alfanumerico: bool = False   # o driver recusa nome de camada com hífen/ponto (File Geodatabase)
+    exige_tipo_geometria: bool = False        # o driver recusa geometria "desconhecida" e precisa de -nlt
 
 
 FORMATOS: dict[str, Formato] = {f.nome: f for f in (
@@ -99,6 +100,7 @@ FORMATOS: dict[str, Formato] = {f.nome: f for f in (
                        "rótulo errado."),
     Formato("filegdb", "OpenFileGDB", ".zip", "application/zip", "File Geodatabase (zip)",
             em_diretorio=True, zipar=True, caminho_interno="dados.gdb", nome_camada_alfanumerico=True,
+            exige_tipo_geometria=True,
             observacao="a .gdb é uma PASTA; o que se entrega é o zip dela, com a pasta dentro "
                        "(reabre em /vsizip/<arquivo>.zip/dados.gdb). Escrita pelo OpenFileGDB do próprio "
                        "GDAL, sem o SDK proprietário da Esri."),

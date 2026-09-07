@@ -220,12 +220,15 @@ def exportacao_gerar(ctx, exportacao_id: uuid.UUID) -> dict:
             argv = motor.argumentos_ogr2ogr(
                 formato, destino=alvo, conninfo=motor.conninfo_pg(ctx.tenant_id, ctx.usuario_id), sql=sql,
                 nome_camada=motor.nome_camada_seguro(Path(nome_arquivo).stem, formato),
-                srid_saida=srid_saida, codificacao=codificacao,
+                srid_saida=srid_saida, codificacao=codificacao, geometria=dados.get("geometria"),
             )
             (resultado, ms_ogr) = motor.cronometrar(ctx.subprocesso, argv)
             avisos = [ln.strip() for ln in (resultado.stderr or "").splitlines() if ln.strip()][:20]
             if resultado.returncode != 0:
-                raise FalhaDefinitiva(f"ogr2ogr falhou: {(avisos[-1] if avisos else 'sem detalhe')[:300]}")
+                # as ÚLTIMAS linhas, não a última: a derradeira do ogr2ogr é sempre a genérica
+                # ("Terminating translation prematurely after failed translation from sql statement"),
+                # e a causa está na linha anterior (medido em 07/09/2026 com o File Geodatabase)
+                raise FalhaDefinitiva(f"ogr2ogr falhou: {' | '.join(avisos[-3:])[:400] or 'sem detalhe'}")
             if not alvo.exists():
                 raise FalhaDefinitiva("ogr2ogr terminou sem escrever o arquivo (consulta sem nenhuma feição?)")
 
