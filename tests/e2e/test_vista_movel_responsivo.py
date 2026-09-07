@@ -92,10 +92,11 @@ def test_tres_viewports_sem_rolagem_e_mapa_visivel(
         page = ctx.new_page()
         tela = Tela(page, base_url)
         tela.entrar(slug, login, senha)
-        t0 = page.evaluate("() => performance.now()")
-        tela.ir(f"/visualizar?item={iid}")
+        # `Tela.ir` mede em Python (perf_counter), do goto até `body[data-pronto=1]` — medir com
+        # `performance.now()` do NAVEGADOR daria negativo: `tela.ir` faz uma navegação de página inteira,
+        # que reseta o relógio da página para perto de 0 (achado ao rodar este item pela 1ª vez).
+        ms = tela.ir(f"/visualizar?item={iid}")
         page.wait_for_selector('[data-tipo="mapa"]', timeout=10000)
-        ms = page.evaluate("(t0) => performance.now() - t0", t0)
 
         assert _sem_rolagem_horizontal(page), f"{nome}: rolagem horizontal"
         mapa_caixa = page.locator('[data-tipo="mapa"]').bounding_box()
