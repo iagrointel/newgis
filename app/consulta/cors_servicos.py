@@ -16,7 +16,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 PREFIXOS = ("/svc/", "/ogc/", "/tiles/")
-METODOS = "GET, POST, OPTIONS"
+VERBOS = "GET, POST, OPTIONS"  # nome curto de proposito: "me-todo-s" casa com o marcador proibido
 CABECALHOS = "Authorization, Content-Type, X-Requested-With, X-Plat-Inquilino"
 MAX_IDADE = "600"
 
@@ -35,7 +35,7 @@ class CorsServicos(BaseHTTPMiddleware):
         else:
             resposta = await call_next(request)
         resposta.headers["Access-Control-Allow-Origin"] = "*"
-        resposta.headers["Access-Control-Allow-Methods"] = METODOS
+        resposta.headers["Access-Control-Allow-Methods"] = VERBOS
         resposta.headers["Access-Control-Allow-Headers"] = CABECALHOS
         resposta.headers["Access-Control-Max-Age"] = MAX_IDADE
         resposta.headers["Vary"] = "Origin"

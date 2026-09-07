@@ -23,8 +23,10 @@ Referência: developers.arcgis.com, "Get started with the services directory", "
 
 from __future__ import annotations
 
+import json
 import re
 import secrets
+from urllib.parse import parse_qsl
 
 from fastapi import APIRouter, Request, Response
 
@@ -116,16 +118,27 @@ def rest_info(token: str, request: Request):
 
 
 async def _credenciais(request: Request) -> dict:
+    """`generateToken` da Esri manda usuário e senha por formulário urlencoded no POST; alguns
+    clientes usam querystring, e o `arcgis` do Python manda JSON. Os três são lidos aqui.
+
+    O formulário é decodificado com `urllib.parse.parse_qsl`, e não com `request.form()`, porque o
+    `form()` do Starlette exige a biblioteca `python-multipart` mesmo para urlencoded — dependência
+    nova só para reler um corpo de duas chaves. `multipart/form-data` não é aceito: nenhum cliente
+    Esri o usa aqui, e recusar é melhor que aceitar pela metade."""
     p = dict(request.query_params)
-    if request.method == "POST":
-        tipo = request.headers.get("content-type", "")
-        if "application/x-www-form-urlencoded" in tipo or "multipart/form-data" in tipo:
-            form = await request.form()
-            p.update({k: str(v) for k, v in form.items()})
-        elif "application/json" in tipo:
-            corpo = await request.json()
-            if isinstance(corpo, dict):
-                p.update({k: str(v) for k, v in corpo.items()})
+    if request.method != "POST":
+        return p
+    tipo = request.headers.get("content-type", "")
+    corpo_bruto = await request.body()
+    if "application/x-www-form-urlencoded" in tipo:
+        p.update({k: v for k, v in parse_qsl(corpo_bruto.decode("utf-8", "replace"), keep_blank_values=True)})
+    elif "application/json" in tipo and corpo_bruto:
+        try:
+            corpo = json.loads(corpo_bruto)
+        except ValueError as e:
+            raise ErroAPI(400, "corpo_invalido", "corpo JSON malformado") from e
+        if isinstance(corpo, dict):
+            p.update({k: str(v) for k, v in corpo.items()})
     return p
 
 
