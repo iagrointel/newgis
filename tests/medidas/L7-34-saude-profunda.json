@@ -48,7 +48,7 @@
   "fila_sem_worker_reflete_degradado": {
    "valor": 1,
    "unidade": "booleano",
-   "comando": "test_profunda_fila_real_sem_worker_e_degradada (sessao_plat, plat-worker de verdade fora do ar nesta trilha): workers_vivos == 0 e fila.estado == degradado, não simulado"
+   "comando": "test_profunda_fila_real_sem_worker_e_degradada (sessao_plat + conexao_plat_app): workers_vivos publicado pela rota == workers_vivos de plat.fila_estado() no mesmo instante, e fila.estado == degradado quando esse número é zero (o caso da base de trilha, que não sobe plat-worker) ou ok quando é >= 1; medido, nunca simulado"
   },
   "disco_e_ram_batem_com_a_maquina": {
    "valor": 1,
