@@ -31,16 +31,21 @@ export function idAberto() { return item ? item.id : null; }
 
 export async function abrir(id, { empurrarUrl = true, abaInicial } = {}) {
   const d = painel();
-  const corpo = h('div', { class: 'item-painel' }, h('p', { class: 'fraco' }, t('catalogo.carregando')));
+  const estado = h('plat-estado', { id: 'item-estado' });
+  const corpo = h('div', { class: 'item-painel' }, estado);
+  queueMicrotask(() => estado.carregando(t('catalogo.carregando')));
   if (!d.aberto) {
-    d.abrir({ titulo: t('catalogo.item'), corpo }).then(() => { const era = item; item = null; if (era) aoFechar(era); });
+    // aoFechar mesmo sem item carregado (uuid inexistente/negado): a URL volta a /conteudo e o estado da tela zera
+    d.abrir({ titulo: t('catalogo.item'), corpo }).then(() => { const era = item; item = null; aoFechar(era); });
   } else { limpar(d.corpo); d.corpo.append(corpo); }
   if (empurrarUrl && location.pathname !== `/conteudo/${id}`) history.pushState({ item: id }, '', `/conteudo/${id}`);
   try {
     item = await api.obter(id);
   } catch (e) {
-    limpar(corpo);
-    corpo.append(h('plat-aviso', { 'data-tipo': 'erro', role: 'alert' }, e.status === 404 ? t('catalogo.item_inexistente') : e.message));
+    if (e.status === 403) estado.negado(e.message);
+    else if (e.status === 404) estado.mostrar({ tipo: 'erro', titulo: t('catalogo.item_inexistente'), texto: t('catalogo.item_inexistente_texto') });
+    else estado.erro({ status: e.status, json: { mensagem: e.message, req_id: e.reqId } }, [{ id: 'tentar', rotulo: t('estado.tentar_de_novo'), classe: 'primario' }]);
+    estado.addEventListener('acao', () => abrir(id, { empurrarUrl: false }), { once: true });
     ctx.definir({ itemAberto: id });
     return;
   }
