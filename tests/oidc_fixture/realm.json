@@ -1,0 +1,101 @@
+{
+  "realm": "plataforma-teste-oidc",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "groups": [
+    {"name": "gg-oidc-admin"},
+    {"name": "gg-oidc-leitura"}
+  ],
+  "users": [
+    {
+      "username": "ana.oidc",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "ana.oidc@plataforma-teste.invalido",
+      "firstName": "Ana",
+      "lastName": "Oidc",
+      "groups": ["/gg-oidc-admin"],
+      "credentials": [{"type": "password", "value": "Teste-oidc-1", "temporary": false}]
+    },
+    {
+      "username": "bruno.oidc",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "bruno.oidc@plataforma-teste.invalido",
+      "firstName": "Bruno",
+      "lastName": "Oidc",
+      "groups": ["/gg-oidc-leitura"],
+      "credentials": [{"type": "password", "value": "Teste-oidc-2", "temporary": false}]
+    },
+    {
+      "username": "carla.oidc",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "carla.oidc@plataforma-teste.invalido",
+      "firstName": "Carla",
+      "lastName": "Oidc",
+      "groups": [],
+      "credentials": [{"type": "password", "value": "Teste-oidc-3", "temporary": false}]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "plat-teste",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://127.0.0.1:8234/*", "http://127.0.0.1:*/*", "http://testserver/*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://127.0.0.1:8234/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "grupos",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "config": {
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "groups"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "plat-teste-outro",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://127.0.0.1:8234/*", "http://127.0.0.1:*/*", "http://testserver/*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "grupos",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "config": {
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "groups"
+          }
+        }
+      ]
+    }
+  ]
+}
