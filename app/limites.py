@@ -232,10 +232,6 @@ EXPORTACAO_BLOCO_LEITURA_BYTES = 8 * 1024 * 1024   # leitura do arquivo pronto e
 # os que este item acrescenta.
 EXPORTACAO_INQUILINO_TIMEOUT_S = 3600 * 4          # inquilino inteiro pode ter muitas camadas; 4x o de uma só
 EXPORTACAO_INQUILINO_POR_DIA_MAX = 1               # portão do item: pedir a 2ª no mesmo dia UTC devolve 429
-EXPORTACAO_INQUILINO_MANIFESTO_NOME = "manifesto.json"
-EXPORTACAO_INQUILINO_CATALOGO_NOME = "catalogo.json"
-EXPORTACAO_INQUILINO_GPKG_NOME = "dados.gpkg"
-EXPORTACAO_INQUILINO_ARQUIVOS_NOME = "arquivos.zip"
 # --- grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
 # macro (grosseira, ex. 1 km) triando regiões e micro (fina, ex. 100 m) gerada SÓ dentro das aprovadas.
 # ESCALA_CELULAS_MAX vale tanto para a grade macro inteira quanto para o refino micro (aprovadas × k²) — é o
