@@ -37,6 +37,24 @@
     }
    }
   },
+  "/saude/profunda": {
+   "get": {
+    "summary": "Saude Profunda",
+    "operationId": "saude_profunda_saude_profunda_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
   "/api/login/provedores": {
    "get": {
     "tags": [

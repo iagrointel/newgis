@@ -48,6 +48,7 @@ from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
+from app.saude_profunda import router as rotas_saude_profunda
 from app.settings import settings
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
@@ -70,6 +71,7 @@ limite_corpo.instalar(app)
 
 ROUTERS = [
     rotas_saude,
+    rotas_saude_profunda,  # L7-34-saude-profunda
     # --- identidade (L0-02)
     rotas_login.router,
     rotas_eu.router,
