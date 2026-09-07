@@ -12,6 +12,12 @@ from tests.api import cruzado_casos as cc
 from tests.api.conftest import arquivo_openapi, novo_cliente
 from tests.api.test_rls import contexto, ids_por_slug
 
+# serial (07/09): cada chamada é cercada por um DIGEST DO INQUILINO B INTEIRO (_digest_b), para provar que a
+# rota não escreveu nada lá. Qualquer worker do pytest-xdist que crie um usuário, um item ou um evento em demo2
+# no mesmo instante muda esse resumo e reprova o teste por um motivo que nada tem a ver com o que ele prova
+# (medido: 'POST /api/login [sem autenticação] alterou B: ...95 -> ...96'). Roda sozinho, com -n 0.
+pytestmark = pytest.mark.serial
+
 ROOT = Path(__file__).resolve().parents[2]
 DIGEST_SQL = """
 SELECT md5(coalesce(string_agg(x::text, ',' ORDER BY x::text), '')) AS d, count(*) AS n FROM (

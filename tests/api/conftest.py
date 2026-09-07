@@ -340,7 +340,6 @@ def limpeza_de_residuos(sessao_a, sessao_b, sessao_plat):
 
 
 def pytest_sessionfinish(session, exitstatus):
-    import sys; print('DEBUG sessionfinish', __file__, os.environ.get('PYTEST_XDIST_WORKER'), getattr(session.config.option,'numprocesses',None), file=sys.stderr)
     """Controlador do pytest-xdist: varre o resíduo zt-* depois que TODOS os workers terminaram (ver
     limpeza_de_residuos). No processo do worker e na rodada serial não faz nada — lá quem varre é a fixture."""
     if sob_xdist() or not getattr(session.config.option, "numprocesses", None):
