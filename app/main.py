@@ -46,6 +46,11 @@ from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
+from app.rede_utilidades.rotas import router as rotas_rede_utilidades
+from app.rede_utilidades.rotas_controladores import router as rotas_rede_controladores
+from app.rede_utilidades.rotas_simples import router as rotas_rede_simples
+from app.rede_utilidades.rotas_subredes import router as rotas_rede_subredes
+from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
@@ -114,6 +119,21 @@ ROUTERS = [
     rotas_ingestao,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
+    # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
+    # exporta o pacote de ativos) e /api/rede/pacotes (os pacotes entregues com a instalação)
+    rotas_rede_utilidades,
+    # --- topologia derivada da rede de utilidades (L4-01-b): /api/rede/{rede_id}/feicoes/{pontos,linhas}
+    # (as camadas de rede, editáveis) e /api/rede/{rede_id}/topologia/{habilitar,nos,arestas} (o índice derivado)
+    rotas_rede_topologia,
+    # --- rede simples (L4-18): /api/rede/simples (cria a partir de 2 camadas do inquilino),
+    # /api/rede/{rede_id}/simples (a configuração) e /api/rede/{rede_id}/promover (pacote mínimo)
+    rotas_rede_simples,
+    # --- controlador de subrede e tiers (L4-04-a): /api/rede/{rede_id}/controlador,
+    # /api/rede/{rede_id}/{subredes,tiers} e /api/rede/{rede_id}/controladores/importar
+    rotas_rede_controladores,
+    # --- atualizar e exportar subrede (L4-04-b): /api/rede/{rede_id}/subredes/atualizar (job),
+    # /api/rede/{rede_id}/subredes/conferencia, /api/rede/{rede_id}/subrede/{nome}/exportar e os propagadores
+    rotas_rede_subredes,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,

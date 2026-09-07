@@ -1,0 +1,149 @@
+{
+ "item": "L4-01-b-topologia-derivada",
+ "assinado_por": "redes+dados+backend+testador (trilha il401btopol)",
+ "gerado_em": "2026-09-07T02:06:10Z",
+ "git_sha": "e368425f2b2d62536423bdc684754719c78c009f",
+ "maquina": "PostgreSQL 16 em iagro_sat; base própria da trilha (plat_tf401b); fonte = schema certaja (BDGD, ativo da casa, somente leitura); outras sessões da casa na mesma máquina",
+ "medidas": {
+  "rede_id": "04f42ac7-64a7-4ffe-8182-b4e4597fb42a",
+  "clausulas": {
+   "ramlig_sem_geometria": {
+    "prova": "26581 registros no arquivo, 0 com geometria (wkt nulo em 100%) -> 0 arestas carregadas, fronteira do ativo, não fabricado",
+    "ok": true
+   },
+   "arestas_igual_arquivo": {
+    "prova": "resumo.arestas 73512 == ssdmt+ssdbt 73512 (ramlig fica fora: 26581 no arquivo, 0 com geometria)",
+    "ok": true
+   },
+   "postes_zero_no": {
+    "prova": "60549 postes -> 0 nós",
+    "ok": true
+   },
+   "fins_de_linha_mt": {
+    "prova": "grau 1 na topologia 3046 x esperado pelo arquivo 3046 (delta 0; o contador independente usa equiretangular local, o construtor usa ST_DWithin geodésico — divergência só pode vir de par de pontas a ~0,05 m exatos)",
+    "ok": true
+   },
+   "componentes_por_ctmt": {
+    "prova": "20 alimentadores, componentes idênticas arquivo x topologia",
+    "ok": true
+   },
+   "orfaos_alta_untrmt": {
+    "prova": "terminais de alta órfãos: topologia 1554 x arquivo 1554",
+    "ok": true
+   },
+   "resumo_gravado": {
+    "prova": "rede_topo_resumo: nós 80456, arestas 73512, órfãos 3948, sem nó 0, 600480 ms",
+    "ok": true
+   }
+  },
+  "avisos": [],
+  "carga": {
+   "ssdmt": {
+    "linhas": 44268,
+    "segundos": 1.627
+   },
+   "ssdbt": {
+    "linhas": 29244,
+    "segundos": 1.633
+   },
+   "ramlig": {
+    "linhas": 0,
+    "segundos": 0.305
+   },
+   "trafo": {
+    "linhas": 5481,
+    "segundos": 0.642
+   },
+   "ponnot": {
+    "linhas": 60549,
+    "segundos": 2.666
+   }
+  },
+  "arquivo": {
+   "ssdmt": 44268,
+   "ssdbt": 29244,
+   "ramlig": 26581,
+   "trafo": 5481,
+   "ponnot": 60549,
+   "ctmt": 21
+  },
+  "habilitar_http_segundos": 601.366,
+  "resumo": {
+   "rede_id": "04f42ac7-64a7-4ffe-8182-b4e4597fb42a",
+   "tolerancia_m": 0.05,
+   "nos": 80456,
+   "arestas": 73512,
+   "nos_orfaos": 3948,
+   "arestas_sem_no": 0,
+   "duracao_ms": 600480,
+   "construido_em": "2026-09-07T01:51:59Z"
+  },
+  "arestas_por_grupo": {
+   "trecho_de_baixa_tensao": 29244,
+   "trecho_de_media_tensao": 44268
+  },
+  "esperado_mt_segundos": 2.894,
+  "mt": {
+   "arquivo": {
+    "nos": 43686,
+    "fins_de_linha_grau1": 3046,
+    "alimentadores": 20
+   },
+   "construido": {
+    "nos": 43686,
+    "fins_de_linha_grau1": 3046
+   },
+   "componentes_por_ctmt_arquivo": {
+    "5_VAS_1": 1,
+    "3_CTJ1_1": 1,
+    "1_CTJ1_1": 1,
+    "2_CTJ1_1": 1,
+    "4_CTJ1_1": 1,
+    "4_SCR2_1": 1,
+    "4_CTJ3_1": 1,
+    "2_CTJ3_1": 1,
+    "6_CTJ3_1": 1,
+    "5_CTJ3_1": 1,
+    "3_CTJ3_1": 1,
+    "1_CTJ3_1": 1,
+    "6_RPA_1": 1,
+    "2_CTJ2_1": 1,
+    "4_CTJ2_1": 1,
+    "3_CTJ2_1": 1,
+    "1_CTJ2_1": 1,
+    "5_CTJ2_1": 1,
+    "55_05_1": 1,
+    "1_TQR_1": 1
+   },
+   "componentes_por_ctmt_topologia": {
+    "2_CTJ3_1": 1,
+    "5_CTJ3_1": 1,
+    "4_CTJ3_1": 1,
+    "6_CTJ3_1": 1,
+    "3_CTJ3_1": 1,
+    "1_CTJ3_1": 1,
+    "6_RPA_1": 1,
+    "2_CTJ2_1": 1,
+    "4_CTJ2_1": 1,
+    "3_CTJ2_1": 1,
+    "1_CTJ2_1": 1,
+    "5_CTJ2_1": 1,
+    "55_05_1": 1,
+    "1_TQR_1": 1,
+    "5_VAS_1": 1,
+    "3_CTJ1_1": 1,
+    "1_CTJ1_1": 1,
+    "2_CTJ1_1": 1,
+    "4_CTJ1_1": 1,
+    "4_SCR2_1": 1
+   },
+   "componentes_divergentes": {},
+   "orfaos_alta": {
+    "arquivo": 1554,
+    "topologia": 1554
+   }
+  },
+  "ok": true
+ },
+ "comando": "venv/bin/pytest tests/api/test_rede_topologia_medida.py -m lento -q (exige GRANT de leitura em certaja.* para o papel da trilha — ver docstring)"
+}
