@@ -22,6 +22,13 @@ conceito por caminhos diferentes e hoje não conversam — unificá-las é decis
 A asserção de contagem de rotas de escrita sob `/api/rede` foi de 6 para 16, com `POST .../tracar`
 declarado como consulta com verbo de escrita (pede `rls:visibilidade`, não `rede.editar`).
 
+Rede de referência sem nome de parceiro: o caminho do pacote `.gdb.zip` e o schema onde a BDGD real está
+carregada saíram do código para `PLAT_REDE_REFERENCIA_GDB`, `PLAT_REDE_REFERENCIA_CTMT` e
+`PLAT_REDE_REFERENCIA_ESQUEMA` (`tests/dados/carga_bdgd.py::esquema()`/`exigir_esquema()`); sem as
+variáveis os testes de medida pulam com a razão escrita, em vez de estourar. Os textos passam a dizer
+"distribuidora de referência" e "cooperativa de teste", e o nome do arquivo saiu da medida gravada — só o
+sha256 identifica o pacote.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a

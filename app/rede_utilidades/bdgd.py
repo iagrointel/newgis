@@ -108,7 +108,8 @@ def sha256_gdb(caminho: str | Path) -> str:
 
 def _ler(caminho: str, camada: str, geometria: bool = True):
     """Lê a camada inteira como dataframe (a maior camada de uma distribuidora média fica abaixo de
-    100 mil linhas com geometria de linha — cabe na cota de memória do worker, medido na CERTEL)."""
+    100 mil linhas com geometria de linha — cabe na cota de memória do worker, medido na distribuidora
+    de referência)."""
     try:
         return pyogrio.read_dataframe(caminho, layer=camada, read_geometry=geometria, fid_as_index=True)
     except Exception as exc:

@@ -105,7 +105,9 @@ def _ler_camadas_do_contrato(gdb: Path, progresso) -> dict:
     "unidade do COMP e órfãos",
     parametros=ImportarBdgdParametros,
     pesado=True,
-    memoria_mb=1024,  # teto PLAT_WORKER_MEMORIA_MB; a maior camada cabe (medido na CERTEL: < 100 mil linhas)
+    # teto PLAT_WORKER_MEMORIA_MB; a maior camada cabe (medido na distribuidora de referência:
+    # menos de 100 mil linhas)
+    memoria_mb=1024,
     timeout_s=3600,
     tentativas=1,
     chave=lambda p: f"rede-bdgd:{p.get('rede_id')}",
