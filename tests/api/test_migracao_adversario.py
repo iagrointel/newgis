@@ -16,7 +16,7 @@ import threading
 import pytest
 
 from app.migracao import relatorio
-from app.migracao.portal import ErroPortal, ErroRede
+from app.migracao.portal import ErroRede
 from tests.api.test_migracao_inventario import (  # noqa: F401 — as fixtures precisam estar no módulo
     TOKEN,
     _cursor,
