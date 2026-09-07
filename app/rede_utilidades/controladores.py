@@ -20,13 +20,11 @@ A âncora gravada é a feição + o número do terminal, nunca o nó de topologi
 refaz `plat.rede_topo_no` inteiro, e uma chave estrangeira para o nó levaria o controlador junto na primeira
 reconstrução. O nó corrente é resolvido na leitura (`_no_corrente`)."""
 
-import json
-import time
-
 from app.erros import ErroAPI
-from app.rede_utilidades import tracado
 
 CATEGORIA_CONTROLADOR = "controlador"
+# um ativo de transformação separa dois tiers: nunca é o controlador do tier de cima (ver marcar_da_importacao)
+CATEGORIA_TRANSFORMACAO = "transformacao"
 PAPEIS = ("fonte", "sumidouro")
 
 
@@ -225,13 +223,21 @@ def ver_controlador(cur, rede_id: str, controlador_id: str) -> dict:
 def listar_subredes(cur, rede_id: str, limite: int, tier: str | None = None) -> list[dict]:
     """As subredes da rede: tier, controladores, estado (limpa/suja) e resumo da última atualização.
 
-    O estado gravado vira `suja` também quando há área suja aberta na rede (edição depois da última
-    construção da topologia): a subrede pode estar limpa no registro e obsoleta no chão."""
+    O estado gravado vira `suja` quando uma área suja aberta TOCA um elemento desta subrede (item L4-04-b):
+    a subrede pode estar limpa no registro e obsoleta no chão. O cruzamento é por subrede, não pela rede
+    inteira — uma edição num alimentador não suja os outros. Leitura pura: a marcação que PERSISTE o estado
+    é `subredes.marcar_sujas`, chamada pela atualização em lote."""
     cur.execute("SELECT count(*) AS n FROM plat.rede_topo_area_suja WHERE rede_id = %s::uuid", (rede_id,))
     areas_sujas = cur.fetchone()["n"]
     cur.execute(
         "SELECT s.id, s.nome, s.estado, s.resumo, s.atualizado_em, s.criado_em, "
-        "       t.codigo AS tier, t.nome AS tier_nome, t.tipo AS tier_tipo, t.ordem AS tier_ordem "
+        "       t.codigo AS tier, t.nome AS tier_nome, t.tipo AS tier_tipo, t.ordem AS tier_ordem, "
+        "       EXISTS (SELECT 1 FROM plat.rede_subrede_elemento e "
+        "               LEFT JOIN plat.rede_feicao_ponto p ON p.id = e.feicao_id "
+        "               LEFT JOIN plat.rede_feicao_linha l ON l.id = e.feicao_id "
+        "               JOIN plat.rede_topo_area_suja a ON a.rede_id = s.rede_id "
+        "                  AND ST_Intersects(a.geom, coalesce(p.geom, l.geom)) "
+        "               WHERE e.subrede_id = s.id) AS tocada_por_area_suja "
         "FROM plat.rede_subrede s JOIN plat.rede_tier t ON t.id = s.tier_id "
         "WHERE s.rede_id = %s::uuid AND (%s::text IS NULL OR t.codigo = %s) "
         "ORDER BY t.ordem, s.nome LIMIT %s",
@@ -249,11 +255,12 @@ def listar_subredes(cur, rede_id: str, limite: int, tier: str | None = None) -> 
         por_subrede.setdefault(str(r["subrede_id"]), []).append(_controlador_json(r))
     saida = []
     for s in subredes:
-        estado = "suja" if (s["estado"] == "suja" or areas_sujas) else "limpa"
+        estado = "suja" if (s["estado"] == "suja" or s["tocada_por_area_suja"]) else "limpa"
         saida.append({
             "id": str(s["id"]), "nome": s["nome"], "tier": s["tier"], "tier_nome": s["tier_nome"],
             "tier_tipo": s["tier_tipo"], "tier_ordem": s["tier_ordem"], "estado": estado,
             "estado_gravado": s["estado"], "areas_sujas_abertas": areas_sujas,
+            "tocada_por_area_suja": s["tocada_por_area_suja"],
             "resumo": s["resumo"], "atualizado_em": s["atualizado_em"], "criado_em": s["criado_em"],
             "controladores": por_subrede.get(str(s["id"]), []),
         })
@@ -275,50 +282,9 @@ def listar_tiers(cur, rede_id: str) -> list[dict]:
              "subredes": r["subredes"], "controladores": r["controladores"]} for r in cur.fetchall()]
 
 
-# --- ciclo de vida: atualizar a subrede ----------------------------------------------------------------
-
-def atualizar(cur, tenant_id: int, rede_id: str, subrede_id: str) -> dict:
-    """Refaz o traçado da subrede a partir dos controladores dela e grava o resumo; a subrede volta a `limpa`.
-
-    É o `Update Subnetwork` da paridade (subnetwork-life-cycle.htm): o traçado é o de tipo `subrede`, que para
-    em qualquer ativo de transformação (fronteira entre dois tiers)."""
-    cur.execute(
-        "SELECT s.id, s.nome, t.codigo AS tier FROM plat.rede_subrede s JOIN plat.rede_tier t ON t.id = s.tier_id "
-        "WHERE s.rede_id = %s::uuid AND s.id = %s::uuid",
-        (rede_id, subrede_id),
-    )
-    s = cur.fetchone()
-    if s is None:
-        raise ErroAPI(404, "subrede_inexistente", "esta subrede não existe nesta rede")
-    controladores = [c for c in listar_controladores(cur, rede_id, 1000) if c["subrede_id"] == str(subrede_id)]
-    if not controladores:
-        raise ErroAPI(409, "subrede_sem_controlador", "esta subrede não tem controlador para partir")
-    sem_no = [c["nome"] for c in controladores if c["no_id"] is None]
-    if sem_no:
-        raise ErroAPI(
-            409, "controlador_sem_no",
-            "o(s) controlador(es) " + ", ".join(sem_no) + " não têm nó na topologia atual: reconstrua a "
-            "topologia (POST .../topologia/habilitar) antes de atualizar a subrede",
-        )
-
-    inicio = time.perf_counter()
-    partidas = [{"feicao_id": c["feicao_id"], "terminal": c["terminal"]} if c["feicao_id"]
-                else {"lon": c["lon"], "lat": c["lat"]} for c in controladores]
-    resultado = tracado.tracar(cur, tenant_id, rede_id, "subrede", partidas, [])
-    resumo = {
-        "elementos": resultado["contagem"],
-        "nos_alcancados": resultado["nos_alcancados"],
-        "controladores": len(controladores),
-        "duracao_ms": int((time.perf_counter() - inicio) * 1000),
-    }
-    cur.execute(
-        "UPDATE plat.rede_subrede SET estado = 'limpa', resumo = %s::jsonb, atualizado_em = now() "
-        "WHERE id = %s::uuid RETURNING atualizado_em",
-        (json.dumps(resumo), subrede_id),
-    )
-    atualizado_em = cur.fetchone()["atualizado_em"]
-    return {"subrede_id": str(subrede_id), "nome": s["nome"], "tier": s["tier"], "estado": "limpa",
-            "resumo": resumo, "atualizado_em": atualizado_em, "geometria": resultado["geometria"]}
+# --- ciclo de vida ------------------------------------------------------------------------------------
+# `atualizar` (Update Subnetwork) mora em `app/rede_utilidades/subredes.py`, junto da gravação do nome da
+# subrede em cada elemento, da propagação e da linha agregada (item L4-04-b): um motor só, não dois.
 
 
 # --- marcação a partir da importação (BDGD Módulo 10) ---------------------------------------------------
@@ -448,8 +414,18 @@ def marcar_da_importacao(cur, tenant_id: int, rede_id: str, usuario_id: int | No
             "AND EXISTS (SELECT 1 FROM plat.rede_tipo_categoria tcat "
             "            JOIN plat.rede_categoria c ON c.id = tcat.categoria_id "
             "            WHERE tcat.tipo_id = tp.id AND c.codigo = %s) "
+            # Item L4-04-b, achado ao medir na cooperativa: um ativo de TRANSFORMAÇÃO não pode ser o
+            # controlador do tier de cima. Sem esta exclusão, um arquivo sem a camada de chaves fazia a
+            # marcação escolher o TRANSFORMADOR do alimentador, e o controlador nascia no terminal de
+            # jusante dele — do lado de LÁ da fronteira de subrede. O traçado partia atrás da fronteira e
+            # a subrede inteira virava um punhado de elementos (medido: 13.646 trechos no arquivo, 4
+            # elementos alcançados). A alternativa correta já existia: o nó de cabeça.
+            "AND NOT EXISTS (SELECT 1 FROM plat.rede_tipo_categoria tcat "
+            "                JOIN plat.rede_categoria c ON c.id = tcat.categoria_id "
+            "                WHERE tcat.tipo_id = tp.id AND c.codigo = %s) "
             "ORDER BY (g.codigo = %s) DESC, f.id LIMIT 1",
-            (rede_id, ctmt, str(tier_mt["id"]), CATEGORIA_CONTROLADOR, GRUPO_CHAVE_MT),
+            (rede_id, ctmt, str(tier_mt["id"]), CATEGORIA_CONTROLADOR, CATEGORIA_TRANSFORMACAO,
+             GRUPO_CHAVE_MT),
         )
         disp = cur.fetchone()
         if disp is not None:
