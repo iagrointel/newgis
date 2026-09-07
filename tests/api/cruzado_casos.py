@@ -275,6 +275,11 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/saude/profunda"): Caso(
         lambda p: "/saude/profunda", publico=True, aceita=frozenset({200, 503}), verificar=_sem_marca
     ),
+    # L0-06-e-status: retrato operacional, aberto como /saude. Só agregado da instalação — nenhum nome de
+    # inquilino, arquivo ou bucket atravessa a rota; 503 é resposta legítima com um serviço fora do ar.
+    ("GET", "/api/status"): Caso(
+        lambda p: "/api/status", publico=True, aceita=frozenset({200, 503}), verificar=_sem_marca
+    ),
     ("GET", "/api/login/provedores"): Caso(
         lambda p: "/api/login/provedores?inquilino=demo2",
         publico=True,
