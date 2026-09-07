@@ -16,6 +16,7 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `CODIGOS_RECUPERACAO` | `8` | — |
 | `SENHA_TEMPORARIA_TAMANHO` | `12` | — |
 | `TOKENS_POR_USUARIO` | `20` | — |
+| `CAMPO_MAPAS_MAX` | `200` | item L2-07-a-pwa-instalavel-cache: teto do que /api/campo/mapas devolve por chamada |
 | `GRUPOS_POR_USUARIO` | `512` | — |
 | `GRUPO_TAGS_MAX` | `50` | — |
 | `GRUPO_NOME_MAX` | `128` | — |

@@ -3,6 +3,35 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L2-07-a-pwa-instalavel-cache: PWA de campo instalável, com cache offline)
+
+PWA em `/campo/` — manifest, ícone (192/512, `any`+`maskable`), service worker sem workbox e app shell
+próprio (HTML/CSS/JS, 28,6 KB somados; teto do portão é 1,5 MB) servidos por rotas dedicadas em
+`app/campo/rotas.py`, nunca por `/static/` (ver ADR `20260907T1400-pwa-de-campo-shell-proprio.md`: a API
+deliberadamente não monta `StaticFiles`, então o shell do PWA precisa se bastar para ser testável numa
+trilha isolada sem nginx). Sessão de campo (`POST /api/campo/sessao`) reaproveita o token de serviço
+genérico do L0-02-d com o escopo `campo:usar` já reservado no vocabulário (`app/auth/escopos.py`), 30
+dias fixos, revogável como qualquer token; `GET /api/campo/mapas` projeta só o que o item precisa (RLS de
+`plat.item` cuida do isolamento entre inquilinos). Cache do shell versionado por `web/campo/VERSAO_SHELL`
+(não pelo git sha do repositório inteiro — motivo no ADR), `skipWaiting`+`clients.claim` mais uma checagem
+de atualização em segundo plano a cada abertura (`app.js::registrarServiceWorker`), o que faz uma troca de
+versão valer já na PRÓXIMA recarga (medido: 1). IndexedDB (`idb.js`) guarda token, mapas e a fila de
+sincronização (vazia por enquanto — o emissor fica para o L2-07-c); a UI mostra indicador online/offline,
+contagem da fila, estimativa de `StorageManager` e pedido de persistência. Achado corrigido durante o
+teste de isolamento: o IndexedDB é isolado por ORIGEM, não por inquilino — sem checar a sessão ativa
+contra o `tenant_slug` salvo, um segundo login (outro inquilino, mesmo navegador) reaproveitava o token
+antigo; `app.js::obterSessaoAtual` agora descarta config e mapas quando o inquilino muda.
+
+Suíte e2e roda contra HTTPS de verdade (certificado autoassinado + `--ignore-certificate-errors`), não
+HTTP como o resto do repositório — é a única chamada do item que precisa (`app.js` grava o token por
+`fetch()` de DENTRO da página, e a defesa de CSRF por `Origin`, ADR 0002 seção 5.3, só bate corretamente
+quando o `Origin` real do navegador casa com `PLAT_URL_PUBLICA`). Lighthouse (pacote npm, categoria `pwa`
+removida da v12 em diante — fixado em `lighthouse@^11.7.1` só em `tools/`, fora do git) sem item vermelho.
+Refutação: armazenamento apagado no meio de uma coleta (o app ressincroniza sem travar), relógio do
+dispositivo mudado (o servidor decide validade, nunca o cliente), PWA de outro inquilino no mesmo
+navegador (token nunca aparece na linha de acesso — `tests/api/test_campo.py`). Medidas em
+`tests/medidas/L2-07-a-pwa-instalavel-cache.json`.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

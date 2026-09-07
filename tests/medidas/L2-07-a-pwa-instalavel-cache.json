@@ -1,0 +1,62 @@
+{
+ "item": "L2-07-a-pwa-instalavel-cache",
+ "medidas": {
+  "manifest_campos_presentes": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "GET manifest.webmanifest + asserts de campo (este teste)"
+  },
+  "beforeinstallprompt_capturado": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "evento sintético dispatchado + botão instalar chama prompt()"
+  },
+  "abre_offline_com_mapa_cacheado": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "context.set_offline(True) + reload (este teste)"
+  },
+  "sobrevive_a_indexeddb_apagado_no_meio": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "indexedDB.deleteDatabase + reload (este teste)"
+  },
+  "shell_bytes": {
+   "valor": 28637,
+   "unidade": "bytes",
+   "comando": "soma do Content-Length dos arquivos do SHELL (este teste)"
+  },
+  "token_revogado_preserva_dado_local": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "DELETE /api/tokens/{id} + reload (este teste)"
+  },
+  "alvos_de_toque_conferidos": {
+   "valor": 3,
+   "unidade": "contagem",
+   "comando": "getBoundingClientRect() de button/a/select (este teste)"
+  },
+  "relogio_do_dispositivo_nao_burla_revogacao": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "page.clock.install + reload (este teste)"
+  },
+  "isolamento_por_inquilino_no_mesmo_navegador": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "dois logins sequenciais no mesmo contexto (este teste)"
+  },
+  "recargas_ate_shell_novo": {
+   "valor": 1,
+   "unidade": "contagem",
+   "comando": "troca de VERSAO_SHELL + update() + reload único (este teste)"
+  },
+  "lighthouse_pwa_score": {
+   "valor": 1,
+   "unidade": "0-1",
+   "comando": "lighthouse --only-categories=pwa (este teste)"
+  }
+ },
+ "gerado_em": "2026-09-07T13:56:18Z",
+ "git_sha": "0f1669c80312"
+}
