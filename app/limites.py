@@ -161,7 +161,7 @@ INTERCAMBIO_XLSX_LINHAS_MAX = 500_000     # importação XLSX: acima disso a con
 INTERCAMBIO_DBF_LARGURA_MAX = 254         # largura máxima de campo texto em DBF (limite do formato)
 INTERCAMBIO_MVT_ZOOM = 14                 # zoom de geração/leitura de mbtiles/pmtiles (declarado no relatório)
 INTERCAMBIO_MEMORIA_MB = 1024             # job intercambio.exportar_camada / exportar_inquilino / importacoes_lote
-INTERCAMBIO_TIMEOUT_S = 3600              # relógio do job de intercâmbio (nome próprio: EXPORTACAO_TIMEOUT_S é do L0-04-h)
+INTERCAMBIO_TIMEOUT_S = 3600              # relógio do job de intercâmbio (EXPORTACAO_TIMEOUT_S é do L0-04-h)
 INTERCAMBIO_LOTE_ITENS_MAX = 200          # teto de arquivos/camadas por chamada de lote (import ou export)
 
 # --- configurações da organização (L0-07-a-configuracoes-org; GET/PUT /api/org): nome, identidade visual

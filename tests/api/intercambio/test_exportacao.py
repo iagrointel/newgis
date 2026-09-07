@@ -66,7 +66,7 @@ def test_mbtiles_e_pmtiles_ida_e_volta_com_aviso_de_quantizacao(inquilino_ic, ca
 
 
 def test_filegdb_ida_e_volta_geometria_e_atributos_e_abre_pelo_driver_do_qgis(
-    inquilino_ic, camada_ic, worker_intercambio, tmp_path
+    inquilino_ic, camada_ic, worker_intercambio, tmp_path, medida
 ):
     """Cláusula 2 do portão ('FileGDB escrito abre no QGIS'). Não há QGIS nesta máquina (medido: 'qgis' e
     'qgis_process' ausentes do PATH) — a prova estrutural é que o pacote é um diretório `.gdb` de verdade
@@ -81,9 +81,11 @@ def test_filegdb_ida_e_volta_geometria_e_atributos_e_abre_pelo_driver_do_qgis(
         "QGIS apareceu nesta máquina depois de 06/09 — trocar a prova estrutural por abertura real"
     )
     cliente = inquilino_ic.admin
+    inicio = time.monotonic()
     final = exportar_intercambio(cliente, {"tipo": "camada", "item_id": camada_ic["item_id"],
                                            "formato": "filegdb.zip", "titulo": "zt_filegdb"},
                                  timeout=240)
+    segundos = round(time.monotonic() - inicio, 2)
     assert final["estado"] == "concluida", final.get("erro") or final
     assert final["avisos"] and "OpenFileGDB" in final["avisos"][0], final["avisos"]
     caminho = baixar_intercambio(cliente, final["id"], tmp_path / "saida_filegdb.zip")
@@ -100,6 +102,17 @@ def test_filegdb_ida_e_volta_geometria_e_atributos_e_abre_pelo_driver_do_qgis(
     # desta instalação) — é o driver que o QGIS delega ao GDAL para ler .gdb
     r = subprocess.run(["ogrinfo", "--formats"], capture_output=True, text=True, timeout=30)
     assert "OpenFileGDB -raster,vector- (rw+v)" in r.stdout, r.stdout
+    medida("L6-02-o-importacao-exportacao-formatos")(
+        "filegdb_segundos", segundos, "s (pedido -> zip do .gdb pronto, 2 mil feições)",
+        "tests/api/intercambio/test_exportacao.py::"
+        "test_filegdb_ida_e_volta_geometria_e_atributos_e_abre_pelo_driver_do_qgis",
+    )
+    medida("L6-02-o-importacao-exportacao-formatos")(
+        "filegdb_feicoes_relidas", total, "feições relidas do .gdb pelo driver OpenFileGDB (origem: "
+        f"{FEICOES_PEQUENA})",
+        "tests/api/intercambio/test_exportacao.py::"
+        "test_filegdb_ida_e_volta_geometria_e_atributos_e_abre_pelo_driver_do_qgis",
+    )
 
 
 # ------------------------------------------------------------ 2: refutação — aviso de truncamento do shapefile

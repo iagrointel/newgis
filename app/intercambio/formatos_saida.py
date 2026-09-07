@@ -130,14 +130,23 @@ FORMATOS_SAIDA: dict[str, FormatoSaida] = {
 # Paridade com o que o GDAL desta máquina lê/escreve mas NÓS não oferecemos, com o motivo — a resposta
 # "temos / não temos" da rota GET /api/intercambio/formatos (nunca um total de formatos).
 NAO_TEMOS: tuple[dict, ...] = (
-    {"formato": "DXF/DWG (saída)", "motivo": "o formato CAD não tem tabela de atributos; a cláusula "
-     "geometria+atributos preservados falharia. Entrada de DXF/DWG: item irmão L0-04-e-formatos-cad."},
+    {"formato": "DXF (saída no intercâmbio em lote)",
+     "motivo": "o formato CAD não tem tabela de atributos, então a cláusula 'geometria E atributos "
+     "preservados' deste item falharia. A exportação avulsa (POST /api/exportacoes, item L0-04-h) OFERECE "
+     "DXF, declarando que os atributos não vão. Entrada de DXF/DWG: item irmão L0-04-e-formatos-cad."},
+    {"formato": "GeoParquet (saída no intercâmbio em lote)",
+     "motivo": "o driver Parquet está ausente do GDAL 3.8.4 desta máquina (medido em ogrinfo --formats, "
+     "06/09/2026). A exportação avulsa (L0-04-h) gera GeoParquet por outro caminho (DuckDB), que não vale "
+     "para o escrow multicamada nem para o lote."},
     {"formato": "MSSQLSpatial", "motivo": "o driver existe no GDAL 3.8.4 da máquina, mas não há servidor "
      "SQL Server para provar ida e volta; sem prova, não se oferece."},
-    {"formato": "GeoParquet", "motivo": "driver Parquet ausente do GDAL 3.8.4 desta máquina (medido em "
-     "ogrinfo --formats, 06/09/2026)."},
     {"formato": "Oracle (OCI)", "motivo": "driver OCI ausente do GDAL 3.8.4 desta máquina (medido em "
      "ogrinfo --formats, 06/09/2026)."},
+    {"formato": "entrada de KML/KMZ, XLSX, FileGDB, GeoJSONSeq, DXF/DWG",
+     "motivo": "a IMPORTAÇÃO desta instalação lê 4 formatos (shapefile.zip, gpkg, geojson, csv — item "
+     "L0-04); o lote deste item chama esses mesmos conversores N vezes, não acrescenta formato de entrada. "
+     "Os formatos de entrada novos são dos itens irmãos L0-04-e (CAD) e L0-04-f (FileGDB). A lista viva de "
+     "entrada é o campo `importacao` desta mesma resposta."},
 )
 
 # Formatos de ENTRADA novos deste item (a ingestão dos 4 originais é do L0-04); a paridade completa de
