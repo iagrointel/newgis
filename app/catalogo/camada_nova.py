@@ -68,7 +68,11 @@ def criar_camada(
     campos_ok, mapa = normalizar_campos(campos)
     item_id = str(uuid.uuid4())
     schema, tabela = f"d_{slug}", tabela_de(item_id)
-    cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))
+    # GRANT no schema compartilhado disputa o mesmo registro de catálogo entre trilhas ("tuple concurrently
+    # updated"); só garante o schema quando ele ainda não existe
+    cur.execute("SELECT 1 FROM pg_namespace WHERE nspname = %s", (schema,))
+    if cur.fetchone() is None:
+        cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))
     colunas = "".join(
         f', "{c["nome"]}" {c["tipo"]}' + ("" if c.get("nulavel", True) else " NOT NULL") for c in campos_ok
     )
