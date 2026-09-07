@@ -1,0 +1,87 @@
+{
+ "item": "L3-07-agregacao",
+ "medidas": {
+  "tempo_agregacao_4346_feicoes_73115_celulas_ms": {
+   "valor": 4530.7,
+   "unidade": "ms",
+   "comando": "app.amc.agregacao.agregar() sobre cbre.imoveis_candidatos x cbre.hex_fav (10 fatores comparáveis, 73.115 células); carga_1min=14.79, ram_livre_gb=8.55, medido_em=2026-09-07T16:34:25Z"
+  },
+  "tempo_agregacao_python_total_ms": {
+   "valor": 4538.1,
+   "unidade": "ms",
+   "comando": "tempo de parede do fixture 'agregado' (inclui fetch de 4.346 linhas); carga_1min=14.79, ram_livre_gb=8.55, medido_em=2026-09-07T16:34:25Z"
+  },
+  "reproducao_f_decl_taxa": {
+   "valor": 1.0,
+   "unidade": "fração de feições com |Δ| <= 0,5",
+   "comando": "comparação por feição de agregacao.agregar()[...].fatores_media/f_decl contra cbre.imoveis_fav.f_decl, n=4346"
+  },
+  "reproducao_f_zon_taxa": {
+   "valor": 1.0,
+   "unidade": "fração de feições com |Δ| <= 0,5",
+   "comando": "comparação por feição de agregacao.agregar()[...].fatores_media/f_zon contra cbre.imoveis_fav.f_zon, n=4346"
+  },
+  "reproducao_f_gru_taxa": {
+   "valor": 1.0,
+   "unidade": "fração de feições com |Δ| <= 0,5",
+   "comando": "comparação por feição de agregacao.agregar()[...].fatores_media/f_gru contra cbre.imoveis_fav.f_gru, n=4346"
+  },
+  "reproducao_f_rod_taxa": {
+   "valor": 1.0,
+   "unidade": "fração de feições com |Δ| <= 0,5",
+   "comando": "comparação por feição de agregacao.agregar()[...].fatores_media/f_rod contra cbre.imoveis_fav.f_rod, n=4346"
+  },
+  "reproducao_f_disp_taxa": {
+   "valor": 1.0,
+   "unidade": "fração de feições com |Δ| <= 0,5",
+   "comando": "comparação por feição de agregacao.agregar()[...].fatores_media/f_disp contra cbre.imoveis_fav.f_disp, n=4346"
+  },
+  "reproducao_f_ener_taxa": {
+   "valor": 1.0,
+   "unidade": "fração de feições com |Δ| <= 0,5",
+   "comando": "comparação por feição de agregacao.agregar()[...].fatores_media/f_ener contra cbre.imoveis_fav.f_ener, n=4346"
+  },
+  "reproducao_f_agua_taxa": {
+   "valor": 1.0,
+   "unidade": "fração de feições com |Δ| <= 0,5",
+   "comando": "comparação por feição de agregacao.agregar()[...].fatores_media/f_agua contra cbre.imoveis_fav.f_agua, n=4346"
+  },
+  "reproducao_f_restr_taxa": {
+   "valor": 1.0,
+   "unidade": "fração de feições com |Δ| <= 0,5",
+   "comando": "comparação por feição de agregacao.agregar()[...].fatores_media/f_restr contra cbre.imoveis_fav.f_restr, n=4346"
+  },
+  "reproducao_f_press_taxa": {
+   "valor": 1.0,
+   "unidade": "fração de feições com |Δ| <= 0,5",
+   "comando": "comparação por feição de agregacao.agregar()[...].fatores_media/f_press contra cbre.imoveis_fav.f_press, n=4346"
+  },
+  "reproducao_f_dens_taxa": {
+   "valor": 1.0,
+   "unidade": "fração de feições com |Δ| <= 0,5",
+   "comando": "comparação por feição de agregacao.agregar()[...].fatores_media/f_dens contra cbre.imoveis_fav.f_dens, n=4346"
+  },
+  "reproducao_n_cel_taxa": {
+   "valor": 1.0,
+   "unidade": "fração de feições com |Δ| <= 0,5",
+   "comando": "comparação por feição de agregacao.agregar()[...].fatores_media/n_cel contra cbre.imoveis_fav.n_cel, n=4346"
+  },
+  "reproducao_pct_vetado_taxa": {
+   "valor": 1.0,
+   "unidade": "fração de feições com |Δ| <= 0,5",
+   "comando": "comparação por feição de agregacao.agregar()[...].fatores_media/pct_vetado contra cbre.imoveis_fav.pct_vetado, n=4328"
+  },
+  "reproducao_veto_principal_taxa": {
+   "valor": 0.99653,
+   "unidade": "fração de feições com |Δ| <= 0,5",
+   "comando": "comparação por feição de agregacao.agregar()[...].fatores_media/veto_principal contra cbre.imoveis_fav.veto_principal, n=4328"
+  },
+  "excecoes_mine_veredito_veto_mineracao": {
+   "valor": 18,
+   "unidade": "feições",
+   "comando": "cbre.imoveis_fav onde mine_veredito='veto_mineracao' — pct_vetado/veto_principal sobrescritos por regra de negócio alheia à geometria, excluídos da comparação de pct_vetado/veto_principal"
+  }
+ },
+ "gerado_em": "2026-09-07T16:34:25Z",
+ "git_sha": "95597d5c56b4"
+}
