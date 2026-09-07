@@ -989,3 +989,29 @@ que serve o ladrilho), `app/imagens/rotas_tiles.py` (rotas e autorização), `ap
 Três decisões que não se refazem sem ler o ADR: token no caminho (não em query, não URL que expira);
 chave de cache sem o token, o que OBRIGA a subrequisição de autorização a conferir também o dono do
 item; e recusa em 403, nunca 401.
+
+## 18.1 CDN de ladrilho (item L7-26-cdn-tiles, ADR 20260907T1522)
+
+Camada NOVA na frente do fluxo acima, num hostname separado (`tiles-<x>`, proxied pela Cloudflare;
+`<x>` da aplicação continua DNS-only, D19):
+
+```
+cliente -> CDN (hostname tiles-<x>; simulada localmente por scripts/cdn_simulada.py)
+             chave de cache = CAMINHO sem query string
+             cache elegível se Cache-Control da origem permitir (respeita o TTL da origem)
+        -> [MISS] origem (o fluxo do §18, sem alteração)
+```
+
+`item@versao` (`versao` = 12 chars do sha256 de `plat.raster_item`) faz `_servir`
+(`app/imagens/rotas_tiles.py`) responder `Cache-Control: public, max-age=31536000, immutable` —
+elegível a ficar na CDN para sempre, porque o endereço nunca muda de conteúdo. A checagem de
+INQUILINO (`_fonte_do_item`, RLS via `plat.raster_item`) acontece SEMPRE antes da checagem de
+VERSÃO — inverter isso vaza, pela diferença 403×404, que um item de outro inquilino existe com um
+sha256 conhecido (achado corrigido nesta bancada, com teste de regressão em
+`tests/api/imagens/test_cdn_tiles.py::test_versao_de_item_de_outro_inquilino_e_403_nunca_404`).
+
+Purge por prefixo de caminho (`/svc/<token>/`) tem de repetir por ≥ `AUTH_TTL_S` (2 s) depois de
+revogar um token — a origem ainda cacheia a autorização por esses 2 s, e uma chamada dentro dessa
+janela recacheia um 200 morto por mais 1 ano (ver ADR 20260907T1522 §3 e `docs/CDN.md`). Sem acesso
+à conta Cloudflare real, o DNS/Cache Rule/purge de produção são PENDENTE DO DONO, documentado em
+`docs/CDN.md` com o passo a passo exato.

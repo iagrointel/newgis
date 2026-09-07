@@ -3,6 +3,31 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 5, setembro de 2026 (item L7-26-cdn-tiles: CDN de ladrilho — endereço versionado, purge por prefixo)
+
+Camada de CDN em frente ao ladrilho raster do L1-02: endereço `/svc/<token>/raster/<item>@<versao>/{z}/{x}/{y}`,
+`<versao>` = 12 caracteres do sha256 já gravado em `plat.raster_item` desde L1-01-a. Casar com o sha256
+vigente → `Cache-Control: public, max-age=31536000, immutable` + `ETag`; não casar → `404 versao_inexistente`
+sem ler o pixel — e a checagem de INQUILINO acontece antes da checagem de VERSÃO (achado desta bancada: sem
+essa ordem, um token de outro inquilino pedindo `item-alheio@versao` recebia 404, vazando pela diferença de
+código que aquele item existe com aquele sha256 em algum lugar; corrigido, com teste de regressão). O
+`tilejson.json` já devolve a URL versionada — o cliente de mapa nunca precisa saber que "versão" existe.
+
+⛔ Sem acesso à conta Cloudflare real: nenhum DNS, nenhuma Cache Rule, nenhum purge de produção foi tocado.
+O que foi medido de verdade contra sockets reais (`scripts/cdn_simulada.py`, um proxy HTTP simulando o
+mecanismo de uma Cache Rule "cache everything" com chave sem query string, cf-cache-status e purge por
+prefixo — não é a Cloudflare, é a mesma classe de mecanismo): `tests/medidas/L7-26-cdn-tiles.json` via
+`scripts/prova_cdn.py` — 2ª chamada HIT, revogar+purgar+3ª chamada 403 em 2,1 s (< 60 s), 87,5% de acerto
+numa rodada de navegação simulada (96 pedidos, 12 ladrilhos distintos), e a API da aplicação sem cabeçalho
+de cache de CDN. **Achado registrado (`docs/adr/20260907T1522-cdn-tiles.md`, seção 3)**: o cache de
+autorização da origem (2 s, já existia no L1-02) pode fazer um purge só-uma-vez ser recacheado por um 200
+morto se a chamada seguinte cair dentro da janela — o procedimento de purge tem de repetir por ≥ 2 s depois
+da revogação, documentado em `docs/CDN.md` junto com o comando real de purge e o passo a passo pendente do
+dono (DNS, Cache Rule, webhook de revogação, decisão de saída para Bunny/R2 acima de ~1 TB/mês).
+
+Refutação: martelar a URL revogada 20× depois do purge (0 de 20 com 200/HIT) e trocar só o token no mesmo
+item de outro inquilino pela CDN (403, não vaza pelo cache) — `laco/handoffs/T5/L7-26-cdn-tiles/refutacao.json`.
+
 ## turno 5, setembro de 2026 (item L2-02-a-modelo-estilo: o estilo de uma camada vira documento versionado)
 
 O tipo `estilo` deixa de ter `corpo` livre e passa a carregar o **JSON Schema publicado**
