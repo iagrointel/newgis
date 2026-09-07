@@ -1,0 +1,77 @@
+{
+ "_formato": "cada exceção suspende o bloqueio de UM achado da varredura de segurança (`make seguranca`, scripts/varredura_seguranca.py) até `prazo` (YYYY-MM-DD); depois do prazo volta a bloquear sozinha. `ferramenta` em bandit|npm|gitleaks|trivy|zap (pip-audit continua em docs/excecoes_cve.json, item L7-03-f); `id` é o identificador do achado como a ferramenta imprime (B310, DS-0002, 10038, generic-api-key, GHSA-...); `arquivo` (glob, opcional) e `pacote` (opcional) estreitam o alvo. Toda entrada precisa de motivo, prazo, registrado_em e quem — sem prazo a varredura reprova a própria lista. Ver docs/SEGURANCA.md seção 9.",
+ "excecoes": [
+  {
+   "ferramenta": "bandit",
+   "id": "B310",
+   "arquivo": "app/saude.py",
+   "motivo": "urlopen com URL fixada em código (Garage/serviços locais em http://127.0.0.1); nenhuma parte da URL vem de entrada externa. Reavaliar ao trocar por httpx, que já é dependência.",
+   "prazo": "2026-12-06",
+   "registrado_em": "2026-09-07",
+   "quem": "HARD-01 (líder de endurecimento)"
+  },
+  {
+   "ferramenta": "bandit",
+   "id": "B310",
+   "arquivo": "docs/xsd/baixar_iso19139.py",
+   "motivo": "script de manutenção baixa o XSD oficial de URL https fixada em código; roda à mão, nunca na API.",
+   "prazo": "2026-12-06",
+   "registrado_em": "2026-09-07",
+   "quem": "HARD-01 (líder de endurecimento)"
+  },
+  {
+   "ferramenta": "bandit",
+   "id": "B310",
+   "arquivo": "scripts/prova_garage_chave_s3.py",
+   "motivo": "prova do item L7-19 contra http://127.0.0.1 fixado; não é caminho de produto.",
+   "prazo": "2026-12-06",
+   "registrado_em": "2026-09-07",
+   "quem": "HARD-01 (líder de endurecimento)"
+  },
+  {
+   "ferramenta": "bandit",
+   "id": "B310",
+   "arquivo": "scripts/prova_segredos_l7_19.py",
+   "motivo": "prova do item L7-19 contra http://127.0.0.1 fixado; não é caminho de produto.",
+   "prazo": "2026-12-06",
+   "registrado_em": "2026-09-07",
+   "quem": "HARD-01 (líder de endurecimento)"
+  },
+  {
+   "ferramenta": "bandit",
+   "id": "B310",
+   "arquivo": "scripts/segredo_rotacionar.py",
+   "motivo": "mede /saude e a Admin API do Garage em http://127.0.0.1 fixado durante a rotação (L7-19); esquema nunca vem de fora.",
+   "prazo": "2026-12-06",
+   "registrado_em": "2026-09-07",
+   "quem": "HARD-01 (líder de endurecimento)"
+  },
+  {
+   "ferramenta": "bandit",
+   "id": "B310",
+   "arquivo": "scripts/varredura_dependencias.py",
+   "motivo": "consulta https://api.osv.dev fixada em código (L7-03-f); o id do CVE entra só no caminho, nunca no esquema/host.",
+   "prazo": "2026-12-06",
+   "registrado_em": "2026-09-07",
+   "quem": "HARD-01 (líder de endurecimento)"
+  },
+  {
+   "ferramenta": "trivy",
+   "id": "DS-0002",
+   "arquivo": "deploy/Dockerfile.worker",
+   "motivo": "o contêiner parte como root DE PROPÓSITO e solta privilégio para `plat` via setpriv no entrypoint antes de importar o worker (comentário no próprio Dockerfile, item L0-05-e); trivy só vê a ausência de `USER`.",
+   "prazo": "2027-03-07",
+   "registrado_em": "2026-09-07",
+   "quem": "HARD-01 (líder de endurecimento)"
+  },
+  {
+   "ferramenta": "zap",
+   "id": "10055",
+   "arquivo": "/api/docs",
+   "motivo": "swagger-ui em /api/docs arranca por script inline gerado pelo FastAPI (get_swagger_ui_html, sem nonce); o CSP desse bloco do nginx libera 'unsafe-inline' SÓ ali. Saída: servir o arranque como arquivo de web/vendor e tirar o unsafe-inline (candidato a item HARD).",
+   "prazo": "2026-12-06",
+   "registrado_em": "2026-09-07",
+   "quem": "HARD-01 (líder de endurecimento)"
+  }
+ ]
+}
