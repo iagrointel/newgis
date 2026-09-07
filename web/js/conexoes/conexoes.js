@@ -156,6 +156,134 @@ async function carregar() {
   for (const c of s.itens) corpo.append(linha(c));
 }
 
+/* ---- descoberta por catálogo CSW 2.0.2 (item L6-06-descoberta-csw): POST /api/csw/buscar lista registros ISO
+   19139 com os serviços WMS/WFS/WMTS que declaram COM endereço; POST /api/csw/conexoes cria as conexões num
+   clique. Registro sem serviço ligado: a linha diz "sem serviço ligado" e o botão fica desativado — a API também
+   recusa (422 sem_servico_ligado), a tela só não deixa o clique acontecer. */
+const csw = { url: '', texto: '', bbox: null, inicio: 1, total: 0, proximo: null };
+
+function bboxDoCampo(texto) {
+  const t = (texto || '').trim();
+  if (!t) return null;
+  const partes = t.split(/[,;\s]+/).filter(Boolean).map(Number);
+  if (partes.length !== 4 || partes.some((n) => Number.isNaN(n))) {
+    throw new Error('extensão precisa ter 4 números: oeste, sul, leste, norte');
+  }
+  return partes;
+}
+
+function badgeServico(s) {
+  return h('span', { class: 'marcador info', title: `${s.protocolo || 'service= na URL'} — ${s.url_declarada}` },
+    `${s.tipo.toUpperCase()}${s.camada ? ` · ${s.camada}` : ''}`);
+}
+
+function celulaServicos(reg) {
+  if (reg.sem_servico) {
+    return h('span', { class: 'marcador atencao', title: (reg.avisos || []).join('; ') }, 'sem serviço ligado');
+  }
+  return h('span', {}, ...reg.servicos.flatMap((s, i) => (i ? [' ', badgeServico(s)] : [badgeServico(s)])));
+}
+
+function detalheRegistro(reg) {
+  const dialogo = porId('dialogo');
+  const corpo = h('div', {},
+    linhaProcedencia('identificador', reg.identificador),
+    linhaProcedencia('organização', reg.organizacao),
+    linhaProcedencia('resumo', reg.resumo),
+    linhaProcedencia('data do dado', reg.data_do_dado),
+    linhaProcedencia('data do metadado', reg.data_metadado),
+    linhaProcedencia('licença (texto declarado)', reg.licenca),
+    linhaProcedencia('restrições (códigos)', (reg.restricoes || []).join(', ')),
+    linhaProcedencia('palavras-chave', (reg.palavras_chave || []).join(', ')),
+    linhaProcedencia('extensão', reg.bbox ? reg.bbox.join(', ') : null),
+    h('p', {}, h('strong', {}, 'serviços declarados com endereço: '),
+      reg.sem_servico ? h('em', {}, 'sem serviço ligado') : celulaServicos(reg)),
+    reg.avisos && reg.avisos.length ? h('p', { class: 'ajuda' }, `ressalvas: ${reg.avisos.join('; ')}`) : null);
+  dialogo.abrir({ titulo: reg.titulo || 'registro', corpo, botoes: [{ id: 'fechar', rotulo: 'fechar' }] }).then(() => {});
+}
+
+async function criarConexoesDoRegistro(reg, botao) {
+  botao.disabled = true;
+  aviso('csw-aviso', '');
+  const r = await api.enviar('/api/csw/conexoes', { url: csw.url, identificador: reg.identificador });
+  botao.disabled = false;
+  if (r.status !== 201) {
+    const erro = r.json && r.json.erro;
+    aviso('csw-aviso', erro === 'sem_servico_ligado'
+      ? `sem serviço ligado: o registro "${reg.titulo || reg.identificador}" não declara WMS/WFS/WMTS com endereço — nenhuma conexão criada`
+      : `não foi possível criar as conexões de "${reg.titulo || reg.identificador}": ${api.mensagemDe(r)}`);
+    return;
+  }
+  const criadas = r.json.conexoes.filter((c) => c.criada).length;
+  const reaproveitadas = r.json.conexoes.length - criadas;
+  aviso('csw-aviso',
+    `${criadas} conexão(ões) criada(s)${reaproveitadas ? `, ${reaproveitadas} já existia(m)` : ''} a partir de "${reg.titulo || reg.identificador}"; a ficha de procedência veio do registro ISO`,
+    'ok');
+  await carregar();
+}
+
+function linhaRegistro(reg) {
+  const btVer = h('button', { type: 'button', class: 'pequeno' }, 'ficha');
+  btVer.addEventListener('click', () => detalheRegistro(reg));
+  const btCriar = h('button', { type: 'button', class: 'pequeno primario', disabled: reg.sem_servico },
+    reg.sem_servico ? 'sem serviço ligado' : `criar ${reg.servicos.length} conexão(ões)`);
+  if (!reg.sem_servico) btCriar.addEventListener('click', () => criarConexoesDoRegistro(reg, btCriar));
+  return h('tr', { dataset: { identificador: reg.identificador || '', semServico: String(reg.sem_servico) } },
+    h('td', {}, reg.titulo || h('em', {}, 'sem título')),
+    h('td', {}, reg.organizacao || h('em', {}, 'não registrado')),
+    h('td', {}, reg.data_do_dado || h('em', {}, 'não registrado')),
+    h('td', {}, celulaServicos(reg)),
+    h('td', {}, btVer, ' ', btCriar));
+}
+
+async function buscarCsw(continuar) {
+  aviso('csw-aviso', '');
+  const form = porId('csw-form');
+  if (!continuar) {
+    csw.url = form.elements.url.value.trim();
+    csw.texto = form.elements.texto.value.trim();
+    try {
+      csw.bbox = bboxDoCampo(form.elements.bbox.value);
+    } catch (e) {
+      aviso('csw-aviso', e.message);
+      return;
+    }
+    csw.inicio = 1;
+    limpar(porId('csw-corpo'));
+  }
+  if (!csw.texto && !csw.bbox) {
+    aviso('csw-aviso', 'informe um texto e/ou uma extensão');
+    return;
+  }
+  const btBuscar = porId('csw-buscar');
+  btBuscar.disabled = true;
+  const r = await api.enviar('/api/csw/buscar', {
+    url: csw.url, texto: csw.texto || null, bbox: csw.bbox, inicio: csw.inicio, maximo: 10,
+  });
+  btBuscar.disabled = false;
+  if (r.status !== 200) {
+    aviso('csw-aviso', `o catálogo não respondeu de forma utilizável: ${api.mensagemDe(r)}`);
+    return;
+  }
+  csw.total = r.json.total;
+  csw.proximo = r.json.proximo;
+  const corpo = porId('csw-corpo');
+  for (const reg of r.json.registros) corpo.append(linhaRegistro(reg));
+  porId('csw-lista').hidden = false;
+  const mostrados = corpo.querySelectorAll('tr').length;
+  porId('csw-resumo').textContent = csw.total
+    ? `${mostrados} de ${csw.total} registro(s)`
+    : 'nenhum registro encontrado';
+  porId('csw-mais').hidden = !csw.proximo;
+}
+
+function ligarCsw() {
+  const form = document.getElementById('csw-form');
+  if (!form) return;
+  form.addEventListener('submit', (e) => { e.preventDefault(); buscarCsw(false); });
+  porId('csw-mais').addEventListener('click', () => { csw.inicio = csw.proximo || 1; buscarCsw(true); });
+}
+
 function layout(usuario) {
   montarLayout({ usuario: usuario || { inquilino: {}, login: '', nome: '', perfil: '' }, ativo: '/conexoes' });
   if (!usuario) {
@@ -180,6 +308,7 @@ async function principal() {
   }
   s.usuario = usuario;
   layout(usuario);
+  ligarCsw();
   await carregar();
 }
 
