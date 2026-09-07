@@ -478,7 +478,7 @@ próprios; falta só o item na varredura genérica. Ver `docs/PARIDADE.md` e `la
 | (este) | Metadado ISO 19139 por item e catálogo externo OGC API Records (item L0-09-metadado-catalogo) |
 ## turno 3, setembro de 2026 (itens L3-01-a-modelo-dado e L3-01-b-unidades: motor multicritério — modelo, proveniência e unidade de análise)
 
-Migração `045_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
+Migração `20260907T1206_amc.sql` (idempotente) cria sete tabelas em `plat`, todas com RLS por inquilino: `amc_modelo` (cabeça
 editável) e `amc_modelo_versao` (toda versão que já existiu, imutável para a aplicação por gatilho), `amc_conjunto_unidade`
 e `amc_unidade`, `amc_execucao` (proveniência congelada), `amc_fator_bruto` e `amc_resultado` — linhas por (execução,
 unidade, fator), nunca uma coluna por fator. `amc_resultado` tem `CHECK` que impede unidade vetada de carregar número na
@@ -550,7 +550,11 @@ O laudo `laco/handoffs/T3/L3-01-ADVERSARIO.md` refutou o item em cinco frentes; 
    teste interno"), então a mudança de regra não invalida histórico de ninguém.
 
 Os 12 `xfail(strict=True)` do adversário viraram prova permanente (as marcas saíram; nenhuma asserção foi afrouxada).
-A migração `044_amc.sql` foi renumerada para **`045_amc.sql`**: a árvore principal publicou `044_uploads.sql`.
+A migração `044_amc.sql` foi renumerada para `045_amc.sql` (a árvore principal publicou `044_uploads.sql`) e depois,
+na junção com `master`, para **`20260907T1206_amc.sql`**: a numeração de três dígitos está FECHADA em 048 (ADR 0014,
+`app.migracoes.ULTIMO_LEGADO`), e `045` já era usado por `045_geocodificador.sql` na árvore principal. Conferido antes
+do renome: `045_amc.sql` nunca foi aplicado sob esse nome em nenhum ambiente (produção `plat`, homologação nem
+qualquer schema de trilha `plat_t*`) — o renome é seguro, sem entrada órfã para limpar em `versao_migracao`.
 
 ## turno 3, setembro de 2026 (item L0-08-d-ldap: LDAP/Active Directory como provedor de login externo)
 
