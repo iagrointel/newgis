@@ -1081,19 +1081,19 @@ reprova se algum deles for digitado à mão ou ficar diferente do arquivo de med
 
 Até **50.000** unidades de análise a combinação é feita no navegador: mudar um peso recalcula a nota na
 hora, sem ida ao servidor e sem gastar job. No maior tamanho que ele aceita — 50.000 unidades × 15 fatores
-— o recálculo leva **20,53 ms**.
+— o recálculo leva **21,18 ms**.
 
 Acima de 50.000 o navegador RECUSA, com o erro `unidades_demais_para_o_navegador`, e a conta passa ao
 servidor. Não existe meio-termo: ele não combina uma parte nem trava a aba.
 
-No servidor a mesma conta leva **0,0028 s** para 10 mil unidades, **0,0219 s** para 100 mil e
-**0,9455 s** para 1 milhão, sempre com 15 fatores. O prazo declarado para 1 milhão é 5 segundos.
+No servidor a mesma conta leva **0,0011 s** para 10 mil unidades, **0,0808 s** para 100 mil e
+**0,9734 s** para 1 milhão, sempre com 15 fatores. O prazo declarado para 1 milhão é 5 segundos.
 
 ### 22.2 Quanta memória
 
 A recombinação é feita em blocos de 50.000 unidades, e o pico de memória é o de UM bloco: multiplicar o
 conjunto por dez multiplica o número de blocos, nunca o pico. Um processo que recombina 1 milhão de
-unidades × 15 fatores em 20 blocos chega a **70,25 MB** de pico, interpretador e numpy incluídos.
+unidades × 15 fatores em 20 blocos chega a **70,26 MB** de pico, interpretador e numpy incluídos.
 
 O job `amc.recombinar` pede o menor entre o teto declarado do produto (4 GB) e o teto da máquina
 (`PLAT_WORKER_MEMORIA_MB`, 1024 MB nesta instalação). Quem aplica o teto é o `RLIMIT_DATA` do processo
@@ -1102,9 +1102,9 @@ filho da fila, não uma promessa deste texto.
 ### 22.3 Quanto cabe na extração — o limite que o produto declara
 
 A extração de fator é o passo caro. Medido com a estatística zonal real sobre um GeoTIFF:
-**701,34 microssegundos por unidade e por fator**.
+**698,93 microssegundos por unidade e por fator**.
 
-Nessa taxa, extrair **1 milhão de células × 15 fatores levaria 10.520,1 segundos**, isto é, quase
+Nessa taxa, extrair **1 milhão de células × 15 fatores levaria 10.483,9 segundos**, isto é, quase
 **3 horas** — bem acima do prazo de **1.800 segundos** (30 minutos) que o job tem. Por isso o motor
 **recusa esse trabalho antes de enfileirá-lo**, com o erro `prazo_projetado_estourado` e o número na
 mensagem, em vez de gastar meia hora de máquina para o relógio matar o job no fim.

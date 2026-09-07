@@ -2,87 +2,87 @@
  "item": "L3-16-desempenho-escala",
  "medidas": {
   "recombinacao_10000x15_servidor_s": {
-   "valor": 0.0028,
+   "valor": 0.0011,
    "unidade": "s",
    "estado": "medido",
    "comando": "mediana de 20 chamadas a app.amc.combinacao.combinar() sobre 10000 unidades × 15 fatores (soma_ponderada, 10% de ausência sorteada), o mesmo caminho do job amc.recombinar",
-   "carga_1min": 6.74,
-   "ram_livre_gb": 7.66,
-   "medido_em": "2026-09-07T19:13:56Z"
+   "carga_1min": 2.84,
+   "ram_livre_gb": 7.49,
+   "medido_em": "2026-09-07T19:19:42Z"
   },
   "recombinacao_100000x15_servidor_s": {
-   "valor": 0.0219,
+   "valor": 0.0808,
    "unidade": "s",
    "estado": "medido",
    "comando": "mediana de 20 chamadas a app.amc.combinacao.combinar() sobre 100000 unidades × 15 fatores (soma_ponderada, 10% de ausência sorteada), o mesmo caminho do job amc.recombinar",
-   "carga_1min": 6.74,
-   "ram_livre_gb": 7.66,
-   "medido_em": "2026-09-07T19:13:56Z"
+   "carga_1min": 2.84,
+   "ram_livre_gb": 7.49,
+   "medido_em": "2026-09-07T19:19:42Z"
   },
   "recombinacao_1000000x15_servidor_s": {
-   "valor": 0.9455,
+   "valor": 0.9734,
    "unidade": "s",
    "estado": "medido",
    "comando": "mediana de 5 chamadas a app.amc.combinacao.combinar() sobre 1000000 unidades × 15 fatores (soma_ponderada, 10% de ausência sorteada), o mesmo caminho do job amc.recombinar",
-   "carga_1min": 6.74,
-   "ram_livre_gb": 7.66,
-   "medido_em": "2026-09-07T19:13:56Z"
+   "carga_1min": 2.84,
+   "ram_livre_gb": 7.49,
+   "medido_em": "2026-09-07T19:19:42Z"
   },
   "pico_ram_recombinacao_1mi_em_blocos_mb": {
-   "valor": 70.25,
+   "valor": 70.26,
    "unidade": "MB",
    "estado": "medido",
    "comando": "VmHWM (pico de RSS) de um processo Python que recombina 1.000.000 de unidades × 15 fatores em 20 blocos de 50000, com 1 thread de BLAS como o worker faz (interpretador e numpy incluídos); o job amc.recombinar pede 1024 MB e o modelo de app/amc/escala.py prevê 306.35 MB",
-   "carga_1min": 6.52,
-   "ram_livre_gb": 7.51,
-   "medido_em": "2026-09-07T19:14:02Z"
+   "carga_1min": 3.1,
+   "ram_livre_gb": 7.52,
+   "medido_em": "2026-09-07T19:19:49Z"
   },
   "extracao_por_unidade_por_fator_us": {
-   "valor": 701.34,
+   "valor": 698.93,
    "unidade": "µs",
    "estado": "medido",
-   "comando": "app.amc.zonal.extrair(raster_media) sobre 2000 células de 250 m em GeoTIFF de 10 m (400×400, nodata declarado), 272 com dado; tempo total 1.403 s",
-   "carga_1min": 6.52,
-   "ram_livre_gb": 7.46,
-   "medido_em": "2026-09-07T19:14:02Z"
+   "comando": "app.amc.zonal.extrair(raster_media) sobre 2000 células de 250 m em GeoTIFF de 10 m (400×400, nodata declarado), 272 com dado; tempo total 1.398 s",
+   "carga_1min": 3.1,
+   "ram_livre_gb": 7.53,
+   "medido_em": "2026-09-07T19:19:49Z"
   },
   "extracao_1mi_x15_projetado_s": {
-   "valor": 10520.1,
+   "valor": 10483.9,
    "unidade": "s",
    "estado": "projetado",
-   "comando": "PROJEÇÃO por multiplicação: 701.34 µs × 1.000.000 × 15 fatores. Não é medição do caso completo; o portão do item L3-01-c2-extracao-em-lote é quem mede a extração em lote de verdade. Limite do portão: 1800 s (30 min)",
-   "carga_1min": 6.52,
-   "ram_livre_gb": 7.46,
-   "medido_em": "2026-09-07T19:14:02Z"
+   "comando": "PROJEÇÃO por multiplicação: 698.93 µs × 1.000.000 × 15 fatores. Não é medição do caso completo; o portão do item L3-01-c2-extracao-em-lote é quem mede a extração em lote de verdade. Limite do portão: 1800 s (30 min)",
+   "carga_1min": 3.1,
+   "ram_livre_gb": 7.53,
+   "medido_em": "2026-09-07T19:19:49Z"
   },
   "extracao_1mi_x15_limite_do_portao_s": {
    "valor": 1800.0,
    "unidade": "s",
    "estado": "medido",
    "comando": "limites.AMC_EXTRACAO_TIMEOUT_S — prazo do job de extração declarado no portão do item",
-   "carga_1min": 6.52,
-   "ram_livre_gb": 7.46,
-   "medido_em": "2026-09-07T19:14:02Z"
+   "carga_1min": 3.1,
+   "ram_livre_gb": 7.53,
+   "medido_em": "2026-09-07T19:19:49Z"
   },
   "combinacao_navegador_50000x15_ms": {
-   "valor": 20.53,
+   "valor": 21.18,
    "unidade": "ms",
    "estado": "medido",
    "comando": "mediana de 5 chamadas a combinar() em web/js/amc/combinacao.js sobre 50000 × 15, medida com performance.now() via node (tests/amc/executar_js.mjs --desempenho); 50000 é o maior tamanho que o navegador aceita — acima disso ele recusa e a conta vai ao servidor",
-   "carga_1min": 6.39,
-   "ram_livre_gb": 7.72,
-   "medido_em": "2026-09-07T19:14:04Z"
+   "carga_1min": 3.1,
+   "ram_livre_gb": 7.41,
+   "medido_em": "2026-09-07T19:19:51Z"
   },
   "extracao_unidades_max_em_30min_com_15_fatores": {
    "valor": 166898,
    "unidade": "unidades",
    "estado": "medido",
    "comando": "maior grade que a extração termina em 1800 s com 15 fatores, à taxa medida de 719 µs por unidade e fator (app/amc/escala.py recusa acima disso com prazo_projetado_estourado)",
-   "carga_1min": 6.52,
-   "ram_livre_gb": 7.46,
-   "medido_em": "2026-09-07T19:14:02Z"
+   "carga_1min": 3.1,
+   "ram_livre_gb": 7.53,
+   "medido_em": "2026-09-07T19:19:49Z"
   }
  },
- "gerado_em": "2026-09-07T19:14:05Z",
+ "gerado_em": "2026-09-07T19:19:52Z",
  "git_sha": "471a7cf1e9b0"
 }

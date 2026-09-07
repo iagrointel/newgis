@@ -46,7 +46,7 @@ entre a aplicação e o banco virar o gargalo, a decisão se revisita com númer
 
 ## Consequência medida que muda o produto
 
-À taxa medida da estatística zonal (701 µs por unidade e por fator), extrair 1 milhão de células por 15
+À taxa medida da estatística zonal (699 µs por unidade e por fator), extrair 1 milhão de células por 15
 fatores leva quase 3 horas — seis vezes o prazo do portão. **A cláusula de extração do portão do item está
 refutada no tamanho cheio.** O limite honesto de hoje, com 15 fatores, é uma grade de 166.898 unidades, e o
 motor recusa acima disso com o número na mensagem. Isso é um limite do extrator unidade a unidade, não do

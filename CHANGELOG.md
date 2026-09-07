@@ -14,13 +14,13 @@ projetado maior que o do job). `web/js/amc/combinacao.js` passa a recusar acima 
 novo `amc.recombinar` (1 por vez na máquina, provado com dois processos de worker e duas execuções).
 
 Medidas de `tests/medidas/L3-16-desempenho-escala.json`, cada uma com `carga_1min`, `ram_livre_gb` e
-`medido_em` ao lado (carga entre 6,39 e 6,74 em 12 núcleos): recombinação no servidor de 10 mil × 15 em
-**0,0028 s**, 100 mil em **0,0219 s** e 1 milhão em **0,9455 s** (prazo do portão: 5 s); pico de memória de
-um processo que recombina 1 milhão em 20 blocos: **70,25 MB** (orçamento do job: 1024 MB nesta máquina);
-combinação de 50.000 × 15 no navegador (o maior tamanho que ele aceita): **20,53 ms**.
+`medido_em` ao lado (carga entre 2,84 e 3,10 em 12 núcleos): recombinação no servidor de 10 mil × 15 em
+**0,0011 s**, 100 mil em **0,0808 s** e 1 milhão em **0,9734 s** (prazo do portão: 5 s); pico de memória de
+um processo que recombina 1 milhão em 20 blocos: **70,26 MB** (orçamento do job: 1024 MB nesta máquina);
+combinação de 50.000 × 15 no navegador (o maior tamanho que ele aceita): **21,18 ms**.
 
-Cláusula REFUTADA e registrada como tal: à taxa medida da estatística zonal (**701,34 µs** por unidade e
-por fator), 1 milhão de células × 15 fatores levaria **10.520,1 s** — quase 3 horas contra os 1.800 s do
+Cláusula REFUTADA e registrada como tal: à taxa medida da estatística zonal (**698,93 µs** por unidade e
+por fator), 1 milhão de células × 15 fatores levaria **10.483,9 s** — quase 3 horas contra os 1.800 s do
 portão. O motor recusa esse plano com `prazo_projetado_estourado`; o limite honesto de hoje é uma grade de
 **166.898 unidades** com 15 fatores. Move esse número o item `L3-01-c2-extracao-em-lote`.
 
