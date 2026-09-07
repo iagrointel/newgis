@@ -1,0 +1,140 @@
+{
+  "agregar_pontos_em_poligonos": {
+    "poligonos_com_ponto": 1,
+    "pontos_distintos": 5
+  },
+  "agregar_pontos_grade_hexagonal": {
+    "celulas": 5,
+    "lado_m": 5000,
+    "pontos": 6
+  },
+  "agregar_pontos_grade_quadrada": {
+    "celulas": 5,
+    "lado_m": 5000,
+    "pontos": 6
+  },
+  "contagem_dupla": {
+    "metodo_publicado": "contagem dentro de cada polígono; 5 feição(ões) contada(s) em mais de um polígono (camada de resumo com sobreposição; use atribuicao='exclusivo' para evitar)",
+    "pontos_distintos_dentro": 5,
+    "soma_atribuicao_exclusiva": 5,
+    "soma_atribuicao_todos": 10
+  },
+  "enriquecer_por_area": {
+    "por_poligono": {
+      "Z1": 749.953836,
+      "Z2": 249.953836,
+      "Z3": 250.046113,
+      "Z4": 250.046113
+    },
+    "soma_distribuida": 1499.9998987906106,
+    "soma_original": 1500.0,
+    "tolerancia_relativa": 1e-06
+  },
+  "ferramentas_registradas": [
+    "agregar_pontos",
+    "contar_dentro",
+    "enriquecer_por_area",
+    "juncao_atributo",
+    "juncao_espacial",
+    "resumir_dentro",
+    "resumir_perto",
+    "tabela_distancias",
+    "vizinho_mais_proximo"
+  ],
+  "juncao_atributo_inner": {
+    "com_par": 3,
+    "linhas": 3
+  },
+  "juncao_atributo_left": {
+    "com_par": 3,
+    "linhas": 6
+  },
+  "juncao_espacial_a_distancia": {
+    "metros": 4000.0,
+    "pares": 8
+  },
+  "juncao_espacial_contem": {
+    "pares": 4
+  },
+  "juncao_espacial_dentro": {
+    "pares": 4
+  },
+  "juncao_espacial_um_para_muitos": {
+    "pares": 6
+  },
+  "juncao_espacial_um_para_um": {
+    "pares": 6,
+    "ponto_na_divisa_contado_duas_vezes": true,
+    "pontos_na_entrada": 6,
+    "zonas": 4
+  },
+  "mais_proximo_pares_conferidos": {
+    "alvos": 10,
+    "pares": 100,
+    "referencia": "pyproj.Geod WGS84",
+    "tolerancia_relativa": 1e-06
+  },
+  "ponto_na_divisa": {
+    "zonas": [
+      "Z1",
+      "Z2"
+    ]
+  },
+  "resumir_dentro_em_volume": {
+    "carga_1min": 15.05,
+    "escala_do_portao": {
+      "poligonos": 5570,
+      "pontos": 1000000,
+      "segundos_max": 60
+    },
+    "escala_do_portao_medida": false,
+    "escala_menor_porque": "disco a 93 %, carga acima de 8 e teto de 5 mil feições por teste no brief da corrida de 07/09",
+    "medido_em": "2026-09-07T22:04:08+00:00",
+    "poligonos": 400,
+    "pontos": 4001,
+    "ram_livre_gb": 5.56,
+    "segundos": 53.84
+  },
+  "resumir_dentro_linhas": {
+    "comprimentos_m": {
+      "Z1": 17034.379010706292,
+      "Z2": 8174.362675387641,
+      "Z3": 8859.925685142913,
+      "Z4": 0.0
+    },
+    "tolerancia_maior_porque": "ST_Intersection em grau e a interseção do shapely cortam o segmento em pontos que diferem no último dígito da coordenada",
+    "tolerancia_relativa": 0.0001
+  },
+  "resumir_dentro_pontos": {
+    "contagens": {
+      "Z1": 3,
+      "Z2": 2,
+      "Z3": 0,
+      "Z4": 1
+    },
+    "poligonos": 4
+  },
+  "resumir_dentro_por_grupo": {
+    "feicoes": 6
+  },
+  "resumir_perto": {
+    "contagens": {
+      "P1": 3,
+      "P2": 3,
+      "P3": 2,
+      "P4": 1,
+      "P5": 4,
+      "P6": 1
+    },
+    "metros": 6000.0,
+    "segmentos": 64
+  },
+  "tabela_distancias": {
+    "destinos": 6,
+    "origens": 6,
+    "pares": 36
+  },
+  "vizinho_mais_proximo": {
+    "feicoes": 6
+  }
+}

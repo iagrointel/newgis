@@ -118,3 +118,15 @@ def criar_camada_grade(env, sessao, n_col: int, n_lin: int, passo: float, desloc
     assert r.status_code == 201, r.text
     return {"id": r.json()["id"], "schema": schema, "tabela": tabela, "srid": 4326,
             "titulo": r.json()["titulo"], "feicoes": n_col * n_lin}
+
+
+def executar(env, slug: str, sql: str, parametros=()) -> None:
+    """SQL de ESCRITA na base da trilha, com commit (o `consultar` acima abre e fecha sem gravar).
+    Serve para semear camada de volume sem trafegar milhares de WKT pelo Python."""
+    con, _ = _conectar(env, slug)
+    try:
+        with con.cursor() as cur:
+            cur.execute(sql, parametros)
+        con.commit()
+    finally:
+        con.close()
