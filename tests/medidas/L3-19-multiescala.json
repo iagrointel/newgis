@@ -1,0 +1,47 @@
+{
+ "item": "L3-19-multiescala",
+ "medidas": {
+  "macro_celulas": {
+   "valor": 4,
+   "unidade": "células",
+   "comando": "POST /api/multiescala/conjuntos/{id}/macro, resolucao_m=1000 sobre estudo de 1.900x1.900 m"
+  },
+  "macro_celulas_aprovadas": {
+   "valor": 2,
+   "unidade": "células",
+   "comando": "aprovacao_tipo=top_pct, valor=50"
+  },
+  "micro_fator_aninhamento": {
+   "valor": 10,
+   "unidade": "×",
+   "comando": "k = resolucao macro / resolucao micro = 1.000 m / 100 m"
+  },
+  "micro_celulas_geradas": {
+   "valor": 200,
+   "unidade": "células",
+   "comando": "POST /api/multiescala/execucoes/{id}/micro, resolucao_m=100 (só dentro das macro aprovadas)"
+  },
+  "micro_celulas_possiveis": {
+   "valor": 400,
+   "unidade": "células",
+   "comando": "macro.celulas × k² — se TODA macro tivesse sido aprovada"
+  },
+  "micro_economia_pct": {
+   "valor": 50.0,
+   "unidade": "%",
+   "comando": "100 × (1 − celulas_geradas / celulas_possiveis): custo evitado por não calcular fora do aprovado"
+  },
+  "fator_1km_escala_na_grade_1km": {
+   "valor": "propria",
+   "unidade": "rótulo",
+   "comando": "GET/POST /api/multiescala/.../macro: fator de 1.000 m numa grade de 1.000 m"
+  },
+  "fator_1km_escala_na_grade_100m": {
+   "valor": "grosseira",
+   "unidade": "rótulo",
+   "comando": "mesma chamada, execução micro (resolucao_m=100) ligada à mesma macro — refutação do item"
+  }
+ },
+ "gerado_em": "2026-09-06T18:32:18Z",
+ "git_sha": "90d03c07da0c"
+}
