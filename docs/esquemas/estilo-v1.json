@@ -3,6 +3,18 @@
   "additionalProperties": false,
   "description": "Estilo de camada em duas partes (ADR do item L2-02-a; C2 do L2_CONCEITO): `maplibre` = layers da MapLibre Style Spec v8 puras, validadas pelo pacote oficial no servidor; `plat_construtor` = o que o editor precisa para reabrir o estilo (tipo, campo, método, cortes, rampa, símbolo, rótulos, faixa de escala, transparência).",
   "properties": {
+    "camada_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "camada vetorial à qual este estilo se aplica (relação estilo_de_camada; o visualizador desenha a camada com o estilo mais recente ligado a ela). Nulo = estilo solto/reutilizável (item L2-02-c)"
+    },
     "corpo": {
       "additionalProperties": false,
       "properties": {
@@ -165,6 +177,28 @@
                     "pattern": "^#[0-9a-fA-F]{6}$",
                     "type": "string"
                   },
+                  "escala_max": {
+                    "maximum": 1000000000,
+                    "minimum": 0,
+                    "type": "number"
+                  },
+                  "escala_min": {
+                    "maximum": 1000000000,
+                    "minimum": 0,
+                    "type": "number"
+                  },
+                  "icone": {
+                    "anyOf": [
+                      {
+                        "maxLength": 64,
+                        "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "rotulo": {
                     "maxLength": 250,
                     "type": "string"
@@ -195,6 +229,16 @@
                     "pattern": "^#[0-9a-fA-F]{6}$",
                     "type": "string"
                   },
+                  "escala_max": {
+                    "maximum": 1000000000,
+                    "minimum": 0,
+                    "type": "number"
+                  },
+                  "escala_min": {
+                    "maximum": 1000000000,
+                    "minimum": 0,
+                    "type": "number"
+                  },
                   "max": {
                     "type": "number"
                   },
@@ -204,6 +248,12 @@
                   "rotulo": {
                     "maxLength": 250,
                     "type": "string"
+                  },
+                  "tamanho": {
+                    "description": "classe de tamanho: raio (ponto) ou largura (linha) da faixa; ausente = só cor",
+                    "maximum": 100,
+                    "minimum": 0,
+                    "type": "number"
                   }
                 },
                 "required": [
@@ -223,6 +273,38 @@
               },
               "maxItems": 64,
               "type": "array"
+            },
+            "efeitos": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "brilho": {
+                      "description": "linha: halo desfocado (line-blur) em px; 0 = sem",
+                      "maximum": 20,
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    "mistura": {
+                      "description": "modo de mistura pedido; a Style Spec não tem blend por camada — gravado e declarado parcial em PARIDADE.md",
+                      "enum": [
+                        "normal",
+                        "multiply",
+                        "screen"
+                      ],
+                      "type": "string"
+                    },
+                    "sombra": {
+                      "description": "polígono: segunda camada deslocada e escura por baixo",
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "escala_max": {
               "description": "maior denominador de escala em que o estilo desenha; 0 = sem limite",
@@ -257,6 +339,31 @@
                 "desvio_padrao"
               ],
               "type": "string"
+            },
+            "outros": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cor": {
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "type": "string"
+                    },
+                    "rotulo": {
+                      "maxLength": 250,
+                      "type": "string"
+                    },
+                    "visivel": {
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "tipo categoria: como desenhar o que não casa com nenhuma categoria (as 200 primeiras entram em categorias; o resto é 'outros')"
             },
             "parametros_raster": {
               "additionalProperties": false,
@@ -326,6 +433,10 @@
               ],
               "description": "nome da rampa de cor aplicada (a cor concreta fica em categorias/classes/simbolo)"
             },
+            "rampa_invertida": {
+              "description": "a rampa nomeada em `rampa` foi aplicada em ordem inversa",
+              "type": "boolean"
+            },
             "rotulos": {
               "anyOf": [
                 {
@@ -386,7 +497,14 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "pattern": "^[a-z0-9][a-z0-9._/-]*$"
+                },
+                "icone_tamanho": {
+                  "description": "ponto: fator do ícone (icon-size)",
+                  "maximum": 8,
+                  "minimum": 0.1,
+                  "type": "number"
                 },
                 "largura": {
                   "maximum": 40,
@@ -398,10 +516,46 @@
                   "minimum": 0,
                   "type": "number"
                 },
+                "padrao": {
+                  "anyOf": [
+                    {
+                      "maxLength": 64,
+                      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "polígono: nome de padrão de preenchimento do sprite do inquilino (fill-pattern)"
+                },
                 "raio": {
                   "maximum": 100,
                   "minimum": 0,
                   "type": "number"
+                },
+                "seta": {
+                  "anyOf": [
+                    {
+                      "maxLength": 64,
+                      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "linha: nome do ícone do sprite repetido ao longo da linha (symbol-placement line)"
+                },
+                "tracejado": {
+                  "description": "linha: padrão de traço em unidades da largura (line-dasharray); vazio = contínua",
+                  "items": {
+                    "maximum": 40,
+                    "minimum": 0,
+                    "type": "number"
+                  },
+                  "maxItems": 8,
+                  "type": "array"
                 }
               },
               "type": "object"
