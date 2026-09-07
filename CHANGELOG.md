@@ -68,6 +68,66 @@ Fora desta passagem (fronteira honesta, ver ADR): matriz fina de permissão por 
 integração com `plat.dominio` do L2-10-a; consumidor da invalidação de tiles (L2-01-b); histórico/
 restauração de feição (L2-03-d-historico-restauracao) — a coluna `versao` cobre só a concorrência
 otimista, não um log de mudanças.
+## turno 4, setembro de 2026 (item L2-01-b-martin-tiles-vetoriais: servidor de tiles em produção, PARCIAL)
+
+Sobe o serviço Martin de verdade (v1.15.0, binário oficial, sha256 conferido; `deploy/martin.yaml`,
+`deploy/plat-martin.service`) em cima do contrato do L2-04-a, com generalização por zoom
+(`ST_SimplifyPreserveTopology` abaixo de z12) e corte de 10.000 feições por tile marcado (migração
+`20260906T1955_martin_generalizacao.sql`, já existente desta trilha antes deste turno). Duas peças novas:
+
+1. **`/internal/tiles/verificar`** (`app/tiles/rotas.py`): o Martin (`martin-core::GetTileWithQueryError`)
+   devolve 500 para QUALQUER erro do Postgres — nunca 401/403, conferido no código-fonte da tag
+   `martin-v1.15.0`. A cláusula "sem token = 401" só existe porque o nginx faz `auth_request` para esta
+   rota ANTES de repassar ao Martin. ADR `20260907T0235`.
+2. **`plat.item_da_tabela`** (migração `20260907T0213_item_da_tabela.sql`): fecha um achado do próprio
+   adversário desta rodada — a 1ª versão da rota acima recebia o item de query param do cliente, e um
+   token amplo de QUALQUER inquilino autenticava para o item de QUALQUER outro (a `escopo_cobre` só
+   compara texto do token, nunca dono do item). Agora o item vem da tabela que está na URL, nunca do
+   cliente.
+
+Medido (`tests/medidas/L2-01-b-martin-tiles-vetoriais.json`, trilha própria, Martin/nginx de teste em
+8351/8451, não a unidade de produção): camada de 100 mil pontos sintéticos — tile z8 frio p95 41,8 ms,
+quente p95 4,3 ms (limite 200/20 ms, passou); camada de 472.780 setores censitários do IBGE já na casa (a
+hipótese do item citava "1 mi", número real registrado) servida por PMTiles (tippecanoe v2.80.0, `-z14
+--drop-densest-as-needed --extend-zooms-if-still-dropping --maximum-tile-bytes=500000`) — 110 tiles
+amostrados em z4-z14, 0 erro, 1 excede 1 MB por 1,3% (z9, região metropolitana de SP); RLS cruzada,
+revogação de token e invalidação de cache por versão (0,12 s) passaram; 200 pedidos paralelos ao pior caso
+(z0 da camada de 472,8 mil) na fonte PMTiles: 200/200 OK, RAM do Martin 38-39 MB — na FUNÇÃO AO VIVO (fora
+do desenho, que é servir isso por PMTiles) o mesmo teste dá 180/200 em 500 sob a piscina pequena da trilha,
+registrado como fronteira, não escondido. PMTiles: 206 a Range, sem Content-Encoding; abertura real no
+QGIS Desktop NÃO verificada nesta máquina (sem GUI) — só o formato (magic bytes) e o protocolo HTTP.
+
+Fica de fora, honesto: `ST_Subdivide` para polígono > 4.096 vértices (nenhuma camada de teste tem isso); a
+unidade systemd `plat-martin` real não foi instalada como serviço do sistema nesta trilha (rodada como
+processo de teste); a fonte PMTiles do Martin não passa pelo mesmo `auth_request` de token que a função ao
+vivo (controle de acesso dela é o do arquivo/bucket, L0-11, fora do escopo medido).
+
+### Commits
+
+Ver `git log wt/il201bmarti` a partir do commit desta entrada.
+
+## turno 3, setembro de 2026 (item L2-04-a-leitor-rls-martin: quem serve o tile não sabe o que é inquilino)
+
+O servidor de tiles vetoriais fala direto com o PostGIS e não tem noção de sessão, privilégio ou inquilino.
+Passa a existir um **papel de banco só de leitura** — LOGIN, sem BYPASSRLS, sem ser dono de nada, com SELECT
+nas tabelas de camada e EXECUTE nas funções de tile — e uma função `plat.contexto_por_token`, que valida o
+token de serviço, confere escopo `camada:ler` e restrição de Referer/IP, grava o uso em `plat.log_acesso` e
+põe o inquilino na transação. Cada camada ganha a sua função de tile `d_<slug>.t_<16 hex>(z, x, y,
+query_params)`, criada junto com a tabela; a primeira instrução dela é o contexto por token. Contrato no ADR
+0020; o papel, a senha e a linha do `pg_hba.conf` saem de `db/leitor_instalar.sh`, chamado pelo `install.sh`.
+
+A política de RLS do papel de leitura **não olha a GUC `plat.tenant_id` crua**: qualquer papel conectado
+escreve nela, e o papel de leitura é o mesmo para todos os inquilinos. Ela olha `plat.tenant_leitor()`, que
+exige uma prova (sha256 de um segredo que nenhum papel comum lê, mais o inquilino e o processo) emitida só
+por `contexto_por_token`. Medido em `tests/medidas/L2-04-a-leitor-rls-martin.json`: `SET plat.tenant_id` feito
+pelo próprio leitor devolve **0 linhas**; **6 chamadas cruzadas** às funções de tile com o token do outro
+inquilino devolvem **0 tiles com dado**; token revogado deixa de valer em **0,002 s**; **1 linha de log por
+chamada** de contexto aceita; segunda execução do instalador = **0 mudanças**.
+
+⛔ Fronteira honesta: a linha de log de uma RECUSA é escrita e desfeita com a transação abortada (o PostgreSQL
+não tem transação autônoma) — medida `linhas_log_de_recusa_persistidas: 0`. O rastro da recusa fica no log do
+servidor (a exceção é nomeada) e no log de acesso da API. E o Martin em si não está instalado nem configurado
+por este item: o que se entrega é o contrato de banco que ele consome.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 

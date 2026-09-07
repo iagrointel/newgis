@@ -216,3 +216,10 @@ EDICAO_TEXTO_MAX = 65_536                 # 64 KiB por valor de campo texto (mes
 EDICAO_REGRA_CAMPO_MAX = 500              # entradas em dados.regras_campo (mesmo teto de campos da camada)
 EDICAO_DOMINIO_VALORES_MAX = 1_000        # valores aceitos por regra de domínio codificado
 EDICAO_SRID_MAX = 999_999                 # mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql)
+# --- motor multicritério, modelo (L3-01-a-modelo-dado; laco/decomposicao/L3L6_CONCEITO.md decisões A1/A4/A10).
+# Vocabulário e tetos do documento em docs/esquemas/amc_modelo.v1.json nascem daqui quando o número é livre
+# (o que é vocabulário FECHADO — tipos de transformação, combinador — mora só no JSON Schema, que é o contrato
+# público; aqui só os tetos de tamanho, que são os mesmos limites transversais do resto da casa).
+AMC_NOME_MAX = 250                # mesmo teto de ITEM_TITULO_MAX
+AMC_FATORES_MAX = 50              # mesmo teto de docs/esquemas/amc_modelo.v1.json fatores.maxItems
+AMC_CAMADAS_MAX = 50              # camadas de entrada declaradas por execução (A10)
