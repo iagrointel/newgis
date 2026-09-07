@@ -3,6 +3,26 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L7-34-saude-profunda: health check profundo por componente)
+
+`GET /saude/profunda` sonda 13 componentes (banco+migrações, fila -- workers vivos e idade do job
+pendente mais antigo via nova função `plat.fila_job_mais_antigo_pendente_s`, Martin, TiTiler, Garage
+via S3 + Admin API `GetClusterHealth`, worker, nginx, certificado TLS, disco, RAM, e três declarados
+`ausente` nesta topologia: CDN, backup, licença), cada uma num pool de threads próprio com tempo
+limite de 2 s -- uma sonda pendurada nunca trava o endpoint inteiro (medido: Garage e Martin
+pendurados por um servidor TCP que aceita e nunca responde viraram `erro` em 2,02 s e 1,05 s, bem
+abaixo do limite de 10 s do portão). Resposta anônima (sem sessão, para o balanceador/CDN) só tem
+nome+estado+tempo de cada componente; sessão de superadmin vê o detalhe (alvo `host:porta`, motivo,
+contagens) -- nenhuma das duas nunca inclui DSN, token do Garage/admin ou o nome do inquilino
+(varredura de texto sobre o corpo inteiro nos dois casos). `200`/`503` conforme o pior estado entre
+os componentes; `ausente` nunca eleva o estado geral. Sem UI própria neste turno (papéis do item:
+backend, adversário) -- consumido hoje só pelo balanceador e por chamada direta de admin.
+
+Retomada de sessão que morreu antes por limite do servidor ao criar o symlink do venv no worktree
+(o código e os testes já estavam prontos no disco, sem commit); corrigidos dois testes que assumiam
+detalhe (`workers_vivos`, `volumes` de disco) na sessão anônima -- esses campos só existem na versão
+admin, então passaram a usar `sessao_plat`. `tests/medidas/L7-34-saude-profunda.json`.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

@@ -1,0 +1,95 @@
+{
+ "item": "L7-34-saude-profunda",
+ "assinado_por": "backend/adversario (retomada, trilha il734saudep; sessão morreu antes por limite de servidor ao criar o symlink do venv, achado com trabalho no disco sem commit)",
+ "gerado_em": "2026-09-07T14:56:00Z",
+ "git_sha": "ca97dcb",
+ "maquina": "12 vCPU, 23 GB RAM (279 MB livres, swap 8 GB cheio, load 7,6-9,8), disco / e /mnt/pgdata a 95%; PostgreSQL 16 + PostGIS 3.6 em iagro_sat, schema de trilha plat_til734saudep",
+ "medidas": {
+  "testes_saude_profunda_passando": {
+   "valor": 8,
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/api/test_saude_profunda.py -q -> 8 passed em 5,86s (sobre ca97dcb, base da trilha il734saudep)"
+  },
+  "tempo_endpoint_com_garage_pendurado_s": {
+   "valor": 2.02,
+   "unidade": "s",
+   "comando": "test_profunda_garage_pendurado_tambem_vira_erro_sem_travar: servidor TCP que aceita e nunca responde no lugar de PLAT_GARAGE_URL/PLAT_GARAGE_ADMIN_URL; endpoint respondeu em 2,02s (limite do portão: 10s); componente garage = erro, status HTTP 503"
+  },
+  "tempo_endpoint_com_martin_pendurado_s": {
+   "valor": 1.05,
+   "unidade": "s",
+   "comando": "test_profunda_servico_pendurado_vira_erro_em_ate_10s_sem_travar: mesma técnica em PLAT_MARTIN_URL; endpoint respondeu em 1,05s; componente martin = erro, status HTTP 503"
+  },
+  "tempo_limite_por_sonda_s": {
+   "valor": 2.0,
+   "unidade": "s",
+   "comando": "constante TEMPO_LIMITE_SONDA_S em app/saude_profunda.py; cada sonda roda em ThreadPoolExecutor próprio e vira erro/tempo_limite ao estourar, sem aguardar o resultado real"
+  },
+  "componentes_sondados": {
+   "valor": 13,
+   "unidade": "componentes",
+   "comando": "banco, fila, martin, titiler, garage, worker, nginx, certificado, disco, ram, cdn_ultimo_hit, backup, licenca (COMPONENTES_ESPERADOS em tests/api/test_saude_profunda.py, conferido == chaves da resposta real)"
+  },
+  "resposta_anonima_so_estado_e_tempo": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "test_profunda_anonimo_e_resumido_sem_alvo: para cada componente da resposta sem sessão, set(componente) == {estado, tempo_ms}; nenhum campo alvo/host/porta/motivo/contagem"
+  },
+  "resposta_admin_tem_detalhe_a_mais": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "test_profunda_admin_ve_mais_mas_nunca_segredo (sessao_plat): pelo menos um componente com chave além de {estado, tempo_ms} na sessão de superadmin"
+  },
+  "varredura_sem_segredo_dsn_token_inquilino": {
+   "valor": 0,
+   "unidade": "ocorrências",
+   "comando": "_varrer_sem_segredo_nem_topologia sobre json.dumps do corpo inteiro (anônimo e admin): 0 ocorrências de 'postgresql://', de PLAT_SECRET, de PLAT_GARAGE_ADMIN_TOKEN, da credencial de PLAT_DSN/PLAT_DSN_WORKER e de PLAT_SCHEMA (nome do inquilino técnico da trilha)"
+  },
+  "fila_sem_worker_reflete_degradado": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "test_profunda_fila_real_sem_worker_e_degradada (sessao_plat, plat-worker de verdade fora do ar nesta trilha): workers_vivos == 0 e fila.estado == degradado, não simulado"
+  },
+  "disco_e_ram_batem_com_a_maquina": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "test_profunda_disco_e_ram_batem_com_a_maquina_real (sessao_plat): livre_pct do volume / na resposta difere em menos de 1,0 ponto percentual do os.statvfs('/') lido no mesmo instante do teste; estado (ok/degradado/erro) bate com os limiares declarados"
+  },
+  "status_http_coerente_com_estado_geral": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "toda chamada nos 8 testes: status_code == 200 quando estado geral == ok, 503 quando degradado/erro (visto nos casos ok, garage pendurado e martin pendurado)"
+  },
+  "cabecalho_cache_control": {
+   "valor": "no-store",
+   "unidade": "cabeçalho HTTP",
+   "comando": "test_profunda_200_estrutura_e_geral_ok: r.headers['Cache-Control'] == 'no-store' em toda resposta (a leitura nunca pode ser cacheada por CDN/proxy)"
+  },
+  "sem_marcador_no_repositorio": {
+   "valor": 0,
+   "unidade": "linhas",
+   "comando": "make sem-marcador sobre ca97dcb: 0 linhas (grep de tests/marcadores.regex em app/web/db/docs/deploy/install.sh/Makefile/requirements/pyproject/*.md, com exceções)"
+  },
+  "lint_ruff": {
+   "valor": 0,
+   "unidade": "erros",
+   "comando": "make lint sobre ca97dcb: venv/bin/ruff check app tests docs/gerar_limites.py -> All checks passed! (1 aviso de noqa em arquivo alheio, tests/api/test_conexoes.py, não tocado por este item)"
+  },
+  "migracao_nome_e_dependencia": {
+   "valor": 0,
+   "unidade": "falhas",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_migracoes_nome_e_dependencia.py -q: 50 passed (o carimbo 20260907T1320_fila_job_mais_antigo.sql passa na regra de nome do ADR 0014)"
+  }
+ },
+ "nao_passa": [
+  "Cláusula de desempenho sob carga: máquina media carga 7,6-9,8 (>8, limiar do brief 07/09) durante toda a rodada — os tempos de 2,02s/1,05s foram medidos mesmo assim porque passam com folga grande (10x abaixo do limite de 10s do portão); registrado como número honesto sob carga alta, não como medição em máquina calma.",
+  "Componente 'nginx' verificado só como 'ausente' nesta topologia de trilha (sem unidade systemd nginx dentro do worktree) — o caminho 'ok'/'erro' de _nginx() não foi exercitado por teste automatizado; o item não pode reinstalar/derrubar o nginx real da máquina (serviço compartilhado por todas as trilhas em curso, mesma classe de risco do Garage documentada no cabeçalho do teste).",
+  "Componentes 'cdn_ultimo_hit', 'backup' e 'licenca' são declarados 'ausente' por decisão do item (ausência honesta do subsistema nesta topologia pilha aberta) — não há CDN/backup/licença reais para pendurar e testar; cobertos só pela asserção de que 'ausente' nunca eleva o estado geral."
+ ],
+ "passou": [
+  "Cláusula 1 (componente parado de propósito vira erro em <=10s, geral acompanha a tabela declarada): PASSA (garage e martin, 2,02s e 1,05s)",
+  "Cláusula 2 (resposta anônima sem host/porta/versão): PASSA (estrutura + varredura de texto)",
+  "Cláusula 3 (sonda com tempo limite individual, nenhuma trava o endpoint): PASSA (mesmos dois testes de sonda pendurada)",
+  "Cláusula 4 (200/503 coerente com o uso pelo balanceador): PASSA (Cache-Control no-store + status coerente em todos os casos testados)"
+ ]
+}
