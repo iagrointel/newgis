@@ -109,3 +109,43 @@ def test_sem_credentials_directory_env_continua_mandando_sozinho(tmp_path, monke
 
     valores = settings_mod.valores_do_ambiente()
     assert valores["PLAT_SECRET"] == "44" * 32
+
+
+# item L7-19-segredos-e-certificados: PLAT_SECRET_ANTERIOR (dupla-chave de rotação, janela de 24h).
+
+
+def test_sem_plat_secret_anterior_fica_none():
+    assert carregar(BASE).PLAT_SECRET_ANTERIOR is None
+
+
+def test_plat_secret_anterior_formato_invalido_e_recusado():
+    with pytest.raises(ErroConfiguracao, match="PLAT_SECRET_ANTERIOR"):
+        carregar({**BASE, "PLAT_SECRET_ANTERIOR": "nao-e-hex"})
+
+
+def test_plat_secret_anterior_valido_e_aceito():
+    s = carregar({**BASE, "PLAT_SECRET_ANTERIOR": "cd" * 32})
+    assert s.PLAT_SECRET_ANTERIOR == "cd" * 32
+    assert s.PLAT_SECRET == "ab" * 32
+
+
+def test_plat_secret_anterior_igual_ao_atual_vira_none():
+    """Rotação que já passou das 24h: o operador esqueceu de apagar o credential ANTERIOR, ou ele nunca
+    foi diferente do atual. Tratar como 'sem anterior' em vez de aceitar (o item exige que os dois nomes
+    sempre possam coexistir sem um mascarar auditoria do outro)."""
+    s = carregar({**BASE, "PLAT_SECRET_ANTERIOR": "ab" * 32})
+    assert s.PLAT_SECRET_ANTERIOR is None
+
+
+def test_plat_secret_anterior_vazio_vira_none():
+    s = carregar({**BASE, "PLAT_SECRET_ANTERIOR": ""})
+    assert s.PLAT_SECRET_ANTERIOR is None
+
+
+def test_credenciais_systemd_le_plat_secret_anterior_tambem(tmp_path, monkeypatch):
+    (tmp_path / "PLAT_SECRET").write_text("ab" * 32)
+    (tmp_path / "PLAT_SECRET_ANTERIOR").write_text("cd" * 32 + "\n")
+    monkeypatch.setenv("CREDENTIALS_DIRECTORY", str(tmp_path))
+    valores = settings_mod._credenciais_systemd()
+    assert valores["PLAT_SECRET"] == "ab" * 32
+    assert valores["PLAT_SECRET_ANTERIOR"] == "cd" * 32

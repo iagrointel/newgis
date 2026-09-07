@@ -17,6 +17,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.jobs import servico
 from app.jobs.contexto import ErroServico, Sessao
+from app.schema_ambiente import CursorSchemaAmbiente
 from app.settings import settings
 
 log = logging.getLogger("plat.eventos")
@@ -31,6 +32,13 @@ _por_usuario: collections.Counter = collections.Counter()
 _thread: threading.Thread | None = None
 
 
+def _conectar():
+    """Conexão do LISTEN pelo MESMO caminho do resto da aplicação: com a fábrica de cursor do ambiente.
+    Sem ela o módulo inteiro ignora PLAT_SCHEMA e qualquer SQL daqui vai ao `plat` de produção mesmo
+    rodando numa trilha isolada (achado F9)."""
+    return psycopg2.connect(settings.PLAT_DSN, cursor_factory=CursorSchemaAmbiente)
+
+
 def _garantir_thread() -> None:
     global _thread
     with _trava:
@@ -43,7 +51,7 @@ def _escutar() -> None:
     while True:
         con = None
         try:
-            con = psycopg2.connect(settings.PLAT_DSN)
+            con = _conectar()
             con.autocommit = True
             with con.cursor() as cur:
                 cur.execute(f"LISTEN {settings.PLAT_CANAL_JOB}")
