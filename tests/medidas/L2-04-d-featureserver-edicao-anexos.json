@@ -1,0 +1,103 @@
+{
+  "item": "L2-04-d-featureserver-edicao-anexos",
+  "medido_em": "2026-09-07T20:15Z",
+  "trilha": "il204dfeatu",
+  "base": "master 68ac41f7 + juncao dos ramos wt/il203edicao (L2-03-a/L2-03-e) e wt/fsquery (L2-04-c), que ainda nao estavam em master",
+  "fontes": [
+    "https://developers.arcgis.com/rest/services-reference/enterprise/apply-edits-feature-service-layer/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/apply-edits-feature-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/add-features/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/update-features/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/delete-features/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/add-attachment/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/update-attachment/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/delete-attachments/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/uploads/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/calculate-feature-service-layer/"
+  ],
+  "acesso_as_fontes_em": "2026-09-07",
+  "comando": "bash laco/roda_teste.sh tests/api/test_featureserver_edicao.py -q",
+  "testes_do_item": 26,
+  "testes_do_item_passando": 26,
+  "rotas_novas": 14,
+  "clausulas": [
+    {
+      "clausula": "applyEdits com 10 adds/5 updates/3 deletes devolve os 3 vetores de resultado",
+      "estado": "feito",
+      "prova": "test_apply_edits_devolve_os_tres_vetores: 10 addResults com objectId inteiro e globalId uuid; 5 updateResults; 3 deleteResults; 7 linhas restantes na tabela e 5 com o atributo novo"
+    },
+    {
+      "clausula": "rollbackOnFailure=true com 1 falha = nenhuma alteracao (contagem)",
+      "estado": "feito",
+      "prova": "test_rollback_on_failure_nao_deixa_nada: 2 adds bons + 1 delete de objectId inexistente; contagem de linhas antes == depois; resposta traz rolledBack=true e error.code=404 na posicao do delete. test_sem_rollback_a_parte_boa_fica prova o contrario com rollbackOnFailure=false"
+    },
+    {
+      "clausula": "useGlobalIds com update por globalId",
+      "estado": "feito",
+      "prova": "test_use_global_ids_atualiza_por_globalid (atributo gravado, globalId ecoado) e test_use_global_ids_com_id_desconhecido_e_404_na_posicao"
+    },
+    {
+      "clausula": "addAttachment multipart e leitura de volta com sha256 igual",
+      "estado": "feito",
+      "prova": "test_add_attachment_multipart_e_leitura_com_sha256_igual: PNG enviado em multipart, attachmentInfos com id inteiro/size/contentType/name, GET /attachments/{id} com sha256 identico ao enviado, queryAttachments agrupado por feicao, deleteAttachments esvazia"
+    },
+    {
+      "clausula": "deleteFeatures por where",
+      "estado": "feito",
+      "prova": "test_delete_features_por_where apaga 2 de 4 pelo filtro; test_delete_features_where_malicioso_e_400 mostra que 'DROP TABLE' no where e 400 pelo analisador AST, sem tocar em dado"
+    },
+    {
+      "clausula": "QGIS edita uma feicao da demo e salva por este caminho (medido aqui, captura)",
+      "estado": "nao feito",
+      "prova": "QGIS nao esta instalado nesta maquina e nao ha ambiente grafico (o mesmo bloqueio ja registrado no item L2-04-c). Nao foi simulado nem declarado como feito."
+    },
+    {
+      "clausula": "Field Maps/Pro reais = teste do parceiro (D20), registrado PENDENTE",
+      "estado": "pendente",
+      "prova": "registrado como pendente na coluna Pro/AGOL real de docs/PARIDADE.md, linha a linha da secao do item"
+    },
+    {
+      "clausula": "token so-leitura recebe HTTP 403 com corpo de erro no formato Esri {error:{code:403,message}}",
+      "estado": "feito em parte",
+      "prova": "test_token_so_leitura_recebe_403_com_corpo_esri: status 403 e corpo com uma unica chave 'error' contendo code=403, message e details. A parte do 'teste com o cliente Python arcgis prova que ele interpreta os dois' NAO foi feita: o pacote arcgis nao esta instalado (disco a 93 %, dependencia grande) e o brief proibe instalacao pesada. A decisao esta escrita no ADR 20260907T2016 secao 2."
+    },
+    {
+      "clausula": "historico registra origem 'featureserver'",
+      "estado": "feito",
+      "prova": "test_historico_registra_origem_featureserver: a mesma feicao inserida pelo FeatureServer e atualizada pela API da casa gera ('inserir','featureserver') e ('atualizar','api') em plat.feicao_historico"
+    }
+  ],
+  "refutacao_do_adversario": [
+    {
+      "ataque": "OBJECTID/camada de outro inquilino",
+      "resultado": "test_objectid_de_outro_inquilino_nao_entra: 404 no formato Esri e a tabela do outro inquilino continua com 0 linhas (a RLS de plat.item resolve antes de qualquer escrita)"
+    },
+    {
+      "ataque": "globalId repetido no mesmo lote",
+      "resultado": "test_globalid_repetido_no_mesmo_lote: a segunda referencia carrega a versao lida antes da primeira escrita, a concorrencia otimista do L2-03-a recusa, e com rollbackOnFailure padrao nada e gravado"
+    },
+    {
+      "ataque": "geometria em SR diferente sem spatialReference",
+      "resultado": "test_geometria_em_metros_sem_spatial_reference_e_recusada: coordenada em metros contra camada geografica vira geometria_fora_do_crs, 0 linhas gravadas. test_spatial_reference_declarada_e_reprojetada mostra que com wkid declarado (3857) a mesma familia de coordenada entra reprojetada"
+    },
+    {
+      "ataque": "5.000 adds num pedido",
+      "resultado": "test_lote_de_cinco_mil_adds_e_recusado_inteiro: 400 lote_grande (teto de 1.000 feicoes por pedido), 0 linhas gravadas"
+    },
+    {
+      "ataque": "campo inexistente nos atributos",
+      "resultado": "test_campo_inexistente_nao_vira_coluna: resultado com success=false na posicao, 0 linhas gravadas"
+    }
+  ],
+  "portoes_da_casa": {
+    "make lint": "passou",
+    "make sem-marcador": "passou (corrigida a palavra TODOS no CHANGELOG herdado da juncao, que casava com o marcador TODO)",
+    "make limites": "passou (docs/LIMITES.md regerado; estava defasado desde a juncao)",
+    "tests/api/test_cruzado.py": "227 casos, 100 % de cobertura: docs/openapi.json foi regerado (a juncao tinha apagado as rotas de edicao, de mapa e do FeatureServer) e cada um dos 29 (metodo, caminho) novos ganhou caso cruzado",
+    "tests/api/test_privilegios_matriz.py": "passou depois de mover a checagem de privilegio para antes da checagem do id da camada",
+    "suite inteira": "nao rodada nesta sessao (e o portao da fila); rodadas as suites tocadas: test_featureserver_edicao (26), test_cruzado (227), test_edicao_transacional, test_edicao_historico_anexos, test_edicao_dividir_unir, test_privilegios_*, test_docs, test_migracoes, test_dependencias, test_where_ast, test_geometria_esri"
+  },
+  "dependencia_nova": "python-multipart==0.0.32 (30 KB, sem dependencia transitiva, exigido pelo starlette para request.form(); fixado em requirements.txt)",
+  "carga_da_maquina_na_ultima_medida": {"carga_1min": 10.51, "ram_livre_gb": 7,
+    "observacao": "nenhuma clausula deste item e de tempo/vazao, entao a carga nao afeta o veredito"}
+}
