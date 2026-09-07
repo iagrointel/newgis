@@ -15,6 +15,11 @@ from PIL import Image
 
 from tests.api.conftest import PREFIXO_TESTE
 
+# serial (07/09): muda a configuração do INQUILINO demo inteiro — cota de armazenamento, cota de usuários
+# (posta no número exato de ativos, o que impede qualquer outro worker de criar usuário) e entradas de auth.
+# Roda sozinho, na segunda invocação com -n 0.
+pytestmark = pytest.mark.serial
+
 
 def _corpo(org: dict) -> dict:
     """Corpo de PUT /api/org que reproduz exatamente o que um GET devolveu (contrato full-replace, igual ao

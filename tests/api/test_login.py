@@ -119,6 +119,9 @@ def test_forca_bruta_de_senha_6a_certa_bloqueia_e_admin_desbloqueia(sessao_a, us
     outro.post("/api/logout")
 
 
+# serial (07/09): suspende o inquilino demo2 INTEIRO no meio do teste; enquanto está suspenso, a sessão
+# `sessao_b` de qualquer outro worker do pytest-xdist é derrubada (401) e o login em demo2 devolve 503.
+@pytest.mark.serial
 def test_usuario_desabilitado_e_inquilino_suspenso(sessao_a, sessao_plat, usuarios_a, cred):
     c, u, senha = usuarios_a.sessao("visualizador")
     assert sessao_a.put(f"/api/usuarios/{u['id']}", json={"ativo": False}).status_code == 200
