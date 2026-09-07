@@ -155,4 +155,15 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/org/saml"): ["org/saml_configurar"],
     ("PUT", "/api/org/saml/{provedor_id}"): ["org/saml_configurar"],
     ("DELETE", "/api/org/saml/{provedor_id}"): ["org/saml_remover"],
+    # ---- motor multicritério em grades aninhadas (L3-19-multiescala; vocabulário nas migrações
+    # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
+    # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por
+    # isso tem tipo próprio (`_apagar`), separado do de criação.
+    ("POST", "/api/multiescala/conjuntos"): ["multiescala/conjunto"],
+    ("DELETE", "/api/multiescala/conjuntos/{id}"): ["multiescala/conjunto_apagar"],
+    ("POST", "/api/multiescala/fatores"): ["multiescala/fator"],
+    ("DELETE", "/api/multiescala/fatores/{id}"): ["multiescala/fator_apagar"],
+    ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
+    ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
+    ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
 }

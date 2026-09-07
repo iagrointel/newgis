@@ -18,6 +18,9 @@ import psycopg2
 import psycopg2.extras
 from dotenv import dotenv_values
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # acha o pacote app
+from app.schema_ambiente import CursorSchemaAmbiente  # noqa: E402 -- depois do sys.path acima
+
 RAIZ = Path(__file__).resolve().parents[1]
 if str(RAIZ) not in sys.path:  # roda como `python docs/gerar_privilegios.py`, sem PYTHONPATH=.
     sys.path.insert(0, str(RAIZ))
@@ -37,15 +40,18 @@ def _dsn() -> str:
     return dsn
 
 
-def _ler_banco() -> tuple[list[dict], dict[str, set[str]]]:
-    # CursorSchemaAmbiente (não RealDictCursor puro): achado nesta verificação — o literal `plat.` abaixo
-    # sempre mirava o schema de PRODUÇÃO, então `tests/api/test_privilegios_doc.py` (que roda com PLAT_SCHEMA
-    # de trilha/homologação) sempre dava `InsufficientPrivilege: permission denied for schema plat` (a role da
-    # trilha não tem privilégio nenhum no `plat` real). `PLAT_SCHEMA`/`PLAT_SCHEMA_TRABALHO` do ambiente do
-    # processo bastam — é a mesma leitura tardia que `app/db.py` já faz.
-    from app.schema_ambiente import CursorSchemaAmbiente
+def _conectar():
+    """Fabrica de cursor do ambiente (achado F9): com `RealDictCursor` puro este gerador lia sempre o
+    `plat` de PRODUCAO, entao `make privilegios` numa trilha publicava a tabela da producao."""
+    return psycopg2.connect(_dsn(), cursor_factory=CursorSchemaAmbiente)
 
-    con = psycopg2.connect(_dsn(), cursor_factory=CursorSchemaAmbiente)
+
+def _ler_banco() -> tuple[list[dict], dict[str, set[str]]]:
+    # CursorSchemaAmbiente (não RealDictCursor puro), via `_conectar()` (achado F9): com conexão crua o
+    # literal `plat.` abaixo sempre mirava o schema de PRODUÇÃO, então `tests/api/test_privilegios_doc.py`
+    # (que roda com PLAT_SCHEMA de trilha/homologação) sempre dava `InsufficientPrivilege: permission denied
+    # for schema plat` (a role da trilha não tem privilégio nenhum no `plat` real).
+    con = _conectar()
     try:
         with con.cursor() as cur:
             cur.execute("SELECT nome, grupo, descricao, administrativo FROM plat.privilegio ORDER BY grupo, nome")
