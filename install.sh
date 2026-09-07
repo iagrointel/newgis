@@ -248,6 +248,14 @@ echo "venv: $(venv/bin/python --version) · fastapi $("${PY[@]}" -c 'import fast
 echo "== f2. cache do XSD ISO 19139 (item L0-09-metadado-catalogo): comitado no repo; idempotente, sem rede quando já presente"
 "${PY[@]}" docs/xsd/baixar_iso19139.py
 
+echo "== f3. validador oficial da MapLibre Style Spec (item L2-02-a-modelo-estilo): versão fixada em ferramentas/estilo/package.json"
+command -v node >/dev/null || { echo "node ausente (apt install nodejs)" >&2; exit 1; }
+(cd ferramentas/estilo && npm ci --no-audit --no-fund --silent 2>/dev/null || npm install --no-audit --no-fund --silent)
+echo '{"version":8,"sources":{"camada":{"type":"vector","tiles":["https://x/{z}/{x}/{y}"]}},"layers":[{"id":"l","type":"circle","source":"camada","source-layer":"camada","paint":{"circle-color":"#ff0000"}}]}' \
+  | node ferramentas/estilo/validar.mjs | grep -q '"ok":true' \
+  || { echo "validador da Style Spec não respondeu ok:true num estilo válido" >&2; exit 1; }
+echo "ferramentas/estilo: node_modules instalado, validador respondendo"
+
 echo "== g. administradores: plataforma (superadmin, 2FA obrigatório) e demonstração (demo, demo2)"
 CRED=tests/credenciais.txt
 if [ ! -f "$CRED" ]; then
@@ -385,7 +393,18 @@ echo "== i. nginx"
 SITE=/etc/nginx/sites-enabled/$DOM
 # zona limit_req própria: 10 tentativas/min por IP em /api/login e /api/login/2fa (ADR 0002 seção 6.2)
 LIMITES=/etc/nginx/conf.d/plat_limites.conf
-printf '# plat: limite por IP nos logins (ADR 0002 secao 6.2); escrito pelo install.sh\nlimit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\n' > "$LIMITES.novo"
+# cache do servidor de tiles vetoriais (item L2-04-e): a CHAVE nunca leva o token (dois tokens
+# válidos do mesmo item compartilham o tile em disco); quem barra token revogado é o auth_request
+# separado (`plat_tiles_vetor_auth`, 2 s), sempre executado mesmo com o tile em cache — ver o bloco
+# `/tiles/` e `/svc/.../VectorTileServer/tile/` em deploy/nginx.conf.
+mkdir -p /var/cache/nginx/plat_tiles_vetor /var/cache/nginx/plat_tiles_vetor_auth
+chown -R www-data:www-data /var/cache/nginx/plat_tiles_vetor /var/cache/nginx/plat_tiles_vetor_auth
+{
+  printf '# plat: limite por IP nos logins (ADR 0002 secao 6.2); escrito pelo install.sh\n'
+  printf 'limit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\n'
+  printf 'proxy_cache_path /var/cache/nginx/plat_tiles_vetor levels=1:2 keys_zone=plat_tiles_vetor:32m max_size=10g inactive=7d use_temp_path=off;\n'
+  printf 'proxy_cache_path /var/cache/nginx/plat_tiles_vetor_auth levels=1:2 keys_zone=plat_tiles_vetor_auth:8m max_size=64m inactive=1m use_temp_path=off;\n'
+} > "$LIMITES.novo"
 if [ -f "$LIMITES" ] && cmp -s "$LIMITES" "$LIMITES.novo"; then rm -f "$LIMITES.novo"; echo "$LIMITES já existe (igual)"; else mv "$LIMITES.novo" "$LIMITES"; echo "$LIMITES escrito"; fi
 escrever_nginx() {
   local bloco certbot_443 bloco_80

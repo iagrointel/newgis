@@ -226,3 +226,10 @@ ANEXO_TAMANHO_MAX = 7 * 1024 * 1024       # 7 MiB por anexo — NÃO 10: o envio
 # tupla ordenada, não frozenset: repr() de um set não é determinístico entre execuções (docs/gerar_limites.py
 # lê repr() literal — um frozenset faria docs/LIMITES.md variar a cada regeneração sem nada ter mudado)
 ANEXO_TIPOS_PERMITIDOS = ("application/pdf", "image/gif", "image/jpeg", "image/png", "image/webp")
+# --- motor multicritério, modelo (L3-01-a-modelo-dado; laco/decomposicao/L3L6_CONCEITO.md decisões A1/A4/A10).
+# Vocabulário e tetos do documento em docs/esquemas/amc_modelo.v1.json nascem daqui quando o número é livre
+# (o que é vocabulário FECHADO — tipos de transformação, combinador — mora só no JSON Schema, que é o contrato
+# público; aqui só os tetos de tamanho, que são os mesmos limites transversais do resto da casa).
+AMC_NOME_MAX = 250                # mesmo teto de ITEM_TITULO_MAX
+AMC_FATORES_MAX = 50              # mesmo teto de docs/esquemas/amc_modelo.v1.json fatores.maxItems
+AMC_CAMADAS_MAX = 50              # camadas de entrada declaradas por execução (A10)

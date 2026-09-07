@@ -1106,3 +1106,38 @@ Dividir polígono por linha de corte; união com política de mesclagem de atrib
 primeira feição ou o que o chamador mandar"; desfazer/refazer por atalho de teclado (o mecanismo hoje
 é o histórico por feição, não uma pilha global de ações). Ver
 `docs/adr/20260907T1123-historico-restauracao-anexos-feicao.md`.
+## 22. Modelo de estilo (item L2-02-a-modelo-estilo)
+
+O documento de um item do tipo `estilo` tem duas partes: `plat_construtor` (o que o editor grava — tipo de
+classificação entre `unico`, `categoria`, `classes`, `proporcional`, `calor`, `agrupamento`, `raster`, o
+campo classificador, as cores, os rótulos, a faixa de escala e a transparência) e `maplibre` (as camadas da
+MapLibre Style Spec v8 que o navegador desenha). Só `plat_construtor` é editável de fato: `maplibre` é sempre
+recalculado pelo servidor a partir dele no momento de gravar (`POST`/`PUT /api/itens`), então salvar duas
+vezes o mesmo construtor produz sempre o mesmo estilo — reabrir um estilo salvo e salvar de novo nunca muda o
+desenho por acidente.
+
+Um estilo inválido nunca chega a ficar salvo: campo de classificação que não existe na lista declarada,
+faixa de classe com o mínimo maior que o máximo, valor de categoria repetido, mais de 200 camadas, ou uma
+camada que não é uma MapLibre Style Spec válida — tudo isso volta como erro `422` no momento de salvar, com
+o campo exatamente apontado, nunca como um mapa que desenha errado depois de aberto.
+
+### 22.1 Como um estilo se referencia num mapa
+
+A entrada de camada de um documento de mapa (item L2-01-a-documento-mapa) referencia um estilo por
+`{ref: <uuid do item estilo>}` (reutilizável entre vários mapas) ou `{embutido: <o mesmo formato>}` (só
+daquele mapa). Apagar um item `estilo` referenciado por algum mapa é recusado (`409`, com a lista de mapas
+que dependem dele — mesmo mecanismo de dependência do L0-03-i).
+
+### 22.2 Estilo padrão e exportação
+
+Toda camada nova recebe um estilo padrão determinístico por tipo de geometria: a cor sai de um hash da
+identidade do item, então a mesma camada tem sempre a mesma cor padrão, em qualquer instalação. Um estilo
+`unico`/`categoria`/`classes` pode ser exportado como SLD 1.0 (para QGIS ou para o WMS do L2-04-i); os demais
+tipos (`proporcional`, `calor`, `agrupamento`, `raster`) não têm equivalente em SLD e a exportação recusa,
+dizendo por quê.
+
+### 22.3 O que ficou de fora
+
+A conversão para/do renderer da Esri (item L2-04-b) e o WMS que consome o SLD (L2-02-e/L2-04-i) são itens
+seguintes. O editor visual do construtor (tela) não foi construído aqui — este item é o formato e a
+validação do documento, não a interface.

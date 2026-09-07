@@ -13,6 +13,13 @@ PREFIXO = "zt-cruzado-"
 URL_CONEXAO_TESTE = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/35"
 PADRAO = frozenset({401, 403, 404})
 UUID_NULO = "00000000-0000-0000-0000-000000000000"  # id que não é de A nem de B: 404 garantido pela RLS/dono
+# L3-01-a: documento mínimo válido de amc_modelo.v1 (mesmo shape de tests/unit/test_amc_esquema.py)
+AMC_DEF_MINIMA = {
+    "combinador": "soma_ponderada",
+    "fatores": [
+        {"id": "f1", "criterio": "c", "peso": 1, "transformacao": {"tipo": "linear", "minimo": 0, "maximo": 1}},
+    ],
+}
 
 
 @dataclass
@@ -51,6 +58,9 @@ class Preparacao:
     fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
     conexao_b: dict = field(default_factory=dict)  # L6-02-a: conexão externa de B
     convite_b: dict = field(default_factory=dict)  # L0-07-d: convite pendente de B
+    modelo_amc_b: dict = field(default_factory=dict)  # L3-01-a: modelo AMC de B (fica "executado" p/ sempre)
+    conjunto_amc_b: dict = field(default_factory=dict)  # L3-01-a: conjunto de unidades AMC de B
+    execucao_amc_b: dict = field(default_factory=dict)  # L3-01-a: execução AMC de B
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -62,6 +72,8 @@ class Preparacao:
             marcas.append(self.conexao_b["nome"])
         if self.convite_b:
             marcas.append(self.convite_b["email"])
+        if self.modelo_amc_b:
+            marcas.append(self.modelo_amc_b["nome"])
         return marcas
 
 
@@ -129,10 +141,24 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     )
     assert r.status_code == 201, r.text
     conexao_b = r.json()
+    # L3-01-a: modelo + conjunto + execução de B, alvos das rotas de /api/amc — a execução marca o modelo
+    # como "executado" (permanente, é a regra do item); por isso o modelo NÃO é apagado em desfazer()
+    r = sessao_b.post("/api/amc/modelos", json={"nome": f"{PREFIXO}amc-modelo-{sufixo}", "definicao": AMC_DEF_MINIMA})
+    assert r.status_code == 201, r.text
+    modelo_amc_b = r.json()
+    r = sessao_b.post("/api/amc/conjuntos",
+                      json={"nome": f"{PREFIXO}amc-conjunto-{sufixo}", "tipo": "hexagonal", "lado_m": 250})
+    assert r.status_code == 201, r.text
+    conjunto_amc_b = r.json()
+    r = sessao_b.post("/api/amc/execucoes",
+                      json={"modelo_id": modelo_amc_b["id"], "conjunto_id": conjunto_amc_b["id"], "semente": 1})
+    assert r.status_code == 201, r.text
+    execucao_amc_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b)
+                      modelo_amc_b=modelo_amc_b, conjunto_amc_b=conjunto_amc_b, execucao_amc_b=execucao_amc_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -158,6 +184,12 @@ def desfazer(p: Preparacao) -> None:
         p.sessao_b.delete(f"/api/pastas/{p.pasta_b['id']}")
     if p.conexao_b:
         p.sessao_b.delete(f"/api/conexoes/{p.conexao_b['id']}")
+    if p.execucao_amc_b:
+        p.sessao_b.delete(f"/api/amc/execucoes/{p.execucao_amc_b['id']}")
+    if p.conjunto_amc_b:
+        p.sessao_b.delete(f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}")
+    # modelo_amc_b NUNCA se apaga (já foi executado — regra do item L3-01-a-modelo-dado); fica como
+    # resíduo esperado do inquilino de teste demo2, do mesmo jeito que a semente de catálogo
     if p.agenda_b:
         p.sessao_b.delete(f"/api/agendas/{p.agenda_b['id']}")
     p.sessao_b.delete(f"/api/grupos/{p.grupo_b['id']}")
@@ -934,6 +966,47 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/deleteAttachments"): Caso(
         lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/1/deleteAttachments",
         lambda p: {"attachmentIds": "1"},
+    # ---- motor de análise multicritério (L3-01-a-modelo-dado): modelo/conjunto têm ciclo de vida limpo
+    # (limpar apaga o que a chamada de A criou); execução/resultado de B são só lidos — nenhuma rota de A
+    # resolve o id de B (404 antes de tocar amc_execucao/amc_resultado; ver também o teste dedicado
+    # tests/api/amc/test_modelo.py::test_a_nao_le_modelo_execucao_nem_resultado_de_b_pela_api).
+    ("POST", "/api/amc/modelos/validar"): Caso(
+        lambda p: "/api/amc/modelos/validar", lambda p: {"definicao": AMC_DEF_MINIMA},
+        proprio=True, aceita=frozenset({200}),
+    ),
+    ("POST", "/api/amc/modelos"): Caso(
+        lambda p: "/api/amc/modelos",
+        lambda p: {"nome": f"{PREFIXO}amc-modelo-a", "definicao": AMC_DEF_MINIMA},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/amc/modelos/{id}")),
+    ),
+    ("GET", "/api/amc/modelos"): Caso(lambda p: "/api/amc/modelos", proprio=True, aceita=frozenset({200}),
+                                      verificar=_sem_marca),
+    ("GET", "/api/amc/modelos/{id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
+    ("PUT", "/api/amc/modelos/{id}"): Caso(
+        lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}", lambda p: {"nome": f"{PREFIXO}amc-invadido"},
+    ),
+    ("DELETE", "/api/amc/modelos/{id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
+    ("POST", "/api/amc/conjuntos"): Caso(
+        lambda p: "/api/amc/conjuntos",
+        lambda p: {"nome": f"{PREFIXO}amc-conjunto-a", "tipo": "hexagonal", "lado_m": 250},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/amc/conjuntos/{id}")),
+    ),
+    ("GET", "/api/amc/conjuntos"): Caso(lambda p: "/api/amc/conjuntos", proprio=True, aceita=frozenset({200}),
+                                        verificar=_sem_marca),
+    ("GET", "/api/amc/conjuntos/{id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
+    ("DELETE", "/api/amc/conjuntos/{id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
+    ("POST", "/api/amc/execucoes"): Caso(
+        lambda p: "/api/amc/execucoes",
+        lambda p: {"modelo_id": p.modelo_amc_b["id"], "conjunto_id": p.conjunto_amc_b["id"], "semente": 1},
+    ),
+    ("GET", "/api/amc/execucoes"): Caso(lambda p: "/api/amc/execucoes", proprio=True, aceita=frozenset({200}),
+                                        verificar=_sem_marca),
+    ("GET", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}"),
+    ("DELETE", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}"),
+    ("GET", "/api/amc/execucoes/{id}/resultados"): Caso(
+        lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}/resultados",
     ),
 }
 

@@ -1,0 +1,81 @@
+{
+  "corpo": {
+    "maplibre": {
+      "layers": [
+        {
+          "filter": [
+            "has",
+            "point_count"
+          ],
+          "id": "camada",
+          "paint": {
+            "circle-color": [
+              "step",
+              [
+                "get",
+                "point_count"
+              ],
+              "#9ecae1",
+              100,
+              "#6baed6"
+            ],
+            "circle-opacity": 1.0,
+            "circle-radius": [
+              "step",
+              [
+                "get",
+                "point_count"
+              ],
+              12,
+              100,
+              18
+            ]
+          },
+          "type": "circle"
+        },
+        {
+          "filter": [
+            "!",
+            [
+              "has",
+              "point_count"
+            ]
+          ],
+          "id": "camada-nao-agrupado",
+          "paint": {
+            "circle-color": "#9ecae1",
+            "circle-opacity": 1.0,
+            "circle-radius": 4
+          },
+          "type": "circle"
+        }
+      ],
+      "version": 8
+    },
+    "plat_construtor": {
+      "agrupamento": {
+        "degraus": [
+          {
+            "ate": 10,
+            "cor": "#9ecae1",
+            "raio": 12
+          },
+          {
+            "ate": 100,
+            "cor": "#6baed6",
+            "raio": 18
+          },
+          {
+            "cor": "#08519c",
+            "raio": 26
+          }
+        ],
+        "raio_px": 40
+      },
+      "geometria": "ponto",
+      "tipo": "agrupamento",
+      "versao": 1
+    }
+  },
+  "esquema_versao": 1
+}

@@ -46,16 +46,25 @@ def _locais_ativos() -> int:
 
 
 def test_hsts_em_todo_bloco_de_add_header_do_modelo():
+    # item L2-04-e: `location`S internas (`internal;`, ex. `/_plat_tile_vetor_autorizar`, o
+    # auth_request do cache de tile) nunca respondem direto a um navegador — não levam cabeçalho
+    # nenhum, de propósito (mesmo desenho do auth_request do ladrilho raster, item L1-02). Só as
+    # locations EXTERNAS entram na conta.
     locais = _locais_ativos()
+    internas = NGINX.count("internal;")
     hsts = NGINX.count('add_header Strict-Transport-Security "max-age=31536000" always;')
-    # 5 desde o item L2-01-a (location nova para o PMTiles do mapa-base, deploy/nginx.conf)
-    assert locais == 5 and hsts == locais + 1, (locais, hsts)
+    # 8 desde o item L2-04-e (tiles vetoriais: /tiles/, /svc/.../VectorTileServer/tile/ e o
+    # auth_request interno — deploy/nginx.conf)
+    assert locais == 8 and hsts == (locais - internas) + 1, (locais, internas, hsts)
 
 
 def test_referrer_policy_em_todo_bloco_de_add_header_do_modelo():
     """Achado do testador do T2: declarado no server{} não chegava às rotas (add_header no bloco cancela o herdado)."""
     locais = _locais_ativos()
-    assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == locais + 1, locais
+    internas = NGINX.count("internal;")
+    assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == (
+        locais - internas
+    ) + 1, locais
 
 
 def test_instalador_limpa_residuos_de_teste_so_em_dev():

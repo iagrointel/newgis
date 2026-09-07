@@ -1,0 +1,10 @@
+{
+  "name": "plat-estilo-validador",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Validador oficial da MapLibre Style Spec para documentos de estilo do plat (item L2-02-a-modelo-estilo). Versao fixada: a mesma linha 20.x que o renderizador vendorizado (web/vendor/maplibre-gl-4.7.1.js) usa (^20.3.1).",
+  "type": "module",
+  "dependencies": {
+    "@maplibre/maplibre-gl-style-spec": "20.4.0"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "corpo": {
+    "maplibre": {
+      "layers": [
+        {
+          "id": "camada",
+          "paint": {
+            "fill-color": "#59a14f",
+            "fill-opacity": 1.0
+          },
+          "type": "fill"
+        },
+        {
+          "id": "camada-contorno",
+          "paint": {
+            "line-color": "#1d3c34",
+            "line-width": 0.6
+          },
+          "type": "line"
+        }
+      ],
+      "version": 8
+    },
+    "plat_construtor": {
+      "geometria": "poligono",
+      "simbolo": {
+        "contorno_cor": "#1d3c34",
+        "cor": "#59a14f"
+      },
+      "tipo": "unico",
+      "versao": 1
+    }
+  },
+  "esquema_versao": 1
+}
