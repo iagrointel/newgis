@@ -57,6 +57,11 @@ EXTENSOES = {
     "application/zip": "zip",
     "application/vnd.google-earth.kmz": "kmz",
     "application/octet-stream": "bin",
+    # L7-03-a: tipos que o pipeline único de upload aceita em anexo (servidos sempre como attachment, ver rotas)
+    "image/svg+xml": "svg",
+    "text/plain": "txt",
+    "text/html": "html",
+    "application/vnd.google-earth.kml+xml": "kml",
 }
 _SLUG = r"[a-z0-9][a-z0-9-]{1,38}"
 _CLASSE = r"[a-z0-9_]{1,40}"
