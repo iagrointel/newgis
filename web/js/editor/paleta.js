@@ -5,7 +5,13 @@
    texto, imagem, espaço) mais os dois lugares onde os widgets de dado do L5-06/L5-07 vão se encaixar
    (`mapa`, `tabela`), aqui com as propriedades de LAYOUT que o editor grava. Quando o L5-06 publicar o
    manifesto de widget, `criarEditor({paleta})` recebe a paleta montada do manifesto e nada neste editor muda:
-   é por isso que o tipo mora em dado (esquema + rótulo + aceita_filhos), nunca em `if (tipo === ...)`. */
+   é por isso que o tipo mora em dado (esquema + rótulo + aceita_filhos), nunca em `if (tipo === ...)`.
+
+   `rotulo` é o texto pt-BR usado como valor-padrão do campo "rótulo" do próprio widget (o servidor grava esse
+   valor no documento) e como reserva para paletas sem dicionário (o manifesto do L5-06 pode não ter uma).
+   `rotulo_chave` é a chave de tradução que `web/js/editor/editor.js::rotuloDoTipo()` prefere quando existe —
+   é o que muda com a troca de idioma do construtor (item L5-12-acessibilidade-i18n-construtores); sem ela o
+   editor cai em `rotulo` puro, sem quebrar. */
 
 export const PALETA_LAYOUT = {
   nome: 'layout',
@@ -13,6 +19,7 @@ export const PALETA_LAYOUT = {
   tipos: {
     grupo: {
       rotulo: 'Contêiner',
+      rotulo_chave: 'construtor.tipo_grupo',
       aceita_filhos: true,
       largura_padrao: 12,
       propriedades_padrao: { rotulo: 'Contêiner', direcao: 'coluna' },
@@ -28,6 +35,7 @@ export const PALETA_LAYOUT = {
     },
     texto: {
       rotulo: 'Texto',
+      rotulo_chave: 'construtor.tipo_texto',
       aceita_filhos: false,
       largura_padrao: 6,
       propriedades_padrao: { texto: 'Texto novo', nivel: 'corpo' },
@@ -43,6 +51,7 @@ export const PALETA_LAYOUT = {
     },
     imagem: {
       rotulo: 'Imagem',
+      rotulo_chave: 'construtor.tipo_imagem',
       aceita_filhos: false,
       largura_padrao: 4,
       propriedades_padrao: { url: '/static/favicon.svg', alternativo: 'Imagem' },
@@ -60,6 +69,7 @@ export const PALETA_LAYOUT = {
     },
     mapa: {
       rotulo: 'Mapa',
+      rotulo_chave: 'construtor.tipo_mapa',
       aceita_filhos: false,
       largura_padrao: 8,
       propriedades_padrao: { zoom: 10, mostrar_escala: true },
@@ -75,6 +85,7 @@ export const PALETA_LAYOUT = {
     },
     tabela: {
       rotulo: 'Tabela',
+      rotulo_chave: 'construtor.tipo_tabela',
       aceita_filhos: false,
       largura_padrao: 6,
       propriedades_padrao: { linhas_por_pagina: 25 },
