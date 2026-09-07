@@ -19,6 +19,19 @@ construcao, testada com unidade que teria a nota maxima sem o veto). Job `amc.ro
 sem migracao nova). Medido (`tests/medidas/L3-02-a-monte-carlo-pesos.json`): 1.000 sorteios em 5.000
 unidades x 8 fatores como job, 0,767 s (78x dentro do limite de 60 s). ADR
 `docs/adr/20260907T1245-robustez-sorteio-de-pesos.md`.
+## turno 3, setembro de 2026 (item L3-01-f-explicacao: explicação da nota do motor multicritério)
+
+`GET /api/amc/execucoes/{execucao_id}/unidades/{unidade_id}/explicacao` responde "por que esta unidade tem nota
+N": tabela fator → valor bruto (com unidade e fonte) → transformação → favorabilidade → peso → contribuição,
+mais soma, veto/motivo e cobertura (`app/amc/explicacao.py`). Recalculado a partir de `plat.amc_fator_bruto` na
+hora, nunca lido de uma tabela de explicação gravada — o mesmo combinador de `app/amc/combinacao.py` (item
+L3-01-e). Sobre 100 unidades sorteadas, |soma das contribuições − favorabilidade gravada| ≤ 0,5 (medido:
+`tests/medidas/L3-01-f-explicacao.json`). Painel em `/amc/explicacao/<execucao_id>/<unidade_id>`
+(`web/amc_explicacao.html` + `web/js/amc/explicacao_pagina.js`). Combinador fuzzy (mínimo/máximo/produto/soma
+fuzzy/gama) não decompõe em contribuições por fator por definição matemática — a tabela mostra a favorabilidade
+de cada fator sem fingir uma soma que não existe. Transformação contínua (Rescale by Function, item
+L3-01-d-transformacoes, pendente) aparece com valor bruto e observação, nunca com número fabricado. ADR
+`docs/adr/20260907T1245-explicacao-amc.md`.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
