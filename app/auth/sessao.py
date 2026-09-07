@@ -154,7 +154,7 @@ def _auth_de_sessao(r: dict, hash_sessao: str) -> Auth:
     )
 
 
-def _origem_permitida(origem: str, padroes: list[str]) -> bool:
+def origem_permitida(origem: str, padroes: list[str]) -> bool:
     """`https://*.exemplo.gov.br` casa só subdomínios; a comparação é da ORIGEM (esquema + host + porta)."""
     o = urlsplit(origem)
     if not o.scheme or not o.hostname:
@@ -201,7 +201,7 @@ def _checar_restricao(request: Request, restricao: dict) -> str | None:
         origem = request.headers.get("origin") or request.headers.get("referer")
         if not origem:
             return "referer_ausente"
-        if not _origem_permitida(origem, referers):
+        if not origem_permitida(origem, referers):
             return "referer_nao_permitido"
     return None
 
@@ -219,6 +219,9 @@ def _auth_de_token(request: Request, valor: str) -> Auth:
     request.state.token_id = r["token_id"]
     request.state.tenant_id = r["tenant_id"]
     request.state.usuario_id = r["usuario_id"]
+    # a restrição fica no estado da requisição para o CORS de app/cabecalhos.py ecoar a origem SÓ quando
+    # ela está na lista do próprio token (item L7-03-e); a verificação que barra o acesso é a de baixo.
+    request.state.token_restricao = r["restricao"] or {}
     if r["revogado_em"] is not None:
         request.state.resultado = "revogado"
         raise ErroAPI(

@@ -10,6 +10,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from dotenv import dotenv_values
 
@@ -64,6 +65,9 @@ class Settings:
     # rede de rota (L2-11-c): OSRM isolado plat-osrm-guarulhos (:5010), só recorte de teste ≤ 50 MB;
     # nunca aponta para os OSRM de outras frentes da casa (5000-5003)
     PLAT_OSRM_URL: str
+    # RFC 9116: endereço de contato do security.txt. Sem a chave vale a convenção seguranca@<host da URL
+    # pública> — endereço derivado, não inventado; quem instala troca no .env se o canal for outro.
+    PLAT_SEGURANCA_CONTATO: str
     PLAT_ROTA_MATRIZ_MAX: int
     PLAT_ROTA_ISOCRONA_MAX_PONTOS: int
     # item L7-31 (docs/HOMOLOGACAO.md): homologação reusa o MESMO banco iagro_sat, nunca um banco novo (disco a
@@ -220,6 +224,9 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_RELOGIO_TESTE=_opcional(valores, "PLAT_RELOGIO_TESTE"),
         PLAT_DSN_WORKER=_dsn_worker(valores, f"{schema}_worker"),
         PLAT_OSRM_URL=(_opcional(valores, "PLAT_OSRM_URL") or "http://127.0.0.1:5010").rstrip("/"),
+        PLAT_SEGURANCA_CONTATO=(
+            _opcional(valores, "PLAT_SEGURANCA_CONTATO") or f"mailto:seguranca@{urlsplit(url).hostname}"
+        ),
         PLAT_ROTA_MATRIZ_MAX=_inteiro(valores, "PLAT_ROTA_MATRIZ_MAX", limites.ROTA_MATRIZ_MAX_PADRAO, 1),
         PLAT_ROTA_ISOCRONA_MAX_PONTOS=_inteiro(
             valores, "PLAT_ROTA_ISOCRONA_MAX_PONTOS", limites.ROTA_ISOCRONA_MAX_PONTOS_PADRAO, 4
