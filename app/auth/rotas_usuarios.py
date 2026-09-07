@@ -478,6 +478,22 @@ def lote(corpo: LoteEntrada, request: Request, auth: Auth = autenticado()):
         raise ErroAPI(403, "sem_privilegio", f"a ação exige {exigido}", {"exigido": exigido})
     alterados, recusados = 0, []
     with db.db(auth.contexto()) as cur:
+        if corpo.acao in ("perfil", "papel"):
+            # Ninguém concede privilégio que não tem, TAMBÉM em lote (ALERTA-1, caminho 3). A conferência
+            # existe dentro de `_editar` e recusaria item a item, mas o lote devolve 200 com a lista de
+            # recusados — e uma tentativa de escalada tem de ser NEGADA, não contabilizada. Concedido depende
+            # do par (perfil, papel) que cada alvo passa a ter, então a conta é feita por alvo, antes de
+            # alterar qualquer um: basta um alvo além do teto do ator para o lote inteiro cair em 403.
+            for uid in dict.fromkeys(corpo.ids):
+                alvo = carregar_usuario(cur, uid)
+                if alvo is None:
+                    continue
+                _nao_conceder_alem_do_proprio(
+                    cur,
+                    auth,
+                    campos.get("perfil", alvo["perfil"]),
+                    campos["papel_id"] if "papel_id" in campos else alvo["papel_id"],
+                )
         for uid in dict.fromkeys(corpo.ids):
             cur.execute("SAVEPOINT item")
             try:
