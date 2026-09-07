@@ -16,16 +16,35 @@ o instante do dump ao lado do número para quem confere.
 """
 
 import re
+from pathlib import Path
 
 OBJETOS_POR_INQUILINO = 3
 # Extensões que o banco de ensaio precisa ter ANTES do pg_restore, senão a restauração perde tabela em
-# silêncio. postgis e pgcrypto vêm do install.sh; pg_trgm e unaccent entraram com o geocodificador
-# (migração 045, que as declara como "já instaladas na casa"). Achado do 1º ensaio de verdade, 07/09: sem
-# unaccent no banco de ensaio, a configuração de busca pt_sem_acento não nasce, a tabela `item` não é
-# criada e o ensaio acusa "tabela ausente na cópia restaurada" — isto é, um dump do schema da plataforma
-# só é restaurável numa base que já tenha as quatro.
-EXTENSOES_DO_ENSAIO = ("postgis", "pgcrypto", "pg_trgm", "unaccent")
+# silêncio. Achado do 1º ensaio de verdade, 07/09: sem unaccent no banco de ensaio, a configuração de
+# busca pt_sem_acento não nasce, a tabela `item` não é criada e o ensaio acusa "tabela ausente na cópia
+# restaurada" — isto é, um dump do schema da plataforma só é restaurável numa base que já tenha todas.
+# A lista NÃO mora mais aqui: mora em db/extensoes.txt (item L7-01-d), lida também pelo install.sh e
+# pelo laco/trilha_ambiente.sh. Duplicá-la foi o defeito que o arquivo único fecha.
+ARQUIVO_EXTENSOES = Path(__file__).resolve().parents[2] / "db" / "extensoes.txt"
 _SEGURO = re.compile(r"[^a-z0-9_]+")
+_NOME_EXTENSAO = re.compile(r"^[a-z0-9_]+$")
+
+
+def extensoes_do_ensaio(arquivo: Path | None = None) -> tuple[str, ...]:
+    """Nomes de db/extensoes.txt, na ordem do arquivo. Mesmo formato que o par grep/awk do bash lê: um
+    nome por linha, `#` começa comentário, linha em branco ignorada."""
+    caminho = arquivo or ARQUIVO_EXTENSOES
+    nomes: list[str] = []
+    for linha in caminho.read_text(encoding="utf-8").splitlines():
+        nome = linha.split("#", 1)[0].split()
+        if not nome:
+            continue
+        if not _NOME_EXTENSAO.match(nome[0]):
+            raise ValueError(f"nome de extensão inválido em {caminho}: {nome[0]}")
+        nomes.append(nome[0])
+    if not nomes:
+        raise ValueError(f"lista de extensões vazia: {caminho}")
+    return tuple(nomes)
 
 
 def nome_banco_temporario(marca: str, limite: int = 63) -> str:

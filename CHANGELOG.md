@@ -36,6 +36,28 @@ próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo:
 segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+## turno 3, setembro de 2026 (item L7-01-d-instalador-extensoes: lista única de extensões)
+
+O `install.sh` criava duas das quatro extensões que o schema exige. `pg_trgm` e `unaccent` tinham
+entrado com o geocodificador (migração 045) declaradas como "já instaladas na casa" — verdade nesta
+máquina, falso numa instalação nova. Sem `unaccent` a configuração de busca `plat.pt_sem_acento` não
+nasce, a tabela `item` não é criada e o ensaio de restauração do L0-06-c acusa "tabela ausente na cópia
+restaurada"; foi assim que o defeito apareceu, no primeiro ensaio de verdade.
+
+A lista passa a morar em `db/extensoes.txt`, no mesmo formato de `deploy/pacotes_apt.txt`. `db/extensoes.sh`
+traz `plat_extensoes_lista` e `plat_extensoes_garantir`, que cria o que falta e **confere em
+`pg_extension`**, saindo diferente de zero com o nome do que não nasceu. Três consumidores leem o mesmo
+arquivo: o `install.sh` (seção "b"), o `laco/trilha_ambiente.sh` (seção "0", nova) e o ensaio de
+restauração, por `app.backup.drill.extensoes_do_ensaio()` — a tupla literal `EXTENSOES_DO_ENSAIO` deixa
+de existir.
+
+Medido em base descartável criada para o teste: base só com PostGIS termina com as quatro extensões e o
+dump do schema restaura nela sem passo manual, com a tabela `item` e a configuração `pt_sem_acento`
+presentes; a mesma restauração numa base sem `unaccent` não cria a tabela `item`. Ver
+`tests/api/test_instalador_extensoes_base_nova.py`, `tests/unit/test_extensoes_lista.py`, o ADR
+`docs/adr/20260907T2248-lista-unica-de-extensoes.md` e `tests/medidas/L7-01-d-instalador-extensoes.json`.
+O `install.sh` inteiro segue sem teste que o rode: ele instala pacotes e escreve unidades do systemd.
+
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
 Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,

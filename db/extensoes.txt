@@ -1,0 +1,10 @@
+# Extensões do Postgres que o schema da plataforma exige. Lista única (item L7-01-d): quem a lê é o
+# install.sh (seção "b. extensões"), o laco/trilha_ambiente.sh (base de trilha) e o ensaio de
+# restauração do L0-06-c (app/backup/drill.py). Acrescentar extensão em um só desses lugares foi o
+# defeito que este arquivo fecha.
+# Formato: um nome por linha; "#" começa comentário; linha em branco ignorada.
+postgis    # geometria e geografia (ADR 0001); toda camada vetorial e raster do produto
+pgcrypto   # gen_random_uuid e digest; usados por token de serviço e por hash de conteúdo
+pg_trgm    # similaridade por trigrama; busca por logradouro do geocodificador (migração 045)
+unaccent   # dobra de acento; sem ela a configuração de busca plat.pt_sem_acento não nasce e a
+           # tabela `item` não é criada numa restauração — achado do 1º ensaio de verdade (07/09)

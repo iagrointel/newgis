@@ -64,10 +64,13 @@ configuração de busca `pt_sem_acento` não nasce e a tabela não é criada; o 
 cópia restaurada". O `install.sh` cria só `postgis` e `pgcrypto`; `pg_trgm` e `unaccent` entraram com o
 geocodificador (migração 045), que as declara como já instaladas na casa. Consequências práticas:
 
-- o banco de ensaio cria as quatro antes de restaurar (`drill.EXTENSOES_DO_ENSAIO`);
-- **numa restauração de verdade em máquina nova, crie as quatro extensões antes do `pg_restore`**;
-- fica registrado aqui que o `install.sh` cobre só duas. Fechar essa lacuna é decisão do item de instalação,
-  não deste; o ensaio serve justamente para ela não passar despercebida.
+- a lista das quatro mora em `db/extensoes.txt` (item L7-01-d, ADR de setembro de 2026) e é lida pelos três
+  caminhos que precisam dela: o `install.sh`, o `laco/trilha_ambiente.sh` e o banco de ensaio, por
+  `drill.extensoes_do_ensaio()`;
+- **numa restauração de verdade em máquina nova, crie antes as extensões de `db/extensoes.txt`** — o mesmo
+  `plat_extensoes_garantir "db/extensoes.txt" "${PSQL[@]}"` de `db/extensoes.sh` que o instalador chama;
+- o `install.sh` cobria só `postgis` e `pgcrypto` até setembro de 2026; hoje cria as quatro e confere em
+  `pg_extension`, saindo diferente de zero com o nome da que não nascer.
 
 ## Limpeza
 

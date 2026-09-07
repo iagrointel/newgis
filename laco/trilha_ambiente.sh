@@ -22,6 +22,27 @@ VAR="$LACO/var/trilha"; mkdir -p "$VAR"; chmod 700 "$VAR"
 ENVF="$VAR/$T.env"; SEG="$VAR/$T.segredos"
 PSQL=(sudo -u postgres psql -d "$DB" -X -q -v ON_ERROR_STOP=1)
 
+# == 0. extensões (lista única db/extensoes.txt, item L7-01-d) ==
+# Terceiro leitor da mesma lista que o install.sh e o ensaio de restauração (app/backup/drill.py) usam.
+# A base de trilha é um SCHEMA dentro do banco compartilhado, então na prática as extensões já existem;
+# o que este trecho garante é que a trilha PARE nomeando a extensão que falta, em vez de a migração 045
+# ou uma restauração falharem depois com "tabela ausente". Enquanto o ramo do L7-01-d não estiver em
+# master, worktree antigo não tem os dois arquivos: nesse caso avisa e segue (o comportamento de antes).
+EXT_SH=""; EXT_TXT=""
+for raiz in "$FONTE" "$REPO"; do
+  if [ -r "$raiz/db/extensoes.sh" ] && [ -r "$raiz/db/extensoes.txt" ]; then
+    EXT_SH="$raiz/db/extensoes.sh"; EXT_TXT="$raiz/db/extensoes.txt"; break
+  fi
+done
+if [ -n "$EXT_SH" ]; then
+  echo "== 0. extensões ($EXT_TXT)"
+  . "$EXT_SH"
+  plat_extensoes_garantir "$EXT_TXT" "${PSQL[@]}"
+else
+  echo "== 0. extensões: db/extensoes.txt ausente em $FONTE e em $REPO (ramo do L7-01-d ainda não em master); seguindo sem conferir"
+fi
+
+
 echo "== a. migrações no schema $SCHEMA"
 "${PSQL[@]}" -f - <<SQL
 CREATE SCHEMA IF NOT EXISTS $SCHEMA AUTHORIZATION postgres;

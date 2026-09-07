@@ -552,7 +552,7 @@ def _banco_ensaio(ctx, banco: str) -> str:
         r = ctx.subprocesso(["sudo", "-n", "-u", "postgres", "createdb", nome])
         if r.returncode != 0:
             raise FalhaDefinitiva(f"ensaio de restauração: createdb {nome} saiu com código {r.returncode}")
-    for ext in drill.EXTENSOES_DO_ENSAIO:
+    for ext in drill.extensoes_do_ensaio():
         ctx.subprocesso(["sudo", "-n", "-u", "postgres", "psql", "-d", nome, "-q", "-c",
                          f"CREATE EXTENSION IF NOT EXISTS {ext}"])
     return nome
