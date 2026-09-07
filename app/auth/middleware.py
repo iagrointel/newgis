@@ -1,6 +1,7 @@
 """Middleware de requisição: X-Req-Id, linha JSON no journal (redigida) e, para /api|/svc|/ogc|/tiles, uma linha em
 plat.log_acesso gravada DEPOIS de o corpo ser enviado, com os bytes contados no body_iterator (ADR 0002 seção 9.1).
-Rotas excluídas: /saude, /saude/profunda, /api/versao, /, /api/docs, /api/openapi.json (ruído do driver) e páginas."""
+Rotas excluídas: /saude, /saude/profunda, /api/status, /api/versao, /, /api/docs, /api/openapi.json (ruído do
+driver) e páginas."""
 
 import logging
 import time
@@ -14,7 +15,9 @@ from app.auth.redigir import rota_redigida
 
 log = logging.getLogger("plat.acesso")
 PREFIXOS_COM_LOG = ("/api/", "/svc/", "/ogc/", "/tiles/")
-SEM_LOG_ACESSO = frozenset({"/saude", "/saude/profunda", "/api/versao", "/", "/api/docs", "/api/openapi.json"})
+SEM_LOG_ACESSO = frozenset(
+    {"/saude", "/saude/profunda", "/api/status", "/api/versao", "/", "/api/docs", "/api/openapi.json"}
+)
 
 
 def gera_log(caminho: str) -> bool:

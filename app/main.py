@@ -50,6 +50,7 @@ from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.saude_profunda import router as rotas_saude_profunda
 from app.settings import settings
+from app.status import router as rotas_status
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 
@@ -72,6 +73,7 @@ limite_corpo.instalar(app)
 ROUTERS = [
     rotas_saude,
     rotas_saude_profunda,  # L7-34-saude-profunda
+    rotas_status,  # L0-06-e-status: GET /api/status (aberto, agregado, cache de 30 s) + página /status
     # --- identidade (L0-02)
     rotas_login.router,
     rotas_eu.router,
