@@ -940,6 +940,23 @@ L6-02-b em diante. Da publicação: `plat-martin` não existe nesta máquina (o 
 API), FeatureServer e OGC API de feição não existem (L2-04) e o visualizador ainda não recebe camada do
 catálogo (L2-01), então "adicionar ao mapa" é por API, não por tela.
 
+### 18.5 Camada do acervo como fator do motor multicritério (item L6-04-acervo-no-motor)
+
+Um fator do modelo AMC (`docs/esquemas/amc_modelo.v1.json`, seção 20) com `camada.tipo = "acervo"` e
+`camada.id = "<acervo_camada_id>"` roda de verdade: `POST /api/amc/execucoes` recusa (422 `sem_assinatura`) se
+o inquilino não assinar a camada (mesmo porteiro do 18.3) e, quando aceita, enfileira sozinho o job
+`amc.executar`. O job lê a view de `plat_acervo` (nunca copia a tabela), extrai o valor bruto com
+`app.amc.vetorial` (só extratores de vetor: `poligono_fracao_area`, `poligono_area`, `poligono_contagem`,
+`poligono_atributo_ponderado`, `linha_comprimento`, `linha_distancia_mais_proxima`, `ponto_contagem_raio`,
+`ponto_densidade_kernel`, `ponto_distancia_mais_proximo`, `ponto_atributo_mais_proximo`), aplica a transformação
+`linear` do fator e combina por soma ponderada normalizada. `GET /api/amc/execucoes/{id}` mostra, por camada,
+`fonte_id`, `sha256` e `contagem` (de `acervo.linhas_exatas`). Revogar a assinatura DEPOIS de a execução
+concluir não apaga o resultado (a execução concluída é imutável); revogar DURANTE um job em andamento derruba
+o job com mensagem — a checagem da assinatura acontece de novo, uma vez antes de cada fator e uma vez depois
+do último, e nenhuma linha de resultado é gravada se qualquer uma delas falhar. Fora do escopo: fator do tipo
+`item` (catálogo do inquilino) não é extraído por este job; raster do acervo, transformação além de `linear` e
+combinador diferente do padrão ficam para o item L3-01-d/e. Ver ADR `20260907T1319`.
+
 ## 19. Ficha do acervo completa e gate de LGPD (itens L6-01-d-ficha-fonte e L6-01-f-lgpd)
 
 ### 19.1 Ficha de procedência (`GET /api/acervo/{fonte_id}`)

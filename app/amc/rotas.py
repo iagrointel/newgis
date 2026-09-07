@@ -477,7 +477,9 @@ def _execucao_ou_404(cur, eid: str) -> dict:
 @router.post("/execucoes", status_code=201, openapi_extra=ESCREVER)
 def criar_execucao(corpo: ExecucaoEntrada, request: Request, auth: Auth = autenticado("analise.amc")):
     """Congela a proveniência (A10): versão do modelo, pesos, ficha de cada camada de entrada, versão do motor e
-    semente. Nada disso muda depois (gatilho `amc_execucao_guarda`). A extração é o item L3-01-c."""
+    semente. Nada disso muda depois (gatilho `amc_execucao_guarda`). A extração de fatores do acervo roda
+    automaticamente como job `amc.executar` (item L6-04-acervo-no-motor); fatores do tipo 'item' ficam fora do
+    escopo desse job (extração de camada do catálogo é item futuro) e a execução fica 'registrada' até lá."""
     mid = _uuid(corpo.modelo_id, "modelo_id")
     cid = _uuid(corpo.conjunto_id, "conjunto_id")
     semente = corpo.semente if corpo.semente is not None else int.from_bytes(uuid.uuid4().bytes[:7], "big")
@@ -502,9 +504,19 @@ def criar_execucao(corpo: ExecucaoEntrada, request: Request, auth: Auth = autent
             registrar_evento(cur, request, "amc/execucao_criar", "amc_execucao", eid,
                              {"modelo_id": mid, "versao_hash": r["versao_hash"], "conjunto_id": cid,
                               "camadas": len(entradas)})
-            return _execucao_json(_execucao_ou_404(cur, eid))
+            tem_fator_acervo = any(e.get("origem") == "fator" and e.get("tipo") == "acervo" for e in entradas)
     except psycopg2.Error as e:
         raise erro_do_banco(e) from e
+    if tem_fator_acervo:
+        job = jobs_servico.criar(sessao_de(auth), "amc.executar", {"execucao_id": eid})
+        try:
+            with db.db(auth.contexto()) as cur:
+                cur.execute("UPDATE plat.amc_execucao SET job_id = %s::uuid WHERE id = %s::uuid",
+                            (str(job["id"]), eid))
+        except psycopg2.Error as e:
+            raise erro_do_banco(e) from e
+    with db.db(auth.contexto()) as cur:
+        return _execucao_json(_execucao_ou_404(cur, eid))
 
 
 @router.get("/execucoes", openapi_extra=LER)
