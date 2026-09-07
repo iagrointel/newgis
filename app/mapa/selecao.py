@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 
 from app import db
 from app.auth.sessao import Auth, autenticado
-from app.consulta.cql2 import GEOJSON_TIPOS, compilar_cql2
+from app.consulta.cql2 import GEOJSON_TIPOS, colunas_da_camada, compilar_cql2
 from app.consulta.where_ast import ErroWhere
 from app.erros import ErroAPI
 from app.mapa.rotas import SQL_CAMADA
@@ -56,18 +56,9 @@ def _tabela_sql(dados: dict) -> str:
 
 
 def _colunas_da_camada(dados: dict) -> dict:
-    """Lista branca campo -> {sql, tipo[, srid]} para `compilar_cql2`. `fid` (chave da ingestão, item
-    L0-04) e `geom` sempre entram; os demais vêm de `dados.campos`, e só se o nome bater no padrão de
-    identificador — um `dados` corrompido nunca vira SQL interpolado sem essa conferência."""
-    colunas: dict = {
-        "fid": {"sql": '"fid"', "tipo": "bigint"},
-        "geom": {"sql": '"geom"', "tipo": "geometry", "srid": int(dados.get("srid") or 4326)},
-    }
-    for c in dados.get("campos") or []:
-        nome = c.get("nome")
-        if isinstance(nome, str) and IDENT_RE.match(nome) and nome not in colunas:
-            colunas[nome] = {"sql": f'"{nome}"', "tipo": (c.get("tipo") or "text").lower()}
-    return colunas
+    """Lista branca campo -> {sql, tipo[, srid]} para `compilar_cql2`. Uma implementação só, em
+    `app.consulta.cql2.colunas_da_camada`, compartilhada com a exportação a partir do mapa (L2-01-l)."""
+    return colunas_da_camada(dados)
 
 
 def _campo_permitido(colunas: dict, campo: str) -> dict:

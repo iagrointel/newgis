@@ -33,6 +33,7 @@ from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import jsonb, registrar_evento, uuid_ok
 from app.catalogo.modelos import UUID_PADRAO, Modelo
 from app.consulta import where_ast
+from app.consulta.cql2 import colunas_da_camada
 from app.erros import ErroAPI
 from app.exportacao import motor
 from app.exportacao.erros import sanear_erro_banco
@@ -40,6 +41,7 @@ from app.exportacao.formatos import descrever as descrever_formatos
 from app.exportacao.formatos import obter as formato_de
 from app.jobs import servico
 from app.jobs.contexto import sessao_de
+from app.mapa import pacote
 
 router = APIRouter(tags=["exportacao"])
 EXPORTAR = {"x-auth": "S/T", "x-privilegio": "conteudo.exportar"}
@@ -69,7 +71,7 @@ class OpcoesCsv(Modelo):
 
 
 class ExportacaoEntrada(Modelo):
-    item_id: str = Field(pattern=UUID_PADRAO)
+    item_id: str = Field(pattern=UUID_PADRAO)   # camada_vetorial, vista_de_camada, selecao ou mapa (pacote)
     formato: str = Field(min_length=1, max_length=40)
     nome: str | None = Field(default=None, max_length=limites.EXPORTACAO_NOME_MAX)
     campos: list[str] | None = Field(default=None, max_length=limites.EXPORTACAO_CAMPOS_MAX)
@@ -79,6 +81,10 @@ class ExportacaoEntrada(Modelo):
     codificacao: str | None = Field(default=None, max_length=20)
     pasta_id: str | None = Field(default=None, pattern=UUID_PADRAO)
     csv: OpcoesCsv | None = None
+    # exportar A PARTIR DO MAPA (item L2-01-l): a seleção (lista de fid) e/ou o filtro do construtor
+    # (CQL2-JSON, o mesmo objeto de POST /api/mapa/camadas/{id}/filtrar). Sem os dois, é a camada inteira.
+    ids: list[int] | None = Field(default=None, max_length=limites.EXPORTACAO_IDS_MAX)
+    filtro: dict | None = None
 
 
 def _exportacao_json(r: dict, base_url: str = "") -> dict:
@@ -122,6 +128,135 @@ def formatos(auth: Auth = autenticado(escopo_token="catalogo:ler")):
             "em_curso_max": limites.EXPORTACAO_POR_USUARIO_EM_CURSO}
 
 
+ORIGENS = ("camada_vetorial", "vista_de_camada", "selecao")
+
+
+def _criar_pacote(corpo: ExportacaoEntrada, request: Request, auth: Auth, item_id: str) -> dict:
+    """Exportação do MAPA inteiro como pacote (item L2-01-l). Mesma tabela, mesmo job, mesmo link de 7
+    dias da exportação de camada — muda só a origem (item `mapa`) e o que o job escreve."""
+    with db.db(auth.contexto()) as cur:
+        cur.execute("SELECT id, titulo, dono_id, dados FROM plat.item WHERE id = %s::uuid AND tipo = 'mapa' "
+                    "AND apagado_em IS NULL", (item_id,))
+        mapa = cur.fetchone()
+        if mapa is None:
+            raise ErroAPI(404, "item_inexistente", "mapa inexistente")
+        if not _pode_exportar_o_item(auth, mapa):
+            raise ErroAPI(403, "exportacao_nao_permitida",
+                          "o dono deste mapa não permitiu que outros o exportem")
+        citadas = pacote.camadas_citadas((mapa["dados"] or {}).get("corpo") or {})
+        if not citadas:
+            raise ErroAPI(422, "mapa_sem_camadas", "este mapa não cita nenhuma camada para empacotar")
+        if len(citadas) > limites.PACOTE_CAMADAS_MAX:
+            raise ErroAPI(422, "pacote_camadas_demais",
+                          f"o pacote leva no máximo {limites.PACOTE_CAMADAS_MAX} camadas; este mapa cita "
+                          f"{len(citadas)}", {"camadas": len(citadas)})
+        cur.execute("SELECT plat.exportacoes_em_curso(%s) AS n", (auth.usuario_id,))
+        em_curso = int(cur.fetchone()["n"])
+        if em_curso >= limites.EXPORTACAO_POR_USUARIO_EM_CURSO:
+            raise ErroAPI(429, "exportacoes_em_curso",
+                          f"você já tem {em_curso} exportações em curso (máximo "
+                          f"{limites.EXPORTACAO_POR_USUARIO_EM_CURSO}); espere uma terminar",
+                          {"em_curso": em_curso, "maximo": limites.EXPORTACAO_POR_USUARIO_EM_CURSO})
+        parametros = {"nome": corpo.nome, "pasta_id": corpo.pasta_id, "camadas_citadas": citadas,
+                      "srid_saida": corpo.srid_saida,
+                      "perda_declarada": ["o pacote leva as camadas citadas pelo mapa como dado no "
+                                          "GeoPackage; camada de serviço externo entra só como referência"]}
+        cur.execute(
+            "INSERT INTO plat.exportacao(tenant_id, usuario_id, item_id, formato, parametros) "
+            "VALUES (%s, %s, %s::uuid, 'pacote', %s) RETURNING id",
+            (auth.tenant_id, auth.usuario_id, item_id, jsonb(parametros)),
+        )
+        exportacao_id = str(cur.fetchone()["id"])
+        registrar_evento(cur, request, "mapas/exportar_pacote", "item", item_id,
+                         {"exportacao_id": exportacao_id, "camadas": len(citadas)})
+    job = servico.criar(sessao_de(auth), "exportacao.gerar", {"exportacao_id": exportacao_id})
+    with db.db(auth.contexto()) as cur:
+        cur.execute("UPDATE plat.exportacao SET job_id = %s::uuid WHERE id = %s::uuid",
+                    (job["id"], exportacao_id))
+    return {"exportacao_id": exportacao_id, "job_id": job["id"],
+            "perda_declarada": parametros["perda_declarada"], "camadas": len(citadas),
+            "validade_dias": limites.EXPORTACAO_VALIDADE_DIAS}
+
+
+def _resolver_origem(cur, auth: Auth, item_id: str) -> dict:
+    """Resolve o item pedido para a CAMADA que vai ser lida, mais o que a embalagem impõe.
+
+    Três origens, um caminho só (item L2-01-l — "a seleção, o filtro ou a camada inteira"):
+
+    * `camada_vetorial` — a camada inteira;
+    * `vista_de_camada` — a camada com o filtro da vista sempre aplicado e os `campos_ocultos` fora
+      (nem exportáveis, nem filtráveis: a lista branca do CQL2 é montada sem eles);
+    * `selecao` — a camada restrita aos `fid` gravados na seleção salva.
+
+    Devolve `{camada, ocultos, filtro, ids, origem}` — `camada` é a linha de `plat.item` da camada.
+    """
+    cur.execute(
+        "SELECT id, tipo, titulo, dono_id, dados FROM plat.item WHERE id = %s::uuid AND apagado_em IS NULL "
+        "AND tipo = ANY(%s)", (item_id, list(ORIGENS)),
+    )
+    origem = cur.fetchone()
+    if origem is None:
+        raise ErroAPI(404, "item_inexistente", "camada inexistente")
+    dados_origem = origem["dados"] or {}
+    ocultos: set[str] = set()
+    filtro: dict | None = None
+    ids: list | None = None
+    camada = origem
+    if origem["tipo"] != "camada_vetorial":
+        camada_id = dados_origem.get("camada_id")
+        if not camada_id:
+            raise ErroAPI(422, "origem_sem_camada",
+                          f"o item {origem['tipo']!r} não aponta para nenhuma camada")
+        cur.execute(
+            "SELECT id, tipo, titulo, dono_id, dados FROM plat.item WHERE id = %s::uuid "
+            "AND tipo = 'camada_vetorial' AND apagado_em IS NULL", (str(camada_id),),
+        )
+        camada = cur.fetchone()
+        if camada is None:
+            raise ErroAPI(404, "item_inexistente", "a camada de origem não existe mais")
+        if origem["tipo"] == "vista_de_camada":
+            ocultos = {c for c in (dados_origem.get("campos_ocultos") or []) if isinstance(c, str)}
+            filtro = dados_origem.get("filtro") or None
+        else:
+            ids = list(dados_origem.get("ids") or [])
+        if not _pode_exportar_o_item(auth, origem):
+            raise ErroAPI(403, "exportacao_nao_permitida",
+                          "o dono deste item não permitiu que outros o exportem")
+    return {"origem": origem, "camada": camada, "ocultos": ocultos, "filtro": filtro, "ids": ids}
+
+
+def _conferir_crs(formato, srid_saida: int | None) -> None:
+    """Formato de CRS preso não aceita outro CRS: recusa na entrada, para nunca gravar coordenada
+    projetada sob rótulo de WGS 84 (ver o bloco CRS de `app/exportacao/formatos.py`)."""
+    if not srid_saida or formato.crs_saida in ("livre", "nenhum"):
+        return
+    preso = int(formato.crs_saida)
+    if int(srid_saida) != preso:
+        raise ErroAPI(422, "crs_fixo_do_formato",
+                      f"{formato.rotulo} grava sempre em EPSG:{preso}; para EPSG:{srid_saida} use "
+                      f"GeoPackage, FlatGeobuf, GML, shapefile ou File Geodatabase",
+                      {"crs_do_formato": preso, "pedido": int(srid_saida)})
+
+
+def _perdas_declaradas(formato, campos: list[str]) -> list[str]:
+    """O que este formato NÃO leva, dito antes de gerar (refutação do item: "DXF com atributos —
+    perda declarada"). Não impede a exportação: informa."""
+    perdas = []
+    if campos and not formato.guarda_atributos:
+        perdas.append(f"{formato.rotulo} não guarda atributo: os {len(campos)} campos escolhidos "
+                      f"({', '.join(campos[:6])}{'…' if len(campos) > 6 else ''}) ficam de fora; sai só a geometria")
+    if not formato.guarda_geometria:
+        perdas.append(f"{formato.rotulo} não guarda geometria")
+    if formato.crs_saida in ("4326", "3857"):
+        perdas.append(f"{formato.rotulo} grava sempre em EPSG:{formato.crs_saida}")
+    if formato.tilado:
+        perdas.append(f"{formato.rotulo} recorta e generaliza a geometria por tile: a contagem de feições "
+                      "do arquivo não é a do banco")
+    if formato.nome == "shapefile":
+        perdas.append("o shapefile trunca nome de campo em 10 caracteres")
+    return perdas
+
+
 @router.post("/api/exportacoes", status_code=202, openapi_extra=EXPORTAR)
 def criar(corpo: ExportacaoEntrada, request: Request, auth: Auth = autenticado("conteudo.exportar")):
     formato = formato_de(corpo.formato)
@@ -134,15 +269,13 @@ def criar(corpo: ExportacaoEntrada, request: Request, auth: Auth = autenticado("
         raise ErroAPI(422, "codificacao_nao_suportada",
                       f"{formato.rotulo} só grava em {', '.join(formato.codificacoes)}",
                       {"aceitas": list(formato.codificacoes)})
+    _conferir_crs(formato, corpo.srid_saida)
     item_id = uuid_ok(corpo.item_id)
+    if formato.nome == "pacote":
+        return _criar_pacote(corpo, request, auth, item_id)
     with db.db(auth.contexto()) as cur:
-        cur.execute(
-            "SELECT id, titulo, dono_id, dados FROM plat.item WHERE id = %s::uuid AND tipo = 'camada_vetorial' "
-            "AND apagado_em IS NULL", (item_id,),
-        )
-        item = cur.fetchone()
-        if item is None:
-            raise ErroAPI(404, "item_inexistente", "camada inexistente")
+        resolvido = _resolver_origem(cur, auth, item_id)
+        item = resolvido["camada"]
         if not _pode_exportar_o_item(auth, item):
             raise ErroAPI(403, "exportacao_nao_permitida",
                           "o dono desta camada não permitiu que outros a exportem")
@@ -150,8 +283,18 @@ def criar(corpo: ExportacaoEntrada, request: Request, auth: Auth = autenticado("
         if dados.get("fonte") != "hospedada":
             raise ErroAPI(422, "camada_nao_hospedada",
                           "só camada hospedada (tabela do inquilino) é exportável nesta versão")
+        ocultos = resolvido["ocultos"]
         campos_item = [c["nome"] for c in dados.get("campos") or []]
-        desconhecidos = [c for c in (corpo.campos or []) if c not in campos_item]
+        campos_visiveis = [c for c in campos_item if c not in ocultos]
+        pedidos = corpo.campos or campos_visiveis
+        escondidos = [c for c in pedidos if c in ocultos]
+        if escondidos:
+            # o campo existe na camada, mas a vista o esconde: dizer "não existe" seria mentira e dizer o
+            # valor seria vazamento. 422 nomeando o campo é o meio-termo honesto (o usuário VÊ a vista).
+            raise ErroAPI(422, "campo_oculto",
+                          f"campos escondidos por esta vista não são exportáveis: {escondidos}",
+                          {"campos": escondidos})
+        desconhecidos = [c for c in pedidos if c not in campos_visiveis]
         if desconhecidos:
             raise ErroAPI(422, "campo_desconhecido", f"campos que não existem na camada: {desconhecidos}",
                           {"campos": desconhecidos})
@@ -161,22 +304,42 @@ def criar(corpo: ExportacaoEntrada, request: Request, auth: Auth = autenticado("
                 raise ErroAPI(422, "srid_desconhecido",
                               f"EPSG:{corpo.srid_saida} não existe nesta instalação do PostGIS",
                               {"srid": corpo.srid_saida})
+        ids = corpo.ids if corpo.ids is not None else resolvido["ids"]
+        filtro = corpo.filtro or resolvido["filtro"]
+        if corpo.filtro and resolvido["filtro"]:
+            # os dois valem juntos: o da vista é condição, o do usuário é recorte dentro dela
+            filtro = {"op": "and", "args": [resolvido["filtro"], corpo.filtro]}
         # filtro: sintaxe/lista branca aqui, semântica no banco (LIMIT 0) — os dois ANTES de criar o job
-        if corpo.where or corpo.bbox:
+        sql = None
+        if corpo.where or corpo.bbox or ids is not None or filtro is not None or formato.linhas_max:
             try:
                 sql = motor.montar_select(
                     cur, schema=dados["schema"], tabela=dados["tabela"],
-                    campos=(corpo.campos or campos_item), coluna_geom="geom", where=corpo.where,
+                    campos=pedidos, coluna_geom="geom", where=corpo.where,
                     bbox=corpo.bbox, srid_tabela=int(dados.get("srid") or 4326),
-                    colunas_brancas=motor.colunas_permitidas(dados.get("campos") or []),
+                    colunas_brancas=motor.colunas_permitidas(
+                        [c for c in (dados.get("campos") or []) if c.get("nome") not in ocultos]),
+                    ids=ids, filtro_cql2=filtro, colunas_cql2=colunas_da_camada(dados, ocultos),
                 )
             except where_ast.ErroWhere as e:
-                raise ErroAPI(400, "where_invalido", e.mensagem, {"codigo": e.codigo, "detalhe": e.detalhe}) from e
+                raise ErroAPI(400 if e.codigo != "campo_nao_permitido" else 422, "where_invalido", e.mensagem,
+                              {"codigo": e.codigo, "detalhe": e.detalhe}) from e
             try:
                 motor.conferir_where(cur, sql)
             except psycopg2.Error as e:
                 mensagem, sqlstate = sanear_erro_banco(e)
                 raise ErroAPI(400, "where_invalido", mensagem, {"sqlstate": sqlstate}) from e
+        if formato.linhas_max and sql is not None:
+            # teto do PRÓPRIO formato (XLSX = 1.048.576 linhas de planilha, cabeçalho incluído): recusar
+            # com mensagem é a única resposta honesta — o driver escreveria um arquivo TRUNCADO em silêncio
+            cur.execute(f"SELECT count(*) AS n FROM ({sql}) AS conferencia")
+            linhas = int(cur.fetchone()["n"])
+            if linhas + 1 > formato.linhas_max:
+                raise ErroAPI(422, "formato_limite_de_linhas",
+                              f"{formato.rotulo} não passa de {formato.linhas_max} linhas (cabeçalho "
+                              f"incluído) e esta exportação tem {linhas} feições; filtre, selecione menos "
+                              f"ou escolha CSV, GeoPackage ou GeoParquet",
+                              {"linhas": linhas, "maximo": formato.linhas_max, "formato": formato.nome})
         cur.execute("SELECT plat.exportacoes_em_curso(%s) AS n", (auth.usuario_id,))
         em_curso = int(cur.fetchone()["n"])
         if em_curso >= limites.EXPORTACAO_POR_USUARIO_EM_CURSO:
@@ -184,24 +347,29 @@ def criar(corpo: ExportacaoEntrada, request: Request, auth: Auth = autenticado("
                           f"você já tem {em_curso} exportações em curso (máximo "
                           f"{limites.EXPORTACAO_POR_USUARIO_EM_CURSO}); espere uma terminar",
                           {"em_curso": em_curso, "maximo": limites.EXPORTACAO_POR_USUARIO_EM_CURSO})
+        perdas = _perdas_declaradas(formato, pedidos)
         parametros = {
             "nome": corpo.nome, "campos": corpo.campos, "where": corpo.where, "bbox": corpo.bbox,
             "srid_saida": corpo.srid_saida, "codificacao": codificacao, "pasta_id": corpo.pasta_id,
             "csv": corpo.csv.model_dump() if corpo.csv else None,
+            "ids": ids, "filtro": filtro, "campos_ocultos": sorted(ocultos),
+            "origem_item_id": str(resolvido["origem"]["id"]), "origem_tipo": resolvido["origem"]["tipo"],
+            "perda_declarada": perdas,
         }
         cur.execute(
             "INSERT INTO plat.exportacao(tenant_id, usuario_id, item_id, formato, parametros) "
             "VALUES (%s, %s, %s::uuid, %s, %s) RETURNING id",
-            (auth.tenant_id, auth.usuario_id, item_id, formato.nome, jsonb(parametros)),
+            (auth.tenant_id, auth.usuario_id, str(item["id"]), formato.nome, jsonb(parametros)),
         )
         exportacao_id = str(cur.fetchone()["id"])
-        registrar_evento(cur, request, "camadas/exportar", "item", item_id,
+        registrar_evento(cur, request, "camadas/exportar", "item", str(item["id"]),
                          {"exportacao_id": exportacao_id, "formato": formato.nome})
     job = servico.criar(sessao_de(auth), "exportacao.gerar", {"exportacao_id": exportacao_id})
     with db.db(auth.contexto()) as cur:
         cur.execute("UPDATE plat.exportacao SET job_id = %s::uuid WHERE id = %s::uuid",
                     (job["id"], exportacao_id))
-    return {"exportacao_id": exportacao_id, "job_id": job["id"]}
+    return {"exportacao_id": exportacao_id, "job_id": job["id"], "perda_declarada": perdas,
+            "validade_dias": limites.EXPORTACAO_VALIDADE_DIAS}
 
 
 def descrever_formatos_nomes():
