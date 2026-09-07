@@ -682,6 +682,33 @@ A extração foi refeita com `ogr2ogr` (streaming, GDAL, pico de RSS medido ~500
   pacote apt nesta distribuição; a cláusula "chave privada nunca no git" foi provada com uma varredura direta
   do histórico (`git log --all -p`) à procura do cabeçalho PEM.
 
+### Galeria de mapas base por inquilino (item L2-01-e-mapas-base, migração `20260907T1649_mapa_base.sql`, ADR `20260907T1800`)
+
+O mapa base deixou de ser fixo no código (item L2-01-a) e virou item do catálogo: tipo `mapa_base` em
+`plat.tipo_item`, validado por JSON Schema na própria migração, com `creditos` e `termos_de_uso` do item
+carregando a atribuição e a licença da fonte. Quatro fontes abertas de instalação (`app/mapas_base/semear.py`,
+licença de cada uma em `docs/DADO_DEMO.md`): PMTiles vetorial local por Range HTTP, raster do OpenStreetMap
+pelo proxy da casa, satélite Sentinel-2 por um TiTiler externo e "nenhum" (fundo cor). Rotas novas
+`GET /api/mapas-base`, `POST /api/mapas-base/instalar` (idempotente, não sobrescreve edição do admin),
+`POST /api/mapas-base/{id}/tornar-padrao` (troca o padrão em uma transação; índice único parcial como rede de
+última linha) e `GET /api/mapas-base/osm/{z}/{x}/{y}.png`.
+
+O proxy do OSM **não lê host de lugar nenhum**: recebe só `z/x/y`, valida os três contra a faixa do slippy map
+e escolhe o host de uma tupla fixa em `app/limites.py` — proxy aberto é impossível por construção, não por
+lista de bloqueio; a busca ainda passa por `app.conexao.seguranca.buscar_seguro`. Cache é arquivo em disco
+(`var/cache/mapa_base_osm/`) com teto e poda do mais antigo, como a política de uso do `tile.openstreetmap.org`
+exige. No navegador, trocar de mapa base troca o `style` inteiro do MapLibre: `web/js/mapa/mapa.js` guarda as
+camadas operacionais, reaplica no `styledata` seguinte e restaura centro/zoom com `jumpTo`; três paletas
+próprias (claro/escuro/cinza) para a fonte vetorial. Regra `@media print` em `web/mapa.css` mantém a
+atribuição visível no papel (o layout de impressão completo é o item L2-12, ainda pendente).
+
+Medido (`tests/medidas/L2-01-e.json`): PMTiles instalado 19.181.534 bytes; pior caso de disco da galeria
+124.039.134 bytes (PMTiles + teto do cache do proxy), contra teto interino de 154.857.600 —
+**a decisão D27 do dono segue aberta, então o teto é o do repositório, não um número dele**. Testes:
+25 de unidade (esquema e proxy), 13 de API, 4 casos no cruzado de RLS. As cláusulas de e2e com captura
+ficaram **pendentes**: a base por trilha não tem nginx (`PLAT_URL_PUBLICA` inválida de propósito), então
+`tests/e2e/test_mapas_base.py` está escrito e salta — roda em homologação ou instalação real.
+
 ## 0.2.0 — turno 2, setembro de 2026 (itens L0-02-tenant-auth: identidade e acesso · L0-05-jobs: fila de trabalhos)
 
 O produto passa a ter login com senha e segundo fator, sessão, usuários, grupos, papéis, tokens de serviço, log de

@@ -147,4 +147,9 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
+    # ---- galeria de mapas base (L2-01-e-mapas-base): as duas rotas de escrita não têm evento próprio —
+    # elas criam/editam itens comuns do catálogo pelo MESMO caminho de /api/itens (app.catalogo.rotas_itens
+    # criar/editar_item), então quem narra é o vocabulário de itens, já declarado acima.
+    ("POST", "/api/mapas-base/instalar"): ["itens/adicionar"],
+    ("POST", "/api/mapas-base/{id}/tornar-padrao"): ["itens/atualizar"],
 }

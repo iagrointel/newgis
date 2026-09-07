@@ -1,0 +1,27 @@
+{
+ "item": "L2-01-e",
+ "medidas": {
+  "pmtiles_em_disco_bytes": {
+   "valor": 19181534,
+   "unidade": "bytes",
+   "comando": "os.stat de web/dados/basemap/guarulhos.pmtiles (fonte 1 da galeria)"
+  },
+  "cache_proxy_osm_teto_bytes": {
+   "valor": 104857600,
+   "unidade": "bytes",
+   "comando": "limites.MAPA_BASE_OSM_CACHE_BYTES_MAX (teto do cache em disco da fonte 2)"
+  },
+  "mapa_base_disco_total_bytes": {
+   "valor": 124039134,
+   "unidade": "bytes",
+   "comando": "PMTiles em disco + teto do cache do proxy OSM (pior caso da instalação)"
+  },
+  "mapa_base_disco_teto_bytes": {
+   "valor": 154857600,
+   "unidade": "bytes",
+   "comando": "limites.MAPA_BASE_DISCO_BYTES_MAX (teto interino: D27 do dono ainda aberta)"
+  }
+ },
+ "gerado_em": "2026-09-07T17:59:05Z",
+ "git_sha": "d2e9973de90e"
+}

@@ -214,3 +214,9 @@ MAPA_BASE_OSM_CACHE_BYTES_MAX = 100 * 1024 * 1024  # 100 MiB de teto do cache em
 MAPA_BASE_OSM_CONECTAR_TIMEOUT_S = 3.0
 MAPA_BASE_OSM_LER_TIMEOUT_S = 8.0
 MAPA_BASE_OSM_RESPOSTA_MAX_BYTES = 1 * 1024 * 1024  # 1 MiB: um PNG 256×256 nunca chega perto disso
+# Teto de disco do mapa base instalado (PMTiles vetorial + teto do cache do proxy raster). A decisão D27 do
+# dono (Protomaps do Brasil inteiro = gigabytes × disco da casa a 98 %) está ABERTA: enquanto não houver
+# número do dono, vale o teto já em vigor no repositório — os 50 MB do recorte PMTiles declarados em
+# web/dados/basemap/PROVENIENCIA.md (item L2-01-a) mais MAPA_BASE_OSM_CACHE_BYTES_MAX do cache do proxy.
+MAPA_BASE_PMTILES_BYTES_MAX = 50 * 1000 * 1000
+MAPA_BASE_DISCO_BYTES_MAX = MAPA_BASE_PMTILES_BYTES_MAX + MAPA_BASE_OSM_CACHE_BYTES_MAX

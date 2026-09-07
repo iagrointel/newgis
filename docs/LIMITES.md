@@ -226,3 +226,5 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `MAPA_BASE_OSM_CONECTAR_TIMEOUT_S` | `3.0` | — |
 | `MAPA_BASE_OSM_LER_TIMEOUT_S` | `8.0` | — |
 | `MAPA_BASE_OSM_RESPOSTA_MAX_BYTES` | `1048576` | 1 MiB: um PNG 256×256 nunca chega perto disso |
+| `MAPA_BASE_PMTILES_BYTES_MAX` | `50000000` | — |
+| `MAPA_BASE_DISCO_BYTES_MAX` | `154857600` | — |
