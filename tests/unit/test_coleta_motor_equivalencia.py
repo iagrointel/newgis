@@ -19,7 +19,8 @@ from app.coleta.documento import ordem_de_calculo  # noqa: E402
 from app.erros import ErroAPI  # noqa: E402
 
 CASOS = [
-    ("basico.xlsx", {"nome": "Ana", "idade": 30, "data_visita": "2026-09-07", "aceita": "sim", "fontes": "poco rio"}, {}),
+    ("basico.xlsx", {"nome": "Ana", "idade": 30, "data_visita": "2026-09-07", "aceita": "sim", "fontes": "poco rio"},
+     {}),
     ("basico.xlsx", {"idade": "x"}, {}),
     ("regras.xlsx", {"idade": 200, "tem_filhos": "sim", "n_filhos": 0}, {}),
     ("regras.xlsx", {"idade": 15, "tem_filhos": "nao", "n_filhos": 5, "email": "sem-arroba", "documento": "1"}, {}),
@@ -30,8 +31,8 @@ CASOS = [
     ("cascata.xlsx", {"estado": "ba", "municipio": "spo", "bairro": "spo_pin"}, {}),
     ("cascata.xlsx", {"estado": "rs"}, {}),
     ("repeticao.xlsx", {"domicilio": "D-1"},
-     {"membros": [{"nome_m": "Ana", "idade_m": 40, "trabalha": "sim"}, {"nome_m": "Bia", "idade_m": 10, "trabalha": "sim"},
-                  {"nome_m": "Caio", "idade_m": 3}]}),
+     {"membros": [{"nome_m": "Ana", "idade_m": 40, "trabalha": "sim"},
+                  {"nome_m": "Bia", "idade_m": 10, "trabalha": "sim"}, {"nome_m": "Caio", "idade_m": 3}]}),
     ("repeticao.xlsx", {"domicilio": "D-2"}, {"membros": [{"nome_m": "X", "idade_m": 999}, {"idade_m": 5}]}),
     ("repeticao.xlsx", {}, {}),
 ]
@@ -92,7 +93,8 @@ def test_ciclo_detectado_nos_dois_lados():
             c["calculo"] = regra_de("$valor + 1")
     with pytest.raises(ErroAPI):
         ordem_de_calculo(doc)
-    saida = subprocess.run(["node", str(RUNNER)], input=json.dumps([{"documento": doc, "valores": {}, "repeticoes": {}}]),
-                           capture_output=True, text=True, timeout=60, cwd=str(ROOT), check=True)
+    entrada = json.dumps([{"documento": doc, "valores": {}, "repeticoes": {}}])
+    saida = subprocess.run(["node", str(RUNNER)], input=entrada, capture_output=True, text=True, timeout=60,
+                           cwd=str(ROOT), check=True)
     js = json.loads(saida.stdout)[0]
     assert js["erro"] == "dependencia_circular" and set(js["campos"]) >= {"area", "valor"}
