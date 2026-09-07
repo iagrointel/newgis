@@ -207,7 +207,11 @@ def exportacao_gerar(ctx, exportacao_id: uuid.UUID) -> dict:
 
             # ---------------------------------------------------------------- ogr2ogr
             ctx.progresso(15, f"gerando {formato.rotulo}")
-            alvo = trabalho / ("saida_dir" if formato.em_diretorio else f"saida{formato.extensao}")
+            # o nome do DIRETÓRIO importa para alguns drivers: o OpenFileGDB recusa criar uma pasta cuja
+            # extensão não seja `.gdb` ("Extension of the directory should be gdb", medido em 07/09/2026),
+            # e é esse mesmo nome que vai para dentro do zip
+            alvo = trabalho / ((formato.caminho_interno or "saida_dir") if formato.em_diretorio
+                               else f"saida{formato.extensao}")
             if formato.nome == "kmz":
                 alvo = trabalho / "saida.kml"
             elif formato.nome == "geoparquet":
@@ -215,7 +219,8 @@ def exportacao_gerar(ctx, exportacao_id: uuid.UUID) -> dict:
             gerados.append(alvo)
             argv = motor.argumentos_ogr2ogr(
                 formato, destino=alvo, conninfo=motor.conninfo_pg(ctx.tenant_id, ctx.usuario_id), sql=sql,
-                nome_camada=Path(nome_arquivo).stem, srid_saida=srid_saida, codificacao=codificacao,
+                nome_camada=motor.nome_camada_seguro(Path(nome_arquivo).stem, formato),
+                srid_saida=srid_saida, codificacao=codificacao,
             )
             (resultado, ms_ogr) = motor.cronometrar(ctx.subprocesso, argv)
             avisos = [ln.strip() for ln in (resultado.stderr or "").splitlines() if ln.strip()][:20]
