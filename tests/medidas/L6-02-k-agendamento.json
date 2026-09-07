@@ -1,0 +1,82 @@
+{
+ "item": "L6-02-k-agendamento",
+ "assinado_por": "backend/dados/testador/adversario (trilha wt/il602kagend, turno T3)",
+ "gerado_em": "2026-09-07T17:05:00Z",
+ "git_sha": "642cf206344e",
+ "maquina": "trilha isolada plat_til602kagend_*, worker próprio na porta 8293 (o :8153 de produção estava ocupado)",
+ "medidas": {
+  "tres_ocorrencias_aceleradas_ok": {
+   "valor": 3,
+   "unidade": "ocorrências",
+   "comando": "tests/api/jobs/test_jobs_agenda_camada_copiada.py::test_atualiza_tres_vezes_e_troca_atomica: mod_agenda.tick com instante injetado a cada 15 min simulados; 3/3 jobs 'conexao.atualizar_copia' concluídos, cada um busca a URL pública real (IBGE) e troca a versão"
+  },
+  "poda_mantem_1_versao_por_ciclo": {
+   "valor": 1,
+   "unidade": "versão em plat.camada_copia_versao por conexão",
+   "comando": "mesmo teste: após cada uma das 3 ocorrências, count(*) em plat.camada_copia_versao filtrado por conexao_id = 1 (D21: disco a 98%, nunca acumula histórico de bytes)"
+  },
+  "cinco_falhas_pausam_a_agenda": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "mecanismo GENÉRICO do L0-05 (plat.agenda_registrar_fim, migração 004), já provado por tests/api/jobs/test_jobs_agenda.py::test_cinco_falhas_seguidas_pausam_a_agenda (roda verde nesta trilha); este item só ACRESCENTA o aviso — ver 'aviso_registrado_ao_pausar' abaixo"
+  },
+  "aviso_registrado_ao_pausar": {
+   "valor": 1,
+   "unidade": "linha em plat.agenda_aviso",
+   "comando": "tests/api/jobs/test_jobs_agenda_camada_copiada.py::test_cinco_falhas_registram_aviso_com_throttle_de_6h: 5x plat.agenda_registrar_fim(...,'falhou') na mesma agenda -> ativa=false, falhas_seguidas=5, exatamente 1 plat.agenda_aviso pendente"
+  },
+  "throttle_de_6h_bloqueia_segundo_aviso": {
+   "valor": 1,
+   "unidade": "linha (não vira 2)",
+   "comando": "mesmo teste: uma 6ª chamada a agenda_registrar_fim(...,'falhou') na janela de 6h NÃO cria um segundo plat.agenda_aviso (plat.agenda_aviso_registrar recusa na entrada)"
+  },
+  "aviso_enfileira_correio_enviar": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "tests/api/jobs/test_jobs_agenda_camada_copiada.py::test_avisos_enviar_enfileira_correio_para_o_dono_com_email: job agenda.avisos_enviar (via app.jobs.sistema.enfileirar) cria 1 plat.job tipo=correio.enviar com o e-mail do dono, e marca agenda_aviso.enviado_em"
+  },
+  "troca_atomica_nunca_ve_camada_vazia": {
+   "valor": 0,
+   "unidade": "leituras nulas de N (leitor concorrente em loop de 20 ms)",
+   "comando": "tests/api/jobs/test_jobs_agenda_camada_copiada.py::test_troca_atomica_sobrevive_a_rollback: leitor concorrente (thread própria, conexão própria) lê plat.camada_copia_atual a cada 20 ms enquanto uma 2ª conexão grava uma versão nova inteira e chama camada_copia_trocar SEM COMMITAR; 0 das leituras viu versao_id nulo ou uma versão nunca comitada"
+  },
+  "kill_no_meio_da_troca_preserva_a_versao_antiga": {
+   "valor": true,
+   "unidade": "booleano (refutação do item)",
+   "comando": "mesmo teste: a transação que chamou camada_copia_trocar sofre ROLLBACK (simula o worker morto no meio da troca); depois do rollback, plat.camada_copia_atual continua apontando para a versão ANTIGA (v1, bytes íntegros = b'versao-1'), a versão nova (v2) nunca existiu, e nenhum outro processo viu v2"
+  },
+  "teto_por_usuario_413": {
+   "valor": "cota_agendas_usuario",
+   "unidade": "código de erro",
+   "comando": "tests/api/jobs/test_jobs_agenda_camada_copiada.py::test_teto_de_agendas_ativas_por_usuario: plat.cota_agendas_usuario (default 10, Esri = 10/usuário) e plat.agendas_ativas_usuario aplicados em agenda_criar/agenda_retomar (app/jobs/servico.py); teto rebaixado por config para não depender do estado de outros testes -> 11ª agenda ativa do mesmo usuário = 413 cota_agendas_usuario"
+  },
+  "teto_por_organizacao_ja_existia": {
+   "valor": 50,
+   "unidade": "agendas/organização (default)",
+   "comando": "plat.cota_agendas, migração 004 (L0-05), default 50 = o número que a Esri publica para organização; provado por tests/api/jobs/test_jobs_agenda.py::test_cota_de_agendas_413_e_rls (verde nesta trilha, não duplicado aqui)"
+  },
+  "tipo_e_periodico_visiveis_na_tela_tarefas": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "tests/api/jobs/test_jobs_agenda_camada_copiada.py::test_tipo_aparece_nos_tipos_e_agenda_na_listagem_de_tarefas: GET /api/jobs/tipos inclui conexao.atualizar_copia (schema com conexao_id obrigatório) e agenda.avisos_enviar; GET /api/agendas?tipo=conexao.atualizar_copia lista a agenda criada — a mesma tela web/tarefas.html usa as duas rotas"
+  },
+  "suite_do_item": {
+   "valor": "6 passed",
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/api/jobs/test_jobs_agenda_camada_copiada.py -q -> 6 passed"
+  },
+  "suite_regressao_l0_05_e_l6_02_a": {
+   "valor": "32 passed",
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/api/jobs/test_jobs_agenda.py tests/api/test_conexoes.py -q -> 32/32 verdes (7 + 25; nada quebrado pelo teto por usuário nem pela extensão de agenda_registrar_fim)"
+  }
+ },
+ "nao_passa": [
+  "tests/api/jobs/test_jobs_periodicos.py::test_cada_periodico_registrado_dispara_uma_vez_com_dois_relogios[3] (catalogo.lixeira_expurgar, pesado=True): estourou o timeout de 90 s nesta rodada por disputa do advisory lock global 'plat.job.pesado' (nome NÃO isolado por trilha/schema) com outros workers vivos na mesma máquina/Postgres compartilhado — pré-existente, não relacionado a este item (o job falho não é nenhum dos dois tipos criados aqui); os outros 4/5 índices dessa suíte passaram"
+ ],
+ "passou_na_rodada": [
+  "tests/api/jobs/test_jobs_agenda_camada_copiada.py: 6/6",
+  "tests/api/jobs/test_jobs_agenda.py + tests/api/test_conexoes.py: 32/32 (7+25, sem regressão)",
+  "make lint e make sem-marcador limpos"
+ ]
+}

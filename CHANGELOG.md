@@ -3,6 +3,23 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L6-02-k-agendamento: atualização agendada de camadas copiadas)
+
+Não é outro relógio: `conexao.atualizar_copia` é só mais um tipo de job agendável pelo mecanismo do L0-05
+(`plat.agenda`, `app/jobs/agenda.py::tick`, cron mínimo de 15 min já validado). Busca o conteúdo pelo
+conector (`app.conexao.seguranca.buscar_seguro`, defendido contra SSRF, `guardar_corpo=True`, teto próprio
+`CONEXAO_COPIA_MAX_BYTES` = 8 MiB) e grava uma VERSÃO nova em `plat.camada_copia_versao`; a troca é atômica
+por ponteiro (`plat.camada_copia_atual`, um UPSERT de uma linha) — a antiga só sai quando a nova entrou
+inteira, e se o worker morrer no meio (ROLLBACK), a camada antiga continua íntegra (provado com um leitor
+concorrente que nunca viu a linha vazia nem uma versão não comitada, `test_troca_atomica_sobrevive_a_
+rollback`). Poda para 1 versão por conexão a cada ciclo (disco a 98%, D21). Teto de tarefas ATIVAS por
+USUÁRIO (`plat.cota_agendas_usuario`/`plat.agendas_ativas_usuario`, default 10 — a referência Esri; o teto
+de 50 por organização já existia em `plat.cota_agendas` desde a 004), aplicado em `agenda_criar`/
+`agenda_retomar`. Quando 5 falhas seguidas pausam a agenda (mecanismo já existente, `plat.agenda_registrar_
+fim`), agora grava um aviso em `plat.agenda_aviso` (throttle de 1 a cada 6h, decidido na entrada da fila);
+o periódico `agenda.avisos_enviar` (a cada 15 min) drena e enfileira `correio.enviar` para o e-mail do dono
+da agenda. Migração `20260907T1631_conexao_agendamento_camada.sql`.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
