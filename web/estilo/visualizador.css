@@ -1,0 +1,31 @@
+/* plat — visualizador em tempo de execução (item L5-15-vista-movel-responsivo). Regra central do portão:
+   ZERO rolagem horizontal em nenhuma das três larguras — por isso `box-sizing: border-box` em tudo, imagem
+   nunca maior que o contêiner, e a única coisa que muda de 12 colunas para 1 é `grid-template-columns`
+   (nunca uma largura em pixel escrita à mão, mesma disciplina do editor em web/estilo/editor.css). */
+html, body { overflow-x: hidden; max-width: 100%; }
+.visualizador .v-principal { max-width: none; padding: var(--e3); box-sizing: border-box; }
+.v-raiz { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; width: 100%; box-sizing: border-box; }
+.v-no-filhos { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; grid-column: 1 / -1; margin-top: var(--e2); box-sizing: border-box; }
+.v-no { background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e2) var(--e3); min-width: 0; box-sizing: border-box; }
+.v-rotulo-grupo { margin: 0 0 var(--e2); font-weight: 600; font-size: .85rem; color: var(--fraco); }
+.v-texto { margin: 0; }
+.v-imagem { display: block; max-width: 100%; height: auto; }
+.v-tabela, .v-tabela-lista { width: 100%; box-sizing: border-box; }
+.v-tabela { border-collapse: collapse; }
+.v-tabela caption { text-align: left; font-size: .8rem; color: var(--fraco); margin-bottom: 4px; }
+.v-tabela th, .v-tabela td { border: 1px solid var(--borda); padding: 4px 8px; text-align: left; }
+.v-tabela-lista { list-style: none; margin: 0; padding: 0; }
+.v-tabela-lista li { border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e2); }
+
+/* mapa: nunca `display:none`, min-height garante bounding box não-nulo em qualquer largura (cláusula
+   "mapa visível" do portão) */
+.v-mapa { min-height: 180px; display: flex; align-items: flex-end; background: repeating-linear-gradient(45deg, var(--fundo-2), var(--fundo-2) 10px, var(--painel) 10px, var(--painel) 20px); }
+.v-mapa-legenda { font-size: .8rem; color: var(--fraco); background: var(--painel); padding: 2px 6px; border-radius: var(--raio); }
+
+/* reflow automático: ≤ 600 px vira 1 coluna, TUDO (largura de nó nunca é aplicada nesta faixa — o JS já
+   deixa de escrever `grid-column` em px/span quando `movel` é verdadeiro) */
+@media (max-width: 600px) {
+  .v-raiz, .v-no-filhos { grid-template-columns: 1fr; }
+  .v-no { grid-column: 1 / -1 !important; }
+  .v-mapa { min-height: 140px; }
+}

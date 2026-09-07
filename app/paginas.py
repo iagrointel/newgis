@@ -39,6 +39,9 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- visualizador em tempo de execução (L5-15-vista-movel-responsivo): ?item=<id>, ou ?preview=1 dentro
+    # do iframe de mesma origem que o construtor monta (web/js/editor/pre_visualizacao.js)
+    "/visualizar": "visualizar.html",
 }
 router = APIRouter()
 

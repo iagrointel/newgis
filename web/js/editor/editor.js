@@ -19,7 +19,7 @@
 import { h, limpar } from '../base/dom.js';
 import * as doc from './documento.js';
 import { validarValor, valorDoControle, conferirSuportado } from './esquema.js';
-import { ligarOrigemPaleta, ligarOrigemNo, ligarAlvo, ligarRedimensionar } from './arrasto.js';
+import { ligarOrigemPaleta, ligarOrigemNo, ligarOrigemNoToque, ligarAlvo, ligarRedimensionar } from './arrasto.js';
 
 const VAO_PADRAO = 8; // px; casa com --e2 usado no gap da grade em web/estilo/editor.css
 
@@ -36,6 +36,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
   const elTela = h('div', { class: 'editor-tela', id: 'tela', role: 'group', 'aria-label': 'Tela' });
   const elEstrutura = h('div', { class: 'editor-arvore', id: 'estrutura', role: 'tree', 'aria-label': 'Estrutura' });
   const elProps = h('div', { class: 'editor-props', id: 'propriedades' });
+  const elVistaMovel = h('div', { class: 'editor-vista-movel', id: 'vista-movel' });
   const elMensagem = h('p', { class: 'editor-mensagem', id: 'editor-mensagem', role: 'status', 'aria-live': 'polite' }, '');
 
   limpar(raiz).append(
@@ -44,7 +45,8 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
       h('section', { class: 'editor-centro', 'aria-label': 'Tela do documento' }, elMensagem, elTela),
       h('aside', { class: 'editor-lado' },
         h('section', { 'aria-label': 'Estrutura' }, h('h2', {}, 'Estrutura'), elEstrutura),
-        h('section', { 'aria-label': 'Propriedades' }, h('h2', {}, 'Propriedades'), elProps))));
+        h('section', { 'aria-label': 'Propriedades' }, h('h2', {}, 'Propriedades'), elProps),
+        h('section', { 'aria-label': 'Vista móvel' }, h('h2', {}, 'Vista móvel'), elVistaMovel))));
 
   function dizer(texto, tipo = 'ok') {
     elMensagem.textContent = texto;
@@ -56,6 +58,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
     desenharTela();
     desenharEstrutura();
     desenharPropriedades();
+    desenharVistaMovel();
     if (mensagem) dizer(mensagem);
     aoMudar?.(documentoAtual);
   }
@@ -99,6 +102,14 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
       if (selecionado === id) selecionado = null;
       return tentar(() => doc.remover(documentoAtual, id), 'removido');
     },
+    /* vista móvel (item L5-15-vista-movel-responsivo): documento.js::vistaMovel/definirVistaMovelManual/
+       definirOverrideMovel já garantem que só nó de raiz recebe override — aqui só embrulha em `tentar`. */
+    vistaMovelManual(manual) {
+      return tentar(() => doc.definirVistaMovelManual(documentoAtual, manual), manual ? 'vista móvel manual ativada: a ordem/visibilidade abaixo passa a mandar no celular' : 'vista móvel manual desativada: o celular volta a empilhar tudo automaticamente');
+    },
+    vistaMovelOverride(id, patch) {
+      return tentar(() => doc.definirOverrideMovel(documentoAtual, id, patch), 'vista móvel do celular atualizada');
+    },
   };
 
   /* ---------------------------------------------------------------- tela */
@@ -135,7 +146,9 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
 
     const titulo = h('span', { class: 'no-titulo' }, def.rotulo);
     const resumo = h('span', { class: 'no-resumo', dataset: { resumo: no.id } }, resumoDe(no));
-    el.append(h('header', { class: 'no-cabecalho' }, titulo, resumo));
+    const cabecalho = h('header', { class: 'no-cabecalho' }, titulo, resumo);
+    ligarOrigemNoToque(cabecalho, no.id); // arrasto por toque (item L5-15): só a partir do cabeçalho
+    el.append(cabecalho);
 
     if (def.aceita_filhos) {
       const dentro = h('div', { class: 'no-filhos', dataset: { filhosDe: no.id }, role: 'group', 'aria-label': `Dentro de ${def.rotulo}` });
@@ -342,6 +355,54 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
     });
     return h('label', { class: 'campo' },
       h('span', {}, `${esq.title || nome}${obrigatorio ? ' *' : ''}`), controle, erro);
+  }
+
+  /* ---------------------------------------------------------------- vista móvel (item L5-15-vista-movel-
+     responsivo): só nó de RAIZ (D1 do item). O toggle "manual" liga/desliga a lista abaixo; com manual
+     desligado a lista fica visível mas desabilitada — o valor continua gravado (não se perde ao desligar),
+     só não é o que manda no celular enquanto "manual" estiver falso (documento.js::nosVistaMovelManual só é
+     lido pelo visualizador quando `vista_movel.manual === true`). */
+  function desenharVistaMovel() {
+    limpar(elVistaMovel);
+    const vm = doc.vistaMovel(documentoAtual);
+    const manual = h('input', { type: 'checkbox', id: 'vm-manual' });
+    manual.checked = vm.manual;
+    manual.addEventListener('change', () => api.vistaMovelManual(manual.checked));
+    elVistaMovel.append(h('label', { class: 'campo campo-linha' }, manual,
+      h('span', {}, 'Vista de celular configurada manualmente (senão, empilha tudo sozinho)')));
+
+    const raizes = doc.filhos(documentoAtual, null);
+    if (!raizes.length) { elVistaMovel.append(h('p', { class: 'vazio' }, 'documento sem nó de raiz')); return; }
+    const tabela = h('div', { class: 'vm-lista', role: 'group', 'aria-label': 'Nós de raiz no celular' });
+    raizes.forEach((no, i) => {
+      const def = paleta.tipos[no.tipo] || { rotulo: no.tipo };
+      const ov = vm.nos[no.id] || {};
+      const oculto = h('input', { type: 'checkbox', dataset: { vmOculto: no.id }, disabled: !manual.checked });
+      oculto.checked = !!ov.oculto;
+      oculto.addEventListener('change', () => api.vistaMovelOverride(no.id, { oculto: oculto.checked || undefined }));
+      const ordem = h('input', {
+        type: 'number', min: '0', step: '1', dataset: { vmOrdem: no.id }, disabled: !manual.checked,
+        value: ov.ordem !== undefined ? String(ov.ordem) : String(i),
+      });
+      ordem.addEventListener('change', () => {
+        const v = Number(ordem.value);
+        api.vistaMovelOverride(no.id, { ordem: Number.isInteger(v) && v >= 0 ? v : undefined });
+      });
+      const largura = h('input', {
+        type: 'number', min: '1', max: String(doc.COLUNAS), step: '1', dataset: { vmLargura: no.id }, disabled: !manual.checked,
+        value: ov.largura_colunas !== undefined ? String(ov.largura_colunas) : '',
+      });
+      largura.addEventListener('change', () => {
+        const v = largura.value === '' ? undefined : Number(largura.value);
+        api.vistaMovelOverride(no.id, { largura_colunas: v === undefined || (Number.isInteger(v) && v >= 1 && v <= doc.COLUNAS) ? v : ov.largura_colunas });
+      });
+      tabela.append(h('div', { class: 'vm-linha', dataset: { vmLinha: no.id } },
+        h('span', { class: 'vm-rotulo' }, def.rotulo),
+        h('label', { class: 'campo-linha' }, oculto, h('span', {}, 'oculto no celular')),
+        h('label', { class: 'campo-linha' }, h('span', {}, 'ordem'), ordem),
+        h('label', { class: 'campo-linha' }, h('span', {}, 'largura móvel (colunas)'), largura)));
+    });
+    elVistaMovel.append(tabela);
   }
 
   desenharPaleta();

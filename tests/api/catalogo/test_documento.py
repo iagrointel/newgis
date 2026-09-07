@@ -122,6 +122,53 @@ def test_no_sem_ulid_e_ulid_repetido_e_ligacao_pendente_sao_recusados(sessao_a, 
     assert r.status_code == 422 and r.json()["erro"] == "grafo_invalido"
 
 
+def test_vista_movel_referencia_pendente_e_fora_da_raiz_sao_recusadas(sessao_a):
+    """item L5-15-vista-movel-responsivo: `corpo.vista_movel.nos` só aceita id de nó de RAIZ que exista de
+    verdade — as duas checagens vivem em `documento.py::validar_grafo`, ao lado da mesma checagem que
+    `ligacoes` já faz, porque JSON Schema puro não expressa "essa chave é um id que existe em `nos`"."""
+    raiz, filho = _no(), _no()
+    corpo_base = {"nos": [{"id": raiz[0], "tipo": raiz[1]}, {"id": filho[0], "tipo": filho[1], "pai": raiz[0]}]}
+
+    def _corpo_com_vista_movel(no_id):
+        return {**corpo_base, "vista_movel": {"manual": True, "nos": {no_id: {"oculto": True}}}}
+
+    # chave que não é nenhum id de `nos`
+    r = sessao_a.post(
+        "/api/itens",
+        json={
+            "tipo": "app",
+            "titulo": titulo_zt("app-vm-pendente"),
+            "dados": {"tipo": "app", "esquema_versao": 3, "corpo": _corpo_com_vista_movel(_no()[0])},
+        },
+    )
+    assert r.status_code == 422 and r.json()["erro"] == "grafo_invalido"
+    assert any(d["regra"] == "referencia_pendente" for d in r.json()["detalhe"])
+
+    # id existe, mas não é nó de raiz (D1 do item: só raiz recebe override)
+    r = sessao_a.post(
+        "/api/itens",
+        json={
+            "tipo": "app",
+            "titulo": titulo_zt("app-vm-fora-raiz"),
+            "dados": {"tipo": "app", "esquema_versao": 3, "corpo": _corpo_com_vista_movel(filho[0])},
+        },
+    )
+    assert r.status_code == 422 and r.json()["erro"] == "grafo_invalido"
+    assert any(d["regra"] == "vista_movel_fora_da_raiz" for d in r.json()["detalhe"])
+
+    # id de raiz de verdade: aceito
+    corpo_ok = {**corpo_base, "vista_movel": {"manual": True, "nos": {raiz[0]: {"ordem": 0}}}}
+    r = sessao_a.post(
+        "/api/itens",
+        json={
+            "tipo": "app",
+            "titulo": titulo_zt("app-vm-ok"),
+            "dados": {"tipo": "app", "esquema_versao": 3, "corpo": corpo_ok},
+        },
+    )
+    assert r.status_code == 201, r.text
+
+
 def test_rascunho_nao_muda_publicado_ate_publicar_explicitamente(sessao_a, itens_a):
     a = _no()
     it = itens_a.criar("app", dados={"tipo": "app", "esquema_versao": 2, "corpo": _corpo([a])})
@@ -177,8 +224,10 @@ def test_ulid_de_no_nunca_se_repete_entre_versoes(sessao_a, itens_a):
 
 def test_migracao_de_esquema_na_leitura_com_evento(sessao_a, itens_a, conexao_plat_app):
     """Documento gravado com esquema_versao=1 (`corpo:{}`, a forma que existia antes de 028_documento_grafo.sql
-    e que os 1.573/1.571 itens semeados em demo ainda têm) chega pela API JÁ migrado para v2, com `nos`/`ligacoes`
-    default, e o evento `itens/esquema_migrado` fica registrado — nunca é gravado de volta em `plat.item.dados`."""
+    e que os 1.573/1.571 itens semeados em demo ainda têm) chega pela API JÁ migrado até a versão VIGENTE
+    (v3 desde 20260907T1505_vista_movel.sql, item L5-15-vista-movel-responsivo: a cadeia 1->2->3 roda inteira
+    numa leitura só), com `nos`/`ligacoes`/`vista_movel` default, e o evento `itens/esquema_migrado` registra
+    o salto de ponta a ponta (de=1, para=3) — nunca é gravado de volta em `plat.item.dados`."""
     it = itens_a.criar("painel", dados={"tipo": "painel", "esquema_versao": 1, "corpo": {}})
     iid = it["id"]
     ids = ids_por_slug(conexao_plat_app)
@@ -198,7 +247,8 @@ def test_migracao_de_esquema_na_leitura_com_evento(sessao_a, itens_a, conexao_pl
     r = sessao_a.get(f"/api/itens/{iid}")
     assert r.status_code == 200
     dados = r.json()["dados"]
-    assert dados["esquema_versao"] == 2 and dados["corpo"] == {"nos": [], "ligacoes": []}
+    assert dados["esquema_versao"] == 3
+    assert dados["corpo"] == {"nos": [], "ligacoes": [], "vista_movel": {"manual": False, "nos": {}}}
 
     contexto(conexao_plat_app, ids["demo"], usuario_id=adm, login="admin")  # SET LOCAL não sobrevive ao commit acima
     with conexao_plat_app.cursor() as cur:
@@ -215,7 +265,7 @@ def test_migracao_de_esquema_na_leitura_com_evento(sessao_a, itens_a, conexao_pl
             (iid,),
         )
         evento = cur.fetchone()
-    assert evento is not None and evento["propriedades"]["de"] == 1 and evento["propriedades"]["para"] == 2
+    assert evento is not None and evento["propriedades"]["de"] == 1 and evento["propriedades"]["para"] == 3
 
 
 def test_versoes_de_outro_inquilino_404_para_documento(sessao_a, itens_b):

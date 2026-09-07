@@ -12,12 +12,12 @@
    "comando": "json.dumps(canonico(arrasto)) == json.dumps(canonico(teclado))"
   },
   "montagem_por_arrasto_ms": {
-   "valor": 737.5,
+   "valor": 772.4,
    "unidade": "ms",
    "comando": "5 componentes + redimensionar + propriedade, só arrasto"
   },
   "montagem_por_teclado_ms": {
-   "valor": 131.8,
+   "valor": 130.0,
    "unidade": "ms",
    "comando": "o mesmo layout só por teclado e menus"
   },
@@ -27,11 +27,11 @@
    "comando": "web/vendor/VERSOES.txt sem SortableJS/dnd-kit/GridStack"
   },
   "editor_proprio_bytes": {
-   "valor": 43771,
+   "valor": 58870,
    "unidade": "bytes",
    "comando": "soma de web/js/editor/*.js (código próprio)"
   }
  },
- "gerado_em": "2026-09-07T03:02:42Z",
- "git_sha": "0cefce43cb54"
+ "gerado_em": "2026-09-07T15:29:26Z",
+ "git_sha": "ec2f1ecb2ff7"
 }

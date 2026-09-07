@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "corpo": {
+      "additionalProperties": false,
+      "properties": {
+        "ligacoes": {
+          "items": {
+            "properties": {
+              "alvo": {
+                "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                "type": "string"
+              },
+              "origem": {
+                "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                "type": "string"
+              },
+              "tipo": {
+                "maxLength": 60,
+                "type": "string"
+              }
+            },
+            "required": [
+              "origem",
+              "alvo"
+            ],
+            "type": "object"
+          },
+          "maxItems": 4000,
+          "type": "array"
+        },
+        "mapa_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "mapas": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "nos": {
+          "items": {
+            "properties": {
+              "id": {
+                "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                "type": "string"
+              },
+              "tipo": {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "tipo"
+            ],
+            "type": "object"
+          },
+          "maxItems": 2000,
+          "type": "array"
+        },
+        "vista_movel": {
+          "additionalProperties": false,
+          "properties": {
+            "manual": {
+              "type": "boolean"
+            },
+            "nos": {
+              "additionalProperties": {
+                "additionalProperties": false,
+                "properties": {
+                  "largura_colunas": {
+                    "maximum": 12,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "oculto": {
+                    "type": "boolean"
+                  },
+                  "ordem": {
+                    "maximum": 100000,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "esquema_versao": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "tipo": {
+      "const": "app"
+    }
+  },
+  "required": [
+    "tipo",
+    "esquema_versao",
+    "corpo"
+  ],
+  "title": "Documento de construtor — aplicativo",
+  "type": "object"
+}
