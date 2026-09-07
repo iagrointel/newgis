@@ -167,4 +167,25 @@ def descobrir(conexao: dict) -> Descoberta:
         "limites": avisos or None,
         "responsavel": None,
     }
+    # Conexão criada por catálogo CSW (item L6-06): o registro ISO 19139 lido na criação fica em
+    # `config.procedencia`. O que o serviço VIVO declara agora vence; o que ele não declara (licença, data do
+    # dado, responsável, frescor...) vem do registro — nunca de um padrão. O `metodo` diz de onde veio cada parte.
+    iso = (conexao.get("config") or {}).get("procedencia") if isinstance(conexao.get("config"), dict) else None
+    if isinstance(iso, dict):
+        preenchidos = []
+        for chave, valor in iso.items():
+            if chave == "limites" or valor in (None, "", [], {}):
+                continue
+            if procedencia.get(chave) is None:
+                procedencia[chave] = valor
+                preenchidos.append(chave)
+        if preenchidos:
+            procedencia["metodo"] = (
+                f"{procedencia['metodo']}; campos {', '.join(preenchidos)} preenchidos do registro ISO 19139 "
+                f"do catálogo CSW ({(iso.get('catalogo') or {}).get('url') or 'origem não registrada'})"
+            )
+        if iso.get("limites"):
+            procedencia["limites"] = (procedencia.get("limites") or []) + [f"registro ISO: {a}" for a in iso["limites"]]
+        if atribuicao is None:
+            atribuicao = iso.get("responsavel") or iso.get("fonte")
     return Descoberta(procedencia=procedencia, atribuicao=atribuicao)
