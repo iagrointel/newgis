@@ -156,3 +156,67 @@ token da própria camada.
 | formato de log `plat_tiles` | `/etc/nginx/conf.d/plat_log_formats.conf` (`deploy/nginx-log-formats.conf`) | 644 |
 | log de acesso de `/tiles/` | `/var/log/nginx/plat_tiles_access.log` | padrão do nginx |
 | scrape jobs da casa | `/opt/monitoring/prometheus/prometheus.yml` (fora do repositório — infra da casa, nunca substituído, só acrescentado) | — |
+
+## 11. Painéis (item L7-06-d-paineis)
+
+Cinco painéis, todos ARQUIVO em `deploy/grafana/paineis/*.json`, provisionados por
+`deploy/grafana/provisioning/`. Nunca editados pela interface: o provedor vai com
+`allowUiUpdates: false` e cada painel com `editable: false` — o Grafana recusa gravar pela tela em vez
+de aceitar e desfazer depois em silêncio.
+
+| uid | responde | fontes |
+|---|---|---|
+| `plat-visao-geral` | as 10 medidas do portão: p95 por rota, ladrilhos/s, acerto de cache, fila, conexões, disco, memória, 5xx, usuários ativos em 24 h, jobs concluídos | API, Martin, node-exporter, postgres_exporter |
+| `plat-por-inquilino` | as mesmas, recortadas pelo seletor `inquilino` (= `plat.tenant.id`, inteiro opaco) | API |
+| `plat-banco` | réplica, atraso, WAL, 10 maiores tabelas do schema, transação mais longa agora | postgres_exporter |
+| `plat-objetos` | saúde do agrupamento Garage, disco do nó, operações S3 por tipo, bytes e objetos por inquilino | Garage, API |
+| `plat-backup` | horas desde a última execução OK, duração e tamanho, por tipo (`backup`, `drill`) | API |
+
+**Onde entram.** No hospedado, no Grafana da casa (`iagro-grafana`, 127.0.0.1:3000) por
+`deploy/paineis_instalar.sh`, que escreve em `/opt/monitoring/grafana/dashboards/plat/` e na pasta de
+fontes de dado. Ali quem provisiona é o provedor `iagrointel` que já existia, e não o nosso: os dois
+apontariam para os mesmos arquivos e o Grafana recusaria o segundo ("dashboard already provisioned by
+another provider"); usar o nosso provedor no hospedado exigiria um bind mount novo, ou seja recriar o
+contêiner da casa — decisão do dono. No appliance (perfil `observabilidade`), onde o Grafana é nosso,
+vale `deploy/grafana/provisioning/` inteiro.
+
+**Homologação.** `bash deploy/paineis_homologacao.sh subir` levanta uma pilha própria — Prometheus
+(8314), Grafana em contêiner (8315), postgres_exporter (8317) e um Martin (8318) — lendo os MESMOS
+arquivos de painel e o MESMO provisionamento; só o endereço do Prometheus na fonte de dado e o nome do
+schema nas consultas do exporter são trocados. Depois roda uma carga curta de verdade
+(`deploy/paineis_carga.py`: 66 pedidos autenticados, um job `prova.progresso` concluído pelo worker,
+um upload com token de serviço, ladrilhos pedidos duas vezes para haver acerto de cache, e um `pg_dump`
+cronometrado registrado como execução de backup e de ensaio). `derrubar` mata tudo pelo PID, retira os
+GRANT temporários e apaga o diretório de trabalho.
+
+### 11.1 Três achados que mudaram o desenho (medidos em 07/09/2026)
+
+1. **`plat_tenant_schema_bytes` e `plat_tenant_conexoes_conexoes` (§4) nunca produzem série.** A
+   primeira faz JOIN com `plat.tenant`, que tem RLS por inquilino; o papel de métrica não é dono e não
+   tem `BYPASSRLS`, então a consulta devolve zero linha **sem erro nenhum** — a métrica simplesmente
+   não nasce, em produção também. A segunda depende de `application_name = 'plat:<id>'`, que só existe
+   na conexão enquanto ela atende um pedido daquele inquilino: série que aparece e some conforme o
+   instante do scrape. Substituídas, neste item, por `plat_tenant_dado_bytes` e `plat_bucket_*`, lidas
+   da API por função SECURITY DEFINER (mesmo padrão de `plat.fila_estado`).
+2. **`pg_stat_statements` está instalado mas NÃO pré-carregado** neste cluster
+   (`shared_preload_libraries = timescaledb,pg_cron,pgaudit`): toda leitura da view devolve "must be
+   loaded via shared_preload_libraries" e derruba o scrape inteiro do exporter. O quadro de consulta
+   lenta foi entregue sobre `pg_stat_activity` (transação mais longa agora, por estado); a consulta
+   pronta de `pg_stat_statements` está escrita em `deploy/postgres_exporter_queries.yaml`, para quando
+   o pré-carregamento entrar — é reinício de banco compartilhado, decisão do dono.
+3. **O Martin da casa está servindo 500 em todas as fontes**: as funções de tile de `d_demo` apontam
+   para `plat_tmapa`, schema de uma trilha já apagada. Não é deste item, mas deixaria dois quadros sem
+   dado por motivo alheio ao que se quer medir — por isso a homologação sobe um Martin próprio.
+
+### 11.2 Famílias novas de métrica (todas em `app/metricas.py`, coletor da API)
+
+| família | rótulos | vem de |
+|---|---|---|
+| `plat_usuarios_ativos_24h` | — | `plat.usuarios_ativos_24h()`: usuários distintos com acesso em 24 h, agregado em todos os inquilinos (sem rótulo por inquilino, usuário, IP ou token) |
+| `plat_backup_ultima_duracao_segundos` | `tipo` | `plat.backup_ultimo()`; tipo que nunca rodou não cria série |
+| `plat_backup_ultimo_bytes` | `tipo` | idem |
+| `plat_bucket_cota_bytes` / `plat_bucket_usado_bytes` / `plat_bucket_objetos` | `tenant_id` | `plat.arquivo_bucket_uso()` |
+| `plat_tenant_dado_bytes` | `tenant_id` | `plat.tenant_dado_bytes()` |
+
+O rótulo é sempre `tenant_id` (inteiro opaco). O alias do bucket carrega o slug do inquilino no nome e
+por isso **nunca** vira rótulo.
