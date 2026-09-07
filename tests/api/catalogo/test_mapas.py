@@ -47,7 +47,13 @@ def test_esquema_do_tipo_mapa_e_o_arquivo_publicado(sessao_a):
     assert r.status_code == 200
     do_banco = r.json()
     arquivo = Path(__file__).resolve().parents[3] / "docs" / "esquemas" / "mapa-v1.json"
-    assert json.loads(arquivo.read_text(encoding="utf-8")) == do_banco
+    esperado = json.loads(arquivo.read_text(encoding="utf-8"))
+    # numa trilha isolada (item L7-31), CursorSchemaAmbiente reescreve toda ocorrência textual de "plat"
+    # para o schema da trilha (ex.: plat_tmapa) — inclusive dentro de uma string humana como o `title`
+    # deste esquema, que não é referência de schema nenhuma. Mesma normalização já feita em
+    # tests/api/catalogo/test_estilos.py: o título não depende da trilha em que o teste roda.
+    do_banco["title"] = esperado["title"] = "documento de mapa do plat (mapa-v1)"
+    assert esperado == do_banco
     assert do_banco["properties"]["corpo"]["properties"]["crs_exibicao"]["const"] == 3857
 
 
