@@ -16,7 +16,6 @@ o `DROP TABLE` do quarto roda dentro de uma transação desfeita.
 
 from __future__ import annotations
 
-import os
 import uuid
 from pathlib import Path
 
@@ -26,7 +25,7 @@ import pytest
 from dotenv import dotenv_values
 
 from app.ingestao.inspecionar import tabela_de
-from app.schema_ambiente import SCHEMA_PADRAO, CursorSchemaAmbiente
+from app.schema_ambiente import SCHEMA_PADRAO
 from tests.api.ingestao.conftest import GERADOS
 from tests.api.test_rls import contexto, ids_por_slug
 
@@ -180,6 +179,7 @@ def test_refutacao_carga_de_trilha_nao_alcanca_camada_de_producao(conexao_plat_a
     camada REAL de produção, dentro de uma transação desfeita: tem de ser recusado, e a tabela de
     produção continua no catálogo."""
     from psycopg2 import errors
+
     from app.settings import settings
 
     if settings.PLAT_SCHEMA == SCHEMA_PADRAO:
