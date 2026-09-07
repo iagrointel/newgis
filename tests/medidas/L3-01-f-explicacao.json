@@ -1,0 +1,27 @@
+{
+ "item": "L3-01-f-explicacao",
+ "medidas": {
+  "latencia_p50_ms": {
+   "valor": null,
+   "unidade": "ms",
+   "comando": "não medida: carga_1min=23.0 acima de 8 (máquina ocupada)"
+  },
+  "maior_delta_100_unidades_sorteadas": {
+   "valor": 0.0,
+   "unidade": "pontos",
+   "comando": "100 unidades sintéticas (seed 20260907, 5% de fator ausente por unidade); |soma das contribuições − favorabilidade recalculada| e |recalculada − gravada independente|"
+  },
+  "delta_soma_vs_gravada_1_chamada_api": {
+   "valor": 0.0,
+   "unidade": "pontos",
+   "comando": "GET .../explicacao sobre execução real da API; ver também os 100 pontos sintéticos em tests/unit/test_amc_explicacao.py::test_montar_explicacao_100_unidades_sorteadas_bate_combinacao_independente"
+  },
+  "veto_mostra_fator_e_motivo": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "GET .../explicacao de unidade vetada: motivo_veto presente e tabela de fatores não fica vazia"
+  }
+ },
+ "gerado_em": "2026-09-07T13:01:45Z",
+ "git_sha": "c0741beb3183"
+}
