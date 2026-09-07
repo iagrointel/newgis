@@ -3,6 +3,17 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L6-02-a-modelo-conexao-e-seguranca)
+
+- O "Bearer da casa" passa a ser provado onde ele nasce, não só dentro de `buscar_seguro`:
+  `tests/unit/test_conexao_credencial_chamadores.py` (job `conexoes.saude_verificar`) e
+  `tests/api/test_conexoes_credencial_saltos.py` (rota `POST /api/conexoes/{id}/testar`, pela API de verdade,
+  com varredura por texto na resposta e no registro de log). Seis guardas `xfail(strict=True)` afirmam o
+  comportamento VULNERÁVEL: enquanto o conserto estiver de pé elas falham; se alguém o desfizer, elas passam
+  (XPASS) e a suíte fica vermelha.
+- `app/garage.py` deixa de seguir `Location` automaticamente nas duas chamadas que mandam `Authorization`
+  (`allow_redirects=False`): o outro caminho da casa que montava credencial e seguia redirecionamento.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

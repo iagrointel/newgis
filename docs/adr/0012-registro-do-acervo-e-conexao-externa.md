@@ -91,7 +91,29 @@ nunca é digitado em teste, só medido de novo a cada rodada).
    sempre a consulta COMPLETA a `geometry_columns`×`acervo.objeto`, calculada antes do corte de
    `--limite`. `--limite` serve só para teste rápido; nunca reduz o que conta como "ainda existe".
 
-### O que fica para os itens seguintes (nunca prometido como pronto aqui)
+### Decisão (setembro de 2026, turno T4): a regra vale no CHAMADOR, e a guarda é um teste que reprova por construção
+
+O conserto de T3 fechou a função (`buscar_seguro`), mas a prova parava ali; o bloqueio do item citava os dois
+chamadores por nome ("`testar`/`saude` vazam o Bearer da casa"). Agora cada um tem prova própria e offline:
+`tests/unit/test_conexao_credencial_chamadores.py` roda o job `conexoes.saude_verificar` com um contexto de
+mentira e uma credencial cifrada de verdade; `tests/api/test_conexoes_credencial_saltos.py` faz o caminho
+completo pela rota HTTP (cifra no POST, decifra no `testar`, cabeçalho, salto), e varre POR TEXTO a resposta da
+API e todo registro de log atrás do segredo.
+
+Regra de manutenção que fica escrita: **todo furo de segurança fechado deixa para trás um teste que afirma o
+comportamento VULNERÁVEL, marcado `xfail(strict=True)`**. Enquanto o conserto estiver de pé o teste falha (é o
+esperado); no dia em que alguém o desfizer, o teste passa, o `strict` transforma o XPASS em erro e a suíte fica
+vermelha. Um teste que só afirma o comportamento correto pode ser apagado junto com o conserto sem que nada
+apite; este não.
+
+Varredura de classe (todo lugar da casa que monta cabeçalho de credencial e segue redirecionamento):
+`app/conexao/seguranca.py` (consertado em T3), `app/garage.py` (as duas chamadas `requests.request` que mandam
+`Authorization` — SigV4 e token de administração — passam a usar `allow_redirects=False`; o Garage não
+redireciona, então um 3xx ali é erro de configuração e deve aparecer como erro, nunca virar requisição
+autenticada para outro destino), `app/rede/osrm.py` (não segue redirecionamento, não leva credencial) e
+`app/saude.py` (segue, mas é sonda sem credencial). No navegador, `web/js` não monta `Authorization`.
+
+## O que fica para os itens seguintes (nunca prometido como pronto aqui)
 
 L6-01-b (view só-leitura + RLS por assinatura), L6-01-f (LGPD por conteúdo), L6-01-g (licença curada em
 vocabulário fechado), L6-01-h (verificação semanal automatizada — hoje o script roda manual/via cron
