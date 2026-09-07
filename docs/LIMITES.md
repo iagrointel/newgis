@@ -231,5 +231,5 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | nome | valor | explicação |
 |---|---|---|
 | `HISTORICO_LISTA_MAX` | `500` | entradas devolvidas por consulta (mais recentes primeiro) |
-| `ANEXO_TAMANHO_MAX` | `10485760` | 10 MiB por anexo (igual ao teto de imagem/PDF de campo mais comum) |
+| `ANEXO_TAMANHO_MAX` | `7340032` | 7 MiB por anexo — NÃO 10: o envio é JSON com o conteúdo em base64 |
 | `ANEXO_TIPOS_PERMITIDOS` | `('application/pdf', 'image/gif', 'image/jpeg', 'image/png', 'image/webp')` | — |

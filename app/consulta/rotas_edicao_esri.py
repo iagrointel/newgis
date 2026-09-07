@@ -103,14 +103,17 @@ def _dicionario_json(valor: Any, nome: str) -> dict:
 def _abrir(request: Request, item_id: str, camada_id: str | None, editar: bool):
     """Autenticação (sessão OU token, inclusive `?token=`, como o resto do protocolo Esri) + escopo +
     privilégio de edição. O privilégio é conferido ANTES de qualquer leitura de corpo."""
-    if camada_id is not None and camada_id != "0":
-        raise ErroAPI(404, "camada_nao_encontrada", "esta implementação publica uma camada só (id 0) por item")
+    # ordem do ADR 0002 seção 5, e é o que `tests/api/test_privilegios_matriz.py` exige: autenticação e
+    # escopo, DEPOIS privilégio, só então a forma do caminho. Conferir o id da camada antes faria a rota
+    # responder 404 a quem não tem privilégio nenhum — um 404 que conta o que existe.
     auth = _autenticar(request, item_id, ESCOPO_EDITAR if editar else ESCOPO_LER)
     if editar and not (auth.tem("feicoes.editar") or auth.tem("feicoes.editar_total")):
         raise ErroAPI(
             403, "sem_privilegio", "a operação exige o privilégio feicoes.editar ou feicoes.editar_total",
             {"exigido": "feicoes.editar|feicoes.editar_total"},
         )
+    if camada_id is not None and camada_id != "0":
+        raise ErroAPI(404, "camada_nao_encontrada", "esta implementação publica uma camada só (id 0) por item")
     return auth
 
 
@@ -667,11 +670,13 @@ async def _arquivo_do_formulario(request: Request, nomes: tuple[str, ...]) -> tu
 async def add_attachment(request: Request, item_id: str, camada_id: str, object_id: str):
     try:
         auth = _abrir(request, item_id, camada_id, editar=True)
-        nome, tipo, conteudo = await _arquivo_do_formulario(request, ("attachment", "file"))
         with db.db(auth.contexto()) as cur:
             _marcar_origem(cur)
             _item, dados = camada_ou_404(cur, item_id)
             gid = _globalid_da_feicao(cur, dados, object_id)
+            # o formulário só é lido DEPOIS de a camada e a feição existirem: pedido contra item de outro
+            # inquilino morre em 404 sem passar por leitura de corpo (varredura cruzada, ADR 0002 §16.1)
+            nome, tipo, conteudo = await _arquivo_do_formulario(request, ("attachment", "file"))
             r = anexos_mod.enviar(cur, auth, request, item_id, gid, nome, tipo, conteudo)
         return _json({"addAttachmentResult": tr.resultado_ok(r["numero"], r["id"])})
     except ErroAPI as e:
@@ -682,16 +687,16 @@ async def add_attachment(request: Request, item_id: str, camada_id: str, object_
              operation_id="esri_update_attachment")
 async def update_attachment(request: Request, item_id: str, camada_id: str, object_id: str):
     try:
-        formulario = await request.form()
-        numero = formulario.get("attachmentId") or request.query_params.get("attachmentId")
         auth = _abrir(request, item_id, camada_id, editar=True)
-        if numero in (None, ""):
-            raise ErroAPI(400, "anexo_ausente", "informe attachmentId")
-        nome, tipo, conteudo = await _arquivo_do_formulario(request, ("attachment", "file"))
         with db.db(auth.contexto()) as cur:
             _marcar_origem(cur)
             _item, dados = camada_ou_404(cur, item_id)
             gid = _globalid_da_feicao(cur, dados, object_id)
+            formulario = await request.form()
+            numero = formulario.get("attachmentId") or request.query_params.get("attachmentId")
+            if numero in (None, ""):
+                raise ErroAPI(400, "anexo_ausente", "informe attachmentId")
+            nome, tipo, conteudo = await _arquivo_do_formulario(request, ("attachment", "file"))
             anexo_id = _anexo_por_numero(cur, gid, str(numero))
             r = anexos_mod.substituir(cur, auth, request, item_id, gid, anexo_id, nome, tipo, conteudo)
         return _json({"updateAttachmentResult": tr.resultado_ok(r["numero"], r["id"])})
@@ -773,21 +778,21 @@ async def upload(request: Request, item_id: str):
     from app.catalogo import comum
     from app.varredura_conteudo import ConteudoRecusado, escanear_cabecalho
     try:
-        auth = _abrir(request, item_id, None, editar=True)
-        nome, tipo, conteudo_b64 = await _arquivo_do_formulario(request, ("file", "attachment"))
-        bruto = base64.b64decode(conteudo_b64)
         from app import limites
-        tipo_limpo = (tipo or "").split(";")[0].strip().lower()
-        if tipo_limpo not in limites.ANEXO_TIPOS_PERMITIDOS:
-            raise ErroAPI(415, "tipo_nao_permitido", f"tipo não permitido: {tipo_limpo!r}")
-        if len(bruto) > limites.ANEXO_TAMANHO_MAX:
-            raise ErroAPI(422, "anexo_grande", f"acima de {limites.ANEXO_TAMANHO_MAX} bytes")
-        try:
-            escanear_cabecalho(bruto, tipo_limpo)
-        except ConteudoRecusado as e:
-            raise ErroAPI(415, "conteudo_recusado", str(e)) from e
+        auth = _abrir(request, item_id, None, editar=True)
         with db.db(auth.contexto()) as cur:
-            item, _dados = camada_ou_404(cur, item_id)
+            item, _dados = camada_ou_404(cur, item_id)  # antes de ler o corpo, como no addAttachment
+            nome, tipo, conteudo_b64 = await _arquivo_do_formulario(request, ("file", "attachment"))
+            bruto = base64.b64decode(conteudo_b64)
+            tipo_limpo = (tipo or "").split(";")[0].strip().lower()
+            if tipo_limpo not in limites.ANEXO_TIPOS_PERMITIDOS:
+                raise ErroAPI(415, "tipo_nao_permitido", f"tipo não permitido: {tipo_limpo!r}")
+            if len(bruto) > limites.ANEXO_TAMANHO_MAX:
+                raise ErroAPI(422, "anexo_grande", f"acima de {limites.ANEXO_TAMANHO_MAX} bytes")
+            try:
+                escanear_cabecalho(bruto, tipo_limpo)
+            except ConteudoRecusado as e:
+                raise ErroAPI(415, "conteudo_recusado", str(e)) from e
             obj = objetos.guardar(cur, "feicao_anexo", bruto, tipo_limpo, item_id=item_id,
                                   usuario_id=auth.usuario_id)
             cur.execute(
