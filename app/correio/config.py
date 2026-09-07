@@ -58,11 +58,14 @@ def smtp_efetivo(config: dict | None, settings: Any) -> ConfigSMTP | None:
     return None
 
 
-def decifrar_senha(cfg: ConfigSMTP, plat_secret: str) -> str | None:
+def decifrar_senha(cfg: ConfigSMTP, plat_secret: str, plat_secret_anterior: str | None = None) -> str | None:
+    """`plat_secret_anterior` (item L7-19): dupla-chave de 24h depois de `plat segredo rotacionar
+    PLAT_SECRET` — a senha cifrada antes da rotação ainda decifra com o valor antigo."""
     if not cfg.senha_cifrada:
         return None
     if cfg.origem == "instalacao":
         return cfg.senha_cifrada  # PLAT_SMTP_SENHA nunca passa pela cifra (não há coluna de banco a proteger)
     from app.correio.cifra import decifrar
+    from app.seguranca_rotacao import decifrar_com_rotacao
 
-    return decifrar(cfg.senha_cifrada, plat_secret)
+    return decifrar_com_rotacao(decifrar, cfg.senha_cifrada, plat_secret, plat_secret_anterior)
