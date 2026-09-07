@@ -80,7 +80,7 @@ def executar_pedidos(
     medida: ConsultaMedida | None = None,
 ) -> dict[str, dict]:
     """`pedidos` é {chave_do_elemento: {agregacao, campo?, campos?, limite?, ordenacao?, max_categorias?}}.
-    UMA chamada desta função cobre TODOS os elementos de uma fonte — é o chamador HTTP (rotas.py) que
+    UMA chamada desta função cobre todo elemento de uma fonte — é o chamador HTTP (rotas.py) que
     garante isso agrupando por `fonte_id` antes de chegar aqui; esta função em si roda 1 SQL por PEDIDO
     (não por elemento — pedidos duplicados entre elementos podem ser deduplicados pelo chamador se quiser,
     mas o ponto do portão é o número de REQUISIÇÕES HTTP por fonte, que já cai para 1 por ciclo)."""
