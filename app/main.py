@@ -39,6 +39,7 @@ from app.catalogo import (
     transferencia,
 )
 from app.conexao import rotas as rotas_conexao
+from app.consulta.rotas_query import router as rotas_consulta_esri
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.edicao.rotas import router as rotas_edicao
 from app.geocodificador.rotas import router as rotas_geocodificador
@@ -127,6 +128,9 @@ ROUTERS = [
     rotas_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
+    # --- operação query do FeatureServer (L2-04-c): /rest/services/{item}/FeatureServer/{camada}/query
+    # (a raiz completa do diretório de serviço é o L2-04-b, ainda não construído)
+    rotas_consulta_esri,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
