@@ -19,6 +19,14 @@ import pytest
 
 from tests.api.test_rls import contexto, ids_por_slug
 
+# A recusa pode chegar como violação de chave estrangeira, como erro levantado por gatilho ou como
+# falta de privilégio, conforme a tabela alvo; qualquer uma das três é recusa do banco.
+_ERROS_DE_RECUSA = (
+    psycopg2.errors.ForeignKeyViolation,
+    psycopg2.errors.RaiseException,
+    psycopg2.errors.InsufficientPrivilege,
+)
+
 
 @pytest.fixture
 def tenants(conexao_plat_app):
@@ -78,13 +86,17 @@ def _grupo(cur, tenant_id):
 
 
 def _categoria(cur, tenant_id):
-    cur.execute("INSERT INTO plat.categoria(tenant_id, nome) VALUES (%s, %s) RETURNING id", (tenant_id, _z("categoria")))
+    cur.execute(
+        "INSERT INTO plat.categoria(tenant_id, nome) VALUES (%s, %s) RETURNING id",
+        (tenant_id, _z("categoria")),
+    )
     return cur.fetchone()["id"]
 
 
 def _papel(cur, tenant_id):
     cur.execute(
-        "INSERT INTO plat.papel_personalizado(tenant_id, nome, perfil_minimo) VALUES (%s, %s, 'visualizador') RETURNING id",
+        "INSERT INTO plat.papel_personalizado(tenant_id, nome, perfil_minimo)"
+        " VALUES (%s, %s, 'visualizador') RETURNING id",
         (tenant_id, _z("papel")),
     )
     return cur.fetchone()["id"]
@@ -262,13 +274,13 @@ def test_fk_de_b_nao_alcanca_linha_de_a_como_plat_app(conexao_plat_app, tenants,
 
     _contexto_admin(con, b)
     with con.cursor() as cur:
-        with pytest.raises((psycopg2.errors.ForeignKeyViolation, psycopg2.errors.RaiseException, psycopg2.errors.InsufficientPrivilege)) as erro_inventado:
+        with pytest.raises(_ERROS_DE_RECUSA) as erro_inventado:
             inserir_na_filha_de_b(cur, b, id_inventado())
     con.rollback()
 
     _contexto_admin(con, b)
     with con.cursor() as cur:
-        with pytest.raises((psycopg2.errors.ForeignKeyViolation, psycopg2.errors.RaiseException, psycopg2.errors.InsufficientPrivilege)) as erro_de_a:
+        with pytest.raises(_ERROS_DE_RECUSA) as erro_de_a:
             inserir_na_filha_de_b(cur, b, alvo_de_a)
     con.rollback()
 
