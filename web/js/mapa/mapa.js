@@ -10,6 +10,7 @@
      camadas do catálogo (Martin/PMTiles)     catalogo.js
      árvore de camadas (ordem/grupo/escala) ../camadas.js (item L2-01-c)
      legenda dinâmica do estilo MapLibre     ../legenda.js (item L2-01-c)
+     lista com ordem, opacidade e legenda     painel.js
      janela de atributos                      atributos.js
      medição geodésica                        medicao.js
      pesquisa de endereço e de coordenada     busca.js
@@ -27,6 +28,10 @@ import { construirEstilo } from './estilo.js';
 import { Catalogo } from './catalogo.js';
 import { Arvore } from '../camadas.js';
 import { Legenda } from '../legenda.js';
+import { exigirSessao } from '../auth/sessao.js';
+import { construirEstilo } from './estilo.js';
+import { Catalogo } from './catalogo.js';
+import { Painel } from './painel.js';
 import { instalarPopup } from './atributos.js';
 import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
@@ -35,6 +40,7 @@ import { criarTabela } from './tabela.js';
 import { Desenho, kmlParaGeoJSON } from './desenho.js';
 import { PainelAnotacoes } from './anotacoes.js';
 import { alterar, enviar, mensagemDe, obter } from '../base/api.js';
+import { PainelExportar } from './exportar.js';
 
 const BASES = [
   { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
@@ -99,6 +105,9 @@ async function iniciar(usuario) {
   const catalogo = new Catalogo(map);
   const medicao = new Medicao(map, el('medicao-saida'));
   const arvore = new Arvore(catalogo, map, el('lista-camadas'), {
+  const painel = new Painel(catalogo, {
+    raizCamadas: el('lista-camadas'),
+    raizLegenda: el('legenda'),
     aoEnquadrar: async (id) => {
       const ext = await catalogo.extensao(id);
       if (ext) map.fitBounds([[ext[0], ext[1]], [ext[2], ext[3]]], { padding: 40, duration: 0 });
@@ -113,6 +122,9 @@ async function iniciar(usuario) {
     const titulo = window.prompt('nome do grupo', 'grupo novo');
     if (titulo !== null) arvore.criarGrupo(titulo);
   });
+
+  });
+  instalarPopup(map, catalogo, maplibregl);
 
   // troca de mapa-base: refazer o estilo apaga as camadas do catálogo, que são re-somadas em seguida
   const sel = montarSeletorBase(map);
@@ -294,6 +306,32 @@ async function iniciar(usuario) {
     } catch { /* documento novo ou inexistente: começa vazio, sem quebrar a tela */ }
   }
 
+  // --- exportação (item L2-01-l)
+  const painelExportar = new PainelExportar(catalogo, map, {
+    raiz: el('exportar'),
+    aoErro: (e) => el('aviso').erro(`${t('mapa.exportar_falhou', { erro: (e && e.message) || e })}`),
+  });
+
+  // --- impressão
+  const titulo = () => `${t('mapa.titulo')} — ${new Date().toLocaleDateString('pt-BR')}`;
+  const atribuicao = '© colaboradores do OpenStreetMap — ODbL 1.0';
+  // a legenda impressa é a MESMA que o painel mostra: entradas prontas de `ficha.legenda`
+  const legendaDaTela = () => catalogo.ativas
+    .map((id) => catalogo.ficha(id))
+    .filter(Boolean)
+    .flatMap((f) => f.legenda || [])
+    .slice(0, 12);
+  el('btn-png').addEventListener('click', async () => {
+    const r = await paraPng(map, { titulo: titulo(), atribuicao, nome: 'mapa.png',
+      legenda: legendaDaTela(), escalaSaida: el('png-2x').checked ? 2 : 1 });
+    el('impressao-saida').textContent = t('mapa.impressao_pronta', { formato: 'PNG', kb: Math.round(r.bytes / 1024) });
+  });
+  el('btn-pdf').addEventListener('click', async () => {
+    const r = await paraPdf(map, { titulo: titulo(), atribuicao, nome: 'mapa.pdf',
+      legenda: legendaDaTela() });
+    el('impressao-saida').textContent = t('mapa.impressao_pronta', { formato: 'PDF', kb: Math.round(r.bytes / 1024) });
+  });
+
   map.on('error', (ev) => {
     const msg = (ev && ev.error && ev.error.message) || String(ev);
     el('aviso').erro(`${t('mapa.erro_carregar')}: ${msg}`);
@@ -303,6 +341,9 @@ async function iniciar(usuario) {
   try {
     await arvore.carregar();
     legenda.desenhar();
+    await catalogo.carregar();
+    painel.desenhar();
+    await painelExportar.iniciar();
   } catch (e) {
     el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
   }
@@ -316,6 +357,7 @@ async function iniciar(usuario) {
   // item L2-01-d-popup-runtime: o fuso do inquilino, uma vez só (nunca por campo de data no popup)
   window.plat.org = window.plat.org || {};
   obter('/api/mapa/fuso').then((r) => { if (r.status === 200) window.plat.org.fuso = r.json.fuso; }).catch(() => {});
+  window.plat.mapa = { map, catalogo, medicao, painel, exportar: painelExportar };  // ponto de inspeção do e2e, nunca de negócio
   document.body.dataset.pronto = '1';
 }
 

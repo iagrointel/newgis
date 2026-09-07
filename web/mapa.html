@@ -42,6 +42,8 @@
             <button type="button" id="btn-novo-grupo" class="botao-mini" aria-label="criar grupo">+ grupo</button>
           </div>
           <ul id="lista-camadas" class="lista-camadas arvore" role="tree" aria-label="Camadas"></ul>
+          <h2 data-i18n="mapa.camadas">Camadas</h2>
+          <ul id="lista-camadas" class="lista-camadas"></ul>
         </section>
 
         <section class="bloco">
@@ -121,6 +123,16 @@
             <button type="button" id="btn-pdf" class="botao">PDF</button>
           </div>
           <p id="impressao-saida" class="saida" aria-live="polite"></p>
+        </section>
+            <label class="rotulo" for="png-2x"><input type="checkbox" id="png-2x">
+              <span data-i18n="mapa.impressao_2x">2x</span></label>
+          </div>
+          <p id="impressao-saida" class="saida" aria-live="polite"></p>
+        </section>
+
+        <section class="bloco">
+          <h2 data-i18n="mapa.exportar_titulo">Exportar</h2>
+          <div id="exportar" class="exportar"></div>
         </section>
       </section>
 

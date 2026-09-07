@@ -1070,3 +1070,110 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Exportação de camada para outros formatos (item L0-04-h-exportar)
+
+### 22.1 Botão Exportar (painel do item, camada vetorial hospedada)
+
+O painel de uma camada vetorial hospedada (não referenciada) mostra o botão **Exportar** quando o usuário
+tem o privilégio `conteudo.exportar` (perfis editor e admin por padrão). O diálogo pede: formato (11
+opções), nome do arquivo, campos a exportar, filtro `where` opcional, sistema de coordenadas de saída
+(EPSG; em branco mantém o da camada), codificação de texto e, para CSV, separador de coluna, separador
+decimal e o nome das colunas de longitude/latitude. O dono do item vê também a caixa "permitir que outros
+exportem esta camada" (nasce desligada — como o "Allow others to export to different formats" da Esri).
+Depois de mandar exportar, o diálogo consulta o estado a cada segundo sem travar a tela; quando o arquivo
+fica pronto, mostra o link de download com a validade (7 dias). Erro do servidor (filtro inválido, limite
+de exportações em curso, EPSG inexistente, item de outro dono) aparece com a mensagem que o servidor
+mandou.
+
+### 22.2 Formatos e o que cada um NÃO guarda
+
+`gpkg · geojson · geojsonseq · shapefile (zip) · csv · xlsx · kml · kmz · fgb (FlatGeobuf) · gml · dxf ·
+filegdb (File Geodatabase em zip) · mvt (zip) · pmtiles · geoparquet`, mais o `pacote` de mapa (§22.7).
+DXF não guarda atributo (o driver recusa criar campo); CSV e XLSX não guardam geometria (o CSV ganha
+colunas de X/Y, ou WKT quando pedido) — limites do FORMATO, declarados em `GET /api/exportacoes/formatos`
+e mostrados no diálogo antes de escolher. GeoParquet sai por um processo próprio (`app.exportacao.parquet_cli`,
+via DuckDB) porque o `ogr2ogr` desta instalação não tem driver Parquet e o DuckDB não sobrevive a um fork.
+
+### 22.3 Isolamento entre inquilinos
+
+A exportação nunca traz linha de outro inquilino, mesmo que o pedido seja forjado diretamente no banco: o
+`ogr2ogr` abre conexão própria (fora do pool da aplicação) com o inquilino na PRÓPRIA string de conexão
+(`-c plat.tenant_id=N`), e é a política de RLS da tabela da camada que faz o corte — não um `WHERE` escrito
+pela aplicação. `tests/api/exportacao/test_exportacao_cruzado.py` prova isso em quatro níveis: API (404 no
+item alheio), job com pedido forjado no banco (falha dizendo que a camada não existe), `ogr2ogr` chamado
+com o contexto do outro inquilino e sem contexto nenhum (0 feições nos dois casos) e o conteúdo do arquivo
+final (nenhuma linha do outro inquilino).
+
+### 22.4 Arquivo grande nunca vai inteiro à memória
+
+O envio ao armazenamento de objetos (`objetos.guardar_arquivo`) lê o arquivo do disco em blocos de 8 MiB:
+até um bloco, um `PUT` só; acima disso, multipart real (uma parte por vez). O download
+(`GET /api/exportacoes/{id}/baixar`, via `objetos.ler_stream`) entrega em blocos de 1 MiB. Medido com
+`tracemalloc`: um arquivo de 40 MiB sobe em 5 partes de 8 MiB com pico de memória abaixo de 3 partes.
+
+### 22.5 Limites
+
+3 exportações em curso por usuário (a 4ª e a 5ª recebem `429`); guarda de disco (`shutil.disk_usage`) antes
+do primeiro byte, com estimativa de tamanho×3 + 2 GiB de folga (disco desta máquina a 98 %); arquivo gerado
+some depois de 7 dias (periódico `exportacao.expirar`, de hora em hora).
+
+### 22.6 O que ficou de fora
+
+Exportação de camada REFERENCIADA (recusada com 422 `camada_nao_hospedada`, nunca silenciosa).
+
+## 23. Exportar a partir do mapa (item L2-01-l)
+
+### 23.1 O bloco Exportar da tela do mapa
+
+O painel do mapa tem o bloco **Exportar** com a camada ligada, o formato, o EPSG de saída e a caixa "só as
+feições da vista atual" (que manda a extensão da tela como recorte). O botão cria a exportação, a tela
+acompanha o estado e mostra o link com a validade que o servidor informa (7 dias). Ao lado, dois botões
+baixam o ESTILO da camada: MapLibre (JSON) e SLD 1.0.0 — os dois gerados da mesma lista de classes que
+gera a legenda, então o mapa da tela, a legenda impressa e o arquivo entregue nunca discordam de cor.
+
+### 23.2 O que se exporta: a camada, o filtro ou a seleção
+
+`POST /api/exportacoes` aceita como `item_id` uma `camada_vetorial`, uma `vista_de_camada` ou uma
+`selecao` salva, e ainda `ids` (a lista de fid da seleção do mapa) e `filtro` (CQL2-JSON, o mesmo objeto
+de `POST /api/mapa/camadas/{id}/filtrar`). Numa vista, o filtro dela vale sempre e os `campos_ocultos`
+ficam de fora: pedir um campo escondido é `422 campo_oculto`, e filtrar por ele é `422 campo_nao_permitido`
+(esconder um campo que ainda serve de filtro não esconde nada — a contagem entregaria o valor).
+
+### 23.3 CRS: o que o formato deixa
+
+Formato de CRS livre (GeoPackage, shapefile, FlatGeobuf, GML, File Geodatabase) grava o EPSG pedido.
+Formato de CRS preso pela especificação (GeoJSON, GeoJSON Sequence, KML, KMZ = 4326; MVT e PMTiles = 3857)
+grava sempre o dele, e pedir outro é `422 crs_fixo_do_formato` — a alternativa seria um arquivo com
+coordenada projetada sob rótulo de WGS 84. CSV, XLSX e DXF não guardam CRS nenhum: a reprojeção vale para
+os números, e quem diz em que CRS eles estão é o relatório da exportação.
+
+### 23.4 Perda declarada e teto do formato
+
+A resposta do pedido traz `perda_declarada`: DXF não leva atributo, CSV/XLSX não levam geometria, o
+shapefile trunca nome de campo em 10 caracteres, MVT/PMTiles recortam a geometria por tile (a contagem do
+arquivo não é a do banco). O XLSX tem teto de 1.048.576 linhas do próprio Excel: acima disso o pedido é
+recusado com `422 formato_limite_de_linhas` e o número de feições, ANTES de existir job — um arquivo
+truncado em silêncio seria pior que a recusa.
+
+### 23.5 Copiar uma feição
+
+Na janela de atributos, dois botões copiam a feição como GeoJSON ou como WKT
+(`GET /api/mapa/camadas/{id}/feicoes/{fid}?formato=geojson|wkt`, sempre em EPSG:4326). O texto vem da
+TABELA, não do tile: a geometria do tile chega recortada na borda e generalizada pelo zoom.
+
+### 23.6 Imagem do mapa
+
+O botão PNG desenha, sobre a imagem, a legenda das camadas ligadas e a atribuição das fontes, além da
+escala, da barra e do norte que já existiam. A caixa "2x" monta um mapa temporário fora da tela com o
+dobro de largura e altura e um nível de zoom a mais, e lê ELE — o dobro de detalhe de verdade, não uma
+ampliação do que estava na tela.
+
+### 23.7 Pacote de mapa (levar para outra instalação)
+
+`POST /api/exportacoes` com `formato: "pacote"` e um item do tipo `mapa` gera um zip com `MANIFESTO.json`,
+`dados.gpkg` (uma tabela por camada CITADA pelo mapa, e só) e `estilos/<camada>.json` + `.sld`. É o mesmo
+job e o mesmo link de 7 dias da exportação de camada. `POST /api/mapa/pacotes/importar` (corpo
+`application/zip`) recria o mapa no inquilino de destino: cada camada vira tabela nova, com a simbologia
+que veio, e o corpo do documento é reescrito para apontar para os identificadores novos. Camada citada que
+já não existe entra no relatório como ausente — um pacote menor e verdadeiro em vez de tabela vazia.

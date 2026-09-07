@@ -11,6 +11,7 @@
      devolver a mesma feição repetida. A janela deduplica por (camada, fid) antes de contar. */
 import { h, limpar } from '../base/dom.js';
 import { t } from '../base/i18n.js';
+import { copiarFeicao } from './exportar.js';
 
 const SEM_VALOR = '—';
 
@@ -119,6 +120,7 @@ export function montarConteudo(porCamada, catalogo) {
     const bloco = h('div', { class: 'popup-camada', dataset: { camada: camadaId } },
       h('h3', {}, ficha.titulo));
     for (const feicao of feicoes.slice(0, 5)) {
+      const fid = feicao.id ?? (feicao.properties && feicao.properties.fid);
       const tabela = h('table', { class: 'popup-tabela' });
       const corpo = h('tbody');
       for (const at of atributosDaFeicao(feicao, ficha.campos)) {
@@ -128,6 +130,25 @@ export function montarConteudo(porCamada, catalogo) {
       }
       tabela.append(corpo);
       bloco.append(tabela);
+      if (fid !== undefined && fid !== null) {
+        // copiar a feição INTEIRA: o que está no tile vem recortado na borda do tile e generalizado
+        // pelo zoom, então o texto copiado é lido da tabela (GET .../feicoes/{fid}), não daqui
+        const aviso = h('span', { class: 'popup-copiado', 'aria-live': 'polite' });
+        const copiar = async (formato) => {
+          try {
+            const n = await copiarFeicao(camadaId, fid, formato);
+            aviso.textContent = t('mapa.copiado', { n });
+          } catch {
+            aviso.textContent = t('mapa.copiar_falhou');
+          }
+        };
+        bloco.append(h('div', { class: 'popup-acoes' },
+          h('button', { type: 'button', class: 'botao secundario', dataset: { copiar: 'geojson', fid },
+            onclick: () => copiar('geojson') }, t('mapa.copiar_geojson')),
+          h('button', { type: 'button', class: 'botao secundario', dataset: { copiar: 'wkt', fid },
+            onclick: () => copiar('wkt') }, t('mapa.copiar_wkt')),
+          aviso));
+      }
     }
     if (feicoes.length > 5) {
       bloco.append(h('p', { class: 'popup-mais' }, t('mapa.popup_mais', { n: feicoes.length - 5 })));

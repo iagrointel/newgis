@@ -40,6 +40,7 @@ from app.catalogo import (
 )
 from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
+from app.exportacao.rotas import router as rotas_exportacao
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
@@ -48,6 +49,9 @@ from app.mapa.anotacoes import router as rotas_anotacoes
 from app.mapa.promover import router as rotas_promover
 from app.mapa.popup import router as rotas_mapa_popup
 from app.mapa.rotas import router as rotas_mapa
+from app.mapa.exportar import router as rotas_exportar_mapa
+from app.mapa.rotas import router as rotas_mapa
+from app.mapa.selecao import router as rotas_selecao
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
@@ -118,6 +122,9 @@ ROUTERS = [
     rotas_uploads,
     # --- ingestão vetorial (L0-04): /api/importacoes (upload -> inspeção -> confirmação -> carga -> camada)
     rotas_ingestao,
+    # --- exportação de camada (L0-04-h) e do mapa (L2-01-l): /api/exportacoes (15 formatos por ogr2ogr
+    # mais o pacote de mapa; arquivo com validade de 7 dias)
+    rotas_exportacao,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
@@ -138,6 +145,10 @@ ROUTERS = [
     rotas_anotacoes,
     # --- popup em tempo de execução (L2-01-d): /api/camadas/{id}/feicoes/{fid}/popup (campos servidor + expressão)
     rotas_mapa_popup,
+    # --- seleção e filtro (L2-01-h): /valores, /filtrar (CQL2-JSON), /selecionar, /selecao-espacial
+    rotas_selecao,
+    # --- exportação a partir do mapa (L2-01-l): cópia de feição, estilo (MapLibre/SLD) e import de pacote
+    rotas_exportar_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)

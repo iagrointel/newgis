@@ -13,6 +13,7 @@ import { bytes, elipse, quando, dataHora, rotuloAcesso, rotuloStatus, rotuloOrig
 import { icone, iconeDoTipo } from './icones.js';
 import { camposDoEsquema, dadosDosValores, aplicarErros, errosDoServidor, resumoDados } from './item_dados.js';
 import { abrirCompartilhar } from './item_compartilhar.js';
+import { abrirExportar } from './item_exportar.js';
 import { abrirTransferencia } from './item_transferir.js';
 import * as versoes from './item_versoes.js';
 import * as relacoes from './item_relacoes.js';
@@ -142,8 +143,18 @@ function cabecalho() {
       h('h3', { id: 'item-titulo' }, item.titulo),
       h('div', { class: 'meta' }, h('span', {}, iconeDoTipo(tipo, { tamanho: 14 }), ' ', rotuloTipo(item.tipo)), h('span', {}, nomeDono(item.dono)), h('span', { title: dataHora(item.modificado_em) }, t('catalogo.modificado_ha', { quando: quando(item.modificado_em) })), h('span', {}, rotuloAcesso(item)), ...selos),
       h('div', { class: 'item-ids' }, h('span', {}, 'uuid ', h('code', { id: 'item-uuid' }, item.id)), botaoCopiar(item.id, null, { copiar: t('acao.copiar'), copiado: t('acao.copiado'), selecionado: t('acao.selecionado') }), h('span', {}, 'URL'), botaoCopiar(url, null, { copiar: t('acao.copiar'), copiado: t('acao.copiado'), selecionado: t('acao.selecionado') })),
-      h('div', { class: 'acoes' }, botaoFavorito(), item.pode_compartilhar ? botaoCompartilhar() : null, abrirEm(), menuMais()),
+      h('div', { class: 'acoes' }, botaoFavorito(), item.pode_compartilhar ? botaoCompartilhar() : null, botaoExportar(), abrirEm(), menuMais()),
       pontuacao()));
+}
+
+/* Exportar: só para camada vetorial hospedada e só para quem tem o privilégio (item L0-04-h-exportar). O
+   servidor decide de novo (403/404) — este teste aqui é só para não mostrar um botão que sempre falharia. */
+function botaoExportar() {
+  if (item.tipo !== 'camada_vetorial' || (item.dados || {}).fonte !== 'hospedada') return null;
+  if (!tem('conteudo.exportar')) return null;
+  const b = h('button', { type: 'button', class: 'pequeno', id: 'item-exportar' }, t('exportar.botao'));
+  b.addEventListener('click', () => abrirExportar(item, { aoMudar: (p) => { mudou(p); render(); } }));
+  return b;
 }
 
 function botaoCompartilhar() {

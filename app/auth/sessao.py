@@ -304,8 +304,17 @@ def resolver(request: Request) -> Auth | None:
     return auth
 
 
+# Tipos de corpo aceitos numa escrita sob COOKIE. A regra não é "JSON": é "nada que um formulário HTML
+# consiga produzir". Um `<form>` de outro sítio só envia `application/x-www-form-urlencoded`,
+# `multipart/form-data` ou `text/plain` — qualquer outro tipo obriga o navegador a um preflight de CORS,
+# que a plataforma não responde. Por isso `application/zip` (o pacote de mapa do item L2-01-l, enviado
+# pela tela do mapa, que entra por cookie) é tão seguro quanto o JSON, e nenhum dos dois abre CSRF.
+TIPOS_DE_CORPO_ACEITOS = frozenset({"application/json", "application/zip"})
+
+
 def checar_escrita_sob_cookie(request: Request) -> None:
-    """CSRF em duas camadas (ADR 0002 seção 5.3): Origin igual à URL pública quando vem; corpo só JSON."""
+    """CSRF em duas camadas (ADR 0002 seção 5.3): Origin igual à URL pública quando vem; corpo só nos
+    tipos que um formulário HTML não sabe produzir (`TIPOS_DE_CORPO_ACEITOS`)."""
     if request.method not in VERBOS_DE_ESCRITA:
         return
     origem = request.headers.get("origin")
@@ -314,8 +323,9 @@ def checar_escrita_sob_cookie(request: Request) -> None:
     tem_corpo = request.headers.get("content-length", "0") not in ("", "0") or "transfer-encoding" in request.headers
     if tem_corpo:
         tipo = request.headers.get("content-type", "").split(";")[0].strip().lower()
-        if tipo != "application/json":
-            raise ErroAPI(415, "tipo_nao_aceito", "o corpo precisa ser application/json")
+        if tipo not in TIPOS_DE_CORPO_ACEITOS:
+            raise ErroAPI(415, "tipo_nao_aceito",
+                          f"o corpo precisa ser um de: {', '.join(sorted(TIPOS_DE_CORPO_ACEITOS))}")
 
 
 def _rota_admite_pendencia(caminho: str) -> bool:

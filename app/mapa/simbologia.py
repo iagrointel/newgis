@@ -25,6 +25,8 @@ simbologia-vetor, ainda `pendente`; aqui contam como os 6 tipos: simples=símbol
 categorias, intervalos=classes, proporcional, calor, raster=raster com rampa). O editor completo de
 classificação (L2-02-b) e o vocabulário rico do L2-02-c não existem ainda — este módulo cobre o que o
 item L2-01-c precisa para PROVAR a legenda dinâmica, não substitui aquele item.
+Vocabulário fechado de `tipo`: `simples`, `valores_unicos`, `intervalos`. Qualquer outro valor é recusado
+(nunca "cai no padrão em silêncio").
 """
 
 from __future__ import annotations
@@ -42,6 +44,7 @@ CORES_PADRAO = {"Point": "#4e79a7", "LineString": "#f28e2b", "Polygon": "#59a14f
 TIPOS = ("simples", "valores_unicos", "intervalos", "proporcional", "calor")
 # tipos de RASTER não têm geometria/campo de feição: vocabulário próprio, ver `legenda_raster`/`estilo_raster`.
 TIPOS_RASTER = ("raster",)
+TIPOS = ("simples", "valores_unicos", "intervalos")
 
 
 class SimbologiaInvalida(ValueError):
@@ -83,6 +86,7 @@ def normalizar(simb: dict | None, geometria: str | None) -> dict:
     if tipo not in TIPOS:
         raise SimbologiaInvalida(f"tipo de simbologia desconhecido: {tipo!r} (aceitos: {', '.join(TIPOS)})")
     if tipo in ("valores_unicos", "intervalos", "proporcional") and not simb.get("campo"):
+    if tipo in ("valores_unicos", "intervalos") and not simb.get("campo"):
         raise SimbologiaInvalida(f"simbologia {tipo} exige o campo classificador")
     if tipo == "intervalos" and not simb.get("cortes"):
         raise SimbologiaInvalida("simbologia intervalos exige a lista de cortes")
@@ -201,6 +205,10 @@ def camadas_maplibre(simb: dict | None, geometria: str | None, id_base: str, fon
 
     cls = classes(simb, geometria)
     cor = _cor_por_classe(cls, simb)
+    cls = classes(simb, geometria)
+    cor = _cor_por_classe(cls, simb)
+    fam = familia(geometria)
+    comum = {"source": fonte, "source-layer": camada_fonte}
     if fam == "Point":
         return [{"id": id_base, "type": "circle", **comum, "paint": {
             "circle-color": cor,
@@ -277,3 +285,4 @@ def legenda_raster(rampa: list[str], minimo: float, maximo: float, titulo: str |
     """Legenda de rampa contínua: título, unidade, mín/máx e a lista de cores — não uma lista de classes."""
     return {"tipo": "raster", "titulo": titulo, "unidade": unidade,
             "minimo": minimo, "maximo": maximo, "rampa": list(rampa)}
+    return [{"rotulo": c["rotulo"], "cor": c["cor"], "forma": forma} for c in classes(simb, geometria)]

@@ -208,6 +208,62 @@ O motor que desenha o popup do visualizador e a configuração mínima que o gov
   (L2-10-b pendente), valor de pixel de raster (L1-02-h pendente) e as ações "selecionar"/"editar"
   (L2-01-h/L2-03 fora desta linhagem).
 
+## turno 4, setembro de 2026 (item L2-01-l-exportacao-do-mapa: exportar a partir do mapa)
+
+Exportação passa a sair DO MAPA e não só do painel do item: a seleção (lista de fid), o filtro do
+construtor (CQL2-JSON, o mesmo objeto de `/api/mapa/camadas/{id}/filtrar`) ou a camada inteira, com CRS,
+campos e codificação. Origem pode ser `camada_vetorial`, `vista_de_camada` (o filtro da vista vale sempre
+e os `campos_ocultos` não são exportáveis nem filtráveis) ou `selecao` salva. O catálogo de formatos foi de
+11 para 16 com GeoJSON Sequence, File Geodatabase (zip), MVT (zip), PMTiles e o `pacote` de mapa, e passou
+a declarar a POLÍTICA DE CRS de cada um: 12 formatos gerados da mesma seleção de 500 feições foram
+reabertos por `ogrinfo` com contagem 500 e o EPSG que a política manda (`tests/medidas/L2-01-l-exportacao-do-mapa.json`,
+`formatos_da_selecao_de_500`) — 31983 nos de CRS livre, 4326 nos que a especificação prende, nenhum nos
+que não guardam CRS. Pedir CRS diferente do que o formato prende é 422, não um arquivo mentiroso.
+
+O XLSX ganhou o teto do próprio Excel: uma camada de 1.048.600 feições é recusada com
+`422 formato_limite_de_linhas` antes de existir job (a mesma camada sai em CSV). Toda resposta de pedido
+traz `perda_declarada` — DXF sem atributo, shapefile truncando nome em 10 caracteres, tile recortando
+geometria. Estilo da camada sai em MapLibre e em SLD 1.0.0, gerados da MESMA lista de classes da legenda.
+Feição copiável como GeoJSON/WKT lida da tabela (o tile vem recortado). A imagem do mapa passou a levar
+legenda e atribuição, com um "2x" que monta um mapa temporário do dobro do tamanho em vez de ampliar
+pixel: as duas composições, com e sem legenda, foram comparadas pixel a pixel no navegador
+(`png_legenda_e_atribuicao`: 775 pixels de diferença na faixa da atribuição). O mapa inteiro vira PACOTE
+(documento + estilos + GeoPackage só das camadas citadas), pelo mesmo job e o mesmo link de 7 dias, e volta
+por `POST /api/mapa/pacotes/importar` em OUTRO inquilino, recriando camadas, simbologia e o documento com
+os identificadores novos; o pacote de um mapa que cita uma camada não leva nenhuma feição da outra camada
+do mesmo inquilino (provado por despejo do GeoPackage).
+
+Quatro defeitos de fora do item foram corrigidos porque bloqueavam o portão: `app/versao.py` não lia o sha
+num GIT WORKTREE (`.git` é arquivo, não pasta) e o worker morria no arranque; a escrita sob cookie só
+aceitava `application/json`, o que barrava o envio do pacote — a regra correta não é "JSON", é "nada que um
+formulário HTML consiga produzir"; a falha do `ogr2ogr` era relatada pela última linha do stderr, que é
+sempre a genérica; e `app/schema_ambiente.py` tinha duas definições de `executemany`, com a segunda (sem
+tratamento de bytes) apagando a primeira em silêncio.
+
+## turno 4, setembro de 2026 (item L0-04-h-exportar: exportação de camada para outros formatos)
+
+`POST /api/exportacoes` enfileira o job `exportacao.gerar` (202) e devolve o arquivo (item `arquivo`,
+validade de 7 dias) em 11 formatos: gpkg, geojson, shapefile(zip), csv, xlsx, kml, kmz, fgb, gml, dxf e
+geoparquet (este pelo DuckDB, num processo próprio — o `ogr2ogr` desta instalação não tem driver Parquet, e
+o DuckDB não sobrevive a um `fork`, então a conversão roda como `python -m app.exportacao.parquet_cli`,
+neto do job). Filtro (`where`), campos e CRS de saída são conferidos ANTES de existir job (400 com o erro do
+banco saneado, `app/exportacao/erros.py`). Isolamento entre inquilinos: o `ogr2ogr` abre conexão PRÓPRIA,
+fora do pool da aplicação — o inquilino entra na string de conexão (`-c plat.tenant_id=N`), e é a RLS do
+PostgreSQL que corta, provada com pedido forjado no banco e com o `ogr2ogr` chamado sem contexto nenhum
+(`tests/api/exportacao/test_exportacao_cruzado.py`). Arquivo grande nunca vai inteiro à memória: envio ao
+Garage em blocos/multipart (`objetos.guardar_arquivo`, novo) e download em blocos de 1 MiB
+(`objetos.ler_stream`, novo) — medido com `tracemalloc` (pico < 3 partes de 8 MiB para um arquivo de 40 MiB).
+Privilégio novo `conteudo.exportar` (editor/admin); opção do dono do item "permitir que outros exportem"
+(`dados.exportacao.permitir_outros`, nasce desligada). Limite de 3 exportações em curso por usuário e guarda
+de disco (`shutil.disk_usage`) antes do primeiro byte. Botão **Exportar** na tela do item
+(`web/js/catalogo/item_exportar.js`). Achado à parte, sem relação direta com exportação: `CursorSchemaAmbiente`
+não reescrevia `executemany`/`mogrify` (só `execute`/`callproc`), o que fazia qualquer rota que use essas duas
+chamadas escrever no schema `plat` de PRODUÇÃO mesmo dentro de uma base de trilha isolada — consertado em
+`app/schema_ambiente.py`. Ver ADR 0018 e `docs/PARIDADE.md` seção "Exportação de camada para outros formatos".
+
+Medido (`tests/medidas/L0-04-h-exportar.json`, camada de 100 mil feições): tempo por formato de 0,80 s
+(FlatGeobuf) a 14,54 s (XLSX); todos os 11 formatos reabertos com a mesma contagem de 100.000 feições
+(`ogrinfo`/DuckDB conforme o formato).
 ## turno 4, setembro de 2026 (item L2-01-mapa-web: visualizador de mapa próprio, do Martin à impressão)
 
 Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava chegar a `master`.
