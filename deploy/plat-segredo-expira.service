@@ -1,0 +1,6 @@
+[Unit]
+Description=plat — expira PLAT_SECRET_ANTERIOR 24 h após a rotação (item L7-19)
+
+[Service]
+Type=oneshot
+ExecStart=APP_DIR/venv/bin/python APP_DIR/scripts/segredo_expirar_anterior.py

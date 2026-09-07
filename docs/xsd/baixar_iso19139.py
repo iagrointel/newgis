@@ -87,6 +87,13 @@ def baixar(forcar: bool) -> dict:
             if loc.startswith("http://") or loc.startswith("https://"):
                 alvo_url = loc
             elif loc.startswith("../") or "/" in loc or loc.endswith(".xsd"):
+                # cache JÁ reescrito (2ª execução em diante): a referência relativa aponta para outro
+                # arquivo do PRÓPRIO cache — resolver urljoin contra a URL de origem compõe um endereço
+                # falso (https://schemas.opengis.net/www.w3.org/1999/xlink.xsd, 404 medido em 07/09 e o
+                # install.sh morria aqui). Se o arquivo local existe, nada a baixar.
+                alvo_local = (destino.parent / loc).resolve()
+                if str(alvo_local).startswith(str(CACHE.resolve())) and alvo_local.exists():
+                    continue
                 alvo_url = urljoin(url, loc)
             else:
                 continue
@@ -116,14 +123,30 @@ def baixar(forcar: bool) -> dict:
 
 def gravar_manifesto(mapa_url: dict[str, str]) -> None:
     agora = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # o manifesto cobre o cache inteiro (rglob), não só o que esta execução baixou/leu: numa execução
+    # idempotente (cache completo) quase nada passa pela fila, e o manifesto encolheria a cada run —
+    # medido 07/09: 57 arquivos viraram 1. url_origem vem desta execução ou do manifesto anterior;
+    # arquivo sem origem conhecida nas duas fontes fica de fora (URL nunca se inventa).
+    antigo: dict[str, str] = {}
+    if MANIFESTO.exists():
+        try:
+            antigo = {
+                i["arquivo"]: i["url_origem"]
+                for i in json.loads(MANIFESTO.read_text(encoding="utf-8"))["arquivos"]
+            }
+        except (json.JSONDecodeError, KeyError, TypeError):
+            antigo = {}
     itens = []
-    for k in sorted(mapa_url):
-        caminho = CACHE / k
+    for caminho in sorted(CACHE.rglob("*.xsd")):
+        k = str(caminho.relative_to(CACHE))
+        url = mapa_url.get(k) or antigo.get(k)
+        if not url:
+            continue
         dados = caminho.read_bytes()
         itens.append(
             {
                 "arquivo": k,
-                "url_origem": mapa_url[k],
+                "url_origem": url,
                 "sha256": hashlib.sha256(dados).hexdigest(),
                 "bytes": len(dados),
             }

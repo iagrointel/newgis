@@ -103,7 +103,7 @@ def smtp_testar(corpo: SMTPTestarEntrada, request: Request,
     if not destinatario:
         raise ErroAPI(422, "validacao", "informe um destinatário (o seu usuário não tem e-mail cadastrado)",
                       {"campo": "destinatario"})
-    senha = decifrar_senha(cfg, settings.PLAT_SECRET)
+    senha = decifrar_senha(cfg, settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR)
     try:
         cliente.enviar(cfg, senha, destinatario, "Teste de envio SMTP",
                        f"Este é um envio de teste do SMTP configurado para {auth.tenant_nome}.",

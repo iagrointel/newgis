@@ -15,7 +15,14 @@ Environment=PYTHONNOUSERSITE=1
 # PLAT_DSN_WORKER é a senha da role plat_worker, autoridade total sobre estado de job de todos os
 # inquilinos (achado do adversário no T2, L0-05) — sai do .env, dono root 0600 em /etc/plat/segredos/.
 LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
+# PLAT_SECRET_ANTERIOR (item L7-19): app.conexao.tarefas/app.correio.tarefas rodam DENTRO do worker
+# (tipos de job registrados em app/jobs/tipos.py) e decifram credencial/senha SMTP com dupla-chave — a
+# janela de 24h de rotação tem de valer aqui também, não só na API.
+LoadCredential=PLAT_SECRET_ANTERIOR:/etc/plat/segredos/PLAT_SECRET_ANTERIOR
 LoadCredential=PLAT_DSN_WORKER:/etc/plat/segredos/PLAT_DSN_WORKER
+# PLAT_DSN (item L7-19): settings.py exige a chave sempre, mesmo aqui — o worker só USA PLAT_DSN_WORKER
+# para mudar estado de job, mas importa app.settings igual à API e por isso precisa da chave presente.
+LoadCredential=PLAT_DSN:/etc/plat/segredos/PLAT_DSN
 ExecStart=APP_DIR/venv/bin/python -m app.jobs.worker
 # sem job o worker só termina por sinal: qualquer saída é anômala (ADR 0003 seção 4.5)
 Restart=always

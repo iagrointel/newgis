@@ -41,6 +41,7 @@ from app.auth.modelos import (
 from app.auth.politica import email_permitido, mensagem_da_regra, regra_da_senha
 from app.auth.sessao import Auth, autenticado, iso
 from app.erros import ErroAPI
+from app.seguranca_rotacao import decifrar_com_rotacao
 from app.settings import settings
 
 router = APIRouter(prefix="/api/eu", tags=["eu"])
@@ -315,7 +316,9 @@ def confirmar_2fa(
         if not r["totp_secret"]:
             raise ErroAPI(409, "nao_iniciado", "chame /api/eu/2fa/iniciar antes")
         passo = totp.verificar(
-            totp.decifrar(r["totp_secret"], settings.PLAT_SECRET), corpo.codigo, r["totp_ultimo_passo"]
+            decifrar_com_rotacao(totp.decifrar, r["totp_secret"], settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR),
+            corpo.codigo,
+            r["totp_ultimo_passo"],
         )
         if passo is None:
             raise ErroAPI(401, "codigo_invalido", "código inválido")
@@ -340,7 +343,13 @@ def desativar_2fa(corpo: SenhaCodigoEntrada, request: Request, auth: Auth = aute
         cur.execute("SELECT totp_secret, totp_ultimo_passo FROM plat.usuario WHERE id = %s", (auth.usuario_id,))
         r = cur.fetchone()
         if (
-            totp.verificar(totp.decifrar(r["totp_secret"], settings.PLAT_SECRET), corpo.codigo, r["totp_ultimo_passo"])
+            totp.verificar(
+                decifrar_com_rotacao(
+                    totp.decifrar, r["totp_secret"], settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR
+                ),
+                corpo.codigo,
+                r["totp_ultimo_passo"],
+            )
             is None
         ):
             raise ErroAPI(401, "codigo_invalido", "código inválido")

@@ -12,7 +12,9 @@ def test_cookie_alterado_em_um_caractere_e_401(cred):
     c = novo_cliente()
     assert entrar(c, "demo", login, senha).status_code == 200
     cookie = c.cookies.get("plat_sessao")
-    alterado = ("0" if cookie[-1] != "0" else "1") + cookie[1:]
+    # 07/09: a versão anterior trocava o PRIMEIRO caractere pelo valor derivado do ÚLTIMO — quando o cookie já
+    # começava por esse valor, "alterado" era igual ao original e o teste via 200 (instabilidade de 1 em 16).
+    alterado = cookie[:-1] + ("0" if cookie[-1] != "0" else "1")
     r = novo_cliente().get("/api/eu", cookies={"plat_sessao": alterado})
     assert r.status_code == 401 and r.json()["erro"] == "sessao_expirada"
     assert novo_cliente().get("/api/eu", cookies={"plat_sessao": "lixo"}).status_code == 401
