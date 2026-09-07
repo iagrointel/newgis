@@ -33,10 +33,16 @@ que fica para depois de D21."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import hashlib
+import socket
+import struct
+from dataclasses import dataclass, field
 from typing import Protocol
 
 import magic
+
+from app import limites
+from app.ingestao.formatos import ZipSuspeito, conferir_zip
 
 CABECALHO_BYTES = 8192  # libmagic precisa só do início; nunca lê o arquivo inteiro para decidir o tipo
 
@@ -56,6 +62,16 @@ TIPOS_PERMITIDOS: dict[str, frozenset[str] | None] = {
     "application/zip": frozenset({"application/zip"}),
     "application/vnd.google-earth.kmz": frozenset({"application/zip"}),  # kmz é um zip por dentro
     "application/octet-stream": None,
+    # L7-03-a: tipos do pipeline único de upload (anexo). Texto/XML: libmagic devolve text/plain, text/xml ou
+    # application/xml conforme o começo do arquivo — as três famílias são texto sem executável por dentro; o SVG
+    # ainda passa pelo sanitizador (app/svg_seguro.py) e o HTML nunca é servido inline (rotas_arquivos.ler).
+    "image/svg+xml": frozenset({"image/svg+xml", "text/xml", "application/xml", "text/plain", "text/html"}),
+    # text/plain: texto nunca é executado e sai como attachment+nosniff; binário genérico declarado como texto é
+    # aceito de propósito (os testes do L0-11 mandam bytes aleatórios como text/plain) — o antivírus, quando
+    # ligado, é quem olha por dentro
+    "text/plain": frozenset({"text/plain", "text/csv", "application/octet-stream"}),
+    "text/html": frozenset({"text/html", "text/plain", "text/xml"}),
+    "application/vnd.google-earth.kml+xml": frozenset({"text/xml", "application/xml", "text/plain"}),
 }
 
 
@@ -65,6 +81,7 @@ class Resultado:
     motivo: str | None
     tipo_detectado: str
     motor: str
+    virus: str | None = None  # nome da assinatura quando o antivírus recusa (L7-03-a)
 
 
 class Motor(Protocol):
@@ -102,6 +119,71 @@ class MotorAssinaturaBasica:
 MOTOR_ATIVO: Motor = MotorAssinaturaBasica()
 
 
+class ClamdIndisponivel(RuntimeError):
+    """clamd configurado (PLAT_CLAMD) mas fora do ar: o upload é RECUSADO (nunca passa sem varrer)."""
+
+
+class MotorClamd:
+    """Antivírus ClamAV por `clamd` (item L7-03-a): protocolo INSTREAM sobre socket unix ou TCP, biblioteca
+    padrão só (nenhuma dependência nova). Manda até `limites.CLAMD_MAX_BYTES` (o StreamMaxLength padrão do
+    daemon); resposta `stream: OK` aceita, `stream: <assinatura> FOUND` recusa com o nome da assinatura.
+    OPCIONAL na instalação (custa ~1,3 GiB de RAM de assinaturas; o appliance pode não ter): só entra na cadeia
+    quando `PLAT_CLAMD` está definido — e aí clamd fora do ar recusa o upload em vez de deixar passar."""
+
+    nome = "clamd"
+
+    def __init__(self, endereco: str) -> None:
+        self.endereco = endereco
+
+    def _conectar(self) -> socket.socket:
+        if self.endereco.startswith("/"):
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.settimeout(limites.CLAMD_TIMEOUT_S)
+            s.connect(self.endereco)
+            return s
+        host, _, porta = self.endereco.rpartition(":")
+        return socket.create_connection((host or "127.0.0.1", int(porta or 3310)), timeout=limites.CLAMD_TIMEOUT_S)
+
+    def escanear(self, cabecalho: bytes, content_type_declarado: str) -> Resultado:
+        dados = cabecalho[: limites.CLAMD_MAX_BYTES]
+        try:
+            with self._conectar() as s:
+                s.sendall(b"zINSTREAM\0")
+                for i in range(0, len(dados), 65536):
+                    pedaco = dados[i : i + 65536]
+                    s.sendall(struct.pack(">I", len(pedaco)) + pedaco)
+                s.sendall(struct.pack(">I", 0))
+                resposta = b""
+                while not resposta.endswith(b"\0") and len(resposta) < 4096:
+                    lido = s.recv(4096)
+                    if not lido:
+                        break
+                    resposta += lido
+        except OSError as e:
+            raise ClamdIndisponivel(f"clamd em {self.endereco} não respondeu: {type(e).__name__}") from e
+        texto = resposta.rstrip(b"\0").decode("utf-8", errors="replace").strip()
+        if texto.endswith(" FOUND"):
+            assinatura = texto.split(":", 1)[-1].strip()[: -len(" FOUND")].strip()
+            return Resultado(False, f"antivírus recusou: {assinatura}", "malware", self.nome, virus=assinatura)
+        if texto.endswith(" OK"):
+            return Resultado(True, None, "sem ameaça conhecida", self.nome)
+        raise ClamdIndisponivel(f"clamd respondeu algo inesperado: {texto[:80]!r}")
+
+
+def endereco_clamd() -> str | None:
+    """`PLAT_CLAMD` das configurações (função, não constante: as configurações são congeladas e o teste troca
+    esta função por um clamd de teste em socket unix)."""
+    from app.settings import settings
+
+    return getattr(settings, "PLAT_CLAMD", None)
+
+
+def motor_antivirus() -> Motor | None:
+    """`MotorClamd` quando `PLAT_CLAMD` está definido; senão `None` (só a assinatura básica)."""
+    endereco = endereco_clamd()
+    return MotorClamd(endereco) if endereco else None
+
+
 class ConteudoRecusado(ValueError):
     """Levantada por `escanear_cabecalho()` quando o motor ativo recusa — quem chama decide o código HTTP
     (415 na maioria das rotas, mesmo padrão de `objetos.CotaExcedida` → 413)."""
@@ -118,4 +200,104 @@ def escanear_cabecalho(cabecalho: bytes, content_type_declarado: str) -> Resulta
     r = MOTOR_ATIVO.escanear(cabecalho, content_type_declarado)
     if not r.permitido:
         raise ConteudoRecusado(r)
+    av = motor_antivirus()
+    if av is not None:
+        try:
+            ra = av.escanear(cabecalho, content_type_declarado)
+        except ClamdIndisponivel as e:
+            raise ConteudoRecusado(Resultado(False, str(e), r.tipo_detectado, av.nome)) from e
+        if not ra.permitido:
+            raise ConteudoRecusado(Resultado(False, ra.motivo, r.tipo_detectado, av.nome, virus=ra.virus))
     return r
+
+
+# --------------------------------------------------------------------------- pipeline único (L7-03-a)
+
+
+@dataclass(frozen=True)
+class Politica:
+    """o que uma CLASSE de upload aceita: Content-Types (provados pelos bytes por `escanear_cabecalho`) e teto."""
+
+    nome: str
+    tipos: frozenset[str]
+    max_bytes: int
+    descricao: str = ""
+    inline: frozenset[str] = field(default_factory=frozenset)  # tipos que podem ser servidos inline (imagens)
+
+
+_IMAGENS = frozenset({"image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"})
+_ANEXO = _IMAGENS | frozenset({
+    "application/pdf", "text/csv", "text/plain", "application/json", "application/geo+json", "application/zip",
+    "application/vnd.google-earth.kmz", "application/vnd.google-earth.kml+xml", "text/html",
+})
+# Lista por rota/classe. Paridade: a Esri fecha por EXTENSÃO (`uploadFileExtensionAllowedList`: soe, sd, sde,
+# odc, csv, txt, zshp, kmz, geodatabase); aqui a chave é o Content-Type declarado e os BYTES têm de bater.
+# `objeto` (padrão de POST /api/arquivos) aceita tudo o que a assinatura básica conhece, inclusive o genérico
+# `application/octet-stream` (binário do cliente: CAD, proprietário) — é a classe "arquivo bruto"; as classes
+# de anexo e imagem são estreitas de propósito. Classe desconhecida cai em `objeto`.
+POLITICAS: dict[str, Politica] = {
+    "objeto": Politica("objeto", frozenset(TIPOS_PERMITIDOS), limites.ARQUIVO_BYTES_MAX,
+                       "arquivo bruto do inquilino (qualquer tipo conhecido, inclusive binário genérico)", _IMAGENS),
+    "anexo": Politica("anexo", _ANEXO, limites.ANEXO_BYTES_MAX,
+                      "anexo de feição/item: documento, imagem, planilha, KML/KMZ; nunca executável", _IMAGENS),
+    "foto_campo": Politica("foto_campo", frozenset({"image/jpeg", "image/png", "image/webp"}), limites.ANEXO_BYTES_MAX,
+                           "foto de campo: só JPEG/PNG/WebP", _IMAGENS),
+    "imagem": Politica("imagem", _IMAGENS, limites.IMAGEM_UPLOAD_BYTES_MAX,
+                       "logotipo/miniatura/avatar enviados como arquivo", _IMAGENS),
+    "csv": Politica("csv", frozenset({"text/csv", "text/plain"}), limites.ANEXO_BYTES_MAX, "tabela CSV/texto"),
+}
+
+
+def politica(classe: str) -> Politica:
+    return POLITICAS.get(classe, POLITICAS["objeto"])
+
+
+def conferir_tipo_na_rota(classe: str, content_type: str) -> Politica:
+    """Content-Type declarado fora da lista da classe → `ConteudoRecusado` antes de ler um byte do corpo."""
+    p = politica(classe)
+    declarado = (content_type or "application/octet-stream").split(";")[0].strip().lower()
+    if declarado not in p.tipos:
+        raise ConteudoRecusado(Resultado(
+            False, f"tipo {declarado} não permitido na classe {p.nome} (aceitos: {', '.join(sorted(p.tipos))})",
+            "não lido", "politica_de_rota",
+        ))
+    return p
+
+
+def pos_processar(dados: bytes, content_type: str) -> bytes:
+    """Sobre o arquivo INTEIRO (só cabe quando ele coube no buffer único): SVG sai sanitizado (sem script,
+    foreignObject, handlers, href externo); zip/kmz passam pelas regras de zip-bomba de `conferir_zip`
+    (entradas, tamanho descomprimido, razão, caminho). Devolve os bytes a gravar (o SVG pode mudar)."""
+    from app import svg_seguro
+
+    declarado = (content_type or "").split(";")[0].strip().lower()
+    if declarado == "image/svg+xml":
+        try:
+            return svg_seguro.sanitizar(dados)
+        except svg_seguro.SVGInvalido as e:
+            raise ConteudoRecusado(Resultado(False, str(e), "image/svg+xml", "svg_seguro")) from e
+    if declarado in ("application/zip", "application/vnd.google-earth.kmz"):
+        try:
+            conferir_zip(dados)
+        except ZipSuspeito as e:
+            raise ConteudoRecusado(Resultado(False, f"zip suspeito: {e}", "application/zip", "zip_bomba")) from e
+    return dados
+
+
+def propriedades_da_recusa(e: ConteudoRecusado, classe: str, content_type: str, dados: bytes | None) -> dict:
+    """o que vai para a trilha (`arquivos/conteudo_recusado` ou `arquivos/quarentena`): nunca o conteúdo."""
+    r = e.resultado
+    props = {
+        "classe": classe, "content_type": content_type, "motor": r.motor, "motivo": r.motivo,
+        "tipo_detectado": r.tipo_detectado, "bytes": len(dados) if dados is not None else None,
+    }
+    if r.virus:
+        props["assinatura"] = r.virus
+    if dados:
+        props["sha256"] = hashlib.sha256(dados).hexdigest()
+    return props
+
+
+def tipo_do_evento(e: ConteudoRecusado) -> str:
+    return "arquivos/quarentena" if e.resultado.virus else "arquivos/conteudo_recusado"
+
