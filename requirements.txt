@@ -75,3 +75,9 @@ sortedcontainers==2.4.0
 tomli==2.4.1
 tomli_w==1.2.0
 Markdown==3.10.2
+#
+# segurança, análise estática (scripts/varredura_seguranca.py chama `venv/bin/bandit` em subprocesso; item HARD-01,
+# docs/SEGURANCA.md seção 9); PyYAML que o bandit importa vem do dpkg python3-yaml (já nesta máquina), como rich/requests
+# do pip-audit acima. gitleaks/trivy/zap são binários fixados em deploy/ferramentas_binarias.txt, não pacotes Python.
+bandit==1.9.4
+stevedore==5.9.1
