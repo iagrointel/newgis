@@ -29,3 +29,9 @@ app/jobs/tipos.py merge=union
 
 # tests/api/eventos_esperados.py: registro de eventos por rota, um por item. Sétimo da família.
 tests/api/eventos_esperados.py merge=union
+
+# app/auth/escopos.py: registro de escopos de token, um por item. Oitavo da família.
+app/auth/escopos.py merge=union
+# web/js/i18n/*.json: dicionário de tradução, um texto por chave — union quebra JSON; driver próprio
+# faz a união das CHAVES (laco/merge_json.py; `git config merge.jsonuniao.driver` já posto na máquina).
+web/js/i18n/*.json merge=jsonuniao
