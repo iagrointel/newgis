@@ -398,3 +398,30 @@ o mesmo acima do teto de uma parte (nunca abre multipart no Garage para um conte
   contêiner externo é conferido.
 - O caminho de sincronização da PWA de campo (L2-07, ainda não construído) precisará da mesma barreira quando
   existir; `objetos.guardar()` já cobre automaticamente qualquer chamador futuro que passe por ele.
+
+## 10. Injeção em consulta: fechada por construção (item L7-03-d-injecao-consulta)
+
+O `where` do FeatureServer e o `havingClause` passam por `app/consulta/where_ast.py` (tokenizador → AST → SQL
+com `%s` e parâmetros; campo só da lista branca da camada); `outFields`, `orderByFields`,
+`groupByFieldsForStatistics`, `outStatistics` e `objectIds` são validados contra o esquema da camada em
+`app/consulta/motor.py` (nome fora do esquema = 400; `statisticType` fora da lista = 422; `resultOffset`/
+`resultRecordCount` só inteiros). O OGC API Features desta versão não tem `filter` (CQL2): `bbox`/`limit`/
+`offset` são numéricos validados e qualquer outro parâmetro é ignorado. Nome de schema/tabela vem sempre do
+catálogo (`plat.item`), nunca do cliente.
+
+Rede de segurança acrescentada neste item (`motor._executar`): erro de TIPO que só o Postgres descobre ao
+executar a consulta parametrizada (`fid LIKE '1%'` num bigint, percentil fora de 0-1) vira 400
+`consulta_invalida` sem texto do banco — antes era 500 com o SQL no traceback do servidor (dois defeitos
+achados pela suíte, corrigidos).
+
+Prova: `tests/seguranca/test_injecao.py` — 180 payloads (sqlmap tamper: comentários, unicode, `/**/`, encoding;
+`; DROP/DELETE/UPDATE` numa tabela-canário; `UNION`; `pg_sleep`; `pg_read_file`, `lo_import`, `COPY TO
+PROGRAM`; subconsulta em `outStatistics`/`havingClause`/`objectIds`; OGC `bbox`/`limit`/`offset`/`filter`) contra
+uma camada importada de verdade: 0 respostas 5xx, latência máxima de 8 ms (nenhum `pg_sleep` executou),
+canário intacto, contagem da camada inalterada, resposta 200 só com feições da própria camada e colunas do
+esquema. Estático: `test_estatico_nenhum_sql_interpola_entrada_do_usuario` varre todo `.execute(` de `app/`
+e reprova SQL interpolado (f-string, `.format`, `%`) que cite nome de parâmetro de entrada; `bandit -t B608`
+sobre `app/consulta` acha 6 f-strings de SQL, todas com interpolação só de lista branca (`colunas_sql`,
+`where_sql` compilado, schema/tabela do catálogo) — a lista é fixada no teste, linha nova é revisão.
+
+Fora desta passagem: ZAP baseline (sem imagem nesta máquina, disco a 94 %, D21); `applyEdits` (item L2-03).
