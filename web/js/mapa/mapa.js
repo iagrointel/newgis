@@ -29,6 +29,8 @@ import { Legenda } from '../legenda.js';
 import { instalarPopup } from './atributos.js';
 import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
+import { montarCoordenadas, Historico, Favoritos, montarLocalizacao, montarTelaCheia, instalarAtalhos, listaDeAtalhos } from './navegacao.js';
+import { formatarCoordenada } from './crs.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
 
 const BASES = [
@@ -49,19 +51,6 @@ function montarSeletorBase(map) {
   return sel;
 }
 
-function montarCoordenadas(map) {
-  const caixa = el('coordenadas');
-  const escrever = (lng, lat, zoom) => {
-    caixa.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)} · z${zoom.toFixed(1)} · 1:`
-      + `${escalaNumerica(lat, zoom).toLocaleString('pt-BR')}`;
-  };
-  const centro = () => { const c = map.getCenter(); escrever(c.lng, c.lat, map.getZoom()); };
-  map.on('mousemove', (ev) => escrever(ev.lngLat.lng, ev.lngLat.lat, map.getZoom()));
-  map.on('mouseout', centro);
-  map.on('zoomend', centro);
-  map.on('moveend', centro);
-  centro();
-}
 
 function marcador(map, maplibregl, lonlat, rotulo) {
   const m = new maplibregl.Marker({ color: '#d98a2b' }).setLngLat(lonlat);
@@ -89,10 +78,12 @@ async function iniciar(usuario) {
   map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
   map.addControl(new maplibregl.ScaleControl({ maxWidth: 140, unit: 'metric' }), 'bottom-left');
   map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-right');
-  montarCoordenadas(map);
+  const coordenadas = montarCoordenadas(map, el('coordenadas'), el('seletor-crs'));
+  const localizacao = montarLocalizacao(map, maplibregl);
+  const telaCheia = montarTelaCheia(map, maplibregl, document.querySelector('.mapa-area'));
 
   const catalogo = new Catalogo(map);
-  const medicao = new Medicao(map, el('medicao-saida'));
+  const medicao = new Medicao(map, el('medicao-saida'), { lista: el('medicao-segmentos') });
   const arvore = new Arvore(catalogo, map, el('lista-camadas'), {
     aoEnquadrar: async (id) => {
       const ext = await catalogo.extensao(id);
@@ -141,6 +132,25 @@ async function iniciar(usuario) {
     el('btn-area').setAttribute('aria-pressed', 'false');
     el('btn-distancia').setAttribute('aria-pressed', 'false');
   });
+  el('btn-medicao-copiar').addEventListener('click', async () => {
+    if (await medicao.copiar()) el('aviso').ok(t('mapa.medicao_copiada'));
+  });
+
+  // --- navegação (item L2-01-f): histórico, favoritos, norte, atalhos, copiar coordenada
+  const historico = new Historico(map, { botaoVoltar: el('btn-voltar-extensao'), botaoAvancar: el('btn-avancar-extensao') });
+  const favoritos = new Favoritos(map, {
+    chave: `plat.mapa.favoritos.${new URLSearchParams(location.search).get('id') || 'padrao'}`,
+    lista: el('favoritos'), campoNome: el('favorito-nome'), botaoSalvar: el('btn-favorito-salvar'),
+  });
+  el('btn-norte').addEventListener('click', () => map.resetNorth());
+  el('atalhos-lista').append(listaDeAtalhos());
+  const copiarCoordenada = async () => {
+    const c = map.getCenter();
+    let texto;
+    try { texto = formatarCoordenada(c.lng, c.lat, coordenadas.srid()); } catch { texto = `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`; }
+    try { await navigator.clipboard.writeText(texto); el('aviso').ok(`${t('mapa.coordenada_copiada')}: ${texto}`); } catch { el('aviso').erro(texto); }
+  };
+  el('coordenadas').addEventListener('click', copiarCoordenada);
 
   // --- pesquisa (endereço ou coordenada)
   let alfinete = null;
@@ -158,6 +168,8 @@ async function iniciar(usuario) {
     if (!texto) return;
     const coord = interpretarCoordenada(texto);
     if (coord) { irPara(coord.lat, coord.lon, `${coord.lat.toFixed(5)}, ${coord.lon.toFixed(5)}`); return; }
+    // texto com cara de coordenada (números, graus, EPSG) mas malformado: diz o motivo em vez de mandar ao geocodificador
+    if (/EPSG|SRID|[°º′″]|^[-−\d.,;\s]+$/i.test(texto)) { el('busca-resultado').textContent = t('mapa.ir_para_invalido'); return; }
     const r = await geocodificar(texto);
     if (r) irPara(r.lat, r.lon, r.rotulo);
     else el('busca-resultado').textContent = t('mapa.busca_sem_resultado');
@@ -205,7 +217,16 @@ async function iniciar(usuario) {
     el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
   }
   window.plat = window.plat || {};
-  window.plat.mapa = { map, catalogo, medicao, arvore, legenda };  // ponto de inspeção do e2e, nunca de negócio
+  instalarAtalhos(map, {
+    voltar: () => historico.voltar(), avancar: () => historico.avancar(),
+    telaCheia: () => { const b = document.querySelector('.maplibregl-ctrl-fullscreen, .maplibregl-ctrl-shrink'); if (b) b.click(); },
+    localizacao: () => localizacao.trigger(),
+    distancia: () => el('btn-distancia').click(), area: () => el('btn-area').click(),
+    limpar: () => el('btn-medicao-limpar').click(), voltarVertice: () => medicao.voltar(),
+    favorito: () => el('favorito-nome').focus(), irPara: () => el('busca-campo').focus(),
+    copiarCoordenada, ajuda: () => { el('atalhos').open = true; el('atalhos').scrollIntoView(); },
+  });
+  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, historico, favoritos, coordenadas, localizacao, telaCheia };  // ponto de inspeção do e2e, nunca de negócio
   document.body.dataset.pronto = '1';
 }
 
