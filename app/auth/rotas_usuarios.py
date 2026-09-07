@@ -101,7 +101,11 @@ def _nao_conceder_alem_do_proprio(cur, auth: Auth, perfil: str, papel_id: int | 
     ou tirar o papel (papel_id nulo), o que devolve o teto inteiro do perfil. As rotas de papel já barravam
     isso na CRIAÇÃO do papel (`_validar_papel`); faltava barrar na ATRIBUIÇÃO. Vale para perfil e papel
     juntos, porque promover de editor para admin com papel nulo concede exatamente o mesmo conjunto."""
-    sobra = sorted(_privilegios_concedidos(cur, perfil, papel_id) - set(auth.privilegios))
+    # o teto do perfil `visualizador` é o PISO de todo membro (ver, entrar em grupo, gerar o próprio token…): não é
+    # "concedido" por ninguém, e por isso não conta na sobra — sem isso um administrador restrito a
+    # {membros.ver, membros.gerir} não conseguiria criar nem um visualizador (regra do L0-02-f, test_usuarios.py)
+    piso = _privilegios_concedidos(cur, "visualizador", None)
+    sobra = sorted(_privilegios_concedidos(cur, perfil, papel_id) - piso - set(auth.privilegios))
     if sobra:
         raise ErroAPI(403, "privilegio_proprio_insuficiente", "não se concede privilégio que não se tem", sobra)
 

@@ -192,8 +192,14 @@ def test_refutacao_um_privilegio_a_mais_em_qualquer_lugar(terreno, medida):
     Qualquer 2xx em criar ou editar refuta o item. Onde o privilégio que falta é o próprio `membros.gerir` ou
     `membros.papel`, o 403 vem do portão de privilégio em vez da conferência nova — continua sendo 403, e o teste
     guarda a contagem de cada motivo."""
+    from app.auth import privilegios as priv
+
     _definir(terreno, "alvo", set(terreno["todos"]))
-    sucessos, motivos = [], {}
+    # o teto de `visualizador` é o PISO de todo membro: não é concedido por ninguém, logo faltar um deles no papel do
+    # ator não é escalonamento — o administrador restrito a {membros.ver, membros.gerir} tem de continuar criando
+    # visualizador (regra do L0-02-f em test_usuarios.py). Para esses, o esperado é 2xx; para todos os outros, 403.
+    piso = set(priv.teto("visualizador"))
+    sucessos, indevidos, motivos = [], [], {}
     for privilegio in terreno["todos"]:
         _definir(terreno, "ator", set(terreno["todos"]) - {privilegio})
         criar = terreno["ator"].post(
@@ -205,15 +211,19 @@ def test_refutacao_um_privilegio_a_mais_em_qualquer_lugar(terreno, medida):
         )
         for rota, r in (("POST /api/usuarios", criar), ("PUT /api/usuarios/{id}", editar)):
             if r.status_code < 400:
-                sucessos.append((privilegio, rota, r.status_code, r.text[:200]))
+                (sucessos if privilegio in piso else indevidos).append((privilegio, rota, r.status_code, r.text[:200]))
             else:
                 assert r.status_code == 403, (privilegio, rota, r.status_code, r.text[:200])
+                assert privilegio not in piso, ("privilégio do piso barrado", privilegio, rota, r.text[:200])
                 motivos[_erro(r)] = motivos.get(_erro(r), 0) + 1
-    assert sucessos == [], sucessos
+    assert indevidos == [], indevidos
+    assert len(sucessos) == 2 * len(piso), (len(sucessos), sorted(piso))
     gravar = medida("L0-02-g-checagem-privilegio-papel-id")
     gravar("refutacao_privilegios_testados", len(terreno["todos"]), "privilégios",
            "para cada privilégio: papel do ator = todos menos ele, papel alvo = todos")
     gravar("refutacao_chamadas_403", sum(motivos.values()), "chamadas",
-           "POST e PUT /api/usuarios por privilégio; nenhuma 2xx")
+           "POST e PUT /api/usuarios por privilégio fora do piso; nenhuma 2xx")
+    gravar("refutacao_piso_2xx", len(sucessos), "chamadas",
+           "privilégios do teto de visualizador (piso de todo membro): faltar um deles no ator não barra")
     gravar("refutacao_motivos", motivos, "chamadas por erro",
            "privilegio_proprio_insuficiente = conferência nova; sem_privilegio = portão de privilégio")
