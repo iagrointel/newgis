@@ -1015,6 +1015,33 @@ CASOS: dict[tuple[str, str], Caso] = {
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # --- SAML 2.0 (L0-08-b): rotas públicas do protocolo respondem igual para todos; configuração é por inquilino
+    ("GET", "/api/sso/saml/metadata"): Caso(
+        lambda p: "/api/sso/saml/metadata?provedor_id=999999999", publico=True, aceita=frozenset({404}),
+    ),
+    ("GET", "/api/sso/saml/iniciar"): Caso(
+        lambda p: "/api/sso/saml/iniciar?inquilino=demo2&provedor_id=999999999", publico=True, aceita=frozenset({404}),
+    ),
+    ("POST", "/api/sso/saml/acs"): Caso(lambda p: "/api/sso/saml/acs", publico=True, aceita=frozenset({401})),
+    ("GET", "/api/sso/saml/slo"): Caso(lambda p: "/api/sso/saml/slo", publico=True, aceita=frozenset({401})),
+    ("POST", "/api/sso/saml/slo"): Caso(lambda p: "/api/sso/saml/slo", publico=True, aceita=frozenset({401})),
+    ("GET", "/api/sso/saml/logout"): Caso(
+        lambda p: "/api/sso/saml/logout", proprio=True, aceita=frozenset({204, 302}), descartavel=True,
+    ),
+    ("GET", "/api/org/saml"): Caso(lambda p: "/api/org/saml", proprio=True, aceita=frozenset({200})),
+    ("POST", "/api/org/saml"): Caso(
+        lambda p: "/api/org/saml",
+        lambda p: {"rotulo": f"{PREFIXO}saml", "idp_entity_id": "https://idp.invalido/x", "idp_sso_url": "https://idp.invalido/sso",
+                   "idp_certificado": "nao"},
+        aceita=frozenset({422}),
+    ),
+    ("PUT", "/api/org/saml/{provedor_id}"): Caso(
+        lambda p: "/api/org/saml/999999999",
+        lambda p: {"rotulo": f"{PREFIXO}saml", "idp_entity_id": "https://idp.invalido/x", "idp_sso_url": "https://idp.invalido/sso",
+                   "idp_certificado": "nao"},
+        aceita=frozenset({404, 422}),
+    ),
+    ("DELETE", "/api/org/saml/{provedor_id}"): Caso(lambda p: "/api/org/saml/999999999"),
 }
 
 

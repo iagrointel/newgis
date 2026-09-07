@@ -147,4 +147,12 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
+    # --- SAML 2.0 (L0-08-b)
+    ("POST", "/api/sso/saml/acs"): ["usuarios/entrar", "usuarios/criar", "usuarios/atualizar"],
+    ("GET", "/api/sso/saml/logout"): ["usuarios/sair"],
+    ("GET", "/api/sso/saml/slo"): [],  # LogoutRequest do IdP encerra sessões por função SECURITY DEFINER, sem sessão
+    ("POST", "/api/sso/saml/slo"): [],
+    ("POST", "/api/org/saml"): ["org/saml_configurar"],
+    ("PUT", "/api/org/saml/{provedor_id}"): ["org/saml_configurar"],
+    ("DELETE", "/api/org/saml/{provedor_id}"): ["org/saml_remover"],
 }
