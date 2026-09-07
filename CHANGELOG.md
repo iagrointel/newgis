@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L2-08-b-clonar-camadas-hospedadas: camadas e tabelas de um FeatureServer da Esri viram camadas do catálogo)
+
+`POST /api/migracao/clones` (job `migracao.clonar`, retomável por camada) lê `/FeatureServer/{id}` pela conexão
+`esri_rest` do L2-08-a e cria, por camada ou tabela, um item `camada_vetorial` com o mesmo preparo da ingestão:
+campos com tipo, alias, tamanho e padrão (nomes saneados; `OBJECTID`/`GlobalID` viram `oid_origem`/
+`globalid_origem`; `Shape__*` descartados com aviso), dados paginados por `resultOffset` (ou por `objectIds`),
+geometria por EWKT com `102100` → `3857`, datas em ms (inclusive antes de 1970), domínios codificados e de
+intervalo e subtipos inteiros pela mesma função da rota `/api/dominios/importar`, anexos no armazém de objetos
+com sha256, relacionamentos entre as camadas clonadas (1:N com chave repetida no dado vira N:M por junção, com
+aviso) e verificação (contagem origem × destino, sha256 de amostra normalizada) no relatório por camada;
+re-execução sem mudança na origem não escreve nada. `X-Esri-Authorization: Bearer` passou a valer como
+`Authorization`, então o FeatureServer da própria plataforma serve de fonte de teste. Conferido: serviço público
+da Esri gravado com URL e data (20 feições, tabela relacionada, 3 anexos) e camada própria de 2.000 feições.
+Fora desta rodada: caminho por File Geodatabase (`createReplica`), vista hospedada como vista, 500 mil feições
+medidas (máquina acima da carga de medição).
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
