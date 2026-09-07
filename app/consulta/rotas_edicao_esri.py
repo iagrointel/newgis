@@ -22,6 +22,7 @@ sessão `plat.origem`, migração 20260907T1927)."""
 
 from __future__ import annotations
 
+import base64
 import json
 import time
 import uuid
@@ -30,7 +31,8 @@ from typing import Any
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 
-from app import db
+from app import db, limites, objetos
+from app.catalogo import comum
 from app.consulta import campos as campos_mod
 from app.consulta import esri_edicao as tr
 from app.consulta import where_ast
@@ -41,6 +43,7 @@ from app.edicao.modelos import EdicoesEntrada
 from app.edicao.servico import _schema_tabela, aplicar_edicoes, camada_ou_404
 from app.erros import ErroAPI
 from app.expressao.avaliador_py import ErroExpressao, avaliar_texto
+from app.varredura_conteudo import ConteudoRecusado, escanear_cabecalho
 
 router = APIRouter(tags=["edicao-esri"])
 SERVICO = "/rest/services/{item_id}/FeatureServer"
@@ -289,9 +292,6 @@ def _conteudo_do_anexo(cur, anexo: dict) -> tuple[str, str, str]:
         linha = cur.fetchone()
         if linha is None:
             raise ErroAPI(404, "upload_inexistente", "uploadId não encontrado para este inquilino")
-        import base64
-
-        from app import objetos
         return (
             anexo.get("name") or linha["nome"],
             anexo.get("contentType") or linha["content_type"],
@@ -417,9 +417,7 @@ async def apply_edits_servico(request: Request, item_id: str):
                 r.pop("avisos", None)
                 if momento is not None:
                     r["editMoment"] = momento
-            return _json({"resultados": saida}) if False else JSONResponse(
-                json.loads(json.dumps(saida, default=str))
-            )
+            return JSONResponse(json.loads(json.dumps(saida, default=str)))
     except ErroAPI as e:
         return _erro_esri(e)
 
@@ -651,7 +649,6 @@ def _anexo_por_numero(cur, globalid: str, numero: str) -> str:
 
 
 async def _arquivo_do_formulario(request: Request, nomes: tuple[str, ...]) -> tuple[str, str, str]:
-    import base64
     formulario = await request.form()
     for nome in nomes:
         arquivo = formulario.get(nome)
@@ -772,13 +769,7 @@ async def upload(request: Request, item_id: str):
     """`/uploads/upload`: recebe o arquivo antes de existir feição-pai e devolve o `itemID` que o cliente
     cita depois como `uploadId` no `applyEdits`. O bloco vai para o mesmo depósito de objetos de todo o
     resto (cota e dedup por sha256 do item L0-11); esta rota só guarda o bilhete."""
-    import base64
-
-    from app import objetos
-    from app.catalogo import comum
-    from app.varredura_conteudo import ConteudoRecusado, escanear_cabecalho
     try:
-        from app import limites
         auth = _abrir(request, item_id, None, editar=True)
         with db.db(auth.contexto()) as cur:
             item, _dados = camada_ou_404(cur, item_id)  # antes de ler o corpo, como no addAttachment
