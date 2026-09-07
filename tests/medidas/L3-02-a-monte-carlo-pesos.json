@@ -1,0 +1,12 @@
+{
+ "item": "L3-02-a-monte-carlo-pesos",
+ "medidas": {
+  "sorteio_1000x5000_job_s": {
+   "valor": 0.767,
+   "unidade": "s",
+   "comando": "amc.robustez_pesos (1000 sorteios × 5000 unidades × 8 fatores, dirichlet, ContextoJob sem banco) — limite 60.0 s; carga_1min=12.94, ram_livre_gb=9.21, medido_em=2026-09-07T12:44:33Z (passou com folga mesmo sob carga alta)"
+  }
+ },
+ "gerado_em": "2026-09-07T12:44:34Z",
+ "git_sha": "31c7a4d11850"
+}

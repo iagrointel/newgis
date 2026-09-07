@@ -129,6 +129,22 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 3, setembro de 2026 (item L3-02-a-monte-carlo-pesos: robustez do motor multicritério por sorteio de pesos)
+
+`app/amc/robustez.py` (puro, sem I/O): `sortear_pesos` (Dirichlet no simplex ou faixa +-k% por fator,
+declarada) e `simular_robustez`, que chama o combinador do L3-01-e (`app.amc.combinacao.combinar`) N
+vezes e agrega por unidade (minimo, media, maximo, desvio, frequencia no top-k e no decil superior,
+estavel = top-k em >=95% dos sorteios). Sorteio de peso em ordem canonica pelos IDs dos fatores (nunca
+pela posicao de entrada), remapeada de volta na saida: permutar a ordem de entrada e reexecutar com a
+mesma semente da o mesmo resultado (nota com tolerancia 1e-9 por soma de ponto flutuante nao ser
+perfeitamente associativa; ranking exato). Veto e restricao nunca sao sorteados: `fracao_vetada` fixo
+em todos os N sorteios, unidade vetada marcada com nota `-inf` antes de ordenar (exclusao do topo por
+construcao, testada com unidade que teria a nota maxima sem o veto). Job `amc.robustez_pesos`
+(`app/amc/tarefas.py`, pesado=True, timeout_s=120) registrado em `app/jobs/tipos.py`; resultado
+(agregados + semente, nunca a matriz N x unidades, conforme A9) em `job.resultado` (jsonb existente,
+sem migracao nova). Medido (`tests/medidas/L3-02-a-monte-carlo-pesos.json`): 1.000 sorteios em 5.000
+unidades x 8 fatores como job, 0,767 s (78x dentro do limite de 60 s). ADR
+`docs/adr/20260907T1245-robustez-sorteio-de-pesos.md`.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
