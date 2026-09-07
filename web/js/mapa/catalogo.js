@@ -106,6 +106,12 @@ export class Catalogo {
     // desenho a camada: "Maximum call stack size exceeded" em reordenar → _avisar → _sincronizarDisponiveis
     // → _aplicarOrdemNoMapa → reordenar. A recursão aparecia sempre que o catálogo ganhava camada nova.
     if (validos.length === this.ativas.length && validos.every((id, i) => id === this.ativas[i])) return true;
+    // Aviso só quando a ordem MUDOU de verdade. Sem esta guarda o desenho da tela do mapa entra em
+    // recursão infinita ("Maximum call stack size exceeded") e a árvore de camadas fica vazia: a
+    // árvore ouve o catálogo (`catalogo.aoMudar` em web/js/camadas.js) e, ao ser avisada, chama
+    // `_aplicarOrdemNoMapa`, que chama esta função de volta. Com a ordem já igual — inclusive o caso
+    // comum de NENHUMA camada ligada, em que os dois lados são a lista vazia — o ciclo nunca fecha.
+    if (validos.length === this.ativas.length && validos.every((id, i) => this.ativas[i] === id)) return true;
     this.ativas = validos;
     this.aplicarOrdem();
     this._avisar();

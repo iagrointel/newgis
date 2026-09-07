@@ -21,6 +21,7 @@ import '../base/componentes.js';
 import { carregar as carregarIdioma, t } from '../base/i18n.js';
 import { montarLayout, pronto } from '../base/layout.js';
 import { h, limpar } from '../base/dom.js';
+import { obter } from '../base/api.js';
 import { exigirSessao } from '../auth/sessao.js';
 import { construirEstilo } from './estilo.js';
 import { Catalogo } from './catalogo.js';
@@ -312,6 +313,9 @@ async function iniciar(usuario) {
   await criarTabela(map, el('aviso')).iniciar();
   // ponto de inspeção do e2e, nunca de negócio
   window.plat.mapa = { map, catalogo, medicao, arvore, legenda, desenho, painelAnotacoes, get mapaId() { return mapaId; } };
+  // item L2-01-d-popup-runtime: o fuso do inquilino, uma vez só (nunca por campo de data no popup)
+  window.plat.org = window.plat.org || {};
+  obter('/api/mapa/fuso').then((r) => { if (r.status === 200) window.plat.org.fuso = r.json.fuso; }).catch(() => {});
   document.body.dataset.pronto = '1';
 }
 

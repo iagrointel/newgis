@@ -226,6 +226,10 @@ def test_janela_de_atributos_com_campo_nulo_e_geometria_multi(mapa, page):
     # geometria multi: a mesma feição chega em pedaços e a janela não a repete
     blocos = page.locator(".popup-plat .popup-camada").count()
     assert blocos == 1, blocos
+    # geometria multi: a mesma feição chega em pedaços e a janela não a repete — desde o item
+    # L2-01-d-popup-runtime a paginação "i de N" só aparece quando há mais de UMA feição coincidente;
+    # multi-parte de uma feição só não deve mostrar o paginador
+    assert page.locator(".popup-pager").count() == 0
     mapa.verificar()
 
 

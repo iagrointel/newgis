@@ -46,6 +46,7 @@ from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.mapa.anotacoes import router as rotas_anotacoes
 from app.mapa.promover import router as rotas_promover
+from app.mapa.popup import router as rotas_mapa_popup
 from app.mapa.rotas import router as rotas_mapa
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
@@ -135,6 +136,8 @@ ROUTERS = [
     # --- desenho e anotações do mapa (L2-01-k): /api/mapa/{id}/desenho/promover, /api/anotacoes
     rotas_promover,
     rotas_anotacoes,
+    # --- popup em tempo de execução (L2-01-d): /api/camadas/{id}/feicoes/{fid}/popup (campos servidor + expressão)
+    rotas_mapa_popup,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
