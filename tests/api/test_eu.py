@@ -103,6 +103,10 @@ def test_put_eu_nunca_escala_acesso_nem_troca_login(usuarios_a, campo, valor):
     assert depois["superadmin"] == u["superadmin"] and depois["foto_url"] is None
 
 
+# serial (07/09): restringe os domínios de e-mail do INQUILINO demo inteiro por PUT /api/org. Enquanto a
+# restrição está de pé, qualquer outro worker do pytest-xdist que crie usuário com e-mail recebe 422
+# email_dominio (medido em duas rodadas seguidas de -n 5, em test_usuarios::test_criar_login_existente_e_dominio).
+@pytest.mark.serial
 def test_put_eu_email_fora_do_dominio_do_proprio_inquilino(sessao_a):
     """Portão do item: 'e-mail com domínio fora da lista recusado com mensagem'. Restringe os domínios do
     PRÓPRIO inquilino (demo) e confirma que a mensagem nomeia a lista — não é só o teste unitário de
