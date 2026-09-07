@@ -753,7 +753,7 @@
  "mapa.erro_carregar": "não foi possível carregar o mapa",
  "mapa.base_nenhuma": "sem mapa-base (só as camadas)",
  "mapa.busca": "Pesquisar",
- "mapa.busca_ajuda": "endereço ou coordenada (lat, lon)",
+ "mapa.busca_ajuda": "endereço, ou coordenada como -23.49350, -46.59300",
  "mapa.busca_sem_resultado": "nada encontrado para este texto",
  "mapa.ir": "Ir",
  "mapa.camadas": "Camadas",
