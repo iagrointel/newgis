@@ -206,7 +206,7 @@ def test_filtro_com_campo_fora_da_lista_branca_e_recusado(inquilino_mapa, camada
         "item_id": camada["item_id"], "formato": "gpkg",
         "filtro": {"op": "=", "args": [{"property": "senha_do_admin"}, "x"]}})
     assert r.status_code == 422, r.text
-    assert r.json()["detalhe"]["codigo"] == "campo_nao_permitido", r.text
+    assert r.json()["erro"] == "campo_nao_permitido", r.text
 
 
 # ---------------------------------------------------------------- 2: campo oculto da vista
@@ -242,7 +242,7 @@ def test_vista_esconde_campo_na_exportacao_e_no_filtro(inquilino_mapa, camada, v
         "item_id": vista_com_campo_oculto, "formato": "gpkg",
         "filtro": {"op": ">", "args": [{"property": "quantidade"}, 50]}})
     assert r.status_code == 422, r.text
-    assert r.json()["detalhe"]["codigo"] == "campo_nao_permitido", r.text
+    assert r.json()["erro"] == "campo_nao_permitido", r.text
 
 
 def test_selecao_salva_como_origem_exporta_os_fids_dela(inquilino_mapa, camada, selecao_de_500,

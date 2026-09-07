@@ -33,7 +33,7 @@ from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import jsonb, registrar_evento, uuid_ok
 from app.catalogo.modelos import UUID_PADRAO, Modelo
 from app.consulta import where_ast
-from app.consulta.cql2 import colunas_da_camada
+from app.consulta.cql2 import colunas_da_camada, compilar_cql2
 from app.erros import ErroAPI
 from app.exportacao import motor
 from app.exportacao.erros import sanear_erro_banco
@@ -309,6 +309,17 @@ def criar(corpo: ExportacaoEntrada, request: Request, auth: Auth = autenticado("
         if corpo.filtro and resolvido["filtro"]:
             # os dois valem juntos: o da vista é condição, o do usuário é recorte dentro dela
             filtro = {"op": "and", "args": [resolvido["filtro"], corpo.filtro]}
+        # o FILTRO do mapa (CQL2-JSON) é conferido à parte, e não junto do `where`, porque os dois têm
+        # código de resposta diferente por contrato: o `where` de texto do L0-04-h devolve 400, o CQL2
+        # devolve 422 — o mesmo 422 de `POST /api/mapa/camadas/{id}/filtrar`, que é quem o cliente usa
+        # para validar o filtro antes de exportar. Uma resposta só para os dois esconderia qual falhou.
+        colunas_do_filtro = colunas_da_camada(dados, ocultos)
+        if filtro is not None:
+            try:
+                compilar_cql2(filtro, colunas_do_filtro)
+            except where_ast.ErroWhere as e:
+                raise ErroAPI(422, e.codigo, e.mensagem,
+                              {"codigo": e.codigo, "detalhe": e.detalhe}) from e
         # filtro: sintaxe/lista branca aqui, semântica no banco (LIMIT 0) — os dois ANTES de criar o job
         sql = None
         if corpo.where or corpo.bbox or ids is not None or filtro is not None or formato.linhas_max:
@@ -319,10 +330,10 @@ def criar(corpo: ExportacaoEntrada, request: Request, auth: Auth = autenticado("
                     bbox=corpo.bbox, srid_tabela=int(dados.get("srid") or 4326),
                     colunas_brancas=motor.colunas_permitidas(
                         [c for c in (dados.get("campos") or []) if c.get("nome") not in ocultos]),
-                    ids=ids, filtro_cql2=filtro, colunas_cql2=colunas_da_camada(dados, ocultos),
+                    ids=ids, filtro_cql2=filtro, colunas_cql2=colunas_do_filtro,
                 )
             except where_ast.ErroWhere as e:
-                raise ErroAPI(400 if e.codigo != "campo_nao_permitido" else 422, "where_invalido", e.mensagem,
+                raise ErroAPI(400, "where_invalido", e.mensagem,
                               {"codigo": e.codigo, "detalhe": e.detalhe}) from e
             try:
                 motor.conferir_where(cur, sql)

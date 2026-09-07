@@ -65,6 +65,9 @@ EXTENSOES = {
     "application/gml+xml": "gml",
     "image/vnd.dxf": "dxf",
     "application/vnd.apache.parquet": "parquet",
+    # acrescentados pelo item L2-01-l (exportação a partir do mapa)
+    "application/geo+json-seq": "geojsonl",
+    "application/vnd.pmtiles": "pmtiles",
 }
 _SLUG = r"[a-z0-9][a-z0-9-]{1,38}"
 _CLASSE = r"[a-z0-9_]{1,40}"

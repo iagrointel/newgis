@@ -129,3 +129,11 @@ body.mapa .popup-tabela th { text-align: left; font-weight: 500; color: var(--fr
 body.mapa .popup-tabela td { padding: .12rem 0; font-family: var(--mono); }
 body.mapa .popup-tabela td.nulo { color: var(--fraco); font-style: italic; }
 body.mapa .popup-mais { margin: 0; font-size: .75rem; color: var(--fraco); }
+
+/* --- bloco Exportar e ações da janela de atributos (item L2-01-l) */
+.exportar .linha { margin-bottom: 6px; }
+.exportar select { max-width: 100%; }
+.exportar #exp-crs { width: 6.5rem; }
+.exportar #exp-perda { color: var(--texto-fraco, #7b8486); font-size: 0.85em; }
+.popup-acoes { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 6px 0 2px; }
+.popup-copiado { font-size: 0.85em; color: var(--texto-fraco, #7b8486); }
