@@ -25,7 +25,7 @@ contra o mesmo XSD que o teamengine consome na checagem estrutural).
 
 | sha | mensagem |
 |---|---|
-| (este) | Alinhamento INSPIRE GNM (item L4-01-h): mapeamento, exportador GML e validação contra o XSD oficial |
+| 3c38aa4 | Alinhamento INSPIRE GNM (item L4-01-h): mapeamento, exportador GML e validação contra o XSD oficial |
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
