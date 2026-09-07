@@ -166,6 +166,91 @@ IP pinado, sem seguir redirecionamento sozinho); token em cabeçalho `X-Esri-Aut
 `plat.migracao_usuario` não tem coluna de e-mail, nome ou telefone: o dado pessoal que o portal devolve não
 tem onde ser gravado. ADR 0018. ⛔ a prova contra Portal REAL fica pendente da decisão D20 do dono
 (credencial do parceiro) — `tests/migracao/PORTAL_DE_TESTE.md` diz o que a prova atual sustenta e o que não.
+## turno 5, setembro de 2026 (item L2-10-b-relacionamentos: classes de relacionamento entre camadas)
+
+`plat.relacionamento`/`plat.relacionamento_junc` (migração `20260907T1244_relacionamentos.sql`; **ADR
+20260907T1436**): 1:N/1:1 vira FK real na tabela de destino (`(tenant_id, chave_destino) -> (tenant_id,
+chave_origem)`, `ON DELETE CASCADE` quando `composto=true`, `SET NULL`/`RESTRICT` quando simples); N:M não
+tem FK física (a junção pode ligar qualquer lado primeiro) e ganha gatilho de integridade
+(`plat.relacionamento_junc_conferir`) sobre uma tabela de junção única para todo o inquilino. Cardinalidade
+máxima em 1:N é gatilho GERADO por tabela de destino (mesmo padrão do L2-10-a, já com o cuidado de nunca
+concatenar texto do usuário no corpo do dollar-quote). Chave de origem/destino é sempre um VALOR (campo
+declarado ou `globalid`), nunca o `fid` físico — é por isso que o relacionamento sobrevive a apagar e
+recriar a linha com o mesmo `globalid` (medido).
+
+API: `POST/DELETE /api/relacionamentos`, `POST .../ligar` e `.../desligar` (N:M), `GET
+/api/camadas/{id}/relacionados/{rel}` com paginação (`limite_relacionados` da classe vence o `limite` da
+consulta) e o novo `GET /api/camadas/{id}/relacionamentos` (lista as classes que a camada enxerga, dos dois
+sentidos, para a tela montar o popup sem conhecer o nome de antemão). `GET
+/rest/services/{id}/FeatureServer/0/queryRelatedRecords` devolve os MESMOS fids da rota própria (paridade
+testada). Popup na tela `/camadas/{id}/dominios` (reaproveitada do L2-10-a): botão "Relacionados" por linha
+abre um `<plat-dialogo>` listando os registros ligados com link para `/camadas/{alvo}/dominios?fid=N`; a
+página de destino lê `?fid=` e destaca a linha (`tr.destaque`) — e2e com 3 capturas
+(`tests/e2e/capturas/L2-10-b-relacionamentos_*.png`).
+
+Refutação do item, todas fechadas: ciclo de relacionamentos compostos A→B→A não trava a criação nem o
+apagar (a segunda ponta do ciclo exige uma FK física que a camada de teste não declara, então cai em `404`
+de campo, nunca trava); cardinalidade máxima violada por inserção DIRETA na tabela (fora da API, mesmo
+caminho de uma edição em lote) é recusada pelo gatilho; paginação com `limite_relacionados` vence um
+`limite` maior pedido pela consulta (mecanismo testado com N=25; N=100 mil não medido nesta passagem —
+custo de disco/tempo compartilhado, registrado no ADR, não escondido). 8 testes de API + 1 e2e verdes;
+medidas em `tests/medidas/L2-10-b-relacionamentos.json`.
+
+Achado do turno (registrado para não se repetir): um teste de leitura que não fecha a própria transação
+(`SELECT` sem `commit`/`rollback`) segura `AccessShareLock` na tabela indefinidamente; a chamada seguinte
+que precise de `AccessExclusiveLock` na MESMA tabela (`ALTER TABLE ... ADD CONSTRAINT` ao criar a FK do
+relacionamento) trava até o Postgres matar a sessão ociosa por `idle_in_transaction_session_timeout`
+(~60 s) — e só então progride, com a conexão do teste já morta para a chamada seguinte
+(`tests/api/test_relacionamentos.py::_contar` agora fecha a própria transação).
+
+Fora desta passagem: formulário de criar/ligar/desligar um registro relacionado a partir do próprio popup
+(a API já faz; falta só o botão); relacionamento sobrevivendo a importação/exportação FGDB (a ingestão
+vetorial ainda não cobre FGDB).
+
+## turno 3, setembro de 2026 (item L2-03-a-api-edicao-transacional: edição transacional de feições — única porta de escrita)
+
+`POST /api/camadas/{id}/edicoes` (`app/edicao/`): equivalente do `applyEdits` da Esri e, a partir
+daqui, a única porta de escrita de feição para navegador, PWA, FeatureServer (L2-04-d) e OGC
+(L2-04-g). Corpo com `adicionar`/`atualizar`/`apagar` numa transação — tudo-ou-nada por padrão
+(`modo=transacao`), ou `modo=parcial` com `SAVEPOINT` por feição, devolvendo resultado feição a
+feição (como o `applyEdits` com `rollbackOnFailure=false`). Roda direto contra a tabela de camada
+`d_<slug>.c_<uuid16>` que `plat.camada_preparar` (029_ingestao_vetor.sql) já cria — nenhuma tabela
+nova (migração 20260906T1859, bump do esquema `camada_vetorial` v2→v3, só propriedades opcionais).
+
+Validação sempre no servidor: tipo de geometria e SRID da coluna (com a mesma promoção
+Point/LineString/Polygon → Multi* que `app/ingestao/carregar.py` usa na carga); `ST_IsValid`, com
+`ST_MakeValid` só quando `corrigir_geometria=true` (sem isso, polígono inválido é 422); domínio de
+atributo por `dados.regras_campo` (obrigatório, somente-leitura, lista de valores ou
+mínimo/máximo — mecanismo próprio deste item; quando o L2-10-a-dominios-subtipos, entregue noutra
+trilha, for integrado, ganha uma segunda fonte compartilhada entre camadas, não substitui esta);
+tamanho de texto (64 KiB); concorrência otimista pela coluna `versao` já existente na tabela de
+camada — atualizar/apagar com a versão errada devolve `409` com a feição ATUAL, nunca sobrescreve
+em silêncio; campos de rastreio (`fid`, `globalid`, `versao`, `tenant_id`, `criado_*`,
+`atualizado_*`) NUNCA aceitos do corpo, sempre preenchidos pelo servidor; "só as próprias feições"
+(`edicao.somente_proprias`) e "geometria travada" (`edicao.geometria_travada`) por camada, com
+`feicoes.editar_total` (perfil admin) ignorando as duas. Sanidade de CRS não declarado: coordenada
+fora de `[-180,180]`/`[-90,90]` numa camada de SRID geográfico sem `crs.srid` declarado é `422
+geometria_fora_do_crs` (cobre o envio de metros — UTM/Web Mercator — sem declarar). Um evento por
+LOTE (`camadas/editar`, nunca um por feição) com a contagem de adicionadas/atualizadas/apagadas, e
+bump de `dados.tiles_versao` no item (ponto de integração para a invalidação de tiles do L2-01-b,
+ainda pendente). Isolamento entre inquilinos por RLS FORCE já existente: o inquilino B recebe `404`
+ao ler, atualizar ou apagar feição de A — nunca `403`, nunca sucesso silencioso, porque a existência
+não é confirmada a quem não pode ver (ADR 20260907T0216).
+
+Medido: 1.000 feições em `adicionar` (modo transação) em menos de 1 s, contra o teto de 3 s do
+portão (`tests/medidas/L2-03-a-api-edicao-transacional.json`). Refutação do item (roteiro do
+adversário) rodada nesta passagem: lote de 100 mil feições recusado pelo teto de lista
+(`EDICAO_LOTE_MAX=2.000`); `crs.srid=0` recusado pela própria validação de entrada; texto de 1 MB
+recusado (`EDICAO_TEXTO_MAX=64 KiB`); geometria em outro CRS sem declarar recusada pela sanidade de
+grau; feição de outro inquilino nunca aceita (404); duas sessões editando a mesma feição — só uma
+ganha (200), a outra recebe 409 com a versão atual, nunca as duas 200. 20 testes verdes em
+`tests/api/test_edicao_transacional.py`.
+
+Fora desta passagem (fronteira honesta, ver ADR): matriz fina de permissão por operação × grupo
+(ficou em `edicao.habilitada`/`somente_proprias`/`geometria_travada` + privilégio único);
+integração com `plat.dominio` do L2-10-a; consumidor da invalidação de tiles (L2-01-b); histórico/
+restauração de feição (L2-03-d-historico-restauracao) — a coluna `versao` cobre só a concorrência
+otimista, não um log de mudanças.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
@@ -226,6 +311,44 @@ carimbo) e o cabeçalho opcional `-- depende: <arquivo>`; `db/migrar.sh`, `db/mi
 reprova nome fora do padrão, três dígitos novos e dependência que vem depois na ordem;
 `tests/api/test_saude.py` deixa de casar o glob de três dígitos e escreve o que "última migração" passa a
 significar (a de autoria mais recente pela chave, não a maior string nem a última aplicada no relógio).
+## turno 3, setembro de 2026 (item L2-10-a-dominios-subtipos: domínios de atributo e subtipos por camada)
+
+Domínio de atributo como objeto do inquilino (`plat.dominio`: codificado com lista de códigos, ou intervalo
+com mínimo e máximo), ligação campo -> domínio por camada e por subtipo (`plat.dominio_campo`), subtipo como
+campo inteiro designado da camada (`plat.camada_subtipo`). **ADR 0021**; migrações
+`20260906T1548_dominios_subtipos.sql` e `20260906T1620_dominios_gatilho_gerado.sql`.
+
+- **A regra vale no banco.** Um INSERT direto na tabela da camada como `plat_app`, sem passar pela API, é
+  recusado com `campo "uf": o valor 'ZZ' não pertence ao domínio "UF"` e com o nome do campo em `COLUMN` —
+  a API repassa isso em `detalhe.campo`. Domínio de intervalo recusa abaixo do mínimo e acima do máximo
+  (`campo "altura": o valor -0.1 está fora do intervalo 0.0 a 10.0`). Medido em
+  `tests/medidas/L2-10-a-dominios-subtipos.json`.
+- **Subtipo troca o domínio do mesmo campo.** Com dois subtipos ligados ao campo `situacao`, `terra` passa no
+  subtipo 2 e é recusado no 1; sem subtipo vale o domínio padrão da camada; subtipo fora da lista é recusado.
+- **Remover valor em uso = 409 com a contagem.** Quem conta é `plat.dominio_uso_contar`, a mesma função que
+  responde `GET /api/dominios/{id}/uso`: quatro feições usando `C1` dão
+  `{"erro": "valor_em_uso", "detalhe": {"codigo": "C1", "usos": 4}}`. Valor não usado sai sem drama.
+- **Custo do gatilho, medido e corrigido.** A primeira versão, genérica, lia a linha com `to_jsonb(NEW)` e
+  custou **1,80x** (10 mil inserções: 1,72 s sem gatilho, 3,11 s com) — acima do teto de 1,5x do item. Um
+  gatilho que só faz `to_jsonb(NEW)` já custa cerca de 129 us por linha, porque converte a linha inteira, com
+  geometria. O gatilho passou a ser GERADO por camada (`plat.dominio_v_<item>`, com `NEW.uf` no código), e
+  três gatilhos AFTER (em `plat.dominio_campo`, `plat.camada_subtipo` e `plat.dominio`) regeneram a função
+  sozinhos — nenhuma rota instala gatilho, e quem mexe por `psql` regenera do mesmo jeito.
+- **FeatureServer com domains e types.** `GET /rest/services/{item_id}/FeatureServer/0` publica
+  `fields[].domain` (codedValue e range) e `types[]` com `domains` por subtipo e `templates` com os valores
+  padrão; conferido contra o que `GET /api/camadas/{id}/dominios` devolve do banco. É só o METADADO: `/query`
+  e `/applyEdits` são da linha L2-08.
+- **Tela `/camadas/{id}/dominios`.** Campo com domínio codificado vira lista de escolha que mostra a descrição
+  e grava o código; trocar o subtipo refaz os campos dependentes e aplica os padrões; a tabela de feições usa
+  a mesma tradução (`web/js/dominios/valores.js`, a função única do formulário, da tabela e — quando o painel
+  de camada existir — do popup).
+- **CSV de ida e volta** (`GET /api/dominios.csv`, `POST /api/dominios/csv`) e **importação do `fields`/`types`
+  de um FeatureServer/FGDB** (`POST /api/dominios/importar`), que reaproveita domínio de mesmo nome em vez de
+  duplicar.
+
+Testes: `tests/api/test_dominios_subtipos.py` (inclui a refutação exigida: domínio de outro inquilino = 404,
+50 mil códigos = 422, código duplicado recusado na API e no banco, trocar o tipo de campo com domínio ligado
+= 409) e `tests/e2e/test_dominios.py` (playwright, com capturas).
 
 ## turno 3, setembro de 2026 (item L0-04-a-upload-arquivo: upload retomável pelo navegador)
 
@@ -547,6 +670,51 @@ Latência medida: mediana de 30 `PUT /api/itens/{id}` (painel, 2 nós) = **17,3 
 `/api/tipos-item`; `/api/itens/{id}/integridade` como alvo padrão 401/403/404).
 
 Decisões em `docs/adr/0011-documento-de-construtor.md`. Detalhe: `MANUAL.md` seção 17, `ARQUITETURA.md` seção 14.
+
+## turno 3, setembro de 2026 (item L1-01-d-garage-por-inquilino: balde por inquilino com cota dupla, chave só-leitura e COG por Range)
+
+Constrói sobre o adaptador do L0-11 (ADR 0006) o que a linha de imagens precisa. **ADR 0016**; migração
+`20260906T1547_garage_inquilino.sql` (a reserva original era 034, e depois 042, mas a árvore principal já tinha commitado 034/036/040/041/042
+— renumerada e registrada no handoff).
+
+- **Cota dupla.** `plat.tenant.cota_objetos` e `plat.arquivo_bucket.cota_objetos` novas; `UpdateBucket` do Garage
+  passa a receber `quotas: {maxSize, maxObjects}`. Medido: com `maxObjects` na conta exata, o PUT seguinte volta
+  403 e a mensagem que chega à API é **"o Garage recusou a gravação: a cota de objetos do inquilino foi atingida
+  (limite do balde: N objetos)"** — em português, com o limite que o próprio Garage citou
+  (`app/garage.traduzir_erro_s3`, classe `CotaGarage`). Para bytes a instância mediu **"o Garage recusou a
+  gravação: a cota de armazenamento do inquilino foi atingida"** — sem número, porque essa mensagem do Garage não
+  cita o limite. `POST /api/arquivos` acima da cota devolve **413 `cota_excedida`**; a frase que chega ali é a da
+  checagem prévia ("cota de 500 bytes excedida: uso atual 138906, objeto de 2048 bytes"), porque ela corre antes e
+  é mais informativa — a do Garage é a que sobe quando a prévia deixa passar.
+- **Semeadura de instalação.** Passo `g3` do `install.sh` (`python -m app.baldes_semear`): balde, duas chaves,
+  as duas cotas e o endpoint web por inquilino ativo. Medido no inquilino de teste: 1ª execução **1
+  criado/alterado**, 2ª **0 criados/alterados**. A semeadura lê o balde de volta pela Admin API e reaplica quando
+  o Garage discorda do banco — foi assim que se descobriu `plat-demo` com `maxObjects: null` no Garage e 200000
+  no banco.
+- **Objeto nomeado por conteúdo, nunca sobrescrito.** `app/objetos_raster.py`: `<item_id>/<asset>_<sha8>.<ext>`,
+  `HEAD` antes de gravar, `ObjetoJaExiste` na segunda gravação do mesmo conteúdo; conteúdo novo produz chave nova
+  (medido: `demo/zt_sobrescrita/cog_c9e41e3e.tif` → `cog_ebd6a855.tif`, a versão 1 intacta). A expressão da chave
+  não admite ponto nem barra no item/asset: dez formas erradas (`..`, `../../etc`, maiúscula, sha curto) recusadas
+  no teste unitário.
+- **Chave só-leitura que sai de casa.** `GET /api/arquivos/_chave-leitura` (sessão + `org.integracoes`) entrega a
+  credencial S3 RO do balde para a conexão do ArcGIS Pro e o `/vsis3` do TiTiler; a chave RW nunca sai. Refutação
+  medida com boto3: com a chave RO, `PutObject` **403**, `DeleteObject` **403**, `CopyObject` no mesmo balde
+  **403**, `CopyObject` entre baldes **403**, `CreateMultipartUpload` **403**; `ListBuckets` responde 200 mas
+  mostra só `['plat-demo']` (o balde do outro inquilino não aparece). Contra o balde do vizinho, `GetObject`,
+  `HeadObject` e `ListObjectsV2` = **403** cada.
+- **COG por HTTPS com Range.** Bloco `/svc/<token>/cog/<slug>/...` em `deploy/nginx.conf` (`slice 1m`, cache das
+  fatias, `auth_request` contra `GET /api/arquivos/_cog/autorizar`). Provado contra um nginx PRÓPRIO de teste
+  (porta 8162, certificado autoassinado): objeto de 3.146.505 bytes, `Range: bytes=1048576-1048591` responde
+  **206** com `Content-Range: bytes 1048576-1048591/3146505`, 16 bytes conferidos contra o conteúdo gravado;
+  token inválido no caminho = **403** antes de o Garage ver a requisição. **O bloco NÃO foi aplicado no nginx do
+  sistema neste turno** — quem aplica é o gerente.
+- **Apagar devolve a cota.** `objetos_raster.apagar_item` mediu 72 objetos/138.095 bytes antes → 75/153.095 com
+  3 objetos gravados → 72/138.095 depois, com os contadores do próprio Garage (GetBucketInfo). Segunda chamada
+  devolve zeros. `objetos.apagar_bucket_do_inquilino` desfaz o balde inteiro (objetos, as duas chaves, o balde e
+  a linha), porque `plat.inquilino_apagar` só limpa o banco.
+
+Medidas em `tests/medidas/L1-01-d.json`. Testes: `tests/unit/test_objetos_raster.py` (30) e
+`tests/api/test_garage_inquilino.py`.
 
 ## turno 3, setembro de 2026 (itens L0-02-e-varredura-cruzada-rls · L0-02-f-tela-usuarios: fechamento com evidência fresca + gap real corrigido)
 

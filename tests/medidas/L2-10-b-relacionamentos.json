@@ -1,0 +1,62 @@
+{
+ "item": "L2-10-b-relacionamentos",
+ "medidas": {
+  "nm_pares_apos_desligar_1_de_3": {
+   "valor": 1,
+   "unidade": "pares",
+   "comando": "3 ligados, 1 desligado"
+  },
+  "queryrelatedrecords_paridade": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "mesmos fids em /relacionados e /FeatureServer/0/queryRelatedRecords"
+  },
+  "globalid_sobrevive_reimportacao": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "apaga lote e recria com mesmo globalid; fid físico muda, relacionamento continua achando"
+  },
+  "relacionar_camada_outro_inquilino_status": {
+   "valor": 404,
+   "unidade": "http_status",
+   "comando": "POST /api/relacionamentos do inquilino B com item_id de camadas do inquilino A"
+  },
+  "ciclo_composto_segunda_classe_status": {
+   "valor": 409,
+   "unidade": "http_status",
+   "comando": "criar 2a classe composta fechando o ciclo A->B->A"
+  },
+  "ciclo_composto_apagar_terminou": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "DELETE na origem do ciclo não travou o teste"
+  },
+  "cardinalidade_maxima_recusa_insercao_direta": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "max=2, 2 já existem, 3a inserção direta (fora da API) tem de ser recusada pelo gatilho"
+  },
+  "paginacao_limite_relacionados_trava_teto": {
+   "valor": 10,
+   "unidade": "linhas",
+   "comando": "25 lotes inseridos, limite_relacionados=10, pedido limite=9999 -> devolveu 10 (100 mil não medido nesta rodada: custo de disco/tempo compartilhado, ver handoff)"
+  },
+  "1n_composto_apaga_n_destinos": {
+   "valor": 3,
+   "unidade": "linhas",
+   "comando": "DELETE quadra Q1; count(lotes) antes/depois"
+  },
+  "popup_mostra_relacionado_e_navega": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "e2e: clicar em Relacionados na quadra -> popup lista o lote -> clicar no link navega para /camadas/{lote}/dominios?fid=N com a linha .destaque"
+  },
+  "pagina_dominios_quadra_ms": {
+   "valor": 72.8,
+   "unidade": "ms",
+   "comando": "playwright chromium (tests/e2e/test_relacionamentos.py) com --base-url próprio"
+  }
+ },
+ "gerado_em": "2026-09-07T14:40:39Z",
+ "git_sha": "2f4574eb8aa5"
+}

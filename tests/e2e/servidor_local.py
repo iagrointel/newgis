@@ -1,11 +1,11 @@
-"""ASGI de TESTE: a aplicação do plat mais `/static` servido pelo próprio processo.
+"""Servidor de e2e para UMA trilha (worktree), quando não há nginx na frente.
 
-Por que existe: em produção e em homologação quem serve `web/` em `/static/` é o nginx (ver o comentário do
-`scripts/homolog_e2e.sh`, achado do 1º turno). Uma trilha em worktree não tem nginx próprio, e mexer no nginx
-da máquina é compartilhado — então, só para o e2e da trilha, a mesma pasta é montada aqui. Nada disto entra
-na aplicação de produção: `app/main.py` continua sem `StaticFiles`.
+Em produção e em `make homolog` quem serve `web/` em `/static/` é o nginx (ADR 0001 seção 4.3), e a app
+nunca monta arquivo estático. Numa trilha em worktree não há nginx: este módulo embrulha `app.main:app` e
+acrescenta SÓ o `/static/`, para o playwright conseguir carregar os módulos JS da tela sob teste. Nada aqui
+entra em produção — é o ponto de entrada do uvicorn do e2e da trilha, e não é importado pela app.
 
-  venv/bin/uvicorn tests.e2e.servidor_local:app --port <porta da trilha>
+    /home/dev/plataforma/enterprise/venv/bin/python -m uvicorn tests.e2e.servidor_local:app --port 8161
 """
 
 from pathlib import Path
@@ -15,4 +15,4 @@ from fastapi.staticfiles import StaticFiles
 from app.main import app
 
 WEB = Path(__file__).resolve().parents[2] / "web"
-app.mount("/static", StaticFiles(directory=str(WEB)), name="estatico_de_teste")
+app.mount("/static", StaticFiles(directory=WEB), name="static")

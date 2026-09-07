@@ -1070,3 +1070,46 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Relacionamentos entre camadas (item L2-10-b-relacionamentos)
+
+### 22.1 Criar uma classe de relacionamento (`POST /api/relacionamentos`)
+
+`origem_item_id`, `destino_item_id`, `cardinalidade` (`1:1`, `1:N` ou `N:M`), `chave_origem`/`chave_destino`
+(um nome de campo da camada ou `globalid`, nunca o `fid` físico — é o que faz o relacionamento sobreviver a
+apagar e recriar a linha com o mesmo `globalid`), `composto` (só vale em `1:1`/`1:N`: apagar a origem apaga
+os destinos), `nome_direto`/`nome_inverso` (como cada lado enxerga a classe) e, opcionalmente,
+`cardinalidade_min`/`cardinalidade_max`/`limite_relacionados`. `1:N`/`1:1` grava uma FK real na tabela de
+destino (`ON DELETE CASCADE` quando composto, `SET NULL`/`RESTRICT` quando simples); `N:M` não tem FK física
+— a integridade é por gatilho sobre uma tabela de junção. `DELETE /api/relacionamentos/{id}` desfaz a FK ou
+o gatilho antes de apagar a classe.
+
+### 22.2 Ligar e desligar pares N:M
+
+`POST /api/relacionamentos/{id}/ligar` e `.../desligar {origem_valor, destino_valor}` — os valores são a
+CHAVE declarada na classe (não o `fid`). Ligar um par com um valor que não existe em nenhum dos dois lados
+devolve `404 relacionamento_valor_inexistente` nomeando o lado; estourar `cardinalidade_max` devolve `422`.
+
+### 22.3 Consultar os relacionados (`GET /api/camadas/{id}/relacionados/{rel}?fids=...`)
+
+`rel` é o nome direto (visto da origem) ou inverso (visto do destino) da classe. `fids` é uma lista de fids
+separada por vírgula; a resposta agrupa por fid. `limite`/`deslocamento` paginam, mas o `limite_relacionados`
+declarado na classe sempre vence um `limite` maior pedido pela consulta (teto duro por classe).
+`GET /rest/services/{id}/FeatureServer/0/queryRelatedRecords?relationshipId=...&objectIds=...` devolve o
+mesmo dado no formato Esri (paridade testada: mesmos fids nos dois formatos).
+
+### 22.4 Popup de relacionados na tela (`/camadas/{id}/dominios`)
+
+A tabela de feições (mesma tela do item L2-10-a) ganha uma coluna "Relacionados" quando a camada tem
+alguma classe: o botão abre um popup (`GET /api/camadas/{id}/relacionamentos` traz as classes que a camada
+enxerga, dos dois sentidos) listando os registros ligados a cada fid, com um link por registro para
+`/camadas/{alvo}/dominios?fid=N`. A página de destino lê `?fid=` da URL e destaca a linha correspondente
+(classe `.destaque`) se ela estiver na primeira leva carregada.
+
+### 22.5 O que ficou de fora
+
+Criar, ligar ou desligar um registro relacionado a partir do próprio popup (hoje é só leitura e navegação;
+a API de ligar/desligar já existe, falta o botão na tela); relacionamento sobrevivendo a
+importação/exportação de File Geodatabase (a ingestão vetorial desta versão não cobre FGDB); medição de
+paginação com 100 mil relacionados numa única origem (o mecanismo — `limite_relacionados` vencendo um
+`limite` maior — foi medido com N=25; ver ADR 20260907T1436).
