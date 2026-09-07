@@ -11,10 +11,10 @@ inteiramente o núcleo do L0-04-ingest-vetor — `plat.camada_schema_garantir`/`
 tabela nasce com colunas obrigatórias, `FORCE ROW LEVEL SECURITY`, índice GIST e gatilhos de tenant/versão
 que uma camada importada) e `app.ingestao.nomes.normalizar` para o nome de cada campo (mesma regra de acento,
 palavra reservada e duplicata da ingestão). Alias e domínio — o que o PostgreSQL não guarda — vivem numa
-tabela nova, `plat.camada_campo_meta`, com FK **composta** `(tenant_id, item_id)` para `plat.item` (exigiu uma
-`UNIQUE (tenant_id, id)` nova em `plat.item`, migração `20260907T1509_camada_esquema.sql`): mesmo que uma
-política de RLS falhasse em algum caminho futuro, o próprio banco recusaria uma linha de metadado apontando
-para item de outro inquilino. `GET /api/camadas/{id}/campos` devolve os campos no formato `fields` de um
+tabela nova, `plat.camada_campo_meta`, com FK simples para `plat.item(id)` e coerência de inquilino por
+gatilho `plat.tg_camada_campo_meta` (migração `20260907T1509_camada_esquema.sql`, mesmo padrão de
+`plat.item_relacao`/`plat.item_grupo`): mesmo que uma política de RLS falhasse em algum caminho futuro, o
+próprio banco recusaria uma linha de metadado apontando para item de outro inquilino. `GET /api/camadas/{id}/campos` devolve os campos no formato `fields` de um
 FeatureServer Esri (name/type/alias/length/nullable/domain) lendo tipo/tamanho/obrigatoriedade direto de
 `information_schema.columns` — nunca uma cópia que pode desalinhar do banco.
 
@@ -30,7 +30,7 @@ duas vias produzem exatamente o mesmo campo, provado em e2e.
 Refutação do item (300 campos, um deles a palavra reservada `select` e outro com acento/símbolo/maiúscula):
 normalizou os 300 sem colisão de nome e sem 500; o `GET /campos` continuou respondendo certo para as 300
 colunas. Dois bugs reais achados e corrigidos ANTES do adversário: (1) a ordem de inserção tinha
-`camada_campo_meta` ANTES de `plat.item` — a própria FK composta que o item pede recusava a primeira
+`camada_campo_meta` ANTES de `plat.item` — a própria FK para `plat.item` recusava a primeira
 gravação, sempre; (2) alargar de `text` (sem teto) para `varchar(N)` não conferia o maior valor já gravado —
 corrigido para medir `max(length(...))` antes de aceitar. Ver `docs/PARIDADE.md` para a tabela completa
 feito/parcial/fora contra a capacidade Esri.
