@@ -185,3 +185,32 @@ body.mapa .camada-titulo { grid-area: titulo; min-width: 0; overflow: hidden; te
 body.mapa .camada-tipo { grid-area: meta; font-family: var(--mono); font-size: .7rem; color: var(--fraco); }
 body.mapa .camada-selo { grid-area: meta; justify-self: end; font-size: .68rem; border: 1px solid var(--borda); border-radius: var(--raio); padding: 0 .3rem; color: var(--fraco); }
 body.mapa .camada-botoes { grid-area: botoes; display: flex; gap: .2rem; }
+
+/* ------------------------------------------------------------------ item L2-02-c-editor-simbologia-vetor
+   Painel do editor de simbologia à direita do mapa (chrome do produto, cores do tema). */
+body.mapa .mapa-painel-estilo {
+  width: 24rem; flex: 0 0 24rem; overflow-y: auto; border-left: 1px solid var(--borda); background: var(--painel);
+  padding: var(--e3); display: flex; flex-direction: column; gap: var(--e3); font-size: .82rem;
+}
+body.mapa .mapa-painel-estilo[hidden] { display: none; }
+body.mapa .estilo-cabecalho { display: flex; align-items: center; gap: var(--e2); }
+body.mapa .estilo-cabecalho h2 { margin: 0; font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--fraco); }
+body.mapa .estilo-camada { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.mapa .estilo-secao { border-top: 1px solid var(--borda); padding-top: var(--e2); display: flex; flex-direction: column; gap: .35rem; }
+body.mapa .estilo-secao h3 { margin: 0 0 .2rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--fraco); }
+body.mapa .estilo-campo { display: grid; grid-template-columns: 9rem 1fr; align-items: center; gap: .4rem; }
+body.mapa .estilo-campo label { color: var(--fraco); font-size: .75rem; }
+body.mapa .estilo-linha { display: flex; flex-wrap: wrap; gap: .4rem .6rem; align-items: center; }
+body.mapa .estilo-linha .estilo-campo { grid-template-columns: auto 1fr; }
+body.mapa .estilo-classes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .25rem; max-height: 22rem; overflow-y: auto; }
+body.mapa .estilo-classe { display: flex; align-items: center; gap: .3rem; }
+body.mapa .estilo-classe input[type=number] { width: 4.2rem; }
+body.mapa .estilo-classe .estilo-rotulo { flex: 1; min-width: 4rem; }
+body.mapa .estilo-classe select { max-width: 7rem; }
+body.mapa .mapa-painel-estilo input, body.mapa .mapa-painel-estilo select { background: var(--superficie); color: var(--texto); border: 1px solid var(--borda); border-radius: var(--raio); font-size: .78rem; padding: .15rem .3rem; }
+body.mapa .mapa-painel-estilo input[type=color] { width: 2rem; height: 1.6rem; padding: 0; }
+body.mapa .estilo-aviso { margin: 0; min-height: 1em; font-size: .78rem; color: var(--fraco); }
+body.mapa .estilo-aviso[data-tipo=erro] { color: var(--erro, #d9534f); }
+body.mapa .estilo-aviso[data-tipo=ok] { color: var(--ok, #59a14f); }
+body.mapa .estilo-info { margin: 0; font-size: .75rem; color: var(--fraco); }
+body.mapa .estilo-rodape { display: flex; gap: .4rem; flex-wrap: wrap; border-top: 1px solid var(--borda); padding-top: var(--e2); }
