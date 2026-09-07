@@ -6,11 +6,16 @@ Cobre o portão de pronto que não depende do navegador: os 7 tipos de desenho g
 refutação do item (polígono auto-intersectante, círculo no polo, texto de 10 mil caracteres, 200 cláusulas
 não se aplica aqui — é do L2-01-h — mas o equivalente de "entrada hostil sempre 422, nunca 500" vale)."""
 
+import datetime
+import os
+import time
 import uuid
 
 import pytest
 
 from app.catalogo.documento import gerar_ulid
+
+ITEM = "L2-01-k-desenho-anotacoes"
 
 
 def _feature(tipo_desenho, geometry, **props):
@@ -26,8 +31,11 @@ def _sete_tipos():
     return [
         _feature("ponto", {"type": "Point", "coordinates": [-46.6, -23.5]}),
         _feature("linha", {"type": "LineString", "coordinates": [[-46.6, -23.5], [-46.5, -23.4]]}),
-        _feature("poligono", {"type": "Polygon", "coordinates": [[[-46.6, -23.5], [-46.5, -23.5], [-46.5, -23.4], [-46.6, -23.5]]]}),
-        _feature("retangulo", {"type": "Polygon", "coordinates": [[[-46.6, -23.5], [-46.55, -23.5], [-46.55, -23.45], [-46.6, -23.45], [-46.6, -23.5]]]}),
+        _feature("poligono", {"type": "Polygon",
+                              "coordinates": [[[-46.6, -23.5], [-46.5, -23.5], [-46.5, -23.4], [-46.6, -23.5]]]}),
+        _feature("retangulo", {"type": "Polygon",
+                               "coordinates": [[[-46.6, -23.5], [-46.55, -23.5], [-46.55, -23.45],
+                                                [-46.6, -23.45], [-46.6, -23.5]]]}),
         _feature("circulo", {"type": "Point", "coordinates": [-46.6, -23.5]}, raio_m=250.0),
         _feature("texto", {"type": "Point", "coordinates": [-46.6, -23.5]}, texto="anotação de teste"),
         _feature("seta", {"type": "LineString", "coordinates": [[-46.6, -23.5], [-46.59, -23.49]]}),
@@ -106,7 +114,8 @@ def test_teto_de_5001_feicoes_e_422(sessao_a):
 
 def test_promover_gera_camada_com_mesma_contagem_e_geometrias_validas(sessao_a, mapa_com_desenho):
     it, features = mapa_com_desenho
-    r = sessao_a.post(f"/api/mapa/{it['id']}/desenho/promover", json={"titulo": "zt camada promovida sete tipos"})
+    r = sessao_a.post(f"/api/mapa/{it['id']}/desenho/promover",
+                      json={"titulo": "zt camada promovida sete tipos"})
     assert r.status_code == 201, r.text
     j = r.json()
     assert j["n_feicoes"] == len(features)
@@ -139,7 +148,8 @@ def test_promover_sem_desenho_e_422(sessao_a, itens_a):
 
 @pytest.fixture
 def grupo_a(sessao_a):
-    r = sessao_a.post("/api/grupos", json={"nome": f"zt grupo anotacao {uuid.uuid4().hex[:8]}", "entrada": "livre", "visibilidade": "inquilino"})
+    r = sessao_a.post("/api/grupos", json={"nome": f"zt grupo anotacao {uuid.uuid4().hex[:8]}",
+                                           "entrada": "livre", "visibilidade": "inquilino"})
     assert r.status_code == 201, r.text
     return r.json()["id"]
 
@@ -153,7 +163,8 @@ def camada_a(sessao_a, itens_a):
 
 
 def test_anotacao_criar_e_listar(sessao_a, camada_a, grupo_a):
-    r = sessao_a.post("/api/anotacoes", json={"camada_id": camada_a["id"], "fid": "42", "grupo_id": grupo_a, "texto": "primeira observação"})
+    r = sessao_a.post("/api/anotacoes", json={"camada_id": camada_a["id"], "fid": "42",
+                                              "grupo_id": grupo_a, "texto": "primeira observação"})
     assert r.status_code == 201, r.text
     j = r.json()
     assert j["texto"] == "primeira observação"
@@ -196,7 +207,8 @@ def test_anotacao_invisivel_a_usuario_fora_do_grupo(sessao_a, usuarios_a, camada
 
 def test_anotacao_de_outro_inquilino_e_404(sessao_a, sessao_b, camada_a, grupo_a, itens_b):
     """B não vê a camada de A (RLS de plat.item) nem a anotação, mesmo sabendo os uuids."""
-    r = sessao_a.post("/api/anotacoes", json={"camada_id": camada_a["id"], "fid": "9", "grupo_id": grupo_a, "texto": "só de A"})
+    r = sessao_a.post("/api/anotacoes", json={"camada_id": camada_a["id"], "fid": "9",
+                                              "grupo_id": grupo_a, "texto": "só de A"})
     assert r.status_code == 201, r.text
     anotacao_id = r.json()["id"]
     r_listar = sessao_b.get("/api/anotacoes", params={"camada_id": camada_a["id"], "fid": "9"})
@@ -209,12 +221,14 @@ def test_anotacao_de_outro_inquilino_e_404(sessao_a, sessao_b, camada_a, grupo_a
 
 def test_anotacao_grupo_de_outro_inquilino_e_recusada(sessao_a, sessao_b, camada_a, itens_b):
     grupo_b = sessao_b.post("/api/grupos", json={"nome": f"zt grupo b {uuid.uuid4().hex[:8]}"}).json()["id"]
-    r = sessao_a.post("/api/anotacoes", json={"camada_id": camada_a["id"], "fid": "1", "grupo_id": grupo_b, "texto": "cruzado"})
+    r = sessao_a.post("/api/anotacoes", json={"camada_id": camada_a["id"], "fid": "1",
+                                              "grupo_id": grupo_b, "texto": "cruzado"})
     assert r.status_code == 404, r.text
 
 
 def test_anotacao_editar_texto_so_autor(sessao_a, usuarios_a, camada_a, grupo_a):
-    r = sessao_a.post("/api/anotacoes", json={"camada_id": camada_a["id"], "fid": "5", "grupo_id": grupo_a, "texto": "original"})
+    r = sessao_a.post("/api/anotacoes", json={"camada_id": camada_a["id"], "fid": "5",
+                                              "grupo_id": grupo_a, "texto": "original"})
     aid = r.json()["id"]
     r2 = sessao_a.patch(f"/api/anotacoes/{aid}", json={"texto": "editado"})
     assert r2.status_code == 200, r2.text
@@ -223,9 +237,62 @@ def test_anotacao_editar_texto_so_autor(sessao_a, usuarios_a, camada_a, grupo_a)
 
 
 def test_anotacao_resolver(sessao_a, camada_a, grupo_a):
-    r = sessao_a.post("/api/anotacoes", json={"camada_id": camada_a["id"], "fid": "6", "grupo_id": grupo_a, "texto": "resolver isto"})
+    r = sessao_a.post("/api/anotacoes", json={"camada_id": camada_a["id"], "fid": "6",
+                                              "grupo_id": grupo_a, "texto": "resolver isto"})
     aid = r.json()["id"]
     r2 = sessao_a.patch(f"/api/anotacoes/{aid}", json={"resolvido": True})
     assert r2.status_code == 200, r2.text
     assert r2.json()["resolvido"] is True
     assert r2.json()["resolvido_em"] is not None
+
+
+def test_5000_desenhos_salvam_reabrem_identicos_e_o_tempo_fica_registrado(sessao_a, itens_a, medida):
+    """Refutação do item: 5.000 desenhos num mapa. Mede o tempo de SALVAR (PATCH do documento) e de REABRIR,
+    e confere que o GeoJSON volta idêntico. O tempo vai para tests/medidas com a carga da máquina ao lado —
+    número de desempenho sem a carga não vale como prova (regra do laço)."""
+    features = [
+        _feature("ponto", {"type": "Point", "coordinates": [-46.6 + i * 1e-5, -23.5 + i * 1e-5]})
+        for i in range(5000)
+    ]
+    it = itens_a.criar("mapa")
+    t0 = time.perf_counter()
+    r = sessao_a.patch(
+        f"/api/itens/{it['id']}",
+        json={"dados": {"esquema_versao": 1, "corpo": {"desenho": {"features": features}}}},
+    )
+    ms_salvar = (time.perf_counter() - t0) * 1000
+    assert r.status_code == 200, r.text[:400]
+
+    t0 = time.perf_counter()
+    r = sessao_a.get(f"/api/itens/{it['id']}")
+    ms_reabrir = (time.perf_counter() - t0) * 1000
+    assert r.status_code == 200, r.text[:400]
+    voltou = r.json()["dados"]["corpo"]["desenho"]["features"]
+    assert len(voltou) == 5000
+    assert voltou == features, "5.000 desenhos têm de voltar idênticos (GeoJSON bit a bit)"
+
+    carga = os.getloadavg()[0]
+    with open("/proc/meminfo") as mem:
+        kb = int(next(linha.split()[1] for linha in mem if linha.startswith("MemAvailable")))
+    livre_gb = round(kb / 1048576, 1)
+    grava = medida(ITEM)
+    comando = ("pytest tests/api/catalogo/test_desenho_anotacoes.py"
+               "::test_5000_desenhos_salvam_reabrem_identicos_e_o_tempo_fica_registrado")
+    grava("salvar_5000_desenhos_ms", round(ms_salvar), "ms", comando)
+    grava("reabrir_5000_desenhos_ms", round(ms_reabrir), "ms", comando)
+    grava("carga_1min", round(carga, 2), "média de 1 min (12 núcleos)", comando)
+    grava("ram_livre_gb", livre_gb, "GB", comando)
+    grava("medido_em", datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), "UTC", comando)
+    # sem alvo de tempo no portão deste item: o que se prova aqui é que 5.000 desenhos NÃO derrubam
+    # (nem estouram limite de corpo) e que voltam idênticos; o tempo fica registrado com a carga ao lado.
+    assert ms_salvar < 60000, f"salvar 5.000 desenhos levou {ms_salvar:.0f} ms (carga {carga:.1f})"
+
+
+def test_html_no_texto_do_desenho_e_guardado_como_dado(sessao_a, itens_a):
+    """O servidor guarda o texto como veio (é DADO); quem nunca interpreta como marcação é a tela
+    (`text-field` do MapLibre e textContent na lista — prova em tests/e2e/test_l201k_desenho.py)."""
+    bruto = "<img src=x onerror=alert(1)><b>oi</b>"
+    f = _feature("texto", {"type": "Point", "coordinates": [-46.6, -23.5]}, texto=bruto)
+    it = itens_a.criar("mapa", dados={"esquema_versao": 1, "corpo": {"desenho": {"features": [f]}}})
+    guardado = it["dados"]["corpo"]["desenho"]["features"][0]["properties"]["texto"]
+    assert guardado == bruto

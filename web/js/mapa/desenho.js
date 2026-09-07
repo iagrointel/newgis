@@ -42,6 +42,16 @@ export function gerarUlid() {
 }
 
 const MODOS_NATIVOS = { ponto: 'point', linha: 'linestring', poligono: 'polygon', retangulo: 'rectangle', seta: 'linestring' };
+// modo do terra-draw que sabe EDITAR cada tipo nosso (retângulo volta como polígono: depois de desenhado é um
+// Polygon como outro qualquer, e o modo `rectangle` do terra-draw só cria, não edita vértice)
+const MODO_DE_EDICAO = { ponto: 'point', texto: 'point', circulo: 'point', linha: 'linestring', seta: 'linestring', poligono: 'polygon', retangulo: 'polygon' };
+// sem `flags` o TerraDrawSelectMode NÃO deixa selecionar nem arrastar nada (`flags={}` é o padrão do pacote,
+// conferido no arquivo vendorizado) — mover a feição, arrastar vértice e apagar vértice saem daqui.
+const FLAGS_SELECAO = {
+  point: { feature: { draggable: true } },
+  linestring: { feature: { draggable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
+  polygon: { feature: { draggable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
+};
 const ESTILO_PADRAO = () => ({ cor: '#d98a2b', contorno: '#10161a', largura: 2, preenchimento: true, opacidade: 0.85, tamanho_fonte: 14 });
 
 function perguntar(mensagem, padrao) {
@@ -186,14 +196,11 @@ export class Desenho {
     this._draw = new TD.TerraDraw({
       adapter: new Adapter({ map: this.map, coordinatePrecision: 9 }),
       modes: [
-        new TD.TerraDrawPointMode(),
-        new TD.TerraDrawLineStringMode({ snapping: this._snap.ativo ? { toCoordinate: true } : undefined }),
-        new TD.TerraDrawPolygonMode({ snapping: this._snap.ativo ? { toCoordinate: true } : undefined }),
+        new TD.TerraDrawPointMode({ snapping: this._snapping() }),
+        new TD.TerraDrawLineStringMode({ snapping: this._snapping() }),
+        new TD.TerraDrawPolygonMode({ snapping: this._snapping() }),
         new TD.TerraDrawRectangleMode(),
-        // configuração padrão do modo (mover, editar vértice, apagar) — não fixamos `flags` a mão: a versão
-        // vendorizada já habilita mover/editar/apagar por padrão e uma forma errada de `flags` reprovaria a
-        // construção do TerraDraw inteiro por causa de UM modo (risco maior que o ganho aqui).
-        new TD.TerraDrawSelectMode(),
+        new TD.TerraDrawSelectMode({ flags: FLAGS_SELECAO }),
       ],
     });
     this._draw.on('finish', (id) => this._aoTerminar(id));
@@ -235,12 +242,14 @@ export class Desenho {
   iniciarModo(tipoDesenho) {
     this._garantirCamadas();
     this._garantirDraw();
+    if (this._editandoId) this.terminarEdicao();
     this._modoDesenhoAtual = tipoDesenho;
     const nativo = MODOS_NATIVOS[tipoDesenho] || (tipoDesenho === 'texto' || tipoDesenho === 'circulo' ? 'point' : 'point');
     this._draw.setMode(nativo);
   }
 
   pararModo() {
+    if (this._editandoId) { this.terminarEdicao(); return; }
     if (this._draw) this._draw.setMode('static');
   }
 
@@ -249,11 +258,96 @@ export class Desenho {
   }
 
   definirSnap(ativo) {
-    this._snap.ativo = ativo;
-    if (this._draw) { this._draw.stop(); this._draw = null; }
+    // o `toCustom` lê `this._snap.ativo` na hora do clique, então ligar/desligar não reconstrói o terra-draw
+    // (reconstruir perdia o desenho em curso e deixava o modo ativo pendurado).
+    this._snap.ativo = !!ativo;
+  }
+
+  definirToleranciaSnap(px) { this._snap.toleranciaPx = Number(px) || 10; }
+
+  /* Encaixe (snapping) em VÉRTICE de feição visível, com tolerância em PIXELS (10 px, o valor do portão do
+     item). O terra-draw só sabe encaixar nas feições que ele mesmo está editando; o que interessa aqui é
+     encaixar no dado do mapa — camadas do catálogo E as feições de desenho já em repouso. Por isso o
+     `toCustom`: perguntamos ao MapLibre quais feições estão RENDERIZADAS numa caixa de ±tolerância em volta
+     do ponteiro (`queryRenderedFeatures`, recurso nativo — degrau 4 do PONYTAIL) e devolvemos o vértice mais
+     próximo em pixels, nunca em graus (em graus a tolerância mudaria com a latitude e com o zoom). */
+  _snapping() {
+    return {
+      toCustom: (evento) => {
+        if (!this._snap.ativo) return undefined;
+        const c = this.encaixar(evento.containerX, evento.containerY);
+        return c || undefined;
+      },
+    };
+  }
+
+  _verticesDe(geometria, saida) {
+    const g = geometria || {};
+    if (g.type === 'Point') saida.push(g.coordinates);
+    else if (g.type === 'LineString' || g.type === 'MultiPoint') saida.push(...g.coordinates);
+    else if (g.type === 'Polygon' || g.type === 'MultiLineString') for (const anel of g.coordinates) saida.push(...anel);
+    else if (g.type === 'MultiPolygon') for (const p of g.coordinates) for (const anel of p) saida.push(...anel);
+    return saida;
+  }
+
+  /** [lon, lat] do vértice visível mais próximo do pixel (x, y) dentro da tolerância; null se não houver. */
+  encaixar(x, y) {
+    const tol = this._snap.toleranciaPx;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    let renderizadas = [];
+    try {
+      renderizadas = this.map.queryRenderedFeatures([[x - tol, y - tol], [x + tol, y + tol]]) || [];
+    } catch { return null; }
+    let melhor = null;
+    let melhorDist = Infinity;
+    for (const f of renderizadas) {
+      // as camadas internas do terra-draw (o que está sendo desenhado agora) não são alvo de encaixe
+      if (String(f.layer?.id || '').startsWith('td-')) continue;
+      for (const v of this._verticesDe(f.geometry, [])) {
+        if (!Array.isArray(v) || v.length < 2) continue;
+        const p = this.map.project({ lng: v[0], lat: v[1] });
+        const d = Math.hypot(p.x - x, p.y - y);
+        if (d <= tol && d < melhorDist) { melhorDist = d; melhor = [v[0], v[1]]; }
+      }
+    }
+    return melhor;
+  }
+
+  /* Edição: a feição sai do repouso (`this._features`) e é EMPRESTADA ao terra-draw no modo `select`, que
+     move a feição inteira, arrasta vértice e apaga vértice (FLAGS_SELECAO). Enquanto está emprestada ela sai
+     do render de repouso (`_colecao()` filtra `_editandoId`) — assim nunca aparece duas vezes. `terminarEdicao`
+     devolve a geometria editada para o MESMO id e as MESMAS propriedades (estilo, texto, raio). */
+  editar(id) {
+    const f = this._features.find((x) => x.id === id);
+    if (!f) return false;
+    if (this._editandoId) this.terminarEdicao();
+    this._garantirCamadas();
+    this._garantirDraw();
+    const modo = MODO_DE_EDICAO[f.properties?.tipo_desenho] || 'polygon';
+    this._draw.clear();
+    this._draw.setMode('select');
+    this._draw.addFeatures([{ type: 'Feature', geometry: f.geometry, properties: { mode: modo } }]);
+    this._editandoId = id;
+    this._repintar();
+    return true;
+  }
+
+  editando() { return this._editandoId; }
+
+  terminarEdicao() {
+    if (!this._editandoId) return null;
+    const id = this._editandoId;
+    const emprestada = this._draw ? this._draw.getSnapshot()[0] : null;
+    const f = this._features.find((x) => x.id === id);
+    if (f && emprestada && emprestada.geometry) f.geometry = emprestada.geometry;
+    if (this._draw) { this._draw.clear(); this._draw.setMode('static'); }
+    this._editandoId = null;
+    this._repintar();
+    return f || null;
   }
 
   apagar(id) {
+    if (this._editandoId === id) { this._editandoId = null; if (this._draw) { this._draw.clear(); this._draw.setMode('static'); } }
     this._features = this._features.filter((f) => f.id !== id);
     this._repintar();
   }
@@ -268,6 +362,7 @@ export class Desenho {
   }
 
   limparTudo() {
+    if (this._editandoId) { this._editandoId = null; if (this._draw) { this._draw.clear(); this._draw.setMode('static'); } }
     this._features = [];
     this._repintar();
   }

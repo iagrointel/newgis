@@ -70,7 +70,8 @@ def promover(
             selecionadas = [f for f in todas if f.get("id") in quero]
             faltando = quero - {f.get("id") for f in selecionadas}
             if faltando:
-                raise ErroAPI(404, "feicao_inexistente", "feição de desenho inexistente neste documento", sorted(faltando))
+                raise ErroAPI(404, "feicao_inexistente",
+                              "feição de desenho inexistente neste documento", sorted(faltando))
         else:
             selecionadas = todas
         if not selecionadas:
@@ -110,7 +111,8 @@ def promover(
             )
             linhas_inseridas += 1
 
-        cur.execute("SELECT plat.camada_preparar(%s, %s, %s, %s, %s)", (schema, tabela, 4326, geometria, auth.usuario_id))
+        cur.execute("SELECT plat.camada_preparar(%s, %s, %s, %s, %s)",
+                    (schema, tabela, 4326, geometria, auth.usuario_id))
         cur.execute(f'SELECT count(*) FILTER (WHERE NOT ST_IsValid(geom)) AS invalidas, count(*) AS n '
                     f'FROM "{schema}"."{tabela}"')
         conferido = cur.fetchone()

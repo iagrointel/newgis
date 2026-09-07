@@ -189,7 +189,9 @@ def _num_dentro_do_mundo(coords) -> bool:
         if len(coords) < 2:
             return False
         lon, lat = coords[0], coords[1]
-        return isinstance(lon, (int, float)) and isinstance(lat, (int, float)) and -180 <= lon <= 180 and -90 <= lat <= 90
+        if not isinstance(lon, (int, float)) or not isinstance(lat, (int, float)):
+            return False
+        return -180 <= lon <= 180 and -90 <= lat <= 90
     return all(_num_dentro_do_mundo(c) for c in coords)
 
 
@@ -255,7 +257,8 @@ def erros_de_desenho(dados) -> list[dict]:
         tipo_desenho = props.get("tipo_desenho")
         if tipo_desenho not in TIPOS_DESENHO:
             saida.append(
-                _erro(f"{campo}.properties.tipo_desenho", f"tipo de desenho desconhecido: {tipo_desenho!r}", "tipo_desconhecido")
+                _erro(f"{campo}.properties.tipo_desenho",
+                      f"tipo de desenho desconhecido: {tipo_desenho!r}", "tipo_desconhecido")
             )
             tipo_desenho = None
         geom = f.get("geometry")
@@ -272,7 +275,8 @@ def erros_de_desenho(dados) -> list[dict]:
                     )
                 )
             if not _num_dentro_do_mundo(geom.get("coordinates")):
-                saida.append(_erro(f"{campo}.geometry.coordinates", "coordenada fora do mundo (lon/lat)", "fora_do_mundo"))
+                saida.append(_erro(f"{campo}.geometry.coordinates",
+                                   "coordenada fora do mundo (lon/lat)", "fora_do_mundo"))
             elif tipo_desenho == "circulo":
                 coords = geom.get("coordinates")
                 lat = coords[1] if isinstance(coords, list) and len(coords) > 1 else None
@@ -295,7 +299,8 @@ def erros_de_desenho(dados) -> list[dict]:
                 )
         rotulo = props.get("rotulo")
         if isinstance(rotulo, str) and len(rotulo) > DESENHO_TEXTO_MAX:
-            saida.append(_erro(f"{campo}.properties.rotulo", f"{len(rotulo)} caracteres; o máximo é {DESENHO_TEXTO_MAX}", "teto"))
+            saida.append(_erro(f"{campo}.properties.rotulo",
+                               f"{len(rotulo)} caracteres; o máximo é {DESENHO_TEXTO_MAX}", "teto"))
         saida.extend(_erros_estilo(f"{campo}.properties.estilo", props.get("estilo")))
     return saida
 
