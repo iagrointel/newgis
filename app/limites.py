@@ -216,3 +216,11 @@ EDICAO_TEXTO_MAX = 65_536                 # 64 KiB por valor de campo texto (mes
 EDICAO_REGRA_CAMPO_MAX = 500              # entradas em dados.regras_campo (mesmo teto de campos da camada)
 EDICAO_DOMINIO_VALORES_MAX = 1_000        # valores aceitos por regra de domínio codificado
 EDICAO_SRID_MAX = 999_999                 # mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql)
+
+# --- classes de relacionamento entre camadas (L2-10-b-relacionamentos; plat.relacionamento/_junc,
+# /api/relacionamentos e /api/camadas/{id}/relacionados/{rel}). Nomes seguem o mesmo teto de campo do
+# L2-10-a (CAMPO_PADRAO); NOME_MAX é o mesmo teto do nome_direto/nome_inverso do banco.
+RELACIONAMENTO_NOME_MAX = 120
+RELACIONAMENTO_VALOR_MAX = 200            # tamanho do valor de chave guardado em relacionamento_junc (texto)
+RELACIONAMENTO_LIMITE_PADRAO = 2000       # teto de relacionados por consulta quando a classe não declara outro
+RELACIONAMENTO_LIMITE_MAX = 100_000       # teto absoluto (refutação do item: "100 mil relacionados numa origem")

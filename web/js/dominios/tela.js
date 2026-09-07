@@ -17,6 +17,9 @@ import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
 import { dominioDoCampo, opcoes, rotulo, rotuloSubtipo } from './valores.js';
 
+const PARAMS = new URLSearchParams(location.search);
+const FID_NA_URL = PARAMS.get('fid');
+
 const ITEM_ID = location.pathname.split('/')[2] || '';
 
 await carregar();
@@ -24,7 +27,8 @@ const usuario = await exigirSessao();
 if (usuario) iniciar();
 pronto();
 
-let dados = null;   // {item_id, campos, ligacoes, subtipo}
+let dados = null;         // {item_id, campos, ligacoes, subtipo}
+let relacionamentos = [];  // classes de relacionamento que ESTA camada enxerga (item L2-10-b)
 
 function aviso(texto, tipo = 'erro') {
   const el = document.getElementById('aviso');
@@ -41,6 +45,8 @@ async function recarregar() {
   const r = await obter(`/api/camadas/${ITEM_ID}/dominios`);
   if (r.status !== 200) { aviso(mensagemDe(r)); return; }
   dados = r.json;
+  const rr = await obter(`/api/camadas/${ITEM_ID}/relacionamentos`);
+  relacionamentos = rr.status === 200 ? rr.json.itens : [];
   montarLigacoes();
   montarFormulario();
   await montarTabela();
@@ -173,17 +179,53 @@ async function montarTabela() {
   const r = await obter(`/api/camadas/${ITEM_ID}/feicoes?limite=20`);
   if (r.status !== 200) { alvo.append(h('p', { class: 'vazio' }, mensagemDe(r))); return; }
   const campoSub = dados.subtipo && dados.subtipo.campo;
+  const cabecalhos = [h('th', {}, 'fid'), ...dados.campos.map((c) => h('th', {}, c.nome))];
+  if (relacionamentos.length > 0) cabecalhos.push(h('th', {}, t('dominios.relacionados')));
   const tabela = h('table', { class: 'lista', id: 'tabela-feicoes' },
-    h('thead', {}, h('tr', {}, h('th', {}, 'fid'), ...dados.campos.map((c) => h('th', {}, c.nome)))));
+    h('thead', {}, h('tr', {}, ...cabecalhos)));
   const corpo = h('tbody');
   for (const f of r.json.itens) {
     const sub = campoSub ? f[campoSub] : null;
-    corpo.append(h('tr', { dataset: { fid: String(f.fid) } },
-      h('td', {}, String(f.fid)),
+    const celulas = [h('td', {}, String(f.fid)),
       ...dados.campos.map((c) => h('td', { title: f[c.nome] === null ? '' : String(f[c.nome]) },
         c.nome === campoSub ? rotuloSubtipo(dados.subtipo, f[c.nome])
-          : rotulo(dados.ligacoes, c.nome, f[c.nome], sub)))));
+          : rotulo(dados.ligacoes, c.nome, f[c.nome], sub)))];
+    if (relacionamentos.length > 0) {
+      const botao = h('button', { type: 'button', class: 'link', dataset: { fid: String(f.fid) } },
+        t('dominios.relacionados'));
+      botao.addEventListener('click', () => abrirRelacionados(f.fid));
+      celulas.push(h('td', {}, botao));
+    }
+    corpo.append(h('tr', { dataset: { fid: String(f.fid) } }, ...celulas));
   }
   tabela.append(corpo);
   alvo.append(tabela);
+  // navegação vinda do popup de outra camada (?fid=N): destaca e centraliza a linha, se estiver na página
+  if (FID_NA_URL) {
+    const linha = alvo.querySelector(`tr[data-fid="${CSS.escape(FID_NA_URL)}"]`);
+    if (linha) { linha.classList.add('destaque'); linha.scrollIntoView({ block: 'center' }); }
+  }
+}
+
+/* ------------------------------------------------------------------ popup de relacionados (item L2-10-b) */
+async function abrirRelacionados(fid) {
+  const dlg = document.getElementById('popup-relacionados');
+  const corpo = h('div', { class: 'relacionados-corpo' });
+  const secoes = [];
+  for (const rel of relacionamentos) {
+    const r = await obter(`/api/camadas/${ITEM_ID}/relacionados/${encodeURIComponent(rel.nome)}?fids=${fid}`);
+    const registros = r.status === 200 ? (r.json.grupos[String(fid)] || []) : [];
+    const lista = registros.length === 0
+      ? h('p', { class: 'vazio' }, t('dominios.sem_relacionados'))
+      : h('ul', {}, ...registros.map((reg) => h('li', {},
+          h('a', { href: `/camadas/${rel.alvo_item_id}/dominios?fid=${reg.fid}` },
+            `#${reg.fid}`, ' ', h('small', {}, `(${t('dominios.ver_registro')})`)))));
+    secoes.push(h('section', { class: 'relacionado-secao', dataset: { rel: rel.nome } },
+      h('h3', {}, `${rel.nome} (${registros.length})`), lista));
+  }
+  corpo.append(...(secoes.length ? secoes : [h('p', { class: 'vazio' }, t('dominios.sem_relacionados'))]));
+  await dlg.abrir({
+    titulo: `${t('dominios.relacionados_titulo')} · #${fid}`, corpo,
+    botoes: [{ id: 'fechar', rotulo: t('dialogo.fechar'), classe: 'primario' }],
+  });
 }

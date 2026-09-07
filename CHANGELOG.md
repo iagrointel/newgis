@@ -3,6 +3,47 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 5, setembro de 2026 (item L2-10-b-relacionamentos: classes de relacionamento entre camadas)
+
+`plat.relacionamento`/`plat.relacionamento_junc` (migração `20260907T1244_relacionamentos.sql`; **ADR
+20260907T1436**): 1:N/1:1 vira FK real na tabela de destino (`(tenant_id, chave_destino) -> (tenant_id,
+chave_origem)`, `ON DELETE CASCADE` quando `composto=true`, `SET NULL`/`RESTRICT` quando simples); N:M não
+tem FK física (a junção pode ligar qualquer lado primeiro) e ganha gatilho de integridade
+(`plat.relacionamento_junc_conferir`) sobre uma tabela de junção única para todo o inquilino. Cardinalidade
+máxima em 1:N é gatilho GERADO por tabela de destino (mesmo padrão do L2-10-a, já com o cuidado de nunca
+concatenar texto do usuário no corpo do dollar-quote). Chave de origem/destino é sempre um VALOR (campo
+declarado ou `globalid`), nunca o `fid` físico — é por isso que o relacionamento sobrevive a apagar e
+recriar a linha com o mesmo `globalid` (medido).
+
+API: `POST/DELETE /api/relacionamentos`, `POST .../ligar` e `.../desligar` (N:M), `GET
+/api/camadas/{id}/relacionados/{rel}` com paginação (`limite_relacionados` da classe vence o `limite` da
+consulta) e o novo `GET /api/camadas/{id}/relacionamentos` (lista as classes que a camada enxerga, dos dois
+sentidos, para a tela montar o popup sem conhecer o nome de antemão). `GET
+/rest/services/{id}/FeatureServer/0/queryRelatedRecords` devolve os MESMOS fids da rota própria (paridade
+testada). Popup na tela `/camadas/{id}/dominios` (reaproveitada do L2-10-a): botão "Relacionados" por linha
+abre um `<plat-dialogo>` listando os registros ligados com link para `/camadas/{alvo}/dominios?fid=N`; a
+página de destino lê `?fid=` e destaca a linha (`tr.destaque`) — e2e com 3 capturas
+(`tests/e2e/capturas/L2-10-b-relacionamentos_*.png`).
+
+Refutação do item, todas fechadas: ciclo de relacionamentos compostos A→B→A não trava a criação nem o
+apagar (a segunda ponta do ciclo exige uma FK física que a camada de teste não declara, então cai em `404`
+de campo, nunca trava); cardinalidade máxima violada por inserção DIRETA na tabela (fora da API, mesmo
+caminho de uma edição em lote) é recusada pelo gatilho; paginação com `limite_relacionados` vence um
+`limite` maior pedido pela consulta (mecanismo testado com N=25; N=100 mil não medido nesta passagem —
+custo de disco/tempo compartilhado, registrado no ADR, não escondido). 8 testes de API + 1 e2e verdes;
+medidas em `tests/medidas/L2-10-b-relacionamentos.json`.
+
+Achado do turno (registrado para não se repetir): um teste de leitura que não fecha a própria transação
+(`SELECT` sem `commit`/`rollback`) segura `AccessShareLock` na tabela indefinidamente; a chamada seguinte
+que precise de `AccessExclusiveLock` na MESMA tabela (`ALTER TABLE ... ADD CONSTRAINT` ao criar a FK do
+relacionamento) trava até o Postgres matar a sessão ociosa por `idle_in_transaction_session_timeout`
+(~60 s) — e só então progride, com a conexão do teste já morta para a chamada seguinte
+(`tests/api/test_relacionamentos.py::_contar` agora fecha a própria transação).
+
+Fora desta passagem: formulário de criar/ligar/desligar um registro relacionado a partir do próprio popup
+(a API já faz; falta só o botão); relacionamento sobrevivendo a importação/exportação FGDB (a ingestão
+vetorial ainda não cobre FGDB).
+
 ## turno 3, setembro de 2026 (item L2-03-a-api-edicao-transacional: edição transacional de feições — única porta de escrita)
 
 `POST /api/camadas/{id}/edicoes` (`app/edicao/`): equivalente do `applyEdits` da Esri e, a partir

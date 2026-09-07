@@ -126,6 +126,14 @@ body:not(.com-lateral) .lateral { display: none; }
 .tabela td.mono, .mono { font-family: var(--mono); font-size: .85rem; }
 .tabela td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .tabela .vazio { color: var(--fraco); text-align: center; padding: var(--e5); }
+.tabela tr.destaque, tr.destaque { outline: 2px solid var(--acento); outline-offset: -2px; background: rgba(76, 155, 232, .12); }
+button.link { background: none; border: none; padding: 0; color: var(--acento); text-decoration: underline; cursor: pointer; font: inherit; }
+button.link:hover, button.link:focus-visible { color: var(--foco); }
+.relacionado-secao { margin-bottom: var(--e4); }
+.relacionado-secao h3 { margin: 0 0 var(--e2); font-size: .95rem; }
+.relacionado-secao ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e1); }
+.relacionado-secao li a { color: var(--acento); text-decoration: none; }
+.relacionado-secao li a:hover { text-decoration: underline; color: var(--foco); }
 .tabela input[type="checkbox"] { accent-color: var(--acento); width: 1rem; height: 1rem; }
 .tabela .marcador { margin-right: var(--e1); }
 .marcador { display: inline-block; font-size: .75rem; padding: 0 var(--e2); border-radius: 999px; border: 1px solid var(--borda-forte); color: var(--fraco); white-space: nowrap; }

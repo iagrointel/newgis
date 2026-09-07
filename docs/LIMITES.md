@@ -225,3 +225,12 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `EDICAO_REGRA_CAMPO_MAX` | `500` | entradas em dados.regras_campo (mesmo teto de campos da camada) |
 | `EDICAO_DOMINIO_VALORES_MAX` | `1000` | valores aceitos por regra de domínio codificado |
 | `EDICAO_SRID_MAX` | `999999` | mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql) |
+
+## classes de relacionamento entre camadas (L2-10-b-relacionamentos; plat.relacionamento/_junc,
+
+| nome | valor | explicação |
+|---|---|---|
+| `RELACIONAMENTO_NOME_MAX` | `120` | — |
+| `RELACIONAMENTO_VALOR_MAX` | `200` | tamanho do valor de chave guardado em relacionamento_junc (texto) |
+| `RELACIONAMENTO_LIMITE_PADRAO` | `2000` | teto de relacionados por consulta quando a classe não declara outro |
+| `RELACIONAMENTO_LIMITE_MAX` | `100000` | teto absoluto (refutação do item: "100 mil relacionados numa origem") |

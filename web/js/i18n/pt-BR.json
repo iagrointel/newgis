@@ -878,5 +878,9 @@
  "dominios.campo_de_subtipo": "campo de subtipo",
  "dominios.escolha": "escolha",
  "dominios.gravar": "Gravar feição",
- "dominios.gravada": "feição gravada"
+ "dominios.gravada": "feição gravada",
+ "dominios.relacionados": "Relacionados",
+ "dominios.relacionados_titulo": "Registros relacionados",
+ "dominios.sem_relacionados": "nenhum registro relacionado",
+ "dominios.ver_registro": "ver registro"
 }
