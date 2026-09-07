@@ -1069,3 +1069,16 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 4 (líder 5), setembro de 2026 (item L7-03-a-antivirus-upload: pipeline único de upload com lista por rota, antivírus opcional, SVG sanitizado e trilha da recusa)
+
+`POST /api/arquivos?classe=` passa a decidir tipo e teto por classe ANTES de ler o corpo (`POLITICAS` em
+`app/varredura_conteudo.py`; `Content-Length` acima = 413 com 0 mensagens de corpo lidas, medido), prova o tipo
+pelos bytes (`.exe` como `.tif` = 415), varre por `clamd` quando `PLAT_CLAMD` está definido (INSTREAM por socket,
+sem dependência; fora do ar = recusa), sanitiza SVG por lista branca (`app/svg_seguro.py`), aplica zip-bomba a
+zip/KMZ (inclusive acima do buffer único, pelo diretório central) e registra toda recusa na trilha
+(`arquivos/conteudo_recusado`, `arquivos/quarentena` com sha256 e assinatura; migração `20260907T2225`). A
+entrega (`GET /api/arquivos/{sha}`) sai com `attachment` para tudo que não é imagem, `nosniff` e CSP `sandbox`.
+`docs/SEGURANCA.md` §9 lista os tipos por classe (teste confere). `tests/seguranca/test_upload.py`: EICAR com
+clamd de teste, SVG com script, zip de 1 GiB de zeros, KMZ com 10 mil entradas, polyglot GIF+HTML, anexo .html.
+ClamAV real segue fora (D21, ~1,3 GiB de RAM de assinaturas).
