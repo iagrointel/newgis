@@ -3,6 +3,7 @@ iguais: diff = 0) → apagar → esvaziar (job); protegido 409; admin de inquili
 com evento forcado; expurgo com relógio simulado (+31 d) apaga registro e tabela física (pg_class); restaurar item de
 outro inquilino 404; camada usada por mapa sem cascata 409; lote apagar/restaurar/proteger; medida expurgo_s."""
 
+import os
 import time
 
 import psycopg2
@@ -10,6 +11,9 @@ import pytest
 
 from tests.api.catalogo.conftest import esperar_job, titulo_zt
 from tests.api.test_rls import contexto, ids_por_slug
+
+# 07/09: a base por trilha reescreve só o texto SQL, não o metadado do item
+_TRAB = os.environ.get("PLAT_SCHEMA_TRABALHO", "plat_trabalho")
 
 ITEM = "L0-03-catalogo"
 
@@ -133,7 +137,7 @@ def test_expurgo_com_relogio_simulado_apaga_tabela_fisica(sessao_a, itens_a, con
     it = itens_a.criar(
         "camada_vetorial",
         dados={
-            "schema": "plat_trabalho",
+            "schema": _TRAB,
             "tabela": tabela,
             "geometria": "Point",
             "srid": 4326,
