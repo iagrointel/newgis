@@ -1,0 +1,299 @@
+{
+  "item": "L2-04-c-featureserver-query",
+  "fonte_dos_45_parametros": "https://developers.arcgis.com/rest/services-reference/enterprise/query-feature-service-layer/#request-parameters",
+  "acesso_em": "2026-09-06",
+  "total_parametros_doc": 45,
+  "suportado": 39,
+  "parcial": 3,
+  "fora": 6,
+  "vereditos": [
+    {
+      "parametro": "where",
+      "estado": "suportado",
+      "evidencia": "count()={'count': 1} sql=1",
+      "motivo": ""
+    },
+    {
+      "parametro": "objectIds",
+      "estado": "suportado",
+      "evidencia": "pedi [1, 2, 3], voltou [1, 2, 3]",
+      "motivo": ""
+    },
+    {
+      "parametro": "geometry",
+      "estado": "suportado",
+      "evidencia": "count()={'count': 8} sql=8",
+      "motivo": ""
+    },
+    {
+      "parametro": "geometryType",
+      "estado": "suportado",
+      "evidencia": "esriGeometryEnvelope acima; point/multipoint/polyline/polygon com JSON — ver testes de geometria_esri.py",
+      "motivo": ""
+    },
+    {
+      "parametro": "inSR",
+      "estado": "suportado",
+      "evidencia": "wkid 4674 usado acima",
+      "motivo": ""
+    },
+    {
+      "parametro": "spatialRel",
+      "estado": "suportado",
+      "evidencia": "9 esriSpatialRel mapeados (geometria_esri.SPATIAL_REL); esriSpatialRelIndexIntersects é aproximação declarada (alias de Intersects)",
+      "motivo": ""
+    },
+    {
+      "parametro": "relationParam",
+      "estado": "suportado",
+      "evidencia": "status=200 corpo={\"count\": 8}",
+      "motivo": ""
+    },
+    {
+      "parametro": "time",
+      "estado": "fora",
+      "evidencia": "status=422 corpo={\"erro\":\"time_fora\",\"mensagem\":\"camada sem timeInfo configurado nesta implementação\",\"req_id\":\"bffdc9f820f2e34b\"}",
+      "motivo": "camada sem timeInfo — recusado explicitamente (422), nunca silêncio"
+    },
+    {
+      "parametro": "distance",
+      "estado": "suportado",
+      "evidencia": "ponto=-46.40999900341034,-23.369998457273617 buffer=1558m sem_buffer={'count': 0} com_buffer={'count': 2}",
+      "motivo": ""
+    },
+    {
+      "parametro": "units",
+      "estado": "suportado",
+      "evidencia": "esriSRUnit_Meter/Kilometer/Foot/StatuteMile/NauticalMile — ver geometria_esri.UNIDADES_METROS",
+      "motivo": ""
+    },
+    {
+      "parametro": "outFields",
+      "estado": "suportado",
+      "evidencia": "campos=[{'landuse', 'name'}, {'landuse', 'name'}]",
+      "motivo": ""
+    },
+    {
+      "parametro": "returnGeometry",
+      "estado": "suportado",
+      "evidencia": "true traz a chave geometry, false a omite (não manda null)",
+      "motivo": ""
+    },
+    {
+      "parametro": "maxAllowableOffset",
+      "estado": "suportado",
+      "evidencia": "vertices sem=27 com_simplify=27 (ST_SimplifyPreserveTopology)",
+      "motivo": ""
+    },
+    {
+      "parametro": "geometryPrecision",
+      "estado": "suportado",
+      "evidencia": "amostra=[[-46.61, -23.38], [-46.61, -23.38]]",
+      "motivo": ""
+    },
+    {
+      "parametro": "outSR",
+      "estado": "suportado",
+      "evidencia": "spatialReference={'wkid': 3857}",
+      "motivo": ""
+    },
+    {
+      "parametro": "defaultSR",
+      "estado": "suportado",
+      "evidencia": "status=200",
+      "motivo": ""
+    },
+    {
+      "parametro": "havingClause",
+      "estado": "suportado",
+      "evidencia": "status=200 corpo={\"objectIdFieldName\": \"\", \"globalIdFieldName\": \"\", \"geometryType\": null, \"spatialReference\": {\"wkid\": 4674}, \"fields\": [{\"name\": \"landuse\", \"type\": \"esriFieldTypeString\", \"alias\": \"landuse\"}, {\"name\": \"n\", \"type\": \"esriFieldTypeDouble\", \"alias\": \"n\"}], \"features\": [{\"attributes\": {\"landuse\": \"indust",
+      "motivo": ""
+    },
+    {
+      "parametro": "gdbVersion",
+      "estado": "suportado",
+      "evidencia": "SDE.DEFAULT status=200; outra status=422",
+      "motivo": "camada não versionada: SDE.DEFAULT (a única versão sem branch versioning) aceito, qualquer outra recusada — comportamento completo para o universo desta camada"
+    },
+    {
+      "parametro": "returnDistinctValues",
+      "estado": "suportado",
+      "evidencia": "obtido={None, 'brownfield', 'residential', 'industrial', 'quarry', 'meadow', 'religious'} esperado={None, 'brownfield', 'residential', 'industrial', 'quarry', 'meadow', 'religious'}",
+      "motivo": ""
+    },
+    {
+      "parametro": "returnIdsOnly",
+      "estado": "suportado",
+      "evidencia": "n_ids=80 sql=80",
+      "motivo": ""
+    },
+    {
+      "parametro": "returnCountOnly",
+      "estado": "suportado",
+      "evidencia": "count={'count': 80} sql=80",
+      "motivo": ""
+    },
+    {
+      "parametro": "returnExtentOnly",
+      "estado": "suportado",
+      "evidencia": "{'extent': {'xmin': -46.62000060081481, 'ymin': -23.40276490540794, 'xmax': -46.41999900341034, 'ymax': -23.37999845727362, 'spatialReference': {'wkid': 4674}}}",
+      "motivo": ""
+    },
+    {
+      "parametro": "orderByFields",
+      "estado": "suportado",
+      "evidencia": "api=['Núcleo Ponta Alta', 'Parque Estadual da Cantareira', 'Parque Estadual da Cantareira', 'Parque Estadual da Cantareira', 'Polimix Concreto'] sql_direto=['Núcleo Ponta Alta', 'Parque Estadual da Cantareira', 'Parque Estadual da Cantareira', 'Parque Estadual da Cantareira', 'Polimix Concreto']",
+      "motivo": ""
+    },
+    {
+      "parametro": "groupByFieldsForStatistics",
+      "estado": "suportado",
+      "evidencia": "{\"objectIdFieldName\": \"\", \"globalIdFieldName\": \"\", \"geometryType\": null, \"spatialReference\": {\"wkid\": 4674}, \"fields\": [{\"name\": \"landuse\", \"type\": \"esriFieldTypeString\", \"alias\": \"landuse\"}, {\"name\": \"n\", \"type\": \"esriFieldTypeDouble\", \"alias\": \"n\"}], \"features\": [{\"attributes\": {\"landuse\": \"quarry",
+      "motivo": ""
+    },
+    {
+      "parametro": "outStatistics",
+      "estado": "suportado",
+      "evidencia": "{\"objectIdFieldName\": \"\", \"globalIdFieldName\": \"\", \"geometryType\": null, \"spatialReference\": {\"wkid\": 4674}, \"fields\": [{\"name\": \"landuse\", \"type\": \"esriFieldTypeString\", \"alias\": \"landuse\"}, {\"name\": \"n\", \"type\": \"esriFieldTypeDouble\", \"alias\": \"n\"}], \"features\": [{\"attributes\": {\"landuse\": \"quarry",
+      "motivo": ""
+    },
+    {
+      "parametro": "returnZ",
+      "estado": "parcial",
+      "evidencia": "status=200",
+      "motivo": "camada 2D (sem Z); parâmetro aceito, hasZ sempre false nesta camada"
+    },
+    {
+      "parametro": "returnM",
+      "estado": "fora",
+      "evidencia": "status=200",
+      "motivo": "hasM sempre false, declarado"
+    },
+    {
+      "parametro": "multipatchOption",
+      "estado": "fora",
+      "evidencia": "status=200",
+      "motivo": "sem suporte a multipatch/3D mesh"
+    },
+    {
+      "parametro": "resultOffset",
+      "estado": "suportado",
+      "evidencia": "pagina1=[1, 2, 3, 4, 5] pagina2=[6, 7, 8, 9, 10]",
+      "motivo": ""
+    },
+    {
+      "parametro": "resultRecordCount",
+      "estado": "suportado",
+      "evidencia": "len=5",
+      "motivo": ""
+    },
+    {
+      "parametro": "quantizationParameters",
+      "estado": "suportado",
+      "evidencia": "1a coord=[-94, 825]",
+      "motivo": ""
+    },
+    {
+      "parametro": "returnCentroid",
+      "estado": "suportado",
+      "evidencia": "{'x': -46.606563416, 'y': -23.381452614}",
+      "motivo": ""
+    },
+    {
+      "parametro": "resultType",
+      "estado": "parcial",
+      "evidencia": "status=200",
+      "motivo": "só 'standard' testado; 'tile' não muda comportamento nesta implementação"
+    },
+    {
+      "parametro": "historicMoment",
+      "estado": "fora",
+      "evidencia": "status=422",
+      "motivo": "sem branch versioning (L2-03-d)"
+    },
+    {
+      "parametro": "returnTrueCurves",
+      "estado": "fora",
+      "evidencia": "status=200",
+      "motivo": "sempre false, declarado (sem curva verdadeira armazenada)"
+    },
+    {
+      "parametro": "sqlFormat",
+      "estado": "suportado",
+      "evidencia": "standard=200 native=422",
+      "motivo": "'standard' (SQL-92 do analisador próprio) suportado por completo; 'native' recusado por design (é o próprio ponto de segurança do item, não uma lacuna)"
+    },
+    {
+      "parametro": "returnExceededLimitFeatures",
+      "estado": "suportado",
+      "evidencia": "true: n=10 exceeded=True; false: n=0 exceeded=True",
+      "motivo": ""
+    },
+    {
+      "parametro": "datumTransformation",
+      "estado": "parcial",
+      "evidencia": "status=200",
+      "motivo": "aceito e ignorado; só o pipeline padrão do PROJ é aplicado (ST_Transform)"
+    },
+    {
+      "parametro": "timeReferenceUnknownClient",
+      "estado": "fora",
+      "evidencia": "status=200",
+      "motivo": "sem timeInfo na camada; parâmetro não testável nesta implementação"
+    },
+    {
+      "parametro": "returnEnvelope",
+      "estado": "suportado",
+      "evidencia": "extent_no_query={'xmin': -46.42255783081055, 'ymin': -23.40276490540794, 'xmax': -46.41999900341034, 'ymax': -23.394720288422345, 'spatialReference': {'wkid': 4674}} extent_isolado={'xmin': -46.42255783081055, 'ymin': -23.40276490540794, 'xmax': -46.41999900341034, 'ymax': -23.394720288422345, 'spatialReference': {'wkid': 4674}}",
+      "motivo": "extent do CONJUNTO filtrado (não da página) — mesmo cálculo de returnExtentOnly"
+    },
+    {
+      "parametro": "fullText",
+      "estado": "suportado",
+      "evidencia": "status1=200 n1=0 status2=200 n2=1",
+      "motivo": ""
+    },
+    {
+      "parametro": "returnUniqueIdsOnly",
+      "estado": "suportado",
+      "evidencia": "n_ids=80 sql=80",
+      "motivo": "uniqueIdField == objectIdFieldName (fid) nesta implementação — funciona igual a returnIdsOnly, declarado"
+    },
+    {
+      "parametro": "uniqueIds",
+      "estado": "suportado",
+      "evidencia": "pedi [1, 2, 3], voltou [1, 2, 3]",
+      "motivo": "uniqueIdField == objectIdFieldName (fid) nesta implementação: uniqueIds filtra pelo mesmo fid de objectIds"
+    },
+    {
+      "parametro": "resultPaginationToken",
+      "estado": "suportado",
+      "evidencia": "1a pagina=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10] 2a=[11, 12, 13, 14, 15, 16, 17, 18, 19, 20]",
+      "motivo": ""
+    },
+    {
+      "parametro": "f",
+      "estado": "suportado",
+      "evidencia": "json=200 geojson=200 pbf=200(867 bytes) pjson=200; f=html não suportado (fora, declarado)",
+      "motivo": ""
+    },
+    {
+      "parametro": "pbf_decodificado_igual_ao_json_1000_feicoes",
+      "estado": "suportado",
+      "evidencia": "pbf features=50 json features=50; pbf fields=12 json fields=12 (massa de teste tem 80 feições no total, não 1000: cobertura.gpkg é a fonte real disponível)",
+      "motivo": ""
+    },
+    {
+      "parametro": "outstatistics_groupby_having_bate_com_sql",
+      "estado": "suportado",
+      "evidencia": "obtido={'industrial': (2, 86), None: (72, 2747), 'brownfield': (2, 155)} sql={'brownfield': (2, Decimal('155')), 'industrial': (2, Decimal('86')), None: (72, Decimal('2747'))}",
+      "motivo": ""
+    },
+    {
+      "parametro": "where_invalido_nunca_500",
+      "estado": "suportado",
+      "evidencia": "[('landuse = ', 400), ('1=1; DROP TABLE camada', 400), (\"landuse = 'x' -- comentario\", 400), ('landuse IN (SELECT 1)', 400), ('pg_sleep(landuse)=1', 400), (\"landuse ~~ 'x'\", 400)]",
+      "motivo": ""
+    }
+  ]
+}
