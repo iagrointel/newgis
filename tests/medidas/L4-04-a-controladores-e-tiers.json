@@ -1,0 +1,32 @@
+{
+ "item": "L4-04-a-controladores-e-tiers",
+ "medidas": {
+  "alimentadores_marcados_por_dispositivo": {
+   "valor": 1,
+   "unidade": "alimentadores",
+   "comando": "bash laco/roda_teste.sh tests/api/test_rede_controladores.py"
+  },
+  "alimentadores_marcados_por_no_de_cabeca": {
+   "valor": 1,
+   "unidade": "alimentadores",
+   "comando": "bash laco/roda_teste.sh tests/api/test_rede_controladores.py"
+  },
+  "transformadores_marcados": {
+   "valor": 1,
+   "unidade": "transformadores",
+   "comando": "bash laco/roda_teste.sh tests/api/test_rede_controladores.py"
+  },
+  "controladores_apos_segunda_importacao": {
+   "valor": 3,
+   "unidade": "controladores",
+   "comando": "bash laco/roda_teste.sh tests/api/test_rede_controladores.py (a marcação é idempotente: a 2ª rodada não duplica)"
+  },
+  "abrir_controladores_ms": {
+   "valor": 31.6,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  }
+ },
+ "gerado_em": "2026-09-07T21:03:16Z",
+ "git_sha": "dee045fd19bd"
+}
