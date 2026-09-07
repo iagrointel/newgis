@@ -256,6 +256,16 @@ details summary { cursor: pointer; color: var(--acento); }
 .entrar .rodape { color: var(--fraco); font-size: var(--t-2); margin-top: var(--e4); }
 .entrar .aviso-beta, .aviso-beta { color: var(--fraco); font-size: var(--t-2); text-transform: lowercase; }
 
+/* ---------- idioma (<plat-idioma>) e telas públicas (UX-02) ---------- */
+plat-idioma { display: inline-flex; align-items: center; gap: var(--e2); }
+plat-idioma select.controle { width: auto; padding: var(--e1) var(--e2); font-size: var(--t-1); }
+.aviso-caps { color: var(--atencao); font-size: var(--t-2); }
+.entrar .topo { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--e3); margin-bottom: var(--e5); }
+.entrar .topo .marca { margin-bottom: 0; }
+.entrar .passos { margin: 0 0 var(--e3); padding-left: var(--e5); color: var(--fraco); font-size: var(--t-1); }
+.entrar form[aria-busy="true"] { opacity: .7; }
+.entrar plat-estado { margin: var(--e3) 0; }
+
 /* ---------- utilidades ---------- */
 .fraco { color: var(--fraco); }
 .oculto { display: none !important; }
