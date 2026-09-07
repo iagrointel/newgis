@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="gerar_osm_power.py (item L4-05-g-osm-power)">
+  <node id="1" lat="-29.75" lon="-51.84"/>
+  <node id="2" lat="-29.746" lon="-51.835">
+    <tag k="power" v="tower"/>
+  </node>
+  <node id="3" lat="-29.742" lon="-51.83">
+    <tag k="power" v="substation"/>
+  </node>
+  <node id="4" lat="-29.738" lon="-51.826"/>
+  <node id="5" lat="-29.735" lon="-51.822">
+    <tag k="power" v="pole"/>
+  </node>
+  <node id="6" lat="-29.732" lon="-51.818">
+    <tag k="power" v="transformer"/>
+  </node>
+  <node id="7" lat="-29.76" lon="-51.85">
+    <tag k="power" v="transformer"/>
+  </node>
+  <node id="8" lat="-29.55" lon="-52.05"/>
+  <node id="9" lat="-29.58" lon="-52.0">
+    <tag k="power" v="tower"/>
+  </node>
+  <node id="10" lat="-29.65" lon="-51.9"/>
+  <node id="11" lat="-29.7" lon="-51.85"/>
+  <node id="12" lat="-29.7375" lon="-51.8265"/>
+  <node id="13" lat="-29.7375" lon="-51.8255"/>
+  <node id="14" lat="-29.7385" lon="-51.8255"/>
+  <node id="15" lat="-29.7385" lon="-51.8265"/>
+  <way id="101">
+    <nd ref="1"/>
+    <nd ref="2"/>
+    <nd ref="3"/>
+    <nd ref="4"/>
+    <tag k="power" v="line"/>
+    <tag k="voltage" v="13800"/>
+  </way>
+  <way id="102">
+    <nd ref="4"/>
+    <nd ref="5"/>
+    <nd ref="6"/>
+    <tag k="power" v="minor_line"/>
+    <tag k="voltage" v="220"/>
+  </way>
+  <way id="103">
+    <nd ref="8"/>
+    <nd ref="9"/>
+    <nd ref="10"/>
+    <nd ref="11"/>
+    <tag k="power" v="line"/>
+    <tag k="voltage" v="13800"/>
+  </way>
+  <way id="104">
+    <nd ref="12"/>
+    <nd ref="13"/>
+    <nd ref="14"/>
+    <nd ref="15"/>
+    <nd ref="12"/>
+    <tag k="power" v="substation"/>
+    <tag k="area" v="yes"/>
+  </way>
+  <relation id="201">
+    <member type="way" ref="104" role="outer"/>
+    <tag k="type" v="multipolygon"/>
+    <tag k="power" v="substation"/>
+  </relation>
+</osm>

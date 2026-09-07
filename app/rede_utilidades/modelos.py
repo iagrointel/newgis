@@ -2,7 +2,7 @@
 sai como bytes, validado pelo esquema JSON (`app/rede_utilidades/esquema.py`), porque a mensagem de erro
 precisa apontar a linha do arquivo que a pessoa enviou."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.rede_utilidades.esquema import DISCIPLINAS
 
@@ -119,3 +119,57 @@ class TopoArestaModelo(BaseModel):
     comprimento_m: float
     fase_bitmask: int | None
     atributos: dict
+
+
+# --- conector OpenStreetMap power=* (item L4-05-g-osm-power) -----------------------------------------------
+
+class MunicipioGeoJson(BaseModel):
+    """Polígono do recorte territorial em GeoJSON (EPSG:4326). Aceita Geometry, Feature ou
+    FeatureCollection tal como vem da fonte (ex.: malha municipal do IBGE) — os campos extras
+    (`geometry`, `features`, `properties`) passam intactos para o conector, que decide a forma."""
+
+    model_config = ConfigDict(extra="allow")
+
+    type: str = Field(min_length=1, max_length=40)
+
+
+class ImportacaoOsmEntrada(BaseModel):
+    caminho: str = Field(min_length=1, max_length=2000)
+    municipio: MunicipioGeoJson
+    nome_municipio: str = Field(min_length=1, max_length=200)
+
+
+class ImportacaoOsmResultado(BaseModel):
+    rede_id: str
+    licenca: str
+    aviso: str
+    contagens: dict
+    trechos_gerados: int
+    fixacoes: int
+    fora_do_limite: dict
+    desvios: dict
+    duracao_ms: int
+    conferido: bool
+    importacao_id: str | None
+
+
+class ImportacaoFicha(BaseModel):
+    id: str
+    fonte: str
+    caminho: str
+    distribuidora: str | None
+    municipio: str | None
+    sha256: str
+    licenca: str | None
+    aviso: str | None
+    estado: str
+    contagens: dict | None
+    desvios: dict | None
+    erro: str | None
+    criado_em: str
+    concluido_em: str | None
+
+
+class ImportacaoFichaLista(BaseModel):
+    total: int
+    itens: list[ImportacaoFicha]
