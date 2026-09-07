@@ -73,7 +73,7 @@ RE_TRATA_ERRO = re.compile(r"\bcatch\b|\.erro\(|mensagemDe|\.status\b|ErroApi|on
 
 # ----------------------------------------------------------------------------------------------- rotas
 def carregar_rotas(vivo: bool = True) -> dict[tuple[str, str], dict]:
-    """{(MÉTODO, caminho): operação} da aplicação viva ou do docs/openapi.json."""
+    """{(verbo HTTP, caminho): operação} da aplicação viva ou do docs/openapi.json."""
     if vivo:
         from app.main import app
 
