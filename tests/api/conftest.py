@@ -265,7 +265,48 @@ class InquilinoTemporario:
         self._plat = sessao_plat
 
     def apagar(self):
-        self._plat.delete(f"/api/plataforma/inquilinos/{self.id}")
+        """Apaga o inquilino (a função plat.tenant_apagar_interno apaga o schema de dado d_<slug> na mesma transação,
+        item L0-02-z) e confere que nada ficou: uma rodada nunca deixa schema d_zt* para trás (incidente
+        laco/handoffs/T4/INCIDENTE-schemas-zt.md). Se o schema sobreviver (base antiga, sem a migração), apaga-o
+        aqui mesmo como plat_app, dono do schema."""
+        r = self._plat.delete(f"/api/plataforma/inquilinos/{self.id}")
+        assert r.status_code in (204, 404), r.text
+        self.schema_apagado = not schema_de_dado_existe(self.slug)
+        if not self.schema_apagado:
+            apagar_schema_de_dado(self.slug)
+            self.schema_apagado = not schema_de_dado_existe(self.slug)
+        assert self.schema_apagado, f"schema d_{self.slug} sobreviveu ao apagar do inquilino"
+
+
+def _conexao_plat_app():
+    import psycopg2
+
+    from app.schema_ambiente import CursorSchemaAmbiente
+    from tests.conftest import valores_env
+
+    con = psycopg2.connect(valores_env()["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
+    con.autocommit = True
+    return con
+
+
+def schema_de_dado_existe(slug: str) -> bool:
+    con = _conexao_plat_app()
+    try:
+        with con.cursor() as cur:
+            cur.execute("SELECT to_regnamespace(%s) IS NOT NULL AS existe", (f"d_{slug}",))
+            return bool(cur.fetchone()["existe"])
+    finally:
+        con.close()
+
+
+def apagar_schema_de_dado(slug: str) -> None:
+    """DROP SCHEMA d_<slug> CASCADE como plat_app (dono do schema); só para o resto de uma base sem a migração."""
+    con = _conexao_plat_app()
+    try:
+        with con.cursor() as cur:
+            cur.execute(f'DROP SCHEMA IF EXISTS "d_{slug}" CASCADE')
+    finally:
+        con.close()
 
 
 @pytest.fixture
