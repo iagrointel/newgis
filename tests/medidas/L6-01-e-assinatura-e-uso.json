@@ -1,0 +1,32 @@
+{
+ "item": "L6-01-e-assinatura-e-uso",
+ "medidas": {
+  "dez_consultas_registradas_no_dia": {
+   "valor": 10,
+   "unidade": "consultas",
+   "comando": "10 x GET /api/acervo/camadas/cbre_osm_aeroway/feicoes; delta de GET /api/acervo/uso"
+  },
+  "revogacao_corte_leitura_ms": {
+   "valor": 15.0,
+   "unidade": "ms",
+   "comando": "DELETE /api/acervo/camadas/<view>/assinatura até o primeiro GET feicoes 403 (mesmo processo de teste, mediana não — uma medição)"
+  },
+  "revogacao_view_zero_linha": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "SELECT count(*) na view como plat_app com o tenant revogado = 0 na mesma hora"
+  },
+  "export_pacote_leva_licenca_txt_e_atribuicao": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "GET /api/acervo/camadas/cbre_osm_aeroway/exportar; LICENCA.txt com 'Licença: ODbL', 'Atribuição exigida: Dados de OpenStreetMap' e share-alike"
+  },
+  "export_pacote_bytes": {
+   "valor": 6052,
+   "unidade": "bytes",
+   "comando": "tamanho do .zip de 50 feições de cbre.osm_aeroway com LICENCA.txt"
+  }
+ },
+ "gerado_em": "2026-09-07T01:56:32Z",
+ "git_sha": "67e2695f40d1"
+}

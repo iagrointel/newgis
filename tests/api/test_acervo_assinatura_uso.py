@@ -220,7 +220,7 @@ def test_assinar_com_sha_defasado_e_recusado(camadas_prontas, sessao_a):
     assert r.status_code == 409, r.text
     corpo = r.json()
     assert corpo["erro"] == "licenca_mudou"
-    assert corpo["detalhes"]["licenca_sha256"] == camada["licenca_sha256"]
+    assert corpo["detalhe"]["licenca_sha256"] == camada["licenca_sha256"]
     assert _licenca_na_lista(sessao_a, VIEW_ODBL)["assinada"] is False
 
 
