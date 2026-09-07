@@ -363,7 +363,7 @@ UPDATE plat.tipo_item SET esquema = $esquema_painel${
       "type": "object"
     },
     "esquema_versao": {
-      "const": 3,
+      "minimum": 1,
       "type": "integer"
     },
     "tipo": {
