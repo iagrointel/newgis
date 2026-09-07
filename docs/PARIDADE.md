@@ -420,3 +420,28 @@ nunca 500 — as 3 passaram). Massa de teste: 80 polígonos reais de uso do solo
 
 Paridade com ArcGIS Pro/AGOL reais: **pendente** (decisão D20, credencial do parceiro) — todo teste acima é contra
 esta implementação e a doc Esri, nunca contra um cliente Esri de verdade.
+
+## Diretório/metadados do FeatureServer + OGC API Features + WFS 2.0 (item L2-04-servicos-esri-ogc, turno 4; ADR 0019)
+
+Construído EM VOLTA da operação `query` acima (item L2-04-c, `wt/fsquery`) — nenhuma reescrita da consulta: reusa
+`motor.PedidoQuery`/`preparar_pedido`/`executar_features`/`executar_count`, `campos.campos_da_camada`,
+`serializar.GEOM_PG_PARA_ESRI` e `rotas_query._autenticar`. Conformidade percorrida por
+`tests/esri/conformidade_servicos.py` (grava `tests/medidas/L2-04-servicos-esri-ogc.json`).
+
+| capacidade | Esri/OGC | nós | estado | evidência |
+|---|---|---|---|---|
+| descritor de serviço `.../FeatureServer?f=json` | `layers`/`tables`/`fullExtent`/`spatialReference`/`capabilities` | implementado; `tables` sempre `[]` (sem tabela sem geometria neste modelo) | feito | `featureserver_descritor_servico` no JSON de medida |
+| descritor de camada `.../FeatureServer/0?f=json` | `fields`/`geometryType`/`objectIdField`/`capabilities`/`relationships` | implementado; `capabilities="Query"` sempre (nunca anuncia edição) | feito | `featureserver_descritor_camada` |
+| `applyEdits`, anexos, `queryRelatedRecords`, `relationships` | edição transacional, upload de anexo, registros relacionados | **não construído** | fora (bloqueio real) | depende de L2-03-edicao (escrita transacional) e L2-10-b (relacionamentos), nenhum dos dois existe no repositório ainda — não é falta de tempo, é dependência não satisfeita |
+| OGC API Features Part 1 (Core): landing/conformance/collections/items/item | OGC 17-069r4 | implementado 1:1 sobre a mesma camada; `bbox`, `limit`, `offset`, GeoJSON puro | feito | `ogc_features_*` no JSON de medida (bbox comprovado por redução real do conjunto: 80 → 9 feições) |
+| OGC API Features Part 3 (Filter/CQL2) | `filter=`/`filter-lang=cql2-*` | não implementado nesta passagem | fora | item próprio L2-04-g |
+| WFS 2.0 GetCapabilities | ISO 19142 | XML `wfs:WFS_Capabilities` — **parseado com sucesso pelo cliente real `owslib.wfs.WebFeatureService` (0.29.3)**, 1 `FeatureType` reconhecido com título e `WGS84BoundingBox` | feito | `wfs_getcapabilities`, `contents=['plat:<item>']` |
+| WFS 2.0 DescribeFeatureType | XSD do tipo | XSD mínimo (campos + tipo), não validado contra o XSD de referência do OGC | parcial | `wfs_describefeaturetype` |
+| WFS 2.0 GetFeature | GML 3.2 (núcleo) | dois formatos: `OUTPUTFORMAT=application/json` (GeoJSON, feito) e GML 3.2 escrito à mão para Point/LineString/Polygon simples — Multi*/curvas não cobertas, não validado contra XSD oficial | json feito / GML parcial | `wfs_getfeature_json`, `wfs_getfeature_gml` |
+| ArcGIS Pro/QGIS/AGOL carregam de fato | interoperabilidade real de desktop | **não verificado** — mesma limitação de ambiente gráfico já registrada para L2-04-c (QGIS) e em CLAUDE.md (Chrome headless); protocolo exercitado por HTTP direto e pelo cliente real `owslib` (não é um mock: é o parser oficial de um cliente WFS de produção) | pendência (nunca "feito") | — |
+| segurança: item_id/where/bbox inválidos nunca chegam ao banco como 500 | erro do cliente sempre 4xx | 13 ataques (item_id com aspas/comentário SQL/`;`, bbox com sub-select/`pg_sleep()`/função não prevista, WFS BBOX com injeção, `REQUEST` desconhecida, `feature_id` não inteiro, unicode no item_id, cross-tenant nas 3 raízes) — **13/13 recusados com 400/404, nenhum 500** | feito | `bateria_de_ataque` no JSON de medida |
+| achado corrigido nesta trilha (não escondido) | — | `item_id::uuid` sem validar prévia deixava o Postgres levantar `InvalidTextRepresentation` sem handler → HTTP 500 em `rotas_query._camada_do_item` (usada por `/query`, pelo descritor de serviço/camada, por OGC Features e por WFS) para QUALQUER item_id malformado; corrigido com um regex de UUID antes do banco (`_item_id_valido`), item_id inválido agora é 404 | consertado, não contornado | commit desta trilha; reexercitado nos 13 ataques acima |
+| cross-tenant nas 3 raízes novas | isolamento por inquilino | achado do adversário desta trilha: `pouso`/`conformance` do OGC API Features respondiam 200 com landing genérica para item de OUTRO inquilino (nunca vazavam dado, mas não deveriam responder 200) — corrigido: as duas rotas agora tocam `plat.item` sob RLS antes de responder, igual ao FeatureServer/WFS | consertado | `cross_tenant_ogc` no JSON de medida (agora 404) |
+
+Paridade com ArcGIS Pro/AGOL/QGIS Desktop reais: **pendente** (decisão D20/D36) — todo teste acima é contra esta
+implementação, a doc Esri/OGC e um cliente Python real (`owslib`); nenhum teste usa ArcGIS Pro/AGOL nem QGIS Desktop.

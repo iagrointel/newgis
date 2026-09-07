@@ -13,6 +13,7 @@ UUID do item seja adivinhado (P6)."""
 from __future__ import annotations
 
 import json
+import re
 
 from fastapi import APIRouter, Request, Response
 
@@ -96,7 +97,24 @@ def _pedido_de(p: dict) -> motor.PedidoQuery:
     return motor.PedidoQuery(**kwargs)
 
 
+_UUID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+
+
+def _item_id_valido(item_id: str) -> None:
+    """Achado do adversário da trilha `esriogc` (item L2-04-servicos-esri-ogc): `item_id::uuid` sem
+    validar antes deixava o Postgres levantar `InvalidTextRepresentation` para qualquer path
+    (`x' OR '1'='1`, `;DROP TABLE ...`) — a exceção não tinha handler e virava HTTP 500 (o texto do
+    cliente chegava ao banco antes de ser recusado, exatamente o que a refutação do item proíbe).
+    Corrigido aqui, na função que cada um dos protocolos (FeatureServer, OGC API Features, WFS) chama
+    antes de tocar o banco — item_id malformado é tratado como item inexistente (404), nunca 500."""
+    if not _UUID_RE.match(item_id):
+        raise ErroAPI(404, "camada_nao_encontrada", "item inexistente, não é camada vetorial, ou sem permissão")
+
+
 def _camada_do_item(cur, item_id: str) -> dict:
+    _item_id_valido(item_id)
     cur.execute(
         "SELECT dados FROM plat.item WHERE id = %s::uuid AND tipo = 'camada_vetorial'", (item_id,)
     )
