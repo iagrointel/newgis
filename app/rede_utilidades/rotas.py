@@ -26,14 +26,19 @@ from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
+from app.rede_utilidades import categorias as categorias_mod
 from app.rede_utilidades import deposito, instalados
 from app.rede_utilidades import pacote as pacote_mod
 from app.rede_utilidades.modelos import (
+    CategoriasEntrada,
+    FeicaoEntrada,
     ImportacaoResultado,
+    LigacaoEntrada,
     PacoteInstaladoLista,
     Rede,
     RedeEntrada,
     RedePagina,
+    RestricoesEntrada,
 )
 
 router = APIRouter(prefix="/api/rede", tags=["rede de utilidades"])
@@ -229,3 +234,81 @@ def exportar_pacote(rede_id: str, auth: Auth = autenticado(escopo_token="catalog
         media_type="application/json; charset=utf-8",
         headers={"ETag": '"' + hashlib.sha256(bruto).hexdigest() + '"', "Cache-Control": "no-store"},
     )
+
+
+# --- categorias, restrições, feição e traçado de isolamento (item L4-06-d-categorias-e-restricoes) -----------
+
+
+@router.put("/{rede_id}/tipos/{tipo_id}/categorias", openapi_extra=EDITAR)
+def redefinir_categorias(rede_id: str, tipo_id: str, corpo: CategoriasEntrada, request: Request,
+                          auth: Auth = autenticado("rede.editar")):
+    """Substitui as categorias de um tipo de ativo já carregado. Toda feição do tipo é marcada suja (a
+    contagem volta na resposta); remover 'controlador' de tipo com feição de controlador ativo é recusado."""
+    rid, tid = _uuid_ok(rede_id), _uuid_ok(tipo_id)
+    with db.db(auth.contexto()) as cur:
+        _carregar(cur, rid)
+        try:
+            resultado = categorias_mod.redefinir_categorias(cur, auth.tenant_id, rid, tid, corpo.categorias)
+        except psycopg2.Error as e:
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(cur, request, "redes/categorias_definir", "rede_tipo", tid, resultado)
+        return resultado
+
+
+@router.put("/{rede_id}/tipos/{tipo_id}/restricoes", openapi_extra=EDITAR)
+def redefinir_restricoes(rede_id: str, tipo_id: str, corpo: RestricoesEntrada, request: Request,
+                          auth: Auth = autenticado("rede.editar")):
+    """Substitui as restrições de feição de um tipo de ativo (`sem_ponto_partida`, `sem_terminal`)."""
+    rid, tid = _uuid_ok(rede_id), _uuid_ok(tipo_id)
+    with db.db(auth.contexto()) as cur:
+        _carregar(cur, rid)
+        try:
+            resultado = categorias_mod.redefinir_restricoes(cur, auth.tenant_id, rid, tid, corpo.restricoes)
+        except psycopg2.Error as e:
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(cur, request, "redes/restricoes_definir", "rede_tipo", tid, resultado)
+        return resultado
+
+
+@router.post("/{rede_id}/feicoes", status_code=201, openapi_extra=EDITAR)
+def criar_feicao(rede_id: str, corpo: FeicaoEntrada, request: Request, auth: Auth = autenticado("rede.editar")):
+    """Instancia uma feição de rede (ativo real) a partir de um tipo do catálogo. Nasce suja, como na
+    topologia Esri — a área suja como extensão espacial é item seguinte (L4-03-d)."""
+    rid, tid = _uuid_ok(rede_id), _uuid_ok(corpo.tipo_id)
+    with db.db(auth.contexto()) as cur:
+        _carregar(cur, rid)
+        try:
+            resultado = categorias_mod.criar_feicao(
+                cur, auth.tenant_id, rid, tid, corpo.codigo, corpo.controlador_ativo
+            )
+        except psycopg2.Error as e:
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(cur, request, "redes/feicao_criar", "rede_feicao", resultado["id"],
+                         {"tipo_id": tid, "codigo": corpo.codigo, "controlador_ativo": corpo.controlador_ativo})
+        return resultado
+
+
+@router.post("/{rede_id}/feicoes/{feicao_id}/ligar", status_code=201, openapi_extra=EDITAR)
+def ligar_feicoes(rede_id: str, feicao_id: str, corpo: LigacaoEntrada, request: Request,
+                   auth: Auth = autenticado("rede.editar")):
+    """Cria a ligação de conectividade entre duas feições da mesma rede (aresta não dirigida)."""
+    rid, fid, pid = _uuid_ok(rede_id), _uuid_ok(feicao_id), _uuid_ok(corpo.para_feicao_id)
+    with db.db(auth.contexto()) as cur:
+        _carregar(cur, rid)
+        try:
+            resultado = categorias_mod.ligar_feicoes(cur, auth.tenant_id, rid, fid, pid)
+        except psycopg2.Error as e:
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(cur, request, "redes/feicoes_ligar", "rede_feicao_ligacao", resultado["id"], resultado)
+        return resultado
+
+
+@router.get("/{rede_id}/feicoes/{feicao_id}/isolamento", openapi_extra=LER)
+def isolamento(rede_id: str, feicao_id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Traçado de isolamento a partir da feição: passeio pela conectividade que para em toda feição cuja
+    categoria seja 'dispositivo_de_protecao', e recusa (422) partir de feição cujo tipo tem a restrição
+    'sem_ponto_partida' (o caso do portão é a unidade consumidora)."""
+    rid, fid = _uuid_ok(rede_id), _uuid_ok(feicao_id)
+    with db.db(auth.contexto()) as cur:
+        _carregar(cur, rid)
+        return categorias_mod.isolar(cur, rid, fid)

@@ -47,6 +47,24 @@ class PacoteInstaladoLista(BaseModel):
     itens: list[PacoteInstalado]
 
 
+class CategoriasEntrada(BaseModel):
+    categorias: list[str] = Field(min_length=0, max_length=64)
+
+
+class RestricoesEntrada(BaseModel):
+    restricoes: list[str] = Field(min_length=0, max_length=8)
+
+
+class FeicaoEntrada(BaseModel):
+    tipo_id: str
+    codigo: str = Field(min_length=1, max_length=120)
+    controlador_ativo: bool = False
+
+
+class LigacaoEntrada(BaseModel):
+    para_feicao_id: str
+
+
 class ImportacaoResultado(BaseModel):
     rede_id: str
     codigo: str

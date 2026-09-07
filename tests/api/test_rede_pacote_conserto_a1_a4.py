@@ -278,7 +278,9 @@ def test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica(
     esquema = app.openapi()
     escritas = [(c, m) for c, ops in esquema["paths"].items() if c.startswith("/api/rede")
                 for m in ops if m in ("post", "put", "patch", "delete")]
-    assert len(escritas) == 3, escritas
+    # 3 rotas do L4-01-a (criar rede, apagar rede, importar pacote) + 4 do L4-06-d (categorias, restrições,
+    # criar feição, ligar feições) — o traçado de isolamento é GET (leitura), não entra nesta contagem.
+    assert len(escritas) == 7, escritas
     for c, m in escritas:
         assert esquema["paths"][c][m].get("x-privilegio") == "rede.editar", (c, m)
     rid = _rede_com_pacote(sessao_a, limpar_redes, "priv")

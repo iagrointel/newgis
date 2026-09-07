@@ -3,6 +3,27 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L4-06-d-categorias-e-restricoes: categorias de rede, restrição de feição, tap de subrede)
+
+Categoria `derivacao` (equivalente de *subnetwork tap*) acrescentada ao pacote `eletrica-br` (12 categorias
+no pacote, o portão pedia ≥ 8), atribuída a `unidade_consumidora/1` — ponto com um único terminal, a mesma
+condição de elegibilidade da Esri. Migração `20260906T2156_rede_categorias_restricoes.sql` entrega a feição
+instanciada (`plat.rede_feicao`, com o estado `controlador_ativo` e a marca `suja`), a ligação de
+conectividade (`plat.rede_feicao_ligacao`) e a restrição de feição por tipo (`plat.rede_tipo_restricao`,
+vocabulário `sem_ponto_partida`/`sem_terminal`). Sobre esse esquema, `app/rede_utilidades/categorias.py` (novo)
+e as rotas em `app/rede_utilidades/rotas.py`: `PUT /api/rede/{id}/tipos/{tipo_id}/categorias` redefine o
+conjunto de categorias de um tipo e marca `suja=true` em toda feição já instanciada dele (a contagem volta
+na resposta); recusa (409) remover a categoria `controlador` de um tipo com feição de controlador ATIVO — a
+refutação do item; `PUT .../restricoes` redefine as restrições de feição; `POST .../feicoes` e
+`.../feicoes/{id}/ligar` instanciam feição e ligação; `GET .../feicoes/{id}/isolamento` traça um passeio em
+largura sobre a conectividade que **para na categoria `dispositivo_de_protecao`** (a fronteira entra no
+resultado, o que está atrás dela não) e recusa (422) partir de feição cujo tipo tem `sem_ponto_partida` — o
+caso do portão é a unidade consumidora. `docs/PARIDADE.md` ganhou as linhas de *feature restrictions* e
+*subnetwork tap*, com a fronteira honesta escrita: a categoria e a condição de elegibilidade do tap existem,
+mas não há traçado de SUBREDE que pare nela (só o de isolamento, que para na proteção) — isso fica para o
+item de traçado completo. 7 testes novos em `tests/api/test_rede_categorias.py`; medidas em
+`tests/medidas/L4-06-d-categorias-e-restricoes.json`.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

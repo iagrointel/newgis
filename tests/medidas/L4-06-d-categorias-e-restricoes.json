@@ -1,0 +1,55 @@
+{
+ "item": "L4-06-d-categorias-e-restricoes",
+ "assinado_por": "redes+backend (turno T4, handoff laco/handoffs/T4/L4-06-d-categorias-e-restricoes.md)",
+ "gerado_em": "2026-09-07T01:54:37Z",
+ "git_sha": "PREENCHIDO_NO_COMMIT",
+ "maquina": "12 vCPU, 23 GB RAM, disco / a 98%; PostgreSQL 16 em iagro_sat; base própria da trilha (schema plat_tf406, laco/trilha_ambiente.sh f406), com outras sessões da casa na mesma máquina",
+ "medidas": {
+  "categorias_no_pacote_eletrica_br": {
+   "valor": 12,
+   "unidade": "categorias",
+   "comando": "python3 -c \"import json;print(len(json.load(open('app/rede_utilidades/pacotes/eletrica-br.json'))['categorias']))\"",
+   "observacao": "o portão pede >= 8; a categoria 'derivacao' (subnetwork tap) foi acrescentada por Kimi K3 no commit 6a77814, atribuída a unidade_consumidora/1 (ponto, um terminal)"
+  },
+  "redefinir_categorias_marca_area_suja": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "venv/bin/pytest tests/api/test_rede_categorias.py::test_redefinir_categorias_marca_area_suja_e_devolve_contagem -q",
+   "observacao": "PUT /api/rede/{rede_id}/tipos/{tipo_id}/categorias marca suja=true em toda plat.rede_feicao do tipo e devolve a contagem em 'feicoes_marcadas_sujas'"
+  },
+  "refutacao_controlador_ativo_bloqueia_remocao": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "venv/bin/pytest tests/api/test_rede_categorias.py::test_remover_categoria_controlador_com_ativo_e_recusado -q",
+   "observacao": "adversário tenta remover 'controlador' do tipo banco_de_capacitores/1 com uma feição de controlador_ativo=true: 409 controlador_ativo_bloqueia_categoria; só passa depois de desligar o controlador"
+  },
+  "restricao_sem_ponto_partida_bloqueia_traçado": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "venv/bin/pytest tests/api/test_rede_categorias.py::test_restricao_sem_ponto_partida_bloqueia_isolamento -q",
+   "observacao": "GET /api/rede/{rede_id}/feicoes/{feicao_id}/isolamento a partir de unidade_consumidora/1 passa sem restrição e devolve 422 ponto_partida_restrito depois de PUT .../restricoes com sem_ponto_partida"
+  },
+  "isolamento_para_na_categoria_protecao": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "venv/bin/pytest tests/api/test_rede_categorias.py::test_isolamento_para_na_categoria_protecao -q",
+   "observacao": "grafo fonte -> disjuntor(dispositivo_de_protecao) -> carga; a fronteira entra no resultado como 'fronteira_protecao', a carga atrás dela não é visitada"
+  },
+  "testes_do_item": {
+   "valor": 7,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/api/test_rede_categorias.py -q"
+  },
+  "suite_rede_relacionada_sem_regressao": {
+   "valor": 54,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/api/test_rede_pacote.py tests/api/test_rede_pacote_conserto_a1_a4.py tests/unit/test_rede_pacote_formato.py tests/api/test_rede_categorias.py -q"
+  }
+ },
+ "fronteira_honesta": [
+  "paridade contra 'subnetwork tap' é PARCIAL: a categoria 'derivacao' existe e está na condição de elegibilidade (ponto, um terminal), mas não há traçado de SUBREDE que trate 'derivacao' como fim de ramal — só o traçado de isolamento, que para em 'dispositivo_de_protecao'. Registrado em docs/PARIDADE.md.",
+  "o traçado de isolamento aqui é um passeio em largura ilustrativo sobre plat.rede_feicao_ligacao (sem geometria, sem múltiplas fases, sem atributos de rede como barreira configurável) — não o motor de traçado completo, que é item de linha própria (fora do escopo de L4-06-d).",
+  "área suja aqui é uma MARCA booleana por feição (plat.rede_feicao.suja); a extensão espacial da área suja e o ciclo de validação completo são do item L4-03-d, declarado no cabeçalho da migração e não refeito aqui.",
+  "não há rota GET para listar tipos de uma rede isoladamente (fora do escopo deste item); os testes resolvem tipo_id direto no banco, do mesmo jeito que outras suítes da casa já fazem (tests/api/test_rls.py)."
+ ]
+}
