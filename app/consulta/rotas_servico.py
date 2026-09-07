@@ -146,7 +146,25 @@ def _estilo_da_camada(cur, item_id: str) -> dict | None:
         (item_id,),
     )
     r = cur.fetchone()
-    return (r["dados"] or {}).get("corpo") if r else None
+    corpo = (r["dados"] or {}).get("corpo") if r else None
+    return _camada_maplibre(corpo)
+
+
+def _camada_maplibre(corpo: dict | None) -> dict | None:
+    """Primeira camada MapLibre de um corpo de estilo.
+
+    O modelo de estilo do catálogo guarda um documento completo (`corpo.maplibre` no formato da Style
+    Spec, mais `corpo.plat_construtor` com a intenção do construtor). O conversor para `drawingInfo`
+    trabalha sobre UMA camada. Antes de este item juntar as duas frentes, o descritor entregava o
+    documento inteiro ao conversor, que não achava `type`/`paint` e devolvia o cinza padrão para todo
+    estilo do catálogo. Aceitar as duas formas (documento completo e camada solta) mantém o descritor
+    funcionando enquanto o formato solto ainda existir em base antiga."""
+    if not isinstance(corpo, dict):
+        return None
+    camadas = ((corpo.get("maplibre") or {}).get("layers") if isinstance(corpo.get("maplibre"), dict) else None)
+    if isinstance(camadas, list) and camadas:
+        return camadas[0] if isinstance(camadas[0], dict) else None
+    return corpo if ("paint" in corpo or "type" in corpo) else None
 
 
 def descritor_da_camada(cur, item_id: str, dados: dict, titulo: str | None) -> dict:

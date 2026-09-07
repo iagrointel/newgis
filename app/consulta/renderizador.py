@@ -155,6 +155,10 @@ def para_drawing_info(camada: dict | None) -> dict:
         r = _unique_value(bruto, tipo, paint)
         if r is not None:
             return _saida(r, "uniqueValue de match")
+    if isinstance(bruto, list) and bruto and bruto[0] == "case":
+        r = _unique_value(_case_para_match(bruto) or [], tipo, paint)
+        if r is not None:
+            return _saida(r, "uniqueValue de case")
     if isinstance(bruto, list) and bruto and bruto[0] == "step":
         r = _class_breaks(bruto, tipo, paint)
         if r is not None:
@@ -167,6 +171,33 @@ def para_drawing_info(camada: dict | None) -> dict:
     motivo = "expressao nao convertida" if isinstance(bruto, list) else "sem cor no estilo"
     return _saida({"type": "simple", "symbol": _simbolo(tipo, list(_COR_PADRAO), paint), "label": "",
                    "description": ""}, motivo)
+
+
+def _case_para_match(expr: list) -> list | None:
+    """`["case", ["==", ["get", campo], v1], c1, ..., padrao]` -> a forma `match` equivalente.
+
+    O compilador de estilo da casa (`app/estilos/compilador.py`) NUNCA emite `match` para estilo por
+    categoria: emite uma cadeia `case` de igualdades. Sem esta tradução, todo estilo do catálogo
+    chegava ao cliente Esri como `simple` cinza, e a linha `drawingInfo` da matriz de conformidade
+    não tinha como ficar verde. Só a cadeia de igualdades sobre UM mesmo campo é traduzida; qualquer
+    outra condição devolve None e o caminho normal (`simple` com o motivo) segue valendo."""
+    if len(expr) < 4 or len(expr) % 2 != 0:
+        return None
+    campo = None
+    pares: list = []
+    for teste, cor in zip(expr[1:-1:2], expr[2:-1:2], strict=True):
+        if not (isinstance(teste, list) and len(teste) == 3 and teste[0] == "=="):
+            return None
+        atual = _campo_de(teste[1])
+        if atual is None or (campo is not None and atual != campo):
+            return None
+        campo = atual
+        if isinstance(teste[2], (list, dict)):
+            return None
+        pares += [teste[2], cor]
+    if campo is None:
+        return None
+    return ["match", ["get", campo], *pares, expr[-1]]
 
 
 def _unique_value(expr: list, tipo: str, paint: dict) -> dict | None:

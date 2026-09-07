@@ -322,14 +322,25 @@ def test_token_sem_escopo_de_catalogo_nao_abre_o_diretorio(anonimo, sessao_a, ca
 
 # ---------------------------------------------------------------- drawingInfo vindo do estilo
 def test_estilo_da_camada_vira_renderer_unique_value(anonimo, token_leitura_a, camada_a):
-    camada_a.dar_estilo({"type": "fill", "paint": {
-        "fill-color": ["match", ["get", "nome"], "Alfa", "#0a0", "Beta", "#00a", "#cccccc"],
-        "fill-opacity": 0.8}})
+    # Forma canônica do estilo no catálogo: o servidor recompila `maplibre` a partir de
+    # `plat_construtor`, e o compilador da casa emite uma cadeia `case` de igualdades (nunca `match`),
+    # com a ÚLTIMA categoria virando a cor padrão. Logo, com três categorias saem dois valores
+    # nomeados e um símbolo padrão — é isso que o cliente Esri recebe.
+    camada_a.dar_estilo({
+        "maplibre": {"version": 8, "layers": [{"id": "camada", "type": "fill", "paint": {
+            "fill-color": ["case", ["==", ["get", "nome"], "Alfa"], "#00aa00", "#cccccc"],
+            "fill-opacity": 1.0}}]},
+        "plat_construtor": {"versao": 1, "tipo": "categoria", "geometria": "poligono",
+                            "campo": "nome", "campos": ["nome"],
+                            "categorias": [{"valor": "Alfa", "rotulo": "Alfa", "cor": "#00aa00"},
+                                           {"valor": "Beta", "rotulo": "Beta", "cor": "#0000aa"},
+                                           {"valor": "Gama", "rotulo": "Gama", "cor": "#cccccc"}]}})
     d = _json(anonimo.get(f"/svc/{token_leitura_a}/rest/services/{camada_a.item_id}/FeatureServer/0"))
     r = d["drawingInfo"]["renderer"]
-    assert r["type"] == "uniqueValue" and r["field1"] == "nome"
+    assert r["type"] == "uniqueValue" and r["field1"] == "nome", d["drawingInfo"]
     assert [i["value"] for i in r["uniqueValueInfos"]] == ["Alfa", "Beta"]
-    assert r["uniqueValueInfos"][0]["symbol"]["color"] == [0, 170, 0, 204]
+    assert r["uniqueValueInfos"][0]["symbol"]["color"] == [0, 170, 0, 255]
+    assert r["defaultSymbol"]["color"] == [204, 204, 204, 255]
 
 
 def test_camada_sem_estilo_tem_renderer_simples_declarado(anonimo, token_leitura_a, camada_a):

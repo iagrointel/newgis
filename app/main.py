@@ -138,6 +138,15 @@ ROUTERS = [
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
     rotas_geocodificador_esri,
+    # --- servidor de tiles vetoriais em 3 contratos (L2-04-e): TileJSON+XYZ, VectorTileServer Esri
+    # (descritor, estilo, sprites/fontes, tile z/y/x) e exportação por URL (geojson/kml/csv/fgb/gpkg).
+    # ORDEM IMPORTA: tem de vir ANTES de `rotas_mapa`. As duas famílias moram em /tiles/, e o repasse
+    # do visualizador (`/tiles/{esquema}/{funcao}/{z}/{x}/{y}`) casa, por forma de caminho, com o tile
+    # vetorial (`/tiles/{token}/{item}/{z}/{x}/{y}.pbf`); quem casa primeiro responde, e como o
+    # visualizador exige `y` inteiro, o `.pbf` do tile vetorial virava 422 em vez de tile. O tile
+    # vetorial exige o sufixo `.pbf` no caminho, então as URLs do visualizador (sem sufixo) continuam
+    # caindo nele normalmente.
+    rotas_vector_tile_server,
     # --- visualizador de mapa (L2-01-mapa-web): /api/mapa/camadas, TileJSON com token curto, repasse /tiles
     rotas_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
@@ -158,9 +167,6 @@ ROUTERS = [
     rotas_edicao_esri,
     # --- motor de análise multicritério (L3-01-a): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
     rotas_amc.router,
-    # --- servidor de tiles vetoriais em 3 contratos (L2-04-e): TileJSON+XYZ, VectorTileServer Esri
-    # (descritor, estilo, sprites/fontes, tile z/y/x) e exportação por URL (geojson/kml/csv/fgb/gpkg)
-    rotas_vector_tile_server,
     rotas_tiles_exportacao,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
