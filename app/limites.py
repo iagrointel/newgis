@@ -226,3 +226,19 @@ EXPORTACAO_CSV_SEPARADORES = (",", ";", "\t", "|")
 EXPORTACAO_CSV_DECIMAIS = (".", ",")
 EXPORTACAO_BLOCO_LEITURA_BYTES = 8 * 1024 * 1024   # leitura do arquivo pronto em blocos (sha256 e envio); NUNCA
                                               # o arquivo inteiro em memória, nem no envio ao Garage nem na entrega
+
+# --- GeoParquet particionado no bucket (L2-15-a-geoparquet-bucket-catalogo). Mesmos tetos de memória/tempo/
+# disco do irmão L0-04-h (o intermediário continua sendo um GPKG do ogr2ogr); GRUPO_LINHAS_PADRAO medido
+# como ponto de partida razoável (DuckDB docs: 100k-1M linhas por row group; 50k cobre camada pequena sem
+# blocos minúsculos demais em partição fina).
+GEOPARQUET_MEMORIA_MB = 1024
+GEOPARQUET_TIMEOUT_S = 3600
+GEOPARQUET_DISCO_MIN_LIVRE_BYTES = 2 * 1024 * 1024 * 1024
+GEOPARQUET_FATOR_DISCO = 3
+GEOPARQUET_GRUPO_LINHAS_PADRAO = 50_000
+GEOPARQUET_GRUPO_LINHAS_MIN = 1_000
+GEOPARQUET_GRUPO_LINHAS_MAX = 1_000_000
+GEOPARQUET_CAMPOS_MAX = 500
+GEOPARQUET_WHERE_MAX = 4000
+GEOPARQUET_POR_USUARIO_EM_CURSO = 3
+GEOPARQUET_URL_ASSINADA_SEGUNDOS = 900   # 15 min: o bastante para DuckDB/QGIS/Pro abrirem o arquivo

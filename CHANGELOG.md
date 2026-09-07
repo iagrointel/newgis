@@ -3,6 +3,35 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L2-15-a-geoparquet-bucket-catalogo: GeoParquet como formato de trabalho)
+
+`POST /api/geoparquet` enfileira `geoparquet.gerar`: escreve GeoParquet 1.1 (metadado `geo` selado — o
+DuckDB 1.5.5 desta máquina só escreve 1.0.0, medido; troca binária de mesmo tamanho, sem tocar rodapé),
+particionado em hive (`particionar_por: {coluna, grao}`, `grao: valor` ou `ano_mes`) ou arquivo único, no
+bucket do inquilino (`<slug>/geoparquet/<uuid do item>/<sha256>.parquet`, reuso de `app/objetos.py` do
+L0-11), e publica/atualiza UM item de catálogo `tipo=parquet` (esquema, contagem, bbox por arquivo, sha256,
+proveniência com `versao` incremental). Atualização incremental: cada partição é comparada por sha256 com a
+rodada anterior — como o adaptador de objetos já deduplica por conteúdo, partição sem mudança nunca gera PUT
+novo no Garage. Modo `arquivar` apaga a tabela de origem DEPOIS de conferir, na mesma transação, que a
+contagem do Parquet bate com o `DELETE ... rowcount` (sem bater, nada é apagado — `app/db.py` reverte).
+Reusa de propósito o motor do L0-04-h-exportar (conninfo com RLS embutida, guarda de disco, GPKG
+intermediário) e o `_conexao`/`_literal` do `parquet_cli` (DuckDB não sobrevive a `fork`, roda em processo
+próprio). Leitura por URL assinada reusa `/api/objetos/{chave}` (nenhuma rota de entrega nova); contrato de
+assinatura vencida é 404 (mesmo de todo o resto da plataforma), não o 403 do texto do portão. Nenhum
+privilégio novo: `conteudo.exportar` para gerar, `conteudo.apagar_tudo` (administrativo) OBRIGATÓRIO ADEMAIS
+para `arquivar`. Ver ADR 20260907T1752.
+
+Medido (`tests/medidas/L2-15-a-geoparquet-bucket-catalogo.json`): camada de **1.000.000 de polígonos**
+exportada em **5,8 s** (carga da máquina 10,75 no início — load average alto não invalidou o resultado);
+reaberta pelo DuckDB com COUNT(*) igual e diferença de ST_Area de **0,0** em 100 amostras contra o PostGIS
+(tolerância pedida 1e-6). Partição por UF gera exatamente 27 arquivos (`tests/unit/test_geoparquet_unidade.py`
+e `tests/api/geoparquet/test_geoparquet.py`). Refutação: geometria mista + SRID 31982, tabela sem geometria e
+campo de 9 MB de texto (10 MB esbarra num teto do próprio driver CSV do GDAL, medido) não quebram o
+conversor; coluna não declarada no item do catálogo nunca aparece no arquivo gerado (o SELECT nunca usa `*`).
+NÃO MEDIDO: QGIS em docker abrindo o Parquet por URL (sem imagem local; disco a 95% impede baixar uma).
+Achado que ficou fora do escopo deste item, registrado no ADR: `app/jobs/worker.py::_pegar()` pode prender o
+advisory lock `plat.job.pesado` indefinidamente num worker ocioso, travando todo job pesado da frota.
+
 ## turno 4, setembro de 2026 (item L0-04-h-exportar: exportação de camada para outros formatos)
 
 `POST /api/exportacoes` enfileira o job `exportacao.gerar` (202) e devolve o arquivo (item `arquivo`,
