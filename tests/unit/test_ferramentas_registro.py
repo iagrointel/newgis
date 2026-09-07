@@ -17,8 +17,9 @@ def _f(ctx, entradas, parametros, destino):
 
 def test_buffer_registrado_com_manifesto_valido():
     f = registro.obter("buffer")
-    assert f is not None and f.categoria == "proximidade" and f.versao == 1
-    assert [p.nome for p in f.entradas] == ["camada", "distancia", "dissolver"]
+    assert f is not None and f.categoria == "proximidade" and f.versao == 2
+    assert [p.nome for p in f.entradas] == ["camada", "distancia", "campo_distancia", "distancia_interna",
+                                            "metodo", "dissolver"]
     assert [p.nome for p in f.saidas] == ["saida"]
     assert all(p.tipo in registro.TIPOS_GP for p in f.parametros)
 
@@ -57,7 +58,7 @@ def test_normalizacao_no_vocabulario_gp():
     v = registro.validar_parametros(f, {"camada": {"url": f"https://x.invalido/rest/services/{uid}/FeatureServer/0"},
                                         "distancia": {"distance": 2, "units": "esriKilometers"}, "dissolver": "true"})
     assert v == {"camada": uid, "distancia": {"distance": 2.0, "units": "esriKilometers", "metros": 2000.0},
-                 "dissolver": True}
+                 "campo_distancia": None, "distancia_interna": None, "metodo": "geodesico", "dissolver": True}
     v = registro.validar_parametros(f, {"camada": uid})
     assert v["distancia"]["metros"] == 100.0 and v["dissolver"] is False
     for dados, campo in [({"camada": uid, "distancia": "x"}, "distancia"), ({"camada": "abc"}, "camada"),
@@ -87,6 +88,7 @@ def test_descritores_api_e_gpserver():
     gp = registro.descrever_gp(f)
     tipos = {p["name"]: p["dataType"] for p in gp["parameters"]}
     assert tipos == {"camada": "GPFeatureRecordSetLayer", "distancia": "GPLinearUnit", "dissolver": "GPBoolean",
+                     "campo_distancia": "GPString", "distancia_interna": "GPLinearUnit", "metodo": "GPString",
                      "saida": "GPFeatureRecordSetLayer"}
     obrig = {p["name"]: p["parameterType"] for p in gp["parameters"]}
     assert obrig["camada"] == "esriGPParameterTypeRequired" and obrig["distancia"] == "esriGPParameterTypeOptional"
