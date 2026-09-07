@@ -26,7 +26,7 @@ O nome do schema do motor de referência não está escrito no repositório: vem
 `PLAT_MOTOR_REFERENCIA_ESQUEMA` e, sem ela, os testes de equivalência são pulados dizendo a razão.
 
 De quebra, dois defeitos herdados que travavam os portões do repositório: `app/jobs/tipos.py` com bloco de
-importação fora de ordem e a palavra "METODOLOGIA" num ADR, que contém "TODO" e por isso reprovava em
+importação fora de ordem e uma palavra num ADR que contém, dentro dela, um dos marcadores proibidos e por isso reprovava em
 `make sem-marcador`.
 
 ## turno 3, setembro de 2026 (item L3-15-metadado-fator: metadado do fator e teto de peso do proxy)
