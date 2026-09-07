@@ -145,3 +145,13 @@ body.mapa .popup-tabela th { text-align: left; font-weight: 500; color: var(--fr
 body.mapa .popup-tabela td { padding: .12rem 0; font-family: var(--mono); }
 body.mapa .popup-tabela td.nulo { color: var(--fraco); font-style: italic; }
 body.mapa .popup-mais { margin: 0; font-size: .75rem; color: var(--fraco); }
+
+/* ------------------------------------------------------------------ item L2-01-f-navegacao-medicao-coordenadas */
+body.mapa .segmentos { margin: var(--e2) 0 0; padding-left: 1.2rem; font-family: var(--mono); font-size: .75rem; color: var(--fraco); }
+body.mapa #seletor-crs { width: 100%; margin-bottom: var(--e2); }
+body.mapa .atalhos { display: grid; grid-template-columns: auto 1fr; gap: .2rem .6rem; margin: var(--e2) 0 0; font-size: .75rem; }
+body.mapa .atalhos dd { margin: 0; color: var(--fraco); }
+body.mapa .atalhos kbd { font-family: var(--mono); border: 1px solid var(--borda); border-radius: var(--raio); padding: 0 .3rem; }
+body.mapa .mapa-coordenadas { cursor: copy; }
+body.mapa #favoritos li { display: flex; align-items: center; gap: .3rem; }
+body.mapa #favoritos .sugestao { flex: 1; }
