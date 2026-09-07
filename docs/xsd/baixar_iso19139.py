@@ -123,7 +123,7 @@ def baixar(forcar: bool) -> dict:
 
 def gravar_manifesto(mapa_url: dict[str, str]) -> None:
     agora = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    # o manifesto cobre TODO o cache (rglob), não só o que esta execução baixou/leu: numa execução
+    # o manifesto cobre o cache inteiro (rglob), não só o que esta execução baixou/leu: numa execução
     # idempotente (cache completo) quase nada passa pela fila, e o manifesto encolheria a cada run —
     # medido 07/09: 57 arquivos viraram 1. url_origem vem desta execução ou do manifesto anterior;
     # arquivo sem origem conhecida nas duas fontes fica de fora (URL nunca se inventa).
