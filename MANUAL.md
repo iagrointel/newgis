@@ -1070,3 +1070,67 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Ladrilho raster por token (item L1-02-tiles-token)
+
+Publica uma imagem já ingerida (L1-01) como camada de mapa para qualquer cliente — QGIS, ArcGIS,
+navegador, mapa de terceiro — sem login e sem plugin. O que dá acesso é um **token de serviço** com
+escopo `tiles:ler`, criado em `/admin/tokens`, e ele vai **no caminho da URL**.
+
+### 22.1 As URLs
+
+Com `<tok>` = o token e `<item>` = o identificador da imagem no catálogo:
+
+| para quê | endereço |
+|---|---|
+| XYZ (a camada "XYZ Tiles" do QGIS, `L.tileLayer` do Leaflet, `raster` do MapLibre) | `https://<dominio>/svc/<tok>/raster/<item>/{z}/{x}/{y}.png` |
+| TileJSON (o mapa lê extensão e zoom sozinho) | `https://<dominio>/svc/<tok>/raster/<item>/tilejson.json` |
+| WMTS (o que o QGIS e o ArcGIS pedem em "Add WMTS layer") | `https://<dominio>/svc/<tok>/raster/<item>/wmts/1.0.0/WMTSCapabilities.xml` |
+| WMTS por KVP | `https://<dominio>/svc/<tok>/raster/<item>/wmts?SERVICE=WMTS&REQUEST=GetCapabilities` |
+| extensão, bandas, tipo do dado, lista de colormaps | `https://<dominio>/svc/<tok>/raster/<item>/info.json` |
+| mosaico de uma coleção (cena mais recente por cima) | `https://<dominio>/svc/<tok>/mosaico/<colecao>/{z}/{x}/{y}.png` |
+
+Formatos: `.png` (padrão), `.jpg`, `.webp`.
+
+### 22.2 Como pintar (os parâmetros)
+
+| parâmetro | o que faz | exemplo |
+|---|---|---|
+| `bandas` | ordem das bandas na saída | `bandas=3,2,1` |
+| `expressao` | conta sobre as bandas, avaliada por pixel | `expressao=(b4-b3)/(b4%2Bb3)` (NDVI) |
+| `faixa` | valores que viram 0 e 255, por banda | `faixa=-1,1` |
+| `colormap` | paleta (211 disponíveis; a lista está em `info.json`) | `colormap=viridis` |
+| `asset` | `visual` (8 bits, mais barato) ou `cientifico` (bandas originais) | `asset=cientifico` |
+
+O `+` da expressão precisa ir codificado como `%2B` na URL — em `+` cru o servidor lê espaço.
+Sem `bandas` e sem `expressao`, uma imagem de mais de três bandas sai com as três primeiras.
+Com `expressao`, o padrão passa a ser o asset `cientifico`.
+
+Os mesmos parâmetros valem no `tilejson.json` e no WMTS: o documento devolvido já traz a pintura
+embutida no endereço dos ladrilhos, então a camada salva no QGIS reabre igual.
+
+### 22.3 Quem pode ler, e por quanto tempo
+
+- o token precisa do escopo `tiles:ler` (ou `tiles:ler:<uuid do item>`, para liberar uma imagem só);
+- em `/admin/tokens` dá para restringir por **Referer/Origin** (o mapa só funciona no site declarado) e
+  por **faixa de IP**;
+- **revogar o token tira o serviço do ar em poucos segundos** — medido de 2,86 s a 2,90 s, inclusive
+  para ladrilhos que já estavam no cache;
+- toda recusa responde **403**, com o motivo em `erro` (`token_revogado`, `escopo_insuficiente`,
+  `referer_nao_permitido`, `ip_nao_permitido`, `item_indisponivel`).
+
+Ladrilho fora da área da imagem responde **204 sem corpo** — o mapa continua navegável.
+
+### 22.4 Quanto foi usado
+
+`GET /api/tiles/leituras?dias=30` devolve, por token, quantos ladrilhos foram servidos, quantos bytes,
+quantos erros e quantas imagens diferentes. É o que a cobrança por uso vai ler. O token em si nunca é
+guardado — só o identificador dele e o prefixo visível.
+
+### 22.5 O que ainda não faz
+
+- o mosaico serve a cena mais recente que cobre o ladrilho; não há escolha por pixel (nuvem) nem linha
+  de costura — isso é o L1-07/L1-08;
+- não há WMS 1.3.0 (L1-02-g), nem OGC API Tiles/Maps (L1-02-i), nem ponto/estatística/histograma
+  (L1-02-h), nem predefinição de renderização gravada (L1-02-f): por enquanto a pintura vive na URL;
+- a única grade é a WebMercatorQuad (a do Google/OSM/AGOL).

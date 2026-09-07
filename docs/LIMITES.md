@@ -225,3 +225,15 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `STAC_PAGINA_MAX` | `1000` | `limit` máximo aceito por pedido (pgstac pagina por token, não por offset) |
 | `STAC_COLECOES_POR_INQUILINO` | `500` | — |
 | `STAC_LOTE_ITENS_MAX` | `10000` | POST .../items:lote (semeadura de teste/ingestão em massa; ADR do item L1-01-h) |
+
+## ingestão de raster (L1-01-ingest-raster; ADR 20260906T2127): validação isolada + COG dois perfis +
+
+| nome | valor | explicação |
+|---|---|---|
+| `RASTER_DIMENSAO_MAX` | `200000` | pixels por eixo (linhas ou colunas) — acima: recusa na validação |
+| `RASTER_BANDAS_MAX` | `64` | bandas por raster — acima: recusa na validação |
+| `RASTER_BYTES_MAX` | `2147483648` | bruto aceito para ingestão (igual a UPLOAD_BYTES_MAX) |
+| `RASTER_VISUAL_MAX_LADO` | `1024` | miniatura PNG (lado maior) |
+| `RASTER_ESTATISTICA_AMOSTRA` | `100000` | pixels amostrados por banda para percentis do perfil visual |
+| `RASTER_TILE_CACHE_DATASET_MAX` | `8` | datasets abertos por processo no handler de tiles (LRU) |
+| `RASTER_TILE_TIMEOUT_S` | `30` | teto de renderização de um tile (mata a requisição, não o worker) |

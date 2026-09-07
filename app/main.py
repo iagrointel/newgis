@@ -43,6 +43,7 @@ from app.correio.rotas_smtp import router as rotas_smtp
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.imagens.rotas_stac import router as rotas_stac
+from app.imagens.rotas_tiles import router as rotas_tiles
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.rede.rotas import router as rotas_rede
@@ -121,6 +122,9 @@ ROUTERS = [
     # --- catálogo de imagens STAC por inquilino (L1-01-a): /svc/<token>/stac/*, token de serviço no PATH
     # (pgstac + convenção de nome de coleção `<tenant_id>-<slug>`; plat.raster_item com RLS)
     rotas_stac,
+    # --- ladrilho raster por token no caminho (L1-02): /svc/<token>/raster/<item>/{z}/{x}/{y}, WMTS,
+    # TileJSON e mosaico por coleção; motor rio-tiler lendo COG no Garage por /vsis3
+    rotas_tiles,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
