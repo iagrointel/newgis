@@ -108,18 +108,12 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
             procname = self._reescrever(procname)
         return super().callproc(procname, *args, **kwargs)
 
-    def executemany(self, query, *args, **kwargs):
-        """`executemany` também precisa da reescrita (achado do item L0-04-h, 06/09/2026): sem ela,
-        `POST /api/papeis` (que insere os privilégios do papel com executemany) falhava com "permission
-        denied for schema plat" em toda base isolada — a rota escrevia no schema `plat` de PRODUÇÃO, ao qual
-        a role da trilha não tem acesso. Onde a role TIVESSE acesso, teria escrito no schema errado em
-        silêncio, que é pior. Mesmo no-op de `execute` quando o schema é o padrão."""
-        if isinstance(query, str):
-            query = self._reescrever(query)
-        return super().executemany(query, *args, **kwargs)
-
     def mogrify(self, query, *args, **kwargs):
-        """Idem: `mogrify` produz o texto final do comando (o `-sql` do ogr2ogr na exportação sai daqui)."""
+        """Idem: `mogrify` produz o texto final do comando (o `-sql` do ogr2ogr na exportação sai daqui).
+        A sobrecarga de `executemany`/`copy_expert` que este item também trazia já está em master, com o
+        tratamento de bytes; sobrou aqui só o `mogrify`, que master não cobria."""
+        if isinstance(query, (bytes, bytearray)):
+            query = self._texto(query)
         if isinstance(query, str):
             query = self._reescrever(query)
         return super().mogrify(query, *args, **kwargs)
