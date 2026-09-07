@@ -8321,6 +8321,314 @@
     "x-privilegio": "rls:visibilidade|conteudo.apagar_tudo"
    }
   },
+  "/api/itens/{id}/publicacao": {
+   "get": {
+    "tags": [
+     "publicacao"
+    ],
+    "summary": "Ver Publicacao",
+    "operationId": "ver_publicacao_api_itens__id__publicacao_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "anyOf": [
+          {
+           "$ref": "#/components/schemas/Publicacao"
+          },
+          {
+           "type": "null"
+          }
+         ],
+         "title": "Response Ver Publicacao Api Itens  Id  Publicacao Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "publicacao"
+    ],
+    "summary": "Publicar",
+    "operationId": "publicar_api_itens__id__publicacao_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PublicacaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Publicacao"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   },
+   "delete": {
+    "tags": [
+     "publicacao"
+    ],
+    "summary": "Despublicar",
+    "operationId": "despublicar_api_itens__id__publicacao_delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/itens/{id}/publicacao/visualizacoes": {
+   "get": {
+    "tags": [
+     "publicacao"
+    ],
+    "summary": "Ver Visualizacoes",
+    "operationId": "ver_visualizacoes_api_itens__id__publicacao_visualizacoes_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "dias",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 30,
+       "title": "Dias"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VisualizacaoDia"
+         },
+         "title": "Response Ver Visualizacoes Api Itens  Id  Publicacao Visualizacoes Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/itens/{id}/publicacao/exportacao": {
+   "get": {
+    "tags": [
+     "publicacao"
+    ],
+    "summary": "Exportar",
+    "operationId": "exportar_api_itens__id__publicacao_exportacao_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/p/{inquilino}/{slug}": {
+   "get": {
+    "tags": [
+     "publicacao"
+    ],
+    "summary": "Documento Publico",
+    "operationId": "documento_publico_api_p__inquilino___slug__get",
+    "parameters": [
+     {
+      "name": "inquilino",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Inquilino"
+      }
+     },
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Slug"
+      }
+     },
+     {
+      "name": "link",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Link"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DocumentoPublico"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
   "/ogc/records": {
    "get": {
     "tags": [
@@ -12882,6 +13190,80 @@
     ],
     "title": "ConviteResolvido"
    },
+   "DocumentoPublico": {
+    "properties": {
+     "item_id": {
+      "type": "string",
+      "title": "Item Id"
+     },
+     "titulo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Titulo"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "resumo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Resumo"
+     },
+     "versao_publicada": {
+      "type": "integer",
+      "title": "Versao Publicada"
+     },
+     "corpo": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Corpo"
+     },
+     "dominios_permitidos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Dominios Permitidos"
+     },
+     "token": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Token"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "item_id",
+     "titulo",
+     "tipo",
+     "resumo",
+     "versao_publicada",
+     "corpo",
+     "dominios_permitidos",
+     "token"
+    ],
+    "title": "DocumentoPublico"
+   },
    "Dono": {
     "properties": {
      "id": {
@@ -16404,6 +16786,124 @@
     ],
     "title": "Provedores"
    },
+   "Publicacao": {
+    "properties": {
+     "item_id": {
+      "type": "string",
+      "title": "Item Id"
+     },
+     "slug": {
+      "type": "string",
+      "title": "Slug"
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "dominios_permitidos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Dominios Permitidos"
+     },
+     "token_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Token Id"
+     },
+     "publicado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Publicado Em"
+     },
+     "atualizado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atualizado Em"
+     },
+     "camadas_citadas": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Camadas Citadas"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "item_id",
+     "slug",
+     "url",
+     "dominios_permitidos",
+     "token_id",
+     "publicado_em",
+     "atualizado_em",
+     "camadas_citadas"
+    ],
+    "title": "Publicacao"
+   },
+   "PublicacaoEntrada": {
+    "properties": {
+     "slug": {
+      "type": "string",
+      "maxLength": 60,
+      "minLength": 2,
+      "title": "Slug"
+     },
+     "dominios_permitidos": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 20
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dominios Permitidos"
+     },
+     "versao": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Versao"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "slug"
+    ],
+    "title": "PublicacaoEntrada"
+   },
    "PublicarCamadaEntrada": {
     "properties": {
      "titulo": {
@@ -17993,6 +18493,25 @@
      "corpo"
     ],
     "title": "VersaoCompleta"
+   },
+   "VisualizacaoDia": {
+    "properties": {
+     "dia": {
+      "type": "string",
+      "title": "Dia"
+     },
+     "visualizacoes": {
+      "type": "integer",
+      "title": "Visualizacoes"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "dia",
+     "visualizacoes"
+    ],
+    "title": "VisualizacaoDia"
    },
    "app__auth__modelos__LoteEntrada": {
     "properties": {
