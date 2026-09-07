@@ -3,6 +3,20 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item UX-02-telas-entrada-conta-convite: entrada, 2FA, conta, convite e redefinição polidos; interface em pt-BR, en e es)
+
+Trilha de interface. As telas públicas (/entrar, /aceitar-convite, /redefinir-senha) ganharam erro por campo
+(`js/base/campos.js`: aria-invalid + mensagem ligada por aria-describedby, foco no primeiro inválido), botão ocupado
+durante a chamada, aviso de Caps Lock, estado de servidor fora com "tentar de novo" e estados de token inválido/expirado
+como `<plat-estado>` nomeado. O idioma passou a ser resolvido em `js/base/i18n.js` (URL > localStorage > <html lang> >
+navegador > pt-BR), com o seletor `<plat-idioma>` nas telas públicas e a preferência da conta aplicada por
+`exigirSessao`; `web/js/i18n/en.json` e `es.json` completos (995 chaves, paridade de chaves e de variáveis provada por
+`tests/unit/test_i18n_paridade.py`); `ORG_IDIOMAS` passa a admitir os três. /conta: passos numerados do 2FA, estado
+de carregando nas tabelas, troca de idioma aplicada na hora. e2e `tests/e2e/test_entrada_conta.py`: fluxo inteiro
+entrar → 2FA → conta → sair com capturas em 360 e 1280, axe sem violação séria em cada tela, textos em en/es, e a
+refutação (campo inválido nunca some sem mensagem) em entrada, código 2FA, convite e redefinição. Conserto de passagem:
+`<plat-tabela>` usa aria-label em vez de caption oculta (traço de 1 px no canto da tabela).
+
 ## turno 8, setembro de 2026 (item UX-01-sistema-de-design: tokens únicos, componentes base, guia viva, guarda de literal)
 
 Trilha de interface. `web/estilo/tokens.css` vira a única fonte de cor, tipo, espaço, raio, sombra e foco (primitivos
