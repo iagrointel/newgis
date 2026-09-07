@@ -120,7 +120,8 @@ def _item_stac(
             "raster:bands": raster_bandas,
         },
         "bruto": _asset_objeto(objetos_ref["bruto"], ["source"], "arquivo original enviado", "application/octet-stream"),
-        "miniatura": _asset_objeto(objetos_ref["miniatura"], ["thumbnail"], "miniatura 600x400", "image/png"),
+        "miniatura": _asset_objeto(objetos_ref["miniatura"], ["thumbnail"], "miniatura 600x400",
+                                   "image/png"),
     }
     return {
         "type": "Feature",
