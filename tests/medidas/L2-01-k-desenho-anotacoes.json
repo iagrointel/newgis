@@ -1,0 +1,32 @@
+{
+ "item": "L2-01-k-desenho-anotacoes",
+ "medidas": {
+  "salvar_5000_desenhos_ms": {
+   "valor": 190,
+   "unidade": "ms",
+   "comando": "pytest tests/api/catalogo/test_desenho_anotacoes.py::test_5000_desenhos_salvam_reabrem_identicos_e_o_tempo_fica_registrado"
+  },
+  "reabrir_5000_desenhos_ms": {
+   "valor": 39,
+   "unidade": "ms",
+   "comando": "pytest tests/api/catalogo/test_desenho_anotacoes.py::test_5000_desenhos_salvam_reabrem_identicos_e_o_tempo_fica_registrado"
+  },
+  "carga_1min": {
+   "valor": 14.12,
+   "unidade": "média de 1 min (12 núcleos)",
+   "comando": "pytest tests/api/catalogo/test_desenho_anotacoes.py::test_5000_desenhos_salvam_reabrem_identicos_e_o_tempo_fica_registrado"
+  },
+  "ram_livre_gb": {
+   "valor": 7.8,
+   "unidade": "GB",
+   "comando": "pytest tests/api/catalogo/test_desenho_anotacoes.py::test_5000_desenhos_salvam_reabrem_identicos_e_o_tempo_fica_registrado"
+  },
+  "medido_em": {
+   "valor": "2026-09-07T18:46:13Z",
+   "unidade": "UTC",
+   "comando": "pytest tests/api/catalogo/test_desenho_anotacoes.py::test_5000_desenhos_salvam_reabrem_identicos_e_o_tempo_fica_registrado"
+  }
+ },
+ "gerado_em": "2026-09-07T18:46:13Z",
+ "git_sha": "5fd1a941"
+}

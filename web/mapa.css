@@ -224,3 +224,15 @@ body.mapa .tabela-popup dd { margin: 0 0 .3rem 0; }
 body.mapa .tabela-estatisticas th,
 body.mapa .tabela-estatisticas td { padding: .2rem .4rem; text-align: right; }
 body.mapa .tabela-estatisticas th[scope="row"] { text-align: left; }
+
+/* desenho e anotações (item L2-01-k-desenho-anotacoes) */
+body.mapa .desenho-ferramentas .botao-mini[data-desenho] { min-width: 3.6rem; }
+body.mapa .desenho-estilo { align-items: center; }
+body.mapa .desenho-estilo input[type=number] { width: 3.4rem; }
+body.mapa .desenho-estilo input[type=range] { width: 5rem; }
+body.mapa #lista-desenho, body.mapa #lista-anotacoes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .3rem; max-height: 14rem; overflow: auto; }
+body.mapa .anotacao-item { border: 1px solid var(--borda); border-radius: var(--raio); padding: .3rem .4rem; font-size: .8rem; }
+body.mapa .anotacao-item[data-resolvido="1"] { opacity: .55; }
+body.mapa .anotacao-cabecalho { font-size: .72rem; color: var(--fraco); display: flex; gap: .3rem; }
+body.mapa .anotacao-item p { margin: .2rem 0; white-space: pre-wrap; }
+body.mapa #anotacao-texto { width: 100%; resize: vertical; }

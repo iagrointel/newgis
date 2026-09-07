@@ -62,6 +62,58 @@
           <p id="medicao-saida" class="saida" aria-live="polite"></p>
         </section>
 
+        <section class="bloco" id="bloco-desenho">
+          <h2 data-i18n="mapa.desenho">Desenho</h2>
+          <div class="linha desenho-ferramentas" role="group" aria-label="ferramentas de desenho">
+            <button type="button" class="botao-mini" data-desenho="ponto" data-i18n="mapa.desenho_ponto">Ponto</button>
+            <button type="button" class="botao-mini" data-desenho="linha" data-i18n="mapa.desenho_linha">Linha</button>
+            <button type="button" class="botao-mini" data-desenho="poligono" data-i18n="mapa.desenho_poligono">Polígono</button>
+            <button type="button" class="botao-mini" data-desenho="retangulo" data-i18n="mapa.desenho_retangulo">Retângulo</button>
+            <button type="button" class="botao-mini" data-desenho="circulo" data-i18n="mapa.desenho_circulo">Círculo</button>
+            <button type="button" class="botao-mini" data-desenho="texto" data-i18n="mapa.desenho_texto">Texto</button>
+            <button type="button" class="botao-mini" data-desenho="seta" data-i18n="mapa.desenho_seta">Seta</button>
+            <button type="button" id="btn-desenho-parar" class="botao-mini" data-i18n="mapa.desenho_parar">Parar</button>
+            <button type="button" id="btn-desenho-editar-fim" class="botao-mini" data-i18n="mapa.desenho_editar_fim">Terminar edição</button>
+          </div>
+          <div class="linha desenho-estilo">
+            <label for="desenho-cor" data-i18n="mapa.desenho_cor">cor</label>
+            <input type="color" id="desenho-cor" value="#d98a2b">
+            <label for="desenho-opacidade" data-i18n="mapa.desenho_opacidade">opacidade</label>
+            <input type="range" id="desenho-opacidade" min="0" max="1" step="0.05" value="0.85">
+            <label for="desenho-largura" data-i18n="mapa.desenho_largura">largura</label>
+            <input type="number" id="desenho-largura" min="0" max="50" step="1" value="2">
+            <label for="desenho-fonte" data-i18n="mapa.desenho_tamanho_fonte">tam. fonte</label>
+            <input type="number" id="desenho-fonte" min="4" max="96" step="1" value="14">
+            <label><input type="checkbox" id="desenho-snap"> <span data-i18n="mapa.desenho_snap">encaixar (10 px)</span></label>
+          </div>
+          <ul id="lista-desenho" class="lista-camadas" aria-label="feições desenhadas"></ul>
+          <div class="linha">
+            <button type="button" id="btn-desenho-limpar" class="botao secundario" data-i18n="mapa.desenho_limpar">Limpar tudo</button>
+            <button type="button" id="btn-desenho-salvar" class="botao" data-i18n="mapa.desenho_salvar">Salvar no mapa</button>
+            <button type="button" id="btn-desenho-promover" class="botao" data-i18n="mapa.desenho_promover">Promover a camada</button>
+          </div>
+          <div class="linha">
+            <label for="desenho-importar" class="botao secundario" data-i18n="mapa.desenho_importar">Importar GeoJSON/KML</label>
+            <input type="file" id="desenho-importar" accept=".geojson,.json,.kml" hidden>
+          </div>
+          <p id="desenho-saida" class="saida" aria-live="polite"></p>
+        </section>
+
+        <section class="bloco" id="bloco-anotacoes">
+          <h2 data-i18n="mapa.anotacoes">Anotações</h2>
+          <button type="button" id="btn-anotar" class="botao secundario" aria-pressed="false"
+                  data-i18n="mapa.anotacao_modo">Clicar numa feição para anotar</button>
+          <div id="anotacoes-corpo" hidden>
+          <p id="anotacoes-alvo" class="saida"></p>
+          <ul id="lista-anotacoes" class="lista-camadas" aria-label="anotações da feição"></ul>
+          <label for="anotacao-grupo" data-i18n="mapa.anotacao_grupo">grupo</label>
+          <select id="anotacao-grupo"></select>
+          <label for="anotacao-texto" data-i18n="mapa.anotacao_texto">comentário</label>
+          <textarea id="anotacao-texto" maxlength="4000" rows="2"></textarea>
+          <button type="button" id="btn-anotacao-enviar" class="botao" data-i18n="mapa.anotacao_enviar">Comentar</button>
+          </div>
+        </section>
+
         <section class="bloco">
           <h2 data-i18n="mapa.impressao">Impressão</h2>
           <div class="linha">
@@ -117,6 +169,8 @@
 </div>
 <script src="/static/vendor/maplibre-gl-4.7.1.js"></script>
 <script src="/static/vendor/pmtiles-4.5.0.js"></script>
+<script src="/static/vendor/terra-draw/terra-draw-1.33.0.js"></script>
+<script src="/static/vendor/terra-draw/terra-draw-maplibre-gl-adapter-1.4.1.js"></script>
 <script type="module" src="/static/js/mapa/mapa.js"></script>
 </body>
 </html>

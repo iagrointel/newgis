@@ -558,6 +558,7 @@ def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteu
     _publicar_tipo(auth, corpo.tipo)
     tipos.validar(corpo.tipo, corpo.dados)
     documento.validar_grafo(corpo.tipo, corpo.dados)
+    documento.validar_desenho(corpo.tipo, corpo.dados)
     _classificacao(auth, corpo.classificacao, novo=True)
     iid = str(uuid.UUID(corpo.id)) if corpo.id else str(uuid.uuid4())
     ext_sql, ext_params = _extent_sql(corpo.extent)
@@ -694,6 +695,7 @@ def editar_item(
     if "dados" in campos:
         tipos.validar(r["tipo"], dados)
         documento.validar_grafo(r["tipo"], dados)
+        documento.validar_desenho(r["tipo"], dados)
     if "classificacao" in campos:
         _classificacao(auth, campos["classificacao"], novo=False)
     cats = (

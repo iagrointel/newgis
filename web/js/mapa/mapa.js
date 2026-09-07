@@ -31,6 +31,9 @@ import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
 import { criarTabela } from './tabela.js';
+import { Desenho, kmlParaGeoJSON } from './desenho.js';
+import { PainelAnotacoes } from './anotacoes.js';
+import { alterar, enviar, mensagemDe, obter } from '../base/api.js';
 
 const BASES = [
   { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
@@ -193,6 +196,103 @@ async function iniciar(usuario) {
     el('impressao-saida').textContent = t('mapa.impressao_pronta', { formato: 'PDF', kb: Math.round(r.bytes / 1024) });
   });
 
+  // --- desenho e anotações (item L2-01-k-desenho-anotacoes)
+  const desenho = new Desenho(map, maplibregl, el('bloco-desenho'));
+  const params = new URLSearchParams(location.search);
+  let mapaId = params.get('mapa');
+
+  const listaDesenho = el('lista-desenho');
+  const redesenharLista = (features) => {
+    limpar(listaDesenho);
+    features.forEach((f, i) => {
+      const medida = desenho.medidaDe(f);
+      listaDesenho.append(h('li', { class: 'camada-item', dataset: { desenho: f.id } },
+        h('span', { class: 'camada-titulo' }, `${f.properties.tipo_desenho}${medida ? ' · ' + medida : ''}`),
+        h('button', {
+          type: 'button', class: 'botao-mini',
+          'aria-label': t(desenho.editando() === f.id ? 'mapa.desenho_editar_fim' : 'mapa.desenho_editar'),
+          onclick: () => (desenho.editando() === f.id ? desenho.terminarEdicao() : desenho.editar(f.id)),
+        }, desenho.editando() === f.id ? '✓' : '✎'),
+        h('button', { type: 'button', class: 'botao-mini', 'aria-label': t('mapa.desenho_mover_cima'), onclick: () => desenho.mover(f.id, -1) }, '↑'),
+        h('button', { type: 'button', class: 'botao-mini', 'aria-label': t('mapa.desenho_mover_baixo'), onclick: () => desenho.mover(f.id, 1) }, '↓'),
+        h('button', { type: 'button', class: 'botao-mini', 'aria-label': t('mapa.desenho_apagar'), onclick: () => desenho.apagar(f.id) }, '×')));
+    });
+  };
+  desenho.aoMudar(redesenharLista);
+
+  for (const botao of document.querySelectorAll('[data-desenho]')) {
+    botao.addEventListener('click', () => desenho.iniciarModo(botao.dataset.desenho));
+  }
+  el('btn-desenho-parar').addEventListener('click', () => desenho.pararModo());
+  el('btn-desenho-limpar').addEventListener('click', () => desenho.limparTudo());
+  const atualizarEstiloAtual = () => desenho.definirEstilo({
+    cor: el('desenho-cor').value,
+    contorno: '#10161a',
+    opacidade: Number(el('desenho-opacidade').value),
+    largura: Number(el('desenho-largura').value),
+    tamanho_fonte: Number(el('desenho-fonte').value),
+  });
+  ['desenho-cor', 'desenho-opacidade', 'desenho-largura', 'desenho-fonte'].forEach((id) => el(id).addEventListener('input', atualizarEstiloAtual));
+  atualizarEstiloAtual();
+  el('desenho-snap').addEventListener('change', (ev) => desenho.definirSnap(ev.target.checked));
+  el('btn-desenho-editar-fim').addEventListener('click', () => desenho.terminarEdicao());
+
+  const salvarDesenho = async () => {
+    const corpo = { esquema_versao: 1, corpo: { desenho: { features: desenho.lista() } } };
+    const r = mapaId ? await alterar(`/api/itens/${mapaId}`, { dados: corpo })
+      : await enviar('/api/itens', { tipo: 'mapa', titulo: `${t('mapa.titulo')} ${new Date().toLocaleString('pt-BR')}`, dados: corpo });
+    if (r.status >= 400) { el('desenho-saida').textContent = mensagemDe(r); return; }
+    if (!mapaId) {
+      mapaId = r.json.id;
+      const novaUrl = new URL(location.href);
+      novaUrl.searchParams.set('mapa', mapaId);
+      history.replaceState(null, '', novaUrl);
+    }
+    el('desenho-saida').textContent = t('mapa.desenho_salvo');
+  };
+  el('btn-desenho-salvar').addEventListener('click', salvarDesenho);
+
+  el('btn-desenho-promover').addEventListener('click', async () => {
+    if (!mapaId) await salvarDesenho();
+    if (!mapaId) return;
+    const titulo = window.prompt(t('mapa.desenho_promover_pedir_titulo'), `${t('mapa.desenho')} ${new Date().toLocaleDateString('pt-BR')}`);
+    if (!titulo) return;
+    const r = await enviar(`/api/mapa/${mapaId}/desenho/promover`, { titulo });
+    if (r.status >= 400) { el('desenho-saida').textContent = mensagemDe(r); return; }
+    el('desenho-saida').textContent = t('mapa.desenho_promovido', { titulo, n: r.json.n_feicoes });
+    await arvore.carregar();
+  });
+
+  el('desenho-importar').addEventListener('change', async (ev) => {
+    const arquivo = ev.target.files[0];
+    if (!arquivo) return;
+    const texto = await arquivo.text();
+    try {
+      const colecao = arquivo.name.toLowerCase().endsWith('.kml') ? kmlParaGeoJSON(texto) : JSON.parse(texto);
+      const n = desenho.importarGeoJSON(colecao);
+      el('desenho-saida').textContent = t('mapa.desenho_importado', { n });
+    } catch (e) {
+      el('desenho-saida').textContent = `${t('mapa.erro_carregar')}: ${(e && e.message) || e}`;
+    }
+    ev.target.value = '';
+  });
+
+  const painelAnotacoes = new PainelAnotacoes(map, catalogo, {
+    btnModo: el('btn-anotar'), corpo: el('anotacoes-corpo'), alvo: el('anotacoes-alvo'),
+    lista: el('lista-anotacoes'), selGrupo: el('anotacao-grupo'), campoTexto: el('anotacao-texto'),
+    btnEnviar: el('btn-anotacao-enviar'),
+  });
+
+  if (mapaId) {
+    try {
+      const r = await obter(`/api/itens/${mapaId}`);
+      if (r.status === 200) {
+        const features = ((r.json.dados || {}).corpo || {}).desenho?.features || [];
+        if (features.length) desenho.carregarFeatures(features);
+      }
+    } catch { /* documento novo ou inexistente: começa vazio, sem quebrar a tela */ }
+  }
+
   map.on('error', (ev) => {
     const msg = (ev && ev.error && ev.error.message) || String(ev);
     el('aviso').erro(`${t('mapa.erro_carregar')}: ${msg}`);
@@ -210,6 +310,8 @@ async function iniciar(usuario) {
   // tabela de atributos (L2-01-g): painel acoplado ao mesmo mapa — a seleção da tabela realça a feição e
   // a seleção no mapa filtra a tabela; as duas leem a MESMA chave primária da camada.
   await criarTabela(map, el('aviso')).iniciar();
+  // ponto de inspeção do e2e, nunca de negócio
+  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, desenho, painelAnotacoes, get mapaId() { return mapaId; } };
   document.body.dataset.pronto = '1';
 }
 

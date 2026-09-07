@@ -8,6 +8,7 @@ ser https. Para o e2e exercitar escrita contra este servidor: certificado autoas
 subjectAltName=IP:127.0.0.1`), `--certificado`/`--chave`, PLAT_URL_PUBLICA=https://127.0.0.1:<porta> no ambiente do
 servidor e `--base-url https://127.0.0.1:<porta>` no pytest (tests/e2e/conftest.py já ignora erro de certificado
 quando o host é 127.0.0.1)."""
+Uso: set -a; source <env da trilha>; set +a; venv/bin/python scripts/servir_local.py --porta 8157"""
 
 import argparse
 import sys
@@ -36,3 +37,5 @@ if __name__ == "__main__":
     a = p.parse_args()
     uvicorn.run(servidor, host=a.host, port=a.porta, log_level="warning", access_log=False,
                 ssl_certfile=a.certificado, ssl_keyfile=a.chave)
+    a = p.parse_args()
+    uvicorn.run(servidor, host=a.host, port=a.porta, log_level="warning", access_log=False)
