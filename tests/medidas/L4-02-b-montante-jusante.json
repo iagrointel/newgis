@@ -1,9 +1,9 @@
 {
   "p95_jusante": {
-    "carga_1min": 10.15,
+    "carga_1min": 12.08,
     "medido": false,
     "motivo": "carga acima de 8: o brief proíbe medir tempo sob disputa",
-    "ram_livre_gb": 4.0
+    "ram_livre_gb": 5.0
   },
   "universo_cooperativa": {
     "medido": true,
