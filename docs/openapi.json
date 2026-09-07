@@ -10902,7 +10902,7 @@
      "rede de utilidades — topologia"
     ],
     "summary": "Tracar Rede",
-    "description": "Traça `tipo=conectado` (tudo que se alcança do(s) ponto(s) de partida, respeitando a traversabilidade\nde cada dispositivo e as barreiras) ou `tipo=subrede` (o mesmo, mas parando em qualquer controlador de\noutra subrede — hoje, categoria `transformacao` do pacote); ou, item L4-02-d-lacos-e-caminho-curto:\n`tipo=lacos` (ciclos por componente biconexo, `pgr_biconnectedComponents`), `tipo=isolados` (elementos sem\ncaminho a nenhuma feição da categoria `categoria_controlador`, padrão `fonte`, `pgr_connectedComponents`)\nou `tipo=caminho_curto` (origem em `pontos_partida[0]`, `destino`, custo = `atributo_custo` ou o\ncomprimento geodésico por padrão; `k` alternativas por `pgr_ksp` quando `k>1`); ou, item\nL4-18-rede-simples-trace-network, `tipo=montante`/`tipo=jusante`, que andam pela DIREÇÃO DE FLUXO\ndeclarada no atributo `direcao_fluxo` de cada trecho (digitalizada/contra/indeterminada) e param, com\naviso por trecho, em toda aresta indeterminada. Ponto de partida, destino\ne barreira são a mesma forma: feição+terminal ou coordenada com tolerância. Não exige `rede.editar`: é\nleitura sobre o índice já construído (mesmo privilégio de `topologia/alcance`), nunca grava nada na rede.\nSem `response_model` fixo porque cada `tipo` devolve um formato diferente (ver `docs/openapi.json` para o\nformato de cada um, e os testes de cada item para exemplo).",
+    "description": "Traça `tipo=conectado` (tudo que se alcança do(s) ponto(s) de partida, respeitando a traversabilidade\nde cada dispositivo e as barreiras) ou `tipo=subrede` (o mesmo, mas parando em qualquer controlador de\noutra subrede — hoje, categoria `transformacao` do pacote); ou, item L4-02-d-lacos-e-caminho-curto:\n`tipo=lacos` (ciclos por componente biconexo, `pgr_biconnectedComponents`), `tipo=isolados` (elementos sem\ncaminho a nenhuma feição da categoria `categoria_controlador`, padrão `fonte`, `pgr_connectedComponents`)\nou `tipo=caminho_curto` (origem em `pontos_partida[0]`, `destino`, custo = `atributo_custo` ou o\ncomprimento geodésico por padrão; `k` alternativas por `pgr_ksp` quando `k>1`); ou, item\nitens L4-18-rede-simples-trace-network e L4-02-b-montante-jusante, `tipo=montante`/`tipo=jusante`: numa\nrede com controlador de subrede em tier hierárquico o sentido vem da DISTÂNCIA AO CONTROLADOR (jusante de\num ponto = o que só chega ao controlador passando por ele); sem controlador, vem da DIREÇÃO DE FLUXO\ndeclarada no atributo `direcao_fluxo` de cada trecho (digitalizada/contra/indeterminada), que para, com\naviso por trecho, em toda aresta indeterminada. `origem_direcao` no pedido impõe um dos dois, e a\nresposta sempre diz qual valeu; em malha (tier particionado) sem atributo, e em laço, a resposta é\n`direcao='indeterminado'` com o motivo e os nós do laço, nunca um sentido arbitrado. Ponto de partida, destino\ne barreira são a mesma forma: feição+terminal ou coordenada com tolerância. Não exige `rede.editar`: é\nleitura sobre o índice já construído (mesmo privilégio de `topologia/alcance`), nunca grava nada na rede.\nSem `response_model` fixo porque cada `tipo` devolve um formato diferente (ver `docs/openapi.json` para o\nformato de cada um, e os testes de cada item para exemplo).",
     "operationId": "tracar_rede_api_rede__rede_id__tracar_post",
     "parameters": [
      {
@@ -19793,6 +19793,12 @@
       "minLength": 1,
       "title": "Categoria Controlador",
       "default": "fonte"
+     },
+     "origem_direcao": {
+      "type": "string",
+      "pattern": "^(auto|controlador|atributo)$",
+      "title": "Origem Direcao",
+      "default": "auto"
      }
     },
     "type": "object",
