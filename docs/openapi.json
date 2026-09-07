@@ -9227,6 +9227,92 @@
     "x-privilegio": "conteudo.registrar_fonte"
    }
   },
+  "/api/csw/buscar": {
+   "post": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Buscar",
+    "operationId": "buscar_api_csw_buscar_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BuscaEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BuscaSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar"
+   }
+  },
+  "/api/csw/conexoes": {
+   "post": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Criar Conexoes",
+    "operationId": "criar_conexoes_api_csw_conexoes_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CriarEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CriarSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.registrar_fonte"
+   }
+  },
   "/api/arquivos/_varredura": {
    "get": {
     "tags": [
@@ -11713,6 +11799,114 @@
     ],
     "title": "AmostrasResultado"
    },
+   "BuscaEntrada": {
+    "properties": {
+     "url": {
+      "type": "string",
+      "maxLength": 2048,
+      "minLength": 1,
+      "title": "Url",
+      "description": "endereço do CSW 2.0.2"
+     },
+     "texto": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Texto"
+     },
+     "bbox": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array",
+        "maxItems": 4,
+        "minItems": 4
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bbox",
+      "description": "[oeste, sul, leste, norte] em graus"
+     },
+     "inicio": {
+      "type": "integer",
+      "maximum": 1000000.0,
+      "minimum": 1.0,
+      "title": "Inicio",
+      "default": 1
+     },
+     "maximo": {
+      "type": "integer",
+      "maximum": 20.0,
+      "minimum": 1.0,
+      "title": "Maximo",
+      "default": 10
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "url"
+    ],
+    "title": "BuscaEntrada"
+   },
+   "BuscaSaida": {
+    "properties": {
+     "url_pedida": {
+      "type": "string",
+      "title": "Url Pedida"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "devolvidos": {
+      "type": "integer",
+      "title": "Devolvidos"
+     },
+     "inicio": {
+      "type": "integer",
+      "title": "Inicio"
+     },
+     "proximo": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Proximo"
+     },
+     "registros": {
+      "items": {
+       "$ref": "#/components/schemas/RegistroSaida"
+      },
+      "type": "array",
+      "title": "Registros"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "url_pedida",
+     "total",
+     "devolvidos",
+     "inicio",
+     "registros"
+    ],
+    "title": "BuscaSaida"
+   },
    "CategoriaNo": {
     "properties": {
      "id": {
@@ -12184,6 +12378,129 @@
      "saude"
     ],
     "title": "ConexaoCartao"
+   },
+   "ConexaoCriada": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "modo": {
+      "type": "string",
+      "title": "Modo"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "saude": {
+      "type": "string",
+      "title": "Saude"
+     },
+     "saude_verificada_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Saude Verificada Em"
+     },
+     "estado_saude": {
+      "type": "string",
+      "title": "Estado Saude",
+      "default": "nunca_testada"
+     },
+     "disponibilidade_30d_pct": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Disponibilidade 30D Pct"
+     },
+     "disponibilidade_30d_total": {
+      "type": "integer",
+      "title": "Disponibilidade 30D Total",
+      "default": 0
+     },
+     "config": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Config"
+     },
+     "tem_credencial": {
+      "type": "boolean",
+      "title": "Tem Credencial"
+     },
+     "saude_mensagem": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Saude Mensagem"
+     },
+     "saude_latencia_ms": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Saude Latencia Ms"
+     },
+     "dono": {
+      "$ref": "#/components/schemas/Dono"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "atualizado_em": {
+      "type": "string",
+      "title": "Atualizado Em"
+     },
+     "criada": {
+      "type": "boolean",
+      "title": "Criada"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "tipo",
+     "modo",
+     "nome",
+     "url",
+     "saude",
+     "config",
+     "tem_credencial",
+     "dono",
+     "criado_em",
+     "atualizado_em",
+     "criada"
+    ],
+    "title": "ConexaoCriada"
    },
    "ConexaoEditar": {
     "properties": {
@@ -12881,6 +13198,73 @@
      "motivo"
     ],
     "title": "ConviteResolvido"
+   },
+   "CriarEntrada": {
+    "properties": {
+     "url": {
+      "type": "string",
+      "maxLength": 2048,
+      "minLength": 1,
+      "title": "Url"
+     },
+     "identificador": {
+      "type": "string",
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Identificador"
+     },
+     "tipos": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipos",
+      "description": "subconjunto de wms/wfs/wmts; padrão = todos"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "url",
+     "identificador"
+    ],
+    "title": "CriarEntrada"
+   },
+   "CriarSaida": {
+    "properties": {
+     "registro": {
+      "$ref": "#/components/schemas/RegistroSaida"
+     },
+     "conexoes": {
+      "items": {
+       "$ref": "#/components/schemas/ConexaoCriada"
+      },
+      "type": "array",
+      "title": "Conexoes"
+     },
+     "avisos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Avisos"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "registro",
+     "conexoes",
+     "avisos"
+    ],
+    "title": "CriarSaida"
    },
    "Dono": {
     "properties": {
@@ -16512,6 +16896,154 @@
     ],
     "title": "RedefinicaoSolicitarSaida"
    },
+   "RegistroSaida": {
+    "properties": {
+     "identificador": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Identificador"
+     },
+     "titulo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Titulo"
+     },
+     "resumo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Resumo"
+     },
+     "organizacao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Organizacao"
+     },
+     "data_do_dado": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data Do Dado"
+     },
+     "data_metadado": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data Metadado"
+     },
+     "palavras_chave": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Palavras Chave"
+     },
+     "bbox": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bbox"
+     },
+     "licenca": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Licenca"
+     },
+     "restricoes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Restricoes"
+     },
+     "frequencia": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Frequencia"
+     },
+     "servicos": {
+      "items": {
+       "$ref": "#/components/schemas/ServicoSaida"
+      },
+      "type": "array",
+      "title": "Servicos"
+     },
+     "sem_servico": {
+      "type": "boolean",
+      "title": "Sem Servico"
+     },
+     "avisos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Avisos"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "palavras_chave",
+     "restricoes",
+     "servicos",
+     "sem_servico",
+     "avisos"
+    ],
+    "title": "RegistroSaida"
+   },
    "RelacaoEntrada": {
     "properties": {
      "destino": {
@@ -16938,6 +17470,46 @@
      "senha_temporaria"
     ],
     "title": "SenhaTemporaria"
+   },
+   "ServicoSaida": {
+    "properties": {
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "camada": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Camada"
+     },
+     "url_declarada": {
+      "type": "string",
+      "title": "Url Declarada"
+     },
+     "protocolo": {
+      "type": "string",
+      "title": "Protocolo"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "tipo",
+     "url",
+     "url_declarada",
+     "protocolo"
+    ],
+    "title": "ServicoSaida"
    },
    "Sessao": {
     "properties": {
