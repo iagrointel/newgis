@@ -692,6 +692,27 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/rede/{rede_id}/pacote"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: {"esquema": "plat.rede.pacote"},
     ),
+    # ---- L4-04-a controlador de subrede e tiers: tudo em /api/rede/{rede_id} aponta a rede de B e tem de
+    # dar 404 (a rede nem é vista). O id de controlador/subrede é forjado: se a rede fosse alcançável, a
+    # resposta mudaria de 404 de rede para 404 de controlador — e mesmo isso vazaria a existência da rede.
+    ("POST", "/api/rede/{rede_id}/controlador"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/controlador",
+        lambda p: {"feicao_id": "00000000-0000-4000-8000-000000000001", "subrede": "zt", "tier": "unico"},
+    ),
+    ("GET", "/api/rede/{rede_id}/controladores"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/controladores"),
+    ("GET", "/api/rede/{rede_id}/controlador/{controlador_id}"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/controlador/00000000-0000-4000-8000-000000000001"),
+    ("DELETE", "/api/rede/{rede_id}/controlador/{controlador_id}"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/controlador/00000000-0000-4000-8000-000000000001"),
+    ("GET", "/api/rede/{rede_id}/subredes"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/subredes"),
+    ("POST", "/api/rede/{rede_id}/subredes/{subrede_id}/atualizar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/subredes/00000000-0000-4000-8000-000000000001/atualizar",
+        lambda p: {},
+    ),
+    ("GET", "/api/rede/{rede_id}/tiers"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/tiers"),
+    ("POST", "/api/rede/{rede_id}/controladores/importar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/controladores/importar", lambda p: {}),
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
     ("PUT", "/api/org"): Caso(
         lambda p: "/api/org", _corpo_org_atual, proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
