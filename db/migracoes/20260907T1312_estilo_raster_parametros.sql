@@ -1,4 +1,10 @@
-{
+-- Extensao do documento de estilo raster (item L2-02-f-estilo-raster): parametros_raster ganha
+-- bandas (composicao RGB/banda unica), resampling, nodata e esticamento (o metodo que o editor usou
+-- para pedir o rescale a /estatisticas.json, item L1-02) -- ver docs/esquemas/estilo-v1-fonte.json.
+-- Correcao em arquivo NOVO (regra do brief comum): a migracao 20260907T1148_estilo_modelo.sql ja foi
+-- aplicada e nao pode ser editada. Idempotente (UPDATE puro).
+
+UPDATE plat.tipo_item SET esquema = $esquema_estilo${
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Estilo de camada em duas partes (ADR do item L2-02-a; C2 do L2_CONCEITO): `maplibre` = layers da MapLibre Style Spec v8 puras, validadas pelo pacote oficial no servidor; `plat_construtor` = o que o editor precisa para reabrir o estilo (tipo, campo, método, cortes, rampa, símbolo, rótulos, faixa de escala, transparência).",
@@ -262,20 +268,47 @@
               "additionalProperties": false,
               "description": "tipo raster: vocabulário de parâmetros de URL do TiTiler (C2 do L2_CONCEITO; L1-02 documenta)",
               "properties": {
-                "bandas": {
-                  "description": "composição de bandas para o ladrilho (1 banda = cinza/rampa; 3 = RGB); índice 1-based",
-                  "items": {
-                    "maximum": 64,
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "maxItems": 4,
-                  "minItems": 1,
-                  "type": "array"
-                },
                 "colormap_name": {
                   "maxLength": 64,
                   "type": "string"
+                },
+                "expression": {
+                  "maxLength": 500,
+                  "type": "string"
+                },
+                "rescale": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 2,
+                  "minItems": 2,
+                  "type": "array"
+                },
+                "bandas": {
+                  "description": "composição de bandas para o ladrilho (1 banda = cinza/rampa; 3 = RGB); índice 1-based",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 64
+                  },
+                  "minItems": 1,
+                  "maxItems": 4,
+                  "type": "array"
+                },
+                "resampling": {
+                  "description": "reamostragem pedida pelo editor; L1-02 ainda só serve o padrão do rio-tiler (vizinho) — 'bilinear' fica registrado no documento para quando o ladrilho aceitar (ver docs/PARIDADE.md)",
+                  "enum": [
+                    "vizinho",
+                    "bilinear"
+                  ],
+                  "type": "string"
+                },
+                "nodata": {
+                  "description": "nodata declarado pelo editor para documentação/legenda; o ladrilho usa o nodata do próprio COG (não há parâmetro de sobrescrita no L1-02 hoje)",
+                  "type": [
+                    "number",
+                    "null"
+                  ]
                 },
                 "esticamento": {
                   "additionalProperties": false,
@@ -295,33 +328,6 @@
                     "metodo"
                   ],
                   "type": "object"
-                },
-                "expression": {
-                  "maxLength": 500,
-                  "type": "string"
-                },
-                "nodata": {
-                  "description": "nodata declarado pelo editor para documentação/legenda; o ladrilho usa o nodata do próprio COG (não há parâmetro de sobrescrita no L1-02 hoje)",
-                  "type": [
-                    "number",
-                    "null"
-                  ]
-                },
-                "resampling": {
-                  "description": "reamostragem pedida pelo editor; L1-02 ainda só serve o padrão do rio-tiler (vizinho) — 'bilinear' fica registrado no documento para quando o ladrilho aceitar (ver docs/PARIDADE.md)",
-                  "enum": [
-                    "vizinho",
-                    "bilinear"
-                  ],
-                  "type": "string"
-                },
-                "rescale": {
-                  "items": {
-                    "type": "number"
-                  },
-                  "maxItems": 2,
-                  "minItems": 2,
-                  "type": "array"
                 }
               },
               "type": "object"
@@ -500,4 +506,5 @@
   ],
   "title": "documento de estilo do plat (estilo-v1)",
   "type": "object"
-}
+}$esquema_estilo$::jsonb
+WHERE nome = 'estilo';

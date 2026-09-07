@@ -458,13 +458,40 @@ Fonte: `developers.arcgis.com/documentation/common-data-types/renderer-objects.h
 | `heatmap` | `calor` | feito | só sobre geometria `ponto` (recusado fora disso); vira `layer` MapLibre `type: heatmap` |
 | — (sem equivalente Esri; construção nossa sobre `cluster` do próprio MapLibre) | `agrupamento` | feito | degraus por contagem acumulada (`point_count`); só sobre `ponto` |
 | `simple` com símbolo proporcional (`visualVariables` de tamanho) | `proporcional` | parcial | raio linear entre `raio_min`/`raio_max` no intervalo `[valor_min, valor_max]`; a Esri faz isso por `visualVariables` dentro de QUALQUER renderer, aqui é um tipo próprio — não compõe com `categoria`/`classes` nesta passagem |
-| — | `raster` | feito | parâmetros de URL do TiTiler (`rescale`, `colormap_name`, `expression`); a Esri usa `rasterRenderer` com um vocabulário bem maior (stretch, colormap por classe) — aqui é o subconjunto que o TiTiler expõe (item L1-02) |
+| — | `raster` | parcial | parâmetros de URL do serviço de ladrilho L1-02 (`bandas`, `rescale`, `colormap_name`, `expression`); a Esri usa `rasterRenderer` com vocabulário maior (stretch por classe, colormap JSON custom) — ver seção "Style Imagery (Map Viewer) → editor de estilo raster" abaixo (item L2-02-f) para o recorte completo, cláusula por cláusula |
 | `dotDensity` | — | fora | declarado fora no C2 do L2_CONCEITO |
 | `pieChart` | — | fora | idem |
 | `dictionary` | — | fora | idem (renderer militar/simbologia de dicionário) |
 | `predominance` | — | fora | idem |
 | `vectorField` | — | fora | idem (campo vetorial, ex. vento) |
 | `visualVariables` (opacidade, rotação por atributo) | `transparencia` (fixa, não por atributo) | parcial | sem variável visual por expressão nesta passagem |
+
+### Style Imagery (Map Viewer) → editor de estilo raster (item L2-02-f-estilo-raster)
+
+Fonte: `doc.arcgis.com/en/arcgis-online/create-maps/style-imagery-mv.htm` (ArcGIS Online) e
+`enterprise.arcgis.com/en/portal/11.4/use/style-imagery-mv.htm` (Enterprise), lidas em 07/09/2026. O painel
+"Style" da imagem no Map Viewer é um editor sobre o `rasterFunction`/renderer da camada; aqui é
+`plat_construtor.parametros_raster` compilado por `app/estilos/compilador.py` para os parâmetros de URL que
+`app/imagens/rotas_tiles.py` (L1-02) de fato lê. Fora do recorte: **funções raster encadeadas do Image
+Server** (Stretch → Convolution → Colormap em cadeia, com histórico de passos) — o L1-02 aplica um esticamento
+e uma rampa por vez, não uma cadeia.
+
+| Style Imagery (Map Viewer) | nosso | estado | nota |
+|---|---|---|---|
+| "Band Combination" (RGB, false color) | `parametros_raster.bandas` (1 a 4 índices) | feito | um `rescale` só, aplicado às bandas escolhidas — a Esri estica banda a banda; aqui é o subconjunto de um par (min,max) só |
+| "Stretch Type": Min-Max | `esticamento.metodo = "minmax"` + `rescale` calculado por `GET .../estatisticas.json` (min/max reais da cena, rio-tiler) | feito | o editor CHAMA a rota de estatísticas e grava o número; a legenda cita exatamente o que veio de lá, nunca recalcula |
+| "Stretch Type": Percent Clip (a Esri usa 2%/98% por padrão) | `esticamento.metodo = "percentil_2_98"` + `rescale` = `[percentil_2, percentil_98]` de `.../estatisticas.json` | feito | mesmos percentis que a Esri usa por padrão |
+| "Stretch Type": Standard Deviation | `esticamento.metodo = "desvio_padrao"` | parcial | campo aceito no documento; o cálculo do número (média ± N·desvio) fica do lado do editor (a rota de estatísticas já devolve média e desvio-padrão) — sem teste de e2e dedicado nesta passagem |
+| "Stretch Type": None | `esticamento.metodo = "nenhum"` (usa `rescale` fixo, ex. NDVI `[-1, 1]`) | feito | capturado no e2e (`tests/api/imagens/test_estilo_raster_e2e.py::test_ndvi_por_expressao...`) |
+| "Color Ramp" (banda única) | `parametros_raster.colormap_name` | feito | vocabulário = `rio_tiler.colormap.cmap.list()` (211 rampas, ColorBrewer + terreno/NDVI/etc.), o mesmo que `app/imagens/rotas_tiles.py` aceita — validado contra a MESMA lista (`app.imagens.tiles.COLORMAPS`), nunca uma cópia |
+| "Invert Color Ramp" | sufixo `_r` do nome da rampa (`viridis_r` etc., já embutido no vocabulário do rio-tiler) | feito | não é um campo booleano à parte — é outro `colormap_name` |
+| classes discretas vs. contínuas na rampa | — | fora | o L1-02 só aceita `colormap_name` (rampa nomeada); rampa discreta custom exigiria um `colormap` em JSON no ladrilho, que o serviço não expõe hoje — registrado como pendência do L1-02, não deste item |
+| "Transparency" | `plat_construtor.transparencia` → `raster-opacity` do layer MapLibre | feito | mesmo campo que os demais tipos de construtor usam |
+| "NoData Color"/transparência de nodata | `parametros_raster.nodata` (documento) | parcial | aceito no documento para leitura/legenda; o ladrilho usa o nodata do próprio COG — sem parâmetro de sobrescrita no L1-02 hoje |
+| "Resampling" (Nearest/Bilinear/Cubic) | `parametros_raster.resampling` (`vizinho`/`bilinear`) | parcial | aceito no documento; o L1-02 hoje sempre lê com o padrão do rio-tiler (nearest) — sem parâmetro de reamostragem na URL de ladrilho ainda |
+| Renderização por índice (NDVI, NDWI, custom) | `parametros_raster.expression` | feito | mesma gramática restrita do L1-02 (`app.imagens.tiles.expressao_valida`, numexpr limitado por regex, sem `__`); o compilador recusa o que o ladrilho recusaria — nunca dois vocabulários |
+| Histograma da banda (painel de estatísticas do Style Imagery) | `GET /svc/<token>/raster/<item>/estatisticas.json` (histograma + percentis do rio-tiler) | feito | rota nova do L1-02 (item L2-02-f); decimada (`max_size` do rio-tiler), não lê a cena inteira |
+| Legenda contínua com valores | `compilador.legenda_raster(pc)` | feito | mín/máx = o `rescale` gravado, que por sua vez nasceu de `estatisticas.json` — nunca dois números para a mesma cena |
 
 **SLD 1.0** (`app/estilos/sld.py`, subconjunto declarado: `unico`/`categoria`/`classes`, sem
 `RasterSymbolizer`): as cores foram provadas iguais às do construtor por leitura do XML

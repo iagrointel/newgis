@@ -1166,6 +1166,44 @@ guardado — só o identificador dele e o prefixo visível.
 
 - o mosaico serve a cena mais recente que cobre o ladrilho; não há escolha por pixel (nuvem) nem linha
   de costura — isso é o L1-07/L1-08;
-- não há WMS 1.3.0 (L1-02-g), nem OGC API Tiles/Maps (L1-02-i), nem ponto/estatística/histograma
-  (L1-02-h), nem predefinição de renderização gravada (L1-02-f): por enquanto a pintura vive na URL;
+- não há WMS 1.3.0 (L1-02-g), nem OGC API Tiles/Maps (L1-02-i), nem ponto/estatística por local
+  específico, nem predefinição de renderização gravada por conta própria do serviço (L1-02-f): a
+  pintura ainda vive nos parâmetros da URL. Estatística/histograma **por banda ou por expressão** da
+  cena inteira agora existe (`estatisticas.json`, item L2-02-f — ver seção 23), decimada pelo rio-tiler;
 - a única grade é a WebMercatorQuad (a do Google/OSM/AGOL).
+
+## 23. Editor de estilo raster (item L2-02-f-estilo-raster)
+
+O tipo `raster` do construtor de estilo (seção 22) ganha o vocabulário para editar imagem de verdade,
+sempre sobre o serviço de ladrilho da seção 22: `plat_construtor.parametros_raster` guarda `bandas`
+(composição de 1 a 4 índices — 3 para RGB, 1 para banda única com rampa), `rescale` (faixa aplicada,
+`min` estritamente menor que `max`), `colormap_name` (rampa nomeada, mesmas 211 disponíveis em
+`info.json`; inverter é usar o nome com sufixo `_r`), `expression` (NDVI, NDWI ou qualquer conta livre
+sobre as bandas, na MESMA gramática restrita que o serviço de ladrilho aceita), `esticamento.metodo`
+(`minmax`, `percentil_2_98`, `desvio_padrao` ou `nenhum` — documenta como o `rescale` foi calculado, para
+reabrir a mesma escolha) e `resampling`/`nodata` (aceitos no documento; o serviço de ladrilho ainda não
+lê nenhum dos dois da URL, então ficam registrados para quando existir o parâmetro — nunca fingidos como
+aplicados).
+
+### 23.1 De onde vêm os números do esticamento
+
+`GET /svc/<token>/raster/<item>/estatisticas.json` (bandas ou expressão, os mesmos nomes da seção 22.2)
+devolve mínimo, máximo, média, desvio-padrão e percentis 2 e 98 por decimação — nunca lendo a cena
+inteira. O editor chama esta rota, escolhe `rescale` pelo método pedido e grava o número; a legenda
+contínua nunca recalcula por conta própria, só repete o que essa rota mediu. Round-trip: salvar e reabrir
+o mesmo estilo devolve `parametros_raster` byte a byte igual.
+
+### 23.2 O que a URL de ladrilho aceita
+
+`plat_construtor` compila para os quatro parâmetros que o serviço de ladrilho de fato lê (`bandas`,
+`faixa`, `colormap`, `expressao`) e nada além disso — nenhum outro campo do construtor (esticamento,
+`nodata`, `resampling`) vaza para a URL. `expression` passa pela mesma validação de gramática do serviço
+de ladrilho antes de ser aceita no documento, então o editor nunca grava algo que o ladrilho recusaria;
+divisão por zero literal (ex. `b4/0`) é recusada na hora de salvar, não só na hora de desenhar.
+
+### 23.3 O que ficou de fora
+
+Classes discretas custom na rampa (o serviço só aceita rampa nomeada, não uma tabela de cor arbitrária) e
+funções raster encadeadas do Image Server (stretch → convolução → colormap em sequência, com histórico de
+passos) — o serviço aplica um esticamento e uma rampa por vez. Paridade contra "Style Imagery" do Map
+Viewer, cláusula por cláusula, em `docs/PARIDADE.md`.

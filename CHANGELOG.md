@@ -3,6 +3,48 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 6, setembro de 2026 (item L2-02-f-estilo-raster: editor de estilo raster sobre o ladrilho do L1-02)
+
+O tipo `raster` do construtor de estilo (L2-02-a) ganha o vocabulário que faltava para editar imagem de
+verdade: `parametros_raster.bandas` (composição de banda, 1 a 4 índices — RGB ou banda única), `rescale`
+(faixa aplicada, validada `min < max`), `colormap_name` (rampa de cor para banda única, contra o mesmo
+vocabulário — `rio_tiler.colormap.cmap.list()`, 211 rampas — que `app/imagens/rotas_tiles.py` de fato
+aceita: `app/estilos/compilador.py::_raster` importa `app.imagens.tiles` em vez de duplicar a lista, então
+o editor nunca aceita algo que o ladrilho recusaria, nem o contrário), `expression` (NDVI/NDWI/livre, pela
+MESMA gramática restrita do L1-02, `tiles.expressao_valida`), `esticamento.metodo`
+(`minmax`/`percentil_2_98`/`desvio_padrao`/`nenhum`, documentando qual método propôs o `rescale` gravado) e
+`resampling`/`nodata` (aceitos no documento; o L1-02 ainda não expõe parâmetro de URL para nenhum dos dois
+— registrado como PARCIAL em `docs/PARIDADE.md`, não fingido como feito).
+
+Nova rota no serviço de ladrilho: `GET /svc/<token>/raster/<item>/estatisticas.json` (item L1-02, módulo
+`app/imagens/tiles.py::estatisticas`) devolve mín/máx/média/desvio-padrão/percentis 2-98 por banda (ou pela
+expressão), decimado pelo rio-tiler — é a fonte ÚNICA que o editor consulta para propor o `rescale` do
+esticamento por percentil/desvio-padrão, e que a legenda contínua (`compilador.legenda_raster`) cita: a
+legenda nunca recalcula por conta própria, só repete o `rescale` que já saiu de lá. `compilador.parametros_tile(pc)`
+traduz o vocabulário do documento (nomes do TiTiler: `bandas`/`rescale`/`colormap_name`/`expression`) para
+os quatro parâmetros de consulta em português que o L1-02 de fato lê (`bandas`/`faixa`/`colormap`/`expressao`)
+— nenhum outro campo do construtor vaza para a URL, e é essa mesma função que fecha a exigência do
+adversário ("a URL de tile gerada não permite expressão arbitrária além do vocabulário do TiTiler").
+
+CORS liberado (`Access-Control-Allow-Origin: *`) nas respostas de ladrilho/TileJSON/info/estatísticas do
+L1-02: sem isso, `<img crossorigin>` do MapLibre (textura WebGL) falha ao carregar um ladrilho de outra
+origem mesmo com HTTP 200 — achado ao montar o e2e com um `uvicorn` de verdade na porta 8248.
+
+E2E (`tests/api/imagens/test_estilo_raster_e2e.py`, `page` do playwright + harness próprio
+`tests/e2e/apoio_estilo/harness_estilo_raster.html`, contra um `uvicorn` real da trilha — o harness
+vetorial do L2-02-a usa GeoJSON sintético por `file://`, raster precisa de HTTP de verdade): 4 capturas
+(RGB, banda única + rampa, NDVI por expressão, percentil 2-98), cada uma com o tile pedido conferido 200
+PNG não vazio ANTES da captura no navegador, e a legenda comparada byte a byte com o que
+`/estatisticas.json` mediu de verdade na cena sintética de teste. Round-trip (salvo/reaberto idêntico) em
+`tests/api/catalogo/test_estilos.py`. Adversário (`tests/unit/test_estilos_compilador.py`): rescale
+invertido, banda fora de 1-64, expressão com divisão por literal zero, expressão fora da gramática do
+TiTiler e colormap desconhecido — todos recusados na compilação, nunca só na renderização.
+
+Fora do recorte (registrado, não fingido): classes discretas na rampa (o L1-02 só aceita `colormap_name`
+nomeado, não colormap JSON custom) e funções raster encadeadas do Image Server (fora do portão literal do
+item). Migração `db/migracoes/20260907T1312_estilo_raster_parametros.sql` (arquivo novo — a
+`20260907T1148_estilo_modelo.sql` já estava aplicada e não pode ser editada).
+
 ## turno 5, setembro de 2026 (item L2-02-a-modelo-estilo: o estilo de uma camada vira documento versionado)
 
 O tipo `estilo` deixa de ter `corpo` livre e passa a carregar o **JSON Schema publicado**

@@ -192,8 +192,40 @@ def informacao(fonte: Fonte) -> dict:
             }
 
 
+def estatisticas(
+    fonte: Fonte,
+    *,
+    bandas: list[int] | None = None,
+    expressao: str | None = None,
+) -> dict:
+    """min/máx/média/desvio-padrão e percentis 2-98 por banda (ou pela expressão), lidos por
+    decimação (`max_size` do rio-tiler, não a cena inteira) — o mesmo cálculo que o editor de estilo
+    usa para propor esticamento por percentil/desvio-padrão e que a legenda cita como "estatísticas
+    do TiTiler" (item L2-02-f, cláusula de legenda com mín/máx reais)."""
+    if expressao is not None:
+        ok, motivo = expressao_valida(expressao)
+        if not ok:
+            raise ErroTile(f"expressão recusada: {motivo}")
+    with rasterio.Env(session=fonte.sessao, **fonte.env):
+        with Reader(fonte.caminho, tms=TMS) as src:
+            bruto = src.statistics(indexes=bandas, expression=expressao, percentiles=[2, 98])
+    saida = {}
+    for nome, st in bruto.items():
+        d = st.model_dump() if hasattr(st, "model_dump") else dict(st)
+        saida[nome] = {
+            "min": d.get("min"),
+            "max": d.get("max"),
+            "media": d.get("mean"),
+            "desvio_padrao": d.get("std"),
+            "percentil_2": d.get("percentile_2"),
+            "percentil_98": d.get("percentile_98"),
+            "histograma": d.get("histogram"),
+        }
+    return saida
+
+
 __all__ = [
     "COLORMAPS", "ErroTile", "ForaDaCobertura", "Fonte", "FORMATOS", "TMS", "TAMANHO",
-    "bandas_da_expressao", "env_gdal", "expressao_valida", "informacao", "ladrilho",
+    "bandas_da_expressao", "env_gdal", "estatisticas", "expressao_valida", "informacao", "ladrilho",
     "preparar_ambiente_s3", "sessao_s3",
 ]

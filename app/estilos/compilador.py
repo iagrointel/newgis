@@ -13,8 +13,17 @@ monta uma expressão `["get", campo]` sem passar por aqui.
 
 from __future__ import annotations
 
+import re
+
 GEOMETRIA_TIPO_LAYER = {"ponto": "circle", "linha": "line", "poligono": "fill", "raster": "raster"}
 TIPOS = ("unico", "categoria", "classes", "proporcional", "calor", "agrupamento", "raster")
+
+
+_DIVISAO_ZERO = re.compile(r"/\s*0(?:\.0*)?(?![0-9.])")
+
+
+def _re_divisao_por_zero(expressao: str) -> bool:
+    return bool(_DIVISAO_ZERO.search(expressao))
 
 
 class EstiloInvalido(ValueError):
@@ -124,11 +133,66 @@ def _agrupamento(pc: dict) -> tuple[list[dict], dict]:
     return saida, ag
 
 
+def _vocabulario_titiler():
+    """Importa a fonte única do vocabulário aceito pelo serviço de ladrilho (item L1-02): colormap,
+    gramática de expressão e limites de banda. Nunca duplicar esta lista aqui — é exatamente a
+    duplicação que deixaria a URL de tile aceitar algo que o TiTiler recusaria (ou pior, o contrário:
+    o editor recusar por conta própria e permitir na URL algo que ele nunca validou)."""
+    from app.imagens import tiles as titiler
+    return titiler
+
+
 def _raster(pc: dict) -> tuple[list[dict], dict]:
     if pc.get("geometria") != "raster":
         raise EstiloInvalido("tipo raster exige geometria raster", "plat_construtor.geometria")
     pr = pc.get("parametros_raster") or {}
+    titiler = _vocabulario_titiler()
+
+    bandas = pr.get("bandas")
+    if bandas is not None:
+        if not (1 <= len(bandas) <= 4) or any(not isinstance(b, int) or b < 1 or b > 64 for b in bandas):
+            raise EstiloInvalido("parametros_raster.bandas exige de 1 a 4 inteiros entre 1 e 64",
+                                 "plat_construtor.parametros_raster.bandas")
+
+    expressao = pr.get("expression")
+    if expressao is not None:
+        ok, motivo = titiler.expressao_valida(expressao)
+        if not ok:
+            raise EstiloInvalido(f"parametros_raster.expression inválida: {motivo}",
+                                 "plat_construtor.parametros_raster.expression")
+        # divisão por literal zero: a gramática do TiTiler aceita o token "/0" (é aritmética válida),
+        # mas nenhum uso real da casa divide por uma constante zero — é o caso do adversário do item.
+        if _re_divisao_por_zero(expressao):
+            raise EstiloInvalido("parametros_raster.expression divide por zero literal",
+                                 "plat_construtor.parametros_raster.expression")
+
+    colormap = pr.get("colormap_name")
+    if colormap is not None and colormap not in titiler.COLORMAPS:
+        raise EstiloInvalido(f"parametros_raster.colormap_name desconhecido do TiTiler: {colormap!r}",
+                             "plat_construtor.parametros_raster.colormap_name")
+
+    rescale = pr.get("rescale")
+    if rescale is not None:
+        mn, mx = rescale
+        if mn >= mx:
+            raise EstiloInvalido(f"parametros_raster.rescale invertido ou vazio: min ({mn}) >= max ({mx})",
+                                 "plat_construtor.parametros_raster.rescale")
+
+    reamostragem = pr.get("resampling")
+    if reamostragem is not None and reamostragem not in ("vizinho", "bilinear"):
+        raise EstiloInvalido("parametros_raster.resampling só aceita 'vizinho' ou 'bilinear'",
+                             "plat_construtor.parametros_raster.resampling")
+
+    esticamento = pr.get("esticamento")
+    if esticamento is not None and esticamento.get("metodo") not in (
+        "minmax", "percentil_2_98", "desvio_padrao", "nenhum"
+    ):
+        raise EstiloInvalido(
+            "parametros_raster.esticamento.metodo só aceita minmax/percentil_2_98/desvio_padrao/nenhum",
+            "plat_construtor.parametros_raster.esticamento")
+
     return [{"rotulo": "raster", "cor": None, "teste": None}], pr
+
 
 
 _COMPILADORES = {
@@ -253,3 +317,37 @@ def compilar(pc: dict, id_base: str = "camada") -> dict:
 def legenda(pc: dict) -> list[dict]:
     """Entradas de legenda — mesma lista de `classes()` usada por `compilar`."""
     return [{"rotulo": c["rotulo"], "cor": c["cor"]} for c in classes(pc) if c["cor"] is not None]
+
+
+def legenda_raster(pc: dict) -> dict | None:
+    """Legenda contínua do tipo raster: mín/máx e nome da rampa, para o editor desenhar a barra de
+    cor com valores reais — os mesmos que `estatisticas_json` (L1-02) devolveu e que o editor gravou
+    em `rescale` (nunca recalculado aqui: fonte única é a rota de estatísticas)."""
+    if pc.get("tipo") != "raster":
+        return None
+    pr = pc.get("parametros_raster") or {}
+    rescale = pr.get("rescale")
+    if rescale is None:
+        return None
+    return {"colormap_name": pr.get("colormap_name"), "min": rescale[0], "max": rescale[1]}
+
+
+def parametros_tile(pc: dict) -> dict:
+    """`plat_construtor.parametros_raster` -> dicionário de consulta do serviço de ladrilho (item
+    L1-02): traduz o vocabulário do documento (nomes do TiTiler, C2 do L2_CONCEITO) para os nomes de
+    parâmetro em português que `app/imagens/rotas_tiles.py` de fato aceita (`expressao`, `bandas`,
+    `faixa`, `colormap`). Só os quatro nomes que o L1-02 lê saem daqui — nenhum outro campo do
+    construtor (esticamento, resampling ainda não suportado pelo L1-02, nodata) vaza para a URL."""
+    if pc.get("tipo") != "raster":
+        raise EstiloInvalido("parametros_tile só se aplica ao tipo raster", "plat_construtor.tipo")
+    pr = pc.get("parametros_raster") or {}
+    saida: dict[str, str] = {}
+    if pr.get("expression"):
+        saida["expressao"] = pr["expression"]
+    if pr.get("bandas"):
+        saida["bandas"] = ",".join(str(b) for b in pr["bandas"])
+    if pr.get("rescale"):
+        saida["faixa"] = ",".join(str(v) for v in pr["rescale"])
+    if pr.get("colormap_name"):
+        saida["colormap"] = pr["colormap_name"]
+    return saida

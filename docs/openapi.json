@@ -12388,6 +12388,113 @@
     "x-auth": "S/T",
     "x-privilegio": "proprio"
    }
+  },
+  "/svc/{token}/raster/{item}/estatisticas.json": {
+   "get": {
+    "tags": [
+     "tiles"
+    ],
+    "summary": "mín/máx/média/desvio-padrão e percentis 2-98 por banda (ou por expressão)",
+    "description": "Base do esticamento por percentil/desvio-padrão do editor de estilo (item L2-02-f) e da legenda\ncontínua: o editor chama esta rota, escolhe min/máx pelo método pedido e GRAVA os números no\n`plat_construtor.parametros_raster.rescale` — a legenda nunca recalcula por conta própria, só cita\no que aqui saiu (mesma disciplina de fonte única do resto do módulo de estilo).",
+    "operationId": "estatisticas_json_svc__token__raster__item__estatisticas_json_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item"
+      }
+     },
+     {
+      "name": "bandas",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 32
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "bandas a medir, ex.: 3,2,1",
+       "title": "Bandas"
+      },
+      "description": "bandas a medir, ex.: 3,2,1"
+     },
+     {
+      "name": "expressao",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 200
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "mede a expressão (ex.: NDVI) em vez das bandas cruas",
+       "title": "Expressao"
+      },
+      "description": "mede a expressão (ex.: NDVI) em vez das bandas cruas"
+     },
+     {
+      "name": "asset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(visual|cientifico)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Asset"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
   }
  },
  "components": {
