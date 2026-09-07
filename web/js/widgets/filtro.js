@@ -6,7 +6,6 @@ class PlatFiltro extends PlatWidget {
   renderizar() {
     const rotulo = document.createElement('label'); rotulo.textContent = this.configuracao.rotulo || 'Filtrar';
     const campo = document.createElement('input'); campo.type = 'search'; campo.value = this.configuracao.valor || '';
-    campo.placeholder = this.configuracao.placeholder || '';
     campo.addEventListener('input', () => this.emitir('filtro.alterado', { valor: campo.value }));
     rotulo.append(campo); this.replaceChildren(rotulo);
   }
