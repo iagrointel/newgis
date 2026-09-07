@@ -238,6 +238,11 @@ echo "== f. venv"
 # o de verdade via LoadCredential=) e não é segredo, então tanto faz aparecer em `ps`.
 "${PY[@]}" -c "import os; os.environ.setdefault('PLAT_SECRET', 'a' * 64); os.environ.setdefault('PLAT_DSN', 'postgresql://plat_app:x@127.0.0.1:5432/x'); import app.main, fastapi, dotenv; assert fastapi.__file__.startswith('$APP_DIR/venv/'), fastapi.__file__" \
   || { echo "app.main não importa com PYTHONNOUSERSITE=1: requirements.txt incompleto" >&2; exit 1; }
+# `plat` na venv (item L0-14): quem ativa a venv passa a ter o comando no PATH; o arquivo de verdade é
+# scripts/plat, e o vínculo é refeito a cada instalação para nunca apontar para uma árvore antiga
+ln -sfn "$APP_DIR/scripts/plat" venv/bin/plat
+chown -h "$APP_USER":"$APP_USER" venv/bin/plat
+echo "venv/bin/plat -> scripts/plat"
 echo "venv: $(venv/bin/python --version) · fastapi $("${PY[@]}" -c 'import fastapi; print(fastapi.__version__)') da venv · pytest $(venv/bin/pytest --version 2>&1 | awk '{print $2}')"
 
 echo "== f2. cache do XSD ISO 19139 (item L0-09-metadado-catalogo): comitado no repo; idempotente, sem rede quando já presente"
@@ -432,4 +437,26 @@ echo "https://$DOM/saude -> HTTP $CODIGO · $ROBOTS · $HSTS"
 printf '%s' "$ROBOTS" | grep -qi noindex || { echo "X-Robots-Tag sem noindex" >&2; exit 4; }
 printf '%s' "$HSTS" | grep -q 'max-age=31536000' || { echo "sem Strict-Transport-Security no bloco 443" >&2; exit 4; }
 curl -fsS -m 5 "https://$DOM/saude" | grep -q '"workers_vivos": *[1-9]' || { echo "/saude sem worker vivo (fila.workers_vivos)" >&2; exit 4; }
+echo "== k. inquilinos de demonstração pela linha de comando (item L0-14: plat inquilino criar)"
+# Aqui a instalação usa a MESMA linha de comando que o operador usa depois, e por isso passa pelas mesmas
+# rotas, privilégios e eventos da API que já subiu na etapa h. A senha do administrador vai por ARQUIVO EM
+# MODO 600 lido pela CLI, nunca por argumento: argumento aparece em `ps` e no journal do sudo (achado 6a do
+# adversário do T1). Só em ambiente de desenvolvimento: numa instalação de cliente não se cria inquilino de
+# demonstração. Nesta linhagem do produto a migração 002 já semeia `demo` e `demo2`, então o comando quase
+# sempre responde "já existe" e não muda nada -- é justamente o comportamento que --se-nao-existir promete.
+if grep -qE '^PLAT_AMBIENTE=dev$' .env; then
+  while read -r slug login senha; do
+    case "$slug" in demo|demo2) ;; *) continue ;; esac
+    SENHA_ARQ=$(sudo -u "$APP_USER" mktemp)
+    chmod 600 "$SENHA_ARQ"
+    printf '%s\n' "$senha" | sudo -u "$APP_USER" tee "$SENHA_ARQ" >/dev/null
+    sudo -u "$APP_USER" env PYTHONNOUSERSITE=1 PLAT_CLI_URL="http://127.0.0.1:$PORTA" \
+      PLAT_CREDENCIAIS_ARQUIVO="$APP_DIR/$CRED" \
+      scripts/plat --configurar-2fa inquilino criar --se-nao-existir \
+        --slug "$slug" --nome "Inquilino de demonstração $slug" \
+        --admin-login "$login" --admin-nome "Administrador $slug" --senha-arquivo "$SENHA_ARQ"
+    rm -f "$SENHA_ARQ"
+  done < "$CRED"
+fi
+
 echo "== instalado em $((SECONDS - INICIO)) s: https://$DOM (serviços $UNIDADE :$PORTA e plat-worker :8153)"
