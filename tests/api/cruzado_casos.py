@@ -848,6 +848,46 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     # ---- L0-09 metadado ISO 19139 do item: mesmo `item_ou_404` + RLS de `IT` acima.
     ("GET", IT + "/metadado.xml"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/metadado.xml"),
+    # ---- L2-05-a ferramentas de análise: catálogo e descritores não têm dado de inquilino; execução com item
+    # de B como entrada = 404 (RLS + pode_ler no resolver de entradas), em todas as pernas; job de B = 404.
+    ("GET", "/api/ferramentas"): Caso(lambda p: "/api/ferramentas", proprio=True, aceita=frozenset({200}),
+                                      verificar=_sem_marca),
+    ("GET", "/api/ferramentas/{nome}"): Caso(lambda p: "/api/ferramentas/buffer", proprio=True,
+                                             aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/ferramentas/{nome}/executar"): Caso(
+        lambda p: "/api/ferramentas/buffer/executar", lambda p: {"parametros": {"camada": p.item_b["id"]}},
+    ),
+    ("GET", "/rest/services/{ferramenta}/GPServer"): Caso(
+        lambda p: "/rest/services/buffer/GPServer?f=json", publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/rest/services/{ferramenta}/GPServer/{tarefa}"): Caso(
+        lambda p: "/rest/services/buffer/GPServer/buffer?f=json", publico=True, aceita=frozenset({200}),
+        verificar=_sem_marca,
+    ),
+    ("GET", "/rest/services/{ferramenta}/GPServer/{tarefa}/execute"): Caso(
+        lambda p: f"/rest/services/buffer/GPServer/buffer/execute?f=json&camada={p.item_b['id']}",
+    ),
+    ("POST", "/rest/services/{ferramenta}/GPServer/{tarefa}/execute"): Caso(
+        lambda p: "/rest/services/buffer/GPServer/buffer/execute?f=json", lambda p: {"camada": p.item_b["id"]},
+    ),
+    ("GET", "/rest/services/{ferramenta}/GPServer/{tarefa}/submitJob"): Caso(
+        lambda p: f"/rest/services/buffer/GPServer/buffer/submitJob?f=json&camada={p.item_b['id']}",
+    ),
+    ("POST", "/rest/services/{ferramenta}/GPServer/{tarefa}/submitJob"): Caso(
+        lambda p: "/rest/services/buffer/GPServer/buffer/submitJob?f=json", lambda p: {"camada": p.item_b["id"]},
+    ),
+    ("GET", "/rest/services/{ferramenta}/GPServer/{tarefa}/jobs/{job_id}"): Caso(
+        lambda p: f"/rest/services/buffer/GPServer/buffer/jobs/{p.job_b['id']}?f=json",
+    ),
+    ("GET", "/rest/services/{ferramenta}/GPServer/{tarefa}/jobs/{job_id}/results/{parametro}"): Caso(
+        lambda p: f"/rest/services/buffer/GPServer/buffer/jobs/{p.job_b['id']}/results/saida?f=json",
+    ),
+    ("GET", "/rest/services/{ferramenta}/GPServer/{tarefa}/jobs/{job_id}/cancel"): Caso(
+        lambda p: f"/rest/services/buffer/GPServer/buffer/jobs/{p.job_b['id']}/cancel?f=json",
+    ),
+    ("POST", "/rest/services/{ferramenta}/GPServer/{tarefa}/jobs/{job_id}/cancel"): Caso(
+        lambda p: f"/rest/services/buffer/GPServer/buffer/jobs/{p.job_b['id']}/cancel?f=json", lambda p: {},
+    ),
     # ---- L2-11-b geocodificador próprio (dado aberto CNEFE/IBGE, sem tabela de inquilino, mesmo padrão de
     # /api/rota-/api/matriz-/api/isocrona acima): 422 é resposta de NEGÓCIO (UF/logradouro não instalado
     # nesta trilha), não vazamento — aceito ao lado de 200.

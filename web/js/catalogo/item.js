@@ -257,8 +257,22 @@ function abaVisao() {
     linhaCampo(t('campo.criado_em'), h('span', {}, dataHora(item.criado_em), item.criado_por ? ` · ${item.criado_por.login || ''}` : ''), { chave: 'criado' }),
     linhaCampo(t('catalogo.col_modificado'), h('span', {}, dataHora(item.modificado_em), item.modificado_por ? ` · ${item.modificado_por.login || ''}` : '', ` · ${t('catalogo.versao')} ${item.versao_atual ?? 0}`), { chave: 'modificado' }),
     linhaCampo(t('catalogo.usado_por'), h('span', {}, String(item.usado_por ?? 0), ' · ', t('catalogo.criado_a_partir_de'), ' ', String(item.criado_a_partir_de ?? 0)), { chave: 'relacoes' }),
+    linhaCampo(t('catalogo.proveniencia'), proveniencia(), { chave: 'proveniencia' }),
   );
   return raiz;
+}
+
+/* bloco de proveniência gravado pelo executor de ferramentas (L2-05-a) em dados.procedencia.ferramenta:
+   ferramenta, versão, parâmetros, entradas (uuid + versão + sha256), data e autor. Sem o bloco, a linha fica vazia. */
+function proveniencia() {
+  const p = item.dados && item.dados.procedencia && item.dados.procedencia.ferramenta;
+  if (!p || !p.ferramenta) return null;
+  const entradas = (p.entradas || []).map((e) => h('li', {},
+    h('a', { href: `/conteudo/${e.item_id}` }, e.item_id), ` · ${t('catalogo.versao')} ${e.versao} · sha256 `, h('code', {}, String(e.sha256 || '').slice(0, 16))));
+  return h('div', { class: 'proveniencia' },
+    h('div', {}, h('strong', {}, `${p.ferramenta} v${p.versao}`), ' · ', dataHora(p.executada_em), p.autor && p.autor.login ? ` · ${p.autor.login}` : '', p.job_id ? ` · job ${p.job_id}` : ''),
+    h('div', {}, t('catalogo.proveniencia_parametros'), ' ', h('code', {}, JSON.stringify(p.parametros || {}))),
+    entradas.length ? h('ul', { class: 'proveniencia-entradas' }, ...entradas) : null);
 }
 
 /* ---------- dados: formulário do JSON Schema ---------- */

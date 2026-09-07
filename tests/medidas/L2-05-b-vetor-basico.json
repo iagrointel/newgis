@@ -1,0 +1,154 @@
+{
+  "buffer_anel": {
+    "area_m2": 2638943.580755053,
+    "area_m2_referencia": 2638904.328369141
+  },
+  "buffer_geodesico_1km_lat_menos23": {
+    "area_m2_postgis": 3141710.646450788,
+    "area_m2_referencia_pyproj": 3141552.7726172884,
+    "desvio_relativo": 5.025343991527331e-05,
+    "limite_do_portao": 0.0005
+  },
+  "buffer_plano": {
+    "area_obtida": 135220063.40688542,
+    "area_shapely": 135220063.40688542
+  },
+  "calcular_geometria": {
+    "area_m2": {
+      "A1": 113164189.1966095,
+      "A2": 113164189.1966095,
+      "A3": 28285810.60074997
+    },
+    "feicoes": 3
+  },
+  "casco": {
+    "area_obtida": 0.03250000000000057,
+    "area_shapely": 0.03250000000000057
+  },
+  "centroide": {
+    "feicoes": 3
+  },
+  "crs_misto": {
+    "area_obtida": 0.005900000000000103,
+    "area_shapely_em_4326": 0.005900000000000103,
+    "feicoes": 3,
+    "srid_b": 31983
+  },
+  "densificar": {
+    "intervalo_m": 500,
+    "maior_segmento_m": 471.0563361871718
+  },
+  "diferenca": {
+    "area_obtida": 0.016600000000000358,
+    "area_shapely": 0.016600000000000358,
+    "feicoes": 3
+  },
+  "diferenca_simetrica": {
+    "area_obtida": 0.026599999999999756,
+    "area_shapely": 0.026599999999999756,
+    "feicoes": 4
+  },
+  "dissolver": {
+    "grupos": 2,
+    "soma_por_grupo": {
+      "10": 20,
+      "20": 20
+    }
+  },
+  "explodir": {
+    "entrada": 2,
+    "saida": 3
+  },
+  "ferramentas_registradas": [
+    "buffer",
+    "calcular_geometria",
+    "casco",
+    "centroide",
+    "densificar",
+    "diferenca",
+    "diferenca_simetrica",
+    "dissolver",
+    "explodir",
+    "intersecao",
+    "linhas_para_pontos",
+    "mesclar",
+    "poligonos_para_linhas",
+    "pontos_aleatorios",
+    "recorte",
+    "reprojetar",
+    "simplificar",
+    "suavizar",
+    "uniao"
+  ],
+  "intersecao": {
+    "area_obtida": 0.005900000000000103,
+    "area_shapely": 0.005900000000000103,
+    "feicoes": 3
+  },
+  "intersecao_em_volume": {
+    "carga_1min": 9.45,
+    "escala_do_portao": 100000,
+    "escala_medida_menor_porque": "disco a 93 % e carga acima de 8 na máquina da trilha (07/09)",
+    "feicoes_por_camada": 1156,
+    "medido_em": "2026-09-07T21:31:55+00:00",
+    "pares_de_saida": 4489,
+    "ram_livre_gb": 5.65,
+    "segundos": 4.87,
+    "validas": 4489
+  },
+  "limite_feicoes_por_entrada": 2000000,
+  "linhas_para_pontos": {
+    "por_intervalo_2km": 19,
+    "vertices": 5
+  },
+  "mesclar": {
+    "entradas": 2,
+    "feicoes": 5
+  },
+  "poligonos_para_linhas": {
+    "comprimento_total": 1.000000000000007,
+    "feicoes": 3
+  },
+  "pontos_aleatorios": {
+    "pontos": 75,
+    "repetivel": true,
+    "semente": 42
+  },
+  "recorte": {
+    "area_obtida": 0.005900000000000103,
+    "area_shapely": 0.005900000000000103,
+    "feicoes": 2
+  },
+  "recorte_sem_sobreposicao": {
+    "feicoes": 0
+  },
+  "regra_da_casa": {
+    "invalidas_na_entrada": 1,
+    "metodo": "ST_Intersection par a par; 1 geometria(s) inválida(s) na entrada corrigida(s) por ST_MakeValid (camada_a=1)",
+    "saidas_totais": 1,
+    "saidas_validas": 1
+  },
+  "reprojetar": {
+    "srid_destino": 31983,
+    "tolerancia_m": 0.001
+  },
+  "simplificar": {
+    "comprimentos": [
+      0.20000000000000284,
+      0.141421356237309
+    ],
+    "tolerancia_graus": 0.0044915558749550845
+  },
+  "suavizar": {
+    "iteracoes": 2,
+    "vertices": [
+      6,
+      2
+    ]
+  },
+  "uniao": {
+    "area_obtida": 0.032499999999999855,
+    "area_shapely": 0.032499999999999855,
+    "feicoes": 7
+  }
+}
