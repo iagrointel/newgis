@@ -70,7 +70,7 @@ def enviar(
     cur.execute(
         "INSERT INTO plat.feicao_anexo (tenant_id, schema_dado, tabela_dado, globalid, nome, content_type, "
         "bytes, sha256, chave, criado_por) VALUES (plat.tenant_atual(), %s, %s, %s, %s, %s, %s, %s, %s, %s) "
-        "RETURNING id, criado_em",
+        "RETURNING id, numero, criado_em",
         (schema, tabela, globalid, nome[:255], tipo, obj["bytes"], obj["sha256"], obj["chave"], auth.usuario_id),
     )
     r = cur.fetchone()
@@ -79,23 +79,58 @@ def enviar(
         {"globalid": globalid, "anexo_id": str(r["id"]), "bytes": obj["bytes"], "content_type": tipo},
     )
     return {
-        "id": str(r["id"]), "nome": nome[:255], "content_type": tipo, "bytes": obj["bytes"],
-        "sha256": obj["sha256"], "criado_em": r["criado_em"].isoformat(),
+        "id": str(r["id"]), "numero": r["numero"], "nome": nome[:255], "content_type": tipo,
+        "bytes": obj["bytes"], "sha256": obj["sha256"], "criado_em": r["criado_em"].isoformat(),
     }
+
+
+def substituir(
+    cur, auth, request, camada_id: str, globalid: str, anexo_id: str, nome: str, content_type: str,
+    conteudo_base64: str,
+) -> dict:
+    """Troca o CONTEÚDO de um anexo mantendo o mesmo identificador (item L2-04-d: o `updateAttachment` da Esri
+    devolve o mesmo `attachmentId`, e cliente que guardou o id não pode ficar apontando para nada). O bloco
+    antigo continua no Garage sob a chave antiga — `app/objetos.py` faz dedup por sha256 e a limpeza de objeto
+    sem referência é do item de retenção, não deste."""
+    item, dados = camada_ou_404(cur, camada_id)
+    exigir_camada_editavel(auth, dados)
+    schema, tabela = _schema_tabela(dados)
+    antigo = _anexo_ou_404(cur, schema, tabela, globalid, anexo_id)
+    tipo = _tipo_ou_recusar(content_type)
+    dados_bin = _decodificar(conteudo_base64)
+    try:
+        escanear_cabecalho(dados_bin, tipo)
+    except ConteudoRecusado as e:
+        raise ErroAPI(415, "conteudo_recusado", str(e)) from e
+    obj = objetos.guardar(cur, "feicao_anexo", dados_bin, tipo, item_id=globalid, usuario_id=auth.usuario_id)
+    cur.execute(
+        "UPDATE plat.feicao_anexo SET nome = %s, content_type = %s, bytes = %s, sha256 = %s, chave = %s "
+        "WHERE id = %s::uuid AND apagado_em IS NULL RETURNING id, numero",
+        (nome[:255] or antigo["nome"], tipo, obj["bytes"], obj["sha256"], obj["chave"], anexo_id),
+    )
+    r = cur.fetchone()
+    comum.registrar_evento(
+        cur, request, "camadas/anexo_enviar", "item", item["id"],
+        {"globalid": globalid, "anexo_id": anexo_id, "bytes": obj["bytes"], "content_type": tipo,
+         "substituicao": True},
+    )
+    return {"id": str(r["id"]), "numero": r["numero"], "nome": nome[:255], "content_type": tipo,
+            "bytes": obj["bytes"], "sha256": obj["sha256"]}
 
 
 def listar(cur, camada_id: str, globalid: str) -> list[dict]:
     _item, dados = camada_ou_404(cur, camada_id)
     schema, tabela = _schema_tabela(dados)
     cur.execute(
-        "SELECT id, nome, content_type, bytes, sha256, criado_por, criado_em FROM plat.feicao_anexo "
+        "SELECT id, numero, nome, content_type, bytes, sha256, criado_por, criado_em FROM plat.feicao_anexo "
         "WHERE schema_dado = %s AND tabela_dado = %s AND globalid = %s AND apagado_em IS NULL "
         "ORDER BY criado_em DESC",
         (schema, tabela, globalid),
     )
     return [
         {
-            "id": str(r["id"]), "nome": r["nome"], "content_type": r["content_type"], "bytes": r["bytes"],
+            "id": str(r["id"]), "numero": r["numero"], "nome": r["nome"],
+            "content_type": r["content_type"], "bytes": r["bytes"],
             "sha256": r["sha256"], "criado_por": r["criado_por"], "criado_em": r["criado_em"].isoformat(),
         }
         for r in cur.fetchall()
@@ -104,7 +139,8 @@ def listar(cur, camada_id: str, globalid: str) -> list[dict]:
 
 def _anexo_ou_404(cur, schema: str, tabela: str, globalid: str, anexo_id: str) -> dict:
     cur.execute(
-        "SELECT id, nome, content_type, chave FROM plat.feicao_anexo WHERE id = %s::uuid AND schema_dado = %s "
+        "SELECT id, numero, nome, content_type, chave FROM plat.feicao_anexo WHERE id = %s::uuid "
+        "AND schema_dado = %s "
         "AND tabela_dado = %s AND globalid = %s AND apagado_em IS NULL",
         (anexo_id, schema, tabela, globalid),
     )

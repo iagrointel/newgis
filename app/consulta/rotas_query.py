@@ -34,7 +34,7 @@ _CONTENT_TYPE = {
 }
 
 
-def _autenticar(request: Request, item_id: str):
+def _autenticar(request: Request, item_id: str, escopo: str = ESCOPO):
     """Sessão normal OU token — igual ao GeocodeServer (`app/geocodificador/rotas_esri.py`):
     protocolo Esri manda o token na URL, então `?token=`/form `token=` também é aceito além do
     cabeçalho `Authorization`."""
@@ -48,7 +48,7 @@ def _autenticar(request: Request, item_id: str):
             raise ErroAPI(401, "token_requerido", "informe token=<token de serviço> ou Authorization: Bearer")
         auth = auth_sessao._auth_de_token(request, tok)  # noqa: SLF001 — mesmo reuso do GeocodeServer
         request.state.auth = auth
-    esc.exigir_escopo(auth, ESCOPO, item_id)
+    esc.exigir_escopo(auth, escopo, item_id)
     return auth
 
 
