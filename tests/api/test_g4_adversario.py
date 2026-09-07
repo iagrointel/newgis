@@ -430,16 +430,13 @@ def test_privilegio_insuficiente_do_banco_nao_vira_403_de_inquilino():
     assert erro.status_code >= 500, f"{erro.status_code} {getattr(erro, 'erro', '')}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-24 (transversal, atinge a prova de isolamento): CursorSchemaAmbiente reescreve `plat.` em "
-           "execute() e callproc(), mas NÃO em executemany(). app/auth/rotas_usuarios.py usa executemany em "
-           "POST e PUT /api/papeis, então em qualquer ambiente isolado (PLAT_SCHEMA != plat: trilha ou "
-           "make homolog) essas rotas batem no schema `plat` de produção e recebem 42501. Efeito medido nesta "
-           "base: tests/api/test_cruzado.py — a varredura A->B que prova isolamento em toda rota — termina com "
-           "1 failed e 168 errors, ou seja, a garantia de isolamento não é exercida fora de produção.",
-)
 def test_cursor_de_schema_reescreve_executemany():
+    """ACHADO G4-24 (transversal, atingia a prova de isolamento): CursorSchemaAmbiente reescrevia `plat.` em
+    execute() e callproc(), mas NÃO em executemany(); app/auth/rotas_usuarios.py usa executemany em POST e PUT
+    /api/papeis, então em qualquer ambiente isolado (PLAT_SCHEMA != plat: trilha ou `make homolog`) essas rotas
+    batiam no schema `plat` de produção e recebiam 42501. O achado foi CORRIGIDO em master (a sobrecarga de
+    `executemany` está em app/schema_ambiente.py); o teste deixou de ser xfail e passou a guardar a correção —
+    se a sobrecarga sumir, ele reprova."""
     from app.schema_ambiente import CursorSchemaAmbiente
 
     assert "executemany" in CursorSchemaAmbiente.__dict__, sorted(CursorSchemaAmbiente.__dict__)
