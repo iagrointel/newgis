@@ -14,8 +14,8 @@ de 12 colunas vira 1 coluna, sem configuração nenhuma).
 As duas convivem, com REGRA DE PRECEDÊNCIA clara:
 
 1. **Reflow automático é o padrão** (`corpo.vista_movel` ausente, ou `manual: false`): puro CSS
-   (`web/estilo/visualizador.css`), grade de 12 colunas vira 1 coluna a ≤ 600 px, TODOS os nós continuam
-   presentes, na mesma ordem/aninhamento do documento. Nenhum widget desaparece — é o que garante a
+   (`web/estilo/visualizador.css`), grade de 12 colunas vira 1 coluna a ≤ 600 px, e cada nó continua
+   presente, na mesma ordem/aninhamento do documento. Nenhum widget desaparece — é o que garante a
    refutação do item ("adversário abre em 360×640 e lista widget cortado ou inacessível").
 2. **Vista móvel manual** (`corpo.vista_movel.manual: true`) é uma lista de override — `corpo.vista_movel.
    nos`, mapa id-de-nó → `{oculto, ordem, largura_colunas}` — que PREVALECE sobre o reflow quando presente.
