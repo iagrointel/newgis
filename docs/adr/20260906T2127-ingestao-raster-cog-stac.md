@@ -28,17 +28,33 @@ que sobrescrever não corrompe (objeto nomeado pelo sha256 do conteúdo).
    8 bits — por isso o perfil científico existe: nenhum dado se perde. A escolha JPEG×WEBP é feita
    por regra escrita aqui, não por heurística escondida.
 
-3. **Validação em subprocesso isolado antes de qualquer conversão.** `gdalinfo -json` roda via
-   `ctx.subprocesso` (herda RLIMIT_DATA do worker, morre com o cancelamento) com
-   `GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR` e sem `/vsicurl/`: o arquivo validado é sempre uma cópia
-   local no diretório de trabalho do job. Regras:
-   - **Sem CRS**: recusa com mensagem clara (`sem_crs`) indicando como reenviar declarando o EPSG
+3. **Validação delegada ao subprocesso isolado do item L1-01-b (ADR 0015), não a um `gdalinfo -json`
+   próprio.** A primeira versão desta decisão (turno do Kimi) rodava `gdalinfo -json` via
+   `ctx.subprocesso` com só `GDAL_DISABLE_READDIR_ON_OPEN` e a remoção de credencial/proxy do
+   ambiente como defesa — a MESMA defesa que o adversário do item L1-01-b já tinha provado
+   insuficiente (`laco/handoffs/T3/L1-01-b-ADVERSARIO.md`, achados 1-3 e 8: variável de ambiente
+   sozinha não fecha `/vsicurl_`/PROJ na rede, e um `CPLE_*` do GDAL vazava traceback com caminho do
+   servidor). Revisão desta passagem: `app/imagens/validacao.py` virou um adaptador fino sobre
+   `app.raster.validacao.validar()` (RLIMIT_AS/CPU/NOFILE/CORE, filtro seccomp que fecha
+   `socket(AF_INET/AF_INET6)` no processo — não só por variável do GDAL —, relógio de parede com
+   `killpg` no grupo, VRT conferido recursivamente por `realpath`, zip pelo diretório central). O
+   arquivo do cliente NUNCA é aberto pelo processo do worker; só o neto isolado o abre. Regras de
+   negócio preservadas:
+   - **Sem CRS**: recusa (`pendente_crs`) com mensagem indicando como reenviar declarando o EPSG
      (`epsg_declarado` no pedido, escrito no COG e registrado na proveniência como decisão humana);
    - **Nodata fora do intervalo do dtype** (ex.: -9999 em Byte, 65535 em UInt16 com valor máximo
-     real menor): corrige reescrevendo o nodata no COG e registra `nodata_corrigido` na
-     proveniência; nodata impossível de representar recusa com mensagem;
+     real menor) ou ausente: corrige/descarta a declaração e registra `nodata_corrigido`/aviso na
+     proveniência — nunca bloqueia a ingestão (o item ainda não tem tela de resposta a NoData);
    - **16 bits**: importa certo — o científico preserva UInt16/Int16 e o visual escala;
-   - **Dimensões/bandas acima do limite** (`PLAT_RASTER_*` em `app/limites.py`): recusa.
+   - **Dimensões/bandas acima do limite** (`RASTER_DIMENSAO_MAX`/`RASTER_BANDAS_MAX` em
+     `app/limites.py`) ou dtype sem conversão possível (`info.tipo_convertivel=false`: complexo,
+     int64/uint64): recusa.
+   - Fronteira honesta que fica: a CONVERSÃO (`app/imagens/cog.py`, `gdal_translate` via
+     `ctx.subprocesso`/`ambiente_isolado()`) e o cálculo de estatísticas do bruto
+     (`estatisticas_bruto`, `rasterio.open` direto no processo do worker) continuam sem seccomp —
+     rodam DEPOIS de o arquivo já ter sido aceito pelo subprocesso isolado, mas não têm a mesma
+     defesa em profundidade. Endurecer essa etapa é trabalho do item L1-01-c (conversão), não desta
+     passagem.
 
 4. **Objeto por conteúdo (sha256), herdado de `app.objetos`.** O COG sobe para o bucket do inquilino
    pela mesma função `objetos.guardar` do resto da plataforma: a chave é
