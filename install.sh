@@ -382,12 +382,27 @@ SITE=/etc/nginx/sites-enabled/$DOM
 LIMITES=/etc/nginx/conf.d/plat_limites.conf
 printf '# plat: limite por IP nos logins (ADR 0002 secao 6.2); escrito pelo install.sh\nlimit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\n' > "$LIMITES.novo"
 if [ -f "$LIMITES" ] && cmp -s "$LIMITES" "$LIMITES.novo"; then rm -f "$LIMITES.novo"; echo "$LIMITES já existe (igual)"; else mv "$LIMITES.novo" "$LIMITES"; echo "$LIMITES escrito"; fi
+# perfil TLS + HTTP/2 + OCSP stapling (item L7-03-e): contexto http, só faz sentido com certificado no disco
+TLSCONF=/etc/nginx/conf.d/plat_tls.conf
+escrever_tls() {
+  if [ ! -d "/etc/letsencrypt/live/$DOM" ]; then
+    echo "$TLSCONF PULADO (sem certificado ainda; o install.sh volta aqui depois do certbot)"
+    return 0
+  fi
+  sed -e "s#DOMINIO#$DOM#g" deploy/nginx_tls.conf > "$TLSCONF.novo"
+  if [ -f "$TLSCONF" ] && cmp -s "$TLSCONF" "$TLSCONF.novo"; then rm -f "$TLSCONF.novo"; echo "$TLSCONF já existe (igual)"
+  else mv "$TLSCONF.novo" "$TLSCONF"; echo "$TLSCONF escrito (Mozilla intermediate, stapling)"; fi
+}
 escrever_nginx() {
   local bloco certbot_443 bloco_80
   bloco=$(sed -e "s#DOMINIO#$DOM#g" -e "s#APP_DIR#$APP_DIR#g" -e "s#PORTA#$PORTA#g" deploy/nginx.conf)
+  escrever_tls
   if [ -f "$SITE" ] && grep -q '# managed by Certbot' "$SITE"; then
     # bloco 443: HSTS fica (modelo); as linhas do certbot são preservadas; o bloco 80 do certbot (301) fica como está
-    certbot_443=$(awk '/^server[[:space:]]*\{/{n++} n==1 && /# managed by Certbot/' "$SITE")
+    # e a linha `listen 443 ssl` do certbot ganha o `http2` (no nginx 1.24 o HTTP/2 é opção do listen, não
+    # a diretiva `http2 on;` do 1.25.1+): sem isso o navegador fala HTTP/1.1 com uma conexão por recurso.
+    certbot_443=$(awk '/^server[[:space:]]*\{/{n++} n==1 && /# managed by Certbot/' "$SITE" \
+      | sed -E 's/^([[:space:]]*listen[^;]*[[:space:]]ssl)([[:space:]]*;)/\1 http2\2/')
     bloco_80=$(awk '/^server[[:space:]]*\{/{n++} n>=2' "$SITE")
     printf '%s\n\n%s\n}\n\n%s\n' "$bloco" "$certbot_443" "$bloco_80" > "$SITE.novo"
     echo "bloco 443 reescrito com HSTS, preservando $(printf '%s\n' "$certbot_443" | grep -c .) linhas do certbot"
