@@ -105,10 +105,14 @@ def _auth_completo(p: Politica) -> dict:
 
 
 def _org_json(cur, auth: Auth) -> dict:
-    cur.execute("SELECT nome, ativo, cota_bytes, config FROM plat.tenant WHERE id = plat.tenant_atual()")
+    cur.execute(
+        "SELECT nome, ativo, cota_bytes, cota_bytes_teto, config FROM plat.tenant WHERE id = plat.tenant_atual()"
+    )
     t = cur.fetchone()
     cur.execute(
-        "SELECT plat.cota_usuarios(%s) AS cota, plat.usuarios_ativos(%s) AS ativos", (auth.tenant_id, auth.tenant_id)
+        "SELECT plat.cota_usuarios(%s) AS cota, plat.usuarios_ativos(%s) AS ativos, "
+        "plat.cota_usuarios_teto(%s) AS teto",
+        (auth.tenant_id, auth.tenant_id, auth.tenant_id),
     )
     u = cur.fetchone()
     config = t["config"] or {}
@@ -126,8 +130,14 @@ def _org_json(cur, auth: Auth) -> dict:
             "basemap": config.get("basemap"),
             "srid_padrao": config.get("srid_padrao"),
         },
-        "armazenamento": {"cota_bytes": t["cota_bytes"], "bytes_usados": objetos.uso(auth.tenant_slug)},
-        "usuarios": {"cota": u["cota"], "ativos": u["ativos"]},
+        # cota_bytes_teto/teto (item L0-07-c-cotas-uso): teto IMPOSTO PELA PLATAFORMA (só o superadmin move,
+        # plat.tenant_cotas_definir) — o inquilino edita a própria cota livremente ABAIXO do teto, nunca acima
+        # (achado do adversário 06/09: sem isso o admin do inquilino elevava a própria cota sem limite).
+        "armazenamento": {
+            "cota_bytes": t["cota_bytes"], "cota_bytes_teto": t["cota_bytes_teto"],
+            "bytes_usados": objetos.uso(auth.tenant_slug),
+        },
+        "usuarios": {"cota": u["cota"], "teto": u["teto"], "ativos": u["ativos"]},
         "auth": _auth_completo(politica),
     }
 
@@ -153,6 +163,29 @@ def org_gravar(corpo: OrgEntrada, request: Request, auth: Auth = autenticado("or
     erros_auth = validar_config_auth(corpo.auth)
     if erros_auth:
         raise ErroAPI(422, "validacao", "política de senha/2FA/domínios inválida", erros_auth)
+    # teto IMPOSTO PELA PLATAFORMA (item L0-07-c-cotas-uso, correção pós-refutação de 06/09): o admin do
+    # inquilino sobe/desce a própria cota livremente, mas nunca acima do teto que só o superadmin move
+    # (plat.tenant_cotas_definir) — sem esta checagem a rota só tinha piso (Field ge=...), e um adversário
+    # provou que o admin elevava a própria cota_bytes/cota_usuarios sem limite algum.
+    with db.db(auth.contexto()) as cur:
+        cur.execute("SELECT cota_bytes_teto FROM plat.tenant WHERE id = plat.tenant_atual()")
+        teto_bytes = cur.fetchone()["cota_bytes_teto"]
+        cur.execute("SELECT plat.cota_usuarios_teto(%s) AS teto", (auth.tenant_id,))
+        teto_usuarios = cur.fetchone()["teto"]
+    if corpo.cota_bytes > teto_bytes:
+        raise ErroAPI(
+            422, "cota_bytes_acima_do_teto",
+            f"cota_bytes não pode passar do teto de {teto_bytes} bytes definido pela plataforma "
+            "(fale com o superadmin para subir o teto)",
+            {"campo": "cota_bytes", "teto": teto_bytes},
+        )
+    if corpo.cota_usuarios > teto_usuarios:
+        raise ErroAPI(
+            422, "cota_usuarios_acima_do_teto",
+            f"cota_usuarios não pode passar do teto de {teto_usuarios} definido pela plataforma "
+            "(fale com o superadmin para subir o teto)",
+            {"campo": "cota_usuarios", "teto": teto_usuarios},
+        )
     merge = {
         "cor": corpo.cor,
         "idioma_padrao": corpo.idioma_padrao,

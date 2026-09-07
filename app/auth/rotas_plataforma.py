@@ -9,7 +9,7 @@ from fastapi import APIRouter, Request, Response
 
 from app import db, limites, senha
 from app.auth.comum import erro_do_banco, registrar_evento
-from app.auth.modelos import Inquilino, InquilinoCriado, InquilinoCriar
+from app.auth.modelos import Inquilino, InquilinoCriado, InquilinoCriar, TenantCotasEntrada
 from app.auth.sessao import Auth, autenticado, iso
 from app.erros import ErroAPI
 
@@ -103,3 +103,26 @@ def apagar(id: int, request: Request, auth: Auth = autenticado(superadmin=True, 
 @router.post("/inquilinos/{id}/reativar", status_code=204, response_class=Response, openapi_extra=SUPER)
 def reativar(id: int, request: Request, auth: Auth = autenticado(superadmin=True, so_sessao=True)):
     return _suspender(auth, request, id, True)
+
+
+@router.post("/inquilinos/{id}/cotas", status_code=204, response_class=Response, openapi_extra=SUPER)
+def cotas_definir(
+    id: int, corpo: TenantCotasEntrada, request: Request, auth: Auth = autenticado(superadmin=True, so_sessao=True)
+):
+    """Único caminho HTTP que move o TETO de cota (cota_bytes_teto/cota_usuarios_teto) — o que o inquilino
+    edita sozinho por PUT /api/org nunca ultrapassa (item L0-07-c-cotas-uso). Efeito imediato: plat.cota_*
+    e plat.tenant.cota_bytes são lidos ao vivo em cada requisição, sem cache (mesmo contrato de PUT /api/org)."""
+    try:
+        with db.db() as cur:
+            cur.execute(
+                "SELECT plat.tenant_cotas_definir(%s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    auth.sessao_hash, id, corpo.cota_bytes, corpo.cota_usuarios, corpo.cota_itens,
+                    corpo.cota_jobs_dia, corpo.cota_bytes_teto, corpo.cota_usuarios_teto,
+                ),
+            )
+        with db.db(auth.contexto()) as cur:
+            registrar_evento(cur, request, "inquilinos/cotas", "inquilino", id, corpo.model_dump(exclude_none=True))
+    except psycopg2.Error as e:
+        raise erro_do_banco(e) from e
+    return Response(status_code=204)

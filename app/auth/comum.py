@@ -38,6 +38,15 @@ ERROS_DO_BANCO = {
     "contexto_de_outro_inquilino": (403, "operação fora do inquilino da sessão"),
     "superadmin_so_plataforma": (422, "superadmin só no inquilino da plataforma"),
     "usuario_inativo_ou_inquilino_suspenso": (401, "usuário inativo ou inquilino suspenso"),
+    # item L0-07-c-cotas-uso (plat.tenant_cotas_definir, POST /api/plataforma/inquilinos/{id}/cotas)
+    "cota_bytes_abaixo_do_minimo": (422, "cota_bytes abaixo do mínimo (100 MiB)"),
+    "cota_bytes_teto_abaixo_do_minimo": (422, "cota_bytes_teto abaixo do mínimo (100 MiB)"),
+    "cota_usuarios_abaixo_do_minimo": (422, "cota_usuarios abaixo do mínimo (1)"),
+    "cota_usuarios_teto_abaixo_do_minimo": (422, "cota_usuarios_teto abaixo do mínimo (1)"),
+    "cota_itens_abaixo_do_minimo": (422, "cota_itens abaixo do mínimo (1)"),
+    "cota_jobs_dia_invalida": (422, "cota_jobs_dia não pode ser negativa"),
+    "cota_bytes_acima_do_teto": (422, "cota_bytes ficaria acima do teto vigente"),
+    "cota_usuarios_acima_do_teto": (422, "cota_usuarios ficaria acima do teto vigente"),
 }
 
 

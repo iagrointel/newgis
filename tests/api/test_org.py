@@ -52,8 +52,10 @@ def test_ler_e_gravar_exige_org_configurar_editor_recebe_403(sessao_a, usuarios_
         assert chave in org, chave
     assert org["slug"] == "demo"
     assert set(org["mapa"]) == {"centro", "zoom", "basemap", "srid_padrao"}
-    assert set(org["armazenamento"]) == {"cota_bytes", "bytes_usados"}
-    assert set(org["usuarios"]) == {"cota", "ativos"}
+    # cota_bytes_teto/teto (item L0-07-c-cotas-uso): teto imposto pela PLATAFORMA, que este PUT nunca
+    # ultrapassa — só o superadmin move (POST /api/plataforma/inquilinos/{id}/cotas), ver tests/api/test_cotas.py
+    assert set(org["armazenamento"]) == {"cota_bytes", "cota_bytes_teto", "bytes_usados"}
+    assert set(org["usuarios"]) == {"cota", "teto", "ativos"}
     assert org["auth"]["senha_min"] >= 8  # a MESMA política que /api/eu já expõe (subconjunto), aqui completa
 
     c_ed, _, _ = usuarios_a.sessao("editor")

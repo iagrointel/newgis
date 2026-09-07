@@ -7,6 +7,7 @@ manutencao_analyze` da 026 — ANALYZE não pode rodar como plat_app, então a f
 dois do catálogo (`app/catalogo/periodicos.py`, que se soma a esta lista na importação), o total é 5 (achado do
 testador T3: o portão L0-05-d exige 5 periódicos e só 3 estavam registrados)."""
 
+import datetime
 import shutil
 import time
 from pathlib import Path
@@ -123,7 +124,7 @@ def jobs_uso_medir(ctx, dia: str | None = None) -> dict:
         buckets = {r["tenant_id"]: r["bucket_id"] for r in cur.fetchall()}
     admin = objetos._admin() if buckets else None
     medidos, sem_bucket, garage_falhou = 0, 0, 0
-    for i, tenant_id in enumerate(tenants):
+    for tenant_id in tenants:
         bytes_bucket = None
         if tenant_id in buckets:
             try:

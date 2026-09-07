@@ -127,6 +127,19 @@ class InquilinoCriar(Modelo):
     admin_nome: str = Field(min_length=1, max_length=200)
 
 
+class TenantCotasEntrada(Modelo):
+    """POST /api/plataforma/inquilinos/{id}/cotas (só superadmin; item L0-07-c-cotas-uso): todo campo é
+    opcional — só o que vier não-None muda. cota_bytes_teto/cota_usuarios_teto são o TETO que o próprio
+    inquilino (PUT /api/org) nunca ultrapassa; sem valor aqui o teto vigente não muda."""
+
+    cota_bytes: int | None = Field(default=None, ge=1)
+    cota_usuarios: int | None = Field(default=None, ge=1)
+    cota_itens: int | None = Field(default=None, ge=1)
+    cota_jobs_dia: int | None = Field(default=None, ge=0)
+    cota_bytes_teto: int | None = Field(default=None, ge=1)
+    cota_usuarios_teto: int | None = Field(default=None, ge=1)
+
+
 # ---- saídas
 class Ok(Saida):
     ok: bool = True

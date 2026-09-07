@@ -121,6 +121,18 @@ def catalogo_lixeira_expurgar(
                 if not cur.fetchone()["ok"]:
                     raise destruidores.Recusado("registro já não estava na lixeira")
                 bytes_total += liberados or int(c["tamanho_bytes"] or 0)
+                # contador SIMÉTRICO (item L0-07-c-cotas-uso, correção pós-refutação): tenant.uso_bytes só
+                # crescia (app/ingestao/carregar.py incrementa no fim da carga) e nunca descia no expurgo — um
+                # adversário provou isso apagando item para tentar "liberar" cota e a cota continuar cheia. Só
+                # camada_vetorial mexe em tenant.uso_bytes (cota de TABELA, 029); o tipo `arquivo` é bucket
+                # Garage, medido ao vivo por soma (plat.arquivo_uso_bytes, apagado_em), sem contador a
+                # dessincronizar. greatest(0, ...) porque a medição diária (plat.uso_medir) já reconcilia o
+                # valor exato pelo tamanho físico e pode ter corrigido para baixo entre a carga e o expurgo.
+                if c["tipo"] == "camada_vetorial" and liberados:
+                    cur.execute(
+                        "UPDATE plat.tenant SET uso_bytes = greatest(0, uso_bytes - %s) WHERE id = %s",
+                        (liberados, c["tenant_id"]),
+                    )
                 _evento(
                     cur,
                     c["tenant_id"],
