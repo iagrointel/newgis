@@ -35,3 +35,4 @@ tests/medidas/_prova_garage_chave_s3.json
 laco_var/
 # binário do Martin instalado por deploy/martin_instalar.sh (nunca versionado; sha256 fixado no script)
 bin/
+tests/e2e/capturas/*.pdf
