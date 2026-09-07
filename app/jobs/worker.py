@@ -26,6 +26,7 @@ import psycopg2
 import psycopg2.extras
 
 from app import log as plat_log
+from app import metricas
 from app.jobs import agenda as mod_agenda
 from app.jobs import filho as mod_filho
 from app.jobs.tipos import REGISTRO
@@ -329,6 +330,7 @@ class Worker:
         if tarefa is None:
             self.sql("SELECT plat.job_terminar(%s, %s, 'falhou', NULL, %s, NULL)",
                      (job["id"], self.nome, f"tipo de job não registrado neste worker: {job['tipo']}"))
+            metricas.registrar_job_processado(job["tipo"], "falhou")
             return
         r, w = os.pipe()
         os.set_blocking(r, False)
@@ -418,6 +420,10 @@ class Worker:
             estado = r["estado"] if r else None
         if estado in ("concluido", "cancelado", "pendente"):
             mod_filho.apagar_dir(self.dir_jobs, job["id"])
+        # plat_jobs_processados_total (item L7-06-a): só estado FINAL de verdade — "pendente" é devolução
+        # para nova tentativa, não fim de vida do job, e não deve inflar o contador de processados.
+        if estado in ("concluido", "falhou", "cancelado"):
+            metricas.registrar_job_processado(job["tipo"], estado)
         log.info("job terminou: %s (código %s)", estado, codigo,
                  extra={"job_id": str(job["id"]), "tipo": job["tipo"], "tenant_id": job["tenant_id"],
                         "pid_filho": f.pid})
@@ -486,10 +492,18 @@ class Worker:
             if linha.startswith(("GET /saude", "HEAD /saude")):
                 corpo = json.dumps(self.estado_saude(), ensure_ascii=False).encode("utf-8")
                 status = "200 OK"
+                tipo_conteudo = "application/json; charset=utf-8"
+            elif linha.startswith(("GET /metrics", "HEAD /metrics")):
+                # item L7-06-a: mesmo contrato de cardinalidade de app/metricas.py; só as métricas DESTE
+                # processo (worker) — plat_jobs_processados_total. Sem fila (evita 2º pool de conexões
+                # só para repetir o que a API já expõe em /metrics via plat.fila_estado()).
+                corpo, tipo_conteudo = metricas.expor()
+                status = "200 OK"
             else:
                 corpo = b'{"erro": "rota_inexistente"}'
                 status = "404 Not Found"
-            cab = (f"HTTP/1.1 {status}\r\nContent-Type: application/json; charset=utf-8\r\nCache-Control: no-store\r\n"
+                tipo_conteudo = "application/json; charset=utf-8"
+            cab = (f"HTTP/1.1 {status}\r\nContent-Type: {tipo_conteudo}\r\nCache-Control: no-store\r\n"
                    f"Content-Length: {len(corpo)}\r\nConnection: close\r\n\r\n").encode("ascii")
             c.sendall(cab + (b"" if linha.startswith("HEAD") else corpo))
         except OSError:

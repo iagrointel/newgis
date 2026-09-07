@@ -1070,3 +1070,32 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Métricas Prometheus e exporters de infraestrutura (item L7-06-a-metricas-exporters)
+
+`GET /metrics` na API (`:8150`) e no worker (`:8153`) — não exige sessão nem token, as duas portas só
+escutam em `127.0.0.1`. Ver `docs/OBSERVABILIDADE.md` para a lista completa de famílias, rótulos e o
+contrato de cardinalidade (rótulo por inquilino é sempre `tenant`/`tenant_id` numérico, nunca o slug do
+schema `d_<slug>` nem token). Resumo:
+
+- `plat_http_requests_total`/`plat_http_request_duracao_segundos` — toda requisição da API, rotulada
+  pelo PADRÃO da rota (nunca o id do recurso).
+- `plat_jobs_processados_total` (worker), `plat_jobs_fila`/`plat_jobs_workers_vivos` (API, agregado
+  entre inquilinos) — a mesma fonte que já alimentava `/saude`.
+- `plat_tiles_requisicoes_total` — família pronta, ainda sem chamador em `master` (a autorização de COG
+  do item L1-01-d não estava mesclada na data desta entrega; docs/OBSERVABILIDADE.md §5).
+- Martin (nativo, `:8151/_/metrics`), node-exporter (`:9100`, já existia), Garage (`:3903/metrics`, já
+  existia), `postgres_exporter` (`:9187`, role dedicada `plat_metrica_pg`) e `nginx_exporter`
+  (`:9113`, `stub_status` interno em `:8096`) — todos acrescentados ao Prometheus da casa
+  (`/opt/monitoring/`, fora deste repositório) por *scrape job* novo, nunca substituindo o que já
+  existia.
+- `X-Req-Id` chega ao Martin: `location /tiles/` nova (`deploy/nginx.conf`) gera/repassa `$request_id` e
+  grava a mesma string no log dedicado `/var/log/nginx/plat_tiles_access.log`. TiTiler não existe hoje
+  no `plat` (porta 8152 reservada, sem serviço) — cláusula parcial, mecanismo pronto para quando nascer.
+
+### 22.1 O que ficou de fora
+
+`plat_tiles_requisicoes_total` sem tráfego real (§ acima); painéis Grafana, alertas e a tela
+`plat logs --req-id` são os itens seguintes da mesma linha (`L7-06-b/c/d`), fora do portão literal
+deste. `Garage :3903/metrics` continua sem exigir `metrics_token` — decisão do dono pendente (a porta
+já não é alcançável de fora de `127.0.0.1`, então o risco imediato é baixo).

@@ -1,6 +1,11 @@
 """Middleware de requisição: X-Req-Id, linha JSON no journal (redigida) e, para /api|/svc|/ogc|/tiles, uma linha em
 plat.log_acesso gravada DEPOIS de o corpo ser enviado, com os bytes contados no body_iterator (ADR 0002 seção 9.1).
-Rotas excluídas: /saude, /api/versao, /, /api/docs, /api/openapi.json (ruído do driver) e páginas."""
+Rotas excluídas: /saude, /api/versao, /, /api/docs, /api/openapi.json (ruído do driver) e páginas.
+
+Item L7-06-a-metricas-exporters: o mesmo middleware alimenta `app.metricas` — rótulo de rota SEMPRE o padrão
+casado pelo roteador (`metricas.rota_para_metrica`, ex. "/api/jobs/{job_id}"), NUNCA o caminho literal usado no
+log de acesso (esse tem o id do recurso; como rótulo de métrica seria cardinalidade sem limite). `/metrics` fica
+de fora dos dois (nem log, nem contado nele mesmo — é scrape do Prometheus a cada poucos segundos, para sempre)."""
 
 import logging
 import time
@@ -8,13 +13,14 @@ import time
 from fastapi import FastAPI, Request
 from starlette.concurrency import run_in_threadpool
 
-from app import db
+from app import db, metricas
 from app import log as plat_log
 from app.auth.redigir import rota_redigida
 
 log = logging.getLogger("plat.acesso")
 PREFIXOS_COM_LOG = ("/api/", "/svc/", "/ogc/", "/tiles/")
-SEM_LOG_ACESSO = frozenset({"/saude", "/api/versao", "/", "/api/docs", "/api/openapi.json"})
+SEM_LOG_ACESSO = frozenset({"/saude", "/api/versao", "/", "/api/docs", "/api/openapi.json", "/metrics"})
+SEM_METRICA = frozenset({"/metrics"})
 
 
 def gera_log(caminho: str) -> bool:
@@ -48,7 +54,16 @@ def instalar(app: FastAPI) -> None:
         resposta.headers.setdefault("Cache-Control", "no-store, must-revalidate")
         caminho = request.url.path
         rota = rota_redigida(caminho, request.url.query)
+        rota_metrica = metricas.rota_para_metrica(request)
         estado = request.state
+
+        def registrar_metrica() -> None:
+            if caminho in SEM_METRICA:
+                return
+            metricas.registrar_requisicao(
+                rota_metrica, resposta.status_code, getattr(estado, "tenant_id", None),
+                time.perf_counter() - inicio,
+            )
 
         def campos(bytes_: int = 0) -> dict:
             return {
@@ -65,6 +80,7 @@ def instalar(app: FastAPI) -> None:
             }
 
         if not gera_log(caminho):
+            registrar_metrica()
             nivel = logging.DEBUG if caminho in SEM_LOG_ACESSO else logging.INFO
             log.log(nivel, "acesso", extra=campos())
             return resposta
@@ -76,6 +92,7 @@ def instalar(app: FastAPI) -> None:
             async for pedaco in original:
                 total += len(pedaco)
                 yield pedaco
+            registrar_metrica()
             c = campos(total)
             log.info("acesso", extra=c)
             await run_in_threadpool(
