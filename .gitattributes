@@ -18,3 +18,8 @@ tests/api/cruzado_casos.py merge=union
 
 # Gerado por `make limites` a partir de app/limites.py — a fila regera ao fechar o lote.
 docs/LIMITES.md merge=ours
+
+# app/main.py é REGISTRO de rotas: cada item acrescenta import + include_router no mesmo lugar.
+# 07/09 tarde: 5 ramos reprovaram de uma vez por conflito aqui, nenhum por teste. União; a fila
+# remove include_router duplicado e confere sintaxe antes da suíte.
+app/main.py merge=union
