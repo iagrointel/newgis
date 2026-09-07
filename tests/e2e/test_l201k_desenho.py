@@ -6,14 +6,12 @@ item (polígono auto-intersectante, círculo no polo, texto de 10 mil caracteres
 Depende de `/mapa` responder (item L2-01-mapa-web) e do terra-draw vendorizado carregar."""
 
 import json
-from pathlib import Path
 
 import pytest
 
 from tests.e2e.apoio import Tela
 
 ITEM = "L2-01-k-desenho-anotacoes"
-CAPTURAS = Path(__file__).resolve().parent / "capturas"
 
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
@@ -93,7 +91,7 @@ def test_sete_tipos_desenham_e_contam(mapa, page):
     assert n == 7, tipos
     assert set(tipos) == {"ponto", "linha", "poligono", "retangulo", "circulo", "texto", "seta"}
     tela = mapa
-    tela.capturar("sete_tipos")
+    tela.capturar(f"{ITEM}_sete_tipos")
     tela.verificar()
 
 
@@ -137,7 +135,7 @@ def test_salvar_e_reabrir_identico(mapa, page, base_url):
         assert fa["geometry"] == fb["geometry"]
         assert fa["properties"]["tipo_desenho"] == fb["properties"]["tipo_desenho"]
         assert fa["properties"]["estilo"] == fb["properties"]["estilo"]
-    mapa.capturar("salvar_reabrir")
+    mapa.capturar(f"{ITEM}_salvar_reabrir")
     mapa.verificar()
 
 
@@ -254,7 +252,7 @@ def test_encaixe_10px_cai_no_vertice_da_feicao_alvo(mapa, page):
     apertado = page.evaluate("([x, y]) => window.plat.mapa.desenho.encaixar(x + 6, y + 4)", pixel)
     assert apertado is None or _dist_px(page, apertado, deslocado) <= 0.5, apertado
     page.evaluate("window.plat.mapa.desenho.definirToleranciaSnap(10)")
-    mapa.capturar("encaixe")
+    mapa.capturar(f"{ITEM}_encaixe")
     mapa.verificar()
 
 
