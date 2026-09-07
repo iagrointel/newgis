@@ -1,0 +1,12 @@
+{
+ "item": "L2-03-a",
+ "medidas": {
+  "mil_feicoes_lote_s": {
+   "valor": 0.563,
+   "unidade": "s",
+   "comando": "POST /api/camadas/{id}/edicoes com 1.000 feições em `adicionar` (modo transação padrão), camada de teste em d_demo; tests/api/test_edicao_transacional.py::test_mil_feicoes_em_lote_menos_de_3s"
+  }
+ },
+ "gerado_em": "2026-09-06T19:23:23Z",
+ "git_sha": "90d03c07da0c"
+}
