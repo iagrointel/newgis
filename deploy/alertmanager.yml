@@ -1,0 +1,102 @@
+# Roteamento e canais de alerta (item L7-06-b-alertas). Análise / beta privado.
+#
+# Alertmanager 0.26 (pacote apt `prometheus-alertmanager`, o mesmo binário no hospedado e no
+# appliance). As REGRAS ficam em `deploy/alertas.yml`; aqui só o que fazer com elas.
+#
+# ⛔ NENHUM SEGREDO NESTE ARQUIVO. O repositório é público. Senha de SMTP e credencial de webhook
+# vêm de arquivo em /etc/plat/segredos/ (modo 600, dono root), pelos campos `*_file` que o
+# Alertmanager 0.26 aceita. Um teste (tests/unit/test_alertas_regras.py) reprova se aparecer aqui
+# qualquer coisa parecida com senha, token ou chave.
+
+global:
+  resolve_timeout: 5m
+  smtp_from: alertas-plat@localhost
+  smtp_smarthost: "127.0.0.1:25"
+  smtp_require_tls: false
+
+templates:
+  - /etc/plat/alertmanager/modelos/*.tmpl
+
+route:
+  # Agrupa por alerta e por serviço: um disco cheio em três pontos de montagem é uma mensagem, não três.
+  group_by: [alertname, servico]
+  group_wait: 15s
+  group_interval: 2m
+  repeat_interval: 12h
+  receiver: painel-e-webhook
+
+  routes:
+    # 1) A sentinela nunca acorda ninguém: vai só para o receptor de teste, que mede o caminho.
+    - matchers: [alertname = "Sentinela"]
+      receiver: canal-de-teste
+      group_wait: 0s
+      repeat_interval: 5m
+
+    # 2) Crítico: e-mail da organização + webhook + banner do painel, e repete de 4 em 4 horas.
+    - matchers: [severidade = "critico"]
+      receiver: critico-email-webhook-painel
+      group_wait: 10s
+      repeat_interval: 4h
+
+    # 3) Aviso: sem e-mail (ninguém lê e-mail de aviso), webhook + banner do painel.
+    - matchers: [severidade = "aviso"]
+      receiver: painel-e-webhook
+
+inhibit_rules:
+  # Disco crítico cala o aviso do MESMO ponto de montagem — as duas regras disparam juntas por
+  # construção (95 % também é > 85 %).
+  - source_matchers: [alertname = "DiscoCritico"]
+    target_matchers: [alertname = "DiscoQuaseCheio"]
+    equal: [mountpoint]
+  # Serviço fora cala o alvo caído genérico do mesmo alvo: é o mesmo fato, contado duas vezes.
+  - source_matchers: [alertname = "ServicoDaPlataformaFora"]
+    target_matchers: [alertname = "AlvoPrometheusCaido"]
+    equal: [instance]
+
+receivers:
+  - name: painel-e-webhook
+    webhook_configs:
+      # O próprio painel do produto: vira banner para o administrador do inquilino (app/alertas.py,
+      # POST /api/alertas/webhook, aceito só de 127.0.0.1).
+      - url: http://127.0.0.1:8150/api/alertas/webhook
+        send_resolved: true
+        max_alerts: 50
+      # Webhook externo compatível com ntfy/Slack. O endereço é de configuração (não é segredo);
+      # a credencial vem de arquivo.
+      - url_file: /etc/plat/segredos/PLAT_ALERTA_WEBHOOK_URL
+        send_resolved: true
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /etc/plat/segredos/PLAT_ALERTA_WEBHOOK_TOKEN
+
+  - name: critico-email-webhook-painel
+    email_configs:
+      # SMTP no molde do `emailsettings` do Portal for ArcGIS (mesmos campos: servidor, porta,
+      # remetente, destinatário, autenticação, TLS). Nesta instalação o relay é o postfix local em
+      # 127.0.0.1:25, que não pede autenticação — por isso não há usuário nem senha aqui. Para um
+      # servidor da organização, mudam três linhas no `global` e entram `auth_username:` e
+      # `auth_password_file: /etc/plat/segredos/PLAT_SMTP_SENHA` (o Alertmanager 0.26 aceita
+      # `auth_password_file`, mas NÃO aceita `to_file` nem `auth_username_file` — conferido com
+      # `amtool check-config` em 07/09/2026, ver docs/RUNBOOKS/alertas.md secao 4).
+      - to: root@localhost
+        send_resolved: true
+        headers:
+          Subject: '[plat][{{ .CommonLabels.severidade }}] {{ .CommonLabels.alertname }}'
+    webhook_configs:
+      - url: http://127.0.0.1:8150/api/alertas/webhook
+        send_resolved: true
+        max_alerts: 50
+      - url_file: /etc/plat/segredos/PLAT_ALERTA_WEBHOOK_URL
+        send_resolved: true
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /etc/plat/segredos/PLAT_ALERTA_WEBHOOK_TOKEN
+
+  - name: canal-de-teste
+    # Receptor de homologação: `deploy/alertas_receptor_teste.py` grava hora de chegada em JSON,
+    # que é a evidência de prazo do portão deste item.
+    webhook_configs:
+      - url_file: /etc/plat/segredos/PLAT_ALERTA_TESTE_URL
+        send_resolved: true
