@@ -49,6 +49,20 @@ six==1.17.0
 # identidade (app/auth/totp.py gera o QR do TOTP em SVG; cryptography vem do dpkg python3-cryptography)
 qrcode==8.2
 #
+# símbolos/sprites/glifos (app/simbolos, item L2-02-e-simbolos-sprites-glifos): cairosvg rasteriza o SVG
+# próprio (ícones + upload saneado) para compor o atlas do sprite; cairocffi é o binding usado por ele
+# (libcairo2 já vem do dpkg, só falta o binding Python), cssselect2/tinycss2/webencodings são dependências
+# dele. Pillow (import PIL) NÃO está aqui: vem de /usr/local/lib/.../dist-packages, instalado globalmente
+# por outro produto da casa — mesma situação e mesmo raciocínio do shapely documentado no topo deste
+# arquivo (P5 fica PARCIAL nesse ponto até o dono decidir acrescentar python3-pillow a deploy/pacotes_apt.txt).
+cairosvg==2.9.0
+cairocffi==1.7.1
+cssselect2==0.9.0
+tinycss2==1.5.1
+webencodings==0.5.1
+cffi==2.0.0
+pycparser==3.0
+#
 # LDAP/Active Directory (app/auth/ldap.py; item L0-08-d): puro Python (sem libldap/openldap-dev no sistema);
 # pyasn1 já vem do dpkg (python3-pyasn1), a venv só acrescenta o pacote ldap3 em si
 ldap3==2.9.1

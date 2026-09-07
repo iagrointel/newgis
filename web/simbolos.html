@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Símbolos · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/vendor/maplibre-gl-4.7.1.css">
+<link rel="stylesheet" href="/static/simbolos.css">
+</head>
+<body class="tela instrumento simbolos">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal simbolos-tela" tabindex="-1">
+    <div class="linha-ferramentas simbolos-barra">
+      <h1 data-i18n="simbolos.titulo">Símbolos</h1>
+      <plat-aviso id="aviso"></plat-aviso>
+    </div>
+    <div class="simbolos-area">
+      <div class="simbolos-galeria">
+        <div class="simbolos-filtros">
+          <div class="simbolos-campo">
+            <label for="busca" data-i18n="simbolos.buscar">buscar por nome</label>
+            <input id="busca" type="search">
+          </div>
+          <div class="simbolos-campo">
+            <label for="categoria" data-i18n="simbolos.categoria">categoria</label>
+            <select id="categoria"></select>
+          </div>
+        </div>
+        <div id="grade" class="simbolos-grade" role="list" aria-label="galeria de ícones"></div>
+        <details class="simbolos-upload">
+          <summary data-i18n="simbolos.enviar_icone">enviar ícone próprio</summary>
+          <form id="form-upload">
+            <label for="up-nome" data-i18n="simbolos.nome">nome</label>
+            <input id="up-nome" name="nome" pattern="[a-z0-9][a-z0-9-]{0,63}" required>
+            <label for="up-categoria" data-i18n="simbolos.categoria">categoria</label>
+            <input id="up-categoria" name="categoria" value="personalizado">
+            <label for="up-svg" data-i18n="simbolos.arquivo_svg">arquivo .svg</label>
+            <input id="up-svg" name="arquivo" type="file" accept=".svg,image/svg+xml" required>
+            <button type="submit" data-i18n="simbolos.enviar">enviar</button>
+          </form>
+        </details>
+      </div>
+      <div class="simbolos-mapa-caixa">
+        <div id="mapa" aria-label="mapa" role="application"></div>
+        <p class="simbolos-dica" data-i18n="simbolos.dica">clique num ícone da galeria para colocá-lo no mapa</p>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/static/vendor/maplibre-gl-4.7.1.js"></script>
+<script type="module" src="/static/js/simbolos/galeria.js"></script>
+</body>
+</html>

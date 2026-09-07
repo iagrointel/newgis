@@ -1,0 +1,12 @@
+{
+ "item": "L2-02-e-simbolos-sprites-glifos",
+ "medidas": {
+  "pagina_pronta_ms_simbolos": {
+   "valor": 975.6,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  }
+ },
+ "gerado_em": "2026-09-07T17:08:28Z",
+ "git_sha": "20e34773221b"
+}

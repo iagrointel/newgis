@@ -48,6 +48,7 @@ from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
+from app.simbolos.rotas import router as rotas_simbolos
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 
@@ -66,6 +67,17 @@ auth_middleware.instalar(app)
 # acrescentado por último: no empilhamento do Starlette isso o torna o mais externo, executando ANTES do
 # middleware de log/sessão acima (ADR 0001 seção 12; app/limite_corpo.py) — corpo grande nunca chega à sessão.
 limite_corpo.instalar(app)
+
+if not settings.producao:
+    # Em produção o nginx serve web/ em /static/ direto do disco (comentário do topo deste arquivo). Fora de
+    # produção (trilha de teste, `venv/bin/uvicorn app.main:app` sem nginx na frente) não existe esse
+    # servidor — o e2e de navegador (item L2-02-e-simbolos-sprites-glifos) precisa de /static respondendo
+    # para a página carregar MapLibre/estilo/js. Guardado por `settings.producao`: zero mudança de
+    # comportamento em produção, só liga o que já faltava para testar sem nginx (mesmo padrão já usado por
+    # outras trilhas, ex. L2-12-a).
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/static", StaticFiles(directory=str(WEB)), name="static_dev")
 
 ROUTERS = [
     rotas_saude,
@@ -117,6 +129,9 @@ ROUTERS = [
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
     rotas_geocodificador_esri,
+    # --- símbolos, sprites e glifos (L2-02-e): /api/simbolos (galeria + upload), /api/simbolos/sprite/{slug}
+    # (.json/.png, 1x e 2x), /api/simbolos/fontes/{fontstack}/{faixa}.pbf
+    rotas_simbolos,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

@@ -863,5 +863,17 @@
  "upload.erro_generico": "não foi possível concluir o envio",
  "upload.erro_iniciar": "não foi possível iniciar o envio",
  "upload.erro_parte": "falha ao enviar a parte {n}",
- "upload.erro_concluir": "não foi possível concluir o envio"
+ "upload.erro_concluir": "não foi possível concluir o envio",
+ "simbolos.titulo": "Símbolos",
+ "simbolos.buscar": "buscar por nome",
+ "simbolos.enviar_icone": "enviar ícone próprio",
+ "simbolos.nome": "nome",
+ "simbolos.categoria": "categoria",
+ "simbolos.arquivo_svg": "arquivo .svg",
+ "simbolos.enviar": "enviar",
+ "simbolos.dica": "clique num ícone da galeria para colocá-lo no mapa",
+ "simbolos.erro_carregar": "não foi possível carregar a galeria",
+ "simbolos.erro_enviar": "não foi possível enviar o ícone",
+ "simbolos.enviado": "ícone enviado",
+ "simbolos.todas_categorias": "todas as categorias"
 }
