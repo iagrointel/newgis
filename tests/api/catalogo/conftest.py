@@ -126,25 +126,6 @@ def itens_b(sessao_b, env):
         _expurgar_zt(env, "demo2")
 
 
-def pytest_sessionfinish(session, exitstatus):
-    """Mesma razão de tests/api/conftest.py: `_expurgar_zt` apaga TODO item zt* do inquilino, inclusive os que
-    outro worker do pytest-xdist ainda está usando. Sob xdist quem expurga é o controlador, no fim de tudo."""
-    if sob_xdist() or not getattr(session.config.option, "numprocesses", None):
-        return
-    if not session.config.pluginmanager.hasplugin("xdist"):
-        return
-    from tests.conftest import valores_env
-
-    env = valores_env()
-    if not env.get("PLAT_DSN"):
-        return
-    for slug in ("demo", "demo2"):
-        try:
-            _expurgar_zt(env, slug)
-        except Exception as e:  # noqa: BLE001 - limpeza best-effort
-            print(f"[limpeza] expurgo zt* de {slug} no controlador falhou: {type(e).__name__}: {e}")
-
-
 @pytest.fixture(scope="session")
 def editor_a(usuarios_a):
     """Editor comum do inquilino demo: (cliente, usuario)."""

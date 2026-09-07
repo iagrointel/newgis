@@ -339,21 +339,5 @@ def limpeza_de_residuos(sessao_a, sessao_b, sessao_plat):
     varrer_residuos(sessao_a, sessao_b, sessao_plat)
 
 
-def pytest_sessionfinish(session, exitstatus):
-    """Controlador do pytest-xdist: varre o resíduo zt-* depois que TODOS os workers terminaram (ver
-    limpeza_de_residuos). No processo do worker e na rodada serial não faz nada — lá quem varre é a fixture."""
-    if sob_xdist() or not getattr(session.config.option, "numprocesses", None):
-        return
-    if not session.config.pluginmanager.hasplugin("xdist"):
-        return
-    try:
-        c = credenciais()
-        if not all(slug in c for slug in ("demo", "demo2", "plataforma")):
-            return
-        varrer_residuos(_sessao_admin(c, "demo"), _sessao_admin(c, "demo2"), _sessao_superadmin(c))
-    except Exception as e:  # noqa: BLE001 - limpeza best-effort: nunca derruba a rodada por causa dela
-        print(f"[limpeza] varredura de resíduos zt-* no controlador falhou: {type(e).__name__}: {e}")
-
-
 def com_token(cliente, token: str, metodo: str, url: str, **kw):
     return cliente.request(metodo, url, headers={"Authorization": f"Bearer {token}", **kw.pop("headers", {})}, **kw)
