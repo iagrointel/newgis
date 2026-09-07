@@ -10,6 +10,7 @@ import numpy as np
 from psycopg2.extras import execute_values
 from pydantic import BaseModel
 
+from app import limites
 from app.amc import escala, unidades
 from app.jobs.registro import FalhaDefinitiva, tarefa
 
@@ -123,7 +124,7 @@ def _blocos_de_fator_bruto(ctx, execucao_id: str, fatores: list[dict], plano: di
     parametros=RecombinarParametros,
     pesado=True,             # 1 por vez na máquina: a refutação do item L3-16 é justamente esta fila
     memoria_mb=escala.orcamento_mb(),
-    timeout_s=escala.limites.AMC_EXTRACAO_TIMEOUT_S,
+    timeout_s=limites.AMC_EXTRACAO_TIMEOUT_S,
     tentativas=1,            # recombinação é determinística: se falhou, repetir dá o mesmo erro
     chave=lambda p: f"amc_recombinar:{p.get('execucao_id')}",
     perfil_minimo="editor",
