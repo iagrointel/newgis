@@ -515,11 +515,14 @@ class _Importador:
         # no_origem_seq/no_destino_seq entram como 0: o gatilho rede_aresta_validar copia os seqs
         # reais dos nós (o DDL proíbe a aplicação de preenchê-los à mão). ST_GeomFromWKB(NULL) é
         # NULL (função STRICT), então o ramal sem geometria entra com geom e comprimento NULL.
-        execute_values(
+        # 07/09 (item L4-01-c): o conflito é por (rede, TIPO, código) — na BDGD o COD_ID repete entre
+        # camadas (26.567 SSDBT com o mesmo código de um SSDMT na cooperativa de teste); e o que o
+        # ON CONFLICT descarta passa a ser CONTADO como desvio, nunca mais engolido em silêncio.
+        gravadas = execute_values(
             self.cur,
             "INSERT INTO plat.rede_aresta (tenant_id, rede_id, tipo_id, codigo_externo, no_origem_id, "
             "no_destino_id, no_origem_seq, no_destino_seq, geom, comprimento_m, fase, subrede_id, atributos) "
-            "VALUES %s ON CONFLICT (rede_id, codigo_externo) DO NOTHING",
+            "VALUES %s ON CONFLICT (rede_id, tipo_id, codigo_externo) DO NOTHING RETURNING codigo_externo",
             tuplas,
             # comprimento_m = COMP convertido quando a unidade foi detectada (item L4-01-c);
             # senão o geodésico da geometria; ramal sem geometria e sem COMP fica NULL.
@@ -529,7 +532,17 @@ class _Importador:
                      "ST_Length(ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE) + "), "
                      "4326)::geography)), %s, %s::uuid, %s)",
             page_size=LOTE,
+            fetch=True,
         )
+        entrou = {r["codigo_externo"] for r in gravadas}
+        for t in tuplas:
+            if t[3] not in entrou:
+                self._desvio(
+                    "trecho_codigo_repetido_no_tipo",
+                    "COD_ID repetido dentro do mesmo tipo de trecho (o mesmo código em outro tipo é normal "
+                    "na BDGD e entra): a segunda ocorrência não é gravada",
+                    t[3],
+                )
 
     def _detectar_unidade_comp(self, camada: str, df) -> float | None:
         """Razão Σ COMP / Σ comprimento geodésico (WGS84, pyproj) da camada. Devolve o fator que
@@ -820,6 +833,14 @@ class _Importador:
             fetch=True,
         )
         id_por_codigo = {r["codigo_externo"]: r["id"] for r in inseridos}
+        for t in tuplas:
+            if t[3] not in id_por_codigo:
+                self._desvio(
+                    "consumidor_codigo_repetido",
+                    "COD_ID de unidade consumidora já gravado (repete entre UCBT_tab e UCMT_tab, ou dentro "
+                    "da mesma camada): a segunda ocorrência não é gravada",
+                    t[3],
+                )
         # o tipo do consumidor (t[2]) já é conhecido em Python — igual ao caminho de dispositivo
         # (_gravar_dispositivos), não precisa de JOIN em rede_no para descobrir de novo. A versão
         # anterior referenciava `n.tipo_id` num ON antes do JOIN que declara `n` (SQL inválido:
