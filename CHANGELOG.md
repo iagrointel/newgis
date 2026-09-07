@@ -129,6 +129,29 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 4, setembro de 2026 (corrida-camada-schema: DDL concorrente em função SECURITY DEFINER)
+
+Defeito de produto achado em produção-de-teste: duas sessões do MESMO inquilino publicando camada ao mesmo
+tempo caem as duas em `plat.camada_schema_garantir(slug)`, que faz `CREATE SCHEMA IF NOT EXISTS` mais
+`GRANT USAGE ON SCHEMA` sem serialização. O `GRANT` atualiza a mesma linha de `pg_namespace`, que não tem
+EvalPlanQual, e a segunda transação aborta com `tuple concurrently updated`; o job de ingestão morre no
+passo 0. Medido pela bancada nova `tests/api/test_camada_schema_corrida.py`, com conexões reais alinhadas
+por barreira, ANTES do conserto: 2 falhas em 12 chamadas com 2 conexões, 10 em 24 com 4, 15 em 36 com 6.
+DEPOIS do conserto: 0 em 24 com 4 conexões, quatro rodadas seguidas do arquivo sem falha
+(`tests/medidas/corrida-camada-schema.json`).
+
+Conserto na migração `20260907T0240_ddl_concorrente_trinco.sql`: `pg_advisory_xact_lock(hashtext(<chave>))`
+antes do DDL, chave derivada do objeto tocado. `IF NOT EXISTS` não bastava porque só cobre metade do
+problema e nem essa metade é atômica (ADR 0025 seção 2). A classe inteira foi coberta, não só o caso
+flagrado: `camada_schema_garantir`, `camada_preparar`, `tenant_criar` (mesmo `d_<slug>`, chave partilhada),
+`evento_particao_garantir` e `log_particao_garantir` (mais reconferência depois do trinco) e os dois
+expurgadores de partição. `tenant_apagar_interno` fica de fora com razão escrita: só emite `ALTER TABLE`,
+que já pega bloqueio pesado na tabela. A chave é por slug, então inquilinos diferentes não esperam um pelo
+outro — provado com uma transação segurando `demo` enquanto `demo2` completa em menos de 5 s e `demo`
+estoura o `statement_timeout` de 1 s. Guarda contra regressão: `test_toda_funcao_com_ddl_tem_trinco` lê
+`pg_proc.prosrc` vivo e reprova função `SECURITY DEFINER` que faça DDL de schema, GRANT ou CREATE/DROP
+TABLE sem o trinco — necessário porque a migração redefine funções inteiras e um ramo posterior pode
+derrubar o trinco em silêncio. ADR 0025.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
