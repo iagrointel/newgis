@@ -228,7 +228,7 @@ class ClienteS3:
         return [b.findtext("s3:Name", default="", namespaces=ns) for b in root.iter("{%s}Bucket" % ns["s3"])]
 
     def listar(self, bucket: str, prefixo: str = "", max_chaves: int = 1000) -> list[dict[str, Any]]:
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET  # B314: XML vindo de outro processo (Garage) nunca pelo parser cru
 
         ns = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
         saida: list[dict[str, Any]] = []
@@ -265,7 +265,7 @@ class ClienteS3:
         r = self._requisicao("POST", bucket, chave, query="uploads=", extra={"content-type": content_type})
         if r.status_code != 200:
             raise ErroGarage(f"CreateMultipartUpload {bucket}/{chave}: {r.status_code} {r.text[:300]}")
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET  # B314: XML vindo de outro processo (Garage) nunca pelo parser cru
 
         ns = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
         root = ET.fromstring(r.text)
