@@ -142,11 +142,17 @@ def argumentos_ogr2ogr(
     nome_camada: str,
     srid_saida: int | None,
     codificacao: str,
+    geometria: str | None = None,
 ) -> list[str]:
     argv = ["ogr2ogr", "-f", formato.driver, str(destino), conninfo, "-sql", sql, "-nln", nome_camada]
     alvo_crs = crs_de_saida(formato, srid_saida)
     if alvo_crs:
         argv += ["-t_srs", f"EPSG:{int(alvo_crs)}"]
+    if formato.exige_tipo_geometria and geometria:
+        # o `-sql` sobre PostgreSQL entrega a camada com geometria "desconhecida"; o OpenFileGDB recusa
+        # ("ERROR 6: Unsupported geometry type", medido em 07/09/2026) e precisa do tipo declarado, que o
+        # item de catálogo já guarda em `dados.geometria`
+        argv += ["-nlt", geometria]
     for opcao in formato.lco:
         argv += ["-lco", opcao]
     for opcao in formato.dsco:
