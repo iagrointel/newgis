@@ -3,6 +3,98 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 6, setembro de 2026 (item L7-06-b-alertas: regras de alerta, roteamento e runbook)
+
+`deploy/alertas.yml`: 16 regras versionadas, as mesmas no hospedado e no appliance — disco acima de
+85 % (aviso) e de 95 % (critico), memória disponível abaixo de 2 GiB, job da fila rodando há mais de
+30 min, mais de 1 % de 5xx em 5 min, p95 de ladrilho acima de 500 ms por 10 min, certificado a menos
+de 14 dias, backup sem sucesso há mais de 26 h, ensaio de restauração não feito no mês, réplica com
+atraso acima de 5 min e réplica que sumiu (`absent`), serviço `plat-*` fora por 2 min, alvo caído por
+5 min, e o par que vigia o próprio alertador (`AlertmanagerFora`, `PrometheusNaoConsegueFalarComAlertmanager`)
+mais a `Sentinela` permanente.
+
+`deploy/alertmanager.yml` (Alertmanager 0.26, apt): rota por severidade, duas regras de inibição
+(disco crítico cala o aviso do mesmo ponto de montagem; serviço fora cala o alvo caído do mesmo
+alvo), e três receptores — e-mail no molde do `emailsettings` do Portal, webhook compatível com
+ntfy/Slack e canal de teste. Nenhum segredo no arquivo: senha e credencial vêm de
+`/etc/plat/segredos/*` pelos campos `*_file`, e um teste reprova qualquer literal.
+
+`deploy/alertas_teste.yml`: 24 casos de `promtool test rules`, um por regra mais o vizinho que NÃO
+deve disparar. Acharam um defeito de verdade antes de produção: em `a and b` o PromQL devolve o valor
+do lado esquerdo, e a mensagem da réplica saía com "atraso de 1s" em vez do atraso real.
+
+`deploy/alertas_homologacao.sh` + `deploy/alertas_receptor_teste.py`: encenação de verdade em
+Prometheus e Alertmanager próprios, com os MESMOS arquivos de produção (só os caminhos de segredo
+mudam). Enche um volume ext4 de 64 MiB com `fallocate`, derruba um alvo `plat-*` que estava no ar,
+grava backup de 30 h atrás, deixa o ensaio sem registro, marca um job como rodando há 35 min e aponta
+a API para um certificado curto. Medido em 07/09/2026 (`tests/medidas/L7-06-b-alertas.json`).
+
+`docs/RUNBOOKS/alertas.md`: uma seção por alerta, com o que fazer e como confirmar; o rótulo
+`runbook` de cada regra é a chave da seção, e `tests/unit/test_alertas_regras.py` reprova regra sem
+seção e seção sem as duas partes. `docs/adr/20260907T1830-alertador.md` registra por que Alertmanager
+e não alerting do Grafana — e corrige a hipótese do item: o Alertmanager é um serviço A MAIS, o que
+decidiu foi poder testar a regra fora do ar.
+
+Fica de fora, nomeado: banner de alerta no painel do produto (falta decidir que privilégio deixa um
+alertador externo escrever no produto) e o casamento automático entre silêncio de manutenção e modo
+somente-leitura de instalação inteira, que ainda não existe.
+
+## turno 6, setembro de 2026 (item L7-06-a-metricas-exporters: métricas Prometheus e exporters de infraestrutura)
+
+`app/metricas.py` (biblioteca única, `CollectorRegistry` próprio por processo): `plat_http_requests_total`
++ histograma de latência (rótulo de rota = PADRÃO do roteador, `request.scope["route"].path`, nunca o
+caminho literal com id — isso é o que segura a cardinalidade), `plat_tiles_requisicoes_total` (família
+pronta, sem chamador ainda em `master`), `plat_jobs_processados_total` (worker), `plat_jobs_fila`/
+`plat_jobs_workers_vivos` (API, agregado entre inquilinos via `plat.fila_estado()`, zero cardinalidade
+nova). Contrato: rótulo de inquilino é SEMPRE `tenant_id` numérico (`plat.tenant.id`), nunca o slug
+(schema `d_<slug>` pode carregar o nome do cliente) nem token. `GET /metrics` em `app/saude.py` (API) e
+no servidor bruto do worker (`app/jobs/worker.py`). `app/db.py::_preparar` agora seta
+`application_name = 'plat:<tenant_id>'` por conexão com contexto (e `'plat'` sem contexto, para não
+vazar o inquilino anterior de uma conexão do pool) — é o único jeito de o `postgres_exporter`, de FORA
+do processo, contar conexões por inquilino sem tocar no slug.
+
+Exporters de infraestrutura novos: `postgres_exporter` (apt `prometheus-postgres-exporter` 0.15.0, role
+dedicada `plat_metrica_pg` só com `pg_monitor` + `SELECT` em `plat.tenant`, duas consultas próprias de
+baixa cardinalidade por `tenant_id`; coletores `stat_user_tables`/`statio_user_tables` DESLIGADOS —
+medido: ligados, 231.807 séries, porque o `iagro_sat` é compartilhado por dezenas de frentes da casa;
+`statement_timeout`/`lock_timeout` curtos na role depois de um achado real — DDL concorrente de outra
+trilha prendeu 7 scrapes em `Lock/relation` por até 4 min) e `nginx_exporter` (apt
+`prometheus-nginx-exporter` 1.1.0, `stub_status` interno em `127.0.0.1:8096`, vhost próprio
+`deploy/nginx-metricas.conf`). Martin já expõe métrica nativa (achado: em `/_/metrics`, não `/metrics`
+— `/metrics` cai na rota de nome de fonte de tile e devolve 404). Os seis viraram *scrape job* novo em
+`/opt/monitoring/prometheus/prometheus.yml` (infra da casa, fora do repositório; só acrescentado, nunca
+substituído). `X-Req-Id` até Martin: `location /tiles/` nova em `deploy/nginx.conf` que gera/repassa
+`$request_id` e grava a MESMA string em `/var/log/nginx/plat_tiles_access.log`
+(`deploy/nginx-log-formats.conf`) — Martin não tem como logar cabeçalho arbitrário do próprio processo
+(CLI só tem `RUST_LOG`). Provado em produção: `X-Req-Id` de resposta e a linha do log batem, no mesmo
+pedido. TiTiler não existe hoje no `plat` (porta 8152 reservada, `PLAT_TITILER_URL` vazio) — cláusula
+parcial, mecanismo pronto.
+
+Testes: `tests/unit/test_metricas.py` (7 casos: famílias presentes, rótulo de rota é o padrão da rota
+não o caminho literal, assinatura de `registrar_requisicao` sem parâmetro de token, cardinalidade não
+cresce com repetição, token de prova não aparece no corpo), `tests/unit/test_db_contexto.py` (2 casos,
+`application_name`), `tests/api/test_metricas_rota.py` (4 casos: 200 com as famílias, sem auth, 50
+inquilinos sintéticos → 50 séries novas em `plat_http_requests_total` (≤ 5.000 no total), refutação com
+500 tokens (10 inquilinos × 50, cada um usado 1 vez e apagado — o produto já limita 20 tokens ativos por
+usuário) → só 10 séries novas, nenhum token no corpo, e `plat_jobs_fila` sobe com um job de verdade
+(não é número fixo)). `make check`/`tests/unit` e `tests/api` completos: **1 falha pré-existente e não
+relacionada** em cada área, confirmadas idênticas com `git stash` (sem nenhuma mudança deste item) —
+`tests/unit/test_jobs_registro.py::test_tipos_de_prova_estao_registrados` (poluição de `lru_cache`
+entre testes do próprio arquivo) e o bloco inteiro de `tests/api/jobs/*` (`permission denied for table
+ambiente` na função `plat.semente_demo_habilitada()` — GRANT que falta na base isolada da trilha,
+`laco/trilha_ambiente.sh`, nada a ver com métricas). Não corrigidas aqui (fora do escopo do item; a
+segunda é infraestrutura compartilhada do laço, não código do produto).
+
+Achado fora do escopo, registrado em `docs/OBSERVABILIDADE.md` §8: `GET /catalog` do Martin descreve
+cada fonte como `"<schema>.<tabela>"` (ex. `"d_demo.t_..."`) — em produção isso vazaria o slug do
+cliente para quem alcançar a rota. Não é uma métrica e a rota pública de tiles ainda não existe; fica
+para quem entregar `L2-01-b`/`L2-04` de verdade decidir.
+
+ADR 0018 (número provisório — vários worktrees paralelos reivindicam 0018 no momento desta entrega;
+renumerar no merge). Documentação: `docs/OBSERVABILIDADE.md` (novo), `MANUAL.md` seção 22,
+`ARQUITETURA.md` corrigido (as linhas de `plat-martin` estavam desatualizadas — diziam "não existe"
+desde antes do item L2-01-b ter mesclado o serviço de verdade).
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

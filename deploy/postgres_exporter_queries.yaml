@@ -1,0 +1,36 @@
+# Consultas próprias do postgres_exporter (item L7-06-a-metricas-exporters). Contrato de cardinalidade
+# igual ao de app/metricas.py: rótulo por inquilino é SEMPRE tenant_id (plat.tenant.id, inteiro opaco),
+# NUNCA o slug (schema d_<slug> pode carregar o nome do cliente) nem qualquer texto livre. Reaplicar com
+# `systemctl restart prometheus-postgres-exporter` depois de editar (o exporter só lê no início).
+
+plat_tenant_schema:
+  query: |
+    SELECT t.id::text AS tenant_id,
+           sum(pg_total_relation_size(c.oid))::bigint AS bytes
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    JOIN plat.tenant t ON n.nspname = 'd_' || t.slug
+    WHERE c.relkind IN ('r', 'm')
+    GROUP BY t.id
+  metrics:
+    - tenant_id:
+        usage: "LABEL"
+        description: "plat.tenant.id (nunca o slug/schema)"
+    - bytes:
+        usage: "GAUGE"
+        description: "soma de pg_total_relation_size das tabelas do schema de dado do inquilino"
+
+plat_tenant_conexoes:
+  query: |
+    SELECT split_part(application_name, ':', 2) AS tenant_id,
+           count(*) AS conexoes
+    FROM pg_stat_activity
+    WHERE datname = current_database() AND application_name LIKE 'plat:%'
+    GROUP BY 1
+  metrics:
+    - tenant_id:
+        usage: "LABEL"
+        description: "plat.tenant.id lido de application_name='plat:<id>' (app/db.py::_preparar)"
+    - conexoes:
+        usage: "GAUGE"
+        description: "conexões abertas AGORA com contexto deste inquilino"

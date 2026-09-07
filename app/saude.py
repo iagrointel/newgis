@@ -1,4 +1,7 @@
-"""GET /saude e GET /api/versao (ADR 0001 seção 7). 200 só com banco = ok; 503 em desatualizado e erro."""
+"""GET /saude, GET /api/versao e GET /metrics (ADR 0001 seção 7; item L7-06-a-metricas-exporters).
+200 só com banco = ok; 503 em desatualizado e erro. /metrics não exige sessão nem token: a porta 8150
+só escuta em 127.0.0.1 (systemd `plat-api.service`), o Prometheus da casa é o único cliente local, e o
+conteúdo em si nunca carrega segredo (contrato de cardinalidade em app/metricas.py)."""
 
 import datetime
 import logging
@@ -6,16 +9,17 @@ import time
 import urllib.error
 import urllib.request
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
 
-from app import db
+from app import db, metricas
 from app.settings import settings
 from app.versao import git_sha_curto, versao
 
 router = APIRouter()
 log = logging.getLogger("plat.saude")
 TIMEOUT_SERVICO_S = 1.0
+metricas.registrar_coletor_fila(db.db)
 
 
 def agora_iso() -> str:
@@ -87,3 +91,9 @@ def api_versao():
 # HEAD (curl -sI, sondas) fora do esquema OpenAPI: mesma função, sem operationId duplicado
 router.add_api_route("/saude", saude, methods=["HEAD"], include_in_schema=False)
 router.add_api_route("/api/versao", api_versao, methods=["HEAD"], include_in_schema=False)
+
+
+@router.get("/metrics", include_in_schema=False)
+def metricas_prometheus():
+    corpo, tipo_conteudo = metricas.expor()
+    return Response(content=corpo, media_type=tipo_conteudo, headers={"Cache-Control": "no-store"})

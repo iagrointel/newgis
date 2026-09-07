@@ -362,12 +362,78 @@ else
   echo "== h4. worker em contêiner PULADO (rode com --worker-container para instalar; ver ADR 0010 e docs/ARQUITETURA.md)"
 fi
 
+echo "== h5. observabilidade (item L7-06-a-metricas-exporters)"
+# role plat_metrica_pg: só pg_monitor (agregados) + SELECT em plat.tenant (id, nunca o slug); senha em
+# /etc/plat/segredos/PLAT_METRICA_PG_SENHA (mesmo padrão de CRED_DIR). statement_timeout/lock_timeout
+# CURTOS no papel: medido 07/09 — sem eles, uma DDL concorrente de OUTRA trilha prende o scrape inteiro
+# (7 conexões empilhadas em Lock/relation) e o postgres_exporter nunca solta a conexão.
+mkdir -p /etc/plat
+SENHA_METRICA_ARQ=$CRED_DIR/PLAT_METRICA_PG_SENHA
+if [ ! -s "$SENHA_METRICA_ARQ" ]; then
+  install -d -m 700 "$CRED_DIR"
+  openssl rand -hex 24 > "$SENHA_METRICA_ARQ.novo" && mv "$SENHA_METRICA_ARQ.novo" "$SENHA_METRICA_ARQ"
+  chmod 600 "$SENHA_METRICA_ARQ"
+  echo "$SENHA_METRICA_ARQ gerada"
+else
+  echo "$SENHA_METRICA_ARQ já existe (mantida)"
+fi
+SENHA_METRICA=$(cat "$SENHA_METRICA_ARQ")
+"${PSQL[@]}" -f - <<SQL
+DO \$\$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'plat_metrica_pg') THEN
+    CREATE ROLE plat_metrica_pg LOGIN;
+  END IF;
+END \$\$;
+ALTER ROLE plat_metrica_pg PASSWORD '$SENHA_METRICA' CONNECTION LIMIT 3
+  SET statement_timeout = '4s' SET lock_timeout = '2s';
+GRANT pg_monitor TO plat_metrica_pg;
+GRANT CONNECT ON DATABASE $DB TO plat_metrica_pg;
+GRANT USAGE ON SCHEMA plat TO plat_metrica_pg;
+GRANT SELECT ON plat.tenant TO plat_metrica_pg;
+SQL
+if grep -qE "^host\s+$DB\s+plat_metrica_pg\s" "$PG_HBA"; then
+  echo "linha de plat_metrica_pg já existe em $PG_HBA"
+else
+  printf 'host    %-15s plat_metrica_pg 127.0.0.1/32            scram-sha-256\n' "$DB" >> "$PG_HBA"
+  "${PSQL[@]}" -Atc "SELECT pg_reload_conf()" >/dev/null
+  echo "linha de plat_metrica_pg acrescentada em $PG_HBA"
+fi
+install -m 644 deploy/postgres_exporter_queries.yaml /etc/plat/postgres_exporter_queries.yaml
+cat > /etc/default/prometheus-postgres-exporter <<EOF
+# gerado pelo install.sh (item L7-06-a-metricas-exporters) — não editar à mão, editar deploy/nginx.conf/
+# deploy/postgres_exporter_queries.yaml e rodar install.sh de novo. collector.stat_user_tables/
+# statio_user_tables DESLIGADOS de propósito: medido 07/09, 231.807 séries só de tabela de OUTRAS
+# frentes no mesmo iagro_sat — não é métrica nossa e estouraria a cardinalidade do Prometheus da casa.
+DATA_SOURCE_NAME="postgresql://plat_metrica_pg:${SENHA_METRICA}@127.0.0.1:5432/$DB?sslmode=disable"
+ARGS="--web.listen-address=127.0.0.1:9187 --extend.query-path=/etc/plat/postgres_exporter_queries.yaml --collector.stat_bgwriter --no-collector.stat_user_tables --no-collector.statio_user_tables"
+EOF
+chmod 600 /etc/default/prometheus-postgres-exporter
+systemctl enable --now prometheus-postgres-exporter >/dev/null
+systemctl restart prometheus-postgres-exporter
+LOGFORMATS=/etc/nginx/conf.d/plat_log_formats.conf
+[ -f "$LOGFORMATS" ] || { cp deploy/nginx-log-formats.conf "$LOGFORMATS"; echo "$LOGFORMATS escrito"; }
+NGINX_METRICAS=/etc/nginx/sites-available/plat-metricas-nginx
+cp deploy/nginx-metricas.conf "$NGINX_METRICAS"
+ln -sf "$NGINX_METRICAS" /etc/nginx/sites-enabled/plat-metricas-nginx
+cat > /etc/default/prometheus-nginx-exporter <<'EOF'
+# gerado pelo install.sh (item L7-06-a-metricas-exporters); stub_status interno, ver deploy/nginx-metricas.conf
+ARGS="-nginx.scrape-uri=http://127.0.0.1:8096/nginx_status -web.listen-address=127.0.0.1:9113"
+EOF
+systemctl enable --now prometheus-nginx-exporter >/dev/null
+systemctl restart prometheus-nginx-exporter
+for i in $(seq 1 20); do curl -fsS -m 2 127.0.0.1:9187/metrics >/dev/null 2>&1 && break; sleep 1; done
+curl -fsS -m 5 127.0.0.1:9187/metrics >/dev/null || { echo "postgres_exporter não respondeu em :9187" >&2; exit 6; }
+curl -fsS -m 5 127.0.0.1:9113/metrics >/dev/null || { echo "nginx_exporter não respondeu em :9113" >&2; exit 6; }
+echo "postgres_exporter :9187 e nginx_exporter :9113 respondendo"
+
 echo "== i. nginx"
 SITE=/etc/nginx/sites-enabled/$DOM
 # zona limit_req própria: 10 tentativas/min por IP em /api/login e /api/login/2fa (ADR 0002 seção 6.2)
 LIMITES=/etc/nginx/conf.d/plat_limites.conf
 printf '# plat: limite por IP nos logins (ADR 0002 secao 6.2); escrito pelo install.sh\nlimit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\n' > "$LIMITES.novo"
 if [ -f "$LIMITES" ] && cmp -s "$LIMITES" "$LIMITES.novo"; then rm -f "$LIMITES.novo"; echo "$LIMITES já existe (igual)"; else mv "$LIMITES.novo" "$LIMITES"; echo "$LIMITES escrito"; fi
+mkdir -p /var/log/nginx  # access_log de deploy/nginx.conf (location /tiles/, plat_tiles_access.log)
+touch /var/log/nginx/plat_tiles_access.log
 escrever_nginx() {
   local bloco certbot_443 bloco_80
   bloco=$(sed -e "s#DOMINIO#$DOM#g" -e "s#APP_DIR#$APP_DIR#g" -e "s#PORTA#$PORTA#g" deploy/nginx.conf)
