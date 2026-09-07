@@ -238,7 +238,8 @@ def aplicar_edicoes(cur, tenant_id: int, rede_id: str, corpo: dict, geometria: s
         cur.execute(f"SAVEPOINT {sp}")
         try:
             cur.execute(
-                f"DELETE FROM plat.{tabela} WHERE id = %s::uuid AND rede_id = %s::uuid RETURNING ST_AsText(geom) AS wkt",
+                f"DELETE FROM plat.{tabela} WHERE id = %s::uuid AND rede_id = %s::uuid "
+                "RETURNING ST_AsText(geom) AS wkt",
                 (feicao_id, rede_id),
             )
             velha = cur.fetchone()
