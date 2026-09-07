@@ -40,3 +40,19 @@
   .editor { grid-template-columns: minmax(0, 1fr); }
   .editor-tela { grid-template-columns: repeat(12, minmax(0, 1fr)); }
 }
+
+/* item L5-09-desfazer-refazer-rascunho: barra de ferramentas, aviso de conflito e árvore de diferença */
+.linha-ferramentas { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; margin-bottom: var(--e3); }
+.linha-ferramentas .estado { color: var(--fraco); font-size: .85rem; }
+.linha-ferramentas .estado[data-tipo="erro"] { color: var(--falha); }
+.linha-ferramentas .estado[data-tipo="rascunho"] { color: var(--acento); }
+
+.conflito-versao { border: 1px solid var(--falha); border-radius: var(--raio); padding: var(--e3); margin-bottom: var(--e3); background: var(--painel); }
+.conflito-versao h3 { margin: 0 0 var(--e2); font-size: .95rem; }
+.conflito-versao .acoes { display: flex; gap: var(--e2); margin-top: var(--e2); }
+
+.diferenca-arvore { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.diferenca-arvore li { padding: 2px var(--e2); border-radius: var(--raio); }
+.diferenca-adicionado { background: color-mix(in srgb, var(--sucesso, #2e7d32) 15%, transparent); }
+.diferenca-removido { background: color-mix(in srgb, var(--falha) 15%, transparent); text-decoration: line-through; }
+.diferenca-alterado { background: color-mix(in srgb, var(--acento) 15%, transparent); }

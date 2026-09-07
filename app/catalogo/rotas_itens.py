@@ -773,12 +773,12 @@ def editar_item(
     return novo
 
 
-def _editar(id: str, corpo, request: Request, auth: Auth) -> dict:
+def _editar(id: str, corpo, request: Request, auth: Auth, rotulo: str | None = None) -> dict:
     iid = uuid_ok(id)
     campos = campos_json(corpo, set(CAMPOS_EDITAVEIS))
     try:
         with db.db(auth.contexto()) as cur:
-            return item_json(editar_item(cur, request, auth, iid, campos), auth)
+            return item_json(editar_item(cur, request, auth, iid, campos, rotulo=rotulo), auth)
     except psycopg2.Error as e:
         raise comum.erro_do_banco(e) from e
 
@@ -789,8 +789,19 @@ def editar(id: str, request: Request, corpo: dict = Body(...), auth: Auth = aute
 
 
 @router.patch("/api/itens/{id}", response_model=Item, openapi_extra=EDITAR)
-def editar_parcial(id: str, request: Request, corpo: dict = Body(...), auth: Auth = autenticado()):  # noqa: B008
-    return _editar(id, corpo, request, auth)
+def editar_parcial(
+    id: str,
+    request: Request,
+    corpo: dict = Body(...),  # noqa: B008
+    rotulo: str | None = Query(default=None, pattern="^rascunho$"),
+    auth: Auth = autenticado(),
+):
+    """item L5-09-desfazer-refazer-rascunho: `?rotulo=rascunho` é a ÚNICA forma de rótulo que o cliente pode
+    pedir por fora (as outras — 'restauracao', 'publicacao', 'compactada', 'migracao' — só o servidor grava,
+    ver `restaurar_versao`/`app/catalogo/comum.py::rotular_versao`). Grava uma versão nova rotulada 'rascunho'
+    do MESMO jeito que o PATCH normal grava 'edicao': não toca `versao_publicada` (só
+    `.../versoes/{n}/publicar` muda isso), então o link público de quem já publicou não se altera."""
+    return _editar(id, corpo, request, auth, rotulo=rotulo)
 
 
 # ---------------------------------------------------------------- exclusão lógica (lixeira) e lote

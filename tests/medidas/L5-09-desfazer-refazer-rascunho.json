@@ -1,0 +1,57 @@
+{
+ "item": "L5-09-desfazer-refazer-rascunho",
+ "medidas": {
+  "ciclos_50_operacoes_sha256_ok": {
+   "valor": 5,
+   "unidade": "sementes",
+   "comando": "tests/unit/test_desfazer_refazer.py::test_cinquenta_operacoes_ida_e_volta_sha256[1,2,3,42,999] — 50 operações reais (inserir/mover/redimensionar/definirPropriedade/remover) desfeitas e refeitas devolvem o documento inicial e final com o mesmo hash sha256 da forma canônica, nas 5 sementes"
+  },
+  "passos_apos_agrupar_arrasto": {
+   "valor": 2,
+   "unidade": "passos de histórico",
+   "comando": "tests/unit/test_desfazer_refazer.py::test_agrupamento_de_operacao_continua_vira_um_passo — 1 inserir + 5 redimensionamentos com o MESMO grupo viram 2 passos (não 6); desfazer 1 vez volta ao estado de antes do grupo inteiro"
+  },
+  "e2e_desfazer_refazer_rascunho_verdes": {
+   "valor": 5,
+   "unidade": "testes",
+   "comando": "tests/e2e/test_desfazer_refazer_rascunho.py -q --base-url http://127.0.0.1:8269 (nginx de trilha com mime.types e Origin vazio; uvicorn próprio :8268)"
+  },
+  "queda_de_api_recupera_local": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "test_queda_da_api_recupera_do_localstorage_ao_recarregar: route.abort() em todo PATCH, localStorage fica pendente=true, recarregar mostra o aviso e 'Usar rascunho recuperado' repõe o nó nunca gravado"
+  },
+  "diferenca_v3_v7_classifica_certo": {
+   "valor": 3,
+   "unidade": "nós",
+   "comando": "test_diferenca_entre_versoes_lista_os_nos_certos: 1 removido + 1 alterado + 1 adicionado, cada um no balde certo por ULID (não por posição)"
+  },
+  "autosave_rascunho_nao_publica": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "test_autosave_de_rascunho_nao_altera_versao_publicada: versao_publicada e o corpo da versão publicada continuam iguais depois do autosave; a versão nova nasce rotulada 'rascunho' (plat.item_versao.rotulo)"
+  },
+  "conflito_duas_abas_sem_perda": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "test_adversario_duas_abas_conflito_sem_perda_silenciosa: aba B recebe 409 com diferença visível; a edição de B some da TELA só quando ELA escolhe sobrescrever — nunca sozinha"
+  },
+  "api_rotulo_rascunho_e_conflito": {
+   "valor": 5,
+   "unidade": "testes",
+   "comando": "tests/api/catalogo/test_versoes.py::test_patch_rotulo_rascunho_nao_publica + os 4 pré-existentes de versão, todos verdes depois da mudança em app/catalogo/rotas_itens.py"
+  },
+  "regressao_l5_08_editor_arrasto": {
+   "valor": 5,
+   "unidade": "testes",
+   "comando": "tests/e2e/test_editor_arrasto.py -q --base-url http://127.0.0.1:8269 — item dependente, sem regressão depois de tela.js/rascunho.js"
+  }
+ },
+ "carga_no_momento_da_medida": {
+  "carga_1min": 12.35,
+  "ram_livre_gb": 0,
+  "nota": "máquina com 5+ trilhas concorrentes; medidas aqui são de CORRETUDE (contagem de teste, booleano), não de tempo — nenhuma cláusula de desempenho foi medida sob esta carga"
+ },
+ "gerado_em": "2026-09-07T15:21:47Z",
+ "git_sha": "e37443b01b38"
+}

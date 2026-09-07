@@ -96,3 +96,40 @@ def test_diff_forjado_nao_existe_e_titulo_ignora_versao_igual(sessao_a, itens_a)
     assert r.status_code == 200 and r.json()["versao_atual"] == 1
     r = sessao_a.put(f"/api/itens/{it['id']}", json={"titulo": titulo_zt("novo")})
     assert r.json()["versao_atual"] == 2
+
+
+def test_patch_rotulo_rascunho_nao_publica(sessao_a, itens_a):
+    """item L5-09-desfazer-refazer-rascunho: `PATCH ?rotulo=rascunho` é o autosave — grava versão nova rotulada
+    'rascunho' (não 'edicao') e nunca mexe em `versao_publicada` (só `.../publicar` muda isso). Qualquer outro
+    valor de rótulo pedido pelo cliente é 422 (as outras palavras do enum só o servidor escreve sozinho)."""
+    it = itens_a.criar("mapa", resumo="v1")
+    iid = it["id"]
+    r = sessao_a.post(f"/api/itens/{iid}/versoes/1/publicar")
+    assert r.status_code == 200 and r.json()["versao_publicada"] == 1
+
+    r = sessao_a.patch(f"/api/itens/{iid}?rotulo=rascunho", json={"resumo": "rascunho v2"})
+    assert r.status_code == 200
+    item = r.json()
+    assert item["versao_atual"] == 2 and item["versao_publicada"] == 1, item
+
+    versoes = sessao_a.get(f"/api/itens/{iid}/versoes?limite=5").json()["itens"]
+    por_versao = {v["versao"]: v["rotulo"] for v in versoes}
+    assert por_versao == {1: "edicao", 2: "rascunho"}, por_versao
+
+    # a versão publicada (1) continua com o conteúdo de antes, imutável
+    v1 = sessao_a.get(f"/api/itens/{iid}/versoes/1").json()
+    assert v1["corpo"]["resumo"] == "v1"
+
+    # PATCH normal (sem o parâmetro) continua rotulando 'edicao', como sempre
+    r = sessao_a.patch(f"/api/itens/{iid}", json={"resumo": "v3"})
+    assert r.status_code == 200 and r.json()["versao_atual"] == 3
+    versoes = sessao_a.get(f"/api/itens/{iid}/versoes?limite=5").json()["itens"]
+    assert {v["versao"]: v["rotulo"] for v in versoes}[3] == "edicao"
+
+    # nenhum outro rótulo entra por fora
+    r = sessao_a.patch(f"/api/itens/{iid}?rotulo=publicacao", json={"resumo": "v4"})
+    assert r.status_code == 422, r.text
+    r = sessao_a.put(f"/api/itens/{iid}?rotulo=rascunho", json={"resumo": "v5"})  # PUT não aceita o parâmetro
+    assert r.status_code == 200  # ignorado silenciosamente pelo FastAPI (rota sem o parâmetro declarado)
+    versoes = sessao_a.get(f"/api/itens/{iid}/versoes?limite=5").json()["itens"]
+    assert {v["versao"]: v["rotulo"] for v in versoes}.get(4) == "edicao"

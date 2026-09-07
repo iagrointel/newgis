@@ -3,6 +3,38 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L5-09-desfazer-refazer-rascunho: desfazer/refazer, autosave e diferença entre versões)
+
+Três módulos novos em `web/js/editor/`: `desfazer.js` (pilha de JSON Patch RFC 6902 com direto+inverso por
+passo, agrupamento de operação contínua por `grupo`), `rascunho.js` (autosave de servidor via
+`PATCH ?rotulo=rascunho`, novo parâmetro em `app/catalogo/rotas_itens.py::editar_parcial`, + cópia local em
+`localStorage` gravada a cada mudança, não só no ciclo do autosave) e `diferenca.js` (diferença entre duas
+versões por ID de nó — nunca por posição, ao contrário do RFC 6902 posicional). `tela.js` ganhou os botões
+Desfazer/Refazer (com atalho Ctrl+Z/Ctrl+Shift+Z), o aviso de rascunho recuperado ao reabrir a tela, o
+comparador de versões, e a reação ao 409 de conflito de versão (que já existia desde o L5-05): mostra a
+diferença contra a versão do servidor e exige clique explícito antes de sobrescrever ou descartar — nunca
+silenciosamente.
+
+Medido (`tests/medidas/L5-09-desfazer-refazer-rascunho.json`): 50 operações reais (inserir, mover,
+redimensionar, definirPropriedade, remover) desfeitas e refeitas devolvem o documento inicial/final com o
+mesmo hash sha256 da forma canônica, em 5 sementes determinísticas
+(`tests/unit/test_desfazer_refazer.py`, roda por Node via `tests/unit/apoio_editor_desfazer.mjs`); um grupo
+sintético de 5 redimensionamentos contínuos vira 1 passo de histórico (2 no total, com o inserir). e2e
+(`tests/e2e/test_desfazer_refazer_rascunho.py`, 5 testes verdes): queda simulada da API (route.abort() em
+todo PATCH) deixa a cópia local `pendente: true`; recarregar mostra "rascunho não gravado encontrado" e
+"Usar rascunho recuperado" repõe o nó que nunca chegou ao servidor; diferença entre v3 e v7 classifica 1 nó
+removido, 1 alterado e 1 adicionado, cada um no balde certo; autosave de rascunho grava versão nova rotulada
+'rascunho' sem tocar `versao_publicada` nem o conteúdo da versão publicada (comparado byte a byte antes e
+depois); duas abas editando o mesmo item — a segunda a salvar recebe 409 com a diferença visível e só grava
+depois de um clique explícito, nunca perde a edição da aba silenciosamente. Regressão zero em
+`tests/e2e/test_editor_arrasto.py` (L5-08, dependência) e nos 5 testes de `tests/api/catalogo/test_versoes.py`
+(mais o novo `test_patch_rotulo_rascunho_nao_publica`).
+
+Limitação registrada no ADR (20260907T1522): o link de compartilhamento público
+(`app/catalogo/rotas_compartilhamento.py`, herdado, fora do escopo) mostra o `dados` corrente do item, não
+uma vista presa a `versao_publicada` — não existe ainda um "renderizador do publicado" separado do editor.
+O que este item garante é o ponteiro de publicação e o conteúdo por trás dele, que não se mexem sozinhos.
+
 ## turno 4, setembro de 2026 (item L5-08-editor-arrasto: primitivas de edição compartilhadas pelos construtores)
 
 Editor de arrasto próprio em `web/js/editor/` (5 módulos, 43.771 bytes medidos; 0 byte de biblioteca de
