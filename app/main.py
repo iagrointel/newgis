@@ -49,6 +49,7 @@ from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
+from app.tabela.rotas import router as rotas_tabela
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 
@@ -121,6 +122,8 @@ ROUTERS = [
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     rotas_multiescala,
+    # --- tabela de atributos da camada (L2-01-g): /api/camadas/{item_id}/tabela/{colunas,vista,linhas,estatisticas}
+    rotas_tabela,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

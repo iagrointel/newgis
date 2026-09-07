@@ -18,6 +18,8 @@
   <main id="principal" class="principal mapa-tela" tabindex="-1">
     <div class="linha-ferramentas mapa-barra" id="ferramentas">
       <h1 data-i18n="mapa.titulo">Mapa</h1>
+      <button type="button" id="tabela-alternar" class="secundario" aria-expanded="false"
+              aria-controls="painel-tabela" data-i18n="tabela.alternar">tabela de atributos</button>
       <plat-aviso id="aviso"></plat-aviso>
     </div>
     <div class="mapa-area">
@@ -28,6 +30,38 @@
       </div>
       <div class="mapa-painel mapa-coordenadas" id="coordenadas" aria-live="off">—</div>
     </div>
+    <section id="painel-tabela" class="mapa-tabela" aria-label="tabela de atributos" hidden>
+      <div class="mapa-tabela-barra">
+        <label for="tabela-camada" data-i18n="tabela.camada">camada</label>
+        <select id="tabela-camada"></select>
+        <label for="tabela-busca" data-i18n="tabela.busca">busca</label>
+        <input type="search" id="tabela-busca" maxlength="200">
+        <label><input type="checkbox" id="tabela-extensao">
+          <span data-i18n="tabela.so_extensao">só na extensão do mapa</span></label>
+        <label for="tabela-por-pagina" data-i18n="tabela.por_pagina">por página</label>
+        <select id="tabela-por-pagina"></select>
+        <button type="button" id="tabela-colunas-abrir" class="secundario" data-i18n="tabela.colunas">colunas</button>
+        <button type="button" id="tabela-estatisticas-abrir" class="secundario"
+                data-i18n="tabela.estatisticas">estatísticas</button>
+        <button type="button" id="tabela-limpar" class="secundario" data-i18n="tabela.limpar">limpar seleção</button>
+        <span id="tabela-selecao" class="mapa-tabela-info">—</span>
+        <span id="tabela-contagem" class="mapa-tabela-info">—</span>
+      </div>
+      <div class="mapa-tabela-rolagem">
+        <table class="mapa-tabela-grade">
+          <thead><tr id="tabela-cabecalho"></tr></thead>
+          <tbody id="tabela-corpo"></tbody>
+        </table>
+      </div>
+      <div class="mapa-tabela-rodape">
+        <button type="button" id="tabela-anterior" class="secundario" data-i18n="tabela.anterior">anterior</button>
+        <span id="tabela-paginacao" class="mapa-tabela-info">—</span>
+        <button type="button" id="tabela-proxima" class="secundario" data-i18n="tabela.proxima">próxima</button>
+      </div>
+      <div id="tabela-popup" class="mapa-tabela-caixa" hidden></div>
+      <div id="tabela-colunas-painel" class="mapa-tabela-caixa" hidden></div>
+      <div id="tabela-estatisticas-painel" class="mapa-tabela-caixa" hidden></div>
+    </section>
   </main>
 </div>
 <script src="/static/vendor/maplibre-gl-4.7.1.js"></script>

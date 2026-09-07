@@ -222,3 +222,16 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+# --- tabela de atributos da camada (L2-01-g-tabela-atributos): paginação no servidor, busca em texto, filtro
+# pela extensão do mapa, seleção e a vista por usuário (colunas visíveis, alias, largura, domínio). As páginas
+# são as três do Map Viewer/ArcGIS Pro; nenhum valor livre, para que o `LIMIT` seja sempre um dos três.
+TABELA_PAGINAS = (50, 200, 1000)
+TABELA_BUSCA_MAX = 200                    # termo de busca (ILIKE + unaccent) — acima disso é ataque, não busca
+TABELA_FIDS_MAX = 5000                    # seleção vinda do mapa: identificadores enviados de uma vez
+TABELA_COLUNAS_MAX = 500                  # mesmo teto de `campos` no esquema do tipo camada_vetorial (029)
+TABELA_ALIAS_MAX = 200                    # mesmo teto de `alias` no esquema do tipo camada_vetorial (029)
+TABELA_LARGURA_MIN = 40                   # pixels; abaixo disso a coluna some da tela e não dá para arrastar
+TABELA_LARGURA_MAX = 2000
+TABELA_DOMINIO_ITENS_MAX = 1000           # pares código -> descrição por coluna
+TABELA_DOMINIO_TEXTO_MAX = 250
+TABELA_GEOMETRIA_LIMITE = 2000            # feições com geometria devolvidas para desenhar no mapa (por página)

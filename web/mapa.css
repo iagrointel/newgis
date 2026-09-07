@@ -61,3 +61,89 @@ body.mapa .mapa-painel-base { top: var(--e4); display: flex; align-items: center
 body.mapa .mapa-painel-base label { color: var(--mapa-texto-fraco); text-transform: lowercase; }
 body.mapa .mapa-painel-base select { background: #1a2224; color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: .2rem .4rem; }
 body.mapa .mapa-coordenadas { top: calc(var(--e4) + 2.4rem); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+
+/* ---------------------------------------------------------------- tabela de atributos (item L2-01-g)
+   Painel ancorado ao rodapé da tela do mapa, sobre o canvas: o mapa continua inteiro atrás, como no Map
+   Viewer, e a tabela toma metade da altura. Mesmas variáveis `--mapa-*` do resto desta folha (cor fixa,
+   não a do tema: o painel fica sobre cartografia de cor fixa — ver a nota no topo do arquivo). A rolagem
+   é do contêiner, nunca do corpo da página: tabela larga rola dentro de si. */
+body.mapa .mapa-tabela {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 50vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--mapa-painel);
+  border-top: 1px solid var(--mapa-borda);
+  color: var(--mapa-texto);
+  z-index: 5;
+}
+body.mapa .mapa-tabela-barra,
+body.mapa .mapa-tabela-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+  padding: .4rem .6rem;
+  border-bottom: 1px solid var(--mapa-borda);
+}
+body.mapa .mapa-tabela-rodape { border-bottom: none; border-top: 1px solid var(--mapa-borda); }
+body.mapa .mapa-tabela-info { color: var(--mapa-texto-fraco); font-variant-numeric: tabular-nums; }
+body.mapa .mapa-tabela-rolagem { overflow: auto; flex: 1 1 auto; }
+body.mapa .mapa-tabela-grade { border-collapse: collapse; width: max-content; min-width: 100%; }
+body.mapa .mapa-tabela-grade th,
+body.mapa .mapa-tabela-grade td {
+  border-bottom: 1px solid var(--mapa-borda);
+  padding: .25rem .5rem;
+  text-align: left;
+  white-space: nowrap;
+  max-width: 40rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.mapa .mapa-tabela-grade thead th {
+  position: sticky;
+  top: 0;
+  background: var(--mapa-painel);
+  z-index: 1;
+}
+body.mapa .tabela-ordenar {
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+body.mapa .tabela-puxador {
+  display: inline-block;
+  width: 6px;
+  height: 1.2em;
+  margin-left: .3rem;
+  cursor: col-resize;
+  border-right: 2px solid var(--mapa-borda);
+  vertical-align: middle;
+}
+body.mapa .mapa-tabela-grade tbody tr:focus { outline: 2px solid #e8b33a; outline-offset: -2px; }
+body.mapa .mapa-tabela-grade tbody tr.selecionada { background: rgba(232, 179, 58, .22); }
+body.mapa .mapa-tabela-caixa {
+  position: absolute;
+  right: .6rem;
+  bottom: 3rem;
+  max-height: 40vh;
+  overflow: auto;
+  padding: .6rem;
+  background: var(--mapa-painel);
+  border: 1px solid var(--mapa-borda);
+  border-radius: 6px;
+  min-width: 18rem;
+  z-index: 6;
+}
+body.mapa .tabela-popup-topo { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .4rem; }
+body.mapa .tabela-popup dt { color: var(--mapa-texto-fraco); }
+body.mapa .tabela-popup dd { margin: 0 0 .3rem 0; }
+body.mapa .tabela-estatisticas th,
+body.mapa .tabela-estatisticas td { padding: .2rem .4rem; text-align: right; }
+body.mapa .tabela-estatisticas th[scope="row"] { text-align: left; }
