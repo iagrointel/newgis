@@ -53,6 +53,13 @@ qrcode==8.2
 # pyasn1 já vem do dpkg (python3-pyasn1), a venv só acrescenta o pacote ldap3 em si
 ldap3==2.9.1
 #
+# OpenID Connect (app/auth/oidc.py; item L0-08-a): Authlib decidida contra httpx+jwt próprio (docs/adr/
+# 20260907T0147-oidc-authlib.md) — usa o módulo joserfc (sucessor não-deprecado de authlib.jose) para
+# validação de JWS/JWT contra JWKS; puxa cryptography>=45 (a venv tinha 41.0.7 do dpkg; upgrade aditivo,
+# sem quebra observada em app.settings/app.senha/app.auth.totp — os únicos outros usuários de cryptography).
+authlib==1.8.0
+joserfc==1.7.5
+#
 # segurança (scripts/varredura_dependencias.py chama o binário `pip-audit` da venv em subprocesso; item
 # L7-03-f, docs/SEGURANCA.md seção 7 justifica a escolha vs `safety`; rich/requests/pygments/markdown-it-py
 # que pip-audit também precisa vêm do dpkg — python3-rich, python3-requests, python3-pygments — já instalados
