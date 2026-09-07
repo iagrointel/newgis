@@ -122,9 +122,19 @@ class PontoTracado(BaseModel):
 
 
 class TracadoEntrada(BaseModel):
-    tipo: str = Field(pattern="^(conectado|subrede)$")
-    pontos_partida: list[PontoTracado] = Field(min_length=1, max_length=50)
+    """`tipo=conectado|subrede` (item L4-02-a) exige `pontos_partida`; `tipo=caminho_curto` (item L4-02-d)
+    exige um único ponto em `pontos_partida` (a origem) e `destino`; `tipo=lacos` e `tipo=isolados` não
+    exigem `pontos_partida` (operam sobre a rede inteira) — a validação por tipo é feita na rota, não aqui,
+    porque cada tipo tem uma exigência diferente sobre a MESMA lista."""
+    tipo: str = Field(pattern="^(conectado|subrede|lacos|caminho_curto|isolados)$")
+    pontos_partida: list[PontoTracado] = Field(default_factory=list, max_length=50)
+    destino: PontoTracado | None = None
     barreiras: list[PontoTracado] = Field(default_factory=list, max_length=200)
+    # caminho_curto (L4-02-d): atributo de custo (None = comprimento geodésico) e k alternativas (pgr_ksp).
+    atributo_custo: str | None = Field(default=None, max_length=63)
+    k: int = Field(default=1, ge=1, le=10)
+    # isolados (L4-02-d): categoria de rede que representa o "controlador" (padrão 'fonte').
+    categoria_controlador: str = Field(default="fonte", min_length=1, max_length=63)
 
 
 class ElementoTracado(BaseModel):
