@@ -31,6 +31,9 @@ export function criarTabela(map, aviso) {
     camadaId: null, colunas: [], chave: null, temGeometria: false,
     pagina: 1, porPagina: PAGINAS[0], ordenarPor: null, ordem: 'asc',
     busca: '', soExtensao: false, selecionados: new Set(), linhas: [], total: 0, foco: -1,
+    // o total só é recontado quando o FILTRO muda: paginar e reordenar não mudam quantas linhas passam pelo
+    // filtro, e a contagem numa camada de um milhão custa mais que a página inteira (ver app/tabela/rotas.py)
+    recontar: true,
   };
   let popup = null;
 
@@ -62,6 +65,7 @@ export function criarTabela(map, aviso) {
         if (!(ev.originalEvent && (ev.originalEvent.shiftKey || ev.originalEvent.ctrlKey))) estado.selecionados.clear();
         if (estado.selecionados.has(id)) estado.selecionados.delete(id); else estado.selecionados.add(id);
         estado.pagina = 1;
+        estado.recontar = true;
         aplicarRealce();
         atualizarTabela();
       });
@@ -111,12 +115,13 @@ export function criarTabela(map, aviso) {
     if (!estado.camadaId) return;
     const corpo = {
       ...filtroDaTabela(), pagina: estado.pagina, por_pagina: estado.porPagina,
-      ordenar_por: estado.ordenarPor, ordem: estado.ordem,
+      ordenar_por: estado.ordenarPor, ordem: estado.ordem, contar: estado.recontar,
     };
     const r = await enviar(`${base()}/linhas`, corpo);
     if (r.status !== 200) { aviso.erro(r.json.mensagem); return; }
     estado.linhas = r.json.linhas || [];
-    estado.total = r.json.total || 0;
+    if (r.json.total !== null && r.json.total !== undefined) estado.total = r.json.total;
+    estado.recontar = false;
     estado.colunas = r.json.colunas || estado.colunas;
     desenharGrade();
   }
@@ -391,6 +396,7 @@ export function criarTabela(map, aviso) {
     estado.pagina = 1;
     estado.selecionados.clear();
     estado.ordenarPor = null;
+    estado.recontar = true;
     if (!id) return;
     if (!await carregarColunas()) return;
     await atualizarTabela();
@@ -407,12 +413,14 @@ export function criarTabela(map, aviso) {
     el('tabela-busca').addEventListener('change', () => {
       estado.busca = el('tabela-busca').value.trim();
       estado.pagina = 1;
+      estado.recontar = true;
       atualizarTabela();
       atualizarMapa();
     });
     el('tabela-extensao').addEventListener('change', () => {
       estado.soExtensao = el('tabela-extensao').checked;
       estado.pagina = 1;
+      estado.recontar = true;
       atualizarTabela();
     });
     const porPagina = el('tabela-por-pagina');
@@ -421,6 +429,7 @@ export function criarTabela(map, aviso) {
     porPagina.addEventListener('change', () => {
       estado.porPagina = Number(porPagina.value);
       estado.pagina = 1;
+      estado.recontar = true;
       atualizarTabela();
     });
     el('tabela-anterior').addEventListener('click', () => { estado.pagina = Math.max(1, estado.pagina - 1); atualizarTabela(); });
@@ -428,6 +437,7 @@ export function criarTabela(map, aviso) {
     el('tabela-limpar').addEventListener('click', () => {
       estado.selecionados.clear();
       estado.pagina = 1;
+      estado.recontar = true;
       aplicarRealce();
       atualizarTabela();
     });
