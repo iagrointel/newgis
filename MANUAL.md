@@ -1169,3 +1169,14 @@ guardado — só o identificador dele e o prefixo visível.
 - não há WMS 1.3.0 (L1-02-g), nem OGC API Tiles/Maps (L1-02-i), nem ponto/estatística/histograma
   (L1-02-h), nem predefinição de renderização gravada (L1-02-f): por enquanto a pintura vive na URL;
 - a única grade é a WebMercatorQuad (a do Google/OSM/AGOL).
+
+### 22.6 CDN (item L7-26-cdn-tiles): o endereço que fica para sempre
+
+O `tilejson.json` já entrega um endereço com a **versão embutida** — `/svc/<tok>/raster/<item>@<sha
+curto>/{z}/{x}/{y}.png` — que responde `Cache-Control: public, max-age=31536000, immutable`. Isso
+significa: uma CDN na frente desse endereço (hostname `tiles-<x>`, separado do domínio da aplicação)
+pode guardar o ladrilho **para sempre**, porque o conteúdo daquele endereço específico nunca muda —
+se a imagem for reingerida, o sha256 muda e o endereço muda junto. O endereço SEM versão (o de sempre,
+22.1) continua com cache curto (5 min), porque sem o sha256 no caminho o conteúdo por trás dele pode
+mudar sem avisar. Detalhe completo, achados de bancada e o que falta configurar na conta Cloudflare
+real: `docs/CDN.md`.
