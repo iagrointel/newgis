@@ -60,9 +60,16 @@
 .sugestoes { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--e1); }
 .sugestoes button { font-size: var(--t-2); }
 
+/* soltar arquivo sobre a lista (UX-03) */
+.coluna-lista { position: relative; min-height: 160px; }
+.coluna-lista.sobre { outline: var(--e0) dashed var(--acento); outline-offset: calc(-1 * var(--e0)); }
+.soltar-veu { position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; text-align: center; background: var(--veu); color: var(--texto); pointer-events: none; border-radius: var(--raio); }
+.soltar-veu .soltar-titulo { font-family: var(--titulo); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; font-size: var(--t3); margin: 0 0 var(--e2); color: var(--acento); }
+.soltar-veu .fraco { margin: 0; color: var(--texto); }
+#lista-estado { margin: var(--e2) 0; }
+
 /* lista: vistas */
 .lista[aria-busy="true"] { opacity: .6; }
-.lista .vazio { color: var(--fraco); padding: var(--e5); text-align: center; border: 1px dashed var(--borda); border-radius: var(--raio); }
 .lista .titulo-item { color: var(--texto); text-decoration: none; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; max-width: 100%; }
 .lista .titulo-item:hover { color: var(--foco); text-decoration: underline; }
 .lista .selos { display: inline-flex; gap: var(--e1); margin-left: var(--e1); vertical-align: middle; }
