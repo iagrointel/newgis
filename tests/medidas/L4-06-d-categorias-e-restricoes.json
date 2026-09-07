@@ -2,7 +2,7 @@
  "item": "L4-06-d-categorias-e-restricoes",
  "assinado_por": "redes+backend (turno T4, handoff laco/handoffs/T4/L4-06-d-categorias-e-restricoes.md)",
  "gerado_em": "2026-09-07T01:54:37Z",
- "git_sha": "PREENCHIDO_NO_COMMIT",
+ "git_sha": "35e675650e98cae27e089003debed8cd547c613f",
  "maquina": "12 vCPU, 23 GB RAM, disco / a 98%; PostgreSQL 16 em iagro_sat; base própria da trilha (schema plat_tf406, laco/trilha_ambiente.sh f406), com outras sessões da casa na mesma máquina",
  "medidas": {
   "categorias_no_pacote_eletrica_br": {
