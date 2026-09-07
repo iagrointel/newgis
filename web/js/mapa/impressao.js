@@ -1,0 +1,149 @@
+/* plat · mapa — impressão em PNG e PDF (item L2-01-mapa-web).
+
+   O portão do item pede "PNG e PDF com escala e norte". A imagem sai do MESMO canvas que o usuário vê
+   (WYSIWYG), o que só funciona com `preserveDrawingBuffer: true` no MapLibre — sem isso o navegador
+   limpa o buffer depois de compor cada quadro e a leitura devolve tela preta (armadilha já paga na
+   casa). Sobre a imagem do mapa, este módulo compõe uma faixa com: título, escala numérica (1:N)
+   calculada da latitude do centro, barra de escala com o comprimento real do trecho, seta de norte e
+   a atribuição das fontes.
+
+   A escala numérica sai da resolução do Mercator na latitude do centro:
+       metros por pixel = 156543,03392 * cos(latitude) / 2^zoom / (razão de pixel do dispositivo)
+   e 1:N com N = metros por pixel / (0,00028 m), o "pixel padrão OGC" de 0,28 mm — a mesma constante
+   que WMS/WMTS usam para dizer escala. */
+import { paginaPdf, A4_PAISAGEM } from './pdf.js';
+
+const PIXEL_OGC_M = 0.00028;
+export const CIRCUNFERENCIA = 156543.03392;
+
+export function metrosPorPixel(latitude, zoom) {
+  return (CIRCUNFERENCIA * Math.cos((latitude * Math.PI) / 180)) / 2 ** zoom;
+}
+
+export function escalaNumerica(latitude, zoom) {
+  return Math.round(metrosPorPixel(latitude, zoom) / PIXEL_OGC_M);
+}
+
+export function barraDeEscala(latitude, zoom, larguraMaxPx = 180) {
+  /* escolhe 1, 2 ou 5 vezes uma potência de dez que caiba na largura máxima */
+  const mpp = metrosPorPixel(latitude, zoom);
+  const metrosMax = mpp * larguraMaxPx;
+  const potencia = 10 ** Math.floor(Math.log10(metrosMax));
+  let metros = potencia;
+  for (const mult of [5, 2, 1]) {
+    if (potencia * mult <= metrosMax) { metros = potencia * mult; break; }
+  }
+  const rotulo = metros >= 1000 ? `${(metros / 1000).toLocaleString('pt-BR')} km` : `${metros} m`;
+  return { metros, pixels: metros / mpp, rotulo };
+}
+
+function desenharSetaNorte(ctx, x, y, tamanho, cor) {
+  ctx.save();
+  ctx.fillStyle = cor;
+  ctx.strokeStyle = cor;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x, y - tamanho);
+  ctx.lineTo(x + tamanho * 0.42, y + tamanho * 0.6);
+  ctx.lineTo(x, y + tamanho * 0.28);
+  ctx.lineTo(x - tamanho * 0.42, y + tamanho * 0.6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.font = `bold ${Math.round(tamanho * 0.7)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('N', x, y + tamanho * 1.35);
+  ctx.restore();
+}
+
+/* compor(map, {titulo}) -> {canvas, escala, barra} : o canvas do mapa mais a faixa de informação */
+export function compor(map, { titulo = 'Mapa', atribuicao = '' } = {}) {
+  const origem = map.getCanvas();
+  const centro = map.getCenter();
+  const zoom = map.getZoom();
+  const razao = window.devicePixelRatio || 1;
+  const largura = origem.width;
+  const faixa = Math.round(58 * razao);
+  const destino = document.createElement('canvas');
+  destino.width = largura;
+  destino.height = origem.height + faixa;
+  const ctx = destino.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, destino.width, destino.height);
+  ctx.drawImage(origem, 0, 0);
+
+  const escala = escalaNumerica(centro.lat, zoom);
+  const barra = barraDeEscala(centro.lat, zoom, 180);
+  const y0 = origem.height;
+  ctx.save();
+  ctx.scale(razao, razao);
+  const l = largura / razao;
+  const yb = y0 / razao;
+  ctx.fillStyle = '#0f1416';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(titulo, 12, yb + 18);
+  ctx.font = '11px sans-serif';
+  ctx.fillStyle = '#414a4d';
+  ctx.fillText(`Escala aproximada 1:${escala.toLocaleString('pt-BR')}`, 12, yb + 34);
+  ctx.fillText(`Centro ${centro.lat.toFixed(5)}, ${centro.lng.toFixed(5)} · WGS 84 (EPSG:4326) · z${zoom.toFixed(1)}`,
+    12, yb + 49);
+  // barra de escala
+  const bx = l - 210;
+  const by = yb + 30;
+  ctx.strokeStyle = '#0f1416';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(bx, by - 5); ctx.lineTo(bx, by); ctx.lineTo(bx + barra.pixels, by);
+  ctx.lineTo(bx + barra.pixels, by - 5);
+  ctx.stroke();
+  ctx.fillStyle = '#0f1416';
+  ctx.font = '11px sans-serif';
+  ctx.fillText(barra.rotulo, bx, by + 14);
+  if (atribuicao) {
+    ctx.fillStyle = '#5b6467';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(atribuicao.slice(0, 120), l - 12, yb + 50);
+  }
+  desenharSetaNorte(ctx, l - 26, yb + 26, 13, '#0f1416');
+  ctx.restore();
+  return { canvas: destino, escala, barra, centro, zoom };
+}
+
+function baixar(blob, nome) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nome;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+export async function paraPng(map, opcoes = {}) {
+  const { canvas, escala } = compor(map, opcoes);
+  const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+  baixar(blob, opcoes.nome || 'mapa.png');
+  return { bytes: blob.size, escala, largura: canvas.width, altura: canvas.height };
+}
+
+export async function paraPdf(map, opcoes = {}) {
+  const { canvas, escala, barra, centro, zoom } = compor(map, opcoes);
+  const blobJpeg = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.92));
+  const jpeg = new Uint8Array(await blobJpeg.arrayBuffer());
+  const pdf = paginaPdf({
+    jpeg,
+    largura: canvas.width,
+    altura: canvas.height,
+    tamanhoPagina: A4_PAISAGEM,
+    textos: [
+      { texto: `${opcoes.titulo || 'Mapa'} — escala aproximada 1:${escala.toLocaleString('pt-BR')}`,
+        x: 24, y: 30, tamanho: 10 },
+      { texto: `Barra de escala ${barra.rotulo} · norte no topo · centro ${centro.lat.toFixed(5)}, `
+        + `${centro.lng.toFixed(5)} (EPSG:4326) · z${zoom.toFixed(1)}`, x: 24, y: 16, tamanho: 8 },
+    ],
+  });
+  baixar(pdf, opcoes.nome || 'mapa.pdf');
+  return { bytes: pdf.size, escala };
+}
