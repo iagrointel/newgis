@@ -454,14 +454,26 @@ async def update_features(request: Request, item_id: str, camada_id: str):
     return await _uma_operacao(request, item_id, camada_id, "updates", "features")
 
 
+def _where_sql(onde: str | None, colunas) -> tuple[str, list]:
+    """`where` do cliente -> SQL parametrizado pelo MESMO analisador da operação `query` (AST, lista
+    branca de colunas). Vazio ou `1=1` é "sem filtro" (mesma convenção de `app/consulta/motor.py`), e
+    erro de sintaxe vira 400 nomeado, nunca SQL."""
+    if not onde or onde.strip() in ("", "1=1"):
+        return "TRUE", []
+    try:
+        c = where_ast.compilar_where(onde, colunas)
+    except where_ast.ErroWhere as e:
+        raise ErroAPI(400, e.codigo, e.mensagem, e.detalhe) from e
+    return c.sql, list(c.params)
+
+
 def _ids_por_filtro(cur, schema: str, tabela: str, meta: list[dict], onde: str, geometria: Any,
                     srid_camada: int) -> list[int]:
     """`deleteFeatures` por `where` (+ `geometry` opcional): o filtro passa pelo MESMO analisador de
     `where` da operação `query` (AST, lista branca de colunas, valor sempre por parâmetro) — não existe
     caminho em que o texto do cliente vire SQL."""
-    consulta = where_ast.compilar_where(onde, campos_mod.lista_branca(meta))
-    sql = f'SELECT fid FROM "{schema}"."{tabela}" WHERE {consulta.sql}'
-    parametros = list(consulta.parametros)
+    onde_sql, parametros = _where_sql(onde, campos_mod.lista_branca(meta))
+    sql = f'SELECT fid FROM "{schema}"."{tabela}" WHERE {onde_sql}'
     if geometria not in (None, ""):
         obj = json.loads(geometria) if isinstance(geometria, str) else geometria
         if not isinstance(obj, dict):
@@ -494,7 +506,7 @@ async def delete_features(request: Request, item_id: str, camada_id: str):
             elif p.get("where") or p.get("geometry"):
                 meta = campos_mod.campos_da_camada(cur, schema, tabela)
                 ids = _ids_por_filtro(
-                    cur, schema, tabela, meta, p.get("where") or "1=1", p.get("geometry"), int(dados["srid"])
+                    cur, schema, tabela, meta, p.get("where"), p.get("geometry"), int(dados["srid"])
                 )
             else:
                 raise ErroAPI(400, "filtro_ausente", "informe objectIds, ou where (e/ou geometry)")
@@ -526,10 +538,10 @@ async def calculate(request: Request, item_id: str, camada_id: str):
             schema, tabela = _schema_tabela(dados)
             nomes = {c["nome"] for c in dados.get("campos") or []}
             meta = campos_mod.campos_da_camada(cur, schema, tabela)
-            consulta = where_ast.compilar_where(p.get("where") or "1=1", campos_mod.lista_branca(meta))
+            onde_sql, parametros = _where_sql(p.get("where"), campos_mod.lista_branca(meta))
             cur.execute(
-                f'SELECT * FROM "{schema}"."{tabela}" WHERE {consulta.sql} ORDER BY fid LIMIT {LOTE_MAX + 1}',
-                list(consulta.parametros),
+                f'SELECT * FROM "{schema}"."{tabela}" WHERE {onde_sql} ORDER BY fid LIMIT {LOTE_MAX + 1}',
+                parametros,
             )
             linhas = cur.fetchall()
             if len(linhas) > LOTE_MAX:
