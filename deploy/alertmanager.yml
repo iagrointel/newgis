@@ -3,6 +3,12 @@
 # Alertmanager 0.26 (pacote apt `prometheus-alertmanager`, o mesmo binário no hospedado e no
 # appliance). As REGRAS ficam em `deploy/alertas.yml`; aqui só o que fazer com elas.
 #
+# ⛔ CANAL QUE NÃO EXISTE AINDA: o banner no painel do produto (terceiro canal previsto na hipótese
+# do item) NÃO está aqui. Ele exige uma decisão de autorização que é de outro item — qual privilégio
+# deixa um alertador externo escrever no produto, já que /api é publicado pelo nginx e /metrics não é.
+# Preferimos deixar a cláusula nomeada como pendente (ver docs/RUNBOOKS/alertas.md secao 6) a apontar
+# um webhook para uma rota inexistente.
+#
 # ⛔ NENHUM SEGREDO NESTE ARQUIVO. O repositório é público. Senha de SMTP e credencial de webhook
 # vêm de arquivo em /etc/plat/segredos/ (modo 600, dono root), pelos campos `*_file` que o
 # Alertmanager 0.26 aceita. Um teste (tests/unit/test_alertas_regras.py) reprova se aparecer aqui
@@ -23,7 +29,7 @@ route:
   group_wait: 15s
   group_interval: 2m
   repeat_interval: 12h
-  receiver: painel-e-webhook
+  receiver: webhook-da-equipe
 
   routes:
     # 1) A sentinela nunca acorda ninguém: vai só para o receptor de teste, que mede o caminho.
@@ -32,15 +38,15 @@ route:
       group_wait: 0s
       repeat_interval: 5m
 
-    # 2) Crítico: e-mail da organização + webhook + banner do painel, e repete de 4 em 4 horas.
+    # 2) Crítico: e-mail da organização + webhook, e repete de 4 em 4 horas.
     - matchers: [severidade = "critico"]
-      receiver: critico-email-webhook-painel
+      receiver: critico-email-e-webhook
       group_wait: 10s
       repeat_interval: 4h
 
-    # 3) Aviso: sem e-mail (ninguém lê e-mail de aviso), webhook + banner do painel.
+    # 3) Aviso: sem e-mail (ninguém lê e-mail de aviso), só o webhook da equipe.
     - matchers: [severidade = "aviso"]
-      receiver: painel-e-webhook
+      receiver: webhook-da-equipe
 
 inhibit_rules:
   # Disco crítico cala o aviso do MESMO ponto de montagem — as duas regras disparam juntas por
@@ -54,13 +60,8 @@ inhibit_rules:
     equal: [instance]
 
 receivers:
-  - name: painel-e-webhook
+  - name: webhook-da-equipe
     webhook_configs:
-      # O próprio painel do produto: vira banner para o administrador do inquilino (app/alertas.py,
-      # POST /api/alertas/webhook, aceito só de 127.0.0.1).
-      - url: http://127.0.0.1:8150/api/alertas/webhook
-        send_resolved: true
-        max_alerts: 50
       # Webhook externo compatível com ntfy/Slack. O endereço é de configuração (não é segredo);
       # a credencial vem de arquivo.
       - url_file: /etc/plat/segredos/PLAT_ALERTA_WEBHOOK_URL
@@ -70,7 +71,7 @@ receivers:
             type: Bearer
             credentials_file: /etc/plat/segredos/PLAT_ALERTA_WEBHOOK_TOKEN
 
-  - name: critico-email-webhook-painel
+  - name: critico-email-e-webhook
     email_configs:
       # SMTP no molde do `emailsettings` do Portal for ArcGIS (mesmos campos: servidor, porta,
       # remetente, destinatário, autenticação, TLS). Nesta instalação o relay é o postfix local em
@@ -84,9 +85,6 @@ receivers:
         headers:
           Subject: '[plat][{{ .CommonLabels.severidade }}] {{ .CommonLabels.alertname }}'
     webhook_configs:
-      - url: http://127.0.0.1:8150/api/alertas/webhook
-        send_resolved: true
-        max_alerts: 50
       - url_file: /etc/plat/segredos/PLAT_ALERTA_WEBHOOK_URL
         send_resolved: true
         http_config:

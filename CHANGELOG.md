@@ -3,6 +3,42 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 6, setembro de 2026 (item L7-06-b-alertas: regras de alerta, roteamento e runbook)
+
+`deploy/alertas.yml`: 16 regras versionadas, as mesmas no hospedado e no appliance — disco acima de
+85 % (aviso) e de 95 % (critico), memória disponível abaixo de 2 GiB, job da fila rodando há mais de
+30 min, mais de 1 % de 5xx em 5 min, p95 de ladrilho acima de 500 ms por 10 min, certificado a menos
+de 14 dias, backup sem sucesso há mais de 26 h, ensaio de restauração não feito no mês, réplica com
+atraso acima de 5 min e réplica que sumiu (`absent`), serviço `plat-*` fora por 2 min, alvo caído por
+5 min, e o par que vigia o próprio alertador (`AlertmanagerFora`, `PrometheusNaoConsegueFalarComAlertmanager`)
+mais a `Sentinela` permanente.
+
+`deploy/alertmanager.yml` (Alertmanager 0.26, apt): rota por severidade, duas regras de inibição
+(disco crítico cala o aviso do mesmo ponto de montagem; serviço fora cala o alvo caído do mesmo
+alvo), e três receptores — e-mail no molde do `emailsettings` do Portal, webhook compatível com
+ntfy/Slack e canal de teste. Nenhum segredo no arquivo: senha e credencial vêm de
+`/etc/plat/segredos/*` pelos campos `*_file`, e um teste reprova qualquer literal.
+
+`deploy/alertas_teste.yml`: 24 casos de `promtool test rules`, um por regra mais o vizinho que NÃO
+deve disparar. Acharam um defeito de verdade antes de produção: em `a and b` o PromQL devolve o valor
+do lado esquerdo, e a mensagem da réplica saía com "atraso de 1s" em vez do atraso real.
+
+`deploy/alertas_homologacao.sh` + `deploy/alertas_receptor_teste.py`: encenação de verdade em
+Prometheus e Alertmanager próprios, com os MESMOS arquivos de produção (só os caminhos de segredo
+mudam). Enche um volume ext4 de 64 MiB com `fallocate`, derruba um alvo `plat-*` que estava no ar,
+grava backup de 30 h atrás, deixa o ensaio sem registro, marca um job como rodando há 35 min e aponta
+a API para um certificado curto. Medido em 07/09/2026 (`tests/medidas/L7-06-b-alertas.json`).
+
+`docs/RUNBOOKS/alertas.md`: uma seção por alerta, com o que fazer e como confirmar; o rótulo
+`runbook` de cada regra é a chave da seção, e `tests/unit/test_alertas_regras.py` reprova regra sem
+seção e seção sem as duas partes. `docs/adr/20260907T1830-alertador.md` registra por que Alertmanager
+e não alerting do Grafana — e corrige a hipótese do item: o Alertmanager é um serviço A MAIS, o que
+decidiu foi poder testar a regra fora do ar.
+
+Fica de fora, nomeado: banner de alerta no painel do produto (falta decidir que privilégio deixa um
+alertador externo escrever no produto) e o casamento automático entre silêncio de manutenção e modo
+somente-leitura de instalação inteira, que ainda não existe.
+
 ## turno 6, setembro de 2026 (item L7-06-a-metricas-exporters: métricas Prometheus e exporters de infraestrutura)
 
 `app/metricas.py` (biblioteca única, `CollectorRegistry` próprio por processo): `plat_http_requests_total`

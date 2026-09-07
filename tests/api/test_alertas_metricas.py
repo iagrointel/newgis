@@ -20,11 +20,19 @@ def test_jobs_rodando_mais_antigo_segundos_sobe_com_job_de_verdade(cliente, cone
     inq = InquilinoTemporario(sessao_plat)
     try:
         with conexao_plat_app.cursor() as cur:
+            # O gatilho plat.job_transicao exige que o job NASÇA pendente e que só o worker o mova
+            # para rodando (declarando plat.via_worker). O teste faz exatamente isso em vez de furar
+            # a regra: é o caminho de verdade, e sem ele o INSERT direto com estado='rodando' morre
+            # com "job nasce pendente e sem resultado".
             cur.execute(
-                "INSERT INTO plat.job (tenant_id, tipo, parametros, estado, iniciado_em, executor, "
-                "pesado, memoria_mb, timeout_s) "
-                "VALUES (%s, 'teste_alerta', '{}'::jsonb, 'rodando', now() - interval '35 minutes', "
-                "'local', false, 256, 60)",
+                "INSERT INTO plat.job (tenant_id, tipo, parametros, executor, pesado, memoria_mb, "
+                "timeout_s) VALUES (%s, 'teste_alerta', '{}'::jsonb, 'local', false, 256, 60)",
+                (inq.id,),
+            )
+            cur.execute("SET LOCAL plat.via_worker = 'sim'")
+            cur.execute(
+                "UPDATE plat.job SET estado = 'rodando', iniciado_em = now() - interval '35 minutes' "
+                "WHERE tenant_id = %s AND tipo = 'teste_alerta'",
                 (inq.id,),
             )
         conexao_plat_app.commit()
