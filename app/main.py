@@ -47,6 +47,7 @@ from app.jobs.rotas import router as rotas_jobs
 from app.mapas.rotas import router as rotas_mapas
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
+from app.render.rotas import router as rotas_render
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
@@ -68,6 +69,16 @@ auth_middleware.instalar(app)
 # acrescentado por último: no empilhamento do Starlette isso o torna o mais externo, executando ANTES do
 # middleware de log/sessão acima (ADR 0001 seção 12; app/limite_corpo.py) — corpo grande nunca chega à sessão.
 limite_corpo.instalar(app)
+
+if not settings.producao:
+    # Em produção o nginx serve web/ em /static/ direto do disco (comentário do topo deste arquivo). Fora de
+    # produção (trilha de teste, `venv/bin/uvicorn app.main:app` sem nginx na frente) não existe esse
+    # servidor — o motor de render (L2-12-a) e qualquer e2e de navegador precisam de /static respondendo para
+    # a página headless carregar MapLibre/pmtiles/estilo.js. Guardado por `settings.producao`: zero mudança de
+    # comportamento em produção, só liga o que já faltava para testar sem nginx.
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/static", StaticFiles(directory=str(WEB)), name="static_dev")
 
 ROUTERS = [
     rotas_saude,
@@ -115,6 +126,9 @@ ROUTERS = [
     rotas_ingestao,
     # --- mapa (L2-01-a-documento-mapa): /api/mapas (lista, criar, ler, editar) e /api/mapas/{id}/completo
     rotas_mapas,
+    # --- motor de render no servidor (L2-12-a-motor-render-servidor): /api/render/mapa (PNG/PDF), token
+    # interno de curta duração e /api/render/saude (fila, execução, falhas do pool de chromium)
+    rotas_render,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
@@ -149,3 +163,15 @@ def inicio():
     return FileResponse(
         WEB / "index.html", media_type="text/html; charset=utf-8", headers={"Cache-Control": "no-store"}
     )
+
+
+@app.on_event("shutdown")
+async def _fechar_motor_render():
+    """O pool de chromium (L2-12-a-motor-render-servidor) nasce SÓ no primeiro `POST /api/render/mapa` (nunca
+    no startup — a suíte inteira sobe esta app centenas de vezes por sessão de teste, e um chromium por
+    instância derrubaria a máquina). Quando ele nasceu, fecha aqui para não vazar processo do navegador."""
+    from app.render.motor import motor
+
+    m = motor()
+    if m.ativo:
+        await m.parar()

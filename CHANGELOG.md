@@ -3,6 +3,49 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L2-12-a-motor-render-servidor: motor de render no servidor, PNG/PDF por chromium headless)
+
+Pool de páginas do chromium do playwright (`app/render/motor.py::Motor`) mantidas quentes, uma por processo
+(`google-chrome` do sistema nunca é usado — regra da casa, ele quebra nesta máquina). Fila com teto
+(`PLAT_RENDER_FILA_MAX`, 429 acima do limite) e um teto de tempo único para fila + execução
+(`PLAT_RENDER_TIMEOUT_S`). Isolamento de rede por interceptação de rota (só `127.0.0.1`/`::1`/`localhost` e o
+host de `PLAT_URL_PUBLICA` em produção passam; o resto é abortado antes de sair da máquina). Token interno
+HMAC de curta duração (`app/render/token.py`, TTL cortado a 60 s mesmo se pedirem mais) mais bloqueio por
+host (`request.client.host` tem de ser loopback) para uma futura chamada da página headless a uma rota
+interna. `POST /api/render/mapa` (extensão/zoom/tamanho/DPI/formato) devolve PNG ou PDF; a página headless
+(`web/render_mapa.html` + `web/js/mapa/render_entrada.js`) importa o MESMO `web/js/mapa/estilo.js` do
+visualizador interativo — WYSIWYG de verdade, não uma cópia. ADR 0023.
+
+Achado real rodando a medida de p95 sob carga (não hipotético): um `goto` que estoura o timeout deixava a
+MESMA página presa, e as navegações seguintes nela falhavam também — exatamente o cenário da refutação do
+item ("mata o processo do chromium no meio e confere recuperação do pool"). Consertado ANTES do adversário:
+`Motor._pagina_de_reposicao` fecha a página envenenada e abre uma nova no lugar; provado isolado
+(`test_pool_se_recupera_de_pagina_que_travou_no_meio`, contra um socket que aceita e nunca responde) e
+também exercido pela medida de p95 (12 falhas em 33 tentativas de "quente" e o motor nunca ficou preso).
+
+Medido (`tests/medidas/L2-12-a-motor-render-servidor.json`, `test_frio_e_quente_p95_da_demo_1024x768`):
+frio p95 **1.347,8 ms** (2/2 amostras, teto do portão 3.000 ms — **passa**); quente p95 **1.400,2 ms** sobre
+21 amostras que terminaram de 33 tentadas (teto do portão 1.000 ms — **não passa**), medido com a máquina
+sob `uptime` ~20-23 de carga e `free` com 0 GB livres/swap cheio (dezenas de outras trilhas do laço rodando
+ao mesmo tempo; `laco/vivo/leases` no momento confirma). Não repetido em janela mais calma por orçamento de
+turno — fica nomeado para o adversário/próximo turno decidir se remede antes de fechar.
+`tests/api/test_render.py` (7/7, servidor uvicorn real + chromium real, login com 2FA de verdade — achado:
+a conta semeada de `plataforma` exige 2FA, sem isso o teste via 401 sem entender por quê) e
+`tests/unit/test_motor_render.py` (7/8, só o de p95 falha pelo motivo acima) cobrem: PNG do tamanho pedido,
+PDF gerado, PNG 300 DPI de A4 (2.480×3.508), fila recusando acima do limite, 20 pedidos simultâneos com
+pool respeitado e todos < 30 s, página headless sem alcançar host externo (`fetch` para host de fora
+resolve com falha de rede, não trava), token interno com TTL ≤ 60 s e bloqueio por host, e recuperação de
+página travada.
+
+Fronteira honesta: `POST /api/render/mapa` com `mapa_id` de um documento COM camadas devolve `501` — compor
+as camadas dentro da página de render depende de servidor de tiles vetoriais (L2-01-b) e raster (L1-02) que
+não existem nesta máquina (mesma fronteira já declarada em `app/mapas/documento.py`); o motor genérico
+(pool/fila/token/isolamento/PNG/PDF) está pronto para qualquer página, a composição de camada é item futuro.
+`deploy/plat-render.service` (porta 8154, `MemoryMax` NOMINAL, não medido sob carga real — a trilha não tem
+a unidade systemd isolada) fica para conferência em produção. `docs/openapi.json` comitado não foi
+regenerado (ficaria com um diff de milhares de linhas por dessincronia PRÉ-EXISTENTE de outros itens já
+juntados neste ramo — regenerar aqui misturaria a autoria; registrado, não escondido).
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
