@@ -3,6 +3,18 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L5-01-d-widgets-pagina-menu: widgets de página e de menu)
+
+- **12 widgets** sobre o motor do L5-06 (`web/js/widgets/`): texto (Markdown + `{campo}` da feição, sanitizado),
+  imagem (endereço ou campo), botão (evento, link seguro, página), cartão, incorporar (iframe com sandbox e lista
+  de domínios; HTML sanitizado em srcdoc), divisor, menu, controlador de widgets, compartilhar (link, QR local por
+  `GET /api/qr.svg`, código de incorporação), login, seletor de idioma e seletor de tema.
+- **Executor de páginas** (`/executar`) desenha esses tipos pelo motor de widgets — `texto` e `imagem` deixam de
+  ter renderizador próprio; eventos `*.pagina` trocam de página; paleta de páginas ganha os tipos novos.
+- Segurança: `web/js/widgets/seguro.js` (URL, domínio, sandbox, Markdown, `{campo}`), `htmlSeguro` com `proibir`
+  (corta `<style>`); e2e injeta 10 vetores XSS em texto, cartão, botão, imagem, menu e embed — nenhum executa,
+  console sem erro. ADR `docs/adr/20260907T2245-widgets-de-pagina-e-menu.md`; paridade em docs/PARIDADE.md.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
