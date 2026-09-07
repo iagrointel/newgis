@@ -35,3 +35,6 @@ app/auth/escopos.py merge=union
 # web/js/i18n/*.json: dicionário de tradução, um texto por chave — union quebra JSON; driver próprio
 # faz a união das CHAVES (laco/merge_json.py; `git config merge.jsonuniao.driver` já posto na máquina).
 web/js/i18n/*.json merge=jsonuniao
+
+# MANUAL.md: cada item acrescenta a sua seção. Nono registro da família; união (markdown tolera).
+MANUAL.md merge=union
