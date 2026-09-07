@@ -3,6 +3,21 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L2-05-a-catalogo-ferramentas-gpserver: registro de ferramentas e GPServer)
+
+- **Registro `@ferramenta`** (`app/ferramentas/registro.py`): manifesto tipado no vocabulário GP da Esri, validado
+  na importação (parâmetro sem tipo = erro de build), JSON Schema para o formulário e descritor GPServer.
+- **Executor com proveniência** (`app/ferramentas/executor.py`): mesmo caminho como job (`ferramentas.executar`)
+  e em processo abaixo do custo declarado; resultado = item `camada_vetorial` com `procedencia.ferramenta`
+  (ferramenta, versão, parâmetros, entradas com uuid + versão + sha256 de conteúdo, data, autor) e relação
+  `derivado_de`; cancelamento apaga a tabela. Ferramenta de exemplo `buffer` (geodésico, dissolver opcional).
+- **API própria** `/api/ferramentas`, `/api/ferramentas/{nome}`, `/api/ferramentas/{nome}/executar`; tela `/analise`
+  com formulário gerado do manifesto; ficha do item mostra a proveniência.
+- **GPServer compatível** `/rest/services/{ferramenta}/GPServer/{tarefa}` (execute, submitJob, jobs/{id},
+  results/{param}, cancel; `token=`; erro no formato Esri com código HTTP real).
+- Migração `20260907T2005_ferramentas.sql` (relação `derivado_de`, evento `analises/executar`); limites em
+  `app/limites.py` (seção ferramentas). ADR `docs/adr/20260907T2010-ferramentas-gpserver.md`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
