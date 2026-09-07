@@ -107,3 +107,39 @@ def medida():
         return gravar
 
     return para_item
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Varredura final do resíduo zt-* no processo CONTROLADOR do pytest-xdist, depois que TODOS os workers
+    terminaram.
+
+    Por que aqui e não no conftest de tests/api: sob xdist quem colhe os testes é o worker, então o controlador
+    só importa os conftests INICIAIS — os das pastas dadas na linha de comando. Com `pytest ... tests`, o único
+    conftest inicial é este; um `pytest_sessionfinish` escrito em tests/api/conftest.py roda nos workers e nunca
+    no controlador (medido em 07/09: o gancho só aparecia com w=True).
+
+    Por que não deixar cada worker varrer: `varrer_residuos` e `_expurgar_zt` apagam por PREFIXO (todo token,
+    usuário, grupo, papel, inquilino e item cujo nome começa por zt). Os workers terminam em instantes
+    diferentes, então o primeiro a acabar apagava o que os outros ainda estavam usando — daí 401 no lugar de
+    404 em test_plataforma/test_cruzado e item zt sobrando na contagem de test_busca. Na rodada serial (-n 0)
+    este gancho não faz nada: lá quem varre continua sendo a fixture de sessão.
+    """
+    import os
+
+    if os.environ.get("PYTEST_XDIST_WORKER") or not getattr(session.config.option, "numprocesses", None):
+        return
+    from tests.api.catalogo.conftest import _expurgar_zt
+    from tests.api.conftest import _sessao_admin, _sessao_superadmin, credenciais, varrer_residuos
+
+    try:
+        c = credenciais()
+        if all(slug in c for slug in ("demo", "demo2", "plataforma")):
+            varrer_residuos(_sessao_admin(c, "demo"), _sessao_admin(c, "demo2"), _sessao_superadmin(c))
+        env = valores_env()
+        if env.get("PLAT_DSN"):
+            for slug in ("demo", "demo2"):
+                _expurgar_zt(env, slug)
+    except Exception as e:  # noqa: BLE001 - limpeza best-effort: nunca derruba a rodada por causa dela
+        session.config.pluginmanager.get_plugin("terminalreporter").write_line(
+            f"[limpeza] varredura de resíduo zt-* no controlador falhou: {type(e).__name__}: {e}"
+        )
