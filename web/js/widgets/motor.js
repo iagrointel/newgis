@@ -1,5 +1,7 @@
 import { REGISTRO, validarEsquema } from './registro.js';
 
+export { REGISTRO };
+
 export class BarramentoWidgets extends EventTarget {
   #pilha = new Set();
 
@@ -28,7 +30,7 @@ function erroWidget(no, mensagem) {
 // Carrega só os módulos citados no documento. Módulo que não carrega (arquivo apagado do disco, 404,
 // erro de sintaxe) NÃO derruba a página: o tipo entra em `falhas` e cada nó dele vira caixa de erro
 // nomeada, os outros widgets seguem montando.
-async function carregarModulos(tipos) {
+export async function carregarModulos(tipos) {
   const falhas = new Map();
   await Promise.all(tipos.map(async (tipo) => {
     const manifesto = REGISTRO.get(tipo);
@@ -49,6 +51,23 @@ function alternarEdicao(grade, ativo) {
     else { widget.removeAttribute('tabindex'); widget.removeAttribute('aria-label'); }
   }
   return ativo;
+}
+
+/* Um widget avulso para quem monta a árvore por fora (o executor de páginas, item L5-01-d): módulo já carregado por
+   `carregarModulos`; tipo desconhecido, módulo que falhou ou configuração fora do esquema viram a mesma caixa de
+   erro nomeada que `montarWidgets` produz. */
+export function criarWidget(no, { barramento = null, falhas = new Map() } = {}) {
+  const manifesto = REGISTRO.get(no.tipo);
+  if (!manifesto) return erroWidget(no, 'tipo desconhecido');
+  if (falhas.has(no.tipo)) return erroWidget(no, falhas.get(no.tipo));
+  if (!customElements.get(manifesto.elemento)) return erroWidget(no, `módulo ${manifesto.modulo} não carregou`);
+  try {
+    validarEsquema(no.configuracao || {}, manifesto.esquema_config, `widget.${no.id}.configuracao`);
+  } catch (erro) { return erroWidget(no, erro.message); }
+  const widget = document.createElement(manifesto.elemento);
+  widget.noId = no.id; widget.barramento = barramento; widget.configuracao = no.configuracao || {};
+  widget.dataset.noId = no.id; widget.dataset.tipo = no.tipo;
+  return widget;
 }
 
 export async function montarWidgets(destino, documento, { barramento = new BarramentoWidgets(), edicao = false } = {}) {
