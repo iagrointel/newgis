@@ -39,7 +39,7 @@ def ver_publicacao(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler"
     "/api/itens/{id}/publicacao",
     response_model=Publicacao,
     status_code=201,
-    openapi_extra={"x-auth": "S", "x-privilegio": "conteudo.editar_tudo|dono"},
+    openapi_extra=EDITAR,
 )
 def publicar(id: str, corpo: PublicacaoEntrada, request: Request, auth: Auth = autenticado(so_sessao=True)):
     iid = uuid_ok(id)
@@ -52,7 +52,7 @@ def publicar(id: str, corpo: PublicacaoEntrada, request: Request, auth: Auth = a
     "/api/itens/{id}/publicacao",
     status_code=204,
     response_class=Response,
-    openapi_extra={"x-auth": "S", "x-privilegio": "conteudo.editar_tudo|dono"},
+    openapi_extra=EDITAR,
 )
 def despublicar(id: str, request: Request, auth: Auth = autenticado(so_sessao=True)):
     iid = uuid_ok(id)
@@ -64,7 +64,7 @@ def despublicar(id: str, request: Request, auth: Auth = autenticado(so_sessao=Tr
 @router.get(
     "/api/itens/{id}/publicacao/visualizacoes",
     response_model=list[VisualizacaoDia],
-    openapi_extra={"x-auth": "S", "x-privilegio": "conteudo.editar_tudo|dono"},
+    openapi_extra=EDITAR,
 )
 def ver_visualizacoes(id: str, dias: int = 30, auth: Auth = autenticado(so_sessao=True)):
     iid = uuid_ok(id)
@@ -74,7 +74,7 @@ def ver_visualizacoes(id: str, dias: int = 30, auth: Auth = autenticado(so_sessa
 
 @router.get(
     "/api/itens/{id}/publicacao/exportacao",
-    openapi_extra={"x-auth": "S", "x-privilegio": "conteudo.editar_tudo|dono"},
+    openapi_extra=EDITAR,
 )
 def exportar(id: str, auth: Auth = autenticado(so_sessao=True)):
     iid = uuid_ok(id)
