@@ -154,6 +154,22 @@ isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não 
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
 
+## turno 3, setembro de 2026 (item L0-06-d-exportar-inquilino: exportar o inquilino inteiro)
+
+Botão "Exportar meu inquilino" em `/admin/organizacao` e o job `inquilino.exportar` por trás dele: o pacote é
+um zip com `dados.gpkg` (uma camada por camada hospedada, com metadado e estilo nas tabelas `gpkg_metadata` da
+norma), `catalogo.json` (itens, pastas, grupos, compartilhamentos, relações e usuários SEM segredo de
+autenticação, validado contra `docs/esquemas/exportacao_inquilino.schema.json`), `arquivos.zip` (os objetos do
+bucket, um por item) e `manifesto.json` (sha256 e tamanho de cada componente). A tela mostra o tamanho estimado
+ANTES do clique e a cota de uma execução por dia; `app/exportacao_inquilino/importar.py` recria o catálogo num
+inquilino novo com os MESMOS uuids. Medido no ambiente de trilha: pacote de 23.782 bytes com 2 itens, 1 camada
+e 1 arquivo em 0,55 s (carga 12,02 numa máquina de 12 núcleos, 0,4 GB livres). Detalhe e limites em
+`docs/adr/20260907T2245-exportacao-completa-do-inquilino.md`.
+
+Dois defeitos alheios ao item foram corrigidos no caminho: `/admin/organizacao` não terminava de carregar
+(zona morta temporal em `smtpAtual`, já em master, medida no navegador) e `app/schema_ambiente.py` tinha duas
+sobrecargas de `executemany` vindas de ramos diferentes, a segunda sombreando a primeira.
+
 ## turno 3, setembro de 2026 (item L0-06-a-dump-logico: backup lógico diário por inquilino)
 
 Fase 1 do backup, sem reiniciar o Postgres (`archive_mode` está desligado e ligá-lo exige reinício de um
