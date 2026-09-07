@@ -16,6 +16,8 @@ import psycopg2.extras
 from pydantic import BaseModel
 
 from app import limites, objetos
+from app import versao as app_versao
+from app.catalogo import procedencia as mod_procedencia
 from app.ingestao.inspecionar import PREPARADORES, tabela_de
 from app.jobs.registro import Cancelado, FalhaDefinitiva, tarefa
 from app.settings import settings
@@ -92,7 +94,7 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             raise FalhaDefinitiva("importação inexistente")
         if imp["estado"] != "confirmada":
             raise FalhaDefinitiva(f"importação em estado {imp['estado']!r}; esperava 'confirmada'")
-        cur.execute("SELECT dados FROM plat.item WHERE id = %s::uuid", (imp["arquivo_id"],))
+        cur.execute("SELECT dados, criado_em FROM plat.item WHERE id = %s::uuid", (imp["arquivo_id"],))
         arq = cur.fetchone()
         if arq is None:
             raise FalhaDefinitiva("o arquivo de origem não existe mais")
@@ -239,6 +241,9 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         with ctx.db() as cur:
             cur.execute("SELECT plat.camada_preparar(%s, %s, %s, %s, %s)",
                         (schema, tabela, srid, tipo_escolhido_raw, ctx.usuario_id))
+            # item L2-04-a: a função de tile da camada (d_<slug>.t_<16 hex>) e a política de RLS do papel de
+            # leitura nascem aqui, com a tabela; sem isto a camada não é servível pelo Martin.
+            cur.execute("SELECT plat.camada_tile_garantir(%s, %s, %s::uuid)", (schema, tabela, item_id))
 
         # ------------------------------------------------------------ estatísticas
         ctx.progresso(80, "estatísticas")
@@ -282,12 +287,28 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             "feicoes": int(est["feicoes"]), "extent_nativo": extent_4326, "por_campo": por_campo,
             "calculadas_em": None,
         }
-        procedencia = {
-            "fonte": (arq["dados"] or {}).get("nome_original"), "url": None, "licenca": None,
-            "data_do_dado": None, "data_de_acesso": None, "gerador": "plat ingestao.carregar v1",
-            "sha256": sha_real, "metodo": "ogr2ogr + ST_MakeValid", "confianca": None,
-            "limites": proposta.get("avisos", []), "job_id": str(ctx.job_id), "importacao_id": iid,
-        }
+        # Procedência (item L0-09-a; ADR 0005 seção 6.3): os 4 campos que a máquina MEDE nascem preenchidos em
+        # toda camada importada — sha256 do arquivo lido de volta, data de acesso (quando o arquivo entrou),
+        # gerador e método. Os demais ficam null porque só o usuário pode declará-los: inferir licença ou url do
+        # nome do arquivo é exatamente a procedência errada que a regra da casa proíbe (D17).
+        nome_original = (arq["dados"] or {}).get("nome_original")
+        procedencia = mod_procedencia.normalizar({
+            "fonte": nome_original, "url": None, "licenca": None,
+            "data_do_dado": None,
+            "data_de_acesso": arq["criado_em"].date().isoformat() if arq["criado_em"] else None,
+            "gerador": f"plat ingestao.carregar {app_versao.versao()}",
+            "sha256": sha_real,
+            "comando_reexecucao": f"sha256sum {nome_original}" if nome_original else None,
+            "metodo": "ogr2ogr + ST_MakeValid", "confianca": None,
+            "limites": proposta.get("avisos", []), "frescor": None, "proxima_verificacao": None,
+            "responsavel": None,
+            "origem": {
+                "fonte": "declarado",          # nome do arquivo: o usuário é quem o nomeou
+                "data_de_acesso": "medido",    # quando o arquivo entrou na plataforma
+                "gerador": "medido", "sha256": "medido", "metodo": "medido", "limites": "medido",
+            },
+            "job_id": str(ctx.job_id), "importacao_id": iid,
+        })
         item_dados = {
             "schema": schema, "tabela": tabela, "geometria": tipo_escolhido_raw,
             "srid": srid,

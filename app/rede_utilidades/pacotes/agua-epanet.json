@@ -1,0 +1,1203 @@
+{
+ "atributos": [
+  {
+   "codigo": "bomba_id",
+   "grupo": "bomba",
+   "nome": "identificador da bomba",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[PUMPS]",
+    "coluna": "ID",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "bomba_no_1",
+   "grupo": "bomba",
+   "nome": "nó de sucção",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[PUMPS]",
+    "coluna": "Node1",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "bomba_no_2",
+   "grupo": "bomba",
+   "nome": "nó de recalque",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[PUMPS]",
+    "coluna": "Node2",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "bomba_padrao_de_operacao",
+   "grupo": "bomba",
+   "nome": "padrão temporal de operação",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[PUMPS]",
+    "coluna": "PATTERN",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "bomba_rotacao_relativa",
+   "grupo": "bomba",
+   "nome": "rotação relativa",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[PUMPS]",
+    "coluna": "SPEED",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": null
+  },
+  {
+   "codigo": "bomba_curva",
+   "grupo": "bomba",
+   "nome": "curva característica",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[PUMPS]",
+    "coluna": "HEAD",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo": 1,
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "bomba_potencia",
+   "grupo": "bomba",
+   "nome": "potência constante",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[PUMPS]",
+    "coluna": "POWER",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo": 2,
+   "tipo_dado": "real",
+   "unidade": "kW"
+  },
+  {
+   "codigo": "no_demanda",
+   "grupo": "no",
+   "nome": "demanda de base",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[JUNCTIONS]",
+    "coluna": "Demand",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": "L/s"
+  },
+  {
+   "codigo": "no_elevacao",
+   "grupo": "no",
+   "nome": "cota do nó",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[JUNCTIONS]",
+    "coluna": "Elev",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "no_id",
+   "grupo": "no",
+   "nome": "identificador do nó",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[JUNCTIONS]",
+    "coluna": "ID",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "no_padrao_de_demanda",
+   "grupo": "no",
+   "nome": "padrão temporal da demanda",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[JUNCTIONS]",
+    "coluna": "Pattern",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "no_x",
+   "grupo": "no",
+   "nome": "coordenada X do nó",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[COORDINATES]",
+    "coluna": "X-Coord",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": null
+  },
+  {
+   "codigo": "no_y",
+   "grupo": "no",
+   "nome": "coordenada Y do nó",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[COORDINATES]",
+    "coluna": "Y-Coord",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": null
+  },
+  {
+   "codigo": "no_coeficiente_de_emissor",
+   "grupo": "no",
+   "nome": "coeficiente do emissor",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[EMITTERS]",
+    "coluna": "Coefficient",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo": 2,
+   "tipo_dado": "real",
+   "unidade": null
+  },
+  {
+   "codigo": "reservatorio_fixo_carga",
+   "grupo": "reservatorio_de_nivel_fixo",
+   "nome": "carga hidráulica",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[RESERVOIRS]",
+    "coluna": "Head",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "reservatorio_fixo_id",
+   "grupo": "reservatorio_de_nivel_fixo",
+   "nome": "identificador do reservatório",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[RESERVOIRS]",
+    "coluna": "ID",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "reservatorio_fixo_padrao_de_carga",
+   "grupo": "reservatorio_de_nivel_fixo",
+   "nome": "padrão temporal da carga",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[RESERVOIRS]",
+    "coluna": "Pattern",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "reservatorio_variavel_cota_de_fundo",
+   "grupo": "reservatorio_de_nivel_variavel",
+   "nome": "cota de fundo",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[TANKS]",
+    "coluna": "Elevation",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "reservatorio_variavel_curva_de_volume",
+   "grupo": "reservatorio_de_nivel_variavel",
+   "nome": "curva de volume",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[TANKS]",
+    "coluna": "VolCurve",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "reservatorio_variavel_diametro",
+   "grupo": "reservatorio_de_nivel_variavel",
+   "nome": "diâmetro",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[TANKS]",
+    "coluna": "Diameter",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "reservatorio_variavel_extravasa",
+   "grupo": "reservatorio_de_nivel_variavel",
+   "nome": "permite extravasamento",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[TANKS]",
+    "coluna": "Overflow",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "booleano",
+   "unidade": null
+  },
+  {
+   "codigo": "reservatorio_variavel_id",
+   "grupo": "reservatorio_de_nivel_variavel",
+   "nome": "identificador do reservatório",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[TANKS]",
+    "coluna": "ID",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "reservatorio_variavel_nivel_inicial",
+   "grupo": "reservatorio_de_nivel_variavel",
+   "nome": "nível inicial",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[TANKS]",
+    "coluna": "InitLevel",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "reservatorio_variavel_nivel_maximo",
+   "grupo": "reservatorio_de_nivel_variavel",
+   "nome": "nível máximo",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[TANKS]",
+    "coluna": "MaxLevel",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "reservatorio_variavel_nivel_minimo",
+   "grupo": "reservatorio_de_nivel_variavel",
+   "nome": "nível mínimo",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[TANKS]",
+    "coluna": "MinLevel",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "reservatorio_variavel_volume_minimo",
+   "grupo": "reservatorio_de_nivel_variavel",
+   "nome": "volume mínimo",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[TANKS]",
+    "coluna": "MinVol",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": "m3"
+  },
+  {
+   "codigo": "tubulacao_comprimento",
+   "grupo": "tubulacao",
+   "nome": "comprimento",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[PIPES]",
+    "coluna": "Length",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "tubulacao_diametro",
+   "grupo": "tubulacao",
+   "nome": "diâmetro interno",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[PIPES]",
+    "coluna": "Diameter",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": "mm"
+  },
+  {
+   "codigo": "tubulacao_id",
+   "grupo": "tubulacao",
+   "nome": "identificador da tubulação",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[PIPES]",
+    "coluna": "ID",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "tubulacao_no_1",
+   "grupo": "tubulacao",
+   "nome": "nó inicial",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[PIPES]",
+    "coluna": "Node1",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "tubulacao_no_2",
+   "grupo": "tubulacao",
+   "nome": "nó final",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[PIPES]",
+    "coluna": "Node2",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "tubulacao_perda_localizada",
+   "grupo": "tubulacao",
+   "nome": "coeficiente de perda localizada",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[PIPES]",
+    "coluna": "MinorLoss",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": null
+  },
+  {
+   "codigo": "tubulacao_rugosidade",
+   "grupo": "tubulacao",
+   "nome": "coeficiente de rugosidade",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[PIPES]",
+    "coluna": "Roughness",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "a unidade depende da fórmula de perda de carga escolhida em [OPTIONS] (Hazen-Williams, Darcy-Weisbach ou Chezy-Manning)"
+   },
+   "tipo_dado": "real",
+   "unidade": null
+  },
+  {
+   "codigo": "tubulacao_situacao",
+   "grupo": "tubulacao",
+   "nome": "situação inicial",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[PIPES]",
+    "coluna": "Status",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "tubulacao_vertices",
+   "grupo": "tubulacao",
+   "nome": "vértices do traçado",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[VERTICES]",
+    "coluna": "X-Coord;Y-Coord",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "geometria",
+   "unidade": null
+  },
+  {
+   "codigo": "valvula_ajuste",
+   "grupo": "valvula",
+   "nome": "valor de ajuste",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[VALVES]",
+    "coluna": "Setting",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "a unidade depende do tipo: pressão (m) nas de pressão, vazão (L/s) na controladora de vazão, adimensional na de perda de carga"
+   },
+   "tipo_dado": "real",
+   "unidade": null
+  },
+  {
+   "codigo": "valvula_diametro",
+   "grupo": "valvula",
+   "nome": "diâmetro",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[VALVES]",
+    "coluna": "Diameter",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": "mm"
+  },
+  {
+   "codigo": "valvula_id",
+   "grupo": "valvula",
+   "nome": "identificador da válvula",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[VALVES]",
+    "coluna": "ID",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "valvula_no_1",
+   "grupo": "valvula",
+   "nome": "nó de montante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[VALVES]",
+    "coluna": "Node1",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "valvula_no_2",
+   "grupo": "valvula",
+   "nome": "nó de jusante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "[VALVES]",
+    "coluna": "Node2",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "valvula_perda_localizada",
+   "grupo": "valvula",
+   "nome": "coeficiente de perda localizada",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "[VALVES]",
+    "coluna": "MinorLoss",
+    "conferida": false,
+    "esquema": "epanet_2_2_inp",
+    "nota": "campo do arquivo .inp do EPANET 2.2; não conferido contra arquivo real nesta entrega"
+   },
+   "tipo_dado": "real",
+   "unidade": null
+  }
+ ],
+ "categorias": [
+  {
+   "codigo": "armazenamento",
+   "descricao": "Guarda volume e amortece a variação de demanda.",
+   "nome": "Armazenamento"
+  },
+  {
+   "codigo": "bombeamento",
+   "descricao": "Acrescenta carga hidráulica.",
+   "nome": "Bombeamento"
+  },
+  {
+   "codigo": "conducao",
+   "descricao": "Conduz sem bombear nem controlar.",
+   "nome": "Condução"
+  },
+  {
+   "codigo": "consumo",
+   "descricao": "Ponto final que retira água da rede.",
+   "nome": "Consumo"
+  },
+  {
+   "codigo": "controle_de_pressao",
+   "descricao": "Impõe pressão a montante ou a jusante.",
+   "nome": "Controle de pressão"
+  },
+  {
+   "codigo": "controle_de_vazao",
+   "descricao": "Limita ou impõe vazão.",
+   "nome": "Controle de vazão"
+  },
+  {
+   "codigo": "fonte",
+   "descricao": "Onde a água entra na rede; o traçado a montante termina aqui.",
+   "nome": "Fonte"
+  },
+  {
+   "codigo": "seccionamento",
+   "descricao": "Abre ou fecha o escoamento por manobra.",
+   "nome": "Seccionamento"
+  }
+ ],
+ "dominios": [
+  {
+   "codigo": "agua_distribuicao",
+   "descricao": "Rede de água de abastecimento, da fonte ao ponto de consumo.",
+   "disciplina": "agua",
+   "nome": "Água de abastecimento",
+   "ordem": 1,
+   "tipo": "dominio"
+  }
+ ],
+ "esquema": "plat.rede.pacote",
+ "esquema_versao": 2,
+ "grupos": [
+  {
+   "camadas_fonte": [
+    "[PUMPS]"
+   ],
+   "codigo": "bomba",
+   "descricao": "Equipamento que acrescenta carga hidráulica ao escoamento.",
+   "dominio": "agua_distribuicao",
+   "geometria": "ponto",
+   "nome": "Bomba"
+  },
+  {
+   "camadas_fonte": [
+    "[JUNCTIONS]"
+   ],
+   "codigo": "no",
+   "descricao": "Ponto da rede onde se retira água ou onde tubulações se encontram.",
+   "dominio": "agua_distribuicao",
+   "geometria": "ponto",
+   "nome": "Nó"
+  },
+  {
+   "camadas_fonte": [
+    "[RESERVOIRS]"
+   ],
+   "codigo": "reservatorio_de_nivel_fixo",
+   "descricao": "Manancial ou reservatório de carga constante; é a fonte da rede.",
+   "dominio": "agua_distribuicao",
+   "geometria": "ponto",
+   "nome": "Reservatório de nível fixo"
+  },
+  {
+   "camadas_fonte": [
+    "[TANKS]"
+   ],
+   "codigo": "reservatorio_de_nivel_variavel",
+   "descricao": "Reservatório cujo nível sobe e desce ao longo da simulação.",
+   "dominio": "agua_distribuicao",
+   "geometria": "ponto",
+   "nome": "Reservatório de nível variável"
+  },
+  {
+   "camadas_fonte": [
+    "[PIPES]"
+   ],
+   "codigo": "tubulacao",
+   "descricao": "Trecho de tubo entre dois nós.",
+   "dominio": "agua_distribuicao",
+   "geometria": "linha",
+   "nome": "Tubulação"
+  },
+  {
+   "camadas_fonte": [
+    "[VALVES]"
+   ],
+   "codigo": "valvula",
+   "descricao": "Equipamento que controla pressão ou vazão em linha.",
+   "dominio": "agua_distribuicao",
+   "geometria": "ponto",
+   "nome": "Válvula"
+  }
+ ],
+ "pacote": {
+  "codigo": "agua-epanet",
+  "descricao": "Pacote de ativos da rede de água de abastecimento no vocabulário do EPANET 2.2: nó, tubulação, bomba, válvula, reservatório de nível variável e reservatório de nível fixo. Os atributos seguem os campos das seções do arquivo .inp. Nenhum campo foi conferido contra um arquivo real nesta entrega: todo atributo sai com origem.conferida = false.",
+  "disciplina": "agua",
+  "fonte": "https://www.epa.gov/water-research/epanet",
+  "nome": "Água de abastecimento (modelo EPANET 2.2)",
+  "versao": "1.0.1"
+ },
+ "regras": [
+  {
+   "de": {
+    "grupo": "bomba",
+    "tipo": 1
+   },
+   "descricao": "bomba em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "bomba",
+    "tipo": 2
+   },
+   "descricao": "bomba em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "no",
+    "tipo": 1
+   },
+   "descricao": "tubulação ligada ao nó",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "no",
+    "tipo": 1
+   },
+   "descricao": "tubulação com válvula de retenção ligada ao nó",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 2
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "no",
+    "tipo": 2
+   },
+   "descricao": "tubulação ligada ao nó",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "no",
+    "tipo": 2
+   },
+   "descricao": "tubulação com válvula de retenção ligada ao nó",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 2
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "reservatorio_de_nivel_fixo",
+    "tipo": 1
+   },
+   "descricao": "tubulação ligada ao nó",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "reservatorio_de_nivel_fixo",
+    "tipo": 1
+   },
+   "descricao": "tubulação com válvula de retenção ligada ao nó",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 2
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "reservatorio_de_nivel_variavel",
+    "tipo": 1
+   },
+   "descricao": "tubulação ligada ao nó",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "reservatorio_de_nivel_variavel",
+    "tipo": 1
+   },
+   "descricao": "tubulação com válvula de retenção ligada ao nó",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 2
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "valvula",
+    "tipo": 1
+   },
+   "descricao": "válvula em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "valvula",
+    "tipo": 2
+   },
+   "descricao": "válvula em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "valvula",
+    "tipo": 3
+   },
+   "descricao": "válvula em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "valvula",
+    "tipo": 4
+   },
+   "descricao": "válvula em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "valvula",
+    "tipo": 5
+   },
+   "descricao": "válvula em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  },
+  {
+   "de": {
+    "grupo": "valvula",
+    "tipo": 6
+   },
+   "descricao": "válvula em série na tubulação",
+   "para": {
+    "grupo": "tubulacao",
+    "tipo": 1
+   },
+   "tipo": "juncao_aresta"
+  }
+ ],
+ "terminais": [
+  {
+   "caminhos_validos": [
+    {
+     "de": 1,
+     "nome": "aberto",
+     "para": 2
+    }
+   ],
+   "codigo": "dois_terminais",
+   "nome": "Dois terminais",
+   "terminais": [
+    {
+     "id": 1,
+     "montante": true,
+     "nome": "montante"
+    },
+    {
+     "id": 2,
+     "montante": false,
+     "nome": "jusante"
+    }
+   ]
+  },
+  {
+   "caminhos_validos": [],
+   "codigo": "um_terminal",
+   "nome": "Um terminal",
+   "terminais": [
+    {
+     "id": 1,
+     "montante": true,
+     "nome": "conexao"
+    }
+   ]
+  }
+ ],
+ "tiers": [
+  {
+   "codigo": "aducao",
+   "descricao": "Da fonte ao reservatório de distribuição.",
+   "dominio": "agua_distribuicao",
+   "nome": "Adução",
+   "ordem": 1,
+   "tipo": "hierarquico"
+  },
+  {
+   "codigo": "distribuicao",
+   "descricao": "Do reservatório ao ponto de consumo.",
+   "dominio": "agua_distribuicao",
+   "nome": "Distribuição",
+   "ordem": 2,
+   "tipo": "hierarquico"
+  }
+ ],
+ "tipos": [
+  {
+   "categorias": [
+    "bombeamento"
+   ],
+   "chave": "bomba_com_curva",
+   "codigo": 1,
+   "codigos_fonte": [
+    "HEAD"
+   ],
+   "descricao": "",
+   "grupo": "bomba",
+   "nome": "Bomba com curva característica",
+   "terminal": "dois_terminais",
+   "tier": "aducao"
+  },
+  {
+   "categorias": [
+    "bombeamento"
+   ],
+   "chave": "bomba_de_potencia_constante",
+   "codigo": 2,
+   "codigos_fonte": [
+    "POWER"
+   ],
+   "descricao": "",
+   "grupo": "bomba",
+   "nome": "Bomba de potência constante",
+   "terminal": "dois_terminais",
+   "tier": "aducao"
+  },
+  {
+   "categorias": [
+    "consumo"
+   ],
+   "chave": "no_de_demanda",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "nó com demanda declarada em [JUNCTIONS]",
+   "grupo": "no",
+   "nome": "Nó de demanda",
+   "terminal": "um_terminal",
+   "tier": "distribuicao"
+  },
+  {
+   "categorias": [
+    "consumo"
+   ],
+   "chave": "no_com_emissor",
+   "codigo": 2,
+   "codigos_fonte": [
+    "EMITTER"
+   ],
+   "descricao": "nó com coeficiente de emissor em [EMITTERS]; representa vazamento ou aspersor",
+   "grupo": "no",
+   "nome": "Nó com emissor",
+   "terminal": "um_terminal",
+   "tier": "distribuicao"
+  },
+  {
+   "categorias": [
+    "fonte"
+   ],
+   "chave": "reservatorio_de_nivel_fixo",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "",
+   "grupo": "reservatorio_de_nivel_fixo",
+   "nome": "Reservatório de nível fixo",
+   "terminal": "um_terminal",
+   "tier": "aducao"
+  },
+  {
+   "categorias": [
+    "armazenamento"
+   ],
+   "chave": "reservatorio_de_nivel_variavel",
+   "codigo": 1,
+   "codigos_fonte": [],
+   "descricao": "",
+   "grupo": "reservatorio_de_nivel_variavel",
+   "nome": "Reservatório de nível variável",
+   "terminal": "um_terminal",
+   "tier": "aducao"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "tubulacao",
+   "codigo": 1,
+   "codigos_fonte": [
+    "Closed",
+    "Open"
+   ],
+   "descricao": "",
+   "grupo": "tubulacao",
+   "nome": "Tubulação",
+   "terminal": "dois_terminais",
+   "tier": "distribuicao"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "tubulacao_com_valvula_de_retencao",
+   "codigo": 2,
+   "codigos_fonte": [
+    "CV"
+   ],
+   "descricao": "escoamento em um sentido só (status CV em [PIPES])",
+   "grupo": "tubulacao",
+   "nome": "Tubulação com válvula de retenção",
+   "terminal": "dois_terminais",
+   "tier": "distribuicao"
+  },
+  {
+   "categorias": [
+    "controle_de_pressao"
+   ],
+   "chave": "valvula_redutora_de_pressao",
+   "codigo": 1,
+   "codigos_fonte": [
+    "PRV"
+   ],
+   "descricao": "",
+   "grupo": "valvula",
+   "nome": "Válvula redutora de pressão",
+   "terminal": "dois_terminais",
+   "tier": "distribuicao"
+  },
+  {
+   "categorias": [
+    "controle_de_pressao"
+   ],
+   "chave": "valvula_sustentadora_de_pressao",
+   "codigo": 2,
+   "codigos_fonte": [
+    "PSV"
+   ],
+   "descricao": "",
+   "grupo": "valvula",
+   "nome": "Válvula sustentadora de pressão",
+   "terminal": "dois_terminais",
+   "tier": "distribuicao"
+  },
+  {
+   "categorias": [
+    "controle_de_pressao"
+   ],
+   "chave": "valvula_de_quebra_de_pressao",
+   "codigo": 3,
+   "codigos_fonte": [
+    "PBV"
+   ],
+   "descricao": "",
+   "grupo": "valvula",
+   "nome": "Válvula de quebra de pressão",
+   "terminal": "dois_terminais",
+   "tier": "distribuicao"
+  },
+  {
+   "categorias": [
+    "controle_de_vazao"
+   ],
+   "chave": "valvula_controladora_de_vazao",
+   "codigo": 4,
+   "codigos_fonte": [
+    "FCV"
+   ],
+   "descricao": "",
+   "grupo": "valvula",
+   "nome": "Válvula controladora de vazão",
+   "terminal": "dois_terminais",
+   "tier": "distribuicao"
+  },
+  {
+   "categorias": [
+    "controle_de_vazao",
+    "seccionamento"
+   ],
+   "chave": "valvula_de_perda_de_carga",
+   "codigo": 5,
+   "codigos_fonte": [
+    "TCV"
+   ],
+   "descricao": "",
+   "grupo": "valvula",
+   "nome": "Válvula de perda de carga",
+   "terminal": "dois_terminais",
+   "tier": "distribuicao"
+  },
+  {
+   "categorias": [
+    "controle_de_vazao"
+   ],
+   "chave": "valvula_de_curva_geral",
+   "codigo": 6,
+   "codigos_fonte": [
+    "GPV"
+   ],
+   "descricao": "",
+   "grupo": "valvula",
+   "nome": "Válvula de curva geral",
+   "terminal": "dois_terminais",
+   "tier": "distribuicao"
+  }
+ ]
+}

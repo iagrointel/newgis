@@ -942,3 +942,36 @@ fora do pytest, usando o MESMO `TestClient` e o MESMO banco, autenticado como ad
 não exige 2FA) — suficiente porque nenhuma rota nova deste item depende do superadmin. Os e2e (que batem no
 serviço `plat-api` ao vivo, não no `TestClient`) não são afetados por este bloqueio; o serviço foi reiniciado
 uma vez (`systemctl restart plat-api`) para servir o código novo, com RAM conferida antes e depois.
+
+## 18. Conector de feição externa: WFS 2.0 e OGC API - Features (item L6-02-c-wfs-ogcapi, ADR 0018)
+
+Primeiro conector que lê dado de serviço de terceiro. Três módulos novos em `app/conexao/`:
+
+- **`vetor_externo.py`** — o protocolo. `listar_colecoes`, `descrever_campos`, `contar` e a classe
+  `Paginador`, para os dois protocolos. WFS 2.0 fala `GetCapabilities` / `DescribeFeatureType` /
+  `GetFeature` (`COUNT`, `STARTINDEX`, `BBOX`, `RESULTTYPE=hits`), em GeoJSON ou GML 3.2; OGC API - Features
+  fala `/collections`, `/collections/{id}/queryables` e `/collections/{id}/items` (`limit`, `bbox`,
+  `datetime`, link `rel=next`). **Todo I/O de rede é `seguranca.buscar_seguro`** — não há cliente HTTP
+  próprio neste módulo, e os drivers `WFS:`/`OAPIF:` do GDAL foram recusados de propósito (fariam a
+  requisição fora da defesa contra requisição forjada pelo servidor; ADR 0018 seção 1).
+- **`copia.py`** — o job `conexao.copiar_vetor` (pesado, 1 GiB, `ferramentas=("gdal",)`). Baixa as páginas
+  por `vetor_externo`, grava GeoJSON por linha no diretório do job e só então chama `ogr2ogr` sobre esse
+  arquivo LOCAL, com `-s_srs`/`-t_srs` (CRS nativo declarado → 4326) e `GDAL_HTTP_PROXY` em porta fechada, de
+  modo que nenhuma requisição do GDAL possa sair da máquina. Depois leva cada coluna ao tipo que o serviço
+  declarou, chama `plat.camada_preparar` (mesmas colunas obrigatórias, RLS e índices da ingestão de arquivo) e
+  publica o item `camada_vetorial` com `dados.conexao` e `dados.procedencia`.
+- **`cache.py`** — cache de 30 s no processo para o modo referenciado, com chave por (inquilino, conexão);
+  editar ou apagar a conexão esquece o que ela cacheou.
+
+Rotas novas (só leitura, modo referenciado): `GET /api/conexoes/{id}/colecoes`,
+`.../colecoes/{c}/campos`, `.../colecoes/{c}/feicoes`. A cópia **não** tem rota própria — é `POST /api/jobs`
+com `tipo: conexao.copiar_vetor`, para herdar fila, cota, cancelamento, log e progresso.
+
+Mudança no L0-05 exigida por este item: o advisory lock de "1 pesado por vez" (`app/jobs/worker.py`,
+`LOCK_PESADO`) passou a carregar o nome do schema. Ele é um lock do BANCO, e o banco é um só para produção,
+homologação e as bases por trilha — com o nome fixo, um job pesado de um ambiente segurava o único lugar de
+TODOS os outros (medido em 06/09). Em produção, onde só existe o schema `plat`, o comportamento não muda.
+
+Válvula de teste: `PLAT_TESTE_CONEXAO_ALVOS` (`app/conexao/seguranca.py::alvos_de_teste`), lista de pares
+`host:porta` exatos aceita só fora de produção, para a suíte falar com um WFS e um OGC API de verdade subidos
+no loopback (`tests/api/conexao/servidor_ogc.py`) em vez de depender do serviço de um órgão estar de pé.

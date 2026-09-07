@@ -2,7 +2,7 @@
 
 Gerado de `plat.privilegio` + `plat.perfil_privilegio` (o banco vivo) por `docs/gerar_privilegios.py` (`make privilegios`) — item L0-07-b-papeis-privilegios; não editar à mão. O vocabulário é fechado: toda rota autenticada declara um destes nomes (ou uma composição `a|b`) em `x-privilegio` no OpenAPI, e `plat.tem(privilegio)`/`plat.privilegios_de(usuario_id)` são a única forma de perguntar, em rota e em RLS (ADR 0002 seções 3, 12.1). `app/auth/privilegios.py` espelha esta mesma lista em Python (para cálculo de `perfil_minimo` sem consulta); `tests/api/test_privilegios_declarados.py` prova que os dois batem, nome a nome, teto a teto.
 
-**47 privilégios** em 12 grupos, **20 administrativos** (só entram em papel personalizado com `perfil_minimo = admin`, ou no perfil `admin` inteiro — ADR 0002 seção 3.3).
+**48 privilégios** em 12 grupos, **21 administrativos** (só entram em papel personalizado com `perfil_minimo = admin`, ou no perfil `admin` inteiro — ADR 0002 seção 3.3).
 
 ## Papéis padrão fixos (teto de cada perfil)
 
@@ -13,7 +13,7 @@ Os quatro perfis abaixo são fixos, não são linhas de `plat.papel_personalizad
 | `visualizador` | 8 |
 | `campo` | 12 |
 | `editor` | 27 |
-| `admin` | 47 |
+| `admin` | 48 |
 
 ## Vocabulário completo
 
@@ -64,6 +64,7 @@ V = visualizador · C = campo · E = editor · A = admin · **adm** = privilégi
 | org | `org.integracoes` | SSO, SMTP, webhooks, CORS | **sim** |  |  |  | x |
 | org | `org.log_ver` | ler log_acesso e evento do inquilino, exportar CSV | **sim** |  |  |  | x |
 | papeis | `papeis.gerir` | criar, editar, apagar papel personalizado | **sim** |  |  |  | x |
+| rede | `rede.administrar` | ligar/desligar a avaliação de regras da rede e substituir o conjunto de regras por CSV | **sim** |  |  |  | x |
 | rede | `rede.editar` | editar rede de utilidades | não |  |  | x | x |
 | rede | `rede.tracar` | traçado e subrede | não |  |  | x | x |
 | tokens | `tokens.gerar` | criar e revogar os próprios tokens de serviço | não | x | x | x | x |

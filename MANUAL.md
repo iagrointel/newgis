@@ -1070,3 +1070,74 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Camada de WFS e de OGC API - Features (item L6-02-c-wfs-ogcapi)
+
+Uma conexão do tipo `wfs` (WFS 2.0) ou `ogc_api` (OGC API - Features), já registrada como na seção 18, passa a
+servir camadas de dois jeitos.
+
+### 22.1 Ver o que o serviço publica
+
+```
+GET /api/conexoes/{id}/colecoes
+GET /api/conexoes/{id}/colecoes/{colecao}/campos
+```
+
+A primeira lista as coleções (`wfs:FeatureTypeList` do GetCapabilities, ou `GET /collections`), com o CRS que o
+serviço DECLARA (`crs_nativo` verbatim e `srid_nativo` em número quando dá para extrair) e a extensão em
+WGS 84. A segunda lista os atributos e o tipo declarado de cada um: `DescribeFeatureType` no WFS,
+`/queryables` no OGC API. Quando o serviço não declara nada — `/queryables` é opcional no padrão — o tipo vem
+de uma amostra de uma feição e `origem_do_tipo` responde `amostra`. Inferido nunca aparece como declarado.
+
+### 22.2 Modo referenciado (ao vivo)
+
+```
+GET /api/conexoes/{id}/colecoes/{colecao}/feicoes?limite=500&bbox=-47.9,-15.8,-47.8,-15.7&datahora=2026-01-01/2026-06-30
+```
+
+Devolve GeoJSON com `numberReturned` (o que veio agora) ao lado de `numberMatched` (o total que o serviço
+declara). Sem os dois não dá para saber se a resposta é a coleção inteira ou um pedaço. `bbox` é
+`minx,miny,maxx,maxy` em graus; `datahora` é o `datetime` do OGC API (instante ou intervalo). O teto por
+chamada é `CONEXAO_VETOR_PREVIA_MAX` (mil feições).
+
+A resposta fica em cache por 30 segundos dentro do processo de API, e `do_cache` diz se veio de lá. Duas
+consequências, escritas aqui porque ninguém deve descobri-las sozinho: dois processos de API podem devolver
+respostas de instantes diferentes dentro dessa janela; e editar a URL da conexão (ou apagá-la) esquece na hora
+o que ela tinha cacheado, para que a resposta da URL antiga nunca seja servida depois da mudança.
+
+Um WFS que não anuncia nenhum `outputFormat` JSON responde 422 `formato_json_indisponivel` neste modo. Ele é
+atendido no modo copiado, que converte o GML localmente.
+
+### 22.3 Modo copiado (traz para o PostGIS)
+
+Não há rota própria: é a tarefa `conexao.copiar_vetor`, criada como qualquer outra tarefa pesada.
+
+```
+POST /api/jobs
+{"tipo": "conexao.copiar_vetor",
+ "parametros": {"conexao_id": "<uuid>", "colecao": "ns:pontos",
+                "limite_feicoes": 100000, "tam_pagina": 1000,
+                "bbox": [-48.0, -16.0, -47.0, -15.0], "datahora": "2026-01-01/2026-06-30"}}
+```
+
+Ao terminar existe uma tabela em `d_<slug>` e um item `camada_vetorial` no catálogo, com as mesmas colunas
+obrigatórias, RLS e índices da camada que veio de arquivo. O resultado do job traz `feicoes` (o que foi
+copiado), `declaradas_pelo_servico` (o `numberMatched`), `paginas`, `segundos_download`, `segundos_carga`,
+`srid_nativo`, `srid_entregue`, `srid_gravado` (sempre 4326) e `avisos`.
+
+Três coisas a saber antes de usar:
+
+1. **O limite é seu.** `limite_feicoes` (padrão 100 mil, teto 2 milhões) é onde a cópia para, mesmo que o
+   serviço declare mais. Quando ela para por limite, `limite_atingido` fica verdadeiro e o aviso vai para
+   `dados.procedencia.limites` do item — a camada é um pedaço, e a ficha diz isso.
+2. **Serviço que ignora a paginação não trava o worker.** Se o serviço devolve mais feições do que as pedidas,
+   ou repete a mesma página, a cópia encerra na página seguinte com o aviso nomeado.
+3. **O tipo da coluna é o que o serviço declarou.** Um `xsd:int` vira `integer`, um `xsd:date` vira `date`.
+   Quando o dado não converte para o tipo declarado, a coluna fica como o GDAL a deixou e o aviso entra na
+   procedência: nenhuma linha é descartada para fazer o tipo bater.
+
+### 22.4 O que ainda não existe aqui
+
+WFS 1.0/1.1 (só 2.0.0), filtro CQL2 ou `Filter` OGC (item L6-02-n), agendamento da reexecução da cópia (item
+L6-02-k), desenho da camada referenciada no mapa (item L6-02-b), escrita de volta (WFS-T) e negociação de CRS
+da Parte 2 do OGC API — `/items` é sempre lido em CRS84.

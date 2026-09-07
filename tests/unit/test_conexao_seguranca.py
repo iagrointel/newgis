@@ -229,3 +229,48 @@ def _ip_publico_desta_maquina() -> str | None:
         except ValueError:
             continue
     return None
+
+
+# --------------------------------------------------------------------------------------------------
+# Válvula de teste `PLAT_TESTE_CONEXAO_ALVOS` (item L6-02-c-wfs-ogcapi; ADR 0018 seção 7). Ela existe para a
+# suíte do conector falar com um WFS/OGC API DE VERDADE subido no loopback, em vez de depender do serviço de
+# um órgão estar de pé. Toda folga de defesa precisa das três provas abaixo: que faz o que promete, que não
+# faz mais do que promete, e que não vale em produção.
+
+
+def test_alvo_de_teste_declarado_passa_no_loopback(monkeypatch):
+    monkeypatch.setenv("PLAT_TESTE_CONEXAO_ALVOS", "127.0.0.1:41871")
+    validada = s.validar_url("http://127.0.0.1:41871/wfs")
+    assert validada.host == "127.0.0.1" and validada.porta == 41871
+    assert validada.ips == ("127.0.0.1",)
+
+
+def test_porta_nao_declarada_no_mesmo_host_continua_recusada(monkeypatch):
+    """A folga é o PAR host:porta, nunca o host: com a válvula ligada em 41871, a porta 8150 (a da API desta
+    máquina, o alvo clássico do adversário do L6-02-a) segue bloqueada."""
+    monkeypatch.setenv("PLAT_TESTE_CONEXAO_ALVOS", "127.0.0.1:41871")
+    for url in ("http://127.0.0.1:8150/", "http://127.0.0.1/", "http://169.254.169.254/latest/meta-data/",
+                "http://10.1.2.3/geoserver/wms"):
+        with pytest.raises(s.ErroURLInsegura) as e:
+            s.validar_url(url)
+        assert e.value.motivo.startswith("ip_bloqueado:"), (url, e.value.motivo)
+
+
+def test_valvula_e_ignorada_em_producao(monkeypatch):
+    import dataclasses
+
+    monkeypatch.setenv("PLAT_TESTE_CONEXAO_ALVOS", "127.0.0.1:41871")
+    monkeypatch.setattr(s, "settings", dataclasses.replace(s.settings, PLAT_AMBIENTE="producao"))
+    assert s.alvos_de_teste() == frozenset()
+    with pytest.raises(s.ErroURLInsegura) as e:
+        s.validar_url("http://127.0.0.1:41871/wfs")
+    assert e.value.motivo == "ip_bloqueado:loopback:127.0.0.1"
+
+
+def test_valvula_ausente_ou_lixo_nao_libera_nada(monkeypatch):
+    monkeypatch.delenv("PLAT_TESTE_CONEXAO_ALVOS", raising=False)
+    assert s.alvos_de_teste() == frozenset()
+    monkeypatch.setenv("PLAT_TESTE_CONEXAO_ALVOS", "127.0.0.1,,sem-porta:,:12,127.0.0.1:abc")
+    assert (("127.0.0.1", 41871) in s.alvos_de_teste()) is False
+    with pytest.raises(s.ErroURLInsegura):
+        s.validar_url("http://127.0.0.1:41871/wfs")

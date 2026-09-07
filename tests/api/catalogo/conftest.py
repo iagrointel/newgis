@@ -41,6 +41,14 @@ DADOS_POR_TIPO = {
 }
 
 
+def documento_mapa(*refs: str) -> dict:
+    """Documento de mapa mínimo com estas camadas, na ordem (item L2-01-a-documento-mapa: cada entrada é
+    {id: ULID local, ref: uuid do item}, nunca um uuid solto — o JSON Schema de `mapa` recusa a forma antiga)."""
+    from app.catalogo.documento import gerar_ulid
+
+    return {"esquema_versao": 1, "corpo": {"camadas": [{"id": gerar_ulid(), "ref": r} for r in refs]}}
+
+
 def titulo_zt(base: str = "item") -> str:
     return f"{PREFIXO_TESTE} {base} {secrets.token_hex(3)}"
 
