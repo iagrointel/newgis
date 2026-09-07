@@ -398,3 +398,113 @@ o mesmo acima do teto de uma parte (nunca abre multipart no Garage para um conte
   contêiner externo é conferido.
 - O caminho de sincronização da PWA de campo (L2-07, ainda não construído) precisará da mesma barreira quando
   existir; `objetos.guardar()` já cobre automaticamente qualquer chamador futuro que passe por ele.
+
+
+## 9. Varredura de segurança contínua (item HARD-01-varredura-de-seguranca-continua)
+
+`make seguranca` (dentro de `make check`, o portão da fila de junção) roda `scripts/varredura_seguranca.py`: bandit
+(análise estática do Python que roda), pip-audit (§7, delegado), `npm audit` sobre as bibliotecas de `web/vendor/`,
+gitleaks sobre o HISTÓRICO inteiro do git, trivy sobre `deploy/` (e sobre a imagem `plat-worker:local` quando ela
+existe na máquina) e, em `make seguranca-zap`, o baseline do OWASP ZAP (spider + regras passivas, nunca varredura
+ativa) contra uma instância que o próprio script sobe e derruba — uvicorn + nginx renderizado de
+`deploy/nginx.conf`, no ambiente de uma trilha, nunca produção. Ferramentas binárias fixadas por versão e sha256 em
+`deploy/ferramentas_binarias.txt`, instaladas por `scripts/ferramentas_seguranca.sh` no cache do usuário
+(`~/.cache/plat/ferramentas`), nunca no PATH da máquina; bandit e pip-audit vêm de `requirements.txt`.
+
+Um achado que a política (§9.2) classifica como bloqueante só deixa de reprovar com uma exceção viva em
+`docs/excecoes_seguranca.json` — cada linha com motivo, prazo, data de registro e responsável; passado o prazo a
+exceção some sozinha e o achado volta a bloquear. O que segue entre os marcadores é GERADO por
+`make seguranca-gravar` a partir de `tests/medidas/HARD-01-seguranca.json`, da lista de exceções e da lista de
+binários; `make seguranca` confere (`--check-doc`) que a seção versionada bate com essas fontes.
+
+<!-- inicio: gerado por scripts/varredura_seguranca.py — não editar à mão -->
+
+### 9.1 Última varredura registrada
+
+Registrada em 2026-09-07T21:25+00:00 (commit `874d7df5`, carga 1 min 14.38916015625, RAM livre 6.6 GB) por `make seguranca-gravar`. Resultado: **verde**.
+
+| ferramenta | versão | achados | bloqueiam | com exceção | revisão | informativos | duração |
+|---|---|---|---|---|---|---|---|
+| bandit | 1.9.4 | 153 | 0 | 7 | 36 | 110 | 1.9 s |
+| pip-audit | 2.10.1 | 1 | 0 | 0 | 0 | 1 | 7.2 s |
+| npm | 10.9.7 | 0 | 0 | 0 | 0 | 0 | 0.8 s |
+| gitleaks | 8.30.1 | 0 | 0 | 0 | 0 | 0 | 2.5 s |
+| trivy | 0.74.0 | 1 | 0 | 1 | 0 | 0 | 0.9 s |
+| zap | 2.17.0 | 7 | 0 | 2 | 0 | 5 | 17.6 s |
+
+trivy: imagem `plat-worker:local` ausente nesta máquina — só deploy/ (Dockerfile e compose) foi varrido.
+
+zap: instância própria (uvicorn + nginx renderizado de deploy/nginx.conf), com sessão autenticada no inquilino demo; só regras passivas.
+
+### 9.2 Política de bloqueio
+
+| ferramenta | regra |
+|---|---|
+| bandit | HIGH (qualquer confiança) ou MEDIUM com confiança HIGH bloqueia; MEDIUM com confiança menor = revisão; LOW = informativo |
+| pip-audit | crítica/alta/desconhecida sem exceção em docs/excecoes_cve.json bloqueia (regra do item L7-03-f) |
+| npm | critical/high bloqueia; moderate/low = informativo |
+| gitleaks | todo achado bloqueia (regras padrão + .gitleaks.toml) |
+| trivy | CRITICAL/HIGH bloqueia; MEDIUM = revisão; imagem só quando plat-worker:local existe na máquina |
+| zap | High/Medium bloqueia; Low/Informational = informativo; só regras passivas, nunca varredura ativa |
+
+### 9.3 Exceções vivas (docs/excecoes_seguranca.json)
+
+| ferramenta | id | alvo | motivo | prazo | dias | registrada | quem |
+|---|---|---|---|---|---|---|---|
+| bandit | B310 | `app/saude.py` | urlopen com URL fixada em código (Garage/serviços locais em http://127.0.0.1); nenhuma parte da URL vem de entrada externa. Reavaliar ao trocar por httpx, que já é dependência. | 2026-12-06 | 90 | 2026-09-07 | HARD-01 (líder de endurecimento) |
+| bandit | B310 | `docs/xsd/baixar_iso19139.py` | script de manutenção baixa o XSD oficial de URL https fixada em código; roda à mão, nunca na API. | 2026-12-06 | 90 | 2026-09-07 | HARD-01 (líder de endurecimento) |
+| bandit | B310 | `scripts/prova_garage_chave_s3.py` | prova do item L7-19 contra http://127.0.0.1 fixado; não é caminho de produto. | 2026-12-06 | 90 | 2026-09-07 | HARD-01 (líder de endurecimento) |
+| bandit | B310 | `scripts/prova_segredos_l7_19.py` | prova do item L7-19 contra http://127.0.0.1 fixado; não é caminho de produto. | 2026-12-06 | 90 | 2026-09-07 | HARD-01 (líder de endurecimento) |
+| bandit | B310 | `scripts/segredo_rotacionar.py` | mede /saude e a Admin API do Garage em http://127.0.0.1 fixado durante a rotação (L7-19); esquema nunca vem de fora. | 2026-12-06 | 90 | 2026-09-07 | HARD-01 (líder de endurecimento) |
+| bandit | B310 | `scripts/varredura_dependencias.py` | consulta https://api.osv.dev fixada em código (L7-03-f); o id do CVE entra só no caminho, nunca no esquema/host. | 2026-12-06 | 90 | 2026-09-07 | HARD-01 (líder de endurecimento) |
+| trivy | DS-0002 | `deploy/Dockerfile.worker` | o contêiner parte como root DE PROPÓSITO e solta privilégio para `plat` via setpriv no entrypoint antes de importar o worker (comentário no próprio Dockerfile, item L0-05-e); trivy só vê a ausência de `USER`. | 2027-03-07 | 181 | 2026-09-07 | HARD-01 (líder de endurecimento) |
+| zap | 10055 | `/api/docs` | swagger-ui em /api/docs arranca por script inline gerado pelo FastAPI (get_swagger_ui_html, sem nonce); o CSP desse bloco do nginx libera 'unsafe-inline' SÓ ali. Saída: servir o arranque como arquivo de web/vendor e tirar o unsafe-inline (candidato a item HARD). | 2026-12-06 | 90 | 2026-09-07 | HARD-01 (líder de endurecimento) |
+
+### 9.4 Achados em revisão (não bloqueiam; lista de trabalho do adversário, item HARD-03)
+
+- `bandit B608 app/acervo/rotas.py:166`
+- `bandit B608 app/acervo/rotas.py:79`
+- `bandit B608 app/acervo/rotas.py:82`
+- `bandit B608 app/acervo/rotas.py:96`
+- `bandit B608 app/auth/rotas_grupos.py:94`
+- `bandit B608 app/auth/rotas_log.py:101`
+- `bandit B608 app/auth/rotas_log.py:104`
+- `bandit B608 app/auth/rotas_log.py:192`
+- `bandit B608 app/auth/rotas_log.py:195`
+- `bandit B608 app/auth/rotas_usuarios.py:349`
+- `bandit B608 app/catalogo/miniatura.py:160`
+- `bandit B608 app/catalogo/miniatura.py:173`
+- `bandit B608 app/catalogo/rotas_itens.py:469`
+- `bandit B608 app/catalogo/rotas_itens.py:475`
+- `bandit B608 app/catalogo/rotas_itens.py:581`
+- `bandit B608 app/catalogo/rotas_itens.py:725`
+- `bandit B608 app/conexao/rotas.py:126`
+- `bandit B608 app/conexao/rotas.py:200`
+- `bandit B608 app/conexao/rotas.py:58`
+- `bandit B608 app/ingestao/carregar.py:154`
+- `bandit B608 app/ingestao/carregar.py:205`
+- `bandit B608 app/ingestao/carregar.py:213`
+- `bandit B608 app/ingestao/carregar.py:217`
+- `bandit B608 app/ingestao/carregar.py:230`
+- `bandit B608 app/ingestao/carregar.py:234`
+- `bandit B608 app/ingestao/carregar.py:248`
+- `bandit B608 app/ingestao/carregar.py:264`
+- `bandit B608 app/ingestao/carregar.py:270`
+- `bandit B608 app/ingestao/carregar.py:303`
+- `bandit B608 app/ingestao/inspecionar.py:67`
+- `bandit B608 app/jobs/servico.py:191`
+- `bandit B608 app/jobs/servico.py:203`
+- `bandit B608 app/jobs/servico.py:249`
+- `bandit B608 app/jobs/servico.py:251`
+- `bandit B608 app/jobs/servico.py:295`
+- `bandit B608 scripts/acervo_sync.py:121`
+
+### 9.6 Ferramentas binárias fixadas (deploy/ferramentas_binarias.txt)
+
+| ferramenta | versão | sha256 do pacote |
+|---|---|---|
+| gitleaks | 8.30.1 | `551f6fc83ea457d6…` |
+| trivy | 0.74.0 | `2ae6fe3ee734b7fd…` |
+| zap | 2.17.0 | `efe799aaa3627db6…` |
+
+<!-- fim: gerado por scripts/varredura_seguranca.py -->
