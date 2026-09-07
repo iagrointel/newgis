@@ -1,0 +1,710 @@
+{
+ "descricao": "Semente curada do catálogo de conectores públicos (item L6-02-m). Cada entrada é retestada por HTTP pelo job endpoints_publicos.retestar; entrada morta sai da lista e fica em 'fora do ar'. licenca segue o vocabulário da decisão B3 (nao-declarada quando o órgão não publica termo em página própria; nunca inferida). Sem nome de cliente ou parceiro.",
+ "curado_em": "2026-09-07",
+ "entradas": [
+  {
+   "orgao": "IBGE",
+   "nome": "IBGE geoserviços (WMS)",
+   "tipo": "wms",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/wms",
+   "licenca": "dado-aberto-com-termo-do-orgao"
+  },
+  {
+   "orgao": "IBGE",
+   "nome": "IBGE geoserviços (WFS)",
+   "tipo": "wfs",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/wfs",
+   "licenca": "dado-aberto-com-termo-do-orgao"
+  },
+  {
+   "orgao": "IBGE",
+   "nome": "IBGE geoserviços (WMTS, GeoWebCache)",
+   "tipo": "wmts",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/gwc/service/wmts",
+   "licenca": "dado-aberto-com-termo-do-orgao"
+  },
+  {
+   "orgao": "IBGE",
+   "nome": "IBGE ODS, indicadores por UF e região (WMS)",
+   "tipo": "wms",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/ODS/ows",
+   "licenca": "dado-aberto-com-termo-do-orgao"
+  },
+  {
+   "orgao": "IBGE",
+   "nome": "IBGE ODS, indicadores por UF e região (WFS)",
+   "tipo": "wfs",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/ODS/ows",
+   "licenca": "dado-aberto-com-termo-do-orgao"
+  },
+  {
+   "orgao": "IBGE",
+   "nome": "IBGE CCAR, base cartográfica contínua (WMS)",
+   "tipo": "wms",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/CCAR/ows",
+   "licenca": "dado-aberto-com-termo-do-orgao"
+  },
+  {
+   "orgao": "IBGE",
+   "nome": "IBGE CCAR, base cartográfica contínua (WFS)",
+   "tipo": "wfs",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/CCAR/ows",
+   "licenca": "dado-aberto-com-termo-do-orgao"
+  },
+  {
+   "orgao": "INDE",
+   "nome": "INDE geoserviços (WMS)",
+   "tipo": "wms",
+   "url": "https://geoservicos.inde.gov.br/geoserver/wms",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "INDE",
+   "nome": "INDE geoserviços (WFS)",
+   "tipo": "wfs",
+   "url": "https://geoservicos.inde.gov.br/geoserver/wfs",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "INDE",
+   "nome": "INDE geoserviços (WMTS, GeoWebCache)",
+   "tipo": "wmts",
+   "url": "https://geoservicos.inde.gov.br/geoserver/gwc/service/wmts",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Exército Brasileiro (DSG)",
+   "nome": "BDGEx cartas topográficas (WMTS)",
+   "tipo": "wmts",
+   "url": "https://bdgex.eb.mil.br/mapcache/wmts",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Exército Brasileiro (DSG)",
+   "nome": "BDGEx cartas topográficas (WMS)",
+   "tipo": "wms",
+   "url": "https://bdgex.eb.mil.br/mapcache",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "INPE",
+   "nome": "TerraBrasilis PRODES/DETER (WMS)",
+   "tipo": "wms",
+   "url": "https://terrabrasilis.dpi.inpe.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "INPE",
+   "nome": "TerraBrasilis PRODES/DETER (WFS)",
+   "tipo": "wfs",
+   "url": "https://terrabrasilis.dpi.inpe.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "INPE",
+   "nome": "TerraBrasilis (WMTS, GeoWebCache)",
+   "tipo": "wmts",
+   "url": "https://terrabrasilis.dpi.inpe.br/geoserver/gwc/service/wmts",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "INPE",
+   "nome": "Queimadas, focos de calor (WMS)",
+   "tipo": "wms",
+   "url": "https://terrabrasilis.dpi.inpe.br/queimadas/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "INPE",
+   "nome": "Queimadas, focos de calor (WFS)",
+   "tipo": "wfs",
+   "url": "https://terrabrasilis.dpi.inpe.br/queimadas/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "INPE",
+   "nome": "Brazil Data Cube, cubos de imagem (STAC)",
+   "tipo": "stac",
+   "url": "https://data.inpe.br/bdc/stac/v1",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "FUNAI",
+   "nome": "FUNAI terras indígenas (WMS)",
+   "tipo": "wms",
+   "url": "https://geoserver.funai.gov.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "FUNAI",
+   "nome": "FUNAI terras indígenas (WFS)",
+   "tipo": "wfs",
+   "url": "https://geoserver.funai.gov.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "INCRA",
+   "nome": "INCRA acervo fundiário (WMS)",
+   "tipo": "wms",
+   "url": "https://acervofundiario.incra.gov.br/i3geo/ogc.php",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "SFB (Serviço Florestal Brasileiro)",
+   "nome": "SICAR, imóveis rurais (WMS)",
+   "tipo": "wms",
+   "url": "https://geoserver.car.gov.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "ANA",
+   "nome": "ANA SNIRH (ArcGIS REST)",
+   "tipo": "esri_rest",
+   "url": "https://www.snirh.gov.br/arcgis/rest/services",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "ANP",
+   "nome": "ANP geomaps, blocos, poços, dutos (WMS)",
+   "tipo": "wms",
+   "url": "https://geomaps.anp.gov.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "ANP",
+   "nome": "ANP geomaps, blocos, poços, dutos (WFS)",
+   "tipo": "wfs",
+   "url": "https://geomaps.anp.gov.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "ANP",
+   "nome": "ANP geomaps (WMTS, GeoWebCache)",
+   "tipo": "wmts",
+   "url": "https://geomaps.anp.gov.br/geoserver/gwc/service/wmts",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "ANM",
+   "nome": "ANM SIGMINE, processos minerários (ArcGIS REST)",
+   "tipo": "esri_rest",
+   "url": "https://geo.anm.gov.br/arcgis/rest/services",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "ANM",
+   "nome": "ANM SIGMINE dados_anm (ArcGIS MapServer)",
+   "tipo": "esri_rest",
+   "url": "https://geo.anm.gov.br/arcgis/rest/services/SIGMINE/dados_anm/MapServer",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "ANEEL",
+   "nome": "ANEEL SIGEL, sistema elétrico (ArcGIS REST)",
+   "tipo": "esri_rest",
+   "url": "https://sigel.aneel.gov.br/arcgis/rest/services",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "EPE",
+   "nome": "EPE webmap sistema elétrico planejado (ArcGIS REST)",
+   "tipo": "esri_rest",
+   "url": "https://gisepeprd2.epe.gov.br/arcgis/rest/services",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "EPE",
+   "nome": "EPE sistema elétrico planejado (ArcGIS MapServer)",
+   "tipo": "esri_rest",
+   "url": "https://gisepeprd2.epe.gov.br/arcgis/rest/services/SMA/Webmap_EPE_Sistema_Eletrico_Planejado/MapServer",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "SGB/CPRM",
+   "nome": "SGB geoportal, geologia (ArcGIS REST)",
+   "tipo": "esri_rest",
+   "url": "https://geoportal.sgb.gov.br/server/rest/services",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "SGB/CPRM",
+   "nome": "SGB litoestratigrafia 1:1.000.000 (ArcGIS MapServer)",
+   "tipo": "esri_rest",
+   "url": "https://geoportal.sgb.gov.br/server/rest/services/geologia/litoestratigrafia_1000000/MapServer",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "DECEA",
+   "nome": "DECEA GeoAISWEB, espaço aéreo (WMS)",
+   "tipo": "wms",
+   "url": "https://geoaisweb.decea.mil.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "DECEA",
+   "nome": "DECEA GeoAISWEB, espaço aéreo (WFS)",
+   "tipo": "wfs",
+   "url": "https://geoaisweb.decea.mil.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "IPHAN",
+   "nome": "IPHAN SICG, sítios arqueológicos (WMS)",
+   "tipo": "wms",
+   "url": "https://geoserver.iphan.gov.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "IPHAN",
+   "nome": "IPHAN SICG, sítios arqueológicos (WFS)",
+   "tipo": "wfs",
+   "url": "https://geoserver.iphan.gov.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Governo do Estado de São Paulo (SIMA)",
+   "nome": "DataGEO SP (WMS)",
+   "tipo": "wms",
+   "url": "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Governo do Estado de São Paulo (SIMA)",
+   "nome": "DataGEO SP (WFS)",
+   "tipo": "wfs",
+   "url": "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Governo do Estado de São Paulo (SIMA)",
+   "nome": "DataGEO SP camadas WMS (WMS)",
+   "tipo": "wms",
+   "url": "https://datageo.ambiente.sp.gov.br/geoserver/datageowms/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Prefeitura de São Paulo",
+   "nome": "GeoSampa (WFS)",
+   "tipo": "wfs",
+   "url": "https://wfs.geosampa.prefeitura.sp.gov.br/geoserver/geoportal/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Prefeitura de São Paulo",
+   "nome": "GeoSampa (WMS)",
+   "tipo": "wms",
+   "url": "https://wfs.geosampa.prefeitura.sp.gov.br/geoserver/geoportal/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Prefeitura de Guarulhos",
+   "nome": "GeoServer municipal (WMS)",
+   "tipo": "wms",
+   "url": "https://geoserver.guarulhos.sp.gov.br:8443/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Prefeitura de Guarulhos",
+   "nome": "GeoServer municipal (WFS)",
+   "tipo": "wfs",
+   "url": "https://geoserver.guarulhos.sp.gov.br:8443/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Governo do Estado do Rio Grande do Sul",
+   "nome": "IEDE RS (ArcGIS REST)",
+   "tipo": "esri_rest",
+   "url": "https://iede.rs.gov.br/server/rest/services",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "IAT (Paraná)",
+   "nome": "IAT PR, outorgas e autorizações (ArcGIS REST)",
+   "tipo": "esri_rest",
+   "url": "https://geopr.iat.pr.gov.br/server/rest/services",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Governo do Estado do Paraná",
+   "nome": "Paraná Interativo (ArcGIS REST)",
+   "tipo": "esri_rest",
+   "url": "https://paranainterativo.pr.gov.br/interativo/rest/services",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Prefeitura do Rio de Janeiro (IPP)",
+   "nome": "Data.Rio (ArcGIS REST)",
+   "tipo": "esri_rest",
+   "url": "https://pgeo3.rio.rj.gov.br/arcgis/rest/services",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Prefeitura do Recife",
+   "nome": "ESIG Recife (ArcGIS REST)",
+   "tipo": "esri_rest",
+   "url": "https://esigportal2.recife.pe.gov.br/arcgis/rest/services",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Governo do Estado de Santa Catarina",
+   "nome": "SIGSC (WMS)",
+   "tipo": "wms",
+   "url": "https://sigsc.sc.gov.br/sigserver/SIGSC/wms",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Governo do Estado do Mato Grosso (SEMA)",
+   "nome": "SEMA MT geoserviços (WMS)",
+   "tipo": "wms",
+   "url": "https://geo.sema.mt.gov.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Element 84 / AWS Open Data",
+   "nome": "Earth Search, Sentinel-2 L2A COG e Landsat (STAC)",
+   "tipo": "stac",
+   "url": "https://earth-search.aws.element84.com/v1",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "Microsoft",
+   "nome": "Planetary Computer, 136 coleções (STAC)",
+   "tipo": "stac",
+   "url": "https://planetarycomputer.microsoft.com/api/stac/v1",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "USGS",
+   "nome": "LandsatLook, Landsat C2 (STAC)",
+   "tipo": "stac",
+   "url": "https://landsatlook.usgs.gov/stac-server",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "NASA",
+   "nome": "CMR Earthdata (STAC)",
+   "tipo": "stac",
+   "url": "https://cmr.earthdata.nasa.gov/stac",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "ESA / Copernicus",
+   "nome": "Copernicus Data Space (STAC)",
+   "tipo": "stac",
+   "url": "https://catalogue.dataspace.copernicus.eu/stac",
+   "licenca": "Copernicus",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "NASA",
+   "nome": "GIBS, imagens diárias (WMTS EPSG:3857)",
+   "tipo": "wmts",
+   "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "NASA",
+   "nome": "GIBS, imagens diárias (WMS EPSG:4326)",
+   "tipo": "wms",
+   "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "EOX",
+   "nome": "Sentinel-2 cloudless (WMS)",
+   "tipo": "wms",
+   "url": "https://tiles.maps.eox.at/wms",
+   "licenca": "CC-BY",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "EOX",
+   "nome": "Sentinel-2 cloudless (WMTS)",
+   "tipo": "wmts",
+   "url": "https://tiles.maps.eox.at/wmts",
+   "licenca": "CC-BY",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "ESA / VITO Terrascope",
+   "nome": "ESA WorldCover (WMS)",
+   "tipo": "wms",
+   "url": "https://services.terrascope.be/wms/v2",
+   "licenca": "CC-BY",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "OpenStreetMap / terrestris",
+   "nome": "OSM WMS (terrestris)",
+   "tipo": "wms",
+   "url": "https://ows.terrestris.de/osm/service",
+   "licenca": "ODbL",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "Esri",
+   "nome": "Esri sampleserver6 (ArcGIS REST, demonstração)",
+   "tipo": "esri_rest",
+   "url": "https://sampleserver6.arcgisonline.com/arcgis/rest/services",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "pygeoapi",
+   "nome": "pygeoapi demonstração (OGC API Features)",
+   "tipo": "ogc_api",
+   "url": "https://demo.pygeoapi.io/master",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "IBGE",
+   "nome": "IBGE ODS (WMTS, GeoWebCache)",
+   "tipo": "wmts",
+   "url": "https://geoservicos.ibge.gov.br/geoserver/ODS/gwc/service/wmts",
+   "licenca": "dado-aberto-com-termo-do-orgao"
+  },
+  {
+   "orgao": "FUNAI",
+   "nome": "FUNAI terras indígenas (WMTS, GeoWebCache)",
+   "tipo": "wmts",
+   "url": "https://geoserver.funai.gov.br/geoserver/gwc/service/wmts",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "SFB (Serviço Florestal Brasileiro)",
+   "nome": "SICAR, imóveis rurais (WFS)",
+   "tipo": "wfs",
+   "url": "https://geoserver.car.gov.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "SFB (Serviço Florestal Brasileiro)",
+   "nome": "SICAR (WMTS, GeoWebCache)",
+   "tipo": "wmts",
+   "url": "https://geoserver.car.gov.br/geoserver/gwc/service/wmts",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "DECEA",
+   "nome": "DECEA GeoAISWEB (WMTS, GeoWebCache)",
+   "tipo": "wmts",
+   "url": "https://geoaisweb.decea.mil.br/geoserver/gwc/service/wmts",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Governo do Estado de São Paulo (SIMA)",
+   "nome": "DataGEO SP (WMTS, GeoWebCache)",
+   "tipo": "wmts",
+   "url": "https://datageo.ambiente.sp.gov.br/geoserver/gwc/service/wmts",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Prefeitura de Guarulhos",
+   "nome": "GeoServer municipal (WMTS, GeoWebCache)",
+   "tipo": "wmts",
+   "url": "https://geoserver.guarulhos.sp.gov.br:8443/geoserver/gwc/service/wmts",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Governo do Estado do Mato Grosso (SEMA)",
+   "nome": "SEMA MT geoserviços (WFS)",
+   "tipo": "wfs",
+   "url": "https://geo.sema.mt.gov.br/geoserver/ows",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Governo do Estado de Santa Catarina",
+   "nome": "SIGSC (WFS)",
+   "tipo": "wfs",
+   "url": "https://sigsc.sc.gov.br/sigserver/SIGSC/wfs",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "ANA",
+   "nome": "ANA DADOSABERTOS DBO Q95 (ArcGIS MapServer)",
+   "tipo": "esri_rest",
+   "url": "https://www.snirh.gov.br/arcgis/rest/services/DADOSABERTOS/DBO_Q95/MapServer",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "SGB/CPRM",
+   "nome": "SGB ocorrências minerais (ArcGIS MapServer)",
+   "tipo": "esri_rest",
+   "url": "https://geoportal.sgb.gov.br/server/rest/services/geologia/ocorrencias/MapServer",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "EPE",
+   "nome": "EPE infraestrutura de gás natural (ArcGIS MapServer)",
+   "tipo": "esri_rest",
+   "url": "https://gisepeprd2.epe.gov.br/arcgis/rest/services/SMA/Webmap_EPE_Infraestrutura_de_Gas_Natural/MapServer",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "IAT (Paraná)",
+   "nome": "IAT PR outorgas de água (ArcGIS FeatureServer)",
+   "tipo": "esri_rest",
+   "url": "https://geopr.iat.pr.gov.br/server/rest/services/Outorgas_Consulta_Automonitoramento_Vazao/FeatureServer",
+   "licenca": "nao-declarada"
+  },
+  {
+   "orgao": "Esri",
+   "nome": "Esri sampleserver6 Census (ArcGIS MapServer, demonstração)",
+   "tipo": "esri_rest",
+   "url": "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Census/MapServer",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "Esri",
+   "nome": "ArcGIS Online basemaps (ArcGIS REST)",
+   "tipo": "esri_rest",
+   "url": "https://services.arcgisonline.com/arcgis/rest/services",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "USGS",
+   "nome": "The National Map basemaps (ArcGIS REST)",
+   "tipo": "esri_rest",
+   "url": "https://basemap.nationalmap.gov/arcgis/rest/services",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "Environment and Climate Change Canada",
+   "nome": "MSC GeoMet (WMS)",
+   "tipo": "wms",
+   "url": "https://geo.weather.gc.ca/geomet",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "Environment and Climate Change Canada",
+   "nome": "MSC GeoMet (OGC API)",
+   "tipo": "ogc_api",
+   "url": "https://api.weather.gc.ca",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "interactive instruments",
+   "nome": "ldproxy Daraa (OGC API Features, demonstração)",
+   "tipo": "ogc_api",
+   "url": "https://demo.ldproxy.net/daraa",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "Ecere",
+   "nome": "GNOSIS Earth (OGC API)",
+   "tipo": "ogc_api",
+   "url": "https://maps.gnosis.earth/ogcapi",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "DLR",
+   "nome": "DLR EOC basemap (WMS)",
+   "tipo": "wms",
+   "url": "https://geoservice.dlr.de/eoc/basemap/wms",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "BKG (Alemanha)",
+   "nome": "TopPlusOpen (WMS)",
+   "tipo": "wms",
+   "url": "https://sgx.geodatenzentrum.de/wms_topplus_open",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "swisstopo",
+   "nome": "geo.admin.ch (WMS)",
+   "tipo": "wms",
+   "url": "https://wms.geo.admin.ch",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "swisstopo",
+   "nome": "geo.admin.ch (STAC)",
+   "tipo": "stac",
+   "url": "https://data.geo.admin.ch/api/stac/v1",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "EMODnet",
+   "nome": "EMODnet batimetria (WMS)",
+   "tipo": "wms",
+   "url": "https://ows.emodnet-bathymetry.eu/wms",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "EODC",
+   "nome": "EODC (STAC)",
+   "tipo": "stac",
+   "url": "https://stac.eodc.eu/api/v1",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "CEDA",
+   "nome": "CEDA (STAC)",
+   "tipo": "stac",
+   "url": "https://api.stac.ceda.ac.uk",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "Digital Earth Africa",
+   "nome": "Digital Earth Africa (STAC)",
+   "tipo": "stac",
+   "url": "https://explorer.digitalearth.africa/stac",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "OpenLandMap",
+   "nome": "OpenLandMap (STAC estático)",
+   "tipo": "stac",
+   "url": "https://s3.eu-central-1.wasabisys.com/stac/openlandmap/catalog.json",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "Google",
+   "nome": "Earth Engine catálogo público (STAC estático)",
+   "tipo": "stac",
+   "url": "https://earthengine-stac.storage.googleapis.com/catalog/catalog.json",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "Copernicus Data Space",
+   "nome": "Copernicus Data Space (STAC v1)",
+   "tipo": "stac",
+   "url": "https://stac.dataspace.copernicus.eu/v1",
+   "licenca": "Copernicus",
+   "origem": "fila_keyless"
+  },
+  {
+   "orgao": "NASA",
+   "nome": "CMR CloudSTAC (STAC)",
+   "tipo": "stac",
+   "url": "https://cmr.earthdata.nasa.gov/cloudstac",
+   "licenca": "nao-declarada",
+   "origem": "fila_keyless"
+  }
+ ]
+}
