@@ -35,8 +35,17 @@
    "valor": 1,
    "unidade": "arquivos",
    "comando": "arquivos do bucket zipados"
+  },
+  "capturas_e2e": {
+   "valor": [
+    "L0-06-d-exportar-inquilino_cota_do_dia_gasta.png",
+    "L0-06-d-exportar-inquilino_pacote_pronto.png",
+    "L0-06-d-exportar-inquilino_secao_com_estimativa.png"
+   ],
+   "unidade": "arquivos",
+   "comando": "playwright screenshot full_page (tests/e2e/test_exportar_inquilino.py)"
   }
  },
- "gerado_em": "2026-09-07T22:23:37Z",
+ "gerado_em": "2026-09-07T22:43:12Z",
  "git_sha": "c3d32d404e57"
 }
