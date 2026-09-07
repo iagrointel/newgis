@@ -18,7 +18,7 @@ import uuid
 import psycopg2
 from fastapi import APIRouter, Query, Request
 
-from app import db
+from app import cotas, db
 from app.acervo.modelos import AcervoAdicionarEntrada, AcervoFicha, AcervoPagina
 from app.auth.comum import paginacao
 from app.auth.sessao import Auth, autenticado
@@ -173,16 +173,16 @@ def adicionar(
     if f["risco_pii"] and not confirma_risco_pii:
         raise _recusar_pii(request, ctx, fonte_id, f["risco_pii_motivo"])
     with db.db(ctx) as cur:
-        cur.execute(
-            "SELECT plat.cota_itens(%s) AS cota, (SELECT count(*) FROM plat.item WHERE tenant_id = %s) AS n",
-            (auth.tenant_id, auth.tenant_id),
-        )
-        cota = cur.fetchone()
-        if cota["n"] >= cota["cota"]:
+        # contar_itens_com_lixeira (item L0-07-c-cotas-uso): item na lixeira ainda não expurgado CONTA na
+        # cota — um count(*) cru via RLS esconderia o apagado e deixaria "liberar" cota sem expurgo.
+        n = cotas.contar_itens_com_lixeira(cur, auth.tenant_id)
+        cur.execute("SELECT plat.cota_itens(%s) AS cota", (auth.tenant_id,))
+        cota_itens = cur.fetchone()["cota"]
+        if n >= cota_itens:
             raise ErroAPI(
                 413, "cota_itens",
-                f"cota de itens esgotada: uso atual {cota['n']} de {cota['cota']} itens",
-                {"cota": cota["cota"], "uso": cota["n"]},
+                f"cota de itens esgotada: uso atual {n} de {cota_itens} itens",
+                {"cota": cota_itens, "uso": n},
             )
         dados = {
             "protocolo": "acervo",

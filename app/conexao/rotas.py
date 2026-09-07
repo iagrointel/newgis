@@ -15,7 +15,7 @@ import uuid
 import psycopg2
 from fastapi import APIRouter, Request
 
-from app import db, limites
+from app import cotas, db, limites
 from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import comum as catalogo_comum
@@ -315,16 +315,16 @@ def publicar_camada(
     atribuicao = (descoberta.atribuicao or "")[:2048] or None
     iid = str(uuid.uuid4())
     with db.db(auth.contexto()) as cur:
-        cur.execute(
-            "SELECT plat.cota_itens(%s) AS cota, (SELECT count(*) FROM plat.item WHERE tenant_id = %s) AS n",
-            (auth.tenant_id, auth.tenant_id),
-        )
-        rc = cur.fetchone()
-        if rc["n"] >= rc["cota"]:
+        # contar_itens_com_lixeira (item L0-07-c-cotas-uso): item na lixeira ainda não expurgado CONTA na
+        # cota — um count(*) cru via RLS esconderia o apagado e deixaria "liberar" cota sem expurgo.
+        n = cotas.contar_itens_com_lixeira(cur, auth.tenant_id)
+        cur.execute("SELECT plat.cota_itens(%s) AS cota", (auth.tenant_id,))
+        cota_itens = cur.fetchone()["cota"]
+        if n >= cota_itens:
             raise ErroAPI(
                 413, "cota_itens",
-                f"cota de itens esgotada: uso atual {rc['n']} de {rc['cota']} itens",
-                {"cota": rc["cota"], "uso": rc["n"]},
+                f"cota de itens esgotada: uso atual {n} de {cota_itens} itens",
+                {"cota": cota_itens, "uso": n},
             )
         try:
             cur.execute(

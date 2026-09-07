@@ -35,6 +35,21 @@ def fmt_bytes(n: int | None) -> str:
     return f"{n} B"  # pragma: no cover — inalcançável pelo laço acima
 
 
+def contar_itens_com_lixeira(cur, tenant_id: int) -> int:
+    """Total de itens do inquilino PARA A COTA (plat.cota_itens): inclui os na lixeira, ainda não expurgados.
+
+    Achado ao fechar o item (a refutação do próprio backlog): a RLS de leitura de `plat.item` esconde linha
+    apagada por padrão (`apagado_em IS NULL OR current_setting('plat.lixeira') = 'on'`, migrações 017/018) —
+    um `SELECT count(*) FROM plat.item WHERE tenant_id = %s` direto, sem ligar essa GUC, contava só os itens
+    VIVOS. Isso deixava passar exatamente o ataque descrito na refutação: apagar um item o tira da contagem
+    na hora, antes do expurgo físico (que só roda dias depois) — cota "liberada" sem nada ter sido liberado
+    de verdade. `app/catalogo/rotas_itens.py`, `app/acervo/rotas.py` e `app/conexao/rotas.py` usam esta função
+    em vez do count cru desde então."""
+    cur.execute("SELECT set_config('plat.lixeira', 'on', true)")
+    cur.execute("SELECT count(*) AS n FROM plat.item WHERE tenant_id = %s", (tenant_id,))
+    return cur.fetchone()["n"]
+
+
 def avisos(recursos: list[dict]) -> list[dict]:
     """[{'recurso', 'uso', 'cota', 'fracao'}] só dos recursos em AVISO_FRAC ou mais. `recursos` é a lista de
     {'recurso': str, 'uso': int|None, 'cota': int|None}; uso None (bucket não medido) ou cota None/0 não avisa

@@ -17,7 +17,7 @@ import pydantic
 from fastapi import APIRouter, Body, Query, Request, Response
 from jsonschema import Draft202012Validator
 
-from app import db, limites
+from app import cotas, db, limites
 from app.auth.comum import campos_json, paginacao
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import busca as mod_busca
@@ -563,16 +563,16 @@ def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteu
     ext_sql, ext_params = _extent_sql(corpo.extent)
     try:
         with db.db(auth.contexto()) as cur:
-            cur.execute(
-                "SELECT plat.cota_itens(%s) AS cota, (SELECT count(*) FROM plat.item WHERE tenant_id = %s) AS n",
-                (auth.tenant_id, auth.tenant_id),
-            )
-            r = cur.fetchone()
-            if r["n"] >= r["cota"]:
+            # contar_itens_com_lixeira (item L0-07-c-cotas-uso): item na lixeira ainda não expurgado CONTA
+            # na cota — um count(*) cru via RLS esconderia o apagado e deixaria "liberar" cota sem expurgo.
+            n = cotas.contar_itens_com_lixeira(cur, auth.tenant_id)
+            cur.execute("SELECT plat.cota_itens(%s) AS cota", (auth.tenant_id,))
+            cota = cur.fetchone()["cota"]
+            if n >= cota:
                 raise ErroAPI(
                     413, "cota_itens",
-                    f"cota de itens esgotada: uso atual {r['n']} de {r['cota']} itens",
-                    {"cota": r["cota"], "uso": r["n"]},
+                    f"cota de itens esgotada: uso atual {n} de {cota} itens",
+                    {"cota": cota, "uso": n},
                 )
             _pasta_existe(cur, corpo.pasta_id)
             cats = _categorias_existem(cur, corpo.categorias)
