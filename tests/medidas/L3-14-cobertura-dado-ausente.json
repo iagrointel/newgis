@@ -1,0 +1,30 @@
+{
+  "item": "L3-14-cobertura-dado-ausente",
+  "clausulas": [
+    {
+      "clausula": "teste injeta NULL em 30% de um fator e confere favorabilidade recalculada só com os presentes e cobertura 70% exibida",
+      "prova": "tests/unit/test_amc_cobertura.py::test_cobertura_70_por_cento_com_30_por_cento_de_ausencia e ::test_favorabilidade_recalculada_so_com_os_presentes",
+      "resultado": "passou",
+      "detalhe": "100 unidades, 30 com fator ausente: n_presentes=70, fracao_unidades=0.70, abaixo_do_limiar=True (limiar padrão 0.80); nota das 30 unidades = soma_ponderada só dos fatores presentes (40.0), nunca herda 0 do ausente"
+    },
+    {
+      "clausula": "varredura estática do código do motor por COALESCE(...,0) sobre colunas de fator (lista de exceções declarada) integrada ao make check",
+      "prova": "tests/unit/test_amc_sem_coalesce_zero.py (roda dentro de `make teste`/`make check` via pytest padrão, sem alvo novo no Makefile)",
+      "resultado": "passou",
+      "detalhe": "varre app/amc/*.py contra COALESCE(...,0), .fillna(0) e 'x or 0'; 0 ocorrências hoje; EXCECOES declarado vazio e documentado no próprio arquivo de teste"
+    },
+    {
+      "clausula": "relatório mostra cobertura por fator",
+      "prova": "tests/unit/test_amc_relatorio.py::test_relatorio_mostra_cobertura_por_fator_e_marca_abaixo_do_limiar",
+      "resultado": "passou",
+      "detalhe": "app.amc.relatorio.montar_relatorio devolve cobertura_por_fator (uma entrada por fator), fatores_abaixo_do_limiar e aviso_cobertura nomeando os fatores marcados"
+    }
+  ],
+  "refutacao_adversario": {
+    "pedido": "adversário procura qualquer caminho em que uma célula sem raster produza nota igual à de uma célula com valor 0",
+    "prova": "tests/unit/test_amc_cobertura_adversario.py (4 testes)",
+    "resultado": "passou, com uma ressalva declarada",
+    "ressalva": "a política 'pessimista' (já existente em app.amc.combinacao, fora do escopo deste item) converte ausência em 0.0 POR DEFINIÇÃO DE PRODUTO — é a única política em que ausência e medição-zero colapsam no mesmo número; isso é aceitável só porque app.amc.relatorio é obrigado a expor politica_ausente_descricao junto do número (testado em test_amc_relatorio.py). Não é o bug que este item veta (código que ESCONDE a conversão); é uma escolha declarada do usuário."
+  },
+  "dependencia_L3-01-c-extracao-fator": "PARCIAL conforme o prompt; usado aqui só para confirmar que zonal.py/vetorial.py já devolvem valor=None (nunca 0.0) quando a unidade não toca o dado — confirmado por leitura de código e por test_extrator_zonal_unidade_fora_do_raster_devolve_none_nunca_zero. Nenhuma cláusula deste item ficou bloqueada pela dependência."
+}
