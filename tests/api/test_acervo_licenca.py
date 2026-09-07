@@ -25,8 +25,20 @@ SYNC = ROOT / "scripts" / "acervo_licenca_sync.py"
 PORTAO_MINIMO = 40
 
 
+# `sudo` limpa o ambiente do processo filho (env_reset): PLAT_SCHEMA/PLAT_SCHEMA_TRABALHO precisam
+# ser repassados na linha de comando com `env`, senao o script roda com o schema padrao e escreve no
+# `plat` de PRODUCAO enquanto o teste le do schema isolado -- era esta a causa da falha destes dois
+# arquivos em QUALQUER trilha (achado F9).
+_REPASSAR = ("PLAT_SCHEMA", "PLAT_SCHEMA_TRABALHO", "PLAT_DSN", "PLAT_CANAL_JOB")
+
+
+def _env_da_trilha() -> list[str]:
+    passar = [f"{k}={os.environ[k]}" for k in _REPASSAR if k in os.environ]
+    return ["env", *passar] if passar else []
+
+
 def _rodar_sync(banco: str = "iagro_sat", somente: str | None = None):
-    cmd = ["sudo", "-u", "postgres", "python3", str(SYNC), "--banco", banco]
+    cmd = ["sudo", "-u", "postgres", *_env_da_trilha(), "python3", str(SYNC), "--banco", banco]
     if somente:
         cmd += ["--somente", somente]
     return subprocess.run(cmd, capture_output=True, text=True, env=os.environ.copy(), timeout=180)
