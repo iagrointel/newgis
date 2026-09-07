@@ -1,7 +1,8 @@
 """Medição em escala REAL do item L4-01-d-atributos-de-rede (marcador `lento`: fora do pytest do dia a dia).
 
-Carrega a mesma rede real da cooperativa de teste que `test_rede_topologia_medida.py` (item L4-01-b) — BDGD
-`certaja.{ssdmt,ssdbt,ramlig,trafo,ponnot}`, ativo da casa, somente leitura — habilita a topologia e mede,
+Carrega a mesma rede real da cooperativa de teste que `test_rede_topologia_medida.py` (item L4-01-b) — as
+tabelas BDGD `ssdmt/ssdbt/ramlig/trafo/ponnot` do ativo de rede de referência da casa (somente leitura,
+schema em `PLAT_REDE_REFERENCIA_ESQUEMA`) — habilita a topologia e mede,
 NESTA ESCALA (73.512 trechos, 5.481 transformadores, 60.549 postes):
 
 1. sincronização em lote (tensão/capacidade/aresta de dispositivo);
