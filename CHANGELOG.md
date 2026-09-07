@@ -3,6 +3,53 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L4-01-d-atributos-de-rede: fase propagável, traversabilidade, is_connected/subrede — PARCIAL)
+
+`plat.rede_atributo` (catálogo do item L4-01-a) ganha duas flags (`propagavel`, `apoia_traversabilidade`),
+marcadas pelo sufixo real do código BDGD ao fim da importação do pacote (`*_fas_con` → propagável;
+`*_p_n_ope` → apoia traversabilidade — 8 e 1 linhas marcadas no pacote `eletrica-br`) e semeia 31 linhas
+sintéticas de atributo calculado (`comprimento_geodesico`/`is_connected`/`subrede`, `origem = {"calculado":
+true}`). Sincronização em dois caminhos: TRIGGER (`AFTER UPDATE` em `rede_feicao_linha`/`_ponto`) copia
+valor numa edição só; `POST /api/rede/{id}/atributos/sincronizar` reconstrói em lote a tensão/capacidade da
+topologia e `plat.rede_topo_dispositivo_aresta` (a aresta INTERNA de um dispositivo de 2+ terminais — sem
+ela o traçado não atravessa uma chave FECHADA; transformador nunca ganha esta aresta). `POST
+.../atributos/propagar-fase` propaga a fase por BFS a partir do(s) controlador(es), aplicando
+`plat.rede_atributo_substituicao` (regra por tipo, nunca inferida) e gravando divergência em
+`plat.rede_atributo_discrepancia` sem nunca corrigir o valor declarado. `POST .../atributos/conectividade`
+recalcula `is_connected`/`subrede` por alcançabilidade, respeitando a traversabilidade do dispositivo.
+Refutado com uma rede sintética construída à mão (`tests/api/test_rede_atributos.py`, 7 casos): mudar
+`FAS_CON` a montante muda a fase propagada de tudo a jusante e NUNCA de um ramo irmão; abrir uma chave
+derruba `traversável` da aresta de dispositivo e zera a `subrede` do lado morto. Contrato em
+`docs/adr/20260907T1315-atributos-de-rede.md`; modelo e paridade em `docs/rede/ATRIBUTOS.md`.
+
+Medido em escala real (mesma rede da cooperativa de teste do item anterior — 73.512 arestas, 80.456 nós, 21
+alimentadores): sincronização em lote em 2,58 s (73.512 arestas de tensão/capacidade atualizadas; 5.481
+transformadores avaliados e ignorados por categoria, corretamente — nunca ganham aresta interna); propagação
+de fase em 27,7 s (43.709 trechos de MT alcançados, 25.772 discrepâncias gravadas); conectividade em 30,2 s
+(44.268/73.512 arestas conectadas em 2 subredes; `WHERE is_connected` devolve exatamente o mesmo número, uso
+como filtro provado).
+
+⛔⛔ **CLÁUSULA ABERTA, nomeada, não afrouxada**: a concordância de fase medida contra `FAS_CON` real ficou em
+**41,04% (17.937/43.709)**, abaixo do ≥95% do portão. Razão medida, não desculpa: o extrato BDGD desta
+cooperativa não tem NENHUMA subestação nem chave de média tensão do pacote `eletrica-br` (só trechos,
+transformador e poste) — a propagação usa a extremidade de grau 1 de MENOR id como raiz ASSUMIDA de cada
+alimentador (`raizes_assumidas_por_alimentador`), e um alimentador real costuma ter VÁRIAS extremidades de
+grau 1 (ramais terminando em derivação monofásica); a raiz assumida não é necessariamente o lado da
+subestação, então a fase da raiz e a fase predominante do alimentador podem ser trocadas por acaso. A
+mecânica de propagação em si (BFS por caminho, substituição, discrepância, isolamento entre ramos irmãos)
+está provada correta pela refutação sintética acima — o que falta é um controlador REAL no mesmo arquivo
+para medir a concordância que o enunciado pede; nenhuma subestação/chave existe nesta base para prover isso.
+Registrado em `tests/medidas/L4-01-d-atributos-de-rede.json`, cláusula `concordancia_fase_mt`, `"ok": false`.
+
+⛔ Fronteira herdada de L4-01-b (achada ao escrever este item, não bug deste item): `topologia.habilitar`
+funde diretamente as duas pontas de um trecho que se tocam quando são do MESMO grupo — pensado para um
+trecho partido sem dispositivo no meio. Uma chave de 2 terminais do MESMO tier sentada exatamente sobre esse
+encontro (o caso normal de uma chave em série na MT) cai no mesmo grupo de união do lado a lado — vira UM nó
+só, não dois; `sincronizar_topologia_lote` detecta e conta (`ignorados_sem_dois_nos`), nunca cria a aresta
+com um nó só. Consequência medida: 0 aresta de dispositivo na base real (sem chave no arquivo, a fronteira
+nunca chegou a ser exercitada em escala). Ver ADR seção "fronteira achada" para a recomendação a um item
+futuro de L4.
+
 ## turno 4, setembro de 2026 (item L4-01-b-topologia-derivada: topologia derivada da rede de utilidades)
 
 `POST /api/rede/{id}/topologia/habilitar` reconstrói dois índices derivados das feições da rede —

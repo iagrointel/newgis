@@ -126,10 +126,19 @@ def importar(cur, tenant_id: int, rede_id: str, doc: dict, usuario_id: int, sha2
              _texto(r.get("descricao"))),
         )
 
+    # atributos de rede (item L4-01-d): marca fase (propagável) e p_n_ope (apoia traversabilidade) nos
+    # atributos reais do pacote, e semeia as linhas sintéticas dos atributos calculados pela plataforma
+    # (comprimento geodésico, is_connected, subrede) — nunca inventando origem para o que não veio da BDGD.
+    from app.rede_utilidades import atributos as atributos_mod
+
+    flags = atributos_mod.declarar_flags_padrao(cur, rede_id)
+    calculados = atributos_mod.declarar_calculados(cur, tenant_id, rede_id)
+
     return {
         "dominios": len(doc["dominios"]), "tiers": len(doc["tiers"]), "categorias": len(doc["categorias"]),
         "terminais": len(doc["terminais"]), "grupos": len(doc["grupos"]), "tipos": len(doc["tipos"]),
         "atributos": len(doc["atributos"]), "regras": len(doc["regras"]),
+        "atributos_flags": flags, "atributos_calculados": calculados,
     }
 
 
@@ -170,8 +179,12 @@ def exportar(cur, rede_id: str) -> dict | None:
     cats_por_tipo: dict = {}
     for r in cur.fetchall():
         cats_por_tipo.setdefault(r["tipo_id"], []).append(categorias[r["categoria_id"]]["codigo"])
+    # atributos CALCULADOS (item L4-01-d: comprimento geodésico/is_connected/subrede, `origem.calculado`)
+    # nunca entram no pacote exportado — não vieram de nenhum arquivo importado, e semeá-los de novo é
+    # `atributos.declarar_calculados` (idempotente), não um dado a levar de uma organização a outra.
     cur.execute("SELECT grupo_id, tipo_id, codigo, nome, tipo_dado, unidade, obrigatorio, origem "
-                "FROM plat.rede_atributo WHERE rede_id = %s::uuid", (rede_id,))
+                "FROM plat.rede_atributo WHERE rede_id = %s::uuid "
+                "AND coalesce(origem->>'calculado', 'false') <> 'true'", (rede_id,))
     atributos = [dict(r) for r in cur.fetchall()]
     cur.execute("SELECT tipo, de_tipo_id, para_tipo_id, descricao FROM plat.rede_regra WHERE rede_id = %s::uuid",
                 (rede_id,))

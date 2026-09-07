@@ -50,7 +50,10 @@ CONTAGENS = (
     "(SELECT count(*) FROM plat.rede_terminal_config tc WHERE tc.rede_id = r.id) AS n_terminais, "
     "(SELECT count(*) FROM plat.rede_grupo g WHERE g.rede_id = r.id) AS n_grupos, "
     "(SELECT count(*) FROM plat.rede_tipo tp WHERE tp.rede_id = r.id) AS n_tipos, "
-    "(SELECT count(*) FROM plat.rede_atributo a WHERE a.rede_id = r.id) AS n_atributos, "
+    # atributos CALCULADOS (item L4-01-d, `origem.calculado`) ficam fora desta contagem: não vieram do
+    # pacote importado, é o catálogo real do arquivo que esta ficha declara.
+    "(SELECT count(*) FROM plat.rede_atributo a WHERE a.rede_id = r.id "
+    " AND coalesce(a.origem->>'calculado', 'false') <> 'true') AS n_atributos, "
     "(SELECT count(*) FROM plat.rede_regra rg WHERE rg.rede_id = r.id) AS n_regras"
 )
 SQL_BASE = (
