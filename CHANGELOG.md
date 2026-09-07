@@ -3,6 +3,43 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L0-14-cli-admin: a linha de comando `plat`, um ponto de entrada só)
+
+`scripts/plat` (vinculado em `venv/bin/plat` pelo install.sh) passa a fazer por script o que o console e o
+painel de administração fazem pela tela: `inquilino criar/listar/suspender/reativar/cota`, `usuario
+criar/listar/redefinir-senha/desabilitar/reabilitar`, `token criar/listar/revogar`, `camada importar`,
+`job listar/cancelar/repetir`, `evento exportar` (JSON ou CSV), `saude`, `segredo rotacionar` (repassa ao
+script do L7-19) e `docs`. São 28 parsers e nenhuma dependência nova: `argparse`, `urllib`,
+`http.cookiejar`, `csv` e `json` da biblioteca padrão (`tests/medidas/L0-14-cli-admin.json`).
+
+A decisão de desenho (ADR 20260907T2318) é que **a CLI é cliente da própria API**: cada subcomando faz
+login e chama a mesma rota que o navegador chamaria, com o mesmo privilégio, a mesma RLS e o mesmo evento
+de auditoria. Nenhum comando abre conexão com o banco. Isso é o que torna a cláusula do portão
+verificável: os 19 testes de `tests/api/test_cli_admin.py` comparam, subcomando a subcomando, o efeito da
+linha de comando com o da rota equivalente chamada pelo cliente da suíte — mesmo resultado e mesmo evento
+gravado (13 subcomandos comparados assim).
+
+Antes deste item havia **quatro** `scripts/plat` diferentes (master com `segredo rotacionar`, e mais um em
+cada um dos ramos L7-06-c, L7-01-c e L7-33), todos com o mesmo nome de arquivo: ficou um só, e quem
+precisar de um grupo novo o acrescenta em `app/cli/principal.py`.
+
+Segurança: senha nunca entra por argumento. `--senha`, `--password`, `--pass` e `-p` são recusados antes
+de qualquer chamada, com a instrução do caminho certo (`--senha-stdin` ou `--senha-arquivo`), e todo
+arquivo de credencial, de senha ou de segundo fator é recusado se estiver legível por grupo ou por outros
+(fecha o achado 6a do adversário do T1: senha visível no `COMMAND=` que o `sudo` grava no journal). Rodada
+sem acesso ao ambiente, a CLI falha com uma linha em português, saída 2 e sem rastro de pilha — o teste
+confere que nem a senha da role aparece na saída.
+
+`docs/CLI.md` é gerado pelo próprio `argparse` (`plat docs`) e o teste reprova se estiver velho; a ajuda de
+todos os comandos é em português, com teste varrendo os 28 parsers atrás de resto de inglês. O `install.sh`
+ganhou a etapa `k`, que cria os inquilinos de demonstração por `plat inquilino criar --se-nao-existir`, com
+a senha do administrador vindo de arquivo em modo 600.
+
+Fora desta passagem, nomeado: `backup agora/verificar/restaurar-drill` e `item exportar/importar pacote`
+(`app/backup` e o pacote do inquilino ainda não estão em master — ramos `wt/il006adumpl`, `wt/il006cresto`
+e `wt/il006dexpor` na fila); e `camada importar` só foi exercitado com `--sem-esperar`, porque a base de
+trilha não tem worker rodando.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
