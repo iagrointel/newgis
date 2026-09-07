@@ -194,3 +194,39 @@ class RedeSimplesEntrada(BaseModel):
     campo_direcao: str | None = Field(default=None, min_length=1, max_length=63)
     mapa_direcao: dict[str, str] = Field(default_factory=dict)
     atributos_rede: list[AtributoRede] = Field(default_factory=list, max_length=50)
+
+
+# --- controlador de subrede e tiers (item L4-04-a-controladores-e-tiers) --------------------------------
+
+class ControladorEntrada(BaseModel):
+    """Marca o terminal de um dispositivo como controlador de uma subrede. `terminal` é obrigatório quando o
+    tipo de ativo declara mais de um terminal no pacote. `nome` é o nome DO CONTROLADOR (único dentro do
+    tier); sem ele, vale o nome da subrede."""
+    feicao_id: str = Field(min_length=36, max_length=36)
+    terminal: int | None = Field(default=None, ge=1, le=8)
+    subrede: str = Field(min_length=1, max_length=200)
+    tier: str = Field(min_length=1, max_length=63)
+    papel: str = Field(default="fonte", pattern="^(fonte|sumidouro)$")
+    nome: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class Controlador(BaseModel):
+    id: str
+    nome: str
+    papel: str
+    origem: str
+    subrede_id: str
+    subrede: str
+    tier: str
+    tier_nome: str
+    tier_tipo: str
+    tier_ordem: int
+    feicao_id: str | None
+    terminal: int | None
+    tipo_id: str | None
+    grupo: str | None
+    tipo_chave: str | None
+    tipo_nome: str | None
+    no_id: str | None
+    lon: float
+    lat: float
