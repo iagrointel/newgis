@@ -80,7 +80,12 @@ def test_orcamento_e_o_menor_entre_o_teto_do_produto_e_o_teto_da_maquina():
 def test_modelo_de_memoria_nao_subestima_o_pico_real_de_um_bloco():
     """O modelo de `pico_estimado_mb` é conferido contra a realidade: aloca um bloco cheio, combina, e
     compara o crescimento REAL de `ru_maxrss` com o que o modelo previu para a matriz. Estimativa que
-    nunca foi conferida contra medida é palpite, e palpite não entra em portão."""
+    nunca foi conferida contra medida é palpite, e palpite não entra em portão.
+
+    Limite honesto DESTE teste: `ru_maxrss` é marca d'água que só sobe, então num processo de pytest que
+    já alocou muito o crescimento pode dar 0 e a comparação passa por pouco esforço. Por isso ele vem
+    acompanhado de uma cota mínima do modelo (o tamanho puro da matriz vezes três) e, sobretudo, da
+    medição forte em `tests/unit/test_amc_escala_desempenho.py`, que roda num processo NOVO e lê `VmHWM`."""
     bloco = limites.AMC_BLOCO_UNIDADES
     antes = escala.medir_pico_mb()
     rng = np.random.default_rng(316)
@@ -90,6 +95,11 @@ def test_modelo_de_memoria_nao_subestima_o_pico_real_de_um_bloco():
     assert len(r) == 1 and isinstance(r[0][1], Resultado)
     crescimento = max(0.0, escala.medir_pico_mb() - antes)
     previsto = escala.pico_estimado_mb(bloco, FATORES) - escala.BASE_MB
+    matriz_mb = bloco * FATORES * 8 / (1024 * 1024)
+    assert previsto >= 3 * matriz_mb, (
+        f"o modelo prevê {previsto:.2f} MB para um bloco cuja matriz sozinha ocupa {matriz_mb:.2f} MB; "
+        "`combinar` mantém entrada, máscara e saída vivas ao mesmo tempo — menos de três cópias é otimismo"
+    )
     assert crescimento <= previsto, (
         f"o modelo previu {previsto:.2f} MB para a matriz do bloco e o pico real cresceu {crescimento:.2f} MB; "
         "aumente COPIAS_DA_MATRIZ/BYTES_POR_UNIDADE_ID em app/amc/escala.py"
