@@ -219,3 +219,9 @@ AMC_CONJUNTOS_POR_INQUILINO = 200     # conjuntos de unidades por inquilino
 AMC_VERSOES_POR_MODELO = 500          # versões de um modelo (cada edição cria uma; imutáveis, nunca apagadas)
 AMC_UNIDADES_PAGINA_MAX = 5_000       # unidades por página em GET /api/amc/conjuntos/{id}/unidades
 AMC_RESULTADOS_PAGINA_MAX = 5_000     # linhas por página em GET /api/amc/execucoes/{id}/resultados
+
+# --- localização semelhante (L3-17-similaridade): pedido é síncrono (sem job), então o teto é o que a
+# requisição aguenta responder em segundos, não o que o motor AMC aguenta processar em lote.
+SIMILARIDADE_UNIDADES_MAX = 20_000
+SIMILARIDADE_CAMPOS_MAX = 50
+SIMILARIDADE_REFERENCIAS_MAX = 500
