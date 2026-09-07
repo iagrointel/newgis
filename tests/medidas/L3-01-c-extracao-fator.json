@@ -1,0 +1,20 @@
+[
+  {
+    "item": "L3-01-c-extracao-fator",
+    "clausula": "extracao_de_12_fatores_sobre_73_mil_celulas_dentro_do_tempo_declarado",
+    "resultado": "nao_medida",
+    "motivo": "a suite (tests/unit/test_amc_zonal.py + test_amc_vetorial.py, incluindo o teste de desempenho de 72.900 unidades x 12 fatores) foi rodada em primeiro plano via laco/roda_teste.sh, que aplica um relogio duro de 600 s por rodada; a rodada estourou esse relogio (saida 'ESTOUROU 600s') com a maquina compartilhada por outras sessoes do laco. Isso E o resultado: nesta maquina, sob a carga medida, a extracao pura em Python (por unidade, sem lote no raster) nao termina 12 fatores x 72.900 unidades dentro de 10 minutos.",
+    "carga_1min_no_momento_do_estouro": 6.31,
+    "ram_livre_gb_no_momento_do_estouro": 9,
+    "medido_em": "2026-09-07T10:42:15Z",
+    "comando": "bash laco/roda_teste.sh tests/unit/test_amc_zonal.py tests/unit/test_amc_vetorial.py -q",
+    "referencia_do_item": "motor logistico faz 12-19 fatores em 73 mil celulas em 1-2 min, EM SQL (implementacao diferente, em lote)",
+    "extrapolacao_de_bancada_nao_oficial": {
+      "descricao": "medicoes menores feitas em REPL antes de fundir as duas chamadas a rasterize em pesos() e depois da fusao, com a maquina mais calma (carga 4,3-7,6 no momento); nao passaram pelo relogio duro de roda_teste.sh e por isso nao contam como prova da clausula, so como contexto de engenharia",
+      "antes_da_fusao_ms_por_unidade": 0.773,
+      "depois_da_fusao_ms_por_unidade": 0.620,
+      "projecao_12_fatores_x_72900_unidades_segundos": 543
+    },
+    "caminho_de_otimizacao_registrado": "ADR 0017: rasterizar a grade de unidades inteira uma vez (raster de id de unidade) e agregar com numpy/scipy.ndimage por rotulo, em vez de reabrir janela e rasterizar por unidade — o que o exactextract faria, ausente nesta maquina"
+  }
+]
