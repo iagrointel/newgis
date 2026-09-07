@@ -3,6 +3,34 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L6-02-o-importacao-exportacao-formatos: intercâmbio em lote e escrow do inquilino)
+
+`POST /api/intercambio/exportacoes` acrescenta aos 11 formatos do L0-04-h os quatro que faltavam e que o
+GDAL 3.8.4 desta máquina escreve: GeoJSON Sequence, File Geodatabase (driver `OpenFileGDB`, entregue como
+zip do diretório `.gdb`), MBTiles e PMTiles. Com `tipo: "inquilino"` a mesma rota gera o **escrow**: todas as
+camadas vetoriais do inquilino num único GeoPackage multi-camada mais um `manifesto.json` (schema, campos,
+SRID, contagem de feições e sha256 por camada), num zip — a saída de dados prevista no L0-06.
+`POST /api/intercambio/importacoes-lote` importa N arquivos numa chamada: é AGRUPAMENTO, não outro funil —
+a prova de conteúdo, a inspeção e a carga continuam sendo as do L0-04, e a criação do lote é uma transação
+só (arquivo malformado no meio não deixa importação pela metade). Antes de gerar, a exportação escreve o que
+o formato de destino vai FAZER com os campos, em vez de deixar o aviso do GDAL passar em silêncio: nome de
+campo acima de 10 caracteres truncado pelo DBF (com o nome exato que o shapefile vai ter), campo data-hora
+virando texto ISO 8601, texto acima de 254 caracteres cortado, inteiro de 64 bits virando número real no
+FileGDB e geometria quantizada na grade do tile em MBTiles/PMTiles. `GET /api/intercambio/formatos` responde
+o que esta instalação lê, o que escreve e o que **não temos** com o motivo escrito — nunca um total de
+formatos. Ver ADR de carimbo `20260907T1659` e `docs/PARIDADE.md`.
+
+Medido (`tests/medidas/L6-02-o-importacao-exportacao-formatos.json`, máquina em disputa — carga 14,7 de 12
+núcleos, então os tempos são limite superior): escrow de 20 camadas do inquilino em 5,66 s; camada de 2 mil
+feições em 0,54 s para GeoJSONSeq e 0,54 s para o zip do FileGDB, com as 2.000 feições relidas do `.gdb`
+pelo driver `OpenFileGDB`.
+
+⛔ O que este item NÃO faz: ampliar a IMPORTAÇÃO. Esta instalação lê quatro formatos (shapefile.zip, gpkg,
+geojson, csv, do L0-04); o lote repete esses conversores N vezes e não acrescenta formato de entrada — KML,
+XLSX, FileGDB e CAD de entrada são dos itens irmãos L0-04-e e L0-04-f. Não há QGIS nesta máquina: a cláusula
+"FileGDB abre no QGIS" foi provada pelo driver que o QGIS delega ao GDAL (`OpenFileGDB`), relendo o arquivo
+com a mesma contagem, e não pelo aplicativo.
+
 ## turno 4, setembro de 2026 (item L0-04-h-exportar: exportação de camada para outros formatos)
 
 `POST /api/exportacoes` enfileira o job `exportacao.gerar` (202) e devolve o arquivo (item `arquivo`,
