@@ -16788,7 +16788,7 @@
      "ids",
      "acao"
     ],
-    "title": "LoteEntrada"
+    "title": "LoteEntradaAuth"
    },
    "app__auth__modelos__LoteSaida": {
     "properties": {
@@ -16811,7 +16811,7 @@
      "alterados",
      "recusados"
     ],
-    "title": "LoteSaida"
+    "title": "LoteSaidaAuth"
    },
    "app__auth__modelos__Pagina": {
     "properties": {
@@ -16831,7 +16831,7 @@
      "total",
      "itens"
     ],
-    "title": "Pagina"
+    "title": "PaginaAuth"
    },
    "app__catalogo__modelos__LoteEntrada": {
     "properties": {
@@ -16966,7 +16966,7 @@
      "ids",
      "acao"
     ],
-    "title": "LoteEntrada"
+    "title": "LoteEntradaCatalogo"
    },
    "app__catalogo__modelos__LoteSaida": {
     "properties": {
@@ -16989,7 +16989,7 @@
      "feitos",
      "recusados"
     ],
-    "title": "LoteSaida"
+    "title": "LoteSaidaCatalogo"
    },
    "app__catalogo__modelos__Pagina": {
     "properties": {
@@ -17031,7 +17031,7 @@
      "total",
      "itens"
     ],
-    "title": "Pagina"
+    "title": "PaginaCatalogo"
    }
   }
  }
