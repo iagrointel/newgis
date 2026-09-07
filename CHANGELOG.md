@@ -84,7 +84,7 @@ retrato do CADASTRO, não do que a topologia alcança, e está dito assim no ADR
 
 Medido em `tests/medidas/L4-04-c-sumarios-por-subrede.json`, sobre o arquivo real da cooperativa de teste
 (44.268 trechos de média tensão, 5.481 transformadores, 27.587 unidades consumidoras, 1.385 gerações):
-**20 alimentadores somados em 2,3 s**, quilômetro de média tensão idêntico à soma do comprimento declarado
+**20 alimentadores somados em 1,5 s**, quilômetro de média tensão idêntico à soma do comprimento declarado
 no arquivo nos 20 (tolerância do portão: 0,1 %), contagem de unidades consumidoras idêntica nos 20 e
 **soma das unidades dos 20 sumários = 27.587 = total do arquivo** — nenhuma unidade contada em dois
 alimentadores. A diferença entre o comprimento declarado e o da geometria, medida e guardada por

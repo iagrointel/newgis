@@ -1,11 +1,11 @@
 {
  "item": "L4-04-c-sumarios-por-subrede",
  "assinado_por": "redes+backend+testador (trilha il404csumar)",
- "gerado_em": "2026-09-07T22:55:38Z",
- "git_sha": "6c11b95b26ec6b7acace655971aceb33519c0397",
+ "gerado_em": "2026-09-07T23:08:10Z",
+ "git_sha": "7faf15623e025ae1301e75a5e337e3147d478486",
  "maquina": "PostgreSQL 16 em iagro_sat; base própria da trilha (plat_til404csumar); fonte = schema do ativo de rede de referência (BDGD, ativo da casa, somente leitura); outras sessões da casa na mesma máquina",
  "medidas": {
-  "rede_id": "7c893a8a-2637-4246-bce8-4d259d146a00",
+  "rede_id": "7e710666-b5cb-4544-a676-7f10f1337ebe",
   "clausulas": {
    "km_mt_por_ctmt": {
     "prova": "20 alimentadores; maior desvio 0.000000 % contra a soma de COMP do arquivo (tolerância 0.1 %)",
@@ -34,19 +34,19 @@
   "carga": {
    "ssdmt": {
     "linhas": 44268,
-    "segundos": 1.324
+    "segundos": 1.435
    },
    "trafo": {
     "linhas": 5481,
-    "segundos": 0.13
+    "segundos": 0.155
    },
    "ucbt": {
     "linhas": 27587,
-    "segundos": 0.794
+    "segundos": 0.832
    },
    "ugbt": {
     "linhas": 1385,
-    "segundos": 0.05
+    "segundos": 0.049
    }
   },
   "arquivo": {
@@ -60,12 +60,12 @@
   "alimentadores_declarados_sem_trecho": [
    "1_CORS_1"
   ],
-  "calcular_http_segundos": 2.319,
+  "calcular_http_segundos": 1.523,
   "calculo": {
    "subredes": 20,
    "calculadas": 20,
    "sem_atributo": [],
-   "duracao_ms": 2296
+   "duracao_ms": 1498
   },
   "por_ctmt": {
    "1_CTJ1_1": {
