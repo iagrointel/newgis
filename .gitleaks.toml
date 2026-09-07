@@ -1,0 +1,31 @@
+# Configuração do gitleaks (item HARD-01, scripts/varredura_seguranca.py). Estende o conjunto de regras padrão
+# da versão fixada em deploy/ferramentas_binarias.txt e só acrescenta uma lista de FALSOS POSITIVOS ESTRUTURAIS —
+# coisas que, pela forma, nunca são segredo. Achado real ou duvidoso NÃO entra aqui: entra em
+# docs/excecoes_seguranca.json, com prazo e responsável (a exceção expira; esta lista não).
+# Medido em 07/09/2026 na primeira varredura do histórico inteiro (844 commits): 21 achados, todos da regra
+# generic-api-key, todos falsos — identificadores de item do laço (L0-02-d-token-servico), rótulos de tradução
+# (web/js/i18n/*.json: "2fa", "password"), constantes de teste com "de-teste"/"nunca-pode-vazar" no valor,
+# a impressão digital SHA256 de uma chave PÚBLICA ssh numa nota de handoff, e `PLAT_GARAGE_ADMIN_TOKEN=` VAZIO
+# no .env.exemplo/install.sh.
+title = "plat"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "falsos positivos estruturais (ver cabeçalho)"
+# o trecho casado (não o arquivo inteiro) é comparado com cada regex
+regexTarget = "match"
+regexes = [
+  '''\bL[0-7]-[0-9]{2}(-[a-z0-9]+)*\b''',       # identificador de item do laço, ex. L0-02-d-token-servico
+  '''(?i)(de-teste|nunca-pode-vazar|exemplo)''', # agulha de teste declarada no próprio valor
+  '''SHA256:[A-Za-z0-9+/]{43}''',                # impressão digital de chave PÚBLICA (ssh-keygen -l)
+  '''PLAT_[A-Z_]+=\s*$''',                       # variável de ambiente com valor VAZIO (modelo/.env.exemplo)
+  '''PLAT_[A-Z_]+=\n''',
+]
+paths = [
+  '''web/js/i18n/.*\.json''',   # rótulos de tradução: "password", "2fa", "otpauth" são NOMES de campo
+  '''web/vendor/.*''',          # bibliotecas de terceiros conferidas por sha256 (VERSOES.txt)
+  '''laco/decomposicao/.*''',   # geradores do backlog: listas de identificadores de item
+  '''laco/PAINEL\.md''',        # painel do laço: listas de identificadores de item
+]
