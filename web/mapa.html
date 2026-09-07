@@ -35,8 +35,11 @@
         </form>
 
         <section class="bloco">
-          <h2 data-i18n="mapa.camadas">Camadas</h2>
-          <ul id="lista-camadas" class="lista-camadas"></ul>
+          <div class="arvore-cabecalho-bloco">
+            <h2 data-i18n="mapa.camadas">Camadas</h2>
+            <button type="button" id="btn-novo-grupo" class="botao-mini" aria-label="criar grupo">+ grupo</button>
+          </div>
+          <ul id="lista-camadas" class="lista-camadas arvore" role="tree" aria-label="Camadas"></ul>
         </section>
 
         <section class="bloco">
