@@ -1069,3 +1069,12 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 4 (líder 5), setembro de 2026 (item L6-03-paridade-conectores: seção "Conectores e acervo" de docs/PARIDADE.md com teste que prende cada linha)
+
+35 linhas (tipos de camada por URL do Map Viewer 11.4, itens de data store, Living Atlas, Data Pipelines, Data
+Interoperability, cascateamento do GeoServer) em feito/parcial/fora, cada `feito`/`parcial` apontando para o
+arquivo de teste e o ramo da fila onde ele vive. `docs/urls_paridade.txt` (20 URLs de referência) testado por
+`scripts/paridade_urls_testar.py` → `tests/medidas/L6-03-paridade-conectores.json` (20 de 20 com 200 em 07/09).
+`tests/unit/test_paridade_conectores.py` reprova linha `feito`/`parcial` sem teste existente (em master ou no
+ramo citado, via `git cat-file`), linha `fora` com teste, chave citada sem URL e URL sem 200 na medida.
