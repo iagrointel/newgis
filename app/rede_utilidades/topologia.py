@@ -200,7 +200,8 @@ def _pares_proximos(cur, candidatos: list[dict], tolerancia_m: float) -> list[tu
 
 def _resolver_uniao(candidatos: list[dict], pares: list, esquema: dict) -> UniaoBusca:
     uf = UniaoBusca()
-    diferido: dict = defaultdict(list)  # feicao_id do dispositivo multi-terminal -> [(meu_idx, terminal_num, outro_idx, outro_tipo_id)]
+    # feicao_id do dispositivo multi-terminal -> [(meu_idx, terminal_num, outro_idx, outro_tipo_id)]
+    diferido: dict = defaultdict(list)
 
     def n_terminais(tipo_id):
         return len(esquema["terminais_do_tipo"](tipo_id))
