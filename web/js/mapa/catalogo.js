@@ -96,6 +96,11 @@ export class Catalogo {
   reordenar(ids) {
     const validos = ids.filter((id) => this.ativas.includes(id));
     if (validos.length !== this.ativas.length) return false;
+    // ordem igual à que já está valendo: não avisa. Avisar aqui fecha um ciclo sem fim — quem ouve é a
+    // árvore de camadas, que responde sincronizando e chamando `reordenar` de novo. MEDIDO ao promover um
+    // desenho a camada: "Maximum call stack size exceeded" em reordenar → _avisar → _sincronizarDisponiveis
+    // → _aplicarOrdemNoMapa → reordenar. A recursão aparecia sempre que o catálogo ganhava camada nova.
+    if (validos.length === this.ativas.length && validos.every((id, i) => id === this.ativas[i])) return true;
     this.ativas = validos;
     this.aplicarOrdem();
     this._avisar();

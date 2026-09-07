@@ -52,6 +52,13 @@ const FLAGS_SELECAO = {
   linestring: { feature: { draggable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
   polygon: { feature: { draggable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
 };
+// halo do texto, em pixels de contorno de cada lado da letra (é `lineWidth/2` do strokeText)
+const HALO_PX = 1.6;
+const HALO_COR = '#ffffff';
+// o texto GUARDADO pode ir a 10.000 caracteres (limite do documento); o DESENHADO é cortado, senão a
+// imagem passaria do tamanho máximo de textura do navegador (medido: 10.000 letras a 14 px ≈ 70.000 px
+// de largura, contra ~32.767 de teto). O corte é só do que aparece no mapa, nunca do dado salvo.
+const TEXTO_DESENHADO_MAX = 120;
 const ESTILO_PADRAO = () => ({ cor: '#d98a2b', contorno: '#10161a', largura: 2, preenchimento: true, opacidade: 0.85, tamanho_fonte: 14 });
 
 function perguntar(mensagem, padrao) {
@@ -68,9 +75,11 @@ export class Desenho {
     this._features = [];          // GeoJSON Feature[]; ordem = ordem de pintura (corpo.desenho.features)
     this._estiloAtual = ESTILO_PADRAO();
     this._editandoId = null;      // ulid da feição atualmente emprestada ao terra-draw para edição
+    this._idEmprestado = null;    // id que o terra-draw deu a essa feição enquanto ela é editada
     this._draw = null;
     this._snap = { ativo: false, toleranciaPx: 10 };
     this._aoMudar = null;         // callback(features) — o chamador decide quando salvar
+    this._imagensTexto = new Map(); // nome da imagem -> assinatura (texto|tamanho|cor) já registrada
   }
 
   aoMudar(fn) { this._aoMudar = fn; }
@@ -83,7 +92,6 @@ export class Desenho {
     const contorno = ['coalesce', ['get', 'contorno', ['get', 'estilo']], '#10161a'];
     const opacidade = ['coalesce', ['get', 'opacidade', ['get', 'estilo']], 0.85];
     const largura = ['coalesce', ['get', 'largura', ['get', 'estilo']], 2];
-    const tamanhoFonte = ['coalesce', ['get', 'tamanho_fonte', ['get', 'estilo']], 14];
     this.map.addLayer({
       id: `${FONTE}-poligono`, type: 'fill', source: FONTE,
       filter: ['in', ['get', 'tipo_desenho'], ['literal', ['poligono', 'retangulo']]],
@@ -118,12 +126,18 @@ export class Desenho {
                'circle-stroke-color': contorno, 'circle-stroke-width': 1.5 },
     });
     this.map.addLayer({
-      // halo nativo do MapLibre (text-halo-*) — portão "texto renderizado com halo"
+      /* Texto com halo SEM servidor de glifos. `text-field` do MapLibre exige `glyphs` no estilo, e o estilo
+         do mapa-base local não tem (o servidor de glifos é outro item, L2-02-e): MEDIDO aqui — o MapLibre 4
+         aceita o addLayer e depois DESCARTA a camada em silêncio, `getLayer` devolve undefined. Por isso o
+         texto é desenhado num canvas próprio (halo = `strokeText` por baixo, texto = `fillText` por cima, a
+         mesma ordem que o MapLibre usa) e entra como IMAGEM da feição (`icon-image`), que não depende de
+         glifo nenhum. Quando o L2-02-e entregar o servidor de glifos, esta camada pode voltar a ser
+         `text-field`/`text-halo-width` sem mudar o documento salvo. */
       id: `${FONTE}-texto`, type: 'symbol', source: FONTE,
       filter: ['==', ['get', 'tipo_desenho'], 'texto'],
-      layout: { 'text-field': ['get', 'texto'], 'text-size': tamanhoFonte, 'text-anchor': 'left',
-                'text-offset': [0.6, 0], 'text-allow-overlap': true, 'text-ignore-placement': true },
-      paint: { 'text-color': cor, 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 },
+      layout: { 'icon-image': ['get', '_imagem_texto'], 'icon-anchor': 'left', 'icon-offset': [8, 0],
+                'icon-allow-overlap': true, 'icon-ignore-placement': true },
+      paint: { 'icon-opacity': opacidade },
     });
     this.map.addLayer({
       // ponta de seta: símbolo triangular girado para o rumo do último trecho da linha
@@ -153,6 +167,58 @@ export class Desenho {
     this.map.addImage('plat-seta-ponta', { width: n, height: n, data: dados });
   }
 
+  /** imagem do texto (halo por baixo, letra por cima) registrada no mapa; devolve o nome da imagem. */
+  _imagemDoTexto(f) {
+    const estilo = f.properties?.estilo || {};
+    const tamanho = Math.min(Math.max(Number(estilo.tamanho_fonte) || 14, 4), 96);
+    const cor = estilo.cor || '#d98a2b';
+    const bruto = String(f.properties?.texto ?? '');
+    const texto = bruto.length > TEXTO_DESENHADO_MAX ? `${bruto.slice(0, TEXTO_DESENHADO_MAX)}…` : bruto;
+    const nome = `plat-texto-${f.id}`;
+    const assinatura = `${texto}|${tamanho}|${cor}`;
+    if (this._imagensTexto.get(nome) === assinatura) return nome;
+    const escala = 2;                       // desenha no dobro e declara pixelRatio 2: letra nítida em tela retina
+    const fonte = (px) => `${px}px ui-sans-serif, system-ui, sans-serif`;
+    const cv = document.createElement('canvas');
+    let ctx = cv.getContext('2d');
+    ctx.font = fonte(tamanho * escala);
+    const larguraTexto = Math.ceil(ctx.measureText(texto).width);
+    const margem = Math.ceil((HALO_PX + 1) * escala);
+    cv.width = Math.max(1, larguraTexto + margem * 2);
+    cv.height = Math.ceil(tamanho * escala * 1.6) + margem * 2;
+    ctx = cv.getContext('2d');
+    ctx.font = fonte(tamanho * escala);
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = HALO_PX * 2 * escala;   // strokeText engrossa para os DOIS lados: metade fica visível
+    ctx.strokeStyle = HALO_COR;
+    ctx.strokeText(texto, margem, cv.height / 2);
+    ctx.fillStyle = cor;
+    ctx.fillText(texto, margem, cv.height / 2);
+    const dados = ctx.getImageData(0, 0, cv.width, cv.height);
+    if (this.map.hasImage(nome)) this.map.removeImage(nome);
+    this.map.addImage(nome, { width: cv.width, height: cv.height, data: new Uint8Array(dados.data.buffer) },
+                      { pixelRatio: escala });
+    this._imagensTexto.set(nome, assinatura);
+    return nome;
+  }
+
+  /** prova do halo para o teste: largura declarada e quantos pixels da cor do halo o desenho tem. */
+  haloDoTexto(id) {
+    const f = this._features.find((x) => x.id === id);
+    if (!f || f.properties?.tipo_desenho !== 'texto') return null;
+    const nome = this._imagemDoTexto(f);
+    const img = this.map.getImage ? this.map.getImage(nome) : null;
+    const dados = img?.data?.data || img?.data;
+    let pixelsHalo = 0;
+    if (dados) {
+      for (let i = 0; i < dados.length; i += 4) {
+        if (dados[i + 3] > 0 && dados[i] > 240 && dados[i + 1] > 240 && dados[i + 2] > 240) pixelsHalo += 1;
+      }
+    }
+    return { imagem: nome, halo_px: HALO_PX, halo_cor: HALO_COR, pixels_de_halo: pixelsHalo };
+  }
+
   _rumo(a, b) {
     const rad = Math.atan2(b[0] - a[0], b[1] - a[1]);
     return (rad * 180) / Math.PI;
@@ -169,6 +235,9 @@ export class Desenho {
             const c = f.geometry.coordinates;
             const rumo = c.length >= 2 ? this._rumo(c[c.length - 2], c[c.length - 1]) : 0;
             return { ...f, properties: { ...f.properties, rumo_graus: rumo } };
+          }
+          if (tipo === 'texto') {
+            return { ...f, properties: { ...f.properties, _imagem_texto: this._imagemDoTexto(f) } };
           }
           if (tipo === 'circulo') {
             const [, lat] = f.geometry.coordinates;
@@ -214,6 +283,14 @@ export class Desenho {
   _aoTerminar(idTerraDraw) {
     const feicao = this._draw.getSnapshot().find((f) => String(f.id) === String(idTerraDraw));
     if (!feicao) return;
+    // MEDIDO: o modo `select` também dispara `finish` — ao SOLTAR o arrasto de um vértice. Sem esta guarda o
+    // fim de um arrasto era tratado como desenho novo: criava uma cópia da feição, tirava a original do
+    // terra-draw e a edição se perdia em silêncio. Em edição, o `finish` só atualiza a geometria emprestada.
+    if (this._editandoId) {
+      const emEdicao = this._features.find((f) => f.id === this._editandoId);
+      if (emEdicao && feicao.geometry) emEdicao.geometry = feicao.geometry;
+      return;
+    }
     let tipoDesenho = this._tipoDoModoAtivo();
     const props = { tipo_desenho: tipoDesenho, estilo: { ...this._estiloAtual } };
     if (tipoDesenho === 'texto') {
@@ -297,13 +374,20 @@ export class Desenho {
     let renderizadas = [];
     try {
       renderizadas = this.map.queryRenderedFeatures([[x - tol, y - tol], [x + tol, y + tol]]) || [];
-    } catch { return null; }
+    } catch { /* estilo ainda carregando: sobram os vértices do próprio desenho */ }
+    // As feições do NOSSO desenho entram pela lista em repouso, não pelo que voltou do MapLibre: uma fonte
+    // GeoJSON é re-ladrilhada antes de desenhar, e a coordenada que volta do `queryRenderedFeatures` vem
+    // arredondada ao ladrilho (medido: até 2,4e-3 grau de diferença). Encaixar no valor arredondado faria o
+    // vértice novo NÃO coincidir com o vértice alvo — que é exatamente o que o portão do item exige.
+    const alvos = [
+      ...this._features.map((f) => f.geometry),
+      ...renderizadas.filter((f) => f.source !== FONTE && !String(f.layer?.id || '').startsWith('td-'))
+        .map((f) => f.geometry),
+    ];
     let melhor = null;
     let melhorDist = Infinity;
-    for (const f of renderizadas) {
-      // as camadas internas do terra-draw (o que está sendo desenhado agora) não são alvo de encaixe
-      if (String(f.layer?.id || '').startsWith('td-')) continue;
-      for (const v of this._verticesDe(f.geometry, [])) {
+    for (const geom of alvos) {
+      for (const v of this._verticesDe(geom, [])) {
         if (!Array.isArray(v) || v.length < 2) continue;
         const p = this.map.project({ lng: v[0], lat: v[1] });
         const d = Math.hypot(p.x - x, p.y - y);
@@ -327,6 +411,10 @@ export class Desenho {
     this._draw.clear();
     this._draw.setMode('select');
     this._draw.addFeatures([{ type: 'Feature', geometry: f.geometry, properties: { mode: modo } }]);
+    // guardamos o id que o terra-draw deu: durante a edição o instantâneo ganha os pontos auxiliares de
+    // vértice e de meio de aresta, e a ordem deles muda a cada arrasto — procurar por índice pegaria o
+    // ponto auxiliar em vez da feição (foi o que aconteceu ao medir).
+    this._idEmprestado = this._draw.getSnapshot().find((g) => g.properties?.mode === modo)?.id ?? null;
     this._editandoId = id;
     this._repintar();
     return true;
@@ -337,11 +425,14 @@ export class Desenho {
   terminarEdicao() {
     if (!this._editandoId) return null;
     const id = this._editandoId;
-    const emprestada = this._draw ? this._draw.getSnapshot()[0] : null;
+    const emprestada = this._draw
+      ? this._draw.getSnapshot().find((g) => String(g.id) === String(this._idEmprestado))
+      : null;
     const f = this._features.find((x) => x.id === id);
     if (f && emprestada && emprestada.geometry) f.geometry = emprestada.geometry;
     if (this._draw) { this._draw.clear(); this._draw.setMode('static'); }
     this._editandoId = null;
+    this._idEmprestado = null;
     this._repintar();
     return f || null;
   }
