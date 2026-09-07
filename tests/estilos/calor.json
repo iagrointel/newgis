@@ -1,0 +1,49 @@
+{
+  "corpo": {
+    "maplibre": {
+      "layers": [
+        {
+          "id": "camada",
+          "paint": {
+            "heatmap-color": [
+              "interpolate",
+              [
+                "linear"
+              ],
+              [
+                "heatmap-density"
+              ],
+              0.0,
+              "#000004",
+              0.5,
+              "#8c2981",
+              1.0,
+              "#fcfdbf"
+            ],
+            "heatmap-intensity": 1.5,
+            "heatmap-opacity": 1.0,
+            "heatmap-radius": 25.0,
+            "heatmap-weight": 1
+          },
+          "type": "heatmap"
+        }
+      ],
+      "version": 8
+    },
+    "plat_construtor": {
+      "calor": {
+        "intensidade": 1.5,
+        "raio_px": 25,
+        "rampa": [
+          "#000004",
+          "#8c2981",
+          "#fcfdbf"
+        ]
+      },
+      "geometria": "ponto",
+      "tipo": "calor",
+      "versao": 1
+    }
+  },
+  "esquema_versao": 1
+}

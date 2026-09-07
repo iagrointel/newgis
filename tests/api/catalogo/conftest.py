@@ -20,7 +20,18 @@ _TRAB = os.environ.get("PLAT_SCHEMA_TRABALHO", "plat_trabalho")
 DADOS_POR_TIPO = {
     "mapa": {"esquema_versao": 1, "corpo": {}},
     "cena": {"esquema_versao": 1, "corpo": {}},
-    "estilo": {"esquema_versao": 1, "corpo": {}},
+    "estilo": {
+        "esquema_versao": 1,
+        "corpo": {
+            "plat_construtor": {"tipo": "unico", "geometria": "poligono", "versao": 1, "simbolo": {"cor": "#4e79a7"}},
+            # o servidor recompila `maplibre` a partir de `plat_construtor` na gravação (app/estilos/validador.py);
+            # este valor é só o que passa nas checagens PRÉVIAS (Style Spec + campos) — não precisa ser o canônico.
+            "maplibre": {
+                "version": 8,
+                "layers": [{"id": "camada", "type": "fill", "paint": {"fill-color": "#4e79a7", "fill-opacity": 1.0}}],
+            },
+        },
+    },
     "app": {"tipo": "app", "esquema_versao": 1, "corpo": {}},
     "painel": {"tipo": "painel", "esquema_versao": 1, "corpo": {}},
     "formulario": {"tipo": "formulario", "esquema_versao": 1, "corpo": {}},
