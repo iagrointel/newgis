@@ -1,0 +1,15 @@
+# Ferramentas BINÁRIAS da varredura de segurança e dos testes de carga (item HARD-01 / HARD-02), fixadas
+# por versão e por sha256 do pacote de release, instaladas por `scripts/ferramentas_seguranca.sh` em
+# ~/.cache/plat/ferramentas (cache do usuário, como ~/.cache/pip) — NUNCA em /usr/local nem no PATH da máquina. Nenhuma tem pacote apt
+# nesta distribuição (ver deploy/pacotes_apt.txt, último comentário); quem fixa versão de biblioteca
+# Python continua sendo requirements.txt (bandit e pip-audit vêm de lá).
+# Formato: nome  versão  url  sha256-do-pacote  caminho-do-executável-dentro-do-pacote
+# Conferir um pacote já baixado: sha256sum var/ferramentas/pacotes/<arquivo> e comparar com a coluna 4.
+# Fonte dos sha256: arquivo *_checksums.txt publicado junto com cada release (gitleaks, trivy, k6) e a
+# tabela "Checksum (SHA-256)" da nota de release do ZAP; conferidos em 07/09/2026.
+gitleaks  8.30.1  https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz  551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks
+trivy     0.74.0  https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz  2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a  trivy
+# ZAP (OWASP Zed Attack Proxy) na forma "Linux" (tar.gz, 244 MB): a imagem docker `zaproxy:bare` tem 505 MB
+# só de camadas comprimidas, acima do teto de 500 MB por download da regra 6 do BRIEF_WORKTREES; o pacote
+# Linux roda sobre o OpenJDK 21 já instalado (dpkg) e traz spider + regras passivas, o que o baseline usa.
+zap       2.17.0  https://github.com/zaproxy/zaproxy/releases/download/v2.17.0/ZAP_2.17.0_Linux.tar.gz  efe799aaa3627db683b43f00c9c210aea0b75c00cc8f0a0f0434d12bb3ddde5a  ZAP_2.17.0/zap.sh
