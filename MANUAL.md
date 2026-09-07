@@ -613,6 +613,10 @@ seção 5.8 e o ADR.
   teste foi barrada pelo gatilho da migração 006 (o teste inseria jobs já `concluido` como `plat_app`); é defeito do
   teste, não do produto, e a medida não está em `tests/medidas/L0-05-jobs.json`.
 - Limites e demais números de referência: `app/limites.py` (identidade e catálogo) e a seção 11 do ADR 0003 (fila).
+- Limite de taxa em três camadas (item L7-03-b-rate-limit-abuso; `ARQUITETURA.md §18`, `docs/SEGURANCA.md §9`)
+  entrou nesta passagem, mas a cláusula "ladrilho acima do limite do plano" fica parcial: a rota real de
+  ladrilho (`L1-02-tiles-token`) ainda não está mesclada nesta base — a zona de borda já protege `/tiles/` e o
+  mecanismo já suporta o escopo, falta só a fiação quando aquele ramo entrar.
 
 
 ---
