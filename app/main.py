@@ -46,8 +46,8 @@ from app.imagens.rotas_stac import router as rotas_stac
 from app.imagens.rotas_tiles import router as rotas_tiles
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
-from app.multiescala.rotas import router as rotas_multiescala
 from app.mapas.rotas import router as rotas_mapas
+from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
