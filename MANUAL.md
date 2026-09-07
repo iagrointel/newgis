@@ -1070,3 +1070,55 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Exportação de camada para outros formatos (item L0-04-h-exportar)
+
+### 22.1 Botão Exportar (painel do item, camada vetorial hospedada)
+
+O painel de uma camada vetorial hospedada (não referenciada) mostra o botão **Exportar** quando o usuário
+tem o privilégio `conteudo.exportar` (perfis editor e admin por padrão). O diálogo pede: formato (11
+opções), nome do arquivo, campos a exportar, filtro `where` opcional, sistema de coordenadas de saída
+(EPSG; em branco mantém o da camada), codificação de texto e, para CSV, separador de coluna, separador
+decimal e o nome das colunas de longitude/latitude. O dono do item vê também a caixa "permitir que outros
+exportem esta camada" (nasce desligada — como o "Allow others to export to different formats" da Esri).
+Depois de mandar exportar, o diálogo consulta o estado a cada segundo sem travar a tela; quando o arquivo
+fica pronto, mostra o link de download com a validade (7 dias). Erro do servidor (filtro inválido, limite
+de exportações em curso, EPSG inexistente, item de outro dono) aparece com a mensagem que o servidor
+mandou.
+
+### 22.2 Formatos e o que cada um NÃO guarda
+
+`gpkg · geojson · shapefile (zip) · csv · xlsx · kml · kmz · fgb (FlatGeobuf) · gml · dxf · geoparquet`.
+DXF não guarda atributo (o driver recusa criar campo); CSV e XLSX não guardam geometria (o CSV ganha
+colunas de X/Y, ou WKT quando pedido) — limites do FORMATO, declarados em `GET /api/exportacoes/formatos`
+e mostrados no diálogo antes de escolher. GeoParquet sai por um processo próprio (`app.exportacao.parquet_cli`,
+via DuckDB) porque o `ogr2ogr` desta instalação não tem driver Parquet e o DuckDB não sobrevive a um fork.
+
+### 22.3 Isolamento entre inquilinos
+
+A exportação nunca traz linha de outro inquilino, mesmo que o pedido seja forjado diretamente no banco: o
+`ogr2ogr` abre conexão própria (fora do pool da aplicação) com o inquilino na PRÓPRIA string de conexão
+(`-c plat.tenant_id=N`), e é a política de RLS da tabela da camada que faz o corte — não um `WHERE` escrito
+pela aplicação. `tests/api/exportacao/test_exportacao_cruzado.py` prova isso em quatro níveis: API (404 no
+item alheio), job com pedido forjado no banco (falha dizendo que a camada não existe), `ogr2ogr` chamado
+com o contexto do outro inquilino e sem contexto nenhum (0 feições nos dois casos) e o conteúdo do arquivo
+final (nenhuma linha do outro inquilino).
+
+### 22.4 Arquivo grande nunca vai inteiro à memória
+
+O envio ao armazenamento de objetos (`objetos.guardar_arquivo`) lê o arquivo do disco em blocos de 8 MiB:
+até um bloco, um `PUT` só; acima disso, multipart real (uma parte por vez). O download
+(`GET /api/exportacoes/{id}/baixar`, via `objetos.ler_stream`) entrega em blocos de 1 MiB. Medido com
+`tracemalloc`: um arquivo de 40 MiB sobe em 5 partes de 8 MiB com pico de memória abaixo de 3 partes.
+
+### 22.5 Limites
+
+3 exportações em curso por usuário (a 4ª e a 5ª recebem `429`); guarda de disco (`shutil.disk_usage`) antes
+do primeiro byte, com estimativa de tamanho×3 + 2 GiB de folga (disco desta máquina a 98 %); arquivo gerado
+some depois de 7 dias (periódico `exportacao.expirar`, de hora em hora).
+
+### 22.6 O que ficou de fora
+
+Exportação de VISTA de camada (o tipo `vista_de_camada` existe no catálogo, mas o item `L0-04-j` que o
+implementa ainda não foi entregue — quando for, o filtro da vista entra como mais um `where` neste mesmo
+motor) e exportação de camada REFERENCIADA (recusada com 422 `camada_nao_hospedada`, nunca silenciosa).
