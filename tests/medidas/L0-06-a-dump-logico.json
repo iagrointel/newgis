@@ -12,7 +12,7 @@
    "comando": "esperar(job) até concluido"
   },
   "dump_completo_bytes": {
-   "valor": 972413,
+   "valor": 1208907,
    "unidade": "bytes",
    "comando": "soma dos dumps da rodada"
   },
@@ -22,22 +22,22 @@
    "comando": "plat.backup.tempo_dump_s"
   },
   "bytes[plat_til006adumpl]": {
-   "valor": 472814,
+   "valor": 476470,
    "unidade": "bytes",
    "comando": "plat.backup.bytes"
   },
   "tempo_dump_s[d_demo]": {
-   "valor": 0.7,
+   "valor": 0.71,
    "unidade": "s",
    "comando": "plat.backup.tempo_dump_s"
   },
   "bytes[d_demo]": {
-   "valor": 245875,
+   "valor": 478713,
    "unidade": "bytes",
    "comando": "plat.backup.bytes"
   },
   "tempo_dump_s[d_demo2]": {
-   "valor": 0.68,
+   "valor": 0.69,
    "unidade": "s",
    "comando": "plat.backup.tempo_dump_s"
   },
@@ -87,16 +87,16 @@
    "comando": "apagar a linha de plat.backup -> verificar conclui listando o arquivo órfão"
   },
   "carga_1min": {
-   "valor": 3.53,
+   "valor": 0.53,
    "unidade": "carga",
    "comando": "os.getloadavg()[0] na hora do dump"
   },
   "ram_livre_gb": {
-   "valor": 8.5,
+   "valor": 8.8,
    "unidade": "GB",
    "comando": "MemAvailable de /proc/meminfo"
   }
  },
- "gerado_em": "2026-09-07T19:29:51Z",
+ "gerado_em": "2026-09-07T19:52:27Z",
  "git_sha": "0bc2d4daac50"
 }

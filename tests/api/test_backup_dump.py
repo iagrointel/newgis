@@ -96,7 +96,7 @@ def con_plataforma(env, sessao_plataforma):
         cur.execute("SELECT * FROM plat.backup_listar(NULL, 10000)")
         antigos = [dict(r) for r in cur.fetchall()]
         if antigos:
-            cur.execute("SELECT * FROM plat.backup_apagar(%s)", ([l["id"] for l in antigos],))
+            cur.execute("SELECT * FROM plat.backup_apagar(%s)", ([ln["id"] for ln in antigos],))
     con.commit()
     _CTX[id(con)] = (sessao_plataforma[1], sessao_plataforma[2])
     try:
@@ -196,23 +196,23 @@ def test_01_dump_completo(cliente_plataforma, worker, con_plataforma, medida):
     # as linhas de plat.backup refletem exatamente os dumps (mais novas primeiro)
     linhas = _listar_backups(con_plataforma)
     assert len(linhas) == len(dumps)
-    assert {l["sha256"] for l in linhas} == {d["sha256"] for d in dumps}
-    assert all(l["bucket_chave"] for l in linhas), "cópia no Garage ausente em alguma linha"
+    assert {ln["sha256"] for ln in linhas} == {d["sha256"] for d in dumps}
+    assert all(ln["bucket_chave"] for ln in linhas), "cópia no Garage ausente em alguma linha"
 
     # bucket: objetos dos dumps + manifesto por inquilino (chave, sha256, bytes)
     dest = _destino(con_plataforma)
     cliente = _cliente_garage(dest)
     objetos = {o["chave"]: o for o in cliente.listar(dest["alias"])}
-    for l in linhas:
-        assert l["bucket_chave"] in objetos, f"{l['bucket_chave']} não está no bucket"
-        assert objetos[l["bucket_chave"]]["bytes"] == l["bytes"]
-    grupos = {(l["inquilino_slug"] or "plat") for l in linhas}
+    for ln in linhas:
+        assert ln["bucket_chave"] in objetos, f"{ln['bucket_chave']} não está no bucket"
+        assert objetos[ln["bucket_chave"]]["bytes"] == ln["bytes"]
+    grupos = {(ln["inquilino_slug"] or "plat") for ln in linhas}
     manifestos = {}
     for grupo in grupos:
         chaves_m = sorted(c for c in objetos if c.startswith(f"{grupo}/manifesto-"))
         assert chaves_m, f"sem manifesto para {grupo}"
         manifestos[grupo] = json.loads(cliente.get(dest["alias"], chaves_m[-1]))
-    for grupo, doc in manifestos.items():
+    for doc in manifestos.values():
         assert doc["objetos"], doc
         for o in doc["objetos"]:
             assert set(o) == {"chave", "sha256", "bytes"}
@@ -237,11 +237,11 @@ def test_02_retencao_apaga_o_excedente(cliente_plataforma, worker, con_plataform
     _rodar(cliente_plataforma, "backup.dump_logico",
            {"somente": ["demo2"], "manter_diarios": 1, "origem": "teste"})
     depois1 = _listar_backups(con_plataforma, "d_demo2")
-    assert len([l for l in depois1 if not l["semanal"]]) == 1
+    assert len([ln for ln in depois1 if not ln["semanal"]]) == 1
     _rodar(cliente_plataforma, "backup.dump_logico",
            {"somente": ["demo2"], "manter_diarios": 1, "origem": "teste"})
     depois2 = _listar_backups(con_plataforma, "d_demo2")
-    diarios = [l for l in depois2 if not l["semanal"]]
+    diarios = [ln for ln in depois2 if not ln["semanal"]]
     assert len(diarios) == 1
     assert diarios[0]["id"] != depois1[0]["id"]
     # o arquivo e o objeto do diário anterior saíram junto com a linha

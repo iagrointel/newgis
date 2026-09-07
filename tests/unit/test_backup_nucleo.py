@@ -4,7 +4,6 @@ e a checagem de espaço que falha ANTES de escrever."""
 
 import json
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 import pytest
 

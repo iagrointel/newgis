@@ -29,7 +29,6 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
 
-from app import db as banco
 from app.backup import destino, nucleo
 from app.jobs.contexto import ErroServico
 from app.jobs.registro import FalhaDefinitiva, tarefa
@@ -302,17 +301,17 @@ def backup_verificar(ctx, ultimos_n: int = 50, esquema: str | None = None) -> di
     divergencias: list[dict] = []
     faltando: list[dict] = []
     conferidos = 0
-    for i, l in enumerate(linhas):
+    for i, linha in enumerate(linhas):
         ctx.verificar()
-        caminho = Path(l["arquivo"])
+        caminho = Path(linha["arquivo"])
         if not caminho.exists():
-            faltando.append({"id": l["id"], "arquivo": l["arquivo"]})
+            faltando.append({"id": linha["id"], "arquivo": linha["arquivo"]})
             continue
         sha = nucleo.sha256_arquivo(caminho)
         conferidos += 1
-        if sha != l["sha256"]:
-            divergencias.append({"id": l["id"], "arquivo": l["arquivo"],
-                                 "sha256_registrado": l["sha256"], "sha256_atual": sha})
+        if sha != linha["sha256"]:
+            divergencias.append({"id": linha["id"], "arquivo": linha["arquivo"],
+                                 "sha256_registrado": linha["sha256"], "sha256_atual": sha})
         if conferidos % 10 == 0:
             ctx.progresso(int(70 * i / max(1, len(linhas))), f"{conferidos} arquivos conferidos")
 
@@ -329,19 +328,19 @@ def backup_verificar(ctx, ultimos_n: int = 50, esquema: str | None = None) -> di
     bucket_inconsistentes: list[dict] = []
     if dest is not None:
         cliente = destino.cliente_garage(dict(dest))
-        for l in linhas:
-            if not l["bucket_chave"]:
+        for linha in linhas:
+            if not linha["bucket_chave"]:
                 continue
             try:
-                info = cliente.head(dest["alias"], l["bucket_chave"])
+                info = cliente.head(dest["alias"], linha["bucket_chave"])
             except Exception as e:
-                bucket_inconsistentes.append({"chave": l["bucket_chave"], "erro": str(e)[:200]})
+                bucket_inconsistentes.append({"chave": linha["bucket_chave"], "erro": str(e)[:200]})
                 continue
             if info is None:
-                bucket_inconsistentes.append({"chave": l["bucket_chave"], "erro": "objeto ausente no bucket"})
-            elif info.tamanho != int(l["bytes"]):
-                bucket_inconsistentes.append({"chave": l["bucket_chave"],
-                                              "erro": f"tamanho {info.tamanho} != registrado {l['bytes']}"})
+                bucket_inconsistentes.append({"chave": linha["bucket_chave"], "erro": "objeto ausente no bucket"})
+            elif info.tamanho != int(linha["bytes"]):
+                bucket_inconsistentes.append({"chave": linha["bucket_chave"],
+                                              "erro": f"tamanho {info.tamanho} != registrado {linha['bytes']}"})
 
     ctx.progresso(100, f"{conferidos} conferidos, {len(divergencias)} divergências, {len(orfaos)} órfãos")
     resultado = {"conferidos": conferidos, "divergencias": divergencias, "faltando": faltando,
