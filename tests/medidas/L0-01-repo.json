@@ -1,8 +1,8 @@
 {
  "item": "L0-01-repo",
  "assinado_por": "testador (turno T1, handoff 40_testes.md; rodada 2 sobre 8ffe950 — sem reinstalação destrutiva, feita pelo adversário)",
- "gerado_em": "2026-09-05T13:14:00Z",
- "git_sha": "8ffe950516f5",
+ "gerado_em": "2026-09-06T00:25:55Z",
+ "git_sha": "65a9fc2c0869",
  "maquina": "12 vCPU, 23 GB RAM (3 GB disponíveis), disco / a 98 % (13 GB livres); PostgreSQL 16 + PostGIS 3.6 em iagro_sat; 12+ sessões concorrentes na máquina",
  "medidas": {
   "tempo_install_zero_s": {
@@ -141,22 +141,22 @@
    "comando": "rodada 1 (sobre b22761e; não repetido na rodada 2 porque o adversário estava reinstalando): curl --path-as-is https://plat.iagrointel.com/static/../.env → 404 (JSON do FastAPI, não o arquivo); /static/..%2F.env e %2e%2e também 404; /static/vendor/ → 403 (sem autoindex)"
   },
   "latencia_saude_ms": {
-   "valor": 1.87,
+   "valor": 2.9,
    "unidade": "ms",
    "comando": "mediana de 20 GET /saude pelo TestClient (tests/api/test_saude.py)"
   },
   "latencia_versao_ms": {
-   "valor": 0.85,
+   "valor": 0.89,
    "unidade": "ms",
    "comando": "mediana de 20 GET /api/versao pelo TestClient (tests/api/test_saude.py)"
   },
   "pagina_pronta_ms": {
-   "valor": 62.6,
+   "valor": 50.9,
    "unidade": "ms",
    "comando": "goto('/') até body[data-pronto=1] no chromium do playwright"
   },
   "primeira_pintura_ms": {
-   "valor": 48,
+   "valor": 28,
    "unidade": "ms",
    "comando": "performance.getEntriesByType('paint') first-contentful-paint no chromium do playwright"
   },

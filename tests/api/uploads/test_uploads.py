@@ -16,10 +16,10 @@ import pytest
 
 from app import db as banco
 from app import objetos
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 from tests.api.conftest import PREFIXO_TESTE, novo_cliente
 from tests.api.test_rls import contexto as _rls_contexto
 from tests.api.test_rls import ids_por_slug
-from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 
 
 class Uploader:

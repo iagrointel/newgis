@@ -17,7 +17,7 @@
    "comando": "test_reverso_50_pontos_logradouro_certo"
   },
   "sugestao_p95": {
-   "valor": 33.7,
+   "valor": 32.8,
    "unidade": "ms",
    "comando": "test_sugestao_p95_100ms (100 chamadas)"
   },
@@ -47,6 +47,6 @@
    "comando": "test_instalacao_rr_tempo_e_disco_medidos"
   }
  },
- "gerado_em": "2026-09-06T15:05:11Z",
- "git_sha": "9a69cebb2476"
+ "gerado_em": "2026-09-06T15:34:16Z",
+ "git_sha": "e407d1a4f013"
 }
