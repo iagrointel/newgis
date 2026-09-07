@@ -9227,6 +9227,204 @@
     "x-privilegio": "conteudo.registrar_fonte"
    }
   },
+  "/api/endpoints-publicos": {
+   "get": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_endpoints_publicos_get",
+    "parameters": [
+     {
+      "name": "tipo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tipo"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 200
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "name": "vivo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": true,
+       "title": "Vivo"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EndpointPublicoPagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.ver_inquilino"
+   }
+  },
+  "/api/endpoints-publicos/{id}": {
+   "get": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_endpoints_publicos__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EndpointPublico"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.ver_inquilino"
+   }
+  },
+  "/api/endpoints-publicos/{id}/adicionar": {
+   "post": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Adicionar",
+    "operationId": "adicionar_api_endpoints_publicos__id__adicionar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConexaoAdicionada"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.registrar_fonte"
+   }
+  },
   "/api/arquivos/_varredura": {
    "get": {
     "tags": [
@@ -12114,6 +12312,129 @@
     ],
     "title": "Conexao"
    },
+   "ConexaoAdicionada": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "modo": {
+      "type": "string",
+      "title": "Modo"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "saude": {
+      "type": "string",
+      "title": "Saude"
+     },
+     "saude_verificada_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Saude Verificada Em"
+     },
+     "estado_saude": {
+      "type": "string",
+      "title": "Estado Saude",
+      "default": "nunca_testada"
+     },
+     "disponibilidade_30d_pct": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Disponibilidade 30D Pct"
+     },
+     "disponibilidade_30d_total": {
+      "type": "integer",
+      "title": "Disponibilidade 30D Total",
+      "default": 0
+     },
+     "config": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Config"
+     },
+     "tem_credencial": {
+      "type": "boolean",
+      "title": "Tem Credencial"
+     },
+     "saude_mensagem": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Saude Mensagem"
+     },
+     "saude_latencia_ms": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Saude Latencia Ms"
+     },
+     "dono": {
+      "$ref": "#/components/schemas/Dono"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "atualizado_em": {
+      "type": "string",
+      "title": "Atualizado Em"
+     },
+     "criada": {
+      "type": "boolean",
+      "title": "Criada"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "tipo",
+     "modo",
+     "nome",
+     "url",
+     "saude",
+     "config",
+     "tem_credencial",
+     "dono",
+     "criado_em",
+     "atualizado_em",
+     "criada"
+    ],
+    "title": "ConexaoAdicionada"
+   },
    "ConexaoCartao": {
     "properties": {
      "id": {
@@ -12911,6 +13232,185 @@
      "login"
     ],
     "title": "Dono"
+   },
+   "EndpointPublico": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "slug": {
+      "type": "string",
+      "title": "Slug"
+     },
+     "orgao": {
+      "type": "string",
+      "title": "Orgao"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "licenca": {
+      "type": "string",
+      "title": "Licenca"
+     },
+     "origem": {
+      "type": "string",
+      "title": "Origem"
+     },
+     "fonte_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fonte Id"
+     },
+     "vivo": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vivo"
+     },
+     "http": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Http"
+     },
+     "ms": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ms"
+     },
+     "motivo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Motivo"
+     },
+     "testado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Testado Em"
+     },
+     "primeiro_ok_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Primeiro Ok Em"
+     },
+     "falhas_seguidas": {
+      "type": "integer",
+      "title": "Falhas Seguidas",
+      "default": 0
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "slug",
+     "orgao",
+     "nome",
+     "tipo",
+     "url",
+     "licenca",
+     "origem"
+    ],
+    "title": "EndpointPublico"
+   },
+   "EndpointPublicoPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "vivos": {
+      "type": "integer",
+      "title": "Vivos"
+     },
+     "fora_do_ar": {
+      "type": "integer",
+      "title": "Fora Do Ar"
+     },
+     "nunca_testados": {
+      "type": "integer",
+      "title": "Nunca Testados"
+     },
+     "testado_em_ultimo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Testado Em Ultimo"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/EndpointPublico"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "vivos",
+     "fora_do_ar",
+     "nunca_testados",
+     "itens"
+    ],
+    "title": "EndpointPublicoPagina"
    },
    "Erro": {
     "properties": {
