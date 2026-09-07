@@ -576,16 +576,10 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}/micro",
         lambda p: {"resolucao_m": 100.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
                    "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
-    # L6-02-c (conector WFS/OGC API): as três rotas de leitura do modo referenciado. A conexão de B é
-    # cross-tenant puro — `_carregar` (RLS) roda ANTES de qualquer ida ao serviço externo, então a rota nem
-    # chega a abrir conexão de rede quando o id é de outro inquilino.
-    ("GET", "/api/conexoes/{id}/colecoes"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes"),
-    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/campos"): Caso(
-        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/campos"
     ),
-    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/feicoes"): Caso(
-        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/feicoes"
-    ),
+    # L6-02-c (conector WFS/OGC API): os três casos de /api/conexoes/{id}/colecoes* saíram daqui porque as
+    # ROTAS não existem nesta árvore — elas vêm do ramo do conector, que ainda não entrou em master, e caso
+    # de rota inexistente reprova o teste de cobertura tanto quanto rota sem caso. Voltam junto com as rotas.
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,
@@ -765,6 +759,44 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/rede/{rede_id}/pacote"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: {"esquema": "plat.rede.pacote"},
     ),
+    # ---- L4-01-b / L4-02-a / L4-18: as rotas de feição, topologia, traçado e rede simples vieram nos
+    # ramos-base desta família e ainda não tinham caso cruzado. Todas apontam a rede de B: a resposta tem de
+    # ser 404 (a rede nem é vista) antes de qualquer trabalho. `/api/rede/simples` aponta uma CAMADA que não
+    # é de A — o id nulo garante 404 sem depender de recurso de B.
+    ("GET", "/api/rede/{rede_id}/feicoes/pontos"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos"),
+    ("GET", "/api/rede/{rede_id}/feicoes/linhas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas"),
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos",
+        lambda p: {"grupo": "trecho", "tipo_codigo": 1, "lon": 0.0, "lat": 0.0}),
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas",
+        lambda p: {"grupo": "trecho", "tipo_codigo": 1, "coordenadas": [[0.0, 0.0], [0.001, 0.0]]}),
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos/applyEdits", lambda p: {"deletes": []}),
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas/applyEdits"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas/applyEdits", lambda p: {"deletes": []}),
+    ("POST", "/api/rede/{rede_id}/topologia/habilitar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/habilitar", lambda p: {}),
+    ("GET", "/api/rede/{rede_id}/topologia"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia"),
+    ("GET", "/api/rede/{rede_id}/topologia/nos"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia/nos"),
+    ("GET", "/api/rede/{rede_id}/topologia/arestas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/arestas"),
+    ("GET", "/api/rede/{rede_id}/topologia/areas-sujas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/areas-sujas"),
+    ("GET", "/api/rede/{rede_id}/topologia/alcance"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/alcance?lon=0&lat=0"),
+    ("POST", "/api/rede/{rede_id}/tracar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/tracar",
+        lambda p: {"tipo": "conectado", "pontos_partida": [{"lon": 0.0, "lat": 0.0}]}),
+    ("POST", "/api/rede/simples"): Caso(
+        lambda p: "/api/rede/simples",
+        lambda p: {"nome": f"{PREFIXO}simples-{secrets.token_hex(4)}", "disciplina": "agua",
+                   "camada_linha_id": UUID_NULO}),
+    ("GET", "/api/rede/{rede_id}/simples"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/simples"),
+    ("POST", "/api/rede/{rede_id}/promover"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/promover", lambda p: {}),
     # ---- L4-04-a controlador de subrede e tiers: tudo em /api/rede/{rede_id} aponta a rede de B e tem de
     # dar 404 (a rede nem é vista). O id de controlador/subrede é forjado: se a rede fosse alcançável, a
     # resposta mudaria de 404 de rede para 404 de controlador — e mesmo isso vazaria a existência da rede.
@@ -784,6 +816,18 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {},
     ),
     ("GET", "/api/rede/{rede_id}/tiers"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/tiers"),
+    # ---- L4-04-b atualizar e exportar subrede: as quatro rotas novas apontam a rede de B e têm de dar 404
+    # antes de qualquer trabalho — a de atualizar em lote nem chega a enfileirar job, a de exportar nem chega
+    # a procurar a subrede pelo nome.
+    ("POST", "/api/rede/{rede_id}/subredes/atualizar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/subredes/atualizar", lambda p: {}),
+    ("PUT", "/api/rede/{rede_id}/tier/{codigo}/propagadores"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/tier/media_tensao/propagadores",
+        lambda p: {"propagadores": []}),
+    ("GET", "/api/rede/{rede_id}/subredes/conferencia"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/subredes/conferencia"),
+    ("GET", "/api/rede/{rede_id}/subrede/{nome}/exportar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/exportar"),
     ("POST", "/api/rede/{rede_id}/controladores/importar"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/controladores/importar", lambda p: {}),
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
