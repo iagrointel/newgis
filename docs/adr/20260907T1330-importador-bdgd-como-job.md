@@ -61,7 +61,7 @@ contrato de dado com pelo menos 30 expectativas, e os três órfãos contados e 
 - Progresso do job: 1–9 % contrato, 10–98 % carga (proporcional ao `progresso` do importador),
   100 % ao gravar.
 - `memoria_mb=1024` (teto do worker): a maior camada de uma distribuidora média cabe (medido na
-  CERTEL, abaixo de 100 mil linhas com geometria). Distribuidora grande (ES, 476 MB) precisa de
+  distribuidora de referência, abaixo de 100 mil linhas com geometria). Distribuidora grande (ES, 476 MB) precisa de
   medida própria de RAM antes de subir o teto — refutação do item, pendente de máquina calma.
 - Migração `20260907T1330_rede_importacao_contrato.sql`: três colunas jsonb opcionais.
 - A medida da cooperativa inteira fica em `tests/medidas/L4-01-c-importador-bdgd.json`, com a

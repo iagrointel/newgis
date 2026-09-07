@@ -258,6 +258,6 @@ def importar_bdgd(rede_id: str, corpo: ImportarBdgdEntrada, request: Request, au
                               {"rede_id": rede_id, "caminho": corpo.caminho,
                                "seguir_com_bloqueio": corpo.seguir_com_bloqueio})
     with db.db(auth.contexto()) as cur:
-        registrar_evento(cur, request, "redes/importar-bdgd", "rede", rede_id,
+        registrar_evento(cur, request, "redes/importar_bdgd", "rede", rede_id,
                          {"job_id": job["id"], "caminho": corpo.caminho})
     return {"job_id": job["id"], "estado": job.get("estado", "pendente")}

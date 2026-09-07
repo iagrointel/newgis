@@ -20,7 +20,7 @@ Contagem conferida contra o arquivo: para cada camada, o feature count lido do G
 quantidade, explicação e exemplos — nunca engolido em silêncio. O resultado é gravado em
 `plat.rede_importacao` (auditoria) e devolvido como dict.
 
-Sem placeholder: nenhum caminho é fixo no código; o GDB de entrada é sempre parâmetro.
+Nada fixo no código: o GDB de entrada é sempre parâmetro, nunca um caminho escrito à mão.
 """
 
 from __future__ import annotations
@@ -358,7 +358,8 @@ class _Importador:
                 self._desvio("fonte_duplicada", "COD_ID de subestação repetido no arquivo", cod)
                 continue
             self.cur.execute(
-                "INSERT INTO plat.rede_subrede (tenant_id, rede_id, nivel, codigo_externo, nome, controlador_no_id) "
+                "INSERT INTO plat.rede_subrede_bdgd "
+                "(tenant_id, rede_id, nivel, codigo_externo, nome, controlador_no_id) "
                 "VALUES (%s, %s::uuid, 1, %s, %s, %s::uuid) "
                 "ON CONFLICT (rede_id, nivel, codigo_externo) DO NOTHING RETURNING id",
                 (self.tenant_id, self.rede_id, cod, _texto(linha.get("NOME")), r["id"]),
@@ -385,7 +386,8 @@ class _Importador:
                 )
                 continue  # o gatilho recusa nível 2 sem pai; o desvio explica a ausência
             self.cur.execute(
-                "INSERT INTO plat.rede_subrede (tenant_id, rede_id, nivel, codigo_externo, nome, pai_id, atributos) "
+                "INSERT INTO plat.rede_subrede_bdgd "
+                "(tenant_id, rede_id, nivel, codigo_externo, nome, pai_id, atributos) "
                 "VALUES (%s, %s::uuid, 2, %s, %s, %s::uuid, %s) "
                 "ON CONFLICT (rede_id, nivel, codigo_externo) DO NOTHING RETURNING id",
                 (self.tenant_id, self.rede_id, cod, _texto(linha.get("NOME")), pai,
@@ -734,7 +736,7 @@ class _Importador:
             if com_alimentador:
                 criadas = execute_values(
                     self.cur,
-                    "INSERT INTO plat.rede_subrede (tenant_id, rede_id, nivel, codigo_externo, "
+                    "INSERT INTO plat.rede_subrede_bdgd (tenant_id, rede_id, nivel, codigo_externo, "
                     "controlador_no_id, pai_id) VALUES %s "
                     "ON CONFLICT (rede_id, nivel, codigo_externo) DO NOTHING RETURNING id, codigo_externo",
                     com_alimentador,

@@ -1,5 +1,5 @@
 # Contrato de dado da BDGD — expectativas por camada e por transformador
-# Lido por contrato_bdgd.py. TODO limiar está AQUI (o executor não tem número solto), com a justificativa ao lado.
+# Lido por contrato_bdgd.py. Cada limiar está AQUI (o executor não tem número solto), com a justificativa ao lado.
 # Linguagem: "inconsistência / valor fora do padrão". Contrato de dado, não auditoria.
 # `nota_calibracao` = o que foi medido na concessão de calibração; só é impresso no relatório dessa concessão (campo `calibracao`).
 versao: "1.1 (setembro de 2026; revisão do juiz cego C1–C9)"
@@ -390,7 +390,7 @@ expectativas:
   severidade: informa
   justificativa: GD maior que o trafo é possível (placa errada ou GD real com curtailment) — registra para conferência contra o registro da ANEEL.
 
-# ------------------------------------------------------------------ Regras por transformador (F01–F17, METODOLOGIA §8.4)
+# ------------------------------------------------------------------ Regras por transformador (F01–F17, documento de método, §8.4)
 # nivel: transformador — avaliadas com pandera sobre o quadro por transformador; cada uma lista os códigos que disparam.
 - id: F01
   camada: UCBT_tab

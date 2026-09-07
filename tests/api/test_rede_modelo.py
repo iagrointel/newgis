@@ -5,23 +5,23 @@ Cláusulas do portão provadas aqui:
 2. DDL `plat.rede_*` com regras de conectividade validadas por TRIGGER, não por checagem da aplicação
    (`test_gatilho_recusa_no_fora_da_rede`, `test_gatilho_recusa_associacao_fora_do_catalogo`,
    `test_gatilho_recusa_subrede_de_nivel_invertido`);
-3. importador BDGD contra um recorte de DISTRIBUIDORA REAL (1 alimentador da cooperativa Certaja,
+3. importador BDGD contra um recorte de DISTRIBUIDORA REAL (1 alimentador da cooperativa de teste,
    ativo da casa também usado pelo item irmão `L4-01-c-importador-bdgd`; ver
    `tests/dados/gerar_bdgd_extrato.py`), com a contagem inserida conferida contra `inspecionar()` camada
    a camada e toda perda explicada por um desvio nomeado (`test_importa_distribuidora_real_e_confere_contagem`).
-   PARCIAL quanto a "distribuidora inteira": a Certaja completa foi tentada e medida em >13 minutos sob
+   PARCIAL quanto a "distribuidora inteira": a distribuidora completa foi tentada e medida em >13 minutos sob
    disputa de banco de uma trilha (ver fixture `extrato_real` e `docs/rede/MODELO_REDE.md` §7) — a
    mecânica está provada contra dado real, a escala de uma distribuidora inteira não.
 
 Fronteira honesta desta passagem (documentada também no ADR e no handoff): RAMLIG entra com desvio,
 nunca aresta, nesta distribuidora real — `PN_CON_2` vem vazio em 100% das linhas (medido no recorte E
-na Certaja inteira, 26.581 linhas, E na BDGD do Vale do Taquari, 2.418.764 linhas — três amostras
+na distribuidora inteira, 26.581 linhas, E na BDGD da cooperativa de teste, 2.418.764 linhas — três amostras
 independentes, mesmo padrão) — o ramal de ligação liga junção a CONSUMIDOR, não junção a junção, e o
 modelo atual só sabe montar aresta juncao-juncao. A conectividade do consumidor com a rede não se
 perde (a associação de `_consumidores` liga o mesmo PN_CON), mas o ramal em si não vira aresta na
 malha do pgRouting — registrado como pendência do próximo item da linha, nunca escondido atrás de um
-número que pareça completo. Se `/home/dev/liga/certaja_2024.gdb.zip` não existir nesta máquina
-(ambiente sem os ativos da casa), os testes que dependem dele pulam."""
+número que pareça completo. Se `PLAT_REDE_REFERENCIA_GDB` não apontar um pacote existente nesta
+máquina (ambiente sem os ativos da casa), os testes que dependem dele pulam."""
 
 import hashlib
 
@@ -36,8 +36,8 @@ from tests.dados.gerar_bdgd_extrato import obter_extrato_pequeno
 
 @pytest.fixture(scope="module")
 def extrato_real():
-    """Um alimentador (CTMT) da cooperativa Certaja real — não a distribuidora inteira: medido que
-    importar a Certaja completa (44.268 SSDMT + 27.587 UCBT_tab + ...) passa de 13 minutos sob a
+    """Um alimentador (CTMT) da cooperativa de teste real — não a distribuidora inteira: medido que
+    importar a distribuidora completa (44.268 SSDMT + 27.587 UCBT_tab + ...) passa de 13 minutos sob a
     disputa de banco de uma trilha compartilhada, porque a associação de cada dispositivo/consumidor
     com a junção é uma consulta por linha (não em lote — ver `docs/rede/MODELO_REDE.md` §4/§7, achado
     de performance registrado como pendência). Este extrato usa o MESMO arquivo fonte e as MESMAS
@@ -157,14 +157,14 @@ def test_gatilho_recusa_subrede_de_nivel_invertido(rede_eletrica):
     with con.cursor() as cur:
         contexto(con, tenant_id, usuario_id)
         cur.execute(
-            "INSERT INTO plat.rede_subrede (tenant_id, rede_id, nivel, codigo_externo) "
+            "INSERT INTO plat.rede_subrede_bdgd (tenant_id, rede_id, nivel, codigo_externo) "
             "VALUES (%s, %s::uuid, 1, 'zt-nivel1') RETURNING id",
             (tenant_id, rede_id),
         )
         nivel1 = cur.fetchone()["id"]
         with pytest.raises(Exception, match="subrede_nivel_invertido"):
             cur.execute(
-                "INSERT INTO plat.rede_subrede (tenant_id, rede_id, nivel, codigo_externo, pai_id) "
+                "INSERT INTO plat.rede_subrede_bdgd (tenant_id, rede_id, nivel, codigo_externo, pai_id) "
                 "VALUES (%s, %s::uuid, 3, 'zt-nivel3', %s::uuid)",
                 (tenant_id, rede_id, nivel1),
             )
@@ -207,7 +207,7 @@ def test_importa_distribuidora_real_e_confere_contagem(rede_eletrica, extrato_re
     `docs/rede/MODELO_REDE.md`): a régua é `inspecionar()` lido do MESMO arquivo GDB (não um número
     de cabeça), e toda camada que não bate 1:1 tem desvio nomeado com quantidade explicando a
     diferença inteira. O arquivo é um recorte (1 alimentador) de uma distribuidora REAL (cooperativa
-    Certaja) — a distribuidora INTEIRA foi tentada e medida como lenta demais para a suíte (ver
+    de teste) — a distribuidora INTEIRA foi tentada e medida como lenta demais para a suíte (ver
     fixture `extrato_real`), então esta cláusula fica provada na MECÂNICA (contagem/desvio corretos
     contra dado real), não na ESCALA."""
     arquivo = inspecionar(extrato_real)
@@ -252,7 +252,7 @@ def test_importa_distribuidora_real_e_confere_contagem(rede_eletrica, extrato_re
         total_nos = cur.fetchone()["n"]
         cur.execute("SELECT count(*) AS n FROM plat.rede_aresta WHERE rede_id = %s::uuid", (rede_id,))
         total_arestas = cur.fetchone()["n"]
-        cur.execute("SELECT count(*) AS n FROM plat.rede_subrede WHERE rede_id = %s::uuid", (rede_id,))
+        cur.execute("SELECT count(*) AS n FROM plat.rede_subrede_bdgd WHERE rede_id = %s::uuid", (rede_id,))
         total_subredes = cur.fetchone()["n"]
         cur.execute("SELECT count(*) AS n FROM plat.rede_associacao WHERE rede_id = %s::uuid", (rede_id,))
         total_associacoes = cur.fetchone()["n"]

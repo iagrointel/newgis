@@ -32,7 +32,7 @@ from app.rede_utilidades import contrato
 from app.rede_utilidades.bdgd import importar, inspecionar
 from tests.api.test_rede_modelo import extrato_real, rede_eletrica  # noqa: F401  (fixtures reusadas)
 from tests.api.test_rls import contexto
-from tests.dados.gerar_bdgd_extrato import FONTE, obter_extrato
+from tests.dados.gerar_bdgd_extrato import fonte, obter_extrato
 
 MEDIDAS = Path("tests/medidas/L4-01-c-importador-bdgd.json")
 
@@ -213,8 +213,9 @@ def test_cooperativa_inteira_contagens_e_tempo(rede_eletrica):
     """A cooperativa de teste inteira: contagem 1:1 com o arquivo nas camadas do portão e tempo
     medido com a carga da máquina ao lado. Antes do lote em `_gravar_dispositivos` a mesma carga
     passou de 13 min sob disputa (item irmão); a medida aqui é a régua nova."""
-    if not FONTE.exists():
-        pytest.skip(f"{FONTE} ausente")
+    origem = fonte()
+    if origem is None or not origem.exists():
+        pytest.skip("sem PLAT_REDE_REFERENCIA_GDB apontando o pacote da distribuidora de referência")
     carga = _carga_maquina()
     if carga["carga_1min"] > 8:
         pytest.skip(f"carga {carga['carga_1min']} > 8: medida de tempo não é confiável; rode com a máquina calma")
@@ -241,8 +242,9 @@ def test_cooperativa_inteira_contagens_e_tempo(rede_eletrica):
         json.dumps(
             {
                 "item": "L4-01-c-importador-bdgd",
-                "pacote": FONTE.name,
-                "sha256_zip": hashlib.sha256(FONTE.read_bytes()).hexdigest()[:16],
+                # o NOME do pacote não entra na medida (traz o nome do parceiro); o sha256 identifica
+                # o arquivo sem revelá-lo.
+                "sha256_zip": hashlib.sha256(origem.read_bytes()).hexdigest()[:16],
                 "contagens": resultado["contagens"],
                 "comp": resultado["comp"],
                 "orfaos": {k: v["quantidade"] for k, v in resultado["orfaos"].items()},

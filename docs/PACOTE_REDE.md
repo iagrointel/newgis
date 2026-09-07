@@ -152,8 +152,8 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | versão do esquema | 1 |
 | disciplina | eletrica |
 | fonte | https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd |
-| tamanho | 96042 bytes |
-| sha256 | `8bc3786c221e3ed5f0a40a85401301c266b15495c7444d5e64fa738f4d612663` |
+| tamanho | 96210 bytes |
+| sha256 | `08e78e0ce4ec93d3217ac7edd74d1056f35b4a7540ebfe132414d7dd879cb191` |
 
 ### Redes de domínio e tiers
 
@@ -170,7 +170,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 |---|---|---|
 | `conducao` | Condução | Conduz sem transformar nem interromper. |
 | `consumo` | Consumo | Ponto final que retira energia da rede. |
-| `controlador` | Controlador | Ajusta grandeza elétrica (tensão, reativo) sem interromper o circuito. |
+| `controlador` | Controlador | Pode controlar uma subrede: o terminal do ativo é fonte (ou sumidouro) de um tier. Também ajusta grandeza elétrica sem interromper o circuito. |
 | `dispositivo_de_protecao` | Dispositivo de proteção | Interrompe sozinho diante de defeito. |
 | `estrutura_de_suporte` | Estrutura de suporte | Sustenta o condutor e o equipamento; não conduz. |
 | `fonte` | Fonte | Onde a energia entra na rede; o traçado a montante termina aqui. |
@@ -198,7 +198,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | `chave_de_media_tensao` | ponto | UNSEMT | 1 | `chave_faca` | Chave faca | media_tensao | seccionamento | — |
 | `chave_de_media_tensao` | ponto | UNSEMT | 2 | `chave_fusivel` | Chave fusível | media_tensao | dispositivo_de_protecao, seccionamento | — |
 | `chave_de_media_tensao` | ponto | UNSEMT | 3 | `religador` | Religador | media_tensao | controlador, dispositivo_de_protecao | — |
-| `chave_de_media_tensao` | ponto | UNSEMT | 4 | `disjuntor` | Disjuntor | media_tensao | dispositivo_de_protecao | — |
+| `chave_de_media_tensao` | ponto | UNSEMT | 4 | `disjuntor` | Disjuntor | media_tensao | controlador, dispositivo_de_protecao | — |
 | `chave_de_media_tensao` | ponto | UNSEMT | 5 | `seccionalizador` | Seccionalizador | media_tensao | dispositivo_de_protecao, seccionamento | — |
 | `equipamento_do_transformador` | sem_geometria | EQTRMT | 1 | `equipamento_do_transformador` | Equipamento do transformador | media_tensao | transformacao | — |
 | `geracao_distribuida` | ponto | UGBT_tab, UGMT_tab | 1 | `geracao_em_baixa_tensao` | Geração em baixa tensão | baixa_tensao | geracao, medicao | — |
@@ -209,10 +209,10 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | `ponto_notavel` | ponto | PONNOT | 3 | `ponto_notavel_nao_classificado` | Ponto notável ainda não classificado | estrutura | estrutura_de_suporte | — |
 | `ramal_de_ligacao` | linha | RAMLIG | 1 | `ramal_de_ligacao` | Ramal de ligação | baixa_tensao | conducao | — |
 | `regulador_de_tensao` | ponto | UNREMT | 1 | `regulador_de_tensao` | Regulador de tensão | media_tensao | controlador | — |
-| `subestacao` | ponto | SUB | 1 | `subestacao_de_distribuicao` | Subestação de distribuição | subtransmissao | fonte | — |
-| `transformador_de_distribuicao` | ponto | UNTRMT | 1 | `transformador_de_distribuicao` | Transformador de distribuição | media_tensao | transformacao | T |
-| `transformador_de_distribuicao` | ponto | UNTRMT | 2 | `banco_de_transformadores` | Banco de transformadores | media_tensao | transformacao | B |
-| `transformador_de_distribuicao` | ponto | UNTRMT | 3 | `transformador_nao_classificado` | Transformador ainda não classificado | media_tensao | transformacao | — |
+| `subestacao` | ponto | SUB | 1 | `subestacao_de_distribuicao` | Subestação de distribuição | subtransmissao | controlador, fonte | — |
+| `transformador_de_distribuicao` | ponto | UNTRMT | 1 | `transformador_de_distribuicao` | Transformador de distribuição | media_tensao | controlador, transformacao | T |
+| `transformador_de_distribuicao` | ponto | UNTRMT | 2 | `banco_de_transformadores` | Banco de transformadores | media_tensao | controlador, transformacao | B |
+| `transformador_de_distribuicao` | ponto | UNTRMT | 3 | `transformador_nao_classificado` | Transformador ainda não classificado | media_tensao | controlador, transformacao | — |
 | `trecho_de_baixa_tensao` | linha | SSDBT | 1 | `trecho_de_baixa_tensao` | Trecho de baixa tensão | baixa_tensao | conducao | — |
 | `trecho_de_media_tensao` | linha | SSDMT | 1 | `trecho_de_media_tensao` | Trecho de média tensão | media_tensao | conducao | — |
 | `unidade_consumidora` | ponto | UCBT_tab, UCMT_tab | 1 | `consumidor_de_baixa_tensao` | Consumidor de baixa tensão | baixa_tensao | consumo, medicao | — |

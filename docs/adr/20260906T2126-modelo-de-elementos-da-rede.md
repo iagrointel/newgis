@@ -35,7 +35,7 @@ tipo — decisão equivalente à da Esri, que também não tipa o vértice de co
 
 ## 4. Hierarquia de subrede por nível estrito, não por grafo livre
 
-`plat.rede_subrede.nivel` vai de 1 (subestação) a 4, e o gatilho `rede_subrede_validar` exige que o
+`plat.rede_subrede_bdgd.nivel` vai de 1 (subestação) a 4, e o gatilho `rede_subrede_bdgd_validar` exige que o
 pai tenha nível exatamente `nivel - 1`. Isso torna ciclo impossível por construção (uma volta exigiria
 nível constante em algum ponto do caminho) — mais barato que detectar ciclo em runtime toda vez que
 alguém reatribuir `pai_id`. Custo aceito: uma hierarquia com "salto" real (subestação alimentando um
@@ -74,7 +74,7 @@ conectada fisicamente, mas o caminho de energia não passa ali.
 
 ## 8. Prova (turno de fechamento)
 
-Ver `tests/api/test_rede_modelo.py` (importador rodado contra `/tmp/bdgd_taquari.gdb`, um FileGDB real
+Ver `tests/api/test_rede_modelo.py` (importador rodado contra o pacote apontado por `PLAT_REDE_REFERENCIA_GDB`, um FileGDB real
 no formato ANEEL, camadas SUB/CTMT/SSDMT/UNTRMT/SSDBT/UCBT_tab/RAMLIG/UNSEMT/UCMT_tab/PONNOT) e
 `tests/medidas/L4-01-modelo-rede.json` para os números. `inspecionar()` é a régua: a contagem inserida
 por camada é comparada contra `pyogrio.read_info(..., layer=camada)["features"]`, com toda diferença

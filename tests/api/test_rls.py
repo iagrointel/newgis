@@ -95,3 +95,38 @@ def test_log_acesso_so_por_funcao(conexao_plat_app):
         cur.execute("SELECT count(*) AS n FROM plat.log_acesso WHERE rota = '/x'")
         assert cur.fetchone()["n"] == 1
     conexao_plat_app.rollback()
+
+
+TABELAS_TOPOLOGIA = (
+    "rede_feicao_ponto", "rede_feicao_linha", "rede_topo_no", "rede_topo_aresta",
+    "rede_topo_resumo", "rede_topo_area_suja",
+)
+
+
+def test_topologia_rls_e_gist(conexao_plat_app, env):
+    """Cláusula do portão L4-01-b: as tabelas da topologia derivada têm RLS LIGADA e índice espacial GIST.
+    Conferido no catálogo do Postgres (pg_tables.pg_indexes), no schema da própria base de teste — nunca
+    inferido do arquivo de migração (o arquivo pode dizer uma coisa e a base ter outra)."""
+    import os
+
+    schema = os.environ.get("PLAT_SCHEMA", "plat")
+    with conexao_plat_app.cursor() as cur:
+        cur.execute(
+            "SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = %s AND tablename = ANY(%s)",
+            (schema, list(TABELAS_TOPOLOGIA)),
+        )
+        linhas = {r["tablename"]: r["rowsecurity"] for r in cur.fetchall()}
+        assert set(linhas) == set(TABELAS_TOPOLOGIA), (
+            f"tabela de topologia faltando no schema {schema}: {set(TABELAS_TOPOLOGIA) - set(linhas)}")
+        sem_rls = [t for t, ok in linhas.items() if not ok]
+        assert not sem_rls, f"RLS desligada em: {sem_rls}"
+
+        com_geom = ("rede_feicao_ponto", "rede_feicao_linha", "rede_topo_no", "rede_topo_aresta",
+                    "rede_topo_area_suja")
+        cur.execute(
+            "SELECT tablename, indexname FROM pg_indexes "
+            "WHERE schemaname = %s AND tablename = ANY(%s) AND indexdef ILIKE '%%USING gist%%'",
+            (schema, list(com_geom)),
+        )
+        gist = {r["tablename"] for r in cur.fetchall()}
+        assert gist == set(com_geom), f"índice GIST faltando em: {set(com_geom) - gist}"

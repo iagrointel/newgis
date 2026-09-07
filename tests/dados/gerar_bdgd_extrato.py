@@ -4,14 +4,14 @@
 PONTO é justamente testar contra dado REAL da ANEEL (esquisitices de campo incluídas — é o que a
 cláusula "contagem conferida contra o arquivo" pede), não uma malha de ordem de grandeza equivalente.
 
-Fonte: `/home/dev/liga/certaja_2024.gdb.zip` — ativo da casa já documentado como tal pelo item irmão
-`L4-01-c-importador-bdgd` (BDGD 2024-12-31 V11 da cooperativa Certaja Energia, 13,5 MB comprimidos,
-56 MB abertos: 6 SUB, 21 CTMT, 44.268 SSDMT, 5.481 UNTRMT, 29.244 SSDBT, 27.587 UCBT_tab, 26.581
-RAMLIG, 3.064 UNSEMT, 142 UCMT_tab, 60.549 PONNOT — uma distribuidora REAL inteira, não um recorte).
-Se o arquivo não estiver na máquina (ambiente sem os ativos da casa), o chamador deve pular o teste —
+Fonte: a variável de ambiente `PLAT_REDE_REFERENCIA_GDB` aponta o pacote `.gdb.zip` da distribuidora de
+referência (ativo da casa, BDGD 2024-12-31 V11, 13,5 MB comprimidos, 56 MB abertos: 6 SUB, 21 CTMT,
+44.268 SSDMT, 5.481 UNTRMT, 29.244 SSDBT, 27.587 UCBT_tab, 26.581 RAMLIG, 3.064 UNSEMT, 142 UCMT_tab,
+60.549 PONNOT — uma distribuidora REAL inteira, não um recorte). O caminho NUNCA é escrito em arquivo:
+vem do ambiente da máquina que tem o ativo. Sem a variável (ou sem o arquivo), o chamador pula o teste —
 `obter_extrato()` levanta `FileNotFoundError` para isso.
 
-Achado ao medir (06-07/09/2026): importar a Certaja INTEIRA (44.268 SSDMT + 29.244 SSDBT + 27.587
+Achado ao medir (06-07/09/2026): importar a distribuidora de referência INTEIRA (44.268 SSDMT + 29.244 SSDBT + 27.587
 UCBT_tab + 5.481 UNTRMT + 3.064 UNSEMT — a associação de cada dispositivo/consumidor com a junção é
 UMA CONSULTA por linha, não em lote) passou de 13 minutos sem terminar numa trilha sob disputa de
 banco compartilhada — achado registrado em `docs/rede/MODELO_REDE.md` §4 como pendência de
@@ -26,15 +26,22 @@ Uso:  venv/bin/python tests/dados/gerar_bdgd_extrato.py   (imprime os dois camin
 
 from __future__ import annotations
 
+import os
 import shutil
 import zipfile
 from pathlib import Path
 
-FONTE = Path("/home/dev/liga/certaja_2024.gdb.zip")
 RAIZ_GERADOS = Path(__file__).resolve().parent / "gerados"
-DESTINO = RAIZ_GERADOS / "bdgd_certaja.gdb"
-DESTINO_PEQUENO = RAIZ_GERADOS / "bdgd_certaja_ctj3_1.gdb"
-CTMT_PEQUENO = "3_CTJ3_1"  # medido: o menor CTMT com as 5 camadas de aresta/nó todas presentes
+DESTINO = RAIZ_GERADOS / "bdgd_referencia.gdb"
+DESTINO_PEQUENO = RAIZ_GERADOS / "bdgd_referencia_ctmt.gdb"
+# O alimentador (CTMT) do recorte pequeno também vem do ambiente: o código traz a sigla da distribuidora.
+CTMT_PEQUENO = os.environ.get("PLAT_REDE_REFERENCIA_CTMT", "")
+
+
+def fonte() -> Path | None:
+    """O pacote `.gdb.zip` da distribuidora de referência, do ambiente. None quando a máquina não o tem."""
+    caminho = os.environ.get("PLAT_REDE_REFERENCIA_GDB", "").strip()
+    return Path(caminho) if caminho else None
 
 
 def obter_extrato() -> str:
@@ -42,18 +49,20 @@ def obter_extrato() -> str:
     Levanta FileNotFoundError se o ativo da casa não estiver nesta máquina."""
     if DESTINO.exists() and any(DESTINO.iterdir()):
         return str(DESTINO)
-    if not FONTE.exists():
+    origem = fonte()
+    if origem is None or not origem.exists():
         raise FileNotFoundError(
-            f"ativo da casa ausente: {FONTE} (BDGD real da Certaja, documentada em L4-01-c; "
-            "sem ela, os testes que dependem de distribuidora real pulam)"
+            "ativo da casa ausente: defina PLAT_REDE_REFERENCIA_GDB com o caminho do .gdb.zip da "
+            "distribuidora de referência (BDGD real, item L4-01-c); sem ela, os testes que dependem "
+            "de distribuidora real pulam"
         )
     RAIZ_GERADOS.mkdir(parents=True, exist_ok=True)
     shutil.rmtree(DESTINO, ignore_errors=True)
-    with zipfile.ZipFile(FONTE) as z:
+    with zipfile.ZipFile(origem) as z:
         nomes_gdb = {n.split("/", 1)[0] for n in z.namelist() if ".gdb/" in n}
         raiz_no_zip = next(iter(sorted(nomes_gdb)), None)
         if raiz_no_zip is None:
-            raise FileNotFoundError(f"{FONTE} não contém um .gdb dentro do zip")
+            raise FileNotFoundError(f"{origem} não contém um .gdb dentro do zip")
         z.extractall(RAIZ_GERADOS)
     extraido = RAIZ_GERADOS / raiz_no_zip
     extraido.rename(DESTINO)
@@ -65,6 +74,11 @@ def obter_extrato_pequeno() -> str:
     automatizada, com as mesmas esquisitices de dado real (RAMLIG sem PN_CON_2 etc.)."""
     if DESTINO_PEQUENO.exists() and any(DESTINO_PEQUENO.iterdir()):
         return str(DESTINO_PEQUENO)
+    if not CTMT_PEQUENO:
+        raise FileNotFoundError(
+            "defina PLAT_REDE_REFERENCIA_CTMT com o código do alimentador do recorte pequeno "
+            "(medido: o menor CTMT com as 5 camadas de aresta/nó todas presentes)"
+        )
     completo = obter_extrato()
     import pyogrio
 

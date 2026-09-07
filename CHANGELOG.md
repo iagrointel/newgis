@@ -3,6 +3,25 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## junção, setembro de 2026 (ramo wt/bdgdjob × wt/il402bmonta: casos cruzados e eventos da família de rede)
+
+União dos dois ramos da linha L4 que trabalharam a rede de utilidades ao mesmo tempo. `test_cruzado.py`
+reprovava porque a árvore tinha as rotas de topologia, feições, traçado, rede simples e controlador sem
+caso em `tests/api/cruzado_casos.py`; a união trouxe os casos e os eventos correspondentes. Três consertos
+que a união exigiu: (a) o registro de união tinha deixado dois `return` em `preparar()` e um caso sem `),`
+— o primeiro `return` matava o segundo e todo caso de `/api/rede/{rede_id}` caía em KeyError; (b) três
+casos de `/api/conexoes/{id}/colecoes*` apontavam rotas que não existem nesta árvore e saíram; (c) a rota
+`POST /api/rede/{rede_id}/importar-bdgd` ganhou o tipo de evento `redes/importar_bdgd` no catálogo
+(migração `20260907T2210`) — sem a linha, a rota gravava o job e falhava ao registrar o evento.
+
+Colisão de nome resolvida (ADR `20260907T2200`): os dois ramos criaram `plat.rede_subrede` com conteúdo
+diferente. A tabela do controlador de subrede fica com o nome (é o do portão do item e o termo de paridade
+com a Esri); a hierarquia lida do arquivo BDGD passa a `plat.rede_subrede_bdgd`. As duas descrevem o mesmo
+conceito por caminhos diferentes e hoje não conversam — unificá-las é decisão de desenho, não desta junção.
+
+A asserção de contagem de rotas de escrita sob `/api/rede` foi de 6 para 16, com `POST .../tracar`
+declarado como consulta com verbo de escrita (pede `rls:visibilidade`, não `rede.editar`).
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -129,6 +148,142 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 4, setembro de 2026 (item L4-02-b-montante-jusante: sentido pela distância ao controlador)
+
+`POST /api/rede/{id}/tracar` com `tipo=montante|jusante` passou a derivar o SENTIDO do controlador de subrede
+quando a rede tem um em tier hierárquico: a árvore de caminhos mínimos a partir dos controladores
+(`public.pgr_drivingDistance`, `equicost`) diz quem está mais perto da fonte; jusante de um ponto é a
+subárvore dele, montante é a cadeia de pais até o controlador, que sai nomeado na resposta. Sem controlador,
+segue valendo a direção declarada em atributo (item L4-18) — e a resposta sempre diz de onde veio o sentido,
+no campo `origem_direcao`, que também pode ser imposto no pedido.
+
+O traçado se recusa a inventar direção em três situações, cada uma com motivo próprio na resposta: tier
+particionado (malha) sem nenhum trecho declarando `direcao_fluxo`; laço, isto é, mais de um caminho até o
+controlador tocando o resultado pedido (sai `direcao='indeterminado'` com `nos_do_laco`); e ponto que nenhum
+controlador alcança. Grafo, resolução de ponto, barreira e formato de saída são os de `tracado.py`: não há
+segundo motor de traçado. ADR `docs/adr/20260907T2133-montante-jusante-por-controlador.md`.
+
+Medido em `tests/medidas/L4-02-b-montante-jusante.json`. Fronteira honesta registrada ali: a comparação entre
+o jusante de cada transformador da cooperativa de teste e as unidades consumidoras que o arquivo liga a ele
+tem universo VAZIO — os 26.581 ramais de ligação do arquivo não têm geometria, então nenhuma das 27.587
+unidades consumidoras tem caminho desenhado até o transformador.
+
+Na mesma passagem, a união dos seis ramos de L4 fechou dois registros que faltavam e reprovavam o lote
+inteiro na fila: as 11 rotas de escrita da rede de utilidades em `tests/api/eventos_esperados.py` e os 16
+casos de cobertura cruzada em `tests/api/cruzado_casos.py`.
+
+## turno 4, setembro de 2026 (item L4-04-a-controladores-e-tiers: controlador de subrede e tiers)
+
+Onde cada subrede começa passou a ser dado gravado, e não convenção de traçado (ADR
+`docs/adr/20260907T2031-controlador-de-subrede-e-tiers.md`; paridade em `docs/PARIDADE.md`, seção "controlador
+de subrede e tiers"). `POST /api/rede/{id}/controlador` marca o TERMINAL de um dispositivo como controlador de
+uma subrede num tier, e `DELETE .../controlador/{cid}` desfaz; só um tipo de ativo com a categoria de rede
+`controlador` é aceito (poste é recusado com `422 categoria_nao_controladora`) e o NOME do controlador é único
+dentro do tier (`409 nome_de_controlador_repetido`), enquanto a mesma subrede aceita vários controladores de
+nomes distintos. A âncora gravada é feição + terminal, nunca o nó derivado: reconstruir a topologia inteira não
+apaga controlador nenhum.
+
+`plat.rede_subrede` é a tabela de subredes (nome, tier, estado `limpa`/`suja`, resumo do último traçado);
+`POST .../subredes/{id}/atualizar` refaz o traçado a partir dos controladores e devolve a subrede limpa, e
+qualquer área suja aberta na rede faz a leitura mostrar `suja` de novo, com `estado_gravado` ao lado.
+`POST .../controladores/importar` marca, a partir do que a importação da BDGD trouxe, **1 controlador por
+alimentador (CTMT)** — pelo terminal do disjuntor de saída quando o arquivo traz o equipamento, pelo nó de
+cabeça (convenção declarada, gravada como `origem='no_de_cabeca'`) quando não traz — e **1 por transformador
+de distribuição, no terminal de jusante, no tier de baixa tensão**. O pacote `eletrica-br` ganhou a categoria
+`controlador` em subestação, disjuntor e transformador (nada foi removido). Tela `/redes/controladores` com a
+tabela de subredes e a ficha do controlador (dispositivo, terminal, tier, subrede, papel, origem e o nó na
+topologia corrente), com atualizar e remover.
+
+Medido em `tests/medidas/L4-04-a-controladores-e-tiers.json`: numa rede no formato da BDGD com 2 alimentadores
+e 1 transformador, a marcação automática deu **1 por dispositivo, 1 por nó de cabeça e 1 por transformador**, e
+rodar de novo não duplicou nada (3 já marcados). 17 testes de API e 1 e2e da ficha. Lacuna nomeada: **grupo de
+tier (tier group) não existe** no modelo — a fonte o exige em domínio hierárquico e o dispensa em particionado,
+que é o caso do pacote elétrico entregue.
+
+## turno 4, setembro de 2026 (item L4-18-rede-simples-trace-network: rede simples, direção de fluxo, montante e jusante)
+
+Rede sem pacote de ativos, o equivalente de disciplina ao Trace Network da Esri (ADR 20260907T2005; documento
+e tabela de paridade em `docs/rede/REDE_SIMPLES.md`). `POST /api/rede/simples` cria a rede a partir de DUAS
+camadas do inquilino numa chamada — rede, catálogo mínimo, feições copiadas (multiparte explodida,
+reprojetada), configuração de direção e topologia construída; a tela `/redes/simples` faz isso em
+**3 interações** (`criar_rede_simples_cliques` = 3, `tests/e2e/test_rede_simples.py`). A direção de fluxo vem
+de um ATRIBUTO do trecho, traduzido para o vocabulário fechado `digitalizada`/`contra`/`indeterminada`;
+`POST /api/rede/{id}/tracar` ganhou `tipo=montante` e `tipo=jusante`, que param em toda aresta indeterminada
+com um aviso por trecho (`app/rede_utilidades/fluxo.py`). `POST /api/rede/{id}/promover` carimba o pacote
+mínimo e muda o modo para `utilidades`.
+
+Medido em `tests/medidas/L4-18-rede-simples-trace-network.json`: uma bacia real do BC250 do IBGE
+(**584 trechos, 585 nós**, recorte em `tests/dados/bacia_bc250.json`) virou rede simples em **464 ms**
+(carga 6,83; 7,2 GiB livres) e **48 traçados** de montante/jusante bateram elemento a elemento com o cálculo
+independente em `networkx`, com **65 arestas indeterminadas** no meio do caminho
+(`tests/api/test_rede_simples_bacia_bc250.py`). 16 testes de API na rede sintética, entre eles a refutação do
+item: marcar um trecho como indeterminado por `applyEdits` faz montante e jusante pararem nele, com aviso
+nomeando trecho e nó.
+
+## turno 4, setembro de 2026 (item L4-02-d-lacos-e-caminho-curto: laços, caminho mais curto e isolados)
+
+`POST /api/rede/{id}/tracar` ganhou três valores novos de `tipo` (ADR 20260907T1748), sobre o MESMO grafo do
+item irmão L4-02-a: `lacos` (ciclos por componente biconexo, `public.pgr_biconnectedComponents`), `isolados`
+(sem caminho a nenhuma feição da categoria `categoria_controlador`, padrão `fonte`,
+`public.pgr_connectedComponents`) e `caminho_curto` (origem/destino, custo = `atributo_custo` ou o
+comprimento geodésico por padrão, `public.pgr_dijkstra` k=1 / `public.pgr_ksp` k>1). Módulo novo
+`app/rede_utilidades/lacos.py`. 13 testes funcionais verdes (`tests/api/test_rede_lacos_caminho.py`):
+rede radial sem laço = 0; quadrado fechado = 1 laço de 4 arestas; banco de capacitores sem linha = isolado
+(fonte nunca é isolada); comprimento de `caminho_curto` bate com a soma independente do `ST_Length` dos
+trechos (0% de diferença no caso testado, dentro do 0,5% do portão); `k=3` devolve 2 alternativas distintas
+no quadrado (só existem 2) e 1 na rede radial (honesto: k não inventa caminho); custo por atributo
+customizado (`impedancia`) escolhe caminho diferente do geodésico. Refutação: adversário fecha uma chave
+normalmente aberta (via `applyEdits` real, item L4-01-b) e o laço passa a aparecer (0 → 1, mesmas arestas
+esperadas); pedir `caminho_curto` com atributo de custo nulo num trecho do grafo é recusado com 422
+`atributo_custo_nulo` e a lista das feições faltantes — nunca troca nulo por zero. Cláusulas NÃO medidas,
+declaradas: laços da cooperativa de teste e p95 do maior alimentador — teste pronto
+(`tests/api/test_rede_lacos_caminho_medida.py`, marcador `lento`), máquina com carga 9,5-10,4 no momento
+(regra do brief: não medir acima de 8); registrado `medido: false` com a carga ao lado. Front-end
+clique+tabela+e2e: mesma fronteira honesta do item irmão (sem `web/` de rede de utilidades no repositório).
+
+## turno 4, setembro de 2026 (item L4-02-a-conectado-e-subrede: traçado conectado e subrede — PARCIAL)
+
+`POST /api/rede/{id}/tracar` (tipo `conectado`|`subrede`), sobre `public.pgr_connectedComponents`
+(pgRouting 4.0.1, já instalada — ver ADR 0021): ponto de partida por feição+terminal ou coordenada com
+tolerância, barreiras que removem nó do grafo inteiro, travessabilidade por `atributos.estado`, fronteira
+de subrede pela categoria `transformacao`. Rede sintética de 12 nós com resultado conhecido em pytest:
+conectado = 9 elementos/6 nós, subrede = 6 elementos/4 nós (`tests/api/test_rede_tracado.py`, 13 casos,
+todos verdes). Refutação: laço fechado não duplica elemento nem trava; transformador é a fronteira de
+subrede, chave em série (mesmo grupo) não é. pgRouting confirmada instalada por consulta a
+`pg_available_extensions`. Dois defeitos corrigidos na primeira execução real (import de `psycopg2` fora
+de escopo; SQL de arestas sem a coluna `cost` que `pgr_connectedComponents` exige) — ver ADR 0021.
+Cláusulas NÃO cumpridas, declaradas: (1) clique+tabela lateral+captura e2e — não existe front-end de rede
+de utilidades no repositório para acoplar; (2) p95 ≤ 2 s no maior alimentador da cooperativa de teste —
+teste pronto (`test_rede_tracado_medida.py`, marcador `lento`), mas a máquina estava com carga 18-21
+(regra do brief: não medir acima de 8); registrado `medido: false` com a carga ao lado, não fingido.
+
+## turno 4, setembro de 2026 (item L4-01-b-topologia-derivada: topologia derivada da rede de utilidades)
+
+`POST /api/rede/{id}/topologia/habilitar` reconstrói dois índices derivados das feições da rede —
+`plat.rede_topo_no` (um por vértice de conexão/terminal) e `plat.rede_topo_aresta` (um por trecho, com nó de
+origem/destino, comprimento geodésico e bitmask de fase) — numa transação, nunca incremental nesta passagem.
+Tolerância de coincidência é parâmetro da rede (`plat.rede.tolerancia_m`, padrão 0,05 m), visível na ficha:
+0,04 m conecta e 0,06 m não conecta na tolerância padrão; a mesma distância de 0,06 m conecta numa rede que
+declarou 0,1 m. Cruzamento geométrico no meio de duas linhas nunca gera nó (cruzar não é conectar). `applyEdits`
+de ponto/linha (paridade FeatureServer) marca área suja a cada gravação. RLS ligada e índice GIST conferidos
+no catálogo do Postgres (não no arquivo de migração) em todas as 6 tabelas da topologia. Contrato em
+`docs/adr/0020-topologia-derivada-da-rede-de-utilidades.md`; modelo e paridade em `docs/rede/TOPOLOGIA.md`.
+
+Medido em escala real (schema `certaja` do `iagro_sat`, ativo da casa, somente leitura — a rede real da
+cooperativa de teste, não um arquivo do repositório): 73.512 arestas reais (44.268 MT + 29.244 BT), 80.456
+nós, 3.948 órfãos, 0 arestas sem nó, 21 alimentadores com componente conexa idêntica arquivo × topologia
+(contador Python independente sobre o wkt cru), 1.554 terminais de alta órfãos batendo exato com o arquivo,
+60.549 postes → 0 nós. Conserto de dois achados do próprio agente ao medir em escala (`tests/dados/carga_bdgd.py`):
+literal `%` não escapado em SQL parametrizado (`IndexError: tuple index out of range` do psycopg2) e chave
+errada num dicionário de retorno (`fins_de_linha` → `fins_de_linha_grau1`).
+
+⛔ Fronteira medida, não fabricada: `certaja.ramlig` (ramal de ligação) tem os 26.581 registros do arquivo mas
+**0 com geometria armazenada** (`wkt` nulo em 100%) — entra como atributo, não como aresta geométrica; a
+topologia geométrica medida cobre MT + BT + transformador + poste (139.542 elementos reais). Tempo de
+`habilitar` variou de ~21 s a ~600 s na mesma carga conforme a disputa por CPU/RAM de outras trilhas na
+máquina compartilhada (swap 100% cheio no pior caso) — variação do ambiente, não do algoritmo (lotes de
+4.000 linhas, ADR 0020 §5); os dois tempos ficam no arquivo de medida. Manutenção incremental por área suja
+e traçado seguem fora desta passagem (itens seguintes da linha L4).
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 

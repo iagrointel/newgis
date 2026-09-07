@@ -61,7 +61,7 @@ ALTER TABLE plat.rede_no ADD CONSTRAINT rede_no_tenant_tipo_fkey
 -- hierarquia de subredes: nível 1 subestação, nível 2 alimentador, nível 3 transformador (a baixa
 -- tensão que ele alimenta). `pai_id` aponta a subrede imediatamente acima; o gatilho exige nível
 -- exatamente um a menos no pai, o que torna ciclo impossível (uma volta exigiria nível constante).
-CREATE TABLE IF NOT EXISTS plat.rede_subrede (
+CREATE TABLE IF NOT EXISTS plat.rede_subrede_bdgd (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id        int NOT NULL REFERENCES plat.tenant(id),
   rede_id          uuid NOT NULL,
@@ -75,18 +75,18 @@ CREATE TABLE IF NOT EXISTS plat.rede_subrede (
   UNIQUE (tenant_id, id),
   UNIQUE (rede_id, nivel, codigo_externo)
 );
-CREATE INDEX IF NOT EXISTS ix_rede_subrede_tenant ON plat.rede_subrede (tenant_id);
-CREATE INDEX IF NOT EXISTS ix_rede_subrede_rede ON plat.rede_subrede (rede_id);
-CREATE INDEX IF NOT EXISTS ix_rede_subrede_pai ON plat.rede_subrede (pai_id);
-ALTER TABLE plat.rede_subrede ADD CONSTRAINT rede_subrede_tenant_rede_fkey
+CREATE INDEX IF NOT EXISTS ix_rede_subrede_bdgd_tenant ON plat.rede_subrede_bdgd (tenant_id);
+CREATE INDEX IF NOT EXISTS ix_rede_subrede_bdgd_rede ON plat.rede_subrede_bdgd (rede_id);
+CREATE INDEX IF NOT EXISTS ix_rede_subrede_bdgd_pai ON plat.rede_subrede_bdgd (pai_id);
+ALTER TABLE plat.rede_subrede_bdgd ADD CONSTRAINT rede_subrede_bdgd_tenant_rede_fkey
   FOREIGN KEY (tenant_id, rede_id) REFERENCES plat.rede (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_subrede ADD CONSTRAINT rede_subrede_tenant_pai_fkey
-  FOREIGN KEY (tenant_id, pai_id) REFERENCES plat.rede_subrede (tenant_id, id) ON DELETE RESTRICT;
-ALTER TABLE plat.rede_subrede ADD CONSTRAINT rede_subrede_tenant_controlador_fkey
+ALTER TABLE plat.rede_subrede_bdgd ADD CONSTRAINT rede_subrede_bdgd_tenant_pai_fkey
+  FOREIGN KEY (tenant_id, pai_id) REFERENCES plat.rede_subrede_bdgd (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE plat.rede_subrede_bdgd ADD CONSTRAINT rede_subrede_bdgd_tenant_controlador_fkey
   FOREIGN KEY (tenant_id, controlador_no_id) REFERENCES plat.rede_no (tenant_id, id) ON DELETE SET NULL;
 
-ALTER TABLE plat.rede_no ADD CONSTRAINT rede_no_tenant_subrede_fkey
-  FOREIGN KEY (tenant_id, subrede_id) REFERENCES plat.rede_subrede (tenant_id, id) ON DELETE SET NULL;
+ALTER TABLE plat.rede_no ADD CONSTRAINT rede_no_tenant_subrede_bdgd_fkey
+  FOREIGN KEY (tenant_id, subrede_id) REFERENCES plat.rede_subrede_bdgd (tenant_id, id) ON DELETE SET NULL;
 
 -- aresta: trecho/condutor entre dois nós. `no_origem_seq`/`no_destino_seq` são a cópia inteira das
 -- pontas que o pgRouting consome (preenchida pelo gatilho, nunca pela aplicação); `comprimento_m`
@@ -128,8 +128,8 @@ ALTER TABLE plat.rede_aresta ADD CONSTRAINT rede_aresta_tenant_no_origem_fkey
   FOREIGN KEY (tenant_id, no_origem_id) REFERENCES plat.rede_no (tenant_id, id) ON DELETE CASCADE;
 ALTER TABLE plat.rede_aresta ADD CONSTRAINT rede_aresta_tenant_no_destino_fkey
   FOREIGN KEY (tenant_id, no_destino_id) REFERENCES plat.rede_no (tenant_id, id) ON DELETE CASCADE;
-ALTER TABLE plat.rede_aresta ADD CONSTRAINT rede_aresta_tenant_subrede_fkey
-  FOREIGN KEY (tenant_id, subrede_id) REFERENCES plat.rede_subrede (tenant_id, id) ON DELETE SET NULL;
+ALTER TABLE plat.rede_aresta ADD CONSTRAINT rede_aresta_tenant_subrede_bdgd_fkey
+  FOREIGN KEY (tenant_id, subrede_id) REFERENCES plat.rede_subrede_bdgd (tenant_id, id) ON DELETE SET NULL;
 
 -- associação explícita entre um nó de ativo (dispositivo/fonte/consumidor) e a rede: conectividade
 -- (com a junção onde se liga, ou com outro nó de ativo), contenção ou fixação. O gatilho valida a
@@ -190,7 +190,7 @@ ALTER TABLE plat.rede_importacao ADD CONSTRAINT rede_importacao_tenant_rede_fkey
 -- -----------------------------------------------------------------------------------------------
 -- gatilho da subrede: pai da mesma rede com nível exatamente um a menos; controlador é nó da mesma
 -- rede. O nível estrito torna ciclo impossível por construção.
-CREATE OR REPLACE FUNCTION plat.rede_subrede_validar() RETURNS trigger
+CREATE OR REPLACE FUNCTION plat.rede_subrede_bdgd_validar() RETURNS trigger
 LANGUAGE plpgsql AS $fn$
 DECLARE
   v_pai_nivel smallint;
@@ -198,7 +198,7 @@ DECLARE
   v_no_rede uuid;
 BEGIN
   IF NEW.pai_id IS NOT NULL THEN
-    SELECT nivel, rede_id INTO v_pai_nivel, v_pai_rede FROM plat.rede_subrede
+    SELECT nivel, rede_id INTO v_pai_nivel, v_pai_rede FROM plat.rede_subrede_bdgd
      WHERE tenant_id = NEW.tenant_id AND id = NEW.pai_id;
     IF NOT FOUND OR v_pai_rede <> NEW.rede_id THEN
       RAISE EXCEPTION 'subrede_pai_fora_da_rede: o pai precisa ser subrede da mesma rede';
@@ -219,9 +219,9 @@ BEGIN
   RETURN NEW;
 END;
 $fn$;
-DROP TRIGGER IF EXISTS tg_rede_subrede_validar ON plat.rede_subrede;
-CREATE TRIGGER tg_rede_subrede_validar BEFORE INSERT OR UPDATE ON plat.rede_subrede
-  FOR EACH ROW EXECUTE FUNCTION plat.rede_subrede_validar();
+DROP TRIGGER IF EXISTS tg_rede_subrede_bdgd_validar ON plat.rede_subrede;
+CREATE TRIGGER tg_rede_subrede_bdgd_validar BEFORE INSERT OR UPDATE ON plat.rede_subrede_bdgd
+  FOR EACH ROW EXECUTE FUNCTION plat.rede_subrede_bdgd_validar();
 
 -- gatilho da aresta: as duas pontas são nós da mesma rede e os seqs inteiros (pgRouting) são
 -- copiados aqui — a aplicação nunca preenche `no_origem_seq`/`no_destino_seq` à mão.
@@ -396,7 +396,7 @@ $fn$;
 DO $$
 DECLARE t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['rede_no', 'rede_aresta', 'rede_subrede', 'rede_associacao', 'rede_importacao'] LOOP
+  FOREACH t IN ARRAY ARRAY['rede_no', 'rede_aresta', 'rede_subrede_bdgd', 'rede_associacao', 'rede_importacao'] LOOP
     EXECUTE format('ALTER TABLE plat.%I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('DROP POLICY IF EXISTS p_%s_ler ON plat.%I', t, t);
     EXECUTE format('CREATE POLICY p_%s_ler ON plat.%I FOR SELECT TO plat_app USING (tenant_id = plat.tenant_atual())', t, t);

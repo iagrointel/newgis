@@ -1,0 +1,19 @@
+{
+  "p95_jusante": {
+    "carga_1min": 12.08,
+    "medido": false,
+    "motivo": "carga acima de 8: o brief proíbe medir tempo sob disputa",
+    "ram_livre_gb": 5.0
+  },
+  "universo_cooperativa": {
+    "medido": true,
+    "motivo_dos_que_nao_fecham": "ramal sem geometria: o ramal de ligação existe como registro no arquivo (26581), com o transformador em UNI_TR_MT e o poste em PN_CON, mas nenhum traz `wkt`. Sem geometria o ramal não vira trecho, não vira aresta de topologia e a unidade consumidora não tem caminho desenhado até o transformador — o universo da cláusula de 99% é vazio, e nenhum transformador é contado como fechado nem como falha.",
+    "ramais_com_geometria": 0,
+    "ramais_de_ligacao": 26581,
+    "transformadores": 5481,
+    "transformadores_citados_pelas_uc": 4967,
+    "transformadores_com_rede_desenhada_ate_a_uc": 0,
+    "uc_com_pn_con": 27587,
+    "unidades_consumidoras": 27587
+  }
+}

@@ -8,6 +8,10 @@ nesta passagem — ver docs/rede/TOPOLOGIA.md); `GET .../topologia` devolve o re
 Mesmo padrão de `rotas.py`: escrita exige `rede.editar`; leitura segue a visibilidade por inquilino (RLS);
 construção pesada vai para o threadpool (lição do achado A4 do item L4-01-a)."""
 
+import json
+import uuid as uuid_mod
+
+import psycopg2
 from fastapi import APIRouter, Request
 from starlette.concurrency import run_in_threadpool
 
@@ -16,12 +20,13 @@ from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
-from app.rede_utilidades import feicoes, topologia
+from app.rede_utilidades import direcao, feicoes, fluxo, lacos, topologia, tracado
 from app.rede_utilidades.modelos import (
     Feicao,
     FeicaoLinhaEntrada,
     FeicaoPontoEntrada,
     TopologiaResumo,
+    TracadoEntrada,
 )
 
 router = APIRouter(prefix="/api/rede", tags=["rede de utilidades — topologia"])
@@ -31,8 +36,6 @@ LISTA_LIMITE_MAX = 2000
 
 
 def _uuid_ok(valor: str) -> str:
-    import uuid as uuid_mod
-
     try:
         return str(uuid_mod.UUID(valor))
     except (ValueError, AttributeError, TypeError) as e:
@@ -90,6 +93,39 @@ def listar_feicoes_linha(rede_id: str, limite: int = 200, auth: Auth = autentica
         _rede_existe(cur, rid)
         itens = feicoes.listar_linhas(cur, rid, min(limite, LISTA_LIMITE_MAX))
         return {"total": len(itens), "itens": [_feicao_json(r) for r in itens]}
+
+
+@router.post("/{rede_id}/feicoes/pontos/applyEdits", status_code=200, openapi_extra=EDITAR)
+async def aplicar_edicoes_ponto(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar")):
+    """applyEdits da camada de dispositivos (paridade FeatureServer): `adds`/`updates`/`deletes` numa chamada,
+    geometria no JSON da Esri (`{"x":..,"y":..}`), resultado por feição. Cada feição gravada marca a área
+    suja correspondente se a topologia já foi construída (refutação do item L4-01-b)."""
+    rid = _uuid_ok(rede_id)
+    corpo = await request.json()
+    return await run_in_threadpool(_apply_edits_sincrono, rid, corpo, "ponto", auth, request)
+
+
+@router.post("/{rede_id}/feicoes/linhas/applyEdits", status_code=200, openapi_extra=EDITAR)
+async def aplicar_edicoes_linha(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar")):
+    """applyEdits da camada de trechos: geometria `{"paths": [[[lon, lat], ...]]}` (um caminho por feição)."""
+    rid = _uuid_ok(rede_id)
+    corpo = await request.json()
+    return await run_in_threadpool(_apply_edits_sincrono, rid, corpo, "linha", auth, request)
+
+
+def _apply_edits_sincrono(rid: str, corpo: dict, geometria: str, auth: Auth, request: Request) -> dict:
+    if not isinstance(corpo, dict) or not any(k in corpo for k in ("adds", "updates", "deletes")):
+        raise ErroAPI(422, "pedido_invalido", "o corpo exige ao menos uma das chaves adds/updates/deletes")
+    with db.db(auth.contexto()) as cur:
+        _rede_existe(cur, rid)
+        res = feicoes.aplicar_edicoes(cur, auth.tenant_id, rid, corpo, geometria)
+        n_ok = sum(1 for k in ("addResults", "updateResults", "deleteResults")
+                   for i in res[k] if i["success"])
+        n_erro = sum(1 for k in ("addResults", "updateResults", "deleteResults")
+                     for i in res[k] if not i["success"])
+        registrar_evento(cur, request, "redes/feicao_editar", "rede", rid,
+                         {"camada": geometria, "gravadas": n_ok, "recusadas": n_erro})
+    return res
 
 
 def _habilitar_sincrono(rid: str, auth: Auth, request: Request) -> dict:
@@ -178,3 +214,165 @@ def listar_arestas(rede_id: str, limite: int = 200, auth: Auth = autenticado(esc
             for r in cur.fetchall()
         ]
         return {"total": len(itens), "itens": itens}
+
+
+# --- área suja e traçado mínimo (refutação do item) ---------------------------------------------------------
+
+@router.get("/{rede_id}/topologia/areas-sujas", openapi_extra=LER)
+def listar_areas_sujas(rede_id: str, limite: int = 200,
+                       auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """As áreas sujas abertas da rede: onde uma edição (applyEdits ou criação simples) passou DEPOIS da última
+    construção da topologia e o índice gravado é, portanto, suspeito. `habilitar` as apaga ao reconstruir."""
+    rid = _uuid_ok(rede_id)
+    with db.db(auth.contexto()) as cur:
+        _rede_existe(cur, rid)
+        cur.execute("SELECT count(*) AS n FROM plat.rede_topo_area_suja WHERE rede_id = %s::uuid", (rid,))
+        total = cur.fetchone()["n"]
+        cur.execute(
+            "SELECT id, motivo, feicao_id, criado_em, ST_AsGeoJSON(geom) AS geojson "
+            "FROM plat.rede_topo_area_suja WHERE rede_id = %s::uuid ORDER BY criado_em LIMIT %s",
+            (rid, min(limite, LISTA_LIMITE_MAX)),
+        )
+        itens = [
+            {"id": str(r["id"]), "motivo": r["motivo"],
+             "feicao_id": str(r["feicao_id"]) if r["feicao_id"] else None,
+             "criado_em": iso(r["criado_em"]), "geometria": json.loads(r["geojson"])}
+            for r in cur.fetchall()
+        ]
+        return {"total": total, "itens": itens}
+
+
+def _alcance_sincrono(rid: str, no_id: str, auth: Auth) -> dict:
+    with db.db(auth.contexto()) as cur:
+        _rede_existe(cur, rid)
+        cur.execute("SELECT 1 FROM plat.rede_topo_no WHERE id = %s::uuid AND rede_id = %s::uuid",
+                    (no_id, rid))
+        if cur.fetchone() is None:
+            raise ErroAPI(404, "no_inexistente", "este nó não existe na topologia desta rede")
+        # varredura de conectividade pura (o "traçado" desta passagem): tudo o que se alcança do nó andando
+        # pelas arestas, nos dois sentidos, sem regra de fluxo nem estado de chave (isso é o item seguinte
+        # da linha L4 — fronteira honesta, docs/rede/TOPOLOGIA.md seção 6). UNION (não ALL) sobre o id da
+        # aresta é o que garante a parada em grafo com ciclo.
+        cur.execute(
+            "WITH RECURSIVE alc(aresta_id, no_a, no_b) AS ("
+            "  SELECT a.id, a.no_origem_id, a.no_destino_id FROM plat.rede_topo_aresta a "
+            "  WHERE a.rede_id = %s::uuid AND %s::uuid IN (a.no_origem_id, a.no_destino_id)"
+            "  UNION"
+            "  SELECT a.id, a.no_origem_id, a.no_destino_id FROM plat.rede_topo_aresta a "
+            "  JOIN alc ON a.rede_id = %s::uuid "
+            "   AND (a.no_origem_id IN (alc.no_a, alc.no_b) OR a.no_destino_id IN (alc.no_a, alc.no_b))"
+            ") SELECT count(*) AS arestas, "
+            "  (SELECT count(*) FROM (SELECT no_a FROM alc UNION SELECT no_b FROM alc) n) AS nos "
+            "FROM alc",
+            (rid, no_id, rid),
+        )
+        r = cur.fetchone()
+        cur.execute(
+            "SELECT count(*) AS n FROM plat.rede_topo_area_suja WHERE rede_id = %s::uuid", (rid,))
+        areas_sujas = cur.fetchone()["n"]
+        # o traçado atravessa área suja se alguma aresta alcançada toca o polígono de uma área aberta:
+        # nesse caso o resultado acima é calculado sobre índice POSSIVELMENTE velho e não é confiável.
+        cur.execute(
+            "WITH RECURSIVE alc(aresta_id, no_a, no_b) AS ("
+            "  SELECT a.id, a.no_origem_id, a.no_destino_id FROM plat.rede_topo_aresta a "
+            "  WHERE a.rede_id = %s::uuid AND %s::uuid IN (a.no_origem_id, a.no_destino_id)"
+            "  UNION"
+            "  SELECT a.id, a.no_origem_id, a.no_destino_id FROM plat.rede_topo_aresta a "
+            "  JOIN alc ON a.rede_id = %s::uuid "
+            "   AND (a.no_origem_id IN (alc.no_a, alc.no_b) OR a.no_destino_id IN (alc.no_a, alc.no_b))"
+            ") SELECT EXISTS ("
+            "  SELECT 1 FROM plat.rede_topo_aresta a JOIN plat.rede_topo_area_suja s "
+            "   ON s.rede_id = a.rede_id AND ST_Intersects(s.geom, a.geom) "
+            "  WHERE a.id IN (SELECT aresta_id FROM alc)) AS atravessa",
+            (rid, no_id, rid),
+        )
+        atravessa = cur.fetchone()["atravessa"]
+        return {
+            "no_inicio": no_id, "nos_alcancados": r["nos"], "arestas_alcancadas": r["arestas"],
+            "areas_sujas_abertas": areas_sujas, "atravessa_area_suja": atravessa,
+        }
+
+
+@router.get("/{rede_id}/topologia/alcance", openapi_extra=LER)
+async def alcance(rede_id: str, no: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Traçado mínimo de conectividade: o conjunto de nós/arestas alcançáveis a partir de `no`. Sem regra de
+    fluxo (montante/jusante) nem estado de chave — isso é o item seguinte da linha L4."""
+    rid = _uuid_ok(rede_id)
+    nid = _uuid_ok_no(no)
+    return await run_in_threadpool(_alcance_sincrono, rid, nid, auth)
+
+
+def _uuid_ok_no(valor: str) -> str:
+    try:
+        return str(uuid_mod.UUID(valor))
+    except (ValueError, AttributeError, TypeError) as e:
+        raise ErroAPI(404, "no_inexistente", "nó inexistente") from e
+
+
+# --- traçado: conectado, subrede (L4-02-a), laços, caminho_curto, isolados (L4-02-d) --------------------
+
+def _tracar_sincrono(rid: str, corpo: TracadoEntrada, auth: Auth, request: Request) -> dict:
+    with db.db(auth.contexto()) as cur:
+        _rede_existe(cur, rid)
+        barreiras = [b.model_dump() for b in corpo.barreiras]
+        try:
+            if corpo.tipo in tracado.TIPOS_TRACADO:
+                resultado = tracado.tracar(
+                    cur, auth.tenant_id, rid, corpo.tipo,
+                    [p.model_dump() for p in corpo.pontos_partida], barreiras,
+                )
+            elif corpo.tipo in fluxo.TIPOS_FLUXO:
+                # o sentido vem do controlador de subrede (L4-02-b) ou do atributo de fluxo (L4-18); quem
+                # escolhe é `direcao.tracar_direcao`, e a resposta sempre diz qual foi em `origem_direcao`.
+                resultado = direcao.tracar_direcao(
+                    cur, auth.tenant_id, rid, corpo.tipo,
+                    [p.model_dump() for p in corpo.pontos_partida], barreiras, corpo.origem_direcao,
+                )
+            elif corpo.tipo == "lacos":
+                resultado = lacos.detectar_lacos(cur, auth.tenant_id, rid, barreiras)
+            elif corpo.tipo == "isolados":
+                resultado = lacos.isolados(cur, auth.tenant_id, rid, corpo.categoria_controlador, barreiras)
+            elif corpo.tipo == "caminho_curto":
+                if len(corpo.pontos_partida) != 1:
+                    raise ErroAPI(422, "origem_invalida",
+                                  "caminho_curto exige exatamente um ponto em pontos_partida (a origem)")
+                if corpo.destino is None:
+                    raise ErroAPI(422, "destino_obrigatorio", "caminho_curto exige o campo 'destino'")
+                resultado = lacos.caminho_curto(
+                    cur, auth.tenant_id, rid, corpo.pontos_partida[0].model_dump(),
+                    corpo.destino.model_dump(), corpo.atributo_custo, corpo.k, barreiras,
+                )
+            else:  # nunca alcançado — o pattern do pydantic já barrou; guarda por clareza
+                raise ErroAPI(422, "tipo_invalido", f"tipo desconhecido: {corpo.tipo}")
+        except psycopg2.Error as e:  # noqa: BLE001 — erro do banco vira mensagem legível, nunca 500 cru
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(cur, request, "redes/tracar", "rede", rid,
+                         {"tipo": corpo.tipo, "contagem": resultado.get("contagem"),
+                          "duracao_ms": resultado.get("duracao_ms")})
+    return resultado
+
+
+@router.post("/{rede_id}/tracar", status_code=200, openapi_extra=LER)
+async def tracar_rede(rede_id: str, corpo: TracadoEntrada, request: Request,
+                      auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Traça `tipo=conectado` (tudo que se alcança do(s) ponto(s) de partida, respeitando a traversabilidade
+    de cada dispositivo e as barreiras) ou `tipo=subrede` (o mesmo, mas parando em qualquer controlador de
+    outra subrede — hoje, categoria `transformacao` do pacote); ou, item L4-02-d-lacos-e-caminho-curto:
+    `tipo=lacos` (ciclos por componente biconexo, `pgr_biconnectedComponents`), `tipo=isolados` (elementos sem
+    caminho a nenhuma feição da categoria `categoria_controlador`, padrão `fonte`, `pgr_connectedComponents`)
+    ou `tipo=caminho_curto` (origem em `pontos_partida[0]`, `destino`, custo = `atributo_custo` ou o
+    comprimento geodésico por padrão; `k` alternativas por `pgr_ksp` quando `k>1`); ou, item
+    itens L4-18-rede-simples-trace-network e L4-02-b-montante-jusante, `tipo=montante`/`tipo=jusante`: numa
+    rede com controlador de subrede em tier hierárquico o sentido vem da DISTÂNCIA AO CONTROLADOR (jusante de
+    um ponto = o que só chega ao controlador passando por ele); sem controlador, vem da DIREÇÃO DE FLUXO
+    declarada no atributo `direcao_fluxo` de cada trecho (digitalizada/contra/indeterminada), que para, com
+    aviso por trecho, em toda aresta indeterminada. `origem_direcao` no pedido impõe um dos dois, e a
+    resposta sempre diz qual valeu; em malha (tier particionado) sem atributo, e em laço, a resposta é
+    `direcao='indeterminado'` com o motivo e os nós do laço, nunca um sentido arbitrado. Ponto de partida, destino
+    e barreira são a mesma forma: feição+terminal ou coordenada com tolerância. Não exige `rede.editar`: é
+    leitura sobre o índice já construído (mesmo privilégio de `topologia/alcance`), nunca grava nada na rede.
+    Sem `response_model` fixo porque cada `tipo` devolve um formato diferente (ver `docs/openapi.json` para o
+    formato de cada um, e os testes de cada item para exemplo)."""
+    rid = _uuid_ok(rede_id)
+    resultado = await run_in_threadpool(_tracar_sincrono, rid, corpo, auth, request)
+    return resultado
