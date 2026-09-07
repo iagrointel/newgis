@@ -3,6 +3,15 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L5-06-motor-widgets: motor de widgets sem framework)
+
+- **Motor de widgets** (`web/js/widgets/`): registro com 6 manifestos validados (mapa, legenda, tabela, texto,
+  botão, filtro), `import()` só dos módulos citados no documento, barramento com corte de recursão, ligações
+  evento → ação por id de nó, caixa de erro nomeada para tipo desconhecido, configuração fora do esquema e
+  módulo que não carrega; alternador de chrome de edição no mesmo módulo; página `/aplicativo`; `<plat-mapa>`
+  embrulha o visualizador. Medido em `tests/medidas/L5-06-motor-widgets.json` (3 módulos = 1,32 kB por widget,
+  primeira pintura 48 ms, carga 5,1). ADR `docs/adr/20260907T1930-motor-de-widgets.md`.
+
 ## turno 4, setembro de 2026 (item L2-01-mapa-web: visualizador de mapa próprio, do Martin à impressão)
 
 Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava chegar a `master`.
