@@ -1,0 +1,52 @@
+{
+  "item": "L2-04-b-featureserver-catalogo-metadados",
+  "medido_em": "2026-09-07",
+  "base": "plat_til204bfeatu (base da trilha, nunca o schema plat de producao)",
+  "clausulas": [
+    {
+      "clausula": "GET de cada rota em conformidade de esquema com a doc Esri (chaves obrigatorias)",
+      "estado": "feito",
+      "prova": "tests/api/test_diretorio_esri.py: test_rest_info_traz_authinfo_apontando_para_generate_token, test_catalogo_lista_a_camada_e_a_pasta, test_descritor_do_servico_tem_as_chaves_obrigatorias, test_descritor_da_camada_tem_campos_tipos_e_indices_do_banco, test_layers_devolve_o_mesmo_descritor_da_camada, test_item_info_e_metadata_vem_do_catalogo",
+      "detalhe": "conjuntos CHAVES_INFO/CHAVES_CATALOGO/CHAVES_SERVICO/CHAVES_CAMADA/CHAVES_CAMPO comparados por diferenca de conjunto; campos e indices conferidos contra information_schema/pg_index da tabela real"
+    },
+    {
+      "clausula": "QGIS 'ArcGIS REST Server' conecta ao diretorio e lista as camadas da demo (captura)",
+      "estado": "nao feito",
+      "razao": "sem QGIS nem navegador nesta maquina (google-chrome headless quebra aqui, ver CLAUDE.md); nao ha como produzir a captura. O que foi medido no lugar: o contrato que o provedor do QGIS le (rest/info, rest/services, FeatureServer, /{id}, /layers) responde com as chaves obrigatorias e com f=json|pjson|html e callback"
+    },
+    {
+      "clausula": "Python arcgis.gis.GIS + FeatureLayer(url) le fields e dominios (biblioteca na venv)",
+      "estado": "nao feito",
+      "razao": "a biblioteca arcgis nao esta instalada e instalar contraria a regra 6 do brief (resolvedor mexeria em versoes fixadas; disco a 93 por cento). Nao foi instalada nem simulada"
+    },
+    {
+      "clausula": "generateToken devolve token de servico com escopo de leitura e expiracao <= 24 h",
+      "estado": "feito",
+      "prova": "tests/api/test_diretorio_esri.py::test_generate_token_devolve_token_de_leitura_com_validade_de_ate_24h",
+      "detalhe": "pedido de expiration=100000 minutos devolveu expires com no maximo 24 h a frente; escopos ['catalogo:ler','camada:ler','tiles:ler']; o token gerado abre o diretorio e e recusado em POST /api/tokens"
+    },
+    {
+      "clausula": "camada de B ausente no diretorio de A (teste cruzado)",
+      "estado": "feito",
+      "prova": "tests/api/test_diretorio_esri.py::test_camada_de_b_ausente_no_diretorio_de_a",
+      "detalhe": "duas camadas reais criadas no mesmo instante, uma em demo e outra em demo2; o catalogo do token de A nao lista a de B e o FeatureServer dela responde 404 pelo mesmo token"
+    },
+    {
+      "clausula": "renderer convertido para os 3 tipos abre no QGIS com as cores do estilo (leitura do JSON)",
+      "estado": "parcial",
+      "prova": "tests/unit/test_renderizador_esri.py (10 testes) e tests/api/test_diretorio_esri.py::test_estilo_da_camada_vira_renderer_unique_value",
+      "detalhe": "os tres tipos (simple, uniqueValue, classBreaks) sao gerados e conferidos canal a canal no JSON, com labelingInfo; a metade 'abre no QGIS' nao foi feita pela mesma razao da clausula do QGIS acima"
+    }
+  ],
+  "testes": {
+    "tests/api/test_diretorio_esri.py": 19,
+    "tests/unit/test_renderizador_esri.py": 22,
+    "tests/unit/test_formato_esri.py": 10,
+    "resultado": "todos verdes na base da trilha"
+  },
+  "fora_de_escopo_declarado": [
+    "dominios codificados/intervalo e subtipos por campo: a linha L2-10-a nao esta nesta base (ramo wt/il210brelac, nao juntado). fields[].domain sai null e types/subtypes saem vazios, que e como a Esri descreve camada sem dominio e sem subtipo",
+    "relationships: idem, L2-10-b nao esta nesta base; a lista sai vazia, nunca inventada",
+    "capabilities de escrita (Create/Update/Delete/Editing/Sync): a edicao transacional (L2-03-a) nao esta nesta base, entao capabilities anuncia so Query e syncEnabled e false"
+  ]
+}
