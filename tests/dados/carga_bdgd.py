@@ -54,12 +54,21 @@ _SQL_FASE = (
 )
 
 
-def carregar(cur, tenant_id: int, rede_id: str) -> dict:
-    """Insere a rede inteira da cooperativa nas camadas `plat.rede_feicao_*` da rede `rede_id` (que já tem de
-    estar com o pacote eletrica-br importado). Um INSERT...SELECT por tabela de origem; devolve a contagem e
-    o tempo de cada uma. A conexão já vem com o contexto do inquilino (RLS vale para esta carga também)."""
+def carregar(cur, tenant_id: int, rede_id: str, ctmts: list[str] | None = None,
+             com_postes: bool = True) -> dict:
+    """Insere a rede da cooperativa nas camadas `plat.rede_feicao_*` da rede `rede_id` (que já tem de estar
+    com o pacote eletrica-br importado). Um INSERT...SELECT por tabela de origem; devolve a contagem e o
+    tempo de cada uma. A conexão já vem com o contexto do inquilino (RLS vale para esta carga também).
+
+    `ctmts` (item L4-04-b) restringe a carga a uma lista de alimentadores DO ARQUIVO — nada é fabricado, é o
+    mesmo dado com um recorte declarado. Serve para medir em janela de tempo menor que a da rede inteira, e
+    quem usa tem de dizer no relatório quantos dos 20 alimentadores entraram. `com_postes=False` deixa de
+    fora `certaja.ponnot` (60.549 postes que, por serem `sem_terminal`, dão zero nó de topologia — medido no
+    item L4-01-b)."""
     tipos = _tipos_da_rede(cur, rede_id)
     cron = {}
+    recorte_linha = "" if ctmts is None else " AND ctmt = ANY(%(ctmts)s)"
+    recorte_ponto = "" if ctmts is None else " WHERE ctmt = ANY(%(ctmts)s)"
 
     def rodar(rotulo, sql, params):
         t0 = time.perf_counter()
@@ -75,15 +84,15 @@ def carregar(cur, tenant_id: int, rede_id: str) -> dict:
         rodar(rotulo, f"""
             WITH carga AS (
               INSERT INTO plat.rede_feicao_linha(tenant_id, rede_id, tipo_id, geom, fase_bitmask, atributos)
-              SELECT %s, %s::uuid, %s::uuid,
+              SELECT %(a)s, %(b)s::uuid, %(c)s::uuid,
                      ST_GeometryN(ST_GeomFromText(wkt, 4326), 1),
                      {_SQL_FASE},
                      {atributos_json}
               FROM {origem}
-              WHERE wkt IS NOT NULL
+              WHERE wkt IS NOT NULL{recorte_linha}
               RETURNING 1
             ) SELECT count(*) AS n FROM carga
-        """, (tenant_id, rede_id, tipo_id))
+        """, {"a": tenant_id, "b": rede_id, "c": tipo_id, "ctmts": ctmts})
 
     carga_linha(
         "ssdmt", "certaja.ssdmt",
@@ -104,23 +113,24 @@ def carregar(cur, tenant_id: int, rede_id: str) -> dict:
     rodar("trafo", """
         WITH carga AS (
           INSERT INTO plat.rede_feicao_ponto(tenant_id, rede_id, tipo_id, geom, atributos)
-          SELECT %s, %s::uuid, %s::uuid, ST_SetSRID(ST_MakePoint(x, y), 4326),
+          SELECT %(a)s, %(b)s::uuid, %(c)s::uuid, ST_SetSRID(ST_MakePoint(x, y), 4326),
                  jsonb_build_object('cod_id', cod_id, 'pot_nom', pot_nom, 'tip_trafo', tip_trafo,
                                     'ctmt', ctmt, 'uni_tr_at', uni_tr_at)
-          FROM certaja.trafo
+          FROM certaja.trafo""" + recorte_ponto + """
           RETURNING 1
         ) SELECT count(*) AS n FROM carga
-    """, (tenant_id, rede_id, tipos[("transformador_de_distribuicao", 1)]))
+    """, {"a": tenant_id, "b": rede_id, "c": tipos[("transformador_de_distribuicao", 1)], "ctmts": ctmts})
 
-    rodar("ponnot", """
-        WITH carga AS (
-          INSERT INTO plat.rede_feicao_ponto(tenant_id, rede_id, tipo_id, geom, atributos)
-          SELECT %s, %s::uuid, %s::uuid, ST_SetSRID(ST_MakePoint(x, y), 4326),
-                 jsonb_build_object('cod_id', cod_id, 'tip_pn', tip_pn, 'pos', pos)
-          FROM certaja.ponnot
-          RETURNING 1
-        ) SELECT count(*) AS n FROM carga
-    """, (tenant_id, rede_id, tipos[("ponto_notavel", 1)]))
+    if com_postes:
+        rodar("ponnot", """
+            WITH carga AS (
+              INSERT INTO plat.rede_feicao_ponto(tenant_id, rede_id, tipo_id, geom, atributos)
+              SELECT %s, %s::uuid, %s::uuid, ST_SetSRID(ST_MakePoint(x, y), 4326),
+                     jsonb_build_object('cod_id', cod_id, 'tip_pn', tip_pn, 'pos', pos)
+              FROM certaja.ponnot
+              RETURNING 1
+            ) SELECT count(*) AS n FROM carga
+        """, (tenant_id, rede_id, tipos[("ponto_notavel", 1)]))
 
     return cron
 
