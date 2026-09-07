@@ -39,6 +39,7 @@ from app.catalogo import (
     transferencia,
 )
 from app.conexao import rotas as rotas_conexao
+from app.conexao import rotas_wms_wmts
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
@@ -103,6 +104,8 @@ ROUTERS = [
     rotas_acervo.router,
     # --- conexão externa (L6-02-a): /api/conexoes, /api/conexoes/{id}, /api/conexoes/{id}/testar
     rotas_conexao.router,
+    # --- conector WMS/WMTS externo (L6-02-b): /api/conexoes/{id}/wms/*, /api/conexoes/{id}/wmts/*
+    rotas_wms_wmts.router,
     # --- arquivos/objetos (L0-11): /api/arquivos genérico por inquilino; /api/objetos/{chave} já vem do catálogo
     # (rotas_compartilhamento, entrega por URL assinada)
     rotas_arquivos,

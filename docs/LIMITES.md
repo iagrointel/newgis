@@ -150,6 +150,19 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `CONEXAO_REDIRECT_MAX` | `5` | cada hop é revalidado do zero (host novo pode ser interno) |
 | `CONEXAO_RESPOSTA_MAX_BYTES` | `1048576` | 1 MiB: o teste de saúde confere status/corpo curto |
 
+## WMS/WMTS externo (L6-02-b-wms-wmts): GetCapabilities pode ser grande (catálogo com centenas de camadas);
+
+| nome | valor | explicação |
+|---|---|---|
+| `CONEXAO_WMS_CAPACIDADES_MAX_BYTES` | `20971520` | 20 MiB |
+| `CONEXAO_WMS_CAPACIDADES_TIMEOUT_S` | `15.0` | — |
+| `CONEXAO_WMS_MAPA_MAX_BYTES` | `8388608` | 8 MiB: uma única imagem GetMap/tile, nunca um mosaico |
+| `CONEXAO_WMS_MAPA_TIMEOUT_S` | `20.0` | — |
+| `CONEXAO_WMS_FEICAO_MAX_BYTES` | `2097152` | 2 MiB: resposta de GetFeatureInfo (texto/GML/JSON) |
+| `CONEXAO_WMS_LARGURA_MAX` | `2048` | — |
+| `CONEXAO_WMS_ALTURA_MAX` | `2048` | — |
+| `CONEXAO_WMTS_TILE_MAX_BYTES` | `4194304` | 4 MiB: um único tile (256/512 px), nunca a pirâmide |
+
 ## ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 
 | nome | valor | explicação |

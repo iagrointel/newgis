@@ -3,6 +3,45 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L6-02-b-wms-wmts: conector WMS/WMTS externo)
+
+Conector de WMS (1.1.1/1.3.0) e WMTS (KVP e RESTful) em `app/conexao/wms_wmts.py`, sobre `buscar_seguro`
+(item L6-02-a), sem `owslib` (não instalado nesta máquina): GetCapabilities analisado à mão com `defusedxml`
+(nunca resolve entidade externa — defesa contra XXE independente de tamanho); WMS devolve bbox sempre
+lon/lat mesmo quando a fonte declara eixo lat/lon (WMS 1.3.0 + EPSG:4326/4674/4269/4258); GetMap/
+GetFeatureInfo com CRS/tag corretos por versão (`CRS`/`I`/`J` em 1.3.0, `SRS`/`X`/`Y` em 1.1.1); WMTS com
+TileMatrixSet nativo 3857 gera template `{z}/{x}/{y}` direto para o MapLibre; TileMatrixSet noutro CRS passa
+por `mosaico_tile_reprojetado` (GDAL via `rasterio.warp`, até 4 tiles nativos por tile de saída, aviso
+`mosaico_parcial` acima disso). Rotas em `app/conexao/rotas_wms_wmts.py`
+(`/api/conexoes/{id}/wms/capacidades|mapa|feicao`, `/wmts/capacidades|tile-info|tile/{tms}/{z}/{x}/{y}`),
+credencial injetada só no proxy (nunca sai na resposta), cache em processo por (conexão, operação,
+parâmetros).
+
+Três bugs reais só apareceram ao testar contra serviço público de verdade (a fixture da análise não os
+pegava): `_href_get` lia `href` no elemento `<Get>` em vez do `<OnlineResource>` filho (URL de GetMap/
+GetFeatureInfo sempre caía no `url_base`); `analisar_wmts` usava a função de busca de operação do WMS
+(`<Capability>/<Request>`) para achar a URL de GetTile do WMTS, que declara em `<OperationsMetadata>/
+<Operation>` — `url_kvp` sempre `None`; `_normalizar_crs` não entendia a forma URN com versão do meio
+(`urn:ogc:def:crs:EPSG:6.3:3857`, do GeoWebCache do BDGEx) — TileMatrixSet 3857 nunca era reconhecido como
+nativo. Um quarto, mais sério: `TopLeftCorner` do WMTS é lido na ordem de eixo do CRS declarado (tabela 7 da
+1.0.0), e para CRS geográfico (mesma lista EPSG:4326/4674/4269/4258 do WMS 1.3.0) isso é (lat, lon) — o
+código tratava sempre como (x, y), e o cálculo de índice de tile em `mosaico_tile_reprojetado` saía da
+grade (`ValueError: negative dimensions`) contra o BDGEx real. Corrigido normalizando `topo_esquerdo` para
+(x, y) = (leste/lon, norte/lat) sempre, na análise.
+
+Portão de pronto (`tests/medidas/L6-02-b-wms-wmts.json`): 6 testes sem rede com fixture em
+`tests/unit/test_wms_wmts_analise.py` (WMS 1.1.1, eixo invertido 1.3.0, XXE de 40 MiB simulado, teto de
+bytes, WMTS KVP nativo 3857, WMTS RESTful EPSG:4674 não-nativo) + 3 testes com rede real marcados
+`pytest.mark.lento` em `tests/api/test_wms_wmts.py` contra dois serviços públicos brasileiros medidos em
+07/09/2026: WMS = INDE (`geoservicos.inde.gov.br`, 1.3.0, 5.126+ camadas) e WMTS = BDGEx (Exército;
+`ctmmultiescalas_mercator` nativo `GoogleMapsCompatible`/3857, `ctm250` só em `bdgex`/EPSG:4326). GetMap,
+GetFeatureInfo (atributos reais) e o proxy de reprojeção (tile geográfico → PNG 3857) passam fim-a-fim.
+Ressalva honesta: nenhum WMTS público brasileiro com EPSG:4674 EXATO foi encontrado (IBGE devolveu HTTP
+500 no `gwc/wmts` nas tentativas); o caso 4674 literal fica provado sem rede pela fixture/adversário, e o
+mesmo caminho de código é provado com rede real contra EPSG:4326 (mesma família geográfica, mesmo bug de
+eixo, mesma correção). A cláusula "vê no mapa" foi verificada no nível de API (GetMap devolve PNG válido
+consumível pelo MapLibre), não por Playwright — marcado como limitação, não como aprovado sem prova.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
