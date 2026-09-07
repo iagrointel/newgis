@@ -49,6 +49,67 @@
       </div>
     </section>
 
+    <section class="cartao" id="catalogo-cartao" aria-labelledby="t-catalogo">
+      <h2 id="t-catalogo">conectores públicos prontos <span id="catalogo-total" class="contagem">…</span></h2>
+      <p class="ajuda">catálogo de serviços públicos (WMS, WFS, WMTS, ArcGIS REST, STAC, OGC API) retestado por HTTP toda
+        semana: só entra na lista quem respondeu o documento do protocolo no último teste; entrada que falhou vai
+        para "fora do ar" e volta sozinha quando passar. "adicionar" cria a conexão com a ficha de procedência do
+        catálogo (órgão, licença, data do teste). Licença "nao-declarada" = o órgão não publica termo em página própria.</p>
+      <div class="linha-ferramentas">
+        <label for="catalogo-tipo" class="sr-only">tipo</label>
+        <select id="catalogo-tipo">
+          <option value="">todos os tipos</option>
+          <option value="wms">WMS</option>
+          <option value="wfs">WFS</option>
+          <option value="wmts">WMTS</option>
+          <option value="esri_rest">ArcGIS REST</option>
+          <option value="stac">STAC</option>
+          <option value="ogc_api">OGC API</option>
+        </select>
+        <label for="catalogo-q" class="sr-only">buscar por órgão, nome ou endereço</label>
+        <input id="catalogo-q" type="search" maxlength="200" title="órgão, nome ou endereço">
+        <button type="button" id="catalogo-buscar" class="pequeno">filtrar</button>
+        <span id="catalogo-resumo" class="ajuda"></span>
+      </div>
+      <plat-aviso id="catalogo-aviso"></plat-aviso>
+      <div class="tabela-rolagem">
+        <table id="catalogo-lista" class="tabela">
+          <caption class="sr-only">conectores públicos vivos no último teste</caption>
+          <thead>
+            <tr>
+              <th scope="col">órgão</th>
+              <th scope="col">nome</th>
+              <th scope="col">tipo</th>
+              <th scope="col">licença</th>
+              <th scope="col">testado em</th>
+              <th scope="col"><span class="sr-only">ações</span></th>
+            </tr>
+          </thead>
+          <tbody id="catalogo-corpo"></tbody>
+        </table>
+      </div>
+      <details id="catalogo-fora">
+        <summary>fora do ar no último teste <span id="catalogo-fora-total" class="contagem">…</span></summary>
+        <p class="ajuda">saíram da lista acima; não viram conexão por aqui (a API recusa com 409). Voltam quando o
+          reteste semanal passar.</p>
+        <div class="tabela-rolagem">
+          <table id="catalogo-fora-lista" class="tabela">
+            <caption class="sr-only">conectores públicos fora do ar</caption>
+            <thead>
+              <tr>
+                <th scope="col">órgão</th>
+                <th scope="col">nome</th>
+                <th scope="col">tipo</th>
+                <th scope="col">motivo</th>
+                <th scope="col">testado em</th>
+              </tr>
+            </thead>
+            <tbody id="catalogo-fora-corpo"></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
     <plat-dialogo id="dialogo"></plat-dialogo>
   </main>
 </div>
