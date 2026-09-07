@@ -150,6 +150,18 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `CONEXAO_REDIRECT_MAX` | `5` | cada hop é revalidado do zero (host novo pode ser interno) |
 | `CONEXAO_RESPOSTA_MAX_BYTES` | `1048576` | 1 MiB: o teste de saúde confere status/corpo curto |
 
+## fonte de dado registrada: conector postgres_fdw (L0-04-i-fonte-registrada; ver
+
+| nome | valor | explicação |
+|---|---|---|
+| `CONEXAO_PG_CATEGORIAS_BLOQUEADAS` | `frozenset({'link_local', 'nao_especificado', 'multicast'})` | — |
+| `CONEXAO_PG_BANCOS_PROIBIDOS` | `frozenset({'iagro_sat'})` | nome do banco de produção da casa, em qualquer host |
+| `CONEXAO_PG_CONECTAR_TIMEOUT_S` | `5` | — |
+| `CONEXAO_PG_ESTATEMENT_TIMEOUT_MS` | `8000` | listar tabelas/colunas nunca trava a rota |
+| `CONEXAO_PG_TABELAS_MAX` | `500` | teto de tabelas devolvidas por GET .../tabelas |
+| `CONEXAO_PG_COLUNAS_MAX` | `300` | teto de colunas por tabela publicada |
+| `CONEXAO_PG_PUBLICAR_LOTE_MAX` | `50` | teto de tabelas por chamada de publicar-em-massa |
+
 ## ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 
 | nome | valor | explicação |

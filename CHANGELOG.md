@@ -3,6 +3,51 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L0-04-i-fonte-registrada: conector postgres_fdw — "fonte de dado registrada")
+
+"Fonte de dado registrada" = o "Data store item" da Esri Enterprise 11.4 / o "store" do GeoServer, restrito
+ao PostgreSQL/PostGIS externo. Reaproveita o modelo genérico de L6-02-a (`plat.conexao`, credencial cifrada
+AES-GCM): registrar (`POST /api/conexoes` tipo `postgres_fdw`), listar tabelas do banco do cliente
+(`GET /api/conexoes/{id}/tabelas`, via `pg_catalog`, nunca cópia de dado), publicar em massa
+(`POST /api/conexoes/{id}/publicar-em-massa` — uma camada `camada_vetorial` referenciada por tabela, o
+"bulk publish" da Esri) e ver o estado da fonte por camada (`GET /api/conexoes/{id}/camadas`). Cada tabela
+publicada vira `FOREIGN TABLE` + `VIEW` (SECURITY DEFINER `plat.conexao_fdw_publicar`, migração
+`20260907T0148`, porque `plat_app` não tem `CREATE` nem `USAGE` na extensão `postgres_fdw`); a view injeta
+`tenant_id` constante e filtra `WHERE plat.tenant_atual() = <constante>` — o predicado de uma RLS, porque
+uma tabela estrangeira não aceita política sobre coluna que não tem.
+
+Defesa de alvo (`app/conexao/pgfdw.py`) é DIFERENTE da defesa de SSRF HTTP (`seguranca.py`): um Postgres de
+cliente pode estar legitimamente numa rede privada/VPN, então só metadado de nuvem/multicast/não-especificado
+são bloqueados por categoria de IP; o banco `iagro_sat` é recusado em QUALQUER host (lista explícita) e o
+(host,porta,banco) do `PLAT_DSN` desta instalação é recusado por IP — duas defesas do mesmo alvo por
+caminhos diferentes. `app/conexao/seguranca.py` ganhou `resolver_ips_bloqueando_categorias` (extração
+pequena e genérica, reaproveitada pelos dois módulos).
+
+Os 3 casos do adversário: (1) usuário SUPERUSER do lado do banco do cliente — registro aceito com aviso, a
+escrita continua estruturalmente impossível (a view só tem `GRANT SELECT`; provado tentando `INSERT` e
+recebendo `InsufficientPrivilege`); (2) aponta para o próprio `iagro_sat` — `422` antes de qualquer
+gravação; (3) injeção no nome da tabela em `publicar-em-massa` — aquele item do lote vem com erro, o resto
+publica normal, a tabela alvo do adversário confere intacta.
+
+e2e completo contra um segundo Postgres real (docker `postgres:16-alpine`, 3 tabelas de dado aberto formato
+IBGE): registrar → listar 3 tabelas → publicar em massa → 3 `camada_vetorial` no catálogo com dado idêntico
+à origem (conferido linha a linha, view lida como a aplicação leria) → parar o container → `503
+fonte_indisponivel` com mensagem, a camada permanece no catálogo com `estado_fonte: "fonte_indisponivel"` →
+religar o container. Credencial nunca em claro no banco (`encconexao:v1:...`) nem em nenhuma das 3 chamadas
+capturadas por `caplog`. 32 testes unitários (`tests/unit/test_pgfdw_seguranca.py`) + 5 testes de API/e2e
+(`tests/api/test_pgfdw.py`, pulados sem falhar quando o docker de teste não está no ar).
+
+Risco aceito e documentado (não escondido): `CREATE/ALTER USER MAPPING ... OPTIONS (password ...)` do
+`postgres_fdw` coloca a senha em texto claro dentro da DDL executada — limitação do próprio `postgres_fdw`
+(o Esri Enterprise e o GeoServer têm a mesma, guardando a senha do Data Store/Store em configuração de
+servidor). Achado corrigido durante a própria trilha: a primeira versão gravava `CREATE USER MAPPING FOR
+plat_app` fixo — quebra em toda base de trilha (papel `plat_t<trilha>_app`); trocado para `session_user`,
+que funciona igual em produção e em qualquer trilha. `plat.item.url` exige `http(s)`; camada `postgres_fdw`
+grava `url = NULL` (a origem fica em `dados.procedencia`, mesmo padrão dos outros protocolos referenciados).
+`srid` do schema de `camada_vetorial` é sempre obrigatório (`minimum: 1`) mesmo sem geometria — tabela não
+espacial grava `srid: 4326` por convenção neutra (documentado no ADR, não escondido). ADR
+`docs/adr/20260907T0148-fonte-registrada-postgres-fdw.md`.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

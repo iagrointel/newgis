@@ -822,8 +822,14 @@ conexoes/{id}/testar` chama `buscar_seguro` com timeout curto e grava `saude`/`s
 `saude_latencia_ms`/`saude_verificada_em`.
 
 Ambos os itens entregam só o MODELO; a view com RLS por assinatura sobre a tabela original do acervo
-(L6-01-b) e os 15 conectores concretos que de fato leem WMS/WFS/STAC/... (L6-02-b em diante) ficam para os
-próximos turnos.
+(L6-01-b) e os 14 conectores concretos restantes que de fato leem WMS/WFS/STAC/... (L6-02-b em diante) ficam
+para os próximos turnos — **o primeiro conector concreto (`postgres_fdw`) foi construído no item
+L0-04-i-fonte-registrada** (turno 4): `plat.conexao_fdw_publicar` (SECURITY DEFINER, migração
+`20260907T0148`) cria `SERVER`+`USER MAPPING`+`FOREIGN TABLE`+`VIEW` por tabela publicada, porque `plat_app`
+não tem `CREATE` nem `USAGE` na extensão. A defesa de alvo desse conector É DIFERENTE da defesa de SSRF HTTP
+acima (TCP direto, não HTTP): bloqueia menos categoria de IP (um Postgres de cliente pode estar numa rede
+privada de propósito) e mais por lista explícita (banco/host de produção da própria casa). Ver `docs/adr/
+20260907T0148-fonte-registrada-postgres-fdw.md` e MANUAL.md §18.2a.
 
 ## 16. Ficha do acervo completa e gate de LGPD (itens L6-01-d-ficha-fonte e L6-01-f-lgpd)
 
