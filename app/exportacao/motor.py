@@ -173,6 +173,18 @@ def crs_de_saida(formato: Formato, srid_pedido: int | None) -> int | None:
     return int(srid_pedido) if srid_pedido else None
 
 
+def nome_camada_seguro(nome: str, formato: Formato) -> str:
+    """Nome da CAMADA dentro do arquivo. O OpenFileGDB recusa hífen e ponto ("Invalid layer name",
+    medido em 07/09/2026 com o nome `zt-sel-filegdb`), então para ele — e só para ele — o nome é
+    reduzido a letras, dígitos e sublinhado, começando por letra."""
+    if not formato.nome_camada_alfanumerico:
+        return nome
+    limpo = "".join(c if (c.isalnum() or c == "_") else "_" for c in nome).strip("_")
+    if not limpo or not limpo[0].isalpha():
+        limpo = "camada_" + limpo
+    return limpo[:60]
+
+
 def zipar_diretorio(origem: Path, destino_zip: Path, nome_interno: str = "") -> None:
     """Zip de todos os arquivos que o driver escreveu (shapefile: .shp/.shx/.dbf/.prj/.cpg). `write` lê do
     disco em blocos — nenhum arquivo é montado inteiro em memória."""

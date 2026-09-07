@@ -62,6 +62,7 @@ class Formato:
     caminho_interno: str = ""        # nome da pasta/arquivo DENTRO do zip (formatos que zipam um diretório)
     linhas_max: int = 0              # teto de linhas do PRÓPRIO formato (0 = sem teto); XLSX = 1.048.576
     tilado: bool = False             # o arquivo é um conjunto de tiles: a contagem de feições não é a do banco
+    nome_camada_alfanumerico: bool = False   # o driver recusa nome de camada com hífen/ponto (File Geodatabase)
 
 
 FORMATOS: dict[str, Formato] = {f.nome: f for f in (
@@ -97,7 +98,7 @@ FORMATOS: dict[str, Formato] = {f.nome: f for f in (
                        "exportação REPROJETA para 4326 em vez de gravar coordenada de outro CRS sob um "
                        "rótulo errado."),
     Formato("filegdb", "OpenFileGDB", ".zip", "application/zip", "File Geodatabase (zip)",
-            em_diretorio=True, zipar=True, caminho_interno="dados.gdb",
+            em_diretorio=True, zipar=True, caminho_interno="dados.gdb", nome_camada_alfanumerico=True,
             observacao="a .gdb é uma PASTA; o que se entrega é o zip dela, com a pasta dentro "
                        "(reabre em /vsizip/<arquivo>.zip/dados.gdb). Escrita pelo OpenFileGDB do próprio "
                        "GDAL, sem o SDK proprietário da Esri."),

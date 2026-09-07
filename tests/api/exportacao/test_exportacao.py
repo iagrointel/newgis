@@ -63,6 +63,8 @@ def contar_no_arquivo(caminho: Path, formato: str) -> int:
         alvo = f"/vsizip/{caminho}"
     elif formato == "kmz":
         alvo = f"/vsizip/{caminho}/doc.kml"
+    elif FORMATOS[formato].caminho_interno:
+        alvo = f"/vsizip/{caminho}/{FORMATOS[formato].caminho_interno}"
     r = subprocess.run(["ogrinfo", "-so", "-al", alvo], capture_output=True, text=True, timeout=600)
     assert r.returncode == 0, f"ogrinfo não reabriu {caminho.name}: {r.stderr[:400]}"
     contagens = [int(li.split(":", 1)[1]) for li in r.stdout.splitlines() if li.strip().startswith("Feature Count:")]
@@ -80,7 +82,10 @@ def test_onze_formatos_da_camada_de_100_mil_feicoes_reabertos_com_a_mesma_contag
     cliente = inquilino_a.admin
     tempos = {}
     reabertos = {}
-    for nome in FORMATOS:
+    # `pacote` sai de um item `mapa`, não de uma camada, e os formatos TILADOS (MVT/PMTiles) recortam a
+    # geometria por tile — a contagem deles não é a do banco. Os dois grupos têm portão próprio no item
+    # L2-01-l (tests/api/exportacao/test_exportacao_mapa.py); aqui ficam os de camada, feição a feição.
+    for nome in [n for n, f in FORMATOS.items() if n != "pacote" and not f.tilado]:
         inicio = time.monotonic()
         final = exportar(cliente, {"item_id": camada_a["item_id"], "formato": nome,
                                    "nome": f"zt-{nome}"}, timeout=600)
@@ -91,7 +96,8 @@ def test_onze_formatos_da_camada_de_100_mil_feicoes_reabertos_com_a_mesma_contag
         assert caminho.stat().st_size == final["bytes"] > 0, nome
         reabertos[nome] = contar_no_arquivo(caminho, nome)
 
-    assert reabertos == dict.fromkeys(FORMATOS, FEICOES), reabertos
+    assert reabertos == dict.fromkeys(reabertos, FEICOES), reabertos
+    assert len(reabertos) >= 13, sorted(reabertos)
     abertos_por_ogrinfo = [n for n, f in FORMATOS.items() if f.reabre_com_ogrinfo]
     assert len(abertos_por_ogrinfo) >= 10, abertos_por_ogrinfo
     medida("L0-04-h-exportar")(
