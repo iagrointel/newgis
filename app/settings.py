@@ -66,6 +66,12 @@ class Settings:
     PLAT_OSRM_URL: str
     PLAT_ROTA_MATRIZ_MAX: int
     PLAT_ROTA_ISOCRONA_MAX_PONTOS: int
+    # tiles vetoriais (L2-01-b): DSN do papel plat_leitor (LOGIN, sem BYPASSRLS), usado SÓ pela rota
+    # /internal/tiles/verificar (auth_request do nginx) para validar o token antes de o pedido chegar ao
+    # Martin — o Martin (martin-core GetTileWithQueryError) devolve 500 para QUALQUER erro do Postgres,
+    # nunca 401/403, então a checagem de "sem token = 401" tem de acontecer fora dele. Ausente = a rota
+    # devolve 503 (falha fechada: sem DSN de leitor, nenhum tile passa).
+    PLAT_DSN_LEITOR: str | None
     # item L7-31 (docs/HOMOLOGACAO.md): homologação reusa o MESMO banco iagro_sat, nunca um banco novo (disco a
     # 98%) — schema e canal de notificação viram configuráveis para que o mesmo código sirva os dois ambientes
     # sem colisão. Produção nunca declara estas 4 chaves no .env: os padrões abaixo reproduzem bit a bit o que
@@ -224,6 +230,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_ROTA_ISOCRONA_MAX_PONTOS=_inteiro(
             valores, "PLAT_ROTA_ISOCRONA_MAX_PONTOS", limites.ROTA_ISOCRONA_MAX_PONTOS_PADRAO, 4
         ),
+        PLAT_DSN_LEITOR=_opcional(valores, "PLAT_DSN_LEITOR"),
         PLAT_SCHEMA=schema,
         PLAT_SCHEMA_TRABALHO=_identificador(valores, "PLAT_SCHEMA_TRABALHO", "plat_trabalho"),
         PLAT_CANAL_JOB=_identificador(valores, "PLAT_CANAL_JOB", "plat_job"),
