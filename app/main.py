@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse
 
-from app import erros, limite_corpo, paginas
+from app import erros, limite_corpo, paginas, rotas_qr
 from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
 from app.auth import ldap as rotas_ldap
@@ -44,8 +44,8 @@ from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
-from app.multiescala.rotas import router as rotas_multiescala
 from app.mapa.rotas import router as rotas_mapa
+from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
@@ -127,6 +127,8 @@ ROUTERS = [
     rotas_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
+    # --- QR local para o widget compartilhar (L5-01-d)
+    rotas_qr.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
