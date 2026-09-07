@@ -7,7 +7,7 @@
    "comando": "scrollWidth <= clientWidth em pixel7"
   },
   "carregamento_pixel7_ms": {
-   "valor": 5,
+   "valor": 59.8,
    "unidade": "ms",
    "comando": "goto /visualizar?item até o mapa aparecer, viewport pixel7"
   },
@@ -17,7 +17,7 @@
    "comando": "scrollWidth <= clientWidth em ipad"
   },
   "carregamento_ipad_ms": {
-   "valor": 8.1,
+   "valor": 66.2,
    "unidade": "ms",
    "comando": "goto /visualizar?item até o mapa aparecer, viewport ipad"
   },
@@ -27,16 +27,16 @@
    "comando": "scrollWidth <= clientWidth em desktop1440"
   },
   "carregamento_desktop1440_ms": {
-   "valor": 13.4,
+   "valor": 57.7,
    "unidade": "ms",
    "comando": "goto /visualizar?item até o mapa aparecer, viewport desktop1440"
   },
   "arrasto_por_toque_ms": {
-   "valor": 148.9,
+   "valor": 149.1,
    "unidade": "ms",
    "comando": "PointerEvent sintético pointerType=touch, paleta mapa -> #tela, iPad (gen 7)"
   }
  },
- "gerado_em": "2026-09-07T15:29:21Z",
- "git_sha": "ec2f1ecb2ff7"
+ "gerado_em": "2026-09-07T15:33:08Z",
+ "git_sha": "2e75bab10bde"
 }
