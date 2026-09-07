@@ -25,12 +25,13 @@ import logging
 import secrets
 
 import httpx
-from fastapi import APIRouter, Path, Request
+from fastapi import APIRouter, Path, Query, Request
 from fastapi.responses import Response
 
 from app import db
 from app.auth.sessao import Auth, autenticado, sha256_hex
 from app.erros import ErroAPI
+from app.estilos import compilador
 from app.mapa import simbologia as simb_mod
 from app.settings import settings
 from app.tiles.rotas import autorizar
@@ -76,6 +77,32 @@ def _n_feicoes(cur, dados: dict) -> int | None:
     return None
 
 
+def _estilo_da_camada(cur, camada_id) -> dict | None:
+    """Item `estilo` mais recente ligado à camada (relação estilo_de_camada, item L2-02-c); a RLS de plat.item
+    decide o que a sessão vê. None = sem estilo salvo (vale a simbologia embutida do L2-01)."""
+    cur.execute(
+        "SELECT e.id, e.dados, e.titulo FROM plat.item_relacao r JOIN plat.item e ON e.id = r.origem "
+        "WHERE r.destino = %s::uuid AND r.tipo = 'estilo_de_camada' AND e.tipo = 'estilo' AND e.apagado_em IS NULL "
+        "ORDER BY e.modificado_em DESC, e.id LIMIT 1", (str(camada_id),))
+    return cur.fetchone()
+
+
+def _estilo_compilado(estilo: dict, fonte: str, funcao: str | None) -> dict:
+    """Camadas MapLibre + legenda do documento de estilo salvo (mesma função da gravação: app/estilos/compilador),
+    com a fonte ligada aqui (o documento nunca grava `sources`, conceito C2). Agrupamento troca a fonte pela
+    função de tile `_ag` (clusters calculados no tile)."""
+    pc = ((estilo.get("dados") or {}).get("corpo") or {}).get("plat_construtor") or {}
+    compilado = compilador.compilar(pc, fonte)
+    agrupamento = None
+    camada_fonte = funcao or "camada"
+    if pc.get("tipo") == "agrupamento":
+        agrupamento = {"raio_px": float((pc.get("agrupamento") or {}).get("raio_px") or 40)}
+        camada_fonte = f"{camada_fonte}_ag"
+    layers = [{**layer, "source": fonte, "source-layer": camada_fonte} for layer in compilado["layers"]]
+    return {"estilo": layers, "legenda": compilador.legenda(pc), "plat_construtor": pc, "agrupamento": agrupamento,
+            "estilo_id": str(estilo["id"]), "estilo_titulo": estilo.get("titulo")}
+
+
 def _ficha(cur, linha: dict, completo: bool) -> dict:
     dados = linha["dados"] or {}
     geometria = dados.get("geometria") or "Point"
@@ -97,7 +124,15 @@ def _ficha(cur, linha: dict, completo: bool) -> dict:
         "legenda": simb_mod.legenda(simb, geometria),
         "estilo": simb_mod.camadas_maplibre(simb, geometria, fonte, fonte, funcao or "camada"),
         "tilejson": f"/api/mapa/camadas/{linha['id']}/tilejson" if funcao else None,
+        "estilo_id": None, "plat_construtor": None, "agrupamento": None,
     }
+    estilo = _estilo_da_camada(cur, linha["id"])
+    if estilo is not None:
+        try:
+            ficha.update(_estilo_compilado(estilo, fonte, funcao))
+        except compilador.EstiloInvalido as e:  # estilo gravado que o compilador de hoje recusa: fica a embutida
+            log.warning("estilo %s da camada %s não compila (%s); simbologia embutida em uso", estilo["id"],
+                        linha["id"], e)
     if completo:
         ficha["descricao"] = linha["descricao"]
         ficha["extensao"] = _extensao(cur, dados)
@@ -127,7 +162,11 @@ def obter_camada(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler"))
 
 
 @router.get("/api/mapa/camadas/{id}/tilejson", openapi_extra=X)
-def tilejson(id: str, request: Request, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+def tilejson(id: str, request: Request, auth: Auth = autenticado(escopo_token="catalogo:ler"),
+             agrupar: float | None = Query(None, ge=1, le=400)):
+    """`agrupar=<raio_px>` (item L2-02-c) troca a função de tile pela variante agrupada `t_<hex>_ag`, criada
+    sob demanda (plat.camada_tile_agrupado_garantir) — clusters por célula calculados no tile, nunca no
+    navegador. O raio viaja na URL do tile (`raio=`), lido pela função a cada pedido."""
     with db.db(auth.contexto()) as cur:
         cur.execute(SQL_CAMADA + " AND i.id = %s::uuid", (id,))
         linha = cur.fetchone()
@@ -138,6 +177,14 @@ def tilejson(id: str, request: Request, auth: Auth = autenticado(escopo_token="c
         if not esquema or not tabela or not tabela.startswith("c_"):
             raise ErroAPI(422, "camada_sem_tabela", "esta camada não é hospedada: não há tile a servir")
         funcao = "t_" + tabela[2:]
+        sufixo_url = ""
+        if agrupar:
+            assinatura = f'"{esquema}"."{funcao}_ag"(integer,integer,integer,json)'
+            cur.execute("SELECT to_regprocedure(%s) IS NOT NULL AS existe", (assinatura,))
+            if not cur.fetchone()["existe"]:
+                cur.execute("SELECT plat.camada_tile_agrupado_garantir(%s, %s, %s::uuid)", (esquema, tabela, id))
+            funcao += "_ag"
+            sufixo_url = f"&raio={agrupar:g}"
         if auth.modo != "sessao":
             raise ErroAPI(403, "so_sessao", "o TileJSON com token cunhado só sai sob sessão de usuário; "
                                             "cliente externo usa o próprio token de serviço na URL do tile")
@@ -159,7 +206,7 @@ def tilejson(id: str, request: Request, auth: Auth = autenticado(escopo_token="c
         "tilejson": "3.0.0",
         "name": linha["titulo"],
         "scheme": "xyz",
-        "tiles": [f"{base}/tiles/{esquema}/{funcao}/{{z}}/{{x}}/{{y}}?token={valor}"],
+        "tiles": [f"{base}/tiles/{esquema}/{funcao}/{{z}}/{{x}}/{{y}}?token={valor}{sufixo_url}"],
         "minzoom": 0,
         "maxzoom": 20,
         "bounds": ext or [-180, -85, 180, 85],
@@ -174,7 +221,7 @@ def tilejson(id: str, request: Request, auth: Auth = autenticado(escopo_token="c
 async def tile(
     request: Request,
     esquema: str = Path(pattern=r"^d_[a-z0-9_]{1,60}$"),
-    funcao: str = Path(pattern=r"^t_[0-9a-f]{16}$"),
+    funcao: str = Path(pattern=r"^t_[0-9a-f]{16}(?:_ag)?$"),
     z: int = Path(ge=0, le=24),
     x: int = Path(ge=0),
     y: int = Path(ge=0),
@@ -200,8 +247,10 @@ async def tile(
             # descompactado entrega ao navegador um tile que ele tenta inflar de novo — MEDIDO nesta suíte
             # ("Error -3 while decompressing data: incorrect header check"). Pedimos sem compressão e
             # entregamos o corpo como veio; quem comprime na saída é o nginx, uma camada só.
-            r = await cliente.get(alvo, params={"token": token or ""},
-                                  headers={"Accept-Encoding": "identity"})
+            params = {"token": token or ""}
+            if request.query_params.get("raio"):  # variante agrupada (L2-02-c): raio em px lido pela função
+                params["raio"] = request.query_params["raio"]
+            r = await cliente.get(alvo, params=params, headers={"Accept-Encoding": "identity"})
     except httpx.HTTPError as e:
         log.warning("tile: martin inacessível em %s: %s", alvo, e)
         raise ErroAPI(503, "tiles_indisponiveis", "servidor de tiles indisponível") from e
