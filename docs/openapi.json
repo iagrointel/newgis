@@ -9895,6 +9895,167 @@
     "x-privilegio": "proprio"
    }
   },
+  "/api/mapas-base": {
+   "get": {
+    "tags": [
+     "mapas-base"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_mapas_base_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/Item"
+         },
+         "type": "array",
+         "title": "Response Listar Api Mapas Base Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/mapas-base/instalar": {
+   "post": {
+    "tags": [
+     "mapas-base"
+    ],
+    "summary": "Instalar",
+    "description": "Cria os itens que faltam entre as fontes padrão (semear.definicoes_padrao); pular o que o admin já tem\ninstalado (por `dados.tipo`, nunca por título — o admin pode ter renomeado) faz a rota ser chamável de\nnovo sem duplicar nem sobrescrever edição manual (ordem/padrão/título já mudados).",
+    "operationId": "instalar_api_mapas_base_instalar_post",
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/Item"
+         },
+         "type": "array",
+         "title": "Response Instalar Api Mapas Base Instalar Post"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar"
+   }
+  },
+  "/api/mapas-base/{id}/tornar-padrao": {
+   "post": {
+    "tags": [
+     "mapas-base"
+    ],
+    "summary": "Tornar Padrao",
+    "description": "Torna `id` o mapa base padrão do inquilino: desliga o padrão anterior (se houver) e liga o novo dentro\nda MESMA transação — nunca dois defaults ao mesmo tempo, sem depender da corrida cair no índice único\n`ux_item_mapa_base_padrao` (esse índice é só a rede de segurança de última linha).",
+    "operationId": "tornar_padrao_api_mapas_base__id__tornar_padrao_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Item"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar"
+   }
+  },
+  "/api/mapas-base/osm/{z}/{x}/{y}.png": {
+   "get": {
+    "tags": [
+     "mapas-base"
+    ],
+    "summary": "Proxy Osm Ladrilho",
+    "description": "Sem parâmetro de host: o único jeito de este endpoint falar com outro servidor é mudar\n`limites.MAPA_BASE_OSM_HOSTS` no código — nenhum valor de requisição chega ao host de saída\n(ver docstring de app.mapas_base.proxy_osm; refutação do item: \"tenta usar como proxy aberto\").",
+    "operationId": "proxy_osm_ladrilho_api_mapas_base_osm__z___x___y__png_get",
+    "parameters": [
+     {
+      "name": "z",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Z"
+      }
+     },
+     {
+      "name": "x",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "X"
+      }
+     },
+     {
+      "name": "y",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Y"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/rota": {
    "post": {
     "tags": [

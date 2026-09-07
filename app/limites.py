@@ -204,3 +204,13 @@ REDEFINICAO_VALIDADE_HORAS = 1            # portão do item-pai (ADR 0002 seçã
 REDEFINICAO_JANELA_MIN = 15               # limite de taxa (refutação do item: 1.000 pedidos/min p/ o mesmo e-mail)
 REDEFINICAO_MAX_JANELA = 5                # no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN
 AVISO_EXPIRACAO_DIAS = (90, 30, 7, 1)     # avisos de expiração de token de serviço (hipótese do item; como a Esri)
+
+# --- galeria de mapas base por inquilino (L2-01-e-mapas-base)
+MAPA_BASE_ZOOM_MAX = 19                            # tile.openstreetmap.org não publica além disso
+MAPA_BASE_OSM_HOSTS = ("a.tile.openstreetmap.org", "b.tile.openstreetmap.org", "c.tile.openstreetmap.org")
+# política de uso do OSM (https://operations.osmfoundation.org/policies/tiles/): identificar o cliente
+MAPA_BASE_OSM_USER_AGENT = "plat-mapa-base/1 (+https://iagrointel.com; contato@iagrosat.com)"
+MAPA_BASE_OSM_CACHE_BYTES_MAX = 100 * 1024 * 1024  # 100 MiB de teto do cache em disco (disco da casa a 98 %)
+MAPA_BASE_OSM_CONECTAR_TIMEOUT_S = 3.0
+MAPA_BASE_OSM_LER_TIMEOUT_S = 8.0
+MAPA_BASE_OSM_RESPOSTA_MAX_BYTES = 1 * 1024 * 1024  # 1 MiB: um PNG 256×256 nunca chega perto disso

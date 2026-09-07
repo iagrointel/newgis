@@ -194,6 +194,25 @@ def _apagar_criado(metodo_url):
     return limpar
 
 
+_TITULOS_MAPA_BASE_PADRAO = {
+    "OSM local (Guarulhos) — vetorial",
+    "OSM padrão (proxy da casa) — raster",
+    "Satélite (Sentinel-2 da casa)",
+    "Fundo sem mapa base",
+}
+
+
+def _apagar_mapas_base_instalados(p: Preparacao, j: Any) -> None:
+    """POST /api/mapas-base/instalar devolve a galeria inteira, não um id só: apaga de A só os itens com um
+    dos 4 títulos padrão (item L2-01-e-mapas-base) — nunca mexe em item que o admin já tinha antes do teste."""
+    if not isinstance(j, list):
+        return
+    for item in j:
+        if isinstance(item, dict) and item.get("titulo") in _TITULOS_MAPA_BASE_PADRAO:
+            r = p.sessao_a.delete(f"/api/itens/{item['id']}")
+            assert r.status_code in (204, 404), r.text
+
+
 def _apagar_arquivo(p: Preparacao, j: Any) -> None:
     """POST /api/arquivos devolve sha256, não id: apaga pela mesma classe usada no upload (limites.py)."""
     if isinstance(j, dict) and j.get("sha256"):
@@ -835,6 +854,21 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    # ---- L2-01-e-mapas-base: galeria de mapas base — lista/instala agem só no próprio inquilino (proprio=True);
+    # tornar-padrao tenta mudar item de B por id (RLS 404 antes de qualquer lógica de negócio); o proxy OSM não
+    # tem dado de inquilino nenhum (ladrilho público) — z=0/x=0/y=5 é inválido (y só vale 0 no zoom 0), então a
+    # validação recusa com 422 ANTES de qualquer busca de rede, mantendo o teste determinístico e offline.
+    ("GET", "/api/mapas-base"): Caso(lambda p: "/api/mapas-base", proprio=True, aceita=frozenset({200}),
+                                     verificar=_sem_marca),
+    ("POST", "/api/mapas-base/instalar"): Caso(lambda p: "/api/mapas-base/instalar", proprio=True,
+                                               aceita=frozenset({201}), verificar=_sem_marca,
+                                               limpar=_apagar_mapas_base_instalados),
+    ("POST", "/api/mapas-base/{id}/tornar-padrao"): Caso(
+        lambda p: f"/api/mapas-base/{p.item_b['id']}/tornar-padrao"
+    ),
+    ("GET", "/api/mapas-base/osm/{z}/{x}/{y}.png"): Caso(
+        lambda p: "/api/mapas-base/osm/0/0/5.png", proprio=True, aceita=frozenset({422}), verificar=_sem_marca,
     ),
 }
 
