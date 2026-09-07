@@ -38,10 +38,14 @@ import argparse
 import sys
 import time
 from datetime import UTC, datetime
+from pathlib import Path
 
 import psycopg2
 import psycopg2.errors
 import psycopg2.extras
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # roda fora do venv: acha o pacote app
+from app.schema_ambiente import CursorSchemaAmbiente  # noqa: E402 — depois do sys.path acima
 
 TIMEOUT_CONTAGEM_MS = 25_000
 PRAZO_TOTAL_S = 270.0  # folga de 30 s sob o portão de 5 min
@@ -128,10 +132,18 @@ def _contar_exato(conn, schema: str, tabela: str) -> int | None:
         return None
 
 
+def _conectar(dsn_kwargs: dict):
+    """Mesma fábrica de cursor do resto da aplicação. `RealDictCursor` puro ignorava PLAT_SCHEMA por
+    inteiro: rodasse de onde rodasse, este sincronizador lia e escrevia no `plat` de PRODUÇÃO, inclusive
+    a partir de uma trilha isolada (achado F9). `CursorSchemaAmbiente` É subclasse de `RealDictCursor`,
+    então o acesso por nome de coluna do resto do arquivo não muda; em produção a reescrita é no-op."""
+    return psycopg2.connect(cursor_factory=CursorSchemaAmbiente, **dsn_kwargs)
+
+
 def sincronizar(dsn_kwargs: dict, servidor: str, banco: str, limite: int | None = None) -> dict:
     inicio = time.monotonic()
     inicio_iso = datetime.now(UTC)
-    conn = psycopg2.connect(cursor_factory=psycopg2.extras.RealDictCursor, **dsn_kwargs)
+    conn = _conectar(dsn_kwargs)
     conn.autocommit = False
     try:
         with conn.cursor() as cur:
