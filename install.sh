@@ -219,6 +219,14 @@ echo "venv: $(venv/bin/python --version) · fastapi $("${PY[@]}" -c 'import fast
 echo "== f2. cache do XSD ISO 19139 (item L0-09-metadado-catalogo): comitado no repo; idempotente, sem rede quando já presente"
 "${PY[@]}" docs/xsd/baixar_iso19139.py
 
+echo "== f3. validador oficial da MapLibre Style Spec (item L2-02-a-modelo-estilo): versão fixada em ferramentas/estilo/package.json"
+command -v node >/dev/null || { echo "node ausente (apt install nodejs)" >&2; exit 1; }
+(cd ferramentas/estilo && npm ci --no-audit --no-fund --silent 2>/dev/null || npm install --no-audit --no-fund --silent)
+echo '{"version":8,"sources":{"camada":{"type":"vector","tiles":["https://x/{z}/{x}/{y}"]}},"layers":[{"id":"l","type":"circle","source":"camada","source-layer":"camada","paint":{"circle-color":"#ff0000"}}]}' \
+  | node ferramentas/estilo/validar.mjs | grep -q '"ok":true' \
+  || { echo "validador da Style Spec não respondeu ok:true num estilo válido" >&2; exit 1; }
+echo "ferramentas/estilo: node_modules instalado, validador respondendo"
+
 echo "== g. administradores: plataforma (superadmin, 2FA obrigatório) e demonstração (demo, demo2)"
 CRED=tests/credenciais.txt
 if [ ! -f "$CRED" ]; then

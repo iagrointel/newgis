@@ -16,7 +16,18 @@ from tests.api.test_rls import contexto, ids_por_slug
 DADOS_POR_TIPO = {
     "mapa": {"esquema_versao": 1, "corpo": {}},
     "cena": {"esquema_versao": 1, "corpo": {}},
-    "estilo": {"esquema_versao": 1, "corpo": {}},
+    "estilo": {
+        "esquema_versao": 1,
+        "corpo": {
+            "plat_construtor": {"tipo": "unico", "geometria": "poligono", "versao": 1, "simbolo": {"cor": "#4e79a7"}},
+            # o servidor recompila `maplibre` a partir de `plat_construtor` na gravação (app/estilos/validador.py);
+            # este valor é só o que passa nas checagens PRÉVIAS (Style Spec + campos) — não precisa ser o canônico.
+            "maplibre": {
+                "version": 8,
+                "layers": [{"id": "camada", "type": "fill", "paint": {"fill-color": "#4e79a7", "fill-opacity": 1.0}}],
+            },
+        },
+    },
     "app": {"tipo": "app", "esquema_versao": 1, "corpo": {}},
     "painel": {"tipo": "painel", "esquema_versao": 1, "corpo": {}},
     "formulario": {"tipo": "formulario", "esquema_versao": 1, "corpo": {}},
@@ -39,6 +50,14 @@ DADOS_POR_TIPO = {
     "conexao": {"protocolo": "wms", "url": "https://exemplo.gov.br/wms"},
     "modelo_amc": {"esquema_versao": 1, "fatores": [], "metodo": "soma_ponderada"},
 }
+
+
+def documento_mapa(*refs: str) -> dict:
+    """Documento de mapa mínimo com estas camadas, na ordem (item L2-01-a-documento-mapa: cada entrada é
+    {id: ULID local, ref: uuid do item}, nunca um uuid solto — o JSON Schema de `mapa` recusa a forma antiga)."""
+    from app.catalogo.documento import gerar_ulid
+
+    return {"esquema_versao": 1, "corpo": {"camadas": [{"id": gerar_ulid(), "ref": r} for r in refs]}}
 
 
 def titulo_zt(base: str = "item") -> str:
