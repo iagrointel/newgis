@@ -30,6 +30,7 @@ import { instalarPopup } from './atributos.js';
 import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
+import '../widgets/mapa.js';
 
 const BASES = [
   { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
@@ -85,6 +86,12 @@ async function iniciar(usuario) {
     hash: false,
     // obrigatório para a impressão ler o canvas depois do quadro composto (impressao.js explica)
     preserveDrawingBuffer: true,
+  });
+  const recipiente = el('mapa');
+  recipiente.addEventListener('plat-mapa-enquadrar', ({ detail }) => {
+    if (Array.isArray(detail?.extensao) && detail.extensao.length === 4) {
+      map.fitBounds([[detail.extensao[0], detail.extensao[1]], [detail.extensao[2], detail.extensao[3]]]);
+    }
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
   map.addControl(new maplibregl.ScaleControl({ maxWidth: 140, unit: 'metric' }), 'bottom-left');
@@ -195,6 +202,12 @@ async function iniciar(usuario) {
   map.on('error', (ev) => {
     const msg = (ev && ev.error && ev.error.message) || String(ev);
     el('aviso').erro(`${t('mapa.erro_carregar')}: ${msg}`);
+  });
+  map.on('moveend', () => {
+    const limites = map.getBounds();
+    recipiente.emitir?.('mapa.extensao_alterada', {
+      extensao: [limites.getWest(), limites.getSouth(), limites.getEast(), limites.getNorth()],
+    });
   });
 
   await new Promise((resolve) => map.once('load', resolve));

@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="/static/style.css">
 <link rel="stylesheet" href="/static/vendor/maplibre-gl-4.7.1.css">
 <link rel="stylesheet" href="/static/mapa.css">
+<link rel="stylesheet" href="/static/widgets.css">
 </head>
 <body class="tela instrumento mapa">
 <a class="pular" href="#mapa" data-i18n="app.pular">pular para o conteúdo</a>
@@ -71,7 +72,7 @@
       </section>
 
       <div class="mapa-area">
-        <div id="mapa" aria-label="mapa" role="application"></div>
+        <plat-mapa id="mapa" aria-label="mapa" role="application"></plat-mapa>
         <div class="mapa-painel mapa-painel-base">
           <label for="seletor-base" data-i18n="mapa.camada_base">camada base</label>
           <select id="seletor-base"></select>

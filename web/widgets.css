@@ -1,0 +1,10 @@
+.plat-widgets { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--espaco-4, 1rem); }
+.plat-widgets > * { min-width: 0; }
+.plat-widget-erro { border: 1px solid var(--cor-erro, #b42318); padding: 1rem; color: var(--cor-erro, #b42318); }
+plat-mapa { display: block; min-height: 18rem; }
+plat-legenda ul { list-style: none; padding: 0; }
+plat-legenda button::before { content: ''; display: inline-block; width: .8rem; height: .8rem; margin-right: .4rem; background: var(--cor); }
+plat-tabela { display: block; overflow: auto; }
+plat-tabela table { width: 100%; border-collapse: collapse; }
+plat-tabela th, plat-tabela td { padding: .45rem; text-align: left; border-bottom: 1px solid var(--cor-borda, #ccd3d4); }
+plat-filtro label { display: grid; gap: .35rem; }
