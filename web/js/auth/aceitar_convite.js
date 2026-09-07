@@ -1,72 +1,104 @@
-/* plat — tela pública /aceitar-convite (item L0-07-d-smtp-convites): GET /api/convites/resolver (mostra
-   inquilino/e-mail/perfil sem exigir nada) e POST /api/convites/aceitar. O e-mail exibido vem SEMPRE do que
-   o servidor resolveu a partir do token — a URL só carrega o token, nunca o e-mail (fecha por construção a
-   refutação "altera o e-mail no link"). Sem sessão: página acessível a qualquer um com o link. */
+/* plat — tela pública /aceitar-convite (item L0-07-d-smtp-convites; polimento UX-02): GET /api/convites/resolver
+   (mostra inquilino/e-mail/perfil/validade sem exigir nada) e POST /api/convites/aceitar. O e-mail exibido vem SEMPRE
+   do que o servidor resolveu a partir do token — a URL só carrega o token, nunca o e-mail. Sem sessão.
+   Estados: convite inválido/usado/expirado como <plat-estado> (título nomeado, sem formulário); erro por campo (login
+   fora do padrão, nome vazio, senha recusada pela política vai para o campo senha com a mensagem do servidor); botão
+   ocupado; sucesso com o link de entrada já apontando para o inquilino. */
 import { enviar, mensagemDe, obter } from '../base/api.js';
 import '../base/componentes.js';
-import { carregar, t } from '../base/i18n.js';
+import { avisarCapsLock, erroCampo, errosDoServidor, ligarMostrarSenha, limparErros, ocupado, validar } from '../base/campos.js';
+import { carregar, formatarData, t } from '../base/i18n.js';
 
 await carregar();
 
 const params = new URLSearchParams(location.search);
 const token = params.get('token') || '';
-const aviso = document.getElementById('aviso');
-const info = document.getElementById('convite-info');
-const form = document.getElementById('form-aceitar');
-const concluido = document.getElementById('concluido');
+const el = (id) => document.getElementById(id);
+const aviso = el('aviso');
+const estado = el('estado');
+const info = el('convite-info');
+const form = el('form-aceitar');
+const concluido = el('concluido');
+const inputLogin = el('login');
+const inputNome = el('nome');
+const inputSenha = el('senha');
+const RE_LOGIN = /^[a-z0-9][a-z0-9._@-]*$/;
+let resolvido = null;
 
-function mensagemMotivo(json) {
+function chaveMotivo(json) {
   const motivo = json?.detalhe?.motivo;
-  return t({
+  return {
     usado: 'aceitar_convite.usado',
     cancelado: 'aceitar_convite.usado',
     expirado: 'aceitar_convite.expirado',
-    invalido: 'aceitar_convite.invalido',
-    inquilino_suspenso: 'aceitar_convite.invalido',
-  }[motivo] || 'aceitar_convite.invalido');
+  }[motivo] || 'aceitar_convite.invalido';
+}
+
+function conviteInvalido(json) {
+  form.hidden = true;
+  info.hidden = true;
+  estado.mostrar({ tipo: 'erro', titulo: t(chaveMotivo(json)), texto: t('aceitar_convite.pedir_novo'), ref: json?.req_id });
+}
+
+function mostrarInfo() {
+  el('convite-tenant').textContent = resolvido.tenant_nome;
+  el('convite-email').textContent = resolvido.email;
+  el('convite-perfil').textContent = resolvido.perfil ? t('aceitar_convite.perfil', { perfil: t(`perfil.${resolvido.perfil}`) }) : '';
+  el('convite-expira').textContent = resolvido.expira_em ? t('aceitar_convite.expira', { quando: formatarData(resolvido.expira_em) }) : '';
+  info.hidden = false;
 }
 
 async function iniciar() {
-  if (!token) { aviso.erro(t('aceitar_convite.sem_token')); return; }
+  if (!token) { estado.mostrar({ tipo: 'erro', titulo: t('aceitar_convite.sem_token'), texto: t('aceitar_convite.pedir_novo') }); return; }
+  estado.carregando();
   const r = await obter(`/api/convites/resolver?token=${encodeURIComponent(token)}`);
-  if (r.status !== 200) { aviso.erro(mensagemMotivo(r.json)); return; }
-  document.getElementById('convite-tenant').textContent = r.json.tenant_nome;
-  document.getElementById('convite-email').textContent = r.json.email;
-  info.hidden = false;
+  if (r.status === 0 || r.status >= 500) { estado.erro(r, [{ id: 'tentar', rotulo: t('login.tentar_de_novo'), classe: 'primario' }]); return; }
+  if (r.status !== 200) { conviteInvalido(r.json); return; }
+  estado.limpar();
+  resolvido = r.json;
+  mostrarInfo();
   form.hidden = false;
-  document.getElementById('login').value = (r.json.email.split('@')[0] || '').toLowerCase().replace(/[^a-z0-9._-]/g, '');
-  document.getElementById('login').focus();
+  inputLogin.value = (resolvido.email.split('@')[0] || '').toLowerCase().replace(/[^a-z0-9._-]/g, '');
+  inputLogin.focus();
 }
+estado.addEventListener('acao', () => iniciar());
 
-document.getElementById('mostrar-senha').addEventListener('click', (e) => {
-  const senha = document.getElementById('senha');
-  const ver = senha.type === 'password';
-  senha.type = ver ? 'text' : 'password';
-  e.currentTarget.setAttribute('aria-pressed', String(ver));
-  e.currentTarget.textContent = ver ? t('form.ocultar') : t('form.mostrar');
-});
+ligarMostrarSenha(el('mostrar-senha'), inputSenha);
+avisarCapsLock(inputSenha);
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   aviso.limpar();
-  const login = document.getElementById('login').value.trim();
-  const nome = document.getElementById('nome').value.trim();
-  const senha = document.getElementById('senha').value;
-  if (!login || !nome || !senha) { aviso.erro(t('login.preencha')); return; }
-  const bt = document.getElementById('aceitar');
-  bt.disabled = true;
-  const r = await enviar('/api/convites/aceitar', { token, login, nome, senha });
-  bt.disabled = false;
-  if (r.status !== 200 || !r.json.ok) {
-    if (r.status === 410) { aviso.erro(mensagemMotivo(r.json)); form.hidden = true; info.hidden = true; return; }
-    aviso.erro(mensagemDe(r));
+  limparErros(form);
+  const ok = validar([
+    [inputLogin, inputLogin.value.trim() ? t('aceitar_convite.login_invalido') : t('login.usuario_obrigatorio'), (v) => RE_LOGIN.test(v)],
+    [inputNome, t('aceitar_convite.nome_obrigatorio')],
+    [inputSenha, inputSenha.value ? t('senha.curta', { n: 8 }) : t('senha.obrigatoria'), (v) => v.length >= 8],
+  ]);
+  if (!ok) return;
+  const bt = el('aceitar');
+  ocupado(bt, true, t('aceitar_convite.criando'));
+  form.setAttribute('aria-busy', 'true');
+  const r = await enviar('/api/convites/aceitar', { token, login: inputLogin.value.trim(), nome: inputNome.value.trim(), senha: inputSenha.value });
+  form.removeAttribute('aria-busy');
+  ocupado(bt, false);
+  if (r.status === 200 && r.json.ok) {
+    form.hidden = true;
+    info.hidden = true;
+    concluido.hidden = false;
+    el('link-entrar').href = `/entrar?inquilino=${encodeURIComponent(r.json.tenant_slug)}&proximo=%2Fconta`;
+    el('link-entrar').focus();
     return;
   }
-  form.hidden = true;
-  info.hidden = true;
-  concluido.hidden = false;
-  document.getElementById('link-entrar').href = `/entrar?inquilino=${encodeURIComponent(r.json.tenant_slug)}&proximo=%2Fconta`;
+  if (r.status === 410) { conviteInvalido(r.json); return; }
+  const codigo = r.json?.erro;
+  if (codigo === 'senha_fraca') { erroCampo(inputSenha, mensagemDe(r)); inputSenha.focus(); return; }
+  if (codigo === 'login_em_uso' || codigo === 'login_invalido') { erroCampo(inputLogin, mensagemDe(r)); inputLogin.focus(); return; }
+  if (r.status === 422 && errosDoServidor(r, { login: inputLogin, nome: inputNome, senha: inputSenha })) { form.querySelector('[aria-invalid]')?.focus(); return; }
+  aviso.erro(mensagemDe(r));
 });
+
+document.addEventListener('plat:i18n', () => { if (resolvido) mostrarInfo(); });
 
 await iniciar();
 document.body.dataset.pronto = '1';

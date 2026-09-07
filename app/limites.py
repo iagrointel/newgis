@@ -158,7 +158,7 @@ INGESTAO_FIDS_RELATORIO_MAX = 1000        # fids corrigidos listados no relatór
 # politica.py, L0-02) — esta tela só EXPÕE aquele esquema, nunca recria um novo.
 ORG_NOME_MAX = 55                         # mesmo teto do "Organization name" da Esri (portão do item-pai L0-07-a)
 ORG_COR_PADRAO = "#2463a8"                # mesmo azul de app/catalogo/miniatura.py TRACO, cor de marca padrão
-ORG_IDIOMAS = ("pt-BR",)                  # só o que existe em web/js/i18n/; L7-10 acrescenta idioma novo aqui
+ORG_IDIOMAS = ("pt-BR", "en", "es")       # só o que existe em web/js/i18n/ (UX-02: en e es com paridade de chaves)
 ORG_ZOOM_MAX = 24                         # teto de zoom de um webmap (padrão MapLibre/Leaflet)
 ORG_BASEMAP_MAX = 100
 ORG_LOGO_BYTES_MAX = 1 * 1024 * 1024      # 1 MiB (portão do item-pai: "logo > 1 MB recusado")

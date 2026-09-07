@@ -14,13 +14,13 @@ body.executor { margin: 0; overflow-x: hidden; } /* overflow-x:hidden é a rede 
 
 .exec-cabecalho { flex: 0 0 auto; display: flex; align-items: center; gap: var(--e3); padding: var(--e2) var(--e3); background: var(--painel); border-bottom: 1px solid var(--borda); z-index: 5; }
 .exec-cabecalho[data-fixo="true"] { position: sticky; top: 0; }
-.exec-rodape { flex: 0 0 auto; padding: var(--e2) var(--e3); border-top: 1px solid var(--borda); color: var(--fraco); font-size: .85rem; }
+.exec-rodape { flex: 0 0 auto; padding: var(--e2) var(--e3); border-top: 1px solid var(--borda); color: var(--fraco); font-size: var(--t-1); }
 
 /* ---------------------------------------------------------------- menu */
 .exec-menu { display: flex; gap: var(--e3); }
 .exec-menu-vertical { flex-direction: column; }
-.exec-menu a { color: var(--texto); text-decoration: none; padding: 4px 8px; border-radius: var(--raio); }
-.exec-menu a[aria-current="page"] { background: var(--acento); color: var(--fundo); }
+.exec-menu a { color: var(--texto); text-decoration: none; padding: var(--e1) var(--e2); border-radius: var(--raio); }
+.exec-menu a[aria-current="page"] { background: var(--acento); color: var(--acento-texto); }
 .exec-menu a:hover { text-decoration: underline; }
 
 /* ---------------------------------------------------------------- linha/coluna: min-width/min-height:0 é a
@@ -42,12 +42,12 @@ body.executor { margin: 0; overflow-x: hidden; } /* overflow-x:hidden é a rede 
 .exec-grade-item { min-width: 0; min-height: 0; }
 
 /* ---------------------------------------------------------------- acordeão */
-.exec-acordeao { display: grid; gap: 2px; min-width: 0; }
+.exec-acordeao { display: grid; gap: var(--e0); min-width: 0; }
 .exec-acordeao-cabecalho { display: block; width: 100%; text-align: left; padding: var(--e2) var(--e3); background: var(--painel); border: 1px solid var(--borda); cursor: pointer; }
 .exec-acordeao-corpo { padding: var(--e2) var(--e3); border: 1px solid var(--borda); border-top: none; min-width: 0; }
 
 /* ---------------------------------------------------------------- painel fixo */
-.exec-painel-fixo { position: fixed; z-index: 20; background: var(--painel); border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: var(--e2); max-width: min(90vw, 360px); box-shadow: 0 2px 12px rgba(0,0,0,.3); }
+.exec-painel-fixo { position: fixed; z-index: 20; background: var(--painel); border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: var(--e2); max-width: min(90vw, 360px); box-shadow: var(--sombra-1); }
 .exec-painel-fixo.pos-superior-direita { top: var(--e3); right: var(--e3); }
 .exec-painel-fixo.pos-superior-esquerda { top: var(--e3); left: var(--e3); }
 .exec-painel-fixo.pos-inferior-direita { bottom: var(--e3); right: var(--e3); }
@@ -62,12 +62,12 @@ body.executor { margin: 0; overflow-x: hidden; } /* overflow-x:hidden é a rede 
 
 /* ---------------------------------------------------------------- janela */
 .exec-janela-modal { border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: var(--e4); max-width: min(90vw, 640px); }
-.exec-janela-modal::backdrop { background: rgba(0,0,0,.5); }
-.exec-janela-ancorada { position: absolute; z-index: 30; margin-top: var(--e2); background: var(--painel); border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: var(--e3); box-shadow: 0 2px 12px rgba(0,0,0,.3); max-width: min(90vw, 360px); }
+.exec-janela-modal::backdrop { background: var(--veu); }
+.exec-janela-ancorada { position: absolute; z-index: 30; margin-top: var(--e2); background: var(--painel); border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: var(--e3); box-shadow: var(--sombra-1); max-width: min(90vw, 360px); }
 
 /* ---------------------------------------------------------------- seção com vistas (abas) */
 .exec-secao-vistas { min-width: 0; }
-.exec-vistas-barra { display: flex; gap: 2px; border-bottom: 1px solid var(--borda); }
+.exec-vistas-barra { display: flex; gap: var(--e0); border-bottom: 1px solid var(--borda); }
 .exec-vistas-barra button { padding: var(--e2) var(--e3); border: none; background: transparent; cursor: pointer; color: var(--fraco); }
 .exec-vistas-barra button[aria-selected="true"] { color: var(--texto); border-bottom: 2px solid var(--acento); }
 .exec-vistas-painel { padding: var(--e3) 0; min-width: 0; }
