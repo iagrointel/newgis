@@ -29,6 +29,31 @@ Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava 
   recusar a fonte inteira em silêncio; repassar `Content-Encoding: gzip` com corpo já descompactado
   entregava tile ilegível ao navegador. Registrados no ADR 20260907T0400.
 
+## turno 3, setembro de 2026 (item L2-01-k-desenho-anotacoes: desenho e anotações no mapa)
+
+Camada de desenho da tela do mapa com sete tipos — ponto, linha, polígono, retângulo, círculo (raio em
+metros), texto e seta — com cor, contorno, preenchimento, opacidade, largura e tamanho de fonte; mover,
+editar vértice, apagar, ordenar; medição da feição na própria lista; importação de GeoJSON e de KML
+(`DOMParser`, sem biblioteca nova). O desenho vive DENTRO do documento do mapa (`corpo.desenho`, GeoJSON
+mais estilo, sem tabela) e é validado no servidor por `app/catalogo/documento.py::erros_de_desenho`, que
+confere o par tipo × geometria, o teto de 5.000 feições, o teto de 10.000 caracteres de texto, o raio do
+círculo e a coordenada dentro do mundo. O botão "promover a camada" (`POST /api/mapa/{id}/desenho/promover`)
+transforma a seleção numa camada hospedada de verdade, reusando `plat.camada_schema_garantir` e
+`plat.camada_preparar` do L0-04, com `ST_MakeValid` e conferência de `ST_IsValid` antes de gravar o item.
+
+Anotação de usuário ligada a uma feição (`plat.anotacao_feicao`, migração `20260907T1655`): comentário com
+autor e data, visível a quem é membro ativo do grupo em que foi criada, nunca a outro inquilino — a
+visibilidade é da RLS, não da aplicação. Texto é sempre dado: entra por `textContent`, nunca por HTML.
+
+Achados de medição que viraram conserto: o `text-field` do MapLibre exige servidor de glifos (item
+L2-02-e) e, sem ele, o MapLibre aceita a camada e a descarta em silêncio — o texto passou a ser desenhado
+num canvas próprio, com halo por `strokeText`; o modo `select` do terra-draw dispara `finish` ao soltar o
+arrasto de um vértice, o que fazia a edição virar cópia; e `Catalogo.reordenar` avisava mesmo sem mudança
+de ordem, fechando um ciclo sem fim com a árvore de camadas sempre que o catálogo ganhava camada nova.
+
+Medido com 5.000 desenhos num mapa: salvar em 190 ms e reabrir em 39 ms, idênticos bit a bit, com carga de
+1 minuto em 14,12 e 7,8 GB de memória livre (`tests/medidas/L2-01-k-desenho-anotacoes.json`).
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
