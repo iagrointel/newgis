@@ -222,3 +222,12 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# --- catálogo de conectores públicos (L6-02-m-catalogo-endpoints-brasil; app/conexao/endpoints_publicos.py):
+# o teste de "vivo" pede o documento do protocolo (GetCapabilities, f=json, raiz STAC) e confere a assinatura do
+# corpo; capabilities de órgão grande passam de 1 MiB (a INDE, o IBGE), por isso o teto próprio de bytes.
+ENDPOINT_PUBLICO_LER_TIMEOUT_S = 20.0    # leitura do documento de teste (órgão lento monta capabilities em segundos)
+ENDPOINT_PUBLICO_MAX_BYTES = 4 * 1024 * 1024  # 4 MiB: acima disso o serviço respondeu XML e conta como vivo (OGC)
+ENDPOINT_PUBLICO_RETESTE_DIAS = 7        # cadência do job endpoints_publicos.retestar (B12: "retestado por semana")
+ENDPOINT_PUBLICO_FALHAS_PARA_MORTO = 1   # 1 teste vermelho já tira da lista (vai para 'fora do ar'; volta ao passar)
+ENDPOINT_PUBLICO_PAGINA_MAX = 500        # a tela lista o catálogo inteiro de uma vez (dezenas, não milhares)
