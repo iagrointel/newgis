@@ -55,7 +55,9 @@ from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
+from app.tiles.exportacao import router as rotas_tiles_exportacao
 from app.tiles.rotas import router as rotas_tiles
+from app.tiles.vector_tile_server import router as rotas_vector_tile_server
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 
@@ -143,6 +145,10 @@ ROUTERS = [
     rotas_amc.router,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
+    # --- servidor de tiles vetoriais em 3 contratos (L2-04-e): TileJSON+XYZ, VectorTileServer Esri
+    # (descritor, estilo, sprites/fontes, tile z/y/x) e exportação por URL (geojson/kml/csv/fgb/gpkg)
+    rotas_vector_tile_server,
+    rotas_tiles_exportacao,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

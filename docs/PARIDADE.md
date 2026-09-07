@@ -445,3 +445,23 @@ Construído EM VOLTA da operação `query` acima (item L2-04-c, `wt/fsquery`) �
 
 Paridade com ArcGIS Pro/AGOL/QGIS Desktop reais: **pendente** (decisão D20/D36) — todo teste acima é contra esta
 implementação, a doc Esri/OGC e um cliente Python real (`owslib`); nenhum teste usa ArcGIS Pro/AGOL nem QGIS Desktop.
+
+## Servidor de tiles vetoriais em 3 contratos (item L2-04-e-vector-tile-server-tilejson, turno 3; ADR 20260907T1648)
+
+Medido com Martin real (`.bin/martin` v1.15.0, item L2-01-b) e, para o contrato Esri, com PyQGIS 3.34.4 headless
+de verdade (`tests/api/test_vector_tile_server.py`, `tests/medidas/L2-04-e-vector-tile-server-tilejson.json`).
+
+| capacidade | Esri/padrão aberto | nós | estado | evidência |
+|---|---|---|---|---|
+| TileJSON 3.0.0 | spec mapbox/tilejson-spec | `GET /tiles/{token}/{item}/tilejson.json`, `vector_layers` com o nome real da função de tile | feito | `tilejson_valido_esquema_3_0_0` (jsonschema contra o esquema oficial vendorizado) |
+| tile XYZ puro (MapLibre/QGIS) | `{z}/{x}/{y}.pbf` | `GET /tiles/{token}/{item}/{z}/{x}/{y}.pbf`, ETag = sha256 do corpo | feito | `tile_esri_ordem_zyx_igual_a_maplibre_zxy_bytes` |
+| VectorTileServer descritor (`?f=json`) | `tileInfo`/`capabilities`/`defaultStyles` | `GET /svc/{token}/rest/services/{item}/VectorTileServer`, Web Mercator 512 px, `capabilities="TilesOnly"` | feito | teste `test_descritor_vector_tile_server_tem_tileinfo_web_mercator_512` |
+| estilo do serviço (`resources/styles/root.json`) | Style Spec v8 | compilado por `app.estilos.padrao`/`compilador` (item L2-02-a, reusado); validado pelo pacote oficial `@maplibre/maplibre-gl-style-spec` | feito | `root_json_valido_style_spec_oficial` |
+| sprites/glyphs | ícone/fonte reais | JSON/PNG/PBF sintaticamente válidos, mas VAZIOS (sem pipeline de ícone/fonte — L2-02-e não construído, não é dependência deste item) | parcial (fronteira honesta) | `sprites_e_fontes_200` |
+| tile em ordem Esri (`tile/{z}/{y}/{x}.pbf`) | convenção Esri | mesma função (`_tile_bytes`) que o contrato 1 — **byte a byte idêntico**, não reimplementado em paralelo | feito | `tile_esri_ordem_zyx_igual_a_maplibre_zxy_bytes` (`723 bytes` em ambos) |
+| exportação GeoJSON/CSV/KML por URL | `where`/`bbox` | streaming linha a linha (cursor nomeado do Postgres); `where` reusa o AST do FeatureServer (L2-04-b/c) | feito | `geojson_1mi_rss_kb` (145 MB de pico p/ 1 mi de feições, teto 300 MB); `kml_10_mil_feicoes_ogrinfo` |
+| exportação FlatGeobuf/GeoPackage por URL | formatos GDAL | via `ogr2ogr` contra o Postgres com RLS (DSN com `options='-c plat.tenant_id=...'`); arquivo temporário, não incremental (GDAL 3.8.4 recusa `/vsistdout/` para FlatGeobuf) | parcial (funciona; não é streaming de geração) | teste `test_fgb_e_gpkg_abrem_com_ogrinfo` |
+| token revogado = 401 em toda rota | revogação imediata | 10 rotas dos 3 contratos testadas depois de revogar — todas 401 | feito | `token_revogado_401_em_todas_as_rotas` |
+| QGIS Desktop carrega de fato | interoperabilidade real | **medido aqui**: PyQGIS headless (`QgsVectorTileLayer` + `QgsMapBoxGlStyleConverter`) carregou a camada por URL do `root.json`, tiles reais buscados por HTTP, captura salva | feito (sem GUI; ver nota) | `tests/medidas/L2-04-e_qgis_captura.png` |
+| ArcGIS Pro/AGOL carregam de fato | interoperabilidade real | **não verificado** — exige credencial do parceiro (D20, PENDENTE) | pendência (nunca "feito") | — |
+

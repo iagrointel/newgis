@@ -3,6 +3,39 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L2-04-e-vector-tile-server-tilejson: servidor de tiles vetoriais em 3 contratos)
+
+`app/tiles/vector_tile_server.py` + `app/tiles/exportacao.py` + `app/tiles/{autorizacao,martin_cliente,
+tilejson,camada}.py`: **contrato 1** TileJSON 3.0.0 (`GET /tiles/{token}/{item}/tilejson.json`) + tile XYZ puro
+(`.../{z}/{x}/{y}.pbf`) para MapLibre/QGIS; **contrato 2** VectorTileServer compatível Esri
+(`GET /svc/{token}/rest/services/{item}/VectorTileServer` com `tileInfo` Web Mercator 512 px e `capabilities:
+TilesOnly`, estilo em `.../resources/styles/root.json` compilado por `app.estilos.padrao`/`compilador` — item
+L2-02-a, reusado sem reescrita —, sprites/glyphs REAIS mas vazios enquanto L2-02-e não existe, e o tile em ordem
+Esri `.../tile/{z}/{y}/{x}.pbf`); **contrato 3** exportação por URL (`GET /svc/{token}/camadas/{item}.geojson|
+.kml|.csv|.fgb|.gpkg`, filtro `where`/`bbox` reusando o AST do FeatureServer — L2-04-b/c). Token no CAMINHO em
+todos os três (decisão do ladrilho raster, item L1-02, citada como ativo da casa a reusar).
+
+Medido com Martin real (`.bin/martin` v1.15.0, mesmo binário do L2-01-b) e, para o contrato 2, com PyQGIS
+headless de verdade: TileJSON válido contra o esquema oficial 3.0.0 (vendorizado em
+`docs/esquemas/vendorizados/`); tile Esri (`z/y/x`) e MapLibre (`z/x/y`) **byte a byte idênticos** por construção
+(`_tile_bytes` é o único ponto que fala com o Martin); `root.json` passa no validador oficial
+`@maplibre/maplibre-gl-style-spec`; QGIS (`QgsVectorTileLayer` + `QgsMapBoxGlStyleConverter`) carregou a camada
+por URL do `root.json` e renderizou as feições com requisições HTTP reais ao servidor (captura em
+`tests/medidas/L2-04-e_qgis_captura.png`); KML de 10.000 feições confere com `ogrinfo`; GeoJSON de 1.000.000 de
+feições via cursor nomeado do Postgres, RSS de pico do worker **145 MB** (teto do portão: 300 MB); token
+revogado devolve 401 nas 10 rotas testadas (tiles, VectorTileServer, exportações).
+
+Achados do adversário, corrigidos ou registrados como fronteira: `/vsistdout/` não funciona com o driver
+FlatGeobuf nesta versão do GDAL (3.8.4) — FlatGeobuf e GeoPackage passaram a escrever em arquivo temporário via
+`ogr2ogr`, apagado ao fim; tile z25 (fora do intervalo 0-24 aceito por `plat.camada_tile_garantir`) vira 502
+nomeado, nunca 500 cru; `.csv` de camada com geometria MULTI funciona, e "camada sem geometria" não existe neste
+catálogo (item alheio ao escopo do token dá 403, nunca 404/500); o ETag muda de verdade depois de editar uma
+geometria, mas fica preso ao cache de 5 min em memória do próprio Martin (decisão já tomada pelo L2-01-b) dentro
+dessa janela — sem prazo declarado no portão, registrado como achado honesto, não como defeito. `docs/adr/
+20260907T1648-vector-tile-server-tres-contratos.md` e `tests/medidas/L2-04-e-vector-tile-server-tilejson.json`
+têm a cláusula a cláusula. Fora do turno: Pro/AGOL reais (D20, exige credencial do parceiro); sprite/glyphs de
+verdade (depende de L2-02-e, não construído).
+
 ## turno 4, setembro de 2026 (item L2-04-servicos-esri-ogc: diretório do FeatureServer, OGC API Features e WFS 2.0)
 
 Construído em volta da operação `query` do FeatureServer (item L2-04-c, `wt/fsquery`, ADR 0018) sem reescrevê-la:
