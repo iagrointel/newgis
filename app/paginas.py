@@ -37,6 +37,8 @@ PAGINAS = {
     "/uploads": "uploads.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>
     "/construtor": "construtor.html",
+    # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
+    "/executar": "executar.html",
 }
 router = APIRouter()
 

@@ -1,0 +1,42 @@
+{
+ "item": "L5-01-a-layout-paginas",
+ "medidas": {
+  "construtor_montagem_ms": {
+   "valor": 2301.0,
+   "unidade": "ms",
+   "comando": "test_paginas_e_layout_por_arrasto"
+  },
+  "url_persiste_apos_f5": {
+   "valor": 1,
+   "unidade": "bool",
+   "comando": "test_paginas_e_layout_por_arrasto"
+  },
+  "grade_razao_larga": {
+   "valor": 2.016,
+   "unidade": "razao",
+   "comando": "test_paginas_e_layout_por_arrasto"
+  },
+  "grade_razao_estreita": {
+   "valor": 2.033,
+   "unidade": "razao",
+   "comando": "test_paginas_e_layout_por_arrasto"
+  },
+  "adversario_estouro_px_1280": {
+   "valor": 0,
+   "unidade": "px",
+   "comando": "test_adversario_seis_niveis_linha_coluna_sem_overflow_ou_widget_oculto"
+  },
+  "adversario_estouro_px_800": {
+   "valor": 0,
+   "unidade": "px",
+   "comando": "test_adversario_seis_niveis_linha_coluna_sem_overflow_ou_widget_oculto"
+  },
+  "adversario_estouro_px_320": {
+   "valor": 0,
+   "unidade": "px",
+   "comando": "test_adversario_seis_niveis_linha_coluna_sem_overflow_ou_widget_oculto"
+  }
+ },
+ "gerado_em": "2026-09-07T13:58:41Z",
+ "git_sha": "c93a08aff95d"
+}
