@@ -98,8 +98,13 @@ class ClienteS3:
         url = f"{self.endpoint}/{bucket}/{chave}" if chave else f"{self.endpoint}/{bucket}"
         if query:
             url += "?" + query
+        # `allow_redirects=False` (item L6-02-a, achado G5-1): a assinatura SigV4 vale para ESTE alvo; seguir um
+        # `Location` reenviaria o `Authorization` a um destino escolhido pelo servidor. O Garage não redireciona,
+        # então um 3xx aqui é erro de configuracao e deve aparecer como erro, nunca virar requisicao autenticada
+        # para outro lugar.
         return requests.request(
-            metodo, url, headers=cabecalhos, data=corpo, timeout=TIMEOUT_S, stream=stream
+            metodo, url, headers=cabecalhos, data=corpo, timeout=TIMEOUT_S, stream=stream,
+            allow_redirects=False,
         )
 
     # ---------------------------------------------------------------- objeto único
@@ -243,6 +248,7 @@ class ClienteAdmin:
             headers={"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"},
             json=corpo,
             timeout=TIMEOUT_S,
+            allow_redirects=False,  # mesmo motivo do `_requisicao`: o token de admin nunca segue `Location`
         )
         if r.status_code >= 300:
             raise ErroGarage(f"admin {metodo} {caminho}: {r.status_code} {r.text[:400]}")
