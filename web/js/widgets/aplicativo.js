@@ -10,7 +10,7 @@ const DEMONSTRACAO = {
       },
       {
         id: '01K4KX2Q0S0000000000000002', tipo: 'filtro', posicao: { coluna: 1, linha: 2, largura: 4, altura: 1 },
-        configuracao: { rotulo: 'Filtrar linhas', placeholder: 'Digite um valor' },
+        configuracao: { rotulo: 'Filtrar linhas' },
       },
       {
         id: '01K4KX2Q0S0000000000000003', tipo: 'tabela', posicao: { coluna: 5, linha: 2, largura: 8, altura: 2 },
@@ -32,6 +32,16 @@ function documentoDaPagina() {
   return incorporado ? JSON.parse(incorporado.textContent) : DEMONSTRACAO;
 }
 
-const motor = await montarWidgets(document.getElementById('aplicativo'), documentoDaPagina());
-window.plat = { ...(window.plat || {}), widgets: motor };
+// A página nunca fica em branco: documento ilegível ou motor que não sobe viram uma mensagem no <main>,
+// e `data-pronto` é marcado de qualquer jeito para o e2e (e quem lê a tela) saber que terminou.
+const principal = document.getElementById('aplicativo');
+try {
+  const motor = await montarWidgets(principal, documentoDaPagina());
+  window.plat = { ...(window.plat || {}), widgets: motor };
+} catch (erro) {
+  const aviso = document.createElement('section');
+  aviso.className = 'plat-widget-erro'; aviso.setAttribute('role', 'alert');
+  aviso.textContent = `Aplicativo não pôde ser montado: ${erro.message}`;
+  principal.replaceChildren(aviso);
+}
 document.body.dataset.pronto = '1';
