@@ -143,8 +143,10 @@ def _psql(db: str, sql: str) -> None:
 def _autentica(dsn: str) -> bool:
     import psycopg2
 
+    from app.schema_ambiente import CursorSchemaAmbiente  # F9: toda conexão nasce com a fábrica, mesmo só p/ autenticar
+
     try:
-        con = psycopg2.connect(dsn, connect_timeout=3)
+        con = psycopg2.connect(dsn, connect_timeout=3, cursor_factory=CursorSchemaAmbiente)
         con.close()
         return True
     except Exception:  # noqa: BLE001
