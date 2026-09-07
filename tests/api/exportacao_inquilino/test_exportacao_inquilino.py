@@ -182,7 +182,8 @@ def test_pacote_completo_gpkg_catalogo_manifesto_e_importacao(
 
     gravar = medida("L0-06-d-exportar-inquilino")
     gravar("duracao_s", duracao_s, "s", "pedir + esperar pronta (tests/api/exportacao_inquilino)")
-    gravar("bytes", final["bytes"], "bytes", "tamanho do pacote final (dados.gpkg+catalogo.json+arquivos.zip+manifesto.json)")
+    gravar("bytes", final["bytes"], "bytes",
+           "tamanho do pacote final (dados.gpkg + catalogo.json + arquivos.zip + manifesto.json)")
     gravar("n_itens", final["n_itens"], "itens", "itens do inquilino de teste no catálogo exportado")
     gravar("n_camadas", final["n_camadas"], "camadas", "camadas hospedadas escritas no GeoPackage")
     gravar("n_arquivos", final["n_arquivos"], "arquivos", "arquivos do bucket zipados")

@@ -23,7 +23,6 @@ pequeno: só metadado, nunca geometria nem conteúdo de arquivo)."""
 from __future__ import annotations
 
 import hashlib
-import json
 import subprocess
 import zipfile
 from pathlib import Path

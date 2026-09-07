@@ -121,8 +121,9 @@ def obter(exportacao_id: str, auth: Auth = autenticado("org.exportar")):
 @router.get("/api/inquilino/exportacoes/{exportacao_id}/baixar", openapi_extra=EXPORTAR,
             responses={200: {"content": {"application/zip": {}}}})
 def baixar(exportacao_id: str, request: Request, auth: Auth = autenticado("org.exportar")):
-    from app import objetos
     from fastapi.responses import StreamingResponse
+
+    from app import objetos
 
     with db.db(auth.contexto()) as cur:
         r = _carregar(cur, exportacao_id)

@@ -36,7 +36,8 @@ def test_manifesto_confere_sha256_e_bytes(tmp_path):
     manifesto = motor.montar_manifesto({"x.txt": a, "catalogo.json": b}, motor.sha256_bytes(b.read_bytes()))
     assert manifesto["componentes"]["x.txt"]["sha256"] == motor.sha256_arquivo(a)
     assert manifesto["componentes"]["x.txt"]["bytes"] == a.stat().st_size
-    assert manifesto["componentes"]["catalogo.json"]["sha256_conteudo"] == manifesto["componentes"]["catalogo.json"]["sha256"]
+    cat = manifesto["componentes"]["catalogo.json"]
+    assert cat["sha256_conteudo"] == cat["sha256"]
 
 
 def test_gpkg_vazio_e_valido_com_zero_camadas(tmp_path):
