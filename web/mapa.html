@@ -56,8 +56,34 @@
                     data-i18n="mapa.area">Área</button>
             <button type="button" id="btn-medicao-limpar" class="botao secundario"
                     data-i18n="mapa.limpar">Limpar</button>
+            <button type="button" id="btn-medicao-copiar" class="botao secundario"
+                    data-i18n="mapa.copiar">Copiar</button>
           </div>
           <p id="medicao-saida" class="saida" aria-live="polite"></p>
+          <ol id="medicao-segmentos" class="segmentos" aria-label="segmentos"></ol>
+        </section>
+
+        <section class="bloco" id="bloco-navegacao">
+          <h2 data-i18n="mapa.navegacao">Navegação</h2>
+          <div class="linha">
+            <button type="button" id="btn-voltar-extensao" class="botao secundario" disabled
+                    data-i18n="mapa.extensao_anterior">← anterior</button>
+            <button type="button" id="btn-avancar-extensao" class="botao secundario" disabled
+                    data-i18n="mapa.extensao_seguinte">seguinte →</button>
+            <button type="button" id="btn-norte" class="botao secundario" data-i18n="mapa.norte">Norte</button>
+          </div>
+          <label class="rotulo" for="seletor-crs" data-i18n="mapa.crs_cursor">coordenada do cursor em</label>
+          <select id="seletor-crs"></select>
+          <div class="linha">
+            <input id="favorito-nome" type="text" maxlength="80" data-i18n-aria="mapa.favorito_nome"
+                   aria-label="nome do favorito">
+            <button type="button" id="btn-favorito-salvar" class="botao" data-i18n="mapa.favorito_salvar">Salvar favorito</button>
+          </div>
+          <ul id="favoritos" class="sugestoes" aria-label="favoritos"></ul>
+          <details id="atalhos">
+            <summary data-i18n="mapa.atalhos">Atalhos de teclado</summary>
+            <div id="atalhos-lista"></div>
+          </details>
         </section>
 
         <section class="bloco">
@@ -76,13 +102,14 @@
           <label for="seletor-base" data-i18n="mapa.camada_base">camada base</label>
           <select id="seletor-base"></select>
         </div>
-        <div class="mapa-painel mapa-coordenadas" id="coordenadas" aria-live="off">—</div>
+        <div class="mapa-painel mapa-coordenadas" id="coordenadas" aria-live="off" title="clique para copiar">—</div>
       </div>
     </div>
   </main>
 </div>
 <script src="/static/vendor/maplibre-gl-4.7.1.js"></script>
 <script src="/static/vendor/pmtiles-4.5.0.js"></script>
+<script src="/static/vendor/proj4-2.22.0.js"></script>
 <script type="module" src="/static/js/mapa/mapa.js"></script>
 </body>
 </html>
