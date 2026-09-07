@@ -338,7 +338,8 @@ def test_refutacao_chave_aberta_desconecta_e_zera_subrede(sessao_a, limpar_redes
     con = _conectar(env, *ctx)
     try:
         with con.cursor() as cur:
-            no_montante, _no1, _no2, _no_jusante = _montar_dois_terminais(cur, rid, tronco["id"], chave["id"], morto["id"])
+            no_montante, _no1, _no2, _no_jusante = _montar_dois_terminais(
+                cur, rid, tronco["id"], chave["id"], morto["id"])
         con.commit()
 
         r = sessao_a.post(f"/api/rede/{rid}/atributos/sincronizar")
@@ -401,7 +402,8 @@ def test_substituicao_troca_fase_declarada_por_regra(sessao_a, limpar_redes, env
     con = _conectar(env, *ctx)
     try:
         with con.cursor() as cur:
-            no_montante, _no1, _no2, _no_jusante = _montar_dois_terminais(cur, rid, tronco["id"], chave["id"], jusante["id"])
+            no_montante, _no1, _no2, _no_jusante = _montar_dois_terminais(
+                cur, rid, tronco["id"], chave["id"], jusante["id"])
             cur.execute("UPDATE plat.rede_feicao_linha SET fase_bitmask = 1 WHERE id = %s::uuid", (tronco["id"],))
             cur.execute("UPDATE plat.rede_topo_aresta SET fase_bitmask = 1 WHERE origem_id = %s::uuid",
                        (tronco["id"],))
