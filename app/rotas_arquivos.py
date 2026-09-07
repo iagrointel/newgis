@@ -14,9 +14,12 @@ import re
 
 from fastapi import APIRouter, Request, Response
 
-from app import db, limites, objetos
+from app import db, limites, objetos, varredura_conteudo
+from app.auth.comum import registrar_evento
 from app.auth.sessao import Auth, autenticado
 from app.erros import ErroAPI
+from app.ingestao.formatos import ZipSuspeito
+from app.uploads import zip_remoto
 
 router = APIRouter(tags=["arquivos"])
 X = {"x-auth": "S/T", "x-privilegio": "proprio"}
@@ -34,6 +37,22 @@ def _sha256_ok(sha256: str) -> str:
     if not SHA256.match(sha256):
         raise ErroAPI(422, "validacao", "sha256 fora do padrão (64 hex)", {"campo": "sha256"})
     return sha256
+
+
+def _recusar(
+    request: Request, ctx, e: varredura_conteudo.ConteudoRecusado, classe: str, content_type: str, dados
+) -> ErroAPI:
+    """Registra a recusa na trilha (`arquivos/conteudo_recusado` ou `arquivos/quarentena` quando é o antivírus)
+    em transação PRÓPRIA (mesmo padrão de app/acervo/rotas.py::_recusar_pii: levantar dentro do `with` faria
+    rollback do evento) e devolve o 415 para o chamador levantar. Nunca grava o conteúdo: a quarentena É o
+    registro (sha256 + assinatura + quem/quando/de onde)."""
+    props = varredura_conteudo.propriedades_da_recusa(e, classe, content_type, dados)
+    with db.db(ctx) as cur:
+        registrar_evento(cur, request, varredura_conteudo.tipo_do_evento(e), "arquivo", props.get("sha256"), props)
+    detalhe = {"tipo_detectado": e.resultado.tipo_detectado, "motor": e.resultado.motor}
+    if e.resultado.virus:
+        detalhe["assinatura"] = e.resultado.virus
+    return ErroAPI(415, "conteudo_recusado", str(e), detalhe)
 
 
 def _linha(cur, tenant_id: int, classe: str, sha256: str) -> dict | None:
@@ -79,8 +98,20 @@ async def enviar(request: Request, classe: str = "objeto", auth: Auth = autentic
     classe = _classe_ok(classe)
     content_type = (request.headers.get("content-type") or "application/octet-stream").split(";")[0].strip()
     ctx = auth.contexto()
+    # pipeline único (item L7-03-a): lista de tipos e teto por CLASSE, decididos ANTES de ler um byte do corpo
+    try:
+        pol = varredura_conteudo.conferir_tipo_na_rota(classe, content_type)
+    except varredura_conteudo.ConteudoRecusado as e:
+        raise _recusar(request, ctx, e, classe, content_type, None) from None
     tamanho_parte = limites.ARQUIVO_PARTE_BYTES
-    limite = limites.ARQUIVO_BYTES_MAX
+    limite = pol.max_bytes
+    declarado = request.headers.get("content-length")
+    if declarado and declarado.isdigit() and int(declarado) > limite:
+        # 1 byte acima do plano = 413 sem ler o corpo (o cliente que mente no Content-Length cai no contador abaixo)
+        raise ErroAPI(
+            413, "arquivo_grande", f"Content-Length {declarado} acima do limite de {limite} bytes da classe {pol.nome}",
+            {"maximo_bytes": limite, "classe": pol.nome},
+        )
     buffer = bytearray()
     total = 0
     upload_id: str | None = None
@@ -98,7 +129,10 @@ async def enviar(request: Request, classe: str = "objeto", auth: Auth = autentic
         total += len(pedaco)
         if total > limite:
             abortar_se_aberto()
-            raise ErroAPI(413, "arquivo_grande", f"corpo acima do limite de {limite} bytes")
+            raise ErroAPI(
+                413, "arquivo_grande", f"corpo acima do limite de {limite} bytes da classe {pol.nome}",
+                {"maximo_bytes": limite, "classe": pol.nome},
+            )
         buffer += pedaco
         if len(buffer) >= tamanho_parte:
             if upload_id is None:
@@ -107,8 +141,7 @@ async def enviar(request: Request, classe: str = "objeto", auth: Auth = autentic
                 try:
                     objetos.escanear_cabecalho(bytes(buffer), content_type)
                 except objetos.ConteudoRecusado as e:
-                    detalhe = {"tipo_detectado": e.resultado.tipo_detectado}
-                    raise ErroAPI(415, "conteudo_recusado", str(e), detalhe) from e
+                    raise _recusar(request, ctx, e, classe, content_type, bytes(buffer)) from None
             try:
                 with db.db(ctx) as cur:
                     if upload_id is None:
@@ -131,8 +164,10 @@ async def enviar(request: Request, classe: str = "objeto", auth: Auth = autentic
             # varredura de conteúdo (item L7-03-b) roda AQUI, na borda onde o byte cru do cliente entra —
             # objetos.guardar() não varre (é adaptador de armazenamento genérico, ver seu próprio docstring)
             objetos.escanear_cabecalho(bytes(buffer), content_type)
+            # arquivo inteiro em mãos: SVG sai sanitizado, zip/kmz passam pela regra de zip-bomba (L7-03-a)
+            dados = varredura_conteudo.pos_processar(bytes(buffer), content_type)
             with db.db(ctx) as cur:
-                resultado = objetos.guardar(cur, classe, bytes(buffer), content_type, usuario_id=auth.usuario_id)
+                resultado = objetos.guardar(cur, classe, dados, content_type, usuario_id=auth.usuario_id)
         else:
             if buffer:
                 with db.db(ctx) as cur:
@@ -140,15 +175,27 @@ async def enviar(request: Request, classe: str = "objeto", auth: Auth = autentic
                 partes.append((numero, etag))
             with db.db(ctx) as cur:
                 resultado = objetos.parte_concluir(cur, upload_id, partes)
+            if content_type in ("application/zip", "application/vnd.google-earth.kmz"):
+                # zip acima do buffer único: as MESMAS regras de zip-bomba, lendo só o diretório central por
+                # intervalo (app/uploads/zip_remoto); zip suspeito é apagado do Garage e recusado
+                try:
+                    zip_remoto.inspecionar_zip_remoto(
+                        lambda a, b: objetos.ler_intervalo(resultado["chave"], a, b), int(resultado["bytes"])
+                    )
+                except ZipSuspeito as e:
+                    objetos.apagar(resultado["chave"])
+                    rec = varredura_conteudo.ConteudoRecusado(
+                        varredura_conteudo.Resultado(False, f"zip suspeito: {e}", "application/zip", "zip_bomba")
+                    )
+                    raise _recusar(request, ctx, rec, classe, content_type, None) from None
     except objetos.CotaExcedida as e:
         abortar_se_aberto()
         raise ErroAPI(413, "cota_excedida", str(e)) from e
     except objetos.ConteudoRecusado as e:
-        # só o caminho de 1 PUT (upload_id is None) chega aqui vindo de objetos.guardar(): o caminho multipart
-        # já escaneou a 1ª parte acima, antes de abrir o upload
+        # só o caminho de 1 PUT (upload_id is None) chega aqui vindo de escanear/pos_processar: o caminho
+        # multipart já escaneou a 1ª parte acima, antes de abrir o upload
         abortar_se_aberto()
-        detalhe = {"tipo_detectado": e.resultado.tipo_detectado}
-        raise ErroAPI(415, "conteudo_recusado", str(e), detalhe) from e
+        raise _recusar(request, ctx, e, classe, content_type, bytes(buffer)) from None
     except Exception:
         abortar_se_aberto()
         raise
@@ -168,13 +215,21 @@ def ler(sha256: str, classe: str = "objeto", auth: Auth = autenticado()):
         dados = objetos.ler(r["chave"])
     except (FileNotFoundError, objetos.ChaveInvalida) as e:
         raise ErroAPI(404, "objeto_inexistente", "objeto inexistente") from e
+    # L7-03-a: nunca `inline` para o que não é imagem; e mesmo a imagem vai com CSP `sandbox` + nosniff, então
+    # um HTML/SVG servido daqui não executa nada no contexto da plataforma (anexo .html abre como download)
+    ct = r["content_type"]
+    ext = objetos.EXTENSOES.get(ct, "bin")
+    disposicao = "inline" if ct in varredura_conteudo.politica(classe).inline else "attachment"
     return Response(
         dados,
-        media_type=r["content_type"],
+        media_type=ct,
         headers={
             "Cache-Control": "private, max-age=60",
             "X-Robots-Tag": "noindex, nofollow",
             "ETag": f'"{sha256}"',
+            "Content-Disposition": f'{disposicao}; filename="{sha256}.{ext}"',
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'",
         },
     )
 
