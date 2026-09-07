@@ -22,6 +22,7 @@ from app.schema_ambiente import reescrever_schema
 from app.settings import settings
 
 router = APIRouter(tags=["estatistica"])
+X = {"x-auth": "S/T", "x-privilegio": "proprio"}
 
 IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _OCULTAS = {"geom", "tenant_id"}
@@ -76,10 +77,44 @@ def _colunas(cur, schema: str, tabela: str) -> dict[str, str]:
         f"SELECT column_name, data_type FROM information_schema.columns "
         f"WHERE table_schema = '{schema}' AND table_name = '{tabela}'"
     )
-    return {row["column_name"]: row["data_type"] for row in cur.fetchall() if row["column_name"] not in _OCULTAS}
+    return {row["column_name"]: row["data_type"] for row in cur.fetchall()}
 
 
-@router.post("/api/camadas/{item_id}/estatisticas")
+def visiveis(colunas: dict[str, str]) -> dict[str, str]:
+    """Colunas que podem ser agrupadas, filtradas e agregadas (geometria e tenant ficam de fora)."""
+    return {c: t for c, t in colunas.items() if c not in _OCULTAS}
+
+
+def compilar_filtro(corpo: dict, colunas: dict[str, str]) -> tuple[str, list]:
+    """`filtro` (where SQL-92 do `app.consulta.where_ast`, lista branca = colunas da camada) e `extensao`
+    (caixa em graus, ST_Intersects na coluna geom) → (where_sql, params). Partilhada com a rota de gráfico
+    (L2-01-i): um filtro só, compilado num lugar só."""
+    where_sql, where_params = "", []
+    filtro = corpo.get("filtro")
+    if filtro:
+        colunas_filtro = {c: f'"{c}"' for c in visiveis(colunas)}
+        try:
+            consulta = compilar_where(filtro, colunas_filtro)
+        except ErroWhere as exc:
+            raise ErroAPI(400, exc.codigo, exc.mensagem, exc.detalhe) from exc
+        where_sql, where_params = consulta.sql, list(consulta.params)
+
+    extensao = corpo.get("extensao")
+    if extensao:
+        geom_col = "geom"
+        if geom_col not in colunas:
+            raise ErroAPI(422, "sem_geometria", "camada sem coluna de geometria para filtrar por extensão")
+        try:
+            xmin, ymin, xmax, ymax = (float(extensao[k]) for k in ("xmin", "ymin", "xmax", "ymax"))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ErroAPI(422, "extensao_invalida", "extensao precisa de xmin, ymin, xmax e ymax numéricos") from exc
+        expr = f'ST_Intersects("{geom_col}", ST_MakeEnvelope(%s, %s, %s, %s, 4326))'
+        where_sql = f"({where_sql}) AND {expr}" if where_sql else expr
+        where_params = list(where_params) + [xmin, ymin, xmax, ymax]
+    return where_sql, where_params
+
+
+@router.post("/api/camadas/{item_id}/estatisticas", openapi_extra=X)
 def estatisticas(
     item_id: str,
     corpo: dict,
@@ -88,7 +123,8 @@ def estatisticas(
 ):
     with db.db(auth.contexto()) as cur:
         camada = _camada_do_item(cur, item_id)
-        colunas = _colunas(cur, camada["schema"], camada["tabela"])
+        todas = _colunas(cur, camada["schema"], camada["tabela"])
+        colunas = visiveis(todas)
 
         try:
             pedido = agr.montar_pedido(corpo)
@@ -105,25 +141,7 @@ def estatisticas(
             saida["cache"] = True
             return saida
 
-        where_sql, where_params = "", []
-        filtro = corpo.get("filtro")
-        if filtro:
-            colunas_filtro = {c: f'"{c}"' for c in colunas}
-            try:
-                consulta = compilar_where(filtro, colunas_filtro)
-            except ErroWhere as exc:
-                raise ErroAPI(400, exc.codigo, exc.mensagem, exc.detalhe) from exc
-            where_sql, where_params = consulta.sql, list(consulta.params)
-
-        extensao = corpo.get("extensao")
-        if extensao:
-            geom_col = "geom"
-            if geom_col not in colunas:
-                raise ErroAPI(422, "sem_geometria", "camada sem coluna de geometria para filtrar por extensão")
-            xmin, ymin, xmax, ymax = extensao["xmin"], extensao["ymin"], extensao["xmax"], extensao["ymax"]
-            expr = f'ST_Intersects("{geom_col}", ST_MakeEnvelope(%s, %s, %s, %s, 4326))'
-            where_sql = f"({where_sql}) AND {expr}" if where_sql else expr
-            where_params = list(where_params) + [xmin, ymin, xmax, ymax]
+        where_sql, where_params = compilar_filtro(corpo, todas)
 
         try:
             sql_montado = agr.construir_sql(
