@@ -18,6 +18,13 @@ o instante do dump ao lado do número para quem confere.
 import re
 
 OBJETOS_POR_INQUILINO = 3
+# Extensões que o banco de ensaio precisa ter ANTES do pg_restore, senão a restauração perde tabela em
+# silêncio. postgis e pgcrypto vêm do install.sh; pg_trgm e unaccent entraram com o geocodificador
+# (migração 045, que as declara como "já instaladas na casa"). Achado do 1º ensaio de verdade, 07/09: sem
+# unaccent no banco de ensaio, a configuração de busca pt_sem_acento não nasce, a tabela `item` não é
+# criada e o ensaio acusa "tabela ausente na cópia restaurada" — isto é, um dump do schema da plataforma
+# só é restaurável numa base que já tenha as quatro.
+EXTENSOES_DO_ENSAIO = ("postgis", "pgcrypto", "pg_trgm", "unaccent")
 _SEGURO = re.compile(r"[^a-z0-9_]+")
 
 
