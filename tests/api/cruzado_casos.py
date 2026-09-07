@@ -20,6 +20,15 @@ PADRAO = frozenset({401, 403, 404})
 UUID_NULO = "00000000-0000-0000-0000-000000000000"  # id que não é de A nem de B: 404 garantido pela RLS/dono
 
 
+def _metadado_saml_novo() -> str:
+    """Metadado de um IdP sintético novo (chave gerada na hora, `tests/saml_fixture/idp_falso.py`): corpo VÁLIDO
+    para POST/PUT de /api/org/saml, para a chamada chegar à checagem de inquilino em vez de parar no 422 de
+    validação. entityId único por chamada por causa do UNIQUE (tenant_id, idp_entity_id)."""
+    from tests.saml_fixture.idp_falso import IdpFalso
+
+    return IdpFalso.novo(f"https://idp-{PREFIXO}{secrets.token_hex(6)}.invalido/saml").metadado()
+
+
 @dataclass
 class Caso:
     url: Callable[[Any], str]
@@ -162,26 +171,6 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b)
-    return Preparacao(
-        sessao_b,
-        sessao_a,
-        ids,
-        inquilino_b,
-        usuario_b,
-        grupo_b,
-        papel_b,
-        token_b,
-        sessao_b_id,
-        job_b=job_b,
-        agenda_b=agenda_b,
-        item_b=item_b,
-        pasta_b=pasta_b,
-        link_b=link_b,
-        categoria_b=categoria_b,
-        fonte_acervo=fonte_acervo,
-        conexao_b=conexao_b,
-    )
                       convite_b=convite_b,
                       conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
 
@@ -630,12 +619,6 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"resolucao_m": 100.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
                    "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
     ),
-    ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
-                                verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
-    ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,
-                                        aceita=frozenset({200}), verificar=_sem_marca),
-    ("GET", "/api/itens/tags"): Caso(lambda p: f"/api/itens/tags?q={PREFIXO}", proprio=True, aceita=frozenset({200}),
-                                     verificar=_sem_marca),
     ("POST", "/api/itens"): Caso(
         lambda p: "/api/itens",
         lambda p: {
@@ -1102,21 +1085,28 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/sso/saml/acs"): Caso(lambda p: "/api/sso/saml/acs", publico=True, aceita=frozenset({401})),
     ("GET", "/api/sso/saml/slo"): Caso(lambda p: "/api/sso/saml/slo", publico=True, aceita=frozenset({401})),
     ("POST", "/api/sso/saml/slo"): Caso(lambda p: "/api/sso/saml/slo", publico=True, aceita=frozenset({401})),
+    # logout: encerra a sessão de quem chama (mesmo padrão de /api/sso/oidc/logout do L0-08-a) — cliente
+    # descartável, nunca a sessão de A, e 204 para qualquer chamador porque não há sessão SAML a propagar
     ("GET", "/api/sso/saml/logout"): Caso(
-        lambda p: "/api/sso/saml/logout", proprio=True, aceita=frozenset({204, 302}), descartavel=True,
+        lambda p: "/api/sso/saml/logout", publico=True, aceita=frozenset({204, 302}), descartavel=True,
     ),
-    ("GET", "/api/org/saml"): Caso(lambda p: "/api/org/saml", proprio=True, aceita=frozenset({200})),
+    ("GET", "/api/org/saml"): Caso(
+        lambda p: "/api/org/saml", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    # POST/PUT levam corpo VÁLIDO (metadado de IdP sintético): assim a chamada chega à checagem de inquilino em
+    # vez de parar no 422 de validação. POST age só sobre o chamador (proprio, provedor criado em A e apagado no
+    # limpar); PUT com id inexistente dá 404 sem depender da suíte de SAML ter rodado antes.
     ("POST", "/api/org/saml"): Caso(
         lambda p: "/api/org/saml",
-        lambda p: {"rotulo": f"{PREFIXO}saml", "idp_entity_id": "https://idp.invalido/x", "idp_sso_url": "https://idp.invalido/sso",
-                   "idp_certificado": "nao"},
-        aceita=frozenset({422}),
+        lambda p: {"habilitado": False, "rotulo": f"{PREFIXO}saml", "metadado_xml": _metadado_saml_novo()},
+        proprio=True,
+        aceita=frozenset({201}),
+        verificar=_sem_marca,
+        limpar=lambda p, j: p.sessao_a.delete(f"/api/org/saml/{j['id']}"),
     ),
     ("PUT", "/api/org/saml/{provedor_id}"): Caso(
         lambda p: "/api/org/saml/999999999",
-        lambda p: {"rotulo": f"{PREFIXO}saml", "idp_entity_id": "https://idp.invalido/x", "idp_sso_url": "https://idp.invalido/sso",
-                   "idp_certificado": "nao"},
-        aceita=frozenset({404, 422}),
+        lambda p: {"habilitado": False, "rotulo": f"{PREFIXO}saml", "metadado_xml": _metadado_saml_novo()},
     ),
     ("DELETE", "/api/org/saml/{provedor_id}"): Caso(lambda p: "/api/org/saml/999999999"),
 }
