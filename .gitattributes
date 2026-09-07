@@ -1,0 +1,5 @@
+# CHANGELOG.md é acrescentado por TODO item, então todo ramo conflitava com todo ramo:
+# em 07/09 seis junções seguidas reprovaram por isso e nenhuma era defeito de código.
+# `merge=union` (embutido no git) guarda os dois lados quando ambos só acrescentam.
+# A ordem das linhas do lote fica arbitrária — de propósito: é registro, não contrato.
+CHANGELOG.md merge=union
