@@ -3,6 +3,27 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 5, setembro de 2026 (item L5-14-publicacao-links-embed: publicação de documento de construtor — links e embed)
+
+Publicar um documento de construtor (`app`/`painel`) por `POST /api/itens/{id}/publicacao` faz três coisas
+numa transação: aponta `plat.item.versao_publicada` (mecanismo já existente, reaproveitado), reserva a URL
+`/p/<inquilino>/<slug>` (tabela nova `plat.item_publicacao`) e emite um token de serviço PRÓPRIO da
+publicação com escopo calculado automaticamente (as camadas citadas pelo documento, via fecho de
+`plat.item_relacao`) e `restricao.referer` = domínios de incorporação escolhidos — mesmo mecanismo de
+`token_servico`/escopos do L0-02/L1-02, nenhuma autorização nova. Acesso à página: público (quando o
+inquilino permite) ou por link-com-token (reaproveita `plat.compartilhamento_link`/`link_resolver`, o
+mesmo de `/c/<token>`); nega com 401/403 depois de revogado. Rascunho editado não muda o publicado até
+novo publish (a leitura pública é sempre da versão CONGELADA em `plat.item_versao`, nunca da linha viva).
+`GET /p/{inquilino}/{slug}` serve a casca HTML com `Content-Security-Policy: frame-ancestors` calculado
+pelos domínios do app (exceção só nesta rota; nunca um `X-Frame-Options: DENY` genérico) — só funciona
+embutido nos domínios cadastrados. `GET /api/itens/{id}/publicacao/exportacao` devolve HTML autocontido
+(sem chamada de rede) que abre por `file://` com o mesmo conteúdo. `GET .../publicacao/visualizacoes`
+mostra a contagem por dia (`plat.item_publicacao_visualizacao`, incrementada dentro de
+`plat.publicacao_resolver`, SECURITY DEFINER). Ver `docs/adr/20260907T1410-publicacao-links-embed.md`
+(decisão de guardar o token da publicação em texto claro, não só hash — ele é uma chave publicável por
+natureza, não um segredo) e `laco/handoffs/T5/L5-14-publicacao-links-embed.md` (portão cláusula a
+cláusula, o que ficou de fora).
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

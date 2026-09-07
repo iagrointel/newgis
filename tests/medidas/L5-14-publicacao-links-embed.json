@@ -1,0 +1,12 @@
+{
+ "item": "L5-14-publicacao-links-embed",
+ "medidas": {
+  "revogacao_nega_ms": {
+   "valor": 18.9,
+   "unidade": "ms",
+   "comando": "DELETE link + GET /api/p/<inquilino>/<slug>?link=<token> -> 401/403"
+  }
+ },
+ "gerado_em": "2026-09-07T15:14:49Z",
+ "git_sha": "325b004a38bd"
+}

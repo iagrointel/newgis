@@ -187,6 +187,12 @@ class EsvaziarEntrada(Modelo):
     ids: list[str] | None = Field(default=None, max_length=limites.LOTE_MAX)
 
 
+class PublicacaoEntrada(Modelo):
+    slug: str = Field(min_length=limites.PUBLICACAO_SLUG_MIN, max_length=limites.PUBLICACAO_SLUG_MAX)
+    dominios_permitidos: list[str] | None = Field(default=None, max_length=limites.PUBLICACAO_DOMINIOS_MAX)
+    versao: int | None = None
+
+
 # ---- saídas
 class Item(Saida):
     id: str
@@ -339,3 +345,30 @@ class ImportadoCategorias(Saida):
 class ObjetoAssinado(Saida):
     url: str
     expira_em: str
+
+
+class Publicacao(Saida):
+    item_id: str
+    slug: str
+    url: str
+    dominios_permitidos: list[str]
+    token_id: int | None
+    publicado_em: str | None
+    atualizado_em: str | None
+    camadas_citadas: list[str]
+
+
+class DocumentoPublico(Saida):
+    item_id: str
+    titulo: str | None
+    tipo: str
+    resumo: str | None
+    versao_publicada: int
+    corpo: dict
+    dominios_permitidos: list[str]
+    token: str | None
+
+
+class VisualizacaoDia(Saida):
+    dia: str
+    visualizacoes: int

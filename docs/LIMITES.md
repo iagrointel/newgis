@@ -93,6 +93,16 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `COTA_ITENS` | `100000` | padrão por inquilino, tenant.config.catalogo.cota_itens |
 | `USADO_POR_PROFUNDIDADE_MAX` | `5` | — |
 
+## publicação de documento de construtor (L5-14-publicacao-links-embed)
+
+| nome | valor | explicação |
+|---|---|---|
+| `PUBLICACAO_SLUG_MIN` | `2` | — |
+| `PUBLICACAO_SLUG_MAX` | `60` | — |
+| `PUBLICACAO_DOMINIOS_MAX` | `20` | — |
+| `PUBLICACAO_CAMADAS_PROFUNDIDADE` | `4` | app -> mapa -> camada; folga para um nível extra de vista_de_camada |
+| `PUBLICACAO_VISUALIZACOES_DIAS_MAX` | `366` | — |
+
 ## contrato de API e limites transversais (L0-12; docs/CONTRATO_API.md e docs/LIMITES.md nascem daqui)
 
 | nome | valor | explicação |
