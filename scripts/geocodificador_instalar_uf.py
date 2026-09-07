@@ -30,36 +30,12 @@ from pathlib import Path
 
 import httpx
 import psycopg2
-import psycopg2.extensions
 from dotenv import dotenv_values
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from app.geocodificador.normalizacao import expandir_abreviacoes  # noqa: E402
-from app.schema_ambiente import reescrever_schema  # noqa: E402 — item L2-11-a: trilha roda num schema não-"plat"
-
-# schema/schema_trabalho do AMBIENTE ATUAL (variável de processo, gravada por laco/trilha_ambiente.sh); em
-# produção as duas ficam no padrão "plat"/"plat_trabalho" e `reescrever_schema` vira no-op (custo zero, mesma
-# garantia de app/schema_ambiente.py). Sem isto o instalador gravava SEMPRE no schema "plat" literal —
-# permissão negada numa trilha (papel só tem GRANT no schema da própria trilha) ou, pior, gravação cruzada.
-_SCHEMA_AMBIENTE = os.environ.get("PLAT_SCHEMA", "plat")
-_SCHEMA_TRABALHO_AMBIENTE = os.environ.get("PLAT_SCHEMA_TRABALHO", "plat_trabalho")
-
-
-class _CursorSchemaAmbiente(psycopg2.extensions.cursor):
-    """Mesma reescrita de texto de `app.schema_ambiente.CursorSchemaAmbiente`, mas para o cursor cru deste
-    script (que não passa pelo pool de `app.db`) — inclusive `copy_expert`, que `COPY plat.geo_endereco ...`
-    também usa."""
-
-    def execute(self, query, vars=None):
-        if isinstance(query, str):
-            query = reescrever_schema(query, _SCHEMA_AMBIENTE, _SCHEMA_TRABALHO_AMBIENTE)
-        return super().execute(query, vars)
-
-    def copy_expert(self, sql, file, size=8192):
-        if isinstance(sql, str):
-            sql = reescrever_schema(sql, _SCHEMA_AMBIENTE, _SCHEMA_TRABALHO_AMBIENTE)
-        return super().copy_expert(sql, file, size)
+from app.schema_ambiente import CursorSchemaAmbiente  # noqa: E402 -- depois do sys.path acima; fábrica única (item F9), a reinvenção local do L2-11-a foi removida
 
 BASE_CNEFE = (
     "https://ftp.ibge.gov.br/Cadastro_Nacional_de_Enderecos_para_Fins_Estatisticos/Censo_Demografico_2022/"
@@ -92,6 +68,13 @@ def _dsn() -> str:
     if not dsn:
         raise SystemExit("PLAT_DSN ausente (nem no ambiente, nem em .env)")
     return dsn
+
+
+def _conectar():
+    """Conexao com a fabrica de cursor do ambiente. Sem ela, tanto o `INSERT INTO plat.geo_uf` quanto o
+    `COPY plat.geo_endereco ... FROM STDIN` (lotes de 20.000) gravavam no `plat` de PRODUCAO a partir de
+    qualquer trilha (achado F9; o COPY e o F2, coberto agora por `CursorSchemaAmbiente.copy_expert`)."""
+    return psycopg2.connect(_dsn(), cursor_factory=CursorSchemaAmbiente)
 
 
 def medir_tamanho(cliente: httpx.Client, url: str) -> int:
@@ -173,7 +156,7 @@ def instalar(sigla: str, *, teto_bytes: int, forcar: bool, arquivo_local: str | 
         municipios = buscar_municipios(cliente, cod_uf)
     _log(f"{len(municipios)} municípios de {sigla} (IBGE localidades)")
 
-    con = psycopg2.connect(_dsn(), cursor_factory=_CursorSchemaAmbiente)
+    con = _conectar()
     con.autocommit = False
     try:
         with con.cursor() as cur:
