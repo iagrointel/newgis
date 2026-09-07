@@ -949,13 +949,14 @@ o inquilino não assinar a camada (mesmo porteiro do 18.3) e, quando aceita, enf
 `app.amc.vetorial` (só extratores de vetor: `poligono_fracao_area`, `poligono_area`, `poligono_contagem`,
 `poligono_atributo_ponderado`, `linha_comprimento`, `linha_distancia_mais_proxima`, `ponto_contagem_raio`,
 `ponto_densidade_kernel`, `ponto_distancia_mais_proximo`, `ponto_atributo_mais_proximo`), aplica a transformação
-`linear` do fator e combina por soma ponderada normalizada. `GET /api/amc/execucoes/{id}` mostra, por camada,
-`fonte_id`, `sha256` e `contagem` (de `acervo.linhas_exatas`). Revogar a assinatura DEPOIS de a execução
-concluir não apaga o resultado (a execução concluída é imutável); revogar DURANTE um job em andamento derruba
-o job com mensagem — a checagem da assinatura acontece de novo, uma vez antes de cada fator e uma vez depois
-do último, e nenhuma linha de resultado é gravada se qualquer uma delas falhar. Fora do escopo: fator do tipo
-`item` (catálogo do inquilino) não é extraído por este job; raster do acervo, transformação além de `linear` e
-combinador diferente do padrão ficam para o item L3-01-d/e. Ver ADR `20260907T1319`.
+do fator — os 16 tipos de `app.amc.transformacoes` (item L3-01-d, seção 22) — e combina por soma ponderada
+normalizada. `GET /api/amc/execucoes/{id}` mostra, por camada, `fonte_id`, `sha256` e `contagem` (de
+`acervo.linhas_exatas`). Revogar a assinatura DEPOIS de a execução concluir não apaga o resultado (a execução
+concluída é imutável); revogar DURANTE um job em andamento derruba o job com mensagem — a checagem da
+assinatura acontece de novo, uma vez antes de cada fator e uma vez depois do último, e nenhuma linha de
+resultado é gravada se qualquer uma delas falhar. Fora do escopo: fator do tipo `item` (catálogo do
+inquilino) não é extraído por este job; raster do acervo e combinador diferente do padrão ficam para outro
+item. Ver ADR `20260907T1319`.
 
 ## 19. Ficha do acervo completa e gate de LGPD (itens L6-01-d-ficha-fonte e L6-01-f-lgpd)
 
@@ -1116,3 +1117,76 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Transformações do motor multicritério: valor bruto → favorabilidade 0-100 (item L3-01-d-transformacoes)
+
+`app/amc/transformacoes.py` implementa os 16 tipos de `docs/esquemas/amc_modelo.v1.json#/$defs/transformacao`
+em numpy (pré-visualização e recomputação); `db/migracoes/20260907T1602_amc_transformacoes.sql` implementa os
+mesmos 16 em PL/pgSQL (`plat.amc_transformar_num`/`plat.amc_transformar_cat`, para materializar sem trazer a
+coluna para o Python). As duas têm de bater, célula a célula, a ≤ 0,01 — provado em
+`tests/unit/test_amc_transformacoes.py`.
+
+### 22.1 Os 16 tipos
+
+| tipo | parâmetros | o que faz |
+|---|---|---|
+| `categoria` | `notas` (objeto texto→nota), `outros` | Unique Categories: valor não listado usa `outros`; sem os dois, fica NULL |
+| `faixas` | `quebras`, `notas`, `metodo` (manual/quantil/intervalo_igual/quebras_naturais) | Range of Classes: degrau, `quebras[i-1] < x ≤ quebras[i]` |
+| `linear` | `minimo`, `maximo`, `direcao` | rampa 0-100 (ou `saida_min`/`saida_max`, extensão deste item) |
+| `linear_simetrica` | `minimo`, `maximo` | pico no ponto médio, cai para as duas pontas (Symmetric Linear) |
+| `degraus` | `bandas` (`{ate, nota}`), `acima` | bandas do motor logístico (ex.: tempo de viagem em faixas) |
+| `potencia` | `minimo`, `maximo`, `expoente`, `deslocamento` | Power |
+| `logaritmo` | `minimo`, `maximo`, `fator`, `deslocamento` | Logarithm |
+| `exponencial` | `minimo`, `maximo`, `base`, `deslocamento` | Exponential |
+| `crescimento_logistico` | `minimo`, `maximo`, `y_intercepto_percentual` | Logistic Growth (S crescente) |
+| `decaimento_logistico` | idem | Logistic Decay (S decrescente, espelho da anterior) |
+| `gaussiana` | `midpoint`, `spread` | Gaussian |
+| `proxima` | `midpoint`, `spread` | Near (mais estreita que a Gaussian) |
+| `grande` | `midpoint`, `spread` | Large (sigmoide crescente) |
+| `pequena` | `midpoint`, `spread` | Small (sigmoide decrescente) |
+| `ms_grande` | `multiplicador_media`, `multiplicador_desvio` (+ `media`/`desvio` resolvidos da amostra) | MSLarge |
+| `ms_pequena` | idem | MSSmall |
+
+Comuns a todos: `abaixo`/`acima` (nota fixa fora do domínio; ausente = usa a borda da própria curva) e NULL de
+entrada sempre sai NULL. `saida_min`/`saida_max` (padrão 0/100) são uma extensão ADITIVA deste item — o
+esquema não fecha `additionalProperties` no objeto `transformacao`, então isto não quebra nenhum modelo já
+gravado.
+
+**Fórmula declarada, não engenharia reversa** (ver ADR `20260907T1602`): a Esri documenta propósito e nome de
+parâmetro das 12 funções contínuas do Rescale by Function, mas não publica a fórmula fechada (verificado em
+07/09/2026, `doc.esri.com/.../the-transformation-functions-available-for-rescale-by-function.html`). Este
+módulo declara uma fórmula concreta e documentada para cada uma, com os mesmos parâmetros e o mesmo efeito
+qualitativo descrito — nunca afirma reproduzir o produto fechado da Esri byte a byte.
+
+### 22.2 Gráfico de cada função
+
+`venv/bin/python scripts/amc_transformacoes_graficos.py` gera `docs/graficos/amc_transformacoes/<tipo>.svg`
+(16 arquivos, um por tipo, com a fórmula no título) a partir do próprio `app.amc.transformacoes.transformar` —
+não há desenho manual, se a fórmula mudar o gráfico muda ao rodar de novo.
+
+### 22.3 Pré-visualização
+
+`app.amc.transformacoes.pre_visualizar(valores, transformacao)` devolve histograma de entrada, histograma de
+saída, contagem de nulos e o tempo gasto — portão de pronto: ≤ 300 ms para 100 mil valores (medido:
+`tests/unit/test_amc_transformacoes_desempenho.py`, ~20-35 ms conforme o tipo, sem banco).
+
+### 22.4 O que reproduz do motor logístico real (CBRE) — e o que não reproduz
+
+Os fatores do motor territorial do projeto CBRE (`cbre.hex_fav`, outro projeto, lido só leitura) que eram
+uma transformação declarativa de UMA coluna bruta E cuja coluna bate com a favorabilidade oficial reproduzem
+a ≤ 0,5 em 100 % das células: `decl` (declividade, `linear`), `rod` (distância a rodovia, `linear` com
+`saida_min`/`saida_max`), `agua` (faixa de 30 m, `categoria`), `press` (pressão urbana, `linear`) — provado em
+`tests/unit/test_amc_transformacoes_cbre.py`. Dos 19 fatores que o motor tinha em 29/08/2026, os outros 15
+ficam de fora, cada um com o motivo medido e nomeado no próprio teste e em
+`tests/medidas/L3-01-d-transformacoes.json` — a maioria combina várias colunas/veto/bônus antes de virar
+nota (fora do escopo de uma biblioteca de transformação), e dois (`gru`, `se`) têm coluna candidata com a
+forma certa mas divergência real medida (3,90 % e 80,1 % das células, respectivamente) que sugere que a
+coluna gravada não é a mesma que o pipeline daquele fator usa — apurar isso é trabalho do projeto CBRE, não
+deste item.
+
+### 22.5 Limites desta fatia
+
+`faixas` por quantil/intervalo igual/quebras naturais e `ms_grande`/`ms_pequena` sem `media`/`desvio`
+gravados só funcionam com uma amostra em mãos (resolvidos em Python antes de qualquer SQL — ver ADR); a
+biblioteca não tem UI de pré-visualização no navegador ainda (só a função Python/o histograma; a tela fica
+para outro item). Ver `laco/handoffs/T3/L3-01-d-transformacoes.md`.

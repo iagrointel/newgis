@@ -3,6 +3,26 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L3-01-d-transformacoes: biblioteca de transformações do motor multicritério)
+
+`app/amc/transformacoes.py` (numpy, puro) implementa os 16 tipos de transformação valor bruto → favorabilidade
+0-100 do esquema (`categoria`, `faixas` com quebra manual/quantil/intervalo igual/quebras naturais, `linear`,
+`degraus`, e as 12 funções contínuas do Rescale by Function do ArcGIS Pro 3.4 — fórmula DECLARADA, a Esri não
+publica a fechada, ver ADR); `db/migracoes/20260907T1602_amc_transformacoes.sql` implementa as mesmas em
+PL/pgSQL (`plat.amc_transformar_num`/`_cat`) para materializar sem trazer a coluna ao Python. Equivalência
+SQL×numpy provada a ≤ 0,01 (`tests/unit/test_amc_transformacoes.py`, 20 casos + amostra aleatória de 200
+valores); refutação do adversário (gaussiana/logística/MSLarge reimplementadas do zero a partir da página
+pública da Esri, mais mínimo=máximo/spread 0/negativo/NaN) em
+`tests/unit/test_amc_transformacoes_adversario.py`. Pré-visualização com histograma de entrada/saída em
+~20-35 ms para 100 mil valores (limite do portão: 300 ms; `tests/unit/test_amc_transformacoes_desempenho.py`).
+Reprodução do motor logístico real (CBRE, só leitura): 4 dos 19 fatores batem a ≤ 0,5 em 100 % das células
+(`decl`, `rod`, `agua`, `press`); os outros 15 ficam fora de escopo (combinam várias colunas/veto/bônus, ou —
+`gru`/`se` — têm coluna candidata que diverge de verdade, 3,90 % e 80,1 % das células), cada um com o motivo
+nomeado em `tests/medidas/L3-01-d-transformacoes.json` — cláusula registrada como PARCIAL, não fingida como
+passada. `app/amc/executor.py` (item L6-04) agora usa esta biblioteca inteira em vez de só `linear`. 16
+gráficos gerados por `scripts/amc_transformacoes_graficos.py` em `docs/graficos/amc_transformacoes/`. ADR
+`docs/adr/20260907T1602-transformacoes-amc.md`.
+
 ## turno 3, setembro de 2026 (item L3-02-a-monte-carlo-pesos: robustez do motor multicritério por sorteio de pesos)
 
 `app/amc/robustez.py` (puro, sem I/O): `sortear_pesos` (Dirichlet no simplex ou faixa +-k% por fator,
