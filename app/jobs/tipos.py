@@ -2,7 +2,6 @@
 acrescentam aqui a importação do seu módulo de tarefas (ex.: app.ingestao.tarefas no L0-04)."""
 
 from app.amc import tarefas as amc_tarefas  # noqa: F401 — L3-01-b: amc.gerar_unidades; L3-02-a: amc.robustez_pesos
-from app.amc import tarefas as amc_tarefas  # noqa: F401 — L3-01-b: amc.gerar_unidades
 from app.catalogo import (
     tarefas as catalogo_tarefas,  # noqa: F401 — L0-03: 6 tipos catalogo.* e os periódicos do catálogo
 )

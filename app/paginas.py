@@ -35,6 +35,8 @@ PAGINAS = {
     "/redefinir-senha": "redefinir_senha.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
+    # --- motor AMC: explicação da nota de uma unidade (L3-01-f-explicacao)
+    "/amc/explicacao/{execucao_id}/{unidade_id}": "amc_explicacao.html",
 }
 router = APIRouter()
 

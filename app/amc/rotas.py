@@ -25,6 +25,7 @@ from app import db, limites
 from app.amc import MOTOR_VERSAO
 from app.amc import camadas as mod_camadas
 from app.amc import esquema as mod_esquema
+from app.amc import explicacao as mod_explicacao
 from app.amc import unidades as mod_unidades
 from app.auth.comum import erro_do_banco, paginacao, registrar_evento
 from app.auth.sessao import Auth, autenticado
@@ -549,6 +550,38 @@ def listar_resultados(execucao_id: str, auth: Auth = autenticado("analise.amc", 
         return {"execucao_id": eid, "estado": r["estado"], "escala": "favorabilidade 0-100 (NULL = sem dado)",
                 "total": total, "limite": limite, "deslocamento": deslocamento,
                 "resultados": [dict(x) for x in cur.fetchall()]}
+
+
+@router.get("/execucoes/{execucao_id}/unidades/{unidade_id}/explicacao", openapi_extra=LER)
+def explicar_unidade(execucao_id: str, unidade_id: str,
+                     auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler")):
+    """Item L3-01-f-explicacao: "por que esta unidade tem nota N". Recalcula fator → valor bruto → transformação →
+    favorabilidade → peso → contribuição a partir de `plat.amc_fator_bruto` NA HORA (não lê nenhuma tabela de
+    explicação gravada), e compara com `plat.amc_resultado` quando a execução já tiver resultado. O cálculo é o
+    mesmo de `app/amc/explicacao.py`; a rota só busca as três peças (definição do modelo, pesos e fatores brutos)."""
+    eid = _uuid(execucao_id, "execucao_id")
+    with db.db(auth.contexto()) as cur:
+        execucao = _execucao_ou_404(cur, eid)
+        cur.execute("SELECT definicao FROM plat.amc_modelo_versao WHERE modelo_id = %s::uuid AND versao_hash = %s",
+                    (execucao["modelo_id"], execucao["versao_hash"]))
+        versao = cur.fetchone()
+        if versao is None:
+            raise ErroAPI(404, "nao_encontrado", "a versão do modelo desta execução não existe mais")
+        cur.execute("SELECT fator, valor, cobertura FROM plat.amc_fator_bruto "
+                    "WHERE execucao_id = %s::uuid AND unidade_id = %s", (eid, unidade_id))
+        brutos = {r["fator"]: {"valor": r["valor"], "cobertura": r["cobertura"]} for r in cur.fetchall()}
+        if not brutos:
+            raise ErroAPI(404, "nao_encontrado",
+                          "nenhum fator bruto desta execução para esta unidade; a extração ainda não rodou "
+                          "ou a unidade não existe no conjunto")
+        cur.execute("SELECT favorabilidade, vetado, motivo, cobertura FROM plat.amc_resultado "
+                    "WHERE execucao_id = %s::uuid AND unidade_id = %s", (eid, unidade_id))
+        gravado = cur.fetchone()
+    try:
+        explicacao = mod_explicacao.montar_explicacao(versao["definicao"], execucao["pesos"], brutos, gravado)
+    except mod_explicacao.ErroExplicacao as e:
+        raise ErroAPI(422, e.codigo, e.mensagem) from e
+    return {"execucao_id": eid, "unidade_id": unidade_id, **explicacao.como_dicionario()}
 
 
 @router.delete("/execucoes/{execucao_id}", status_code=204, openapi_extra=ESCREVER)
