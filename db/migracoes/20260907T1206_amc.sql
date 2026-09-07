@@ -1,4 +1,4 @@
--- 044_amc: motor multicritério (AMC) — modelo de dado (item L3-01-a-modelo-dado) e conjunto de unidades de análise
+-- 20260907T1206_amc: motor multicritério (AMC) — modelo de dado (item L3-01-a-modelo-dado) e conjunto de unidades de análise
 -- (item L3-01-b-unidades). Decisões de conceito em laco/decomposicao/L3L6_CONCEITO.md, parte A (A1, A3, A5, A6, A7,
 -- A10, A14) e docs/adr/0016-motor-amc-modelo-e-unidades.md. Idempotente. Sem BEGIN/COMMIT. Aplicada como postgres.
 --
