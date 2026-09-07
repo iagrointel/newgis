@@ -230,3 +230,13 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## catálogo de conectores públicos (L6-02-m-catalogo-endpoints-brasil; app/conexao/endpoints_publicos.py):
+
+| nome | valor | explicação |
+|---|---|---|
+| `ENDPOINT_PUBLICO_LER_TIMEOUT_S` | `20.0` | leitura do documento de teste (órgão lento monta capabilities em segundos) |
+| `ENDPOINT_PUBLICO_MAX_BYTES` | `4194304` | 4 MiB: acima disso o serviço respondeu XML e conta como vivo (OGC) |
+| `ENDPOINT_PUBLICO_RETESTE_DIAS` | `7` | cadência do job endpoints_publicos.retestar (B12: "retestado por semana") |
+| `ENDPOINT_PUBLICO_FALHAS_PARA_MORTO` | `1` | 1 teste vermelho já tira da lista (vai para 'fora do ar'; volta ao passar) |
+| `ENDPOINT_PUBLICO_PAGINA_MAX` | `500` | a tela lista o catálogo inteiro de uma vez (dezenas, não milhares) |
