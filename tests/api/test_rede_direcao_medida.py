@@ -9,7 +9,8 @@ Duas cláusulas do portão são MEDIDA, não teste de igualdade:
 2. UNIVERSO DA COOPERATIVA DE TESTE: a cláusula "jusante de cada transformador devolve exatamente as
    unidades consumidoras que o arquivo liga a ele (UNI_TR_MT) em ≥ 99 % dos transformadores COM REDE
    DESENHADA ATÉ A UC" pressupõe que exista rede desenhada até a UC. Este teste mede esse universo direto no
-   ativo da casa (schema `certaja`, só leitura) e grava o número: a unidade consumidora se prende à rede pelo
+   ativo de rede de referência da casa (só leitura, schema em `PLAT_REDE_REFERENCIA_ESQUEMA`) e grava o
+   número: a unidade consumidora se prende à rede pelo
    poste `PN_CON` através do ramal de ligação, e o ramal do arquivo NÃO TEM GEOMETRIA (`wkt` nulo em todos os
    registros). Sem geometria não há trecho, sem trecho não há nó de topologia, e o universo da cláusula é
    VAZIO. Fica medido e nomeado, com o motivo por transformador, em vez de ser declarado cumprido.
@@ -26,7 +27,7 @@ from app.schema_ambiente import CursorSchemaAmbiente
 from tests.api.conftest import PREFIXO_TESTE
 from tests.api.test_rede_tracado import _criar_rede, _importar_eletrica, limpar_redes  # noqa: F401
 from tests.api.test_rede_tracado_medida import _carga_da_maquina
-from tests.dados import gerar_rede
+from tests.dados import carga_bdgd, gerar_rede
 
 MEDIDAS = Path(__file__).resolve().parent.parent / "medidas" / "L4-02-b-montante-jusante.json"
 
@@ -46,16 +47,17 @@ def _gravar(dados: dict) -> None:
 def test_medida_universo_da_cooperativa_de_teste(env):
     """Quantos transformadores da cooperativa de teste têm rede desenhada até a unidade consumidora — o
     universo da cláusula de 99 %. Lê só o ativo da casa; não carrega nada na plataforma."""
+    esq = carga_bdgd.esquema()
     con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
         with con.cursor() as cur:
             cur.execute("SELECT count(*) AS n, count(pn_con) AS com_pn_con, "
-                        "count(DISTINCT uni_tr_mt) AS trafos_citados FROM certaja.ucbt")
+                        f"count(DISTINCT uni_tr_mt) AS trafos_citados FROM {esq}.ucbt")
             uc = dict(cur.fetchone())
             cur.execute("SELECT count(*) AS n, count(wkt) AS com_geometria, "
-                        "count(DISTINCT uni_tr_mt) AS trafos_citados FROM certaja.ramlig")
+                        f"count(DISTINCT uni_tr_mt) AS trafos_citados FROM {esq}.ramlig")
             ramal = dict(cur.fetchone())
-            cur.execute("SELECT count(*) AS n FROM certaja.trafo")
+            cur.execute(f"SELECT count(*) AS n FROM {esq}.trafo")
             trafos = cur.fetchone()["n"]
     finally:
         con.close()
