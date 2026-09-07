@@ -1070,3 +1070,53 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Escala do motor multicritério: quanto cabe e onde a conta roda (item L3-16-desempenho-escala)
+
+Todo número desta seção sai de `tests/medidas/L3-16-desempenho-escala.json`, gravado pela suíte com a
+carga da máquina ao lado (`carga_1min`, `ram_livre_gb`, `medido_em`). `tests/unit/test_amc_escala_manual.py`
+reprova se algum deles for digitado à mão ou ficar diferente do arquivo de medidas.
+
+### 22.1 Onde a combinação roda
+
+Até **50.000** unidades de análise a combinação é feita no navegador: mudar um peso recalcula a nota na
+hora, sem ida ao servidor e sem gastar job. No maior tamanho que ele aceita — 50.000 unidades × 15 fatores
+— o recálculo leva **20,53 ms**.
+
+Acima de 50.000 o navegador RECUSA, com o erro `unidades_demais_para_o_navegador`, e a conta passa ao
+servidor. Não existe meio-termo: ele não combina uma parte nem trava a aba.
+
+No servidor a mesma conta leva **0,0028 s** para 10 mil unidades, **0,0219 s** para 100 mil e
+**0,9455 s** para 1 milhão, sempre com 15 fatores. O prazo declarado para 1 milhão é 5 segundos.
+
+### 22.2 Quanta memória
+
+A recombinação é feita em blocos de 50.000 unidades, e o pico de memória é o de UM bloco: multiplicar o
+conjunto por dez multiplica o número de blocos, nunca o pico. Um processo que recombina 1 milhão de
+unidades × 15 fatores em 20 blocos chega a **70,25 MB** de pico, interpretador e numpy incluídos.
+
+O job `amc.recombinar` pede o menor entre o teto declarado do produto (4 GB) e o teto da máquina
+(`PLAT_WORKER_MEMORIA_MB`, 1024 MB nesta instalação). Quem aplica o teto é o `RLIMIT_DATA` do processo
+filho da fila, não uma promessa deste texto.
+
+### 22.3 Quanto cabe na extração — o limite que o produto declara
+
+A extração de fator é o passo caro. Medido com a estatística zonal real sobre um GeoTIFF:
+**701,34 microssegundos por unidade e por fator**.
+
+Nessa taxa, extrair **1 milhão de células × 15 fatores levaria 10.520,1 segundos**, isto é, quase
+**3 horas** — bem acima do prazo de **1.800 segundos** (30 minutos) que o job tem. Por isso o motor
+**recusa esse trabalho antes de enfileirá-lo**, com o erro `prazo_projetado_estourado` e o número na
+mensagem, em vez de gastar meia hora de máquina para o relógio matar o job no fim.
+
+O que cabe hoje no prazo de 30 minutos, com 15 fatores, é uma grade de **166.898 unidades**. Com menos
+fatores cabe proporcionalmente mais: o limite é sempre unidades × fatores.
+
+Este é um limite de HOJE, não uma propriedade do produto: a extração ainda é feita unidade a unidade. A
+extração em lote é o item `L3-01-c2-extracao-em-lote`, e é ele quem vai medir o caso completo.
+
+### 22.4 Um trabalho pesado por vez
+
+`amc.recombinar` é um job pesado: com dois processos de worker livres e duas execuções lançadas ao mesmo
+tempo, a segunda só começa depois de a primeira terminar. Não é uma escolha deste item — é a regra da fila
+(ADR 0003), aqui apenas herdada e conferida para o motor.

@@ -875,6 +875,7 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
     # ---- L3-01-a/b motor multicritério: modelo, conjunto de unidades e execução de B
     ("POST", "/api/amc/modelos/validar"): Caso(
         lambda p: "/api/amc/modelos/validar",

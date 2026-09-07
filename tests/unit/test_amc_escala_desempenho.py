@@ -24,7 +24,6 @@ limite, mas não suja a árvore a cada rodada."""
 from __future__ import annotations
 
 import datetime
-import io
 import json
 import os
 import subprocess

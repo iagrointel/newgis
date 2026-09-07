@@ -3,6 +3,27 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L3-16-desempenho-escala: limites de escala do motor multicritério, medidos)
+
+Contrato de escala do motor num lugar só (`app/amc/escala.py`, ADR
+`docs/adr/20260907T1915-escala-do-motor-amc.md`): a combinação roda no navegador até 50.000 unidades e no
+servidor acima disso, em blocos de 50.000 lidos por faixa de `unidade_id`; o plano é recusado ANTES de
+enfileirar quando não cabe (unidades demais, fatores demais, bloco maior que o orçamento de RAM, prazo
+projetado maior que o do job). `web/js/amc/combinacao.js` passa a recusar acima do limite com
+`unidades_demais_para_o_navegador` — o mesmo número que `app/limites.py`, comparado por teste. Job pesado
+novo `amc.recombinar` (1 por vez na máquina, provado com dois processos de worker e duas execuções).
+
+Medidas de `tests/medidas/L3-16-desempenho-escala.json`, cada uma com `carga_1min`, `ram_livre_gb` e
+`medido_em` ao lado (carga entre 6,39 e 6,74 em 12 núcleos): recombinação no servidor de 10 mil × 15 em
+**0,0028 s**, 100 mil em **0,0219 s** e 1 milhão em **0,9455 s** (prazo do portão: 5 s); pico de memória de
+um processo que recombina 1 milhão em 20 blocos: **70,25 MB** (orçamento do job: 1024 MB nesta máquina);
+combinação de 50.000 × 15 no navegador (o maior tamanho que ele aceita): **20,53 ms**.
+
+Cláusula REFUTADA e registrada como tal: à taxa medida da estatística zonal (**701,34 µs** por unidade e
+por fator), 1 milhão de células × 15 fatores levaria **10.520,1 s** — quase 3 horas contra os 1.800 s do
+portão. O motor recusa esse plano com `prazo_projetado_estourado`; o limite honesto de hoje é uma grade de
+**166.898 unidades** com 15 fatores. Move esse número o item `L3-01-c2-extracao-em-lote`.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

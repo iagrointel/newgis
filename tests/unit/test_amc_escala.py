@@ -199,9 +199,8 @@ def test_bloco_com_identificadores_e_linhas_em_numero_diferente_e_recusado():
 # ------------------------------------------------------------------ job pesado (base da refutação)
 
 def test_job_de_recombinacao_e_pesado_e_pede_memoria_dentro_do_orcamento():
+    import app.amc.tarefas  # noqa: F401 — importado pelo efeito: registra os tipos amc.* no REGISTRO
     from app.jobs.registro import REGISTRO
-
-    import app.amc.tarefas  # noqa: F401 — registra os tipos amc.*
 
     t = REGISTRO["amc.recombinar"]
     assert t.pesado is True, "sem pesado=True a fila não serializa as execuções (refutação do item)"
