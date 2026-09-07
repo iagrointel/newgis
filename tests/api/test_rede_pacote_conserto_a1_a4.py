@@ -278,7 +278,10 @@ def test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica(
     esquema = app.openapi()
     escritas = [(c, m) for c, ops in esquema["paths"].items() if c.startswith("/api/rede")
                 for m in ops if m in ("post", "put", "patch", "delete")]
-    assert len(escritas) == 3, escritas
+    # 06/09 (item L4-05-g-osm-power): a rota nova (POST /api/rede/{rede_id}/importar-osm) sobe a
+    # contagem de 6 (L4-01-b topologia/feições) para 7 -- na MESMA régua: rede.editar declarado no
+    # openapi e recusado na prática para quem só tem rede.ler.
+    assert len(escritas) == 7, escritas
     for c, m in escritas:
         assert esquema["paths"][c][m].get("x-privilegio") == "rede.editar", (c, m)
     rid = _rede_com_pacote(sessao_a, limpar_redes, "priv")
@@ -287,6 +290,10 @@ def test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica(
     assert visual.post("/api/rede", json={"nome": "zadv-x", "disciplina": "agua"}).status_code == 403
     assert _importar(visual, rid, instalados.bruto("agua-epanet")).status_code == 403
     assert visual.delete(f"/api/rede/{rid}").status_code == 403
+    assert visual.post(f"/api/rede/{rid}/importar-osm", json={
+        "caminho": "/nao/importa/aqui", "municipio": {"type": "Polygon", "coordinates": []},
+        "nome_municipio": "x",
+    }).status_code == 403
 
 
 # ------------------------------------------------------------------------------ servidor real (laço de eventos)

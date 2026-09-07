@@ -1,0 +1,49 @@
+{
+ "item": "L4-05-g-osm-power",
+ "descricao": "Conector OpenStreetMap power=* para a rede de utilidades: código já existia no worktree (não commitado, escrito por um agente Kimi anterior); esta rodada terminou a fiação (modelos pydantic, registro da rota, teto de leitura em memória), corrigiu 3 bugs que impediam qualquer chamada de funcionar, escreveu o teste automatizado que faltava e provou cada cláusula do portão.",
+ "extrato_de_teste": "tests/dados/taquari_power.osm (gerado por tests/dados/gerar_osm_power.py, sem baixar nada da internet: 2 vias, 6 nós tipados, 1 avulso, 1 trecho com ponta fora do recorte, 1 área de subestação, 1 relação power=*)",
+ "bugs_consertados": [
+  {"onde": "app/rede_utilidades/osm_power.py:_tipos_mapa", "erro": "ValueError: not enough values to unpack (misturava tuplas de 2 e 3 posições de MAPA_VIA/MAPA_NO/MAPA_AREA no mesmo set comprehension)", "sha_do_conserto": "pendente-commit"},
+  {"onde": "app/rede_utilidades/osm_power.py:_Importador.rodar", "erro": "FileNotFoundError cru (não ErroOsm) quando o caminho do extrato não existe: sha256_arquivo() era chamado antes de qualquer checagem de existência", "sha_do_conserto": "pendente-commit"},
+  {"onde": "app/schema_ambiente.py:CursorSchemaAmbiente.execute", "erro": "psycopg2.extras.execute_values monta a consulta em BYTES; o reescritor de schema só tratava str, então TODO insert em lote (rede_no/rede_aresta, usado por bdgd.py e por este conector) ia sempre para o schema plat de produção em vez do schema da trilha -- 'permission denied for schema plat' em qualquer ambiente isolado", "sha_do_conserto": "pendente-commit"}
+ ],
+ "clausulas": [
+  {
+   "clausula": "importar power=* de 1 município a partir do .pbf existente (osm_raw da cooperativa de teste) -> rede com topologia",
+   "prova": "tests/api/test_rede_osm.py::test_importa_um_municipio_e_confere_a_topologia -- 1 município sintético (Taquari-RS, limite oficial IBGE), 4 trechos e 2 fixações realmente gravados em plat.rede_no/rede_aresta/rede_associacao (conferido por SELECT direto, não só pelo JSON da resposta)",
+   "comando": "set -a; source laco/var/trilha/f405g.env; set +a; venv/bin/pytest tests/api/test_rede_osm.py -q -p no:cacheprovider",
+   "resultado": "PASS"
+  },
+  {
+   "clausula": "ficha mostra ODbL e 'cadastro comunitário, não oficial'",
+   "prova": "tests/api/test_rede_osm.py::test_ficha_mostra_licenca_e_aviso -- GET /api/rede/{id}/importacoes devolve fonte='osm', licenca com 'ODbL', aviso literal",
+   "resultado": "PASS"
+  },
+  {
+   "clausula": "contagem de linhas/torres = contagem do extrato",
+   "prova": "mesma test_importa_um_municipio_e_confere_a_topologia: campo `conferido`=true e cada contagem (line, minor_line, tower, pole, transformer, substation, substation_area) bate arquivo==inserido",
+   "resultado": "PASS"
+  },
+  {
+   "clausula": "teste automatizado",
+   "prova": "tests/api/test_rede_osm.py (6 casos: topologia+contagem, ficha, rede sem pacote instalado, extrato inexistente, isolamento entre fontes, teto de leitura)",
+   "resultado": "PASS (6/6)"
+  }
+ ],
+ "refutacao": {
+  "enunciado": "adversário mistura OSM com BDGD no mesmo inquilino e confere que os elementos não se conectam entre fontes sem associação explícita",
+  "prova": "test_nunca_liga_no_de_outra_fonte_por_coincidencia -- insere um nó fonte='bdgd' na MESMA coordenada de um vértice que o extrato OSM corta (coincidência geométrica proposital); depois da importação, 0 linhas em rede_associacao referenciam esse nó e o atributo fonte='bdgd' continua intacto",
+  "resultado": "PASS"
+ },
+ "regra_dura_da_casa": {
+  "enunciado": "extração de dado do OpenStreetMap nunca em memória sem limite (já derrubou o banco desta máquina uma vez)",
+  "implementacao": "MAX_ELEMENTOS=300000 em app/rede_utilidades/osm_power.py: a leitura streama o OPL do subprocesso osmium linha a linha (nunca o .pbf inteiro) e aborta com ErroOsm + término do subprocesso assim que o total de nós+vias do subconjunto filtrado passa do teto -- nunca acumula sem fim",
+  "prova": "tests/api/test_rede_osm.py::test_extrato_acima_do_teto_e_recusado_sem_estourar_memoria (monkeypatch do teto para 3, extrato de teste tem mais de 3 elementos, resposta 422 explicada)",
+  "resultado": "PASS"
+ },
+ "fora_do_escopo_desta_rodada": [
+  "make lint falha por F601 (chaves duplicadas) em tests/api/cruzado_casos.py:698-714 -- pré-existente, herdado do squash de dependência L4-01-a/L4-01-b (commits 33d8092/497ce79), não tocado nesta rodada e fora do escopo deste item (arquivo pertence a outro item da linha)",
+  "make sem-marcador falha por 'placeholder' em app/rede_utilidades/bdgd.py:23, app/geocodificador/motor.py:207, app/settings.py:71, db/estrutura/plat_estrutura.sql, CONTRIBUIR.md e SISTEMA.md -- todos pré-existentes (nenhum é arquivo deste item); a mesma frase em osm_power.py foi reescrita nesta rodada para não repetir a armadilha",
+  "reentrância de transação: se um passo de gravação falhar por erro de banco genuíno (não é o caso testado aqui, que fica em ErroOsm de validação Python), _fechar_auditoria tenta um UPDATE na mesma transação já abortada e a exceção original fica mascarada por InFailedSqlTransaction -- mesmo padrão de app/rede_utilidades/bdgd.py (não introduzido por este item); um SAVEPOINT antes de cada fase resolveria, não implementado aqui"
+ ]
+}

@@ -43,6 +43,16 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
     ciclo — app/settings.py não importa este módulo."""
 
     def execute(self, query, *args, **kwargs):
+        # `psycopg2.extras.execute_values` (usado pelos importadores em lote da rede de utilidades,
+        # L4-01-modelo-rede/L4-05-g-osm-power) monta a consulta em BYTES antes de chamar cur.execute
+        # -- isinstance(query, str) nunca batia para essas chamadas, então o schema de homologação/
+        # trilha nunca era aplicado nelas e o INSERT ia parar no `plat` de produção com permissão
+        # negada (achado do item L4-05-g-osm-power). Decodifica na codificação da conexão, reescreve
+        # e devolve como texto -- psycopg2 aceita str no lugar de bytes sem custo extra.
+        if isinstance(query, (bytes, bytearray)):
+            from psycopg2 import extensions as _ext
+
+            query = bytes(query).decode(_ext.encodings[self.connection.encoding])
         if isinstance(query, str):
             query = self._reescrever(query)
         return super().execute(query, *args, **kwargs)

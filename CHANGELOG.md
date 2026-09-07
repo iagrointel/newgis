@@ -3,6 +3,31 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L4-05-g-osm-power: conector OpenStreetMap power=* como rede de baixa confiança)
+
+`POST /api/rede/{rede_id}/importar-osm` monta a rede power=* (linha, torre, poste, transformador,
+subestação, geração distribuída) de UM município a partir de um extrato `.pbf`/`.osm` já na máquina, sobre
+o pacote `eletrica-br` já importado na rede. Cada elemento grava `fonte = 'OSM'` nos atributos e a ficha da
+importação (`GET .../importacoes`) mostra sempre a licença ODbL e o aviso "cadastro comunitário, não
+oficial" — nunca dado oficial disfarçado de oficial. A topologia vem só dos refs do extrato (nunca de
+coincidência geométrica): uma via vira um ou mais trechos, cortada nos vértices compartilhados com outra
+via, nas pontas, e em nó tipado que muda o dono do trecho (transformador/subestação/gerador); torre e
+poste fixam no trecho sem cortar, pela mesma regra de fixação estrutural do catálogo. Contagem sempre
+conferida por etiqueta contra o que o extrato tinha dentro do recorte — o que não entra vira desvio
+explicado, nunca silêncio. Leitura do extrato em fluxo (osmium `tags-filter` linha a linha) com **teto
+declarado de 300 mil elementos** (`MAX_ELEMENTOS`): acima dele o subprocesso é encerrado e a importação
+falha com erro explicado, nunca acumulando sem fim (regra dura da casa: extração de OSM nunca em memória
+sem limite — já derrubou o banco desta máquina uma vez). Teste: `tests/api/test_rede_osm.py` (6 casos,
+extrato sintético `tests/dados/taquari_power.osm` sobre o limite oficial de Taquari-RS); refutação provada
+em `test_nunca_liga_no_de_outra_fonte_por_coincidencia` — um nó de outra fonte na MESMA coordenada de um
+vértice que o OSM corta não recebe associação nenhuma da importação.
+
+De quebra, um conserto que vale para qualquer importador em lote da casa: `psycopg2.extras.execute_values`
+monta a consulta em **bytes**, e o reescritor de schema de homologação/trilha (`app/schema_ambiente.py`)
+só tratava `str` — todo `INSERT ... VALUES %s` em lote (usado por este conector e por `bdgd.py`) ia sempre
+para o schema `plat` de produção em vez do schema isolado da trilha, e falhava com "permission denied for
+schema plat" em qualquer ambiente que não fosse produção. Corrigido decodificando bytes antes de reescrever.
+
 ## turno 3, setembro de 2026 (item L4-01-a-pacote-de-ativos: o esquema da rede de utilidades é dado)
 
 Primeiro item da linha L4. O esquema de uma rede de utilidades — redes de domínio, tiers, grupos e tipos de
