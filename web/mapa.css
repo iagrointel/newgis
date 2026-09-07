@@ -96,28 +96,44 @@ body.mapa .sugestoes .sugestao {
 }
 body.mapa .sugestoes .sugestao:hover, body.mapa .sugestoes .sugestao:focus { background: var(--superficie-2); }
 
-body.mapa .lista-camadas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .25rem; }
-body.mapa .camada-linha { border: 1px solid transparent; border-radius: var(--raio); padding: .3rem .35rem; }
-body.mapa .camada-linha.ativa { border-color: var(--borda); background: var(--superficie-2); }
-body.mapa .camada-linha.alvo { border-color: var(--acento); }
-body.mapa .camada-cabecalho { display: flex; align-items: center; gap: var(--e2); }
-body.mapa .camada-titulo { flex: 1; font-size: .85rem; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-body.mapa .camada-conta { font-family: var(--mono); font-size: .7rem; color: var(--fraco); }
-body.mapa .camada-controles { display: flex; align-items: center; gap: .25rem; margin-top: .25rem; }
-body.mapa .camada-controles .camada-opacidade { flex: 1; min-width: 4rem; }
+/* árvore de camadas (item L2-01-c-lista-camadas-legenda) */
+body.mapa .arvore-cabecalho-bloco { display: flex; align-items: center; justify-content: space-between; gap: var(--e2); }
+body.mapa .lista-camadas.arvore { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; }
+body.mapa .arvore-sub { list-style: none; margin: .2rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; }
+body.mapa .arvore-linha {
+  border: 1px solid transparent; border-radius: var(--raio); padding: .3rem .35rem;
+  margin-left: calc(var(--nivel, 0) * .85rem);
+}
+body.mapa .arvore-linha:focus { outline: 2px solid var(--acento); outline-offset: 1px; }
+body.mapa .arvore-linha.ativa { border-color: var(--borda); background: var(--superficie-2); }
+body.mapa .arvore-linha.alvo { border-color: var(--acento); }
+body.mapa .arvore-linha.grupo > .arvore-cabecalho { font-weight: 600; }
+/* "camada fora de escala aparece cinza": esmaece a linha inteira, sem escondê-la (o usuário precisa ver
+   que ela existe e por que não está desenhando — a geometria em si já sumiu do mapa sozinha, porque o
+   MapLibre respeita minzoom/maxzoom da própria camada de estilo). */
+body.mapa .arvore-linha.fora-de-escala { opacity: .45; filter: grayscale(1); }
+body.mapa .arvore-cabecalho { display: flex; align-items: center; gap: var(--e2); }
+body.mapa .arvore-titulo { flex: 1; font-size: .85rem; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; background: none; border: 0; color: var(--texto); padding: 0; }
+body.mapa .arvore-titulo-grupo { font-family: inherit; }
+body.mapa .arvore-conta { font-family: var(--mono); font-size: .7rem; color: var(--fraco); }
+body.mapa .arvore-linha-controles { display: flex; flex-direction: column; gap: .2rem; margin-top: .25rem; }
+body.mapa .arvore-controles { display: flex; align-items: center; gap: .2rem; flex-wrap: wrap; }
+body.mapa .arvore-controles .camada-opacidade { flex: 1; min-width: 3.5rem; }
+body.mapa .arvore-escala { display: flex; align-items: center; gap: .25rem; font-size: .68rem; color: var(--fraco); }
+body.mapa .arvore-escala input[type=number] { width: 2.6rem; background: var(--superficie); color: var(--texto); border: 1px solid var(--borda); border-radius: var(--raio); font-size: .7rem; padding: .1rem .2rem; }
 body.mapa .botao-mini {
   background: var(--superficie); border: 1px solid var(--borda); color: var(--texto);
   border-radius: var(--raio); font-size: .7rem; line-height: 1; padding: .25rem .35rem; cursor: pointer;
 }
 body.mapa .botao-mini[disabled] { opacity: .4; cursor: default; }
 
+/* legenda dinâmica (web/js/legenda.js) */
 body.mapa .legenda-bloco h3 { margin: var(--e2) 0 .25rem; font-size: .8rem; font-weight: 600; }
+body.mapa .legenda-unidade { margin: 0 0 .2rem; font-size: .7rem; color: var(--fraco); }
+body.mapa .legenda-faixa { margin: .2rem 0 0; font-size: .7rem; color: var(--fraco); font-family: var(--mono); }
 body.mapa .legenda-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; }
 body.mapa .legenda-lista li { display: flex; align-items: center; gap: var(--e2); font-size: .8rem; }
-body.mapa .legenda-amostra { display: inline-block; background: var(--cor); border: 1px solid rgba(0,0,0,.35); }
-body.mapa .legenda-ponto { width: .7rem; height: .7rem; border-radius: 50%; }
-body.mapa .legenda-linha { width: 1.1rem; height: .2rem; border-radius: 1px; }
-body.mapa .legenda-poligono { width: 1rem; height: .7rem; border-radius: 2px; }
+body.mapa .legenda-svg { flex: 0 0 auto; }
 body.mapa .legenda .vazio { color: var(--fraco); font-size: .8rem; margin: 0; }
 
 /* janela de atributos */
