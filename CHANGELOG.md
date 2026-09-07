@@ -3,6 +3,32 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L3-01-j-equivalencia-motor-logistico: equivalência com o motor de referência)
+
+O motor multicritério genérico reproduz o motor logístico de referência da casa. Os 19 fatores disponíveis
+dele estão reescritos no vocabulário do modelo em `docs/modelos/motor_logistico_referencia.json` (esquema
+`amc_modelo.v1`, oito com a transformação do valor bruto e onze com a identidade sobre um valor que já
+chega em escala de favorabilidade, cada um dizendo isso em `nao_sustenta`), e `app/amc/agregacao.py` passa
+a fazer a conta de célula para feição: média ponderada pela área de interseção sobre as células não
+vetadas, fração vetada por área e motivo da maior área vetada.
+
+Medido em 07/09/2026 contra o motor de referência lido só para leitura, em três perfis de peso
+(declarado, todos iguais e sorteado): **100 % das 73.115 células e 100 % das 4.346 feições** dentro de
+0,5 ponto, com diferença máxima de 0,0 contra o mesmo cálculo refeito em `numeric` no Postgres; veto e
+motivo idênticos nas 73.115 células (51.598 vetadas); fração vetada idêntica nas 4.346 feições. A
+agregação reproduz **os dez fatores que o motor de referência tira da grade**, em 100 % das feições cada;
+os outros nove ele calcula direto na feição (sete numa tabela por imóvel, `varzea` pela fração de
+inundação do imóvel, `mine` pelo veredito do imóvel) — a nota deles bate com essa fonte em 4.346 de 4.346,
+que é a evidência de que não foi agregação que os produziu. Tempo: 0,05 a 0,09 s para combinar as 73.115
+células e 0,03 s para agregar os 61.238 pares feição-célula, com carga de 5,4 a 6,2 na máquina.
+
+O nome do schema do motor de referência não está escrito no repositório: vem de
+`PLAT_MOTOR_REFERENCIA_ESQUEMA` e, sem ela, os testes de equivalência são pulados dizendo a razão.
+
+De quebra, dois defeitos herdados que travavam os portões do repositório: `app/jobs/tipos.py` com bloco de
+importação fora de ordem e a palavra "METODOLOGIA" num ADR, que contém "TODO" e por isso reprovava em
+`make sem-marcador`.
+
 ## turno 3, setembro de 2026 (item L3-15-metadado-fator: metadado do fator e teto de peso do proxy)
 
 `app/amc/metadado.py` reúne o que cada fator do motor multicritério carrega além da conta: `fonte` e
