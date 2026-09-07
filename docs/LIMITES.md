@@ -163,6 +163,20 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `INGESTAO_CAMPOS_MAX` | `500` | mesmo teto do JSON Schema de camada_vetorial (ADR 0004/0005) |
 | `INGESTAO_FIDS_RELATORIO_MAX` | `1000` | fids corrigidos listados no relatório de ST_MakeValid |
 
+## intercâmbio de formatos em lote (L6-02-o): exportação por camada nos formatos extra, escrow do inquilino
+
+| nome | valor | explicação |
+|---|---|---|
+| `INTERCAMBIO_EXPORTACAO_BYTES_MAX` | `2147483648` | 2 GiB: pacote final guardado no Garage |
+| `INTERCAMBIO_DISCO_FOLGA` | `3` | disco livre exigido = estimativa do pacote × 3 (disco a 98%) |
+| `INTERCAMBIO_CAMADAS_ESCROW_MAX` | `500` | teto de camadas vetoriais num escrow (job único, timeout 3600 s) |
+| `INTERCAMBIO_XLSX_LINHAS_MAX` | `500000` | importação XLSX: acima disso a conversão p/ CSV estoura a memória |
+| `INTERCAMBIO_DBF_LARGURA_MAX` | `254` | largura máxima de campo texto em DBF (limite do formato) |
+| `INTERCAMBIO_MVT_ZOOM` | `14` | zoom de geração/leitura de mbtiles/pmtiles (declarado no relatório) |
+| `INTERCAMBIO_MEMORIA_MB` | `1024` | job intercambio.exportar_camada / exportar_inquilino / importacoes_lote |
+| `INTERCAMBIO_TIMEOUT_S` | `3600` | relógio do job de intercâmbio (nome próprio: EXPORTACAO_TIMEOUT_S é do L0-04-h) |
+| `INTERCAMBIO_LOTE_ITENS_MAX` | `200` | teto de arquivos/camadas por chamada de lote (import ou export) |
+
 ## configurações da organização (L0-07-a-configuracoes-org; GET/PUT /api/org): nome, identidade visual
 
 | nome | valor | explicação |
@@ -214,3 +228,22 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `REDEFINICAO_JANELA_MIN` | `15` | limite de taxa (refutação do item: 1.000 pedidos/min p/ o mesmo e-mail) |
 | `REDEFINICAO_MAX_JANELA` | `5` | no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN |
 | `AVISO_EXPIRACAO_DIAS` | `(90, 30, 7, 1)` | avisos de expiração de token de serviço (hipótese do item; como a Esri) |
+
+## exportação de camada (L0-04-h-exportar; ADR 0018). Os tempos e tetos abaixo saem de MEDIÇÃO nesta
+
+| nome | valor | explicação |
+|---|---|---|
+| `EXPORTACAO_VALIDADE_DIAS` | `7` | arquivo gerado some depois disso (periódico exportacao.expirar) |
+| `EXPORTACAO_POR_USUARIO_EM_CURSO` | `3` | exportações pendentes/gerando por usuário (refutação: 5 em paralelo) |
+| `EXPORTACAO_MEMORIA_MB` | `1024` | job exportacao.gerar (mesmo teto de ingestao.carregar) |
+| `EXPORTACAO_TIMEOUT_S` | `3600` | — |
+| `EXPORTACAO_DISCO_MIN_LIVRE_BYTES` | `2147483648` | nunca começa com menos que isto livre (disco a 98%) |
+| `EXPORTACAO_FATOR_DISCO` | `3` | arquivo temporário estimado = tamanho da tabela x isto (GML mede 3,4x |
+| `EXPORTACAO_CAMPOS_MAX` | `500` | mesmo teto de INGESTAO_CAMPOS_MAX (a lista vem do mesmo item) |
+| `EXPORTACAO_WHERE_MAX` | `4000` | caracteres do filtro `where` (o parser do L2-04-b recusa o resto) |
+| `EXPORTACAO_NOME_MAX` | `120` | nome do arquivo pedido pelo usuário (sem extensão) |
+| `EXPORTACAO_ERRO_BANCO_MAX` | `300` | tamanho do erro do banco depois de saneado, no corpo do 400 |
+| `EXPORTACAO_CODIFICACOES` | `('UTF-8', 'ISO-8859-1')` | — |
+| `EXPORTACAO_CSV_SEPARADORES` | `(',', ';', '\t', '|')` | — |
+| `EXPORTACAO_CSV_DECIMAIS` | `('.', ',')` | — |
+| `EXPORTACAO_BLOCO_LEITURA_BYTES` | `8388608` | leitura do arquivo pronto em blocos (sha256 e envio); NUNCA |
