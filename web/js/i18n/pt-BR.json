@@ -863,5 +863,20 @@
  "upload.erro_generico": "não foi possível concluir o envio",
  "upload.erro_iniciar": "não foi possível iniciar o envio",
  "upload.erro_parte": "falha ao enviar a parte {n}",
- "upload.erro_concluir": "não foi possível concluir o envio"
+ "upload.erro_concluir": "não foi possível concluir o envio",
+ "dominios.titulo": "Domínios da camada",
+ "dominios.ligacoes": "Campos e domínios",
+ "dominios.formulario": "Nova feição",
+ "dominios.tabela": "Feições da camada",
+ "dominios.campo": "campo",
+ "dominios.tipo_do_campo": "tipo",
+ "dominios.dominio": "domínio",
+ "dominios.subtipo": "subtipo",
+ "dominios.sem_dominio": "sem domínio",
+ "dominios.padrao": "padrão da camada",
+ "dominios.valores": "valores",
+ "dominios.campo_de_subtipo": "campo de subtipo",
+ "dominios.escolha": "escolha",
+ "dominios.gravar": "Gravar feição",
+ "dominios.gravada": "feição gravada"
 }

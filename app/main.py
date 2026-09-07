@@ -40,6 +40,8 @@ from app.catalogo import (
 )
 from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
+from app.dominios import rotas as rotas_dominios
+from app.dominios import rotas_featureserver, rotas_feicoes
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
@@ -111,6 +113,12 @@ ROUTERS = [
     rotas_uploads,
     # --- ingestão vetorial (L0-04): /api/importacoes (upload -> inspeção -> confirmação -> carga -> camada)
     rotas_ingestao,
+    # --- domínios de atributo e subtipos (L2-10-a): /api/dominios, /api/camadas/{id}/dominios e /subtipos
+    rotas_dominios.router,
+    # --- gravação de UMA feição pelo formulário de atributos (L2-10-a; edição em lote é da linha L2-08)
+    rotas_feicoes.router,
+    # --- metadado de FeatureServer com domains/types (L2-10-a; /query e /applyEdits são da linha L2-08)
+    rotas_featureserver.router,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
