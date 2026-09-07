@@ -1,0 +1,47 @@
+{
+ "item": "L2-02-e-simbolos-sprites-glifos",
+ "medidas": {
+  "pagina_pronta_ms_simbolos": {
+   "valor": 975.6,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "carga_1min": {
+   "valor": 12.38,
+   "unidade": "media de processos",
+   "comando": "os.getloadavg()[0] no instante das medidas de tempo abaixo (12 nucleos)"
+  },
+  "ram_livre_gb": {
+   "valor": 0.4,
+   "unidade": "GiB",
+   "comando": "os.sysconf SC_AVPHYS_PAGES * SC_PAGE_SIZE"
+  },
+  "icones_proprios": {
+   "valor": 153,
+   "unidade": "arquivos",
+   "comando": "len(app.simbolos.biblioteca.catalogo()) — portao exige >= 150"
+  },
+  "padroes_preenchimento": {
+   "valor": 10,
+   "unidade": "arquivos",
+   "comando": "len(app.simbolos.biblioteca.padroes()) — hachuras, pontos e tracejados"
+  },
+  "composicao_atlas_1x_s": {
+   "valor": 0.097,
+   "unidade": "s",
+   "comando": "app.simbolos.sprite._compor(163 itens, pixel_ratio=1)"
+  },
+  "composicao_atlas_2x_s": {
+   "valor": 0.145,
+   "unidade": "s",
+   "comando": "app.simbolos.sprite._compor(163 itens, pixel_ratio=2)"
+  },
+  "upload_ate_aparecer_no_sprite_s": {
+   "valor": 0.271,
+   "unidade": "s",
+   "comando": "POST /api/simbolos seguido de GET /api/simbolos/sprite/{slug}.json, sem reinicio de processo (portao: <= 5 s)"
+  }
+ },
+ "gerado_em": "2026-09-07T17:53:22Z",
+ "git_sha": "20e34773221b"
+}

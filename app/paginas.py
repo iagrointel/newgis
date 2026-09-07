@@ -28,6 +28,8 @@ PAGINAS = {
     "/c/{token}": "compartilhado.html",
     # --- mapa (L2-01-a)
     "/mapa": "mapa.html",
+    # --- símbolos, sprites e glifos (L2-02-e): galeria de ícones + upload + colocar no mapa
+    "/simbolos": "simbolos.html",
     # --- conexões externas (L6-02-a/L6-02-l/L6-05)
     "/conexoes": "conexoes.html",
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão

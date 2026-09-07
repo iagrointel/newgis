@@ -22,6 +22,16 @@ python3-gdal           # 3.8.4+dfsg-3ubuntu3
 # no upload contra o que o arquivo realmente e).
 python3-magic          # 2:0.4.27-3
 #
+# Imagem: composicao do sprite por inquilino (item L2-02-e, app/simbolos/sprite.py) e miniatura de item
+# do catalogo / foto de perfil / marca do inquilino (app/catalogo/miniatura.py, app/auth/rotas_eu.py,
+# app/auth/rotas_org.py) importam `PIL`. Ate 07/09/2026 nenhum item tinha declarado essa dependencia:
+# ela funcionava por acaso, porque a venv e --system-site-packages e a maquina ja tinha o pacote. A
+# rasterizacao do SVG proprio para o atlas do sprite usa cairosvg (requirements.txt), que carrega
+# libcairo por ctypes em tempo de execucao — sem a biblioteca C do sistema o import passa e a primeira
+# composicao de sprite falha.
+python3-pil            # 10.2.0-1ubuntu1.3
+libcairo2              # 1.18.0-3build1
+#
 # Fora desta lista de proposito (nao e escopo deste item, colisao evitada com o item que ja e dono):
 # - pgRouting, pgstac, pg_partman, tds_fdw/oracle_fdw -> item L7-14-extensoes-fdw (extensoes de banco
 #   com portao e adversario proprios, dependente de L7-01-a-compose-perfis).

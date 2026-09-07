@@ -122,6 +122,37 @@ servidor de tiles vetoriais nem raster instalado nesta máquina (itens L2-01-b e
 vazio com o motivo escrito, porque a camada ainda não guarda vocabulário de domínio (L0-04-c, parcial). A tela
 lista e reordena as camadas do documento; não as desenha no canvas, pelo mesmo motivo, e diz isso em cada
 linha. ⛔ Quebra declarada: documento com `corpo.camadas` como lista de uuid soltos passa a ser 422.
+## turno 3, setembro de 2026 (item L2-02-e-simbolos-sprites-glifos: biblioteca de símbolos, sprite por inquilino e glifos de fonte)
+
+Biblioteca própria de símbolos em `app/simbolos/biblioteca.py`: **153 ícones** e **10 padrões de
+preenchimento** (hachuras, pontos, tracejados), todos de produção própria sob CC0-1.0, gerados por
+composição de traço sobre moldura de categoria (energia, água, saneamento, transporte, ambiente,
+imobiliário, campo, setas, formas). Licença de cada arquivo, com sha256, em `docs/LICENCAS_SIMBOLOS.md`,
+gerado do manifesto vivo por `scripts/gerar_licencas_simbolos.py` — o arquivo não se edita à mão.
+
+Sprite por inquilino em `/api/simbolos/sprite/{slug}.json|.png`, 1x e 2x, no formato que o MapLibre
+consome, composto pela própria API. O Martin não serve o sprite porque lê o diretório uma única vez na
+subida do processo (medido com o binário v1.15.0 e `curl`, sem código nosso): um SVG acrescentado ao vivo
+não aparece. Decisão e medição em `docs/adr/20260907T1642-sprite-proprio-em-vez-de-martin.md`. Os glifos
+de fonte, que não mudam em runtime, continuam vindo do Martin de verdade (`app/simbolos/fontes.py`), sobre
+as TTF embutidas Noto Sans (OFL-1.1) e Open Sans (Apache-2.0) registradas em `web/vendor/VERSOES.txt`.
+
+Upload de SVG do inquilino saneado por `app/simbolos/validador.py`: `<script>`, referência externa e XML
+perigoso (DOCTYPE/entidade — a bomba de XML da refutação) são recusados com **422** e motivo nomeado;
+acima de 64 kB é recusado. O upload entra no sprite sob o prefixo `personalizado/`, então um ícone com o
+mesmo nome de um da base não sobrescreve nada — os dois convivem no mesmo sprite (a segunda refutação).
+Pedir o sprite de outro inquilino com token próprio dá **403 `inquilino_divergente`** (a terceira).
+
+Medido (`tests/medidas/L2-02-e-simbolos-sprites-glifos.json`, com a carga da máquina ao lado): compor o
+atlas dos 163 itens leva **0,097 s** em 1x e **0,145 s** em 2x; do POST do ícone até ele aparecer no
+`sprite.json` pelo HTTP, **0,271 s** sem reinício de processo — folga de 18x sobre os 5 s do portão, e
+isso com carga 12,38 e 0,4 GiB livres. Galeria em `/simbolos` com busca por nome e filtro por categoria;
+o e2e escolhe um ícone e vê o marcador no mapa, e uma captura real do navegador mostra os glifos da Noto
+Sans com acento português ("Nação, Água, Ímã, Coração, Codificação").
+
+Achado de fora do item, consertado de passagem: `tests/e2e/apoio.py` nomeava a captura de qualquer item
+como `L0-02-tenant-auth_*`, porque usava a constante do próprio módulo em vez do item do teste que a
+chamou. `Tela(...)` agora recebe `item=`, com o valor antigo como padrão.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
