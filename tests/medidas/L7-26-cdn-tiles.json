@@ -1,0 +1,53 @@
+{
+  "item": "L7-26-cdn-tiles",
+  "clausulas": {
+    "1_hit_na_segunda_chamada": {
+      "primeira_status": 200,
+      "primeira_cf_cache_status": "MISS",
+      "segunda_status": 200,
+      "segunda_cf_cache_status": "HIT",
+      "passou": true
+    },
+    "2_revoga_purga_403_ate_60s": {
+      "purga_status": 200,
+      "purga_removidos_1a_tentativa": 1,
+      "tentativas_de_purge": 9,
+      "terceira_status": 403,
+      "terceira_cf_cache_status": "MISS",
+      "segundos_ate_403": 2.124,
+      "passou": true,
+      "achado": "a origem cacheia autorização por AUTH_TTL_S=2s; um purge SÓ na hora da revogação pode ser recacheado com 200 se cair dentro dessa janela — o purge precisa repetir por >= AUTH_TTL_S depois da revogação (ver docs/CDN.md)"
+    },
+    "3_hit_percentual_navegacao": {
+      "caminhos_distintos": 12,
+      "repeticoes": 8,
+      "pedidos": 96,
+      "acertos": 84,
+      "faltas": 12,
+      "taxa_hit": 0.875,
+      "passou": true
+    },
+    "4_api_sem_cache_de_cdn": {
+      "status": 401,
+      "cache_control": "no-store, must-revalidate",
+      "passou": true
+    }
+  },
+  "refutacao_martelo_pos_revogacao": {
+    "tentativas": 20,
+    "status_unicos": [
+      403
+    ],
+    "nenhum_200_ou_hit_depois_da_revogacao": true
+  },
+  "refutacao_token_de_outro_inquilino": {
+    "status": 403,
+    "cf_cache_status": "MISS",
+    "recusado": true
+  },
+  "medido_em": "2026-09-07T15:28:25Z",
+  "carga_1min": 6.87,
+  "ram_livre_gb": 8.9,
+  "todas_clausulas_testaveis_localmente_passaram": true,
+  "nota": "cláusula 5 (docs/CDN.md) é conferida por leitura, não por este script; a configuração real da Cloudflare (DNS, Cache Rule, purge de produção) é PENDENTE DO DONO — ver docs/CDN.md"
+}
