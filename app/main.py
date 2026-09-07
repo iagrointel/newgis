@@ -45,6 +45,8 @@ from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.multiescala.rotas import router as rotas_multiescala
+from app.mapa.anotacoes import router as rotas_anotacoes
+from app.mapa.promover import router as rotas_promover
 from app.mapa.rotas import router as rotas_mapa
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
@@ -125,6 +127,9 @@ ROUTERS = [
     rotas_multiescala,
     # --- visualizador de mapa (L2-01-mapa-web): /api/mapa/camadas, TileJSON com token curto, repasse /tiles
     rotas_mapa,
+    # --- desenho e anotações do mapa (L2-01-k): /api/mapa/{id}/desenho/promover, /api/anotacoes
+    rotas_promover,
+    rotas_anotacoes,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
