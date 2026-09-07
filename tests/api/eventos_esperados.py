@@ -107,7 +107,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/org"): ["org/configurar"],
     ("POST", "/api/org/logo"): ["org/logo_enviar"],
     ("DELETE", "/api/org/logo"): ["org/logo_remover"],
-<<<<<<< HEAD
     # ---- convite de membro por e-mail (L0-07-d-smtp-convites; ADR 0013)
     ("POST", "/api/convites"): ["convites/criar"],
     ("DELETE", "/api/convites/{id}"): ["convites/cancelar"],
