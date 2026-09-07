@@ -39,6 +39,7 @@ from app.catalogo import (
     transferencia,
 )
 from app.conexao import rotas as rotas_conexao
+from app.consulta.rotas_edicao_esri import router as rotas_edicao_esri
 from app.consulta.rotas_query import router as rotas_consulta_esri
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.edicao.rotas import router as rotas_edicao
@@ -131,6 +132,9 @@ ROUTERS = [
     # --- operação query do FeatureServer (L2-04-c): /rest/services/{item}/FeatureServer/{camada}/query
     # (a raiz completa do diretório de serviço é o L2-04-b, ainda não construído)
     rotas_consulta_esri,
+    # --- escrita compatível Esri (L2-04-d): applyEdits/addFeatures/updateFeatures/deleteFeatures, calculate,
+    # anexos e uploads sobre a MESMA porta de escrita do L2-03-a
+    rotas_edicao_esri,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
