@@ -12,6 +12,11 @@ O pacote final é um zip com quatro componentes:
 - `manifesto.json` — sha256 e tamanho de cada um dos três componentes acima, mais o sha256 do próprio
   `catalogo.json` calculado ANTES de entrar no zip (o teste do portão confere os dois).
 
+O metadado e o estilo de cada camada vão TAMBÉM dentro do GeoPackage, nas tabelas `gpkg_metadata` da norma
+(ver `metadado.py`) — assim o arquivo sozinho já se explica em qualquer leitor conforme, sem o `catalogo.json`
+ao lado. O sha256 vem de `app.backup.nucleo` (item L0-06-a), que já lê em blocos: não existe uma segunda
+implementação de hash nesta casa.
+
 Nenhum componente é montado inteiro em memória além do necessário para escrever um JSON de catálogo (que já é
 pequeno: só metadado, nunca geometria nem conteúdo de arquivo)."""
 
@@ -23,8 +28,9 @@ import subprocess
 import zipfile
 from pathlib import Path
 
+from app.backup.nucleo import sha256_arquivo
 from app.exportacao import motor as motor_camada
-from app.exportacao.formatos import obter as formato_de
+from app.exportacao_inquilino import metadado
 
 CAMPOS_USUARIO_PUBLICOS = (
     "id", "login", "nome", "email", "perfil", "superadmin", "ativo", "papel_id",
@@ -125,15 +131,58 @@ def montar_catalogo(cur, tenant_id: int) -> dict:
     }
 
 
+def estimar_bytes(cur, catalogo: dict) -> dict:
+    """Tamanho estimado do pacote ANTES de gerar (a tela mostra este número no botão; o job usa o mesmo para
+    exigir disco). Três parcelas, todas lidas do banco e nenhuma chutada:
+
+    - camadas hospedadas: `pg_total_relation_size` da tabela de cada uma. É o tamanho no PostgreSQL, incluindo
+      índice e TOAST, então SUPERESTIMA o GeoPackage — que é o lado seguro para uma checagem de disco;
+    - arquivos do bucket: `tamanho_bytes` do item, que é o tamanho gravado do objeto;
+    - catálogo: 4 KB por item, a ordem de grandeza de um cartão em JSON.
+
+    A compressão do zip final não entra: estimar para menos é o erro que enche o disco."""
+    bytes_camadas = 0
+    camadas = 0
+    for item in catalogo["itens"]:
+        dados = item.get("dados") or {}
+        if item["tipo"] != "camada_vetorial" or dados.get("fonte") != "hospedada":
+            continue
+        schema, tabela = dados.get("schema"), dados.get("tabela")
+        if not (schema and tabela):
+            continue
+        cur.execute(
+            "SELECT coalesce(pg_total_relation_size(c.oid), 0) AS n FROM pg_class c "
+            "JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = %s AND c.relname = %s",
+            (schema, tabela),
+        )
+        linha = cur.fetchone()
+        bytes_camadas += int(linha["n"]) if linha else 0
+        camadas += 1
+    arquivos = [i for i in catalogo["itens"] if (i.get("dados") or {}).get("chave")]
+    bytes_arquivos = sum(int(i.get("tamanho_bytes") or 0) for i in arquivos)
+    bytes_catalogo = 4096 * len(catalogo["itens"])
+    return {
+        "bytes": bytes_camadas + bytes_arquivos + bytes_catalogo,
+        "bytes_camadas": bytes_camadas,
+        "bytes_arquivos": bytes_arquivos,
+        "bytes_catalogo": bytes_catalogo,
+        "n_itens": len(catalogo["itens"]),
+        "n_camadas": camadas,
+        "n_arquivos": len(arquivos),
+    }
+
+
 def _nome_camada_seguro(item_id: str) -> str:
     return "c_" + item_id.replace("-", "")
 
 
-def gerar_gpkg(cur, tenant_id: int, catalogo: dict, destino: Path, executar=None) -> int:
-    """Um GeoPackage com uma camada por item `camada_vetorial` de `dados.fonte == 'hospedada'`. Devolve o
-    número de camadas escritas (0 quando o inquilino não tem nenhuma — o portão aceita N=0)."""
+def gerar_gpkg(cur, tenant_id: int, catalogo: dict, destino: Path, executar=None) -> list[tuple[str, dict]]:
+    """Um GeoPackage com uma camada por item `camada_vetorial` de `dados.fonte == 'hospedada'`, com o metadado
+    e o estilo de cada uma gravados nas tabelas `gpkg_metadata` da norma. Devolve a lista
+    `(nome da tabela no GeoPackage, item do catálogo)` — vazia quando o inquilino não tem camada hospedada,
+    que o portão aceita como N=0."""
     rodar = executar or (lambda a: subprocess.run(a, capture_output=True, text=True, timeout=1800))
-    n = 0
+    escritas: list[tuple[str, dict]] = []
     for item in catalogo["itens"]:
         if item["tipo"] != "camada_vetorial":
             continue
@@ -153,7 +202,7 @@ def gerar_gpkg(cur, tenant_id: int, catalogo: dict, destino: Path, executar=None
         conninfo = motor_camada.conninfo_pg(tenant_id)
         nome_camada = _nome_camada_seguro(item["id"])
         argv = ["ogr2ogr", "-f", "GPKG"]
-        if n > 0:
+        if escritas:
             argv.append("-update")
         argv += [str(destino), conninfo, "-sql", sql, "-nln", nome_camada]
         r = rodar(argv)
@@ -162,8 +211,8 @@ def gerar_gpkg(cur, tenant_id: int, catalogo: dict, destino: Path, executar=None
             raise ErroExportacaoInquilino(
                 f"ogr2ogr falhou na camada {item['titulo']!r}: {(avisos[-1] if avisos else 'sem detalhe')[:300]}"
             )
-        n += 1
-    if n == 0:
+        escritas.append((nome_camada, item))
+    if not escritas:
         # GeoPackage vazio mas válido (SQLite com as tabelas gpkg_* e zero camadas de usuário): cria uma
         # camada de um GeoJSON vazio e a apaga em seguida — o teste do portão só exige "N camadas do
         # catálogo", e N=0 é um catálogo sem camada hospedada, não um erro.
@@ -174,7 +223,8 @@ def gerar_gpkg(cur, tenant_id: int, catalogo: dict, destino: Path, executar=None
             raise ErroExportacaoInquilino("não foi possível criar o GeoPackage vazio")
         rodar(["ogrinfo", str(destino), "-sql", "DROP TABLE _vazio"])
         temp_geojson.unlink(missing_ok=True)
-    return n
+    metadado.gravar(destino, escritas, catalogo)
+    return escritas
 
 
 def gerar_arquivos_zip(catalogo: dict, destino: Path, ler_stream) -> int:
@@ -194,14 +244,6 @@ def gerar_arquivos_zip(catalogo: dict, destino: Path, ler_stream) -> int:
                     f.write(bloco)
             n += 1
     return n
-
-
-def sha256_arquivo(caminho: Path) -> str:
-    h = hashlib.sha256()
-    with open(caminho, "rb") as f:
-        for bloco in iter(lambda: f.read(8 * 1024 * 1024), b""):
-            h.update(bloco)
-    return h.hexdigest()
 
 
 def sha256_bytes(dados: bytes) -> str:

@@ -1,5 +1,6 @@
 """Rotas da exportação COMPLETA do inquilino (item L0-06-d-exportar-inquilino; ADR 0018 seção do item):
 
+    GET    /api/inquilino/exportar/estimativa      tamanho estimado ANTES de pedir, e se a cota do dia já foi
     POST   /api/inquilino/exportar                pede o pacote (privilégio org.exportar, 1x/dia UTC — 429)
     GET    /api/inquilino/exportacoes              lista as pedidas por este inquilino
     GET    /api/inquilino/exportacoes/{id}         estado, contagens e link de download
@@ -20,6 +21,7 @@ from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import registrar_evento, uuid_ok
 from app.erros import ErroAPI
 from app.exportacao.rotas import ESTADOS_APAGAVEIS
+from app.exportacao_inquilino import motor
 from app.jobs import servico
 from app.jobs.contexto import sessao_de
 
@@ -51,11 +53,28 @@ def _carregar(cur, exportacao_id: str) -> dict:
     return r
 
 
+def _pedidas_hoje(cur, tenant_id: int) -> int:
+    cur.execute("SELECT plat.exportacao_inquilino_hoje(%s) AS n", (tenant_id,))
+    return int(cur.fetchone()["n"])
+
+
+@router.get("/api/inquilino/exportar/estimativa", openapi_extra=EXPORTAR)
+def estimativa(auth: Auth = autenticado("org.exportar")):
+    """Quanto o pacote deve pesar, lido do banco (ver `motor.estimar_bytes`), e se a cota do dia já foi gasta —
+    para a tela avisar ANTES do clique, em vez de o admin descobrir com um 429 ou com um arquivo de gigabytes."""
+    with db.db(auth.contexto()) as cur:
+        e = motor.estimar_bytes(cur, motor.montar_catalogo(cur, auth.tenant_id))
+        hoje = _pedidas_hoje(cur, auth.tenant_id)
+    e["pedidas_hoje"] = hoje
+    e["maximo_por_dia"] = limites.EXPORTACAO_INQUILINO_POR_DIA_MAX
+    e["disponivel"] = hoje < limites.EXPORTACAO_INQUILINO_POR_DIA_MAX
+    return e
+
+
 @router.post("/api/inquilino/exportar", status_code=202, openapi_extra=EXPORTAR)
 def pedir(request: Request, auth: Auth = autenticado("org.exportar")):
     with db.db(auth.contexto()) as cur:
-        cur.execute("SELECT plat.exportacao_inquilino_hoje(%s) AS n", (auth.tenant_id,))
-        hoje = int(cur.fetchone()["n"])
+        hoje = _pedidas_hoje(cur, auth.tenant_id)
         if hoje >= limites.EXPORTACAO_INQUILINO_POR_DIA_MAX:
             raise ErroAPI(
                 429, "exportacao_inquilino_ja_pedida_hoje",
@@ -63,14 +82,11 @@ def pedir(request: Request, auth: Auth = autenticado("org.exportar")):
                 f"{limites.EXPORTACAO_INQUILINO_POR_DIA_MAX} por dia); tente de novo amanhã",
                 {"hoje": hoje, "maximo": limites.EXPORTACAO_INQUILINO_POR_DIA_MAX},
             )
-        cur.execute(
-            "SELECT count(*) AS n FROM plat.item WHERE apagado_em IS NULL",
-        )
-        n_itens = int(cur.fetchone()["n"])
+        e = motor.estimar_bytes(cur, motor.montar_catalogo(cur, auth.tenant_id))
         cur.execute(
             "INSERT INTO plat.exportacao_inquilino(tenant_id, usuario_id, estimativa_bytes) "
             "VALUES (%s, %s, %s) RETURNING id",
-            (auth.tenant_id, auth.usuario_id, n_itens * 4096),
+            (auth.tenant_id, auth.usuario_id, e["bytes"]),
         )
         exportacao_id = str(cur.fetchone()["id"])
         registrar_evento(cur, request, "inquilino/exportar", "inquilino", None, {"exportacao_id": exportacao_id})
@@ -78,7 +94,7 @@ def pedir(request: Request, auth: Auth = autenticado("org.exportar")):
     with db.db(auth.contexto()) as cur:
         cur.execute("UPDATE plat.exportacao_inquilino SET job_id = %s::uuid WHERE id = %s::uuid",
                     (job["id"], exportacao_id))
-    return {"exportacao_id": exportacao_id, "job_id": job["id"]}
+    return {"exportacao_id": exportacao_id, "job_id": job["id"], "estimativa_bytes": e["bytes"]}
 
 
 @router.get("/api/inquilino/exportacoes", openapi_extra=EXPORTAR)

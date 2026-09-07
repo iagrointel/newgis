@@ -69,13 +69,16 @@ def inquilino_exportar(ctx, exportacao_id: uuid.UUID) -> dict:
             catalogo = motor.montar_catalogo(cur, ctx.tenant_id)
 
         from app.exportacao import motor as motor_camada
-        estimativa = 8 * 1024 * 1024
-        motor_camada.exigir_disco(trabalho, estimativa)
+        with ctx.db() as cur:
+            estimativa = motor.estimar_bytes(cur, catalogo)["bytes"]
+        # o pacote é escrito duas vezes no disco de trabalho (componentes soltos + zip final), daí o dobro
+        motor_camada.exigir_disco(trabalho, 2 * estimativa)
 
         ctx.progresso(20, "gerando o GeoPackage das camadas hospedadas")
         caminho_gpkg = trabalho / "dados.gpkg"
         with ctx.db() as cur:
-            n_camadas = motor.gerar_gpkg(cur, ctx.tenant_id, catalogo, caminho_gpkg, ctx.subprocesso)
+            camadas = motor.gerar_gpkg(cur, ctx.tenant_id, catalogo, caminho_gpkg, ctx.subprocesso)
+        n_camadas = len(camadas)
         ctx.verificar()
 
         ctx.progresso(50, "compactando os arquivos do inquilino")
