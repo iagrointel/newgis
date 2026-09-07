@@ -25,3 +25,6 @@ laco/var/
 laco/vivo/
 laco/*.lock
 laco/*.log
+
+# bancada de teste manual do item L2-01-b (Martin/nginx locais, PMTiles gerado, logs) -- nunca versionar
+laco_var/

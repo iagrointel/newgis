@@ -3,6 +3,44 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L2-01-b-martin-tiles-vetoriais: servidor de tiles em produção, PARCIAL)
+
+Sobe o serviço Martin de verdade (v1.15.0, binário oficial, sha256 conferido; `deploy/martin.yaml`,
+`deploy/plat-martin.service`) em cima do contrato do L2-04-a, com generalização por zoom
+(`ST_SimplifyPreserveTopology` abaixo de z12) e corte de 10.000 feições por tile marcado (migração
+`20260906T1955_martin_generalizacao.sql`, já existente desta trilha antes deste turno). Duas peças novas:
+
+1. **`/internal/tiles/verificar`** (`app/tiles/rotas.py`): o Martin (`martin-core::GetTileWithQueryError`)
+   devolve 500 para QUALQUER erro do Postgres — nunca 401/403, conferido no código-fonte da tag
+   `martin-v1.15.0`. A cláusula "sem token = 401" só existe porque o nginx faz `auth_request` para esta
+   rota ANTES de repassar ao Martin. ADR `20260907T0235`.
+2. **`plat.item_da_tabela`** (migração `20260907T0213_item_da_tabela.sql`): fecha um achado do próprio
+   adversário desta rodada — a 1ª versão da rota acima recebia o item de query param do cliente, e um
+   token amplo de QUALQUER inquilino autenticava para o item de QUALQUER outro (a `escopo_cobre` só
+   compara texto do token, nunca dono do item). Agora o item vem da tabela que está na URL, nunca do
+   cliente.
+
+Medido (`tests/medidas/L2-01-b-martin-tiles-vetoriais.json`, trilha própria, Martin/nginx de teste em
+8351/8451, não a unidade de produção): camada de 100 mil pontos sintéticos — tile z8 frio p95 41,8 ms,
+quente p95 4,3 ms (limite 200/20 ms, passou); camada de 472.780 setores censitários do IBGE já na casa (a
+hipótese do item citava "1 mi", número real registrado) servida por PMTiles (tippecanoe v2.80.0, `-z14
+--drop-densest-as-needed --extend-zooms-if-still-dropping --maximum-tile-bytes=500000`) — 110 tiles
+amostrados em z4-z14, 0 erro, 1 excede 1 MB por 1,3% (z9, região metropolitana de SP); RLS cruzada,
+revogação de token e invalidação de cache por versão (0,12 s) passaram; 200 pedidos paralelos ao pior caso
+(z0 da camada de 472,8 mil) na fonte PMTiles: 200/200 OK, RAM do Martin 38-39 MB — na FUNÇÃO AO VIVO (fora
+do desenho, que é servir isso por PMTiles) o mesmo teste dá 180/200 em 500 sob a piscina pequena da trilha,
+registrado como fronteira, não escondido. PMTiles: 206 a Range, sem Content-Encoding; abertura real no
+QGIS Desktop NÃO verificada nesta máquina (sem GUI) — só o formato (magic bytes) e o protocolo HTTP.
+
+Fica de fora, honesto: `ST_Subdivide` para polígono > 4.096 vértices (nenhuma camada de teste tem isso); a
+unidade systemd `plat-martin` real não foi instalada como serviço do sistema nesta trilha (rodada como
+processo de teste); a fonte PMTiles do Martin não passa pelo mesmo `auth_request` de token que a função ao
+vivo (controle de acesso dela é o do arquivo/bucket, L0-11, fora do escopo medido).
+
+### Commits
+
+Ver `git log wt/il201bmarti` a partir do commit desta entrada.
+
 ## turno 3, setembro de 2026 (item L2-04-a-leitor-rls-martin: quem serve o tile não sabe o que é inquilino)
 
 O servidor de tiles vetoriais fala direto com o PostGIS e não tem noção de sessão, privilégio ou inquilino.
