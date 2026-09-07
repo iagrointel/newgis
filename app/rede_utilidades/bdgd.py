@@ -300,6 +300,21 @@ class _Importador:
         return out
 
     def _fontes_e_alimentadores(self) -> None:
+        # mesmo tratamento das demais camadas (achado deste item: SUB/CTMT eram as duas únicas sem o
+        # guarda de "camada ausente no GDB não é erro" — um extrato ou distribuidora sem uma delas
+        # quebrava a importação inteira em vez de entrar com 0 declarado).
+        if not self.arquivo.get("SUB"):
+            self._desvio("sub_ausente",
+                         "o GDB não tem a camada SUB: nenhuma subestação/subrede de nível 1 entra", None)
+        else:
+            self._subs()
+        if not self.arquivo.get("CTMT"):
+            self._desvio("ctmt_ausente",
+                         "o GDB não tem a camada CTMT: nenhum alimentador/subrede de nível 2 entra", None)
+        else:
+            self._alimentadores()
+
+    def _subs(self) -> None:
         subs = _ler(self.caminho, "SUB")
         for _, linha in subs.iterrows():
             cod = _texto(linha.get("COD_ID"))
@@ -331,6 +346,7 @@ class _Importador:
                 self.subredes[(1, cod)] = r2["id"]
             self.inseridos["SUB"] = self.inseridos.get("SUB", 0) + 1
 
+    def _alimentadores(self) -> None:
         ctmts = _ler(self.caminho, "CTMT", geometria=False)
         for _, linha in ctmts.iterrows():
             cod = _texto(linha.get("COD_ID"))
@@ -474,8 +490,8 @@ class _Importador:
             tuplas,
             template="(%s, %s::uuid, %s::uuid, %s, %s::uuid, %s::uuid, 0, 0, "
                      "ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE) + "), 4326), "
-                     "ST_Length(ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE) + "), 4326)::geography), "
-                     "%s, %s::uuid, %s)",
+                     "ST_Length(ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE) + "), "
+                     "4326)::geography), %s, %s::uuid, %s)",
             page_size=LOTE,
         )
 
@@ -533,13 +549,17 @@ class _Importador:
 
     def _gravar_dispositivos(self, tuplas: list[tuple], camada: str) -> None:
         """Nós de dispositivo em lote; depois subrede de nível 3 (só trafo) e a associação com a
-        junção, já filtrada pela mesma régua do gatilho (aresta incidente com regra)."""
+        junção, já filtrada pela mesma régua do gatilho (aresta incidente com regra). Cada `t` em
+        `tuplas` carrega 2 campos A MAIS do que o INSERT usa (cod repetido e o id/seq da junção,
+        `t[8]`/`t[9]`) — servem só ao laço abaixo; `execute_values` recebe `t[:8]`, senão o número de
+        `%s` do template (8) não bate com o da tupla (10) e o psycopg2 erra ('not all arguments
+        converted') — achado deste item, mesma família do bug de `_gravar_consumidores`."""
         inseridos = execute_values(
             self.cur,
             "INSERT INTO plat.rede_no (tenant_id, rede_id, papel, tipo_id, codigo_externo, estado, "
             "subrede_id, geom, atributos) VALUES %s "
             "ON CONFLICT (rede_id, papel, codigo_externo) DO NOTHING RETURNING id, codigo_externo",
-            tuplas,
+            [t[:8] for t in tuplas],
             template="(%s, %s::uuid, 'dispositivo', %s::uuid, %s, %s, %s::uuid, "
                      "ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE) + "), 4326), %s)",
             page_size=LOTE,
@@ -632,18 +652,25 @@ class _Importador:
         self.inseridos[camada] = int(self.cur.fetchone()["n"])
 
     def _gravar_consumidores(self, tuplas: list[tuple]) -> None:
+        """`t[6]` (id/seq da junção) só serve à associação abaixo, não ao INSERT — mesmo motivo e
+        mesmo conserto de `_gravar_dispositivos`: `execute_values` recebe `t[:6]`, do contrário o
+        template de 6 `%s` não bate com a tupla de 7."""
         inseridos = execute_values(
             self.cur,
             "INSERT INTO plat.rede_no (tenant_id, rede_id, papel, tipo_id, codigo_externo, subrede_id, atributos) "
             "VALUES %s ON CONFLICT (rede_id, papel, codigo_externo) DO NOTHING RETURNING id, codigo_externo",
-            tuplas,
+            [t[:6] for t in tuplas],
             template="(%s, %s::uuid, 'consumidor', %s::uuid, %s, %s::uuid, %s)",
             page_size=LOTE,
             fetch=True,
         )
         id_por_codigo = {r["codigo_externo"]: r["id"] for r in inseridos}
+        # o tipo do consumidor (t[2]) já é conhecido em Python — igual ao caminho de dispositivo
+        # (_gravar_dispositivos), não precisa de JOIN em rede_no para descobrir de novo. A versão
+        # anterior referenciava `n.tipo_id` num ON antes do JOIN que declara `n` (SQL inválido:
+        # "missing FROM-clause entry for table n") — achado deste item.
         associacoes = [
-            (self.tenant_id, self.rede_id, id_por_codigo[t[3]], t[6])
+            (self.tenant_id, self.rede_id, id_por_codigo[t[3]], t[6], t[2])
             for t in tuplas if t[3] in id_por_codigo
         ]
         if not associacoes:
@@ -652,26 +679,27 @@ class _Importador:
             self.cur,
             "INSERT INTO plat.rede_associacao (tenant_id, rede_id, tipo, de_no_id, para_no_id, origem) "
             "SELECT v.tenant_id, v.rede_id::uuid, 'conectividade', v.de_no::uuid, v.para_no::uuid, 'importacao' "
-            "FROM (VALUES %s) AS v(tenant_id, rede_id, de_no, para_no) "
+            "FROM (VALUES %s) AS v(tenant_id, rede_id, de_no, para_no, tipo_id) "
             "WHERE EXISTS ("
             "  SELECT 1 FROM plat.rede_aresta a JOIN plat.rede_regra r "
             "    ON r.rede_id = v.rede_id::uuid AND r.tipo = 'conectividade_no_trecho' "
-            "   AND ((r.de_tipo_id = a.tipo_id AND r.para_tipo_id = n.tipo_id) "
-            "     OR (r.de_tipo_id = n.tipo_id AND r.para_tipo_id = a.tipo_id)) "
-            "   JOIN plat.rede_no n ON n.tenant_id = v.tenant_id AND n.id = v.de_no::uuid "
-            "   WHERE a.rede_id = v.rede_id::uuid AND (a.no_origem_id = v.para_no::uuid OR a.no_destino_id = v.para_no::uuid)"
+            "   AND ((r.de_tipo_id = a.tipo_id AND r.para_tipo_id = v.tipo_id::uuid) "
+            "     OR (r.de_tipo_id = v.tipo_id::uuid AND r.para_tipo_id = a.tipo_id)) "
+            "   WHERE a.rede_id = v.rede_id::uuid "
+            "     AND (a.no_origem_id = v.para_no::uuid OR a.no_destino_id = v.para_no::uuid)"
             ") RETURNING de_no_id",
             associacoes,
             page_size=LOTE,
             fetch=True,
         )
         ok = {r["de_no_id"] for r in gravadas}
-        for _, _, de_no, _ in associacoes:
+        cod_por_id = {v: k for k, v in id_por_codigo.items()}
+        for _, _, de_no, _, _ in associacoes:
             if de_no not in ok:
                 self._desvio(
                     "consumidor_sem_regra_na_juncao",
                     "nenhuma aresta incidente na junção do consumidor tem regra de conectividade "
                     "com o tipo dele no catálogo — na BDGD o consumidor de baixa liga pelo ramal, "
                     "e junção sem ramal incidente não tem como validar a regra",
-                    None,
+                    cod_por_id.get(de_no),
                 )
