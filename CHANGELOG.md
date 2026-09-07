@@ -108,7 +108,7 @@ Paridade contra "Add and manage pages" e "Layout widgets" (doc EXB) em `docs/PAR
 ## turno 4, setembro de 2026 (item L5-12-acessibilidade-i18n-construtores: acessibilidade e idioma da base dos construtores)
 
 Sobre o editor de arrasto do L5-08: dicionário de idioma (`web/js/i18n/{pt-BR,en,es}.json`, paridade total de
-chave e placeholder testada estaticamente), seletor de idioma dentro de `/construtor` que troca o dicionário
+chave e campo de substituição `{nome}` testados estaticamente), seletor de idioma dentro de `/construtor` que troca o dicionário
 na hora (sem `location.reload()`; `document.documentElement.lang` atualizado também em `base/i18n.js`, WCAG
 3.1.1), quinto painel de Ações (`documento.js::ligar/desligar` sobre `corpo.ligacoes`, que já existia vazia
 desde o L5-08) e botão Publicar (`POST /api/itens/{id}/versoes/{n}/publicar`, rota que já existia). A
