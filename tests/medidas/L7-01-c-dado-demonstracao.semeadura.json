@@ -1,0 +1,33 @@
+{
+  "segundos": 7.09,
+  "inquilinos": [
+    {
+      "inquilino": "demo",
+      "arquivo": 0,
+      "camada": 0,
+      "composicao": 3,
+      "reaproveitados": 15,
+      "segundos_por_arquivo": {
+        "municipios_ap_rr.zip": 0.0,
+        "pontos_municipais_ap_rr.geojson": 0.0,
+        "rodovias_federais_rr.geojson": 0.0,
+        "hidrografia_bacia_4668.geojson": 0.0,
+        "estacoes_inmet_norte.csv": 0.0,
+        "vias_fernando_de_noronha.geojson": 0.0,
+        "nos_via_fernando_de_noronha.geojson": 0.0,
+        "sentinel2_fernando_de_noronha_visual.tif": 0.0
+      }
+    },
+    {
+      "inquilino": "demo2",
+      "arquivo": 1,
+      "camada": 1,
+      "composicao": 0,
+      "reaproveitados": 0,
+      "segundos_por_arquivo": {
+        "municipios_ac.zip": 6.58
+      }
+    }
+  ],
+  "arquivos_no_catalogo": 9
+}

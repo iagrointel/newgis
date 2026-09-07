@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""`plat` — utilitário de linha de comando do administrador da plataforma.
+
+Hoje só tem o grupo `demo` (item L7-01-c-dado-demonstracao). Roda de dentro do repositório
+(`scripts/plat ...`), lendo a base venv/ do próprio worktree. Não faz nada sozinho: fala com a API
+já no ar (--base-url), a mesma que o navegador usa.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+RAIZ = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(RAIZ))
+
+from dados.demo import semear as demo_semear  # noqa: E402
+
+
+def cmd_demo_semear(a: argparse.Namespace) -> int:
+    medida = Path(a.medida) if a.medida else None
+    resumo = demo_semear.semear(a.base_url, Path(a.credenciais), medida, verboso=not a.silencioso)
+    print(json.dumps(resumo, ensure_ascii=False, indent=2 if not a.silencioso else None))
+    return 0
+
+
+def cmd_demo_verificar(a: argparse.Namespace) -> int:
+    resultado = demo_semear.verificar(a.base_url, Path(a.credenciais), verboso=not a.silencioso)
+    print(json.dumps(resultado, ensure_ascii=False, indent=2))
+    return 0 if resultado["ok"] else 1
+
+
+def main(argv: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(prog="plat", description="utilitário de linha de comando da plataforma")
+    sub = p.add_subparsers(dest="grupo", required=True)
+
+    demo = sub.add_parser("demo", help="pacote de dado de demonstração")
+    demo_sub = demo.add_subparsers(dest="acao", required=True)
+
+    p_semear = demo_sub.add_parser("semear", help="cria o inquilino demo/demo2 com os itens do catálogo")
+    p_semear.add_argument("--base-url", default=os.environ.get("PLAT_URL_TESTE", "http://127.0.0.1:8150"))
+    p_semear.add_argument(
+        "--credenciais", default=os.environ.get("PLAT_CREDENCIAIS_ARQUIVO", str(RAIZ / "tests" / "credenciais.txt"))
+    )
+    p_semear.add_argument("--medida", default=None, help="grava o resultado e o tempo neste JSON")
+    p_semear.add_argument("--silencioso", action="store_true")
+    p_semear.set_defaults(func=cmd_demo_semear)
+
+    p_verificar = demo_sub.add_parser("verificar", help="confere contagens e sha256 do pacote semeado")
+    p_verificar.add_argument("--base-url", default=os.environ.get("PLAT_URL_TESTE", "http://127.0.0.1:8150"))
+    p_verificar.add_argument(
+        "--credenciais", default=os.environ.get("PLAT_CREDENCIAIS_ARQUIVO", str(RAIZ / "tests" / "credenciais.txt"))
+    )
+    p_verificar.add_argument("--silencioso", action="store_true")
+    p_verificar.set_defaults(func=cmd_demo_verificar)
+
+    a = p.parse_args(argv)
+    try:
+        return a.func(a)
+    except demo_semear.Erro as e:
+        print(f"plat {a.grupo} {a.acao} falhou: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,32 @@
+{
+ "item": "L7-01-c-dado-demonstracao",
+ "medidas": {
+  "arquivos_com_fonte_url_licenca_data": {
+   "valor": 9,
+   "unidade": "arquivos",
+   "comando": "pytest tests/api/test_dado_demo_l7.py -k licencas"
+  },
+  "ocorrencias_de_nome_proibido": {
+   "valor": 0,
+   "unidade": "ocorrências",
+   "comando": "grep de 22 nomes em 13 arquivos (pytest tests/api/test_dado_demo_l7.py::test_nenhum_nome_de_cliente_parceiro_ou_piloto)"
+  },
+  "pacote_de_demonstracao": {
+   "valor": 1.011,
+   "unidade": "MB",
+   "comando": "du -sb dados/demo/arquivos (teto 315 MB)"
+  },
+  "itens_semeados_em_demo": {
+   "valor": 19,
+   "unidade": "itens",
+   "comando": "pytest tests/api/test_dado_demo_l7.py::test_demo_tem_arquivos_camadas_e_as_4_composicoes"
+  },
+  "segundos_reexecucao_idempotente": {
+   "valor": 0.38,
+   "unidade": "s",
+   "comando": "pytest tests/api/test_dado_demo_l7.py::test_semeadura_e_idempotente (2ª chamada de plat demo semear)"
+  }
+ },
+ "gerado_em": "2026-09-07T16:16:07Z",
+ "git_sha": "642cf206344e"
+}

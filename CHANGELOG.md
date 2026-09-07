@@ -3,6 +3,39 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L7-01-c-dado-demonstracao: pacote de dado de demonstração aberto)
+
+`dados/demo/catalogo.json` + `dados/demo/arquivos/` (0,96 MB, teto 300 MB): 9 arquivos abertos —
+limites municipais do IBGE (Amapá/Roraima em `demo`, Acre em `demo2`, prova de isolamento), ponto
+municipal derivado, rodovia federal (DNIT), hidrografia (ANA/BHO), estações do INMET, um recorte
+real de Sentinel-2 (visual/TCI, ESA/Copernicus, via Earth Search) guardado como arquivo (sem
+pipeline de raster nesta base — L1-01-ingest-raster segue parcial) e um extrato aberto do
+OpenStreetMap (vias e nós de Fernando de Noronha, ODbL) usado como arestas/nós de uma composição
+do tipo `rede`. `dados/demo/LICENCAS.md` é GERADO por `dados/demo/gerar_licencas.py` a partir do
+catálogo (fonte, órgão, URL, licença e data de acesso de cada arquivo — nunca escrito à mão).
+
+CLI `scripts/plat demo semear` (cria os itens pela própria API: arquivo → importação → camada
+vetorial nos itens marcados `ingerir`, mais 1 mapa, 1 painel, 1 formulário e 1 rede compostos sobre
+as camadas recém-criadas) e `scripts/plat demo verificar` (confere sha256/tamanho no disco e a
+presença de cada item nos inquilinos `demo`/`demo2`, sem semear nada). Reusa o desenho do item
+L0-13-dado-demonstracao (ramo `wt/t13`, ainda não integrado a `master`).
+
+Medido (`tests/medidas/L7-01-c-dado-demonstracao.json`, `PLAT_GRAVAR_MEDIDAS=1`): 9 arquivos com
+fonte/URL/licença/data de acesso; 0 ocorrência de nome de cliente/parceiro/piloto (22 nomes, 14
+arquivos varridos, inclusive dentro dos `.zip`); pacote com 1,011 MB (teto 300 MB); 19 itens
+semeados em `demo` (8 arquivos + 6 camadas + 1 mapa + 1 painel + 1 formulário + 1 rede — o raster
+fica só como arquivo); reexecução idempotente em 0,45 s (0 arquivo/camada/composição novos). 12/12
+testes verdes (`pytest tests/api/test_dado_demo_l7.py`).
+
+Cláusula pendente, nomeada: uma corrida completa de ingestão travou duas vezes em "baixando o
+arquivo" por contenção do Postgres compartilhado (outras trilhas concorrentes prendendo a consulta
+de introspecção do driver GDAL/PostGIS em lock de relação por 8-65 min, visto em
+`pg_stat_activity`); a terceira tentativa, com a fila mais livre, completou em 7 s. Não é defeito
+do item: registrado para quem for medir tempo de semeadura sob carga.
+
+Riscos de merge: nenhum arquivo do L0-13 foi tocado (`dados_demo/` dele é um diretório diferente de
+`dados/demo/` deste item); `CHANGELOG.md` só ganhou esta entrada no topo.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
