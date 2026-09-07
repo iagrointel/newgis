@@ -28,6 +28,7 @@ from app.auth import (
     rotas_tokens,
     rotas_usuarios,
 )
+from app.auth import saml as rotas_saml
 from app.catalogo import (
     rotas_categorias,
     rotas_compartilhamento,
@@ -84,6 +85,8 @@ ROUTERS = [
     rotas_ldap.router,
     # --- OpenID Connect (L0-08-a): GET /api/sso/oidc/{iniciar,retorno,logout}; GET/POST/PUT/DELETE /api/org/oidc
     rotas_oidc.router,
+    # --- SAML 2.0 (L0-08-b): /api/sso/saml/{metadata,iniciar,acs,slo,logout}; GET/POST/PUT/DELETE /api/org/saml
+    rotas_saml.router,
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): GET/PUT /api/org/smtp,
     # POST /api/org/smtp/testar; /api/convites (+ /resolver e /aceitar públicos); /api/senha/redefinir/*
     rotas_smtp,

@@ -109,7 +109,9 @@ def provedores(inquilino: str):
     with db.db() as cur:
         cur.execute("SELECT provedor_id, rotulo FROM plat.provedores_oidc_de(%s)", (inquilino,))
         oidc = [{"tipo": "oidc", "id": r["provedor_id"], "rotulo": r["rotulo"]} for r in cur.fetchall()]
-    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": oidc, "login_local": True}
+        cur.execute("SELECT provedor_id, rotulo FROM plat.provedores_saml_de(%s)", (inquilino,))  # L0-08-b
+        saml = [{"tipo": "saml", "id": r["provedor_id"], "rotulo": r["rotulo"]} for r in cur.fetchall()]
+    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": oidc + saml, "login_local": True}
 
 
 @router.post(
