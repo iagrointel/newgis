@@ -44,6 +44,8 @@ from app.exportacao.rotas import router as rotas_exportacao
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
+from app.intercambio.lote_importar import router as rotas_intercambio_lote_importar
+from app.intercambio.rotas import router as rotas_intercambio
 from app.jobs.rotas import router as rotas_jobs
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
@@ -114,6 +116,10 @@ ROUTERS = [
     rotas_ingestao,
     # --- exportação de camada (L0-04-h): /api/exportacoes (11 formatos por ogr2ogr, arquivo com validade de 7 dias)
     rotas_exportacao,
+    # --- intercâmbio em lote (L6-02-o): /api/intercambio (formatos extra: filegdb.zip, mbtiles, pmtiles,
+    # geojsonseq; exportação do inquilino inteiro em GeoPackage + manifesto; importação em lote sobre L0-04)
+    rotas_intercambio,
+    rotas_intercambio_lote_importar,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível

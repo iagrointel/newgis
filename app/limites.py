@@ -160,8 +160,11 @@ INTERCAMBIO_CAMADAS_ESCROW_MAX = 500      # teto de camadas vetoriais num escrow
 INTERCAMBIO_XLSX_LINHAS_MAX = 500_000     # importação XLSX: acima disso a conversão p/ CSV estoura a memória
 INTERCAMBIO_DBF_LARGURA_MAX = 254         # largura máxima de campo texto em DBF (limite do formato)
 INTERCAMBIO_MVT_ZOOM = 14                 # zoom de geração/leitura de mbtiles/pmtiles (declarado no relatório)
-EXPORTACAO_MEMORIA_MB = 1024              # job intercambio.exportar_camada / exportar_inquilino
-EXPORTACAO_TIMEOUT_S = 3600
+INTERCAMBIO_MEMORIA_MB = 1024             # job intercambio.exportar_camada / exportar_inquilino / importacoes_lote
+INTERCAMBIO_TIMEOUT_S = 3600              # nome próprio: achado do merge com L0-04-h (EXPORTACAO_MEMORIA_MB já
+                                          # existe lá embaixo para exportacao.gerar; mesmo valor, nomes que não
+                                          # colidem mais)
+INTERCAMBIO_LOTE_ITENS_MAX = 200          # teto de arquivos/camadas por chamada de lote (import ou export)
 
 # --- configurações da organização (L0-07-a-configuracoes-org; GET/PUT /api/org): nome, identidade visual
 # (logotipo reaproveitando o adaptador genérico de arquivo do L0-11, classe 'org_logo'), mapa padrão, idioma
