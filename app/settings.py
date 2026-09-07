@@ -92,6 +92,14 @@ class Settings:
     # .env de trilha grava PLAT_POOL_MAX=2 (ver laco/trilha_ambiente.sh).
     PLAT_POOL_MIN: int
     PLAT_POOL_MAX: int
+    # backup lógico (item L0-06-a; ADR 20260906T2124): diretório dos .dump (padrão var/backups da árvore);
+    # destino externo S3 opcional — as 4 chaves juntas ou nenhuma (destino.py recusa configuração pela metade)
+    PLAT_BACKUP_DIR: str | None
+    PLAT_BACKUP_EXTERNO_URL: str | None
+    PLAT_BACKUP_EXTERNO_BUCKET: str | None
+    PLAT_BACKUP_EXTERNO_CHAVE: str | None
+    PLAT_BACKUP_EXTERNO_SEGREDO: str | None
+    PLAT_BACKUP_EXTERNO_REGIAO: str | None
 
     @property
     def producao(self) -> bool:
@@ -237,6 +245,12 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SMTP_ROTULO=_opcional(valores, "PLAT_SMTP_ROTULO"),
         PLAT_POOL_MIN=pool_min,
         PLAT_POOL_MAX=pool_max,
+        PLAT_BACKUP_DIR=_opcional(valores, "PLAT_BACKUP_DIR"),
+        PLAT_BACKUP_EXTERNO_URL=_opcional(valores, "PLAT_BACKUP_EXTERNO_URL"),
+        PLAT_BACKUP_EXTERNO_BUCKET=_opcional(valores, "PLAT_BACKUP_EXTERNO_BUCKET"),
+        PLAT_BACKUP_EXTERNO_CHAVE=_opcional(valores, "PLAT_BACKUP_EXTERNO_CHAVE"),
+        PLAT_BACKUP_EXTERNO_SEGREDO=_opcional(valores, "PLAT_BACKUP_EXTERNO_SEGREDO"),
+        PLAT_BACKUP_EXTERNO_REGIAO=_opcional(valores, "PLAT_BACKUP_EXTERNO_REGIAO"),
     )
 
 

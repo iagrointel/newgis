@@ -130,6 +130,27 @@ isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não 
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
 
+## turno 3, setembro de 2026 (item L0-06-a-dump-logico: backup lógico diário por inquilino)
+
+Fase 1 do backup, sem reiniciar o Postgres (`archive_mode` está desligado e ligá-lo exige reinício de um
+banco compartilhado com outros serviços da casa — a recuperação a ponto no tempo fica para a fase 2, com
+decisão do dono). Periódico `backup.dump_logico` às 03:00 no inquilino técnico: `pg_dump -Fc` do schema
+`plat` e de cada `d_<slug>`, um arquivo por inquilino, restaurável sozinho. Cada linha de `plat.backup`
+guarda sha256, bytes, `tempo_dump_s` e número de tabelas; a cópia vai para o bucket `plat-backup` do Garage
+(multipart acima de 32 MB) e, quando as quatro variáveis `PLAT_BACKUP_EXTERNO_*` existem, para um destino S3
+externo — configuração pela metade é recusada nomeando o que falta, em vez de mandar o dump para meio
+endereço. Junto dos dumps vai um manifesto por inquilino (chave, sha256, bytes) gravado no próprio bucket.
+
+O espaço livre é conferido ANTES de escrever qualquer byte (mínimo 10 GB por padrão); abaixo disso o job
+termina em `falhou` com os dois números na mensagem, grava o evento `backup/falha` e enfileira `correio.enviar`
+ao superadministrador — falha de backup não pode ser silêncio. Retenção 14 diários + 8 semanais por schema,
+apagando linha, arquivo e objeto do bucket juntos. O periódico `backup.verificar` (segundas 05:30) reconfere
+o sha256 de cada arquivo e lista arquivo órfão (o que está em disco sem linha em `plat.backup`).
+
+Paridade escrita contra o `webgisdr` do ArcGIS Enterprise em `docs/PARIDADE.md`: cache de tile, dado
+referenciado e armazenamento espaço-temporal estão fora dos dois lados, e pelas mesmas razões; a restauração
+por inquilino e a retenção automática são nossas e não existem lá.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
