@@ -16,6 +16,8 @@ ARQUITETURA.md merge=union
 CHANGELOG.md merge=union
 # conflita com todo ramo e a fila serializa (07/09: 5 reprovações seguidas, nenhuma por teste).
 # depois de montar o lote. `merge=ours` guarda a versão do alvo e o gerador escreve a verdade.
+docs/cobertura_ui_lacunas.json merge=ours
+docs/COBERTURA_UI.md merge=ours
 docs/LIMITES.md merge=ours
 docs/openapi.json merge=ours
 docs/PARIDADE.md merge=ours
