@@ -993,5 +993,15 @@
  "conta.carregando_convites": "loading the invitations…",
  "2fa.passo_1": "1. open the authenticator app (any that generates TOTP codes) and scan the QR, or type the secret",
  "2fa.passo_2": "2. enter the 6-digit code the app shows now",
- "2fa.passo_3": "3. keep the recovery codes, which are shown only once"
+ "2fa.passo_3": "3. keep the recovery codes, which are shown only once",
+ "catalogo.vazio_titulo": "no item here",
+ "catalogo.vazio_filtro_titulo": "nothing with this search or filter",
+ "catalogo.limpar_busca_filtros": "clear search, folder and filters",
+ "catalogo.item_inexistente_texto": "the item may have been deleted, moved to the trash or never shared with you",
+ "catalogo.soltar_aqui": "drop to upload",
+ "catalogo.soltar_ajuda": "each file becomes a catalog item; up to {max} per file",
+ "catalogo.soltar_enviando": "uploading {n} of {total}: {nome}",
+ "catalogo.soltar_criados": "{n} item(s) created",
+ "catalogo.soltar_falhas": "{n} file(s) failed",
+ "catalogo.soltar_ocupado": "wait for the current upload to finish before dropping more files"
 }

@@ -993,5 +993,15 @@
  "conta.carregando_convites": "cargando las invitaciones…",
  "2fa.passo_1": "1. abra la aplicación autenticadora (cualquiera que genere códigos TOTP) y lea el QR, o escriba el secreto",
  "2fa.passo_2": "2. indique el código de 6 dígitos que la aplicación muestra ahora",
- "2fa.passo_3": "3. guarde los códigos de recuperación, que aparecen una sola vez"
+ "2fa.passo_3": "3. guarde los códigos de recuperación, que aparecen una sola vez",
+ "catalogo.vazio_titulo": "ningún elemento por aquí",
+ "catalogo.vazio_filtro_titulo": "nada con esta búsqueda o filtro",
+ "catalogo.limpar_busca_filtros": "limpiar búsqueda, carpeta y filtros",
+ "catalogo.item_inexistente_texto": "el elemento puede haber sido eliminado, movido a la papelera o nunca compartido con usted",
+ "catalogo.soltar_aqui": "suelte para subir",
+ "catalogo.soltar_ajuda": "cada archivo se convierte en un elemento del catálogo; hasta {max} por archivo",
+ "catalogo.soltar_enviando": "subiendo {n} de {total}: {nome}",
+ "catalogo.soltar_criados": "{n} elemento(s) creado(s)",
+ "catalogo.soltar_falhas": "{n} archivo(s) fallaron",
+ "catalogo.soltar_ocupado": "espere a que termine la subida en curso antes de soltar más archivos"
 }
