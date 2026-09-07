@@ -152,10 +152,6 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_b.post(f"/api/rede/{rede_b['id']}/pacote", content=instalados.bruto("agua-epanet"),
                       headers={"Content-Type": "application/json"})
     assert r.status_code == 201, r.text
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      rede_b=rede_b, convite_b=convite_b)
     # L3-19-multiescala: conjunto + fator + execução macro de B (sem amostra: 0 aprovadas, mas a execução
     # existe de verdade para os casos GET/POST cross-tenant de /execucoes e /execucoes/{id}/micro)
     r = sessao_b.post("/api/multiescala/conjuntos",
@@ -175,7 +171,7 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b,
+                      rede_b=rede_b, convite_b=convite_b,
                       conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
 
 
@@ -537,16 +533,9 @@ CASOS: dict[tuple[str, str], Caso] = {
     # quando o alvo é de B (a rota lê a conexão pelo RLS de _carregar ANTES de qualquer efeito colateral).
     ("GET", "/api/conexoes/{id}/saude-historico"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/saude-historico"),
     ("POST", "/api/conexoes/{id}/publicar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar"),
-    # L6-02-c (conector WFS/OGC API): as três rotas de leitura do modo referenciado. A conexão de B é
-    # cross-tenant puro — `_carregar` (RLS) roda ANTES de qualquer ida ao serviço externo, então a rota nem
-    # chega a abrir conexão de rede quando o id é de outro inquilino.
-    ("GET", "/api/conexoes/{id}/colecoes"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes"),
-    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/campos"): Caso(
-        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/campos"
-    ),
-    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/feicoes"): Caso(
-        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/feicoes"
-    ),
+    # L6-02-c (conector WFS/OGC API): os três casos de leitura do modo referenciado saíram daqui porque as
+    # rotas não existem nesta árvore (o ramo do conector ainda não entrou); caso sem rota reprova a cobertura
+    # do cruzado. Voltam com o ramo que traz as rotas.
     # ---- L3-19-multiescala: conjunto/fator/execução são do INQUILINO (tenant_id + RLS, mesma classe da
     # conexão acima, não do registro compartilhado do acervo); GET/POST/DELETE de lista agem só sobre o
     # próprio chamador, GET/DELETE/POST por id de B são cross-tenant puro (404, a RLS nunca deixa ver a linha).
@@ -764,8 +753,47 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("DELETE", "/api/rede/{rede_id}"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}"),
     ("GET", "/api/rede/{rede_id}/pacote"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/pacote"),
     ("POST", "/api/rede/{rede_id}/pacote"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: {"esquema": "plat.rede.pacote"},
-    ),
+        lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: {"esquema": "plat.rede.pacote"}),
+    # ---- L4-01-b topologia e feições da rede de utilidades, L4-18 rede simples: todas apontam a rede de B
+    # e têm de dar 404 (a rede de B nem é vista). O corpo é o mínimo que passa pela validação de forma, para
+    # que a resposta venha da autorização e não de um 422 de esquema.
+    ("GET", "/api/rede/{rede_id}/feicoes/pontos"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos"),
+    ("GET", "/api/rede/{rede_id}/feicoes/linhas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas"),
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos",
+        lambda p: {"tipo_codigo": 1, "grupo": "juncao", "lon": -46.6, "lat": -23.5}),
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas",
+        lambda p: {"tipo_codigo": 1, "grupo": "trecho", "coordenadas": [[-46.6, -23.5], [-46.59, -23.49]]}),
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos/applyEdits", lambda p: {"adds": []}),
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas/applyEdits"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas/applyEdits", lambda p: {"adds": []}),
+    ("POST", "/api/rede/{rede_id}/topologia/habilitar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/habilitar", lambda p: {}),
+    ("GET", "/api/rede/{rede_id}/topologia"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia"),
+    ("GET", "/api/rede/{rede_id}/topologia/nos"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/nos"),
+    ("GET", "/api/rede/{rede_id}/topologia/arestas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/arestas"),
+    ("GET", "/api/rede/{rede_id}/topologia/areas-sujas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/areas-sujas"),
+    ("GET", "/api/rede/{rede_id}/topologia/alcance"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/alcance?no={UUID_NULO}"),
+    ("POST", "/api/rede/{rede_id}/tracar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/tracar",
+        lambda p: {"tipo": "lacos"}),
+    ("GET", "/api/rede/{rede_id}/simples"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/simples"),
+    ("POST", "/api/rede/{rede_id}/promover"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/promover", lambda p: {}),
+    # criar rede simples não endereça a rede de B: aponta CAMADA por id, e o id que não é de ninguém tem de
+    # dar 404 igual (a resposta não pode depender de existir camada em outro inquilino)
+    ("POST", "/api/rede/simples"): Caso(
+        lambda p: "/api/rede/simples",
+        lambda p: {"nome": f"{PREFIXO}simples-{secrets.token_hex(4)}", "disciplina": "agua",
+                   "camada_linha_id": UUID_NULO}),
     # ---- L4-04-a controlador de subrede e tiers: tudo em /api/rede/{rede_id} aponta a rede de B e tem de
     # dar 404 (a rede nem é vista). O id de controlador/subrede é forjado: se a rede fosse alcançável, a
     # resposta mudaria de 404 de rede para 404 de controlador — e mesmo isso vazaria a existência da rede.
