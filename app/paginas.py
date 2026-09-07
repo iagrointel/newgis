@@ -39,6 +39,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- migração de Portal/AGOL (L2-08-a-leitor-portal-inventario)
+    "/migracao": "migracao.html",
 }
 router = APIRouter()
 

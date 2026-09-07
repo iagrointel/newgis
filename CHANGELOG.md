@@ -129,6 +129,43 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 3, setembro de 2026 (item L2-08-a-leitor-portal-inventario: conserto de segurança, B1-B7 do adversário)
+
+Sete achados do adversário independente (`laco/handoffs/T3/ataque-L4-portal-ADVERSARIO.md`, seção 2)
+consertados; os 15 `xfail(strict=True)` de `tests/api/test_migracao_adversario.py` viraram teste normal
+(marca retirada, achado por achado). **B1/B1b (crítico)**: `ClientePortal._cabecalhos(alvo)` só põe
+`X-Esri-Authorization` quando `alvo` é a MESMA origem do portal configurado
+(`seguranca._mesma_origem_de_confianca`, copiada com atribuição da defesa que o item L6-02-h fez para
+redirecionamento) — nunca para o host de um item de terceiro nem para onde um 302 aponte; `_requisitar`
+recalcula os cabeçalhos a cada salto. **B2 (alto)**: título com NUL e `numViews` não numérico agora são
+SANEADOS antes do INSERT (`_sanear`, `_inteiro_nao_negativo`) — o item fica no inventário; quando o campo
+é irrecuperável (não adapta para a coluna) o item é registrado e PULADO (`Totais.itens_pulados`, AVISO no
+log do job), nunca trava o lote. **B3 (alto)**: `resposta_grande_demais` (página > 8 MiB) entrou em
+`MOTIVOS_DEFINITIVOS` — falha limpa em `falhou` já na 1ª tentativa, não fica `rodando` para sempre.
+**B4 (médio)**: quando a ordem do portal muda entre tentativas e a retomada perde itens, `Totais.aviso`
+registra a contagem esperada x obtida e some para a coluna `mensagem` mesmo com o job `concluido`
+(recuperar os itens perdidos fica fora do escopo do conserto — só detectar e avisar). **B5 (médio)**:
+`relatorio._texto` neutraliza injeção de fórmula no CSV (`'` na frente de células que começam com
+`=`/`+`/`-`/`@`). **B6 (baixo)**: `size: -1` do AGOL vira NULL, não entra mais somado em
+`bytes_declarados`. **B7 (médio)**: `POST /api/migracao/inventarios` confere o perfil mínimo do job
+(`servico.tipo_registrado` + `ordem_perfil`) ANTES de gravar a linha do inventário — editor sem privilégio
+nunca cria mais um inventário órfão. Handoff: `laco/handoffs/T3/L2-08-a-CONSERTO.md`.
+
+## turno 3, setembro de 2026 (item L2-08-a-leitor-portal-inventario: leitor de inventário de Portal/AGOL)
+
+Leitura só-leitura do Portal for ArcGIS / ArcGIS Online do cliente, como job retomável
+(`migracao.inventariar`): `portals/self`, `search` paginado, item, `item/data`, `item/resources`,
+`relatedItems`, grupos com membros, usuários, e contagem de feições por camada dos serviços hospedados
+(`query?returnCountOnly=true`). Grava em `plat.migracao_inventario` / `migracao_item` / `migracao_grupo` /
+`migracao_usuario` (migração `20260906T1540_migracao_inventario_portal.sql`, RLS por inquilino), com
+classificação prévia migra / migra parcial / não migra por tipo de item — tipo fora da tabela vira
+`desconhecido`, nunca chute. Tela `/migracao` (escolher a conexão, ler, ver o relatório por tipo e por item)
+e `GET /api/migracao/inventarios/{id}/relatorio.csv`. Rede pelo `app.conexao.seguranca` do L6-02-a (SSRF,
+IP pinado, sem seguir redirecionamento sozinho); token em cabeçalho `X-Esri-Authorization`, nunca em URL;
+429 com espera pelo `Retry-After`; corte de rede no meio retoma do ponto gravado sem reler o que já entrou.
+`plat.migracao_usuario` não tem coluna de e-mail, nome ou telefone: o dado pessoal que o portal devolve não
+tem onde ser gravado. ADR 0018. ⛔ a prova contra Portal REAL fica pendente da decisão D20 do dono
+(credencial do parceiro) — `tests/migracao/PORTAL_DE_TESTE.md` diz o que a prova atual sustenta e o que não.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
