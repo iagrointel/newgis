@@ -227,8 +227,12 @@ def test_cota_excedida_nao_cria_tabela(ingestor_a, conexao_plat_app, env):
         _contexto_admin(conexao_plat_app, ids)
         # invariante geral do item (ADR 6.2-9): toda tabela d_demo.c_* tem item, todo item camada_vetorial tem tabela
         with conexao_plat_app.cursor() as cur:
+            # o schema de dado é o da INSTALAÇÃO (plat.camada_schema_prefixo): em produção `d_demo`, numa
+            # trilha `d_plat_t<T>_demo`. Com 'd_demo' fixo, o invariante media o schema de PRODUÇÃO —
+            # e contava as tabelas que outras trilhas deixaram lá (87 em 07/09/2026).
             cur.execute(
-                "SELECT count(*) AS n FROM pg_tables t WHERE t.schemaname = 'd_demo' AND t.tablename LIKE 'c\\_%' "
+                "SELECT count(*) AS n FROM pg_tables t WHERE t.schemaname = plat.camada_schema_prefixo() || 'demo' "
+                "AND t.tablename LIKE 'c\\_%' "
                 "AND NOT EXISTS (SELECT 1 FROM plat.item i WHERE i.tipo='camada_vetorial' "
                 "AND i.dados->>'tabela' = t.tablename)"
             )

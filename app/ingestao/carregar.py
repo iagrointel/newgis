@@ -98,8 +98,14 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             raise FalhaDefinitiva("o arquivo de origem não existe mais")
         cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (ctx.tenant_id,))
         slug = cur.fetchone()["slug"]
+        # o prefixo do schema de dado carrega a INSTALAÇÃO (plat.camada_schema_prefixo, migração
+        # 20260907T0245): em produção continua `d_`, em homologação/trilha vira `d_<schema>_`. Sem isso o
+        # nome `d_<slug>` não contém a palavra `plat`, o tradutor de schema não o alcança e toda instalação
+        # grava no MESMO schema de dado (achado F8 do adversário de 07/09/2026).
+        cur.execute("SELECT plat.camada_schema_prefixo() AS p")
+        prefixo = cur.fetchone()["p"]
 
-    schema = f"d_{slug}"
+    schema = f"{prefixo}{slug}"
     proposta = imp["proposta"] or {}
     confirmacao = imp["confirmacao"] or {}
     tabela = proposta.get("nome_tabela") or tabela_de(imp["item_id"])

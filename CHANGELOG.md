@@ -3,6 +3,20 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (F8: o schema de dado de camada passa a carregar a instalação)
+
+- `plat.camada_schema_prefixo()` (migração `20260907T0245_isolamento_schema_de_dado.sql`): o dado de
+  camada mora em `d_<slug>` em produção e em `d_plat_t<trilha>_<slug>` / `d_plat_homolog_<slug>` nas
+  instalações derivadas. Produção não muda de lugar; nada é renomeado nem apagado. ADR 0018.
+- `camada_schema_garantir`, `camada_preparar`, `tenant_criar` e `app/ingestao/carregar.py` usam o prefixo.
+- `laco/trilha_ambiente.sh`: worktree com o conserto não recebe mais privilégio nos schemas de dado de
+  produção (medido: `has_schema_privilege('plat_tf8isol_app','d_demo','USAGE')` = falso, contra
+  verdadeiro para as trilhas antigas).
+- Testes: `tests/api/ingestao/test_isolamento_schema_dado.py` (4 exigências do portão, 3 delas reprovam
+  com o código anterior); dois testes que fixavam `'d_demo'` no texto passaram a perguntar o prefixo —
+  mediam o schema de PRODUÇÃO de dentro da trilha (87 tabelas alheias contadas em 07/09/2026).
+
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

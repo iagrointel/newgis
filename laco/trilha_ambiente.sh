@@ -72,18 +72,40 @@ for papel in "$APP" "$WORKER"; do
 done
 [ $MUDOU = 1 ] && sudo systemctl reload postgresql && echo "  pg_hba atualizado (reload)" || echo "  pg_hba já tinha as linhas"
 
-echo "== c2. privilégio nos schemas de dado d_<slug> (achado 06/09)"
-# O produto grava camada em `d_<slug>` derivado do APELIDO do inquilino, sem prefixo de ambiente:
-# produção, homologação e todas as trilhas partilham `d_demo`. Enquanto o produto não separar isso
-# (item de recurso partilhado, em conserto), a trilha precisa de privilégio nos schemas que já
-# existem, senão QUALQUER teste que crie camada morre com `permission denied for schema d_demo`.
-for d in $("${PSQL[@]}" -Atc "select nspname from pg_namespace where nspname like 'd\_%'"); do
-  # `|| true` + 2 tentativas: GRANT em schema compartilhado dá `tuple concurrently updated` quando outra
-  # trilha faz DDL no mesmo instante (set -e derrubava a criação da trilha inteira por isso)
-  for tent in 1 2; do "${PSQL[@]}" -c "GRANT USAGE, CREATE ON SCHEMA \"$d\" TO $APP, $WORKER" >/dev/null 2>&1 && break; sleep 1; done || true
-  for tent in 1 2; do "${PSQL[@]}" -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA \"$d\" TO $APP, $WORKER" >/dev/null 2>&1 && break; sleep 1; done || true
-done
-echo "  privilégio dado nos schemas de dado existentes"
+echo "== c2. privilégio nos schemas de dado d_<slug> (achado 06/09; isolado desde 07/09)"
+# O produto gravava camada em `d_<slug>`, derivado só do APELIDO do inquilino: produção, homologação e
+# todas as trilhas partilhavam `d_demo` (achado F8 do adversário, 07/09 — 79 tabelas em d_demo, 65 de
+# sete trilhas). O conserto (migração *_isolamento_schema_de_dado.sql + plat.camada_schema_prefixo)
+# põe a instalação no prefixo: a trilha grava em `d_plat_t<T>_<slug>`, criado pela própria migração,
+# com dono `plat_t<T>_app`. Quando o worktree TEM o conserto, a trilha NÃO recebe mais privilégio nos
+# schemas de dado de produção — é isso que a torna incapaz de ler ou apagar camada de produção.
+# Enquanto houver worktree sem o conserto (código de master antigo), ele continua ganhando o
+# privilégio antigo, senão qualquer teste que crie camada morre com `permission denied`.
+if grep -rqs "camada_schema_prefixo" "$FONTE/db/migracoes"; then
+  echo "  worktree com o isolamento de schema de dado: nenhum privilégio em d_ de produção"
+  for d in $("${PSQL[@]}" -Atc "select nspname from pg_namespace where nspname like 'd\_plat\_t${T}\_%'"); do
+    "${PSQL[@]}" -c "GRANT USAGE, CREATE ON SCHEMA \"$d\" TO $APP, $WORKER" >/dev/null 2>&1 || true
+    "${PSQL[@]}" -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA \"$d\" TO $APP, $WORKER" >/dev/null 2>&1 || true
+  done
+else
+  for d in $("${PSQL[@]}" -Atc "select nspname from pg_namespace where nspname like 'd\_%'"); do
+    # `|| true` + 2 tentativas: GRANT em schema compartilhado dá `tuple concurrently updated` quando outra
+    # trilha faz DDL no mesmo instante (set -e derrubava a criação da trilha inteira por isso)
+    for tent in 1 2; do "${PSQL[@]}" -c "GRANT USAGE, CREATE ON SCHEMA \"$d\" TO $APP, $WORKER" >/dev/null 2>&1 && break; sleep 1; done || true
+    for tent in 1 2; do "${PSQL[@]}" -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA \"$d\" TO $APP, $WORKER" >/dev/null 2>&1 && break; sleep 1; done || true
+  done
+  echo "  privilégio dado nos schemas de dado existentes (worktree sem o isolamento)"
+fi
+
+echo "== c3. privilégio de leitura no schema certaja (ativo da casa, só leitura, item L4-01-b)"
+# tests/dados/carga_bdgd.py carrega a rede REAL da cooperativa de teste (certaja.ssdmt/ssdbt/ramlig/
+# trafo/ponnot) para medir a topologia derivada em escala; sem USAGE+SELECT o teste morre com
+# `permission denied for schema certaja` (achado 06/09 ao medir o item L4-01-b-topologia-derivada).
+if "${PSQL[@]}" -Atc "select 1 from pg_namespace where nspname='certaja'" | grep -q 1; then
+  "${PSQL[@]}" -c "GRANT USAGE ON SCHEMA certaja TO $APP" >/dev/null 2>&1 || true
+  "${PSQL[@]}" -c "GRANT SELECT ON ALL TABLES IN SCHEMA certaja TO $APP" >/dev/null 2>&1 || true
+  echo "  privilégio de leitura dado em certaja.*"
+fi
 
 echo "== d. ambiente de teste + admins semeados (nunca cópia de produção)"
 "${PSQL[@]}" -c "UPDATE $SCHEMA.ambiente SET nome='dev', semear_demo=true WHERE unico" >/dev/null 2>&1 || true
@@ -114,7 +136,11 @@ SQL
 echo "  admins de plataforma/demo/demo2 semeados"
 
 echo "== e. $ENVF"
-TOKEN_GARAGE=$(grep -m1 '^PLAT_GARAGE_ADMIN_TOKEN=' "$REPO/.env" | cut -d= -f2-)
+# 06/09 19:45: o token do Garage SAIU do .env (conserto G6: segredos em /etc/plat/segredos). O grep no
+# .env devolvia 1 e, com set -e/pipefail, o script morria em silêncio antes de escrever o .env da
+# trilha — foi o que derrubou a base de integração da fila três vezes. Lê do cofre, com o .env de reserva.
+TOKEN_GARAGE=$(sudo cat /etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN 2>/dev/null || true)
+[ -z "$TOKEN_GARAGE" ] && TOKEN_GARAGE=$(grep -m1 '^PLAT_GARAGE_ADMIN_TOKEN=' "$REPO/.env" 2>/dev/null | cut -d= -f2- || true)
 SEGREDO=$(sudo cat /etc/plat/segredos/PLAT_SECRET)
 cat > "$ENVF" <<ENV
 PLAT_DSN=postgresql://$APP:${SENHA_APP}@127.0.0.1:5432/${DB}
