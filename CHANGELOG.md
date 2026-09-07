@@ -3,6 +3,28 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L0-06-e-status: página aberta de estado da instalação)
+
+`GET /api/status` e a página `/status` respondem sem sessão, com `X-Robots-Tag: noindex`: estado de api,
+banco, worker, martin, titiler e garage (as mesmas sondas do health check profundo, nunca uma segunda lista),
+migrações aplicadas e pendentes, fila (na fila, executando, falhas em 24 h), última cópia de segurança, último
+ensaio de restauração, menor percentual livre de disco, espaço e objetos no armazenamento do Garage, dias
+restantes do certificado, histórico de 90 dias por serviço e percentual de disponibilidade do mês, mais o log
+de correções lido do próprio CHANGELOG. O histórico vem de `plat.status_amostra`, gravada a cada 5 minutos pelo
+periódico `status.amostrar`, que usa o MESMO retrato que a página serve; o percentual é recalculado das
+amostras a cada pedido (o teste recalcula por fora e compara). A resposta é só agregado: sem versão da
+aplicação ou de dependência, sem caminho de volume, sem alvo `host:porta`, sem slug de inquilino, sem nome de
+bucket — o detalhe continua no `/saude/profunda`, atrás de sessão de superadmin.
+
+Medidas: 1.000 pedidos em 20 conexões levaram 1,07 s, todos servidos do cache de 30 s, nenhuma consulta ao
+banco; retrato frio em 92 ms (carga 5,5-6,7 em 12 núcleos). Duas correções nasceram de medir em vez de ler:
+somar o espaço com um `GetBucketInfo` por bucket custava 5.272,8 ms por retrato e virou uma chamada única de
+estatística do cluster; e o log de correções vazava nome de dependência e caminho de arquivo do CHANGELOG (o
+teste de vazamento reprovou de verdade), então passou a ser higienizado, e a frase que só sobra em pedaços não
+entra. Cláusula do worker medida com servidor HTTP real em porta livre no lugar de `PLAT_WORKER_URL` — cai em
+31 s e volta em 31 s, dentro dos 5 minutos do portão; `systemctl stop` de unidade de produção é proibido na
+trilha e não foi usado. `tests/medidas/L0-06-e-status.json`, ADR `20260907T2257-pagina-de-estado-aberta.md`.
+
 ## turno 3, setembro de 2026 (item L7-34-saude-profunda: health check profundo por componente)
 
 `GET /saude/profunda` sonda 13 componentes (banco+migrações, fila -- workers vivos e idade do job

@@ -55,6 +55,24 @@
     "x-privilegio": "publico"
    }
   },
+  "/api/status": {
+   "get": {
+    "summary": "Api Status",
+    "operationId": "api_status_api_status_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
   "/api/login/provedores": {
    "get": {
     "tags": [

@@ -1,0 +1,74 @@
+{
+ "item": "L0-06-e-status",
+ "hipotese": "página interna /status e JSON /api/status com estado dos serviços, migrações, fila, backup, ensaio de restauração, disco, bucket, certificado, histórico de 90 dias com percentual do mês e log de correções",
+ "medido_em": "2026-09-07T22:57:03Z",
+ "carga_1min": 5.5,
+ "ram_livre_gb": 8,
+ "como_rodar": {
+  "ambiente": "bash laco/trilha_ambiente.sh il006estatu /home/dev/plataforma/wt/il006estatu; set -a; source laco/var/trilha/il006estatu.env; set +a",
+  "unidade_e_api": "bash laco/roda_teste.sh tests/unit/test_status_calculo.py tests/api/test_status.py -q -p no:cacheprovider",
+  "worker_cai_e_volta": "bash laco/roda_teste.sh tests/api/test_status_worker.py -q -p no:cacheprovider",
+  "e2e_com_captura": "venv/bin/python -m uvicorn app.main:app --port 8352 --host 127.0.0.1 & bash laco/roda_teste.sh tests/e2e/test_status.py -q --base-url http://127.0.0.1:8352"
+ },
+ "clausulas": {
+  "e2e_status_200_sem_sessao_com_todos_os_campos_e_captura": {
+   "resultado": "passou",
+   "prova": "tests/e2e/test_status.py::test_status_abre_sem_sessao_com_todos_os_campos (chromium, sem sessão) + tests/api/test_status.py::test_api_status_200_sem_sessao_com_todos_os_campos",
+   "captura": "tests/e2e/capturas/L0-06-e-status_pagina.png"
+  },
+  "worker_derrubado_muda_o_campo_em_ate_5_min_e_volta_ao_religar": {
+   "resultado": "passou por equivalente",
+   "prova": "tests/api/test_status_worker.py: servidor HTTP real numa porta livre no lugar de PLAT_WORKER_URL; no ar=ok, derrubado=erro depois de 31 s (cache de 30 s), religado=ok depois de 31 s; as duas transições medidas abaixo de 300 s",
+   "ressalva": "systemctl stop plat-worker NÃO foi usado: derrubar unidade de produção é proibido na trilha (BRIEF_WORKTREES). O que a página enxerga do worker é a sonda HTTP, e é ela que o teste encena."
+  },
+  "percentual_do_mes_bate_com_as_amostras": {
+   "resultado": "passou",
+   "prova": "tests/api/test_status.py::test_percentual_do_mes_bate_com_as_amostras: 7 amostras gravadas por plat.status_amostrar (4 ok, 1 erro, 1 degradado, 1 ausente); o teste recalcula da tabela e compara com o pct da rota (66,667 % = 4 de 6; 'ausente' fora do denominador)"
+  },
+  "api_status_nao_expoe_versao_de_dependencia_nem_caminho_de_disco": {
+   "resultado": "passou",
+   "prova": "tests/api/test_status.py::test_nao_expoe_versao_de_dependencia_nem_caminho_de_disco (lista de proibidos + nenhum literal x.y.z na resposta) e ::test_nao_carrega_slug_de_inquilino_ip_interno_nem_segredo (slugs reais do banco, endereço interno e todo PLAT_* do ambiente)",
+   "achado": "o log de correções lido do CHANGELOG carregava nome de dependência e caminho de arquivo (o teste reprovou de verdade na 1ª rodada); passou a ser higienizado (app.status.higienizar) e a frase que só sobra em pedaços não entra"
+  },
+  "x_robots_tag_noindex": {
+   "resultado": "passou",
+   "prova": "tests/api/test_status.py::test_api_status_tem_cabecalho_noindex_e_no_store e ::test_pagina_status_200_sem_sessao_e_noindex; o cabeçalho passou a valer para TODA página de app/paginas.py"
+  },
+  "paridade_contra_portalScan_operationalHealth_da_esri": {
+   "resultado": "passou",
+   "prova": "docs/PARIDADE.md, seção 'Página pública de estado da instalação': 8 linhas, com o que cobrimos, o que fazemos acima da referência (histórico/percentual, que na Esri é o ArcGIS Monitor licenciado, e log de correções) e o que não se aplica (detalhe por máquina do site, ações de conserto)"
+  },
+  "adversario_1000_pedidos_por_minuto_sem_consultar_o_banco": {
+   "resultado": "passou",
+   "prova": "1.000 pedidos HTTP reais em 20 conexões contra 127.0.0.1:8352",
+   "medida": {
+    "pedidos": 1000,
+    "segundos": 1.07,
+    "pedidos_por_minuto": 56115,
+    "x_cache": {
+     "hit": 1000
+    },
+    "codigos": {
+     "200": 1000
+    },
+    "miss_ms": [],
+    "hit_ms_mediana": 12.6,
+    "hit_ms_p99": 358.65,
+    "carga_1min": 5.5,
+    "ram_livre_gb": 8,
+    "medido_em": "2026-09-07T22:57:03Z"
+   }
+  }
+ },
+ "desempenho": {
+  "retrato_frio_ms": 92.2,
+  "retrato_quente_mediana_ms": 1.0,
+  "custo_do_espaco_no_bucket_antes": "5.272,8 ms por retrato (um GetBucketInfo por bucket, 200 chamadas)",
+  "custo_do_espaco_no_bucket_depois": "uma chamada GetClusterStatistics; retrato inteiro em 92 ms",
+  "observacao": "medido com carga 5,5-6,7 em 12 núcleos e 7-8 GB livres; o número passa com folga mesmo assim"
+ },
+ "pendente": {
+  "ensaio_de_restauracao": "plat.backup_drill_status() é do item L0-06-c (ramo wt/il006cresto, ainda fora da fila quando este item fechou): enquanto a função não existir, o campo responde 'indisponivel' com a razão, e passa a valer sozinho quando o L0-06-c juntar",
+  "ultimo_backup": "plat.backup existe (L0-06-a, juntado neste ramo) mas a base da trilha não tem rodada de dump gravada, então o campo veio nulo na medida — o caminho de leitura está exercido pelo teste de campos"
+ }
+}
