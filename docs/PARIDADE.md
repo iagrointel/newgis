@@ -361,6 +361,23 @@ demo = Roraima (260.515 pontos, 15 municípios; escolhida por ser o MENOR arquiv
 | `outSR`, `searchExtent`, boost por `location=`, `category`, `langCode`, paginação `search/start/num` | parâmetros documentados do `findAddressCandidates` | fora desta versão (saída sempre 4326; sem filtro geográfico nem boost de proximidade) | fora | — | 2026-09-06 | pendente (D20) |
 | geocodificação em lote de planilha/CSV do usuário (upload → coluna de endereço → resultado) | não é o `GeocodeServer`; é uma ferramenta de geoprocessamento separada (`Geocode Addresses` do Pro/ArcMap) | item-irmão `L2-11-a-geocodificacao-csv`, ainda não construído (reusa `motor.buscar()`) | fora (item separado) | — | 2026-09-06 | pendente (D20) |
 
+## Navegação, medição e coordenadas do visualizador (item L2-01-f, turno 4; ADR 20260907T2330)
+
+Referência Esri: Map Viewer 11.4 (barra de escala, navegação, tela cheia, localização, pesquisar coordenada,
+medir, favoritos/marcadores, atalhos) — doc.arcgis.com/en/arcgis-online/get-started/navigate-map-mv.htm e
+measure-mv.htm; sem Pro/AGOL reais (D20). Oráculo das medidas: PostGIS desta instalação.
+
+| capacidade | Esri | nós | estado | testado por | data |
+|---|---|---|---|---|---|
+| barra de escala métrica correta na latitude | scale bar | ScaleControl do MapLibre (geodésica no centro) | feito | e2e: rótulo × ST_Length < 1 % | 2026-09-07 |
+| zoom/rotação/norte, tela cheia, minha localização (círculo de precisão) | navigation, fullscreen, locate | controles nativos + botão Norte + tecla N | feito (tela cheia: controle e clique provados; o chromium sem cabeça pode recusar o modo) | e2e | 2026-09-07 |
+| ir para coordenada (decimal, GMS, UTM/EPSG) | "Search" aceita lat/lon e GMS; UTM via locator | decimal (vírgula, −), GMS (′″ ou '"), projetado com EPSG explícito da lista curada | feito (supera: EPSG explícito; UTM nunca adivinhado) | unidade + e2e | 2026-09-07 |
+| coordenada do cursor em CRS escolhido | coordinates (lat/lon; projetado em Pro) | 4326, 4674, UTM 21S-25S, 5880, 3857 pelo proj4 vendorizado, ≤ 1 cm de ST_Transform | feito | unidade + e2e | 2026-09-07 |
+| medição de distância e área geodésicas com segmentos e cópia | measure (geodesic) | Vincenty + área por geodésicas densificadas em projeção equivalente; segmentos; copiar | feito (≤ 0,1 % vs PostGIS; antimeridiano e equador conferidos) | unidade + e2e | 2026-09-07 |
+| favoritos (nome + extensão + rotação) salvos no documento do mapa | bookmarks no web map | localStorage por mapa; restaura ± 1 px | parcial (documento do mapa depende do L2-01-a na fila) | e2e | 2026-09-07 |
+| histórico de extensão (voltar/avançar) | previous/next extent (Pro) | pilha de estados + Alt+←/→ | feito | e2e | 2026-09-07 |
+| atalhos de teclado documentados | keyboard shortcuts | lista na tela (`?`), 16 atalhos | feito | e2e | 2026-09-07 |
+
 ## SMTP, convite de membro e redefinição de senha (item L0-07-d-smtp-convites, turno 3; ADR 0017)
 
 | capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
