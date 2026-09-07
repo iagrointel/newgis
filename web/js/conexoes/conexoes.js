@@ -156,6 +156,89 @@ async function carregar() {
   for (const c of s.itens) corpo.append(linha(c));
 }
 
+/* ---- catálogo de conectores públicos (item L6-02-m-catalogo-endpoints-brasil): GET /api/endpoints-publicos lista
+   as entradas vivas no último teste HTTP (filtro por tipo e texto); ?vivo=false é a seção "fora do ar";
+   POST /api/endpoints-publicos/{id}/adicionar cria a conexão num clique (idempotente: segundo clique reaproveita). */
+const TIPO_ROTULO = { wms: 'WMS', wfs: 'WFS', wmts: 'WMTS', esri_rest: 'ArcGIS REST', stac: 'STAC', ogc_api: 'OGC API' };
+
+async function adicionarDoCatalogo(e, botao) {
+  botao.disabled = true;
+  aviso('catalogo-aviso', '');
+  const r = await api.enviar(`/api/endpoints-publicos/${encodeURIComponent(e.id)}/adicionar`, {});
+  botao.disabled = false;
+  if (r.status !== 201) {
+    const erro = r.json && r.json.erro;
+    aviso('catalogo-aviso', erro === 'endpoint_fora_do_ar'
+      ? `"${e.nome}" está fora do ar no último teste do catálogo: não vira conexão por aqui`
+      : `não foi possível adicionar "${e.nome}": ${api.mensagemDe(r)}`);
+    return;
+  }
+  botao.textContent = r.json.criada ? 'adicionada' : 'já existia';
+  botao.dataset.resultado = r.json.criada ? 'criada' : 'existente';
+  aviso('catalogo-aviso', r.json.criada
+    ? `conexão "${r.json.nome}" criada a partir do catálogo, com a ficha de procedência do órgão`
+    : `"${r.json.nome}" já existia: conexão reaproveitada`, 'ok');
+  await carregar();
+}
+
+function linhaCatalogo(e) {
+  const bt = h('button', { type: 'button', class: 'pequeno primario' }, 'adicionar');
+  bt.addEventListener('click', () => adicionarDoCatalogo(e, bt));
+  return h('tr', { dataset: { endpoint: String(e.id), tipo: e.tipo } },
+    h('td', {}, e.orgao),
+    h('td', {}, h('span', { title: e.url }, e.nome)),
+    h('td', {}, h('span', { class: 'marcador info' }, TIPO_ROTULO[e.tipo] || e.tipo)),
+    h('td', {}, e.licenca === 'nao-declarada' ? h('em', {}, 'não declarada') : e.licenca),
+    h('td', {}, e.testado_em ? formatarData(e.testado_em) : h('em', {}, 'nunca')),
+    h('td', {}, bt));
+}
+
+function linhaForaDoAr(e) {
+  return h('tr', { dataset: { endpoint: String(e.id), tipo: e.tipo } },
+    h('td', {}, e.orgao),
+    h('td', {}, h('span', { title: e.url }, e.nome)),
+    h('td', {}, TIPO_ROTULO[e.tipo] || e.tipo),
+    h('td', {}, h('span', { class: 'marcador falha', title: `HTTP ${e.http === null ? '—' : e.http}` }, e.motivo || '—')),
+    h('td', {}, e.testado_em ? formatarData(e.testado_em) : h('em', {}, 'nunca')));
+}
+
+async function carregarCatalogo() {
+  aviso('catalogo-aviso', '');
+  const tipo = porId('catalogo-tipo').value;
+  const q = porId('catalogo-q').value.trim();
+  const params = api.consulta({ tipo: tipo || undefined, q: q || undefined, limite: 500 });
+  const [vivos, fora] = await Promise.all([
+    api.obter(`/api/endpoints-publicos${params}`),
+    api.obter(`/api/endpoints-publicos${params}${params ? '&' : '?'}vivo=false`),
+  ]);
+  if (vivos.status !== 200 || fora.status !== 200) {
+    if (vivos.status === 401) return;
+    aviso('catalogo-aviso', `não foi possível carregar o catálogo (${api.mensagemDe(vivos.status !== 200 ? vivos : fora)})`);
+    return;
+  }
+  porId('catalogo-total').textContent = `(${vivos.json.total})`;
+  porId('catalogo-fora-total').textContent = `(${fora.json.total})`;
+  porId('catalogo-resumo').textContent = vivos.json.testado_em_ultimo
+    ? `${vivos.json.vivos} vivos, ${vivos.json.fora_do_ar} fora do ar, ${vivos.json.nunca_testados} nunca testados; último teste ${formatarData(vivos.json.testado_em_ultimo)}`
+    : 'catálogo ainda não testado nesta instalação (o job endpoints_publicos.retestar roda toda semana)';
+  const corpo = porId('catalogo-corpo');
+  limpar(corpo);
+  if (!vivos.json.itens.length) {
+    corpo.append(h('tr', {}, h('td', { colspan: '6', class: 'ajuda' }, 'nenhum conector vivo com esse filtro')));
+  }
+  for (const e of vivos.json.itens) corpo.append(linhaCatalogo(e));
+  const corpoFora = porId('catalogo-fora-corpo');
+  limpar(corpoFora);
+  for (const e of fora.json.itens) corpoFora.append(linhaForaDoAr(e));
+}
+
+function ligarCatalogo() {
+  if (!document.getElementById('catalogo-cartao')) return;
+  porId('catalogo-buscar').addEventListener('click', () => carregarCatalogo());
+  porId('catalogo-tipo').addEventListener('change', () => carregarCatalogo());
+  porId('catalogo-q').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); carregarCatalogo(); } });
+}
+
 function layout(usuario) {
   montarLayout({ usuario: usuario || { inquilino: {}, login: '', nome: '', perfil: '' }, ativo: '/conexoes' });
   if (!usuario) {
@@ -180,7 +263,9 @@ async function principal() {
   }
   s.usuario = usuario;
   layout(usuario);
+  ligarCatalogo();
   await carregar();
+  await carregarCatalogo();
 }
 
 await carregarIdioma();
