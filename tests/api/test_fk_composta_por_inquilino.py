@@ -74,6 +74,8 @@ PERMITIDAS: dict[tuple[str, str], str] = {
     ("redefinicao_senha", "usuario_id"): "fora do escopo de L4-01-a",
     ("rede", "dono_id"): "fora do escopo de L4-01-a — aponta para usuario, não para outra plat.rede_*",
     ("rede", "importado_por"): "fora do escopo de L4-01-a — aponta para usuario, não para outra plat.rede_*",
+    ("rede_feicao", "criado_por"): "fora do escopo de L4-03-a — aponta para usuario (auditoria de quem "
+                                    "editou), mesmo padrão já aceito em rede.dono_id/importado_por",
     ("sessao", "usuario_id"): "fora do escopo de L4-01-a",
     ("token_servico", "renovado_por"): "fora do escopo de L4-01-a",
     ("token_servico", "usuario_id"): "fora do escopo de L4-01-a",

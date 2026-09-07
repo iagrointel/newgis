@@ -3,6 +3,40 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L4-03-a-regras-de-conectividade: applyEdits, validação em lote e CSV de regras)
+
+O pacote elétrico ganha um QUINTO tipo de regra (`aresta_juncao_aresta`, separado de `juncao_aresta`
+porque o papel da junção do meio é o VIA, não o terminal) e cresce de 24 para **58 regras**, cobrindo
+os cinco tipos da *utility network* Esri (*Junction-Junction*, *Junction-Edge*, *Edge-Junction-Edge*,
+*Containment*, *Structural Attachment*). A política padrão é **"sem regra = proibido"**: `POST
+/api/rede/{id}/applyEdits` deriva as conexões da geometria gravada (coincidência de ponto, tolerância
+0,5 m) e recusa com `409` — código `sem_regra` ou `terminal_errado`, mensagem citando a regra ou as
+candidatas — qualquer par de tipos sem regra; associação (contenção/estrutura) é sempre explícita e
+direcional. `POST .../validar` reavalia tudo em lote mesmo com a comporta desligada (é o instrumento
+de auditoria da carga em massa). CSV nas 13 colunas de Import/Export Rules do ArcGIS Pro 3.4
+(`regras_csv.py`): a ferramenta da Esri ACRESCENTA, esta SUBSTITUI o conjunto inteiro numa transação —
+diferença documentada no ADR 20260906T2058. A única comporta (`plat.rede.regras_ativas`) é um
+privilégio novo, `rede.administrar` (perfil admin), separado de `rede.editar`: quem edita feição não
+desliga a avaliação nem substitui o conjunto de regras por CSV.
+
+Trabalho do agente Kimi K3 (motor `regras.py`, migração, rotas, CSV — 15 commits, ~1.700 linhas)
+estava pronto no worktree mas sem prova: sem rebase contra `master` (90 mil linhas de divergência,
+toda aditiva — a linha L4 inteira e mais 4 itens ainda não tinham chegado à árvore principal), sem
+nenhum teste do item (as rotas de applyEdits/CSV/ativação ficaram fora de commit), e a resposta de
+`GET /api/rede/{id}` não expunha `regras_ativas` (só o `PUT` de ativação devolvia). Consertado neste
+turno: rebase limpo (só `CHANGELOG.md` colidiu, textual); `regras_ativas` agora sai em toda ficha de
+rede; 34 testes novos escritos e verdes (`tests/unit/test_regras_motor.py` — motor puro, sem banco;
+`tests/api/test_regras_conectividade.py` — applyEdits/validar/comporta contra a API real;
+`tests/api/test_regras_csv.py` — round-trip por token, malformação, privilégio); dois testes de
+regressão de L4-01-a atualizados para a forma nova (7 rotas de escrita, não 3; a FK de auditoria
+`rede_feicao.criado_por → usuario` entra em `PERMITIDAS` no mesmo padrão de `rede.dono_id`); ADR
+20260906T2058 escrito (não existia, só citado); `docs/PARIDADE.md` atualizado (24→58 regras,
+"parcial" → "feito"); `docs/openapi.json` regerado (0 rotas perdidas, 42 adicionadas pelo rebase +
+este item). **Fronteira honesta**: a `descricao` da regra (só existe no pacote JSON) não sobrevive
+ao round-trip de CSV — não é uma das 13 colunas da Esri, e o teste prova os dois lados. `via_terminal`
+está no esquema e no CSV mas nenhuma regra do pacote elétrico o usa — pendência nomeada, não testada
+com dado real. Paridade contra ArcGIS Pro/AGOL reais continua `pendente` (decisão D20).
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

@@ -146,7 +146,7 @@ def importar(bruto: bytes, tipos_por_grupo: dict, terminais: dict, geometrias: d
             problemas.append(_problema(n, None, "colunas_erradas",
                                        f"a linha tem {len(valores)} colunas; são {len(COLUNAS)}"))
             continue
-        row = dict(zip(COLUNAS, valores))
+        row = dict(zip(COLUNAS, valores, strict=True))
         tipo = ESRI_PARA_TIPO.get(row["RULETYPE"].strip())
         if tipo is None:
             problemas.append(_problema(

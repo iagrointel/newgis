@@ -32,7 +32,6 @@ from fastapi import APIRouter, Request, Response
 from starlette.concurrency import run_in_threadpool
 
 from app import db
-from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
@@ -367,7 +366,6 @@ def _apply_edits_sincrono(rid: str, corpo: ApplyEditsEntrada, auth: Auth, reques
         for f in corpo.atualizar:
             atual = _carregar_feicao(cur, rid, f.id)
             campos = f.model_fields_set
-            geometria_nova = atual["geometria"] != "sem_geometria" and "geometria" in campos
             if "geometria" in campos:
                 _conferir_geometria(f.geometria, atual["geometria"])
             ti = f.terminal_inicio if "terminal_inicio" in campos else None
@@ -571,7 +569,13 @@ async def importar_regras_csv(rede_id: str, request: Request,
                               auth: Auth = autenticado("rede.administrar")):
     """Substitui o conjunto INTEIRO de regras pelo do CSV (formato de colunas da Esri), numa transação.
     Ato de admin da rede: a ferramenta Import Rules da Esri ACRESCENTA; aqui substitui — a diferença e o
-    motivo estão na paridade do item."""
+    motivo estão na paridade do item.
+
+    Corpo NÃO é JSON (é `text/csv`): sob sessão de navegador o CSRF de `checar_escrita_sob_cookie` (ADR
+    0002 §5.3, "corpo só JSON") recusa com 415 antes mesmo do privilégio ser checado — a mesma regra que
+    já vale para `POST /api/arquivos` (ADR 0006, "upload só por token, nunca cookie"). Na prática, quem
+    substitui o conjunto de regras por CSV usa um token de serviço com escopo `admin:inquilino`, nunca a
+    sessão do navegador; a tela administrativa faz a chamada por trás com o token do próprio inquilino."""
     rid = _uuid_ok(rede_id)
     bruto = await request.body()
     return await run_in_threadpool(_importar_regras_sincrono, rid, bruto, auth, request)

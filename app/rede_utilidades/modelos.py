@@ -23,6 +23,7 @@ class Rede(BaseModel):
     disciplina: str
     descricao: str | None
     pacote: dict | None
+    regras_ativas: bool
     contagens: dict
     dono: dict
     criado_em: str

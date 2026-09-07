@@ -56,6 +56,7 @@ CONTAGENS = (
 SQL_BASE = (
     "SELECT r.id, r.nome, r.disciplina, r.descricao, r.pacote_codigo, r.pacote_nome, r.pacote_versao, "
     "r.pacote_esquema_versao, r.pacote_fonte, r.pacote_sha256, r.pacote_bytes, r.importado_em, r.criado_em, "
+    "r.regras_ativas, "
     f"r.atualizado_em, r.dono_id, u.login AS dono_login, u.nome AS dono_nome, {CONTAGENS} "
     "FROM plat.rede r JOIN plat.usuario u ON u.id = r.dono_id"
 )
@@ -75,6 +76,7 @@ def _json(r: dict) -> dict:
         "disciplina": r["disciplina"],
         "descricao": r["descricao"],
         "pacote": pacote,
+        "regras_ativas": r["regras_ativas"],  # item L4-03-a: a comporta 'sem regra = proibido'
         "contagens": {s: r[f"n_{s}"] for s in pacote_mod.SECOES},
         "dono": {"id": r["dono_id"], "login": r["dono_login"], "nome": r["dono_nome"]},
         "criado_em": iso(r["criado_em"]),
