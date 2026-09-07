@@ -3298,7 +3298,7 @@
   },
   {
    "codigo": "controlador",
-   "descricao": "Ajusta grandeza elétrica (tensão, reativo) sem interromper o circuito.",
+   "descricao": "Pode controlar uma subrede: o terminal do ativo é fonte (ou sumidouro) de um tier. Também ajusta grandeza elétrica sem interromper o circuito.",
    "nome": "Controlador"
   },
   {
@@ -3830,6 +3830,7 @@
   },
   {
    "categorias": [
+    "controlador",
     "dispositivo_de_protecao"
    ],
    "chave": "disjuntor",
@@ -3981,6 +3982,7 @@
   },
   {
    "categorias": [
+    "controlador",
     "fonte"
    ],
    "chave": "subestacao_de_distribuicao",
@@ -3994,6 +3996,7 @@
   },
   {
    "categorias": [
+    "controlador",
     "transformacao"
    ],
    "chave": "transformador_de_distribuicao",
@@ -4009,6 +4012,7 @@
   },
   {
    "categorias": [
+    "controlador",
     "transformacao"
    ],
    "chave": "banco_de_transformadores",
@@ -4024,6 +4028,7 @@
   },
   {
    "categorias": [
+    "controlador",
     "transformacao"
    ],
    "chave": "transformador_nao_classificado",
