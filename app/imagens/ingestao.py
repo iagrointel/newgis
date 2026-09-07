@@ -17,7 +17,6 @@ Ordem das gravações (pensada para cancelamento/retentativa):
 
 from __future__ import annotations
 
-import json
 import time
 import uuid
 from datetime import UTC, datetime
@@ -26,10 +25,12 @@ import pyproj
 from pydantic import BaseModel, Field
 
 from app import limites, objetos
+from app.catalogo import miniatura as miniatura_catalogo
 from app.catalogo import tipos as tipos_item
 from app.catalogo.comum import jsonb
-from app.catalogo import miniatura as miniatura_catalogo
-from app.imagens import cog, pgstac as ps, raster_item as ri
+from app.imagens import cog
+from app.imagens import pgstac as ps
+from app.imagens import raster_item as ri
 from app.imagens.cog import ErroConversao
 from app.imagens.validacao import RecusaValidacao, validar
 from app.jobs.registro import FalhaDefinitiva, tarefa
@@ -119,7 +120,8 @@ def _item_stac(
             **_asset_objeto(objetos_ref["cientifico"], ["data"], "COG científico (dtype original, ZSTD)", tipo_cog),
             "raster:bands": raster_bandas,
         },
-        "bruto": _asset_objeto(objetos_ref["bruto"], ["source"], "arquivo original enviado", "application/octet-stream"),
+        "bruto": _asset_objeto(objetos_ref["bruto"], ["source"], "arquivo original enviado",
+                               "application/octet-stream"),
         "miniatura": _asset_objeto(objetos_ref["miniatura"], ["thumbnail"], "miniatura 600x400", "image/png"),
     }
     return {
