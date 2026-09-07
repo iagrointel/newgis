@@ -65,3 +65,34 @@ class EdicoesSaida(Saida):
     atualizar: list[ResultadoFeicao]
     apagar: list[ResultadoFeicao]
     avisos: list[str] = Field(default_factory=list)
+
+
+class AnexoEntrada(Modelo):
+    nome: str = Field(min_length=1, max_length=255)
+    content_type: str = Field(min_length=1, max_length=255)
+    conteudo: str = Field(min_length=1)  # base64
+
+
+class RestaurarSaida(Saida):
+    sucesso: bool
+    id: str
+    fid: int | None = None
+    versao: int | None = None
+    recriada: bool
+    avisos: list[str] = Field(default_factory=list)
+
+
+class UniaoEntrada(Modelo):
+    # `versoes` é OBRIGATÓRIO (achado do adversário 07/09: com default {}, a checagem de concorrência
+    # de `_conferir_versao` só roda para os ids presentes no dict — mandar {} pulava a detecção por
+    # completo, silenciosamente descartando uma edição concorrente da feição de origem).
+    ids: list[str] = Field(min_length=2, max_length=200)
+    versoes: dict[str, int]
+    atributos: dict[str, Any] | None = None
+
+
+class DivisaoEntrada(Modelo):
+    # `versao` OBRIGATÓRIO pelo mesmo motivo (achado do adversário): opcional pulava a concorrência.
+    id: str = Field(pattern=UUID_PADRAO)
+    versao: int = Field(ge=1)
+    ponto: list[float] = Field(min_length=2, max_length=2)

@@ -3,6 +3,72 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 5, setembro de 2026 (item L2-03-edicao: fechamento — dois achados corrigidos, junção do turno 4)
+
+Retomada do turno 4 (sessão anterior morreu por limitação do servidor da API antes de registrar, comitar
+e enfileirar): conferência independente da suíte revelou dois defeitos reais, além do já corrigido pelo
+próprio turno 4. Corrigidos e cobertos por teste permanente (não script de auditoria à parte — removido,
+mesma convenção do commit `054286a`):
+
+1. `app/edicao/combinar.py::unir` checava `versao` declarada ANTES de checar existência/acesso do id — um
+   id inexistente ou de outro inquilino, quando listado depois de um id existente sem `versao`, nunca
+   chegava a 404 (ficava preso em 422 `versao_ausente`). Corrigido para existência de TODOS os ids primeiro,
+   depois versão de todos (`tests/api/test_edicao_dividir_unir.py::test_unir_sem_declarar_versao_de_uma_das_feicoes_e_422`
+   fecha o buraco original: `versoes` incompleto não pode mais deixar uma origem sem checagem de
+   concorrência).
+2. `limites.ANEXO_TAMANHO_MAX` (10 MiB) igual ao teto de corpo do middleware (`CORPO_MAX_PADRAO_BYTES`,
+   também 10 MiB) — como o anexo viaja em JSON com o conteúdo em base64 (~4/3 de inchaço), o 413 genérico
+   do corpo sempre disparava antes do 422 `anexo_grande` específico rodar; o limite documentado de anexo
+   era, na prática, letra morta. Reduzido para 7 MiB, com folga sob o teto de corpo mesmo codificado
+   (`tests/api/test_edicao_historico_anexos.py::test_anexo_no_teto_real_ainda_da_anexo_grande_nao_corpo_grande`).
+
+Suíte dedicada reconferida após os dois consertos: verde (mesmo comando do turno 4); `ruff` e
+`sem-marcador` verdes. Portão e veredito do item-pai continuam os do turno 4 (nenhuma cláusula mudou de
+prova, só a implementação ficou mais correta). Handoff em `laco/handoffs/T5/L2-03-edicao/`.
+
+## turno 4, setembro de 2026 (item L2-03-edicao: edição de feições no mapa — criar/mover/vértice/dividir/unir/apagar, formulário, anexos, desfazer, histórico e restauração)
+
+Constrói sobre o L2-03-a (API única de escrita) e o L2-01-mapa-web (visualizador): `web/js/mapa/edicao.js`
+inteiro novo, ligado à tela `/mapa`. Criar ponto/linha/polígono por clique; mover e editar vértice
+por arrasto (a geometria de trabalho vem sempre de `GET /api/camadas/{id}/feicoes/{globalid}`, exata,
+nunca da versão recortada por tile); apagar; formulário de atributos gerado dos mesmos `campos`/
+`regras_campo` da camada, com domínio/obrigatório espelhados no navegador — e reconferidos direto na
+API nesta rodada, sem passar pela tela, provando que a validação real mora no servidor (cláusula do
+item-pai). Aderência (checkbox "aderir a vértice próximo", tolerância de 12 px sobre feições
+renderizadas) e edição em lote (N feições selecionadas por shift-clique, um atributo aplicado a todas
+num único lote `atualizar`, reaproveitando o array heterogêneo que o L2-03-a já aceitava).
+
+Histórico e restauração são novos no banco: `plat.feicao_historico` + gatilho genérico
+`feicao_historico_registrar()` ligado por `plat.camada_preparar` a TODA tabela de camada (não só a
+escrita que passa pela API — SQL direto, importação e réplica também ficam registrados), migração
+`20260907T1025`. Restaurar reaplica pela MESMA porta de escrita (`_inserir`/`_atualizar` de
+`app.edicao.servico`) — feição existente vira `UPDATE`, feição apagada vira `INSERT` com o MESMO
+`globalid` (referência externa nunca quebra); a própria restauração grava um marcador
+`operacao='restaurar'` a mais no histórico, que nunca é reescrito.
+
+Anexos (`plat.feicao_anexo`, migração `20260907T1035`): limite de tamanho e de tipo aplicados no
+SERVIDOR em duas etapas (tamanho da string base64 antes de decodificar, depois o tamanho real) e
+contra o conteúdo de fato (item L7-03-b) — um PDF disfarçado de PNG é recusado mesmo com
+`content_type` mentindo. Objeto guardado no Garage por trás do adaptador já existente (`app.objetos`).
+
+Dividir/unir (`app/edicao/combinar.py`): geometria estrutural nunca sai do MVT (recortado/generalizado
+por tile) — as duas operações leem a geometria exata do banco e usam `ST_Union`/`ST_LineMerge`/
+`ST_LineSubstring`. `unir` funciona para qualquer família de geometria; `dividir` está escopado a
+LineString/MultiLineString de uma parte só nesta passagem (dividir polígono por linha de corte fica
+de fora, registrado no ADR, não escondido).
+
+Dois defeitos de infraestrutura achados e corrigidos nesta rodada (não só no código do item):
+`app/garage.py::criar_chave` devolvia um dicionário sem `accessKeyId` no caminho de reaproveitamento
+(`ListKeys` usa a chave `id`, `CreateKey` usa `accessKeyId`) — crashava com `KeyError` em vez de um
+erro que diz o que aconteceu; e `docs/gerar_limites.py` ficaria não determinístico se um limite fosse
+guardado como `frozenset` (a ordem de iteração de um set do Python varia entre execuções) — corrigido
+trocando `ANEXO_TIPOS_PERMITIDOS` para tupla ordenada antes de existir um segundo caso.
+
+ADR: `docs/adr/20260907T1123-historico-restauracao-anexos-feicao.md`. Medidas em
+`tests/medidas/L2-03-edicao.json` — sem cláusula numérica de tempo neste item; a suíte dedicada (75
+testes de API/unit) e o e2e dedicado (6 cláusulas no chromium do playwright, 0 erro de console) estão
+registrados lá com o comando exato. Fronteira honesta e vereditos completos no handoff do item.
+
 ## turno 3, setembro de 2026 (item L2-03-a-api-edicao-transacional: edição transacional de feições — única porta de escrita)
 
 `POST /api/camadas/{id}/edicoes` (`app/edicao/`): equivalente do `applyEdits` da Esri e, a partir

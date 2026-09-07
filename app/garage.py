@@ -283,11 +283,17 @@ class ClienteAdmin:
 
     def criar_chave(self, nome: str) -> dict:
         """Idempotente por NOME: uma chave já existente com o mesmo nome não gera segredo novo (o segredo antigo
-        continua sendo o que está gravado em `plat.arquivo_bucket`; só a criação é idempotente, não a rotação)."""
+        continua sendo o que está gravado em `plat.arquivo_bucket`; só a criação é idempotente, não a rotação).
+
+        Achado do item L2-03-edicao (07/09): `ListKeys` (usado por `chave_por_nome`) devolve o id da chave sob a
+        chave `id`; `CreateKey` devolve o mesmo valor sob `accessKeyId`. `garantir_bucket` só conhece
+        `accessKeyId` — sem normalizar aqui, o caminho de reaproveitamento (chave já existe no Garage mas a
+        LINHA em `plat.arquivo_bucket` sumiu, por exemplo depois de recriar o schema de uma trilha sem apagar o
+        Garage) crashava com `KeyError: 'accessKeyId'` em vez de um erro que diz o que aconteceu."""
         existente = self.chave_por_nome(nome)
         if existente is not None:
             log.info("garage: chave %s já existe (id=%s), reaproveitada sem novo segredo", nome, existente["id"])
-            return existente
+            return {**existente, "accessKeyId": existente.get("accessKeyId", existente["id"])}
         return self._chamar("POST", "/v2/CreateKey", {"name": nome})
 
     def permitir(self, bucket_id: str, chave_id: str, *, ler: bool, escrever: bool, dono: bool) -> dict:

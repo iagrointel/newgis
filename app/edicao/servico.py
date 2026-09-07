@@ -281,6 +281,21 @@ def _feicao_atual_json(atual: dict, dados: dict) -> dict:
     return saida
 
 
+def obter_feicao(cur, camada_id: str, globalid: str) -> dict:
+    """`GET /api/camadas/{id}/feicoes/{globalid}` — geometria e atributos EXATOS (não a versão recortada por
+    tile que o mapa desenha). É daqui que a tela de edição parte para mover vértice, dividir ou preencher o
+    formulário: a ficha do MVT nunca é fonte de verdade geométrica (item L2-03-edicao)."""
+    _item, dados = camada_ou_404(cur, camada_id)
+    schema, tabela = _schema_tabela(dados)
+    tem_geom = dados.get("geometria") not in (None, "nenhuma")
+    extra = ", ST_AsGeoJSON(geom) AS __geom_geojson" if tem_geom else ""
+    cur.execute(f'SELECT *{extra} FROM "{schema}"."{tabela}" WHERE globalid = %s', (globalid,))
+    atual = cur.fetchone()
+    if atual is None:
+        raise ErroAPI(404, "feicao_inexistente", "feição inexistente nesta camada", {"id": globalid})
+    return _feicao_atual_json(atual, dados)
+
+
 def _inserir(
     cur, auth: Auth, dados: dict, corpo: EdicoesEntrada, feicao: FeicaoAdicionar
 ) -> tuple[ResultadoFeicao, list[str]]:

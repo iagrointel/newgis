@@ -28,6 +28,7 @@ import { instalarPopup } from './atributos.js';
 import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
+import { Edicao } from './edicao.js';
 
 const BASES = [
   { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
@@ -116,6 +117,7 @@ async function iniciar(usuario) {
     catalogo.opacidade = opacidades;
     for (const id of [...ativas].reverse()) { try { await catalogo.ligar(id); } catch { /* segue */ } }
     catalogo.reordenar(ativas);
+    edicao._instalarFontesECamadas(); // setStyle apagou as fontes/camadas de edição também
   });
 
   // --- medição
@@ -191,6 +193,10 @@ async function iniciar(usuario) {
   });
 
   await new Promise((resolve) => map.once('load', resolve));
+  const edicao = new Edicao(map, maplibregl, catalogo, {
+    raiz: el('edicao-painel'),
+    aoErro: (msg) => el('aviso').erro(msg),
+  });
   try {
     await catalogo.carregar();
     painel.desenhar();
@@ -198,7 +204,7 @@ async function iniciar(usuario) {
     el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
   }
   window.plat = window.plat || {};
-  window.plat.mapa = { map, catalogo, medicao, painel };  // ponto de inspeção do e2e, nunca de negócio
+  window.plat.mapa = { map, catalogo, medicao, painel, edicao };  // ponto de inspeção do e2e, nunca de negócio
   document.body.dataset.pronto = '1';
 }
 
@@ -209,7 +215,7 @@ if (usuario) {
   try {
     await iniciar(usuario);
   } catch (e) {
-    el('aviso').erro(`${t('erro.carregar')}: ${(e && e.message) || e}`);
+    el("aviso").erro(`${t("erro.carregar")}: ${(e && e.message) || e}`);
     pronto();
   }
 }

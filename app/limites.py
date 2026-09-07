@@ -216,3 +216,13 @@ EDICAO_TEXTO_MAX = 65_536                 # 64 KiB por valor de campo texto (mes
 EDICAO_REGRA_CAMPO_MAX = 500              # entradas em dados.regras_campo (mesmo teto de campos da camada)
 EDICAO_DOMINIO_VALORES_MAX = 1_000        # valores aceitos por regra de domínio codificado
 EDICAO_SRID_MAX = 999_999                 # mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql)
+
+# --- edição no mapa: histórico/restauração e anexos por feição (item L2-03-edicao)
+HISTORICO_LISTA_MAX = 500                 # entradas devolvidas por consulta (mais recentes primeiro)
+ANEXO_TAMANHO_MAX = 7 * 1024 * 1024       # 7 MiB por anexo — NÃO 10: o envio é JSON com o conteúdo em base64
+# (achado do adversário 07/09), que incha o arquivo em ~4/3; um anexo de 10 MiB vira ~13,3 MiB de corpo, acima
+# de CORPO_MAX_PADRAO_BYTES (10 MiB) — o 413 genérico do middleware dispara ANTES desta checagem rodar, e o
+# 422 "anexo_grande" (com a mensagem específica) nunca aparece. 7 MiB codifica para ~9,33 MiB, com folga.
+# tupla ordenada, não frozenset: repr() de um set não é determinístico entre execuções (docs/gerar_limites.py
+# lê repr() literal — um frozenset faria docs/LIMITES.md variar a cada regeneração sem nada ter mudado)
+ANEXO_TIPOS_PERMITIDOS = ("application/pdf", "image/gif", "image/jpeg", "image/png", "image/webp")

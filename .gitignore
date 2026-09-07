@@ -32,3 +32,6 @@ laco_var/
 # binário do Martin instalado por deploy/martin_instalar.sh (nunca versionado; sha256 fixado no script)
 bin/
 tests/e2e/capturas/*.pdf
+
+# bancada local efêmera da trilha (Martin/nginx próprios, fora de qualquer unidade systemd de outra trilha)
+deploy/local/

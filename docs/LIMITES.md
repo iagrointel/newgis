@@ -225,3 +225,11 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `EDICAO_REGRA_CAMPO_MAX` | `500` | entradas em dados.regras_campo (mesmo teto de campos da camada) |
 | `EDICAO_DOMINIO_VALORES_MAX` | `1000` | valores aceitos por regra de domínio codificado |
 | `EDICAO_SRID_MAX` | `999999` | mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql) |
+
+## edição no mapa: histórico/restauração e anexos por feição (item L2-03-edicao)
+
+| nome | valor | explicação |
+|---|---|---|
+| `HISTORICO_LISTA_MAX` | `500` | entradas devolvidas por consulta (mais recentes primeiro) |
+| `ANEXO_TAMANHO_MAX` | `10485760` | 10 MiB por anexo (igual ao teto de imagem/PDF de campo mais comum) |
+| `ANEXO_TIPOS_PERMITIDOS` | `('application/pdf', 'image/gif', 'image/jpeg', 'image/png', 'image/webp')` | — |
