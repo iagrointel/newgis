@@ -225,3 +225,15 @@ AMC_RESULTADOS_PAGINA_MAX = 5_000     # linhas por página em GET /api/amc/execu
 SIMILARIDADE_UNIDADES_MAX = 20_000
 SIMILARIDADE_CAMPOS_MAX = 50
 SIMILARIDADE_REFERENCIAS_MAX = 500
+
+# --- edição transacional de feições (L2-03-a-api-edicao-transacional; POST /api/camadas/{id}/edicoes, única
+# porta de escrita para navegador/PWA/FeatureServer/OGC). LOTE_MAX = 2× o tamanho medido no portão (1.000
+# feições ≤ 3 s), com folga operacional; bem abaixo do lote de 100 mil que a refutação do item manda recusar
+# (esse cai primeiro no 413 de CORPO_MAX_PADRAO_BYTES quando o corpo é grande, mas o teto por lista garante o
+# 422 mesmo com corpo pequeno e muitas feições minúsculas).
+EDICAO_LOTE_MAX = 2_000
+EDICAO_ATRIBUTOS_MAX = 500                # campos por feição num único pedido (mesmo teto de INGESTAO_CAMPOS_MAX)
+EDICAO_TEXTO_MAX = 65_536                 # 64 KiB por valor de campo texto (mesma ordem de ITEM_DESCRICAO_MAX)
+EDICAO_REGRA_CAMPO_MAX = 500              # entradas em dados.regras_campo (mesmo teto de campos da camada)
+EDICAO_DOMINIO_VALORES_MAX = 1_000        # valores aceitos por regra de domínio codificado
+EDICAO_SRID_MAX = 999_999                 # mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql)
