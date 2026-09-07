@@ -374,3 +374,29 @@ demo = Roraima (260.515 pontos, 15 municípios; escolhida por ser o MENOR arquiv
 | e-mail nunca prende a requisição nem vaza segredo em log | não se aplica (SaaS gerenciado) | e-mail sempre por job (`correio.enviar`, `somente_sistema=True` — não criável por `POST /api/jobs`, nem por admin: fecharia canhão de spam com o SMTP do inquilino); senha lida fresca do banco a cada tentativa, nunca gravada em `job.parametros`; erro de `smtplib` convertido para mensagem sem credencial | feito | `tests/unit/test_correio_cliente.py` (erro sem a senha) + `test_senha_smtp_nunca_aparece_no_log_do_worker` (grep no `journalctl` real de `plat-worker`/`plat-api`) + `test_correio_enviar_nao_e_criavel_por_post_jobs` | 2026-09-06 | pendente (D20) |
 | caminho manual sem SMTP (nem instalação, nem inquilino) | não se aplica | convite devolve `link_manual` na resposta de `POST /api/convites` (mesmo padrão de "senha temporária mostrada uma vez" de `POST /api/usuarios`); redefinição por e-mail some (o pedido fica só registrado para o limite de taxa) — o usuário pede ao admin, caminho que já existia antes deste item | feito | `test_convite_expirado_apos_7_dias_e_410` (usa o `link_manual` de propósito, sem SMTP) | 2026-09-06 | pendente (D20) |
 | avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail | licença/certificado prestes a expirar avisa por e-mail | **fora desta passagem** (hipótese do item, não do portão literal): exigiria periódico cross-tenant, hoje só sob o inquilino técnico `plataforma` (ADR 0003 seção 7) | fora (ver ADR 0017 seção D5) | — | 2026-09-06 | pendente (D20) |
+
+## Backup lógico (item L0-06-a-dump-logico, turno 3) — paridade contra o `webgisdr` do ArcGIS Enterprise
+
+Fontes conferidas por HTTP em 07/09/2026: `enterprise.arcgis.com/en/portal/11.4/administer/windows/`
+`overview-backup-restore-web-gis.htm` e `create-web-gis-backup.htm`. Os textos entre aspas são da Esri.
+
+O `webgisdr` é uma ferramenta de recuperação de desastre do Web GIS INTEIRO: uma execução produz um pacote do
+portal, dos sites de servidor federados e do ArcGIS Data Store, e a restauração é do conjunto. A nossa fase 1 é
+outro recorte: `pg_dump -Fc` por schema, um arquivo do `plat` e um arquivo por inquilino (`d_<slug>`), com
+sha256, tamanho e tempo gravados em `plat.backup`. A diferença que importa para o comprador é a granularidade —
+lá se restaura o Web GIS, aqui se restaura um inquilino sem tocar nos outros.
+
+| capacidade | Esri (`webgisdr`) | nós (fase 1) | estado |
+|---|---|---|---|
+| itens, usuários, grupos, configuração | "your portal items and settings" — no pacote | tabelas do schema `plat` no dump do `plat` | feito |
+| serviços e configuração de serviço | "GIS services and settings", "service webhooks" | não há ArcGIS Server; a definição de camada/serviço é linha de tabela e entra no dump | feito (por equivalência, não por igualdade) |
+| dado de feição hospedado | relational data store, no pacote | tabelas de `d_<slug>` no dump do inquilino | feito |
+| **cache de tile** | **FORA**: "map service cache tiles and hosted tile layer caches" precisam de cópia manual do diretório | **FORA também**, e pela mesma razão: cache é arquivo, não linha; o dump lógico não o vê. Cobertura pelos objetos do Garage é o item L0-11, não este | fora (declarado) |
+| **dado referenciado** | **FORA**: "referenced data sources for web services"; base externa se salva com a ferramenta do próprio banco | **FORA também**: conexão externa guarda endereço e credencial (que entram no dump), nunca o dado do outro lado | fora (declarado) |
+| **armazenamento espaço-temporal** | **FORA**: "spatiotemporal big data store and graph store backups" têm procedimento próprio | não existe na plataforma; nada a salvar | não se aplica |
+| object store / tile cache data store | dentro do pacote | objetos ficam no Garage; o backup grava no bucket `plat-backup` os dumps e um manifesto por inquilino (chave, sha256, bytes). O objeto em si não é recopiado | parcial (manifesto sim, cópia do objeto não) |
+| restauração por inquilino | não existe: o pacote é do Web GIS | um arquivo por inquilino, restaurável sozinho (provado em banco temporário no L0-06-c) | acima da Esri |
+| modo incremental | `BACKUP_RESTORE_MODE = incremental`, exige recuperação a ponto no tempo do relational data store | não existe: `archive_mode` está desligado e ligá-lo exige reiniciar um Postgres compartilhado com outros serviços da casa (decisão do dono, fase 2) | fora (fase 2) |
+| retenção automática | o `webgisdr` não apaga pacote velho; a retenção é do administrador | 14 diários + 8 semanais por schema, aplicada pelo próprio periódico, apagando linha, arquivo e objeto juntos | acima da Esri |
+| verificação de integridade | não documentada | sha256 por arquivo, conferido pelo periódico `backup.verificar`, que também lista arquivo órfão | acima da Esri |
+

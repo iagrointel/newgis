@@ -65,15 +65,15 @@ def selecao_retencao(linhas: list[dict], manter_diarios: int = MANTER_DIARIOS,
     `manter_diarios` diários mais novos e os `manter_semanais` semanais mais novos; um dump semanal nunca
     conta como diário (senão os 14 diários seriam engolidos pelos domingos)."""
     por_esquema: dict[str, list[dict]] = {}
-    for l in linhas:
-        por_esquema.setdefault(l["esquema"], []).append(l)
+    for linha in linhas:
+        por_esquema.setdefault(linha["esquema"], []).append(linha)
     apagar: list[int] = []
-    for esquema, grupo in por_esquema.items():
-        grupo.sort(key=lambda l: (l["criado_em"], l["id"]), reverse=True)
-        diarios = [l for l in grupo if not l["semanal"]]
-        semanais = [l for l in grupo if l["semanal"]]
-        apagar.extend(l["id"] for l in diarios[manter_diarios:])
-        apagar.extend(l["id"] for l in semanais[manter_semanais:])
+    for grupo in por_esquema.values():
+        grupo.sort(key=lambda linha: (linha["criado_em"], linha["id"]), reverse=True)
+        diarios = [linha for linha in grupo if not linha["semanal"]]
+        semanais = [linha for linha in grupo if linha["semanal"]]
+        apagar.extend(linha["id"] for linha in diarios[manter_diarios:])
+        apagar.extend(linha["id"] for linha in semanais[manter_semanais:])
     return apagar
 
 

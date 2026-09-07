@@ -150,6 +150,13 @@ def _cliente_garage(linha):
                      settings.PLAT_GARAGE_REGIAO)
 
 
+def _ram_livre_gb() -> float:
+    for linha in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
+        if linha.startswith("MemAvailable:"):
+            return int(linha.split()[1]) / 1e6
+    return 0.0
+
+
 def _rodar(cliente, tipo, parametros, timeout=300, final="concluido"):
     job = criar_job(cliente, tipo, parametros)
     fim = esperar(cliente, job["id"], timeout=timeout)
@@ -214,6 +221,9 @@ def test_01_dump_completo(cliente_plataforma, worker, con_plataforma, medida):
     medida(ITEM)("dump_completo_arquivos", len(dumps), "arquivos",
                  "POST /api/jobs backup.dump_logico na trilha il006adumpl")
     medida(ITEM)("dump_completo_duracao_s", dur, "s", "esperar(job) até concluido")
+    # a carga da máquina ao lado de todo número de tempo: medida de duração sem ela não é prova de nada
+    medida(ITEM)("carga_1min", round(os.getloadavg()[0], 2), "carga", "os.getloadavg()[0] na hora do dump")
+    medida(ITEM)("ram_livre_gb", round(_ram_livre_gb(), 1), "GB", "MemAvailable de /proc/meminfo")
     medida(ITEM)("dump_completo_bytes", sum(d["bytes"] for d in dumps), "bytes", "soma dos dumps da rodada")
     for d in dumps:
         medida(ITEM)(f"tempo_dump_s[{d['esquema']}]", d["tempo_dump_s"], "s", "plat.backup.tempo_dump_s")
