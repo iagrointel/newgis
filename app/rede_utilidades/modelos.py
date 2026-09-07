@@ -230,3 +230,10 @@ class Controlador(BaseModel):
     no_id: str | None
     lon: float
     lat: float
+
+
+class PropagadoresEntrada(BaseModel):
+    """Atributos que um tier propaga do controlador para os elementos da subrede (item L4-04-b). Lista vazia
+    é legítima: significa "este tier não propaga nada"."""
+
+    propagadores: list[str] = Field(default_factory=list, max_length=20)
