@@ -6,9 +6,14 @@ atrás de qualquer forma de "ausente vira zero" — em SQL (``COALESCE(coluna, 0
 equivalentes em Python/numpy sobre uma coluna de fator ou de favorabilidade (``fillna(0)``,
 ``nan_to_num`` sem cuidado, ``or 0`` como substituto de valor ausente).
 
-Falso positivo esperado e por quê cada exceção é segura: nenhuma hoje (lista abaixo fica vazia de
-propósito — qualquer entrada nova exige justificar por que aquele COALESCE(...,0) NÃO é sobre uma
-coluna de fator/favorabilidade, com o número da linha).
+Falso positivo esperado e por quê cada exceção é segura (achados ao rodar a suíte completa pela
+primeira vez com o item L3-07-agregacao, não introduzidos por ele — `unidades.py` já tinha os dois
+primeiros): as três linhas abaixo somam uma CONTAGEM/ÁREA sobre um CONJUNTO de linhas (unidades ou
+células), não o valor de um FATOR ou de uma FAVORABILIDADE. Quando o conjunto é vazio, `sum()` dá
+`NULL` e o `COALESCE(..., 0)` está certo: "zero linhas somam zero", não "fator ausente virou zero".
+A regra do item é sobre a métrica que descreve UMA unidade (a coluna teria de ficar `NULL`, nunca 0,
+quando falta dado); aqui é sobre quantas unidades/células existem ou quanta área elas somam — 0 é a
+resposta verdadeira, não um substituto de ausência.
 """
 
 from __future__ import annotations
@@ -24,9 +29,16 @@ PADRAO_COALESCE_ZERO = re.compile(r"coalesce\s*\(\s*[^,]+,\s*0(?:\.0)?\s*\)", re
 PADRAO_FILLNA_ZERO = re.compile(r"\.fillna\s*\(\s*0(?:\.0)?\s*\)")
 PADRAO_OR_ZERO_ATRIBUICAO = re.compile(r"=\s*[\w\.\[\]]+\s+or\s+0\b")
 
-# Exceções declaradas: (arquivo relativo a app/amc/, trecho da linha, motivo). Vazia por enquanto —
-# nenhum caso legítimo de COALESCE(...,0) apareceu dentro do motor AMC.
-EXCECOES: set[tuple[str, str]] = set()
+# Exceções declaradas: (arquivo relativo a app/amc/, trecho da linha) — ver a justificativa no
+# docstring do módulo. Todas somam CONTAGEM/ÁREA sobre um conjunto (nunca o valor de um fator).
+EXCECOES: set[tuple[str, str]] = {
+    ("unidades.py",
+     'cur.execute("SELECT count(*) AS n, coalesce(sum(area_m2), 0) AS a FROM plat.amc_unidade '
+     'WHERE conjunto_id = %s",'),
+    ("unidades.py", '"  SELECT count(*) AS n, coalesce(sum(area_m2), 0) AS a, "'),
+    ("agregacao.py",
+     "ELSE coalesce(t.area_vetada_m2, 0) / t.area_total_m2 END AS fracao_vetada,"),
+}
 
 
 def _arquivos_amc() -> list[Path]:

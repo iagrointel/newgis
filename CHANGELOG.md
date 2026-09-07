@@ -3,6 +3,27 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L3-07-agregacao: agregação de grade para feição)
+
+`app/amc/agregacao.py`: leva o resultado do motor por CÉLULA a uma FEIÇÃO qualquer (imóvel, lote,
+município, setor) por interseção geométrica com `ST_Area`/`ST_Intersection` no CRS de trabalho — média
+por fator ponderada pela área sobre células não vetadas, fração vetada (sobre todas as células
+tocadas), veto principal (motivo da maior área vetada, desempate determinístico por `cell_id`),
+recombinação opcional por pesos do modelo (`app.amc.combinacao.combinar`, item L3-01-e) e favorabilidade
+final = combinação × (1 - fração vetada); limiar de fração vetada ("sai do ranking") é parâmetro de quem
+chama. Caminho inverso (feição -> células) em `celulas_de_uma_feicao`. Feição sem nenhuma célula sai
+`sem_celula = true`, nunca 0. Portão: reproduz `cbre.imoveis_fav` (piloto real, só leitura) para as
+4.346 feições contra `cbre.hex_fav`/`cbre.hex` — 10 fatores comparáveis + `n_cel` + `pct_vetado` em
+100% de reprodução (|Δ| ≤ 0,5), `veto_principal` em 99,65% (limiar do portão: 99,5%); tempo medido
+4,5-22 s conforme carga da máquina (`tests/medidas/L3-07-agregacao.json`). Sete fatores do cbre
+(`f_roubo`/`f_trib`/`f_renda`/`f_rlapp`/`f_polos`/`f_se`/`f_cluster`/`f_varzea`) ficam fora da
+comparação por serem sobrescritos por gancho direto por imóvel no pipeline do cbre, não geometria de
+grade (ver ADR). Refutação exigida: `tests/unit/test_amc_agregacao_adversario.py` recalcula 50 imóveis
+com `ST_Intersection` escrito do zero no psql (nunca chama `agregacao.py` para o valor esperado) e
+compara — achou e corrigiu o desempate de `veto_principal` (decisão 4 do ADR). Integração com a
+execução real do motor entra com um fator sintético (`favorabilidade` já combinada por célula) — limite
+documentado, ver decisão 3 do ADR `docs/adr/20260907T1650-agregacao-grade-feicao.md`.
+
 ## turno 3, setembro de 2026 (item L3-02-a-monte-carlo-pesos: robustez do motor multicritério por sorteio de pesos)
 
 `app/amc/robustez.py` (puro, sem I/O): `sortear_pesos` (Dirichlet no simplex ou faixa +-k% por fator,
