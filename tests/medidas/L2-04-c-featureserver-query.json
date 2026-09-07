@@ -52,7 +52,7 @@
     {
       "parametro": "time",
       "estado": "fora",
-      "evidencia": "status=422 corpo={\"erro\":\"time_fora\",\"mensagem\":\"camada sem timeInfo configurado nesta implementação\",\"req_id\":\"bffdc9f820f2e34b\"}",
+      "evidencia": "status=422 corpo={\"erro\":\"time_fora\",\"mensagem\":\"camada sem timeInfo configurado nesta implementação\",\"req_id\":\"e74056ee40577548\"}",
       "motivo": "camada sem timeInfo — recusado explicitamente (422), nunca silêncio"
     },
     {
@@ -118,7 +118,7 @@
     {
       "parametro": "returnDistinctValues",
       "estado": "suportado",
-      "evidencia": "obtido={None, 'brownfield', 'residential', 'industrial', 'quarry', 'meadow', 'religious'} esperado={None, 'brownfield', 'residential', 'industrial', 'quarry', 'meadow', 'religious'}",
+      "evidencia": "obtido={None, 'industrial', 'quarry', 'brownfield', 'residential', 'religious', 'meadow'} esperado={None, 'industrial', 'quarry', 'brownfield', 'residential', 'religious', 'meadow'}",
       "motivo": ""
     },
     {

@@ -63,6 +63,30 @@ próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo:
 segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+## turno 3, setembro de 2026 (item L2-04-j-conformidade-clientes-e-paridade: matriz de conformidade viva)
+
+`tests/esri/conformidade.py` + `make conformidade`: a lista de serviços do `docs/PARIDADE.md` deixa de ser
+texto escrito à mão e passa a ser saída de medida. 102 linhas (45 parâmetros da operação `query`, diretório,
+edição, anexos, OGC API Features, WFS 2.0, tiles vetoriais, serviços ainda não construídos e clientes), cada
+uma nomeando a prova que a sustenta — um nó de teste ou uma chave dos roteiros de sonda dos itens irmãos. O
+script roda as provas, grava `tests/esri/conformidade.json` com data e versão do repositório, e reescreve a
+seção do documento entre marcadores. Regra: prova que falha derruba a linha para REFUTADO; linha sem prova
+executada cai para "não medido" e nunca vira "suportado". `tests/unit/test_conformidade_matriz.py` reprova
+documento editado à mão, linha afirmada sem prova, parâmetro da doc Esri ausente da matriz e item irmão
+construído fora dela.
+
+`tests/api/test_conformidade_clientes.py`: cliente OGC de terceiros (owslib) contra um uvicorn próprio da
+trilha — lê o `GetCapabilities` do nosso WFS 2.0, monta o catálogo e faz `GetFeature` pelo código dele.
+Também mede a AUSÊNCIA de rota WMS (404 e nenhum caminho no OpenAPI), e mede que QGIS e o pacote Python
+`arcgis` não estão nesta máquina: as linhas que dependem deles ficam "não medido", com o motivo escrito.
+`docs/TESTE_PARCEIRO_PRO_AGOL.md` traz o protocolo para quem tem ArcGIS Pro e ArcGIS Online executarem, com
+`resultado: pendente` até haver evidência devolvida.
+
+Dois defeitos que só aparecem com os ramos da família juntos foram consertados no caminho: o estilo do
+catálogo não chegava ao cliente Esri (o descritor entregava o documento de estilo inteiro ao conversor de
+`drawingInfo`, e o compilador da casa emite cadeia `case`, que o conversor não lia), e o tile vetorial
+devolvia 422 (o repasse do visualizador casava antes no mesmo prefixo `/tiles/`).
+
 ## turno 3, setembro de 2026 (item L2-04-e-vector-tile-server-tilejson: servidor de tiles vetoriais em 3 contratos)
 
 `app/tiles/vector_tile_server.py` + `app/tiles/exportacao.py` + `app/tiles/{autorizacao,martin_cliente,

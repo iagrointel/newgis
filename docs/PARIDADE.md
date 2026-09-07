@@ -471,3 +471,174 @@ uma raiz e desce sozinho. Nada do FeatureServer foi reescrito — os descritores
 | QGIS "ArcGIS REST Server" conecta e lista as camadas | interoperabilidade de desktop | **não verificado** — sem QGIS nem ambiente gráfico nesta máquina (mesma limitação já registrada para L2-04-c e L2-04-servicos-esri-ogc) | pendência (nunca "feito") | — |
 | cliente Python `arcgis` (`GIS` + `FeatureLayer`) lê campos e domínios | cliente real da Esri | **não verificado** — a biblioteca não está na venv e instalá-la mexeria em versões fixadas (regra 6 do brief de trilhas) | pendência (nunca "feito") | — |
 | isolamento entre inquilinos | — | camada de outro inquilino não aparece no catálogo e responde 404 pelo mesmo caminho; token revogado deixa de valer; token sem `catalogo:ler` recebe 403 | feito | `test_camada_de_b_ausente_no_diretorio_de_a`, `test_token_invalido_ou_revogado_nao_abre_o_diretorio` |
+
+<!-- INICIO matriz-de-conformidade (gerado por tests/esri/conformidade.py; nao editar a mao) -->
+
+## Matriz de conformidade dos serviços (item L2-04-j)
+
+Gerada por `tests/esri/conformidade.py` em 2026-09-07T21:27:17+00:00, sobre a versão `65d6e964de08` do repositório. 102 linhas: 81 suportadas, 5 parciais, 12 fora, 4 não medidas, 0 refutadas.
+
+Regra desta tabela: **uma linha só fica `sim` se a prova nomeada ao lado passou na mesma execução que gerou a tabela**. Prova que falha derruba a linha para REFUTADO; linha sem prova executada cai para `não medido`. `não medido` nunca é o mesmo que `sim`.
+
+### Operação `query` do FeatureServer
+
+| linha | estado | prova | item |
+|---|---|---|---|
+| query · where | sim | `query#where` | `L2-04-c-featureserver-query` |
+| query · objectIds | sim | `query#objectIds` | `L2-04-c-featureserver-query` |
+| query · geometry | sim | `query#geometry` | `L2-04-c-featureserver-query` |
+| query · geometryType | sim | `query#geometryType` | `L2-04-c-featureserver-query` |
+| query · inSR | sim | `query#inSR` | `L2-04-c-featureserver-query` |
+| query · spatialRel | sim | `query#spatialRel` | `L2-04-c-featureserver-query` |
+| query · relationParam | sim | `query#relationParam` | `L2-04-c-featureserver-query` |
+| query · time | não | `query#time` | `L2-04-c-featureserver-query` |
+| query · distance | sim | `query#distance` | `L2-04-c-featureserver-query` |
+| query · units | sim | `query#units` | `L2-04-c-featureserver-query` |
+| query · outFields | sim | `query#outFields` | `L2-04-c-featureserver-query` |
+| query · returnGeometry | sim | `query#returnGeometry` | `L2-04-c-featureserver-query` |
+| query · maxAllowableOffset | sim | `query#maxAllowableOffset` | `L2-04-c-featureserver-query` |
+| query · geometryPrecision | sim | `query#geometryPrecision` | `L2-04-c-featureserver-query` |
+| query · outSR | sim | `query#outSR` | `L2-04-c-featureserver-query` |
+| query · defaultSR | sim | `query#defaultSR` | `L2-04-c-featureserver-query` |
+| query · havingClause | sim | `query#havingClause` | `L2-04-c-featureserver-query` |
+| query · gdbVersion | sim | `query#gdbVersion` | `L2-04-c-featureserver-query` |
+| query · returnDistinctValues | sim | `query#returnDistinctValues` | `L2-04-c-featureserver-query` |
+| query · returnIdsOnly | sim | `query#returnIdsOnly` | `L2-04-c-featureserver-query` |
+| query · returnCountOnly | sim | `query#returnCountOnly` | `L2-04-c-featureserver-query` |
+| query · returnExtentOnly | sim | `query#returnExtentOnly` | `L2-04-c-featureserver-query` |
+| query · orderByFields | sim | `query#orderByFields` | `L2-04-c-featureserver-query` |
+| query · groupByFieldsForStatistics | sim | `query#groupByFieldsForStatistics` | `L2-04-c-featureserver-query` |
+| query · outStatistics | sim | `query#outStatistics` | `L2-04-c-featureserver-query` |
+| query · returnZ | parcial | `query#returnZ` | `L2-04-c-featureserver-query` |
+| query · returnM | não | `query#returnM` | `L2-04-c-featureserver-query` |
+| query · multipatchOption | não | `query#multipatchOption` | `L2-04-c-featureserver-query` |
+| query · resultOffset | sim | `query#resultOffset` | `L2-04-c-featureserver-query` |
+| query · resultRecordCount | sim | `query#resultRecordCount` | `L2-04-c-featureserver-query` |
+| query · quantizationParameters | sim | `query#quantizationParameters` | `L2-04-c-featureserver-query` |
+| query · returnCentroid | sim | `query#returnCentroid` | `L2-04-c-featureserver-query` |
+| query · resultType | parcial | `query#resultType` | `L2-04-c-featureserver-query` |
+| query · historicMoment | não | `query#historicMoment` | `L2-04-c-featureserver-query` |
+| query · returnTrueCurves | não | `query#returnTrueCurves` | `L2-04-c-featureserver-query` |
+| query · sqlFormat | sim | `query#sqlFormat` | `L2-04-c-featureserver-query` |
+| query · returnExceededLimitFeatures | sim | `query#returnExceededLimitFeatures` | `L2-04-c-featureserver-query` |
+| query · datumTransformation | parcial | `query#datumTransformation` | `L2-04-c-featureserver-query` |
+| query · timeReferenceUnknownClient | não | `query#timeReferenceUnknownClient` | `L2-04-c-featureserver-query` |
+| query · returnEnvelope | sim | `query#returnEnvelope` | `L2-04-c-featureserver-query` |
+| query · fullText | sim | `query#fullText` | `L2-04-c-featureserver-query` |
+| query · returnUniqueIdsOnly | sim | `query#returnUniqueIdsOnly` | `L2-04-c-featureserver-query` |
+| query · uniqueIds | sim | `query#uniqueIds` | `L2-04-c-featureserver-query` |
+| query · resultPaginationToken | sim | `query#resultPaginationToken` | `L2-04-c-featureserver-query` |
+| query · f | sim | `query#f` | `L2-04-c-featureserver-query` |
+
+### Diretório, descritores e metadados
+
+| linha | estado | prova | item |
+|---|---|---|---|
+| rest/info com authInfo | sim | `tests/api/test_diretorio_esri.py::test_rest_info_traz_authinfo_apontando_para_generate_token` | `L2-04-b-featureserver-catalogo-metadados` |
+| rest/services (catálogo de pastas e serviços) | sim | `tests/api/test_diretorio_esri.py::test_catalogo_lista_a_camada_e_a_pasta` | `L2-04-b-featureserver-catalogo-metadados` |
+| generateToken (token curto por usuário e senha) | sim | `tests/api/test_diretorio_esri.py::test_generate_token_devolve_token_de_leitura_com_validade_de_ate_24h`; `tests/api/test_diretorio_esri.py::test_generate_token_com_senha_errada_nao_gera` | `L2-04-b-featureserver-catalogo-metadados` |
+| descritor do serviço FeatureServer | sim | `tests/api/test_diretorio_esri.py::test_descritor_do_servico_tem_as_chaves_obrigatorias`; `servicos#featureserver_descritor_servico` | `L2-04-b-featureserver-catalogo-metadados` |
+| descritor da camada (campos, tipos, índices) | sim | `tests/api/test_diretorio_esri.py::test_descritor_da_camada_tem_campos_tipos_e_indices_do_banco`; `servicos#featureserver_descritor_camada` | `L2-04-b-featureserver-catalogo-metadados` |
+| FeatureServer/layers | sim | `tests/api/test_diretorio_esri.py::test_layers_devolve_o_mesmo_descritor_da_camada` | `L2-04-b-featureserver-catalogo-metadados` |
+| info/itemInfo e info/metadata | sim | `tests/api/test_diretorio_esri.py::test_item_info_e_metadata_vem_do_catalogo` | `L2-04-b-featureserver-catalogo-metadados` |
+| formatos f=json, pjson, html e jsonp | sim | `tests/api/test_diretorio_esri.py::test_pjson_e_html_e_jsonp_respondem_e_nunca_500`; `tests/api/test_diretorio_esri.py::test_formato_desconhecido_e_400` | `L2-04-b-featureserver-catalogo-metadados` |
+| drawingInfo (renderer a partir do estilo da camada) | sim | `tests/api/test_diretorio_esri.py::test_estilo_da_camada_vira_renderer_unique_value`; `tests/api/test_diretorio_esri.py::test_camada_sem_estilo_tem_renderer_simples_declarado` | `L2-04-b-featureserver-catalogo-metadados` |
+| camada de outro inquilino ausente do diretório | sim | `tests/api/test_diretorio_esri.py::test_camada_de_b_ausente_no_diretorio_de_a`; `tests/api/test_diretorio_esri.py::test_token_invalido_ou_revogado_nao_abre_o_diretorio` | `L2-04-b-featureserver-catalogo-metadados` |
+
+### Edição compatível Esri
+
+| linha | estado | prova | item |
+|---|---|---|---|
+| applyEdits da camada (adds, updates, deletes) | sim | `tests/api/test_featureserver_edicao.py::test_apply_edits_devolve_os_tres_vetores` | `L2-04-d-featureserver-edicao-anexos` |
+| applyEdits do serviço (várias camadas num lote) | sim | `tests/api/test_featureserver_edicao.py::test_apply_edits_do_servico`; `tests/api/test_featureserver_edicao.py::test_apply_edits_do_servico_com_camada_inexistente` | `L2-04-d-featureserver-edicao-anexos` |
+| rollbackOnFailure | sim | `tests/api/test_featureserver_edicao.py::test_rollback_on_failure_nao_deixa_nada`; `tests/api/test_featureserver_edicao.py::test_sem_rollback_a_parte_boa_fica` | `L2-04-d-featureserver-edicao-anexos` |
+| useGlobalIds | sim | `tests/api/test_featureserver_edicao.py::test_use_global_ids_atualiza_por_globalid`; `tests/api/test_featureserver_edicao.py::test_use_global_ids_com_id_desconhecido_e_404_na_posicao` | `L2-04-d-featureserver-edicao-anexos` |
+| addFeatures e updateFeatures separados | sim | `tests/api/test_featureserver_edicao.py::test_add_e_update_features_separados` | `L2-04-d-featureserver-edicao-anexos` |
+| deleteFeatures (por objectIds e por where) | sim | `tests/api/test_featureserver_edicao.py::test_delete_features_por_where`; `tests/api/test_featureserver_edicao.py::test_delete_features_where_malicioso_e_400` | `L2-04-d-featureserver-edicao-anexos` |
+| calculate (por expressão e por valor) | sim | `tests/api/test_featureserver_edicao.py::test_calculate_por_expressao_e_por_valor`; `tests/api/test_featureserver_edicao.py::test_calculate_com_nome_desconhecido_e_400` | `L2-04-d-featureserver-edicao-anexos` |
+| escrita exige escopo (token só de leitura recebe 403) | sim | `tests/api/test_featureserver_edicao.py::test_token_so_leitura_recebe_403_com_corpo_esri`; `tests/api/test_featureserver_edicao.py::test_token_de_edicao_escreve_pelo_mesmo_caminho` | `L2-04-d-featureserver-edicao-anexos` |
+| spatialReference declarada na geometria de entrada | sim | `tests/api/test_featureserver_edicao.py::test_geometria_em_metros_sem_spatial_reference_e_recusada`; `tests/api/test_featureserver_edicao.py::test_spatial_reference_declarada_e_reprojetada` | `L2-04-d-featureserver-edicao-anexos` |
+| objectId de outro inquilino nunca entra | sim | `tests/api/test_featureserver_edicao.py::test_objectid_de_outro_inquilino_nao_entra` | `L2-04-d-featureserver-edicao-anexos` |
+| histórico registra a origem FeatureServer | sim | `tests/api/test_featureserver_edicao.py::test_historico_registra_origem_featureserver` | `L2-04-d-featureserver-edicao-anexos` |
+
+### Anexos
+
+| linha | estado | prova | item |
+|---|---|---|---|
+| addAttachment (multipart) e leitura com sha256 igual | sim | `tests/api/test_featureserver_edicao.py::test_add_attachment_multipart_e_leitura_com_sha256_igual` | `L2-04-d-featureserver-edicao-anexos` |
+| updateAttachment mantém o identificador | sim | `tests/api/test_featureserver_edicao.py::test_update_attachment_mantem_o_mesmo_identificador` | `L2-04-d-featureserver-edicao-anexos` |
+| uploads/upload em dois tempos e anexo por uploadId | sim | `tests/api/test_featureserver_edicao.py::test_upload_em_dois_tempos_e_anexo_por_upload_id` | `L2-04-d-featureserver-edicao-anexos` |
+| anexo em base64 dentro do applyEdits | sim | `tests/api/test_featureserver_edicao.py::test_anexo_base64_dentro_do_apply_edits` | `L2-04-d-featureserver-edicao-anexos` |
+| attachments (listagem) e deleteAttachments | sim | `tests/api/test_edicao_historico_anexos.py::test_anexo_enviado_e_listado`; `tests/api/test_edicao_historico_anexos.py::test_anexo_apagado_some_da_listagem` | `L2-04-d-featureserver-edicao-anexos` |
+| anexo de feição de outro inquilino é 404 | sim | `tests/api/test_edicao_historico_anexos.py::test_anexo_de_feicao_de_outro_inquilino_e_404` | `L2-04-d-featureserver-edicao-anexos` |
+
+### Relacionamentos
+
+| linha | estado | prova | item |
+|---|---|---|---|
+| queryRelatedRecords <br> não existe rota queryRelatedRecords neste repositório; relationships é declarado vazio no descritor da camada. O item que constrói relacionamento ainda não foi feito | não | — | `L2-10-b-relacionamentos` |
+
+### OGC API Features
+
+| linha | estado | prova | item |
+|---|---|---|---|
+| pouso, conformance e collections | sim | `servicos#ogc_features_pouso`; `servicos#ogc_features_conformance`; `servicos#ogc_features_collections` | `L2-04-servicos-esri-ogc` |
+| items com limit, item único e bbox | sim | `servicos#ogc_features_items_limit`; `servicos#ogc_features_item_um`; `servicos#ogc_features_bbox` | `L2-04-servicos-esri-ogc` |
+| Part 2 CRS (crs, storageCrs, bbox-crs) | sim | `tests/api/test_ogc_features_crs_cql2.py::test_crs_31982_bate_com_st_transform`; `tests/api/test_ogc_features_crs_cql2.py::test_crs_epsg_curto_e_crs84_sao_aceitos`; `tests/api/test_ogc_features_crs_cql2.py::test_storage_crs_na_colecao`; `tests/api/test_ogc_features_crs_cql2.py::test_crs_invalido_e_400` | `L2-04-g-ogc-api-features-crs-cql2` |
+| Part 3 filtro CQL2 (texto e JSON) | sim | `tests/api/test_ogc_features_crs_cql2.py::test_filter_cql2_text_e_cql2_json_mesma_contagem`; `tests/api/test_ogc_features_crs_cql2.py::test_filter_bate_com_sql_escrito_a_mao`; `tests/api/test_ogc_features_crs_cql2.py::test_filter_in_like_between`; `tests/api/test_ogc_features_crs_cql2.py::test_filter_espacial_s_dwithin` | `L2-04-g-ogc-api-features-crs-cql2` |
+| queryables e conformance declaram CRS e CQL2 | sim | `tests/api/test_ogc_features_crs_cql2.py::test_queryables_lista_campos_da_camada`; `tests/api/test_ogc_features_crs_cql2.py::test_conformance_declara_crs_e_cql2` | `L2-04-g-ogc-api-features-crs-cql2` |
+| Part 4 transações (POST, PUT, PATCH, DELETE) | sim | `tests/api/test_ogc_features_crs_cql2.py::test_post_cria_feicao_e_devolve_location_e_etag`; `tests/api/test_ogc_features_crs_cql2.py::test_put_substitui_com_if_match_correto`; `tests/api/test_ogc_features_crs_cql2.py::test_put_com_if_match_desatualizado_e_412`; `tests/api/test_ogc_features_crs_cql2.py::test_patch_atualiza_parcial`; `tests/api/test_ogc_features_crs_cql2.py::test_delete_apaga_feicao` | `L2-04-g-ogc-api-features-crs-cql2` |
+| coleção de outro inquilino ausente | sim | `tests/api/test_ogc_features_crs_cql2.py::test_colecao_de_b_ausente_para_token_de_a` | `L2-04-g-ogc-api-features-crs-cql2` |
+
+### WFS 2.0
+
+| linha | estado | prova | item |
+|---|---|---|---|
+| GetCapabilities 2.0.0 lido por cliente OGC de terceiros | sim | `servicos#wfs_getcapabilities`; `tests/api/test_conformidade_clientes.py::test_owslib_le_o_getcapabilities_do_nosso_wfs_2_0` | `L2-04-servicos-esri-ogc` |
+| GetFeature com OUTPUTFORMAT=application/json | sim | `servicos#wfs_getfeature_json`; `tests/api/test_conformidade_clientes.py::test_owslib_faz_getfeature_e_devolve_as_feicoes_da_camada` | `L2-04-servicos-esri-ogc` |
+| GetFeature em GML 3.2 <br> GML escrito à mão, não validado contra o XSD de referência do OGC; Multi* vira o tipo simples do primeiro membro | parcial | `servicos#wfs_getfeature_gml` | `L2-04-servicos-esri-ogc` |
+| DescribeFeatureType <br> XSD mínimo, suficiente para os campos aparecerem no cliente, não validado contra o XSD do OGC | parcial | `servicos#wfs_describefeaturetype` | `L2-04-servicos-esri-ogc` |
+| Filter Encoding 2.0 no parâmetro FILTER e WFS-T <br> não implementado; o item próprio de WFS 2.0/GML ainda não foi feito | não | — | `L2-04-h-wfs-2-gml` |
+
+### Tiles vetoriais e exportação
+
+| linha | estado | prova | item |
+|---|---|---|---|
+| TileJSON 3.0.0 válido contra o esquema oficial | sim | `tests/api/test_vector_tile_server.py::test_tilejson_valido_contra_o_esquema_3_0` | `L2-04-e-vector-tile-server-tilejson` |
+| VectorTileServer: descritor com tileInfo | sim | `tests/api/test_vector_tile_server.py::test_descritor_vector_tile_server_tem_tileinfo_web_mercator_512` | `L2-04-e-vector-tile-server-tilejson` |
+| tile Esri (z/y/x) e tile MapLibre (z/x/y) byte a byte iguais | sim | `tests/api/test_vector_tile_server.py::test_tile_esri_e_maplibre_sao_byte_a_byte_iguais` | `L2-04-e-vector-tile-server-tilejson` |
+| estilo raiz aprovado no validador oficial da style spec | sim | `tests/api/test_vector_tile_server.py::test_root_style_passa_no_validador_oficial_da_style_spec`; `tests/api/test_vector_tile_server.py::test_root_style_reprova_com_o_validador_quando_corrompido` | `L2-04-e-vector-tile-server-tilejson` |
+| sprites e fontes com content-type correto | sim | `tests/api/test_vector_tile_server.py::test_sprites_e_fontes_200_com_content_type_correto` | `L2-04-e-vector-tile-server-tilejson` |
+| exportação por URL: geojson, kml, csv, fgb e gpkg | sim | `tests/api/test_vector_tile_server.py::test_geojson_export_reflete_where_e_bbox`; `tests/api/test_vector_tile_server.py::test_kml_de_10_mil_feicoes_abre_com_ogrinfo`; `tests/api/test_vector_tile_server.py::test_csv_export_com_geometria_multi`; `tests/api/test_vector_tile_server.py::test_fgb_e_gpkg_abrem_com_ogrinfo` | `L2-04-e-vector-tile-server-tilejson` |
+| token revogado fecha todas as rotas de tile | sim | `tests/api/test_vector_tile_server.py::test_token_revogado_401_em_todas_as_rotas` | `L2-04-e-vector-tile-server-tilejson` |
+
+### Serviços Esri que esta plataforma ainda não tem
+
+| linha | estado | prova | item |
+|---|---|---|---|
+| MapServer, identify, legend e GeometryServer <br> nenhuma rota MapServer/GeometryServer no repositório; a prova mede a ausência de rota de mapa | não | `tests/api/test_conformidade_clientes.py::test_nao_existe_rota_wms_neste_repositorio` | `L2-04-f-mapserver-identify-legend-geometryserver` |
+| WMS, WMTS e SLD <br> medido: GET /wms/{item} devolve 404 e o OpenAPI não tem caminho WMS/WMTS | não | `tests/api/test_conformidade_clientes.py::test_nao_existe_rota_wms_neste_repositorio` | `L2-04-i-wms-wmts-sld` |
+| createReplica, syncReplica e extractChanges <br> não implementado; item ainda não feito | não | — | `L2-04-k-sync-replicas-esri` |
+
+### Clientes
+
+| linha | estado | prova | item |
+|---|---|---|---|
+| owslib (WFS 2.0): GetCapabilities e GetFeature | sim | `tests/api/test_conformidade_clientes.py::test_owslib_le_o_getcapabilities_do_nosso_wfs_2_0`; `tests/api/test_conformidade_clientes.py::test_owslib_faz_getfeature_e_devolve_as_feicoes_da_camada` | `L2-04-j-conformidade-clientes-e-paridade` |
+| owslib (WMS) <br> não há o que o cliente WMS possa ler: a rota não existe | não | `tests/api/test_conformidade_clientes.py::test_nao_existe_rota_wms_neste_repositorio` | `L2-04-j-conformidade-clientes-e-paridade` |
+| cliente HTTP puro: FeatureServer e OGC API Features | sim | `tests/api/test_conformidade_clientes.py::test_featureserver_responde_ao_cliente_http_puro`; `tests/api/test_conformidade_clientes.py::test_ogc_api_features_responde_ao_cliente_http_puro` | `L2-04-j-conformidade-clientes-e-paridade` |
+| QGIS: ArcGIS REST, OGC API Features, WFS, WMS, WMTS e tile vetorial <br> QGIS não está instalado nesta máquina (medido: qgis e qgis_process ausentes do PATH) e a imagem oficial em contêiner não cabe no orçamento de disco desta trilha (raiz a 93 % de uso). Seis tipos de serviço ficam sem medida por cliente gráfico | não medido | `tests/api/test_conformidade_clientes.py::test_clientes_ausentes_sao_medidos_nao_presumidos` | `L2-04-j-conformidade-clientes-e-paridade` |
+| cliente Python arcgis: FeatureLayer.query() <br> pacote arcgis ausente da venv (medido) e não instalado: a árvore de dependências dele passa de 1 GB, acima do que esta trilha pode gastar em disco | não medido | `tests/api/test_conformidade_clientes.py::test_clientes_ausentes_sao_medidos_nao_presumidos` | `L2-04-j-conformidade-clientes-e-paridade` |
+| ArcGIS Pro e ArcGIS Online reais <br> exige licença e credencial de parceiro: o protocolo de teste está escrito em docs/TESTE_PARCEIRO_PRO_AGOL.md e o resultado fica pendente até haver evidência (decisão D20) | não medido | — | `L2-04-j-conformidade-clientes-e-paridade` |
+| OGC teamengine (suíte oficial de conformidade) <br> a suíte roda em contêiner que não está nesta máquina e não cabe no orçamento de disco; sem ela, a conformidade OGC afirmada aqui é a do nosso teste, não a do certificador | não medido | — | `L2-04-j-conformidade-clientes-e-paridade` |
+
+Fontes das listas de parâmetros e operações, com a data em que foram lidas:
+
+- `query`: https://developers.arcgis.com/rest/services-reference/enterprise/query-feature-service-layer/ (acesso em 2026-09-06)
+- `feature_service`: https://developers.arcgis.com/rest/services-reference/enterprise/feature-service/ (acesso em 2026-09-07)
+- `arcgis_python`: https://developers.arcgis.com/python/latest/api-reference/arcgis.gis.toc.html (acesso em 2026-09-07)
+- `ogc_features`: https://docs.ogc.org/is/17-069r4/17-069r4.html (acesso em 2026-09-07)
+
+ArcGIS Pro e ArcGIS Online não são testados por esta máquina: o protocolo para o parceiro rodar está em `docs/TESTE_PARCEIRO_PRO_AGOL.md` e o resultado segue **pendente** até haver evidência devolvida.
+
+<!-- FIM matriz-de-conformidade -->

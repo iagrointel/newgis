@@ -5,7 +5,7 @@
     {
       "clausula": "featureserver_descritor_servico",
       "estado": "suportado",
-      "evidencia": "status=200 corpo={\"currentVersion\":11.3,\"serviceDescription\":\"cobertura\",\"hasVersionedData\":false,\"supportsDisconnectedEditing\":false,\"syncEnabled\":false,\"hasStaticData\":false,\"maxRecordCount\":2000,\"supportedQueryFormats\":\"JSON,geoJSON,PBF\",\"capabilities\":\"Query\",\"spatialReference\":{\"wkid\":4674},\"fullExtent\":{\"xmin\"",
+      "evidencia": "status=200 corpo={\"currentVersion\":11.4,\"serviceDescription\":\"cobertura\",\"serviceItemId\":\"0f2ab8c9-6e19-4a6f-9d60-722df235fa60\",\"hasVersionedData\":false,\"supportsDisconnectedEditing\":false,\"syncEnabled\":false,\"hasStaticData\":false,\"maxRecordCount\":2000,\"supportedQueryFormats\":\"JSON,geoJSON,PBF\",\"capabilities\":\"Query",
       "motivo": ""
     },
     {
@@ -29,7 +29,7 @@
     {
       "clausula": "ogc_features_conformance",
       "estado": "suportado",
-      "evidencia": "conformsTo=['http://www.opengis.net/spec/ogcapi-common-1/1.0/conf/core', 'http://www.opengis.net/spec/ogcapi-common-2/1.0/conf/collections', 'http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/core', 'http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson']",
+      "evidencia": "conformsTo=['http://www.opengis.net/spec/ogcapi-common-1/1.0/conf/core', 'http://www.opengis.net/spec/ogcapi-common-2/1.0/conf/collections', 'http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/core', 'http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson', 'http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/oas30', 'http://www.opengis.net/spec/ogcapi-features-2/1.0/conf/crs', 'http://www.opengis.net/spec/ogcapi-features-2/1.0/conf/crs-by-reference', 'http://www.opengis.net/spec/ogcapi-features-3/1.0/conf/filter', 'http://www.opengis.net/spec/ogcapi-features-3/1.0/conf/features",
       "motivo": ""
     },
     {
@@ -65,7 +65,7 @@
     {
       "clausula": "wfs_getcapabilities",
       "estado": "suportado",
-      "evidencia": "owslib.WebFeatureService parseou; contents=['plat:db36780c_ee80_4802_a424_99116845ff48']",
+      "evidencia": "owslib.WebFeatureService parseou; contents=['plat:0f2ab8c9_6e19_4a6f_9d60_722df235fa60']",
       "motivo": ""
     },
     {
@@ -98,80 +98,80 @@
       "ataque": "item_id_com_aspas",
       "status": 404,
       "passou": true,
-      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"cd8933bf06936747\"}"
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"7a2fc42f2b9dae8a\"}"
     },
     {
       "ataque": "item_id_comentario_sql",
       "status": 404,
       "passou": true,
-      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"8fe86fb3b2e1e9f9\"}"
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"a734596b956f2a60\"}"
     },
     {
       "ataque": "item_id_ponto_e_virgula",
       "status": 404,
       "passou": true,
-      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"c041374093fb0e6a\"}"
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"67909cf5a4d843f2\"}"
     },
     {
       "ataque": "bbox_subselect",
       "status": 400,
       "passou": true,
-      "corpo": "{\"erro\":\"geometria_invalida\",\"mensagem\":\"envelope não numérica: '(SELECT 1)'\",\"req_id\":\"7d1c42a4ab815396\"}"
+      "corpo": "{\"erro\":\"bbox_invalido\",\"mensagem\":\"bbox precisa ser 4 números\",\"req_id\":\"083365b00b9d817b\"}"
     },
     {
       "ataque": "bbox_pg_sleep",
       "status": 400,
       "passou": true,
-      "corpo": "{\"erro\":\"geometria_invalida\",\"mensagem\":\"envelope não numérica: 'pg_sleep(1)'\",\"req_id\":\"b8cd3471d2a883a5\"}"
+      "corpo": "{\"erro\":\"bbox_invalido\",\"mensagem\":\"bbox precisa ser 4 números\",\"req_id\":\"2d63442fe17f3fd9\"}"
     },
     {
       "ataque": "bbox_funcao_nao_prevista",
       "status": 400,
       "passou": true,
-      "corpo": "{\"erro\":\"geometria_invalida\",\"mensagem\":\"envelope não numérica: 'version()'\",\"req_id\":\"fd750c667ba16d5a\"}"
+      "corpo": "{\"erro\":\"bbox_invalido\",\"mensagem\":\"bbox precisa ser 4 números\",\"req_id\":\"2125200d90ef7429\"}"
     },
     {
       "ataque": "wfs_bbox_injecao",
       "status": 400,
       "passou": true,
-      "corpo": "{\"erro\":\"geometria_invalida\",\"mensagem\":\"envelope não numérica: '0); DROP TABLE plat.item;--'\",\"req_id\":\"4ec416a479782ac7\"}"
+      "corpo": "{\"erro\":\"geometria_invalida\",\"mensagem\":\"envelope não numérica: '0); DROP TABLE plat.item;--'\",\"req_id\":\"8cc15a6e6fe34bb7\"}"
     },
     {
       "ataque": "wfs_request_desconhecida",
       "status": 400,
       "passou": true,
-      "corpo": "{\"erro\":\"request_invalido\",\"mensagem\":\"REQUEST='GetCoverage' não suportado (use GetCapabilities, DescribeFeatureType ou GetFeature)\",\"req_id\":\"428838e4b1ed5f18\"}"
+      "corpo": "{\"erro\":\"request_invalido\",\"mensagem\":\"REQUEST='GetCoverage' não suportado (use GetCapabilities, DescribeFeatureType ou GetFeature)\",\"req_id\":\"3fcb67466249758f\"}"
     },
     {
       "ataque": "feature_id_nao_inteiro",
       "status": 400,
       "passou": true,
-      "corpo": "{\"erro\":\"feature_id_invalido\",\"mensagem\":\"id da feição precisa ser o OID inteiro (fid)\",\"req_id\":\"68ad8708ea89a13a\"}"
+      "corpo": "{\"erro\":\"feature_id_invalido\",\"mensagem\":\"id da feição precisa ser o OID inteiro (fid)\",\"req_id\":\"e379ae5ab0122fc0\"}"
     },
     {
       "ataque": "unicode_no_item_id",
       "status": 404,
       "passou": true,
-      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"0c79b7869de6b0d2\"}"
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"c02acbe6e90e93b6\"}"
     },
     {
       "ataque": "cross_tenant_rest",
       "status": 404,
       "passou": true,
-      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"b1beef3893098a22\"}"
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"9604d182ab5929e2\"}"
     },
     {
       "ataque": "cross_tenant_ogc",
       "status": 404,
       "passou": true,
-      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"97d56e6742f62e99\"}"
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"fe8d462a5a86ee21\"}"
     },
     {
       "ataque": "cross_tenant_wfs",
       "status": 404,
       "passou": true,
-      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"16aebdef32a6182f\"}"
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"00ab2cb4bd52a9d2\"}"
     }
   ],
-  "medido_em": "2026-09-07T12:04:59.026485+00:00"
+  "medido_em": "2026-09-07T21:27:17.380752+00:00"
 }
