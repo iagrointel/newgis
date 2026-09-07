@@ -6,9 +6,14 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from app.db import migracoes_em_disco
 
 ROOT = Path(__file__).resolve().parents[2]
+# worktree: db/migrar.sh recusa de propósito (a base por trilha aplica as migrações reescritas)
+if (ROOT / ".git").is_file():
+    pytest.skip("db/migrar.sh não roda em worktree; este módulo só prova na árvore principal", allow_module_level=True)
 MIGRAR = ROOT / "db" / "migrar.sh"
 MIGRACOES = ROOT / "db" / "migracoes"
 
