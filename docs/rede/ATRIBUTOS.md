@@ -72,7 +72,8 @@ dispositivo entrar no jogo — os dois terminais da chave caem no MESMO grupo de
 dois. `sincronizar_topologia_lote` detecta isto honestamente (conta em `ignorados_sem_dois_nos`, nunca cria
 a aresta interna com um único nó). Não é bug deste item: é uma ambiguidade herdada de L4-01-b.
 
-Consequência medida contra a cooperativa de teste (schema `certaja`, BDGD real): o extrato não tem NENHUMA
+Consequência medida contra a cooperativa de teste (ativo de rede de referência, BDGD real): o extrato não
+tem NENHUMA
 chave/subestação do pacote `eletrica-br` (só trechos, transformador e poste) — `sincronizar_topologia_lote`
 mede 0 aresta de dispositivo nessa base, e a propagação/conectividade usam a raiz ASSUMIDA por alimentador
 (extremidade de grau 1 do `ctmt`), nunca uma subestação real. Números exatos em
