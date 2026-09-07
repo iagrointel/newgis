@@ -1,0 +1,16 @@
+{
+  "item": "L2-04-c-featureserver-query",
+  "clausula": "consulta espacial por polígono em imóveis do acervo <= 200 ms p95 (índice GIST)",
+  "tabela_medida": "public.car_area_imovel (8.406.837 linhas, COUNT(*) real; índice idx_car_area_imovel_geom USING gist(geom); SRID 4326)",
+  "nota_sobre_universo": "o portao cita 7,36 mi de imoveis; a tabela real disponivel no acervo desta maquina com esse perfil (CAR, GIST, mesmo padrao de consulta) tem 8.406.837 linhas — mesma ordem de grandeza, usada como proxy honesto",
+  "sql_medido": "SELECT ogc_fid FROM car_area_imovel WHERE ST_Intersects(geom, ST_Transform(ST_GeomFromEWKT(%s), 4326)) LIMIT 2001 -- mesmo padrao gerado por app/consulta/motor.py::executar_features (LIMIT = teto de pagina + 1)",
+  "metodo": "30 poligonos de 0,05 grau (~5x5 km) com origem aleatoria (seed=42) espalhados no retangulo -70,-40 x -30,0 (Brasil continental); uma conexao psycopg2 direta, tempo de round-trip da consulta",
+  "resultado_ms": {"p50": 0.3, "p95": 1.6, "max": 90.7,
+    "amostra": [0.1,0.1,0.1,0.1,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.3,0.3,0.3,0.3,0.3,0.4,0.4,0.4,0.4,0.4,0.5,0.5,0.5,0.6,0.8,1.6,3.3,90.7]},
+  "veredito": "PASSA: p95 = 1,6 ms <= 200 ms",
+  "achado_a_parte": "a mesma consulta com returnCountOnly (COUNT(*) de TODAS as linhas que interceptam, sem LIMIT) mede p95 = 986 ms, p50 = 159,8 ms, max = 2.376 ms nos mesmos 30 poligonos — contagem exaustiva sobre poligono grande em area densa de CAR e uma operacao MAIS CARA por natureza (nao e o que o portao mede: o portao fala de 'consulta espacial por poligono', nao de 'contagem de todos os resultados'); registrado aqui para nao esconder o numero",
+  "carga_1min": 5.96,
+  "ram_livre_gb": 0,
+  "ram_disponivel_gb": 9,
+  "medido_em": "2026-09-07T10:58:00Z"
+}
