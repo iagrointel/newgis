@@ -25,3 +25,6 @@ laco/var/
 laco/vivo/
 laco/*.lock
 laco/*.log
+.regeneracao_teste_*/
+sdk/python/src/*.egg-info/
+sdk/python/build/
