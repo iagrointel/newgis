@@ -14735,6 +14735,17 @@
      "timeout_s": {
       "type": "integer",
       "title": "Timeout S"
+     },
+     "posicao_fila": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Posicao Fila"
      }
     },
     "type": "object",

@@ -660,6 +660,28 @@ LDAP nunca mais dependerem de `sessao_plat` (conta mais disputada da árvore).
 |---|---|
 | (este) | LDAP/Active Directory como provedor de login externo por inquilino (item L0-08-d-ldap) |
 
+## turno 3, setembro de 2026 (item L0-05-e-justica-entre-inquilinos: rodízio por inquilino na fila)
+
+A fila escolhia o próximo job por ordem global (prioridade, `agendado_para`, `criado_em`), o que com um worker
+é uma fila serial: no turno 2 mediu-se um job de 0 s de um inquilino esperando 10 minutos atrás de dois jobs de
+300 s de outro. A migração `db/migracoes/20260906T2110_jobs_justica_inquilino.sql` põe o TURNO do inquilino
+(`max(iniciado_em)` daquele inquilino, `NULLS FIRST`) como primeira chave de ordenação do `plat.job_pegar`:
+prioridade e ordem de criação passam a ordenar a fila DENTRO do inquilino, e o rodízio alterna os inquilinos.
+Com 2 inquilinos e 1 worker, um job curto de A espera no máximo o job de B que já está rodando — medido com
+2 × 300 s de B (espera de A: 0,5 s) e repetido com 50 × 300 s de B (0,2 s), em ambos os casos 1 job de B
+iniciado antes de A. Nada mais do `job_pegar` muda: chave em série, cota de simultâneos por inquilino e filtro
+de pesado seguem iguais, e a cota foi remedida (dois jobs do mesmo inquilino em série com cota 1, e inquilinos
+diferentes em paralelo). Índice parcial novo `(tenant_id, iniciado_em)` para o cálculo do turno.
+
+A leitura de job devolve `posicao_fila` para job pendente (posição na fila do inquilino; nula fora de
+`pendente`) e a tela Tarefas escreve esse número na coluna de progresso. Não existe posição global: entre
+inquilinos a ordem é decidida pelo rodízio a cada retirada. Limite honesto: com mais de um worker a justiça é
+estatística, não exata (cada worker decide por uma foto do instante do seu `SELECT ... SKIP LOCKED`).
+
+Provas: `tests/api/jobs/test_jobs_justica.py`, `tests/unit/test_jobs_posicao_fila_tela.py`, medidas em
+`tests/medidas/L0-05-e-justica-entre-inquilinos.json`, decisão em
+`docs/adr/20260907T2109-justica-entre-inquilinos-na-fila.md`.
+
 ## turno 3, setembro de 2026 (item L0-05-e-worker-em-container: worker da fila em contêiner)
 
 Segundo executor da fila de jobs (ADR 0003), em contêiner Docker, ao lado da unidade systemd `plat-worker`
