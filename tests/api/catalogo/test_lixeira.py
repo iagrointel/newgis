@@ -169,7 +169,10 @@ def test_expurgo_com_relogio_simulado_apaga_tabela_fisica(sessao_a, itens_a, con
         "POST /api/jobs catalogo.lixeira_expurgar (1 camada apagada há 31 dias) até concluido",
     )
     with conexao_plat_app.cursor() as cur:
-        cur.execute("SELECT to_regclass(%s) AS t", (f"plat_trabalho.{tabela}",))
+        # 07/09: o nome do schema vai no TEXTO da consulta, não como parâmetro — é o texto que
+        # CursorSchemaAmbiente reescreve para o schema da trilha (base própria da fila/homolog);
+        # como parâmetro, `plat_trabalho` batia no schema de PRODUÇÃO e dava permission denied.
+        cur.execute(f"SELECT to_regclass('plat_trabalho.{tabela}') AS t")
         assert cur.fetchone()["t"] is None, "a tabela física tem de sumir no expurgo"
         cur.execute("SELECT set_config('plat.lixeira', 'on', true)")
         cur.execute("SELECT count(*) AS n FROM plat.item WHERE id = %s::uuid", (it["id"],))
