@@ -1,76 +1,97 @@
-/* plat — tela /entrar (ADR 0002 seção 15.1). Lê ?inquilino= e ?proximo=; GET /api/login/provedores; POST /api/login;
-   troca para o formulário de código quando exige_2fa (POST /api/login/2fa); contador de 5 min do desafio;
-   redireciona só para caminho relativo seguro. Sem "lembrar-me". */
+/* plat — tela /entrar (ADR 0002 seção 15.1; polimento UX-02). Lê ?inquilino= e ?proximo=; GET /api/login/provedores;
+   POST /api/login; troca para o formulário de código quando exige_2fa (POST /api/login/2fa); contador de 5 min do
+   desafio; redireciona só para caminho relativo seguro. Sem "lembrar-me".
+   Estados explícitos: erro por campo (nunca só o aviso geral), botão ocupado durante a chamada, aviso de Caps Lock,
+   estado de rede fora com "tentar de novo", sucesso antes do redirecionamento. Idioma pelo <plat-idioma> do cartão. */
 import { obter, enviar, mensagemDe } from '../base/api.js';
 import { h, limpar, caminhoSeguro } from '../base/dom.js';
-import { carregar, t, formatarData } from '../base/i18n.js';
+import { carregar, t, formatarData, aoTraduzir } from '../base/i18n.js';
 import '../base/componentes.js';
+import { avisarCapsLock, erroCampo, errosDoServidor, ligarMostrarSenha, limparErros, ocupado, validar } from '../base/campos.js';
 import { lembrarInquilino, marcarSessao, inquilinoLembrado } from './sessao.js';
 
 await carregar();
 
 const params = new URLSearchParams(location.search);
 const proximo = caminhoSeguro(params.get('proximo'), '/');
-const aviso = document.getElementById('aviso');
-const formSenha = document.getElementById('form-senha');
-const form2fa = document.getElementById('form-2fa');
-const campoInquilino = document.getElementById('campo-inquilino');
-const inputInquilino = document.getElementById('inquilino');
-const inputLogin = document.getElementById('login');
-const inputSenha = document.getElementById('senha');
-const inputCodigo = document.getElementById('codigo');
-const rotuloCodigo = document.getElementById('codigo-rotulo');
-const contador = document.getElementById('contador');
-const provedores = document.getElementById('provedores');
-const btEntrar = document.getElementById('entrar');
-const btConfirmar = document.getElementById('confirmar');
+const el = (id) => document.getElementById(id);
+const aviso = el('aviso');
+const estado = el('estado-entrada');
+const formSenha = el('form-senha');
+const form2fa = el('form-2fa');
+const campoInquilino = el('campo-inquilino');
+const inputInquilino = el('inquilino');
+const inputLogin = el('login');
+const inputSenha = el('senha');
+const inputCodigo = el('codigo');
+const rotuloCodigo = el('codigo-rotulo');
+const ajudaCodigo = el('codigo-ajuda');
+const contador = el('contador');
+const provedores = el('provedores');
+const btEntrar = el('entrar');
+const btConfirmar = el('confirmar');
+const btAlternar = el('alternar-recuperacao');
 
 let slug = (params.get('inquilino') || inquilinoLembrado() || '').trim();
 let desafio = null;
 let recuperacao = false;
 let relogio = null;
+let listaProvedores = [];
 
 function mostrarInquilino(nome) {
-  document.getElementById('inquilino-rotulo').textContent = nome;
-  document.getElementById('inquilino-nome').hidden = false;
+  el('inquilino-rotulo').textContent = nome;
+  el('inquilino-nome').hidden = false;
   campoInquilino.classList.add('oculto');
   inputInquilino.required = false;
   inputInquilino.value = slug;
 }
 
 function pedirInquilino(msg) {
-  document.getElementById('inquilino-nome').hidden = true;
+  el('inquilino-nome').hidden = true;
   campoInquilino.classList.remove('oculto');
   inputInquilino.required = true;
   inputInquilino.value = slug;
-  if (msg) aviso.erro(msg);
+  if (msg) erroCampo(inputInquilino, msg);
 }
 
 function mostrarProvedores(lista) {
+  listaProvedores = lista || [];
   limpar(provedores);
-  for (const p of lista || []) {
+  for (const p of listaProvedores) {
     if (!p || typeof p.url !== 'string' || !p.url.startsWith('/')) continue;
     provedores.append(h('a', { class: 'botao', href: p.url }, t('login.entrar_com', { nome: p.nome || p.tipo || '' })));
   }
 }
 
 async function carregarInquilino() {
+  estado.limpar();
+  formSenha.hidden = false;
   if (!slug) { pedirInquilino(); return; }
+  formSenha.setAttribute('aria-busy', 'true');
   const r = await obter(`/api/login/provedores?inquilino=${encodeURIComponent(slug)}`);
+  formSenha.removeAttribute('aria-busy');
   if (r.status === 200) {
     mostrarInquilino(r.json.inquilino?.nome || slug);
     mostrarProvedores(r.json.provedores);
     if (r.json.login_local === false) { formSenha.hidden = true; aviso.mostrar(t('login.so_externo'), 'info'); }
     return;
   }
+  if (r.status === 0 || r.status >= 500) {
+    // sem servidor: estado de erro com nova tentativa, em vez de um formulário que falharia em silêncio
+    formSenha.hidden = true;
+    estado.erro(r, [{ id: 'tentar', rotulo: t('login.tentar_de_novo'), classe: 'primario' }]);
+    return;
+  }
   pedirInquilino(r.status === 404 ? t('login.inquilino_inexistente', { slug }) : mensagemDe(r));
 }
+estado.addEventListener('acao', () => carregarInquilino());
 
 function concluir(json) {
   lembrarInquilino(slug);
   marcarSessao(true);
   const pend = json.usuario?.pendencias || [];
   const destino = pend.includes('trocar_senha') ? '/conta#senha' : (pend.length ? '/conta#2fa' : proximo);
+  aviso.ok(t('login.redirecionando'));
   location.replace(destino);
 }
 
@@ -78,6 +99,7 @@ function mensagemLogin(r) {
   const j = r.json || {};
   if (r.status === 423 && j.detalhe?.bloqueado_ate) return t('login.bloqueado_ate', { quando: formatarData(j.detalhe.bloqueado_ate) });
   if (r.status === 429) return t('login.muitas_tentativas');
+  if (r.status === 0) return t('login.sem_servidor');
   return mensagemDe(r);
 }
 
@@ -100,8 +122,9 @@ function mostrar2fa(json) {
   recuperacao = false;
   aplicarModoCodigo();
   formSenha.hidden = true;
+  provedores.hidden = true;
   form2fa.hidden = false;
-  document.getElementById('alternar-recuperacao').hidden = json.recuperacao_disponivel === false;
+  btAlternar.hidden = json.recuperacao_disponivel === false;
   aviso.limpar();
   iniciarRelogio(5 * 60);
   inputCodigo.value = '';
@@ -110,9 +133,11 @@ function mostrar2fa(json) {
 
 function aplicarModoCodigo() {
   rotuloCodigo.textContent = recuperacao ? t('login.codigo_recuperacao') : t('login.codigo');
+  ajudaCodigo.textContent = recuperacao ? t('login.codigo_recuperacao_ajuda') : t('login.codigo_ajuda');
   inputCodigo.setAttribute('inputmode', recuperacao ? 'text' : 'numeric');
   inputCodigo.setAttribute('autocomplete', recuperacao ? 'off' : 'one-time-code');
-  document.getElementById('alternar-recuperacao').textContent = recuperacao ? t('login.usar_autenticador') : t('login.usar_recuperacao');
+  inputCodigo.setAttribute('maxlength', recuperacao ? '20' : '6');
+  btAlternar.textContent = recuperacao ? t('login.usar_autenticador') : t('login.usar_recuperacao');
 }
 
 function voltarParaSenha(msg) {
@@ -120,53 +145,73 @@ function voltarParaSenha(msg) {
   desafio = null;
   form2fa.hidden = true;
   formSenha.hidden = false;
+  provedores.hidden = false;
   inputSenha.value = '';
+  limparErros(document);
   if (msg) aviso.mostrar(msg, 'atencao'); else aviso.limpar();
   inputSenha.focus();
 }
 
-document.getElementById('mostrar-senha').addEventListener('click', (e) => {
-  const ver = inputSenha.type === 'password';
-  inputSenha.type = ver ? 'text' : 'password';
-  e.currentTarget.setAttribute('aria-pressed', String(ver));
-  e.currentTarget.textContent = ver ? t('form.ocultar') : t('form.mostrar');
-});
+ligarMostrarSenha(el('mostrar-senha'), inputSenha);
+avisarCapsLock(inputSenha);
+inputCodigo.addEventListener('input', () => { if (!recuperacao) inputCodigo.value = inputCodigo.value.replace(/\D/g, '').slice(0, 6); });
 
 formSenha.addEventListener('submit', async (e) => {
   e.preventDefault();
   aviso.limpar();
+  limparErros(formSenha);
   if (!campoInquilino.classList.contains('oculto')) slug = inputInquilino.value.trim();
-  if (!slug || !inputLogin.value.trim() || !inputSenha.value) { aviso.erro(t('login.preencha')); return; }
-  btEntrar.disabled = true;
+  const pares = [[inputLogin, t('login.usuario_obrigatorio')], [inputSenha, t('login.senha_obrigatoria')]];
+  if (!campoInquilino.classList.contains('oculto')) pares.unshift([inputInquilino, t('login.inquilino_obrigatorio')]);
+  if (!validar(pares)) return;
+  ocupado(btEntrar, true, t('login.entrando'));
+  formSenha.setAttribute('aria-busy', 'true');
   const r = await enviar('/api/login', { inquilino: slug, login: inputLogin.value.trim(), senha: inputSenha.value });
-  btEntrar.disabled = false;
+  formSenha.removeAttribute('aria-busy');
+  ocupado(btEntrar, false);
   if (r.status === 200 && r.json.ok === true) { concluir(r.json); return; }
   if (r.status === 200 && r.json.exige_2fa) { mostrar2fa(r.json); return; }
+  if (r.status === 404) { pedirInquilino(t('login.inquilino_inexistente', { slug })); inputInquilino.focus(); return; }
+  if (r.status === 422 && errosDoServidor(r, { inquilino: inputInquilino, login: inputLogin, senha: inputSenha })) { return; }
   aviso.erro(mensagemLogin(r));
-  inputSenha.focus();
+  if (r.status === 401) { erroCampo(inputSenha, mensagemLogin(r)); inputSenha.select(); } else inputSenha.focus();
 });
 
-document.getElementById('alternar-recuperacao').addEventListener('click', () => {
+btAlternar.addEventListener('click', () => {
   recuperacao = !recuperacao;
   aplicarModoCodigo();
+  limparErros(form2fa);
   inputCodigo.value = '';
   inputCodigo.focus();
 });
-document.getElementById('voltar').addEventListener('click', () => voltarParaSenha());
+el('voltar').addEventListener('click', () => voltarParaSenha());
 
 form2fa.addEventListener('submit', async (e) => {
   e.preventDefault();
   aviso.limpar();
+  limparErros(form2fa);
   const codigo = inputCodigo.value.trim();
-  if (!codigo || !desafio) { aviso.erro(t('login.preencha_codigo')); return; }
-  btConfirmar.disabled = true;
+  if (!desafio) { voltarParaSenha(t('login.desafio_expirado')); return; }
+  const formato = recuperacao ? /^[a-z0-9-]{8,20}$/i : /^\d{6}$/;
+  if (!validar([[inputCodigo, codigo ? t(recuperacao ? 'login.codigo_recuperacao_formato' : 'login.codigo_formato') : t('login.codigo_obrigatorio'), (v) => formato.test(v)]])) return;
+  ocupado(btConfirmar, true, t('login.entrando'));
+  form2fa.setAttribute('aria-busy', 'true');
   const corpo = recuperacao ? { desafio, codigo_recuperacao: codigo } : { desafio, codigo };
   const r = await enviar('/api/login/2fa', corpo);
-  btConfirmar.disabled = false;
+  form2fa.removeAttribute('aria-busy');
+  ocupado(btConfirmar, false);
   if (r.status === 200 && r.json.ok === true) { pararRelogio(); concluir(r.json); return; }
   if (r.status === 410) { voltarParaSenha(t('login.desafio_expirado')); return; }
   aviso.erro(mensagemLogin(r));
+  erroCampo(inputCodigo, mensagemLogin(r));
   inputCodigo.select();
+});
+
+/* troca de idioma pelo seletor: o que foi montado por código re-traduz aqui (o resto é data-i18n) */
+aoTraduzir(() => {
+  if (!form2fa.hidden) aplicarModoCodigo();
+  if (listaProvedores.length) mostrarProvedores(listaProvedores);
+  if (!el('inquilino-nome').hidden) document.title = `${t('login.entrar')} · ${t('app.nome')}`;
 });
 
 await carregarInquilino();

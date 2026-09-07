@@ -9,16 +9,22 @@
 <script src="/static/js/base/tema_cedo.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="tela instrumento">
+<body class="tela">
 <main class="entrar" id="principal">
   <div class="cartao instrumento-moldura">
-    <div class="marca"><strong data-i18n="app.nome">plat</strong> <span class="aviso-beta" data-i18n="app.beta">análise / beta privado</span></div>
+    <div class="topo">
+      <div class="marca"><strong data-i18n="app.nome">plat</strong> <span class="aviso-beta" data-i18n="app.beta">análise / beta privado</span></div>
+      <plat-idioma id="idioma"></plat-idioma>
+    </div>
+    <h1 class="sr-only" data-i18n="login.entrar">Entrar</h1>
     <p class="inquilino-nome" id="inquilino-nome" hidden><span data-i18n="login.entrar_em">Entrar em:</span> <strong id="inquilino-rotulo"></strong></p>
     <plat-aviso id="aviso"></plat-aviso>
-    <form id="form-senha" class="form" novalidate autocomplete="on">
+    <plat-estado id="estado-entrada" hidden></plat-estado>
+    <form id="form-senha" class="form" novalidate autocomplete="on" aria-describedby="aviso">
       <div class="campo" id="campo-inquilino">
         <label for="inquilino" data-i18n="login.inquilino">inquilino</label>
-        <input id="inquilino" name="inquilino" type="text" autocomplete="organization" autocapitalize="none" spellcheck="false" required>
+        <input id="inquilino" name="inquilino" type="text" autocomplete="organization" autocapitalize="none" spellcheck="false" required aria-describedby="inquilino-ajuda">
+        <span class="ajuda" id="inquilino-ajuda" data-i18n="login.inquilino_ajuda">o endereço curto da sua organização</span>
       </div>
       <div class="campo">
         <label for="login" data-i18n="login.usuario">usuário</label>
@@ -33,20 +39,22 @@
       </div>
       <div class="botoes"><button type="submit" id="entrar" class="primario" data-i18n="login.entrar">Entrar</button></div>
     </form>
-    <div class="provedores" id="provedores" aria-label="provedores de login"></div>
-    <form id="form-2fa" class="form" novalidate hidden>
+    <div class="provedores" id="provedores" data-i18n-aria="login.entrar_com_rotulo" aria-label="provedores de login"></div>
+    <form id="form-2fa" class="form" novalidate hidden aria-labelledby="passo-2fa">
+      <p class="fraco" id="passo-2fa" data-i18n="login.passo_2fa">segundo passo: código do aplicativo autenticador</p>
       <div class="campo">
         <label for="codigo" id="codigo-rotulo" data-i18n="login.codigo">código do autenticador</label>
-        <input id="codigo" name="codigo" type="text" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" required>
+        <input id="codigo" name="codigo" type="text" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" required maxlength="6" aria-describedby="codigo-ajuda">
+        <span class="ajuda" id="codigo-ajuda" data-i18n="login.codigo_ajuda">6 dígitos do aplicativo autenticador</span>
       </div>
-      <p class="contador" id="contador" aria-live="polite"></p>
+      <p class="contador" id="contador" role="timer" aria-live="polite"></p>
       <div class="botoes">
         <button type="submit" id="confirmar" class="primario" data-i18n="login.confirmar">Confirmar</button>
         <button type="button" id="alternar-recuperacao" class="texto" data-i18n="login.usar_recuperacao">usar código de recuperação</button>
         <button type="button" id="voltar" class="texto" data-i18n="login.voltar">voltar</button>
       </div>
     </form>
-    <p class="rodape"><a href="/redefinir-senha" data-i18n="login.esqueci_link">Esqueceu a senha?</a></p>
+    <p class="rodape"><a href="/redefinir-senha" id="esqueci" data-i18n="login.esqueci_link">Esqueceu a senha?</a></p>
   </div>
 </main>
 <script type="module" src="/static/js/auth/login.js"></script>
