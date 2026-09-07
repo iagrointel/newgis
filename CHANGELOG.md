@@ -61,7 +61,7 @@ mesma convenção do commit `054286a`):
 
 1. `app/edicao/combinar.py::unir` checava `versao` declarada ANTES de checar existência/acesso do id — um
    id inexistente ou de outro inquilino, quando listado depois de um id existente sem `versao`, nunca
-   chegava a 404 (ficava preso em 422 `versao_ausente`). Corrigido para existência de TODOS os ids primeiro,
+   chegava a 404 (ficava preso em 422 `versao_ausente`). Corrigido para existência de todos os ids primeiro,
    depois versão de todos (`tests/api/test_edicao_dividir_unir.py::test_unir_sem_declarar_versao_de_uma_das_feicoes_e_422`
    fecha o buraco original: `versoes` incompleto não pode mais deixar uma origem sem checagem de
    concorrência).
