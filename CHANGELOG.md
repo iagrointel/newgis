@@ -1090,3 +1090,13 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 4 (líder 5), setembro de 2026 (item L7-03-d-injecao-consulta: 180 payloads de injeção contra o FeatureServer/OGC, 0 execução, 2 defeitos de 500 corrigidos)
+
+`tests/seguranca/test_injecao.py`: 180 payloads (where/outFields/orderBy/groupBy/outStatistics/having/objectIds/
+OGC) contra camada importada de verdade — 0 respostas 5xx, 8 ms de latência máxima, tabela-canário e contagem
+intactas; teste estático por AST (nenhum `.execute` em `app/` interpola nome de entrada do usuário) + `bandit
+B608` em `app/consulta` fixado em 6 f-strings de lista branca. Corrigidos em `app/consulta/motor.py`: `LIKE` em
+coluna numérica e `statisticParameters.value` não numérico devolviam 500 com traceback; agora 400 nomeado
+(`_executar`, rede de segurança para erro de tipo do banco). `docs/SEGURANCA.md` §10. ZAP baseline não rodou
+(sem imagem, disco 94 %, D21).
