@@ -28,6 +28,7 @@ from app.auth import (
     rotas_usuarios,
 )
 from app.catalogo import (
+    camada_esquema,
     rotas_categorias,
     rotas_compartilhamento,
     rotas_favoritos,
@@ -111,6 +112,9 @@ ROUTERS = [
     rotas_uploads,
     # --- ingestão vetorial (L0-04): /api/importacoes (upload -> inspeção -> confirmação -> carga -> camada)
     rotas_ingestao,
+    # --- construtor de camada por esquema (L5-31): /api/camadas/esquema, /api/camadas/{id}/esquema[/plano],
+    # /api/camadas/{id}/campos (fields no formato FeatureServer)
+    camada_esquema.router,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível

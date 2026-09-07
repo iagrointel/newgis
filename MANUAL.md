@@ -1070,3 +1070,31 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Construtor de camada por esquema (`/construtor-camada`, item L5-31-construtor-de-camada-esquema)
+
+Cria uma camada VAZIA a partir de uma lista de campos, sem precisar de arquivo nenhum. Passo 1: título,
+tipo de geometria e SRID. Passo 2: uma paleta de 8 tipos de campo (texto, inteiro, inteiro longo, decimal,
+verdadeiro/falso, data, hora, data e hora) — arraste um até a lista de campos abaixo, ou clique nele (as
+duas formas fazem a mesma coisa; quem não usa mouse usa o clique). Cada linha de campo tem nome, alias
+(rótulo de tela), tamanho (só para texto), valor padrão, domínio (lista `código:rótulo, código:rótulo`,
+separada por vírgula) e as caixas "obrigatório"/"índice". "criar camada" grava a tabela de verdade no
+PostgreSQL (com a mesma segurança — RLS, colunas de auditoria — de uma camada importada) e mostra de volta
+os campos no formato que um FeatureServer usa (`fields`), já com o alias e o domínio certos.
+
+### 22.1 Alterar o esquema de uma camada existente
+
+`POST /api/camadas/{id}/esquema/plano` mostra o que ACONTECERIA com uma lista de mudanças, sem tocar o
+banco: cada mudança vem com `aplicavel` (sim/não) e, quando não, o motivo exato. `PUT /api/camadas/{id}/esquema`
+aplica só as que passaram no plano. Mudanças possíveis: `adicionar_campo` (sempre aplica), `renomear_alias`
+(sempre aplica — é só um rótulo, não mexe na coluna real), `mudar_tamanho` (aumentar sempre aplica; diminuir
+só se ninguém tiver gravado um valor maior que o novo tamanho) e `mudar_tipo` (alargar — inteiro→inteiro
+longo→decimal, ou qualquer coisa→texto — sempre aplica; o resto só se a camada estiver VAZIA, porque poderia
+perder dado. Ex.: texto→inteiro com uma camada que já tem "AB-12" gravado é recusado com a mensagem exata).
+
+### 22.2 O que ficou de fora
+
+O formulário padrão (L5-03) e o popup padrão (L5-26) que a hipótese do item cita não foram montados nesta
+passagem — dependem desses dois itens existirem nesta árvore; o contrato que eles vão consumir
+(`GET /api/camadas/{id}/campos`, formato `fields`) já está pronto e testado. Modelos de camada por setor
+(agro, energia, ...) também ficaram de fora — não fazem parte do portão literal deste item.

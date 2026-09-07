@@ -9895,6 +9895,193 @@
     "x-privilegio": "proprio"
    }
   },
+  "/api/camadas/esquema": {
+   "post": {
+    "tags": [
+     "camada-esquema"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_camadas_esquema_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CamadaEsquemaEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "conteudo.publicar_camada"
+   }
+  },
+  "/api/camadas/{item_id}/campos": {
+   "get": {
+    "tags": [
+     "camada-esquema"
+    ],
+    "summary": "Campos",
+    "operationId": "campos_api_camadas__item_id__campos_get",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/camadas/{item_id}/esquema/plano": {
+   "post": {
+    "tags": [
+     "camada-esquema"
+    ],
+    "summary": "Plano",
+    "operationId": "plano_api_camadas__item_id__esquema_plano_post",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PlanoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/camadas/{item_id}/esquema": {
+   "put": {
+    "tags": [
+     "camada-esquema"
+    ],
+    "summary": "Alterar",
+    "operationId": "alterar_api_camadas__item_id__esquema_put",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PlanoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
   "/api/rota": {
    "post": {
     "tags": [
@@ -10979,6 +11166,126 @@
      "criado_em"
     ],
     "title": "Agenda"
+   },
+   "CamadaEsquemaEntrada": {
+    "properties": {
+     "titulo": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 1,
+      "title": "Titulo"
+     },
+     "geometria": {
+      "type": "string",
+      "title": "Geometria"
+     },
+     "srid": {
+      "type": "integer",
+      "maximum": 999999.0,
+      "minimum": 1.0,
+      "title": "Srid"
+     },
+     "campos": {
+      "items": {
+       "$ref": "#/components/schemas/CampoEntrada"
+      },
+      "type": "array",
+      "maxItems": 500,
+      "title": "Campos"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "titulo",
+     "geometria",
+     "srid"
+    ],
+    "title": "CamadaEsquemaEntrada"
+   },
+   "CampoEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "tamanho": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 10000.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tamanho"
+     },
+     "alias": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 250
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Alias"
+     },
+     "obrigatorio": {
+      "type": "boolean",
+      "title": "Obrigatorio",
+      "default": false
+     },
+     "padrao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Padrao"
+     },
+     "dominio": {
+      "anyOf": [
+       {
+        "items": {
+         "additionalProperties": true,
+         "type": "object"
+        },
+        "type": "array",
+        "maxItems": 1000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dominio"
+     },
+     "indice": {
+      "type": "boolean",
+      "title": "Indice",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "tipo"
+    ],
+    "title": "CampoEntrada"
    },
    "CategoriaNo": {
     "properties": {
@@ -14072,6 +14379,83 @@
     "type": "object",
     "title": "MoverEntrada"
    },
+   "MudancaEntrada": {
+    "properties": {
+     "tipo": {
+      "type": "string",
+      "enum": [
+       "adicionar_campo",
+       "renomear_alias",
+       "mudar_tamanho",
+       "mudar_tipo"
+      ],
+      "title": "Tipo"
+     },
+     "campo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Campo"
+     },
+     "novo_campo": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/CampoEntrada"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "novo_alias": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 250
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Novo Alias"
+     },
+     "novo_tamanho": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 10000.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Novo Tamanho"
+     },
+     "novo_tipo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Novo Tipo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "tipo"
+    ],
+    "title": "MudancaEntrada"
+   },
    "OrdemExclusao": {
     "properties": {
      "ordem": {
@@ -14908,6 +15292,21 @@
      "destino"
     ],
     "title": "PedidoRota"
+   },
+   "PlanoEntrada": {
+    "properties": {
+     "mudancas": {
+      "items": {
+       "$ref": "#/components/schemas/MudancaEntrada"
+      },
+      "type": "array",
+      "maxItems": 500,
+      "title": "Mudancas"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "PlanoEntrada"
    },
    "Privilegio": {
     "properties": {

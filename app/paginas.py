@@ -35,6 +35,8 @@ PAGINAS = {
     "/redefinir-senha": "redefinir_senha.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
+    # --- construtor de camada por esquema (L5-31)
+    "/construtor-camada": "construtor_camada.html",
 }
 router = APIRouter()
 

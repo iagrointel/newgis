@@ -847,6 +847,7 @@
  "redefinir_senha.invalido": "este link não existe ou não pode mais ser usado",
  "redefinir_senha.expirado": "este link expirou",
  "nav.uploads": "Enviar arquivo",
+ "nav.construtor_camada": "Construtor de camada",
  "upload.titulo": "Enviar arquivo",
  "upload.tipo": "tipo do arquivo",
  "upload.tipo_detectar": "detectar pela extensão",
