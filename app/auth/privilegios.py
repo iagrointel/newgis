@@ -54,6 +54,10 @@ PRIVILEGIOS: tuple[tuple[str, str, str, bool, tuple[str, ...]], ...] = (
     ("analise.raster", "analise", "análise de imagem", False, (E, A)),
     ("rede.tracar", "rede", "traçado e subrede", False, (E, A)),
     ("rede.editar", "rede", "editar rede de utilidades", False, (E, A)),
+    # migração 20260906T2219 (item L4-03-a): a comporta `regras_ativas` e a substituição do conjunto de
+    # regras por CSV ficam FORA do editar do dia a dia — quem edita feição não abre a comporta
+    ("rede.administrar", "rede",
+     "ligar/desligar a avaliação de regras da rede e substituir o conjunto de regras por CSV", True, (A,)),
     ("jobs.ver", "jobs", "ver a lista, o detalhe, o log e os tipos de job do inquilino (leitura)", False,
      QUATRO_PERFIS),  # acrescentado em T2 (migração 015): sem ele o visualizador tomava 403 na tela Tarefas
     ("jobs.executar", "jobs", "criar, cancelar e repetir os próprios jobs, e gerir agendas", False,

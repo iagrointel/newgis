@@ -117,3 +117,35 @@ class AtivacaoEntrada(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     ativa: bool
+
+
+class ApplyEditsResultado(BaseModel):
+    rede_id: str
+    regras_ativas: bool
+    adicionadas: list[str]
+    atualizadas: int
+    apagadas: int
+    associacoes_adicionadas: int
+    associacoes_apagadas: int
+    conexoes: int  # conexões derivadas novas (jj + je) gravadas neste lote
+
+
+class ValidacaoResultado(BaseModel):
+    rede_id: str
+    regras_ativas: bool
+    conexoes_avaliadas: int
+    associacoes_avaliadas: int
+    total_erros: int
+    erros: list[dict]  # cada erro traz codigo, mensagem e a lista de feições envolvidas
+
+
+class AtivacaoResultado(BaseModel):
+    rede_id: str
+    regras_ativas: bool
+
+
+class ImportacaoRegrasResultado(BaseModel):
+    rede_id: str
+    total: int
+    sha256: str
+    bytes: int
