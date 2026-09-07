@@ -4,3 +4,4 @@
 ^app/settings\.py:[0-9]+: *# SMTP de instalação
 ^Makefile:[0-9]+:#
 ^BRIEF_WORKTREES\.md:[0-9]+:[0-9]+\. Sem placeholder
+^db/migracoes/20260906T2125_backup_dump_logico\.sql:6:.*listar TODOS os inquilinos
