@@ -267,6 +267,14 @@ class ClienteAdmin:
     def info_bucket(self, bucket_id: str) -> dict:
         return self._chamar("GET", f"/v2/GetBucketInfo?id={bucket_id}")
 
+    def estatisticas_cluster(self) -> dict:
+        """GetClusterStatistics (Admin API v2): número de buckets, de objetos, tamanho total e espaço livre do
+        cluster numa ÚNICA chamada. O corpo vem em `freeform` (texto de relatório, feito para gente ler) e traz
+        também o nome da máquina de armazenamento — quem consome tem de extrair os números e nunca repassar o
+        texto adiante (é o que app/status.py faz). Sem isto, medir o espaço usado exigia um GetBucketInfo por
+        bucket: medido em 07/09, 200 chamadas = 5,3 s por retrato, contra 15 ms desta."""
+        return self._chamar("GET", "/v2/GetClusterStatistics")
+
     def definir_cota(self, bucket_id: str, max_bytes: int) -> dict:
         return self._chamar(
             "POST", f"/v2/UpdateBucket?id={bucket_id}", {"quotas": {"maxSize": int(max_bytes), "maxObjects": None}}
