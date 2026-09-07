@@ -7,20 +7,17 @@ o acervo): qualquer usuário do inquilino lê tudo do inquilino e cria conjunto/
 exclusivo que bloqueie os demais (a política de INSERT da migração só exige `usuario_do_inquilino()`), então
 o privilégio publicado é `rls:visibilidade`, igual ao resto do catálogo por inquilino."""
 
-import json
-
 import psycopg2
-
 from fastapi import APIRouter, Query, Request
 
-from app import db, limites
+from app import db
 from app.auth import comum as auth_comum
 from app.auth.comum import paginacao, registrar_evento
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import uuid_ok
 from app.erros import ErroAPI
-from app.multiescala import motor
 from app.multiescala import crs as crs_mod
+from app.multiescala import motor
 from app.multiescala.modelos import (
     AmostrasEntrada,
     AmostrasResultado,

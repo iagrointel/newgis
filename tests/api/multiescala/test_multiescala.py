@@ -54,7 +54,8 @@ def _amostras_cobrindo_o_retangulo(valor: float, n_por_lado: int = 6) -> list[di
 
 @pytest.fixture
 def conjunto(sessao_a):
-    r = sessao_a.post("/api/multiescala/conjuntos", json={"nome": f"zt-estudo-{secrets.token_hex(4)}", "area": _retangulo_estudo()})
+    r = sessao_a.post("/api/multiescala/conjuntos",
+                      json={"nome": f"zt-estudo-{secrets.token_hex(4)}", "area": _retangulo_estudo()})
     assert r.status_code == 201, r.text
     return r.json()
 
