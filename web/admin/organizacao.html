@@ -48,6 +48,15 @@
       <p class="fraco" data-i18n="org.seguranca_ajuda">a mesma política que /conta já mostra a cada membro ao trocar a senha (tenant.config.auth)</p>
       <plat-formulario id="form-seguranca"></plat-formulario>
     </section>
+    <section class="cartao" id="exportar-inquilino" aria-labelledby="t-exportar-inquilino">
+      <h2 id="t-exportar-inquilino" data-i18n="orgexp.titulo">Exportar meu inquilino</h2>
+      <p class="fraco" data-i18n="orgexp.ajuda">um pacote em formato aberto com tudo deste inquilino: um GeoPackage com as camadas hospedadas (metadado e estilo dentro do próprio arquivo), o catálogo em JSON, os arquivos enviados e um manifesto com o sha256 de cada parte. Uma execução por dia.</p>
+      <p id="exp-estimativa" class="fraco" data-i18n="orgexp.estimativa_lendo">lendo o tamanho estimado</p>
+      <div class="botoes">
+        <button type="button" id="exp-pedir" data-i18n="orgexp.pedir">Exportar meu inquilino</button>
+      </div>
+      <div id="exp-lista"></div>
+    </section>
     <section class="cartao" id="smtp" aria-labelledby="t-smtp">
       <h2 id="t-smtp" data-i18n="smtp.titulo">E-mail (SMTP)</h2>
       <p class="fraco" id="smtp-origem" data-i18n="smtp.ajuda">convite de membro, redefinição de senha e avisos saem por este servidor; sem SMTP, esses fluxos caem no caminho manual (senha temporária mostrada ao admin)</p>

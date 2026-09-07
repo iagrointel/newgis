@@ -11,6 +11,7 @@ import { carregar, t } from '../base/i18n.js';
 import '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from './sessao.js';
+import { montarExportacao } from './organizacao_exportar.js';
 
 const IDIOMAS = [{ valor: 'pt-BR', rotulo: 'Português (Brasil)' }];
 let atual = null;
@@ -37,6 +38,7 @@ async function carregarOrg() {
   montarUsuarios();
   montarSeguranca();
   await carregarSmtp();
+  await montarExportacao(document.getElementById('aviso'), usuario);
 }
 
 /* corpo completo de PUT /api/org a partir do último GET conhecido; `sobre` sobrepõe só o que a seção que
