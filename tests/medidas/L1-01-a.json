@@ -2,7 +2,7 @@
  "item": "L1-01-a",
  "medidas": {
   "busca_bbox_10000_itens_mediana_ms": {
-   "valor": 234.73,
+   "valor": 229.37,
    "unidade": "ms",
    "comando": "GET /svc/<token>/stac/search?collections=<tenant>-medida10k&bbox=-55.0,-17.0,-45.0,-9.0&limit=1000  (10.000 itens sintéticos previamente carregados na coleção; mediana de 5 chamadas HTTP completas, 1ª chamada de aquecimento descartada)"
   },
@@ -15,8 +15,18 @@
    "valor": 10000,
    "unidade": "itens",
    "comando": "GET /svc/<token>/stac/search?collections=<tenant>-medida10k&bbox=-55.0,-17.0,-45.0,-9.0&limit=1000  (10.000 itens sintéticos previamente carregados na coleção; mediana de 5 chamadas HTTP completas, 1ª chamada de aquecimento descartada)"
+  },
+  "stac_api_validator_core": {
+   "valor": 1,
+   "unidade": "0=reprovou,1=passou",
+   "comando": "stac-api-validator --root-url https://<api>/svc/<token>/stac --conformance core  (stac-api-validator, version 0.6.8; API real por uvicorn+TLS autoassinado, coleção+item semeados via TestClient, o mesmo cenário exigido pelo portão)"
+  },
+  "gdal_stacit_abre_busca": {
+   "valor": 1,
+   "unidade": "0=falha,1=abriu",
+   "comando": "gdalinfo 'STACIT:\"http://127.0.0.1:35883/svc/<token-A>/stac/search?collections=1-stacit-prova-f72e6144&ids=item-stacit-1\"'  (GDAL 3.8.4, released 2024/02/08; API por uvicorn em porta livre + COG 256x256 servido por HTTP local, os dois levantados e derrubados pelo próprio teste)"
   }
  },
- "gerado_em": "2026-09-06T19:39:56Z",
- "git_sha": "90d03c07da0c"
+ "gerado_em": "2026-09-07T01:57:13Z",
+ "git_sha": "c2a50cb5f2bd"
 }

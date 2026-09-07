@@ -117,16 +117,35 @@ def infra_stacit(tmp_path_factory, token_stac_a, token_stac_b):
         xmin, ymin, xmax, ymax = COG_BBOX
         item = {
             **item_stac("item-stacit-1", colecao, lon=(xmin + xmax) / 2, lat=(ymin + ymax) / 2),
+            # o driver STACIT do GDAL (medido nesta máquina, GDAL 3.8.4: "Skipping Feature that lacks
+            # stac_extensions" e depois "...that lacks the 'proj' STAC extension") só considera um
+            # asset raster "compatível" quando o item declara as extensões `eo` e `projection` E traz
+            # `proj:epsg`/`proj:shape`/`proj:transform` — sem isso ele descarta a feature inteira antes
+            # de sequer tentar abrir o COG por HTTP, e o erro fica genérico ("No compatible asset found").
+            "stac_extensions": [
+                "https://stac-extensions.github.io/eo/v1.1.0/schema.json",
+                "https://stac-extensions.github.io/projection/v1.1.0/schema.json",
+            ],
             "bbox": [xmin, ymin, xmax, ymax],
             "geometry": {
                 "type": "Polygon",
                 "coordinates": [[[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax], [xmin, ymin]]],
+            },
+            "properties": {
+                "datetime": item_stac("item-stacit-1", colecao)["properties"]["datetime"],
+                "proj:epsg": 4326,
+                "proj:shape": [COG_LADO, COG_LADO],
+                "proj:transform": [
+                    (xmax - xmin) / COG_LADO, 0.0, xmin,
+                    0.0, -(ymax - ymin) / COG_LADO, ymax,
+                ],
             },
             "assets": {
                 "visual": {
                     "href": href,
                     "type": "image/tiff; application=geotiff; profile=cloud-optimized",
                     "roles": ["data"],
+                    "eo:bands": [{"name": "b1"}],
                 }
             },
         }
