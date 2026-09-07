@@ -10951,6 +10951,172 @@
     "x-privilegio": "rls:visibilidade"
    }
   },
+  "/api/rede/{rede_id}/epanet": {
+   "post": {
+    "tags": [
+     "rede de utilidades — EPANET"
+    ],
+    "summary": "Importar Epanet",
+    "description": "Enfileira a importação do `.inp` recebido no corpo. `crs_epsg` é obrigatório quando as coordenadas do\narquivo não são WGS84 (faixa -180..180/-90..90) — o job recusa sem adivinhar a projeção.",
+    "operationId": "importar_epanet_api_rede__rede_id__epanet_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "crs_epsg",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Crs Epsg"
+      }
+     },
+     {
+      "name": "nome_arquivo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Nome Arquivo"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EpanetImportacaoAceita"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades — EPANET"
+    ],
+    "summary": "Exportar Epanet",
+    "description": "O `.inp` reconstruído das feições atuais da rede (nunca um arquivo guardado).",
+    "operationId": "exportar_epanet_api_rede__rede_id__epanet_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/epanet/{importacao_id}": {
+   "get": {
+    "tags": [
+     "rede de utilidades — EPANET"
+    ],
+    "summary": "Ver Importacao Epanet",
+    "operationId": "ver_importacao_epanet_api_rede__rede_id__epanet__importacao_id__get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "importacao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Importacao Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EpanetImportacao"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/geocodificar": {
    "post": {
     "tags": [
@@ -13085,6 +13251,141 @@
      "terminal"
     ],
     "title": "ElementoTracado"
+   },
+   "EpanetImportacao": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "rede_id": {
+      "type": "string",
+      "title": "Rede Id"
+     },
+     "estado": {
+      "type": "string",
+      "title": "Estado"
+     },
+     "nome_arquivo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome Arquivo"
+     },
+     "crs_epsg": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Crs Epsg"
+     },
+     "arquivo_sha256": {
+      "type": "string",
+      "title": "Arquivo Sha256"
+     },
+     "arquivo_bytes_tamanho": {
+      "type": "integer",
+      "title": "Arquivo Bytes Tamanho"
+     },
+     "job_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Job Id"
+     },
+     "contagens": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Contagens"
+     },
+     "avisos": {
+      "anyOf": [
+       {
+        "items": {},
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Avisos"
+     },
+     "erro": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Erro"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "atualizado_em": {
+      "type": "string",
+      "title": "Atualizado Em"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "rede_id",
+     "estado",
+     "nome_arquivo",
+     "crs_epsg",
+     "arquivo_sha256",
+     "arquivo_bytes_tamanho",
+     "job_id",
+     "contagens",
+     "avisos",
+     "erro",
+     "criado_em",
+     "atualizado_em"
+    ],
+    "title": "EpanetImportacao"
+   },
+   "EpanetImportacaoAceita": {
+    "properties": {
+     "importacao_id": {
+      "type": "string",
+      "title": "Importacao Id"
+     },
+     "job_id": {
+      "type": "string",
+      "title": "Job Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "importacao_id",
+     "job_id"
+    ],
+    "title": "EpanetImportacaoAceita"
    },
    "Erro": {
     "properties": {

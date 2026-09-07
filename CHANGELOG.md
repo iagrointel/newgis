@@ -3,6 +3,31 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L4-05-d-epanet-inp: arquivo EPANET .inp entra e sai da rede de água)
+
+Porta de entrada e de saída do formato que o setor de água usa: o `.inp` do EPANET. `ler_inp`/`escrever_inp`
+(`app/rede_utilidades/epanet_inp.py`) cobrem JUNCTIONS, RESERVOIRS, TANKS, PIPES, PUMPS, VALVES, COORDINATES,
+VERTICES, PATTERNS, CURVES e OPTIONS; seção fora do escopo vira aviso, nunca erro. `POST /api/rede/{id}/epanet`
+enfileira o job `rede.epanet_importar`, que grava feições sobre o pacote de ativos `agua-epanet`;
+`GET /api/rede/{id}/epanet` reconstrói o arquivo das tabelas, nunca devolve o que entrou. Migração
+`20260907T1629_rede_epanet_importacao.sql`: fila da importação, `plat.rede_epanet_curva`/`rede_epanet_padrao`
+(as curvas e os padrões que um ativo referencia por ID, e sem as quais o arquivo exportado é recusado pelo
+WNTR) e a queda do `NOT NULL` das duas colunas `geom` da rede.
+
+Medido sobre a rede de água real desta casa (`tests/medidas/L4-05-d-epanet-inp.json`): 11.119 junções,
+7 reservatórios e 14.756 trechos lidos do arquivo, 11.126 feições de ponto e 14.756 de linha gravadas,
+941.294,02 m de comprimento declarado, importação em 2,0 s. Topologia habilitada: 11.126 nós e 14.756 arestas.
+Traçado conectado a partir de um reservatório alcança 11.126 nós, exatamente o tamanho da componente conexa que
+o `networkx` calcula no próprio `.inp`. Exportar e reimportar numa rede nova dá o mesmo grafo, e o
+`wntr.sim.EpanetSimulator` 1.5.0 roda o arquivo exportado sem erro.
+
+Nó sem linha em `[COORDINATES]` entra sem geometria e com aviso, jamais como ponto em (0,0) — a refutação
+exigida pelo item é teste (`test_adversario_remove_uma_coordenada`), e a soma de comprimento dos trechos não
+muda quando a coordenada some, porque ela vem do campo Length e não da geometria. Fica declarado como parcial:
+bomba e válvula são LINK no EPANET e ganham aqui o ponto médio dos dois nós (aproximação, não medição), e a
+paridade com o "water utility network foundation" da Esri não foi medida — o modelo é fechado e licenciado.
+ADR `docs/adr/20260907T1629-epanet-inp.md`.
+
 ## turno 4, setembro de 2026 (item L4-02-a-conectado-e-subrede: traçado conectado e subrede — PARCIAL)
 
 `POST /api/rede/{id}/tracar` (tipo `conectado`|`subrede`), sobre `public.pgr_connectedComponents`

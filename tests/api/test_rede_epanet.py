@@ -21,6 +21,7 @@ Refutação do item ("adversário remove uma linha de COORDINATES...") provada a
 Exige um worker vivo (mesma regra de `tests/api/jobs/conftest.py`): sem ele, todo job de importação nunca
 termina — `esperar_importacao` falha explicando isso, nunca fica esperando escondido."""
 
+import os
 import time
 from pathlib import Path
 
@@ -31,7 +32,7 @@ from tests.api.conftest import PREFIXO_TESTE
 
 DADOS = Path(__file__).resolve().parent.parent / "dados"
 COMPLETO = DADOS / "epanet_completo.inp"
-REAL = DADOS / "brasilia_caesb.inp"
+REAL = DADOS / "rede_agua_real.inp"
 
 
 @pytest.fixture
@@ -107,9 +108,9 @@ def test_importa_fixture_sintetica_por_job_contagens_batem(sessao_a, limpar_rede
     assert linhas["total"] == 5
 
 
-@pytest.mark.skipif(not REAL.exists(), reason="fixture real (brasilia_caesb.inp) não está neste checkout")
+@pytest.mark.skipif(not REAL.exists(), reason="fixture real (rede_agua_real.inp) não está neste checkout")
 def test_importa_arquivo_real_11119_juncoes_14756_trechos_941km(sessao_a, limpar_redes):
-    """A rede REAL medida nesta casa (GPU box, CAESB/atlas público): 11.119 junções + 7 reservatórios,
+    """A rede REAL medida nesta casa (ativo interno, ver o repasse do item): 11.119 junções + 7 reservatórios,
     14.756 trechos, 941.294 m — os números citados no portão do item. Coordenadas em SIRGAS 2000/UTM 23S
     (EPSG:31983, declarado explicitamente — nunca adivinhado)."""
     rid = _criar_rede_agua(sessao_a, "real", limpar_redes)
@@ -201,9 +202,15 @@ def test_wntr_simula_o_inp_exportado(sessao_a, limpar_redes, tmp_path):
     assert r.status_code == 200, r.text
     caminho = tmp_path / "exportado.inp"
     caminho.write_bytes(r.content)
-    wn = wntr.network.WaterNetworkModel(str(caminho))
-    sim = wntr.sim.EpanetSimulator(wn)
-    resultados = sim.run_sim()
+    # o EpanetSimulator escreve temp.inp/temp.rpt/temp.bin no DIRETÓRIO CORRENTE: sem este `chdir` a rodada
+    # suja a árvore de trabalho (aconteceu neste item, 07/09).
+    anterior = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        wn = wntr.network.WaterNetworkModel(str(caminho))
+        resultados = wntr.sim.EpanetSimulator(wn).run_sim()
+    finally:
+        os.chdir(anterior)
     assert "pressure" in resultados.node
 
 
@@ -258,3 +265,116 @@ def test_adversario_remove_uma_coordenada(sessao_a, limpar_redes):
     nos = sessao_a.get(f"/api/rede/{rid}/topologia/nos?limite=1000").json()["itens"]
     for no in nos:
         assert not (no["lon"] == 0.0 and no["lat"] == 0.0), "nó fantasma em (0,0): a refutação do item reprovou"
+
+
+# --- medidas do portão (grava tests/medidas/L4-05-d-epanet-inp.json com PLAT_GRAVAR_MEDIDAS=1) -----------
+
+def test_medidas_do_portao(sessao_a, limpar_redes, medida, tmp_path):
+    """Repete o caminho inteiro do portão e GRAVA cada número. Roda sempre (as asserções são as mesmas dos
+    testes acima); só escreve o arquivo quando `PLAT_GRAVAR_MEDIDAS=1`, para a suíte comum não sujar a árvore."""
+    grava = medida("L4-05-d-epanet-inp")
+    from app.rede_utilidades import epanet_inp
+
+    # cláusula 1: contagens do job x contagens do arquivo, no arquivo REAL quando ele está no checkout
+    if REAL.exists():
+        bruto = REAL.read_bytes()
+        doc = epanet_inp.ler_inp(bruto.decode("utf-8"))
+        rid = _criar_rede_agua(sessao_a, "medidas", limpar_redes)
+        t0 = time.monotonic()
+        imp = _importar(sessao_a, rid, bruto, crs_epsg=31983, timeout=480)
+        duracao_s = round(time.monotonic() - t0, 1)
+        assert imp["estado"] == "concluida", imp
+        c = imp["contagens"]
+        grava("arquivo_real_junctions", c["arquivo"]["junctions"], "nós",
+              "contagens.arquivo.junctions do job rede.epanet_importar sobre a rede de água real da casa")
+        grava("arquivo_real_reservoirs", c["arquivo"]["reservoirs"], "reservatórios",
+              "contagens.arquivo.reservoirs do mesmo job")
+        grava("arquivo_real_pipes", c["arquivo"]["pipes"], "trechos", "contagens.arquivo.pipes do mesmo job")
+        grava("gravado_pontos", c["gravado"]["pontos"], "feições de ponto",
+              "contagens.gravado.pontos — igual a junctions + reservoirs (a cláusula 'contagens iguais ao "
+              "arquivo')")
+        grava("gravado_linhas", c["gravado"]["linhas"], "feições de linha", "contagens.gravado.linhas")
+        grava("soma_comprimento_declarado_m", round(sum(p["length"] for p in doc.pipes), 2), "m",
+              "Σ do campo Length de [PIPES] lido do arquivo (a comparação que a refutação do item pede)")
+        # regra da casa para toda medida de tempo: a carga da máquina vai gravada AO LADO do número, senão
+        # ele não vale como prova (07/09; a mesma rodada levou 21 s livre e 601 s sob disputa).
+        carga_1min = os.getloadavg()[0]
+        ram_livre_gb = round(os.sysconf("SC_AVPHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") / 1024**3, 1)
+        grava("importacao_duracao_s", duracao_s, "s",
+              f"POST /api/rede/{{id}}/epanet até estado=concluida, worker de 1 processo na trilha "
+              f"(carga_1min={carga_1min:.2f}, ram_livre_gb={ram_livre_gb}, são 12 núcleos)")
+        grava("carga_1min_na_medida_de_tempo", round(carga_1min, 2), "carga",
+              "os.getloadavg()[0] no instante de importacao_duracao_s")
+        grava("ram_livre_gb_na_medida_de_tempo", ram_livre_gb, "GiB",
+              "páginas livres x tamanho de página no instante de importacao_duracao_s")
+
+        r = sessao_a.post(f"/api/rede/{rid}/topologia/habilitar")
+        assert r.status_code == 201, r.text
+        resumo = r.json()
+        grava("topologia_nos", resumo["nos"], "nós", "POST /api/rede/{id}/topologia/habilitar -> nos")
+        grava("topologia_arestas", resumo["arestas"], "arestas", "a mesma resposta -> arestas")
+
+        g = nx.Graph()
+        g.add_nodes_from(j["id"] for j in doc.junctions)
+        g.add_nodes_from(res["id"] for res in doc.reservoirs)
+        g.add_edges_from((p["node1"], p["node2"]) for p in doc.pipes)
+        reservatorio_id = doc.reservoirs[0]["id"]
+        componente = nx.node_connected_component(g, reservatorio_id)
+        import pyproj
+
+        lon84, lat84 = pyproj.Transformer.from_crs(31983, 4326, always_xy=True).transform(
+            *doc.coordinates[reservatorio_id])
+        r = sessao_a.post(f"/api/rede/{rid}/tracar",
+                          json={"tipo": "conectado", "pontos_partida": [{"lon": lon84, "lat": lat84}]})
+        assert r.status_code == 200, r.text
+        alcancados = r.json()["nos_alcancados"]
+        assert alcancados == len(componente)
+        grava("tracado_nos_alcancados", alcancados, "nós",
+              "POST /api/rede/{id}/tracar tipo=conectado a partir do 1º reservatório")
+        grava("componente_conexa_networkx", len(componente), "nós",
+              "nx.node_connected_component do grafo montado do PRÓPRIO .inp — a cláusula é a IGUALDADE com "
+              "tracado_nos_alcancados")
+    else:
+        grava("arquivo_real_junctions", None, "nós",
+              "NÃO MEDIDO: o arquivo real de 2 MB não entra no repositório (dado de operadora, repositório "
+              "público); está no disco da casa e o teste pula sem ele")
+
+    # cláusula 3: exportar e reimportar dá o mesmo grafo (fixture sintética, sempre no checkout)
+    rid1 = _criar_rede_agua(sessao_a, "medidas-export", limpar_redes)
+    imp1 = _importar(sessao_a, rid1, COMPLETO.read_bytes())
+    assert imp1["estado"] == "concluida", imp1
+    exportado = sessao_a.get(f"/api/rede/{rid1}/epanet").content
+    rid2 = _criar_rede_agua(sessao_a, "medidas-reimport", limpar_redes)
+    imp2 = _importar(sessao_a, rid2, exportado)
+    assert imp2["estado"] == "concluida", imp2
+    iguais = (imp2["contagens"]["gravado"]["pontos"] == imp1["contagens"]["gravado"]["pontos"]
+              and imp2["contagens"]["gravado"]["linhas"] == imp1["contagens"]["gravado"]["linhas"])
+    assert iguais
+    grava("ida_e_volta_mesmo_grafo", iguais, "verdadeiro/falso",
+          "importa a fixture sintética, GET .../epanet, reimporta numa rede NOVA: mesmas contagens de ponto "
+          "e de linha (test_exportar_e_reimportar_da_o_mesmo_grafo)")
+
+    # cláusula 4: WNTR simula o .inp exportado
+    try:
+        import wntr
+    except ImportError:
+        grava("wntr_simulou_o_inp_exportado", None, "verdadeiro/falso",
+              "NÃO MEDIDO: wntr não está instalado nesta máquina (o item declara a instalação como bloqueante)")
+    else:
+        caminho = tmp_path / "medida.inp"
+        caminho.write_bytes(exportado)
+        anterior = os.getcwd()
+        os.chdir(tmp_path)  # mesmo motivo do teste acima: o simulador escreve temp.* no diretório corrente
+        try:
+            wntr.sim.EpanetSimulator(wntr.network.WaterNetworkModel(str(caminho))).run_sim()
+        finally:
+            os.chdir(anterior)
+        grava("wntr_simulou_o_inp_exportado", True, "verdadeiro/falso",
+              f"wntr {wntr.__version__}: EpanetSimulator(WaterNetworkModel(inp exportado)).run_sim() sem erro")
+
+    # cláusula 5: paridade com o modelo de dados de água da Esri — PARCIAL, declarada
+    grava("paridade_water_utility_network_foundation", "parcial", "veredito",
+          "PARCIAL e não medida: comparar contra o 'water utility network foundation' exige o próprio pacote "
+          "de solução da Esri (modelo fechado, licenciado), que este item não tem. O que existe aqui é o "
+          "pacote de ativos 'agua-epanet' desta casa, cujos grupos cobrem o vocabulário do .inp; a comparação "
+          "campo a campo com o modelo da Esri fica para um item próprio")

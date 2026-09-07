@@ -75,3 +75,12 @@ sortedcontainers==2.4.0
 tomli==2.4.1
 tomli_w==1.2.0
 Markdown==3.10.2
+#
+# rede de utilidades — EPANET (item L4-05-d): networkx é a CONFERÊNCIA INDEPENDENTE do traçado conectado
+# (a componente conexa calculada no próprio .inp, `tests/api/test_rede_epanet.py`); só suíte, puro Python,
+# 2,1 MB, instalação aditiva (nenhuma versão de outro pacote mudou). `pyproj` (usado pela aplicação em
+# app/ingestao/inspecionar.py e em app/rede_utilidades/epanet_importar.py) continua vindo do dist-packages do
+# sistema, mesmo raciocínio já escrito no cabeçalho para shapely. `wntr` (simulação hidráulica) NÃO entra
+# aqui de propósito: arrasta numpy/pandas/scipy e só serve a UMA cláusula do portão, que o teste marca como
+# não medida quando a biblioteca falta (`pytest.importorskip`); quem quiser medir instala à parte.
+networkx==3.6.1

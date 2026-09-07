@@ -7,7 +7,7 @@ Fluxo: pendente -> executando -> concluida|falhou. Nunca lê o índice de topolo
 
 CRS: o `.inp` do EPANET não declara sistema de coordenadas. Se todo par (X,Y) de `[COORDINATES]` cai dentro da
 faixa geográfica válida (-180..180, -90..90), a coordenada é lida como WGS84 (EPSG:4326) direto. Fora disso
-(coordenada PROJETADA — o caso real medido: SIRGAS 2000 / UTM 23S, `brasilia_caesb.inp`, valores ~187000/
+(coordenada PROJETADA — o caso real medido: SIRGAS 2000 / UTM 23S, `rede_agua_real.inp`, valores ~187000/
 8252000) é OBRIGATÓRIO informar `crs_epsg` (parâmetro do job/da rota): nunca se adivinha um EPSG por
 "parecer" UTM — a falha é um erro claro (`ErroImportacaoEpanet`), nunca um ponto errado calado."""
 

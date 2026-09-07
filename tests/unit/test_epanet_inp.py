@@ -3,7 +3,7 @@
 Cláusulas do portão provadas aqui (a metade que não depende de banco): "exportar .inp e reimportar dá o mesmo
 grafo" (ida e volta byte-a-byte nos campos, não no texto) — nas duas fontes usadas nesta casa: a fixture
 sintética com as 10 seções (JUNCTIONS/RESERVOIRS/TANKS/PIPES/PUMPS/VALVES/COORDINATES/VERTICES/PATTERNS/CURVES)
-e o arquivo REAL medido (`brasilia_caesb.inp`, CAESB/atlas público, 11.119 junções + 7 reservatórios, 14.756
+e o arquivo REAL medido (`rede_agua_real.inp`, dado público de operadora, 11.119 junções + 7 reservatórios, 14.756
 trechos, 941.294 m). Refutação do item ("adversário remove uma linha de COORDINATES...") também mora aqui: a
 metade que é montagem de feição (`montar_feicoes`) é pura, sem banco."""
 
@@ -15,7 +15,7 @@ from app.rede_utilidades import epanet_importar, epanet_inp
 
 DADOS = Path(__file__).resolve().parent.parent / "dados"
 COMPLETO = DADOS / "epanet_completo.inp"
-REAL = DADOS / "brasilia_caesb.inp"
+REAL = DADOS / "rede_agua_real.inp"
 
 
 def _ida_e_volta(doc: epanet_inp.DocumentoEpanet) -> epanet_inp.DocumentoEpanet:
@@ -36,7 +36,7 @@ def test_le_todas_as_secoes_da_fixture_sintetica():
     assert valvula["type"] == "PRV" and valvula["setting"] == 20.0
     assert doc.curves["C1"] == [(0.0, 50.0), (10.0, 40.0), (20.0, 20.0)]
     assert doc.patterns["PAT1"] == [1.0, 1.1, 0.9, 1.0]
-    assert doc.vertices["P2"] == [(15.0, 2.0)]
+    assert doc.vertices["P2"] == [(115.0, 52.0)]
 
 
 def test_ida_e_volta_campo_a_campo_fixture_sintetica():
@@ -48,10 +48,11 @@ def test_ida_e_volta_campo_a_campo_fixture_sintetica():
         assert getattr(doc, campo) == getattr(doc2, campo), campo
 
 
-@pytest.mark.skipif(not REAL.exists(), reason="fixture real (brasilia_caesb.inp) não está neste checkout")
+@pytest.mark.skipif(not REAL.exists(), reason="fixture real (rede_agua_real.inp) não está neste checkout")
 def test_ida_e_volta_arquivo_real_11119_juncoes_14756_trechos():
-    """Ativo da casa (GPU box `/home/dev/nascente/artifacts/edge_tests/brasilia_caesb.inp`, dado público CAESB/
-    atlas.caesb.df.gov.br): 11.119 junções + 7 reservatórios = 11.126 nós, 14.756 trechos, Σ Length = 941.294 m
+    """Ativo interno desta casa (rede de água real, dado público de operadora; o caminho do arquivo está no
+    repasse do item, fora do repositório): 11.119 junções + 7 reservatórios = 11.126 nós, 14.756 trechos,
+    Σ Length = 941.294 m
     — os números citados no portão do item."""
     doc = epanet_inp.ler_inp(REAL.read_text(encoding="utf-8"))
     c = doc.contagens()

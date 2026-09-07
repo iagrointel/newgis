@@ -4,6 +4,7 @@ caso que aponta um recurso do inquilino B (demo2) e diz o que A (demo) pode rece
 não carregue dado de B (`verificar`) e B fique intacto (digest antes/depois, em test_cruzado.py). Rota sem caso =
 o teste falha (cobertura 100 % é cláusula)."""
 
+import json
 import secrets
 from dataclasses import dataclass, field
 from typing import Any, Callable
@@ -503,16 +504,10 @@ CASOS: dict[tuple[str, str], Caso] = {
     # quando o alvo é de B (a rota lê a conexão pelo RLS de _carregar ANTES de qualquer efeito colateral).
     ("GET", "/api/conexoes/{id}/saude-historico"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/saude-historico"),
     ("POST", "/api/conexoes/{id}/publicar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar"),
-    # L6-02-c (conector WFS/OGC API): as três rotas de leitura do modo referenciado. A conexão de B é
-    # cross-tenant puro — `_carregar` (RLS) roda ANTES de qualquer ida ao serviço externo, então a rota nem
-    # chega a abrir conexão de rede quando o id é de outro inquilino.
-    ("GET", "/api/conexoes/{id}/colecoes"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes"),
-    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/campos"): Caso(
-        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/campos"
-    ),
-    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/feicoes"): Caso(
-        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/feicoes"
-    ),
+    # As três rotas `/api/conexoes/{id}/colecoes*` do item L6-02-c NÃO existem nesta árvore: o `master` já
+    # tinha removido os casos órfãos (commit `dc06e11`, "cobertura cruzada"), e eles voltaram por resolução de
+    # conflito na fusão `c5c3844`. Caso de rota inexistente reprova `test_cobertura_100_por_cento` tanto quanto
+    # rota sem caso; quando o item L6-02-c entrar, os casos voltam junto com as rotas.
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,
@@ -690,8 +685,50 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("DELETE", "/api/rede/{rede_id}"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}"),
     ("GET", "/api/rede/{rede_id}/pacote"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/pacote"),
     ("POST", "/api/rede/{rede_id}/pacote"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: {"esquema": "plat.rede.pacote"},
+        # pacote VÁLIDO de propósito: com um corpo inválido a resposta seria 422 da validação de esquema, e a
+        # varredura deixaria de provar o que quer provar (que a rede de B não existe para A).
+        lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: json.loads(instalados.bruto("agua-epanet")),
     ),
+    # Toda rota de /api/rede/{rede_id} abaixo aponta a rede de B: o esperado é 404 pela RLS, nunca dado de B.
+    # As de feição/topologia/traçado (itens L4-01-b e L4-02-a) entraram aqui junto com as de EPANET (L4-05-d)
+    # porque `docs/openapi.json` só foi regerado neste item — a cobertura de 100 % é cláusula da varredura
+    # cruzada e uma rota sem caso reprova o teste.
+    ("GET", "/api/rede/{rede_id}/feicoes/pontos"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos"),
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos",
+        lambda p: {"tipo_codigo": 1, "grupo": "no", "lon": 0.0, "lat": 0.0, "atributos": {}}),
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos/applyEdits", lambda p: {"adds": []}),
+    ("GET", "/api/rede/{rede_id}/feicoes/linhas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas"),
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas",
+        lambda p: {"tipo_codigo": 1, "grupo": "tubulacao", "coordenadas": [[0.0, 0.0], [0.0, 1.0]],
+                   "atributos": {}}),
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas/applyEdits"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas/applyEdits", lambda p: {"adds": []}),
+    ("GET", "/api/rede/{rede_id}/topologia"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia"),
+    ("POST", "/api/rede/{rede_id}/topologia/habilitar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/habilitar"),
+    ("GET", "/api/rede/{rede_id}/topologia/nos"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia/nos"),
+    ("GET", "/api/rede/{rede_id}/topologia/arestas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/arestas"),
+    ("GET", "/api/rede/{rede_id}/topologia/alcance"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/alcance?no={UUID_NULO}"),
+    ("GET", "/api/rede/{rede_id}/topologia/areas-sujas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/areas-sujas"),
+    ("POST", "/api/rede/{rede_id}/tracar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/tracar",
+        lambda p: {"tipo": "conectado", "pontos_partida": [{"lon": 0.0, "lat": 0.0}]}),
+    # EPANET (L4-05-d): importar aceita o .inp cru no corpo; o corpo aqui é um .inp mínimo VÁLIDO de propósito,
+    # para que o 404 venha da rede de B não existir para A, e não de o arquivo ser recusado antes.
+    ("POST", "/api/rede/{rede_id}/epanet"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/epanet",
+        lambda p: {"_inp": "[JUNCTIONS]\n J1 10 1\n[COORDINATES]\n J1 0 0\n[END]\n"}),
+    ("GET", "/api/rede/{rede_id}/epanet"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/epanet"),
+    ("GET", "/api/rede/{rede_id}/epanet/{importacao_id}"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/epanet/{UUID_NULO}"),
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
     ("PUT", "/api/org"): Caso(
         lambda p: "/api/org", _corpo_org_atual, proprio=True, aceita=frozenset({200}), verificar=_sem_marca,

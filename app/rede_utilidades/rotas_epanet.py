@@ -1,11 +1,12 @@
 """Rotas EPANET .inp da rede de água (item L4-05-d-epanet-inp; ADR 20260907T1629).
 
 `POST /api/rede/{rede_id}/epanet` recebe o `.inp` cru no corpo (como `.../pacote`), guarda numa fila
-(`plat.rede_importacao_epanet`) e enfileira o job `rede.epanet_importar` (pesado; a rede real desta casa tem
-11.119 nós e 14.756 trechos — não roda no laço de eventos). `GET .../epanet/{importacao_id}` devolve o estado e
-as contagens. `GET .../epanet` reconstrói o `.inp` DAS TABELAS (nunca de um arquivo guardado — mesma regra do
-pacote de ativos, `rotas.py`) e devolve como texto; roda no threadpool porque reconstruir 14 mil trechos com um
-`SELECT` por grupo não é instantâneo."""
+(`plat.rede_importacao_epanet`) e enfileira o job `rede.epanet_importar` (a rede real desta casa tem 11.119
+nós e 14.756 trechos — não roda no laço de eventos; o job é declarado `pesado=False`, ver ADR
+20260907T1629). `GET .../epanet/{importacao_id}` devolve o estado e as contagens.
+`GET .../epanet` reconstrói o `.inp` DAS TABELAS (nunca de um arquivo guardado — mesma regra do pacote
+de ativos, `rotas.py`) e devolve como texto; roda no threadpool porque reconstruir 14 mil trechos com
+um `SELECT` por grupo não é instantâneo."""
 
 import hashlib
 import uuid as uuid_mod
@@ -114,8 +115,9 @@ def _reconstruir_doc(cur, rede_id: str) -> epanet_inp.DocumentoEpanet:
 
     def _grupo(codigo: str):
         cur.execute(
-            "SELECT f.atributos, ST_X(f.geom) AS x, ST_Y(f.geom) AS y FROM plat.rede_feicao_ponto f "
-            "JOIN plat.rede_tipo t ON t.id = f.tipo_id JOIN plat.rede_grupo g ON g.id = t.grupo_id "
+            "SELECT f.atributos, t.codigo AS tipo_codigo, ST_X(f.geom) AS x, ST_Y(f.geom) AS y "
+            "FROM plat.rede_feicao_ponto f JOIN plat.rede_tipo t ON t.id = f.tipo_id "
+            "JOIN plat.rede_grupo g ON g.id = t.grupo_id "
             "WHERE f.rede_id = %s::uuid AND g.codigo = %s ORDER BY f.criado_em", (rede_id, codigo),
         )
         return cur.fetchall()
@@ -177,11 +179,9 @@ def _reconstruir_doc(cur, rede_id: str) -> epanet_inp.DocumentoEpanet:
         vid = a.get("valvula_id")
         if vid is None:
             continue
-        cur.execute("SELECT tp.codigo FROM plat.rede_feicao_ponto f JOIN plat.rede_tipo tp ON tp.id = f.tipo_id "
-                    "JOIN plat.rede_grupo g ON g.id = tp.grupo_id WHERE g.codigo = 'valvula' AND "
-                    "f.atributos->>'valvula_id' = %s AND f.rede_id = %s::uuid LIMIT 1", (vid, rede_id))
-        tr = cur.fetchone()
-        tipo_codigo = tr["codigo"] if tr else 1
+        # o tipo da válvula (PRV/PSV/PBV/FCV/TCV/GPV) é o CÓDIGO DO TIPO da própria feição, que `_grupo` já
+        # trouxe na mesma consulta — não precisa de um SELECT por válvula aqui.
+        tipo_codigo = r["tipo_codigo"]
         doc.valves.append({"id": vid, "node1": a.get("valvula_no_1"), "node2": a.get("valvula_no_2"),
                             "diameter": a.get("valvula_diametro") or 0.0,
                             "type": epanet_inp.CODIGO_VALVULA.get(tipo_codigo, "PRV"),

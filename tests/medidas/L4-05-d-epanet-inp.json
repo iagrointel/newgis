@@ -1,0 +1,87 @@
+{
+ "item": "L4-05-d-epanet-inp",
+ "medidas": {
+  "arquivo_real_junctions": {
+   "valor": 11119,
+   "unidade": "nós",
+   "comando": "contagens.arquivo.junctions do job rede.epanet_importar sobre a rede de água real da casa"
+  },
+  "arquivo_real_reservoirs": {
+   "valor": 7,
+   "unidade": "reservatórios",
+   "comando": "contagens.arquivo.reservoirs do mesmo job"
+  },
+  "arquivo_real_pipes": {
+   "valor": 14756,
+   "unidade": "trechos",
+   "comando": "contagens.arquivo.pipes do mesmo job"
+  },
+  "gravado_pontos": {
+   "valor": 11126,
+   "unidade": "feições de ponto",
+   "comando": "contagens.gravado.pontos — igual a junctions + reservoirs (a cláusula 'contagens iguais ao arquivo')"
+  },
+  "gravado_linhas": {
+   "valor": 14756,
+   "unidade": "feições de linha",
+   "comando": "contagens.gravado.linhas"
+  },
+  "soma_comprimento_declarado_m": {
+   "valor": 941294.02,
+   "unidade": "m",
+   "comando": "Σ do campo Length de [PIPES] lido do arquivo (a comparação que a refutação do item pede)"
+  },
+  "importacao_duracao_s": {
+   "valor": 2.1,
+   "unidade": "s",
+   "comando": "POST /api/rede/{id}/epanet até estado=concluida, worker de 1 processo na trilha (carga_1min=9.60, ram_livre_gb=0.6, são 12 núcleos)"
+  },
+  "topologia_nos": {
+   "valor": 11126,
+   "unidade": "nós",
+   "comando": "POST /api/rede/{id}/topologia/habilitar -> nos"
+  },
+  "topologia_arestas": {
+   "valor": 14756,
+   "unidade": "arestas",
+   "comando": "a mesma resposta -> arestas"
+  },
+  "tracado_nos_alcancados": {
+   "valor": 11126,
+   "unidade": "nós",
+   "comando": "POST /api/rede/{id}/tracar tipo=conectado a partir do 1º reservatório"
+  },
+  "componente_conexa_networkx": {
+   "valor": 11126,
+   "unidade": "nós",
+   "comando": "nx.node_connected_component do grafo montado do PRÓPRIO .inp — a cláusula é a IGUALDADE com tracado_nos_alcancados"
+  },
+  "ida_e_volta_mesmo_grafo": {
+   "valor": true,
+   "unidade": "verdadeiro/falso",
+   "comando": "importa a fixture sintética, GET .../epanet, reimporta numa rede NOVA: mesmas contagens de ponto e de linha (test_exportar_e_reimportar_da_o_mesmo_grafo)"
+  },
+  "wntr_simulou_o_inp_exportado": {
+   "valor": true,
+   "unidade": "verdadeiro/falso",
+   "comando": "wntr 1.5.0: EpanetSimulator(WaterNetworkModel(inp exportado)).run_sim() sem erro"
+  },
+  "paridade_water_utility_network_foundation": {
+   "valor": "parcial",
+   "unidade": "veredito",
+   "comando": "PARCIAL e não medida: comparar contra o 'water utility network foundation' exige o próprio pacote de solução da Esri (modelo fechado, licenciado), que este item não tem. O que existe aqui é o pacote de ativos 'agua-epanet' desta casa, cujos grupos cobrem o vocabulário do .inp; a comparação campo a campo com o modelo da Esri fica para um item próprio"
+  },
+  "carga_1min_na_medida_de_tempo": {
+   "valor": 9.6,
+   "unidade": "carga",
+   "comando": "os.getloadavg()[0] no instante de importacao_duracao_s"
+  },
+  "ram_livre_gb_na_medida_de_tempo": {
+   "valor": 0.6,
+   "unidade": "GiB",
+   "comando": "páginas livres x tamanho de página no instante de importacao_duracao_s"
+  }
+ },
+ "gerado_em": "2026-09-07T18:04:02Z",
+ "git_sha": "0ac39f7e2de0"
+}

@@ -3,7 +3,7 @@
 --
 -- `plat.rede_importacao_epanet` é a fila de trabalho do job `rede.epanet_importar` (app/jobs/tipos.py):
 -- guarda o arquivo .inp CRU (bytea; teto de 20 MiB, bem acima do maior arquivo real medido nesta casa —
--- 2.089.315 bytes, brasilia_caesb.inp) até o job ler e apagar (`arquivo_bytes = NULL` depois de processar,
+-- 2.089.315 bytes, a rede de agua real usada nos testes) até o job ler e apagar (`arquivo_bytes = NULL` depois de processar,
 -- nunca guardado para sempre: é fila de job, não arquivo do inquilino). `estado` segue o mesmo vocabulário
 -- de `plat.importacao` (ingestão vetorial, ADR 0005): pendente -> executando -> concluida|falhou.
 --
