@@ -9,6 +9,10 @@ Duas origens, como o esquema do modelo permite (`camada.tipo`):
 
 - `acervo`: slug `<fonte_id>/<schema>.<tabela>` em `plat.acervo_camada` (item L6-01), que já traz `sha256`,
   `linhas_exatas`, `linhas_contadas_em` e `estado`. Camada bloqueada ou inexistente recusa a execução com 422.
+  A partir do item L6-04-acervo-no-motor, também exige que o INQUILINO ASSINE a camada
+  (`plat.acervo_pode_ler`, a mesma porta de `app.acervo.publicacao`): sem assinatura, 422 `sem_assinatura` —
+  é isto que "revogar a assinatura impede nova execução" do portão do item significa; uma execução já
+  registrada não é afetada (a proveniência congelada e os resultados antigos ficam).
 - `item`: item do catálogo do inquilino (`plat.item`, RLS). Para `camada_vetorial` hospedada no schema de trabalho a
   contagem sai de `COUNT(*)` com `statement_timeout` de CONTAGEM_TIMEOUT_S; se o tempo estourar, o campo diz
   `"contagem_nao_concluida"` com o tempo, como faz o `contagem exata do acervo (`contagem2.py`) — nunca zero.
@@ -62,8 +66,17 @@ def _acervo(cur, ref: dict) -> dict:
     if r["estado"] != "exposta":
         raise ErroAPI(422, "camada_bloqueada", f"a camada do acervo {ref['id']!r} está em estado {r['estado']!r} e não "
                       f"entra numa execução", {"fator": ref["chave"], "camada": ref["id"], "estado": r["estado"]})
+    # item L6-04-acervo-no-motor: sem assinatura do inquilino, a execução não nasce. Mesmo porteiro que
+    # app.acervo.publicacao usa para a API de mapa — nunca um segundo critério que pudesse divergir dele.
+    cur.execute("SELECT plat.acervo_pode_ler(%s) AS pode", (ref["id"],))
+    if not cur.fetchone()["pode"]:
+        raise ErroAPI(422, "sem_assinatura",
+                      f"o inquilino não assina a camada do acervo {ref['id']!r}; assine em "
+                      f"POST /api/acervo/camadas/{{camada}}/assinatura antes de usá-la num modelo",
+                      {"fator": ref["chave"], "camada": ref["id"]})
     return {
         "titulo": f"{r['fonte_id']} · {r['schema_nome']}.{r['tabela']}",
+        "fonte_id": r["fonte_id"],
         "sha256": r["sha256"] or NAO_REGISTRADO,
         "contagem": r["linhas_exatas"] if r["linhas_exatas"] is not None else NAO_REGISTRADO,
         "contagem_origem": "acervo.linhas_exatas" if r["linhas_exatas"] is not None else NAO_REGISTRADO,

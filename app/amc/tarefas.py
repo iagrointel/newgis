@@ -3,14 +3,16 @@
 `amc.robustez_pesos`: Monte Carlo de sensibilidade ao peso (item L3-02-a; A8 do laco/decomposicao/L3L6_CONCEITO.md:
 extração como job, combinação síncrona, ROBUSTEZ COMO JOB porque N sorteios em milhares de unidades passa
 do orçamento de uma requisição síncrona). A tarefa só sorteia peso e chama `app.amc.combinacao.combinar`
-(item L3-01-e) N vezes — não reimplementa a combinação."""
+(item L3-01-e) N vezes — não reimplementa a combinação.
+`amc.executar`: processa uma execução registrada sobre camadas do acervo (app/amc/executor.py, item
+L6-04-acervo-no-motor) — a extração de camadas do tipo 'item' fica para item futuro."""
 
 import time
 import uuid
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.amc import robustez, unidades
+from app.amc import executor, robustez, unidades
 from app.jobs.registro import FalhaDefinitiva, tarefa
 
 MAX_UNIDADES = 20_000
@@ -20,6 +22,10 @@ MAX_SORTEIOS = 5_000
 
 class GerarUnidadesParametros(BaseModel):
     conjunto_id: uuid.UUID
+
+
+class ExecutarParametros(BaseModel):
+    execucao_id: uuid.UUID
 
 
 @tarefa(
@@ -127,3 +133,17 @@ def amc_robustez_pesos(
     saida = r.como_dicionario()
     saida["duracao_job_s"] = duracao_total
     return saida
+@tarefa(
+    nome="amc.executar",
+    descricao="Extrai os fatores do acervo de uma execução registrada pela view só-leitura de plat_acervo e grava "
+              "fator bruto e favorabilidade (item L6-04-acervo-no-motor)",
+    parametros=ExecutarParametros,
+    pesado=False,
+    memoria_mb=768,
+    timeout_s=1800,
+    tentativas=1,   # nunca repetir sozinho: revogação de assinatura é FalhaDefinitiva, não erro transiente
+    chave=lambda p: f"amc_execucao:{p.get('execucao_id')}",
+    perfil_minimo="editor",
+)
+def amc_executar(ctx, execucao_id: uuid.UUID) -> dict:
+    return executor.executar(ctx, execucao_id)

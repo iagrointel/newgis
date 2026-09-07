@@ -32,6 +32,37 @@ fuzzy/gama) não decompõe em contribuições por fator por definição matemát
 de cada fator sem fingir uma soma que não existe. Transformação contínua (Rescale by Function, item
 L3-01-d-transformacoes, pendente) aparece com valor bruto e observação, nunca com número fabricado. ADR
 `docs/adr/20260907T1245-explicacao-amc.md`.
+## turno 3, setembro de 2026 (item L6-04-acervo-no-motor: camada do acervo como fator no motor multicritério)
+
+Fecha o ciclo entre o motor AMC (L3-01-a/b/c) e a publicação sem cópia do acervo (L6-01-b): `app/amc/executor.py`
+(job `amc.executar`, enfileirado sozinho por `POST /api/amc/execucoes` quando o modelo tem fator `camada.tipo =
+'acervo'`) lê cada fator direto da view `plat_acervo.<view>` — nunca copia a tabela de origem — com
+`app.amc.vetorial` fazendo a extração e uma transformação `linear` levando o valor bruto a favorabilidade 0-100.
+Provado com 3 camadas REAIS já ingeridas na casa (`icmbio_unidades_conservacao`, `funai_terras_indigenas`,
+`hidro_nacional_bc250`, 1,6 mi de linhas), não dado sintético. `app/amc/camadas.py::_acervo` passou a exigir
+`plat.acervo_pode_ler` (mesmo porteiro da API de mapa) na CRIAÇÃO da execução — sem assinatura, 422
+`sem_assinatura`, execução nem nasce; o job confere a assinatura DE NOVO, uma vez antes de cada fator e uma vez
+depois do último, então revogar a assinatura NO MEIO do job (a refutação do item) derruba a execução com
+`FalhaDefinitiva` e mensagem, sem gravar nenhuma linha de `amc_fator_bruto`/`amc_resultado` — os dois só são
+escritos juntos, no bloco final, depois de todas as confirmações. Resultado de uma execução já concluída nunca é
+apagado por uma revogação posterior (gatilho `amc_resultado_guarda`, sem mudança). Proveniência
+(`amc_execucao.camadas`) ganhou o campo `fonte_id` explícito, ao lado de `sha256`/`contagem`/`contagem_origem`
+que `mod_camadas._acervo` já gravava. Limite honesto: só fatores `camada.tipo == 'acervo'` são extraídos por este
+job (fator do tipo `item` fica de fora, é ignorado na combinação); só transformação `linear`; camada lida só
+dentro da caixa envolvente das unidades + folga, não da tabela inteira (necessário para não varrer camadas
+nacionais de milhões de linhas a cada execução) — a combinação completa do motor (categorias, faixas, degraus,
+funções contínuas, combinadores alternativos) é o item L3-01-d/e, ainda não construído.
+
+Achado de merge: juntar os três worktrees de que este item depende (`wt/amc`, `wt/extrat`, `wt/t601b`, nenhum
+ainda integrado a `master`) produziu um `SyntaxError` real em `tests/api/cruzado_casos.py` — o merge automático
+(`git ort`) costurou dois `return Preparacao(...)` de branches diferentes de um jeito que partiu uma função no
+meio por uma `def` e derrubou um `),` de fechamento do dicionário `CASOS`. Sem o conserto (feito neste ramo),
+`make lint` e toda a suíte de API (que importa `tests/api/conftest.py`, que importa `cruzado_casos.py`) falhavam
+na coleta. `docs/openapi.json` continua sem nenhuma das 18 rotas `/api/amc` — débito pré-existente do próprio
+L3-01-a/b, não deste item; os dois testes que dependem dele (`test_amc_adversario_api.py` × 2,
+`test_cruzado.py::test_cobertura_100_por_cento`) seguem vermelhos, sem regressão nova. `docs/adr/0017` do
+L3-01-c também dispara `make sem-marcador` (falso positivo de uma palavra comum em português que contém a
+sequência proibida por acaso) — não é código deste item, não corrigido aqui.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
