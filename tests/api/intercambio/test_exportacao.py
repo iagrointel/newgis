@@ -37,7 +37,7 @@ def test_geojsonseq_ida_e_volta_geometria_e_atributos(inquilino_ic, camada_ic, w
     final = exportar_intercambio(cliente, {"tipo": "camada", "item_id": camada_ic["item_id"],
                                            "formato": "geojsonseq", "titulo": "zt_geojsonseq"})
     segundos = round(time.monotonic() - inicio, 2)
-    assert final["estado"] == "concluida", final
+    assert final["estado"] == "concluida", final.get("erro") or final
     caminho = baixar_intercambio(cliente, final["id"], tmp_path / "saida.geojsonl")
     linhas = [ln for ln in caminho.read_text(encoding="utf-8").splitlines() if ln.strip()]
     assert len(linhas) == FEICOES_PEQUENA
@@ -84,7 +84,7 @@ def test_filegdb_ida_e_volta_geometria_e_atributos_e_abre_pelo_driver_do_qgis(
     final = exportar_intercambio(cliente, {"tipo": "camada", "item_id": camada_ic["item_id"],
                                            "formato": "filegdb.zip", "titulo": "zt_filegdb"},
                                  timeout=240)
-    assert final["estado"] == "concluida", final
+    assert final["estado"] == "concluida", final.get("erro") or final
     assert final["avisos"] and "OpenFileGDB" in final["avisos"][0], final["avisos"]
     caminho = baixar_intercambio(cliente, final["id"], tmp_path / "saida_filegdb.zip")
     extraido = tmp_path / "extraido"
@@ -163,7 +163,7 @@ def test_adversario_shapefile_campo_longo_e_data_tem_aviso_de_truncamento(
 
     final = exportar_intercambio(cliente, {"tipo": "camada", "item_id": item_id, "formato": "shapefile.zip",
                                            "titulo": "zt_adversario"})
-    assert final["estado"] == "concluida", final
+    assert final["estado"] == "concluida", final.get("erro") or final
     avisos = final["avisos"]
     assert any("mais de 10 caracteres" in a and "campo_muito_longo_de_verdade" in a for a in avisos), avisos
     assert any("data-hora" in a and "data_do_evento" in a for a in avisos), avisos

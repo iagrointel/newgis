@@ -18,7 +18,7 @@ def test_escrow_do_inquilino_com_20_camadas_em_tempo_medido(inquilino_ic, camada
     inicio = time.monotonic()
     final = exportar_intercambio(cliente, {"tipo": "inquilino"}, timeout=300)
     segundos = round(time.monotonic() - inicio, 2)
-    assert final["estado"] == "concluida", final
+    assert final["estado"] == "concluida", final.get("erro") or final
     relatorio = final["relatorio"]
     assert relatorio["camadas"] >= 20, relatorio
     assert relatorio["feicoes"] >= 20 * 100, relatorio

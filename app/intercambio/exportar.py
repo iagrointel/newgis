@@ -116,6 +116,13 @@ def _avisos_da_camada(cur, fmt: FormatoSaida, campos: list[dict], schema: str, t
             max_len = {k: int(v) for k, v in cur.fetchone().items() if v is not None}
         mapa_dbf, por_campo = avisos_mod.avisos_shapefile(campos, max_len)
         avisos += por_campo
+    if fmt.nome == "filegdb.zip":
+        bigints = [c["nome"] for c in campos if c.get("tipo") == "bigint"]
+        if bigints:
+            avisos.append(
+                "campos inteiros de 64 bits (" + ", ".join(sorted(bigints)) + ") viram número real no "
+                "FileGDB: o driver OpenFileGDB não tem tipo Integer64 (medido em 07/09/2026, GDAL 3.8.4)"
+            )
     if fmt.crs_fixo is None and srid_alvo != srid_origem:
         avisos.append(f"reprojetado de EPSG:{srid_origem} para EPSG:{srid_alvo} a pedido do usuário")
     return avisos, mapa_dbf
@@ -130,10 +137,34 @@ def _guarda_disco(ctx, estimativa_bytes: int) -> None:
         )
 
 
+# Tipos de geometria que o catálogo grava em `item.dados.geometria` (o mesmo vocabulário de
+# `plat.camada_preparar`) e o nome que o `-nlt` do ogr2ogr entende.
+GEOMETRIA_NLT = {
+    "point": "POINT", "multipoint": "MULTIPOINT", "linestring": "LINESTRING",
+    "multilinestring": "MULTILINESTRING", "polygon": "POLYGON", "multipolygon": "MULTIPOLYGON",
+    "geometrycollection": "GEOMETRYCOLLECTION",
+}
+
+
+def _nlt(geometria: str | None) -> str | None:
+    """Nome OGR do tipo de geometria da camada, ou None quando o catálogo diz 'Geometry' (tipo misto).
+
+    Sem isto o ogr2ogr recebe a consulta como geometria DESCONHECIDA (wkbUnknown) e o driver OpenFileGDB
+    recusa: `ERROR 6: Unsupported geometry type` (medido em 07/09/2026, GDAL 3.8.4) — o FileGDB exige tipo
+    declarado por classe de feição. Os demais drivers aceitam wkbUnknown, mas declarar o tipo também os
+    deixa mais fiéis (GPKG grava a tabela gpkg_geometry_columns com o tipo certo em vez de GEOMETRY)."""
+    if not geometria:
+        return None
+    return GEOMETRIA_NLT.get(str(geometria).lower())
+
+
 def _argv_ogr2ogr(fmt: FormatoSaida, conninfo: str, destino: str, sql: str, nome_saida: str,
-                  srid_origem: int, srid_alvo: int) -> list[str]:
+                  srid_origem: int, srid_alvo: int, geometria: str | None = None) -> list[str]:
     argv = ["ogr2ogr", "-f", fmt.driver, destino, conninfo,
             "-sql", sql, "-nln", nome_saida, "-a_srs", f"EPSG:{srid_origem}"]
+    nlt = _nlt(geometria) if fmt.geometria == "nativa" else None
+    if nlt:
+        argv += ["-nlt", nlt]
     if srid_alvo != srid_origem:
         argv += ["-t_srs", f"EPSG:{srid_alvo}"]
     for o in fmt.opcoes_camada:
@@ -147,8 +178,10 @@ def _argv_ogr2ogr(fmt: FormatoSaida, conninfo: str, destino: str, sql: str, nome
 def _rodar_ogr2ogr(ctx, argv: list[str]) -> None:
     r = ctx.subprocesso(argv)
     if r.returncode != 0:
-        linhas = [ln for ln in (r.stderr or "").splitlines() if ln.strip()]
-        raise FalhaDefinitiva(f"ogr2ogr falhou: {(linhas[-1] if linhas else 'sem detalhe')[:200]}")
+        # a ÚLTIMA linha do ogr2ogr é genérica ("translation from sql statement."): quem diz a causa é a
+        # linha ERROR que vem antes. Guardar as 3 últimas custou uma sessão inteira de depuração em 07/09.
+        linhas = [ln.strip() for ln in (r.stderr or "").splitlines() if ln.strip()]
+        raise FalhaDefinitiva(f"ogr2ogr falhou: {' | '.join(linhas[-3:])[:400] or 'sem detalhe'}")
 
 
 def _contar_na_saida(ctx, caminho: str, camada: str | None = None) -> int | None:
@@ -258,7 +291,8 @@ def _exportar_uma(ctx, conninfo: str, camada: dict, fmt: FormatoSaida, srid_alvo
             destino = sub / f"{nome_saida}.{fmt.extensao}"
 
     sql = _sql_select(camada["schema"], camada["tabela"], campos, wkt=(fmt.geometria == "wkt"))
-    argv = _argv_ogr2ogr(fmt, conninfo, str(destino), sql, nome_saida, srid_origem, alvo)
+    argv = _argv_ogr2ogr(fmt, conninfo, str(destino), sql, nome_saida, srid_origem, alvo,
+                         camada.get("geometria"))
     if destino_compartilhado is not None and destino.exists():
         argv += ["-update", "-append"]
     _rodar_ogr2ogr(ctx, argv)
