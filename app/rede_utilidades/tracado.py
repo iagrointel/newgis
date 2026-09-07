@@ -29,6 +29,7 @@ pacote (ex.: chave "lado_1 -> lado_2, fechado"; transformador "alta -> baixa"), 
 `GET topologia/alcance` (item L4-01-b) fica como estava: alcance puro sobre `rede_topo_aresta`, sem estas
 arestas virtuais nem barreira — é o "traçado mínimo" da refutação daquele item, não este."""
 
+import json
 import time
 import uuid as uuid_mod
 
@@ -142,6 +143,56 @@ def _info_tipos(cur, rede_id: str, tipo_ids: set) -> dict:
     return {str(r["id"]): {"chave": r["chave"], "nome": r["nome"], "grupo": r["grupo"]} for r in cur.fetchall()}
 
 
+def elementos_e_geometria(cur, rede_id: str, alcancados) -> tuple[list[dict], dict | None]:
+    """Os elementos (terminais de dispositivo alcançados + trechos com AS DUAS pontas alcançadas) e a
+    geometria agregada em GeoJSON, a partir de um conjunto de nós de topologia. Extraído de `tracar` para ser
+    o MESMO formato de saída dos traçados de montante/jusante (`fluxo.py`, item L4-18) — dois traçados que
+    devolvessem formatos diferentes seriam duas APIs com um nome só."""
+    alcancados = list(alcancados)
+    cur.execute(
+        "SELECT origem_id AS feicao_id, tipo_id, terminal_num FROM plat.rede_topo_no "
+        "WHERE rede_id = %s::uuid AND papel = 'terminal' AND id = ANY(%s::uuid[])",
+        (rede_id, alcancados),
+    )
+    elementos = [
+        {"feicao_id": str(row["feicao_id"]), "tipo_id": str(row["tipo_id"]), "terminal": row["terminal_num"]}
+        for row in cur.fetchall()
+    ]
+    cur.execute(
+        "SELECT DISTINCT origem_id AS feicao_id, tipo_id FROM plat.rede_topo_aresta "
+        "WHERE rede_id = %s::uuid AND no_origem_id = ANY(%s::uuid[]) AND no_destino_id = ANY(%s::uuid[])",
+        (rede_id, alcancados, alcancados),
+    )
+    elementos += [
+        {"feicao_id": str(row["feicao_id"]), "tipo_id": str(row["tipo_id"]) if row["tipo_id"] else None,
+         "terminal": None}
+        for row in cur.fetchall()
+    ]
+
+    tipos = _info_tipos(cur, rede_id, {e["tipo_id"] for e in elementos if e["tipo_id"]})
+    for e in elementos:
+        info = tipos.get(e["tipo_id"], {})
+        e["grupo"] = info.get("grupo")
+        e["tipo_chave"] = info.get("chave")
+        e["tipo_nome"] = info.get("nome")
+
+    geometria = None
+    if alcancados:
+        cur.execute(
+            "SELECT ST_AsGeoJSON(ST_Collect(geom)) AS geojson FROM ("
+            "  SELECT geom FROM plat.rede_topo_no WHERE rede_id = %s::uuid AND id = ANY(%s::uuid[])"
+            "  UNION ALL"
+            "  SELECT geom FROM plat.rede_topo_aresta WHERE rede_id = %s::uuid"
+            "    AND no_origem_id = ANY(%s::uuid[]) AND no_destino_id = ANY(%s::uuid[])"
+            ") u",
+            (rede_id, alcancados, rede_id, alcancados, alcancados),
+        )
+        linha_geo = cur.fetchone()
+        if linha_geo and linha_geo["geojson"]:
+            geometria = json.loads(linha_geo["geojson"])
+    return elementos, geometria
+
+
 def tracar(cur, tenant_id: int, rede_id: str, tipo: str, pontos_partida: list[dict],
            barreiras: list[dict]) -> dict:
     """Traça `tipo` ('conectado' ou 'subrede') a partir de `pontos_partida`, parando em `barreiras`. Devolve
@@ -190,50 +241,7 @@ def tracar(cur, tenant_id: int, rede_id: str, tipo: str, pontos_partida: list[di
     )
     alcancados = {str(row["no_id"]) for row in cur.fetchall()}
 
-    cur.execute(
-        "SELECT origem_id AS feicao_id, tipo_id, terminal_num FROM plat.rede_topo_no "
-        "WHERE rede_id = %s::uuid AND papel = 'terminal' AND id = ANY(%s::uuid[])",
-        (rede_id, list(alcancados)),
-    )
-    elementos_ponto = [
-        {"feicao_id": str(row["feicao_id"]), "tipo_id": str(row["tipo_id"]), "terminal": row["terminal_num"]}
-        for row in cur.fetchall()
-    ]
-    cur.execute(
-        "SELECT DISTINCT origem_id AS feicao_id, tipo_id FROM plat.rede_topo_aresta "
-        "WHERE rede_id = %s::uuid AND no_origem_id = ANY(%s::uuid[]) AND no_destino_id = ANY(%s::uuid[])",
-        (rede_id, list(alcancados), list(alcancados)),
-    )
-    elementos_linha = [
-        {"feicao_id": str(row["feicao_id"]), "tipo_id": str(row["tipo_id"]) if row["tipo_id"] else None,
-         "terminal": None}
-        for row in cur.fetchall()
-    ]
-    elementos = elementos_ponto + elementos_linha
-
-    tipos = _info_tipos(cur, rede_id, {e["tipo_id"] for e in elementos if e["tipo_id"]})
-    for e in elementos:
-        info = tipos.get(e["tipo_id"], {})
-        e["grupo"] = info.get("grupo")
-        e["tipo_chave"] = info.get("chave")
-        e["tipo_nome"] = info.get("nome")
-
-    geometria = None
-    if alcancados:
-        cur.execute(
-            "SELECT ST_AsGeoJSON(ST_Collect(geom)) AS geojson FROM ("
-            "  SELECT geom FROM plat.rede_topo_no WHERE rede_id = %s::uuid AND id = ANY(%s::uuid[])"
-            "  UNION ALL"
-            "  SELECT geom FROM plat.rede_topo_aresta WHERE rede_id = %s::uuid"
-            "    AND no_origem_id = ANY(%s::uuid[]) AND no_destino_id = ANY(%s::uuid[])"
-            ") u",
-            (rede_id, list(alcancados), rede_id, list(alcancados), list(alcancados)),
-        )
-        linha_geo = cur.fetchone()
-        if linha_geo and linha_geo["geojson"]:
-            import json as _json
-
-            geometria = _json.loads(linha_geo["geojson"])
+    elementos, geometria = elementos_e_geometria(cur, rede_id, alcancados)
 
     duracao_ms = int((time.perf_counter() - inicio) * 1000)
     return {

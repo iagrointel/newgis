@@ -122,11 +122,12 @@ class PontoTracado(BaseModel):
 
 
 class TracadoEntrada(BaseModel):
-    """`tipo=conectado|subrede` (item L4-02-a) exige `pontos_partida`; `tipo=caminho_curto` (item L4-02-d)
+    """`tipo=montante|jusante` (item L4-18) exige `pontos_partida` e anda pela direção de fluxo declarada em
+    atributo; `tipo=conectado|subrede` (item L4-02-a) exige `pontos_partida`; `tipo=caminho_curto` (item L4-02-d)
     exige um único ponto em `pontos_partida` (a origem) e `destino`; `tipo=lacos` e `tipo=isolados` não
     exigem `pontos_partida` (operam sobre a rede inteira) — a validação por tipo é feita na rota, não aqui,
     porque cada tipo tem uma exigência diferente sobre a MESMA lista."""
-    tipo: str = Field(pattern="^(conectado|subrede|lacos|caminho_curto|isolados)$")
+    tipo: str = Field(pattern="^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante)$")
     pontos_partida: list[PontoTracado] = Field(default_factory=list, max_length=50)
     destino: PontoTracado | None = None
     barreiras: list[PontoTracado] = Field(default_factory=list, max_length=200)
@@ -165,3 +166,31 @@ class TopoArestaModelo(BaseModel):
     comprimento_m: float
     fase_bitmask: int | None
     atributos: dict
+
+
+# --- rede simples (item L4-18-rede-simples-trace-network) ---------------------------------------------
+
+class AtributoRede(BaseModel):
+    """Atributo DE REDE: um campo da camada de origem que o inquilino declara como parte do modelo de rede
+    (é o que o traçado pode usar como custo em `caminho_curto`). Declarar é o que separa um campo qualquer
+    da camada de um atributo de rede."""
+    nome: str = Field(min_length=1, max_length=63)
+    tipo_dado: str = Field(default="texto", pattern="^(texto|inteiro|real|data|booleano)$")
+    de: str = Field(default="linha", pattern="^(linha|ponto)$")
+
+
+class RedeSimplesEntrada(BaseModel):
+    """Criação de uma rede simples a partir de duas camadas do inquilino. `camada_ponto_id` é opcional: uma
+    rede simples pode ser só de trechos (hidrografia sem camada de nó, por exemplo). `campo_direcao` é o
+    NOME do campo da camada de linhas que carrega a direção de fluxo, e `mapa_direcao` traduz os valores
+    desse campo (em minúsculas, sem espaço nas pontas) para o vocabulário fechado
+    digitalizada/contra/indeterminada; sem `campo_direcao`, toda a rede é lida como digitalizada."""
+    nome: str = Field(min_length=1, max_length=200)
+    disciplina: str = Field(pattern="^(" + "|".join(DISCIPLINAS) + ")$")
+    descricao: str | None = Field(default=None, max_length=2000)
+    tolerancia_m: float = Field(default=0.05, gt=0, le=10)
+    camada_linha_id: str = Field(min_length=36, max_length=36)
+    camada_ponto_id: str | None = Field(default=None, min_length=36, max_length=36)
+    campo_direcao: str | None = Field(default=None, min_length=1, max_length=63)
+    mapa_direcao: dict[str, str] = Field(default_factory=dict)
+    atributos_rede: list[AtributoRede] = Field(default_factory=list, max_length=50)

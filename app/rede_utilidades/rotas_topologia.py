@@ -20,7 +20,7 @@ from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
-from app.rede_utilidades import feicoes, lacos, topologia, tracado
+from app.rede_utilidades import feicoes, fluxo, lacos, topologia, tracado
 from app.rede_utilidades.modelos import (
     Feicao,
     FeicaoLinhaEntrada,
@@ -321,6 +321,11 @@ def _tracar_sincrono(rid: str, corpo: TracadoEntrada, auth: Auth, request: Reque
                     cur, auth.tenant_id, rid, corpo.tipo,
                     [p.model_dump() for p in corpo.pontos_partida], barreiras,
                 )
+            elif corpo.tipo in fluxo.TIPOS_FLUXO:
+                resultado = fluxo.tracar_fluxo(
+                    cur, auth.tenant_id, rid, corpo.tipo,
+                    [p.model_dump() for p in corpo.pontos_partida], barreiras,
+                )
             elif corpo.tipo == "lacos":
                 resultado = lacos.detectar_lacos(cur, auth.tenant_id, rid, barreiras)
             elif corpo.tipo == "isolados":
@@ -354,7 +359,10 @@ async def tracar_rede(rede_id: str, corpo: TracadoEntrada, request: Request,
     `tipo=lacos` (ciclos por componente biconexo, `pgr_biconnectedComponents`), `tipo=isolados` (elementos sem
     caminho a nenhuma feição da categoria `categoria_controlador`, padrão `fonte`, `pgr_connectedComponents`)
     ou `tipo=caminho_curto` (origem em `pontos_partida[0]`, `destino`, custo = `atributo_custo` ou o
-    comprimento geodésico por padrão; `k` alternativas por `pgr_ksp` quando `k>1`). Ponto de partida, destino
+    comprimento geodésico por padrão; `k` alternativas por `pgr_ksp` quando `k>1`); ou, item
+    L4-18-rede-simples-trace-network, `tipo=montante`/`tipo=jusante`, que andam pela DIREÇÃO DE FLUXO
+    declarada no atributo `direcao_fluxo` de cada trecho (digitalizada/contra/indeterminada) e param, com
+    aviso por trecho, em toda aresta indeterminada. Ponto de partida, destino
     e barreira são a mesma forma: feição+terminal ou coordenada com tolerância. Não exige `rede.editar`: é
     leitura sobre o índice já construído (mesmo privilégio de `topologia/alcance`), nunca grava nada na rede.
     Sem `response_model` fixo porque cada `tipo` devolve um formato diferente (ver `docs/openapi.json` para o
