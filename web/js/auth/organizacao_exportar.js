@@ -50,7 +50,9 @@ async function montarEstimativa() {
     tamanho: formatarBytes(e.bytes), itens: e.n_itens, camadas: e.n_camadas, arquivos: e.n_arquivos,
   });
   botao.disabled = !e.disponivel;
-  if (!e.disponivel) alvo.textContent += ` ${t('orgexp.cota_gasta', { maximo: e.maximo_por_dia })}`;
+  const cota = document.getElementById('exp-cota');
+  cota.hidden = e.disponivel;
+  cota.textContent = e.disponivel ? '' : t('orgexp.cota_gasta', { maximo: e.maximo_por_dia });
 }
 
 async function pedir(aviso) {
