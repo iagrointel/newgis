@@ -546,6 +546,7 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("GET", "/api/conexoes/{id}/colecoes/{colecao}/feicoes"): Caso(
         lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/feicoes"
+    ),
     # ---- L3-19-multiescala: conjunto/fator/execução são do INQUILINO (tenant_id + RLS, mesma classe da
     # conexão acima, não do registro compartilhado do acervo); GET/POST/DELETE de lista agem só sobre o
     # próprio chamador, GET/DELETE/POST por id de B são cross-tenant puro (404, a RLS nunca deixa ver a linha).
