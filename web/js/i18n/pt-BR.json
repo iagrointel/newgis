@@ -902,6 +902,11 @@
  "controladores.sem_subrede": "esta rede ainda não tem subrede com controlador",
  "controladores.atualizar": "Atualizar subrede",
  "controladores.atualizada": "Subrede atualizada: traçado refeito e estado limpo.",
+ "controladores.atualizar_sujas": "Atualizar subredes sujas",
+ "controladores.lote_enfileirado": "Atualização em lote enfileirada (job {job}). Acompanhe em Trabalhos.",
+ "controladores.exportar": "Exportar",
+ "controladores.comprimento": "Comprimento (m)",
+ "controladores.sem_comprimento": "—",
  "controladores.remover": "Remover controlador",
  "controladores.removido": "Controlador removido.",
  "controladores.falhou": "não foi possível ler ou alterar o controlador"
