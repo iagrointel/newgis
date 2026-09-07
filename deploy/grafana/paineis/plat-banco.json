@@ -1,0 +1,248 @@
+{
+  "uid": "plat-banco",
+  "title": "Plataforma — banco",
+  "description": "Réplica, WAL, tabelas maiores e consultas mais lentas. Fonte: postgres_exporter com as consultas próprias de deploy/postgres_exporter_queries.yaml (os coletores stat_user_tables ficam DESLIGADOS de propósito: mediram 231.807 séries neste cluster compartilhado). pg_stat_statements não está pré-carregado neste cluster: o quadro de consulta lenta lê pg_stat_activity.",
+  "tags": [
+    "plat"
+  ],
+  "timezone": "browser",
+  "editable": false,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "É réplica?",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "max(pg_replication_is_replica)",
+          "refId": "A",
+          "legendFormat": "1 = réplica",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Atraso de replicação",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 18,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "pg_replication_lag_seconds",
+          "refId": "A",
+          "legendFormat": "atraso"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "type": "timeseries",
+      "title": "WAL — tamanho e segmentos",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "pg_wal_size_bytes",
+          "refId": "A",
+          "legendFormat": "bytes de WAL"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "type": "timeseries",
+      "title": "WAL — segmentos",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "pg_wal_segments",
+          "refId": "A",
+          "legendFormat": "segmentos"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "type": "bargauge",
+      "title": "10 maiores tabelas do schema plat",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "topk(10, plat_tabela_maior_bytes)",
+          "refId": "A",
+          "legendFormat": "{{tabela}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "displayMode": "gradient",
+        "orientation": "horizontal"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Transação mais longa agora, por estado",
+      "description": "Segundos da transação aberta há mais tempo, por estado. Substitui a leitura de pg_stat_statements: medido em 07/09/2026, este cluster tem a extensão instalada mas NÃO pré-carregada (shared_preload_libraries = timescaledb,pg_cron,pgaudit), e ligá-la exige reiniciar um banco compartilhado por dezenas de frentes da casa. Ver deploy/postgres_exporter_queries.yaml para a consulta pronta de quando ligar.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "refId": "A",
+          "expr": "pg_stat_activity_max_tx_duration{datname=\"iagro_sat\"}",
+          "legendFormat": "{{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {}
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+# Fonte de dado dos painéis do item L7-06-d. O `uid` é FIXO (`plat-prometheus`) porque cada painel de
+# deploy/grafana/paineis/*.json aponta para ele pelo uid — é isso que faz o mesmo arquivo de painel
+# servir no Grafana da casa (hospedado) e no perfil `observabilidade` do appliance sem edição nenhuma.
+# `editable: false`: quem muda a fonte é o arquivo, nunca a interface.
+apiVersion: 1
+datasources:
+  - name: Prometheus (plataforma)
+    uid: plat-prometheus
+    type: prometheus
+    access: proxy
+    url: http://127.0.0.1:9090
+    isDefault: false
+    editable: false
+    jsonData:
+      timeInterval: 15s

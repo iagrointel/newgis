@@ -1,0 +1,249 @@
+{
+  "uid": "plat-por-inquilino",
+  "title": "Plataforma — por inquilino",
+  "description": "Mesmas medidas, recortadas por inquilino. O seletor lista o `tenant` (plat.tenant.id, inteiro opaco) — nunca o slug, que pode carregar o nome do cliente.",
+  "tags": [
+    "plat"
+  ],
+  "timezone": "browser",
+  "editable": false,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "inquilino",
+        "label": "Inquilino (id)",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "plat-prometheus"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values(plat_http_requests_total{tenant!=\"-\"}, tenant)",
+          "refId": "var"
+        },
+        "refresh": 1,
+        "includeAll": false,
+        "multi": false,
+        "sort": 3,
+        "current": {},
+        "description": "tenant=\"-\" é o pedido SEM inquilino resolvido (login que falhou, 404 de caminho arbitrário): não é um inquilino e por isso fica fora do seletor."
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Requisições por segundo, por rota",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "sum by (rota) (rate(plat_http_requests_total{tenant=\"$inquilino\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "{{rota}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "type": "timeseries",
+      "title": "Respostas por código de status",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "sum by (status) (rate(plat_http_requests_total{tenant=\"$inquilino\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "type": "stat",
+      "title": "Cota de armazenamento usada",
+      "description": "Conexões abertas POR INQUILINO não entram aqui: a única fonte seria application_name='plat:<id>', que só existe na conexão enquanto ela atende um pedido daquele inquilino — série que aparece e some conforme o instante do scrape não serve de painel.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 8,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "refId": "A",
+          "instant": true,
+          "expr": "100 * sum(plat_bucket_usado_bytes{tenant_id=\"$inquilino\"}) / clamp_min(sum(plat_bucket_cota_bytes{tenant_id=\"$inquilino\"}), 1)",
+          "legendFormat": "usado"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Tamanho do schema de dado",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 8,
+        "w": 8,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "sum(plat_tenant_dado_bytes{tenant_id=\"$inquilino\"}) or vector(0)",
+          "refId": "A",
+          "legendFormat": "bytes",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Objetos guardados",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "plat-prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 8,
+        "w": 8,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "plat-prometheus"
+          },
+          "expr": "sum(plat_bucket_objetos{tenant_id=\"$inquilino\"}) or vector(0)",
+          "refId": "A",
+          "legendFormat": "objetos",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    }
+  ]
+}

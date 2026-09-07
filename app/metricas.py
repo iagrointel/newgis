@@ -132,10 +132,44 @@ class _ColetorFila(Collector):
             "Horas desde a última execução OK de backup/drill (item L7-06-b); alto de propósito se nunca houve",
             labels=["tipo"],
         )
+        duracao = GaugeMetricFamily(
+            "plat_backup_ultima_duracao_segundos",
+            "Duração da ÚLTIMA execução OK de backup/drill, em segundos (item L7-06-d)",
+            labels=["tipo"],
+        )
+        tamanho = GaugeMetricFamily(
+            "plat_backup_ultimo_bytes",
+            "Tamanho do artefato da ÚLTIMA execução OK de backup/drill, em bytes (item L7-06-d)",
+            labels=["tipo"],
+        )
+        usuarios = GaugeMetricFamily(
+            "plat_usuarios_ativos_24h",
+            "Usuários distintos com acesso registrado nas últimas 24 h, agregado em todos os "
+            "inquilinos (sem rótulo por inquilino, usuário, IP ou token)",
+        )
+        bucket_cota = GaugeMetricFamily(
+            "plat_bucket_cota_bytes", "Cota de armazenamento do inquilino, em bytes", labels=["tenant_id"]
+        )
+        bucket_usado = GaugeMetricFamily(
+            "plat_bucket_usado_bytes", "Bytes guardados pelo inquilino (arquivos vivos)", labels=["tenant_id"]
+        )
+        bucket_objetos = GaugeMetricFamily(
+            "plat_bucket_objetos", "Arquivos vivos do inquilino", labels=["tenant_id"]
+        )
+        dado_bytes = GaugeMetricFamily(
+            "plat_tenant_dado_bytes",
+            "Tamanho do schema de dado do inquilino, em bytes (substitui plat_tenant_schema_bytes do "
+            "postgres_exporter, que a RLS de plat.tenant deixava sempre vazia)",
+            labels=["tenant_id"],
+        )
         linha = None
         antigo_s = 0
         horas_backup = _SEM_PRAZO
         horas_drill = _SEM_PRAZO
+        ultimos = []
+        ativos_24h = 0
+        buckets = []
+        dados = []
         try:
             with self._obter_cursor() as cur:
                 cur.execute("SELECT * FROM plat.fila_estado()")
@@ -148,6 +182,14 @@ class _ColetorFila(Collector):
                 cur.execute("SELECT plat.backup_horas_desde_ultimo('drill') AS v")
                 r = cur.fetchone()["v"]
                 horas_drill = float(r) if r is not None else _SEM_PRAZO
+                cur.execute("SELECT * FROM plat.backup_ultimo()")
+                ultimos = cur.fetchall()
+                cur.execute("SELECT plat.usuarios_ativos_24h() AS v")
+                ativos_24h = cur.fetchone()["v"] or 0
+                cur.execute("SELECT * FROM plat.arquivo_bucket_uso()")
+                buckets = cur.fetchall()
+                cur.execute("SELECT * FROM plat.tenant_dado_bytes()")
+                dados = cur.fetchall()
         except Exception:  # noqa: BLE001 — a coleta de métrica nunca derruba o scrape nem a resposta
             log.exception("coletor de fila/alertas: falha ao consultar o banco")
         fila.add_metric(["pendente"], linha["pendentes"] if linha else 0)
@@ -158,8 +200,30 @@ class _ColetorFila(Collector):
         backup.add_metric(["drill"], horas_drill)
         yield fila
         yield workers
+        for u in ultimos:
+            # duracao_s/bytes podem ser nulos (execução registrada por rotina antiga, sem medida):
+            # nesse caso a SÉRIE não é criada, para o painel mostrar ausência em vez de zero falso.
+            if u["duracao_s"] is not None:
+                duracao.add_metric([u["tipo"]], float(u["duracao_s"]))
+            if u["bytes"] is not None:
+                tamanho.add_metric([u["tipo"]], float(u["bytes"]))
+        usuarios.add_metric([], ativos_24h)
+        for b in buckets:
+            tid = str(b["tenant_id"])
+            bucket_cota.add_metric([tid], float(b["cota_bytes"]))
+            bucket_usado.add_metric([tid], float(b["usado_bytes"]))
+            bucket_objetos.add_metric([tid], float(b["objetos"]))
+        for d in dados:
+            dado_bytes.add_metric([str(d["tenant_id"])], float(d["bytes"]))
         yield mais_antigo
         yield backup
+        yield duracao
+        yield tamanho
+        yield usuarios
+        yield bucket_cota
+        yield bucket_usado
+        yield bucket_objetos
+        yield dado_bytes
 
         caminho_cert = os.environ.get("PLAT_CERTIFICADO_CAMINHO")
         if caminho_cert:
