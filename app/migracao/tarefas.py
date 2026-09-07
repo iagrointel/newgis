@@ -19,8 +19,14 @@ from app.migracao import inventario as motor
 from app.migracao.portal import ClientePortal, ErroPortal, ErroRede
 from app.settings import settings
 
-MOTIVOS_DEFINITIVOS = ("nao_e_portal", "credencial_recusada", "url_insegura", "inventario_inexistente",
-                       "token_nao_emitido", "resposta_grande_demais")  # achado B3: repetir não encolhe a página
+MOTIVOS_DEFINITIVOS = (
+    "nao_e_portal",
+    "credencial_recusada",
+    "url_insegura",
+    "inventario_inexistente",
+    "token_nao_emitido",
+    "resposta_grande_demais",
+)  # achado B3: repetir não encolhe a página
 
 
 class InventariarParametros(BaseModel):
@@ -30,15 +36,21 @@ class InventariarParametros(BaseModel):
 @tarefa(
     nome="migracao.inventariar",
     descricao="Inventário só-leitura de um Portal/AGOL registrado como conexão (itens, grupos, usuários)",
-    parametros=InventariarParametros, pesado=False, memoria_mb=512, timeout_s=3600, tentativas=3,
-    chave=lambda p: f"inventariar:{p['inventario_id']}", perfil_minimo="admin",
+    parametros=InventariarParametros,
+    pesado=False,
+    memoria_mb=512,
+    timeout_s=3600,
+    tentativas=3,
+    chave=lambda p: f"inventariar:{p['inventario_id']}",
+    perfil_minimo="admin",
 )
 def migracao_inventariar(ctx, inventario_id: str) -> dict:
     with ctx.db() as cur:
         cur.execute(
             "SELECT i.id, i.tenant_id, i.portal_url, c.credencial_cifrada "
             "FROM plat.migracao_inventario i JOIN plat.conexao c ON c.id = i.conexao_id "
-            "WHERE i.id = %s::uuid", (inventario_id,),
+            "WHERE i.id = %s::uuid",
+            (inventario_id,),
         )
         linha = cur.fetchone()
     if linha is None:
@@ -52,14 +64,21 @@ def migracao_inventariar(ctx, inventario_id: str) -> dict:
             raise FalhaDefinitiva("credencial da conexão não pôde ser decifrada (PLAT_SECRET trocado?)") from e
 
     with ctx.db() as cur:
-        cur.execute("UPDATE plat.migracao_inventario SET estado = 'rodando', job_id = %s::uuid, "
-                    "iniciado_em = coalesce(iniciado_em, now()), mensagem = NULL WHERE id = %s::uuid",
-                    (str(ctx.job_id), inventario_id))
+        cur.execute(
+            "UPDATE plat.migracao_inventario SET estado = 'rodando', job_id = %s::uuid, "
+            "iniciado_em = coalesce(iniciado_em, now()), mensagem = NULL WHERE id = %s::uuid",
+            (str(ctx.job_id), inventario_id),
+        )
 
     cliente = ClientePortal(base=linha["portal_url"], token=token)
     execucao = motor.Inventario(
-        cliente, ctx.db, inventario_id, int(linha["tenant_id"]),
-        registrar=ctx.log, verificar=ctx.verificar, progresso=ctx.progresso,
+        cliente,
+        ctx.db,
+        inventario_id,
+        int(linha["tenant_id"]),
+        registrar=ctx.log,
+        verificar=ctx.verificar,
+        progresso=ctx.progresso,
     )
     try:
         totais = execucao.executar()
@@ -67,9 +86,11 @@ def migracao_inventariar(ctx, inventario_id: str) -> dict:
         mensagem = motor.mensagem_de_erro(e, token)
         definitivo = (not isinstance(e, ErroRede)) and e.motivo in MOTIVOS_DEFINITIVOS
         with ctx.db() as cur:
-            cur.execute("UPDATE plat.migracao_inventario SET estado = %s, mensagem = %s, "
-                        "terminado_em = CASE WHEN %s THEN now() ELSE terminado_em END WHERE id = %s::uuid",
-                        ("falhou" if definitivo else "rodando", mensagem, definitivo, inventario_id))
+            cur.execute(
+                "UPDATE plat.migracao_inventario SET estado = %s, mensagem = %s, "
+                "terminado_em = CASE WHEN %s THEN now() ELSE terminado_em END WHERE id = %s::uuid",
+                ("falhou" if definitivo else "rodando", mensagem, definitivo, inventario_id),
+            )
         if definitivo:
             raise FalhaDefinitiva(mensagem) from e
         raise
@@ -79,11 +100,86 @@ def migracao_inventariar(ctx, inventario_id: str) -> dict:
         # com mensagem em português, e não se tenta de novo (o mesmo item quebraria do mesmo jeito).
         mensagem = motor.mensagem_de_erro(e, token)
         with ctx.db() as cur:
-            cur.execute("UPDATE plat.migracao_inventario SET estado = 'falhou', mensagem = %s, "
-                        "terminado_em = now() WHERE id = %s::uuid", (mensagem, inventario_id))
+            cur.execute(
+                "UPDATE plat.migracao_inventario SET estado = 'falhou', mensagem = %s, "
+                "terminado_em = now() WHERE id = %s::uuid",
+                (mensagem, inventario_id),
+            )
         raise FalhaDefinitiva(mensagem) from e
 
     with ctx.db() as cur:
-        cur.execute("UPDATE plat.migracao_inventario SET estado = 'concluido', terminado_em = now(), "
-                    "mensagem = %s WHERE id = %s::uuid", (totais.get("aviso"), inventario_id))
+        cur.execute(
+            "UPDATE plat.migracao_inventario SET estado = 'concluido', terminado_em = now(), "
+            "mensagem = %s WHERE id = %s::uuid",
+            (totais.get("aviso"), inventario_id),
+        )
     return totais
+
+
+# ------------------------------------------------------------------ clonagem (item L2-08-b)
+class ClonarParametros(BaseModel):
+    clone_id: str = Field(min_length=36, max_length=36)
+
+
+@tarefa(
+    nome="migracao.clonar",
+    descricao="Clonagem de camadas hospedadas e tabelas de um FeatureServer da Esri para o catálogo (esquema, "
+    "domínios, "
+    "dados paginados, anexos, relacionamentos), retomável por camada",
+    parametros=ClonarParametros,
+    pesado=True,
+    memoria_mb=1024,
+    timeout_s=6 * 3600,
+    tentativas=3,
+    chave=lambda p: f"clonar:{p['clone_id']}",
+    perfil_minimo="admin",
+)
+def migracao_clonar(ctx, clone_id: str) -> dict:
+    from app.migracao import clonar as motor_clone
+
+    with ctx.db() as cur:
+        cur.execute(
+            "SELECT m.id, m.tenant_id, m.url_servico, m.criado_por, c.credencial_cifrada, c.url AS portal_url "
+            "FROM plat.migracao_clone m JOIN plat.conexao c ON c.id = m.conexao_id WHERE m.id = %s::uuid",
+            (clone_id,),
+        )
+        linha = cur.fetchone()
+    if linha is None:
+        raise FalhaDefinitiva(f"clonagem {clone_id} inexistente neste inquilino")
+    token = None
+    if linha["credencial_cifrada"]:
+        try:
+            token = credencial_mod.decifrar(linha["credencial_cifrada"], settings.PLAT_SECRET)
+        except ValueError as e:
+            raise FalhaDefinitiva("credencial da conexão não pôde ser decifrada (PLAT_SECRET trocado?)") from e
+    with ctx.db() as cur:
+        cur.execute(
+            "UPDATE plat.migracao_clone SET estado = 'rodando', job_id = %s::uuid, "
+            "iniciado_em = coalesce(iniciado_em, now()), mensagem = NULL WHERE id = %s::uuid",
+            (str(ctx.job_id), clone_id),
+        )
+    cliente = ClientePortal(base=linha["portal_url"], token=token)
+    execucao = motor_clone.Clonagem(
+        cliente,
+        ctx.db,
+        clone_id,
+        int(linha["tenant_id"]),
+        int(linha["criado_por"]),
+        registrar=ctx.log,
+        verificar=ctx.verificar,
+        progresso=ctx.progresso,
+    )
+    try:
+        return execucao.executar()
+    except ErroRede:
+        raise
+    except ErroPortal as e:
+        with ctx.db() as cur:
+            cur.execute(
+                "UPDATE plat.migracao_clone SET estado = 'falhou', mensagem = %s, terminado_em = now() "
+                "WHERE id = %s::uuid",
+                (motor.mensagem_de_erro(e, token), clone_id),
+            )
+        if e.motivo in MOTIVOS_DEFINITIVOS:
+            raise FalhaDefinitiva(motor.mensagem_de_erro(e, token)) from e
+        raise

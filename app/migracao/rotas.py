@@ -9,7 +9,6 @@ descarta a senha; a senha nunca é gravada e nunca volta em resposta.
 `GET .../{id}/relatorio.csv` devolve o CSV. Nenhuma rota devolve token, credencial cifrada ou dado pessoal:
 o único campo de pessoa que existe no inventário é o LOGIN."""
 
-
 import psycopg2
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
@@ -26,6 +25,9 @@ from app.jobs.registro import ordem_perfil
 from app.migracao import relatorio
 from app.migracao.classificacao import CLASSES
 from app.migracao.modelos import (
+    CloneCartao,
+    CloneEntrada,
+    ClonePagina,
     InventarioDetalhe,
     InventarioEntrada,
     InventarioPagina,
@@ -47,10 +49,17 @@ CAMPOS_ITEM = (
 
 def _cartao(r: dict) -> dict:
     return {
-        "id": str(r["id"]), "conexao_id": str(r["conexao_id"]), "estado": r["estado"],
-        "portal_url": r["portal_url"], "portal_nome": r["portal_nome"], "portal_versao": r["portal_versao"],
-        "totais": r["totais"] or {}, "job_id": str(r["job_id"]) if r["job_id"] else None,
-        "mensagem": r["mensagem"], "criado_em": iso(r["criado_em"]), "atualizado_em": iso(r["atualizado_em"]),
+        "id": str(r["id"]),
+        "conexao_id": str(r["conexao_id"]),
+        "estado": r["estado"],
+        "portal_url": r["portal_url"],
+        "portal_nome": r["portal_nome"],
+        "portal_versao": r["portal_versao"],
+        "totais": r["totais"] or {},
+        "job_id": str(r["job_id"]) if r["job_id"] else None,
+        "mensagem": r["mensagem"],
+        "criado_em": iso(r["criado_em"]),
+        "atualizado_em": iso(r["atualizado_em"]),
     }
 
 
@@ -97,7 +106,8 @@ def ver(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
         r = _carregar(cur, inv)
         cur.execute(
             "SELECT tipo, classificacao, contagem_total, tamanho_bytes FROM plat.migracao_item "
-            "WHERE inventario_id = %s::uuid", (inv,),
+            "WHERE inventario_id = %s::uuid",
+            (inv,),
         )
         linhas = [dict(x) for x in cur.fetchall()]
         cur.execute("SELECT count(*) AS n FROM plat.migracao_grupo WHERE inventario_id = %s::uuid", (inv,))
@@ -109,15 +119,25 @@ def ver(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
         chave = linha["classificacao"] if linha["classificacao"] in por_classe else "desconhecido"
         por_classe[chave] += 1
     return {
-        **_cartao(r), "portal_id": r["portal_id"], "retomada": r["retomada"] or {},
-        "por_tipo": relatorio.resumo_por_tipo(linhas), "por_classificacao": por_classe,
-        "grupos": grupos, "usuarios": usuarios,
+        **_cartao(r),
+        "portal_id": r["portal_id"],
+        "retomada": r["retomada"] or {},
+        "por_tipo": relatorio.resumo_por_tipo(linhas),
+        "por_classificacao": por_classe,
+        "grupos": grupos,
+        "usuarios": usuarios,
     }
 
 
 @router.get("/inventarios/{id}/itens", response_model=ItemPagina, openapi_extra=LER)
-def itens(id: str, tipo: str | None = None, classificacao: str | None = None, limite: int = 100,
-          deslocamento: int = 0, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+def itens(
+    id: str,
+    tipo: str | None = None,
+    classificacao: str | None = None,
+    limite: int = 100,
+    deslocamento: int = 0,
+    auth: Auth = autenticado(escopo_token="catalogo:ler"),
+):
     inv = uuid_ok(id, "inventario_inexistente", "inventário inexistente")
     if not 1 <= limite <= ITENS_LIMITE_MAX:
         raise ErroAPI(422, "limite_invalido", f"limite deve estar entre 1 e {ITENS_LIMITE_MAX}")
@@ -137,12 +157,14 @@ def relatorio_csv(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")
         _carregar(cur, inv)
         cur.execute(  # noqa: S608
             f"SELECT {CAMPOS_ITEM} FROM plat.migracao_item WHERE inventario_id = %s::uuid "
-            "ORDER BY tipo, lower(coalesce(titulo, ''))", (inv,),
+            "ORDER BY tipo, lower(coalesce(titulo, ''))",
+            (inv,),
         )
         linhas = [dict(r) for r in cur.fetchall()]
     corpo = relatorio.csv_de_itens(linhas)
     return Response(
-        content=corpo, media_type="text/csv; charset=utf-8",
+        content=corpo,
+        media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="inventario-{inv}.csv"'},
     )
 
@@ -154,9 +176,11 @@ def criar(corpo: InventarioEntrada, request: Request, auth: Auth = autenticado("
     # sobra inventário órfão (job_id NULL, nunca vai rodar) depois do 403 do serviço de job.
     tipo_job = servico.tipo_registrado("migracao.inventariar")
     if not auth.superadmin and ordem_perfil(auth.perfil) < ordem_perfil(tipo_job.perfil_minimo):
-        raise ErroAPI(403, "perfil_insuficiente",
-                      f"criar inventário exige perfil {tipo_job.perfil_minimo} ou superior "
-                      f"(o seu é {auth.perfil})")
+        raise ErroAPI(
+            403,
+            "perfil_insuficiente",
+            f"criar inventário exige perfil {tipo_job.perfil_minimo} ou superior (o seu é {auth.perfil})",
+        )
     cid = uuid_ok(corpo.conexao_id, "conexao_inexistente", "conexão inexistente")
     with db.db(auth.contexto()) as cur:
         cur.execute("SELECT id, tipo, url, credencial_cifrada FROM plat.conexao WHERE id = %s::uuid", (cid,))
@@ -164,16 +188,22 @@ def criar(corpo: InventarioEntrada, request: Request, auth: Auth = autenticado("
         if conexao is None:
             raise ErroAPI(404, "conexao_inexistente", "conexão inexistente")
         if conexao["tipo"] != "esri_rest":
-            raise ErroAPI(422, "conexao_nao_e_portal",
-                          "o inventário só roda sobre conexão do tipo esri_rest (Portal/AGOL)",
-                          {"tipo": conexao["tipo"]})
+            raise ErroAPI(
+                422,
+                "conexao_nao_e_portal",
+                "o inventário só roda sobre conexão do tipo esri_rest (Portal/AGOL)",
+                {"tipo": conexao["tipo"]},
+            )
 
     if corpo.usuario or corpo.senha:
         if not (corpo.usuario and corpo.senha):
             raise ErroAPI(422, "credencial_incompleta", "usuário e senha vêm juntos ou nenhum dos dois")
         try:
             token = ClientePortal.gerar_token(
-                conexao["url"], corpo.usuario, corpo.senha, referer=settings.PLAT_URL_PUBLICA,
+                conexao["url"],
+                corpo.usuario,
+                corpo.senha,
+                referer=settings.PLAT_URL_PUBLICA,
             )
         except ErroPortal as e:
             raise ErroAPI(422, e.motivo, f"generateToken recusado pelo portal ({e.motivo})") from e
@@ -192,8 +222,9 @@ def criar(corpo: InventarioEntrada, request: Request, auth: Auth = autenticado("
             inv = str(cur.fetchone()["id"])
         except psycopg2.Error as e:
             raise auth_comum.erro_do_banco(e) from e
-        registrar_evento(cur, request, "migracao/inventariar", "conexao", cid,
-                         {"inventario_id": inv, "portal_url": conexao["url"]})
+        registrar_evento(
+            cur, request, "migracao/inventariar", "conexao", cid, {"inventario_id": inv, "portal_url": conexao["url"]}
+        )
 
     job = servico.criar(sessao_de(auth), "migracao.inventariar", {"inventario_id": inv})
     with db.db(auth.contexto()) as cur:
@@ -209,6 +240,98 @@ def apagar(id: str, request: Request, auth: Auth = autenticado("conteudo.registr
         if r["criado_por"] != auth.usuario_id and not auth.tem("conteudo.editar_tudo"):
             raise ErroAPI(403, "sem_permissao", "só quem criou o inventário ou conteudo.editar_tudo")
         cur.execute("DELETE FROM plat.migracao_inventario WHERE id = %s::uuid", (inv,))
-        registrar_evento(cur, request, "migracao/inventario_apagar", "conexao", str(r["conexao_id"]),
-                         {"inventario_id": inv})
+        registrar_evento(
+            cur, request, "migracao/inventario_apagar", "conexao", str(r["conexao_id"]), {"inventario_id": inv}
+        )
+    return Response(status_code=204)
+
+
+# ------------------------------------------------------------------ clonagem de camadas hospedadas (item L2-08-b)
+def _clone_json(r: dict) -> dict:
+    return {
+        "id": str(r["id"]),
+        "conexao_id": str(r["conexao_id"]),
+        "url_servico": r["url_servico"],
+        "estado": r["estado"],
+        "camadas_pedidas": list(r["camadas_pedidas"]) if r["camadas_pedidas"] is not None else None,
+        "job_id": str(r["job_id"]) if r["job_id"] else None,
+        "mensagem": r["mensagem"],
+        "camadas": r["camadas"] or [],
+        "relatorio": r["relatorio"] or {},
+        "criado_em": r["criado_em"].isoformat(),
+        "atualizado_em": r["atualizado_em"].isoformat(),
+    }
+
+
+@router.get("/clones", response_model=ClonePagina, openapi_extra=LER)
+def listar_clones(auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    with db.db(auth.contexto()) as cur:
+        cur.execute("SELECT * FROM plat.migracao_clone ORDER BY criado_em DESC LIMIT 200")
+        itens = [_clone_json(r) for r in cur.fetchall()]
+    return {"total": len(itens), "itens": itens}
+
+
+@router.get("/clones/{id}", response_model=CloneCartao, openapi_extra=LER)
+def ver_clone(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    cid = uuid_ok(id, "clone_inexistente", "clonagem inexistente")
+    with db.db(auth.contexto()) as cur:
+        cur.execute("SELECT * FROM plat.migracao_clone WHERE id = %s::uuid", (cid,))
+        r = cur.fetchone()
+    if r is None:
+        raise ErroAPI(404, "clone_inexistente", "clonagem inexistente")
+    return _clone_json(r)
+
+
+@router.post("/clones", status_code=201, response_model=CloneCartao, openapi_extra=CRIAR)
+def criar_clone(corpo: CloneEntrada, request: Request, auth: Auth = autenticado("conteudo.publicar_camada")):
+    """Pede a clonagem (job `migracao.clonar`) das camadas/tabelas de um FeatureServer da conexão `esri_rest`.
+    `url_servico` tem de estar sob a URL da conexão (a credencial dela nunca viaja para outro host)."""
+    tipo_job = servico.tipo_registrado("migracao.clonar")
+    if not auth.superadmin and ordem_perfil(auth.perfil) < ordem_perfil(tipo_job.perfil_minimo):
+        raise ErroAPI(403, "perfil_insuficiente", f"clonar exige perfil {tipo_job.perfil_minimo} ou superior")
+    cid = uuid_ok(corpo.conexao_id, "conexao_inexistente", "conexão inexistente")
+    url = corpo.url_servico.strip().rstrip("/")
+    if "/FeatureServer" not in url and "/MapServer" not in url:
+        raise ErroAPI(422, "url_servico_invalida", "url_servico precisa apontar para um FeatureServer/MapServer")
+    with db.db(auth.contexto()) as cur:
+        cur.execute("SELECT id, tipo, url FROM plat.conexao WHERE id = %s::uuid", (cid,))
+        conexao = cur.fetchone()
+        if conexao is None:
+            raise ErroAPI(404, "conexao_inexistente", "conexão inexistente")
+        if conexao["tipo"] != "esri_rest":
+            raise ErroAPI(422, "conexao_nao_e_portal", "a clonagem só roda sobre conexão do tipo esri_rest")
+        from app.conexao.seguranca import _mesma_origem_de_confianca
+
+        if not _mesma_origem_de_confianca(conexao["url"], url):
+            raise ErroAPI(422, "url_servico_fora_da_conexao", "url_servico fica fora da origem da conexão")
+        try:
+            cur.execute(
+                "INSERT INTO plat.migracao_clone(tenant_id, conexao_id, url_servico, camadas_pedidas, criado_por) "
+                "VALUES (%s, %s::uuid, %s, %s, %s) RETURNING *",
+                (auth.tenant_id, cid, url, corpo.camadas, auth.usuario_id),
+            )
+            r = cur.fetchone()
+        except psycopg2.Error as e:
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(
+            cur, request, "migracao/clonar", "conexao", cid, {"clone_id": str(r["id"]), "url_servico": url}
+        )
+        job = servico.criar(sessao_de(auth), "migracao.clonar", {"clone_id": str(r["id"])})
+        cur.execute(
+            "UPDATE plat.migracao_clone SET job_id = %s::uuid WHERE id = %s::uuid RETURNING *",
+            (str(job["id"]), str(r["id"])),
+        )
+        r = cur.fetchone()
+    return _clone_json(r)
+
+
+@router.delete("/clones/{id}", status_code=204, openapi_extra=CRIAR)
+def apagar_clone(id: str, request: Request, auth: Auth = autenticado("conteudo.publicar_camada")):
+    """Apaga só o registro da clonagem; as camadas clonadas continuam no catálogo (são itens comuns)."""
+    cid = uuid_ok(id, "clone_inexistente", "clonagem inexistente")
+    with db.db(auth.contexto()) as cur:
+        cur.execute("DELETE FROM plat.migracao_clone WHERE id = %s::uuid RETURNING id", (cid,))
+        if cur.fetchone() is None:
+            raise ErroAPI(404, "clone_inexistente", "clonagem inexistente")
+        registrar_evento(cur, request, "migracao/clone_apagar", "migracao_clone", cid)
     return Response(status_code=204)
