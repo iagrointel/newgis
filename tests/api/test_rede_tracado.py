@@ -316,9 +316,13 @@ def test_transformador_e_a_fronteira_de_subrede(sessao_a, env, limpar_redes):
 # --- erros de validação --------------------------------------------------------------------------------
 
 def test_tipo_invalido_e_rejeitado(sessao_a, limpar_redes):
+    """Tipo fora do vocabulário do `tracar` é 422. O valor usado aqui era `montante`, que passou a EXISTIR no
+    item L4-18-rede-simples-trace-network; trocado por um nome que continua fora do vocabulário, para que o
+    teste siga provando o que sempre provou."""
     rid = _criar_rede(sessao_a, "tipo-invalido", limpar_redes)
     _importar_eletrica(sessao_a, rid)
-    r = sessao_a.post(f"/api/rede/{rid}/tracar", json={"tipo": "montante", "pontos_partida": [{"lon": 0, "lat": 0}]})
+    r = sessao_a.post(f"/api/rede/{rid}/tracar",
+                      json={"tipo": "voo_de_passaro", "pontos_partida": [{"lon": 0, "lat": 0}]})
     assert r.status_code == 422, r.text
 
 
