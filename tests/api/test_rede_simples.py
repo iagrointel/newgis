@@ -139,6 +139,16 @@ def test_camada_de_outro_tipo_e_recusada(sessao_a, camadas_sinteticas):
     assert r.status_code == 422 and r.json()["erro"] == "item_nao_e_camada", r.text
 
 
+def test_camada_de_geometria_errada_no_papel_e_recusada(sessao_a, camadas_sinteticas):
+    """A listagem do catálogo não devolve `dados`, então a tela não filtra por geometria: quem recusa é o
+    servidor. Camada de pontos no papel de linhas tem de sair com mensagem, nunca com uma rede vazia."""
+    linha, ponto = _itens(sessao_a, "geom-trocada")
+    r = sessao_a.post("/api/rede/simples", json={
+        "nome": f"{PREFIXO_TESTE}-simples-geom-trocada", "disciplina": "agua",
+        "camada_linha_id": ponto, "camada_ponto_id": linha})
+    assert r.status_code == 422 and r.json()["erro"] == "geometria_incompativel", r.text
+
+
 def test_campo_de_direcao_inexistente_e_recusado(sessao_a, camadas_sinteticas):
     linha, _ponto = _itens(sessao_a, "campo-ruim")
     r = sessao_a.post("/api/rede/simples", json={

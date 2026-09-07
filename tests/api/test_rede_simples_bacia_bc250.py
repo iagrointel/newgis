@@ -17,6 +17,7 @@ A conferência independente é `networkx`: o teste remonta o grafo dirigido a pa
 `ancestors` e compara conjunto a conjunto com o resultado do traçado."""
 
 import json
+import os
 import time
 from pathlib import Path
 
@@ -158,6 +159,11 @@ def test_montante_e_jusante_batem_com_networkx(sessao_a, bacia, rede_bacia, medi
     gravar("bacia_bc250_tracados_conferidos_contra_networkx", comparacoes, "traçados", comando)
     gravar("bacia_bc250_criar_rede_ms", rede_bacia["criar_ms"], "ms",
            comando + " (POST /api/rede/simples, camada -> feições -> topologia)")
+    # regra do laço: número de tempo só vale com a carga da máquina ao lado
+    gravar("carga_1min_quando_medido", round(os.getloadavg()[0], 2), "carga", "os.getloadavg()[0]")
+    livre_gb = round(int(next(linha.split()[1] for linha in Path("/proc/meminfo").read_text().splitlines()
+                              if linha.startswith("MemAvailable"))) / 1024 / 1024, 1)
+    gravar("ram_livre_gb_quando_medido", livre_gb, "GiB", "MemAvailable de /proc/meminfo")
 
 
 def test_aviso_de_indeterminada_cita_trecho_encostado_no_resultado(sessao_a, rede_bacia):
