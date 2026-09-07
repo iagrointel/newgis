@@ -17,12 +17,18 @@ uma métrica única "global" calculada aqui.
 from __future__ import annotations
 
 import logging
+import os
+import subprocess
 
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, Histogram, generate_latest
 from prometheus_client.core import GaugeMetricFamily
 from prometheus_client.registry import Collector
 
 log = logging.getLogger("plat.metricas")
+
+# Sem prazo declarado (nunca instalado, ou nunca passou): número alto de propósito — maior que
+# qualquer limiar de alerta razoável (dias/horas), para que "nunca aconteceu" dispare, não silencie.
+_SEM_PRAZO = 999_999
 
 REGISTRO = CollectorRegistry(auto_describe=True)
 
@@ -81,10 +87,31 @@ def registrar_job_processado(tipo: str, estado_final: str | None) -> None:
     JOBS_PROCESSADOS.labels(tipo=tipo, estado_final=estado_final or "desconhecido").inc()
 
 
+def _dias_restantes_certificado(caminho: str) -> float | None:
+    """Dias até o certificado em `caminho` (PEM) vencer, via `openssl x509` (CLI já presente na casa;
+    stdlib `ssl` não decodifica arquivo PEM solto sem socket vivo). `None` = não deu para ler (arquivo
+    ausente/ilegível) — o item L7-06-b trata isso como cláusula não medida, nunca como "ok"."""
+    try:
+        saida = subprocess.run(  # noqa: S603,S607 — comando fixo, caminho vem de configuração local
+            ["openssl", "x509", "-enddate", "-noout", "-in", caminho],
+            capture_output=True, text=True, timeout=2, check=True,
+        ).stdout.strip()
+        # formato: "notAfter=Sep  7 17:00:00 2026 GMT"
+        import datetime as _dt
+        venc = _dt.datetime.strptime(saida.split("=", 1)[1], "%b %d %H:%M:%S %Y %Z").replace(tzinfo=_dt.UTC)
+        return (venc - _dt.datetime.now(_dt.UTC)).total_seconds() / 86400.0
+    except Exception:  # noqa: BLE001 — leitura de certificado nunca derruba o scrape
+        log.exception("plat_certificado_dias_restantes: falha ao ler %s", caminho)
+        return None
+
+
 class _ColetorFila(Collector):
     """plat.fila_estado() é SECURITY DEFINER e devolve um agregado CROSS-INQUILINO (contagem só, sem
     tenant_id, sem slug): zero cardinalidade nova. Consultado a cada scrape (o Prometheus da casa faz
-    scrape a cada 15s; uma consulta agregada dessas não pesa no pool)."""
+    scrape a cada 15s; uma consulta agregada dessas não pesa no pool). Mesmo coletor também expõe, pelo
+    mesmo padrão (agregado, SECURITY DEFINER, sem cardinalidade nova), as famílias que o item
+    L7-06-b-alertas precisa: idade do job mais antigo rodando, horas desde o último backup/drill, e —
+    fora do banco — dias restantes do certificado configurado em `PLAT_CERTIFICADO_CAMINHO`."""
 
     def __init__(self, obter_cursor):
         self._obter_cursor = obter_cursor
@@ -96,18 +123,53 @@ class _ColetorFila(Collector):
         workers = GaugeMetricFamily(
             "plat_jobs_workers_vivos", "Processos worker com heartbeat nos últimos 90 segundos"
         )
+        mais_antigo = GaugeMetricFamily(
+            "plat_jobs_rodando_mais_antigo_segundos",
+            "Segundos desde que o job RODANDO há mais tempo começou (0 se não há nenhum rodando)",
+        )
+        backup = GaugeMetricFamily(
+            "plat_backup_horas_desde_ultimo",
+            "Horas desde a última execução OK de backup/drill (item L7-06-b); alto de propósito se nunca houve",
+            labels=["tipo"],
+        )
         linha = None
+        antigo_s = 0
+        horas_backup = _SEM_PRAZO
+        horas_drill = _SEM_PRAZO
         try:
             with self._obter_cursor() as cur:
                 cur.execute("SELECT * FROM plat.fila_estado()")
                 linha = cur.fetchone()
+                cur.execute("SELECT plat.fila_job_mais_antigo_rodando_segundos() AS v")
+                antigo_s = cur.fetchone()["v"]
+                cur.execute("SELECT plat.backup_horas_desde_ultimo('backup') AS v")
+                r = cur.fetchone()["v"]
+                horas_backup = float(r) if r is not None else _SEM_PRAZO
+                cur.execute("SELECT plat.backup_horas_desde_ultimo('drill') AS v")
+                r = cur.fetchone()["v"]
+                horas_drill = float(r) if r is not None else _SEM_PRAZO
         except Exception:  # noqa: BLE001 — a coleta de métrica nunca derruba o scrape nem a resposta
-            log.exception("plat_jobs_fila: falha ao consultar plat.fila_estado()")
+            log.exception("coletor de fila/alertas: falha ao consultar o banco")
         fila.add_metric(["pendente"], linha["pendentes"] if linha else 0)
         fila.add_metric(["rodando"], linha["rodando"] if linha else 0)
         workers.add_metric([], linha["workers_vivos"] if linha else 0)
+        mais_antigo.add_metric([], antigo_s)
+        backup.add_metric(["backup"], horas_backup)
+        backup.add_metric(["drill"], horas_drill)
         yield fila
         yield workers
+        yield mais_antigo
+        yield backup
+
+        caminho_cert = os.environ.get("PLAT_CERTIFICADO_CAMINHO")
+        if caminho_cert:
+            dias = _dias_restantes_certificado(caminho_cert)
+            certificado = GaugeMetricFamily(
+                "plat_certificado_dias_restantes",
+                "Dias até o certificado TLS configurado vencer (ausente se PLAT_CERTIFICADO_CAMINHO não estiver setado)",
+            )
+            certificado.add_metric([], dias if dias is not None else _SEM_PRAZO)
+            yield certificado
 
 
 _coletor_fila_registrado = False

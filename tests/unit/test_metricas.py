@@ -107,3 +107,27 @@ def test_um_token_de_verdade_gerado_como_o_do_produto_nunca_aparece_no_corpo_exp
     token_de_prova = "plat_" + secrets.token_urlsafe(32)
     metricas.registrar_requisicao("/_teste_token_nao_vaza", 200, 100099, 0.01)
     assert token_de_prova not in _registro_vazio()
+
+
+# ---------------------------------------------------------------- item L7-06-b-alertas: novas famílias
+
+
+def test_dias_restantes_certificado_curto_da_negativo_ou_perto_de_zero(tmp_path):
+    """openssl gera um certificado autoassinado válido por 1 dia (86400 s); a função devolve um número
+    de dias positivo bem menor que qualquer limiar de alerta razoável (14 d do portão)."""
+    import subprocess
+
+    cert = tmp_path / "curto.pem"
+    chave = tmp_path / "curto.key"
+    subprocess.run(
+        ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-keyout", str(chave), "-out", str(cert),
+         "-days", "1", "-nodes", "-subj", "/CN=teste-alertas-il706balert"],
+        check=True, capture_output=True,
+    )
+    dias = metricas._dias_restantes_certificado(str(cert))
+    assert dias is not None
+    assert 0 < dias <= 1.01
+
+
+def test_dias_restantes_certificado_arquivo_ausente_devolve_none():
+    assert metricas._dias_restantes_certificado("/caminho/que/nao/existe.pem") is None
