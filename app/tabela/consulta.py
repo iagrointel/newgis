@@ -79,7 +79,7 @@ def colunas_do_banco(cur, schema: str, tabela: str) -> list[dict]:
         (schema, tabela),
     )
     return [
-        {"nome": r["nome"], "udt": r["udt"], "classe": classe_do_tipo(r["udt"]), "aceita_nulo": r["aceita_nulo"]}
+        {"nome": r["nome"], "udt": r["udt"], "tipo": classe_do_tipo(r["udt"]), "aceita_nulo": r["aceita_nulo"]}
         for r in cur.fetchall()
     ]
 
@@ -101,7 +101,7 @@ def coluna_chave(cur, schema: str, tabela: str) -> str | None:
 
 def coluna_geometria(colunas: list[dict]) -> str | None:
     for c in colunas:
-        if c["classe"] == "geometria":
+        if c["tipo"] == "geometria":
             return c["nome"]
     return None
 
@@ -127,7 +127,7 @@ def filtro(colunas: list[dict], chave: str | None, geom: str | None, srid: int, 
     if busca:
         if len(busca) > limites.TABELA_BUSCA_MAX:
             raise ErroAPI(422, "busca_longa", f"a busca aceita no máximo {limites.TABELA_BUSCA_MAX} caracteres")
-        colunas_texto = [c for c in colunas if c["classe"] == "texto"]
+        colunas_texto = [c for c in colunas if c["tipo"] == "texto"]
         if not colunas_texto:
             partes.append("false")
         else:
@@ -174,7 +174,7 @@ def ordenacao(colunas: list[dict], chave: str | None, ordenar_por: str | None, o
     partes = []
     if ordenar_por:
         c = achar(colunas, ordenar_por, "ordenar_por")
-        if c["classe"] == "geometria":
+        if c["tipo"] == "geometria":
             raise ErroAPI(422, "coluna_invalida", "ordenar_por: não se ordena por coluna de geometria")
         partes.append(f"{_ident(c['nome'])} {direcao} NULLS LAST")
     if chave:
@@ -187,7 +187,7 @@ def ordenacao(colunas: list[dict], chave: str | None, ordenar_por: str | None, o
 def selecao(colunas_visiveis: list[dict], chave: str | None, geom: str | None, incluir_geometria: bool) -> str:
     """Lista do `SELECT`. Geometria nunca sai como coluna de atributo: quando pedida, sai como GeoJSON em
     4326, no campo separado `geometria`, para o mapa desenhar a mesma linha que a tabela mostra."""
-    partes = [f"{_ident(c['nome'])}" for c in colunas_visiveis if c["classe"] != "geometria"]
+    partes = [f"{_ident(c['nome'])}" for c in colunas_visiveis if c["tipo"] != "geometria"]
     if chave and chave not in [c["nome"] for c in colunas_visiveis]:
         partes.insert(0, _ident(chave))
     if incluir_geometria and geom:

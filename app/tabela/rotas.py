@@ -52,6 +52,7 @@ class PedidoLinhas(Filtro):
     ordenar_por: str | None = Field(default=None, max_length=63)
     ordem: str = Field(default="asc")
     geometria: bool = Field(default=False, description="devolve a geometria em GeoJSON 4326 para o mapa desenhar")
+    contar: bool = Field(default=True, description="conta o total sob o mesmo filtro; false devolve total nulo")
 
     @field_validator("por_pagina")
     @classmethod
@@ -134,7 +135,7 @@ def _colunas(cur, item: dict, usuario_id: int) -> tuple[list[dict], list[dict], 
         todas.append({
             "nome": c["nome"],
             "alias": v.get("alias") or aliases.get(c["nome"]) or c["nome"],
-            "tipo": c["classe"],
+            "tipo": c["tipo"],
             "udt": c["udt"],
             "aceita_nulo": c["aceita_nulo"],
             "chave": c["nome"] == chave,
@@ -204,8 +205,16 @@ def linhas(item_id: str, corpo: PedidoLinhas = Body(default_factory=PedidoLinhas
         alvo = f'{consulta.citar(schema)}.{consulta.citar(tabela)}'
         clausula = f" WHERE {onde}" if onde else ""
 
-        cur.execute(f"SELECT count(*) AS total FROM {alvo}{clausula}", params)
-        total = int(cur.fetchone()["total"])
+        # A contagem é um `count(*)` de verdade sob o mesmo filtro, e numa camada larga de 1 milhão de linhas
+        # ela custa mais que a página: a política de RLS vira `current_setting(...)`, que é PARALLEL RESTRICTED,
+        # então a varredura é serial (MEDIDO: 263 ms em 281 MB, contra 0,05 ms da página pelo índice). Trocar
+        # a página ou a ordem NÃO muda o total; por isso a tela pede `contar` uma vez, quando o filtro muda, e
+        # manda `contar: false` ao paginar e ao reordenar. Quem quiser o número em toda chamada só não manda o
+        # campo — o padrão continua contando.
+        total = None
+        if corpo.contar:
+            cur.execute(f"SELECT count(*) AS total FROM {alvo}{clausula}", params)
+            total = int(cur.fetchone()["total"])
 
         com_geometria = bool(corpo.geometria and geom and corpo.por_pagina <= limites.TABELA_GEOMETRIA_LIMITE)
         campos = consulta.selecao(visiveis, chave, geom, com_geometria)
@@ -227,7 +236,7 @@ def linhas(item_id: str, corpo: PedidoLinhas = Body(default_factory=PedidoLinhas
         saida.append(registro)
     return {
         "total": total, "pagina": corpo.pagina, "por_pagina": corpo.por_pagina,
-        "paginas": (total + corpo.por_pagina - 1) // corpo.por_pagina,
+        "paginas": None if total is None else (total + corpo.por_pagina - 1) // corpo.por_pagina,
         "colunas": visiveis, "chave": chave, "linhas": saida,
     }
 
