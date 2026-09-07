@@ -38,6 +38,7 @@ from app.catalogo import (
     rotas_pastas,
     transferencia,
 )
+from app.coleta.rotas import router as rotas_coleta
 from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.edicao.rotas import router as rotas_edicao
@@ -127,6 +128,9 @@ ROUTERS = [
     rotas_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
+    # --- formulário de coleta por XLSForm (L2-07-b): /api/formularios/xlsform, /api/formularios/{id},
+    # /api/formularios/{id}/respostas, /api/formularios/equivalencia
+    rotas_coleta,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

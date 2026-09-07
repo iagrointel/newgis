@@ -35,6 +35,8 @@ PAGINAS = {
     "/redefinir-senha": "redefinir_senha.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
+    # --- formulário de coleta (L2-07-b-formulario-de-coleta-xlsform)
+    "/coleta": "coleta.html",
 }
 router = APIRouter()
 
