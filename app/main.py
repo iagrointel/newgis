@@ -41,6 +41,7 @@ from app.catalogo import (
 from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.estatistica.rotas import router as rotas_estatistica
+from app.estatistica.rotas_graficos import router as rotas_graficos
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
@@ -130,6 +131,8 @@ ROUTERS = [
     rotas_tiles,
     # --- agregação estatística (L2-06-e): POST /api/camadas/{id}/estatisticas
     rotas_estatistica,
+    # --- gráficos por camada (L2-01-i): POST /api/camadas/{id}/grafico
+    rotas_graficos,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
