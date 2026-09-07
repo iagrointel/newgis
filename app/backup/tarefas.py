@@ -20,6 +20,7 @@ Os dois tipos recusam rodar fora do inquilino técnico (a função SQL `backup_c
 `backup_so_plataforma`; vira FalhaDefinitiva) — um admin de inquilino comum não dispara dump dos vizinhos.
 """
 
+import hashlib
 import json
 import os
 import time
@@ -29,7 +30,7 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
 
-from app.backup import destino, nucleo
+from app.backup import destino, drill, nucleo
 from app.jobs.contexto import ErroServico
 from app.jobs.registro import FalhaDefinitiva, tarefa
 from app.settings import settings
@@ -353,4 +354,228 @@ def backup_verificar(ctx, ultimos_n: int = 50, esquema: str | None = None) -> di
     return resultado
 
 
-from app.backup import periodicos  # noqa: E402,F401 — importar registra os periódicos do backup na lista do worker
+class DrillParametros(BaseModel):
+    somente: list[str] | None = Field(None, max_length=200,
+                                      description="slugs de inquilino e/ou 'plat'; vazio = todos os esquemas "
+                                                  "com dump registrado")
+    objetos_por_inquilino: int = Field(drill.OBJETOS_POR_INQUILINO, ge=0, le=50,
+                                       description="objetos do bucket conferidos contra o manifesto, por inquilino")
+    origem: str = Field("manual", max_length=40)
+
+
+def _psql(ctx, banco: str, sql: str) -> list[list[str]]:
+    """Consulta como o superusuário local (mesmo caminho do pg_dump): a contagem tem de ser a FÍSICA da
+    tabela, e a RLS FORCE mostraria ao papel da aplicação só as linhas do inquilino do job."""
+    r = ctx.subprocesso(["sudo", "-n", "-u", "postgres", "psql", "-d", banco, "-At", "-F", "|", "-c", sql])
+    if r.returncode != 0:
+        raise FalhaDefinitiva(f"psql em {banco} saiu com código {r.returncode}")
+    return [linha.split("|") for linha in (r.stdout or "").splitlines() if linha.strip()]
+
+
+def _tabelas_com_tenant(ctx, banco: str, esquema: str) -> list[str]:
+    linhas = _psql(ctx, banco, (
+        "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+        "JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped "
+        f"WHERE c.relkind = 'r' AND n.nspname = '{esquema}' ORDER BY 1"))
+    return [linha[0] for linha in linhas]
+
+
+def _contar(ctx, banco: str, esquema: str, tabelas: list[str]) -> dict[str, int]:
+    """Um psql só para o schema inteiro (uma chamada por N tabelas, não N chamadas)."""
+    if not tabelas:
+        return {}
+    sql = " UNION ALL ".join(
+        f"SELECT '{t}' AS tabela, count(*) AS n FROM \"{esquema}\".\"{t}\"" for t in tabelas)
+    return {linha[0]: int(linha[1]) for linha in _psql(ctx, banco, sql)}
+
+
+def _conferir_objetos(ctx, cliente, bucket: str, grupo: str, registradas: dict[str, str],
+                      limite: int) -> tuple[int, list[dict]]:
+    """sha256 de até `limite` objetos do manifesto mais novo do inquilino contra o próprio manifesto.
+    Objeto que já saiu pela retenção (sem linha em plat.backup) é pulado, não vira divergência."""
+    if limite <= 0:
+        return 0, []
+    chaves = sorted(o["chave"] for o in cliente.listar(bucket, prefixo=f"{grupo}/manifesto-"))
+    if not chaves:
+        return 0, [{"grupo": grupo, "motivo": "sem manifesto no bucket"}]
+    doc = json.loads(cliente.get(bucket, chaves[-1]))
+    conferidos, divergencias = 0, []
+    for objeto in drill.escolher_objetos(doc.get("objetos") or [], limite):
+        chave = objeto["chave"]
+        try:
+            dados = cliente.get(bucket, chave)
+        except Exception as e:
+            if chave not in registradas:
+                ctx.log("INFO", f"objeto {chave} já saiu pela retenção: fora do ensaio")
+                continue
+            divergencias.append({"chave": chave, "motivo": f"objeto do manifesto ilegível no bucket: {e}"[:300]})
+            continue
+        sha = hashlib.sha256(dados).hexdigest()
+        conferidos += 1
+        if sha != objeto["sha256"]:
+            divergencias.append({"chave": chave, "motivo": "sha256 do objeto difere do manifesto",
+                                 "sha256_manifesto": objeto["sha256"], "sha256_objeto": sha})
+    return conferidos, divergencias
+
+
+def _ultimos_dumps(ctx, somente: list[str] | None) -> list[dict]:
+    """A linha mais nova de plat.backup por esquema (o ensaio restaura o ÚLTIMO dump, que é o que seria
+    usado numa restauração de verdade)."""
+    with ctx.db() as cur:
+        slug_atual = _slug_atual(cur)
+        if slug_atual != "plataforma":
+            raise FalhaDefinitiva(
+                f"backup.restore_drill só roda no inquilino técnico 'plataforma' (este job está em {slug_atual!r})")
+        cur.execute("SELECT * FROM plat.backup_listar(NULL, 10000)")
+        linhas = [dict(r) for r in cur.fetchall()]
+    escolhidas: dict[str, dict] = {}
+    for linha in linhas:  # backup_listar já vem das mais novas para as mais velhas
+        escolhidas.setdefault(linha["esquema"], linha)
+    alvos = []
+    for _esquema, linha in sorted(escolhidas.items()):
+        grupo = linha["inquilino_slug"] or "plat"
+        if somente is not None and grupo not in somente:
+            continue
+        alvos.append(linha)
+    return alvos
+
+
+@tarefa(nome="backup.restore_drill",
+        descricao="Backup: restaura o último dump de cada esquema num banco temporário, compara COUNT(*) de "
+                  "todas as tabelas com tenant_id contra a produção, confere o sha256 de objetos do bucket "
+                  "contra o manifesto e grava o ensaio em plat.backup_drill",
+        parametros=DrillParametros, pesado=True, memoria_mb=512, timeout_s=7200, tentativas=1,
+        chave=lambda p: "restore_drill", perfil_minimo="admin")
+def backup_restore_drill(ctx, somente: list[str] | None = None,
+                         objetos_por_inquilino: int = drill.OBJETOS_POR_INQUILINO,
+                         origem: str = "manual") -> dict:
+    alvos = _ultimos_dumps(ctx, somente)
+    if not alvos:
+        raise FalhaDefinitiva("ensaio de restauração: nenhum dump registrado em plat.backup para restaurar")
+    with ctx.db() as cur:
+        cur.execute("SELECT * FROM plat.backup_destino_ler()")
+        dest = cur.fetchone()
+        cur.execute("SELECT arquivo, bucket_chave FROM plat.backup_listar(NULL, 100000)")
+        registradas = {r["bucket_chave"]: r["arquivo"] for r in cur.fetchall() if r["bucket_chave"]}
+    cliente = destino.cliente_garage(dict(dest)) if dest is not None else None
+    banco = _banco_nome()
+
+    ensaios: list[dict] = []
+    for i, linha in enumerate(alvos):
+        ctx.verificar()
+        ensaios.append(_ensaiar(ctx, linha, banco, cliente, dest, registradas, objetos_por_inquilino, origem))
+        ctx.progresso(5 + int(90 * (i + 1) / len(alvos)),
+                      f"{linha['esquema']}: {ensaios[-1]['tabelas']} tabelas, "
+                      f"{len(ensaios[-1]['divergencias'])} divergências")
+
+    ruins = [e for e in ensaios if not e["ok"]]
+    resultado = {"ensaios": ensaios, "esquemas": len(ensaios),
+                 "divergencias": sum(len(e["divergencias"]) for e in ensaios),
+                 "duracao_drill_s": round(sum(e["duracao_drill_s"] for e in ensaios), 2)}
+    if ruins:
+        motivo = "; ".join(f"{e['esquema']}: {e['mensagem']}" for e in ruins)[:900]
+        _notificar_falha(ctx, f"ensaio de restauração acusou divergência — {motivo}",
+                         {"esquemas": [e["esquema"] for e in ruins],
+                          "divergencias": [d for e in ruins for d in e["divergencias"]][:20]})
+        raise FalhaDefinitiva(f"ensaio de restauração: {motivo}")
+    ctx.progresso(100, f"{len(ensaios)} esquema(s) restaurado(s) sem divergência")
+    return resultado
+
+
+def _ensaiar(ctx, linha: dict, banco: str, cliente, dest, registradas: dict[str, str],
+             objetos_por_inquilino: int, origem: str) -> dict:
+    """Um esquema: restaura, compara, confere objetos, grava a linha de plat.backup_drill e devolve o resumo.
+    O banco temporário é derrubado sempre (inclusive quando a restauração falha)."""
+    inicio = time.monotonic()
+    esquema, grupo = linha["esquema"], linha["inquilino_slug"] or "plat"
+    arquivo = Path(linha["arquivo"])
+    temporario = _banco_ensaio(ctx, banco)
+    divergencias: list[dict] = []
+    posteriores: list[dict] = []
+    contagens: dict[str, int] = {}
+    tabelas: list[str] = []
+    conferidos = 0
+    try:
+        if not arquivo.exists():
+            divergencias.append({"arquivo": str(arquivo), "motivo": "dump registrado não está no disco"})
+        else:
+            ctx.log("INFO", f"ensaio de {esquema}: conferindo o sha256 de {arquivo.name}")
+            sha = nucleo.sha256_arquivo(arquivo)
+            if sha != linha["sha256"]:
+                divergencias.append({"arquivo": str(arquivo),
+                                     "motivo": "sha256 do dump difere do registrado em plat.backup",
+                                     "sha256_registrado": linha["sha256"], "sha256_atual": sha})
+            else:
+                ctx.log("INFO", f"ensaio de {esquema}: restaurando em {temporario}")
+                tabelas, contagens, restauradas = _restaurar_e_contar(ctx, esquema, arquivo, banco, temporario)
+                ctx.log("INFO", f"ensaio de {esquema}: {len(tabelas)} tabela(s) contada(s) nos dois lados")
+                comparadas = [{"tabela": t, "restaurado": restauradas.get(t), "producao": contagens[t]}
+                              for t in tabelas]
+                divergencias, posteriores = drill.classificar_contagens(comparadas)
+                contagens = restauradas
+        if cliente is not None and not divergencias:
+            ctx.log("INFO", f"ensaio de {esquema}: conferindo objetos do bucket contra o manifesto")
+            conferidos, div_objetos = _conferir_objetos(ctx, cliente, dest["alias"], grupo, registradas,
+                                                        objetos_por_inquilino)
+            divergencias.extend(div_objetos)
+    finally:
+        ctx.log("INFO", f"ensaio de {esquema}: derrubando o schema restaurado em {temporario}")
+        _largar_schema(ctx, temporario, banco, esquema)
+    duracao = round(time.monotonic() - inicio, 2)
+    ok = not divergencias
+    mensagem = ("sem divergência" if ok else
+                "; ".join(f"{d.get('tabela') or d.get('chave') or d.get('arquivo')}: {d['motivo']}"
+                          for d in divergencias)[:900])
+    with ctx.db() as cur:
+        cur.execute(
+            "SELECT plat.backup_drill_registrar(%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s, "
+            "%s, %s) AS id",
+            (linha["id"], esquema, linha["inquilino_slug"], str(arquivo), linha["criado_em"], len(tabelas),
+             sum(contagens.values()), json.dumps(divergencias, ensure_ascii=False),
+             json.dumps(posteriores, ensure_ascii=False), conferidos, ok, mensagem, duracao, origem))
+        drill_id = cur.fetchone()["id"]
+    return {"id": drill_id, "esquema": esquema, "inquilino_slug": linha["inquilino_slug"],
+            "backup_id": linha["id"], "arquivo": str(arquivo), "tabelas": len(tabelas),
+            "linhas": sum(contagens.values()), "divergencias": divergencias, "posteriores": posteriores,
+            "objetos_conferidos": conferidos, "ok": ok, "mensagem": mensagem, "duracao_drill_s": duracao}
+
+
+def _banco_ensaio(ctx, banco: str) -> str:
+    """Banco de ensaio da instalação (um só, com PostGIS), criado na primeira vez. Nunca é o banco da
+    plataforma: o nome vem de `drill.nome_banco_temporario` e é conferido antes de qualquer DROP."""
+    nome = drill.nome_banco_temporario(settings.PLAT_SCHEMA)
+    if nome == banco:
+        raise FalhaDefinitiva(f"ensaio de restauração: o banco de ensaio não pode ser o da plataforma ({nome})")
+    existe = _psql(ctx, banco, f"SELECT 1 FROM pg_database WHERE datname = '{nome}'")
+    if not existe:
+        r = ctx.subprocesso(["sudo", "-n", "-u", "postgres", "createdb", nome])
+        if r.returncode != 0:
+            raise FalhaDefinitiva(f"ensaio de restauração: createdb {nome} saiu com código {r.returncode}")
+        ctx.subprocesso(["sudo", "-n", "-u", "postgres", "psql", "-d", nome, "-q", "-c",
+                         "CREATE EXTENSION IF NOT EXISTS postgis"])
+    return nome
+
+
+def _largar_schema(ctx, banco_ensaio: str, banco: str, esquema: str) -> None:
+    """DROP SCHEMA dentro do banco de ensaio. A guarda do nome está aqui e não só em quem chama: é o
+    único lugar do produto que derruba schema, e apontar isso para o banco da plataforma apagaria dado
+    de verdade."""
+    if banco_ensaio == banco or not banco_ensaio.startswith("plat_drill_"):
+        raise FalhaDefinitiva(f"ensaio de restauração: recusa derrubar schema fora do banco de ensaio ({banco_ensaio})")
+    ctx.subprocesso(["sudo", "-n", "-u", "postgres", "psql", "-d", banco_ensaio, "-q", "-c",
+                     f'DROP SCHEMA IF EXISTS "{esquema}" CASCADE'])
+
+
+def _restaurar_e_contar(ctx, esquema: str, arquivo: Path, banco: str,
+                        temporario: str) -> tuple[list[str], dict[str, int], dict[str, int]]:
+    """(tabelas da produção com tenant_id, contagem na produção, contagem na cópia restaurada)."""
+    _largar_schema(ctx, temporario, banco, esquema)
+    rest = ctx.subprocesso(["sudo", "-n", "-u", "postgres", "pg_restore", "-d", temporario,
+                            "--no-owner", "--no-privileges", str(arquivo)])
+    if rest.returncode != 0:
+        ctx.log("AVISO", f"pg_restore de {esquema} devolveu código {rest.returncode} (a prova é por COUNT(*))")
+    tabelas = _tabelas_com_tenant(ctx, banco, esquema)
+    restauradas_nomes = set(_tabelas_com_tenant(ctx, temporario, esquema))
+    producao = _contar(ctx, banco, esquema, tabelas)
+    restauradas = _contar(ctx, temporario, esquema, [t for t in tabelas if t in restauradas_nomes])
+    return tabelas, producao, restauradas

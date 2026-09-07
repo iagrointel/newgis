@@ -1,0 +1,52 @@
+{
+ "item": "L0-06-c-restore-drill",
+ "medidas": {
+  "drill_curto_duracao_s": {
+   "valor": 12.8,
+   "unidade": "s",
+   "comando": "POST /api/jobs backup.restore_drill somente=[demo2] até concluido"
+  },
+  "duracao_drill_s": {
+   "valor": 12.75,
+   "unidade": "s",
+   "comando": "plat.backup_drill.duracao_drill_s"
+  },
+  "drill_curto_teto_s": {
+   "valor": 60.0,
+   "unidade": "s",
+   "comando": "cláusula do portão: drill curto <= 60 s"
+  },
+  "drill_curto_tabelas": {
+   "valor": 4,
+   "unidade": "tabelas",
+   "comando": "tabelas com tenant_id em d_demo2"
+  },
+  "drill_curto_linhas": {
+   "valor": 262,
+   "unidade": "linhas",
+   "comando": "soma dos COUNT(*) na cópia restaurada"
+  },
+  "drill_curto_objetos": {
+   "valor": 1,
+   "unidade": "objetos",
+   "comando": "objetos do bucket com sha256 conferido contra o manifesto"
+  },
+  "carga_1min": {
+   "valor": 11.21,
+   "unidade": "carga",
+   "comando": "os.getloadavg()[0] na hora do ensaio"
+  },
+  "ram_livre_gb": {
+   "valor": 7.0,
+   "unidade": "GB",
+   "comando": "MemAvailable de /proc/meminfo"
+  },
+  "dump_corrompido_acusado_e_notificado": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "1 byte trocado no dump -> job falhou + linha ok=false + evento backup/falha + correio"
+  }
+ },
+ "gerado_em": "2026-09-07T22:15:29Z",
+ "git_sha": "3d72ad0d9861"
+}

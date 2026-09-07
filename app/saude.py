@@ -58,6 +58,24 @@ def estado_banco() -> tuple[str, int, int, str | None]:
     return ("desatualizado" if pendentes else "ok"), aplicadas, pendentes, ultima
 
 
+def estado_backup_drill() -> dict:
+    """Último ensaio de restauração (item L0-06-c): data, se passou, quantos esquemas e quantas
+    divergências. Só o agregado de plat.backup_drill_status() — nem arquivo nem inquilino — porque a
+    sonda de status responde sem sessão. Informativo: não muda o status HTTP."""
+    try:
+        with db.db() as cur:
+            cur.execute("SELECT * FROM plat.backup_drill_status()")
+            r = cur.fetchone()
+    except Exception:
+        log.exception("saude: ensaio de restauração em erro")
+        return {"erro": True}
+    if r is None or r["ultimo_em"] is None:
+        return {"ultimo_em": None}
+    return {"ultimo_em": r["ultimo_em"].astimezone(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "ok": r["ok"], "esquemas": r["esquemas"], "divergencias": r["divergencias"],
+            "duracao_drill_s": float(r["duracao_drill_s"])}
+
+
 @router.get("/saude")
 def saude():
     inicio = time.perf_counter()
@@ -73,6 +91,7 @@ def saude():
         "ultima_migracao": ultima,
         "servicos": servicos,
         "fila": estado_fila() if banco == "ok" else {"erro": True},
+        "backup_drill": estado_backup_drill() if banco == "ok" else {"erro": True},
         "tempo_ms": round((time.perf_counter() - inicio) * 1000, 1),
         "em": agora_iso(),
     }
