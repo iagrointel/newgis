@@ -262,8 +262,9 @@ def criar(corpo: CamadaEsquemaEntrada, request: Request, auth: Auth = autenticad
             },
             "estatisticas": {"feicoes": 0, "extent_nativo": None, "por_campo": {}, "calculadas_em": None},
         }
-        # o item precisa existir ANTES do camada_campo_meta: a FK composta (tenant_id, item_id) exige a
-        # linha-pai já commitada dentro desta mesma transação, senão a inserção do metadado é recusada.
+        # o item precisa existir ANTES do camada_campo_meta: a FK para plat.item(id) e o gatilho de
+        # coerência de inquilino exigem a linha-pai já gravada nesta mesma transação, senão o metadado é
+        # recusado.
         cur.execute(
             "INSERT INTO plat.item(id, tenant_id, tipo, titulo, dono_id, dados, criado_por, modificado_por) "
             "VALUES (%s::uuid, %s, 'camada_vetorial', %s, %s, %s, %s, %s)",
