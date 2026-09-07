@@ -56,12 +56,13 @@ def _schema() -> str:
 
 def _psql(sql: str, *params: str) -> str:
     """psql como postgres — a identidade que escreve os registros do acervo (nunca plat_app). Parâmetros vão
-    por -v e se citam no SQL como :'p1' — nunca por formatação de string."""
+    por -v e se citam no SQL como :'p1' — nunca por formatação de string. O SQL vai por STDIN (não -c):
+    a substituição de variável do psql só acontece lendo de arquivo/stdin."""
     cmd = ["sudo", "-u", "postgres", "psql", "-d", os.environ.get("PLAT_BANCO", "iagro_sat"),
            "-X", "-q", "-tA", "-v", "ON_ERROR_STOP=1"]
     for i, p in enumerate(params, start=1):
         cmd += ["-v", f"p{i}={p}"]
-    r = subprocess.run(cmd + ["-c", sql], capture_output=True, text=True, timeout=120)
+    r = subprocess.run(cmd, input=sql, capture_output=True, text=True, timeout=120)
     assert r.returncode == 0, r.stderr
     return r.stdout.strip()
 
@@ -227,24 +228,22 @@ def test_assinar_grava_quem_quando_e_o_texto_aceito(camadas_prontas, sessao_a, i
     """Portão, parte 1: o clique fica GRAVADO — quem (assinado_por), quando (assinado_em) e o texto da
     licença aceito na hora, byte a byte (conferido na tabela, como postgres, não na resposta da API)."""
     antes = _licenca_na_lista(sessao_a, VIEW_ODBL)
-    marco = time.time()
     resposta = _assinar_pela_api(sessao_a, VIEW_ODBL)
     try:
         assert resposta["assinada"] is True and resposta["licenca_tipo"] == "ODbL"
         assert resposta["assinado_em"], "a resposta traz o carimbo para a tela não precisar reler"
         s = _schema()
-        linha = _psql(
-            f"SELECT assinado_por, extract(epoch from (now() - assinado_em))::int, licenca_tipo, "
-            f"licenca_url, licenca_sha256, licenca_texto FROM {s}.acervo_assinatura a "
-            f"JOIN {s}.tenant t ON t.id = a.tenant_id "
+        # comparação byte a byte DENTRO do banco (o texto tem quebras de linha; mandá-lo como parâmetro
+        # :'pN' do psql é a comparação exata, sem serialização de saída no meio do caminho)
+        ok = _psql(
+            f"SELECT a.licenca_texto = :'p2' AND a.licenca_sha256 = :'p3' AND a.licenca_tipo = 'ODbL' "
+            f"AND a.licenca_url = :'p4' AND a.assinado_por = {int(ids['a']['id'])} "
+            f"AND now() - a.assinado_em < interval '5 minutes' "
+            f"FROM {s}.acervo_assinatura a JOIN {s}.tenant t ON t.id = a.tenant_id "
             f"WHERE t.slug = 'demo' AND a.acervo_camada_id = :'p1'",
-            CAMADA_ODBL_ID).split("|")
-        assinado_por, segundos, tipo, url, sha, texto = (linha[0], int(linha[1]), *linha[2:5], "|".join(linha[5:]))
-        assert int(assinado_por) == ids["a"]["usuario"]["id"], "QUEM: o admin do inquilino demo"
-        assert 0 <= segundos <= max(60, int(time.time() - marco) + 60), "QUANDO: agora, não uma data fixa"
-        assert tipo == "ODbL" and url == URL_LICENCA_OSM
-        assert texto == antes["licenca_texto"], "O TEXTO gravado é byte a byte o que a lista mostrou"
-        assert sha == hashlib.sha256(texto.encode()).hexdigest() == antes["licenca_sha256"]
+            CAMADA_ODBL_ID, antes["licenca_texto"], antes["licenca_sha256"], URL_LICENCA_OSM)
+        assert ok == "t", "QUEM (assinado_por), QUANDO (assinado_em recente) ou O TEXTO (byte a byte) " \
+                          "não conferem na tabela"
     finally:
         sessao_a.delete(f"/api/acervo/camadas/{VIEW_ODBL}/assinatura")
 

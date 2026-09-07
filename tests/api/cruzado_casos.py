@@ -55,6 +55,7 @@ class Preparacao:
     categoria_b: dict = field(default_factory=dict)  # L0-03: categoria de B
     fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
     camada_acervo: str = ""  # L6-01-b: view publicada em plat_acervo; "" quando nada está publicado nesta base
+    camada_acervo_sha: str = ""  # L6-01-e: sha256 do texto da licença da camada ("" quando não há licença curada)
     conexao_b: dict = field(default_factory=dict)  # L6-02-a: conexão externa de B
     convite_b: dict = field(default_factory=dict)  # L0-07-d: convite pendente de B
     conjunto_b: dict = field(default_factory=dict)  # L3-19-multiescala: área de estudo de B
@@ -138,6 +139,7 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     assert r.status_code == 200, r.text
     publicadas = r.json()["camadas"]
     camada_acervo = publicadas[0]["view_nome"] if publicadas else ""
+    camada_acervo_sha = (publicadas[0].get("licenca_sha256") or "") if publicadas else ""
     # L6-02-a: conexão externa de B, alvo das rotas de /api/conexoes (URL pública real — passa pela defesa de
     # SSRF na criação; dado aberto federal, nunca nome de cliente/parceiro)
     r = sessao_b.post(
@@ -168,7 +170,7 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
                       convite_b=convite_b,
                       conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, camada_acervo=camada_acervo,
-                      conexao_b=conexao_b)
+                      camada_acervo_sha=camada_acervo_sha, conexao_b=conexao_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -512,12 +514,15 @@ CASOS: dict[tuple[str, str], Caso] = {
         verificar=_sem_marca, limpar=_apagar_criado(("DELETE", "/api/itens/{id}")),
     ),
     # ---- L6-01-b publicação sem cópia: a camada é da CASA (compartilhada); a ASSINATURA é do inquilino.
-    # A assina para si e cancela na limpeza; ler feição/tile sem assinatura é 403, que já está no PADRÃO.
+    # L6-01-e: o POST exige o aceite do texto da licença (aceite_licenca + o sha256 exibido na lista) —
+    # com licença curada é 201 (e a limpeza cancela); sem licença curada é 409 (sem_licenca), que também é
+    # resposta válida do contrato novo. Ler feição/tile/export sem assinatura é 403, que já está no PADRÃO.
     ("GET", "/api/acervo/camadas"): Caso(lambda p: "/api/acervo/camadas", proprio=True,
                                          aceita=frozenset({200}), verificar=_sem_marca),
     ("POST", "/api/acervo/camadas/{camada}/assinatura"): Caso(
-        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/assinatura", proprio=True,
-        aceita=frozenset({201}), verificar=_sem_marca, limpar=_cancelar_assinatura,
+        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/assinatura",
+        lambda p: {"aceite_licenca": True, "licenca_sha256": p.camada_acervo_sha},
+        proprio=True, aceita=frozenset({201, 409}), verificar=_sem_marca, limpar=_cancelar_assinatura,
     ),
     ("DELETE", "/api/acervo/camadas/{camada}/assinatura"): Caso(
         lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/assinatura", proprio=True,
@@ -527,6 +532,14 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/feicoes?limite=1"),
     ("GET", "/api/acervo/camadas/{camada}/tiles/{z}/{x}/{y}.mvt"): Caso(
         lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/tiles/10/379/580.mvt"),
+    # ---- L6-01-e exportação com LICENCA.txt (403 sem assinatura, já no PADRÃO) e registro de uso: o uso é
+    # do PRÓPRIO inquilino (a RLS recorta), nunca de B — leitura própria como /api/eu
+    ("GET", "/api/acervo/camadas/{camada}/exportar"): Caso(
+        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/exportar?limite=1"),
+    ("GET", "/api/acervo/uso"): Caso(lambda p: "/api/acervo/uso", proprio=True, aceita=frozenset({200}),
+                                     verificar=_sem_marca),
+    ("GET", "/api/acervo/uso/mensal"): Caso(lambda p: "/api/acervo/uso/mensal", proprio=True,
+                                            aceita=frozenset({200}), verificar=_sem_marca),
     # ---- L6-02-a modelo de conexão externa: conexão é do INQUILINO (tenant_id + RLS), diferente do acervo
     # acima; GET/POST agem só sobre o próprio chamador (o POST usa o MESMO nome de B para provar que a
     # unicidade de nome é por inquilino, não global); GET/PATCH/DELETE/testar por id de B são cross-tenant puro
