@@ -37,6 +37,8 @@ PAGINAS = {
     "/uploads": "uploads.html",
     # --- motor AMC: explicação da nota de uma unidade (L3-01-f-explicacao)
     "/amc/explicacao/{execucao_id}/{unidade_id}": "amc_explicacao.html",
+    # --- construtor de camada por esquema (L5-31)
+    "/construtor-camada": "construtor_camada.html",
 }
 router = APIRouter()
 
