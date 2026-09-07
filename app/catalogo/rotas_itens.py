@@ -1078,7 +1078,7 @@ def relacoes_definir(id: str, corpo: RelacoesEntrada, request: Request, auth: Au
     try:
         with db.db(auth.contexto()) as cur:
             r = exigir_edicao(cur, iid)
-            if relacoes.tem_extrator(r["tipo"]):
+            if relacoes.relacoes_pelo_documento(r["tipo"], r["dados"]):
                 raise ErroAPI(409, "relacoes_pelo_tipo", f"as relações de {r['tipo']} saem de dados; edite o item")
             cur.execute("SELECT nome FROM plat.relacao_tipo")
             vocab = {x["nome"] for x in cur.fetchall()}
