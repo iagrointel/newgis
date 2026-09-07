@@ -8,6 +8,8 @@ import secrets
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from app.rede_utilidades import instalados
+
 PREFIXO = "zt-cruzado-"
 # L6-02-a: dado aberto federal (IBGE), nunca nome de cliente/parceiro; passa pela defesa de SSRF na criação
 URL_CONEXAO_TESTE = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/35"
@@ -50,6 +52,7 @@ class Preparacao:
     categoria_b: dict = field(default_factory=dict)  # L0-03: categoria de B
     fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
     conexao_b: dict = field(default_factory=dict)  # L6-02-a: conexão externa de B
+    rede_b: dict = field(default_factory=dict)  # L4-01-a: rede de utilidades de B, com pacote de ativos importado
     convite_b: dict = field(default_factory=dict)  # L0-07-d: convite pendente de B
 
     @property
@@ -60,6 +63,8 @@ class Preparacao:
             marcas += [self.item_b["titulo"], self.pasta_b["nome"]]
         if self.conexao_b:
             marcas.append(self.conexao_b["nome"])
+        if self.rede_b:
+            marcas.append(self.rede_b["nome"])
         if self.convite_b:
             marcas.append(self.convite_b["email"])
         return marcas
@@ -129,10 +134,18 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     )
     assert r.status_code == 201, r.text
     conexao_b = r.json()
+    # L4-01-a: rede de utilidades de B com o pacote de ativos JÁ importado — é o alvo das rotas /api/rede/{rede_id}
+    # (inclusive a exportação, que é onde um vazamento de esquema apareceria)
+    r = sessao_b.post("/api/rede", json={"nome": f"{PREFIXO}rede-{sufixo}", "disciplina": "agua"})
+    assert r.status_code == 201, r.text
+    rede_b = r.json()
+    r = sessao_b.post(f"/api/rede/{rede_b['id']}/pacote", content=instalados.bruto("agua-epanet"),
+                      headers={"Content-Type": "application/json"})
+    assert r.status_code == 201, r.text
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b)
+                      rede_b=rede_b, convite_b=convite_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -156,6 +169,8 @@ def desfazer(p: Preparacao) -> None:
         p.sessao_b.delete(f"/api/itens/{p.item_b['id']}?cascata=true")
     if p.pasta_b:
         p.sessao_b.delete(f"/api/pastas/{p.pasta_b['id']}")
+    if p.rede_b:
+        p.sessao_b.delete(f"/api/rede/{p.rede_b['id']}")
     if p.conexao_b:
         p.sessao_b.delete(f"/api/conexoes/{p.conexao_b['id']}")
     if p.agenda_b:
@@ -488,6 +503,16 @@ CASOS: dict[tuple[str, str], Caso] = {
     # quando o alvo é de B (a rota lê a conexão pelo RLS de _carregar ANTES de qualquer efeito colateral).
     ("GET", "/api/conexoes/{id}/saude-historico"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/saude-historico"),
     ("POST", "/api/conexoes/{id}/publicar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar"),
+    # L6-02-c (conector WFS/OGC API): as três rotas de leitura do modo referenciado. A conexão de B é
+    # cross-tenant puro — `_carregar` (RLS) roda ANTES de qualquer ida ao serviço externo, então a rota nem
+    # chega a abrir conexão de rede quando o id é de outro inquilino.
+    ("GET", "/api/conexoes/{id}/colecoes"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes"),
+    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/campos"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/campos"
+    ),
+    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/feicoes"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/feicoes"
+    ),
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,
@@ -646,6 +671,27 @@ CASOS: dict[tuple[str, str], Caso] = {
     # nunca recebe id de inquilino na URL — age só sobre `plat.tenant_atual()` (proprio). O corpo do PUT
     # ecoa exatamente o que o próprio GET de A acabou de devolver (full-replace sem mudar nada de verdade),
     # então não precisa de `limpar`; o logotipo enviado É apagado no fim (1×1 PNG, não é dado de B).
+    # ---- rede de utilidades (L4-01-a-pacote-de-ativos): o catálogo /api/rede/pacotes vem com a instalação e
+    # não é de inquilino nenhum (proprio); tudo em /api/rede/{rede_id} aponta a rede de B e tem de dar 404.
+    ("GET", "/api/rede"): Caso(lambda p: "/api/rede", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/rede"): Caso(
+        lambda p: "/api/rede",
+        lambda p: {"nome": f"{PREFIXO}rede-a-{secrets.token_hex(4)}", "disciplina": "eletrica"},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/rede/{id}")),
+    ),
+    ("GET", "/api/rede/pacotes"): Caso(
+        lambda p: "/api/rede/pacotes", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/rede/pacotes/{codigo}"): Caso(
+        lambda p: "/api/rede/pacotes/agua-epanet", proprio=True, aceita=frozenset({200}),
+    ),
+    ("GET", "/api/rede/{rede_id}"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}"),
+    ("DELETE", "/api/rede/{rede_id}"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}"),
+    ("GET", "/api/rede/{rede_id}/pacote"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/pacote"),
+    ("POST", "/api/rede/{rede_id}/pacote"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: {"esquema": "plat.rede.pacote"},
+    ),
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
     ("PUT", "/api/org"): Caso(
         lambda p: "/api/org", _corpo_org_atual, proprio=True, aceita=frozenset({200}), verificar=_sem_marca,

@@ -3,6 +3,50 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L4-02-a-conectado-e-subrede: traçado conectado e subrede — PARCIAL)
+
+`POST /api/rede/{id}/tracar` (tipo `conectado`|`subrede`), sobre `public.pgr_connectedComponents`
+(pgRouting 4.0.1, já instalada — ver ADR 0021): ponto de partida por feição+terminal ou coordenada com
+tolerância, barreiras que removem nó do grafo inteiro, travessabilidade por `atributos.estado`, fronteira
+de subrede pela categoria `transformacao`. Rede sintética de 12 nós com resultado conhecido em pytest:
+conectado = 9 elementos/6 nós, subrede = 6 elementos/4 nós (`tests/api/test_rede_tracado.py`, 13 casos,
+todos verdes). Refutação: laço fechado não duplica elemento nem trava; transformador é a fronteira de
+subrede, chave em série (mesmo grupo) não é. pgRouting confirmada instalada por consulta a
+`pg_available_extensions`. Dois defeitos corrigidos na primeira execução real (import de `psycopg2` fora
+de escopo; SQL de arestas sem a coluna `cost` que `pgr_connectedComponents` exige) — ver ADR 0021.
+Cláusulas NÃO cumpridas, declaradas: (1) clique+tabela lateral+captura e2e — não existe front-end de rede
+de utilidades no repositório para acoplar; (2) p95 ≤ 2 s no maior alimentador da cooperativa de teste —
+teste pronto (`test_rede_tracado_medida.py`, marcador `lento`), mas a máquina estava com carga 18-21
+(regra do brief: não medir acima de 8); registrado `medido: false` com a carga ao lado, não fingido.
+
+## turno 4, setembro de 2026 (item L4-01-b-topologia-derivada: topologia derivada da rede de utilidades)
+
+`POST /api/rede/{id}/topologia/habilitar` reconstrói dois índices derivados das feições da rede —
+`plat.rede_topo_no` (um por vértice de conexão/terminal) e `plat.rede_topo_aresta` (um por trecho, com nó de
+origem/destino, comprimento geodésico e bitmask de fase) — numa transação, nunca incremental nesta passagem.
+Tolerância de coincidência é parâmetro da rede (`plat.rede.tolerancia_m`, padrão 0,05 m), visível na ficha:
+0,04 m conecta e 0,06 m não conecta na tolerância padrão; a mesma distância de 0,06 m conecta numa rede que
+declarou 0,1 m. Cruzamento geométrico no meio de duas linhas nunca gera nó (cruzar não é conectar). `applyEdits`
+de ponto/linha (paridade FeatureServer) marca área suja a cada gravação. RLS ligada e índice GIST conferidos
+no catálogo do Postgres (não no arquivo de migração) em todas as 6 tabelas da topologia. Contrato em
+`docs/adr/0020-topologia-derivada-da-rede-de-utilidades.md`; modelo e paridade em `docs/rede/TOPOLOGIA.md`.
+
+Medido em escala real (schema `certaja` do `iagro_sat`, ativo da casa, somente leitura — a rede real da
+cooperativa de teste, não um arquivo do repositório): 73.512 arestas reais (44.268 MT + 29.244 BT), 80.456
+nós, 3.948 órfãos, 0 arestas sem nó, 21 alimentadores com componente conexa idêntica arquivo × topologia
+(contador Python independente sobre o wkt cru), 1.554 terminais de alta órfãos batendo exato com o arquivo,
+60.549 postes → 0 nós. Conserto de dois achados do próprio agente ao medir em escala (`tests/dados/carga_bdgd.py`):
+literal `%` não escapado em SQL parametrizado (`IndexError: tuple index out of range` do psycopg2) e chave
+errada num dicionário de retorno (`fins_de_linha` → `fins_de_linha_grau1`).
+
+⛔ Fronteira medida, não fabricada: `certaja.ramlig` (ramal de ligação) tem os 26.581 registros do arquivo mas
+**0 com geometria armazenada** (`wkt` nulo em 100%) — entra como atributo, não como aresta geométrica; a
+topologia geométrica medida cobre MT + BT + transformador + poste (139.542 elementos reais). Tempo de
+`habilitar` variou de ~21 s a ~600 s na mesma carga conforme a disputa por CPU/RAM de outras trilhas na
+máquina compartilhada (swap 100% cheio no pior caso) — variação do ambiente, não do algoritmo (lotes de
+4.000 linhas, ADR 0020 §5); os dois tempos ficam no arquivo de medida. Manutenção incremental por área suja
+e traçado seguem fora desta passagem (itens seguintes da linha L4).
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
@@ -62,6 +106,57 @@ carimbo) e o cabeçalho opcional `-- depende: <arquivo>`; `db/migrar.sh`, `db/mi
 reprova nome fora do padrão, três dígitos novos e dependência que vem depois na ordem;
 `tests/api/test_saude.py` deixa de casar o glob de três dígitos e escreve o que "última migração" passa a
 significar (a de autoria mais recente pela chave, não a maior string nem a última aplicada no relógio).
+## turno 3, setembro de 2026 (item L4-01-a-pacote-de-ativos: o esquema da rede de utilidades é dado)
+
+Primeiro item da linha L4. O esquema de uma rede de utilidades — redes de domínio, tiers, grupos e tipos de
+ativo, categorias de rede, atributos e configurações de terminal — passa a ser um **pacote de ativos**: um
+documento JSON versionado, importado para dez tabelas `plat.rede_*` do inquilino (`POST
+/api/rede/{rede_id}/pacote`) e exportado de volta a partir delas (`GET .../pacote`). O contrato está no ADR
+0019; o mapeamento coluna a coluna, em `docs/PACOTE_REDE.md`, gerado do próprio dado.
+
+A exportação é **reconstruída das tabelas**, nunca o arquivo recebido — dos 96.042 bytes importados do pacote
+`eletrica-br`, saem os mesmos 96.042 bytes, e um teste altera uma linha no banco para mostrar que a exportação
+muda junto (`test_a_exportacao_vem_das_tabelas_e_nao_do_arquivo_recebido`). Pacote recusado sai com a lista
+inteira de problemas, cada um com o caminho (`tipos[41].grupo`) e a **linha do arquivo enviado**.
+
+Dois pacotes vêm com a instalação: `eletrica-br` (2 domínios, 4 tiers, 14 grupos, 24 tipos, 214 atributos, 24
+regras) cobrindo as 13 camadas de rede da BDGD do Módulo 10 do PRODIST, e `agua-epanet` (1 domínio, 2 tiers, 6
+grupos, 14 tipos, 41 atributos, 16 regras) no vocabulário do EPANET 2.2.
+
+⛔ Fronteira honesta declarada no próprio dado: dos 214 atributos do pacote elétrico, **154 têm a coluna de
+origem conferida contra uma extração real** (11 camadas) e **60 são declarados do documento da fonte, sem
+conferência** (`SUB`, `UNSEMT`, `UNCRMT`, `UNREMT`, `UGMT_tab`); o pacote de água é inteiramente declarado.
+Nenhum atributo com `conferida = false` deve decidir carga de dado sem antes conferir o dicionário da entrega.
+Topologia, traçado e subrede não existem ainda — este item entrega só o catálogo do esquema.
+
+## turno 3, setembro de 2026 (item L4-01-a-pacote-de-ativos: conserto pós-adversário, refutado -> corrigido)
+
+O adversário independente do turno 3 (`handoffs/T3/ataque-L4-portal-ADVERSARIO.md` §1) refutou o item com
+seis achados; todos corrigidos, com a mesma bateria de teste virando regressão permanente
+(`tests/api/test_rede_pacote_conserto_a1_a4.py`, `tests/api/test_fk_composta_por_inquilino.py`).
+
+**A1** (a FK não era filtrada pela RLS): as 10 tabelas `plat.rede_*` ganharam FK **composta** `(tenant_id,
+id)` (`db/migracoes/20260906T1815_rede_fk_por_inquilino.sql`) — um inquilino não pendura mais linha própria
+em `tipo`/`domínio` de outro pelo uuid alheio. A trava (`test_fk_composta_por_inquilino.py`) varre
+`pg_constraint` do schema inteiro, não só a rede; achou 55 FKs do mesmo padrão em outras tabelas do produto,
+documentadas como fora de escopo (não corrigidas aqui).
+
+**A2/A2b** (seção repetida entrava em silêncio e a linha apontada era a errada): `localizador.py` foi
+reescrito para construir um mapa de offsets numa única passada — a última ocorrência de uma chave
+sobrescreve a anterior, como `json.loads`, então a linha apontada é sempre a da seção que a validação de
+fato usou; `pacote._chave_repetida` recusa com 422 qualquer chave repetida, em qualquer profundidade.
+
+**A3** (NUL em `texto`/`jsonb` derrubava a importação com 500): `pacote._procurar_nul` recusa com 422 antes
+de a string chegar ao psycopg2.
+
+**A4** (a rota travava o laço de eventos e a localização de linha era quadrática): `POST
+.../{rede_id}/pacote` só lê o corpo no laço de eventos; validação e gravação vão para
+`run_in_threadpool`. O mesmo mapa de offsets do conserto A2b tornou a localização de linha linear (medido:
+pacote de 4 mil erros, 14,1 s → 1,2 s; pior `/saude` concorrente, 13,6 s → 0,19 s —
+`tests/medidas/L4-01-a.json`). Tornar a concorrência real expôs um `DeadlockDetected` não tratado em duas
+importações simultâneas na MESMA rede; corrigido com `SELECT ... FOR UPDATE` na linha da rede
+(`_travar_rede`), que serializa a substituição do catálogo sem 500.
+
 
 ## turno 3, setembro de 2026 (item L0-04-a-upload-arquivo: upload retomável pelo navegador)
 
