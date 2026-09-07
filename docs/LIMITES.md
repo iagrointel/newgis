@@ -214,3 +214,18 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `REDEFINICAO_JANELA_MIN` | `15` | limite de taxa (refutação do item: 1.000 pedidos/min p/ o mesmo e-mail) |
 | `REDEFINICAO_MAX_JANELA` | `5` | no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN |
 | `AVISO_EXPIRACAO_DIAS` | `(90, 30, 7, 1)` | avisos de expiração de token de serviço (hipótese do item; como a Esri) |
+
+## tabela de atributos da camada (L2-01-g-tabela-atributos): paginação no servidor, busca em texto, filtro
+
+| nome | valor | explicação |
+|---|---|---|
+| `TABELA_PAGINAS` | `(50, 200, 1000)` | — |
+| `TABELA_BUSCA_MAX` | `200` | termo de busca (ILIKE + unaccent) — acima disso é ataque, não busca |
+| `TABELA_FIDS_MAX` | `5000` | seleção vinda do mapa: identificadores enviados de uma vez |
+| `TABELA_COLUNAS_MAX` | `500` | mesmo teto de `campos` no esquema do tipo camada_vetorial (029) |
+| `TABELA_ALIAS_MAX` | `200` | mesmo teto de `alias` no esquema do tipo camada_vetorial (029) |
+| `TABELA_LARGURA_MIN` | `40` | pixels; abaixo disso a coluna some da tela e não dá para arrastar |
+| `TABELA_LARGURA_MAX` | `2000` | — |
+| `TABELA_DOMINIO_ITENS_MAX` | `1000` | pares código -> descrição por coluna |
+| `TABELA_DOMINIO_TEXTO_MAX` | `250` | — |
+| `TABELA_GEOMETRIA_LIMITE` | `2000` | feições com geometria devolvidas para desenhar no mapa (por página) |

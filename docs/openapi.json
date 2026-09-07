@@ -10320,6 +10320,245 @@
     "x-auth": "S/T",
     "x-privilegio": "proprio"
    }
+  },
+  "/api/camadas/{item_id}/tabela/colunas": {
+   "get": {
+    "tags": [
+     "tabela"
+    ],
+    "summary": "colunas visíveis da tabela de atributos",
+    "description": "Só o que a vista do usuário mostra: coluna marcada como oculta não sai daqui (nem a geometria, que não\né atributo). Para ver o que está oculto e voltar atrás, `GET .../vista`.",
+    "operationId": "colunas_api_camadas__item_id__tabela_colunas_get",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/camadas/{item_id}/tabela/vista": {
+   "get": {
+    "tags": [
+     "tabela"
+    ],
+    "summary": "vista gravada da tabela (inclui colunas ocultas)",
+    "operationId": "vista_ver_api_camadas__item_id__tabela_vista_get",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "put": {
+    "tags": [
+     "tabela"
+    ],
+    "summary": "grava a vista da tabela para o usuário",
+    "description": "Ordem, rótulo, visibilidade, largura e domínio — por usuário e por camada. A largura persistida aqui é\no que a tela lê no próximo carregamento; nada disso fica no navegador.",
+    "operationId": "vista_gravar_api_camadas__item_id__tabela_vista_put",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PedidoVista"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/camadas/{item_id}/tabela/linhas": {
+   "post": {
+    "tags": [
+     "tabela"
+    ],
+    "summary": "página de linhas da tabela de atributos",
+    "operationId": "linhas_api_camadas__item_id__tabela_linhas_post",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PedidoLinhas"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/camadas/{item_id}/tabela/estatisticas": {
+   "post": {
+    "tags": [
+     "tabela"
+    ],
+    "summary": "estatísticas por coluna numérica sob o mesmo filtro",
+    "description": "Contagem, soma, média, mínimo, máximo e nulos, calculados no banco — nunca sobre a página carregada na\ntela (a página é 50 linhas de um milhão; a média dela não é a média da camada).",
+    "operationId": "estatisticas_api_camadas__item_id__tabela_estatisticas_post",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PedidoEstatisticas"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
   }
  },
  "components": {
@@ -11104,6 +11343,64 @@
      "codigos_recuperacao"
     ],
     "title": "CodigosRecuperacao"
+   },
+   "ColunaVista": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 63,
+      "title": "Nome"
+     },
+     "alias": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Alias"
+     },
+     "oculta": {
+      "type": "boolean",
+      "title": "Oculta",
+      "default": false
+     },
+     "largura": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 2000.0,
+        "minimum": 40.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Largura"
+     },
+     "dominio": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dominio"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome"
+    ],
+    "title": "ColunaVista"
    },
    "Compartilhado": {
     "properties": {
@@ -14657,6 +14954,72 @@
     ],
     "title": "PastaEntrada"
    },
+   "PedidoEstatisticas": {
+    "properties": {
+     "busca": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Busca"
+     },
+     "bbox": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array",
+        "maxItems": 4,
+        "minItems": 4
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bbox",
+      "description": "extensão do mapa em WGS84: [oeste, sul, leste, norte]"
+     },
+     "fids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "integer"
+        },
+        "type": "array",
+        "maxItems": 5000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fids",
+      "description": "seleção vinda do mapa: valores da chave primária"
+     },
+     "colunas": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Colunas"
+     }
+    },
+    "type": "object",
+    "title": "PedidoEstatisticas"
+   },
    "PedidoGeocodificar": {
     "properties": {
      "endereco": {
@@ -14800,6 +15163,91 @@
     ],
     "title": "PedidoIsocrona"
    },
+   "PedidoLinhas": {
+    "properties": {
+     "busca": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Busca"
+     },
+     "bbox": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array",
+        "maxItems": 4,
+        "minItems": 4
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bbox",
+      "description": "extensão do mapa em WGS84: [oeste, sul, leste, norte]"
+     },
+     "fids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "integer"
+        },
+        "type": "array",
+        "maxItems": 5000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fids",
+      "description": "seleção vinda do mapa: valores da chave primária"
+     },
+     "pagina": {
+      "type": "integer",
+      "minimum": 1.0,
+      "title": "Pagina",
+      "default": 1
+     },
+     "por_pagina": {
+      "type": "integer",
+      "title": "Por Pagina",
+      "default": 50
+     },
+     "ordenar_por": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 63
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ordenar Por"
+     },
+     "ordem": {
+      "type": "string",
+      "title": "Ordem",
+      "default": "asc"
+     },
+     "geometria": {
+      "type": "boolean",
+      "title": "Geometria",
+      "description": "devolve a geometria em GeoJSON 4326 para o mapa desenhar",
+      "default": false
+     }
+    },
+    "type": "object",
+    "title": "PedidoLinhas"
+   },
    "PedidoMatriz": {
     "properties": {
      "origens": {
@@ -14908,6 +15356,20 @@
      "destino"
     ],
     "title": "PedidoRota"
+   },
+   "PedidoVista": {
+    "properties": {
+     "colunas": {
+      "items": {
+       "$ref": "#/components/schemas/ColunaVista"
+      },
+      "type": "array",
+      "maxItems": 500,
+      "title": "Colunas"
+     }
+    },
+    "type": "object",
+    "title": "PedidoVista"
    },
    "Privilegio": {
     "properties": {

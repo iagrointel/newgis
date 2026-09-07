@@ -14,6 +14,7 @@ import { carregar as carregarIdioma, t } from '../base/i18n.js';
 import { montarLayout, pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
 import { construirEstilo } from './estilo.js';
+import { criarTabela } from './tabela.js';
 
 const BASES = [
   { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
@@ -82,6 +83,9 @@ async function iniciarMapa() {
   });
 
   await new Promise((resolve) => map.once('load', resolve));
+  // tabela de atributos (L2-01-g): painel acoplado ao mesmo mapa — a seleção da tabela realça a feição e
+  // a seleção no mapa filtra a tabela; as duas leem a MESMA chave primária da camada.
+  await criarTabela(map, el('aviso')).iniciar();
   document.body.dataset.pronto = '1';
 }
 
