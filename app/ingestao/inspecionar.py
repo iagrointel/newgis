@@ -16,6 +16,7 @@ from shapely.validation import explain_validity
 
 from app import limites, objetos
 from app.ingestao import csv_normalizar, formatos, geometria, nomes, tipos_campo
+from app.ingestao.isolamento import ambiente_isolado, preexec_bloquear_rede
 from app.jobs.registro import FalhaDefinitiva, tarefa
 
 AMOSTRA_VALIDADE = limites.INGESTAO_AMOSTRA_VALIDADE
@@ -50,7 +51,7 @@ def _ogrinfo_json(ctx, caminho: str, layer: str | None, oo: list[str]) -> dict:
     argv.append(caminho)
     if layer:
         argv.append(layer)
-    r = ctx.subprocesso(argv)
+    r = ctx.subprocesso(argv, env=ambiente_isolado(), preexec_fn=preexec_bloquear_rede)
     if r.returncode != 0:
         linhas = [ln for ln in (r.stderr or "").splitlines() if ln.strip()]
         raise FalhaDefinitiva(f"o GDAL não abriu o arquivo: {(linhas[-1] if linhas else 'sem detalhe')[:200]}")
@@ -66,7 +67,7 @@ def _tipos_por_varredura(ctx, caminho: str, layer: str, oo: list[str]) -> dict[s
         argv += ["-oo", o]
     argv += ["-dialect", "OGRSQL", "-sql", f'SELECT OGR_GEOMETRY, COUNT(*) AS n FROM "{layer}" GROUP BY OGR_GEOMETRY',
              caminho]
-    r = ctx.subprocesso(argv)
+    r = ctx.subprocesso(argv, env=ambiente_isolado(), preexec_fn=preexec_bloquear_rede)
     if r.returncode != 0:
         return {}
     try:
@@ -91,7 +92,7 @@ def _amostra_validade(ctx, caminho: str, layer: str | None, oo: list[str]) -> tu
     argv += ["-limit", str(AMOSTRA_VALIDADE), caminho]
     if layer:
         argv.append(layer)
-    r = ctx.subprocesso(argv)
+    r = ctx.subprocesso(argv, env=ambiente_isolado(), preexec_fn=preexec_bloquear_rede)
     if r.returncode != 0 or not (r.stdout or "").strip():
         return 0, 0, None
     try:

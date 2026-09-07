@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from app import limites, objetos
 from app.ingestao.inspecionar import PREPARADORES, tabela_de
+from app.ingestao.isolamento import ambiente_isolado
 from app.jobs.registro import Cancelado, FalhaDefinitiva, tarefa
 from app.settings import settings
 
@@ -202,7 +203,7 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             "--config", "PG_USE_COPY", "YES",
         ]
         ctx.progresso(25, "ogr2ogr")
-        r = ctx.subprocesso(argv)
+        r = ctx.subprocesso(argv, env=ambiente_isolado())  # AF_INET permitido: este ogr2ogr grava no Postgres
         if r.returncode != 0:
             linhas = [ln for ln in (r.stderr or "").splitlines() if ln.strip()]
             raise FalhaDefinitiva(f"ogr2ogr falhou: {(linhas[-1] if linhas else 'sem detalhe')[:200]}")
