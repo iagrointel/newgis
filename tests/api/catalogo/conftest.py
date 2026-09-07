@@ -6,10 +6,9 @@ import secrets
 
 import psycopg2
 import psycopg2.extras
-
-from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 import pytest
 
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 from tests.api.conftest import PREFIXO_TESTE
 from tests.api.semear_catalogo import PREFIXO as SEMENTE
 from tests.api.test_rls import contexto, ids_por_slug
@@ -17,7 +16,18 @@ from tests.api.test_rls import contexto, ids_por_slug
 DADOS_POR_TIPO = {
     "mapa": {"esquema_versao": 1, "corpo": {}},
     "cena": {"esquema_versao": 1, "corpo": {}},
-    "estilo": {"esquema_versao": 1, "corpo": {}},
+    "estilo": {
+        "esquema_versao": 1,
+        "corpo": {
+            "plat_construtor": {"tipo": "unico", "geometria": "poligono", "versao": 1, "simbolo": {"cor": "#4e79a7"}},
+            # o servidor recompila `maplibre` a partir de `plat_construtor` na gravação (app/estilos/validador.py);
+            # este valor é só o que passa nas checagens PRÉVIAS (Style Spec + campos) — não precisa ser o canônico.
+            "maplibre": {
+                "version": 8,
+                "layers": [{"id": "camada", "type": "fill", "paint": {"fill-color": "#4e79a7", "fill-opacity": 1.0}}],
+            },
+        },
+    },
     "app": {"tipo": "app", "esquema_versao": 1, "corpo": {}},
     "painel": {"tipo": "painel", "esquema_versao": 1, "corpo": {}},
     "formulario": {"tipo": "formulario", "esquema_versao": 1, "corpo": {}},

@@ -23,7 +23,7 @@ DESTINO = RAIZ / "docs" / "esquemas"
 # tipos publicados como arquivo fora das famílias de grafo: o documento de mapa (item L2-01-a-documento-mapa)
 # tem o esquema citado pelo portão do item e lido pelo editor do navegador, então mora em docs/esquemas como
 # os demais — a família `mapa` não é grafo de nós/ligações, por isso não entra por FAMILIAS_GRAFO.
-TIPOS_PUBLICADOS = {"mapa"}
+TIPOS_PUBLICADOS = {"mapa", "estilo"}
 
 
 def _tipos_com_esquema_publicado() -> list[dict]:

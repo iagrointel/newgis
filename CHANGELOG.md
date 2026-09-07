@@ -3,7 +3,43 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
-## turno 3, setembro de 2026 (item L2-01-a-documento-mapa: o mapa é um documento com esquema, não um punhado de URLs)
+## turno 5, setembro de 2026 (item L2-02-a-modelo-estilo: o estilo de uma camada vira documento versionado)
+
+O tipo `estilo` deixa de ter `corpo` livre e passa a carregar o **JSON Schema publicado**
+(`docs/esquemas/estilo-v1.json`): `plat_construtor` (a intenção do usuário — 7 tipos: `unico`, `categoria`,
+`classes`, `proporcional`, `calor`, `agrupamento`, `raster`, com campo, cortes, cores, rótulos, faixa de
+escala e transparência) e `maplibre` (as camadas MapLibre Style Spec v8 que o navegador desenha). O servidor
+recompila `maplibre` a partir de `plat_construtor` na gravação (`app/estilos/validador.py`) — nunca existe um
+`maplibre` gravado que não seja exatamente o que aquele `plat_construtor` implica, o que fecha a ida-e-volta
+sem perda sem depender do cliente calcular o documento certo. Validação em três camadas na gravação, nunca no
+desenho: (1) `plat_construtor` compila sem erro (campo ausente, faixa invertida, tipo desconhecido —
+`app/estilos/compilador.py`, `EstiloInvalido` → 422 `plat_construtor_invalido` com o campo apontado); (2)
+todo campo citado em expressões `get`/`has`/`in` está no vocabulário `plat_construtor.campos` (422
+`campo_inexistente`); (3) a Style Spec enviada é válida pelo pacote oficial `@maplibre/maplibre-gl-style-spec`
+20.4.0, chamado por subprocesso Node (`ferramentas/estilo/validar.mjs`) — 422 `estilo_invalido` com a
+mensagem literal do validador. `docs/adr/20260907T1200-modelo-de-estilo.md` registra a convivência com
+`app/mapa/simbologia.py` (item L2-01-mapa-web, ramo `wt/l201mapa`, ainda não juntado): as duas coisas ainda
+não se ligam (nenhum código resolve um `estilo.ref` desenhando-o), e o caminho de convergência fica descrito
+lá, com a mesma paleta categórica preservada nos dois lugares.
+
+`app/estilos/padrao.py::estilo_padrao` gera o estilo padrão de uma camada nova por hash sha256 do uuid do
+item — mesmo uuid, mesma cor, em qualquer instalação (testado em `tests/unit/test_estilos_compilador.py`);
+wiring dentro do INSERT de `app/ingestao/carregar.py` fica para quem tocar o L0-04-c/L2-02-e em seguida (a
+função está pronta e testada, a chamada dentro do pipeline de ingestão não foi feita neste item).
+`app/estilos/sld.py::gerar_sld` converte o subconjunto declarado (`unico`/`categoria`/`classes`) para SLD 1.0;
+provado por leitura do XML (as mesmas cores do construtor), não por abrir no QGIS — QGIS não está instalado
+nesta máquina (`SISTEMA.md` recursos), então essa metade da cláusula fica **parcial**, nomeada no handoff.
+
+Sete exemplos (um por tipo do construtor) em `tests/estilos/*.json`: todos compilam, passam no validador
+oficial e a ida-e-volta (compilar de novo o mesmo `plat_construtor`) dá byte a byte o mesmo `maplibre`.
+Bateria da refutação, todas recusadas em 422 na gravação: expressão com campo inexistente, 300 layers
+(o esquema limita a 200), sprite de URL externa (padrão restrito a `/sprites/...` interno), faixa de classe
+invertida, valor de categoria duplicado; item de um inquilino não é legível por outro (404, RLS genérico do
+catálogo). `tests/api/catalogo/conftest.py::DADOS_POR_TIPO["estilo"]` e duas fixtures de `test_mapas.py` que
+fabricavam um `estilo` de exemplo com a forma antiga (`corpo` livre) foram atualizadas para o novo formato.
+
+## turno 3, setembro de 2026
+, setembro de 2026 (item L2-01-a-documento-mapa: o mapa é um documento com esquema, não um punhado de URLs)
 
 O tipo `mapa` deixa de ter `corpo` livre e passa a carregar um **JSON Schema publicado**
 (`docs/esquemas/mapa-v1.json`, gerado de `plat.tipo_item`): mapa-base, lista ordenada de camadas com

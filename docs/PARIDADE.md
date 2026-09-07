@@ -443,3 +443,32 @@ Web Map (URL do portal congelada dentro de cada JSON).
 |---|---|---|---|
 | `baseMapLayers[]` | `corpo.mapa_base.id` ou `.ref` | parcial | uma base por vez (a local em PMTiles ou um item do catálogo); sem empilhar camadas de base nem camada de referência por cima (item L2-01-e) |
 | `title` | `corpo.mapa_base.titulo` | feito | ausente = título do item referenciado |
+
+## Modelo de estilo: renderer da Esri → `plat_construtor` (item L2-02-a-modelo-estilo)
+
+Fonte: `developers.arcgis.com/documentation/common-data-types/renderer-objects.htm` (9 tipos de
+`renderer`, lido em 05/09/2026 pelo L2_CONCEITO C2). Coluna "nosso" = `plat_construtor.tipo`
+(`docs/esquemas/estilo-v1.json`). Compilação para desenho em `app/estilos/compilador.py`.
+
+| Esri (`renderer.type`) | nosso | estado | nota |
+|---|---|---|---|
+| `simple` | `unico` | feito | símbolo único (`plat_construtor.simbolo`) |
+| `uniqueValue` | `categoria` | feito | cor por valor distinto; `campo` + `categorias[]`; valor duplicado é recusado na gravação |
+| `classBreaks` | `classes` | feito | faixas `[min, max)`; a última fecha em `max` inclusive; faixa invertida (`min >= max`) é recusada na gravação |
+| `heatmap` | `calor` | feito | só sobre geometria `ponto` (recusado fora disso); vira `layer` MapLibre `type: heatmap` |
+| — (sem equivalente Esri; construção nossa sobre `cluster` do próprio MapLibre) | `agrupamento` | feito | degraus por contagem acumulada (`point_count`); só sobre `ponto` |
+| `simple` com símbolo proporcional (`visualVariables` de tamanho) | `proporcional` | parcial | raio linear entre `raio_min`/`raio_max` no intervalo `[valor_min, valor_max]`; a Esri faz isso por `visualVariables` dentro de QUALQUER renderer, aqui é um tipo próprio — não compõe com `categoria`/`classes` nesta passagem |
+| — | `raster` | feito | parâmetros de URL do TiTiler (`rescale`, `colormap_name`, `expression`); a Esri usa `rasterRenderer` com um vocabulário bem maior (stretch, colormap por classe) — aqui é o subconjunto que o TiTiler expõe (item L1-02) |
+| `dotDensity` | — | fora | declarado fora no C2 do L2_CONCEITO |
+| `pieChart` | — | fora | idem |
+| `dictionary` | — | fora | idem (renderer militar/simbologia de dicionário) |
+| `predominance` | — | fora | idem |
+| `vectorField` | — | fora | idem (campo vetorial, ex. vento) |
+| `visualVariables` (opacidade, rotação por atributo) | `transparencia` (fixa, não por atributo) | parcial | sem variável visual por expressão nesta passagem |
+
+**SLD 1.0** (`app/estilos/sld.py`, subconjunto declarado: `unico`/`categoria`/`classes`, sem
+`RasterSymbolizer`): as cores foram provadas iguais às do construtor por leitura do XML
+(`tests/unit/test_estilos_compilador.py`); a prova de que o arquivo **abre no QGIS** com as mesmas
+cores fica **pendente de máquina com QGIS** — `qgis_process` está fora dos binários instalados
+nesta máquina (ver `SISTEMA.md`, recursos medidos 05/09/2026). Não confundir "XML lido e correto"
+com "confirmado no QGIS": só o primeiro foi feito aqui.
