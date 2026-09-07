@@ -152,11 +152,6 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_b.post(f"/api/rede/{rede_b['id']}/pacote", content=instalados.bruto("agua-epanet"),
                       headers={"Content-Type": "application/json"})
     assert r.status_code == 201, r.text
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b)
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b, rede_b=rede_b)
     # L3-19-multiescala: conjunto + fator + execução macro de B (sem amostra: 0 aprovadas, mas a execução
     # existe de verdade para os casos GET/POST cross-tenant de /execucoes e /execucoes/{id}/micro)
     r = sessao_b.post("/api/multiescala/conjuntos",
@@ -177,7 +172,7 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
+                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b, rede_b=rede_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -547,6 +542,7 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("GET", "/api/conexoes/{id}/colecoes/{colecao}/feicoes"): Caso(
         lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/feicoes"
+    ),
     # ---- L3-19-multiescala: conjunto/fator/execução são do INQUILINO (tenant_id + RLS, mesma classe da
     # conexão acima, não do registro compartilhado do acervo); GET/POST/DELETE de lista agem só sobre o
     # próprio chamador, GET/DELETE/POST por id de B são cross-tenant puro (404, a RLS nunca deixa ver a linha).
