@@ -11,6 +11,7 @@ construção pesada vai para o threadpool (lição do achado A4 do item L4-01-a)
 import json
 import uuid as uuid_mod
 
+import psycopg2
 from fastapi import APIRouter, Request
 from starlette.concurrency import run_in_threadpool
 
@@ -19,12 +20,14 @@ from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
-from app.rede_utilidades import feicoes, topologia
+from app.rede_utilidades import feicoes, topologia, tracado
 from app.rede_utilidades.modelos import (
     Feicao,
     FeicaoLinhaEntrada,
     FeicaoPontoEntrada,
     TopologiaResumo,
+    TracadoEntrada,
+    TracadoResultado,
 )
 
 router = APIRouter(prefix="/api/rede", tags=["rede de utilidades — topologia"])
@@ -305,3 +308,35 @@ def _uuid_ok_no(valor: str) -> str:
         return str(uuid_mod.UUID(valor))
     except (ValueError, AttributeError, TypeError) as e:
         raise ErroAPI(404, "no_inexistente", "nó inexistente") from e
+
+
+# --- traçado: conectado e subrede, sobre pgRouting (item L4-02-a-conectado-e-subrede) ------------------------
+
+def _tracar_sincrono(rid: str, corpo: TracadoEntrada, auth: Auth, request: Request) -> dict:
+    with db.db(auth.contexto()) as cur:
+        _rede_existe(cur, rid)
+        try:
+            resultado = tracado.tracar(
+                cur, auth.tenant_id, rid, corpo.tipo,
+                [p.model_dump() for p in corpo.pontos_partida],
+                [b.model_dump() for b in corpo.barreiras],
+            )
+        except psycopg2.Error as e:  # noqa: BLE001 — erro do banco vira mensagem legível, nunca 500 cru
+            raise auth_comum.erro_do_banco(e) from e
+        registrar_evento(cur, request, "redes/tracar", "rede", rid,
+                         {"tipo": corpo.tipo, "contagem": resultado["contagem"],
+                          "duracao_ms": resultado["duracao_ms"]})
+    return resultado
+
+
+@router.post("/{rede_id}/tracar", response_model=TracadoResultado, status_code=200, openapi_extra=LER)
+async def tracar_rede(rede_id: str, corpo: TracadoEntrada, request: Request,
+                      auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Traça `tipo=conectado` (tudo que se alcança do(s) ponto(s) de partida, respeitando a traversabilidade
+    de cada dispositivo e as barreiras) ou `tipo=subrede` (o mesmo, mas parando em qualquer controlador de
+    outra subrede — hoje, categoria `transformacao` do pacote). Ponto de partida e barreira são a mesma forma:
+    feição+terminal ou coordenada com tolerância. Não exige `rede.editar`: é leitura sobre o índice já
+    construído (mesmo privilégio de `topologia/alcance`), nunca grava nada na rede."""
+    rid = _uuid_ok(rede_id)
+    resultado = await run_in_threadpool(_tracar_sincrono, rid, corpo, auth, request)
+    return resultado

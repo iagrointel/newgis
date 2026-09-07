@@ -10896,6 +10896,61 @@
     "x-privilegio": "rls:visibilidade"
    }
   },
+  "/api/rede/{rede_id}/tracar": {
+   "post": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Tracar Rede",
+    "description": "Traça `tipo=conectado` (tudo que se alcança do(s) ponto(s) de partida, respeitando a traversabilidade\nde cada dispositivo e as barreiras) ou `tipo=subrede` (o mesmo, mas parando em qualquer controlador de\noutra subrede — hoje, categoria `transformacao` do pacote). Ponto de partida e barreira são a mesma forma:\nfeição+terminal ou coordenada com tolerância. Não exige `rede.editar`: é leitura sobre o índice já\nconstruído (mesmo privilégio de `topologia/alcance`), nunca grava nada na rede.",
+    "operationId": "tracar_rede_api_rede__rede_id__tracar_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TracadoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TracadoResultado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/geocodificar": {
    "post": {
     "tags": [
@@ -11052,7 +11107,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "-",
+    "x-privilegio": "publico"
    },
    "post": {
     "tags": [
@@ -11071,7 +11127,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "-",
+    "x-privilegio": "publico"
    }
   },
   "/rest/services/Geocodificador/GeocodeServer/findAddressCandidates": {
@@ -11091,7 +11148,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    },
    "post": {
     "tags": [
@@ -11109,7 +11167,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    }
   },
   "/rest/services/Geocodificador/GeocodeServer/reverseGeocode": {
@@ -11129,7 +11188,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    },
    "post": {
     "tags": [
@@ -11147,7 +11207,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    }
   },
   "/rest/services/Geocodificador/GeocodeServer/suggest": {
@@ -11167,7 +11228,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    }
   },
   "/rest/services/Geocodificador/GeocodeServer/geocodeAddresses": {
@@ -11188,7 +11250,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    }
   }
  },
@@ -12949,6 +13012,79 @@
      "login"
     ],
     "title": "Dono"
+   },
+   "ElementoTracado": {
+    "properties": {
+     "feicao_id": {
+      "type": "string",
+      "title": "Feicao Id"
+     },
+     "tipo_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo Id"
+     },
+     "grupo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Grupo"
+     },
+     "tipo_chave": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo Chave"
+     },
+     "tipo_nome": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo Nome"
+     },
+     "terminal": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Terminal"
+     }
+    },
+    "type": "object",
+    "required": [
+     "feicao_id",
+     "tipo_id",
+     "grupo",
+     "tipo_chave",
+     "tipo_nome",
+     "terminal"
+    ],
+    "title": "ElementoTracado"
    },
    "Erro": {
     "properties": {
@@ -16065,6 +16201,76 @@
     ],
     "title": "PedidoRota"
    },
+   "PontoTracado": {
+    "properties": {
+     "feicao_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Feicao Id"
+     },
+     "terminal": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 8.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Terminal"
+     },
+     "lon": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 180.0,
+        "minimum": -180.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lon"
+     },
+     "lat": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 90.0,
+        "minimum": -90.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lat"
+     },
+     "tolerancia_m": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1000.0,
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tolerancia M"
+     }
+    },
+    "type": "object",
+    "title": "PontoTracado",
+    "description": "Um ponto de partida ou barreira: por feição (`feicao_id` + `terminal`, obrigatório quando a feição tem\nmais de um terminal) OU por coordenada (`lon`/`lat`, com `tolerancia_m` própria ou a da rede)."
+   },
    "Privilegio": {
     "properties": {
      "nome": {
@@ -17481,6 +17687,87 @@
      "construido_em"
     ],
     "title": "TopologiaResumo"
+   },
+   "TracadoEntrada": {
+    "properties": {
+     "tipo": {
+      "type": "string",
+      "pattern": "^(conectado|subrede)$",
+      "title": "Tipo"
+     },
+     "pontos_partida": {
+      "items": {
+       "$ref": "#/components/schemas/PontoTracado"
+      },
+      "type": "array",
+      "maxItems": 50,
+      "minItems": 1,
+      "title": "Pontos Partida"
+     },
+     "barreiras": {
+      "items": {
+       "$ref": "#/components/schemas/PontoTracado"
+      },
+      "type": "array",
+      "maxItems": 200,
+      "title": "Barreiras"
+     }
+    },
+    "type": "object",
+    "required": [
+     "tipo",
+     "pontos_partida"
+    ],
+    "title": "TracadoEntrada"
+   },
+   "TracadoResultado": {
+    "properties": {
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "elementos": {
+      "items": {
+       "$ref": "#/components/schemas/ElementoTracado"
+      },
+      "type": "array",
+      "title": "Elementos"
+     },
+     "contagem": {
+      "type": "integer",
+      "title": "Contagem"
+     },
+     "nos_alcancados": {
+      "type": "integer",
+      "title": "Nos Alcancados"
+     },
+     "geometria": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Geometria"
+     },
+     "duracao_ms": {
+      "type": "integer",
+      "title": "Duracao Ms"
+     }
+    },
+    "type": "object",
+    "required": [
+     "tipo",
+     "elementos",
+     "contagem",
+     "nos_alcancados",
+     "geometria",
+     "duracao_ms"
+    ],
+    "title": "TracadoResultado"
    },
    "Transferencia": {
     "properties": {

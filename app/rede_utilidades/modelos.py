@@ -109,6 +109,42 @@ class TopoNo(BaseModel):
     lat: float
 
 
+# --- traçado (item L4-02-a-conectado-e-subrede) -------------------------------------------------------
+
+class PontoTracado(BaseModel):
+    """Um ponto de partida ou barreira: por feição (`feicao_id` + `terminal`, obrigatório quando a feição tem
+    mais de um terminal) OU por coordenada (`lon`/`lat`, com `tolerancia_m` própria ou a da rede)."""
+    feicao_id: str | None = None
+    terminal: int | None = Field(default=None, ge=1, le=8)
+    lon: float | None = Field(default=None, ge=-180, le=180)
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    tolerancia_m: float | None = Field(default=None, gt=0, le=1000)
+
+
+class TracadoEntrada(BaseModel):
+    tipo: str = Field(pattern="^(conectado|subrede)$")
+    pontos_partida: list[PontoTracado] = Field(min_length=1, max_length=50)
+    barreiras: list[PontoTracado] = Field(default_factory=list, max_length=200)
+
+
+class ElementoTracado(BaseModel):
+    feicao_id: str
+    tipo_id: str | None
+    grupo: str | None
+    tipo_chave: str | None
+    tipo_nome: str | None
+    terminal: int | None
+
+
+class TracadoResultado(BaseModel):
+    tipo: str
+    elementos: list[ElementoTracado]
+    contagem: int
+    nos_alcancados: int
+    geometria: dict | None
+    duracao_ms: int
+
+
 class TopoArestaModelo(BaseModel):
     id: str
     grupo_id: str

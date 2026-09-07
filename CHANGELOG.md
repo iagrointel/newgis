@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L4-02-a-conectado-e-subrede: traçado conectado e subrede — PARCIAL)
+
+`POST /api/rede/{id}/tracar` (tipo `conectado`|`subrede`), sobre `public.pgr_connectedComponents`
+(pgRouting 4.0.1, já instalada — ver ADR 0021): ponto de partida por feição+terminal ou coordenada com
+tolerância, barreiras que removem nó do grafo inteiro, travessabilidade por `atributos.estado`, fronteira
+de subrede pela categoria `transformacao`. Rede sintética de 12 nós com resultado conhecido em pytest:
+conectado = 9 elementos/6 nós, subrede = 6 elementos/4 nós (`tests/api/test_rede_tracado.py`, 13 casos,
+todos verdes). Refutação: laço fechado não duplica elemento nem trava; transformador é a fronteira de
+subrede, chave em série (mesmo grupo) não é. pgRouting confirmada instalada por consulta a
+`pg_available_extensions`. Dois defeitos corrigidos na primeira execução real (import de `psycopg2` fora
+de escopo; SQL de arestas sem a coluna `cost` que `pgr_connectedComponents` exige) — ver ADR 0021.
+Cláusulas NÃO cumpridas, declaradas: (1) clique+tabela lateral+captura e2e — não existe front-end de rede
+de utilidades no repositório para acoplar; (2) p95 ≤ 2 s no maior alimentador da cooperativa de teste —
+teste pronto (`test_rede_tracado_medida.py`, marcador `lento`), mas a máquina estava com carga 18-21
+(regra do brief: não medir acima de 8); registrado `medido: false` com a carga ao lado, não fingido.
+
 ## turno 4, setembro de 2026 (item L4-01-b-topologia-derivada: topologia derivada da rede de utilidades)
 
 `POST /api/rede/{id}/topologia/habilitar` reconstrói dois índices derivados das feições da rede —
