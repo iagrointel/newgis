@@ -32,6 +32,7 @@ import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
 import { carregar as carregarMapa, camadasDoTopo, salvarOrdem, alternarVisivel, salvarDocumento } from './documento.js';
 import { montarPainel } from './painel_camadas.js';
+import { EditorEstilo } from './estilo_editor.js';
 
 const BASES = [
   { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
@@ -118,7 +119,18 @@ async function iniciarDocumento(map) {
 }
 
 
+/* sprite e glifos do inquilino (item L2-02-e): URLs absolutas da própria origem; o MapLibre exige absoluta */
+let slugInquilino = null;
+function recursosDoInquilino() {
+  if (!slugInquilino) return {};
+  return {
+    sprite: `${location.origin}/api/simbolos/sprite/${encodeURIComponent(slugInquilino)}`,
+    glyphs: `${location.origin}/api/simbolos/fontes/{fontstack}/{range}.pbf`,
+  };
+}
+
 async function iniciar(usuario) {
+  slugInquilino = (usuario && usuario.inquilino && usuario.inquilino.slug) || null;
   const maplibregl = window.maplibregl;
   if (!maplibregl || !window.pmtiles) { el('aviso').erro(t('mapa.erro_biblioteca')); return; }
   const protocolo = new window.pmtiles.Protocol();
@@ -126,7 +138,7 @@ async function iniciar(usuario) {
 
   const map = new maplibregl.Map({
     container: 'mapa',
-    style: construirEstilo(urlDado(BASES[0].arquivo)),
+    style: construirEstilo(urlDado(BASES[0].arquivo), recursosDoInquilino()),
     center: CENTRO,
     zoom: 11,
     attributionControl: false,
@@ -148,7 +160,9 @@ async function iniciar(usuario) {
     },
     aoErro: (e) => el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`),
     aoMudarEscala: () => legenda.desenhar(),
+    aoAbrirPainel: (acao, id) => { if (acao === 'estilo') editor.abrir(id); },
   });
+  const editor = new EditorEstilo({ catalogo, map, raiz: el('painel-estilo'), aoFechar: () => legenda.desenhar() });
   const legenda = new Legenda(map, el('legenda'), () => arvore.camadasParaLegenda());
   instalarPopup(map, catalogo, maplibregl);
 
@@ -163,7 +177,7 @@ async function iniciar(usuario) {
     const base = BASES.find((b) => b.id === sel.value) || BASES[0];
     const ativas = [...catalogo.ativas];
     const opacidades = new Map(catalogo.opacidade);
-    map.setStyle(base.arquivo ? construirEstilo(urlDado(base.arquivo))
+    map.setStyle(base.arquivo ? construirEstilo(urlDado(base.arquivo), recursosDoInquilino())
       : { version: 8, name: 'plat-sem-base', sources: {}, layers: [
         { id: 'fundo', type: 'background', paint: { 'background-color': '#0b0f10' } }] });
     await new Promise((r) => map.once('styledata', r));
@@ -253,7 +267,7 @@ async function iniciar(usuario) {
     el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
   }
   window.plat = window.plat || {};
-  window.plat.mapa = { map, catalogo, medicao, arvore, legenda };  // ponto de inspeção do e2e, nunca de negócio
+  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, editor };  // ponto de inspeção do e2e, nunca de negócio
   await iniciarDocumento(map);
   document.body.dataset.pronto = '1';
 }
