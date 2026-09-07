@@ -333,6 +333,30 @@ def tamanho(chave: str) -> int:
     return int(info.tamanho)
 
 
+def fonte_gdal(chave: str) -> tuple[str, dict]:
+    """(caminho `/vsis3/...`, opções de ambiente GDAL) para LER o objeto por faixa de bytes, sem baixar
+    (item L1-02: o motor de ladrilho abre o COG direto no Garage). Usa SEMPRE a chave só-leitura do balde
+    do inquilino — a chave RW nunca chega perto do caminho de leitura de tile.
+
+    Não devolve URL assinada nem credencial ao cliente: o segredo fica no processo, no `rasterio.Env` que
+    envolve a leitura. Quem chama nunca recebe endereço que o navegador possa repetir."""
+    bucket, obj_key = _chave_e_objeto(chave)
+    if not settings.PLAT_GARAGE_URL:
+        raise ConfiguracaoAusente("PLAT_GARAGE_URL é obrigatório para ler COG por /vsis3")
+    endpoint = settings.PLAT_GARAGE_URL
+    sem_esquema = endpoint.split("://", 1)[-1]
+    opcoes = {
+        "AWS_ACCESS_KEY_ID": bucket["chave_ro_id"],
+        "AWS_SECRET_ACCESS_KEY": bucket["chave_ro_segredo"],
+        "AWS_S3_ENDPOINT": sem_esquema,
+        "AWS_HTTPS": "YES" if endpoint.startswith("https://") else "NO",
+        "AWS_VIRTUAL_HOSTING": "FALSE",
+        "AWS_DEFAULT_REGION": settings.PLAT_GARAGE_REGIAO,
+        "AWS_REGION": settings.PLAT_GARAGE_REGIAO,
+    }
+    return f"/vsis3/{bucket['bucket_alias']}/{obj_key}", opcoes
+
+
 def baixar(chave: str, destino) -> int:
     """Grava o objeto em `destino` (caminho local) EM STREAM, sem materializar em RAM (item L1-01: o bruto de
     até RASTER_BYTES_MAX desce para o diretório de trabalho do job). Devolve os bytes escritos."""

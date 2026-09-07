@@ -18,7 +18,8 @@ from __future__ import annotations
 import io
 import threading
 from collections import OrderedDict
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturoTimeout
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturoTimeout
 
 import morecantile
 import numpy as np
@@ -46,7 +47,6 @@ PUBLICAR = {"x-auth": "S/T", "x-privilegio": "conteudo.publicar_camada"}
 SEM_CACHE = {"Cache-Control": "no-store, must-revalidate"}
 TILE_CACHE = {"Cache-Control": "private, max-age=300", "X-Robots-Tag": "noindex, nofollow"}
 
-import morecantile
 
 _TMS = morecantile.tms.get("WebMercatorQuad")
 _TILE_PX = 256

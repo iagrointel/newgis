@@ -1,0 +1,98 @@
+{
+ "item": "L1-02-tiles-token",
+ "medidas": {
+  "quente_ladrilhos_por_segundo_ab": {
+   "valor": 68738.6,
+   "unidade": "ladrilhos/s",
+   "comando": "ab -n 40000 -c 32 -k http://127.0.0.1:8238/svc/<tok>/raster/<uuid>/12/1503/2230.png  (mesma bancada; ab e cliente em C, sem a trava global do Python)"
+  },
+  "quente_ladrilhos_por_segundo_um_ladrilho": {
+   "valor": 6718.7,
+   "unidade": "ladrilhos/s",
+   "comando": "scripts/bench_tiles.py --base http://127.0.0.1:8238 --token <tok> --item <uuid> --z 15 --lon -47.90 --lat -15.85 --conexoes 32 --segundos 10 --frios 60 --revogar <credenciais>  (nginx da bancada com o MESMO bloco de deploy/nginx.conf; aplicacao uvicorn 4 workers; COG sintetico 1024x1024, 4 bandas uint16, ZSTD, no Garage)  [cliente em Python: a trava global limita o CLIENTE, nao o servidor]"
+  },
+  "quente_ladrilhos_por_segundo_tela_40_ladrilhos": {
+   "valor": 6809.3,
+   "unidade": "ladrilhos/s",
+   "comando": "scripts/bench_tiles.py --base http://127.0.0.1:8238 --token <tok> --item <uuid> --z 15 --lon -47.90 --lat -15.85 --conexoes 32 --segundos 10 --frios 60 --revogar <credenciais>  (nginx da bancada com o MESMO bloco de deploy/nginx.conf; aplicacao uvicorn 4 workers; COG sintetico 1024x1024, 4 bandas uint16, ZSTD, no Garage)"
+  },
+  "quente_ms_mediana": {
+   "valor": 3.76,
+   "unidade": "ms",
+   "comando": "scripts/bench_tiles.py --base http://127.0.0.1:8238 --token <tok> --item <uuid> --z 15 --lon -47.90 --lat -15.85 --conexoes 32 --segundos 10 --frios 60 --revogar <credenciais>  (nginx da bancada com o MESMO bloco de deploy/nginx.conf; aplicacao uvicorn 4 workers; COG sintetico 1024x1024, 4 bandas uint16, ZSTD, no Garage)"
+  },
+  "quente_ms_p95": {
+   "valor": 10.24,
+   "unidade": "ms",
+   "comando": "scripts/bench_tiles.py --base http://127.0.0.1:8238 --token <tok> --item <uuid> --z 15 --lon -47.90 --lat -15.85 --conexoes 32 --segundos 10 --frios 60 --revogar <credenciais>  (nginx da bancada com o MESMO bloco de deploy/nginx.conf; aplicacao uvicorn 4 workers; COG sintetico 1024x1024, 4 bandas uint16, ZSTD, no Garage)"
+  },
+  "quente_erros": {
+   "valor": 0,
+   "unidade": "requisicoes",
+   "comando": "scripts/bench_tiles.py --base http://127.0.0.1:8238 --token <tok> --item <uuid> --z 15 --lon -47.90 --lat -15.85 --conexoes 32 --segundos 10 --frios 60 --revogar <credenciais>  (nginx da bancada com o MESMO bloco de deploy/nginx.conf; aplicacao uvicorn 4 workers; COG sintetico 1024x1024, 4 bandas uint16, ZSTD, no Garage)"
+  },
+  "frio_ladrilhos_por_segundo_uma_conexao": {
+   "valor": 96.2,
+   "unidade": "ladrilhos/s",
+   "comando": "scripts/bench_tiles.py --base http://127.0.0.1:8238 --token <tok> --item <uuid> --z 15 --lon -47.90 --lat -15.85 --conexoes 32 --segundos 10 --frios 60 --revogar <credenciais>  (nginx da bancada com o MESMO bloco de deploy/nginx.conf; aplicacao uvicorn 4 workers; COG sintetico 1024x1024, 4 bandas uint16, ZSTD, no Garage)  [60 URLs unicas: 60/60 MISS, nenhuma resposta do cache]"
+  },
+  "frio_ms_mediana": {
+   "valor": 9.79,
+   "unidade": "ms",
+   "comando": "scripts/bench_tiles.py --base http://127.0.0.1:8238 --token <tok> --item <uuid> --z 15 --lon -47.90 --lat -15.85 --conexoes 32 --segundos 10 --frios 60 --revogar <credenciais>  (nginx da bancada com o MESMO bloco de deploy/nginx.conf; aplicacao uvicorn 4 workers; COG sintetico 1024x1024, 4 bandas uint16, ZSTD, no Garage)"
+  },
+  "rebanho_20_pedidos_ao_mesmo_ladrilho_frio_falta": {
+   "valor": 1,
+   "unidade": "leituras na aplicacao",
+   "comando": "scripts/bench_tiles.py --base http://127.0.0.1:8238 --token <tok> --item <uuid> --z 15 --lon -47.90 --lat -15.85 --conexoes 32 --segundos 10 --frios 60 --revogar <credenciais>  (nginx da bancada com o MESMO bloco de deploy/nginx.conf; aplicacao uvicorn 4 workers; COG sintetico 1024x1024, 4 bandas uint16, ZSTD, no Garage)  [proxy_cache_lock: 20 pedidos simultaneos ao mesmo ladrilho frio]"
+  },
+  "rebanho_20_pedidos_ao_mesmo_ladrilho_frio_acerto": {
+   "valor": 19,
+   "unidade": "respostas do cache",
+   "comando": "scripts/bench_tiles.py --base http://127.0.0.1:8238 --token <tok> --item <uuid> --z 15 --lon -47.90 --lat -15.85 --conexoes 32 --segundos 10 --frios 60 --revogar <credenciais>  (nginx da bancada com o MESMO bloco de deploy/nginx.conf; aplicacao uvicorn 4 workers; COG sintetico 1024x1024, 4 bandas uint16, ZSTD, no Garage)  [proxy_cache_lock]"
+  },
+  "revogacao_segundos_ate_403_pior_de_3": {
+   "valor": 2.902,
+   "unidade": "s",
+   "comando": "scripts/bench_tiles.py --base http://127.0.0.1:8238 --token <tok> --item <uuid> --z 15 --lon -47.90 --lat -15.85 --conexoes 32 --segundos 10 --frios 60 --revogar <credenciais>  (nginx da bancada com o MESMO bloco de deploy/nginx.conf; aplicacao uvicorn 4 workers; COG sintetico 1024x1024, 4 bandas uint16, ZSTD, no Garage)  [revoga o token pela API e mede ate o nginx devolver 403]"
+  },
+  "revogacao_segundos_ate_403_melhor_de_3": {
+   "valor": 2.864,
+   "unidade": "s",
+   "comando": "scripts/bench_tiles.py --base http://127.0.0.1:8238 --token <tok> --item <uuid> --z 15 --lon -47.90 --lat -15.85 --conexoes 32 --segundos 10 --frios 60 --revogar <credenciais>  (nginx da bancada com o MESMO bloco de deploy/nginx.conf; aplicacao uvicorn 4 workers; COG sintetico 1024x1024, 4 bandas uint16, ZSTD, no Garage)"
+  },
+  "wmts_capabilities_valida_no_xsd_oficial": {
+   "valor": 1,
+   "unidade": "0=nao 1=sim",
+   "comando": "pytest tests/api/imagens/test_tiles_token.py::test_wmts_getcapabilities_valida_no_esquema_oficial (xmllint --nonet --schema tests/dados/ogc_xsd/wmts/1.0/wmtsGetCapabilities_response.xsd)"
+  },
+  "cliente_ogc_gdal_wmts_media_banda1": {
+   "valor": 3.536,
+   "unidade": "valor de pixel (0-255)",
+   "comando": "scripts/prova_cliente_ogc.sh https://127.0.0.1:8240 <tok> <uuid>  [driver WMTS do GDAL le pixel; media != 0 prova imagem, nao vazio]"
+  },
+  "cliente_ogc_gdal_xyz_media_banda1": {
+   "valor": 13.367,
+   "unidade": "valor de pixel (0-255)",
+   "comando": "scripts/prova_cliente_ogc.sh (etapa 3: driver WMS/TMS do GDAL sobre o gabarito XYZ)"
+  },
+  "ndvi_ao_vivo_ms_no_motor": {
+   "valor": 14.8,
+   "unidade": "ms",
+   "comando": "leitura direta do motor (rio-tiler sobre /vsis3), 3a repeticao; RGB do mesmo ladrilho: 7,7 ms"
+  },
+  "testes_do_item": {
+   "valor": 61,
+   "unidade": "casos",
+   "comando": "pytest tests/api/imagens/test_tiles_token.py tests/unit/test_tiles_expressao_e_wmts.py  (32 + 29)"
+  }
+ },
+ "ambiente": {
+  "maquina": "12 vCPU, 23 GB RAM, carga do sistema ~10 (outras trilhas do laco rodando ao mesmo tempo)",
+  "teto_da_maquina": "68.484 requisicoes/s do MESMO nginx servindo um arquivo estatico de 10.744 bytes (ab -n 20000 -c 32): o servico de ladrilho quente chega a 68.738/s, ou seja, esta no teto do nginx desta maquina, nao no da aplicacao",
+  "cache": "proxy_cache em /tmp (bancada); em producao o install.sh cria /var/cache/nginx/plat_tiles, 20 GB",
+  "aviso": "numero de UMA maquina e de um COG sintetico pequeno; nao extrapolar para acervo grande sem remedir"
+ },
+ "gerado_em": "2026-09-07T03:15:03Z",
+ "git_sha": "23eb185aff60"
+}
