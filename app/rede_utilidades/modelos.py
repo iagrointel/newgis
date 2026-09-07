@@ -5,6 +5,7 @@ precisa apontar a linha do arquivo que a pessoa enviou."""
 from pydantic import BaseModel, Field
 
 from app.rede_utilidades.esquema import DISCIPLINAS
+from app.rede_utilidades.isolamento import CATEGORIAS_PADRAO as CATEGORIAS_ISOLAMENTO_PADRAO
 
 
 class RedeEntrada(BaseModel):
@@ -127,7 +128,7 @@ class TracadoEntrada(BaseModel):
     exige um único ponto em `pontos_partida` (a origem) e `destino`; `tipo=lacos` e `tipo=isolados` não
     exigem `pontos_partida` (operam sobre a rede inteira) — a validação por tipo é feita na rota, não aqui,
     porque cada tipo tem uma exigência diferente sobre a MESMA lista."""
-    tipo: str = Field(pattern="^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante)$")
+    tipo: str = Field(pattern="^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante|isolamento)$")
     pontos_partida: list[PontoTracado] = Field(default_factory=list, max_length=50)
     destino: PontoTracado | None = None
     barreiras: list[PontoTracado] = Field(default_factory=list, max_length=200)
@@ -140,6 +141,13 @@ class TracadoEntrada(BaseModel):
     # controlador com nó na topologia, do atributo `direcao_fluxo` quando não tem; 'controlador' e 'atributo'
     # impõem um dos dois. Ignorado pelos demais tipos de traçado.
     origem_direcao: str = Field(default="auto", pattern="^(auto|controlador|atributo)$")
+    # isolamento (L4-02-c): categorias de ativo que podem ser abertas para cortar (proteção e manobra, por
+    # padrão), se os elementos de além dos dispositivos que ficam sem fonte entram no resultado, e se um
+    # dispositivo sem `estado` declarado (ou com `operavel` negado) pode ser contado como ponto de corte.
+    categorias_isolamento: list[str] = Field(
+        default_factory=lambda: list(CATEGORIAS_ISOLAMENTO_PADRAO), max_length=20)
+    incluir_isolados: bool = False
+    ignorar_inoperante: bool = True
 
 
 class ElementoTracado(BaseModel):

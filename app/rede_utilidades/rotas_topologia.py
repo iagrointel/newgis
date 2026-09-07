@@ -20,7 +20,7 @@ from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
-from app.rede_utilidades import direcao, feicoes, fluxo, lacos, topologia, tracado
+from app.rede_utilidades import direcao, feicoes, fluxo, isolamento, lacos, topologia, tracado
 from app.rede_utilidades.modelos import (
     Feicao,
     FeicaoLinhaEntrada,
@@ -330,6 +330,12 @@ def _tracar_sincrono(rid: str, corpo: TracadoEntrada, auth: Auth, request: Reque
                 )
             elif corpo.tipo == "lacos":
                 resultado = lacos.detectar_lacos(cur, auth.tenant_id, rid, barreiras)
+            elif corpo.tipo == isolamento.TIPO:
+                resultado = isolamento.tracar_isolamento(
+                    cur, auth.tenant_id, rid, [p.model_dump() for p in corpo.pontos_partida], barreiras,
+                    corpo.categorias_isolamento, corpo.categoria_controlador, corpo.incluir_isolados,
+                    corpo.ignorar_inoperante,
+                )
             elif corpo.tipo == "isolados":
                 resultado = lacos.isolados(cur, auth.tenant_id, rid, corpo.categoria_controlador, barreiras)
             elif corpo.tipo == "caminho_curto":
@@ -360,6 +366,11 @@ async def tracar_rede(rede_id: str, corpo: TracadoEntrada, request: Request,
     outra subrede — hoje, categoria `transformacao` do pacote); ou, item L4-02-d-lacos-e-caminho-curto:
     `tipo=lacos` (ciclos por componente biconexo, `pgr_biconnectedComponents`), `tipo=isolados` (elementos sem
     caminho a nenhuma feição da categoria `categoria_controlador`, padrão `fonte`, `pgr_connectedComponents`)
+    ou `tipo=isolamento` (item L4-02-c: os dispositivos de proteção/manobra que precisam ABRIR para desenergizar
+    o ponto de partida, o que fica sem energia junto e o resumo por clientes, transformadores e km por nível;
+    `categorias_isolamento` escolhe as categorias que podem ser abertas, `ignorar_inoperante` decide se um
+    dispositivo sem `estado` declarado conta como ponto de corte, `incluir_isolados` traz também o que fica
+    sem fonte além dos dispositivos);
     ou `tipo=caminho_curto` (origem em `pontos_partida[0]`, `destino`, custo = `atributo_custo` ou o
     comprimento geodésico por padrão; `k` alternativas por `pgr_ksp` quando `k>1`); ou, item
     itens L4-18-rede-simples-trace-network e L4-02-b-montante-jusante, `tipo=montante`/`tipo=jusante`: numa
