@@ -278,7 +278,12 @@ def test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica(
     esquema = app.openapi()
     escritas = [(c, m) for c, ops in esquema["paths"].items() if c.startswith("/api/rede")
                 for m in ops if m in ("post", "put", "patch", "delete")]
-    assert len(escritas) == 3, escritas
+    # 3 rotas do catálogo (POST /api/rede, DELETE /api/rede/{id}, POST .../pacote) + 3 da topologia
+    # derivada (POST .../feicoes/pontos, .../feicoes/linhas, .../topologia/habilitar; item
+    # L4-01-b-topologia-derivada). O número cresce a cada item novo da linha L4 que escreva rede — o
+    # que a asserção abaixo protege é que TODA rota nova venha com x-privilegio=rede.editar, não a
+    # contagem exata.
+    assert len(escritas) == 6, escritas
     for c, m in escritas:
         assert esquema["paths"][c][m].get("x-privilegio") == "rede.editar", (c, m)
     rid = _rede_com_pacote(sessao_a, limpar_redes, "priv")

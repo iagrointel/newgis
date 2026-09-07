@@ -14,10 +14,18 @@
 --
 -- Cláusula "pgRouting instalado": o pacote apt postgresql-16-pgrouting é pré-requisito de máquina
 -- (instalado em 06/09, versão 4.0.1; a lista deploy/pacotes_apt.txt é do item L7-14 e fica com ele).
--- Aqui a extensão é criada no schema da aplicação para que a função de menor caminho exista junto do
--- modelo que a usa. Idempotente. Sem BEGIN/COMMIT. Aplicada como postgres.
-
-CREATE EXTENSION IF NOT EXISTS pgrouting WITH SCHEMA plat;
+-- Idempotente. Sem BEGIN/COMMIT. Aplicada como postgres.
+--
+-- Achado deste item (06-07/09/2026, laço de fechamento): a extensão é um objeto ÚNICO por BANCO —
+-- "CREATE EXTENSION IF NOT EXISTS" é no-op se ela já existir em QUALQUER schema, mesmo pedindo outro
+-- `WITH SCHEMA`. Com várias trilhas compartilhando o mesmo banco (`laco/trilha_ambiente.sh`), a
+-- PRIMEIRA trilha a rodar esta migração "ganha" o schema, e todas as outras — cuja consulta é
+-- reescrita para o schema DELAS por `CursorSchemaAmbiente` — chamavam `<schema_da_trilha>.pgr_dijkstra`
+-- e batiam em UndefinedFunction (medido: extensão ficou em `plat_til401modelo`, outra trilha do MESMO
+-- item, enquanto esta rodava como `plat_tf401m`). A extensão fica em `public` (schema que a
+-- reescrita NUNCA toca — sempre o mesmo nome literal em toda trilha/homolog/produção), e a função de
+-- menor caminho chama `public.pgr_dijkstra` explicitamente, nunca `plat.pgr_dijkstra` reescrito.
+CREATE EXTENSION IF NOT EXISTS pgrouting WITH SCHEMA public;
 
 -- -----------------------------------------------------------------------------------------------
 -- nó da rede: junção (ponto de conexão anônimo ou nomeado), dispositivo (transformador, chave),
@@ -364,7 +372,7 @@ BEGIN
     '  AND (n.id = a.no_origem_id OR n.id = a.no_destino_id))', p_rede);
 
   WITH dij AS (
-    SELECT d.node, d.edge, d.seq AS ordem FROM plat.pgr_dijkstra(v_grafo, v_de_seq, v_para_seq, directed := false) d
+    SELECT d.node, d.edge, d.seq AS ordem FROM public.pgr_dijkstra(v_grafo, v_de_seq, v_para_seq, directed := false) d
   )
   SELECT count(*),
          COALESCE(sum(COALESCE(a.comprimento_m, 0)) FILTER (WHERE a.seq IS NOT NULL), 0),
