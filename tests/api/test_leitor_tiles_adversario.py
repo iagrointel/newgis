@@ -31,7 +31,7 @@ def _conta(cur, c):
     return cur.fetchone()["n"]
 
 
-def test_leitor_nao_le_o_segredo_da_prova(env, leitor, camadas):
+def test_leitor_nao_le_o_segredo_da_prova(env, leitor, camadas):  # noqa: F811  (fixtures importadas do arquivo do construtor)
     """Sem o segredo não há como forjar a prova. O papel de leitura não pode SELECIONAR `segredo_leitor`."""
     s = _schema(env)
     with leitor.cursor() as cur, pytest.raises(psycopg2.errors.InsufficientPrivilege):
@@ -39,7 +39,7 @@ def test_leitor_nao_le_o_segredo_da_prova(env, leitor, camadas):
     leitor.rollback()
 
 
-def test_leitor_nao_executa_prova_leitor(env, leitor, camadas):
+def test_leitor_nao_executa_prova_leitor(env, leitor, camadas):  # noqa: F811  (fixtures importadas do arquivo do construtor)
     """A função que devolveria a prova de qualquer inquilino é negada ao papel de leitura."""
     s = _schema(env)
     with leitor.cursor() as cur, pytest.raises(psycopg2.errors.InsufficientPrivilege):
@@ -47,7 +47,7 @@ def test_leitor_nao_executa_prova_leitor(env, leitor, camadas):
     leitor.rollback()
 
 
-def test_guc_crua_sem_prova_nao_le_nada(env, leitor, camadas):
+def test_guc_crua_sem_prova_nao_le_nada(env, leitor, camadas):  # noqa: F811  (fixtures importadas do arquivo do construtor)
     """`SET plat.tenant_id`/`plat.prova` com valores forjados não abre a camada: a política do leitor exige a
     prova, e a prova errada não bate."""
     b = camadas["demo2"]
@@ -58,7 +58,7 @@ def test_guc_crua_sem_prova_nao_le_nada(env, leitor, camadas):
     leitor.rollback()
 
 
-def test_token_de_a_nao_le_camada_de_b(env, leitor, camadas):
+def test_token_de_a_nao_le_camada_de_b(env, leitor, camadas):  # noqa: F811  (fixtures importadas do arquivo do construtor)
     """Com um token legítimo de A: lê A (3), não lê B (0), na MESMA transação. É o contrato central do item,
     reafirmado pelo adversário porque é o que mais importa."""
     a, b = camadas["demo"], camadas["demo2"]
@@ -70,7 +70,7 @@ def test_token_de_a_nao_le_camada_de_b(env, leitor, camadas):
     leitor.rollback()
 
 
-def test_override_do_tenant_id_apos_o_contexto_nao_le_b(env, leitor, camadas):
+def test_override_do_tenant_id_apos_o_contexto_nao_le_b(env, leitor, camadas):  # noqa: F811  (fixtures importadas do arquivo do construtor)
     """Depois de `contexto_por_token` de A, sobrescrever só `plat.tenant_id` para B não lê B: a `plat.prova`
     posta continua a de A e `tenant_leitor()` recomputa a prova de B (que não bate)."""
     a, b = camadas["demo"], camadas["demo2"]
@@ -81,7 +81,7 @@ def test_override_do_tenant_id_apos_o_contexto_nao_le_b(env, leitor, camadas):
     leitor.rollback()
 
 
-def test_prova_de_a_reusada_como_prova_de_b_nao_le_b(env, leitor, camadas):
+def test_prova_de_a_reusada_como_prova_de_b_nao_le_b(env, leitor, camadas):  # noqa: F811  (fixtures importadas do arquivo do construtor)
     """A `plat.prova` de A é legível na sessão (`current_setting`) mas embute o inquilino: reusá-la como prova
     de B não abre B."""
     a, b = camadas["demo"], camadas["demo2"]
@@ -96,7 +96,7 @@ def test_prova_de_a_reusada_como_prova_de_b_nao_le_b(env, leitor, camadas):
     leitor.rollback()
 
 
-def test_token_amplo_de_a_nao_alcanca_b(env, leitor, camadas):
+def test_token_amplo_de_a_nao_alcanca_b(env, leitor, camadas):  # noqa: F811  (fixtures importadas do arquivo do construtor)
     """Escopo não é inquilino: o token AMPLO de A (escopo `camada:ler` sem pin de item, criado pela fixture do
     construtor) passa a validação de escopo, mas não muda o inquilino do contexto. Na função de tile de B
     levanta `tile_de_outro_inquilino`; na leitura direta de B, o contexto continua o inquilino de A e B dá 0."""

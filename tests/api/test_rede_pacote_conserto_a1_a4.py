@@ -278,7 +278,10 @@ def test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica(
     esquema = app.openapi()
     escritas = [(c, m) for c, ops in esquema["paths"].items() if c.startswith("/api/rede")
                 for m in ops if m in ("post", "put", "patch", "delete")]
-    assert len(escritas) == 3, escritas
+    # 07/09: a contagem era fixa em 3 e quebrou quando o L4-28 acrescentou ativos e faixas ao mesmo
+    # prefixo. O contrato do teste é o LAÇO abaixo (toda rota de escrita de /api/rede exige rede.editar);
+    # o número só existe para o caso de a lista vir vazia por erro de coleta.
+    assert len(escritas) >= 3, escritas
     for c, m in escritas:
         assert esquema["paths"][c][m].get("x-privilegio") == "rede.editar", (c, m)
     rid = _rede_com_pacote(sessao_a, limpar_redes, "priv")
