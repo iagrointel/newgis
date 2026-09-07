@@ -417,3 +417,12 @@ geométrica). Ver `docs/rede/MODELO_REDE.md` para o modelo de dado completo e o 
 | *Trace* (isolamento, montante/jusante, laço) | percorre o grafo respeitando barreira/estado | `plat.rede_menor_caminho` só faz MENOR CAMINHO (pgRouting Dijkstra), excluindo aresta que toca nó `aberto`; não faz isolamento nem montante/jusante | parcial (uma operação de traçado das várias da linha L4-02) | `test_pgrouting_resolve_menor_caminho` | 2026-09-07 | pendente (D20) |
 | importador de fonte real (*Load From File Geodatabase*) com contagem conferida | ferramentas de carga do *Utility Network Package*, sem conferência automática publicada | `app/rede_utilidades/bdgd.py`: `inspecionar()` lê o feature count de cada camada do GDB e compara com o inserido; toda diferença vira desvio nomeado com quantidade e exemplos, nunca silêncio | parcial — ver `docs/rede/MODELO_REDE.md` §4 (RAMLIG não vira aresta nesta distribuidora real; testado num EXTRATO real, não a distribuidora inteira) | `tests/api/test_rede_modelo.py` (5 testes) | 2026-09-07 | pendente (D20) |
 | pgRouting como motor de menor caminho | motor de traçado proprietário do *Utility Network* | extensão `pgrouting` 4.0.1, instalada em `public` (achado: objeto único por banco, não por schema de trilha — ver ADR) | feito | `test_pgrouting_resolve_menor_caminho` | 2026-09-07 | pendente (D20) |
+
+### Importador BDGD como job (item L4-01-c)
+
+| capacidade | Esri (Utility Network / Data Loading Tools) | plataforma |
+|---|---|---|
+| carga de fonte externa com progresso | Data Loading Workspace (Pro), sem contagem conferida automática | job `rede.importar_bdgd` com progresso e contagem camada a camada contra `GetFeatureCount` |
+| validação da fonte antes da carga | Attribute Rules na feature class (após a carga) | contrato de dado do YAML da casa avaliado ANTES da carga; relatório gravado com a importação |
+| comprimento do ativo | `Shape_Length` (geodésico/planar) ou campo de negócio, sem detecção de unidade | COMP declarado convertido pela razão geodésica; unidade detectada por medida, não por configuração |
+| órfãos após a carga | Validate Network Topology (erros de rede) | `uc_sem_trafo`, `trafo_sem_ctmt`, `pac_sem_trecho` contados e listados na auditoria |
