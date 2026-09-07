@@ -13,6 +13,14 @@ cru, nunca reconsultando as tabelas que o construtor gravou).
 
 Tudo que este teste mede vai para `tests/medidas/L4-01-b-topologia-derivada.json` (reescreve o arquivo a
 cada rodada — ele é o registro vivo da medição, não um cache).
+
+⛔ FRONTEIRA DECLARADA (achada ao medir, não um defeito de código): `certaja.ramlig` tem os 26.581
+registros do arquivo, mas 0 de 26.581 têm a coluna `wkt` preenchida (ver docstring de
+`tests/dados/carga_bdgd.py`). O ramal de ligação não tem geometria armazenada nesta extração BDGD —
+carregá-lo como aresta exigiria fabricar uma linha que o arquivo não tem. Este teste mede a topologia
+geométrica sobre o que TEM geometria real (MT + BT + transformador + poste = 139.542 elementos) e
+confere separadamente que ramlig existe no arquivo (26.581) mas contribui ZERO arestas geométricas —
+essa contagem zero é a prova da fronteira, não uma falha.
 """
 
 import json
@@ -86,11 +94,18 @@ def test_medida_topologia_escala_real(cred, env):
 
         assert arquivo["ssdmt"] == 44_268 and arquivo["ssdbt"] == 29_244, arquivo
         assert arquivo["ramlig"] == 26_581 and arquivo["trafo"] == 5_481 and arquivo["ponnot"] == 60_549, arquivo
-        for rotulo, esperado in (("ssdmt", 44_268), ("ssdbt", 29_244), ("ramlig", 26_581),
+        # ramlig fica de fora desta lista: 0 dos 26.581 registros têm wkt (fronteira declarada acima),
+        # logo a carga geométrica dele é 0 arestas — não os 26.581 do arquivo.
+        for rotulo, esperado in (("ssdmt", 44_268), ("ssdbt", 29_244),
                                  ("trafo", 5_481), ("ponnot", 60_549)):
             assert cron[rotulo]["linhas"] == esperado, (rotulo, cron[rotulo])
+        assert cron["ramlig"]["linhas"] == 0, cron["ramlig"]
         medida["carga"] = cron
         medida["arquivo"] = arquivo
+        medida["clausulas"]["ramlig_sem_geometria"] = {
+            "prova": f"{arquivo['ramlig']} registros no arquivo, {cron['ramlig']['linhas']} com geometria "
+                     "(wkt nulo em 100%) -> 0 arestas carregadas, fronteira do ativo, não fabricado",
+            "ok": True}
 
         # 3) A CLÁUSULA: habilitar pela API, em tempo medido (duracao_ms medido no servidor, por
         # perf_counter dentro do construtor — não inclui rede nem fila do cliente)
@@ -101,23 +116,26 @@ def test_medida_topologia_escala_real(cred, env):
         resumo = r.json()
         medida["resumo"] = resumo
 
-        total_linhas = arquivo["ssdmt"] + arquivo["ssdbt"] + arquivo["ramlig"]
+        # ramlig fica de fora da soma: 0 arestas geométricas (fronteira declarada acima). A cláusula
+        # central do portão (contagem de arestas == arquivo) vale sobre o que TEM geometria real.
+        total_linhas = arquivo["ssdmt"] + arquivo["ssdbt"]
         assert resumo["arestas"] == total_linhas, resumo
         medida["clausulas"]["arestas_igual_arquivo"] = {
-            "prova": f"resumo.arestas {resumo['arestas']} == ssdmt+ssdbt+ramlig {total_linhas}", "ok": True}
+            "prova": f"resumo.arestas {resumo['arestas']} == ssdmt+ssdbt {total_linhas} "
+                     f"(ramlig fica fora: {arquivo['ramlig']} no arquivo, 0 com geometria)", "ok": True}
 
         # 4) conferência contra o arquivo, por caminho independente
         with con.cursor() as cur:
-            # 4a) arestas por grupo == contagens do arquivo (SSDMT, SSDBT, RAMLIG uma a uma)
+            # 4a) arestas por grupo == contagens do arquivo (SSDMT, SSDBT uma a uma; RAMLIG == 0)
             cur.execute(
                 "SELECT g.codigo, count(*) AS n FROM plat.rede_topo_aresta a "
                 "JOIN plat.rede_grupo g ON g.id = a.grupo_id WHERE a.rede_id = %s::uuid GROUP BY 1",
                 (rid,))
             por_grupo = {r["codigo"]: r["n"] for r in cur.fetchall()}
         esperado_grupo = {"trecho_de_media_tensao": arquivo["ssdmt"],
-                          "trecho_de_baixa_tensao": arquivo["ssdbt"],
-                          "ramal_de_ligacao": arquivo["ramlig"]}
+                          "trecho_de_baixa_tensao": arquivo["ssdbt"]}
         assert por_grupo == esperado_grupo, (por_grupo, esperado_grupo)
+        assert "ramal_de_ligacao" not in por_grupo, por_grupo  # 0 arestas -> nem aparece no GROUP BY
         medida["arestas_por_grupo"] = por_grupo
 
         # 4b) os 60.549 postes (sem_terminal) deram ZERO nó
@@ -167,7 +185,7 @@ def test_medida_topologia_escala_real(cred, env):
                 pai[rb] = ra
         fins_topo = sum(1 for n in nos_mt if grau[n] == 1)
         medida["mt"] = {
-            "arquivo": {"nos": esperado["nos"], "fins_de_linha_grau1": esperado["fins_de_linha"],
+            "arquivo": {"nos": esperado["nos"], "fins_de_linha_grau1": esperado["fins_de_linha_grau1"],
                         "alimentadores": esperado["alimentadores"]},
             "construido": {"nos": len(nos_mt), "fins_de_linha_grau1": fins_topo},
         }
@@ -189,7 +207,7 @@ def test_medida_topologia_escala_real(cred, env):
         for ctmt, arestas in por_ctmt_topo.items():
             p2 = {}
 
-            def achar2(x):
+            def achar2(x, p2=p2):  # p2 como argumento padrão: evita B023 (closure sobre variável de laço)
                 p2.setdefault(x, x)
                 while p2[x] != x:
                     p2[x] = p2[p2[x]]

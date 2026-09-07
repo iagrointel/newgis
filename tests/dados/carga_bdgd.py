@@ -16,6 +16,14 @@ Mapa de carga (vocabulário do pacote `eletrica-br`, item L4-01-a):
   ponnot → grupo ponto_notavel/1           (poste — `sem_terminal`: tem de dar ZERO nó de topologia)
 `fas_con` ('A','AB','CA'...) vira o bitmask de fase A=1, B=2, C=4. O wkt é MULTILINESTRING de parte única
 (medido: 0 linhas com ST_NumGeometries > 1 em ssdmt) — `ST_GeometryN(...,1)` devolve a LineString.
+
+⛔ FRONTEIRA MEDIDA (não é defeito de carga): `certaja.ramlig` tem os 26.581 registros do arquivo, mas
+**0 de 26.581 têm `wkt` preenchido** (conferido por `count(wkt)` direto na tabela). O ramal de ligação
+existe como atributo no ativo da casa, sem geometria armazenada nesta extração BDGD — carregar exigiria
+fabricar uma linha que o arquivo não tem, o que a metodologia da casa proíbe. `carga_linha` filtra
+`WHERE wkt IS NOT NULL`: para ssdmt/ssdbt isso não descarta nada (100% têm wkt); para ramlig o resultado
+é 0 arestas carregadas, e é isso mesmo. A topologia geométrica medida cobre MT+BT+transformador+poste
+(139.542 elementos reais); ramal de ligação fica de fora, contado e declarado, nunca inventado.
 """
 
 import math
@@ -35,10 +43,14 @@ def _tipos_da_rede(cur, rede_id: str) -> dict:
     return {(r["grupo"], r["tipo_codigo"]): r["id"] for r in cur.fetchall()}
 
 
+# '%' duplicado (`%%`) porque esta string entra numa consulta executada com parâmetros: o scanner de
+# placeholder do psycopg2 trata todo '%' solto como início de um novo `%s` e estoura o índice da tupla
+# de parâmetros (`IndexError: tuple index out of range`) se não for escapado — achado ao rodar a carga
+# real da BDGD para medir o item L4-01-b-topologia-derivada.
 _SQL_FASE = (
-    "(CASE WHEN fas_con ILIKE '%A%' THEN 1 ELSE 0 END) + "
-    "(CASE WHEN fas_con ILIKE '%B%' THEN 2 ELSE 0 END) + "
-    "(CASE WHEN fas_con ILIKE '%C%' THEN 4 ELSE 0 END)"
+    "(CASE WHEN fas_con ILIKE '%%A%%' THEN 1 ELSE 0 END) + "
+    "(CASE WHEN fas_con ILIKE '%%B%%' THEN 2 ELSE 0 END) + "
+    "(CASE WHEN fas_con ILIKE '%%C%%' THEN 4 ELSE 0 END)"
 )
 
 
@@ -57,6 +69,9 @@ def carregar(cur, tenant_id: int, rede_id: str) -> dict:
         return n
 
     def carga_linha(rotulo, origem, atributos_json, tipo_id):
+        # só as linhas com wkt preenchido: `certaja.ramlig` (ativo da casa, ver docstring do módulo)
+        # tem 0 de 26.581 registros com geometria — carregar exige geom NOT NULL (segurança de linha
+        # da tabela derivada), e fabricar geometria que o arquivo não tem seria inventar dado.
         rodar(rotulo, f"""
             WITH carga AS (
               INSERT INTO plat.rede_feicao_linha(tenant_id, rede_id, tipo_id, geom, fase_bitmask, atributos)
@@ -65,6 +80,7 @@ def carregar(cur, tenant_id: int, rede_id: str) -> dict:
                      {_SQL_FASE},
                      {atributos_json}
               FROM {origem}
+              WHERE wkt IS NOT NULL
               RETURNING 1
             ) SELECT count(*) AS n FROM carga
         """, (tenant_id, rede_id, tipo_id))
@@ -186,11 +202,11 @@ def esperado_mt(cur, tolerancia_m: float = TOLERANCIA_PADRAO_M) -> dict:
     componentes conexas POR ALIMENTADOR (coluna ctmt — a junção SSDMT × CTMT do portão)."""
     cur.execute("SELECT ctmt, wkt FROM certaja.ssdmt")
     linhas = cur.fetchall()
-    lat_media = sum(_parse_pontas(l["wkt"])[0][1] for l in linhas[:500]) / min(len(linhas), 500)
+    lat_media = sum(_parse_pontas(linha["wkt"])[0][1] for linha in linhas[:500]) / min(len(linhas), 500)
 
     por_ctmt: dict[str, list] = defaultdict(list)
-    for l in linhas:
-        por_ctmt[l["ctmt"]].append(_parse_pontas(l["wkt"]))
+    for linha in linhas:
+        por_ctmt[linha["ctmt"]].append(_parse_pontas(linha["wkt"]))
 
     todos = _Agrupador(tolerancia_m, lat_media)
     todos.montar([p for pontas in por_ctmt.values() for p in pontas])
@@ -202,9 +218,12 @@ def esperado_mt(cur, tolerancia_m: float = TOLERANCIA_PADRAO_M) -> dict:
         ag = _Agrupador(tolerancia_m, lat_media)
         ag.montar(pontas)
         # componentes = nº de sub-grafos desconexos DENTRO do alimentador: union-find sobre as arestas
+        # `pai` como argumento padrão (não fechado por referência de nome): evita o B023 de closure em
+        # laço — `pai` é sempre o dict desta iteração porque é vinculado na DEFINIÇÃO da função, não lido
+        # de fora dela em cada chamada.
         pai: dict[int, int] = {}
 
-        def achar(x):
+        def achar(x, pai=pai):
             pai.setdefault(x, x)
             while pai[x] != x:
                 pai[x] = pai[pai[x]]
