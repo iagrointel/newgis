@@ -1,0 +1,37 @@
+{
+ "item": "L2-17-crs-transformacoes",
+ "medidas": {
+  "erro_max_10_pontos_ibge_grade_sad69_m": {
+   "valor": 6.9e-05,
+   "unidade": "m",
+   "comando": "venv/bin/pytest tests/unit/test_crs_grade_ibge.py::test_erro_maximo_entre_os_10_pontos_fica_registrado"
+  },
+  "erro_min_10_pontos_sem_transformacao_de_datum_m": {
+   "valor": 61.984,
+   "unidade": "m",
+   "comando": "venv/bin/pytest tests/unit/test_crs_grade_ibge.py::test_sem_grade_o_erro_e_de_dezenas_de_metros"
+  },
+  "paridade_31982_maior_diferenca_pyproj_x_postgis_m": {
+   "valor": 0.0,
+   "unidade": "m",
+   "comando": "venv/bin/pytest tests/unit/test_crs_paridade_31982.py"
+  },
+  "paridade_31982_maior_diferenca_pyproj_x_proj4js_m": {
+   "valor": 0.0,
+   "unidade": "m",
+   "comando": "venv/bin/pytest tests/unit/test_crs_paridade_31982.py"
+  },
+  "bbox_canto_a_canto_roundtrip_4674_31982_5880_tolerancia_m": {
+   "valor": 0.02,
+   "unidade": "m",
+   "comando": "venv/bin/pytest tests/api/crs/test_crs.py::test_servicos_respondem_em_4674_31982_5880_com_o_mesmo_bbox"
+  },
+  "bbox_envelope_roundtrip_crescimento_31982_m": {
+   "valor": 722.6,
+   "unidade": "m",
+   "comando": "venv/bin/pytest tests/api/crs/test_crs.py::test_servicos_respondem_em_4674_31982_5880_com_o_mesmo_bbox"
+  }
+ },
+ "gerado_em": "2026-09-07T16:41:17Z",
+ "git_sha": "099fc463e1c7"
+}

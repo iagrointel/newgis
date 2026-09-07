@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Sistema de referência · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/tarefas.css">
+</head>
+<body class="tela crs">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <div id="ferramentas" class="linha-ferramentas">
+      <h1>Sistema de referência</h1>
+    </div>
+    <p class="aviso-beta">análise / beta privado</p>
+    <plat-aviso id="aviso"></plat-aviso>
+    <p class="ajuda" id="crs-subtitulo" data-i18n="crs.subtitulo"></p>
+
+    <section class="cartao" id="lista-cartao" aria-labelledby="t-lista">
+      <h2 id="t-lista">CRS registrados <span id="lista-total" class="contagem">…</span></h2>
+      <p class="ajuda" id="lista-ajuda">a lista curada do Brasil aparece primeiro (marcada); o resto é o
+        registro EPSG completo do PROJ desta máquina.</p>
+      <div class="tabela-rolagem">
+        <table id="lista" class="tabela">
+          <caption class="sr-only">CRS disponíveis para transformação</caption>
+          <thead>
+            <tr>
+              <th scope="col">EPSG</th>
+              <th scope="col">nome</th>
+              <th scope="col">tipo</th>
+              <th scope="col">área de uso</th>
+              <th scope="col"><span class="sr-only">curada</span></th>
+            </tr>
+          </thead>
+          <tbody id="lista-corpo"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="cartao" id="transformar-cartao" aria-labelledby="t-transformar">
+      <h2 id="t-transformar" data-i18n="crs.transformar">Transformar</h2>
+      <plat-aviso id="transformar-aviso"></plat-aviso>
+      <form id="form-transformar" class="form linha">
+        <div class="campo">
+          <label for="origem" data-i18n="crs.origem">CRS de origem</label>
+          <select id="origem" required></select>
+        </div>
+        <div class="campo">
+          <label for="destino" data-i18n="crs.destino">CRS de destino</label>
+          <select id="destino" required></select>
+        </div>
+        <div class="campo">
+          <label for="tipo">tipo</label>
+          <select id="tipo">
+            <option value="ponto" data-i18n="crs.tipo_ponto">ponto (lon, lat)</option>
+            <option value="bbox" data-i18n="crs.tipo_bbox">retângulo (bbox)</option>
+          </select>
+        </div>
+        <div class="campo" id="campos-ponto-lon">
+          <label for="lon" data-i18n="crs.lon">longitude / x</label>
+          <input id="lon" type="number" step="any" required>
+        </div>
+        <div class="campo" id="campos-ponto-lat">
+          <label for="lat" data-i18n="crs.lat">latitude / y</label>
+          <input id="lat" type="number" step="any" required>
+        </div>
+        <div class="campo" id="campos-bbox-xmin" hidden>
+          <label for="xmin" data-i18n="crs.xmin">xmin</label>
+          <input id="xmin" type="number" step="any">
+        </div>
+        <div class="campo" id="campos-bbox-ymin" hidden>
+          <label for="ymin" data-i18n="crs.ymin">ymin</label>
+          <input id="ymin" type="number" step="any">
+        </div>
+        <div class="campo" id="campos-bbox-xmax" hidden>
+          <label for="xmax" data-i18n="crs.xmax">xmax</label>
+          <input id="xmax" type="number" step="any">
+        </div>
+        <div class="campo" id="campos-bbox-ymax" hidden>
+          <label for="ymax" data-i18n="crs.ymax">ymax</label>
+          <input id="ymax" type="number" step="any">
+        </div>
+        <div class="campo botoes">
+          <button type="submit" class="primario" data-i18n="crs.transformar">Transformar</button>
+        </div>
+      </form>
+      <div id="resultado" hidden>
+        <p><strong data-i18n="crs.resultado">resultado</strong>: <code id="resultado-coordenadas"></code></p>
+        <p><strong data-i18n="crs.transformacao_usada">transformação usada</strong>: <span id="resultado-transformacao"></span></p>
+        <p><strong data-i18n="crs.cobertura">cobertura</strong>: <span id="resultado-cobertura"></span></p>
+        <p class="ajuda">prévia em Web Mercator (EPSG:3857, o CRS que o mapa sempre desenha), calculada
+          NO NAVEGADOR por proj4js a partir das mesmas definições de <code>/api/crs/{epsg}.proj4</code> —
+          sem grade de datum, só para exibição/entrada de coordenada: <code id="resultado-3857"></code></p>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="/static/vendor/proj4-2.15.0.js"></script>
+<script type="module" src="/static/js/crs/crs.js"></script>
+</body>
+</html>

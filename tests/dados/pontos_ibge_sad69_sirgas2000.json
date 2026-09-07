@@ -1,0 +1,110 @@
+{
+ "descricao": "10 pontos com coordenadas SAD69 arredondadas (centro aproximado de 10 capitais/cidades) transformados para SIRGAS2000 PELO PRÓPRIO SERVIÇO OFICIAL DO IBGE (ProGriD Online, API pública) — usado aqui como padrão-ouro para provar que o pipeline local (PostGIS/pyproj) usando a MESMA grade NTv2 (SAD69_003.GSB, dado aberto do IBGE) reproduz o cálculo oficial. Não são vértices de triangulação com placa física — são coordenadas de entrada arbitrárias dentro da cobertura da grade nacional, o que HONESTAMENTE é diferente de 'vértice geodésico oficial', mas o resultado de saída É o cálculo oficial do IBGE.",
+ "fonte": "https://servicodados.ibge.gov.br/api/v1/progrid (ProGriD Online, IBGE)",
+ "comando_de_reproducao_por_ponto": "curl 'https://servicodados.ibge.gov.br/api/v1/progrid/latlongdec?referencialEntrada=sad69&tipoCoordenadaSaida=lat_long_gd&lat=<SAD69_LAT>&long=<SAD69_LONG>'",
+ "obtido_em": "2026-09-07T16:00:00Z",
+ "licenca": "dado aberto do IBGE (serviço público federal, sem restrição de uso declarada na documentação da API)",
+ "grade_local_usada": "grades_ibge/SAD69_003.GSB (sha256 em grades_ibge/SHA256SUMS)",
+ "pontos": [
+  {
+   "nome": "sao_paulo",
+   "sad69_lat": -23.5505,
+   "sad69_long": -46.6333,
+   "sirgas2000_lat_oficial": -23.550946692,
+   "sirgas2000_long_oficial": -46.633756904,
+   "sigma_lat_m": 0.036,
+   "sigma_long_m": 0.09,
+   "tipo_conversao_oficial": "grid"
+  },
+  {
+   "nome": "rio_de_janeiro",
+   "sad69_lat": -22.9068,
+   "sad69_long": -43.1729,
+   "sirgas2000_lat_oficial": -22.907261718,
+   "sirgas2000_long_oficial": -43.173324847,
+   "sigma_lat_m": 0.134,
+   "sigma_long_m": 0.174,
+   "tipo_conversao_oficial": "grid"
+  },
+  {
+   "nome": "belo_horizonte",
+   "sad69_lat": -19.9167,
+   "sad69_long": -43.9345,
+   "sirgas2000_lat_oficial": -19.917168628,
+   "sirgas2000_long_oficial": -43.934928475,
+   "sigma_lat_m": 0.118,
+   "sigma_long_m": 0.099,
+   "tipo_conversao_oficial": "grid"
+  },
+  {
+   "nome": "brasilia",
+   "sad69_lat": -15.7942,
+   "sad69_long": -47.8822,
+   "sirgas2000_lat_oficial": -15.794633141,
+   "sirgas2000_long_oficial": -47.882626269,
+   "sigma_lat_m": 0.051,
+   "sigma_long_m": 0.046,
+   "tipo_conversao_oficial": "grid"
+  },
+  {
+   "nome": "salvador",
+   "sad69_lat": -12.9714,
+   "sad69_long": -38.5014,
+   "sirgas2000_lat_oficial": -12.971840971,
+   "sirgas2000_long_oficial": -38.501803422,
+   "sigma_lat_m": 0.108,
+   "sigma_long_m": 0.228,
+   "tipo_conversao_oficial": "grid"
+  },
+  {
+   "nome": "fortaleza",
+   "sad69_lat": -3.7319,
+   "sad69_long": -38.5267,
+   "sirgas2000_lat_oficial": -3.732325452,
+   "sirgas2000_long_oficial": -38.527066146,
+   "sigma_lat_m": 0.128,
+   "sigma_long_m": 0.133,
+   "tipo_conversao_oficial": "grid"
+  },
+  {
+   "nome": "manaus",
+   "sad69_lat": -3.119,
+   "sad69_long": -60.0217,
+   "sirgas2000_lat_oficial": -3.119374101,
+   "sirgas2000_long_oficial": -60.022113022,
+   "sigma_lat_m": 0.035,
+   "sigma_long_m": 0.035,
+   "tipo_conversao_oficial": "grid"
+  },
+  {
+   "nome": "porto_alegre",
+   "sad69_lat": -30.0346,
+   "sad69_long": -51.2177,
+   "sirgas2000_lat_oficial": -30.035042538,
+   "sirgas2000_long_oficial": -51.218237834,
+   "sigma_lat_m": 0.285,
+   "sigma_long_m": 0.42,
+   "tipo_conversao_oficial": "grid"
+  },
+  {
+   "nome": "curitiba",
+   "sad69_lat": -25.4284,
+   "sad69_long": -49.2733,
+   "sirgas2000_lat_oficial": -25.428818211,
+   "sirgas2000_long_oficial": -49.273790537,
+   "sigma_lat_m": 0.251,
+   "sigma_long_m": 0.319,
+   "tipo_conversao_oficial": "grid"
+  },
+  {
+   "nome": "recife",
+   "sad69_lat": -8.0476,
+   "sad69_long": -34.877,
+   "sirgas2000_lat_oficial": -8.048044951,
+   "sirgas2000_long_oficial": -34.877347622,
+   "sigma_lat_m": 0.038,
+   "sigma_long_m": 0.037,
+   "tipo_conversao_oficial": "grid"
+  }
+ ]
+}

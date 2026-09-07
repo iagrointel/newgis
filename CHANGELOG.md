@@ -3,6 +3,54 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L2-17-crs-transformacoes: sistema de referência como serviço transversal)
+
+`app/crs/` (registro, grades, serviço, rotas) — sem tabela `plat.*` própria (mesmo padrão de `app/rede`,
+L2-11-c): registro de CRS lido do banco EPSG embutido no PROJ da máquina (pyproj 3.7.2/PROJ 9.4.0) mais
+uma lista curada brasileira (`app/crs/curada.py`: SIRGAS2000 geográfico e as 21 zonas UTM 31965-31985,
+WGS84, Web Mercator, Policônica 5880, SAD69 e Córrego Alegre 1961/1970-72 legados — correção sobre a
+hipótese do item, que dizia "31981-31985 e 31965-31975"; o conjunto real medido no registro EPSG é
+31965-31985). `GET /api/crs` (curada primeiro), `GET /api/crs/{epsg}`, `GET /api/crs/{epsg}.proj4`,
+`POST /api/crs/transformar` (ponto/bbox, escopo novo `crs:usar`). Tela `/crs` (seletor de origem/destino
+com a curada marcada ★, prévia em 3857 calculada no NAVEGADOR por proj4js vendorizado a partir das
+mesmas definições de `/api/crs/{epsg}.proj4`).
+
+Datum legado (SAD69, Córrego Alegre 1961/1970-72) transformado pelas grades NTv2 oficiais do IBGE
+(ProGriD), vendorizadas em `grades_ibge/*.GSB` (sha256 conferido por `grades_ibge/instalar.sh`, chamado
+pelo `install.sh` seção h5) e lidas por caminho absoluto num pipeline PROJ sem CRS declarado
+(`+proj=pipeline +step +proj=hgridshift +grids=<arquivo>`) — funciona idêntico em `pyproj` e em
+`ST_Transform` (mesma libproj), sem depender do CDN do PROJ nem de `PROJ_DATA` compartilhado fora de
+`/home/dev/plataforma/`. Fora da cobertura de qualquer grade, cai nos parâmetros geocêntricos do R.PR
+IBGE 01/2005 (sem grade, classe de exatidão EPSG 5,0 m) e DECLARA isso na resposta
+(`transformacao_usada`, `cobertura`) — nunca silencioso. Detecção de eixos trocados por ÁREA DE USO do
+CRS (a checagem `|lat|>90` sozinha não pega a maioria dos casos reais: longitude e latitude do Brasil
+cabem as duas em [-90,90]). ADR `docs/adr/20260907T1630-crs-transversal.md`.
+
+Prova da cláusula mais dura do portão ("10 pontos do IBGE ... erro <= 0,05 m"): comparado contra o
+serviço OFICIAL AO VIVO do IBGE (`servicodados.ibge.gov.br/api/v1/progrid`, achado por busca — não estava
+nos materiais estáticos já baixados) para 10 pontos, o pipeline local bate a <= 0,07 mm; sem
+transformação de datum nenhuma, o mesmo ponto erra 62-72 m (`tests/unit/test_crs_grade_ibge.py`, fixture
+`tests/dados/pontos_ibge_sad69_sirgas2000.json`, proveniência em `grades_ibge/PROVENIENCIA.md`). Paridade
+ST_Transform/pyproj/proj4js em 31982 (sem grade, projeção pura) para 20 pontos: <= 0,01 m nas duas
+comparações (`tests/unit/test_crs_paridade_31982.py`, proj4js rodado via Node sobre o mesmo arquivo
+vendorizado que o navegador usa). Refutação (`tests/api/crs/test_crs.py`): EPSG inexistente -> 422
+`crs_inexistente`; ponto fora da cobertura da grade -> 200 com `cobertura=fora_da_grade_usou_parametros`
+e a transformação alternativa nomeada; eixos trocados -> 422 `eixos_suspeitos`; grade e PROJ direto (sem
+grade) DIVERGEM de verdade nos mesmos 20 pontos (senão vendorizar a grade não faria diferença nenhuma).
+e2e (`tests/e2e/test_crs.py`, checagem estrutural do DOM — a máquina não faz captura confiável de tela):
+os dois seletores (origem/destino) mostram a curada primeiro, marcada; fluxo real de transformação exibe
+a transformação usada.
+
+**Pendência nomeada**: `app/crs/servico.py::transformar_bbox` devolve o ENVELOPE dos 4 cantos
+transformados — por causa da convergência meridiana do UTM/Policônica, o envelope de ida e volta NÃO
+reproduz o bbox original (medido: cresce ~700 m no canto para um bbox de 0,2°×0,2° perto de São Paulo,
+transformado por 31982). Isso é esperado e documentado (a cláusula do portão fala em CANTO — provada
+ponto a ponto —, não em envelope-do-envelope), mas quem for construir a ferramenta "reprojetar" do
+L2-05-b sobre uma feição real (não um bbox de consulta) precisa saber que reprojetar um POLÍGONO exige
+reprojetar cada vértice, nunca só os 2 cantos opostos do envelope. Sentido inverso SIRGAS2000 -> Córrego
+Alegre não é suportado (recusa explícita, `CRSInexistenteErro`): a ingestão só LÊ dado legado, nunca
+grava nele, e nenhum consumidor desta plataforma pede essa direção.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

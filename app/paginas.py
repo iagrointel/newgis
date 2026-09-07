@@ -35,6 +35,8 @@ PAGINAS = {
     "/redefinir-senha": "redefinir_senha.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
+    # --- sistema de referência (L2-17-crs-transformacoes): lista curada + reprojeção de coordenada/bbox
+    "/crs": "crs.html",
 }
 router = APIRouter()
 

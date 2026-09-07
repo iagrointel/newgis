@@ -333,6 +333,9 @@ else
   echo "== h4. worker em contêiner PULADO (rode com --worker-container para instalar; ver ADR 0010 e docs/ARQUITETURA.md)"
 fi
 
+echo "== h5. grades NTv2 do IBGE (item L2-17-crs-transformacoes; sistema de referência transversal)"
+bash grades_ibge/instalar.sh
+
 echo "== i. nginx"
 SITE=/etc/nginx/sites-enabled/$DOM
 # zona limit_req própria: 10 tentativas/min por IP em /api/login e /api/login/2fa (ADR 0002 seção 6.2)

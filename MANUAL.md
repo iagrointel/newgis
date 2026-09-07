@@ -1070,3 +1070,51 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Sistema de referência — CRS (item L2-17-crs-transformacoes)
+
+Serviço transversal de CRS: registro (lista curada + banco EPSG do PROJ), transformação de ponto/bbox e
+definição proj4 — sem tabela `plat.*` própria (mesmo padrão da rota/matriz/isócrona, seção 14).
+
+### 22.1 API
+
+- `GET /api/crs` — lista curada brasileira PRIMEIRO (SIRGAS2000 geográfico, WGS84, Web Mercator,
+  Policônica 5880, as 21 zonas UTM SIRGAS2000 31965-31985, SAD69 e Córrego Alegre 1961/1970-72 legados),
+  depois o resto do registro EPSG (Geographic 2D/Projected, sem deprecados). Ordem é a que os seletores
+  do navegador respeitam sem reordenar.
+- `GET /api/crs/{epsg}` — nome, tipo, área de uso, se é curada e por quê.
+- `GET /api/crs/{epsg}.proj4` — texto proj4 puro (`text/plain`), a MESMA definição que o navegador usa
+  via proj4js (`web/js/crs/crs.js`) — nunca uma segunda cópia digitada à mão.
+- `POST /api/crs/transformar` — `{origem, destino, tipo: "ponto"|"bbox", coordenadas}`. Resposta sempre
+  declara `transformacao_usada` e `cobertura` (`direta` | `dentro_da_grade` |
+  `fora_da_grade_usou_parametros`). Todas exigem sessão ou token com o escopo `crs:usar`.
+
+### 22.2 Datum legado (SAD69, Córrego Alegre) — grade oficial do IBGE, sem CDN
+
+`grades_ibge/*.GSB` (NTv2, ProGriD do IBGE, dado aberto) vendorizadas no repositório, sha256 conferido por
+`grades_ibge/instalar.sh` (chamado pelo `install.sh` seção h5). Lidas por CAMINHO ABSOLUTO num pipeline
+PROJ sem CRS nas pontas (`app/crs/grades.py::Grade.pipeline`), funcionando idêntico em `pyproj` e em
+`ST_Transform` (mesma libproj) — sem depender de `cdn.proj.org` (PostGIS deste ambiente já roda com
+`NETWORK_ENABLED=OFF`) nem de `PROJ_DATA` compartilhado fora do repositório. A grade certa é escolhida
+por área (`bounds` de cada uma, lidos do registro EPSG); fora de qualquer cobertura, cai nos parâmetros
+geocêntricos do R.PR IBGE 01/2005 (sem grade, 5,0 m) e DECLARA isso na resposta — nunca falha nem
+esconde. Prova contra o serviço oficial ao vivo do IBGE e proveniência completa em
+`grades_ibge/PROVENIENCIA.md` e ADR `docs/adr/20260907T1630-crs-transversal.md`.
+
+### 22.3 Tela `/crs`
+
+Dois seletores (origem/destino) com a curada marcada ★ primeiro, formulário de ponto ou bbox, resultado
+com a transformação usada e a cobertura, e uma prévia em Web Mercator calculada NO NAVEGADOR por proj4js
+(`web/vendor/proj4-2.15.0.js`) a partir das definições de `/api/crs/{epsg}.proj4` — nunca uma reprojeção
+de datum legado no navegador (isso fica no backend, que tem a grade).
+
+### 22.4 Limites desta fatia
+
+`transformar_bbox` devolve o ENVELOPE dos 4 cantos transformados — cresce de verdade num round-trip
+(convergência meridiana do UTM/Policônica: medido ~700 m de crescimento num bbox de 0,2°×0,2° perto de
+São Paulo, ida e volta por 31982). Quem reprojetar uma FEIÇÃO real (não um bbox de consulta) precisa
+reprojetar cada vértice, não só o envelope — é o que a ferramenta "reprojetar" do L2-05-b (ainda não
+construída) vai ter de fazer. Sentido inverso SIRGAS2000 -> Córrego Alegre não suportado (a ingestão só
+lê dado legado, nunca grava nele). Mapa (seção 13, MapLibre) desenha SEMPRE em Web Mercator — não existe
+"trocar a projeção do mapa" nesta pilha, mesma limitação do Map Viewer da Esri sem mapa-base compatível.
+
