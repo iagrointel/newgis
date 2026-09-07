@@ -10320,6 +10320,318 @@
     "x-auth": "S/T",
     "x-privilegio": "proprio"
    }
+  },
+  "/api/simbolos": {
+   "get": {
+    "tags": [
+     "simbolos"
+    ],
+    "summary": "Galeria",
+    "description": "Ícones embutidos + do inquilino, para a galeria do editor (busca por nome/categoria).",
+    "operationId": "galeria_api_simbolos_get",
+    "parameters": [
+     {
+      "name": "busca",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "",
+       "title": "Busca"
+      }
+     },
+     {
+      "name": "categoria",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "",
+       "title": "Categoria"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "simbolos"
+    ],
+    "summary": "Enviar Icone",
+    "operationId": "enviar_icone_api_simbolos_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SimboloEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar"
+   }
+  },
+  "/api/simbolos/sprite/{slug}@2x.json": {
+   "get": {
+    "tags": [
+     "simbolos"
+    ],
+    "summary": "Sprite Json 2X",
+    "operationId": "sprite_json_2x_api_simbolos_sprite__slug__2x_json_get",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Slug"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/simbolos/sprite/{slug}@2x.png": {
+   "get": {
+    "tags": [
+     "simbolos"
+    ],
+    "summary": "Sprite Png 2X",
+    "operationId": "sprite_png_2x_api_simbolos_sprite__slug__2x_png_get",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Slug"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/simbolos/sprite/{slug}.json": {
+   "get": {
+    "tags": [
+     "simbolos"
+    ],
+    "summary": "Sprite Json 1X",
+    "operationId": "sprite_json_1x_api_simbolos_sprite__slug__json_get",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Slug"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/simbolos/sprite/{slug}.png": {
+   "get": {
+    "tags": [
+     "simbolos"
+    ],
+    "summary": "Sprite Png 1X",
+    "operationId": "sprite_png_1x_api_simbolos_sprite__slug__png_get",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Slug"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/simbolos/fontes/{fontstack}/{faixa}.pbf": {
+   "get": {
+    "tags": [
+     "simbolos"
+    ],
+    "summary": "Glifos",
+    "operationId": "glifos_api_simbolos_fontes__fontstack___faixa__pbf_get",
+    "parameters": [
+     {
+      "name": "fontstack",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Fontstack"
+      }
+     },
+     {
+      "name": "faixa",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Faixa"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
   }
  },
  "components": {
@@ -15765,6 +16077,35 @@
      "atual"
     ],
     "title": "Sessao"
+   },
+   "SimboloEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "categoria": {
+      "type": "string",
+      "maxLength": 40,
+      "title": "Categoria",
+      "default": "personalizado"
+     },
+     "conteudo_svg": {
+      "type": "string",
+      "maxLength": 65536,
+      "minLength": 1,
+      "title": "Conteudo Svg"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "conteudo_svg"
+    ],
+    "title": "SimboloEntrada"
    },
    "TipoItem": {
     "properties": {

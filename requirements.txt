@@ -52,9 +52,12 @@ qrcode==8.2
 # símbolos/sprites/glifos (app/simbolos, item L2-02-e-simbolos-sprites-glifos): cairosvg rasteriza o SVG
 # próprio (ícones + upload saneado) para compor o atlas do sprite; cairocffi é o binding usado por ele
 # (libcairo2 já vem do dpkg, só falta o binding Python), cssselect2/tinycss2/webencodings são dependências
-# dele. Pillow (import PIL) NÃO está aqui: vem de /usr/local/lib/.../dist-packages, instalado globalmente
-# por outro produto da casa — mesma situação e mesmo raciocínio do shapely documentado no topo deste
-# arquivo (P5 fica PARCIAL nesse ponto até o dono decidir acrescentar python3-pillow a deploy/pacotes_apt.txt).
+# dele. Pillow (import PIL) NÃO está aqui porque não é pacote de venv nesta casa: vem do dpkg
+# `python3-pil` (10.2.0), pela venv --system-site-packages, mesmo raciocínio do GDAL e do psycopg2 no ADR
+# 0001 seção 2.1 — e nesta máquina de desenvolvimento um Pillow 12.2.0 no site do usuário `dev`
+# (~/.local/lib/python3.12/site-packages) ainda ofusca o do sistema, então o que se testa aqui é o 12.2.0
+# e o que roda no servidor é o 10.2.0. `python3-pil` e `libcairo2` foram declarados em
+# deploy/pacotes_apt.txt neste item (antes disso o import de PIL funcionava por acaso, sem declaração).
 cairosvg==2.9.0
 cairocffi==1.7.1
 cssselect2==0.9.0

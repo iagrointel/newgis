@@ -836,6 +836,39 @@ CASOS: dict[tuple[str, str], Caso] = {
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # ---- L2-02-e símbolos, sprites e glifos. Três formas diferentes nesta família:
+    # (1) `/api/simbolos/sprite/{slug}`: o slug do inquilino está NO CAMINHO, então é a rota da família em
+    #     que A pode tentar nomear B. `_sprite_do_slug` compara o slug pedido com o do chamador e devolve
+    #     403 `inquilino_divergente` — cai no padrão {401,403,404}, sem caso especial.
+    # (2) galeria e glifos de fonte: não recebem identificação de inquilino nenhuma. A galeria devolve os
+    #     ícones embutidos mais os do PRÓPRIO chamador (RLS por `current_setting`), e a fonte é um arquivo
+    #     embutido no produto, igual para todo mundo — daí `proprio=True` com verificação de marca de B.
+    # (3) POST /api/simbolos: o corpo não tem campo nenhum que aponte para outro inquilino (nome, categoria
+    #     e SVG), então não há como A endereçar B por aqui. O corpo declarado abaixo é recusado com 422
+    #     pelo saneador (tem `<script>`), de propósito: assim a varredura não deixa ícone residual no
+    #     inquilino A a cada rodada — não existe rota de apagar símbolo (fora do portão deste item), logo
+    #     não haveria como `limpar`. O caminho do 201 e o isolamento entre inquilinos que ele produz estão
+    #     medidos em tests/api/test_simbolos.py (`test_upload_de_a_nao_aparece_no_sprite_de_b`).
+    ("GET", "/api/simbolos"): Caso(
+        lambda p: "/api/simbolos", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("POST", "/api/simbolos"): Caso(
+        lambda p: "/api/simbolos",
+        lambda p: {
+            "nome": f"{PREFIXO}simbolo",
+            "categoria": "teste",
+            "conteudo_svg": '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+        },
+        proprio=True, aceita=frozenset({422}),
+    ),
+    ("GET", "/api/simbolos/sprite/{slug}.json"): Caso(lambda p: "/api/simbolos/sprite/demo2.json"),
+    ("GET", "/api/simbolos/sprite/{slug}.png"): Caso(lambda p: "/api/simbolos/sprite/demo2.png"),
+    ("GET", "/api/simbolos/sprite/{slug}@2x.json"): Caso(lambda p: "/api/simbolos/sprite/demo2@2x.json"),
+    ("GET", "/api/simbolos/sprite/{slug}@2x.png"): Caso(lambda p: "/api/simbolos/sprite/demo2@2x.png"),
+    ("GET", "/api/simbolos/fontes/{fontstack}/{faixa}.pbf"): Caso(
+        lambda p: "/api/simbolos/fontes/Noto%20Sans%20Regular/0-255.pbf",
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
 }
 
 

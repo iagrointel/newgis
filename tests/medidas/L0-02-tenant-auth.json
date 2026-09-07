@@ -60,7 +60,7 @@
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
   "pagina_pronta_ms_login": {
-   "valor": 72.4,
+   "valor": 48.4,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   },
@@ -200,13 +200,8 @@
    "valor": 73.1,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
-  },
-  "pagina_pronta_ms_simbolos": {
-   "valor": 261.2,
-   "unidade": "ms",
-   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
   }
  },
- "gerado_em": "2026-09-07T17:04:56Z",
- "git_sha": "20e34773221b"
+ "gerado_em": "2026-09-06T13:00:50Z",
+ "git_sha": "e2d5f9164f6b"
 }

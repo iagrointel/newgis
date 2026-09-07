@@ -38,9 +38,12 @@ para um catálogo de sprites estático, publicado no deploy, igual às camadas d
    Composição sob demanda, cacheada por uma **versão** (contagem + carimbo do upload mais recente do
    inquilino, uma consulta rápida ao Postgres): um upload novo muda a versão na hora, então a PRÓXIMA
    leitura já compõe o sprite atualizado. Medido: compor os 163 itens embutidos (153 ícones + 10 padrões)
-   nos dois fatores de escala leva **0,25 s** nesta máquina (`0,107 s` 1x + `0,143 s` 2x,
-   `tests/medidas/L2-02-e-simbolos-sprites-glifos.json`) — bem dentro dos 5 s do portão, mesmo somando o
-   tempo de rede de um pedido HTTP.
+   nos dois fatores de escala leva **0,24 s** nesta máquina (`0,097 s` 1x + `0,145 s` 2x, medidas
+   `composicao_atlas_1x_s`/`composicao_atlas_2x_s` de `tests/medidas/L2-02-e-simbolos-sprites-glifos.json`,
+   gravadas por `tests/api/test_simbolos.py::test_medidas_do_portao`) — bem dentro dos 5 s do portão. O
+   caminho completo que o portão cobra, do POST do ícone até ele aparecer no `sprite.json` pelo HTTP, foi
+   medido de ponta a ponta em **0,271 s** (`upload_ate_aparecer_no_sprite_s`), com a máquina sob carga
+   12,38 e 0,4 GiB livres — ou seja, passa com folga de mais de 18x mesmo na pior condição da casa.
 2. **Os glifos de fonte continuam vindo do Martin de verdade** (`app/simbolos/fontes.py`): fontes
    embutidas (Noto Sans, Open Sans) nunca mudam em runtime, então a limitação acima não se aplica —
    não existe cláusula de "fonte nova em ≤ 5 s" no portão, só de ícone. Rodar um Martin dedicado (config

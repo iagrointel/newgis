@@ -153,3 +153,51 @@ def test_glifos_fonte_inexistente_404(sessao_a):
 def test_galeria_e_sprite_exigem_sessao(cliente):
     assert cliente.get("/api/simbolos").status_code == 401
     assert cliente.get("/api/simbolos/sprite/demo.json").status_code == 401
+
+
+def test_medidas_do_portao(sessao_a, medida):
+    """Grava em tests/medidas/L2-02-e-simbolos-sprites-glifos.json os números que o portão e o ADR citam:
+    contagem de ícones/padrões, tempo de composição do atlas (1x e 2x) e o tempo do upload até o ícone
+    novo aparecer no sprite. Junto vão a carga da máquina e a memória livre no instante da medida — sem
+    isso um número de tempo não prova nada sobre o produto (regra de desempenho de laco/BRIEF_WORKTREES.md)."""
+    import os
+
+    from app.simbolos import sprite as mod_sprite
+
+    gravar = medida("L2-02-e-simbolos-sprites-glifos")
+    carga = os.getloadavg()[0]
+    ram_livre_gb = round(os.sysconf("SC_AVPHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") / 2**30, 1)
+    gravar("carga_1min", round(carga, 2), "media de processos",
+           "os.getloadavg()[0] no instante das medidas de tempo abaixo (12 nucleos)")
+    gravar("ram_livre_gb", ram_livre_gb, "GiB", "os.sysconf SC_AVPHYS_PAGES * SC_PAGE_SIZE")
+
+    n_icones = len(biblioteca.catalogo())
+    n_padroes = len(biblioteca.padroes())
+    assert n_icones >= 150, n_icones  # cláusula do portão: >= 150 ícones próprios
+    gravar("icones_proprios", n_icones, "arquivos",
+           "len(app.simbolos.biblioteca.catalogo()) — portao exige >= 150")
+    gravar("padroes_preenchimento", n_padroes, "arquivos",
+           "len(app.simbolos.biblioteca.padroes()) — hachuras, pontos e tracejados")
+
+    base = mod_sprite._base_itens()
+    for fator, rotulo in ((1, "1x"), (2, "2x")):
+        t0 = time.monotonic()
+        png, indice = mod_sprite._compor(base, fator)
+        decorrido = time.monotonic() - t0
+        assert len(indice) == len(base) and len(png) > 0
+        gravar(f"composicao_atlas_{rotulo}_s", round(decorrido, 3), "s",
+               f"app.simbolos.sprite._compor({len(base)} itens, pixel_ratio={fator})")
+
+    slug = _slug(sessao_a)
+    nome = f"zt-medida-{int(time.time())}"
+    svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24"/></svg>'
+    t0 = time.monotonic()
+    assert sessao_a.post(
+        "/api/simbolos", json={"nome": nome, "categoria": "teste", "conteudo_svg": svg}
+    ).status_code == 201
+    indice = sessao_a.get(f"/api/simbolos/sprite/{slug}.json").json()
+    decorrido = time.monotonic() - t0
+    assert f"personalizado/{nome}" in indice
+    gravar("upload_ate_aparecer_no_sprite_s", round(decorrido, 3), "s",
+           "POST /api/simbolos seguido de GET /api/simbolos/sprite/{slug}.json, sem reinicio de processo "
+           "(portao: <= 5 s)")
