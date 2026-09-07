@@ -82,3 +82,10 @@ sortedcontainers==2.4.0
 tomli==2.4.1
 tomli_w==1.2.0
 Markdown==3.10.2
+
+# --- SAML 2.0 Web SSO (L0-08-b): python3-saml (OneLogin, MIT) faz XML-DSig, XSD, EncryptedAssertion, metadado e
+# SLO; xmlsec é a ligação Python da libxmlsec (wheel manylinux com a biblioteca embutida: não exige xmlsec1 nem
+# libxmlsec1-dev no sistema, e não muda a versão de lxml/cryptography); isodate lê as datas do SAML.
+python3-saml==1.16.0
+xmlsec==1.3.17
+isodate==0.7.2

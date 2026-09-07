@@ -3,6 +3,20 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L0-08-b-saml: SAML 2.0 Web SSO por inquilino, SP- e IdP-initiated)
+
+`plat.provedor_saml` (vários por inquilino, metadado do IdP por URL, XML ou parâmetros; par de chaves do SP
+gerado aqui, chave privada cifrada com PLAT_SECRET), rotas `GET /api/sso/saml/metadata` (metadado do SP
+assinado, válido contra o XSD do SAML), `iniciar`, `acs`, `logout` e `slo`, mais `GET/POST/PUT/DELETE
+/api/org/saml`. Biblioteca python3-saml com `strict`, assinatura de resposta E de asserção obrigatórias,
+asserção cifrada opcional (exigível), SHA-1 recusado, desvio de relógio de 300 s (10 min à frente = 401),
+replay barrado pelo ID da asserção até o NotOnOrAfter, logout propagado nos dois sentidos (NameID +
+SessionIndex por sessão). Identidade única com o OIDC: `plat.usuario_externo_provisionar(origem, ...)`
+substitui o corpo de `oidc_provisionar`. Conferido: 16 testes com IdP sintético (sem Docker: sem assinatura,
+outra chave, relógio, replay, XML Signature Wrapping, NameID fora da regra Esri, cifra, SLO, IdP desligado não
+afeta o login local, isolamento A->B) e 5 contra o Keycloak 26 do L0-08-a (dois clientes SAML no realm de
+teste). Sem captura de tela (chromium headless quebrado nesta máquina).
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
