@@ -92,6 +92,9 @@ class Settings:
     # .env de trilha grava PLAT_POOL_MAX=2 (ver laco/trilha_ambiente.sh).
     PLAT_POOL_MIN: int
     PLAT_POOL_MAX: int
+    # antivírus opcional (item L7-03-a-antivirus-upload): endereço do clamd — caminho de socket unix
+    # (/var/run/clamav/clamd.ctl) ou host:porta (127.0.0.1:3310). Vazio = só a assinatura por bytes mágicos.
+    PLAT_CLAMD: str | None
 
     @property
     def producao(self) -> bool:
@@ -237,6 +240,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SMTP_ROTULO=_opcional(valores, "PLAT_SMTP_ROTULO"),
         PLAT_POOL_MIN=pool_min,
         PLAT_POOL_MAX=pool_max,
+        PLAT_CLAMD=_opcional(valores, "PLAT_CLAMD"),
     )
 
 
