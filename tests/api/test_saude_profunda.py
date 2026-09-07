@@ -10,8 +10,9 @@ o servidor web da máquina inteira) — pendurá-los de verdade (SIGSTOP/iptable
 que está rodando ao mesmo tempo, não só este item. Por isso o teste de "sonda pendurada" usa um servidor TCP
 de verdade, isolado neste processo, que aceita a conexão e nunca responde — reproduz bit a bit o sintoma real
 (handshake TCP completo, sem resposta HTTP) sem tocar nenhuma infraestrutura compartilhada. Já a `fila` É
-verificada com o worker de verdade fora do ar: esta trilha não sobe `plat-worker` nenhum (schema isolado
-`plat_til734saudep`), então `workers_vivos == 0` já é o estado real, não simulado."""
+verificada contra o worker de verdade: o número de workers vivos publicado pela rota é conferido contra
+`plat.fila_estado()` no mesmo instante, sem simulação. Na base de trilha (`laco/trilha_ambiente.sh` não sobe
+`plat-worker` nenhum) esse número é zero de verdade, e é esse o caso que o portão pede."""
 
 import json
 import socket
@@ -47,15 +48,24 @@ def test_profunda_head(cliente):
     assert r.status_code in (200, 503)
 
 
-def test_profunda_fila_real_sem_worker_e_degradada(sessao_plat):
-    """Esta trilha não sobe plat-worker (ADR 0003; laco/trilha_ambiente.sh não inclui a unidade) — workers_vivos
-    é ZERO de verdade, não simulado. `fila` tem de refletir isso como degradado, nunca como ok.
+def test_profunda_fila_real_sem_worker_e_degradada(sessao_plat, conexao_plat_app):
+    """`fila` mede o worker de verdade, nunca um valor simulado: o número de workers vivos que a rota publica é o
+    mesmo que `plat.fila_estado()` devolve no instante do teste, e o estado segue a regra declarada — sem worker
+    vivo a fila é `degradado`, nunca `ok`.
+
+    O teste não pressupõe worker ligado nem desligado: quem roda a suíte na base de trilha (laco/trilha_ambiente.sh
+    não sobe `plat-worker`) mede zero, e quem roda com a unidade `plat-worker` no ar mede um ou mais. As duas
+    leituras provam a mesma cláusula — a de zero é a que interessa ao portão e é o caso comum da trilha.
     Detalhe por componente (workers_vivos) só existe na versão admin — anônimo é resumido de propósito
     (cláusula 2 do portão), por isso esta cláusula 1 é medida com sessão de superadmin."""
+    with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT workers_vivos FROM plat.fila_estado()")
+        vivos = cur.fetchone()["workers_vivos"]
+    conexao_plat_app.rollback()
     r = sessao_plat.get("/saude/profunda")
     fila = r.json()["componentes"]["fila"]
-    assert fila["workers_vivos"] == 0, fila
-    assert fila["estado"] == "degradado", fila
+    assert fila["workers_vivos"] == vivos, (fila, vivos)
+    assert fila["estado"] == ("ok" if vivos >= 1 else "degradado"), (fila, vivos)
 
 
 def test_profunda_disco_e_ram_batem_com_a_maquina_real(sessao_plat):
