@@ -34,7 +34,7 @@ SELECT j.id, j.tipo, j.estado, j.progresso, j.mensagem, j.prioridade, j.pesado, 
             ELSE extract(epoch FROM (coalesce(j.terminado_em, now()) - j.iniciado_em)) END AS duracao_s,
        j.tentativa, j.max_tentativas, j.reinicios, j.cancelar_solicitado, j.cancelado_por, j.cancelado_em,
        j.worker, j.chave, j.agenda_id, j.programado_para, j.resultado, j.erro, j.linhas_log, j.parametros,
-       j.proveniencia, j.memoria_mb, j.timeout_s
+       j.proveniencia, j.memoria_mb, j.timeout_s, j.somente_leitura
 FROM plat.job j LEFT JOIN plat.usuario u ON u.id = j.usuario_id
 """
 SQL_AGENDA = """
@@ -131,11 +131,12 @@ def criar(sessao: Sessao, tipo: str, parametros, prioridade: int = 5, agendado_p
                               f"o inquilino já tem {r['pendentes']} jobs pendentes (máximo {PENDENTES_MAX})")
         cur.execute(
             "INSERT INTO plat.job(tenant_id, usuario_id, tipo, parametros, prioridade, chave, pesado, memoria_mb, "
-            "timeout_s, executor, max_tentativas, agendado_para, proveniencia, agenda_id, programado_para) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, coalesce(%s, now()), %s, %s, %s) RETURNING id",
+            "timeout_s, executor, max_tentativas, agendado_para, proveniencia, agenda_id, programado_para, "
+            "somente_leitura) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, coalesce(%s, now()), %s, %s, %s, %s) RETURNING id",
             (sessao.tenant_id, sessao.usuario_id, t.nome, psycopg2.extras.Json(params), prioridade, chave_de(t, params),
              t.pesado, t.memoria_mb, t.timeout_s, t.executor, t.tentativas, quando,
-             psycopg2.extras.Json(prov) if prov else None, agenda_id, programado_para),
+             psycopg2.extras.Json(prov) if prov else None, agenda_id, programado_para, t.somente_leitura),
         )
         novo = cur.fetchone()["id"]
     return obter(sessao, novo)

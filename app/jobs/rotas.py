@@ -75,6 +75,7 @@ class Job(BaseModel):
     proveniencia: Any | None = None
     memoria_mb: int
     timeout_s: int
+    somente_leitura: bool = False
 
 
 class ListaJobs(BaseModel):
@@ -103,6 +104,7 @@ class TipoJob(BaseModel):
     versao: int
     perfil_minimo: str
     parametros_schema: dict
+    somente_leitura: bool = False
 
 
 class LinhaLog(BaseModel):

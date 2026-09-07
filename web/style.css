@@ -272,3 +272,7 @@ body.instrumento dd, body.instrumento .mono, body.instrumento .tabela td.mono, b
 #upload-progresso::-webkit-progress-value { background: var(--acento); border-radius: 999px; }
 #upload-rotulo-progresso { font-family: var(--mono); font-size: .85rem; color: var(--fraco); }
 .upload-ok { color: var(--ok); }
+
+/* ---------- faixa do modo de manutenção (L7-33) ---------- */
+.faixa-modo { position: sticky; top: 0; z-index: 1000; padding: var(--e2) var(--e4); background: rgba(210, 153, 34, .16); border-bottom: 1px solid var(--atencao); color: var(--texto); font-size: .92rem; }
+.faixa-modo strong { color: var(--atencao); }

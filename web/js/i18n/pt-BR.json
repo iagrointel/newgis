@@ -747,6 +747,7 @@
  "nav.conexoes": "Conexões",
  "nav.conexoes_desc": "conexões a serviços externos: saúde, histórico e camadas publicadas com procedência",
  "mapa.titulo": "Mapa",
+ "modo.faixa_rotulo": "Manutenção em andamento, somente leitura:",
  "mapa.camada_base": "camada base",
  "mapa.base_osm_guarulhos": "OSM aberto — recorte Guarulhos (ODbL 1.0)",
  "mapa.erro_biblioteca": "biblioteca de mapa não carregou (MapLibre ou PMTiles ausente)",

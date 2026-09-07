@@ -1070,3 +1070,49 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Modo somente-leitura/manutenção (item L7-33-modo-somente-leitura)
+
+### 22.1 O que é
+
+Uma bandeira liga/desliga o modo somente-leitura para a plataforma inteira ou para um inquilino. Ligado,
+toda escrita (`POST`/`PUT`/`PATCH`/`DELETE`) devolve `503` com o motivo, exceto login/logout, `/api/modo`,
+`/saude`, `/api/versao` e a exportação de catálogo (`catalogo.exportar_lista`, que só lê); leitura, mapa e
+tiles continuam normais. Quem tem sessão aberta e quem ainda não entrou veem uma faixa no topo da tela com
+o motivo. É o mecanismo que a atualização (L7-14), o failover (L7-07-c) e a licença vencida (L7-11-a)
+usarão para pausar escrita antes de mexer na plataforma — nenhum dos três existe ainda; este item entrega
+só o interruptor e a CLI.
+
+### 22.2 Operar (`plat modo`, CLI — não existe rota HTTP para ligar/desligar)
+
+```
+plat modo ligar    --motivo "troca da versão 2026.09" [--inquilino SLUG] [--retry-after S] [--quem N]
+plat modo desligar --motivo "troca concluída, smoke ok" [--inquilino SLUG] [--quem N]
+plat modo estado   [--inquilino SLUG]
+```
+
+Motivo é obrigatório nos dois sentidos (ligar E desligar) — recusado tanto pelo `argparse` quanto pela
+função SQL, e cada chamada grava uma linha em `plat.sistema_trilha` (quem, quando, motivo). Só a role do
+worker (`plat_worker`) tem `EXECUTE` nas funções `plat.modo_ligar`/`modo_desligar`: é operação de
+infraestrutura, a API nunca liga o próprio modo. Global vence sobre o de um inquilino específico.
+
+### 22.3 `GET /api/modo` (público, sempre 200)
+
+`{"ativo": bool, "escopo": "global"|"inquilino", "motivo": "...", "quem": "...", "desde": "...",
+"retry_after_s": N}` (ou só `{"ativo": false}`). É o que a faixa do front consulta — o texto que o usuário
+lê na faixa é o MESMO motivo devolvido no `detalhe` do `503` de uma escrita bloqueada.
+
+### 22.4 Jobs sob o modo
+
+Um job já `rodando` no momento de ligar termina normalmente (nunca é tocado). Um job comum pendente na fila
+fica retido (não é retirado) enquanto o modo estiver ligado para o inquilino dele — mesmo que a cota de
+simultâneos abra vaga — e só é pego na próxima varredura depois de desligar. `POST /api/jobs` de um tipo
+comum é escrita e devolve `503` como qualquer outra rota; só um tipo declarado `somente_leitura=True` no
+registro (hoje `catalogo.exportar_lista`) atravessa tanto o middleware quanto a fila.
+
+### 22.5 O que ficou de fora
+
+Nenhum consumidor automático (atualização, failover, licença vencida) liga o modo sozinho — hoje é sempre
+operação manual pela CLI. O silenciamento de alerta durante o modo (L7-06-b) tem o ponto de leitura pronto
+(`/saude` expõe `manutencao.ativo`), mas não há motor de alerta construído nesta plataforma para provar o
+silenciamento ponta a ponta. Ver ADR `20260907T1434-modo-manutencao.md`.

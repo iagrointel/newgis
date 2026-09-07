@@ -113,8 +113,15 @@ BEGIN
   RETURN plat.modo_ler(p_tenant_id);
 END $$;
 
+-- ---------------------------------------------------------------- job somente-leitura (exportação):
+-- tipo declarado `somente_leitura` no registro Python (hoje catalogo.exportar_lista) não altera dado do
+-- inquilino — só lê e materializa artefato — então atravessa o modo: a hipótese do item manda a exportação
+-- continuar. A coluna congela a marca no momento da criação (mudança futura no registro não reabre fila).
+ALTER TABLE plat.job ADD COLUMN IF NOT EXISTS somente_leitura boolean NOT NULL DEFAULT false;
+
 -- ---------------------------------------------------------------- pausa da fila: inquilino sob modo não tem pendente retirado
--- (o job em execução não é tocado: "termina ou pausa sem se perder", portão do L7-33)
+-- (o job em execução não é tocado: "termina ou pausa sem se perder", portão do L7-33); EXCETO o job
+-- somente_leitura, que continua saindo da fila durante a manutenção.
 CREATE OR REPLACE FUNCTION plat.job_pegar(p_worker text, p_pesado_ok boolean) RETURNS plat.job
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = plat, public AS $$
 DECLARE pego plat.job;
@@ -124,7 +131,7 @@ BEGIN
     SELECT j.id FROM plat.job j
     WHERE j.estado = 'pendente' AND j.agendado_para <= now()
       AND (p_pesado_ok OR NOT j.pesado)
-      AND NOT plat.modo_bloqueia(j.tenant_id)
+      AND (j.somente_leitura OR NOT plat.modo_bloqueia(j.tenant_id))
       AND (j.chave IS NULL OR NOT EXISTS (SELECT 1 FROM plat.job r WHERE r.chave = j.chave AND r.estado = 'rodando'))
       AND (SELECT count(*) FROM plat.job r WHERE r.tenant_id = j.tenant_id AND r.estado = 'rodando')
           < plat.cota_jobs_simultaneos(j.tenant_id)

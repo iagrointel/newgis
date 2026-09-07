@@ -288,6 +288,9 @@ class ExportarParametros(BaseModel):
     timeout_s=600,
     tentativas=1,
     perfil_minimo="editor",
+    # L7-33: só lê o catálogo e grava o artefato no armazenamento — é o tipo que atravessa o modo de
+    # manutenção (a hipótese do item manda a exportação continuar; ver app/modo.py e plat.job_pegar)
+    somente_leitura=True,
 )
 def catalogo_exportar_lista(ctx, formato: str = "csv", ids: list[uuid.UUID] | None = None) -> dict:
     with ctx.db() as cur:

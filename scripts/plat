@@ -1,0 +1,13 @@
+#!/bin/bash
+# plat — CLI de operação da plataforma (o módulo é app/cli.py; este arquivo é só o atalho `plat`).
+# Carrega PLAT_DSN_WORKER do cofre quando o ambiente não o tem, com o MESMO privilégio que o Makefile
+# já usa (`sudo cat /etc/plat/segredos/...`): a role do worker é a única com EXECUTE em modo_ligar/
+# modo_desligar (migração 20260906T2109), então operar o modo exige esse privilégio — de propósito.
+set -euo pipefail
+RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -z "${PLAT_DSN_WORKER:-}" ]; then
+  V=$(sudo -n cat /etc/plat/segredos/PLAT_DSN_WORKER 2>/dev/null || true)
+  [ -n "$V" ] && export PLAT_DSN_WORKER="$V"
+fi
+cd "$RAIZ"
+exec "$RAIZ/venv/bin/python" -m app.cli "$@"

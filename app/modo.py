@@ -9,7 +9,9 @@ em português, detalhe com motivo/escopo/desde/quem e req_id). Leitura, tiles e 
 nunca passam por aqui.
 
 Isenções fixas, nunca bloqueadas:
-- `/saude` e `/status`: o monitoramento tem de continuar vendo a plataforma durante a manutenção;
+- `/saude` e `/api/versao`: o monitoramento tem de continuar vendo a plataforma durante a manutenção
+  (a rota `/status` citada na hipótese do item não existe neste código — o par real é saúde/versão,
+  ADR 0001 seção 7 — e ambas já são GET, fora de VERBOS_ESCRITA; ficam na lista por clareza documental);
 - `/api/modo`: a própria consulta do estado (é o que a faixa do front lê);
 - `/api/login`, `/api/login/2fa`, `/api/login/ldap` e `/api/logout`: entrar e sair não são edição —
   no modo READ_ONLY do ArcGIS o usuário continua entrando para CONSULTAR; bloquear o login deixaria
@@ -56,7 +58,7 @@ VERBOS_ESCRITA = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 ISENTOS = frozenset(
     {
         "/saude",
-        "/status",
+        "/api/versao",
         "/api/modo",
         "/api/login",
         "/api/login/2fa",

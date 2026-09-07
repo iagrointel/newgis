@@ -4,10 +4,12 @@
 import { obter, enviar, mensagemDe } from '../base/api.js';
 import { h, limpar, caminhoSeguro } from '../base/dom.js';
 import { carregar, t, formatarData } from '../base/i18n.js';
+import { aplicarFaixaModo } from '../base/modo.js';
 import '../base/componentes.js';
 import { lembrarInquilino, marcarSessao, inquilinoLembrado } from './sessao.js';
 
 await carregar();
+aplicarFaixaModo();  // L7-33: quem ainda não entrou também vê a faixa de manutenção (modo global)
 
 const params = new URLSearchParams(location.search);
 const proximo = caminhoSeguro(params.get('proximo'), '/');

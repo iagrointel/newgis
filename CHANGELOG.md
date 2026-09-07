@@ -3,6 +3,44 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L7-33-modo-somente-leitura: modo somente-leitura/manutenção global e por inquilino)
+
+Bandeira em `plat.sistema`/`plat.sistema_trilha` (migração `20260906T2109_modo_manutencao.sql`), lida pelo
+`ModoMiddleware` (ASGI puro, `app/modo.py`, mesmo desenho de `LimiteCorpoMiddleware` para controlar o
+contrato de erro na leitura do corpo): toda escrita (`POST`/`PUT`/`PATCH`/`DELETE`) devolve `503` +
+`Retry-After` + Problem Details, exceto `/saude`, `/api/versao`, `/api/modo`, login/logout e `POST
+/api/jobs` de um tipo declarado `somente_leitura=True` (campo novo em `app/jobs/registro.py::tarefa`, hoje
+só `catalogo.exportar_lista`, congelado na coluna `plat.job.somente_leitura` no momento da criação).
+`plat.job_pegar` ganha a cláusula gêmea do lado do SQL: job já `rodando` não é tocado; pendente comum fica
+retido enquanto `plat.modo_bloqueia(tenant)`, mesmo com vaga de cota livre; só o tipo `somente_leitura`
+continua saindo da fila. CLI `plat modo ligar/desligar/estado` (`app/cli.py`, role `plat_worker` — só ela
+tem `EXECUTE` nas funções, a API nunca liga o próprio modo); motivo obrigatório nos dois sentidos, recusado
+no SQL (não só no `argparse`), cada chamada grava `plat.sistema_trilha`. `GET /api/modo` público alimenta a
+faixa do front (`web/js/base/modo.js::aplicarFaixaModo()`, chamada por `exigirSessao` e por `/entrar`).
+
+Achado consertado durante a montagem do portão: a hipótese do item citava uma rota `/status` que não
+existe neste código (o par real de monitoramento é `/saude` + `/api/versao`, ADR 0001 seção 7) — corrigido
+em `app/modo.py` e no teste, com a nota de por que a rota não existe.
+
+Medido, com o worker real e o job de 2 minutos (`prova.progresso`) rodando ANTES do modo ligar: termina
+normalmente com o modo ligado no meio da execução em **120,1 s** (`tests/medidas/L7-33-modo-somente-leitura.json`);
+um segundo job (curto) criado antes do modo, atrás do primeiro na fila de um worker de um processo só,
+continua `pendente` mesmo depois de o primeiro terminar e o worker ficar livre — só é pego ao desligar.
+Refutação do item: varredura de `docs/openapi.json` (regenerado nesta passagem, estava desatualizado desde
+antes deste item — 126 → 149 caminhos) por TODA rota `POST`/`PUT`/`PATCH`/`DELETE`, tentando escrever com o
+modo ligado; um único `2xx` fora da isenção nomeada reprova (`tests/api/jobs/test_modo_manutencao.py::test_adversario_openapi_todas_as_rotas_de_escrita_bloqueadas`).
+`tests/e2e/test_modo_manutencao.py` prova a faixa no navegador (liga pela CLI, `#faixa-modo` visível em
+`/entrar`, captura, desliga, faixa some) — como todo e2e desta suíte, faz SKIP automático dentro de uma
+trilha isolada (sem nginx/domínio público) e passou de verdade contra um `uvicorn` solto com
+`--base-url http://127.0.0.1:8208`.
+
+Fora desta passagem (nomeado, não escondido): nenhum consumidor (atualização L7-14, failover L7-07-c,
+licença vencida L7-11-a) liga o modo sozinho — nenhum dos três existe ainda nesta plataforma. Silenciamento
+de alerta durante o modo (L7-06-b): o ponto de leitura está pronto (`/saude` expõe `manutencao.ativo`), mas
+não há motor de alerta construído para provar o silenciamento ponta a ponta. ADR
+`20260907T1434-modo-manutencao.md`; `docs/PARIDADE.md` (paridade com `mode` do Portal e o site mode
+`READ_ONLY` do Server).
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
