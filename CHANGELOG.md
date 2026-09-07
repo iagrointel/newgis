@@ -3,6 +3,33 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L7-03-e-cabecalhos-csp-tls: CSP com nonce por resposta, frame-ancestors por inquilino, perfil TLS)
+
+- **Content-Security-Policy em toda resposta**, montada por `app/cabecalhos.py` (middleware mais externo):
+  documento HTML leva `script-src 'self' 'nonce-<sorteado por resposta>'`, sem `'unsafe-inline'` e sem
+  `'unsafe-eval'`; resposta que não é documento leva `default-src 'none'`. Medido: 196 pares (método,
+  caminho) do OpenAPI mais 6 rotas fora do esquema, e nenhuma resposta sem política — inclusive 401, 404,
+  405 e 422 (`tests/api/test_cabecalhos.py`).
+- **Embutir a aplicação no sítio do cliente** passou a ser configuração do inquilino
+  (`plat.tenant.config -> 'origens_embutidas'`, lida pela função `plat.origens_embutidas` da migração
+  `20260907T2047`): origem autorizada carrega, origem fora da lista é recusada pelo navegador. Provado com
+  chromium 147 em `tests/e2e/test_csp_embutir.py` (6 testes). `X-Frame-Options` foi retirado: ele não sabe
+  dizer "estas origens sim".
+- **`Permissions-Policy`, COOP, CORP, `Referrer-Policy` e `nosniff` numa origem só** — a aplicação. O nginx
+  deixou de repeti-los nas rotas proxiadas (`add_header` acrescenta: sairiam dois) e passou a declarar o
+  conjunto inteiro em `/static/`, onde ele é a origem do corpo (`tests/unit/test_cabecalhos_fonte.py`).
+- **CORS por token** reusando a `restricao.referer` que o token de serviço já tinha: a origem é ecoada só
+  quando está na lista do próprio token, nunca `*`.
+- **Perfil TLS intermediate da Mozilla, HTTP/2 e OCSP stapling** em `deploy/nginx_tls.conf`, instalado pelo
+  `install.sh` em `/etc/nginx/conf.d/plat_tls.conf`. Medido na instalação pública ANTES do item: stapling
+  ausente ("no response sent").
+- **`/.well-known/security.txt`** no contrato da RFC 9116, com `Expires` sempre válido.
+- **19 páginas de `web/` examinadas por leitura de arquivo**: zero `<script>` em linha sem nonce e zero
+  tratador de evento em atributo. Com a política nova eles não executariam e a tela abriria em branco.
+- Mozilla Observatory sobre a instalação pública, 07/09/2026, **antes** deste item: **B, 75 de 100, 11 de
+  12 exames** (a falta de CSP tira 25). A nota depois não foi medida — depende de o dono instalar.
+- ADR: `docs/adr/20260907T2105-cabecalhos-de-seguranca-e-perfil-tls.md`. Manual: `docs/SEGURANCA.md` §9.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a

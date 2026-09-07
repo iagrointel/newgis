@@ -398,3 +398,104 @@ o mesmo acima do teto de uma parte (nunca abre multipart no Garage para um conte
   contêiner externo é conferido.
 - O caminho de sincronização da PWA de campo (L2-07, ainda não construído) precisará da mesma barreira quando
   existir; `objetos.guardar()` já cobre automaticamente qualquer chamador futuro que passe por ele.
+
+## 9. Cabeçalhos de segurança, CORS e perfil TLS (item L7-03-e-cabecalhos-csp-tls)
+
+### 9.1 Quem declara cada cabeçalho
+
+`add_header` do nginx ACRESCENTA, nunca substitui: cabeçalho posto nos dois lugares sai em dobro e o
+serviço perde como dizer outra coisa numa rota. A repartição, então, é esta — e ela é provada por
+`tests/unit/test_cabecalhos_fonte.py`, que lê `deploy/nginx.conf`:
+
+| cabeçalho | quem declara | por quê |
+|---|---|---|
+| `Content-Security-Policy` | aplicação (`app/cabecalhos.py`) | depende da resposta: nonce novo a cada uma, política diferente para documento e para dado, `frame-ancestors` por inquilino |
+| `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` | aplicação | idem: o CORP muda para `cross-origin` quando a origem é a de um token autorizado |
+| `Referrer-Policy`, `X-Content-Type-Options` | aplicação | ficam ao lado dos demais, numa origem só |
+| `Cache-Control` | aplicação (piso `no-store, must-revalidate`) | decisão do turno T2, mantida |
+| `Strict-Transport-Security` | nginx, bloco 443 | é do transporte; a aplicação não sabe se a conexão chegou por TLS |
+| `X-Robots-Tag` | nginx | vale para tudo o que o domínio serve, inclusive o que a aplicação não responde |
+| conjunto inteiro em `/static/` | nginx | ali o nginx é a origem do corpo |
+
+`X-Frame-Options` deixou de ser declarado. Quem manda no embutir passou a ser `frame-ancestors`, que
+aceita uma LISTA de origens (o cabeçalho antigo só aceita `DENY`, `SAMEORIGIN` ou uma origem) e que os
+navegadores atuais aplicam com precedência sobre ele quando os dois aparecem.
+
+O HSTS continua em `max-age=31536000` (um ano). `includeSubDomains` e `preload` NÃO foram ligados:
+`preload` é irreversível na prática (a lista embutida nos navegadores demora meses a sair) e alcança o
+domínio inteiro da casa, não só este serviço — é decisão do dono, não do item.
+
+### 9.2 A política
+
+Documento HTML:
+
+```
+default-src 'self'; script-src 'self' 'nonce-<sorteado por resposta>'; style-src 'self';
+img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:;
+child-src 'self' blob:; media-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none';
+form-action 'self'; frame-src 'self'; upgrade-insecure-requests; frame-ancestors <por inquilino>
+```
+
+Sem `'unsafe-inline'` e sem `'unsafe-eval'`. `blob:` em `worker-src`/`child-src` porque o MapLibre cria o
+próprio processo de trabalho por URL de blob. As páginas de `web/` não têm `<script>` em linha nem
+tratador de evento em atributo (`onclick=`, `onerror=`…), e um teste que LÊ os arquivos impede que
+voltem: com esta política eles não executariam, e a tela abriria em branco sem erro visível. A única
+exceção é o script de arranque da Swagger UI, que recebe o nonce da própria resposta em `/api/docs`.
+
+Resposta que não é documento (JSON, GeoJSON, imagem, tile, arquivo) leva
+`default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`.
+
+### 9.3 Embutir a aplicação no sítio do cliente (`frame-ancestors` por inquilino)
+
+Embutir é caso de uso, não acidente. A lista de origens autorizadas é do INQUILINO e mora em
+`plat.tenant.config -> 'origens_embutidas'`, a mesma coluna jsonb das demais configurações da
+organização. Sem lista, a política sai `frame-ancestors 'none'` — a falta fecha.
+
+```sql
+-- pela role da aplicação, com contexto de inquilino (igual ao PUT /api/org)
+SELECT set_config('plat.tenant_id', '<id>', true);
+UPDATE plat.tenant
+   SET config = config || jsonb_build_object('origens_embutidas',
+       '["https://sig.exemplo.gov.br"]'::jsonb)
+ WHERE id = plat.tenant_atual();
+```
+
+O middleware descobre de quem é a página por `state.tenant_id` (quando houve autenticação) ou pelo
+parâmetro `inquilino` da própria URL (páginas ainda sem sessão). A leitura vai pela função
+`plat.origens_embutidas(slug, id)`, `SECURITY DEFINER` da migração `20260907T2047`: o cabeçalho é montado
+antes de haver contexto de inquilino na conexão, e sem ela a RLS devolveria zero linhas e a política sairia
+sempre fechada. A função devolve um campo de configuração de um inquilino, que o próprio cabeçalho já
+publica. O valor fica em memória por 60 s (`app.cabecalhos.CACHE_ORIGENS_S`).
+
+### 9.4 CORS por token
+
+A lista de origens do CORS é a MESMA `restricao.referer` que o token de serviço já usa desde o item L0-02
+para ser aceito. Só quando a requisição chega autenticada por token e a origem está naquela lista é que a
+resposta ganha `Access-Control-Allow-Origin` com a origem pedida (nunca `*`), mais
+`Access-Control-Expose-Headers: x-req-id` e `Cross-Origin-Resource-Policy: cross-origin`. `Vary: Origin`
+sai sempre que há `Origin`, para que um intermediário não sirva a resposta de uma origem a outra.
+
+O preflight (`OPTIONS` com `Access-Control-Request-Method`) é respondido sem consultar token, porque a
+especificação proíbe o navegador de mandar crachá no preflight. Autorizar o preflight não entrega dado
+nenhum: a requisição de verdade continua barrada pela restrição do token (401 `referer_nao_permitido`).
+
+### 9.5 TLS, HTTP/2 e OCSP stapling
+
+`deploy/nginx_tls.conf` (o `install.sh` escreve em `/etc/nginx/conf.d/plat_tls.conf`, contexto http, só
+depois de existir certificado) põe o servidor no perfil **intermediate** do guia Server Side TLS da
+Mozilla: TLS 1.2 e 1.3 apenas, escolha de cifra pelo cliente, retomada por ticket desligada. Uma
+diferença declarada: a lista de cifras não traz as `DHE-*`, o que dispensa gerar e manter um
+`ssl_dhparam` e não perde nenhum cliente do alvo do perfil — todos negociam ECDHE.
+
+O OCSP stapling entrega no aperto de mão a resposta do respondedor da CA, poupando ao navegador uma
+consulta que revela o sítio visitado; `ssl_stapling_verify on` exige a cadeia, que o certbot deixa em
+`chain.pem`, e o resolvedor declarado é o do sistema.
+
+HTTP/2: no nginx 1.24 (Ubuntu 24.04) ainda é opção do `listen`, não a diretiva `http2 on;` do 1.25.1+.
+O `install.sh` acrescenta `http2` à linha `listen ... ssl;` que o certbot gerou, ao reescrever o bloco.
+
+### 9.6 `security.txt`
+
+`GET /.well-known/security.txt` responde no contrato da RFC 9116, gerado a cada leitura porque o campo
+`Expires` é obrigatório e um arquivo com data fixa envelhece em silêncio. O contato vem de
+`PLAT_SEGURANCA_CONTATO`; sem a chave vale `seguranca@<host de PLAT_URL_PUBLICA>`.
