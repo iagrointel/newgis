@@ -9,6 +9,7 @@ as mesmas linhas.
 Ordem importa (o arquivo é sequencial): dump completo -> retenção -> espaço -> restauração -> sha ->
 órfão -> recusa fora do inquilino técnico. Limpeza: o arquivo órfão do teste é removido no fim."""
 
+import contextlib
 import json
 import os
 import subprocess
@@ -72,7 +73,13 @@ def worker(env, cliente_plataforma):
 
 @pytest.fixture(scope="module")
 def con_plataforma(env, sessao_plataforma):
-    """Conexão como plat_app já no contexto do inquilino técnico (lê plat.backup via RLS/funções)."""
+    """Conexão como plat_app já no contexto do inquilino técnico (lê plat.backup via RLS/funções).
+
+    `set_config(..., true)` (usado por `jobs_sessao.contexto`) é LOCAL À TRANSAÇÃO: some no primeiro
+    commit/rollback da conexão. Como esta conexão é module-scoped e reaproveitada por vários testes em
+    transações distintas, guardamos o (tenant_id, usuario_id) em `_plat_ctx` e reaplicamos o contexto a
+    cada cursor novo (`_cursor_ctx` abaixo) — mesmo padrão de `jobs_sessao.contexto` chamado a cada bloco
+    em `tests/api/jobs/test_jobs_rls.py` e afins."""
     con = jobs_sessao.conectar(env["PLAT_DSN"])
     from app.schema_ambiente import CursorSchemaAmbiente
 
@@ -82,25 +89,56 @@ def con_plataforma(env, sessao_plataforma):
         cur.execute("UPDATE plat.tenant SET config = config || '{\"cota_jobs_dia\": 100000}' "
                     "WHERE slug = 'plataforma'")
         cur.execute("UPDATE plat.usuario SET email = 'superadmin.backup@example.com' WHERE superadmin")
+        # limpa o rastro de rodadas anteriores da MESMA trilha (linha + arquivo + objeto do bucket): sem
+        # isso `test_01_dump_completo` compara "linhas de plat.backup" com "dumps desta rodada" e vê mais
+        # linhas do que dumps (achado real: 2 execuções seguidas da suíte sem limpar deram 7 == 4, nunca
+        # verdadeiro). plat.backup_apagar já cuida de arquivo + objeto do Garage, não só da linha.
+        cur.execute("SELECT * FROM plat.backup_listar(NULL, 10000)")
+        antigos = [dict(r) for r in cur.fetchall()]
+        if antigos:
+            cur.execute("SELECT * FROM plat.backup_apagar(%s)", ([l["id"] for l in antigos],))
     con.commit()
+    _CTX[id(con)] = (sessao_plataforma[1], sessao_plataforma[2])
     try:
         yield con
     finally:
+        _CTX.pop(id(con), None)
         con.close()
 
 
-def _listar_backups(con, esquema=None):
+# objeto connection do psycopg2 não aceita atributo novo (tipo C sem __dict__); guarda o (tenant_id,
+# usuario_id) por identidade da conexão, popular em con_plataforma e lido por _cursor_ctx
+_CTX: dict[int, tuple[int, int]] = {}
+
+
+@contextlib.contextmanager
+def _cursor_ctx(con):
+    """Cursor novo já com o contexto (tenant_id/usuario_id) reaplicado — necessário porque `set_config`
+    local não sobrevive ao commit da transação anterior na mesma conexão. Faz commit ao sair: sem isso a
+    conexão fica presa numa transação idle-in-transaction pelo resto do módulo (inclusive durante o
+    `test_04`, que passa dezenas de segundos em subprocessos de pg_dump/pg_restore) e o servidor a derruba
+    (`idle_in_transaction_session_timeout`), quebrando os testes seguintes com 'SSL connection has been
+    closed unexpectedly' — achado real ao rodar a suíte ponta a ponta, não de leitura de código."""
     from app.schema_ambiente import CursorSchemaAmbiente
 
-    with con.cursor(cursor_factory=CursorSchemaAmbiente) as cur:
+    cur = con.cursor(cursor_factory=CursorSchemaAmbiente)
+    tenant_id, usuario_id = _CTX[id(con)]
+    jobs_sessao.contexto(cur, tenant_id, usuario_id, "admin")
+    try:
+        yield cur
+    finally:
+        con.commit()
+        cur.close()
+
+
+def _listar_backups(con, esquema=None):
+    with _cursor_ctx(con) as cur:
         cur.execute("SELECT * FROM plat.backup_listar(%s, 10000)", (esquema,))
         return [dict(r) for r in cur.fetchall()]
 
 
 def _destino(con):
-    from app.schema_ambiente import CursorSchemaAmbiente
-
-    with con.cursor(cursor_factory=CursorSchemaAmbiente) as cur:
+    with _cursor_ctx(con) as cur:
         cur.execute("SELECT * FROM plat.backup_destino_ler()")
         return dict(cur.fetchone())
 
@@ -144,7 +182,9 @@ def test_01_dump_completo(cliente_plataforma, worker, con_plataforma, medida):
         assert caminho.exists(), d
         assert nucleo.sha256_arquivo(caminho) == d["sha256"], f"sha256 da linha difere do arquivo: {d['arquivo']}"
         assert d["bytes"] == caminho.stat().st_size > 0
-        assert d["tempo_dump_s"] >= 0 and d["tabelas"] > 0
+        # tabelas >= 0: o inquilino técnico 'plataforma' tem seu próprio d_plataforma, mas vazio (0
+        # tabelas) — é um dump legítimo (arquivo com a definição do schema, sha256 íntegro), não um erro
+        assert d["tempo_dump_s"] >= 0 and d["tabelas"] >= 0
 
     # as linhas de plat.backup refletem exatamente os dumps (mais novas primeiro)
     linhas = _listar_backups(con_plataforma)
@@ -204,20 +244,19 @@ def test_02_retencao_apaga_o_excedente(cliente_plataforma, worker, con_plataform
 
 
 def test_03_falha_de_espaco_vira_job_falhou_e_notifica(cliente_plataforma, worker, con_plataforma, medida):
-    from app.schema_ambiente import CursorSchemaAmbiente
-
     arquivos_antes = set(Path(settings.PLAT_BACKUP_DIR or "var/backups").glob("*.dump")) \
         if settings.PLAT_BACKUP_DIR else set((Path(__file__).resolve().parents[2] / "var" / "backups").glob("*.dump"))
+    # 100000 GB (teto de DumpParametros.min_livre_gb) é bem mais que qualquer disco real desta máquina
     fim = _rodar(cliente_plataforma, "backup.dump_logico",
-                 {"somente": ["demo2"], "min_livre_gb": 999999, "origem": "teste"}, final="falhou")
+                 {"somente": ["demo2"], "min_livre_gb": 100000, "origem": "teste"}, final="falhou")
     assert "espaço insuficiente" in (fim.get("erro") or ""), fim.get("erro")
-    assert "999999.0 GB" in (fim.get("erro") or "") or "1000000.0 GB" in (fim.get("erro") or "")
+    assert "100000.0 GB" in (fim.get("erro") or ""), fim.get("erro")
     # nada foi escrito
     diretorio = Path(settings.PLAT_BACKUP_DIR) if settings.PLAT_BACKUP_DIR \
         else Path(__file__).resolve().parents[2] / "var" / "backups"
     assert set(diretorio.glob("*.dump")) == arquivos_antes
     # notificação, não silêncio: evento auditável + e-mail enfileirado ao superadmin
-    with con_plataforma.cursor(cursor_factory=CursorSchemaAmbiente) as cur:
+    with _cursor_ctx(con_plataforma) as cur:
         cur.execute("SELECT propriedades FROM plat.evento WHERE tipo = 'backup/falha' ORDER BY id DESC LIMIT 1")
         ev = cur.fetchone()
         assert ev is not None, "sem evento backup/falha"
@@ -290,10 +329,8 @@ def test_05_adversario_corrompe_1_byte_e_a_verificacao_acusa(cliente_plataforma,
 
 
 def test_06_linha_apagada_vira_arquivo_orfao_listado(cliente_plataforma, worker, con_plataforma, medida):
-    from app.schema_ambiente import CursorSchemaAmbiente
-
     linha = _listar_backups(con_plataforma, "d_demo2")[0]
-    with con_plataforma.cursor(cursor_factory=CursorSchemaAmbiente) as cur:
+    with _cursor_ctx(con_plataforma) as cur:
         cur.execute("SELECT * FROM plat.backup_apagar(%s)", ([linha["id"]],))
         assert cur.fetchone()["id"] == linha["id"]
     con_plataforma.commit()

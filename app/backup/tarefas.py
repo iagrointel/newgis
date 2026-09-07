@@ -55,8 +55,14 @@ class VerificarParametros(BaseModel):
 
 
 def dir_backups() -> Path:
+    """Diretório dos dumps. `pg_dump` roda como o superusuário local `postgres` (via sudo -n) e escreve o
+    arquivo `-f` diretamente aqui: o diretório tem de aceitar escrita de outro dono, exatamente como o
+    diretório `backups/` do backup do SIG de teste interno da casa (`drwxrwxrwx`, ativo reusado). Sem isso
+    o pg_dump sai com "Permission denied" e nunca chega a criar o arquivo — achado do 1º turno real desta
+    trilha (o rescaldo do Kimi tinha o código mas nunca tinha rodado o dump de ponta a ponta)."""
     d = Path(settings.PLAT_BACKUP_DIR) if settings.PLAT_BACKUP_DIR else RAIZ / "var" / "backups"
     d.mkdir(parents=True, exist_ok=True)
+    d.chmod(0o777)
     return d
 
 
@@ -210,6 +216,14 @@ def backup_dump_logico(ctx, min_livre_gb: int = nucleo.MIN_LIVRE_GB,
         final = diretorio / nome
         inicio = time.monotonic()
         _dump(ctx, esquema, tmp)
+        # pg_dump roda como `postgres` (sudo -n) e o arquivo nasce 0600 daquele dono; o diretório é 0777
+        # mas o ARQUIVO também precisa aceitar escrita de outro usuário, e só o dono (ou root) pode fazer
+        # esse chmod — `Path.chmod` como o usuário do worker dá "Operation not permitted" (achado real
+        # rodando o job de ponta a ponta, não de leitura de código). Sem isso o adversário do portão de
+        # pronto ("corrompe 1 byte") não consegue reabrir o dump para escrita.
+        r_chmod = ctx.subprocesso(["sudo", "-n", "-u", "postgres", "chmod", "666", str(tmp)])
+        if r_chmod.returncode != 0:
+            raise FalhaDefinitiva(f"chmod do dump de {esquema} saiu com código {r_chmod.returncode}")
         os.replace(tmp, final)
         tempo = round(time.monotonic() - inicio, 2)
         sha = nucleo.sha256_arquivo(final)
