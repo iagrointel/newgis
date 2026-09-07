@@ -1,0 +1,23 @@
+{
+ "item": "L2-02-c-editor-simbologia-vetor",
+ "medidas": {
+  "agrupamento_z6_concordancia_kmeans": {
+   "valor": 0.758,
+   "unidade": "fração",
+   "comando": "tile z6/23/36: 2 células de 80 px; ST_ClusterKMeans(k=2); tolerância 0.6"
+  },
+  "pagina_mapa_ms": {
+   "valor": 569.3,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  }
+ },
+ "gerado_em": "2026-09-07T21:04:23Z",
+ "git_sha": "d500839aaa4a",
+ "contexto": {
+  "carga_1min": 11.73,
+  "ram_livre_gb": 6.5,
+  "medido_em": "2026-09-07T21:04:23Z",
+  "como": "trilha cx202c: Martin próprio em :8436 (deploy/martin.yaml), app em scripts de teste na porta 8438 com PLAT_MARTIN_URL/PLAT_DSN_LEITOR; bancada tests/api/estilos_apoio.py; roda_teste.sh tests/api/test_estilos_editor.py e tests/e2e/test_estilos_editor.py"
+ }
+}
