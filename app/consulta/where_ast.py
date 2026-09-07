@@ -2,19 +2,32 @@
 e futuro alvo do CQL2-JSON canônico (L2_CONCEITO.md seção C7: "um único gerador de SQL parametrizado
 é o ponto de auditoria de injeção"). Este módulo é essa peça, isolada e reutilizável por qualquer
 serviço (FeatureServer, OGC API Features, painel) que precise transformar filtro digitado por
-cliente em predicado SQL seguro — item L2-04-b, sem tabela de mapa, sem integração de rota ainda.
+cliente em predicado SQL seguro — nasceu no item L2-04-b (sem tabela de mapa, sem integração de
+rota) e o item L2-04-c (operação `query` do FeatureServer) acrescenta BETWEEN, NOT, os literais de
+data/hora e as duas funções de texto do dialeto Esri ("standardized queries"), mantendo as mesmas
+duas etapas e a mesma garantia: nenhum caminho monta SQL por concatenação de texto do cliente.
 
 Gramática (EBNF), operadores fixos — nada além disto é aceito:
 
     expr        := and_termo (OR and_termo)*
-    and_termo   := primario (AND primario)*
+    and_termo   := nao_termo (AND nao_termo)*
+    nao_termo   := [NOT] primario
     primario    := "(" expr ")" | comparacao
-    comparacao  := CAMPO ( is_nulo | in_lista | op_valor )
+    comparacao  := operando ( is_nulo | in_lista | between | op_valor )
+    operando    := CAMPO | UPPER "(" CAMPO ")" | LOWER "(" CAMPO ")"
     is_nulo     := IS [NOT] NULL
     in_lista    := IN "(" valor ("," valor)* ")"
+    between     := BETWEEN valor AND valor
     op_valor    := ( "=" | "!=" | "<>" | "<" | "<=" | ">" | ">=" | LIKE ) valor
-    valor       := NUMERO | STRING
+    valor       := NUMERO | STRING | data_lit | CURRENT_DATE | CURRENT_TIMESTAMP
+    data_lit    := DATE STRING | TIMESTAMP STRING
     CAMPO       := identificador ASCII (letra/"_" seguido de letras/dígitos/"_")
+
+`DATE 'YYYY-MM-DD'` e `TIMESTAMP 'YYYY-MM-DD HH:MM:SS'` (ISO 8601, sem fuso — dialeto Esri) viram
+objeto `datetime.date`/`datetime.datetime` Python, que o psycopg2 adapta como parâmetro tipado —
+nunca como texto colado no SQL. `CURRENT_DATE`/`CURRENT_TIMESTAMP` são palavras-chave fixas do
+analisador (não texto do usuário) e por isso podem virar SQL literal com segurança. `UPPER(campo)`/
+`LOWER(campo)` só envolvem um CAMPO da lista branca — nunca uma expressão arbitrária.
 
 Duas etapas, nunca uma só:
 
@@ -33,6 +46,7 @@ Duas etapas, nunca uma só:
 
 import re
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, Union
 
 # ---------------------------------------------------------------- limites (negação-de-serviço)
@@ -41,8 +55,32 @@ MAX_TOKENS = 400  # tokens após tokenizar (largura: número de termos)
 MAX_PROFUNDIDADE = 20  # aninhamento de parênteses
 
 IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-_PALAVRAS_CHAVE = {"and", "or", "not", "in", "like", "is", "null"}
+_PALAVRAS_CHAVE = {
+    "and", "or", "not", "in", "like", "is", "null", "between",
+    "date", "timestamp", "current_date", "current_timestamp", "upper", "lower",
+}
 _OPERADORES = ["<=", ">=", "!=", "<>", "=", "<", ">"]  # ordem importa: prefixos de 2 chars primeiro
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$")
+
+
+class _CurrentKeyword:
+    """Marcador de valor: `CURRENT_DATE`/`CURRENT_TIMESTAMP` não são texto do usuário — são
+    palavras-chave reconhecidas pelo tokenizador — por isso podem virar SQL literal fixo em vez de
+    parâmetro, sem violar a regra de nunca concatenar texto do cliente."""
+
+    def __init__(self, sql: str):
+        self.sql = sql
+
+    def __eq__(self, outro):
+        return isinstance(outro, _CurrentKeyword) and self.sql == outro.sql
+
+    def __repr__(self):
+        return f"_CurrentKeyword({self.sql!r})"
+
+
+CURRENT_DATE = _CurrentKeyword("CURRENT_DATE")
+CURRENT_TIMESTAMP = _CurrentKeyword("CURRENT_TIMESTAMP")
 
 
 class ErroWhere(Exception):
@@ -146,9 +184,10 @@ def _tokenizar(texto: str) -> list[Token]:
 @dataclass
 class Comparacao:
     campo: str
-    operador: str  # "=" "!=" "<" "<=" ">" ">=" "LIKE" "IN" "IS NULL" "IS NOT NULL"
+    operador: str  # "=" "!=" "<" "<=" ">" ">=" "LIKE" "IN" "BETWEEN" "IS NULL" "IS NOT NULL"
     valor: Any = None
-    valores: list | None = None  # só para IN
+    valores: list | None = None  # para IN (lista) e BETWEEN ([inicio, fim])
+    funcao: str | None = None  # None | "UPPER" | "LOWER" — envolve o CAMPO (dialeto Esri), não o valor
 
 
 @dataclass
@@ -163,7 +202,14 @@ class Ou:
     direita: "No"
 
 
-No = Union[Comparacao, E, Ou]
+@dataclass
+class Nao:
+    """`NOT <primario>` — negação prefixa de uma comparação ou de uma expressão entre parênteses."""
+
+    no: "No"
+
+
+No = Union[Comparacao, E, Ou, Nao]
 
 
 class _Parser:
@@ -203,12 +249,19 @@ class _Parser:
         return esquerda
 
     def e_termo(self, profundidade: int) -> No:
-        esquerda = self.primario(profundidade)
+        esquerda = self.nao_termo(profundidade)
         while (tok := self._olha()) is not None and tok.tipo == "AND":
             self.i += 1
-            direita = self.primario(profundidade)
+            direita = self.nao_termo(profundidade)
             esquerda = E(esquerda, direita)
         return esquerda
+
+    def nao_termo(self, profundidade: int) -> No:
+        tok = self._olha()
+        if tok is not None and tok.tipo == "NOT":
+            self.i += 1
+            return Nao(self.primario(profundidade))
+        return self.primario(profundidade)
 
     def primario(self, profundidade: int) -> No:
         tok = self._olha()
@@ -225,9 +278,21 @@ class _Parser:
             return no
         return self.comparacao()
 
-    def comparacao(self) -> Comparacao:
+    def _operando(self) -> tuple[str, str | None]:
+        """CAMPO | UPPER "(" CAMPO ")" | LOWER "(" CAMPO ")" — devolve (campo, funcao)."""
+        tok = self._olha()
+        if tok is not None and tok.tipo in ("UPPER", "LOWER"):
+            funcao = tok.tipo
+            self.i += 1
+            self._espera("(")
+            campo_tok = self._espera("ident")
+            self._espera(")")
+            return campo_tok.valor, funcao
         campo_tok = self._espera("ident")
-        campo = campo_tok.valor
+        return campo_tok.valor, None
+
+    def comparacao(self) -> Comparacao:
+        campo, funcao = self._operando()
         tok = self._olha()
         if tok is None:
             raise ErroWhere("sintaxe_invalida", f"operador esperado após '{campo}'", {"campo": campo})
@@ -239,7 +304,7 @@ class _Parser:
                 negado = True
                 self.i += 1
             self._espera("NULL")
-            return Comparacao(campo, "IS NOT NULL" if negado else "IS NULL")
+            return Comparacao(campo, "IS NOT NULL" if negado else "IS NULL", funcao=funcao)
         if tok.tipo == "IN":
             self.i += 1
             self._espera("(")
@@ -248,13 +313,19 @@ class _Parser:
                 self.i += 1
                 valores.append(self.valor())
             self._espera(")")
-            return Comparacao(campo, "IN", valores=valores)
+            return Comparacao(campo, "IN", valores=valores, funcao=funcao)
+        if tok.tipo == "BETWEEN":
+            self.i += 1
+            inicio = self.valor()
+            self._espera("AND")
+            fim = self.valor()
+            return Comparacao(campo, "BETWEEN", valores=[inicio, fim], funcao=funcao)
         if tok.tipo == "LIKE":
             self.i += 1
-            return Comparacao(campo, "LIKE", valor=self.valor())
+            return Comparacao(campo, "LIKE", valor=self.valor(), funcao=funcao)
         if tok.tipo == "op":
             self.i += 1
-            return Comparacao(campo, tok.valor, valor=self.valor())
+            return Comparacao(campo, tok.valor, valor=self.valor(), funcao=funcao)
         raise ErroWhere(
             "sintaxe_invalida",
             f"operador desconhecido após '{campo}': '{tok.tipo}'",
@@ -263,14 +334,49 @@ class _Parser:
 
     def valor(self):
         tok = self._olha()
-        if tok is None or tok.tipo not in ("numero", "string"):
+        if tok is None:
+            raise ErroWhere("sintaxe_invalida", "valor esperado", {"posicao": self.i})
+        if tok.tipo in ("numero", "string"):
+            self.i += 1
+            return tok.valor
+        if tok.tipo == "CURRENT_DATE":
+            self.i += 1
+            return CURRENT_DATE
+        if tok.tipo == "CURRENT_TIMESTAMP":
+            self.i += 1
+            return CURRENT_TIMESTAMP
+        if tok.tipo in ("DATE", "TIMESTAMP"):
+            literal_tipo = tok.tipo
+            self.i += 1
+            texto_tok = self._espera("string")
+            return self._literal_data(literal_tipo, texto_tok.valor)
+        raise ErroWhere(
+            "sintaxe_invalida",
+            "valor esperado (número, 'string', DATE/TIMESTAMP 'iso' ou CURRENT_DATE/CURRENT_TIMESTAMP)",
+            {"posicao": self.i, "obtido": tok.tipo},
+        )
+
+    def _literal_data(self, literal_tipo: str, texto: str):
+        """DATE/TIMESTAMP seguido de STRING vira `date`/`datetime` Python — nunca texto solto no
+        SQL; formato fixo ISO 8601 (dialeto Esri), qualquer outro formato é sintaxe inválida."""
+        if literal_tipo == "DATE":
+            if not _DATE_RE.match(texto):
+                raise ErroWhere("data_invalida", f"DATE espera 'YYYY-MM-DD', obtive {texto!r}", {"valor": texto})
+            try:
+                return datetime.strptime(texto, "%Y-%m-%d").date()
+            except ValueError as e:
+                raise ErroWhere("data_invalida", f"data inválida: {texto!r}", {"valor": texto}) from e
+        if not _TIMESTAMP_RE.match(texto):
             raise ErroWhere(
-                "sintaxe_invalida",
-                "valor esperado (número ou 'string' entre aspas simples)",
-                {"posicao": self.i, "obtido": tok.tipo if tok else None},
+                "data_invalida", f"TIMESTAMP espera 'YYYY-MM-DD HH:MM[:SS]', obtive {texto!r}", {"valor": texto}
             )
-        self.i += 1
-        return tok.valor
+        normalizado = texto.replace("T", " ")
+        for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+            try:
+                return datetime.strptime(normalizado, fmt)
+            except ValueError:
+                continue
+        raise ErroWhere("data_invalida", f"timestamp inválido: {texto!r}", {"valor": texto})
 
 
 def analisar(texto: str) -> No:
@@ -314,25 +420,40 @@ def compilar(no: No, colunas) -> ConsultaSQL:
     colunas_ok = _normalizar_colunas(colunas)
     params: list = []
 
+    def _valor_sql(v) -> str:
+        """`CURRENT_DATE`/`CURRENT_TIMESTAMP` (palavra-chave do analisador) viram literal SQL fixo;
+        qualquer outro valor (número, string, `date`/`datetime` de DATE/TIMESTAMP) é parâmetro."""
+        if isinstance(v, _CurrentKeyword):
+            return v.sql
+        params.append(v)
+        return "%s"
+
     def visitar(nodo: No) -> str:
         if isinstance(nodo, Ou):
             return f"({visitar(nodo.esquerda)} OR {visitar(nodo.direita)})"
         if isinstance(nodo, E):
             return f"({visitar(nodo.esquerda)} AND {visitar(nodo.direita)})"
+        if isinstance(nodo, Nao):
+            return f"NOT ({visitar(nodo.no)})"
         if isinstance(nodo, Comparacao):
             if nodo.campo not in colunas_ok:
                 raise ErroWhere(
                     "campo_nao_permitido", f"campo não está na lista branca: {nodo.campo}", {"campo": nodo.campo}
                 )
             col = colunas_ok[nodo.campo]
+            if nodo.funcao in ("UPPER", "LOWER"):
+                col = f"{nodo.funcao}({col})"
             if nodo.operador in ("IS NULL", "IS NOT NULL"):
                 return f"{col} {nodo.operador}"
             if nodo.operador == "IN":
-                marcadores = ", ".join(["%s"] * len(nodo.valores))
-                params.extend(nodo.valores)
+                marcadores = ", ".join(_valor_sql(v) for v in nodo.valores)
                 return f"{col} IN ({marcadores})"
-            params.append(nodo.valor)
-            return f"{col} {nodo.operador} %s"
+            if nodo.operador == "BETWEEN":
+                ini_sql = _valor_sql(nodo.valores[0])
+                fim_sql = _valor_sql(nodo.valores[1])
+                return f"{col} BETWEEN {ini_sql} AND {fim_sql}"
+            val_sql = _valor_sql(nodo.valor)
+            return f"{col} {nodo.operador} {val_sql}"
         raise ErroWhere("no_desconhecido", "nó de AST fora dos tipos esperados")  # pragma: no cover
 
     sql = visitar(no)
