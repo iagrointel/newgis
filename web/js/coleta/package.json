@@ -1,0 +1,6 @@
+{
+  "name": "plat-coleta",
+  "private": true,
+  "type": "module",
+  "description": "escopo mínimo para o Node tratar motor.js como módulo ES quando os testes o importam (tests/coleta/executar_motor.mjs); não afeta o navegador, que decide módulo por <script type=module>."
+}
