@@ -71,6 +71,11 @@ def _vista(dados: dict) -> list[tuple[str, str, int | None]]:
     return [(u, "vista_de_camada", None) for u in _uuids([dados.get("camada_id")])]
 
 
+def _estilo(dados: dict) -> list[tuple[str, str, int | None]]:
+    """estilo -> camada (item L2-02-c): `dados.camada_id` liga o estilo à camada que ele desenha."""
+    return [(u, "estilo_de_camada", None) for u in _uuids([dados.get("camada_id")])]
+
+
 def _app(dados: dict) -> list[tuple[str, str, int | None]]:
     corpo = dados.get("corpo") or {}
     mapas = corpo.get("mapas") or ([corpo["mapa_id"]] if corpo.get("mapa_id") else [])
@@ -95,6 +100,7 @@ EXTRATORES: dict[str, Callable[[dict], list[tuple[str, str, int | None]]]] = {
     "mapa": _mapa,
     "cena": _mapa,
     "vista_de_camada": _vista,
+    "estilo": _estilo,
     "app": _app,
     "painel": _app,
     "modelo_amc": _amc,
@@ -102,8 +108,22 @@ EXTRATORES: dict[str, Callable[[dict], list[tuple[str, str, int | None]]]] = {
 }
 
 
+# tipos cujo extrator é OPCIONAL: sem a chave em `dados`, o item aceita relações declaradas à mão pelo PUT de
+# relações (estilo solto/reutilizável, item L2-02-c); com a chave, valem só as do documento, como nos demais
+EXTRATORES_OPCIONAIS = {"estilo"}
+
+
 def tem_extrator(tipo: str) -> bool:
     return tipo in EXTRATORES
+
+
+def relacoes_pelo_documento(tipo: str, dados: dict | None) -> bool:
+    """True quando as relações deste item saem de `dados` (e o PUT manual deve ser recusado)."""
+    if tipo not in EXTRATORES:
+        return False
+    if tipo in EXTRATORES_OPCIONAIS:
+        return bool(extrair(tipo, dados or {}))
+    return True
 
 
 def extrair(tipo: str, dados: dict) -> list[tuple[str, str, int | None]]:
