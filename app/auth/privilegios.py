@@ -34,6 +34,11 @@ PRIVILEGIOS: tuple[tuple[str, str, str, bool, tuple[str, ...]], ...] = (
     ("conteudo.publicar_tiles", "conteudo", "publicar tiles vetoriais", False, (E, A)),
     ("conteudo.publicar_raster", "conteudo", "publicar imagem/raster", False, (E, A)),
     ("conteudo.registrar_fonte", "conteudo", "registrar fonte de dado externa", False, (E, A)),
+    # L0-04-h-exportar: exportar é privilégio próprio (a Esri separa "Export data" de "Create content" pela
+    # mesma razão) e vem só para editor/admin; a opção do DONO do item ("permitir que outros exportem",
+    # dados.exportacao.permitir_outros) é uma segunda tranca, não um substituto desta
+    ("conteudo.exportar", "conteudo",
+     "exportar camada para outros formatos (shapefile, GeoPackage, CSV, ...)", False, (E, A)),
     ("conteudo.categorias", "conteudo", "gerir categorias do inquilino", True, (A,)),
     ("conteudo.ver_tudo", "conteudo", "ver qualquer item do inquilino, inclusive privado", True, (A,)),
     ("conteudo.editar_tudo", "conteudo", "editar metadado e dado de qualquer item", True, (A,)),

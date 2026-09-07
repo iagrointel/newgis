@@ -129,6 +129,30 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 4, setembro de 2026 (item L0-04-h-exportar: exportação de camada para outros formatos)
+
+`POST /api/exportacoes` enfileira o job `exportacao.gerar` (202) e devolve o arquivo (item `arquivo`,
+validade de 7 dias) em 11 formatos: gpkg, geojson, shapefile(zip), csv, xlsx, kml, kmz, fgb, gml, dxf e
+geoparquet (este pelo DuckDB, num processo próprio — o `ogr2ogr` desta instalação não tem driver Parquet, e
+o DuckDB não sobrevive a um `fork`, então a conversão roda como `python -m app.exportacao.parquet_cli`,
+neto do job). Filtro (`where`), campos e CRS de saída são conferidos ANTES de existir job (400 com o erro do
+banco saneado, `app/exportacao/erros.py`). Isolamento entre inquilinos: o `ogr2ogr` abre conexão PRÓPRIA,
+fora do pool da aplicação — o inquilino entra na string de conexão (`-c plat.tenant_id=N`), e é a RLS do
+PostgreSQL que corta, provada com pedido forjado no banco e com o `ogr2ogr` chamado sem contexto nenhum
+(`tests/api/exportacao/test_exportacao_cruzado.py`). Arquivo grande nunca vai inteiro à memória: envio ao
+Garage em blocos/multipart (`objetos.guardar_arquivo`, novo) e download em blocos de 1 MiB
+(`objetos.ler_stream`, novo) — medido com `tracemalloc` (pico < 3 partes de 8 MiB para um arquivo de 40 MiB).
+Privilégio novo `conteudo.exportar` (editor/admin); opção do dono do item "permitir que outros exportem"
+(`dados.exportacao.permitir_outros`, nasce desligada). Limite de 3 exportações em curso por usuário e guarda
+de disco (`shutil.disk_usage`) antes do primeiro byte. Botão **Exportar** na tela do item
+(`web/js/catalogo/item_exportar.js`). Achado à parte, sem relação direta com exportação: `CursorSchemaAmbiente`
+não reescrevia `executemany`/`mogrify` (só `execute`/`callproc`), o que fazia qualquer rota que use essas duas
+chamadas escrever no schema `plat` de PRODUÇÃO mesmo dentro de uma base de trilha isolada — consertado em
+`app/schema_ambiente.py`. Ver ADR 0018 e `docs/PARIDADE.md` seção "Exportação de camada para outros formatos".
+
+Medido (`tests/medidas/L0-04-h-exportar.json`, camada de 100 mil feições): tempo por formato de 0,80 s
+(FlatGeobuf) a 14,54 s (XLSX); todos os 11 formatos reabertos com a mesma contagem de 100.000 feições
+(`ogrinfo`/DuckDB conforme o formato).
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 

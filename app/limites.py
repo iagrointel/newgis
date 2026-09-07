@@ -222,3 +222,24 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+# --- exportação de camada (L0-04-h-exportar; ADR 0018). Os tempos e tetos abaixo saem de MEDIÇÃO nesta
+# máquina em 06/09/2026 sobre uma camada de 100 mil pontos (ver tests/medidas/L0-04-h-exportar.json), não de
+# estimativa: ogr2ogr escreve GPKG/GeoJSON/shapefile/CSV/XLSX/KML/FlatGeobuf/GML/DXF de 50 mil feições em
+# 0,2-0,7 s cada. A exceção medida é o driver LIBKML: 3,5 min de CPU e 255 MB de RSS para as MESMAS 50 mil
+# feições, sem terminar — por isso KML/KMZ usam o driver `KML` (0,34 s) e o KMZ é o zip do KML feito aqui.
+EXPORTACAO_VALIDADE_DIAS = 7                  # arquivo gerado some depois disso (periódico exportacao.expirar)
+EXPORTACAO_POR_USUARIO_EM_CURSO = 3           # exportações pendentes/gerando por usuário (refutação: 5 em paralelo)
+EXPORTACAO_MEMORIA_MB = 1024                  # job exportacao.gerar (mesmo teto de ingestao.carregar)
+EXPORTACAO_TIMEOUT_S = 3600
+EXPORTACAO_DISCO_MIN_LIVRE_BYTES = 2 * 1024 * 1024 * 1024   # nunca começa com menos que isto livre (disco a 98%)
+EXPORTACAO_FATOR_DISCO = 3                    # arquivo temporário estimado = tamanho da tabela x isto (GML mede 3,4x
+                                              # o GPKG na medição de 06/09; o fator cobre o pior caso + o zip)
+EXPORTACAO_CAMPOS_MAX = 500                   # mesmo teto de INGESTAO_CAMPOS_MAX (a lista vem do mesmo item)
+EXPORTACAO_WHERE_MAX = 4000                   # caracteres do filtro `where` (o parser do L2-04-b recusa o resto)
+EXPORTACAO_NOME_MAX = 120                     # nome do arquivo pedido pelo usuário (sem extensão)
+EXPORTACAO_ERRO_BANCO_MAX = 300               # tamanho do erro do banco depois de saneado, no corpo do 400
+EXPORTACAO_CODIFICACOES = ("UTF-8", "ISO-8859-1")
+EXPORTACAO_CSV_SEPARADORES = (",", ";", "\t", "|")
+EXPORTACAO_CSV_DECIMAIS = (".", ",")
+EXPORTACAO_BLOCO_LEITURA_BYTES = 8 * 1024 * 1024   # leitura do arquivo pronto em blocos (sha256 e envio); NUNCA
+                                              # o arquivo inteiro em memória, nem no envio ao Garage nem na entrega
