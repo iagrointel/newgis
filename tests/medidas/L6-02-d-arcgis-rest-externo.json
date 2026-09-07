@@ -50,10 +50,10 @@
    "nota_honesta": "código e teste de unidade (bbox/parâmetros) escritos; nenhum ImageServer público brasileiro foi encontrado nesta sessão (INDE/IBGE/CPRM/ANA/DNIT/ITCG-PR testados, sem sucesso) — prova de rede real fica para quando um serviço for localizado, mesma fronteira honesta do L6-02-b para EPSG:4674 exato"
   },
   "teste_sem_rede_unidade": {
-   "valor": 17,
+   "valor": 18,
    "unidade": "testes",
    "comando": "bash laco/roda_teste.sh tests/unit/test_esri_rest_analise.py -q",
-   "resultado": "17 passed"
+   "resultado": "18 passed"
   },
   "teste_com_rede_marcado": {
    "valor": 6,
@@ -64,7 +64,12 @@
   "suite_conexao_nao_regrediu": {
    "valor": "passa",
    "comando": "bash laco/roda_teste.sh tests/unit/test_conexao_seguranca.py tests/api/test_conexoes.py tests/unit/test_esri_rest_analise.py tests/api/test_esri_rest.py -q",
-   "resultado": "73 passed"
+   "resultado": "75 passed"
+  },
+  "refutacao_pagina_repetida_terceira_trava": {
+   "valor": "passa",
+   "comando": "tests/unit/test_esri_rest_analise.py::test_consultar_tudo_pagina_identica_repetida_para_sem_esperar_o_teto",
+   "detalhe": "servidor que ignora resultOffset e repete a mesma pagina: detectado por hash sha256, para em 2 chamadas em vez de esperar o teto de 50 (achado do adversario, consertado nesta rodada)"
   }
  },
  "fora_do_turno": [

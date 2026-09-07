@@ -169,3 +169,24 @@ def test_buscar_json_erro_token_vira_mensagem_clara():
         assert "token" in str(ei.value).lower()
     finally:
         mod.seguranca.buscar_seguro = original
+
+
+def test_consultar_tudo_pagina_identica_repetida_para_sem_esperar_o_teto(monkeypatch):
+    """3ª trava: servidor que ignora `resultOffset` por completo e devolve sempre a MESMA página —
+    o laço para assim que detecta a repetição, sem esperar acumular até o teto de páginas com dados
+    duplicados."""
+    chamadas = {"n": 0}
+
+    def _pagina_repetida(url_camada, *, offset, tamanho, where, out_fields, out_sr, token):
+        chamadas["n"] += 1
+        feicao = {"type": "Feature", "properties": {"id": 1}, "geometry": {"type": "Point", "coordinates": [0, 0]}}
+        return {"type": "FeatureCollection", "features": [feicao] * tamanho, "exceededTransferLimit": True}, None
+
+    monkeypatch.setattr(esri_rest, "consultar_pagina", _pagina_repetida)
+    from app import limites
+
+    resultado = esri_rest.consultar_tudo("https://exemplo.invalido/FeatureServer/0", max_record_count_servico=5)
+    assert resultado.ok is True
+    assert chamadas["n"] == 2  # 1ª página lida, 2ª detectada como idêntica e o laço para
+    assert chamadas["n"] < limites.ESRI_REST_PAGINAS_MAX
+    assert any("idêntica à anterior" in a for a in resultado.avisos)

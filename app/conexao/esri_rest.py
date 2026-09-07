@@ -27,6 +27,7 @@ entra em `mensagem`/exceção nem é logado (`app/log.py` não recebe este módu
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass, field
 from urllib.parse import urlencode
@@ -275,6 +276,7 @@ def consultar_tudo(
     avisos: list[str] = []
     offset = 0
     pagina = 0
+    hash_pagina_anterior: str | None = None
     while pagina < limites.ESRI_REST_PAGINAS_MAX and len(feicoes) < limites.ESRI_REST_FEICOES_MAX:
         pagina += 1
         doc, erro = consultar_pagina(
@@ -289,8 +291,18 @@ def consultar_tudo(
         novas = doc.get("features") or []
         if not novas:
             break
-        # página maior do que a pedida, ou repetida (servidor hostil ignora resultRecordCount/resultOffset):
-        # duas travas independentes além do teto de páginas, mesma ideia do conector WFS (L6-02-c).
+        # três travas independentes além do teto de páginas, mesma ideia do conector WFS (L6-02-c):
+        # (1) página maior do que a pedida (servidor ignora resultRecordCount); (2) página IDÊNTICA à
+        # anterior (servidor ignora resultOffset por completo — sem isto, o teto de páginas ainda pararia
+        # o laço, mas só depois de acumular até ESRI_REST_PAGINAS_MAX cópias duplicadas da mesma página).
+        hash_pagina_atual = hashlib.sha256(json.dumps(novas, sort_keys=True, default=str).encode()).hexdigest()
+        if hash_pagina_anterior is not None and hash_pagina_atual == hash_pagina_anterior:
+            avisos.append(
+                f"parou na página {pagina}: idêntica à anterior (servidor ignora resultOffset) — "
+                "sem isso o laço só pararia no teto de páginas, com dados duplicados"
+            )
+            break
+        hash_pagina_anterior = hash_pagina_atual
         if len(novas) > tamanho_pagina:
             avisos.append(
                 f"página {pagina} devolveu {len(novas)} feições, mais do que os {tamanho_pagina} pedidos "
