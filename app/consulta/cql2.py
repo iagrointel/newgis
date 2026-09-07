@@ -39,6 +39,7 @@ PostgreSQL declarado ("text", "integer", "bigint", "double precision", "real", "
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 from typing import Any
 
@@ -278,3 +279,33 @@ def contar_clausulas(no: dict) -> int:
     contador = {"n": 0}
     _validar_estrutura(no, 1, contador)
     return contador["n"]
+
+
+IDENT_CAMPO = re.compile(r"^[a-z][a-z0-9_]{1,62}$")
+
+
+def colunas_da_camada(dados: dict, ocultos: set[str] | None = None) -> dict:
+    """Lista branca `campo -> {sql, tipo[, srid]}` de uma camada hospedada, para `compilar_cql2`.
+
+    Mora aqui, e não em `app/mapa/selecao.py`, porque três lugares precisam dela com o MESMO
+    resultado: a seleção do mapa (L2-01-h), a exportação a partir do mapa (L2-01-l) e a
+    `vista_de_camada` da ADR 0004. Duas implementações divergentes seriam duas listas brancas —
+    e a lista branca é a única coisa entre o filtro do cliente e o SQL.
+
+    `fid` (chave da ingestão, L0-04) e `geom` sempre entram; os demais vêm de `dados.campos`, e só se
+    o nome bater no padrão de identificador: um `dados` corrompido nunca vira SQL interpolado sem essa
+    conferência. `ocultos` (campos escondidos por uma `vista_de_camada`) são retirados da lista: um
+    campo que a vista esconde não pode nem ser filtrado, nem exportado.
+    """
+    escondidos = {c for c in (ocultos or set()) if isinstance(c, str)}
+    colunas: dict = {
+        "fid": {"sql": '"fid"', "tipo": "bigint"},
+        "geom": {"sql": '"geom"', "tipo": "geometry", "srid": int(dados.get("srid") or 4326)},
+    }
+    for c in dados.get("campos") or []:
+        nome = c.get("nome") if isinstance(c, dict) else None
+        if isinstance(nome, str) and IDENT_CAMPO.match(nome) and nome not in colunas and nome not in escondidos:
+            colunas[nome] = {"sql": f'"{nome}"', "tipo": (c.get("tipo") or "text").lower()}
+    for nome in escondidos:
+        colunas.pop(nome, None)
+    return colunas

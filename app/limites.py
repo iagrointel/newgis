@@ -217,6 +217,10 @@ EXPORTACAO_TIMEOUT_S = 3600
 EXPORTACAO_DISCO_MIN_LIVRE_BYTES = 2 * 1024 * 1024 * 1024   # nunca começa com menos que isto livre (disco a 98%)
 EXPORTACAO_FATOR_DISCO = 3                    # arquivo temporário estimado = tamanho da tabela x isto (GML mede 3,4x
                                               # o GPKG na medição de 06/09; o fator cobre o pior caso + o zip)
+PACOTE_CAMADAS_MAX = 50                       # camadas num pacote de mapa (item L2-01-l)
+PACOTE_IMPORTAR_MAX_BYTES = 200 * 1024 * 1024 # pacote enviado para reimportação (acima disso, 413)
+PACOTE_OGR_TIMEOUT_S = 900                    # ogr2ogr de UMA camada do pacote na reimportação
+EXPORTACAO_IDS_MAX = 200000                   # fids de uma seleção exportada (mesmo teto do tipo de item `selecao`)
 EXPORTACAO_CAMPOS_MAX = 500                   # mesmo teto de INGESTAO_CAMPOS_MAX (a lista vem do mesmo item)
 EXPORTACAO_WHERE_MAX = 4000                   # caracteres do filtro `where` (o parser do L2-04-b recusa o resto)
 EXPORTACAO_NOME_MAX = 120                     # nome do arquivo pedido pelo usuário (sem extensão)

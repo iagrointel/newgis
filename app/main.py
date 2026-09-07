@@ -45,6 +45,7 @@ from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
+from app.mapa.exportar import router as rotas_exportar_mapa
 from app.mapa.rotas import router as rotas_mapa
 from app.mapa.selecao import router as rotas_selecao
 from app.rede.rotas import router as rotas_rede
@@ -115,7 +116,8 @@ ROUTERS = [
     rotas_uploads,
     # --- ingestão vetorial (L0-04): /api/importacoes (upload -> inspeção -> confirmação -> carga -> camada)
     rotas_ingestao,
-    # --- exportação de camada (L0-04-h): /api/exportacoes (11 formatos por ogr2ogr, arquivo com validade de 7 dias)
+    # --- exportação de camada (L0-04-h) e do mapa (L2-01-l): /api/exportacoes (15 formatos por ogr2ogr
+    # mais o pacote de mapa; arquivo com validade de 7 dias)
     rotas_exportacao,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
@@ -127,6 +129,8 @@ ROUTERS = [
     rotas_mapa,
     # --- seleção e filtro (L2-01-h): /valores, /filtrar (CQL2-JSON), /selecionar, /selecao-espacial
     rotas_selecao,
+    # --- exportação a partir do mapa (L2-01-l): cópia de feição, estilo (MapLibre/SLD) e import de pacote
+    rotas_exportar_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
