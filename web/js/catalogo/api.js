@@ -32,11 +32,26 @@ export async function chamar(metodo, url, corpo) {
 /* PATCH não existe no cliente comum; mesma disciplina (same-origin, no-store, JSON) */
 export const remendar = (url, corpo) => chamar('PATCH', url, corpo ?? {});
 
-/* corpo bruto: Blob (parte de upload do ADR 0005) */
+/* token de serviço para o upload por partes (ADR 0005 seção 3, o mesmo caminho da tela /uploads): sob cookie o corpo
+   só pode ser application/json (CSRF), então partes, conclusão e aborto vão com Authorization: Bearer de um token
+   trocado pela sessão uma vez por carregamento de página e guardado só em memória. A API só aceita hoje o escopo
+   admin:inquilino para essas rotas (medido em UX-03: camada:editar e catalogo:ler recebem 403) — quem não é
+   administrador recebe a mensagem da API ao tentar, nunca um 415 silencioso. */
+let tokenUpload = null;
+async function tokenParaUpload() {
+  if (tokenUpload) return tokenUpload;
+  const r = await chamarBase('POST', '/api/tokens', { nome: 'plat-catalogo-upload', escopos: ['admin:inquilino'], validade_dias: 1 });
+  if (r.status !== 201) throw new ErroApi(r);
+  tokenUpload = r.json.token;
+  return tokenUpload;
+}
+
+/* corpo bruto ou chamada por token (parte de upload do ADR 0005): credentials omit, nunca o cookie */
 export async function enviarBruto(metodo, url, corpo, cabecalhos = {}) {
   let resp;
   try {
-    resp = await fetch(url, { method: metodo, credentials: 'same-origin', cache: 'no-store', headers: cabecalhos, body: corpo });
+    const tk = await tokenParaUpload();
+    resp = await fetch(url, { method: metodo, credentials: 'omit', cache: 'no-store', headers: { ...cabecalhos, authorization: `Bearer ${tk}` }, body: corpo });
   } catch {
     return tratar({ status: 0, json: normalizarErro(0, null, null) });
   }
@@ -140,5 +155,5 @@ export const usuariosBuscar = (q) => chamar('GET', `/api/usuarios${consulta({ q,
 /* upload retomável (ADR 0005 seção 3): partes de parte_bytes em application/octet-stream; concluir cria o item 'arquivo' */
 export const uploadIniciar = (corpo) => chamar('POST', '/api/uploads', corpo);
 export const uploadParte = (uploadId, n, blob) => enviarBruto('PUT', `/api/uploads/${id(uploadId)}/partes/${n}`, blob, { 'Content-Type': 'application/octet-stream' });
-export const uploadConcluir = (uploadId, inspecionar = true) => chamar('POST', `/api/uploads/${id(uploadId)}/concluir`, inspecionar ? {} : { inspecionar: false });
-export const uploadAbortar = (uploadId) => chamar('DELETE', `/api/uploads/${id(uploadId)}`);
+export const uploadConcluir = (uploadId, inspecionar = true) => enviarBruto('POST', `/api/uploads/${id(uploadId)}/concluir`, JSON.stringify(inspecionar ? {} : { inspecionar: false }), { 'Content-Type': 'application/json' });
+export const uploadAbortar = (uploadId) => enviarBruto('DELETE', `/api/uploads/${id(uploadId)}`, undefined);
