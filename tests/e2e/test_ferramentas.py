@@ -60,5 +60,6 @@ def test_formulario_roda_buffer_e_ficha_mostra_proveniencia(page, base_url, cred
     assert "buffer v1" in texto and "75" in texto and c["id"] in texto and "sha256" in texto
     assert page.locator(f"[data-campo='proveniencia'] a[href='/conteudo/{c['id']}']").count() == 1
     CAPTURAS.mkdir(parents=True, exist_ok=True)
-    page.screenshot(path=str(CAPTURAS / f"{ITEM}_proveniencia.png"), full_page=True)
+    page.locator("[data-campo='proveniencia']").scroll_into_view_if_needed()
+    page.screenshot(path=str(CAPTURAS / f"{ITEM}_proveniencia.png"))
     tela.verificar()
