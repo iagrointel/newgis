@@ -7,8 +7,9 @@ Duas cláusulas do portão são MEDIDA, não igualdade, e as duas ficam aqui:
    registrada como NÃO MEDIDA em vez de reprovar o produto pela casa.
 2. UNIVERSO DA REDE REAL: a cláusula "na cooperativa de teste, o nº de clientes afetados bate com a soma de
    UCBT a jusante" pressupõe (a) uma camada de dispositivos de manobra na rede carregada e (b) rede desenhada
-   até a unidade consumidora. Este teste mede as duas coisas direto no ativo da casa (schema `certaja`, só
-   leitura) e grava o número em vez de declarar a cláusula cumprida.
+   até a unidade consumidora. Este teste mede as duas coisas direto no ativo de rede de referência da casa
+   (só leitura, schema em `PLAT_REDE_REFERENCIA_ESQUEMA`) e grava o número em vez de declarar a cláusula
+   cumprida.
 """
 
 import json
@@ -22,7 +23,7 @@ from app.schema_ambiente import CursorSchemaAmbiente
 from tests.api.conftest import PREFIXO_TESTE
 from tests.api.test_rede_tracado import _criar_rede, _importar_eletrica, limpar_redes  # noqa: F401
 from tests.api.test_rede_tracado_medida import _carga_da_maquina
-from tests.dados import gerar_rede
+from tests.dados import carga_bdgd, gerar_rede
 
 MEDIDAS = Path(__file__).resolve().parent.parent / "medidas" / "L4-02-c-isolamento.json"
 
@@ -45,15 +46,16 @@ def test_medida_universo_da_rede_real(env):
     """Duas perguntas ao ativo da casa: existe camada de dispositivo de manobra na extração? e existe rede
     desenhada até a unidade consumidora? Sem a primeira não há conjunto de isolamento a conferir; sem a
     segunda não há "soma de UCBT a jusante" a comparar."""
+    esq = carga_bdgd.esquema()
     con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
         with con.cursor() as cur:
-            cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'certaja' "
-                        "ORDER BY table_name")
+            cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = %s "
+                        "ORDER BY table_name", (esq,))
             tabelas = [r["table_name"] for r in cur.fetchall()]
-            cur.execute("SELECT count(*) AS n, count(wkt) AS com_geometria FROM certaja.ramlig")
+            cur.execute(f"SELECT count(*) AS n, count(wkt) AS com_geometria FROM {esq}.ramlig")
             ramal = dict(cur.fetchone())
-            cur.execute("SELECT count(*) AS n FROM certaja.ucbt")
+            cur.execute(f"SELECT count(*) AS n FROM {esq}.ucbt")
             ucbt = cur.fetchone()["n"]
     finally:
         con.close()
