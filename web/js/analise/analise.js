@@ -61,7 +61,12 @@ function parametrosDe(valores) {
   const saida = {};
   for (const p of s.atual.parametros.filter((x) => x.direcao === 'entrada')) {
     const v = valores[p.nome];
-    if (p.tipo === 'GPLinearUnit') { saida[p.nome] = { distance: Number(v ?? 0), units: valores[`${p.nome}__unidade`] || 'esriMeters' }; continue; }
+    if (p.tipo === 'GPLinearUnit') {
+      // unidade linear opcional em branco (o anel do buffer, por exemplo) não vira distância zero: fica de fora
+      if ((v === '' || v === null || v === undefined) && p.padrao === null) continue;
+      saida[p.nome] = { distance: Number(v ?? 0), units: valores[`${p.nome}__unidade`] || 'esriMeters' };
+      continue;
+    }
     if (v === '' || v === null || v === undefined) continue;
     saida[p.nome] = v;
   }
