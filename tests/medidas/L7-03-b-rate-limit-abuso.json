@@ -39,9 +39,15 @@
       "comando": "pytest tests/api/test_limite_taxa.py::test_50_ips_forjados_contra_o_mesmo_token_a_camada_de_inquilino_segura"
     },
     "suite_do_item": {
-      "valor": "10 passed",
+      "valor": "11 passed",
       "unidade": "pytest",
       "comando": "bash laco/roda_teste.sh tests/api/test_limite_taxa.py -q"
+    },
+    "corrida_real_corrigida_pg_advisory_xact_lock": {
+      "valor": {"antes": "furou 20 para 21 (2/3 rodadas, pool=2) e para 23 (1/5 rodadas, pool=8)",
+                "depois": "0/5 rodadas furaram, 200 chamadas concorrentes por rodada, teto sempre exatamente 20"},
+      "unidade": "achado do adversario + correcao medida",
+      "comando": "achado: adversario independente (laco/handoffs/T5/L7-03-b-rate-limit-abuso.md); correcao: pg_advisory_xact_lock em plat.limite_taxa_verificar (mesma migracao); prova: pytest tests/api/test_limite_taxa.py::test_concorrencia_real_nunca_fura_o_teto"
     }
   }
 }

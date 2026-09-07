@@ -30,6 +30,19 @@ Custo aceito: uma consulta extra por requisição autenticada (medido — ver §
 `docs/SEGURANCA.md`) e uma tabela que cresce; a faxina oportunista (1 em 200 chamadas apaga linhas
 com mais de 1 dia) evita um job periódico novo.
 
+**Correção pós-adversário (mesma passagem, antes de marcar o item):** a 1ª versão desta função
+afirmava, no próprio comentário, que fazer o `SELECT count()` e o `INSERT` "dentro da mesma
+transação curta" bastava para nunca abrir corrida — **errado**. Sob `READ COMMITTED` (padrão do
+Postgres), duas transações concorrentes fazem o MESMO `SELECT count()` (nenhuma enxerga o `INSERT`
+da outra até o commit dela) e as duas passam pelo `IF n >= p_max`. O adversário do turno mediu isso
+de verdade: pool de 2 conexões furou um teto de 20 para 21 em 2 de 3 rodadas; pool de 8 furou para
+23 em 1 de 5. Conserto: `pg_advisory_xact_lock(hashtextextended(chave || '|' || escopo, 0))` logo no
+início da função — trava transacional (liberada sozinha no fim da transação, a mesma transação curta
+de `with db.db()`) só para a MESMA `(chave, escopo)`; chaves diferentes nunca se bloqueiam entre si.
+Reproduzido depois do conserto: `tests/api/test_limite_taxa.py::
+test_concorrencia_real_nunca_fura_o_teto` — 5 rodadas de 200 chamadas verdadeiramente concorrentes
+(thread pool) contra o mesmo par `(chave, escopo)`, teto sempre EXATAMENTE respeitado nas 5.
+
 ## Decisão 2 — a chave é o INQUILINO (`tenant:<id>`), nunca o IP
 
 A hipótese do item fala em "API por token/inquilino"; a chave escolhida foi `tenant:<id>` (o plano

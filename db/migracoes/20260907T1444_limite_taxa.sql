@@ -22,17 +22,28 @@ ALTER TABLE plat.limite_taxa_pedido ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON plat.limite_taxa_pedido FROM plat_app;
 REVOKE ALL ON plat.limite_taxa_pedido FROM PUBLIC;
 
--- plat.limite_taxa_verificar: incrementa e decide em UMA operação (nunca dois passos SELECT+INSERT
--- separados do lado do Python, que abriria uma corrida entre duas requisições concorrentes do mesmo
--- token — medido no item, ver docs/adr; a contagem e a decisão acontecem dentro da MESMA transação
--- curta da função). Faxina oportunista (achado da própria implementação, mesmo truque usado alhures
--- na casa para não precisar de um job periódico novo: 1 em 200 chamadas apaga o que já saiu de TODAS
--- as janelas prováveis, 1 dia de folga) evita que a tabela cresça sem limite.
+-- plat.limite_taxa_verificar: incrementa e decide em UMA operação. O comentário original desta função
+-- dizia que SELECT+INSERT "dentro da mesma transação curta" bastava para nunca abrir corrida — ERRADO,
+-- achado pelo adversário do turno (refutação real, ver laco/handoffs/T5/L7-03-b-rate-limit-abuso.md):
+-- sob READ COMMITTED (padrão do Postgres) duas transações concorrentes fazem o MESMO SELECT count()
+-- (nenhuma ainda viu o INSERT da outra, que só aparece depois do commit), as duas passam pelo `IF n >=
+-- p_max`, e as duas inserem — o teto configurado é ultrapassado. MEDIDO pelo adversário: com pool de 2
+-- conexões, teto 20 furado para 21 em 2 de 3 rodadas; com pool de 8, furado para 23 em 1 de 5.
+-- Conserto: `pg_advisory_xact_lock` na chave (chave, escopo), travado ANTES do SELECT e liberado
+-- automaticamente no fim da transação (a mesma transação curta de `with db.db()`, ver app/db.py) —
+-- serializa toda chamada concorrente para a MESMA (chave, escopo), sem lock de tabela nem de linha (uma
+-- chave nova, sem linha ainda, não tem o que travar por FOR UPDATE). Chamadas de (chave, escopo)
+-- DIFERENTES nunca se bloqueiam entre si (hash de 64 bits, hashtextextended, colisão desprezível e sem
+-- consequência real — na pior hipótese duas chaves diferentes serializam à toa por um instante, nunca
+-- erram o teto). Faxina oportunista (achado da própria implementação, mesmo truque usado alhures na
+-- casa para não precisar de um job periódico novo: 1 em 200 chamadas apaga o que já saiu de TODAS as
+-- janelas prováveis, 1 dia de folga) evita que a tabela cresça sem limite.
 CREATE OR REPLACE FUNCTION plat.limite_taxa_verificar(p_chave text, p_escopo text, p_janela_s int, p_max int)
 RETURNS TABLE (permitido boolean, restante int, expira_em timestamptz)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = plat, public AS $$
 DECLARE n int; mais_antigo timestamptz;
 BEGIN
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_chave || '|' || p_escopo, 0));
   IF random() < 0.005 THEN
     DELETE FROM plat.limite_taxa_pedido WHERE criado_em < now() - interval '1 day';
   END IF;

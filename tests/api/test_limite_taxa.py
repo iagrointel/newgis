@@ -4,6 +4,7 @@ trilha). Cobre a camada 2 (API por inquilino, Postgres, janela deslizante) diret
 teto baixo, para não depender de milhares de pedidos). As camadas 1 (nginx) e 3 (fail2ban) são provadas fora
 do pytest, com nginx e fail2ban de verdade — ver `scripts/bench_limite_taxa.py` e `docs/SEGURANCA.md §9`."""
 
+import concurrent.futures
 import secrets
 import time
 
@@ -68,6 +69,28 @@ def test_escopos_diferentes_da_mesma_chave_sao_contadores_independentes():
     # "tiles" da MESMA chave não foi tocado
     assert limite_taxa.contagem_atual(chave, "tiles", janela_s=60) == 0
     assert limite_taxa.verificar(chave, "tiles", maximo=4, janela_s=60)[0] is True
+
+
+def test_concorrencia_real_nunca_fura_o_teto():
+    """Achado do adversário do turno (`laco/handoffs/T5/L7-03-b-rate-limit-abuso.md`): sem
+    `pg_advisory_xact_lock`, duas transações concorrentes fazem o MESMO `SELECT count()` (nenhuma viu o
+    `INSERT` da outra ainda) e as duas passam — o teto configurado é ultrapassado. MEDIDO pelo
+    adversário: pool de 2 conexões furou 20 para 21 em 2 de 3 rodadas; pool de 8 furou para 23 em 1 de
+    5. Consertado com o lock transacional por (chave, escopo) na migração. Prova aqui: 200 chamadas
+    verdadeiramente concorrentes (thread pool, 60 workers) contra o MESMO par (chave, escopo) e teto 20,
+    repetido 5 vezes — o teto nunca pode ser ultrapassado em NENHUMA rodada."""
+    maximo = 20
+    for rodada in range(5):
+        chave = f"{_chave()}:{rodada}"
+
+        def bater(_, chave=chave):
+            permitido, _restante, _expira = limite_taxa.verificar(chave, "api", maximo=maximo, janela_s=60)
+            return permitido
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=60) as ex:
+            resultados = list(ex.map(bater, range(200)))
+        aceitos = sum(resultados)
+        assert aceitos == maximo, (rodada, aceitos)
 
 
 def test_50_ips_forjados_contra_o_mesmo_token_a_camada_de_inquilino_segura(sessao_plat):

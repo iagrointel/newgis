@@ -483,6 +483,12 @@ Provas (`tests/api/test_limite_taxa.py`, 10 casos, todos verdes):
 - **Contrato de erro e `Retry-After`**: `test_retry_after_e_o_corpo_seguem_o_contrato_de_erro_do_produto`.
 - **Escopos independentes da mesma chave**: `test_escopos_diferentes_da_mesma_chave_sao_contadores_independentes`.
 - **Não conta duas vezes na mesma requisição**: `test_nao_conta_duas_vezes_na_mesma_requisicao`.
+- **Concorrência real nunca fura o teto**: achado do adversário do turno — a 1ª versão da função tinha
+  uma corrida real (`SELECT count()` + `INSERT` sem trava, sob `READ COMMITTED` duas transações
+  concorrentes viam a mesma contagem e as duas passavam; medido furando 20 para 21/23). Consertado com
+  `pg_advisory_xact_lock` por `(chave, escopo)` na própria migração. Reproduzido depois do conserto:
+  `test_concorrencia_real_nunca_fura_o_teto` — 5 rodadas de 200 chamadas concorrentes (thread pool),
+  teto sempre exatamente respeitado.
 
 ### 9.4 X-Forwarded-For — por que não há nada novo para configurar
 
