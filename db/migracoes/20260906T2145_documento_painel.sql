@@ -358,6 +358,11 @@ UPDATE plat.tipo_item SET esquema = $esquema_painel${
             }
           },
           "type": "object"
+        },
+        "semente": {
+          "description": "marca interna de idempotência de uma semente de demonstração (ex.: plat.painel_exemplo_semear); documento de autor nunca grava este campo",
+          "maxLength": 60,
+          "type": "string"
         }
       },
       "type": "object"

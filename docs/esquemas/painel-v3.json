@@ -329,6 +329,11 @@
           "maxItems": 20,
           "type": "array"
         },
+        "semente": {
+          "description": "marca interna de idempotência de uma semente de demonstração (ex.: plat_til206amodel.painel_exemplo_semear); documento de autor nunca grava este campo",
+          "maxLength": 60,
+          "type": "string"
+        },
         "tema": {
           "additionalProperties": false,
           "description": "claro/escuro até o L5-10 (temas e marca) existir; aí este objeto ganha referência ao tema",

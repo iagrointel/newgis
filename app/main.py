@@ -44,6 +44,7 @@ from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
+from app.paineis.rotas import router as rotas_paineis
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
@@ -97,6 +98,8 @@ ROUTERS = [
     rotas_categorias.router,
     rotas_favoritos.router,
     rotas_lixeira.router,
+    # --- documento de painel (L2-06-a-modelo-painel-fontes): dados por fonte, sessão/token e link anônimo
+    rotas_paineis,
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar
