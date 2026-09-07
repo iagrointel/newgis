@@ -3,6 +3,14 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L0-02-z-apagar-inquilino-apaga-schema: apagar inquilino apaga o schema de dado)
+
+- `plat.tenant_apagar_interno` faz `DROP SCHEMA d_<slug> CASCADE` na mesma transação (tabelas de camada, funções de
+  tile, políticas), sob trinco de transação por slug (`plat.trinco_schema_dado`) que `plat.camada_schema_garantir`
+  também toma (migração `20260907T2215_tenant_apagar_schema.sql`). A fixture `InquilinoTemporario` confere no fim que o
+  schema sumiu (e apaga como plat_app se a base ainda não tiver a migração). Origem: incidente dos 1.219 schemas
+  `d_zt*` (laco/handoffs/T4/INCIDENTE-schemas-zt.md).
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
