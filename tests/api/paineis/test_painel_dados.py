@@ -90,7 +90,7 @@ def test_um_pedido_por_elemento_uma_unica_requisicao_por_fonte(sessao_a, painel_
     assert set(resultados) == {"contagem", "soma", "categorias"}
     assert resultados["contagem"]["valor"] == 120
     assert resultados["categorias"]["tipo"] == "categorias"
-    assert sum(l["valor"] for l in resultados["categorias"]["linhas"]) == 120
+    assert sum(linha["valor"] for linha in resultados["categorias"]["linhas"]) == 120
 
 
 def test_filtro_global_aplica_a_todas_as_fontes_contagem_conferida_com_sql(

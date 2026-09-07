@@ -9,7 +9,6 @@ nginx na frente, servindo web/ em /static/ direto do disco só para este cenári
 inteira (nunca reprova por engano contra um domínio que não existe de propósito, ver trilha_ambiente.sh)."""
 
 import re
-import time
 from pathlib import Path
 
 import psycopg2
@@ -70,7 +69,9 @@ def painel_exemplo(env):
         con.close()
 
 
-def test_painel_primeira_pintura_e_empilhamento_em_tela_estreita(page, base_url, credenciais_demo, painel_exemplo, medida):
+def test_painel_primeira_pintura_e_empilhamento_em_tela_estreita(
+    page, base_url, credenciais_demo, painel_exemplo, medida,
+):
     slug, login, senha = credenciais_demo
     tela = Tela(page, base_url)
     tela.entrar(slug, login, senha)
@@ -135,7 +136,9 @@ def test_filtro_global_muda_a_contagem_na_tela(page, base_url, credenciais_demo,
     tela.verificar()
 
 
-def test_link_compartilhado_abre_anonimo_e_nega_apos_revogar(page, context, base_url, credenciais_demo, painel_exemplo):
+def test_link_compartilhado_abre_anonimo_e_nega_apos_revogar(
+    page, context, base_url, credenciais_demo, painel_exemplo,
+):
     slug, login, senha = credenciais_demo
     tela = Tela(page, base_url)
     tela.entrar(slug, login, senha)
@@ -183,7 +186,10 @@ def test_adversario_50_elementos_agrupa_requisicao_por_fonte(page, base_url, cre
     camada_id = painel_exemplo["camada_id"]
     fontes_ids = [gerar_ulid() for _ in range(3)]
     fontes = [
-        {"id": fid, "nome": f"fonte {fid}", "camada": {"ref": camada_id}, "campos": ["categoria", "valor"], "limite": 50}
+        {
+            "id": fid, "nome": f"fonte {fid}", "camada": {"ref": camada_id},
+            "campos": ["categoria", "valor"], "limite": 50,
+        }
         for fid in fontes_ids
     ]
     elementos = []
@@ -199,15 +205,21 @@ def test_adversario_50_elementos_agrupa_requisicao_por_fonte(page, base_url, cre
         "grade": {"colunas": 12, "linha_px": 20}, "tema": {"modo": "claro"},
         "fontes": fontes, "elementos": elementos, "filtros": [], "parametros_url": [],
     }
+    doc = {"tipo": "painel", "esquema_versao": 3, "corpo": corpo}
     r = page.request.post(
         f"{base_url}/api/itens",
-        data={"tipo": "painel", "titulo": "zt-painel-50-elementos", "dados": {"tipo": "painel", "esquema_versao": 3, "corpo": corpo}},
+        data={"tipo": "painel", "titulo": "zt-painel-50-elementos", "dados": doc},
     )
     assert r.ok, r.text()
     painel_id = r.json()["id"]
 
     requisicoes_dados = []
-    page.on("request", lambda req: requisicoes_dados.append(req.url) if req.method == "POST" and "/paineis/fontes/" in req.url else None)
+
+    def _registrar(req):
+        if req.method == "POST" and "/paineis/fontes/" in req.url:
+            requisicoes_dados.append(req.url)
+
+    page.on("request", _registrar)
 
     tela.ir(f"/paineis/{painel_id}")
     page.wait_for_function(
@@ -216,7 +228,8 @@ def test_adversario_50_elementos_agrupa_requisicao_por_fonte(page, base_url, cre
         timeout=15000,
     )
 
-    assert len(requisicoes_dados) == 3, f"esperava 3 requisições (uma por fonte), veio {len(requisicoes_dados)}: {requisicoes_dados}"
+    msg = f"esperava 3 requisições (uma por fonte), veio {len(requisicoes_dados)}: {requisicoes_dados}"
+    assert len(requisicoes_dados) == 3, msg
     assert len({u.rsplit('/', 2)[1] for u in requisicoes_dados}) == 3  # 3 fonte_id distintos, não 50
 
     tela.verificar()

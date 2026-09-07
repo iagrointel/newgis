@@ -74,6 +74,8 @@ def test_literal_booleano_e_recusado():
 def test_campo_fora_da_lista_branca_falha_na_compilacao_nao_na_traducao():
     """CQL2 não sabe quais campos existem (isso é responsabilidade de `where_ast.compilar_where` com a
     lista branca do chamador) — a tradução aceita qualquer nome de propriedade sintaticamente válido."""
+    from app.consulta.where_ast import ErroWhere
+
     texto = cql2_para_texto({"op": "=", "args": [{"property": "coluna_que_nao_existe"}, "x"]})
-    with pytest.raises(Exception):
+    with pytest.raises(ErroWhere):
         compilar_where(texto, COLUNAS)
