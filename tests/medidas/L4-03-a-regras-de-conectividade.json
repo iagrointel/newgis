@@ -2,7 +2,7 @@
  "item": "L4-03-a-regras-de-conectividade",
  "assinado_por": "gerente (rebase e prova do trabalho do agente Kimi K3, turno T4, handoff laco/handoffs/T4/L4-03-a-regras-de-conectividade.md)",
  "gerado_em": "2026-09-07T01:55:00Z",
- "git_sha": "PENDENTE_NO_COMMIT",
+ "git_sha": "ac7da355c84c6534fef98bce05e5a3552e935ea7",
  "maquina": "12 vCPU, 23 GB RAM (574 MiB livres no momento da prova, swap 7,8/8,0 GiB), disco / a 94%; PostgreSQL 16 em iagro_sat; base própria da trilha (schema plat_tf403, laco/trilha_ambiente.sh f403 com FONTE=wt/il403aregra), com outras sessões da casa na mesma máquina",
  "medidas": {
   "pacote_eletrica_br_regras": {
