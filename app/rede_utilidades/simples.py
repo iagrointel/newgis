@@ -36,6 +36,10 @@ CAMPO_DIRECAO_INTERNO = "direcao_fluxo"  # chave gravada em rede_feicao_linha.at
 NOME_SQL = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
 FEICOES_MAX = 200_000  # teto por camada: acima disso a carga vira trabalho de importação, não de uma chamada
 TIPOS_DADO_ATRIBUTO = ("texto", "inteiro", "real", "data", "booleano")
+# geometria declarada da camada (o vocabulário do tipo `camada_vetorial`) aceita em cada papel. "Geometry"
+# (mista) entra nos dois: a carga filtra por `GeometryType` feição a feição.
+GEOMETRIA_ACEITA = {"linha": ("LineString", "MultiLineString", "Geometry"),
+                    "ponto": ("Point", "MultiPoint", "Geometry")}
 
 
 def doc_minimo(disciplina: str, nome: str) -> dict:
@@ -166,6 +170,11 @@ def _camada(cur, item_id: str | None, geometria_esperada: str) -> dict | None:
     schema, tabela = dados.get("schema"), dados.get("tabela")
     if not schema or not tabela or not NOME_SQL.match(schema) or not NOME_SQL.match(tabela):
         raise ErroAPI(422, "camada_sem_tabela", f"a camada {r['titulo']!r} não aponta para uma tabela válida")
+    geometria = dados.get("geometria")
+    if geometria not in GEOMETRIA_ACEITA[geometria_esperada]:
+        raise ErroAPI(422, "geometria_incompativel",
+                      f"a camada {r['titulo']!r} é de geometria {geometria!r}; no papel de "
+                      f"{geometria_esperada} só entram {GEOMETRIA_ACEITA[geometria_esperada]}")
     campos = [c for c in (dados.get("campos") or []) if NOME_SQL.match(str(c.get("nome", "")))]
     return {"id": item_id, "titulo": r["titulo"], "schema": schema, "tabela": tabela,
             "campos": campos, "geometria": geometria_esperada}
