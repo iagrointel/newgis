@@ -51,6 +51,7 @@ from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
 from app.tiles.rotas import router as rotas_tiles
+from app.tabela.rotas import router as rotas_tabela
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 
@@ -127,6 +128,8 @@ ROUTERS = [
     rotas_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
+    # --- tabela de atributos da camada (L2-01-g): /api/camadas/{item_id}/tabela/{colunas,vista,linhas,estatisticas}
+    rotas_tabela,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
