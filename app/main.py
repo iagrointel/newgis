@@ -40,14 +40,17 @@ from app.catalogo import (
 )
 from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
+from app.edicao.rotas import router as rotas_edicao
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
+from app.mapa.rotas import router as rotas_mapa
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
+from app.tiles.rotas import router as rotas_tiles
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 
@@ -111,12 +114,19 @@ ROUTERS = [
     rotas_uploads,
     # --- ingestão vetorial (L0-04): /api/importacoes (upload -> inspeção -> confirmação -> carga -> camada)
     rotas_ingestao,
+    # --- edição transacional de feições (L2-03-a): POST /api/camadas/{id}/edicoes (adicionar/atualizar/apagar
+    # numa transação; única porta de escrita de feição — FeatureServer/OGC futuros chamam este mesmo caminho)
+    rotas_edicao,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
     rotas_geocodificador_esri,
+    # --- visualizador de mapa (L2-01-mapa-web): /api/mapa/camadas, TileJSON com token curto, repasse /tiles
+    rotas_mapa,
+    # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
+    rotas_tiles,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
