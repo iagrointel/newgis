@@ -55,8 +55,50 @@ function desenharSetaNorte(ctx, x, y, tamanho, cor) {
   ctx.restore();
 }
 
-/* compor(map, {titulo}) -> {canvas, escala, barra} : o canvas do mapa mais a faixa de informação */
-export function compor(map, { titulo = 'Mapa', atribuicao = '' } = {}) {
+/* Legenda desenhada NA IMAGEM (item L2-01-l): as entradas vêm prontas de `ficha.legenda`, geradas pelo
+   servidor da mesma lista de classes que gerou o estilo (app/mapa/simbologia.py). O canvas não inventa
+   cor nenhuma — se inventasse, a legenda impressa e o mapa impresso poderiam discordar. */
+export function alturaDaLegenda(legenda, linhaPx = 15) {
+  if (!legenda || !legenda.length) return 0;
+  return 22 + legenda.length * linhaPx;   // título + uma linha por classe
+}
+
+function desenharLegenda(ctx, legenda, x, y, largura) {
+  if (!legenda || !legenda.length) return;
+  const linha = 15;
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.strokeStyle = '#b9c2c4';
+  ctx.lineWidth = 1;
+  const alturaCaixa = alturaDaLegenda(legenda, linha);
+  ctx.fillRect(x, y, largura, alturaCaixa);
+  ctx.strokeRect(x + 0.5, y + 0.5, largura - 1, alturaCaixa - 1);
+  ctx.fillStyle = '#0f1416';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Legenda', x + 8, y + 15);
+  ctx.font = '10px sans-serif';
+  legenda.forEach((entrada, i) => {
+    const linhaY = y + 22 + i * linha;
+    ctx.fillStyle = entrada.cor;
+    if (entrada.forma === 'ponto') {
+      ctx.beginPath();
+      ctx.arc(x + 13, linhaY + 4, 4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (entrada.forma === 'linha') {
+      ctx.fillRect(x + 8, linhaY + 3, 12, 2.5);
+    } else {
+      ctx.fillRect(x + 8, linhaY, 12, 9);
+    }
+    ctx.fillStyle = '#26302f';
+    ctx.fillText(String(entrada.rotulo).slice(0, 34), x + 26, linhaY + 8);
+  });
+  ctx.restore();
+}
+
+/* compor(map, {titulo, legenda}) -> {canvas, escala, barra} : o canvas do mapa mais a faixa de
+   informação e, quando houver classes, a legenda sobre o canto inferior esquerdo do mapa. */
+export function compor(map, { titulo = 'Mapa', atribuicao = '', legenda = [] } = {}) {
   const origem = map.getCanvas();
   const centro = map.getCenter();
   const zoom = map.getZoom();
@@ -109,8 +151,10 @@ export function compor(map, { titulo = 'Mapa', atribuicao = '' } = {}) {
   }
   ctx.textAlign = 'left';
   desenharSetaNorte(ctx, l - 34, yb + 28, 13, '#0f1416');
+  const alturaLegenda = alturaDaLegenda(legenda);
+  if (alturaLegenda) desenharLegenda(ctx, legenda, 12, yb - alturaLegenda - 12, 168);
   ctx.restore();
-  return { canvas: destino, escala, barra, centro, zoom };
+  return { canvas: destino, escala, barra, centro, zoom, legenda: legenda ? legenda.length : 0 };
 }
 
 function baixar(blob, nome) {
@@ -124,11 +168,48 @@ function baixar(blob, nome) {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
+/* PNG em 2x: o canvas da tela tem a resolução da tela, e ampliá-lo só interpola pixel. Para dobrar de
+   verdade, um mapa TEMPORÁRIO é montado fora da tela com o dobro da largura e da altura, o mesmo estilo
+   e a mesma câmera, e é ELE que é lido depois do 'idle'. Custa uma renderização a mais e entrega o
+   dobro de detalhe de verdade — que é o que "2x" promete. */
+async function mapaEmDobro(map) {
+  const maplibregl = window.maplibregl;
+  const origem = map.getCanvas();
+  const caixa = document.createElement('div');
+  caixa.style.cssText = `position:absolute;left:-10000px;top:0;width:${origem.clientWidth * 2}px;`
+    + `height:${origem.clientHeight * 2}px`;
+  document.body.append(caixa);
+  const dobro = new maplibregl.Map({
+    container: caixa,
+    style: map.getStyle(),
+    center: map.getCenter(),
+    zoom: map.getZoom() + 1,   // o dobro de pixel por grau é um nível de zoom a mais
+    bearing: map.getBearing(),
+    pitch: map.getPitch(),
+    attributionControl: false,
+    interactive: false,
+    preserveDrawingBuffer: true,
+  });
+  await new Promise((r) => dobro.once('idle', r));
+  return { dobro, remover: () => { dobro.remove(); caixa.remove(); } };
+}
+
 export async function paraPng(map, opcoes = {}) {
-  const { canvas, escala } = compor(map, opcoes);
-  const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
-  baixar(blob, opcoes.nome || 'mapa.png');
-  return { bytes: blob.size, escala, largura: canvas.width, altura: canvas.height };
+  let alvo = map;
+  let fechar = null;
+  if (opcoes.escalaSaida === 2) {
+    const d = await mapaEmDobro(map);
+    alvo = d.dobro;
+    fechar = d.remover;
+  }
+  try {
+    const { canvas, escala, legenda } = compor(alvo, opcoes);
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+    baixar(blob, opcoes.nome || 'mapa.png');
+    return { bytes: blob.size, escala, largura: canvas.width, altura: canvas.height, legenda };
+  } finally {
+    if (fechar) fechar();
+  }
 }
 
 export async function paraPdf(map, opcoes = {}) {

@@ -28,6 +28,7 @@ import { instalarPopup } from './atributos.js';
 import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
+import { PainelExportar } from './exportar.js';
 
 const BASES = [
   { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
@@ -173,15 +174,29 @@ async function iniciar(usuario) {
     }, 250);
   });
 
+  // --- exportação (item L2-01-l)
+  const painelExportar = new PainelExportar(catalogo, map, {
+    raiz: el('exportar'),
+    aoErro: (e) => el('aviso').erro(`${t('mapa.exportar_falhou', { erro: (e && e.message) || e })}`),
+  });
+
   // --- impressão
   const titulo = () => `${t('mapa.titulo')} — ${new Date().toLocaleDateString('pt-BR')}`;
   const atribuicao = '© colaboradores do OpenStreetMap — ODbL 1.0';
+  // a legenda impressa é a MESMA que o painel mostra: entradas prontas de `ficha.legenda`
+  const legendaDaTela = () => catalogo.ativas
+    .map((id) => catalogo.ficha(id))
+    .filter(Boolean)
+    .flatMap((f) => f.legenda || [])
+    .slice(0, 12);
   el('btn-png').addEventListener('click', async () => {
-    const r = await paraPng(map, { titulo: titulo(), atribuicao, nome: 'mapa.png' });
+    const r = await paraPng(map, { titulo: titulo(), atribuicao, nome: 'mapa.png',
+      legenda: legendaDaTela(), escalaSaida: el('png-2x').checked ? 2 : 1 });
     el('impressao-saida').textContent = t('mapa.impressao_pronta', { formato: 'PNG', kb: Math.round(r.bytes / 1024) });
   });
   el('btn-pdf').addEventListener('click', async () => {
-    const r = await paraPdf(map, { titulo: titulo(), atribuicao, nome: 'mapa.pdf' });
+    const r = await paraPdf(map, { titulo: titulo(), atribuicao, nome: 'mapa.pdf',
+      legenda: legendaDaTela() });
     el('impressao-saida').textContent = t('mapa.impressao_pronta', { formato: 'PDF', kb: Math.round(r.bytes / 1024) });
   });
 
@@ -194,11 +209,12 @@ async function iniciar(usuario) {
   try {
     await catalogo.carregar();
     painel.desenhar();
+    await painelExportar.iniciar();
   } catch (e) {
     el('aviso').erro(`${t('mapa.erro_camada')}: ${(e && e.message) || e}`);
   }
   window.plat = window.plat || {};
-  window.plat.mapa = { map, catalogo, medicao, painel };  // ponto de inspeção do e2e, nunca de negócio
+  window.plat.mapa = { map, catalogo, medicao, painel, exportar: painelExportar };  // ponto de inspeção do e2e, nunca de negócio
   document.body.dataset.pronto = '1';
 }
 

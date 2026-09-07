@@ -20,9 +20,13 @@ from app.exportacao.formatos import FORMATOS, obter
 
 
 # ---------------------------------------------------------------- catálogo de formatos
-def test_onze_formatos_com_extensao_e_tipo_unicos():
-    assert len(FORMATOS) == 11, sorted(FORMATOS)
-    assert sum(1 for f in FORMATOS.values() if f.reabre_com_ogrinfo) == 10
+def test_catalogo_de_formatos_com_extensao_e_tipo_unicos():
+    """Eram 11 no L0-04-h; o L2-01-l acrescentou GeoJSON Sequence, File Geodatabase, MVT, PMTiles e o
+    `pacote` de mapa. `reabre_com_ogrinfo` é o conjunto que o portão do L2-01-l chama de "os 12"."""
+    assert len(FORMATOS) == 16, sorted(FORMATOS)
+    assert sum(1 for f in FORMATOS.values() if f.reabre_com_ogrinfo) == 14
+    assert sum(1 for f in FORMATOS.values()
+               if f.reabre_com_ogrinfo and not f.tilado and f.nome != "pacote") == 12
     for nome, f in FORMATOS.items():
         assert f.nome == nome and f.extensao.startswith(".") and f.content_type
         assert "UTF-8" in f.codificacoes

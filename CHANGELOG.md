@@ -3,6 +3,38 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L2-01-l-exportacao-do-mapa: exportar a partir do mapa)
+
+Exportação passa a sair DO MAPA e não só do painel do item: a seleção (lista de fid), o filtro do
+construtor (CQL2-JSON, o mesmo objeto de `/api/mapa/camadas/{id}/filtrar`) ou a camada inteira, com CRS,
+campos e codificação. Origem pode ser `camada_vetorial`, `vista_de_camada` (o filtro da vista vale sempre
+e os `campos_ocultos` não são exportáveis nem filtráveis) ou `selecao` salva. O catálogo de formatos foi de
+11 para 16 com GeoJSON Sequence, File Geodatabase (zip), MVT (zip), PMTiles e o `pacote` de mapa, e passou
+a declarar a POLÍTICA DE CRS de cada um: 12 formatos gerados da mesma seleção de 500 feições foram
+reabertos por `ogrinfo` com contagem 500 e o EPSG que a política manda (`tests/medidas/L2-01-l-exportacao-do-mapa.json`,
+`formatos_da_selecao_de_500`) — 31983 nos de CRS livre, 4326 nos que a especificação prende, nenhum nos
+que não guardam CRS. Pedir CRS diferente do que o formato prende é 422, não um arquivo mentiroso.
+
+O XLSX ganhou o teto do próprio Excel: uma camada de 1.048.600 feições é recusada com
+`422 formato_limite_de_linhas` antes de existir job (a mesma camada sai em CSV). Toda resposta de pedido
+traz `perda_declarada` — DXF sem atributo, shapefile truncando nome em 10 caracteres, tile recortando
+geometria. Estilo da camada sai em MapLibre e em SLD 1.0.0, gerados da MESMA lista de classes da legenda.
+Feição copiável como GeoJSON/WKT lida da tabela (o tile vem recortado). A imagem do mapa passou a levar
+legenda e atribuição, com um "2x" que monta um mapa temporário do dobro do tamanho em vez de ampliar
+pixel: as duas composições, com e sem legenda, foram comparadas pixel a pixel no navegador
+(`png_legenda_e_atribuicao`: 775 pixels de diferença na faixa da atribuição). O mapa inteiro vira PACOTE
+(documento + estilos + GeoPackage só das camadas citadas), pelo mesmo job e o mesmo link de 7 dias, e volta
+por `POST /api/mapa/pacotes/importar` em OUTRO inquilino, recriando camadas, simbologia e o documento com
+os identificadores novos; o pacote de um mapa que cita uma camada não leva nenhuma feição da outra camada
+do mesmo inquilino (provado por despejo do GeoPackage).
+
+Quatro defeitos de fora do item foram corrigidos porque bloqueavam o portão: `app/versao.py` não lia o sha
+num GIT WORKTREE (`.git` é arquivo, não pasta) e o worker morria no arranque; a escrita sob cookie só
+aceitava `application/json`, o que barrava o envio do pacote — a regra correta não é "JSON", é "nada que um
+formulário HTML consiga produzir"; a falha do `ogr2ogr` era relatada pela última linha do stderr, que é
+sempre a genérica; e `app/schema_ambiente.py` tinha duas definições de `executemany`, com a segunda (sem
+tratamento de bytes) apagando a primeira em silêncio.
+
 ## turno 4, setembro de 2026 (item L0-04-h-exportar: exportação de camada para outros formatos)
 
 `POST /api/exportacoes` enfileira o job `exportacao.gerar` (202) e devolve o arquivo (item `arquivo`,
