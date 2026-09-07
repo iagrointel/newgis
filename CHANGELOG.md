@@ -129,6 +129,30 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 4, setembro de 2026 (item L4-02-b-montante-jusante: sentido pela distância ao controlador)
+
+`POST /api/rede/{id}/tracar` com `tipo=montante|jusante` passou a derivar o SENTIDO do controlador de subrede
+quando a rede tem um em tier hierárquico: a árvore de caminhos mínimos a partir dos controladores
+(`public.pgr_drivingDistance`, `equicost`) diz quem está mais perto da fonte; jusante de um ponto é a
+subárvore dele, montante é a cadeia de pais até o controlador, que sai nomeado na resposta. Sem controlador,
+segue valendo a direção declarada em atributo (item L4-18) — e a resposta sempre diz de onde veio o sentido,
+no campo `origem_direcao`, que também pode ser imposto no pedido.
+
+O traçado se recusa a inventar direção em três situações, cada uma com motivo próprio na resposta: tier
+particionado (malha) sem nenhum trecho declarando `direcao_fluxo`; laço, isto é, mais de um caminho até o
+controlador tocando o resultado pedido (sai `direcao='indeterminado'` com `nos_do_laco`); e ponto que nenhum
+controlador alcança. Grafo, resolução de ponto, barreira e formato de saída são os de `tracado.py`: não há
+segundo motor de traçado. ADR `docs/adr/20260907T2133-montante-jusante-por-controlador.md`.
+
+Medido em `tests/medidas/L4-02-b-montante-jusante.json`. Fronteira honesta registrada ali: a comparação entre
+o jusante de cada transformador da cooperativa de teste e as unidades consumidoras que o arquivo liga a ele
+tem universo VAZIO — os 26.581 ramais de ligação do arquivo não têm geometria, então nenhuma das 27.587
+unidades consumidoras tem caminho desenhado até o transformador.
+
+Na mesma passagem, a união dos seis ramos de L4 fechou dois registros que faltavam e reprovavam o lote
+inteiro na fila: as 11 rotas de escrita da rede de utilidades em `tests/api/eventos_esperados.py` e os 16
+casos de cobertura cruzada em `tests/api/cruzado_casos.py`.
+
 ## turno 4, setembro de 2026 (item L4-04-a-controladores-e-tiers: controlador de subrede e tiers)
 
 Onde cada subrede começa passou a ser dado gravado, e não convenção de traçado (ADR
