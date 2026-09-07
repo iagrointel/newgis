@@ -1,0 +1,33 @@
+{
+ "descricao": "lacunas de ESCRITA conhecidas (linha de base de tests/unit/test_cobertura_ui.py); encolhe conforme a trilha UX fecha itens; gerado por docs/gerar_cobertura_ui.py",
+ "lacunas": [
+  "DELETE /api/arquivos/{sha256}",
+  "DELETE /api/conexoes/{id}",
+  "DELETE /api/importacoes/{id}",
+  "DELETE /api/plataforma/inquilinos/{id}",
+  "PATCH /api/conexoes/{id}",
+  "POST /api/acervo/{fonte_id}/adicionar",
+  "POST /api/arquivos",
+  "POST /api/categorias/importar",
+  "POST /api/conexoes",
+  "POST /api/geocodificar",
+  "POST /api/importacoes",
+  "POST /api/isocrona",
+  "POST /api/login/ldap",
+  "POST /api/matriz",
+  "POST /api/org/ldap/importar",
+  "POST /api/plataforma/inquilinos",
+  "POST /api/plataforma/inquilinos/{id}/reativar",
+  "POST /api/plataforma/inquilinos/{id}/suspender",
+  "POST /api/reverso",
+  "POST /api/rota",
+  "POST /rest/services/Geocodificador/GeocodeServer",
+  "POST /rest/services/Geocodificador/GeocodeServer/findAddressCandidates",
+  "POST /rest/services/Geocodificador/GeocodeServer/geocodeAddresses",
+  "POST /rest/services/Geocodificador/GeocodeServer/reverseGeocode",
+  "PUT /api/categorias",
+  "PUT /api/importacoes/{id}/confirmar",
+  "PUT /api/org/ldap",
+  "PUT /api/papeis/{id}"
+ ]
+}
