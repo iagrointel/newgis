@@ -1069,3 +1069,16 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 4 (líder 5), setembro de 2026 (item L6-06-descoberta-csw: descoberta por catálogo CSW 2.0.2 da INDE e criação de conexão WMS/WFS num clique)
+
+`POST /api/csw/buscar` (texto e/ou bbox, `GetRecords` por GET KVP com `CQL_TEXT` e `outputSchema` ISO 19139,
+paginação por `nextRecord`) e `POST /api/csw/conexoes` (`GetRecordById` → uma `plat.conexao` por
+`CI_OnlineResource` WMS/WFS/WMTS com endereço, idempotente por tipo+url+camada, ficha de procedência do
+registro ISO em `config.procedencia`; o `publicar` completa a ficha com o que o serviço vivo declara e o
+resto vem do ISO). Registro com protocolo declarado e `linkage` vazio (caso real das cartas do IBGE na INDE)
+devolve 422 `sem_servico_ligado` e não cria nada. Tela `/conexoes` ganha a seção "descobrir por catálogo".
+Tudo por `buscar_seguro` (SSRF, 1 MiB, 20 s); XML por defusedxml; nomes/e-mails de contato retirados das
+gravações de teste. Medido contra a INDE em 07/09 (`tests/medidas/L6-06-descoberta-csw.json`): 52 registros
+para "tuberculose", 2 conexões (WMS+WFS) criadas de um registro e as 2 com saúde ok. Cinco endereços de
+CSW estadual adivinhados não resolveram: só a INDE está verificada.
