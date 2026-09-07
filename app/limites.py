@@ -241,3 +241,9 @@ RELACIONAMENTO_NOME_MAX = 120
 RELACIONAMENTO_VALOR_MAX = 200            # tamanho do valor de chave guardado em relacionamento_junc (texto)
 RELACIONAMENTO_LIMITE_PADRAO = 2000       # teto de relacionados por consulta quando a classe não declara outro
 RELACIONAMENTO_LIMITE_MAX = 100_000       # teto absoluto (refutação do item: "100 mil relacionados numa origem")
+
+# --- clonagem de camadas hospedadas da Esri (L2-08-b-clonar-camadas-hospedadas; app/migracao/clonar.py)
+CLONE_PAGINA = 1000                      # feições por página de query e por lote de INSERT (maxRecordCount típico 1000-2000)
+CLONE_ANEXO_MAX = 50 * 1024 * 1024       # bytes por anexo lido do portal (acima disto: aviso no relatório, feição segue)
+CLONE_CAMADAS_MAX = 200                  # camadas + tabelas por serviço numa execução
+CLONE_AMOSTRA = 100                      # feições da amostra comparada por sha256 (geometria normalizada + atributos)
