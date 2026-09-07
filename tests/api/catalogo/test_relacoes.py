@@ -4,7 +4,7 @@ vocabulário fora 422; família incompatível 422; FK sem órfã após expurgo; 
 
 import time
 
-from tests.api.catalogo.conftest import titulo_zt
+from tests.api.catalogo.conftest import documento_mapa, titulo_zt
 
 ITEM = "L0-03-catalogo"
 
@@ -12,7 +12,7 @@ ITEM = "L0-03-catalogo"
 def _grafo(itens_a):
     cam = itens_a.criar("camada_vetorial", titulo=titulo_zt("camada"))
     mapa = itens_a.criar(
-        "mapa", titulo=titulo_zt("mapa"), dados={"esquema_versao": 1, "corpo": {"camadas": [cam["id"]]}}
+        "mapa", titulo=titulo_zt("mapa"), dados=documento_mapa(cam["id"])
     )
     app = itens_a.criar(
         "app", titulo=titulo_zt("app"), dados={"tipo": "app", "esquema_versao": 1, "corpo": {"mapas": [mapa["id"]]}}
@@ -58,7 +58,7 @@ def test_dependente_invisivel_bloqueia_sem_revelar(sessao_a, itens_a, editor_a):
     sessao_a.put(f"/api/itens/{cam['id']}/compartilhamento", json={"acesso": "inquilino"})
     dono_c.get(f"/api/itens/{cam['id']}")
     # o admin cria um mapa privado que usa a camada do editor
-    mapa = itens_a.criar("mapa", dados={"esquema_versao": 1, "corpo": {"camadas": [cam["id"]]}})
+    mapa = itens_a.criar("mapa", dados=documento_mapa(cam["id"]))
     r = dono_c.get(f"/api/itens/{cam['id']}/usado-por")
     assert r.json() == [
         {
@@ -128,12 +128,12 @@ def test_ciclo_vocabulario_familia_e_outro_inquilino(sessao_a, itens_a, itens_b)
 
 def test_relacao_some_com_o_dado_e_sem_orfa_no_expurgo(sessao_a, itens_a, conexao_plat_app):
     cam = itens_a.criar("camada_vetorial")
-    mapa = itens_a.criar("mapa", dados={"esquema_versao": 1, "corpo": {"camadas": [cam["id"]]}})
+    mapa = itens_a.criar("mapa", dados=documento_mapa(cam["id"]))
     assert sessao_a.get(f"/api/itens/{cam['id']}").json()["usado_por"] == 1
-    r = sessao_a.put(f"/api/itens/{mapa['id']}", json={"dados": {"esquema_versao": 1, "corpo": {"camadas": []}}})
+    r = sessao_a.put(f"/api/itens/{mapa['id']}", json={"dados": documento_mapa()})
     assert r.status_code == 200
     assert sessao_a.get(f"/api/itens/{cam['id']}").json()["usado_por"] == 0
-    sessao_a.put(f"/api/itens/{mapa['id']}", json={"dados": {"esquema_versao": 1, "corpo": {"camadas": [cam["id"]]}}})
+    sessao_a.put(f"/api/itens/{mapa['id']}", json={"dados": documento_mapa(cam["id"])})
     assert sessao_a.delete(f"/api/itens/{mapa['id']}").status_code == 204
     from tests.api.test_rls import contexto, ids_por_slug
 

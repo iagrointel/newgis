@@ -942,3 +942,28 @@ fora do pytest, usando o MESMO `TestClient` e o MESMO banco, autenticado como ad
 não exige 2FA) — suficiente porque nenhuma rota nova deste item depende do superadmin. Os e2e (que batem no
 serviço `plat-api` ao vivo, não no `TestClient`) não são afetados por este bloqueio; o serviço foi reiniciado
 uma vez (`systemctl restart plat-api`) para servir o código novo, com RAM conferida antes e depois.
+
+## 18. Modelo de estilo (item L2-02-a-modelo-estilo; ADR `20260907T1200-modelo-de-estilo.md`)
+
+`app/estilos/compilador.py` é o único lugar que traduz `plat_construtor` (7 tipos) em camadas MapLibre;
+`app/estilos/validador.py` roda depois de `tipos.validar('estilo', dados)` nas duas rotas de escrita de
+`app/catalogo/rotas_itens.py` (mesmo padrão de `documento.validar_grafo`): valida o `maplibre` ENVIADO contra
+o vocabulário de campos e o validador oficial `@maplibre/maplibre-gl-style-spec` 20.4.0 (subprocesso Node,
+`ferramentas/estilo/validar.mjs`), valida que `plat_construtor` compila sem erro, e então REESCREVE
+`corpo.maplibre` com o resultado da compilação — a forma que fica gravada é sempre a canônica, nunca a
+literal que o cliente mandou. `app/estilos/padrao.py` gera o estilo padrão determinístico (hash sha256 do
+uuid do item); `app/estilos/sld.py` converte o subconjunto declarado para SLD 1.0.
+
+Migração `db/migracoes/20260907T1148_estilo_modelo.sql` aperta o esquema do tipo `estilo` (antes `corpo` era
+um objeto livre); `docs/gerar_esquemas.py` publica `docs/esquemas/estilo-v1.json` (acrescentado a
+`TIPOS_PUBLICADOS`, ao lado de `mapa`). Achado de ambiente, não deste item:
+`CursorSchemaAmbiente` reescreve a palavra `plat` mesmo dentro de string humana (o `title` do JSON Schema),
+então `docs/gerar_esquemas.py --check` só bate se rodado no schema `plat` de produção, nunca dentro de uma
+trilha isolada — `docs/esquemas/mapa-v1.json` (item L2-01-a) já está commitado com esse defeito
+(`title` contaminado com o nome de outra trilha); registrado no ADR deste item para quem for corrigi-lo.
+
+**Decisão deliberada, não bug**: `maplibre` enviado pelo cliente é validado mas DESCARTADO — o que fica
+gravado é sempre `compilador.compilar(plat_construtor)`. Isso fecha a ida-e-volta sem perda de graça (dois
+saves do mesmo construtor são idênticos byte a byte) ao custo de o cliente não poder gravar uma camada
+MapLibre inteiramente à mão fora do vocabulário do construtor — aceitável nesta passagem porque nenhum editor
+visual deste construtor foi construído ainda (a interface é item seguinte).
