@@ -19,7 +19,13 @@ import psycopg2
 from fastapi import APIRouter, Query, Request
 
 from app import db
-from app.acervo.modelos import AcervoAdicionarEntrada, AcervoDominio, AcervoFicha, AcervoPagina
+from app.acervo.modelos import (
+    AcervoAdicionarEntrada,
+    AcervoCamadaMapa,
+    AcervoDominio,
+    AcervoFicha,
+    AcervoPagina,
+)
 from app.auth.comum import paginacao
 from app.auth.sessao import Auth, autenticado
 from app.catalogo import comum, tipos
@@ -110,6 +116,26 @@ def dominios(auth: Auth = autenticado(escopo_token="catalogo:ler")):
             "FROM (SELECT DISTINCT dominio FROM acervo.fonte) d "
             "LEFT JOIN (SELECT dominio, count(*) AS fontes FROM plat.acervo_ficha GROUP BY dominio) v "
             "USING (dominio) ORDER BY d.dominio"
+        )
+        return cur.fetchall()
+
+
+@router.get("/api/acervo/meu-mapa", response_model=list[AcervoCamadaMapa], openapi_extra=LER)
+def meu_mapa(auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Camadas do acervo já adicionadas ao catálogo de quem chama, para a legenda da tela /mapa (item
+    L6-01-c-tela-acervo). Rota própria porque `GET /api/itens` não devolve `dados` (campo pesado, fora de
+    `SQL_ITEM_LISTA`) e não filtra por protocolo: pela lista do catálogo a legenda teria de pedir a ficha de
+    cada item, uma chamada por camada. Aqui é uma consulta só, e o filtro `dados->>'protocolo' = 'acervo'` é
+    feito no banco. O isolamento por inquilino é o mesmo do resto do catálogo (RLS sobre `plat.item` pela
+    conexão de `auth.contexto()`), não um WHERE escrito aqui."""
+    with db.db(auth.contexto()) as cur:
+        cur.execute(
+            "SELECT i.id::text AS item_id, i.titulo, i.dados->'parametros'->>'fonte_id' AS fonte_id, "
+            "i.dados->'parametros'->>'dominio' AS dominio, i.dados->'parametros'->>'licenca' AS licenca, "
+            "i.dados->'parametros'->>'licenca_curada_tipo' AS licenca_curada_tipo "
+            "FROM plat.item i WHERE i.apagado_em IS NULL AND i.tipo = 'conexao' "
+            "AND i.dados->>'protocolo' = 'acervo' AND i.dados->'parametros'->>'fonte_id' IS NOT NULL "
+            "ORDER BY i.titulo"
         )
         return cur.fetchall()
 

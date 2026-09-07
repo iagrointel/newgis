@@ -11,22 +11,7 @@ import { carregar as carregarIdioma, t, formatarData, formatarNumero } from '../
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao, irParaLogin } from '../auth/sessao.js';
 import { obter, enviar, mensagemDe } from '../base/api.js';
-
-// vocabulário fechado do item L6-01-g (plat.acervo_licenca, migração 043); rótulo acentuado só para a tela —
-// o dado gravado no banco segue sem acento de propósito (evita duas grafias da mesma coisa por encoding).
-const RES = {
-  CC0: 'CC0 (domínio público)',
-  'CC-BY': 'CC-BY (atribuição)',
-  'CC-BY-SA': 'CC-BY-SA (atribuição + compartilhamento pelas mesmas regras)',
-  ODbL: 'ODbL (atribuição obrigatória)',
-  'dado-aberto-com-termo-do-orgao': 'dado aberto — termo próprio do órgão',
-  Copernicus: 'Copernicus (atribuição obrigatória)',
-  'licenca-propria': 'licença própria da fonte',
-  'nao-declarada': 'não declarada',
-};
-// item L6-01-c: as licenças que EXIGEM crédito visível de quem usa o dado (hipótese literal do portão: "aviso
-// de atribuição obrigatória para ODbL e CC BY-SA"); as demais do vocabulário fechado não exigem o aviso.
-const EXIGE_ATRIBUICAO = new Set(['ODbL', 'CC-BY-SA']);
+import { exigeAtribuicao, rotuloLicenca } from './licencas.js';
 
 const el = (id) => document.getElementById(id);
 const LIMITE = 24;
@@ -126,13 +111,26 @@ async function carregarLista() {
   grade.setAttribute('aria-busy', 'false');
 }
 
+// O cartão traz uma ETIQUETA curta de licença; o texto livre de `licenca` (às vezes uma frase inteira do órgão)
+// fica no atributo title e completo na ficha. Etiqueta é rótulo, não parágrafo: com a frase dentro dela o cartão
+// deixava de caber num visor de celular (medido: corpo de 729 px num visor de 390 px).
+function marcadorLicenca(item) {
+  const curada = rotuloLicenca(item.licenca_curada_tipo);
+  const m = marcador(
+    curada || (item.licenca ? t('acervo.licenca_texto_livre') : t('acervo.licenca_nao_declarada')),
+    exigeAtribuicao(item.licenca_curada_tipo) ? 'atencao' : 'ok',
+  );
+  if (!curada && item.licenca) m.title = item.licenca;
+  return m;
+}
+
 function cartao(item) {
   const b = h('button', { type: 'button', class: 'acervo-cartao', 'data-fonte-id': item.fonte_id }, [
     h('h2', {}, item.nome),
     h('p', { class: 'acervo-cartao-orgao' }, item.orgao || '—'),
     h('div', { class: 'acervo-cartao-marcadores' }, [
       marcador(item.dominio, 'info'),
-      marcador(item.licenca_curada_tipo ? RES[item.licenca_curada_tipo] : (item.licenca || t('acervo.licenca_nao_declarada')), item.licenca_curada_tipo && EXIGE_ATRIBUICAO.has(item.licenca_curada_tipo) ? 'atencao' : 'ok'),
+      marcadorLicenca(item),
     ]),
     h('p', { class: 'acervo-cartao-linha' }, `${t('acervo.frescor')}: ${item.frescor || t('acervo.frescor_nao_registrado')}`),
     h('p', { class: 'acervo-cartao-linha' }, `${t('acervo.registros')}: ${formatarNumero(item.registros_estimados)} · ${t('acervo.tabelas')}: ${formatarNumero(item.numero_tabelas)}`),
@@ -162,7 +160,7 @@ async function abrirFicha(fonteId) {
   const dl = h('dl', { class: 'acervo-ficha' }, [
     campo(t('acervo.orgao'), ficha.orgao),
     campo(t('acervo.dominio'), ficha.dominio),
-    campo(t('acervo.licenca'), ficha.licenca_curada_tipo ? RES[ficha.licenca_curada_tipo] : (ficha.licenca || t('acervo.licenca_nao_declarada'))),
+    campo(t('acervo.licenca'), rotuloLicenca(ficha.licenca_curada_tipo) || ficha.licenca || t('acervo.licenca_nao_declarada')),
     campo(t('acervo.frescor'), ficha.frescor || t('acervo.frescor_nao_registrado')),
     campo(t('acervo.registros'), formatarNumero(ficha.registros_estimados)),
     campo(t('acervo.tabelas'), formatarNumero(ficha.numero_tabelas)),
@@ -179,8 +177,8 @@ async function abrirFicha(fonteId) {
 
   const corpo = h('div', {}, [
     dl,
-    ficha.licenca_curada_tipo && EXIGE_ATRIBUICAO.has(ficha.licenca_curada_tipo)
-      ? h('p', { class: 'acervo-atribuicao', role: 'note' }, t('acervo.atribuicao_obrigatoria', { licenca: RES[ficha.licenca_curada_tipo] }))
+    exigeAtribuicao(ficha.licenca_curada_tipo)
+      ? h('p', { class: 'acervo-atribuicao', role: 'note' }, t('acervo.atribuicao_obrigatoria', { licenca: ficha.licenca_curada_tipo }))
       : null,
     h('h3', {}, t('acervo.ficha_previsualizacao')),
     previa(ficha),

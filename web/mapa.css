@@ -56,8 +56,33 @@ body.mapa .mapa-painel {
   font-size: .8rem;
   color: var(--mapa-texto);
   backdrop-filter: blur(2px);
+  /* nenhum painel flutuante pode passar da borda do mapa: num visor de 390 px o seletor de camada base
+     media 378 px e terminava em 394 px, empurrando a página 2 px para fora da tela (medido no item
+     L6-01-c ao acrescentar a legenda do acervo a esta mesma tela). */
+  max-width: calc(100% - var(--e4) * 2);
 }
 body.mapa .mapa-painel-base { top: var(--e4); display: flex; align-items: center; gap: var(--e2); font-family: var(--sans); }
 body.mapa .mapa-painel-base label { color: var(--mapa-texto-fraco); text-transform: lowercase; }
-body.mapa .mapa-painel-base select { background: #1a2224; color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: .2rem .4rem; }
+body.mapa .mapa-painel-base select { min-width: 0; max-width: 100%; background: #1a2224; color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: .2rem .4rem; }
 body.mapa .mapa-coordenadas { top: calc(var(--e4) + 2.4rem); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+
+/* legenda das camadas do acervo adicionadas ao mapa (item L6-01-c-tela-acervo). Usa o chrome escuro do próprio
+   mapa (--mapa-painel/--mapa-texto), não os tokens da tela clara: ela flutua SOBRE o mapa. A atribuição de
+   ODbL/CC-BY-SA fica visível aqui porque é onde o dado é visto — a licença exige crédito de quem exibe. */
+body.mapa .mapa-acervo-legenda {
+  right: var(--e4); bottom: calc(var(--e4) * 3); left: auto; top: auto;
+  max-width: 320px; max-height: 45vh; overflow: auto;
+  font-family: var(--sans); display: grid; gap: var(--e2);
+}
+body.mapa .mapa-acervo-legenda[hidden] { display: none; }
+body.mapa .mapa-acervo-legenda h2 { margin: 0; font-size: .8rem; text-transform: lowercase; color: var(--mapa-texto-fraco); }
+body.mapa .mapa-acervo-legenda ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
+body.mapa .mapa-acervo-legenda li { border-top: 1px solid var(--mapa-borda); padding-top: var(--e2); }
+body.mapa .mapa-acervo-legenda li:first-child { border-top: none; padding-top: 0; }
+body.mapa .mapa-acervo-legenda .titulo { display: block; color: var(--mapa-texto); }
+body.mapa .mapa-acervo-legenda .licenca { display: block; color: var(--mapa-texto-fraco); font-size: .75rem; }
+body.mapa .mapa-acervo-legenda .atribuicao { display: block; color: var(--atencao); font-size: .75rem; }
+
+@media (max-width: 640px) {
+  body.mapa .mapa-acervo-legenda { right: var(--e2); left: var(--e2); bottom: var(--e2); max-width: none; max-height: 30vh; }
+}

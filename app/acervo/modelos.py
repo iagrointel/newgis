@@ -82,6 +82,19 @@ class AcervoDominio(Saida):
     fontes: int
 
 
+class AcervoCamadaMapa(Saida):
+    """Uma camada do acervo já adicionada ao catálogo do inquilino, como a legenda do mapa precisa dela (item
+    L6-01-c-tela-acervo). Os campos vêm do instantâneo gravado em `dados.parametros` na hora de adicionar, não
+    de uma nova consulta ao acervo: a legenda mostra a licença sob a qual o dado foi adicionado."""
+
+    item_id: str
+    titulo: str
+    fonte_id: str
+    dominio: str | None = None
+    licenca: str | None = None
+    licenca_curada_tipo: str | None = None
+
+
 class AcervoAdicionarEntrada(BaseModel):
     """Corpo opcional de POST /api/acervo/{fonte_id}/adicionar (item L6-01-f-lgpd). Fonte marcada em
     `plat.acervo_lgpd.risco_pii` exige `confirma_risco_pii=true` explícito; sem isso a rota recusa com 409

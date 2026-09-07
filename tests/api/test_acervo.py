@@ -479,3 +479,45 @@ def test_adicionar_congela_licenca_curada_tipo_no_item(sessao_a, licenca_curada_
     item = r.json()
     item_acervo_a.append(item["id"])
     assert item["dados"]["parametros"]["licenca_curada_tipo"] == "ODbL"
+
+
+def test_meu_mapa_lista_so_camadas_do_acervo_do_proprio_inquilino(sessao_a, sessao_b, licenca_curada_odbl,
+                                                                  item_acervo_a):
+    """A legenda do mapa (item L6-01-c) lê `GET /api/acervo/meu-mapa`. Ela devolve as camadas do acervo já
+    adicionadas — com o tipo de licença CURADA congelado ao adicionar, que é o que aciona o aviso de atribuição
+    obrigatória — e nada do vizinho: a mesma trava cruzada A→B do resto do catálogo (RLS por `tenant_id`)."""
+    fonte_id = licenca_curada_odbl
+    antes_a = sessao_a.get("/api/acervo/meu-mapa")
+    assert antes_a.status_code == 200, antes_a.text
+    antes_com_a_fonte = [c for c in antes_a.json() if c["fonte_id"] == fonte_id]
+
+    r = sessao_a.post(f"/api/acervo/{fonte_id}/adicionar")
+    assert r.status_code == 201, r.text
+    item_acervo_a.append(r.json()["id"])
+
+    depois_a = sessao_a.get("/api/acervo/meu-mapa")
+    assert depois_a.status_code == 200, depois_a.text
+    depois_com_a_fonte = [c for c in depois_a.json() if c["fonte_id"] == fonte_id]
+    assert len(depois_com_a_fonte) == len(antes_com_a_fonte) + 1
+    camada = next(c for c in depois_com_a_fonte if c["item_id"] == r.json()["id"])
+    assert camada["licenca_curada_tipo"] == "ODbL"
+    assert camada["titulo"].startswith("Acervo — ")
+
+    # inquilino B não enxerga a camada de A
+    r_b = sessao_b.get("/api/acervo/meu-mapa")
+    assert r_b.status_code == 200, r_b.text
+    assert all(c["item_id"] != r.json()["id"] for c in r_b.json()), r_b.json()
+
+
+def test_meu_mapa_nao_devolve_conexao_que_nao_e_do_acervo(sessao_a, item_acervo_a):
+    """Item tipo `conexao` de outro protocolo (uma conexão externa comum, item L6-02) não é camada do acervo e
+    não pode aparecer na legenda: o filtro é `dados->>'protocolo' = 'acervo'`, não o tipo do item."""
+    r = sessao_a.post("/api/itens", json={
+        "tipo": "conexao",
+        "titulo": f"{PREFIXO_TESTE} conexão que não é do acervo",
+        "dados": {"protocolo": "wms", "url": "https://exemplo.invalido/wms", "parametros": {}},
+    })
+    assert r.status_code == 201, r.text
+    item_acervo_a.append(r.json()["id"])
+    camadas = sessao_a.get("/api/acervo/meu-mapa").json()
+    assert all(c["item_id"] != r.json()["id"] for c in camadas), camadas

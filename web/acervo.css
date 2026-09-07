@@ -7,7 +7,7 @@
 .acervo-dominio-campo { display: grid; gap: var(--e1); color: var(--fraco); font-size: .85rem; }
 .acervo-dominio-campo select { color: var(--texto); background: var(--painel); border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: .25rem var(--e2); }
 
-.acervo-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--e3); margin-bottom: var(--e4); }
+.acervo-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: var(--e3); margin-bottom: var(--e4); }
 .acervo-vazio { color: var(--fraco); grid-column: 1 / -1; }
 
 .acervo-cartao {
@@ -15,10 +15,13 @@
   border-radius: var(--raio); padding: var(--e3) var(--e4); color: var(--texto); font: inherit; cursor: pointer;
 }
 .acervo-cartao:hover, .acervo-cartao:focus-visible { border-color: var(--acento); }
-.acervo-cartao h2 { margin: 0; font-size: 1rem; }
-.acervo-cartao-orgao { margin: 0; color: var(--fraco); font-size: .85rem; }
+.acervo-cartao > * { min-width: 0; }
+.acervo-cartao h2 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
+.acervo-cartao-orgao { margin: 0; color: var(--fraco); font-size: .85rem; overflow-wrap: anywhere; }
 .acervo-cartao-marcadores { display: flex; flex-wrap: wrap; gap: var(--e1); }
-.acervo-cartao-linha { margin: 0; font-size: .8rem; color: var(--fraco); }
+/* etiqueta é rótulo curto, mas o nome de um domínio pode ser longo: deixa quebrar em vez de esticar o cartão */
+.acervo-cartao-marcadores .marcador { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.acervo-cartao-linha { margin: 0; font-size: .8rem; color: var(--fraco); overflow-wrap: anywhere; }
 
 .acervo-ficha { display: grid; gap: var(--e2) var(--e4); grid-template-columns: max-content 1fr; margin: 0 0 var(--e3); }
 .acervo-ficha dt { color: var(--fraco); font-size: .8rem; align-self: start; }
@@ -27,12 +30,3 @@
 
 .acervo-atribuicao { background: rgba(210, 153, 34, .12); border: 1px solid var(--atencao); color: var(--atencao); border-radius: var(--raio); padding: var(--e2) var(--e3); }
 .acervo-previa-vazia { color: var(--fraco); }
-
-/* legenda de camadas do acervo no mapa (item L6-01-c) */
-.mapa-acervo-legenda { position: absolute; right: var(--e3); bottom: var(--e3); max-width: 320px; max-height: 50vh; overflow: auto; background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e3); z-index: 5; }
-.mapa-acervo-legenda h2 { margin: 0 0 var(--e2); font-size: .9rem; }
-.mapa-acervo-legenda ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
-.mapa-acervo-legenda li { border-top: 1px solid var(--borda); padding-top: var(--e2); }
-.mapa-acervo-legenda li:first-child { border-top: none; padding-top: 0; }
-.mapa-acervo-legenda .titulo { font-weight: 600; }
-.mapa-acervo-legenda .atribuicao { color: var(--atencao); font-size: .8rem; }
