@@ -937,3 +937,15 @@ def _link_so_o_item(p: Preparacao, j: Any) -> None:
     assert "login" not in item["dono"] and "pode_editar" not in item and item["id"] == p.item_b["id"]
     for marca in (p.usuario_b["login"], p.grupo_b["nome"], p.papel_b["nome"], p.token_b["prefixo"], "demo2"):
         assert marca not in str(j), marca
+
+
+# ---- L6-02-m-catalogo-endpoints-brasil: o catálogo é GLOBAL (a mesma lista para todo inquilino; só leitura),
+# logo GET não tem "recurso de B" — aceita 200 sem marca de B. `adicionar` cria em A a partir de uma entrada do
+# catálogo: o id 0 não existe em catálogo nenhum (bigserial começa em 1), então a resposta é 404 sem efeito.
+CASOS.update({
+    ("GET", "/api/endpoints-publicos"): Caso(
+        lambda p: "/api/endpoints-publicos?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/endpoints-publicos/{id}"): Caso(lambda p: "/api/endpoints-publicos/0"),
+    ("POST", "/api/endpoints-publicos/{id}/adicionar"): Caso(lambda p: "/api/endpoints-publicos/0/adicionar"),
+})
