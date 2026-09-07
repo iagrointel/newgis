@@ -39,6 +39,7 @@ from app.catalogo import (
     transferencia,
 )
 from app.conexao import rotas as rotas_conexao
+from app.consulta.rotas_query import router as rotas_consulta_esri
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
@@ -117,6 +118,9 @@ ROUTERS = [
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
     rotas_geocodificador_esri,
+    # --- operação query do FeatureServer (L2-04-c): /rest/services/{item}/FeatureServer/{camada}/query
+    # (a raiz completa do diretório de serviço é o L2-04-b, ainda não construído)
+    rotas_consulta_esri,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
