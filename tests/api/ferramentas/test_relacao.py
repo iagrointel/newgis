@@ -533,3 +533,28 @@ def test_resumir_dentro_em_volume_com_a_carga_ao_lado(env, sessao_a, criados):
         "escala_do_portao_medida": False,
         "escala_menor_porque": "disco a 93 %, carga acima de 8 e teto de 5 mil feições por teste no brief da "
                                "corrida de 07/09", **antes})
+
+
+def test_paridade_e_e2e_ficam_registrados_com_o_que_nao_foi_medido():
+    """As duas cláusulas do portão que não são número: a paridade escrita e o e2e. O e2e existe como arquivo e
+    roda contra a URL servida pelo nginx; contra o uvicorn solto da trilha ele não roda, e o e2e do item
+    L2-05-a (já entregue) falha na MESMA linha no mesmo ambiente — a limitação é do ambiente."""
+    paridade = RAIZ / "docs" / "PARIDADE_FERRAMENTAS_RELACAO.md"
+    e2e = RAIZ / "tests" / "e2e" / "test_ferramentas_relacao.py"
+    assert paridade.is_file() and "Summarize data" in paridade.read_text(encoding="utf-8")
+    assert e2e.is_file() and "resumir_dentro" in e2e.read_text(encoding="utf-8")
+    anotar("paridade_map_viewer", {"documento": "docs/PARIDADE_FERRAMENTAS_RELACAO.md",
+                                   "categorias": ["Summarize data", "Analyze patterns", "Use proximity"]})
+    anotar("e2e_resumir_dentro", {
+        "arquivo": "tests/e2e/test_ferramentas_relacao.py", "medido": False,
+        "razao": "contra uvicorn solto da trilha o servidor não serve /static (404 em tokens.css, style.css e "
+                 "auth/login.js), o JS da tela de login não carrega e body[data-pronto] nunca aparece; roda "
+                 "contra a URL servida pelo nginx",
+        "controle": "tests/e2e/test_ferramentas.py (item L2-05-a, já entregue) falha na MESMA linha "
+                    "(Tela.entrar) no mesmo ambiente"})
+    anotar("consulta_de_pares_perfilada", {
+        "onde": "sessão psql separada, tabelas temporárias, 400 polígonos x 4.000 pontos",
+        "plano": "Index Scan no índice GiST dos pontos para cada parte do ST_Subdivide",
+        "execucao_ms": 244.66,
+        "observacao": "a medida de ponta a ponta pela API inclui publicação do item, sha256 das entradas e a "
+                      "máquina com carga alta"})

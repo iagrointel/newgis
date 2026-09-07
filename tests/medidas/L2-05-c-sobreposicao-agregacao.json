@@ -15,7 +15,7 @@
   },
   "consulta_de_pares_perfilada": {
     "execucao_ms": 244.66,
-    "observacao": "a medida de ponta a ponta pela API (27,21 s) inclui publicação do item, sha256 das entradas e a máquina com carga 7,2",
+    "observacao": "a medida de ponta a ponta pela API inclui publicação do item, sha256 das entradas e a máquina com carga alta",
     "onde": "sessão psql separada, tabelas temporárias, 400 polígonos x 4.000 pontos",
     "plano": "Index Scan no índice GiST dos pontos para cada parte do ST_Subdivide"
   },
@@ -27,7 +27,7 @@
   },
   "e2e_resumir_dentro": {
     "arquivo": "tests/e2e/test_ferramentas_relacao.py",
-    "controle": "tests/e2e/test_ferramentas.py (item L2-05-a, já entregue) falha na MESMA linha (Tela.entrar) no mesmo ambiente — a limitação é do ambiente, não do item",
+    "controle": "tests/e2e/test_ferramentas.py (item L2-05-a, já entregue) falha na MESMA linha (Tela.entrar) no mesmo ambiente",
     "medido": false,
     "razao": "contra uvicorn solto da trilha o servidor não serve /static (404 em tokens.css, style.css e auth/login.js), o JS da tela de login não carrega e body[data-pronto] nunca aparece; roda contra a URL servida pelo nginx"
   },
@@ -101,7 +101,7 @@
     ]
   },
   "resumir_dentro_em_volume": {
-    "carga_1min": 15.05,
+    "carga_1min": 11.02,
     "escala_do_portao": {
       "poligonos": 5570,
       "pontos": 1000000,
@@ -109,11 +109,11 @@
     },
     "escala_do_portao_medida": false,
     "escala_menor_porque": "disco a 93 %, carga acima de 8 e teto de 5 mil feições por teste no brief da corrida de 07/09",
-    "medido_em": "2026-09-07T22:04:08+00:00",
+    "medido_em": "2026-09-07T22:21:22+00:00",
     "poligonos": 400,
     "pontos": 4001,
-    "ram_livre_gb": 5.56,
-    "segundos": 53.84
+    "ram_livre_gb": 5.86,
+    "segundos": 52.13
   },
   "resumir_dentro_linhas": {
     "comprimentos_m": {
