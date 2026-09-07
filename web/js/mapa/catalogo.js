@@ -43,7 +43,7 @@ export class Catalogo {
     if (this.ativas.includes(id)) return;
     const f = this.ficha(id);
     if (!f) throw new Error(`camada desconhecida: ${id}`);
-    const r = await obter(f.tilejson);
+    const r = await obter(this._urlTilejson(f));
     if (r.status !== 200) throw new Error((r.json && r.json.mensagem) || 'falha ao obter o TileJSON');
     const fonte = PREFIXO + id;
     if (!this.map.getSource(fonte)) {
@@ -60,6 +60,7 @@ export class Catalogo {
       };
       if (f.atribuicao) especificacao.attribution = f.atribuicao;
       this.map.addSource(fonte, especificacao);
+      f.camada_fonte = (r.json.vector_layers && r.json.vector_layers[0] && r.json.vector_layers[0].id) || f.camada_fonte;
     }
     for (const camada of f.estilo) {
       if (!this.map.getLayer(camada.id)) this.map.addLayer(camada);
@@ -96,6 +97,9 @@ export class Catalogo {
   reordenar(ids) {
     const validos = ids.filter((id) => this.ativas.includes(id));
     if (validos.length !== this.ativas.length) return false;
+    // guarda (achado do item L2-01-d, repetido aqui no L2-02-c): ordem igual à atual não avisa ninguém — a árvore
+    // reordena ao sincronizar e o aviso a faria sincronizar de novo, em recursão sem fim
+    if (validos.every((id, i) => id === this.ativas[i])) return true;
     this.ativas = validos;
     this.aplicarOrdem();
     this._avisar();
@@ -130,6 +134,44 @@ export class Catalogo {
       }
     }
     return v;
+  }
+
+  /* TileJSON da camada; agrupamento (clusters no tile, item L2-02-c) pede a variante `agrupar=<raio_px>` */
+  _urlTilejson(f) {
+    const raio = f.agrupamento && f.agrupamento.raio_px;
+    return raio ? `${f.tilejson}?agrupar=${encodeURIComponent(raio)}` : f.tilejson;
+  }
+
+  /* Estilo ao vivo (editor de simbologia, item L2-02-c): troca as camadas de estilo desta camada do catálogo
+     pelas compiladas no servidor (POST /api/estilos/compilar), sem recarregar a página. Quando o agrupamento
+     muda (liga/desliga/raio), a FONTE muda de função de tile e é refeita; senão só as camadas de estilo. */
+  async aplicarEstilo(id, layers, legenda, opcoes = {}) {
+    const f = this.ficha(id);
+    if (!f) throw new Error(`camada desconhecida: ${id}`);
+    const fonte = PREFIXO + id;
+    const agrupamentoAntes = JSON.stringify(f.agrupamento || null);
+    f.agrupamento = opcoes.agrupamento || null;
+    f.plat_construtor = opcoes.plat_construtor || f.plat_construtor || null;
+    const estavaLigada = this.ativas.includes(id);
+    if (estavaLigada) for (const idc of this.idsDeEstilo(id)) if (this.map.getLayer(idc)) this.map.removeLayer(idc);
+    const mudouFonte = agrupamentoAntes !== JSON.stringify(f.agrupamento || null);
+    if (estavaLigada && mudouFonte && this.map.getSource(fonte)) {
+      this.map.removeSource(fonte);
+      const r = await obter(this._urlTilejson(f));
+      if (r.status !== 200) throw new Error((r.json && r.json.mensagem) || 'falha ao obter o TileJSON');
+      this.map.addSource(fonte, { type: 'vector', tiles: r.json.tiles, minzoom: r.json.minzoom ?? 0, maxzoom: r.json.maxzoom ?? 20, bounds: r.json.bounds });
+      f.camada_fonte = (r.json.vector_layers && r.json.vector_layers[0] && r.json.vector_layers[0].id) || f.camada_fonte;
+    }
+    const camadaFonte = f.agrupamento ? `${f.camada_fonte || ''}`.replace(/_ag$/, '') + '_ag' : `${f.camada_fonte || ''}`.replace(/_ag$/, '');
+    f.estilo = layers.map((l) => ({ ...l, source: fonte, 'source-layer': camadaFonte }));
+    f.legenda = legenda || f.legenda;
+    if (estavaLigada) {
+      for (const camada of f.estilo) if (!this.map.getLayer(camada.id)) this.map.addLayer(camada);
+      this.aplicarOrdem();
+      this.definirOpacidade(id, this.opacidade.get(id) ?? 1);
+    }
+    this._avisar();
+    return f;
   }
 
   /* extensão da camada (graus) para o botão "enquadrar"; pede ao servidor quando a lista não trouxe */
