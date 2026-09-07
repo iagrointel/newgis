@@ -13,6 +13,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
+from app.amc import metadado as mod_metadado
 from app.erros import ErroAPI
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -178,7 +179,8 @@ def _violacoes_transformacao(t, caminho: str) -> list[dict]:
 
 
 def _violacoes_semanticas(definicao: dict) -> list[dict]:
-    """O que o JSON Schema não diz: id único entre fatores e restrições, soma dos pesos > 0, percentual fecha 100."""
+    """O que o JSON Schema não diz: id único entre fatores e restrições, soma dos pesos > 0, percentual fecha 100,
+    e o teto de peso de fator declarado proxy (item L3-15-metadado-fator, `app/amc/metadado.py`)."""
     v: list[dict] = []
     fatores = definicao.get("fatores") or []
     if not isinstance(fatores, list):
@@ -214,6 +216,7 @@ def _violacoes_semanticas(definicao: dict) -> list[dict]:
     if comb == "percentual" and abs(soma - 100.0) > TOLERANCIA_PERCENTUAL:
         v.append({"clausula": "combinador percentual: soma(fatores[].peso) = 100", "caminho": "$.fatores",
                   "mensagem": f"no combinador 'percentual' os pesos fecham 100; somam {soma:g}"})
+    v.extend(mod_metadado.violacoes_teto_proxy(fatores))
     restricoes = definicao.get("restricoes") or []
     if isinstance(restricoes, list):
         vistos_r: dict[str, int] = {}
@@ -280,4 +283,11 @@ def validar_pesos(definicao: dict, pesos: dict | None) -> dict:
     if comb == "percentual" and abs(soma - 100.0) > TOLERANCIA_PERCENTUAL:
         raise ErroAPI(422, "pesos_invalidos", f"no combinador 'percentual' os pesos fecham 100; somam {soma:g}",
                       {"pesos": finais, "soma": soma})
+    # teto de proxy também nos pesos da EXECUÇÃO: o modelo pode estar dentro do teto e o pedido de execução
+    # sobrescrever o peso do fator proxy (item L3-15-metadado-fator). Barrar só no documento deixaria a porta
+    # dos fundos aberta.
+    excedem = mod_metadado.violacoes_teto_proxy(definicao["fatores"], finais)
+    if excedem:
+        raise ErroAPI(422, "pesos_invalidos", excedem[0]["mensagem"],
+                      {"violacoes": excedem, "pesos": finais, "teto_proxy_padrao": mod_metadado.TETO_PROXY_PADRAO})
     return finais

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://plat.local/esquemas/amc_modelo.v1.json",
   "title": "amc_modelo.v1",
-  "description": "Modelo multicritério (AMC) da plataforma: documento único, versionado pelo sha256 do JSON canônico (json.dumps com sort_keys=True, separators=(',', ':'), ensure_ascii=False, codificado em UTF-8). Vocabulário e forma decididos em laco/decomposicao/L3L6_CONCEITO.md (A1, A3, A4, A5, A6, A11). Além deste esquema a API confere: id de fator único, soma dos pesos > 0, combinador 'percentual' com pesos que fecham 100.",
+  "description": "Modelo multicritério (AMC) da plataforma: documento único, versionado pelo sha256 do JSON canônico (json.dumps com sort_keys=True, separators=(',', ':'), ensure_ascii=False, codificado em UTF-8). Vocabulário e forma decididos em laco/decomposicao/L3L6_CONCEITO.md (A1, A3, A4, A5, A6, A11). Além deste esquema a API confere: id de fator único, soma dos pesos > 0, combinador 'percentual' com pesos que fecham 100, e o teto de peso de cada fator declarado proxy (item L3-15-metadado-fator).",
   "type": "object",
   "additionalProperties": false,
   "required": ["esquema", "nome", "fatores"],
@@ -116,21 +116,22 @@
         "id": { "$ref": "#/$defs/identificador" },
         "nome": { "type": "string", "minLength": 1, "maxLength": 250 },
         "criterio": { "type": "string", "maxLength": 1000, "description": "uma linha: o que se quer (linguagem do motor logístico)" },
-        "fonte": { "type": "string", "minLength": 1, "maxLength": 1000, "description": "quem publica o dado e quando (A11)" },
+        "fonte": { "type": "string", "minLength": 1, "maxLength": 1000, "description": "quem publica o dado e quando (A11); obrigatório — fator sem fonte declarada é recusado" },
+        "versao_fonte": { "type": "string", "minLength": 1, "maxLength": 200, "description": "edição/versão do dado lida (ano, coleção, data de extração, sha256 da camada). Opcional; quando ausente o relatório nomeia o fator na lista 'fatores sem versão de fonte' em vez de deixar passar em silêncio" },
         "unidade": { "type": "string", "minLength": 1, "maxLength": 64, "description": "unidade de medida do valor bruto (m, %, hab/km², min, ...)" },
         "direcao": { "type": "string", "enum": ["maior_melhor", "menor_melhor"], "description": "do valor bruto; a favorabilidade já sai orientada (maior = melhor)" },
-        "base": { "type": "string", "enum": ["norma", "engenharia", "preferencia"], "description": "por que este fator pesa (A11)" },
+        "base": { "type": "string", "enum": ["norma", "engenharia", "preferencia"], "description": "por que este fator pesa (A11): norma (a lei obriga) · engenharia (critério técnico) · preferencia (escolha de quem decide); obrigatório" },
         "camada": { "$ref": "#/$defs/camada" },
         "extrator": { "$ref": "#/$defs/extrator" },
         "transformacao": { "$ref": "#/$defs/transformacao" },
         "peso": { "type": "number", "minimum": 0, "description": "multiplicador (ou percentual no combinador 'percentual'); escolhido pelo usuário, não medido" },
         "proxy": {
           "type": "object", "additionalProperties": false, "required": ["descricao"],
-          "properties": { "descricao": { "type": "string", "maxLength": 1000 }, "teto_peso": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.6 } },
-          "description": "o dado mede outra grandeza (proxy): declarar e limitar o peso (teto padrão 0,60 da escala)"
+          "properties": { "descricao": { "type": "string", "minLength": 1, "maxLength": 1000, "description": "que grandeza a camada mede de fato, e qual é o gatilho que se queria medir" }, "teto_peso": { "type": "number", "exclusiveMinimum": 0, "maximum": 1, "default": 0.6, "description": "fatia máxima do peso do modelo (peso do fator / soma dos pesos) que este proxy pode tomar; padrão 0,60, o mesmo TETO_PROXY do motor de linha de transmissão da casa" } },
+          "description": "o dado mede outra grandeza (proxy): declarar e limitar o peso. A API recusa (422 modelo_invalido / pesos_invalidos) o modelo ou a execução em que a fatia do peso deste fator passe do teto, com a explicação do peso que caberia"
         },
-        "classe_peso": { "type": "string", "enum": ["custo_medido", "apetite_de_risco", "consequencia_normativa"] },
-        "ancora_peso": { "type": "string", "enum": ["medida", "escolhida"] },
+        "classe_peso": { "type": "string", "enum": ["custo_medido", "apetite_de_risco", "consequencia_normativa"], "description": "de onde vem o peso (A11): custo_medido (preço publicado em R$) · apetite_de_risco (probabilidade de encrenca, decisão do cliente) · consequencia_normativa (a norma muda o rito)" },
+        "ancora_peso": { "type": "string", "enum": ["medida", "escolhida"], "description": "medida = o peso tem âncora externa; escolhida = é escolha de quem decide. Ausente conta como não declarada e o relatório nomeia o fator" },
         "nao_sustenta": { "type": "string", "maxLength": 1000, "description": "o que este fator NÃO permite concluir" }
       }
     },

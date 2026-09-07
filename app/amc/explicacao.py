@@ -26,6 +26,7 @@ import math
 from dataclasses import dataclass, field
 
 from app.amc import combinacao
+from app.amc import metadado as mod_metadado
 
 # tradução do vocabulário do modelo (esquema amc_modelo.v1, item L3-01-a) para o vocabulário do combinador
 # (app/amc/combinacao.py, item L3-01-e): as duas trilhas nomearam a mesma escolha de forma diferente.
@@ -151,6 +152,7 @@ class LinhaFator:
     presente: bool
     contribuicao: float | None
     observacao: str | None
+    metadado: dict = field(default_factory=dict)
 
     def como_dicionario(self) -> dict:
         return {
@@ -159,6 +161,9 @@ class LinhaFator:
             "cobertura_extracao": self.cobertura_extracao, "transformacao_tipo": self.transformacao_tipo,
             "favorabilidade_fator": self.favorabilidade_fator, "peso": self.peso, "presente": self.presente,
             "contribuicao": self.contribuicao, "observacao": self.observacao,
+            # item L3-15-metadado-fator: a ficha que a tela mostra no '?' do fator (fonte e versão, unidade,
+            # direção, base, proxy com teto, classe e âncora do peso, "o que não sustenta")
+            "metadado": self.metadado,
         }
 
 
@@ -177,6 +182,7 @@ class Explicacao:
     motivo_veto: str | None
     aviso_pesos: str = combinacao.AVISO_PESOS
     observacoes: list[str] = field(default_factory=list)
+    metadado: dict = field(default_factory=dict)
 
     def como_dicionario(self) -> dict:
         return {
@@ -192,6 +198,7 @@ class Explicacao:
             "vetado": self.vetado,
             "motivo_veto": self.motivo_veto,
             "observacoes": list(self.observacoes),
+            "metadado": self.metadado,
             "fatores": [f.como_dicionario() for f in self.fatores],
         }
 
@@ -220,6 +227,11 @@ def montar_explicacao(definicao: dict, pesos: dict, fatores_brutos: dict,
     linhas: list[LinhaFator] = []
     favor_vals: list[float | None] = []
     pesos_array: list[float] = []
+    # item L3-15-metadado-fator: as fichas saem do MESMO documento e dos MESMOS pesos que a conta usa, para o
+    # '?' do fator e o bloco de proxies/âncoras nunca descreverem um modelo diferente do que foi somado
+    pesos_efetivos = {f["id"]: float(pesos.get(f["id"], f["peso"])) for f in fatores_def}
+    metadado = mod_metadado.fichas(definicao, pesos_efetivos)
+    ficha_por_id = {x["fator_id"]: x for x in metadado["fatores"]}
     for f in fatores_def:
         fid = f["id"]
         bruto = fatores_brutos.get(fid)
@@ -233,7 +245,7 @@ def montar_explicacao(definicao: dict, pesos: dict, fatores_brutos: dict,
             fator_id=fid, nome=f["nome"], criterio=f.get("criterio"), fonte=f["fonte"], unidade_medida=f["unidade"],
             direcao=f["direcao"], valor_bruto=valor, cobertura_extracao=cobertura_extracao,
             transformacao_tipo=f["transformacao"]["tipo"], favorabilidade_fator=fav, peso=peso, presente=False,
-            contribuicao=None, observacao=observacao,
+            contribuicao=None, observacao=observacao, metadado=ficha_por_id.get(fid, {}),
         ))
 
     combinador_esquema = ((definicao.get("combinador") or {}).get("tipo")) or "soma_ponderada_normalizada"
@@ -301,4 +313,6 @@ def montar_explicacao(definicao: dict, pesos: dict, fatores_brutos: dict,
         cobertura_recalculada=cobertura_recalc, favorabilidade_gravada=fav_gravado,
         cobertura_gravada=cobertura_gravada, delta=delta, vetado=vetado, motivo_veto=motivo_veto,
         observacoes=observacoes,
+        metadado={k: metadado[k] for k in ("proxies", "ancoras", "fatores_sem_versao_de_fonte", "aviso_proxy",
+                                           "aviso_ancora")},
     )

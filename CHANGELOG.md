@@ -3,6 +3,36 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L3-15-metadado-fator: metadado do fator e teto de peso do proxy)
+
+`app/amc/metadado.py` reúne o que cada fator do motor multicritério carrega além da conta: `fonte` e
+`versao_fonte`, `unidade`, `direcao`, `base` (norma / engenharia / preferência), marca de `proxy` com teto de
+peso, `classe_peso` (custo medido em R$ / apetite de risco / consequência normativa), `ancora_peso` (medida /
+escolhida) e `nao_sustenta`. Os cinco últimos vêm do motor de linha de transmissão da casa
+(`rs-coop/tracado-lt/motor/pesos.py`), onde a camada de vegetação nativa mede presença declarada e não
+supressão de árvore, e por isso o peso dela para em `TETO_PROXY = 0,60`.
+
+Teto de proxy agora é regra, não texto: a fatia do peso de um fator declarado proxy (`peso_i / Σ pesos`, a
+mesma fatia que a soma ponderada normalizada usa, invariante a multiplicar todos os pesos pelo mesmo número)
+não pode passar do `teto_peso` declarado. A recusa sai 422 nos DOIS lugares onde um peso entra — no documento
+do modelo (`modelo_invalido`) e nos pesos de uma execução, que podem sobrescrever os do modelo
+(`pesos_invalidos`) — e explica: nomeia o fator, a fatia medida, o teto, o que a camada mede e qual peso
+caberia com os demais mantidos.
+
+`app.amc.relatorio.montar_relatorio(..., definicao=...)` ganha o bloco `metadado` com a ficha de cada fator, a
+lista dos proxies (descrição, teto, fatia) e a lista das âncoras (medida / escolhida / **não declarada**, que
+é uma terceira coisa e não vira "escolhida"); a explicação por unidade carrega o mesmo bloco, e a tela
+`/amc/explicacao/...` mostra a ficha no `?` de cada fator (elemento `details` nativo, sem biblioteca) e o
+cartão "proxies e âncoras". No esquema, `versao_fonte` entra como campo OPCIONAL — quem não a declara fica
+nomeado em `fatores_sem_versao_de_fonte`, o que é melhor que forçar o usuário a escrever qualquer coisa no
+campo. `fonte` e `base` seguem obrigatórios, com `fonte` de comprimento mínimo 1.
+
+Refutação (`tests/api/amc/test_metadado_api.py`): o adversário tentou salvar fator sem fonte, fator sem base,
+proxy com peso 1000 contra 0,001 dos demais, o mesmo ataque pelos pesos da execução, `teto_peso = 0` para
+esvaziar a regra, proxy sem descrição e a multiplicação de todos os pesos por 1000 — as sete recusadas ou sem
+efeito, e nada gravado. Decisão e alternativas descartadas em
+`docs/adr/20260907T1919-metadado-do-fator.md`.
+
 ## turno 3, setembro de 2026 (item L3-01-d-transformacoes: biblioteca de transformações do motor multicritério)
 
 `app/amc/transformacoes.py` (numpy, puro) implementa os 16 tipos de transformação valor bruto → favorabilidade

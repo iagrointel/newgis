@@ -14,6 +14,15 @@
   #tabela-fatores td, #tabela-fatores th { padding: .35rem .6rem; text-align: left; white-space: nowrap; }
   #tabela-fatores td.observacao, #tabela-fatores th:last-child { white-space: normal; }
   tr[data-vetado] { opacity: .6; }
+  /* item L3-15: ficha de metadado no '?' do fator — details nativo, sem biblioteca e sem janela flutuante */
+  .ficha > summary { cursor: pointer; font-weight: 600; width: 1.4rem; text-align: center; }
+  .ficha > dl { display: grid; grid-template-columns: max-content 1fr; gap: .15rem .8rem; margin: .4rem 0 0;
+                white-space: normal; max-width: 46rem; }
+  .ficha > dl dt { color: var(--fraco); }
+  .ficha > dl dd { margin: 0; }
+  .marca-proxy { font-size: .85em; border: 1px solid currentColor; border-radius: .2rem; padding: 0 .25rem;
+                 margin-left: .35rem; }
+  #proxies-lista, #ancoras-lista { margin: .25rem 0 .75rem; }
 </style>
 </head>
 <body class="tela">
@@ -37,6 +46,7 @@
         <table id="tabela-fatores">
           <thead>
             <tr>
+              <th><span aria-hidden="true">?</span><span class="sr-only">ficha do fator</span></th>
               <th>fator</th><th>fonte</th><th>valor bruto</th><th>unidade</th><th>transformação</th>
               <th>favorabilidade</th><th>peso</th><th>presente</th><th>contribuição</th><th>observação</th>
             </tr>
@@ -44,6 +54,15 @@
           <tbody id="tabela-corpo"></tbody>
         </table>
       </div>
+    </section>
+
+    <section class="cartao" id="metadado-cartao" aria-labelledby="t-metadado">
+      <h2 id="t-metadado">proxies e âncoras</h2>
+      <p class="fraco" id="aviso-proxy"></p>
+      <ul id="proxies-lista"></ul>
+      <p class="fraco" id="aviso-ancora"></p>
+      <ul id="ancoras-lista"></ul>
+      <p class="fraco" id="sem-versao"></p>
     </section>
 
     <section class="cartao" id="observacoes-cartao" aria-labelledby="t-observacoes" hidden>

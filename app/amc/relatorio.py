@@ -10,12 +10,20 @@ fator é confiável para o modelo inteiro".
 
 A política de dado ausente e o aviso de que os pesos são escolha do usuário (nunca medição) são
 sempre incluídos e nunca dependem de o chamador lembrar de pedir.
+
+Item L3-15-metadado-fator: quando o chamador passa a `definicao` do modelo, o relatório ganha o bloco
+`metadado` (`app.amc.metadado.fichas`) com a ficha de cada fator, a lista dos fatores declarados PROXY (com
+teto de peso e a fatia que cada um toma) e a lista das ÂNCORAS de peso (medida / escolhida / não declarada).
+Essas duas listas não são opcionais quando há definição: um relatório que mostra a nota sem dizer quais
+fatores medem grandeza diferente do gatilho e quais pesos são escolha, e não medida, apresenta preferência
+como medição.
 """
 
 from __future__ import annotations
 
 from app.amc import cobertura as mod_cobertura
 from app.amc import combinacao as mod_combinacao
+from app.amc import metadado as mod_metadado
 
 
 def montar_relatorio(
@@ -30,6 +38,8 @@ def montar_relatorio(
     gama: float = 0.5,
     fracao_vetada=None,
     motivo_veto=None,
+    definicao=None,
+    pesos_por_id=None,
 ) -> dict:
     """Executa a combinação e a cobertura por fator sobre a MESMA matriz e devolve um dicionário
     pronto para serializar (API, PDF, explicação por unidade): `resultado` (saída de `combinacao`),
@@ -61,7 +71,7 @@ def montar_relatorio(
     else:
         aviso = f"todos os {len(ids)} fatores estão com cobertura de unidades >= {limiar_cobertura:.0%}"
 
-    return {
+    saida = {
         "ids_fatores": list(ids),
         "politica_ausente": politica_ausente,
         "politica_ausente_descricao": mod_combinacao.POLITICAS_AUSENTE[politica_ausente],
@@ -71,3 +81,6 @@ def montar_relatorio(
         "aviso_cobertura": aviso,
         "resultado": resultado.como_dicionario(),
     }
+    if definicao is not None:
+        saida["metadado"] = mod_metadado.fichas(definicao, pesos_por_id)
+    return saida
