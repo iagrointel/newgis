@@ -64,7 +64,7 @@ def test_campo_servidor_vem_da_tabela_companheira_nao_do_tile(sessao_a, camada_p
     assert r2.json()["campos_servidor"]["nota_servidor"]["bruto"] is None
 
 
-def test_expressao_de_area_bate_com_st_area_geografica(sessao_a, conexao_plat_app, camada_area):
+def test_expressao_de_area_bate_com_st_area_geografica(sessao_a, conexao_plat_app, camada_area, medida):
     """5 feições: a expressão `$area_m2 / 10000` do popup contra ST_Area(geography(geom))/10000 medido
     direto no banco (mesma fórmula que a rota usa) — tolerância 0,1% (a cláusula literal do portão)."""
     with conexao_plat_app.cursor() as cur:
@@ -82,12 +82,19 @@ def test_expressao_de_area_bate_com_st_area_geografica(sessao_a, conexao_plat_ap
                     f'FROM "{linha["esquema"]}"."{linha["tabela"]}" ORDER BY fid LIMIT 5')
         esperado = {r["fid"]: r["ha"] for r in cur.fetchall()}
     assert len(esperado) == 5
+    erros = {}
     for fid, ha_esperado in esperado.items():
         r = sessao_a.get(f"/api/camadas/{camada_area['id']}/feicoes/{fid}/popup")
         assert r.status_code == 200, r.text
         ha_obtido = r.json()["expressoes"]["area_ha"]["bruto"]
         erro_relativo = abs(ha_obtido - ha_esperado) / ha_esperado
+        erros[fid] = erro_relativo
         assert erro_relativo < 0.001, (fid, ha_obtido, ha_esperado, erro_relativo)
+    medida("L2-01-d-popup-runtime")(
+        "expressao_area_vs_st_area",
+        {"feicoes": len(erros), "erro_relativo_maximo": max(erros.values()), "tolerancia": 0.001},
+        "erro relativo (adimensional)",
+        "pytest tests/api/test_mapa_popup_api.py::test_expressao_de_area_bate_com_st_area_geografica -q")
 
 
 def test_camada_de_outro_inquilino_e_404(sessao_b, camada_pontos):

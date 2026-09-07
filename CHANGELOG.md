@@ -3,6 +3,34 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L2-01-d-popup-runtime: popup em tempo de execução, do clique ao valor formatado)
+
+O motor que desenha o popup do visualizador e a configuração mínima que o governa (`plat.item.dados.popup`).
+
+- **Configuração da camada** (`app/mapa/popup.py::normalizar`): título com `{campo}`, lista de campos com
+  nome de exibição e formato (número com casas e separador pt-BR, moeda, data no fuso do inquilino, URL
+  clicável, imagem por URL), campo marcado `servidor` e expressões. Camada sem configuração continua
+  mostrando todos os campos como texto — o item acrescenta formato, nunca tira o popup de quem não
+  configurou.
+- **`GET /api/camadas/{id}/feicoes/{fid}/popup`**: devolve só o que o cliente não tem — campos que o tile
+  não carrega (tabela companheira `<tabela>_x`, por `fid`) e expressões avaliadas no servidor pelo núcleo
+  do item L2-10-c, com `$area_m2`/`$perimetro_m2` de `ST_Area`/`ST_Perimeter` geográficos no contexto.
+  Camada de outro inquilino e feição inexistente respondem 404.
+- **Tela**: paginação "i de N" entre feições coincidentes, campo nulo como travessão, zoom para a feição,
+  e painel acoplado na parte de baixo em tela estreita (390 px) no lugar do popup flutuante.
+- Medido: p95 da consulta ao servidor **8,38 ms** com carga 7,24 e 8,01 GB livres (alvo do portão: 100 ms);
+  expressão de área contra `ST_Area` geográfica em 5 feições. Detalhe em
+  `tests/medidas/L2-01-d-popup-runtime.json`, que também registra a ressalva: o erro é zero por construção,
+  porque a expressão recebe a área da MESMA chamada PostGIS — o teste prova o encanamento, não um cálculo
+  de área independente.
+- Dois defeitos reais achados ao rodar o e2e no navegador: recursão infinita entre a árvore de camadas e
+  `Catalogo.reordenar` (o catálogo avisava mesmo sem mudança de ordem, inclusive com nenhuma camada ligada)
+  deixava a tela do mapa inteira sem árvore; e o botão de fechar do MapLibre cobria o botão "próxima
+  feição" do paginador. Os dois corrigidos.
+- Fora do item, com motivo escrito: anexos (não há armazenamento por feição), registros relacionados
+  (L2-10-b pendente), valor de pixel de raster (L1-02-h pendente) e as ações "selecionar"/"editar"
+  (L2-01-h/L2-03 fora desta linhagem).
+
 ## turno 4, setembro de 2026 (item L2-01-mapa-web: visualizador de mapa próprio, do Martin à impressão)
 
 Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava chegar a `master`.
