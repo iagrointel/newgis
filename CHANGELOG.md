@@ -3,6 +3,56 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L0-09-b-editor-iso-mgb: editor de metadado no Perfil MGB 2.0 da INDE)
+
+Editor completo sobre `app/catalogo/metadado_mgb.py`, em cima do que `L0-09-metadado-catalogo` já tinha
+(exportação ISO 19139/GMD somente-leitura): três rotas novas, `GET /api/itens/{id}/metadado` (leitura +
+faltantes essencial/completo + avisos), `POST /api/itens/{id}/metadado/validar` (valida um rascunho sem
+gravar — o botão "Validar" do editor) e `PUT /api/itens/{id}/metadado` (grava). Migração
+`20260907T0148_metadado_mgb.sql` acrescenta `plat.item.metadado_iso` (jsonb) só para a parte PRÓPRIA do
+metadado (contato, licença, extensão temporal/espacial declarada, sistema de referência, manutenção,
+formato de distribuição); título, resumo, palavras-chave, créditos e termos de uso continuam em
+`plat.item` e são computados AO VIVO a cada leitura — nunca duplicados, ao contrário do "Title" independente
+do ArcGIS. Mudar o título pelo editor de metadado passa pelo MESMO núcleo do PUT/PATCH de item
+(`rotas_itens.editar_item`); mudar o título pela Visão geral aparece no editor de metadado na próxima
+leitura, porque os dois leem a mesma coluna (prova: `test_titulo_sincronizado_editor_muda_item_e_vice_versa`).
+
+Linhagem (`qualidade_linhagem`) é sempre computada, nunca digitada: de `dados.procedencia` (quando o item
+tiver, formato do item L0-09-a-procedencia) e do histórico de `plat.evento` do próprio item (criação,
+atualização de dados) — não existe campo de texto livre para "processo" no editor. Estilo de apresentação
+por inquilino (`plat.tenant.config.estilo_metadado`: `mgb2` padrão, `iso19115_3`, `dublin_core`) muda só
+rótulo/agrupamento da MESMA leitura — armazenamento único nos três estilos, provado por
+`test_estilo_muda_so_apresentacao_armazenamento_e_um_so`.
+
+Refutação do item, as três provadas: metadado de 5 MB (limite declarado 1 MiB) → `422 metadado_grande`;
+`extensao.temporal.fim` antes de `.inicio` → `422 metadado_invalido` com o caminho exato do campo; e
+`extensao.espacial` declarada divergindo do extent real do item → **aviso, nunca bloqueio** (`avisos` na
+resposta, `PUT` continua `200`). 11 testes próprios verdes em
+`tests/api/catalogo/test_metadado_mgb.py` (`tests/medidas/L0-09-b-editor-iso-mgb.json` lista cláusula por
+cláusula do portão de pronto → prova).
+
+Editor em abas no front (`web/js/catalogo/item_metadado.js`, ligado na aba nova "Metadado" do painel do
+item, `web/js/catalogo/item.js`): campos essenciais e completos, botão Validar (lista de faltantes sem
+gravar) e Salvar, bloco de linhagem só leitura. `docs/PARIDADE.md` ganhou a comparação campo a campo com a
+aba **Metadata** do ArcGIS Enterprise Portal 11.4 (estilos, Validate, XML, Overwrite, Synchronize):
+`Overwrite` (importar XML de terceiro) fica `fora` (nenhum item pede isto ainda); a exportação do metadado
+no pacote do inquilino fica `fora` porque **`L0-06-d-exportar-inquilino` não existe no repositório** — a
+cláusula do portão que dependia dele está registrada como pendência real, não fingida (ADR
+`docs/adr/20260907T0148-metadado-iso-mgb.md`, decisão 5).
+
+**Pendências nomeadas**: XML de exportação (`metadado.xml`) ainda não inclui a parte própria nova
+(`metadado_iso`) — fica para quando a saída for revisada junto com `L0-06-d`; `L0-09-a-procedencia`
+(commit `ac4dbce`) não estava mesclado em `master` quando este worktree nasceu, então a linhagem foi
+provada com `dados.procedencia` sintético do mesmo formato, não com uma camada importada de verdade; e2e
+de navegador da aba nova fica para o próximo turno (sem tempo de trilha para levantar Playwright contra
+`uvicorn` isolado nesta rodada — ver handoff).
+
+### Commits
+
+| sha | mensagem |
+|---|---|
+| (este) | Editor de metadado no Perfil MGB 2.0 da INDE, abas essencial/completo (item L0-09-b-editor-iso-mgb) |
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

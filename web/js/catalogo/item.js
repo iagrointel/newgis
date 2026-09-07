@@ -16,6 +16,7 @@ import { abrirCompartilhar } from './item_compartilhar.js';
 import { abrirTransferencia } from './item_transferir.js';
 import * as versoes from './item_versoes.js';
 import * as relacoes from './item_relacoes.js';
+import * as metadadoMgb from './item_metadado.js';
 import { seletorPasta, caminhoDe } from './pastas.js';
 
 let item = null;
@@ -148,7 +149,7 @@ function botaoCompartilhar() {
 }
 
 /* ---------- abas ---------- */
-const ABAS = [['visao', 'catalogo.aba_visao'], ['dados', 'catalogo.aba_dados'], ['config', 'catalogo.aba_config'], ['versoes', 'catalogo.versoes'], ['relacoes', 'catalogo.aba_relacoes'], ['compartilhamento', 'catalogo.aba_compartilhamento']];
+const ABAS = [['visao', 'catalogo.aba_visao'], ['dados', 'catalogo.aba_dados'], ['metadado', 'catalogo.aba_metadado'], ['config', 'catalogo.aba_config'], ['versoes', 'catalogo.versoes'], ['relacoes', 'catalogo.aba_relacoes'], ['compartilhamento', 'catalogo.aba_compartilhamento']];
 
 function render() {
   const d = painel();
@@ -163,7 +164,7 @@ function render() {
     abas.append(b);
   }
   const conteudo = h('div', { role: 'tabpanel', id: `item-painel-${aba}`, 'aria-labelledby': `item-aba-${aba}` });
-  conteudo.append({ visao: abaVisao, dados: abaDados, config: abaConfig, versoes: () => versoes.montar(item, { aoMudar: (novo) => { mudou(novo); } }), relacoes: () => relacoes.montar(item, { abrir: (id) => abrir(id) }), compartilhamento: abaCompartilhamento }[aba]());
+  conteudo.append({ visao: abaVisao, dados: abaDados, metadado: () => metadadoMgb.montar(item, { aoMudou: (novo) => { mudou(novo); } }), config: abaConfig, versoes: () => versoes.montar(item, { aoMudar: (novo) => { mudou(novo); } }), relacoes: () => relacoes.montar(item, { abrir: (id) => abrir(id) }), compartilhamento: abaCompartilhamento }[aba]());
   paineis.append(abas, conteudo);
   corpo.append(paineis);
   limpar(d.corpo);

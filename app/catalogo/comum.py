@@ -42,7 +42,7 @@ for _k, _v in ERROS_DO_BANCO_CATALOGO.items():
 SQL_ITEM = """
 SELECT i.id, i.tenant_id, i.tipo, t.familia, t.abre_em, i.titulo, i.resumo, i.descricao, i.descricao_html, i.tags,
        i.creditos, i.termos_de_uso, i.termos_de_uso_html, i.dono_id, i.pasta_id, i.extent_origem, i.miniatura_chave,
-       i.miniatura_sha256, i.dados, i.acesso, i.status, i.protegido, i.classificacao,
+       i.miniatura_sha256, i.dados, i.metadado_iso, i.acesso, i.status, i.protegido, i.classificacao,
        i.categorias::text[] AS categorias,
        i.origem, i.url,
        i.tamanho_bytes, i.versao_atual, i.versao_publicada, i.pontuacao, i.criado_por, i.criado_em, i.modificado_por,
@@ -94,7 +94,10 @@ SQL_ITEM_LISTA = (
         "i.resumo, NULL::text AS descricao, NULL::text AS descricao_html, i.tags,\n       i.creditos, "
         "NULL::text AS termos_de_uso, NULL::text AS termos_de_uso_html, i.dono_id,",
     )
-    .replace("i.miniatura_sha256, i.dados, i.acesso,", "i.miniatura_sha256, NULL::jsonb AS dados, i.acesso,")
+    .replace(
+        "i.miniatura_sha256, i.dados, i.metadado_iso, i.acesso,",
+        "i.miniatura_sha256, NULL::jsonb AS dados, NULL::jsonb AS metadado_iso, i.acesso,",
+    )
 )
 
 

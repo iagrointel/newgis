@@ -52,6 +52,7 @@ ITEM_CREDITOS_MAX = 2048
 ITEM_TAGS_MAX = 50
 TAG_MAX = 128
 ITEM_CATEGORIAS_MAX = 20
+METADADO_ISO_BYTES_MAX = 1 * 1024 * 1024  # item L0-09-b-editor-iso-mgb: refutação exige recusar 5 MB (limite 1 MB)
 CATEGORIAS_POR_INQUILINO = (200, 50, 900)  # (padrão, mínimo, máximo) em tenant.config.catalogo.categorias_max
 CATEGORIA_NIVEIS = 3
 CATEGORIA_NOME_MAX = 100

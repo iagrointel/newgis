@@ -84,6 +84,11 @@ export const lote = (corpo) => chamar('POST', '/api/itens/lote', corpo);
 export const mover = (itemId, pastaId) => chamar('POST', `${I(itemId)}/mover`, { pasta_id: pastaId || null });
 export const transferir = (corpo) => chamar('POST', '/api/itens/transferir', corpo);
 
+/* metadado ISO/MGB 2.0 (item L0-09-b-editor-iso-mgb) */
+export const metadadoObter = (itemId, estilo) => chamar('GET', `${I(itemId)}/metadado${consulta({ estilo })}`);
+export const metadadoValidar = (itemId, corpo) => chamar('POST', `${I(itemId)}/metadado/validar`, corpo);
+export const metadadoSalvar = (itemId, corpo) => chamar('PUT', `${I(itemId)}/metadado`, corpo);
+
 /* miniatura */
 export const miniaturaUrl = (itemId) => `${I(itemId)}/miniatura`;
 /* miniatura em JSON base64 {conteudo, nome}: a escrita sob cookie exige application/json (ADR 0002 5.3); multipart entra com o L0-11 */
