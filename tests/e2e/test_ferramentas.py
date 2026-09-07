@@ -57,7 +57,7 @@ def test_formulario_roda_buffer_e_ficha_mostra_proveniencia(page, base_url, cred
     page.wait_for_selector("body[data-pronto='1']", timeout=20000)
     page.wait_for_selector("[data-campo='proveniencia'] .proveniencia", timeout=20000)
     texto = page.text_content("[data-campo='proveniencia']")
-    assert "buffer v1" in texto and "75" in texto and c["id"] in texto and "sha256" in texto
+    assert "buffer v2" in texto and "75" in texto and c["id"] in texto and "sha256" in texto
     assert page.locator(f"[data-campo='proveniencia'] a[href='/conteudo/{c['id']}']").count() == 1
     CAPTURAS.mkdir(parents=True, exist_ok=True)
     page.locator("[data-campo='proveniencia']").scroll_into_view_if_needed()

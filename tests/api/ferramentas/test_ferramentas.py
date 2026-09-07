@@ -91,7 +91,7 @@ def test_buffer_por_api_propria_gpserver_execute_e_submitjob_dao_o_mesmo_resulta
     # proveniência gravada e conferível: sha256 da entrada recalculado por SQL independente
     item = _resultado(sessao_a, api_["item_id"])
     prov = item["dados"]["procedencia"]["ferramenta"]
-    assert prov["ferramenta"] == "buffer" and prov["versao"] == 1
+    assert prov["ferramenta"] == "buffer" and prov["versao"] == 2
     assert prov["parametros"]["distancia"]["metros"] == 50.0
     assert prov["autor"]["login"] == "admin" and prov["executada_em"]
     entrada = prov["entradas"][0]
