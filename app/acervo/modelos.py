@@ -31,6 +31,9 @@ class AcervoCartao(Saida):
     proxima_verificacao: str | None = None
     risco_pii: bool = False
     risco_pii_motivo: str | None = None
+    # item L6-01-c-tela-acervo: tipo do vocabulário fechado do L6-01-g (plat.acervo_licenca), quando a fonte
+    # já foi curada por HTTP; None quando só existe o texto livre de `licenca` (nunca inferido do texto).
+    licenca_curada_tipo: str | None = None
 
 
 class AcervoEndpoint(Saida):
