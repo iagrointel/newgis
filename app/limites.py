@@ -222,3 +222,8 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+# --- ferramentas de análise (L2-05-a; L2_CONCEITO C8): job por padrão, síncrono só abaixo do custo declarado
+FERRAMENTA_SINCRONO_CUSTO_MAX = 5000       # custo = feições × complexidade declarada no manifesto; acima disso só job
+FERRAMENTA_JOB_MEMORIA_MB = 1024            # RLIMIT_DATA do filho que roda uma ferramenta
+FERRAMENTA_JOB_TIMEOUT_S = 1800             # 30 min por execução; ferramenta mais longa é outro tipo de job
+BUFFER_DISTANCIA_M_MAX = 100_000            # 100 km: acima disso o buffer geodésico deixa de fazer sentido em camada
