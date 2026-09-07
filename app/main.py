@@ -41,6 +41,7 @@ from app.catalogo import (
 from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.estatistica.rotas import router as rotas_estatistica
+from app.estilos import rotas as rotas_estilos
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
@@ -51,8 +52,8 @@ from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
-from app.tiles.rotas import router as rotas_tiles
 from app.simbolos.rotas import router as rotas_simbolos
+from app.tiles.rotas import router as rotas_tiles
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 
@@ -145,6 +146,8 @@ ROUTERS = [
     # --- símbolos, sprites e glifos (L2-02-e): /api/simbolos (galeria + upload), /api/simbolos/sprite/{slug}
     # (.json/.png, 1x e 2x), /api/simbolos/fontes/{fontstack}/{faixa}.pbf
     rotas_simbolos,
+    # --- editor de estilo (L2-02-c): POST /api/estilos/compilar (pré-visualização pela mesma função que grava)
+    rotas_estilos.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
