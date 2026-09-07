@@ -13,13 +13,12 @@ import time
 
 import psycopg2
 import psycopg2.extras
-
-from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 import pytest
 
 from app.jobs import agenda as mod_agenda
 from app.jobs import tipos as _tipos  # noqa: F401 — importação agrega catalogo.* a PERIODICOS
 from app.jobs.periodicos import PERIODICOS
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 from tests.api.jobs.conftest import esperar
 from tests.api.jobs.test_jobs_agenda import _apagar
 

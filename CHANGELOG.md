@@ -3,6 +3,40 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
+
+Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
+medição honesta achou nela. `PLAT_DSN`, `PLAT_GARAGE_ADMIN_TOKEN` e `PLAT_SECRET_ANTERIOR` saíram do
+`.env` para `/etc/plat/segredos` (root 0600) entregues por `LoadCredential=` do systemd — o `.env` fica
+só com configuração, e o Makefile injeta os segredos no pytest (a falta de `PLAT_DSN` na injeção tinha
+deixado a suíte vermelha na coleta desde 06/09 à noite). `scripts/plat segredo rotacionar <nome>`
+rotaciona os 5 segredos: PLAT_SECRET com dupla-chave (o valor antigo vira `PLAT_SECRET_ANTERIOR` por 24
+h, sessões sobrevivem), PLAT_DSN e PLAT_DSN_WORKER com `ALTER ROLE` + reinício das consumidoras,
+PLAT_GARAGE_ADMIN_TOKEN com restart do Garage + API, e a chave S3 de um inquilino sem reiniciar nada.
+Em todos, o valor antigo deixa de autenticar (prova por `psycopg2.connect` com a senha velha depois da
+rotação). A cláusula "0 erro 5xx durante a rotação" é medida pelo **k6** (v2.2.0,
+`scripts/k6_saude_5xx.js`, martelo externo ao processo medido): 0 respostas 5xx em 276-762 requisições
+por rotação (`tests/medidas/L7-19.json`). Chegar ao zero exigiu trocar o mecanismo depois de duas
+medições ruins: "restart em cadeia" deixou 57 respostas 500 na janela entre o `ALTER ROLE` e o restart
+da segunda unidade, e "parar tudo antes" deixou 1.334, porque com ativação por soquete a própria
+conexão do cliente religa o serviço com a credencial velha (e `mask --runtime` não impede a religação
+de unidade estática, medido em spike). O mecanismo final é uma janela `trust` de segundos no pg_hba
+(só a role, só 127.0.0.1, linha marcada, removida por `finally`): velho e novo autenticam durante a
+troca, e a senha velha morre quando a janela fecha. A API passa a subir por ativação por soquete
+(`deploy/plat-api.socket`, uvicorn `--fd 3` com 2 workers — spike medido: conexão durante o stop
+espera ~1 s e recebe 200, nunca refused/502). O adversário independente refutou a primeira versão e os achados que eram do item viraram conserto
+neste mesmo turno: a janela trust abre dentro do `try` (linha nunca fica para trás no pg_hba, checado a
+cada prova), a rotação de PLAT_SECRET reinicia também o worker (ele carrega a chave uma vez na subida e
+decifra dentro de jobs), e o ANTERIOR expira de verdade — timer `plat-segredo-expira.timer` esvazia o
+arquivo e reinicia API e worker na virada das 24 h (janela efetiva 24 h-24 h 59 min). Os achados que são
+contaminação do ambiente ANTERIOR ao item (segredos reais semeados no journal por comandos de outras
+operações; `.env` de worktrees de trilha com valores reais, um deles modo 664; segredos em
+`/proc/<pid>/environ` de processos de trilha) ficaram registrados em `refutacao.json` e viraram itens
+próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo: unidades plat-* só veem os
+segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
+Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
+garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
