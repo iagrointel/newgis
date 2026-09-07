@@ -48,7 +48,7 @@ def mapa(page, base_url, credenciais_demo, martin_no_ar):
 def _clicar_no_ponto_coincidente(page):
     """Os fid 1/2/3 da bancada (scripts/mapa_demo_popup.py) estão na MESMA coordenada exata
     (-46.633, -23.55); aproxima até um pixel e clica no centro do mapa."""
-    _ligar(page, "mapa-popup (", enquadrar=False)
+    _ligar(page, "^mapa-popup ", enquadrar=False)  # âncora: casa a camada de pontos, nunca a "mapa-popup-area"
     page.evaluate("""() => {
       const m = window.plat.mapa;
       m.map.jumpTo({ center: [-46.633, -23.55], zoom: 16 });
@@ -58,51 +58,72 @@ def _clicar_no_ponto_coincidente(page):
     page.mouse.click(caixa["x"] + caixa["width"] / 2, caixa["y"] + caixa["height"] / 2)
 
 
+def _texto_do_pager(page):
+    return page.locator(".popup-pager-texto").inner_text().strip()
+
+
+def _ir_para_pagina(page, n: int):
+    """Anda para a página `n` do paginador clicando em "próxima feição". A ORDEM em que as feições
+    coincidentes aparecem vem de `queryRenderedFeatures` do MapLibre, que não promete ordem de fid —
+    por isso o teste anda por posição e lê o que há, nunca supõe qual fid está em qual página."""
+    while True:
+        atual = int(_texto_do_pager(page).split(" de ")[0])
+        if atual == n:
+            return
+        page.locator('.popup-pager button[aria-label="próxima feição"]').click()
+        page.wait_for_function(
+            "(alvo) => document.querySelector('.popup-pager-texto').textContent.trim() !== alvo",
+            arg=f"{atual} de 3")
+
+
+def _celula(page, campo: str) -> str:
+    return page.locator(f'.popup-tabela tr[data-campo="{campo}"] td').inner_text().strip()
+
+
 def test_paginacao_entre_tres_feicoes_coincidentes(mapa, page):
+    """Cláusula: clique em ponto com 3 feições coincidentes mostra "1 de 3" e navega."""
     _clicar_no_ponto_coincidente(page)
     page.wait_for_selector(".popup-plat .popup-pager", timeout=10000)
-    assert page.locator(".popup-pager-texto").inner_text().strip() == "1 de 3"
-    # navega: próxima feição muda o texto do título (nomes diferentes na bancada)
-    titulo1 = page.locator(".popup-conteudo h3").inner_text()
-    page.locator('.popup-pager button[aria-label="próxima feição"]').click()
-    page.wait_for_function(
-        "(t0) => document.querySelector('.popup-pager-texto').textContent.trim() === '2 de 3'", titulo1)
-    titulo2 = page.locator(".popup-conteudo h3").inner_text()
-    assert titulo1 != titulo2
-    page.locator('.popup-pager button[aria-label="próxima feição"]').click()
-    page.wait_for_function(
-        "() => document.querySelector('.popup-pager-texto').textContent.trim() === '3 de 3'")
+    assert _texto_do_pager(page) == "1 de 3"
+    titulos = []
+    for n in (1, 2, 3):
+        _ir_para_pagina(page, n)
+        assert _texto_do_pager(page) == f"{n} de 3"
+        titulos.append(page.locator(".popup-conteudo h3").inner_text())
+    # três feições distintas: pelo menos dois títulos diferentes entre si (uma delas tem nome nulo)
+    assert len(set(titulos)) > 1, titulos
     mapa.verificar()
 
 
 def test_campo_nulo_numero_grande_e_texto_bruto_nunca_executa(mapa, page):
-    _clicar_no_ponto_coincidente(page)
-    page.wait_for_selector(".popup-plat .popup-tabela", timeout=10000)
-    # fid 3 (a terceira do trio coincidente) tem TODO campo nulo, exceto data_evento_ms
-    for _ in range(2):
-        page.locator('.popup-pager button[aria-label="próxima feição"]').click()
-        page.wait_for_timeout(150)
-    nome_row = page.locator('.popup-tabela tr[data-campo="nome"]')
-    assert nome_row.locator("td").inner_text().strip() == "—"
-    assert "null" not in page.locator(".popup-conteudo").inner_text().lower()
-    assert "undefined" not in page.locator(".popup-conteudo").inner_text().lower()
-
-    # volta para o fid 1 (valor_numero = 1234567.891, configurado com 2 casas)
-    page.locator('.popup-pager button[aria-label="feição anterior"]').click()
-    page.locator('.popup-pager button[aria-label="feição anterior"]').click()
-    page.wait_for_function("() => document.querySelector('.popup-pager-texto').textContent.trim() === '1 de 3'")
-    valor = page.locator('.popup-tabela tr[data-campo="valor_numero"] td').inner_text().strip()
-    assert valor == "1.234.567,89", valor
-
-    # fid 2 tem o campo com <script> — precisa aparecer como TEXTO na tabela, nunca executar
+    """Cláusulas: campo nulo aparece como "—" (nunca "null"/"undefined"); 1234567.891 vira
+    "1.234.567,89" com 2 decimais configuradas; e a refutação do item — texto com HTML e script
+    aparece como TEXTO, nunca vira elemento nem dispara alert()."""
     dialogos = []
     page.on("dialog", lambda d: (dialogos.append(d.message), d.dismiss()))
-    page.locator('.popup-pager button[aria-label="próxima feição"]').click()
-    page.wait_for_function("() => document.querySelector('.popup-pager-texto').textContent.trim() === '2 de 3'")
-    texto_obs = page.locator('.popup-tabela tr[data-campo="obs_bruta"] td').inner_text()
-    assert "<script>" in texto_obs  # o texto CRU aparece na tela...
-    assert page.locator(".popup-tabela script").count() == 0  # ...mas nunca vira um elemento <script>
-    assert dialogos == [], dialogos  # e nunca dispara alert()
+    _clicar_no_ponto_coincidente(page)
+    page.wait_for_selector(".popup-plat .popup-tabela", timeout=10000)
+
+    nomes, valores, observacoes = [], [], []
+    for n in (1, 2, 3):
+        _ir_para_pagina(page, n)
+        page.wait_for_selector(".popup-plat .popup-tabela", timeout=10000)
+        nomes.append(_celula(page, "nome"))
+        valores.append(_celula(page, "valor_numero"))
+        observacoes.append(_celula(page, "obs_bruta"))
+        conteudo = page.locator(".popup-conteudo").inner_text().lower()
+        assert "null" not in conteudo, (n, conteudo)
+        assert "undefined" not in conteudo, (n, conteudo)
+
+    # a feição de nome nulo da bancada aparece como travessão, nunca vazia nem "null"
+    assert "—" in nomes, nomes
+    # a feição com valor_numero = 1234567.891 e 2 casas configuradas
+    assert "1.234.567,89" in valores, valores
+    # o texto cru com marcação aparece como TEXTO...
+    assert any("<script>" in o for o in observacoes), observacoes
+    # ...e nunca vira elemento de script nem dispara diálogo
+    assert page.locator(".popup-tabela script").count() == 0
+    assert dialogos == [], dialogos
     mapa.verificar()
 
 
@@ -155,12 +176,12 @@ def test_painel_acoplado_em_viewport_estreito(mapa, page):
     CAPTURAS.mkdir(parents=True, exist_ok=True)
     page.screenshot(path=str(CAPTURAS / "L2-01-d-popup-runtime_painel_acoplado.png"))
     page.locator(".popup-dock-fechar").click()
-    page.wait_for_selector("#popup-dock[hidden]", timeout=5000)
+    page.wait_for_selector("#popup-dock[hidden]", state="attached", timeout=5000)  # elemento oculto nunca fica "visível"
     mapa.verificar()
 
 
 def test_cinquenta_cliques_rapidos_sem_consulta_pendurada(mapa, page):
-    _ligar(page, "mapa-popup (", enquadrar=False)
+    _ligar(page, "^mapa-popup ", enquadrar=False)  # âncora: casa a camada de pontos, nunca a "mapa-popup-area"
     page.evaluate("() => window.plat.mapa.map.jumpTo({ center: [-46.633, -23.55], zoom: 16 })")
     _esperar_feicoes(page, 30000)
     caixa = page.locator("#mapa").bounding_box()

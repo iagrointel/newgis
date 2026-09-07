@@ -7,7 +7,10 @@ L2-01-mapa-web (`mapa_demo_camadas.py`) não cobre porque ela é da tela, não d
      paginação "1 de 3" entre feições coincidentes. Campos com todo tipo de formato do portão: número
      grande com casas configuradas, data (convenção de milissegundos desde a época — a mesma do item
      L2-10-c, `docs/EXPRESSAO.md`), moeda, URL, imagem, e um campo com HTML/script bruto (a refutação do
-     item: tem de aparecer como TEXTO). Campo nulo em 1 de cada 5. Uma tabela COMPANHEIRA
+     item: tem de aparecer como TEXTO). Campo nulo em 1 de cada 5. O campo de IMAGEM aponta para um
+     arquivo que a própria aplicação serve (/static/favicon.svg): endereço inventado não resolve no
+     navegador do e2e e vira erro de console, o que reprovaria a conferência de console da tela sem
+     nada dizer sobre o popup. Uma tabela COMPANHEIRA
      (`<tabela>_x`) guarda um campo que o MVT nunca carrega — a rota do popup faz o JOIN só quando o
      cliente pede aquela feição, o "consulta ao servidor por fid para campos não incluídos no tile" da
      hipótese do item.
@@ -94,7 +97,7 @@ def criar():
                 f'INSERT INTO "d_demo"."{t}" (nome, valor_numero, data_evento_ms, preco, site, foto, '
                 f'obs_bruta, geom) VALUES '
                 f"('coincidente 1', %s, %s, 199.9, 'https://exemplo.iagrointel.com/ficha/1', "
-                f"'https://exemplo.iagrointel.com/imagem/1.jpg', "
+                f"'/static/favicon.svg', "
                 f"'texto normal, sem marcação', ST_SetSRID(ST_MakePoint(-46.633, -23.55), 4326)), "
                 f"('coincidente 2', 50.5, %s, 10.0, NULL, NULL, "
                 f"'<script>alert(1)</script> nunca deve executar', "
@@ -111,7 +114,7 @@ def criar():
                 f"{DATA_EVENTO_MS} + g::bigint * 86400000, "
                 f"round((random() * 500)::numeric, 2)::double precision, "
                 f"'https://exemplo.iagrointel.com/ficha/' || g, "
-                f"'https://exemplo.iagrointel.com/imagem/' || g || '.jpg', "
+                f"'/static/favicon.svg', "
                 f"'observação ' || g, "
                 f"ST_SetSRID(ST_MakePoint(-60.0 + (g % 30) * 0.5, -25.0 + (g % 20) * 0.5), 4326) "
                 f"FROM generate_series(1, 27) g")

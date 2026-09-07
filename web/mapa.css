@@ -151,6 +151,9 @@ body.mapa .popup-mais { margin: 0; font-size: .75rem; color: var(--fraco); }
 
 /* paginação entre feições coincidentes ("i de N") */
 body.mapa .popup-pager { display: flex; align-items: center; justify-content: space-between; gap: var(--e2); margin-bottom: .35rem; }
+/* o botão de fechar do MapLibre é posicionado por cima do canto superior direito do conteúdo; sem esta
+   folga ele cobre o botão "próxima feição" do paginador e o clique nunca chega ao paginador. */
+body.mapa .popup-plat .popup-pager { padding-right: 1.5rem; }
 body.mapa .popup-pager-texto { font-size: .75rem; color: var(--fraco); font-family: var(--mono); }
 body.mapa .popup-acoes { margin-top: .35rem; display: flex; gap: var(--e2); }
 
