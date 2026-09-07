@@ -693,6 +693,21 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("DELETE", "/api/org/logo"): Caso(
         lambda p: "/api/org/logo", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # ---- L4-01-b-topologia-derivada: alcance, áreas sujas e applyEdits sobre rede de B = 404
+    ("GET", "/api/rede/{rede_id}/topologia/alcance"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/alcance?no=1",
+    ),
+    ("GET", "/api/rede/{rede_id}/topologia/areas-sujas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/areas-sujas",
+    ),
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos/applyEdits",
+        lambda p: {"adds": [], "updates": [], "deletes": []},
+    ),
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas/applyEdits"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas/applyEdits",
+        lambda p: {"adds": [], "updates": [], "deletes": []},
+    ),
 }
 
 

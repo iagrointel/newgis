@@ -104,4 +104,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/org"): ["org/configurar"],
     ("POST", "/api/org/logo"): ["org/logo_enviar"],
     ("DELETE", "/api/org/logo"): ["org/logo_remover"],
+    # ---- L4-01-b-topologia-derivada: eventos registrados pelas rotas (vocabulário em db/migracoes da rede)
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): ["redes/feicao_editar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas/applyEdits"): ["redes/feicao_editar"],
 }
