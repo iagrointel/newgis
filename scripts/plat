@@ -1,23 +1,12 @@
 #!/usr/bin/env bash
-# CLI do plat (item L7-19-segredos-e-certificados). Hoje só `segredo rotacionar`; outros subcomandos
-# entram aqui conforme nascerem (nunca um script novo por comando — um só ponto de entrada).
+# `plat` — ponto de entrada ÚNICO da linha de comando de administração (item L0-14-cli-admin).
+# O código vive em app/cli/; este arquivo só escolhe o interpretador da venv do projeto (nunca o do
+# sistema) e repassa os argumentos. `venv/bin/plat` é um vínculo simbólico para cá, criado pelo install.sh.
 #
-# Uso: sudo scripts/plat segredo rotacionar <NOME> [opções de scripts/segredo_rotacionar.py]
+# Uso: scripts/plat --help
 set -euo pipefail
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RAIZ="$(cd "$DIR/.." && pwd)"
-
-if [ "${1:-}" = "segredo" ] && [ "${2:-}" = "rotacionar" ]; then
-  shift 2
-  exec "$RAIZ/venv/bin/python" "$DIR/segredo_rotacionar.py" rotacionar "$@"
-fi
-
-cat >&2 <<'USO'
-uso: plat segredo rotacionar <NOME> [opções]
-
-NOME em: PLAT_SECRET | PLAT_DSN | PLAT_DSN_WORKER | PLAT_GARAGE_ADMIN_TOKEN | PLAT_GARAGE_CHAVE_S3:<slug>
-
-Ver docs/RUNBOOKS/segredos.md para o procedimento completo (o que cada segredo invalida, quando avisar
-antes de rodar em produção com usuários ativos).
-USO
-exit 1
+RAIZ="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+PY="$RAIZ/venv/bin/python"
+[ -x "$PY" ] || PY=python3
+cd "$RAIZ"
+exec "$PY" -m app.cli "$@"
