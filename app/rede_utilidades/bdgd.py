@@ -745,6 +745,25 @@ class _Importador:
                 for r3 in criadas:
                     self.subredes[(3, r3["codigo_externo"])] = r3["id"]
         associacoes = [(self.tenant_id, self.rede_id, por_codigo[t[3]], t[9], t[2]) for t in validos]
+        self._gravar_associacoes(
+            associacoes,
+            "dispositivo_sem_regra_na_juncao",
+            "nenhuma aresta incidente na junção do dispositivo tem regra de conectividade "
+            "com o tipo dele no catálogo (o gatilho recusaria; o desvio explica a ausência)",
+            {por_codigo[t[3]]: t[3] for t in validos},
+        )
+
+    def _gravar_associacoes(
+        self, associacoes: list[tuple], tipo_desvio: str, msg_desvio: str, cod_por_de_no: dict
+    ) -> None:
+        """`associacoes` é (tenant_id, rede_id, de_no_id, para_no_id, tipo_id): grava em lote,
+        filtrado pela mesma régua do gatilho `rede_associacao_validar` (EXISTS sobre aresta
+        incidente com regra de conectividade no catálogo). O que o EXISTS recusa — o gatilho
+        recusaria do mesmo jeito — vira desvio contado e explicado, nunca silencioso. Compartilhado
+        por `_gravar_dispositivos` e `_gravar_consumidores` (item L4-01-c: era o mesmo SQL duas
+        vezes, com o mesmo padrão de desvio)."""
+        if not associacoes:
+            return
         gravadas = execute_values(
             self.cur,
             "INSERT INTO plat.rede_associacao (tenant_id, rede_id, tipo, de_no_id, para_no_id, origem) "
@@ -763,14 +782,9 @@ class _Importador:
             fetch=True,
         )
         ok = {r["de_no_id"] for r in gravadas}
-        for t in validos:
-            if por_codigo[t[3]] not in ok:
-                self._desvio(
-                    "dispositivo_sem_regra_na_juncao",
-                    "nenhuma aresta incidente na junção do dispositivo tem regra de conectividade "
-                    "com o tipo dele no catálogo (o gatilho recusaria; o desvio explica a ausência)",
-                    t[3],
-                )
+        for _, _, de_no, _, _ in associacoes:
+            if de_no not in ok:
+                self._desvio(tipo_desvio, msg_desvio, cod_por_de_no.get(de_no))
 
     def _consumidores(self, camada: str, geometrias: dict[str, bytes]) -> None:
         if not self.arquivo.get(camada):
@@ -849,33 +863,11 @@ class _Importador:
             (self.tenant_id, self.rede_id, id_por_codigo[t[3]], t[6], t[2])
             for t in tuplas if t[3] in id_por_codigo
         ]
-        if not associacoes:
-            return
-        gravadas = execute_values(
-            self.cur,
-            "INSERT INTO plat.rede_associacao (tenant_id, rede_id, tipo, de_no_id, para_no_id, origem) "
-            "SELECT v.tenant_id, v.rede_id::uuid, 'conectividade', v.de_no::uuid, v.para_no::uuid, 'importacao' "
-            "FROM (VALUES %s) AS v(tenant_id, rede_id, de_no, para_no, tipo_id) "
-            "WHERE EXISTS ("
-            "  SELECT 1 FROM plat.rede_aresta a JOIN plat.rede_regra r "
-            "    ON r.rede_id = v.rede_id::uuid AND r.tipo = 'conectividade_no_trecho' "
-            "   AND ((r.de_tipo_id = a.tipo_id AND r.para_tipo_id = v.tipo_id::uuid) "
-            "     OR (r.de_tipo_id = v.tipo_id::uuid AND r.para_tipo_id = a.tipo_id)) "
-            "   WHERE a.rede_id = v.rede_id::uuid "
-            "     AND (a.no_origem_id = v.para_no::uuid OR a.no_destino_id = v.para_no::uuid)"
-            ") RETURNING de_no_id",
+        self._gravar_associacoes(
             associacoes,
-            page_size=LOTE,
-            fetch=True,
+            "consumidor_sem_regra_na_juncao",
+            "nenhuma aresta incidente na junção do consumidor tem regra de conectividade "
+            "com o tipo dele no catálogo — na BDGD o consumidor de baixa liga pelo ramal, "
+            "e junção sem ramal incidente não tem como validar a regra",
+            {v: k for k, v in id_por_codigo.items()},
         )
-        ok = {r["de_no_id"] for r in gravadas}
-        cod_por_id = {v: k for k, v in id_por_codigo.items()}
-        for _, _, de_no, _, _ in associacoes:
-            if de_no not in ok:
-                self._desvio(
-                    "consumidor_sem_regra_na_juncao",
-                    "nenhuma aresta incidente na junção do consumidor tem regra de conectividade "
-                    "com o tipo dele no catálogo — na BDGD o consumidor de baixa liga pelo ramal, "
-                    "e junção sem ramal incidente não tem como validar a regra",
-                    cod_por_id.get(de_no),
-                )
