@@ -557,6 +557,7 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}/micro",
         lambda p: {"resolucao_m": 100.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
                    "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
+    ),
     # L6-02-h: arquivo por URL. A conexão de B é `ogc_api`/`referenciada`, então mesmo dentro do inquilino
     # dono estas rotas recusariam; para A o 404 vem antes disso, no _carregar (RLS), e nenhuma linha de
     # plat.conexao_arquivo nasce em A.
