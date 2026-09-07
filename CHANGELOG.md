@@ -3,6 +3,41 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 5, setembro de 2026 (item L2-02-d-rotulos: rótulos por campo, expressão e classe, com prioridade/colisão e faixa de escala)
+
+`plat_construtor.rotulos` deixa de ser `{visivel, campo, cor, tamanho}` e passa a ter classes: cada
+classe tem filtro simples (`{campo, operador, valor}`), texto por `campo` ou por `expressao` da
+linguagem própria (L2-10-c), fonte, tamanho (fixo ou por interpolação de zoom), cor, halo, âncora e
+deslocamento (ponto), rótulo ao longo da linha com repetição (linha), várias linhas, maiúsculas,
+unidade, prioridade e permitir-sobreposição, e faixa de escala própria. `app/expressao/
+compilador_maplibre.py` (novo) compila o subconjunto da linguagem com equivalente nativo na Style
+Spec; o que não compila (a começar por `TextoNumero`/`TextoData`, a formatação pt-BR) cai para uma
+coluna pré-calculada do servidor com nome determinístico (`app/estilos/rotulos_servidor.py`, novo).
+Achado medido em produção, não suposto: `symbol-sort-key` sozinho NÃO decide colisão entre classes
+diferentes (layers diferentes) no MapLibre-GL real — quem decide é a ORDEM dos layers no array;
+`_rotulos_layers` reordena por prioridade em vez de confiar só no sort-key (`docs/adr/
+20260907T1640-rotulos-de-camada.md` tem o experimento de controle). Faixa de escala por classe vira
+`minzoom`/`maxzoom` nativos (conversão OGC de 0,28 mm), não só metadata. `glyphs` é gravado
+automaticamente no documento quando há rótulo (a Style Spec recusa `text-field` sem isso).
+
+E2e sobre o MapLibre vendorizado real e um Martin real (binário de produção, fontes abertas Noto
+Sans/Open Sans instaladas nesta máquina, numa porta descartável só da suíte): rótulo por campo,
+rótulo por expressão com formatação `'1.234,5 ha'` (coluna do servidor), 2 classes com filtro,
+rótulo de linha seguindo a linha em z14 (captura mostra o texto girando com o traçado), prioridade
+(classe A vence B em colisão real, provado por amostragem de pixel com Pillow — 455 pixels pretos
+de A, 0 vermelhos de B), faixa de escala (visível dentro, ausente fora, via
+`queryRenderedFeatures`), glifos do Martin com cache (1ª chamada 14,6 ms, 2ª 1,1 ms, bytes
+idênticos). Identidade "dois modos" (a mesma expressão compilada e pré-calculada dão o mesmo texto
+em 100 feições) provada em `tests/unit/test_rotulos_servidor.py` com um intérprete de referência
+escrito à mão (`tests/apoio_expressao_maplibre.py`) para o subconjunto emitido pelo compilador.
+Refutação: divisão por zero, campo nulo, campo ausente e texto de 2.000 caracteres nunca produzem
+`'null'`/`'NaN'`/`'undefined'` no rótulo (erro de avaliação em uma feição vira rótulo vazio só
+naquela feição, nunca derruba o lote).
+
+Fora do escopo, nomeado: compilação para SQL/coluna real na função de tile do Martin (pipeline de
+ingestão, item L2-04); glifário definitivo com licença no catálogo (L2-02-e); `posicao_poligono`
+não tem controle nativo separado no MapLibre (o motor sempre ancora dentro do polígono).
+
 ## turno 5, setembro de 2026 (item L2-02-a-modelo-estilo: o estilo de uma camada vira documento versionado)
 
 O tipo `estilo` deixa de ter `corpo` livre e passa a carregar o **JSON Schema publicado**

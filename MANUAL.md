@@ -1106,3 +1106,36 @@ dizendo por quê.
 A conversão para/do renderer da Esri (item L2-04-b) e o WMS que consome o SLD (L2-02-e/L2-04-i) são itens
 seguintes. O editor visual do construtor (tela) não foi construído aqui — este item é o formato e a
 validação do documento, não a interface.
+
+### 22.4 Rótulos (item L2-02-d-rotulos)
+
+`plat_construtor.rotulos` (quando `visivel: true`) tem uma ou mais `classes`, cada uma com filtro opcional
+(`{campo, operador, valor}` — sem filtro, é a classe padrão da camada), o texto (por `campo` direto ou por
+`expressao` na linguagem própria do item L2-10-c), fonte, tamanho, cor, halo, âncora e deslocamento (útil em
+camadas de ponto), rótulo ao longo da linha com distância de repetição (camadas de linha), várias linhas,
+maiúsculas, sufixo de unidade, prioridade e permitir-sobreposição, e faixa de escala própria (independente da
+faixa da camada inteira). Cada classe vira um layer `symbol` da MapLibre Style Spec.
+
+**Expressão compilável ou coluna do servidor.** Quando `texto.expressao` usa só as operações que a Style
+Spec também tem (aritmética, comparação, `Se`/`SeNulo`/`EhNulo`, `Concatenar`/`Texto`/`Maiuscula`/
+`Minuscula`, `Absoluto`/`Minimo`/`Maximo`/`Arredondar`), o texto é calculado pelo próprio MapLibre no
+navegador. Quando usa algo sem equivalente nativo — a começar pela formatação de número em pt-BR
+(`TextoNumero`, "1.234,5") — o texto é calculado no servidor e o rótulo lê uma coluna pré-calculada; as duas
+formas dão o MESMO texto para a MESMA expressão (é o que garante que trocar de forma nunca muda o que o
+usuário vê). Uma feição com campo nulo, divisão por zero ou erro de avaliação nunca mostra "null"/"NaN" —
+fica com rótulo vazio, sem derrubar as demais.
+
+**Prioridade e colisão entre classes.** Quando duas classes competem pelo mesmo espaço, a de prioridade
+numericamente menor (mais importante) é exibida e a outra é suprimida — testado com dois pontos no mesmo
+lugar. Por trás, isso não é feito só com o atributo de prioridade da Style Spec (que só decide entre feições
+de uma MESMA classe): o servidor ordena os layers das classes na ordem certa para o motor de desenho resolver
+a colisão do jeito esperado.
+
+**Faixa de escala por classe.** Uma classe pode ter sua própria faixa de escala (além da faixa da camada
+inteira) — útil para mostrar um rótulo resumido de longe e um mais detalhado de perto, por exemplo. Testado
+com o mesmo rótulo aparecendo dentro da faixa e sumindo fora dela.
+
+O que ficou de fora: filtro de classe só cobre comparação simples (não uma expressão booleana qualquer);
+posição no centro geométrico do polígono não é distinta de "ponto garantido dentro do polígono" (o motor de
+desenho sempre garante o ponto dentro); o glifário definitivo (fontes com licença documentada, servidas em
+produção) é o item L2-02-e — aqui o mecanismo foi provado com um servidor de fontes real e fontes abertas.

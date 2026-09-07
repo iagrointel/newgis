@@ -1,4 +1,13 @@
-{
+-- Estende o esquema do tipo `estilo` com o vocabulario completo de rotulos (item
+-- L2-02-d-rotulos): classes com filtro/faixa de escala, texto por campo ou por expressao da
+-- linguagem do L2-10-c, fonte/tamanho/cor/halo, ancora e deslocamento (ponto), rotulo ao longo da
+-- linha com repeticao, posicao no poligono, varias linhas, maiusculas, unidade, prioridade e
+-- permitir_sobreposicao. Substitui o bloco simples {visivel, campo, cor, tamanho} da migracao
+-- 20260907T1148_estilo_modelo.sql (nenhum estilo gravado ainda por nenhum construtor: mesmo
+-- raciocinio das migracoes anteriores da familia, apertar o esquema nao migra conteudo).
+-- Idempotente (UPDATE com o esquema completo).
+
+UPDATE plat.tipo_item SET esquema = $esquema_estilo${
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Estilo de camada em duas partes (ADR do item L2-02-a; C2 do L2_CONCEITO): `maplibre` = layers da MapLibre Style Spec v8 puras, validadas pelo pacote oficial no servidor; `plat_construtor` = o que o editor precisa para reabrir o estilo (tipo, campo, método, cortes, rampa, símbolo, rótulos, faixa de escala, transparência).",
@@ -701,4 +710,5 @@
   ],
   "title": "documento de estilo do plat (estilo-v1)",
   "type": "object"
-}
+}$esquema_estilo$::jsonb
+WHERE nome = 'estilo';

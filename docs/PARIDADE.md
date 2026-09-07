@@ -472,3 +472,27 @@ Fonte: `developers.arcgis.com/documentation/common-data-types/renderer-objects.h
 cores fica **pendente de máquina com QGIS** — `qgis_process` está fora dos binários instalados
 nesta máquina (ver `SISTEMA.md`, recursos medidos 05/09/2026). Não confundir "XML lido e correto"
 com "confirmado no QGIS": só o primeiro foi feito aqui.
+
+## Rótulos: `labelingInfo` da Esri → `plat_construtor.rotulos.classes[]` (item L2-02-d-rotulos)
+
+Fonte: `developers.arcgis.com/documentation/common-data-types/labeling-objects.htm` (lido
+07/09/2026). Coluna "nosso" = `plat_construtor.rotulos.classes[]` (`docs/esquemas/estilo-v1.json`);
+compilação em `app/estilos/compilador.py::_rotulo_layer`.
+
+| Esri (`labelingInfo[]`) | nosso | estado | nota |
+|---|---|---|---|
+| `labelExpressionInfo.expression` (Arcade) | `texto.expressao` (linguagem própria, L2-10-c) | parcial | 18 funções do núcleo compilam para MapLibre; formatação pt-BR (`TextoNumero`/`TextoData`) cai para coluna do servidor, provado idêntico em texto (não em latência de tile real) |
+| `labelExpression`/campo direto | `texto.campo` | feito | `["get", campo]` direto |
+| `where` (filtro da classe) | `filtro` (`{campo, operador, valor}`) | parcial | só igualdade/comparação simples; Arcade aceita expressão booleana arbitrária |
+| `minScale`/`maxScale` | `escala_min`/`escala_max` | feito | vira `minzoom`/`maxzoom` nativos (conversão OGC 0,28 mm), testado ponta a ponta |
+| `symbol.font.family`/`size`/`weight` | `fonte`/`tamanho` | parcial | pilha de glifos por nome publicado (Martin), sem `weight`/`style` variável nesta passagem |
+| `symbol.color`/`haloColor`/`haloSize` | `cor`/`halo_cor`/`halo_largura` | feito | |
+| `labelPlacement` (`esriServerPointLabelPlacement*`, 8 âncoras) | `ancora` (8 valores) + `deslocamento` | feito | mesmos 8 pontos cardeais/intercardeais da Style Spec |
+| `labelPlacement` linha (`esriServerLinePlacementAboveAlong` etc.) | `ao_longo_da_linha` + `repetir_px` | feito | `symbol-placement: line`; medido em captura z14 (texto acompanha o traçado) |
+| posição em polígono (`esriServerPolygonPlacementAlwaysHorizontal`) | `posicao_poligono` | parcial | MapLibre não expõe escolha entre centróide e ponto interior — sempre ancora dentro do polígono (equivalente a `ponto_interior`); o campo existe no schema mas hoje não muda o layer |
+| multiline (`Text` com `\n`) | `varias_linhas_largura_max` | feito | `text-max-width` |
+| `symbol.text-transform`-like (maiúsculas via Arcade `Upper()`) | `maiusculas` | feito | `text-transform: uppercase` |
+| unidade (concatenação manual no Arcade) | `unidade` | feito | sufixo concatenado no MapLibre |
+| `deconflictionStrategy`/prioridade entre classes | `prioridade` | feito, com correção medida | a Esri resolve conflito por prioridade declarada; no MapLibre, `symbol-sort-key` só ordena DENTRO de um layer — a colisão ENTRE classes é decidida pela ORDEM dos layers (medido; ver ADR `20260907T1640-rotulos-de-camada.md`), então o compilador reordena os layers em vez de confiar só no sort-key |
+| `symbol.text-allow-overlap`-like (`repeatLabel`/sem supressão) | `permitir_sobreposicao` | feito | `text-allow-overlap` + `text-ignore-placement` |
+| glifário/fonte servida | fonte própria (Martin) | parcial | mecanismo provado com Martin real + Noto Sans/Open Sans abertas; glifário definitivo com licença documentada é o item L2-02-e |
