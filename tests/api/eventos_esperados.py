@@ -129,6 +129,14 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/importacoes"): ["importacoes/criar"],
     ("PUT", "/api/importacoes/{id}/confirmar"): ["importacoes/confirmar"],
     ("DELETE", "/api/importacoes/{id}"): [],
+    # ---- documento de mapa (L2-01-a) e ícone do inquilino (L2-02-e), trazidos pelos ramos juntados no L2-02-c:
+    # as rotas gravam pelo catálogo (o item é o mapa/ícone) e não registram evento próprio; o evento de item
+    # (itens/criar, itens/atualizar) fica a cargo do L0-03 quando as duas passarem a chamá-lo.
+    ("POST", "/api/mapas"): [],
+    ("PUT", "/api/mapas/{id}"): [],
+    ("POST", "/api/simbolos"): [],
+    # ---- editor de estilo (L2-02-c): compilar é cálculo puro sem gravação nem dado de inquilino, sem evento
+    ("POST", "/api/estilos/compilar"): [],
     # ---- geocodificador (L2-11-a/b): cálculo sobre dado aberto CNEFE/IBGE, sem tabela de inquilino e sem
     # dono humano para narrar — mesma decisão já usada acima em /api/rota, /api/matriz, /api/isocrona.
     ("POST", "/api/geocodificar"): [],
