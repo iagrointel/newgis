@@ -361,6 +361,26 @@ demo = Roraima (260.515 pontos, 15 municípios; escolhida por ser o MENOR arquiv
 | `outSR`, `searchExtent`, boost por `location=`, `category`, `langCode`, paginação `search/start/num` | parâmetros documentados do `findAddressCandidates` | fora desta versão (saída sempre 4326; sem filtro geográfico nem boost de proximidade) | fora | — | 2026-09-06 | pendente (D20) |
 | geocodificação em lote de planilha/CSV do usuário (upload → coluna de endereço → resultado) | não é o `GeocodeServer`; é uma ferramenta de geoprocessamento separada (`Geocode Addresses` do Pro/ArcMap) | item-irmão `L2-11-a-geocodificacao-csv`, ainda não construído (reusa `motor.buscar()`) | fora (item separado) | — | 2026-09-06 | pendente (D20) |
 
+## Ferramentas de análise e GPServer (item L2-05-a-catalogo-ferramentas-gpserver, turno 4; ADR 20260907T2010)
+
+Referência Esri: `gp-service`, `gp-task`, `execute-gp-task`, `submit-gp-job`, `gp-job`, `gp-result`, `cancel-gp-job`
+(developers.arcgis.com/rest/services-reference/enterprise, 07/09/2026) e "Perform analysis" do Map Viewer 11.4
+(doc.arcgis.com/en/arcgis-online/analyze/perform-analysis-mv.htm). Sem ArcGIS Pro/AGOL reais (D20).
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| registro de ferramenta com parâmetros tipados | Python toolbox (`.pyt`) / GP task com `dataType` GP* | `@ferramenta` + `Parametro(tipo GP*)`, validado na importação; parâmetro sem tipo = erro de build | feito | `tests/unit/test_ferramentas_registro.py` | 2026-09-07 | pendente (D20) |
+| catálogo de ferramentas na API e formulário gerado | painel "Analysis" do Map Viewer | `GET /api/ferramentas` (manifesto + JSON Schema); tela `/analise` gera o formulário do manifesto | feito | `test_catalogo_lista_buffer_com_esquema_e_gpserver`; e2e `tests/e2e/test_ferramentas.py` | 2026-09-07 | pendente (D20) |
+| execução como job com progresso, cancelamento, log | GP job assíncrono | `ferramentas.executar` na fila L0-05 (progresso, log, cancel); síncrono abaixo de `FERRAMENTA_SINCRONO_CUSTO_MAX` | feito | `test_buffer_por_api_propria_gpserver_execute_e_submitjob_dao_o_mesmo_resultado`, `test_custo_acima_do_teto_vira_job_e_execute_recusa_com_erro_esri` | 2026-09-07 | pendente (D20) |
+| resultado como item com proveniência e relação | camada de resultado no conteúdo; sem bloco de proveniência formal | item `camada_vetorial` com `procedencia.ferramenta` {ferramenta, versão, parâmetros, entradas uuid+versão+sha256, data, autor} e relação `derivado_de`; visível na ficha | feito (supera: sha256 das entradas conferível por SQL independente) | mesmo teste acima (`sha256_independente`); e2e com captura `proveniencia` | 2026-09-07 | — |
+| histórico de análises e rerodar | "Analysis history" (Map Viewer) | `GET /api/jobs?tipo=ferramentas.executar` + `POST /api/jobs/{id}/repetir` (mesmos parâmetros) | feito | `test_rerodar_do_historico_reproduz_contagem_e_sha256` (contagem e sha256 iguais) | 2026-09-07 | pendente (D20) |
+| job cancelado não deixa camada órfã | não documentado | tabela apagada no cancelamento/falha após criada; item nunca gravado | feito | `test_cancelamento_apos_criar_a_tabela_nao_deixa_camada_orfa` | 2026-09-07 | — |
+| camada de outro inquilino como entrada | não se aplica (um portal por organização) | 404 (RLS + `pode_ler`) na API e no GPServer | feito | `test_camada_de_outro_inquilino_e_404_na_api_e_no_gpserver`; varredura cruzada | 2026-09-07 | — |
+| GPServer: descritores, execute, submitJob, jobs/{id}, results/{param}, cancel, `token=` | referência REST acima | `/rest/services/{ferramenta}/GPServer/{tarefa}/…`, estados esriJob*, erro `{error:{code,message,details}}` com código HTTP real | feito | `test_gpserver_descritores_publicos_token_obrigatorio_e_cancel` e o teste dos três caminhos | 2026-09-07 | pendente (D20) |
+| GPFeatureRecordSetLayer por FeatureSet inline; jobs/{id}/inputs; uploads | referência REST | só referência por uuid/URL de FeatureServer desta instalação | parcial | — | 2026-09-07 | pendente (D20) |
+| Buffer (Create Buffers) | Map Viewer 11.4 "Use proximity" | `buffer` geodésico em metros, dissolver | feito | testes acima | 2026-09-07 | pendente (D20) |
+| demais ferramentas do "Perform analysis" 11.4 (Summarize, Find locations, Enrich, Analyze patterns, Manage data, Use proximity além do buffer) | Map Viewer 11.4 | itens irmãos do L2-05 (b em diante) sobre este registro | fora (itens separados) | — | 2026-09-07 | pendente (D20) |
+
 ## SMTP, convite de membro e redefinição de senha (item L0-07-d-smtp-convites, turno 3; ADR 0017)
 
 | capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
