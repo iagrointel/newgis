@@ -541,8 +541,9 @@ def _ensaiar(ctx, linha: dict, banco: str, cliente, dest, registradas: dict[str,
 
 
 def _banco_ensaio(ctx, banco: str) -> str:
-    """Banco de ensaio da instalação (um só, com PostGIS), criado na primeira vez. Nunca é o banco da
-    plataforma: o nome vem de `drill.nome_banco_temporario` e é conferido antes de qualquer DROP."""
+    """Banco de ensaio da instalação (um só, com as extensões que a restauração exige), criado na primeira
+    vez. Nunca é o banco da plataforma: o nome vem de `drill.nome_banco_temporario` e é conferido antes de
+    qualquer DROP."""
     nome = drill.nome_banco_temporario(settings.PLAT_SCHEMA)
     if nome == banco:
         raise FalhaDefinitiva(f"ensaio de restauração: o banco de ensaio não pode ser o da plataforma ({nome})")
@@ -551,8 +552,9 @@ def _banco_ensaio(ctx, banco: str) -> str:
         r = ctx.subprocesso(["sudo", "-n", "-u", "postgres", "createdb", nome])
         if r.returncode != 0:
             raise FalhaDefinitiva(f"ensaio de restauração: createdb {nome} saiu com código {r.returncode}")
+    for ext in drill.EXTENSOES_DO_ENSAIO:
         ctx.subprocesso(["sudo", "-n", "-u", "postgres", "psql", "-d", nome, "-q", "-c",
-                         "CREATE EXTENSION IF NOT EXISTS postgis"])
+                         f"CREATE EXTENSION IF NOT EXISTS {ext}"])
     return nome
 
 
