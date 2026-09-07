@@ -26,13 +26,15 @@ def _criar(sessao, sufixo, tipo, url, config, **extra):
 
 # --------------------------------------------------------------------- xyz: config obrigatório (sem rede)
 def test_xyz_sem_atribuicao_e_recusado(sessao_a):
-    r = _criar(sessao_a, "sem-atrib", "xyz", "https://tile.openstreetmap.org/{z}/{x}/{y}.png", {"zoom_min": 0, "zoom_max": 14, "formato": "raster"})
+    r = _criar(sessao_a, "sem-atrib", "xyz", "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+               {"zoom_min": 0, "zoom_max": 14, "formato": "raster"})
     assert r.status_code == 422, r.text
     assert r.json()["erro"] == "atribuicao_obrigatoria"
 
 
 def test_xyz_sem_zoom_e_recusado(sessao_a):
-    r = _criar(sessao_a, "sem-zoom", "xyz", "https://tile.openstreetmap.org/{z}/{x}/{y}.png", {"atribuicao": "Fonte", "formato": "raster"})
+    r = _criar(sessao_a, "sem-zoom", "xyz", "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+               {"atribuicao": "Fonte", "formato": "raster"})
     assert r.status_code == 422, r.text
     assert r.json()["erro"] == "zoom_min_invalido"
 
