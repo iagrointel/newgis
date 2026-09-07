@@ -204,3 +204,10 @@ REDEFINICAO_VALIDADE_HORAS = 1            # portão do item-pai (ADR 0002 seçã
 REDEFINICAO_JANELA_MIN = 15               # limite de taxa (refutação do item: 1.000 pedidos/min p/ o mesmo e-mail)
 REDEFINICAO_MAX_JANELA = 5                # no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN
 AVISO_EXPIRACAO_DIAS = (90, 30, 7, 1)     # avisos de expiração de token de serviço (hipótese do item; como a Esri)
+
+# --- geocodificação de tabela (L2-11-a-geocodificacao-csv): CSV/XLSX com endereço vira job de geocodificação em
+# lote reusando o motor do L2-11-b; teto de linhas por lote para não estourar memória do worker leve (disco a
+# 98%, sem processamento em memória sem limite — regra da trilha).
+GEOCODIFICADOR_LOTE_MAX_LINHAS = 20_000
+GEOCODIFICADOR_LOTE_LIMIAR_PENDENTE_PADRAO = 60.0   # score abaixo disso também vira pendente, mesmo com tipo bom
+GEOCODIFICADOR_LOTE_TITULO_MAX = 250

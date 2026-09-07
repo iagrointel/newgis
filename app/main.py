@@ -42,6 +42,7 @@ from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
+from app.geocodificador.rotas_lote import router as rotas_geocodificador_lote
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.rede.rotas import router as rotas_rede
@@ -117,6 +118,9 @@ ROUTERS = [
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
     rotas_geocodificador_esri,
+    # --- geocodificação de tabela (L2-11-a): /api/geocodificador/lote/* — a criação em si é POST /api/jobs
+    # (tipo geocodificador.lote_csv); aqui só a tela de revisão (pendentes, arrasto manual, re-geocodificar)
+    rotas_geocodificador_lote,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

@@ -22,6 +22,7 @@ import argparse
 import csv
 import hashlib
 import io
+import os
 import sys
 import time
 import zipfile
@@ -29,11 +30,36 @@ from pathlib import Path
 
 import httpx
 import psycopg2
+import psycopg2.extensions
 from dotenv import dotenv_values
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from app.geocodificador.normalizacao import expandir_abreviacoes  # noqa: E402
+from app.schema_ambiente import reescrever_schema  # noqa: E402 — item L2-11-a: trilha roda num schema não-"plat"
+
+# schema/schema_trabalho do AMBIENTE ATUAL (variável de processo, gravada por laco/trilha_ambiente.sh); em
+# produção as duas ficam no padrão "plat"/"plat_trabalho" e `reescrever_schema` vira no-op (custo zero, mesma
+# garantia de app/schema_ambiente.py). Sem isto o instalador gravava SEMPRE no schema "plat" literal —
+# permissão negada numa trilha (papel só tem GRANT no schema da própria trilha) ou, pior, gravação cruzada.
+_SCHEMA_AMBIENTE = os.environ.get("PLAT_SCHEMA", "plat")
+_SCHEMA_TRABALHO_AMBIENTE = os.environ.get("PLAT_SCHEMA_TRABALHO", "plat_trabalho")
+
+
+class _CursorSchemaAmbiente(psycopg2.extensions.cursor):
+    """Mesma reescrita de texto de `app.schema_ambiente.CursorSchemaAmbiente`, mas para o cursor cru deste
+    script (que não passa pelo pool de `app.db`) — inclusive `copy_expert`, que `COPY plat.geo_endereco ...`
+    também usa."""
+
+    def execute(self, query, vars=None):
+        if isinstance(query, str):
+            query = reescrever_schema(query, _SCHEMA_AMBIENTE, _SCHEMA_TRABALHO_AMBIENTE)
+        return super().execute(query, vars)
+
+    def copy_expert(self, sql, file, size=8192):
+        if isinstance(sql, str):
+            sql = reescrever_schema(sql, _SCHEMA_AMBIENTE, _SCHEMA_TRABALHO_AMBIENTE)
+        return super().copy_expert(sql, file, size)
 
 BASE_CNEFE = (
     "https://ftp.ibge.gov.br/Cadastro_Nacional_de_Enderecos_para_Fins_Estatisticos/Censo_Demografico_2022/"
@@ -57,12 +83,14 @@ def _log(msg: str) -> None:
 
 
 def _dsn() -> str:
-    """PLAT_DSN do .env direto (não usa app.settings: este script não precisa de PLAT_SECRET/segredos
-    systemd, que desde o item L7-19 não moram mais no .env — exigi-los aqui quebraria a carga sem motivo)."""
-    v = dotenv_values(ROOT / ".env")
-    dsn = v.get("PLAT_DSN")
+    """PLAT_DSN do ambiente do processo (trilha: `laco/trilha_ambiente.sh` grava um .env de trilha e o
+    chamador faz `set -a; source ...`) OU do `.env` da raiz, nesta ordem — não usa `app.settings`: este
+    script não precisa de PLAT_SECRET/segredos systemd, que desde o item L7-19 não moram mais no .env
+    (exigi-los aqui quebraria a carga sem motivo). O ambiente vence porque é o único jeito de uma trilha
+    (que não tem `.env` na raiz do worktree) apontar este script para o Postgres certo sem editar o script."""
+    dsn = os.environ.get("PLAT_DSN") or dotenv_values(ROOT / ".env").get("PLAT_DSN")
     if not dsn:
-        raise SystemExit("PLAT_DSN ausente em .env")
+        raise SystemExit("PLAT_DSN ausente (nem no ambiente, nem em .env)")
     return dsn
 
 
@@ -145,7 +173,7 @@ def instalar(sigla: str, *, teto_bytes: int, forcar: bool, arquivo_local: str | 
         municipios = buscar_municipios(cliente, cod_uf)
     _log(f"{len(municipios)} municípios de {sigla} (IBGE localidades)")
 
-    con = psycopg2.connect(_dsn())
+    con = psycopg2.connect(_dsn(), cursor_factory=_CursorSchemaAmbiente)
     con.autocommit = False
     try:
         with con.cursor() as cur:
