@@ -957,13 +957,14 @@ SECURITY`, índice GIST e os gatilhos `tg_tenant`/`tg_versao`. Nome de campo pas
 `app.ingestao.nomes.normalizar` (mesma função do L0-04, sem duplicar regra).
 
 O que o PostgreSQL não guarda sobre um campo — alias de tela e domínio (lista código→rótulo, formato já
-compatível com o `domain` de um FeatureServer Esri) — vive em `plat.camada_campo_meta`, tabela nova com
-**FK composta** `(tenant_id, item_id) REFERENCES plat.item (tenant_id, id)` em vez de só `item_id`: exigiu
-acrescentar `UNIQUE (tenant_id, id)` em `plat.item` (a PK já bastava para toda referência simples por id
-até agora). A vantagem sobre uma FK simples: mesmo que uma política de RLS falhe silenciosamente em algum
-caminho futuro, a própria constraint do banco recusa a inserção de uma linha de metadado apontando para um
-item de OUTRO inquilino — defesa em profundidade, não o único mecanismo (a RLS de `camada_campo_meta`,
-`FORCE`, com a política padrão `tenant_id = plat.tenant_atual()`, é a linha de frente). `GET
+compatível com o `domain` de um FeatureServer Esri) — vive em `plat.camada_campo_meta`, tabela nova com FK
+simples `item_id REFERENCES plat.item (id) ON DELETE CASCADE` (a chave primária que já existe; nenhuma
+constraint única nova é criada em `plat.item`). A coerência de inquilino é garantida por GATILHO,
+`plat.tg_camada_campo_meta`, no mesmo padrão de `plat.item_relacao` e `plat.item_grupo`: uma linha de
+metadado que aponte para item de OUTRO inquilino é recusada com `metadado_de_outro_inquilino`, mesmo que
+uma política de RLS falhe silenciosamente em algum caminho futuro — defesa em profundidade, não o único
+mecanismo (a RLS de `camada_campo_meta`, `FORCE`, com a política padrão `tenant_id = plat.tenant_atual()`,
+é a linha de frente). `GET
 /api/camadas/{id}/campos` junta as duas fontes: tipo/tamanho/obrigatoriedade vêm de
 `information_schema.columns` (autoridade única — nunca uma cópia que desalinha de um `ALTER TABLE` feito
 por fora), alias/domínio vêm de `camada_campo_meta`.
