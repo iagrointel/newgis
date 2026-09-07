@@ -63,7 +63,6 @@ def _extent_nativo(cur, schema: str, tabela: str, srid: int) -> dict | None:
         tuple(float(v) for v in par.split()) for par in miolo.split(",")
     )
     return {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax, "spatialReference": {"wkid": srid}}
-    return d
 
 
 def _indices(cur, schema: str, tabela: str, nomes: set[str]) -> list[dict]:
