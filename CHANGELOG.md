@@ -3,6 +3,40 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 5, setembro de 2026 (item L6-02-d-arcgis-rest-externo: conector ArcGIS REST de terceiro — modo referenciado)
+
+Leitura de serviços ArcGIS REST de Portal/AGOL de terceiro sobre `app.conexao.seguranca.buscar_seguro` (item
+L6-02-a, nunca um cliente HTTP à parte): `app/conexao/esri_rest.py` (motor) + `app/conexao/rotas_esri_rest.py`
+(`/api/conexoes/{id}/esri/*`). FeatureServer/MapServer: descrição da camada (geometria, `maxRecordCount`,
+campos, capacidades), contagem por `returnCountOnly` e query paginado (`resultOffset`/`resultRecordCount`
+sempre clampado ao `maxRecordCount` do servidor, com teto de páginas/feições — três travas independentes
+contra servidor hostil). MapServer `export` e ImageServer `exportImage`: proxy de imagem dinâmica/raster
+referenciado. Simbologia simples (`renderer.type=simple`, `esriSFS`/`esriSLS`) importada como cor de
+preenchimento/contorno RGBA; `classBreaks`/`uniqueValue`/marcador de imagem ficam fora, sem fingir suporte.
+Token do cliente decifrado só em memória e injetado como `token=` na querystring da chamada ao serviço
+externo (convenção clássica do ArcGIS Server — diferente do Bearer do teste de saúde genérico), nunca no
+corpo/erro da nossa API. ADR 0020; paridade em `docs/PARIDADE.md` seção "Conector ArcGIS REST externo".
+
+Achado ao testar contra rede real (SIGEL/ANEEL, `sigel.aneel.gov.br/arcgis/rest/services`, ArcGIS Server
+11.5): a raiz de um FeatureServer/MapServer sem `?f=json` devolve a página HTML do diretório de serviços do
+ArcGIS Server, não o JSON esperado — `_buscar_json` corrigido para sempre anexar `f=json`. Medido: 3
+serviços públicos federais brasileiros (EOL — ponto, `Areas_Publicas` — polígono com simbologia laranja/
+contorno preto, `Distribuição` — polígono) responderam HTTP 200 em 07/09/2026, adicionados como conexão e
+vistos (descrição + camada + simbologia); contagem da API bateu com a `returnCountOnly` bruta do serviço
+(2.490); query paginada por UF trouxe geometria e atributos reais; `SIGEL/Linhas_de_Transmissao` (exige
+token real, `{"error":{"code":499,"message":"Token Required"}}`) devolveu erro claro em < 30 s sem
+credencial, sem retry em loop; `MapServer/export` devolveu PNG 256×256 real. Refutação do item
+(`maxRecordCount=1`): provada sem rede (nenhum serviço público brasileiro com esse valor foi encontrado) —
+`consultar_tudo` monkeypatchado com um servidor que nunca sinaliza fim de página para no teto
+`ESRI_REST_PAGINAS_MAX` (50), sem loop infinito. 23 testes (17 de unidade + 6 de API com rede real,
+`tests/unit/test_esri_rest_analise.py` e `tests/api/test_esri_rest.py`), suíte de conexão (`test_conexoes.py`
++ `test_conexao_seguranca.py`) continua verde.
+
+Fora deste turno, nomeado: modo copiado (materializar em PostGIS — mesma fronteira do L6-02-b/c, ainda não
+integrados a master); ImageServer `exportImage` com rede real (nenhum ImageServer público brasileiro
+encontrado nesta sessão — código e teste de unidade escritos, prova de rede fica pendente); formato `f=pbf`
+na query paginada (só `geojson` implementado; a hipótese cita os dois).
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

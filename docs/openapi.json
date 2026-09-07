@@ -9227,6 +9227,446 @@
     "x-privilegio": "conteudo.registrar_fonte"
    }
   },
+  "/api/conexoes/{id}/esri/descricao": {
+   "get": {
+    "tags": [
+     "esri_rest"
+    ],
+    "summary": "Descricao",
+    "description": "Raiz do serviço: tipo detectado da URL e a lista de sub-camadas/tabelas que ele declara (`?f=json` da\nraiz sempre tem `layers`/`tables` para FeatureServer/MapServer; ImageServer não tem sub-camada — é ele\nmesmo o recurso de imagem).",
+    "operationId": "descricao_api_conexoes__id__esri_descricao_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/conexoes/{id}/esri/camadas/{camada}": {
+   "get": {
+    "tags": [
+     "esri_rest"
+    ],
+    "summary": "Camada Descricao",
+    "operationId": "camada_descricao_api_conexoes__id__esri_camadas__camada__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "camada",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/conexoes/{id}/esri/camadas/{camada}/contagem": {
+   "get": {
+    "tags": [
+     "esri_rest"
+    ],
+    "summary": "Camada Contagem",
+    "operationId": "camada_contagem_api_conexoes__id__esri_camadas__camada__contagem_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "camada",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada"
+      }
+     },
+     {
+      "name": "where",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "1=1",
+       "title": "Where"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/conexoes/{id}/esri/camadas/{camada}/feicoes": {
+   "get": {
+    "tags": [
+     "esri_rest"
+    ],
+    "summary": "Camada Feicoes",
+    "operationId": "camada_feicoes_api_conexoes__id__esri_camadas__camada__feicoes_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "camada",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada"
+      }
+     },
+     {
+      "name": "where",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "1=1",
+       "title": "Where"
+      }
+     },
+     {
+      "name": "campos",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "*",
+       "title": "Campos"
+      }
+     },
+     {
+      "name": "outSR",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 4326,
+       "title": "Outsr"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/conexoes/{id}/esri/mapa": {
+   "get": {
+    "tags": [
+     "esri_rest"
+    ],
+    "summary": "Mapa",
+    "description": "MapServer `/export`: imagem dinâmica renderizada pelo servidor, no modo referenciado (proxy — o\nnavegador nunca vê a URL original nem a credencial).",
+    "operationId": "mapa_api_conexoes__id__esri_mapa_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "bbox",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Bbox"
+      }
+     },
+     {
+      "name": "largura",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 512,
+       "title": "Largura"
+      }
+     },
+     {
+      "name": "altura",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 512,
+       "title": "Altura"
+      }
+     },
+     {
+      "name": "outSR",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 4326,
+       "title": "Outsr"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "png32",
+       "title": "Formato"
+      }
+     },
+     {
+      "name": "camadas",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Camadas"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/conexoes/{id}/esri/imagem": {
+   "get": {
+    "tags": [
+     "esri_rest"
+    ],
+    "summary": "Imagem",
+    "description": "ImageServer `/exportImage`: raster referenciado, no modo referenciado (proxy).",
+    "operationId": "imagem_api_conexoes__id__esri_imagem_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "bbox",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Bbox"
+      }
+     },
+     {
+      "name": "largura",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 512,
+       "title": "Largura"
+      }
+     },
+     {
+      "name": "altura",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 512,
+       "title": "Altura"
+      }
+     },
+     {
+      "name": "outSR",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 4326,
+       "title": "Outsr"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "png",
+       "title": "Formato"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/arquivos/_varredura": {
    "get": {
     "tags": [

@@ -1,0 +1,76 @@
+{
+ "item": "L6-02-d-arcgis-rest-externo",
+ "portao_de_pronto": "3 serviços públicos de órgãos brasileiros que respondem 200 na data adicionados e vistos; contagem copiada = returnCountOnly; token do cliente cifrado e nunca exposto; cor de preenchimento/linha importada.",
+ "medidas": {
+  "tres_servicos_publicos_brasileiros_200": {
+   "valor": "passa",
+   "servico": "SIGEL/ANEEL (Agência Nacional de Energia Elétrica) — https://sigel.aneel.gov.br/arcgis/rest/services, ArcGIS Server 11.5",
+   "comando": "tests/api/test_esri_rest.py::test_tres_servicos_publicos_brasileiros_200_e_vistos (pytest.mark.lento)",
+   "detalhe": "PORTAL/Camadas_Downloads/FeatureServer (ponto, EOL — 35 camadas), PORTAL/Areas_Publicas/MapServer (polígono), PORTAL/Distribuição/FeatureServer (polígono) — os 3 responderam HTTP 200 em 07/09/2026, criados como conexão, descrição+camada+campos lidos"
+  },
+  "contagem_returncountonly": {
+   "valor": 2490,
+   "unidade": "feições (EOL, where=1=1)",
+   "comando": "tests/api/test_esri_rest.py::test_contagem_e_returncountonly (pytest.mark.lento)",
+   "detalhe": "conferido contra a mesma operação returnCountOnly=true bruta no serviço real; a API nunca baixa feição para contar"
+  },
+  "simbologia_importada": {
+   "valor": "passa",
+   "comando": "tests/api/test_esri_rest.py::test_simbologia_preenchimento_e_contorno_importados (pytest.mark.lento)",
+   "detalhe": "PORTAL/Areas_Publicas: preenchimento_rgba=[246,197,103,255], contorno_rgba=[0,0,0,255] — valor idêntico ao renderer bruto do serviço"
+  },
+  "feicoes_paginadas_reais": {
+   "valor": "passa",
+   "comando": "tests/api/test_esri_rest.py::test_feicoes_paginadas_geometria_e_atributos_reais (pytest.mark.lento)",
+   "detalhe": "where=UF1='RN' contra o EOL real devolve geometria Point e atributos reais, outSR=4326"
+  },
+  "mapserver_export_imagem_real": {
+   "valor": "passa",
+   "comando": "tests/api/test_esri_rest.py::test_mapserver_export_devolve_imagem_real (pytest.mark.lento)",
+   "detalhe": "PNG 256x256 real via /esri/mapa (proxy de /export)"
+  },
+  "servico_exige_token_erro_claro": {
+   "valor": "passa",
+   "servico": "SIGEL/Linhas_de_Transmissao/FeatureServer (exige token real, {\"error\":{\"code\":499,\"message\":\"Token Required\"}})",
+   "comando": "tests/api/test_esri_rest.py::test_servico_que_exige_token_sem_fornecer_da_erro_claro_sem_travar (pytest.mark.lento)",
+   "detalhe": "502 com mensagem nomeando 'token' em < 30s, sem retry em loop"
+  },
+  "credencial_nunca_exposta": {
+   "valor": "passa",
+   "comando": "tests/api/test_esri_rest.py::test_credencial_cifrada_nunca_aparece_na_resposta (pytest.mark.lento)",
+   "detalhe": "token literal e coluna credencial_cifrada ausentes em criação, ficha, listagem e erro da rota /esri/descricao"
+  },
+  "refutacao_maxrecordcount_1_sem_loop_infinito": {
+   "valor": "passa",
+   "comando": "tests/unit/test_esri_rest_analise.py::test_consultar_tudo_para_no_teto_de_paginas_com_maxrecordcount_1",
+   "nota_honesta": "provado sem rede (monkeypatch) — nenhum serviço público brasileiro com maxRecordCount=1 foi encontrado em busca de 07/09/2026; o motor para em ESRI_REST_PAGINAS_MAX=50 chamadas, nunca em loop infinito, e marca truncado=True com o aviso"
+  },
+  "imageserver_exportimage_rede_real": {
+   "valor": "pendente",
+   "nota_honesta": "código e teste de unidade (bbox/parâmetros) escritos; nenhum ImageServer público brasileiro foi encontrado nesta sessão (INDE/IBGE/CPRM/ANA/DNIT/ITCG-PR testados, sem sucesso) — prova de rede real fica para quando um serviço for localizado, mesma fronteira honesta do L6-02-b para EPSG:4674 exato"
+  },
+  "teste_sem_rede_unidade": {
+   "valor": 17,
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_esri_rest_analise.py -q",
+   "resultado": "17 passed"
+  },
+  "teste_com_rede_marcado": {
+   "valor": 6,
+   "unidade": "testes pytest.mark.lento",
+   "comando": "bash laco/roda_teste.sh tests/api/test_esri_rest.py -q -m lento",
+   "resultado": "6 passed"
+  },
+  "suite_conexao_nao_regrediu": {
+   "valor": "passa",
+   "comando": "bash laco/roda_teste.sh tests/unit/test_conexao_seguranca.py tests/api/test_conexoes.py tests/unit/test_esri_rest_analise.py tests/api/test_esri_rest.py -q",
+   "resultado": "73 passed"
+  }
+ },
+ "fora_do_turno": [
+  "modo copiado (materializar em PostGIS) — mesma fronteira do L6-02-b/c",
+  "f=pbf na query paginada (só geojson implementado)"
+ ],
+ "medido_em": "2026-09-07",
+ "sessao": "bdgdjob (fork/turno 5, worktree wt/arcext)"
+}

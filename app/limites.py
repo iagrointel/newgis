@@ -142,6 +142,21 @@ CONEXAO_REDIRECT_MAX = 5                 # cada hop é revalidado do zero (host 
 CONEXAO_RESPOSTA_MAX_BYTES = 1 * 1024 * 1024  # 1 MiB: o teste de saúde confere status/corpo curto
                                                 # (nunca baixa o serviço inteiro)
 
+# --- ArcGIS REST externo (L6-02-d-arcgis-rest-externo; ADR 0020): FeatureServer (query paginado),
+# MapServer (export dinâmico) e ImageServer (exportImage) de Portal/AGOL de terceiro. `maxRecordCount`
+# do serviço é sempre respeitado (nunca pedimos mais do que ele aceita); quando o serviço declara um valor
+# hostil (ex.: 1) ou nunca fecha `exceededTransferLimit`, os tetos abaixo evitam laço infinito — a página é
+# sempre gravada como aviso de procedência, nunca um erro silencioso.
+ESRI_REST_TIMEOUT_S = 15.0                        # descrição do serviço (?f=json) e cada página de query
+ESRI_REST_IMAGEM_TIMEOUT_S = 20.0                 # export/exportImage: pode gerar imagem grande no servidor
+ESRI_REST_DESCRICAO_MAX_BYTES = 5 * 1024 * 1024   # 5 MiB: JSON de descrição do serviço/camada
+ESRI_REST_PAGINA_MAX_BYTES = 8 * 1024 * 1024      # 8 MiB: uma página de feições (geojson/pbf)
+ESRI_REST_MAX_RECORD_COUNT_PADRAO = 1000          # quando o serviço não declara `maxRecordCount`
+ESRI_REST_PAGINAS_MAX = 50                        # teto de segurança mesmo com maxRecordCount hostil (ex.: 1)
+ESRI_REST_FEICOES_MAX = 20000                     # teto de segurança do modo referenciado (consulta ao vivo)
+ESRI_REST_IMAGEM_MAX_BYTES = 8 * 1024 * 1024      # 8 MiB: uma única imagem export/exportImage
+ESRI_REST_IMAGEM_LADO_MAX = 2048                  # largura/altura máximas pedidas ao serviço (px)
+
 # --- ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 INGESTAO_AMOSTRA_VALIDADE = 1000          # feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR)
 INGESTAO_MEMORIA_MB = 768                 # job ingestao.inspecionar (cobre GeoJSON de 64 MiB, ADR seção 0.4)
