@@ -41,8 +41,9 @@ def test_instalador_grava_plat_git_sha_e_confere_hsts():
 def test_hsts_em_todo_bloco_de_add_header_do_modelo():
     locais = NGINX.count("location ")
     hsts = NGINX.count('add_header Strict-Transport-Security "max-age=31536000" always;')
-    # 5 desde o item L2-01-a (location nova para o PMTiles do mapa-base, deploy/nginx.conf)
-    assert locais == 5 and hsts == locais + 1, (locais, hsts)
+    # 7 desde o item L7-03-b-rate-limit-abuso (locations novas /api/ e /tiles/ com limit_req, deploy/nginx.conf;
+    # eram 5 desde o L2-01-a, PMTiles do mapa-base)
+    assert locais == 7 and hsts == locais + 1, (locais, hsts)
 
 
 def test_referrer_policy_em_todo_bloco_de_add_header_do_modelo():
@@ -63,6 +64,19 @@ def test_logins_com_limite_por_ip_e_zona_escrita_pelo_instalador():
         assert "proxy_pass http://127.0.0.1:PORTA;" in bloco
     assert NGINX.index("location = /api/login {") < NGINX.index("location / {")
     assert "zone=plat_login:10m rate=10r/m" in INSTALL and "/etc/nginx/conf.d/plat_limites.conf" in INSTALL
+
+
+def test_api_e_tiles_com_limite_por_ip_camada_1_do_item_l703b():
+    """docs/SEGURANCA.md §9.1: camada 1 (borda, por IP) do item L7-03-b-rate-limit-abuso."""
+    for rota, zona, burst in (("location /api/ {", "plat_api", "60"), ("location /tiles/ {", "plat_tiles", "200")):
+        bloco = NGINX[NGINX.index(rota) :]
+        bloco = bloco[: bloco.index("}")]
+        assert f"limit_req zone={zona} burst={burst} nodelay;" in bloco and "limit_req_status 429;" in bloco, rota
+        assert "proxy_pass http://127.0.0.1:PORTA;" in bloco
+    # /api/ e /tiles/ (prefixo) vêm DEPOIS dos `location =` exatos de login (nginx: exato sempre vence prefixo,
+    # mas a ordem no arquivo também documenta a intenção) e ANTES do fallback genérico `location /`
+    assert NGINX.index("location = /api/login {") < NGINX.index("location /api/ {") < NGINX.index("location / {")
+    assert "zone=plat_api:10m rate=120r/m" in INSTALL and "zone=plat_tiles:10m rate=600r/m" in INSTALL
 
 
 def test_instalador_semeia_plataforma_sem_superadmin_nos_demos_e_confere_cryptography():

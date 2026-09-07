@@ -214,3 +214,19 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `REDEFINICAO_JANELA_MIN` | `15` | limite de taxa (refutação do item: 1.000 pedidos/min p/ o mesmo e-mail) |
 | `REDEFINICAO_MAX_JANELA` | `5` | no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN |
 | `AVISO_EXPIRACAO_DIAS` | `(90, 30, 7, 1)` | avisos de expiração de token de serviço (hipótese do item; como a Esri) |
+
+## limite de taxa por inquilino/plano (L7-03-b-rate-limit-abuso; app/limite_taxa.py, docs/SEGURANCA.md §9):
+
+| nome | valor | explicação |
+|---|---|---|
+| `LIMITE_TAXA_PADROES` | *(dicionário; ver subtabela abaixo)* | — |
+| `LIMITE_TAXA_JANELA_S` | `60` | janela deslizante única para os dois escopos acima (segundos) |
+| `LIMITE_TAXA_ESCOPOS` | `('api', 'tiles')` | — |
+| `LIMITE_TAXA_RETRY_AFTER_MIN_S` | `1` | nunca manda Retry-After: 0 (RFC 6585 recomenda um valor positivo) |
+
+### `LIMITE_TAXA_PADROES`
+
+| chave | padrão | mínimo | máximo |
+|---|---|---|---|
+| `api_por_minuto` | `6000` | `5` | `500000` |
+| `tiles_por_minuto` | `12000` | `10` | `2000000` |

@@ -384,3 +384,129 @@ o mesmo acima do teto de uma parte (nunca abre multipart no Garage para um conte
   contêiner externo é conferido.
 - O caminho de sincronização da PWA de campo (L2-07, ainda não construído) precisará da mesma barreira quando
   existir; `objetos.guardar()` já cobre automaticamente qualquer chamador futuro que passe por ele.
+
+## 9. Limite de taxa contra abuso de volume (item L7-03-b-rate-limit-abuso)
+
+Três camadas independentes (ADR `docs/adr/20260907T1500-limite-de-taxa-tres-camadas.md` tem as decisões e o
+que ficou de fora):
+
+| camada | onde | chave | o que segura |
+|---|---|---|---|
+| 1 — borda | nginx, zonas `plat_login`/`plat_api`/`plat_tiles` (`deploy/nginx.conf`, `install.sh` grava as zonas em `/etc/nginx/conf.d/plat_limites.conf`) | IP (`$binary_remote_addr`) | volume bruto, antes de gastar CPU/conexão de banco |
+| 2 — inquilino/plano | `app/limite_taxa.py` + `plat.limite_taxa_verificar` (Postgres, janela deslizante), chamada de dentro de `app/auth/sessao.py::resolver` | `tenant:<id>` | um inquilino (ou um token comprometido dele) não afeta outro; teto lido de `tenant.config.limites.*`, cortado para a faixa de `limites.LIMITE_TAXA_PADROES` |
+| 3 — reincidência | fail2ban, jail `plat` (`deploy/fail2ban/`) sobre `/var/log/nginx/plat_access.log` | IP (`$remote_addr` do log combined) | quem insiste em 401/429 depois de já ter sido recusado |
+
+### 9.1 Camada 1 — nginx por IP
+
+`deploy/nginx.conf` tem `location /api/` (zona `plat_api`, `rate=120r/m burst=60 nodelay`) e
+`location /tiles/` (zona `plat_tiles`, `rate=600r/m burst=200 nodelay`), além do `location = /api/login`
+já existente (zona `plat_login`, item L0-02). `limit_req` roda ANTES do roteamento da aplicação — a
+rajada acima do burst nunca chega ao `proxy_pass`, então nunca invalida nem escreve num `proxy_cache`
+que a rota venha a ter (prova em 9.3). As três zonas usam `$binary_remote_addr`, nunca um cabeçalho:
+não há `ngx_http_realip_module` configurado neste vhost, então não existe "confiar no
+X-Forwarded-For" para configurar errado aqui — a defesa é segura por padrão.
+
+Medido com `scripts/bench_limite_taxa.sh` (nginx e uvicorn reais, ver 9.4):
+
+```
+== camada 1, zona plat_api (rate=120r/m burst=60) ==
+direto (sem nginx), 90 pedidos rápidos: 90 404, 0 429   -- confirma que a defesa é só do nginx
+via nginx,           90 pedidos rápidos: 53 404, 37 429
+== camada 1, zona plat_tiles (rate=600r/m burst=200), sem existir rota de ladrilho ==
+via nginx, 320 pedidos rápidos: 229 404, 91 429
+== X-Forwarded-For forjado e ROTACIONADO a cada pedido, 200 pedidos cada rodada ==
+sem forjar: 192/200 em 429 · forjando: 197/200 em 429 (diferença 5, ruído de tempo entre rodadas)
+```
+
+### 9.2 Camada 3 — fail2ban
+
+`deploy/fail2ban/filter.d/plat-abuso.conf` casa linhas do log combined do nginx com status 401 ou 429
+em `/api/`, `/svc/` ou `/tiles/`; `deploy/fail2ban/jail.d/plat.conf` (`backend=auto`, arquivo — NUNCA o
+`backend=systemd`/journal que a jail `nginx-limit-req` já instalada nesta máquina usa, que leria todo
+nginx de todo produto) aponta para `/var/log/nginx/plat_access.log`, um `access_log` DEDICADO do vhost
+do plat (nunca o log genérico compartilhado com outros produtos da casa). `install.sh` copia os dois
+arquivos para `/etc/fail2ban/` e recarrega o fail2ban (seção "i4"). `maxretry=15 findtime=120s
+bantime=3600s`; `banaction` herdado do `[DEFAULT]` da casa (`nftables`).
+
+**Prova real, medida em 07/09/2026** (nunca contra um IP de produção — `127.0.0.9` é loopback,
+`curl --interface` alcança sem configurar nada, e nenhum outro serviço desta máquina compartilhada
+depende dele; ver o ADR §Decisão 3 para o motivo de não usar um IP real neste teste):
+
+```
+$ fail2ban-regex /var/log/nginx/plat_access.log /etc/fail2ban/filter.d/plat-abuso.conf
+Failregex: 2226 total
+Lines: 3716 lines, 0 ignored, 2226 matched, 1490 missed
+
+$ for i in $(seq 1 30); do curl -s --interface 127.0.0.9 -o /dev/null -X POST http://.../api/login \
+    -H 'Content-Type: application/json' -d '{"inquilino":"demo","login":"zz-nao-existe","senha":"errada"}'; done
+$ sudo fail2ban-client status plat
+...
+   |- Currently banned:	1
+   `- Banned IP list:	127.0.0.9
+$ curl --interface 127.0.0.9 http://.../saude   # sem resposta (000) -- o nftables está mesmo bloqueando
+$ sudo fail2ban-client set plat unbanip 127.0.0.9   # limpeza; confirmado banned=0 depois
+```
+
+### 9.3 Camada 2 — por inquilino/plano, em Postgres
+
+`app/limite_taxa.py` (mecanismo) + `plat.limite_taxa_verificar` (migração `20260907T1444_limite_taxa.sql`,
+janela deslizante — mesmo desenho de `plat.redefinicao_solicitar`, migração 047). Chamada de dentro de
+`app/auth/sessao.py::resolver()`, o único ponto por onde toda requisição autenticada passa (sessão OU
+token), já com `tenant_id`/`config` resolvidos. 429 com `Retry-After` (RFC 6585), corpo
+`{"erro": "limite_de_taxa", "detalhe": {"escopo", "maximo", "janela_s"}}`.
+
+Teto por `tenant.config.limites.<escopo>_por_minuto`, cortado para a faixa de `limites.LIMITE_TAXA_PADROES`
+(nunca abaixo do mínimo nem acima do máximo — mesma regra de corte de `AUTH_PADROES`):
+
+| escopo | padrão | mínimo | máximo |
+|---|---|---|---|
+| `api` (todo `/api/*` autenticado) | 6000/min | 5/min | 500.000/min |
+| `tiles` (`/tiles/*`, `/svc/<token>/(raster\|mosaico)`) | 12000/min | 10/min | 2.000.000/min |
+
+O padrão é DE PROPÓSITO alto (100 req/s sustentado para `api`): o mesmo contador corre em toda a suíte
+de teste da casa martelando os inquilinos `demo`/`demo2` (`sessao_a`/`sessao_b`, escopo de sessão do
+pytest) — um teto pensado só para "uso normal de um cliente" derrubaria `make check` sem motivo nenhum
+do produto (provado: `tests/api/test_limite_taxa.py::
+test_limite_padrao_de_demo_e_alto_o_bastante_para_nao_atrapalhar_a_suite`).
+
+Provas (`tests/api/test_limite_taxa.py`, 10 casos, todos verdes):
+
+- **Cláusula "inquilino não afeta outro"**: dois inquilinos temporários com o mesmo teto baixo; esgota
+  o de A, confere que B segue 200 no mesmo instante
+  (`test_limite_de_um_inquilino_nao_afeta_outro_teste_cruzado`).
+- **Refutação "50 IPs contra o mesmo token"**: rotaciona `X-Forwarded-For` a cada pedido contra o MESMO
+  inquilino — a chave é `tenant:<id>`, nunca o IP, então rotacionar o cabeçalho não devolve cota nenhuma
+  (`test_50_ips_forjados_contra_o_mesmo_token_a_camada_de_inquilino_segura`).
+- **Refutação "1 IP contra 50 tokens"**: a camada 2, por desenho, NÃO segura isso sozinha — cada
+  inquilino tem sua própria cota. Quem segura é a camada 1 (9.1): a zona `plat_api` não sabe o que é
+  um token, então criar mais tokens (ou mais inquilinos) não dá mais cota de IP.
+- **Contrato de erro e `Retry-After`**: `test_retry_after_e_o_corpo_seguem_o_contrato_de_erro_do_produto`.
+- **Escopos independentes da mesma chave**: `test_escopos_diferentes_da_mesma_chave_sao_contadores_independentes`.
+- **Não conta duas vezes na mesma requisição**: `test_nao_conta_duas_vezes_na_mesma_requisicao`.
+
+### 9.4 X-Forwarded-For — por que não há nada novo para configurar
+
+`deploy/plat-api.service` já sobe o uvicorn com `--proxy-headers --forwarded-allow-ips 127.0.0.1` (de
+um item anterior, não tocado por este). Isso faz o `ProxyHeadersMiddleware` do uvicorn só confiar no
+cabeçalho quando o peer TCP imediato é `127.0.0.1` (o nginx local); de qualquer outro peer, o cabeçalho
+é ignorado e `request.client.host` fica com o IP real do socket. `app/auth/sessao.py::ip_de()` já lê só
+`request.client.host` — todo código que já usava essa função (restrição de token por IP, bloqueio de
+login, log de acesso) já herda a defesa sem mudança nenhuma. Este item PROVA isso, não inventa
+mecanismo novo — ver o ADR (Decisão 3) para o raciocínio completo e por que o teste usa `127.0.0.9`
+como "peer não confiável" em vez de tentar simular um atacante remoto de verdade numa máquina de teste
+local.
+
+### 9.5 O que ficou de fora (nomeado, não escondido)
+
+- **"Tile acima do limite do plano" fim a fim por HTTP real**: `L1-02-tiles-token` (que cria as rotas
+  `/tiles/...`/`/svc/<token>/raster/...`) está `entregue` mas **não mesclado** nesta base (`app/imagens/`
+  não existe neste worktree — ver `laco/handoffs/T4/L1-02-tiles-token.md`). O MECANISMO da camada 2 é
+  genérico por escopo e testado com `escopo="tiles"` diretamente contra a função SQL; a zona de nginx
+  `plat_tiles` já protege `/tiles/` na borda (9.1, provado até sem existir a rota real). O que falta é
+  só a FIAÇÃO — anexar `limite_taxa.exigir(..., "tiles", "tiles_por_minuto")` no ponto que resolve o
+  token de ladrilho quando aquele ramo mesclar. Registrado como pendência do item, não como feito.
+- **Limite nomeado por PLANO** (Bronze/Prata/Ouro, item L7-09-b): o mecanismo já lê
+  `tenant.config.limites.*`; nomear planos e expor a UI de configuração é do L7-09-b.
+- **`fail2ban` com IP real de produção no teste**: por segurança operacional desta máquina
+  compartilhada (ver 9.2) — em produção o `banaction` é o real (`nftables`, herdado), sem dry-run;
+  só o TESTE evita usar um IP de verdade.

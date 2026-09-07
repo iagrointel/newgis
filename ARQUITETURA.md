@@ -942,3 +942,36 @@ fora do pytest, usando o MESMO `TestClient` e o MESMO banco, autenticado como ad
 não exige 2FA) — suficiente porque nenhuma rota nova deste item depende do superadmin. Os e2e (que batem no
 serviço `plat-api` ao vivo, não no `TestClient`) não são afetados por este bloqueio; o serviço foi reiniciado
 uma vez (`systemctl restart plat-api`) para servir o código novo, com RAM conferida antes e depois.
+
+## 18. Limite de taxa em três camadas (item L7-03-b-rate-limit-abuso)
+
+Três defesas independentes contra abuso de volume, cada uma provada com pedidos HTTP reais (não só
+unitário) — detalhe operacional completo em `docs/SEGURANCA.md §9`, decisões em
+`docs/adr/20260907T1500-limite-de-taxa-tres-camadas.md`.
+
+1. **Borda, por IP** — `deploy/nginx.conf`: `location /api/` (zona `plat_api`, 120r/m burst 60) e
+   `location /tiles/` (zona `plat_tiles`, 600r/m burst 200), somadas à `plat_login` já existente do
+   L0-02; `install.sh` grava as zonas em `/etc/nginx/conf.d/plat_limites.conf`. `limit_req` roda ANTES
+   do `proxy_pass`, então nunca invalida um `proxy_cache` que a rota venha a ter.
+2. **API, por inquilino/plano** — `app/limite_taxa.py` + `plat.limite_taxa_verificar` (migração
+   `20260907T1444_limite_taxa.sql`, janela deslizante em Postgres, mesmo desenho de
+   `plat.redefinicao_solicitar` da migração 047), chamada de dentro de `app/auth/sessao.py::resolver` —
+   por isso cobre TODA rota autenticada da casa, sem precisar tocar cada rota uma a uma. Chave
+   `tenant:<id>`; teto por `tenant.config.limites.<escopo>_por_minuto`, cortado para a faixa de
+   `limites.LIMITE_TAXA_PADROES` (mesma regra de corte de `AUTH_PADROES`). 429 com `Retry-After`
+   (RFC 6585).
+3. **Reincidência** — fail2ban, jail `plat` (`deploy/fail2ban/filter.d/plat-abuso.conf` +
+   `jail.d/plat.conf`), `backend=auto` sobre um `access_log` DEDICADO do vhost do plat
+   (`/var/log/nginx/plat_access.log`) — nunca o log genérico da máquina nem o `backend=systemd`/journal
+   que a jail `nginx-limit-req` de outro produto, já instalada nesta máquina, usa.
+
+`X-Forwarded-For` forjado: nada novo em Python. `deploy/plat-api.service` já sobe o uvicorn com
+`--proxy-headers --forwarded-allow-ips 127.0.0.1` (item anterior); `app/auth/sessao.py::ip_de()` já lê
+só `request.client.host`, nunca um cabeçalho. Este item prova que a cadeia inteira (nginx por socket →
+uvicorn confiando só no peer `127.0.0.1` → `ip_de()`) resiste a cabeçalho forjado, com nginx e fail2ban
+reais (`scripts/bench_limite_taxa.sh`) — não inventa mecanismo novo.
+
+**Pendência nomeada**: a cláusula "tile acima do limite do plano" está `parcial` — `L1-02-tiles-token`
+(rotas `/tiles/...`/`/svc/<token>/raster/...`) não está mesclado nesta base; a zona `plat_api` já
+protege `/tiles/` na borda mesmo sem a rota, e o escopo `tiles` da camada 2 já existe e está testado
+diretamente contra a função SQL — falta só a fiação na rota real quando aquele ramo mesclar.

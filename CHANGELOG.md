@@ -3,6 +3,43 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 5, setembro de 2026 (item L7-03-b-rate-limit-abuso: limite de taxa em três camadas contra abuso de volume)
+
+Três camadas independentes, cada uma provada com pedidos HTTP reais (ADR `docs/adr/20260907T1500-limite-de-
+taxa-tres-camadas.md`, `docs/SEGURANCA.md §9`): (1) nginx por IP, zonas `plat_api`/`plat_tiles` novas
+(`deploy/nginx.conf`, `install.sh`) somadas à `plat_login` já existente do L0-02; (2) API por inquilino/plano,
+janela deslizante em Postgres (`app/limite_taxa.py` + `plat.limite_taxa_verificar`, migração
+`20260907T1444_limite_taxa.sql`, mesmo desenho de `plat.redefinicao_solicitar` da migração 047), chamada de
+dentro de `app/auth/sessao.py::resolver` — cobre TODA requisição autenticada da casa, sessão OU token; (3)
+fail2ban, jail `plat` dedicada (`deploy/fail2ban/`) sobre um `access_log` próprio do vhost do plat, nunca o
+log genérico compartilhado com outros produtos nem o `backend=systemd`/journal que a jail `nginx-limit-req`
+já instalada nesta máquina usa (leria todo nginx de todo produto).
+
+Medido com nginx e fail2ban REAIS (`scripts/bench_limite_taxa.sh`, `tests/medidas/L7-03-b-rate-limit-
+abuso.json`): zona `plat_api` (rate=120r/m burst=60) segura 37/90 pedidos rápidos em 429 via nginx contra
+0/90 na porta direta (prova de que a camada 1 é só do nginx); zona `plat_tiles` segura 91/320 mesmo sem
+existir rota de ladrilho real; `X-Forwarded-For` forjado e rotacionado a cada pedido não move o ponto do 429
+(192/200 × 197/200, diferença 5 dentro do ruído); `fail2ban-regex` casa 2.226 linhas no log real; e o jail
+BANE DE VERDADE (nftables) um atacante de loopback (`127.0.0.9` — nunca um IP real, ver o ADR) depois de 30
+tentativas de login erradas, confirmado com o próprio `curl` sem resposta (000) durante o banimento e
+desbanido logo depois. `X-Forwarded-For` no nível do processo já estava resolvido por um item anterior
+(`deploy/plat-api.service` já sobe `--proxy-headers --forwarded-allow-ips 127.0.0.1`): este item prova que
+`app/auth/sessao.py::ip_de()` herda essa defesa sem mudança nenhuma, em vez de inventar mecanismo novo.
+
+Refutação do item — 10 casos em `tests/api/test_limite_taxa.py`, todos verdes: "50 IPs contra o mesmo
+token" (a chave da camada 2 é `tenant:<id>`, nunca o IP — rotacionar o cabeçalho não devolve cota) e "1 IP
+contra 50 tokens" (a camada 2 não segura isso sozinha por desenho — quem segura é a camada 1, que não sabe
+o que é um token); cláusula "inquilino não afeta outro" com dois inquilinos temporários e teto igual; e uma
+rede de segurança para o próprio laço — o padrão de produção (6000/min por inquilino) é alto o bastante para
+não atrapalhar a suíte inteira martelando `demo`/`demo2`.
+
+**Pendência nomeada, não fingida**: `L1-02-tiles-token` (rotas `/tiles/...`/`/svc/<token>/raster/...`) está
+`entregue` mas não mesclado nesta base (`app/imagens/` não existe neste worktree — `laco/handoffs/T4/L1-02-
+tiles-token.md`); a cláusula "tile acima do limite do plano" fica **parcial**: a zona de borda (`plat_tiles`)
+já protege `/tiles/` mesmo sem a rota, e o mecanismo da camada 2 já suporta o escopo `tiles` (testado
+diretamente na função SQL) — falta só anexar `limite_taxa.exigir(..., "tiles", ...)` no ponto que resolve o
+token de ladrilho quando aquele ramo mesclar.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha

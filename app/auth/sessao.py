@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 import psycopg2
 from fastapi import Depends, Request
 
-from app import db, limites
+from app import db, limite_taxa, limites
 from app.auth import escopos as esc
 from app.auth.politica import Politica, politica_de
 from app.erros import ErroAPI
@@ -301,6 +301,9 @@ def resolver(request: Request) -> Auth | None:
     request.state.tenant_id = auth.tenant_id
     request.state.usuario_id = auth.usuario_id
     request.state.token_id = auth.token_id
+    # camada 2 do item L7-03-b-rate-limit-abuso: limite de taxa por inquilino, aqui porque é o único ponto
+    # por onde TODA requisição autenticada passa (sessão OU token), já com tenant_id e config resolvidos.
+    limite_taxa.exigir(request, auth.tenant_id, auth.config, "api", "api_por_minuto")
     return auth
 
 

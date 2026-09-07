@@ -204,3 +204,26 @@ REDEFINICAO_VALIDADE_HORAS = 1            # portão do item-pai (ADR 0002 seçã
 REDEFINICAO_JANELA_MIN = 15               # limite de taxa (refutação do item: 1.000 pedidos/min p/ o mesmo e-mail)
 REDEFINICAO_MAX_JANELA = 5                # no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN
 AVISO_EXPIRACAO_DIAS = (90, 30, 7, 1)     # avisos de expiração de token de serviço (hipótese do item; como a Esri)
+
+# --- limite de taxa por inquilino/plano (L7-03-b-rate-limit-abuso; app/limite_taxa.py, docs/SEGURANCA.md §9):
+# camada 2 do item (a camada 1 é o nginx por IP, zonas plat_api/plat_tiles em deploy/nginx.conf; a camada 3 é
+# o fail2ban sobre 401/429 repetidos, deploy/fail2ban/). Cada chave abaixo é (padrão, mínimo, máximo) por
+# tenant.config.limites.<chave> — MESMA faixa/corte de AUTH_PADROES (nunca permite política MAIS FROUXA que o
+# mínimo, nunca MAIS APERTADA que impediria uso normal); "tiles" fica pronto para o item L1-02-tiles-token
+# (ainda não mesclado nesta trilha, ver ADR desta trilha §5) — o mecanismo é genérico por escopo, testado aqui
+# só com "api" contra rotas reais; anexar "tiles" a uma rota de ladrilho é um passo de fiação, não de desenho.
+LIMITE_TAXA_PADROES: dict[str, tuple] = {
+    # 6000/min (100/s sustentado) é DE PROPÓSITO alto: este teto corre em TODA requisição autenticada da CASA
+    # inteira (`app/auth/sessao.py::resolver`), inclusive a suíte de teste inteira martelando os inquilinos
+    # demo/demo2 (`sessao_a`/`sessao_b`, escopo de sessão do pytest) — um teto pensado só para "uso normal de
+    # um cliente" derrubaria `make check` por motivo nenhum do produto. 100/s já é bem acima do que um cliente
+    # legítimo sustenta (a Esri, referência do item, não documenta um número; este é o piso defensável: pára
+    # abuso de volume mantendo folga generosa para teste e uso real). Um inquilino real que precise de mais
+    # ajusta pelo próprio `config.limites.api_por_minuto` (corte de faixa abaixo garante que nunca fica ABAIXO
+    # do mínimo nem ACIMA do máximo).
+    "api_por_minuto": (6000, 5, 500_000),          # por tenant_id, todo /api/* autenticado (sessão OU token)
+    "tiles_por_minuto": (12000, 10, 2_000_000),    # por tenant_id, /svc/<token>/(raster|mosaico) e /tiles/*
+}
+LIMITE_TAXA_JANELA_S = 60           # janela deslizante única para os dois escopos acima (segundos)
+LIMITE_TAXA_ESCOPOS = ("api", "tiles")
+LIMITE_TAXA_RETRY_AFTER_MIN_S = 1   # nunca manda Retry-After: 0 (RFC 6585 recomenda um valor positivo)

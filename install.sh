@@ -335,9 +335,10 @@ fi
 
 echo "== i. nginx"
 SITE=/etc/nginx/sites-enabled/$DOM
-# zona limit_req própria: 10 tentativas/min por IP em /api/login e /api/login/2fa (ADR 0002 seção 6.2)
+# zonas limit_req próprias: 10 tentativas/min por IP em /api/login e /api/login/2fa (ADR 0002 seção 6.2);
+# plat_api/plat_tiles são a camada 1 (por IP, na borda) do item L7-03-b-rate-limit-abuso — docs/SEGURANCA.md §9.
 LIMITES=/etc/nginx/conf.d/plat_limites.conf
-printf '# plat: limite por IP nos logins (ADR 0002 secao 6.2); escrito pelo install.sh\nlimit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\n' > "$LIMITES.novo"
+printf '# plat: limite por IP (ADR 0002 secao 6.2; item L7-03-b-rate-limit-abuso); escrito pelo install.sh\nlimit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\nlimit_req_zone $binary_remote_addr zone=plat_api:10m rate=120r/m;\nlimit_req_zone $binary_remote_addr zone=plat_tiles:10m rate=600r/m;\n' > "$LIMITES.novo"
 if [ -f "$LIMITES" ] && cmp -s "$LIMITES" "$LIMITES.novo"; then rm -f "$LIMITES.novo"; echo "$LIMITES já existe (igual)"; else mv "$LIMITES.novo" "$LIMITES"; echo "$LIMITES escrito"; fi
 escrever_nginx() {
   local bloco certbot_443 bloco_80
@@ -366,6 +367,21 @@ escrever_nginx() {
   systemctl reload nginx
 }
 escrever_nginx
+
+echo "== i4. fail2ban (camada 3 do item L7-03-b-rate-limit-abuso; docs/SEGURANCA.md §9.2)"
+# arquivo de log pode não existir ainda na primeira instalação (nginx só cria depois do primeiro pedido);
+# fail2ban recusa uma jail cujo logpath não existe, então garante o arquivo antes de copiar a jail.
+touch /var/log/nginx/plat_access.log
+if command -v fail2ban-client >/dev/null 2>&1; then
+  cp deploy/fail2ban/filter.d/plat-abuso.conf /etc/fail2ban/filter.d/plat-abuso.conf
+  cp deploy/fail2ban/jail.d/plat.conf /etc/fail2ban/jail.d/plat.conf
+  systemctl reload fail2ban 2>/dev/null || systemctl restart fail2ban
+  sleep 1
+  fail2ban-client status plat >/dev/null 2>&1 && echo "jail plat ativa" || echo "AVISO: jail plat não respondeu (ver journalctl -u fail2ban)" >&2
+else
+  echo "AVISO: fail2ban-client ausente nesta máquina; camada 3 (docs/SEGURANCA.md §9.2) fica sem efeito até instalar fail2ban" >&2
+fi
+
 if [ ! -d "/etc/letsencrypt/live/$DOM" ]; then
   echo "== i2. certbot"
   certbot --nginx -d "$DOM" --non-interactive --agree-tos --register-unsafely-without-email --redirect
