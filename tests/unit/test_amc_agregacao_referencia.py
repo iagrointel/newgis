@@ -1,30 +1,36 @@
 """Item L3-07-agregacao — a prova do portão: `app.amc.agregacao.agregar()` (o motor genérico, item novo)
-reproduz `cbre.imoveis_fav` (piloto real, só leitura — nunca escrito por este teste) recomputando a mesma
-conta que `cbre/pipeline/85_fatores.sql` faz à mão em SQL: média por fator ponderada pela área de
-interseção sobre células não vetadas de `cbre.hex_fav`, fração vetada, veto principal e contagem de
-células, para as 4.346 feições de `cbre.imoveis_candidatos`.
+reproduz a tabela de feições do motor logístico de referência da casa (piloto de referência, só leitura —
+nunca escrita por este teste) recomputando a mesma conta que o SQL de fatores daquele piloto faz à mão:
+média por fator ponderada pela área de interseção sobre células não vetadas da tabela de células, fração
+vetada, veto principal e contagem de células, para as 4.346 feições da tabela de candidatos.
 
-Por que essa comparação prova o item genérico: `cbre.hex_fav` tem VÁRIOS fatores já na escala 0-100
-(`f_decl`, `f_zon`, ...) — o mesmo formato que `agregar()` espera de qualquer conjunto de células — então
-a prova cobre o mecanismo geométrico com N fatores reais, não um caso de brinquedo.
+O motor logístico de referência é um produto de OUTRO projeto desta casa, já materializado num schema
+próprio do banco compartilhado. O nome desse schema NÃO está escrito neste repositório — vem da variável
+de ambiente `PLAT_MOTOR_REFERENCIA_ESQUEMA`, porque o repositório é público e o schema carrega o nome de
+um cliente. Sem a variável, o módulo inteiro é pulado com essa razão dita em voz alta.
+
+Por que essa comparação prova o item genérico: a tabela de células do motor de referência tem VÁRIOS
+fatores já na escala 0-100 (`f_decl`, `f_zon`, ...) — o mesmo formato que `agregar()` espera de qualquer
+conjunto de células — então a prova cobre o mecanismo geométrico com N fatores reais, não um caso de
+brinquedo.
 
 Duas exceções documentadas, contadas à parte e não escondidas: (a) 18 imóveis com
-`mine_veredito = 'veto_mineracao'` — o pipeline do cbre SOBRESCREVE `pct_vetado`/`veto_principal` com uma
-regra de negócio (veredito de mineração por satélite) que não é geometria nenhuma, então não é este
-mecanismo que se está provando ali; (b) `NULL` × `0`: quando NENHUMA célula tocada escapa do veto, o SQL
-do cbre não tem linha nenhuma no agrupamento (`n_cel`/`f_*` saem `NULL`); `agregar()` devolve `n_cel = 0`
-e `fatores_media = {}` para o mesmo caso — os dois dizem a mesma coisa (nenhuma célula não vetada), e o
-teste normaliza antes de comparar.
+`mine_veredito = 'veto_mineracao'` — o pipeline do motor de referência SOBRESCREVE `pct_vetado`/
+`veto_principal` com uma regra de negócio (veredito de mineração por satélite) que não é geometria
+nenhuma, então não é este mecanismo que se está provando ali; (b) `NULL` × `0`: quando NENHUMA célula
+tocada escapa do veto, o SQL do piloto não tem linha nenhuma no agrupamento (`n_cel`/`f_*` saem `NULL`);
+`agregar()` devolve `n_cel = 0` e `fatores_media = {}` para o mesmo caso — os dois dizem a mesma coisa
+(nenhuma célula não vetada), e o teste normaliza antes de comparar.
 
-Uma terceira exceção, achada rodando este teste (conferida linha a linha em `pipeline/85_fatores.sql`):
+Uma terceira exceção, achada rodando este teste (conferida linha a linha no SQL de fatores do piloto):
 sete fatores (`f_roubo`, `f_trib`, `f_renda`, `f_rlapp`, `f_polos`, `f_se`, `f_cluster`) e o `f_varzea`
-NÃO são o resultado da agregação por célula em `cbre.imoveis_fav` — o próprio pipeline do cbre os
-SOBRESCREVE depois, com uma consulta por imóvel direto de `cbre.imovel_fatores_extra`/
-`cbre.imovel_inundacao` (roubo de carga pelo trajeto do imóvel, tributação do lote, inundação oficial
-por imóvel — mais preciso que a média das células que ele toca). Comparar essas colunas testaria O
-GANCHO por imóvel do cbre, não a agregação de grade — por isso ficam fora de `FATORES_HEX` (only os 10
-fatores que o próprio SQL do cbre lista no `SELECT` de resumo do fim do arquivo, nunca tocados por
-UPDATE nenhum depois da agregação)."""
+NÃO são o resultado da agregação por célula na tabela de feições — o próprio pipeline do piloto os
+SOBRESCREVE depois, com uma consulta por imóvel direto das tabelas de fatores extra e de inundação por
+imóvel (roubo de carga pelo trajeto do imóvel, tributação do lote, inundação oficial por imóvel — mais
+preciso que a média das células que ele toca). Comparar essas colunas testaria O GANCHO por imóvel do
+piloto, não a agregação de grade — por isso ficam fora de `FATORES_HEX` (só os 10 fatores que o próprio
+SQL do piloto lista no `SELECT` de resumo do fim do arquivo, nunca tocados por UPDATE nenhum depois da
+agregação)."""
 
 import datetime
 import json
@@ -35,20 +41,26 @@ import pytest
 
 from app.amc import agregacao
 
+ESQUEMA = os.environ.get("PLAT_MOTOR_REFERENCIA_ESQUEMA", "").strip()
+if not ESQUEMA:
+    pytest.skip("PLAT_MOTOR_REFERENCIA_ESQUEMA não definido", allow_module_level=True)
+if not ESQUEMA.replace("_", "").isalnum():
+    raise RuntimeError("PLAT_MOTOR_REFERENCIA_ESQUEMA tem de ser um identificador simples")
+
 MEDIDAS_ITEM = "L3-07-agregacao"
 
-# os fatores de `cbre.imoveis_fav` que são MESMO o resultado da agregação de área sobre `cbre.hex_fav`
-# (a lista do próprio SELECT de resumo no fim de `cbre/pipeline/85_fatores.sql` — nenhum UPDATE depois
-# da agregação toca estes dez; ver a nota do módulo sobre os que ficam de fora e por quê).
+# os fatores da tabela de feições do motor de referência que são MESMO o resultado da agregação de área
+# sobre a tabela de células (a lista do próprio SELECT de resumo no fim do SQL de fatores do piloto —
+# nenhum UPDATE depois da agregação toca estes dez; ver a nota do módulo sobre os que ficam de fora).
 FATORES_HEX = [
     "f_decl", "f_zon", "f_gru", "f_rod", "f_disp", "f_ener", "f_agua", "f_restr", "f_press", "f_dens",
 ]
 
-_FEICOES_SQL = "SELECT car_cod AS feicao_id, geom FROM cbre.imoveis_candidatos"
+_FEICOES_SQL = f"SELECT car_cod AS feicao_id, geom FROM {ESQUEMA}.imoveis_candidatos"
 _CELULAS_SQL = (
     "SELECT h.hex_id::text AS cell_id, h.geom_utm AS geom, hf.veto, hf.veto_motivo AS motivo, "
     "jsonb_build_object(" + ", ".join(f"'{f}', hf.{f}" for f in FATORES_HEX) + ") AS fatores "
-    "FROM cbre.hex h JOIN cbre.hex_fav hf USING (hex_id)"
+    f"FROM {ESQUEMA}.hex h JOIN {ESQUEMA}.hex_fav hf USING (hex_id)"
 )
 
 
@@ -81,12 +93,12 @@ def agregado(_conexao_sessao):
 
 @pytest.fixture(scope="module")
 def referencia(_conexao_sessao):
-    """`cbre.imoveis_fav`, só leitura — a verdade que o pipeline do cbre já calculou."""
+    """A tabela de feições do motor de referência, só leitura — a verdade que o piloto já calculou."""
     with _conexao_sessao.cursor() as cur:
         cur.execute(
             "SELECT car_cod, n_cel, pct_vetado, veto_principal, mine_veredito, "
             + ", ".join(FATORES_HEX)
-            + " FROM cbre.imoveis_fav"
+            + f" FROM {ESQUEMA}.imoveis_fav"
         )
         linhas = {r["car_cod"]: dict(r) for r in cur.fetchall()}
     assert len(linhas) == 4346
@@ -101,14 +113,16 @@ def test_geometria_reproduz_area_total_com_st_area_no_crs_metrico(agregado, _con
     por_id = {x["feicao_id"]: x for x in r["resultados"]}
     with _conexao_sessao.cursor() as cur:
         cur.execute(
-            "SELECT car_cod FROM cbre.imoveis_candidatos TABLESAMPLE SYSTEM (5) ORDER BY car_cod LIMIT 30"
+            f"SELECT car_cod FROM {ESQUEMA}.imoveis_candidatos TABLESAMPLE SYSTEM (5) "
+            "ORDER BY car_cod LIMIT 30"
         )
         amostra = [x["car_cod"] for x in cur.fetchall()]
     for cid in amostra:
         with _conexao_sessao.cursor() as cur:
             cur.execute(
                 "SELECT sum(ST_Area(ST_Intersection(i.geom, h.geom_utm))) AS a "
-                "FROM cbre.imoveis_candidatos i JOIN cbre.hex h ON ST_Intersects(i.geom, h.geom_utm) "
+                f"FROM {ESQUEMA}.imoveis_candidatos i "
+                f"JOIN {ESQUEMA}.hex h ON ST_Intersects(i.geom, h.geom_utm) "
                 "WHERE i.car_cod = %s",
                 (cid,),
             )
@@ -155,7 +169,7 @@ def test_reproduz_imoveis_fav_com_delta_ate_0_5_em_99_5_por_cento(agregado, refe
         exemplos = []
         for cid, ref in referencia.items():
             if coluna in ("pct_vetado", "veto_principal") and cid in excecoes_mineracao:
-                continue  # veredito de mineração sobrescreve isto no pipeline do cbre; não é geometria
+                continue  # veredito de mineração sobrescreve isto no pipeline do piloto; não é geometria
             total += 1
             calc = por_id[cid]
             if coluna == "n_cel":
@@ -174,7 +188,7 @@ def test_reproduz_imoveis_fav_com_delta_ate_0_5_em_99_5_por_cento(agregado, refe
                     bate = False
                 else:
                     bate = abs(esperado - obtido) <= 0.5
-            else:  # fatores f_* (smallint 0-100 no cbre)
+            else:  # fatores f_* (smallint 0-100 no motor de referência)
                 esperado = ref[coluna]
                 obtido = calc["fatores_media"].get(coluna)
                 if esperado is None and obtido is None:
@@ -200,16 +214,18 @@ def test_reproduz_imoveis_fav_com_delta_ate_0_5_em_99_5_por_cento(agregado, refe
 
     gravar = medida(MEDIDAS_ITEM)
     gravar("tempo_agregacao_4346_feicoes_73115_celulas_ms", tempo_ms_sql, "ms",
-           f"app.amc.agregacao.agregar() sobre cbre.imoveis_candidatos x cbre.hex_fav (10 fatores "
-           f"comparáveis, 73.115 células); {contexto}")
+           "app.amc.agregacao.agregar() sobre as tabelas de candidatos e de células do motor de "
+           f"referência (10 fatores comparáveis, 73.115 células); {contexto}")
     gravar("tempo_agregacao_python_total_ms", tempo_python_ms, "ms",
            f"tempo de parede do fixture 'agregado' (inclui fetch de 4.346 linhas); {contexto}")
     for coluna, r_coluna in resumo.items():
         gravar(f"reproducao_{coluna}_taxa", r_coluna["taxa"], "fração de feições com |Δ| <= 0,5",
                f"comparação por feição de agregacao.agregar()[...].fatores_media/{coluna} "
-               f"contra cbre.imoveis_fav.{coluna}, n={r_coluna['total']}")
+               f"contra a coluna {coluna} da tabela de feições do motor de referência, "
+               f"n={r_coluna['total']}")
     gravar("excecoes_mine_veredito_veto_mineracao", len(excecoes_mineracao), "feições",
-           "cbre.imoveis_fav onde mine_veredito='veto_mineracao' — pct_vetado/veto_principal sobrescritos "
+           "tabela de feições do motor de referência onde mine_veredito='veto_mineracao' — "
+           "pct_vetado/veto_principal sobrescritos "
            "por regra de negócio alheia à geometria, excluídos da comparação de pct_vetado/veto_principal")
 
     piores = {c: v["taxa"] for c, v in resumo.items() if v["taxa"] < 0.995}

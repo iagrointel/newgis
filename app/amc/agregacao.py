@@ -2,9 +2,9 @@
 da grade, para uma FEIÇÃO qualquer (imóvel, lote, município, setor censitário — qualquer polígono que o
 usuário forneça), e o caminho inverso (feição -> células) para exibir a composição da nota.
 
-Método (decisão do item, o mesmo que `cbre.imoveis_fav` já fazia à mão em SQL para o piloto CBRE — este
-módulo generaliza para qualquer conjunto de células e qualquer fator, ver `pipeline/85_fatores.sql` do
-projeto `cbre`):
+Método (decisão do item, o mesmo que a tabela de feições do motor logístico de referência da casa já
+fazia à mão em SQL para o piloto de referência — este módulo generaliza para qualquer conjunto de
+células e qualquer fator):
 
 1. interseção geométrica entre a feição e cada célula que ela toca, com `ST_Area` no CRS MÉTRICO de
    trabalho (nunca grau, nunca Web Mercator — a mesma zona UTM SIRGAS 2000 do conjunto de unidades);
@@ -33,8 +33,9 @@ partir de entrada do usuário) que devolvem, cada uma, linhas já no CRS de trab
 - `feicoes_sql` (opcional; ver `feicoes_de_geojson`): `(feicao_id text, geom geometry)`.
 
 Isso deixa o mesmo motor servir tanto a execução real (`app.amc.tarefas`/rotas, ver
-`celulas_de_execucao_sql`) quanto a comparação com `cbre.hex_fav`/`cbre.imoveis_fav` que prova o item
-(mesma consulta, fonte diferente: ver `tests/unit/test_amc_agregacao_cbre.py`)."""
+`celulas_de_execucao_sql`) quanto a comparação com as tabelas de células e de feições do motor de
+referência que prova o item (mesma consulta, fonte diferente: ver
+`tests/unit/test_amc_agregacao_referencia.py`)."""
 
 from __future__ import annotations
 
@@ -116,11 +117,12 @@ def celulas_de_execucao_sql() -> str:
 
     Por isso a célula entra na agregação com UM fator sintético, `favorabilidade`, igual ao que o motor
     já combinou — a agregação por feição vira `Σ área·favorabilidade / Σ área` sobre as células não
-    vetadas, exatamente a mesma conta que `cbre.imoveis_fav` faz para cada `f_*` (a prova do item usa
-    `cbre.hex_fav`, que tem VÁRIOS fatores já transformados, exatamente para provar que o mecanismo
-    geométrico generaliza para N fatores — aqui a integração real começa com N = 1 porque é o que o
-    resto do motor persiste hoje). Recombinar por vários fatores no nível da feição (o `modelo_definicao`
-    continua aceito por `agregar()` para esse caso) fica pronto para quando a nota por fator existir."""
+    vetadas, exatamente a mesma conta que a tabela de feições do motor de referência faz para cada `f_*`
+    (a prova do item usa a tabela de células dele, que tem VÁRIOS fatores já transformados, exatamente
+    para provar que o mecanismo geométrico generaliza para N fatores — aqui a integração real começa com
+    N = 1 porque é o que o resto do motor persiste hoje). Recombinar por vários fatores no nível da
+    feição (o `modelo_definicao` continua aceito por `agregar()` para esse caso) fica pronto para quando
+    a nota por fator existir."""
     return (
         "SELECT u.unidade_id AS cell_id, ST_Transform(u.geom, %(srid_trabalho)s) AS geom, "
         "r.vetado AS veto, r.motivo, "

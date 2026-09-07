@@ -6,8 +6,10 @@ O motor multicritério calcula favorabilidade por CÉLULA de grade (`plat.amc_un
 `plat.amc_resultado`, itens L3-01-b/e). Este item leva esse resultado a uma FEIÇÃO qualquer
 (imóvel, lote, município, setor censitário — qualquer polígono do usuário) por interseção
 geométrica ponderada por área, e o caminho inverso (feição -> células) para exibir a composição.
-O portão exige reproduzir `cbre.imoveis_fav` (piloto real, 4.346 feições) com |Δ| ≤ 0,5 em
-≥ 99,5 % dos casos, contra `cbre.hex_fav`/`cbre.hex` calculados por `cbre/pipeline/85_fatores.sql`.
+O portão exige reproduzir a tabela de feições do motor logístico de referência da casa (piloto de
+referência, 4.346 feições) com |Δ| ≤ 0,5 em ≥ 99,5 % dos casos, contra as tabelas de células e de grade
+dele, calculadas pelo SQL de fatores daquele piloto. O nome do schema não é escrito aqui nem no código:
+vem de `PLAT_MOTOR_REFERENCIA_ESQUEMA`, e sem a variável os testes que precisam do oráculo são pulados.
 
 ## Decisão 1 — o núcleo é uma consulta SQL parametrizada por DUAS sub-consultas, não uma função Python sobre geometria
 
@@ -17,7 +19,7 @@ veto/motivo/fatores em jsonb) e faz UMA consulta com `ST_Intersects`/`ST_Area`/`
 no PostGIS — nunca reimplementando geometria em shapely/Python. Isso deixa o MESMO motor servir
 três fontes diferentes sem duplicar a conta: a execução real do produto
 (`celulas_de_execucao_sql`), casos sintéticos de teste (`feicoes_de_geojson`/`celulas_de_geojson`,
-via `unnest`) e a comparação com `cbre.hex_fav`/`cbre.imoveis_candidatos` que prova o portão (SQL
+via `unnest`) e a comparação com as tabelas de células e de candidatos do motor de referência (SQL
 literal, direto nas tabelas do piloto, só leitura). Escala medida: 4.346 feições × 73.115 células
 em ≈ 4,5-22 s dependendo da carga da máquina (`tests/medidas/L3-07-agregacao.json`).
 
@@ -28,7 +30,8 @@ metros/booleano/categoria) de nota (0-100, produto da transformação declarada)
 que `app/amc/combinacao.py` já assume ("matriz de fatores JÁ transformados"). Uma média de área
 ponderada só comuta com a transformação quando ela é afim e nenhuma célula bate no limite (`abaixo`/
 `acima`); como isso não é garantido em geral, `agregar()` exige a nota já pronta por célula, nunca
-o bruto. É por isso que a prova do portão usa `cbre.hex_fav` (fatores já 0-100) em vez de tentar
+o bruto. É por isso que a prova do portão usa a tabela de células do motor de referência (fatores já
+0-100) em vez de tentar
 reconstituir a transformação aqui.
 
 ## Decisão 3 — a integração com a execução real do motor entra com UM fator sintético (limite honesto, documentado)
@@ -39,7 +42,8 @@ Recompor a transformação de cada fator aqui duplicaria o item L3-01-d-transfor
 `app/amc/executor.py` já documenta o mesmo limite: só resolve `linear`, as outras erram alto e claro)
 sem a verificação cruzada que aquele item exige. A saída escolhida: a célula entra na agregação com
 um fator sintético `favorabilidade` = o que o motor já combinou; a agregação por feição vira
-`Σ área·favorabilidade / Σ área` sobre as não vetadas — mesma conta de qualquer `f_*` do cbre, com
+`Σ área·favorabilidade / Σ área` sobre as não vetadas — mesma conta de qualquer `f_*` do motor de
+referência, com
 N = 1. `agregar()` continua aceitando `modelo_definicao`/`pesos` para recombinar N > 1 fatores
 (testado com dados sintéticos, `test_pesos_do_modelo_recombinam_varios_fatores`) para quando a nota
 por fator por célula existir.
@@ -52,17 +56,17 @@ matematicamente equivalentes mas com plano de execução diferente podem devolve
 para a mesma feição — achado rodando a refutação do item (`tests/unit/test_amc_agregacao_adversario.py`,
 a consulta escrita à mão no psql discordava da de `agregacao.py` só nesse critério até o ajuste).
 
-## Decisão 5 — três colunas de `cbre.imoveis_fav` ficam fora da comparação do portão, por não serem geometria
+## Decisão 5 — três colunas da tabela de feições do motor de referência ficam fora da comparação do portão, por não serem geometria
 
 `f_roubo`, `f_trib`, `f_renda`, `f_rlapp`, `f_polos`, `f_se`, `f_cluster` e `f_varzea` são
-SOBRESCRITOS por `cbre/pipeline/85_fatores.sql` depois da agregação de grade, com uma consulta
-direta por imóvel (`cbre.imovel_fatores_extra`/`cbre.imovel_inundacao` — roubo pelo trajeto real do
+SOBRESCRITOS pelo SQL de fatores do piloto depois da agregação de grade, com uma consulta
+direta por imóvel (tabelas de fatores extra e de inundação por imóvel — roubo pelo trajeto real do
 imóvel, inundação oficial por imóvel, mais precisos que a média das células que ele toca).
-Comparar essas colunas testaria o gancho por imóvel do cbre, não o mecanismo geométrico deste item;
-ficam fora de `FATORES_HEX` em `tests/unit/test_amc_agregacao_cbre.py`, com a evidência (linha do
-SQL do cbre) no docstring do teste. Os dez fatores comparados (`f_decl`, `f_zon`, `f_gru`, `f_rod`,
+Comparar essas colunas testaria o gancho por imóvel do piloto, não o mecanismo geométrico deste item;
+ficam fora de `FATORES_HEX` em `tests/unit/test_amc_agregacao_referencia.py`, com a evidência (linha do
+SQL do piloto) no docstring do teste. Os dez fatores comparados (`f_decl`, `f_zon`, `f_gru`, `f_rod`,
 `f_disp`, `f_ener`, `f_agua`, `f_restr`, `f_press`, `f_dens`) são exatamente os que o próprio SQL do
-cbre lista no `SELECT` de resumo do fim do arquivo — nenhum `UPDATE` os toca depois da agregação.
+o piloto lista no `SELECT` de resumo do fim do arquivo — nenhum `UPDATE` os toca depois da agregação.
 
 ## Consequências
 

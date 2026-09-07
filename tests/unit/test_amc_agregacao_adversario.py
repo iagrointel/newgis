@@ -4,26 +4,38 @@ ST_Intersection à mão no psql e compara". Este teste NÃO importa nem chama ne
 com `ST_Intersection`/`ST_Area` direto em SQL, do mesmo jeito que um humano no psql faria. Só depois os
 dois números (o daqui e o de `agregacao.agregar()`) são comparados.
 
-Amostra: 50 imóveis de `cbre.imoveis_candidatos`, escolhidos por `md5(car_cod || sal)` (determinístico,
-sem depender de ordem física da tabela). Comparados: área total de interseção, contagem de células não
-vetadas, fração vetada, veto principal e a média ponderada de três fatores (`f_zon`, `f_rod`, `f_agua`)
-— os mesmos números que o portão do item exige."""
+Amostra: 50 imóveis da tabela de candidatos do motor logístico de referência, escolhidos por
+`md5(car_cod || sal)` (determinístico, sem depender de ordem física da tabela). O nome do schema desse
+motor NÃO está escrito neste repositório — vem da variável de ambiente `PLAT_MOTOR_REFERENCIA_ESQUEMA`,
+porque o repositório é público e o schema carrega o nome de um cliente. Sem a variável, o módulo inteiro
+é pulado com essa razão dita em voz alta. A leitura é SÓ leitura: nada é escrito nesse schema.
+
+Comparados: área total de interseção, contagem de células não vetadas, fração vetada, veto principal e
+a média ponderada de três fatores (`f_zon`, `f_rod`, `f_agua`) — os mesmos números que o portão exige."""
+
+import os
 
 import pytest
 
 from app.amc import agregacao
 
+ESQUEMA = os.environ.get("PLAT_MOTOR_REFERENCIA_ESQUEMA", "").strip()
+if not ESQUEMA:
+    pytest.skip("PLAT_MOTOR_REFERENCIA_ESQUEMA não definido", allow_module_level=True)
+if not ESQUEMA.replace("_", "").isalnum():
+    raise RuntimeError("PLAT_MOTOR_REFERENCIA_ESQUEMA tem de ser um identificador simples")
+
 SAL = "sal-adversario-l307"
 _CELULAS_SQL = (
     "SELECT h.hex_id::text AS cell_id, h.geom_utm AS geom, hf.veto, hf.veto_motivo AS motivo, "
     "jsonb_build_object('f_zon', hf.f_zon, 'f_rod', hf.f_rod, 'f_agua', hf.f_agua) AS fatores "
-    "FROM cbre.hex h JOIN cbre.hex_fav hf USING (hex_id)"
+    f"FROM {ESQUEMA}.hex h JOIN {ESQUEMA}.hex_fav hf USING (hex_id)"
 )
 
 
 def _amostra_50(cur) -> list[str]:
     cur.execute(
-        "SELECT car_cod FROM cbre.imoveis_candidatos ORDER BY md5(car_cod || %s) LIMIT 50",
+        f"SELECT car_cod FROM {ESQUEMA}.imoveis_candidatos ORDER BY md5(car_cod || %s) LIMIT 50",
         (SAL,),
     )
     return [r["car_cod"] for r in cur.fetchall()]
@@ -32,14 +44,14 @@ def _amostra_50(cur) -> list[str]:
 def _referencia_a_mao(cur, ids: list[str]) -> dict[str, dict]:
     """Recálculo independente: ST_Intersection/ST_Area escritos aqui, nunca em `app/amc/agregacao.py`."""
     cur.execute(
-        """
+        f"""
         WITH inter AS (
             SELECT i.car_cod, h.hex_id, hf.veto, hf.veto_motivo,
                    ST_Area(ST_Intersection(i.geom, h.geom_utm)) AS a,
                    hf.f_zon, hf.f_rod, hf.f_agua
-            FROM cbre.imoveis_candidatos i
-            JOIN cbre.hex h ON ST_Intersects(i.geom, h.geom_utm)
-            JOIN cbre.hex_fav hf USING (hex_id)
+            FROM {ESQUEMA}.imoveis_candidatos i
+            JOIN {ESQUEMA}.hex h ON ST_Intersects(i.geom, h.geom_utm)
+            JOIN {ESQUEMA}.hex_fav hf USING (hex_id)
             WHERE i.car_cod = ANY(%(ids)s)
         ),
         tot AS (
@@ -75,7 +87,7 @@ def test_adversario_recalcula_50_feicoes_com_st_intersection_a_mao_no_psql(conex
         referencia = _referencia_a_mao(cur, ids)
         assert set(referencia) == set(ids)
 
-        feicoes_sql = ("SELECT car_cod AS feicao_id, geom FROM cbre.imoveis_candidatos "
+        feicoes_sql = (f"SELECT car_cod AS feicao_id, geom FROM {ESQUEMA}.imoveis_candidatos "
                        "WHERE car_cod = ANY(%(amostra_ids)s)")
         r = agregacao.agregar(cur, feicoes_sql, {"amostra_ids": ids}, _CELULAS_SQL, {})
 

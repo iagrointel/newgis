@@ -1,6 +1,6 @@
 """Item L3-07-agregacao: agregação de grade para feição. Casos sintéticos (geometria conhecida à mão) para
-provar o mecanismo — o cross-check contra o piloto real (`cbre.imoveis_fav`, 4.346 feições) está em
-`test_amc_agregacao_cbre.py`. Usa `conexao_plat_app` só porque a interseção/área é feita pelo PostGIS
+provar o mecanismo — o cross-check contra o piloto de referência (4.346 feições) está em
+`test_amc_agregacao_referencia.py`. Usa `conexao_plat_app` só porque a interseção/área é feita pelo PostGIS
 (ST_Intersection/ST_Area), nunca por reimplementar geometria em Python."""
 
 import pytest
