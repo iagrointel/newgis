@@ -1,0 +1,3 @@
+# axe-core — só para os e2e (injetado pelo playwright em tempo de teste; nunca servido em /static nem
+# referenciado pelo produto). Mesmo formato de web/vendor/VERSOES.txt (ADR 0001 seção 11.2 regra 3).
+axe-4.12.1.min.js  4.12.1  66a8aaa95a8b044a7fd74a5435873bf04ff65a1ca75567c921b7509742085a14  MPL-2.0  https://registry.npmjs.org/axe-core/-/axe-core-4.12.1.tgz (arquivo package/axe.min.js)

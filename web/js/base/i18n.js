@@ -12,6 +12,9 @@ export async function carregar(id) {
   const resp = await fetch(`/static/js/i18n/${idioma}.json`, { cache: 'no-store', credentials: 'same-origin' });
   dicionario = resp.ok ? await resp.json() : {};
   carregado = true;
+  /* WCAG 3.1.1 (idioma da página): o leitor de tela troca de voz/pronúncia por este atributo, não pelo texto
+     visível — trocar o dicionário sem trocar `lang` deixa um português lido como inglês (ou o contrário). */
+  document.documentElement.lang = idioma;
   aplicar(document);
   // componentes que traduziram antes do dicionário chegar (renderizam no connectedCallback) re-traduzem por este evento
   document.dispatchEvent(new CustomEvent(EVENTO, { detail: { idioma } }));

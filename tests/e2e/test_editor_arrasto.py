@@ -213,9 +213,13 @@ def test_arrasto_e_teclado_produzem_o_mesmo_documento(page, base_url, credenciai
     # aninhamento gravado
     assert c1["nos"][1]["pai"] == "n1" and c1["nos"][2]["pai"] == "n1" and c1["nos"][3]["pai"] is None
 
-    # cláusula 3: a árvore reflete o aninhamento (nível 2 para os dois filhos, 1 para os três da raiz)
+    # cláusula 3: a árvore reflete o aninhamento (nível 2 para os dois filhos, 1 para os três da raiz).
+    # `aria-level` mora no `<li role=listitem>` que envolve o botão (item L5-12: `role=button` não admite
+    # `aria-level`, e a estrutura deixou de se anunciar como `role=tree`/`treeitem` — ver o cabeçalho de
+    # web/js/editor/editor.js), não no `[data-arvore]` em si; o valor e o aninhamento são os mesmos de antes.
     niveis = page.eval_on_selector_all(
-        "[data-arvore]", "els => els.map(e => [e.getAttribute('aria-level'), e.dataset.pai !== ''])"
+        "[data-arvore]",
+        "els => els.map(e => [e.closest('.arvore-linha').getAttribute('aria-level'), e.dataset.pai !== ''])",
     )
     assert niveis == [["1", False], ["2", True], ["2", True], ["1", False], ["1", False]], niveis
 

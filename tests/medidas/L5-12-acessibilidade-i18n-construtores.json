@@ -1,0 +1,37 @@
+{
+ "item": "L5-12-acessibilidade-i18n-construtores",
+ "medidas": {
+  "axe_violacoes_criticas_serias_app": {
+   "valor": 0,
+   "unidade": "violações",
+   "comando": "axe.run() em /construtor?item=<app> com 3 widgets — resultTypes violations, filtro impact"
+  },
+  "fluxo_so_teclado_widgets_acao_publicar": {
+   "valor": 1,
+   "unidade": "fluxo completo",
+   "comando": "criar 3 widgets + ligar ação + salvar + publicar, só page.focus/page.keyboard"
+  },
+  "axe_violacoes_criticas_serias_painel": {
+   "valor": 0,
+   "unidade": "violações",
+   "comando": "axe.run() em /construtor?item=<painel> com 3 widgets — resultTypes violations, filtro impact"
+  },
+  "chaves_dicionario_paridade": {
+   "valor": 926,
+   "unidade": "chaves (pt-BR == en == es)",
+   "comando": "len(json.load(pt-BR.json)) == len(en.json) == len(es.json); tests/unit/test_i18n_construtor_paridade.py"
+  },
+  "chaves_construtor_namespace": {
+   "valor": 61,
+   "unidade": "chaves construtor.*",
+   "comando": "chaves com prefixo 'construtor.' em pt-BR.json, todas traduzidas em en/es (escopo do item; o resto do dicionário é do L7-10-a)"
+  },
+  "contraste_acento_claro_instrumento": {
+   "valor": 4.74,
+   "unidade": "razão de contraste (WCAG)",
+   "comando": "--i-acento #a05f1b sobre --i-acento-texto #fff6ec (tema claro); era 4,36:1 com #a8641c, abaixo do 4,5:1 AA — achado por axe-core em /construtor, web/estilo/tokens.css"
+  }
+ },
+ "gerado_em": "2026-09-07T15:34:35Z",
+ "git_sha": "dfe958009bda"
+}

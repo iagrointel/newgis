@@ -21,8 +21,8 @@
 .alca-largura { position: absolute; top: 0; right: 0; width: 12px; height: 100%; padding: 0; border-radius: 0 var(--raio) var(--raio) 0; cursor: ew-resize; background: var(--painel-2); }
 .vazio { color: var(--fraco); font-size: .85rem; grid-column: 1 / -1; margin: 0; }
 
-.editor-arvore { display: grid; gap: 2px; }
-.arvore-linha { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; }
+.editor-arvore { display: grid; gap: 2px; list-style: none; margin: 0; padding: 0; }
+.arvore-linha { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; list-style: none; }
 .arvore-item { flex: 1; display: flex; gap: var(--e2); align-items: baseline; text-align: left; }
 .arvore-item.selecionado { border-color: var(--acento); }
 .arvore-resumo { color: var(--fraco); font-size: .8rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -30,11 +30,13 @@
 .arvore-acoes { display: flex; gap: 2px; align-items: center; flex-wrap: wrap; }
 .arvore-acoes select { max-width: 130px; }
 
-.editor-props .campo { display: grid; gap: 2px; margin-bottom: var(--e3); }
-.editor-props .campo > span { font-size: .8rem; color: var(--fraco); }
+.editor-props .campo, .editor-acoes .campo { display: grid; gap: 2px; margin-bottom: var(--e3); }
+.editor-props .campo > span, .editor-acoes .campo > span { font-size: .8rem; color: var(--fraco); }
 .campo-erro { color: var(--falha); font-size: .8rem; min-height: 1em; }
 .editor-mensagem { min-height: 1.2em; margin: 0 0 var(--e2); font-size: .85rem; color: var(--fraco); }
 .editor-mensagem[data-tipo="erro"] { color: var(--falha); }
+.lista-acoes { list-style: none; margin: var(--e2) 0 0; padding: 0; display: grid; gap: var(--e2); }
+.lista-acoes li { display: flex; align-items: center; justify-content: space-between; gap: var(--e2); font-size: .85rem; }
 
 @media (max-width: 900px) {
   .editor { grid-template-columns: minmax(0, 1fr); }

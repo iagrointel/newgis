@@ -3,6 +3,32 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L5-12-acessibilidade-i18n-construtores: acessibilidade e idioma da base dos construtores)
+
+Sobre o editor de arrasto do L5-08: dicionário de idioma (`web/js/i18n/{pt-BR,en,es}.json`, paridade total de
+chave e placeholder testada estaticamente), seletor de idioma dentro de `/construtor` que troca o dicionário
+na hora (sem `location.reload()`; `document.documentElement.lang` atualizado também em `base/i18n.js`, WCAG
+3.1.1), quinto painel de Ações (`documento.js::ligar/desligar` sobre `corpo.ligacoes`, que já existia vazia
+desde o L5-08) e botão Publicar (`POST /api/itens/{id}/versoes/{n}/publicar`, rota que já existia). A
+"árvore" de estrutura deixou de anunciar `role=tree`/`treeitem` (o componente não navega por seta entre
+itens, e `role=tree` recusa botão/select como descendente em qualquer profundidade — achado do axe-core) e
+passou a `role=list`/`listitem`, com `aria-level` no `<li>` (que o suporta) e o nível também por extenso no
+`aria-label` do item. Corrigido de quebra: `--i-acento` do tema claro "instrumento" media 4,36:1 contra
+`--i-acento-texto` — abaixo do 4,5:1 AA — escurecido para 4,74:1 (`web/estilo/tokens.css`, afeta toda tela
+`instrumento` em modo claro, não só o construtor).
+
+Medido (`tests/medidas/L5-12-acessibilidade-i18n-construtores.json`, e2e `tests/e2e/
+test_construtor_acessibilidade.py`, 9 testes): axe-core (`resultTypes: violations`) zero violação
+`critical`/`serious` em `/construtor` para item `app` e `painel`, com 3 widgets montados; fluxo fim-a-fim só
+por `page.focus`/`page.keyboard` (3 widgets, ligar ação por type-ahead nativo do `<select>`, salvar,
+publicar) grava `versao_publicada == versao_atual`; troca de idioma comprovadamente sem navegação (marcador
+em `window` sobrevive à troca); zero chave crua visível na tela nos 3 idiomas. Refutação do adversário:
+árvore de acessibilidade do playwright percorrida em `/construtor` (app e painel) — zero controle sem nome
+computado (aria-label/aria-labelledby/texto/title/`label` implícito). `test_i18n_construtor_paridade.py`
+(5 testes estáticos, sem navegador) trava a paridade dos três catálogos e que toda chave `construtor.*` do
+código exista no dicionário. `test_editor_arrasto.py` (L5-08, já ENTREGUE) segue 5/5 — uma linha ajustada
+porque `aria-level` mudou de elemento (razão acima), valor e aninhamento inalterados. ADR 20260907T1533.
+
 ## turno 4, setembro de 2026 (item L5-08-editor-arrasto: primitivas de edição compartilhadas pelos construtores)
 
 Editor de arrasto próprio em `web/js/editor/` (5 módulos, 43.771 bytes medidos; 0 byte de biblioteca de

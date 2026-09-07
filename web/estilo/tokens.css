@@ -95,7 +95,7 @@
     --i-linha: #ccd4d1;
     --i-texto: #12181a;
     --i-texto-fraco: #4d5b57;
-    --i-acento: #a8641c;      /* âmbar escurecido para contraste AA sobre fundo claro */
+    --i-acento: #a05f1b;      /* âmbar escurecido (item L5-12: #a8641c media 4,36:1 sobre #fff6ec, abaixo de 4,5:1 AA; medido por axe-core em /construtor — este tom mede 4,74:1) */
     --i-acento-texto: #fff6ec;
     --i-sucesso: #2f7a4c;
     --i-aviso: #8a5a12;
@@ -112,7 +112,7 @@
   --i-linha: #ccd4d1;
   --i-texto: #12181a;
   --i-texto-fraco: #4d5b57;
-  --i-acento: #a8641c;
+  --i-acento: #a05f1b;      /* mesmo ajuste do bloco @media acima (item L5-12) */
   --i-acento-texto: #fff6ec;
   --i-sucesso: #2f7a4c;
   --i-aviso: #8a5a12;
