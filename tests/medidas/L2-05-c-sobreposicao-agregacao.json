@@ -13,11 +13,23 @@
     "lado_m": 5000,
     "pontos": 6
   },
+  "consulta_de_pares_perfilada": {
+    "execucao_ms": 244.66,
+    "observacao": "a medida de ponta a ponta pela API (27,21 s) inclui publicação do item, sha256 das entradas e a máquina com carga 7,2",
+    "onde": "sessão psql separada, tabelas temporárias, 400 polígonos x 4.000 pontos",
+    "plano": "Index Scan no índice GiST dos pontos para cada parte do ST_Subdivide"
+  },
   "contagem_dupla": {
     "metodo_publicado": "contagem dentro de cada polígono; 5 feição(ões) contada(s) em mais de um polígono (camada de resumo com sobreposição; use atribuicao='exclusivo' para evitar)",
     "pontos_distintos_dentro": 5,
     "soma_atribuicao_exclusiva": 5,
     "soma_atribuicao_todos": 10
+  },
+  "e2e_resumir_dentro": {
+    "arquivo": "tests/e2e/test_ferramentas_relacao.py",
+    "controle": "tests/e2e/test_ferramentas.py (item L2-05-a, já entregue) falha na MESMA linha (Tela.entrar) no mesmo ambiente — a limitação é do ambiente, não do item",
+    "medido": false,
+    "razao": "contra uvicorn solto da trilha o servidor não serve /static (404 em tokens.css, style.css e auth/login.js), o JS da tela de login não carrega e body[data-pronto] nunca aparece; roda contra a URL servida pelo nginx"
   },
   "enriquecer_por_area": {
     "por_poligono": {
@@ -73,6 +85,14 @@
     "pares": 100,
     "referencia": "pyproj.Geod WGS84",
     "tolerancia_relativa": 1e-06
+  },
+  "paridade_map_viewer": {
+    "categorias": [
+      "Summarize data",
+      "Analyze patterns",
+      "Use proximity"
+    ],
+    "documento": "docs/PARIDADE_FERRAMENTAS_RELACAO.md"
   },
   "ponto_na_divisa": {
     "zonas": [
