@@ -1,0 +1,84 @@
+# syntax=docker/dockerfile:1
+# Imagem da API do plat (item L7-01-a-compose-perfis). MESMO repositório, MESMA venv, MESMO requirements.txt
+# que a unidade systemd `plat-api` (deploy/plat-api.service) e a imagem do worker (deploy/Dockerfile.worker) —
+# este arquivo copia o padrão já medido lá (ver os comentários de Dockerfile.worker para o raciocínio
+# completo sobre --system-site-packages vs pip puro; não repetido aqui).
+#
+# Base: python:3.12-slim-bookworm — a MESMA da imagem do worker, já presente no cache local desta máquina
+# no dia da construção (disco a 95-96%; este item NUNCA baixa uma base nova, ADR desta trilha no handoff).
+FROM python:3.12-slim-bookworm
+
+LABEL org.opencontainers.image.title="plat-api" \
+      org.opencontainers.image.description="API HTTP do plat, em contêiner (item L7-01-a-compose-perfis). Interno. Análise / beta privado."
+
+# a) pacotes de sistema que a API chama por BINÁRIO/biblioteca C (mesmo raciocínio do worker):
+#    gdal-bin -> ogr2ogr/ogrinfo (app/ingestao/inspecionar.py, chamado também no caminho síncrono de inspeção
+#    de upload, não só pelo worker); libmagic1 -> python-magic (app/varredura_conteudo.py, chamado na
+#    validação de upload ANTES de enfileirar o job, portanto também no processo da API, não só no worker).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gdal-bin \
+        libmagic1 \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# usuário sem privilégio (a API não faz fork()/RLIMIT_DATA como o worker, mas nunca roda como root)
+RUN groupadd --gid 10001 plat && useradd --uid 10001 --gid plat --no-create-home --shell /usr/sbin/nologin plat
+
+WORKDIR /app
+
+# b) dependências Python. requirements.txt é o MESMO do host (fonte única, ADR 0001). As linhas fixas abaixo
+# são o que, no host, a venv --system-site-packages resolve sozinha a partir de pacotes dpkg (uvicorn,
+# psycopg2, cryptography, python-magic, lxml, pyproj) MAIS a que o comentário de requirements.txt já
+# registra como "pip global de outro produto da casa" (shapely, para app/rede/isocrona.py) e as duas que o
+# Dockerfile.worker já havia achado por trás da cadeia do worker (jsonschema, Pillow) — a API importa a
+# MESMA app.catalogo/app.ingestao na rota síncrona (listagem/miniatura/inspeção de upload), então precisa
+# de todas também. Lista fechada MEDIDA neste item por AST (`ast.walk` sobre toda árvore `app/`, imports
+# de topo de módulo menos stdlib menos o que requirements.txt já resolve sozinho) — não uma suposição.
+# Versão fixada na resolução mais recente do pip no dia da construção desta imagem (mesmo padrão do
+# worker; registrar no handoff do item).
+COPY requirements.txt VERSAO ./
+RUN python3 -m venv venv \
+    && PYTHONNOUSERSITE=1 venv/bin/pip install --no-cache-dir --upgrade pip \
+    && PYTHONNOUSERSITE=1 venv/bin/pip install --no-cache-dir \
+        uvicorn==0.34.0 \
+        psycopg2-binary==2.9.12 \
+        cryptography==50.0.1 \
+        python-magic==0.4.27 \
+        Pillow==12.2.0 \
+        jsonschema==4.26.0 \
+        shapely==2.1.2 \
+        pyproj==3.7.2 \
+        lxml==6.1.1 \
+    && PYTHONNOUSERSITE=1 venv/bin/pip install --no-cache-dir -r requirements.txt \
+    && find venv -name '__pycache__' -type d -prune -exec rm -rf {} + \
+    && rm -rf /root/.cache
+
+COPY app ./app
+COPY web ./web
+# só o arquivo de proveniência (728 B) que app/rede/rotas.py lê na importação — nunca os `.osrm.*` (grafo
+# binário de teste, 61 MB, servido por um processo OSRM à parte via PLAT_OSRM_URL; ver .dockerignore)
+COPY osrm/proveniencia.json ./osrm/proveniencia.json
+COPY deploy/entrypoint-api.sh ./entrypoint-api.sh
+
+RUN mkdir -p var/jobs && chown -R plat:plat /app && chmod 0755 entrypoint-api.sh
+# mesmo motivo do worker: PARTE como root só até o entrypoint soltar o privilégio (setpriv), depois de ler
+# os segredos montados root:root 0600 (docker-compose.yml -> secrets:)
+
+ENV PYTHONNOUSERSITE=1 \
+    PYTHONUNBUFFERED=1 \
+    PLAT_URL_PUBLICA=http://127.0.0.1:8150
+
+EXPOSE 8150
+
+# GET /saude do próprio processo (app/saude.py); 200 só quando o banco está ok E migracoes_pendentes=0 —
+# o MESMO contrato que a unidade systemd expõe (ADR 0001 seção 7). start-period maior que o do worker:
+# a API faz a primeira consulta de migração antes do primeiro request.
+#
+# Sonda SEMPRE 127.0.0.1:$PLAT_API_PORTA (nunca PLAT_URL_PUBLICA): PLAT_URL_PUBLICA é o domínio HTTPS
+# público da instalação (ex. https://plat.iagrointel.com em produção, ou o `https://...invalido` de uma
+# trilha) — de DENTRO do contêiner isso não resolve DNS nem fala TLS com ninguém. MEDIDO neste item: o
+# healthcheck original (que lia PLAT_URL_PUBLICA) travava toda sonda em erro de resolução de nome.
+HEALTHCHECK --interval=15s --timeout=3s --start-period=15s --retries=5 \
+    CMD venv/bin/python -c "import os,urllib.request as u,sys; p=os.environ.get('PLAT_API_PORTA','8150'); r=u.urlopen(f'http://127.0.0.1:{p}/saude', timeout=2); sys.exit(0 if r.status==200 else 1)" || exit 1
+
+ENTRYPOINT ["./entrypoint-api.sh"]

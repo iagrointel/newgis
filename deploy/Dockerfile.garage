@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+# Imagem do Garage (S3 de objetos, ADR 0006) para o perfil `appliance` do compose (item L7-01-a-compose-perfis).
+#
+# NUNCA baixa a imagem oficial `dxflrs/garage` (disco desta máquina a 95-96% no dia deste item — regra do
+# handoff da trilha): em vez disso empacota o MESMO binário Rust estático que já roda em produção nesta
+# máquina como unidade systemd `plataforma-garage` (/home/dev/plataforma/pipeline/bin/garage, garage v2.3.0,
+# `file` confere "statically linked" — não depende de glibc/musl do sistema, portanto uma base mínima calada
+# como `busybox` (JÁ no cache local desta máquina, zero pull novo) basta para rodá-lo). O binário entra pelo
+# `deploy/compose/vendorizar_binarios.sh` (copiado para `deploy/compose/vendor/garage` antes do `docker build`
+# — Dockerfile não alcança caminho fora do contexto de build).
+FROM busybox:latest
+
+LABEL org.opencontainers.image.title="plat-garage" \
+      org.opencontainers.image.description="Garage S3 vendorizado do binário de produção (item L7-01-a-compose-perfis). Interno. Análise / beta privado."
+
+RUN adduser -D -H -u 10002 garage
+
+COPY deploy/compose/vendor/garage /usr/local/bin/garage
+RUN chmod 0755 /usr/local/bin/garage
+
+WORKDIR /garage
+COPY deploy/compose/garage.appliance.toml /garage/garage.toml
+RUN mkdir -p /garage/meta /garage/data && chown -R garage:garage /garage
+
+USER garage
+EXPOSE 3900 3901 3902 3903
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=5 \
+    CMD wget -q -O- http://127.0.0.1:3903/health || exit 1
+
+ENTRYPOINT ["/usr/local/bin/garage", "-c", "/garage/garage.toml", "server"]

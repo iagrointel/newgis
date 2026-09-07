@@ -1,0 +1,10 @@
+# Configuração mínima do Martin para o perfil `appliance` (item L7-01-a-compose-perfis). A configuração
+# completa (camadas publicadas, funções de tile) está sendo construída em paralelo por outra trilha
+# (L2-01-b-martin-tiles-vetoriais, ramo/worktree l201mapa, ainda não juntado a master no dia deste item) —
+# este arquivo é só o suficiente para o Martin SUBIR e listar as tabelas com geometria do schema da conexão,
+# não uma cópia do trabalho daquela trilha. Quando l201mapa juntar, este arquivo é substituído pelo dela.
+postgres:
+  connection_string: '${PLAT_DSN_LEITOR}'
+  auto_publish:
+    from_schemas:
+      - plat

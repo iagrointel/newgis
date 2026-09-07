@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1
+# Imagem do nginx para o perfil `appliance` (item L7-01-a-compose-perfis).
+#
+# ⛔ NÃO CONSTRUÍDA neste turno: a base oficial `nginx:1.27-alpine` NÃO está no cache local desta máquina
+# (`docker images` conferido em 07/09/2026) e o disco está a 95-96% — baixar uma base nova é exatamente o
+# que o handoff desta trilha proíbe. `caddy:2.9` já está em cache (68,9 MB) e serviria de substituto
+# funcional (reverse proxy + cabeçalhos), mas trocar nginx por caddy no perfil `appliance` é uma decisão de
+# arquitetura que este item não toma sozinho (o `install.sh` da instalação hospedada usa nginx de verdade,
+# com certbot; divergir do proxy entre os dois caminhos de instalação contradiz a própria hipótese do item
+# — "os mesmos arquivos"). Registrado como pendente (tests/medidas, cláusula "nginx_imagem": "pendente").
+#
+# Plano para quando o disco permitir:
+#   FROM nginx:1.27-alpine
+#   COPY deploy/compose/nginx.appliance.conf /etc/nginx/conf.d/default.conf
+FROM busybox:latest
+LABEL org.opencontainers.image.title="plat-nginx-appliance-PENDENTE" \
+      org.opencontainers.image.description="Rascunho não construído (item L7-01-a-compose-perfis) — ver comentário do arquivo; base real é nginx:1.27-alpine, ainda não baixada."
+COPY deploy/compose/nginx.appliance.conf /etc/nginx-pendente/default.conf
+ENTRYPOINT ["/bin/sh", "-c", "echo 'PENDENTE: construir com FROM nginx:1.27-alpine quando o disco permitir (ver Dockerfile.nginx)'; exit 1"]
