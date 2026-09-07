@@ -45,10 +45,10 @@ from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
-from app.multiescala.rotas import router as rotas_multiescala
 from app.mapa.exportar import router as rotas_exportar_mapa
 from app.mapa.rotas import router as rotas_mapa
 from app.mapa.selecao import router as rotas_selecao
+from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
