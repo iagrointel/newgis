@@ -330,6 +330,14 @@ def agenda_criar(sessao: Sessao, dados: dict) -> dict:
         if r["n"] >= r["cota"]:
             raise ErroServico(413, "cota_agendas", f"cota de agendas do inquilino esgotada ({r['cota']})",
                               {"cota": r["cota"]})
+        # teto por USUÁRIO (item L6-02-k; Esri publica 10 tarefas ativas por usuário, 50 por organização — o
+        # de organização é o `cota_agendas` acima, da 004; conta só as ATIVAS, como o nome diz)
+        cur.execute("SELECT plat.cota_agendas_usuario(%s) AS cota, plat.agendas_ativas_usuario(%s) AS n",
+                    (sessao.tenant_id, sessao.usuario_id))
+        ru = cur.fetchone()
+        if ru["n"] >= ru["cota"]:
+            raise ErroServico(413, "cota_agendas_usuario",
+                              f"cota de agendas ativas do usuário esgotada ({ru['cota']})", {"cota": ru["cota"]})
         try:
             cur.execute("INSERT INTO plat.agenda(tenant_id, usuario_id, nome, tipo, parametros, cron, fuso, expira_em, "
                         "proxima_em) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
@@ -380,6 +388,13 @@ def agenda_retomar(sessao: Sessao, agenda_id) -> dict:
     except mod_agenda.ErroAgenda as e:
         raise ErroServico(422, e.codigo, e.mensagem) from e
     with banco.db(sessao.ctx) as cur:
+        # mesmo teto por usuário de agenda_criar (a retomada também soma 1 agenda ATIVA)
+        cur.execute("SELECT plat.cota_agendas_usuario(%s) AS cota, plat.agendas_ativas_usuario(%s) AS n",
+                    (sessao.tenant_id, sessao.usuario_id))
+        ru = cur.fetchone()
+        if ru["n"] >= ru["cota"]:
+            raise ErroServico(413, "cota_agendas_usuario",
+                              f"cota de agendas ativas do usuário esgotada ({ru['cota']})", {"cota": ru["cota"]})
         cur.execute("UPDATE plat.agenda SET ativa = true, falhas_seguidas = 0, proxima_em = %s WHERE id = %s",
                     (prox, str(agenda_id)))
     return agenda_obter(sessao, agenda_id)

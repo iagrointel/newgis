@@ -142,6 +142,11 @@ CONEXAO_REDIRECT_MAX = 5                 # cada hop é revalidado do zero (host 
 CONEXAO_RESPOSTA_MAX_BYTES = 1 * 1024 * 1024  # 1 MiB: o teste de saúde confere status/corpo curto
                                                 # (nunca baixa o serviço inteiro)
 
+# --- agendamento de camada copiada (L6-02-k-agendamento; app/conexao/tarefas_agendamento.py): não é outro
+# relógio, reusa plat.agenda/app/jobs/agenda.py (intervalo mínimo 15 min já em INTERVALO_MINIMO_S de lá).
+CONEXAO_COPIA_MAX_BYTES = 8 * 1024 * 1024        # bem maior que o teste de saúde, mas pequeno de propósito
+                                                   # (disco a 98% nos dois servidores, D21 do laço)
+
 # --- ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 INGESTAO_AMOSTRA_VALIDADE = 1000          # feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR)
 INGESTAO_MEMORIA_MB = 768                 # job ingestao.inspecionar (cobre GeoJSON de 64 MiB, ADR seção 0.4)
