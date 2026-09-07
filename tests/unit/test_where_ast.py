@@ -249,3 +249,121 @@ def test_ast_e_tipada_antes_de_compilar():
     assert no.esquerda.campo == "idade"
     assert no.esquerda.operador == "="
     assert no.esquerda.valor == 1
+
+
+# --------------------------------------------------------------------- 4. item L2-04-c: BETWEEN, NOT,
+# literais de data/hora e as duas funções de texto do dialeto Esri ("standardized queries")
+def test_between_numerico():
+    c = compilar("idade between 18 and 65")
+    assert c.sql == "i.idade BETWEEN %s AND %s"
+    assert c.params == [18, 65]
+
+
+def test_between_seguido_de_and_externo():
+    c = compilar("idade between 18 and 65 and uf = 'SP'")
+    assert c.sql == "(i.idade BETWEEN %s AND %s AND i.uf = %s)"
+    assert c.params == [18, 65, "SP"]
+
+
+def test_not_prefixo_em_comparacao():
+    c = compilar("not idade = 1")
+    assert c.sql == "NOT (i.idade = %s)"
+    assert c.params == [1]
+
+
+def test_not_prefixo_em_parenteses():
+    c = compilar("not (idade = 1 and uf = 'SP')")
+    assert c.sql == "NOT ((i.idade = %s AND i.uf = %s))"
+    assert c.params == [1, "SP"]
+
+
+def test_not_liga_mais_forte_que_and():
+    # not a and b == (not a) and b
+    no = w.analisar("not idade = 1 and uf = 'SP'")
+    assert isinstance(no, w.E)
+    assert isinstance(no.esquerda, w.Nao)
+
+
+def test_date_literal_vira_parametro_date_python():
+    import datetime
+
+    c2 = w.compilar_where("idade > DATE '2020-01-01'", {"idade": "i.idade"})
+    assert c2.sql == "i.idade > %s"
+    assert c2.params == [datetime.date(2020, 1, 1)]
+
+
+def test_timestamp_literal_vira_parametro_datetime_python():
+    import datetime
+
+    c = w.compilar_where("idade > TIMESTAMP '2020-01-01 10:30:00'", {"idade": "i.idade"})
+    assert c.sql == "i.idade > %s"
+    assert c.params == [datetime.datetime(2020, 1, 1, 10, 30, 0)]
+
+
+def test_date_literal_formato_invalido_e_recusado():
+    with pytest.raises(w.ErroWhere) as e:
+        w.compilar_where("idade > DATE '01/01/2020'", {"idade": "i.idade"})
+    assert e.value.codigo == "data_invalida"
+
+
+def test_current_date_vira_literal_sql_fixo_nunca_parametro():
+    c = w.compilar_where("idade < CURRENT_DATE", {"idade": "i.idade"})
+    assert c.sql == "i.idade < CURRENT_DATE"
+    assert c.params == []
+
+
+def test_current_timestamp_vira_literal_sql_fixo():
+    c = w.compilar_where("idade < CURRENT_TIMESTAMP", {"idade": "i.idade"})
+    assert c.sql == "i.idade < CURRENT_TIMESTAMP"
+    assert c.params == []
+
+
+def test_upper_envolve_so_o_campo_da_lista_branca():
+    c = compilar("upper(nome) = 'ANA'")
+    assert c.sql == "UPPER(i.nome) = %s"
+    assert c.params == ["ANA"]
+
+
+def test_lower_envolve_so_o_campo_da_lista_branca():
+    c = compilar("lower(uf) = 'sp'")
+    assert c.sql == "LOWER(i.uf) = %s"
+
+
+def test_upper_com_campo_fora_da_lista_branca_e_recusado():
+    with pytest.raises(w.ErroWhere) as e:
+        compilar("upper(segredo) = 'X'")
+    assert e.value.codigo == "campo_nao_permitido"
+
+
+def test_upper_de_expressao_arbitraria_e_recusado_na_sintaxe():
+    # UPPER só aceita um identificador de campo — nunca uma sub-expressão, string ou número
+    with pytest.raises(w.ErroWhere):
+        compilar("upper('literal') = 'X'")
+    with pytest.raises(w.ErroWhere):
+        compilar("upper(1) = 'X'")
+
+
+# --------------------------------------------------------------------- 5. ataques novos (L2-04-c)
+def test_between_com_subselect_e_recusado():
+    with pytest.raises(w.ErroWhere):
+        compilar("idade between (select 1) and 65")
+
+
+def test_funcao_nao_prevista_e_recusada():
+    for texto in ["lower(idade); DROP TABLE camada", "extract(year from idade) = 1",
+                  "cast(idade as text) = '1'", "pg_sleep(idade) = 1"]:
+        with pytest.raises(w.ErroWhere):
+            compilar(texto)
+
+
+def test_date_com_injecao_no_literal_e_recusada_pelo_formato():
+    with pytest.raises(w.ErroWhere) as e:
+        w.compilar_where("idade > DATE '2020-01-01''; DROP TABLE camada; --'", {"idade": "i.idade"})
+    assert e.value.codigo in ("data_invalida", "sintaxe_invalida")
+
+
+def test_not_seguido_de_texto_invalido_e_recusado():
+    with pytest.raises(w.ErroWhere):
+        compilar("not")
+    with pytest.raises(w.ErroWhere):
+        compilar("not not")
