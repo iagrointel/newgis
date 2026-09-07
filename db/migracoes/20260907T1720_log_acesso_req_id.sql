@@ -12,7 +12,8 @@ ALTER TABLE plat.log_acesso ADD COLUMN IF NOT EXISTS req_id text;
 CREATE INDEX IF NOT EXISTS ix_log_acesso_tenant_req ON plat.log_acesso (tenant_id, req_id)
   WHERE req_id IS NOT NULL;
 
-DROP FUNCTION IF EXISTS plat.log_registrar(int, int, int, text, text, text, int, bigint, int, text, text);
+-- A versão de 11 argumentos (migração 003) FICA: `tests/api/test_rls.py` e `test_funcoes_seguras.py` a chamam
+-- e a aridade diferente não gera ambiguidade. A nova é uma sobrecarga, não uma substituição.
 CREATE OR REPLACE FUNCTION plat.log_registrar(p_tenant int, p_usuario int, p_token int, p_ip text, p_metodo text,
   p_rota text, p_status int, p_bytes bigint, p_tempo_ms int, p_agente text, p_resultado text, p_req_id text)
 RETURNS void
@@ -37,4 +38,20 @@ END $$;
 REVOKE ALL ON FUNCTION plat.log_registrar(int, int, int, text, text, text, int, bigint, int, text, text, text)
   FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION plat.log_registrar(int, int, int, text, text, text, int, bigint, int, text, text, text)
+  TO plat_app;
+
+-- A sobrecarga de 11 argumentos continua existindo para quem ainda a chama (tests/api/test_rls.py,
+-- tests/api/test_funcoes_seguras.py e qualquer base já migrada): passa a delegar na de 12 com req_id nulo,
+-- para haver UM só caminho de INSERT em plat.log_acesso.
+CREATE OR REPLACE FUNCTION plat.log_registrar(p_tenant int, p_usuario int, p_token int, p_ip text, p_metodo text,
+  p_rota text, p_status int, p_bytes bigint, p_tempo_ms int, p_agente text, p_resultado text)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = plat, public AS $$
+BEGIN
+  PERFORM plat.log_registrar(p_tenant, p_usuario, p_token, p_ip, p_metodo, p_rota, p_status, p_bytes, p_tempo_ms,
+                             p_agente, p_resultado, NULL);
+END $$;
+REVOKE ALL ON FUNCTION plat.log_registrar(int, int, int, text, text, text, int, bigint, int, text, text)
+  FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION plat.log_registrar(int, int, int, text, text, text, int, bigint, int, text, text)
   TO plat_app;

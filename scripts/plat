@@ -1,0 +1,4 @@
+#!/bin/sh
+# `plat` — linha de comando de operação (item L7-06-c). Usa a venv do projeto, nunca o Python do sistema.
+raiz=$(cd "$(dirname "$0")/.." && pwd)
+exec "$raiz/venv/bin/python" "$raiz/scripts/plat.py" "$@"

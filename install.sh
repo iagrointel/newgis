@@ -337,7 +337,20 @@ echo "== i. nginx"
 SITE=/etc/nginx/sites-enabled/$DOM
 # zona limit_req própria: 10 tentativas/min por IP em /api/login e /api/login/2fa (ADR 0002 seção 6.2)
 LIMITES=/etc/nginx/conf.d/plat_limites.conf
-printf '# plat: limite por IP nos logins (ADR 0002 secao 6.2); escrito pelo install.sh\nlimit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\n' > "$LIMITES.novo"
+cat > "$LIMITES.novo" <<'NGINXCONF'
+# plat: escrito pelo install.sh. Duas coisas moram aqui porque so valem no contexto http do nginx.
+# 1) limite por IP nos logins (ADR 0002 secao 6.2)
+limit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;
+# 2) formato de acesso em JSON por linha, com $request_id (item L7-06-c). O mesmo identificador vai ao
+#    upstream em X-Req-Id, entao a linha do nginx e a linha da API casam por igualdade, sem adivinhacao
+#    de horario. upstream_addr distingue quem atendeu (API, Martin ou TiTiler), que nao registram
+#    identificador de pedido proprio. Vai para o journal com a etiqueta plat_nginx, para `plat logs`
+#    ler tudo de um lugar so e a retencao ser a mesma dos outros servicos (SystemMaxUse/MaxRetentionSec).
+log_format plat_json escape=json '{"ts":"$time_iso8601","req_id":"$request_id","ip":"$remote_addr",'
+  '"metodo":"$request_method","rota":"$uri","consulta":"$args","status":$status,'
+  '"bytes":$body_bytes_sent,"tempo_ms":$request_time,"upstream":"$upstream_addr",'
+  '"upstream_status":"$upstream_status","agente":"$http_user_agent"}';
+NGINXCONF
 if [ -f "$LIMITES" ] && cmp -s "$LIMITES" "$LIMITES.novo"; then rm -f "$LIMITES.novo"; echo "$LIMITES já existe (igual)"; else mv "$LIMITES.novo" "$LIMITES"; echo "$LIMITES escrito"; fi
 escrever_nginx() {
   local bloco certbot_443 bloco_80

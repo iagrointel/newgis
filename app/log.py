@@ -17,6 +17,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from app.auth.redigir import linha_redigida
 from app.settings import NIVEIS
 
 CAMPOS_REQ = ("req_id", "metodo", "rota", "status", "tempo_ms", "ip", "tenant_id", "usuario_id", "token_id",
@@ -162,7 +163,10 @@ class FormatadorJSON(logging.Formatter):
         linha = {
             "ts": datetime.datetime.fromtimestamp(registro.created, datetime.UTC).isoformat(timespec="milliseconds"),
             "nivel": registro.levelname,
-            "msg": registro.getMessage(),
+            # L7-06-c: a mensagem passa pelo redator ANTES de sair. Sem isto qualquer biblioteca que
+            # registre a URL que chamou (o httpx, por exemplo, registra "HTTP Request: GET <url>") escreve
+            # token de serviço e cookie de sessão inteiros no journal — medido na própria suíte.
+            "msg": linha_redigida(registro.getMessage()),
             "logger": registro.name,
         }
         for campo in CAMPOS_REQ:
@@ -170,7 +174,7 @@ class FormatadorJSON(logging.Formatter):
             if valor is not None:
                 linha[campo] = valor
         if registro.exc_info:
-            linha["exc"] = self.formatException(registro.exc_info)
+            linha["exc"] = linha_redigida(self.formatException(registro.exc_info))
         return json.dumps(linha, ensure_ascii=False, default=str)
 
 
