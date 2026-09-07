@@ -81,10 +81,16 @@ def _campos_citados(maplibre: dict) -> list[str]:
     return achados
 
 
+# propriedades que a FONTE de tile inventa, não a tabela: `point_count` vem da função agrupada do Martin
+# (plat.camada_agrupar, item L2-02-c) e por isso nunca está no vocabulário de campos da camada
+CAMPOS_SINTETICOS = {"agrupamento": {"point_count"}}
+
+
 def _checar_campos(maplibre: dict, pc: dict) -> None:
     campos = set(pc.get("campos") or [])
     if not campos:
         return  # sem vocabulário declarado: a compilação já barra campo fora de "campos" quando há lista
+    campos |= CAMPOS_SINTETICOS.get(pc.get("tipo"), set())
     for campo in _campos_citados(maplibre):
         if campo not in campos:
             raise ErroAPI(
