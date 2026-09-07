@@ -229,7 +229,8 @@ def popup_da_feicao(
         for chave, valor in feicao.items():
             if chave in ("geom",):
                 continue
-            contexto_expr[chave] = float(valor) if isinstance(valor, (int, float)) and not isinstance(valor, bool) else valor
+            numero = isinstance(valor, (int, float)) and not isinstance(valor, bool)
+            contexto_expr[chave] = float(valor) if numero else valor
 
         campos_servidor = {}
         for c in cfg["campos"]:

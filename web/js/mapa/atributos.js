@@ -16,7 +16,7 @@
    Campo marcado `servidor: true` na configuração (`app/mapa/popup.py::normalizar`) e toda `expressão`
    nunca vêm do tile: a janela pede `GET /api/camadas/{id}/feicoes/{fid}/popup` só quando o usuário está
    OLHANDO aquela feição (não para as N-1 outras da paginação) e escreve o resultado por cima do
-   placeholder "carregando…" quando chega — cliques rápidos cancelam o pedido anterior
+   texto de espera "carregando…" quando chega — cliques rápidos cancelam o pedido anterior
    (AbortController), a refutação "50 cliques sem consulta pendurada". */
 import { h, limpar } from '../base/dom.js';
 import { obter } from '../base/api.js';

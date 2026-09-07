@@ -30,7 +30,7 @@ pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
 
 @pytest.fixture
-def mapa(page, base_url, credenciais_demo, martin_no_ar):
+def mapa(page, base_url, credenciais_demo, martin_no_ar):  # noqa: F811 (fixture importada de propósito)
     """Sessão aberta na tela /mapa, com a bancada DESTE item conferida (mesma família "(L2-01", filtro
     mais estrito para não depender da bancada do item-pai estar presente também)."""
     slug, login, senha = credenciais_demo
@@ -176,7 +176,8 @@ def test_painel_acoplado_em_viewport_estreito(mapa, page):
     CAPTURAS.mkdir(parents=True, exist_ok=True)
     page.screenshot(path=str(CAPTURAS / "L2-01-d-popup-runtime_painel_acoplado.png"))
     page.locator(".popup-dock-fechar").click()
-    page.wait_for_selector("#popup-dock[hidden]", state="attached", timeout=5000)  # elemento oculto nunca fica "visível"
+    # elemento com [hidden] nunca fica "visível": a espera é por presença no DOM
+    page.wait_for_selector("#popup-dock[hidden]", state="attached", timeout=5000)
     mapa.verificar()
 
 
