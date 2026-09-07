@@ -216,73 +216,91 @@ def _fields_de(cur, item: dict) -> list[dict]:
     return campos
 
 
-@router.post("/api/camadas/esquema", status_code=201, openapi_extra=CRIAR)
-def criar(corpo: CamadaEsquemaEntrada, request: Request, auth: Auth = autenticado("conteudo.publicar_camada")):
-    campos, avisos = _normalizar_campos(corpo.campos)
+def criar_camada_de_campos(
+    cur, tenant_id: int, usuario_id: int, titulo: str, geometria: str, srid: int,
+    campos_entrada: list[CampoEntrada], fonte: str = "hospedada", procedencia_extra: dict | None = None,
+    metodo: str = "arrasto de campos (L5-31)", gerador: str = "plat camada_esquema v1",
+) -> dict:
+    """Núcleo de `POST /api/camadas/esquema` (item L5-31), fatorado para servir também a outros
+    publicadores de camada hospedada que precisem de uma tabela nova pronta para o catálogo — o item
+    L3-13-resultado-como-camada é o primeiro chamador de fora deste módulo: a camada do resultado do
+    motor AMC nasce pela MESMA função (`plat.camada_schema_garantir`/`plat.camada_preparar`, mesma
+    normalização de nome de campo), não por um `CREATE TABLE` escrito de novo. `procedencia_extra`
+    substitui/estende os campos default da ficha de proveniência (fonte/gerador/método) sem mudar a
+    forma do dicionário que `camada_vetorial` espera (ADR 0004)."""
+    campos, avisos = _normalizar_campos(campos_entrada)
     item_id = str(uuid.uuid4())
     tabela = tabela_de(item_id)
 
-    with db.db(auth.contexto()) as cur:
-        cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (auth.tenant_id,))
-        slug = cur.fetchone()["slug"]
-        schema = f"d_{slug}"
-        if not NOME_ESQUEMA_TABELA.match(schema):
-            raise ErroAPI(422, "slug_invalido", "slug de inquilino fora do padrão")
+    cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (tenant_id,))
+    slug = cur.fetchone()["slug"]
+    schema = f"d_{slug}"
+    if not NOME_ESQUEMA_TABELA.match(schema):
+        raise ErroAPI(422, "slug_invalido", "slug de inquilino fora do padrão")
 
-        cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))
+    cur.execute("SELECT plat.camada_schema_garantir(%s)", (slug,))
 
-        colunas_ddl = ['fid bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY',
-                       f'geom geometry({corpo.geometria}, {corpo.srid})']
-        for c in campos:
-            colunas_ddl.append(f'"{c["nome"]}" {_coluna_sql(c["tipo"], c["tamanho"])}')
-        ddl = f'CREATE TABLE "{schema}"."{tabela}" (' + ", ".join(colunas_ddl) + ")"
-        cur.execute(ddl)
+    colunas_ddl = ['fid bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY',
+                   f'geom geometry({geometria}, {srid})']
+    for c in campos:
+        colunas_ddl.append(f'"{c["nome"]}" {_coluna_sql(c["tipo"], c["tamanho"])}')
+    ddl = f'CREATE TABLE "{schema}"."{tabela}" (' + ", ".join(colunas_ddl) + ")"
+    cur.execute(ddl)
 
-        cur.execute("SELECT plat.camada_preparar(%s, %s, %s, %s, %s)",
-                    (schema, tabela, corpo.srid, corpo.geometria, auth.usuario_id))
+    cur.execute("SELECT plat.camada_preparar(%s, %s, %s, %s, %s)",
+                (schema, tabela, srid, geometria, usuario_id))
 
-        for c in campos:
-            if c["obrigatorio"]:
-                cur.execute(f'ALTER TABLE "{schema}"."{tabela}" ALTER COLUMN "{c["nome"]}" SET NOT NULL')
-            valor = _valor_padrao(c["tipo"], c["padrao"])
-            if valor is not None:
-                cur.execute(f'ALTER TABLE "{schema}"."{tabela}" ALTER COLUMN "{c["nome"]}" SET DEFAULT %s', (valor,))
-            if c["indice"]:
-                cur.execute(f'CREATE INDEX IF NOT EXISTS "ix_{tabela}_{c["nome"]}" '
-                            f'ON "{schema}"."{tabela}" ("{c["nome"]}")')
+    for c in campos:
+        if c["obrigatorio"]:
+            cur.execute(f'ALTER TABLE "{schema}"."{tabela}" ALTER COLUMN "{c["nome"]}" SET NOT NULL')
+        valor = _valor_padrao(c["tipo"], c["padrao"])
+        if valor is not None:
+            cur.execute(f'ALTER TABLE "{schema}"."{tabela}" ALTER COLUMN "{c["nome"]}" SET DEFAULT %s', (valor,))
+        if c["indice"]:
+            cur.execute(f'CREATE INDEX IF NOT EXISTS "ix_{tabela}_{c["nome"]}" '
+                        f'ON "{schema}"."{tabela}" ("{c["nome"]}")')
 
-        item_dados = {
-            "schema": schema, "tabela": tabela, "geometria": corpo.geometria, "srid": corpo.srid,
-            "campos": [{"nome": c["nome"], "tipo": c["tipo"], "alias": c["alias"]} for c in campos],
-            "fonte": "hospedada",
-            "procedencia": {
-                "fonte": "construtor de camada por esquema", "url": None, "licenca": None, "data_do_dado": None,
-                "data_de_acesso": None, "gerador": "plat camada_esquema v1", "sha256": None,
-                "metodo": "arrasto de campos (L5-31)", "confianca": None, "limites": avisos,
-            },
-            "estatisticas": {"feicoes": 0, "extent_nativo": None, "por_campo": {}, "calculadas_em": None},
-        }
-        # o item precisa existir ANTES do camada_campo_meta: a FK composta (tenant_id, item_id) exige a
-        # linha-pai já commitada dentro desta mesma transação, senão a inserção do metadado é recusada.
+    procedencia = {
+        "fonte": "construtor de camada por esquema", "url": None, "licenca": None, "data_do_dado": None,
+        "data_de_acesso": None, "gerador": gerador, "sha256": None,
+        "metodo": metodo, "confianca": None, "limites": avisos,
+    }
+    if procedencia_extra:
+        procedencia.update(procedencia_extra)
+    item_dados = {
+        "schema": schema, "tabela": tabela, "geometria": geometria, "srid": srid,
+        "campos": [{"nome": c["nome"], "tipo": c["tipo"], "alias": c["alias"]} for c in campos],
+        "fonte": fonte,
+        "procedencia": procedencia,
+        "estatisticas": {"feicoes": 0, "extent_nativo": None, "por_campo": {}, "calculadas_em": None},
+    }
+    # o item precisa existir ANTES do camada_campo_meta: a FK composta (tenant_id, item_id) exige a
+    # linha-pai já commitada dentro desta mesma transação, senão a inserção do metadado é recusada.
+    cur.execute(
+        "INSERT INTO plat.item(id, tenant_id, tipo, titulo, dono_id, dados, criado_por, modificado_por) "
+        "VALUES (%s::uuid, %s, 'camada_vetorial', %s, %s, %s, %s, %s)",
+        (item_id, tenant_id, titulo[:250], usuario_id, jsonb(item_dados), usuario_id, usuario_id),
+    )
+
+    for ordem, c in enumerate(campos):
         cur.execute(
-            "INSERT INTO plat.item(id, tenant_id, tipo, titulo, dono_id, dados, criado_por, modificado_por) "
-            "VALUES (%s::uuid, %s, 'camada_vetorial', %s, %s, %s, %s, %s)",
-            (item_id, auth.tenant_id, corpo.titulo[:250], auth.usuario_id, jsonb(item_dados),
-             auth.usuario_id, auth.usuario_id),
+            "INSERT INTO plat.camada_campo_meta(tenant_id, item_id, coluna, alias, dominio, ordem, indice) "
+            "VALUES (%s, %s::uuid, %s, %s, %s, %s, %s)",
+            (tenant_id, item_id, c["nome"], c["alias"], jsonb(c["dominio"]) if c["dominio"] else None,
+             ordem, c["indice"]),
         )
+    return {"item_id": item_id, "schema": schema, "tabela": tabela, "campos": campos, "avisos": avisos}
 
-        for ordem, c in enumerate(campos):
-            cur.execute(
-                "INSERT INTO plat.camada_campo_meta(tenant_id, item_id, coluna, alias, dominio, ordem, indice) "
-                "VALUES (%s, %s::uuid, %s, %s, %s, %s, %s)",
-                (auth.tenant_id, item_id, c["nome"], c["alias"], jsonb(c["dominio"]) if c["dominio"] else None,
-                 ordem, c["indice"]),
-            )
 
-        registrar_evento(cur, request, "camadas/criar_esquema", "item", item_id,
-                          {"campos": len(campos), "geometria": corpo.geometria, "srid": corpo.srid})
-
-    return {"item_id": item_id, "schema": schema, "tabela": tabela, "campos": len(campos), "avisos": avisos}
+@router.post("/api/camadas/esquema", status_code=201, openapi_extra=CRIAR)
+def criar(corpo: CamadaEsquemaEntrada, request: Request, auth: Auth = autenticado("conteudo.publicar_camada")):
+    with db.db(auth.contexto()) as cur:
+        r = criar_camada_de_campos(cur, auth.tenant_id, auth.usuario_id, corpo.titulo, corpo.geometria,
+                                    corpo.srid, corpo.campos)
+        registrar_evento(cur, request, "camadas/criar_esquema", "item", r["item_id"],
+                          {"campos": len(r["campos"]), "geometria": corpo.geometria, "srid": corpo.srid})
+    return {"item_id": r["item_id"], "schema": r["schema"], "tabela": r["tabela"],
+            "campos": len(r["campos"]), "avisos": r["avisos"]}
 
 
 @router.get("/api/camadas/{item_id}/campos", openapi_extra=LER)
