@@ -30,6 +30,8 @@ import { instalarPopup } from './atributos.js';
 import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
+import { carregar as carregarMapa, camadasDoTopo, salvarOrdem, alternarVisivel, salvarDocumento } from './documento.js';
+import { montarPainel } from './painel_camadas.js';
 
 const BASES = [
   { id: 'osm-guarulhos', rotuloChave: 'mapa.base_osm_guarulhos', arquivo: 'guarulhos.pmtiles' },
@@ -69,6 +71,52 @@ function marcador(map, maplibregl, lonlat, rotulo) {
   m.addTo(map);
   return m;
 }
+
+/* Documento de mapa (item L2-01-a-documento-mapa): /mapa?id=<uuid> abre um mapa do catálogo. Sem `id` a tela
+   segue sendo só o mapa-base local, como no item que a criou — nada de mapa de exemplo embutido. */
+async function iniciarDocumento(map) {
+  const id = new URLSearchParams(location.search).get('id');
+  if (!id) return;
+  const { completo, documento, erro } = await carregarMapa(id);
+  if (erro) {
+    el('aviso').erro(`${t('mapa.erro_documento')}: ${erro.mensagem}`);
+    return;
+  }
+  let doc = documento;
+  let ordem = camadasDoTopo(completo).map((c) => c.id);
+  el('mapa-nome').textContent = completo.titulo;
+  const painel = el('painel-camadas');
+  painel.hidden = false;
+  const salvar = el('salvar-mapa');
+  salvar.hidden = false;
+  if (!completo.camadas.length) {
+    el('camadas').textContent = t('mapa.sem_camadas');
+  } else {
+    montarPainel({
+      raiz: el('camadas'),
+      camadas: camadasDoTopo(completo),
+      aoReordenar: (ids) => { ordem = ids; salvar.dataset.sujo = '1'; },
+      aoAlternarVisivel: (idLocal) => { doc = alternarVisivel(doc, idLocal); salvar.dataset.sujo = '1'; },
+    });
+  }
+  salvar.addEventListener('click', async () => {
+    salvar.disabled = true;
+    const gravado = await (ordem.length ? salvarOrdem(id, doc, ordem) : salvarDocumento(id, doc));
+    salvar.disabled = false;
+    if (gravado.erro) {
+      el('aviso').erro(`${t('mapa.erro_salvar')}: ${gravado.erro.mensagem}`);
+      return;
+    }
+    doc = gravado.documento;
+    delete salvar.dataset.sujo;
+    el('aviso').ok(t('mapa.salvo'));
+  });
+  if (completo.extensao_inicial) {
+    const [oeste, sul, leste, norte] = completo.extensao_inicial;
+    map.fitBounds([[oeste, sul], [leste, norte]], { animate: false, padding: 20 });
+  }
+}
+
 
 async function iniciar(usuario) {
   const maplibregl = window.maplibregl;
@@ -206,6 +254,7 @@ async function iniciar(usuario) {
   }
   window.plat = window.plat || {};
   window.plat.mapa = { map, catalogo, medicao, arvore, legenda };  // ponto de inspeção do e2e, nunca de negócio
+  await iniciarDocumento(map);
   document.body.dataset.pronto = '1';
 }
 

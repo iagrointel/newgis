@@ -18,7 +18,9 @@
   <main id="principal" class="principal mapa-tela" tabindex="-1">
     <div class="linha-ferramentas mapa-barra" id="ferramentas">
       <h1 data-i18n="mapa.titulo">Mapa</h1>
+      <span class="mapa-nome" id="mapa-nome"></span>
       <plat-aviso id="aviso"></plat-aviso>
+      <button type="button" id="salvar-mapa" class="pequeno" hidden data-i18n="mapa.salvar">salvar</button>
     </div>
     <div class="mapa-corpo">
       <section class="mapa-painel-lateral" aria-label="painel do mapa">
@@ -70,6 +72,11 @@
         </section>
       </section>
 
+    <section class="mapa-camadas" id="painel-camadas" hidden aria-labelledby="camadas-titulo">
+      <h2 id="camadas-titulo" data-i18n="mapa.camadas">Camadas</h2>
+      <p class="fraco" id="camadas-ajuda" data-i18n="mapa.camadas_ajuda">arraste para reordenar; a de cima desenha por último</p>
+      <div id="camadas"></div>
+    </section>
       <div class="mapa-area">
         <div id="mapa" aria-label="mapa" role="application"></div>
         <div class="mapa-painel mapa-painel-base">
@@ -78,6 +85,7 @@
         </div>
         <div class="mapa-painel mapa-coordenadas" id="coordenadas" aria-live="off">—</div>
       </div>
+    </div>
     </div>
   </main>
 </div>

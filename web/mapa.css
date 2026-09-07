@@ -145,3 +145,43 @@ body.mapa .popup-tabela th { text-align: left; font-weight: 500; color: var(--fr
 body.mapa .popup-tabela td { padding: .12rem 0; font-family: var(--mono); }
 body.mapa .popup-tabela td.nulo { color: var(--fraco); font-style: italic; }
 body.mapa .popup-mais { margin: 0; font-size: .75rem; color: var(--fraco); }
+
+/* --- painel de camadas do documento de mapa (item L2-01-a-documento-mapa). Fica FORA do canvas (coluna à
+   esquerda do mapa), não sobreposto: a lista é operável (arrastar, caixa, botões) e sobreposição em cima de
+   um mapa que também arrasta confunde o gesto. Cores do chrome do instrumento, como o resto da tela. */
+body.mapa .mapa-corpo { flex: 1; min-height: 0; display: flex; }
+body.mapa .mapa-camadas {
+  width: 20rem;
+  flex: 0 0 auto;
+  overflow-y: auto;
+  padding: var(--e3);
+  border-right: 1px solid var(--borda);
+  background: var(--painel);
+}
+body.mapa .mapa-camadas h2 { margin: 0 0 var(--e2); font-size: .95rem; }
+body.mapa .mapa-camadas .fraco { margin: 0 0 var(--e3); font-size: .78rem; }
+body.mapa .mapa-nome { font-size: .9rem; color: var(--fraco); }
+body.mapa .camadas-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+body.mapa .camada-linha {
+  /* grade de duas linhas: a de cima é a operável (pega, visibilidade, título, botões), a de baixo é o
+     metadado (tipo e selo). ACHADO na captura do e2e: com tudo numa linha só de flex, o título ficava
+     espremido a zero (é o único elemento encolhível, com overflow:hidden) e a linha parecia sem nome. */
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  grid-template-areas: "pega visivel titulo botoes" ". . meta meta";
+  align-items: center;
+  gap: var(--e1) var(--e2);
+  padding: var(--e2);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--fundo);
+  cursor: grab;
+}
+body.mapa .camada-linha.arrastando { opacity: .5; border-style: dashed; }
+body.mapa .camada-pega { grid-area: pega; border: 0; background: none; color: var(--fraco); cursor: grab; font-size: 1rem; padding: 0 .2rem; }
+body.mapa .camada-visivel { grid-area: visivel; }
+body.mapa .camada-rotulo { grid-area: titulo; display: contents; }
+body.mapa .camada-titulo { grid-area: titulo; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.mapa .camada-tipo { grid-area: meta; font-family: var(--mono); font-size: .7rem; color: var(--fraco); }
+body.mapa .camada-selo { grid-area: meta; justify-self: end; font-size: .68rem; border: 1px solid var(--borda); border-radius: var(--raio); padding: 0 .3rem; color: var(--fraco); }
+body.mapa .camada-botoes { grid-area: botoes; display: flex; gap: .2rem; }
