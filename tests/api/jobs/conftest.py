@@ -16,7 +16,20 @@ from tests import jobs_sessao
 
 ROOT = Path(__file__).resolve().parents[3]
 FINAIS = ("concluido", "falhou", "cancelado")
-PORTA_WORKER_EXTRA = 18159
+def porta_livre() -> int:
+    """Porta TCP livre escolhida pelo sistema, não uma constante.
+
+    07/09: era a constante 18159. Numa máquina onde várias trilhas rodam a MESMA suíte ao mesmo tempo (e com
+    pytest-xdist, vários processos da mesma suíte), o worker extra de uma rodada encontrava a porta já ocupada
+    pelo worker extra de outra: o processo novo morria no bind e `saude()` respondia pelo processo ALHEIO.
+    Efeito medido: "assert 'teste-extra-2500034:2500328' ... startswith('trilha-xdist:')" — o teste media a
+    identidade do worker de outra rodada. Pedir a porta ao sistema (bind em 0) elimina a coincidência."""
+    import socket
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
 
 
 @pytest.fixture(scope="session")
@@ -111,7 +124,8 @@ class WorkerExtra:
     """Worker em subprocesso (só para teste; sempre encerrado no fim). `nome` é a identidade `<base>:<pid>` que o
     processo registra; `saude()` lê o /saude dele."""
 
-    def __init__(self, env: dict, nome_base: str, processos: int = 1, porta: int = PORTA_WORKER_EXTRA):
+    def __init__(self, env: dict, nome_base: str, processos: int = 1, porta: int | None = None):
+        porta = porta or porta_livre()
         ambiente = {k: v for k, v in os.environ.items()}
         ambiente.update({k: v for k, v in env.items() if v is not None})
         ambiente.update({"PYTHONNOUSERSITE": "1", "PLAT_WORKER_NOME": nome_base,
@@ -151,7 +165,7 @@ def iniciar_worker(env):
     """Fábrica: iniciar_worker(nome_base, processos, porta) -> WorkerExtra; todos encerrados no fim do teste."""
     vivos: list[WorkerExtra] = []
 
-    def _iniciar(nome_base: str, processos: int = 1, porta: int = PORTA_WORKER_EXTRA) -> WorkerExtra:
+    def _iniciar(nome_base: str, processos: int = 1, porta: int | None = None) -> WorkerExtra:
         w = WorkerExtra(env, nome_base, processos, porta)
         vivos.append(w)
         return w

@@ -8,7 +8,7 @@ import psycopg2
 import psycopg2.extras
 
 from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
-from tests.api.jobs.conftest import PORTA_WORKER_EXTRA, criar_job, esperar
+from tests.api.jobs.conftest import criar_job, esperar
 
 
 def test_homonimo_nao_rouba_job_do_worker_vivo(cliente_demo, worker_vivo, iniciar_worker, env):
@@ -19,7 +19,7 @@ def test_homonimo_nao_rouba_job_do_worker_vivo(cliente_demo, worker_vivo, inicia
     base, pid = dono.rsplit(":", 1)
     assert pid.isdigit(), dono
     # o homônimo: mesmo nome-base do dono, processo novo (pid diferente), partida com ceifa
-    homonimo = iniciar_worker(base, 1, PORTA_WORKER_EXTRA)
+    homonimo = iniciar_worker(base, 1)
     assert homonimo.nome != dono and homonimo.nome.startswith(base + ":")
     assert homonimo.saude()["nome_base"] == base
     # 6 s depois da partida do homônimo: o job continua do mesmo dono, com progresso adiante do que estava
