@@ -62,7 +62,7 @@ export function compor(map, { titulo = 'Mapa', atribuicao = '' } = {}) {
   const zoom = map.getZoom();
   const razao = window.devicePixelRatio || 1;
   const largura = origem.width;
-  const faixa = Math.round(58 * razao);
+  const faixa = Math.round(76 * razao);  // 4 linhas de texto + a barra de escala e a seta de norte
   const destino = document.createElement('canvas');
   destino.width = largura;
   destino.height = origem.height + faixa;
@@ -88,8 +88,8 @@ export function compor(map, { titulo = 'Mapa', atribuicao = '' } = {}) {
   ctx.fillText(`Centro ${centro.lat.toFixed(5)}, ${centro.lng.toFixed(5)} · WGS 84 (EPSG:4326) · z${zoom.toFixed(1)}`,
     12, yb + 49);
   // barra de escala
-  const bx = l - 210;
-  const by = yb + 30;
+  const bx = l - 250;
+  const by = yb + 44;
   ctx.strokeStyle = '#0f1416';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -100,12 +100,15 @@ export function compor(map, { titulo = 'Mapa', atribuicao = '' } = {}) {
   ctx.font = '11px sans-serif';
   ctx.fillText(barra.rotulo, bx, by + 14);
   if (atribuicao) {
+    // à esquerda, numa linha só sua: à direita ela colidia com o rótulo da barra de escala (medido na
+    // captura de impressão do e2e, tests/e2e/capturas/L2-01-mapa-web_impressao.png)
     ctx.fillStyle = '#5b6467';
     ctx.font = '9px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(atribuicao.slice(0, 120), l - 12, yb + 50);
+    ctx.textAlign = 'left';
+    ctx.fillText(atribuicao.slice(0, 140), 12, yb + 65);
   }
-  desenharSetaNorte(ctx, l - 26, yb + 26, 13, '#0f1416');
+  ctx.textAlign = 'left';
+  desenharSetaNorte(ctx, l - 34, yb + 28, 13, '#0f1416');
   ctx.restore();
   return { canvas: destino, escala, barra, centro, zoom };
 }
