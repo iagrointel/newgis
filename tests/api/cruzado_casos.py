@@ -785,6 +785,12 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {},
     ),
     ("GET", "/api/rede/{rede_id}/tiers"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/tiers"),
+    # ---- L4-04-c sumário por subrede: as duas rotas apontam a rede de B e têm de dar 404 (a rede nem é
+    # vista); o CSV segue a mesma rota, com formato=csv, e por isso não tem caso separado.
+    ("GET", "/api/rede/{rede_id}/subredes/resumos"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/subredes/resumos"),
+    ("POST", "/api/rede/{rede_id}/subredes/resumos/calcular"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/subredes/resumos/calcular", lambda p: {}),
     ("POST", "/api/rede/{rede_id}/controladores/importar"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/controladores/importar", lambda p: {}),
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
