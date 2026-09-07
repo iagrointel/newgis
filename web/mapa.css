@@ -10,15 +10,9 @@
    painel (MEDIDO: computed `color: rgb(18,24,26)` sobre `background-color: rgba(18,24,26,.86)`, a mesma cor).
    O canvas do MapLibre é cartografia de cor FIXA (estilo.js, independente de tema — um mapa não reflui de
    paleta com o SO); o painel que fica em cima dele tem de ser fixo também, não seguir `--texto`/`--fraco`/
-   `--borda` do tema. Por isso as variáveis `--mapa-*` abaixo, com os MESMOS valores hexadecimais de
+   `--borda` do tema. Por isso as variáveis `--mapa-*` (definidas em tokens.css) com os MESMOS valores hexadecimais de
    `web/js/mapa/estilo.js` (`COR`), nunca as var(--texto) etc. da folha principal. */
-body.mapa {
-  overflow: hidden;
-  --mapa-painel: rgba(18, 24, 26, .88);
-  --mapa-borda: #3a4550;
-  --mapa-texto: #e7ece9;
-  --mapa-texto-fraco: #9aa8ae;
-}
+body.mapa { overflow: hidden; }
 body.mapa .principal.mapa-tela {
   padding: 0;
   max-width: none;
@@ -34,7 +28,7 @@ body.mapa .mapa-barra {
   border-bottom: 1px solid var(--borda);
   background: var(--painel);
 }
-body.mapa .mapa-barra h1 { margin: 0; font-size: 1.1rem; }
+body.mapa .mapa-barra h1 { margin: 0; font-size: var(--t1); }
 body.mapa .mapa-barra plat-aviso { flex: 1; }
 body.mapa .mapa-area { position: relative; flex: 1; min-height: 0; }
 body.mapa #mapa { position: absolute; inset: 0; }
@@ -53,11 +47,11 @@ body.mapa .mapa-painel {
   border-radius: var(--raio);
   padding: var(--e2) var(--e3);
   font-family: var(--mono);
-  font-size: .8rem;
+  font-size: var(--t-2);
   color: var(--mapa-texto);
   backdrop-filter: blur(2px);
 }
 body.mapa .mapa-painel-base { top: var(--e4); display: flex; align-items: center; gap: var(--e2); font-family: var(--sans); }
 body.mapa .mapa-painel-base label { color: var(--mapa-texto-fraco); text-transform: lowercase; }
-body.mapa .mapa-painel-base select { background: #1a2224; color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: .2rem .4rem; }
+body.mapa .mapa-painel-base select { background: var(--mapa-controle); color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: var(--e1) var(--e2); }
 body.mapa .mapa-coordenadas { top: calc(var(--e4) + 2.4rem); font-variant-numeric: tabular-nums; letter-spacing: .02em; }

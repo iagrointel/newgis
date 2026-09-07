@@ -2,38 +2,38 @@
    `span <largura_colunas>`; nenhuma medida do documento é pixel. */
 .construtor .principal { max-width: none; }
 .editor { display: grid; grid-template-columns: 180px minmax(0, 1fr) 320px; gap: var(--e3); align-items: start; }
-.editor h2 { font-size: .95rem; margin: 0 0 var(--e2); }
+.editor h2 { font-size: var(--t0); margin: 0 0 var(--e2); }
 .editor-paleta, .editor-lado > section { background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e3); margin-bottom: var(--e3); }
 .lista-paleta { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
 .lista-paleta li { display: flex; align-items: center; gap: var(--e2); justify-content: space-between; }
 .paleta-item { cursor: grab; padding: var(--e2); border: 1px dashed var(--borda-forte); border-radius: var(--raio); flex: 1; }
 .paleta-item:active { cursor: grabbing; }
 
-.editor-tela { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; min-height: 320px; padding: var(--e3); background: var(--fundo-2); border: 1px solid var(--borda); border-radius: var(--raio); align-content: start; }
-.no-filhos { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; grid-column: 1 / -1; margin-top: var(--e2); min-height: 48px; align-content: start; }
+.editor-tela { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--e2); min-height: 320px; padding: var(--e3); background: var(--fundo-2); border: 1px solid var(--borda); border-radius: var(--raio); align-content: start; }
+.no-filhos { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--e2); grid-column: 1 / -1; margin-top: var(--e2); min-height: 48px; align-content: start; }
 .no-editor { position: relative; background: var(--painel); border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: var(--e2) var(--e3); min-height: 56px; }
 .no-editor.selecionado { border-color: var(--acento); box-shadow: 0 0 0 1px var(--acento); }
 .no-editor.arrastando { opacity: .5; }
 .no-editor.arrasto-sobre, .editor-tela.arrasto-sobre, .no-filhos.arrasto-sobre { outline: 2px dashed var(--acento); outline-offset: 2px; }
 .no-cabecalho { display: flex; gap: var(--e2); align-items: baseline; justify-content: space-between; }
-.no-titulo { font-weight: 600; font-size: .85rem; }
-.no-resumo { color: var(--fraco); font-size: .8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.no-titulo { font-weight: 600; font-size: var(--t-1); }
+.no-resumo { color: var(--fraco); font-size: var(--t-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .alca-largura { position: absolute; top: 0; right: 0; width: 12px; height: 100%; padding: 0; border-radius: 0 var(--raio) var(--raio) 0; cursor: ew-resize; background: var(--painel-2); }
-.vazio { color: var(--fraco); font-size: .85rem; grid-column: 1 / -1; margin: 0; }
+.vazio { color: var(--fraco); font-size: var(--t-1); grid-column: 1 / -1; margin: 0; }
 
-.editor-arvore { display: grid; gap: 2px; }
+.editor-arvore { display: grid; gap: var(--e0); }
 .arvore-linha { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; }
 .arvore-item { flex: 1; display: flex; gap: var(--e2); align-items: baseline; text-align: left; }
 .arvore-item.selecionado { border-color: var(--acento); }
-.arvore-resumo { color: var(--fraco); font-size: .8rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.arvore-colunas { font-family: var(--mono, monospace); font-size: .75rem; color: var(--fraco); }
-.arvore-acoes { display: flex; gap: 2px; align-items: center; flex-wrap: wrap; }
+.arvore-resumo { color: var(--fraco); font-size: var(--t-2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arvore-colunas { font-family: var(--mono, monospace); font-size: var(--t-3); color: var(--fraco); }
+.arvore-acoes { display: flex; gap: var(--e0); align-items: center; flex-wrap: wrap; }
 .arvore-acoes select { max-width: 130px; }
 
-.editor-props .campo { display: grid; gap: 2px; margin-bottom: var(--e3); }
-.editor-props .campo > span { font-size: .8rem; color: var(--fraco); }
-.campo-erro { color: var(--falha); font-size: .8rem; min-height: 1em; }
-.editor-mensagem { min-height: 1.2em; margin: 0 0 var(--e2); font-size: .85rem; color: var(--fraco); }
+.editor-props .campo { display: grid; gap: var(--e0); margin-bottom: var(--e3); }
+.editor-props .campo > span { font-size: var(--t-2); color: var(--fraco); }
+.campo-erro { color: var(--falha); font-size: var(--t-2); min-height: 1em; }
+.editor-mensagem { min-height: 1.2em; margin: 0 0 var(--e2); font-size: var(--t-1); color: var(--fraco); }
 .editor-mensagem[data-tipo="erro"] { color: var(--falha); }
 
 @media (max-width: 900px) {
