@@ -1,0 +1,32 @@
+{
+ "item": "L4-23-isolamento-por-inquilino-na-rede",
+ "medidas": {
+  "rotas_de_rede_no_openapi": {
+   "valor": 20,
+   "unidade": "rotas",
+   "comando": "app.main.app.openapi() filtrado por caminho iniciando em /api/rede, em processo"
+  },
+  "rotas_com_alvo_testadas_cruzadas": {
+   "valor": 16,
+   "unidade": "rotas",
+   "comando": "subconjunto de rotas_de_rede_no_openapi com {rede_id}/recurso de outro inquilino na URL, cada uma chamada com o alvo de B e A autenticado, exigindo 403/404"
+  },
+  "explain_mostra_filtro_de_tenant": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "EXPLAIN (COSTS OFF) da consulta-base de arestas do traçado, contexto de B"
+  },
+  "explain_plano_bruto": {
+   "valor": "Seq Scan on rede_topo_aresta a\n  Filter: ((rede_id = '92660884-c5b6-4032-81c2-0d7fba5eb87c'::uuid) AND (('b08621b0-5a6a-413e-b231-b8d2a8e17c20'::uuid = no_origem_id) OR ('b08621b0-5a6a-413e-b231-b8d2a8e17c20'::uuid = no_destino_id)) AND (tenant_id = (NULLIF(current_setting('plat.tenant_id'::text, true), ''::text))::integer))",
+   "unidade": "texto",
+   "comando": "plano completo, para auditoria"
+  },
+  "traceLocations_fachada_esri": {
+   "valor": "nao_aplicavel",
+   "unidade": "texto",
+   "comando": "grep -rn traceLocations app/ — sem resultado; feature não construída nesta passagem"
+  }
+ },
+ "gerado_em": "2026-09-07T13:11:02Z",
+ "git_sha": "c239e09b978d"
+}

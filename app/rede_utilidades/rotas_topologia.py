@@ -53,7 +53,7 @@ def _feicao_json(r: dict) -> dict:
 
 @router.post("/{rede_id}/feicoes/pontos", response_model=Feicao, status_code=201, openapi_extra=EDITAR)
 def criar_feicao_ponto(rede_id: str, corpo: FeicaoPontoEntrada, request: Request,
-                        auth: Auth = autenticado("rede.editar")):
+                        auth: Auth = autenticado("rede.editar", escopo_token="rede:editar")):
     rid = _uuid_ok(rede_id)
     with db.db(auth.contexto()) as cur:
         _rede_existe(cur, rid)
@@ -65,7 +65,7 @@ def criar_feicao_ponto(rede_id: str, corpo: FeicaoPontoEntrada, request: Request
 
 @router.post("/{rede_id}/feicoes/linhas", response_model=Feicao, status_code=201, openapi_extra=EDITAR)
 def criar_feicao_linha(rede_id: str, corpo: FeicaoLinhaEntrada, request: Request,
-                        auth: Auth = autenticado("rede.editar")):
+                        auth: Auth = autenticado("rede.editar", escopo_token="rede:editar")):
     rid = _uuid_ok(rede_id)
     with db.db(auth.contexto()) as cur:
         _rede_existe(cur, rid)
@@ -76,7 +76,7 @@ def criar_feicao_linha(rede_id: str, corpo: FeicaoLinhaEntrada, request: Request
 
 
 @router.get("/{rede_id}/feicoes/pontos", openapi_extra=LER)
-def listar_feicoes_ponto(rede_id: str, limite: int = 200, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+def listar_feicoes_ponto(rede_id: str, limite: int = 200, auth: Auth = autenticado(escopo_token="rede:ler")):
     rid = _uuid_ok(rede_id)
     with db.db(auth.contexto()) as cur:
         _rede_existe(cur, rid)
@@ -85,7 +85,7 @@ def listar_feicoes_ponto(rede_id: str, limite: int = 200, auth: Auth = autentica
 
 
 @router.get("/{rede_id}/feicoes/linhas", openapi_extra=LER)
-def listar_feicoes_linha(rede_id: str, limite: int = 200, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+def listar_feicoes_linha(rede_id: str, limite: int = 200, auth: Auth = autenticado(escopo_token="rede:ler")):
     rid = _uuid_ok(rede_id)
     with db.db(auth.contexto()) as cur:
         _rede_existe(cur, rid)
@@ -94,7 +94,9 @@ def listar_feicoes_linha(rede_id: str, limite: int = 200, auth: Auth = autentica
 
 
 @router.post("/{rede_id}/feicoes/pontos/applyEdits", status_code=200, openapi_extra=EDITAR)
-async def aplicar_edicoes_ponto(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar")):
+async def aplicar_edicoes_ponto(
+    rede_id: str, request: Request, auth: Auth = autenticado("rede.editar", escopo_token="rede:editar")
+):
     """applyEdits da camada de dispositivos (paridade FeatureServer): `adds`/`updates`/`deletes` numa chamada,
     geometria no JSON da Esri (`{"x":..,"y":..}`), resultado por feição. Cada feição gravada marca a área
     suja correspondente se a topologia já foi construída (refutação do item L4-01-b)."""
@@ -104,7 +106,9 @@ async def aplicar_edicoes_ponto(rede_id: str, request: Request, auth: Auth = aut
 
 
 @router.post("/{rede_id}/feicoes/linhas/applyEdits", status_code=200, openapi_extra=EDITAR)
-async def aplicar_edicoes_linha(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar")):
+async def aplicar_edicoes_linha(
+    rede_id: str, request: Request, auth: Auth = autenticado("rede.editar", escopo_token="rede:editar")
+):
     """applyEdits da camada de trechos: geometria `{"paths": [[[lon, lat], ...]]}` (um caminho por feição)."""
     rid = _uuid_ok(rede_id)
     corpo = await request.json()
@@ -144,7 +148,9 @@ def _habilitar_sincrono(rid: str, auth: Auth, request: Request) -> dict:
 
 @router.post("/{rede_id}/topologia/habilitar", response_model=TopologiaResumo, status_code=201,
              openapi_extra=EDITAR)
-async def habilitar_topologia(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar")):
+async def habilitar_topologia(
+    rede_id: str, request: Request, auth: Auth = autenticado("rede.editar", escopo_token="rede:editar")
+):
     """Reconstrói a topologia INTEIRA da rede a partir das feições atuais. Idempotente (chamar de novo com as
     mesmas feições dá o mesmo resultado); substitui qualquer topologia anterior, nunca soma."""
     rid = _uuid_ok(rede_id)
@@ -153,7 +159,7 @@ async def habilitar_topologia(rede_id: str, request: Request, auth: Auth = auten
 
 
 @router.get("/{rede_id}/topologia", response_model=TopologiaResumo, openapi_extra=LER)
-def ver_resumo_topologia(rede_id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+def ver_resumo_topologia(rede_id: str, auth: Auth = autenticado(escopo_token="rede:ler")):
     rid = _uuid_ok(rede_id)
     with db.db(auth.contexto()) as cur:
         _rede_existe(cur, rid)
@@ -172,7 +178,7 @@ def ver_resumo_topologia(rede_id: str, auth: Auth = autenticado(escopo_token="ca
 
 
 @router.get("/{rede_id}/topologia/nos", openapi_extra=LER)
-def listar_nos(rede_id: str, limite: int = 200, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+def listar_nos(rede_id: str, limite: int = 200, auth: Auth = autenticado(escopo_token="rede:ler")):
     rid = _uuid_ok(rede_id)
     with db.db(auth.contexto()) as cur:
         _rede_existe(cur, rid)
@@ -194,7 +200,7 @@ def listar_nos(rede_id: str, limite: int = 200, auth: Auth = autenticado(escopo_
 
 
 @router.get("/{rede_id}/topologia/arestas", openapi_extra=LER)
-def listar_arestas(rede_id: str, limite: int = 200, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+def listar_arestas(rede_id: str, limite: int = 200, auth: Auth = autenticado(escopo_token="rede:ler")):
     rid = _uuid_ok(rede_id)
     with db.db(auth.contexto()) as cur:
         _rede_existe(cur, rid)
@@ -218,7 +224,7 @@ def listar_arestas(rede_id: str, limite: int = 200, auth: Auth = autenticado(esc
 
 @router.get("/{rede_id}/topologia/areas-sujas", openapi_extra=LER)
 def listar_areas_sujas(rede_id: str, limite: int = 200,
-                       auth: Auth = autenticado(escopo_token="catalogo:ler")):
+                       auth: Auth = autenticado(escopo_token="rede:ler")):
     """As áreas sujas abertas da rede: onde uma edição (applyEdits ou criação simples) passou DEPOIS da última
     construção da topologia e o índice gravado é, portanto, suspeito. `habilitar` as apaga ao reconstruir."""
     rid = _uuid_ok(rede_id)
@@ -292,7 +298,7 @@ def _alcance_sincrono(rid: str, no_id: str, auth: Auth) -> dict:
 
 
 @router.get("/{rede_id}/topologia/alcance", openapi_extra=LER)
-async def alcance(rede_id: str, no: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+async def alcance(rede_id: str, no: str, auth: Auth = autenticado(escopo_token="rede:analisar")):
     """Traçado mínimo de conectividade: o conjunto de nós/arestas alcançáveis a partir de `no`. Sem regra de
     fluxo (montante/jusante) nem estado de chave — isso é o item seguinte da linha L4."""
     rid = _uuid_ok(rede_id)

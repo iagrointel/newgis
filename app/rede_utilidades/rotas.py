@@ -132,7 +132,7 @@ def baixar_pacote_instalado(codigo: str, auth: Auth = autenticado(escopo_token="
 
 
 @router.get("", response_model=RedePagina, openapi_extra=LER)
-def listar(auth: Auth = autenticado(escopo_token="catalogo:ler")):
+def listar(auth: Auth = autenticado(escopo_token="rede:ler")):
     with db.db(auth.contexto()) as cur:
         cur.execute("SELECT count(*) AS n FROM plat.rede")
         total = cur.fetchone()["n"]
@@ -141,7 +141,7 @@ def listar(auth: Auth = autenticado(escopo_token="catalogo:ler")):
 
 
 @router.post("", response_model=Rede, status_code=201, openapi_extra=EDITAR)
-def criar(corpo: RedeEntrada, request: Request, auth: Auth = autenticado("rede.editar")):
+def criar(corpo: RedeEntrada, request: Request, auth: Auth = autenticado("rede.editar", escopo_token="rede:editar")):
     with db.db(auth.contexto()) as cur:
         try:
             cur.execute(
@@ -161,13 +161,13 @@ def criar(corpo: RedeEntrada, request: Request, auth: Auth = autenticado("rede.e
 
 
 @router.get("/{rede_id}", response_model=Rede, openapi_extra=LER)
-def ver(rede_id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+def ver(rede_id: str, auth: Auth = autenticado(escopo_token="rede:ler")):
     with db.db(auth.contexto()) as cur:
         return _json(_carregar(cur, _uuid_ok(rede_id)))
 
 
 @router.delete("/{rede_id}", status_code=204, openapi_extra=EDITAR)
-def apagar(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar")):
+def apagar(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar", escopo_token="rede:editar")):
     rid = _uuid_ok(rede_id)
     with db.db(auth.contexto()) as cur:
         r = _carregar(cur, rid)
@@ -208,7 +208,9 @@ def _importar_pacote_sincrono(rid: str, bruto: bytes, auth: Auth, request: Reque
 
 
 @router.post("/{rede_id}/pacote", response_model=ImportacaoResultado, status_code=201, openapi_extra=EDITAR)
-async def importar_pacote(rede_id: str, request: Request, auth: Auth = autenticado("rede.editar")):
+async def importar_pacote(
+    rede_id: str, request: Request, auth: Auth = autenticado("rede.editar", escopo_token="rede:editar")
+):
     """Importa o pacote de ativos. Substitui o catálogo INTEIRO da rede, numa transação: ou entra tudo, ou nada.
     Só a leitura do corpo fica no laço de eventos (rápida, I/O); validação e gravação vão para o threadpool."""
     rid = _uuid_ok(rede_id)
@@ -217,7 +219,7 @@ async def importar_pacote(rede_id: str, request: Request, auth: Auth = autentica
 
 
 @router.get("/{rede_id}/pacote", openapi_extra=LER, response_class=Response)
-def exportar_pacote(rede_id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+def exportar_pacote(rede_id: str, auth: Auth = autenticado(escopo_token="rede:ler")):
     """O pacote da rede, reconstruído das tabelas e serializado na forma canônica — nunca o arquivo recebido."""
     rid = _uuid_ok(rede_id)
     with db.db(auth.contexto()) as cur:

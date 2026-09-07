@@ -278,7 +278,10 @@ def test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica(
     esquema = app.openapi()
     escritas = [(c, m) for c, ops in esquema["paths"].items() if c.startswith("/api/rede")
                 for m in ops if m in ("post", "put", "patch", "delete")]
-    assert len(escritas) == 3, escritas
+    # 3 de L4-01-a (criar/apagar rede, importar pacote) + 5 de L4-01-b (feições pontos/linhas, applyEdits
+    # dos dois, habilitar topologia) — a contagem sobe quando esse branch entra na árvore (achado do item
+    # L4-23-isolamento-por-inquilino-na-rede ao rebasear sobre wt/il401btopol).
+    assert len(escritas) == 8, escritas
     for c, m in escritas:
         assert esquema["paths"][c][m].get("x-privilegio") == "rede.editar", (c, m)
     rid = _rede_com_pacote(sessao_a, limpar_redes, "priv")
