@@ -130,6 +130,22 @@ isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não 
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
 
+## turno 3, setembro de 2026 (item L0-06-c-restore-drill: ensaio de restauração do backup)
+
+Job `backup.restore_drill`: restaura o último dump de cada schema num banco de ensaio, compara `COUNT(*)`
+de todas as tabelas com `tenant_id` contra a produção, confere o sha256 de até 3 objetos do bucket por
+inquilino contra o manifesto e grava tabelas, linhas, divergências, diferenças posteriores e
+`duracao_drill_s` em `plat.backup_drill`. Periódico mensal (dia 1, 04:30) e versão curta na suíte, dentro do
+`make check`: 3,7 s ponta a ponta com a máquina em carga 7,20, e 21,2 s na rodada que precisa criar o
+banco de ensaio (teto da cláusula: 60 s). A base de
+comparação é o instante do dump: linha escrita depois dele é registrada como diferença posterior, com tabela
+e delta, e não reprova; cópia com mais linhas que a produção, tabela ausente ou sha256 diferente do
+registrado reprovam, viram evento `backup/falha` e e-mail ao superadmin. `GET /saude` ganha o bloco
+`backup_drill` com a data do último ensaio. Runbook em `docs/RUNBOOKS/restauracao.md`, ADR
+20260907T2230. Achado do primeiro ensaio real: o dump do schema da plataforma só restaura numa base com
+`postgis`, `pgcrypto`, `pg_trgm` e `unaccent` — sem `unaccent` a tabela `item` não é criada e some em
+silêncio; o `install.sh` cria só as duas primeiras.
+
 ## turno 3, setembro de 2026 (item L0-06-a-dump-logico: backup lógico diário por inquilino)
 
 Fase 1 do backup, sem reiniciar o Postgres (`archive_mode` está desligado e ligá-lo exige reinício de um
