@@ -21,6 +21,8 @@ PAGINAS = {
     "/admin/log": "admin/log.html",
     # --- configurações da organização (L0-07-a-configuracoes-org)
     "/admin/organizacao": "admin/organizacao.html",
+    # --- retrato operacional (L0-06-e-status): aberta, sem sessão, noindex
+    "/status": "status.html",
     # --- catálogo (L0-03)
     "/conteudo": "conteudo.html",
     "/conteudo/lixeira": "conteudo_lixeira.html",
@@ -47,7 +49,10 @@ def servir(arquivo: str) -> FileResponse:
     caminho = WEB / arquivo
     if not caminho.is_file():
         raise ErroAPI(404, "pagina_inexistente", "página inexistente")
-    return FileResponse(caminho, media_type="text/html; charset=utf-8", headers={"Cache-Control": "no-store"})
+    # X-Robots-Tag além da meta noindex que toda página já traz (L0-06-e-status): a meta só é lida por quem
+    # interpreta o HTML; o cabeçalho vale para qualquer rastreador, inclusive em resposta não renderizada.
+    return FileResponse(caminho, media_type="text/html; charset=utf-8",
+                        headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"})
 
 
 def _registrar(caminho: str, arquivo: str) -> None:

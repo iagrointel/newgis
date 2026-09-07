@@ -1,0 +1,26 @@
+/* Página /status (item L0-06-e-status): aberta, sem sessão e sem barra lateral — o visitante não tem conta.
+   Só o que a folha comum (style.css) não dá: a faixa de 90 dias e a tabela de serviços. Cores e espaçamentos
+   saem dos tokens do painel de instrumento, nunca de valor solto. */
+.status-principal { max-width: 72rem; margin: 0 auto; padding: var(--e5); }
+.status .tabela { width: 100%; border-collapse: collapse; }
+.status .tabela th, .status .tabela td { text-align: left; padding: var(--e1) var(--e2); border-bottom: 1px solid var(--borda); }
+.status .tabela th { color: var(--fraco); font-weight: 600; }
+.status .tabela td:nth-child(3), .status .tabela td:nth-child(4) { font-family: var(--mono); }
+.status-estado { font-weight: 600; }
+.status-estado-ok { color: var(--ok); }
+.status-estado-degradado { color: var(--atencao); }
+.status-estado-erro { color: var(--falha); }
+.status-estado-ausente { color: var(--fraco); }
+.status .faixa { display: flex; gap: 1px; align-items: flex-end; height: 2.25rem; margin: var(--e1) 0 var(--e4); }
+.status .faixa .dia { flex: 1 1 auto; min-width: 2px; background: var(--borda); height: 100%; position: relative; }
+.status .faixa .dia > span { display: block; width: 100%; background: var(--ok); position: absolute; bottom: 0; }
+.status .faixa .dia.parcial > span { background: var(--atencao); }
+.status .faixa .dia.caiu > span { background: var(--falha); }
+.status .faixa + h3, .status h3 { margin: 0 0 var(--e1); font-size: .9rem; color: var(--fraco); }
+.status .numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: var(--e2) var(--e4); }
+.status .numeros .numero { display: block; }
+.status .numeros dt { color: var(--fraco); font-size: .85rem; }
+.status .numeros dd { margin: 0 0 var(--e2); }
+.status .correcoes { margin: 0; padding-left: 1.1rem; }
+.status .correcoes li { margin-bottom: var(--e1); }
+.status .nota { color: var(--fraco); font-size: .85rem; }
