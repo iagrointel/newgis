@@ -4,6 +4,7 @@ caso que aponta um recurso do inquilino B (demo2) e diz o que A (demo) pode rece
 não carregue dado de B (`verificar`) e B fique intacto (digest antes/depois, em test_cruzado.py). Rota sem caso =
 o teste falha (cobertura 100 % é cláusula)."""
 
+import json
 import secrets
 from dataclasses import dataclass, field
 from typing import Any, Callable
@@ -160,13 +161,10 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     })
     assert r.status_code == 201, r.text
     execucao_b = r.json()
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
     # L4-01-a: rede de utilidades de B com o pacote de ativos JÁ importado — é o alvo das rotas /api/rede/{rede_id}
-    # (inclusive a exportação, que é onde um vazamento de esquema apareceria)
+    # (inclusive a exportação, que é onde um vazamento de esquema apareceria). A união dos ramos de L4 com o
+    # master tinha deixado DOIS `return` aqui: o primeiro (sem `rede_b`) matava o segundo, e todo caso de
+    # /api/rede/{rede_id} caía em KeyError antes de chegar à API.
     r = sessao_b.post("/api/rede", json={"nome": f"{PREFIXO}rede-{sufixo}", "disciplina": "agua"})
     assert r.status_code == 201, r.text
     rede_b = r.json()
@@ -176,7 +174,8 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      rede_b=rede_b, convite_b=convite_b)
+                      rede_b=rede_b, convite_b=convite_b,
+                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -577,16 +576,6 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"resolucao_m": 100.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
                    "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
     ),
-    # L6-02-c (conector WFS/OGC API): as três rotas de leitura do modo referenciado. A conexão de B é
-    # cross-tenant puro — `_carregar` (RLS) roda ANTES de qualquer ida ao serviço externo, então a rota nem
-    # chega a abrir conexão de rede quando o id é de outro inquilino.
-    ("GET", "/api/conexoes/{id}/colecoes"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes"),
-    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/campos"): Caso(
-        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/campos"
-    ),
-    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/feicoes"): Caso(
-        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/feicoes"
-    ),
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,
@@ -763,8 +752,11 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/rede/{rede_id}"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}"),
     ("DELETE", "/api/rede/{rede_id}"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}"),
     ("GET", "/api/rede/{rede_id}/pacote"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/pacote"),
+    # o corpo é um pacote VÁLIDO de propósito: a rota valida o documento (CPU) antes de abrir conexão, então
+    # um corpo inválido pararia em 422 e a chamada nunca chegaria a provar que a RLS derruba a rede de B.
     ("POST", "/api/rede/{rede_id}/pacote"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/pacote", lambda p: {"esquema": "plat.rede.pacote"},
+        lambda p: f"/api/rede/{p.rede_b['id']}/pacote",
+        lambda p: json.loads(instalados.bruto("agua-epanet")),
     ),
     # ---- L4-04-a controlador de subrede e tiers: tudo em /api/rede/{rede_id} aponta a rede de B e tem de
     # dar 404 (a rede nem é vista). O id de controlador/subrede é forjado: se a rede fosse alcançável, a
@@ -976,6 +968,50 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    # ---- rede de utilidades: feições, topologia, traçado e rede simples (L4-01-b, L4-02-a/d, L4-18). As 16
+    # rotas abaixo nasceram em ramos paralelos e nenhuma tinha caso aqui — a cobertura cruzada reprovava o
+    # lote inteiro de L4 por este registro. Todas apontam a rede de B: a RLS derruba antes de qualquer
+    # trabalho, então a resposta é 404 de rede (nunca 422 de corpo — por isso os corpos abaixo são válidos).
+    ("GET", "/api/rede/{rede_id}/feicoes/pontos"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos"),
+    ("GET", "/api/rede/{rede_id}/feicoes/linhas"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas"),
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos",
+        lambda p: {"grupo": "juncao", "tipo_codigo": 1, "lon": -46.60, "lat": -23.50},
+    ),
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas",
+        lambda p: {"grupo": "tubulacao", "tipo_codigo": 1,
+                   "coordenadas": [[-46.60, -23.50], [-46.59, -23.50]]},
+    ),
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos/applyEdits", lambda p: {"adds": []},
+    ),
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas/applyEdits"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas/applyEdits", lambda p: {"adds": []},
+    ),
+    ("GET", "/api/rede/{rede_id}/topologia"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia"),
+    ("GET", "/api/rede/{rede_id}/topologia/nos"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia/nos"),
+    ("GET", "/api/rede/{rede_id}/topologia/arestas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/arestas"),
+    ("GET", "/api/rede/{rede_id}/topologia/areas-sujas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/areas-sujas"),
+    ("GET", "/api/rede/{rede_id}/topologia/alcance"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/alcance?no={UUID_NULO}"),
+    ("POST", "/api/rede/{rede_id}/topologia/habilitar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/habilitar"),
+    ("POST", "/api/rede/{rede_id}/tracar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/tracar",
+        lambda p: {"tipo": "conectado", "pontos_partida": [{"lon": -46.60, "lat": -23.50}]},
+    ),
+    ("GET", "/api/rede/{rede_id}/simples"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/simples"),
+    ("POST", "/api/rede/{rede_id}/promover"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/promover"),
+    # a rede simples nasce de uma CAMADA do inquilino: o id nulo não é de A nem de B, e a rota devolve 404
+    # de camada sem criar nada — por isso este caso não precisa de limpeza.
+    ("POST", "/api/rede/simples"): Caso(
+        lambda p: "/api/rede/simples",
+        lambda p: {"nome": f"{PREFIXO}simples-{secrets.token_hex(4)}", "disciplina": "agua",
+                   "camada_linha_id": UUID_NULO},
     ),
 }
 
