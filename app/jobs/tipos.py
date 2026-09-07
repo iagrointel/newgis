@@ -10,6 +10,7 @@ from app.ingestao import tarefas as ingestao_tarefas  # noqa: F401 — L0-04: in
 from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos
 from app.jobs.registro import REGISTRO
 from app.rede_utilidades import tarefas as rede_tarefas  # noqa: F401 — L4-04-b: redes.subredes_atualizar
+from app.rede_utilidades import tarefas as rede_tarefas  # noqa: F401 — L4-01-c: rede.importar_bdgd
 from app.uploads import tarefas as uploads_tarefas  # noqa: F401 — L0-04-a: uploads.expirar + periódico
 
 __all__ = ["REGISTRO"]

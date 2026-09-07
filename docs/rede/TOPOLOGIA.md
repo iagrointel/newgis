@@ -71,7 +71,7 @@ saindo de vértices de BT existentes, postes decorativos em qualquer lugar da ca
 de fronteira DELIBERADOS (transformador deslocado 1 m — prova de nó órfão; trecho degenerado — prova de
 aresta sem nó). Usada nos testes rápidos de `tests/api/test_rede_topologia*.py` (segundos, não minutos).
 
-**Escala real, marcado `lento`**: a rede real da cooperativa de teste (schema `certaja` do `iagro_sat`, ativo
+**Escala real, marcado `lento`**: a rede real da cooperativa de teste (schema declarado em `PLAT_REDE_REFERENCIA_ESQUEMA`, ativo
 da casa, SOMENTE LEITURA — 44.268 trechos de MT, 29.244 de BT, 26.581 ramais, 5.481 trafos, 60.549 postes) NÃO
 está no repositório como arquivo (é acesso vivo ao Postgres compartilhado, exige `GRANT USAGE/SELECT` — ver
 docstring de `tests/dados/carga_bdgd.py`), mas EXISTE e é medida em `tests/api/test_rede_topologia_medida.py`
@@ -79,7 +79,7 @@ docstring de `tests/dados/carga_bdgd.py`), mas EXISTE e é medida em `tests/api/
 o construtor gravou. Medido 2026-09-07 (`tests/medidas/L4-01-b-topologia-derivada.json`): 73.512 arestas reais
 (MT+BT), 80.456 nós, 3.948 órfãos, 0 arestas sem nó, 21 alimentadores com componente conexa idêntica arquivo ×
 topologia, 1.554 terminais de alta órfãos batendo exato com o arquivo. **Fronteira medida, não fabricada**:
-`certaja.ramlig` tem 0 dos 26.581 registros com `wkt` preenchido — o ramal de ligação entra como atributo, não
+`<esquema>.ramlig` tem 0 dos 26.581 registros com `wkt` preenchido — o ramal de ligação entra como atributo, não
 como aresta geométrica (§6 abaixo detalha a conferência). Tempo de `habilitar` variou de ~21 s (máquina sem
 outra carga) a ~600 s (máquina com 4-8 agentes de outras trilhas disputando CPU/RAM ao mesmo tempo — swap
 100% cheio) na mesma rede de 73.512 arestas: o código processa em lotes de 4.000 linhas (§ADR 0020) e escala
@@ -103,7 +103,7 @@ incluso no próprio arquivo JSON).
   de uma chave é o item seguinte da linha L4.
 - **Desambiguação de terminal por ordem de chegada** quando um dispositivo multi-terminal só toca UM tier
   (§3.3) é uma convenção, não uma dedução dos dados — sem traçado de rede não há como fazer melhor.
-- **Ramal de ligação sem geometria no ativo real.** `certaja.ramlig` (schema `certaja`, BDGD da cooperativa
+- **Ramal de ligação sem geometria no ativo real.** `<esquema>.ramlig` (BDGD da cooperativa
   de teste) tem os 26.581 registros do arquivo mas 0 com a coluna `wkt` preenchida — medido, não suposto
   (`count(wkt)` direto na tabela). A carga (`tests/dados/carga_bdgd.py`) filtra `WHERE wkt IS NOT NULL`, o
   ramal entra como atributo (contagem do arquivo) mas não como aresta geométrica — fabricar uma linha que o

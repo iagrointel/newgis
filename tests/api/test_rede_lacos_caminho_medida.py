@@ -1,6 +1,7 @@
 """Medição em escala REAL do item L4-02-d-lacos-e-caminho-curto (marcador `lento`: fora do pytest do dia a dia).
 
-Cláusulas do portão medidas aqui, na mesma rede real da cooperativa de teste (schema `certaja`, ativo da
+Cláusulas do portão medidas aqui, na mesma rede real da cooperativa de teste (schema da distribuidora
+de referência, ativo da
 casa, somente leitura, reusado do item L4-01-b/L4-02-a via `tests/dados/carga_bdgd.py`):
 
 1. laços da cooperativa de teste listados — esperado ≈ 0 numa rede radial de MT (o padrão de distribuição
@@ -25,6 +26,15 @@ from app.schema_ambiente import CursorSchemaAmbiente
 from tests.api.conftest import entrar, novo_cliente
 from tests.api.test_rls import ids_por_slug
 from tests.dados import carga_bdgd
+from tests.dados.carga_bdgd import esquema
+from tests.dados.carga_bdgd import exigir_esquema as _esq
+
+# Sem o ativo da casa (BDGD real da distribuidora de referência num schema do iagro_sat) não há o que
+# medir: o módulo inteiro pula com a razão, em vez de estourar na primeira consulta.
+pytestmark = pytest.mark.skipif(
+    not esquema(),
+    reason="sem PLAT_REDE_REFERENCIA_ESQUEMA: a medida exige a BDGD real da distribuidora de referência",
+)
 
 MEDIDAS = Path(__file__).resolve().parent.parent / "medidas" / "L4-02-d-lacos-e-caminho-curto.json"
 
@@ -140,19 +150,19 @@ def test_medida_lacos_e_p95_caminho_curto_maior_alimentador(cred, env):
         # --- cláusula 5: p95 de tipo=caminho_curto no maior alimentador --------------------------------
         with con.cursor() as cur:
             cur.execute(
-                "SELECT ctmt, count(*) AS n FROM certaja.ssdmt WHERE wkt IS NOT NULL "
+                f"SELECT ctmt, count(*) AS n FROM {_esq()}.ssdmt WHERE wkt IS NOT NULL "
                 "GROUP BY ctmt ORDER BY n DESC LIMIT 1")
             maior = cur.fetchone()
             cur.execute(
                 "SELECT ST_X(ST_StartPoint(ST_GeometryN(wkt::geometry, 1))) AS lon, "
                 "ST_Y(ST_StartPoint(ST_GeometryN(wkt::geometry, 1))) AS lat "
-                "FROM certaja.ssdmt WHERE ctmt = %s AND wkt IS NOT NULL LIMIT 1",
+                f"FROM {_esq()}.ssdmt WHERE ctmt = %s AND wkt IS NOT NULL LIMIT 1",
                 (maior["ctmt"],))
             p_origem = cur.fetchone()
             cur.execute(
                 "SELECT ST_X(ST_EndPoint(ST_GeometryN(wkt::geometry, 1))) AS lon, "
                 "ST_Y(ST_EndPoint(ST_GeometryN(wkt::geometry, 1))) AS lat "
-                "FROM certaja.ssdmt WHERE ctmt = %s AND wkt IS NOT NULL "
+                f"FROM {_esq()}.ssdmt WHERE ctmt = %s AND wkt IS NOT NULL "
                 "ORDER BY ST_Length(wkt::geometry) DESC LIMIT 1 OFFSET 1",
                 (maior["ctmt"],))
             p_destino = cur.fetchone() or p_origem

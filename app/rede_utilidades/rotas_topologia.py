@@ -20,7 +20,7 @@ from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
-from app.rede_utilidades import feicoes, fluxo, lacos, topologia, tracado
+from app.rede_utilidades import direcao, feicoes, fluxo, lacos, topologia, tracado
 from app.rede_utilidades.modelos import (
     Feicao,
     FeicaoLinhaEntrada,
@@ -322,9 +322,11 @@ def _tracar_sincrono(rid: str, corpo: TracadoEntrada, auth: Auth, request: Reque
                     [p.model_dump() for p in corpo.pontos_partida], barreiras,
                 )
             elif corpo.tipo in fluxo.TIPOS_FLUXO:
-                resultado = fluxo.tracar_fluxo(
+                # o sentido vem do controlador de subrede (L4-02-b) ou do atributo de fluxo (L4-18); quem
+                # escolhe é `direcao.tracar_direcao`, e a resposta sempre diz qual foi em `origem_direcao`.
+                resultado = direcao.tracar_direcao(
                     cur, auth.tenant_id, rid, corpo.tipo,
-                    [p.model_dump() for p in corpo.pontos_partida], barreiras,
+                    [p.model_dump() for p in corpo.pontos_partida], barreiras, corpo.origem_direcao,
                 )
             elif corpo.tipo == "lacos":
                 resultado = lacos.detectar_lacos(cur, auth.tenant_id, rid, barreiras)
@@ -360,9 +362,13 @@ async def tracar_rede(rede_id: str, corpo: TracadoEntrada, request: Request,
     caminho a nenhuma feição da categoria `categoria_controlador`, padrão `fonte`, `pgr_connectedComponents`)
     ou `tipo=caminho_curto` (origem em `pontos_partida[0]`, `destino`, custo = `atributo_custo` ou o
     comprimento geodésico por padrão; `k` alternativas por `pgr_ksp` quando `k>1`); ou, item
-    L4-18-rede-simples-trace-network, `tipo=montante`/`tipo=jusante`, que andam pela DIREÇÃO DE FLUXO
-    declarada no atributo `direcao_fluxo` de cada trecho (digitalizada/contra/indeterminada) e param, com
-    aviso por trecho, em toda aresta indeterminada. Ponto de partida, destino
+    itens L4-18-rede-simples-trace-network e L4-02-b-montante-jusante, `tipo=montante`/`tipo=jusante`: numa
+    rede com controlador de subrede em tier hierárquico o sentido vem da DISTÂNCIA AO CONTROLADOR (jusante de
+    um ponto = o que só chega ao controlador passando por ele); sem controlador, vem da DIREÇÃO DE FLUXO
+    declarada no atributo `direcao_fluxo` de cada trecho (digitalizada/contra/indeterminada), que para, com
+    aviso por trecho, em toda aresta indeterminada. `origem_direcao` no pedido impõe um dos dois, e a
+    resposta sempre diz qual valeu; em malha (tier particionado) sem atributo, e em laço, a resposta é
+    `direcao='indeterminado'` com o motivo e os nós do laço, nunca um sentido arbitrado. Ponto de partida, destino
     e barreira são a mesma forma: feição+terminal ou coordenada com tolerância. Não exige `rede.editar`: é
     leitura sobre o índice já construído (mesmo privilégio de `topologia/alcance`), nunca grava nada na rede.
     Sem `response_model` fixo porque cada `tipo` devolve um formato diferente (ver `docs/openapi.json` para o

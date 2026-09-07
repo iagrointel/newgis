@@ -1,9 +1,14 @@
-"""Carga da rede REAL da cooperativa de teste (BDGD, schema `certaja` do iagro_sat — ativo da casa, somente
-leitura) nas camadas de rede da plataforma, para a medição do item L4-01-b-topologia-derivada.
+"""Carga da rede REAL da cooperativa de teste (BDGD já carregada num schema do iagro_sat — ativo da casa,
+somente leitura) nas camadas de rede da plataforma, para a medição do item L4-01-b-topologia-derivada.
+
+O NOME do schema de origem vem de `PLAT_REDE_REFERENCIA_ESQUEMA` (função `esquema()` abaixo) e nunca fica
+escrito em arquivo: quem tem o ativo na máquina põe a variável no ambiente, quem não tem vê os testes
+pularem com a razão. As tabelas dentro dele seguem o vocabulário da BDGD da ANEEL (ssdmt, ssdbt, ramlig,
+trafo, ponnot, ucbt).
 
 ⛔ Não é gerador sintético (esse é `gerar_rede.py`, dos testes rápidos): aqui cada linha vem das tabelas
-`certaja.ssdmt` (44.268 trechos de MT), `certaja.ssdbt` (29.244 de BT), `certaja.ramlig` (26.581 ramais),
-`certaja.trafo` (5.481 transformadores) e `certaja.ponnot` (60.549 postes) — a mesma contagem que o portão
+`<esquema>.ssdmt` (44.268 trechos de MT), `<esquema>.ssdbt` (29.244 de BT), `<esquema>.ramlig` (26.581
+ramais), `<esquema>.trafo` (5.481 transformadores) e `<esquema>.ponnot` (60.549 postes) — a contagem que o portão
 do item declara — e toda conferência de "número esperado" é computada DESTAS tabelas, por um caminho
 INDEPENDENTE do construtor de topologia (contador em Python puro sobre o wkt cru, nunca reconsultando
 `plat.rede_topo_*`).
@@ -17,7 +22,7 @@ Mapa de carga (vocabulário do pacote `eletrica-br`, item L4-01-a):
 `fas_con` ('A','AB','CA'...) vira o bitmask de fase A=1, B=2, C=4. O wkt é MULTILINESTRING de parte única
 (medido: 0 linhas com ST_NumGeometries > 1 em ssdmt) — `ST_GeometryN(...,1)` devolve a LineString.
 
-⛔ FRONTEIRA MEDIDA (não é defeito de carga): `certaja.ramlig` tem os 26.581 registros do arquivo, mas
+⛔ FRONTEIRA MEDIDA (não é defeito de carga): `<esquema>.ramlig` tem os 26.581 registros do arquivo, mas
 **0 de 26.581 têm `wkt` preenchido** (conferido por `count(wkt)` direto na tabela). O ramal de ligação
 existe como atributo no ativo da casa, sem geometria armazenada nesta extração BDGD — carregar exigiria
 fabricar uma linha que o arquivo não tem, o que a metodologia da casa proíbe. `carga_linha` filtra
@@ -27,8 +32,27 @@ fabricar uma linha que o arquivo não tem, o que a metodologia da casa proíbe. 
 """
 
 import math
+import os
 import time
 from collections import defaultdict
+
+
+def esquema() -> str:
+    """Schema do iagro_sat onde a BDGD da distribuidora de referência está carregada (só leitura), lido de
+    `PLAT_REDE_REFERENCIA_ESQUEMA`. Devolve "" quando a máquina não tem o ativo — o chamador pula o teste
+    com essa razão. O nome nunca aparece no repositório."""
+    return os.environ.get("PLAT_REDE_REFERENCIA_ESQUEMA", "").strip()
+
+
+def exigir_esquema() -> str:
+    """Como `esquema()`, mas levanta `RuntimeError` com a razão quando a variável está vazia."""
+    e = esquema()
+    if not e:
+        raise RuntimeError(
+            "sem PLAT_REDE_REFERENCIA_ESQUEMA: esta medida precisa da BDGD real da distribuidora de "
+            "referência carregada num schema do iagro_sat (ativo da casa, só leitura)"
+        )
+    return e
 
 TOLERANCIA_PADRAO_M = 0.05
 _M_POR_GRAU_LAT = 110_540.0
@@ -63,7 +87,7 @@ def carregar(cur, tenant_id: int, rede_id: str, ctmts: list[str] | None = None,
     `ctmts` (item L4-04-b) restringe a carga a uma lista de alimentadores DO ARQUIVO — nada é fabricado, é o
     mesmo dado com um recorte declarado. Serve para medir em janela de tempo menor que a da rede inteira, e
     quem usa tem de dizer no relatório quantos dos 20 alimentadores entraram. `com_postes=False` deixa de
-    fora `certaja.ponnot` (60.549 postes que, por serem `sem_terminal`, dão zero nó de topologia — medido no
+    fora `<esquema>.ponnot` (60.549 postes que, por serem `sem_terminal`, dão zero nó de topologia — medido no
     item L4-01-b)."""
     tipos = _tipos_da_rede(cur, rede_id)
     cron = {}
@@ -78,7 +102,7 @@ def carregar(cur, tenant_id: int, rede_id: str, ctmts: list[str] | None = None,
         return n
 
     def carga_linha(rotulo, origem, atributos_json, tipo_id):
-        # só as linhas com wkt preenchido: `certaja.ramlig` (ativo da casa, ver docstring do módulo)
+        # só as linhas com wkt preenchido: `<esquema>.ramlig` (ativo da casa, ver docstring do módulo)
         # tem 0 de 26.581 registros com geometria — carregar exige geom NOT NULL (segurança de linha
         # da tabela derivada), e fabricar geometria que o arquivo não tem seria inventar dado.
         rodar(rotulo, f"""
@@ -95,39 +119,39 @@ def carregar(cur, tenant_id: int, rede_id: str, ctmts: list[str] | None = None,
         """, {"a": tenant_id, "b": rede_id, "c": tipo_id, "ctmts": ctmts})
 
     carga_linha(
-        "ssdmt", "certaja.ssdmt",
+        "ssdmt", f"{exigir_esquema()}.ssdmt",
         "jsonb_build_object('cod_id', cod_id, 'ctmt', ctmt, 'uni_tr_at', uni_tr_at, 'sub', sub, "
         "'conj', conj, 'fas_con', fas_con, 'comp', comp, 'pos', pos)",
         tipos[("trecho_de_media_tensao", 1)])
     carga_linha(
-        "ssdbt", "certaja.ssdbt",
+        "ssdbt", f"{exigir_esquema()}.ssdbt",
         "jsonb_build_object('cod_id', cod_id, 'ctmt', ctmt, 'uni_tr_mt', uni_tr_mt, 'fas_con', fas_con, "
         "'comp', comp, 'tip_cnd', tip_cnd)",
         tipos[("trecho_de_baixa_tensao", 1)])
     carga_linha(
-        "ramlig", "certaja.ramlig",
+        "ramlig", f"{exigir_esquema()}.ramlig",
         "jsonb_build_object('cod_id', cod_id, 'ctmt', ctmt, 'uni_tr_mt', uni_tr_mt, 'fas_con', fas_con, "
         "'comp', comp, 'tip_cnd', tip_cnd)",
         tipos[("ramal_de_ligacao", 1)])
 
-    rodar("trafo", """
+    rodar("trafo", f"""
         WITH carga AS (
           INSERT INTO plat.rede_feicao_ponto(tenant_id, rede_id, tipo_id, geom, atributos)
           SELECT %(a)s, %(b)s::uuid, %(c)s::uuid, ST_SetSRID(ST_MakePoint(x, y), 4326),
                  jsonb_build_object('cod_id', cod_id, 'pot_nom', pot_nom, 'tip_trafo', tip_trafo,
                                     'ctmt', ctmt, 'uni_tr_at', uni_tr_at)
-          FROM certaja.trafo""" + recorte_ponto + """
+          FROM {exigir_esquema()}.trafo {recorte_ponto}
           RETURNING 1
         ) SELECT count(*) AS n FROM carga
     """, {"a": tenant_id, "b": rede_id, "c": tipos[("transformador_de_distribuicao", 1)], "ctmts": ctmts})
 
     if com_postes:
-        rodar("ponnot", """
+        rodar("ponnot", f"""
             WITH carga AS (
               INSERT INTO plat.rede_feicao_ponto(tenant_id, rede_id, tipo_id, geom, atributos)
               SELECT %s, %s::uuid, %s::uuid, ST_SetSRID(ST_MakePoint(x, y), 4326),
                      jsonb_build_object('cod_id', cod_id, 'tip_pn', tip_pn, 'pos', pos)
-              FROM certaja.ponnot
+              FROM {exigir_esquema()}.ponnot
               RETURNING 1
             ) SELECT count(*) AS n FROM carga
         """, (tenant_id, rede_id, tipos[("ponto_notavel", 1)]))
@@ -207,10 +231,10 @@ class _Agrupador:
 
 
 def esperado_mt(cur, tolerancia_m: float = TOLERANCIA_PADRAO_M) -> dict:
-    """O que o ARQUIVO diz para a média tensão (caminho independente, em cima do wkt cru de certaja.ssdmt):
+    """O que o ARQUIVO diz para a média tensão (caminho independente, em cima do wkt cru de <esquema>.ssdmt):
     nº de nós (pontas coincidentes dentro da tolerância), nº de nós de grau 1 (fins de linha) e nº de
     componentes conexas POR ALIMENTADOR (coluna ctmt — a junção SSDMT × CTMT do portão)."""
-    cur.execute("SELECT ctmt, wkt FROM certaja.ssdmt")
+    cur.execute(f"SELECT ctmt, wkt FROM {exigir_esquema()}.ssdmt")
     linhas = cur.fetchall()
     lat_media = sum(_parse_pontas(linha["wkt"])[0][1] for linha in linhas[:500]) / min(len(linhas), 500)
 
@@ -258,21 +282,21 @@ def esperado_mt(cur, tolerancia_m: float = TOLERANCIA_PADRAO_M) -> dict:
 
 def esperado_orfaos_alta(cur, tolerancia_m: float = TOLERANCIA_PADRAO_M) -> int:
     """Quantos transformadores do ARQUIVO NÃO têm nenhuma ponta de trecho de MT dentro da tolerância — o
-    número esperado de terminais de alta órfãos (a junção SSDMT × UNTRMT do portão: `certaja.trafo` cruza
-    com as pontas de `certaja.ssdmt`)."""
+    número esperado de terminais de alta órfãos (a junção SSDMT × UNTRMT do portão: `<esquema>.trafo` cruza
+    com as pontas de `<esquema>.ssdmt`)."""
     cur.execute("DROP TABLE IF EXISTS topo_pontas_mt")
-    cur.execute("""
+    cur.execute(f"""
         CREATE TEMP TABLE topo_pontas_mt AS
         SELECT ST_StartPoint(g) AS p FROM (SELECT ST_GeometryN(ST_GeomFromText(wkt, 4326), 1) AS g
-                                         FROM certaja.ssdmt) s
+                                         FROM {exigir_esquema()}.ssdmt) s
         UNION ALL
         SELECT ST_EndPoint(g) FROM (SELECT ST_GeometryN(ST_GeomFromText(wkt, 4326), 1) AS g
-                                    FROM certaja.ssdmt) s
+                                    FROM {exigir_esquema()}.ssdmt) s
     """)
     cur.execute("CREATE INDEX ON topo_pontas_mt USING gist (p)")
     cur.execute("ANALYZE topo_pontas_mt")
     cur.execute(
-        "SELECT count(*) AS n FROM certaja.trafo t WHERE NOT EXISTS ("
+        f"SELECT count(*) AS n FROM {exigir_esquema()}.trafo t WHERE NOT EXISTS ("
         "  SELECT 1 FROM topo_pontas_mt p "
         "  WHERE ST_DWithin(p.p, ST_SetSRID(ST_MakePoint(t.x, t.y), 4326), %s / 111320.0 * 2)"
         "   AND ST_DWithin(p.p::geography, ST_SetSRID(ST_MakePoint(t.x, t.y), 4326)::geography, %s))",
@@ -287,6 +311,6 @@ def contagens_arquivo(cur) -> dict:
     """As contagens do arquivo que o portão declara — medidas, nunca copiadas do enunciado."""
     saida = {}
     for tabela in ("ssdmt", "ssdbt", "ramlig", "trafo", "ponnot", "ctmt"):
-        cur.execute(f"SELECT count(*) AS n FROM certaja.{tabela}")
+        cur.execute(f"SELECT count(*) AS n FROM {exigir_esquema()}.{tabela}")
         saida[tabela] = cur.fetchone()["n"]
     return saida

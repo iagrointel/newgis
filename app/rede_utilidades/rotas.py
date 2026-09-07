@@ -231,3 +231,33 @@ def exportar_pacote(rede_id: str, auth: Auth = autenticado(escopo_token="catalog
         media_type="application/json; charset=utf-8",
         headers={"ETag": '"' + hashlib.sha256(bruto).hexdigest() + '"', "Cache-Control": "no-store"},
     )
+
+
+# ---------------------------------------------------------------- importação BDGD por job (item L4-01-c)
+from pydantic import BaseModel as _BaseModel  # noqa: E402
+from pydantic import Field as _Field  # noqa: E402
+
+from app.jobs import servico as _jobs_servico  # noqa: E402  fim do módulo: evita ciclo rede -> jobs -> rede
+from app.jobs.contexto import sessao_de as _sessao_de  # noqa: E402
+
+
+class ImportarBdgdEntrada(_BaseModel):
+    caminho: str = _Field(min_length=1, max_length=1024,
+                          description="pacote .gdb.zip ou pasta .gdb dentro de PLAT_BDGD_RAIZ")
+    seguir_com_bloqueio: bool = True
+
+
+@router.post("/{rede_id}/importar-bdgd", status_code=202, openapi_extra=EDITAR)
+def importar_bdgd(rede_id: str, corpo: ImportarBdgdEntrada, request: Request, auth: Auth = autenticado("rede.editar")):
+    """Enfileira `rede.importar_bdgd`: contrato de dado, carga com contagem conferida, unidade do COMP
+    e órfãos, com progresso em /api/jobs/{id}. O caminho é local e restrito a PLAT_BDGD_RAIZ (D21:
+    o job nunca baixa da ANEEL)."""
+    with db.db(auth.contexto()) as cur:
+        _carregar(cur, rede_id)  # 404 se a rede não é do inquilino
+    job = _jobs_servico.criar(_sessao_de(auth), "rede.importar_bdgd",
+                              {"rede_id": rede_id, "caminho": corpo.caminho,
+                               "seguir_com_bloqueio": corpo.seguir_com_bloqueio})
+    with db.db(auth.contexto()) as cur:
+        registrar_evento(cur, request, "redes/importar_bdgd", "rede", rede_id,
+                         {"job_id": job["id"], "caminho": corpo.caminho})
+    return {"job_id": job["id"], "estado": job.get("estado", "pendente")}

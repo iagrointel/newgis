@@ -21,6 +21,31 @@ Medido na cooperativa de teste (três maiores alimentadores da BDGD, 13.646 trec
 traz 5.392 elementos, 4.963 ligações e 337.047 m de linha agregada. Achado no caminho e corrigido: sem a
 camada de chaves no arquivo, a marcação automática elegia o TRANSFORMADOR como controlador do tier de média
 tensão, e o traçado partia do lado de lá da fronteira de subrede — 4 elementos alcançados de 13.646 trechos.
+## junção, setembro de 2026 (ramo wt/bdgdjob × wt/il402bmonta: casos cruzados e eventos da família de rede)
+
+União dos dois ramos da linha L4 que trabalharam a rede de utilidades ao mesmo tempo. `test_cruzado.py`
+reprovava porque a árvore tinha as rotas de topologia, feições, traçado, rede simples e controlador sem
+caso em `tests/api/cruzado_casos.py`; a união trouxe os casos e os eventos correspondentes. Três consertos
+que a união exigiu: (a) o registro de união tinha deixado dois `return` em `preparar()` e um caso sem `),`
+— o primeiro `return` matava o segundo e todo caso de `/api/rede/{rede_id}` caía em KeyError; (b) três
+casos de `/api/conexoes/{id}/colecoes*` apontavam rotas que não existem nesta árvore e saíram; (c) a rota
+`POST /api/rede/{rede_id}/importar-bdgd` ganhou o tipo de evento `redes/importar_bdgd` no catálogo
+(migração `20260907T2210`) — sem a linha, a rota gravava o job e falhava ao registrar o evento.
+
+Colisão de nome resolvida (ADR `20260907T2200`): os dois ramos criaram `plat.rede_subrede` com conteúdo
+diferente. A tabela do controlador de subrede fica com o nome (é o do portão do item e o termo de paridade
+com a Esri); a hierarquia lida do arquivo BDGD passa a `plat.rede_subrede_bdgd`. As duas descrevem o mesmo
+conceito por caminhos diferentes e hoje não conversam — unificá-las é decisão de desenho, não desta junção.
+
+A asserção de contagem de rotas de escrita sob `/api/rede` foi de 6 para 16, com `POST .../tracar`
+declarado como consulta com verbo de escrita (pede `rls:visibilidade`, não `rede.editar`).
+
+Rede de referência sem nome de parceiro: o caminho do pacote `.gdb.zip` e o schema onde a BDGD real está
+carregada saíram do código para `PLAT_REDE_REFERENCIA_GDB`, `PLAT_REDE_REFERENCIA_CTMT` e
+`PLAT_REDE_REFERENCIA_ESQUEMA` (`tests/dados/carga_bdgd.py::esquema()`/`exigir_esquema()`); sem as
+variáveis os testes de medida pulam com a razão escrita, em vez de estourar. Os textos passam a dizer
+"distribuidora de referência" e "cooperativa de teste", e o nome do arquivo saiu da medida gravada — só o
+sha256 identifica o pacote.
 
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
@@ -148,6 +173,30 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 4, setembro de 2026 (item L4-02-b-montante-jusante: sentido pela distância ao controlador)
+
+`POST /api/rede/{id}/tracar` com `tipo=montante|jusante` passou a derivar o SENTIDO do controlador de subrede
+quando a rede tem um em tier hierárquico: a árvore de caminhos mínimos a partir dos controladores
+(`public.pgr_drivingDistance`, `equicost`) diz quem está mais perto da fonte; jusante de um ponto é a
+subárvore dele, montante é a cadeia de pais até o controlador, que sai nomeado na resposta. Sem controlador,
+segue valendo a direção declarada em atributo (item L4-18) — e a resposta sempre diz de onde veio o sentido,
+no campo `origem_direcao`, que também pode ser imposto no pedido.
+
+O traçado se recusa a inventar direção em três situações, cada uma com motivo próprio na resposta: tier
+particionado (malha) sem nenhum trecho declarando `direcao_fluxo`; laço, isto é, mais de um caminho até o
+controlador tocando o resultado pedido (sai `direcao='indeterminado'` com `nos_do_laco`); e ponto que nenhum
+controlador alcança. Grafo, resolução de ponto, barreira e formato de saída são os de `tracado.py`: não há
+segundo motor de traçado. ADR `docs/adr/20260907T2133-montante-jusante-por-controlador.md`.
+
+Medido em `tests/medidas/L4-02-b-montante-jusante.json`. Fronteira honesta registrada ali: a comparação entre
+o jusante de cada transformador da cooperativa de teste e as unidades consumidoras que o arquivo liga a ele
+tem universo VAZIO — os 26.581 ramais de ligação do arquivo não têm geometria, então nenhuma das 27.587
+unidades consumidoras tem caminho desenhado até o transformador.
+
+Na mesma passagem, a união dos seis ramos de L4 fechou dois registros que faltavam e reprovavam o lote
+inteiro na fila: as 11 rotas de escrita da rede de utilidades em `tests/api/eventos_esperados.py` e os 16
+casos de cobertura cruzada em `tests/api/cruzado_casos.py`.
+
 ## turno 4, setembro de 2026 (item L4-04-a-controladores-e-tiers: controlador de subrede e tiers)
 
 Onde cada subrede começa passou a ser dado gravado, e não convenção de traçado (ADR
@@ -1251,3 +1300,10 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## L4-01-c-importador-bdgd (07/09/2026, turno 4)
+- Job `rede.importar_bdgd` (`POST /api/rede/{id}/importar-bdgd`): pacote `.gdb.zip` local dentro de `PLAT_BDGD_RAIZ`, progresso, contrato de dado ANTES da carga (30 de 61 expectativas do YAML da casa avaliadas; as de nível transformador declaradas não avaliadas), contagem conferida contra o arquivo, unidade do COMP pela razão Σ COMP / Σ geodésico, três órfãos contados e listados.
+- `_gravar_dispositivos` em lote (duas consultas por dispositivo viraram dois `execute_values`): tira ~17 mil idas ao banco da cooperativa de teste.
+- `comprimento_m` da aresta passa a ser o COMP convertido (o comprimento do ATIVO); o geodésico fica em `atributos`. Cláusula "km de MT = Σ COMP ± 0,1 %" verdadeira por construção.
+- Migração `20260907T1330_rede_importacao_contrato.sql`: colunas `contrato`, `comp`, `orfaos` (jsonb) em `plat.rede_importacao`.
+- `inspecionar`/`sha256_gdb` aceitam arquivo único (GPKG) além de pasta `.gdb`.

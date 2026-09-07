@@ -6,7 +6,8 @@
   * o nome da subrede gravado em cada trecho de média tensão bate com o `CTMT` DO ARQUIVO em ≥ 99 %, e a
     diferença sai listada como candidata a erro de cadastro.
 
-RECORTE DECLARADO: a carga é a BDGD da cooperativa (schema `certaja`, ativo da casa, somente leitura), mas
+RECORTE DECLARADO: a carga é a BDGD da cooperativa de teste (schema lido de
+`PLAT_REDE_REFERENCIA_ESQUEMA`, ativo da casa, somente leitura), mas
 restrita aos ALIMENTADORES escolhidos em `ALIMENTADORES_MEDIDOS` — não é dado sintético, é o mesmo arquivo
 com um recorte nomeado. O motivo é a janela do semáforo de testes: a construção da topologia da rede inteira
 levou 600 s medidos no item L4-01-b, e o teto de uma rodada é 600 s. Quem citar este número tem de citar o
@@ -18,7 +19,7 @@ medir isso é outro item, e prometer o número sem medir seria invenção. O que
 tensão, uma subrede por alimentador, que é o caso do portão.
 
 ⛔ Exige o GRANT de leitura do ativo para o papel da trilha (o `trilha_ambiente.sh` já dá):
-  GRANT USAGE ON SCHEMA certaja TO <papel>; GRANT SELECT ON certaja.ssdmt, ssdbt, ramlig, trafo, ponnot ...
+  GRANT USAGE ON SCHEMA <esquema> TO <papel>; GRANT SELECT ON <esquema>.ssdmt, ssdbt, ... ao papel
 """
 
 import json
@@ -73,7 +74,8 @@ def _alimentadores(cur, quantos: int) -> list[str]:
     """Os `quantos` MAIORES alimentadores do arquivo (mais trechos de média tensão) — recorte determinístico
     e o pior caso que cabe na janela do semáforo. Medir nos menores daria um número bonito e sem valor."""
     cur.execute(
-        "SELECT ctmt, count(*) AS n FROM certaja.ssdmt WHERE ctmt IS NOT NULL AND wkt IS NOT NULL "
+        f"SELECT ctmt, count(*) AS n FROM {carga_bdgd.exigir_esquema()}.ssdmt "
+        "WHERE ctmt IS NOT NULL AND wkt IS NOT NULL "
         "GROUP BY 1 ORDER BY n DESC, ctmt LIMIT %s",
         (quantos,),
     )
@@ -110,7 +112,8 @@ def test_medida_atualizar_subredes_da_cooperativa(cred, env):
             escolhidos = _alimentadores(cur, 3)
             assert len(escolhidos) == 3, escolhidos
             cron = carga_bdgd.carregar(cur, tenant_id, rid, ctmts=escolhidos, com_postes=False)
-            cur.execute("SELECT count(*) AS n FROM certaja.ssdmt WHERE ctmt = ANY(%s) AND wkt IS NOT NULL",
+            cur.execute(f"SELECT count(*) AS n FROM {carga_bdgd.exigir_esquema()}.ssdmt "
+                        "WHERE ctmt = ANY(%s) AND wkt IS NOT NULL",
                         (escolhidos,))
             mt_no_arquivo = cur.fetchone()["n"]
         con.commit()
@@ -196,7 +199,7 @@ def test_medida_atualizar_subredes_da_cooperativa(cred, env):
         "gerado_em": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "git_sha": sha,
         "maquina": "PostgreSQL 16 em iagro_sat; base própria da trilha "
-                   f"({os.environ.get('PLAT_SCHEMA', '?')}); fonte = schema certaja (BDGD, ativo da casa, "
+                   f"({os.environ.get('PLAT_SCHEMA', '?')}); fonte = BDGD da cooperativa de teste (ativo da casa, "
                    "somente leitura); outras sessões da casa na mesma máquina",
         "medidas": medida,
         "comando": "venv/bin/pytest tests/api/test_rede_subredes_medida.py -m lento -q",

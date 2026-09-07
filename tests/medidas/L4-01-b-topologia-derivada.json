@@ -3,7 +3,7 @@
  "assinado_por": "redes+dados+backend+testador (trilha il401btopol)",
  "gerado_em": "2026-09-07T02:06:10Z",
  "git_sha": "e368425f2b2d62536423bdc684754719c78c009f",
- "maquina": "PostgreSQL 16 em iagro_sat; base própria da trilha (plat_tf401b); fonte = schema certaja (BDGD, ativo da casa, somente leitura); outras sessões da casa na mesma máquina",
+ "maquina": "PostgreSQL 16 em iagro_sat; base própria da trilha (plat_tf401b); fonte = schema da distribuidora de referência, de PLAT_REDE_REFERENCIA_ESQUEMA (BDGD, ativo da casa, somente leitura); outras sessões da casa na mesma máquina",
  "medidas": {
   "rede_id": "04f42ac7-64a7-4ffe-8182-b4e4597fb42a",
   "clausulas": {
@@ -145,5 +145,5 @@
   },
   "ok": true
  },
- "comando": "venv/bin/pytest tests/api/test_rede_topologia_medida.py -m lento -q (exige GRANT de leitura em certaja.* para o papel da trilha — ver docstring)"
+ "comando": "venv/bin/pytest tests/api/test_rede_topologia_medida.py -m lento -q (exige PLAT_REDE_REFERENCIA_ESQUEMA e GRANT de leitura nesse schema para o papel da trilha — ver docstring)"
 }

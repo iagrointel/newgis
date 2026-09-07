@@ -136,6 +136,10 @@ class TracadoEntrada(BaseModel):
     k: int = Field(default=1, ge=1, le=10)
     # isolados (L4-02-d): categoria de rede que representa o "controlador" (padrão 'fonte').
     categoria_controlador: str = Field(default="fonte", min_length=1, max_length=63)
+    # montante/jusante (L4-02-b): de onde vem o SENTIDO. 'auto' = do controlador de subrede quando a rede tem
+    # controlador com nó na topologia, do atributo `direcao_fluxo` quando não tem; 'controlador' e 'atributo'
+    # impõem um dos dois. Ignorado pelos demais tipos de traçado.
+    origem_direcao: str = Field(default="auto", pattern="^(auto|controlador|atributo)$")
 
 
 class ElementoTracado(BaseModel):

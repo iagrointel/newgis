@@ -278,9 +278,19 @@ def test_toda_rota_de_escrita_de_rede_exige_rede_editar_no_openapi_e_na_pratica(
     esquema = app.openapi()
     escritas = [(c, m) for c, ops in esquema["paths"].items() if c.startswith("/api/rede")
                 for m in ops if m in ("post", "put", "patch", "delete")]
-    assert len(escritas) == 3, escritas
+    # 4 rotas do catálogo e da importação (POST /api/rede, DELETE /api/rede/{id}, POST .../pacote,
+    # POST .../importar-bdgd), 5 da topologia derivada e da edição (POST .../feicoes/{pontos,linhas},
+    # os dois applyEdits e .../topologia/habilitar), 1 de traçado, 2 de rede simples (POST
+    # /api/rede/simples e .../promover) e 4 de controlador de subrede. O número cresce a cada item novo
+    # da linha L4 que escreva rede — o que a asserção abaixo protege é que TODA rota nova venha com
+    # x-privilegio=rede.editar, não a contagem exata.
+    assert len(escritas) == 16, escritas
+    # POST /api/rede/{rede_id}/tracar é CONSULTA com verbo de escrita: manda os pontos de partida no corpo
+    # e não grava nada na rede, por isso pede leitura (rls:visibilidade) e não rede.editar.
+    consultas = {("/api/rede/{rede_id}/tracar", "post")}
     for c, m in escritas:
-        assert esquema["paths"][c][m].get("x-privilegio") == "rede.editar", (c, m)
+        esperado = "rls:visibilidade" if (c, m) in consultas else "rede.editar"
+        assert esquema["paths"][c][m].get("x-privilegio") == esperado, (c, m)
     rid = _rede_com_pacote(sessao_a, limpar_redes, "priv")
     visual, _, _ = usuarios_a.sessao("visualizador")
     assert visual.get(f"/api/rede/{rid}").status_code == 200

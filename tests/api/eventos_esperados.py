@@ -180,4 +180,24 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- rede de utilidades (L4-01-a modelo, L4-01-b topologia, L4-02-a/d e L4-18 traçado, L4-04-a
+    # controladores). As 11 rotas de escrita da família nasceram em ramos paralelos e nenhuma delas tinha
+    # entrada aqui: a fila de junção reprovava o lote inteiro por este registro, não por defeito de código
+    # (achado do agente de L4-04-a, confirmado nesta trilha ao juntar os seis ramos de L4). Cada nome já
+    # existe em `plat.evento_tipo` (migrações da própria família), e é o mesmo que a rota grava com
+    # `registrar_evento`. `POST .../tracar` é leitura no sentido do dado — não muda a rede — mas é POST no
+    # OpenAPI (o corpo do traçado não cabe em query) e narra `redes/tracar` para deixar rastro de quem
+    # traçou o quê.
+    ("POST", "/api/rede"): ["redes/criar"],
+    ("DELETE", "/api/rede/{rede_id}"): ["redes/apagar"],
+    ("POST", "/api/rede/{rede_id}/pacote"): ["redes/importar_pacote"],
+    ("POST", "/api/rede/{rede_id}/importar-bdgd"): ["redes/importar_bdgd"],
+    ("POST", "/api/rede/simples"): ["redes/simples_criar"],
+    ("POST", "/api/rede/{rede_id}/promover"): ["redes/simples_promover"],
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos"): ["redes/feicao_criar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas"): ["redes/feicao_criar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): ["redes/feicao_editar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas/applyEdits"): ["redes/feicao_editar"],
+    ("POST", "/api/rede/{rede_id}/topologia/habilitar"): ["redes/topologia_habilitar"],
+    ("POST", "/api/rede/{rede_id}/tracar"): ["redes/tracar"],
 }
