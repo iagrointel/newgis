@@ -40,6 +40,7 @@ from app.catalogo import (
 )
 from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
+from app.estatistica.rotas import router as rotas_estatistica
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
@@ -127,6 +128,8 @@ ROUTERS = [
     rotas_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
+    # --- agregação estatística (L2-06-e): POST /api/camadas/{id}/estatisticas
+    rotas_estatistica,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
