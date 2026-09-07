@@ -55,4 +55,8 @@ tela Tarefas escreve esse número na coluna de progresso (`web/js/jobs/formato.j
 
 `tests/api/jobs/test_jobs_justica.py` (fila e cota) e `tests/unit/test_jobs_posicao_fila_tela.py` (texto da
 coluna, executado no mesmo motor do navegador). Medidas em
-`tests/medidas/L0-05-e-justica-entre-inquilinos.json`.
+`tests/medidas/L0-05-e-justica-entre-inquilinos.json`: com 1 worker na base, 1 job de B iniciado antes de A e
+espera de 0,5 s (cenário do portão, 2 × 300 s) e 0,2 s (refutação, 50 × 300 s), carga de máquina gravada ao
+lado. O teste conta quantos workers servem a base (`GET /saude`, campo `fila.workers_vivos`) e cobra um job de
+B por worker: com dois workers ligados na mesma base a medida deu 2, o que é o mesmo limite por lugar de
+execução — e nunca a fila inteira de B, que é o que o item afirma.

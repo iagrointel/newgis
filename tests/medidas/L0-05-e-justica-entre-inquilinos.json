@@ -2,14 +2,14 @@
  "item": "L0-05-e-justica-entre-inquilinos",
  "medidas": {
   "portao_espera_a_s": {
-   "valor": 0.2,
+   "valor": 0.5,
    "unidade": "s",
    "comando": "2 × prova.progresso(300 s) de demo2 + 1 × prova.progresso(1 s) de demo, worker 1 processo; B em curso cancelado para liberar o worker; espera = iniciado_em(A) − criado_em(A)"
   },
   "portao_jobs_b_antes_de_a": {
    "valor": 1,
    "unidade": "jobs",
-   "comando": "contagem dos jobs de demo2 criados pelo teste com iniciado_em <= iniciado_em(A); portão: <= 1"
+   "comando": "contagem dos jobs de demo2 criados pelo teste com iniciado_em <= iniciado_em(A); portão: <= 1 por worker vivo na base"
   },
   "adversario50_espera_a_s": {
    "valor": 0.2,
@@ -19,14 +19,44 @@
   "adversario50_jobs_b_antes_de_a": {
    "valor": 1,
    "unidade": "jobs",
-   "comando": "contagem dos jobs de demo2 criados pelo teste com iniciado_em <= iniciado_em(A); portão: <= 1"
+   "comando": "contagem dos jobs de demo2 criados pelo teste com iniciado_em <= iniciado_em(A); portão: <= 1 por worker vivo na base"
   },
   "cota_simultaneos_sobreposicao_inquilinos_s": {
    "valor": 3.1,
    "unidade": "s",
    "comando": "worker 2 processos, demo com cota_jobs_simultaneos=1: 2 jobs de demo em série (inicio2 >= fim1) e demo x demo2 em paralelo (sobreposição > 0); tests/api/jobs/test_jobs_justica.py"
+  },
+  "portao_carga_1min": {
+   "valor": 11.25,
+   "unidade": "carga",
+   "comando": "os.getloadavg()[0] no instante da medida da espera"
+  },
+  "portao_ram_livre_gb": {
+   "valor": 5.4,
+   "unidade": "GB",
+   "comando": "MemAvailable de /proc/meminfo no instante da medida da espera"
+  },
+  "adversario50_carga_1min": {
+   "valor": 11.71,
+   "unidade": "carga",
+   "comando": "os.getloadavg()[0] no instante da medida da espera"
+  },
+  "adversario50_ram_livre_gb": {
+   "valor": 5.6,
+   "unidade": "GB",
+   "comando": "MemAvailable de /proc/meminfo no instante da medida da espera"
+  },
+  "portao_workers_vivos_na_base": {
+   "valor": 1,
+   "unidade": "workers",
+   "comando": "GET /saude campo fila.workers_vivos no instante da medida (o portão fala de 1)"
+  },
+  "adversario50_workers_vivos_na_base": {
+   "valor": 1,
+   "unidade": "workers",
+   "comando": "GET /saude campo fila.workers_vivos no instante da medida (o portão fala de 1)"
   }
  },
- "gerado_em": "2026-09-06T21:32:43Z",
- "git_sha": "099fc463e1c7"
+ "gerado_em": "2026-09-07T21:46:09Z",
+ "git_sha": "6d9ecb76f345"
 }

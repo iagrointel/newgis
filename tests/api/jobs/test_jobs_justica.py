@@ -74,12 +74,20 @@ def _jobs_b_antes_de_a(cliente_b, ids_b: list[str], inicio_a: str) -> int:
     return n
 
 
+def _workers_vivos(cliente) -> int:
+    """Quantos workers estão servindo ESTA base agora (plat.worker do schema em uso, por /saude). O portão fala de
+    1 worker; se a máquina tiver outro worker ligado na mesma base, ele ocupa mais um lugar de execução e o limite
+    honesto passa a ser um job de B por lugar — nunca a fila inteira de B, que é o que o item afirma."""
+    return int(((cliente.get("/saude").json() or {}).get("fila") or {}).get("workers_vivos") or 1)
+
+
 def _cenario_a_atropelado(cliente_a, cliente_b, iniciar_worker, nome: str, porta: int, longos: int,
                           medida, prefixo: str) -> None:
     """N jobs de 300 s de B + 1 job de 1 s de A, worker com 1 processo: A tem de ser o próximo escolhido quando
     o job de B em curso sai (aqui por cancelamento, para não esperar 300 s). Mede espera e jobs de B antes de A."""
     worker = iniciar_worker(nome, 1, porta)
     assert worker.nome
+    lugares = _workers_vivos(cliente_a)
     longo = {"duracao_s": 300, "passos": 600}  # passo de 0,5 s: o cancelamento é percebido em ≤ 1 s
     ids_b = [criar_job(cliente_b, "prova.progresso", dict(longo))["id"] for _ in range(longos)]
     b1 = esperar(cliente_b, ids_b[0], timeout=30, condicao=lambda j: j["estado"] == "rodando")
@@ -92,14 +100,17 @@ def _cenario_a_atropelado(cliente_a, cliente_b, iniciar_worker, nome: str, porta
         antes = _jobs_b_antes_de_a(cliente_b, ids_b, fa["iniciado_em"])
         espera_s = round((_iso(fa["iniciado_em"]) - _iso(a["criado_em"])).total_seconds(), 1)
         # na fila global antiga A esperaria os N × 300 s; com o rodízio espera só o job de B em curso
-        assert antes <= 1, (f"A esperou {antes} jobs de B (máximo 1): início de A {fa['iniciado_em']}, "
-                            f"B1 {b1['iniciado_em']}")
+        assert antes <= lugares, (f"A esperou {antes} jobs de B (máximo {lugares}, um por worker vivo na base): "
+                                  f"início de A {fa['iniciado_em']}, B1 {b1['iniciado_em']}")
         assert espera_s < 60, f"espera de A ({espera_s} s) incompatível com 'no máximo 1 job de B'"
         medida("L0-05-e-justica-entre-inquilinos")(f"{prefixo}_espera_a_s", espera_s, "s",
             f"{longos} × prova.progresso(300 s) de demo2 + 1 × prova.progresso(1 s) de demo, worker 1 processo; "
             "B em curso cancelado para liberar o worker; espera = iniciado_em(A) − criado_em(A)")
         medida("L0-05-e-justica-entre-inquilinos")(f"{prefixo}_jobs_b_antes_de_a", antes, "jobs",
-            "contagem dos jobs de demo2 criados pelo teste com iniciado_em <= iniciado_em(A); portão: <= 1")
+            "contagem dos jobs de demo2 criados pelo teste com iniciado_em <= iniciado_em(A); portão: <= 1 por "
+            "worker vivo na base")
+        medida("L0-05-e-justica-entre-inquilinos")(f"{prefixo}_workers_vivos_na_base", lugares, "workers",
+            "GET /saude campo fila.workers_vivos no instante da medida (o portão fala de 1)")
         # a espera é medida em segundos: a carga da máquina no instante vai gravada ao lado (regra do laço)
         medida("L0-05-e-justica-entre-inquilinos")(f"{prefixo}_carga_1min", round(os.getloadavg()[0], 2),
             "carga", "os.getloadavg()[0] no instante da medida da espera")
@@ -167,13 +178,16 @@ def test_cota_de_simultaneos_por_inquilino_respeitada(cliente_demo, cliente_demo
 def test_posicao_na_fila_na_api(cliente_demo, conexao_plat_app, sessao_demo):
     """Tela Tarefas (portão): a API expõe posicao_fila — posição do job pendente na fila do inquilino
     (1 = o próximo quando chegar a vez dele), respeitando prioridade e ordem de criação; fora de 'pendente'
-    é null. Sem worker neste teste: os jobs ficam pendentes de propósito."""
+    é null. Os jobs nascem agendados para o futuro: assim ficam pendentes de propósito, sem depender de haver ou
+    não worker ligado nesta base (o mesmo instante nos quatro mantém `criado_em` como chave de desempate)."""
     _cancelar_pendentes(conexao_plat_app, sessao_demo)
     ids = []
+    daqui_a_uma_hora = (datetime.datetime.now(UTC) + datetime.timedelta(hours=1)).isoformat()
+    parado = {"duracao_s": 0, "passos": 1}
     try:
-        j1 = criar_job(cliente_demo, "prova.progresso", {"duracao_s": 0, "passos": 1})
-        j2 = criar_job(cliente_demo, "prova.progresso", {"duracao_s": 0, "passos": 1})
-        j3 = criar_job(cliente_demo, "prova.progresso", {"duracao_s": 0, "passos": 1})
+        j1 = criar_job(cliente_demo, "prova.progresso", dict(parado), agendado_para=daqui_a_uma_hora)
+        j2 = criar_job(cliente_demo, "prova.progresso", dict(parado), agendado_para=daqui_a_uma_hora)
+        j3 = criar_job(cliente_demo, "prova.progresso", dict(parado), agendado_para=daqui_a_uma_hora)
         ids = [j1["id"], j2["id"], j3["id"]]
         p1 = cliente_demo.get(f"/api/jobs/{j1['id']}").json()["posicao_fila"]
         p2 = cliente_demo.get(f"/api/jobs/{j2['id']}").json()["posicao_fila"]
@@ -181,7 +195,8 @@ def test_posicao_na_fila_na_api(cliente_demo, conexao_plat_app, sessao_demo):
         assert isinstance(p1, int) and p1 >= 1, p1
         assert (p2 - p1, p3 - p2) == (1, 1), (p1, p2, p3)  # ordem de criação, independente do que havia antes
 
-        urgente = criar_job(cliente_demo, "prova.progresso", {"duracao_s": 0, "passos": 1}, prioridade=1)
+        urgente = criar_job(cliente_demo, "prova.progresso", dict(parado), prioridade=1,
+                            agendado_para=daqui_a_uma_hora)
         ids.append(urgente["id"])
         pu = cliente_demo.get(f"/api/jobs/{urgente['id']}").json()["posicao_fila"]
         p1_depois = cliente_demo.get(f"/api/jobs/{j1['id']}").json()["posicao_fila"]
