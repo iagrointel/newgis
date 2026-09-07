@@ -2,12 +2,12 @@
  "item": "L0-06-c-restore-drill",
  "medidas": {
   "drill_curto_duracao_s": {
-   "valor": 12.8,
+   "valor": 3.7,
    "unidade": "s",
    "comando": "POST /api/jobs backup.restore_drill somente=[demo2] até concluido"
   },
   "duracao_drill_s": {
-   "valor": 12.75,
+   "valor": 3.59,
    "unidade": "s",
    "comando": "plat.backup_drill.duracao_drill_s"
   },
@@ -32,12 +32,12 @@
    "comando": "objetos do bucket com sha256 conferido contra o manifesto"
   },
   "carga_1min": {
-   "valor": 11.21,
+   "valor": 7.2,
    "unidade": "carga",
    "comando": "os.getloadavg()[0] na hora do ensaio"
   },
   "ram_livre_gb": {
-   "valor": 7.0,
+   "valor": 7.5,
    "unidade": "GB",
    "comando": "MemAvailable de /proc/meminfo"
   },
@@ -45,8 +45,18 @@
    "valor": true,
    "unidade": "bool",
    "comando": "1 byte trocado no dump -> job falhou + linha ok=false + evento backup/falha + correio"
+  },
+  "posterior_delta_grupo": {
+   "valor": 3,
+   "unidade": "linhas",
+   "comando": "3 grupos criados depois do dump; delta da tabela grupo no ensaio"
+  },
+  "drill_plat_tabelas": {
+   "valor": 49,
+   "unidade": "tabelas",
+   "comando": "tabelas com tenant_id em plat_til006cresto"
   }
  },
- "gerado_em": "2026-09-07T22:15:29Z",
+ "gerado_em": "2026-09-07T22:28:29Z",
  "git_sha": "3d72ad0d9861"
 }

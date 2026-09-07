@@ -158,19 +158,20 @@ def test_02_linha_nova_apos_o_dump_e_acusada_como_posterior(cliente_plataforma, 
     """Refutação do adversário: acrescentar linha na produção DEPOIS do dump. O ensaio compara com o
     instante do dump, então a diferença aparece nomeada (tabela e delta) e não vira divergência."""
     _rodar(cliente_plataforma, "backup.dump_logico", {"somente": ["plat"], "origem": "teste"})
-    with _cursor_ctx(con_plataforma) as cur:
-        for _ in range(3):
-            cur.execute("SELECT plat.evento_registrar('backup/ensaio', 'backup', NULL, "
-                        "'{\"origem\": \"refutacao L0-06-c\"}'::jsonb, NULL, NULL)")
+    # escrita real de produção depois do dump: três grupos zt-* (a limpeza de fim de sessão da suíte os
+    # apaga), não uma linha injetada à mão numa tabela
+    for n in range(3):
+        r = cliente_plataforma.post("/api/grupos", json={"nome": f"zt-drill-{os.getpid()}-{n}"})
+        assert r.status_code == 201, r.text
     fim = _rodar(cliente_plataforma, "backup.restore_drill", {"somente": ["plat"], "origem": "teste"})
     ensaio = fim["resultado"]["ensaios"][0]
     assert ensaio["esquema"] == settings.PLAT_SCHEMA
     assert ensaio["divergencias"] == [], ensaio["divergencias"]
-    eventos = [p for p in ensaio["posteriores"] if p["tabela"].startswith("evento")]
-    assert eventos, f"a linha nova não foi acusada: {ensaio['posteriores']}"
-    assert sum(p["delta"] for p in eventos) >= 3, eventos
-    medida(ITEM)("posterior_delta_evento", sum(p["delta"] for p in eventos), "linhas",
-                 "3 eventos gravados depois do dump; delta das partições de evento no ensaio")
+    grupos = [p for p in ensaio["posteriores"] if p["tabela"] == "grupo"]
+    assert grupos, f"a linha nova não foi acusada: {ensaio['posteriores']}"
+    assert grupos[0]["delta"] >= 3, grupos
+    medida(ITEM)("posterior_delta_grupo", grupos[0]["delta"], "linhas",
+                 "3 grupos criados depois do dump; delta da tabela grupo no ensaio")
     medida(ITEM)("drill_plat_tabelas", ensaio["tabelas"], "tabelas",
                  f"tabelas com tenant_id em {settings.PLAT_SCHEMA}")
 
