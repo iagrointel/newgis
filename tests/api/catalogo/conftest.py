@@ -127,6 +127,7 @@ def itens_b(sessao_b, env):
 
 
 def pytest_sessionfinish(session, exitstatus):
+    import sys; print('DEBUG sessionfinish', __file__, os.environ.get('PYTEST_XDIST_WORKER'), getattr(session.config.option,'numprocesses',None), file=sys.stderr)
     """Mesma razão de tests/api/conftest.py: `_expurgar_zt` apaga TODO item zt* do inquilino, inclusive os que
     outro worker do pytest-xdist ainda está usando. Sob xdist quem expurga é o controlador, no fim de tudo."""
     if sob_xdist() or not getattr(session.config.option, "numprocesses", None):
