@@ -1,0 +1,172 @@
+"""Job `rede.importar_bdgd` (item L4-01-c-importador-bdgd): importa um pacote BDGD da ANEEL
+(`.gdb.zip` ou pasta `.gdb`) para uma rede de utilidades do inquilino, com barra de progresso,
+contrato de dado ANTES da carga e contagem conferida contra o arquivo DEPOIS.
+
+Ordem dentro do job:
+1. valida o caminho (só dentro de `PLAT_BDGD_RAIZ`; nada de arquivo arbitrário do servidor);
+2. extrai o zip para o diretório de trabalho do job (apagado pelo worker no fim);
+3. lê as camadas do contrato e avalia as expectativas do YAML da casa — o relatório vai para a
+   auditoria mesmo que a carga falhe depois;
+4. `bdgd.importar` com `ctx.progresso` (5 % .. 98 %), contagem por camada, unidade do COMP, órfãos;
+5. grava tudo em `plat.rede_importacao` e devolve o resumo.
+
+⛔ D21 (disco): o job NÃO baixa pacote da ANEEL. Importação "pelo nome da distribuidora" fica
+registrada como pendente de decisão do dono — o parâmetro é sempre um caminho local já existente.
+"""
+
+from __future__ import annotations
+
+import re
+import uuid
+import zipfile
+from pathlib import Path
+
+import pyogrio
+from pydantic import BaseModel, Field
+
+from app import settings as cfg
+from app.jobs.registro import FalhaDefinitiva, tarefa
+from app.rede_utilidades import bdgd, contrato
+
+
+class ImportarBdgdParametros(BaseModel):
+    rede_id: uuid.UUID
+    caminho: str = Field(
+        min_length=1, max_length=1024, description="pacote .gdb.zip ou pasta .gdb, dentro de PLAT_BDGD_RAIZ"
+    )
+    seguir_com_bloqueio: bool = Field(
+        default=True,
+        description="com expectativa 'bloqueia' em falha, ainda assim carrega a topologia (o relatório fica gravado); "
+        "False aborta antes da carga",
+    )
+
+
+def _raiz_permitida() -> Path:
+    raiz = cfg.obter().PLAT_BDGD_RAIZ
+    if not raiz:
+        raise FalhaDefinitiva(
+            "PLAT_BDGD_RAIZ não configurada: a importação por caminho local fica desligada nesta instalação "
+            "(pendente de D21 — o pacote da ANEEL não é baixado pelo job)"
+        )
+    return Path(raiz).resolve()
+
+
+def _resolver_caminho(caminho: str) -> Path:
+    raiz = _raiz_permitida()
+    p = (raiz / caminho).resolve() if not Path(caminho).is_absolute() else Path(caminho).resolve()
+    if raiz != p and raiz not in p.parents:
+        raise FalhaDefinitiva(f"caminho fora de PLAT_BDGD_RAIZ ({raiz}): recusado")
+    if not p.exists():
+        raise FalhaDefinitiva(f"pacote não encontrado: {p}")
+    return p
+
+
+def _extrair_se_zip(p: Path, dir_trabalho: Path) -> Path:
+    """Devolve a pasta .gdb pronta para o GDAL: a própria `p` quando já é pasta, ou a extraída."""
+    if p.is_dir():
+        return p
+    if p.suffix.lower() != ".zip" and not p.name.lower().endswith(".gdb.zip"):
+        raise FalhaDefinitiva("o pacote tem de ser uma pasta .gdb ou um .gdb.zip")
+    destino = dir_trabalho / "bdgd"
+    destino.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(p) as z:
+        raizes = sorted({n.split("/")[0] for n in z.namelist() if n.lower().split("/")[0].endswith(".gdb")})
+        if not raizes:
+            raise FalhaDefinitiva(f"{p.name} não contém uma pasta .gdb")
+        # defesa contra caminho que escapa da pasta de destino (zip malicioso)
+        for n in z.namelist():
+            alvo = (destino / n).resolve()
+            if destino.resolve() not in alvo.parents and alvo != destino.resolve():
+                raise FalhaDefinitiva("zip com caminho fora da pasta de destino: recusado")
+        z.extractall(destino)
+    return destino / raizes[0]
+
+
+def _ano_da_safra(p: Path) -> int | None:
+    m = re.search(r"(20\d{2})", p.name)
+    return int(m.group(1)) if m else None
+
+
+def _ler_camadas_do_contrato(gdb: Path, progresso) -> dict:
+    camadas = {}
+    for i, nome in enumerate(contrato.CAMADAS_DO_CONTRATO):
+        try:
+            geometria = nome in ("PONNOT",)
+            camadas[nome] = pyogrio.read_dataframe(str(gdb), layer=nome, read_geometry=geometria)
+        except Exception:
+            continue  # camada ausente no GDB: o contrato marca as expectativas dela como não avaliadas
+        progresso(2 + int(6 * (i + 1) / len(contrato.CAMADAS_DO_CONTRATO)), f"contrato: lendo {nome}")
+    return camadas
+
+
+@tarefa(
+    nome="rede.importar_bdgd",
+    descricao="Importa um pacote BDGD (ANEEL) para a rede: contrato de dado, carga com contagem conferida, "
+    "unidade do COMP e órfãos",
+    parametros=ImportarBdgdParametros,
+    pesado=True,
+    memoria_mb=1024,  # teto PLAT_WORKER_MEMORIA_MB; a maior camada cabe (medido na CERTEL: < 100 mil linhas)
+    timeout_s=3600,
+    tentativas=1,
+    chave=lambda p: f"rede-bdgd:{p.get('rede_id')}",
+    perfil_minimo="editor",
+    ferramentas=("gdal",),
+)
+def rede_importar_bdgd(ctx, rede_id: uuid.UUID, caminho: str, seguir_com_bloqueio: bool = True) -> dict:
+    p = _resolver_caminho(caminho)
+    ctx.progresso(1, f"pacote: {p.name}")
+    gdb = _extrair_se_zip(p, Path(ctx.dir_trabalho))
+    safra = _ano_da_safra(p)
+
+    with ctx.db() as cur:
+        cur.execute("SELECT id FROM plat.rede WHERE id = %s::uuid", (str(rede_id),))
+        if cur.fetchone() is None:
+            raise FalhaDefinitiva("rede inexistente ou de outro inquilino")
+
+    camadas = _ler_camadas_do_contrato(gdb, ctx.progresso)
+    ctx.progresso(9, "contrato: avaliando expectativas")
+    relatorio = contrato.avaliar_contrato(camadas, safra_ano=safra)
+    del camadas
+    ctx.log(
+        "info",
+        f"contrato: {relatorio['avaliadas']}/{relatorio['total']} avaliadas, "
+        f"{relatorio['bloqueia_falhas']} 'bloqueia' em falha",
+    )
+    if relatorio["bloqueia_falhas"] and not seguir_com_bloqueio:
+        # ainda assim deixa rastro: auditoria só do contrato, sem carga
+        with ctx.db() as cur:
+            imp = bdgd._Importador(cur, ctx.tenant_id, str(rede_id), str(gdb), None, True)
+            imp._abrir_auditoria(bdgd.inspecionar(gdb))
+            imp.gravar_contrato(relatorio)
+            imp._fechar_auditoria(
+                None, f"{relatorio['bloqueia_falhas']} expectativa(s) 'bloqueia' em falha; carga não iniciada"
+            )
+        raise FalhaDefinitiva(f"contrato de dado: {relatorio['bloqueia_falhas']} expectativa(s) 'bloqueia' em falha")
+
+    def progresso(pct, msg):
+        ctx.progresso(10 + int(pct * 0.88), msg)
+
+    with ctx.db() as cur:
+        resultado = bdgd.importar(cur, ctx.tenant_id, str(rede_id), str(gdb), progresso=progresso, registrar=True)
+        if resultado.get("importacao_id"):
+            cur.execute(
+                "UPDATE plat.rede_importacao SET contrato = %s, job_id = %s::uuid, atualizado_em = now() "
+                "WHERE id = %s::uuid",
+                (bdgd.Json(relatorio), str(ctx.job_id), resultado["importacao_id"]),
+            )
+    ctx.progresso(100, "importação concluída")
+    return {
+        "importacao_id": resultado["importacao_id"],
+        "conferido": resultado["conferido"],
+        "contagens": resultado["contagens"],
+        "comp": resultado["comp"],
+        "orfaos": {k: v["quantidade"] for k, v in resultado["orfaos"].items()},
+        "desvios": {k: v["quantidade"] for k, v in resultado["desvios"].items()},
+        "contrato": {
+            "avaliadas": relatorio["avaliadas"],
+            "total": relatorio["total"],
+            "bloqueia_falhas": relatorio["bloqueia_falhas"],
+            "resumo": relatorio["resumo"],
+        },
+        "duracao_ms": resultado["duracao_ms"],
+    }
