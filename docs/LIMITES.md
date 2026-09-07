@@ -231,5 +231,15 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | nome | valor | explicação |
 |---|---|---|
 | `HISTORICO_LISTA_MAX` | `500` | entradas devolvidas por consulta (mais recentes primeiro) |
-| `ANEXO_TAMANHO_MAX` | `10485760` | 10 MiB por anexo (igual ao teto de imagem/PDF de campo mais comum) |
+| `ANEXO_TAMANHO_MAX` | `7340032` | 7 MiB por anexo — NÃO 10: o envio é JSON com o conteúdo em base64 |
 | `ANEXO_TIPOS_PERMITIDOS` | `('application/pdf', 'image/gif', 'image/jpeg', 'image/png', 'image/webp')` | — |
+
+## formulário de coleta por XLSForm (L2-07-b-formulario-de-coleta-xlsform; app/coleta)
+
+| nome | valor | explicação |
+|---|---|---|
+| `XLSFORM_TAMANHO_MAX` | `2097152` | 2 MiB por planilha (formulários reais têm dezenas de KiB) |
+| `FORMULARIO_CAMPOS_MAX` | `500` | perguntas por formulário (mesmo teto de campos da camada) |
+| `FORMULARIO_LISTA_MAX` | `5000` | linhas por lista de escolhas (cascata de município cabe) |
+| `FORMULARIO_REPETICOES_MAX` | `200` | linhas por repetição numa única resposta |
+| `FORMULARIO_ANEXOS_MAX` | `20` | anexos por resposta |

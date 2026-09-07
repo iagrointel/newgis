@@ -226,3 +226,10 @@ ANEXO_TAMANHO_MAX = 7 * 1024 * 1024       # 7 MiB por anexo — NÃO 10: o envio
 # tupla ordenada, não frozenset: repr() de um set não é determinístico entre execuções (docs/gerar_limites.py
 # lê repr() literal — um frozenset faria docs/LIMITES.md variar a cada regeneração sem nada ter mudado)
 ANEXO_TIPOS_PERMITIDOS = ("application/pdf", "image/gif", "image/jpeg", "image/png", "image/webp")
+
+# --- formulário de coleta por XLSForm (L2-07-b-formulario-de-coleta-xlsform; app/coleta)
+XLSFORM_TAMANHO_MAX = 2 * 1024 * 1024    # 2 MiB por planilha (formulários reais têm dezenas de KiB)
+FORMULARIO_CAMPOS_MAX = 500              # perguntas por formulário (mesmo teto de campos da camada)
+FORMULARIO_LISTA_MAX = 5_000             # linhas por lista de escolhas (cascata de município cabe)
+FORMULARIO_REPETICOES_MAX = 200          # linhas por repetição numa única resposta
+FORMULARIO_ANEXOS_MAX = 20               # anexos por resposta
