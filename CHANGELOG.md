@@ -52,6 +52,34 @@ segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
 
+## turno 3, setembro de 2026 (item L2-05-b-vetor-basico: 19 ferramentas vetoriais elementares em SQL/PostGIS)
+
+As operações que faltavam ao registro de ferramentas do item L2-05-a, todas como expressão SQL executada pelo
+mesmo executor (em processo abaixo do custo declarado, senão como job) e publicadas como item de camada com
+proveniência: `buffer` (agora geodésico com 48 segmentos por quarto de círculo, com distância por campo, anel
+por distância interna, método plano opcional e dissolver), `recorte`, `intersecao`, `uniao`, `diferenca`,
+`diferenca_simetrica`, `dissolver` (por campos, com soma/média/mínimo/máximo/desvio/contagem), `mesclar`
+(N camadas), `explodir`, `centroide` (centro de massa ou ponto interior), `casco` (convexo ou côncavo),
+`simplificar`, `suavizar`, `reprojetar`, `calcular_geometria` (área, perímetro, comprimento geodésicos e x/y),
+`pontos_aleatorios` (com semente), `linhas_para_pontos` (vértices ou intervalo geodésico),
+`poligonos_para_linhas` e `densificar`.
+
+Regra da casa dentro da expressão: toda operação booleana em massa recebe `ST_ReducePrecision(ST_MakeValid(g))`
+e a contagem de geometrias inválidas da entrada vai para o log e para o método gravado na procedência da
+camada de saída. Teto novo: `VETOR_FEICOES_MAX` = 2 milhões de feições por entrada, declarado no manifesto e
+conferido antes de operar; o teto de 30 min por execução já era o do job.
+
+Conferência: 29 testes novos comparam cada ferramenta com shapely (geometria plana) ou `pyproj.Geod` (medida
+geodésica) na MESMA entrada, com tolerância de área 1e-6 relativa e contagem exata; o buffer geodésico de 1 km
+em latitude −23 fica a 5,0e-5 do círculo de referência calculado com `pyproj.Geod` (o portão aceita 5e-4).
+Medidas em `tests/medidas/L2-05-b-vetor-basico.json`. Paridade com "Manage data" e "Use proximity" do Map
+Viewer escrita em `docs/PARIDADE_FERRAMENTAS_VETOR.md`. Decisões em
+`docs/adr/20260907T2119-ferramentas-vetoriais-elementares.md`.
+
+O executor passou a aceitar parâmetro de LISTA de camadas (`GPMultiValue:GPFeatureRecordSetLayer`, usado pelo
+`mesclar`) e a achatar essa lista ao escrever proveniência e `derivado_de`: a camada mesclada aponta para
+todas as origens.
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
