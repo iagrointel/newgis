@@ -1,20 +1,29 @@
 """Consulta do log de acesso e dos eventos (ADR 0002 seções 9.3, 9.4): filtros, janela máxima de 92 dias,
-CSV até 100 mil linhas, `X-Plat-Inquilino` para o superadmin (transação só leitura, com evento de trilha)."""
+CSV até 100 mil linhas, `X-Plat-Inquilino` para o superadmin (transação só leitura, com evento de trilha).
+
+Item L7-06-c acrescenta: filtro por `req_id` em `/api/log` (RLS de `plat.log_acesso` já garante que o
+admin de um inquilino nunca vê a linha de outro, MESMO forjando o req_id de outro pedido — o WHERE é
+sempre `tenant_id = tenant_atual()` primeiro) e as rotas de nível de log em tempo de execução, só para o
+superadmin da plataforma (afeta o processo inteiro, não um inquilino)."""
 
 import csv
 import datetime
 import io
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
 from app import db, limites
-from app.auth.comum import paginacao
+from app import log as plat_log
+from app.auth.comum import paginacao, registrar_evento
 from app.auth.modelos import Pagina
 from app.auth.sessao import Auth, autenticado, iso
 from app.erros import ErroAPI
+from app.settings import NIVEIS
 
 router = APIRouter(prefix="/api", tags=["log"])
+SUPER = {"x-auth": "S", "x-privilegio": "superadmin"}
 COLUNAS = (
     "id",
     "em",
@@ -30,6 +39,7 @@ COLUNAS = (
     "tempo_ms",
     "agente",
     "resultado",
+    "req_id",
 )
 
 
@@ -70,11 +80,13 @@ def _linha(r: dict) -> dict:
         "tempo_ms": r["tempo_ms"],
         "agente": r["agente"],
         "resultado": r["resultado"],
+        "req_id": r.get("req_id"),
     }
 
 
 def consultar_log(
-    cur, *, usuario_id=None, token_id=None, rota=None, status=None, desde=None, ate=None, limite=50, deslocamento=0
+    cur, *, usuario_id=None, token_id=None, rota=None, status=None, desde=None, ate=None, limite=50, deslocamento=0,
+    req_id=None,
 ) -> dict:
     inicio, fim = janela(desde, ate)
     condicoes, params = ["l.em >= %s", "l.em < %s"], [inicio, fim]
@@ -84,6 +96,12 @@ def consultar_log(
     if token_id is not None:
         condicoes.append("l.token_id = %s")
         params.append(token_id)
+    if req_id:
+        # o isolamento não é o req_id ser secreto: é o `WHERE tenant_id = tenant_atual()` da RLS, que
+        # roda ANTES desta condição — um req_id forjado de outro inquilino só devolve zero linhas
+        # (tests/api/test_log_consulta.py::test_req_id_de_outro_inquilino_nao_vaza).
+        condicoes.append("l.req_id = %s")
+        params.append(req_id)
     if rota:
         condicoes.append("l.rota LIKE %s")
         params.append(rota.replace("%", r"\%") + "%")
@@ -127,6 +145,7 @@ def log_acesso(
     limite: int | None = None,
     deslocamento: int | None = None,
     formato: str = "json",
+    req_id: str | None = None,
     auth: Auth = autenticado("org.log_ver", superadmin_pode_ler=True),
 ):
     somente_leitura = auth.leitura_inquilino is not None
@@ -142,6 +161,7 @@ def log_acesso(
                 ate=ate,
                 limite=limites.LOG_CSV_MAX,
                 deslocamento=0,
+                req_id=req_id,
             )
         saida = io.StringIO()
         w = csv.DictWriter(saida, fieldnames=COLUNAS)
@@ -165,6 +185,7 @@ def log_acesso(
             ate=ate,
             limite=lim,
             deslocamento=desl,
+            req_id=req_id,
         )
 
 
@@ -212,3 +233,36 @@ def eventos(
             for r in cur.fetchall()
         ]
     return {"total": total, "itens": itens}
+
+
+class NivelDefinir(BaseModel):
+    componente: str = Field(..., min_length=1, max_length=200, description="nome do logger (app.consulta), "
+                             "prefixo de rota (rota:/api/tiles) ou * (global)")
+    nivel: str
+    minutos: float | None = Field(default=None, gt=0, le=1440, description="prazo; None = até ser removido")
+
+
+@router.get("/log/nivel", openapi_extra=SUPER)
+def nivel_listar(auth: Auth = autenticado(superadmin=True, so_sessao=True)):
+    """Overrides ativos (não expirados) de nível de log em tempo de execução — afeta o PROCESSO inteiro,
+    não um inquilino, por isso só o superadmin da plataforma mexe aqui."""
+    return {"itens": plat_log.listar_overrides()}
+
+
+@router.post("/log/nivel", status_code=201, openapi_extra=SUPER)
+def nivel_definir(corpo: NivelDefinir, request: Request, auth: Auth = autenticado(superadmin=True, so_sessao=True)):
+    if corpo.nivel.upper() not in NIVEIS:
+        raise ErroAPI(422, "validacao", f"nivel aceita um de {NIVEIS}", {"campo": "nivel"})
+    registro = plat_log.definir_override(corpo.componente, corpo.nivel, corpo.minutos)
+    with db.db(auth.contexto()) as cur:
+        registrar_evento(cur, request, "log/nivel_definir", "log_nivel", corpo.componente, registro)
+    return registro
+
+
+@router.delete("/log/nivel", status_code=204, openapi_extra=SUPER)
+def nivel_remover(componente: str, request: Request, auth: Auth = autenticado(superadmin=True, so_sessao=True)):
+    if not plat_log.remover_override(componente):
+        raise ErroAPI(404, "nao_encontrado", "não há override desse componente", {"componente": componente})
+    with db.db(auth.contexto()) as cur:
+        registrar_evento(cur, request, "log/nivel_remover", "log_nivel", componente)
+    return Response(status_code=204)

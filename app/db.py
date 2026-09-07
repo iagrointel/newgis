@@ -12,6 +12,7 @@ import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 
+from app import log as plat_log
 from app.migracoes import chave_migracao
 from app.migracoes import listar as listar_migracoes
 from app.schema_ambiente import CursorSchemaAmbiente
@@ -74,6 +75,11 @@ def _preparar(con, ctx: Contexto | None, somente_leitura: bool = False):
     con.autocommit = False
     cur = con.cursor(cursor_factory=CursorSchemaAmbiente)
     cur.execute(f"SET search_path = {settings.PLAT_SCHEMA}, public")
+    # L7-06-c: application_name = req_id curto do pedido corrente (contextvar, sem precisar que cada
+    # chamador de db() o passe); `plat logs --req-id` casa isto com app=%a de log_line_prefix e com
+    # pg_stat_activity.application_name para achar a consulta em curso de um pedido específico. Toda
+    # conexão do pool, mesmo reciclada de outro pedido, é reetiquetada aqui a cada checkout.
+    cur.execute("SET application_name = %s", (plat_log.nome_aplicacao_pg(plat_log.req_id_atual()),))
     if ctx is not None:
         cur.execute(
             "SELECT set_config('plat.tenant_id', %s, true), set_config('plat.usuario_id', %s, true), "
