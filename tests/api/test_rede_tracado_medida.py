@@ -1,8 +1,9 @@
 """Medição em escala REAL do item L4-02-a-conectado-e-subrede (marcador `lento`: fora do pytest do dia a dia).
 
 Cláusula de desempenho do portão: `POST /api/rede/{id}/tracar` responde em ≤ 2 s (p95, medido 30 vezes) no
-maior alimentador da cooperativa de teste (schema `certaja`, ativo da casa, somente leitura, reusado do item
-L4-01-b via `tests/dados/carga_bdgd.py`). Regra de desempenho do brief (07/09): medir só com a máquina calma
+maior alimentador da cooperativa de teste (ativo de rede de referência da casa, somente leitura, reusado do
+item L4-01-b via `tests/dados/carga_bdgd.py`; o schema vem de `PLAT_REDE_REFERENCIA_ESQUEMA`).
+Regra de desempenho do brief (07/09): medir só com a máquina calma
 (`uptime`/`free -g` antes) e gravar `carga_1min`/`ram_livre_gb` ao lado do número — número de tempo sem a
 carga ao lado não vale como prova; se a carga estiver alta, a cláusula fica NÃO MEDIDA, honesta, em vez de
 reprovar o item pela casa ou aprovar sem base (regra do brief comum das trilhas).
@@ -105,13 +106,13 @@ def test_medida_p95_tracar_maior_alimentador(cred, env):
         # maior alimentador (CTMT) por número de trechos de MT, e um ponto dele para iniciar o traçado
         with con.cursor() as cur:
             cur.execute(
-                "SELECT ctmt, count(*) AS n FROM certaja.ssdmt WHERE wkt IS NOT NULL "
+                f"SELECT ctmt, count(*) AS n FROM {carga_bdgd.esquema()}.ssdmt WHERE wkt IS NOT NULL "
                 "GROUP BY ctmt ORDER BY n DESC LIMIT 1")
             maior = cur.fetchone()
             cur.execute(
                 "SELECT ST_X(ST_StartPoint(ST_GeometryN(wkt::geometry, 1))) AS lon, "
                 "ST_Y(ST_StartPoint(ST_GeometryN(wkt::geometry, 1))) AS lat "
-                "FROM certaja.ssdmt WHERE ctmt = %s AND wkt IS NOT NULL LIMIT 1",
+                f"FROM {carga_bdgd.esquema()}.ssdmt WHERE ctmt = %s AND wkt IS NOT NULL LIMIT 1",
                 (maior["ctmt"],))
             ponto_inicio = cur.fetchone()
         medida["maior_alimentador"] = {"ctmt": maior["ctmt"], "trechos_mt": maior["n"]}
@@ -183,7 +184,7 @@ def test_medida_3_clientes_simultaneos(cred, env):
         with con.cursor() as cur:
             cur.execute("SELECT ST_X(ST_StartPoint(ST_GeometryN(wkt::geometry, 1))) AS lon, "
                         "ST_Y(ST_StartPoint(ST_GeometryN(wkt::geometry, 1))) AS lat "
-                        "FROM certaja.ssdmt WHERE wkt IS NOT NULL LIMIT 1")
+                        f"FROM {carga_bdgd.esquema()}.ssdmt WHERE wkt IS NOT NULL LIMIT 1")
             p0 = cur.fetchone()
         corpo = {"tipo": "conectado", "pontos_partida": [{"lon": p0["lon"], "lat": p0["lat"], "tolerancia_m": 5.0}]}
 
