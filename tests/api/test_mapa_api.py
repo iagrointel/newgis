@@ -123,3 +123,38 @@ def test_tile_de_tabela_fora_do_catalogo_e_recusado(sessao_a, martin_no_ar):
     r = sessao_a.get("/tiles/d_demo/t_0000000000000000/8/100/150?token=plat_qualquer")
     assert r.status_code == 401
     assert r.headers.get("X-Motivo-Recusa") == "tabela_nao_catalogada", dict(r.headers)
+
+
+def test_medidas_de_latencia_do_tile(sessao_a, camada_grande, martin_no_ar, medida):
+    """Latência do tile da camada de 1 milhão de feições, frio e quente, pelo repasse da plataforma.
+
+    Frio = primeiro pedido daquele z/x/y (o cache de 64 MB do Martin ainda não tem); quente = o mesmo
+    pedido repetido. Mede o caminho INTEIRO (autorização por token + Martin + PostGIS), não só o
+    Martin — é o que o navegador sente."""
+    import statistics
+    import time
+
+    gravar = medida("L2-01-mapa-web")
+    tj = sessao_a.get(f"/api/mapa/camadas/{camada_grande['id']}/tilejson").json()
+
+    def pedir(z, x, y):
+        t0 = time.perf_counter()
+        r = sessao_a.get(_caminho_do_tile(tj, z, x, y))
+        assert r.status_code in (200, 204), r.status_code
+        return (time.perf_counter() - t0) * 1000, len(r.content)
+
+    frios = []
+    for i in range(12):
+        ms, _ = pedir(8, 100 + i, 150)
+        frios.append(ms)
+    quentes = [pedir(8, 100, 150)[0] for _ in range(12)]
+    _, bytes_z8 = pedir(8, 100, 150)
+    _, bytes_z0 = pedir(0, 0, 0)
+
+    gravar("tile_z8_frio_mediana_ms", round(statistics.median(frios), 1), "ms",
+           "12 tiles z8 distintos da camada de 1 mi pelo repasse /tiles (token válido)")
+    gravar("tile_z8_quente_mediana_ms", round(statistics.median(quentes), 1), "ms",
+           "o MESMO tile z8 pedido 12 vezes (cache em memória do Martin, 64 MB)")
+    gravar("tile_z8_bytes", bytes_z8, "bytes", "corpo do tile z8 sem compressão (Accept-Encoding: identity)")
+    gravar("tile_z0_bytes", bytes_z0, "bytes",
+           "corpo do tile z0 (o milhão inteiro cai neste tile; o corte de 10.000 feições por tile age aqui)")
