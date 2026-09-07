@@ -7,7 +7,7 @@ addopts = "-q --strict-markers"
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-extend-exclude = ["venv", "web/vendor"]
+extend-exclude = ["venv", "web/vendor", "app/consulta/proto/FeatureCollection_pb2.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "B", "I"]

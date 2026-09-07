@@ -374,3 +374,74 @@ demo = Roraima (260.515 pontos, 15 municípios; escolhida por ser o MENOR arquiv
 | e-mail nunca prende a requisição nem vaza segredo em log | não se aplica (SaaS gerenciado) | e-mail sempre por job (`correio.enviar`, `somente_sistema=True` — não criável por `POST /api/jobs`, nem por admin: fecharia canhão de spam com o SMTP do inquilino); senha lida fresca do banco a cada tentativa, nunca gravada em `job.parametros`; erro de `smtplib` convertido para mensagem sem credencial | feito | `tests/unit/test_correio_cliente.py` (erro sem a senha) + `test_senha_smtp_nunca_aparece_no_log_do_worker` (grep no `journalctl` real de `plat-worker`/`plat-api`) + `test_correio_enviar_nao_e_criavel_por_post_jobs` | 2026-09-06 | pendente (D20) |
 | caminho manual sem SMTP (nem instalação, nem inquilino) | não se aplica | convite devolve `link_manual` na resposta de `POST /api/convites` (mesmo padrão de "senha temporária mostrada uma vez" de `POST /api/usuarios`); redefinição por e-mail some (o pedido fica só registrado para o limite de taxa) — o usuário pede ao admin, caminho que já existia antes deste item | feito | `test_convite_expirado_apos_7_dias_e_410` (usa o `link_manual` de propósito, sem SMTP) | 2026-09-06 | pendente (D20) |
 | avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail | licença/certificado prestes a expirar avisa por e-mail | **fora desta passagem** (hipótese do item, não do portão literal): exigiria periódico cross-tenant, hoje só sob o inquilino técnico `plataforma` (ADR 0003 seção 7) | fora (ver ADR 0017 seção D5) | — | 2026-09-06 | pendente (D20) |
+
+## Operação `query` do FeatureServer (item L2-04-c-featureserver-query, turno 4; ADR 0018)
+
+Conformidade percorrida por `tests/esri/conformidade_query.py` (pedido real contra o serviço, comparação com SQL
+direto quando fazia sentido; grava `tests/medidas/L2-04-c-featureserver-query.json`) sobre os 45 parâmetros da doc
+Esri "Query (Feature Service/Layer)" (acesso 06/09/2026): **39 suportado, 3 parcial, 3 fora** (mais 3 verificações
+do portão que não são um dos 45: PBF==JSON, `outStatistics`+`groupBy`+`having` batendo com SQL, `where` inválido
+nunca 500 — as 3 passaram). Massa de teste: 80 polígonos reais de uso do solo de Guarulhos (OSM/ODbL,
+`tests/dados/gerados/cobertura.gpkg`, mesmo dado já usado por outros itens da casa — sem nome de cliente, sem PII).
+
+| parâmetro | Esri | nós | estado | evidência |
+|---|---|---|---|---|
+| `where` | filtro SQL-92 | `where_ast.compilar_where` contra a lista branca de campos da camada | feito | count()=1 == SQL direto |
+| `objectIds` | lista de OID | `fid = ANY(%s)` | feito | ids pedidos == devolvidos |
+| `geometry`+`geometryType`+`inSR` | filtro espacial | envelope/ponto/multiponto/polilinha/polígono, csv ou JSON Esri, `ST_GeomFromEWKT` parametrizado | feito | count()=8 == SQL direto |
+| `spatialRel`+`relationParam` | 9 relações + DE-9IM | 9 `esriSpatialRel` mapeados (`geometria_esri.SPATIAL_REL`); `esriSpatialRelIndexIntersects` é aproximação declarada (alias de Intersects, sem acesso ao índice cru) | feito (1 aproximação declarada) | `ST_Relate` com padrão validado por regex |
+| `distance`+`units` | buffer do filtro | `ST_Buffer` em `geography` (5 unidades mapeadas) antes do teste espacial | feito | ponto fora sem buffer (0), dentro com buffer calibrado pela distância real (>0) |
+| `outFields`+`returnGeometry` | seleção de campos/geometria | outFields="*"\|lista; geometria omitida (não `null`) quando `returnGeometry=false` | feito | conjunto de campos e presença/ausência da chave `geometry` |
+| `maxAllowableOffset`+`geometryPrecision` | simplificação/arredondamento | `ST_SimplifyPreserveTopology` + `round()` nas coordenadas de saída | feito | nº de vértices não cresce; casas decimais respeitadas |
+| `outSR`/`defaultSR` | reprojeção de saída/entrada | `ST_Transform` para qualquer EPSG do PostGIS | feito | `spatialReference.wkid` = pedido |
+| `havingClause`+`groupByFieldsForStatistics`+`outStatistics` | agregação SQL | `count/sum/min/max/avg/stddev/variance/percentile_cont/disc`, `GROUP BY`, `HAVING` contra a EXPRESSÃO agregada (nunca o alias — Postgres recusa) | feito | resultado idêntico ao SQL direto (`obtido == sql`) |
+| `returnDistinctValues`/`returnIdsOnly`/`returnCountOnly`/`returnExtentOnly` | 4 modos de retorno | 4 modos implementados; `returnExtentOnly` também compõe com `returnCountOnly` (PBF `ExtentCountResult`) | feito | valores == `COUNT(*)`/`DISTINCT`/extensão via SQL direto |
+| `orderByFields` | ordenação | `ORDER BY` nas colunas da lista branca, com a MESMA colação do banco (não a ordem por codepoint do Python) | feito | sequência == `ORDER BY` direto no banco |
+| `returnZ`/`returnM` | Z/M na geometria | `hasZ` refletido; `returnM` sempre `false` (camada sem M) | Z parcial (camada de teste é 2D; sem dado para exercitar `hasZ=true`) / M fora (declarado) | — |
+| `multipatchOption` | opções de multipatch | sem suporte a 3D mesh | fora | declarado |
+| `resultOffset`+`resultRecordCount` | paginação por offset | `LIMIT`/`OFFSET`, teto 2.000 padrão / 5.000 máximo | feito | páginas sem sobreposição |
+| `resultPaginationToken` (12.1) | cursor keyset | token opaco (base64 dos valores da última linha) sobre `ORDER BY` ascendente; recusado com mensagem quando o `orderBy` não é compatível | feito | 2 páginas consecutivas sem interseção |
+| `quantizationParameters` (modo view) | coordenada inteira p/ o Pro | quantiza para inteiro dentro da tolerância declarada; usado também como fallback automático ao exportar PBF (o schema PBF só aceita `sint64`) | feito | 1ª coordenada da resposta é inteira |
+| `returnCentroid` | centróide por feição | `ST_Centroid` | feito | `centroid.x/y` presentes |
+| `resultType` | dica de renderização | aceito; sem efeito de comportamento nesta implementação | parcial | só `standard` exercitado |
+| `historicMoment`/`time`/`timeReferenceUnknownClient` | consulta temporal/histórica | camada sem `timeInfo`/branch versioning: os três são RECUSADOS com 422 explícito | fora (declarado, nunca silencioso) | 422 nomeado |
+| `returnTrueCurves` | curva verdadeira | sempre `false` (sem curva armazenada) | fora | declarado |
+| `sqlFormat` | `standard`\|`native` | `standard` (SQL-92 do analisador) completo; `native` recusado por DESIGN (é o ponto de segurança do item, não uma lacuna) | feito | 200 / 422 |
+| `returnExceededLimitFeatures` | página truncada vs. vazia | `true` = página até o teto; `false` = ZERO feições quando o teto seria excedido (achado ao medir: a 1ª versão sempre truncava) | feito | `n=10`/`n=0`, `exceededTransferLimit=true` nos dois |
+| `datumTransformation` | pipeline de datum | aceito; só o padrão do PROJ (via `ST_Transform`) é aplicado, sem seleção de pipeline | parcial | 200, sem verificação de pipeline não-padrão |
+| `returnEnvelope` (11.4) | extensão do conjunto na resposta | extensão do CONJUNTO FILTRADO (não da página) anexada ao corpo | feito | igual ao `returnExtentOnly` isolado |
+| `fullText` (11.4) | busca textual | `to_tsvector('simple', unaccent(...))`/`plainto_tsquery` em todo campo de texto | feito | termo acentuado e sem acento encontram a mesma feição |
+| `uniqueIds`/`returnUniqueIdsOnly` (11.5) | filtro/ids por campo de unicidade | equivalem a `objectIds`/`returnIdsOnly` (sem campo de unicidade separado do OID nesta camada, declarado) | feito (equivalência declarada) | mesmo resultado de `objectIds`/`returnIdsOnly` |
+| `f` (json\|pjson\|geojson\|pbf) | formato de saída | 4 formatos; `html` fora (não implementado) | feito (3/4; `html` fora) | 200 nos 4; PBF decodificado pela definição oficial `Esri/arcgis-pbf` bate com o JSON em campos e nº de feições |
+| PBF == mesma definição de protocolo | `FeatureCollectionPBuffer` | `.proto` oficial baixado de `Esri/arcgis-pbf` (Apache-2.0), compilado com `protoc` nesta máquina — não reimplementado | feito | round-trip decodificado, `objectIdFieldName`/nº de campos/nº de feições batem com o JSON |
+| `where` inválido nunca 500 | erro do cliente sempre 4xx | 6 ataques (`;DROP`, comentário SQL, sub-select em `IN`, `pg_sleep`, operador não previsto) → sempre 400/422 | feito | `tests/esri/conformidade_query.py::_checar_where_invalido_nao_derruba` |
+| QGIS carrega 100 mi de linhas do acervo e desenha | interoperabilidade real de desktop | **não verificado nesta rodada** — sem QGIS Desktop/ambiente gráfico disponível dentro do orçamento do turno (mesma limitação de Chrome headless já registrada em `CLAUDE.md`); o protocolo foi exercitado por HTTP direto (JSON/GeoJSON/PBF), não pela integração do produto QGIS | **pendência** (nunca "feito") | — |
+| consulta espacial por polígono ≤ 200 ms p95 (acervo, GIST) | desempenho a escala | medido em `public.car_area_imovel` (8.406.837 linhas reais, índice GIST) com o padrão de SQL exato do motor (`ST_Intersects` + `LIMIT 2001`): **p95 = 1,6 ms**; `returnCountOnly` (contagem exaustiva, operação mais cara por natureza) mede p95 = 986 ms nos mesmos 30 polígonos — registrado à parte, não é o que o portão pede | feito | `tests/medidas/L2-04-c-consulta-espacial-p95.json` |
+
+Paridade com ArcGIS Pro/AGOL reais: **pendente** (decisão D20, credencial do parceiro) — todo teste acima é contra
+esta implementação e a doc Esri, nunca contra um cliente Esri de verdade.
+
+## Diretório/metadados do FeatureServer + OGC API Features + WFS 2.0 (item L2-04-servicos-esri-ogc, turno 4; ADR 0019)
+
+Construído EM VOLTA da operação `query` acima (item L2-04-c, `wt/fsquery`) — nenhuma reescrita da consulta: reusa
+`motor.PedidoQuery`/`preparar_pedido`/`executar_features`/`executar_count`, `campos.campos_da_camada`,
+`serializar.GEOM_PG_PARA_ESRI` e `rotas_query._autenticar`. Conformidade percorrida por
+`tests/esri/conformidade_servicos.py` (grava `tests/medidas/L2-04-servicos-esri-ogc.json`).
+
+| capacidade | Esri/OGC | nós | estado | evidência |
+|---|---|---|---|---|
+| descritor de serviço `.../FeatureServer?f=json` | `layers`/`tables`/`fullExtent`/`spatialReference`/`capabilities` | implementado; `tables` sempre `[]` (sem tabela sem geometria neste modelo) | feito | `featureserver_descritor_servico` no JSON de medida |
+| descritor de camada `.../FeatureServer/0?f=json` | `fields`/`geometryType`/`objectIdField`/`capabilities`/`relationships` | implementado; `capabilities="Query"` sempre (nunca anuncia edição) | feito | `featureserver_descritor_camada` |
+| `applyEdits`, anexos, `queryRelatedRecords`, `relationships` | edição transacional, upload de anexo, registros relacionados | **não construído** | fora (bloqueio real) | depende de L2-03-edicao (escrita transacional) e L2-10-b (relacionamentos), nenhum dos dois existe no repositório ainda — não é falta de tempo, é dependência não satisfeita |
+| OGC API Features Part 1 (Core): landing/conformance/collections/items/item | OGC 17-069r4 | implementado 1:1 sobre a mesma camada; `bbox`, `limit`, `offset`, GeoJSON puro | feito | `ogc_features_*` no JSON de medida (bbox comprovado por redução real do conjunto: 80 → 9 feições) |
+| OGC API Features Part 3 (Filter/CQL2) | `filter=`/`filter-lang=cql2-*` | não implementado nesta passagem | fora | item próprio L2-04-g |
+| WFS 2.0 GetCapabilities | ISO 19142 | XML `wfs:WFS_Capabilities` — **parseado com sucesso pelo cliente real `owslib.wfs.WebFeatureService` (0.29.3)**, 1 `FeatureType` reconhecido com título e `WGS84BoundingBox` | feito | `wfs_getcapabilities`, `contents=['plat:<item>']` |
+| WFS 2.0 DescribeFeatureType | XSD do tipo | XSD mínimo (campos + tipo), não validado contra o XSD de referência do OGC | parcial | `wfs_describefeaturetype` |
+| WFS 2.0 GetFeature | GML 3.2 (núcleo) | dois formatos: `OUTPUTFORMAT=application/json` (GeoJSON, feito) e GML 3.2 escrito à mão para Point/LineString/Polygon simples — Multi*/curvas não cobertas, não validado contra XSD oficial | json feito / GML parcial | `wfs_getfeature_json`, `wfs_getfeature_gml` |
+| ArcGIS Pro/QGIS/AGOL carregam de fato | interoperabilidade real de desktop | **não verificado** — mesma limitação de ambiente gráfico já registrada para L2-04-c (QGIS) e em CLAUDE.md (Chrome headless); protocolo exercitado por HTTP direto e pelo cliente real `owslib` (não é um mock: é o parser oficial de um cliente WFS de produção) | pendência (nunca "feito") | — |
+| segurança: item_id/where/bbox inválidos nunca chegam ao banco como 500 | erro do cliente sempre 4xx | 13 ataques (item_id com aspas/comentário SQL/`;`, bbox com sub-select/`pg_sleep()`/função não prevista, WFS BBOX com injeção, `REQUEST` desconhecida, `feature_id` não inteiro, unicode no item_id, cross-tenant nas 3 raízes) — **13/13 recusados com 400/404, nenhum 500** | feito | `bateria_de_ataque` no JSON de medida |
+| achado corrigido nesta trilha (não escondido) | — | `item_id::uuid` sem validar prévia deixava o Postgres levantar `InvalidTextRepresentation` sem handler → HTTP 500 em `rotas_query._camada_do_item` (usada por `/query`, pelo descritor de serviço/camada, por OGC Features e por WFS) para QUALQUER item_id malformado; corrigido com um regex de UUID antes do banco (`_item_id_valido`), item_id inválido agora é 404 | consertado, não contornado | commit desta trilha; reexercitado nos 13 ataques acima |
+| cross-tenant nas 3 raízes novas | isolamento por inquilino | achado do adversário desta trilha: `pouso`/`conformance` do OGC API Features respondiam 200 com landing genérica para item de OUTRO inquilino (nunca vazavam dado, mas não deveriam responder 200) — corrigido: as duas rotas agora tocam `plat.item` sob RLS antes de responder, igual ao FeatureServer/WFS | consertado | `cross_tenant_ogc` no JSON de medida (agora 404) |
+
+Paridade com ArcGIS Pro/AGOL/QGIS Desktop reais: **pendente** (decisão D20/D36) — todo teste acima é contra esta
+implementação, a doc Esri/OGC e um cliente Python real (`owslib`); nenhum teste usa ArcGIS Pro/AGOL nem QGIS Desktop.
