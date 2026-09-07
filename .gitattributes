@@ -23,3 +23,6 @@ docs/LIMITES.md merge=ours
 # 07/09 tarde: 5 ramos reprovaram de uma vez por conflito aqui, nenhum por teste. União; a fila
 # remove include_router duplicado e confere sintaxe antes da suíte.
 app/main.py merge=union
+
+# app/jobs/tipos.py é REGISTRO de tipos de job (um import por módulo de tarefas); mesma família.
+app/jobs/tipos.py merge=union
