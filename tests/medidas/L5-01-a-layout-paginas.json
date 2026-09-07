@@ -2,7 +2,7 @@
  "item": "L5-01-a-layout-paginas",
  "medidas": {
   "construtor_montagem_ms": {
-   "valor": 2301.0,
+   "valor": 2265.2,
    "unidade": "ms",
    "comando": "test_paginas_e_layout_por_arrasto"
   },
@@ -37,6 +37,6 @@
    "comando": "test_adversario_seis_niveis_linha_coluna_sem_overflow_ou_widget_oculto"
   }
  },
- "gerado_em": "2026-09-07T13:58:41Z",
- "git_sha": "c93a08aff95d"
+ "gerado_em": "2026-09-07T13:59:10Z",
+ "git_sha": "06f42417aea7"
 }
