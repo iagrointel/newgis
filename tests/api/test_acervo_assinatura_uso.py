@@ -77,7 +77,7 @@ def _colunas_reais(tabela: str) -> list[str]:
     schema_nome, tabela_nome = tabela.split(".")
     saida = _psql(
         "SELECT string_agg(column_name, ',' ORDER BY ordinal_position) FROM information_schema.columns "
-        f"WHERE table_schema = :'p1' AND table_name = :'p2' AND column_name <> 'geom' AND data_type <> 'USER-DEFINED'",
+        "WHERE table_schema = :'p1' AND table_name = :'p2' AND column_name <> 'geom' AND data_type <> 'USER-DEFINED'",
         schema_nome, tabela_nome)
     return saida.split(",")
 
