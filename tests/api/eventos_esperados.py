@@ -104,4 +104,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/org"): ["org/configurar"],
     ("POST", "/api/org/logo"): ["org/logo_enviar"],
     ("DELETE", "/api/org/logo"): ["org/logo_remover"],
+    # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
+    # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
+    ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
 }
