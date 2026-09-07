@@ -46,6 +46,15 @@ def _amc(dados: dict) -> list[tuple[str, str, int | None]]:
     ]
 
 
+def _estilo(dados: dict) -> list[tuple[str, str, int | None]]:
+    """Item de estilo -> camada que ele pinta (`corpo.camada_id`). O tipo de relação
+    `estilo_de_camada` já existia em plat.relacao_tipo desde o L0-03 sem ninguém o declarar; sem
+    extrator, o estilo ficava solto e o FeatureServer não tinha como saber qual desenho é o da
+    camada (item L2-04-b, `drawingInfo`)."""
+    corpo = dados.get("corpo") or {}
+    return [(u, "estilo_de_camada", None) for u in _uuids([corpo.get("camada_id")])]
+
+
 def _rede(dados: dict) -> list[tuple[str, str, int | None]]:
     camadas = dados.get("camadas") or {}
     return [
@@ -62,6 +71,7 @@ EXTRATORES: dict[str, Callable[[dict], list[tuple[str, str, int | None]]]] = {
     "painel": _app,
     "modelo_amc": _amc,
     "rede": _rede,
+    "estilo": _estilo,
 }
 
 
