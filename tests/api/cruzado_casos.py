@@ -937,3 +937,18 @@ def _link_so_o_item(p: Preparacao, j: Any) -> None:
     assert "login" not in item["dono"] and "pode_editar" not in item and item["id"] == p.item_b["id"]
     for marca in (p.usuario_b["login"], p.grupo_b["nome"], p.papel_b["nome"], p.token_b["prefixo"], "demo2"):
         assert marca not in str(j), marca
+
+
+# ---- L6-06-descoberta-csw: as duas rotas agem só sobre o chamador (buscam num catálogo EXTERNO e criam em A);
+# não há recurso de B a apontar. O corpo usa uma URL de rede interna: a rota recusa na validação de SSRF (422
+# url_insegura) ANTES de qualquer conexão de rede — a varredura fica determinística e sem tráfego externo.
+CASOS.update({
+    ("POST", "/api/csw/buscar"): Caso(
+        lambda p: "/api/csw/buscar", lambda p: {"url": "http://10.0.0.1/csw", "texto": "x"},
+        proprio=True, aceita=frozenset({422}), verificar=lambda p, j: None,
+    ),
+    ("POST", "/api/csw/conexoes"): Caso(
+        lambda p: "/api/csw/conexoes", lambda p: {"url": "http://10.0.0.1/csw", "identificador": "x"},
+        proprio=True, aceita=frozenset({422}), verificar=lambda p, j: None,
+    ),
+})
