@@ -24,6 +24,8 @@ ACS = f"{BASE}/api/sso/saml/acs"
 
 def novo_cliente() -> TestClient:
     return TestClient(app, base_url=BASE)
+
+
 MAPA = {"gg-saml-admin": "admin", "gg-saml-leitura": "visualizador"}
 
 
