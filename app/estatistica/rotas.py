@@ -206,7 +206,7 @@ def _valores_numericos(cur, schema: str, tabela: str, campo: str, tipo_pg: str, 
     return valores, nulos, amostrado, tamanho_amostra, total_validos
 
 
-@router.get("/api/camadas/{item_id}/classes")
+@router.get("/api/camadas/{item_id}/classes", openapi_extra={"x-auth": "S/T", "x-privilegio": "proprio"})
 def classes(
     item_id: str,
     request: Request,
