@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item UX-03-tela-conteudo-item-lixeira: estados explícitos, arrastar e soltar, seleção que sobrevive, 1.000 itens medidos)
+
+Trilha de interface. A lista do catálogo passa a mostrar `<plat-estado>` em vez de ficar em branco: vazio (com "Novo
+item" ou "limpar busca, pasta e filtros"), carregando com esqueleto, erro com a referência e "tentar de novo", negado
+em 403; o painel do item idem para uuid inexistente/negado/erro. Arrastar arquivos sobre a lista cria itens
+(`js/catalogo/soltar.js`) pelo MESMO caminho de "Novo item > Arquivo", agora extraído em
+`novo.js::enviarArquivoComoItem` — e esse caminho estava quebrado desde o L0-03: as partes iam sob cookie (415, CSRF)
+e a conclusão lia `item_id` onde a API devolve `arquivo_id`; passa a usar token de serviço em memória como a tela
+/uploads (a API só aceita `admin:inquilino` nessas rotas, medido: `camada:editar` e `catalogo:ler` recebem 403 — quem
+não é administrador não consegue enviar arquivo pelo navegador; registrado para o dono da rota). A seleção em massa
+sobrevive a reordenar e filtrar (é por id; só troca de aba ou "limpar seleção" a zera). Desempenho:
+`performance.measure('catalogo:render')` em `lista.js`; `tests/e2e/test_conteudo_ux03.py` cria 1.000 itens pela API e
+mede p95 do render completo em 20 renders: **57,7 ms** (mediana 47,8 ms) com carga 11,3 e 6,7 GB livres
+(`tests/medidas/UX-03.json`) — alvo 500 ms. Capturas em 390 e 1280; axe sem violação séria em lista, painel,
+compartilhamento e lixeira.
+
 ## turno 8, setembro de 2026 (item UX-02-telas-entrada-conta-convite: entrada, 2FA, conta, convite e redefinição polidos; interface em pt-BR, en e es)
 
 Trilha de interface. As telas públicas (/entrar, /aceitar-convite, /redefinir-senha) ganharam erro por campo
