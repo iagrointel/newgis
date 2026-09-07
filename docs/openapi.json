@@ -10320,6 +10320,1110 @@
     "x-auth": "S/T",
     "x-privilegio": "proprio"
    }
+  },
+  "/rest/services/{item_id}/FeatureServer/{camada_id}/query": {
+   "get": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Query Get",
+    "operationId": "consulta_esri_query_get",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "camada_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "post": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Query Post",
+    "operationId": "consulta_esri_query_post",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "camada_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/rest/services/{item_id}/FeatureServer": {
+   "get": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Descritor Servico",
+    "description": "`.../FeatureServer?f=json` — raiz do diretório. `f` diferente de json/pjson não é servido aqui\n(html é a UI da Esri, servida pelo diretório por token do item L2-04-b).",
+    "operationId": "consulta_esri_servico_descritor",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/rest/services/{item_id}/FeatureServer/{camada_id}": {
+   "get": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Descritor Camada",
+    "description": "`.../FeatureServer/0?f=json` — descritor da camada. `camada_id` diferente de \"0\" cai no mesmo\n404 já usado pela `query` (uma camada publicada por item, ver docstring do módulo).",
+    "operationId": "consulta_esri_camada_descritor",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "camada_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/rest/info": {
+   "post": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Rest Info",
+    "description": "`rest/info` é o primeiro pedido de todo cliente Esri e NÃO exige credencial válida (é onde o\ncliente descobre como se autenticar). Não revela nada do inquilino: só versão e para onde mandar\nusuário/senha. O token do caminho é ecoado apenas dentro da URL do serviço de token.",
+    "operationId": "svc_rest_info_post",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   },
+   "get": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Rest Info",
+    "description": "`rest/info` é o primeiro pedido de todo cliente Esri e NÃO exige credencial válida (é onde o\ncliente descobre como se autenticar). Não revela nada do inquilino: só versão e para onde mandar\nusuário/senha. O token do caminho é ecoado apenas dentro da URL do serviço de token.",
+    "operationId": "svc_rest_info",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/svc/{token}/rest/generateToken": {
+   "post": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Generate Token",
+    "description": "Troca usuário/senha do inquilino por um token de SERVIÇO de leitura, com validade de no\nmáximo 24 h (`expiration` em minutos, teto aplicado sem reclamar, como faz o ArcGIS Server).\n\nO inquilino é o do token que está no caminho — não se pede o slug de novo, e um usuário de outro\ninquilino não autentica aqui nem por acaso. Conta com 2FA ligado é recusada com o código 400 do\nprotocolo: `generateToken` não tem onde pedir o segundo fator, e aceitar só a senha rebaixaria a\npolítica do inquilino.",
+    "operationId": "svc_generate_token",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   },
+   "get": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Generate Token",
+    "description": "Troca usuário/senha do inquilino por um token de SERVIÇO de leitura, com validade de no\nmáximo 24 h (`expiration` em minutos, teto aplicado sem reclamar, como faz o ArcGIS Server).\n\nO inquilino é o do token que está no caminho — não se pede o slug de novo, e um usuário de outro\ninquilino não autentica aqui nem por acaso. Conta com 2FA ligado é recusada com o código 400 do\nprotocolo: `generateToken` não tem onde pedir o segundo fator, e aceitar só a senha rebaixaria a\npolítica do inquilino.",
+    "operationId": "svc_generate_token_get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/svc/{token}/rest/services": {
+   "get": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Servicos Raiz",
+    "description": "Raiz do catálogo: pastas (as do catálogo do inquilino) e os serviços da raiz. Um FeatureServer\npor camada vetorial legível — é o que o QGIS lista ao conectar.",
+    "operationId": "svc_servicos_raiz",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/rest/services/{pasta}": {
+   "get": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Servicos Pasta",
+    "operationId": "svc_servicos_pasta",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "pasta",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Pasta"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/rest/services/{item_id}/FeatureServer": {
+   "get": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Featureserver",
+    "operationId": "svc_featureserver_raiz",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/rest/services/{item_id}/FeatureServer/layers": {
+   "get": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Featureserver Layers",
+    "description": "`/layers` devolve os descritores COMPLETOS de camadas e tabelas de uma vez — é o pedido que o\nArcGIS Pro faz para desenhar a legenda sem N idas ao servidor.",
+    "operationId": "svc_featureserver_layers",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/rest/services/{item_id}/FeatureServer/info/itemInfo": {
+   "get": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Featureserver Item Info",
+    "operationId": "svc_featureserver_iteminfo",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/rest/services/{item_id}/FeatureServer/info/metadata": {
+   "get": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Featureserver Metadata",
+    "description": "Metadado no perfil ISO 19139, que é o que o ArcGIS Pro e o QGIS pedem neste caminho — XML,\nnão JSON: aqui `f` não se aplica.",
+    "operationId": "svc_featureserver_metadata",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/svc/{token}/rest/services/{item_id}/FeatureServer/{camada_id}": {
+   "get": {
+    "tags": [
+     "consulta-esri"
+    ],
+    "summary": "Featureserver Camada",
+    "operationId": "svc_featureserver_camada",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "camada_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/ogc/features/{item_id}": {
+   "get": {
+    "tags": [
+     "ogc-features"
+    ],
+    "summary": "Pouso",
+    "operationId": "ogc_features_pouso",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/ogc/features/{item_id}/conformance": {
+   "get": {
+    "tags": [
+     "ogc-features"
+    ],
+    "summary": "Conformidade",
+    "operationId": "ogc_features_conformidade",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/ogc/features/{item_id}/collections": {
+   "get": {
+    "tags": [
+     "ogc-features"
+    ],
+    "summary": "Colecoes",
+    "operationId": "ogc_features_colecoes",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/ogc/features/{item_id}/collections/{colecao_id}": {
+   "get": {
+    "tags": [
+     "ogc-features"
+    ],
+    "summary": "Colecao",
+    "operationId": "ogc_features_colecao",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "colecao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Colecao Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/ogc/features/{item_id}/collections/{colecao_id}/items": {
+   "get": {
+    "tags": [
+     "ogc-features"
+    ],
+    "summary": "Items",
+    "operationId": "ogc_features_items",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "colecao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Colecao Id"
+      }
+     },
+     {
+      "name": "bbox",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Bbox"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "minimum": 0
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Offset"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}": {
+   "get": {
+    "tags": [
+     "ogc-features"
+    ],
+    "summary": "Item Um",
+    "operationId": "ogc_features_item",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "colecao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Colecao Id"
+      }
+     },
+     {
+      "name": "feature_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Feature Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/wfs/{item_id}": {
+   "get": {
+    "tags": [
+     "wfs"
+    ],
+    "summary": "Wfs Kvp",
+    "description": "Um único endpoint KVP (o jeito WFS de fazer as coisas): `REQUEST=` decide a operação.",
+    "operationId": "wfs_kvp",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
   }
  },
  "components": {

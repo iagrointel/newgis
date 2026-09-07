@@ -445,3 +445,29 @@ Construído EM VOLTA da operação `query` acima (item L2-04-c, `wt/fsquery`) �
 
 Paridade com ArcGIS Pro/AGOL/QGIS Desktop reais: **pendente** (decisão D20/D36) — todo teste acima é contra esta
 implementação, a doc Esri/OGC e um cliente Python real (`owslib`); nenhum teste usa ArcGIS Pro/AGOL nem QGIS Desktop.
+
+## Diretório de serviços por token (item L2-04-b, turno 3; ADR 20260907T1955)
+
+Publicado em `/svc/{token}/rest/...`. É o passo que faltava antes do FeatureServer: o cliente recebe
+uma raiz e desce sozinho. Nada do FeatureServer foi reescrito — os descritores são as funções de
+`app/consulta/rotas_servico.py`, agora públicas. Medida em
+`tests/medidas/L2-04-b-featureserver-catalogo-metadados.json`.
+
+| capacidade | Esri | nós | estado | evidência |
+|---|---|---|---|---|
+| `rest/info` | `currentVersion`, `fullVersion`, `authInfo.tokenServicesUrl`, `shortLived` | implementado; não exige credencial válida (é onde o cliente descobre como autenticar) e não revela nada do inquilino | feito | `test_rest_info_traz_authinfo_apontando_para_generate_token` |
+| `rest/generateToken` | usuário/senha → token curto | implementado; escopo de leitura (`catalogo:ler`, `camada:ler`, `tiles:ler`), teto de 24 h aplicado em silêncio como no ArcGIS Server; conta com segundo fator é recusada com o erro 400 do protocolo | feito | `test_generate_token_devolve_token_de_leitura_com_validade_de_ate_24h` |
+| `rest/services` e `rest/services/{pasta}` | `folders` + `services` | implementado; pasta = pasta do catálogo, um FeatureServer por camada vetorial legível | feito | `test_catalogo_lista_a_camada_e_a_pasta` |
+| `FeatureServer` raiz | `layers`/`tables`/`fullExtent`/`initialExtent`/`spatialReference`/`units`/`capabilities` | implementado; `tables` sempre `[]` | feito | `test_descritor_do_servico_tem_as_chaves_obrigatorias` |
+| `FeatureServer/{id}` | `fields` com tipo/alias/length/nullable/editable/domain, `indexes`, `editFieldsInfo`, `types`/`subtypes`/`typeIdField`, `timeInfo`, `ownershipBasedAccessControlForFeatures`, `advancedQueryCapabilities`, `drawingInfo` | implementado; `indexes` e `editFieldsInfo` lidos do banco (`pg_index`, colunas de autoria que existirem), não declarados de véspera | feito | `test_descritor_da_camada_tem_campos_tipos_e_indices_do_banco` |
+| tipos de campo de 11.3 (`DateOnly`, `TimeOnly`, `BigInteger`) | — | já vinham do mapa de `app/consulta/campos.py`; conferidos contra `date`/`time`/`bigint` reais | feito | mesmo teste |
+| `FeatureServer/layers`, `/info/itemInfo`, `/info/metadata` | descritores em bloco, ficha do item, metadado ISO 19139 | implementados; a ficha e o metadado vêm de `plat.item`, sem segunda cópia | feito | `test_layers_devolve_o_mesmo_descritor_da_camada`, `test_item_info_e_metadata_vem_do_catalogo` |
+| `f=json|pjson|html` e `callback` (JSONP) | negociação de formato | implementados num lugar só (`app/consulta/formato_esri.py`); `f` fora do vocabulário é 400, nunca 500; nome de callback é validado e recusado com 400 quando não é identificador | feito | `test_pjson_e_html_e_jsonp_respondem_e_nunca_500`, `test_callback_com_script_e_recusado_sem_ecoar` |
+| CORS em `/svc` e `/ogc` | aberto | aberto em `/svc`, `/ogc` e `/tiles` e **fechado em `/api`** (lá a credencial é o cookie); nunca `Allow-Credentials` | feito | `test_cors_aberto_em_svc_e_fechado_em_api` |
+| `domain` por campo, `types`/`subtypes` | domínios codificados/intervalo e subtipos | `null`/vazios: a linha L2-10-a não está nesta base (ramo não juntado). É como a Esri descreve camada sem domínio e sem subtipo — não é invenção nem promessa | fora (dependência não satisfeita) | mesma medida |
+| `relationships` | classes de relacionamento | `[]` pela mesma razão (L2-10-b não está nesta base) | fora (dependência não satisfeita) | — |
+| `capabilities` de escrita (`Create,Update,Delete,Editing,Sync`) | edição e sincronização | nunca anunciadas; `syncEnabled` é `false`. Sem L2-03-a, anunciar seria um botão que não faz nada | fora (dependência não satisfeita) | — |
+| `drawingInfo` a partir do estilo MapLibre | `simple`, `uniqueValue`, `classBreaks`, `labelingInfo` | os três convertidos e conferidos canal a canal; expressão fora desses três casos (interpolação, cor por zoom) NÃO é aproximada — sai `simple` cinza com o motivo em `_conversao` | feito no JSON | `tests/unit/test_renderizador_esri.py`, `test_estilo_da_camada_vira_renderer_unique_value` |
+| QGIS "ArcGIS REST Server" conecta e lista as camadas | interoperabilidade de desktop | **não verificado** — sem QGIS nem ambiente gráfico nesta máquina (mesma limitação já registrada para L2-04-c e L2-04-servicos-esri-ogc) | pendência (nunca "feito") | — |
+| cliente Python `arcgis` (`GIS` + `FeatureLayer`) lê campos e domínios | cliente real da Esri | **não verificado** — a biblioteca não está na venv e instalá-la mexeria em versões fixadas (regra 6 do brief de trilhas) | pendência (nunca "feito") | — |
+| isolamento entre inquilinos | — | camada de outro inquilino não aparece no catálogo e responde 404 pelo mesmo caminho; token revogado deixa de valer; token sem `catalogo:ler` recebe 403 | feito | `test_camada_de_b_ausente_no_diretorio_de_a`, `test_token_invalido_ou_revogado_nao_abre_o_diretorio` |
