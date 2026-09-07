@@ -80,6 +80,29 @@ recusam ou isolam o cross-tenant corretamente) e passam a valer em `test_cobertu
 `test_rota_nao_cruza` assim que `make openapi` rodar contra a árvore juntada. `L3-01-b-unidades`
 (dependência declarada) segue PARCIAL num ramo não juntado (`wt/amc`); este item não depende dele em
 código (CRS resolvido de forma própria em `app/multiescala/crs.py`), só na hipótese conceitual.
+## turno 4, setembro de 2026 (item L5-08-editor-arrasto: primitivas de edição compartilhadas pelos construtores)
+
+Editor de arrasto próprio em `web/js/editor/` (5 módulos, 43.771 bytes medidos; 0 byte de biblioteca de
+arrasto — `web/vendor/VERSOES.txt` segue sem SortableJS, dnd-kit ou GridStack) e tela `/construtor?item=<id>`
+sobre o documento do L5-05. Paleta→tela e tela→tela por HTML5 Drag and Drop; alça de largura por Pointer
+Events com `setPointerCapture`; árvore de estrutura, painel de propriedades gerado do JSON Schema do tipo e
+menu "mover para" para quem só tem toque. Largura sempre em COLUNAS da grade de 12, nunca em pixel.
+
+Medido (`tests/medidas/L5-08-editor-arrasto.json`, e2e `tests/e2e/test_editor_arrasto.py` contra a base da
+trilha): o MESMO layout de 5 componentes montado só por arrasto (787,5 ms) e só por teclado e menus
+(134,0 ms) grava dois documentos idênticos — diferença 0 depois de trocar cada ULID por `n1..nN` na ordem de
+profundidade (o ULID é aleatório por construção, D2). Redimensionar por arrasto levou o mapa de 8 para 4
+colunas nos dois caminhos; `"px"` não aparece no documento gravado. A árvore reflete o aninhamento
+(aria-level 1/2/2/1/1). O painel recusa zoom 99 num campo `maximum: 22`: mensagem no campo, `aria-invalid`,
+e o documento salvo depois continua com 12. Refutação do adversário no mesmo arquivo: soltar um contêiner
+dentro de um descendente dele é recusado com motivo ("dentro de si"), soltar fora da tela não muda nada, o
+menu de mover não oferece destino dentro do próprio nó, e o layout inteiro se monta só por toque no viewport
+Pixel 7 (onde o HTML5 Drag and Drop não dispara). 0 erro de console em todos os caminhos.
+
+Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a partir do navegador, e por
+isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
+anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
+coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
