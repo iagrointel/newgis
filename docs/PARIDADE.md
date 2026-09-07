@@ -361,6 +361,30 @@ demo = Roraima (260.515 pontos, 15 municípios; escolhida por ser o MENOR arquiv
 | `outSR`, `searchExtent`, boost por `location=`, `category`, `langCode`, paginação `search/start/num` | parâmetros documentados do `findAddressCandidates` | fora desta versão (saída sempre 4326; sem filtro geográfico nem boost de proximidade) | fora | — | 2026-09-06 | pendente (D20) |
 | geocodificação em lote de planilha/CSV do usuário (upload → coluna de endereço → resultado) | não é o `GeocodeServer`; é uma ferramenta de geoprocessamento separada (`Geocode Addresses` do Pro/ArcMap) | item-irmão `L2-11-a-geocodificacao-csv`, ainda não construído (reusa `motor.buscar()`) | fora (item separado) | — | 2026-09-06 | pendente (D20) |
 
+## Editor de simbologia vetorial (item L2-02-c-editor-simbologia-vetor, turno 4; ADR 20260907T2130)
+
+Referência Esri: "Apply styles" e "Style categories/clustering" do Map Viewer 11.4 (doc.arcgis.com/en/arcgis-online/
+create-maps/apply-styles-mv.htm, enterprise.arcgis.com/en/portal/11.4/use/apply-styles-mv.htm,
+style-categories-mv.htm, configure-clustering-mv.htm; renderer-objects e color-ramp-objects da REST, 07/09/2026).
+Bancada: 3 camadas sintéticas do inquilino demo (1.000 pontos com 300 categorias, 200 polígonos, 100 linhas).
+Sem ArcGIS Pro/AGOL reais (D20).
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| símbolo único (cor, contorno, tamanho, ícone, padrão de preenchimento, tracejado, seta em linha) | "Location (single symbol)" + símbolo | `unico` + `simbolo.{cor,contorno_*,raio|largura,icone,icone_tamanho,padrao,tracejado,seta}`; ícones e padrões do sprite do inquilino (L2-02-e) | feito | `tests/api/test_estilos_editor.py::test_estilo_compilado_valida_na_style_spec_oficial`; e2e captura `1_unico` | 2026-09-07 | pendente (D20) |
+| por categoria (campo, cor/ícone por valor, "outros", ordem, rampa qualitativa) | "Types (unique symbols)" com "Other" | `categoria` + `outros` (ramo padrão do `case`), ícone por categoria, ordem no editor, rampas qualitativas ColorBrewer; valores do servidor (`/classes`), as 200 primeiras + outros | feito | e2e capturas `2_categoria` e teste dos 300 valores → 200 + outros; `tests/unit/test_estilo_sugestao.py` | 2026-09-07 | pendente (D20) |
+| por classe de cor (método/n do L2-02-b, rampa sequencial/divergente, inversão) | "Counts and Amounts (color)" | `classes` com `metodo`/`cortes` do servidor, `rampa`/`rampa_invertida` ColorBrewer | feito (cortes = L2-02-b) | `test_classes_do_estilo_sao_os_cortes_do_l2_02_b`; e2e `3_classes_cor` | 2026-09-07 | pendente (D20) |
+| por classe de tamanho | "Counts and Amounts (size)" por classes | `classes[].tamanho` (raio/largura por faixa) | feito | e2e `5_classes_tamanho` | 2026-09-07 | pendente (D20) |
+| proporcional (tamanho contínuo) | "Counts and Amounts (size)" contínuo | `proporcional` (mín/máx do campo pelo servidor) | feito | e2e `6_proporcional` | 2026-09-07 | pendente (D20) |
+| mapa de calor (raio, intensidade, rampa) | "Heat map" | `calor` | feito (por zoom via `heatmap-*`; raio único) | e2e `7_calor` | 2026-09-07 | pendente (D20) |
+| agrupamento de pontos (clusters, raio em px, rótulo de contagem, cor por contagem) | "Clustering" (client-side) | clusters no TILE pela função do Martin (`t_<hex>_ag`, `plat.camada_agrupar`), degraus de cor/raio por contagem; expansão ao clicar e rótulo de contagem ficam para o L2-02-d/L2-01-d | parcial (contagem exata por célula; sem rótulo/expansão) | `test_agrupamento_no_tile_bate_com_count_por_celula_e_kmeans` (exato vs COUNT(*), concordância k-means ≥ 0,6 declarada); e2e `8_agrupamento` | 2026-09-07 | pendente (D20) |
+| efeitos por camada (opacidade, mistura, sombra, brilho) | "Effects" (bloom, drop shadow, blend) | `transparencia`; sombra (polígono) e brilho (linha) por camada extra; `mistura` gravada, sem blend na Style Spec | parcial (mistura só registrada; bloom e drop shadow aproximados) | e2e `4_efeitos_escala` | 2026-09-07 | pendente (D20) |
+| faixa de escala por camada e por classe | "Visible range" | `escala_min/max` → minzoom/maxzoom; por classe → opacidade em `step` de zoom | feito | Style Spec no teste parametrizado; e2e `4_efeitos_escala` | 2026-09-07 | pendente (D20) |
+| pré-visualização ao vivo, desfazer, salvar no mapa | Map Viewer | compilar no servidor sem gravar, `aplicarEstilo`, pilha de instantâneos, item `estilo` com `camada_id` | feito | e2e (desfazer/refazer, salvar, reabrir) | 2026-09-07 | pendente (D20) |
+| exportar/importar estilo | não (renderer JSON só pela REST) | JSON do documento; exportado valida na Style Spec oficial | feito (supera) | `test_exportado_da_ficha_valida_na_style_spec`; e2e | 2026-09-07 | — |
+| densidade de pontos, predominância, bivariado (cor e tamanho por 2 campos), gráfico (pie), dicionário | "Dot density", "Predominant category", "Color & Size", "Charts", dictionary renderer | não construídos | fora | — | 2026-09-07 | pendente (D20) |
+| fps do mapa com 1 mi de pontos em mapa de calor | — | não medido nesta bancada (1.000 pontos) | não medido | — | 2026-09-07 | — |
+
 ## SMTP, convite de membro e redefinição de senha (item L0-07-d-smtp-convites, turno 3; ADR 0017)
 
 | capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
