@@ -3,6 +3,26 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L4-02-c-isolamento: o que abrir para desenergizar um ponto)
+
+`tipo=isolamento` em `POST /api/rede/{id}/tracar`, no mesmo grafo dos traçados irmãos (nenhum motor novo:
+`isolamento.py` chama `lacos._preparar_mapa`/`_montar_arestas_custo` e `tracado._resolver_ponto`/
+`elementos_e_geometria`). A resposta tem três partes: `dispositivos_a_abrir`, `elementos_isolados` e um
+`resumo` com clientes, transformadores e quilômetros por nível de tensão. O conjunto é MÍNIMO POR INCLUSÃO,
+não a fronteira inteira: numa rede radial a chave a jusante da falha não precisa abrir, e a prova disso é o
+teste da rede de três chaves e dois fusíveis, onde a fronteira tem dois dispositivos e a resposta tem um.
+Quem decide é um grafo reduzido (componente vira vértice, dispositivo vira ligação), percorrido uma vez por
+candidato. Barreira de CONDIÇÃO: dispositivo sem `estado` declarado, ou com `operavel` negado, não é ponto
+de corte — o traçado passa por ele e procura o próximo, e ele sai nomeado em `dispositivos_inoperantes`;
+`ignorar_inoperante=false` abre mão da exigência e o conjunto muda de volta. Duas respostas honestas em vez
+de conjunto inventado: `isolavel=false` quando há caminho de energia sem dispositivo, e `ponto_ja_sem_fonte`
+quando o ponto já estava sem energia. Tela nova `/redes/isolamento` com o trecho isolado numa cor e os
+dispositivos a abrir em cor própria (e2e com captura, lendo a cor do próprio MapLibre). 13 testes de API e 1
+e2e verdes. Cláusulas com universo VAZIO, medidas e nomeadas em `tests/medidas/L4-02-c-isolamento.json`: a
+extração da rede real da casa não traz camada de dispositivo de manobra (nenhuma das tabelas de manobra
+existe no schema) e o ramal de ligação tem 0 de 26.581 registros com geometria; a medida de tempo ficou NÃO
+MEDIDA por carga da máquina 10,95 (o brief proíbe medir tempo sob disputa).
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
