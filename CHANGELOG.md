@@ -3,6 +3,21 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L3-04-restricoes: restrição como objeto próprio do motor multicritério)
+
+`app/amc/restricao.py`: avalia UMA restrição declarada no modelo (`avaliar(cur, unidades, feicoes,
+restricao)`) e compõe várias por OU (`compor`). Regra `intersecta` usa `ST_Intersects` puro sem buffer
+e `ST_DWithin(geography, geography, buffer_m)` com buffer — nunca projeção plana escolhida por acaso;
+regra `fracao_area_minima` usa `ST_Area(geography)`, o mesmo padrão de área geodésica já documentado em
+`app.amc.crs`. Composição por OU é sempre binária (fração vetada 0,0 ou 1,0 — restrição veta, não pesa);
+o motivo gravado é o da primeira restrição, na ordem do modelo, que vetou a unidade; `frase_motivo` lê só
+o metadado `base` ("a norma veda: ..." para `norma`, "vetamos por precaução: ..." para `precaucao").
+Camada sem nenhuma feição na área nunca veta em silêncio: levanta `ErroRestricao('camada_vazia', ...)`.
+`app.amc.robustez` e `app.amc.combinacao` não mudaram: já tratavam `fracao_vetada` como fixa (A6). Medido
+(`tests/medidas/L3-04-restricoes.json`): 12 testes, 3 restrições encadeadas com contagem por restrição
+batendo com `ST_Intersects`/`ST_DWithin` recomputados à mão fora do módulo. Regra `valor_raster` fica
+fora do escopo, declarada com erro explícito. ADR
+`docs/adr/20260907T1617-restricao-como-objeto-proprio.md`.
 ## turno 3, setembro de 2026 (item L3-02-a-monte-carlo-pesos: robustez do motor multicritério por sorteio de pesos)
 
 `app/amc/robustez.py` (puro, sem I/O): `sortear_pesos` (Dirichlet no simplex ou faixa +-k% por fator,
