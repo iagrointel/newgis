@@ -16,6 +16,13 @@ from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make 
 from tests import jobs_sessao
 from tests.api.jobs.conftest import esperar
 
+# serial (07/09): estes testes injetam um instante no MESMO relógio de agendas que a unidade de jobs viva
+# executa a cada 30 s (app/jobs/worker.py -> mod_agenda.tick). Quando a rodada em paralelo atrasa o teste e o
+# relógio de parede cruza a fronteira da cron, a unidade dispara a mesma ocorrência e sobra um job: medido
+# 'assert 2 == 0 + 1' e 'assert 3 == 1 + 1'. Correndo sozinho o teste leva segundos e não cruza a fronteira.
+# Isto é redução de risco, não eliminação: a unidade de jobs continua viva ao lado.
+pytestmark = pytest.mark.serial
+
 UTC = datetime.UTC
 
 
