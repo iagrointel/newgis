@@ -6,6 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Minha conta · plat</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 <script src="/static/vendor/dompurify-3.4.14.js"></script>
 </head>
@@ -28,6 +29,10 @@
       <p class="fraco" data-i18n="conta.foto_ajuda">PNG, JPEG, GIF ou WEBP, até 1 MB; a imagem é recortada num quadro de 200×200</p>
       <plat-formulario id="form-dados"></plat-formulario>
       <details class="espaco"><summary data-i18n="conta.privilegios">privilégios</summary><ul class="privilegios-lista espaco" id="lista-privilegios"></ul></details>
+    </section>
+    <section class="cartao" id="preferencias" aria-labelledby="t-preferencias">
+      <h2 id="t-preferencias" data-i18n="conta.preferencias">Preferências</h2>
+      <div class="campo"><span class="campo-rotulo" data-i18n="tema.rotulo">tema</span> <plat-tema id="tema"></plat-tema></div>
     </section>
     <section class="cartao" id="senha" aria-labelledby="t-senha">
       <h2 id="t-senha" data-i18n="conta.senha">Senha</h2>

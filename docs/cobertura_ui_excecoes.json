@@ -1,0 +1,9 @@
+{
+ "descricao": "Rotas para CLIENTE EXTERNO (QGIS, ArcGIS Pro/AGOL, catálogo OGC, link assinado): não têm controle na tela; contam como cobertas quando alguma tela expõe o prefixo como URL a copiar. Lida por docs/gerar_cobertura_ui.py. Um prefixo por linha, sempre com motivo.",
+ "excecoes": [
+  {"prefixo": "/ogc/records", "motivo": "OGC API Records para catálogos externos (token catalogo:ler); a ficha do item ou a tela de tokens deve mostrar a URL"},
+  {"prefixo": "/rest/services/Geocodificador/GeocodeServer", "motivo": "GeocodeServer compatível com Esri, consumido por Pro/AGOL; a tela de tokens deve mostrar a URL"},
+  {"prefixo": "/api/publico/itens", "motivo": "leitura de item público por quem recebe o link, sem sessão; a ficha do item mostra o link"},
+  {"prefixo": "/api/objetos", "motivo": "entrega por URL assinada gerada pela API (ADR 0005); o navegador só a segue"}
+ ]
+}

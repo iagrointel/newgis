@@ -1,0 +1,24 @@
+/* plat · guia de estilo (/estilo-guia): só o arranjo das amostras; cores, tipos e espaços vêm dos tokens. */
+.guia-secao h3 { margin: var(--e4) 0 var(--e2); font-size: var(--t0); }
+.amostras { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--e2) var(--e4); }
+.amostra-par { display: grid; gap: var(--e1); }
+.amostra { --amostra: var(--painel); height: var(--e6); border: var(--borda-largura) solid var(--borda-forte); border-radius: var(--raio); background: var(--amostra); }
+.amostra-info { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; font-size: var(--t-1); }
+.valor-token { font-family: var(--mono); font-size: var(--t-2); }
+.sonda { position: absolute; left: -9999px; }
+.escala-tipo .exemplo-tipo { margin: var(--e1) 0; }
+.titulo-exemplo { font-family: var(--titulo); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; font-size: var(--t3); }
+.escala-espaco { display: grid; gap: var(--e1); }
+.linha-espaco { display: grid; grid-template-columns: 5rem 8rem 1fr; align-items: center; gap: var(--e2); }
+.barra-espaco { display: block; height: var(--e2); background: var(--acento); }
+.forma { display: flex; gap: var(--e4); flex-wrap: wrap; align-items: center; }
+.caixa-forma { padding: var(--e3) var(--e4); background: var(--painel-2); border: var(--borda-largura) solid var(--borda-forte); font-family: var(--mono); font-size: var(--t-2); }
+.caixa-forma.raio { border-radius: var(--raio); }
+.caixa-forma.pilula { border-radius: var(--raio-pilula); }
+.caixa-forma.sombra { box-shadow: var(--sombra); border-radius: var(--raio); }
+.caixa-forma.sombra-1 { box-shadow: var(--sombra-1); border-radius: var(--raio); }
+.grade-paineis { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--e3); }
+.grade-paineis plat-painel { min-height: 160px; }
+.grade-estados { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--e3); }
+.grade-estados h3 { margin-top: 0; }
+.grade-avisos { display: grid; gap: var(--e2); }

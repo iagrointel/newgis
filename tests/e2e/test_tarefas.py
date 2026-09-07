@@ -19,6 +19,7 @@ import psycopg2.extras
 import pytest
 
 from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
+from tests.e2e.apoio import local
 
 CAPTURAS = Path(__file__).resolve().parent / "capturas"
 ITEM = "L0-05-jobs"
@@ -40,7 +41,7 @@ pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 def api_jobs_disponivel(base_url, url_publica_resolve, playwright):
     if not url_publica_resolve:
         pytest.skip(f"{base_url} não resolve nesta máquina")
-    req = playwright.request.new_context(base_url=base_url)
+    req = playwright.request.new_context(base_url=base_url, ignore_https_errors=local(base_url))
     try:
         r = req.get("/api/openapi.json")
         caminhos = r.json().get("paths", {}) if r.ok else {}

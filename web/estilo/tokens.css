@@ -1,30 +1,25 @@
-/* plat — tokens "instrumento" (item L0-14-identidade-visual, decisão do dono 06/09/2026: "instrumento" — painel
-   escuro, denso, preciso, como um cockpit operado o dia inteiro, nunca um painel administrativo genérico).
+/* plat — tokens do sistema de design (item UX-01-sistema-de-design; identidade "instrumento", decisão do dono
+   06/09/2026, item L0-14: painel escuro, denso, preciso, operado o dia inteiro; nunca painel administrativo genérico).
 
-   O QUE É ISTO: a fonte única de verdade dos tokens visuais novos (cor, tipografia, raio, densidade). Esta
-   folha NÃO redefine --fundo/--painel/--acento etc. usados hoje em web/style.css (isso quebraria as 9 telas
-   que já usam essas variáveis com a paleta azul do turno T2). Em vez disso define um segundo conjunto,
-   namespaced `--i-*`, e web/style.css remapeia `--i-*` -> nomes antigos SÓ dentro de `body.instrumento`
-   (ver "layout base: remapeamento" no fim de web/style.css). Uma tela adota a identidade nova só com
-   `class="instrumento"` no <body>; sem essa classe, nada muda — é assim que a tela de entrada (web/login.html)
-   pôde virar a primeira fatia sem mexer nas outras 8 telas.
+   ESTE ARQUIVO É A ÚNICA FONTE DE COR, TIPO, ESPAÇO, RAIO, SOMBRA E FOCO DO PRODUTO. Nenhuma outra folha, HTML ou
+   módulo pode escrever cor literal (#hex, rgb, hsl, nome de cor) nem tamanho literal em font-size/padding/margin/
+   gap/border-radius: `docs/verificar_tokens.py` varre web/ e o teste `tests/unit/test_tokens_visuais.py` reprova.
+   Exceções declaradas com motivo em web/estilo/tokens_excecoes.json (cartografia do MapLibre lê JSON, não CSS).
 
-   Tipografia (par com motivo, três papéis):
-   - "Big Shoulders Display" 700/800 — título/rótulo de destaque: condensada e industrial, letra de placa de
-     instrumento (marca, h1, número grande de destaque). Nunca para texto de corrida (é condensada demais
-     para parágrafo).
-   - "IBM Plex Sans" 400/500/600 — texto de corrida e formulário: neutra, legível em texto longo, contraste
-     deliberado com o título (a mesma fonte para tudo é o "painel genérico" que o dono rejeitou).
-   - "IBM Plex Mono" 400/500 — todo dado tabular/numérico/código: algarismos de largura fixa
-     (font-variant-numeric: tabular-nums já ligado abaixo), para número alinhar em coluna como em um
-     mostrador digital.
-   Vendorizadas em web/vendor/ (ADR 0001 seção 11.2 regra 3, estendida): big-shoulders-display-2.002.woff2,
-   ibm-plex-sans-3.201.woff2, ibm-plex-mono-regular-2.3.woff2, ibm-plex-mono-medium-2.3.woff2 — sha256 e
-   licença OFL-1.1 em web/vendor/VERSOES.txt.
+   Duas camadas:
+   1. PRIMITIVOS `--i-*`: a paleta por tema (escuro é o padrão do produto; claro por preferência do sistema ou por
+      escolha explícita). Só aqui há valor literal.
+   2. SEMÂNTICOS (`--fundo`, `--painel`, `--texto`, `--acento`, `--e1`..`--e6`, `--t-3`..`--t4`, `--raio`...): o que
+      toda regra de estilo usa. Derivam dos primitivos; trocar um primitivo troca todas as telas (refutação do item).
 
-   Tema: três estados, regra da casa (system/claro/escuro) — "sistema" (nenhum atributo, `prefers-color-scheme`
-   decide), escolha explícita via `data-theme="light"` ou `data-theme="dark"` no <html> (vence os dois outros
-   estados nas suas respectivas direções). */
+   Tema: três estados. "sistema" (nenhum atributo em <html>: prefers-color-scheme decide), "claro" e "escuro"
+   (data-theme="light"|"dark" em <html>, aplicado por js/base/tema_cedo.js antes da primeira pintura a partir de
+   localStorage plat_tema; o controle <plat-tema> em /conta e /estilo-guia grava a escolha).
+
+   Tipografia (três papéis, decisão L0-14): "Big Shoulders Display" 700/800 para título e marca (condensada, letra
+   de placa de instrumento; nunca em texto corrido); "IBM Plex Sans" 400/500/600 para texto e formulário; "IBM Plex
+   Mono" 400/500 para dado tabular, número e código (tabular-nums ligado). Vendorizadas em web/vendor/ (sha256 e
+   licença OFL-1.1 em web/vendor/VERSOES.txt). */
 
 @font-face {
   font-family: "Big Shoulders Display";
@@ -58,73 +53,96 @@
   src: url("/static/vendor/ibm-plex-mono-medium-2.3.woff2") format("woff2");
 }
 
+/* ------------------------------------------------------------------ 1. primitivos: paleta escura (padrão) */
 :root {
-  /* ---- paleta escura (padrão do produto — instrumento operado de noite tanto quanto de dia) ---- */
   --i-fundo: #0b0f10;
   --i-superficie: #12181a;
   --i-superficie-2: #1a2224;
+  --i-superficie-3: #223034;   /* realce de linha selecionada, fundo de menu aberto */
   --i-linha: #263133;
+  --i-linha-forte: #3a4a4e;
   --i-texto: #e7ece9;
   --i-texto-fraco: #8fa19c;
-  --i-acento: #d98a2b;       /* âmbar de instrumento — ponteiro, luz de aviso; NUNCA azul de sistema */
-  --i-acento-texto: #1a1002; /* texto sobre botão/etiqueta preenchida a âmbar, contraste AA */
+  --i-acento: #d98a2b;         /* âmbar de instrumento: ponteiro, luz de aviso; NUNCA azul de sistema */
+  --i-acento-texto: #1a1002;   /* texto sobre âmbar preenchido, contraste AA */
   --i-sucesso: #4f9e6e;
   --i-aviso: #e0a24a;
   --i-erro: #d9614f;
-  --i-foco: var(--i-acento);
+  --i-info: #7fb2c9;           /* estado "em andamento": frio, distinto do âmbar de atenção */
   --i-sombra: 0 12px 40px rgba(0, 0, 0, .55);
+  --i-sombra-1: 0 2px 12px rgba(0, 0, 0, .35);
+  --i-veu: rgba(0, 0, 0, .55);           /* fundo atrás de diálogo */
+  --i-veu-painel: rgba(18, 24, 26, .88);  /* painel sobre o mapa (cartografia de cor fixa) */
+  --i-selecao: rgba(217, 138, 43, .16);   /* linha/cartão selecionado: âmbar translúcido */
+  --i-perigo-fraco: rgba(217, 97, 79, .14);
+  --i-atencao-fraco: rgba(224, 162, 74, .12);
+  --i-branco: #ffffff;                    /* QR e miniatura: fundo que tem de ser branco em qualquer tema */
 
-  /* ---- tipografia ---- */
+  /* tipografia */
   --i-fonte-titulo: "Big Shoulders Display", "Arial Narrow", sans-serif;
   --i-fonte-texto: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --i-fonte-dado: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 
-  /* ---- motivo: cantos retos, densidade alta ---- */
-  --i-raio: 2px;             /* nunca maior — instrumento não é app consumidor arredondado */
-  --i-tique: 10px;           /* comprimento do traço em L nos 4 cantos dos painéis-chave */
+  /* motivo: cantos retos, densidade alta */
+  --i-raio: 2px;
+  --i-tique: 10px;
   --i-tique-espessura: 1px;
-  --i-e1: .2rem; --i-e2: .4rem; --i-e3: .6rem; --i-e4: .85rem; --i-e5: 1.25rem; --i-e6: 1.75rem;
 }
 
-/* ---- paleta clara (sistema em modo claro; nenhum <html data-theme> explícito) ---- */
+/* paleta clara: preferência do sistema sem escolha explícita, ou escolha explícita */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     --i-fundo: #eef1f0;
     --i-superficie: #ffffff;
     --i-superficie-2: #e4e9e7;
+    --i-superficie-3: #d6dedb;
     --i-linha: #ccd4d1;
+    --i-linha-forte: #aab6b2;
     --i-texto: #12181a;
     --i-texto-fraco: #4d5b57;
-    --i-acento: #a8641c;      /* âmbar escurecido para contraste AA sobre fundo claro */
+    --i-acento: #9a5a17;
     --i-acento-texto: #fff6ec;
     --i-sucesso: #2f7a4c;
     --i-aviso: #8a5a12;
     --i-erro: #a83c2e;
+    --i-info: #2f6f8a;
     --i-sombra: 0 8px 28px rgba(18, 24, 26, .12);
+    --i-sombra-1: 0 2px 10px rgba(18, 24, 26, .10);
+    --i-veu: rgba(18, 24, 26, .45);
+    --i-selecao: rgba(168, 100, 28, .14);
+    --i-perigo-fraco: rgba(168, 60, 46, .10);
+    --i-atencao-fraco: rgba(138, 90, 18, .10);
   }
 }
-
-/* ---- escolha explícita, vence os dois estados acima nas suas direções ---- */
 :root[data-theme="light"] {
   --i-fundo: #eef1f0;
   --i-superficie: #ffffff;
   --i-superficie-2: #e4e9e7;
+  --i-superficie-3: #d6dedb;
   --i-linha: #ccd4d1;
+  --i-linha-forte: #aab6b2;
   --i-texto: #12181a;
   --i-texto-fraco: #4d5b57;
-  --i-acento: #a8641c;
+  --i-acento: #9a5a17;
   --i-acento-texto: #fff6ec;
   --i-sucesso: #2f7a4c;
   --i-aviso: #8a5a12;
   --i-erro: #a83c2e;
+  --i-info: #2f6f8a;
   --i-sombra: 0 8px 28px rgba(18, 24, 26, .12);
+  --i-sombra-1: 0 2px 10px rgba(18, 24, 26, .10);
+  --i-veu: rgba(18, 24, 26, .45);
+  --i-selecao: rgba(168, 100, 28, .14);
+  --i-perigo-fraco: rgba(168, 60, 46, .10);
+  --i-atencao-fraco: rgba(138, 90, 18, .10);
 }
-
 :root[data-theme="dark"] {
   --i-fundo: #0b0f10;
   --i-superficie: #12181a;
   --i-superficie-2: #1a2224;
+  --i-superficie-3: #223034;
   --i-linha: #263133;
+  --i-linha-forte: #3a4a4e;
   --i-texto: #e7ece9;
   --i-texto-fraco: #8fa19c;
   --i-acento: #d98a2b;
@@ -132,18 +150,84 @@
   --i-sucesso: #4f9e6e;
   --i-aviso: #e0a24a;
   --i-erro: #d9614f;
+  --i-info: #7fb2c9;
   --i-sombra: 0 12px 40px rgba(0, 0, 0, .55);
+  --i-sombra-1: 0 2px 12px rgba(0, 0, 0, .35);
+  --i-veu: rgba(0, 0, 0, .55);
+  --i-selecao: rgba(217, 138, 43, .16);
+  --i-perigo-fraco: rgba(217, 97, 79, .14);
+  --i-atencao-fraco: rgba(224, 162, 74, .12);
 }
 
-/* ---- marca d'água de instrumento: tique de canto (moldura de mostrador) ----
-   um traço em L nos 4 cantos de um painel-chave, como a moldura de um mostrador. Cor = --i-acento (o âmbar
-   de instrumento, "ponteiro, luz de aviso" da especificação) — testado primeiro com a cor da borda (--i-linha)
-   e DESCARTADO, ficava indistinguível do canto do border de 1px (mesma cor). Vive num `::before` próprio, não
-   na propriedade `background` do painel: um `.cartao { background: var(--painel) }` que caísse depois na
-   cascata (mesma especificidade, `background` é atalho e reseta `background-image` para `none`) apagaria o
-   tique — MEDIDO acontecendo na primeira versão desta regra contra `web/style.css` linha ~59. Aplicar a
-   classe `.instrumento-moldura` a qualquer painel-chave (o `.cartao` da tela de entrada é o primeiro);
-   exige `position: relative` (ou `static` mesmo, o `::before` vira absoluto contra o próprio elemento). */
+/* ------------------------------------------------------------------ 2. semânticos: o que as telas usam */
+:root {
+  /* cor */
+  --fundo: var(--i-fundo);
+  --fundo-2: var(--i-fundo);
+  --painel: var(--i-superficie);
+  --painel-2: var(--i-superficie-2);
+  --painel-3: var(--i-superficie-3);
+  --borda: var(--i-linha);
+  --borda-forte: var(--i-linha-forte);
+  --texto: var(--i-texto);
+  --fraco: var(--i-texto-fraco);
+  --ok: var(--i-sucesso);
+  --atencao: var(--i-aviso);
+  --falha: var(--i-erro);
+  --info: var(--i-info);
+  --andamento: var(--i-info);
+  --acento: var(--i-acento);
+  --acento-texto: var(--i-acento-texto);
+  --foco: var(--i-acento);
+  --selecao: var(--i-selecao);
+  --perigo-fraco: var(--i-perigo-fraco);
+  --atencao-fraco: var(--i-atencao-fraco);
+  --veu: var(--i-veu);
+  --branco: var(--i-branco);
+  --sombra: var(--i-sombra);
+  --sombra-1: var(--i-sombra-1);
+
+  /* painel sobre o mapa: o canvas do MapLibre é cartografia de cor fixa (js/mapa/estilo.js), logo o painel que
+     fica em cima dele também é fixo, nunca segue --texto/--painel do tema (medido no L2-01-a: texto sumia no claro) */
+  --mapa-painel: var(--i-veu-painel);
+  --mapa-borda: #3a4550;
+  --mapa-texto: #e7ece9;
+  --mapa-texto-fraco: #9aa8ae;
+  --mapa-controle: #1a2224;
+
+  /* tipografia: famílias e escala (raiz 14 px; a escala é a única fonte de font-size) */
+  --sans: var(--i-fonte-texto);
+  --mono: var(--i-fonte-dado);
+  --titulo: var(--i-fonte-titulo);
+  --tamanho-base: 14px;  /* raiz da escala rem */
+  --t-3: .75rem;   /* rodapé, rótulo de eixo, log */
+  --t-2: .8rem;    /* legenda, ajuda, marcador */
+  --t-1: .875rem;  /* tabela, formulário compacto */
+  --t0: 1rem;      /* texto */
+  --t1: 1.1rem;    /* h2 de cartão, título de diálogo */
+  --t2: 1.25rem;   /* marca na barra, número de destaque pequeno */
+  --t3: 1.5rem;    /* h1 de tela */
+  --t4: 2rem;      /* h1 da página inicial */
+  --linha: 1.5;
+  --linha-justa: 1.3;
+
+  /* espaço (escala de 6 degraus + fio) */
+  --e0: 2px;
+  --e1: .2rem; --e2: .4rem; --e3: .6rem; --e4: .85rem; --e5: 1.25rem; --e6: 1.75rem;
+
+  /* forma */
+  --raio: var(--i-raio);
+  --raio-pilula: 999px;
+  --foco-largura: 2px;
+  --foco-recuo: 2px;
+  --borda-largura: 1px;
+  --borda-destaque: 3px;   /* item ativo na navegação, aviso com borda lateral */
+  --lateral-largura: 232px;
+  --painel-lateral-largura: 520px;
+  --painel-inferior-altura: 390px;  /* painel do mapa em celular (UX-04) */
+}
+
+/* ------------------------------------------------------------------ marca d'água de instrumento: tique de canto */
 .instrumento-moldura { position: relative; }
 .instrumento-moldura::before {
   content: "";
@@ -151,10 +235,10 @@
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(var(--i-acento), var(--i-acento)), linear-gradient(var(--i-acento), var(--i-acento)),
-    linear-gradient(var(--i-acento), var(--i-acento)), linear-gradient(var(--i-acento), var(--i-acento)),
-    linear-gradient(var(--i-acento), var(--i-acento)), linear-gradient(var(--i-acento), var(--i-acento)),
-    linear-gradient(var(--i-acento), var(--i-acento)), linear-gradient(var(--i-acento), var(--i-acento));
+    linear-gradient(var(--acento), var(--acento)), linear-gradient(var(--acento), var(--acento)),
+    linear-gradient(var(--acento), var(--acento)), linear-gradient(var(--acento), var(--acento)),
+    linear-gradient(var(--acento), var(--acento)), linear-gradient(var(--acento), var(--acento)),
+    linear-gradient(var(--acento), var(--acento)), linear-gradient(var(--acento), var(--acento));
   background-repeat: no-repeat;
   background-size:
     var(--i-tique-espessura) var(--i-tique), var(--i-tique) var(--i-tique-espessura),

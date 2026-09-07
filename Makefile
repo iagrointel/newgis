@@ -77,3 +77,6 @@ e2e-worker:                                 ## testes lentos da fila (reinício 
 
 homolog:                                    ## item L7-31 (docs/HOMOLOGACAO.md): migra plat_homolog, sobe API+worker em :8154 e roda o e2e isolado; derruba tudo ao final
 	bash scripts/homolog_e2e.sh
+
+cobertura-ui:                               ## item UX-00: docs/COBERTURA_UI.md + docs/cobertura_ui_lacunas.json a partir da aplicação viva e de web/ (rode na trilha, com o .env dela carregado); --registrar cria os itens UX-<n> das lacunas
+	$(VENV)/python docs/gerar_cobertura_ui.py
