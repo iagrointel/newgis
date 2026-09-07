@@ -1,0 +1,139 @@
+{
+ "item": "L6-03-paridade-conectores",
+ "medidas": {
+  "urls_referencia": {
+   "valor": 20,
+   "unidade": "URLs",
+   "comando": "venv/bin/python scripts/paridade_urls_testar.py (GET com httpx, até 5 redirecionamentos)"
+  },
+  "urls_200_na_data": {
+   "valor": 20,
+   "unidade": "URLs",
+   "comando": "venv/bin/python scripts/paridade_urls_testar.py (GET com httpx, até 5 redirecionamentos)"
+  }
+ },
+ "urls": [
+  {
+   "chave": "E11-mv-tipos",
+   "url": "https://enterprise.arcgis.com/en/portal/11.4/use/add-layers-mv.htm",
+   "http": 200,
+   "url_final": "https://enterprise.arcgis.com/en/portal/11.4/use/add-layers-mv.htm"
+  },
+  {
+   "chave": "E11-mv-url",
+   "url": "https://enterprise.arcgis.com/en/portal/11.4/use/add-layers-from-url.htm",
+   "http": 200,
+   "url_final": "https://enterprise.arcgis.com/en/portal/11.4/use/add-layers-from-url.htm"
+  },
+  {
+   "chave": "E11-mv-add",
+   "url": "https://enterprise.arcgis.com/en/portal/11.4/use/add-layers.htm",
+   "http": 200,
+   "url_final": "https://enterprise.arcgis.com/en/portal/11.4/use/add-layers.htm"
+  },
+  {
+   "chave": "E11-add-items",
+   "url": "https://enterprise.arcgis.com/en/portal/11.4/use/add-items.htm",
+   "http": 200,
+   "url_final": "https://enterprise.arcgis.com/en/portal/11.4/use/add-items.htm"
+  },
+  {
+   "chave": "E11-datastore",
+   "url": "https://enterprise.arcgis.com/en/portal/11.4/use/data-store-items.htm",
+   "http": 200,
+   "url_final": "https://enterprise.arcgis.com/en/portal/11.4/use/data-store-items.htm"
+  },
+  {
+   "chave": "E11-datastore-add",
+   "url": "https://enterprise.arcgis.com/en/portal/11.4/use/add-data-store-item.htm",
+   "http": 200,
+   "url_final": "https://enterprise.arcgis.com/en/portal/11.4/use/add-data-store-item.htm"
+  },
+  {
+   "chave": "E11-living-atlas",
+   "url": "https://enterprise.arcgis.com/en/portal/11.4/use/what-is-living-atlas.htm",
+   "http": 200,
+   "url_final": "https://enterprise.arcgis.com/en/portal/11.4/use/what-is-living-atlas.htm"
+  },
+  {
+   "chave": "E11-living-atlas-admin",
+   "url": "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-living-atlas-content.htm",
+   "http": 200,
+   "url_final": "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-living-atlas-content.htm"
+  },
+  {
+   "chave": "BA-living-atlas",
+   "url": "https://doc.arcgis.com/en/business-analyst/web/understand-arcgis-living-atlas.htm",
+   "http": 200,
+   "url_final": "https://doc.arcgis.com/en/business-analyst/web/understand-arcgis-living-atlas.htm"
+  },
+  {
+   "chave": "DP-about",
+   "url": "https://doc.arcgis.com/en/data-pipelines/latest/get-started/about-data-pipelines.htm",
+   "http": 200,
+   "url_final": "https://doc.arcgis.com/en/data-pipelines/latest/get-started/about-data-pipelines.htm"
+  },
+  {
+   "chave": "DP-editor",
+   "url": "https://doc.arcgis.com/en/data-pipelines/latest/get-started/data-pipelines-editor.htm",
+   "http": 200,
+   "url_final": "https://doc.arcgis.com/en/data-pipelines/latest/get-started/data-pipelines-editor.htm"
+  },
+  {
+   "chave": "DP-faq",
+   "url": "https://doc.arcgis.com/en/data-pipelines/latest/get-started/faq.htm",
+   "http": 200,
+   "url_final": "https://doc.arcgis.com/en/data-pipelines/latest/get-started/faq.htm"
+  },
+  {
+   "chave": "DP-tarefas",
+   "url": "https://doc.arcgis.com/en/data-pipelines/latest/get-started/schedule-data-pipeline-tasks.htm",
+   "http": 200,
+   "url_final": "https://doc.arcgis.com/en/data-pipelines/latest/get-started/schedule-data-pipeline-tasks.htm"
+  },
+  {
+   "chave": "PRO-interop",
+   "url": "https://pro.arcgis.com/en/pro-app/3.4/help/data/data-interoperability/what-is-the-data-interoperability-extension.htm",
+   "http": 200,
+   "url_final": "https://pro.arcgis.com/en/pro-app/3.4/help/data/data-interoperability/what-is-the-data-interoperability-extension.htm"
+  },
+  {
+   "chave": "PRO-interop-formatos",
+   "url": "https://pro.arcgis.com/en/pro-app/3.4/help/data/data-interoperability/supported-formats-with-the-data-interoperability-extension.htm",
+   "http": 200,
+   "url_final": "https://pro.arcgis.com/en/pro-app/3.4/help/data/data-interoperability/supported-formats-with-the-data-interoperability-extension.htm"
+  },
+  {
+   "chave": "GS-cascade",
+   "url": "https://docs.geoserver.org/stable/en/user/data/cascaded/index.html",
+   "http": 200,
+   "url_final": "https://docs.geoserver.org/stable/en/user/data/cascaded/index.html"
+  },
+  {
+   "chave": "E11-geojson",
+   "url": "https://enterprise.arcgis.com/en/portal/11.4/use/geojson.htm",
+   "http": 200,
+   "url_final": "https://enterprise.arcgis.com/en/portal/11.4/use/geojson.htm"
+  },
+  {
+   "chave": "E11-kml",
+   "url": "https://enterprise.arcgis.com/en/portal/11.4/use/kml.htm",
+   "http": 200,
+   "url_final": "https://enterprise.arcgis.com/en/portal/11.4/use/kml.htm"
+  },
+  {
+   "chave": "AGOL-geojson",
+   "url": "https://doc.arcgis.com/en/arcgis-online/reference/geojson.htm",
+   "http": 200,
+   "url_final": "https://doc.arcgis.com/en/arcgis-online/reference/geojson.htm"
+  },
+  {
+   "chave": "AGOL-kml",
+   "url": "https://doc.arcgis.com/en/arcgis-online/reference/kml.htm",
+   "http": 200,
+   "url_final": "https://doc.arcgis.com/en/arcgis-online/reference/kml.htm"
+  }
+ ],
+ "gerado_em": "2026-09-07T21:59:33Z",
+ "git_sha": "5e89faa4268e"
+}
