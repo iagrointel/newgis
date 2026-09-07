@@ -40,18 +40,3 @@ REVOKE ALL ON FUNCTION plat.log_registrar(int, int, int, text, text, text, int, 
 GRANT EXECUTE ON FUNCTION plat.log_registrar(int, int, int, text, text, text, int, bigint, int, text, text, text)
   TO plat_app;
 
--- A sobrecarga de 11 argumentos continua existindo para quem ainda a chama (tests/api/test_rls.py,
--- tests/api/test_funcoes_seguras.py e qualquer base já migrada): passa a delegar na de 12 com req_id nulo,
--- para haver UM só caminho de INSERT em plat.log_acesso.
-CREATE OR REPLACE FUNCTION plat.log_registrar(p_tenant int, p_usuario int, p_token int, p_ip text, p_metodo text,
-  p_rota text, p_status int, p_bytes bigint, p_tempo_ms int, p_agente text, p_resultado text)
-RETURNS void
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = plat, public AS $$
-BEGIN
-  PERFORM plat.log_registrar(p_tenant, p_usuario, p_token, p_ip, p_metodo, p_rota, p_status, p_bytes, p_tempo_ms,
-                             p_agente, p_resultado, NULL);
-END $$;
-REVOKE ALL ON FUNCTION plat.log_registrar(int, int, int, text, text, text, int, bigint, int, text, text)
-  FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION plat.log_registrar(int, int, int, text, text, text, int, bigint, int, text, text)
-  TO plat_app;

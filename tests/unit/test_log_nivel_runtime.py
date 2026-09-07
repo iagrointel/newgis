@@ -119,7 +119,8 @@ def test_volume_muda_em_tempo_de_execucao_sem_reiniciar(arquivo_nivel, raiz_limp
     assert com_erro == 10
     medida = {"chamadas_por_lote": 40, "linhas_no_padrao_WARNING": padrao,
               "linhas_com_override_DEBUG": len(com_debug), "linhas_com_override_ERROR": com_erro}
-    assert medida["linhas_com_override_DEBUG"] > medida["linhas_no_padrao_WARNING"] > medida["linhas_com_override_ERROR"]
+    assert (medida["linhas_com_override_DEBUG"] > medida["linhas_no_padrao_WARNING"]
+            > medida["linhas_com_override_ERROR"])
 
 
 def test_arquivo_ilegivel_nao_derruba_nem_prende_o_nivel(arquivo_nivel, raiz_limpa):

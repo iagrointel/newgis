@@ -33,6 +33,14 @@ from app.schema_ambiente import CursorSchemaAmbiente
 from app.settings import settings
 from app.versao import git_sha_curto, versao
 
+
+def req_id_do_job(job: dict) -> str | None:
+    """Item L7-06-c: o identificador do pedido que enfileirou o job vive em `proveniencia.req_id`
+    (app/jobs/servico.py). Job criado por agenda ou pelo próprio sistema não tem pedido de origem e
+    devolve None — o campo simplesmente não sai na linha JSON (app/log.py só escreve o que não é nulo)."""
+    prov = job.get("proveniencia")
+    return prov.get("req_id") if isinstance(prov, dict) else None
+
 ROOT = Path(__file__).resolve().parents[2]
 log = logging.getLogger("plat.worker")
 
@@ -350,7 +358,7 @@ class Worker:
         self.filhos[pid] = Filho(pid, job, r)
         self.sql("SELECT plat.job_pid(%s, %s, %s)", (job["id"], self.nome, pid))
         log.info("job iniciado", extra={"job_id": str(job["id"]), "tipo": job["tipo"], "tenant_id": job["tenant_id"],
-                                        "pid_filho": pid})
+                                        "pid_filho": pid, "req_id": req_id_do_job(job)})
 
     # ---------------------------------------------------------------- fim de um filho
     def _proveniencia(self, job: dict, saida: dict) -> dict:
@@ -420,7 +428,7 @@ class Worker:
             mod_filho.apagar_dir(self.dir_jobs, job["id"])
         log.info("job terminou: %s (código %s)", estado, codigo,
                  extra={"job_id": str(job["id"]), "tipo": job["tipo"], "tenant_id": job["tenant_id"],
-                        "pid_filho": f.pid})
+                        "pid_filho": f.pid, "req_id": req_id_do_job(job)})
 
     # ---------------------------------------------------------------- parada
     def _parar(self) -> None:

@@ -13,6 +13,7 @@ import psycopg2.extras
 from pydantic import ValidationError
 
 from app import db as banco
+from app import log as plat_log
 from app.jobs import agenda as mod_agenda
 from app.jobs.contexto import ErroServico, Sessao
 from app.jobs.registro import REGISTRO, Tarefa, chave_de, descrever, ordem_perfil, validar_parametros
@@ -116,7 +117,13 @@ def criar(sessao: Sessao, tipo: str, parametros, prioridade: int = 5, agendado_p
     if not isinstance(prioridade, int) or not 1 <= prioridade <= 9:
         raise ErroServico(422, "prioridade_invalida", "prioridade deve ser inteiro de 1 (primeiro) a 9")
     quando = _data(agendado_para, "agendado_para")
+    # item L7-06-c: o identificador do pedido que enfileirou o job entra na proveniência (coluna que já
+    # existe e já é mesclada, não uma coluna nova). É o que liga a linha do worker à linha da API e à do
+    # nginx em `plat logs --req-id`; sem ele o trabalho pesado fica órfão do pedido que o pediu.
     prov = {"repetido_de": str(repetido_de)} if repetido_de else None
+    rid = plat_log.req_id_atual()
+    if rid:
+        prov = {**(prov or {}), "req_id": rid}
     with banco.db(sessao.ctx) as cur:
         cur.execute("SELECT plat.cota_jobs_dia(%s) AS cota, "
                     "(SELECT count(*) FROM plat.job WHERE criado_em >= "

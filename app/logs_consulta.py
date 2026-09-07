@@ -156,7 +156,8 @@ def _do_arquivo(fonte: Fonte) -> list[tuple[datetime.datetime | None, str]]:
         return []
 
 
-def reunir(req_id: str, *, desde: str = "-24h", ate: str | None = None, especificacao: str | None = None) -> list[Linha]:
+def reunir(req_id: str, *, desde: str = "-24h", ate: str | None = None,
+           especificacao: str | None = None) -> list[Linha]:
     """Todas as linhas dos serviços configurados que citam o pedido, em ordem de relógio. Linha sem
     horário legível fica no fim do bloco do próprio serviço, nunca é descartada nem inventada."""
     alvos = anzois(req_id)

@@ -22,8 +22,21 @@ def versao() -> str:
     return _ler(ROOT / "VERSAO") or "0.0.0"
 
 
-def _sha_do_git() -> str | None:
+def _diretorio_git() -> Path:
+    """Num clone comum `.git` é diretório; num WORKTREE do git é um ARQUIVO com a linha
+    `gitdir: /caminho/.git/worktrees/<nome>`. Sem seguir essa linha, toda árvore de trabalho paralela
+    fica sem sha e o worker recusa a subir — foi o que aconteceu na banca do item L7-06-c."""
     git = ROOT / ".git"
+    if git.is_file():
+        conteudo = (_ler(git) or "")
+        if conteudo.startswith("gitdir:"):
+            apontado = Path(conteudo.split(":", 1)[1].strip())
+            return apontado if apontado.is_absolute() else (ROOT / apontado)
+    return git
+
+
+def _sha_do_git() -> str | None:
+    git = _diretorio_git()
     head = _ler(git / "HEAD")
     if not head:
         return None
@@ -33,7 +46,12 @@ def _sha_do_git() -> str | None:
     direto = _ler(git / ref)
     if direto and _HEX.match(direto):
         return direto
-    empacotadas = _ler(git / "packed-refs") or ""
+    comum = _ler(git / "commondir")
+    raiz_comum = (git / comum).resolve() if comum else git
+    direto = direto or _ler(raiz_comum / ref)
+    if direto and _HEX.match(direto):
+        return direto
+    empacotadas = _ler(raiz_comum / "packed-refs") or ""
     for linha in empacotadas.splitlines():
         partes = linha.split()
         if len(partes) == 2 and partes[1] == ref and _HEX.match(partes[0]):

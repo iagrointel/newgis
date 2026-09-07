@@ -5,6 +5,7 @@ Aqui a prova é da REUNIÃO e da ORDEM sobre linhas no formato real de cada serv
 A prova de que os serviços de verdade emitem essas linhas está em tests/api/test_logs_req_id_banca.py.
 """
 
+import argparse
 import json
 
 import pytest
@@ -100,5 +101,5 @@ def test_cli_converte_prazo():
     assert cli.minutos("30s") == 0.5
     assert cli.minutos("2h") == 120.0
     assert cli.minutos("7") == 7.0
-    with pytest.raises(Exception):
+    with pytest.raises(argparse.ArgumentTypeError):
         cli.minutos("depois")

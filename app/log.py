@@ -92,7 +92,8 @@ def definir_override(componente: str, nivel: str, minutos: float | None = None) 
         "componente": componente,
         "nivel": nivel,
         "definido_em": _agora().isoformat(timespec="seconds"),
-        "expira_em": (_agora() + datetime.timedelta(minutes=minutos)).isoformat(timespec="seconds") if minutos else None,
+        "expira_em": ((_agora() + datetime.timedelta(minutes=minutos)).isoformat(timespec="seconds")
+                      if minutos else None),
     }
     overrides.append(registro)
     _escrever_overrides(caminho, overrides)
