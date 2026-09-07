@@ -96,6 +96,11 @@ export class Catalogo {
   reordenar(ids) {
     const validos = ids.filter((id) => this.ativas.includes(id));
     if (validos.length !== this.ativas.length) return false;
+    // Aviso só quando a ordem MUDOU de verdade. Sem esta guarda o desenho da tela do mapa entra em recursão
+    // infinita ("Maximum call stack size exceeded") e a árvore de camadas fica vazia: a árvore ouve o catálogo
+    // (`catalogo.aoMudar` em web/js/camadas.js) e, ao ser avisada, chama `_aplicarOrdemNoMapa`, que chama esta
+    // função de volta. Com a ordem já igual — inclusive NENHUMA camada ligada (listas vazias) — o ciclo nunca fecha.
+    if (validos.every((id, i) => this.ativas[i] === id)) { this.aplicarOrdem(); return true; }
     this.ativas = validos;
     this.aplicarOrdem();
     this._avisar();
