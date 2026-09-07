@@ -1,0 +1,42 @@
+{
+ "item": "L0-06-d-exportar-inquilino",
+ "medidas": {
+  "duracao_s": {
+   "valor": 0.55,
+   "unidade": "s",
+   "comando": "pedir + esperar pronta (tests/api/exportacao_inquilino)"
+  },
+  "carga_1min": {
+   "valor": 12.02,
+   "unidade": "carga",
+   "comando": "os.getloadavg()[0] no fim da exportação (12 núcleos)"
+  },
+  "ram_livre_gb": {
+   "valor": 0.4,
+   "unidade": "GB",
+   "comando": "memória livre no fim da exportação"
+  },
+  "bytes": {
+   "valor": 23782,
+   "unidade": "bytes",
+   "comando": "tamanho do pacote final (dados.gpkg + catalogo.json + arquivos.zip + manifesto.json)"
+  },
+  "n_itens": {
+   "valor": 2,
+   "unidade": "itens",
+   "comando": "itens do inquilino de teste no catálogo exportado"
+  },
+  "n_camadas": {
+   "valor": 1,
+   "unidade": "camadas",
+   "comando": "camadas hospedadas escritas no GeoPackage"
+  },
+  "n_arquivos": {
+   "valor": 1,
+   "unidade": "arquivos",
+   "comando": "arquivos do bucket zipados"
+  }
+ },
+ "gerado_em": "2026-09-07T22:23:37Z",
+ "git_sha": "c3d32d404e57"
+}

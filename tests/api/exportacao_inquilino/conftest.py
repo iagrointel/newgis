@@ -32,3 +32,21 @@ def camada_a(env, inquilino_a):
     """Uma camada hospedada pequena no inquilino de teste — o suficiente para o GeoPackage do pacote sair
     com N=1 camada e provar a cláusula "N camadas do catálogo", sem o custo de 100 mil feições do L0-04-h."""
     return semear_camada(env, inquilino_a, 500, "zt camada do inquilino (exportacao completa)")
+
+
+@pytest.fixture(scope="session")
+def arquivo_a(inquilino_a):
+    """Um arquivo de verdade no bucket do inquilino, pelo fluxo do produto (`POST /api/uploads` ->
+    `PUT .../partes/1` -> `POST .../concluir`, o mesmo `Uploader` do item L0-04-a). Sem ele o pacote sairia com
+    `arquivos.zip` vazio e a cláusula "os arquivos do bucket em zip por item" ficaria sem prova."""
+    from tests.api.uploads.test_uploads import Uploader
+
+    up = Uploader(inquilino_a.admin)
+    conteudo = ("id,nome\n" + "\n".join(f"{i},zt {i}" for i in range(200))).encode("utf-8")
+    r = up.iniciar("zt-arquivo-do-inquilino.csv", conteudo, "csv")
+    upload_id = r.json()["id"]
+    for resposta in up.enviar_partes(upload_id, conteudo, r.json()["parte_bytes"]):
+        assert resposta.status_code == 200, resposta.text
+    arquivo_id = up.concluir(upload_id).json()["arquivo_id"]
+    yield {"item_id": arquivo_id, "bytes": len(conteudo)}
+    up.liberar_token()
