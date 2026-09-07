@@ -27,7 +27,10 @@ LoadCredential=PLAT_SECRET_ANTERIOR:/etc/plat/segredos/PLAT_SECRET_ANTERIOR
 # admin_token configurado ainda) — settings.py trata arquivo vazio como chave opcional ausente.
 LoadCredential=PLAT_DSN:/etc/plat/segredos/PLAT_DSN
 LoadCredential=PLAT_GARAGE_ADMIN_TOKEN:/etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN
-ExecStart=APP_DIR/venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port PORTA --workers 2 --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-access-log
+# --fd 3: o soquete quem abre é o systemd (deploy/plat-api.socket, item L7-19) — durante `systemctl stop`
+# de uma rotação de segredo a conexão nova espera na fila do kernel (ativação sob demanda) em vez de
+# levar refused/502. Spike medido: parada de 3 s atendida com 200 em ~1 s, 0 erro.
+ExecStart=APP_DIR/venv/bin/python -m uvicorn app.main:app --fd 3 --workers 2 --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-access-log
 Restart=on-failure
 RestartSec=3
 MemoryHigh=768M

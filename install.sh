@@ -305,7 +305,14 @@ echo "cota_jobs_dia dos inquilinos de demonstração garantida (100000)"
 
 echo "== h. systemd $UNIDADE"
 sed -e "s#APP_DIR#$APP_DIR#g" -e "s#APP_USER#$APP_USER#g" -e "s#PORTA#$PORTA#g" deploy/plat-api.service > /etc/systemd/system/$UNIDADE.service
+# soquete de ativação (item L7-19): o systemd passa a segurar a :PORTA; a API recebe o fd 3. Em instalação
+# EXISTENTE a sequência para->soquete->sobe troca quem escuta a porta com uma janela de ~1-2 s em que a
+# conexão nova espera na fila do kernel (não leva refused) — é o mesmo mecanismo que a rotação de
+# PLAT_DSN usa depois para nunca devolver 5xx.
+sed -e "s#PORTA#$PORTA#g" deploy/plat-api.socket > /etc/systemd/system/$UNIDADE.socket
 systemctl daemon-reload
+systemctl stop $UNIDADE.service 2>/dev/null || true
+systemctl enable -q --now $UNIDADE.socket
 systemctl enable -q $UNIDADE
 systemctl restart $UNIDADE
 for i in $(seq 1 30); do
@@ -327,6 +334,13 @@ for i in $(seq 1 30); do
   sleep 1
 done
 systemctl --no-pager --lines=0 status plat-worker | sed -n '1,4p'
+
+echo "== h3. timer de expiração do PLAT_SECRET_ANTERIOR (item L7-19: a dupla-chave vale 24 h de verdade)"
+sed -e "s#APP_DIR#$APP_DIR#g" deploy/plat-segredo-expira.service > /etc/systemd/system/plat-segredo-expira.service
+install -m 0644 deploy/plat-segredo-expira.timer /etc/systemd/system/plat-segredo-expira.timer
+systemctl daemon-reload
+systemctl enable -q --now plat-segredo-expira.timer
+systemctl list-timers plat-segredo-expira.timer --no-pager | sed -n '1,3p'
 
 echo "== h3. systemd plat-osrm-guarulhos (item L2-11-c; recorte de teste <= 50 MB, nunca as bases de outra frente)"
 if [ ! -f osrm/guarulhos.osrm ]; then

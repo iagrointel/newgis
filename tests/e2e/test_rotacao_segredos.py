@@ -36,8 +36,30 @@ def _todos_5xx(bruta: dict) -> int:
     total = 0
     for v in bruta["rotacoes"].values():
         restarts = [v["restart"]] if v.get("restart") else v.get("restart_cadeia", [])
+        restarts = restarts + ([v["restart_worker"]] if v.get("restart_worker") else [])
         total += sum(r["codigo_5xx"] for r in restarts)
     return total
+
+
+def _restarts_falhados(bruta: dict) -> list[str]:
+    falhados = []
+    for nome, v in bruta["rotacoes"].items():
+        restarts = [v["restart"]] if v.get("restart") else v.get("restart_cadeia", [])
+        restarts = restarts + ([v["restart_worker"]] if v.get("restart_worker") else [])
+        falhados += [f"{nome}:{r['unidade']}" for r in restarts if r.get("restart_falhou")]
+    return falhados
+
+
+def _todos_5xx_k6(bruta: dict) -> tuple[int, int]:
+    """A régua da cláusula é o k6 (processo separado do medido); o martelo interno do
+    segredo_rotacionar.py fica como segunda testemunha. Devolve (5xx somados, requisições somadas)."""
+    cinco_xx = 0
+    requisicoes = 0
+    for nome, v in bruta["rotacoes"].items():
+        assert "k6" in v, f"rotação {nome} sem medição k6 — a cláusula exige k6, não substituto"
+        cinco_xx += v["k6"]["codigo_5xx"]
+        requisicoes += v["k6"]["requisicoes"]
+    return cinco_xx, requisicoes
 
 
 @pytest.fixture(autouse=True)
@@ -53,6 +75,13 @@ def test_quatro_segredos_com_restart_rotacionam_sem_5xx_e_invalidam_o_valor_anti
     bruta = json.loads((ROOT / "tests" / "medidas" / "_prova_segredos_bruta.json").read_text(encoding="utf-8"))
     assert bruta["status"] == "ok", bruta
     assert _todos_5xx(bruta) == 0, "houve resposta 5xx durante alguma rotação com restart"
+    assert _restarts_falhados(bruta) == [], "algum restart/start falhou de verdade (systemctl != 0)"
+    cinco_xx_k6, requisicoes_k6 = _todos_5xx_k6(bruta)
+    assert cinco_xx_k6 == 0, "o k6 mediu resposta 5xx durante alguma rotação"
+    assert requisicoes_k6 > 400, (
+        f"k6 fez só {requisicoes_k6} requisições nas 4 rotações — martelo fraco demais para provar "
+        "que '0 5xx' não é acaso de janela vazia"
+    )
 
     rot = bruta["rotacoes"]
     assert rot["PLAT_DSN"]["senha_antiga_ainda_autentica"] is False

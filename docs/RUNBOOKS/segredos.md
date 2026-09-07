@@ -18,15 +18,26 @@ curl -s http://127.0.0.1:8150/saude | head -c 300; echo
 Se algum dos dois não estiver `active`, resolva isso primeiro — rotacionar um segredo com o serviço já
 caído não tem como provar "o serviço não caiu".
 
+Pré-requisito só da PROVA (não da rotação em si): o binário do k6 — o portão do item exige "0 erro 5xx
+durante a rotação, medido pelo k6 curto". Nesta máquina está em `/home/dev/tools/k6/k6` (tar.gz de
+github.com/grafana/k6/releases, linux-amd64); fora dela, aponte `PLAT_K6=<caminho>` ou ponha `k6` no
+PATH. `tests/e2e/test_rotacao_segredos.py` falha com mensagem nomeada se não achar o binário — nunca
+passa com régua substituta.
+
 ## 1. `PLAT_SECRET` (chave de cifra/HMAC da aplicação)
 
 **O que quebra**: nenhuma URL assinada de objeto emitida ANTES da rotação (a cliente pede outra, sem
 estado a limpar) nem sessão TOTP/LDAP/SMTP/conexão externa (o valor antigo continua legível por 24h
 como `PLAT_SECRET_ANTERIOR` — dupla-chave). Depois das 24h, quem tinha algo cifrado só com o valor de
 DUAS rotações atrás perde acesso (recadastra 2FA, reconfigura LDAP/SMTP/conexão) — normal, é a janela.
+**As 24 h são automáticas**: a rotação grava o carimbo em `PLAT_SECRET_ANTERIOR_EM` e o timer
+`plat-segredo-expira.timer` (de hora em hora) esvazia o ANTERIOR e reinicia API e worker na virada —
+janela efetiva de 24 h a 24 h 59 min (granularidade do timer). O worker TAMBÉM reinicia na rotação:
+ele carrega a chave uma única vez na subida e decifra SMTP/conexão dentro de jobs — sem o restart ele
+ficaria semanas com a chave velha e não leria o que a API re-cifrar com a nova.
 
 ```
-sudo scripts/plat segredo rotacionar PLAT_SECRET
+sudo scripts/plat segredo rotacionar PLAT_SECRET --unidade-worker plat-worker --porta-worker 8153
 ```
 
 Confirme:
@@ -44,8 +55,23 @@ sudo truncate -s 0 /etc/plat/segredos/PLAT_SECRET_ANTERIOR
 
 ## 2. `PLAT_DSN` (senha da role `plat_app` no Postgres)
 
-**O que quebra**: nada em produção normal — a troca de senha e o restart de `plat-api` acontecem juntos,
-não há usuário conectado diretamente com essa role fora da própria API.
+**Como o script evita qualquer 5xx**: trocar senha de role tem uma contradição — depois do
+`ALTER ROLE` e antes de cada serviço subir com a credencial nova, quem atende com a senha velha leva
+erro do banco (a sequência "restart em cadeia" deixou 57 respostas 500 nessa janela, medidas pelo k6
+na prova do item; parar o serviço não resolve, porque com ativação por soquete a própria conexão do
+cliente o religa com a credencial velha). O script abre uma **janela `trust` de segundos no pg_hba**
+(só aquela role, só aquele banco, só 127.0.0.1, linha marcada `# plat-rotacao-temporaria`), troca a
+senha, grava a credencial, reinicia `plat-api` e `plat-worker`, e só então remove a linha — velho e
+novo autenticam durante a troca; a senha velha morre quando a janela fecha (a prova confere isso
+depois da remoção). **Custo assumido**: durante ~2-5 s, um processo LOCAL conecta como `plat_app` sem
+senha — janela curta, só localhost, só uma role, remoção garantida por `finally`. Rode em horário de
+baixa se isso pesar na sua avaliação de risco.
+
+**Ativação por soquete**: com `plat-api.socket` ativo (instalado pelo `install.sh` desta versão),
+quem chama a API durante o restart espera na fila do kernel e recebe a resposta segundos depois, sem
+erro. Confira com `systemctl is-active plat-api.socket`; numa máquina instalada antes desta versão,
+rode `sudo bash install.sh <dominio> <porta>` uma vez para ativar (sem o soquete, a janela do restart
+é connection refused de ~1-2 s, e 502 no nginx).
 
 ```
 sudo scripts/plat segredo rotacionar PLAT_DSN
@@ -53,13 +79,17 @@ sudo scripts/plat segredo rotacionar PLAT_DSN
 
 Confirme:
 ```
+systemctl is-active plat-api.socket plat-api plat-worker
+sudo grep -c plat-rotacao-temporaria /etc/postgresql/16/main/pg_hba.conf   # tem de ser 0 (janela fechada)
 curl -s http://127.0.0.1:8150/saude | head -c 300; echo    # 200, banco ok
 ```
 
 ## 3. `PLAT_DSN_WORKER` (senha da role `plat_worker`, autoridade sobre estado de job)
 
 Rotacione se suspeitar que alguém obteve essa senha (ela sozinha basta para terminar/devolver job de
-QUALQUER inquilino, achado do adversário do T2 — não há segunda checagem).
+QUALQUER inquilino, achado do adversário do T2 — não há segunda checagem). Mesma janela `trust` de
+segundos da seção 2, agora para a role `plat_worker`; o worker reinicia e os jobs em andamento são
+devolvidos (`reinicios += 1`) e retomados — não são perdidos, só atrasam alguns segundos.
 
 ```
 sudo scripts/plat segredo rotacionar PLAT_DSN_WORKER
@@ -89,6 +119,14 @@ Confirme:
 sudo systemctl is-active plataforma-garage plat-api
 curl -s http://127.0.0.1:8150/saude | head -c 300; echo
 ```
+
+**Ressalva declarada (lida pelo adversário do item):** o `garage.toml` do daemon continua com
+`admin_token` e `rpc_secret` em texto — o Garage não aceita `LoadCredential=` para a própria
+configuração, e o arquivo é da frente `plataforma/pipeline` (regra da casa: nunca editar). A
+mitigação é a que existe: `0600`, dono `dev` (o mesmo usuário do daemon), e o `plat` nunca lê esse
+arquivo em operação — o `install.sh` só copia o token dele para `/etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN`
+(root 0600), que é o que as unidades `plat-*` recebem por `LoadCredential=`. O segredo que o PRODUTO
+usa está fora de texto plano; o do daemon é fronteira da outra frente.
 
 ## 5. Chave S3 de um inquilino (`PLAT_GARAGE_CHAVE_S3:<slug>`)
 

@@ -162,69 +162,126 @@ def rotacionar_plat_secret(args) -> dict:
     # se o processo morrer entre as duas escritas, o pior caso é ANTERIOR == atual antigo (settings.py já
     # trata ANTERIOR igual a atual como "sem anterior", nunca como erro).
     _gravar_credential(cred / "PLAT_SECRET_ANTERIOR", atual)
+    _gravar_credential(cred / "PLAT_SECRET_ANTERIOR_EM", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
     _gravar_credential(cred / "PLAT_SECRET", novo)
     medicao = reiniciar_e_medir(args.unidade_api, args.porta_api)
-    return {
+    resultado = {
         "segredo": "PLAT_SECRET",
         "sha_antigo": sha_curto(atual),
         "sha_novo": sha_curto(novo),
         "sha_anterior_gravado": sha_curto(_ler(cred / "PLAT_SECRET_ANTERIOR")),
         "restart": medicao.como_dict(),
     }
+    if args.unidade_worker:
+        # o worker carrega settings UMA vez no import e decifra SMTP/conexao DENTRO de jobs: sem restart
+        # ele ficaria com a chave VELHA como atual por semanas (achado do adversário do T7) — tudo que a
+        # API re-cifrasse com a chave nova viraria ilegível nos jobs. A dupla-chave cobre a leitura do
+        # que já estava cifrado durante as 24 h; o restart fecha a escrita.
+        medicao_worker = reiniciar_e_medir(args.unidade_worker, args.porta_worker)
+        resultado["restart_worker"] = medicao_worker.como_dict()
+    return resultado
+
+
+MARCA_CONFIANCA = "plat-rotacao-temporaria"
+
+
+def _recarrega_pg() -> None:
+    subprocess.run(
+        ["sudo", "-u", "postgres", "psql", "-Atc", "SELECT pg_reload_conf()"],
+        check=True, capture_output=True, text=True,
+    )
+
+
+def _confianca_abrir(args, role: str) -> None:
+    """Janela `trust` no pg_hba só para ESTA role, ESTE banco, 127.0.0.1, medida em segundos.
+
+    Por que existe: trocar a senha de uma role tem uma contradição inevitável — depois do ALTER ROLE e
+    antes de cada consumidor subir com a credencial nova, quem atende com a senha velha leva 500 (57
+    medidos pelo k6 com restart em cadeia; 1.334 com stop simples, porque com socket activation a
+    PRÓPRIA conexão do cliente religa o serviço sob demanda com a credencial velha; e mask --runtime
+    NÃO impede a religação de unidade estática — spike medido 07/09: start em unidade mascarada saiu
+    com exit 0). A janela trust desfaz a contradição: durante os ~2-5 s da troca, velho e novo
+    autenticam; depois que as consumidoras já rodam com a credencial nova, a linha sai e a senha velha
+    morre de verdade (a prova confere `senha_antiga_ainda_autentica is False` DEPOIS da remoção).
+    Custo declarado: durante a janela, qualquer processo LOCAL conecta como a role sem senha — janela
+    de segundos, só 127.0.0.1, só a role nomeada, linha com marca própria e remoção em finally."""
+    pg_hba = Path(args.pg_hba)
+    linhas = pg_hba.read_text(encoding="utf-8").splitlines(keepends=True)
+    i = 0
+    while i < len(linhas) and (not linhas[i].strip() or linhas[i].lstrip().startswith("#")):
+        i += 1
+    linhas.insert(i, f"host {args.db} {role} 127.0.0.1/32 trust # {MARCA_CONFIANCA}\n")
+    pg_hba.write_text("".join(linhas), encoding="utf-8")
+    _recarrega_pg()
+
+
+def _confianca_fechar(args, role: str) -> None:  # noqa: ARG001 — role fica na assinatura p/ simetria
+    pg_hba = Path(args.pg_hba)
+    texto = pg_hba.read_text(encoding="utf-8")
+    if MARCA_CONFIANCA not in texto:
+        return
+    linhas = [li for li in texto.splitlines(keepends=True) if MARCA_CONFIANCA not in li]
+    pg_hba.write_text("".join(linhas), encoding="utf-8")
+    _recarrega_pg()
+
+
+def _rotacionar_senha_role(args, role: str, credential: str, unidades: list[tuple[str, int]],
+                           nome_segredo: str) -> dict:
+    """Esqueleto comum de PLAT_DSN e PLAT_DSN_WORKER: janela trust -> ALTER -> credencial nova ->
+    sobe cada consumidora medindo -> fecha a janela -> prova que a velha morreu SEM a janela."""
+    cred = Path(args.cred_dir)
+    dsn_atual = _ler(cred / credential)
+    m = re.match(rf"^postgresql://{re.escape(role)}:([^@]+)@(.+)$", dsn_atual)
+    if not m:
+        raise SystemExit(f"{cred / credential} não tem a forma postgresql://{role}:<senha>@<resto>")
+    senha_antiga, resto = m.group(1), m.group(2)
+    senha_nova = secrets.token_hex(16)
+    dsn_novo = f"postgresql://{role}:{senha_nova}@{resto}"
+    try:
+        # abrir a janela DENTRO do try: se _recarrega_pg falhar depois de a linha trust já ter sido
+        # gravada, o finally remove a linha do arquivo (achado do adversário do T7: fora do try, a
+        # linha ficava no pg_hba e virava trust PERMANENTE no próximo reload)
+        _confianca_abrir(args, role)
+        _psql(args.db, f"ALTER ROLE {role} PASSWORD '{senha_nova}'")
+        _gravar_credential(cred / credential, dsn_novo)
+        cadeia = []
+        for unidade, porta in unidades:
+            medicao = reiniciar_e_medir(unidade, porta)
+            cadeia.append(medicao.como_dict())
+    finally:
+        _confianca_fechar(args, role)
+    ainda_autentica_com_a_antiga = _autentica(f"postgresql://{role}:{senha_antiga}@{resto}")
+    autentica_com_a_nova = _autentica(dsn_novo)
+    resultado = {
+        "segredo": nome_segredo,
+        "sha_senha_antiga": sha_curto(senha_antiga),
+        "sha_senha_nova": sha_curto(senha_nova),
+        "senha_antiga_ainda_autentica": ainda_autentica_com_a_antiga,
+        "senha_nova_autentica": autentica_com_a_nova,
+    }
+    if len(cadeia) == 1:
+        resultado["restart"] = cadeia[0]
+    else:
+        resultado["restart_cadeia"] = cadeia
+    return resultado
 
 
 # ---------------------------------------------------------------- PLAT_DSN (senha de plat_app)
 def rotacionar_plat_dsn(args) -> dict:
-    cred = Path(args.cred_dir)
-    role = args.role_app
-    dsn_atual = _ler(cred / "PLAT_DSN")
-    m = re.match(rf"^postgresql://{re.escape(role)}:([^@]+)@(.+)$", dsn_atual)
-    if not m:
-        raise SystemExit(f"{cred / 'PLAT_DSN'} não tem a forma postgresql://{role}:<senha>@<resto>")
-    senha_antiga, resto = m.group(1), m.group(2)
-    senha_nova = secrets.token_hex(16)
-    dsn_novo = f"postgresql://{role}:{senha_nova}@{resto}"
-    _psql(args.db, f"ALTER ROLE {role} PASSWORD '{senha_nova}'")
-    _gravar_credential(cred / "PLAT_DSN", dsn_novo)
-    medicao_api = reiniciar_e_medir(args.unidade_api, args.porta_api)
-    cadeia = [medicao_api.como_dict()]
-    if args.unidade_worker:  # "reinício em cadeia": produção só precisa da API para PLAT_DSN, mas a
-        # prova do mecanismo (scripts/prova_segredos_l7_19.py) passa um segundo consumidor da MESMA role
-        # para provar que a cadeia de N unidades fecha sem erro, uma depois da outra, cada uma checada.
-        medicao_worker = reiniciar_e_medir(args.unidade_worker, args.porta_worker)
-        cadeia.append(medicao_worker.como_dict())
-    ainda_autentica_com_a_antiga = _autentica(f"postgresql://{role}:{senha_antiga}@{resto}")
-    return {
-        "segredo": "PLAT_DSN",
-        "sha_senha_antiga": sha_curto(senha_antiga),
-        "sha_senha_nova": sha_curto(senha_nova),
-        "senha_antiga_ainda_autentica": ainda_autentica_com_a_antiga,
-        "restart_cadeia": cadeia,
-    }
+    # consumidoras da role plat_app: a API e (na prova) um 2º consumidor da MESMA role, para a cadeia
+    # de N unidades fechar sem erro, uma depois da outra, cada uma checada
+    unidades = [(args.unidade_api, args.porta_api)]
+    if args.unidade_worker:
+        unidades.append((args.unidade_worker, args.porta_worker))
+    return _rotacionar_senha_role(args, args.role_app, "PLAT_DSN", unidades, "PLAT_DSN")
 
 
 # ---------------------------------------------------------------- PLAT_DSN_WORKER (senha de plat_worker)
 def rotacionar_plat_dsn_worker(args) -> dict:
-    cred = Path(args.cred_dir)
-    role = args.role_worker
-    dsn_atual = _ler(cred / "PLAT_DSN_WORKER")
-    m = re.match(rf"^postgresql://{re.escape(role)}:([^@]+)@(.+)$", dsn_atual)
-    if not m:
-        raise SystemExit(f"{cred / 'PLAT_DSN_WORKER'} não tem a forma postgresql://{role}:<senha>@<resto>")
-    senha_antiga, resto = m.group(1), m.group(2)
-    senha_nova = secrets.token_hex(16)
-    dsn_novo = f"postgresql://{role}:{senha_nova}@{resto}"
-    _psql(args.db, f"ALTER ROLE {role} PASSWORD '{senha_nova}'")
-    _gravar_credential(cred / "PLAT_DSN_WORKER", dsn_novo)
-    medicao = reiniciar_e_medir(args.unidade_worker, args.porta_worker)
-    ainda_autentica_com_a_antiga = _autentica(f"postgresql://{role}:{senha_antiga}@{resto}")
-    return {
-        "segredo": "PLAT_DSN_WORKER",
-        "sha_senha_antiga": sha_curto(senha_antiga),
-        "sha_senha_nova": sha_curto(senha_nova),
-        "senha_antiga_ainda_autentica": ainda_autentica_com_a_antiga,
-        "restart": medicao.como_dict(),
-    }
+    return _rotacionar_senha_role(
+        args, args.role_worker, "PLAT_DSN_WORKER",
+        [(args.unidade_worker, args.porta_worker)], "PLAT_DSN_WORKER",
+    )
 
 
 # ---------------------------------------------------------------- PLAT_GARAGE_ADMIN_TOKEN
@@ -344,6 +401,7 @@ def montar_argparse() -> argparse.ArgumentParser:
     r.add_argument("nome")
     r.add_argument("--cred-dir", default="/etc/plat/segredos")
     r.add_argument("--db", default=os.environ.get("PLAT_DB", "iagro_sat"))
+    r.add_argument("--pg-hba", default="/etc/postgresql/16/main/pg_hba.conf")
     r.add_argument("--unidade-api", default="plat-api")
     r.add_argument("--role-app", default="plat_app")
     r.add_argument("--role-worker", default="plat_worker")

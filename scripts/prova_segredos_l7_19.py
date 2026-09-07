@@ -6,16 +6,18 @@ Cria, para a duração da prova:
   - `/etc/plat/segredos-teste-l7-19/` (credenciais SINTÉTICAS, nunca um valor real da casa);
   - duas roles de Postgres descartáveis (`plat_teste19_app`, `plat_teste19_worker`) + 2 linhas de
     `pg_hba.conf` (removidas ao final; `pg_reload_conf()`, nunca restart do serviço);
-  - 3 pares soquete+serviço systemd `plat-teste-segredo-{a,b,garage}` (portas 8197-8199, fora da faixa
-    8150-8159 do produto) rodando `scripts/teste_segredo_servico.py`, todos com socket activation
+  - 3 pares soquete+serviço systemd `plat-teste-segredo-{a,b,garage}` (portas 8185-8187, fora da faixa
+    8150-8159 do produto e fora das portas das trilhas de integração — 8197-8199 colidiu com o worker
+    da fila em 07/09) rodando `scripts/teste_segredo_servico.py`, todos com socket activation
     (`Sockets=`) — é a técnica que segura conexão nova na fila do kernel durante um restart, medida
     aqui como a razão de "zero 5xx" não ser um acaso de sorte;
   - um `garage-teste.toml` (não é o Garage real: só o arquivo que `scripts/segredo_rotacionar.py`
     edita, exatamente como editaria o de verdade).
 
 Roda `sudo venv/bin/python scripts/segredo_rotacionar.py rotacionar <NOME> ...` para cada um dos 5
-segredos contra essa infraestrutura, grava `tests/medidas/L7-19.json` e desfaz tudo no final (units,
-roles, pg_hba, diretório de credenciais), sucesso ou erro — `finally` cobre a limpeza inteira.
+segredos contra essa infraestrutura, grava `tests/medidas/_prova_segredos_bruta.json` (de onde o
+`tests/medidas/L7-19.json` curado cita os números) e desfaz tudo no final (units, roles, pg_hba,
+diretório de credenciais), sucesso ou erro — `finally` cobre a limpeza inteira.
 
 Uso: sudo venv/bin/python scripts/prova_segredos_l7_19.py
 """
@@ -25,8 +27,11 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import shutil
+import signal
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -39,9 +44,17 @@ DB = "iagro_sat"
 UNIDADES_SYSTEMD = Path("/etc/systemd/system")
 GARAGE_TOML_TESTE = CRED_DIR / "garage-teste.toml"
 
-PORTAS = {"a": 8199, "b": 8198, "garage": 8197}
+PORTAS = {"a": 8187, "b": 8186, "garage": 8185}
 ROLE_APP = "plat_teste19_app"
 ROLE_WORKER = "plat_teste19_worker"
+
+# cláusula do portão "0 erro 5xx durante a rotação, medido pelo k6 curto": a régua é um k6 externo
+# (scripts/k6_saude_5xx.js, 1 VU em laço fechado), processo separado do que está sendo medido. O
+# martelo interno do segredo_rotacionar.py continua existindo — é o log da própria rotação — mas o
+# número que responde à cláusula sai do k6. Binário em PLAT_K6, no PATH, ou em ~/tools/k6/k6 desta
+# máquina (pré-requisito da prova, anotado em docs/RUNBOOKS/segredos.md).
+K6 = os.environ.get("PLAT_K6") or shutil.which("k6") or "/home/dev/tools/k6/k6"
+K6_JS = RAIZ / "scripts" / "k6_saude_5xx.js"
 
 registro_para_desfazer: list[str] = []  # log em português do que foi criado, na ordem — a limpeza anda ao contrário
 
@@ -120,6 +133,25 @@ def preparar() -> dict:
     print("== preparo: diretório de credenciais de teste")
     if CRED_DIR.exists():
         raise SystemExit(f"{CRED_DIR} já existe — rode a limpeza de uma prova anterior antes")
+    # as 3 portas têm de estar livres ANTES de criar qualquer coisa: 07/09 a faixa antiga (8197-8199)
+    # colidiu com o worker da fila de junção (trilha-integra escuta 8199) e o preparo morreu na cara;
+    # portas novas 8185-8187, e mesmo assim só se segue se ninguém estiver escutando nelas.
+    import socket as _socket
+
+    for apelido, porta in PORTAS.items():
+        with _socket.socket() as s:
+            if s.connect_ex(("127.0.0.1", porta)) == 0:
+                raise SystemExit(
+                    f"porta {porta} (unidade de teste '{apelido}') já está em uso — a prova não cria "
+                    "nada em cima de serviço dos outros; libere a porta ou troque PORTAS"
+                )
+    # reset-failed um a um e sem check: unidade que não existe/carregou devolve erro no systemctl,
+    # e é exatamente o caso comum (só há algo a limpar depois de uma prova interrompida)
+    for u in ("a", "b", "garage"):
+        subprocess.run(["systemctl", "reset-failed", f"plat-teste-segredo-{u}.socket"],
+                       check=False, capture_output=True)
+        subprocess.run(["systemctl", "reset-failed", f"plat-teste-segredo-{u}.service"],
+                       check=False, capture_output=True)
     sh("install", "-d", "-m", "0700", "-o", "root", "-g", "root", str(CRED_DIR))
     registro_para_desfazer.append(f"diretorio:{CRED_DIR}")
 
@@ -185,20 +217,66 @@ def preparar() -> dict:
     return {"senha_app_inicial_sha": senha_app[:0] or "oculta", "token_inicial_gerado": True}
 
 
-def rodar_rotacao(nome_segredo: str, extra: list[str]) -> dict:
+def k6_iniciar(portas: list[int]) -> tuple[subprocess.Popen, Path]:
+    """k6 curto martelando /saude das portas em laço fechado. Para com SIGINT — o k6 roda o
+    handleSummary mesmo assim e grava o JSON no caminho de K6_SAIDA."""
+    if not Path(K6).exists():
+        raise SystemExit(
+            f"k6 não achado ({K6}): a cláusula do portão exige a medição de 5xx PELO K6. "
+            "Instale em ~/tools/k6 (tar.gz de github.com/grafana/k6/releases) ou aponte PLAT_K6."
+        )
+    saida = Path(tempfile.mkstemp(prefix="k6-saude-", suffix=".json")[1])
+    env = dict(os.environ)
+    env["K6_URLS"] = json.dumps([f"http://127.0.0.1:{p}/saude" for p in portas])
+    env["K6_SAIDA"] = str(saida)
+    proc = subprocess.Popen(
+        # --duration longa de propósito: sem ela o k6 roda UMA iteração por VU e sai (medimos 6
+        # requisições em 4 rotações — janela vazia); quem encerra é o SIGINT do k6_colher, que o k6
+        # honra rodando o handleSummary com tudo o que mediu até ali.
+        [K6, "run", "--quiet", "--duration", "10m", str(K6_JS)], env=env,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    # arranque do binário + compilação do JS + 1ª requisição: o martelo já está de pé antes de a
+    # rotação começar (e o segredo_rotacionar.py ainda gasta ~1 s próprio antes do 1º restart)
+    time.sleep(2.0)
+    return proc, saida
+
+
+def k6_colher(proc: subprocess.Popen, saida: Path) -> dict:
+    proc.send_signal(signal.SIGINT)
+    try:
+        proc.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        raise SystemExit("k6 não encerrou no SIGINT em 30 s — sem resumo, cláusula não checada") from None
+    d = json.loads(saida.read_text(encoding="utf-8"))
+    metricas = d.get("metrics", {})
+    return {
+        "requisicoes": int(metricas.get("http_reqs", {}).get("values", {}).get("count", 0)),
+        "codigo_5xx": int(metricas.get("saude_5xx", {}).get("values", {}).get("count", 0)),
+    }
+
+
+def rodar_rotacao(nome_segredo: str, extra: list[str], portas_martelo: list[int]) -> dict:
     print(f"\n== rotacionando {nome_segredo}")
     cmd = [
         sys.executable, str(RAIZ / "scripts" / "segredo_rotacionar.py"), "rotacionar", nome_segredo,
-        "--cred-dir", str(CRED_DIR), "--db", DB,
+        "--cred-dir", str(CRED_DIR), "--db", DB, "--pg-hba", str(PG_HBA),
         *extra,
     ]
-    r = subprocess.run(cmd, text=True, capture_output=True)
+    martelo, resumo_k6 = k6_iniciar(portas_martelo)
+    try:
+        r = subprocess.run(cmd, text=True, capture_output=True)
+    finally:
+        medida_k6 = k6_colher(martelo, resumo_k6)
     if r.returncode != 0:
         print(r.stdout)
         print(r.stderr, file=sys.stderr)
         raise SystemExit(f"rotação de {nome_segredo} falhou (código {r.returncode})")
     print(r.stdout)
-    return json.loads(r.stdout)
+    resultado = json.loads(r.stdout)
+    resultado["k6"] = medida_k6
+    return resultado
 
 
 def limpar() -> None:
@@ -247,7 +325,14 @@ def main() -> None:
         preparar()
         rotacoes = {}
         rotacoes["PLAT_SECRET"] = rodar_rotacao(
-            "PLAT_SECRET", ["--unidade-api", "plat-teste-segredo-a", "--porta-api", str(PORTAS["a"])]
+            "PLAT_SECRET",
+            [
+                "--unidade-api", "plat-teste-segredo-a", "--porta-api", str(PORTAS["a"]),
+                # worker também reinicia (adversário T7: ele carrega settings uma vez e decifra
+                # dentro de jobs — sem restart ficaria semanas com a chave velha como atual)
+                "--unidade-worker", "plat-teste-segredo-b", "--porta-worker", str(PORTAS["b"]),
+            ],
+            [PORTAS["a"], PORTAS["b"]],
         )
         rotacoes["PLAT_DSN"] = rodar_rotacao(
             "PLAT_DSN",
@@ -256,6 +341,7 @@ def main() -> None:
                 "--unidade-worker", "plat-teste-segredo-b", "--porta-worker", str(PORTAS["b"]),
                 "--role-app", ROLE_APP,
             ],
+            [PORTAS["a"], PORTAS["b"]],
         )
         # unidade b muda de papel agora: era o 2º elo da cadeia de PLAT_DSN, vira a única consumidora de
         # PLAT_DSN_WORKER — precisa apontar para o outro credential antes da próxima rotação
@@ -266,6 +352,7 @@ def main() -> None:
                 "--unidade-worker", "plat-teste-segredo-b", "--porta-worker", str(PORTAS["b"]),
                 "--role-worker", ROLE_WORKER,
             ],
+            [PORTAS["b"]],
         )
         rotacoes["PLAT_GARAGE_ADMIN_TOKEN"] = rodar_rotacao(
             "PLAT_GARAGE_ADMIN_TOKEN",
@@ -275,6 +362,7 @@ def main() -> None:
                 "--saude-garage", "/saude", "--caminho-admin-garage", "/admin",
                 "--garage-toml", str(GARAGE_TOML_TESTE),
             ],
+            [PORTAS["a"], PORTAS["garage"]],
         )
         resultado["rotacoes"] = rotacoes
         resultado["status"] = "ok"
