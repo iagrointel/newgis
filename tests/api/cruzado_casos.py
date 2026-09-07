@@ -853,6 +853,15 @@ CASOS: dict[tuple[str, str], Caso] = {
                                        verificar=_sem_marca),
     ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}"),
     ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/tilejson"),
+    # ---- L2-06-e / L2-01-i: agregação e gráfico sobre a camada de B — o item de B (mapa) não é camada
+    # vetorial, e RLS esconde o item: 404 em toda perna, nunca uma linha agregada.
+    ("POST", "/api/camadas/{item_id}/estatisticas"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/estatisticas",
+        lambda p: {"estatisticas": [{"campo": "id", "tipo": "count"}]},
+    ),
+    ("POST", "/api/camadas/{item_id}/grafico"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/grafico", lambda p: {"tipo": "contagem"},
+    ),
     ("GET", "/api/geocodificar"): Caso(
         lambda p: "/api/geocodificar?endereco=Avenida+Paulista,+Sao+Paulo+-+SP", proprio=True,
         aceita=frozenset({200, 422}), verificar=_sem_marca,

@@ -133,6 +133,10 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # dono humano para narrar — mesma decisão já usada acima em /api/rota, /api/matriz, /api/isocrona.
     ("POST", "/api/geocodificar"): [],
     ("POST", "/api/reverso"): [],
+    # ---- agregação e gráfico por camada (L2-06-e, L2-01-i): POST só porque o pedido é um corpo JSON; são
+    # LEITURAS (SELECT agregado, nada muda no catálogo nem na camada) — sem evento, como /api/geocodificar.
+    ("POST", "/api/camadas/{item_id}/estatisticas"): [],
+    ("POST", "/api/camadas/{item_id}/grafico"): [],
     ("POST", "/rest/services/Geocodificador/GeocodeServer"): [],
     ("POST", "/rest/services/Geocodificador/GeocodeServer/findAddressCandidates"): [],
     ("POST", "/rest/services/Geocodificador/GeocodeServer/reverseGeocode"): [],
