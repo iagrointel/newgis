@@ -223,3 +223,10 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `FERRAMENTA_JOB_MEMORIA_MB` | `1024` | RLIMIT_DATA do filho que roda uma ferramenta |
 | `FERRAMENTA_JOB_TIMEOUT_S` | `1800` | 30 min por execução; ferramenta mais longa é outro tipo de job |
 | `BUFFER_DISTANCIA_M_MAX` | `100000` | 100 km: acima disso o buffer geodésico deixa de fazer sentido em camada |
+
+## ferramentas vetoriais elementares (L2-05-b): o teto de feições é por ENTRADA, conferido antes de operar
+
+| nome | valor | explicação |
+|---|---|---|
+| `VETOR_FEICOES_MAX` | `2000000` | acima disso a ferramenta recusa a entrada em vez de encher o disco |
+| `PONTOS_ALEATORIOS_MAX` | `10000` | pontos sorteados por feição em pontos_aleatorios |
