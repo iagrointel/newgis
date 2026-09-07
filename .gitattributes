@@ -9,3 +9,12 @@ CHANGELOG.md merge=union
 # (07/09: openapi.json reprovou junção de item cujo código estava correto.)
 docs/openapi.json merge=ours
 docs/PARIDADE.md merge=ours
+
+# Registros que só CRESCEM: cada item acrescenta uma entrada de uma linha. Sem isto, todo ramo
+# conflita com todo ramo e a fila serializa (07/09: 5 reprovações seguidas, nenhuma por teste).
+# Risco aceito: se a união quebrar a sintaxe, a verificação do lote reprova na hora e alto.
+app/limites.py merge=union
+tests/api/cruzado_casos.py merge=union
+
+# Gerado por `make limites` a partir de app/limites.py — a fila regera ao fechar o lote.
+docs/LIMITES.md merge=ours
