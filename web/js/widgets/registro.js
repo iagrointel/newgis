@@ -38,7 +38,7 @@ const manifestos = [
   },
   {
     nome: 'filtro', versao: '1.0.0', api_widget: 1, modulo: './filtro.js', elemento: 'plat-filtro',
-    esquema_config: objetoFechado({ rotulo: textoCurto, placeholder: textoCurto, valor: textoCurto }),
+    esquema_config: objetoFechado({ rotulo: textoCurto, valor: textoCurto }),
     eventos: ['filtro.alterado'], acoes: ['filtro.definir'], fontes: { min: 1, max: 100, tipos: ['camada', 'tabela'] }, i18n: 'widget.filtro',
   },
 ];
@@ -50,7 +50,9 @@ function falha(caminho, mensagem) { throw new Error(`${caminho}: ${mensagem}`); 
 export function validarEsquema(valor, esquema, caminho = 'configuracao') {
   if (!esquema || Object.keys(esquema).length === 0) return;
   const tipo = Array.isArray(valor) ? 'array' : (valor === null ? 'null' : typeof valor);
-  if (esquema.type && tipo !== esquema.type) falha(caminho, `esperado ${esquema.type}, recebido ${tipo}`);
+  // JSON Schema: `integer` é um `number` sem parte fracionária (typeof não distingue os dois)
+  const tipoEsperado = esquema.type === 'integer' ? 'number' : esquema.type;
+  if (tipoEsperado && tipo !== tipoEsperado) falha(caminho, `esperado ${esquema.type}, recebido ${tipo}`);
   if (tipo === 'string' && esquema.maxLength !== undefined && valor.length > esquema.maxLength) falha(caminho, `máximo ${esquema.maxLength} caracteres`);
   if ((tipo === 'number' || tipo === 'integer') && esquema.minimum !== undefined && valor < esquema.minimum) falha(caminho, `mínimo ${esquema.minimum}`);
   if ((tipo === 'number' || tipo === 'integer') && esquema.maximum !== undefined && valor > esquema.maximum) falha(caminho, `máximo ${esquema.maximum}`);
