@@ -19,6 +19,9 @@ import psycopg2.extras
 from dotenv import dotenv_values
 
 RAIZ = Path(__file__).resolve().parents[1]
+if str(RAIZ) not in sys.path:  # roda como `python docs/gerar_privilegios.py`, sem PYTHONPATH=.
+    sys.path.insert(0, str(RAIZ))
+
 DESTINO = RAIZ / "docs" / "PRIVILEGIOS.md"
 PERFIS = ("visualizador", "campo", "editor", "admin")
 ROTULO_PERFIL = {"visualizador": "V", "campo": "C", "editor": "E", "admin": "A"}
@@ -35,7 +38,14 @@ def _dsn() -> str:
 
 
 def _ler_banco() -> tuple[list[dict], dict[str, set[str]]]:
-    con = psycopg2.connect(_dsn(), cursor_factory=psycopg2.extras.RealDictCursor)
+    # CursorSchemaAmbiente (não RealDictCursor puro): achado nesta verificação — o literal `plat.` abaixo
+    # sempre mirava o schema de PRODUÇÃO, então `tests/api/test_privilegios_doc.py` (que roda com PLAT_SCHEMA
+    # de trilha/homologação) sempre dava `InsufficientPrivilege: permission denied for schema plat` (a role da
+    # trilha não tem privilégio nenhum no `plat` real). `PLAT_SCHEMA`/`PLAT_SCHEMA_TRABALHO` do ambiente do
+    # processo bastam — é a mesma leitura tardia que `app/db.py` já faz.
+    from app.schema_ambiente import CursorSchemaAmbiente
+
+    con = psycopg2.connect(_dsn(), cursor_factory=CursorSchemaAmbiente)
     try:
         with con.cursor() as cur:
             cur.execute("SELECT nome, grupo, descricao, administrativo FROM plat.privilegio ORDER BY grupo, nome")

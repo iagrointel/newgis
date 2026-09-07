@@ -26,7 +26,16 @@ privilegios:                                 ## docs/PRIVILEGIOS.md == plat.priv
 	$(VENV)/python docs/gerar_privilegios.py
 
 sem-marcador:                               ## mesma expressão do laco/driver.sh (tests/marcadores.regex); inclui os .md da raiz e docs/
-	! grep -rnI --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=tests --exclude-dir=.git --exclude-dir=venv -E -f tests/marcadores.regex app web db docs deploy install.sh Makefile requirements.txt pyproject.toml *.md
+# 07/09: a guarda estava reprovando A SI MESMA e travou a fila de junção a noite inteira --
+# batia no dump gerado db/estrutura (variável de terceiro chamada `placeholder` numa função de
+# busca textual) e nos documentos que DESCREVEM a regra (SISTEMA.md, CONTRIBUIR.md, e comentários
+# que citam a palavra ao explicar por que ela é proibida). Marcador de verdade é código morto,
+# não prosa sobre código morto. Por isso: dump gerado fora, e linha que cite a palavra dentro de
+# comentário explicativo sai por `marcadores.excecoes` (lista curta, com motivo em cada entrada).
+	! grep -rnI --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=tests --exclude-dir=.git \
+	    --exclude-dir=venv --exclude-dir=estrutura \
+	    -E -f tests/marcadores.regex app web db docs deploy install.sh Makefile requirements.txt pyproject.toml *.md \
+	  | grep -vE -f tests/marcadores.excecoes
 
 teste:
 	$(SEGREDOS) $(VENV)/pytest -m "not lento"
