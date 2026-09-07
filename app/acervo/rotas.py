@@ -48,9 +48,24 @@ def _completude_texto(r: dict) -> str | None:
     return f"{p:.1f}".replace(".", ",") + "/10"
 
 
+def _camada_resumo(c: dict) -> dict:
+    """`origem`: texto literal que a ficha mostra (item L6-01-j-multi-servidor) — 'local', 'servidor
+    remoto (<nome>)' quando lida por FDW, ou 'servidor remoto indisponível (<nome>)' quando a última
+    verificação não respondeu (a linha continua com a última `linhas_exatas` conhecida, nunca zerada)."""
+    j = _iso_datas(c)
+    modo, servidor = c["modo_acesso"], c["servidor"]
+    if modo == "local":
+        j["origem"] = "local"
+    elif modo == "fdw":
+        j["origem"] = f"servidor remoto ({servidor})"
+    else:
+        j["origem"] = f"servidor remoto indisponível ({servidor})"
+    return j
+
+
 def _iso_datas(r: dict) -> dict:
     j = dict(r)
-    for campo in ("url_conferida_em", "data_acesso", "proxima_verificacao", "testado_em"):
+    for campo in ("url_conferida_em", "data_acesso", "proxima_verificacao", "testado_em", "fdw_verificado_em"):
         if j.get(campo) is not None:
             j[campo] = j[campo].isoformat()
     if j.get("atualizado_em") is not None:
@@ -116,6 +131,15 @@ def ver(fonte_id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
         j["endpoints"] = [_iso_datas(e) for e in cur.fetchall()]
         j["endpoints_total"] = contagem["total"]
         j["endpoints_confirmados_vivos"] = contagem["vivos"]
+        # item L6-01-j-multi-servidor: camadas desta fonte, local ou lidas por FDW de outro servidor da
+        # casa — a ficha nunca esconde que o dado vem de outra máquina.
+        cur.execute(
+            "SELECT servidor, schema_nome, tabela, modo_acesso, linhas_exatas, aviso, "
+            "fdw_verificado_em, fdw_latencia_ms FROM plat.acervo_camada "
+            "WHERE fonte_id = %s ORDER BY (modo_acesso <> 'local'), servidor, tabela",
+            (fonte_id,),
+        )
+        j["camadas"] = [_camada_resumo(c) for c in cur.fetchall()]
     return j
 
 

@@ -1,0 +1,32 @@
+{
+ "item": "L6-01-j-multi-servidor",
+ "medidas": {
+  "tabelas_remotas_lidas_por_fdw": {
+   "valor": 3,
+   "unidade": "tabelas",
+   "comando": "test_tres_tabelas_remotas_lidas_por_fdw_com_tempo_medido"
+  },
+  "duracao_rodada_3_tabelas": {
+   "valor": 0.65,
+   "unidade": "s",
+   "comando": "test_tres_tabelas_remotas_lidas_por_fdw_com_tempo_medido"
+  },
+  "fdw_latencia_ms_maxima": {
+   "valor": 1,
+   "unidade": "ms",
+   "comando": "test_tres_tabelas_remotas_lidas_por_fdw_com_tempo_medido"
+  },
+  "camadas_preservadas_apos_queda_de_rede": {
+   "valor": 3,
+   "unidade": "camadas",
+   "comando": "test_falha_de_rede_vira_aviso_nao_camada_vazia"
+  },
+  "linhas_exatas_zeradas_por_falha_de_rede": {
+   "valor": 0,
+   "unidade": "camadas",
+   "comando": "test_falha_de_rede_vira_aviso_nao_camada_vazia"
+  }
+ },
+ "gerado_em": "2026-09-07T02:35:39Z",
+ "git_sha": "90d03c07da0c"
+}

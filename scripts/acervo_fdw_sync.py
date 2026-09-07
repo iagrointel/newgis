@@ -112,7 +112,7 @@ INSERT INTO {schema}.acervo_camada
    sha256, comando_reexecucao, estado, motivo_bloqueio, sincronizado_em,
    modo_acesso, fdw_tabela, aviso, fdw_verificado_em, fdw_latencia_ms)
 VALUES (%(id)s, %(fonte_id)s, %(servidor)s, %(banco)s, %(schema_nome)s, %(tabela)s, %(coluna_geom)s,
-        0, 'GEOMETRY', '{}', '{}', NULL, NULL, NULL, NULL, NULL, 'bloqueada', 'servidor_indisponivel',
+        0, 'GEOMETRY', '{{}}', '{{}}', NULL, NULL, NULL, NULL, NULL, 'bloqueada', 'servidor_indisponivel',
         now(), 'indisponivel', NULL, %(aviso)s, now(), NULL)
 ON CONFLICT (acervo_camada_id) DO UPDATE SET
   modo_acesso = 'indisponivel', aviso = EXCLUDED.aviso, fdw_verificado_em = now(),
@@ -356,6 +356,16 @@ def sincronizar(dsn_kwargs: dict, schema_plat: str, segredos: Path, so_servidore
                 try:
                     with conn.cursor() as cur:
                         cur.execute(f"CREATE SCHEMA IF NOT EXISTS {_ident(conn, espelho)}")
+                        # IMPORT FOREIGN SCHEMA não é idempotente por si só (erra "relation already
+                        # exists" numa segunda rodada): apaga só as foreign tables DESTE grupo antes de
+                        # reimportar — reimportar de novo é o que deixa o espelho igual à definição
+                        # ATUAL da tabela remota (coluna nova, tipo mudado) a cada rodada, em vez de
+                        # herdar a definição congelada da primeira vez.
+                        for cand in grupo:
+                            cur.execute(
+                                f"DROP FOREIGN TABLE IF EXISTS "
+                                f"{_ident(conn, espelho)}.{_ident(conn, cand['tabela'])}"
+                            )
                         cur.execute(
                             f"IMPORT FOREIGN SCHEMA {_ident(conn, schema_remoto)} LIMIT TO ({tabelas_sql}) "
                             f"FROM SERVER {_ident(conn, nome_srv)} INTO {_ident(conn, espelho)}"
@@ -486,7 +496,7 @@ def sincronizar(dsn_kwargs: dict, schema_plat: str, segredos: Path, so_servidore
                     cur.execute(
                         "SELECT n.nspname AS espelho, c.relname AS tabela "
                         "FROM pg_foreign_table ft "
-                        "JOIN pg_class c ON c.oid = ft.ftgrelid "
+                        "JOIN pg_class c ON c.oid = ft.ftrelid "
                         "JOIN pg_namespace n ON n.oid = c.relnamespace "
                         "JOIN pg_foreign_server fs ON fs.oid = ft.ftserver WHERE fs.srvname = %s",
                         (nome_srv,),
