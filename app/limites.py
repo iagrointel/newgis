@@ -219,3 +219,17 @@ AMC_CONJUNTOS_POR_INQUILINO = 200     # conjuntos de unidades por inquilino
 AMC_VERSOES_POR_MODELO = 500          # versões de um modelo (cada edição cria uma; imutáveis, nunca apagadas)
 AMC_UNIDADES_PAGINA_MAX = 5_000       # unidades por página em GET /api/amc/conjuntos/{id}/unidades
 AMC_RESULTADOS_PAGINA_MAX = 5_000     # linhas por página em GET /api/amc/execucoes/{id}/resultados
+
+# --- desempenho em escala do motor multicritério (L3-16-desempenho-escala). Contrato de escala do motor:
+# ONDE a combinação roda, de quanto em quanto o servidor lê a matriz de fatores e quanta RAM um job de
+# extração pode pedir. Os números medidos ficam em tests/medidas/L3-16-desempenho-escala.json e é de lá
+# que o MANUAL os cita (teste tests/unit/test_amc_escala_manual.py reprova se alguém digitar à mão).
+# AMC_COMBINAR_NAVEGADOR_MAX é o mesmo número nos dois lados: web/js/amc/combinacao.js recusa acima dele
+# com `unidades_demais_para_o_navegador` e o cliente refaz o pedido no servidor (nunca combina pela metade).
+AMC_COMBINAR_NAVEGADOR_MAX = 50_000   # unidades combinadas no navegador; acima disso, servidor
+AMC_BLOCO_UNIDADES = 50_000           # unidades por bloco lido/gravado pelo servidor (pico de RAM constante)
+AMC_EXTRACAO_MEMORIA_MB = 4096        # teto DECLARADO do job de extração/recombinação (guardrail do portão do
+                                      # item). A máquina pode ter teto menor (PLAT_WORKER_MEMORIA_MB, 1024 MB
+                                      # nesta): vale o MENOR dos dois, e é ele que vira RLIMIT_DATA no filho
+                                      # (app/jobs/filho.py, item L0-05-e). Ver app.amc.escala.orcamento_mb.
+AMC_EXTRACAO_TIMEOUT_S = 1800         # 30 min: o prazo do portão para 1 mi de células × 15 fatores
