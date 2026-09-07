@@ -20,8 +20,26 @@
    "valor": 154857600,
    "unidade": "bytes",
    "comando": "limites.MAPA_BASE_DISCO_BYTES_MAX (teto interino: D27 do dono ainda aberta)"
+  },
+  "proxy_osm_miss_ms": {
+   "valor": 30.2,
+   "unidade": "ms",
+   "comando": "venv/bin/python -c 'proxy_osm.buscar_ladrilho(12,1519,2159)' duas vezes seguidas contra o tile.openstreetmap.org REAL, com o cache do proxy vazio (var/cache/mapa_base_osm apagado antes)"
+  },
+  "proxy_osm_hit_ms": {
+   "valor": 0.05,
+   "unidade": "ms",
+   "comando": "venv/bin/python -c 'proxy_osm.buscar_ladrilho(12,1519,2159)' duas vezes seguidas contra o tile.openstreetmap.org REAL, com o cache do proxy vazio (var/cache/mapa_base_osm apagado antes)"
+  },
+  "proxy_osm_ladrilho_bytes": {
+   "valor": 2336,
+   "unidade": "bytes",
+   "comando": "venv/bin/python -c 'proxy_osm.buscar_ladrilho(12,1519,2159)' duas vezes seguidas contra o tile.openstreetmap.org REAL, com o cache do proxy vazio (var/cache/mapa_base_osm apagado antes)"
   }
  },
- "gerado_em": "2026-09-07T17:59:05Z",
- "git_sha": "d2e9973de90e"
+ "gerado_em": "2026-09-07T18:02:05Z",
+ "git_sha": "d2e9973de90e",
+ "carga_1min": 11.27,
+ "ram_livre_gb": 7,
+ "medido_em": "2026-09-07T18:02:05Z"
 }
