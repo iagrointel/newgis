@@ -306,18 +306,17 @@ export function criarTabela(map, aviso) {
     });
     document.addEventListener('mouseup', async () => {
       if (!alvo) return;
-      const th = alvo; alvo = null;
-      await persistirLarguras(th);
+      alvo = null;
+      await persistirLarguras();
     });
   }
 
   async function persistirLarguras() {
     const r = await obter(`${base()}/vista`);
     if (r.status !== 200) return;
-    const guardadas = new Map((r.json.colunas || []).map((c) => [c.nome, c]));
     const colunas = (r.json.colunas || []).map((c) => {
       const th = el('tabela-cabecalho').querySelector(`th[data-coluna="${CSS.escape(c.nome)}"]`);
-      const largura = th ? Math.round(th.getBoundingClientRect().width) : (guardadas.get(c.nome) || {}).largura;
+      const largura = th ? Math.round(th.getBoundingClientRect().width) : c.largura;
       const saida = { nome: c.nome, oculta: !!c.oculta };
       if (largura) saida.largura = Math.min(2000, Math.max(40, largura));
       if (c.alias && c.alias !== c.nome) saida.alias = c.alias;
