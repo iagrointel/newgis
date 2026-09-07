@@ -43,8 +43,8 @@ def _criar_sincrono(corpo: RedeSimplesEntrada, auth: Auth, request: Request) -> 
             raise ErroAPI(422, "direcao_invalida",
                           f"o mapa de direção só aceita {simples.DIRECOES}; veio {v!r}")
     with db.db(auth.contexto()) as cur:
-        camada_linha = simples._camada(cur, corpo.camada_linha_id, "linha")
-        camada_ponto = simples._camada(cur, corpo.camada_ponto_id, "ponto")
+        camada_linha = simples.camada(cur, corpo.camada_linha_id, "linha")
+        camada_ponto = simples.camada(cur, corpo.camada_ponto_id, "ponto")
         try:
             cur.execute(
                 "INSERT INTO plat.rede(tenant_id, nome, disciplina, descricao, tolerancia_m, dono_id, modo) "

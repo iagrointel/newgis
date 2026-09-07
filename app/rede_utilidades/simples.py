@@ -155,7 +155,7 @@ def promover(cur, tenant_id: int, rede_id: str, usuario_id: int) -> dict:
 
 # --- carga a partir de duas camadas do inquilino ----------------------------------------------------------
 
-def _camada(cur, item_id: str | None, geometria_esperada: str) -> dict | None:
+def camada(cur, item_id: str | None, geometria_esperada: str) -> dict | None:
     """A camada vetorial do inquilino (`plat.item` tipo `camada_vetorial`): schema, tabela e campos. `None`
     quando o pedido não trouxe a camada (a de pontos é opcional: uma rede simples pode ser só de trechos)."""
     if item_id is None:

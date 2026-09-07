@@ -126,13 +126,3 @@ def tracar_fluxo(cur, tenant_id: int, rede_id: str, tipo: str, pontos_partida: l
         "duracao_ms": int((time.perf_counter() - inicio) * 1000), "nos_alcancados": len(alcancados),
         "avisos": avisos, "parou_em_indeterminada": bool(avisos),
     }
-
-
-def arestas_dirigidas(cur, rede_id: str) -> list[dict]:
-    """As arestas já orientadas, para conferência independente (o teste do item as reconstrói em networkx).
-    Monta o mesmo grafo do traçado, sem barreira nenhuma."""
-    _lac._preparar_mapa(cur, rede_id, [])
-    _montar_arestas_dirigidas(cur, rede_id)
-    cur.execute("SELECT aresta_id, feicao_id, de, para, indeterminada FROM fluxo_aresta")
-    return [{"aresta_id": str(r["aresta_id"]), "feicao_id": str(r["feicao_id"]), "de": str(r["de"]),
-             "para": str(r["para"]), "indeterminada": r["indeterminada"]} for r in cur.fetchall()]
