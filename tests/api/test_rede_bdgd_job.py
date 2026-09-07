@@ -37,7 +37,12 @@ from tests.dados.gerar_bdgd_extrato import FONTE, obter_extrato
 MEDIDAS = Path("tests/medidas/L4-01-c-importador-bdgd.json")
 
 # números do portão de pronto, conferidos contra o ARQUIVO (não contra a carga)
-PORTAO_ARQUIVO = {"CTMT": 20, "UNTRMT": 5481, "SSDMT": 44268, "SSDBT": 29244, "UCBT_tab": 27587, "PONNOT": 60549}
+# CTMT fica fora desta régua de propósito: o arquivo tem 21 linhas e o portão diz 20 — o 21º é o
+# alimentador que referencia uma subestação de OUTRO arquivo (interligação real, desvio nomeado
+# `alimentador_sem_subestacao` pelo item irmão). O portão contou "alimentadores com subestação".
+# Medido em 07/09 com carga 7,98: o teste acusou 21 ≠ 20 e o portão é que estava impreciso.
+PORTAO_ARQUIVO = {"UNTRMT": 5481, "SSDMT": 44268, "SSDBT": 29244, "UCBT_tab": 27587, "PONNOT": 60549}
+CTMT_ARQUIVO, CTMT_COM_SUBESTACAO = 21, 20
 
 
 def _carga_maquina() -> dict:
@@ -229,9 +234,8 @@ def test_cooperativa_inteira_contagens_e_tempo(rede_eletrica):
             resultado["contagens"][camada],
         )
     ctmt = resultado["contagens"]["CTMT"]
-    assert ctmt["arquivo"] - ctmt["inserido"] == resultado["desvios"].get("alimentador_sem_subestacao", {}).get(
-        "quantidade", 0
-    )
+    assert arquivo["CTMT"] == CTMT_ARQUIVO and ctmt["inserido"] == CTMT_COM_SUBESTACAO, (arquivo["CTMT"], ctmt)
+    assert ctmt["arquivo"] - ctmt["inserido"] == resultado["desvios"]["alimentador_sem_subestacao"]["quantidade"] == 1
     MEDIDAS.parent.mkdir(parents=True, exist_ok=True)
     MEDIDAS.write_text(
         json.dumps(
