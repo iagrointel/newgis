@@ -41,6 +41,8 @@ PAGINAS = {
     "/redefinir-senha": "redefinir_senha.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
+    # item UX-16-ingestao-sem-tela: importações (arquivo enviado -> camada vetorial)
+    "/importacoes": "importacoes.html",
     # --- sistema de design (UX-01-sistema-de-design): guia viva de tokens e componentes
     "/estilo-guia": "estilo_guia.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>

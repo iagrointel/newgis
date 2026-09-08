@@ -14,6 +14,7 @@ export const TELAS = [
   { caminho: '/conexoes', chave: 'nav.conexoes' },
   { caminho: '/geocodificar', chave: 'nav.geocodificar' },
   { caminho: '/uploads', chave: 'nav.uploads', privilegio: 'conteudo.criar' },
+  { caminho: '/importacoes', chave: 'nav.importacoes', privilegio: 'conteudo.publicar_camada' },
   { caminho: '/conta', chave: 'nav.conta' },
   { caminho: '/admin/usuarios', chave: 'nav.usuarios', privilegio: 'membros.ver' },
   { caminho: '/admin/grupos', chave: 'nav.grupos' },
