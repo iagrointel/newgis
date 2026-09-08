@@ -558,6 +558,12 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"resolucao_m": 100.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
                    "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
     ),
+    # L3-10-corredor-custo-minimo: a execução de B é invisível para A (RLS), logo o traçado nem chega a ler
+    # os pontos do corpo: a busca da execução vem primeiro e devolve 404 (mesma classe dos casos acima).
+    ("POST", "/api/multiescala/execucoes/{id}/corredor"): Caso(
+        lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}/corredor",
+        lambda p: {"origem": {"lon": -46.60, "lat": -23.50}, "destino": {"lon": -46.59, "lat": -23.51}},
+    ),
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,

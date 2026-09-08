@@ -158,4 +158,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # L3-10-corredor-custo-minimo: o traçado não cria tabela; o que fica é o EVENTO com os parâmetros
+    # declarados (custo máximo, vetos, vizinhança, epsilon) e as medidas — é o rastro que repete a corrida.
+    ("POST", "/api/multiescala/execucoes/{id}/corredor"): ["multiescala/corredor"],
 }

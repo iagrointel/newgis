@@ -222,3 +222,10 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# --- traçado de custo mínimo sobre a grade do motor multicritério (L3-10-corredor-custo-minimo)
+# O traçado carrega a grade INTEIRA da execução em memória (duas matrizes float32/bool), logo o teto de células
+# é o mesmo da grade (ESCALA_CELULAS_MAX = 250 mil = 2 MB de custo). O que precisa de teto próprio é a
+# GEOMETRIA do corredor: unir 100 mil quadrados em PostGIS e mandar isso por HTTP é o que derruba a tela, não
+# o cálculo. Acima do teto a resposta traz a contagem e diz que omitiu a geometria.
+CORREDOR_CELULAS_GEOJSON_MAX = 20_000

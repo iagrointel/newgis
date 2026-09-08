@@ -230,3 +230,9 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## traçado de custo mínimo sobre a grade do motor multicritério (L3-10-corredor-custo-minimo)
+
+| nome | valor | explicação |
+|---|---|---|
+| `CORREDOR_CELULAS_GEOJSON_MAX` | `20000` | — |

@@ -10987,6 +10987,61 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/multiescala/execucoes/{id}/corredor": {
+   "post": {
+    "tags": [
+     "multiescala"
+    ],
+    "summary": "Tracar Corredor",
+    "description": "Traça a linha de custo mínimo entre dois pontos sobre as notas desta execução e devolve o corredor.",
+    "operationId": "tracar_corredor_api_multiescala_execucoes__id__corredor_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CorredorEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CorredorSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
   }
  },
  "components": {
@@ -12881,6 +12936,132 @@
      "motivo"
     ],
     "title": "ConviteResolvido"
+   },
+   "CorredorEntrada": {
+    "properties": {
+     "origem": {
+      "$ref": "#/components/schemas/Ponto"
+     },
+     "destino": {
+      "$ref": "#/components/schemas/Ponto"
+     },
+     "custo_maximo": {
+      "type": "number",
+      "maximum": 1000.0,
+      "exclusiveMinimum": 1.0,
+      "title": "Custo Maximo",
+      "description": "custo da pior nota (a melhor custa 1); a regra é linear e sai no manifesto",
+      "default": 10.0
+     },
+     "sem_dado": {
+      "type": "string",
+      "title": "Sem Dado",
+      "description": "célula sem nota: um de ('veto', 'custo_maximo')",
+      "default": "veto"
+     },
+     "veto_abaixo_de": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 100.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Veto Abaixo De",
+      "description": "nota abaixo da qual a célula é veto"
+     },
+     "veto_nao_aprovadas": {
+      "type": "boolean",
+      "title": "Veto Nao Aprovadas",
+      "description": "célula não aprovada pela execução vira veto",
+      "default": false
+     },
+     "vizinhanca": {
+      "type": "integer",
+      "title": "Vizinhanca",
+      "description": "um de (4, 8, 16)",
+      "default": 16
+     },
+     "epsilon": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Epsilon",
+      "description": "folga do corredor (0,05 = +5 %); nulo devolve só a linha",
+      "default": 0.05
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "origem",
+     "destino"
+    ],
+    "title": "CorredorEntrada"
+   },
+   "CorredorSaida": {
+    "properties": {
+     "execucao_id": {
+      "type": "string",
+      "title": "Execucao Id"
+     },
+     "linha": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Linha",
+      "description": "LineString GeoJSON em EPSG:4326 pelo centro das células"
+     },
+     "corredor": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Corredor",
+      "description": "MultiPolygon GeoJSON do corredor-epsilon, quando cabe"
+     },
+     "corredor_celulas": {
+      "type": "integer",
+      "title": "Corredor Celulas"
+     },
+     "corredor_geometria_omitida": {
+      "type": "boolean",
+      "title": "Corredor Geometria Omitida",
+      "description": "corredor acima de 20000 células: só a contagem",
+      "default": false
+     },
+     "manifesto": {
+      "$ref": "#/components/schemas/Manifesto"
+     },
+     "duracao_ms": {
+      "type": "integer",
+      "title": "Duracao Ms"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "execucao_id",
+     "linha",
+     "corredor_celulas",
+     "manifesto",
+     "duracao_ms"
+    ],
+    "title": "CorredorSaida"
    },
    "Dono": {
     "properties": {
@@ -15220,6 +15401,33 @@
     ],
     "title": "LoginSaida"
    },
+   "Manifesto": {
+    "properties": {
+     "superficie": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Superficie"
+     },
+     "parametros": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Parametros"
+     },
+     "medidas": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Medidas"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "superficie",
+     "parametros",
+     "medidas"
+    ],
+    "title": "Manifesto"
+   },
    "Membro": {
     "properties": {
      "usuario": {
@@ -16160,6 +16368,29 @@
      "destino"
     ],
     "title": "PedidoRota"
+   },
+   "Ponto": {
+    "properties": {
+     "lon": {
+      "type": "number",
+      "maximum": 180.0,
+      "minimum": -180.0,
+      "title": "Lon"
+     },
+     "lat": {
+      "type": "number",
+      "maximum": 90.0,
+      "minimum": -90.0,
+      "title": "Lat"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "lon",
+     "lat"
+    ],
+    "title": "Ponto"
    },
    "Privilegio": {
     "properties": {
