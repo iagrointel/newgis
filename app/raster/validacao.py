@@ -46,6 +46,7 @@ import subprocess
 import sys
 import threading
 import time
+import xml.etree.ElementTree as ET
 import zipfile
 from datetime import date, datetime
 from pathlib import Path
@@ -105,6 +106,11 @@ AMBIENTE_FILHO = {
     "GDAL_PAM_ENABLED": "NO",
     "CPL_DEBUG": "OFF",
 }
+
+# Únicas variáveis do worker que o filho herda (o resto fica de fora por padrão: ver `ambiente_do_filho`).
+AMBIENTE_HERDADO = ("PATH", "HOME", "TMPDIR", "TMP", "TEMP", "LANG", "LC_ALL", "LC_CTYPE", "TZ",
+                    "LD_LIBRARY_PATH", "VIRTUAL_ENV", "PYTHONPATH", "PYTHONHOME", "PYTHONHASHSEED")
+PREFIXOS_HERDADOS = ("GDAL_", "PROJ_", "CPL_", "OGR_")   # ajuste de biblioteca, nunca credencial
 
 
 class EntradaInvalida(ValueError):
@@ -298,10 +304,25 @@ def validar(caminho: str | os.PathLike, *, perfil: str = "dados", respostas: dic
 
 
 
+def ambiente_do_filho(base: dict | None = None) -> dict:
+    """Monta o ambiente do filho por LISTA DE PERMISSÃO (achado H2 do 2º adversário). A montagem anterior era
+    `{**os.environ, **AMBIENTE_FILHO}` menos `PLAT_DSN`/`PLAT_SECRET`: toda outra variável do worker
+    (`PLAT_DSN_WORKER`, com a senha da role que escreve no banco, e `PLAT_GARAGE_ADMIN_TOKEN`) chegava ao
+    processo que abre o arquivo hostil. Como o filtro de chamadas de sistema deixa `AF_UNIX` passar, essa
+    credencial bastava para falar com o Postgres pelo soquete local — a frase "o filho nunca fala com o banco"
+    dependia do que a lista de remoção não esquecesse. Agora é o contrário: entra só o que está nomeado aqui,
+    e qualquer variável nova do worker é excluída por padrão."""
+    base = os.environ if base is None else base
+    ambiente = {chave: base[chave] for chave in AMBIENTE_HERDADO if chave in base}
+    for chave, valor in base.items():
+        if chave.startswith(PREFIXOS_HERDADOS) and chave not in AMBIENTE_FILHO:
+            ambiente[chave] = valor
+    ambiente.update(AMBIENTE_FILHO)
+    return ambiente
+
+
 def _executar_filho(argumentos: dict, timeout_s: int) -> dict:
-    ambiente = {**os.environ, **AMBIENTE_FILHO}
-    ambiente.pop("PLAT_DSN", None)  # o filho nunca fala com o banco
-    ambiente.pop("PLAT_SECRET", None)
+    ambiente = ambiente_do_filho()
     argv = [sys.executable, "-m", "app.raster.validacao", json.dumps(argumentos, ensure_ascii=False)]
     inicio = time.monotonic()
     proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ambiente,
@@ -413,6 +434,9 @@ def _filho(argumentos: dict) -> dict:
     if prova == "tempo":
         while True:
             time.sleep(1)
+    if prova == "ambiente":  # usado pelo teste: prova, no filho vivo, que nenhum segredo do worker chegou
+        saida["info"]["ambiente_chaves"] = sorted(os.environ)
+        return saida
     caminho = Path(argumentos["caminho"])
     if "/vsi" in str(caminho):
         saida["problemas"].append("caminho virtual do GDAL (/vsi…) não é aceito")
@@ -520,16 +544,56 @@ def _abrir_zip(caminho: Path, cota: int, dir_trabalho: Path, saida: dict) -> lis
     return caminhos
 
 
-_RE_FONTE_VRT = re.compile(r"<SourceFilename([^>]*)>(.*?)</SourceFilename>", re.S)
-_RE_RELATIVO = re.compile(r'relativeToVRT\s*=\s*["\']?(\d)')
+# Elementos do modelo VRT que SEMPRE referenciam dado, seja qual for a subclasse do dataset. `SourceDataset` é
+# o do `VRTWarpedDataset` (achado H1 do 2º adversário): a conferência antiga casava só `SourceFilename` por
+# expressão regular e deixava passar a fonte do warp — e, por ser regex, também lia a isca escondida num
+# comentário XML. Agora o XML é PERCORRIDO: vale a árvore, não o texto.
+TAGS_FONTE_VRT = ("sourcefilename", "sourcedataset", "filename", "dataset", "sourcedatasetname",
+                  "srcfilename", "sourcefile", "maskfilename")
+
+# Qualquer outro texto ou atributo com CARA de caminho também é conferido: começa por caminho absoluto,
+# por `~`, por `./`/`../`, tem esquema remoto (`http://`, `/vsicurl/`) ou termina em extensão de dado.
+_RE_REFERENCIA = re.compile(
+    r"^\s*(?:/vsi|~|\.{1,2}[/\\]|/|[A-Za-z]:[\\/])"
+    r"|[a-zA-Z][a-zA-Z0-9+.\-]*://"
+    r"|[/\\]\.\.[/\\]"
+    r"|\.(?:tif|tiff|vrt|jp2|j2k|img|ntf|nc|hdf|hdf5|h5|zip|gz|tar|bin|dat|raw|ers|sid|ecw|pix|bt|xml|aux)\s*$",
+    re.I)
+
+MSG_FONTE_FORA = "VRT com fonte fora do diretório do envio ou remota"
+
+
+def _referencias_do_vrt(texto: str) -> tuple[list[tuple[str, bool | None, bool]], str | None]:
+    """Percorre cada nó do XML e devolve (referências, erro). Cada referência é (valor, relativoToVRT, exigida):
+    `exigida` distingue o elemento que sempre aponta para dado (aí a fonte também tem de EXISTIR) do texto ou
+    atributo que apenas se parece com caminho (aí basta não sair do envio)."""
+    try:
+        raiz = ET.fromstring(texto)
+    except ET.ParseError as erro:
+        return [], f"o XML do VRT não pôde ser lido ({_sem_caminho(str(erro))})"
+    achados: list[tuple[str, bool | None, bool]] = []
+    for elemento in raiz.iter():
+        tag = elemento.tag.rsplit("}", 1)[-1].lower()
+        marca = elemento.get("relativeToVRT")
+        relativo = marca.strip() == "1" if marca is not None else None
+        exigido = tag in TAGS_FONTE_VRT
+        valores = [(elemento.text or "", exigido)]
+        valores += [(v, False) for chave, v in elemento.attrib.items() if chave != "relativeToVRT"]
+        for bruto, obrigatorio in valores:
+            valor = (bruto or "").strip()
+            if not valor:
+                continue
+            if obrigatorio or _RE_REFERENCIA.search(valor):
+                achados.append((valor, relativo, obrigatorio))
+    return achados, None
 
 
 def _conferir_vrt(caminho: Path, saida: dict, raiz: str | None = None, profundidade: int = 0,
                   vistos: set[str] | None = None) -> None:
-    """Confere o VRT INTEIRO e, RECURSIVAMENTE, todo VRT que ele referencie (achados 1-3 do adversário). Regra:
-    a fonte, depois de resolvida com `os.path.realpath` (o que desfaz ligação simbólica e `..`), tem de cair
-    dentro do diretório do envio. O XML é lido inteiro até VRT_XML_MAX — o corte de 1 MiB deixava passar a
-    segunda banda escondida atrás de um comentário grande."""
+    """Confere o VRT INTEIRO e, RECURSIVAMENTE, todo VRT que ele referencie. Regra: toda referência a dado —
+    `SourceFilename`, `SourceDataset` e qualquer outro nó ou atributo com cara de caminho — resolvida com
+    `os.path.realpath` (o que desfaz ligação simbólica e `..`), tem de cair dentro do diretório do envio;
+    nada de `/vsi…` nem de esquema remoto. O XML é lido inteiro até VRT_XML_MAX."""
     raiz = raiz if raiz is not None else os.path.realpath(caminho.parent)
     vistos = vistos if vistos is not None else set()
     real = os.path.realpath(caminho)
@@ -553,26 +617,33 @@ def _conferir_vrt(caminho: Path, saida: dict, raiz: str | None = None, profundid
     if "PixelFunction" in texto or "VRTDerivedRasterBand" in texto:
         saida["problemas"].append("VRT com banda derivada (função de pixel) não é aceito")
         return
-    achados = _RE_FONTE_VRT.findall(texto)
-    if not achados:
+    referencias, erro = _referencias_do_vrt(texto)
+    if erro:
+        saida["problemas"].append(erro)
+        return
+    if not referencias:
         saida["problemas"].append("VRT sem SourceFilename: não referencia nenhum raster")
         return
-    for atributos, bruto in achados:
-        f = bruto.strip()
-        marca = _RE_RELATIVO.search(atributos or "")
-        relativo = marca.group(1) == "1" if marca else False
-        if f.startswith("/vsi") or "://" in f or "\\" in f or not f:
-            saida["problemas"].append(f"VRT com fonte fora do diretório do envio ou remota: {f[:120]!r}")
+    for valor, relativo, exigido in referencias:
+        if ("\x00" in valor or valor.startswith("/vsi") or "://" in valor or "\\" in valor
+                or valor.startswith("~")):
+            saida["problemas"].append(f"{MSG_FONTE_FORA}: {valor[:120]!r}")
             return
         base = caminho.parent
-        alvo = base / f if (relativo or not os.path.isabs(f)) else Path(f)
-        destino = os.path.realpath(alvo)
+        alvo = base / valor if (relativo or not os.path.isabs(valor)) else Path(valor)
+        try:
+            destino = os.path.realpath(alvo)
+        except (OSError, ValueError):
+            saida["problemas"].append(f"{MSG_FONTE_FORA}: {valor[:120]!r}")
+            return
         if not (destino == raiz or destino.startswith(raiz + os.sep)):
-            saida["problemas"].append(f"VRT com fonte fora do diretório do envio ou remota: {f[:120]!r}")
+            saida["problemas"].append(f"{MSG_FONTE_FORA}: {valor[:120]!r}")
             return
         if not os.path.isfile(destino):
-            saida["problemas"].append(f"VRT referencia fonte inexistente: {f[:120]!r}")
-            return
+            if exigido:
+                saida["problemas"].append(f"VRT referencia fonte inexistente: {valor[:120]!r}")
+                return
+            continue
         if destino.lower().endswith(".vrt"):
             _conferir_vrt(Path(destino), saida, raiz, profundidade + 1, vistos)
             if saida["problemas"]:
