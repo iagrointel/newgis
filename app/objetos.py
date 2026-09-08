@@ -139,6 +139,16 @@ def garantir_bucket(cur, tenant_id: int | None = None, tenant_slug: str | None =
     admin = _admin()
     alias = f"{settings.PLAT_GARAGE_BUCKET_PREFIXO}{tenant_slug}"
     bucket = admin.criar_bucket(alias)
+    # Este ramo roda só quando NÃO há linha em plat.arquivo_bucket — inclusive quando a base foi recriada
+    # (restauração, trilha de teste) e o Garage sobreviveu com as chaves antigas. Nesse caso o segredo da
+    # chave de mesmo nome não está gravado em lugar nenhum (o Garage não o devolve de novo), então reusar a
+    # chave é incoerente: roda-se ROTAÇÃO — apaga-se a chave órfã e cria-se outra com o mesmo nome (L0-13).
+    # Quando a linha EXISTE (ramo de cima) nada aqui roda e a chave gravada segue valendo.
+    for sufixo in ("-rw", "-ro"):
+        orfa = admin.chave_por_nome(f"{alias}{sufixo}")
+        if orfa is not None:
+            log.warning("objetos: chave %s sem linha em arquivo_bucket (base recriada?): rotacionada", orfa["id"])
+            admin.apagar_chave(orfa["id"])
     rw = admin.criar_chave(f"{alias}-rw")
     ro = admin.criar_chave(f"{alias}-ro")
     ids_permitidos = {k["accessKeyId"] for k in bucket.get("keys", [])}
@@ -147,9 +157,6 @@ def garantir_bucket(cur, tenant_id: int | None = None, tenant_slug: str | None =
     if ro["accessKeyId"] not in ids_permitidos:
         admin.permitir(bucket["id"], ro["accessKeyId"], ler=True, escrever=False, dono=False)
     admin.definir_cota(bucket["id"], cota_atual)
-    # criar_chave é idempotente por NOME (ClienteAdmin.criar_chave): se a chave já existia, a resposta não traz
-    # `secretAccessKey` de volta (o Garage só devolve o segredo na criação) — nesse caso o segredo já gravado em
-    # plat.arquivo_bucket é o único que vale; só entra aqui na 1ª vez que este bucket é criado, então sempre é novo
     cur.execute(
         "SELECT plat.arquivo_bucket_registrar(%s,%s,%s,%s,%s,%s,%s,%s)",
         (
