@@ -10,6 +10,7 @@ import { exigirSessao } from '../auth/sessao.js';
 import { montarExecucao, prepararWidgets } from './executor.js';
 import { PALETA_PAGINAS } from '../editor/paleta_paginas.js';
 import { novoDocumento } from '../editor/documento.js';
+import { montarNarrativa } from '../narrativa/leitor.js';
 
 await carregar();
 const usuario = await exigirSessao();
@@ -30,6 +31,15 @@ async function iniciar() {
     ? { tipo: item.tipo, esquema_versao: dados.esquema_versao || 2, corpo: { nos: [], ligacoes: [], ...dados.corpo } }
     : novoDocumento(item.tipo);
 
+  if (item.tipo === 'narrativa') {
+    // item L5-04-a: a narrativa é lida, não executada — mesmo documento do editor, forma de leitura do leitor
+    document.body.classList.add('narrativa-leitura');
+    document.title = `${item.titulo} · plat`;
+    const resultado = montarNarrativa(raiz, documento, { interativo: true });
+    window.plat = window.plat || {};
+    window.plat.narrativa = { documento, mapas: resultado.mapas };  // ponto de inspeção do e2e
+    return;
+  }
   const falhas = await prepararWidgets(documento);
   montarExecucao({ raiz, documento, paleta: PALETA_PAGINAS, falhas });
 }

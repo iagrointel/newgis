@@ -56,6 +56,17 @@ async function principal() {
   }
   r = await resp.json();
   document.title = `${texto(r.titulo)} · plat`;
+  if (r.corpo && r.corpo.tipo === 'narrativa') {
+    // item L5-04-a: narrativa publicada é LIDA pelo mesmo leitor de /executar (blocos, mapa com vista salva)
+    const { montarNarrativa } = await import('../narrativa/leitor.js');
+    const documento = { tipo: 'narrativa', esquema_versao: r.corpo.esquema_versao || 1, corpo: { nos: [], ligacoes: [], ...(r.corpo.corpo || {}) } };
+    document.body.classList.add('narrativa-leitura');
+    const resultado = montarNarrativa(raiz, documento, { interativo: true });
+    window.plat = window.plat || {};
+    window.plat.narrativa = { documento, mapas: resultado.mapas };
+    raiz.dataset.carregado = '1';
+    return;
+  }
   const nos = (r.corpo && r.corpo.corpo && Array.isArray(r.corpo.corpo.nos)) ? r.corpo.corpo.nos : [];
   raiz.append(
     el('h1', { texto: r.titulo || '(sem título)' }),
