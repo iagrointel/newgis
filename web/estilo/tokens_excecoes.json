@@ -1,6 +1,17 @@
 {
  "descricao": "Arquivos de web/ dispensados da guarda de tokens (docs/verificar_tokens.py), um por linha, sempre com motivo. Tudo o mais tem de usar só var(--...) de web/estilo/tokens.css.",
  "excecoes": [
-  {"arquivo": "web/js/mapa/estilo.js", "motivo": "estilo MapLibre é JSON lido pelo canvas, não CSS: não resolve var(); as cores são copiadas dos tokens escuros e o comentário do arquivo obriga a repetir quando tokens.css mudar"}
+  {
+   "arquivo": "web/js/mapa/estilo.js",
+   "motivo": "estilo MapLibre é JSON lido pelo canvas, não CSS: não resolve var(); as cores são copiadas dos tokens escuros e o comentário do arquivo obriga a repetir quando tokens.css mudar"
+  },
+  {
+   "arquivo": "web/render_mapa.html",
+   "motivo": "página headless do motor de render (L2-12-a): não carrega tokens.css nem tema; o fundo é o do canvas do mapa"
+  },
+  {
+   "arquivo": "web/render_layout_mapa.html",
+   "motivo": "página headless do quadro de mapa do layout (L2-12-b): sem tokens.css; fundo branco de papel para a impressão"
+  }
  ]
 }

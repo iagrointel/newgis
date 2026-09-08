@@ -44,6 +44,7 @@ import { PainelMotor } from './motor.js';
 import { criarTabela } from './tabela.js';
 import { Desenho, kmlParaGeoJSON } from './desenho.js';
 import { PainelSelecao } from './selecao.js';
+import { PainelLayout } from './layout.js';
 import { PainelAnotacoes } from './anotacoes.js';
 import { PainelExportar } from './exportar.js';
 
@@ -52,8 +53,8 @@ const BASES = [
   { id: 'sem-base', rotuloChave: 'mapa.base_nenhuma', arquivo: null },
 ];
 const CENTRO = [-46.593018, -23.493476];
-const PAINEIS = ['busca', 'camadas', 'legenda', 'medicao', 'desenho', 'anotacoes', 'impressao', 'exportar', 'rotas', 'motor', 'selecao'];
-const ATALHOS = { b: 'busca', c: 'camadas', l: 'legenda', m: 'medicao', d: 'desenho', a: 'anotacoes', i: 'impressao', e: 'exportar', r: 'rotas', o: 'motor', s: 'selecao' };
+const PAINEIS = ['busca', 'camadas', 'legenda', 'medicao', 'desenho', 'anotacoes', 'impressao', 'exportar', 'rotas', 'motor', 'selecao', 'layout'];
+const ATALHOS = { b: 'busca', c: 'camadas', l: 'legenda', m: 'medicao', d: 'desenho', a: 'anotacoes', i: 'impressao', e: 'exportar', r: 'rotas', o: 'motor', s: 'selecao', y: 'layout' };
 const CHAVE_PAINEL = 'plat_mapa_painel';
 const el = (id) => document.getElementById(id);
 
@@ -459,13 +460,17 @@ async function iniciar() {
   await tabela.iniciar();
   // painel Seleção (UX-23): atributo, geometria do desenho e entre camadas; resultado cai na tabela
   const painelSelecao = new PainelSelecao(map, catalogo, desenho, tabela, el('selecao'));
+  // painel Layout (L2-12-b): modelo → elementos por formulário → prévia → exportação por job; o mapa é o da tela
+  const painelLayout = new PainelLayout(map, catalogo, el('layout'), { baseAtual: () => sel.value, mapaId: () => mapaId });
+  const layoutPedido = params.get('layout');
+  if (layoutPedido) { painelLayout.abrirItem(layoutPedido); abrirPainel('layout', { foco: false }); }
 
   // item L2-01-d-popup-runtime: o fuso do inquilino, uma vez só (nunca por campo de data no popup)
   window.plat = window.plat || {};
   window.plat.org = window.plat.org || {};
   obter('/api/mapa/fuso').then((r) => { if (r.status === 200) window.plat.org.fuso = r.json.fuso; }).catch(() => {});
   // ponto de inspeção do e2e, nunca de negócio
-  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, desenho, painelAnotacoes, exportar: painelExportar, rotas: painelRotas, motor: painelMotor, selecao: painelSelecao, tabela, abrirPainel, fecharGaveta, painelAberto, get mapaId() { return mapaId; } };
+  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, desenho, painelAnotacoes, exportar: painelExportar, rotas: painelRotas, motor: painelMotor, selecao: painelSelecao, layout: painelLayout, tabela, abrirPainel, fecharGaveta, painelAberto, get mapaId() { return mapaId; } };
   document.body.dataset.pronto = '1';
 }
 

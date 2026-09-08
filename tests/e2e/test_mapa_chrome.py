@@ -22,7 +22,7 @@ pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
 ITEM = "UX-04"
 PAINEIS = ["busca", "camadas", "legenda", "medicao", "desenho", "anotacoes", "impressao", "exportar", "rotas", "motor",
-           "selecao"]
+           "selecao", "layout"]
 ATALHOS = {
     "b": "busca",
     "c": "camadas",
@@ -35,6 +35,7 @@ ATALHOS = {
     "r": "rotas",
     "o": "motor",
     "s": "selecao",
+    "y": "layout",
 }
 
 
