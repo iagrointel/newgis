@@ -152,21 +152,14 @@ def _verificar_zip(tipo: str, chave: str, tamanho: int) -> None:
     # de conteúdo além disso — a inspeção decide o que fazer com o que encontrar dentro (seção 3.4 do ADR)
 
 
-def verificar_conteudo(tipo_declarado: str, chave: str, tamanho: int) -> None:
-    """Levanta `ConteudoNaoCorresponde` quando os bytes não provam `tipo_declarado`. `tamanho` é o tamanho REAL
-    do objeto já gravado no Garage (nunca o declarado pelo cliente)."""
-    tipo = TIPOS.get(tipo_declarado)
-    if tipo is None:
-        raise ConteudoNaoCorresponde(f"tipo declarado desconhecido nesta instalação: {tipo_declarado}")
-    if tamanho == 0:
-        raise ConteudoNaoCorresponde(f"conteúdo não corresponde ao tipo {tipo_declarado}: arquivo vazio")
+MINIMO_INICIO_BYTES = 4096  # abaixo disto o trecho não prova nada (geojson/kml procuram marca até 4096)
 
-    if tipo.zip_baseado:
-        _verificar_zip(tipo_declarado, chave, tamanho)
-        return
 
-    cabecalho = _cabecalho(chave, tamanho)
-
+def _conferir_cabecalho(tipo_declarado: str, cabecalho: bytes) -> None:
+    """Prova o tipo pelos bytes INICIAIS. Vale tanto para o arquivo inteiro já no Garage (`verificar_conteudo`)
+    quanto para os primeiros bytes da parte 1 ainda no disco de trabalho (`verificar_inicio`, item L1-01-e).
+    O parquet é o único cujo cabeçalho não basta: a marca `PAR1` também tem de estar na cauda, e essa metade
+    fica em `verificar_conteudo`, que é quem tem o arquivo inteiro."""
     if tipo_declarado == "gpkg":
         if cabecalho[:16] != b"SQLite format 3\x00":
             raise ConteudoNaoCorresponde(f"conteúdo não corresponde ao tipo gpkg: o arquivo é {_o_que_e(cabecalho)}")
@@ -202,8 +195,51 @@ def verificar_conteudo(tipo_declarado: str, chave: str, tamanho: int) -> None:
         if cabecalho[:3] != b"fgb":
             raise ConteudoNaoCorresponde(f"conteúdo não corresponde ao tipo fgb: o arquivo é {_o_que_e(cabecalho)}")
     elif tipo_declarado == "parquet":
-        cauda = _cauda(chave, tamanho, 4)
-        if cabecalho[:4] != b"PAR1" or cauda[-4:] != b"PAR1":
+        if cabecalho[:4] != b"PAR1":
             raise ConteudoNaoCorresponde(f"conteúdo não corresponde ao tipo parquet: o arquivo é {_o_que_e(cabecalho)}")
-    else:  # pragma: no cover — TIPOS e o dispatch acima são mantidos em sincronia manualmente
+    else:  # pragma: no cover -- TIPOS e o dispatch acima são mantidos em sincronia manualmente
         raise ConteudoNaoCorresponde(f"tipo declarado sem verificação implementada: {tipo_declarado}")
+
+
+def verificar_inicio(tipo_declarado: str, inicio: bytes) -> None:
+    """Recusa o envio já na PARTE 1, sem esperar a última parte ser copiada (item L1-01-e): o que os
+    primeiros bytes provam, provam desde o começo. Silencioso (não levanta) quando o trecho é curto demais
+    para decidir — nesse caso quem recusa é `verificar_conteudo`, no fim, com o arquivo inteiro.
+
+    Para os tipos baseados em zip a única prova possível no começo é a assinatura de arquivo local (`PK\x03\x04`):
+    o diretório central, que diz quais arquivos existem dentro, mora no FIM do zip."""
+    tipo = TIPOS.get(tipo_declarado)
+    if tipo is None:
+        raise ConteudoNaoCorresponde(f"tipo declarado desconhecido nesta instalação: {tipo_declarado}")
+    if len(inicio) < MINIMO_INICIO_BYTES:
+        return
+    if tipo.zip_baseado:
+        if inicio[:4] != b"PK\x03\x04":
+            raise ConteudoNaoCorresponde(
+                f"conteúdo não corresponde ao tipo {tipo_declarado}: o arquivo é {_o_que_e(inicio)}"
+            )
+        return
+    _conferir_cabecalho(tipo_declarado, inicio)
+
+
+def verificar_conteudo(tipo_declarado: str, chave: str, tamanho: int) -> None:
+    """Levanta `ConteudoNaoCorresponde` quando os bytes não provam `tipo_declarado`. `tamanho` é o tamanho REAL
+    do objeto já gravado no Garage (nunca o declarado pelo cliente)."""
+    tipo = TIPOS.get(tipo_declarado)
+    if tipo is None:
+        raise ConteudoNaoCorresponde(f"tipo declarado desconhecido nesta instalação: {tipo_declarado}")
+    if tamanho == 0:
+        raise ConteudoNaoCorresponde(f"conteúdo não corresponde ao tipo {tipo_declarado}: arquivo vazio")
+
+    if tipo.zip_baseado:
+        _verificar_zip(tipo_declarado, chave, tamanho)
+        return
+
+    cabecalho = _cabecalho(chave, tamanho)
+    _conferir_cabecalho(tipo_declarado, cabecalho)
+    if tipo_declarado == "parquet":
+        cauda = _cauda(chave, tamanho, 4)
+        if cauda[-4:] != b"PAR1":
+            raise ConteudoNaoCorresponde(
+                f"conteúdo não corresponde ao tipo parquet: o arquivo é {_o_que_e(cabecalho)}"
+            )

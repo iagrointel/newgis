@@ -105,6 +105,17 @@ UPLOAD_PARTE_BYTES = 16 * 1024 * 1024       # 16 MiB (ADR 0005 seção 3.1; dist
 UPLOAD_EXPIRA_HORAS = 24
 UPLOAD_NOME_MAX = 255
 
+# --- upload grande retomável (L1-01-e; ADR 20260908T1600): o corpo de `PUT /api/uploads/{id}/partes/{n}` NUNCA
+# é acumulado em memória — ele é escrito em fluxo no disco de trabalho (`app.uploads.disco`) em pedaços de
+# UPLOAD_PEDACO_BYTES e só depois enviado ao Garage a partir do arquivo. Logo o pico de memória do processo que
+# recebe não cresce com o tamanho do arquivo nem com o número de envios simultâneos: é UPLOAD_PEDACO_BYTES por
+# requisição em curso, não UPLOAD_PARTE_BYTES. UPLOAD_RAM_MAX_MB é o teto declarado para o processo da API/worker
+# que recebe partes (a medida de pico com envios simultâneos é registrada em tests/medidas/L1-01-e-*.json).
+UPLOAD_PEDACO_BYTES = 1024 * 1024            # 1 MiB por leitura do socket e escrita no disco de trabalho
+UPLOAD_DISCO_LIVRE_MIN_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB livres exigidos no disco de trabalho, além da parte
+UPLOAD_RAM_MAX_MB = 512                      # teto declarado de pico de memória do processo que recebe partes
+UPLOAD_CABECALHO_INICIO_BYTES = 65536        # bytes da parte 1 usados para recusar tipo errado antes do fim
+
 # --- rede de rota (L2-11-c): OSRM isolado `plat-osrm-guarulhos` (:5010; recorte de teste ≤ 50 MB — nunca os
 # OSRM de outras frentes da casa em 5000-5003); PLAT_ROTA_MATRIZ_MAX/PLAT_ROTA_ISOCRONA_MAX_PONTOS no .env
 # sobrepõem os padrões abaixo (settings.py). ROTA_MATRIZ_MAX_PADRAO bate com --max-table-size do container.

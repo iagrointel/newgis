@@ -434,6 +434,18 @@ def parte_enviar(cur, upload_id: str, numero: int, dados: bytes) -> str:
     return cli.multipart_enviar_parte(bucket["bucket_alias"], linha["chave_temp"], upload_id, numero, dados)
 
 
+def parte_enviar_arquivo(cur, upload_id: str, numero: int, caminho, sha256_hex: str) -> str:
+    """Mesma coisa que `parte_enviar`, com a parte lida do disco de trabalho (item L1-01-e): o conteúdo
+    nunca existe inteiro na memória do processo. `sha256_hex` é o hash já calculado durante a gravação e
+    serve à assinatura SigV4 (`x-amz-content-sha256`), evitando uma segunda leitura do arquivo."""
+    linha = _upload_linha(cur, upload_id)
+    bucket = garantir_bucket(cur, linha["tenant_id"])
+    cli = _cliente(bucket)
+    return cli.multipart_enviar_parte_arquivo(
+        bucket["bucket_alias"], linha["chave_temp"], upload_id, numero, caminho, sha256_hex
+    )
+
+
 def parte_concluir(cur, upload_id: str, partes: list[tuple[int, str]]) -> dict:
     """Fecha o multipart, lê o objeto de volta EM STREAM para calcular o sha256 real (o ETag multipart do
     S3 não é um sha256 do conteúdo), copia para a chave definitiva por conteúdo e apaga o temporário.

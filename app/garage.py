@@ -108,13 +108,14 @@ class ClienteS3:
         self.regiao = regiao
 
     def _assinar_requisicao(
-        self, metodo: str, bucket: str, chave: str, corpo: bytes, query: str, extra: dict[str, str] | None
+        self, metodo: str, bucket: str, chave: str, corpo: bytes, query: str, extra: dict[str, str] | None,
+        payload_hash: str | None = None,
     ) -> dict[str, str]:
         agora = datetime.datetime.now(datetime.timezone.utc)
         amzdate = agora.strftime("%Y%m%dT%H%M%SZ")
         datestamp = agora.strftime("%Y%m%d")
         uri = urllib.parse.quote(f"/{bucket}/{chave}" if chave else f"/{bucket}", safe="/")
-        payload_hash = hashlib.sha256(corpo).hexdigest()
+        payload_hash = payload_hash or hashlib.sha256(corpo).hexdigest()
         cabecalhos = {"host": self.host, "x-amz-content-sha256": payload_hash, "x-amz-date": amzdate}
         if extra:
             cabecalhos.update(extra)
@@ -143,12 +144,22 @@ class ClienteS3:
         metodo: str,
         bucket: str,
         chave: str = "",
-        corpo: bytes = b"",
+        corpo: Any = b"",
         query: str = "",
         extra: dict[str, str] | None = None,
         stream: bool = False,
+        payload_hash: str | None = None,
     ) -> requests.Response:
-        cabecalhos = self._assinar_requisicao(metodo, bucket, chave, corpo, query, extra)
+        """`corpo` é bytes ou um objeto de arquivo aberto em binário. No segundo caso `payload_hash` é
+        obrigatório: o sha256 do conteúdo já foi calculado enquanto a parte era gravada no disco de
+        trabalho (item L1-01-e), e reler o arquivo só para assinar derrotaria o propósito de não passar
+        o conteúdo pela memória."""
+        em_memoria = isinstance(corpo, (bytes, bytearray))
+        if not em_memoria and payload_hash is None:
+            raise ErroGarage("corpo de arquivo exige payload_hash (sha256 do conteúdo) para assinar")
+        cabecalhos = self._assinar_requisicao(
+            metodo, bucket, chave, bytes(corpo) if em_memoria else b"", query, extra, payload_hash
+        )
         url = f"{self.endpoint}/{bucket}/{chave}" if chave else f"{self.endpoint}/{bucket}"
         if query:
             url += "?" + query
@@ -276,6 +287,21 @@ class ClienteS3:
 
     def multipart_enviar_parte(self, bucket: str, chave: str, upload_id: str, numero: int, dados: bytes) -> str:
         r = self._requisicao("PUT", bucket, chave, corpo=dados, query=f"partNumber={numero}&uploadId={upload_id}")
+        if r.status_code != 200:
+            raise _erro_escrita(f"UploadPart {bucket}/{chave} #{numero}", r.status_code, r.text)
+        return (r.headers.get("etag") or "").strip('"')
+
+    def multipart_enviar_parte_arquivo(
+        self, bucket: str, chave: str, upload_id: str, numero: int, caminho, sha256_hex: str
+    ) -> str:
+        """A mesma parte, lida do disco de trabalho em vez da memória (item L1-01-e): `requests` envia o
+        objeto de arquivo em fluxo e deduz o Content-Length do tamanho dele, de modo que o conteúdo da
+        parte nunca existe inteiro em RAM no processo da API."""
+        with open(caminho, "rb") as f:
+            r = self._requisicao(
+                "PUT", bucket, chave, corpo=f, query=f"partNumber={numero}&uploadId={upload_id}",
+                payload_hash=sha256_hex,
+            )
         if r.status_code != 200:
             raise _erro_escrita(f"UploadPart {bucket}/{chave} #{numero}", r.status_code, r.text)
         return (r.headers.get("etag") or "").strip('"')
