@@ -162,12 +162,6 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     })
     assert r.status_code == 201, r.text
     execucao_b = r.json()
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
-                      convite_b=convite_b)
     # L3-01-a/b: modelo, conjunto de unidades e execução de B (a camada do modelo é o item de B, que já existe)
     definicao = amc_exemplos.modelo_sem_camada_externa()
     definicao["nome"] = f"{PREFIXO}amc-{sufixo}"
@@ -185,8 +179,9 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     amc_execucao_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, amc_modelo_b=amc_modelo_b,
-                      amc_conjunto_b=amc_conjunto_b, amc_execucao_b=amc_execucao_b)
+                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
+                      convite_b=convite_b, conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b,
+                      amc_modelo_b=amc_modelo_b, amc_conjunto_b=amc_conjunto_b, amc_execucao_b=amc_execucao_b)
 
 
 def amc_feicoes(*ids: str) -> dict:
@@ -946,6 +941,7 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
     # ---- L3-01-a/b motor multicritério: modelo, conjunto de unidades e execução de B
     ("POST", "/api/amc/modelos/validar"): Caso(
         lambda p: "/api/amc/modelos/validar",
