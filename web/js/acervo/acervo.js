@@ -231,6 +231,8 @@ function controleAdicionar(ficha) {
     return caixa;
   }
   botao.addEventListener('click', () => adicionar(ficha, false, { botao, estadoCtl }));
+  // "tentar de novo" do estado de erro: um ouvinte só, ligado uma vez (não um por erro)
+  estadoCtl.addEventListener('acao', (e) => { if (e.detail.id === 'tentar') adicionar(ficha, false, { botao, estadoCtl }); });
   return caixa;
 }
 
@@ -267,7 +269,6 @@ async function adicionar(ficha, confirmaPii = false, { botao, estadoCtl } = {}) 
   if (r.status >= 400 || r.status === 0) {
     // 413 cota, 422 corpo, 404 fonte, 5xx: a mensagem da API nomeada e a referência, no próprio controle
     estadoCtl?.erro(r, [{ id: 'tentar', rotulo: t('estado.tentar_de_novo') }]);
-    estadoCtl?.addEventListener('acao', (e) => { if (e.detail.id === 'tentar') adicionar(ficha, confirmaPii, { botao, estadoCtl }); }, { once: true });
     return;
   }
   estadoCtl?.limpar();
