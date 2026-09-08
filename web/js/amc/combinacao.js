@@ -18,6 +18,25 @@ export const COMBINADORES = {
   soma_fuzzy: 'soma fuzzy 1 − Π(1 − f), na escala 0-1; ignora os pesos por definição',
   gama: 'gama fuzzy (soma fuzzy)^γ · (produto)^(1−γ); ignora os pesos por definição',
 };
+// Tradução do vocabulário do documento do modelo (docs/esquemas/amc_modelo.v1.json, item L3-01-a) para o
+// vocabulário desta função — as duas trilhas nomearam a mesma escolha de forma diferente. Gêmeo em JavaScript
+// dos dicionários MAPA_COMBINADOR/MAPA_POLITICA de app/amc/explicacao.py; quem escrever mais um nome de
+// combinador tem de escrever nos dois lugares, e tests/unit/test_amc_combinacao_equivalencia.py cobra.
+export const MAPA_COMBINADOR = {
+  soma_ponderada_normalizada: 'soma_ponderada',
+  percentual: 'percentual',
+  media_geometrica: 'media_geometrica',
+  minimo: 'minimo',
+  maximo: 'maximo',
+  produto: 'produto',
+  soma_fuzzy: 'soma_fuzzy',
+  gama: 'gama',
+};
+export const MAPA_POLITICA = {
+  excluir_fator: 'excluir',
+  unidade_nula: 'nulo',
+  nota_pessimista: 'pessimista',
+};
 export const SEM_PESO = ['minimo', 'maximo', 'produto', 'soma_fuzzy', 'gama'];
 export const POLITICAS_AUSENTE = {
   excluir: 'o fator sai da conta naquela unidade e a cobertura cai (padrão)',
