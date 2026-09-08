@@ -161,4 +161,60 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
     # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
     ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
+    # --- edição no mapa e escrita compatível Esri (L2-03-edicao / L2-04-d): as rotas existem nesta
+    # árvore (ramos wt/il203edicao, wt/il204bfeatu e wt/il204dfeatu juntados aqui) e o registro delas
+    # faltava porque o docs/openapi.json de master ainda não as listava. Nomes lidos do código.
+    ("POST", "/api/camadas/{id}/feicoes/unir"): ["camadas/unir"],
+    ("POST", "/api/camadas/{id}/feicoes/dividir"): ["camadas/dividir"],
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): [
+        "camadas/restaurar"
+    ],
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): ["camadas/anexo_enviar"],
+    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): ["camadas/anexo_apagar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/applyEdits"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/applyEdits"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/addFeatures"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/updateFeatures"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/deleteFeatures"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/calculate"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/uploads/upload"): ["camadas/upload_esri"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/addAttachment"): [
+        "camadas/anexo_enviar"
+    ],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/updateAttachment"): [
+        "camadas/anexo_enviar", "camadas/anexo_apagar"
+    ],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/deleteAttachments"): [
+        "camadas/anexo_apagar"
+    ],
+    # POST que só existe porque o protocolo Esri manda parâmetro por formulário: são LEITURAS.
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): [],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/queryAttachments"): [],
+    ("POST", "/svc/{token}/rest/info"): [],
+    ("POST", "/svc/{token}/rest/generateToken"): [],
+    # --- versionamento por ramo (L2-13-a)
+    ("POST", "/api/camadas/{id}/versionar"): ["camadas/versionar"],
+    ("POST", "/api/camadas/{id}/versoes"): ["versoes/criar"],
+    ("DELETE", "/api/camadas/{id}/versoes/{versao}"): ["versoes/apagar"],
+    ("POST", "/api/camadas/{id}/versoes/{versao}/reconciliar"): ["versoes/reconciliar"],
+    ("POST", "/api/camadas/{id}/versoes/{versao}/conflitos/{globalid}/resolver"): ["versoes/resolver"],
+    ("POST", "/api/camadas/{id}/versoes/{versao}/publicar"): ["versoes/publicar"],
+    # VersionManagementServer: os mesmos eventos, porque chama as MESMAS funções (create/delete/
+    # reconcile/post). startReading/stopReading/startEditing/stopEditing não mudam estado nenhum e por
+    # decisão não geram evento.
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/create"): ["versoes/criar"],
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/delete"): ["versoes/apagar"],
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/reconcile"): [
+        "versoes/reconciliar"
+    ],
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/post"): ["versoes/publicar"],
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/startReading"): [],
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/stopReading"): [],
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/startEditing"): [],
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/stopEditing"): [],
+    # leituras que o protocolo também aceita por POST (parâmetro em formulário)
+    ("POST", "/rest/services/{item_id}/VersionManagementServer"): [],
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/versions"): [],
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/versionInfos"): [],
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/conflicts"): [],
 }

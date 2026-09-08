@@ -230,3 +230,29 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## edição transacional de feições (L2-03-a-api-edicao-transacional; POST /api/camadas/{id}/edicoes, única
+
+| nome | valor | explicação |
+|---|---|---|
+| `EDICAO_LOTE_MAX` | `2000` | — |
+| `EDICAO_ATRIBUTOS_MAX` | `500` | campos por feição num único pedido (mesmo teto de INGESTAO_CAMPOS_MAX) |
+| `EDICAO_TEXTO_MAX` | `65536` | 64 KiB por valor de campo texto (mesma ordem de ITEM_DESCRICAO_MAX) |
+| `EDICAO_REGRA_CAMPO_MAX` | `500` | entradas em dados.regras_campo (mesmo teto de campos da camada) |
+| `EDICAO_DOMINIO_VALORES_MAX` | `1000` | valores aceitos por regra de domínio codificado |
+| `EDICAO_SRID_MAX` | `999999` | mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql) |
+
+## edição no mapa: histórico/restauração e anexos por feição (item L2-03-edicao)
+
+| nome | valor | explicação |
+|---|---|---|
+| `HISTORICO_LISTA_MAX` | `500` | entradas devolvidas por consulta (mais recentes primeiro) |
+| `ANEXO_TAMANHO_MAX` | `7340032` | 7 MiB por anexo — NÃO 10: o envio é JSON com o conteúdo em base64 |
+| `ANEXO_TIPOS_PERMITIDOS` | `('application/pdf', 'image/gif', 'image/jpeg', 'image/png', 'image/webp')` | — |
+
+## versionamento por ramo (item L2-13-a): teto de ramos ABERTOS por camada. A camada pode declarar o
+
+| nome | valor | explicação |
+|---|---|---|
+| `VERSOES_POR_CAMADA_MAX` | `50` | — |
+| `VERSAO_NOME_MAX` | `128` | — |

@@ -947,6 +947,84 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
         lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"
     ),
+    # ---- versionamento por ramo (L2-13-a): API própria e VersionManagementServer compatível. O alvo é
+    # sempre um UUID que não é de A nem de B; a RLS de `plat.item` responde 404 antes de qualquer leitura
+    # de ramo, e o VersionManagementServer devolve o erro no envelope da Esri COM o status HTTP certo.
+    ("POST", "/api/camadas/{id}/versionar"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/versionar", lambda p: {}
+    ),
+    ("GET", "/api/camadas/{id}/versoes"): Caso(lambda p: f"/api/camadas/{UUID_NULO}/versoes"),
+    ("POST", "/api/camadas/{id}/versoes"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/versoes", lambda p: {"nome": PREFIXO + "ramo"}
+    ),
+    ("GET", "/api/camadas/{id}/versoes/{versao}"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/versoes/{UUID_NULO}"
+    ),
+    ("DELETE", "/api/camadas/{id}/versoes/{versao}"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/versoes/{UUID_NULO}"
+    ),
+    ("POST", "/api/camadas/{id}/versoes/{versao}/reconciliar"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/versoes/{UUID_NULO}/reconciliar", lambda p: {}
+    ),
+    ("GET", "/api/camadas/{id}/versoes/{versao}/conflitos"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/versoes/{UUID_NULO}/conflitos"
+    ),
+    ("POST", "/api/camadas/{id}/versoes/{versao}/conflitos/{globalid}/resolver"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/versoes/{UUID_NULO}/conflitos/{UUID_NULO}/resolver",
+        lambda p: {"decisao": "ramo"},
+    ),
+    ("POST", "/api/camadas/{id}/versoes/{versao}/publicar"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/versoes/{UUID_NULO}/publicar", lambda p: {}
+    ),
+    ("GET", "/rest/services/{item_id}/VersionManagementServer"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer?f=json"
+    ),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer", lambda p: {"f": "json"}
+    ),
+    ("GET", "/rest/services/{item_id}/VersionManagementServer/versions"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/versions"
+    ),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/versions"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/versions", lambda p: {}
+    ),
+    ("GET", "/rest/services/{item_id}/VersionManagementServer/versionInfos"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/versionInfos"
+    ),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/versionInfos"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/versionInfos", lambda p: {}
+    ),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/create"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/create",
+        lambda p: {"versionName": PREFIXO + "ramo"},
+    ),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/delete"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/{UUID_NULO}/delete", lambda p: {}
+    ),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/reconcile"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/{UUID_NULO}/reconcile", lambda p: {}
+    ),
+    ("GET", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/conflicts"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/{UUID_NULO}/conflicts"
+    ),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/conflicts"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/{UUID_NULO}/conflicts", lambda p: {}
+    ),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/post"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/{UUID_NULO}/post", lambda p: {}
+    ),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/startReading"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/{UUID_NULO}/startReading", lambda p: {}
+    ),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/stopReading"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/{UUID_NULO}/stopReading", lambda p: {}
+    ),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/startEditing"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/{UUID_NULO}/startEditing", lambda p: {}
+    ),
+    ("POST", "/rest/services/{item_id}/VersionManagementServer/{versao_guid}/stopEditing"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/VersionManagementServer/{UUID_NULO}/stopEditing", lambda p: {}
+    ),
     # ---- visualizador de mapa (L2-01-mapa-web): a lista é do próprio chamador; o resto é por id
     ("GET", "/api/mapa/camadas"): Caso(
         lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
