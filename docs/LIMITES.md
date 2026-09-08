@@ -230,3 +230,11 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## ------------------------------------------------------------- relatórios do admin (item L0-07-e; limites iguais aos
+
+| nome | valor | explicação |
+|---|---|---|
+| `RELATORIO_JANELA_DIAS` | `366` | janela máxima de um relatório: 12 meses |
+| `RELATORIO_LINHAS_MAX` | `10000` | linhas por relatório; acima disso o CSV é cortado e o resultado diz truncado |
+| `RELATORIO_POR_TIPO_HORA` | `1` | pedidos por tipo por hora pela API (agenda disparada pelo worker não conta) |
