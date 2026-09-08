@@ -61,7 +61,7 @@ def test_mil_pontos_quatro_criterios_pela_api(sessao_a, feicoes, pontos):
     assert len(corpo["histogramas"]) == 4
     assert len(corpo["correlacao"]["matriz"]) == 4
     assert corpo["aviso_pesos"] == "pesos escolhidos pelo usuário, não medidos"
-    posicoes = sorted(l["posicao"] for l in corpo["linhas"] if l["posicao"] is not None)
+    posicoes = sorted(linha["posicao"] for linha in corpo["linhas"] if linha["posicao"] is not None)
     assert posicoes == list(range(1, 1_001))
 
 
@@ -69,7 +69,7 @@ def test_contagem_em_raio_confere_com_st_dwithin(sessao_a, conexao_plat_app, fei
     """Cláusula do portão: a contagem em raio do motor contra `ST_DWithin` do PostGIS, feição a feição."""
     r = sessao_a.post("/api/amc/criterios-feicao", json=_pedido(feicoes, pontos))
     assert r.status_code == 200, r.text
-    do_motor = {l["id"]: l["valores"]["lugares_1km"] for l in r.json()["linhas"]}
+    do_motor = {linha["id"]: linha["valores"]["lugares_1km"] for linha in r.json()["linhas"]}
 
     unidades = [(f["properties"]["id"], json.dumps(f["geometry"])) for f in feicoes]
     camada = [json.dumps(f["geometry"]) for f in pontos]
@@ -108,7 +108,7 @@ def test_filtro_de_inclusao_marca_filtrada_pela_api(sessao_a, feicoes, pontos):
     corpo = r.json()
     assert corpo["n_filtradas"] > 0
     assert corpo["n_incluidas"] + corpo["n_filtradas"] == 1_000
-    filtrada = next(l for l in corpo["linhas"] if l["estado"] == "filtrada")
+    filtrada = next(linha for linha in corpo["linhas"] if linha["estado"] == "filtrada")
     assert filtrada["posicao"] is None and "fora da faixa de inclusão" in filtrada["motivo_filtro"]
 
 

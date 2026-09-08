@@ -22,8 +22,8 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field, field_validator
 
 from app import limites
-from app.amc import crs as mod_crs
 from app.amc import criterios_feicao as motor
+from app.amc import crs as mod_crs
 from app.auth.sessao import autenticado
 from app.erros import ErroAPI
 

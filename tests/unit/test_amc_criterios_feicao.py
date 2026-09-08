@@ -66,10 +66,10 @@ def test_mil_pontos_quatro_criterios_roda_e_ranqueia(avaliacao):
     d = avaliacao.como_dicionario()
     assert d["n_feicoes"] == 1_000
     assert len(d["criterios"]) == 4
-    posicoes = sorted(l["posicao"] for l in d["linhas"] if l["posicao"] is not None)
+    posicoes = sorted(linha["posicao"] for linha in d["linhas"] if linha["posicao"] is not None)
     assert posicoes == list(range(1, len(posicoes) + 1)), "o ranque tem de ser 1..N, sem buraco e sem repetição"
     assert len(posicoes) == d["n_incluidas"]
-    notas = [l["nota"] for l in sorted(d["linhas"], key=lambda x: x["posicao"] or 10**9)[:len(posicoes)]]
+    notas = [linha["nota"] for linha in sorted(d["linhas"], key=lambda x: x["posicao"] or 10**9)[:len(posicoes)]]
     assert notas == sorted(notas, reverse=True), "a posição 1 é a maior nota"
     assert all(0.0 <= n <= 100.0 for n in notas)
 
@@ -179,7 +179,7 @@ def test_csv_tem_uma_linha_por_feicao_na_ordem_do_ranque(avaliacao):
     assert cabecalho[:5] == ["id", "estado", "motivo_filtro", "posicao", "nota"]
     for c in ("area", "lugares_1km", "dist_lugar", "area_ideal"):
         assert f"{c}_valor" in cabecalho and f"{c}_favorabilidade" in cabecalho
-    primeiras = [l[3] for l in linhas[1:6]]
+    primeiras = [linha[3] for linha in linhas[1:6]]
     assert primeiras == ["1", "2", "3", "4", "5"]
 
 
@@ -189,7 +189,7 @@ def test_csv_traz_a_feicao_filtrada_no_fim_com_o_motivo(feicoes, pontos):
     a = cf.avaliar(feicoes, criterios, SRID, {"lugares": pontos})
     # o motivo do filtro tem vírgula: a leitura é com o módulo csv, que é a prova de que a citação está certa
     linhas = list(csv.reader(io.StringIO(a.csv())))[1:]
-    estados = [l[1] for l in linhas]
+    estados = [linha[1] for linha in linhas]
     assert estados.count("filtrada") > 0
     assert estados[-1] == "filtrada", "quem não tem posição sai no fim"
     assert linhas[-1][3] == "" and "fora da faixa de inclusão" in linhas[-1][2]
@@ -202,14 +202,14 @@ def test_filtro_de_inclusao_tira_do_ranque_sem_zerar_a_nota_de_ninguem(feicoes, 
     a = cf.avaliar(feicoes, criterios, SRID, {"lugares": pontos})
     d = a.como_dicionario()
     assert d["n_filtradas"] > 0 and d["n_incluidas"] + d["n_filtradas"] == 1_000
-    for l in d["linhas"]:
-        if l["estado"] == cf.ESTADO_FILTRADA:
-            assert l["posicao"] is None and l["nota"] is None
-            assert l["motivo_filtro"] and "fora da faixa" in l["motivo_filtro"]
-            assert not (50.0 <= l["valores"]["area"] <= 500.0)
+    for linha in d["linhas"]:
+        if linha["estado"] == cf.ESTADO_FILTRADA:
+            assert linha["posicao"] is None and linha["nota"] is None
+            assert linha["motivo_filtro"] and "fora da faixa" in linha["motivo_filtro"]
+            assert not (50.0 <= linha["valores"]["area"] <= 500.0)
         else:
-            assert 50.0 <= l["valores"]["area"] <= 500.0
-            assert l["posicao"] is not None
+            assert 50.0 <= linha["valores"]["area"] <= 500.0
+            assert linha["posicao"] is not None
 
 
 def test_valor_ausente_nao_e_filtrado_por_faixa():
@@ -218,7 +218,7 @@ def test_valor_ausente_nao_e_filtrado_por_faixa():
     a = cf.avaliar(feicoes, [{"id": "a", "tipo": "atributo", "campo": "a", "influencia": "positiva",
                               "minimo": 10.0, "maximo": 20.0, "faixa_inclusao": {"minimo": 10.0}}], SRID)
     d = a.como_dicionario()
-    por_id = {l["id"]: l for l in d["linhas"]}
+    por_id = {linha["id"]: linha for linha in d["linhas"]}
     assert por_id["com"]["estado"] == cf.ESTADO_FILTRADA, "1 está fora da faixa [10, +inf]"
     assert por_id["sem"]["estado"] == cf.ESTADO_INCLUIDA, "falta de dado não é 'fora da faixa'"
     assert por_id["sem"]["nota"] is None, "sem dado em nenhum critério, a feição fica sem nota (nunca 0)"
