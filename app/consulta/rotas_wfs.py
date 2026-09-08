@@ -231,6 +231,31 @@ def _capabilities(request: Request, item_id: str, titulo: str, extent: list | No
       {caixa}
     </wfs:FeatureType>
   </wfs:FeatureTypeList>
+  <ogc:Filter_Capabilities>
+    <ogc:Spatial_Capabilities>
+      <ogc:GeometryOperands><ogc:GeometryOperand>gml:Envelope</ogc:GeometryOperand>
+        <ogc:GeometryOperand>gml:Point</ogc:GeometryOperand>
+        <ogc:GeometryOperand>gml:LineString</ogc:GeometryOperand>
+        <ogc:GeometryOperand>gml:Polygon</ogc:GeometryOperand></ogc:GeometryOperands>
+      <ogc:SpatialOperators><ogc:SpatialOperator name="BBOX"/><ogc:SpatialOperator name="Intersects"/>
+        <ogc:SpatialOperator name="Within"/><ogc:SpatialOperator name="DWithin"/></ogc:SpatialOperators>
+    </ogc:Spatial_Capabilities>
+    <ogc:Scalar_Capabilities>
+      <ogc:LogicalOperators/>
+      <ogc:ComparisonOperators>
+        <ogc:ComparisonOperator>LessThan</ogc:ComparisonOperator>
+        <ogc:ComparisonOperator>GreaterThan</ogc:ComparisonOperator>
+        <ogc:ComparisonOperator>LessThanEqualTo</ogc:ComparisonOperator>
+        <ogc:ComparisonOperator>GreaterThanEqualTo</ogc:ComparisonOperator>
+        <ogc:ComparisonOperator>EqualTo</ogc:ComparisonOperator>
+        <ogc:ComparisonOperator>NotEqualTo</ogc:ComparisonOperator>
+        <ogc:ComparisonOperator>Like</ogc:ComparisonOperator>
+        <ogc:ComparisonOperator>Between</ogc:ComparisonOperator>
+        <ogc:ComparisonOperator>NullCheck</ogc:ComparisonOperator>
+      </ogc:ComparisonOperators>
+    </ogc:Scalar_Capabilities>
+    <ogc:Id_Capabilities><ogc:FID/></ogc:Id_Capabilities>
+  </ogc:Filter_Capabilities>
 </wfs:WFS_Capabilities>
 """
     return f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -274,19 +299,29 @@ def _capabilities(request: Request, item_id: str, titulo: str, extent: list | No
       <ows:DCP><ows:HTTP><ows:Post xlink:href="{base}"/></ows:HTTP></ows:DCP>
     </ows:Operation>
     <ows:Constraint name="ImplementsBasicWFS"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></ows:Constraint>
-    <ows:Constraint name="ImplementsTransactionalWFS"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></ows:Constraint>
-    <ows:Constraint name="ImplementsLockingWFS"><ows:NoValues/><ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
+    <ows:Constraint name="ImplementsTransactionalWFS"><ows:NoValues/>
+      <ows:DefaultValue>TRUE</ows:DefaultValue></ows:Constraint>
+    <ows:Constraint name="ImplementsLockingWFS"><ows:NoValues/>
+      <ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
     <ows:Constraint name="KVPEncoding"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></ows:Constraint>
     <ows:Constraint name="XMLEncoding"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></ows:Constraint>
     <ows:Constraint name="SOAPEncoding"><ows:NoValues/><ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
-    <ows:Constraint name="ImplementsInheritance"><ows:NoValues/><ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
-    <ows:Constraint name="ImplementsRemoteResolve"><ows:NoValues/><ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
-    <ows:Constraint name="ImplementsResultPaging"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></ows:Constraint>
-    <ows:Constraint name="ImplementsStandardJoins"><ows:NoValues/><ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
-    <ows:Constraint name="ImplementsSpatialJoins"><ows:NoValues/><ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
-    <ows:Constraint name="ImplementsTemporalJoins"><ows:NoValues/><ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
-    <ows:Constraint name="ImplementsFeatureVersioning"><ows:NoValues/><ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
-    <ows:Constraint name="ManageStoredQueries"><ows:NoValues/><ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
+    <ows:Constraint name="ImplementsInheritance"><ows:NoValues/>
+      <ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
+    <ows:Constraint name="ImplementsRemoteResolve"><ows:NoValues/>
+      <ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
+    <ows:Constraint name="ImplementsResultPaging"><ows:NoValues/>
+      <ows:DefaultValue>TRUE</ows:DefaultValue></ows:Constraint>
+    <ows:Constraint name="ImplementsStandardJoins"><ows:NoValues/>
+      <ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
+    <ows:Constraint name="ImplementsSpatialJoins"><ows:NoValues/>
+      <ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
+    <ows:Constraint name="ImplementsTemporalJoins"><ows:NoValues/>
+      <ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
+    <ows:Constraint name="ImplementsFeatureVersioning"><ows:NoValues/>
+      <ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
+    <ows:Constraint name="ManageStoredQueries"><ows:NoValues/>
+      <ows:DefaultValue>FALSE</ows:DefaultValue></ows:Constraint>
     <ows:Constraint name="CountDefault"><ows:NoValues/><ows:DefaultValue>1000</ows:DefaultValue></ows:Constraint>
     <ows:Constraint name="QueryExpressions"><ows:AllowedValues>
       <ows:Value>wfs:Query</ows:Value><ows:Value>wfs:StoredQuery</ows:Value></ows:AllowedValues></ows:Constraint>
@@ -307,18 +342,29 @@ def _capabilities(request: Request, item_id: str, titulo: str, extent: list | No
   <fes:Filter_Capabilities>
     <fes:Conformance>
       <fes:Constraint name="ImplementsQuery"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
-      <fes:Constraint name="ImplementsAdHocQuery"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
-      <fes:Constraint name="ImplementsFunctions"><ows:NoValues/><ows:DefaultValue>FALSE</ows:DefaultValue></fes:Constraint>
-      <fes:Constraint name="ImplementsResourceId"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
-      <fes:Constraint name="ImplementsMinStandardFilter"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
-      <fes:Constraint name="ImplementsStandardFilter"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
-      <fes:Constraint name="ImplementsMinSpatialFilter"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
-      <fes:Constraint name="ImplementsSpatialFilter"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
-      <fes:Constraint name="ImplementsMinTemporalFilter"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
-      <fes:Constraint name="ImplementsTemporalFilter"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
-      <fes:Constraint name="ImplementsVersionNav"><ows:NoValues/><ows:DefaultValue>FALSE</ows:DefaultValue></fes:Constraint>
+      <fes:Constraint name="ImplementsAdHocQuery"><ows:NoValues/>
+        <ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
+      <fes:Constraint name="ImplementsFunctions"><ows:NoValues/>
+        <ows:DefaultValue>FALSE</ows:DefaultValue></fes:Constraint>
+      <fes:Constraint name="ImplementsResourceId"><ows:NoValues/>
+        <ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
+      <fes:Constraint name="ImplementsMinStandardFilter"><ows:NoValues/>
+        <ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
+      <fes:Constraint name="ImplementsStandardFilter"><ows:NoValues/>
+        <ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
+      <fes:Constraint name="ImplementsMinSpatialFilter"><ows:NoValues/>
+        <ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
+      <fes:Constraint name="ImplementsSpatialFilter"><ows:NoValues/>
+        <ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
+      <fes:Constraint name="ImplementsMinTemporalFilter"><ows:NoValues/>
+        <ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
+      <fes:Constraint name="ImplementsTemporalFilter"><ows:NoValues/>
+        <ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
+      <fes:Constraint name="ImplementsVersionNav"><ows:NoValues/>
+        <ows:DefaultValue>FALSE</ows:DefaultValue></fes:Constraint>
       <fes:Constraint name="ImplementsSorting"><ows:NoValues/><ows:DefaultValue>TRUE</ows:DefaultValue></fes:Constraint>
-      <fes:Constraint name="ImplementsExtendedOperators"><ows:NoValues/><ows:DefaultValue>FALSE</ows:DefaultValue></fes:Constraint>
+      <fes:Constraint name="ImplementsExtendedOperators"><ows:NoValues/>
+        <ows:DefaultValue>FALSE</ows:DefaultValue></fes:Constraint>
     </fes:Conformance>
     <fes:Id_Capabilities><fes:ResourceIdentifier name="fes:ResourceId"/></fes:Id_Capabilities>
     <fes:Scalar_Capabilities>
@@ -485,15 +531,41 @@ def _executar_get_feature(cur, item_id: str, p: dict, versao: str, base: str, va
     else:
         meta_saida = meta
     return Response(
-        gml_mod.colecao_feicoes(item_id, corpo, meta_saida, srs, lat_lon, campo_oid, total, url_esquema),
+        gml_mod.colecao_feicoes(item_id, corpo, meta_saida, srs, lat_lon, campo_oid, total, url_esquema,
+                                 campos_saida),
         media_type=_GML)
 
 
 # ------------------------------------------------------------------------------------ Transaction
+_INTEIROS = {"esriFieldTypeInteger", "esriFieldTypeSmallInteger", "esriFieldTypeBigInteger",
+             "esriFieldTypeOID"}
+_REAIS = {"esriFieldTypeDouble", "esriFieldTypeSingle"}
+
+
+def _tipar(valor: str, tipo_esri: str) -> object:
+    """XML não carrega tipo: o texto do documento vira número conforme a COLUNA antes de chegar à
+    porta de escrita. Não é conversão frouxa — o que não converte segue como texto e quem reprova
+    é a validação da porta, com o erro dela."""
+    if valor == "":
+        return None
+    if tipo_esri in _INTEIROS:
+        try:
+            return int(valor)
+        except ValueError:
+            return valor
+    if tipo_esri in _REAIS:
+        try:
+            return float(valor)
+        except ValueError:
+            return valor
+    return valor
+
+
 def _feicao_de_elemento(elem, meta: list[dict]) -> dict:
     """Elemento de feição do documento (namespace da plataforma) -> `{atributos, geometria}` da
     porta de escrita da casa."""
-    nomes = {c["nome"] for c in meta}
+    tipos = {c["nome"]: c["tipo_esri"] for c in meta}
+    nomes = set(tipos)
     atributos: dict = {}
     geometria = None
     for filho in elem:
@@ -503,11 +575,12 @@ def _feicao_de_elemento(elem, meta: list[dict]) -> dict:
                 geometria = fes_mod.geometria_para_geojson(g)
                 break
         elif nome in nomes:
-            atributos[nome] = (filho.text or "").strip()
+            atributos[nome] = _tipar((filho.text or "").strip(), tipos[nome])
     return {"atributos": atributos, "geometria": geometria}
 
 
 def _transacao(cur, request: Request, auth, item_id: str, raiz, meta: list[dict]):
+    tipos_camada = {c["nome"]: c["tipo_esri"] for c in meta}
     adicionar, atualizar, apagar = [], [], []
     for acao in raiz:
         nome = fes_mod._local(acao.tag)  # noqa: SLF001
@@ -527,7 +600,7 @@ def _transacao(cur, request: Request, auth, item_id: str, raiz, meta: list[dict]
                         elif pm == "Value":
                             val = (parte.text or "").strip()
                     if ref:
-                        valores[ref] = val
+                        valores[ref] = _tipar(val or "", tipos_camada.get(ref, "esriFieldTypeString"))
                 elif marca == "Filter":
                     ids = fes_mod.ids_de(filho)
                     alvo = ids[0] if ids else None
