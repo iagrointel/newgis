@@ -8,6 +8,8 @@ import secrets
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from app.catalogo.documento import gerar_ulid
+
 PREFIXO = "zt-cruzado-"
 # L6-02-a: dado aberto federal (IBGE), nunca nome de cliente/parceiro; passa pela defesa de SSRF na criação
 URL_CONEXAO_TESTE = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/35"
@@ -59,6 +61,8 @@ class Preparacao:
     conjunto_b: dict = field(default_factory=dict)  # L3-19-multiescala: área de estudo de B
     fator_b: dict = field(default_factory=dict)  # L3-19-multiescala: fator de B
     execucao_b: dict = field(default_factory=dict)  # L3-19-multiescala: execução macro de B (sobre conjunto_b)
+    app_b: dict = field(default_factory=dict)  # L5-14-publicacao: app de B (família publicável)
+    publicacao_b: dict = field(default_factory=dict)  # L5-14-publicacao: publicação de B em /p/demo2/<slug>
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -72,6 +76,8 @@ class Preparacao:
             marcas.append(self.convite_b["email"])
         if self.conjunto_b:
             marcas += [self.conjunto_b["nome"], self.fator_b["nome"]]
+        if self.app_b:
+            marcas += [self.app_b["titulo"], self.publicacao_b["slug"]]
         return marcas
 
 
@@ -155,11 +161,25 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     })
     assert r.status_code == 201, r.text
     execucao_b = r.json()
+    # L5-14-publicacao-links-embed: app de B PUBLICADO de verdade em /p/demo2/<slug>. O item continua com acesso
+    # privado, então a vitrine pública só abre com o token do link de B — é isso que os casos de
+    # /api/p/{inquilino}/{slug} provam: publicar não torna o documento de B legível para A nem para o anônimo.
+    r = sessao_b.post("/api/itens", json={
+        "tipo": "app", "titulo": f"{PREFIXO}app-{sufixo}",
+        "dados": {"tipo": "app", "esquema_versao": 2,
+                  "corpo": {"nos": [{"id": gerar_ulid(), "tipo": "visor_mapa"}], "mapas": []}},
+    })
+    assert r.status_code == 201, r.text
+    app_b = r.json()
+    r = sessao_b.post(f"/api/itens/{app_b['id']}/publicacao", json={"slug": f"{PREFIXO}pub-{sufixo}"})
+    assert r.status_code == 201, r.text
+    publicacao_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
+                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b,
+                      app_b=app_b, publicacao_b=publicacao_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -170,6 +190,8 @@ def _no_categoria(no: dict) -> dict:
 def desfazer(p: Preparacao) -> None:
     for metodo, url in reversed(p.criados_em_a):
         p.sessao_a.request(metodo, url)
+    if p.publicacao_b:  # libera o slug e revoga o token de serviço da publicação de B
+        p.sessao_b.delete(f"/api/itens/{p.app_b['id']}/publicacao")
     if p.convite_b:
         p.sessao_b.delete(f"/api/convites/{p.convite_b['id']}")
     if p.job_b:
@@ -605,6 +627,20 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", IT + "/links"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/links", lambda p: {"nome": "x"}),
     ("GET", IT + "/links"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/links"),
     ("DELETE", IT + "/links/{lid}"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/links/{p.link_b['id']}"),
+    # ---- L5-14-publicacao-links-embed: as quatro rotas por item passam por `exigir_edicao` (mesma checagem de
+    # visibilidade de PUT /api/itens/{id}), então o app publicado de B é 404 para A; a vitrine pública
+    # /api/p/{inquilino}/{slug} existe e resolve o slug de B, mas o item de B não é público e nenhuma das quatro
+    # chamadas traz o token do link de B, então todas param em 401 — publicar não abre o documento de B para A.
+    ("GET", IT + "/publicacao"): Caso(lambda p: f"/api/itens/{p.app_b['id']}/publicacao"),
+    ("POST", IT + "/publicacao"): Caso(
+        lambda p: f"/api/itens/{p.app_b['id']}/publicacao", lambda p: {"slug": f"{PREFIXO}invadido"}
+    ),
+    ("DELETE", IT + "/publicacao"): Caso(lambda p: f"/api/itens/{p.app_b['id']}/publicacao"),
+    ("GET", IT + "/publicacao/exportacao"): Caso(lambda p: f"/api/itens/{p.app_b['id']}/publicacao/exportacao"),
+    ("GET", IT + "/publicacao/visualizacoes"): Caso(
+        lambda p: f"/api/itens/{p.app_b['id']}/publicacao/visualizacoes"
+    ),
+    ("GET", "/api/p/{inquilino}/{slug}"): Caso(lambda p: f"/api/p/demo2/{p.publicacao_b['slug']}"),
     # link é anônimo por desenho: a sessão de A não ganha nada além do link (o item vem sem dono.login e sem pode_*)
     ("GET", "/api/compartilhado/{token}"): Caso(
         lambda p: f"/api/compartilhado/{p.link_b['token']}", publico=True, aceita=frozenset({200}),
