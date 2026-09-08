@@ -38,6 +38,7 @@ from app.catalogo import (
     rotas_pastas,
     transferencia,
 )
+from app.cena.rotas import router as rotas_cena
 from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.geocodificador.rotas import router as rotas_geocodificador
@@ -125,6 +126,8 @@ ROUTERS = [
     rotas_multiescala,
     # --- visualizador de mapa (L2-01-mapa-web): /api/mapa/camadas, TileJSON com token curto, repasse /tiles
     rotas_mapa,
+    # --- cena 3D (L2-09-b-cena-extrusao-slides): posição do Sol para a iluminação da cena
+    rotas_cena,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
