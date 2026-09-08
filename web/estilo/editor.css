@@ -47,3 +47,6 @@
 .construtor #ferramentas { justify-content: space-between; }
 .construtor #ferramentas .direita { display: flex; gap: var(--e2); align-items: center; }
 .construtor #estado-salvo { color: var(--fraco); font-size: var(--t-1); }
+
+/* UX-07: paleta e painel lateral sempre à mão — presos ao topo e com rolagem própria quando a tela cresce */
+.editor-paleta, .editor-lado { position: sticky; top: var(--e3); max-height: calc(100vh - var(--e5)); overflow-y: auto; }
