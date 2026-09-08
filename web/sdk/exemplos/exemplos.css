@@ -1,0 +1,13 @@
+/* folha dos exemplos do SDK JS (item L7-08-c-sdk-js): tudo local, sem fonte externa (CSP default-src 'none') */
+body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #0b0f10; color: #d7dedc; }
+main { max-width: 960px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 18px; margin: 0 0 4px; }
+p.doc { color: #8fa19c; margin: 0 0 12px; }
+form { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-bottom: 12px; }
+label { display: flex; flex-direction: column; font-size: 12px; color: #8fa19c; }
+input { background: #182420; color: #d7dedc; border: 1px solid #263133; padding: 6px 8px; min-width: 140px; }
+button { background: #d98a2b; color: #0b0f10; border: 0; padding: 7px 14px; font-weight: 600; cursor: pointer; }
+pre#saida { background: #101617; border: 1px solid #263133; padding: 10px; min-height: 80px; white-space: pre-wrap; }
+#mapa { height: 420px; border: 1px solid #263133; margin-bottom: 12px; }
+body[data-resultado='ok'] pre#saida { border-color: #3e9a5f; }
+body[data-resultado='erro'] pre#saida { border-color: #c04a3a; }

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data: blob:; worker-src blob:; child-src blob:; font-src 'self'; base-uri 'none'; form-action 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SDK JS — exemplo 02: Listar itens do catálogo</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/sdk/exemplos/exemplos.css">
+</head>
+<body data-exemplo="02_listar_itens">
+<main>
+<h1>Exemplo 02/10 — Listar itens do catálogo</h1>
+<p class="doc">itens.listar() devolve uma página; itens.todos() percorre todas pelo proximo_cursor; facetas() resume por tipo.</p>
+<form id="form" autocomplete="off">
+<label>inquilino <input name="inquilino" value="demo"></label>
+<label>login <input name="login" value="admin"></label>
+<label>senha <input name="senha" type="password"></label>
+<button type="submit">rodar</button>
+</form>
+<pre id="saida"></pre>
+</main>
+<script type="module" src="/static/sdk/exemplos/02_listar_itens.js"></script>
+</body>
+</html>
