@@ -3,11 +3,15 @@ BYPASSRLS (ADR 0001 seção 3.1)."""
 
 
 def test_conexao_tcp_como_plat_app(conexao_plat_app, env):
+    # achado nesta verificação: o nome literal "plat_app" só existe em produção — toda trilha/homologação usa
+    # `plat_t<nome>_app` (laco/trilha_ambiente.sh); o esperado é o USUÁRIO DO PRÓPRIO DSN, não o literal.
+    from urllib.parse import urlparse
+
     assert "127.0.0.1" in env["PLAT_DSN"], "o DSN precisa ser TCP para provar o pg_hba"
     with conexao_plat_app.cursor() as cur:
         cur.execute("SELECT current_user AS u, host(inet_server_addr()) AS addr")
         r = cur.fetchone()
-    assert r["u"] == "plat_app"
+    assert r["u"] == urlparse(env["PLAT_DSN"]).username
     assert r["addr"] == "127.0.0.1"
 
 

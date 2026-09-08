@@ -1,0 +1,79 @@
+/* plat — executor de páginas e layout (item L5-01-a-layout-paginas). A tela /executar NÃO usa `.app`/aside
+   (nenhum `montarLayout`): a página executada é dona do viewport inteiro, como a Esri deixa uma "full-screen
+   app page" cobrir a tela toda sem o cromo do builder. */
+html, body.executor { height: 100%; }
+body.executor { margin: 0; overflow-x: hidden; } /* overflow-x:hidden é a rede de segurança contra vazamento de largura em aninhamento profundo — a correção de verdade é min-width:0 em cada item flex/grid abaixo */
+#raiz-execucao { min-height: 100%; }
+.exec-vazio { padding: var(--e4); color: var(--fraco); }
+
+/* ---------------------------------------------------------------- página */
+.exec-pagina { display: flex; flex-direction: column; min-width: 0; }
+.exec-pagina-tela-cheia { height: 100vh; overflow: hidden; }
+.exec-pagina-tela-cheia > :not(.exec-cabecalho):not(.exec-rodape) { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.exec-pagina-rolavel { min-height: 100vh; overflow-y: auto; }
+
+.exec-cabecalho { flex: 0 0 auto; display: flex; align-items: center; gap: var(--e3); padding: var(--e2) var(--e3); background: var(--painel); border-bottom: 1px solid var(--borda); z-index: 5; }
+.exec-cabecalho[data-fixo="true"] { position: sticky; top: 0; }
+.exec-rodape { flex: 0 0 auto; padding: var(--e2) var(--e3); border-top: 1px solid var(--borda); color: var(--fraco); font-size: .85rem; }
+
+/* ---------------------------------------------------------------- menu */
+.exec-menu { display: flex; gap: var(--e3); }
+.exec-menu-vertical { flex-direction: column; }
+.exec-menu a { color: var(--texto); text-decoration: none; padding: 4px 8px; border-radius: var(--raio); }
+.exec-menu a[aria-current="page"] { background: var(--acento); color: var(--fundo); }
+.exec-menu a:hover { text-decoration: underline; }
+
+/* ---------------------------------------------------------------- linha/coluna: min-width/min-height:0 é a
+   linha que impede o vazamento em 6 níveis de aninhamento (o `flex` puro sem isto estoura o contêiner) */
+.exec-linha, .exec-coluna { display: flex; gap: var(--e2); min-width: 0; min-height: 0; }
+.exec-linha { flex-direction: row; flex-wrap: wrap; }
+.exec-coluna { flex-direction: column; }
+.exec-linha.alinhar-centro, .exec-coluna.alinhar-centro { justify-content: center; align-items: center; }
+.exec-linha.alinhar-fim { justify-content: flex-end; }
+.exec-coluna.alinhar-fim { align-items: flex-end; }
+.exec-linha.alinhar-espacado { justify-content: space-between; }
+.exec-coluna.alinhar-espacado { justify-content: space-between; }
+.exec-flex-item { min-width: 0; min-height: 0; }
+
+/* ---------------------------------------------------------------- grade: fr-based — proporção entre dois
+   filhos é uma razão de frações, invariante à largura do contêiner (cláusula "grade responsiva mantém
+   proporção" do portão) */
+.exec-grade { display: grid; gap: var(--e2); min-width: 0; }
+.exec-grade-item { min-width: 0; min-height: 0; }
+
+/* ---------------------------------------------------------------- acordeão */
+.exec-acordeao { display: grid; gap: 2px; min-width: 0; }
+.exec-acordeao-cabecalho { display: block; width: 100%; text-align: left; padding: var(--e2) var(--e3); background: var(--painel); border: 1px solid var(--borda); cursor: pointer; }
+.exec-acordeao-corpo { padding: var(--e2) var(--e3); border: 1px solid var(--borda); border-top: none; min-width: 0; }
+
+/* ---------------------------------------------------------------- painel fixo */
+.exec-painel-fixo { position: fixed; z-index: 20; background: var(--painel); border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: var(--e2); max-width: min(90vw, 360px); box-shadow: 0 2px 12px rgba(0,0,0,.3); }
+.exec-painel-fixo.pos-superior-direita { top: var(--e3); right: var(--e3); }
+.exec-painel-fixo.pos-superior-esquerda { top: var(--e3); left: var(--e3); }
+.exec-painel-fixo.pos-inferior-direita { bottom: var(--e3); right: var(--e3); }
+.exec-painel-fixo.pos-inferior-esquerda { bottom: var(--e3); left: var(--e3); }
+
+/* ---------------------------------------------------------------- painel lateral: largura anima; o painel
+   nunca recebe display:none (só aria-hidden) — quem some de largura é o ENVOLTÓRIO */
+.exec-painel-lateral-envolucro { display: flex; gap: 0; min-width: 0; min-height: 0; flex: 1 1 auto; }
+.exec-painel-lateral { flex: 0 0 260px; min-width: 0; overflow: auto; padding: var(--e3); border-inline: 1px solid var(--borda); transition: flex-basis .15s ease, opacity .15s ease; background: var(--painel); }
+.exec-painel-lateral-envolucro.recolhido .exec-painel-lateral { flex-basis: 0; padding: 0; border: none; opacity: 0; pointer-events: none; }
+.exec-painel-lateral-alternar { flex: 0 0 auto; align-self: flex-start; margin: var(--e2); cursor: pointer; }
+
+/* ---------------------------------------------------------------- janela */
+.exec-janela-modal { border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: var(--e4); max-width: min(90vw, 640px); }
+.exec-janela-modal::backdrop { background: rgba(0,0,0,.5); }
+.exec-janela-ancorada { position: absolute; z-index: 30; margin-top: var(--e2); background: var(--painel); border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: var(--e3); box-shadow: 0 2px 12px rgba(0,0,0,.3); max-width: min(90vw, 360px); }
+
+/* ---------------------------------------------------------------- seção com vistas (abas) */
+.exec-secao-vistas { min-width: 0; }
+.exec-vistas-barra { display: flex; gap: 2px; border-bottom: 1px solid var(--borda); }
+.exec-vistas-barra button { padding: var(--e2) var(--e3); border: none; background: transparent; cursor: pointer; color: var(--fraco); }
+.exec-vistas-barra button[aria-selected="true"] { color: var(--texto); border-bottom: 2px solid var(--acento); }
+.exec-vistas-painel { padding: var(--e3) 0; min-width: 0; }
+
+/* ---------------------------------------------------------------- conteúdo comum */
+.exec-grupo { min-width: 0; }
+.exec-mapa { min-height: 160px; display: flex; align-items: center; justify-content: center; background: var(--fundo-2); border: 1px dashed var(--borda-forte); color: var(--fraco); }
+.exec-tabela { min-height: 80px; padding: var(--e2); background: var(--fundo-2); border: 1px solid var(--borda); color: var(--fraco); }
+.exec-desconhecido { padding: var(--e2); border: 1px dashed var(--falha); color: var(--falha); }

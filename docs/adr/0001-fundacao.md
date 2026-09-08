@@ -590,7 +590,6 @@ valores de exemplo; `.gitignore` já tem `.env*`, e o backend acrescenta `!.env.
 
 | chave | obrigatória | exemplo | uso |
 |---|---|---|---|
-| PLAT_DSN | sim | `postgresql://plat_app:<senha>@127.0.0.1:5432/iagro_sat` | pool |
 | PLAT_AMBIENTE | sim | `producao` ou `dev` | `/saude`, nível de log |
 | PLAT_URL_PUBLICA | sim | `https://plat.iagrointel.com` | cookies `Secure`, links absolutos, e2e |
 | PLAT_GIT_SHA | não | `a1d0c20` | só sem `.git` |
@@ -599,16 +598,20 @@ valores de exemplo; `.gitignore` já tem `.env*`, e o backend acrescenta `!.env.
 | PLAT_GARAGE_URL | não | `http://127.0.0.1:3900` | `/saude` |
 | PLAT_LOG_NIVEL | não | `INFO` | logging |
 
-**Alterado no item L7-19-segredos-e-certificados:** `PLAT_SECRET` e `PLAT_DSN_WORKER` (a senha da role
-`plat_worker`) saíram desta tabela e do `.env` — moram em `/etc/plat/segredos/`, dono `root`, modo
-`600`, e chegam a `plat-api`/`plat-worker` por `LoadCredential=` do systemd (não por argumento nem por
-`Environment=` da unidade, então a regra abaixo continua valendo). Detalhe completo, rotação e o
-porquê em `docs/SEGURANCA.md`. As demais chaves da tabela continuam no `.env` como descrito aqui.
+**Alterado no item L7-19-segredos-e-certificados:** `PLAT_SECRET`, `PLAT_SECRET_ANTERIOR` (dupla-chave de
+rotação, 24h), `PLAT_DSN` (a senha da role `plat_app`), `PLAT_DSN_WORKER` (a senha da role `plat_worker`)
+e `PLAT_GARAGE_ADMIN_TOKEN` (bearer da Admin API do Garage) saíram desta tabela e do `.env` — moram em
+`/etc/plat/segredos/`, dono `root`, modo `600`, e chegam a `plat-api`/`plat-worker` por `LoadCredential=`
+do systemd (não por argumento nem por `Environment=` da unidade, então a regra abaixo continua valendo).
+Rotação por `plat segredo rotacionar <nome>` (`scripts/segredo_rotacionar.py`). Detalhe completo,
+mecanismo medido e o porquê em `docs/SEGURANCA.md` e `docs/RUNBOOKS/segredos.md`. As demais chaves da
+tabela continuam no `.env` como descrito aqui.
 
 Regra: segredo nunca em argumento de linha de comando nem em `Environment=`/argv de unidade systemd
 (aparece em `ps` e em `systemctl show`); hoje isso é o `.env` 600 (chaves acima) **ou** um arquivo fora
-do repositório entregue por `LoadCredential=` (`PLAT_SECRET`, `PLAT_DSN_WORKER` — `docs/SEGURANCA.md`).
-Porta e caminho não são segredo e ficam na unidade.
+do repositório entregue por `LoadCredential=` (`PLAT_SECRET`, `PLAT_SECRET_ANTERIOR`, `PLAT_DSN`,
+`PLAT_DSN_WORKER`, `PLAT_GARAGE_ADMIN_TOKEN` — `docs/SEGURANCA.md`). Porta e caminho não são segredo e
+ficam na unidade.
 **Alterado em T1: motivo** — o passo g do `install.sh` quebrava esta regra: a senha de
 demonstração ia em `argv` de `sudo -u ... python -c`, e o `sudo` grava `COMMAND=` inteiro no
 journal (18 linhas em claro achadas pelo adversário). Agora a senha entra por `stdin`

@@ -3,6 +3,7 @@ acentuados, 3 tags, resumo e descrição, 1/7 de cada tipo, parte compartilhada 
 Escreve direto como plat_app no contexto do admin (um INSERT com generate_series: o gatilho grava a versão de cada
 um). Reutilizável pelo e2e. Uso: venv/bin/python -m tests.api.semear_catalogo [n_demo] [n_demo2]."""
 
+import os
 import sys
 import time
 
@@ -24,8 +25,8 @@ DADOS = {
     + '.bin","sha256":"'
     + "a" * 64
     + '","bytes":10,"content_type":"application/octet-stream","nome_original":"x.bin"}',
-    "camada_vetorial": '{"schema":"plat_trabalho","tabela":"zt_semente","geometria":"Point","srid":4326,'
-    '"campos":[],"fonte":"hospedada"}',
+    "camada_vetorial": '{"schema":"' + os.environ.get("PLAT_SCHEMA_TRABALHO", "plat_trabalho")
+    + '","tabela":"zt_semente","geometria":"Point","srid":4326,"campos":[],"fonte":"hospedada"}',
     "conexao": '{"protocolo":"wms","url":"https://exemplo.gov.br/wms"}',
     "modelo_amc": '{"esquema_versao":1,"fatores":[],"metodo":"soma_ponderada"}',
 }

@@ -104,4 +104,58 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/org"): ["org/configurar"],
     ("POST", "/api/org/logo"): ["org/logo_enviar"],
     ("DELETE", "/api/org/logo"): ["org/logo_remover"],
+    # ---- convite de membro por e-mail (L0-07-d-smtp-convites; ADR 0013)
+    ("POST", "/api/convites"): ["convites/criar"],
+    ("DELETE", "/api/convites/{id}"): ["convites/cancelar"],
+    ("POST", "/api/convites/aceitar"): ["usuarios/convite_aceito"],
+    # ---- redefinição de senha por e-mail (L0-07-d-smtp-convites; ADR 0002 seção 6.3): `solicitar` SEMPRE
+    # responde {"ok": true} sem revelar se o e-mail existe e não registra evento nenhum (mesma decisão de
+    # /api/login com credencial errada) — o evento nasce só quando a senha É trocada, em `aplicar`.
+    ("POST", "/api/senha/redefinir/solicitar"): [],
+    ("POST", "/api/senha/redefinir/aplicar"): ["usuarios/redefinir_senha_email"],
+    # ---- SMTP por inquilino (L0-07-d-smtp-convites; ADR 0013): PUT tanto configura quanto remove o override
+    # (host="" apaga), então os dois tipos aparecem juntos.
+    ("PUT", "/api/org/smtp"): ["org/smtp_configurar", "org/smtp_remover"],
+    ("POST", "/api/org/smtp/testar"): ["org/smtp_testar"],
+    # ---- upload retomável (L0-04-a-upload-arquivo; ADR 0005 seção 3): `enviar_parte` não registra evento por
+    # parte (o volume de partes tornaria o log ruidoso sem valor de auditoria; `uploads/iniciar` e
+    # `uploads/concluir`/`uploads/abortar` já narram início e fim do processo).
+    ("POST", "/api/uploads"): ["uploads/iniciar"],
+    ("PUT", "/api/uploads/{id}/partes/{n}"): [],
+    ("POST", "/api/uploads/{id}/concluir"): ["uploads/concluir"],
+    ("DELETE", "/api/uploads/{id}"): ["uploads/abortar"],
+    # ---- ingestão vetorial (L0-04-b/c/d; ADR 0005 seção 16): `apagar` só remove importações que nunca
+    # chegaram a carregar (proposta/falhou/cancelada/expirada) — sem efeito sobre o catálogo, sem evento.
+    ("POST", "/api/importacoes"): ["importacoes/criar"],
+    ("PUT", "/api/importacoes/{id}/confirmar"): ["importacoes/confirmar"],
+    ("DELETE", "/api/importacoes/{id}"): [],
+    # ---- geocodificador (L2-11-a/b): cálculo sobre dado aberto CNEFE/IBGE, sem tabela de inquilino e sem
+    # dono humano para narrar — mesma decisão já usada acima em /api/rota, /api/matriz, /api/isocrona.
+    ("POST", "/api/geocodificar"): [],
+    ("POST", "/api/reverso"): [],
+    ("POST", "/rest/services/Geocodificador/GeocodeServer"): [],
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/findAddressCandidates"): [],
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/reverseGeocode"): [],
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/geocodeAddresses"): [],
+    # ---- achado nesta verificação: as duas famílias abaixo já existiam em master sem entrada aqui (não são
+    # deste turno) — /api/eu/foto (app/auth/rotas_eu.py) e /api/conexoes (L6-02-a-modelo-conexao-e-seguranca,
+    # app/conexao/rotas.py). Sem elas o portão de cobertura nunca passava, mesmo antes das rotas novas.
+    ("POST", "/api/eu/foto"): ["usuarios/foto_enviar"],
+    ("DELETE", "/api/eu/foto"): ["usuarios/foto_remover"],
+    ("POST", "/api/conexoes"): ["conexoes/criar"],
+    ("PATCH", "/api/conexoes/{id}"): ["conexoes/editar"],
+    ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
+    ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
+    ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
+    # ---- motor multicritério em grades aninhadas (L3-19-multiescala; vocabulário nas migrações
+    # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
+    # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por
+    # isso tem tipo próprio (`_apagar`), separado do de criação.
+    ("POST", "/api/multiescala/conjuntos"): ["multiescala/conjunto"],
+    ("DELETE", "/api/multiescala/conjuntos/{id}"): ["multiescala/conjunto_apagar"],
+    ("POST", "/api/multiescala/fatores"): ["multiescala/fator"],
+    ("DELETE", "/api/multiescala/fatores/{id}"): ["multiescala/fator_apagar"],
+    ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
+    ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
+    ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
 }

@@ -1,0 +1,9 @@
+[Unit]
+Description=plat — varredura de hora em hora da expiração de PLAT_SECRET_ANTERIOR (item L7-19)
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

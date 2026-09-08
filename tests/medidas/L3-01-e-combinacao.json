@@ -1,0 +1,17 @@
+{
+ "item": "L3-01-e-combinacao",
+ "medidas": {
+  "recalculo_4346x19_servidor_ms": {
+   "valor": 1.493,
+   "unidade": "ms",
+   "comando": "mediana de 30 chamadas a combinar() sobre 4346×19 (numpy, soma_ponderada, 10% de ausência sorteada) — limite 50.0 ms; carga_1min=5.97, ram_livre_gb=10.45, medido_em=2026-09-07T10:12:16Z"
+  },
+  "recalculo_4346x19_navegador_ms": {
+   "valor": 1.625,
+   "unidade": "ms",
+   "comando": "mediana de 30 chamadas a combinar() em web/js/amc/combinacao.js sobre 4346×19, medida com performance.now() via node (executar_js.mjs --desempenho) — o mesmo relógio que o navegador usa; limite 20.0 ms; carga_1min=5.97, ram_livre_gb=10.45, medido_em=2026-09-07T10:12:16Z"
+  }
+ },
+ "gerado_em": "2026-09-07T10:12:16Z",
+ "git_sha": "afc909f55a75"
+}

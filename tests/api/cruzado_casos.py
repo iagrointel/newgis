@@ -11,7 +11,13 @@ from typing import Any, Callable
 PREFIXO = "zt-cruzado-"
 # L6-02-a: dado aberto federal (IBGE), nunca nome de cliente/parceiro; passa pela defesa de SSRF na criação
 URL_CONEXAO_TESTE = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/35"
+# L3-19-multiescala: polígono pequeno dentro da cobertura SIRGAS 2000 UTM (zona 23S), perto de São Paulo
+AREA_MULTIESCALA_TESTE = {
+    "type": "Polygon",
+    "coordinates": [[[-46.61, -23.51], [-46.59, -23.51], [-46.59, -23.49], [-46.61, -23.49], [-46.61, -23.51]]],
+}
 PADRAO = frozenset({401, 403, 404})
+UUID_NULO = "00000000-0000-0000-0000-000000000000"  # id que não é de A nem de B: 404 garantido pela RLS/dono
 
 
 @dataclass
@@ -49,6 +55,10 @@ class Preparacao:
     categoria_b: dict = field(default_factory=dict)  # L0-03: categoria de B
     fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
     conexao_b: dict = field(default_factory=dict)  # L6-02-a: conexão externa de B
+    convite_b: dict = field(default_factory=dict)  # L0-07-d: convite pendente de B
+    conjunto_b: dict = field(default_factory=dict)  # L3-19-multiescala: área de estudo de B
+    fator_b: dict = field(default_factory=dict)  # L3-19-multiescala: fator de B
+    execucao_b: dict = field(default_factory=dict)  # L3-19-multiescala: execução macro de B (sobre conjunto_b)
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -58,6 +68,10 @@ class Preparacao:
             marcas += [self.item_b["titulo"], self.pasta_b["nome"]]
         if self.conexao_b:
             marcas.append(self.conexao_b["nome"])
+        if self.convite_b:
+            marcas.append(self.convite_b["email"])
+        if self.conjunto_b:
+            marcas += [self.conjunto_b["nome"], self.fator_b["nome"]]
         return marcas
 
 
@@ -79,6 +93,11 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_b.post("/api/papeis", json={"nome": f"{PREFIXO}papel-{sufixo}", "privilegios": ["conteudo.criar"]})
     assert r.status_code == 201, r.text
     papel_b = r.json()
+    # L0-07-d: convite pendente de B, alvo das rotas de /api/convites (resolver/aceitar são por TOKEN secreto,
+    # não por id — usar o token real de B mutaria B ao aceitar, então essas duas usam token forjado, não este)
+    r = sessao_b.post("/api/convites", json={"email": f"{PREFIXO}convite-{sufixo}@teste.exemplo", "perfil": "editor"})
+    assert r.status_code == 201, r.text
+    convite_b = r.json()
     r = sessao_b.post("/api/tokens", json={"nome": f"{PREFIXO}token-{sufixo}", "escopos": ["catalogo:ler"]})
     assert r.status_code == 201, r.text
     token_b = r.json()
@@ -120,9 +139,27 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     )
     assert r.status_code == 201, r.text
     conexao_b = r.json()
+    # L3-19-multiescala: conjunto + fator + execução macro de B (sem amostra: 0 aprovadas, mas a execução
+    # existe de verdade para os casos GET/POST cross-tenant de /execucoes e /execucoes/{id}/micro)
+    r = sessao_b.post("/api/multiescala/conjuntos",
+                      json={"nome": f"{PREFIXO}conjunto-{sufixo}", "area": AREA_MULTIESCALA_TESTE})
+    assert r.status_code == 201, r.text
+    conjunto_b = r.json()
+    r = sessao_b.post("/api/multiescala/fatores",
+                      json={"nome": f"{PREFIXO}fator-{sufixo}", "resolucao_fonte_m": 100.0, "papel": "atrai"})
+    assert r.status_code == 201, r.text
+    fator_b = r.json()
+    r = sessao_b.post(f"/api/multiescala/conjuntos/{conjunto_b['id']}/macro", json={
+        "resolucao_m": 1000.0, "fatores": [{"fator_id": fator_b["id"], "peso": 1.0}],
+        "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0,
+    })
+    assert r.status_code == 201, r.text
+    execucao_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b)
+                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
+                      convite_b=convite_b,
+                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -133,6 +170,8 @@ def _no_categoria(no: dict) -> dict:
 def desfazer(p: Preparacao) -> None:
     for metodo, url in reversed(p.criados_em_a):
         p.sessao_a.request(metodo, url)
+    if p.convite_b:
+        p.sessao_b.delete(f"/api/convites/{p.convite_b['id']}")
     if p.job_b:
         p.sessao_b.post(f"/api/jobs/{p.job_b['id']}/cancelar")
     if p.categoria_b:
@@ -146,6 +185,9 @@ def desfazer(p: Preparacao) -> None:
         p.sessao_b.delete(f"/api/pastas/{p.pasta_b['id']}")
     if p.conexao_b:
         p.sessao_b.delete(f"/api/conexoes/{p.conexao_b['id']}")
+    if p.conjunto_b:
+        p.sessao_b.delete(f"/api/multiescala/conjuntos/{p.conjunto_b['id']}")  # cascata apaga a execução também
+        p.sessao_b.delete(f"/api/multiescala/fatores/{p.fator_b['id']}")
     if p.agenda_b:
         p.sessao_b.delete(f"/api/agendas/{p.agenda_b['id']}")
     p.sessao_b.delete(f"/api/grupos/{p.grupo_b['id']}")
@@ -476,6 +518,46 @@ CASOS: dict[tuple[str, str], Caso] = {
     # quando o alvo é de B (a rota lê a conexão pelo RLS de _carregar ANTES de qualquer efeito colateral).
     ("GET", "/api/conexoes/{id}/saude-historico"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/saude-historico"),
     ("POST", "/api/conexoes/{id}/publicar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar"),
+    # ---- L3-19-multiescala: conjunto/fator/execução são do INQUILINO (tenant_id + RLS, mesma classe da
+    # conexão acima, não do registro compartilhado do acervo); GET/POST/DELETE de lista agem só sobre o
+    # próprio chamador, GET/DELETE/POST por id de B são cross-tenant puro (404, a RLS nunca deixa ver a linha).
+    ("GET", "/api/multiescala/conjuntos"): Caso(lambda p: "/api/multiescala/conjuntos", proprio=True,
+                                                aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/multiescala/conjuntos"): Caso(
+        lambda p: "/api/multiescala/conjuntos",
+        lambda p: {"nome": f"{PREFIXO}conjunto-a-{secrets.token_hex(3)}", "area": AREA_MULTIESCALA_TESTE},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/multiescala/conjuntos/{id}")),
+    ),
+    ("GET", "/api/multiescala/conjuntos/{id}"): Caso(lambda p: f"/api/multiescala/conjuntos/{p.conjunto_b['id']}"),
+    ("DELETE", "/api/multiescala/conjuntos/{id}"): Caso(lambda p: f"/api/multiescala/conjuntos/{p.conjunto_b['id']}"),
+    ("POST", "/api/multiescala/conjuntos/{id}/macro"): Caso(
+        lambda p: f"/api/multiescala/conjuntos/{p.conjunto_b['id']}/macro",
+        lambda p: {"resolucao_m": 1000.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
+                   "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
+    ),
+    ("GET", "/api/multiescala/fatores"): Caso(lambda p: "/api/multiescala/fatores", proprio=True,
+                                              aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/multiescala/fatores"): Caso(
+        lambda p: "/api/multiescala/fatores",
+        lambda p: {"nome": f"{PREFIXO}fator-a-{secrets.token_hex(3)}", "resolucao_fonte_m": 100.0, "papel": "atrai"},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/multiescala/fatores/{id}")),
+    ),
+    ("GET", "/api/multiescala/fatores/{id}"): Caso(lambda p: f"/api/multiescala/fatores/{p.fator_b['id']}"),
+    ("DELETE", "/api/multiescala/fatores/{id}"): Caso(lambda p: f"/api/multiescala/fatores/{p.fator_b['id']}"),
+    ("POST", "/api/multiescala/fatores/{id}/amostras"): Caso(
+        lambda p: f"/api/multiescala/fatores/{p.fator_b['id']}/amostras",
+        lambda p: {"amostras": [{"lon": -46.60, "lat": -23.50, "valor": 1.0}]},
+    ),
+    ("GET", "/api/multiescala/execucoes"): Caso(lambda p: "/api/multiescala/execucoes", proprio=True,
+                                                aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/api/multiescala/execucoes/{id}"): Caso(lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}"),
+    ("POST", "/api/multiescala/execucoes/{id}/micro"): Caso(
+        lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}/micro",
+        lambda p: {"resolucao_m": 100.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
+                   "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
+    ),
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,
@@ -647,6 +729,183 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("DELETE", "/api/org/logo"): Caso(
         lambda p: "/api/org/logo", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # ---- L0-07-d convite de membro por e-mail (ADR 0013): GET/POST/DELETE agem só sobre o inquilino do
+    # chamador (a tabela é por tenant_id, igual a papéis/tokens); POST usa o MESMO e-mail do convite de B de
+    # propósito, para provar que a unicidade de convite pendente é por inquilino, não global (mesmo padrão de
+    # POST /api/tokens e POST /api/conexoes acima) — por isso não checa _sem_marca. resolver/aceitar são
+    # públicos e endereçados só pelo TOKEN secreto do link (nunca por id de inquilino): usar o token real de B
+    # aceitaria de fato o convite e mutaria B (violaria o digest antes/depois por DESENHO da funcionalidade,
+    # não por falha de isolamento) — o caso usa um token forjado, que dá sempre 410 `convite_invalido`
+    # independente de quem chama, provando que não há atalho por sessão/cabeçalho/token de A.
+    ("GET", "/api/convites"): Caso(lambda p: "/api/convites", proprio=True, aceita=frozenset({200}),
+                                   verificar=_sem_marca),
+    ("POST", "/api/convites"): Caso(
+        lambda p: "/api/convites",
+        lambda p: {"email": p.convite_b["email"], "perfil": "editor"},
+        proprio=True, aceita=frozenset({201}), verificar=lambda p, j: None,
+        limpar=_apagar_criado(("DELETE", "/api/convites/{id}")),
+    ),
+    ("DELETE", "/api/convites/{id}"): Caso(lambda p: f"/api/convites/{p.convite_b['id']}"),
+    ("GET", "/api/convites/resolver"): Caso(
+        lambda p: "/api/convites/resolver?token=zt-cruzado-token-forjado-nunca-emitido",
+        publico=True, aceita=frozenset({410}),
+    ),
+    ("POST", "/api/convites/aceitar"): Caso(
+        lambda p: "/api/convites/aceitar",
+        lambda p: {"token": "zt-cruzado-token-forjado-nunca-emitido", "login": f"{PREFIXO}invasor",
+                   "nome": "invasor", "senha": "Senha-Forte-123!"},
+        publico=True, aceita=frozenset({410}),
+    ),
+    # ---- L0-07-d redefinição de senha por e-mail: as três rotas são públicas e por TOKEN/e-mail, nunca por
+    # id de inquilino; `solicitar` SEMPRE responde {"ok": true} (nunca revela se o e-mail existe, ADR 0002
+    # seção 6.3), então usar o e-mail de um usuário de B não prova nem desprova nada — e não muda B (sem SMTP
+    # configurado na trilha não sai fila nenhuma). resolver/aplicar com token forjado dão sempre 410, mesmo
+    # padrão do convite acima.
+    # o mesmo e-mail se repete nas 4 chamadas da varredura (mesmo caso, sessão/token/cabeçalho/sem-auth): a
+    # 2ª em diante esbarra no limite de taxa por inquilino+e-mail (`REDEFINICAO_MAX_JANELA`, ADR 0002 seção
+    # 6.3) e dá 429 — esperado, não vazamento; aceito ao lado do 202 da 1ª chamada.
+    ("POST", "/api/senha/redefinir/solicitar"): Caso(
+        lambda p: "/api/senha/redefinir/solicitar",
+        lambda p: {"inquilino": "demo2", "email": f"{PREFIXO}naoexiste@teste.exemplo"},
+        publico=True, aceita=frozenset({202, 429}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/senha/redefinir/resolver"): Caso(
+        lambda p: "/api/senha/redefinir/resolver?token=zt-cruzado-token-forjado-nunca-emitido",
+        publico=True, aceita=frozenset({410}),
+    ),
+    ("POST", "/api/senha/redefinir/aplicar"): Caso(
+        lambda p: "/api/senha/redefinir/aplicar",
+        lambda p: {"token": "zt-cruzado-token-forjado-nunca-emitido", "senha": "Senha-Forte-123!"},
+        publico=True, aceita=frozenset({410}),
+    ),
+    # ---- L0-07-a SMTP por inquilino (ADR 0013): mesmo padrão do /api/org/ldap acima — a rota nunca recebe id
+    # de inquilino, age só sobre `plat.tenant_atual()`. PUT com corpo vazio é o caminho idempotente que só
+    # remove o override do PRÓPRIO inquilino (host="" -> `config - 'smtp'`), nunca mexe em B. `testar` sem SMTP
+    # configurado na trilha dá 422 `smtp_nao_configurado` antes de qualquer tentativa de envio real.
+    ("GET", "/api/org/smtp"): Caso(lambda p: "/api/org/smtp", proprio=True, aceita=frozenset({200}),
+                                   verificar=_sem_marca),
+    ("PUT", "/api/org/smtp"): Caso(
+        lambda p: "/api/org/smtp", lambda p: {}, proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/api/org/smtp/testar"): Caso(
+        lambda p: "/api/org/smtp/testar", lambda p: {}, proprio=True, aceita=frozenset({200, 422, 502}),
+        verificar=_sem_marca,
+    ),
+    # ---- L0-04-a upload retomável (ADR 0005): sob TOKEN de serviço; a rota nunca recebe id de inquilino —
+    # `_carregar` filtra por `usuario_id == auth.usuario_id` (nem sequer por tenant: outro usuário do MESMO
+    # inquilino já toma 404), então qualquer id que não seja do chamador (o de B incluso) é 404 garantido sem
+    # precisar upar nada como B. `iniciar`/`tipos` agem só sobre o chamador (proprio); `iniciar` não é limpo
+    # explicitamente (abortar exige token, que `limpar` não tem acesso aqui) — o upload nascido fica
+    # 'iniciado' e expira sozinho (PLAT_UPLOAD_EXPIRA_HORAS), sem custo de armazenamento (Garage só recebe
+    # bytes na primeira parte, que este caso nunca envia).
+    # `tipos_aceitos` não declara `auth` nenhum (achado desta verificação: a metadado openapi diz "S/T", mas
+    # o handler não chama `autenticado()`) — vocabulário estático, sem dado de inquilino, correto ficar aberto.
+    ("GET", "/api/uploads/tipos"): Caso(lambda p: "/api/uploads/tipos", publico=True, aceita=frozenset({200}),
+                                        verificar=_sem_marca),
+    ("POST", "/api/uploads"): Caso(
+        lambda p: "/api/uploads",
+        lambda p: {"nome": f"{PREFIXO}upload.geojson", "bytes": 10, "tipo_declarado": "geojson"},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/uploads/{id}"): Caso(lambda p: f"/api/uploads/{UUID_NULO}"),
+    ("PUT", "/api/uploads/{id}/partes/{n}"): Caso(lambda p: f"/api/uploads/{UUID_NULO}/partes/1"),
+    ("POST", "/api/uploads/{id}/concluir"): Caso(lambda p: f"/api/uploads/{UUID_NULO}/concluir", lambda p: {}),
+    ("DELETE", "/api/uploads/{id}"): Caso(lambda p: f"/api/uploads/{UUID_NULO}"),
+    # ---- L0-04-b/c/d ingestão vetorial (ADR 0005 seção 16): `_carregar` filtra por RLS de tenant_id + dono
+    # (com exceção de jobs.gerir_todos), igual ao padrão de jobs/agendas — id de B (ou qualquer id que não seja
+    # do chamador) é 404 `importacao_inexistente` garantido. `criar` referencia o item-arquivo de B (existe,
+    # mas não é tipo 'arquivo' nem do inquilino de A) para cair no mesmo 404 sem upar nada de verdade.
+    ("GET", "/api/importacoes"): Caso(lambda p: "/api/importacoes", proprio=True, aceita=frozenset({200}),
+                                      verificar=_sem_marca),
+    ("GET", "/api/importacoes/formatos"): Caso(lambda p: "/api/importacoes/formatos", proprio=True,
+                                               aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/importacoes"): Caso(
+        lambda p: "/api/importacoes", lambda p: {"arquivo_id": p.item_b["id"], "formato": "geojson"}
+    ),
+    ("GET", "/api/importacoes/{id}"): Caso(lambda p: f"/api/importacoes/{UUID_NULO}"),
+    ("PUT", "/api/importacoes/{id}/confirmar"): Caso(
+        lambda p: f"/api/importacoes/{UUID_NULO}/confirmar", lambda p: {}
+    ),
+    ("DELETE", "/api/importacoes/{id}"): Caso(lambda p: f"/api/importacoes/{UUID_NULO}"),
+    # ---- L0-09 catálogo externo OGC API Records: mesma RLS de `plat.item` de `GET /api/itens` — a coleção
+    # única ("catalogo") é o inquilino do chamador; item de B por id é 404 (`item_ou_404`); listar com filtro
+    # `q=id:<item de B>` dá lista vazia (mesmo padrão de `GET /api/itens` acima).
+    ("GET", "/ogc/records"): Caso(lambda p: "/ogc/records", proprio=True, aceita=frozenset({200}),
+                                  verificar=_sem_marca),
+    ("GET", "/ogc/records/conformance"): Caso(lambda p: "/ogc/records/conformance", proprio=True,
+                                              aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/ogc/records/collections"): Caso(lambda p: "/ogc/records/collections", proprio=True,
+                                              aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/ogc/records/collections/{colecao_id}"): Caso(
+        lambda p: "/ogc/records/collections/catalogo", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("GET", "/ogc/records/collections/{colecao_id}/items"): Caso(
+        lambda p: f"/ogc/records/collections/catalogo/items?q=id:{p.item_b['id']}",
+        proprio=True, aceita=frozenset({200}), verificar=lambda p, j: [_sem_marca(p, j), _ogc_zero(j)],
+    ),
+    ("GET", "/ogc/records/collections/{colecao_id}/items/{item_id}"): Caso(
+        lambda p: f"/ogc/records/collections/catalogo/items/{p.item_b['id']}"
+    ),
+    # ---- L0-09 metadado ISO 19139 do item: mesmo `item_ou_404` + RLS de `IT` acima.
+    ("GET", IT + "/metadado.xml"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/metadado.xml"),
+    # ---- L2-11-b geocodificador próprio (dado aberto CNEFE/IBGE, sem tabela de inquilino, mesmo padrão de
+    # /api/rota-/api/matriz-/api/isocrona acima): 422 é resposta de NEGÓCIO (UF/logradouro não instalado
+    # nesta trilha), não vazamento — aceito ao lado de 200.
+    ("POST", "/api/geocodificar"): Caso(
+        lambda p: "/api/geocodificar", lambda p: {"endereco": "Avenida Paulista, São Paulo - SP"},
+        proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
+    ),
+    ("POST", "/api/reverso"): Caso(
+        lambda p: "/api/reverso", lambda p: {"lon": -46.6333, "lat": -23.5505},
+        proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/sugerir"): Caso(lambda p: "/api/sugerir?q=Avenida+Paulista", proprio=True,
+                                  aceita=frozenset({200}), verificar=_sem_marca),
+    # ---- L2-11-b GeocodeServer compatível Esri (mesmo motor/dado aberto acima, protocolo REST do ArcGIS):
+    # o descritor não checa autenticação nenhuma (metadado do locator, igual ao capabilities de um serviço
+    # publicado). As demais chamam `_autenticar()` (rotas_esri.py), que tenta sessão/token PRÓPRIO — não a
+    # dependência `autenticado()` padrão do resto da API — e por isso NUNCA passa pelo `_resolver_leitura_
+    # superadmin` que rejeita `X-Plat-Inquilino` de quem não é operador da plataforma (achado desta
+    # verificação): o cabeçalho é simplesmente ignorado, a chamada roda no tenant de quem autenticou de
+    # verdade. Sem risco (dado nacional do CNEFE, sem tabela de inquilino), mas o comportamento real é
+    # `publico=True` nesta varredura, não `proprio=True` — marcar `proprio` aqui exigiria 401/403/404 na
+    # perna do cabeçalho, que a rota não devolve.
+    ("GET", "/rest/services/Geocodificador/GeocodeServer"): Caso(
+        lambda p: "/rest/services/Geocodificador/GeocodeServer", publico=True, aceita=frozenset({200}),
+        verificar=_sem_marca,
+    ),
+    ("POST", "/rest/services/Geocodificador/GeocodeServer"): Caso(
+        lambda p: "/rest/services/Geocodificador/GeocodeServer", lambda p: {}, publico=True,
+        aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/rest/services/Geocodificador/GeocodeServer/findAddressCandidates"): Caso(
+        lambda p: "/rest/services/Geocodificador/GeocodeServer/findAddressCandidates"
+                  "?address=Avenida+Paulista&city=Sao+Paulo&region=SP",
+        publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/findAddressCandidates"): Caso(
+        lambda p: "/rest/services/Geocodificador/GeocodeServer/findAddressCandidates"
+                  "?address=Avenida+Paulista&city=Sao+Paulo&region=SP",
+        publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/rest/services/Geocodificador/GeocodeServer/reverseGeocode"): Caso(
+        lambda p: "/rest/services/Geocodificador/GeocodeServer/reverseGeocode?location=-46.6333,-23.5505",
+        publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/reverseGeocode"): Caso(
+        lambda p: "/rest/services/Geocodificador/GeocodeServer/reverseGeocode?location=-46.6333,-23.5505",
+        publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/rest/services/Geocodificador/GeocodeServer/suggest"): Caso(
+        lambda p: "/rest/services/Geocodificador/GeocodeServer/suggest?text=Avenida+Paulista",
+        publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/rest/services/Geocodificador/GeocodeServer/geocodeAddresses"): Caso(
+        lambda p: "/rest/services/Geocodificador/GeocodeServer/geocodeAddresses",
+        lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
+                                                              "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
+        publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
 }
 
 
@@ -656,6 +915,16 @@ def _zero(j: Any) -> None:
 
 def _vazio(j: Any) -> None:
     assert j == [], "A vê pastas de B"
+
+
+def _ogc_zero(j: Any) -> None:
+    # a resposta vem com media_type "application/geo+json" (rotas_ogc.py), então `test_cruzado._chamar`
+    # (que só faz `.json()` quando o content-type começa com "application/json") entrega texto cru aqui —
+    # decodifica antes de indexar.
+    import json as _json
+
+    corpo = _json.loads(j) if isinstance(j, str) else j
+    assert corpo["numberMatched"] == 0 and corpo["features"] == [], "A vê registro OGC de item de B"
 
 
 def _lote_itens_recusado(p: Preparacao, j: Any) -> None:

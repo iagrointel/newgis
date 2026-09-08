@@ -74,7 +74,24 @@ def novo_cliente():
 
 
 def entrar(cliente, slug: str, login: str, senha: str, segredo_totp: str | None = None):
-    """Login completo (com 2FA quando exigido e o segredo é conhecido). Devolve a resposta final."""
+    """Login completo (com 2FA quando exigido e o segredo é conhecido). Devolve a resposta final.
+
+    07/09: sob pytest-xdist os workers entram com o MESMO usuário ao mesmo tempo; o banco guarda um
+    desafio 2FA por usuário (plat.usuario.desafio_2fa_hash), então o login de um worker apaga o desafio
+    do outro (410 desafio_expirado) e os dois disputam o mesmo passo de 30 s do TOTP (anti-replay).
+    Só o trecho login -> 2fa é serializado, por trinco de arquivo; o resto da suíte segue em paralelo.
+    """
+    import fcntl
+
+    with open(Path(__file__).resolve().parents[1] / ".login.lock", "w") as trinco:
+        fcntl.flock(trinco, fcntl.LOCK_EX)
+        try:
+            return _entrar(cliente, slug, login, senha, segredo_totp)
+        finally:
+            fcntl.flock(trinco, fcntl.LOCK_UN)
+
+
+def _entrar(cliente, slug: str, login: str, senha: str, segredo_totp: str | None = None):
     from app.auth import totp
 
     r = cliente.post("/api/login", json={"inquilino": slug, "login": login, "senha": senha})

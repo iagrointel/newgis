@@ -41,10 +41,14 @@ import re
 import sys
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 
 import httpx
 import psycopg2
 import psycopg2.extras
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # roda fora do venv: acha o pacote app
+from app.schema_ambiente import CursorSchemaAmbiente  # noqa: E402 -- depois do sys.path acima
 
 TIMEOUT_PADRAO = 20.0
 USER_AGENT = "plat-acervo-licenca/1.0 (+iAgroIntel; verificacao de licenca por HTTP, item L6-01-g)"
@@ -326,12 +330,18 @@ ON CONFLICT (fonte_id) DO UPDATE SET
 """
 
 
+def _conectar(dsn_kwargs: dict):
+    """Fabrica de cursor do ambiente (achado F9): com `RealDictCursor` puro o UPSERT de
+    `plat.acervo_licenca` ia sempre ao `plat` de PRODUCAO, mesmo numa trilha isolada."""
+    return psycopg2.connect(cursor_factory=CursorSchemaAmbiente, **dsn_kwargs)
+
+
 def sincronizar(dsn_kwargs: dict, timeout: float, somente: str | None = None) -> dict:
     itens = [c for c in CURADORIA if somente is None or c.fonte_id == somente]
     if not itens:
         raise SystemExit(f"nenhum item da curadoria casa com --somente={somente!r}")
 
-    conn = psycopg2.connect(cursor_factory=psycopg2.extras.RealDictCursor, **dsn_kwargs)
+    conn = _conectar(dsn_kwargs)
     conn.autocommit = False
     ok = falha = 0
     falhas: list[tuple[str, str]] = []

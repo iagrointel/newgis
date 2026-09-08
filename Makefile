@@ -2,13 +2,24 @@ VENV=venv/bin
 # nunca ~/.local: a suíte prova o que a venv + dpkg fornecem, igual à unidade systemd
 export PYTHONNOUSERSITE=1
 URL_PUBLICA=$(shell grep ^PLAT_URL_PUBLICA .env 2>/dev/null | cut -d= -f2)
-# PLAT_SECRET e PLAT_DSN_WORKER não estão mais no .env (item L7-19: LoadCredential do systemd,
-# /etc/plat/segredos, dono root, 0600); fora do systemd só root lê, por isso o `sudo cat` — mesmo
-# privilégio que install.sh e `make migrar` já exigem, nunca em argumento de linha de comando visível
-# em `ps` (só o valor lido entra no ambiente do pytest/uvicorn filho, como já era com o .env). Só
-# exporta quando o credential existe: numa máquina que ainda não rodou a migração (arquivo ausente,
-# `sudo cat` devolve vazio) isso NÃO pisa no PLAT_SECRET/PLAT_DSN_WORKER que ainda estiverem no `.env`.
-SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); PLAT_DSN_WORKER=$$(sudo cat /etc/plat/segredos/PLAT_DSN_WORKER 2>/dev/null); [ -n "$$PLAT_SECRET" ] && export PLAT_SECRET; [ -n "$$PLAT_DSN_WORKER" ] && export PLAT_DSN_WORKER;
+# PLAT_SECRET, PLAT_DSN_WORKER, PLAT_DSN, PLAT_GARAGE_ADMIN_TOKEN e PLAT_SECRET_ANTERIOR não vão mais no
+# .env (item L7-19: LoadCredential do systemd, /etc/plat/segredos, dono root, 0600); fora do systemd só
+# root lê, por isso o `sudo cat` — mesmo privilégio que install.sh e `make migrar` já exigem, nunca em
+# argumento de linha de comando visível em `ps` (só o valor lido entra no ambiente do pytest/uvicorn
+# filho, como já era com o .env). Só exporta quando o credential existe e não é vazio: numa máquina que
+# ainda não rodou a migração (arquivo ausente, `sudo cat` devolve vazio) isso NÃO pisa no que ainda
+# estiver no `.env`; PLAT_SECRET_ANTERIOR/PLAT_GARAGE_ADMIN_TOKEN ficam de fora quando vazios de propósito
+# (arquivo vazio é o estado normal fora de uma rotação/sem admin_token — settings.py trata como ausente).
+SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); \
+	PLAT_SECRET_ANTERIOR=$$(sudo cat /etc/plat/segredos/PLAT_SECRET_ANTERIOR 2>/dev/null); \
+	PLAT_DSN_WORKER=$$(sudo cat /etc/plat/segredos/PLAT_DSN_WORKER 2>/dev/null); \
+	PLAT_DSN=$$(sudo cat /etc/plat/segredos/PLAT_DSN 2>/dev/null); \
+	PLAT_GARAGE_ADMIN_TOKEN=$$(sudo cat /etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN 2>/dev/null); \
+	[ -n "$$PLAT_SECRET" ] && export PLAT_SECRET; \
+	[ -n "$$PLAT_SECRET_ANTERIOR" ] && export PLAT_SECRET_ANTERIOR; \
+	[ -n "$$PLAT_DSN_WORKER" ] && export PLAT_DSN_WORKER; \
+	[ -n "$$PLAT_DSN" ] && export PLAT_DSN; \
+	[ -n "$$PLAT_GARAGE_ADMIN_TOKEN" ] && export PLAT_GARAGE_ADMIN_TOKEN;
 
 .PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps homolog
 
@@ -26,7 +37,16 @@ privilegios:                                 ## docs/PRIVILEGIOS.md == plat.priv
 	$(VENV)/python docs/gerar_privilegios.py
 
 sem-marcador:                               ## mesma expressão do laco/driver.sh (tests/marcadores.regex); inclui os .md da raiz e docs/
-	! grep -rnI --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=tests --exclude-dir=.git --exclude-dir=venv -E -f tests/marcadores.regex app web db docs deploy install.sh Makefile requirements.txt pyproject.toml *.md
+# 07/09: a guarda estava reprovando A SI MESMA e travou a fila de junção a noite inteira --
+# batia no dump gerado db/estrutura (variável de terceiro chamada `placeholder` numa função de
+# busca textual) e nos documentos que DESCREVEM a regra (SISTEMA.md, CONTRIBUIR.md, e comentários
+# que citam a palavra ao explicar por que ela é proibida). Marcador de verdade é código morto,
+# não prosa sobre código morto. Por isso: dump gerado fora, e linha que cite a palavra dentro de
+# comentário explicativo sai por `marcadores.excecoes` (lista curta, com motivo em cada entrada).
+	! grep -rnI --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=tests --exclude-dir=.git \
+	    --exclude-dir=venv --exclude-dir=estrutura \
+	    -E -f tests/marcadores.regex app web db docs deploy install.sh Makefile requirements.txt pyproject.toml *.md \
+	  | grep -vE -f tests/marcadores.excecoes
 
 teste:
 	$(SEGREDOS) $(VENV)/pytest -m "not lento"
