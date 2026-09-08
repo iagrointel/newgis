@@ -294,18 +294,19 @@ def mapa(serie_id: str, ano: int, auth: Auth = autenticado(escopo_token="catalog
         safra = cur.fetchone()
         if safra is None:
             raise ErroAPI(404, "safra_inexistente", "a série não tem esse ano")
+        ident = serie_mod.SQL_IDENTIDADE  # a mesma identidade da linhagem, nunca o codigo_externo cru
         cur.execute(
-            "SELECT n.codigo_externo AS codigo, ST_X(n.geom) AS lon, ST_Y(n.geom) AS lat, "
+            f"SELECT {ident} AS codigo, ST_X(n.geom) AS lon, ST_Y(n.geom) AS lat, "
             "  ts.carga_pct, ts.pot_nom_kva, ts.n_uc, ts.alimentador, l.classe "
             "FROM plat.rede_no n "
             "JOIN plat.rede_tipo t ON t.id = n.tipo_id "
             "JOIN plat.rede_grupo g ON g.id = t.grupo_id "
             "LEFT JOIN plat.rede_trafo_safra ts ON ts.serie_id = %(serie)s::uuid AND ts.ano = %(ano)s "
-            "  AND ts.codigo = n.codigo_externo "
+            f"  AND ts.codigo = {ident} "
             "LEFT JOIN plat.rede_linhagem l ON l.serie_id = %(serie)s::uuid AND l.entidade = 'trafo' "
-            "  AND l.ano_alvo = %(ano)s AND l.codigo_alvo = n.codigo_externo "
+            f"  AND l.ano_alvo = %(ano)s AND l.codigo_alvo = {ident} "
             "WHERE n.rede_id = %(rede)s::uuid AND g.codigo = %(grupo)s AND n.geom IS NOT NULL "
-            "ORDER BY n.codigo_externo",
+            f"ORDER BY {ident}",
             {"serie": sid, "ano": ano, "rede": safra["rede_id"], "grupo": serie_mod.GRUPO_TRAFO},
         )
         feicoes = [
