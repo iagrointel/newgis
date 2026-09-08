@@ -206,6 +206,23 @@ def _checar_restricao(request: Request, restricao: dict) -> str | None:
     return None
 
 
+def _recusar_se_suspenso(request: Request, h: str) -> None:
+    """Item L0-07-f: credencial (sessão ou token) que só não autentica porque o INQUILINO está suspenso recebe 503
+    `inquilino_suspenso` com a mensagem do operador, em vez de um 401 mudo — o mesmo código que POST /api/login já
+    devolve. Só roda no caminho de falha (a credencial válida nunca passa por aqui); nada é apagado."""
+    with db.db() as cur:
+        cur.execute("SELECT * FROM plat.credencial_suspensa(%s)", (h,))
+        r = cur.fetchone()
+    if r is None:
+        return
+    request.state.resultado = "suspenso"
+    detalhe = {"mensagem": r["mensagem"], "desde": iso(r["desde"]) if r["desde"] else None}
+    texto = "inquilino suspenso; fale com o operador da plataforma"
+    if r["mensagem"]:
+        texto = f"inquilino suspenso: {r['mensagem']}"
+    raise ErroAPI(503, "inquilino_suspenso", texto, detalhe)
+
+
 def _auth_de_token(request: Request, valor: str) -> Auth:
     if not valor.startswith(TOKEN_PREFIXO) or len(valor) != TOKEN_TAMANHO:
         raise ErroAPI(401, "token_invalido", "token de serviço inválido")
@@ -214,6 +231,7 @@ def _auth_de_token(request: Request, valor: str) -> Auth:
         cur.execute("SELECT * FROM plat.auth_token(%s, %s)", (h, ip_de(request)))
         r = cur.fetchone()
     if r is None:
+        _recusar_se_suspenso(request, h)
         request.state.resultado = "invalido"
         raise ErroAPI(401, "token_invalido", "token de serviço inválido")
     request.state.token_id = r["token_id"]
@@ -293,6 +311,7 @@ def resolver(request: Request) -> Auth | None:
             cur.execute("SELECT * FROM plat.auth_sessao(%s, %s)", (h, ociosa_horas_padrao()))
             r = cur.fetchone()
         if r is None:
+            _recusar_se_suspenso(request, h)
             raise ErroAPI(401, "sessao_expirada", "sessão inexistente ou expirada; entre de novo")
         auth = _auth_de_sessao(r, h)
     else:
