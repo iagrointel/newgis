@@ -20,7 +20,6 @@ from pydantic import Field
 from app import db, limites, senha
 from app.auth.comum import erro_do_banco, paginacao, registrar_evento
 from app.auth.modelos import CotasEntrada, Inquilino, InquilinoCriado, InquilinoCriar, Modelo, Saida
-
 from app.auth.sessao import Auth, autenticado, iso
 from app.erros import ErroAPI
 
@@ -130,7 +129,8 @@ def criar(corpo: InquilinoCriar, request: Request, auth: Auth = OPERADOR):
                 ),
             )
             r = cur.fetchone()
-        _evento(auth, request, "inquilinos/criar", r["tenant_id"], {"slug": slug, "cotas": json.loads(_cotas_jsonb(cotas))})
+        propriedades = {"slug": slug, "cotas": json.loads(_cotas_jsonb(cotas))}
+        _evento(auth, request, "inquilinos/criar", r["tenant_id"], propriedades)
     except psycopg2.errors.UniqueViolation as e:
         raise ErroAPI(409, "slug_existente", "já existe um inquilino com esse identificador") from e
     except psycopg2.errors.CheckViolation as e:
@@ -218,7 +218,9 @@ def desligar_2fa_de_admin(id: int, usuario_id: int, request: Request, auth: Auth
     (409), sessões do alvo encerradas, evento com o login do alvo."""
     try:
         with db.db() as cur:
-            cur.execute("SELECT plat.tenant_admin_2fa_desligar(%s, %s, %s) AS login", (auth.sessao_hash, id, usuario_id))
+            cur.execute(
+                "SELECT plat.tenant_admin_2fa_desligar(%s, %s, %s) AS login", (auth.sessao_hash, id, usuario_id)
+            )
             login = cur.fetchone()["login"]
         _evento(auth, request, "inquilinos/2fa_desligar", id, {"usuario_id": usuario_id, "login": login})
     except psycopg2.Error as e:
