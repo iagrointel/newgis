@@ -30,3 +30,10 @@ laco/*.log
 # fica no curado tests/medidas/L7-19.json)
 tests/medidas/_prova_segredos_bruta.json
 tests/medidas/_prova_garage_chave_s3.json
+
+# bancada de teste manual do item L2-01-b (Martin/nginx locais, PMTiles gerado, logs) -- nunca versionar
+laco_var/
+
+# binário do Martin instalado por deploy/martin_instalar.sh (nunca versionado; sha256 fixado no script)
+bin/
+tests/e2e/capturas/*.pdf

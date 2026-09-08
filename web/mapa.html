@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="/static/style.css">
 <link rel="stylesheet" href="/static/vendor/maplibre-gl-4.7.1.css">
 <link rel="stylesheet" href="/static/mapa.css">
+<link rel="stylesheet" href="/static/widgets.css">
 </head>
 <body class="tela instrumento mapa">
 <a class="pular" href="#mapa" data-i18n="app.pular">pular para o conteúdo</a>
@@ -20,13 +21,64 @@
       <h1 data-i18n="mapa.titulo">Mapa</h1>
       <plat-aviso id="aviso"></plat-aviso>
     </div>
-    <div class="mapa-area">
-      <div id="mapa" aria-label="mapa" role="application"></div>
-      <div class="mapa-painel mapa-painel-base">
-        <label for="seletor-base" data-i18n="mapa.camada_base">camada base</label>
-        <select id="seletor-base"></select>
+    <div class="mapa-corpo">
+      <section class="mapa-painel-lateral" aria-label="painel do mapa">
+        <form id="busca-form" class="bloco" role="search">
+          <h2 data-i18n="mapa.busca">Pesquisar</h2>
+          <label class="rotulo" for="busca-campo" data-i18n="mapa.busca_ajuda">endereço ou coordenada</label>
+          <div class="linha">
+            <input id="busca-campo" name="q" type="search" autocomplete="off"
+                   data-i18n-aria="mapa.busca">
+            <button type="submit" class="botao" data-i18n="mapa.ir">Ir</button>
+          </div>
+          <ul id="busca-sugestoes" class="sugestoes"></ul>
+          <p id="busca-resultado" class="saida" aria-live="polite"></p>
+        </form>
+
+        <section class="bloco">
+          <div class="arvore-cabecalho-bloco">
+            <h2 data-i18n="mapa.camadas">Camadas</h2>
+            <button type="button" id="btn-novo-grupo" class="botao-mini" aria-label="criar grupo">+ grupo</button>
+          </div>
+          <ul id="lista-camadas" class="lista-camadas arvore" role="tree" aria-label="Camadas"></ul>
+        </section>
+
+        <section class="bloco">
+          <h2 data-i18n="mapa.legenda">Legenda</h2>
+          <div id="legenda" class="legenda"></div>
+        </section>
+
+        <section class="bloco">
+          <h2 data-i18n="mapa.medicao">Medição</h2>
+          <div class="linha">
+            <button type="button" id="btn-distancia" class="botao" aria-pressed="false"
+                    data-i18n="mapa.distancia">Distância</button>
+            <button type="button" id="btn-area" class="botao" aria-pressed="false"
+                    data-i18n="mapa.area">Área</button>
+            <button type="button" id="btn-medicao-limpar" class="botao secundario"
+                    data-i18n="mapa.limpar">Limpar</button>
+          </div>
+          <p id="medicao-saida" class="saida" aria-live="polite"></p>
+        </section>
+
+        <section class="bloco">
+          <h2 data-i18n="mapa.impressao">Impressão</h2>
+          <div class="linha">
+            <button type="button" id="btn-png" class="botao">PNG</button>
+            <button type="button" id="btn-pdf" class="botao">PDF</button>
+          </div>
+          <p id="impressao-saida" class="saida" aria-live="polite"></p>
+        </section>
+      </section>
+
+      <div class="mapa-area">
+        <plat-mapa id="mapa" aria-label="mapa" role="application"></plat-mapa>
+        <div class="mapa-painel mapa-painel-base">
+          <label for="seletor-base" data-i18n="mapa.camada_base">camada base</label>
+          <select id="seletor-base"></select>
+        </div>
+        <div class="mapa-painel mapa-coordenadas" id="coordenadas" aria-live="off">—</div>
       </div>
-      <div class="mapa-painel mapa-coordenadas" id="coordenadas" aria-live="off">—</div>
     </div>
   </main>
 </div>
