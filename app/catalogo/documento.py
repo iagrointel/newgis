@@ -81,12 +81,42 @@ def _corpo_do_documento(tipo: str, dados) -> dict | None:
     return corpo if isinstance(corpo, dict) else None
 
 
+# o que JSON Schema do tipo `colecao` não expressa: `capa.midia` e `metadados.miniatura` viram `src`/`href`
+# na página leitora e nos `og:` da página do link, então só valem caminho da própria instalação ou http(s)
+_MIDIA_RE = re.compile(r"^(https://[^\s]+|/[^\s]*)$")
+
+
+def validar_colecao(corpo: dict) -> None:
+    """422 colecao_invalida quando `capa.midia` ou `metadados.miniatura` fogem do formato permitido
+    (caminho relativo começado por `/` ou URL https). O formato de capa/itens/tema é do JSON Schema do
+    tipo; aqui entra só a regra de seguraça que precisa do conteúdo da string."""
+    erros: list[dict] = []
+    for campo in (("capa", "midia"), ("metadados", "miniatura")):
+        secao = corpo.get(campo[0])
+        valor = secao.get(campo[1]) if isinstance(secao, dict) else None
+        if valor is not None and not (isinstance(valor, str) and _MIDIA_RE.match(valor)):
+            erros.append(
+                {
+                    "campo": f"corpo.{campo[0]}.{campo[1]}",
+                    "erro": "caminho precisa começar por / ou ser uma URL https",
+                    "regra": "midia_invalida",
+                }
+            )
+    if erros:
+        raise ErroAPI(422, "colecao_invalida", "corpo da coleção inválido", erros)
+
+
 def validar_grafo(tipo: str, dados) -> None:
     """422 grafo_invalido (mesmo contrato de app/erros.py) quando: nó sem id ULID, dois nós com o mesmo id, ou
     ligação (`origem`/`alvo`) apontando para um id que não está em `corpo.nos`. O formato de cada campo (tipo do
     nó, tipos de `corpo`/`nos`/`ligacoes`) já é responsabilidade do JSON Schema do tipo (`tipos.validar`,
     chamado ANTES desta função nas duas rotas que escrevem `dados`); aqui só entra o que precisa da lista
     inteira para ser conferido."""
+    if tipo == "colecao":
+        corpo_colecao = dados.get("corpo") if isinstance(dados, dict) else None
+        if isinstance(corpo_colecao, dict):
+            validar_colecao(corpo_colecao)
+        return
     corpo = _corpo_do_documento(tipo, dados)
     if corpo is None:
         return
