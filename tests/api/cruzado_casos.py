@@ -4,6 +4,7 @@ caso que aponta um recurso do inquilino B (demo2) e diz o que A (demo) pode rece
 não carregue dado de B (`verificar`) e B fique intacto (digest antes/depois, em test_cruzado.py). Rota sem caso =
 o teste falha (cobertura 100 % é cláusula)."""
 
+import math
 import secrets
 from dataclasses import dataclass, field
 from typing import Any, Callable
@@ -16,6 +17,19 @@ AREA_MULTIESCALA_TESTE = {
     "type": "Polygon",
     "coordinates": [[[-46.61, -23.51], [-46.59, -23.51], [-46.59, -23.49], [-46.61, -23.49], [-46.61, -23.51]]],
 }
+# L2-09-d-analise-3d: grade 6x6 de 20 m (120 m de lado) em SIRGAS 2000 UTM 23S; o centro tem um morro de 40 m
+_X0_A3D, _Y0_A3D, _C_A3D = 220000.0, 7450000.0, 20.0
+TERRA_ANALISE3D = {
+    "srid": 31983, "x0": _X0_A3D, "y0": _Y0_A3D, "celula_m": _C_A3D,
+    "alturas": [
+        [round(40.0 * math.exp(-((j * _C_A3D - 60.0) ** 2 + (i * _C_A3D - 60.0) ** 2) / (2 * 30.0**2)), 3)
+         for j in range(6)] for i in range(6)
+    ],
+}
+OBS_ANALISE3D = (
+    [_X0_A3D + _C_A3D, _Y0_A3D + 3 * _C_A3D],
+    [_X0_A3D + 5 * _C_A3D, _Y0_A3D + 3 * _C_A3D],
+)
 PADRAO = frozenset({401, 403, 404})
 UUID_NULO = "00000000-0000-0000-0000-000000000000"  # id que não é de A nem de B: 404 garantido pela RLS/dono
 
@@ -905,6 +919,40 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    # ---- L2-09-d-analise-3d: análise é stateless SEM salvar_item (o corpo não pede item) — nada é criado
+    # nem em A nem em B; a verificação é a resposta não carregar marca de B
+    ("POST", "/api/analise3d/visada"): Caso(
+        lambda p: "/api/analise3d/visada", lambda p: {
+            "terreno": TERRA_ANALISE3D, "observador": OBS_ANALISE3D[0], "alvo": OBS_ANALISE3D[1],
+            "altura_observador_m": 2.0,
+        },
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/api/analise3d/viewshed"): Caso(
+        lambda p: "/api/analise3d/viewshed", lambda p: {
+            "terreno": TERRA_ANALISE3D, "observador": OBS_ANALISE3D[0], "altura_observador_m": 2.0,
+            "distancia_max_m": 5000.0,
+        },
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/api/analise3d/perfil"): Caso(
+        lambda p: "/api/analise3d/perfil", lambda p: {
+            "terreno": TERRA_ANALISE3D, "ponto_a": OBS_ANALISE3D[0], "ponto_b": OBS_ANALISE3D[1],
+            "n_amostras": 6,
+        },
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/api/analise3d/sombra"): Caso(
+        lambda p: "/api/analise3d/sombra", lambda p: {
+            "srid": 31983, "data_hora": "2026-12-21T15:00:00+00:00",
+            "solidos": [{"poligono": {
+                "type": "Polygon",
+                "coordinates": [[[220000.0, 7450000.0], [220010.0, 7450000.0], [220010.0, 7450010.0],
+                                 [220000.0, 7450010.0], [220000.0, 7450000.0]]],
+            }, "altura_m": 20.0}],
+        },
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
 }
 
