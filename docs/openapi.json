@@ -10987,6 +10987,300 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/parcelas/fabrica/build": {
+   "post": {
+    "tags": [
+     "parcelas"
+    ],
+    "summary": "Build",
+    "description": "Build (forma da doc `.../ParcelFabricServer/build`): fecha anéis com as linhas livres e\ncria uma parcela por face. record é obrigatório na casa (divergência §11).",
+    "operationId": "build_api_parcelas_fabrica_build_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BuildEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/parcelas/fabrica/divide": {
+   "post": {
+    "tags": [
+     "parcelas"
+    ],
+    "summary": "Divide",
+    "description": "Divide (forma da doc `.../ParcelFabricServer/divide`): por rumo com divideOption\n(ProportionalArea/EqualArea/EqualWidth) ou por linha de corte direta (campo `linha`).",
+    "operationId": "divide_api_parcelas_fabrica_divide_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DivideEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/parcelas/fabrica/merge": {
+   "post": {
+    "tags": [
+     "parcelas"
+    ],
+    "summary": "Merge",
+    "description": "Merge (forma da doc `.../ParcelFabricServer/merge`): une as parentParcels em uma parcela.\nLinhas externas continuam ativas; a interna é RETIRADA (a casa não apaga, §11).",
+    "operationId": "merge_api_parcelas_fabrica_merge_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MergeEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/parcelas/fabrica/clip": {
+   "post": {
+    "tags": [
+     "parcelas"
+    ],
+    "summary": "Clip",
+    "description": "Clip (forma da doc `.../ParcelFabricServer/clip`): recorta a parcela com clippingGeometry\n(GeoJSON Polygon) OU clippingParcels, com clipOption PreserveArea/DiscardArea/\nPreserveBothAreasSplit.",
+    "operationId": "clip_api_parcelas_fabrica_clip_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ClipEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/parcelas/fabrica/createSeeds": {
+   "post": {
+    "tags": [
+     "parcelas"
+    ],
+    "summary": "Create Seeds",
+    "description": "CreateSeeds (forma da doc `.../ParcelFabricServer/createSeeds`): uma semente por face\nfechada pelas linhas do registro.",
+    "operationId": "create_seeds_api_parcelas_fabrica_createSeeds_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CreateSeedsEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/parcelas/fabrica/reconstructFromSeeds": {
+   "post": {
+    "tags": [
+     "parcelas"
+    ],
+    "summary": "Reconstruct From Seeds",
+    "description": "ReconstructFromSeeds (forma da doc `.../ParcelFabricServer/reconstructFromSeeds`):\nreconstrói parcelas das sementes na extent; a resposta carrega reconstructedParcelCount.",
+    "operationId": "reconstruct_from_seeds_api_parcelas_fabrica_reconstructFromSeeds_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReconstructEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/parcelas/fabrica/assignFeaturesToRecord": {
+   "post": {
+    "tags": [
+     "parcelas"
+    ],
+    "summary": "Assign Features To Record",
+    "description": "AssignFeaturesToRecord (forma da doc `.../ParcelFabricServer/assignFeaturesToRecord`; o\nportão chama de assignToRecord): atribui parcela/linha/ponto/conexão a um registro, com\nwriteAttribute CreatedByRecord|RetiredByRecord.",
+    "operationId": "assign_features_to_record_api_parcelas_fabrica_assignFeaturesToRecord_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AssignEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
   }
  },
  "components": {
@@ -11713,6 +12007,122 @@
     ],
     "title": "AmostrasResultado"
    },
+   "AssignEntrada": {
+    "properties": {
+     "gdbVersion": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gdbversion"
+     },
+     "sessionId": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sessionid"
+     },
+     "parcelFeatures": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Parcelfeatures"
+     },
+     "record": {
+      "type": "string",
+      "title": "Record"
+     },
+     "writeAttribute": {
+      "type": "string",
+      "enum": [
+       "CreatedByRecord",
+       "RetiredByRecord"
+      ],
+      "title": "Writeattribute"
+     }
+    },
+    "type": "object",
+    "required": [
+     "parcelFeatures",
+     "record",
+     "writeAttribute"
+    ],
+    "title": "AssignEntrada"
+   },
+   "BuildEntrada": {
+    "properties": {
+     "gdbVersion": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gdbversion"
+     },
+     "sessionId": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sessionid"
+     },
+     "record": {
+      "type": "string",
+      "title": "Record"
+     },
+     "tipo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "lote",
+         "gleba",
+         "quadra",
+         "servidao",
+         "estrato"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo"
+     },
+     "buildExtent": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Extent"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "record"
+    ],
+    "title": "BuildEntrada"
+   },
    "CategoriaNo": {
     "properties": {
      "id": {
@@ -11805,6 +12215,109 @@
      "arvore"
     ],
     "title": "CategoriasEntrada"
+   },
+   "ClipEntrada": {
+    "properties": {
+     "gdbVersion": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gdbversion"
+     },
+     "sessionId": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sessionid"
+     },
+     "parentParcels": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Parentparcels"
+     },
+     "record": {
+      "type": "string",
+      "title": "Record"
+     },
+     "clippingParcels": {
+      "anyOf": [
+       {
+        "items": {
+         "additionalProperties": true,
+         "type": "object"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clippingparcels"
+     },
+     "clippingGeometry": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clippinggeometry"
+     },
+     "clipOption": {
+      "type": "string",
+      "enum": [
+       "PreserveArea",
+       "DiscardArea",
+       "PreserveBothAreasSplit"
+      ],
+      "title": "Clipoption"
+     },
+     "codigo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Codigo"
+     },
+     "defaultAreaUnit": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Defaultareaunit"
+     }
+    },
+    "type": "object",
+    "required": [
+     "parentParcels",
+     "record",
+     "clipOption"
+    ],
+    "title": "ClipEntrada"
    },
    "CodigoEntrada": {
     "properties": {
@@ -12882,6 +13395,184 @@
     ],
     "title": "ConviteResolvido"
    },
+   "CreateSeedsEntrada": {
+    "properties": {
+     "gdbVersion": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gdbversion"
+     },
+     "sessionId": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sessionid"
+     },
+     "record": {
+      "type": "string",
+      "title": "Record"
+     },
+     "extent": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Extent"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "record"
+    ],
+    "title": "CreateSeedsEntrada"
+   },
+   "DivideEntrada": {
+    "properties": {
+     "gdbVersion": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gdbversion"
+     },
+     "sessionId": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sessionid"
+     },
+     "divideParcelGuid": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Divideparcelguid"
+     },
+     "divideParcelType": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "lote",
+         "gleba",
+         "quadra",
+         "servidao",
+         "estrato"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Divideparceltype"
+     },
+     "record": {
+      "type": "string",
+      "title": "Record"
+     },
+     "divideOption": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "ProportionalArea",
+         "EqualArea",
+         "EqualWidth"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Divideoption"
+     },
+     "divideNumberOfParts": {
+      "type": "integer",
+      "minimum": 2.0,
+      "title": "Dividenumberofparts",
+      "default": 2
+     },
+     "dividePartAreaOrWidth": {
+      "type": "number",
+      "minimum": 0.0,
+      "title": "Dividepartareaorwidth",
+      "default": 0.0
+     },
+     "divideLineBearing": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMaximum": 360.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dividelinebearing"
+     },
+     "divideLeftSide": {
+      "type": "boolean",
+      "title": "Divideleftside",
+      "default": true
+     },
+     "divideDistributeRemainder": {
+      "type": "boolean",
+      "title": "Dividedistributeremainder",
+      "default": false
+     },
+     "linha": {
+      "anyOf": [
+       {
+        "items": {
+         "items": {
+          "type": "number"
+         },
+         "type": "array"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Linha"
+     }
+    },
+    "type": "object",
+    "required": [
+     "record"
+    ],
+    "title": "DivideEntrada",
+    "description": "Divide na forma da doc (divideOption + bearing) OU com linha de corte direta (campo\n`linha`, com 2 pontos) — o corte por linha é extra declarado da casa (§11)."
+   },
    "Dono": {
     "properties": {
      "id": {
@@ -13447,6 +14138,47 @@
      "itens"
     ],
     "title": "ExecucaoPagina"
+   },
+   "Extent": {
+    "properties": {
+     "xmin": {
+      "type": "number",
+      "title": "Xmin"
+     },
+     "ymin": {
+      "type": "number",
+      "title": "Ymin"
+     },
+     "xmax": {
+      "type": "number",
+      "title": "Xmax"
+     },
+     "ymax": {
+      "type": "number",
+      "title": "Ymax"
+     },
+     "spatialReference": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Spatialreference"
+     }
+    },
+    "type": "object",
+    "required": [
+     "xmin",
+     "ymin",
+     "xmax",
+     "ymax"
+    ],
+    "title": "Extent",
+    "description": "Envelope da doc (buildExtent/extent). spatialReference é aceito e ignorado (SRID fixo)."
    },
    "Fator": {
     "properties": {
@@ -15257,6 +15989,101 @@
     ],
     "title": "Membro"
    },
+   "MergeEntrada": {
+    "properties": {
+     "gdbVersion": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gdbversion"
+     },
+     "sessionId": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sessionid"
+     },
+     "parentParcels": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Parentparcels"
+     },
+     "record": {
+      "type": "string",
+      "title": "Record"
+     },
+     "targetParcelType": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "lote",
+         "gleba",
+         "quadra",
+         "servidao",
+         "estrato"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Targetparceltype"
+     },
+     "codigo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Codigo"
+     },
+     "defaultAreaUnit": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Defaultareaunit"
+     },
+     "mergeInto": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mergeinto"
+     }
+    },
+    "type": "object",
+    "required": [
+     "parentParcels",
+     "record"
+    ],
+    "title": "MergeEntrada"
+   },
    "Miniatura": {
     "properties": {
      "miniatura": {
@@ -16423,6 +17250,45 @@
     "additionalProperties": false,
     "type": "object",
     "title": "PublicarCamadaEntrada"
+   },
+   "ReconstructEntrada": {
+    "properties": {
+     "gdbVersion": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gdbversion"
+     },
+     "sessionId": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sessionid"
+     },
+     "extent": {
+      "$ref": "#/components/schemas/Extent"
+     },
+     "record": {
+      "type": "string",
+      "title": "Record"
+     }
+    },
+    "type": "object",
+    "required": [
+     "extent",
+     "record"
+    ],
+    "title": "ReconstructEntrada"
    },
    "RedefinicaoAplicada": {
     "properties": {
