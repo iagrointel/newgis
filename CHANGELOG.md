@@ -1145,3 +1145,17 @@ regras por linha; tabela de paridade com a Esri 11.4 (New member defaults, group
 ADR `20260908T0240-provisionamento-federado.md`. Testes: unidade (decisão pura, 500 grupos, 422 por campo),
 integração com Keycloak real (grupos e usuários criados pela API de administração dentro do teste) e e2e da tela
 com captura. Este ramo contém `wt/cx008` (OIDC + SAML) por merge.
+
+## turno 8, setembro de 2026 (item L0-08-c-govbr: gov.br como provedor OIDC, adaptador provado contra IdP sintético)
+
+gov.br (Login Único) vira um `modelo` do provedor OIDC (`plat.provedor_oidc.modelo = 'govbr'`, `api_base`),
+sem cópia do fluxo: descoberta, PKCE S256, JWKS, validação e transação de uso único são as do L0-08-a. O adaptador
+(`app/auth/govbr.py`) transforma `reliability_info` do id_token (nível bronze/prata/ouro, selos) e `amr` em valores
+`nivel:*`, `selo:<id>`, `amr:*`; sem `reliability_info`, consulta a API de confiabilidades
+(`/confiabilidades/v3/contas/{cpf}/niveis|confiabilidades?response-type=ids`) com o access_token; o mapeamento para
+perfil/papel/grupos é o do L0-08-e (regra explícita, valor exato). CPF só como pseudônimo SHA-256 (nunca em login,
+sujeito externo, evento ou log; teste procura). Tela Logins > Novo provedor OIDC com os campos do roteiro (ambiente,
+issuer, client_id, client_secret cifrado, redirect_uri fixa, escopos). Provado contra `tests/govbr_fixture/idp_falso.py`
+(formato do roteiro, 6 casos, inclusive id_token de outro issuer com 'gold' = 401); e2e da tela 51 ms. **Teste real
+com credencial do órgão: pendente em `docs/PARIDADE.md`** (cadastro exige ofício). ADR `20260908T0630-govbr-login-unico.md`.
+Este ramo contém `wt/cx2l008e` (e por ele `wt/cx008`).
