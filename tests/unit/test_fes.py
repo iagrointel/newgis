@@ -13,6 +13,10 @@ import pytest
 
 from app.consulta import cql2, fes
 
+POLIGONO = ('{"type": "Polygon", "coordinates": [[[-49.5, -27.5], [-49.0, -27.5], '
+            '[-49.0, -27.0], [-49.5, -27.0], [-49.5, -27.5]]]}')
+PONTO = '{"type": "Point", "coordinates": [-49.1, -27.1]}'
+
 COLUNAS = {"nome": '"nome"', "area": '"area"', "quando": '"quando"', "geometria": "geom"}
 SRID = 4674
 
@@ -99,8 +103,7 @@ def test_intersects_e_within_dao_o_mesmo_sql_do_cql2():
         sql, params, _ = _fes(_filtro(
             f"<fes:{elemento}><fes:ValueReference>geometria</fes:ValueReference>"
             + _envelope(-49.5, -27.5, -49.0, -27.0) + f"</fes:{elemento}>"))
-        esperado = _cql2(
-            f"{funcao}(geometria, POLYGON((-49.5 -27.5, -49.0 -27.5, -49.0 -27.0, -49.5 -27.0, -49.5 -27.5)))")
+        esperado = _cql2(f"{funcao}(geometria, '" + POLIGONO + "')")
         assert sql == esperado[0]
         assert params == esperado[1]
 
@@ -110,7 +113,7 @@ def test_dwithin_exige_metros_e_da_o_mesmo_sql_do_cql2():
         '<fes:DWithin><fes:ValueReference>geometria</fes:ValueReference>'
         '<gml:Point srsName="http://www.opengis.net/def/crs/OGC/1.3/CRS84"><gml:pos>-49.1 -27.1</gml:pos>'
         '</gml:Point><fes:Distance uom="m">500</fes:Distance></fes:DWithin>'))
-    esperado = _cql2("S_DWITHIN(geometria, POINT(-49.1 -27.1), 500)")
+    esperado = _cql2("S_DWITHIN(geometria, '" + PONTO + "', 500)")
     assert sql == esperado[0]
     assert params == esperado[1]
     with pytest.raises(fes.ErroFes) as e:
@@ -131,19 +134,31 @@ def test_temporal_after_before_during():
         "<fes:After><fes:ValueReference>quando</fes:ValueReference>"
         '<gml:TimeInstant gml:id="t1"><gml:timePosition>2026-01-01T00:00:00Z</gml:timePosition>'
         "</gml:TimeInstant></fes:After>"))
-    assert sql == '"quando" > %s'
-    assert params[0] == datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
+    esperado = _cql2("T_AFTER(quando, TIMESTAMP('2026-01-01T00:00:00Z'))")
+    assert (sql, params) == esperado
+    assert params[0] == datetime.datetime(2026, 1, 1)  # noqa: DTZ001 - coluna é timestamp sem fuso
 
     sql, params, _ = _fes(_filtro(
         "<fes:During><fes:ValueReference>quando</fes:ValueReference>"
         '<gml:TimePeriod gml:id="p1"><gml:beginPosition>2026-01-01</gml:beginPosition>'
         "<gml:endPosition>2026-02-01</gml:endPosition></gml:TimePeriod></fes:During>"))
-    esperado = _cql2("T_DURING(quando, 2026-01-01/2026-02-01)")
+    esperado = _cql2("T_DURING(quando, TIMESTAMP('2026-01-01/2026-02-01'))")
     assert sql == esperado[0]
     assert params == esperado[1]
 
 
 # --------------------------------------------------------------------------- ordem dos eixos
+def test_envelope_sem_srsname_usa_o_crs_padrao_do_servico():
+    """O GDAL manda o BBOX sem `srsName`, em latitude, longitude (a ordem do DefaultCRS que o
+    Capabilities publica). Sem esta regra o filtro espacial dele devolvia zero feição."""
+    sem = _fes(_filtro("<fes:BBOX>"
+                       '<gml:Envelope xmlns:gml="http://www.opengis.net/gml/3.2">'
+                       "<gml:lowerCorner>-27.5 -49.5</gml:lowerCorner>"
+                       "<gml:upperCorner>-27.0 -49.0</gml:upperCorner></gml:Envelope></fes:BBOX>"))
+    com = _fes(_filtro("<fes:BBOX>" + _envelope(-49.5, -27.5, -49.0, -27.0, "CRS84") + "</fes:BBOX>"))
+    assert sem[1] == com[1]
+
+
 def test_ordem_dos_eixos_urn_4326_e_latitude_longitude():
     """A pegadinha do WFS 2.0: em `urn:ogc:def:crs:EPSG::4326` vale a ordem da autoridade EPSG
     (latitude, longitude); na forma curta `EPSG:4326`, longitude, latitude."""
