@@ -65,7 +65,7 @@ def camada_ou_404(cur, camada_id: str) -> tuple[dict, dict]:
     cláusula 11) validado como `camada_vetorial` hospedada (a única editável por aqui; camada referenciada não
     tem `versao`/rastreio, é escopo de outro item)."""
     r = comum.item_ou_404(cur, camada_id)
-    if r["tipo"] != "camada_vetorial":
+    if r["tipo"] not in ("camada_vetorial", "vista_de_camada"):
         raise ErroAPI(404, "item_inexistente", "item inexistente")
     dados = r["dados"] or {}
     if dados.get("fonte") != "hospedada":
@@ -75,7 +75,14 @@ def camada_ou_404(cur, camada_id: str) -> tuple[dict, dict]:
 
 def exigir_camada_editavel(auth: Auth, dados: dict) -> None:
     """`feicoes.editar_total` (perfil admin) ignora a chave `edicao.habilitada`; sem ela, `feicoes.editar`
-    exige que a camada tenha ligado edição (hipótese do item; ADR Esri de editor tracking)."""
+    exige que a camada tenha ligado edição (hipótese do item; ADR Esri de editor tracking).
+
+    Vista de camada marcada `somente_leitura` (item L5-32) é recusada ANTES do atalho de administrador: ali
+    a recusa não é permissão de quem escreve, é a natureza do objeto — a view foi publicada como só-leitura
+    e nem o administrador escreve por ela (escreve pela camada-mãe, que continua editável)."""
+    if dados.get("somente_leitura"):
+        raise ErroAPI(403, "vista_somente_leitura",
+                      "esta vista de camada é somente leitura; edite pela camada-mãe")
     if auth.tem("feicoes.editar_total"):
         return
     if not (dados.get("edicao") or {}).get("habilitada"):
@@ -423,6 +430,10 @@ def _processar_lista(cur, lista: list, aplicar, modo: str, prefixo: str) -> tupl
                 cur.execute(f"RELEASE SAVEPOINT {savepoint}")
         except (ErroAPI, psycopg2.Error) as e:
             if modo != "parcial":
+                if isinstance(e, psycopg2.errors.WithCheckOptionViolation):
+                    # vista de camada só aceita feição dentro do próprio filtro (item L5-32): recusa com
+                    # código de negócio, não 500. Os demais erros do banco seguem como estavam.
+                    raise comum.erro_do_banco(e) from e
                 raise
             cur.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
             cur.execute(f"RELEASE SAVEPOINT {savepoint}")
