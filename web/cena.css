@@ -15,3 +15,12 @@
 .slide-miniatura { width: 72px; height: auto; display: block; border-radius: 2px; }
 .slide-sem-miniatura { width: 72px; text-align: center; opacity: .6; }
 .slide-nome { font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* item L2-09-c: painel do elemento clicado no modelo 3D */
+.elemento-propriedades { max-height: 22rem; overflow: auto; }
+.elemento-propriedades h3 { margin: 0 0 .25rem; font-size: .95rem; }
+.elemento-propriedades h4 { margin: .6rem 0 .15rem; font-size: .8rem; opacity: .8; }
+.elemento-cabecalho, .elemento-conjunto { display: grid; grid-template-columns: auto 1fr; gap: .1rem .6rem; margin: 0; }
+.elemento-cabecalho dt, .elemento-conjunto dt { opacity: .7; }
+.elemento-cabecalho dd, .elemento-conjunto dd { margin: 0; word-break: break-word; }
+.modelo-cena { display: flex; align-items: center; gap: .4rem; }

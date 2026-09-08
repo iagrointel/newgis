@@ -28,6 +28,7 @@ export const PADRAO = Object.freeze({
   atmosfera: { ceu: true, cor_horizonte: '#a8c6dd', nevoa: { ligada: true, inicio: 0.7, fim: 1, cor: '#c9d6de' } },
   camadas: [],
   slides: [],
+  modelos: [],   // item L2-09-c: modelos 3D (glTF posicionado ou árvore 3D Tiles)
 });
 
 function juntar(padrao, valor) {
@@ -50,6 +51,7 @@ export function comPadrao(corpo) {
     atmosfera: juntar(PADRAO.atmosfera, c.atmosfera),
     camadas: Array.isArray(c.camadas) ? c.camadas.map((x) => ({ ...x })) : [],
     slides: Array.isArray(c.slides) ? c.slides.map((x) => ({ ...x })) : [],
+    modelos: Array.isArray(c.modelos) ? c.modelos.map((x) => ({ ...x })) : [],
   };
 }
 
@@ -60,7 +62,7 @@ export function paraGravar(corpo) {
   const terreno = { ...c.terreno };
   if (!terreno.url) delete terreno.url;
   return { camera: c.camera, terreno, iluminacao: c.iluminacao, atmosfera: c.atmosfera,
-    camadas: c.camadas, slides: c.slides };
+    camadas: c.camadas, slides: c.slides, modelos: c.modelos };
 }
 
 export class Documento {

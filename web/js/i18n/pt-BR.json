@@ -909,5 +909,15 @@
  "upload.erro_generico": "não foi possível concluir o envio",
  "upload.erro_iniciar": "não foi possível iniciar o envio",
  "upload.erro_parte": "falha ao enviar a parte {n}",
- "upload.erro_concluir": "não foi possível concluir o envio"
+ "upload.erro_concluir": "não foi possível concluir o envio",
+ "modelos3d.titulo": "Modelos 3D",
+ "modelos3d.propriedades": "Propriedades do elemento",
+ "modelos3d.sem_selecao": "clique num elemento do modelo para ver as propriedades",
+ "modelos3d.tipo": "tipo",
+ "modelos3d.pavimento": "pavimento",
+ "modelos3d.guid": "identificador global",
+ "modelos3d.erro_ficha": "não foi possível ler a ficha do modelo",
+ "modelos3d.erro_camada": "erro ao montar o modelo 3D",
+ "modelos3d.sem_tileset": "este modelo ainda não tem árvore 3D Tiles gerada",
+ "modelos3d.elemento_nao_achado": "elemento sem ficha neste modelo"
 }

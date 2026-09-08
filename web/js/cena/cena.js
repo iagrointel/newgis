@@ -19,6 +19,7 @@ import { Documento } from './documento.js';
 import { Camadas3D, PREFIXO } from './camadas3d.js';
 import { Slides } from './slides.js';
 import { Medicao3D } from './medicao3d.js';
+import { Modelos3D } from './modelospainel.js';
 
 const FONTE_TERRENO = 'plat-cena-terreno';
 const el = (id) => document.getElementById(id);
@@ -115,6 +116,8 @@ async function iniciar() {
   const camadas = new Camadas3D(map);
   const camadaDaCena = (idDeEstilo) => corpo.camadas.find((c) => PREFIXO + c.id === idDeEstilo) || null;
   const medicao = new Medicao3D(map, el('medicao-saida'), camadaDaCena);
+  const modelos = new Modelos3D(map, { lista: el('lista-modelos'),
+    propriedades: el('modelo-propriedades'), aviso: el('aviso') });
   const slides = new Slides(map, documento, () => ({
     camadas_visiveis: corpo.camadas.filter((c) => c.visivel !== false).map((c) => c.id),
     instante: corpo.iluminacao.instante,
@@ -161,6 +164,7 @@ async function iniciar() {
     const sol = await aplicarSol(map, corpo.iluminacao, map.getCenter().toArray(), el('aviso'));
     el('sol-saida').textContent = textoDoSol(sol);
     await camadas.aplicar(corpo.camadas);
+    await modelos.aplicar(corpo.modelos || []);
   };
 
   const gravar = async () => {
@@ -224,7 +228,7 @@ async function iniciar() {
   desenharListaCamadas();
   desenharSlides();
   window.plat = window.plat || {};
-  window.plat.cena = { map, documento, camadas, slides, medicao, aplicarCena };  // ponto de inspeção do e2e
+  window.plat.cena = { map, documento, camadas, slides, medicao, modelos, aplicarCena };  // ponto de inspeção do e2e
   document.body.dataset.pronto = '1';
 }
 
