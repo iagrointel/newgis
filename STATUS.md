@@ -1,18 +1,18 @@
-# Status da corrida — 07/09/2026 20:48 UTC
+# Status da corrida — 08/09/2026 14:42 UTC
 
 Gerado de `laco/estado.json` pelo supervisor. `#` provado (portão passou e adversário não refutou) · `~` parcial (cláusula pendente nomeada) · `!` refutado pelo adversário, conserto em curso · `.` não iniciado.
 
-**84 provados · 83 parciais · 15 refutados · 340 na fila · 522 itens**
+**42 provados · 193 parciais · 55 refutados · 253 na fila · 543 itens**
 
 ```
-L0 fundação              ###########~~~~~~~~~~~~~!!!.............   19/72
-L1 imagens               #~!.....................................    2/65
-L2 plataforma            ########~~~~~~~~~~~.....................   19/100
-L3 motor multicritério   #########~~~~~~~!.......................    8/35
-L4 rede de utilidades    #####~~~~~..............................    8/66
-L5 construtores          #####~..................................    7/61
-L6 conectores            ##################~~~~~~~~~~............   14/32
-L7 operação              ####~~~~!!!.............................    7/77
+L0 fundação              #########~~~~~~~~~~~~~~~~~~~~!!!!.......   17/74
+L1 imagens               ~~!.....................................    0/65
+L2 plataforma            ##~~~~~~~~~~~~~~~~~~~!!!!!..............    6/100
+L3 motor multicritério   ######~~~~~~~~~~~~~~~!!!!!..............    5/35
+L4 rede de utilidades    ~~~~~~~~~~~~~~!!!!!.....................    0/70
+L5 construtores          #####~~~~~~~~...........................    7/61
+L6 conectores            ########~~~~~~~~~~~~~~~~!!!!!!!!!!......    6/32
+L7 operação              #~~~~~~~~!!!!!!.........................    1/78
 ```
 
 ## Como um item vira "provado"
