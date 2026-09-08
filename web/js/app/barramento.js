@@ -30,7 +30,10 @@ export class Barramento extends EventTarget {
           // o mesmo evento vale para o WIDGET que causou a mudança (gatilho "seleção mudou" no mapa, como no
           // Experience Builder): `detail.origem` é o noId que chamou definirSelecao/definirFiltro
           const causador = e.detail?.origem;
-          if (causador && causador !== v.id && this.widgets.has(causador)) this.disparar(causador, ev, e.detail);
+          // ... mas nunca quando a volta ATUAL já começou nesse mesmo widget com esse mesmo evento: aí o evento da
+          // vista é só o eco da ação que o widget acabou de pedir, e redisparar marcaria a mensagem como ciclo
+          const eco = this.#volta && this.#volta.origem === causador && this.#volta.evento === ev;
+          if (causador && causador !== v.id && !eco && this.widgets.has(causador)) this.disparar(causador, ev, e.detail);
         });
       }
     }
@@ -132,7 +135,8 @@ export class Barramento extends EventTarget {
       if (!t) return;
       if (acao.acao === 'filtrar') {
         if (t.filtro !== undefined && t.ids === undefined) alvoVista.definirFiltro(t.filtro, origem);
-        else if (t.ids) alvoVista.definirFiltro(t.ids.length ? { op: 'in', args: [{ property: '__id' }, t.ids] } : { op: 'in', args: [{ property: '__id' }, []] }, origem);
+        // seleção vazia = tira o filtro que a seleção desta origem tinha posto (Dashboards), não "nenhum registro"
+        else if (t.ids) alvoVista.definirFiltro(t.ids.length ? { op: 'in', args: [{ property: '__id' }, t.ids] } : null, origem);
         else alvoVista.definirFiltro(t.filtro, origem);
       } else if (acao.acao === 'selecionar') {
         if (t.ids) alvoVista.definirSelecao(t.ids, origem);
