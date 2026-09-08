@@ -230,3 +230,11 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## malha de parcelas (L4-parcelas-01-modelo-de-parcelas; migração 20260908T2140_parcelas.sql):
+
+| nome | valor | explicação |
+|---|---|---|
+| `PARCELA_IMPORT_LOTES_MAX` | `50000` | lotes por rodada de import (acima disso: 422, rodada menor) |
+| `PARCELA_VALIDACAO_PARES_MAX` | `500` | pares de sobreposição devolvidos por consulta (o total é contado) |
+| `PARCELA_TRAJETO_MAX` | `200` | segmentos COGO na criação de UMA parcela por trajeto |
