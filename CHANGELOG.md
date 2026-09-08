@@ -1081,3 +1081,14 @@ estático: nenhum HTML/JS/CSS carrega `http(s)://`, bibliotecas e fontes vendori
 `docs/APPLIANCE.md`: o que não funciona offline e a mensagem exata da tela (conectores, CSW, catálogo público,
 imagens, e-mail, OSRM, certbot), CA interna, rede `--internal` do compose (não executada: imagens do perfil
 appliance pendentes por disco, D21). `tests/operacao/frente_estatica.py` faz o papel do nginx para e2e em trilha.
+
+## turno 4 (líder 5), setembro de 2026 (item L7-11-c-telemetria-opcional: telemetria do appliance desligada por padrão, opt-in do superadmin, só agregados)
+
+`app/telemetria.py` + migração `20260908T0555`: `plat.telemetria` (1 linha por instalação, `ligada=false`, chave
+própria gerada), `GET /api/telemetria` (estado + prévia = o JSON exato que sai), `PUT` liga/desliga (superadmin,
+evento na trilha), `POST /api/telemetria/enviar` e periódico diário `telemetria.enviar` (só quando ligada;
+desligada = 0 chamadas de rede, medido); relatório com 13 campos fixos (`CAMPOS`: versão, saúde, fila,
+contagens agregadas por `plat.telemetria_contagens()`), nunca nome/geometria/conteúdo. Receptor na casa
+(`POST /api/telemetria/receber`): chave desconhecida = 403 sem gravar, campo a mais = 422, chave de outro
+appliance no cabeçalho = 422; `plat.telemetria_appliance` alimenta `GET /api/telemetria/appliances`.
+`docs/APPLIANCE.md` §5 lista os campos (teste confere). Ramo inclui o merge de `wt/cx5l711b` (dependência).
