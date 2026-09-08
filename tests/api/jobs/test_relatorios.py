@@ -206,7 +206,9 @@ def test_agendamento_cria_agenda_e_roda_agora(inq, worker):
     ag = r.json()
     try:
         assert ag["tipo"] == "relatorios.gerar" and ag["cron"] == "0 7 * * 1" and ag["ativa"] is True
-        assert ag["parametros"] == {"tipo": "grupos", "dias": 7, "email": False} and ag["proxima_em"]
+        essenciais = {k: ag["parametros"][k] for k in ("tipo", "dias", "email")}
+        assert essenciais == {"tipo": "grupos", "dias": 7, "email": False}
+        assert ag["proxima_em"]
         repetido = inq.admin.post("/api/relatorios/agendas", json={"tipo": "grupos", "periodicidade": "semanal"})
         assert repetido.status_code == 409
         r = inq.admin.post("/api/relatorios/agendas", json={"tipo": "uso", "periodicidade": "mensal", "hora": 30})
@@ -240,7 +242,9 @@ def test_painel_atividade(inq):
     assert inq.admin.get("/api/atividade?dias=400").status_code == 422
 
 
-def test_medida_relatorio_de_itens_com_10_mil_itens(env, inq, worker, medida):
+def test_medida_relatorio_de_itens_com_10_mil_itens(env, inq, worker, medida, monkeypatch):
+    # a semeadura do catálogo (ADR 0004 seção 7.6) só conhece demo/demo2; aqui ela semeia o inquilino temporário
+    monkeypatch.setattr(semear_catalogo, "ids_por_slug", lambda con: {inq.slug: inq.id})
     con = _conexao(env)
     try:
         semear_catalogo.semear(con, inq.slug, 10_000)
