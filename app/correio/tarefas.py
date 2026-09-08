@@ -49,7 +49,7 @@ def correio_enviar(ctx, destinatario: str, assunto: str, texto: str, categoria: 
         # SMTP removido/nunca configurado entre o pedido e a execução: não adianta repetir (ADR 0002 seção
         # 6.3 — o caminho manual já cobre quem não tem SMTP; o job só existe quando havia SMTP no pedido).
         raise FalhaDefinitiva("SMTP não configurado neste inquilino nem na instalação")
-    senha = decifrar_senha(cfg, settings.PLAT_SECRET)
+    senha = decifrar_senha(cfg, settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR)
     ctx.progresso(30, f"conectando a {cfg.host}:{cfg.porta}")
     try:
         cliente.enviar(cfg, senha, destinatario, assunto, texto)
