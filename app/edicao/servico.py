@@ -424,7 +424,11 @@ def _processar_lista(cur, lista: list, aplicar, modo: str, prefixo: str) -> tupl
     return resultados, avisos
 
 
-def aplicar_edicoes(cur, request: Request, auth: Auth, camada_id: str, corpo: EdicoesEntrada) -> EdicoesSaida:
+def aplicar_edicoes(cur, request: Request, auth: Auth, camada_id: str, corpo: EdicoesEntrada,
+                    origem: str = "api") -> EdicoesSaida:
+    """`origem` é o protocolo por onde a escrita entrou ("api" para `POST /api/camadas/{id}/edicoes`,
+    "wfs" para uma `wfs:Transaction`): entra no evento de domínio para o histórico dizer por onde
+    a linha mudou. Não muda regra nenhuma de validação — só rotula."""
     item, dados = camada_ou_404(cur, camada_id)
     exigir_camada_editavel(auth, dados)
 
@@ -453,7 +457,8 @@ def aplicar_edicoes(cur, request: Request, auth: Auth, camada_id: str, corpo: Ed
         )
     comum.registrar_evento(
         cur, request, "camadas/editar", "item", item["id"],
-        {"adicionados": n_add, "atualizados": n_upd, "apagados": n_del, "modo": corpo.modo},
+        {"adicionados": n_add, "atualizados": n_upd, "apagados": n_del, "modo": corpo.modo,
+         "origem": origem},
     )
     return EdicoesSaida(
         modo=corpo.modo, adicionar=resultados_add, atualizar=resultados_upd, apagar=resultados_del, avisos=avisos
