@@ -216,7 +216,9 @@ def test_varredura_acusa_orfao_plantado(conexao_plat_app):
     contexto(conexao_plat_app, ids["demo"], usuario_id=0, login="teste")
     with conexao_plat_app.cursor() as cur:
         antes = objetos.varrer_orfaos(cur, "demo")
-        assert antes["sem_linha"] == []
+        # 08/09: o bucket do demo é compartilhado entre trilhas de teste em paralelo (cada uma com o seu schema);
+        # objetos de outra trilha aparecem aqui como órfãos. A cláusula é sobre o objeto PLANTADO, não sobre vazio.
+        assert "zt_orfao/plantado.bin" not in antes["sem_linha"]
         bucket = objetos.garantir_bucket(cur, ids["demo"], "demo")
     conexao_plat_app.commit()
     cli = objetos._cliente(bucket)
