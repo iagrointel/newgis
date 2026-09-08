@@ -1,63 +1,226 @@
-/* plat · mapa — estilo da tela /mapa (item L2-01-a-basemap-local-pmtiles). Escopado a `body.mapa`: não toca
-   nenhuma regra de web/style.css. `.principal.mapa-tela` vira tela cheia (sem o padding/max-width das outras
-   telas); `.mapa-area` é o retângulo onde o MapLibre desenha; os dois painéis (camada base, coordenadas) são
-   sobrepostos ao canvas, no canto oposto aos controles nativos do MapLibre (navegação: canto superior direito;
-   escala e atribuição: rodapé).
+/* plat · mapa — estilo da tela /mapa (L2-01-a e L2-01-mapa-web; chrome único do UX-04). Escopado a `body.mapa`;
+   só tokens de web/estilo/tokens.css (a guarda docs/verificar_tokens.py reprova literal).
 
-   ACHADO (corrigido antes de publicar): o painel usava `color: var(--texto)` (segue o tema claro/escuro do
-   resto do produto) sobre `background: rgba(18,24,26,.86)` FIXO escuro — em navegador com preferência de
-   sistema CLARA, `--texto` vira escuro (`#12181a`, tokens.css) e o texto some contra o próprio fundo do
-   painel (MEDIDO: computed `color: rgb(18,24,26)` sobre `background-color: rgba(18,24,26,.86)`, a mesma cor).
-   O canvas do MapLibre é cartografia de cor FIXA (estilo.js, independente de tema — um mapa não reflui de
-   paleta com o SO); o painel que fica em cima dele tem de ser fixo também, não seguir `--texto`/`--fraco`/
-   `--borda` do tema. Por isso as variáveis `--mapa-*` abaixo, com os MESMOS valores hexadecimais de
-   `web/js/mapa/estilo.js` (`COR`), nunca as var(--texto) etc. da folha principal. */
-body.mapa {
-  overflow: hidden;
-  --mapa-painel: rgba(18, 24, 26, .88);
-  --mapa-borda: #3a4550;
-  --mapa-texto: #e7ece9;
-  --mapa-texto-fraco: #9aa8ae;
-}
-body.mapa .principal.mapa-tela {
-  padding: 0;
-  max-width: none;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-body.mapa .mapa-barra {
-  display: flex;
-  align-items: center;
-  gap: var(--e4);
-  padding: var(--e3) var(--e4);
-  border-bottom: 1px solid var(--borda);
-  background: var(--painel);
-}
-body.mapa .mapa-barra h1 { margin: 0; font-size: 1.1rem; }
-body.mapa .mapa-barra plat-aviso { flex: 1; }
-body.mapa .mapa-area { position: relative; flex: 1; min-height: 0; }
+   Duas famílias de cor, de propósito:
+   - CHROME do produto (barra, trilho, gaveta, painéis, tabela de atributos): segue o tema (var(--painel),
+     var(--texto)...), como toda tela.
+   - O que fica SOBRE O CANVAS (status de coordenadas, atribuição, escala, painel acoplado do popup): o canvas
+     é cartografia de cor fixa (js/mapa/estilo.js), então esses usam `--mapa-*` (fixos, definidos em tokens.css).
+     MEDIDO no L2-01-a: com `--texto` do tema claro sobre fundo escuro fixo o texto sumia.
+
+   Layout: barra no topo · trilho de botões à esquerda · gaveta com UM <plat-painel> visível · mapa em tela
+   cheia. Em ≤ 800 px o trilho vai para o rodapé e a gaveta vira painel inferior de var(--painel-inferior-altura)
+   sobre o mapa. Impressão pelo navegador (@media print): só o mapa. */
+body.mapa { overflow: hidden; }
+body.mapa .app { grid-template-columns: minmax(0, 1fr); }
+body.mapa .principal.mapa-tela { padding: 0; max-width: none; height: 100vh; display: flex; flex-direction: column; position: relative; }
+
+/* navegação do produto como gaveta sobre o mapa (o mapa é tela cheia por padrão) */
+body.mapa .lateral { position: fixed; left: 0; top: 0; bottom: 0; z-index: 60; width: var(--lateral-largura); height: 100vh; transform: translateX(-100%); transition: transform .15s ease; box-shadow: var(--sombra); }
+body.mapa[data-nav="1"] .lateral { transform: none; }
+body.mapa .mapa-veu { position: fixed; inset: 0; z-index: 50; background: var(--veu); border: 0; padding: 0; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { body.mapa .lateral { transition: none; } }
+
+/* ---------- barra ---------- */
+body.mapa .mapa-barra { display: flex; align-items: center; gap: var(--e3); padding: var(--e2) var(--e3); border-bottom: var(--borda-largura) solid var(--borda); background: var(--painel); min-height: 2.75rem; }
+body.mapa .mapa-barra h1 { margin: 0; font-size: var(--t1); }
+/* o aviso flutua sobre o mapa (absoluto), nunca no fluxo da barra: um aviso não pode mudar a altura do canvas
+   (medido no e2e da exportação: a barra crescia 21 px e as duas composições saíam com alturas diferentes) */
+body.mapa .mapa-barra plat-aviso { position: absolute; top: calc(2.75rem + var(--e2)); left: 50%; transform: translateX(-50%); z-index: 20; width: max-content; max-width: min(60vw, 40rem); margin: 0; box-shadow: var(--sombra-1); }
+body.mapa .mapa-barra plat-aviso[hidden] { display: none; }
+body.mapa .mapa-barra-direita { margin-left: auto; display: flex; gap: var(--e2); align-items: center; }
+body.mapa .mapa-barra #btn-atalhos { font-family: var(--mono); width: 2rem; padding-left: 0; padding-right: 0; }
+
+/* ---------- corpo: trilho + gaveta + mapa ---------- */
+body.mapa .mapa-corpo { display: flex; flex: 1; min-height: 0; position: relative; }
+body.mapa .mapa-trilho { display: flex; flex-direction: column; gap: var(--e0); padding: var(--e2) var(--e1); background: var(--fundo); border-right: var(--borda-largura) solid var(--borda); overflow-y: auto; flex: 0 0 auto; width: 5.4rem; }
+body.mapa .trilho-botao { display: flex; flex-direction: column; align-items: center; gap: var(--e0); padding: var(--e2) var(--e1); background: transparent; border: var(--borda-largura) solid transparent; border-radius: var(--raio); color: var(--fraco); font-size: var(--t-3); line-height: var(--linha-justa); text-align: center; width: 100%; }
+body.mapa .trilho-botao span { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+body.mapa .trilho-botao kbd { font-family: var(--mono); font-size: var(--t-3); color: var(--fraco); opacity: .7; }
+body.mapa .trilho-botao:hover { color: var(--texto); border-color: var(--borda); }
+body.mapa .trilho-botao[aria-pressed="true"], body.mapa .trilho-botao[aria-expanded="true"] { color: var(--acento-texto); background: var(--acento); border-color: var(--acento); }
+body.mapa .trilho-botao[aria-pressed="true"] kbd, body.mapa .trilho-botao[aria-expanded="true"] kbd { color: var(--acento-texto); opacity: .8; }
+
+body.mapa .mapa-gaveta { width: 22rem; flex: 0 0 22rem; min-height: 0; display: flex; flex-direction: column; border-right: var(--borda-largura) solid var(--borda); background: var(--painel); }
+body.mapa .mapa-gaveta plat-painel { border: 0; border-radius: 0; flex: 1; min-height: 0; }
+body.mapa .mapa-gaveta plat-painel > .painel-cabecalho { padding: var(--e2) var(--e3); }
+body.mapa .mapa-gaveta plat-painel > .painel-cabecalho h2 { font-size: var(--t-1); letter-spacing: .08em; }
+body.mapa .mapa-gaveta .linha { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; }
+body.mapa .mapa-gaveta .linha input[type=search] { flex: 1; min-width: 8rem; }
+body.mapa .mapa-gaveta .rotulo { display: block; font-size: var(--t-2); color: var(--fraco); margin-bottom: var(--e1); }
+body.mapa .mapa-gaveta .saida { margin: var(--e2) 0 0; font-family: var(--mono); font-size: var(--t-2); min-height: 1.2em; }
+body.mapa .mapa-gaveta .saida:empty { display: none; }
+body.mapa .mapa-gaveta .ajuda { display: block; color: var(--fraco); font-size: var(--t-2); margin: var(--e2) 0 0; }
+body.mapa .mapa-gaveta input[type=search], body.mapa .mapa-gaveta input[type=number], body.mapa .mapa-gaveta select, body.mapa .mapa-gaveta textarea { font: inherit; color: var(--texto); background: var(--fundo); border: var(--borda-largura) solid var(--borda-forte); border-radius: var(--raio); padding: var(--e1) var(--e2); min-width: 0; }
+body.mapa .mapa-gaveta select.controle { width: auto; max-width: 100%; }
+body.mapa .grade-campos { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--e1) var(--e2); align-items: center; margin: var(--e2) 0; font-size: var(--t-2); color: var(--fraco); }
+body.mapa .grade-campos input[type=number] { width: 4rem; }
+body.mapa .grade-campos input[type=range] { width: 100%; }
+body.mapa .grade-campos input[type=color] { width: 2.4rem; height: 1.6rem; padding: 0; border: var(--borda-largura) solid var(--borda-forte); background: transparent; }
+body.mapa .sugestoes { list-style: none; margin: var(--e2) 0 0; padding: 0; }
+body.mapa .sugestoes .sugestao { display: block; width: 100%; text-align: left; background: none; border: 0; color: var(--texto); padding: var(--e1) var(--e1); font-size: var(--t-1); cursor: pointer; border-radius: var(--raio); }
+body.mapa .sugestoes .sugestao:hover, body.mapa .sugestoes .sugestao:focus { background: var(--painel-2); }
+body.mapa .mapa-gaveta [data-desenho][aria-pressed="true"] { background: var(--acento); color: var(--acento-texto); border-color: var(--acento); }
+
+/* ---------- mapa e o que fica sobre o canvas ---------- */
+body.mapa .mapa-area { position: relative; flex: 1; min-height: 0; min-width: 0; }
 body.mapa #mapa { position: absolute; inset: 0; }
-/* o MapLibre injeta o canvas e os controles nativos dentro de #mapa; nada aqui estiliza .maplibregl-* além
-   do necessário para casar com o chrome escuro do instrumento */
-body.mapa .maplibregl-ctrl-attrib { background: var(--mapa-painel); color: var(--mapa-texto-fraco); }
+body.mapa .maplibregl-ctrl-attrib { background: var(--mapa-painel); color: var(--mapa-texto-fraco); font-size: var(--t-3); }
 body.mapa .maplibregl-ctrl-attrib a { color: var(--mapa-texto-fraco); }
 body.mapa .maplibregl-ctrl-scale { background: var(--mapa-painel); border-color: var(--mapa-borda); color: var(--mapa-texto); }
+body.mapa .maplibregl-ctrl-group { background: var(--mapa-painel); border: var(--borda-largura) solid var(--mapa-borda); border-radius: var(--raio); box-shadow: none; }
+body.mapa .maplibregl-ctrl-group button + button { border-top-color: var(--mapa-borda); }
+body.mapa .maplibregl-ctrl button .maplibregl-ctrl-icon { filter: invert(1); }
+body.mapa .mapa-status { position: absolute; right: var(--e3); bottom: var(--e6); z-index: 5; background: var(--mapa-painel); border: var(--borda-largura) solid var(--mapa-borda); border-radius: var(--raio); padding: var(--e1) var(--e2); font-family: var(--mono); font-size: var(--t-3); color: var(--mapa-texto); font-variant-numeric: tabular-nums; letter-spacing: .02em; backdrop-filter: blur(2px); }
+body.mapa .maplibregl-marker svg { display: block; }
 
-body.mapa .mapa-painel {
-  position: absolute;
-  left: var(--e4);
-  z-index: 5;
-  background: var(--mapa-painel);
-  border: 1px solid var(--mapa-borda);
-  border-radius: var(--raio);
-  padding: var(--e2) var(--e3);
-  font-family: var(--mono);
-  font-size: .8rem;
-  color: var(--mapa-texto);
-  backdrop-filter: blur(2px);
+/* árvore de camadas (item L2-01-c-lista-camadas-legenda) */
+body.mapa .lista-camadas.arvore { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e0); }
+body.mapa .arvore-sub { list-style: none; margin: var(--e0) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--e0); }
+body.mapa .arvore-linha { --nivel: 0; border: var(--borda-largura) solid transparent; border-radius: var(--raio); padding: var(--e1) var(--e2); margin-left: calc(var(--nivel, 0) * var(--e4)); }
+body.mapa .arvore-linha:focus { outline: var(--foco-largura) solid var(--foco); outline-offset: 1px; }
+body.mapa .arvore-linha.ativa { border-color: var(--borda); background: var(--painel-2); }
+body.mapa .arvore-linha.alvo { border-color: var(--acento); }
+body.mapa .arvore-linha.grupo > .arvore-cabecalho { font-weight: 600; }
+/* camada fora de escala aparece cinza, sem sumir (a geometria já não desenha: minzoom/maxzoom do MapLibre) */
+body.mapa .arvore-linha.fora-de-escala { opacity: .45; filter: grayscale(1); }
+body.mapa .arvore-cabecalho { display: flex; align-items: center; gap: var(--e2); }
+body.mapa .arvore-titulo { flex: 1; font-size: var(--t-1); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; background: none; border: 0; color: var(--texto); padding: 0; }
+body.mapa .arvore-titulo-grupo { font-family: inherit; }
+body.mapa .arvore-conta { font-family: var(--mono); font-size: var(--t-3); color: var(--fraco); }
+body.mapa .arvore-linha-controles { display: flex; flex-direction: column; gap: var(--e0); margin-top: var(--e1); }
+body.mapa .arvore-controles { display: flex; align-items: center; gap: var(--e0); flex-wrap: wrap; }
+body.mapa .arvore-controles .camada-opacidade { flex: 1; min-width: 3.5rem; }
+body.mapa .arvore-escala { display: flex; align-items: center; gap: var(--e1); font-size: var(--t-3); color: var(--fraco); }
+body.mapa .arvore-escala input[type=number] { width: 3rem; font-size: var(--t-3); padding: var(--e0) var(--e1); }
+body.mapa .lista-camadas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+body.mapa .camada-linha, body.mapa .camada-item { border: var(--borda-largura) solid transparent; border-radius: var(--raio); padding: var(--e1) var(--e2); display: flex; align-items: center; gap: var(--e1); }
+body.mapa .camada-linha.ativa { border-color: var(--borda); background: var(--painel-2); }
+body.mapa .camada-linha.alvo { border-color: var(--acento); }
+body.mapa .camada-cabecalho { display: flex; align-items: center; gap: var(--e2); }
+body.mapa .camada-titulo { flex: 1; font-size: var(--t-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.mapa .camada-conta { font-family: var(--mono); font-size: var(--t-3); color: var(--fraco); }
+body.mapa .camada-controles { display: flex; align-items: center; gap: var(--e1); margin-top: var(--e1); }
+body.mapa .camada-controles .camada-opacidade { flex: 1; min-width: 4rem; }
+body.mapa .botao-mini { background: var(--painel-2); border: var(--borda-largura) solid var(--borda-forte); color: var(--texto); border-radius: var(--raio); font-size: var(--t-3); line-height: 1; padding: var(--e1) var(--e2); cursor: pointer; }
+body.mapa .botao-mini[disabled] { opacity: .4; cursor: default; }
+
+/* legenda dinâmica (web/js/legenda.js) */
+body.mapa .legenda-bloco h3 { margin: var(--e2) 0 var(--e1); font-size: var(--t-2); font-weight: 600; font-family: var(--sans); text-transform: none; letter-spacing: 0; }
+body.mapa .legenda-unidade { margin: 0 0 var(--e0); font-size: var(--t-3); color: var(--fraco); }
+body.mapa .legenda-faixa { margin: var(--e0) 0 0; font-size: var(--t-3); color: var(--fraco); font-family: var(--mono); }
+body.mapa .legenda-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e0); }
+body.mapa .legenda-lista li { display: flex; align-items: center; gap: var(--e2); font-size: var(--t-2); }
+body.mapa .legenda-svg { flex: 0 0 auto; }
+body.mapa .legenda-amostra { --cor: transparent; display: inline-block; background: var(--cor); border: var(--borda-largura) solid var(--borda-forte); }
+body.mapa .legenda-ponto { width: .7rem; height: .7rem; border-radius: 50%; }
+body.mapa .legenda-linha { width: 1.1rem; height: .2rem; border-radius: var(--raio); }
+body.mapa .legenda-poligono { width: 1rem; height: .7rem; border-radius: var(--raio); }
+body.mapa .legenda .vazio { color: var(--fraco); font-size: var(--t-2); margin: 0; }
+
+/* janela de atributos (popup em tempo de execução, item L2-01-d) */
+body.mapa .popup-plat .maplibregl-popup-content { background: var(--painel); color: var(--texto); border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); max-height: 22rem; overflow: auto; box-shadow: var(--sombra-1); }
+body.mapa .popup-plat .maplibregl-popup-tip { border-top-color: var(--painel); border-bottom-color: var(--painel); }
+body.mapa .popup-plat .maplibregl-popup-close-button { color: var(--fraco); font-size: var(--t2); }
+body.mapa .popup-camada h3, body.mapa .popup-conteudo h3 { margin: 0 0 var(--e1); font-size: var(--t-2); font-family: var(--sans); text-transform: none; letter-spacing: 0; }
+body.mapa .popup-tabela { width: 100%; border-collapse: collapse; font-size: var(--t-2); margin-bottom: var(--e2); }
+body.mapa .popup-tabela th { text-align: left; font-weight: 500; color: var(--fraco); padding: var(--e0) var(--e2) var(--e0) 0; vertical-align: top; }
+body.mapa .popup-tabela td { padding: var(--e0) 0; font-family: var(--mono); word-break: break-word; }
+body.mapa .popup-tabela td.nulo { color: var(--fraco); font-style: italic; }
+body.mapa .popup-tabela td.carregando { color: var(--fraco); font-style: italic; }
+body.mapa .popup-tabela td a { color: inherit; text-decoration: underline; }
+body.mapa .popup-imagem { max-width: 100%; max-height: 8rem; display: block; border-radius: var(--raio); margin-top: var(--e0); }
+body.mapa .popup-mais { margin: 0; font-size: var(--t-3); color: var(--fraco); }
+body.mapa .popup-pager { display: flex; align-items: center; justify-content: space-between; gap: var(--e2); margin-bottom: var(--e1); }
+/* o botão de fechar do MapLibre cobre o canto do conteúdo; sem a folga ele cobre "próxima feição" */
+body.mapa .popup-plat .popup-pager { padding-right: var(--e5); }
+body.mapa .popup-pager-texto { font-size: var(--t-3); color: var(--fraco); font-family: var(--mono); }
+body.mapa .popup-acoes { margin-top: var(--e1); display: flex; gap: var(--e1); align-items: center; flex-wrap: wrap; }
+body.mapa .popup-copiado { font-size: var(--t-3); color: var(--fraco); }
+
+/* painel acoplado (viewport estreito, item L2-01-d): substitui o popup flutuante do MapLibre */
+body.mapa .popup-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 7; background: var(--painel); color: var(--texto); border-top: var(--borda-largura) solid var(--borda); padding: var(--e3) var(--e3) calc(var(--e3) + env(safe-area-inset-bottom)); max-height: var(--painel-inferior-altura); overflow-y: auto; box-shadow: var(--sombra); }
+body.mapa .popup-dock-fechar { position: absolute; top: var(--e1); right: var(--e2); background: none; border: none; color: var(--fraco); font-size: var(--t2); line-height: 1; cursor: pointer; padding: var(--e0) var(--e2); }
+
+/* tabela de atributos (item L2-01-g): ancorada ao rodapé do MAPA, sobre o canvas; a rolagem é do contêiner */
+body.mapa .mapa-tabela { position: absolute; left: 0; right: 0; bottom: 0; max-height: 50vh; display: flex; flex-direction: column; background: var(--painel); border-top: var(--borda-largura) solid var(--borda); color: var(--texto); z-index: 6; }
+body.mapa .mapa-tabela-barra, body.mapa .mapa-tabela-rodape { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); padding: var(--e2) var(--e3); border-bottom: var(--borda-largura) solid var(--borda); font-size: var(--t-1); }
+body.mapa .mapa-tabela-barra label { color: var(--fraco); }
+body.mapa .mapa-tabela-barra .controle { width: auto; padding: var(--e1) var(--e2); font-size: var(--t-1); }
+body.mapa .mapa-tabela-barra #tabela-fechar { margin-left: auto; }
+body.mapa .mapa-tabela-rodape { border-bottom: none; border-top: var(--borda-largura) solid var(--borda); }
+body.mapa .mapa-tabela-info { color: var(--fraco); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+body.mapa .mapa-tabela-rolagem { overflow: auto; flex: 1 1 auto; }
+body.mapa .mapa-tabela-grade { border-collapse: collapse; width: max-content; min-width: 100%; font-size: var(--t-1); }
+body.mapa .mapa-tabela-grade th, body.mapa .mapa-tabela-grade td { border-bottom: var(--borda-largura) solid var(--borda); padding: var(--e1) var(--e2); text-align: left; white-space: nowrap; max-width: 40rem; overflow: hidden; text-overflow: ellipsis; }
+body.mapa .mapa-tabela-grade thead th { position: sticky; top: 0; background: var(--fundo); color: var(--fraco); z-index: 1; }
+body.mapa .tabela-ordenar { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; padding: 0; }
+body.mapa .tabela-puxador { display: inline-block; width: 6px; height: 1.2em; margin-left: var(--e1); cursor: col-resize; border-right: var(--e0) solid var(--borda-forte); vertical-align: middle; }
+body.mapa .mapa-tabela-grade tbody tr:focus { outline: var(--foco-largura) solid var(--foco); outline-offset: calc(-1 * var(--foco-largura)); }
+body.mapa .mapa-tabela-grade tbody tr.selecionada { background: var(--selecao); }
+body.mapa .mapa-tabela-caixa { position: absolute; right: var(--e3); bottom: 3rem; max-height: 40vh; overflow: auto; padding: var(--e3); background: var(--painel); border: var(--borda-largura) solid var(--borda-forte); border-radius: var(--raio); min-width: 18rem; z-index: 8; box-shadow: var(--sombra-1); }
+body.mapa .tabela-popup-topo { display: flex; justify-content: space-between; gap: var(--e4); margin-bottom: var(--e2); }
+body.mapa .tabela-popup dt { color: var(--fraco); }
+body.mapa .tabela-popup dd { margin: 0 0 var(--e1) 0; font-family: var(--mono); }
+body.mapa .tabela-estatisticas th, body.mapa .tabela-estatisticas td { padding: var(--e0) var(--e2); text-align: right; }
+body.mapa .tabela-estatisticas th[scope="row"] { text-align: left; }
+
+/* desenho e anotações (item L2-01-k) */
+body.mapa #lista-desenho, body.mapa #lista-anotacoes { max-height: 14rem; overflow: auto; }
+body.mapa .anotacao-item { border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); padding: var(--e1) var(--e2); font-size: var(--t-2); display: block; }
+body.mapa .anotacao-item[data-resolvido="1"] { opacity: .55; }
+body.mapa .anotacao-cabecalho { font-size: var(--t-3); color: var(--fraco); display: flex; gap: var(--e1); }
+body.mapa .anotacao-item p { margin: var(--e0) 0; white-space: pre-wrap; }
+body.mapa #anotacao-texto { width: 100%; resize: vertical; }
+
+/* exportação (item L2-01-l) */
+body.mapa .exportar .linha { margin-bottom: var(--e2); }
+body.mapa .exportar select { max-width: 100%; }
+body.mapa .exportar #exp-crs { width: 6.5rem; }
+body.mapa .exportar #exp-perda { color: var(--fraco); font-size: var(--t-2); }
+
+/* ---------- celular e tablet: trilho no rodapé, gaveta como painel inferior de 390 px ---------- */
+@media (max-width: 800px) {
+  body.mapa .mapa-corpo { flex-direction: column; }
+  body.mapa .mapa-area { order: 1; }
+  body.mapa .mapa-gaveta { order: 2; width: auto; flex: 0 0 auto; max-height: var(--painel-inferior-altura); border-right: 0; border-top: var(--borda-largura) solid var(--borda); }
+  body.mapa .mapa-gaveta plat-painel { max-height: var(--painel-inferior-altura); }
+  body.mapa .mapa-trilho { order: 3; flex-direction: row; width: auto; border-right: 0; border-top: var(--borda-largura) solid var(--borda); overflow-x: auto; overflow-y: hidden; padding: var(--e1); }
+  body.mapa .trilho-botao { width: auto; flex: 0 0 auto; min-width: 4.2rem; }
+  body.mapa .mapa-barra h1 { font-size: var(--t0); }
+  body.mapa .mapa-barra #btn-imprimir { display: none; }
+  body.mapa .mapa-status { display: none; }
+  body.mapa .mapa-tabela { max-height: var(--painel-inferior-altura); }
 }
-body.mapa .mapa-painel-base { top: var(--e4); display: flex; align-items: center; gap: var(--e2); font-family: var(--sans); }
-body.mapa .mapa-painel-base label { color: var(--mapa-texto-fraco); text-transform: lowercase; }
-body.mapa .mapa-painel-base select { background: #1a2224; color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: .2rem .4rem; }
-body.mapa .mapa-coordenadas { top: calc(var(--e4) + 2.4rem); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+@media (max-width: 480px) {
+  body.mapa .mapa-barra plat-aviso { flex-basis: 100%; order: 9; }
+  body.mapa .mapa-barra { flex-wrap: wrap; }
+}
+
+/* ---------- impressão pelo navegador: só o mapa ---------- */
+@media print {
+  body.mapa .lateral, body.mapa .mapa-barra, body.mapa .mapa-trilho, body.mapa .mapa-gaveta, body.mapa .mapa-tabela, body.mapa .popup-dock, body.mapa .maplibregl-ctrl-top-right, body.mapa .pular, body.mapa .mapa-veu { display: none !important; }
+  body.mapa, body.mapa .principal.mapa-tela, body.mapa .mapa-corpo, body.mapa .mapa-area { height: 100vh; width: 100vw; margin: 0; padding: 0; }
+  body.mapa .mapa-area { position: fixed; inset: 0; }
+  body.mapa .mapa-status { display: block; }
+}
+
+/* legenda das camadas do acervo adicionadas ao mapa (item L6-01-c-tela-acervo). Usa o chrome escuro do próprio
+   mapa (--mapa-painel/--mapa-texto), não os tokens da tela clara: ela flutua SOBRE o mapa. A atribuição de
+   ODbL/CC-BY-SA fica visível aqui porque é onde o dado é visto — a licença exige crédito de quem exibe. */
+body.mapa .mapa-acervo-legenda {
+  right: var(--e4); bottom: calc(var(--e4) * 3); left: auto; top: auto;
+  max-width: 320px; max-height: 45vh; overflow: auto;
+  font-family: var(--sans); display: grid; gap: var(--e2);
+}
+body.mapa .mapa-acervo-legenda[hidden] { display: none; }
+body.mapa .mapa-acervo-legenda h2 { margin: 0; font-size: var(--t-2); text-transform: lowercase; color: var(--mapa-texto-fraco); }
+body.mapa .mapa-acervo-legenda ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
+body.mapa .mapa-acervo-legenda li { border-top: 1px solid var(--mapa-borda); padding-top: var(--e2); }
+body.mapa .mapa-acervo-legenda li:first-child { border-top: none; padding-top: 0; }
+body.mapa .mapa-acervo-legenda .titulo { display: block; color: var(--mapa-texto); }
+body.mapa .mapa-acervo-legenda .licenca { display: block; color: var(--mapa-texto-fraco); font-size: var(--t-3); }
+body.mapa .mapa-acervo-legenda .atribuicao { display: block; color: var(--atencao); font-size: var(--t-3); }
+@media (max-width: 640px) {
+  body.mapa .mapa-acervo-legenda { right: var(--e2); left: var(--e2); bottom: var(--e2); max-width: none; max-height: 30vh; }
+}

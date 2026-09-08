@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Geocodificador · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/geocodificar.css">
+</head>
+<body class="tela">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="geocodificar.titulo">Geocodificador</h1>
+    <p class="fraco" data-i18n="geocodificar.subtitulo">endereço para coordenada e coordenada para endereço, sobre o CNEFE 2022 do IBGE instalado nesta plataforma</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" aria-labelledby="t-endereco">
+      <h2 id="t-endereco" data-i18n="geocodificar.endereco_titulo">Endereço para coordenada</h2>
+      <plat-formulario id="form-endereco"></plat-formulario>
+      <plat-estado id="endereco-estado" hidden></plat-estado>
+      <div id="resultados" class="tabela-rolagem" hidden>
+        <p id="resultados-contagem" class="fraco" aria-live="polite"></p>
+        <table id="resultados-tabela" class="tabela" data-i18n-aria="geocodificar.resultados_rotulo" aria-label="candidatos encontrados">
+          <thead>
+            <tr>
+              <th scope="col" data-i18n="geocodificar.col_score">pontuação</th>
+              <th scope="col" data-i18n="geocodificar.col_endereco">endereço</th>
+              <th scope="col" data-i18n="geocodificar.col_acerto">tipo de acerto</th>
+              <th scope="col" data-i18n="geocodificar.col_coordenada">coordenada (lon, lat)</th>
+              <th scope="col"><span class="sr-only" data-i18n="tabela.acoes">ações</span></th>
+            </tr>
+          </thead>
+          <tbody id="resultados-corpo"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="cartao" aria-labelledby="t-reverso">
+      <h2 id="t-reverso" data-i18n="geocodificar.reverso_titulo">Coordenada para endereço</h2>
+      <plat-formulario id="form-reverso"></plat-formulario>
+      <plat-estado id="reverso-estado" hidden></plat-estado>
+      <div id="reverso-resultado" class="geo-resultado" hidden aria-live="polite"></div>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/geocodificador/geocodificar.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+{
+ "item": "L2-01-g-tabela-atributos",
+ "medidas": {
+  "feicoes_da_camada_medida": {
+   "valor": 1000000,
+   "unidade": "linhas",
+   "comando": "bash laco/roda_teste.sh tests/api/test_tabela_atributos_1mi.py -q -m lento (PLAT_GRAVAR_MEDIDAS=1)"
+  },
+  "primeira_pagina_p95_ms": {
+   "valor": 275.9,
+   "unidade": "ms",
+   "comando": "bash laco/roda_teste.sh tests/api/test_tabela_atributos_1mi.py -q -m lento (PLAT_GRAVAR_MEDIDAS=1)"
+  },
+  "primeira_pagina_mediana_ms": {
+   "valor": 240.7,
+   "unidade": "ms",
+   "comando": "bash laco/roda_teste.sh tests/api/test_tabela_atributos_1mi.py -q -m lento (PLAT_GRAVAR_MEDIDAS=1)"
+  },
+  "ordenar_coluna_indexada_p95_ms": {
+   "valor": 15.2,
+   "unidade": "ms",
+   "comando": "bash laco/roda_teste.sh tests/api/test_tabela_atributos_1mi.py -q -m lento (PLAT_GRAVAR_MEDIDAS=1)"
+  },
+  "ordenar_coluna_indexada_mediana_ms": {
+   "valor": 14.0,
+   "unidade": "ms",
+   "comando": "bash laco/roda_teste.sh tests/api/test_tabela_atributos_1mi.py -q -m lento (PLAT_GRAVAR_MEDIDAS=1)"
+  },
+  "carga_1min": {
+   "valor": 10.73388671875,
+   "unidade": "media de processos",
+   "comando": "bash laco/roda_teste.sh tests/api/test_tabela_atributos_1mi.py -q -m lento (PLAT_GRAVAR_MEDIDAS=1)"
+  },
+  "ram_livre_gb": {
+   "valor": 0.54,
+   "unidade": "GB",
+   "comando": "bash laco/roda_teste.sh tests/api/test_tabela_atributos_1mi.py -q -m lento (PLAT_GRAVAR_MEDIDAS=1)"
+  },
+  "medido_em": {
+   "valor": "2026-09-07T20:27:11Z",
+   "unidade": "UTC",
+   "comando": "bash laco/roda_teste.sh tests/api/test_tabela_atributos_1mi.py -q -m lento (PLAT_GRAVAR_MEDIDAS=1)"
+  },
+  "ordenar_com_recontagem_p95_ms": {
+   "valor": 266.3,
+   "unidade": "ms",
+   "comando": "bash laco/roda_teste.sh tests/api/test_tabela_atributos_1mi.py -q -m lento (PLAT_GRAVAR_MEDIDAS=1)"
+  }
+ },
+ "gerado_em": "2026-09-07T20:27:11Z",
+ "git_sha": "715af996458c"
+}

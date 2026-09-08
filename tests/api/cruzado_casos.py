@@ -848,6 +848,15 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     # ---- L0-09 metadado ISO 19139 do item: mesmo `item_ou_404` + RLS de `IT` acima.
     ("GET", IT + "/metadado.xml"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/metadado.xml"),
+    # ---- L2-01-mapa-web: leituras de lista agem só no chamador (RLS); camada de B como alvo = 404 em toda perna.
+    ("GET", "/api/mapa/camadas"): Caso(lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}),
+                                       verificar=_sem_marca),
+    ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}"),
+    ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/tilejson"),
+    ("GET", "/api/geocodificar"): Caso(
+        lambda p: "/api/geocodificar?endereco=Avenida+Paulista,+Sao+Paulo+-+SP", proprio=True,
+        aceita=frozenset({200, 422}), verificar=_sem_marca,
+    ),
     # ---- L2-11-b geocodificador próprio (dado aberto CNEFE/IBGE, sem tabela de inquilino, mesmo padrão de
     # /api/rota-/api/matriz-/api/isocrona acima): 422 é resposta de NEGÓCIO (UF/logradouro não instalado
     # nesta trilha), não vazamento — aceito ao lado de 200.
@@ -905,6 +914,73 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+
+    # ---- rotas da linhagem do mapa e do acervo que chegaram pela cadeia UX (UX-04) e pelo L6-01-c sem caso cruzado
+    # (achado na junção do UX-12): alvo = item de B (RLS esconde: 404 em toda perna); corpo mínimo válido para a
+    # validação não parar antes da leitura do item (422 aceito onde o corpo é do domínio e não do item).
+    ("GET", "/api/acervo/dominios"): Caso(lambda p: "/api/acervo/dominios", proprio=True, aceita=frozenset({200}),
+                                          verificar=_sem_marca),
+    ("GET", "/api/acervo/meu-mapa"): Caso(lambda p: "/api/acervo/meu-mapa", proprio=True, aceita=frozenset({200}),
+                                          verificar=_sem_marca),
+    ("GET", "/api/anotacoes"): Caso(lambda p: f"/api/anotacoes?camada_id={p.item_b['id']}", proprio=True,
+                                    aceita=frozenset({200, 422}), verificar=_sem_marca),
+    ("POST", "/api/anotacoes"): Caso(
+        lambda p: "/api/anotacoes",
+        lambda p: {"camada_id": p.item_b["id"], "fid": "1", "grupo_id": p.grupo_b["id"], "texto": "zt cruzado"},
+        aceita=frozenset({422}),
+    ),
+    ("PATCH", "/api/anotacoes/{id}"): Caso(lambda p: f"/api/anotacoes/{p.item_b['id']}", lambda p: {"texto": "zt"}),
+    ("DELETE", "/api/anotacoes/{id}"): Caso(lambda p: f"/api/anotacoes/{p.item_b['id']}"),
+    ("GET", "/api/exportacoes"): Caso(lambda p: f"/api/exportacoes?item_id={p.item_b['id']}", proprio=True,
+                                      aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/api/exportacoes/formatos"): Caso(lambda p: "/api/exportacoes/formatos", proprio=True,
+                                               aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/exportacoes"): Caso(
+        lambda p: "/api/exportacoes", lambda p: {"item_id": p.item_b["id"], "formato": "geojson"},
+        aceita=frozenset({422}),
+    ),
+    ("GET", "/api/exportacoes/{exportacao_id}"): Caso(lambda p: f"/api/exportacoes/{p.item_b['id']}"),
+    ("GET", "/api/exportacoes/{exportacao_id}/baixar"): Caso(lambda p: f"/api/exportacoes/{p.item_b['id']}/baixar"),
+    ("DELETE", "/api/exportacoes/{exportacao_id}"): Caso(lambda p: f"/api/exportacoes/{p.item_b['id']}"),
+    ("GET", "/api/camadas/{id}/feicoes/{fid}/popup"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/1/popup"),
+    ("GET", "/api/camadas/{item_id}/tabela/colunas"): Caso(lambda p: f"/api/camadas/{p.item_b['id']}/tabela/colunas"),
+    ("GET", "/api/camadas/{item_id}/tabela/vista"): Caso(lambda p: f"/api/camadas/{p.item_b['id']}/tabela/vista"),
+    ("PUT", "/api/camadas/{item_id}/tabela/vista"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/tabela/vista", lambda p: {"colunas": []},
+    ),
+    ("POST", "/api/camadas/{item_id}/tabela/linhas"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/tabela/linhas", lambda p: {},
+    ),
+    ("POST", "/api/camadas/{item_id}/tabela/estatisticas"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/tabela/estatisticas", lambda p: {},
+    ),
+    ("GET", "/api/mapa/camadas/{id}/estilo"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/estilo"),
+    ("GET", "/api/mapa/camadas/{id}/feicoes/{fid}"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/feicoes/1"),
+    ("GET", "/api/mapa/camadas/{id}/valores"): Caso(
+        lambda p: f"/api/mapa/camadas/{p.item_b['id']}/valores?campo=nome"),
+    ("GET", "/api/mapa/fuso"): Caso(lambda p: "/api/mapa/fuso", proprio=True, aceita=frozenset({200}),
+                                    verificar=_sem_marca),
+    ("POST", "/api/mapa/camadas/{id}/filtrar"): Caso(
+        lambda p: f"/api/mapa/camadas/{p.item_b['id']}/filtrar", lambda p: {"filtro": {"op": "=", "args": []}},
+        aceita=frozenset({422}),
+    ),
+    ("POST", "/api/mapa/camadas/{id}/selecionar"): Caso(
+        lambda p: f"/api/mapa/camadas/{p.item_b['id']}/selecionar",
+        lambda p: {"geometria": {"type": "Point", "coordinates": [-46.6, -23.5]}}, aceita=frozenset({422}),
+    ),
+    ("POST", "/api/mapa/selecao-espacial"): Caso(
+        lambda p: "/api/mapa/selecao-espacial", lambda p: {"camada_a": p.item_b["id"], "camada_b": p.item_b["id"]},
+        aceita=frozenset({422}),
+    ),
+    # importar pacote age só no inquilino do chamador (não há alvo de B): corpo que não é zip = 422 pacote_invalido
+    ("POST", "/api/mapa/pacotes/importar"): Caso(
+        lambda p: "/api/mapa/pacotes/importar", lambda p: {}, proprio=True, aceita=frozenset({422}),
+        verificar=_sem_marca,
+    ),
+    ("POST", "/api/mapa/{mapa_id}/desenho/promover"): Caso(
+        lambda p: f"/api/mapa/{p.item_b['id']}/desenho/promover", lambda p: {"titulo": "zt cruzado"},
     ),
 }
 

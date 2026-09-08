@@ -21,6 +21,8 @@ PAGINAS = {
     "/admin/log": "admin/log.html",
     # --- configurações da organização (L0-07-a-configuracoes-org)
     "/admin/organizacao": "admin/organizacao.html",
+    # --- categorias do inquilino (UX-12-categorias-sem-controle): PUT /api/categorias e POST /api/categorias/importar
+    "/admin/categorias": "admin/categorias.html",
     # --- catálogo (L0-03)
     "/conteudo": "conteudo.html",
     "/conteudo/lixeira": "conteudo_lixeira.html",
@@ -28,13 +30,19 @@ PAGINAS = {
     "/c/{token}": "compartilhado.html",
     # --- mapa (L2-01-a)
     "/mapa": "mapa.html",
+    # --- acervo da casa (L6-01-c-tela-acervo): equivalente do Living Atlas, sobre plat.acervo_ficha
+    "/acervo": "acervo.html",
     # --- conexões externas (L6-02-a/L6-02-l/L6-05)
     "/conexoes": "conexoes.html",
+    # item UX-14-geocodificador-sem-tela: tela de trabalho do geocodificador (POST /api/geocodificar e /api/reverso)
+    "/geocodificar": "geocodificar.html",
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
     "/aceitar-convite": "aceitar_convite.html",
     "/redefinir-senha": "redefinir_senha.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
+    # --- sistema de design (UX-01-sistema-de-design): guia viva de tokens e componentes
+    "/estilo-guia": "estilo_guia.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>

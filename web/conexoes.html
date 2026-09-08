@@ -6,42 +6,56 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Conexões · plat</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 <link rel="stylesheet" href="/static/tarefas.css">
 </head>
 <body class="tela conexoes">
-<a class="pular" href="#principal">pular para o conteúdo</a>
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
 <div class="app">
   <aside id="lateral" class="lateral"></aside>
   <main id="principal" class="principal" tabindex="-1">
     <div id="ferramentas" class="linha-ferramentas">
-      <h1>Conexões</h1>
+      <h1 data-i18n="conexoes.titulo">Conexões</h1>
     </div>
-    <p class="aviso-beta">análise / beta privado</p>
+    <p class="aviso-beta" data-i18n="app.beta">análise / beta privado</p>
     <plat-aviso id="aviso"></plat-aviso>
 
     <section class="cartao" id="lista-cartao" aria-labelledby="t-lista">
-      <h2 id="t-lista">conexões externas <span id="lista-total" class="contagem">…</span></h2>
-      <p class="ajuda">estado calculado das últimas verificações de saúde: <span class="marcador ok">ok</span>
-        (as últimas passaram), <span class="marcador atencao">degradado</span> (a mais recente passou, mas
-        alguma das últimas 5 falhou), <span class="marcador falha">fora</span> (a mais recente falhou),
-        <span class="marcador info">nunca testada</span>.</p>
+      <h2 id="t-lista"><span data-i18n="conexoes.lista_titulo">conexões externas</span> <span id="lista-total" class="contagem">…</span></h2>
+      <p class="ajuda" id="lista-legenda">
+        <span data-i18n="conexoes.legenda_intro">estado calculado das últimas verificações de saúde:</span>
+        <span class="marcador ok" data-i18n="conexoes.estado_ok">ok</span> <span data-i18n="conexoes.legenda_ok">(as últimas passaram),</span>
+        <span class="marcador atencao" data-i18n="conexoes.estado_degradado">degradado</span> <span data-i18n="conexoes.legenda_degradado">(a mais recente passou, mas alguma das últimas 5 falhou),</span>
+        <span class="marcador falha" data-i18n="conexoes.estado_fora">fora</span> <span data-i18n="conexoes.legenda_fora">(a mais recente falhou),</span>
+        <span class="marcador info" data-i18n="conexoes.estado_nunca_testada">nunca testada</span>.
+      </p>
       <div class="linha-ferramentas">
-        <button type="button" id="conexao-nova" class="primario">nova conexão</button>
+        <plat-busca id="lista-busca" rotulo="buscar por nome, tipo ou endereço"></plat-busca>
+        <div class="direita">
+          <button type="button" id="lista-recarregar" class="pequeno" data-i18n="conexoes.recarregar">recarregar</button>
+          <button type="button" id="conexao-nova" class="primario" data-i18n="conexoes.nova" hidden>nova conexão</button>
+        </div>
       </div>
       <plat-aviso id="lista-aviso"></plat-aviso>
-      <div class="tabela-rolagem">
-        <table id="lista" class="tabela">
-          <caption class="sr-only">conexões externas do inquilino</caption>
+
+      <div id="conexao-form-caixa" class="agenda-form-caixa" hidden>
+        <h3 id="conexao-form-titulo" data-i18n="conexoes.form_nova">nova conexão</h3>
+        <plat-formulario id="conexao-form"></plat-formulario>
+      </div>
+
+      <plat-estado id="lista-estado" hidden></plat-estado>
+      <div class="tabela-rolagem" id="lista-caixa">
+        <table id="lista" class="tabela" data-i18n-aria="conexoes.tabela_rotulo" aria-label="conexões externas do inquilino">
           <thead>
             <tr>
-              <th scope="col">nome</th>
-              <th scope="col">tipo</th>
-              <th scope="col">modo</th>
-              <th scope="col">estado</th>
-              <th scope="col">disponibilidade (30 d)</th>
-              <th scope="col">última verificação</th>
-              <th scope="col"><span class="sr-only">ações</span></th>
+              <th scope="col" data-campo="nome" tabindex="0" aria-sort="ascending" data-i18n="conexoes.col_nome">nome</th>
+              <th scope="col" data-campo="tipo" tabindex="0" aria-sort="none" data-i18n="conexoes.col_tipo">tipo</th>
+              <th scope="col" data-campo="modo" tabindex="0" aria-sort="none" data-i18n="conexoes.col_modo">modo</th>
+              <th scope="col" data-campo="estado_saude" tabindex="0" aria-sort="none" data-i18n="conexoes.col_estado">estado</th>
+              <th scope="col" data-campo="disponibilidade_30d_pct" tabindex="0" aria-sort="none" data-i18n="conexoes.col_disponibilidade">disponibilidade (30 d)</th>
+              <th scope="col" data-campo="saude_verificada_em" tabindex="0" aria-sort="none" data-i18n="conexoes.col_verificada">última verificação</th>
+              <th scope="col"><span class="sr-only" data-i18n="tabela.acoes">ações</span></th>
             </tr>
           </thead>
           <tbody id="lista-corpo"></tbody>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Categorias · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/categorias.css">
+</head>
+<body class="tela">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="categorias.titulo">Categorias</h1>
+    <p class="fraco" data-i18n="categorias.subtitulo">árvore de até 3 níveis com que os itens do catálogo são classificados; um nó com itens não se remove</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" aria-labelledby="t-importar">
+      <h2 id="t-importar" data-i18n="categorias.importar_modelo">Importar modelo</h2>
+      <p class="fraco" data-i18n="categorias.importar_ajuda">ISO 19115 (19 categorias temáticas) ou INSPIRE (anexos e temas); importar de novo não duplica</p>
+      <div class="botoes">
+        <label class="campo-inline"><span data-i18n="categorias.modelo">modelo</span>
+          <select id="modelo" class="controle">
+            <option value="iso19115">ISO 19115</option>
+            <option value="inspire">INSPIRE</option>
+          </select></label>
+        <button type="button" id="importar" class="pequeno" data-i18n="categorias.importar">Importar</button>
+        <span id="importado" class="fraco" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section class="cartao" aria-labelledby="t-arvore">
+      <div class="linha-ferramentas">
+        <h2 id="t-arvore" data-i18n="categorias.arvore">Árvore</h2>
+        <span id="contagem" class="fraco" aria-live="polite"></span>
+        <div class="direita">
+          <button type="button" id="nova-raiz" class="pequeno" data-i18n="categorias.nova_raiz">+ categoria</button>
+          <button type="button" id="recarregar" class="pequeno texto" data-i18n="categorias.recarregar">Recarregar</button>
+        </div>
+      </div>
+      <plat-estado id="categorias-estado" hidden></plat-estado>
+      <ul id="arvore" class="categorias-arvore" aria-label="categorias"></ul>
+      <div class="botoes">
+        <button type="button" id="salvar" class="primario" disabled data-i18n="categorias.salvar">Salvar</button>
+        <span id="estado-edicao" class="estado" aria-live="polite"></span>
+      </div>
+      <plat-estado id="salvar-estado" hidden></plat-estado>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/catalogo/categorias_admin.js"></script>
+</body>
+</html>

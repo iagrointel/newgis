@@ -1,10 +1,13 @@
 /* plat · catálogo — a lista de itens nas três vistas (tabela | lista | grade) sobre o mesmo JSON de GET /api/itens
    (ADR 0004 seção 15.1). Pagina por cursor ("carregar mais": os itens já vistos não repetem nem pulam), seleção em
    massa até 100, favoritar por linha, abrir por clique/Enter, teclado j/k/x. A tabela é própria (não <plat-tabela>)
-   porque acrescenta linhas sem perder a seleção e ordena pelo cabeçalho; as classes de estilo são as da base. */
+   porque acrescenta linhas sem perder a seleção e ordena pelo cabeçalho; as classes de estilo são as da base.
+   UX-03: estados explícitos por <plat-estado> (vazio com ação "Novo item", carregando com esqueleto, erro com "tentar
+   de novo", negado em 403); a seleção SOBREVIVE a reordenar e filtrar (é por id; só muda de aba ou "limpar seleção"
+   a zera); cada render deixa performance.measure('catalogo:render') para o e2e medir o p95 com 1.000 itens. */
 import { h, limpar, marcador } from '../base/dom.js';
 import { t } from '../base/i18n.js';
-import { mensagemDe } from '../base/api.js';
+import { tem } from '../base/estado.js';
 import * as api from './api.js';
 import { ctx, parametrosLista, rotuloTipo, tipoDe, selecionado, alternarSelecao, limparSelecao } from './contexto.js';
 import { elipse, quando, rotuloAcesso, nomeDono, LIMITES } from './formato.js';
@@ -13,6 +16,7 @@ import { icone, iconeDoTipo } from './icones.js';
 let seq = 0;
 let aoAbrir = () => {};
 let foco = -1;
+let ultimoErro = null;
 const COLUNAS = [['titulo', 'catalogo.col_titulo'], ['tipo', 'catalogo.col_tipo'], ['dono', 'catalogo.col_dono'], ['modificado_em', 'catalogo.col_modificado'], ['acesso', 'catalogo.col_acesso']];
 const ORDENAVEIS = new Set(['titulo', 'tipo', 'dono', 'modificado_em', 'criado_em', 'tamanho_bytes', 'pontuacao']);
 
@@ -22,6 +26,16 @@ export function iniciar({ abrir }) {
   aoAbrir = abrir;
   el('carregar-mais').textContent = t('catalogo.carregar_mais');
   el('carregar-mais').addEventListener('click', () => carregar({ mais: true }));
+  const estado = el('lista-estado');
+  estado.addEventListener('acao', (e) => {
+    if (e.detail.id === 'tentar') carregar();
+    else if (e.detail.id === 'novo') el('novo-item')?.click();
+    else if (e.detail.id === 'limpar') {
+      const b = el('busca');
+      if (b) { b.valor = ''; b.dispatchEvent(new CustomEvent('buscar', { detail: { q: '' } })); }
+      document.dispatchEvent(new CustomEvent('catalogo:limpar_filtros'));
+    }
+  });
   ctx.assinar(() => render(), ['itens', 'vista', 'selecionados', 'carregando']);
 }
 
@@ -30,17 +44,18 @@ export async function carregar({ mais = false } = {}) {
   const aviso = el('lista-aviso');
   const meu = ++seq;
   const p = parametrosLista();
-  if (mais) { if (!ctx.ler('cursor')) return; p.cursor = ctx.ler('cursor'); } else limparSelecao();
+  if (mais) { if (!ctx.ler('cursor')) return; p.cursor = ctx.ler('cursor'); }
+  ultimoErro = null;
   ctx.definir({ carregando: true });
   let r;
   try {
     r = await api.listar(p);
   } catch (e) {
     if (meu !== seq) return;
-    ctx.definir({ carregando: false });
-    if (e.status === 401) return;
-    aviso.erro(`${t('erro.carregar')}: ${e.message}`);
-    if (!mais) ctx.definir({ itens: [], total: 0, cursor: null, aproximado: false });
+    if (e.status === 401) { ctx.definir({ carregando: false }); return; }
+    ultimoErro = e;
+    ctx.definir({ carregando: false, ...(mais ? {} : { itens: [], total: 0, cursor: null, aproximado: false }) });
+    if (mais) aviso.erro(`${t('erro.carregar')}: ${e.message}`);
     return;
   }
   if (meu !== seq) return; // resposta atrasada: a lista nunca volta no tempo
@@ -121,17 +136,48 @@ function ligarAbrir(no, item) {
   });
 }
 
+/* ---------- estados ---------- */
+function mostrarEstado(itens) {
+  const estado = el('lista-estado');
+  const mostrou = mostrarEstadoInterno(itens, estado);
+  estado.classList.toggle('vazio', mostrou && estado.getAttribute('tipo') === 'vazio');
+  return mostrou;
+}
+
+function mostrarEstadoInterno(itens, estado) {
+  if (ctx.ler('carregando') && !itens.length) { estado.carregando(t('catalogo.carregando')); return true; }
+  if (ultimoErro) {
+    if (ultimoErro.status === 403) estado.negado(ultimoErro.message);
+    else estado.erro({ status: ultimoErro.status, json: { mensagem: ultimoErro.message, req_id: ultimoErro.reqId } }, [{ id: 'tentar', rotulo: t('estado.tentar_de_novo'), classe: 'primario' }]);
+    return true;
+  }
+  if (!itens.length) {
+    const filtrado = !!(ctx.ler('q') || ctx.ler('pastaId') || Object.values(ctx.ler('filtros')).some((v) => (Array.isArray(v) ? v.length : v)));
+    const acoes = [];
+    if (filtrado) acoes.push({ id: 'limpar', rotulo: t('catalogo.limpar_busca_filtros') });
+    else if (tem('conteudo.criar') && ctx.ler('aba') === 'meus') acoes.push({ id: 'novo', rotulo: t('catalogo.novo_item'), classe: 'primario' });
+    estado.mostrar({ tipo: 'vazio', titulo: t(filtrado ? 'catalogo.vazio_filtro_titulo' : 'catalogo.vazio_titulo'), texto: t(filtrado ? 'catalogo.vazio_filtro' : 'catalogo.vazio'), acoes });
+    estado.dataset.filtrado = filtrado ? '1' : '0';
+    return true;
+  }
+  estado.limpar();
+  return false;
+}
+
 /* ---------- render ---------- */
 function render() {
+  performance.mark('catalogo:render:inicio');
   const raiz = el('lista');
   raiz.setAttribute('aria-busy', String(!!ctx.ler('carregando')));
   const itens = ctx.ler('itens');
   const sel = new Set(ctx.ler('selecionados'));
+  const estadoEl = el('lista-estado');
+  if (estadoEl.parentElement === raiz) raiz.parentElement.insertBefore(estadoEl, raiz);
   limpar(raiz);
   const vista = ctx.ler('vista');
   raiz.dataset.vista = vista;
-  if (!itens.length) {
-    raiz.append(h('p', { class: 'vazio' }, ctx.ler('carregando') ? t('catalogo.carregando') : (ctx.ler('q') || ctx.ler('pastaId') ? t('catalogo.vazio_filtro') : t('catalogo.vazio'))));
+  if (mostrarEstado(itens)) {
+    raiz.append(el('lista-estado')); // dentro de #lista: a área da lista nunca fica vazia (sem altura) nem some
   } else if (vista === 'tabela') raiz.append(tabela(itens, sel));
   else if (vista === 'lista') raiz.append(vistaLista(itens, sel));
   else raiz.append(vistaGrade(itens, sel));
@@ -140,6 +186,8 @@ function render() {
   const mais = el('carregar-mais');
   mais.hidden = !ctx.ler('cursor');
   mais.disabled = !!ctx.ler('carregando');
+  performance.mark('catalogo:render:fim');
+  performance.measure('catalogo:render', { start: 'catalogo:render:inicio', end: 'catalogo:render:fim', detail: { itens: itens.length, vista } });
 }
 
 function cabecalhoOrdenavel(campo, chave) {
@@ -161,7 +209,7 @@ function cabecalhoOrdenavel(campo, chave) {
 }
 
 function tabela(itens, sel) {
-  const tab = h('table', { class: 'tabela' }, h('caption', { class: 'sr-only' }, t('catalogo.lista_itens')));
+  const tab = h('table', { class: 'tabela', 'aria-label': t('catalogo.lista_itens') });
   const todos = h('input', { type: 'checkbox', 'aria-label': t('tabela.selecionar_todos') });
   todos.checked = itens.length > 0 && itens.every((i) => sel.has(i.id));
   todos.addEventListener('change', () => {

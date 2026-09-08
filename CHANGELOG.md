@@ -3,6 +3,124 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## codex cx1, setembro de 2026 (item UX-14-geocodificador-sem-tela: tela /geocodificar para POST /api/geocodificar e /api/reverso)
+
+Fecha as lacunas "POST /api/geocodificar" e "POST /api/reverso sem controle" do mapa de cobertura (UX-00): tela nova
+`/geocodificar` (menu, sem privilégio além da sessão — as rotas exigem só o escopo `geocodificar:usar`) com dois
+`<plat-formulario>`: endereço em linha única e/ou campos estruturados (até 50 candidatos, com pontuação, tipo de
+acerto traduzido, coordenada e "ver no mapa") e coordenada para endereço (vizinho mais próximo, distância, marca
+"fora do raio"). Estados do sistema de design por `<plat-estado>`: carregando, vazio NOMEADO com a resposta real do
+motor (422 sem_correspondencia / sem_dado_instalado: o código e a mensagem, nunca o número cru), erro com "tentar de
+novo" e referência, negado (403); 422 endereco_vazio e a lista do pydantic caem no campo. `docs/COBERTURA_UI.md` e
+`docs/cobertura_ui_lacunas.json` regenerados (35 → 33). e2e `tests/e2e/test_geocodificar_ux14.py` (10 estados, dois
+deles reais contra a base sem CNEFE; axe 0 sérias; capturas 390/1280); textos em pt-BR/en/es.
+
+## codex cx1, setembro de 2026 (item UX-13-conexoes-sem-controle: a escrita de conexões com erro nomeado no controle da tela /conexoes)
+
+Fecha a lacuna "POST/PATCH/DELETE /api/conexoes sem controle" do mapa de cobertura (UX-00). A tela `/conexoes` da
+cadeia UX-05 já chamava as 8 rotas de `/api/conexoes*` (formulário `<plat-formulario>` de criar/editar, ação "apagar"
+com confirmação, testar, histórico, publicar) com os quatro estados de `<plat-estado>`; este item prova a refutação
+rota a rota e fecha o que faltava: 404 em PATCH/DELETE (conexão apagada por outra pessoa) avisa e recarrega a lista
+em vez de deixar o formulário preso (`conexoes.ja_removida` em pt-BR/en/es). `tests/e2e/test_conexoes_ux13.py`:
+lista vazia/erro/negada forjadas; POST com 403 (privilégio nomeado na mensagem do formulário), 409 (campo nome), 422
+da validação (campo apontado por `loc`), 422 config e 413 cota forjados e criação real; PATCH com 403 e 422
+url_insegura forjados e gravação real conferida por GET; DELETE com 403, 500 e 404 forjados nomeados no aviso da lista
+(role=alert, referência) e remoção real; axe 0 sérias, capturas 390/1280, 0 erro de console. `docs/COBERTURA_UI.md`
+regenerado (35 lacunas na junção, nenhuma de conexões).
+
+## codex cx1, setembro de 2026 (item UX-12-categorias-sem-controle: as rotas de escrita de categorias com controle na tela /admin/categorias)
+
+Fecha as lacunas "PUT /api/categorias" e "POST /api/categorias/importar sem controle" do mapa de cobertura (UX-00):
+tela nova `/admin/categorias` (menu, privilégio `conteudo.categorias`) sobre a cadeia UX-00..05 — editor da
+árvore de 3 níveis (nome, nova raiz/filha, subir/descer, remover bloqueado quando há itens) que grava a árvore
+inteira com ids preservados, e "Importar modelo" (ISO 19115 / INSPIRE, idempotente). Estados do sistema de design:
+`<plat-estado>` da lista (carregando, vazio com "importar modelo", erro com "tentar de novo", negado) e do
+salvar/importar, onde o erro da API aparece nomeado — 409 categoria_em_uso com os caminhos e itens, 422
+limite_categorias com "N de M", 403 negado (refutação: nunca o número cru). `docs/COBERTURA_UI.md` e
+`docs/cobertura_ui_lacunas.json` regenerados (41 → 36). e2e com axe (0 sérias), capturas 390/1280 e restauração da
+árvore original ao fim em `tests/e2e/test_categorias_ux12.py`; textos em pt-BR/en/es.
+## codex cx1, setembro de 2026 (item UX-10-acervo-sem-tela: a rota de escrita do acervo com controle nomeado na tela /acervo)
+
+Fecha a lacuna "POST /api/acervo/{fonte_id}/adicionar sem tela" do mapa de cobertura (UX-00): a tela /acervo do
+L6-01-c (juntada aqui sobre a cadeia UX-00..05, com a legenda do acervo reaplicada nos arquivos do mapa da UX-04)
+ganha os quatro estados do sistema de design — `<plat-estado>` na lista (carregando com esqueleto, vazio com
+"limpar filtros", erro com "tentar de novo" e referência, negado) e no controle "adicionar ao meu mapa", que
+passa a viver dentro da ficha com estado próprio: 403 vira negado com o privilégio exigido (e quem não tem
+`conteudo.registrar_fonte` vê o negado antes de clicar), 409 vira o diálogo de confirmação de dado pessoal
+(a confirmação repete com `confirma_risco_pii`), 413/422/5xx mostram a mensagem da API com a referência —
+nunca o número cru (refutação). `plat-estado` ganhou `data-acao` nos botões; acervo.css e a legenda do mapa
+ficaram só com tokens (guarda do UX-01 = 0). `docs/COBERTURA_UI.md` e `docs/cobertura_ui_lacunas.json`
+regenerados: 41 → 40 lacunas. e2e com axe (0 sérias) e capturas 390/1280 em `tests/e2e/test_acervo_ux10.py`.
+
+## turno 8, setembro de 2026 (item UX-04-tela-mapa-polimento: chrome único do visualizador; ramos de painel juntados)
+
+Trilha de interface. Juntados no mesmo tronco os ramos de painel do mapa (`wt/l201mapa`, `wt/il201gtabel`,
+`wt/desenho`, `wt/il201dpopup`, `wt/il201lexpor`); os arquivos que todos tocavam foram refeitos por junção de três
+vias sobre a base `wt/l201mapa` (não por união de texto). O visualizador ganhou UM chrome: barra no topo, trilho à
+esquerda com um botão por painel, gaveta com um `<plat-painel>` por função (pesquisar, camadas, legenda, medição,
+desenho, anotações, impressão, exportar) e a tabela de atributos ancorada ao rodapé do mapa; atalhos de teclado
+(b c l m d a i e t, f tela cheia, Esc, ?), tela cheia, impressão pelo navegador (@media print só o mapa), painel
+inferior de 390 px em celular, navegação do produto como gaveta sobre o mapa, mapa-base escuro. `web/mapa.css` só
+com tokens. e2e `tests/e2e/test_mapa_chrome.py` (cada painel em 1280 e 390, axe, i18n, atalhos, impressão, base);
+os e2e dos painéis passam a abrir o painel que usam (`window.plat.mapa.abrirPainel`). Consertos achados ao juntar:
+`<select>` de camada da tabela de atributos vazio (`append(nó, array)` em `tabela.js`), fuga da variável `simbologia`
+duplicada em `app/mapa/rotas.py`, `return` morto em `simbologia.py`, `servir_local.py` e `main.py` duplicados pela
+união; aviso da barra passa a flutuar sobre o mapa (um aviso mudava a altura do canvas e a composição do PNG). Chaves
+de i18n dos painéis traduzidas para en e es (paridade mantida). Fora do escopo e registrado no handoff: o teste
+`test_ordem_opacidade_e_enquadrar` depende da ordem da bancada (a camada inativa entre as duas ativas); o Martin de
+produção não enxerga funções novas sem reinício, por isso o e2e da trilha sobe um Martin próprio.
+
+## turno 8, setembro de 2026 (item UX-03-tela-conteudo-item-lixeira: estados explícitos, arrastar e soltar, seleção que sobrevive, 1.000 itens medidos)
+
+Trilha de interface. A lista do catálogo passa a mostrar `<plat-estado>` em vez de ficar em branco: vazio (com "Novo
+item" ou "limpar busca, pasta e filtros"), carregando com esqueleto, erro com a referência e "tentar de novo", negado
+em 403; o painel do item idem para uuid inexistente/negado/erro. Arrastar arquivos sobre a lista cria itens
+(`js/catalogo/soltar.js`) pelo MESMO caminho de "Novo item > Arquivo", agora extraído em
+`novo.js::enviarArquivoComoItem` — e esse caminho estava quebrado desde o L0-03: as partes iam sob cookie (415, CSRF)
+e a conclusão lia `item_id` onde a API devolve `arquivo_id`; passa a usar token de serviço em memória como a tela
+/uploads (a API só aceita `admin:inquilino` nessas rotas, medido: `camada:editar` e `catalogo:ler` recebem 403 — quem
+não é administrador não consegue enviar arquivo pelo navegador; registrado para o dono da rota). A seleção em massa
+sobrevive a reordenar e filtrar (é por id; só troca de aba ou "limpar seleção" a zera). Desempenho:
+`performance.measure('catalogo:render')` em `lista.js`; `tests/e2e/test_conteudo_ux03.py` cria 1.000 itens pela API e
+mede p95 do render completo em 20 renders: **57,7 ms** (mediana 47,8 ms) com carga 11,3 e 6,7 GB livres
+(`tests/medidas/UX-03.json`) — alvo 500 ms. Capturas em 390 e 1280; axe sem violação séria em lista, painel,
+compartilhamento e lixeira.
+
+## turno 8, setembro de 2026 (item UX-02-telas-entrada-conta-convite: entrada, 2FA, conta, convite e redefinição polidos; interface em pt-BR, en e es)
+
+Trilha de interface. As telas públicas (/entrar, /aceitar-convite, /redefinir-senha) ganharam erro por campo
+(`js/base/campos.js`: aria-invalid + mensagem ligada por aria-describedby, foco no primeiro inválido), botão ocupado
+durante a chamada, aviso de Caps Lock, estado de servidor fora com "tentar de novo" e estados de token inválido/expirado
+como `<plat-estado>` nomeado. O idioma passou a ser resolvido em `js/base/i18n.js` (URL > localStorage > <html lang> >
+navegador > pt-BR), com o seletor `<plat-idioma>` nas telas públicas e a preferência da conta aplicada por
+`exigirSessao`; `web/js/i18n/en.json` e `es.json` completos (995 chaves, paridade de chaves e de variáveis provada por
+`tests/unit/test_i18n_paridade.py`); `ORG_IDIOMAS` passa a admitir os três. /conta: passos numerados do 2FA, estado
+de carregando nas tabelas, troca de idioma aplicada na hora. e2e `tests/e2e/test_entrada_conta.py`: fluxo inteiro
+entrar → 2FA → conta → sair com capturas em 360 e 1280, axe sem violação séria em cada tela, textos em en/es, e a
+refutação (campo inválido nunca some sem mensagem) em entrada, código 2FA, convite e redefinição. Conserto de passagem:
+`<plat-tabela>` usa aria-label em vez de caption oculta (traço de 1 px no canto da tabela).
+
+## turno 8, setembro de 2026 (item UX-01-sistema-de-design: tokens únicos, componentes base, guia viva, guarda de literal)
+
+Trilha de interface. `web/estilo/tokens.css` vira a única fonte de cor, tipo, espaço, raio, sombra e foco (primitivos
+por tema + semânticos); `web/style.css` a importa e todas as telas passam à identidade "instrumento" (o remapeamento
+por `body.instrumento` saiu). Componentes novos: `<plat-estado>`, `<plat-toasts>`/`notificar()`, `<plat-painel>`,
+`<plat-tema>` com `tema_cedo.js`. Guia viva em `/estilo-guia` com contraste calculado no navegador. Guarda:
+`docs/verificar_tokens.py` + `tests/unit/test_tokens_visuais.py` (0 literal fora de tokens.css, medido: 15 achados
+corrigidos na primeira passagem). e2e `tests/e2e/test_estilo_guia.py`: axe 0 violações sérias nos dois temas (o acento
+claro precisou escurecer para passar), troca de um token muda 3 telas, teclado e anel de foco; `test_capturas_telas.py`
+captura as 20 telas em 1280 e 390 antes e depois. `scripts/servir_local.py` com TLS para o e2e de escrita em trilha.
+Conserto de passagem: `/admin/organizacao` nunca marcava pronta (zona morta temporal de `smtpAtual`).
+
+## turno 8, setembro de 2026 (item UX-00-mapa-de-cobertura-da-interface: rota sem tela reprova)
+
+Trilha de interface. `docs/gerar_cobertura_ui.py` cruza as rotas da aplicação viva com as chamadas de `web/` e as
+páginas de `app/paginas.py` e escreve `docs/COBERTURA_UI.md` (rota → tela/controle → estado) e a linha de base
+`docs/cobertura_ui_lacunas.json`. Primeira medição: 196 pares método × rota, 137 cobertos, 22 sem controle, 20 sem
+tela, 17 externos sem exposição, 28 lacunas de escrita. `tests/unit/test_cobertura_ui.py` reprova rota de escrita
+nova sem tela e fora da linha de base; `--registrar` cria um item UX-<n> por grupo com lacuna. ADR em
+`docs/adr/*-cobertura-da-interface.md`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -129,6 +247,192 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 4, setembro de 2026 (item L2-01-d-popup-runtime: popup em tempo de execução, do clique ao valor formatado)
+
+O motor que desenha o popup do visualizador e a configuração mínima que o governa (`plat.item.dados.popup`).
+
+- **Configuração da camada** (`app/mapa/popup.py::normalizar`): título com `{campo}`, lista de campos com
+  nome de exibição e formato (número com casas e separador pt-BR, moeda, data no fuso do inquilino, URL
+  clicável, imagem por URL), campo marcado `servidor` e expressões. Camada sem configuração continua
+  mostrando todos os campos como texto — o item acrescenta formato, nunca tira o popup de quem não
+  configurou.
+- **`GET /api/camadas/{id}/feicoes/{fid}/popup`**: devolve só o que o cliente não tem — campos que o tile
+  não carrega (tabela companheira `<tabela>_x`, por `fid`) e expressões avaliadas no servidor pelo núcleo
+  do item L2-10-c, com `$area_m2`/`$perimetro_m2` de `ST_Area`/`ST_Perimeter` geográficos no contexto.
+  Camada de outro inquilino e feição inexistente respondem 404.
+- **Tela**: paginação "i de N" entre feições coincidentes, campo nulo como travessão, zoom para a feição,
+  e painel acoplado na parte de baixo em tela estreita (390 px) no lugar do popup flutuante.
+- Medido: p95 da consulta ao servidor **8,38 ms** com carga 7,24 e 8,01 GB livres (alvo do portão: 100 ms);
+  expressão de área contra `ST_Area` geográfica em 5 feições. Detalhe em
+  `tests/medidas/L2-01-d-popup-runtime.json`, que também registra a ressalva: o erro é zero por construção,
+  porque a expressão recebe a área da MESMA chamada PostGIS — o teste prova o encanamento, não um cálculo
+  de área independente.
+- Dois defeitos reais achados ao rodar o e2e no navegador: recursão infinita entre a árvore de camadas e
+  `Catalogo.reordenar` (o catálogo avisava mesmo sem mudança de ordem, inclusive com nenhuma camada ligada)
+  deixava a tela do mapa inteira sem árvore; e o botão de fechar do MapLibre cobria o botão "próxima
+  feição" do paginador. Os dois corrigidos.
+- Fora do item, com motivo escrito: anexos (não há armazenamento por feição), registros relacionados
+  (L2-10-b pendente), valor de pixel de raster (L1-02-h pendente) e as ações "selecionar"/"editar"
+  (L2-01-h/L2-03 fora desta linhagem).
+
+## turno 4, setembro de 2026 (item L2-01-l-exportacao-do-mapa: exportar a partir do mapa)
+
+Exportação passa a sair DO MAPA e não só do painel do item: a seleção (lista de fid), o filtro do
+construtor (CQL2-JSON, o mesmo objeto de `/api/mapa/camadas/{id}/filtrar`) ou a camada inteira, com CRS,
+campos e codificação. Origem pode ser `camada_vetorial`, `vista_de_camada` (o filtro da vista vale sempre
+e os `campos_ocultos` não são exportáveis nem filtráveis) ou `selecao` salva. O catálogo de formatos foi de
+11 para 16 com GeoJSON Sequence, File Geodatabase (zip), MVT (zip), PMTiles e o `pacote` de mapa, e passou
+a declarar a POLÍTICA DE CRS de cada um: 12 formatos gerados da mesma seleção de 500 feições foram
+reabertos por `ogrinfo` com contagem 500 e o EPSG que a política manda (`tests/medidas/L2-01-l-exportacao-do-mapa.json`,
+`formatos_da_selecao_de_500`) — 31983 nos de CRS livre, 4326 nos que a especificação prende, nenhum nos
+que não guardam CRS. Pedir CRS diferente do que o formato prende é 422, não um arquivo mentiroso.
+
+O XLSX ganhou o teto do próprio Excel: uma camada de 1.048.600 feições é recusada com
+`422 formato_limite_de_linhas` antes de existir job (a mesma camada sai em CSV). Toda resposta de pedido
+traz `perda_declarada` — DXF sem atributo, shapefile truncando nome em 10 caracteres, tile recortando
+geometria. Estilo da camada sai em MapLibre e em SLD 1.0.0, gerados da MESMA lista de classes da legenda.
+Feição copiável como GeoJSON/WKT lida da tabela (o tile vem recortado). A imagem do mapa passou a levar
+legenda e atribuição, com um "2x" que monta um mapa temporário do dobro do tamanho em vez de ampliar
+pixel: as duas composições, com e sem legenda, foram comparadas pixel a pixel no navegador
+(`png_legenda_e_atribuicao`: 775 pixels de diferença na faixa da atribuição). O mapa inteiro vira PACOTE
+(documento + estilos + GeoPackage só das camadas citadas), pelo mesmo job e o mesmo link de 7 dias, e volta
+por `POST /api/mapa/pacotes/importar` em OUTRO inquilino, recriando camadas, simbologia e o documento com
+os identificadores novos; o pacote de um mapa que cita uma camada não leva nenhuma feição da outra camada
+do mesmo inquilino (provado por despejo do GeoPackage).
+
+Quatro defeitos de fora do item foram corrigidos porque bloqueavam o portão: `app/versao.py` não lia o sha
+num GIT WORKTREE (`.git` é arquivo, não pasta) e o worker morria no arranque; a escrita sob cookie só
+aceitava `application/json`, o que barrava o envio do pacote — a regra correta não é "JSON", é "nada que um
+formulário HTML consiga produzir"; a falha do `ogr2ogr` era relatada pela última linha do stderr, que é
+sempre a genérica; e `app/schema_ambiente.py` tinha duas definições de `executemany`, com a segunda (sem
+tratamento de bytes) apagando a primeira em silêncio.
+
+## turno 4, setembro de 2026 (item L0-04-h-exportar: exportação de camada para outros formatos)
+
+`POST /api/exportacoes` enfileira o job `exportacao.gerar` (202) e devolve o arquivo (item `arquivo`,
+validade de 7 dias) em 11 formatos: gpkg, geojson, shapefile(zip), csv, xlsx, kml, kmz, fgb, gml, dxf e
+geoparquet (este pelo DuckDB, num processo próprio — o `ogr2ogr` desta instalação não tem driver Parquet, e
+o DuckDB não sobrevive a um `fork`, então a conversão roda como `python -m app.exportacao.parquet_cli`,
+neto do job). Filtro (`where`), campos e CRS de saída são conferidos ANTES de existir job (400 com o erro do
+banco saneado, `app/exportacao/erros.py`). Isolamento entre inquilinos: o `ogr2ogr` abre conexão PRÓPRIA,
+fora do pool da aplicação — o inquilino entra na string de conexão (`-c plat.tenant_id=N`), e é a RLS do
+PostgreSQL que corta, provada com pedido forjado no banco e com o `ogr2ogr` chamado sem contexto nenhum
+(`tests/api/exportacao/test_exportacao_cruzado.py`). Arquivo grande nunca vai inteiro à memória: envio ao
+Garage em blocos/multipart (`objetos.guardar_arquivo`, novo) e download em blocos de 1 MiB
+(`objetos.ler_stream`, novo) — medido com `tracemalloc` (pico < 3 partes de 8 MiB para um arquivo de 40 MiB).
+Privilégio novo `conteudo.exportar` (editor/admin); opção do dono do item "permitir que outros exportem"
+(`dados.exportacao.permitir_outros`, nasce desligada). Limite de 3 exportações em curso por usuário e guarda
+de disco (`shutil.disk_usage`) antes do primeiro byte. Botão **Exportar** na tela do item
+(`web/js/catalogo/item_exportar.js`). Achado à parte, sem relação direta com exportação: `CursorSchemaAmbiente`
+não reescrevia `executemany`/`mogrify` (só `execute`/`callproc`), o que fazia qualquer rota que use essas duas
+chamadas escrever no schema `plat` de PRODUÇÃO mesmo dentro de uma base de trilha isolada — consertado em
+`app/schema_ambiente.py`. Ver ADR 0018 e `docs/PARIDADE.md` seção "Exportação de camada para outros formatos".
+
+Medido (`tests/medidas/L0-04-h-exportar.json`, camada de 100 mil feições): tempo por formato de 0,80 s
+(FlatGeobuf) a 14,54 s (XLSX); todos os 11 formatos reabertos com a mesma contagem de 100.000 feições
+(`ogrinfo`/DuckDB conforme o formato).
+## turno 4, setembro de 2026 (item L2-01-mapa-web: visualizador de mapa próprio, do Martin à impressão)
+
+Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava chegar a `master`.
+
+- **Servidor de tiles**: Martin 1.15.0 (musl, sha256 do pacote fixado em `deploy/martin_instalar.sh`) como
+  unidade `plat-martin` em `127.0.0.1:8151`, publicando SÓ funções (`auto_publish.tables: false`) — a
+  tabela crua da camada nunca é exposta. Papel de leitura `plat_leitor` (LOGIN, sem BYPASSRLS, sem ser
+  dono), `plat.contexto_por_token` e a função de tile por camada com RLS vieram do trabalho dos itens
+  L2-01-b/L2-04-a, que nunca tinha sido juntado.
+- **API do mapa** (`app/mapa/`): `GET /api/mapa/camadas` com estilo MapLibre e legenda geradas da
+  simbologia; `GET /api/mapa/camadas/{id}/tilejson` cunhando token de 12 h com escopo de UMA camada;
+  repasse `GET /tiles/{esquema}/{funcao}/{z}/{x}/{y}` com a mesma autorização do `auth_request` do nginx
+  (uma implementação, duas portas); `plat.camada_extensao` para o "enquadrar".
+- **Tela `/mapa`**: lista de camadas com ordem (arrastar e por botão), opacidade, ligar/desligar e
+  enquadrar; legenda; janela de atributos (campo nulo aparece marcado, multi-geometria não se repete);
+  medição geodésica de distância e área; pesquisa de endereço (CNEFE) e de coordenada em decimal e em
+  grau-minuto-segundo; escala, coordenadas e escala numérica 1:N; troca de mapa-base; impressão em PNG e
+  em PDF com escala, barra de escala e seta de norte.
+- **`GET /api/geocodificar`**: geocodificar é leitura e agora tem o verbo certo (o POST continua).
+- Medido com 1.000.000 de feições: 2,4 s do clique ao primeiro desenho, 1,5 s de zoom até `idle`, 61 MB
+  de heap; 10 camadas ao mesmo tempo em 4,3 s, pan em 302 ms, 24,8 MB. Tile z8 pelo repasse: 406 ms
+  frio, 21 ms quente. Detalhe em `tests/medidas/L2-01-mapa-web.json`.
+- Dois defeitos reais achados pelos testes e corrigidos: `attribution: undefined` fazia o MapLibre
+  recusar a fonte inteira em silêncio; repassar `Content-Encoding: gzip` com corpo já descompactado
+  entregava tile ilegível ao navegador. Registrados no ADR 20260907T0400.
+## turno 3, setembro de 2026 (item L2-01-g-tabela-atributos: tabela de atributos acoplada ao mapa)
+
+Tabela de atributos por camada, paginada no servidor: `GET/PUT /api/camadas/{id}/tabela/vista`,
+`GET .../colunas`, `POST .../linhas` e `POST .../estatisticas`. Página de 50, 200 ou 1.000; ordenação por
+coluna com desempate pela chave primária; busca em texto com `unaccent` sobre todas as colunas de texto;
+filtro pela extensão do mapa (`&&` no índice GIST mais `ST_Intersects`); filtro pela seleção vinda do mapa;
+estatísticas por coluna numérica (contagem, soma, média, mínimo, máximo, nulos) calculadas no banco.
+
+A vista fica em `plat.tabela_vista` (migração `20260907T1922_tabela_atributos.sql`), uma linha por item e
+usuário, com política por inquilino e por usuário: ordem, rótulo, coluna oculta, largura e domínio. Coluna
+oculta não sai da API de colunas nem da linha; `GET .../vista` devolve a vista inteira para desfazer.
+
+Nenhum identificador vem do pedido: o nome de coluna pedido é procurado na lista de colunas reais do
+catálogo do banco e, se não estiver lá, é 422 antes de virar SQL.
+
+Na tela do mapa, painel acoplado (`web/js/mapa/tabela.js`): clicar na linha realça e centra a feição,
+clicar na feição filtra a tabela, setas navegam a grade e Enter abre o popup da linha.
+
+Medido em camada de 1.000.000 de feições, com a carga da máquina em 10,7 (acima do teto de 8; passou mesmo
+assim) — `tests/medidas/L2-01-g-tabela-atributos.json`: primeira página com contagem 275,9 ms no percentil
+95; ordenar por coluna indexada 15,2 ms. A contagem passou a ser sob pedido (`contar`, padrão verdadeiro):
+sozinha ela custa 263 ms porque a política de segurança por linha impede a varredura em paralelo — ver
+`docs/adr/20260907T2028-tabela-de-atributos-conta-sob-pedido.md`.
+
+Pendente: os e2e de tela (`tests/e2e/test_mapa_tabela.py`) foram escritos mas não rodaram nesta base de
+trilha, que não tem URL que resolva; ficam pulados com o motivo.
+
+## turno 3, setembro de 2026 (item L2-01-k-desenho-anotacoes: desenho e anotações no mapa)
+
+Camada de desenho da tela do mapa com sete tipos — ponto, linha, polígono, retângulo, círculo (raio em
+metros), texto e seta — com cor, contorno, preenchimento, opacidade, largura e tamanho de fonte; mover,
+editar vértice, apagar, ordenar; medição da feição na própria lista; importação de GeoJSON e de KML
+(`DOMParser`, sem biblioteca nova). O desenho vive DENTRO do documento do mapa (`corpo.desenho`, GeoJSON
+mais estilo, sem tabela) e é validado no servidor por `app/catalogo/documento.py::erros_de_desenho`, que
+confere o par tipo × geometria, o teto de 5.000 feições, o teto de 10.000 caracteres de texto, o raio do
+círculo e a coordenada dentro do mundo. O botão "promover a camada" (`POST /api/mapa/{id}/desenho/promover`)
+transforma a seleção numa camada hospedada de verdade, reusando `plat.camada_schema_garantir` e
+`plat.camada_preparar` do L0-04, com `ST_MakeValid` e conferência de `ST_IsValid` antes de gravar o item.
+
+Anotação de usuário ligada a uma feição (`plat.anotacao_feicao`, migração `20260907T1655`): comentário com
+autor e data, visível a quem é membro ativo do grupo em que foi criada, nunca a outro inquilino — a
+visibilidade é da RLS, não da aplicação. Texto é sempre dado: entra por `textContent`, nunca por HTML.
+
+Achados de medição que viraram conserto: o `text-field` do MapLibre exige servidor de glifos (item
+L2-02-e) e, sem ele, o MapLibre aceita a camada e a descarta em silêncio — o texto passou a ser desenhado
+num canvas próprio, com halo por `strokeText`; o modo `select` do terra-draw dispara `finish` ao soltar o
+arrasto de um vértice, o que fazia a edição virar cópia; e `Catalogo.reordenar` avisava mesmo sem mudança
+de ordem, fechando um ciclo sem fim com a árvore de camadas sempre que o catálogo ganhava camada nova.
+
+Medido com 5.000 desenhos num mapa: salvar em 190 ms e reabrir em 39 ms, idênticos bit a bit, com carga de
+1 minuto em 14,12 e 7,8 GB de memória livre (`tests/medidas/L2-01-k-desenho-anotacoes.json`).
+## turno 3, setembro de 2026 (item L6-01-c-tela-acervo: tela do Acervo — busca, ficha, adicionar ao mapa e atribuição na legenda)
+
+Tela `/acervo` (`web/acervo.html`, `web/acervo.css`, `web/js/acervo/acervo.js`): filtro pelos **22 domínios**
+da taxonomia de `acervo.fonte` (medido, `tests/medidas/L6-01-c-tela-acervo.json`), busca por nome e órgão,
+cartão por fonte (órgão, domínio, etiqueta de licença, frescor, tabelas, registros) e ficha completa de
+procedência em painel lateral, com pré-visualização do endpoint vivo quando existe. Rota nova
+`GET /api/acervo/dominios` devolve a taxonomia inteira com a contagem de fontes VISÍVEIS por domínio: domínio
+sem fonte visível hoje aparece com zero, nunca some da lista.
+
+Licença curada entra na lista, na ficha e no instantâneo gravado ao adicionar (`licenca_curada_tipo`, do
+vocabulário fechado de `plat.acervo_licenca`, item L6-01-g) — nunca inferida do texto livre de `licenca`.
+ODbL e CC-BY-SA acionam o aviso de atribuição obrigatória em dois lugares: na ficha e na legenda da tela
+`/mapa`. A legenda lê `GET /api/acervo/meu-mapa`, rota nova que lista as camadas do acervo já adicionadas ao
+catálogo do inquilino (`dados->>'protocolo' = 'acervo'`, isolamento pela RLS de `plat.item`) — `GET /api/itens`
+não serve porque não devolve `dados` e não filtra por protocolo.
+
+Medido no e2e `tests/e2e/test_acervo.py` (1 teste, percurso inteiro, contra o uvicorn da trilha): 22 domínios
+no filtro; buscar "unidades de conservação" devolve **0 cartões** e as 3 fontes com esse nome no acervo — todas
+sem licença escrita — não aparecem nem têm o identificador no HTML; adicionar cria 1 item `conexao` em modo
+`referenciada` (sem cópia de dado); a legenda do mapa mostra o nome, a licença e a linha de atribuição;
+`document.body.scrollWidth` = 390 px num visor de 390 px em `/acervo` e em `/mapa`; **0 erro de console** em
+todo o percurso. Capturas em `tests/e2e/capturas/L6-01-c-tela-acervo_{ficha,legenda_no_mapa,celular}.png`.
+
+Correção de borda na tela do mapa (item L2-01-a), achada ao medir o responsivo: painel flutuante ganhou
+`max-width: calc(100% - var(--e4) * 2)` — o seletor de camada base media 378 px e terminava em 394 px num visor
+de 390 px, empurrando a página 2 px para fora da tela.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
