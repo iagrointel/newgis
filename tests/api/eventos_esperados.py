@@ -158,4 +158,13 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- motor multicritério, presets (L3-01-h-presets; vocabulário na migração
+    # 20260908T1659_amc_preset.sql). Preset é tabela do inquilino com dono humano: toda escrita narra
+    # evento; `aplicar` também narra (foi executado com quais pesos, sobre quantas unidades) porque é a
+    # decisão analítica do usuário, não leitura.
+    ("POST", "/api/amc/presets"): ["amc/preset"],
+    ("PATCH", "/api/amc/presets/{id}"): ["amc/preset_atualizar"],
+    ("DELETE", "/api/amc/presets/{id}"): ["amc/preset_apagar"],
+    ("POST", "/api/amc/presets/importar"): ["amc/preset_importar"],
+    ("POST", "/api/amc/presets/{id}/aplicar"): ["amc/preset_aplicar"],
 }
