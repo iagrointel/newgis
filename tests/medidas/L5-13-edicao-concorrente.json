@@ -20,8 +20,23 @@
    "valor": 0.001,
    "unidade": "s",
    "comando": "batimento de outra aba -> evento presenca no gerador SSE (mesmo processo)"
+  },
+  "presenca_aparece_s": {
+   "valor": 1.282,
+   "unidade": "s",
+   "comando": "B abre o construtor -> li[data-sessao] na aba A (SSE + batimento)"
+  },
+  "nos_diferentes_sem_conflito": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "grupo por A (v2) + texto por B com base v1 -> 200 mesclado (v3)"
+  },
+  "rede_lenta_alteracoes_perdidas": {
+   "valor": 0,
+   "unidade": "alteracoes",
+   "comando": "2 rodadas com PATCH retido >= 3 s (playwright route) e liberado depois da outra aba gravar; 4 nós no servidor e nas 2 telas"
   }
  },
- "gerado_em": "2026-09-08T11:00:23Z",
+ "gerado_em": "2026-09-08T11:06:03Z",
  "git_sha": "34e4a323a105"
 }
