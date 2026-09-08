@@ -153,7 +153,10 @@ def importar(cur, tenant_id: int, rede_id: str, caso: dict, prefixo: str = "") -
             # reais; comprimento_m e geom ficam NULOS (o caseformat não tem comprimento nem traçado).
             "INSERT INTO plat.rede_aresta (tenant_id, rede_id, tipo_id, codigo_externo, no_origem_id, "
             "no_destino_id, no_origem_seq, no_destino_seq, atributos) VALUES %s "
-            "ON CONFLICT (rede_id, codigo_externo) DO NOTHING",
+            # o código externo da aresta é único por (rede, TIPO, código) desde 20260907T1530: na BDGD
+            # o mesmo COD_ID repete entre camadas. Aqui o código já nasce único, mas o conflito
+            # declarado tem de ser o da restrição que existe.
+            "ON CONFLICT (rede_id, tipo_id, codigo_externo) DO NOTHING",
             tuplas[i:i + LOTE],
             template="(%s, %s::uuid, %s::uuid, %s, %s::uuid, %s::uuid, 0, 0, %s)", page_size=LOTE)
 

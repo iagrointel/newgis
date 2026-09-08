@@ -59,6 +59,8 @@ def _importar_sincrono(rid: str, bruto: bytes, prefixo: str, auth: Auth, request
     except matpower.ErroMatpower as e:
         raise ErroAPI(422, e.codigo, e.mensagem,
                       [{"linha": e.linha, "erro": e.codigo, "mensagem": e.mensagem}]) from e
+    # o `Content-Type` do pedido tem de ser `application/json` mesmo o corpo sendo um `.m`: é a defesa
+    # contra CSRF da casa (`auth.sessao.checar_escrita_sob_cookie`), a mesma que `POST .../pacote` obedece.
     with db.db(auth.contexto()) as cur:
         try:
             contagens = matpower_importar.importar(cur, auth.tenant_id, rid, caso, prefixo)
