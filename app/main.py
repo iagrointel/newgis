@@ -40,12 +40,14 @@ from app.catalogo import (
 )
 from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
+from app.edicao.rotas import router as rotas_edicao
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
+from app.regras.rotas import router as rotas_regras  # L2-10-d: regras de atributo por camada
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
@@ -112,6 +114,10 @@ ROUTERS = [
     rotas_uploads,
     # --- ingestão vetorial (L0-04): /api/importacoes (upload -> inspeção -> confirmação -> carga -> camada)
     rotas_ingestao,
+    # --- edição transacional de feições (L2-03-a): POST /api/camadas/{id}/edicoes (adicionar/atualizar/apagar
+    # numa transação; única porta de escrita de feição — FeatureServer/OGC futuros chamam este mesmo caminho)
+    rotas_edicao,
+    rotas_regras,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível

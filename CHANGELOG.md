@@ -3,6 +3,50 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L2-03-a-api-edicao-transacional: edição transacional de feições — única porta de escrita)
+
+`POST /api/camadas/{id}/edicoes` (`app/edicao/`): equivalente do `applyEdits` da Esri e, a partir
+daqui, a única porta de escrita de feição para navegador, PWA, FeatureServer (L2-04-d) e OGC
+(L2-04-g). Corpo com `adicionar`/`atualizar`/`apagar` numa transação — tudo-ou-nada por padrão
+(`modo=transacao`), ou `modo=parcial` com `SAVEPOINT` por feição, devolvendo resultado feição a
+feição (como o `applyEdits` com `rollbackOnFailure=false`). Roda direto contra a tabela de camada
+`d_<slug>.c_<uuid16>` que `plat.camada_preparar` (029_ingestao_vetor.sql) já cria — nenhuma tabela
+nova (migração 20260906T1859, bump do esquema `camada_vetorial` v2→v3, só propriedades opcionais).
+
+Validação sempre no servidor: tipo de geometria e SRID da coluna (com a mesma promoção
+Point/LineString/Polygon → Multi* que `app/ingestao/carregar.py` usa na carga); `ST_IsValid`, com
+`ST_MakeValid` só quando `corrigir_geometria=true` (sem isso, polígono inválido é 422); domínio de
+atributo por `dados.regras_campo` (obrigatório, somente-leitura, lista de valores ou
+mínimo/máximo — mecanismo próprio deste item; quando o L2-10-a-dominios-subtipos, entregue noutra
+trilha, for integrado, ganha uma segunda fonte compartilhada entre camadas, não substitui esta);
+tamanho de texto (64 KiB); concorrência otimista pela coluna `versao` já existente na tabela de
+camada — atualizar/apagar com a versão errada devolve `409` com a feição ATUAL, nunca sobrescreve
+em silêncio; campos de rastreio (`fid`, `globalid`, `versao`, `tenant_id`, `criado_*`,
+`atualizado_*`) NUNCA aceitos do corpo, sempre preenchidos pelo servidor; "só as próprias feições"
+(`edicao.somente_proprias`) e "geometria travada" (`edicao.geometria_travada`) por camada, com
+`feicoes.editar_total` (perfil admin) ignorando as duas. Sanidade de CRS não declarado: coordenada
+fora de `[-180,180]`/`[-90,90]` numa camada de SRID geográfico sem `crs.srid` declarado é `422
+geometria_fora_do_crs` (cobre o envio de metros — UTM/Web Mercator — sem declarar). Um evento por
+LOTE (`camadas/editar`, nunca um por feição) com a contagem de adicionadas/atualizadas/apagadas, e
+bump de `dados.tiles_versao` no item (ponto de integração para a invalidação de tiles do L2-01-b,
+ainda pendente). Isolamento entre inquilinos por RLS FORCE já existente: o inquilino B recebe `404`
+ao ler, atualizar ou apagar feição de A — nunca `403`, nunca sucesso silencioso, porque a existência
+não é confirmada a quem não pode ver (ADR 20260907T0216).
+
+Medido: 1.000 feições em `adicionar` (modo transação) em menos de 1 s, contra o teto de 3 s do
+portão (`tests/medidas/L2-03-a-api-edicao-transacional.json`). Refutação do item (roteiro do
+adversário) rodada nesta passagem: lote de 100 mil feições recusado pelo teto de lista
+(`EDICAO_LOTE_MAX=2.000`); `crs.srid=0` recusado pela própria validação de entrada; texto de 1 MB
+recusado (`EDICAO_TEXTO_MAX=64 KiB`); geometria em outro CRS sem declarar recusada pela sanidade de
+grau; feição de outro inquilino nunca aceita (404); duas sessões editando a mesma feição — só uma
+ganha (200), a outra recebe 409 com a versão atual, nunca as duas 200. 20 testes verdes em
+`tests/api/test_edicao_transacional.py`.
+
+Fora desta passagem (fronteira honesta, ver ADR): matriz fina de permissão por operação × grupo
+(ficou em `edicao.habilitada`/`somente_proprias`/`geometria_travada` + privilégio único);
+integração com `plat.dominio` do L2-10-a; consumidor da invalidação de tiles (L2-01-b); histórico/
+restauração de feição (L2-03-d-historico-restauracao) — a coluna `versao` cobre só a concorrência
+otimista, não um log de mudanças.
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -1069,3 +1113,17 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 4, setembro de 2026 (item L2-10-d-regras-de-atributo: regras de atributo por camada)
+
+Sobre a porta única de escrita (L2-03-a, mesclada aqui) e a linguagem de expressão (L2-10-c): `dados.regras` da
+camada (esquema v4) com regras de **cálculo** (campo alvo = expressão, gatilho por campo, ordem, encadeamento),
+**restrição** (booleana; falso = 422 com código e mensagem configurados) e **validação** (job `camadas.validar`
+grava erros em `e_<hex16>` e cria a camada de erros no catálogo), mais **campos virtuais** só-leitura avaliados na
+leitura. Motor em `app/regras/motor.py` (ciclo detectado na configuração: `regra_ciclo` com o caminho); rotas
+`GET/PUT /api/camadas/{id}/regras`, `POST /api/camadas/{id}/validar`, `GET /api/camadas/{id}/feicoes`,
+`GET /api/camadas/{id}/erros`; `em_massa` no corpo de edição pula regras marcadas `excluir_em_massa`. Testes:
+`tests/unit/test_regras_motor.py` (12) e `tests/api/test_regras_atributo.py` (validação de 100 mil como job com
+N conferido por SQL; 1.000 edições com 3 regras contra sem regras, medido). ADR
+`docs/adr/20260908T0740-regras-de-atributo.md`; paridade contra "attribute rules" (Pro/hosted 11.4) em
+`docs/PARIDADE.md`. Fora: compilação para SQL (L2-10-e), WFS-T (não existe em master), tela.
