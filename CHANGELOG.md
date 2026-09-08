@@ -36,6 +36,32 @@ próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo:
 segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+## turno 3, setembro de 2026 (item L3-01-g-tela-motor: a tela do motor multicritério)
+
+Tela `/amc/motor`, aberta a partir de um conjunto de unidades ou de uma execução. Monta o modelo (adicionar
+fator = camada do catálogo ou do acervo + extrator + transformação, com pré-visualização do histograma sobre
+os valores REAIS já extraídos; marcar veto = restrição declarada, objeto separado do peso), escolhe o peso de
+cada fator por controle deslizante (multiplicador) ou por percentual com trava, manda rodar (a extração é job
+do servidor) e, com a execução em mãos, RECOMBINA NA HORA ao mover um peso — medido no navegador: zero
+requisição à API entre mover o controle e a lista mudar. Mapa recolorido por favorabilidade com rampa
+declarada (vetado em cinza, sem nota vazado), lista das melhores unidades, clique = explicação fator a fator,
+e link com os pesos na URL que reabre a mesma leitura.
+
+Duas rotas novas: `GET /api/amc/execucoes/{id}/matriz` (valor bruto E favorabilidade de cada fator em cada
+unidade — é o que torna a recombinação local possível sem uma terceira implementação da conta) e
+`POST /api/amc/transformacoes/previsao` (porta HTTP de `app.amc.transformacoes.pre_visualizar`, mais a curva
+desenhada sobre o domínio dos valores recebidos).
+
+Os pesos viajam na URL, então a barra de endereço é fronteira de confiança: `web/js/amc/pesos_url.js` valida
+antes de qualquer conta e a tela RECUSA o link adulterado (peso acima do máximo da escala, fator inexistente,
+soma percentual fora de 100) com a razão escrita, deixando o mapa VAZIO em vez de recolorido com outros pesos.
+
+Três defeitos achados pelo próprio e2e e corrigidos: sem carregar o dicionário, a barra lateral mostrava chave
+crua; o campo de número dispara `change` outra vez ao perder o foco e redesenhava a lista entre o apertar e o
+soltar do botão, perdendo o clique; e item de grade nasce com `min-width: auto`, o que fazia a tabela esticar
+a coluna do painel por cima do mapa. A explicação de uma unidade passou a delegar as doze funções contínuas a
+`app/amc/transformacoes.py` — sem isso a tela e a explicação dariam números diferentes para o mesmo fator.
+
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
 Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,
