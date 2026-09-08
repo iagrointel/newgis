@@ -817,7 +817,9 @@ CASOS: dict[tuple[str, str], Caso] = {
     # mas não é tipo 'arquivo' nem do inquilino de A) para cair no mesmo 404 sem upar nada de verdade.
     ("GET", "/api/importacoes"): Caso(lambda p: "/api/importacoes", proprio=True, aceita=frozenset({200}),
                                       verificar=_sem_marca),
-    ("GET", "/api/importacoes/formatos"): Caso(lambda p: "/api/importacoes/formatos", proprio=True,
+    # lista estática de formatos (sem dado de inquilino): mesmo padrão de /api/uploads/tipos — antes do UX-16 a rota
+    # nem respondia (era engolida por /api/importacoes/{id} e devolvia 404, o que escondia o caso)
+    ("GET", "/api/importacoes/formatos"): Caso(lambda p: "/api/importacoes/formatos", publico=True,
                                                aceita=frozenset({200}), verificar=_sem_marca),
     ("POST", "/api/importacoes"): Caso(
         lambda p: "/api/importacoes", lambda p: {"arquivo_id": p.item_b["id"], "formato": "geojson"}
