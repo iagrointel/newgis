@@ -49,6 +49,7 @@ from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
 from app.rede_utilidades.rotas_controladores import router as rotas_rede_controladores
+from app.rede_utilidades.rotas_resultados import router as rotas_rede_resultados
 from app.rede_utilidades.rotas_resumos import router as rotas_rede_resumos
 from app.rede_utilidades.rotas_simples import router as rotas_rede_simples
 from app.rede_utilidades.rotas_subredes import router as rotas_rede_subredes
@@ -130,6 +131,9 @@ ROUTERS = [
     # --- configuração de traçado (L4-02-e): /api/rede/{rede_id}/config_tracado (CRUD) e o campo `config_id`
     # do POST /api/rede/{rede_id}/tracar, que faz o traçado ler o pedido salvo em vez do corpo
     rotas_rede_config_tracado,
+    # --- resultado do traçado (L4-02-f): /api/rede/{rede_id}/tracar/{exportar,camada} e o histórico em
+    # /api/rede/{rede_id}/tracados (+ .../{execucao_id}/repetir)
+    rotas_rede_resultados,
     # --- rede simples (L4-18): /api/rede/simples (cria a partir de 2 camadas do inquilino),
     # /api/rede/{rede_id}/simples (a configuração) e /api/rede/{rede_id}/promover (pacote mínimo)
     rotas_rede_simples,

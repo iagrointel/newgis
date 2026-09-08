@@ -164,6 +164,14 @@ class TracadoResultado(BaseModel):
     duracao_ms: int
 
 
+# --- resultado do traçado: camada, exportação e histórico (item L4-02-f-resultados-e-exportacao) ---------
+
+class CamadaDoTracadoEntrada(TracadoEntrada):
+    """O mesmo pedido de traçado mais o TÍTULO da camada que vai guardar o resultado. Herda de
+    `TracadoEntrada` de propósito: salvar como camada é traçar e guardar, nunca um pedido diferente."""
+    titulo: str = Field(min_length=1, max_length=250)
+
+
 class TopoArestaModelo(BaseModel):
     id: str
     grupo_id: str
