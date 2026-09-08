@@ -326,3 +326,19 @@ plat-idioma select.controle { width: auto; padding: var(--e1) var(--e2); font-si
 .publica #incluido h2 { margin: 0; }
 .publica .ficha-item h2 { margin-bottom: var(--e2); text-transform: none; letter-spacing: normal; font-size: var(--t2); }  /* título do item é conteúdo, não rótulo de seção */
 @media (max-width: 800px) { .publica-topo { padding: var(--e2) var(--e3); } .publica-rodape { padding: var(--e2) var(--e3); } }
+
+/* ---------- administração (/admin, UX-06): grade de cartões e aviso de evento registrado ---------- */
+.admin-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--e3); margin-bottom: var(--e5); }
+.admin-cartao { display: grid; gap: var(--e1); background: var(--painel); border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); padding: var(--e3) var(--e4); color: var(--texto); text-decoration: none; min-height: 7rem; }
+.admin-cartao:hover, .admin-cartao:focus-visible { border-color: var(--acento); }
+.admin-cartao-titulo { font-family: var(--titulo); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; font-size: var(--t-1); color: var(--fraco); }
+.admin-cartao-numero { font-family: var(--mono); font-size: var(--t3); line-height: var(--linha-justa); }
+.admin-cartao-apoio { color: var(--fraco); font-size: var(--t-1); overflow-wrap: anywhere; }
+.admin-cartao.negado, .admin-cartao.erro { border-style: dashed; }
+.admin-cartao.erro .admin-cartao-numero { color: var(--falha); font-size: var(--t1); }
+.admin-cartao.negado .admin-cartao-numero { color: var(--fraco); font-size: var(--t1); }
+.evento-registrado { color: var(--fraco); font-size: var(--t-1); margin: 0 0 var(--e3); }
+.ficha-acervo { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--e1) var(--e3); }
+.ficha-acervo dt { color: var(--fraco); font-size: var(--t-1); }
+.ficha-acervo dd { margin: 0; overflow-wrap: anywhere; }
+.ldap-mapa { display: grid; gap: var(--e1); }

@@ -14,6 +14,8 @@ PAGINAS = {
     # --- identidade (L0-02)
     "/entrar": "login.html",
     "/conta": "conta.html",
+    "/admin": "admin/index.html",
+    "/admin/acervo": "admin/acervo.html",
     "/admin/usuarios": "admin/usuarios.html",
     "/admin/grupos": "admin/grupos.html",
     "/admin/papeis": "admin/papeis.html",

@@ -173,6 +173,28 @@ def _metodo_na_instrucao(trecho: str) -> str | None:
     return None
 
 
+def _metodo_antes_do_literal(linha: str, bruto: str) -> str | None:
+    """método da chamada `nome(` que fica imediatamente antes do literal na mesma linha (o trecho entre o último
+    nome de chamada e o literal); None quando o literal não é precedido por um nome conhecido."""
+    pos = linha.find(bruto)
+    if pos < 0:
+        return None
+    antes = linha[:pos]
+    ultimo, metodo_ultimo = -1, None
+    for nome, metodo in (("remendar(", "PATCH"), ("obter(", "GET"), ("enviar(", "POST"), ("alterar(", "PUT"),
+                         ("apagar(", "DELETE"), ("EventSource(", "GET"), ("fetch(", "GET")):
+        i = antes.rfind(nome)
+        if i > ultimo:
+            ultimo, metodo_ultimo = i, metodo
+    m = None
+    padrao = r"\b(?:chamar|chamarBase|enviarBruto|fetchJson)\(\s*['\"](GET|POST|PUT|PATCH|DELETE)['\"]"
+    for m2 in re.finditer(padrao, antes):
+        m = m2
+    if m and m.start() > ultimo:
+        return m.group(1)
+    return metodo_ultimo
+
+
 def _normalizar_template(t: str, apelidos: dict[str, str]) -> str:
     def troca(m):
         expr = m.group(1).strip()
@@ -254,7 +276,9 @@ def chamadas(arquivos: list[Path]) -> list[dict]:
                 url = _normalizar_template(bruto, apelidos)
                 if not url.startswith(PREFIXOS_URL):
                     continue
-                metodo = _metodo_na_instrucao(linha)
+                # uma linha pode ter mais de uma chamada (`novo ? enviar('/x') : alterar(`/x/${id}`)`): o método é o
+                # da chamada mais próxima ANTES do literal, não o primeiro nome que aparece na linha
+                metodo = _metodo_antes_do_literal(linha, bruto) or _metodo_na_instrucao(linha)
                 if not metodo and re.match(r"\s*[`'\"]", linha):
                     # linha de continuação de uma chamada aberta acima (só o argumento): o método está antes
                     metodo = _metodo_na_instrucao(" ".join(linhas[max(0, i - 2): i]))

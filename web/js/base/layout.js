@@ -13,6 +13,8 @@ export const TELAS = [
   { caminho: '/conexoes', chave: 'nav.conexoes' },
   { caminho: '/uploads', chave: 'nav.uploads', privilegio: 'conteudo.criar' },
   { caminho: '/conta', chave: 'nav.conta' },
+  // administração (UX-06): entra com QUALQUER um dos privilégios administrativos (qualquer = lista "ou")
+  { caminho: '/admin', chave: 'nav.admin', qualquer: ['membros.ver', 'papeis.gerir', 'tokens.gerir_todos', 'org.log_ver', 'org.configurar', 'org.integracoes'] },
   { caminho: '/admin/usuarios', chave: 'nav.usuarios', privilegio: 'membros.ver' },
   { caminho: '/admin/grupos', chave: 'nav.grupos' },
   { caminho: '/tarefas', chave: 'nav.tarefas', privilegio: 'jobs.executar' },
@@ -20,11 +22,15 @@ export const TELAS = [
   { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar' },
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver' },
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
+  { caminho: '/admin/acervo', chave: 'nav.acervo', privilegio: 'conteudo.registrar_fonte' },
   { caminho: '/estilo-guia', chave: 'nav.estilo_guia', privilegio: 'org.configurar' },
 ];
 
 export function telasVisiveis(usuario) {
-  return TELAS.filter((tela) => !tela.privilegio || tem(tela.privilegio, usuario));
+  return TELAS.filter((tela) => {
+    if (tela.qualquer) return tela.qualquer.some((p) => tem(p, usuario));
+    return !tela.privilegio || tem(tela.privilegio, usuario);
+  });
 }
 
 export function montarLayout({ usuario, ativo = location.pathname }) {

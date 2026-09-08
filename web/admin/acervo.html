@@ -4,29 +4,29 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Grupos · plat</title>
+<title>Acervo · plat</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <script src="/static/js/base/tema_cedo.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="tela">
+<body class="tela acervo">
 <a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
 <div class="app">
   <aside id="lateral" class="lateral"></aside>
   <main id="principal" class="principal" tabindex="-1">
-    <h1 data-i18n="grupos.titulo">Grupos</h1>
+    <h1 data-i18n="acervo.titulo">Acervo da casa</h1>
     <div class="linha-ferramentas" id="ferramentas"></div>
+    <p class="aviso-beta" data-i18n="app.beta">análise / beta privado</p>
+    <p class="fraco" data-i18n="acervo.ajuda">fontes de dado com licença escrita e ficha de procedência; "adicionar ao catálogo" cria um item deste inquilino apontando para a fonte, com a ficha copiada</p>
     <plat-aviso id="aviso"></plat-aviso>
-    <div class="abas" role="tablist" id="abas"></div>
     <p id="evento-registrado" class="evento-registrado" hidden aria-live="polite"></p>
-    <div role="tabpanel" id="painel-lista">
-      <plat-estado id="estado" hidden></plat-estado>
-      <plat-tabela id="tabela" legenda="grupos"></plat-tabela>
-      <plat-paginacao id="paginacao"></plat-paginacao>
-    </div>
+    <div class="filtros" id="filtros"></div>
+    <plat-estado id="estado" hidden></plat-estado>
+    <plat-tabela id="tabela" legenda="fontes do acervo"></plat-tabela>
+    <plat-paginacao id="paginacao"></plat-paginacao>
   </main>
 </div>
 <plat-dialogo id="painel" modo="lateral"></plat-dialogo>
-<script type="module" src="/static/js/auth/grupos.js"></script>
+<script type="module" src="/static/js/auth/acervo.js"></script>
 </body>
 </html>
