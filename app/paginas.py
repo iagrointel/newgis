@@ -39,6 +39,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- construtor de camada por esquema (L5-31)
     "/construtor-camada": "construtor_camada.html",
+    # --- vista de camada (L5-32): filtro, campos ocultos, só leitura
+    "/vista-de-camada": "vista_camada.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
 }
