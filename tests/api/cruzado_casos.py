@@ -937,3 +937,21 @@ def _link_so_o_item(p: Preparacao, j: Any) -> None:
     assert "login" not in item["dono"] and "pode_editar" not in item and item["id"] == p.item_b["id"]
     for marca in (p.usuario_b["login"], p.grupo_b["nome"], p.papel_b["nome"], p.token_b["prefixo"], "demo2"):
         assert marca not in str(j), marca
+
+
+# ---- L7-11-c-telemetria-opcional: rotas de INSTALAÇÃO (superadmin, sessão só): para o admin de A e para o token
+# a resposta é 404 (a rota não se confirma a quem não é superadmin, ADR 0002 §10) — dentro do padrão {401,403,404}.
+# `receber` é pública por CHAVE de appliance: sem cabeçalho = 401 nas 4 chamadas, nada gravado.
+CASOS.update({
+    ("GET", "/api/telemetria"): Caso(lambda p: "/api/telemetria"),
+    ("PUT", "/api/telemetria"): Caso(lambda p: "/api/telemetria", lambda p: {"ligada": False}),
+    ("POST", "/api/telemetria/enviar"): Caso(lambda p: "/api/telemetria/enviar"),
+    ("GET", "/api/telemetria/appliances"): Caso(lambda p: "/api/telemetria/appliances"),
+    ("POST", "/api/telemetria/appliances"): Caso(
+        lambda p: "/api/telemetria/appliances", lambda p: {"chave": "0123456789abcdef0123456789abcdef", "nome": "x"},
+    ),
+    ("DELETE", "/api/telemetria/appliances/{chave}"): Caso(lambda p: "/api/telemetria/appliances/0123456789abcdef"),
+    ("POST", "/api/telemetria/receber"): Caso(
+        lambda p: "/api/telemetria/receber", lambda p: {"esquema": 1}, publico=True, aceita=frozenset({401}),
+    ),
+})
