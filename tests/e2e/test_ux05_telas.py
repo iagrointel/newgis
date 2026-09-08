@@ -135,7 +135,7 @@ def test_conexoes_criar_editar_ordenar_apagar_e_estados(page, base_url, credenci
         page.click("#conexao-form button[type=submit]")
         page.wait_for_selector("#conexao-form [data-campo='nome'] .erro-campo")
         assert "409" not in (page.text_content("#conexao-form [data-campo='nome'] .erro-campo") or "")
-        page.click("#conexao-form button:not([type=submit])")
+        page.click("#conexao-form .botoes button[type=button]")  # cancelar (o "mostrar" da credencial também é button)
         page.wait_for_selector("#conexao-form-caixa[hidden]", state="attached")
 
         # editar: tipo travado, nome muda, PATCH volta na linha
