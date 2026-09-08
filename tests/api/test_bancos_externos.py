@@ -9,7 +9,8 @@ sem LIMIT em tabela de 100 mi de linhas".
 Fixture: o mesmo docker de `test_pgfdw.py` (127.0.0.1:55499, banco `amostra_aberta`) acrescido de
 `public.sedes_municipais` (PostGIS, Point 4674, 1.000 linhas) e `public.tabela_grande` (2.000.000 linhas —
 o "100 mi" da refutação é recusado antes de qualquer conexão, então o tamanho real da tabela só importa para
-medir o custo do que PASSA pelo validador). Sem o container os testes são pulados, nunca reprovam.
+medir o custo do que PASSA pelo validador; criação em `tests/api/dados_bancos_externos_amostra.sql`). Sem o
+container os testes são pulados, nunca reprovam.
 SQL Server e Oracle: sem container liberado, ficam PENDENTES (registrado na ADR e no handoff)."""
 
 from __future__ import annotations
