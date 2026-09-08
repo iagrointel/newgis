@@ -48,6 +48,7 @@ from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_epanet import router as rotas_rede_epanet
+from app.rede_utilidades.rotas_gas_esgoto import router as rotas_rede_gas_esgoto
 from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
@@ -126,6 +127,9 @@ ROUTERS = [
     # --- EPANET .inp da rede de água (L4-05-d): POST/GET /api/rede/{rede_id}/epanet (importa por job, exporta
     # reconstruído das feições) e GET .../epanet/{importacao_id} (status do job)
     rotas_rede_epanet,
+    # --- gás e esgoto (L4-05-e): GET /api/rede/{rede_id}/esgoto/escoamento e .../gas/pressao (conferências
+    # que só leem) e POST .../teksi (GeoPackage no esquema TEKSI vira feição no vocabulário do pacote)
+    rotas_rede_gas_esgoto,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
