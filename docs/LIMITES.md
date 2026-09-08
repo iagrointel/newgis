@@ -224,3 +224,28 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `SAML_METADADO_MAX` | `524288` | metadado do IdP lido por URL/arquivo |
 | `SAML_METADADO_TIMEOUT_S` | `8.0` | leitura do metadado do IdP por URL |
 | `SAML_TRANSACAO_MIN` | `10` | validade do AuthnRequest/LogoutRequest emitido (plat.saml_transacao) |
+
+## grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
+
+| nome | valor | explicação |
+|---|---|---|
+| `ESCALA_AREA_VERTICES_MAX` | `5000` | vértices do polígono de estudo (mesma ordem de grandeza de INGESTAO_*) |
+| `ESCALA_RESOLUCAO_MIN_M` | `1.0` | — |
+| `ESCALA_RESOLUCAO_MAX_M` | `100000.0` | — |
+| `ESCALA_CELULAS_MAX` | `250000` | — |
+| `ESCALA_FATORES_MAX` | `20` | — |
+| `ESCALA_LIGACOES_MAX` | `2000000` | — |
+| `ESCALA_APROVACAO_TIPOS` | `('limiar', 'top_pct')` | — |
+| `ESCALA_NOME_MAX` | `200` | mesmo teto de CHECK(length(nome)<=200) da migração |
+| `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
+| `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
+| `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## ------------------------------------------------------------- provisionamento federado (item L0-08-e)
+
+| nome | valor | explicação |
+|---|---|---|
+| `PROVISIONAMENTO_REGRAS_MAX` | `200` | regras (valores do IdP mapeados) por provedor |
+| `PROVISIONAMENTO_GRUPOS_POR_REGRA` | `50` | grupos internos por regra |
+| `PROVISIONAMENTO_GRUPOS_IDP_MAX` | `1000` | valores do atributo de grupos lidos do IdP por login (o resto é ignorado) |
+| `PROVISIONAMENTO_VALOR_MAX` | `200` | tamanho de um valor de grupo do IdP |
