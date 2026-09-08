@@ -1070,3 +1070,31 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 29. Backtest contra decisão real (item L3-09-backtest-decisao-real)
+
+Depois de uma execução do motor multicritério, dá para perguntar o quanto o modelo concorda com escolhas que já
+aconteceram (galpões construídos, linhas existentes, agências abertas):
+
+```
+POST /api/multiescala/execucoes/{id}/backtest
+{ "escolhas_item_id": "<uuid de camada vetorial hospedada>",   // OU
+  "pontos": [{"lon": -46.5, "lat": -23.5}, ...],
+  "n_permutacoes": 1000, "semente": 0,
+  "data_decisao": "2018-06-01", "data_camada": "2026-09-01",
+  "preferencia_revelada": true }
+```
+
+A resposta traz `auc` (probabilidade de uma escolha ser mais favorável que uma não-escolha sorteada),
+`percentil_mediano` e `percentil_medio` das escolhas no ranking, o `nulo` por permutação (média e faixa de 5 % a
+95 % da AUC sorteada, e o percentil mediano do nulo), o `p_valor`, `n_escolhas`, `n_unidades`, `n_fora` (escolhas
+que não caíram em nenhuma célula) e, por fator, a preferência revelada: `evitamento` positivo (a escolha evitou o
+fator) ou negativo (procurou), com as duas frações que geraram o número. Nunca há peso na resposta.
+
+Ressalvas que vêm sempre em `ressalvas`: o backtest mede concordância com a decisão passada, não acerto futuro;
+fatores de distância se confundem entre si e com a escolha. Quando `data_camada` é mais nova que `data_decisao`,
+`anacronica` fica verdadeiro e a primeira ressalva diz por quê.
+
+Casos que a resposta nomeia em vez de esconder: com TODAS as células marcadas como escolhidas, `auc` vem `null`
+e `auc_indefinida` explica que sem não-escolhas a AUC não existe (não é 0,5 nem 1,0); com nenhuma escolha dentro
+da grade, `auc` vem `null` e `n_fora` mostra quantas ficaram de fora. Nada é gravado.
