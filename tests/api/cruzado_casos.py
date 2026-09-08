@@ -471,6 +471,14 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/plataforma/inquilinos/{id}/reativar"): Caso(
         lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/reativar"
     ),
+    # ---- L0-08-e logins/provisionamento: leitura age só no chamador; provedor/usuário de B = 404
+    ("GET", "/api/org/logins"): Caso(
+        lambda p: "/api/org/logins", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("PUT", "/api/org/logins/{tipo}/{id}"): Caso(
+        lambda p: "/api/org/logins/oidc/999999", lambda p: {"habilitado": False}
+    ),
+    ("POST", "/api/usuarios/{id}/desregistrar"): Caso(lambda p: f"/api/usuarios/{p.usuario_b['id']}/desregistrar"),
     # ---- L0-05 fila de jobs: leituras e criação agem só no chamador (RLS + filtro de dono); alvos de B = 404
     ("GET", "/api/jobs"): Caso(
         lambda p: "/api/jobs?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
