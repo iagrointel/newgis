@@ -3,6 +3,25 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item UX-07-telas-do-construtor-e-aplicativo: escolha do item, publicação, motor de widgets juntado, plat-w-*)
+
+Trilha de interface. Juntados `wt/cx506` (motor de widgets, L5-06) e `wt/cx501d` (widgets de página e menu,
+L5-01-d): os arquivos do visualizador que `cx506` carregava em cópia antiga ficaram com a versão de UX-04 e só os
+três trechos próprios do motor entraram no mapa (`<plat-w-mapa>`, `plat-mapa-enquadrar`, `mapa.extensao_alterada`).
+Os elementos dos widgets passam a `plat-w-<nome>`: `plat-tabela`, `plat-tema` e `plat-idioma` colidiam com os
+componentes do sistema de design e o `definir()` do motor silenciava a colisão. `/construtor` sem `?item=` lista
+aplicativos e painéis (busca, estados) e cria um novo; com item, a barra tem Salvar, Publicar (com confirmação;
+`POST /api/itens/{id}/versoes/{n}/publicar`), Executar e "escolher outro", com o estado de publicação e o conflito
+409 nomeado; estados de item inexistente e tipo errado; chrome do editor pelo dicionário (`construtor.*`, três
+idiomas; os rótulos da paleta ficam para L5-12). Paleta e painel lateral presos ao topo com rolagem própria — o
+arrasto pegava o item errado quando a página rolava. Árvore da estrutura conforme ARIA (linha = treeitem focável;
+Enter/Espaço selecionam). `/executar` e `/aplicativo` com estados explícitos; `/aplicativo?item=` roda um painel
+(ou a página inicial de um app) pelo motor, traduzindo o documento do editor para a grade de widgets. `widgets.css`
+só com tokens. e2e `tests/e2e/test_ux07_construtor.py` (novo app, três widgets por arrasto, publica, abre em
+/executar e em /aplicativo; configuração inválida nomeada no painel e no aplicativo; estados); suítes L5-08, L5-01-a,
+L5-06, L5-01-d e as do mapa passam contra esta árvore (o Martin da trilha precisa subir DEPOIS da bancada, como
+em UX-04). Cobertura regenerada: 239 rotas, 34 lacunas de escrita.
+
 ## turno 8, setembro de 2026 (item UX-06-tela-administracao-inquilino: porta única /admin, acervo com licença, diretório LDAP, evento registrado)
 
 Trilha de interface. `/admin` é a porta única da administração: um cartão por assunto (usuários ativos, convites

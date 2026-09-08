@@ -6,10 +6,10 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 
 | medida | valor |
 |---|---|
-| rotas (método × caminho) | 238 |
+| rotas (método × caminho) | 239 |
 | coberto | 171 |
 | sem controle | 23 |
-| sem tela | 27 |
+| sem tela | 28 |
 | externo | 1 |
 | externo sem exposição | 16 |
 | cobertas sem estado de erro perto da chamada | 4 |
@@ -112,15 +112,15 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | DELETE | `/api/importacoes/{id}` | ingestao | — | — | **sem tela** | não se aplica |
 | PUT | `/api/importacoes/{id}/confirmar` | ingestao | — | — | **sem tela** | não se aplica |
 | POST | `/api/isocrona` | rede | — | — | **sem tela** | não se aplica |
-| GET | `/api/itens` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa` | `web/js/catalogo/api.js:90`<br>`web/js/mapa/tabela.js:388` | **coberto** | com erro |
-| POST | `/api/itens` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa` | `web/js/catalogo/api.js:94`<br>`web/js/mapa/mapa.js:338` | **coberto** | com erro |
-| GET | `/api/itens/facetas` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa` | `web/js/catalogo/api.js:79`<br>`web/js/catalogo/api.js:91`<br>`web/js/catalogo/api.js:93`<br>`web/js/editor/tela.js:39`<br>`web/js/executor/executar_tela.js:25`<br>`web/js/mapa/mapa.js:380` | **coberto** | com erro |
+| GET | `/api/itens` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa` | `web/js/catalogo/api.js:90`<br>`web/js/editor/tela.js:62`<br>`web/js/mapa/tabela.js:388` | **coberto** | com erro |
+| POST | `/api/itens` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa` | `web/js/catalogo/api.js:94`<br>`web/js/editor/tela.js:89`<br>`web/js/mapa/mapa.js:346` | **coberto** | com erro |
+| GET | `/api/itens/facetas` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa` | `web/js/catalogo/api.js:79`<br>`web/js/catalogo/api.js:91`<br>`web/js/catalogo/api.js:93`<br>`web/js/editor/tela.js:114`<br>`web/js/executor/executar_tela.js:33`<br>`web/js/mapa/mapa.js:388` | **coberto** | com erro |
 | POST | `/api/itens/lote` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:98` | **coberto** | com erro |
-| GET | `/api/itens/tags` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa` | `web/js/catalogo/api.js:79`<br>`web/js/catalogo/api.js:92`<br>`web/js/catalogo/api.js:93`<br>`web/js/editor/tela.js:39`<br>`web/js/executor/executar_tela.js:25`<br>`web/js/mapa/mapa.js:380` | **coberto** | com erro |
+| GET | `/api/itens/tags` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa` | `web/js/catalogo/api.js:79`<br>`web/js/catalogo/api.js:92`<br>`web/js/catalogo/api.js:93`<br>`web/js/editor/tela.js:114`<br>`web/js/executor/executar_tela.js:33`<br>`web/js/mapa/mapa.js:388` | **coberto** | com erro |
 | POST | `/api/itens/transferir` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:100` | **coberto** | com erro |
-| GET | `/api/itens/{id}` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa` | `web/js/catalogo/api.js:79`<br>`web/js/catalogo/api.js:91`<br>`web/js/catalogo/api.js:92`<br>`web/js/catalogo/api.js:93`<br>`web/js/editor/tela.js:39`<br>`web/js/executor/executar_tela.js:25`<br>`web/js/mapa/mapa.js:380` | **coberto** | com erro |
-| PUT | `/api/itens/{id}` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa` | `web/js/catalogo/api.js:95`<br>`web/js/mapa/mapa.js:337` | **coberto** | com erro |
-| PATCH | `/api/itens/{id}` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:96`<br>`web/js/editor/tela.js:68` | **coberto** | com erro |
+| GET | `/api/itens/{id}` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa` | `web/js/catalogo/api.js:79`<br>`web/js/catalogo/api.js:91`<br>`web/js/catalogo/api.js:92`<br>`web/js/catalogo/api.js:93`<br>`web/js/editor/tela.js:114`<br>`web/js/executor/executar_tela.js:33`<br>`web/js/mapa/mapa.js:388` | **coberto** | com erro |
+| PUT | `/api/itens/{id}` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa` | `web/js/catalogo/api.js:95`<br>`web/js/mapa/mapa.js:345` | **coberto** | com erro |
+| PATCH | `/api/itens/{id}` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:96`<br>`web/js/editor/tela.js:169` | **coberto** | com erro |
 | DELETE | `/api/itens/{id}` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:97` | **coberto** | com erro |
 | GET | `/api/itens/{id}/compartilhamento` | compartilhamento | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:125` | **coberto** | com erro |
 | PUT | `/api/itens/{id}/compartilhamento` | compartilhamento | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:126` | **coberto** | com erro |
@@ -140,7 +140,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/itens/{id}/usado-por` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:119` | **coberto** | com erro |
 | GET | `/api/itens/{id}/versoes` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:113` | **coberto** | com erro |
 | GET | `/api/itens/{id}/versoes/{n}` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:114` | **coberto** | com erro |
-| POST | `/api/itens/{id}/versoes/{n}/publicar` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:116` | **coberto** | com erro |
+| POST | `/api/itens/{id}/versoes/{n}/publicar` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:116`<br>`web/js/editor/tela.js:196` | **coberto** | com erro |
 | POST | `/api/itens/{id}/versoes/{n}/restaurar` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:115` | **coberto** | com erro |
 | GET | `/api/jobs` | jobs | `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/api.js:38` | **coberto** | com erro |
 | POST | `/api/jobs` | jobs | `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/api.js:40` | **coberto** | com erro |
@@ -168,10 +168,10 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | POST | `/api/mapa/camadas/{id}/selecionar` | mapa | — | — | **sem controle** | não se aplica |
 | GET | `/api/mapa/camadas/{id}/tilejson` | mapa | — | — | **sem controle** | não se aplica |
 | GET | `/api/mapa/camadas/{id}/valores` | mapa | — | — | **sem controle** | não se aplica |
-| GET | `/api/mapa/fuso` | mapa-popup | `/mapa` | `web/js/mapa/mapa.js:439` | **coberto** | com erro |
+| GET | `/api/mapa/fuso` | mapa-popup | `/mapa` | `web/js/mapa/mapa.js:453` | **coberto** | com erro |
 | POST | `/api/mapa/pacotes/importar` | mapa | — | — | **sem controle** | não se aplica |
 | POST | `/api/mapa/selecao-espacial` | mapa | — | — | **sem controle** | não se aplica |
-| POST | `/api/mapa/{mapa_id}/desenho/promover` | mapa | `/mapa` | `web/js/mapa/mapa.js:354` | **coberto** | com erro |
+| POST | `/api/mapa/{mapa_id}/desenho/promover` | mapa | `/mapa` | `web/js/mapa/mapa.js:362` | **coberto** | com erro |
 | POST | `/api/matriz` | rede | — | — | **sem tela** | não se aplica |
 | GET | `/api/multiescala/conjuntos` | multiescala | — | — | **sem tela** | não se aplica |
 | POST | `/api/multiescala/conjuntos` | multiescala | — | — | **sem tela** | não se aplica |
@@ -214,6 +214,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/privilegios` | usuarios | `/admin/papeis`, `/conta` | `web/js/auth/conta.js:426`<br>`web/js/auth/papeis.js:26` | **coberto** | com erro |
 | GET | `/api/publico/itens/{id}` | compartilhamento | — | `leitura de item público por quem recebe o link, sem sessão; a ficha do item mostra o link` | **externo sem exposição** | não se aplica |
 | GET | `/api/publico/itens/{id}/miniatura` | compartilhamento | — | `leitura de item público por quem recebe o link, sem sessão; a ficha do item mostra o link` | **externo sem exposição** | não se aplica |
+| GET | `/api/qr.svg` | utilidades | — | — | **sem tela** | não se aplica |
 | POST | `/api/reverso` | geocodificador | — | — | **sem controle** | não se aplica |
 | POST | `/api/rota` | rede | — | — | **sem tela** | não se aplica |
 | POST | `/api/senha/redefinir/aplicar` | redefinicao | `/redefinir-senha` | `web/js/auth/redefinir_senha.js:79` | **coberto** | com erro |
@@ -279,13 +280,14 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | `/conteudo/{id}` | conteudo_item.html | sim | sim | sim | sim | sim |
 | `/c/{token}` | compartilhado.html | sim | sim | sim | sim | sim |
 | `/mapa` | mapa.html | sim | sim | sim | sim | sim |
+| `/aplicativo` | aplicativo.html | sim | **não** | **não** | sim | **não** |
 | `/conexoes` | conexoes.html | sim | sim | sim | sim | sim |
 | `/aceitar-convite` | aceitar_convite.html | sim | sim | sim | sim | **não** |
 | `/redefinir-senha` | redefinir_senha.html | sim | **não** | sim | sim | **não** |
 | `/uploads` | uploads.html | sim | sim | sim | sim | sim |
 | `/estilo-guia` | estilo_guia.html | sim | sim | sim | sim | sim |
-| `/construtor` | construtor.html | sim | sim | **não** | sim | sim |
-| `/executar` | executar.html | sim | sim | **não** | sim | sim |
+| `/construtor` | construtor.html | sim | sim | sim | sim | sim |
+| `/executar` | executar.html | sim | sim | sim | sim | sim |
 | `/tarefas` | tarefas.html | sim | sim | sim | sim | sim |
 | `/tarefas/{job_id}` | tarefas.html | sim | sim | sim | sim | sim |
 
@@ -353,6 +355,11 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | UX-05-telas-conexoes-uploads-tarefas-compartilhado | parcial | `/conexoes` | página existe |
 | UX-05-telas-conexoes-uploads-tarefas-compartilhado | parcial | `/tarefas` | página existe |
 | UX-05-telas-conexoes-uploads-tarefas-compartilhado | parcial | `/uploads` | página existe |
+| UX-06-tela-administracao-inquilino | parcial | `/api/convites` | rota coberta |
+| UX-06-tela-administracao-inquilino | parcial | `/api/cotas` | rota sem tela |
+| UX-06-tela-administracao-inquilino | parcial | `/api/grupos` | rota coberta |
+| UX-06-tela-administracao-inquilino | parcial | `/api/org` | rota coberta |
+| UX-06-tela-administracao-inquilino | parcial | `/api/sso` | rota sem tela |
 | UX-10-acervo-sem-tela | parcial | `/api/acervo/{fonte_id}/adicionar` | rota coberta |
 | UX-12-categorias-sem-controle | parcial | `/api/categorias` | rota coberta |
 | UX-12-categorias-sem-controle | parcial | `/api/categorias/importar` | rota sem tela |
