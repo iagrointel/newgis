@@ -243,3 +243,11 @@ ANEXO_TAMANHO_MAX = 7 * 1024 * 1024       # 7 MiB por anexo — NÃO 10: o envio
 # tupla ordenada, não frozenset: repr() de um set não é determinístico entre execuções (docs/gerar_limites.py
 # lê repr() literal — um frozenset faria docs/LIMITES.md variar a cada regeneração sem nada ter mudado)
 ANEXO_TIPOS_PERMITIDOS = ("application/pdf", "image/gif", "image/jpeg", "image/png", "image/webp")
+
+# --- versionamento por ramo (item L2-13-a): teto de ramos ABERTOS por camada. A camada pode declarar o
+# seu próprio teto menor em `dados.versionamento.ramos_max`; este é o máximo que ela pode declarar e o
+# valor usado quando ela não declara nada. Não é um limite físico: cada ramo aberto acrescenta uma perna
+# ao UNION de nada (a leitura consulta UM ramo por vez), mas cada ramo aberto é uma reconciliação a
+# fazer, e um número redondo declarado vale mais que um teto implícito descoberto quando dói.
+VERSOES_POR_CAMADA_MAX = 50
+VERSAO_NOME_MAX = 128

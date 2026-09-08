@@ -43,6 +43,8 @@ from app.consulta import cors_servicos
 from app.consulta.rotas_diretorio import router as rotas_diretorio_esri
 from app.consulta.rotas_ogc_features import router as rotas_ogc_features
 from app.consulta.rotas_edicao_esri import router as rotas_edicao_esri
+from app.versionamento.rotas import router as rotas_versionamento
+from app.versionamento.rotas_esri import router as rotas_versionamento_esri
 from app.consulta.rotas_query import router as rotas_consulta_esri
 from app.consulta.rotas_servico import router as rotas_consulta_servico
 from app.consulta.rotas_wfs import router as rotas_wfs
@@ -156,6 +158,10 @@ ROUTERS = [
     # --- escrita compatível Esri (L2-04-d): applyEdits/addFeatures/updateFeatures/deleteFeatures, calculate,
     # anexos e uploads sobre a MESMA porta de escrita do L2-03-a
     rotas_edicao_esri,
+    # --- versionamento por ramo (L2-13-a): API própria (/api/camadas/{id}/versoes...) e o
+    # VersionManagementServer compatível com a Esri sobre as MESMAS funções
+    rotas_versionamento,
+    rotas_versionamento_esri,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

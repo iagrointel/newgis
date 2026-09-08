@@ -440,6 +440,14 @@ def _processar_lista(cur, lista: list, aplicar, modo: str, prefixo: str) -> tupl
 
 
 def aplicar_edicoes(cur, request: Request, auth: Auth, camada_id: str, corpo: EdicoesEntrada) -> EdicoesSaida:
+    if corpo.versao:
+        # edição dentro de um ramo de versão (item L2-13-a): a linha vai para a tabela companheira do
+        # ramo, não para a do padrão. O desvio fica AQUI, na porta única de escrita, para valer também
+        # para o applyEdits do FeatureServer, para o OGC e para o calculate — nenhum deles precisa saber
+        # que ramo existe. Importação local: `app.versionamento.edicao` reaproveita este módulo.
+        from app.versionamento.edicao import aplicar_edicoes_no_ramo  # noqa: PLC0415
+
+        return aplicar_edicoes_no_ramo(cur, request, auth, camada_id, corpo)
     item, dados = camada_ou_404(cur, camada_id)
     exigir_camada_editavel(auth, dados)
 

@@ -41,6 +41,7 @@ from app.consulta.rotas_query import _autenticar, _parametros
 from app.edicao import anexos as anexos_mod
 from app.edicao.modelos import EdicoesEntrada
 from app.edicao.servico import _schema_tabela, aplicar_edicoes, camada_ou_404
+from app.versionamento import consulta as versao_consulta
 from app.erros import ErroAPI
 from app.expressao.avaliador_py import ErroExpressao, avaliar_texto
 from app.varredura_conteudo import ConteudoRecusado, escanear_cabecalho
@@ -125,9 +126,14 @@ def _marcar_origem(cur) -> None:
 
 
 # ---------------------------------------------------------------- resolução de alvo (objectId/globalId)
-def _alvo(cur, schema: str, tabela: str, entrada: Any, usar_globalid: bool) -> dict:
+def _alvo(cur, schema: str, tabela: str, entrada: Any, usar_globalid: bool,
+          origem: tuple[str | None, list] = (None, [])) -> dict:
     """Localiza a feição citada pelo cliente e devolve `{fid, globalid, versao}`. `entrada` é o objeto de
-    feição (com `attributes`) ou o identificador cru (lista de `deletes`)."""
+    feição (com `attributes`) ou o identificador cru (lista de `deletes`).
+
+    `origem` troca a tabela do padrão pela relação de um RAMO (item L2-13-a): sem isso, um `objectId`
+    de feição criada dentro do ramo não seria encontrado, e um `objectId` já apagado no ramo continuaria
+    sendo resolvido pelo padrão — os dois casos escreveriam a coisa errada em silêncio."""
     if isinstance(entrada, dict):
         atributos = entrada.get("attributes") or {}
         gid = entrada.get("globalId") or tr.valor_por_nome(atributos, tr.NOMES_GLOBALID)
@@ -148,7 +154,9 @@ def _alvo(cur, schema: str, tabela: str, entrada: Any, usar_globalid: bool) -> d
             chave, valor = "fid = %s", int(oid)
         except (ValueError, TypeError) as e:
             raise ErroAPI(400, "objectid_invalido", f"objectId não é inteiro: {oid!r}") from e
-    cur.execute(f'SELECT fid, globalid, versao FROM "{schema}"."{tabela}" WHERE {chave}', (valor,))
+    origem_sql, origem_params = origem
+    relacao = origem_sql or f'"{schema}"."{tabela}"'
+    cur.execute(f"SELECT fid, globalid, versao FROM {relacao} WHERE {chave}", [*origem_params, valor])
     linha = cur.fetchone()
     if linha is None:
         raise ErroAPI(404, "feicao_inexistente", "feição inexistente nesta camada", {"alvo": str(valor)})
@@ -180,6 +188,11 @@ def _aplicar(cur, request: Request, auth, item_id: str, edits: dict, opcoes: dic
     schema, tabela = _schema_tabela(dados)
     srid_camada = int(dados["srid"])
     usar_globalid = _bool(opcoes.get("useGlobalIds"), False)
+    # gdbVersion: a mesma edição, escrita no ramo em vez do padrão (item L2-13-a). A resolução de alvo
+    # passa a ler a relação do ramo, e a porta única de escrita recebe o ramo em `versao`.
+    gdb = opcoes.get("gdbVersion")
+    origem = versao_consulta.origem(cur, item_id, dados, auth, gdb, None)
+    ramo = gdb if origem[0] else None
 
     adds = edits.get("adds") or []
     updates = edits.get("updates") or []
@@ -217,7 +230,7 @@ def _aplicar(cur, request: Request, auth, item_id: str, edits: dict, opcoes: dic
         try:
             if not isinstance(feicao, dict):
                 raise ErroAPI(400, "feicao_invalida", "cada item de updates precisa ser um objeto")
-            alvo = _alvo(cur, schema, tabela, feicao, usar_globalid)
+            alvo = _alvo(cur, schema, tabela, feicao, usar_globalid, origem)
             geometria = _geometria_da_feicao(cur, feicao, srid_camada, crs)
             corpo["atualizar"].append({
                 "id": alvo["globalid"], "versao": alvo["versao"],
@@ -231,7 +244,7 @@ def _aplicar(cur, request: Request, auth, item_id: str, edits: dict, opcoes: dic
 
     for i, entrada in enumerate(deletes):
         try:
-            alvo = _alvo(cur, schema, tabela, entrada, usar_globalid)
+            alvo = _alvo(cur, schema, tabela, entrada, usar_globalid, origem)
             corpo["apagar"].append({"id": alvo["globalid"], "versao": alvo["versao"]})
             alvos["apagar"].append(alvo)
             mapa["apagar"].append(i)
@@ -242,6 +255,7 @@ def _aplicar(cur, request: Request, auth, item_id: str, edits: dict, opcoes: dic
         modo="parcial",  # o tudo-ou-nada do protocolo Esri é o SAVEPOINT de fora, ver `_com_rollback`
         crs={"srid": crs["srid"]} if crs.get("srid") else None,
         adicionar=corpo["adicionar"], atualizar=corpo["atualizar"], apagar=corpo["apagar"],
+        versao=ramo,
     )
     resultado = aplicar_edicoes(cur, request, auth, item_id, entrada_casa)
 

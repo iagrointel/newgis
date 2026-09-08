@@ -182,10 +182,6 @@ def _clausula_where(p: PedidoQuery, colunas_sql: dict) -> tuple[list, list]:
     params: list = []
     if p.sqlFormat and p.sqlFormat != "standard":
         raise ErroAPI(422, "sqlformat_fora", "sqlFormat só suporta 'standard' (dialeto nativo do banco é recusado)")
-    if p.gdbVersion and p.gdbVersion not in ("SDE.DEFAULT", "DEFAULT"):
-        raise ErroAPI(422, "gdbversion_fora", "camada não versionada: só SDE.DEFAULT é aceito")
-    if p.historicMoment:
-        raise ErroAPI(422, "historicmoment_fora", "camada sem arquivo histórico (branch versioning); ver L2-03-d")
     if p.time:
         raise ErroAPI(422, "time_fora", "camada sem timeInfo configurado nesta implementação")
     if p.where and p.where.strip() not in ("1=1", ""):
@@ -265,10 +261,17 @@ def _clausula_fulltext(p: PedidoQuery, meta: list[dict]) -> tuple[str | None, li
     return "(" + " OR ".join(partes) + ")", params
 
 
-def preparar_pedido(p: PedidoQuery, meta: list[dict], srid_nativo: int) -> dict:
+def preparar_pedido(
+    p: PedidoQuery, meta: list[dict], srid_nativo: int, origem_sql: str | None = None,
+    origem_params: list | None = None,
+) -> dict:
     """Monta as peças SQL comuns a todos os modos (where, filtro espacial, fullText, lista branca,
     outFields) — chamado uma vez por pedido; os modos (feições/contagem/ids/extensão/estatísticas)
-    reaproveitam o resultado."""
+    reaproveitam o resultado.
+
+    `origem_sql` troca a tabela física por outra relação com as MESMAS colunas: é assim que
+    `gdbVersion` (ler dentro de um ramo) e `historicMoment` (ler o padrão como estava) entram, sem que
+    nenhum dos modos precise saber que versionamento existe (item L2-13-a, app/versionamento/leitura.py)."""
     colunas_sql = campos_mod.lista_branca(meta)
     clausulas, params = _clausula_where(p, colunas_sql)
     esp_sql, esp_params = _clausula_espacial(p, srid_nativo)
@@ -280,17 +283,34 @@ def preparar_pedido(p: PedidoQuery, meta: list[dict], srid_nativo: int) -> dict:
         clausulas.append(ft_sql)
         params += ft_params
     where_final = " AND ".join(f"({c})" for c in clausulas) if clausulas else "TRUE"
-    return {"colunas_sql": colunas_sql, "where_sql": where_final, "where_params": params}
+    return {
+        "colunas_sql": colunas_sql, "where_sql": where_final, "where_params": params,
+        "origem_sql": origem_sql, "origem_params": list(origem_params or []),
+    }
+
+
+def _origem(schema: str, tabela: str, prep: dict) -> str:
+    """Relação que a consulta lê: a tabela da camada, ou a relação versionada montada por
+    `app.versionamento.leitura` quando o pedido traz `gdbVersion`/`historicMoment`."""
+    return prep.get("origem_sql") or f'"{schema}"."{tabela}"'
+
+
+def _origem_params(prep: dict) -> list:
+    return list(prep.get("origem_params") or [])
 
 
 def executar_count(cur, schema: str, tabela: str, prep: dict) -> ResultadoCount:
-    cur.execute(f'SELECT count(*) AS n FROM "{schema}"."{tabela}" WHERE {prep["where_sql"]}', prep["where_params"])
+    cur.execute(
+        f'SELECT count(*) AS n FROM {_origem(schema, tabela, prep)} WHERE {prep["where_sql"]}',
+        [*_origem_params(prep), *prep["where_params"]],
+    )
     return ResultadoCount(count=int(cur.fetchone()["n"]))
 
 
 def executar_ids(cur, schema: str, tabela: str, prep: dict) -> ResultadoIds:
-    sql = f'SELECT fid FROM "{schema}"."{tabela}" WHERE {prep["where_sql"]} ORDER BY fid LIMIT %s'
-    cur.execute(sql, [*prep["where_params"], MAX_IDS_SEM_LIMITE + 1])
+    sql = (f'SELECT fid FROM {_origem(schema, tabela, prep)} WHERE {prep["where_sql"]} '
+           f"ORDER BY fid LIMIT %s")
+    cur.execute(sql, [*_origem_params(prep), *prep["where_params"], MAX_IDS_SEM_LIMITE + 1])
     linhas = cur.fetchall()
     if len(linhas) > MAX_IDS_SEM_LIMITE:
         raise ErroAPI(413, "resultado_grande_demais", f"mais de {MAX_IDS_SEM_LIMITE} ids; filtre mais")
@@ -300,8 +320,8 @@ def executar_ids(cur, schema: str, tabela: str, prep: dict) -> ResultadoIds:
 def executar_extent(cur, schema: str, tabela: str, prep: dict, srid_saida: int, com_count: bool) -> ResultadoExtent:
     cur.execute(
         f'SELECT ST_Extent(ST_Transform(geom, %s)) AS ext, count(*) AS n '
-        f'FROM "{schema}"."{tabela}" WHERE {prep["where_sql"]}',
-        [srid_saida, *prep["where_params"]],
+        f'FROM {_origem(schema, tabela, prep)} WHERE {prep["where_sql"]}',
+        [srid_saida, *_origem_params(prep), *prep["where_params"]],
     )
     r = cur.fetchone()
     extent = None
@@ -372,8 +392,8 @@ def executar_estatisticas(
     selects, grupos_sql, info = _outstatistics_sql(
         p.outStatistics, p.groupByFieldsForStatistics, prep["colunas_sql"]
     )
-    sql = f'SELECT {", ".join(selects)} FROM "{schema}"."{tabela}" WHERE {prep["where_sql"]}'
-    params = list(prep["where_params"])
+    sql = f'SELECT {", ".join(selects)} FROM {_origem(schema, tabela, prep)} WHERE {prep["where_sql"]}'
+    params = [*_origem_params(prep), *prep["where_params"]]
     if grupos_sql:
         sql += " GROUP BY " + ", ".join(str(i + 1) for i in range(len(grupos_sql)))
     if p.havingClause:
@@ -463,13 +483,14 @@ def executar_features(cur, schema: str, tabela: str, prep: dict, p: PedidoQuery,
         select_parts.append(cent_expr)
         if srid_saida != srid_nativo:
             select_params.append(srid_saida)
-    sql = f'SELECT {distinct}{", ".join(select_parts)} FROM "{schema}"."{tabela}" WHERE {where_sql}'
+    sql = (f'SELECT {distinct}{", ".join(select_parts)} '
+           f'FROM {_origem(schema, tabela, prep)} WHERE {where_sql}')
     if not p.returnDistinctValues:
         sql += f" {order_clause}"
     sql += " LIMIT %s OFFSET %s"
     limite = max_rec + 1
     offset = int(p.resultOffset or 0)
-    cur.execute(sql, [*select_params, *params, limite, offset])
+    cur.execute(sql, [*select_params, *_origem_params(prep), *params, limite, offset])
     linhas = cur.fetchall()
     excedeu = len(linhas) > max_rec
     linhas = linhas[:max_rec]
