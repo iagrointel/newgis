@@ -9227,6 +9227,216 @@
     "x-privilegio": "conteudo.registrar_fonte"
    }
   },
+  "/api/conexoes/{id}/tabelas": {
+   "get": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Tabelas Externas",
+    "description": "Lista as tabelas base do schema `schema_remoto` do Postgres do cliente (via `pg_catalog`, nunca\ncopiando dado). Conexão fora do ar vira 503 `fonte_indisponivel` (a conexão em si continua registrada;\nnada é apagado).",
+    "operationId": "tabelas_externas_api_conexoes__id__tabelas_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "schema_remoto",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "public",
+       "title": "Schema Remoto"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TabelasExternasSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/conexoes/{id}/publicar-em-massa": {
+   "post": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Publicar Em Massa",
+    "description": "\"Bulk publish\" (Esri) / criar N \"stores\" (GeoServer) de uma vez: uma camada `camada_vetorial`\nREFERENCIADA por tabela pedida, sem copiar dado — cada uma vira `FOREIGN TABLE` + `VIEW` (com\n`tenant_id`/predicado equivalente a RLS; `plat.conexao_fdw_publicar`, migração 20260907T0148) e um item de\ncatálogo. Nome de tabela é validado por identificador ANTES de qualquer SQL (o adversário do item injeta\nno nome da tabela); se a fonte cair NO MEIO do lote, as tabelas já publicadas ficam no catálogo e as\nrestantes voltam com `erro: \"fonte_indisponivel:...\"` no item da lista — a chamada inteira nunca vira 503\nsozinha quando pelo menos uma tabela já foi confirmada (o 503 do portão é para quando a fonte já está fora\ndo ar ANTES de qualquer publicação, ver `tabelas_externas` acima e o teste `test_pgfdw.py`).",
+    "operationId": "publicar_em_massa_api_conexoes__id__publicar_em_massa_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PublicarEmMassaEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PublicarEmMassaSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.registrar_fonte"
+   }
+  },
+  "/api/conexoes/{id}/camadas": {
+   "get": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Camadas Da Conexao",
+    "description": "Camadas de catálogo publicadas a partir desta conexão, com o estado da FONTE (não do item) calculado\nda última verificação de saúde — a camada em si NUNCA some daqui: \"fonte_indisponivel\" é o estado, não um\napagamento (portão: \"a camada continua no catálogo com estado 'fonte indisponível'\").",
+    "operationId": "camadas_da_conexao_api_conexoes__id__camadas_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CamadaDaConexaoSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/conexoes/{id}/consulta": {
+   "post": {
+    "tags": [
+     "conexoes"
+    ],
+    "summary": "Consulta Sql Externa",
+    "description": "Consulta SQL do cliente no banco externo dele (item L6-02-j; \"query layer\"): só SELECT, tabelas da lista\nque a própria conexão enxerga, LIMIT obrigatório, conexão só-leitura com statement_timeout; tempo medido.\nRecusa (422) ANTES de tocar o banco para tudo que não é leitura com limite.",
+    "operationId": "consulta_sql_externa_api_conexoes__id__consulta_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConsultaSqlEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConsultaSqlSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/arquivos/_varredura": {
    "get": {
     "tags": [
@@ -11713,6 +11923,57 @@
     ],
     "title": "AmostrasResultado"
    },
+   "CamadaDaConexaoItem": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "titulo": {
+      "type": "string",
+      "title": "Titulo"
+     },
+     "schema_tabela": {
+      "type": "string",
+      "title": "Schema Tabela"
+     },
+     "tabela": {
+      "type": "string",
+      "title": "Tabela"
+     },
+     "estado_fonte": {
+      "type": "string",
+      "title": "Estado Fonte"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "titulo",
+     "schema_tabela",
+     "tabela",
+     "estado_fonte"
+    ],
+    "title": "CamadaDaConexaoItem"
+   },
+   "CamadaDaConexaoSaida": {
+    "properties": {
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/CamadaDaConexaoItem"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "itens"
+    ],
+    "title": "CamadaDaConexaoSaida"
+   },
    "CategoriaNo": {
     "properties": {
      "id": {
@@ -12560,6 +12821,79 @@
      "itens"
     ],
     "title": "ConjuntoPagina"
+   },
+   "ConsultaSqlEntrada": {
+    "properties": {
+     "sql": {
+      "type": "string",
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Sql"
+     },
+     "schema_remoto": {
+      "type": "string",
+      "maxLength": 63,
+      "minLength": 1,
+      "title": "Schema Remoto",
+      "default": "public"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "sql"
+    ],
+    "title": "ConsultaSqlEntrada",
+    "description": "consulta SQL do cliente sobre o banco externo dele (L6-02-j): só SELECT, LIMIT obrigatório."
+   },
+   "ConsultaSqlSaida": {
+    "properties": {
+     "colunas": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Colunas"
+     },
+     "linhas": {
+      "items": {
+       "items": {},
+       "type": "array"
+      },
+      "type": "array",
+      "title": "Linhas"
+     },
+     "n": {
+      "type": "integer",
+      "title": "N"
+     },
+     "limite": {
+      "type": "integer",
+      "title": "Limite"
+     },
+     "tabelas": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Tabelas"
+     },
+     "tempo_ms": {
+      "type": "integer",
+      "title": "Tempo Ms"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "colunas",
+     "linhas",
+     "n",
+     "limite",
+     "tabelas",
+     "tempo_ms"
+    ],
+    "title": "ConsultaSqlSaida"
    },
    "Convite": {
     "properties": {
@@ -16424,6 +16758,90 @@
     "type": "object",
     "title": "PublicarCamadaEntrada"
    },
+   "PublicarEmMassaEntrada": {
+    "properties": {
+     "tabelas": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 50,
+      "minItems": 1,
+      "title": "Tabelas"
+     },
+     "schema_remoto": {
+      "type": "string",
+      "maxLength": 63,
+      "minLength": 1,
+      "title": "Schema Remoto",
+      "default": "public"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "tabelas"
+    ],
+    "title": "PublicarEmMassaEntrada"
+   },
+   "PublicarEmMassaItemSaida": {
+    "properties": {
+     "tabela": {
+      "type": "string",
+      "title": "Tabela"
+     },
+     "ok": {
+      "type": "boolean",
+      "title": "Ok"
+     },
+     "item_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Item Id"
+     },
+     "erro": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Erro"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "tabela",
+     "ok"
+    ],
+    "title": "PublicarEmMassaItemSaida"
+   },
+   "PublicarEmMassaSaida": {
+    "properties": {
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/PublicarEmMassaItemSaida"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "itens"
+    ],
+    "title": "PublicarEmMassaSaida"
+   },
    "RedefinicaoAplicada": {
     "properties": {
      "ok": {
@@ -17017,6 +17435,91 @@
      "atual"
     ],
     "title": "Sessao"
+   },
+   "TabelaExterna": {
+    "properties": {
+     "tabela": {
+      "type": "string",
+      "title": "Tabela"
+     },
+     "n_colunas": {
+      "type": "integer",
+      "title": "N Colunas"
+     },
+     "comentario": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Comentario"
+     },
+     "geometria_coluna": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Geometria Coluna"
+     },
+     "geometria_tipo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Geometria Tipo"
+     },
+     "srid": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Srid"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "tabela",
+     "n_colunas"
+    ],
+    "title": "TabelaExterna"
+   },
+   "TabelasExternasSaida": {
+    "properties": {
+     "schema_remoto": {
+      "type": "string",
+      "title": "Schema Remoto"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/TabelaExterna"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "schema_remoto",
+     "itens"
+    ],
+    "title": "TabelasExternasSaida"
    },
    "TipoItem": {
     "properties": {
