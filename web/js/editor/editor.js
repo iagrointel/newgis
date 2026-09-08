@@ -23,7 +23,9 @@ import { ligarOrigemPaleta, ligarOrigemNo, ligarAlvo, ligarRedimensionar } from 
 
 const VAO_PADRAO = 8; // px; casa com --e2 usado no gap da grade em web/estilo/editor.css
 
-export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta, aoMudar = null }) {
+export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta, aoMudar = null, extensaoPropriedades = null }) {
+  /* `extensaoPropriedades({ no, raiz, api })` (item L5-01-e): quem monta o editor pendura painéis próprios no fim
+     das propriedades do nó selecionado — o construtor de app põe aqui o painel "Ações" do widget. */
   for (const [tipo, def] of Object.entries(paleta.tipos)) {
     const fora = conferirSuportado(def.esquema);
     if (fora.length) throw new Error(`esquema do tipo ${tipo} usa palavra não suportada pelo painel: ${fora.join(', ')}`);
@@ -227,7 +229,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
     for (const { no: outro, nivel } of doc.emProfundidade(documentoAtual)) {
       if (!paleta.tipos[outro.tipo]?.aceita_filhos) continue;
       if (outro.id === no.id || doc.ehDescendente(documentoAtual, outro.id, no.id)) continue;
-      opcoes.push(h('option', { value: outro.id }, `${'— '.repeat(nivel)}${paleta.tipos[outro.tipo].rotulo}: ${resumoDe(outro)}`));
+      opcoes.push(h('option', { value: outro.id }, `${'— '.repeat(nivel)}${(paleta.tipos[outro.tipo] || { rotulo: outro.tipo }).rotulo}: ${resumoDe(outro)}`));
     }
     const sel = h('select', { dataset: { moverPara: no.id }, 'aria-label': 'Mover para' }, ...opcoes);
     sel.value = no.pai ?? '';
@@ -273,7 +275,8 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
     limpar(elProps);
     const no = selecionado ? doc.acharNo(documentoAtual, selecionado) : null;
     if (!no) { elProps.append(h('p', { class: 'vazio' }, 'selecione um item na tela ou na estrutura')); return; }
-    const def = paleta.tipos[no.tipo];
+    // tipo fora da paleta (widget do motor L5-06 gravado por outro construtor): painel só com largura e extensões
+    const def = paleta.tipos[no.tipo] || { rotulo: no.tipo, esquema: {} };
     elProps.append(h('p', { class: 'props-tipo' }, def.rotulo));
 
     const largura = h('input', {
@@ -289,6 +292,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
     for (const [nome, esq] of Object.entries(def.esquema.properties || {})) {
       elProps.append(campoDeEsquema(no, nome, esq, (def.esquema.required || []).includes(nome)));
     }
+    if (extensaoPropriedades) extensaoPropriedades({ no, raiz: elProps, api });
   }
 
   function campoDeEsquema(no, nome, esq, obrigatorio) {
