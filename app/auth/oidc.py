@@ -56,7 +56,7 @@ from joserfc.jwk import KeySet
 from pydantic import Field
 
 from app import db
-from app.auth import provisionamento
+from app.auth import govbr, provisionamento
 from app.auth.comum import apagar_cookie, erro_do_banco, registrar_evento
 from app.auth.ldap import PERFIS_VALIDOS  # mesmo vocabulário de 4 perfis
 from app.auth.modelos import Modelo, Saida
@@ -370,12 +370,27 @@ def sso_oidc_retorno(
     login = (email.split("@")[0] if email else sub).strip().lower().replace(" ", ".")[:120] or sub[:120]
     sujeito_externo = f"{provedor['issuer']}#{sub}"
     tenant_slug = provedor["tenant_slug"]
+    valores_grupos = claims.get(provedor["atributo_grupos"])
+    with db.db() as cur:
+        cur.execute("SELECT * FROM plat.provedor_oidc_modelo(%s)", (provedor["provedor_id"],))
+        modelo = cur.fetchone() or {"modelo": "generico", "api_base": None}
+    if modelo["modelo"] == "govbr":
+        # item L0-08-c: `sub` é o CPF — nunca em claro no login, no sujeito externo, no evento ou no log;
+        # nível/selos/amr viram valores do mapeamento (regras do L0-08-e), junto com o atributo de grupos se houver
+        pseud = govbr.pseudonimo(sub)
+        sujeito_externo = f"{provedor['issuer']}#{pseud}"
+        login = govbr.login_de(claims, pseud)
+        nome = claims.get("name") or login
+        extra = claims.get(provedor["atributo_grupos"]) or []
+        valores_grupos = govbr.valores_de(claims, tokens.get("access_token"), modelo["api_base"]) + (
+            [extra] if isinstance(extra, str) else list(extra)
+        )
     # item L0-08-e: regras de provisionamento do provedor (criação, padrões, mapa valor->papel/grupos, atualizar,
     # desligar) decidem e provisionam; 403 sem_grupo_mapeado/convite_necessario/conta_desligada saem de lá
     try:
         resultado = provisionamento.aplicar(
             request, "oidc", provedor["provedor_id"], provedor["tenant_id"], tenant_slug, login, nome, email,
-            claims.get(provedor["atributo_grupos"]), sujeito_externo, provedor["mapa_grupo_perfil"],
+            valores_grupos, sujeito_externo, provedor["mapa_grupo_perfil"],
             provedor["perfil_padrao"],
         )
     except psycopg2.errors.RaiseException as e:
@@ -460,6 +475,10 @@ class ProvedorOidcEntrada(Modelo):
     atributo_grupos: str = Field(default="groups", min_length=1, max_length=64)
     perfil_padrao: str | None = None
     mapa_grupo_perfil: dict[str, str] = Field(default_factory=dict)
+    # item L0-08-c: 'govbr' liga o adaptador do Login Único (nível/selos/amr como valores do mapeamento; CPF
+    # pseudonimizado); api_base = API de confiabilidades (padrão pela issuer: produção ou staging)
+    modelo: str = Field(default="generico", pattern="^(generico|govbr)$")
+    api_base: str | None = Field(default=None, max_length=250)
 
 
 class ProvedorOidcSaida(Saida):
@@ -474,6 +493,24 @@ class ProvedorOidcSaida(Saida):
     atributo_grupos: str
     perfil_padrao: str | None
     mapa_grupo_perfil: dict[str, Any]
+    modelo: str
+    api_base: str | None
+
+
+def _api_base_de(corpo: "ProvedorOidcEntrada") -> str | None:
+    """gov.br: API de confiabilidades explícita, ou deduzida do issuer (staging/produção); genérico: nada."""
+    if corpo.modelo != "govbr":
+        return None
+    if corpo.api_base:
+        if not _url_valida_https_ou_teste(corpo.api_base):
+            raise ErroAPI(422, "validacao", "api_base precisa ser https:// (http:// só em loopback fora de produção)",
+                          {"campo": "api_base"})
+        return corpo.api_base.rstrip("/")
+    if corpo.issuer.rstrip("/") == govbr.ISSUER_STAGING:
+        return govbr.API_STAGING
+    if corpo.issuer.rstrip("/") == govbr.ISSUER_PRODUCAO:
+        return govbr.API_PRODUCAO
+    return None
 
 
 def _validar_entrada(corpo: ProvedorOidcEntrada) -> None:
@@ -509,6 +546,8 @@ def _saida_de(r: dict) -> dict:
         "atributo_grupos": r["atributo_grupos"],
         "perfil_padrao": r["perfil_padrao"],
         "mapa_grupo_perfil": r["mapa_grupo_perfil"] or {},
+        "modelo": r.get("modelo") or "generico",
+        "api_base": r.get("api_base"),
     }
 
 
@@ -541,8 +580,8 @@ def org_oidc_criar(corpo: ProvedorOidcEntrada, request: Request, auth: Auth = au
                 """
                 INSERT INTO plat.provedor_oidc(tenant_id, habilitado, rotulo, ordem, issuer, client_id,
                     client_secret_cifrada, escopos, atributo_grupos, perfil_padrao, mapa_grupo_perfil,
-                    criado_por, atualizado_por)
-                VALUES (plat.tenant_atual(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s)
+                    criado_por, atualizado_por, modelo, api_base)
+                VALUES (plat.tenant_atual(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s)
                 RETURNING *
                 """,
                 (
@@ -558,6 +597,8 @@ def org_oidc_criar(corpo: ProvedorOidcEntrada, request: Request, auth: Auth = au
                     json.dumps(corpo.mapa_grupo_perfil),
                     auth.usuario_id,
                     auth.usuario_id,
+                    corpo.modelo,
+                    _api_base_de(corpo),
                 ),
             )
             r = cur.fetchone()
@@ -607,7 +648,7 @@ def org_oidc_atualizar(
                 """
                 UPDATE plat.provedor_oidc SET habilitado=%s, rotulo=%s, ordem=%s, issuer=%s, client_id=%s,
                     client_secret_cifrada=%s, escopos=%s, atributo_grupos=%s, perfil_padrao=%s,
-                    mapa_grupo_perfil=%s::jsonb, atualizado_por=%s, atualizado_em=now()
+                    mapa_grupo_perfil=%s::jsonb, atualizado_por=%s, atualizado_em=now(), modelo=%s, api_base=%s
                 WHERE id = %s AND tenant_id = plat.tenant_atual()
                 RETURNING *
                 """,
@@ -623,6 +664,8 @@ def org_oidc_atualizar(
                     corpo.perfil_padrao,
                     json.dumps(corpo.mapa_grupo_perfil),
                     auth.usuario_id,
+                    corpo.modelo,
+                    _api_base_de(corpo),
                     provedor_id,
                 ),
             )
