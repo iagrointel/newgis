@@ -56,8 +56,9 @@ from joserfc.jwk import KeySet
 from pydantic import Field
 
 from app import db
+from app.auth import provisionamento
 from app.auth.comum import apagar_cookie, erro_do_banco, registrar_evento
-from app.auth.ldap import PERFIS_VALIDOS, perfil_por_grupos  # mesmo vocabulário de 4 perfis e mesma regra de mapa
+from app.auth.ldap import PERFIS_VALIDOS  # mesmo vocabulário de 4 perfis
 from app.auth.modelos import Modelo, Saida
 from app.auth.politica import politica_de
 from app.auth.rotas_login import _abrir_sessao  # reaproveita a criação de sessão do login local; ver docstring
@@ -366,47 +367,36 @@ def sso_oidc_retorno(
     sub = claims["sub"]
     email = claims.get("email")
     nome = claims.get("name") or (email.split("@")[0] if email else sub)
-    grupos = claims.get(provedor["atributo_grupos"]) or []
-    if isinstance(grupos, str):
-        grupos = [grupos]
-    perfil = perfil_por_grupos(grupos, provedor["mapa_grupo_perfil"] or {}, provedor["perfil_padrao"])
-    if perfil is None:
-        request.state.resultado = "sem_grupo_mapeado"
-        raise ErroAPI(
-            403,
-            "sem_grupo_mapeado",
-            "nenhum grupo do provedor está mapeado para um perfil desta plataforma; fale com o administrador",
-        )
     login = (email.split("@")[0] if email else sub).strip().lower().replace(" ", ".")[:120] or sub[:120]
     sujeito_externo = f"{provedor['issuer']}#{sub}"
     tenant_slug = provedor["tenant_slug"]
+    # item L0-08-e: regras de provisionamento do provedor (criação, padrões, mapa valor->papel/grupos, atualizar,
+    # desligar) decidem e provisionam; 403 sem_grupo_mapeado/convite_necessario/conta_desligada saem de lá
     try:
-        with db.db() as cur:
-            cur.execute(
-                "SELECT * FROM plat.oidc_provisionar(%s, %s, %s, %s, %s, %s, true)",
-                (provedor["tenant_id"], login, nome, email, perfil, sujeito_externo),
-            )
-            prov = cur.fetchone()
-            cur.execute("SELECT * FROM plat.auth_login(%s, %s)", (tenant_slug, login))
-            linha = cur.fetchone()
+        resultado = provisionamento.aplicar(
+            request, "oidc", provedor["provedor_id"], provedor["tenant_id"], tenant_slug, login, nome, email,
+            claims.get(provedor["atributo_grupos"]), sujeito_externo, provedor["mapa_grupo_perfil"],
+            provedor["perfil_padrao"],
+        )
     except psycopg2.errors.RaiseException as e:
         if (e.diag.message_primary or "").strip() == "login_em_uso_local":
             raise _falha_retorno(request, "login_em_uso_local", "login_em_uso_local") from e
         raise erro_do_banco(e) from e
     except psycopg2.Error as e:
         raise erro_do_banco(e) from e
-    if linha is None:
-        raise _falha_retorno(request, "provisionamento_sem_login_correspondente")
+    linha = resultado["linha"]
+    perfil = resultado["perfil"]
     ctx = db.Contexto(linha["tenant_id"], linha["usuario_id"], login)
     with db.db(ctx) as cur:
         registrar_evento(
             cur,
             request,
-            "usuarios/criar" if prov["criado"] else "usuarios/atualizar",
+            "usuarios/criar" if resultado["criado"] else "usuarios/atualizar",
             "usuario",
             linha["usuario_id"],
-            {"origem": "oidc", "perfil": perfil, "perfil_anterior": prov["perfil_anterior"]},
+            {"origem": "oidc", "perfil": perfil, "perfil_anterior": resultado["perfil_anterior"]},
         )
+        provisionamento.registrar_efeitos(cur, request, resultado, "oidc", linha["usuario_id"])
     politica_sessao = politica_de(linha["config"], tenant_slug)
     saida = _abrir_sessao(request, resposta, ctx, linha["usuario_id"], politica_sessao, "oidc", None)
     saida["end_session_endpoint"] = doc.get("end_session_endpoint")
