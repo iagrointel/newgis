@@ -59,3 +59,24 @@ Uma CONDIÇÃO cita exatamente um de `atributo`, `fase`, `categoria`, `grupo` ou
 * A validação é contra o catálogo da rede, que vem do pacote. Rede sem pacote importado não tem atributo
   nenhum conhecido, e toda condição sobre atributo é recusada — o que é o comportamento certo, mas explica
   um 422 que pode surpreender numa rede vazia.
+
+## 4. Medido em dado real (08/09/2026)
+
+`tests/medidas/L4-02-e-configuracoes-de-tracado.json`, gerado por
+`tests/api/test_rede_config_tracado_medida.py` (marcador `lento`), num alimentador da cooperativa de teste
+com 451 trechos e 50 transformadores no arquivo, carregando SÓ as camadas de média tensão e de
+transformadores:
+
+* a função `soma(pot_nom)` devolve exatamente a soma de `POT_NOM` dos transformadores que o traçado
+  ALCANÇOU — isso é conferido por consulta independente e é a igualdade que o teste exige;
+* dos 50 transformadores que o cadastro filia ao alimentador, **34 são alcançados** pela topologia
+  (940 kVA de 1.730 kVA, −45,7 %). Os 16 restantes não estão ligados à malha construída só com as duas
+  camadas carregadas: o cadastro filia por campo (`ctmt`), o traçado anda pela rede;
+* **alargar a tolerância não é conserto.** Com 1,0 m em vez dos 0,05 m padrão, os nós órfãos caem de 47 para
+  22, mas a folga funde vértices vizinhos, o grafo ganha laço e o traçado a jusante passa a responder
+  `indeterminado`: troca-se falta de alcance por falta de sentido. O experimento está registrado na
+  constante `TOLERANCIA_M` do teste.
+
+Logo, a cláusula "Σ kVA a jusante de um CTMT = Σ POT_NOM dos UNTRMT do CTMT no arquivo" está provada na rede
+de teste (onde a malha é completa) e **parcialmente** no arquivo real: a função está certa, o alcance da
+topologia construída com duas camadas não cobre o alimentador inteiro.

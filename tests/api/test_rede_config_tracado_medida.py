@@ -34,6 +34,11 @@ from tests.dados import carga_bdgd_uc
 from tests.dados.carga_bdgd import esquema
 
 MEDIDAS = Path(__file__).resolve().parent.parent / "medidas" / "L4-02-e-configuracoes-de-tracado.json"
+TOLERANCIA_M = 0.05   # a tolerancia padrao do produto. MEDIDO em 08/09: com 1,0 m os nos orfaos caem de
+                      # 47 para 22, mas a folga funde vertices vizinhos e o grafo ganha LACO — o tracado a
+                      # jusante passa a responder `indeterminado` e a soma deixa de existir. Alargar a
+                      # tolerancia nao e conserto: troca falta de alcance por falta de sentido.
+TRAFOS_MINIMOS = 20   # a soma de um alimentador de um transformador só não prova a função
 
 
 def _carga_maquina() -> dict:
@@ -71,13 +76,18 @@ def _tipo(cur, rede_id: str, grupo: str, codigo: int) -> str:
 
 
 def _escolher_alimentador(cur) -> str:
-    """O alimentador de menor número de trechos que tenha ao menos um transformador — o que cabe no
-    orçamento de uma trilha sem deixar a cláusula sem dado."""
+    """O alimentador de MENOR número de trechos entre os que têm ao menos `TRAFOS_MINIMOS` transformadores:
+    grande o bastante para a soma dizer alguma coisa (um alimentador de um transformador só provaria pouco) e
+    pequeno o bastante para caber no orçamento de relógio de uma trilha. Se nenhum chega ao mínimo, cai para
+    o que tem mais transformadores, e o número fica gravado na medida."""
     esq = esquema()
     cur.execute(
-        f"SELECT s.ctmt, count(*) AS trechos FROM {esq}.ssdmt s "
-        f"WHERE EXISTS (SELECT 1 FROM {esq}.trafo t WHERE t.ctmt = s.ctmt) "
-        "GROUP BY 1 ORDER BY 2 LIMIT 1"
+        "SELECT ctmt, trechos, trafos FROM ("
+        f"  SELECT s.ctmt, count(*) AS trechos, "
+        f"         (SELECT count(*) FROM {esq}.trafo t WHERE t.ctmt = s.ctmt) AS trafos "
+        f"  FROM {esq}.ssdmt s GROUP BY 1"
+        ") c WHERE trafos > 0 ORDER BY (trafos >= %s) DESC, trechos ASC, trafos DESC LIMIT 1",
+        (TRAFOS_MINIMOS,),
     )
     linha = cur.fetchone()
     if linha is None:
@@ -134,7 +144,8 @@ def test_medida_kva_a_jusante_contra_o_arquivo(cred, env):
     con.close()
     tenant_id, usuario_id = ids["demo"], eu["id"]
 
-    r = cliente.post("/api/rede", json={"nome": f"{PREFIXO_TESTE}-medida-cfg", "disciplina": "eletrica"})
+    r = cliente.post("/api/rede", json={"nome": f"{PREFIXO_TESTE}-medida-cfg", "disciplina": "eletrica",
+                                        "tolerancia_m": TOLERANCIA_M})
     assert r.status_code == 201, r.text
     rid = r.json()["id"]
     medida = {"item": "L4-02-e-configuracoes-de-tracado", "rede_id": rid, "maquina": _carga_maquina(),
