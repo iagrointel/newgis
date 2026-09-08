@@ -54,3 +54,34 @@ ficaram pendentes por disco (95-96 % no L7-01-a; 94 % hoje, D21) — a prova aqu
 uma instalação em processo, atrás do proxy de captura, que é onde se vê se o NAVEGADOR tenta sair. O que o
 BACKEND tenta sair (conectores) é recusado por `app/conexao/seguranca.py` antes de abrir conexão quando o nome
 não resolve, e vira as mensagens da seção 2.
+
+## 5. Telemetria: desligada por padrão, opt-in do superadmin (item L7-11-c)
+
+`GET /api/telemetria` (superadmin) mostra o estado e a **prévia** — o JSON exatamente como sairá; `PUT
+/api/telemetria {"ligada": true, "nome_instalacao": "..."}` liga; `POST /api/telemetria/enviar` manda agora; o
+periódico `telemetria.enviar` manda uma vez por dia (04:30) enquanto ligada. Desligada, o job devolve
+`telemetria desligada: nenhum pedido de rede` sem abrir conexão (provado por `tests/api/test_telemetria.py`,
+que conta as chamadas HTTP: 0). Destino = `PLAT_TELEMETRIA_URL` do `.env` (vazio = nada sai, e o estado diz
+`sem_destino_configurado`). Chave própria por appliance (`plat.telemetria.chave`, gerada na migração), enviada
+no cabeçalho `X-Plat-Chave`. O JSON enviado fica em `ultimo_relatorio` e é byte a byte o que a prévia mostrou
+(teste compara).
+
+Campos, e nada além deles (`app/telemetria.py::CAMPOS`; o teste reprova chave a mais):
+
+| campo | conteúdo |
+|---|---|
+| `esquema` | versão do formato (1) |
+| `chave` | identidade do appliance (hex gerado, sem significado) |
+| `nome_instalacao` | texto escolhido pelo superadmin ao ligar (ou nulo) |
+| `enviado_em` | instante UTC |
+| `versao`, `git_sha`, `ambiente` | versão do produto |
+| `banco`, `migracoes_aplicadas`, `migracoes_pendentes` | saúde do banco |
+| `servicos` | estado de cada serviço da instalação (`ok`/`erro`/`ausente`, o mesmo de `/saude`) |
+| `fila` | `pendentes`, `rodando`, `workers_vivos` |
+| `contagens` | `inquilinos`, `usuarios`, `itens`, `camadas`, `jobs_24h`, `gb_arquivos` — só números agregados |
+
+Nunca: nome de inquilino, login, e-mail, título de item, geometria, coordenada, endereço, IP, conteúdo.
+
+Receptor (na instalação da casa): `POST /api/telemetria/receber` aceita só chave registrada pelo superadmin em
+`POST /api/telemetria/appliances` (`403 chave_desconhecida` para o resto, nada gravado; `422
+relatorio_fora_do_contrato` se vier campo a mais); `GET /api/telemetria/appliances` alimenta o painel de suporte.
