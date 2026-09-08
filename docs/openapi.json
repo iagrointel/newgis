@@ -9743,6 +9743,27 @@
     "x-privilegio": "proprio"
    }
   },
+  "/api/importacoes/formatos": {
+   "get": {
+    "tags": [
+     "ingestao"
+    ],
+    "summary": "Formatos Aceitos",
+    "operationId": "formatos_aceitos_api_importacoes_formatos_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
   "/api/importacoes/{id}": {
    "get": {
     "tags": [
@@ -9872,27 +9893,6 @@
     },
     "x-auth": "S",
     "x-privilegio": "conteudo.publicar_camada"
-   }
-  },
-  "/api/importacoes/formatos": {
-   "get": {
-    "tags": [
-     "ingestao"
-    ],
-    "summary": "Formatos Aceitos",
-    "operationId": "formatos_aceitos_api_importacoes_formatos_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "proprio"
    }
   },
   "/api/rota": {

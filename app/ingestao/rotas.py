@@ -130,6 +130,14 @@ def listar(limite: int = 50, deslocamento: int = 0, auth: Auth = autenticado(esc
     return {"itens": [_importacao_json(r) for r in linhas], "total": len(linhas)}
 
 
+# A rota fixa vem ANTES da parametrizada de propósito: o roteador do Starlette casa na ordem de
+# declaração, então `/api/importacoes/{id}` declarada antes engoliria `/formatos` e a resposta seria
+# 404 importacao_inexistente. tests/unit/test_rotas_sombreamento.py reprova a inversão em toda a app.
+@router.get("/api/importacoes/formatos", openapi_extra=LER)
+def formatos_aceitos(auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    return [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo} for f in FORMATOS.values()]
+
+
 @router.get("/api/importacoes/{id}", openapi_extra=LER)
 def ver(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
     with db.db(auth.contexto()) as cur:
@@ -222,8 +230,3 @@ def apagar(id: str, auth: Auth = autenticado("conteudo.publicar_camada")):
             raise ErroAPI(409, "estado_invalido", f"importação em estado {r['estado']!r} não pode ser apagada")
         cur.execute("DELETE FROM plat.importacao WHERE id = %s::uuid", (r["id"],))
     return Response(status_code=204)
-
-
-@router.get("/api/importacoes/formatos", openapi_extra=LER)
-def formatos_aceitos():
-    return [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo} for f in FORMATOS.values()]
