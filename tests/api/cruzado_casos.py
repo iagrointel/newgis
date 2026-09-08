@@ -1125,6 +1125,17 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/amc/execucoes/{id}/resultados"): Caso(
         lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}/resultados",
     ),
+    # L2-04-i (WMS 1.3.0 e WMTS 1.0.0): o serviço é por ITEM. A pedindo o serviço de um item de B tem de
+    # receber 404 (a RLS decide a existência antes de qualquer XML); nenhuma das rotas devolve corpo de
+    # protocolo com dado de B.
+    ("GET", "/wms/{item_id}"): Caso(
+        lambda p: f"/wms/{p.item_b['id']}?service=WMS&version=1.3.0&request=GetCapabilities"),
+    ("GET", "/wmts/{item_id}"): Caso(
+        lambda p: f"/wmts/{p.item_b['id']}?service=WMTS&version=1.0.0&request=GetCapabilities"),
+    ("GET", "/wmts/{item_id}/rest/WMTSCapabilities.xml"): Caso(
+        lambda p: f"/wmts/{p.item_b['id']}/rest/WMTSCapabilities.xml"),
+    ("GET", "/wmts/{item_id}/rest/{camada}/{estilo}/{tms}/{z}/{y}/{x}.png"): Caso(
+        lambda p: f"/wmts/{p.item_b['id']}/rest/{p.item_b['id']}/padrao/GoogleMapsCompatible/6/27/22.png"),
 }
 
 
