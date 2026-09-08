@@ -8638,6 +8638,259 @@
     "x-privilegio": "rls:visibilidade"
    }
   },
+  "/api/acervo/camadas": {
+   "get": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Listar Camadas",
+    "operationId": "listar_camadas_api_acervo_camadas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AcervoCamadaPagina"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/acervo/camadas/{camada}/assinatura": {
+   "post": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Assinar",
+    "operationId": "assinar_api_acervo_camadas__camada__assinatura_post",
+    "parameters": [
+     {
+      "name": "camada",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.registrar_fonte"
+   },
+   "delete": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Cancelar Assinatura",
+    "operationId": "cancelar_assinatura_api_acervo_camadas__camada__assinatura_delete",
+    "parameters": [
+     {
+      "name": "camada",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.registrar_fonte"
+   }
+  },
+  "/api/acervo/camadas/{camada}/feicoes": {
+   "get": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Feicoes",
+    "operationId": "feicoes_api_acervo_camadas__camada__feicoes_get",
+    "parameters": [
+     {
+      "name": "camada",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada"
+      }
+     },
+     {
+      "name": "bbox",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "oeste,sul,leste,norte em graus (EPSG:4326)",
+       "title": "Bbox"
+      },
+      "description": "oeste,sul,leste,norte em graus (EPSG:4326)"
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 5000,
+       "minimum": 1,
+       "default": 500,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AcervoFeicoes"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/acervo/camadas/{camada}/tiles/{z}/{x}/{y}.mvt": {
+   "get": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Tile",
+    "description": "Tile vetorial (MVT) da MESMA view — é este o SQL que o Martin publicaria como função. Sem assinatura,\n403; e mesmo que alguém chegue ao SQL por fora, a view devolve zero feição (o porteiro está nela).",
+    "operationId": "tile_api_acervo_camadas__camada__tiles__z___x___y__mvt_get",
+    "parameters": [
+     {
+      "name": "camada",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada"
+      }
+     },
+     {
+      "name": "z",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "maximum": 22,
+       "minimum": 0,
+       "title": "Z"
+      }
+     },
+     {
+      "name": "x",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "title": "X"
+      }
+     },
+     {
+      "name": "y",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "title": "Y"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/acervo": {
    "get": {
     "tags": [
@@ -10333,7 +10586,7 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/ConjuntoEntrada"
+        "$ref": "#/components/schemas/app__multiescala__modelos__ConjuntoEntrada"
        }
       }
      }
@@ -10775,7 +11028,7 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/ExecucaoEntrada"
+        "$ref": "#/components/schemas/app__multiescala__modelos__ExecucaoEntrada"
        }
       }
      }
@@ -10830,7 +11083,7 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/ExecucaoEntrada"
+        "$ref": "#/components/schemas/app__multiescala__modelos__ExecucaoEntrada"
        }
       }
      }
@@ -10987,6 +11240,1159 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/amc/modelos/validar": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Validar Modelo",
+    "description": "Valida sem gravar: devolve o hash que o documento teria. Modelo inválido sai 422 com todas as violações.",
+    "operationId": "validar_modelo_api_amc_modelos_validar_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ValidarEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/modelos": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Criar Modelo",
+    "operationId": "criar_modelo_api_amc_modelos_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ModeloEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   },
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Listar Modelos",
+    "operationId": "listar_modelos_api_amc_modelos_get",
+    "parameters": [
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/modelos/{modelo_id}": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Obter Modelo",
+    "operationId": "obter_modelo_api_amc_modelos__modelo_id__get",
+    "parameters": [
+     {
+      "name": "modelo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Modelo Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   },
+   "put": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Atualizar Modelo",
+    "description": "Edita: grava versão NOVA e move a cabeça. A versão anterior fica; execução que a usou não muda de resultado.",
+    "operationId": "atualizar_modelo_api_amc_modelos__modelo_id__put",
+    "parameters": [
+     {
+      "name": "modelo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Modelo Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ModeloEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   },
+   "delete": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Apagar Modelo",
+    "description": "Esconde o modelo (apagado_em). Versões e execuções ficam: são a proveniência do que já rodou.",
+    "operationId": "apagar_modelo_api_amc_modelos__modelo_id__delete",
+    "parameters": [
+     {
+      "name": "modelo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Modelo Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/modelos/{modelo_id}/versoes": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Listar Versoes",
+    "operationId": "listar_versoes_api_amc_modelos__modelo_id__versoes_get",
+    "parameters": [
+     {
+      "name": "modelo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Modelo Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/modelos/{modelo_id}/versoes/{versao_hash}": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Obter Versao",
+    "operationId": "obter_versao_api_amc_modelos__modelo_id__versoes__versao_hash__get",
+    "parameters": [
+     {
+      "name": "modelo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Modelo Id"
+      }
+     },
+     {
+      "name": "versao_hash",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Versao Hash"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/conjuntos": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Criar Conjunto",
+    "description": "Grade: grava o conjunto e enfileira `amc.gerar_unidades` (estado 'pendente'). Feições: grava e responde\n'pronto' na mesma chamada. A ficha traz sempre CRS de trabalho e distorção de área medida.",
+    "operationId": "criar_conjunto_api_amc_conjuntos_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/app__amc__rotas__ConjuntoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   },
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Listar Conjuntos",
+    "operationId": "listar_conjuntos_api_amc_conjuntos_get",
+    "parameters": [
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/conjuntos/{conjunto_id}": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Obter Conjunto",
+    "description": "Ficha do conjunto: CRS de trabalho, distorção de área mínima/máxima medida, contagem esperada × obtida.",
+    "operationId": "obter_conjunto_api_amc_conjuntos__conjunto_id__get",
+    "parameters": [
+     {
+      "name": "conjunto_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Conjunto Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   },
+   "delete": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Apagar Conjunto",
+    "description": "Apaga o conjunto e as suas unidades. Conjunto usado por execução é recusado (FK RESTRICT → 409).",
+    "operationId": "apagar_conjunto_api_amc_conjuntos__conjunto_id__delete",
+    "parameters": [
+     {
+      "name": "conjunto_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Conjunto Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/conjuntos/{conjunto_id}/unidades": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Listar Unidades",
+    "description": "FeatureCollection paginada (ou só os ids e áreas com geometria=false).",
+    "operationId": "listar_unidades_api_amc_conjuntos__conjunto_id__unidades_get",
+    "parameters": [
+     {
+      "name": "conjunto_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Conjunto Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 5000,
+       "minimum": 1,
+       "default": 1000,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     },
+     {
+      "name": "geometria",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": true,
+       "title": "Geometria"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/execucoes": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Criar Execucao",
+    "description": "Congela a proveniência (A10): versão do modelo, pesos, ficha de cada camada de entrada, versão do motor e\nsemente. Nada disso muda depois (gatilho `amc_execucao_guarda`). A extração de fatores do acervo roda\nautomaticamente como job `amc.executar` (item L6-04-acervo-no-motor); fatores do tipo 'item' ficam fora do\nescopo desse job (extração de camada do catálogo é item futuro) e a execução fica 'registrada' até lá.",
+    "operationId": "criar_execucao_api_amc_execucoes_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/app__amc__rotas__ExecucaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   },
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Listar Execucoes",
+    "operationId": "listar_execucoes_api_amc_execucoes_get",
+    "parameters": [
+     {
+      "name": "modelo_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Modelo Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/execucoes/{execucao_id}": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Obter Execucao",
+    "operationId": "obter_execucao_api_amc_execucoes__execucao_id__get",
+    "parameters": [
+     {
+      "name": "execucao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Execucao Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   },
+   "delete": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Apagar Execucao",
+    "description": "Só execução NÃO concluída se apaga (o gatilho do banco é quem manda; aqui a mensagem é em português).",
+    "operationId": "apagar_execucao_api_amc_execucoes__execucao_id__delete",
+    "parameters": [
+     {
+      "name": "execucao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Execucao Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/execucoes/{execucao_id}/resultados": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Listar Resultados",
+    "description": "Favorabilidade por unidade. Execução sem resultado ainda devolve lista vazia com o estado — nunca zero.",
+    "operationId": "listar_resultados_api_amc_execucoes__execucao_id__resultados_get",
+    "parameters": [
+     {
+      "name": "execucao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Execucao Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 5000,
+       "minimum": 1,
+       "default": 1000,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/execucoes/{execucao_id}/unidades/{unidade_id}/explicacao": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Explicar Unidade",
+    "description": "Item L3-01-f-explicacao: \"por que esta unidade tem nota N\". Recalcula fator → valor bruto → transformação →\nfavorabilidade → peso → contribuição a partir de `plat.amc_fator_bruto` NA HORA (não lê nenhuma tabela de\nexplicação gravada), e compara com `plat.amc_resultado` quando a execução já tiver resultado. O cálculo é o\nmesmo de `app/amc/explicacao.py`; a rota só busca as três peças (definição do modelo, pesos e fatores brutos).",
+    "operationId": "explicar_unidade_api_amc_execucoes__execucao_id__unidades__unidade_id__explicacao_get",
+    "parameters": [
+     {
+      "name": "execucao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Execucao Id"
+      }
+     },
+     {
+      "name": "unidade_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Unidade Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/execucoes/{execucao_id}/matriz": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Matriz Execucao",
+    "description": "Item L3-01-g-tela-motor: valor bruto E favorabilidade de CADA fator em CADA unidade, para que a tela\nrecombine no navegador quando o usuário move um peso — sem novo job e sem nova extração. É a mesma conta\nque `GET .../unidades/{id}/explicacao` faz para uma unidade, feita de uma vez para uma página de unidades.\n\nA favorabilidade por fator sai de `app/amc/transformacoes.py` (item L3-01-d), vetorizada por fator: uma\nchamada com todos os valores brutos daquele fator, não uma por unidade. Fator sem dado na unidade continua\nNULL — nunca 0. Quem combina os fatores no navegador é `web/js/amc/combinacao.js`, provado equivalente ao\n`app/amc/combinacao.py` em tests/unit/test_amc_combinacao_equivalencia.py; esta rota NÃO combina nada, para\nnão existir uma terceira implementação da mesma conta.",
+    "operationId": "matriz_execucao_api_amc_execucoes__execucao_id__matriz_get",
+    "parameters": [
+     {
+      "name": "execucao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Execucao Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 2000,
+       "minimum": 1,
+       "default": 500,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/transformacoes/previsao": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Previsao Transformacao",
+    "description": "Pré-visualização da transformação escolhida (item L3-01-g): histograma do valor bruto, histograma da\nfavorabilidade resultante e a curva desenhada. Não grava nada e não abre o banco — os valores vêm de quem\nchama (a tela manda a coluna do fator que `GET .../matriz` já lhe entregou). É a porta HTTP da função\n`app.amc.transformacoes.pre_visualizar`, do item L3-01-d; a conta não é reimplementada aqui.",
+    "operationId": "previsao_transformacao_api_amc_transformacoes_previsao_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PrevisaoEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/similaridade": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Calcular Similaridade",
+    "description": "Ranking por parecença com 1-N unidades de referência, sobre fatores padronizados por z-score. Devolve\nJSON; `/api/amc/similaridade/exportar` devolve o mesmo cálculo em CSV ou GeoJSON.",
+    "operationId": "calcular_similaridade_api_amc_similaridade_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PedidoSimilaridade"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/similaridade/exportar": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Exportar Similaridade",
+    "description": "Mesmo cálculo de `/api/amc/similaridade`, exportado (item L3-17, cláusula 'export'). `formato=csv`\n(default) devolve texto CSV (posição, unidade, índice); `formato=geojson` devolve FeatureCollection sem\ngeometria (o item não guarda geometria própria — quem tiver, sobrepõe no cliente pelo `unidade_id`).",
+    "operationId": "exportar_similaridade_api_amc_similaridade_exportar_post",
+    "parameters": [
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "csv",
+        "geojson"
+       ],
+       "type": "string",
+       "default": "csv",
+       "title": "Formato"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PedidoSimilaridade"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
   }
  },
  "components": {
@@ -11003,6 +12409,108 @@
     "type": "object",
     "title": "AcervoAdicionarEntrada",
     "description": "Corpo opcional de POST /api/acervo/{fonte_id}/adicionar (item L6-01-f-lgpd). Fonte marcada em\n`plat.acervo_lgpd.risco_pii` exige `confirma_risco_pii=true` explícito; sem isso a rota recusa com 409\nantes de criar qualquer item. Default false: nunca se confirma sozinho."
+   },
+   "AcervoCamadaPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "camadas": {
+      "items": {
+       "$ref": "#/components/schemas/AcervoCamadaPublicada"
+      },
+      "type": "array",
+      "title": "Camadas"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "camadas"
+    ],
+    "title": "AcervoCamadaPagina"
+   },
+   "AcervoCamadaPublicada": {
+    "properties": {
+     "view_nome": {
+      "type": "string",
+      "title": "View Nome"
+     },
+     "acervo_camada_id": {
+      "type": "string",
+      "title": "Acervo Camada Id"
+     },
+     "fonte_id": {
+      "type": "string",
+      "title": "Fonte Id"
+     },
+     "schema_origem": {
+      "type": "string",
+      "title": "Schema Origem"
+     },
+     "tabela_origem": {
+      "type": "string",
+      "title": "Tabela Origem"
+     },
+     "coluna_geom": {
+      "type": "string",
+      "title": "Coluna Geom"
+     },
+     "srid": {
+      "type": "integer",
+      "title": "Srid"
+     },
+     "colunas": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Colunas"
+     },
+     "linhas_exatas": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Linhas Exatas"
+     },
+     "tipo_geom": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo Geom"
+     },
+     "assinada": {
+      "type": "boolean",
+      "title": "Assinada"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "view_nome",
+     "acervo_camada_id",
+     "fonte_id",
+     "schema_origem",
+     "tabela_origem",
+     "coluna_geom",
+     "srid",
+     "colunas",
+     "assinada"
+    ],
+    "title": "AcervoCamadaPublicada",
+    "description": "Uma view de `plat_acervo` (item L6-01-b). `assinada` é deste inquilino: a RLS de\nplat.acervo_assinatura já recorta o LEFT JOIN, então nunca vaza a assinatura de outro."
    },
    "AcervoCartao": {
     "properties": {
@@ -11198,6 +12706,40 @@
      "vivo"
     ],
     "title": "AcervoEndpoint"
+   },
+   "AcervoFeicoes": {
+    "properties": {
+     "type": {
+      "type": "string",
+      "title": "Type"
+     },
+     "camada": {
+      "type": "string",
+      "title": "Camada"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "features": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Features"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "type",
+     "camada",
+     "total",
+     "features"
+    ],
+    "title": "AcervoFeicoes",
+    "description": "GeoJSON de uma camada publicada. `features` fica vazio quando o filtro não achou nada — nunca quando\nfalta assinatura: aí a rota já devolveu 403 antes de consultar."
    },
    "AcervoFicha": {
     "properties": {
@@ -12516,29 +14058,6 @@
     ],
     "title": "Conjunto"
    },
-   "ConjuntoEntrada": {
-    "properties": {
-     "nome": {
-      "type": "string",
-      "maxLength": 200,
-      "minLength": 1,
-      "title": "Nome"
-     },
-     "area": {
-      "additionalProperties": true,
-      "type": "object",
-      "title": "Area",
-      "description": "polígono GeoJSON (Polygon) em EPSG:4326"
-     }
-    },
-    "additionalProperties": false,
-    "type": "object",
-    "required": [
-     "nome",
-     "area"
-    ],
-    "title": "ConjuntoEntrada"
-   },
    "ConjuntoPagina": {
     "properties": {
      "total": {
@@ -13299,46 +14818,6 @@
      "fatores"
     ],
     "title": "Execucao"
-   },
-   "ExecucaoEntrada": {
-    "properties": {
-     "resolucao_m": {
-      "type": "number",
-      "exclusiveMinimum": 0.0,
-      "title": "Resolucao M"
-     },
-     "fatores": {
-      "items": {
-       "$ref": "#/components/schemas/FatorPesoEntrada"
-      },
-      "type": "array",
-      "maxItems": 20,
-      "minItems": 1,
-      "title": "Fatores"
-     },
-     "aprovacao_tipo": {
-      "type": "string",
-      "enum": [
-       "limiar",
-       "top_pct"
-      ],
-      "title": "Aprovacao Tipo"
-     },
-     "aprovacao_valor": {
-      "type": "number",
-      "minimum": 0.0,
-      "title": "Aprovacao Valor"
-     }
-    },
-    "additionalProperties": false,
-    "type": "object",
-    "required": [
-     "resolucao_m",
-     "fatores",
-     "aprovacao_tipo",
-     "aprovacao_valor"
-    ],
-    "title": "ExecucaoEntrada"
    },
    "ExecucaoFatorSaida": {
     "properties": {
@@ -15305,6 +16784,32 @@
     "title": "MiniaturaEntrada",
     "description": "Imagem em base64 (JSON: o CSRF sob cookie exige application/json; multipart entra com o L0-11)."
    },
+   "ModeloEntrada": {
+    "properties": {
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 250
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "definicao": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Definicao"
+     }
+    },
+    "type": "object",
+    "required": [
+     "definicao"
+    ],
+    "title": "ModeloEntrada"
+   },
    "MoverEntrada": {
     "properties": {
      "pasta_id": {
@@ -16160,6 +17665,106 @@
      "destino"
     ],
     "title": "PedidoRota"
+   },
+   "PedidoSimilaridade": {
+    "properties": {
+     "unidades": {
+      "additionalProperties": {
+       "additionalProperties": {
+        "anyOf": [
+         {
+          "type": "number"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "type": "object"
+      },
+      "type": "object",
+      "minProperties": 1,
+      "title": "Unidades",
+      "description": "{unidade_id: {campo: valor|null}} — a matriz fator×unidade já extraída (execução do motor AMC, upload, ou qualquer outra fonte)."
+     },
+     "referencias": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "minItems": 1,
+      "title": "Referencias",
+      "description": "ids de unidade que 'deram certo' (1-N)."
+     },
+     "campos": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Campos",
+      "description": "subconjunto de fatores a comparar (escolha de campos); omitido = todos os vistos."
+     },
+     "metrica": {
+      "type": "string",
+      "enum": [
+       "cosseno",
+       "euclidiana"
+      ],
+      "title": "Metrica",
+      "default": "cosseno"
+     }
+    },
+    "type": "object",
+    "required": [
+     "unidades",
+     "referencias"
+    ],
+    "title": "PedidoSimilaridade"
+   },
+   "PrevisaoEntrada": {
+    "properties": {
+     "transformacao": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Transformacao"
+     },
+     "valores": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "array",
+      "maxItems": 200000,
+      "minItems": 1,
+      "title": "Valores"
+     },
+     "bins": {
+      "type": "integer",
+      "maximum": 200.0,
+      "minimum": 2.0,
+      "title": "Bins",
+      "default": 30
+     }
+    },
+    "type": "object",
+    "required": [
+     "transformacao",
+     "valores"
+    ],
+    "title": "PrevisaoEntrada"
    },
    "Privilegio": {
     "properties": {
@@ -17860,6 +19465,20 @@
     "type": "object",
     "title": "UsuarioEditar"
    },
+   "ValidarEntrada": {
+    "properties": {
+     "definicao": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Definicao"
+     }
+    },
+    "type": "object",
+    "required": [
+     "definicao"
+    ],
+    "title": "ValidarEntrada"
+   },
    "ValidationError": {
     "properties": {
      "loc": {
@@ -17993,6 +19612,121 @@
      "corpo"
     ],
     "title": "VersaoCompleta"
+   },
+   "app__amc__rotas__ConjuntoEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo",
+      "description": "hexagonal, quadrada ou feicoes"
+     },
+     "lado_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lado M"
+     },
+     "area_estudo": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Area Estudo",
+      "description": "Polygon/MultiPolygon GeoJSON em EPSG:4326 (grade)"
+     },
+     "feicoes": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Feicoes",
+      "description": "FeatureCollection GeoJSON em EPSG:4326 (tipo 'feicoes')"
+     },
+     "campo_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 128
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Campo Id",
+      "description": "propriedade que carrega o id da unidade; sem ela, usa feature.id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome",
+     "tipo"
+    ],
+    "title": "ConjuntoEntrada"
+   },
+   "app__amc__rotas__ExecucaoEntrada": {
+    "properties": {
+     "modelo_id": {
+      "type": "string",
+      "title": "Modelo Id"
+     },
+     "conjunto_id": {
+      "type": "string",
+      "title": "Conjunto Id"
+     },
+     "pesos": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pesos",
+      "description": "{fator_id: peso}; sem isto, os pesos do modelo"
+     },
+     "semente": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 9.223372036854776e+18,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Semente"
+     }
+    },
+    "type": "object",
+    "required": [
+     "modelo_id",
+     "conjunto_id"
+    ],
+    "title": "ExecucaoEntrada"
    },
    "app__auth__modelos__LoteEntrada": {
     "properties": {
@@ -18284,6 +20018,69 @@
      "itens"
     ],
     "title": "Pagina"
+   },
+   "app__multiescala__modelos__ConjuntoEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "area": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Area",
+      "description": "polígono GeoJSON (Polygon) em EPSG:4326"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "area"
+    ],
+    "title": "ConjuntoEntrada"
+   },
+   "app__multiescala__modelos__ExecucaoEntrada": {
+    "properties": {
+     "resolucao_m": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Resolucao M"
+     },
+     "fatores": {
+      "items": {
+       "$ref": "#/components/schemas/FatorPesoEntrada"
+      },
+      "type": "array",
+      "maxItems": 20,
+      "minItems": 1,
+      "title": "Fatores"
+     },
+     "aprovacao_tipo": {
+      "type": "string",
+      "enum": [
+       "limiar",
+       "top_pct"
+      ],
+      "title": "Aprovacao Tipo"
+     },
+     "aprovacao_valor": {
+      "type": "number",
+      "minimum": 0.0,
+      "title": "Aprovacao Valor"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "resolucao_m",
+     "fatores",
+     "aprovacao_tipo",
+     "aprovacao_valor"
+    ],
+    "title": "ExecucaoEntrada"
    }
   }
  }
