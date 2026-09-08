@@ -158,4 +158,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- consumidores e endereços da rede (L4-20): as duas rotas de escrita geram evento de domínio
+    ("POST", "/api/rede/consumidores/enderecos-sem-rede"): ["rede/enderecos_sem_rede"],
+    ("POST", "/api/rede/consumidores/jusante/calcular"): ["rede/jusante_calcular"],
 }
