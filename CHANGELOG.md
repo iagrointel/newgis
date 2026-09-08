@@ -109,6 +109,24 @@ próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo:
 segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+## turno 3, setembro de 2026 (item L5-32-vistas-de-camada: vista de camada como VIEW do PostgreSQL)
+
+- `POST /api/camadas/{id}/vistas` cria uma vista da camada: filtro próprio, campos escondidos, só leitura ou
+  editável, extensão limitada, estilo e janela de atributos próprios. `GET`/`PUT /api/vistas/{id}` leem e
+  refazem a definição. Tela em `/vista-de-camada`, com o campo indo para "ocultos" por arrasto ou por clique.
+- A vista é uma VIEW em `d_<slug>` com `security_invoker = true`, registrada como item `vista_de_camada`
+  (tipo reservado desde `011_catalogo.sql`, agora no esquema v2). Campo oculto não é filtrado na saída: ele
+  não existe na relação consultada, então `outFields=*` não o alcança. O filtro é congelado na definição da
+  view, então `where=1=1` do cliente só se soma a ele.
+- FeatureServer, descritor de serviço, diretório Esri, OGC API Features, WFS e o mapa web servem a vista sem
+  código novo: o filtro por tipo virou `TIPOS_CAMADA` em `app/catalogo/tipos.py`.
+- Vista `somente_leitura` recusa escrita com 403 na porta única (`app.edicao.servico`), antes do atalho de
+  administrador. Vista editável nasce `WITH CASCADED CHECK OPTION`, e a violação vira 422 `fora_da_vista`.
+- Compartilhar a vista não compartilha a camada-mãe: a ficha pública da vista deixa de trazer
+  `campos_ocultos` e `camada_id`, e um token com escopo `camada:ler:<vista>` recebe 403 na camada-mãe.
+- Dívida trazida junto e fechada em arquivo novo: `plat.feicao_historico_registrar()` e `plat.origem_atual()`
+  tinham EXECUTE para PUBLIC.
+
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
 Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,
