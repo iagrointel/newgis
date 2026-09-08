@@ -45,6 +45,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- catálogo de ferramentas (UX-09): formulário gerado do esquema de parâmetros de cada tipo de tarefa
+    "/ferramentas": "ferramentas.html",
 }
 router = APIRouter()
 
