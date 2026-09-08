@@ -422,3 +422,19 @@ class ModeloGaleria(Saida):
     bytes: int
     do_inquilino: bool
     criado_em: str | None
+
+
+# ---- site do inquilino (L5-20-sites-paginas-publicas)
+class SiteEntrada(Modelo):
+    indexavel: bool = False  # noindex é o padrão da casa; indexar é opção explícita, com aviso na tela
+    versao: int | None = None
+
+
+class Site(Saida):
+    item_id: str
+    tenant_slug: str
+    url: str
+    indexavel: bool
+    versao_publicada: int | None
+    publicado_em: str | None
+    atualizado_em: str | None
