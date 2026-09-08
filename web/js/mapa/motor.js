@@ -312,12 +312,12 @@ export class PainelMotor {
     if (!(resolucao > 0)) { this.estadoRodar.erro(t('motor.resolucao_invalida'), []); return; }
     if (nivel === 'micro' && !this.execucoes.macro) { this.estadoRodar.erro(t('motor.micro_sem_macro'), []); return; }
     const corpo = { resolucao_m: resolucao, fatores, aprovacao_tipo: this.aprovTipo.value, aprovacao_valor: Number(this.aprovValor.value) };
-    const url = nivel === 'macro'
-      ? `/api/multiescala/conjuntos/${encodeURIComponent(this.conjunto.id)}/macro`
-      : `/api/multiescala/execucoes/${encodeURIComponent(this.execucoes.macro.id)}/micro`;
     this.estadoRodar.carregando(t('motor.rodando', { nivel: t(`motor.nivel_${nivel}`) }));
     this.raiz.querySelector('#motor-rodar').disabled = true;
-    const r = await enviar(url, corpo);
+    // cada chamada com o seu caminho na mesma linha: é assim que docs/gerar_cobertura_ui.py liga rota → tela
+    const r = nivel === 'macro'
+      ? await enviar(`/api/multiescala/conjuntos/${encodeURIComponent(this.conjunto.id)}/macro`, corpo)
+      : await enviar(`/api/multiescala/execucoes/${encodeURIComponent(this.execucoes.macro.id)}/micro`, corpo);
     this.raiz.querySelector('#motor-rodar').disabled = false;
     if (r.status !== 201) {
       this.estadoRodar.mostrar({ tipo: r.status === 403 ? 'negado' : 'erro', texto: mensagemDe(r), acoes: r.status === 403 ? [] : [{ id: 'tentar', rotulo: t('estado.tentar_de_novo') }], ref: r.json?.req_id });
