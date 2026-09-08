@@ -4,8 +4,16 @@
    "adicionar ao meu mapa" `POST /api/acervo/{fonte_id}/adicionar` — cria item tipo `conexao`, nunca copia dado
    (regra do L6-01-a/b: publicação sem cópia). Regra D17 (repetida aqui): fonte sem licença ESCRITA nunca chega
    a esta tela — o backend já filtra; esta tela não tenta "completar" a lista com nada que a API não devolveu.
-   body[data-pronto="1"] após a 1ª carga (contrato dos e2e, tests/e2e/apoio.py::Tela.ir). */
+   body[data-pronto="1"] após a 1ª carga (contrato dos e2e, tests/e2e/apoio.py::Tela.ir).
+
+   Item UX-10-acervo-sem-tela: os quatro estados do sistema de design (UX-01) na lista (<plat-estado id="lista-estado">:
+   carregando com esqueleto, vazio com "limpar filtros", erro com "tentar de novo", negado) e no controle "adicionar ao
+   meu mapa", que vive DENTRO da ficha com o seu próprio <plat-estado id="adicionar-estado">: 403 vira negado com o
+   privilégio exigido, 409 vira o diálogo de confirmação de risco de dado pessoal, 413/422/5xx mostram a mensagem da
+   API com a referência — nunca o número cru, nunca tela quebrada (refutação do item). Quem não tem
+   conteudo.registrar_fonte vê o estado negado antes mesmo de clicar. */
 import { confirmar } from '../base/componentes.js';
+import { tem } from '../base/estado.js';
 import { h, limpar, marcador } from '../base/dom.js';
 import { carregar as carregarIdioma, t, formatarData, formatarNumero } from '../base/i18n.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
@@ -31,6 +39,7 @@ async function iniciar() {
   cabecalho(t('acervo.titulo'));
   dialogo = el('ficha');
   montarBusca();
+  montarEstadoLista();
   await montarDominios();
   montarPaginacao();
   await carregarLista();
@@ -78,10 +87,26 @@ function montarPaginacao() {
 
 function aoSemSessao() { saindo = true; irParaLogin(); }
 
+function limparFiltros() {
+  estado = { ...estado, dominio: '', q: '', deslocamento: 0 };
+  el('dominio-filtro').value = '';
+  const campo = el('busca').querySelector('input');
+  if (campo) campo.value = '';
+  carregarLista();
+}
+
+function montarEstadoLista() {
+  el('lista-estado').addEventListener('acao', (e) => {
+    if (e.detail.id === 'limpar') limparFiltros();
+    else if (e.detail.id === 'tentar') carregarLista();
+  });
+}
+
 async function carregarLista() {
   const grade = el('grade');
-  const avisoLista = el('lista-aviso');
-  avisoLista.limpar();
+  const estadoLista = el('lista-estado');
+  limpar(grade);
+  estadoLista.carregando(t('acervo.carregando'));
   grade.setAttribute('aria-busy', 'true');
   const q = new URLSearchParams();
   if (estado.dominio) q.set('dominio', estado.dominio);
@@ -89,26 +114,32 @@ async function carregarLista() {
   q.set('limite', String(LIMITE));
   q.set('deslocamento', String(estado.deslocamento));
   let pagina;
-  try {
-    const r = await obter(`/api/acervo?${q.toString()}`);
-    if (r.status === 401) { aoSemSessao(); return; }
-    if (r.status >= 400) throw new Error(mensagemDe(r));
-    pagina = r.json;
-  } catch (e) {
-    grade.setAttribute('aria-busy', 'false');
-    avisoLista.erro(`${t('acervo.erro_listar')}: ${e.message || e}`);
+  const r = await obter(`/api/acervo?${q.toString()}`);
+  grade.setAttribute('aria-busy', 'false');
+  if (r.status === 401) { aoSemSessao(); return; }
+  if (r.status >= 400 || r.status === 0) {
+    // 403 vira "negado" e 0 vira "sem rede" dentro do próprio componente; o resto é erro com referência
+    estadoLista.erro(r, [{ id: 'tentar', rotulo: t('estado.tentar_de_novo'), classe: 'primario' }]);
+    el('contagem').textContent = '';
     return;
   }
+  pagina = r.json;
   estado = { ...estado, total: pagina.total };
   el('contagem').textContent = t('acervo.contagem', { n: formatarNumero(pagina.total) });
   el('paginacao').atualizar({ total: pagina.total, limite: LIMITE, deslocamento: estado.deslocamento });
   limpar(grade);
   if (!pagina.itens.length) {
-    grade.append(h('p', { class: 'acervo-vazio' }, estado.dominio ? t('acervo.dominio_vazio') : t('acervo.vazio')));
+    const filtrado = !!(estado.dominio || estado.q);
+    estadoLista.mostrar({
+      tipo: 'vazio',
+      titulo: t('acervo.vazio_titulo'),
+      texto: estado.dominio && !estado.q ? t('acervo.dominio_vazio') : t('acervo.vazio'),
+      acoes: filtrado ? [{ id: 'limpar', rotulo: t('acervo.limpar_filtros') }] : [],
+    });
   } else {
+    estadoLista.limpar();
     for (const item of pagina.itens) grade.append(cartao(item));
   }
-  grade.setAttribute('aria-busy', 'false');
 }
 
 // O cartão traz uma ETIQUETA curta de licença; o texto livre de `licenca` (às vezes uma frase inteira do órgão)
@@ -182,11 +213,25 @@ async function abrirFicha(fonteId) {
       : null,
     h('h3', {}, t('acervo.ficha_previsualizacao')),
     previa(ficha),
+    controleAdicionar(ficha),
   ].filter(Boolean));
 
-  const botoes = [{ id: 'adicionar', rotulo: t('acervo.adicionar'), classe: 'primario' }];
-  const r = await dialogo.abrir({ titulo: `${t('acervo.ficha_titulo')} — ${ficha.nome}`, corpo, botoes });
-  if (r === 'adicionar') await adicionar(ficha);
+  await dialogo.abrir({ titulo: `${t('acervo.ficha_titulo')} — ${ficha.nome}`, corpo, botoes: [] });
+}
+
+/* o controle da rota de escrita POST /api/acervo/{fonte_id}/adicionar (UX-10): botão + estado próprio, dentro
+   da ficha, que fica aberta enquanto a chamada corre e enquanto houver um erro a ler */
+function controleAdicionar(ficha) {
+  const estadoCtl = h('plat-estado', { id: 'adicionar-estado', hidden: true });
+  const botao = h('button', { type: 'button', class: 'primario', id: 'acervo-adicionar', dataset: { id: 'adicionar' } }, t('acervo.adicionar'));
+  const caixa = h('div', { class: 'acervo-adicionar' }, h('h3', {}, t('acervo.adicionar_titulo')), botao, estadoCtl);
+  if (!tem('conteudo.registrar_fonte')) {
+    botao.disabled = true;
+    estadoCtl.negado(t('acervo.negado_registrar', { privilegio: 'conteudo.registrar_fonte' }));
+    return caixa;
+  }
+  botao.addEventListener('click', () => adicionar(ficha, false, { botao, estadoCtl }));
+  return caixa;
 }
 
 function previa(ficha) {
@@ -195,26 +240,37 @@ function previa(ficha) {
   return h('p', {}, h('a', { href: vivo.url, target: '_blank', rel: 'noopener noreferrer' }, vivo.url));
 }
 
-async function adicionar(ficha, confirmaPii = false) {
+async function adicionar(ficha, confirmaPii = false, { botao, estadoCtl } = {}) {
   const corpo = confirmaPii ? { confirma_risco_pii: true } : undefined;
-  let r;
-  try {
-    r = await enviar(`/api/acervo/${encodeURIComponent(ficha.fonte_id)}/adicionar`, corpo);
-  } catch (e) {
-    el('aviso').erro(`${t('acervo.adicionar_erro')}: ${e.message || e}`);
-    return;
-  }
+  if (botao) { botao.disabled = true; botao.setAttribute('aria-busy', 'true'); }
+  estadoCtl?.carregando(t('acervo.adicionar_carregando'));
+  const r = await enviar(`/api/acervo/${encodeURIComponent(ficha.fonte_id)}/adicionar`, corpo);
+  if (botao) { botao.disabled = false; botao.removeAttribute('aria-busy'); }
   if (r.status === 401) { aoSemSessao(); return; }
   if (r.status === 409 && r.json && r.json.erro === 'confirmacao_pii_exigida') {
+    estadoCtl?.limpar();
     const ok = await confirmar(
       t('acervo.pii_confirma_titulo'),
       (r.json.detalhe && r.json.detalhe.risco_pii_motivo) || t('acervo.risco_pii'),
       { ok: t('acervo.pii_confirmar'), perigo: true },
     );
-    if (ok) await adicionar(ficha, true);
+    if (ok) await adicionar(ficha, true, { botao, estadoCtl });
     return;
   }
-  if (r.status >= 400) { el('aviso').erro(`${t('acervo.adicionar_erro')}: ${mensagemDe(r)}`); return; }
+  if (r.status === 403) {
+    // negado, com o privilégio que falta nomeado (o detalhe da API traz `exigido`)
+    const exigido = (r.json && r.json.detalhe && r.json.detalhe.exigido) || 'conteudo.registrar_fonte';
+    estadoCtl?.negado(`${r.json?.mensagem || t('estado.negado_texto')} (${exigido})`);
+    if (botao) botao.disabled = true;
+    return;
+  }
+  if (r.status >= 400 || r.status === 0) {
+    // 413 cota, 422 corpo, 404 fonte, 5xx: a mensagem da API nomeada e a referência, no próprio controle
+    estadoCtl?.erro(r, [{ id: 'tentar', rotulo: t('estado.tentar_de_novo') }]);
+    estadoCtl?.addEventListener('acao', (e) => { if (e.detail.id === 'tentar') adicionar(ficha, confirmaPii, { botao, estadoCtl }); }, { once: true });
+    return;
+  }
+  estadoCtl?.limpar();
   dialogo.fechar('adicionado');
   const aviso = el('aviso');
   limpar(aviso);
