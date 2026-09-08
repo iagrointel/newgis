@@ -669,6 +669,14 @@ CASOS: dict[tuple[str, str], Caso] = {
                                    verificar=_sem_marca),
     ("GET", "/api/arquivos/_varredura"): Caso(lambda p: "/api/arquivos/_varredura", proprio=True,
                                                aceita=frozenset({200}), verificar=_sem_marca),
+    # L1-01-d: a credencial só-leitura devolvida é SEMPRE a do balde do chamador (o slug vem de auth, não da URL),
+    # então A recebe a chave de A — `proprio=True` com verificação de que nada de B aparece no corpo.
+    ("GET", "/api/arquivos/_chave-leitura"): Caso(
+        lambda p: "/api/arquivos/_chave-leitura", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    # L1-01-d: subrequisição `auth_request` do nginx. Sem `X-Original-URI` válido ela nega sempre — e é assim
+    # que as quatro chamadas da varredura a alcançam (nenhuma delas forja o cabeçalho interno do nginx).
+    ("GET", "/api/arquivos/_cog/autorizar"): Caso(lambda p: "/api/arquivos/_cog/autorizar", publico=True),
     ("GET", "/api/arquivos/{sha256}"): Caso(lambda p: f"/api/arquivos/{'0' * 64}?classe=zt_cruzado"),
     ("DELETE", "/api/arquivos/{sha256}"): Caso(lambda p: f"/api/arquivos/{'0' * 64}?classe=zt_cruzado"),
     # ---- L2-11-c rede de rota: cálculo sobre dado aberto (OSM, recorte de teste), não é de A nem de B —

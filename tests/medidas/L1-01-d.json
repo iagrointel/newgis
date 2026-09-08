@@ -1,0 +1,77 @@
+{
+ "item": "L1-01-d-garage-por-inquilino",
+ "clausulas": {
+  "c_isolamento_ro": {
+   "get": 403,
+   "head": 403,
+   "list": 403
+  },
+  "refutacao_ro": {
+   "put": 403,
+   "delete": 403,
+   "copy_no_mesmo_balde": 403,
+   "copy_entre_baldes": 403,
+   "multipart": 403,
+   "list_buckets": "200 ['til101dgarag-plat-demo']"
+  },
+  "d_nunca_sobrescreve": {
+   "chave_v1": "demo/zt_sobrescrita/cog_c9e41e3e.tif",
+   "chave_v2": "demo/zt_sobrescrita/cog_ebd6a855.tif",
+   "recusa": "ObjetoJaExiste"
+  },
+  "f_apagar": {
+   "objetos_antes": 0,
+   "bytes_antes": 0,
+   "objetos_apos_gravar": 3,
+   "bytes_apos_gravar": 15000,
+   "liberados": {
+    "objetos": 3,
+    "bytes": 15000
+   },
+   "objetos_no_fim": 0,
+   "bytes_no_fim": 0
+  },
+  "cog_autorizacao": {
+   "/svc/<token de A>/cog/demo/item01/cog_77e7c523.tif": 204,
+   "/svc/<token de A>/cog/demo2/item01/cog_77e7c523.tif": 403,
+   "/svc/plat_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz/cog/demo/item01/cog_77e7c523.tif": 403,
+   "/svc/<token de A>/cog/demo/../demo2/item01/cog_77e7c523.tif": 403,
+   "/svc/<token de A>/cog/demo/item01/cog_77e7c523.tif/etc/passwd": 403
+  },
+  "e_range_https": {
+   "url": "/svc/<token de A>/cog/demo/zt_range/cog_63818cfc.tif",
+   "status": 206,
+   "content_range": "bytes 1048576-1048591/3146505",
+   "bytes_conferidos": 16,
+   "objeto_bytes": 3146505,
+   "slice": "1m",
+   "token_invalido": 403
+  },
+  "a_semeadura": {
+   "balde": "til101dgarag-plat-zt-inq-6839cc",
+   "cota_bytes_declarada": 21474836480,
+   "cota_objetos_declarada": 200000,
+   "cota_bytes_no_garage": 21474836480,
+   "cota_objetos_no_garage": 200000,
+   "primeira_execucao_alterados": 1,
+   "segunda_execucao_alterados": 0
+  },
+  "b_cota_bytes": {
+   "cota_bytes": 1000,
+   "bytes_tentados": 4096,
+   "mensagem": "o Garage recusou a gravação: a cota de armazenamento do inquilino foi atingida"
+  },
+  "b_cota_objetos": {
+   "objetos_usados_antes": 0,
+   "cota_objetos": 1,
+   "mensagem": "o Garage recusou a gravação: a cota de objetos do inquilino foi atingida (limite do balde: 1 objetos)"
+  },
+  "b_api": {
+   "status": 413,
+   "erro": "cota_excedida",
+   "mensagem": "cota de 500 bytes excedida: uso atual 0, objeto de 2048 bytes"
+  }
+ },
+ "medido_em": "2026-09-08T13:20:10+0000",
+ "garage": "v2.3.0"
+}
