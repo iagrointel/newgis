@@ -158,7 +158,7 @@ INGESTAO_FIDS_RELATORIO_MAX = 1000        # fids corrigidos listados no relatór
 # politica.py, L0-02) — esta tela só EXPÕE aquele esquema, nunca recria um novo.
 ORG_NOME_MAX = 55                         # mesmo teto do "Organization name" da Esri (portão do item-pai L0-07-a)
 ORG_COR_PADRAO = "#2463a8"                # mesmo azul de app/catalogo/miniatura.py TRACO, cor de marca padrão
-ORG_IDIOMAS = ("pt-BR",)                  # só o que existe em web/js/i18n/; L7-10 acrescenta idioma novo aqui
+ORG_IDIOMAS = ("pt-BR", "en", "es")       # só o que existe em web/js/i18n/ (UX-02: en e es com paridade de chaves)
 ORG_ZOOM_MAX = 24                         # teto de zoom de um webmap (padrão MapLibre/Leaflet)
 ORG_BASEMAP_MAX = 100
 ORG_LOGO_BYTES_MAX = 1 * 1024 * 1024      # 1 MiB (portão do item-pai: "logo > 1 MB recusado")
@@ -221,4 +221,46 @@ ESCALA_APROVACAO_TIPOS = ("limiar", "top_pct")
 ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) da migração
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
+ESCALA_CELULAS_GEOJSON_MAX = 50_000   # feições de GET /api/multiescala/execucoes/{id}/celulas (UX-08); além = truncado
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+# --- tabela de atributos da camada (L2-01-g-tabela-atributos): paginação no servidor, busca em texto, filtro
+# pela extensão do mapa, seleção e a vista por usuário (colunas visíveis, alias, largura, domínio). As páginas
+# são as três do Map Viewer/ArcGIS Pro; nenhum valor livre, para que o `LIMIT` seja sempre um dos três.
+TABELA_PAGINAS = (50, 200, 1000)
+TABELA_BUSCA_MAX = 200                    # termo de busca (ILIKE + unaccent) — acima disso é ataque, não busca
+TABELA_FIDS_MAX = 5000                    # seleção vinda do mapa: identificadores enviados de uma vez
+TABELA_COLUNAS_MAX = 500                  # mesmo teto de `campos` no esquema do tipo camada_vetorial (029)
+TABELA_ALIAS_MAX = 200                    # mesmo teto de `alias` no esquema do tipo camada_vetorial (029)
+TABELA_LARGURA_MIN = 40                   # pixels; abaixo disso a coluna some da tela e não dá para arrastar
+TABELA_LARGURA_MAX = 2000
+TABELA_DOMINIO_ITENS_MAX = 1000           # pares código -> descrição por coluna
+TABELA_DOMINIO_TEXTO_MAX = 250
+TABELA_GEOMETRIA_LIMITE = 2000            # feições com geometria devolvidas para desenhar no mapa (por página)
+# --- exportação de camada (L0-04-h-exportar; ADR 0018). Os tempos e tetos abaixo saem de MEDIÇÃO nesta
+# máquina em 06/09/2026 sobre uma camada de 100 mil pontos (ver tests/medidas/L0-04-h-exportar.json), não de
+# estimativa: ogr2ogr escreve GPKG/GeoJSON/shapefile/CSV/XLSX/KML/FlatGeobuf/GML/DXF de 50 mil feições em
+# 0,2-0,7 s cada. A exceção medida é o driver LIBKML: 3,5 min de CPU e 255 MB de RSS para as MESMAS 50 mil
+# feições, sem terminar — por isso KML/KMZ usam o driver `KML` (0,34 s) e o KMZ é o zip do KML feito aqui.
+EXPORTACAO_VALIDADE_DIAS = 7                  # arquivo gerado some depois disso (periódico exportacao.expirar)
+EXPORTACAO_POR_USUARIO_EM_CURSO = 3           # exportações pendentes/gerando por usuário (refutação: 5 em paralelo)
+EXPORTACAO_MEMORIA_MB = 1024                  # job exportacao.gerar (mesmo teto de ingestao.carregar)
+EXPORTACAO_TIMEOUT_S = 3600
+EXPORTACAO_DISCO_MIN_LIVRE_BYTES = 2 * 1024 * 1024 * 1024   # nunca começa com menos que isto livre (disco a 98%)
+EXPORTACAO_FATOR_DISCO = 3                    # arquivo temporário estimado = tamanho da tabela x isto (GML mede 3,4x
+                                              # o GPKG na medição de 06/09; o fator cobre o pior caso + o zip)
+PACOTE_CAMADAS_MAX = 50                       # camadas num pacote de mapa (item L2-01-l)
+PACOTE_IMPORTAR_MAX_BYTES = 200 * 1024 * 1024 # pacote enviado para reimportação (acima disso, 413)
+PACOTE_OGR_TIMEOUT_S = 900                    # ogr2ogr de UMA camada do pacote na reimportação
+EXPORTACAO_IDS_MAX = 200000                   # fids de uma seleção exportada (mesmo teto do tipo de item `selecao`)
+EXPORTACAO_CAMPOS_MAX = 500                   # mesmo teto de INGESTAO_CAMPOS_MAX (a lista vem do mesmo item)
+EXPORTACAO_WHERE_MAX = 4000                   # caracteres do filtro `where` (o parser do L2-04-b recusa o resto)
+EXPORTACAO_NOME_MAX = 120                     # nome do arquivo pedido pelo usuário (sem extensão)
+EXPORTACAO_ERRO_BANCO_MAX = 300               # tamanho do erro do banco depois de saneado, no corpo do 400
+EXPORTACAO_CODIFICACOES = ("UTF-8", "ISO-8859-1")
+EXPORTACAO_CSV_SEPARADORES = (",", ";", "\t", "|")
+EXPORTACAO_CSV_DECIMAIS = (".", ",")
+EXPORTACAO_BLOCO_LEITURA_BYTES = 8 * 1024 * 1024   # leitura do arquivo pronto em blocos (sha256 e envio); NUNCA
+                                              # o arquivo inteiro em memória, nem no envio ao Garage nem na entrega
+
+# --- widgets de página e de menu (L5-01-d)
+QR_TEXTO_MAX = 2048                         # conteúdo máximo do QR de compartilhar (uma URL longa cabe)

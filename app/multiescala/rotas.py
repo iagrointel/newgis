@@ -7,10 +7,12 @@ o acervo): qualquer usuário do inquilino lê tudo do inquilino e cria conjunto/
 exclusivo que bloqueie os demais (a política de INSERT da migração só exige `usuario_do_inquilino()`), então
 o privilégio publicado é `rls:visibilidade`, igual ao resto do catálogo por inquilino."""
 
+import json
+
 import psycopg2
 from fastapi import APIRouter, Query, Request
 
-from app import db
+from app import db, limites
 from app.auth import comum as auth_comum
 from app.auth.comum import paginacao, registrar_evento
 from app.auth.sessao import Auth, autenticado, iso
@@ -41,9 +43,12 @@ ESCOPO = "multiescala:usar"
 
 
 def _conjunto_json(r: dict) -> dict:
+    # `area` (GeoJSON) só quando a consulta a trouxe como texto (ST_AsGeoJSON): a tela do motor desenha o polígono
+    area = r.get("area_geojson")
     return {
         "id": str(r["id"]),
         "nome": r["nome"],
+        "area": json.loads(area) if isinstance(area, str) else (area if isinstance(area, dict) else None),
         "srid_trabalho": r["srid_trabalho"],
         "srid_nome": crs_mod.nome_do_srid(r["srid_trabalho"]),
         "origem_x_m": float(r["origem_x_m"]),
@@ -67,7 +72,7 @@ def _fator_json(r: dict) -> dict:
 
 
 def _carregar_conjunto(cur, cid: str) -> dict:
-    cur.execute("SELECT * FROM plat.escala_conjunto WHERE id = %s::uuid", (cid,))
+    cur.execute("SELECT *, ST_AsGeoJSON(area, 7) AS area_geojson FROM plat.escala_conjunto WHERE id = %s::uuid", (cid,))
     r = cur.fetchone()
     if r is None:
         raise ErroAPI(404, "conjunto_inexistente", "área de estudo inexistente")
@@ -186,7 +191,11 @@ def listar_conjuntos(limite: int | None = None, deslocamento: int | None = None,
     with db.db(auth.contexto()) as cur:
         cur.execute("SELECT count(*) AS n FROM plat.escala_conjunto")
         total = cur.fetchone()["n"]
-        cur.execute("SELECT * FROM plat.escala_conjunto ORDER BY lower(nome) LIMIT %s OFFSET %s", (lim, desl))
+        cur.execute(
+            "SELECT *, ST_AsGeoJSON(area, 7) AS area_geojson FROM plat.escala_conjunto ORDER BY lower(nome) "
+            "LIMIT %s OFFSET %s",
+            (lim, desl),
+        )
         itens = [_conjunto_json(r) for r in cur.fetchall()]
     return {"total": total, "itens": itens}
 
@@ -298,6 +307,45 @@ def executar_macro(id: str, corpo: ExecucaoEntrada, request: Request, auth: Auth
             "celulas_aprovadas": execucao["celulas_aprovadas"],
         })
         return _relatorio(cur, execucao)
+
+
+@router.get("/execucoes/{id}/celulas", openapi_extra=LER)
+def celulas_da_execucao(id: str, limite: int | None = Query(None, ge=1, le=limites.ESCALA_CELULAS_GEOJSON_MAX),
+                        auth: Auth = autenticado(escopo_token=ESCOPO)):
+    """Item UX-08: as células de uma execução como FeatureCollection (nota 0-100, cobertura, aprovada, col, lin)
+    para o visualizador pintar a grade. Só leitura; até ESCALA_CELULAS_GEOJSON_MAX feições, ordenadas por linha e
+    coluna; a resposta declara `total` e `truncado` para a tela nunca fingir que mostrou tudo."""
+    eid = uuid_ok(id, "execucao_inexistente", "execução inexistente")
+    lim = limite or limites.ESCALA_CELULAS_GEOJSON_MAX
+    with db.db(auth.contexto()) as cur:
+        execucao = _carregar_execucao(cur, eid)
+        cur.execute(
+            "SELECT count(*) AS n FROM plat.escala_resultado WHERE execucao_id = %s::uuid", (eid,)
+        )
+        total = cur.fetchone()["n"]
+        cur.execute(
+            "SELECT c.col, c.lin, r.nota, r.cobertura, r.aprovada, ST_AsGeoJSON(c.geom, 7) AS geom "
+            "FROM plat.escala_resultado r JOIN plat.escala_celula c ON c.id = r.celula_id "
+            "WHERE r.execucao_id = %s::uuid ORDER BY c.lin, c.col LIMIT %s",
+            (eid, lim),
+        )
+        feicoes = [
+            {
+                "type": "Feature",
+                "geometry": json.loads(f["geom"]),
+                "properties": {
+                    "col": f["col"], "lin": f["lin"],
+                    "nota": float(f["nota"]) if f["nota"] is not None else None,
+                    "cobertura": float(f["cobertura"]), "aprovada": bool(f["aprovada"]),
+                },
+            }
+            for f in cur.fetchall()
+        ]
+    return {
+        "type": "FeatureCollection", "features": feicoes,
+        "execucao_id": str(execucao["id"]), "nivel": execucao["nivel"], "total": total,
+        "truncado": total > len(feicoes),
+    }
 
 
 @router.post("/execucoes/{id}/micro", response_model=Execucao, status_code=201, openapi_extra=LER)

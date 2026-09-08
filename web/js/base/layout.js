@@ -13,17 +13,25 @@ export const TELAS = [
   { caminho: '/conexoes', chave: 'nav.conexoes' },
   { caminho: '/uploads', chave: 'nav.uploads', privilegio: 'conteudo.criar' },
   { caminho: '/conta', chave: 'nav.conta' },
+  // administração (UX-06): entra com QUALQUER um dos privilégios administrativos (qualquer = lista "ou")
+  { caminho: '/admin', chave: 'nav.admin', qualquer: ['membros.ver', 'papeis.gerir', 'tokens.gerir_todos', 'org.log_ver', 'org.configurar', 'org.integracoes'] },
   { caminho: '/admin/usuarios', chave: 'nav.usuarios', privilegio: 'membros.ver' },
   { caminho: '/admin/grupos', chave: 'nav.grupos' },
   { caminho: '/tarefas', chave: 'nav.tarefas', privilegio: 'jobs.executar' },
+  { caminho: '/ferramentas', chave: 'nav.ferramentas', privilegio: 'jobs.executar' },
   { caminho: '/admin/papeis', chave: 'nav.papeis', privilegio: 'papeis.gerir' },
   { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar' },
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver' },
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
+  { caminho: '/admin/acervo', chave: 'nav.acervo', privilegio: 'conteudo.registrar_fonte' },
+  { caminho: '/estilo-guia', chave: 'nav.estilo_guia', privilegio: 'org.configurar' },
 ];
 
 export function telasVisiveis(usuario) {
-  return TELAS.filter((tela) => !tela.privilegio || tem(tela.privilegio, usuario));
+  return TELAS.filter((tela) => {
+    if (tela.qualquer) return tela.qualquer.some((p) => tem(p, usuario));
+    return !tela.privilegio || tem(tela.privilegio, usuario);
+  });
 }
 
 export function montarLayout({ usuario, ativo = location.pathname }) {
@@ -33,6 +41,15 @@ export function montarLayout({ usuario, ativo = location.pathname }) {
   document.body.classList.add('com-lateral');
   const inq = usuario.inquilino || {};
   aside.append(h('div', { class: 'marca' }, h('strong', {}, t('app.nome')), h('span', { title: inq.slug }, inq.nome || inq.slug || '')));
+  /* celular (<= 800 px, style.css): a barra vira faixa no topo e a navegação abre por este botão; em tela larga ele
+     não aparece (display:none) e a navegação está sempre visível */
+  const btMenu = h('button', { type: 'button', class: 'menu-alternar pequeno', id: 'menu-alternar', 'aria-expanded': 'false', 'aria-controls': 'lateral' }, t('nav.menu'));
+  btMenu.addEventListener('click', () => {
+    const aberta = aside.dataset.aberta === '1';
+    aside.dataset.aberta = aberta ? '0' : '1';
+    btMenu.setAttribute('aria-expanded', String(!aberta));
+  });
+  aside.append(btMenu);
   const ul = h('ul');
   for (const tela of telasVisiveis(usuario)) {
     const a = h('a', { href: tela.caminho, 'aria-current': tela.caminho === ativo ? 'page' : undefined }, t(tela.chave));

@@ -4,7 +4,7 @@
 import { chamar, obter, mensagemDe } from '../base/api.js';
 import { h, limpar } from '../base/dom.js';
 import { loja, tem } from '../base/estado.js';
-import { t } from '../base/i18n.js';
+import { definirIdioma, idiomaAtual, normalizarIdioma, t } from '../base/i18n.js';
 
 export const CHAVE_INQUILINO = 'plat_inquilino';
 export const CHAVE_SESSAO = 'plat_sessao';
@@ -63,6 +63,9 @@ export async function exigirSessao({ privilegio, permitirPendencia = false } = {
   marcarSessao(true);
   if (usuario.inquilino?.slug) lembrarInquilino(usuario.inquilino.slug);
   loja.definir({ usuario });
+  // preferência de idioma da conta (UX-02): vale sobre o do navegador e fica lembrada para as telas públicas
+  const pref = normalizarIdioma(usuario.idioma_preferido);
+  if (pref && pref !== idiomaAtual()) await definirIdioma(pref);
   const destino = caminhoPendencia(usuario.pendencias);
   if (destino && !permitirPendencia) { location.replace(destino); return null; }
   if (privilegio && !tem(privilegio, usuario)) { semPermissao(privilegio); return null; }

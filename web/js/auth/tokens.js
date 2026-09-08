@@ -9,6 +9,7 @@ import '../base/componentes.js';
 import { confirmar } from '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from './sessao.js';
+import { estadoDeLista, eventoRegistrado } from './comum.js';
 
 const ESCOPOS = ['catalogo:ler', 'camada:ler', 'camada:editar', 'tiles:ler', 'jobs:executar', 'admin:inquilino'];
 let todos = false;
@@ -34,6 +35,10 @@ async function iniciar() {
   botoes.push(bt);
   cabecalho(t('tokens.titulo'), { contagem: 0, botoes });
   montarTabela();
+  document.getElementById('estado').addEventListener('acao', (ev) => {
+    if (ev.detail.id === 'tentar') carregarLista();
+    if (ev.detail.id === 'novo') abrirNovo();
+  });
   await carregarLista();
 }
 
@@ -80,13 +85,14 @@ function restricoesTexto(r) {
 }
 
 async function carregarLista() {
-  const aviso = document.getElementById('aviso');
+  const estado = document.getElementById('estado');
   const tab = document.getElementById('tabela');
+  if (!tab.linhas.length) estadoDeLista(estado, tab, null);
   const r = await obter(`/api/tokens${consulta({ todos: todos ? '1' : '' })}`);
-  if (r.status !== 200) { aviso.erro(`${t('erro.carregar')}: ${mensagemDe(r)}`); tab.linhas = []; return; }
+  estadoDeLista(estado, tab, r, { vazio: t('tokens.vazio'), acoes: [{ id: 'novo', rotulo: t('tokens.novo'), classe: 'primario' }] });
+  if (r.status !== 200) { tab.linhas = []; return; }
   const itens = Array.isArray(r.json) ? r.json : (r.json.itens || []);
   tab.linhas = itens;
-  tab.vazio = t('tokens.vazio');
   cabecalho(t('tokens.titulo'), { contagem: itens.length });
 }
 
@@ -117,12 +123,13 @@ async function acao(id, tk) {
     if (r.status !== 201) { aviso.erro(mensagemDe(r)); return; }
     await carregarLista();
     mostrarTokenUmaVez(r.json, t('token.renovado', { nome: tk.nome }));
+    eventoRegistrado();
     return;
   }
   if (id === 'revogar') {
     if (!(await confirmar(t('token.revogar'), t('token.revogar_confirma', { nome: tk.nome }), { perigo: true, ok: t('token.revogar') }))) return;
     const r = await apagar(`/api/tokens/${tk.id}`);
-    if (r.status === 204) { await carregarLista(); aviso.ok(t('token.revogado_ok', { nome: tk.nome })); } else aviso.erro(mensagemDe(r));
+    if (r.status === 204) { await carregarLista(); aviso.ok(t('token.revogado_ok', { nome: tk.nome })); eventoRegistrado(); } else aviso.erro(mensagemDe(r));
   }
 }
 
@@ -154,7 +161,7 @@ function abrirNovo() {
     f.ocupado = true;
     const r = await enviar('/api/tokens', corpo);
     f.ocupado = false;
-    if (r.status === 201) { painel.fechar('ok'); await carregarLista(); mostrarTokenUmaVez(r.json, t('token.criado', { nome: v.nome })); return; }
+    if (r.status === 201) { painel.fechar('ok'); await carregarLista(); mostrarTokenUmaVez(r.json, t('token.criado', { nome: v.nome })); eventoRegistrado(); return; }
     const campo = { validade_acima_do_maximo: 'validade_dias', escopo_invalido: 'escopos', escopo_fora_do_teto: 'escopos', limite_tokens: 'nome' }[r.json.erro];
     let m = mensagemDe(r);
     if (r.json.detalhe?.maximo_dias) m += ` (${t('token.maximo_dias', { n: r.json.detalhe.maximo_dias })})`;

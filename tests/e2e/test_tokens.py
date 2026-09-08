@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from tests.e2e.apoio import Tela, gravar_medidas, sufixo
+from tests.e2e.apoio import Tela, gravar_medidas, local, sufixo
 
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
@@ -29,7 +29,7 @@ def test_token_criar_usar_acessos_revogar(page, base_url, credenciais_demo, medi
     linha = page.locator("#tabela tbody tr", has_text=nome)
     assert token[:12] in linha.text_content()
     # uso por Bearer, fora do cookie
-    ctx = page.context.browser.new_context()
+    ctx = page.context.browser.new_context(ignore_https_errors=local(base_url))
     r = ctx.request.get(f"{base_url}/api/eu", headers={"Authorization": f"Bearer {token}"})
     assert r.status == 200 and r.json()["login"] == admin_login, r.text()
     tid = r.json()["token"]["id"]

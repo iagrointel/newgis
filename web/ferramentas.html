@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Ferramentas · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/tarefas.css">
+<link rel="stylesheet" href="/static/estilo/ferramentas.css">
+</head>
+<body class="tela ferramentas">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="ferramentas.titulo">Ferramentas</h1>
+    <div class="linha-ferramentas" id="ferramentas"></div>
+    <p class="aviso-beta"><span data-i18n="app.beta">análise / beta privado</span> · <span data-i18n="ferramentas.subtitulo">cada ferramenta roda como tarefa; o formulário nasce do esquema de parâmetros que o tipo declara</span></p>
+    <plat-aviso id="aviso"></plat-aviso>
+    <div class="tarefas-grade">
+      <div class="tarefas-coluna">
+        <section class="cartao" id="catalogo" aria-labelledby="t-catalogo">
+          <h2 id="t-catalogo"><span data-i18n="ferramentas.catalogo">catálogo</span> <span id="catalogo-total" class="contagem">…</span></h2>
+          <div class="linha-ferramentas">
+            <plat-busca id="catalogo-busca" rotulo="buscar por nome ou descrição"></plat-busca>
+            <label class="caixa"><input type="checkbox" id="catalogo-diagnostico"> <span data-i18n="ferramentas.mostrar_diagnostico">mostrar as de diagnóstico</span></label>
+          </div>
+          <plat-estado id="catalogo-estado" hidden></plat-estado>
+          <div id="catalogo-lista" class="ferramentas-lista"></div>
+        </section>
+      </div>
+      <section class="cartao detalhe" id="ferramenta" aria-labelledby="t-ferramenta" hidden>
+        <div class="detalhe-cabecalho">
+          <h2 id="t-ferramenta"><span id="ferramenta-nome" class="mono">…</span></h2>
+          <button type="button" id="ferramenta-fechar" class="pequeno texto" data-i18n="tarefas.fechar">fechar</button>
+        </div>
+        <p id="ferramenta-descricao" class="detalhe-resumo"></p>
+        <p id="ferramenta-custo" class="ajuda"></p>
+        <plat-estado id="ferramenta-estado" hidden></plat-estado>
+        <plat-formulario id="ferramenta-form"></plat-formulario>
+        <section id="execucao" class="cartao-interno" hidden aria-live="polite">
+          <h3><span data-i18n="ferramentas.execucao">execução</span> <span id="execucao-estado" class="estado-job"></span></h3>
+          <div class="progresso" id="execucao-progresso" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-i18n-aria="ferramentas.progresso" aria-label="progresso da execução">
+            <div class="barra-progresso"><div class="preenchido" id="execucao-preenchido"></div></div>
+            <span class="valor" id="execucao-valor">0 %</span>
+          </div>
+          <p id="execucao-mensagem" class="detalhe-mensagem"></p>
+          <p id="execucao-erro" class="detalhe-erro" hidden></p>
+          <div class="botoes">
+            <button type="button" id="execucao-cancelar" class="perigo pequeno" data-i18n="tarefas.cancelar">cancelar</button>
+            <a id="execucao-tarefa" class="botao pequeno" href="#" data-i18n="ferramentas.abrir_tarefa">abrir a tarefa</a>
+            <a id="execucao-item" class="botao pequeno primario" href="#" hidden data-i18n="ferramentas.abrir_resultado">abrir o resultado no catálogo</a>
+          </div>
+          <details open class="log"><summary><span data-i18n="tarefas.log">log</span></summary><ol id="execucao-log" class="log-linhas" aria-live="polite"></ol></details>
+        </section>
+      </section>
+    </div>
+  </main>
+</div>
+<script type="module" src="/static/js/jobs/ferramentas.js"></script>
+</body>
+</html>

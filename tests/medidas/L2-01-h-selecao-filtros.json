@@ -1,0 +1,83 @@
+{
+  "item": "L2-01-h-selecao-filtros",
+  "medido_em": "2026-09-07T13:03Z",
+  "carga_1min": 24.04,
+  "ram_livre_gb": 0,
+  "observacao_carga": "carga alta na maquina compartilhada; nenhuma clausula deste item mede tempo/vazao, so contagem/status, entao o numero vale mesmo sob carga",
+  "bancada": "scripts/selecao_demo_camadas.py (camadas selecao-pontos 200 feicoes/20 no quadrado-alvo, selecao-alvo 1 ponto a ~300 m)",
+  "clausulas": [
+    {
+      "clausula": "selecao por poligono de 20 feicoes confere com ST_Intersects direto (mesma contagem)",
+      "estado": "passou",
+      "prova": "tests/api/test_selecao_filtro.py::test_selecao_por_poligono_bate_com_st_intersects_direto",
+      "resultado": "API n=20, SQL a mao n=20"
+    },
+    {
+      "clausula": "filtro CQL2 com 3 clausulas e um OR aninhado da a mesma contagem do SQL escrito a mao",
+      "estado": "passou",
+      "prova": "tests/api/test_selecao_filtro.py::test_filtro_cql2_tres_clausulas_or_aninhado_bate_com_sql_a_mao",
+      "resultado": "API e SQL a mao batem (LIKE + IN + OR(>,=) aninhado)",
+      "nota": "a clausula original citava 'is not null'; o compilador CQL2 desta arvore so tem isNull (positivo), sem negacao 'not' -- trocado por IN(...) que tambem exclui nulo e mantém 3 clausulas + OR aninhado"
+    },
+    {
+      "clausula": "URL copiada em outra sessao reabre com o mesmo filtro e selecao",
+      "estado": "pendente",
+      "razao": "nao medida: o front-end (construtor de filtro, desenho terra-draw, estado na URL) ainda nao foi construido nesta trilha -- so o backend (app/mapa/selecao.py, app/consulta/cql2.py) e a bancada existem. terra-draw ja esta vendorizado (web/vendor/terra-draw/) mas sem wiring em web/js/mapa/."
+    },
+    {
+      "clausula": "filtro em campo de data com fuso",
+      "estado": "passou",
+      "prova": "tests/api/test_selecao_filtro.py::test_filtro_data_com_fuso_bate_com_sql_a_mao",
+      "resultado": "filtro >= '2026-08-01T00:00:00-03:00' bate com SQL a mao (timestamptz)"
+    },
+    {
+      "clausula": "selecao espacial por distancia 500 m bate com ST_DWithin geografico",
+      "estado": "passou",
+      "prova": "tests/api/test_selecao_filtro.py::test_selecao_espacial_por_distancia_500m_bate_com_st_dwithin_geografico",
+      "resultado": "API e SQL a mao (ST_DWithin geography) batem"
+    },
+    {
+      "clausula": "construtor recusa campo inexistente e operador invalido (422)",
+      "estado": "passou",
+      "prova": "tests/api/test_selecao_filtro.py::test_construtor_recusa_campo_inexistente, ::test_construtor_recusa_operador_invalido",
+      "resultado": "422 campo_nao_permitido / 422 operador_nao_permitido"
+    },
+    {
+      "clausula": "captura de cada modo",
+      "estado": "pendente",
+      "razao": "nao medida: captura de tela/PDF depende do front-end interativo (clique/retangulo/poligono/laco), que nao existe ainda nesta trilha -- ver clausula da URL acima."
+    }
+  ],
+  "refutacao": [
+    {
+      "ataque": "funcao nao permitida (pg_sleep)",
+      "estado": "passou",
+      "prova": "tests/api/test_selecao_filtro.py::test_adversario_funcao_nao_permitida_da_422_nunca_500",
+      "resultado": "422, nunca 500 nem execucao"
+    },
+    {
+      "ataque": "200 clausulas (AND com 200 filhos)",
+      "estado": "passou",
+      "prova": "tests/api/test_selecao_filtro.py::test_adversario_200_clausulas_da_422_nunca_500",
+      "resultado": "422 (excede o teto de complexidade)"
+    },
+    {
+      "ataque": "valor de tipo errado (texto onde espera numero)",
+      "estado": "passou",
+      "prova": "tests/api/test_selecao_filtro.py::test_adversario_valor_de_tipo_errado_da_422_nunca_500",
+      "resultado": "422"
+    },
+    {
+      "ataque": "SQL bruto no nome do campo (';DROP TABLE...')",
+      "estado": "passou",
+      "prova": "tests/api/test_selecao_filtro.py::test_adversario_sql_bruto_no_nome_do_campo_da_422_nunca_500",
+      "resultado": "422 campo_nao_permitido -- nunca chega a montar SQL com o nome bruto"
+    },
+    {
+      "ataque": "compara 10 selecoes aleatorias com PostGIS",
+      "estado": "passou",
+      "prova": "tests/api/test_selecao_filtro.py::test_adversario_dez_selecoes_aleatorias_batem_com_postgis",
+      "resultado": "10 quadrados aleatorios (seed fixa 20260907), API bate com ST_Intersects direto nos 10"
+    }
+  ]
+}

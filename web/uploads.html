@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Enviar arquivo · plat</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/estilo/tokens.css">
+<script src="/static/js/base/tema_cedo.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="tela instrumento uploads">
@@ -15,7 +15,9 @@
   <aside id="lateral" class="lateral"></aside>
   <main id="principal" class="principal" tabindex="-1">
     <h1 data-i18n="upload.titulo">Enviar arquivo</h1>
+    <p class="aviso-beta" data-i18n="app.beta">análise / beta privado</p>
     <plat-aviso id="aviso"></plat-aviso>
+    <plat-estado id="upload-estado" hidden></plat-estado>
   </main>
 </div>
 <script type="module" src="/static/js/uploads/enviar.js"></script>

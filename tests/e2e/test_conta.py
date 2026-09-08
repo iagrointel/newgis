@@ -9,7 +9,7 @@ import io
 import pytest
 from PIL import Image
 
-from tests.e2e.apoio import Tela, gravar_medidas, sufixo
+from tests.e2e.apoio import Tela, gravar_medidas, local, sufixo
 
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
@@ -41,7 +41,7 @@ def test_pendencia_de_senha_troca_e_sessoes(page, base_url, credenciais_demo, ad
         page.wait_for_selector("#form-senha plat-aviso[data-tipo='ok']", timeout=15000)
         assert (page.text_content("#pendencia") or "").strip() == ""
         # segunda sessão pela API, para a tabela ter uma linha a encerrar
-        ctx2 = page.context.browser.new_context()
+        ctx2 = page.context.browser.new_context(ignore_https_errors=local(base_url))
         r2 = ctx2.request.post(f"{base_url}/api/login", data={"inquilino": slug, "login": login, "senha": nova})
         assert r2.status == 200 and r2.json()["ok"] is True
         tela.ir("/conta")
