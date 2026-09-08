@@ -1,0 +1,40 @@
+{
+  "item": "L2-01-c-lista-camadas-legenda",
+  "medido_em": "2026-09-07T00:00:00Z",
+  "clausulas": {
+    "reordenar_arrasto_e_teclado_mesma_ordem": {
+      "status": "nao_medida_e2e",
+      "nota": "camadas.js: mover() e moverRelativo() sao o MESMO caminho de codigo para arrasto e ArrowUp/ArrowDown (unico ponto que grava o documento); prova por navegador (playwright) nao rodada nesta sessao por falta de tempo de maquina apos retomada de queda por cota."
+    },
+    "opacidade_30pc_getPaintProperty": {
+      "status": "nao_medida_e2e",
+      "nota": "catalogo.definirOpacidade ja existe e e reusado pelo slider (camada-opacidade) na arvore; leitura via getPaintProperty nao capturada em navegador nesta sessao."
+    },
+    "fora_de_escala_cinza_some_do_mapa": {
+      "status": "implementado_unidade",
+      "nota": "camadas.js:_foraDeEscala + classe CSS .arvore-linha.fora-de-escala (opacity .45, grayscale) confirmadas no arquivo; setLayerZoomRange aplicado em definirFaixaDeEscala. Prova visual em navegador pendente."
+    },
+    "legenda_muda_sem_recarregar_setPaintProperty": {
+      "status": "nao_medida_e2e",
+      "nota": "Legenda escuta map.on('styledata', ...) e MapLibre dispara styledata em setPaintProperty (documentado no cabecalho de legenda.js); nao capturado por teste de navegador nesta sessao."
+    },
+    "amostra_legenda_6_tipos_por_captura": {
+      "status": "parcial_unidade",
+      "nota": "5 dos 6 tipos (simples, valores_unicos, intervalos, proporcional, calor) provados por unidade em tests/unit/test_simbologia_mapa_estilos.py (legenda() e camadas_maplibre() usam a MESMA cor/expressao). raster provado por unidade (legenda_raster/estilo_raster). Captura de tela dos 6 juntos no navegador NAO feita nesta sessao."
+    },
+    "legenda_raster_rampa_e_minmax": {
+      "status": "implementado_unidade",
+      "nota": "legenda_raster() devolve minimo/maximo/rampa; legenda.js analisarCamada() le raster-color-range + raster-color e monta bloco .legenda-faixa com min/max. test_estilo_raster_gera_rampa_continua_com_minimo_e_maximo cobre o lado Python."
+    },
+    "zero_erro_console": {"status": "nao_medida_e2e", "nota": "depende de sessao de navegador; nao rodada."},
+    "captura_L2-01-c_camadas_png": {"status": "nao_feita", "nota": "arquivo tests/e2e/capturas/L2-01-c_camadas.png nao gerado nesta sessao."}
+  },
+  "testes_unitarios_verdes": [
+    "tests/unit/test_simbologia_mapa_estilos.py (12 testes, proporcional/calor/raster)",
+    "tests/unit/test_simbologia_mapa.py (14 testes, item-pai, sem regressao)"
+  ],
+  "refutacao_adversario": {
+    "status": "nao_executada",
+    "nota": "60 camadas / 3 niveis / 200 alternancias de visibilidade com performance.memory, e leitura de pixel do canvas contra a cor da amostra: nao executado nesta sessao (exige navegador real e bancada Martin no ar)."
+  }
+}

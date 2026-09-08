@@ -205,17 +205,6 @@ REDEFINICAO_JANELA_MIN = 15               # limite de taxa (refutação do item:
 REDEFINICAO_MAX_JANELA = 5                # no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN
 AVISO_EXPIRACAO_DIAS = (90, 30, 7, 1)     # avisos de expiração de token de serviço (hipótese do item; como a Esri)
 
-# --- edição transacional de feições (L2-03-a-api-edicao-transacional; POST /api/camadas/{id}/edicoes, única
-# porta de escrita para navegador/PWA/FeatureServer/OGC). LOTE_MAX = 2× o tamanho medido no portão (1.000
-# feições ≤ 3 s), com folga operacional; bem abaixo do lote de 100 mil que a refutação do item manda recusar
-# (esse cai primeiro no 413 de CORPO_MAX_PADRAO_BYTES quando o corpo é grande, mas o teto por lista garante o
-# 422 mesmo com corpo pequeno e muitas feições minúsculas).
-EDICAO_LOTE_MAX = 2_000
-EDICAO_ATRIBUTOS_MAX = 500                # campos por feição num único pedido (mesmo teto de INGESTAO_CAMPOS_MAX)
-EDICAO_TEXTO_MAX = 65_536                 # 64 KiB por valor de campo texto (mesma ordem de ITEM_DESCRICAO_MAX)
-EDICAO_REGRA_CAMPO_MAX = 500              # entradas em dados.regras_campo (mesmo teto de campos da camada)
-EDICAO_DOMINIO_VALORES_MAX = 1_000        # valores aceitos por regra de domínio codificado
-EDICAO_SRID_MAX = 999_999                 # mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql)
 # --- grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
 # macro (grosseira, ex. 1 km) triando regiões e micro (fina, ex. 100 m) gerada SÓ dentro das aprovadas.
 # ESCALA_CELULAS_MAX vale tanto para a grade macro inteira quanto para o refino micro (aprovadas × k²) — é o
@@ -243,3 +232,14 @@ REGRAS_MENSAGEM_MAX = 500                  # mensagem configurada da restrição
 REGRAS_VALIDACAO_LOTE = 5_000              # feições por lote do job camadas.validar (cursor no servidor)
 REGRAS_VALIDACAO_ERROS_MAX = 1_000_000     # teto de erros gravados por execução (acima disso o job para e avisa)
 REGRAS_FEICOES_LEITURA_MAX = 1_000         # linhas por chamada de GET /api/camadas/{id}/feicoes
+# --- edição transacional de feições (L2-03-a-api-edicao-transacional; POST /api/camadas/{id}/edicoes, única
+# porta de escrita para navegador/PWA/FeatureServer/OGC). LOTE_MAX = 2× o tamanho medido no portão (1.000
+# feições ≤ 3 s), com folga operacional; bem abaixo do lote de 100 mil que a refutação do item manda recusar
+# (esse cai primeiro no 413 de CORPO_MAX_PADRAO_BYTES quando o corpo é grande, mas o teto por lista garante o
+# 422 mesmo com corpo pequeno e muitas feições minúsculas).
+EDICAO_LOTE_MAX = 2_000
+EDICAO_ATRIBUTOS_MAX = 500                # campos por feição num único pedido (mesmo teto de INGESTAO_CAMPOS_MAX)
+EDICAO_TEXTO_MAX = 65_536                 # 64 KiB por valor de campo texto (mesma ordem de ITEM_DESCRICAO_MAX)
+EDICAO_REGRA_CAMPO_MAX = 500              # entradas em dados.regras_campo (mesmo teto de campos da camada)
+EDICAO_DOMINIO_VALORES_MAX = 1_000        # valores aceitos por regra de domínio codificado
+EDICAO_SRID_MAX = 999_999                 # mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql)

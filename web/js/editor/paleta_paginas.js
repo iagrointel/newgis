@@ -25,6 +25,7 @@ export const PALETA_PAGINAS = {
     'linha', 'coluna', 'grade', 'acordeao', 'painel_fixo', 'painel_lateral', 'janela',
     'secao_vistas', 'vista',
     'grupo', 'texto', 'imagem', 'mapa', 'tabela',
+    'grafico', 'lista', 'filtro', 'consulta', 'selecao', 'info-feicao', 'adicionar-dado',
   ],
   tipos: {
     // ---------------------------------------------------------------- página (raiz do documento)
@@ -238,6 +239,71 @@ export const PALETA_PAGINAS = {
       esquema: {
         type: 'object', additionalProperties: false, required: ['linhas_por_pagina'],
         properties: { linhas_por_pagina: { type: 'integer', title: 'Linhas por página', minimum: 1, maximum: 500 } },
+      },
+    },
+    // ---------------------------------------------------------------- widgets de dado (item L5-01-c)
+    grafico: {
+      rotulo: 'Gráfico', aceita_filhos: false, largura_padrao: 6,
+      propriedades_padrao: { tipo: 'barra', campo: '', agregacao: 'contagem' },
+      esquema: {
+        type: 'object', additionalProperties: false, required: ['tipo', 'campo'],
+        properties: {
+          tipo: { type: 'string', title: 'Tipo', enum: ['barra', 'linha', 'pizza', 'dispersao', 'histograma'] },
+          campo: { type: 'string', title: 'Campo (categoria ou x)', maxLength: 200 },
+          agregacao: { type: 'string', title: 'Agregação', enum: ['contagem', 'soma', 'media', 'minimo', 'maximo'] },
+          campo_valor: { type: 'string', title: 'Campo do valor', maxLength: 200 },
+          campo_y: { type: 'string', title: 'Campo y (dispersão)', maxLength: 200 },
+          titulo: { type: 'string', title: 'Título', maxLength: 200 },
+        },
+      },
+    },
+    lista: {
+      rotulo: 'Lista', aceita_filhos: false, largura_padrao: 4,
+      propriedades_padrao: { modelo: '{__id}', linhas_por_pagina: 20 },
+      esquema: {
+        type: 'object', additionalProperties: false, required: ['modelo'],
+        properties: {
+          modelo: { type: 'string', title: 'Modelo do cartão ({campo} ou {= expressão com $campo })', maxLength: 2000 },
+          linhas_por_pagina: { type: 'integer', title: 'Cartões por página', minimum: 1, maximum: 500 },
+        },
+      },
+    },
+    filtro: {
+      rotulo: 'Filtro', aceita_filhos: false, largura_padrao: 4,
+      propriedades_padrao: { modo: 'texto', campo: '', rotulo: 'Filtrar' },
+      esquema: {
+        type: 'object', additionalProperties: false, required: ['modo'],
+        properties: {
+          modo: { type: 'string', title: 'Modo', enum: ['texto', 'valores', 'intervalo', 'data'] },
+          campo: { type: 'string', title: 'Campo', maxLength: 200 },
+          rotulo: { type: 'string', title: 'Rótulo', maxLength: 200 },
+        },
+      },
+    },
+    consulta: {
+      rotulo: 'Consulta', aceita_filhos: false, largura_padrao: 6,
+      propriedades_padrao: { rotulo: 'Consultar', espacial: true },
+      esquema: {
+        type: 'object', additionalProperties: false, required: [],
+        properties: { rotulo: { type: 'string', title: 'Rótulo do botão', maxLength: 200 }, espacial: { type: 'boolean', title: 'Permitir filtro espacial', default: true } },
+      },
+    },
+    selecao: {
+      rotulo: 'Seleção', aceita_filhos: false, largura_padrao: 4,
+      propriedades_padrao: { campo: '' },
+      esquema: { type: 'object', additionalProperties: false, required: [], properties: { campo: { type: 'string', title: 'Campo padrão', maxLength: 200 } } },
+    },
+    'info-feicao': {
+      rotulo: 'Informação da feição', aceita_filhos: false, largura_padrao: 4,
+      propriedades_padrao: { modelo: '' },
+      esquema: { type: 'object', additionalProperties: false, required: [], properties: { modelo: { type: 'string', title: 'Modelo ({campo}); vazio = todos os campos', maxLength: 2000 } } },
+    },
+    'adicionar-dado': {
+      rotulo: 'Adicionar dado', aceita_filhos: false, largura_padrao: 4,
+      propriedades_padrao: { rotulo: 'Adicionar dado', aceitar_url: true },
+      esquema: {
+        type: 'object', additionalProperties: false, required: [],
+        properties: { rotulo: { type: 'string', title: 'Rótulo', maxLength: 200 }, aceitar_url: { type: 'boolean', title: 'Aceitar caminho do servidor', default: true } },
       },
     },
   },

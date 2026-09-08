@@ -7,10 +7,17 @@ addopts = "-q --strict-markers"
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-extend-exclude = ["venv", "web/vendor"]
+extend-exclude = ["venv", "web/vendor", "app/consulta/proto/FeatureCollection_pb2.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "B", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# Fixture de pytest reexportada de outro arquivo de teste: o nome importado e o nome do PARÂMETRO da
+# função de teste têm de ser iguais para o pytest encontrar a fixture, e o ruff lê isso como
+# redefinição (F811). É a forma normal de partilhar fixture entre dois arquivos sem conftest próprio.
+"tests/api/test_martin_tiles.py" = ["F811"]
+"tests/api/test_leitor_tiles_adversario.py" = ["F811"]
 
 [tool.ruff.lint.flake8-bugbear]
 # Depends()/Body() em valor padrão é a forma do FastAPI; autenticado()/exigir() devolvem um Depends

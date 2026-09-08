@@ -16,6 +16,7 @@ import { criarEditor } from './editor.js';
 import { PALETA_LAYOUT } from './paleta.js';
 import { PALETA_PAGINAS } from './paleta_paginas.js';
 import { novoDocumento } from './documento.js';
+import { montarPainelDados } from '../app/painel_dados.js';
 
 /* item `app` ganha a paleta de PÁGINAS E LAYOUT (L5-01-a: página, cabeçalho, menu, janela, ...); os demais
    tipos de construtor continuam com a paleta de layout comum do L5-08, sem página nenhuma dentro deles. */
@@ -52,21 +53,44 @@ async function iniciar() {
   const linkExecutar = documento.tipo === 'app' && id
     ? h('a', { id: 'executar', class: 'pequeno', href: `/executar?item=${id}`, target: '_blank', rel: 'noopener' }, 'Executar')
     : null;
-  principal.append(h('div', { class: 'linha-ferramentas' }, btSalvar, estado, linkExecutar), alvo);
+  const linkPublicar = documento.tipo === 'app' && id
+    ? h('a', { id: 'abrir-aplicativo', class: 'pequeno', href: `/aplicativo?item=${id}`, target: '_blank', rel: 'noopener' }, 'Abrir aplicativo')
+    : null;
+  principal.append(h('div', { class: 'linha-ferramentas' }, btSalvar, estado, linkExecutar, linkPublicar), alvo);
 
+  /* item L5-07: painel de fontes, vistas e mensagens (só para `app`); as coleções vivem fora do editor de nós e
+     entram no corpo na gravação; erro do modelo bloqueia o Salvar com a mensagem na tela */
+  let painel = null;
   const editor = criarEditor({
     raiz: alvo,
     documento,
     paleta: paletaDoTipo(documento.tipo),
-    aoMudar: () => { estado.textContent = 'alterações não gravadas'; },
+    aoMudar: () => { estado.textContent = 'alterações não gravadas'; painel?.redesenhar(); },
   });
+  const colecoes = { fontes: documento.corpo.fontes || [], vistas: documento.corpo.vistas || [], mensagens: documento.corpo.mensagens || [] };
+  if (documento.tipo === 'app') {
+    // recolhido por padrão e dentro da coluna lateral do editor: a altura da página continua a da paleta (o
+    // arrasto da paleta é medido por coordenadas e o navegador só rola a paleta para a vista quando nada abaixo
+    // da grade alonga a página)
+    const raizDados = h('details', { id: 'painel-dados', class: 'painel-dados' }, h('summary', {}, 'Dados e mensagens'));
+    (alvo.querySelector('.editor-lado') || principal).append(raizDados);
+    painel = montarPainelDados({
+      raiz: raizDados, colecoes, nosAtuais: () => editor.documento().corpo.nos,
+      aoMudar: ({ erros }) => { estado.textContent = erros.length ? 'alterações não gravadas (modelo com erro)' : 'alterações não gravadas'; },
+    });
+  }
 
   btSalvar.addEventListener('click', async () => {
     if (!item) return;
-    btSalvar.disabled = true;
     const d = editor.documento();
+    const corpo = painel ? { ...d.corpo, ...painel.colecoes() } : d.corpo;
+    if (painel) {
+      const { erros } = painel.validar();
+      if (erros.length) { estado.textContent = 'não gravado: modelo com erro'; aviso.mostrar(`${erros.length} erro(s) em fontes/vistas/mensagens: ${erros[0].erro}`, 'erro'); return; }
+    }
+    btSalvar.disabled = true;
     const r = await chamar('PATCH', `/api/itens/${item.id}`, {
-      dados: { tipo: item.tipo, esquema_versao: d.esquema_versao, corpo: d.corpo },
+      dados: { tipo: item.tipo, esquema_versao: painel ? Math.max(3, d.esquema_versao || 2) : d.esquema_versao, corpo },
       versao_atual: item.versao_atual,
     });
     btSalvar.disabled = false;
