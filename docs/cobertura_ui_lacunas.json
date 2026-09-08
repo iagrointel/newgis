@@ -27,10 +27,6 @@
   "POST /api/plataforma/inquilinos/{id}/reativar",
   "POST /api/plataforma/inquilinos/{id}/suspender",
   "POST /api/rota",
-  "POST /rest/services/Geocodificador/GeocodeServer",
-  "POST /rest/services/Geocodificador/GeocodeServer/findAddressCandidates",
-  "POST /rest/services/Geocodificador/GeocodeServer/geocodeAddresses",
-  "POST /rest/services/Geocodificador/GeocodeServer/reverseGeocode",
   "PUT /api/importacoes/{id}/confirmar",
   "PUT /api/org/ldap",
   "PUT /api/papeis/{id}"
