@@ -10,6 +10,10 @@ from jsonschema import Draft202012Validator
 from app import db
 from app.erros import ErroAPI
 
+# Tipos de item que apontam para uma relação de camada em `d_<slug>` (`dados.schema`/`dados.tabela`) e por
+# isso são servidos pelos mesmos protocolos: a tabela da camada e a VIEW da vista de camada (item L5-32).
+TIPOS_CAMADA = ("camada_vetorial", "vista_de_camada")
+
 VALIDADE_CACHE_S = 60.0
 _cache: dict[str, dict] = {}
 _validadores: dict[str, Draft202012Validator] = {}
