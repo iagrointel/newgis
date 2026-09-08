@@ -38,6 +38,7 @@ from app.catalogo import (
     rotas_pastas,
     transferencia,
 )
+from app.chamados import rotas as rotas_chamados
 from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.geocodificador.rotas import router as rotas_geocodificador
@@ -104,6 +105,10 @@ ROUTERS = [
     rotas_acervo.router,
     # --- conexão externa (L6-02-a): /api/conexoes, /api/conexoes/{id}, /api/conexoes/{id}/testar
     rotas_conexao.router,
+    # --- chamados de suporte (L7-13-a): /api/chamados (cliente, com captura e anexos) e
+    # /api/plataforma/chamados (painel do operador superadmin, fila de todos os inquilinos)
+    rotas_chamados.router,
+    rotas_chamados.router_operador,
     # --- arquivos/objetos (L0-11): /api/arquivos genérico por inquilino; /api/objetos/{chave} já vem do catálogo
     # (rotas_compartilhamento, entrega por URL assinada)
     rotas_arquivos,
