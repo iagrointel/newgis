@@ -126,7 +126,8 @@ def test_usuario_desabilitado_e_inquilino_suspenso(sessao_a, sessao_plat, usuari
     r = novo_cliente().post("/api/login", json={"inquilino": "demo", "login": u["login"], "senha": senha})
     assert r.status_code == 401 and r.json()["erro"] == "credenciais_invalidas"
     assert sessao_a.put(f"/api/usuarios/{u['id']}", json={"ativo": True}).status_code == 200
-    # suspensão do inquilino demo2 pelo superadmin: login 503, sessão viva 401; reativação restaura
+    # suspensão do inquilino demo2 pelo superadmin: login 503, sessão viva 503 (item L0-07-f: mesma mensagem do
+    # operador, nada apagado); reativação restaura
     inq = {t["slug"]: t for t in sessao_plat.get("/api/plataforma/inquilinos").json()}
     b = novo_cliente()
     assert entrar(b, "demo2", *cred["demo2"]).status_code == 200
@@ -136,7 +137,8 @@ def test_usuario_desabilitado_e_inquilino_suspenso(sessao_a, sessao_plat, usuari
             "/api/login", json={"inquilino": "demo2", "login": cred["demo2"][0], "senha": cred["demo2"][1]}
         )
         assert r.status_code == 503 and r.json()["erro"] == "inquilino_suspenso"
-        assert b.get("/api/eu").status_code == 401
+        r = b.get("/api/eu")
+        assert r.status_code == 503 and r.json()["erro"] == "inquilino_suspenso"
     finally:
         assert sessao_plat.post(f"/api/plataforma/inquilinos/{inq['demo2']['id']}/reativar").status_code == 204
     assert b.get("/api/eu").status_code == 200
