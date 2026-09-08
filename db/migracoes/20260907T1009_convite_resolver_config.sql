@@ -1,4 +1,4 @@
--- 049_convite_resolver_config: mesma classe de defeito da 048 (verificação manual do item L0-07-d, antes do
+-- 20260907T1009_convite_resolver_config: mesma classe de defeito da 048 (verificação manual do item L0-07-d, antes do
 -- adversário) — `POST /api/convites/aceitar` buscava `tenant.config` numa segunda consulta SEM contexto de
 -- inquilino (`db.db()` sem `Contexto`, porque a conta ainda não existe: não há usuario_id para montar um);
 -- RLS de `plat.tenant` (`id = plat.tenant_atual()`) filtra a linha com o GUC vazio e `cur.fetchone()` volta

@@ -1,0 +1,234 @@
+{
+ "item": "L0-01-repo",
+ "veredito": "PASSA",
+ "resumo": "Rodada 2 sobre o HEAD 8ffe950: a refutação literal resistiu (9,66 s; 82 testes; /saude 200 com noindex e HSTS) e os quatro achados da rodada 1 foram reatacados e fecharam com reprodução: (1) app importa e roda sem ~/.local, unidade viva com PYTHONNOUSERSITE=1; (2) 0 senha no journal durante e depois da reinstalação; (3) ADR e código batem (medidas, vendor com versão no nome, PLAT_GIT_SHA gravado, requirements completo, log_acesso adiado explicitamente); (4) HSTS só no bloco 443 e /api/docs com 0 requisição externa em chromium real. Ressalvas que não derrubam o item: prova de 'máquina nova' por simulação; funções SECURITY DEFINER sem checagem de inquilino ficam para o L0-02; tests/medidas/L0-01-repo.json sujo na árvore.",
+ "rodada": 2,
+ "head": "8ffe950",
+ "evidencia": [
+  {
+   "ataque": "R2-1. Refutação literal sobre HEAD 8ffe950 (drop schema+role -> install.sh -> /saude -> pytest completo -> make check -> noindex)",
+   "comando": "bash scratchpad/refutacao_r2.sh",
+   "saida": "rc_drop=0 (17 objetos); /saude com schema apagado = HTTP 503; rc_install=0 em 9,66 s (migração 002 4,6 s); pg_hba 1 linha; nginx idêntico ao anterior e sem cópia residual em /etc/nginx; https://plat.iagrointel.com/saude -> 200, X-Robots-Tag: noindex, nofollow, Strict-Transport-Security: max-age=31536000, JSON git_sha 8ffe950516f5 = git rev-parse HEAD, migracoes 2/0; banco: demo/demo2, admin demo superadmin; pytest completo 82 passed (81 + 1 e2e); make check verde (lint, sem-marcador, 81 + 1); plat-api active, NRestarts=0, 90 MB",
+   "resultado": "resistiu"
+  },
+  {
+   "ataque": "R2-2. Achado 1: dependências sem ~/.local (import e unidade viva)",
+   "comando": "PYTHONNOUSERSITE=1 ./venv/bin/python -c 'import app.main, fastapi, starlette, pydantic, dotenv'; systemctl show plat-api -p Environment; tr '\\0' '\\n' </proc/<MainPID>/environ; grep /.local /proc/<worker>/maps",
+   "saida": "import ok: fastapi e dotenv em /home/dev/plataforma/enterprise/venv/lib/python3.12/site-packages; unidade viva Environment=PYTHONNOUSERSITE=1 e igual ao modelo deploy/; ambiente do processo principal tem PYTHONNOUSERSITE=1; nenhum mapeamento de /home/dev/.local no worker; install.sh confere dpkg (python3-uvicorn, python3-psycopg2, python3-venv), instala requirements.txt com PYTHONNOUSERSITE=1 e aborta se app.main não importar; requirements.txt fixa fastapi 0.138.0, starlette 1.3.1, pydantic 2.13.4, python-dotenv 1.2.2 e transitivas; Makefile exporta PYTHONNOUSERSITE=1; tests/unit/test_dependencias.py prova em subprocesso (4 testes reais)",
+   "resultado": "resistiu (achado 1 fechado; ressalva: ainda não é uma segunda máquina)"
+  },
+  {
+   "ataque": "R2-3. Achado 2: senha no journal durante e depois da reinstalação",
+   "comando": "sudo journalctl --since -15min -o cat | grep -c <cada senha de tests/credenciais.txt>; journalctl _COMM=sudo | grep gerar_hash",
+   "saida": "0 ocorrências de cada senha antes e 0 depois da reinstalação; o COMMAND= gravado pelo sudo agora é '/usr/bin/env PYTHONNOUSERSITE=1 venv/bin/python -c ... gerar_hash(sys.stdin.read())' sem a senha (10 linhas nos 15 min, todas sem segredo); senha do banco: 0 no journal e 0 no log do Postgres. tests/unit/test_instalador.py trava a forma por stdin. Histórico: as 18 linhas antigas com senha em claro continuam no journal (senhas da rodada 1 já substituídas pelo testador às 12:49)",
+   "resultado": "resistiu (achado 2 fechado)"
+  },
+  {
+   "ataque": "R2-4. Achado 3: ADR x código, nomes de parceiro",
+   "comando": "grep -nE '^(medidas|vendor):' Makefile; make vendor; grep PLAT_GIT_SHA .env; ls web/vendor; git grep -i -E 'fgr|cbre|novaterra|sigcorp' -- ':!web/vendor'; sed -n 610,622p docs/adr/0001-fundacao.md",
+   "saida": "alvo medidas existe (PLAT_GRAVAR_MEDIDAS=1) e alvo vendor confere sha256: 4/4 OK; install.sh gravou PLAT_GIT_SHA=8ffe950516f5... no .env (igual ao HEAD) e app/versao.py lê .env ou ambiente sem .git (3 testes novos); vendor renomeado maplibre-gl-4.7.1.js/.css + swagger-ui-*-5.32.15 com sha e licença em VERSOES.txt (test_vendor.py); nomes de parceiro em rastreados fora de vendor = 0 (a única ocorrência é 'cbre' numa lista de TLDs dentro do bundle minificado do Swagger, falso positivo); a promessa do middleware gravar plat.log_acesso agora está explicitamente adiada ao L0-02 no ADR (linha 619, 'Decisão explícita (alterado em T1)'); 'fastapi vem do sistema' removido; regra de segredo em argv agora cumprida",
+   "resultado": "resistiu (achado 3 fechado)"
+  },
+  {
+   "ataque": "R2-5. Achado 4: HSTS só no 443 e /api/docs sem domínio externo",
+   "comando": "awk por bloco server no arquivo vivo; curl -D - em /saude, /, /static/app.js, /api/docs e http://; playwright chromium abrindo /api/docs e listando toda requisição",
+   "saida": "arquivo vivo: 3 add_header HSTS todos no bloco 1 (listen 443), bloco 2 (listen 80) sem HSTS; HTTPS: as 4 rotas devolvem Strict-Transport-Security: max-age=31536000; http://.../saude -> 301 sem HSTS; /api/docs: 4 pedidos, todos a https://plat.iagrointel.com (docs, css, bundle, openapi.json), 0 a host externo, 0 erro de console, 2 operações renderizadas; validatorUrl null; /docs, /redoc, /openapi.json = 404 (test_docs.py)",
+   "resultado": "resistiu (achado 4 fechado)"
+  },
+  {
+   "ataque": "R2-6. sem-marcador cobre os .md; docs deixaram de ser casca",
+   "comando": "make sem-marcador; grep largo do adversário em app db web install.sh Makefile docs *.md; wc -l *.md docs/PARIDADE.md",
+   "saida": "alvo inclui '*.md', requirements.txt e pyproject.toml; make sem-marcador rc=0; grep largo (inclusive 'escrita pelo laço|escrita pelo cronista') = 0; README 47, ARQUITETURA 475, MANUAL 157 (aponta a captura tests/e2e/capturas/L0-01-repo_inicio.png, que existe), CHANGELOG 82 linhas; docs/PARIDADE.md segue com a tabela vazia (4 linhas) — coerente: nenhuma capacidade Esri entregue ainda, e PARIDADE não está no portão deste item",
+   "resultado": "resistiu"
+  },
+  {
+   "ataque": "R2-7. Leitura dos testes novos (24 a mais: 58 -> 82)",
+   "comando": "cat tests/unit/test_dependencias.py test_instalador.py test_vendor.py tests/api/test_docs.py; git diff 3b53c24 HEAD -- tests/",
+   "saida": "test_dependencias: subprocesso real com PYTHONNOUSERSITE=1 e ambiente mínimo; test_instalador: leitura estática do install.sh/modelos (prova a forma, não a execução — a execução foi provada por R2-3); test_vendor: sha256 e convenção de nome; test_docs: HTML sem http(s)://; test_cabecalhos: HSTS em 6 rotas HTTPS, ausente no :80, recursos do /api/docs servidos pelo nginx; test_versao: 3 caminhos sem .git. Nenhum teste vazio",
+   "resultado": "resistiu"
+  }
+ ],
+ "o_que_nao_prova": [
+  "Segunda máquina real: a prova de 'máquina que nunca viu o repo' continua sendo PYTHONNOUSERSITE=1 + origem dos módulos + unidade viva; venv, .env e certificado foram reaproveitados.",
+  "Caminhos do install.sh não exercitados: .env inexistente (gera senha e segredo), certbot emitindo certificado (i2/i3), nginx -t reprovando (volta ao bloco anterior, só lido).",
+  "Funções SECURITY DEFINER sem checagem de inquilino (rodada 1, ataque 4): as migrações não mudaram entre as rodadas (db/ fora do diff), logo o achado permanece; não é cláusula deste item, é risco registrado para o L0-02.",
+  "Árvore suja ao fim: tests/medidas/L0-01-repo.json modificado (gerado_em 13:10:39, sha 8ffe950) por um 'make medidas' do testador antes da minha rodada; não é falha de código, mas o gerente precisa comitar ou descartar antes de fechar o turno.",
+  "Carga, concorrência e RAM sob uso: não medidos (MemoryCurrent 90 MB em repouso)."
+ ],
+ "clausulas": [
+  {
+   "clausula": "git com README/ARQUITETURA/MANUAL/CHANGELOG",
+   "veredito": "passa",
+   "evidencia": "README 47, ARQUITETURA 475, MANUAL 157 com captura real referenciada, CHANGELOG 82 linhas; 0 marcador; 0 nome de parceiro fora de vendor"
+  },
+  {
+   "clausula": "install.sh cria schema+role+pg_hba (com linha em pg_hba.conf)",
+   "veredito": "passa",
+   "evidencia": "R2-1: após DROP, schema com 2 migrações, role NOBYPASSRLS, 1 linha em pg_hba após 5 instalações no dia"
+  },
+  {
+   "clausula": "sobe plat-api (:8150) sem erro em máquina que nunca viu o repo",
+   "veredito": "passa",
+   "evidencia": "R2-2: import com PYTHONNOUSERSITE=1 vem da venv; unidade viva com Environment=PYTHONNOUSERSITE=1; nada de ~/.local mapeado no worker; requirements.txt fixa tudo que app/ importa; install.sh aborta se faltar dpkg ou se app.main não importar. Ressalva: prova por simulação, não em segunda máquina"
+  },
+  {
+   "clausula": "make check roda pytest verde",
+   "veredito": "passa",
+   "evidencia": "make check: lint ok, sem-marcador ok (inclui *.md), 81 passed + 1 e2e, 0 skip; pytest completo 82 passed"
+  },
+  {
+   "clausula": "URL interna HTTPS com noindex responde 200 em /saude com JSON de versão",
+   "veredito": "passa",
+   "evidencia": "200, X-Robots-Tag noindex/nofollow, HSTS no 443, git_sha = HEAD, PLAT_GIT_SHA no .env = HEAD"
+  },
+  {
+   "clausula": "docs/adr/0001-fundacao.md escrito",
+   "veredito": "passa",
+   "evidencia": "as 6 divergências da rodada 1 foram corrigidas no código (medidas, vendor, PLAT_GIT_SHA, requirements, segredo por stdin, Swagger local) ou decididas explicitamente no ADR (log_acesso adiado ao L0-02, 'alterado em T1')"
+  },
+  {
+   "clausula": "refutação literal: apagar schema e role, install.sh, subir, /saude e pytest completo, noindex",
+   "veredito": "passa",
+   "evidencia": "R2-1 sobre o HEAD final 8ffe950"
+  },
+  {
+   "clausula": "P2 sem placeholder",
+   "veredito": "passa",
+   "evidencia": "make sem-marcador cobre *.md; grep largo do adversário = 0"
+  },
+  {
+   "clausula": "P6 RLS em toda tabela com tenant_id",
+   "veredito": "passa",
+   "evidencia": "rodada 1: 15/15 cruzamentos bloqueados; migrações inalteradas na rodada 2; ressalva registrada: funções SECURITY DEFINER sem checagem de inquilino (L0-02)"
+  },
+  {
+   "clausula": "P7 sem nome de cliente/parceiro",
+   "veredito": "passa",
+   "evidencia": "0 em rastreados fora de vendor; única ocorrência é lista de TLDs no bundle minificado do Swagger"
+  }
+ ],
+ "historico": [
+  {
+   "rodada": 1,
+   "head": "3b53c24",
+   "veredito": "PARCIAL",
+   "resumo": "A refutação literal resistiu (drop schema+role -> install.sh 6,5 s -> /saude 200 noindex -> 58 testes verdes). A refutação foi repetida sobre o HEAD final 3b53c24 com o mesmo resultado (6,33 s). Três falhas reais não derrubam o mecanismo, mas derrubam cláusulas do portão: (1) a app depende de pacotes em /home/dev/.local (fastapi, starlette, pydantic, python-dotenv) que nem o sistema nem o requirements.txt fornecem, logo 'máquina que nunca viu o repo' não sobe; (2) a senha dos administradores de demonstração vai em argv de sudo e fica em claro no journal, violando a regra da seção 8 do próprio ADR; (3) ARQUITETURA/MANUAL/CHANGELOG/PARIDADE são cascas de 2-4 linhas com texto 'escrita pelo laço'.",
+   "evidencia": [
+    {
+     "ataque": "1. Refutação literal cronometrada: DROP SCHEMA plat CASCADE; DROP OWNED BY plat_app; DROP ROLE plat_app; sudo bash install.sh plat.iagrointel.com 8150",
+     "comando": "bash scratchpad/refutacao_destrutiva.sh (drop -> install -> curl -> pytest)",
+     "saida": "rc_drop=0 (17 objetos); /saude com schema apagado = HTTP 503; rc_install=0 tempo=6,46 s; pg_hba continua com 1 linha plat_app (sem duplicar); nginx sites-enabled idêntico ao anterior (diff vazio, 5 linhas do certbot preservadas); https://plat.iagrointel.com/saude -> HTTP 200, X-Robots-Tag: noindex, nofollow, JSON {versao 0.1.0, git_sha ca61ea1ea31c, banco ok, migracoes_aplicadas 2, pendentes 0}; banco: 2 migrações, tenants demo/demo2, admin demo superadmin=t; pytest completo 58 passed (57 + 1 e2e lento); make check 57+1 passed; plat-api active, NRestarts=0, MemoryCurrent 94,7 MB || SEGUNDA RODADA sobre o HEAD final 3b53c24 (commit do gerente às 12:55, depois da 1ª rodada): rc_install=0 em 6,33 s; /saude 200 noindex com git_sha 3b53c24e4c12 = HEAD; pg_hba 1 linha; nginx idêntico; 58 passed; make check verde; plat-api active, NRestarts=0, 95,3 MB; árvore do git limpa (0 arquivos sujos) — a fixture de medidas deixou de sujar a árvore.",
+     "resultado": "resistiu"
+    },
+    {
+     "ataque": "2. make check e leitura dos testes",
+     "comando": "/usr/bin/time make check -rs; venv/bin/pytest -m lento --durations=0; leitura de tests/**",
+     "saida": "make check 2,70 s: ruff ok, sem-marcador ok, 57 passed 1 deselected, e2e 1 passed; 0 skip. Todos os testes chamam código real (TestClient, conexão psycopg2 como plat_app, subprocess de migrar.sh, playwright chromium com captura regravada em tests/e2e/capturas/L0-01-repo_inicio.png 43 KB, setup 0,33 s). Nenhum assert True. Lacunas: RLS não testa UPDATE/DELETE cruzado nem funções SECURITY DEFINER (feito pelo adversário, ataque 4); e2e e cabeçalhos são pulados (skip) se o nome público não resolver, então make check pode ficar verde sem HTTPS em outra máquina",
+     "resultado": "resistiu"
+    },
+    {
+     "ataque": "3. Grep de placeholder",
+     "comando": "grep -rnIE --exclude-dir=vendor 'TODO|FIXME|XXX|lorem|em breve|coming soon|placeholder|mock|not implemented' app/ db/ web/ install.sh Makefile docs/",
+     "saida": "0 ocorrências (rc=1). Porém ARQUITETURA.md (3 linhas: '(escrita pelo laço a partir do item L0-01)'), MANUAL.md (3 linhas), CHANGELOG.md (2 linhas, só o título) e docs/PARIDADE.md (4 linhas, tabela vazia) são cascas; o alvo sem-marcador não varre os .md da raiz e a expressão dele não pega essa forma de placeholder",
+     "resultado": "quebrou (cláusula de documentação; o cronista ainda não rodou)"
+    },
+    {
+     "ataque": "4. RLS cruzado como plat_app em todas as tabelas com tenant_id + tenant, e funções SECURITY DEFINER",
+     "comando": "venv/bin/python scratchpad/rls_ataque.py (contexto tenant 1; SELECT/UPDATE/DELETE em log_acesso, sessao, token_servico, usuario, tenant com tenant_id=2; UPDATE do próprio usuário para tenant 2; INSERT em sessao/token_servico com tenant 2; plat.auth_sessao_criar(usuario de demo2); plat.auth_falha(usuario de demo2); plat.auth_login('demo2'); plat.tenant_criar com GUC plat.usuario_id forjado; tudo em transação com rollback)",
+     "saida": "Tabelas: 15/15 operações cruzadas devolveram 0 linhas ou 'new row violates row-level security policy'; log_acesso UPDATE/DELETE = permission denied. Role: rolbypassrls=f, rolsuper=f, sem membership, nenhuma tabela de plat_app (todas de postgres), schema acl só postgres+plat_app. Funções SECURITY DEFINER: auth_sessao_criar(2) no contexto do tenant 1 devolveu token válido cujo auth_sessao resolve para demo2/admin; auth_falha(2,1,60) bloqueou o admin de demo2 a partir do contexto de demo; auth_login('demo2','admin') devolve senha_hash e totp_secret de outro inquilino; tenant_criar aceitou GUC plat.usuario_id=1 forjado pelo cliente e criou tenant 3 (desfeito por rollback). Todas as funções têm EXECUTE para PUBLIC (=X/postgres), inalcançável hoje só porque PUBLIC não tem USAGE no schema",
+     "resultado": "resistiu nas tabelas; quebrou nas funções SECURITY DEFINER (isolamento por inquilino depende 100 % da API passar o usuario_id certo — não é cláusula deste item, é risco para L0-02)"
+    },
+    {
+     "ataque": "5. Segurança do que está no ar",
+     "comando": "curl -D - em /, /saude, /api/versao, /api/docs, /api/openapi.json, /static/app.js, /static/../.env, /static/..%2f.env, /.env, /.git/HEAD, /tests/credenciais.txt; curl https://IP com SNI; git grep -i 'password|senha|dsn'; git log -p --all | grep <segredos reais>; stat .env tests/credenciais.txt",
+     "saida": "Toda rota 200 traz X-Robots-Tag: noindex, nofollow, X-Content-Type-Options nosniff, Cache-Control no-store; API traz X-Frame-Options DENY e X-Req-Id; travessia devolve 404; http -> 301 https; /api/openapi.json expõe só /saude e /api/versao; nenhum segredo real no histórico do git (0 ocorrências da senha do banco, do PLAT_SECRET e das senhas de demo); .env e tests/credenciais.txt ignorados pelo git (check-ignore) e modo 600 dono dev. Faltas: sem Strict-Transport-Security; /api/docs carrega Swagger UI de CDN externo (contradiz a seção 11.4 do ADR, 'dependência externa em tempo de execução quebra rede fechada')",
+     "resultado": "resistiu (com duas faltas menores)"
+    },
+    {
+     "ataque": "6. Leitura do install.sh: idempotência, rm -rf, senha em log, estado assumido",
+     "comando": "sudo journalctl --since hoje -o cat _COMM=sudo | grep gerar_hash; PYTHONNOUSERSITE=1 venv/bin/python -c 'import app.main'; venv/bin/python -c 'import fastapi; print(fastapi.__file__)'",
+     "saida": "(a) passo g: HASH=$(sudo -u dev venv/bin/python -c '... gerar_hash(sys.argv[1])' \"$senha\") — o sudo grava COMMAND completo no journal: 'COMMAND=venv/bin/python -c ... gerar_hash(sys.argv[1])) <senha em claro>'; 18 linhas hoje, 9 por senha antes das 12:47 e 3 por senha atual (tests/credenciais.txt regravado pelo testador às 12:49; 1 linha por reinstalação: testador 12:53, adversário 12:53 e 12:56); o journal é legível por root e pelos grupos systemd-journal/adm. Viola a regra da seção 8 do ADR ('segredo nunca em argumento de linha de comando'). A senha do banco NÃO vazou (printf builtin + stdin do psql; 0 ocorrências no journal e no log do Postgres). (b) fastapi 0.138.0, starlette 1.3.1, pydantic 2.13.4 e python-dotenv 1.2.2 vêm de /home/dev/.local/lib/python3.12/site-packages (pip --user do dev), não de dpkg nem de requirements.txt (que só lista pytest/playwright/ruff); com PYTHONNOUSERSITE=1 'import app.main' falha com ModuleNotFoundError: No module named 'fastapi' — em máquina ou usuário novo o plat-api não sobe. (c) Sem rm -rf. (d) nginx: mv do bloco novo para sites-enabled ANTES de nginx -t; se o -t falhar, o set -e sai e deixa o arquivo quebrado em sites-enabled (não é atômico; não reproduzido). (e) Estado assumido sem checagem: PG 16 em /etc/postgresql/16, certbot, nginx, openssl, bc não; --register-unsafely-without-email no certbot. (f) Idempotência conferida: pg_hba 1 linha, nginx idêntico, .env mantido, senha realinhada",
+     "resultado": "quebrou em (a) e (b); resistiu no resto"
+    },
+    {
+     "ataque": "7. /saude mente?",
+     "comando": "curl /saude | jq .git_sha; git rev-parse HEAD; select count(*) from plat.versao_migracao",
+     "saida": "Antes da reinstalação: git_sha b22761e1c785 = HEAD b22761e1c785e33d...; migracoes_aplicadas 2 = count(*) 2; ultima 002_identidade = max(nome). Depois: git_sha ca61ea1ea31c = HEAD novo (o restart releu .git). Limite: o sha é lido uma vez na partida (lru_cache) e não reflete árvore suja (tests/medidas/L0-01-repo.json está modificado e não comitado) — /saude diz o commit, não o que está em disco",
+     "resultado": "resistiu"
+    },
+    {
+     "ataque": "8. ADR promete o que o código não faz",
+     "comando": "leitura de docs/adr/0001-fundacao.md contra app/, Makefile, install.sh, web/vendor, requirements.txt",
+     "saida": "(1) seção 1: Makefile com alvo 'medidas' — não existe (grep -c '^medidas' = 0). (2) seção 9: 'o middleware grava a mesma linha em plat.log_acesso para /api/, /svc/, /ogc/' — app/main.py não chama plat.log_registrar (0 referências em app/). (3) seção 7: 'PLAT_GIT_SHA do .env, que o install.sh grava' — o install.sh escreve PLAT_GIT_SHA= vazio e nunca preenche. (4) seção 2.1 e requirements.txt: 'fastapi, uvicorn, psycopg2, httpx, python-dotenv vêm do sistema' — fastapi, starlette, pydantic e dotenv vêm de ~/.local do dev. (5) seção 11.2 regra 3: 'web/vendor/<nome>-<versão>.js' — o arquivo é maplibre-gl.js sem versão no nome (sha256 de VERSOES.txt confere). (6) seção 8: 'segredo nunca em argumento de linha de comando' — quebrada pelo passo g. (7) seção 10 cita test_rls_sem_contexto_ve_zero e HTTP real em 127.0.0.1:8150 — nomes/alvos diferentes (cosmético)",
+     "resultado": "quebrou (promessas 1-6)"
+    },
+    {
+     "ataque": "9. Nomes de cliente/parceiro (P7) após o commit 3b53c24",
+     "comando": "git grep -n -i -E 'fgr|cbre|novaterra|sigcorp|fgrsig|cbresig'; grep -rIl nos arquivos não rastreados (exceto venv/.git/caches)",
+     "saida": "código, testes, web, deploy, install.sh, Makefile, README: 0 ocorrências. Sobrou 1 linha no ADR: docs/adr/0001-fundacao.md:293 'em cada location, como o fgrsig faz'. O ADR é documento interno do repositório (P7 fala em produto, UI, docs e dado de exemplo); listo para o gerente decidir se ADR conta como 'docs'",
+     "resultado": "quebrou (1 linha residual no ADR)"
+    }
+   ],
+   "o_que_nao_prova": [
+    "Instalação em máquina realmente nova: não há segunda máquina; a evidência é a simulação PYTHONNOUSERSITE=1 e a origem dos módulos (~/.local). A reinstalação aqui reaproveitou venv, .env, certificado e os pacotes do usuário dev.",
+    "A refutação literal reaproveitou o .env existente: o caminho '.env não existe -> gera senha e segredo' não foi exercitado por mim (só lido).",
+    "Rotas com autenticação e teste cruzado A->B por HTTP (P6 'em toda rota'): não existem rotas ainda; a fuga pelas funções SECURITY DEFINER só é explorável por quem tem o DSN ou por bug futuro da API.",
+    "Comportamento do install.sh quando nginx -t falha ou quando certbot precisa emitir certificado (não reproduzido).",
+    "Carga, concorrência e RAM sob uso (só MemoryCurrent 94,7 MB em repouso).",
+    "Nenhum teste e2e de tela além de /: não há tela ainda."
+   ],
+   "clausulas": [
+    {
+     "clausula": "git com README/ARQUITETURA/MANUAL/CHANGELOG",
+     "veredito": "nao passa",
+     "evidencia": "os quatro arquivos existem e estão no git, mas ARQUITETURA.md (3 linhas), MANUAL.md (3 linhas), CHANGELOG.md (2 linhas) e docs/PARIDADE.md (4 linhas) não têm conteúdo; texto '(escrita pelo laço a partir do item L0-01)'. README.md (15 linhas) é real. Árvore limpa após o commit 3b53c24"
+    },
+    {
+     "clausula": "install.sh cria schema+role+pg_hba (com linha em pg_hba.conf)",
+     "veredito": "passa",
+     "evidencia": "após DROP SCHEMA/DROP ROLE: schema plat com 2 migrações, role plat_app NOBYPASSRLS/NOSUPERUSER, linha 35 do pg_hba 'host iagro_sat plat_app 127.0.0.1/32 scram-sha-256' única após 3 instalações; conexão TCP como plat_app provada pelos testes"
+    },
+    {
+     "clausula": "sobe plat-api (:8150) sem erro em máquina que nunca viu o repo",
+     "veredito": "nao passa",
+     "evidencia": "nesta máquina sobe em 2 s (active, NRestarts=0); mas fastapi/starlette/pydantic/python-dotenv vêm de /home/dev/.local (pip --user), ausentes do requirements.txt e do sistema: PYTHONNOUSERSITE=1 venv/bin/python -c 'import app.main' -> ModuleNotFoundError: No module named 'fastapi'"
+    },
+    {
+     "clausula": "make check roda pytest verde",
+     "veredito": "passa",
+     "evidencia": "make check 2,70 s: ruff ok, sem-marcador ok, 57 passed + 1 e2e passed, 0 skip, 0 falha; repetido após a reinstalação com o mesmo resultado; testes chamam código real"
+    },
+    {
+     "clausula": "URL interna HTTPS com noindex responde 200 em /saude com JSON de versão",
+     "veredito": "passa",
+     "evidencia": "https://plat.iagrointel.com/saude -> HTTP 200, X-Robots-Tag: noindex, nofollow, JSON com versao 0.1.0 e git_sha igual a git rev-parse HEAD; http -> 301 https; IP direto com SNI também noindex"
+    },
+    {
+     "clausula": "docs/adr/0001-fundacao.md escrito",
+     "veredito": "passa",
+     "evidencia": "726 linhas, 13 seções, decisões com motivo; mas 6 promessas não batem com o código (ataque 8)"
+    },
+    {
+     "clausula": "refutação: apagar schema e role, rodar install.sh, subir, /saude e pytest completo, noindex",
+     "veredito": "passa",
+     "evidencia": "ataque 1: rc_install=0 em 6,46 s; /saude 200 noindex; 58 passed"
+    },
+    {
+     "clausula": "P2 sem placeholder",
+     "veredito": "nao passa",
+     "evidencia": "grep do adversário 0 em app/db/web/install/Makefile/docs, mas os .md da raiz são cascas com texto de espera"
+    },
+    {
+     "clausula": "P6 RLS em toda tabela com tenant_id",
+     "veredito": "passa",
+     "evidencia": "5 tabelas com RLS e política; 15/15 operações cruzadas bloqueadas; ressalva: funções SECURITY DEFINER sem checagem de inquilino (risco para L0-02)"
+    },
+    {
+     "clausula": "P7 sem nome de cliente/parceiro",
+     "veredito": "nao passa",
+     "evidencia": "0 em código/testes/web/deploy/README; 1 linha residual em docs/adr/0001-fundacao.md:293 ('fgrsig')"
+    }
+   ]
+  }
+ ]
+}

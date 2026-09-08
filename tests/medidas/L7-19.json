@@ -1,0 +1,168 @@
+{
+  "item": "L7-19-segredos-e-certificados",
+  "medidas": {
+    "segredos_rotacionaveis": {
+      "valor": 5,
+      "unidade": "segredos",
+      "comando": "scripts/plat segredo rotacionar {PLAT_SECRET|PLAT_DSN|PLAT_DSN_WORKER|PLAT_GARAGE_ADMIN_TOKEN|PLAT_GARAGE_CHAVE_S3:<slug>} — os 5 do portão do item L7-19"
+    },
+    "plat_secret_5xx_durante_rotacao": {
+      "valor": 0,
+      "unidade": "respostas 5xx",
+      "comando": "pytest tests/e2e/test_rotacao_segredos.py -m lento (sudo scripts/prova_segredos_l7_19.py) — k6 v2.2.0 (scripts/k6_saude_5xx.js, 1 VU laço fechado) martelando /saude de TODAS as unidades da rotação durante a rotação inteira; morto por SIGINT ao fim, resumo via handleSummary"
+    },
+    "plat_secret_tempo_s": {
+      "valor": 1.601,
+      "unidade": "s",
+      "comando": "scripts/plat segredo rotacionar PLAT_SECRET (tempo de ponta a ponta do próprio script)"
+    },
+    "plat_secret_dupla_chave_anterior_gravado": {
+      "valor": true,
+      "unidade": "bool (True = passou)",
+      "comando": "o valor antigo vira PLAT_SECRET_ANTERIOR (sha comparado, nunca o valor); ver tests/unit/test_seguranca_rotacao.py para a prova de que ele ainda decifra/assina por 24h"
+    },
+    "plat_dsn_5xx_durante_rotacao": {
+      "valor": 0,
+      "unidade": "respostas 5xx",
+      "comando": "pytest tests/e2e/test_rotacao_segredos.py -m lento (sudo scripts/prova_segredos_l7_19.py) — k6 v2.2.0 (scripts/k6_saude_5xx.js, 1 VU laço fechado) martelando /saude de TODAS as unidades da rotação durante a rotação inteira; morto por SIGINT ao fim, resumo via handleSummary"
+    },
+    "plat_dsn_tempo_s": {
+      "valor": 3.314,
+      "unidade": "s",
+      "comando": "scripts/plat segredo rotacionar PLAT_DSN (tempo de ponta a ponta do próprio script)"
+    },
+    "plat_dsn_senha_antiga_ainda_autentica": {
+      "valor": false,
+      "unidade": "bool (False = passou)",
+      "comando": "psycopg2.connect com a senha ANTERIOR depois da rotação"
+    },
+    "plat_dsn_worker_5xx_durante_rotacao": {
+      "valor": 0,
+      "unidade": "respostas 5xx",
+      "comando": "pytest tests/e2e/test_rotacao_segredos.py -m lento (sudo scripts/prova_segredos_l7_19.py) — k6 v2.2.0 (scripts/k6_saude_5xx.js, 1 VU laço fechado) martelando /saude de TODAS as unidades da rotação durante a rotação inteira; morto por SIGINT ao fim, resumo via handleSummary"
+    },
+    "plat_dsn_worker_tempo_s": {
+      "valor": 1.719,
+      "unidade": "s",
+      "comando": "scripts/plat segredo rotacionar PLAT_DSN_WORKER (tempo de ponta a ponta do próprio script)"
+    },
+    "plat_dsn_worker_senha_antiga_ainda_autentica": {
+      "valor": false,
+      "unidade": "bool (False = passou)",
+      "comando": "psycopg2.connect com a senha ANTERIOR depois da rotação"
+    },
+    "plat_garage_admin_token_5xx_durante_rotacao": {
+      "valor": 0,
+      "unidade": "respostas 5xx",
+      "comando": "pytest tests/e2e/test_rotacao_segredos.py -m lento (sudo scripts/prova_segredos_l7_19.py) — k6 v2.2.0 (scripts/k6_saude_5xx.js, 1 VU laço fechado) martelando /saude de TODAS as unidades da rotação durante a rotação inteira; morto por SIGINT ao fim, resumo via handleSummary"
+    },
+    "plat_garage_admin_token_tempo_s": {
+      "valor": 3.201,
+      "unidade": "s",
+      "comando": "scripts/plat segredo rotacionar PLAT_GARAGE_ADMIN_TOKEN (tempo de ponta a ponta do próprio script)"
+    },
+    "plat_garage_admin_token_token_antigo_ainda_autentica": {
+      "valor": false,
+      "unidade": "bool (False = passou)",
+      "comando": "GET /admin com Authorization: Bearer <token antigo> depois da rotação"
+    },
+    "plat_garage_admin_token_token_novo_autentica": {
+      "valor": true,
+      "unidade": "bool (True = passou)",
+      "comando": "GET /admin com Authorization: Bearer <token novo> depois da rotação"
+    },
+    "plat_garage_chave_s3_5xx_durante_rotacao": {
+      "valor": 0,
+      "unidade": "respostas 5xx",
+      "comando": "rotação de chave S3 por inquilino não reinicia nenhuma unidade (a API resolve o par de chaves por SELECT a cada requisição) — não há janela de restart para martelar; a prova é /saude de plat-api real ANTES/DEPOIS"
+    },
+    "plat_garage_chave_s3_tempo_s": {
+      "valor": 0.225,
+      "unidade": "s",
+      "comando": "scripts/plat segredo rotacionar PLAT_GARAGE_CHAVE_S3:<slug> contra bucket descartável no Garage real desta máquina"
+    },
+    "plat_garage_chave_s3_chave_antiga_falha": {
+      "valor": true,
+      "unidade": "bool (True = passou)",
+      "comando": "GET do objeto de prova com a chave S3 antiga depois de apagada no Garage (403/InvalidAccessKeyId)"
+    },
+    "plat_garage_chave_s3_chave_nova_funciona": {
+      "valor": true,
+      "unidade": "bool (True = passou)",
+      "comando": "PUT+HEAD do objeto de prova assinado com a chave S3 nova"
+    },
+    "plat_api_real_saude_durante_rotacao_s3": {
+      "valor": [
+        200,
+        200
+      ],
+      "unidade": "código http [antes, depois]",
+      "comando": "GET http://127.0.0.1:8150/saude (plat-api de PRODUÇÃO, nunca reiniciado) antes e depois da rotação de chave S3"
+    },
+    "total_5xx_nas_4_rotacoes_com_restart": {
+      "valor": 0,
+      "unidade": "respostas 5xx",
+      "comando": "soma de código_5xx nas 4 rotações que reiniciam unidade de teste (PLAT_SECRET, PLAT_DSN x2, PLAT_DSN_WORKER, PLAT_GARAGE_ADMIN_TOKEN x2) — 0 é o número exigido pelo portão"
+    },
+    "total_erros_de_conexao_nas_4_rotacoes_com_restart": {
+      "valor": 2,
+      "unidade": "erros de conexão (não é 5xx)",
+      "comando": "soma de erros_conexao em 154 requisições martelo durante restart com ativação por soquete (Sockets=) — reportado à parte, nunca somado a código_5xx"
+    },
+    "comando_cli": {
+      "valor": "sudo scripts/plat segredo rotacionar <NOME>",
+      "unidade": "comando",
+      "comando": "scripts/plat (dispatcher) -> scripts/segredo_rotacionar.py; reprodução completa via pytest tests/e2e/test_rotacao_segredos.py -m lento"
+    },
+    "plat_secret_requisicoes_k6": {
+      "valor": 423,
+      "unidade": "requisições",
+      "comando": "pytest tests/e2e/test_rotacao_segredos.py -m lento (sudo scripts/prova_segredos_l7_19.py) — k6 v2.2.0 (scripts/k6_saude_5xx.js, 1 VU laço fechado) martelando /saude de TODAS as unidades da rotação durante a rotação inteira; morto por SIGINT ao fim, resumo via handleSummary"
+    },
+    "plat_dsn_requisicoes_k6": {
+      "valor": 505,
+      "unidade": "requisições",
+      "comando": "pytest tests/e2e/test_rotacao_segredos.py -m lento (sudo scripts/prova_segredos_l7_19.py) — k6 v2.2.0 (scripts/k6_saude_5xx.js, 1 VU laço fechado) martelando /saude de TODAS as unidades da rotação durante a rotação inteira; morto por SIGINT ao fim, resumo via handleSummary"
+    },
+    "plat_dsn_worker_requisicoes_k6": {
+      "valor": 348,
+      "unidade": "requisições",
+      "comando": "pytest tests/e2e/test_rotacao_segredos.py -m lento (sudo scripts/prova_segredos_l7_19.py) — k6 v2.2.0 (scripts/k6_saude_5xx.js, 1 VU laço fechado) martelando /saude de TODAS as unidades da rotação durante a rotação inteira; morto por SIGINT ao fim, resumo via handleSummary"
+    },
+    "plat_garage_admin_token_requisicoes_k6": {
+      "valor": 802,
+      "unidade": "requisições",
+      "comando": "pytest tests/e2e/test_rotacao_segredos.py -m lento (sudo scripts/prova_segredos_l7_19.py) — k6 v2.2.0 (scripts/k6_saude_5xx.js, 1 VU laço fechado) martelando /saude de TODAS as unidades da rotação durante a rotação inteira; morto por SIGINT ao fim, resumo via handleSummary"
+    },
+    "mecanismo_zero_5xx_senha_banco": {
+      "valor": "janela trust de segundos no pg_hba (só a role, só 127.0.0.1, linha marcada, removida em finally)",
+      "unidade": "mecanismo",
+      "comando": "scripts/segredo_rotacionar.py::_rotacionar_senha_role — substituiu 'restart em cadeia' (57 5xx medidos) e 'stop simples' (1.334 5xx: religação sob demanda com credencial velha; mask --runtime não impede em unidade estática, spike 07/09)"
+    },
+    "socket_activation_uvicorn_fd3": {
+      "valor": true,
+      "unidade": "bool (True = provado)",
+      "comando": "spike plat-spike-fd (07/09): uvicorn --fd 3 --workers 2 sob plat-spike-fd.socket; conexão durante stop esperou ~1 s e recebeu 200 (ativação sob demanda), 0 erro"
+    },
+    "erros_conexao_durante_rotacoes": {
+      "valor": 3,
+      "unidade": "conexões recusadas/estouradas (não são 5xx; cláusula é sobre 5xx)",
+      "comando": "soma dos restart/restart_cadeia/restart_worker do _prova_segredos_bruta.json"
+    },
+    "anterior_expira_automatico": {
+      "valor": true,
+      "unidade": "bool (True = automático)",
+      "comando": "plat-segredo-expira.timer (horário) roda scripts/segredo_expirar_anterior.py: PLAT_SECRET_ANTERIOR_EM com 24 h -> esvazia ANTERIOR + try-restart plat-api plat-worker; janela efetiva 24h-24h59 (granularidade horária)"
+    },
+    "worker_reinicia_na_rotacao_de_plat_secret": {
+      "valor": true,
+      "unidade": "bool",
+      "comando": "rotacionar_plat_secret com --unidade-worker: worker carrega settings 1x no import e decifra dentro de jobs (achado 7 do adversário T7); prova passa a 2ª unidade e mede o restart"
+    },
+    "janela_trust_dentro_do_try": {
+      "valor": true,
+      "unidade": "bool",
+      "comando": "_confianca_abrir dentro do try com _confianca_fechar no finally (achado 6 do adversário T7); grep -c plat-rotacao-temporaria no pg_hba = 0 após cada prova"
+    }
+  }
+}

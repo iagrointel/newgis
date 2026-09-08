@@ -100,12 +100,48 @@ def test_preparar_ambiente_ponta_a_ponta_em_subprocesso_isolado(tmp_path):
         from app.jobs import filho
         filho.CAMINHO_PROC_CGROUP = Path({str(proc_cgroup)!r})
         filho.RAIZ_CGROUP = Path({str(raiz)!r})
-        efetivo = filho.preparar_ambiente(memoria_mb=256, threads_blas=1)
+        efetivo = filho.preparar_ambiente(memoria_mb=256, threads_blas=1, base_mb=300)
         limite, _ = resource.getrlimit(resource.RLIMIT_DATA)
         assert efetivo == 104, efetivo
-        assert limite == 104 * 1024 * 1024, limite
+        # RLIMIT_DATA = base herdada do fork (300 MB, fixa aqui para o teste ser determinístico) + orçamento
+        assert limite == (300 + 104) * 1024 * 1024, limite
         print("OK")
     """)
     r = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=10, check=False,
                         cwd=ROOT)
+    assert r.returncode == 0 and r.stdout.strip() == "OK", f"stdout={r.stdout!r} stderr={r.stderr!r}"
+
+
+def test_vmdata_mb_le_o_proc_status(tmp_path, monkeypatch):
+    """VmData vem de /proc/self/status em kB e vira MB (o filho herda o VmData do worker no fork)."""
+    status = tmp_path / "status"
+    status.write_text("Name:\tpython\nVmSize:\t 1234 kB\nVmData:\t  551548 kB\nVmRSS:\t  106172 kB\n")
+    monkeypatch.setattr(filho, "CAMINHO_PROC_STATUS", status)
+    assert filho.vmdata_mb() == 538  # 551548 kB // 1024
+
+
+def test_vmdata_mb_sem_arquivo_devolve_zero(tmp_path, monkeypatch):
+    monkeypatch.setattr(filho, "CAMINHO_PROC_STATUS", tmp_path / "nao_existe")
+    assert filho.vmdata_mb() == 0
+
+
+def test_preparar_ambiente_soma_a_base_em_subprocesso_isolado(tmp_path):
+    """Sem teto de cgroup, RLIMIT_DATA = VmData REAL do processo + o orçamento do job. Regressão do defeito
+    medido em 06/09/2026: `import app.jobs.tipos` deixa o worker com 551 MB de VmData, o filho herda esses
+    551 MB no fork e um RLIMIT_DATA absoluto de 256 MB fazia `prova.memoria(mb=64)` morrer com MemoryError."""
+    script = textwrap.dedent("""
+        import resource
+        from pathlib import Path
+        from app.jobs import filho
+        filho.CAMINHO_PROC_CGROUP = Path("/nao/existe/cgroup")   # sem teto de cgroup
+        base = filho.vmdata_mb()
+        efetivo = filho.preparar_ambiente(memoria_mb=256, threads_blas=1)
+        limite, _ = resource.getrlimit(resource.RLIMIT_DATA)
+        assert efetivo == 256, efetivo
+        assert limite >= (base + 256) * 1024 * 1024, (base, limite)
+        assert limite < (base + 256 + 32) * 1024 * 1024, (base, limite)
+        print("OK")
+    """)
+    r = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30, check=False,
+                       cwd=ROOT)
     assert r.returncode == 0 and r.stdout.strip() == "OK", f"stdout={r.stdout!r} stderr={r.stderr!r}"

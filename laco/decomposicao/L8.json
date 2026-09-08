@@ -1,0 +1,306 @@
+{
+ "linha": "L8 rodovias",
+ "gerado_em": "2026-09-06",
+ "gerado_por": "pesquisa L8 (esboço de conceito, pedido do dono para decisão no dia), a partir do addendum D38 de L4_CONCEITO.md",
+ "n_itens": 18,
+ "dependencias_externas_propostas": [
+  {
+   "id": "L2-11-c-rota-matriz-isocrona",
+   "o_que_muda": "precisa aceitar grafo roteável DERIVADO de rota+medida rodoviária (não só OSM genérico) como entrada — L8-05"
+  },
+  {
+   "id": "L3-10-corredor-custo-minimo",
+   "o_que_muda": "precisa aceitar pacote de camadas rodoviário (faixa de domínio, travessia, UC/TI/cavidade) para servir estudo de corredor de rodovia — L8-11"
+  },
+  {
+   "id": "L3-04-restricoes",
+   "o_que_muda": "mesma extensão de L3-10, para veto por camada em estudo de rodovia — L8-11"
+  },
+  {
+   "id": "L3-01-j-equivalencia-motor-logistico",
+   "o_que_muda": "provar que o motor de favorabilidade único também aceita pacote de fatores rodoviário sem motor novo — L8-13"
+  },
+  {
+   "id": "L6-01-a-registro",
+   "o_que_muda": "registrar SNV/BC250/OSM-highway/pacote rodovia-BR como fontes do acervo com licença e frescor — L8-02/03/04/07"
+  }
+ ],
+ "fontes_gerais": [
+  "https://knowledge-base.inspire.ec.europa.eu/utility-and-governmental-services_en",
+  "https://inspire-mif.github.io/technical-guidelines/data/tn/",
+  "https://servicos.dnit.gov.br/dadosabertos/dataset/jurisdicao-de-vias",
+  "https://www.gov.br/dnit/pt-br/assuntos/atlas-e-mapas/pnv-e-snv",
+  "https://www.ibge.gov.br/geociencias/cartas-e-mapas/redes-geograficas/15968-infra-estrutura-de-transporte.html",
+  "https://wiki.openstreetmap.org/wiki/Key:surface",
+  "https://wiki.openstreetmap.org/wiki/Key:tracktype",
+  "https://www.esri.com/arcgis-blog/products/arcgis-enterprise/announcements/introducing-arcgis-linear-referencing",
+  "https://www.esri.com/en-us/arcgis/products/arcgis-roads-highways/overview",
+  "https://www.bentley.com/software/assetwise-linear-network-management/",
+  "https://arxiv.org/abs/2508.01206",
+  "https://www.sciencedirect.com/science/article/abs/pii/S0926580522003776"
+ ],
+ "itens": [
+  {
+   "id": "L8-01-modelo-lrs-rodoviario",
+   "linha": "L8 rodovias",
+   "prioridade": 1,
+   "dependencias": [],
+   "hipotese": "o núcleo do domínio é referenciamento linear (rota + medida = evento), não nó/aresta: `plat.rodovia_rota` (identificador oficial, ex. BR-101/SP), `plat.rodovia_medida` (km inicial/final sobre a rota, com geometria) e `plat.rodovia_evento` genérico (rota, km, tipo de evento, valor, fonte, data) sustentam toda camada de atributo/condição/ativo; grafo nó/aresta é derivado (L8-05), nunca fonte",
+   "portao_de_pronto": "DDL idempotente com RLS; round-trip medida→coordenada→medida com erro ≤ tolerância declarada por rota; import de um trecho de teste (uma UF) com contagem de rota/medida/evento gravada em tests/medidas",
+   "refutacao": "adversário importa evento com km fora do intervalo da rota e com rota inexistente: ambos recusados com mensagem que aponta a linha; converte coordenada→medida→coordenada 100 vezes e confere que o erro acumulado não cresce",
+   "papeis": ["rodovias", "arquiteto", "dados", "backend", "adversario"],
+   "tamanho": "M",
+   "origem": "spec",
+   "fontes": [
+    "https://www.esri.com/en-us/arcgis/products/arcgis-roads-highways/overview",
+    "https://www.bentley.com/software/assetwise-linear-network-management/"
+   ]
+  },
+  {
+   "id": "L8-02-conector-dnit-snv",
+   "linha": "L8 rodovias",
+   "prioridade": 1,
+   "dependencias": ["L8-01-modelo-lrs-rodoviario", "L0-04-i-fonte-registrada"],
+   "hipotese": "o conector importa 'Jurisdição de Vias' (XLS/CSV mensal do DNIT) para `plat.rodovia_rota`, gravando frescor (data do arquivo) e cobertura por UF; API REST da Portaria 595/2024 entra como conector futuro quando publicada, não bloqueia esta rodada",
+   "portao_de_pronto": "importador roda contra o XLS mais recente publicado, grava `frescor` e `cobertura_km` por UF em `plat.rodovia_rota_resumo`; reimportar o mesmo arquivo é idempotente (mesma contagem, sem duplicata)",
+   "refutacao": "adversário importa duas vezes o mesmo arquivo e confere que a contagem não dobra; corrompe uma linha do XLS e confere que o importador recusa essa linha sem abortar o lote inteiro",
+   "papeis": ["rodovias", "dados", "backend", "adversario"],
+   "tamanho": "M",
+   "origem": "spec",
+   "fontes": [
+    "https://servicos.dnit.gov.br/dadosabertos/dataset/jurisdicao-de-vias",
+    "https://www.gov.br/dnit/pt-br/assuntos/atlas-e-mapas/pnv-e-snv"
+   ]
+  },
+  {
+   "id": "L8-03-conector-ibge-bc250",
+   "linha": "L8 rodovias",
+   "prioridade": 2,
+   "dependencias": ["L8-01-modelo-lrs-rodoviario"],
+   "hipotese": "a BC250 (Sistema de Transporte, ISO 19115) entra como malha de PREENCHIMENTO onde o SNV não cobre (rodovia estadual/municipal) e como conferência de completude, nunca como fonte de atributo de gestão; cada trecho grava `fonte = bc250` distinto de `fonte = snv`",
+   "portao_de_pronto": "importador lê o FTP do IBGE, grava proveniência e metadado ISO por trecho; relatório de cobertura (km BC250 fora do SNV, por UF) gerado e salvo em tests/medidas",
+   "refutacao": "adversário confere que nenhum trecho fica com `fonte` nula e que um trecho presente nas duas fontes não duplica geometria",
+   "papeis": ["rodovias", "dados", "cartografo", "adversario"],
+   "tamanho": "P",
+   "origem": "spec",
+   "fontes": [
+    "https://www.ibge.gov.br/geociencias/cartas-e-mapas/redes-geograficas/15968-infra-estrutura-de-transporte.html"
+   ]
+  },
+  {
+   "id": "L8-04-conector-osm-highway",
+   "linha": "L8 rodovias",
+   "prioridade": 2,
+   "dependencias": ["L8-01-modelo-lrs-rodoviario"],
+   "hipotese": "o conector importa `highway`, `surface`, `smoothness`, `tracktype`, `lanes`, `maxspeed`, `ref` do extrato OSM como camada contínua nacional, com `origem_tag = osm_voluntario` gravado desde a entrada — nunca tratado como levantamento oficial",
+   "portao_de_pronto": "importador roda sobre extrato OSM de uma UF de teste; contagem de vias por classe funcional e por presença de `surface`/`smoothness` gravada; nenhuma linha grava `origem_tag` diferente de `osm_voluntario` para esta fonte",
+   "refutacao": "adversário busca uma via sem nenhuma das tags de condição e confere que o sistema devolve 'sem dado', nunca um valor inventado",
+   "papeis": ["rodovias", "dados", "backend", "adversario"],
+   "tamanho": "P",
+   "origem": "spec",
+   "fontes": [
+    "https://wiki.openstreetmap.org/wiki/Key:surface",
+    "https://wiki.openstreetmap.org/wiki/Key:tracktype",
+    "https://wiki.openstreetmap.org/wiki/Highways"
+   ]
+  },
+  {
+   "id": "L8-05-grafo-roteavel-derivado",
+   "linha": "L8 rodovias",
+   "prioridade": 1,
+   "dependencias": ["L8-01-modelo-lrs-rodoviario", "L2-11-c-rota-matriz-isocrona"],
+   "hipotese": "o grafo roteável (nó/aresta) para rota/matriz/isócrona é gerado da mesma geometria de rota+medida pelo padrão OSRM já operado pela casa noutra linha; nunca é editado como fonte nem recebe evento diretamente",
+   "portao_de_pronto": "conversor gera o grafo a partir de `plat.rodovia_medida` de uma UF de teste; rota calculada entre dois pontos bate (tolerância declarada) com a rota manual conhecida do trecho; regenerar o grafo não altera resultado de rota do mesmo par",
+   "refutacao": "adversário edita um trecho na fonte e confere que o grafo velho (não regenerado) NÃO reflete a mudança — provando que o grafo é derivado, não editável",
+   "papeis": ["rodovias", "backend", "adversario"],
+   "tamanho": "M",
+   "origem": "casa",
+   "fontes": []
+  },
+  {
+   "id": "L8-06-referenciamento-evento",
+   "linha": "L8 rodovias",
+   "prioridade": 1,
+   "dependencias": ["L8-01-modelo-lrs-rodoviario"],
+   "hipotese": "todo evento (obra de arte, sinalização, condição, contagem de tráfego) é gravado como (rota, km_inicial, km_final|km_pontual), com serviço de conversão medida↔coordenada com tolerância declarada por rota — igual à regra de coincidência geométrica do L4",
+   "portao_de_pronto": "`POST /api/v1/rodovia/{rota_id}/localizar` converte coordenada em km e km em coordenada nos dois sentidos; erro medido e registrado por rota; nenhum evento aceito sem rota+medida válidas",
+   "refutacao": "adversário grava evento com km_final menor que km_inicial e com rota que não existe: ambos recusados",
+   "papeis": ["rodovias", "backend", "adversario"],
+   "tamanho": "M",
+   "origem": "esri",
+   "fontes": [
+    "https://www.esri.com/en-us/arcgis/products/arcgis-roads-highways/overview"
+   ]
+  },
+  {
+   "id": "L8-07-pacote-ativos-rodovia-br",
+   "linha": "L8 rodovias",
+   "prioridade": 2,
+   "dependencias": ["L8-06-referenciamento-evento"],
+   "hipotese": "pacote de ativos 'rodovia-BR' (JSON versionado, espelho do pacote elétrica-BR do L4): grupos/tipos de evento (obra de arte especial, sinalização, trecho de condição, ponto de contagem de tráfego, faixa de domínio), mapeado coluna a coluna ao dicionário de dados do SNV onde existir",
+   "portao_de_pronto": "pacote importa/exporta round-trip byte a byte; validação recusa tipo sem grupo; documento de mapeamento coluna a coluna publicado",
+   "refutacao": "adversário importa pacote com grupo referenciando tipo inexistente: recusado com mensagem que aponta a linha",
+   "papeis": ["rodovias", "arquiteto", "dados", "adversario"],
+   "tamanho": "M",
+   "origem": "spec",
+   "fontes": [
+    "https://servicos.dnit.gov.br/dadosabertos/dataset/jurisdicao-de-vias"
+   ]
+  },
+  {
+   "id": "L8-08-camada-condicao-sensoriamento",
+   "linha": "L8 rodovias",
+   "prioridade": 2,
+   "dependencias": ["L8-06-referenciamento-evento", "L8-09-calibracao-sensor-condicao"],
+   "hipotese": "camada `rodovia_condicao_sensoriamento` (sensor, data da cena, classe/índice, nº de cenas, cobertura de nuvem, ressalva impressa 'proxy, não substitui IRI/PCI medido em campo') referenciada por rota+km, nunca como atributo do cadastro",
+   "portao_de_pronto": "camada gerada para um trecho de teste com todos os campos de proveniência preenchidos; nenhuma linha publicável sem a ressalva; job registra tempo e nº de cenas processadas",
+   "refutacao": "adversário confere que a camada nunca aparece sem a ressalva e que o trecho sem cena no período correto sai como 'não processado', nunca como zero",
+   "papeis": ["rodovias", "raster", "adversario"],
+   "tamanho": "G",
+   "origem": "spec",
+   "fontes": [
+    "https://arxiv.org/abs/2508.01206",
+    "https://www.sciencedirect.com/science/article/abs/pii/S0926580522003776"
+   ]
+  },
+  {
+   "id": "L8-09-calibracao-sensor-condicao",
+   "linha": "L8 rodovias",
+   "prioridade": 3,
+   "dependencias": [],
+   "hipotese": "antes de calibrar o classificador de condição por sensoriamento contra a realidade brasileira, é preciso achar um trecho nacional com IRI/PCI oficial publicado (DER estadual, concessionária regulada, ANTT); nesta pesquisa nenhum foi identificado — o item nasce como busca de fonte, com estado inicial 'não calibrado' declarado explicitamente na camada",
+   "portao_de_pronto": "relatório de busca de fonte de calibração nacional (achou ou não achou, com URLs testadas); se não achou, a camada L8-08 nasce e permanece rotulada 'não calibrado' até este item fechar",
+   "refutacao": "adversário verifica que nenhuma peça ou tela do produto usa a palavra 'medido' ou 'IRI' para a camada de sensoriamento antes deste item fechar com calibração real",
+   "papeis": ["rodovias", "raster", "adversario"],
+   "tamanho": "P",
+   "origem": "spec",
+   "fontes": [
+    "https://arxiv.org/abs/2508.01206"
+   ]
+  },
+  {
+   "id": "L8-10-oae-fonte-pendente",
+   "linha": "L8 rodovias",
+   "prioridade": 4,
+   "dependencias": [],
+   "hipotese": "não foi achada nesta pesquisa uma fonte federal aberta de obras de arte especiais (pontes/viadutos/túneis); o item é de PESQUISA DE FONTE (federal consolidada vs. mosaico estado a estado, ex. DER-SP), não de ingestão — nasce sem portão de dado até a fonte existir",
+   "portao_de_pronto": "relatório de busca (achou fonte federal | não achou, propõe mosaico estadual com lista de estados testados) salvo em research/; nenhuma tabela de OAE criada antes deste item fechar",
+   "refutacao": "adversário confere que nenhum número de OAE aparece em nenhuma peça ou tela antes da fonte existir",
+   "papeis": ["rodovias", "dados"],
+   "tamanho": "P",
+   "origem": "spec",
+   "fontes": [
+    "https://revistaeninfra.dnit.gov.br/index.php/inicio/article/view/146/89",
+    "https://dadosabertos.sp.gov.br/dataset/obras-de-arte-especiais-oae"
+   ]
+  },
+  {
+   "id": "L8-11-motor-veto-custo-corredor",
+   "linha": "L8 rodovias",
+   "prioridade": 2,
+   "dependencias": ["L3-10-corredor-custo-minimo", "L3-04-restricoes", "L8-12-buffers-regulatorios-rodovia"],
+   "hipotese": "o motor de custo/veto por camada do corredor de LT recebe um pacote de camadas rodoviário (faixa de domínio, área urbana, UC, TI, cavidade, travessia de água) e passa a servir estudo de duplicação/contorno viário, sem motor novo — só o pacote de camadas e os limiares (definidos em L8-12) mudam",
+   "portao_de_pronto": "corredor calculado para um trecho de teste com o pacote rodoviário produz resultado com custo/veto explicado camada a camada, no mesmo formato do motor de LT; nenhum limiar de buffer usado antes de L8-12 fechar",
+   "refutacao": "adversário roda o mesmo corredor com um limiar trocado por analogia (não confirmado em lei) e confere que o sistema recusa rodar sem a fonte do limiar registrada",
+   "papeis": ["rodovias", "arquiteto", "backend", "adversario"],
+   "tamanho": "M",
+   "origem": "casa",
+   "fontes": []
+  },
+  {
+   "id": "L8-12-buffers-regulatorios-rodovia",
+   "linha": "L8 rodovias",
+   "prioridade": 1,
+   "dependencias": [],
+   "hipotese": "a Lei 15.190/2025 tem buckets de distância diferentes por tipologia de empreendimento para UC/TI/quilombo (linear: 5 km Amazônia/3 km demais; pontual: 8 km Amazônia/5 km demais); esta pesquisa NÃO determinou em qual bucket a rodovia cai no Anexo — item é de LEITURA JURÍDICA do texto da lei (ou de decisão do dono/advogado), não de código; nenhum outro item de L8 usa buffer antes deste fechar",
+   "portao_de_pronto": "citação literal do Anexo da Lei 15.190/2025 (ou norma vigente à data) indicando o bucket aplicável a rodovia, com URL/DOU; documento `docs/rodovia/BUFFERS.md` registra a citação antes de qualquer limiar entrar em L8-11",
+   "refutacao": "adversário confere que nenhuma peça, tela ou item de backlog cita um km de buffer para rodovia sem apontar para este documento",
+   "papeis": ["rodovias", "arquiteto"],
+   "tamanho": "P",
+   "origem": "spec",
+   "fontes": []
+  },
+  {
+   "id": "L8-13-motor-amc-favorabilidade",
+   "linha": "L8 rodovias",
+   "prioridade": 2,
+   "dependencias": ["L3-01-j-equivalencia-motor-logistico"],
+   "hipotese": "o motor de favorabilidade 0-100 com pesos escolhidos pelo usuário recebe um pacote de fatores rodoviário (condição declarada, proximidade de polo gerador de tráfego, sinuosidade, travessia, sobreposição ambiental) sem motor novo, mesma linguagem fator/critério/favorabilidade/peso",
+   "portao_de_pronto": "cálculo rodado para um trecho de teste com pesos de exemplo; explicação fator×peso por trecho igual ao formato já usado noutra linha; tempo medido e registrado",
+   "refutacao": "adversário troca os pesos e confere que o resultado muda de forma consistente com a explicação (nenhum fator com peso zero influencia o resultado)",
+   "papeis": ["rodovias", "backend", "adversario"],
+   "tamanho": "M",
+   "origem": "casa",
+   "fontes": []
+  },
+  {
+   "id": "L8-14-fachada-paridade-esri",
+   "linha": "L8 rodovias",
+   "prioridade": 3,
+   "dependencias": ["L8-06-referenciamento-evento"],
+   "hipotese": "documentar a paridade contra o modelo rota+evento do produto fundido da Esri ('ArcGIS Linear Referencing', previsto Q4 2026) parâmetro a parâmetro, declarando explicitamente que traçado/isolamento de rede está FORA do domínio (nem o produto de mercado equivalente tem isso)",
+   "portao_de_pronto": "`docs/PARIDADE.md` ganha seção rodovia com tabela operação-a-operação e URL datada; nenhuma peça promete 'traçado' para rodovia",
+   "refutacao": "adversário procura no material de venda qualquer menção a isolamento/traçado de rede para rodovia e reprova se achar",
+   "papeis": ["rodovias", "esri", "cronista"],
+   "tamanho": "P",
+   "origem": "esri",
+   "fontes": [
+    "https://www.esri.com/arcgis-blog/products/arcgis-enterprise/announcements/introducing-arcgis-linear-referencing"
+   ]
+  },
+  {
+   "id": "L8-15-decisao-linha-propria",
+   "linha": "L8 rodovias",
+   "prioridade": 1,
+   "dependencias": [],
+   "hipotese": "L8 nasce como linha de produto separada de L4 (schema `plat.rodovia_*` próprio), reaproveitando L0/L2/L3/L6 — mesma relação que o motor logístico já tem com o motor de LT — porque rodovia é tema INSPIRE separado (Transport Networks) de utilidade (Utility and Governmental Services) e o mercado trata como produto/extensão separada do utility network",
+   "portao_de_pronto": "`L8 rodovias` registrada como linha em `estado.json` com o motivo escrito (referência ao addendum D38 de L4_CONCEITO.md); nenhuma tabela `plat.rodovia_*` referencia tabela `plat.rede_*` do L4 como dependência estrutural (só compartilha L0/L2/L3/L6)",
+   "refutacao": "adversário verifica que remover o L4 inteiro não quebra nenhuma tabela ou rota de L8",
+   "papeis": ["arquiteto", "cronista"],
+   "tamanho": "P",
+   "origem": "usuario",
+   "fontes": [
+    "https://knowledge-base.inspire.ec.europa.eu/utility-and-governmental-services_en"
+   ]
+  },
+  {
+   "id": "L8-16-fora-escopo-trafego-pedagio",
+   "linha": "L8 rodovias",
+   "prioridade": 4,
+   "dependencias": [],
+   "hipotese": "tráfego em tempo real, pedágio e pesagem ficam fora desta rodada: nenhuma fonte nacional aberta e contínua foi identificada nesta pesquisa; item existe só para registrar a decisão e evitar que alguém prometa isso sem checar de novo",
+   "portao_de_pronto": "nota em `docs/PARIDADE.md` ou `README` da linha listando o que foi buscado e não achado, com data",
+   "refutacao": "adversário confere que nenhuma peça promete tráfego em tempo real ou pedágio",
+   "papeis": ["rodovias", "cronista"],
+   "tamanho": "P",
+   "origem": "spec",
+   "fontes": []
+  },
+  {
+   "id": "L8-17-fora-escopo-sinalizacao-vertical",
+   "linha": "L8 rodovias",
+   "prioridade": 4,
+   "dependencias": [],
+   "hipotese": "sinalização vertical detalhada (placa a placa) fica fora desta rodada: sem fonte estruturada encontrada; mercado (Bentley/Esri) resolve isso via captura de realidade paga, fora do escopo aberto desta pesquisa",
+   "portao_de_pronto": "nota em `docs/PARIDADE.md` registrando a lacuna e a razão",
+   "refutacao": "adversário confere que nenhuma peça promete inventário de sinalização vertical",
+   "papeis": ["rodovias", "cronista"],
+   "tamanho": "P",
+   "origem": "spec",
+   "fontes": []
+  },
+  {
+   "id": "L8-18-teste-cobertura-snv-osm-bc250",
+   "linha": "L8 rodovias",
+   "prioridade": 2,
+   "dependencias": ["L8-02-conector-dnit-snv", "L8-03-conector-ibge-bc250", "L8-04-conector-osm-highway"],
+   "hipotese": "antes de prometer cobertura nacional, medir a cobertura (km) SNV × OSM × BC250 sobre uma UF de teste, com o que sobra fora das três (se houver) explicitado",
+   "portao_de_pronto": "relatório com km por fonte, sobreposição e km exclusivo de cada fonte para a UF de teste, salvo em tests/medidas; nenhuma peça cita '% de cobertura nacional' antes deste item rodar em mais de uma UF",
+   "refutacao": "adversário recalcula a mesma métrica por caminho de código diferente e confere divergência dentro da tolerância declarada",
+   "papeis": ["rodovias", "dados", "cartografo", "adversario"],
+   "tamanho": "M",
+   "origem": "spec",
+   "fontes": []
+  }
+ ]
+}
