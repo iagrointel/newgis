@@ -48,6 +48,7 @@ from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_controladores import router as rotas_rede_controladores
+from app.rede_utilidades.rotas_matpower import router as rotas_rede_matpower
 from app.rede_utilidades.rotas_resumos import router as rotas_rede_resumos
 from app.rede_utilidades.rotas_simples import router as rotas_rede_simples
 from app.rede_utilidades.rotas_subredes import router as rotas_rede_subredes
@@ -123,6 +124,7 @@ ROUTERS = [
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
     # exporta o pacote de ativos) e /api/rede/pacotes (os pacotes entregues com a instalação)
     rotas_rede_utilidades,
+    rotas_rede_matpower,
     # --- topologia derivada da rede de utilidades (L4-01-b): /api/rede/{rede_id}/feicoes/{pontos,linhas}
     # (as camadas de rede, editáveis) e /api/rede/{rede_id}/topologia/{habilitar,nos,arestas} (o índice derivado)
     rotas_rede_topologia,
