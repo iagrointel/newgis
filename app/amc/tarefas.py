@@ -1,5 +1,7 @@
 """Tipos de job do motor AMC (registrados pelo decorador @tarefa do L0-05; importados em app/jobs/tipos.py).
 `amc.gerar_unidades`: gera a grade de um conjunto (app/amc/unidades.gerar_grade) — item L3-01-b.
+`amc.smaa`: SMAA-2 simplificado (item L3-02-c) — aceitabilidade por posição, vetor central de pesos e fator de
+confiança; roda como job pela mesma razão do `amc.robustez_pesos` (A8) e reusa o sorteio dele.
 `amc.robustez_pesos`: Monte Carlo de sensibilidade ao peso (item L3-02-a; A8 do laco/decomposicao/L3L6_CONCEITO.md:
 extração como job, combinação síncrona, ROBUSTEZ COMO JOB porque N sorteios em milhares de unidades passa
 do orçamento de uma requisição síncrona). A tarefa só sorteia peso e chama `app.amc.combinacao.combinar`
@@ -10,7 +12,7 @@ import uuid
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.amc import robustez, unidades
+from app.amc import robustez, smaa, unidades
 from app.jobs.registro import FalhaDefinitiva, tarefa
 
 MAX_UNIDADES = 20_000
@@ -124,6 +126,66 @@ def amc_robustez_pesos(
         raise FalhaDefinitiva(e.mensagem) from e
     duracao_total = time.monotonic() - inicio
     ctx.log("INFO", f"robustez concluída em {duracao_total:.3f} s (cálculo puro: {r.tempo_s:.3f} s)")
+    saida = r.como_dicionario()
+    saida["duracao_job_s"] = duracao_total
+    return saida
+
+
+class SmaaParametros(RobustezParametros):
+    """Mesmos parâmetros do sorteio de peso, mais o recorte da tabela de aceitabilidade. `k_top`,
+    `decil_superior` e `n_sorteios` do sorteio de robustez continuam valendo: o SMAA usa `posicoes`
+    (quantas posições do ranking a tabela conta) e `topo` (quantas unidades a tabela mostra)."""
+
+    posicoes: int = Field(smaa.POSICOES_PADRAO, ge=1, le=1000)
+    topo: int = Field(smaa.TOPO_PADRAO, ge=1, le=1000)
+
+
+@tarefa(
+    nome="amc.smaa",
+    descricao="SMAA-2 simplificado: índice de aceitabilidade por posição, vetor central de pesos e fator de "
+              "confiança por unidade; responde que pesos precisariam ser verdade para a unidade ganhar",
+    parametros=SmaaParametros,
+    pesado=True,
+    memoria_mb=512,
+    timeout_s=300,
+    tentativas=1,
+    chave=None,
+    perfil_minimo="editor",
+)
+def amc_smaa(
+    ctx,
+    fatores: list[list[float | None]],
+    pesos_base: list[float],
+    ids_fatores: list[str],
+    semente: int,
+    n_sorteios: int = 1000,
+    metodo: str = "dirichlet",
+    concentracao: float | None = None,
+    k_percentual: float = 0.3,
+    k_top: int | None = None,
+    decil_superior: float = 0.9,
+    combinador: str = "soma_ponderada",
+    politica_ausente: str = "excluir",
+    fracao_vetada: list[float] | None = None,
+    posicoes: int = smaa.POSICOES_PADRAO,
+    topo: int = smaa.TOPO_PADRAO,
+) -> dict:
+    n_unidades = len(fatores)
+    n_fatores = len(fatores[0]) if fatores else 0
+    ctx.log("INFO", f"smaa: {n_sorteios} sorteios em {n_unidades} unidades × {n_fatores} fatores "
+                     f"(método={metodo}, semente={semente}, posições={posicoes}, topo={topo})")
+    try:
+        inicio = time.monotonic()
+        r = smaa.simular_smaa(
+            fatores, pesos_base, n=n_sorteios, metodo=metodo, concentracao=concentracao,
+            k_percentual=k_percentual, combinador=combinador, politica_ausente=politica_ausente,
+            fracao_vetada=fracao_vetada, ids_fatores=ids_fatores, posicoes=posicoes, topo=topo,
+            semente=semente, progresso=lambda pct: ctx.progresso(pct, f"{pct} % dos sorteios"),
+        )
+    except smaa.ErroSmaa as e:
+        raise FalhaDefinitiva(e.mensagem) from e
+    duracao_total = time.monotonic() - inicio
+    ctx.log("INFO", f"smaa concluído em {duracao_total:.3f} s (cálculo puro: {r.tempo_s:.3f} s)")
     saida = r.como_dicionario()
     saida["duracao_job_s"] = duracao_total
     return saida
