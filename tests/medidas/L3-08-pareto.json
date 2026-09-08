@@ -1,0 +1,37 @@
+{
+ "item": "L3-08-pareto",
+ "medidas": {
+  "unidades_conferidas_2_objetivos": {
+   "valor": 2000,
+   "unidade": "unidades",
+   "comando": "tests/unit/test_amc_pareto.py::test_2000_unidades_batem_com_o_laco_ingenuo_de_pares"
+  },
+  "unidades_conferidas_3_objetivos": {
+   "valor": 2000,
+   "unidade": "unidades",
+   "comando": "tests/unit/test_amc_pareto.py::test_2000_unidades_batem_com_o_laco_ingenuo_de_pares"
+  },
+  "unidades_conferidas_4_objetivos": {
+   "valor": 2000,
+   "unidade": "unidades",
+   "comando": "tests/unit/test_amc_pareto.py::test_2000_unidades_batem_com_o_laco_ingenuo_de_pares"
+  },
+  "ordenacao_no_teto_ms": {
+   "valor": 6836.5,
+   "unidade": "ms",
+   "comando": "pareto.ordenar() sobre 50000 unidades × 4 objetivos, 3 ordens (uma chamada, sem repetição); carga_1min=5.51, ram_livre_gb=5.81, medido_em=2026-09-08T11:36:00Z"
+  },
+  "carga_1min": {
+   "valor": 5.51,
+   "unidade": "carga",
+   "comando": "os.getloadavg()[0] no instante da medida; carga_1min=5.51, ram_livre_gb=5.81, medido_em=2026-09-08T11:36:00Z"
+  },
+  "ram_livre_gb": {
+   "valor": 5.81,
+   "unidade": "GB",
+   "comando": "MemAvailable de /proc/meminfo no instante da medida; carga_1min=5.51, ram_livre_gb=5.81, medido_em=2026-09-08T11:36:00Z"
+  }
+ },
+ "gerado_em": "2026-09-08T11:36:06Z",
+ "git_sha": "33be09441f2f"
+}
