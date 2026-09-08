@@ -125,6 +125,14 @@ def validar_grafo(tipo: str, dados) -> None:
                     )
     if erros:
         raise ErroAPI(422, "grafo_invalido", f"grafo do documento ({tipo}) inválido", erros)
+    if tipo == "app":
+        # item L5-07: fontes, vistas e mensagens — a API recusa o que o construtor recusaria (relação entre
+        # fontes diferentes ausente ou com tipos que não casam, referências pendentes, CQL2 malformado)
+        from app.app_modelo.validar import validar_modelo
+
+        erros_modelo, _avisos = validar_modelo(corpo)
+        if erros_modelo:
+            raise ErroAPI(422, "modelo_invalido", "fontes, vistas ou mensagens do aplicativo inválidas", erros_modelo)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -150,10 +158,20 @@ def _migrar_app_v1_v2(dados: dict) -> dict:
     return {**dados, "corpo": corpo, "esquema_versao": 2}
 
 
+def _migrar_app_v2_v3(dados: dict) -> dict:
+    """v2→v3 (item L5-07): `corpo` ganha `fontes`, `vistas` e `mensagens` vazias — nenhum nó nem ligação muda."""
+    corpo = dict(dados.get("corpo") or {})
+    corpo.setdefault("fontes", [])
+    corpo.setdefault("vistas", [])
+    corpo.setdefault("mensagens", [])
+    return {**dados, "corpo": corpo, "esquema_versao": 3}
+
+
 # registro fechado: (tipo, versão de origem) -> função que devolve o documento na versão seguinte
 _MIGRACOES = {
     ("painel", 1): _migrar_painel_v1_v2,
     ("app", 1): _migrar_app_v1_v2,
+    ("app", 2): _migrar_app_v2_v3,
 }
 
 _TETO_PASSOS = 50  # mesma ordem de grandeza de outras cadeias da casa; documento real nunca chega perto disso

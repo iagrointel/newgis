@@ -1,0 +1,42 @@
+{
+ "item": "L5-07-fontes-vistas-mensagens",
+ "medidas": {
+  "pagina_pronta_ms_aplicativo": {
+   "valor": 109.3,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (apoio.py Tela.ir)"
+  },
+  "e2e_selecao_mapa_filtra_tabela_grafico_e_outra_fonte": {
+   "valor": 1,
+   "unidade": "fluxo",
+   "comando": "tests/e2e/test_app_fontes_vistas.py: 12 municípios, 24 escolas, 3 vistas, 2 fontes"
+  },
+  "latencia_gatilho_acao_p95_ms": {
+   "valor": 1.403,
+   "unidade": "ms",
+   "comando": "node tests/app/executar_js.mjs latencia 10000: selecao no mapa -> vista da tabela refiltrada + piscar no grafico, 200 disparos, 10 mil feicoes em memoria"
+  },
+  "latencia_gatilho_acao_p50_ms": {
+   "valor": 0.665,
+   "unidade": "ms",
+   "comando": "mesmo comando, mediana"
+  },
+  "latencia_gatilho_acao_max_ms": {
+   "valor": 4.629,
+   "unidade": "ms",
+   "comando": "mesmo comando, maximo"
+  },
+  "carga_1min": {
+   "valor": 4.81,
+   "unidade": "load",
+   "comando": "os.getloadavg()[0] no instante da medida"
+  },
+  "ram_livre_gb": {
+   "valor": 3.58,
+   "unidade": "GB",
+   "comando": "MemAvailable de /proc/meminfo no instante da medida"
+  }
+ },
+ "gerado_em": "2026-09-08T11:03:19Z",
+ "git_sha": "81cd80e2b9d2"
+}
