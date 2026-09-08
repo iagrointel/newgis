@@ -1,5 +1,6 @@
 """Processo filho: um por job (ADR 0003 seção 4.3). Logo depois do fork: PR_SET_PDEATHSIG=SIGKILL (pai morto leva o
-filho), threads de BLAS = threads_blas do tipo, RLIMIT_DATA = memoria_mb do job (não RLIMIT_AS: numpy/OpenBLAS
+filho), threads de BLAS = threads_blas do tipo, RLIMIT_DATA = VmData herdado do fork + memoria_mb do job
+(não RLIMIT_AS: numpy/OpenBLAS
 reservam endereço e travam), pool do pai descartado, SIGTERM vira flag lida por progresso()/cancelado(). Códigos
 de saída: 0 concluído · 3 cancelado · 4 FalhaDefinitiva · 5 memória excedida · 1 exceção comum. Sempre os._exit."""
 
@@ -29,6 +30,7 @@ RAIZ_CGROUP = Path("/sys/fs/cgroup")              # trocar por um diretório de 
 # 96 MB dá folga de ~3,7× esse número para o pai e para o overhead do runtime do contêiner) — reavaliar com
 # `docker stats`/`MemoryPeak` se algum job legítimo passar a ser clampado sem necessidade.
 RESERVA_CGROUP_MB = 96
+CAMINHO_PROC_STATUS = Path("/proc/self/status")  # VmData do processo (constante para o teste de unidade)
 
 
 def _pdeathsig(pid_pai_esperado: int) -> None:
@@ -86,6 +88,25 @@ def limite_memoria_cgroup_mb() -> int | None:
         return None
 
 
+def vmdata_mb() -> int:
+    """VmData do processo em MB (segmento de dados + mmap anônimo privado — exatamente o que RLIMIT_DATA conta).
+
+    MEDIDO 06/09/2026 nesta máquina: `import app.jobs.tipos` (o registro dos 20 tipos, que puxa GDAL/rasterio,
+    numpy e psycopg2) leva o VmData do worker de 5 MB para 551 MB. O filho nasce de `fork()` e HERDA esse
+    VmData. Por isso RLIMIT_DATA não pode ser o número declarado do job em termos absolutos: um job de
+    `memoria_mb=256` nascia com 551 MB de VmData já contra um teto de 256 MB e morria com MemoryError na
+    primeira alocação (medido: `prova.memoria(mb=64)` falhava com "memória excedida (limite 256 MB)"). O
+    limite aplicado é `base do fork + memoria_mb`, ou seja `memoria_mb` é o que o JOB pode alocar além da
+    base do worker — que é o que o número declarado sempre quis dizer."""
+    try:
+        for linha in CAMINHO_PROC_STATUS.read_text().splitlines():
+            if linha.startswith("VmData:"):
+                return int(linha.split()[1]) // 1024  # kB -> MB
+    except (OSError, ValueError, IndexError):
+        return 0
+    return 0
+
+
 def memoria_efetiva_mb(memoria_mb: int) -> int:
     """Aritmética pura do clamp (sem tocar em RLIMIT — testável sem subprocesso, já que `setrlimit(RLIMIT_DATA)`
     só pode BAIXAR o teto no processo que o chama; testar a syscall de verdade duas vezes no mesmo processo de
@@ -98,14 +119,18 @@ def memoria_efetiva_mb(memoria_mb: int) -> int:
     return efetivo_mb
 
 
-def preparar_ambiente(memoria_mb: int, threads_blas: int) -> int:
-    """Aplica RLIMIT_DATA e devolve o limite efetivo em MB (item L0-05-e: nunca acima do teto do cgroup,
-    contêiner ou unidade systemd — `memoria_mb` do job é o pedido; o cgroup é o que existe de verdade). Chamado
-    uma vez por filho recém-forkado (nunca duas vezes no mesmo processo: RLIMIT_DATA só desce, não sobe)."""
+def preparar_ambiente(memoria_mb: int, threads_blas: int, base_mb: int | None = None) -> int:
+    """Aplica RLIMIT_DATA e devolve o ORÇAMENTO efetivo do job em MB (item L0-05-e: nunca acima do teto do
+    cgroup, contêiner ou unidade systemd — `memoria_mb` do job é o pedido; o cgroup é o que existe de verdade).
+    Chamado uma vez por filho recém-forkado (nunca duas vezes no mesmo processo: RLIMIT_DATA só desce, não sobe).
+
+    O RLIMIT_DATA aplicado é `base_mb + orçamento`, com `base_mb` = VmData herdado do worker no fork (ver
+    `vmdata_mb`); `base_mb` explícito só existe para o teste, que precisa de um número determinístico."""
     for chave in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
         os.environ[chave] = str(threads_blas)
     efetivo_mb = memoria_efetiva_mb(memoria_mb)
-    limite = efetivo_mb * 1024 * 1024
+    base = vmdata_mb() if base_mb is None else int(base_mb)
+    limite = (base + efetivo_mb) * 1024 * 1024
     resource.setrlimit(resource.RLIMIT_DATA, (limite, limite))
     return efetivo_mb
 

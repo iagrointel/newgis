@@ -2,42 +2,42 @@
  "item": "L0-05-jobs",
  "medidas": {
   "cancelamento_s": {
-   "valor": 0.426,
+   "valor": 0.632,
    "unidade": "s",
    "comando": "POST /api/jobs/{id}/cancelar em prova.progresso rodando até estado=cancelado (tests/api/jobs/test_jobs_cancelamento.py)"
   },
   "jobs_vazios_por_min": {
-   "valor": 2135.9,
+   "valor": 3666.9,
    "unidade": "jobs/min",
    "comando": "100 prova.progresso(duracao_s=0) criados pela API e concluídos por 2 workers (plat-worker 1 processo + worker extra 2 processos); tests/api/jobs/test_jobs_fila.py"
   },
   "rss_worker_kb": {
-   "valor": 40556,
+   "valor": 56728,
    "unidade": "kB",
    "comando": "VmRSS do processo pai do worker lido em GET :8153/saude depois do job de memória (tests/api/jobs/test_jobs_memoria.py); MemoryPeak da unidade é do testador"
   },
   "latencia_progresso_s": {
-   "valor": 0.065,
+   "valor": 0.173,
    "unidade": "s",
    "comando": "menor diferença entre o heartbeat_em gravado pelo filho e a chegada do evento estado no cliente SSE (TestClient; granularidade de 1 s do carimbo)"
   },
   "sse_primeiro_evento_publico_s": {
-   "valor": 0.022,
+   "valor": 0.024,
    "unidade": "s",
    "comando": "GET https://plat.iagrointel.com/api/jobs/{id}/eventos até o primeiro evento estado (nginx + uvicorn)"
   },
   "cancelamento_forcado_s": {
-   "valor": 40.5,
+   "valor": 40.3,
    "unidade": "s",
    "comando": "prova.ignora_cancelamento: pedido até SIGTERM (30 s) + SIGKILL (10 s) e estado cancelado"
   },
   "tempo_job_5min_s": {
-   "valor": 300.4,
+   "valor": 300.5,
    "unidade": "s",
    "comando": "prova.progresso(300 s, 60 passos) da criação ao evento fim pelo SSE"
   },
   "heartbeat_intervalo_max_s": {
-   "valor": 5.0,
+   "valor": 5.3,
    "unidade": "s",
    "comando": "maior intervalo entre heartbeat_em consecutivos vistos nos eventos estado do job de 5 min"
   },
@@ -52,7 +52,7 @@
    "comando": "systemctl restart plat-worker no meio de prova.progresso até o job voltar a pendente/rodando com reinicios=1 (tests/api/jobs/test_jobs_reinicio.py)"
   },
   "pagina_tarefas_pronta_ms": {
-   "valor": 142.9,
+   "valor": 182.6,
    "unidade": "ms",
    "comando": "goto('/tarefas') até body[data-pronto=1] (chromium)"
   },
@@ -102,14 +102,14 @@
    "comando": "cruzado_jobs.py: toda rota /api/jobs* e /api/agendas* do OpenAPI público chamada com sessão de demo2 sobre recurso de demo: 15 rotas, 0 falhas (404 nas rotas com id; listas/resumo sem o recurso de A); 17 de 17 chamadas sem sessão = 401"
   },
   "primeira_pintura_tarefas_ms": {
-   "valor": 48,
+   "valor": 32,
    "unidade": "ms",
-   "comando": "mil_jobs.py: 1.000 prova.progresso(0 s) criados pela API pública (cota de 200 pendentes respeitada: 20 respostas 429 fila_cheia) e concluídos pelo worker em 39 s; first-contentful-paint de /tarefas com período tudo (2.214 jobs no inquilino, 50 na página), chromium 1280x800; substitui o test_primeira_pintura_com_mil_jobs, cuja semeadura por SQL a migração 006 barra"
+   "comando": "first-contentful-paint de /tarefas com 1.000 jobs semeados por plat.jobs_semear_demo no inquilino de demonstração (chromium)"
   },
   "pagina_tarefas_mil_pronta_ms": {
-   "valor": 182.9,
+   "valor": 161.5,
    "unidade": "ms",
-   "comando": "mil_jobs.py: goto(/tarefas) até body[data-pronto=1] com 2.214 jobs no inquilino"
+   "comando": "goto('/tarefas') até body[data-pronto=1] com 1.000 jobs semeados"
   },
   "reinicio_com_tela_aberta_s": {
    "valor": 1.36,
@@ -127,6 +127,6 @@
    "comando": "prova_012.py 17:58:07-17:59:56Z: worker manual fora do systemd com PLAT_WORKER_NOME = hostname (mesmo nome-base da unidade) durante job de 240 s na unidade: reinicios ficou 0 e o progresso subiu de 3 para 20 em 35 s; kill -9 no manual com job de 240 s rodando: ceifado pela unidade 68,4 s depois (heartbeat vencido, limite 60 s), nunca antes de 55 s; estado pendente, erro 'worker sem sinal'"
   }
  },
- "gerado_em": "2026-09-05T18:03:40Z",
- "git_sha": "05a41cd29d5e"
+ "gerado_em": "2026-09-06T00:27:09Z",
+ "git_sha": "65a9fc2c0869"
 }

@@ -31,6 +31,12 @@ class ErroConfiguracao(RuntimeError):
 class Settings:
     PLAT_DSN: str
     PLAT_SECRET: str
+    # item L7-19-segredos-e-certificados: dupla-chave de rotação. Durante as 24h depois de `plat segredo
+    # rotacionar PLAT_SECRET`, o valor ANTIGO fica aqui (LoadCredential=, nunca no .env) para que o que foi
+    # cifrado/assinado com ele ainda seja lido (sessão TOTP, credencial LDAP/SMTP/conexao, URL de objeto já
+    # emitida) enquanto o valor novo já assina/cifra tudo o que é gravado dali em diante. Vazio fora da
+    # janela de rotação — é o caso comum. Ver app/seguranca_rotacao.py e docs/RUNBOOKS/segredos.md.
+    PLAT_SECRET_ANTERIOR: str | None
     PLAT_AMBIENTE: str
     PLAT_URL_PUBLICA: str
     PLAT_GIT_SHA: str | None
@@ -165,6 +171,13 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
     segredo = _obrigatoria(valores, "PLAT_SECRET")
     if not _HEX64.match(segredo):
         raise ErroConfiguracao("PLAT_SECRET inválido: exige 64 caracteres hexadecimais (openssl rand -hex 32)")
+    segredo_anterior = _opcional(valores, "PLAT_SECRET_ANTERIOR")
+    if segredo_anterior is not None and not _HEX64.match(segredo_anterior):
+        raise ErroConfiguracao("PLAT_SECRET_ANTERIOR inválido: exige 64 caracteres hexadecimais ou vazio")
+    if segredo_anterior is not None and segredo_anterior == segredo:
+        # rotação que já passou das 24h (ou nunca aconteceu de verdade): não faz sentido tratar o
+        # mesmo valor como "atual" e "anterior" ao mesmo tempo — trata como se não houvesse anterior.
+        segredo_anterior = None
     ambiente = _obrigatoria(valores, "PLAT_AMBIENTE")
     if ambiente not in AMBIENTES:
         raise ErroConfiguracao(f"PLAT_AMBIENTE inválido: {ambiente!r}; admitidos {AMBIENTES}")
@@ -187,6 +200,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
     return Settings(
         PLAT_DSN=dsn,
         PLAT_SECRET=segredo,
+        PLAT_SECRET_ANTERIOR=segredo_anterior,
         PLAT_AMBIENTE=ambiente,
         PLAT_URL_PUBLICA=url,
         PLAT_GIT_SHA=_opcional(valores, "PLAT_GIT_SHA"),

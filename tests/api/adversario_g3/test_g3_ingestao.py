@@ -23,7 +23,10 @@ def _importar_bruto(ing, caminho: Path, formato: str):
 
 
 # --------------------------------------------------------------- L0-04-d: formatos do portão
-@pytest.mark.xfail(strict=True, reason="L0-04-d: a instalacao anuncia 4 formatos (csv, geojson, gpkg, shapefile.zip); o portao exige 9")
+@pytest.mark.xfail(
+    strict=True,
+    reason="L0-04-d: a instalacao anuncia 4 formatos (csv, geojson, gpkg, shapefile.zip); o portao exige 9",
+)
 def test_formatos_anunciados_cobrem_os_9_do_portao(sessao_a):
     """Portão do L0-04-d: 'teste automatizado com 1 arquivo aberto por formato (9 arquivos)'.
     Formatos exigidos: shapefile zip, GeoPackage, GeoJSON/GeoJSONSeq, KML/KMZ, CSV/TXT, GPX, XLSX/XLS."""
@@ -34,7 +37,10 @@ def test_formatos_anunciados_cobrem_os_9_do_portao(sessao_a):
 
 
 @pytest.mark.parametrize("formato", FORMATOS_DO_PORTAO)
-@pytest.mark.xfail(strict=True, reason="L0-04-b/L0-04-d: KML/KMZ/GPX/XLSX/GML/FlatGeobuf/DXF/GDB nao existem na instalacao (formato_nao_suportado)")
+@pytest.mark.xfail(
+    strict=True,
+    reason="L0-04-b/L0-04-d: KML/KMZ/GPX/XLSX/GML/FlatGeobuf/DXF/GDB nao existem na instalacao (formato_nao_suportado)",
+)
 def test_formato_do_portao_e_aceito(ingestor_a, arquivos_de_ataque, formato):
     """Cada formato que o portão do item pai lista tem de ser ACEITO (importar ou perguntar), nunca recusado
     como inexistente. Hoje só existem 4 formatos (app/ingestao/formatos.py FORMATOS)."""
@@ -60,7 +66,10 @@ def test_gpkg_com_3_camadas_propoe_as_3(ingestor_a, arquivos_de_ataque):
         f"a proposta só cita a 1ª camada; estado={imp['estado']}; proposta={json.dumps(proposta)[:400]}"
 
 
-@pytest.mark.xfail(strict=True, reason="L0-04-b refutacao: CSV de 300 colunas e 0 linhas termina em proposta sem pergunta nem aviso (silencio)")
+@pytest.mark.xfail(
+    strict=True,
+    reason="L0-04-b refutacao: CSV de 300 colunas e 0 linhas termina em proposta sem pergunta nem aviso (silencio)",
+)
 def test_csv_300_colunas_e_0_linhas_recusa_com_mensagem_na_inspecao(ingestor_a, arquivos_de_ataque):
     """Refutação literal do L0-04-b: 'adversário envia CSV com 300 colunas e 0 linhas ... silêncio ou 500 =
     refutado'. Hoje a inspeção conclui SEM pergunta e SEM aviso: o silêncio é a resposta."""
@@ -78,7 +87,10 @@ def test_csv_300_colunas_e_0_linhas_recusa_com_mensagem_na_inspecao(ingestor_a, 
 
 # --------------------------------------------------------------- refutação: entrada malformada nunca 500
 @pytest.mark.parametrize("nome", ["zip_corrompido.zip", "zip_aninhado.zip"])
-@pytest.mark.xfail(strict=True, reason="L0-04-b refutacao: rotas.py captura ConteudoNaoCorresponde e nao ZipSuspeito (classes irmas) -> 500")
+@pytest.mark.xfail(
+    strict=True,
+    reason="L0-04-b refutacao: rotas.py captura ConteudoNaoCorresponde e nao ZipSuspeito (classes irmas) -> 500",
+)
 def test_zip_malformado_devolve_422_e_nunca_500(ingestor_a, arquivos_de_ataque, nome):
     """Refutação literal do item pai: 'cada um tem de ou importar certo ou recusar com mensagem exata —
     silêncio = refutado'; e do L0-04-b: 'silêncio ou 500 = refutado'. app/ingestao/rotas.py captura
@@ -132,7 +144,11 @@ def test_geojson_de_uma_feicao_com_um_milhao_de_vertices(ingestor_a, geojson_mui
 
 
 # --------------------------------------------------------------- rota de descoberta de formatos
-@pytest.mark.xfail(strict=True, reason="L0-04-d: GET /api/importacoes/formatos declarada depois de /api/importacoes/{id} -> 404 importacao_inexistente")
+@pytest.mark.xfail(
+    strict=True,
+    reason="L0-04-d: GET /api/importacoes/formatos declarada depois de /api/importacoes/{id} -> 404 "
+           "importacao_inexistente",
+)
 def test_rota_de_formatos_de_importacao_e_alcancavel(sessao_a):
     """`GET /api/importacoes/formatos` é declarada DEPOIS de `GET /api/importacoes/{id}` em
     app/ingestao/rotas.py, e o parâmetro de caminho é livre: a rota de descoberta nunca é alcançada."""
@@ -142,13 +158,16 @@ def test_rota_de_formatos_de_importacao_e_alcancavel(sessao_a):
 
 
 # --------------------------------------------------------------- medidas exigidas pelos portões
-@pytest.mark.xfail(strict=True, reason="L0-04-b/c: nenhuma medida tempo_inspecao_s nem tempo_import_100k_s existe em tests/medidas")
+@pytest.mark.xfail(
+    strict=True,
+    reason="L0-04-b/c: nenhuma medida tempo_inspecao_s nem tempo_import_100k_s existe em tests/medidas",
+)
 def test_medidas_de_desempenho_da_ingestao_estao_gravadas():
     """Portão do L0-04-b: 'medida tempo_inspecao_s por arquivo (100 mil feições ≤ 5 s)'. Portão do L0-04-c:
     'shapefile de 100 mil feições ... em ≤ 60 s medido (medida tempo_import_100k_s)'. O BRIEF do laço manda
     gravar cada medida em tests/medidas/<item>.json. Não existe nenhum arquivo de medida de L0-04."""
-    from pathlib import Path
     import json as _json
+    from pathlib import Path
     achadas = {}
     for arq in Path("tests/medidas").glob("*.json"):
         try:
@@ -159,7 +178,8 @@ def test_medidas_de_desempenho_da_ingestao_estao_gravadas():
             if chave in _json.dumps(dados):
                 achadas[chave] = arq.name
     assert set(achadas) == {"tempo_inspecao_s", "tempo_import_100k_s"}, \
-        f"medidas do portão ausentes; achadas: {achadas}; arquivos: {sorted(p.name for p in Path('tests/medidas').glob('*.json'))}"
+        f"medidas do portão ausentes; achadas: {achadas}; "\
+        f"arquivos: {sorted(p.name for p in Path('tests/medidas').glob('*.json'))}"
 
 
 # --------------------------------------------------------------- isolamento do schema de dados
@@ -219,7 +239,10 @@ def test_uso_de_armazenamento_e_devolvido_quando_a_camada_e_apagada(ingestor_a, 
         f"{depois_do_expurgo} depois de apagar e expurgar a camada — a cota nunca desce")
 
 
-@pytest.mark.xfail(strict=True, reason="L0-04-c: slug com hifen e valido como inquilino e invalido na ingestao (slug_invalido)")
+@pytest.mark.xfail(
+    strict=True,
+    reason="L0-04-c: slug com hifen e valido como inquilino e invalido na ingestao (slug_invalido)",
+)
 def test_inquilino_com_hifen_no_slug_consegue_importar():
     """A migração 002 aceita hífen e dígito inicial no slug do inquilino
     (`slug ~ '^[a-z0-9][a-z0-9-]{1,38}$'`); a função de ingestão da migração 029 recusa os dois
@@ -233,7 +256,7 @@ def test_inquilino_com_hifen_no_slug_consegue_importar():
                         "SELECT ('minha-org' ~ '^[a-z0-9][a-z0-9-]{1,38}$')::text || '|' || "
                         "('minha-org' ~ '^[a-z][a-z0-9_]{0,60}$')::text"], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
-    inquilino, ingestao = [l for l in r.stdout.splitlines() if "|" in l][-1].split("|")
+    inquilino, ingestao = [ln for ln in r.stdout.splitlines() if "|" in ln][-1].split("|")
     assert not (inquilino == "true" and ingestao == "false"), (
         "o slug 'minha-org' é aceito na criação do inquilino e recusado pela ingestão "
         f"(criação={inquilino}, ingestão={ingestao})")

@@ -1,0 +1,2408 @@
+{
+ "linha": "L1 imagens",
+ "gerado_em": "2026-09-05",
+ "gerador": "scratchpad/l1/gera_l1.py (agente L1 imagens, 05/09/2026)",
+ "brief": "laco/decomposicao/BRIEF.md (05/09/2026); decisões de conceito em L1_CONCEITO.md",
+ "itens_existentes_detalhados": [
+  "L1-01-ingest-raster",
+  "L1-02-tiles-token",
+  "L1-03-conectores-sensores",
+  "L1-04-serie-temporal",
+  "L1-05-ia-na-entrada"
+ ],
+ "nota_sobre_pais": "L1-01..L1-05 continuam no estado.json; quando trabalhados viram `parcial` com os filhos `-a..` daqui como dependência. L1-06 foi proposto pela decomposição L3L6 e está aqui com o mesmo id. L1-07 em diante são itens novos e independentes.",
+ "n_itens": 60,
+ "numeracao": "ids L1-11, L1-17, L1-22, L1-26, L1-28 e as letras L1-03-g/i/j/m/o/r, L1-04-b/d, L1-02-j/k/l não existem: foram fundidos em itens vizinhos durante a decomposição para ficar em 60 itens (ex.: legenda entrou em L1-02-f, pegadas em L1-07, MDT/MDS de LiDAR em L1-03-q, exportação em massa em L1-20, CLI em L1-01-h).",
+ "n_por_prioridade": {
+  "1": 13,
+  "2": 29,
+  "3": 13,
+  "4": 3,
+  "5": 2
+ },
+ "n_por_tamanho": {
+  "P": 7,
+  "M": 42,
+  "G": 11
+ },
+ "dependencias_externas_propostas": [
+  {
+   "id": "L0-05-jobs",
+   "pedido": "fila com nome de fila (`cpu`, `gpu`, `rede`), sub-passos nomeados com progresso por passo, cancelamento cooperativo e limite de 1 job pesado por vez; o `plat-worker-gpu` do L1-05-b consome a fila `gpu` por túnel SSH e precisa que o worker possa rodar em outra máquina com a mesma tabela"
+  },
+  {
+   "id": "L0-03-catalogo",
+   "pedido": "tipo de item `raster` (aponta para `plat.raster_item`/STAC), `mosaico` (busca registrada), `nuvem_de_pontos`, `imagens_orientadas` e `modelo`; miniatura e estatísticas vêm do L1-01-c; compartilhamento por link público tem de consultar a restrição de licença do item (L1-27) antes de emitir"
+  },
+  {
+   "id": "L0-02-tenant-auth",
+   "pedido": "`plat.token_servico` com coluna de escopo em lista (itens/coleções/mosaicos), Referer e CIDR, e endpoint interno de validação rápido (≤ 5 ms) para o `auth_request` do nginx; log de leitura em tabela particionada por mês"
+  },
+  {
+   "id": "L0-06-backup-status",
+   "pedido": "o dump por inquilino inclui o STAC (pgstac) e o manifesto dos objetos do balde; o `restore_drill` confere sha256 de uma amostra de COGs contra o balde"
+  },
+  {
+   "id": "L0-09-metadado-catalogo",
+   "pedido": "perfil ISO 19115-2 (imagem) no exportador, gerado a partir das propriedades STAC do L1-27"
+  },
+  {
+   "id": "L2-01-mapa-web",
+   "pedido": "fonte raster do MapLibre aceita TileJSON do L1-02-c e a predefinição de renderização vai na URL; controles de opacidade e ordem valem para raster; o visualizador expõe gancho para o controle de tempo/cortina do L1-04-a"
+  },
+  {
+   "id": "L2-02-simbologia",
+   "pedido": "o editor de simbologia raster (rampa, faixa, transparência) edita a 'predefinição de renderização' v1 do L1-02-f, não um formato próprio; rampas ColorBrewer mapeadas para os nomes de colormap do rio-tiler"
+  },
+  {
+   "id": "L2-05-geoprocessamento",
+   "pedido": "as ferramentas 'estatísticas zonais sobre raster', 'calculadora raster' e 'reprojeção' chamam o motor do L1-14/L1-15 em vez de implementação própria; formulário gerado do mesmo JSON Schema"
+  },
+  {
+   "id": "L2-09-3d",
+   "pedido": "terreno = tiles terrain-RGB do L1-16 (gerados do MDT nativo); nuvem de pontos COPC do L1-03-q renderizada por leitor de octree no navegador (decisão de biblioteca no L2-09)"
+  },
+  {
+   "id": "L5-05-documento-versoes",
+   "pedido": "a predefinição de renderização (L1-02-f) e o estado do controle de tempo (L1-04-a) são documentos versionados por `plat.item_versao`; o L5-05 está declarado em L5.json, não no estado.json"
+  },
+  {
+   "id": "L5-02-fluxos",
+   "pedido": "cada ferramenta do L1-14/L1-15/L1-16 é um nó do construtor de fluxos com entradas por id de item e saída = item novo com proveniência"
+  },
+  {
+   "id": "L6-02-e-stac-externo",
+   "pedido": "reusa o conector genérico do L1-03-k e o modo referenciado do L1-03-l; só acrescenta a URL livre do usuário com a mesma lista de bloqueio de hosts internos"
+  },
+  {
+   "id": "L7-06-observabilidade",
+   "pedido": "métricas do `plat-titiler` (tempo por tile, taxa de acerto do cache nginx, erros por token) e do `plat-worker-gpu` (VRAM, fila) no painel"
+  },
+  {
+   "id": "L7-09-medicao-cobranca",
+   "pedido": "consome `plat.uso_raster` do L1-23 (bytes por perfil, tiles, saída, CPU/GPU) como a linha 'imagens' do relatório mensal; a distinção ver × analisar é medida, não declarada"
+  },
+  {
+   "id": "L7-03-seguranca",
+   "pedido": "varredura de CVE cobre GDAL, rasterio, TiTiler, PDAL e onnxruntime; a validação de upload roda em subprocesso isolado (L1-01-b) e o adversário de segurança tem os casos de arquivo malformado desta linha"
+  },
+  {
+   "id": "L7-14-instalacoes-apt-desta-linha",
+   "pedido": "instalações que exigem apt/sudo e decisão: PDAL/untwine (L1-03-q), onnxruntime-gpu no GPU box (L1-05-e), Docker do OpenDroneMap no GPU box (L1-03-p); pypgstac, titiler-pgstac, psycopg[binary,pool], numexpr, exactextract, zarr e titiler.xarray são `pip` na venv (sem apt), mas o disco a 98 % exige `df` antes de cada um (D21)"
+  }
+ ],
+ "medido_na_casa_em_2026-09-05": [
+  "GDAL 3.8.4 do sistema: driver COG, JP2OpenJPEG, WEBP, netCDF, HDF4/5, GRIB, Zarr, PDF, WCS/WMS/WMTS, STACIT/STACTA presentes; ECW e MrSID AUSENTES (`gdalinfo --formats`, 05/09)",
+  "venv de `plataforma/pipeline`: titiler.core/extensions/mosaic 2.2.0, rio-tiler 9.4.3, rio-cogeo 7.0.2, rasterio 1.5.0, morecantile 7.0.3 (13 TMS), pystac 1.14.3, pystac-client 0.9.0, odc-stac 0.5.2, planetary-computer 1.0.0, rioxarray 0.22.0, xarray 2026.4.0, numexpr 2.14.2, boto3 1.43.83; AUSENTES em toda a máquina: pypgstac, titiler-pgstac, titiler.xarray, zarr, laspy, PDAL, untwine, exactextract, onnxruntime",
+  "TiTiler 2.2.0: 18 algoritmos de fábrica (bitonal, cast, ceil, contours, floor, grayscale, hillshade, max, mean, median, min, normalizedIndex, slope, std, sum, terrainrgb, terrarium, var) e 211 colormaps nomeados no rio-tiler",
+  "Postgres 16.13 + PostGIS 3.6.3 no `iagro_sat`: btree_gist 1.7 (pré-requisito do pgstac) instalado; postgis_raster disponível mas NÃO usado por decisão (conceito C1); timescaledb 2.26.4 presente mas fora do dado do cliente (TSL)",
+  "Garage v2.3.0 ativo (`plataforma-garage`, :3900 S3 / :3902 web), balde `demo` com cota 20 GB; TiTiler da prova ativo (`plataforma-titiler`, :8131); nginx com `proxy_cache_path` 3 GB/14 d, `proxy_cache_lock`, `slice 1m` para COG por Range — tudo em produção interna desde 29/08 (não se toca; copia-se)",
+  "prova do pipeline (29/08): S2 23KLQ 672 MB → 41,5 MB JPEG 75 (16,2:1) em 15,9 s; 4 bandas 16 bits ZSTD 924 MB → 869 MB (1,1:1) em 11,6 s; ortofoto 10 cm 300 MB → 29,7 MB (10,1:1) em 1,8 s; tile frio 65-86 ms, quente 8,7 ms, Cloudflare HIT ≈ 40 ms; NDVI ao vivo custa o mesmo que RGB",
+  "concorrência (31/08, `pipeline/bench_conc.py`): 1.080 tiles/s por cliente quente sem degradar de 10 a 200 conexões; 45.178 tiles/s com 4 clientes; frio 16 tiles/s (1 conexão), teto 65; 20 pedidos ao mesmo tile frio = 1 MISS + 19 HIT",
+  "GPU box (`ssh gpu`): NVIDIA RTX 4000 SFF Ada 20.475 MiB, torch 2.5.1+cu121 com CUDA disponível, disco `/` 1,7 TB a 100 % (16 GB livres), sem PDAL",
+  "esta máquina: 12 vCPU, 23 GB RAM (3 GB disponíveis), `/` 13 GB livres (98 %), `/mnt/pgdata` 16 GB livres (98 %)",
+  "URLs de dado aberto vivas em 05/09: Element84 (S2 L2A, S2 C1, S1 GRD, Landsat C2 L2, GLO-30), Planetary Computer (206 em Range), CMR-STAC LPCLOUD/ASF, INPE BDC STAC (CB4A-WPM-PCA-FUSED-1, S2-16D-2, AMZ1-WFI-L4-SR-1, CBERS4-WFI-16D-2), MapBiomas col. 10 `brazil_coverage_2024.tif` (o nome `brasil_` dá 404), WorldCover S24W048, JRC GSW 50W_20S, Hansen GFC-2024 v1.12 20S_050W, GLO-30 S23 W047, SoilGrids VRT, CHIRPS mensal, WSF2019, NASA POWER, CDS (datasets e how-to-api)"
+ ],
+ "fontes_testadas_http_200_em_2026-09-05": [
+  "https://app.skyfi.com/platform-api/docs",
+  "https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-presigned-urls.html",
+  "https://brasil.mapbiomas.org/download/",
+  "https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land",
+  "https://cds.climate.copernicus.eu/datasets/sis-agrometeorological-indicators",
+  "https://cds.climate.copernicus.eu/how-to-api",
+  "https://cmr.earthdata.nasa.gov/stac/ASF/collections/OPERA_L2_RTC-S1_V1_1",
+  "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/collections/HLSS30_2.0",
+  "https://cogeo.org/",
+  "https://cogeotiff.github.io/rio-tiler/",
+  "https://copc.io/",
+  "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_S23_00_W047_00_DEM/Copernicus_DSM_COG_10_S23_00_W047_00_DEM.tif",
+  "https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/atoms/files/Landsat_Data_Policy.pdf",
+  "https://data.chc.ucsb.edu/products/CHIRPS-2.0/global_monthly/tifs/",
+  "https://data.inpe.br/bdc/stac/v1/",
+  "https://data.inpe.br/bdc/stac/v1/collections",
+  "https://data.inpe.br/bdc/stac/v1/collections/AMZ1-WFI-L4-SR-1",
+  "https://data.inpe.br/bdc/stac/v1/collections/CB4A-WPM-PCA-FUSED-1",
+  "https://data.inpe.br/bdc/stac/v1/collections/S2-16D-2",
+  "https://datatracker.ietf.org/doc/draft-ietf-httpbis-resumable-upload/",
+  "https://developer.nvidia.com/cuda-toolkit",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/add-rasters/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/compute-statistics-and-histograms/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/download-rasters/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/export-image/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/generate-raster/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/get-samples/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/identify-image-service/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/image-service/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/image-tile/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/legend-image-service/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/mosaic-rules/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/query-image-service/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/raster-attribute-table/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/raster-function-objects/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/summarize-raster-within/",
+  "https://developers.arcgis.com/rest/services-reference/enterprise/zonal-statistics-as-table/",
+  "https://developers.cloudflare.com/cache/concepts/default-cache-behavior/",
+  "https://developers.cloudflare.com/cache/how-to/purge-cache/",
+  "https://developers.maxar.com/docs/streaming-imagery/",
+  "https://developers.planet.com/docs/apis/data/",
+  "https://developers.planet.com/docs/apis/orders/",
+  "https://developers.planet.com/docs/planetscope/",
+  "https://developers.planet.com/docs/subscriptions/",
+  "https://developmentseed.org/titiler/advanced/customization/",
+  "https://developmentseed.org/titiler/advanced/performance_tuning/",
+  "https://developmentseed.org/titiler/endpoints/cog/",
+  "https://developmentseed.org/titiler/examples/code/tiler_with_auth/",
+  "https://developmentseed.org/titiler/examples/code/tiler_with_cache/",
+  "https://developmentseed.org/titiler/examples/notebooks/Working_with_Statistics/",
+  "https://developmentseed.org/titiler/user_guide/algorithms/",
+  "https://developmentseed.org/titiler/user_guide/rendering/",
+  "https://doc.arcgis.com/en/arcgis-online/administer/credits.htm",
+  "https://doc.arcgis.com/en/arcgis-online/create-maps/add-layers-from-url.htm",
+  "https://doc.arcgis.com/en/arcgis-online/reference/arcgis-server-services.htm",
+  "https://doc.arcgis.com/en/arcgis-online/reference/ogc.htm",
+  "https://doc.arcgis.com/en/drone2map/latest/get-started/what-is-drone2map.htm",
+  "https://doc.esri.com/en/arcgis-enterprise/12.1/create/introduction-to-oriented-imagery-layers.html",
+  "https://doc.esri.com/en/arcgis-enterprise/12.1/create/work-with-oriented-imagery-layers-mv.html",
+  "https://docs.geoserver.org/latest/en/user/community/ogc-api/tiles/index.html",
+  "https://docs.geoserver.org/latest/en/user/services/wcs/index.html",
+  "https://docs.geoserver.org/latest/en/user/services/wms/index.html",
+  "https://docs.ogc.org/is/20-057/20-057.html",
+  "https://docs.opendronemap.org/",
+  "https://docs.opendronemap.org/gcp/",
+  "https://docs.opendronemap.org/outputs/",
+  "https://docs.overturemaps.org/guides/buildings/",
+  "https://docs.qgis.org/3.40/en/docs/server_manual/services/wcs.html",
+  "https://docs.qgis.org/3.40/en/docs/server_manual/services/wms.html",
+  "https://docs.qgis.org/3.40/en/docs/user_manual/working_with_point_clouds/point_clouds.html",
+  "https://documentation.dataspace.copernicus.eu/APIs/STAC.html",
+  "https://download.geoservice.dlr.de/WSF2019/files/WSF2019_cog.tif",
+  "https://earth-search.aws.element84.com/v1",
+  "https://earth-search.aws.element84.com/v1/collections/landsat-c2-l2",
+  "https://earth-search.aws.element84.com/v1/collections/sentinel-1-grd",
+  "https://earth-search.aws.element84.com/v1/collections/sentinel-2-c1-l2a",
+  "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a",
+  "https://enterprise.arcgis.com/en/get-started/11.4/windows/what-s-new-in-arcgis-enterprise.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-and-deploy-arcgis-enterprise-for-deep-learning-raster-analytics.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-default-elevation-service.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-living-atlas-content.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/specify-the-default-token-expiration-time.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/add-layers-from-url.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/add-layers-mv.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/configure-time-mv.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/configure-time.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/create-viewshed-mv.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/imagery-layers.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/manage-imagery-layers.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/perform-analysis-mv.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/perform-raster-analysis.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/publish-imagery-layers.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/raster-function-editor.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/tile-layers.htm",
+  "https://enterprise.arcgis.com/en/server/11.4/get-started/windows/what-is-arcgis-image-server-.htm",
+  "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/image-service-parameters.htm",
+  "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/key-concepts-for-image-services.htm",
+  "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/publishing-image-services.htm",
+  "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/server-side-raster-functions.htm",
+  "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/wcs-services.htm",
+  "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/wms-services.htm",
+  "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/wmts-services.htm",
+  "https://esa-worldcover.org/en/data-access",
+  "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_S24W048_Map.tif",
+  "https://files.isric.org/soilgrids/latest/data/clay/clay_0-5cm_mean.vrt",
+  "https://garagehq.deuxfleurs.fr/documentation/cookbook/exposing-websites/",
+  "https://garagehq.deuxfleurs.fr/documentation/operations/durability-repairs/",
+  "https://garagehq.deuxfleurs.fr/documentation/reference-manual/admin-api/",
+  "https://garagehq.deuxfleurs.fr/documentation/reference-manual/features/",
+  "https://garagehq.deuxfleurs.fr/documentation/reference-manual/s3-compatibility/",
+  "https://gdal.org/en/stable/drivers/raster/cog.html",
+  "https://gdal.org/en/stable/drivers/raster/ecw.html",
+  "https://gdal.org/en/stable/drivers/raster/jp2openjpeg.html",
+  "https://gdal.org/en/stable/drivers/raster/mrsid.html",
+  "https://gdal.org/en/stable/drivers/raster/netcdf.html",
+  "https://gdal.org/en/stable/drivers/raster/stacit.html",
+  "https://gdal.org/en/stable/drivers/raster/wcs.html",
+  "https://gdal.org/en/stable/drivers/raster/wms.html",
+  "https://gdal.org/en/stable/drivers/raster/wmts.html",
+  "https://gdal.org/en/stable/drivers/raster/zarr.html",
+  "https://gdal.org/en/stable/programs/gdal2tiles.html",
+  "https://gdal.org/en/stable/programs/gdal_contour.html",
+  "https://gdal.org/en/stable/programs/gdal_pansharpen.html",
+  "https://gdal.org/en/stable/programs/gdal_polygonize.html",
+  "https://gdal.org/en/stable/programs/gdal_rasterize.html",
+  "https://gdal.org/en/stable/programs/gdal_translate.html",
+  "https://gdal.org/en/stable/programs/gdal_viewshed.html",
+  "https://gdal.org/en/stable/programs/gdaldem.html",
+  "https://gdal.org/en/stable/programs/gdalwarp.html",
+  "https://gdal.org/en/stable/user/multidim_raster_data_model.html",
+  "https://gdal.org/en/stable/user/raster_data_model.html",
+  "https://gdal.org/en/stable/user/virtual_file_systems.html",
+  "https://geoservicos.ibge.gov.br/geoserver/ows?service=WCS&request=GetCapabilities",
+  "https://github.com/Esri/raster-functions",
+  "https://github.com/OpenDroneMap/NodeODM",
+  "https://github.com/OpenDroneMap/ODM",
+  "https://github.com/cogeotiff/rio-cogeo",
+  "https://github.com/cogeotiff/rio-tiler",
+  "https://github.com/hobu/untwine",
+  "https://github.com/mapbox/tilejson-spec/tree/master/3.0.0",
+  "https://github.com/maplibre/maplibre-gl-compare",
+  "https://github.com/protomaps/PMTiles/blob/main/spec/v3/spec.md",
+  "https://github.com/protomaps/go-pmtiles",
+  "https://github.com/radiantearth/stac-api-spec",
+  "https://github.com/stac-extensions/alternate-assets",
+  "https://github.com/stac-extensions/classification",
+  "https://github.com/stac-extensions/datacube",
+  "https://github.com/stac-extensions/eo",
+  "https://github.com/stac-extensions/file",
+  "https://github.com/stac-extensions/label",
+  "https://github.com/stac-extensions/mlm",
+  "https://github.com/stac-extensions/pointcloud",
+  "https://github.com/stac-extensions/processing",
+  "https://github.com/stac-extensions/projection",
+  "https://github.com/stac-extensions/raster",
+  "https://github.com/stac-extensions/render",
+  "https://github.com/stac-extensions/sar",
+  "https://github.com/stac-extensions/sat",
+  "https://github.com/stac-extensions/scientific",
+  "https://github.com/stac-extensions/storage",
+  "https://github.com/stac-extensions/timestamps",
+  "https://github.com/stac-extensions/version",
+  "https://github.com/stac-extensions/view",
+  "https://github.com/stac-utils/pgstac/releases",
+  "https://glad.umd.edu/dataset/global-2010-tree-cover-30-m",
+  "https://huggingface.co/ibm-nasa-geospatial/Prithvi-EO-2.0-600M",
+  "https://hyp3-docs.asf.alaska.edu/guides/rtc_product_guide/",
+  "https://inde.gov.br/",
+  "https://landsatlook.usgs.gov/stac-server/collections/landsat-c2l2-sr",
+  "https://metadados.inde.gov.br/geonetwork/srv/por/catalog.search",
+  "https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_cache_lock",
+  "https://nginx.org/en/docs/http/ngx_http_slice_module.html",
+  "https://numexpr.readthedocs.io/en/latest/",
+  "https://odc-stac.readthedocs.io/en/latest/",
+  "https://onnxruntime.ai/docs/",
+  "https://pdal.io/en/stable/",
+  "https://pdal.io/en/stable/stages/filters.hag_nn.html",
+  "https://pdal.io/en/stable/stages/filters.smrf.html",
+  "https://pdal.io/en/stable/stages/readers.copc.html",
+  "https://pdal.io/en/stable/stages/writers.copc.html",
+  "https://pdal.io/en/stable/stages/writers.gdal.html",
+  "https://planetarycomputer.microsoft.com/api/stac/v1",
+  "https://planetarycomputer.microsoft.com/api/stac/v1/collections",
+  "https://planetarycomputer.microsoft.com/api/stac/v1/collections/sentinel-1-rtc",
+  "https://planetarycomputer.microsoft.com/docs/concepts/sas/",
+  "https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,PRECTOTCORR&community=AG&longitude=-47.5&latitude=-22.5&start=20260101&end=20260110&format=JSON",
+  "https://power.larc.nasa.gov/docs/services/api/",
+  "https://pro.arcgis.com/en/pro-app/3.4/help/analysis/image-analyst/change-detection-in-arcgis-pro.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/help/projects/connect-to-cloud-stores.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/deep-learning/deep-learning-in-arcgis-pro.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/deep-learning/install-deep-learning-frameworks.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/image-analyst/label-objects-for-deep-learning.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/aspect-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/band-arithmetic-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/colormap-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/composite-bands-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/contour-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/curvature-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/hillshade-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/list-of-raster-functions.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/mask-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/ml-classify-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/ndvi-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/pansharpening-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/raster-function-template.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/raster-functions.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/remap-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/slope-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/stretch-function.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/an-overview-of-multidimensional-raster-data.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/create-a-stac-connection.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/explore-stac.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/introduction-to-ortho-mapping.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/mosaic-dataset-properties.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/mosaic-datasets.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/supported-raster-dataset-file-formats.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/data/las-dataset/what-is-a-las-dataset-.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/mapping/time/visualize-temporal-data-using-the-time-slider.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/help/sharing/overview/web-tile-layer.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/3d-analyst/classify-las-ground.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/conversion/las-dataset-to-raster.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/conversion/raster-to-polygon.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/add-rasters-to-mosaic-dataset.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/build-footprints.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/build-raster-attribute-table.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/build-seamlines.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/clip.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/copy-raster.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/create-cloud-storage-connection-file.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/create-ortho-corrected-raster-dataset.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/create-pansharpened-raster-dataset.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/manage-tile-cache.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/mosaic-to-new-raster.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/project-raster.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/aggregate-multidimensional-raster.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/an-overview-of-the-image-analyst-toolbox.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/an-overview-of-the-synthetic-aperture-radar-toolset.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/classify-pixels-using-deep-learning.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/compute-change-raster.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/detect-change-using-deep-learning.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/detect-objects-using-deep-learning.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/export-training-data-for-deep-learning.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/generate-multidimensional-anomaly.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/multidimension/make-multidimensional-raster-layer.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-analyst/raster-calculator.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-analyst/reclassify.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-analyst/viewshed.htm",
+  "https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-analyst/zonal-statistics-as-table.htm",
+  "https://pypi.org/project/cdsapi/",
+  "https://pypi.org/project/exactextract/",
+  "https://pypi.org/project/numexpr/",
+  "https://pypi.org/project/odc-stac/",
+  "https://pypi.org/project/omnicloudmask/",
+  "https://pypi.org/project/onnxruntime/",
+  "https://pypi.org/project/planetary-computer/",
+  "https://pypi.org/project/procrastinate/",
+  "https://pypi.org/project/rasterstats/",
+  "https://pypi.org/project/rio-cogeo/",
+  "https://pypi.org/project/s2cloudless/",
+  "https://pypi.org/project/stac-fastapi.pgstac/",
+  "https://pypi.org/project/titiler.core/",
+  "https://pypi.org/project/titiler.pgstac/",
+  "https://pypi.org/project/titiler.xarray/",
+  "https://pypi.org/project/xarray/",
+  "https://pypi.org/project/zarr/",
+  "https://rasterio.readthedocs.io/en/stable/",
+  "https://registry.opendata.aws/copernicus-dem/",
+  "https://registry.opendata.aws/sentinel-2-l2a-cogs/",
+  "https://schemas.opengis.net/wmts/1.0/wmtsGetCapabilities_response.xsd",
+  "https://sentinels.copernicus.eu/documents/247904/690755/Sentinel_Data_Legal_Notice",
+  "https://sentinels.copernicus.eu/web/sentinel/terms-conditions",
+  "https://sentiwiki.copernicus.eu/web/s1-products",
+  "https://sentiwiki.copernicus.eu/web/s2-processing",
+  "https://sentiwiki.copernicus.eu/web/s2-products",
+  "https://sites.research.google/gr/open-buildings/",
+  "https://stac-utils.github.io/pgstac/pgstac/",
+  "https://stac-utils.github.io/pgstac/pypgstac/",
+  "https://stac-utils.github.io/stac-fastapi-pgstac/",
+  "https://stac-utils.github.io/titiler-pgstac/latest/endpoints/items_endpoints/",
+  "https://stac-utils.github.io/titiler-pgstac/latest/endpoints/searches_endpoints/",
+  "https://storage.googleapis.com/earthenginepartners-hansen/GFC-2024-v1.12/Hansen_GFC-2024-v1.12_lossyear_20S_050W.tif",
+  "https://storage.googleapis.com/earthenginepartners-hansen/GFC-2024-v1.12/download.html",
+  "https://storage.googleapis.com/global-surface-water/downloads2021/occurrence/occurrence_50W_20Sv1_4_2021.tif",
+  "https://storage.googleapis.com/mapbiomas-public/initiatives/brasil/collection_10/lulc/coverage/brazil_coverage_1985.tif",
+  "https://storage.googleapis.com/mapbiomas-public/initiatives/brasil/collection_10/lulc/coverage/brazil_coverage_2024.tif",
+  "https://tus.io/protocols/resumable-upload",
+  "https://urs.earthdata.nasa.gov/documentation/for_users/data_access/curl_and_wget",
+  "https://www.dgi.inpe.br/catalogo/explore",
+  "https://www.esri.com/en-us/arcgis/products/arcgis-image/overview",
+  "https://www.isric.org/explore/soilgrids/faq-soilgrids",
+  "https://www.ogc.org/standard/ogcapi-maps/",
+  "https://www.ogc.org/standard/ogcapi-tiles/",
+  "https://www.ogc.org/standard/wcs/",
+  "https://www.ogc.org/standard/wms/",
+  "https://www.ogc.org/standard/wmts/",
+  "https://www.planet.com/terms-of-use/",
+  "https://www.usgs.gov/faqs/are-there-any-restrictions-use-or-redistribution-landsat-data",
+  "https://www.usgs.gov/landsat-missions/landsat-collection-2-level-2-science-products"
+ ],
+ "itens": [
+  {
+   "id": "L1-01-a-pgstac-e-stac-api-por-inquilino",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-01-repo",
+    "L0-02-tenant-auth",
+    "L0-03-catalogo"
+   ],
+   "hipotese": "o catálogo de imagens é o pgstac (schema `pgstac` no banco `iagro_sat`, instalado por `pypgstac migrate`, requer btree_gist, já presente 1.7) e não uma tabela própria; o isolamento por inquilino, que o pgstac não tem, vem de duas regras: (1) toda coleção chama-se `<tenant_id>-<slug>` e toda leitura/escrita passa pela API da casa, que filtra pela lista de coleções do inquilino; (2) uma tabela-espelho `plat.raster_item(tenant_id, item_id, colecao, sha256, perfil, bytes, estado)` com RLS é a fonte de autorização, e o pgstac guarda só o STAC. A API STAC (stac-fastapi-pgstac 6.x, montada dentro do `plat-api` ou como `plat-stac`) responde em `/svc/<token>/stac/` com busca por bbox, datetime, coleção e filtro CQL2, e é o que o ArcGIS Pro (STAC Connection, desde 3.2) e o QGIS (Browser, desde 3.40) consomem",
+   "portao_de_pronto": "`pypgstac migrate` aplicado por `db/migrar.sh` com versão registrada; role `plat_app` só com `pgstac_read`/`pgstac_ingest` (nunca `pgstac_admin`); `GET /svc/<token>/stac/` devolve landing page STAC API 1.0.0 conformando `core`, `item-search`, `filter`, `sort` (validado por `stac-validator` ou `stac-api-validator`); busca com token do inquilino A nunca devolve item de coleção do B (teste cruzado em `search`, `collections`, `items`, `queryables`); `plat.raster_item` com RLS e teste cruzado; inserir 10.000 itens sintéticos e buscar por bbox em tempo medido (registrado em `tests/medidas/L1-01-a.json`); `GDAL STACIT` (`gdalinfo 'STACIT:https://.../stac/search?...'`) abre a busca, o que prova que QGIS/GDAL consomem",
+   "refutacao": "adversário injeta CQL2 e `collections` com id de coleção de outro inquilino em todos os endpoints do stac-fastapi (inclusive `/queryables` e `/collections/{id}/items/{id}`); qualquer 200 com dado alheio = refutado; roda o validador STAC API oficial e reprova qualquer não-conformidade de `core`",
+   "papeis": [
+    "arquiteto",
+    "dados",
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-01-ingest-raster",
+   "origem": "spec",
+   "fontes": [
+    "https://stac-utils.github.io/pgstac/pgstac/",
+    "https://stac-utils.github.io/pgstac/pypgstac/",
+    "https://github.com/stac-utils/pgstac/releases",
+    "https://stac-utils.github.io/stac-fastapi-pgstac/",
+    "https://pypi.org/project/stac-fastapi.pgstac/",
+    "https://github.com/radiantearth/stac-api-spec",
+    "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/create-a-stac-connection.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/explore-stac.htm",
+    "https://gdal.org/en/stable/drivers/raster/stacit.html"
+   ]
+  },
+  {
+   "id": "L1-01-b-validacao-e-isolamento-da-entrada",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-05-jobs"
+   ],
+   "hipotese": "todo arquivo enviado passa por validação em processo separado (subprocesso com `ulimit` de RAM/CPU/tempo, `GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR`, sem `/vsicurl` em upload, sem rede) antes de qualquer conversão: CRS presente com EPSG resolvível ou WKT2 válido (senão a tela pergunta o CRS e grava a resposta no job, nunca assume), tipo de dado, nº de bandas, ColorInterp, NoData declarado (ou pedido), extensão dentro do território esperado (aviso), data de aquisição nos metadados (ou pedida), tamanho descompactado estimado contra a cota (recusa antes de descompactar: proteção contra bomba zip), assinatura de formato conferida contra a extensão. Reaproveita `validate()` do `plataforma/pipeline/ingest.py` (só cópia, nunca edição)",
+   "portao_de_pronto": "cada caso da lista abaixo importa certo ou recusa com mensagem exata em português, nunca silêncio: sem CRS; CRS sem EPSG (WKT custom); NoData ausente; 16 bits; bandas com tipos diferentes; zip com 1 GB que descompacta para 50 GB; arquivo `.tif` que é PNG renomeado; GeoTIFF com CRS EPSG:4674 e outro com EPSG:31983; raster de 1 banda para perfil visual; validação roda em subprocesso com `RLIMIT_AS` e `timeout` declarados no ADR e um teste prova que um GeoTIFF malformado de 100 GB virtual (BigTIFF esparso) é recusado sem derrubar o worker; relatório de validação gravado no job em JSON",
+   "refutacao": "adversário envia os 9 casos e mais 3 de invenção própria (TIFF com IFD circular, JP2 truncado, GeoTIFF com 65.535 bandas) e mede RAM do worker; qualquer travamento, estouro de RAM ou aceitação silenciosa = refutado",
+   "papeis": [
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-01-ingest-raster",
+   "origem": "casa",
+   "fontes": [
+    "https://gdal.org/en/stable/user/virtual_file_systems.html",
+    "https://gdal.org/en/stable/user/raster_data_model.html",
+    "https://rasterio.readthedocs.io/en/stable/"
+   ]
+  },
+  {
+   "id": "L1-01-c-conversao-cog-perfis-miniatura-estatisticas",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-b-validacao-e-isolamento-da-entrada",
+    "L1-01-d-garage-por-inquilino"
+   ],
+   "hipotese": "conversão para COG por GDAL (`gdal_translate -of COG`, BLOCKSIZE 512, overviews internos, NUM_THREADS ALL_CPUS, BIGTIFF IF_SAFER) em três perfis declarados no ADR: `visual` (Byte, 3 bandas, JPEG Q75 YCbCr, reescalonamento por percentil 2-98 quando a entrada é 16 bits, overview AVERAGE), `cientifico` (tipo original, ZSTD nível 9, PREDICTOR 2, overview AVERAGE) e `categorico` (ZSTD, PREDICTOR 2, overview NEAREST, colormap e tabela de atributos preservados); `rio-cogeo validate` reprova o que não passar; no mesmo job saem miniatura PNG 256 px, estatísticas por banda (mín, máx, média, desvio, percentis 2/98, histograma 256 classes) gravadas no item STAC (extensão `raster`, `raster:bands[].statistics` e `histogram`) e tempo/razão de compressão por job. Medido na casa (29/08): RGB 34 cm JPEG 75 = 1,2 MB/km² e 19,9:1; 16 bits 4 bandas ZSTD = 1,4:1; ≈ 1 s por 100-170 MB cru",
+   "portao_de_pronto": "os três perfis convertem 3 rasters abertos (Sentinel-2 L2A 4 bandas 16 bits, ortofoto RGB 8 bits, MapBiomas categórico) e todos passam em `cog_validate` sem aviso; JPEG nunca é aplicado a NIR/térmico/índice (teste que tenta e é recusado); categórico mantém os valores de classe exatos em todos os níveis de overview (teste compara moda por bloco); estatísticas gravadas batem com `gdalinfo -stats` (tolerância 0,1 %); miniatura visível na tela Conteúdo; `tests/medidas/L1-01-c.json` com MB/km², razão e segundos por perfil",
+   "refutacao": "adversário converte um raster com NoData = 0 e valores válidos = 0 em bordas e confere se o perfil visual não engole dado válido; converte um 16 bits com outliers (nuvem saturada) e confere se o percentil 2-98 não achata o resto; abre o COG em QGIS/GDAL por `/vsicurl` e conta requisições HTTP para 1 janela (tem de ser ≤ 20)",
+   "papeis": [
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-01-ingest-raster",
+   "origem": "casa",
+   "fontes": [
+    "https://gdal.org/en/stable/drivers/raster/cog.html",
+    "https://gdal.org/en/stable/programs/gdal_translate.html",
+    "https://github.com/cogeotiff/rio-cogeo",
+    "https://pypi.org/project/rio-cogeo/",
+    "https://github.com/stac-extensions/raster",
+    "https://cogeo.org/"
+   ]
+  },
+  {
+   "id": "L1-01-d-garage-por-inquilino",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-tenant-auth"
+   ],
+   "hipotese": "cada inquilino tem um balde próprio no Garage (v2.3.0, já ativo em `plataforma-garage` :3900) com cota em bytes e em objetos, uma chave só-leitura própria (para o TiTiler e para a conexão S3 do ArcGIS Pro) e nenhuma chave de escrita fora do worker; objetos são nomeados por conteúdo `<item_id>/<asset>_<sha8>.tif` e nunca sobrescritos (regra medida em 29/08: sobrescrever deixou o TiTiler em 500 pelo cache VSI e a CDN com tile velho); criação de balde/chave/cota é migração idempotente executada pela API de administração do Garage, registrada em `plat.tenant_bucket`",
+   "portao_de_pronto": "`install.sh` cria o balde do inquilino de teste com cota declarada; upload acima da cota é recusado pelo Garage e a mensagem chega à tela; a chave só-leitura do inquilino A não lista nem lê o balde do B (teste com boto3); `PUT` com a mesma chave de objeto é recusado pelo worker (teste); `GET` por HTTPS com `Range` responde 206 no endpoint web do Garage atrás do nginx (`slice 1m`, já configurado na prova); apagar item remove os objetos e o balde reflete a cota (teste)",
+   "refutacao": "adversário tenta com a chave só-leitura: PUT, DELETE, ListBuckets, CopyObject entre baldes; tenta chave de objeto com `..`; mede que a réplica (quando houver 2ª máquina) não é pré-requisito silencioso; qualquer escrita bem-sucedida = refutado",
+   "papeis": [
+    "arquiteto",
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-01-ingest-raster",
+   "origem": "spec",
+   "fontes": [
+    "https://garagehq.deuxfleurs.fr/documentation/reference-manual/s3-compatibility/",
+    "https://garagehq.deuxfleurs.fr/documentation/reference-manual/admin-api/",
+    "https://garagehq.deuxfleurs.fr/documentation/cookbook/exposing-websites/",
+    "https://garagehq.deuxfleurs.fr/documentation/reference-manual/features/",
+    "https://nginx.org/en/docs/http/ngx_http_slice_module.html"
+   ]
+  },
+  {
+   "id": "L1-01-e-upload-grande-retomavel",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-d-garage-por-inquilino",
+    "L0-05-jobs"
+   ],
+   "hipotese": "envio pelo navegador em partes (protocolo tus 1.0 ou o rascunho IETF de upload retomável) direto para o worker, com retomada após queda de rede, limite por inquilino, checagem de sha256 no fim e início da validação sem esperar a última parte ser copiada; alternativa por linha de comando (`plat raster enviar`) para acervo de dezenas de GB; nada passa pela RAM da API (streaming para disco de trabalho com espaço conferido antes por `df`)",
+   "portao_de_pronto": "arquivo de 5 GB sobe pelo navegador (playwright, rede simulada com corte no meio) e retoma sem recomeçar; sha256 conferido no fim; 3 uploads simultâneos de 1 GB não ultrapassam o limite de RAM do worker declarado no ADR (medido com `MemoryPeak`); cota: upload que excederia a cota é recusado antes de começar; espaço em disco de trabalho abaixo do limiar recusa com mensagem",
+   "refutacao": "adversário envia partes fora de ordem, repete uma parte com conteúdo diferente e declara tamanho falso no cabeçalho; qualquer arquivo final corrompido aceito como válido = refutado",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-01-ingest-raster",
+   "origem": "usuario",
+   "fontes": [
+    "https://tus.io/protocols/resumable-upload",
+    "https://datatracker.ietf.org/doc/draft-ietf-httpbis-resumable-upload/",
+    "https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-presigned-urls.html"
+   ]
+  },
+  {
+   "id": "L1-01-f-formatos-de-entrada",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-b-validacao-e-isolamento-da-entrada"
+   ],
+   "hipotese": "lista fechada e testada de formatos de entrada, cada um com um arquivo aberto de teste: GeoTIFF/BigTIFF, JPEG2000 (JP2OpenJPEG, presente no GDAL 3.8.4), Erdas IMG, ENVI, ASCII Grid, PNG/JPEG com world file, GeoPDF, netCDF/HDF5/GRIB (1 variável × 1 tempo vira 1 raster; o resto é L1-19), Zarr (leitura), zip com vários arquivos (mosaico por VRT quando as cenas são contíguas e do mesmo CRS/tipo), KMZ superoverlay (só a imagem base). ECW e MrSID são recusados com mensagem explicando que o GDAL do sistema não tem os SDKs proprietários (medido: `gdalinfo --formats` sem ECW/MrSID); a mensagem indica a conversão prévia no software de origem",
+   "portao_de_pronto": "1 arquivo aberto por formato listado em `tests/dados/raster/` (≤ 20 MB cada, licença anotada) importa e vira COG válido; ECW/MrSID: recusa com a mensagem exata; zip com 4 cenas contíguas vira 1 item com 1 COG mosaicado; zip com cenas de CRS diferentes recusa e diz quais; tela lista os formatos aceitos lendo a mesma tabela do código (nunca lista à mão)",
+   "refutacao": "adversário envia JP2 com 12 bits, IMG com pirâmides externas `.rrd`, netCDF com eixo de tempo e ASCII Grid com vírgula decimal; cada um importa certo ou recusa com mensagem; tabela da tela diferente da tabela do código = refutado",
+   "papeis": [
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-01-ingest-raster",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/supported-raster-dataset-file-formats.htm",
+    "https://gdal.org/en/stable/drivers/raster/jp2openjpeg.html",
+    "https://gdal.org/en/stable/drivers/raster/ecw.html",
+    "https://gdal.org/en/stable/drivers/raster/mrsid.html",
+    "https://gdal.org/en/stable/drivers/raster/netcdf.html",
+    "https://gdal.org/en/stable/drivers/raster/zarr.html"
+   ]
+  },
+  {
+   "id": "L1-01-g-raster-categorico-colormap-e-tabela-de-atributos",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-c-conversao-cog-perfis-miniatura-estatisticas"
+   ],
+   "hipotese": "raster de classes (MapBiomas, WorldCover, uso do solo do cliente) guarda a legenda no item STAC pela extensão `classification` (`classification:classes` com valor, nome, cor) e na tabela de atributos do GeoTIFF (RAT, `gdal.RasterAttributeTable`), lida do arquivo quando existe ou enviada pelo usuário como CSV (valor, nome, cor); tiles usam colormap exato por valor (nunca interpolação), legenda gerada dessa tabela; contagem de pixels por classe dentro de um polígono sai da mesma tabela (base do `tabulate area`)",
+   "portao_de_pronto": "MapBiomas col. 10 (COG público, licença CC BY-SA 4.0) importa com as 30+ classes nomeadas e coloridas iguais ao dicionário oficial (teste compara 5 classes); tile com `colormap` por valor é bit a bit igual ao esperado em 3 pixels de referência; legenda JSON e PNG em `/svc/<token>/raster/<item>/legenda`; CSV de classes com valor repetido ou cor inválida é recusado com mensagem; contagem por classe num polígono bate com `numpy.unique` independente",
+   "refutacao": "adversário confere overview de raster categórico (nível 3) contra o nível 0: se aparecer classe que não existe no original (mistura por AVERAGE) = refutado; envia RAT com 70.000 classes e mede tempo da legenda",
+   "papeis": [
+    "raster",
+    "cartografo",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-01-ingest-raster",
+   "origem": "esri",
+   "fontes": [
+    "https://github.com/stac-extensions/classification",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/build-raster-attribute-table.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/raster-attribute-table/",
+    "https://storage.googleapis.com/mapbiomas-public/initiatives/brasil/collection_10/lulc/coverage/brazil_coverage_2024.tif"
+   ]
+  },
+  {
+   "id": "L1-01-h-ingestao-em-lote-por-manifesto-e-cli",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-c-conversao-cog-perfis-miniatura-estatisticas",
+    "L1-01-e-upload-grande-retomavel"
+   ],
+   "hipotese": "ingestão de centenas de cenas de uma vez por manifesto (CSV ou JSON: caminho/URL, coleção, datetime, título, perfil, licença, propriedades) pela API `POST /api/raster/lote` e pelo CLI `plat raster lote`, idempotente por sha256 (reenviar o manifesto não duplica), com progresso por cena na tela Tarefas e relatório final (aceitas, recusadas com motivo, tempo, bytes); o CLI é o mesmo módulo Python da API (nada duplicado)",
+   "portao_de_pronto": "manifesto com 50 cenas abertas (Sentinel-2 recortes pequenos) ingere em lote com progresso por cena; reexecução do mesmo manifesto cria 0 itens novos; cena com erro não interrompe as demais e aparece no relatório; `plat raster lote --help` documentado no MANUAL; tempo total e por cena em `tests/medidas/L1-01-h.json`",
+   "refutacao": "adversário altera 1 byte de uma cena e reenvia o manifesto: tem de nascer 1 item novo e só 1; mata o worker no meio do lote e reinicia: nenhuma cena pode aparecer como concluída sem COG válido no balde",
+   "papeis": [
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-01-ingest-raster",
+   "origem": "esri",
+   "fontes": [
+    "https://developers.arcgis.com/rest/services-reference/enterprise/add-rasters/",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/add-rasters-to-mosaic-dataset.htm"
+   ]
+  },
+  {
+   "id": "L1-01-i-ciclo-de-vida-exclusao-e-coleta-de-lixo",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-d-garage-por-inquilino",
+    "L1-01-a-pgstac-e-stac-api-por-inquilino"
+   ],
+   "hipotese": "regras escritas de ciclo de vida: excluir item = marcar `estado=excluido` em `plat.raster_item`, remover do pgstac, invalidar tiles no cache nginx (chave por item) e apagar objetos do balde em job separado com retenção de 7 dias (lixeira); o arquivo bruto enviado é apagado assim que o COG é validado, salvo opção `guardar_original` por item (ocupa cota); job semanal de coleta de lixo lista objetos sem item (órfãos) e itens sem objeto (quebrados) e escreve relatório; disco a 98 % obriga a lixeira curta e o relatório visível",
+   "portao_de_pronto": "excluir item pelo navegador: tiles respondem 404 em ≤ 5 s, STAC não lista, objetos somem após a retenção (teste com relógio simulado); restaurar dentro da retenção devolve tudo; relatório de órfãos e quebrados gerado por `plat raster gc` e visível em Tarefas; cota recalculada após exclusão bate com o balde (teste)",
+   "refutacao": "adversário cria 3 itens, apaga 2, roda o gc e confere que o 3º está intacto e que nenhum objeto do 3º foi tocado (sha256 antes e depois); tenta ler o COG excluído pela URL antiga com o token: tem de ser 404",
+   "papeis": [
+    "backend",
+    "dados",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-01-ingest-raster",
+   "origem": "spec",
+   "fontes": [
+    "https://garagehq.deuxfleurs.fr/documentation/operations/durability-repairs/",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/manage-imagery-layers.htm"
+   ]
+  },
+  {
+   "id": "L1-01-j-proveniencia-da-imagem-lastro",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-c-conversao-cog-perfis-miniatura-estatisticas"
+   ],
+   "hipotese": "todo item STAC carrega proveniência verificável: `file:checksum` (multihash sha256) do COG e do bruto, extensão `processing` (`processing:software` com versões de GDAL/rio-cogeo/plat, `processing:lineage` em texto), bloco `plat:cadeia` com o comando exato de conversão, os parâmetros e os sha256 das entradas, e `plat:manifesto_sha256` = sha256 do JSON canônico do item sem esse campo; script `plat raster reexecutar <item>` refaz a conversão e compara o sha256; é o Lastro da tese da casa aplicado à imagem",
+   "portao_de_pronto": "item gerado tem os campos; `plat raster verificar <item>` baixa o COG do balde, recalcula sha256 e compara (0 divergências em 10 itens); `reexecutar` sobre a ortofoto aberta produz COG com o mesmo sha256 (determinismo com NUM_THREADS fixo, provado) ou, quando o GDAL não é determinístico, com estatísticas iguais e diferença documentada no ADR; ficha do item na tela mostra a cadeia em texto simples",
+   "refutacao": "adversário edita 1 byte do objeto no balde (com a chave RW do worker) e roda `verificar`: tem de acusar; muda a versão do GDAL no manifesto e roda `reexecutar`: tem de acusar divergência de software antes de comparar",
+   "papeis": [
+    "arquiteto",
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-01-ingest-raster",
+   "origem": "casa",
+   "fontes": [
+    "https://github.com/stac-extensions/processing",
+    "https://github.com/stac-extensions/file",
+    "https://github.com/stac-extensions/version",
+    "https://github.com/stac-extensions/scientific"
+   ]
+  },
+  {
+   "id": "L1-02-a-servico-titiler-por-inquilino",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-a-pgstac-e-stac-api-por-inquilino",
+    "L1-01-d-garage-por-inquilino"
+   ],
+   "hipotese": "unidade `plat-titiler` (:8152, titiler.core 2.2 + titiler-pgstac 3.1, uvicorn 4 workers, `PYTHONNOUSERSITE=1`, chave só-leitura do balde por inquilino lida na hora do pedido) com `path_dependency` que aceita SÓ `item_id` (resolvido em `plat.raster_item` do inquilino do token para `s3://<balde>/<chave>`) e nunca URL livre (anti-SSRF, herdado do `pipeline/app.py`); um único TileMatrixSet `WebMercatorQuad` (medido: capabilities cai de 191 KB/655 ms para 18 KB/143 ms); `Server-Timing` em toda resposta; cabeçalho `X-Robots-Tag: noindex`; ligado ao `/saude` do `plat-api`",
+   "portao_de_pronto": "`systemctl is-active plat-titiler`; `/svc/<token>/raster/<item>/info` e `/tiles/WebMercatorQuad/{z}/{x}/{y}.png` respondem para item do inquilino; `?url=` e qualquer host externo devolvem 400 (teste com `file:///etc/passwd`, `s3://outro-balde/`, `http://169.254.169.254/`); tile de item de outro inquilino = 403; `tests/medidas/L1-02-a.json` com mediana/p90 de 40 tiles frios e quentes (referência da prova: 36-56 ms in-process, 65-86 ms frio pelo nginx, 8,7 ms quente)",
+   "refutacao": "adversário tenta SSRF por todos os parâmetros do OpenAPI do TiTiler (inclusive `assets`, `expression`, `colormap` com URL); tenta `item_id` com `..` e com id de outro inquilino; compara o OpenAPI publicado com as rotas realmente montadas (rota não documentada = refutado)",
+   "papeis": [
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-02-tiles-token",
+   "origem": "casa",
+   "fontes": [
+    "https://developmentseed.org/titiler/endpoints/cog/",
+    "https://developmentseed.org/titiler/advanced/customization/",
+    "https://developmentseed.org/titiler/examples/code/tiler_with_auth/",
+    "https://stac-utils.github.io/titiler-pgstac/latest/endpoints/items_endpoints/",
+    "https://pypi.org/project/titiler.core/",
+    "https://pypi.org/project/titiler.pgstac/"
+   ]
+  },
+  {
+   "id": "L1-02-b-token-de-servico-com-escopo-por-lista",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-tenant-auth",
+    "L1-02-a-servico-titiler-por-inquilino"
+   ],
+   "hipotese": "token de serviço = registro em `plat.token_servico` (já existe na fundação) com escopo em lista de itens/coleções/mosaicos (pedido do L5-14: escopo por LISTA, não só por camada), restrição opcional por Referer e por CIDR, validade opcional, revogação imediata e log por leitura (rota, item, z, bytes, IP, Referer, ms); o token vai NO CAMINHO (`/svc/<token>/...`) porque o ArcGIS Online não guarda credencial de WMTS/XYZ externo e recusa OGC com token (doc Esri, lida 29/08); validação feita pelo nginx via `auth_request` para a API (resposta em cache local por 5 s), antes do `proxy_cache`, para que revogação valha em ≤ 5 s mesmo com tile em cache",
+   "portao_de_pronto": "criar/listar/revogar token pela tela e pela API (e2e playwright); tile com token revogado devolve 403 em ≤ 5 s (medido) mesmo depois de servido em cache; Referer fora da lista = 403; CIDR fora = 403; token com escopo de 2 itens não abre o 3º (teste); log por leitura consultável por token e por dia (`plat.log_svc`, particionado por mês); OpenAPI atualizado",
+   "refutacao": "adversário usa token de A em item de B, token expirado, Referer forjado e header `X-Forwarded-For` falso; tenta escrever no log por rota pública; qualquer 200 indevido = refutado; confere que o log não grava o token em claro (só hash)",
+   "papeis": [
+    "backend",
+    "dados",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-02-tiles-token",
+   "origem": "spec",
+   "fontes": [
+    "https://doc.arcgis.com/en/arcgis-online/reference/arcgis-server-services.htm",
+    "https://doc.arcgis.com/en/arcgis-online/reference/ogc.htm",
+    "https://doc.arcgis.com/en/arcgis-online/create-maps/add-layers-from-url.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/specify-the-default-token-expiration-time.htm"
+   ]
+  },
+  {
+   "id": "L1-02-c-wmts-xyz-tilejson-validados",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-b-token-de-servico-com-escopo-por-lista"
+   ],
+   "hipotese": "três contratos de URL estáveis por item e por mosaico, sem `?url=`: XYZ `/svc/<token>/raster/<item>/{z}/{x}/{y}.{png|jpg|webp}`, WMTS 1.0.0 RESTful `/svc/<token>/raster/<item>/WMTSCapabilities.xml` (wmtsExtension do titiler.extensions, XML validado contra o XSD oficial `wmtsGetCapabilities_response.xsd`) e TileJSON 3.0 `/svc/<token>/raster/<item>/tilejson.json`; 256 px, y não invertido, HTTPS, CORS liberado para `*.arcgis.com` e para o domínio do portal do cliente (lista por inquilino); os parâmetros de renderização (L1-02-f) ficam gravados dentro da URL de `ResourceURL`, de modo que um 'WMTS de NDVI' é só uma URL",
+   "portao_de_pronto": "XML do WMTS passa no `xmllint --schema` contra o XSD da OGC; `gdalinfo 'WMTS:https://.../WMTSCapabilities.xml'` e `gdalinfo` de XYZ por `<GDAL_WMS>` abrem a camada (é o que o QGIS usa por baixo); TileJSON abre no MapLibre do L2-01; CORS conferido com `OPTIONS` de origem `https://www.arcgis.com`; e2e playwright colando a URL WMTS no visualizador da casa; tabela de paridade contra 'Add layer from URL' do Portal 11.4 (Tile layer, WMTS) escrita em `docs/PARIDADE.md`",
+   "refutacao": "adversário valida o XML com um segundo validador (pywps/owslib ausente: usar `lxml` com o XSD baixado uma vez para `tests/xsd/`), pede tile fora do `TileMatrixLimits` e em zoom 25, e confere que o `ResourceURL` não vaza o caminho interno do balde; teste no Portal/AGOL real continua PENDENTE (D20) e nunca é marcado feito",
+   "papeis": [
+    "raster",
+    "esri",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-02-tiles-token",
+   "origem": "esri",
+   "fontes": [
+    "https://www.ogc.org/standard/wmts/",
+    "https://schemas.opengis.net/wmts/1.0/wmtsGetCapabilities_response.xsd",
+    "https://github.com/mapbox/tilejson-spec/tree/master/3.0.0",
+    "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/wmts-services.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/add-layers-from-url.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/tile-layers.htm",
+    "https://gdal.org/en/stable/drivers/raster/wmts.html",
+    "https://gdal.org/en/stable/drivers/raster/wms.html"
+   ]
+  },
+  {
+   "id": "L1-02-d-cache-nginx-cdn-e-bancada-de-carga",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-c-wmts-xyz-tilejson-validados"
+   ],
+   "hipotese": "cache de tiles no nginx (`proxy_cache` em NVMe, `proxy_cache_lock`, `use_stale`, chave SEM o token: `item + z/x/y + parâmetros de renderização`, para que 2 tokens do mesmo item compartilhem tile), `Cache-Control: public, max-age=86400` para a CDN (o domínio já está na Cloudflare; medido na prova: HIT em GRU ≈ 40 ms), invalidação por item na exclusão/reingestão (o nome por sha já garante URL nova), e bancada `tests/carga/tiles.py` (reuso do `pipeline/bench_conc.py`) que mede quente/frio de 1 a 200 conexões; referência medida 31/08: 1.080 tiles/s por cliente quente, 20 pedidos simultâneos ao mesmo tile frio = 1 MISS + 19 HIT",
+   "portao_de_pronto": "≥ 500 tiles/s quente com 0 erro (portão do pai); frio ≥ 15 tiles/s com 1 conexão; `proxy_cache_lock` provado (N pedidos simultâneos ao mesmo tile frio = 1 pedido ao TiTiler, contado no log); token revogado não é servido do cache (auth_request antes do cache, teste); números em `tests/medidas/L1-02-d.json`; página interna de status mostra taxa de acerto do cache por dia",
+   "refutacao": "adversário mede com URL errada de propósito para provar que a bancada não 'passa' medindo 404 (regra da casa); varia parâmetros de renderização e confere que a chave de cache os inclui (NDVI e RGB do mesmo item nunca se misturam); enche o cache além de `max_size` e confere eviction sem erro",
+   "papeis": [
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-02-tiles-token",
+   "origem": "casa",
+   "fontes": [
+    "https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_cache_lock",
+    "https://developers.cloudflare.com/cache/concepts/default-cache-behavior/",
+    "https://developers.cloudflare.com/cache/how-to/purge-cache/",
+    "https://developmentseed.org/titiler/examples/code/tiler_with_cache/"
+   ]
+  },
+  {
+   "id": "L1-02-e-cog-direto-por-https-e-endpoint-s3-para-o-pro",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-b-token-de-servico-com-escopo-por-lista",
+    "L1-01-d-garage-por-inquilino"
+   ],
+   "hipotese": "duas portas para o degrau 'analisa': (1) COG por HTTPS com token no caminho `/svc/<token>/cog/<item>/<asset>.tif`, `Range` → 206, `slice 1m` + `proxy_cache` no nginx (já provado na prova do pipeline), lido por QGIS/GDAL por `/vsicurl/`; (2) endpoint S3 compatível por inquilino (`s3.<dominio>` → Garage, chave só-leitura própria) para o `Create Cloud Storage Connection File` do ArcGIS Pro (provedor MinIO/'Amazon S3' com Service End Point custom; a Esri escreve que não testa nem garante S3 compatíveis); o Pro não aceita COG por URL direta (pedido aberto na comunidade Esri) — por isso as duas portas",
+   "portao_de_pronto": "`gdalinfo /vsicurl/https://.../cog/<item>/cientifico.tif` abre em ≤ 20 requisições (contadas no log) e `gdal_translate` de uma janela 1024² sai em tempo medido; `AWS_S3_ENDPOINT` + chave do inquilino: `gdalinfo /vsis3/<balde>/...` abre; chave do inquilino A não abre balde do B; `X-Robots-Tag noindex` e `Content-Type` COG; documento `docs/PRO_CONEXAO.md` com o passo a passo do `.acs` (sem captura real até D20)",
+   "refutacao": "adversário faz 50 leituras `Range` sobrepostas e confere integridade (sha256 do resultado montado = sha256 do objeto); tenta `Range` gigante e negativo; lê com a chave de A o balde de B por `ListObjectsV2` e por `GetObject` direto (sem listar): qualquer 200 = refutado",
+   "papeis": [
+    "raster",
+    "esri",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-02-tiles-token",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/create-cloud-storage-connection-file.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/projects/connect-to-cloud-stores.htm",
+    "https://gdal.org/en/stable/user/virtual_file_systems.html",
+    "https://nginx.org/en/docs/http/ngx_http_slice_module.html",
+    "https://garagehq.deuxfleurs.fr/documentation/reference-manual/s3-compatibility/"
+   ]
+  },
+  {
+   "id": "L1-02-f-predefinicoes-de-renderizacao-e-legenda",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-a-servico-titiler-por-inquilino",
+    "L1-12-linguagem-de-expressao-de-banda"
+   ],
+   "hipotese": "uma 'predefinição de renderização' é um documento JSON v1 validado por JSON Schema (`docs/esquemas/renderizacao-v1.json`): bandas por nome comum (`red, green, blue, nir, swir16…` resolvidos por `eo:bands`) ou índice, expressão (L1-12), `rescale` por banda (explícito, ou por percentil 2-98 lido das estatísticas do item), `colormap` (211 nomes do rio-tiler, medido) ou colormap explícito por intervalo/valor, `nodata`, `resampling`, algoritmo (L1-13) e opacidade; guardada por item (padrão) ou por mapa, versionada em `plat.item_versao` (modelo do L5-05), e serializada de forma determinística para a query string das URLs de tile/WMTS; a legenda (`/legenda.json` e `/legenda.png`) sai da mesma predefinição; é o equivalente ao 'raster function template' de exibição do Image Server, com o conteúdo declarado (feito/parcial/fora) na paridade",
+   "portao_de_pronto": "predefinição inválida = 422 com o caminho do erro; a mesma predefinição gera a mesma query string (teste de determinismo); NDVI com colormap `rdylgn` e stretch por percentil abre no mapa (e2e) e a legenda mostra os cortes; trocar a predefinição padrão do item muda a URL WMTS publicada (versão na URL) sem quebrar a anterior; 6 predefinições de fábrica (RGB natural, falsa-cor NIR, NDVI, NDWI, NBR, relevo sombreado) com teste de imagem por pixel de referência",
+   "refutacao": "adversário monta predefinição com banda inexistente, colormap de 70.000 entradas, rescale invertido e expressão que divide por zero: cada uma recusada ou tratada com NoData, nunca 500; compara a legenda PNG com os cortes do JSON (cor de cada intervalo)",
+   "papeis": [
+    "raster",
+    "cartografo",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-02-tiles-token",
+   "origem": "esri",
+   "fontes": [
+    "https://developmentseed.org/titiler/user_guide/rendering/",
+    "https://cogeotiff.github.io/rio-tiler/",
+    "https://github.com/stac-extensions/render",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/raster-function-template.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/stretch-function.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/colormap-function.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/legend-image-service/",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/raster-function-editor.htm"
+   ]
+  },
+  {
+   "id": "L1-02-g-wms-1-3-0-raster",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-f-predefinicoes-de-renderizacao-e-legenda"
+   ],
+   "hipotese": "WMS 1.3.0 por item e por mosaico (`GetCapabilities`, `GetMap` em EPSG:3857/4326/4674/31981-31985, `GetFeatureInfo` devolvendo valor por banda, `GetLegendGraphic`) como camada fina sobre o rio-tiler (`part()`/`bbox` com reprojeção), porque o Portal/AGOL aceita WMS de terceiros e muitos clientes de prefeitura só sabem colar WMS; `TIME` opcional lendo o `datetime` do STAC para coleções (série); XML validado contra o XSD 1.3.0; limites de tamanho de imagem declarados (2048×2048) e recusa acima",
+   "portao_de_pronto": "`GetCapabilities` passa no XSD; `gdalinfo WMS:` abre; `GetMap` em 4 CRS bate geometricamente com o tile XYZ equivalente (diferença de reprojeção ≤ 1 px, teste); `GetFeatureInfo` devolve o mesmo valor do endpoint `/ponto`; `GetLegendGraphic` igual à legenda do L1-02-f; paridade contra 'WMS services' do Server 11.4 escrita",
+   "refutacao": "adversário pede `WIDTH=100000`, `BBOX` invertido, CRS inexistente, `STYLES` arbitrário e `SLD_BODY` com entidade externa (XXE): recusa limpa em todos; compara `GetMap` com tile do mesmo pixel",
+   "papeis": [
+    "raster",
+    "esri",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-02-tiles-token",
+   "origem": "geoserver",
+   "fontes": [
+    "https://www.ogc.org/standard/wms/",
+    "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/wms-services.htm",
+    "https://docs.geoserver.org/latest/en/user/services/wms/index.html",
+    "https://docs.qgis.org/3.40/en/docs/server_manual/services/wms.html",
+    "https://doc.arcgis.com/en/arcgis-online/reference/ogc.htm"
+   ]
+  },
+  {
+   "id": "L1-02-h-ponto-estatisticas-e-histograma",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-a-servico-titiler-por-inquilino"
+   ],
+   "hipotese": "três leituras de valor com token: `/ponto/{lon},{lat}` (valor por banda e valor da expressão, com a data do item), `/estatisticas` por bbox ou por polígono GeoJSON (mín, máx, média, desvio, percentis, histograma com nº de classes e faixa declarados) e `/amostras` (N pontos → tabela); tudo sobre o `/point`, `/statistics` e `/feature` do TiTiler já existentes; resultado com CRS de cálculo e nº de pixels usados, nunca sem",
+   "portao_de_pronto": "valor em 20 pontos de referência bate com `rasterio.sample` independente; estatística por polígono bate com `numpy` sobre máscara `rasterio.features.geometry_mask` (tolerância 0,1 %); polígono maior que o limite declarado (km²) é recusado com mensagem e sugere o job de L1-15; paridade contra `identify`, `computeStatisticsHistograms` e `getSamples` do REST do Image Server escrita",
+   "refutacao": "adversário pede ponto fora da extensão (tem de ser NoData explícito, não 0), polígono auto-intersectado e 10.000 amostras de uma vez; compara o histograma com `numpy.histogram` com as mesmas classes",
+   "papeis": [
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-02-tiles-token",
+   "origem": "esri",
+   "fontes": [
+    "https://developers.arcgis.com/rest/services-reference/enterprise/identify-image-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/compute-statistics-and-histograms/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/get-samples/",
+    "https://developmentseed.org/titiler/examples/notebooks/Working_with_Statistics/"
+   ]
+  },
+  {
+   "id": "L1-02-i-ogc-api-tiles-e-maps",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-c-wmts-xyz-tilejson-validados"
+   ],
+   "hipotese": "OGC API – Tiles (17-083r4 é WMTS; Tiles é 20-057) e OGC API – Maps por item e por mosaico: `/tiles`, `/tileMatrixSets`, `/tiles/WebMercatorQuad/{z}/{y}/{x}` com metadados JSON, e `/map` com bbox/crs/width/height; o ArcGIS Pro consome 'map tiles' de OGC API Tiles (doc Esri lida 29/08) e o QGIS ≥ 3.34 também; mesmo motor do XYZ/WMS, só a fachada muda",
+   "portao_de_pronto": "landing page e conformance declaram as classes implementadas e passam no validador OGC (ETS de Tiles) quando disponível, ou em teste próprio contra o JSON Schema da spec; `gdalinfo` abre via driver OGCAPI; paridade escrita",
+   "refutacao": "adversário compara tile OGC API com o XYZ do mesmo z/x/y (bit a bit); pede TMS não suportado e conferência de `tileMatrixSetLimits`",
+   "papeis": [
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-02-tiles-token",
+   "origem": "geoserver",
+   "fontes": [
+    "https://www.ogc.org/standard/ogcapi-tiles/",
+    "https://docs.ogc.org/is/20-057/20-057.html",
+    "https://www.ogc.org/standard/ogcapi-maps/",
+    "https://docs.geoserver.org/latest/en/user/community/ogc-api/tiles/index.html"
+   ]
+  },
+  {
+   "id": "L1-07-mosaico-por-colecao-e-pegadas",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-a-pgstac-e-stac-api-por-inquilino",
+    "L1-02-b-token-de-servico-com-escopo-por-lista"
+   ],
+   "hipotese": "um mosaico é uma busca STAC registrada no pgstac (`POST /searches/register` do titiler-pgstac: coleções, bbox, datetime, filtro CQL2, `sortby`) cujo id é o hash da busca, portanto estável na URL do web map; tiles `/svc/<token>/mosaico/<busca>/{z}/{x}/{y}`, WMTS e TileJSON iguais aos do item; o inquilino cria o mosaico pela tela ('Coleção → Mosaico') escolhendo coleção, período e filtro de nuvem; as pegadas (footprints) dos itens que compõem o mosaico saem como camada vetorial (`/svc/<token>/mosaico/<busca>/pegadas` em GeoJSON e por Martin) com data, nuvem e id, equivalente à sublayer 'Footprint' do mosaic dataset; o equivalente Esri é o mosaic dataset + image service dinâmico",
+   "portao_de_pronto": "mosaico de ≥ 6 cenas Sentinel-2 abertas (recortes pequenos) registrado pela tela; tile do mosaico em z 8-14 medido (frio/quente) em `tests/medidas/L1-07.json`; a mesma busca registrada duas vezes devolve o mesmo id; pegadas abrem no mapa com popup de data/nuvem (e2e); token com escopo no mosaico e não nos itens individuais consegue o tile e não consegue o item avulso; paridade contra mosaic dataset/Footprint escrita",
+   "refutacao": "adversário registra busca com `collections` de outro inquilino, com filtro CQL2 malicioso e com bbox global sem limite de itens; confere que o tile de mosaico nunca lê cena fora do escopo (log de leitura do balde); compara pegadas com `SELECT` direto no pgstac",
+   "papeis": [
+    "raster",
+    "esri",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://stac-utils.github.io/titiler-pgstac/latest/endpoints/searches_endpoints/",
+    "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/mosaic-datasets.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/build-footprints.htm",
+    "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/key-concepts-for-image-services.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/query-image-service/"
+   ]
+  },
+  {
+   "id": "L1-08-regras-de-mosaico-e-selecao-de-pixel",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-07-mosaico-por-colecao-e-pegadas",
+    "L1-09-mascara-de-nuvem"
+   ],
+   "hipotese": "regras de composição declaradas e escolhidas por mosaico: ordem (`sortby` por data desc/asc, por nuvem asc, por atributo), seleção de pixel (`first`, `last`, `lowest`, `highest`, `mean`, `median`, `stdev` do rio-tiler), 'travar cena' (`lock raster`: só o item escolhido), 'mais recente sem nuvem' (ordem por data desc + máscara de nuvem por pixel do L1-09 antes de `first`), e limite de cenas por tile; a tabela de paridade contra os métodos de mosaico do Esri (None, Closest to Center, By Attribute, Lock Raster, Northwest, Seamline, Closest to Viewpoint) marca Seamline e Closest to Viewpoint como FORA, com o motivo",
+   "portao_de_pronto": "cada regra tem teste de pixel: com 3 cenas sintéticas sobrepostas de valores 10/20/30, `first` por data devolve a esperada, `median` devolve 20, `lock` devolve a travada; 'mais recente sem nuvem' sobre 6 cenas reais nunca devolve pixel marcado como nuvem no SCL (teste em 100 pixels); tempo por tile com N cenas candidatas medido para N=1,3,6,12 e registrado; `docs/PARIDADE.md` com os 7 métodos Esri",
+   "refutacao": "adversário monta mosaico com cenas em CRS diferentes (UTM 22S e 23S) e confere alinhamento na borda de zona (≤ 1 px); usa `pixel_selection=mean` com NoData em uma cena e confere que o NoData não entra na média",
+   "papeis": [
+    "raster",
+    "esri",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://github.com/cogeotiff/rio-tiler",
+    "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/mosaic-dataset-properties.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/mosaic-rules/",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/build-seamlines.htm"
+   ]
+  },
+  {
+   "id": "L1-09-mascara-de-nuvem",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-03-b-sentinel-2"
+   ],
+   "hipotese": "nuvem é dado de primeira classe: para Sentinel-2 L2A a banda SCL (classes 3, 8, 9, 10 e 11 = sombra, nuvem média/alta, cirro, neve) vira máscara por pixel guardada como asset `mascara` do item (COG Byte, NEAREST) e a fração de nuvem DENTRO de um polígono é calculada sob demanda (o `eo:cloud_cover` da cena é da cena inteira, não da fazenda); para Landsat C2 L2 a `qa_pixel`; para imagem sem máscara nativa, opção de modelo leve (s2cloudless ou omnicloudmask, ambos em PyPI, não instalados: decisão de instalação no item) com taxa de erro declarada na ficha; a máscara alimenta o mosaico (L1-08) e a série (L1-04-c)",
+   "portao_de_pronto": "asset `mascara` gerado para 6 cenas S2 abertas; fração de nuvem por polígono bate com contagem independente sobre o SCL (0 divergência); série NDVI com máscara não tem os picos negativos de nuvem que a série sem máscara tem (teste com 1 polígono e 12 datas, diferença documentada em número); ficha da máscara diz de onde vem (SCL, qa_pixel ou modelo, com versão); tela mostra a fração de nuvem no polígono, não só a da cena",
+   "refutacao": "adversário pega 5 cenas com nuvem visível e confere pixel a pixel 20 pontos marcados à mão (nuvem/não nuvem) contra a máscara; taxa de erro acima da declarada = refutado; confere que a máscara não é aplicada por engano a raster que não é óptico (SAR, MDT)",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "usuario",
+   "fontes": [
+    "https://sentiwiki.copernicus.eu/web/s2-processing",
+    "https://pypi.org/project/s2cloudless/",
+    "https://pypi.org/project/omnicloudmask/",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/list-of-raster-functions.htm"
+   ]
+  },
+  {
+   "id": "L1-10-camada-congelada-pmtiles",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-f-predefinicoes-de-renderizacao-e-legenda",
+    "L0-05-jobs"
+   ],
+   "hipotese": "para ortofoto ou mosaico que não muda e tem tráfego alto (portal público, basemap do cliente), o inquilino 'congela' a camada: job gera a pirâmide XYZ até o zoom nativo (gdal2tiles `--xyz` ou rio-tiler por bloco), empacota em PMTiles v3 (`pmtiles` CLI já usado na casa para vetor) e sobe ao balde; nginx serve `{z}/{x}/{y}` por `Range` sem processo Python; medido 29/08: cache completo até z19 de 1.000 km² a 30 cm ≈ 2,5-10 GB, do tamanho do próprio COG; é o equivalente ao 'tiled imagery layer'/'cached image service' e fica marcado como cópia que ocupa cota; a camada dinâmica continua existindo",
+   "portao_de_pronto": "congelar a ortofoto aberta de 1 km² gera PMTiles válido (`pmtiles verify`); tile congelado é bit a bit igual ao dinâmico com a mesma predefinição (teste em 50 tiles); tempo e bytes do job registrados e a cota do inquilino reflete a cópia; `descongelar` apaga o PMTiles e a URL dinâmica continua; MapLibre lê o PMTiles pelo protocolo; XYZ para ArcGIS continua servido pelo nginx (PMTiles não entra no AGOL, doc 29/08)",
+   "refutacao": "adversário congela, altera a predefinição do item e confere que a camada congelada declara a versão da predefinição usada (não muda silenciosamente); mede latência do tile congelado vs dinâmico quente e reprova se o congelado for mais lento",
+   "papeis": [
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://github.com/protomaps/PMTiles/blob/main/spec/v3/spec.md",
+    "https://github.com/protomaps/go-pmtiles",
+    "https://gdal.org/en/stable/programs/gdal2tiles.html",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/tile-layers.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/manage-tile-cache.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/sharing/overview/web-tile-layer.htm"
+   ]
+  },
+  {
+   "id": "L1-12-linguagem-de-expressao-de-banda",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-a-servico-titiler-por-inquilino"
+   ],
+   "hipotese": "a linguagem de expressão é a do rio-tiler (avaliada por numexpr: aritmética, comparação, `where`, funções `sqrt/log/exp/abs/min/max`), com duas regras da casa: bandas por NOME COMUM (`nir`, `red`, `swir16`…) resolvidos por `eo:bands` do item (não só `b1`, `b2`), e gramática publicada (EBNF em `docs/expressao.ebnf`) com vetores de teste em `tests/vetores/expressao.json` compartilhados com o front (mesma regra que o L2-10 adotou para a linguagem de atributos); catálogo de índices de fábrica com fórmula, faixa e fonte (NDVI, NDWI McFeeters, NDMI, NBR, EVI, SAVI, NDBI, NDRE, BSI) gerado do mesmo JSON; expressão inválida = 422 com posição do erro; `+` na URL vai codificado (`%2B`, armadilha medida 29/08)",
+   "portao_de_pronto": "9 índices de fábrica com teste numérico contra numpy puro em 3 pixels de referência (Sentinel-2 aberta); expressão com nome de banda que o item não tem = 422 nomeando a banda; vetores de teste rodam em Python e em JS (front) com resultado igual; expressão com divisão por zero devolve NoData, nunca inf/500; tempo de tile NDVI vs RGB medido (referência: +2 ms)",
+   "refutacao": "adversário injeta `__import__`, `os.system`, atributo de objeto e expressão de 10.000 termos; qualquer execução fora da aritmética ou travamento = refutado; confere que `where(nir>0.3,1,0)` bate com numpy",
+   "papeis": [
+    "arquiteto",
+    "raster",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://numexpr.readthedocs.io/en/latest/",
+    "https://pypi.org/project/numexpr/",
+    "https://cogeotiff.github.io/rio-tiler/",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/band-arithmetic-function.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/ndvi-function.htm",
+    "https://github.com/stac-extensions/eo"
+   ]
+  },
+  {
+   "id": "L1-13-cadeia-de-funcoes-raster-ao-vivo",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-f-predefinicoes-de-renderizacao-e-legenda",
+    "L1-12-linguagem-de-expressao-de-banda"
+   ],
+   "hipotese": "funções raster aplicadas na hora do tile, encadeáveis, como os algoritmos do TiTiler (`algorithm=` + `algorithm_params`, medido: 18 algoritmos de fábrica — hillshade, slope, contours, normalizedIndex, terrainrgb, terrarium, min/max/mean/median/std/var/sum, grayscale, bitonal, cast, floor, ceil) mais os da casa registrados como `BaseAlgorithm`: aspecto, curvatura, recorte por polígono, máscara por valor/faixa, remapeamento (reclass), composição de bandas, filtro de convolução 3×3/5×5, conversão de escala (fator/deslocamento), realce por percentil; a cadeia é um JSON `[{funcao, params}, …]` guardado dentro da predefinição de renderização, com JSON Schema por função e limite de profundidade; paridade contra a lista de raster functions do Pro/Image Server marcada função a função (feito/parcial/fora), sem prometer as de ortorretificação, sensor ou pansharpen ao vivo (essas são L1-18, em lote)",
+   "portao_de_pronto": "cada função da casa tem teste numérico contra numpy/GDAL (`gdaldem` para hillshade/slope/aspect, tolerância declarada); cadeia `remap → colormap` e `hillshade → composição` renderizam no mapa (e2e); cadeia inválida = 422; tempo por tile com cadeia de 3 funções medido e ≤ 2× o tile simples; `docs/PARIDADE.md` com a lista completa das raster functions do Pro 3.4 marcada",
+   "refutacao": "adversário monta cadeia de 50 funções, convolução 101×101 e remap com 1 milhão de intervalos e mede CPU/RAM do worker; qualquer tile > 5 s ou processo morto = refutado; compara hillshade com `gdaldem hillshade -z 1 -az 315 -alt 45` pixel a pixel",
+   "papeis": [
+    "raster",
+    "esri",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://developmentseed.org/titiler/user_guide/algorithms/",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/list-of-raster-functions.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/raster-functions.htm",
+    "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/server-side-raster-functions.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/raster-function-objects/",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/hillshade-function.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/remap-function.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/mask-function.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/composite-bands-function.htm",
+    "https://github.com/Esri/raster-functions"
+   ]
+  },
+  {
+   "id": "L1-14-analise-raster-em-lote-gera-item-novo",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-13-cadeia-de-funcoes-raster-ao-vivo",
+    "L0-05-jobs",
+    "L1-01-j-proveniencia-da-imagem-lastro"
+   ],
+   "hipotese": "toda análise raster que materializa resultado roda como job e produz um item STAC NOVO com proveniência (L1-01-j): calculadora raster (expressão do L1-12 sobre 1..N itens co-registrados), reclassificação, recorte por polígono/bbox, reprojeção (gdalwarp, CRS alvo explícito, reamostragem declarada: nearest para classes, bilinear/cúbica para contínuo), reamostragem, mosaico para novo raster, composição de bandas, vetorização (gdal_polygonize) e rasterização (gdal_rasterize); cada ferramenta tem formulário gerado do JSON Schema dos parâmetros e é a mesma função que o construtor de fluxos (L5-02) chama; o L2-05 usa este motor para 'estatísticas zonais sobre raster, calculadora raster, reprojeção' em vez de reimplementar; a paridade cobre as Raster Analysis tools do Portal 11.4 (Map Viewer) marcadas uma a uma",
+   "portao_de_pronto": "9 ferramentas com teste contra resultado independente (GDAL CLI ou numpy) em dado aberto pequeno; resultado aparece no catálogo em ≤ 60 s para 100 MB (medido); ficha do item novo mostra entrada, parâmetros, versões e sha256; job cancelado não deixa item parcial; reprojeção de MapBiomas usa NEAREST obrigatoriamente (teste que tenta bilinear em categórico é recusado); `tests/medidas/L1-14.json` com tempo por ferramenta e tamanho de entrada",
+   "refutacao": "adversário roda calculadora com dois rasters de resolução diferente sem declarar reamostragem (tem de recusar ou declarar a escolhida no item), recorte com polígono fora da extensão (resultado vazio explícito, não raster de zeros) e vetorização de raster contínuo (tem de exigir reclass antes)",
+   "papeis": [
+    "raster",
+    "esri",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/perform-raster-analysis.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/perform-analysis-mv.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-analyst/raster-calculator.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-analyst/reclassify.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/project-raster.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/mosaic-to-new-raster.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/conversion/raster-to-polygon.htm",
+    "https://gdal.org/en/stable/programs/gdalwarp.html",
+    "https://gdal.org/en/stable/programs/gdal_polygonize.html",
+    "https://gdal.org/en/stable/programs/gdal_rasterize.html",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/generate-raster/"
+   ]
+  },
+  {
+   "id": "L1-15-estatistica-zonal",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-14-analise-raster-em-lote-gera-item-novo"
+   ],
+   "hipotese": "estatística zonal (polígonos × raster) como job: média, mínimo, máximo, mediana, desvio, percentil, soma, contagem, moda e fração por classe (tabulate area) com peso de área na borda (pixel parcial conta pela fração coberta, não pelo centróide), CRS de cálculo declarado (o do raster; área geodésica no resultado), NULL quando a zona não toca pixel válido (nunca 0); resultado como tabela ligada à camada de zonas e como CSV; é o extrator raster que o L3-01-c usa e a ferramenta 'Summarize Raster Within'/'Zonal Statistics as Table' do Portal; exactextract não está instalado (decisão de instalação no item: `pip` na venv, sem apt) — sem ele, rasterio + numpy com máscara `all_touched` e fração por sub-amostragem 4×4 declarada",
+   "portao_de_pronto": "200 polígonos abertos (setores censitários do IBGE) × Sentinel-2 NDVI: divergência ≤ 1 célula raster na média contra recomputação independente em rasterio puro e ≤ 0,5 % na fração por classe contra `numpy` sobre máscara exata; zona sem pixel válido devolve NULL; 10.000 polígonos × 1 raster em tempo medido; CSV abre com cabeçalho que diz unidade, CRS e nº de pixels por zona",
+   "refutacao": "adversário usa polígonos menores que 1 pixel, polígonos com furo, multipolígonos e raster com NoData no meio da zona; compara com `gdal_calc`+`gdalwarp -cutline` por zona em 20 casos; média por centróide em vez de fração de área = refutado",
+   "papeis": [
+    "raster",
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-analyst/zonal-statistics-as-table.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/zonal-statistics-as-table/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/summarize-raster-within/",
+    "https://pypi.org/project/exactextract/",
+    "https://pypi.org/project/rasterstats/"
+   ]
+  },
+  {
+   "id": "L1-16-derivados-de-terreno-e-terrain-rgb",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-14-analise-raster-em-lote-gera-item-novo",
+    "L1-03-f-cog-globais-por-vsicurl"
+   ],
+   "hipotese": "de um MDT/MDS (GLO-30 do conector, LiDAR do L1-03-q ou MDT enviado): declividade (graus e %), aspecto, sombreamento (azimute/altitude/exagero declarados), curvatura, índice de posição topográfica, curvas de nível (gdal_contour, intervalo declarado, como camada vetorial no catálogo), bacia visual (gdal_viewshed, altura do observador declarada) e tiles terrain-RGB para o 3D do L2-09 (regra da casa: terrain-RGB gerado do MDT nativo, nunca reamostrado de tile já codificado); cada derivado é item novo com proveniência (L1-14); ao vivo, hillshade/slope/contours já existem como algoritmo (L1-13)",
+   "portao_de_pronto": "cada derivado tem teste contra `gdaldem`/`gdal_contour`/`gdal_viewshed` (mesmos parâmetros) em MDT aberto de 10×10 km: diferença ≤ 0,01 em declividade e 0 em curvas (mesmo vértices); terrain-RGB decodificado = MDT original ± 0,1 m em 100 pontos; bacia visual bate com `gdal_viewshed` pixel a pixel; MapLibre 3D do L2-09 carrega o terrain-RGB (e2e); paridade contra Surface Parameters/Contour/Viewshed do Portal escrita",
+   "refutacao": "adversário usa MDT em EPSG:4326 (graus) sem declarar fator de escala: declividade em graus errada = refutado (o item tem de reprojetar ou aplicar `-s 111120`); confere bordas de tile terrain-RGB (costura) e NoData no mar",
+   "papeis": [
+    "raster",
+    "cartografo",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://gdal.org/en/stable/programs/gdaldem.html",
+    "https://gdal.org/en/stable/programs/gdal_contour.html",
+    "https://gdal.org/en/stable/programs/gdal_viewshed.html",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/slope-function.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/aspect-function.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/curvature-function.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/contour-function.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-analyst/viewshed.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/create-viewshed-mv.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-default-elevation-service.htm"
+   ]
+  },
+  {
+   "id": "L1-18-pansharpening-e-ortorretificacao-rpc",
+   "linha": "L1 imagens",
+   "prioridade": 5,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-14-analise-raster-em-lote-gera-item-novo",
+    "L1-03-f-cog-globais-por-vsicurl"
+   ],
+   "hipotese": "duas ferramentas de lote para imagem comercial ou CBERS-4A bruta: pansharpening (gdal_pansharpen: Brovey ponderado, pesos por banda declarados; pan 2 m + multiespectral 8 m do CBERS-4A WPM, ou pares comerciais) e ortorretificação por RPC (gdalwarp `-rpc` com MDT GLO-30 do conector, `RPC_DEM`), ambas gerando item novo com proveniência; fora de escopo declarado: aerotriangulação, blocos fotogramétricos e ortomapeamento completo (Esri Ortho Mapping) — o ortomosaico de drone entra pronto pelo L1-03-p",
+   "portao_de_pronto": "pansharpen de par aberto (CBERS-4A do STAC do INPE) produz item de 2 m com estatísticas coerentes (correlação por banda com o multiespectral reamostrado ≥ 0,9, teste); ortorretificação de cena com RPC desloca pontos de controle abertos (SIGEF/marcos) para ≤ 2 px do esperado (medido em 10 pontos); ficha diz método, pesos e MDT usado; paridade contra Pansharpening function e Create Ortho Corrected Raster escrita",
+   "refutacao": "adversário roda pansharpen com bandas de datas diferentes (tem de avisar) e ortorretificação sem MDT (tem de recusar, nunca usar elipsoide em silêncio)",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://gdal.org/en/stable/programs/gdal_pansharpen.html",
+    "https://gdal.org/en/stable/programs/gdalwarp.html",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/pansharpening-function.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/create-pansharpened-raster-dataset.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/create-ortho-corrected-raster-dataset.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/introduction-to-ortho-mapping.htm",
+    "https://data.inpe.br/bdc/stac/v1/collections/CB4A-WPM-PCA-FUSED-1"
+   ]
+  },
+  {
+   "id": "L1-19-multidimensional-netcdf-zarr",
+   "linha": "L1 imagens",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-f-formatos-de-entrada",
+    "L1-04-c-grafico-de-indice-por-poligono"
+   ],
+   "hipotese": "dado multidimensional (variável × tempo × nível: saída do CDS, modelos de clima, séries agregadas) entra por duas vias declaradas: (a) 'fatiar' — cada tempo/nível vira um item STAC com COG na coleção (o padrão, serve tudo o que já existe; até 1.000 fatias por arquivo), (b) 'cubo' — o netCDF/Zarr fica como asset único (Zarr v2/v3 via GDAL 3.8 multidim ou xarray, já instalado; `zarr` em PyPI não instalado) com extensão `datacube` no item e tiles por `titiler.xarray` (não instalado) com seleção de variável/tempo na URL; o Esri chama isso de multidimensional raster/imagery layer e cobra crédito por cena-dia em coleção dinâmica; aqui entra na cota por bytes",
+   "portao_de_pronto": "netCDF do AgERA5 (1 variável, 12 meses) importa em modo fatiar (12 itens) e em modo cubo (1 item com `cube:dimensions`); tile por tempo do cubo igual ao tile da fatia correspondente (teste); série por ponto sobre o cubo bate com xarray puro; `gdalmdiminfo` lê o Zarr gravado; paridade contra multidimensional imagery layer (Portal 11.4) escrita com o que fica de fora (aggregate/anomaly/trend do Esri = L1-04-e parcial)",
+   "refutacao": "adversário envia netCDF com calendário 360 dias, sem CRS e com eixo de tempo não monotônico: recusa ou correção declarada; cubo com 5.000 tempos: tempo de abertura medido e limite declarado",
+   "papeis": [
+    "raster",
+    "arquiteto",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://gdal.org/en/stable/user/multidim_raster_data_model.html",
+    "https://gdal.org/en/stable/drivers/raster/zarr.html",
+    "https://gdal.org/en/stable/drivers/raster/netcdf.html",
+    "https://pypi.org/project/titiler.xarray/",
+    "https://pypi.org/project/zarr/",
+    "https://pypi.org/project/xarray/",
+    "https://github.com/stac-extensions/datacube",
+    "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/an-overview-of-multidimensional-raster-data.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/multidimension/make-multidimensional-raster-layer.htm"
+   ]
+  },
+  {
+   "id": "L1-04-a-controle-de-tempo-cortina-e-lado-a-lado",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-07-mosaico-por-colecao-e-pegadas",
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "no visualizador (L2-01) uma coleção com `datetime` ganha controle deslizante de tempo (datas discretas lidas do STAC, nunca da data de upload; passo, reprodução, intervalo), comparação em cortina (swipe) e lado a lado (dois mapas sincronizados, `maplibre-gl-compare` ou implementação própria) entre duas datas ou duas predefinições da mesma data; o estado do controle entra no documento do mapa (L5-05) e na URL; equivalente ao Time slider e ao widget Swipe do Map Viewer",
+   "portao_de_pronto": "coleção com ≥ 6 datas: o controle lista exatamente as datas do STAC (teste compara); mover o controle troca o tile (e2e com captura por data); cortina e lado a lado funcionam com captura; estado salvo e restaurado da URL; 0 erro de console; paridade contra Time slider/Swipe do Portal 11.4 escrita",
+   "refutacao": "adversário troca o `datetime` de um item no pgstac e confere que o controle muda (prova de que lê o STAC); coleção com 2 itens na mesma data; coleção sem `datetime` (intervalo start/end) tem de ser tratada",
+   "papeis": [
+    "frontend",
+    "raster",
+    "cartografo",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-04-serie-temporal",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/configure-time.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/configure-time-mv.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/mapping/time/visualize-temporal-data-using-the-time-slider.htm",
+    "https://github.com/maplibre/maplibre-gl-compare",
+    "https://github.com/stac-extensions/timestamps"
+   ]
+  },
+  {
+   "id": "L1-04-c-grafico-de-indice-por-poligono",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-03-b-sentinel-2",
+    "L1-09-mascara-de-nuvem"
+   ],
+   "hipotese": "série de índice (qualquer expressão do L1-12) por polígono desenhado ou por feição de camada, sobre uma coleção (própria ou referenciada), lendo só a janela do polígono de cada cena (rasterio/odc-stac, instalado), com máscara de nuvem por pixel, estatística por data (média, mediana, p10/p90, nº de pixels válidos, fração de nuvem), cache por (polígono sha, coleção, expressão) e CSV; perfil espectral por ponto/data e perfil temporal por ponto usam o mesmo motor; é o serviço que o portão do pai exige (série NDVI por polígono em ≤ 90 s) e a base do 'Temporal Profile' do Pro; reuso do método de `geoapp` (`/api/series`, só leitura) e da série anual por lote do motor logístico",
+   "portao_de_pronto": "polígono de 50 ha × 12 datas Sentinel-2 em ≤ 90 s frio e ≤ 5 s em cache (medido); valores por data batem com cálculo independente em rasterio sobre o mesmo recorte (tolerância 0,5 %); datas com fração de nuvem > limiar aparecem marcadas, não somem; CSV com colunas declaradas; gráfico no navegador com e2e; ponto: perfil espectral (valor por banda) e temporal",
+   "refutacao": "adversário desenha polígono entre duas cenas (borda de tile S2) e confere que as duas entram; polígono de 10.000 ha × 60 datas: tempo medido e limite declarado (recusa acima, com sugestão de job); compara com valor de `geoapp` para o mesmo polígono (divergência tem de ser explicada por máscara/versão, com número)",
+   "papeis": [
+    "raster",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-04-serie-temporal",
+   "origem": "casa",
+   "fontes": [
+    "https://odc-stac.readthedocs.io/en/latest/",
+    "https://pypi.org/project/odc-stac/",
+    "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/imagery-layers.htm"
+   ]
+  },
+  {
+   "id": "L1-04-e-diferenca-entre-datas-e-tendencia",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-14-analise-raster-em-lote-gera-item-novo",
+    "L1-09-mascara-de-nuvem"
+   ],
+   "hipotese": "duas ferramentas de lote sobre coleção: diferença entre datas (raster B − A de uma expressão, com máscara de nuvem nas duas, limiar opcional que gera camada de mudança em polígonos com área e valor médio, limiares DECLARADOS pelo usuário ou calibrados por distribuição nula como fez o estudo de lote vazio da casa) e tendência (inclinação e p-valor por pixel de uma série ≥ 6 datas, regressão linear, com nº de observações por pixel); equivalente parcial ao Compute Change Raster e Generate Trend Raster do Portal; tudo 'sinal, não prova' na ficha",
+   "portao_de_pronto": "diferença NDVI entre 2 datas abertas gera item + camada de mudança; polígonos de mudança batem com `numpy` + `rasterio.features.shapes` independente; tendência em 12 datas sintéticas com inclinação conhecida recupera a inclinação (erro ≤ 5 %); pixel com < 6 observações válidas = NULL; frase de enquadramento obrigatória na ficha ('diferença de índice; não é prova de causa'); paridade escrita",
+   "refutacao": "adversário usa duas datas com nuvem numa e confere que a diferença é NULL onde havia nuvem (não valor extremo); série com uma data errada de propósito (tendência não pode virar 'mudança')",
+   "papeis": [
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-04-serie-temporal",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/compute-change-raster.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/analysis/image-analyst/change-detection-in-arcgis-pro.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/generate-multidimensional-anomaly.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/aggregate-multidimensional-raster.htm"
+   ]
+  },
+  {
+   "id": "L1-03-a-quadro-de-conectores-e-tela-sensores",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-c-conversao-cog-perfis-miniatura-estatisticas",
+    "L0-05-jobs"
+   ],
+   "hipotese": "um conector é uma classe Python registrada em `app/conectores/registro.py` com contrato fixo: `ficha()` (nome, órgão, licença com URL, resolução, cobertura, chave necessária: nenhuma/da casa/do cliente), `testar()` (HTTP na hora, com tempo), `buscar(area, periodo)` (lista de cenas com data, nuvem, tamanho), `recortar(cena, area) → arquivo local` e `propriedades_stac()`; a tela 'Sensores' lista os conectores com estado testado na hora, e 'área + período → job → item no catálogo' é o mesmo fluxo para todos (L1-01-c faz o COG); chaves da casa (CDS, Earthdata) em `.env`, nunca no repositório nem na tela; conector que falha grava erro no job com a resposta HTTP, nunca item vazio; padrões de código reaproveitados (só leitura) do `geoapp/app.py`: `_clip_global`, `_pc_clip`, `GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR`, `ReadRaster` + `np.frombuffer` (armadilha numpy 1×2 já paga)",
+   "portao_de_pronto": "tela Sensores com ≥ 12 conectores e estado (200/erro/tempo) por conector, medido na hora e em cache 10 min; fluxo área+período→job→item roda por e2e com 1 conector (Sentinel-2) e captura; ficha de licença obrigatória: conector sem URL de licença não carrega (teste); teste automatizado por conector baixa 1 recorte ≤ 5 MB (marcador `rede`, roda no `make check` completo); OpenAPI de `/api/sensores/`",
+   "refutacao": "adversário derruba a rede (hosts bloqueados por `/etc/hosts` no teste) e confere que cada conector reporta erro nomeado e nenhum item nasce; confere licença de cada ficha contra a página oficial datada; conector que 'passa' com recorte vazio (0 pixels válidos) = refutado",
+   "papeis": [
+    "arquiteto",
+    "raster",
+    "pesquisador",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-03-conectores-sensores",
+   "origem": "casa",
+   "fontes": [
+    "https://earth-search.aws.element84.com/v1",
+    "https://planetarycomputer.microsoft.com/api/stac/v1",
+    "https://data.inpe.br/bdc/stac/v1/",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-living-atlas-content.htm"
+   ]
+  },
+  {
+   "id": "L1-03-b-sentinel-2",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-03-a-quadro-de-conectores-e-tela-sensores"
+   ],
+   "hipotese": "Sentinel-2 L2A pelo STAC do Element84 (`sentinel-2-l2a` e `sentinel-2-c1-l2a`, sem chave; a coleção já aplica o deslocamento BOA, `earthsearch:boa_offset_applied`, medido 29/08: reflectância = DN/10.000), bandas B02-B12 + SCL, recorte por área com `rasterio` janela sobre o COG remoto, três produtos por cena: `visual` (B04/B03/B02 Byte, JPEG), `cientifico` (bandas escolhidas 16 bits ZSTD) e `mascara` (SCL); modo 'referenciado' (L1-03-l) quando o usuário só quer ver sem copiar; licença: Copernicus Sentinel data, termos da ESA (URL testada), com a frase de atribuição obrigatória gravada no item; fonte alternativa (CDSE STAC, com conta) registrada como reserva",
+   "portao_de_pronto": "área de 100 km² × 3 meses: busca lista cenas com data e nuvem; 1 cena vira item com 3 assets em ≤ 3 min (medido); NDVI ao vivo sobre o `cientifico`; reflectância em 3 pixels bate com o valor lido direto do COG remoto (DN/10.000); atribuição na ficha; teste automatizado com recorte ≤ 5 MB",
+   "refutacao": "adversário pede área na borda de dois tiles MGRS (tem de mosaicar ou listar os dois), período sem cena (mensagem, não item vazio) e confere que a coleção `c1` e a antiga não se misturam na mesma série sem aviso",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-03-conectores-sensores",
+   "origem": "casa",
+   "fontes": [
+    "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a",
+    "https://earth-search.aws.element84.com/v1/collections/sentinel-2-c1-l2a",
+    "https://registry.opendata.aws/sentinel-2-l2a-cogs/",
+    "https://sentinels.copernicus.eu/web/sentinel/terms-conditions",
+    "https://sentinels.copernicus.eu/documents/247904/690755/Sentinel_Data_Legal_Notice",
+    "https://sentiwiki.copernicus.eu/web/s2-products",
+    "https://documentation.dataspace.copernicus.eu/APIs/STAC.html"
+   ]
+  },
+  {
+   "id": "L1-03-c-sentinel-1-sar",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-03-a-quadro-de-conectores-e-tela-sensores"
+   ],
+   "hipotese": "Sentinel-1: GRD pelo Element84 (`sentinel-1-grd`, sem chave) e RTC (corrigido de terreno, pronto para análise) pelo Planetary Computer (`sentinel-1-rtc`, assinatura SAS anônima) ou OPERA RTC-S1 (CMR-STAC ASF, conta Earthdata da casa); conversão de amplitude para dB na predefinição (expressão `10*log10(vv)`), VV/VH/razão como produtos, `sar:` na ficha (polarização, órbita, modo); uso típico da casa: água sob nuvem (cheia), como fez o estudo de enchente × rede; a calibração radiométrica e o despeckle ao vivo entram como algoritmo (L1-13) com filtro Lee 5×5 declarado",
+   "portao_de_pronto": "área × período lista cenas GRD e RTC; 1 RTC vira item com VV/VH e predefinição em dB; a mesma área e data no GRD e no RTC abrem lado a lado; despeckle no L1-13 medido; ficha com polarização/órbita; licença Copernicus; teste com recorte ≤ 5 MB",
+   "refutacao": "adversário confere que dB de pixel de água aberta fica na faixa esperada (VV < −15 dB) e de área urbana (> −5 dB) em 10 pontos abertos; confere que GRD (não corrigido) nunca é rotulado como pronto para análise",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-03-conectores-sensores",
+   "origem": "casa",
+   "fontes": [
+    "https://earth-search.aws.element84.com/v1/collections/sentinel-1-grd",
+    "https://planetarycomputer.microsoft.com/api/stac/v1/collections/sentinel-1-rtc",
+    "https://cmr.earthdata.nasa.gov/stac/ASF/collections/OPERA_L2_RTC-S1_V1_1",
+    "https://hyp3-docs.asf.alaska.edu/guides/rtc_product_guide/",
+    "https://sentiwiki.copernicus.eu/web/s1-products",
+    "https://github.com/stac-extensions/sar",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/an-overview-of-the-synthetic-aperture-radar-toolset.htm"
+   ]
+  },
+  {
+   "id": "L1-03-d-landsat",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-03-b-sentinel-2"
+   ],
+   "hipotese": "Landsat Collection 2 Level-2 (1982→) pelo Element84 (`landsat-c2-l2`, sem chave) com o Planetary Computer como reserva e o USGS LandsatLook como catálogo oficial (asset requer requester-pays); aplica fator de escala e deslocamento oficiais (reflectância = DN×0,0000275 − 0,2; temperatura de superfície = DN×0,00341802 + 149) na predefinição, `qa_pixel` como máscara (L1-09); domínio público do USGS; serve a série longa que o Sentinel-2 não tem",
+   "portao_de_pronto": "área × período de 1990 e de 2024 lista cenas; 1 cena de cada década vira item; NDVI de 1990 e 2024 no mesmo polígono no gráfico (L1-04-c); reflectância corrigida em 3 pixels bate com a fórmula oficial; ficha com licença USGS; teste ≤ 5 MB",
+   "refutacao": "adversário compara NDVI Landsat 8 × Sentinel-2 na mesma data/área (diferença de sensor tem de estar documentada na ficha como esperada, não escondida); pede cena Landsat 7 com falha SLC (faixas) e confere máscara",
+   "papeis": [
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-03-conectores-sensores",
+   "origem": "casa",
+   "fontes": [
+    "https://earth-search.aws.element84.com/v1/collections/landsat-c2-l2",
+    "https://landsatlook.usgs.gov/stac-server/collections/landsat-c2l2-sr",
+    "https://www.usgs.gov/landsat-missions/landsat-collection-2-level-2-science-products",
+    "https://www.usgs.gov/faqs/are-there-any-restrictions-use-or-redistribution-landsat-data",
+    "https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/atoms/files/Landsat_Data_Policy.pdf"
+   ]
+  },
+  {
+   "id": "L1-03-e-mapbiomas",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-g-raster-categorico-colormap-e-tabela-de-atributos",
+    "L1-03-a-quadro-de-conectores-e-tela-sensores"
+   ],
+   "hipotese": "MapBiomas coleção 10 (1985-2024) lido direto do COG público no bucket do projeto (`brazil_coverage_<ano>.tif`, URL testada; sem GEE, regra da casa), recorte por área e ano, raster categórico com a legenda oficial (L1-01-g), série anual por polígono = fração por classe por ano (gráfico empilhado, como o `geoapp` já faz) e transição entre dois anos (matriz classe × classe em ha); licença declarada pelo projeto (CC BY-SA 4.0) gravada na ficha com a atribuição exigida; a casa já tem anos em disco (`acervo`), que o L1-06 converte",
+   "portao_de_pronto": "recorte de 1 município × 3 anos vira 3 itens categóricos com legenda; fração por classe por ano bate com `numpy.unique` independente; matriz de transição 2000→2024 soma a área do polígono (± 0,1 %); ficha com atribuição; teste ≤ 5 MB",
+   "refutacao": "adversário confere 5 classes contra o dicionário oficial da coleção 10 (código, nome, cor) e reprova qualquer divergência; recorte na fronteira do Brasil (NoData fora)",
+   "papeis": [
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-03-conectores-sensores",
+   "origem": "casa",
+   "fontes": [
+    "https://storage.googleapis.com/mapbiomas-public/initiatives/brasil/collection_10/lulc/coverage/brazil_coverage_2024.tif",
+    "https://storage.googleapis.com/mapbiomas-public/initiatives/brasil/collection_10/lulc/coverage/brazil_coverage_1985.tif",
+    "https://brasil.mapbiomas.org/download/"
+   ]
+  },
+  {
+   "id": "L1-03-f-cog-globais-por-vsicurl",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-03-a-quadro-de-conectores-e-tela-sensores",
+    "L1-01-g-raster-categorico-colormap-e-tabela-de-atributos"
+   ],
+   "hipotese": "família de conectores sem chave que leem COG público por `/vsicurl` com um só motor (`_clip_global(geom, passo, url_fn)`, lido no `geoapp`, com endpoints verificados por `gdalinfo` em 01/09 na `PLUG_READY_QUEUE`): Copernicus DEM GLO-30 e GLO-90 (elevação; base do L1-16), ESA WorldCover 10 m 2020/2021 (categórico), JRC Global Surface Water (ocorrência/mudança/sazonalidade), Hansen GFC 2024 v1.12 (treecover2000, lossyear, gain), SoilGrids 2.0 (propriedade × profundidade × estatística, projeção Homolosine → reprojetar, VRT lento 40-90 s medido), CHIRPS mensal/diário (chuva), TerraClimate (déficit hídrico, PET, umidade do solo), GHSL (população/construído, Mollweide → reprojetar), WSF2019 (mancha construída, 1 COG global), Potapov altura de dossel 30 m (SAM), Meta/WRI dossel 1 m (quadkey z9); cada um com licença na ficha (Copernicus, CC BY 4.0, domínio público) e com a lista de armadilhas do catálogo da casa (FABDEM e GEM full-layers são NC e ficam FORA)",
+   "portao_de_pronto": "12 conectores listados com estado testado na hora; recorte de 1 polígono de 100 km² por conector em ≤ 30 s cada (SoilGrids ≤ 120 s, declarado) e item categórico ou contínuo correto (colormap/legenda para WorldCover e Hansen); reprojeção de SoilGrids/GHSL conferida por sobreposição com o GLO-30 (deslocamento ≤ 1 px); licença por conector com URL; teste automatizado por conector ≤ 5 MB",
+   "refutacao": "adversário compara valor do GLO-30 em 10 marcos geodésicos abertos (IBGE) com o esperado (erro ≤ 10 m vertical), confere que Hansen `lossyear` mantém o valor de ano (categórico) e que nenhum conector NC entrou na lista",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-03-conectores-sensores",
+   "origem": "casa",
+   "fontes": [
+    "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_S23_00_W047_00_DEM/Copernicus_DSM_COG_10_S23_00_W047_00_DEM.tif",
+    "https://registry.opendata.aws/copernicus-dem/",
+    "https://esa-worldcover.org/en/data-access",
+    "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_S24W048_Map.tif",
+    "https://storage.googleapis.com/global-surface-water/downloads2021/occurrence/occurrence_50W_20Sv1_4_2021.tif",
+    "https://storage.googleapis.com/earthenginepartners-hansen/GFC-2024-v1.12/download.html",
+    "https://storage.googleapis.com/earthenginepartners-hansen/GFC-2024-v1.12/Hansen_GFC-2024-v1.12_lossyear_20S_050W.tif",
+    "https://files.isric.org/soilgrids/latest/data/clay/clay_0-5cm_mean.vrt",
+    "https://www.isric.org/explore/soilgrids/faq-soilgrids",
+    "https://data.chc.ucsb.edu/products/CHIRPS-2.0/global_monthly/tifs/",
+    "https://download.geoservice.dlr.de/WSF2019/files/WSF2019_cog.tif",
+    "https://glad.umd.edu/dataset/global-2010-tree-cover-30-m"
+   ]
+  },
+  {
+   "id": "L1-03-h-clima-nasa-power-e-copernicus-cds",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-03-a-quadro-de-conectores-e-tela-sensores",
+    "L1-19-multidimensional-netcdf-zarr"
+   ],
+   "hipotese": "dois conectores de clima com natureza diferente e declarada: NASA POWER (API sem chave, ponto 0,5°, diário desde 1981: chuva, temperatura, radiação) devolve TABELA por ponto/polígono (centróide), não raster, e entra como camada tabular ligada à feição; Copernicus CDS (AgERA5 diário 0,1° e ERA5-Land horário 9 km) com a chave da casa (`~/.cdsapirc`, medido 28/08: 1 variável × 1 ano × Brasil = 276 s), fila do CDS respeitada, licença aceita uma vez por dataset na conta da casa, netCDF → itens por dia (modo fatiar do L1-19) ou cubo; ficha diz resolução de grade e que 0,1°/0,5° não é precisão de fazenda (regra do dono)",
+   "portao_de_pronto": "POWER: série de 1 ano por ponto em ≤ 10 s, valores iguais à API (teste com resposta gravada); CDS: pedido de 1 variável × 1 mês × área de 1° vira itens diários com data certa em tempo medido; falha do CDS (fila) aparece como job 'aguardando fonte', nunca erro silencioso; licenças na ficha; frase de resolução na ficha",
+   "refutacao": "adversário pede POWER para 2.000 pontos de uma vez (limite declarado e recusa acima), CDS sem licença aceita (mensagem exata) e confere unidade (K × °C, m × mm) em 3 valores contra o netCDF cru",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-03-conectores-sensores",
+   "origem": "casa",
+   "fontes": [
+    "https://power.larc.nasa.gov/docs/services/api/",
+    "https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,PRECTOTCORR&community=AG&longitude=-47.5&latitude=-22.5&start=20260101&end=20260110&format=JSON",
+    "https://cds.climate.copernicus.eu/datasets/sis-agrometeorological-indicators",
+    "https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land",
+    "https://cds.climate.copernicus.eu/how-to-api",
+    "https://pypi.org/project/cdsapi/"
+   ]
+  },
+  {
+   "id": "L1-03-k-planetary-computer-e-stac-de-terceiros",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-03-a-quadro-de-conectores-e-tela-sensores",
+    "L1-03-l-item-referenciado-sem-copia"
+   ],
+   "hipotese": "conector genérico 'STAC de terceiros' com três perfis prontos: Planetary Computer (busca anônima, asset assinado por SAS `planetary-computer` 1.0.0 instalado, ≈ 126 coleções: MODIS, ALOS, NASADEM, IO-LULC anual, ESA CCI, biomassa), NASA CMR-STAC (HLS 30 m, GEDI, ECOSTRESS; conta Earthdata da casa, token em `~/.edl_token`) e INPE Brazil Data Cube (`data.inpe.br/bdc/stac/v1`, sem chave; CBERS-4/4A, Amazônia-1 WFI, cubos S2-16D, precipitação MERGE — dado brasileiro com STAC testado); o usuário escolhe coleção, área e período; assinatura SAS renovada por pedido (dura ~24 h); tudo como item referenciado ou copiado; o L6-02-e (STAC externo por URL livre) reusa este conector com URL do usuário",
+   "portao_de_pronto": "3 perfis testados na hora; 1 asset de cada (WorldCover pelo PC, HLS pelo CMR, CBERS-4A WPM pelo INPE) vira item referenciado e abre no mapa; URL assinada nunca é gravada no STAC (só o href original + `plat:assinar=pc`), teste; licença lida do campo `license` da coleção e exibida; teste com resposta gravada por perfil",
+   "refutacao": "adversário aponta o conector para STAC malicioso (href `file://`, host interno, redirecionamento infinito, item de 100 MB de JSON) e confere recusa; deixa a SAS expirar e confere renovação sem 500",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-03-conectores-sensores",
+   "origem": "casa",
+   "fontes": [
+    "https://planetarycomputer.microsoft.com/docs/concepts/sas/",
+    "https://planetarycomputer.microsoft.com/api/stac/v1/collections",
+    "https://pypi.org/project/planetary-computer/",
+    "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/collections/HLSS30_2.0",
+    "https://urs.earthdata.nasa.gov/documentation/for_users/data_access/curl_and_wget",
+    "https://data.inpe.br/bdc/stac/v1/collections",
+    "https://data.inpe.br/bdc/stac/v1/collections/CB4A-WPM-PCA-FUSED-1",
+    "https://data.inpe.br/bdc/stac/v1/collections/AMZ1-WFI-L4-SR-1",
+    "https://data.inpe.br/bdc/stac/v1/collections/S2-16D-2",
+    "https://www.dgi.inpe.br/catalogo/explore"
+   ]
+  },
+  {
+   "id": "L1-03-l-item-referenciado-sem-copia",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-a-servico-titiler-por-inquilino",
+    "L1-01-a-pgstac-e-stac-api-por-inquilino"
+   ],
+   "hipotese": "todo item tem `plat:origem` = `copiado` (COG no balde do inquilino, ocupa cota) ou `referenciado` (asset em host de terceiros, lista de hosts permitidos por conector — Element84/AWS sentinel-cogs, PC blob, INPE, GCS MapBiomas/Hansen —, nunca URL livre); o TiTiler abre o referenciado por `/vsicurl` com `GDAL_HTTP_MAX_RETRY`, tempo limite e cache nginx curto; o referenciado pode ser 'materializado' depois (vira copiado, job do L1-01-c) e a ficha diz que a fonte pode sumir (frescor + última verificação HTTP, como o `acervo.endpoint` da casa); é a diferença entre 'ver de graça' e 'guardar na cota'",
+   "portao_de_pronto": "item referenciado de Sentinel-2 abre no mapa e não ocupa cota (teste no balde); host fora da lista = 400; `materializar` gera COG no balde e troca `plat:origem`; verificação HTTP semanal grava `plat:ultima_verificacao` e marca item quebrado (teste com host bloqueado); latência de tile referenciado × copiado medida e escrita na ficha do conector",
+   "refutacao": "adversário edita o href no pgstac para host interno (`127.0.0.1:5432`) e pede tile: tem de ser 400, prova de que a lista é conferida na leitura e não só na criação; simula fonte fora do ar e confere mensagem na tela",
+   "papeis": [
+    "arquiteto",
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-03-conectores-sensores",
+   "origem": "spec",
+   "fontes": [
+    "https://github.com/stac-extensions/alternate-assets",
+    "https://github.com/stac-extensions/storage",
+    "https://gdal.org/en/stable/user/virtual_file_systems.html",
+    "https://developmentseed.org/titiler/advanced/performance_tuning/"
+   ]
+  },
+  {
+   "id": "L1-03-n-comerciais-com-chave-do-cliente",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-03-a-quadro-de-conectores-e-tela-sensores",
+    "L1-01-e-upload-grande-retomavel"
+   ],
+   "hipotese": "imagem comercial entra com a CHAVE DO CLIENTE (nunca a da casa; a licença é dele): PlanetScope (Data API para busca, Orders API para recorte/entrega, Subscriptions para área monitorada), SkyFi (Platform API: busca de arquivo/tasking, pedido, download; a casa já comprou cenas de 36 cm por esse caminho, pipeline `cpsi-brusque/ingest/skyfi/`, só leitura) e Maxar (Streaming/MGP, com chave); a ficha grava o EULA do fornecedor, o nº do pedido e o custo informado pela API, e o item nasce com `license` = 'comercial, ver EULA' e restrição de compartilhamento (não sai por link público); sem chave, o conector aparece como 'requer chave do cliente' e nada mais",
+   "portao_de_pronto": "com chave de teste do fornecedor (quando o dono fornecer) o fluxo busca→pedido→entrega→item roda; sem chave, a tela mostra o estado certo e a API devolve 402 com mensagem; item comercial não pode ser compartilhado por link público nem entrar em exportação em massa (teste); `docs/PARIDADE.md` compara com Living Atlas/Image dedicado (Esri vende Maxar embutido; aqui a chave é do cliente)",
+   "refutacao": "adversário tenta usar chave de A no inquilino B (chave é por inquilino, cifrada em repouso; teste), e confere que o log nunca grava a chave",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": "chave de teste de fornecedor comercial = decisão do dono; até lá o item fecha só a parte 'sem chave'",
+   "pai": "L1-03-conectores-sensores",
+   "origem": "usuario",
+   "fontes": [
+    "https://developers.planet.com/docs/apis/data/",
+    "https://developers.planet.com/docs/apis/orders/",
+    "https://developers.planet.com/docs/subscriptions/",
+    "https://developers.planet.com/docs/planetscope/",
+    "https://www.planet.com/terms-of-use/",
+    "https://app.skyfi.com/platform-api/docs",
+    "https://developers.maxar.com/docs/streaming-imagery/"
+   ]
+  },
+  {
+   "id": "L1-03-p-drone-ortomosaico-e-fotos-brutas",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-c-conversao-cog-perfis-miniatura-estatisticas",
+    "L1-05-b-trabalhador-gpu-remoto"
+   ],
+   "hipotese": "duas entradas de drone: (a) ortomosaico/MDS/MDT já processados (GeoTIFF do OpenDroneMap, Pix4D, Metashape) entram pelo L1-01 com ficha de voo (data, GSD, RTK/PPK, altura, sensor, lidos do relatório quando existir) e classificação 'produto derivado de fotogrametria'; (b) fotos brutas (JPEG com EXIF/XMP: posição, altitude, atitude) sobem em lote e um job no GPU box roda o OpenDroneMap (`docker run opendronemap/odm`, GCP opcional) e devolve ortomosaico + MDS + nuvem de pontos (COPC pelo L1-03-q) + relatório de qualidade como itens; limites declarados (nº de fotos, tempo, disco do GPU box a 100 % hoje: D21); paridade contra Drone2Map/Ortho Mapping escrita como PARCIAL (sem ajuste de bloco interativo, sem edição de seamline)",
+   "portao_de_pronto": "(a) ortomosaico aberto de teste importa com ficha de voo; (b) conjunto aberto de ≥ 30 fotos processa no GPU box em tempo medido e os produtos aparecem no catálogo com proveniência (versão do ODM, parâmetros); relatório de qualidade ligado ao item; e2e da tela de envio; regra de disco: job recusado quando o GPU box tem < 20 GB livres",
+   "refutacao": "adversário envia fotos sem EXIF de posição (tem de recusar ou exigir GCP), fotos de dois voos misturados e confere GSD calculado contra o esperado; compara o MDS do ODM com o GLO-30 em área plana (viés declarado)",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-03-conectores-sensores",
+   "origem": "esri",
+   "fontes": [
+    "https://docs.opendronemap.org/",
+    "https://docs.opendronemap.org/outputs/",
+    "https://docs.opendronemap.org/gcp/",
+    "https://github.com/OpenDroneMap/ODM",
+    "https://github.com/OpenDroneMap/NodeODM",
+    "https://doc.arcgis.com/en/drone2map/latest/get-started/what-is-drone2map.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/introduction-to-ortho-mapping.htm"
+   ]
+  },
+  {
+   "id": "L1-03-q-lidar-copc-mdt-mds",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-d-garage-por-inquilino",
+    "L1-16-derivados-de-terreno-e-terrain-rgb"
+   ],
+   "hipotese": "nuvem de pontos (LAS/LAZ 1.2-1.4) entra e vira COPC (Cloud Optimized Point Cloud: LAZ 1.4 com octree, lido por range) via PDAL (`writers.copc`) ou untwine — nenhum dos dois está instalado aqui nem no GPU box (medido); a instalação (apt `pdal` ou pip `pdal`) é o primeiro passo do item; o COPC fica no balde e serve por HTTPS com token e `Range` (o QGIS ≥ 3.26 abre COPC por URL; o Pro lê COPC desde 3.2); do COPC saem MDT (classe 2 solo; se não classificado, `filters.smrf`), MDS (primeiro retorno) e altura acima do solo (`filters.hag_nn`) como COG (`writers.gdal`) que entram como itens do L1-16; ficha com densidade (pts/m²), CRS vertical, classes presentes e ISO/ASPRS; item STAC com extensão `pointcloud`; o visualizador 3D de pontos fica no L2-09",
+   "portao_de_pronto": "LAZ aberto de teste (≤ 200 MB) vira COPC válido (`pdal info --metadata` mostra `copc: true`), abre por `/vsicurl` no PDAL (`readers.copc` com bounds) lendo só parte do arquivo (nº de requisições contado); MDT/MDS/altura gerados com resolução declarada e diferença MDS − MDT ≥ 0 em 99,9 % dos pixels; densidade e classes na ficha; token revogado = 403; paridade contra LAS dataset/LAS Dataset To Raster escrita",
+   "refutacao": "adversário envia LAZ sem CRS, com CRS vertical diferente do horizontal e com 5 bilhões de pontos declarados no cabeçalho: recusa ou tratamento declarado; compara MDT com o GLO-30 em área plana (viés e RMSE escritos)",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-03-conectores-sensores",
+   "origem": "esri",
+   "fontes": [
+    "https://copc.io/",
+    "https://pdal.io/en/stable/",
+    "https://pdal.io/en/stable/stages/writers.copc.html",
+    "https://pdal.io/en/stable/stages/writers.gdal.html",
+    "https://pdal.io/en/stable/stages/filters.smrf.html",
+    "https://pdal.io/en/stable/stages/filters.hag_nn.html",
+    "https://pdal.io/en/stable/stages/readers.copc.html",
+    "https://github.com/hobu/untwine",
+    "https://github.com/stac-extensions/pointcloud",
+    "https://docs.qgis.org/3.40/en/docs/user_manual/working_with_point_clouds/point_clouds.html",
+    "https://pro.arcgis.com/en/pro-app/latest/help/data/las-dataset/what-is-a-las-dataset-.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/conversion/las-dataset-to-raster.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/3d-analyst/classify-las-ground.htm"
+   ]
+  },
+  {
+   "id": "L1-05-a-registro-de-modelo-e-proveniencia",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-j-proveniencia-da-imagem-lastro"
+   ],
+   "hipotese": "todo modelo que roda na entrada é um registro em `plat.modelo` (nome, versão, tarefa, sha256 dos pesos, arquitetura, dado de treino descrito, licença dos pesos, métrica MEDIDA em área de controle com data e n, taxa de falso positivo declarada, frase de enquadramento obrigatória) e a camada resultante carrega a extensão STAC `mlm` (Machine Learning Model) + `processing` apontando para o registro; sem taxa de erro medida o modelo não pode ser marcado 'disponível' para inquilino (estado `experimental`, só interno); a regra da casa (19/08, detector de ferrugem reprovado no controle negativo) vira portão: controle negativo obrigatório antes de publicar",
+   "portao_de_pronto": "tabela + tela 'Modelos' com ficha; modelo sem controle negativo não aparece para inquilino (teste); camada gerada por modelo mostra na ficha nome/versão/sha/taxa de erro e a frase; `docs/PARIDADE.md` contra 'deep learning package (.dlpk)' e 'model definition (.emd)' do Esri escrita (feito/parcial/fora)",
+   "refutacao": "adversário publica modelo com métrica sem data ou sem n e confere recusa; altera os pesos no disco e confere que o sha do registro acusa antes da inferência",
+   "papeis": [
+    "arquiteto",
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-05-ia-na-entrada",
+   "origem": "casa",
+   "fontes": [
+    "https://github.com/stac-extensions/mlm",
+    "https://github.com/stac-extensions/processing",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/deep-learning/deep-learning-in-arcgis-pro.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/ml-classify-function.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-and-deploy-arcgis-enterprise-for-deep-learning-raster-analytics.htm"
+   ]
+  },
+  {
+   "id": "L1-05-b-trabalhador-gpu-remoto",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-05-jobs",
+    "L1-05-a-registro-de-modelo-e-proveniencia"
+   ],
+   "hipotese": "o GPU box (RTX 4000 Ada 20 GB, torch 2.5.1 com CUDA, medido 05/09; disco a 100 % com 16 GB livres) roda um `plat-worker-gpu` que consome a MESMA fila Postgres (fila `gpu`) por túnel SSH persistente (autossh, chave própria, usuário sem sudo), baixa a entrada do balde por HTTPS com token de serviço de escopo mínimo, roda o modelo e devolve a saída pelo mesmo caminho; sem GPU disponível o job fica 'aguardando GPU' com tempo visível, nunca falha silenciosa; limites por job (VRAM, tempo, disco) declarados e conferidos antes de começar; 1 job de GPU por vez (regra da casa)",
+   "portao_de_pronto": "job de teste (inferência trivial em 1 chip) vai da tela ao GPU box e volta com resultado em tempo medido; matar o worker no meio deixa o job 'falhou' com motivo, e o reinício não o marca concluído; túnel cai e volta sem intervenção (teste derrubando o autossh); token do worker só lê/escreve o prefixo do job (teste cruzado); `free`/`df` do GPU box checados antes de aceitar (recusa abaixo do limiar)",
+   "refutacao": "adversário injeta job com caminho de saída fora do prefixo, com payload de 10 GB e com modelo não registrado; qualquer execução = refutado; confere que a chave SSH do worker não abre shell (comando forçado)",
+   "papeis": [
+    "arquiteto",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-05-ia-na-entrada",
+   "origem": "casa",
+   "fontes": [
+    "https://developer.nvidia.com/cuda-toolkit",
+    "https://pypi.org/project/procrastinate/",
+    "https://onnxruntime.ai/docs/"
+   ]
+  },
+  {
+   "id": "L1-05-c-mudanca-s2-calibrada",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-05-b-trabalhador-gpu-remoto",
+    "L1-04-e-diferenca-entre-datas-e-tendencia",
+    "L1-09-mascara-de-nuvem"
+   ],
+   "hipotese": "o primeiro modelo 'de produção' na entrada é determinístico, não neural: mudança de superfície por Sentinel-2 entre janelas (dNDVI, dNDBI, dSolo) com limiares calibrados na distribuição nula de lotes-controle e persistência em ≥ 2 passagens, exatamente o método que a casa mediu no estudo de lote vazio (falso positivo 4/150 = 2,7 % no controle construído; `nao_vegetado` ≠ construído); gera camada leve de polígonos com classe (vegetado→não vegetado, não vegetado→vegetado, inconclusivo), datas, nº de cenas e a frase de enquadramento; Prithvi-EO 2.0 (600M, já no GPU box) fica registrado como `experimental` até passar em controle negativo próprio",
+   "portao_de_pronto": "área de controle aberta com mudança conhecida (dado aberto de obra pública com data) → camada com ≥ 1 polígono certo; controle negativo (área sem mudança) → taxa de falso positivo medida e escrita na ficha (≤ 5 % ou o modelo fica experimental); limiares gravados no registro do modelo com a data da calibração; camada aparece no catálogo com proveniência",
+   "refutacao": "adversário roda em área com colheita (mudança sazonal, não de superfície) e confere que a classe é 'inconclusivo' ou que a ficha declara o limite; compara com o resultado do estudo original em 10 lotes (tem de reproduzir o veredito)",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-05-ia-na-entrada",
+   "origem": "casa",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/detect-change-using-deep-learning.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/compute-change-raster.htm",
+    "https://huggingface.co/ibm-nasa-geospatial/Prithvi-EO-2.0-600M"
+   ]
+  },
+  {
+   "id": "L1-05-d-camadas-leves-edificacoes-e-vegetacao-em-faixa",
+   "linha": "L1 imagens",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-05-b-trabalhador-gpu-remoto",
+    "L1-03-f-cog-globais-por-vsicurl"
+   ],
+   "hipotese": "duas camadas leves geradas na entrada a partir de base ABERTA (não de modelo próprio): edificações = Google Open Buildings v3 (CC BY 4.0) + Overture (ODbL/CDLA) recortados e conferidos contra a imagem enviada (só marcação de 'novo/ausente' por diferença de NDBI, com a taxa de erro medida); vegetação em faixa = altura de dossel (Meta/WRI 1 m e Potapov 30 m) × NDVI dentro da faixa declarada (largura e mínimo de condutor conforme a norma citada na ficha), classificador calibrado por estado/zona como o da casa (AUC 0,74-0,81 medida em 4 células, 19/07), saída = vãos com prioridade, 'localiza, não antecipa'; ambos registrados no L1-05-a com métrica",
+   "portao_de_pronto": "edificações: 100 polígonos de área aberta conferidos contra a ortofoto (precisão ≥ 90 %); vegetação: rodada numa faixa aberta (linha de distribuição do OSM) com CHM e NDVI; taxa de erro declarada; frase de enquadramento; camada com proveniência das fontes (licença de cada base gravada)",
+   "refutacao": "adversário confere licença de Open Buildings/Overture/Meta CHM contra a página oficial datada e reprova uso fora dela; roda o de vegetação numa faixa sem CHM disponível (tem de dizer 'sem dado', nunca 0)",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-05-ia-na-entrada",
+   "origem": "casa",
+   "fontes": [
+    "https://sites.research.google/gr/open-buildings/",
+    "https://docs.overturemaps.org/guides/buildings/",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/detect-objects-using-deep-learning.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/classify-pixels-using-deep-learning.htm"
+   ]
+  },
+  {
+   "id": "L1-05-e-pacote-de-modelo-importavel",
+   "linha": "L1 imagens",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-05-a-registro-de-modelo-e-proveniencia",
+    "L1-05-b-trabalhador-gpu-remoto"
+   ],
+   "hipotese": "o inquilino traz o próprio modelo: pacote zip com `modelo.onnx` (ou TorchScript) + `manifesto.json` (JSON Schema publicado: tarefa — classificação de pixel, detecção de objeto, regressão —, bandas de entrada por nome comum, tamanho do chip, normalização, classes, pós-processamento, licença, métrica declarada) executado em sandbox no GPU box por `onnxruntime` (não instalado; instalação no item) com tempo/VRAM limitados; é o equivalente ao `.dlpk`/`.emd` do Esri, com a diferença de que o manifesto é aberto; modelo importado nasce `experimental` até o controle negativo do L1-05-a",
+   "portao_de_pronto": "modelo ONNX de exemplo (segmentação binária pequena, licença aberta) importa, roda em chip de teste e gera camada; manifesto inválido = 422 com o caminho do erro; modelo que pede banda ausente é recusado antes de rodar; VRAM/tempo estourados = job falho com motivo; `docs/PARIDADE.md` com a tabela `.emd` × manifesto (campo a campo)",
+   "refutacao": "adversário empacota ONNX com operador customizado que carrega biblioteca nativa, manifesto com caminho `../` e modelo de 8 GB: tudo recusado; confere que o worker não tem rede de saída durante a inferência",
+   "papeis": [
+    "arquiteto",
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-05-ia-na-entrada",
+   "origem": "esri",
+   "fontes": [
+    "https://onnxruntime.ai/docs/",
+    "https://pypi.org/project/onnxruntime/",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/deep-learning/deep-learning-in-arcgis-pro.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/deep-learning/install-deep-learning-frameworks.htm",
+    "https://github.com/stac-extensions/mlm"
+   ]
+  },
+  {
+   "id": "L1-05-f-amostras-e-rotulos-para-treino",
+   "linha": "L1 imagens",
+   "prioridade": 5,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-05-e-pacote-de-modelo-importavel",
+    "L2-03-edicao"
+   ],
+   "hipotese": "o usuário marca amostras sobre a imagem (polígonos/pontos com classe, ferramenta de edição do L2-03 com esquema fixo) e exporta chips de treino (imagem + máscara, tamanho e passo declarados, formato de pasta documentado, extensão STAC `label`) para treinar fora ou no GPU box; o treino em si (fine-tuning) fica FORA deste item e do produto até que um modelo passe no controle negativo; paridade contra 'Label Objects for Deep Learning' e 'Export Training Data for Deep Learning' = parcial (sem treino no produto)",
+   "portao_de_pronto": "≥ 50 amostras marcadas por e2e; exportação gera pasta com chips e máscaras alinhadas pixel a pixel (teste abre 5 pares); item STAC `label` com contagem por classe; zip baixável pelo L1-20",
+   "refutacao": "adversário marca amostra fora da imagem e amostra com classe vazia (recusa); confere alinhamento do chip com a máscara por sha de recorte",
+   "papeis": [
+    "raster",
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L1-05-ia-na-entrada",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/image-analyst/label-objects-for-deep-learning.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/export-training-data-for-deep-learning.htm",
+    "https://github.com/stac-extensions/label"
+   ]
+  },
+  {
+   "id": "L1-20-exportacao-recorte-e-massa",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-14-analise-raster-em-lote-gera-item-novo",
+    "L1-02-b-token-de-servico-com-escopo-por-lista",
+    "L0-06-backup-status"
+   ],
+   "hipotese": "exportar = job que recorta por bbox/polígono, escolhe bandas ou predefinição, CRS de saída (EPSG, com reamostragem declarada), resolução e formato (GeoTIFF/COG, PNG/JPEG com world file, GeoPackage raster, XYZ zip para uso off-line) e devolve um arquivo por URL assinada CURTA (aqui sim expira: 24 h) com sha256 e ficha de licença dentro do zip; síncrono só até um limite declarado (ex.: 50 MB, via `/bbox` do TiTiler); 'exportar meu acervo de imagens' = todos os COGs + STAC estático do inquilino em zip (escrow, complemento do L0-06); item comercial/NC não sai por link público; equivalente ao `exportImage`/'Download rasters' do Image Server",
+   "portao_de_pronto": "recorte de 10 km² com reprojeção para EPSG:31983 abre no QGIS/GDAL com CRS certo e pixel alinhado ao esperado (teste com `gdalinfo` + comparação de 5 valores); URL expira em 24 h (relógio simulado); exportação em massa do inquilino de teste bate item a item com o catálogo (contagem e sha256); item comercial recusado; limite síncrono/assíncrono aplicado; MANUAL com a tela",
+   "refutacao": "adversário pede exportação de 2.000 km² a 10 cm (tem de estimar tamanho e recusar acima da cota declarada), polígono de outro inquilino como recorte, e reutiliza URL assinada após expirar; qualquer 200 = refutado",
+   "papeis": [
+    "raster",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://developers.arcgis.com/rest/services-reference/enterprise/export-image/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/download-rasters/",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/copy-raster.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/clip.htm",
+    "https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-presigned-urls.html"
+   ]
+  },
+  {
+   "id": "L1-21-wcs-2-0-1",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-20-exportacao-recorte-e-massa",
+    "L1-02-g-wms-1-3-0-raster"
+   ],
+   "hipotese": "WCS 2.0.1 (GetCapabilities, DescribeCoverage, GetCoverage com subset por eixo, CRS de saída, formato GeoTIFF) como fachada fina sobre o recorte do L1-20, porque o Pro, o Portal e o QGIS consomem WCS de terceiros para 'analisar' sem `.acs` (e é o que a casa já usou para puxar ortofoto municipal pelo WCS público); limites de tamanho iguais aos da exportação síncrona; XML validado contra o XSD 2.0.1",
+   "portao_de_pronto": "`gdalinfo WCS:` abre a cobertura e `gdal_translate` baixa um subset igual ao do L1-20 (sha256 igual); capabilities passa no XSD; paridade contra 'WCS services' do Server 11.4 escrita (operações suportadas × não)",
+   "refutacao": "adversário pede subset fora da extensão, eixo com nome errado, CRS não suportado e 10 pedidos simultâneos de 50 MB (limite de concorrência declarado); compara pixel a pixel com o COG",
+   "papeis": [
+    "raster",
+    "esri",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "geoserver",
+   "fontes": [
+    "https://www.ogc.org/standard/wcs/",
+    "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/wcs-services.htm",
+    "https://docs.geoserver.org/latest/en/user/services/wcs/index.html",
+    "https://docs.qgis.org/3.40/en/docs/server_manual/services/wcs.html",
+    "https://gdal.org/en/stable/drivers/raster/wcs.html",
+    "https://geoservicos.ibge.gov.br/geoserver/ows?service=WCS&request=GetCapabilities"
+   ]
+  },
+  {
+   "id": "L1-23-cota-e-medicao-por-tb",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-d-garage-por-inquilino",
+    "L1-02-b-token-de-servico-com-escopo-por-lista",
+    "L7-09-medicao-cobranca"
+   ],
+   "hipotese": "o taxímetro da imagem: por inquilino e por dia, bytes armazenados por perfil (`visual` × `cientifico` × `categorico` × `original`, lidos do balde pela API de administração do Garage e conferidos por soma dos itens), tiles servidos e bytes de saída por token (do `plat.log_svc`), pedidos de COG por `Range`, jobs de conversão (segundos de CPU) e de GPU (segundos), exportações; cota dura (recusa) e branda (aviso) por plano; tudo em `plat.uso_raster` (particionada por mês) alimentando o relatório do L7-09; a diferença 'ver' × 'analisar' (spec 17.3: analisar = +50 %) é medida pela existência de asset `cientifico`, não declarada",
+   "portao_de_pronto": "após ingerir 3 itens e servir 1.000 tiles, `plat.uso_raster` do dia bate com a contagem direta no balde (bytes, ± 0) e no log (tiles, ± 0); cota dura bloqueia novo upload com mensagem e a tela mostra a barra; relatório mensal exportável em CSV; teste com relógio simulado fecha um mês",
+   "refutacao": "adversário apaga um item e confere que o uso do dia seguinte cai; sobe o mesmo arquivo duas vezes (nome por sha: 1 objeto) e confere que a cota conta 1; tenta servir tiles com token revogado e confere que não entra no uso",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "spec",
+   "fontes": [
+    "https://garagehq.deuxfleurs.fr/documentation/reference-manual/admin-api/",
+    "https://doc.arcgis.com/en/arcgis-online/administer/credits.htm"
+   ]
+  },
+  {
+   "id": "L1-24-imagens-orientadas",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-d-garage-por-inquilino",
+    "L2-01-mapa-web",
+    "L2-03-edicao"
+   ],
+   "hipotese": "fotos não-nadir (nível de rua, oblíquas de drone, 360°, inspeção de ativo) como camada de 'imagens orientadas': tabela `plat.imagem_orientada` com esquema inspirado no do Esri (posição da câmera, altura, direção, inclinação, campo de visão horizontal/vertical, distância útil, data, tipo de câmera, URL da foto no balde) preenchida por EXIF/XMP na entrada (GPS, GPSImgDirection, DJI XMP) ou por CSV; no mapa (L2-01): clicar num ponto mostra as fotos que 'veem' aquele ponto, com a pegada (cone de visão) desenhada, e o visualizador de foto com seta de direção; sem medição fotogramétrica (declarado FORA); equivalente à Oriented Imagery layer do Portal 11.4",
+   "portao_de_pronto": "≥ 50 fotos abertas com EXIF viram camada; cone de visão calculado bate com o teste manual em 5 fotos (direção ± 5°); clique no mapa lista as fotos certas (e2e com captura); 360° abre em visualizador esférico; CSV sem coluna obrigatória é recusado nomeando a coluna; paridade contra Oriented Imagery (Portal 11.4) escrita",
+   "refutacao": "adversário envia fotos com GPS zerado, direção ausente e data futura: cada uma tratada com mensagem; confere que a foto no balde só sai com token (não há URL pública)",
+   "papeis": [
+    "raster",
+    "cartografo",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://doc.esri.com/en/arcgis-enterprise/12.1/create/introduction-to-oriented-imagery-layers.html",
+    "https://doc.esri.com/en/arcgis-enterprise/12.1/create/work-with-oriented-imagery-layers-mv.html",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/add-layers-mv.htm"
+   ]
+  },
+  {
+   "id": "L1-25-servico-de-imagem-esri-compativel",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-f-predefinicoes-de-renderizacao-e-legenda",
+    "L1-02-h-ponto-estatisticas-e-histograma",
+    "L1-07-mosaico-por-colecao-e-pegadas"
+   ],
+   "hipotese": "um subconjunto do protocolo ArcGIS REST `ImageServer` sobre cada item e mosaico (`/svc/<token>/rest/services/<item>/ImageServer` com `?f=json`: `info` com extent/spatialReference/pixelType/bandCount, `exportImage` (bbox, size, imageSR, format, renderingRule limitada às funções do L1-13, mosaicRule limitada às do L1-08), `identify`, `tile/{z}/{y}/{x}`, `legend`, `computeStatisticsHistograms`, `rasterAttributeTable`, `query` das pegadas), porque é o único tipo de serviço externo para o qual o AGOL/Portal guarda credencial (stored credentials só para serviços ArcGIS — doc lida 29/08) e é o que o Pro chama de 'Imagery layer'; o mesmo padrão do FeatureServer da casa que o AGOL e o Pro já carregaram; tudo declarado PARCIAL na paridade com a lista exata de operações e parâmetros suportados, e o teste no Pro/AGOL real fica PENDENTE (D20)",
+   "portao_de_pronto": "`/ImageServer?f=json` conforme o esquema da doc Esri (campos obrigatórios presentes; teste com o JSON de um serviço público da Esri como referência de forma); `exportImage` com `bbox` em 3857 e 4326 devolve PNG/JPEG/TIFF alinhado ao XYZ (≤ 1 px); `identify` = `/ponto`; `tile` = XYZ (bit a bit); `computeStatisticsHistograms` = L1-02-h; parâmetro não suportado devolve erro JSON no formato Esri (`error.code/message`), nunca 500; `pystac`/`arcgis` API for Python não é usada (pilha aberta) — o cliente de teste é `requests` + comparação com a doc",
+   "refutacao": "adversário envia `renderingRule` com função fora da lista, `mosaicRule` com `lockRasterIds` de outro inquilino, `exportImage` de 20.000×20.000 e `f=html`; compara cada resposta com o formato da doc REST; qualquer operação anunciada em `capabilities` e não implementada = refutado",
+   "papeis": [
+    "esri",
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://developers.arcgis.com/rest/services-reference/enterprise/image-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/export-image/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/identify-image-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/image-tile/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/legend-image-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/compute-statistics-and-histograms/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/raster-attribute-table/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/query-image-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/mosaic-rules/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/raster-function-objects/",
+    "https://doc.arcgis.com/en/arcgis-online/reference/arcgis-server-services.htm",
+    "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/key-concepts-for-image-services.htm"
+   ]
+  },
+  {
+   "id": "L1-27-ficha-de-metadado-e-licenca-da-imagem",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-a-pgstac-e-stac-api-por-inquilino",
+    "L0-09-metadado-catalogo"
+   ],
+   "hipotese": "a ficha de uma imagem tem campos obrigatórios e editáveis pela tela, gravados como propriedades STAC padronizadas: plataforma/sensor/instrumento (`platform`, `instruments`, `constellation`), GSD, data de aquisição (`datetime` ou `start/end_datetime`), nuvem, ângulo de visada (`view:`), órbita (`sat:`), fornecedor, LICENÇA (`license` SPDX ou URL; lista fechada da casa: Copernicus, CC BY 4.0, CC BY-SA 4.0, domínio público, ODbL, comercial-EULA, 'sem licença escrita'), atribuição obrigatória, restrição de redistribuição (bloqueia link público e exportação em massa quando NC/comercial), fonte (conector ou upload), e exportação ISO 19115-2 (perfil de imagem) pelo editor do L0-09; regra D17 da casa: item 'sem licença escrita' é auditável, não vendável — aparece com aviso e não entra em material de canal",
+   "portao_de_pronto": "editor de ficha por e2e; item sem licença não pode ser compartilhado por link público (teste); ISO 19115-2 exportado valida contra o XSD; propriedades STAC validadas por `stac-validator` com as extensões `eo`, `view`, `sat`, `proj`, `raster`; ficha mostra atribuição; lista de licenças lida do código (uma só tabela)",
+   "refutacao": "adversário marca item comercial como CC BY (tem de exigir permissão de administrador e registrar no log); exporta ISO e confere que a licença e a data batem com o STAC",
+   "papeis": [
+    "raster",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://github.com/stac-extensions/eo",
+    "https://github.com/stac-extensions/view",
+    "https://github.com/stac-extensions/sat",
+    "https://github.com/stac-extensions/projection",
+    "https://github.com/stac-extensions/raster",
+    "https://inde.gov.br/",
+    "https://metadados.inde.gov.br/geonetwork/srv/por/catalog.search"
+   ]
+  },
+  {
+   "id": "L1-29-teste-no-arcgis-real-do-parceiro",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-c-wmts-xyz-tilejson-validados",
+    "L1-02-e-cog-direto-por-https-e-endpoint-s3-para-o-pro",
+    "L1-01-a-pgstac-e-stac-api-por-inquilino"
+   ],
+   "hipotese": "roteiro escrito e executável pelo parceiro no ArcGIS Pro/Portal/AGOL reais (D20): colar XYZ como Tile layer no Map Viewer, WMTS no Pro e no Map Viewer, STAC Connection no Pro (com `custom headers`), `.acs` para o endpoint S3 do inquilino (provedor MinIO), WMS, WCS e o ImageServer compatível; cada passo com o resultado esperado, captura pedida e campo 'funcionou / não / erro exato'; o resultado preenche a coluna 'testado em Pro/AGOL' de `docs/PARIDADE.md`, que até lá fica 'pendente' em toda a linha (portão P4 da casa)",
+   "portao_de_pronto": "`docs/ROTEIRO_ARCGIS.md` com os 7 passos e as URLs geradas por script (nunca à mão); um script `plat paridade --arcgis resultado.json` grava as respostas na tabela de paridade; enquanto D20 estiver aberta o item fica `pendente` com bloqueio nomeado e nenhuma linha da paridade é marcada 'testado'",
+   "refutacao": "adversário lê a tabela de paridade e reprova qualquer 'feito' em Pro/AGOL sem o JSON de resultado do parceiro anexado",
+   "papeis": [
+    "esri",
+    "cronista",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": "D20: credencial/tempo do parceiro no ArcGIS Pro/AGOL",
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://doc.arcgis.com/en/arcgis-online/create-maps/add-layers-from-url.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/data/imagery/create-a-stac-connection.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/create-cloud-storage-connection-file.htm",
+    "https://doc.arcgis.com/en/arcgis-online/reference/ogc.htm"
+   ]
+  },
+  {
+   "id": "L1-30-paridade-image-server-documento-vivo",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-c-wmts-xyz-tilejson-validados"
+   ],
+   "hipotese": "a seção 'L1 imagens' de `docs/PARIDADE.md` é gerada por script (`docs/gera_paridade.py`) de um JSON `docs/paridade/l1.json` com uma linha por capacidade do ArcGIS Image Server 11.4 / Image for Portal / Pro Image Analyst (fonte: doc Esri datada com URL testada, ≥ 60 capacidades: image service dinâmico, cache, mosaic dataset, métodos de mosaico, raster functions (lista completa), raster analysis tools do Map Viewer, deep learning, multidimensional, oriented imagery, WMS/WMTS/WCS/OGC API, exportImage/download, time, swipe, STAC, `.acs`, credenciais) e o estado feito/parcial/fora + o item da casa que cobre + 'testado em Pro/AGOL: pendente'; o papel `esri` escreve, o adversário confere",
+   "portao_de_pronto": "JSON com ≥ 60 linhas, cada uma com URL Esri que responde 200 no teste automatizado (`tests/rede`); `PARIDADE.md` regenerado no `make check`; nenhuma linha 'feito' sem item `entregue` no estado (teste cruza com `laco/estado.json`); 'fora' sempre com motivo",
+   "refutacao": "adversário escolhe 10 capacidades ao acaso na doc Esri e confere se estão na tabela; ausência = refutado; confere que nada está 'feito' por decisão, só por item entregue",
+   "papeis": [
+    "esri",
+    "cronista",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/server/11.4/get-started/windows/what-is-arcgis-image-server-.htm",
+    "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/key-concepts-for-image-services.htm",
+    "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/publishing-image-services.htm",
+    "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/image-service-parameters.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/imagery-layers.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/publish-imagery-layers.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/perform-raster-analysis.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/raster-function-editor.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/help/analysis/raster-functions/list-of-raster-functions.htm",
+    "https://pro.arcgis.com/en/pro-app/latest/tool-reference/image-analyst/an-overview-of-the-image-analyst-toolbox.htm",
+    "https://enterprise.arcgis.com/en/get-started/11.4/windows/what-s-new-in-arcgis-enterprise.htm",
+    "https://www.esri.com/en-us/arcgis/products/arcgis-image/overview"
+   ]
+  },
+  {
+   "id": "L1-06-rasters-do-acervo-em-cog",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-h-ingestao-em-lote-por-manifesto-e-cli",
+    "L1-01-g-raster-categorico-colormap-e-tabela-de-atributos"
+   ],
+   "hipotese": "os rasters que a casa já tem em disco (MapBiomas por ano em GeoTIFF comum, recortes GLO-30, mosaicos Sentinel-2 mensais do motor logístico, registrados em `acervo.objeto`/`acervo.camada_arquivo` com sha256) entram na coleção do inquilino 'acervo' pelo manifesto do L1-01-h, com sha256 conferido ANTES de converter (regra do acervo), perfil categórico ou científico conforme a fonte, licença e frescor lidos de `acervo.fonte` (só fontes com licença escrita — D17), conversão por partes por causa do disco a 98 % (D21: nada > 2 GB novo sem decisão do dono; converter, conferir, apagar a cópia bruta quando o acervo permitir); é o que o L6-01-i expõe como camadas raster do acervo",
+   "portao_de_pronto": "≥ 10 rasters do acervo convertidos e catalogados com sha256 de origem gravado na ficha; divergência de sha entre `acervo.camada_arquivo` e o arquivo aborta (teste com arquivo alterado); nenhum item de fonte sem licença escrita (teste cruza com `acervo.fonte`); disco conferido antes de cada conversão (`df`), com registro; tiles por token",
+   "refutacao": "adversário confere 3 itens contra o arquivo de origem (valores em 5 pixels) e contra `acervo.fonte` (licença, frescor); item de fonte sem licença = refutado; conversão que deixou o disco abaixo do limiar = refutado",
+   "papeis": [
+    "raster",
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://storage.googleapis.com/mapbiomas-public/initiatives/brasil/collection_10/lulc/coverage/brazil_coverage_2024.tif",
+    "https://registry.opendata.aws/copernicus-dem/"
+   ]
+  }
+ ]
+}

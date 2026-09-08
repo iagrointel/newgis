@@ -27,8 +27,9 @@ def sql(consulta: str) -> list[dict]:
                        capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     ruido = ("SET", "BEGIN", "COMMIT", "ROLLBACK")
-    return [l for l in r.stdout.splitlines() if l.strip() and not l.split()[0] in ruido
-            and not l.split()[0] in ("INSERT", "UPDATE", "DELETE", "SELECT")]
+    return [ln for ln in r.stdout.splitlines()
+            if ln.strip() and ln.split()[0] not in ruido
+            and ln.split()[0] not in ("INSERT", "UPDATE", "DELETE", "SELECT")]
 
 
 def sobe_worker(porta: int) -> subprocess.Popen:

@@ -216,3 +216,20 @@ SSE_TOTAL = 200             # teto novo: orçamento da instalação, independent
 CEIFA_API_INTERVALO_S = 30  # a API ceifa os jobs sem sinal do PRÓPRIO inquilino no máximo a cada 30 s
 CEIFA_LIMITE_S = 60         # mesmo LIMITE_SEM_SINAL_S do worker (app/jobs/worker.py); piso na função SQL
 CHAVE_RESERVADA = "sys:"    # espaço de nome das chaves de trinco dos periódicos da plataforma
+# --- grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
+# macro (grosseira, ex. 1 km) triando regiões e micro (fina, ex. 100 m) gerada SÓ dentro das aprovadas.
+# ESCALA_CELULAS_MAX vale tanto para a grade macro inteira quanto para o refino micro (aprovadas × k²) — é o
+# mesmo teto de proteção de RAM/disco (a casa está com o disco a 98 %, item não pode gerar grade sem freio);
+# 250.000 células cobrem, por exemplo, uma grade macro de 500×500 ou um refino de 500 regiões aprovadas a
+# k=22. ESCALA_LIGACOES_MAX freia célula × fator (a tabela `escala_fator_celula` é uma LINHA por par).
+ESCALA_AREA_VERTICES_MAX = 5_000      # vértices do polígono de estudo (mesma ordem de grandeza de INGESTAO_*)
+ESCALA_RESOLUCAO_MIN_M = 1.0
+ESCALA_RESOLUCAO_MAX_M = 100_000.0
+ESCALA_CELULAS_MAX = 250_000
+ESCALA_FATORES_MAX = 20
+ESCALA_LIGACOES_MAX = 2_000_000
+ESCALA_APROVACAO_TIPOS = ("limiar", "top_pct")
+ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) da migração
+ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
+ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
+ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)

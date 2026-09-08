@@ -1,0 +1,244 @@
+{
+ "item": "L0-02-tenant-auth",
+ "veredito": "PASSA",
+ "rodada": 2,
+ "resumo_rodadas": "Rodada 1 = ataques nao destrutivos no servico vivo (PASSA). Rodada 2 = refutacao COM REINSTALACAO do zero (drop schema plat+plat_trabalho + drop role plat_app/plat_worker + install.sh) e re-varredura na instalacao nova (PASSA).",
+ "reinstalacao": {
+  "comando": "systemctl stop plat-api plat-worker; psql -U postgres -d iagro_sat -c 'DROP SCHEMA plat CASCADE; DROP SCHEMA plat_trabalho CASCADE; DROP OWNED BY plat_app; DROP OWNED BY plat_worker; DROP ROLE plat_app; DROP ROLE plat_worker'; sudo bash install.sh plat.iagrointel.com 8150",
+  "hora_stop_utc": "2026-09-05T17:14:17Z",
+  "hora_schema_e_roles_zerados_utc": "2026-09-05T17:14:30Z (schemas restantes=0, roles restantes=0)",
+  "hora_install_concluido_utc": "2026-09-05T17:15:20Z (rc=0, install.sh: 'instalado em 50 s')",
+  "servico_indisponivel_segundos": "~63 (17:14:17 -> 17:15:20)"
+ },
+ "evidencia": [
+  {
+   "ataque": "Reinstalacao destrutiva do zero (P5)",
+   "comando": "drop schema plat+plat_trabalho CASCADE + drop role plat_app/plat_worker; sudo bash install.sh plat.iagrointel.com 8150",
+   "saida": "DROP SCHEMA x2 (79+2 objetos), DROP ROLE x2, schemas restantes=0 roles restantes=0; install rc=0; POS: 27 tabelas, 60 funcoes, 25 politicas, plat_trabalho 2 tabelas, migracoes 001..011 aplicadas, tenants demo/demo2/plataforma, admins semeados (plataforma superadmin+2FA, demo/demo2 nao-superadmin), particoes evento/log_acesso 2026m09..12 recriadas",
+   "resultado": "resistiu"
+  },
+  {
+   "ataque": "Invariantes de seguranca na instalacao NOVA (P6)",
+   "comando": "pg_proc proacl LIKE '{=X%'; pg_roles rolsuper/rolbypassrls; pg_class relrowsecurity para tabelas com tenant_id; owner",
+   "saida": "funcoes com EXECUTE PUBLIC = 0 (apos o conjunto completo de migracoes, incl. 010 que revoga os gatilhos da 004); secdef sem contexto e com PUBLIC = 0; tabelas com tenant_id SEM RLS = 0; plat_app/plat_worker rolsuper=f rolbypassrls=f; owner de todas as tabelas = postgres",
+   "resultado": "resistiu"
+  },
+  {
+   "ataque": "Conferencia publica /saude (P: noindex + HSTS)",
+   "comando": "curl -D- https://plat.iagrointel.com/saude",
+   "saida": "HTTP/1.1 200 OK; X-Robots-Tag: noindex, nofollow; Strict-Transport-Security: max-age=31536000; banco=ok, migracoes_pendentes=0; /api/openapi.json publico = 200",
+   "resultado": "resistiu"
+  },
+  {
+   "ataque": "Login real pelo navegador (playwright) com a senha REGENERADA de tests/credenciais.txt",
+   "comando": "playwright chromium: goto /entrar, preenche inquilino=demo/login=admin/senha=<regenerada>, click #entrar; depois fetch /api/eu e /api/logout",
+   "saida": "/entrar 200; apos entrar redireciona para / (painel real: Inicio/Usuarios/Grupos/Tarefas/Papeis/Tokens/Log); /api/eu 200 login=admin tenant=demo; cookie plat_sessao httpOnly=true secure=true sameSite=Lax; logout 204 -> /api/eu 401; 0 erro real de console (o unico e o 401 esperado pos-logout). Capturas pw_01_form.png, pw_02_logado.png",
+   "resultado": "resistiu"
+  },
+  {
+   "ataque": "Varredura cruzada A->B DE NOVO sobre a instalacao nova (nucleo do portao)",
+   "comando": "login demo/demo2 com credenciais regeneradas; seed em B; 34 rotas por id do OpenAPI vivo com cookie de A contra ids de B; listas; token de B; header X-Plat-Inquilino",
+   "saida": "34 rotas-com-id: CROSS200=[]; NAO-ESPERADOS=[]; 0 lista vaza B; token de B -> /api/eu = dono id 2 tenant demo2 (so B); X-Plat-Inquilino: demo2 -> 403",
+   "resultado": "resistiu"
+  },
+  {
+   "ataque": "make check inteiro na instalacao nova (P3)",
+   "comando": "make check (ruff + marcadores + pytest -m 'not lento' + e2e)",
+   "saida": "ruff All checks passed; 402 passed, 7 failed. Os 7 sao FORA DO ITEM L0-02: (a) 4 em tests/api/jobs (test_jobs_fila.py, test_jobs_memoria.py = trilha B/L0-05, worker nao pegou o job em 60 s sob contencao do make check concorrente; test_repetir_cria_job_novo_com_proveniencia falha tambem isolado = trilha B a corrigir); (b) 3 (test_cruzado::test_cobertura_100_por_cento, test_eventos, test_privilegios_declarados) eram CORRIDA de worktree compartilhada - a app viva ja tinha a rota DELETE /api/plataforma/inquilinos/{id} e as migracoes 009/010/011 da trilha B antes de docs/openapi.json e cruzado_casos serem comitados. Re-rodados isolados no HEAD abbb03d = 80 passed; docs/openapi.json comitado x vivo = 74/74 identicos.",
+   "resultado": "resistiu (para o L0-02); falhas remanescentes sao de trilha B, nao do item"
+  }
+ ],
+ "o_que_nao_prova": [
+  "Nao rodei make check nem e2e playwright (dominio do testador; um TESTADOR mede em paralelo e a RAM esta baixa). A cobertura de navegador (P1) das telas login/2FA/troca de senha/usuarios NAO foi verificada por mim; testei o backend dessas rotas por HTTP.",
+  "Paridade Esri (P4) nao foi testada contra uma organizacao Esri viva (so doc no ADR).",
+  "A refutacao com REINSTALACAO (drop schema plat + role + install.sh) NAO foi executada: o portao pede o arquivo 40_testes.md, que estava AUSENTE em 2026-09-05 ate o fim desta sessao. P5 (reproduzivel do zero) fica PENDENTE do gate.",
+  "Nao estressei o limite por IP do nginx (plat_login 10r/m) ao ponto do 429 em producao; confirmei a zona/limit_req no site plat.iagrointel.com e o bloqueio por usuario (5/15min).",
+  "A restricao de IP do token e derivada de request.client.host: na porta de loopback :8150 um X-Forwarded-For forjado troca o IP visto (200 indevido), MAS isso nao e alcancavel em producao - :8150 esta ligado so a 127.0.0.1; via nginx (proxy_add_x_forwarded_for) o IP real e anexado a direita e o uvicorn (--forwarded-allow-ips 127.0.0.1) o usa, entao pela URL publica o spoof devolve 401. Confirmado: https://plat.iagrointel.com/api/eu com XFF forjado = 401 ip_nao_permitido.",
+  "Login em 'plataforma' exige 2FA e eu nao tenho o segredo TOTP do superadmin; nao confirmei o fluxo operacional do superadmin (listar/criar inquilinos) fim-a-fim - mas confirmei que ele e barrado para nao-superadmin (so_superadmin, 404, 422).",
+  "make check completo NAO fica 100% verde enquanto a trilha B (jobs, tests/api/jobs) nao fecha; isso e do L0-05, nao do L0-02. Registrado com o arquivo, conforme instrucao do coordenador.",
+  "A arvore de trabalho e compartilhada e avancou durante a sessao (HEAD 12b2c2e->abbb03d; migracoes 009/010/011 aplicadas por outras trilhas/testador). A reinstalacao rodou o conjunto de migracoes presente no disco no momento; o estado final refletido em /saude e git_sha abbb03d02920."
+ ],
+ "clausulas": [
+  {
+   "clausula": "tabelas tenant/usuario/sessao/token/permissao com RLS ativa",
+   "veredito": "passa",
+   "evidencia": "relrowsecurity=t em tenant,usuario,sessao,token_servico,grupo,grupo_membro,papel_*,senha_historico,agenda,job,job_log,evento(+4 particoes),log_acesso(+4 particoes); tabelas globais sem tenant_id (privilegio,perfil_privilegio,evento_tipo,worker) sem RLS por design"
+  },
+  {
+   "clausula": "usuario de A nao le nem edita linha de B em nenhum endpoint (varredura de todas as rotas)",
+   "veredito": "passa",
+   "evidencia": "sweep vivo 40 rotas por id = 0 cross 200 (todas 404); listas 8/8 sem leak; header spoof 403; token de B age so como B; test_cruzado.py 73/73 com digest-diff de B"
+  },
+  {
+   "clausula": "login/logout/2FA/troca de senha/usuarios (admin) funcionam",
+   "veredito": "passa",
+   "evidencia": "verificado por HTTP: login (200/cookie), logout (204 -> 401), 2FA iniciar/confirmar/login-2fa (recovery ok), troca de senha (204, mata outras sessoes), criar usuario admin (201 com senha_temporaria + trocar_senha=t). E2E navegador e do testador (P1)."
+  },
+  {
+   "clausula": "token de servico aparece no log com IP/rota/bytes",
+   "veredito": "passa",
+   "evidencia": "plat.log_acesso: 1481 linhas com token_id, 0 com ip NULL, 0 com bytes NULL; ex.: token_id=309 ip=216.238.123.14 rota=/api/eu status=200 bytes=1679 tempo_ms=4"
+  },
+  {
+   "clausula": "toda funcao SECURITY DEFINER checa o inquilino do contexto (auth_sessao_criar, auth_falha, auth_login, tenant_criar) e EXECUTE so plat_app",
+   "veredito": "passa",
+   "evidencia": "auth_sessao_criar e auth_falha chamam contexto_confere(p_usuario); auth_login e escopado por t.slug=p_tenant AND u.login; tenant_criar chama plataforma_operador (exige superadmin); proacl sem PUBLIC (=X); funcoes de app so plat_app, de worker so plat_worker"
+  },
+  {
+   "clausula": "middleware grava plat.log_acesso por requisicao autenticada",
+   "veredito": "passa",
+   "evidencia": "plat.log_acesso 30882 linhas, crescendo a cada chamada; campos ip/metodo/rota/status/bytes/tempo_ms/tenant_id/usuario_id/token_id populados; rota redigida (0 token/cookie em 30882)"
+  },
+  {
+   "clausula": "limiares declarados no ADR (senha >=8 letra+numero, bloqueio 5/15min, sessao/token com expiracao configuravel, MFA TOTP por usuario)",
+   "veredito": "passa",
+   "evidencia": "ADR 0002 secoes 5-8; comportamento vivo: bloqueio 5->423; sessao HttpOnly/Secure/SameSite=lax Max-Age 7d; token validade padrao 90d/maximo 365d; TOTP por usuario com anti-replay e recuperacao"
+  }
+ ],
+ "historico_rodada1": {
+  "veredito": "PASSA",
+  "evidencia": [
+   {
+    "ataque": "Varredura cruzada A(demo)->B(demo2): sessao de A + ids de B em ~40 rotas por id (usuario 434, grupo, papel 75, token 301, job, agenda, sessao) + rotas superadmin",
+    "comando": "venv/bin/python sweep.py (login demo/demo2; GET/PUT/DELETE/POST em /api/usuarios/{id}, /api/grupos/{id}(+membros/entrar/aceitar), /api/papeis/{id}, /api/tokens/{id}(+log,renovar), /api/jobs/{id}(+eventos,log,cancelar,repetir), /api/agendas/{id}(+pausar,retomar,rodar-agora), /api/eu/sessoes/{id}, /api/plataforma/*)",
+    "saida": "40/40 rotas: 404 (usuario_inexistente/grupo_inexistente/token_inexistente/job_inexistente/agenda_inexistente/nao_encontrado); CROSS200=[]; nenhuma linha de B alterada",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "Listas de A vazam linha de B? /api/usuarios,/grupos,/papeis,/tokens,/jobs,/agendas,/eventos,/log",
+    "comando": "GET cada lista com cookie de A; procura 'Bob B'/'demo2'/'HACKED'",
+    "saida": "8/8 listas leakB=False (ex.: /api/usuarios total=16 so de demo; /api/log total=25587 so tenant 1)",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "Spoof de inquilino por cabecalho: sessao de A + X-Plat-Inquilino: demo2",
+    "comando": "GET /api/eu e /api/usuarios com cookie de A e X-Plat-Inquilino: demo2",
+    "saida": "403; nao troca de inquilino; /api/usuarios 403 leakB=False; X-Tenant/X-Plat-Tenant ignorados (segue demo)",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "Token de servico de B usado cross",
+    "comando": "GET /api/eu com Authorization: Bearer <token de B>",
+    "saida": "200 devolvendo o proprio dono do token (id 2, demo2) - age SO como B, nunca como A",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "SECURITY DEFINER / EXECUTE PUBLIC / BYPASSRLS (achado T1)",
+    "comando": "SELECT proname,prosecdef,proacl FROM pg_proc WHERE pronamespace='plat'; SELECT rolname,rolsuper,rolbypassrls FROM pg_roles WHERE rolname LIKE 'plat%'; SELECT relname,relrowsecurity FROM pg_class ...",
+    "saida": "0 funcoes com '=X/postgres' (PUBLIC); EXECUTE so plat_app/plat_worker; plat_app/plat_worker rolsuper=f rolbypassrls=f; RLS ativa em toda tabela com tenant_id INCLUINDO particoes evento_y2026m09..12 e log_acesso_y2026m09..12; tabelas de plat sao owned por postgres (RLS aplica a plat_app)",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "Forjar contexto como plat_app: set_config('plat.tenant_id',<B>) e chamar funcoes agindo em B; job_cancelar(id de B, usuario de A); tenant_suspender com sessao de A (nao-superadmin)",
+    "comando": "psql -U plat_app; SET plat.tenant_id=1; SELECT count(*) FROM plat.usuario WHERE tenant_id=2; SELECT plat.job_cancelar('<job de B>',1); SELECT plat.tenant_suspender('<hash sessao de A>',2,false)",
+    "saida": "com contexto honesto (tid=1): B_users_visible=0 e job_cancelar=NULL (job de B intacto - a funcao filtra 'AND tenant_id=plat.tenant_atual()'); tenant_suspender -> ERROR so_superadmin (plataforma_operador rejeita); funcoes superadmin resolvem a sessao no banco, nunca por GUC (contexto_confere presente em auth_falha/auth_ok/auth_sessao_criar/auth_desafio_2fa_criar/sessoes_encerrar_usuario)",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "Forca bruta / bloqueio por usuario",
+    "comando": "6 senhas erradas seguidas para usuario 'vitima', depois a senha CORRETA",
+    "saida": "erro#1..5 = 401 credenciais_invalidas; #6 = 423 bloqueado; senha correta apos 5 falhas = 423 bloqueado",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "TOTP replay e reuso de codigo de recuperacao",
+    "comando": "login/2fa com o mesmo codigo TOTP em duas janelas; codigo de recuperacao usado 2x",
+    "saida": "reuso do mesmo passo TOTP = 401 codigo_invalido (anti-replay por totp_ultimo_passo); recovery#1 = ok, recovery REUSE mesmo codigo = 401 codigo_invalido; totp_secret no banco = prefixo 'enc:v1:' (cifrado, sem texto claro)",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "Tempo de resposta usuario existente x inexistente (60 amostras cada)",
+    "comando": "POST /api/login senha errada para 'admin' vs 'naoexiste_zzz'",
+    "saida": "existente mediana 140,2 ms; inexistente mediana 137,5 ms; delta 2,7 ms sobre base ~140 ms (HASH_FANTASMA equaliza; sem oraculo de tempo)",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "Sessao: fixacao, usuario desativado, logout, troca de senha, atributos do cookie",
+    "comando": "login com cookie pre-setado pelo atacante; desativar usuario e reusar sessao; logout; trocar senha por s2 e usar s1",
+    "saida": "cookie HttpOnly; Secure; SameSite=lax; login ignora cookie do atacante e emite novo (atacante -> 401 sessao_expirada); usuario desativado -> sessao 401 imediata; pos-logout 401; troca de senha derruba as OUTRAS sessoes (s1 -> 401)",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "CSRF: POST sob cookie com Origin de outro site e sem Content-Type JSON",
+    "comando": "POST /api/tokens cookie de A + Origin: https://evil.example; e ctype text/plain",
+    "saida": "Origin evil -> 403 origem_invalida; ctype nao-JSON -> 415 tipo_nao_aceito; Origin correto -> 201",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "Escalada a superadmin e alcance do inquilino tecnico 'plataforma' pela API normal",
+    "comando": "PUT /api/usuarios/1 {superadmin:true}; POST /api/usuarios {superadmin:true}; A -> /api/plataforma/inquilinos",
+    "saida": "PUT/POST com campo superadmin -> 422 extra_forbidden (campo nao existe); A -> /api/plataforma/* = 404 nao_encontrado; login em 'plataforma' exige_2fa=true e superadmin tem totp_ativo=t (nenhum cookie ate 2FA)",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "Token de servico: escopo insuficiente, revogado, restricao de IP, auto-perpetuacao",
+    "comando": "token catalogo:ler em /api/usuarios,/api/log; revogar e reusar; token restrito a IP; token cria token / mexe em 2fa / lista sessoes",
+    "saida": "escopo -> 403 escopo_insuficiente; revogado -> 401 token_revogado; validade 100000 -> 400 validade_acima_do_maximo (maximo 365); token cria token/2fa/sessoes -> 403 so_sessao; restricao de IP: recusa 401 ip_nao_permitido do IP real",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "Segredos: .env/credenciais fora do git e 600; segredos no rastreado; journal e log_acesso com valor de sessao/token",
+    "comando": "git ls-files | grep .env; git check-ignore; stat -c %a; git grep secretos; journalctl -u plat-api --since -3h; SELECT ... FROM plat.log_acesso",
+    "saida": ".env nao rastreado e gitignored, perms 600; credenciais 600; 0 segredo hardcoded no py/js/sh; journal 1290 linhas com 0 valor de cookie(32hex) e 0 valor de token; log_acesso 0/30882 com token=/plat_sessao= na rota (redigido); totp_secret cifrado enc:v1:",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "Placeholder (P2) e teste que nao testa (P8)",
+    "comando": "git grep TODO/FIXME/NotImplemented/placeholder em app+web/js; assert True; contagem de cobertura do cruzado",
+    "saida": "0 placeholder (2 'pass #' sao fluxo comentado, nao stub); 0 'assert True'; 253 testes/60 arquivos; tests/api/test_cruzado.py deriva 73 metodo×caminho do OpenAPI, exige cobertura 100%, 4 vetores por rota (sessao A, token A, X-Plat-Inquilino, sem auth) e compara digest md5 de TODO o dado de B antes/depois; CASOS=73, cobertura 73/73",
+    "resultado": "resistiu"
+   },
+   {
+    "ataque": "P7 nome de cliente/parceiro no rastreado",
+    "comando": "git grep -Ii 'cbre|novaterra|fgr|potiragua|robson|arayara|ineep|daiichi|jamel|certel|...' excluindo vendor e a propria medida",
+    "saida": "0 ocorrencias em codigo/docs; unica mencao em tests/medidas/L0-01-repo.json e a citacao do proprio comando de checagem P7 (meta), nao dado de exemplo",
+    "resultado": "resistiu"
+   }
+  ],
+  "clausulas": [
+   {
+    "clausula": "tabelas tenant/usuario/sessao/token/permissao com RLS ativa",
+    "veredito": "passa",
+    "evidencia": "relrowsecurity=t em tenant,usuario,sessao,token_servico,grupo,grupo_membro,papel_*,senha_historico,agenda,job,job_log,evento(+4 particoes),log_acesso(+4 particoes); tabelas globais sem tenant_id (privilegio,perfil_privilegio,evento_tipo,worker) sem RLS por design"
+   },
+   {
+    "clausula": "usuario de A nao le nem edita linha de B em nenhum endpoint (varredura de todas as rotas)",
+    "veredito": "passa",
+    "evidencia": "sweep vivo 40 rotas por id = 0 cross 200 (todas 404); listas 8/8 sem leak; header spoof 403; token de B age so como B; test_cruzado.py 73/73 com digest-diff de B"
+   },
+   {
+    "clausula": "login/logout/2FA/troca de senha/usuarios (admin) funcionam",
+    "veredito": "passa",
+    "evidencia": "verificado por HTTP: login (200/cookie), logout (204 -> 401), 2FA iniciar/confirmar/login-2fa (recovery ok), troca de senha (204, mata outras sessoes), criar usuario admin (201 com senha_temporaria + trocar_senha=t). E2E navegador e do testador (P1)."
+   },
+   {
+    "clausula": "token de servico aparece no log com IP/rota/bytes",
+    "veredito": "passa",
+    "evidencia": "plat.log_acesso: 1481 linhas com token_id, 0 com ip NULL, 0 com bytes NULL; ex.: token_id=309 ip=216.238.123.14 rota=/api/eu status=200 bytes=1679 tempo_ms=4"
+   },
+   {
+    "clausula": "toda funcao SECURITY DEFINER checa o inquilino do contexto (auth_sessao_criar, auth_falha, auth_login, tenant_criar) e EXECUTE so plat_app",
+    "veredito": "passa",
+    "evidencia": "auth_sessao_criar e auth_falha chamam contexto_confere(p_usuario); auth_login e escopado por t.slug=p_tenant AND u.login; tenant_criar chama plataforma_operador (exige superadmin); proacl sem PUBLIC (=X); funcoes de app so plat_app, de worker so plat_worker"
+   },
+   {
+    "clausula": "middleware grava plat.log_acesso por requisicao autenticada",
+    "veredito": "passa",
+    "evidencia": "plat.log_acesso 30882 linhas, crescendo a cada chamada; campos ip/metodo/rota/status/bytes/tempo_ms/tenant_id/usuario_id/token_id populados; rota redigida (0 token/cookie em 30882)"
+   },
+   {
+    "clausula": "limiares declarados no ADR (senha >=8 letra+numero, bloqueio 5/15min, sessao/token com expiracao configuravel, MFA TOTP por usuario)",
+    "veredito": "passa",
+    "evidencia": "ADR 0002 secoes 5-8; comportamento vivo: bloqueio 5->423; sessao HttpOnly/Secure/SameSite=lax Max-Age 7d; token validade padrao 90d/maximo 365d; TOTP por usuario com anti-replay e recuperacao"
+   }
+  ],
+  "o_que_nao_prova": [
+   "Nao rodei make check nem e2e playwright (dominio do testador; um TESTADOR mede em paralelo e a RAM esta baixa). A cobertura de navegador (P1) das telas login/2FA/troca de senha/usuarios NAO foi verificada por mim; testei o backend dessas rotas por HTTP.",
+   "Paridade Esri (P4) nao foi testada contra uma organizacao Esri viva (so doc no ADR).",
+   "A refutacao com REINSTALACAO (drop schema plat + role + install.sh) NAO foi executada: o portao pede o arquivo 40_testes.md, que estava AUSENTE em 2026-09-05 ate o fim desta sessao. P5 (reproduzivel do zero) fica PENDENTE do gate.",
+   "Nao estressei o limite por IP do nginx (plat_login 10r/m) ao ponto do 429 em producao; confirmei a zona/limit_req no site plat.iagrointel.com e o bloqueio por usuario (5/15min).",
+   "A restricao de IP do token e derivada de request.client.host: na porta de loopback :8150 um X-Forwarded-For forjado troca o IP visto (200 indevido), MAS isso nao e alcancavel em producao - :8150 esta ligado so a 127.0.0.1; via nginx (proxy_add_x_forwarded_for) o IP real e anexado a direita e o uvicorn (--forwarded-allow-ips 127.0.0.1) o usa, entao pela URL publica o spoof devolve 401. Confirmado: https://plat.iagrointel.com/api/eu com XFF forjado = 401 ip_nao_permitido.",
+   "Login em 'plataforma' exige 2FA e eu nao tenho o segredo TOTP do superadmin; nao confirmei o fluxo operacional do superadmin (listar/criar inquilinos) fim-a-fim - mas confirmei que ele e barrado para nao-superadmin (so_superadmin, 404, 422)."
+  ]
+ }
+}
