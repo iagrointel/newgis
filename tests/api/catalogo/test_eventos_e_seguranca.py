@@ -43,6 +43,11 @@ VOCABULARIO_CATALOGO = {
     "favoritos/remover",
     "lixeira/expurgar",
     "lixeira/esvaziar",
+    # L5-14-publicacao-links-embed: as rotas de publicação ficam sob /api/itens/{id}, então entram em
+    # ROTAS_CATALOGO abaixo e o vocabulário delas (migração 20260907T1410_publicacao_documento.sql) pertence a
+    # esta lista.
+    "publicacao/publicar",
+    "publicacao/despublicar",
 }
 ROTAS_CATALOGO = [
     r

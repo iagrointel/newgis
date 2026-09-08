@@ -74,6 +74,11 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/itens/{id}/relacoes"): ["itens/relacoes"],
     ("PUT", "/api/itens/{id}/compartilhamento"): ["compartilhamento/alterar"],
     ("POST", "/api/itens/{id}/links"): ["compartilhamento/link_criar"],
+    # ---- publicação de documento de construtor (L5-14-publicacao-links-embed; vocabulário na migração
+    # 20260907T1410_publicacao_documento.sql). As três leituras da família (`GET .../publicacao`,
+    # `.../visualizacoes`, `.../exportacao`) não entram aqui: só rota de escrita é exigida.
+    ("POST", "/api/itens/{id}/publicacao"): ["publicacao/publicar"],
+    ("DELETE", "/api/itens/{id}/publicacao"): ["publicacao/despublicar"],
     ("DELETE", "/api/itens/{id}/links/{lid}"): ["compartilhamento/link_revogar"],
     ("POST", "/api/pastas"): ["pastas/criar"],
     ("PUT", "/api/pastas/{id}"): ["pastas/renomear", "pastas/mover"],

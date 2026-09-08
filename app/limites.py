@@ -82,6 +82,13 @@ LIXEIRA_DIAS = 30
 COTA_ITENS = 100_000  # padrão por inquilino, tenant.config.catalogo.cota_itens
 USADO_POR_PROFUNDIDADE_MAX = 5
 
+# --- publicação de documento de construtor (L5-14-publicacao-links-embed)
+PUBLICACAO_SLUG_MIN = 2
+PUBLICACAO_SLUG_MAX = 60
+PUBLICACAO_DOMINIOS_MAX = 20
+PUBLICACAO_CAMADAS_PROFUNDIDADE = 4  # app -> mapa -> camada; folga para um nível extra de vista_de_camada
+PUBLICACAO_VISUALIZACOES_DIAS_MAX = 366
+
 # --- contrato de API e limites transversais (L0-12; docs/CONTRATO_API.md e docs/LIMITES.md nascem daqui)
 CORPO_MAX_PADRAO_BYTES = 10 * 1024 * 1024        # 10 MiB; toda rota /api,/svc,/ogc,/tiles fora da lista de upload
 CORPO_MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB (hipótese do item); sem rota isenta ainda (upload = L1-01-e)
