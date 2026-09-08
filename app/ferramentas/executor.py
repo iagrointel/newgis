@@ -197,19 +197,32 @@ def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None =
             campos = [c["nome"] for c in saida["campos"]]
             sha_saida = sha256_camada(cur, schema, tabela, campos)
             cur.execute(
-                f'SELECT count(*) AS feicoes, ST_AsGeoJSON(ST_Transform(ST_SetSRID(ST_Extent(geom)::geometry, '
-                f'{int(saida["srid"])}), 4326)) AS extent FROM "{schema}"."{tabela}"'
+                f'SELECT (SELECT count(*) FROM "{schema}"."{tabela}") AS feicoes, ST_XMin(e) AS x0, '
+                f'ST_YMin(e) AS y0, ST_XMax(e) AS x1, ST_YMax(e) AS y1 FROM (SELECT ST_Transform('
+                f'ST_SetSRID(ST_Extent(geom)::geometry, {int(saida["srid"])}), 4326) AS e '
+                f'FROM "{schema}"."{tabela}") t'
             )
             est = cur.fetchone()
             cur.execute('SELECT pg_total_relation_size(%s::regclass) AS b', (f'"{schema}"."{tabela}"',))
             tamanho = int(cur.fetchone()["b"])
         ctx.progresso(90, "publicando no catálogo")
         extent = None
-        if est["extent"]:
-            coords = json.loads(est["extent"])["coordinates"][0]
-            xs, ys = [c[0] for c in coords], [c[1] for c in coords]
+        # os quatro cantos vêm em número, não em GeoJSON: camada de uma feição só devolve um ponto como
+        # extensão, e a leitura do anel do polígono quebrava nesse caso (achado no item L2-05-d)
+        if est["x0"] is not None:
+            xs, ys = [float(est["x0"]), float(est["x1"])], [float(est["y0"]), float(est["y1"])]
             if -180 <= min(xs) and max(xs) <= 180 and -90 <= min(ys) and max(ys) <= 90:
-                extent = [min(xs), min(ys), max(xs), max(ys)]
+                # saída de UMA feição pontual tem extensão degenerada, e ST_MakeEnvelope com os quatro cantos
+                # iguais devolve polígono inválido (o CHECK item_extent_check recusa): abre-se 1e-9 grau
+                # (cerca de 0,1 mm) para o retângulo existir
+                folga = 1e-9
+                x0, x1 = min(xs), max(xs)
+                y0, y1 = min(ys), max(ys)
+                if x1 - x0 < folga:
+                    x0, x1 = x0 - folga, x1 + folga
+                if y1 - y0 < folga:
+                    y0, y1 = y0 - folga, y1 + folga
+                extent = [x0, y0, x1, y1]
         proveniencia = {
             "ferramenta": f.nome, "versao": f.versao, "parametros": parametros,
             "entradas": [{"parametro": n, "item_id": e["item_id"], "versao": e["versao"], "sha256": e["sha256"]}

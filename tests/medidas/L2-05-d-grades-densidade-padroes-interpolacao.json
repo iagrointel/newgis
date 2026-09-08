@@ -1,0 +1,94 @@
+{
+  "centro_medio_elipse": {
+    "distancia_padrao_m": 1544.9923410825304,
+    "eixo_maior_m": 1192.482464438659,
+    "eixo_menor_m": 982.3374705313747,
+    "n": 60,
+    "rotacao_graus": 128.72102044369032
+  },
+  "contorno": {
+    "arquivo": "GeoPackage relido pelo OGR do GDAL",
+    "geometrias_validas_no_ogr": 14,
+    "intervalo": 50.0,
+    "isolinhas": 14
+  },
+  "densidade_linhas": {
+    "celulas": 206,
+    "comprimento_utm_m": 6387.520680733802,
+    "integral": 6389.582478391498
+  },
+  "densidade_pontos": {
+    "carga_1min": 5.64,
+    "celulas": 474,
+    "erro_relativo": 0.00010995306844196288,
+    "integral": 59.99340281589348,
+    "medido_em": "2026-09-08T01:18:17+00:00",
+    "pontos": 60,
+    "ram_livre_gb": 6.35
+  },
+  "ferramentas_registradas": [
+    "centro_medio",
+    "contorno",
+    "densidade_kernel",
+    "hot_spot",
+    "interpolacao_idw",
+    "moran_global",
+    "tesselacao",
+    "vizinho_mais_proximo_medio"
+  ],
+  "hot_spot_gi_estrela": {
+    "maior_diferenca_z_contra_esda": 8.881784197001252e-16,
+    "n": 60,
+    "quentes_99": 12,
+    "raio_m": 600.0
+  },
+  "idw_exato_nas_amostras": {
+    "amostras": 60,
+    "iguais": 60
+  },
+  "interpolacao_idw": {
+    "celulas": 240,
+    "faixa_amostras": [
+      92.0,
+      519.0
+    ],
+    "faixa_saida": [
+      94.16635035341125,
+      493.5404250780836
+    ],
+    "maior_diferenca": 0.0
+  },
+  "moran_global": {
+    "i": 0.8146841006299248,
+    "i_esda": 0.8146841006299245,
+    "pares": 232.0,
+    "z": 9.345941686867633,
+    "z_esda": 9.34594168686763
+  },
+  "tesselacao_h3_nivel9": {
+    "celulas": 169
+  },
+  "tesselacao_hexagonal_250m": {
+    "area_da_formula_m2": 54126.58773652742,
+    "area_mediana_m2": 54126.587736525835,
+    "celulas": 380
+  },
+  "tesselacao_quadrada_500m": {
+    "area_da_entrada_m2": 18104195.663722705,
+    "area_uniao_m2": 18104195.663725324,
+    "celulas": 90
+  },
+  "tesselacao_recortada": {
+    "area_fora_da_area_m2": 413.5735494026821,
+    "area_total_m2": 18104195.66372282,
+    "celulas": 380,
+    "fracao_fora": 2.2844072008755438e-05
+  },
+  "vizinho_mais_proximo_medio": {
+    "area_m2": 18104195.663722705,
+    "n": 60,
+    "p": 0.32357052645898865,
+    "razao": 0.9333844880724695,
+    "z": -0.9871471085644594
+  }
+}
