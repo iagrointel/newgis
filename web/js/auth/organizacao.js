@@ -216,6 +216,7 @@ document.getElementById('logo-remover').addEventListener('click', async () => {
    senha_configurada: bool); "host" vazio apaga o override do inquilino (volta à instalação/caminho manual). */
 
 async function carregarSmtp() {
+  carregarLdap();  // item UX-17: seção do diretório carrega em paralelo (privilégio próprio: org.integracoes)
   const r = await obter('/api/org/smtp');
   if (r.status !== 200) { document.getElementById('aviso').erro(`${t('smtp.erro_carregar')}: ${mensagemDe(r)}`); return; }
   smtpAtual = r.json;
@@ -263,3 +264,151 @@ document.getElementById('smtp-testar').addEventListener('click', async () => {
   if (r.status !== 200) { aviso.erro(`${t('smtp.testar_falhou')}: ${mensagemDe(r)}`); return; }
   aviso.ok(t('smtp.testar_ok', { destinatario: r.json.destinatario }));
 });
+
+
+/* ---------------------------------------------------------------- Diretório LDAP (item UX-17-login-sem-controle):
+   controles em tela para PUT /api/org/ldap (configuração, corpo sempre completo) e POST /api/org/ldap/importar
+   (grupo → usuários desabilitados). Estados do sistema de design: carregando, erro (com "tentar de novo" e
+   referência), negado (403: privilégio org.integracoes é separado do org.configurar desta tela), vazio (nenhum
+   provedor ainda) e conteúdo. A senha da conta de serviço nunca volta na resposta (só tem_bind_senha). */
+let ldapAtual = null;
+let ldapOuvintesLigados = false; // os dois formulários são remontados a cada gravação; o ouvinte liga uma vez
+const PERFIS_LDAP = ['admin', 'editor', 'visualizador', 'campo'];
+
+function opcoesPerfilLdap(comNenhum) {
+  const base = PERFIS_LDAP.map((p) => ({ valor: p, rotulo: t(`perfil.${p}`) }));
+  return comNenhum ? [{ valor: '', rotulo: t('ldap.perfil_nenhum') }, ...base] : base;
+}
+
+function mapaParaTexto(mapa) {
+  return Object.entries(mapa || {}).map(([g, p]) => `${g} = ${p}`).join('\n');
+}
+
+function textoParaMapa(texto) {
+  const mapa = {};
+  const linhas = String(texto || '').split('\n');
+  for (let i = 0; i < linhas.length; i++) {
+    const li = linhas[i].trim();
+    if (!li) continue;
+    const m = li.match(/^(.+?)\s*=\s*([a-z]+)$/);
+    if (!m || !PERFIS_LDAP.includes(m[2])) return { erro: i + 1 };
+    mapa[m[1].trim()] = m[2];
+  }
+  return { mapa };
+}
+
+async function carregarLdap() {
+  const estado = document.getElementById('ldap-estado');
+  const form = document.getElementById('form-ldap');
+  const resumo = document.getElementById('ldap-resumo');
+  estado.hidden = false;
+  form.hidden = true;
+  resumo.hidden = true;
+  estado.carregando();
+  const r = await obter('/api/org/ldap');
+  if (r.status === 403) { estado.negado(t('ldap.negado')); mostrarImportar(false); return; }
+  if (r.status !== 200) {
+    estado.mostrar({ tipo: 'erro', titulo: t('ldap.erro_carregar'), texto: mensagemDe(r), ref: r.json?.req_id,
+                     acoes: [{ id: 'tentar', rotulo: t('estado.tentar_de_novo') }] });
+    estado.addEventListener('acao', (e) => { if (e.detail?.id === 'tentar') carregarLdap(); }, { once: true });
+    mostrarImportar(false);
+    return;
+  }
+  ldapAtual = r.json; // null = nenhum provedor ainda (estado vazio, com o formulário para preencher)
+  estado.hidden = true;
+  estado.limpar();
+  montarLdap();
+}
+
+function mostrarImportar(visivel) {
+  for (const id of ['t-ldap-importar', 'ldap-importar-ajuda', 'form-ldap-importar']) document.getElementById(id).hidden = !visivel;
+}
+
+function montarLdap() {
+  const s = ldapAtual;
+  const resumo = document.getElementById('ldap-resumo');
+  resumo.hidden = false;
+  resumo.id = 'ldap-resumo';
+  if (!s) {
+    resumo.textContent = t('ldap.nao_configurado');
+    resumo.dataset.estado = 'vazio';
+  } else {
+    resumo.textContent = t('ldap.configurado', { url: s.url || '—', base_dn: s.base_dn || '—', estado: t(s.habilitado ? 'ldap.habilitado' : 'ldap.desabilitado') });
+    resumo.dataset.estado = s.habilitado ? 'habilitado' : 'desabilitado';
+  }
+  const f = document.getElementById('form-ldap');
+  f.hidden = false;
+  f.campos = [
+    { nome: 'habilitado', rotulo: t('ldap.campo_habilitado'), tipo: 'caixa', padrao: s ? s.habilitado : false },
+    { nome: 'url', rotulo: t('ldap.url'), tipo: 'texto', padrao: s?.url || '', ajuda: t('ldap.url_ajuda'), atributos: { maxlength: 250, placeholder: 'ldaps://diretorio.exemplo:636' } },
+    { nome: 'base_dn', rotulo: t('ldap.base_dn'), tipo: 'texto', padrao: s?.base_dn || '', atributos: { maxlength: 250, placeholder: 'dc=exemplo,dc=local' } },
+    { nome: 'start_tls', rotulo: t('ldap.start_tls'), tipo: 'caixa', padrao: s ? s.start_tls : true },
+    { nome: 'bind_dn', rotulo: t('ldap.bind_dn'), tipo: 'texto', padrao: s?.bind_dn || '', ajuda: t('ldap.bind_dn_ajuda'), atributos: { maxlength: 250, autocomplete: 'off' } },
+    { nome: 'bind_senha', rotulo: t(s?.tem_bind_senha ? 'ldap.bind_senha_trocar' : 'ldap.bind_senha'), tipo: 'senha', padrao: '', ajuda: s?.tem_bind_senha ? t('ldap.bind_senha_ajuda') : '', atributos: { maxlength: 250, autocomplete: 'new-password' } },
+    { nome: 'filtro_usuario', rotulo: t('ldap.filtro_usuario'), tipo: 'texto', obrigatorio: true, padrao: s?.filtro_usuario || '(uid={login})', ajuda: t('ldap.filtro_ajuda'), atributos: { maxlength: 250 } },
+    { nome: 'atributo_grupos', rotulo: t('ldap.atributo_grupos'), tipo: 'texto', obrigatorio: true, padrao: s?.atributo_grupos || 'memberOf', atributos: { maxlength: 64 } },
+    { nome: 'perfil_padrao', rotulo: t('ldap.perfil_padrao'), tipo: 'select', padrao: s?.perfil_padrao || '', opcoes: opcoesPerfilLdap(true) },
+    { nome: 'mapa', rotulo: t('ldap.mapa'), tipo: 'area', padrao: mapaParaTexto(s?.mapa_grupo_perfil), ajuda: t('ldap.mapa_ajuda'), atributos: { rows: 4, maxlength: 4000 } },
+  ];
+  f.botoes = [{ id: 'salvar', rotulo: t('acao.salvar'), tipo: 'submit' }];
+  montarImportar();
+  if (ldapOuvintesLigados) return;
+  ldapOuvintesLigados = true;
+  f.addEventListener('enviar', async (e) => {
+    const v = e.detail.valores;
+    f.limparErros();
+    const mapa = textoParaMapa(v.mapa);
+    if (mapa.erro) { f.erro('mapa', t('ldap.mapa_invalido', { n: mapa.erro })); return; }
+    f.ocupado = true;
+    const corpo = {
+      habilitado: !!v.habilitado, url: v.url || null, base_dn: v.base_dn || null, start_tls: !!v.start_tls,
+      bind_dn: v.bind_dn || null, filtro_usuario: v.filtro_usuario, atributo_grupos: v.atributo_grupos,
+      perfil_padrao: v.perfil_padrao || null, mapa_grupo_perfil: mapa.mapa,
+    };
+    if (v.bind_senha) corpo.bind_senha = v.bind_senha; // vazio: preserva a cifra guardada
+    const r = await alterar('/api/org/ldap', corpo);
+    f.ocupado = false;
+    if (r.status === 403) { f.mensagem(t('ldap.negado'), 'erro'); return; }
+    if (r.status === 422 && r.json?.detalhe?.campo) {
+      const campo = r.json.detalhe.campo === 'mapa_grupo_perfil' ? 'mapa' : r.json.detalhe.campo;
+      f.erro(campo, r.json.mensagem);
+      return;
+    }
+    if (r.status !== 200) { f.mensagem(mensagemDe(r), 'erro'); return; }
+    ldapAtual = r.json;
+    document.getElementById('aviso').ok(t('ldap.salvo'));
+    montarLdap();
+  });
+  ligarImportar();
+}
+
+function montarImportar() {
+  mostrarImportar(true);
+  const f = document.getElementById('form-ldap-importar');
+  f.campos = [
+    { nome: 'grupo_dn', rotulo: t('ldap.grupo_dn'), tipo: 'texto', obrigatorio: true, padrao: '', atributos: { maxlength: 250, placeholder: 'cn=equipe,ou=grupos,dc=exemplo,dc=local' } },
+    { nome: 'atributo_membro', rotulo: t('ldap.atributo_membro'), tipo: 'texto', obrigatorio: true, padrao: 'member', atributos: { maxlength: 64 } },
+    { nome: 'atributo_login', rotulo: t('ldap.atributo_login'), tipo: 'texto', obrigatorio: true, padrao: 'uid', atributos: { maxlength: 64 } },
+    { nome: 'perfil', rotulo: t('ldap.perfil'), tipo: 'select', padrao: 'visualizador', opcoes: opcoesPerfilLdap(false) },
+  ];
+  f.botoes = [{ id: 'importar', rotulo: t('ldap.importar'), tipo: 'submit' }];
+}
+
+function ligarImportar() {
+  const f = document.getElementById('form-ldap-importar');
+  f.addEventListener('enviar', async (e) => {
+    const v = e.detail.valores;
+    f.limparErros();
+    f.ocupado = true;
+    const r = await enviar('/api/org/ldap/importar', { grupo_dn: v.grupo_dn, atributo_membro: v.atributo_membro, atributo_login: v.atributo_login, perfil: v.perfil });
+    f.ocupado = false;
+    if (r.status === 403) { f.mensagem(t('ldap.importar_negado'), 'erro'); return; }
+    if (r.status === 409) { f.mensagem(t('ldap.importar_sem_configuracao'), 'erro'); return; }
+    if (r.status === 503) { f.mensagem(`${t('ldap.importar_indisponivel')} (${mensagemDe(r)})`, 'erro'); return; }
+    if (r.status === 422 && r.json?.detalhe?.campo) { f.erro(r.json.detalhe.campo, r.json.mensagem); return; }
+    if (r.status !== 200) { f.mensagem(mensagemDe(r), 'erro'); return; }
+    const j = r.json;
+    f.mensagem(t('ldap.importar_ok', { encontrados: j.encontrados, criados: j.criados, ja_existentes: j.ja_existentes, recusados: j.recusados }), 'ok');
+    document.getElementById('aviso').ok(t('ldap.importar_ok', { encontrados: j.encontrados, criados: j.criados, ja_existentes: j.ja_existentes, recusados: j.recusados }));
+  });
+}

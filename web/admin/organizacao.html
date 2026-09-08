@@ -57,6 +57,16 @@
         <button type="button" id="smtp-testar" class="pequeno" data-i18n="smtp.testar">Testar envio</button>
       </div>
     </section>
+    <section class="cartao" id="ldap" aria-labelledby="t-ldap">
+      <h2 id="t-ldap" data-i18n="ldap.titulo">Diretório (LDAP / Active Directory)</h2>
+      <p class="fraco" data-i18n="ldap.ajuda">quem está no diretório da organização entra com o usuário e a senha da rede; o perfil vem do grupo (mapa abaixo) ou do perfil padrão</p>
+      <plat-estado id="ldap-estado" hidden></plat-estado>
+      <p class="fraco" id="ldap-resumo" hidden></p>
+      <plat-formulario id="form-ldap" hidden></plat-formulario>
+      <h3 id="t-ldap-importar" data-i18n="ldap.importar_titulo" hidden>Importar um grupo do diretório</h3>
+      <p class="fraco" id="ldap-importar-ajuda" data-i18n="ldap.importar_ajuda" hidden>cria os membros do grupo como usuários desabilitados; cada um é ativado no primeiro login pela rede</p>
+      <plat-formulario id="form-ldap-importar" aria-labelledby="t-ldap-importar" hidden></plat-formulario>
+    </section>
   </main>
 </div>
 <script type="module" src="/static/js/auth/organizacao.js"></script>

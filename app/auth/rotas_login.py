@@ -104,8 +104,18 @@ def provedores(inquilino: str):
         t = cur.fetchone()
     if t is None:
         raise ErroAPI(404, "inquilino_inexistente", "inquilino inexistente")
-    # provedores externos nascem no L0-08; a lista vazia é o estado real, não um dado fixo
-    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": [], "login_local": True}
+    # provedores externos nascem no L0-08: LDAP (L0-08-d) entra na lista quando o inquilino o habilitou — é o que
+    # a tela /entrar usa para oferecer "entrar com o diretório" (item UX-17); a lista vazia é o estado real
+    lista = []
+    with db.db() as cur:
+        cur.execute("SELECT habilitado FROM plat.provedor_ldap_de(%s)", (t["slug"],))
+        ldap = cur.fetchone()
+    if ldap is not None and ldap["habilitado"]:
+        # `modo: senha` = mesmo formulário (usuário e senha) enviado a `endpoint`; provedores de redirecionamento
+        # (OIDC/SAML) virão com `url`, que a tela já trata
+        lista.append({"tipo": "ldap", "nome": "diretório da organização (LDAP)", "modo": "senha",
+                      "endpoint": "/api/login/ldap"})
+    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": lista, "login_local": True}
 
 
 @router.post(
