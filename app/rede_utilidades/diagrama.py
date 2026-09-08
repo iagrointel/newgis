@@ -214,7 +214,7 @@ def elementos_da_subrede(cur, rede_id: str, subrede_id: str) -> list[dict]:
 
 
 def elementos_da_selecao(cur, rede_id: str, feicoes: list[str]) -> list[dict]:
-    """Uma seleção de feições (ponto e/ou linha): de um ponto entram TODOS os terminais dele, de uma linha
+    """Uma seleção de feições (ponto e/ou linha): de um ponto entram os terminais todos, de uma linha
     entra a aresta. Feição que não é desta rede simplesmente não entra — não se inventa nó."""
     if not feicoes:
         return []
@@ -1129,7 +1129,7 @@ def para_svg(doc: dict) -> str:
         f'viewBox="0 0 {larg * escala:.1f} {alt * escala:.1f}" role="img" '
         f'aria-label="{_texto_seguro(doc["nome"])}">',
         f'<title>{_texto_seguro(doc["nome"])}</title>',
-        f'<rect width="100%" height="100%" fill="#ffffff"/>',
+        '<rect width="100%" height="100%" fill="#ffffff"/>',
     ]
 
     def _px(no_x, no_y):

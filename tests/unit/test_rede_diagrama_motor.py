@@ -71,7 +71,7 @@ def _alimentador(ramos: int = 8, por_ramo: int = 12) -> dict:
 def test_reduzir_juncao_reduz_e_preserva_conectividade():
     """Cláusula do portão: a regra reduz o número de nós (medido) sem mudar a conectividade."""
     g = _cadeia(30)
-    antes_nos, antes_componentes = len(g["nos"]), diagrama.componentes(g)
+    antes_componentes = diagrama.componentes(g)
     relatorio = diagrama.aplicar_regras(g, [{"regra": "reduzir_juncao_de_passagem"}])
     assert antes_componentes == 1
     assert relatorio[0]["nos_removidos"] == 28, relatorio
