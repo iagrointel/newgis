@@ -230,3 +230,35 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## motor multicritério (L3-01-a/b; ADR 0016, decisões A1/A3/A7 do L3L6_CONCEITO). Os tetos de unidade e de
+
+| nome | valor | explicação |
+|---|---|---|
+| `AMC_LADO_M_MIN` | `10.0` | abaixo disso a grade deixa de ser unidade de análise e vira pixel |
+| `AMC_LADO_M_MAX` | `100000.0` | 100 km: célula maior que isto não cabe em nenhuma zona UTM sem distorcer |
+| `AMC_AREA_ESTUDO_KM2_MAX` | `2000000.0` | ~1/4 do Brasil: acima disso a zona UTM única do centróide perde sentido |
+| `AMC_UNIDADES_MAX` | `1000000` | unidades por conjunto (grade ou feições) |
+| `AMC_FEICOES_INLINE_MAX` | `20000` | feições por envio síncrono de conjunto do tipo 'feicoes' |
+| `AMC_MODELOS_POR_INQUILINO` | `500` | modelos vivos (apagado_em IS NULL) por inquilino |
+| `AMC_CONJUNTOS_POR_INQUILINO` | `200` | conjuntos de unidades por inquilino |
+| `AMC_VERSOES_POR_MODELO` | `500` | versões de um modelo (cada edição cria uma; imutáveis, nunca apagadas) |
+| `AMC_UNIDADES_PAGINA_MAX` | `5000` | unidades por página em GET /api/amc/conjuntos/{id}/unidades |
+| `AMC_RESULTADOS_PAGINA_MAX` | `5000` | linhas por página em GET /api/amc/execucoes/{id}/resultados |
+
+## localização semelhante (L3-17-similaridade): pedido é síncrono (sem job), então o teto é o que a
+
+| nome | valor | explicação |
+|---|---|---|
+| `SIMILARIDADE_UNIDADES_MAX` | `20000` | — |
+| `SIMILARIDADE_CAMPOS_MAX` | `50` | — |
+| `SIMILARIDADE_REFERENCIAS_MAX` | `500` | — |
+
+## critérios sobre a própria feição (L3-06-criterios-de-feicao): a avaliação é SÍNCRONA e roda na tela,
+
+| nome | valor | explicação |
+|---|---|---|
+| `AMC_CRITERIOS_FEICAO_MAX` | `5000` | feições por avaliação síncrona (na tela) |
+| `AMC_CRITERIOS_POR_AVALIACAO` | `20` | critérios por avaliação (o painel compara par a par: 20 = 400 células) |
+| `AMC_CRITERIO_RAIO_M_MAX` | `100000.0` | 100 km: raio maior que isto não vale numa única zona UTM |
+| `AMC_CRITERIO_CAMADA_PONTOS_MAX` | `200000` | pontos por camada auxiliar num pedido (raio, contenção, distância) |

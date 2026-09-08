@@ -3,6 +3,30 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L3-06-criterios-de-feicao: critérios sobre a própria feição)
+
+Quando a unidade de análise é a feição do usuário (imóvel, loja, lote), o critério deixa de ser o que a grade
+mediu e passa a ser uma pergunta feita à feição. Entraram quatro: atributo numérico da própria feição,
+contagem de pontos de outra camada em raio, contagem dentro e distância ao ponto mais próximo. A influência é
+declarada pelo usuário (positiva, inversa, ideal — nota máxima no alvo, com queda simétrica), e o filtro de
+inclusão por faixa tira a feição da comparação com o estado `filtrada`, sem posição e sem nota — filtro não é
+veto, e valor ausente nunca filtra. `app/amc/criterios_feicao.py` só monta: quem mede é `app/amc/vetorial.py`,
+quem transforma é `app/amc/transformacoes.py` e quem combina é `app/amc/combinacao.py`.
+
+Rotas `POST /api/amc/criterios-feicao` (ranque, histograma por critério, matriz de correlação par a par) e
+`POST /api/amc/criterios-feicao/exportar?formato=csv`, sem estado e sem tabela própria, e a tela
+`/amc/criterios-feicao` com o histograma em SVG e a matriz, sem biblioteca de gráfico.
+
+Medido sobre dado aberto que passou a viver no repositório (1.000 centróides de edificação e 212 lugares do
+OpenStreetMap, ODbL 1.0, extraídos do mapa-base local): 1.000 feições × 4 critérios em 131,7 ms, ranque
+1..1.000 sem buraco, e a contagem em raio conferida contra `ST_DWithin` do PostGIS feição a feição, com zero
+divergência. Números e comandos em `tests/medidas/L3-06-criterios-de-feicao.json`.
+
+Três achados de junção consertados no caminho, todos escondidos porque o `docs/openapi.json` comitado ainda
+não trazia `/api/amc`: nenhuma rota do motor multicritério tinha entrada em `tests/api/eventos_esperados.py`;
+a preparação da varredura cruzada tinha dois `return`, e o primeiro deixava todo o bloco do L3-01 morto; e a
+junção de `app/schema_ambiente.py` tinha perdido a classe `CursorSchemaAmbiente` e duplicado `copy_expert`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
