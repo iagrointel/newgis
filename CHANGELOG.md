@@ -36,6 +36,19 @@ próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo:
 segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+
+## turno 3, setembro de 2026 (item L0-04-k-rota-formatos-encoberta: rota de formatos encoberta pela rota com id)
+
+`GET /api/importacoes/formatos` estava declarada depois de `GET /api/importacoes/{id}` e era inalcançável: o
+roteador casava a rota parametrizada primeiro, lia `formatos` como identificador e respondia 404
+`importacao_inexistente`. A rota fixa passou para antes da parametrizada e voltou a responder 200 com a
+tabela de formatos aceitos. Na mesma passagem ela passou a exigir autenticação sem privilégio
+(`autenticado(escopo_token="catalogo:ler")`), que é o que já declarava no OpenAPI — alcançável e anônima ela
+reprovava a varredura cruzada de inquilino. `tests/unit/test_rotas_sombreamento.py` varre a aplicação inteira
+(236 rotas) e reprova qualquer rota de segmento fixo declarada depois de uma parametrizada que a cobre; a
+varredura achata os nós de router incluído, sem o que só se enxergam 3 rotas no FastAPI 0.138. Nenhum outro
+par encoberto na app. ADR `docs/adr/20260908T0108-ordem-de-rota-fixa-e-parametrizada.md`.
+
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
 Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,

@@ -1,0 +1,33 @@
+{
+ "item": "L0-04-k-rota-formatos-encoberta",
+ "medidas": {
+  "formatos_status": {
+   "valor": 200,
+   "unidade": "http",
+   "comando": "tests/api/ingestao/test_formatos_rota.py::test_formatos_responde_200_com_a_lista"
+  },
+  "formatos_na_lista": {
+   "valor": 4,
+   "unidade": "formatos",
+   "comando": "tests/api/ingestao/test_formatos_rota.py::test_formatos_responde_200_com_a_lista"
+  },
+  "rotas_varridas": {
+   "valor": 236,
+   "unidade": "rotas",
+   "comando": "tests/unit/test_rotas_sombreamento.py::test_varredura_nao_acha_rota_fixa_encoberta_em_toda_a_app"
+  },
+  "pares_encobertos_na_app": {
+   "valor": 0,
+   "unidade": "pares",
+   "comando": "tests/unit/test_rotas_sombreamento.py::test_varredura_nao_acha_rota_fixa_encoberta_em_toda_a_app"
+  },
+  "pares_encobertos_com_a_ordem_invertida": {
+   "valor": 1,
+   "unidade": "pares",
+   "comando": "ordem revertida a mao: pares_encobertos() devolveu [('GET', '/api/importacoes/{id}', '/api/importacoes/formatos')]"
+  }
+ },
+ "nao_medido": {
+  "plat_camada_importar_sem_formato": "o comando `plat camada importar` nao existe no repositorio (scripts/plat so tem `segredo rotacionar`; nenhuma ocorrencia de --formato em toda a arvore). A clausula nao se aplica nesta base."
+ }
+}
