@@ -5,7 +5,6 @@
   "DELETE /api/arquivos/{sha256}",
   "DELETE /api/multiescala/conjuntos/{id}",
   "DELETE /api/multiescala/fatores/{id}",
-  "DELETE /api/plataforma/inquilinos/{id}",
   "PATCH /api/anotacoes/{id}",
   "POST /api/arquivos",
   "POST /api/isocrona",
@@ -21,9 +20,6 @@
   "POST /api/multiescala/fatores",
   "POST /api/multiescala/fatores/{id}/amostras",
   "POST /api/org/ldap/importar",
-  "POST /api/plataforma/inquilinos",
-  "POST /api/plataforma/inquilinos/{id}/reativar",
-  "POST /api/plataforma/inquilinos/{id}/suspender",
   "POST /api/rota",
   "PUT /api/org/ldap",
   "PUT /api/papeis/{id}"
