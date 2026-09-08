@@ -3,6 +3,18 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## codex cx1, setembro de 2026 (item UX-12-categorias-sem-controle: as rotas de escrita de categorias com controle na tela /admin/categorias)
+
+Fecha as lacunas "PUT /api/categorias" e "POST /api/categorias/importar sem controle" do mapa de cobertura (UX-00):
+tela nova `/admin/categorias` (menu, privilégio `conteudo.categorias`) sobre a cadeia UX-00..05 — editor da
+árvore de 3 níveis (nome, nova raiz/filha, subir/descer, remover bloqueado quando há itens) que grava a árvore
+inteira com ids preservados, e "Importar modelo" (ISO 19115 / INSPIRE, idempotente). Estados do sistema de design:
+`<plat-estado>` da lista (carregando, vazio com "importar modelo", erro com "tentar de novo", negado) e do
+salvar/importar, onde o erro da API aparece nomeado — 409 categoria_em_uso com os caminhos e itens, 422
+limite_categorias com "N de M", 403 negado (refutação: nunca o número cru). `docs/COBERTURA_UI.md` e
+`docs/cobertura_ui_lacunas.json` regenerados (41 → 36). e2e com axe (0 sérias), capturas 390/1280 e restauração da
+árvore original ao fim em `tests/e2e/test_categorias_ux12.py`; textos em pt-BR/en/es.
+
 ## turno 8, setembro de 2026 (item UX-04-tela-mapa-polimento: chrome único do visualizador; ramos de painel juntados)
 
 Trilha de interface. Juntados no mesmo tronco os ramos de painel do mapa (`wt/l201mapa`, `wt/il201gtabel`,
