@@ -1,0 +1,22 @@
+{
+ "item": "L0-07-f-console-plataforma",
+ "medidas": {
+  "rotas_plataforma_404_nao_superadmin": {
+   "valor": 10,
+   "unidade": "rotas",
+   "comando": "rotas /api/plataforma do docs/openapi.json chamadas com sessão comum, token, anônimo e cookie forjado"
+  },
+  "pagina_pronta_ms_plataforma": {
+   "valor": 152.0,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)"
+  },
+  "e2e_demo3_criar_suspender_503_reativar": {
+   "valor": 1,
+   "unidade": "fluxo",
+   "comando": "tests/e2e/test_plataforma.py: criar demo3 pela tela, admin entra, suspender com mensagem, 503 no navegador, reativar"
+  }
+ },
+ "gerado_em": "2026-09-08T01:22:32Z",
+ "git_sha": "9ac92cde4a8b"
+}
