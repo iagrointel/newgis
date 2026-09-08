@@ -15,3 +15,23 @@ plat-filtro label { display: grid; gap: .35rem; }
   padding: .15rem .35rem; background: var(--cor-acento, #1f6f8b); color: var(--cor-fundo, #fff);
 }
 .plat-widgets[data-edicao] > [data-no-id]:focus { outline-style: solid; }
+/* item L5-07: dado nos widgets (vista) */
+plat-mapa svg { display: block; width: 100%; background: var(--cor-fundo-secundario, #f3f5f6); border: 1px solid var(--cor-borda, #ccd3d4); }
+plat-mapa .feicao { fill: var(--cor-acento, #1f6f8b); fill-opacity: .55; stroke: var(--cor-acento, #1f6f8b); stroke-width: 1.5; cursor: pointer; }
+plat-mapa polyline.feicao { fill: none; stroke-width: 2.5; }
+plat-mapa .feicao.selecionada { fill: var(--cor-atencao, #d98a2b); stroke: var(--cor-atencao, #d98a2b); fill-opacity: .85; }
+plat-mapa .feicao.destaque { stroke: var(--cor-erro, #b42318); stroke-width: 4; }
+plat-mapa .feicao:focus { outline: none; stroke-width: 4; }
+plat-mapa .mapa-barra { font-size: .8rem; color: var(--cor-texto-fraco, #666); padding: .25rem 0; }
+plat-mapa dialog.mapa-popup { position: relative; margin: .25rem 0; border: 1px solid var(--cor-borda, #ccd3d4); }
+plat-mapa dialog.mapa-popup dl { display: grid; grid-template-columns: max-content 1fr; gap: .2rem .6rem; margin: 0 0 .5rem; }
+plat-tabela tr[aria-selected="true"] td { background: var(--cor-atencao-fundo, #fff3e0); font-weight: 600; }
+plat-tabela caption { text-align: left; font-size: .8rem; color: var(--cor-texto-fraco, #666); padding: .25rem 0; }
+plat-grafico { display: block; }
+plat-grafico .grafico-titulo { margin: 0 0 .25rem; font-weight: 600; }
+plat-grafico .barra rect { fill: var(--cor-acento, #1f6f8b); cursor: pointer; }
+plat-grafico .barra.selecionada rect { fill: var(--cor-atencao, #d98a2b); }
+plat-grafico .barra text { font-size: 10px; fill: var(--cor-texto, #222); }
+[data-piscando] { outline: 3px solid var(--cor-erro, #b42318); outline-offset: 2px; }
+.plat-avisos p { color: var(--cor-atencao, #d98a2b); font-size: .85rem; margin: .25rem 0; }
+.plat-avisos p[data-tipo="ciclo_cortado"]::before { content: 'ciclo cortado: '; font-weight: 600; }
