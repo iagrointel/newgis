@@ -472,12 +472,22 @@ def _porta_viva(porta: int) -> bool:
         return s.connect_ex(("127.0.0.1", porta)) == 0
 
 
+def _porta_livre() -> int:
+    """Porta efêmera pedida ao próprio sistema. A porta é recurso PARTILHADO desta máquina (dezenas de trilhas
+    correm ao mesmo tempo): número fixo no teste faz duas rodadas disputarem o mesmo soquete e, pior, faz uma
+    delas medir o servidor da outra. O soquete é fechado antes de o nginx subir — a janela de corrida é de
+    milissegundos e é a mesma que qualquer alocador de porta tem."""
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return int(s.getsockname()[1])
+
+
 @pytest.mark.skipif(not Path("/usr/sbin/nginx").exists(), reason="nginx não instalado nesta máquina")
 def test_e_range_responde_206_por_https_atras_do_nginx(conexao_plat_app, tmp_path):
-    """Sobe um nginx PRÓPRIO (prefixo temporário, porta 8162, certificado autoassinado) com o MESMO bloco de
-    deploy/nginx.conf — `slice 1m`, cache das fatias, auth_request contra a API — e mede: GET com `Range` no
-    endpoint web do Garage responde 206 com `Content-Range`, e sem token válido responde 403. Não toca o nginx
-    do sistema (regra do turno: quem aplica o bloco em produção é o gerente).
+    """Sobe um nginx PRÓPRIO (prefixo temporário, porta livre pedida ao sistema, certificado autoassinado) com o
+    MESMO bloco de deploy/nginx.conf — `slice 1m`, cache das fatias, auth_request contra a API — e mede: GET
+    com `Range` no endpoint web do Garage responde 206 com `Content-Range`, e sem token válido responde 403.
+    Não toca o nginx do sistema (regra do turno: quem aplica o bloco em produção é o gerente).
 
     A API tem de estar ouvindo (PLAT_TESTE_API_PORTA, padrão 8161: `venv/bin/uvicorn app.main:app --port 8161`),
     porque a autorização do caminho é uma subrequisição HTTP de verdade."""
@@ -510,6 +520,7 @@ def test_e_range_responde_206_por_https_atras_do_nginx(conexao_plat_app, tmp_pat
     assert rt.status_code == 201, rt.text
     token = rt.json()
 
+    porta_nginx = _porta_livre()
     prefixo = tmp_path / "nginx"
     (prefixo / "logs").mkdir(parents=True)
     (prefixo / "cache").mkdir()
@@ -539,7 +550,7 @@ http {{
   scgi_temp_path {prefixo}/scgi_temp;
   proxy_cache_path {prefixo}/cache levels=1:2 keys_zone=plat_cog_teste:4m max_size=64m inactive=10m use_temp_path=off;
   server {{
-    listen 8162 ssl;
+    listen {porta_nginx} ssl;
     server_name localhost;
     ssl_certificate {prefixo}/c.pem;
     ssl_certificate_key {prefixo}/k.pem;
@@ -561,12 +572,12 @@ http {{
     ctx_ssl.verify_mode = ssl.CERT_NONE
     try:
         for _ in range(50):
-            if _porta_viva(8162):
+            if _porta_viva(porta_nginx):
                 break
             time.sleep(0.1)
-        assert _porta_viva(8162), "o nginx de teste não subiu na 8162"
+        assert _porta_viva(porta_nginx), f"o nginx de teste não subiu na {porta_nginx}"
         caminho = objetos_raster.caminho_web(token["token"], gravado["chave"])
-        url = f"https://127.0.0.1:8162{caminho}"
+        url = f"https://127.0.0.1:{porta_nginx}{caminho}"
 
         pedido = urllib.request.Request(url, headers={"Range": "bytes=1048576-1048591"})
         with urllib.request.urlopen(pedido, context=ctx_ssl, timeout=30) as r:
@@ -581,7 +592,8 @@ http {{
 
         # sem token válido no caminho, o auth_request barra antes de o Garage ver a requisição
         ruim = urllib.request.Request(
-            f"https://127.0.0.1:8162/svc/plat_{'z' * 40}/cog/{gravado['chave']}", headers={"Range": "bytes=0-15"}
+            f"https://127.0.0.1:{porta_nginx}/svc/plat_{'z' * 40}/cog/{gravado['chave']}",
+            headers={"Range": "bytes=0-15"},
         )
         try:
             with urllib.request.urlopen(ruim, context=ctx_ssl, timeout=30):
