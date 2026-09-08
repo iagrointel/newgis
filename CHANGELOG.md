@@ -1129,3 +1129,19 @@ escondida nem contornada.
 | sha | mensagem |
 |---|---|
 | (este) | Login federado OpenID Connect por inquilino (item L0-08-a-oidc) |
+
+## turno 8, setembro de 2026 (item L0-08-e-mapeamento-provisionamento: regras de provisionamento por provedor de login, tela Logins)
+
+Um laço só de provisionamento para LDAP, OIDC e SAML (`app/auth/provisionamento.py`), chamado depois que o IdP
+confirma a identidade: criação automática ou só por convite prévio (o convite por e-mail do L0-07-d; sem convite
+= 403 `convite_necessario`, "peça convite"), padrões para membro novo (papel, grupos internos, pasta inicial),
+mapa **valor exato** do grupo do IdP → perfil, papel e grupos internos (grupo chamado `administrador` sem regra não
+vira nada), atualização a cada login (opcional), desligamento da conta quando o IdP deixa de mandar grupo mapeado
+(opcional), grupos regidos sincronizados a cada login (entra e sai), e `POST /api/usuarios/{id}/desregistrar`
+(vínculo removido, conta desativada, IdP intacto). Coluna `provisionamento` jsonb nas três tabelas de provedor
+(migração `20260908T0212`), funções SECURITY DEFINER para localizar/regras/desligar/convite. Tela `/admin/logins`
+(`org.integracoes`): lista LDAP/OIDC/SAML com rótulo e ordem dos botões, habilitação, criação e regras; editor de
+regras por linha; tabela de paridade com a Esri 11.4 (New member defaults, group membership) na própria tela e no
+ADR `20260908T0240-provisionamento-federado.md`. Testes: unidade (decisão pura, 500 grupos, 422 por campo),
+integração com Keycloak real (grupos e usuários criados pela API de administração dentro do teste) e e2e da tela
+com captura. Este ramo contém `wt/cx008` (OIDC + SAML) por merge.
