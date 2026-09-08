@@ -291,6 +291,50 @@ Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava 
 - Dois defeitos reais achados pelos testes e corrigidos: `attribution: undefined` fazia o MapLibre
   recusar a fonte inteira em silêncio; repassar `Content-Encoding: gzip` com corpo já descompactado
   entregava tile ilegível ao navegador. Registrados no ADR 20260907T0400.
+## turno 4, setembro de 2026 (item L2-04-servicos-esri-ogc: diretório do FeatureServer, OGC API Features e WFS 2.0)
+
+Construído em volta da operação `query` do FeatureServer (item L2-04-c, `wt/fsquery`, ADR 0018) sem reescrevê-la:
+`app/consulta/rotas_servico.py` (descritor de serviço `.../FeatureServer?f=json` e de camada `.../FeatureServer/0
+?f=json` — `fields`, `geometryType`, `objectIdField`, `fullExtent`), `app/consulta/rotas_ogc_features.py` (OGC API
+Features Part 1: landing, conformance, collections, items com bbox/limit/offset, item único, GeoJSON puro) e
+`app/consulta/rotas_wfs.py` (WFS 2.0 KVP: GetCapabilities validado pelo cliente real `owslib.wfs.WebFeatureService`,
+DescribeFeatureType mínimo, GetFeature em GeoJSON e GML 3.2 simples). `applyEdits`/anexos/`queryRelatedRecords`/
+`relationships` ficam de fora — dependem de L2-03-edicao e L2-10-b, nenhum construído (ADR 0019).
+
+Bateria de 13 ataques (item_id com aspas/comentário SQL/`;`, bbox com sub-select/`pg_sleep()`/função não prevista,
+BBOX do WFS com injeção, `REQUEST` desconhecida, `feature_id` não inteiro, unicode no item_id, cross-tenant nas 3
+raízes): **13/13 recusados com 400/404, nenhum 500**. Dois achados corrigidos no mesmo turno: (1) `item_id::uuid`
+sem validar antes deixava o Postgres levantar exceção sem handler → 500 real, inclusive na `/query` original do
+L2-04-c — corrigido com validação de UUID compartilhada; (2) landing/conformance do OGC API Features respondiam 200
+para item de outro inquilino (sem vazar dado, mas sem checar posse) — corrigido tocando `plat.item` sob RLS antes de
+responder. `docs/PARIDADE.md` e `tests/medidas/L2-04-servicos-esri-ogc.json` têm a tabela cláusula a cláusula.
+
+Fora do turno: QGIS/ArcGIS Pro/AGOL reais carregando o serviço (sem ambiente gráfico nesta máquina, mesma limitação
+já registrada para L2-04-c e para Chrome headless); OGC API Features Part 3 (CQL2), WFS-T; GML validado contra o
+XSD de referência do OGC.
+
+## turno 3, setembro de 2026 (item L2-04-b-featureserver-catalogo-metadados: diretório de serviços Esri por token)
+
+- Diretório de serviços compatível com Esri em `/svc/{token}/rest/...`: `rest/info`, `rest/generateToken`,
+  `rest/services` (pastas do catálogo), `rest/services/{pasta}`, `FeatureServer`, `FeatureServer/{id}`,
+  `FeatureServer/layers`, `FeatureServer/info/itemInfo` e `FeatureServer/info/metadata` (ISO 19139).
+  O token vai no caminho porque é uma URL que se entrega e o cliente navega sozinho a partir dela;
+  a consequência está declarada no ADR `20260907T1955-diretorio-servicos-esri-por-token.md`.
+- O FeatureServer não foi reescrito: `app/consulta/rotas_servico.py` passou a expor
+  `descritor_do_servico`/`descritor_da_camada` e o diretório as chama. O descritor da camada ganhou
+  `indexes` (lidos de `pg_index`), `editFieldsInfo`, `types`/`subtypes`/`typeIdField`, `timeInfo`,
+  `ownershipBasedAccessControlForFeatures` e `domain` por campo. `currentVersion` foi de 11.3 para 11.4.
+- `app/consulta/formato_esri.py`: `f=json|pjson|html` e `callback` (JSONP) num lugar só. `f` desconhecido
+  é 400 e nunca 500; nome de callback fora de identificador simples é recusado, nunca ecoado.
+- `app/consulta/renderizador.py`: estilo MapLibre → `drawingInfo`. Cor constante vira `simple`,
+  `["match", …]` vira `uniqueValue`, `["step", …]` vira `classBreaks`, `layout.text-field` vira
+  `labelingInfo`. Expressão fora desses casos não é aproximada: sai `simple` cinza com o motivo.
+- `app/consulta/cors_servicos.py`: CORS aberto em `/svc`, `/ogc` e `/tiles` — e só. Em `/api` a
+  credencial é o cookie de sessão, e abrir ali seria falsificação de requisição entre sítios legível.
+- O `drawingInfo` lê a relação `estilo_de_camada` (item de tipo `estilo` → camada), declarada pelo
+  `PUT /api/itens/{estilo}/relacoes` que já existia; nada foi acrescentado ao catálogo por causa disto.
+- Fica declarado como ausente, não simulado: `fields[].domain` nulo, `types`/`subtypes`/`relationships`
+  vazios e `capabilities` só `Query` — as linhas L2-10-a, L2-10-b e L2-03-a não estão nesta base.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
