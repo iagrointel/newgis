@@ -161,4 +161,13 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
     # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
     ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
+    # família L2-04 (serviços de camada por item): a escrita Esri/OGC/WFS não tem porta própria — toda
+    # ela chama `app.edicao.servico.aplicar_edicoes`, que registra o MESMO evento de lote, com o campo
+    # `origem` dizendo o protocolo ("api", "ogcfeat", "wfs").
+    ("POST", "/ogc/features/{item_id}/collections/{colecao_id}/items"): ["camadas/editar"],
+    ("PUT", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
+    ("PATCH", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
+    ("DELETE", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): [],  # leitura por POST (protocolo Esri)
+    ("POST", "/wfs/{item_id}"): ["camadas/editar"],  # wfs:Transaction; GetFeature por POST não escreve
 }
