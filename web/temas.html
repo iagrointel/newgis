@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Temas · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/estilo/temas.css">
+</head>
+<body class="tela instrumento temas com-lateral">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <div class="linha-ferramentas">
+      <h1>Temas</h1>
+    </div>
+    <p class="aviso-beta">análise / beta privado</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" aria-labelledby="t-padroes">
+      <h2 id="t-padroes">temas padrão da plataforma</h2>
+      <p class="ajuda">um tema é um conjunto de tokens (cores, tipografia, raio, espaçamento, sombra) com modo
+        claro e/ou escuro. Clique em um tema padrão para começar uma cópia sua na edição, abaixo.</p>
+      <div id="tema-cartoes" class="tema-cartoes"></div>
+    </section>
+
+    <section class="cartao" aria-labelledby="t-inquilino">
+      <h2 id="t-inquilino">tema do inquilino</h2>
+      <p class="ajuda">a marca da organização: todo app publicado herda este tema, e um tema embutido no
+        documento pode sobrepor. Gravar exige o privilégio de configurar a organização.</p>
+      <plat-aviso id="inquilino-aviso"></plat-aviso>
+      <div class="linha-ferramentas">
+        <span id="inquilino-estado" class="ajuda">…</span>
+        <button type="button" id="inquilino-salvar" class="primario">gravar o tema em edição como tema do inquilino</button>
+        <button type="button" id="inquilino-remover">remover o tema do inquilino</button>
+      </div>
+      <div id="inquilino-avisos" class="ajuda"></div>
+    </section>
+
+    <section class="cartao" aria-labelledby="t-edicao">
+      <h2 id="t-edicao">edição</h2>
+      <div class="tema-grade">
+        <div>
+          <h3>tokens</h3>
+          <div class="linha-ferramentas">
+            <select id="editor-modo" aria-label="modo em edição">
+              <option value="claro">modo claro</option>
+              <option value="escuro">modo escuro</option>
+            </select>
+            <button type="button" id="copiar-para-escuro">copiar o modo claro para o escuro</button>
+          </div>
+          <h4>paleta de arrasto — arraste uma cor ou uma fonte para um campo</h4>
+          <div id="paleta-cores" class="tema-paleta"></div>
+          <div id="paleta-fontes" class="tema-paleta"></div>
+          <h4>cores</h4>
+          <div id="slots-cores" class="tema-slots"></div>
+          <h4>tipografia</h4>
+          <div id="slots-fontes" class="tema-slots"></div>
+          <h4>raio e espaçamento</h4>
+          <div id="slots-medidas" class="tema-slots"></div>
+          <h4>sombra</h4>
+          <div id="slots-sombra" class="tema-slots"></div>
+        </div>
+        <div>
+          <h3>pré-visualização ao vivo</h3>
+          <div id="previa" class="tema-previa"></div>
+          <h3>contraste (WCAG 1.4.3, mínimo 4,5:1)</h3>
+          <div id="contraste-saida"></div>
+          <h3>exportar / importar (JSON)</h3>
+          <div class="linha-ferramentas">
+            <button type="button" id="exportar">exportar o tema em edição</button>
+            <button type="button" id="importar">importar o JSON abaixo</button>
+          </div>
+          <textarea id="json" class="tema-json" spellcheck="false"
+            aria-label="definição do tema em JSON"></textarea>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/temas/tela.js"></script>
+</body>
+</html>
