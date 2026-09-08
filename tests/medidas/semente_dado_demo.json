@@ -1,5 +1,5 @@
 {
-  "segundos": 124.74,
+  "segundos": 22.18,
   "inquilinos": [
     {
       "inquilino": "demo",
@@ -8,13 +8,13 @@
       "reaproveitados": 0,
       "grupos": 2,
       "segundos_por_arquivo": {
-        "municipios_ap_rr.zip": 14.38,
-        "pontos_municipais_ap_rr.geojson": 13.33,
-        "rodovias_federais_rr.geojson": 14.54,
-        "hidrografia_bacia_4668.geojson": 16.92,
-        "estacoes_inmet_norte.csv": 9.26,
-        "demonstracao_3_camadas.gpkg": 11.42,
-        "estacoes_inmet_norte.xlsx": 0.02,
+        "municipios_ap_rr.zip": 2.37,
+        "pontos_municipais_ap_rr.geojson": 1.3,
+        "rodovias_federais_rr.geojson": 2.24,
+        "hidrografia_bacia_4668.geojson": 1.91,
+        "estacoes_inmet_norte.csv": 1.62,
+        "demonstracao_3_camadas.gpkg": 1.9,
+        "estacoes_inmet_norte.xlsx": 0.04,
         "planta_exemplo.dxf": 0.05
       }
     },
@@ -24,9 +24,9 @@
       "camada": 3,
       "reaproveitados": 0,
       "segundos_por_arquivo": {
-        "municipios_ac.zip": 17.02,
-        "rodovias_federais_ac.geojson": 14.5,
-        "estacoes_inmet_centro_oeste.csv": 12.64
+        "municipios_ac.zip": 2.26,
+        "rodovias_federais_ac.geojson": 4.65,
+        "estacoes_inmet_centro_oeste.csv": 3.13
       }
     }
   ],
