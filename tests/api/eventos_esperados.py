@@ -147,6 +147,11 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/api/rede/{rede_id}/tier/{codigo}/propagadores"): ["redes/tier_propagadores"],
     ("POST", "/api/rede/{rede_id}/subredes/resumos/calcular"): ["redes/subrede_resumo"],
     ("POST", "/api/rede/{rede_id}/subrede/{nome}/curto"): ["redes/curto_circuito"],
+    # L4-04-d diagrama de rede
+    ("POST", "/api/rede/{rede_id}/diagrama"): ["redes/diagrama_gerar"],
+    ("POST", "/api/rede/{rede_id}/diagrama/{diagrama_id}/layout"): ["redes/diagrama_layout"],
+    ("DELETE", "/api/rede/{rede_id}/diagrama/{diagrama_id}"): ["redes/diagrama_apagar"],
+    ("PUT", "/api/rede/{rede_id}/diagrama-modelo/{codigo}"): ["redes/diagrama_modelo_definir"],
     ("POST", "/api/senha/redefinir/solicitar"): [],
     ("POST", "/api/senha/redefinir/aplicar"): ["usuarios/redefinir_senha_email"],
     # ---- SMTP por inquilino (L0-07-d-smtp-convites; ADR 0013): PUT tanto configura quanto remove o override

@@ -897,6 +897,26 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/curto"),
     ("GET", "/api/rede/{rede_id}/subrede/{nome}/curto/camada"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/curto/camada"),
+    # ---- L4-04-d diagrama de rede: as oito rotas apontam a rede de B e têm de dar 404 (a rede nem é
+    # vista). O identificador de diagrama é forjado: se a rede fosse alcançável, o 404 viria do diagrama e
+    # não da rede, e o caso deixaria de provar o isolamento — por isso o alvo é sempre a rede de B.
+    ("POST", "/api/rede/{rede_id}/diagrama"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/diagrama",
+        lambda p: {"nome": "zt-cruzado-diagrama", "origem": {"tipo": "selecao", "feicoes": [UUID_NULO]}}),
+    ("GET", "/api/rede/{rede_id}/diagramas"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/diagramas"),
+    ("GET", "/api/rede/{rede_id}/diagrama/{diagrama_id}"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/diagrama/{UUID_NULO}"),
+    ("POST", "/api/rede/{rede_id}/diagrama/{diagrama_id}/layout"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/diagrama/{UUID_NULO}/layout", lambda p: {"layout": "radial"}),
+    ("GET", "/api/rede/{rede_id}/diagrama/{diagrama_id}/exportar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/diagrama/{UUID_NULO}/exportar"),
+    ("DELETE", "/api/rede/{rede_id}/diagrama/{diagrama_id}"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/diagrama/{UUID_NULO}"),
+    ("GET", "/api/rede/{rede_id}/diagrama-modelos"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/diagrama-modelos"),
+    ("PUT", "/api/rede/{rede_id}/diagrama-modelo/{codigo}"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/diagrama-modelo/zt-cruzado",
+        lambda p: {"nome": "zt cruzado", "regras": [], "layout": "grade"}),
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
     ("PUT", "/api/org"): Caso(
         lambda p: "/api/org", _corpo_org_atual, proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
