@@ -1,6 +1,8 @@
 """Fixtures dos e2e do L0-02: contexto pt-BR 1280x800; rotas do OpenAPI da URL interna; salto limpo enquanto o
 backend não publica /api/login (o frontend foi escrito contra o ADR 0002 antes das rotas existirem)."""
 
+import os
+
 import httpx
 import pytest
 
@@ -9,7 +11,13 @@ from tests.e2e.apoio import credenciais
 
 @pytest.fixture(scope="session")
 def browser_context_args(browser_context_args):
-    return {**browser_context_args, "locale": "pt-BR", "viewport": {"width": 1280, "height": 800}}
+    args = {**browser_context_args, "locale": "pt-BR", "viewport": {"width": 1280, "height": 800}}
+    # item L7-11-b (appliance sem internet): com PLAT_E2E_PROXY todo pedido do navegador passa pelo proxy de
+    # captura (tests/operacao/proxy_captura.py), que repassa só a própria instalação e conta o que tentou sair
+    proxy = os.environ.get("PLAT_E2E_PROXY")
+    if proxy:
+        args["proxy"] = {"server": proxy}
+    return args
 
 
 @pytest.fixture(scope="session")
