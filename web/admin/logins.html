@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Logins · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  .regras { width: 100%; border-collapse: collapse; margin: var(--e3) 0; }
+  .regras th, .regras td { text-align: left; padding: .25rem .5rem; border-bottom: 1px solid var(--borda); vertical-align: top; }
+  .regras input[type=text], .regras select { width: 100%; }
+  .regras .grupos label { display: block; font-size: .85rem; }
+  .paridade td, .paridade th { font-size: .85rem; }
+</style>
+</head>
+<body class="tela">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="logins.titulo">Logins</h1>
+    <plat-aviso id="aviso"></plat-aviso>
+    <section class="cartao" id="provedores" aria-labelledby="t-provedores">
+      <h2 id="t-provedores" data-i18n="logins.provedores">Provedores de login externo</h2>
+      <p class="fraco" data-i18n="logins.provedores_ajuda">LDAP (um por inquilino), OpenID Connect e SAML (vários). Rótulo e ordem valem para os botões da tela de entrada; as regras de provisionamento decidem quem entra, com que perfil, papel, grupos e pasta. Mapeamento é por valor exato do grupo do IdP: um grupo com nome parecido com um papel não vira nada sem regra.</p>
+      <plat-tabela id="tabela" legenda="provedores de login"></plat-tabela>
+    </section>
+    <section class="cartao" id="paridade-cartao" aria-labelledby="t-paridade">
+      <h2 id="t-paridade" data-i18n="logins.paridade">Paridade com a Esri (Portal 11.4)</h2>
+      <div class="tabela-rolagem">
+        <table class="tabela paridade" id="paridade">
+          <thead><tr><th data-i18n="logins.par_esri">Esri</th><th data-i18n="logins.par_aqui">aqui</th></tr></thead>
+          <tbody>
+            <tr><td>New member defaults: "Automatically" × "Upon invitation from an administrator"</td><td data-i18n="logins.par_criacao">criação: automática × só por convite (e-mail convidado em Usuários)</td></tr>
+            <tr><td>New member defaults: user type / role</td><td data-i18n="logins.par_perfil">perfil padrão + papel padrão</td></tr>
+            <tr><td>New member defaults: groups</td><td data-i18n="logins.par_grupos">grupos padrão</td></tr>
+            <tr><td>Update profile on sign in</td><td data-i18n="logins.par_atualizar">atualizar a cada login</td></tr>
+            <tr><td>SAML/OIDC group membership: IdP group name (exact) linked to a portal group</td><td data-i18n="logins.par_mapa">mapa: valor exato do grupo do IdP → perfil, papel e grupos internos; membros sincronizados a cada login</td></tr>
+            <tr><td>Remove member (account remains at the IdP)</td><td data-i18n="logins.par_desregistrar">desregistrar (em Usuários): vínculo removido, conta desativada, IdP intacto</td></tr>
+            <tr><td>—</td><td data-i18n="logins.par_extra">extras daqui: desligar a conta quando o IdP deixa de mandar grupo mapeado; pasta inicial do membro</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <plat-dialogo id="painel" modo="lateral"></plat-dialogo>
+  </main>
+</div>
+<script type="module" src="/static/js/auth/logins.js"></script>
+</body>
+</html>
