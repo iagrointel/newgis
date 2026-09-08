@@ -79,7 +79,8 @@ pedidos simultâneos ao mesmo tile frio = 1 MISS + 19 HIT). Sem `slice`, cada Ra
 MISS diferente.
 
 Limitação honesta: o bloco foi escrito em `deploy/nginx.conf` e PROVADO contra um nginx próprio, de teste, com
-certificado autoassinado na porta 8162 (206 com `Content-Range` conferido byte a byte contra o conteúdo gravado).
+certificado autoassinado em porta livre pedida ao sistema (206 com `Content-Range` conferido byte a byte
+contra o conteúdo gravado).
 Ele NÃO foi aplicado no nginx do sistema neste turno — quem aplica é o gerente, com `install.sh`. Enquanto não for
 aplicado, a entrega de COG por HTTPS existe como configuração provada, não como serviço no ar.
 
