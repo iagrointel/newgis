@@ -1,0 +1,40 @@
+/* plat — narrativa por blocos (item L5-04-a-blocos-de-conteudo): leitura (/executar, /p/) e o controle de vista
+   do mapa no painel do construtor. Coluna de leitura estreita, mídia larga por opção do bloco. */
+.narrativa { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; line-height: 1.6; }
+body.narrativa-leitura main#raiz-execucao { display: block; }
+.narrativa .bloco { margin: 1.25rem 0; }
+.narrativa .bloco-capa { text-align: center; margin-bottom: 2rem; }
+.narrativa .bloco-capa h1 { font-size: 2.2rem; line-height: 1.15; margin: .75rem 0 .25rem; }
+.narrativa .capa-subtitulo { font-size: 1.15rem; opacity: .8; margin: 0; }
+.narrativa .capa-imagem { width: 100%; max-height: 24rem; object-fit: cover; border-radius: var(--raio, 2px); }
+.narrativa .bloco-texto p { margin: 0 0 .9rem; }
+.narrativa .bloco-texto.alinhar-centro { text-align: center; }
+.narrativa .bloco-texto.alinhar-justificado { text-align: justify; }
+.narrativa .bloco-texto h1, .narrativa .bloco-texto h2, .narrativa .bloco-texto h3 { line-height: 1.2; margin: 1.4rem 0 .5rem; }
+.narrativa figure { margin: 0; }
+.narrativa figure img, .narrativa figure video { width: 100%; height: auto; display: block; border-radius: var(--raio, 2px); }
+.narrativa figure.largura-larga { margin-left: -4rem; margin-right: -4rem; }
+.narrativa figure.largura-inteira { margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); }
+.narrativa figcaption { font-size: .85rem; opacity: .75; margin-top: .35rem; }
+.narrativa .transcricao { font-size: .9rem; opacity: .85; }
+.narrativa .bloco-mapa-quadro { width: 100%; aspect-ratio: 1 / .6; background: #0b0f10; border-radius: var(--raio, 2px); overflow: hidden; }
+.narrativa iframe { width: 100%; border: 0; border-radius: var(--raio, 2px); background: #0b0f10; }
+.narrativa iframe.video-embed { aspect-ratio: 16 / 9; height: auto; }
+.narrativa .bloco-tabela-rolagem { overflow-x: auto; }
+.narrativa table.bloco-tabela { border-collapse: collapse; width: 100%; font-size: .92rem; }
+.narrativa table.bloco-tabela th, .narrativa table.bloco-tabela td { border: 1px solid var(--borda, #444); padding: .35rem .5rem; text-align: left; }
+.narrativa .bloco-botao-linha { text-align: center; }
+.narrativa .bloco-botao { display: inline-block; text-decoration: none; padding: .5rem 1.2rem; }
+.narrativa hr.bloco-separador { border: 0; border-top: 1px solid var(--borda, #444); margin: 2rem auto; width: 60%; }
+.narrativa hr.bloco-separador.estilo-espaco { border: 0; height: 2rem; }
+.narrativa hr.bloco-separador.estilo-pontos { border: 0; text-align: center; height: auto; }
+.narrativa hr.bloco-separador.estilo-pontos::after { content: '\2022 \2022 \2022'; letter-spacing: .6em; opacity: .6; }
+.narrativa .bloco-erro { color: var(--falha, #d9614f); font-size: .9rem; border-left: 3px solid currentColor; padding-left: .5rem; }
+.narrativa .vazio { opacity: .6; text-align: center; }
+
+/* painel do construtor: controle de vista do bloco de mapa */
+.vista-controle { display: flex; flex-direction: column; gap: .4rem; }
+.vista-quadro { width: 100%; aspect-ratio: 1 / .6; min-height: 8rem; background: #0b0f10; border: 1px solid var(--borda, #444); }
+.vista-camadas { list-style: none; margin: 0; padding: 0; max-height: 8rem; overflow: auto; font-size: .8rem; }
+.vista-estado { margin: 0; font-size: .75rem; font-family: var(--mono, monospace); opacity: .8; }
+.no-editor.tipo-texto .no-resumo, .no-editor.tipo-capa .no-resumo { white-space: normal; }
