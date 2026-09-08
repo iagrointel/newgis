@@ -1,0 +1,1502 @@
+{
+ "linha": "L5 builder",
+ "criado": "2026-09-05",
+ "fonte": "laco/decomposicao/BRIEF.md (05/09/2026); decisões de conceito em L5_CONCEITO.md; medições e URLs testadas por HTTP em 2026-09-05 (anexo do CONCEITO)",
+ "itens_existentes_mantidos": [
+  "L5-01-app-builder",
+  "L5-02-fluxos",
+  "L5-03-form-builder",
+  "L5-04-storymap"
+ ],
+ "nota_sobre_pais": "L5-01, L5-02, L5-03 e L5-04 continuam no estado.json; ao serem trabalhados viram `parcial` com os filhos `-a..-f` daqui como dependência (regra 3 do turno). Os demais itens são novos e independentes.",
+ "itens": [
+  {
+   "id": "L5-05-documento-versoes",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-catalogo"
+   ],
+   "hipotese": "todo construtor (app, painel, formulário, fluxo, narrativa, página, popup, estilo, relatório, projeto de captura, diagrama de trabalho) salva UM tipo de documento: envelope JSON {tipo, esquema_versao, id, nome, corpo} com id imutável por nó (ULID) e referência entre nós só por id; tabela `plat.item_versao` (item_id, versao, corpo jsonb, sha256, autor, criado_em, rotulo) imutável + `plat.item.versao_publicada`; JSON Schema por tipo em `docs/esquemas/<tipo>-v<N>.json` validado no servidor (jsonschema 4.26 na venv) e servido em `/api/esquemas/`; migração de esquema por função `migrar_<tipo>_v<N>_v<N+1>` aplicada na leitura",
+   "portao_de_pronto": "POST/GET/PUT em `/api/itens/{id}/versoes` cria versão com sha256 igual ao calculado fora (`sha256sum` do corpo canônico); documento inválido contra o JSON Schema = HTTP 422 com caminho do erro; `publicar` aponta versao_publicada e a versão anterior continua legível; leitura de documento gravado com esquema_versao antiga devolve corpo migrado e registra no log; RLS: versão do inquilino A invisível para B (teste cruzado); 2 tipos (app, painel) com esquema publicado neste item; medida `latencia_salvar_versao_ms` em tests/medidas",
+   "refutacao": "adversário grava corpo com nó referenciando id inexistente e com dois nós de mesmo id: os dois têm de ser recusados; edita a linha de versão direto no banco e confere que o sha256 deixa de bater e que /saude ou a tela acusa",
+   "papeis": [
+    "arquiteto",
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "spec"
+  },
+  {
+   "id": "L5-06-motor-widgets",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-05-documento-versoes",
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "motor de widgets sem framework: cada widget é um Custom Element (`<plat-mapa>`, `<plat-tabela>` …) em módulo ES próprio (≤ 60 kB, regra 4 do ADR 0001) com manifesto {nome, versao_api, esquema_config (JSON Schema), eventos_emitidos, acoes_aceitas, fontes_de_dado} registrado em `web/js/widgets/registro.js`; carregamento por `import()` dinâmico só dos widgets citados no documento; o MESMO módulo roda no construtor (com chrome de edição) e na publicação (sem chrome) — zero renderizador duplicado",
+   "portao_de_pronto": "registro com ≥ 6 widgets (mapa, legenda, tabela, texto, botão, filtro) cada um com manifesto validado no `make check`; página publicada com 3 widgets carrega só 3 módulos (medido pelo e2e via `performance.getEntriesByType('resource')`); widget desconhecido no documento renderiza caixa de erro nomeada, nunca quebra a página; medidas `primeira_pintura_ms` e `kb_por_widget` gravadas; teste unitário de manifesto (config fora do esquema = erro)",
+   "refutacao": "adversário injeta widget com manifesto inválido e config com HTML malicioso em campo de texto: tem de ser sanitizado (DOMPurify) e o console sem erro; remove um módulo do disco e confere que a página degrada com mensagem em vez de tela branca",
+   "papeis": [
+    "arquiteto",
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-07-fontes-vistas-mensagens",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-06-motor-widgets",
+    "L2-04-servicos-esri-ogc"
+   ],
+   "hipotese": "modelo de dado do app: `fontes` (item do catálogo: camada, raster, tabela, acervo) e `vistas` (fonte + filtro CQL2-JSON + seleção + ordenação + campos) referenciadas por id; barramento de mensagens {gatilho:{origem,evento}, acoes:[{alvo,acao,parametros,relacao}]} com os 8 gatilhos do Experience Builder (clique, dado adicionado, filtro mudou, extensão mudou, localização, registros carregados, seleção mudou, vista mudou) e as ações de dado (filtrar, selecionar, limpar) e de widget (zoom, pan, piscar, popup, abrir/fechar); relação entre fontes diferentes por atributo ou espacial (regra dos Dashboards); estado da seleção e dos filtros na URL (padrão do SIG de teste interno)",
+   "portao_de_pronto": "seleção no mapa filtra tabela e gráfico (3 widgets, 2 vistas da mesma fonte) por e2e; filtro por atributo entre fontes diferentes com relação declarada funciona e sem relação é recusado no construtor com mensagem; URL copiada reabre com o mesmo filtro/seleção; tabela de gatilhos × ações escrita em docs/PARIDADE.md contra a doc do Experience Builder (action-triggers, acesso 2026-09-05); latência gatilho→ação medida (p95 ≤ 100 ms com 10 mil feições em memória)",
+   "refutacao": "adversário cria ciclo (A filtra B, B filtra A) e confere que o barramento corta a recursão em 1 volta e avisa; muda o tipo do campo de relação (texto × inteiro) e confere recusa",
+   "papeis": [
+    "arquiteto",
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-08-editor-arrasto",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-06-motor-widgets"
+   ],
+   "hipotese": "primitivas de edição compartilhadas por todos os construtores: paleta → tela por HTML5 Drag and Drop (medido nesta máquina: playwright `drag_and_drop` 123 ms, emulação de celular ok), mover/redimensionar por Pointer Events com `setPointerCapture`, grade de 12 colunas com encaixe, seleção com contorno, árvore (outline) com arrastar para reordenar/aninhar, painel de propriedades gerado do JSON Schema do widget, atalhos; ALTERNATIVA sem arrasto obrigatória em toda operação (WCAG 2.2 SC 2.5.7 AA: botão 'adicionar', menu 'mover para', setas) — medido: caminho por teclado funciona no mesmo teste",
+   "portao_de_pronto": "e2e cria um layout com 5 widgets só por arrasto E o mesmo layout só por teclado/menus, e os dois documentos resultantes são idênticos (diff JSON vazio); redimensionar por arrasto grava largura em colunas, não em px; outline reflete aninhamento; painel de propriedades recusa valor fora do esquema; sem biblioteca de arrasto vendida (0 kB) ou, se SortableJS entrar, linha em VERSOES.txt com sha256; 0 erro de console",
+   "refutacao": "adversário arrasta widget para dentro de si mesmo e para fora da tela; solta durante rolagem; usa só toque (viewport Pixel 7) e só teclado; qualquer estado inconsistente entre outline e tela = refutado",
+   "papeis": [
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-09-desfazer-refazer-rascunho",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-05-documento-versoes",
+    "L5-08-editor-arrasto"
+   ],
+   "hipotese": "desfazer/refazer por JSON Patch (RFC 6902) com operação inversa gravada, agrupamento de operações contínuas (arrastar = 1 passo), pilha por sessão de edição; autosave do rascunho a cada N s em `item_versao` com rotulo 'rascunho' + cópia local (localStorage) para queda de rede; diferença visual entre versões (árvore de nós adicionados/removidos/alterados); restaurar versão antiga = nova versão, nunca sobrescreve",
+   "portao_de_pronto": "50 operações desfeitas e refeitas devolvem documento byte a byte igual (teste unitário com sha256); queda simulada da API durante edição → recarregar recupera do localStorage e avisa; diff entre v3 e v7 lista os nós certos por e2e; rascunho autosalvo não altera a versão publicada (e2e abre link público antes e depois)",
+   "refutacao": "adversário abre o mesmo documento em duas abas, edita nas duas e salva: a segunda tem de receber conflito de versão (base_versao ≠ atual) com opção de ver diferença, nunca perda silenciosa",
+   "papeis": [
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-10-temas-marca",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-06-motor-widgets",
+    "L0-07-admin-org"
+   ],
+   "hipotese": "tema = conjunto de tokens CSS (cores, tipografia, raio, espaçamento, sombra) em JSON, com modo claro/escuro; tema padrão da plataforma + tema do inquilino (config do tenant: cor, logo) + tema por documento; editor de tema por arrasto de cor/fonte com pré-visualização ao vivo; contraste calculado (WCAG 1.4.3 ≥ 4,5:1) e avisado; os 6 temas padrão dos StoryMaps e os temas do Web AppBuilder servem de referência de paridade",
+   "portao_de_pronto": "trocar tema não recarrega a página (e2e); tema com contraste < 4,5:1 mostra aviso e o teste automatizado calcula contraste de 10 pares; app publicado herda tema do inquilino e pode sobrepor; tema exportável/importável como JSON; documento sem tema renderiza com o padrão",
+   "refutacao": "adversário injeta `url(javascript:…)` e `expression()` em token de cor/fonte: tem de ser recusado por validação de formato (regex de cor, lista de fontes)",
+   "papeis": [
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-11-expressoes-no-navegador",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-10-relacoes-regras"
+   ],
+   "hipotese": "a linguagem de expressão do L2-10 (servidor, Python) ganha avaliador em JavaScript com semântica idêntica: mesmo analisador (gramática publicada), mesmos vetores de teste (`tests/expressoes/*.json` com entrada, contexto, saída) rodando nos dois lados; perfis de uso: popup, rótulo, cálculo de formulário, visibilidade condicional, restrição, indicador de painel, título dinâmico; funções sobre feição ($feicao), geometria (área, comprimento, distância, dentro), texto, número, data, lista; sem acesso a rede nem a outro inquilino; limite de passos (laço) e de tempo",
+   "portao_de_pronto": "≥ 40 funções com ≥ 200 vetores de teste passando em Python e em JS (mesmo arquivo de vetores); expressão com laço infinito é cortada em ≤ 50 ms com erro nomeado; a mesma expressão usada num popup e num cálculo de formulário dá o mesmo valor (e2e); documentação da linguagem em MANUAL.md com um exemplo por função",
+   "refutacao": "adversário escreve 20 expressões de borda (nulo, divisão por zero, data inválida, unicode, número enorme) e compara JS × Python: qualquer divergência = refutado; tenta `fetch`, `window` e acesso a propriedade de protótipo",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-12-acessibilidade-i18n-construtores",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-08-editor-arrasto"
+   ],
+   "hipotese": "acessibilidade e idioma da BASE dos construtores (a do produto inteiro é L7-10): toda operação com alternativa sem arrasto (2.5.7) e por teclado (2.1.1), foco visível, ARIA nos painéis (árvore, abas, diálogos), leitor de tela anuncia 'widget X adicionado na posição Y'; textos da interface por chave (pt-BR/en/es); rótulos de documento opcionalmente multilíngues ({\"pt\": …, \"en\": …}, precedente `label::idioma` do XLSForm); axe-core no e2e",
+   "portao_de_pronto": "axe-core sem violação crítica ou séria nas telas do construtor de app e de formulário; e2e só por teclado completa: criar app, adicionar 3 widgets, ligar ação, publicar; troca de idioma do construtor sem recarregar; 0 chave sem tradução (teste que varre `web/js/i18n/*.json`)",
+   "refutacao": "adversário navega com leitor de tela (NVDA/Orca ou playwright + árvore de acessibilidade) e lista cada controle sem nome acessível; um controle sem nome = refutado",
+   "papeis": [
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-13-edicao-concorrente",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-09-desfazer-refazer-rascunho",
+    "L0-02-tenant-auth"
+   ],
+   "hipotese": "edição por várias pessoas SEM CRDT nesta fase: versão otimista (base_versao no PUT; conflito = HTTP 409 com o documento atual), presença via SSE (quem está com o documento aberto, em que nó), bloqueio leve por nó (aviso, não trava) e mesclagem automática quando os dois lados alteraram nós diferentes (JSON Patch em nós disjuntos); CRDT (Yjs, medido 300 kB) só se o e2e desta fase reprovar por perda de trabalho medida",
+   "portao_de_pronto": "dois navegadores editam nós diferentes e ambos salvam sem conflito (mesclagem por nó); editam o mesmo nó → 409 com diferença mostrada; presença aparece em ≤ 2 s; nenhum caso perde alteração (teste automatizado com 100 pares de edições aleatórias em nós disjuntos)",
+   "refutacao": "adversário simula rede lenta (playwright route delay 3 s) e salva dos dois lados fora de ordem; qualquer alteração perdida sem aviso = refutado",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "usuario"
+  },
+  {
+   "id": "L5-14-publicacao-links-embed",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-05-documento-versoes",
+    "L1-02-tiles-token"
+   ],
+   "hipotese": "publicar = apontar `versao_publicada` e emitir URL `/p/<inquilino>/<slug>` servida por função SECURITY DEFINER que lê só documento publicado; acesso: público, inquilino, grupo ou link com token (token de serviço com escopo = itens de dado citados no documento, revogável, com log — mesmo mecanismo do L1-02); incorporação por iframe/script com `frame-ancestors` por app (o `X-Frame-Options: DENY` do ADR vira exceção controlada em `/p/`); miniatura gerada no publish (chromium headless, medido: captura 25 ms); exportação estática (HTML + JSON + dados citados) para hub e para o appliance",
+   "portao_de_pronto": "app publicado abre anônimo por link-com-token e nega após revogação (HTTP 401/403 por e2e); rascunho alterado não muda o publicado até novo publish; iframe em página externa funciona só quando o domínio está na lista do app; exportação estática abre de `file://` com o mesmo conteúdo; token do app lê SÓ as camadas listadas (teste tenta camada fora da lista → 403); contagem de visualizações gravada por dia",
+   "refutacao": "adversário usa o token do app para chamar rotas de escrita e rotas de outra camada; pega o token da URL do iframe e tenta em outro domínio (Referer) — qualquer leitura fora do escopo = refutado",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-15-vista-movel-responsivo",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-08-editor-arrasto"
+   ],
+   "hipotese": "cada documento pode ter 'vista móvel' própria (elementos e posições diferentes, regra dos Dashboards: largura ≤ 600 px carrega móvel) ou herdar reflow responsivo (grade 12 → 1 coluna, painéis viram abas inferiores, padrão do SIG de teste interno); pré-visualização por dispositivo no construtor (celular/tablet/desktop, iframe de mesma origem — precedente Puck); arrastar por toque testado",
+   "portao_de_pronto": "e2e em 3 viewports (Pixel 7, iPad, 1440) do mesmo app: sem rolagem horizontal, mapa visível, tabela vira lista; vista móvel configurada manualmente prevalece sobre reflow; construtor em tablet consegue arrastar widget (touch) e a alternativa por menu também; capturas das 3 vistas",
+   "refutacao": "adversário abre o app publicado em 360×640 e lista widget cortado ou inacessível; um widget inacessível = refutado",
+   "papeis": [
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-16-agente-escreve-configuracao",
+   "linha": "L5 builder",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-05-documento-versoes",
+    "L5-01-app-builder"
+   ],
+   "hipotese": "'descreva o app' → o agente (Qwen3 local para rascunho, Claude API para o que o cliente vê — regra da casa) escreve o documento JSON válido contra o JSON Schema do tipo, citando só itens do catálogo do inquilino; o construtor abre o resultado como rascunho para revisão humana; nunca publica sozinho (spec §20.3 v2 e §19)",
+   "portao_de_pronto": "10 pedidos de teste em texto viram documentos válidos (validação 200) com ≥ 80 % dos widgets pedidos presentes (medido por gabarito); item citado fora do catálogo do inquilino = documento recusado; custo por geração medido e gravado; botão 'gerar' desativado sem chave configurada, com mensagem",
+   "refutacao": "adversário pede app com camada de OUTRO inquilino pelo nome e pede widget inexistente; qualquer documento salvo com referência inválida = refutado",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "spec"
+  },
+  {
+   "id": "L5-01-a-layout-paginas",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-08-editor-arrasto"
+   ],
+   "hipotese": "páginas e layout do app: página de tela cheia (mapa central) e página rolável, cabeçalho e rodapé opcionais, seções com vistas (abas), painel lateral (esquerda/direita, recolhível), linha/coluna/grade/acordeão/painel fixo como widgets de layout (os 8 do Experience Builder), janelas (modal e ancorada), menu entre páginas, página inicial, ordem e ocultação; modelos de página",
+   "portao_de_pronto": "app com 2 páginas (mapa cheio + rolável) navegável por menu, com cabeçalho e painel lateral recolhível, criado só por arrasto por e2e; grade responsiva mantém proporção; janela modal abre por botão e fecha por Esc; URL muda por página e reabre na página certa; paridade escrita contra 'Add and manage pages' e 'Layout widgets' (doc EXB, acesso 2026-09-05)",
+   "refutacao": "adversário aninha 6 níveis de linha/coluna e redimensiona a janela: overflow ou widget oculto = refutado",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-01-app-builder",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-01-b-widgets-mapa",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-07-fontes-vistas-mensagens",
+    "L2-02-simbologia"
+   ],
+   "hipotese": "widgets centrados no mapa: mapa (item de mapa do L2-01, ferramentas ligáveis), galeria de mapas base, lista de camadas, legenda (derivada do estilo MapLibre), coordenadas (com conversão de CRS por proj4 no cliente), medição, favoritos (bookmarks), desenho (terra-draw ou nativo), impressão (L2-12), cortina (swipe), minha localização, perto de mim (raio + isócrona OSRM do L2-11), perfil de elevação (GLO-30 do L2-09), linha do tempo (L1-04), captura rápida (L5-34)",
+   "portao_de_pronto": "≥ 10 dos widgets acima configuráveis por arrasto, cada um com e2e próprio e captura; legenda muda quando o estilo da camada muda (sem recarregar); coordenadas conferidas contra pyproj em 5 pontos; perto de mim devolve as mesmas feições que consulta espacial direta no PostGIS; paridade escrita contra 'Mapcentric widgets' (30 na doc EXB) marcando fora: Business Analyst, Autodesk Construction Cloud, Floor Filter, Oriented Imagery, 3D Toolbox",
+   "refutacao": "adversário mede 3 distâncias no mapa e compara com cálculo geodésico; erro > 0,5 % = refutado; muda o CRS de exibição e confere as coordenadas",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-01-app-builder",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-01-c-widgets-dado",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-07-fontes-vistas-mensagens",
+    "L2-04-servicos-esri-ogc"
+   ],
+   "hipotese": "widgets de dado: tabela (paginação no servidor via FeatureServer/OGC, ordenação, seleção, exportar CSV/GeoJSON), lista/cartões com modelo de texto e expressão, gráfico (barra/linha/pizza/dispersão/histograma sobre vista, com agregação no servidor), filtro (por campo, valores únicos carregados, data, intervalo), consulta (atributo + espacial), seleção (atributo/interativa/espacial), informação da feição (popup do L5-26), edição (formulário do L5-03 dentro do app), adicionar dado em tempo de execução (URL/arquivo, temporário)",
+   "portao_de_pronto": "tabela com 100 mil feições rola e ordena com p95 < 300 ms por página (medido); gráfico agrega no servidor e a soma bate com SQL direto (teste); filtro combinado com seleção no mapa por mensagens (e2e); exportação CSV respeita filtro ativo; paridade escrita contra 'Datacentric widgets' (15 na doc EXB) marcando fora: Feature Report do Survey123 (coberto por L5-29), Business Analyst",
+   "refutacao": "adversário compara 5 agregações do gráfico com `psql`; qualquer diferença = refutado; carrega camada com 2 milhões de feições no widget tabela e mede",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-01-app-builder",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-01-d-widgets-pagina-menu",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-06-motor-widgets"
+   ],
+   "hipotese": "widgets de página e de menu: texto (markdown + expressões {campo} sobre feição selecionada, sanitizado), imagem (estática ou por campo/anexo), botão (link, página, vista, ação), cartão, incorporar (URL/HTML em iframe sandbox), divisor, menu, controlador de widgets (abre/fecha em painel), compartilhar (link/QR/embed), login, seletor de idioma, seletor de tema claro/escuro",
+   "portao_de_pronto": "cada widget por e2e; texto com HTML malicioso sanitizado (teste com 10 vetores XSS); iframe com sandbox e lista de domínios; QR gerado localmente (sem serviço externo); paridade escrita contra 'Page element' e 'Menu and toolbar widgets' (12 na doc EXB)",
+   "refutacao": "adversário injeta `<script>` e `javascript:` em texto, botão e embed; execução de script = refutado",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-01-app-builder",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-01-e-acoes-configuraveis",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-07-fontes-vistas-mensagens",
+    "L5-08-editor-arrasto"
+   ],
+   "hipotese": "painel 'Ações' de cada widget: escolher gatilho → alvo → ação → parâmetros (campo de relação, relação espacial, condição SQL/CQL2), como no Experience Builder; ações de dado no botão 'Ações' do usuário (exportar, ver na tabela, zoom, criar item no catálogo com a seleção); validação no construtor (gatilho já usado, alvo incompatível)",
+   "portao_de_pronto": "app 'seleção no mapa → filtra tabela → gráfico → lista' montado só pelo painel de ações (e2e com captura em cada passo); ação de exportar gera arquivo com as feições filtradas; tabela de gatilhos × alvos × ações do produto em docs/PARIDADE.md conferida contra a doc EXB (8 gatilhos) pelo adversário",
+   "refutacao": "adversário configura 30 ações em cadeia e mede latência e recursão; monta relação com campo inexistente após renomear campo da camada: o construtor tem de acusar a referência quebrada",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-01-app-builder",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-01-f-modelos-app-galeria",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-01-a-layout-paginas",
+    "L5-01-b-widgets-mapa",
+    "L5-01-c-widgets-dado"
+   ],
+   "hipotese": "modelos de app (documentos prontos com slots): visualizador com painel lateral, catálogo lista+mapa 30/70 (o do SIG de teste interno), painel operacional, formulário público, comparação; galeria com pré-visualização e filtro por capacidade; 'criar a partir de' copia o documento com novo id; modelos do inquilino e da plataforma",
+   "portao_de_pronto": "≥ 5 modelos funcionais (e2e abre cada um com dado de demonstração aberto); criar a partir de modelo em ≤ 3 cliques; modelo do inquilino invisível a outro (RLS); paridade escrita contra 'Templates' do EXB e contra a lista de modos do Web AppBuilder (tema Foldable/Dashboard/Launchpad…)",
+   "refutacao": "adversário compara o modelo salvo com o app gerado: qualquer nó com id repetido entre os dois = refutado",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-01-app-builder",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-17-painel-elementos-avancados",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-06-paineis",
+    "L5-07-fontes-vistas-mensagens"
+   ],
+   "hipotese": "sobre o L2-06: indicador com valor de referência (anterior, fixo, estatística) e formatação condicional, medidor (gauge) com faixas, gráfico serial com guias/linhas de referência e datas, gráfico de pizza, detalhes (popup da feição selecionada), texto rico com {campos}, conteúdo incorporado, seletores de categoria/número/data como elementos, cabeçalho e barra lateral recolhível — os 12 elementos dos Dashboards",
+   "portao_de_pronto": "cada elemento por e2e; indicador com referência 'valor anterior' muda quando o dado muda no banco (SSE/polling do L2-06); medidor com 3 faixas; guias em datas; valores de indicador e medidor conferidos com SQL direto; paridade escrita contra 'Dashboard elements' (12) e 'Configure actions for elements'",
+   "refutacao": "adversário muda 100 linhas no banco por `psql` e cronometra até o painel refletir; > 10 s sem aviso = refutado; confere estatística com nulos",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-18-painel-parametros-url-vistas",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-17-painel-elementos-avancados",
+    "L5-14-publicacao-links-embed"
+   ],
+   "hipotese": "parâmetros de URL dos painéis (5 tipos: categoria, numérico, data, feição, geometria; `#param=valor`, valores múltiplos, ((null))/((notnull))/((empty))), ações de URL → filtro/extensão; vista desktop e vista móvel distintas (≤ 600 px); 'renderizar só quando filtrado'; incorporação com parâmetros vindos do app hospedeiro (postMessage)",
+   "portao_de_pronto": "painel aberto com `#municipio=A,B` filtra 4 elementos (e2e); parâmetro de geometria em WKT filtra por interseção; vista móvel própria aparece em 390 px; app hospedeiro muda o parâmetro sem recarregar o iframe; paridade escrita contra 'URL parameters' dos Dashboards (acesso 2026-09-05)",
+   "refutacao": "adversário passa valores com aspas, vírgula codificada e SQL em parâmetro: qualquer erro 500 ou injeção = refutado",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-19-painel-expressoes-de-dado-tempo-real",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-17-painel-elementos-avancados",
+    "L2-14-tempo-real",
+    "L5-11-expressoes-no-navegador"
+   ],
+   "hipotese": "'expressão de dado' = fonte virtual definida por consulta (SQL restrito a views do inquilino ou expressão da linguagem sobre uma vista) que vira conjunto de feições para os elementos; fontes de tempo real (L2-14) com intervalo de atualização e ação 'seguir feição' no mapa (só ponto, com intervalo)",
+   "portao_de_pronto": "expressão de dado com junção de duas camadas alimenta gráfico e indicador; resultado conferido com SQL; atualização a cada 5 s com a camada AIS/GPS de demonstração aberta; 'seguir feição' mantém a feição centrada por e2e (posições sintéticas)",
+   "refutacao": "adversário escreve SQL com `pg_sleep`, acesso a `plat.usuario` e a schema de outro inquilino: tudo tem de ser recusado pelo analisador e pela RLS",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-02-a-editor-de-nos",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-08-editor-arrasto",
+    "L2-05-geoprocessamento",
+    "L3-01-motor-servico"
+   ],
+   "hipotese": "editor de nós próprio em SVG/HTML (≤ 60 kB; motivo medido no CONCEITO: os editores mantidos exigem framework de renderização e o único vanilla está sem commit desde 2024-10): nós com portas tipadas (vetor por geometria, raster, tabela, número, texto, lista, extensão), ligações por arrasto e por teclado, validação de tipo na ligação e detecção de ciclo, nós de ferramenta gerados do catálogo de ferramentas (L2-05 + L3-01 + fluxos publicados), nó de entrada (parâmetro do fluxo: obrigatório/opcional/derivado — precedente ModelBuilder), nó de saída (camada nova ou sobrescrever), minimapa, alinhar, agrupar, comentários; documento = grafo JSON com ids",
+   "portao_de_pronto": "fluxo com ≥ 5 nós montado só por arrasto e o mesmo por teclado (documentos idênticos); ligação raster→buffer vetorial recusada com mensagem antes de rodar; ciclo recusado; catálogo de nós vem do OpenAPI das ferramentas (nenhum nó escrito à mão); documento salvo e reaberto sem perda de posição; e2e com captura",
+   "refutacao": "adversário monta grafo com 200 nós e mede fluidez (fps de arrasto ≥ 30 medido no e2e) e importa JSON com porta inexistente",
+   "papeis": [
+    "arquiteto",
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-02-fluxos",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-02-b-execucao-proveniencia",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-02-a-editor-de-nos",
+    "L0-05-jobs"
+   ],
+   "hipotese": "executar fluxo = job (L0-05) que percorre o grafo em ordem topológica, chamando as mesmas rotas das ferramentas; cada nó registra entrada (ids + sha256 do conteúdo, como `acervo.objeto`), parâmetros, versão da ferramenta, git sha, início/fim, mensagens; a camada de saída recebe `proveniencia` jsonb com o manifesto inteiro e o hash do fluxo; reexecução com mesmas entradas dá o mesmo hash de saída (portão de proveniência do motor de LT, `release.py`); erro num nó para o fluxo e a tela mostra ONDE (nó vermelho, log); histórico de execuções por fluxo (geoprocessing history)",
+   "portao_de_pronto": "fluxo de 5 nós roda como job com progresso por nó; saída tem manifesto com sha256 de cada entrada; rodar duas vezes = hash de saída igual (teste); nó com erro mostra nó e mensagem no editor; histórico lista execuções com duração e permite 'reabrir com os mesmos parâmetros'; medida `tempo_fluxo_5_nos_s`",
+   "refutacao": "adversário altera uma linha da camada de entrada e reexecuta: o hash de entrada TEM de mudar; mata o worker no meio: execução marcada falha, nunca 'concluída'",
+   "papeis": [
+    "backend",
+    "dados",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-02-fluxos",
+   "origem": "casa"
+  },
+  {
+   "id": "L5-02-c-agendamento-variaveis",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-02-b-execucao-proveniencia"
+   ],
+   "hipotese": "agendamento por cron (tabela `plat.agenda`: expressão cron, fuso, próxima execução, pausar/retomar, expiração) com o worker como relógio; variáveis do fluxo ({{data}}, {{inquilino}}, parâmetros) e sobrescrever × versionar saída com `%t%` (precedente Pro); notificação ao fim (e-mail SMTP do L0-07, webhook do L7-08); log por execução; limite por inquilino de execuções/dia",
+   "portao_de_pronto": "fluxo agendado `*/2 * * * *` roda 3 vezes em 6 min (teste com relógio real e log); pausar interrompe; saída versionada gera camada_20260905T1200; fuso America/Sao_Paulo respeitado (teste com data de troca de horário); paridade escrita contra 'Schedule geoprocessing tools' (Pro) e 'Scheduling workflows' (Carto)",
+   "refutacao": "adversário agenda `* * * * *` em 5 fluxos pesados e confere que o limite por inquilino segura e que o worker não passa do MemoryMax",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-02-fluxos",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-02-d-exportar-python-importar-json",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-02-b-execucao-proveniencia",
+    "L7-08-sdk-api-webhooks"
+   ],
+   "hipotese": "exportar fluxo como script Python que usa o SDK da plataforma (L7-08) e reproduz o grafo (um `def fluxo(parametros)` por fluxo, sub-fluxos em módulos — precedente 'Export a model to Python'); importar JSON de fluxo (esquema validado); o script exportado roda contra a API e produz a mesma saída",
+   "portao_de_pronto": "script exportado do fluxo de 5 nós roda em `python` limpo com o SDK e gera camada com hash igual ao da execução pela interface (teste automatizado); importar o JSON exportado reabre o mesmo grafo (diff vazio); nomes de variável válidos em Python (teste com nomes acentuados)",
+   "refutacao": "adversário edita o script exportado para acessar camada de outro inquilino: a API recusa; importa JSON com nó de ferramenta inexistente: recusa nomeada",
+   "papeis": [
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-02-fluxos",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-02-e-iteradores-condicionais",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-02-b-execucao-proveniencia",
+    "L5-11-expressoes-no-navegador"
+   ],
+   "hipotese": "nós de controle: 'para cada' (feição de uma camada, valor de campo, camada de um grupo, arquivo de um upload) com substituição inline no nome da saída; 'se/senão' por expressão da linguagem; 'sub-fluxo' (fluxo chama fluxo publicado); mesclar resultados; um iterador por fluxo na raiz (regra do ModelBuilder) ou ilimitado por sub-fluxo",
+   "portao_de_pronto": "fluxo com 'para cada município' roda buffer 10× e produz 10 camadas nomeadas por valor (teste); 'se' desvia por área; sub-fluxo aninhado com proveniência propagada (manifesto do pai inclui o do filho); paridade escrita contra 'Iterators' (Pro, 3.7)",
+   "refutacao": "adversário monta iterador dentro de iterador na raiz e 'para cada' sobre 100 mil feições: limite e mensagem claros; estouro de memória = refutado",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-02-fluxos",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-02-f-fluxo-como-ferramenta-e-api",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-02-b-execucao-proveniencia",
+    "L2-04-servicos-esri-ogc"
+   ],
+   "hipotese": "fluxo publicado vira ferramenta: aparece no catálogo de ferramentas (L2-05), no editor de nós (L5-02-a), no widget 'Análise' do app builder (com formulário gerado dos parâmetros) e como processo OGC API - Processes (`/ogc/processes/<id>/execution`, síncrono e assíncrono com job); versão da ferramenta = versão do fluxo",
+   "portao_de_pronto": "fluxo publicado executável de 4 lugares (e2e do widget e do editor; teste de API do OGC Processes com `conformance` e `execution`); mudar o fluxo e republicar cria versão 2 e os apps que citam v1 continuam em v1 até atualizar",
+   "refutacao": "adversário chama `execution` com token sem escopo e com parâmetros fora do esquema: 403/422; compara a saída do OGC com a da interface (hash igual)",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-02-fluxos",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-03-a-construtor-elementos",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-08-editor-arrasto",
+    "L2-03-edicao",
+    "L2-07-campo"
+   ],
+   "hipotese": "construtor de formulário por arrasto: elementos básicos (texto curto/longo, inteiro, decimal, data, data-hora, hora, código de barras), de escolha (lista suspensa, opção única, múltipla, escala Likert, classificação/rank), de estrutura (grupo, página, repetição), de captura (foto/arquivo/áudio, ponto/linha/polígono GPS, assinatura), nota/leitura, calculado oculto; arrastar campo EXISTENTE da camada ou criar campo novo (altera o esquema da camada com migração segura, precedente Field Maps: nome/tipo/tamanho travam depois de salvo); propriedades: rótulo, dica, dica de orientação, padrão, obrigatório com mensagem, só leitura, máscara de entrada, aparência",
+   "portao_de_pronto": "formulário com 15 elementos de 8 tipos criado por arrasto e por teclado (documentos idênticos); campo novo aparece na camada (FeatureServer `fields`) e no PostGIS; alterar tipo de campo salvo é recusado com mensagem; o mesmo documento renderiza na edição web (L2-03) e na PWA (L2-07) por e2e em viewport móvel; paridade escrita contra 'Question types' do Survey123 (~30) e 'Build the form' do Field Maps",
+   "refutacao": "adversário submete pela API um registro sem campo obrigatório e com valor fora do tipo: 422 nos dois; renomeia campo na camada e confere que o formulário acusa referência quebrada",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-03-form-builder",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-03-b-logica-condicional-calculo-restricao",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-03-a-construtor-elementos",
+    "L5-11-expressoes-no-navegador"
+   ],
+   "hipotese": "lógica do formulário na linguagem de expressão (L5-11): visibilidade condicional (relevant; oculto envia nulo × envia valor, as duas semânticas do Survey123), cálculo (calculation, inclusive geometria: área, comprimento, coordenadas), restrição com mensagem (constraint), aviso não bloqueante (warning), obrigatório condicional, só leitura condicional, padrão dinâmico; mesma avaliação no navegador e no servidor (a API recusa o que o formulário recusaria)",
+   "portao_de_pronto": "≥ 30 vetores de formulário (entrada → visível/valor/erro) passando no JS e no Python; cálculo de área bate com PostGIS (±0,1 %); restrição violada bloqueia no navegador E na API (teste); aviso não bloqueia; e2e com captura de cada tipo de regra; paridade escrita contra 'Formulas' e 'Expressions' do Survey123 e 'Add logic' do Field Maps",
+   "refutacao": "adversário monta cadeia circular de cálculos (A = B + 1, B = A + 1) e expressão com 10 mil caracteres: recusa nomeada; envia pela API valor que o navegador esconderia: servidor tem de aplicar a mesma regra",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-03-form-builder",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-03-c-dominios-listas-cascata",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-03-a-construtor-elementos",
+    "L2-10-relacoes-regras"
+   ],
+   "hipotese": "listas de escolha reutilizáveis (choices com nome/rótulo/imagem/atributos extra), ligadas a domínio codificado da camada (L2-10) ou soltas; filtro em cascata (choice_filter: estado → município) inclusive por camada do acervo (L6-01); domínio de intervalo; valores contingentes (Pro: combinação válida entre campos); busca em lista longa (≥ 5 mil itens, autocompletar)",
+   "portao_de_pronto": "cascata estado→município com dado aberto do IBGE por e2e; lista de 5.570 municípios responde autocompletar em < 100 ms (medido); domínio codificado da camada e lista do formulário sincronizados (mudar um muda o outro, teste); valor fora do domínio recusado na API; paridade escrita contra domínios/contingent values e choice_filter",
+   "refutacao": "adversário envia código não listado e rótulo em vez de código pela API; tudo recusado",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-03-form-builder",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-03-d-repeticoes-relacionadas-anexos",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-03-a-construtor-elementos",
+    "L2-10-relacoes-regras"
+   ],
+   "hipotese": "repetição (begin repeat) grava em tabela relacionada 1:N (L2-10) com contagem fixa ou livre, mínimo/máximo, resumo por linha; anexos (foto com redução no dispositivo, arquivo com tipos aceitos, áudio) via attachments do FeatureServer; assinatura (canvas próprio ou signature_pad 16 kB) salva como anexo PNG; ponto GPS com limiar de precisão (accuracyThreshold) e captura de linha/polígono em campo",
+   "portao_de_pronto": "formulário com repetição de 3 linhas cria feição + 3 registros relacionados consultáveis por `queryRelatedRecords` (teste); foto de 8 MB vira ≤ 1 MB antes do envio (medido); assinatura visível no popup como anexo; GPS com precisão 30 m acima do limiar 10 m é recusado com mensagem (e2e com geolocalização simulada)",
+   "refutacao": "adversário envia repetição com 10 mil linhas e anexo de 500 MB: limites declarados e aplicados; sincroniza a mesma repetição duas vezes (L2-07): sem duplicata",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-03-form-builder",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-03-e-xlsform-ida-e-volta-idiomas",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-03-b-logica-condicional-calculo-restricao",
+    "L5-03-c-dominios-listas-cascata"
+   ],
+   "hipotese": "exportar formulário como XLSForm válido (survey/choices/settings, colunas type/name/label/hint/required/relevant/calculation/constraint/choice_filter/appearance/default/readonly/repeat_count, `label::idioma`) e importar XLSForm (o do Survey123 e o do ODK); rótulos multilíngues; verificação do XLSForm gerado com pyxform (instalado neste item) — é a ponte com ODK Central e com a migração (L2-08)",
+   "portao_de_pronto": "exportar→importar devolve documento equivalente (diff só em ids); XLSForm gerado passa no pyxform sem erro para 5 formulários de teste; XLSForm de exemplo do xlsform.org importa com ≥ 90 % dos elementos suportados e lista o resto por nome; troca de idioma no formulário publicado; paridade escrita contra 'XLSForm essentials' (colunas suportadas × nossas)",
+   "refutacao": "adversário importa XLSForm com `pulldata`, `search()` e tipos exóticos (geotrace, rank, range): o importador tem de listar o que não suporta em vez de silenciar",
+   "papeis": [
+    "backend",
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-03-form-builder",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-04-a-blocos-de-conteudo",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-08-editor-arrasto",
+    "L5-14-publicacao-links-embed"
+   ],
+   "hipotese": "editor de narrativa por blocos (documento = lista de blocos com id): título/capa, texto (markdown, sanitizado), imagem (com legenda e texto alternativo obrigatório), vídeo/áudio (arquivo do inquilino ou embed), mapa (item do catálogo com vista salva: centro/zoom/camadas visíveis/filtro), tabela, botão, separador, incorporar (iframe sandbox), app/painel da plataforma; arrastar para reordenar; acessibilidade: texto alternativo exigido",
+   "portao_de_pronto": "narrativa com 10 blocos de 8 tipos criada por arrasto e por teclado; mapa em bloco reabre exatamente na vista salva (bbox comparado, tolerância 1 %); imagem sem texto alternativo bloqueia publicação com mensagem; publicado por link (L5-14); paridade escrita contra a lista de blocos dos StoryMaps (acesso 2026-09-05)",
+   "refutacao": "adversário mede a vista salva de 5 mapas após reabrir em 2 viewports: deriva > 1 % = refutado; injeta HTML no texto",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-04-storymap",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-04-b-imersivos-sidecar-tour-swipe",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-04-a-blocos-de-conteudo",
+    "L5-01-b-widgets-mapa"
+   ],
+   "hipotese": "blocos imersivos: sidecar (acoplado, flutuante, apresentação) com slides e coreografia do mapa (cada slide define vista/camadas/feição destacada; o mapa voa entre slides ao rolar), tour de mapa (guiado numerado, explorador em lista/grade, categorizado a partir de camada com campo categoria), cortina (swipe) entre dois mapas/imagens, ações de mapa dentro do texto (link que muda a vista)",
+   "portao_de_pronto": "sidecar de 4 slides rola e o mapa voa para cada vista (e2e verifica centro/zoom por slide); tour a partir de camada de pontos aberta com foto em anexo (3 modos); swipe entre imagem Sentinel de 2 datas (L1-04); publicação e leitura em celular sem rolagem horizontal; paridade escrita contra 'Add sidecars', 'Add map tours', 'Add swipes'",
+   "refutacao": "adversário rola rápido 20 slides e confere que o mapa termina no slide certo (sem corrida de animação); abre em 360 px",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-04-storymap",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-04-c-temas-capa-colecao",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-04-a-blocos-de-conteudo",
+    "L5-10-temas-marca"
+   ],
+   "hipotese": "tema da narrativa (do L5-10: 6 padrões + do inquilino), capa com título/subtítulo/mídia, metadados para compartilhamento (título/resumo/miniatura, `og:` só quando pública), coleção (agrupa narrativas/apps/painéis numa página com navegação), rascunho automático × publicado, aviso de item de dado não compartilhado para o público-alvo (regra do publish dos StoryMaps)",
+   "portao_de_pronto": "publicar narrativa que cita camada privada avisa e oferece corrigir (e2e); coleção com 3 itens navegável; `og:title` presente só na pública; tema trocado sem reeditar blocos",
+   "refutacao": "adversário publica narrativa pública com camada privada e abre anônimo: mapa vazio sem aviso = refutado",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L5-04-storymap",
+   "origem": "esri"
+  },
+  {
+   "id": "L5-20-sites-paginas-publicas",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-08-editor-arrasto",
+    "L5-14-publicacao-links-embed",
+    "L0-03-catalogo"
+   ],
+   "hipotese": "construtor de site do inquilino (Hub/Sites): páginas por arrasto de seções e cartões (texto, imagem, galeria de itens do catálogo com filtro, mapa incorporado, app/painel, busca de conteúdo, chamada com botão, estatísticas, iframe), cabeçalho com menu e rodapé do site, tema do inquilino; páginas renderizadas no servidor para HTML estático (anônimo, indexável SE o inquilino pedir; padrão noindex — regra da casa) com o JS só para os widgets vivos",
+   "portao_de_pronto": "site com 3 páginas e 8 tipos de cartão publicado em `/s/<inquilino>/`; HTML servido sem JS já contém o texto (teste com `curl` e sem navegador); galeria lista só itens compartilhados com 'todos'; noindex por padrão e `index` só por opção explícita com aviso; Lighthouse acessibilidade ≥ 90 no e2e; paridade escrita contra 'Create a site' e cartões do Hub",
+   "refutacao": "adversário procura na galeria pública um item privado por id e por busca; qualquer vazamento = refutado; confere `X-Robots-Tag` em cada página",
+   "papeis": [
+    "frontend",
+    "backend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-21-dados-abertos-catalogo-publico",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-20-sites-paginas-publicas",
+    "L0-09-metadado-catalogo",
+    "L6-01-acervo-casa"
+   ],
+   "hipotese": "portal de dados abertos do inquilino: página por conjunto de dados (título, descrição, licença ESCRITA obrigatória, frescor, campos, mapa de pré-visualização, contagem), downloads gerados sob demanda e em cache (CSV, GeoJSON, GeoPackage, Shapefile zip, KML) com hash, links de API (FeatureServer/OGC/tiles) e metadado DCAT (JSON-LD `schema.org/Dataset` + `dcat:Dataset`) para o dados.gov.br e o Google Dataset Search; busca e facetas por tag/categoria/órgão",
+   "portao_de_pronto": "3 conjuntos abertos de demonstração com licença escrita publicados; download GeoPackage abre no QGIS (teste com `ogrinfo`); JSON-LD válido (validador schema.org offline por JSON Schema); conjunto sem licença escrita não pode ser publicado (teste, regra D17 do acervo); página lista frescor lido do catálogo, nunca digitado",
+   "refutacao": "adversário publica conjunto sem licença pela API direta e pede download de camada privada pelo caminho do cache; qualquer sucesso = refutado",
+   "papeis": [
+    "frontend",
+    "backend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-22-sites-dominio-proprio-tema",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-20-sites-paginas-publicas",
+    "L7-01-instalador-limpo"
+   ],
+   "hipotese": "site em domínio próprio do inquilino (CNAME + certificado emitido pelo install.sh/certbot com validação do DNS) ou caminho na URL da plataforma; tema e favicon por site; medição de acessos por página (sem cookie de terceiro, contagem no nginx/log); página 404 e manutenção; o ato de apontar DNS público é do dono (guardrail) — aqui só a mecânica",
+   "portao_de_pronto": "site de teste em subdomínio interno responde com certificado válido emitido por script (nenhum passo manual, portão P5); tema trocado sem redeploy; contagem diária por página conferida com o log do nginx; 404 personalizada",
+   "refutacao": "adversário aponta domínio para o inquilino errado (host header de A no site de B): tem de responder 404, nunca conteúdo de B",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-23-apps-instantaneos-motor-galeria",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-01-f-modelos-app-galeria",
+    "L5-14-publicacao-links-embed"
+   ],
+   "hipotese": "'app instantâneo' = documento de app pré-montado + painel de configuração simplificado (modo expresso: só as opções essenciais, sem tela de arrasto), galeria com sugestão por pergunta (objetivo, público, dado), pré-visualização, publicar em 3 passos; qualquer app instantâneo pode ser 'aberto no construtor completo' (vira documento normal, sem volta)",
+   "portao_de_pronto": "galeria com ≥ 6 modelos, criar+publicar em ≤ 3 telas por e2e; 'abrir no construtor' preserva tudo (diff vazio nos nós); modo expresso não expõe opção fora da lista do modelo (teste de esquema); paridade escrita contra 'Choose an app template' dos Instant Apps (lista datada 2026-09-05)",
+   "refutacao": "adversário configura pelo modo expresso um valor inválido via devtools (edita o JSON): validação do servidor recusa",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-24-apps-instantaneos-modelos-1",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-23-apps-instantaneos-motor-galeria",
+    "L2-11-geocodificacao-rota"
+   ],
+   "hipotese": "seis modelos: visualizador básico (mapa + ferramentas, swipe ou tempo opcional, incorporável), comparação (2 a 4 mapas sincronizados na mesma vista ou favoritos do mesmo mapa), contagem/ranking (lista de feições ordenada por campo com resumo, 'countdown'), atlas (coleção de mapas e camadas com busca/medição/tabela/adicionar camada), perto de mim (endereço → feições no raio + rota do L2-11), legenda interativa (clicar categoria filtra o mapa)",
+   "portao_de_pronto": "cada modelo com e2e e captura em desktop e celular, criado a partir de dado aberto de demonstração; comparação mantém as 4 vistas sincronizadas (bbox igual após pan); perto de mim devolve as mesmas feições que ST_DWithin (teste); ranking bate com ORDER BY (teste)",
+   "refutacao": "adversário compara 'perto de mim' e 'ranking' com SQL direto; divergência = refutado; abre comparação com mapas de CRS diferentes",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-25-apps-instantaneos-modelos-2",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-23-apps-instantaneos-motor-galeria",
+    "L1-04-serie-temporal",
+    "L2-03-edicao"
+   ],
+   "hipotese": "seis modelos: exibição/slides (sequência de vistas com título, camadas, filtro e popup por slide), visualizador de anexos (pagina feições com foto/PDF, edita atributos), gerenciador (mapa + tabela grande editável + anexos/relacionados), galeria (itens de um grupo com filtro), portfólio (mapas/apps/PDFs/páginas num só app), imagens no tempo (série temporal do L1-04 com controle de data e comparação)",
+   "portao_de_pronto": "cada modelo com e2e e captura; gerenciador edita 5 atributos na tabela e o FeatureServer reflete; anexos abrem PDF/imagem; imagens no tempo percorre 6 datas Sentinel-2 abertas; portfólio abre PDF e app da plataforma",
+   "refutacao": "adversário edita no gerenciador com perfil visualizador (403) e abre anexo de outra camada por id",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-26-construtor-popup",
+   "linha": "L5 builder",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-08-editor-arrasto",
+    "L5-11-expressoes-no-navegador",
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "construtor de popup por camada (salvo na camada e sobreposto no mapa/app): título com {campo} e expressão, lista de campos com nome de exibição e formato (decimais, separador de milhar, data, moeda), texto rico com {campos}, imagem por URL/campo/anexo, gráfico (barras/pizza/linha a partir de campos da feição), anexos, registros relacionados (L2-10), elemento de expressão (linguagem L5-11 devolvendo texto/número/lista); arrastar para ordenar elementos; pré-visualização com feição real; o mesmo documento serve mapa, app, painel, narrativa e relatório",
+   "portao_de_pronto": "popup com 7 tipos de elemento por arrasto e por teclado (documentos idênticos); formato de campo aplicado igual no popup e na tabela (teste); expressão que calcula área bate com PostGIS; registros relacionados listados; e2e em mapa e em app com o mesmo popup; paridade escrita contra 'Configure pop-ups' do Map Viewer (11 seções, acesso 2026-09-05) e contra popupInfo do Web Map Specification",
+   "refutacao": "adversário põe HTML em {campo} de texto rico e expressão que lê outra camada: sanitizado e recusado; compara 20 formatações de número/data com `toLocaleString` pt-BR",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-27-simbologia-por-arrasto",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-02-simbologia",
+    "L5-08-editor-arrasto"
+   ],
+   "hipotese": "sobre o editor do L2-02: painel de estilo onde se arrasta um CAMPO para 'cor', 'tamanho', 'rótulo' ou 'opacidade' e o construtor sugere o tipo (categoria, classes, proporcional, calor) pela cardinalidade e tipo do campo (smart mapping), arrasta uma rampa da galeria, arrasta símbolo da galeria para a categoria; pré-visualização ao vivo no mapa; resultado sempre gravado como estilo MapLibre (spec) + metadados do construtor (campo, método, cortes) para reabrir; desfazer integrado",
+   "portao_de_pronto": "arrastar campo numérico → classes por quantil com 5 cortes iguais aos do L2-02 (teste); arrastar campo de texto com 6 valores → categorias com rampa qualitativa; arrastar rampa troca cores sem recalcular cortes; estilo exportado valida contra o MapLibre Style Spec (validador no `make check`); reabrir mostra os mesmos controles; e2e com captura por modo",
+   "refutacao": "adversário arrasta campo com 20 mil valores distintos para categoria e campo todo nulo para classes: mensagem e sem travar (< 2 s)",
+   "papeis": [
+    "frontend",
+    "cartografo",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-28-galeria-simbolos-rampas-estilos",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-27-simbologia-por-arrasto",
+    "L0-03-catalogo"
+   ],
+   "hipotese": "galeria de símbolos (SVG próprios com licença aberta, ícones por tema: energia, água, saneamento, agro, urbano), rampas (ColorBrewer, viridis, do inquilino), e 'estilo salvo' como item do catálogo reutilizável entre camadas (arrastar estilo sobre a camada); upload de SVG/PNG do inquilino com sanitização; legenda gerada do estilo (derivação própria, precedente maplibre-gl-legend)",
+   "portao_de_pronto": "≥ 100 símbolos e ≥ 30 rampas com licença registrada em VERSOES.txt; estilo salvo aplicado a 2 camadas de mesmo esquema por arrasto; SVG com script é recusado (teste com 5 vetores); legenda de cada tipo de renderização confere com o estilo (teste unitário)",
+   "refutacao": "adversário sobe SVG de 20 MB e SVG com `<script>`/`xlink:href` externo; qualquer execução ou travamento = refutado",
+   "papeis": [
+    "frontend",
+    "cartografo",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-29-construtor-relatorio-pdf",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-08-editor-arrasto",
+    "L5-26-construtor-popup",
+    "L2-12-impressao-layout"
+   ],
+   "hipotese": "modelo de relatório por arrasto (cabeçalho com logo/título, mapa com extensão da feição/seleção e escala, tabela de campos, tabela de registros relacionados, gráfico, imagem/anexos, texto com {campos} e expressões, rodapé com página/data, quebra de página, papel A4/A3 retrato/paisagem) por feição ou por seleção; renderização no servidor pelo chromium headless do playwright (medido nesta máquina: mapa MapLibre com 2.000 polígonos pronto em 350 ms, captura 25 ms, PDF 17 ms, WebGL por SwiftShader sem flag) num worker com MemoryMax; CSS de impressão; o mesmo runtime dos widgets desenha o relatório (WYSIWYG)",
+   "portao_de_pronto": "relatório de 1 feição gerado em < 3 s (medido) com mapa correto (bbox da feição ± 5 %), escala impressa conferida com régua (ADR do L2-12), tabela e gráfico; modelo editável por arrasto e por teclado; PDF com texto selecionável; teste automatizado extrai texto do PDF e confere campos; worker de PDF com limite de RAM declarado na unidade systemd",
+   "refutacao": "adversário pede relatório de feição de outro inquilino por id e de 500 páginas: 403 e limite com mensagem; mede a escala no PDF",
+   "papeis": [
+    "frontend",
+    "backend",
+    "cartografo",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-30-relatorio-lote-agendado",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-29-construtor-relatorio-pdf",
+    "L5-02-c-agendamento-variaveis"
+   ],
+   "hipotese": "relatório para N feições (filtro/seleção/intervalo de datas) como job: um PDF por feição ou um único mesclado, nome do arquivo com campos de substituição (`${campo | formato}`), resultado no catálogo com link e validade, envio por e-mail/webhook, agendamento (L5-02-c); pré-visualização de amostra com marca d'água; sem crédito, com limite por inquilino",
+   "portao_de_pronto": "200 feições viram 200 PDFs em job com progresso e zip no fim (medido tempo/feição); mesclado respeita a ordem da tabela; agendado semanal roda no teste de relógio; nome com data formatada; paridade escrita contra 'Print reports' do Survey123 (que cobra 0,5 crédito por registro no Online — nós não)",
+   "refutacao": "adversário agenda 10 relatórios de 10 mil feições: limite por inquilino e fila, nunca OOM (worker com MemoryMax medido)",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-31-construtor-de-camada-esquema",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-08-editor-arrasto",
+    "L0-04-ingest-vetor",
+    "L2-04-servicos-esri-ogc"
+   ],
+   "hipotese": "criar camada vazia por arrasto de campos (tipo, tamanho, alias, obrigatório, padrão, domínio, índice) e tipo de geometria/CRS; alterar esquema de camada existente com plano de migração mostrado antes (adicionar campo, renomear alias, mudar tamanho para maior; recusar mudança destrutiva sem cópia); a camada nasce com FeatureServer/OGC (L2-04), formulário padrão (L5-03) e popup padrão (L5-26); modelos de camada por setor",
+   "portao_de_pronto": "camada criada por arrasto aparece no PostGIS com os tipos certos (teste compara `information_schema`) e no FeatureServer `fields`; migração destrutiva (texto→inteiro com dado) recusada com mensagem; alias e domínio refletem no formulário sem reconfigurar; e2e com captura",
+   "refutacao": "adversário cria 300 campos e nome de campo com palavra reservada/acentos: tem de normalizar ou recusar sem quebrar o FeatureServer",
+   "papeis": [
+    "frontend",
+    "backend",
+    "dados",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-32-vistas-de-camada",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-31-construtor-de-camada-esquema",
+    "L0-03-catalogo"
+   ],
+   "hipotese": "'vista de camada' como item do catálogo (equivalente à hosted feature layer view): mesma tabela, com filtro CQL2, campos ocultos, só leitura ou editável, área (extensão) limitada, estilo/popup próprios; compartilhável separadamente da camada-mãe; implementada como view PostgreSQL com RLS + registro no catálogo, servida pelo FeatureServer/OGC/tiles",
+   "portao_de_pronto": "vista com filtro e 3 campos ocultos criada pela tela; consulta ao FeatureServer da vista não devolve campo oculto nem feição fora do filtro (teste); vista só leitura recusa applyEdits (403); compartilhar a vista com o público não expõe a camada-mãe (teste cruzado)",
+   "refutacao": "adversário tenta `outFields=*` e `where=1=1` na vista e o id da camada-mãe pelo token da vista: qualquer vazamento = refutado",
+   "papeis": [
+    "backend",
+    "dados",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-33-a-diagrama-de-trabalho",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-02-a-editor-de-nos",
+    "L5-03-a-construtor-elementos",
+    "L5-11-expressoes-no-navegador"
+   ],
+   "hipotese": "gerenciador de trabalho: diagrama de passos por arrasto (biblioteca de passos: manual com instrução, preencher formulário (L5-03), abrir app/mapa com a área do trabalho, executar fluxo (L5-02), pergunta/decisão com caminhos, aprovação, atribuir, e-mail, webhook, esperar), caminhos condicionais por expressão sobre propriedades do trabalho, passos opcionais, rascunho × ativado (versão), duplicar diagrama; reusa o editor de nós do L5-02-a com paleta própria",
+   "portao_de_pronto": "diagrama de 7 passos com decisão montado por arrasto e por teclado; ativar cria versão e o rascunho seguinte não altera trabalhos em curso (teste); passo 'executar fluxo' roda o fluxo de teste; passo 'formulário' abre o formulário e grava; caminho condicional avaliado pela linguagem; paridade escrita contra 'Create and manage workflow diagrams' e a biblioteca de passos do Workflow Manager (acesso 2026-09-05)",
+   "refutacao": "adversário ativa diagrama com passo sem caminho de saída e com dois passos iniciais: recusa nomeada; muda o diagrama com 3 trabalhos em curso e confere que cada um segue a versão em que nasceu",
+   "papeis": [
+    "frontend",
+    "backend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-33-b-modelos-e-trabalhos",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-33-a-diagrama-de-trabalho",
+    "L7-08-sdk-api-webhooks"
+   ],
+   "hipotese": "modelo de trabalho (job template) = diagrama + propriedades (nome, prioridade, prazo, atribuído a usuário/grupo, descrição, localização no mapa) + propriedades estendidas (campos do inquilino, tabela própria); criar trabalho manualmente, a partir de feição selecionada no app (widget), por webhook (L7-08) ou por agenda (L5-02-c, recorrente); tela 'Meus trabalhos' e 'Todos' com filtros, mapa dos trabalhos, comentários, anexos, histórico de passos com quem/quando, dependências entre trabalhos, fechar/reabrir",
+   "portao_de_pronto": "criar 3 trabalhos do modelo, executar passos até o fim por 2 usuários diferentes (e2e com 2 sessões), histórico completo com carimbo e usuário; trabalho por webhook com assinatura HMAC; trabalho recorrente semanal; mapa dos trabalhos filtra a lista por extensão (mensagens do L5-07); RLS: trabalhos de A invisíveis para B; paridade escrita contra 'Job template' e 'Manage jobs'",
+   "refutacao": "adversário executa passo atribuído a outro usuário pela API e avança passo fora de ordem: 403/409; cria 10 mil trabalhos por webhook sem assinatura",
+   "papeis": [
+    "frontend",
+    "backend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-33-c-atribuicao-avancada-indicadores",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-33-b-modelos-e-trabalhos",
+    "L2-06-paineis"
+   ],
+   "hipotese": "atribuição avançada: por grupo, por resultado do passo, ou ESPACIAL (camada de referência com campo de usuário/grupo intersectada pela localização do trabalho); notificações (sino do produto, e-mail); indicadores do gerenciador (abertos por status/atribuído/atraso, tempo médio por passo) como painel (L2-06) pronto; exportação CSV; SLA por modelo com alerta de atraso",
+   "portao_de_pronto": "trabalho criado dentro do polígono de 'equipe norte' cai para a equipe norte automaticamente (teste com camada aberta de setores); painel de indicadores confere com SQL; alerta de atraso dispara no teste de relógio; paridade escrita contra 'Advanced Assignment' e 'Schedule and manage recurring jobs' (que na Esri exige licença Server Advanced)",
+   "refutacao": "adversário põe trabalho na fronteira de dois polígonos e em nenhum: regra de desempate declarada e aplicada; nunca atribuição silenciosa a ninguém",
+   "papeis": [
+    "frontend",
+    "backend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-34-captura-rapida-designer-pwa",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-08-editor-arrasto",
+    "L2-07-campo",
+    "L2-14-tempo-real"
+   ],
+   "hipotese": "captura rápida (QuickCapture): designer por arrasto de BOTÕES grandes em grupos, cada botão ligado a uma camada com atributos fixos, foto opcional, captura de ponto (um toque) ou linha/polígono (rastreamento contínuo), variáveis de entrada do usuário (turno, veículo) que preenchem atributos, mapa de revisão com edição de posição; projeto = JSON com esquema publicado (precedente 'Project JSON' do QuickCapture); executa na PWA do L2-07 offline com fila e sincronização; também como widget do app builder",
+   "portao_de_pronto": "projeto com 6 botões em 2 grupos criado por arrasto; na PWA (viewport Pixel 7) 20 capturas offline com foto sincronizam sem duplicata (regra do L2-07); rastreamento contínuo grava linha com carimbo de tempo por vértice; variável do usuário aparece no atributo; paridade escrita contra 'Introduction to QuickCapture' e 'Project JSON'",
+   "refutacao": "adversário captura com GPS a 200 m de precisão e com relógio errado: limiar e carimbo do servidor; sincroniza 2× (sem duplicata)",
+   "papeis": [
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-35-missao-operacao-ao-vivo",
+   "linha": "L5 builder",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-34-captura-rapida-designer-pwa",
+    "L2-14-tempo-real",
+    "L5-33-b-modelos-e-trabalhos"
+   ],
+   "hipotese": "operação ao vivo (Mission): mapa compartilhado com posição dos participantes (rastreamento da PWA via L2-14), tarefas com título/local/tipo/atribuído/status/prazo/prioridade e relatórios rápidos (formulário L5-03 curto), mensagens por canal (WebSocket/SSE do L2-14, sem áudio/vídeo), linha do tempo da operação, revisão pós-operação (replay das posições); papéis: líder, analista, participante",
+   "portao_de_pronto": "3 participantes simulados enviam posição a cada 5 s e aparecem no mapa do líder (e2e com 3 contextos); tarefa criada pelo líder chega ao participante e muda de status; replay reproduz 10 min de trajetória; RLS por operação; paridade escrita contra 'What is ArcGIS Mission' e 'Tasks status view' marcando fora: par-a-par sem servidor e Mission Server dedicado",
+   "refutacao": "adversário participante lê tarefas de outra operação e posição de participante fora do seu canal: qualquer vazamento = refutado",
+   "papeis": [
+    "frontend",
+    "backend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-36-widgets-personalizados-sdk",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-06-motor-widgets",
+    "L5-07-fontes-vistas-mensagens",
+    "L0-07-admin-org"
+   ],
+   "hipotese": "SDK de widget para o parceiro (equivalente ao Jimu do Experience Builder, sem framework): manifesto + módulo ES + JSON Schema de configuração + i18n; carregado de `web/ext/<inquilino>/` ou de URL do inquilino (sha256 conferido), opcionalmente em iframe sandbox com ponte postMessage para o barramento de mensagens; versão da API de widget (`api_widget: 1`) com teste de compatibilidade; exemplo documentado que um desenvolvedor externo consegue seguir (medido: tempo de um testador sem contexto)",
+   "portao_de_pronto": "widget de exemplo (semáforo por campo) empacotado, instalado por upload do admin do inquilino, usado num app e recebendo mensagem de seleção (e2e); widget com API antiga acusado no `make check`; modo sandbox bloqueia acesso a cookie (teste); MANUAL com o passo a passo e o testador reproduz em ≤ 60 min (medido)",
+   "refutacao": "adversário sobe widget que tenta `fetch` a `/api/usuarios` e ler `document.cookie` no modo sandbox: qualquer sucesso = refutado; sem sandbox, o log tem de registrar a origem do widget",
+   "papeis": [
+    "arquiteto",
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-37-pacotes-modelos-entre-inquilinos",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-05-documento-versoes",
+    "L5-14-publicacao-links-embed"
+   ],
+   "hipotese": "exportar/importar pacote (zip com documentos JSON + estilos + formulários + fluxos + dependências declaradas por tipo, sem dado) para levar um app/painel/formulário/fluxo entre inquilinos e entre instalações (appliance do L7-11); mapeamento de fontes na importação (camada X do pacote → camada Y do destino) com verificação de esquema; galeria de modelos da plataforma e do canal (parceiro publica modelo para seus inquilinos)",
+   "portao_de_pronto": "pacote exportado de A importa em B mapeando 3 fontes e o app funciona (e2e nos dois inquilinos); esquema incompatível listado campo a campo antes de importar; ids regenerados sem quebrar referências (teste de integridade); pacote assinado (sha256 do conteúdo) e conferido",
+   "refutacao": "adversário monta pacote com id de item de outro inquilino e com caminho `../` no zip: recusa; importa duas vezes: dois apps distintos, sem colisão",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "spec"
+  },
+  {
+   "id": "L5-38-importadores-configuracao-esri",
+   "linha": "L5 builder",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-26-construtor-popup",
+    "L5-27-simbologia-por-arrasto",
+    "L5-17-painel-elementos-avancados",
+    "L2-08-migracao-agol"
+   ],
+   "hipotese": "importar configuração Esri para os nossos documentos (complemento do L2-08): popupInfo e renderer do Web Map Specification → popup (L5-26) e estilo MapLibre (simple/uniqueValue/classBreaks/heatmap; dot density, dictionary, pie e predominance ficam fora, declarados), formulário do Field Maps (formInfo) → formulário L5-03, JSON de Dashboards (elementos e ações básicas) → painel, XLSForm do Survey123 (já no L5-03-e); relatório do que não migrou por nó, nunca silêncio (regra da spec: Arcade e ações complexas não migram)",
+   "portao_de_pronto": "5 web maps públicos de teste (JSON obtido com a credencial do parceiro, D20) importam popup e renderer com ≥ 80 % dos elementos e listam o resto; 1 dashboard público importa ≥ 6 elementos; relatório de migração gerado por documento; paridade escrita item a item do Web Map Specification (renderer: 9 tipos listados na doc, acesso 2026-09-05)",
+   "refutacao": "adversário importa web map com Arcade em popup e renderer 'dictionary': o importador tem de marcar como não migrado com o texto original preservado; qualquer conversão silenciosa errada = refutado",
+   "papeis": [
+    "backend",
+    "frontend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L5-39-paridade-l5-e-manual",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-01-f-modelos-app-galeria",
+    "L5-02-f-fluxo-como-ferramenta-e-api",
+    "L5-03-e-xlsform-ida-e-volta-idiomas",
+    "L5-17-painel-elementos-avancados",
+    "L5-26-construtor-popup"
+   ],
+   "hipotese": "fecho da linha: tabela de paridade viva (docs/PARIDADE.md) dos 12 construtores contra Experience Builder, Web AppBuilder (aposentado no 2º trimestre de 2027, doc Esri), Instant Apps, Dashboards, StoryMaps, Hub/Sites, Survey123/Field Maps, Workflow Manager, ModelBuilder, QuickCapture, Mission e contra Carto Builder/Workflows, Felt, Kepler, Retool — feito/parcial/fora com URL testada; seção do MANUAL por construtor com captura real; tour guiado 'primeiro app em 5 min' dentro do produto (liga com L7-04)",
+   "portao_de_pronto": "tabela com ≥ 150 linhas, cada uma com URL que respondeu 200 na data (script `docs/paridade_verifica.py` roda no `make check` e reprova link morto); MANUAL com ≥ 12 seções e capturas geradas pelo e2e; tour completado por testador sem contexto em ≤ 5 min (medido)",
+   "refutacao": "adversário sorteia 20 linhas 'feito' e executa cada uma no produto; uma que não faça o que a linha diz = refutado",
+   "papeis": [
+    "esri",
+    "cronista",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  }
+ ],
+ "dependencias_externas_propostas": [
+  {
+   "id": "L2-10-relacoes-regras",
+   "pedido": "a linguagem de expressão precisa nascer com gramática publicada (EBNF) e arquivo de vetores de teste compartilhável, porque o L5-11 a reimplementa em JavaScript com os mesmos vetores"
+  },
+  {
+   "id": "L2-02-simbologia",
+   "pedido": "o estilo gravado tem de ser MapLibre Style Spec puro + bloco `plat_construtor` (campo, método, cortes) para o L5-27 reabrir o construtor"
+  },
+  {
+   "id": "L2-04-servicos-esri-ogc",
+   "pedido": "aceitar filtro CQL2-JSON além de `where`, porque as vistas do L5-07 serializam filtro em CQL2-JSON; expor `queryRelatedRecords` (L5-26) e estatística agregada no servidor (L5-01-c)"
+  },
+  {
+   "id": "L0-03-catalogo",
+   "pedido": "tipos de item `app, painel, formulario, fluxo, narrativa, pagina, popup, estilo, relatorio, captura, diagrama_trabalho, vista_camada` e tabela `plat.item_versao` conforme L5-05 (ou o L5-05 cria, e o L0-03 só referencia)"
+  },
+  {
+   "id": "L0-05-jobs",
+   "pedido": "job com sub-passos nomeados e progresso por passo (fluxo de N nós) e cancelamento cooperativo entre nós"
+  },
+  {
+   "id": "L1-02-tiles-token",
+   "pedido": "token de serviço com escopo por LISTA de itens (não só por camada raster) para o token de app do L5-14"
+  },
+  {
+   "id": "L2-12-impressao-layout",
+   "pedido": "a renderização de mapa para PDF pode reusar o chromium headless medido no L5-29 (MapLibre + SwiftShader, 350 ms/2.000 polígonos) em vez de motor próprio"
+  },
+  {
+   "id": "L7-08-sdk-api-webhooks",
+   "pedido": "SDK Python com função por ferramenta gerada do OpenAPI, para o L5-02-d exportar o fluxo como script executável"
+  },
+  {
+   "id": "L7-10-i18n-acessibilidade",
+   "pedido": "o L5-12 já entrega a base (2.5.7, teclado, ARIA, chaves pt/en/es) dos construtores; o L7-10 mede o produto inteiro"
+  },
+  {
+   "id": "L0-01-repo",
+   "pedido": "o nginx do ADR 0001 põe `X-Frame-Options: DENY` em tudo; o L5-14 precisa de exceção em `/p/` com `Content-Security-Policy: frame-ancestors` por app (ADR novo)"
+  }
+ ]
+}

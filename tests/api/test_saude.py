@@ -17,7 +17,7 @@ def test_saude_200_com_json_do_contrato(cliente):
     assert set(j) == CAMPOS
     assert j["banco"] == "ok"
     assert j["migracoes_pendentes"] == 0
-    # Duas famílias de nome convivem (ADR 0014): o legado `NNN_slug`, fechado em 047, e o carimbo de
+    # Duas famílias de nome convivem (ADR 0014): o legado `NNN_slug`, fechado em 048, e o carimbo de
     # tempo `YYYYMMDDTHHMM_slug` de toda migração nova. `migracoes_em_disco` já devolve as duas na
     # ordem de aplicação (legado primeiro, depois carimbo).
     migracoes = migracoes_em_disco()

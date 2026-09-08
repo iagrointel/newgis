@@ -3,6 +3,270 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
+
+Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
+medição honesta achou nela. `PLAT_DSN`, `PLAT_GARAGE_ADMIN_TOKEN` e `PLAT_SECRET_ANTERIOR` saíram do
+`.env` para `/etc/plat/segredos` (root 0600) entregues por `LoadCredential=` do systemd — o `.env` fica
+só com configuração, e o Makefile injeta os segredos no pytest (a falta de `PLAT_DSN` na injeção tinha
+deixado a suíte vermelha na coleta desde 06/09 à noite). `scripts/plat segredo rotacionar <nome>`
+rotaciona os 5 segredos: PLAT_SECRET com dupla-chave (o valor antigo vira `PLAT_SECRET_ANTERIOR` por 24
+h, sessões sobrevivem), PLAT_DSN e PLAT_DSN_WORKER com `ALTER ROLE` + reinício das consumidoras,
+PLAT_GARAGE_ADMIN_TOKEN com restart do Garage + API, e a chave S3 de um inquilino sem reiniciar nada.
+Em todos, o valor antigo deixa de autenticar (prova por `psycopg2.connect` com a senha velha depois da
+rotação). A cláusula "0 erro 5xx durante a rotação" é medida pelo **k6** (v2.2.0,
+`scripts/k6_saude_5xx.js`, martelo externo ao processo medido): 0 respostas 5xx em 276-762 requisições
+por rotação (`tests/medidas/L7-19.json`). Chegar ao zero exigiu trocar o mecanismo depois de duas
+medições ruins: "restart em cadeia" deixou 57 respostas 500 na janela entre o `ALTER ROLE` e o restart
+da segunda unidade, e "parar tudo antes" deixou 1.334, porque com ativação por soquete a própria
+conexão do cliente religa o serviço com a credencial velha (e `mask --runtime` não impede a religação
+de unidade estática, medido em spike). O mecanismo final é uma janela `trust` de segundos no pg_hba
+(só a role, só 127.0.0.1, linha marcada, removida por `finally`): velho e novo autenticam durante a
+troca, e a senha velha morre quando a janela fecha. A API passa a subir por ativação por soquete
+(`deploy/plat-api.socket`, uvicorn `--fd 3` com 2 workers — spike medido: conexão durante o stop
+espera ~1 s e recebe 200, nunca refused/502). O adversário independente refutou a primeira versão e os achados que eram do item viraram conserto
+neste mesmo turno: a janela trust abre dentro do `try` (linha nunca fica para trás no pg_hba, checado a
+cada prova), a rotação de PLAT_SECRET reinicia também o worker (ele carrega a chave uma vez na subida e
+decifra dentro de jobs), e o ANTERIOR expira de verdade — timer `plat-segredo-expira.timer` esvazia o
+arquivo e reinicia API e worker na virada das 24 h (janela efetiva 24 h-24 h 59 min). Os achados que são
+contaminação do ambiente ANTERIOR ao item (segredos reais semeados no journal por comandos de outras
+operações; `.env` de worktrees de trilha com valores reais, um deles modo 664; segredos em
+`/proc/<pid>/environ` de processos de trilha) ficaram registrados em `refutacao.json` e viraram itens
+próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo: unidades plat-* só veem os
+segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
+Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
+garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
+
+Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,
+`app/multiescala/{crs,motor}.py` ainda sem rota nenhuma). Duas execuções ligadas: `POST
+/api/multiescala/conjuntos/{id}/macro` gera a grade grosseira sobre a área de estudo inteira e roda a
+combinação; `POST /api/multiescala/execucoes/{id}/micro` gera a grade fina SÓ dentro das células macro
+aprovadas (aritmético — a query de geração junta a região aprovada ANTES de expandir as sub-células, nunca
+gera tudo para descartar depois) e roda a mesma combinação nela. `GET /api/multiescala/execucoes/{id}`
+devolve o relatório por fator com `escala`/`escala_grosseira`/`razao_escala`, calculado pelo motor a partir
+de `resolucao_fonte_m` (declarada no fator) x `resolucao_grade_m` (da execução) — o cliente nunca envia
+esse campo. CRUD completo: `/conjuntos`, `/fatores`, `/fatores/{id}/amostras` (carga em lote),
+`/execucoes`; `DELETE` de conjunto e fator (cascata pelas FKs da migração), acrescentados neste turno para
+a varredura cruzada ter como limpar o que cria. Escopo de token novo `multiescala:usar`
+(`app/auth/escopos.py`). ADR `docs/adr/20260906T1640-grades-aninhadas-multiescala.md`.
+
+Um defeito de FRAMEWORK achado e corrigido, fora do arquivo deste item mas bloqueando-o:
+`app/schema_ambiente.py::CursorSchemaAmbiente` reescreve `plat.` → `plat_t<trilha>.` em `execute` e
+`callproc`, mas não em `executemany` (psycopg2 implementa em C e não chama `execute` de volta) —
+`POST /api/multiescala/fatores/{id}/amostras` falhava com `permission denied for schema plat` em qualquer
+trilha. A MESMA lacuna já quebrava `POST /api/papeis` (não deste item), convertida por `erro_do_banco` num
+403 "operação fora do inquilino da sessão" que parecia RLS cruzada e não era — reproduzido e confirmado
+antes de mexer. Corrigido na classe (um método a mais, mesmo corpo de `execute`), vale para as duas rotas.
+
+Um defeito do próprio teste (não do motor) achado rodando de verdade: uma área de estudo desenhada só um
+pouco maior que a resolução da grade (~1,35-1,47 km sobre 1 km) produz uma célula-fatia cujo CENTRO
+nominal (usado para achar o bloco de dado) cai FORA da extensão real da amostra — 2 das 4 células macro
+ficavam sem nota, não por bug, porque nenhuma amostra alcançava o bloco que aquela célula ia procurar.
+Corrigido aumentando a área de teste para 1.900 x 1.900 m (documentado no ADR, decisão B, para o próximo
+teste desta família não tropeçar na mesma coisa).
+
+Medido de verdade (`PLAT_GRAVAR_MEDIDAS=1`, `tests/medidas/L3-19-multiescala.json`), 10/10 testes passam
+duas vezes seguidas: grade macro de 1 km sobre estudo de 1.900x1.900 m dá 4 células, top_pct 50% aprova 2;
+grade micro de 100 m (k=10) gera exatamente 200 células (2 aprovadas × 10²) contra 400 possíveis (4×10²) —
+economia de 50,0%; o mesmo fator (1.000 m de escala nativa) sai `própria` na grade de 1 km e `grosseira`
+na grade de 100 m da MESMA execução ligada, sem o cliente declarar nada de diferente — é a refutação do
+item. `tests/api/multiescala/test_multiescala.py`: 10/10.
+
+**Fora do portão deste turno, registrado no ADR**: `docs/openapi.json` comitado não inclui
+`/api/multiescala/*` (regeneração é pendência do gerente após os merges); os 11 casos da varredura cruzada
+já estão em `tests/api/cruzado_casos.py` (conferidos à mão contra o app rodando — todas as 11 rotas
+recusam ou isolam o cross-tenant corretamente) e passam a valer em `test_cobertura_100_por_cento`/
+`test_rota_nao_cruza` assim que `make openapi` rodar contra a árvore juntada. `L3-01-b-unidades`
+(dependência declarada) segue PARCIAL num ramo não juntado (`wt/amc`); este item não depende dele em
+código (CRS resolvido de forma própria em `app/multiescala/crs.py`), só na hipótese conceitual.
+## turno 5, setembro de 2026 (item L5-01-a-layout-paginas: páginas e layout do app)
+
+Sobre o editor de arrasto do L5-08: paleta nova (`web/js/editor/paleta_paginas.js`) com `pagina` (tela cheia
+× rolável; `caminho`/`titulo`/`ordem`/`oculta`/`inicial`), `cabecalho`, `rodape`, `menu`, os widgets de
+layout do Experience Builder (`linha`, `coluna`, `grade`, `acordeao`, `painel_fixo`, `painel_lateral`) e
+`janela` (`modal`/`ancorada`) + `secao_vistas`/`vista`. Executor novo (`web/js/executor/{executor,paginas}.js`
++ tela `/executar?item=<id>&pagina=<caminho>`, `app/paginas.py`) que renderiza o MESMO documento como app de
+verdade: nav entre páginas por `history.pushState`, `<dialog>` nativo para janela modal, painel lateral que
+recolhe sem `display:none`, grade em CSS Grid `fr`. `web/js/editor/tela.js` escolhe a paleta pelo `tipo` do
+item (`app` → paleta de páginas; o resto continua com a paleta comum do L5-08) — única mudança num arquivo
+que outro item também toca.
+
+Medido (`tests/medidas/L5-01-a-layout-paginas.json`, e2e `tests/e2e/test_layout_paginas.py`): app de 2
+páginas (Central tela-cheia com mapa, Detalhes rolável com painel lateral/grade/janela) montado só por
+arrasto (2.245,1 ms); menu navega e a URL muda por página, F5 reabre na página certa; painel lateral
+recolhe/expande; grade mantém a razão 8:4 entre dois filhos em 1200 px (2,016) e 600 px (2,033) — diferença
+0,017; janela modal abre pelo botão e fecha por Esc (`<dialog>` nativo). Refutação do adversário: 6 níveis
+alternando linha/coluna, com irmão ao lado do 1º nível, em 3 larguras de viewport (1280/800/320) — 0 px de
+estouro horizontal e nenhum nível com largura, altura, `display` ou `visibility` zerados (a correção que fez
+isso passar foi `min-width:0`/`min-height:0` em todo item flexível, ADR
+`20260907T1355-paginas-e-layout-do-app`). Achado corrigido no caminho: `drag_and_drop` sobre o SELETOR do
+contêiner-alvo mira o CENTRO da caixa — quando o contêiner já tem um filho de largura 12/12, o centro cai
+sobre o filho e o `drop` do HTML5 é entregue a ele, não ao contêiner (o novo nó entra um nível mais fundo do
+que o pedido); o teste agora solta sempre no FUNDO do contêiner, como o e2e do L5-08 já fazia na raiz.
+Paridade contra "Add and manage pages" e "Layout widgets" (doc EXB) em `docs/PARIDADE.md`.
+
+## turno 4, setembro de 2026 (item L5-08-editor-arrasto: primitivas de edição compartilhadas pelos construtores)
+
+Editor de arrasto próprio em `web/js/editor/` (5 módulos, 43.771 bytes medidos; 0 byte de biblioteca de
+arrasto — `web/vendor/VERSOES.txt` segue sem SortableJS, dnd-kit ou GridStack) e tela `/construtor?item=<id>`
+sobre o documento do L5-05. Paleta→tela e tela→tela por HTML5 Drag and Drop; alça de largura por Pointer
+Events com `setPointerCapture`; árvore de estrutura, painel de propriedades gerado do JSON Schema do tipo e
+menu "mover para" para quem só tem toque. Largura sempre em COLUNAS da grade de 12, nunca em pixel.
+
+Medido (`tests/medidas/L5-08-editor-arrasto.json`, e2e `tests/e2e/test_editor_arrasto.py` contra a base da
+trilha): o MESMO layout de 5 componentes montado só por arrasto (787,5 ms) e só por teclado e menus
+(134,0 ms) grava dois documentos idênticos — diferença 0 depois de trocar cada ULID por `n1..nN` na ordem de
+profundidade (o ULID é aleatório por construção, D2). Redimensionar por arrasto levou o mapa de 8 para 4
+colunas nos dois caminhos; `"px"` não aparece no documento gravado. A árvore reflete o aninhamento
+(aria-level 1/2/2/1/1). O painel recusa zoom 99 num campo `maximum: 22`: mensagem no campo, `aria-invalid`,
+e o documento salvo depois continua com 12. Refutação do adversário no mesmo arquivo: soltar um contêiner
+dentro de um descendente dele é recusado com motivo ("dentro de si"), soltar fora da tela não muda nada, o
+menu de mover não oferece destino dentro do próprio nó, e o layout inteiro se monta só por toque no viewport
+Pixel 7 (onde o HTML5 Drag and Drop não dispara). 0 erro de console em todos os caminhos.
+
+Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a partir do navegador, e por
+isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
+anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
+coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+
+## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
+
+SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
+cifrada AES-GCM com rótulo próprio `plat-smtp`); `GET/PUT /api/org/smtp` e `POST /api/org/smtp/testar`
+(envio síncrono, erro legível, nunca a senha). E-mail sempre por job `correio.enviar` (fila do L0-05),
+`somente_sistema=True` (campo novo em `app/jobs/registro.py`) impede a criação via `POST /api/jobs` mesmo
+por admin — fecharia canhão de spam com o SMTP do inquilino; só `app/jobs/sistema.py::enfileirar` cria.
+Convite de membro (`plat.convite`, migração 047): o link carrega só o token, nunca o e-mail — o servidor
+sempre lê o que o convite guarda (`ConviteAceitarEntrada` é `extra="forbid"`, um `email` extra no corpo
+vira 422 antes de tocar o banco); token de uso único (sha256), validade 7 dias, aceitar roda numa função
+SQL `SECURITY DEFINER` com `FOR UPDATE` que cria a conta e marca o convite usado na mesma transação. Sem
+SMTP, a resposta devolve `link_manual` (mesmo padrão de senha temporária mostrada uma vez). Redefinição de
+senha por e-mail (`plat.redefinicao_senha` + `plat.redefinicao_pedido`): solicitar sempre devolve
+`202 {"ok":true}`, exista ou não a conta; limite de taxa por (inquilino, e-mail), 5 pedidos a cada 15
+minutos, contado mesmo para e-mail inexistente (senão o próprio limite revelaria existência); aplicar
+reusa a mesma rotina de troca de senha/histórico/sessões de `PUT /api/eu/senha`. Telas: `/admin/organizacao`
+(seção SMTP), `/admin/usuarios` (convidar + lista de pendentes), `/aceitar-convite` e `/redefinir-senha`
+(públicas). ADR 0017.
+
+Três defeitos reais achados rodando de verdade contra `https://plat.iagrointel.com` com um servidor SMTP
+de captura em stdlib puro (`tests/api/util_smtp_captura.py` — `aiosmtpd` está ausente) e o `plat-worker`
+real, corrigidos ANTES do adversário (migrações 048/049): (1) variável PL/pgSQL `chave` ambígua contra a
+coluna homônima em `plat.redefinicao_pedido` — todo `POST /api/senha/redefinir/solicitar` caía em 500;
+(2) sete tipos de evento novos nunca inseridos em `plat.evento_tipo` — toda `registrar_evento` correspondente
+violava a FK (500 em `PUT/DELETE /api/org/smtp`, `POST /api/convites`, aceitar convite, aplicar
+redefinição); (3) duas consultas a `plat.tenant` sem contexto de inquilino (a conta ainda não existe)
+caíam na RLS e devolviam `None` em vez da linha; (4) `correio.enviar` com `memoria_mb=192` estourava de
+verdade o `RLIMIT_DATA` do filho (cryptography importado pela primeira vez depois do fork), subiu para 512.
+Medido, com o worker/API reais e o servidor de captura: convite chega e-mail→resolver→aceitar→conta
+criada→login funciona; link usado de novo e expirado (7 dias simulados por UPDATE direto) dão `410`
+nos dois casos; e-mail malicioso extra no corpo do aceite vira `422` e nunca altera o e-mail da conta
+criada (sempre o do convite); redefinição ponta a ponta com o mesmo padrão; 12 pedidos seguidos de
+redefinição para o mesmo e-mail estouram o limite de taxa antes do fim (refutação do item); `testar envio`
+com host inexistente devolve erro legível em menos de 1 s; a senha SMTP em claro NUNCA aparece no
+`journalctl` real de `plat-worker`/`plat-api` (grep direto no log real, não simulado);
+`POST /api/jobs {"tipo":"correio.enviar"}` recusa `403` mesmo para o admin do inquilino; isolamento
+cruzado confirmado (admin de outro inquilino recebe `404` ao tentar cancelar convite alheio).
+`tests/api/test_smtp_convites.py` + `tests/unit/test_correio_cifra.py` + `test_correio_cliente.py`:
+21/21 passam contra o schema `plat` de produção. **Pendência nomeada**: o e2e de navegador
+(`tests/e2e/test_convite.py`, escrito e com lint limpo) não foi executado neste turno — swap da
+máquina em 7,7/8,0 GiB no momento do fechamento (contenção de múltiplos agentes concorrentes no laço,
+não desta mudança), e a casa já teve OOM por lançar Chromium sob essa pressão; roda no próximo `make e2e`
+com RAM livre. Fora do portão literal deste turno (hipótese do item, registrado no ADR 0017 §D5): avisos
+de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail — o job `correio.enviar` já serve,
+falta só o gatilho periódico cross-tenant.
+
+## turno 3, setembro de 2026 (nome de migração por carimbo de tempo — ADR 0014)
+
+Migração nova passa a se chamar `db/migracoes/YYYYMMDDTHHMM_<slug>.sql` (carimbo UTC, mais 3 hexadecimais
+quando duas nascem no mesmo minuto em trilhas diferentes). O nome do arquivo é CHAVE em
+`plat.versao_migracao`, não etiqueta: renumerar um arquivo já aplicado faz o aplicador tratá-lo como novo e
+reaplicá-lo. Com trilhas em paralelo, a numeração sequencial colidiu três vezes no mesmo dia (o mesmo arquivo
+foi 031 → 037 → 044 → 045). A família de três dígitos fica FECHADA em 048, imutável; nenhum arquivo existente
+foi renomeado. `app/migracoes.py` concentra o padrão de nome, a chave de ordenação (legado antes de qualquer
+carimbo) e o cabeçalho opcional `-- depende: <arquivo>`; `db/migrar.sh`, `db/migrar_homolog.sh` e
+`laco/trilha_ambiente.sh` repetem a mesma chave em bash. `tests/unit/test_migracoes_nome_e_dependencia.py`
+reprova nome fora do padrão, três dígitos novos e dependência que vem depois na ordem;
+`tests/api/test_saude.py` deixa de casar o glob de três dígitos e escreve o que "última migração" passa a
+significar (a de autoria mais recente pela chave, não a maior string nem a última aplicada no relógio).
+
+## turno 3, setembro de 2026 (item L0-04-a-upload-arquivo: upload retomável pelo navegador)
+
+Upload de arquivo em partes de 16 MiB pelo navegador, retomável (`POST /api/uploads` reserva cota do inquilino
+e abre o multipart no Garage; `PUT /api/uploads/{id}/partes/{n}` aceita partes fora de ordem e reenviadas — o
+`addPart` da Esri; `POST /api/uploads/{id}/concluir` fecha o multipart, confere sha256/tamanho/tipo×conteúdo e
+registra o item `arquivo` no catálogo; `DELETE` aborta). Vocabulário de 14 tipos declarados (shapefile.zip,
+gpkg, geojson, kml, kmz, csv, gpx, xlsx, dxf, dwg, gdb.zip, parquet, fgb, gml, zip) provados pelo CONTEÚDO real,
+nunca só a extensão (`app/uploads/tipos.py`); os zip-baseados usam `app.ingestao.formatos.conferir_zip`
+(arquivo pequeno) ou um parser do formato PKZIP por leitura em intervalo (`app/uploads/zip_remoto.py`, arquivo
+grande — nunca baixa o objeto inteiro para RAM, motivo é a máquina ter pouca RAM livre e o item aceitar até
+2 GiB por arquivo). Periódico `uploads.expirar` (`*/30 * * * *`) apaga upload sem atividade há 24 h em
+qualquer inquilino (SECURITY DEFINER cruzando tenants, mesmo mecanismo de `plat.sessoes_expurgar`). Tela
+`/uploads` (dropzone, barra de progresso nativa, identidade "instrumento").
+
+Decisão registrada: a cota reservada NÃO usa `tenant.uso_reservado_bytes` (a hipótese do ADR 0005) — aquela
+coluna já foi tomada por outra trilha para "armazenamento de tabela carregada", com significado explicitamente
+"independente da cota do bucket Garage". A reserva deste item é a soma de `plat.upload.bytes_declarado` em
+estado `iniciado` do inquilino (`plat.upload_reservado_bytes`), sob o mesmo `SELECT ... FOR UPDATE` da linha
+do tenant.
+
+Achado de processo (não de produto): a migração original (`044_uploads.sql`) colidiu com uma tabela IDÊNTICA
+já aplicada ao banco compartilhado por outra sessão desta árvore, cujo código Python nunca apareceu em lugar
+nenhum encontrado — registrado no handoff para o coordenador verificar se há uma segunda linha de trabalho no
+mesmo item. Renomeada para `046_upload_retomavel.sql`, escrita para ser segura contra o schema já existir.
+
+Testes: `tests/unit/test_uploads_tipos.py` (32, sem banco) + `tests/api/uploads/test_uploads.py` (18, API real:
+100 MB em 7 partes com a 4ª reenviada e sha256 igual; `.gpkg` com zip dentro recusado com a mensagem exata;
+2,1 GiB e cota insuficiente recusados com 413 antes de qualquer byte; zip-bomba de 1.500 entradas e caminho
+`../` recusados; duas conclusões concorrentes — uma vence, a outra vê `ja_concluido`; duas sessões enviando
+partes diferentes ao mesmo tempo — as duas terminam OK; upload esquecido expira em 24 h pelo periódico real)
++ `tests/e2e/test_uploads.py` (playwright contra a URL interna, barra de progresso, 0 erro de console).
+`taxa_upload_mb_s` = 92,1 MB/s (local, `tests/medidas/L0-04-a-upload-arquivo.json`).
+
+## turno 3, setembro de 2026 (item L0-07-b-papeis-privilegios: vocabulário fino, conferência Esri e gate de rebaixamento)
+
+O grosso de privilégios/papéis já existia do L0-02 (vocabulário fechado, papéis personalizados, tela `/admin/papeis`,
+`plat.tem`/`plat.privilegios_de`); este item fechou o que faltava do portão. `docs/gerar_privilegios.py` lê
+`plat.privilegio`/`plat.perfil_privilegio` AO VIVO no banco (nunca `app/auth/privilegios.py`) e escreve
+`docs/PRIVILEGIOS.md` (47 privilégios, 12 grupos, 20 administrativos), com `tests/api/test_privilegios_doc.py`
+provando que o comitado bate com o banco agora. `tests/api/test_privilegios_matriz.py` chama toda rota do OpenAPI
+vivo cujo `x-privilegio` é um nome puro do vocabulário (sozinho ou em composição `a|b`) com um usuário que
+provadamente não o tem, e exige `403` em todas — dois clientes só bastam (um só com `tokens.gerar`, outro só com
+`membros.ver`, a interseção perfil×papel do ADR 0002 faz o resto); a exceção nomeada (`PUT
+/api/itens/{id}/compartilhamento`, que checa posse do item ANTES do privilégio de compartilhar) ganhou teste à
+parte provando o gate real com o dono do item.
+
+Achado do adversário: rebaixar o perfil de um usuário que possui itens do catálogo não era recusado —
+`_editar` (`app/auth/rotas_usuarios.py`) só checava grupos (`409 possui_grupos`); a regra da Esri (E12-members)
+é "não possui conteúdo NEM grupos". Corrigido com o mesmo padrão (`409 possui_itens`, listando os itens);
+`tests/api/test_usuarios.py::test_rebaixar_perfil_com_itens_e_recusado` prova a recusa, que promover não
+esbarra na regra, e que a purga do item destrava o rebaixamento.
+
+Paridade linha a linha contra a lista de privilégios da Esri 11.4 (E12-priv, `laco/handoffs/T1/21_esri.md` §1.3):
+43 gerais + 33 administrativos = 76 privilégios Esri, **35 feito · 11 parcial · 30 fora** — cada `fora` é uma
+decisão de escopo já nomeada em outro item (notebook, app OAuth, pipeline, versionamento de dado, colaboração
+entre organizações, licença/assento, vídeo, grafo de conhecimento, relatório de uso), nunca uma lacuna descoberta
+agora. Tabela completa em `docs/PARIDADE.md` seção "Privilégios e papéis personalizados".
+
+e2e novo (`tests/e2e/test_papeis.py::test_papel_curador_categoriza_mas_nao_publica`, captura
+`L0-02-tenant-auth_papel_curador.png`): papel "Curador" (`conteudo.criar` + `conteudo.categorias`, este último
+administrativo — só cabe em perfil `admin`) criado pela tela, atribuído a um usuário novo; ele reescreve a árvore
+de categorias e cria conteúdo comum, mas uma tentativa de criar/publicar camada vetorial nega com `403
+sem_privilegio` (`exigido: conteudo.publicar_camada`).
+
+Refutação própria (papel esri+backend+frontend+testador+adversário, sem subagentes — item pequeno o bastante
+para uma sessão): papel administrativo atribuído a perfil abaixo do teto → `422 papel_incompativel` (já provado
+em `test_so_admin_cria_altera_e_apaga_admin`); ninguém concede privilégio que não tem → `403
+privilegio_proprio_insuficiente` (`test_privilegios_e_papeis`); apagar papel em uso → `409 papel_em_uso`; as
+~40 rotas de privilégio puro do OpenAPI vivo, uma a uma, sem o privilégio declarado → `403` em todas
+(`test_privilegios_matriz.py`). Nenhuma reprovação nova encontrada além da já corrigida (`possui_itens`).
+
+Pendente, registrado no handoff: teste automatizado do downgrade de tipo Esri "Creator → Viewer com conteúdo"
+não tem equivalente 1:1 (nossa spec não tem tipo separado de perfil — decisão D5/D16 já registrada); relatório
+de uso administrativo (`Content: Create and manage administrative reports`) e alguns privilégios de
+colaboração/servidor seguem `fora` por decisão de escopo, não por falta de tempo.
+
+
 ## turno 3, setembro de 2026 (item L2-11-b-geocodificador-brasil: geocodificador próprio sobre CNEFE 2022)
 
 Geocodificador PRÓPRIO em PostgreSQL/PostGIS (sem Nominatim/Pelias, decisão D28 sobre disco), base = CNEFE

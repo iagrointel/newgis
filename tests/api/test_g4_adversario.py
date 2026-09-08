@@ -89,12 +89,8 @@ def _psql(sql: str) -> str:
 
 
 # ================================================================ TRANSVERSAL 1 — o contrato comitado
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-01: docs/openapi.json (o 'contrato comitado') está 28 rotas atrás do app vivo e nenhum "
-           "teste compara os dois; make check não regenera nem confere. Como test_eventos.py e test_cruzado.py "
-           "leem o arquivo comitado, toda rota nova escapa da cobertura de evento e da varredura cruzada.",
-)
+# G4-01 CORRIGIDO em master (conferido 08/09/2026): o ataque não reproduz mais. A marca
+# xfail estrita saiu e o teste fica valendo como regressão — se o defeito voltar, ele reprova.
 def test_openapi_comitado_igual_ao_app_vivo():
     import json
 
@@ -108,11 +104,8 @@ def test_openapi_comitado_igual_ao_app_vivo():
 
 
 # ================================================================ TRANSVERSAL 2 — cobertura de evento
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-02 (L0-10): a cobertura declarada de 100 % é medida contra o OpenAPI COMITADO. Contra o "
-           "app vivo são 84 declarações para 111 rotas de escrita = 75,7 %; 27 rotas de escrita sem declaração.",
-)
+# G4-02 CORRIGIDO em master (conferido 08/09/2026): o ataque não reproduz mais. A marca
+# xfail estrita saiu e o teste fica valendo como regressão — se o defeito voltar, ele reprova.
 def test_cobertura_de_evento_100_por_cento_contra_o_app_vivo():
     from app.main import app
     from tests.api.eventos_esperados import EVENTOS_POR_ROTA
@@ -442,15 +435,8 @@ def test_privilegio_insuficiente_do_banco_nao_vira_403_de_inquilino():
     assert erro.status_code >= 500, f"{erro.status_code} {getattr(erro, 'erro', '')}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-24 (transversal, atinge a prova de isolamento): CursorSchemaAmbiente reescreve `plat.` em "
-           "execute() e callproc(), mas NÃO em executemany(). app/auth/rotas_usuarios.py usa executemany em "
-           "POST e PUT /api/papeis, então em qualquer ambiente isolado (PLAT_SCHEMA != plat: trilha ou "
-           "make homolog) essas rotas batem no schema `plat` de produção e recebem 42501. Efeito medido nesta "
-           "base: tests/api/test_cruzado.py — a varredura A->B que prova isolamento em toda rota — termina com "
-           "1 failed e 168 errors, ou seja, a garantia de isolamento não é exercida fora de produção.",
-)
+# G4-24 CORRIGIDO em master (conferido 08/09/2026): o ataque não reproduz mais. A marca
+# xfail estrita saiu e o teste fica valendo como regressão — se o defeito voltar, ele reprova.
 def test_cursor_de_schema_reescreve_executemany():
     from app.schema_ambiente import CursorSchemaAmbiente
 

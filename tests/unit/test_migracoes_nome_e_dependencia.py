@@ -2,7 +2,7 @@
 
 O nome do arquivo de migração é CHAVE em `plat.versao_migracao`, não etiqueta: renumerar um arquivo
 já aplicado faz o aplicador tratá-lo como novo e reaplicar. Por isso a família legada `NNN_slug` está
-FECHADA em 047 e imutável, e toda migração nova nasce com carimbo de tempo `YYYYMMDDTHHMM_slug`
+FECHADA em 048 e imutável, e toda migração nova nasce com carimbo de tempo `YYYYMMDDTHHMM_slug`
 (mais 3 hexadecimais quando duas nascem no mesmo minuto em trilhas diferentes).
 
 O carimbo resolve a colisão, mas não garante ORDEM DE DEPENDÊNCIA: duas trilhas podem escrever, no
@@ -42,7 +42,7 @@ def test_todo_arquivo_sql_tem_nome_de_uma_das_duas_familias():
         "`YYYYMMDDTHHMM_slug.sql` (date -u +%Y%m%dT%H%M), com 3 hex se colidir no minuto.")
 
 
-def test_a_familia_legada_esta_fechada_em_047():
+def test_a_familia_legada_esta_fechada_no_ultimo_numero_existente():
     novos = [p.name for p in arquivos()
              if RE_MIGRACAO_LEGADO.match(p.stem) and int(p.stem[:3]) > ULTIMO_LEGADO]
     assert novos == [], f"migração nova com número de três dígitos: {novos}. Use carimbo de tempo."
