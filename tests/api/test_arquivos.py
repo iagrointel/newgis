@@ -209,25 +209,38 @@ def test_multipart_real_produz_o_mesmo_sha256_que_um_put_unico(conexao_plat_app)
 
 def test_varredura_acusa_orfao_plantado(conexao_plat_app):
     """Objeto gravado direto no Garage (sem passar por guardar, então sem linha em plat.arquivo) aparece em
-    `sem_linha`; a varredura não acusa nada quando não há órfão plantado."""
+    `sem_linha`; a varredura não acusa mais nada além dele.
+
+    08/09: a asserção de entrada era `antes["sem_linha"] == []`, isto é, o BUCKET INTEIRO do inquilino `demo`
+    limpo. O bucket é de todo o inquilino, e sob pytest-xdist os arquivos da suíte correm em paralelo: quando
+    `tests/api/uploads/test_uploads.py` termina antes deste arquivo, o objeto que a conclusão de multipart deixa
+    para trás (medido: 1 objeto `arquivo/<sha>.csv`, sempre o mesmo, produzido por
+    `test_duas_sessoes_enviando_partes_diferentes_ao_mesmo_tempo`, que está na linha de base de falhas) já está
+    lá e a entrada reprova. Em série o mesmo teste passa só porque `test_arquivos.py` é colhido antes de
+    `uploads/` — ordem, não propriedade.
+
+    A propriedade que o item prova continua inteira e é verificada por DIFERENÇA entre as duas varreduras: o
+    objeto plantado não era acusado antes, é acusado depois, e nada mais entrou na acusação. Nenhuma asserção
+    foi afrouxada: o que saiu foi a dependência de ordem de coleta.
+    """
     from app import objetos
 
+    chave = "zt_orfao/plantado.bin"
     ids = ids_por_slug(conexao_plat_app)
     contexto(conexao_plat_app, ids["demo"], usuario_id=0, login="teste")
     with conexao_plat_app.cursor() as cur:
         antes = objetos.varrer_orfaos(cur, "demo")
-        # 08/09: o bucket do demo é compartilhado entre trilhas de teste em paralelo (cada uma com o seu schema);
-        # objetos de outra trilha aparecem aqui como órfãos. A cláusula é sobre o objeto PLANTADO, não sobre vazio.
-        assert "zt_orfao/plantado.bin" not in antes["sem_linha"]
+        assert chave not in antes["sem_linha"]
         bucket = objetos.garantir_bucket(cur, ids["demo"], "demo")
     conexao_plat_app.commit()
     cli = objetos._cliente(bucket)
-    cli.put(bucket["bucket_alias"], "zt_orfao/plantado.bin", b"ninguem registrou isso", "text/plain")
+    cli.put(bucket["bucket_alias"], chave, b"ninguem registrou isso", "text/plain")
     contexto(conexao_plat_app, ids["demo"], usuario_id=0, login="teste")
     with conexao_plat_app.cursor() as cur:
         depois = objetos.varrer_orfaos(cur, "demo")
-    assert "zt_orfao/plantado.bin" in depois["sem_linha"]
-    cli.delete(bucket["bucket_alias"], "zt_orfao/plantado.bin")
+    cli.delete(bucket["bucket_alias"], chave)
+    assert chave in depois["sem_linha"]
+    assert set(depois["sem_linha"]) - set(antes["sem_linha"]) == {chave}
 
 
 def test_api_enviar_exige_token_nunca_cookie_de_sessao(sessao_a):
