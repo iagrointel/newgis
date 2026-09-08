@@ -3,6 +3,39 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L2-04-h-wfs-2-gml: WFS 2.0 com filtro FES e GML 3.2 por token)
+
+O WFS que existia desde o item `L2-04-servicos-esri-ogc` respondia às três operações básicas com um
+esquema aproximado. Agora o serviço é o que um cliente de escritório adiciona por URL:
+
+- **GetCapabilities 2.0.0 e 1.1.0 válidos contra o XSD oficial do OGC**, com o esquema em cache local
+  (`docs/xsd/cache`, perfil `wfs20` do `docs/xsd/baixar_iso19139.py`: 124 arquivos, 1,9 MB, sha256 no
+  manifesto) — a validação nunca toca a rede. `owslib` lê o documento e enxerga o tipo de feição.
+- **DescribeFeatureType em XSD gerado das colunas**, importando o GML 3.2.1 oficial; o mesmo esquema
+  valida, no teste, cada feição devolvida pelo GetFeature (seis tipos de geometria, Multi* inclusas).
+- **Filtro FES 2.0** (`app/consulta/fes.py`): comparação, lógica, espacial (BBOX/Intersects/Within/
+  DWithin) e temporal, traduzidos para a MESMA árvore do CQL2 e compilados pelo MESMO
+  `cql2.compilar` — nenhum segundo gerador de SQL. XML lido por `defusedxml` (DTD, entidade e
+  referência externa recusadas), com teto de bytes, de nós e de profundidade.
+- **GetFeature** com `typeNames`, `count`/`startIndex`, `bbox`, `srsName`, `propertyName`, `sortBy`,
+  `resultType=hits` e `resourceId`; **GetPropertyValue**; consulta armazenada **GetFeatureById**.
+- **Transaction (Insert/Update/Delete)** pela porta ÚNICA de escrita da casa (`aplicar_edicoes`, item
+  L2-03-a), com o parâmetro novo `origem` marcando `"wfs"` no evento de domínio.
+- **Ordem dos eixos** resolvida num lugar só: forma de autoridade (`urn:ogc:def:crs:EPSG::4326`) é
+  latitude, longitude; forma curta e CRS84 são longitude, latitude; geometria de filtro sem
+  `srsName` usa o CRS padrão publicado — sem essa última regra o `-spat` do GDAL devolvia zero feição.
+
+Medido (`tests/medidas/L2-04-h-wfs-2-gml.json`): 1.000 feições em GML 3.2 reabertas pelo GDAL com
+geometria válida; o driver WFS do GDAL 3.8.4 lê o serviço vivo e conta 250, igual ao banco; `-spat`
+traz 60 e `-where "area > 200"` traz 50, ambos traduzidos para FES pelo próprio driver; `ogr2ogr`
+exporta as 250 para GeoPackage. 57 testes do item verdes. **Não medido:** QGIS (não instalado nesta
+máquina) e AGOL/ArcGIS Pro (D20).
+
+De quebra, o que a junção da família L2-04 tinha deixado para trás: `docs/openapi.json` regerado (19
+rotas de serviço que não estavam lá), casos de varredura cruzada e eventos declarados para todas
+elas, `docs/LIMITES.md` regerado com os limites da edição transacional e três linhas longas de
+`make lint` herdadas dos ramos irmãos.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
