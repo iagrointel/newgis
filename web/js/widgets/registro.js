@@ -1,11 +1,23 @@
+/* plat — registro de widgets (item L5-06-motor-widgets; ampliado pelo L5-07-fontes-vistas-mensagens).
+   Cada manifesto declara os EVENTOS que emite e as AÇÕES que aceita no vocabulário do barramento
+   (L5_CONCEITO D5): eventos clique | dado_adicionado | filtro_mudou | extensao_mudou | localizacao |
+   registros_carregados | selecao_mudou | vista_mudou; ações de dado filtrar | selecionar | limpar_filtro |
+   limpar_selecao (resolvidas na VISTA do widget) e de widget zoom | pan | piscar | popup | abrir | fechar |
+   definir_parametro (chamadas no elemento). `configuracao.vista` liga o widget a uma vista do documento. */
 const textoCurto = { type: 'string', maxLength: 200 };
+const ulid = { type: 'string', maxLength: 26 };
 const objetoFechado = (properties = {}, required = []) => ({ type: 'object', additionalProperties: false, properties, required });
+
+export const EVENTOS_BARRAMENTO = Object.freeze(['clique', 'dado_adicionado', 'filtro_mudou', 'extensao_mudou', 'localizacao', 'registros_carregados', 'selecao_mudou', 'vista_mudou']);
+export const ACOES_DADO = Object.freeze(['filtrar', 'selecionar', 'limpar_filtro', 'limpar_selecao']);
+export const ACOES_WIDGET = Object.freeze(['zoom', 'pan', 'piscar', 'popup', 'abrir', 'fechar', 'definir_parametro']);
 
 const manifestos = [
   {
-    nome: 'mapa', versao: '1.0.0', api_widget: 1, modulo: './mapa.js', elemento: 'plat-mapa',
-    esquema_config: objetoFechado({ rotulo: textoCurto }),
-    eventos: ['mapa.selecao', 'mapa.extensao_alterada'], acoes: ['mapa.enquadrar', 'mapa.destacar'],
+    nome: 'mapa', versao: '1.1.0', api_widget: 1, modulo: './mapa.js', elemento: 'plat-mapa',
+    esquema_config: objetoFechado({ rotulo: textoCurto, vista: ulid, campo_rotulo: textoCurto, altura: { type: 'integer', minimum: 120, maximum: 2000 } }),
+    eventos: ['clique', 'selecao_mudou', 'extensao_mudou', 'registros_carregados', 'mapa.selecao', 'mapa.extensao_alterada'],
+    acoes: [...ACOES_DADO, 'zoom', 'pan', 'piscar', 'popup', 'mapa.enquadrar', 'mapa.destacar'],
     fontes: { min: 0, max: 100, tipos: ['mapa', 'camada'] }, i18n: 'widget.mapa',
   },
   {
@@ -18,28 +30,42 @@ const manifestos = [
     fontes: { min: 0, max: 1, tipos: ['mapa'] }, i18n: 'widget.legenda',
   },
   {
-    nome: 'tabela', versao: '1.0.0', api_widget: 1, modulo: './tabela.js', elemento: 'plat-tabela',
+    nome: 'tabela', versao: '1.1.0', api_widget: 1, modulo: './tabela.js', elemento: 'plat-tabela',
     esquema_config: objetoFechado({
+      vista: ulid,
       colunas: { type: 'array', maxItems: 100, items: objetoFechado({ campo: textoCurto, rotulo: textoCurto }, ['campo', 'rotulo']) },
       linhas: { type: 'array', maxItems: 10000, items: { type: 'object' } },
+      linhas_por_pagina: { type: 'integer', minimum: 5, maximum: 1000 },
     }, ['colunas']),
-    eventos: ['tabela.linha_selecionada'], acoes: ['tabela.definir', 'tabela.filtrar'],
+    eventos: ['clique', 'selecao_mudou', 'registros_carregados', 'tabela.linha_selecionada'],
+    acoes: [...ACOES_DADO, 'piscar', 'tabela.definir', 'tabela.filtrar'],
     fontes: { min: 1, max: 1, tipos: ['camada', 'tabela'] }, i18n: 'widget.tabela',
+  },
+  {
+    nome: 'grafico', versao: '1.0.0', api_widget: 1, modulo: './grafico.js', elemento: 'plat-grafico',
+    esquema_config: objetoFechado({
+      vista: ulid, titulo: textoCurto, campo: textoCurto, agregacao: { type: 'string', enum: ['contagem', 'soma', 'media'] },
+      campo_valor: textoCurto, maximo_barras: { type: 'integer', minimum: 1, maximum: 200 },
+    }, ['campo']),
+    eventos: ['clique', 'selecao_mudou', 'filtro_mudou', 'registros_carregados'],
+    acoes: [...ACOES_DADO, 'piscar'],
+    fontes: { min: 1, max: 1, tipos: ['camada', 'tabela'] }, i18n: 'widget.grafico',
   },
   {
     nome: 'texto', versao: '1.0.0', api_widget: 1, modulo: './texto.js', elemento: 'plat-texto',
     esquema_config: objetoFechado({ texto: { type: 'string', maxLength: 10000 }, nivel: { type: 'integer', minimum: 1, maximum: 6 } }, ['texto']),
-    eventos: [], acoes: ['texto.definir'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.texto',
+    eventos: [], acoes: ['texto.definir', 'definir_parametro'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.texto',
   },
   {
     nome: 'botao', versao: '1.0.0', api_widget: 1, modulo: './botao.js', elemento: 'plat-botao',
     esquema_config: objetoFechado({ rotulo: textoCurto, valor: {}, habilitado: { type: 'boolean' } }, ['rotulo']),
-    eventos: ['botao.acionado'], acoes: ['botao.habilitar'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.botao',
+    eventos: ['clique', 'botao.acionado'], acoes: ['botao.habilitar', 'abrir', 'fechar'], fontes: { min: 0, max: 0, tipos: [] }, i18n: 'widget.botao',
   },
   {
-    nome: 'filtro', versao: '1.0.0', api_widget: 1, modulo: './filtro.js', elemento: 'plat-filtro',
-    esquema_config: objetoFechado({ rotulo: textoCurto, valor: textoCurto }),
-    eventos: ['filtro.alterado'], acoes: ['filtro.definir'], fontes: { min: 1, max: 100, tipos: ['camada', 'tabela'] }, i18n: 'widget.filtro',
+    nome: 'filtro', versao: '1.1.0', api_widget: 1, modulo: './filtro.js', elemento: 'plat-filtro',
+    esquema_config: objetoFechado({ rotulo: textoCurto, valor: textoCurto, vista: ulid, campo: textoCurto }),
+    eventos: ['filtro_mudou', 'filtro.alterado'], acoes: ['filtro.definir', 'limpar_filtro', 'definir_parametro'],
+    fontes: { min: 1, max: 100, tipos: ['camada', 'tabela'] }, i18n: 'widget.filtro',
   },
 ];
 
@@ -54,6 +80,7 @@ export function validarEsquema(valor, esquema, caminho = 'configuracao') {
   const tipoEsperado = esquema.type === 'integer' ? 'number' : esquema.type;
   if (tipoEsperado && tipo !== tipoEsperado) falha(caminho, `esperado ${esquema.type}, recebido ${tipo}`);
   if (tipo === 'string' && esquema.maxLength !== undefined && valor.length > esquema.maxLength) falha(caminho, `máximo ${esquema.maxLength} caracteres`);
+  if (tipo === 'string' && esquema.enum && !esquema.enum.includes(valor)) falha(caminho, `valor fora de ${esquema.enum.join('|')}`);
   if ((tipo === 'number' || tipo === 'integer') && esquema.minimum !== undefined && valor < esquema.minimum) falha(caminho, `mínimo ${esquema.minimum}`);
   if ((tipo === 'number' || tipo === 'integer') && esquema.maximum !== undefined && valor > esquema.maximum) falha(caminho, `máximo ${esquema.maximum}`);
   if (esquema.type === 'integer' && !Number.isInteger(valor)) falha(caminho, 'esperado inteiro');
