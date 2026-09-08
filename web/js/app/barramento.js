@@ -78,15 +78,18 @@ export class Barramento extends EventTarget {
     return vid ? this.vistas.get(vid) || null : null;
   }
 
-  #registrosDeOrigem(origem, evento, detalhe) {
+  #registrosDeOrigem(origem, evento, detalhe, acao = null) {
     const v = this.#vistaDe(origem);
     if (!v) return [];
+    let regs;
     if (evento === 'selecao_mudou' || evento === 'clique') {
       const ids = detalhe?.ids || (detalhe?.id !== undefined ? [detalhe.id] : null);
-      if (ids) { const s = new Set(ids); return v.registros().filter((f) => s.has(f.id)); }
-      return v.selecionados();
-    }
-    return v.registros();
+      if (ids) { const s = new Set(ids); regs = v.registros().filter((f) => s.has(f.id)); } else regs = v.selecionados();
+    } else regs = v.registros();
+    // item L5-01-e: `parametros.condicao` (CQL2) restringe os registros de origem que a ação leva em conta
+    const cond = acao?.parametros?.condicao;
+    if (cond !== undefined && cond !== null) regs = regs.filter((f) => avaliarSeguro(cond, f));
+    return regs;
   }
 
   /* traduz a relação para o alvo: devolve {ids} (mesma fonte) ou {filtro} (atributo/espacial) */
@@ -96,12 +99,14 @@ export class Barramento extends EventTarget {
     const mesma = vo && va && vo.fonte.id === va.fonte.id;
     if (rel.tipo === 'mesma_fonte' || (!rel.tipo && mesma)) {
       if (!mesma) { this.#aviso('relacao_invalida', 'ação de dado entre fontes diferentes sem relação declarada; ignorada', { origem, alvo: acao.alvo }); return null; }
-      if (evento === 'selecao_mudou' || evento === 'clique') return { ids: this.#registrosDeOrigem(origem, evento, detalhe).map((f) => f.id) };
+      if (evento === 'selecao_mudou' || evento === 'clique') return { ids: this.#registrosDeOrigem(origem, evento, detalhe, acao).map((f) => f.id) };
       // filtro vindo de um widget (caixa de filtro, gráfico) chega em detalhe.filtro; de uma vista, é o filtro dela
-      if (detalhe && detalhe.filtro !== undefined && !this.vistas.has(origem)) return { filtro: detalhe.filtro, ids: null };
-      return { filtro: vo.filtro, ids: null };
+      const cond = acao.parametros?.condicao;
+      const comCondicao = (f) => (cond ? (f ? { op: 'and', args: [f, cond] } : cond) : f);
+      if (detalhe && detalhe.filtro !== undefined && !this.vistas.has(origem)) return { filtro: comCondicao(detalhe.filtro), ids: null };
+      return { filtro: comCondicao(vo.filtro), ids: null };
     }
-    let regs = this.#registrosDeOrigem(origem, evento, detalhe);
+    let regs = this.#registrosDeOrigem(origem, evento, detalhe, acao);
     if (detalhe && detalhe.filtro !== undefined && !this.vistas.has(origem) && vo) {
       // filtro digitado num widget de outra fonte: aplica na origem em memória e leva os valores casados
       regs = vo.fonte.feicoes.filter((f) => avaliarSeguro(detalhe.filtro, f));
@@ -145,7 +150,7 @@ export class Barramento extends EventTarget {
     }
     if (!alvoWidget || typeof alvoWidget.executar !== 'function') { this.#aviso('alvo_sem_widget', `ação ${acao.acao} em alvo que não é widget: ${acao.alvo}`, { alvo: acao.alvo }); return; }
     const vistaOrigem = this.#vistaDe(origem);
-    const regs = vistaOrigem ? this.#registrosDeOrigem(origem, m.gatilho.evento, detalhe) : [];
+    const regs = vistaOrigem ? this.#registrosDeOrigem(origem, m.gatilho.evento, detalhe, acao) : [];
     try { alvoWidget.executar(acao.acao, { ...(acao.parametros || {}), origem, registros: regs, detalhe }); }
     catch (e) { this.#aviso('acao_falhou', `${acao.acao} em ${acao.alvo}: ${e.message}`, { alvo: acao.alvo }); }
   }
