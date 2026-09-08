@@ -5,6 +5,7 @@ import '../base/componentes.js';
 import { h, limpar, htmlSeguro } from '../base/dom.js';
 import { carregar as carregarIdioma, t } from '../base/i18n.js';
 import { pronto } from '../base/layout.js';
+import { montarBarraFiltros, montarPainel, parametrosUrlDaLocalizacao } from '../paineis/render.js';
 import * as api from './api.js';
 import { bytes, dataHora, elipse } from './formato.js';
 
@@ -37,6 +38,20 @@ async function principal() {
   if (it.creditos) sec.append(h('p', { class: 'fraco' }, `${t('catalogo.creditos')}: ${it.creditos}`));
   if (r.permite_download && r.download_url) sec.append(h('p', {}, h('a', { class: 'botao', href: r.download_url }, t('catalogo.baixar'))));
   sec.hidden = false;
+
+  if (it.tipo === 'painel') {
+    const corpo = (it.dados && it.dados.corpo) || {};
+    const grade = el('painel-grade');
+    const filtrosEl = el('painel-filtros');
+    grade.hidden = false;
+    const iniciaisUrl = parametrosUrlDaLocalizacao(corpo.parametros_url);
+    const buscarDados = (fonteId, pedidos, filtroExecucao) =>
+      api.painelDadosCompartilhado(token, it.id, fonteId, { pedidos, filtro_execucao: filtroExecucao });
+    const instancia = montarPainel(grade, corpo, buscarDados, iniciaisUrl);
+    montarBarraFiltros(filtrosEl, corpo.filtros, iniciaisUrl, (campo, valor) => instancia.atualizarFiltro(campo, valor));
+    await instancia.aguardarPrimeiraCarga;
+  }
+
   const incluidos = Array.isArray(r.itens_incluidos) ? r.itens_incluidos : [];
   if (incluidos.length) {
     const tab = el('incluidos-tabela');
