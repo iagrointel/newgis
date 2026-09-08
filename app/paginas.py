@@ -39,6 +39,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- provedores de login e regras de provisionamento (L0-08-e-mapeamento-provisionamento)
+    "/admin/logins": "admin/logins.html",
 }
 router = APIRouter()
 
