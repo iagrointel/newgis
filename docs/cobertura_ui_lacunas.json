@@ -10,7 +10,6 @@
   "DELETE /api/plataforma/inquilinos/{id}",
   "PATCH /api/anotacoes/{id}",
   "PATCH /api/conexoes/{id}",
-  "POST /api/acervo/{fonte_id}/adicionar",
   "POST /api/arquivos",
   "POST /api/categorias/importar",
   "POST /api/conexoes",

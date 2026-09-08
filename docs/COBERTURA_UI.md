@@ -6,23 +6,25 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 
 | medida | valor |
 |---|---|
-| rotas (método × caminho) | 238 |
-| coberto | 158 |
+| rotas (método × caminho) | 240 |
+| coberto | 163 |
 | sem controle | 33 |
-| sem tela | 30 |
+| sem tela | 27 |
 | externo | 1 |
 | externo sem exposição | 16 |
 | cobertas sem estado de erro perto da chamada | 13 |
-| lacunas de ESCRITA (linha de base do teste) | 41 |
+| lacunas de ESCRITA (linha de base do teste) | 40 |
 | URLs chamadas pela tela que não existem na API | 2 |
 
 ## Rotas → tela/controle → estado
 
 | método | rota | grupo | tela | controle (arquivo:linha) | estado | erro |
 |---|---|---|---|---|---|---|
-| GET | `/api/acervo` | acervo | — | — | **sem tela** | não se aplica |
-| GET | `/api/acervo/{fonte_id}` | acervo | — | — | **sem tela** | não se aplica |
-| POST | `/api/acervo/{fonte_id}/adicionar` | acervo | — | — | **sem tela** | não se aplica |
+| GET | `/api/acervo` | acervo | `/acervo` | `web/js/acervo/acervo.js:117` | **coberto** | com erro |
+| GET | `/api/acervo/dominios` | acervo | `/acervo` | `web/js/acervo/acervo.js:181`<br>`web/js/acervo/acervo.js:64` | **coberto** | com erro |
+| GET | `/api/acervo/meu-mapa` | acervo | `/acervo`, `/mapa` | `web/js/acervo/acervo.js:181`<br>`web/js/mapa/mapa.js:215` | **coberto** | com erro |
+| GET | `/api/acervo/{fonte_id}` | acervo | `/acervo`, `/mapa` | `web/js/acervo/acervo.js:181`<br>`web/js/acervo/acervo.js:64`<br>`web/js/mapa/mapa.js:215` | **coberto** | com erro |
+| POST | `/api/acervo/{fonte_id}/adicionar` | acervo | `/acervo` | `web/js/acervo/acervo.js:247` | **coberto** | com erro |
 | GET | `/api/agendas` | agendas | `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/api.js:50` | **coberto** | sem estado de erro |
 | POST | `/api/agendas` | agendas | `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/api.js:52` | **coberto** | sem estado de erro |
 | GET | `/api/agendas/{agenda_id}` | agendas | `/tarefas`, `/tarefas/{job_id}` | `web/js/jobs/api.js:51` | **coberto** | sem estado de erro |
@@ -67,7 +69,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | DELETE | `/api/convites/{id}` | convites | `/admin/usuarios` | `web/js/auth/convites.js:25` | **coberto** | com erro |
 | GET | `/api/esquemas` | catalogo | — | — | **sem controle** | não se aplica |
 | GET | `/api/esquemas/{tipo}` | catalogo | — | — | **sem controle** | não se aplica |
-| GET | `/api/eu` | eu | `/`, `/admin/grupos`, `/admin/log`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/c/{token}`, `/conexoes`, `/construtor`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/entrar`, `/estilo-guia`, `/executar`, `/mapa`, `/tarefas`, `/tarefas/{job_id}`, `/uploads` | `web/app.js:36`<br>`web/js/auth/conta.js:90`<br>`web/js/auth/sessao.js:59`<br>`web/js/conexoes/conexoes.js:169`<br>`web/js/jobs/tarefas.js:52` | **coberto** | com erro |
+| GET | `/api/eu` | eu | `/`, `/acervo`, `/admin/grupos`, `/admin/log`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/c/{token}`, `/conexoes`, `/construtor`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/entrar`, `/estilo-guia`, `/executar`, `/mapa`, `/tarefas`, `/tarefas/{job_id}`, `/uploads` | `web/app.js:36`<br>`web/js/auth/conta.js:90`<br>`web/js/auth/sessao.js:59`<br>`web/js/conexoes/conexoes.js:169`<br>`web/js/jobs/tarefas.js:52` | **coberto** | com erro |
 | PUT | `/api/eu` | eu | `/conta` | `web/js/auth/conta.js:143` | **coberto** | com erro |
 | POST | `/api/eu/2fa/codigos` | eu | `/conta` | `web/js/auth/conta.js:350` | **coberto** | com erro |
 | POST | `/api/eu/2fa/confirmar` | eu | `/conta` | `web/js/auth/conta.js:305` | **coberto** | com erro |
@@ -113,13 +115,13 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | PUT | `/api/importacoes/{id}/confirmar` | ingestao | — | — | **sem tela** | não se aplica |
 | POST | `/api/isocrona` | rede | — | — | **sem tela** | não se aplica |
 | GET | `/api/itens` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa` | `web/js/catalogo/api.js:90`<br>`web/js/mapa/tabela.js:388` | **coberto** | com erro |
-| POST | `/api/itens` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa` | `web/js/catalogo/api.js:94`<br>`web/js/mapa/mapa.js:338` | **coberto** | com erro |
-| GET | `/api/itens/facetas` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa` | `web/js/catalogo/api.js:79`<br>`web/js/catalogo/api.js:91`<br>`web/js/catalogo/api.js:93`<br>`web/js/editor/tela.js:39`<br>`web/js/executor/executar_tela.js:25`<br>`web/js/mapa/mapa.js:380` | **coberto** | com erro |
+| POST | `/api/itens` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa` | `web/js/catalogo/api.js:94`<br>`web/js/mapa/mapa.js:370` | **coberto** | com erro |
+| GET | `/api/itens/facetas` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa` | `web/js/catalogo/api.js:79`<br>`web/js/catalogo/api.js:91`<br>`web/js/catalogo/api.js:93`<br>`web/js/editor/tela.js:39`<br>`web/js/executor/executar_tela.js:25`<br>`web/js/mapa/mapa.js:412` | **coberto** | com erro |
 | POST | `/api/itens/lote` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:98` | **coberto** | com erro |
-| GET | `/api/itens/tags` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa` | `web/js/catalogo/api.js:79`<br>`web/js/catalogo/api.js:92`<br>`web/js/catalogo/api.js:93`<br>`web/js/editor/tela.js:39`<br>`web/js/executor/executar_tela.js:25`<br>`web/js/mapa/mapa.js:380` | **coberto** | com erro |
+| GET | `/api/itens/tags` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa` | `web/js/catalogo/api.js:79`<br>`web/js/catalogo/api.js:92`<br>`web/js/catalogo/api.js:93`<br>`web/js/editor/tela.js:39`<br>`web/js/executor/executar_tela.js:25`<br>`web/js/mapa/mapa.js:412` | **coberto** | com erro |
 | POST | `/api/itens/transferir` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:100` | **coberto** | com erro |
-| GET | `/api/itens/{id}` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa` | `web/js/catalogo/api.js:79`<br>`web/js/catalogo/api.js:91`<br>`web/js/catalogo/api.js:92`<br>`web/js/catalogo/api.js:93`<br>`web/js/editor/tela.js:39`<br>`web/js/executor/executar_tela.js:25`<br>`web/js/mapa/mapa.js:380` | **coberto** | com erro |
-| PUT | `/api/itens/{id}` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa` | `web/js/catalogo/api.js:95`<br>`web/js/mapa/mapa.js:337` | **coberto** | com erro |
+| GET | `/api/itens/{id}` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/executar`, `/mapa` | `web/js/catalogo/api.js:79`<br>`web/js/catalogo/api.js:91`<br>`web/js/catalogo/api.js:92`<br>`web/js/catalogo/api.js:93`<br>`web/js/editor/tela.js:39`<br>`web/js/executor/executar_tela.js:25`<br>`web/js/mapa/mapa.js:412` | **coberto** | com erro |
+| PUT | `/api/itens/{id}` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa` | `web/js/catalogo/api.js:95`<br>`web/js/mapa/mapa.js:369` | **coberto** | com erro |
 | PATCH | `/api/itens/{id}` | catalogo | `/c/{token}`, `/construtor`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:96`<br>`web/js/editor/tela.js:68` | **coberto** | com erro |
 | DELETE | `/api/itens/{id}` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:97` | **coberto** | com erro |
 | GET | `/api/itens/{id}/compartilhamento` | compartilhamento | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:125` | **coberto** | com erro |
@@ -159,7 +161,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | POST | `/api/login/2fa` | login | `/entrar` | `web/js/auth/login.js:200` | **coberto** | com erro |
 | POST | `/api/login/ldap` | login | — | — | **sem controle** | não se aplica |
 | GET | `/api/login/provedores` | login | `/entrar` | `web/js/auth/login.js:71` | **coberto** | com erro |
-| POST | `/api/logout` | login | `/`, `/admin/grupos`, `/admin/log`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/c/{token}`, `/conexoes`, `/construtor`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/entrar`, `/estilo-guia`, `/executar`, `/mapa`, `/tarefas`, `/tarefas/{job_id}`, `/uploads` | `web/js/auth/sessao.js:76` | **coberto** | sem estado de erro |
+| POST | `/api/logout` | login | `/`, `/acervo`, `/admin/grupos`, `/admin/log`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/c/{token}`, `/conexoes`, `/construtor`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/entrar`, `/estilo-guia`, `/executar`, `/mapa`, `/tarefas`, `/tarefas/{job_id}`, `/uploads` | `web/js/auth/sessao.js:76` | **coberto** | sem estado de erro |
 | GET | `/api/mapa/camadas` | mapa | `/mapa` | `web/js/mapa/catalogo.js:30` | **coberto** | com erro |
 | GET | `/api/mapa/camadas/{id}` | mapa | `/mapa` | `web/js/mapa/catalogo.js:145` | **coberto** | com erro |
 | GET | `/api/mapa/camadas/{id}/estilo` | mapa | `/mapa` | `web/js/mapa/exportar.js:141` | **coberto** | com erro |
@@ -168,10 +170,10 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | POST | `/api/mapa/camadas/{id}/selecionar` | mapa | — | — | **sem controle** | não se aplica |
 | GET | `/api/mapa/camadas/{id}/tilejson` | mapa | — | — | **sem controle** | não se aplica |
 | GET | `/api/mapa/camadas/{id}/valores` | mapa | — | — | **sem controle** | não se aplica |
-| GET | `/api/mapa/fuso` | mapa-popup | `/mapa` | `web/js/mapa/mapa.js:439` | **coberto** | com erro |
+| GET | `/api/mapa/fuso` | mapa-popup | `/mapa` | `web/js/mapa/mapa.js:476` | **coberto** | com erro |
 | POST | `/api/mapa/pacotes/importar` | mapa | — | — | **sem controle** | não se aplica |
 | POST | `/api/mapa/selecao-espacial` | mapa | — | — | **sem controle** | não se aplica |
-| POST | `/api/mapa/{mapa_id}/desenho/promover` | mapa | `/mapa` | `web/js/mapa/mapa.js:354` | **coberto** | com erro |
+| POST | `/api/mapa/{mapa_id}/desenho/promover` | mapa | `/mapa` | `web/js/mapa/mapa.js:386` | **coberto** | com erro |
 | POST | `/api/matriz` | rede | — | — | **sem tela** | não se aplica |
 | GET | `/api/multiescala/conjuntos` | multiescala | — | — | **sem tela** | não se aplica |
 | POST | `/api/multiescala/conjuntos` | multiescala | — | — | **sem tela** | não se aplica |
@@ -277,6 +279,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | `/conteudo/{id}` | conteudo_item.html | sim | sim | sim | sim | sim |
 | `/c/{token}` | compartilhado.html | sim | sim | **não** | sim | sim |
 | `/mapa` | mapa.html | sim | sim | sim | sim | sim |
+| `/acervo` | acervo.html | sim | sim | sim | sim | sim |
 | `/conexoes` | conexoes.html | sim | **não** | **não** | sim | sim |
 | `/aceitar-convite` | aceitar_convite.html | sim | sim | sim | sim | **não** |
 | `/redefinir-senha` | redefinir_senha.html | sim | **não** | sim | sim | **não** |
@@ -289,7 +292,6 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 
 ## Lacunas de escrita (cada grupo vira um item UX-<n> no backlog via `--registrar`)
 
-- **acervo**: POST `/api/acervo/{fonte_id}/adicionar` (sem tela)
 - **arquivos**: POST `/api/arquivos` (sem controle); DELETE `/api/arquivos/{sha256}` (sem controle)
 - **categorias**: PUT `/api/categorias` (sem controle); POST `/api/categorias/importar` (sem controle)
 - **conexoes**: POST `/api/conexoes` (sem controle); PATCH `/api/conexoes/{id}` (sem controle); DELETE `/api/conexoes/{id}` (sem controle)
@@ -347,5 +349,6 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | UX-03-tela-conteudo-item-lixeira | parcial | `/conteudo` | página existe |
 | UX-03-tela-conteudo-item-lixeira | parcial | `/conteudo/item` | página existe |
 | UX-03-tela-conteudo-item-lixeira | parcial | `/conteudo/lixeira` | página existe |
+| UX-04-tela-mapa-polimento | parcial | `/mapa` | página existe |
 
-Itens com efeito visível que não citam página nem rota no texto (95; a cobertura deles é conferida pelo e2e do item, não por este cruzamento): L0-02-b-politica-senha-bloqueio, L0-02-c-2fa-totp, L0-02-d-token-servico, L0-02-f-tela-usuarios, L0-02-tenant-auth, L0-03-b-pastas-tags-categorias-classificacao, L0-03-catalogo, L0-03-d-grupos, L0-03-g-detalhe-item-miniatura, L0-04-d-formatos-base, L0-04-e-formatos-cad, L0-04-h-exportar, L0-04-i-fonte-registrada, L0-04-ingest-vetor, L0-05-d-periodicos, L0-05-e-justica-entre-inquilinos, L0-05-jobs, L0-06-c-restore-drill, L0-06-d-exportar-inquilino, L0-07-a-configuracoes-org, L0-07-b-papeis-privilegios, L0-07-c-cotas-uso, L0-07-d-smtp-convites, L0-08-d-ldap, L0-09-a-procedencia, L0-09-b-editor-iso-mgb, L0-10-eventos-historico, L0-11-arquivos-objetos, L0-12-contrato-api-e-limites, L0-13-dado-demonstracao, L0-14-cli-admin, L1-01-ingest-raster, L2-01-b-martin-tiles-vetoriais, L2-01-c-lista-camadas-legenda, L2-01-e-mapas-base, L2-01-f-navegacao-medicao-coordenadas, L2-01-g-tabela-atributos, L2-01-h-selecao-filtros, L2-01-i-graficos-de-camada, L2-01-mapa-web, L2-02-a-modelo-estilo, L2-02-c-editor-simbologia-vetor, L2-02-d-rotulos, L2-03-b-ferramentas-geometria, L2-03-c-formulario-atributos-runtime, L2-04-b-featureserver-catalogo-metadados, L2-04-c-featureserver-query, L2-04-h-wfs-2-gml, L2-04-j-conformidade-clientes-e-paridade, L2-04-servicos-esri-ogc, L2-05-a-catalogo-ferramentas-gpserver, L2-05-b-vetor-basico, L2-05-c-sobreposicao-agregacao, L2-05-d-grades-densidade-padroes-interpolacao, L2-05-f-rede-isocrona-rota-ferramentas, L2-06-a-modelo-painel-fontes, L2-07-b-formulario-de-coleta-xlsform, L2-08-a-leitor-portal-inventario, L2-08-b-clonar-camadas-hospedadas, L2-09-a-terreno-terrain-rgb-relevo, L2-10-c-linguagem-expressao, L2-11-a-geocodificacao-csv, L2-12-a-motor-render-servidor, L3-01-b-unidades, L3-01-e-combinacao, L3-01-f-explicacao, L3-14-cobertura-dado-ausente, L3-16-desempenho-escala, L4-02-b-montante-jusante, L4-02-c-isolamento, L4-02-d-lacos-e-caminho-curto, L4-04-b-atualizar-e-exportar-subrede, L4-04-c-sumarios-por-subrede, L5-01-a-layout-paginas, L5-01-d-widgets-pagina-menu, L5-06-motor-widgets, L5-08-editor-arrasto, L5-09-desfazer-refazer-rascunho, L5-12-acessibilidade-i18n-construtores, L5-15-vista-movel-responsivo, L5-31-construtor-de-camada-esquema, L6-01-b-view-so-leitura, L6-01-d-ficha-fonte, L6-01-g-licenca-curada, L6-02-c-wfs-ogcapi, L6-02-k-agendamento, L6-02-l-saude, L6-02-m-catalogo-endpoints-brasil, L6-05-proveniencia-camada-externa, L7-03-e-cabecalhos-csp-tls, L7-06-b-alertas, L7-06-c-logs-consulta-req-id, L7-06-d-paineis, L7-20-trilha-auditoria, UX-00-mapa-de-cobertura-da-interface
+Itens com efeito visível que não citam página nem rota no texto (97; a cobertura deles é conferida pelo e2e do item, não por este cruzamento): L0-02-b-politica-senha-bloqueio, L0-02-c-2fa-totp, L0-02-d-token-servico, L0-02-f-tela-usuarios, L0-02-tenant-auth, L0-03-b-pastas-tags-categorias-classificacao, L0-03-catalogo, L0-03-d-grupos, L0-03-g-detalhe-item-miniatura, L0-04-d-formatos-base, L0-04-e-formatos-cad, L0-04-h-exportar, L0-04-i-fonte-registrada, L0-04-ingest-vetor, L0-05-d-periodicos, L0-05-e-justica-entre-inquilinos, L0-05-jobs, L0-06-c-restore-drill, L0-06-d-exportar-inquilino, L0-07-a-configuracoes-org, L0-07-b-papeis-privilegios, L0-07-c-cotas-uso, L0-07-d-smtp-convites, L0-07-e-relatorios, L0-08-d-ldap, L0-09-a-procedencia, L0-09-b-editor-iso-mgb, L0-10-eventos-historico, L0-11-arquivos-objetos, L0-12-contrato-api-e-limites, L0-13-dado-demonstracao, L0-14-cli-admin, L1-01-ingest-raster, L2-01-b-martin-tiles-vetoriais, L2-01-c-lista-camadas-legenda, L2-01-e-mapas-base, L2-01-f-navegacao-medicao-coordenadas, L2-01-g-tabela-atributos, L2-01-h-selecao-filtros, L2-01-i-graficos-de-camada, L2-01-mapa-web, L2-02-a-modelo-estilo, L2-02-c-editor-simbologia-vetor, L2-02-d-rotulos, L2-03-b-ferramentas-geometria, L2-03-c-formulario-atributos-runtime, L2-04-b-featureserver-catalogo-metadados, L2-04-c-featureserver-query, L2-04-h-wfs-2-gml, L2-04-j-conformidade-clientes-e-paridade, L2-04-servicos-esri-ogc, L2-05-a-catalogo-ferramentas-gpserver, L2-05-b-vetor-basico, L2-05-c-sobreposicao-agregacao, L2-05-d-grades-densidade-padroes-interpolacao, L2-05-f-rede-isocrona-rota-ferramentas, L2-06-a-modelo-painel-fontes, L2-07-b-formulario-de-coleta-xlsform, L2-08-a-leitor-portal-inventario, L2-08-b-clonar-camadas-hospedadas, L2-09-a-terreno-terrain-rgb-relevo, L2-10-c-linguagem-expressao, L2-11-a-geocodificacao-csv, L2-12-a-motor-render-servidor, L3-01-b-unidades, L3-01-e-combinacao, L3-01-f-explicacao, L3-14-cobertura-dado-ausente, L3-16-desempenho-escala, L4-02-b-montante-jusante, L4-02-c-isolamento, L4-02-d-lacos-e-caminho-curto, L4-04-b-atualizar-e-exportar-subrede, L4-04-c-sumarios-por-subrede, L5-01-a-layout-paginas, L5-01-d-widgets-pagina-menu, L5-04-a-blocos-de-conteudo, L5-06-motor-widgets, L5-08-editor-arrasto, L5-09-desfazer-refazer-rascunho, L5-12-acessibilidade-i18n-construtores, L5-15-vista-movel-responsivo, L5-31-construtor-de-camada-esquema, L6-01-b-view-so-leitura, L6-01-d-ficha-fonte, L6-01-g-licenca-curada, L6-02-c-wfs-ogcapi, L6-02-k-agendamento, L6-02-l-saude, L6-02-m-catalogo-endpoints-brasil, L6-05-proveniencia-camada-externa, L7-03-e-cabecalhos-csp-tls, L7-06-b-alertas, L7-06-c-logs-consulta-req-id, L7-06-d-paineis, L7-20-trilha-auditoria, UX-00-mapa-de-cobertura-da-interface
