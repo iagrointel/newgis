@@ -11,6 +11,7 @@ import { montarLayout, pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
 import * as api from '../catalogo/api.js';
 import { montarBarraFiltros, montarPainel, parametrosUrlDaLocalizacao } from './render.js';
+import { assinarCamadas, horaCurta } from '../vivo/assinatura.js';
 
 const el = (id) => document.getElementById(id);
 const itemId = decodeURIComponent((/^\/paineis\/([^/]+)/.exec(location.pathname) || [])[1] || '');
@@ -38,7 +39,21 @@ async function iniciar() {
   const buscarDados = (fonteId, pedidos, filtroExecucao) =>
     api.painelDados(itemId, fonteId, { pedidos, filtro_execucao: filtroExecucao });
 
-  const instancia = montarPainel(el('painel-grade'), corpo, buscarDados, iniciaisUrl);
+  // atualização viva (L2-06-d): o painel assina as camadas das suas fontes e refaz só a consulta afetada.
+  // `porIntervalo` vira verdadeiro quando o fluxo não está disponível — o texto do cabeçalho diz qual dos
+  // dois caminhos está em uso, para ninguém achar que a tela está viva quando está apenas repetindo.
+  let porIntervalo = false;
+  const marcador = el('painel-atualizado');
+  const assinar = (camadas, aoMudar, op) => assinarCamadas(camadas, aoMudar, {
+    aoIndisponivel: () => { porIntervalo = true; op.aoIndisponivel(); },
+  });
+  const aoAtualizar = (data) => {
+    marcador.hidden = false;
+    const chave = porIntervalo ? 'painel.atualizado_intervalo' : 'painel.atualizado_as';
+    marcador.textContent = t(chave).replace('{hora}', horaCurta(data));
+  };
+
+  const instancia = montarPainel(el('painel-grade'), corpo, buscarDados, iniciaisUrl, { assinar, aoAtualizar });
   montarBarraFiltros(el('painel-filtros'), corpo.filtros, iniciaisUrl, (campo, valor) => instancia.atualizarFiltro(campo, valor));
 
   window.addEventListener('pagehide', instancia.destruir, { once: true });

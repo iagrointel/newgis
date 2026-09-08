@@ -52,3 +52,11 @@
   .painel-grade { grid-template-columns: 1fr !important; }
   .painel-el { grid-column: auto !important; grid-row: auto !important; }
 }
+
+/* "atualizado às hh:mm:ss" do cabeçalho (item L2-06-d): discreto, ao lado do título, sem competir com o dado */
+.painel-atualizado {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--cor-texto-fraco, #667);
+  font-variant-numeric: tabular-nums;
+}

@@ -122,9 +122,18 @@ function pintarResultado(container, elemento, resultado) {
  * versão vigente). `buscarDados(fonteId, pedidos, filtroExecucao)` devolve `{resultados}`.
  * `parametrosUrlIniciais` (opcional) é `{campo: valor}` já lido de `location.search` pelo chamador (a tela
  * decide se os nomes de parâmetro vêm de query string ou de outro lugar — este módulo só recebe valores).
+ *
+ * `opcoes.assinar(camadas, aoMudar, {aoIndisponivel})` (item L2-06-d) liga a atualização viva: quando o dado
+ * muda no banco, o servidor empurra o evento e só as fontes daquela camada refazem a consulta — sem
+ * recarregar a página. É OPCIONAL: a tela anônima do link compartilhado não assina (o fluxo é autenticado) e
+ * continua no intervalo. Quando a assinatura existe, o intervalo de atualização de cada fonte fica DESLIGADO
+ * e só entra em cena se o fluxo se declarar indisponível — é o fallback por polling que o portão pede, e é
+ * assim que não se paga a consulta duas vezes.
+ * `opcoes.aoAtualizar(data)` é chamado a cada carga concluída, para o "atualizado às hh:mm:ss" do cabeçalho.
+ *
  * Devolve `{atualizarFiltro(campo, valor), destruir(), aguardarPrimeiraCarga}`.
  */
-export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciais = {}) {
+export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciais = {}, opcoes = {}) {
   const grade = corpo.grade || { colunas: 12, linha_px: 36 };
   const elementos = corpo.elementos || [];
   const fontesPorId = new Map((corpo.fontes || []).map((f) => [f.id, f]));
@@ -140,6 +149,17 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
 
   const filtroExecucao = { ...parametrosUrlIniciais };
   const temporizadores = [];
+  let assinatura = null;
+
+  // camada -> fontes que a usam: o evento vivo chega por CAMADA e precisa virar refetch por FONTE
+  const fontesPorCamada = new Map();
+  for (const fonteId of porFonte.keys()) {
+    const fonte = fontesPorId.get(fonteId);
+    const ref = fonte && fonte.camada && fonte.camada.ref;
+    if (!ref) continue;
+    if (!fontesPorCamada.has(ref)) fontesPorCamada.set(ref, []);
+    fontesPorCamada.get(ref).push(fonteId);
+  }
 
   async function atualizarFonte(fonteId) {
     const pedidos = porFonte.get(fonteId);
@@ -159,18 +179,38 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
       const el = elementos.find((e) => e.id === elId);
       if (el) pintarResultado(container, el, resultados[elId]);
     }
+    if (opcoes.aoAtualizar) opcoes.aoAtualizar(new Date());
   }
 
   async function atualizarTudo() {
     await Promise.all([...porFonte.keys()].map((fid) => atualizarFonte(fid)));
   }
 
-  for (const fonteId of porFonte.keys()) {
-    const fonte = fontesPorId.get(fonteId);
-    const intervaloS = fonte && fonte.atualizacao_s;
-    if (intervaloS && intervaloS > 0) {
-      temporizadores.push(setInterval(() => atualizarFonte(fonteId), intervaloS * 1000));
+  function ligarIntervalos() {
+    if (temporizadores.length) return;
+    for (const fonteId of porFonte.keys()) {
+      const fonte = fontesPorId.get(fonteId);
+      const intervaloS = fonte && fonte.atualizacao_s;
+      if (intervaloS && intervaloS > 0) {
+        temporizadores.push(setInterval(() => atualizarFonte(fonteId), intervaloS * 1000));
+      }
     }
+  }
+
+  if (typeof opcoes.assinar === 'function' && fontesPorCamada.size) {
+    assinatura = opcoes.assinar(
+      [...fontesPorCamada.keys()],
+      (camadasMudadas) => {
+        const alvos = new Set();
+        for (const camada of camadasMudadas) {
+          for (const fonteId of fontesPorCamada.get(camada) || []) alvos.add(fonteId);
+        }
+        for (const fonteId of alvos) atualizarFonte(fonteId);
+      },
+      { aoIndisponivel: ligarIntervalos },
+    );
+  } else {
+    ligarIntervalos();
   }
 
   const aguardarPrimeiraCarga = atualizarTudo();
@@ -183,6 +223,8 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
 
   function destruir() {
     for (const t of temporizadores) clearInterval(t);
+    temporizadores.length = 0;
+    if (assinatura) assinatura.fechar();
   }
 
   return { atualizarFiltro, destruir, aguardarPrimeiraCarga, filtroExecucao };

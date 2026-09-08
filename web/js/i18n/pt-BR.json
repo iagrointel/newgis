@@ -684,6 +684,8 @@
   "paginacao.faixa": "{ini}–{fim} de {total}",
   "paginacao.proxima": "Próxima",
   "paginacao.rotulo": "paginação",
+  "painel.atualizado_as": "atualizado às {hora}",
+  "painel.atualizado_intervalo": "atualizado às {hora} (por intervalo: o fluxo de eventos não está disponível)",
   "painel.id_ausente": "identificador de painel ausente na URL",
   "painel.nao_e_painel": "este item não é um documento de painel",
   "painel.titulo": "Painel",
