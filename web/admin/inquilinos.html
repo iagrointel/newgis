@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Inquilinos · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/inquilinos.css">
+</head>
+<body class="tela">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="inquilinos.titulo">Inquilinos</h1>
+    <p class="fraco" data-i18n="inquilinos.subtitulo">console do superadmin: criar, suspender, reativar e apagar inquilinos da plataforma</p>
+    <plat-aviso id="aviso"></plat-aviso>
+    <div class="linha-ferramentas">
+      <span id="contagem" class="fraco" aria-live="polite"></span>
+      <div class="direita">
+        <button type="button" id="recarregar" class="pequeno texto" data-i18n="inquilinos.recarregar">Recarregar</button>
+        <button type="button" id="novo" class="primario" data-i18n="inquilinos.novo">Novo inquilino</button>
+      </div>
+    </div>
+    <plat-estado id="acao-estado" hidden></plat-estado>
+    <plat-estado id="lista-estado" hidden></plat-estado>
+    <plat-tabela id="tabela" legenda="inquilinos"></plat-tabela>
+  </main>
+</div>
+<plat-dialogo id="painel" modo="lateral"></plat-dialogo>
+<script type="module" src="/static/js/auth/inquilinos.js"></script>
+</body>
+</html>
