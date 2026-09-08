@@ -5,8 +5,8 @@ URL do serviço é exposta para o cliente externo copiar em /geocodificar e em /
 1. descritor REAL (público): versão e capacidades no painel; findAddressCandidates REAL com a sessão (a base por
    trilha não tem CNEFE: lista vazia → estado vazio nomeado, sem erro); reverseGeocode REAL (422 sem_dado_instalado
    nomeado, ou 200 quando a base tem UF); geocodeAddresses REAL em lote (1 registro, Status U ou M);
-2. forjados pela própria página: 200 com candidatos (tabela Score/Match_addr/Addr_type), 403 no formato Esri
-   ({error:{code,message}}) vira negado com o código nomeado, 500 vira erro com "tentar de novo" e referência;
+2. forjados pela própria página: 200 com candidatos (tabela Score/Match_addr/Addr_type), 403 (escopo insuficiente,
+   no formato da API da casa) vira negado com o código nomeado, 500 vira erro com "tentar de novo" e referência;
 3. /admin/tokens: bloco "URLs para clientes externos" com GeocodeServer e OGC Records, escopo e botão copiar;
 4. axe 0 violações sérias; 0 erro de console; capturas 390/1280; medidas em
    tests/medidas/UX-15-geocodificador-esri-sem-controle.json."""
@@ -135,12 +135,14 @@ def test_geocodeserver_pela_tela_e_urls_para_clientes_externos(page, base_url, c
     estados.append("candidatos:ok")
     parar()
     _capturar(page, "candidatos")
+    # 403 como a API da casa responde (escopo insuficiente): negado com o código e o escopo nomeados
     parar = _forjar(page, f"**{PREFIXO}/reverseGeocode*", 403,
-                    {"error": {"code": 403, "message": "token sem o escopo geocodificar:usar (forjado)"}})
+                    {"erro": "escopo_insuficiente", "mensagem": "o token não tem o escopo geocodificar:usar (forjado)",
+                     "req_id": "e2e-ux15-403"})
     page.click("#esri-reverso")
     page.wait_for_selector("#esri-estado[tipo='negado']:not([hidden])")
     texto = page.text_content("#esri-estado") or ""
-    assert "geocodificar:usar" in texto and "403:" in texto, texto
+    assert "geocodificar:usar" in texto and "escopo_insuficiente" in texto, texto
     estados.append("reverso:negado")
     _capturar(page, "negado", (1280,))
     parar()
