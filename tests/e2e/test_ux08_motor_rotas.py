@@ -101,6 +101,13 @@ def test_motor_area_fatores_macro_micro_e_explicacao(page, base_url, credenciais
         )
         page.wait_for_timeout(300)
         page.fill("#motor-area-nome", f"zt-ux08 estudo {s}")
+        # refutação: retângulo inválido é recusado com o motivo, antes de qualquer chamada
+        page.fill("#motor-area-bbox", "1, 2, 3")
+        page.click("#motor-area-criar")
+        page.wait_for_selector("#motor-area-estado[tipo='erro']:not([hidden])")
+        # área exata do L3-19 (a vista tem a proporção da janela; o retângulo digitado não)
+        cantos = (CENTRO[0] - MEIA_LON, CENTRO[1] - MEIA_LAT, CENTRO[0] + MEIA_LON, CENTRO[1] + MEIA_LAT)
+        page.fill("#motor-area-bbox", ", ".join(f"{v:.6f}" for v in cantos))
         page.click("#motor-area-criar")
         page.wait_for_function(
             "(n) => [...document.querySelectorAll('#motor-area option')].some(o => o.textContent === n)",
@@ -113,7 +120,7 @@ def test_motor_area_fatores_macro_micro_e_explicacao(page, base_url, credenciais
         assert "m ×" in (page.text_content("#motor-area-info") or "")
         # dois fatores com amostras geradas sobre a área
         for nome, res, valor in ((f"zt-ux08 fino {s}", "50", "10"), (f"zt-ux08 grosso {s}", "1000", "20")):
-            page.locator("#motor-fatores details").evaluate("d => { d.open = true; }")
+            page.locator("#motor-secao-fatores details").evaluate("d => { d.open = true; }")
             page.fill("#motor-fator-nome", nome)
             page.fill("#motor-fator-res", res)
             page.click("#motor-fator-criar")

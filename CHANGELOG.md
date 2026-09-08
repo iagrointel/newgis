@@ -3,6 +3,26 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item UX-08-telas-rede-de-utilidades-e-motor: painéis Rotas e Motor no visualizador; rede de utilidades fica nos ramos L4)
+
+Trilha de interface. O visualizador ganha dois painéis no mesmo chrome de UX-04, com atalhos `r` e `o`: **Rotas**
+(`POST /api/rota`, `/api/isocrona`, `/api/matriz` sobre o OSRM do recorte — origem e destino por clique no mapa ou
+digitados, isócrona em minutos, matriz origens × destinos em tabela; linha, polígono e marcadores no mapa; a
+proveniência da resposta é mostrada; 503 do serviço e 422 `isocrona_vazia`/`matriz_grande_demais` viram texto nomeado
+no painel) e **Motor** (multiescala L3-19: área de estudo criada da vista atual ou de um retângulo digitado em graus,
+fatores com amostras em grade gerada sobre a área, pesos por fator escolhidos pelo usuário, macro com aprovação por
+limiar ou top %, refino micro só nas aprovadas, relatório por fator com a explicação de escala grosseira, células
+pintadas no mapa e popup com nota, cobertura e aprovação; rodar sem área ou sem fator mostra o motivo, nunca painel
+vazio). API: `GET /api/multiescala/execucoes/{id}/celulas` (GeoJSON das células com nota, limite
+`ESCALA_CELULAS_GEOJSON_MAX`, `truncado` declarado) e `area` do conjunto no JSON. Fator novo entra desligado no
+estudo (a composição é escolha do usuário; o recém-criado no painel entra ligado). Marcadores do MapLibre recebem
+papel `img` e nome (axe `aria-prohibited-attr`). Ids das seções do motor com prefixo `motor-secao-` (colidiam com os
+controles). Cada chamada da rede e do motor com o caminho na própria linha, que é como o gerador de cobertura liga
+rota → tela. e2e `tests/e2e/test_ux08_motor_rotas.py` (2 testes, capturas 390/1280, axe, sem chave crua);
+`test_mapa_chrome.py` conhece os dois painéis. Cobertura regenerada: 240 rotas, 24 lacunas de escrita (era 34).
+Parte NÃO coberta: traçado de rede de utilidades (montante/jusante, controladores) — não está no tronco; vive em
+`wt/il402bmonta`, `il402cisola`, `il402dlacos`, `il404acontr`, `il405depane`, `il418redesi`, `il401datrib`.
+
 ## turno 8, setembro de 2026 (item UX-07-telas-do-construtor-e-aplicativo: escolha do item, publicação, motor de widgets juntado, plat-w-*)
 
 Trilha de interface. Juntados `wt/cx506` (motor de widgets, L5-06) e `wt/cx501d` (widgets de página e menu,

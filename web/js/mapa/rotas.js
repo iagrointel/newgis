@@ -168,6 +168,10 @@ export class PainelRotas {
       const m = new this.gl.Marker({ color: cor }).setLngLat(p);
       if (rotulo) m.setPopup(new this.gl.Popup({ closeButton: true }).setText(rotulo));
       m.addTo(this.map); this.marcadores.push(m);
+      // o MapLibre põe aria-label num <div> sem papel (axe: aria-prohibited-attr); marcador é imagem com nome
+      const el = m.getElement();
+      el.setAttribute('role', 'img');
+      el.setAttribute('aria-label', rotulo ? t('rotas.marcador', { rotulo }) : t('rotas.marcador_sem_nome'));
     };
     if (this.modo === 'rota') { por(this.pontos.origem, COR_ROTA, t('rotas.origem')); por(this.pontos.destino, COR_DESTINO, t('rotas.destino')); }
     if (this.modo === 'isocrona') por(this.pontos.ponto, COR_ISO, t('rotas.ponto'));
@@ -214,22 +218,23 @@ export class PainelRotas {
   async executar() {
     limpar(this.saida);
     const p = this.pontos;
-    let url; let corpo;
+    // cada chamada com o seu caminho na mesma linha: é assim que docs/gerar_cobertura_ui.py liga rota → tela
+    let chamada;
     if (this.modo === 'rota') {
       if (!p.origem || !p.destino) { this.estado.erro(t('rotas.falta_origem_destino'), []); return; }
-      url = '/api/rota'; corpo = { origem: p.origem, destino: p.destino, perfil: 'carro' };
+      chamada = () => enviar('/api/rota', { origem: p.origem, destino: p.destino, perfil: 'carro' });
     } else if (this.modo === 'isocrona') {
       const min = Number(this.minutos.value);
       if (!p.ponto) { this.estado.erro(t('rotas.falta_ponto'), []); return; }
       if (!(min > 0)) { this.estado.erro(t('rotas.minutos_invalidos'), []); return; }
-      url = '/api/isocrona'; corpo = { ponto: p.ponto, minutos: min, perfil: 'carro' };
+      chamada = () => enviar('/api/isocrona', { ponto: p.ponto, minutos: min, perfil: 'carro' });
     } else {
       if (!p.origens.length || !p.destinos.length) { this.estado.erro(t('rotas.falta_matriz'), []); return; }
-      url = '/api/matriz'; corpo = { origens: p.origens, destinos: p.destinos, perfil: 'carro' };
+      chamada = () => enviar('/api/matriz', { origens: p.origens, destinos: p.destinos, perfil: 'carro' });
     }
     this.estado.carregando(t('rotas.calculando'));
     this.raiz.querySelectorAll('button.primario').forEach((b) => { b.disabled = true; });
-    const r = await enviar(url, corpo);
+    const r = await chamada();
     this.raiz.querySelectorAll('button.primario').forEach((b) => { b.disabled = false; });
     if (r.status !== 200) {
       const j = r.json || {};

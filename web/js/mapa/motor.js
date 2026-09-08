@@ -49,7 +49,7 @@ export class PainelMotor {
   }
 
   _secao(id, titulo, ...filhos) {
-    return h('section', { class: 'motor-secao', id: `motor-${id}` }, h('h3', {}, titulo), ...filhos);
+    return h('section', { class: 'motor-secao', id: `motor-secao-${id}` }, h('h3', {}, titulo), ...filhos);
   }
 
   _secaoArea() {
@@ -58,8 +58,9 @@ export class PainelMotor {
     this.selArea = h('select', { id: 'motor-area', class: 'controle', 'aria-label': t('motor.area') });
     this.selArea.addEventListener('change', () => this.escolherConjunto(this.selArea.value));
     const nome = h('input', { type: 'text', id: 'motor-area-nome', class: 'controle', maxlength: '200', autocomplete: 'off' });
-    const btCriar = h('button', { type: 'button', class: 'primario pequeno', id: 'motor-area-criar' }, t('motor.area_da_vista'));
-    btCriar.addEventListener('click', () => this.criarConjunto(nome.value.trim()));
+    const bbox = h('input', { type: 'text', id: 'motor-area-bbox', class: 'controle', autocomplete: 'off', spellcheck: 'false' });
+    const btCriar = h('button', { type: 'button', class: 'primario pequeno', id: 'motor-area-criar' }, t('motor.area_criar'));
+    btCriar.addEventListener('click', () => this.criarConjunto(nome.value.trim(), bbox.value.trim()));
     const btEnquadrar = h('button', { type: 'button', class: 'pequeno', id: 'motor-area-enquadrar' }, t('mapa.enquadrar'));
     btEnquadrar.addEventListener('click', () => this._enquadrarArea());
     const btApagar = h('button', { type: 'button', class: 'pequeno perigo', id: 'motor-area-apagar' }, t('acao.apagar'));
@@ -70,7 +71,8 @@ export class PainelMotor {
       h('div', { class: 'campo' }, h('label', { for: 'motor-area' }, t('motor.area_existente')), this.selArea),
       h('div', { class: 'botoes' }, btEnquadrar, btApagar),
       this.infoArea,
-      h('div', { class: 'campo' }, h('label', { for: 'motor-area-nome' }, t('motor.area_nome')), nome, h('span', { class: 'ajuda' }, t('motor.area_da_vista_ajuda'))),
+      h('div', { class: 'campo' }, h('label', { for: 'motor-area-nome' }, t('motor.area_nome')), nome),
+      h('div', { class: 'campo' }, h('label', { for: 'motor-area-bbox' }, t('motor.area_bbox')), bbox, h('span', { class: 'ajuda' }, t('motor.area_da_vista_ajuda'))),
       h('div', { class: 'botoes' }, btCriar));
   }
 
@@ -153,12 +155,25 @@ export class PainelMotor {
     return { type: 'Polygon', coordinates: [[[o, s], [e, s], [e, n], [o, n], [o, s]]] };
   }
 
-  async criarConjunto(nome) {
+  /* "oeste, sul, leste, norte" em graus → polígono; null quando vazio; false quando inválido */
+  _poligonoDoTexto(texto) {
+    if (!texto) return null;
+    const n = texto.split(/[,;\s]+/).filter(Boolean).map(Number);
+    if (n.length !== 4 || n.some((x) => Number.isNaN(x))) return false;
+    const [o, s, e, nn] = n;
+    if (o < -180 || e > 180 || s < -90 || nn > 90 || o >= e || s >= nn) return false;
+    return { type: 'Polygon', coordinates: [[[o, s], [e, s], [e, nn], [o, nn], [o, s]]] };
+  }
+
+  async criarConjunto(nome, bboxTexto = '') {
     if (!nome) { this.estadoArea.erro(t('motor.area_nome_obrigatorio'), []); this.raiz.querySelector('#motor-area-nome').focus(); return; }
+    const doTexto = this._poligonoDoTexto(bboxTexto);
+    if (doTexto === false) { this.estadoArea.erro(t('motor.area_bbox_invalido'), []); this.raiz.querySelector('#motor-area-bbox').focus(); return; }
     this.estadoArea.carregando(t('motor.criando'));
-    const r = await enviar('/api/multiescala/conjuntos', { nome, area: this._poligonoDaVista() });
+    const r = await enviar('/api/multiescala/conjuntos', { nome, area: doTexto || this._poligonoDaVista() });
     if (r.status !== 201) { this.estadoArea.erro(r, []); return; }
     this.raiz.querySelector('#motor-area-nome').value = '';
+    this.raiz.querySelector('#motor-area-bbox').value = '';
     await this.carregarConjuntos(r.json.id);
   }
 
@@ -194,7 +209,9 @@ export class PainelMotor {
     const r = await obter('/api/multiescala/fatores?limite=200');
     if (r.status !== 200) { this.estadoFatores.erro(r); return; }
     this.fatores = r.json.itens || [];
-    for (const f of this.fatores) if (!this.uso.has(f.id)) this.uso.set(f.id, { usar: true, peso: 1 });
+    // fator novo entra DESLIGADO: a composição do estudo é escolha do usuário (fatores e pesos declarados por ele);
+    // o fator que ele acabou de criar neste painel entra ligado, porque o criou para usar
+    for (const f of this.fatores) if (!this.uso.has(f.id)) this.uso.set(f.id, { usar: this.recemCriados?.has(f.id) || false, peso: 1 });
     this._listaFatores();
     if (!this.fatores.length) this.estadoFatores.vazio(t('motor.fatores_vazio'), [{ id: 'novo', rotulo: t('motor.fator_novo') }]);
     else this.estadoFatores.limpar();
@@ -230,6 +247,7 @@ export class PainelMotor {
     const r = await enviar('/api/multiescala/fatores', { ...dados, fonte: '' });
     if (r.status !== 201) { this.estadoFatores.erro(r, []); return; }
     this.formFator.nome.value = ''; this.formFator.unidade.value = '';
+    (this.recemCriados ||= new Set()).add(r.json.id);
     await this.carregarFatores();
   }
 
@@ -297,12 +315,12 @@ export class PainelMotor {
     if (!(resolucao > 0)) { this.estadoRodar.erro(t('motor.resolucao_invalida'), []); return; }
     if (nivel === 'micro' && !this.execucoes.macro) { this.estadoRodar.erro(t('motor.micro_sem_macro'), []); return; }
     const corpo = { resolucao_m: resolucao, fatores, aprovacao_tipo: this.aprovTipo.value, aprovacao_valor: Number(this.aprovValor.value) };
-    const url = nivel === 'macro'
-      ? `/api/multiescala/conjuntos/${encodeURIComponent(this.conjunto.id)}/macro`
-      : `/api/multiescala/execucoes/${encodeURIComponent(this.execucoes.macro.id)}/micro`;
     this.estadoRodar.carregando(t('motor.rodando', { nivel: t(`motor.nivel_${nivel}`) }));
     this.raiz.querySelector('#motor-rodar').disabled = true;
-    const r = await enviar(url, corpo);
+    // cada chamada com o seu caminho na mesma linha: é assim que docs/gerar_cobertura_ui.py liga rota → tela
+    const r = nivel === 'macro'
+      ? await enviar(`/api/multiescala/conjuntos/${encodeURIComponent(this.conjunto.id)}/macro`, corpo)
+      : await enviar(`/api/multiescala/execucoes/${encodeURIComponent(this.execucoes.macro.id)}/micro`, corpo);
     this.raiz.querySelector('#motor-rodar').disabled = false;
     if (r.status !== 201) {
       this.estadoRodar.mostrar({ tipo: r.status === 403 ? 'negado' : 'erro', texto: mensagemDe(r), acoes: r.status === 403 ? [] : [{ id: 'tentar', rotulo: t('estado.tentar_de_novo') }], ref: r.json?.req_id });
