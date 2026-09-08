@@ -16,6 +16,8 @@ DESTINO="$RAIZ/var/tiles3d"
 command -v npm >/dev/null || { echo "npm não encontrado nesta máquina" >&2; exit 1; }
 mkdir -p "$DESTINO"
 [ -f "$DESTINO/package.json" ] || echo '{"name":"plat-tiles3d","private":true}' > "$DESTINO/package.json"
-npm install --prefix "$DESTINO" --no-audit --no-fund "3d-tiles-validator@$VERSAO"
+# `cd` no destino, e nunca `--prefix` a partir da raiz: com --prefix o npm ainda reescreve o
+# package-lock.json da raiz (medido: trocou o campo `name` pelo nome do worktree)
+(cd "$DESTINO" && npm install --no-audit --no-fund "3d-tiles-validator@$VERSAO")
 echo "instalado em $DESTINO/node_modules/.bin/3d-tiles-validator"
 "$DESTINO/node_modules/.bin/3d-tiles-validator" --help >/dev/null && echo "validador responde"
