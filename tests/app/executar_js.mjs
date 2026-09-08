@@ -7,6 +7,9 @@
 //   latencia  : gera 10 mil feições, 3 widgets e 2 vistas, dispara 200 seleções no mapa; imprime {p95_ms, ...}
 //   ciclo     : A filtra B e B filtra A; imprime {avisos, voltas, filtroA, filtroB}
 //   url       : ida e volta do estado de vistas pelos parâmetros de URL
+//   where     : (L5-01-c) lê {filtros:[cql2 json|texto]} do stdin, imprime [{where, geometria, erro}]
+//   agregar   : (L5-01-c) lê {feicoes, opcoes} do stdin, imprime {grupos, histograma, csv}
+//   vista_memoria : (L5-01-c) a API assíncrona da vista em fonte de memória: página, total, agregação, exportação
 import { webcrypto } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
@@ -22,6 +25,8 @@ const { Fonte, normalizarLista } = await import('../../web/js/app/fontes.js');
 const { criarVistas } = await import('../../web/js/app/vistas.js');
 const { Barramento } = await import('../../web/js/app/barramento.js');
 const url = await import('../../web/js/app/estado_url.js');
+const consulta = await import('../../web/js/app/consulta.js');
+const agregacao = await import('../../web/js/app/agregacao.js');
 
 const comando = process.argv[2];
 const entrada = () => JSON.parse(readFileSync(0, 'utf8'));
@@ -130,6 +135,43 @@ if (comando === 'url') {
   const vistas2 = criarVistas(corpo, fontes);
   const aplicados = url.aplicarEstado(vistas2, url.estadoDosParams(params));
   sair({ query: params.toString(), aplicados, filtro: vistas2.get(A).filtro, selecao: [...vistas2.get(A).selecao], registros: vistas2.get(A).registros().map((f) => f.id) });
+}
+
+if (comando === 'where') {
+  const { filtros, oid } = entrada();
+  sair(filtros.map((f) => {
+    try { const r = consulta.cql2ParaWhere(cql2.normalizar(f), { oid: oid || 'fid' }); return { where: r.where, geometria: r.geometria ? r.geometria.relacao : null, erro: null }; }
+    catch (e) { return { where: null, geometria: null, erro: e.codigo || 'erro' }; }
+  }));
+}
+
+if (comando === 'agregar') {
+  const { feicoes, opcoes } = entrada();
+  const lista = normalizarLista(feicoes);
+  sair({
+    grupos: agregacao.agregarEmMemoria(lista, opcoes),
+    histograma: opcoes.campo_valor ? agregacao.histogramaEmMemoria(lista, { campo: opcoes.campo_valor, faixas: opcoes.faixas || 4 }) : [],
+    csv: agregacao.paraCsv(lista.map((f) => ({ __id: f.id, ...f.propriedades })), opcoes.colunas || null),
+    modelo: agregacao.preencherModelo(opcoes.modelo || '', lista[0]?.propriedades || {}),
+  });
+}
+
+if (comando === 'vista_memoria') {
+  const { feicoes, filtro, ordenacao, limite } = entrada();
+  const F = ulid(1); const A = ulid(2);
+  const lista = normalizarLista(feicoes);
+  const fontes = new Map([[F, fonteEmbutida(F, feicoes, [])]]);
+  const corpo = { nos: [], fontes: [], vistas: [{ id: A, nome: 'A', fonte: F, ordenacao: ordenacao || [] }], mensagens: [] };
+  const vistas = criarVistas(corpo, fontes);
+  const v = vistas.get(A);
+  if (filtro) v.definirFiltro(filtro);
+  const p1 = await v.pagina({ deslocamento: 0, limite: limite || 2 });
+  const p2 = await v.pagina({ deslocamento: limite || 2, limite: limite || 2 });
+  const csv = await v.exportar('csv');
+  const gj = await v.exportar('geojson');
+  const ids = await v.idsDoFiltro({ op: '>', args: [{ property: 'n' }, 2] });
+  sair({ total: await v.total(), p1: p1.registros.map((f) => f.id), p2: p2.registros.map((f) => f.id), linhasCsv: csv.trim().split('\n').length - 1, feicoesGeoJson: gj.features.length,
+    distintos: await v.distintos('uf'), ids, lista: lista.length });
 }
 
 process.stderr.write(`comando desconhecido: ${comando}\n`);
