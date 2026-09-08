@@ -21,7 +21,7 @@ from tests.e2e.test_i18n_cru import _cruas, _texto
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
 ITEM = "UX-04"
-PAINEIS = ["busca", "camadas", "legenda", "medicao", "desenho", "anotacoes", "impressao", "exportar"]
+PAINEIS = ["busca", "camadas", "legenda", "medicao", "desenho", "anotacoes", "impressao", "exportar", "rotas", "motor"]
 ATALHOS = {
     "b": "busca",
     "c": "camadas",
@@ -31,6 +31,8 @@ ATALHOS = {
     "a": "anotacoes",
     "i": "impressao",
     "e": "exportar",
+    "r": "rotas",
+    "o": "motor",
 }
 
 
@@ -101,10 +103,11 @@ def test_cada_painel_abre_no_mesmo_chrome_com_capturas_e_axe(page, base_url, cre
             assert gaveta and gaveta["height"] <= 390 and gaveta["y"] >= mapa["y"], (gaveta, mapa)
     page.set_viewport_size({"width": 1280, "height": 800})
     # fechar pelo x devolve o foco ao botão do trilho
-    page.click("#painel-exportar > .painel-cabecalho .fechar-x")
+    ultimo = PAINEIS[-1]
+    page.click(f"#painel-{ultimo} > .painel-cabecalho .fechar-x")
     page.wait_for_selector("#gaveta", state="hidden", timeout=5000)
     assert _aberto(page) is None
-    assert page.evaluate("() => document.activeElement.dataset.painel") == "exportar"
+    assert page.evaluate("() => document.activeElement.dataset.painel") == ultimo
     tela.verificar()
 
 
