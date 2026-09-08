@@ -78,7 +78,7 @@ function mostrarProvedores(lista) {
   endpointLdap = null;
   for (const p of listaProvedores) {
     if (!p) continue;
-    if (p.modo === 'senha' && typeof p.endpoint === 'string' && p.endpoint.startsWith('/api/')) {
+    if (p.tipo === 'ldap' && p.modo === 'senha' && p.endpoint === '/api/login/ldap') {
       endpointLdap = p.endpoint;
       const bt = h('button', { type: 'button', id: 'modo-ldap', class: 'botao', 'aria-pressed': 'false' }, t('login.ldap_entrar'));
       bt.addEventListener('click', () => { modoLogin = modoLogin === 'ldap' ? 'local' : 'ldap'; aviso.limpar(); aplicarModoLogin(); inputLogin.focus(); });
@@ -202,8 +202,10 @@ formSenha.addEventListener('submit', async (e) => {
   if (!validar(pares)) return;
   ocupado(btEntrar, true, t('login.entrando'));
   formSenha.setAttribute('aria-busy', 'true');
-  const destino = modoLogin === 'ldap' && endpointLdap ? endpointLdap : '/api/login';
-  const r = await enviar(destino, { inquilino: slug, login: inputLogin.value.trim(), senha: inputSenha.value });
+  const corpo = { inquilino: slug, login: inputLogin.value.trim(), senha: inputSenha.value };
+  // endpoints LITERAIS de propósito: a credencial nunca vai para um caminho vindo da rede, e o mapa de cobertura
+  // da interface (docs/gerar_cobertura_ui.py) lê a URL no código
+  const r = modoLogin === 'ldap' && endpointLdap ? await enviar('/api/login/ldap', corpo) : await enviar('/api/login', corpo);
   formSenha.removeAttribute('aria-busy');
   ocupado(btEntrar, false);
   if (r.status === 200 && r.json.ok === true) { concluir(r.json); return; }

@@ -9,7 +9,6 @@
   "PATCH /api/anotacoes/{id}",
   "POST /api/arquivos",
   "POST /api/isocrona",
-  "POST /api/login/ldap",
   "POST /api/mapa/camadas/{id}/filtrar",
   "POST /api/mapa/camadas/{id}/selecionar",
   "POST /api/mapa/pacotes/importar",
@@ -20,12 +19,10 @@
   "POST /api/multiescala/execucoes/{id}/micro",
   "POST /api/multiescala/fatores",
   "POST /api/multiescala/fatores/{id}/amostras",
-  "POST /api/org/ldap/importar",
   "POST /api/plataforma/inquilinos",
   "POST /api/plataforma/inquilinos/{id}/reativar",
   "POST /api/plataforma/inquilinos/{id}/suspender",
   "POST /api/rota",
-  "PUT /api/org/ldap",
   "PUT /api/papeis/{id}"
  ]
 }
