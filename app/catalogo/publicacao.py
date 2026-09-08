@@ -41,7 +41,7 @@ from app.auth import escopos as esc
 from app.auth.rotas_tokens import _inserir as _inserir_token
 from app.auth.rotas_tokens import _validar_restricao
 from app.auth.sessao import Auth, iso
-from app.catalogo import tipos
+from app.catalogo import narrativa, tipos
 from app.catalogo.comum import contexto_anonimo, exigir_edicao, registrar_evento
 from app.catalogo.relacoes import criado_a_partir_de
 from app.erros import ErroAPI
@@ -49,7 +49,7 @@ from app.settings import settings
 
 _MIN, _MAX = limites.PUBLICACAO_SLUG_MIN - 2, limites.PUBLICACAO_SLUG_MAX - 2
 SLUG = re.compile(rf"^[a-z0-9][a-z0-9-]{{{_MIN},{_MAX}}}[a-z0-9]$")
-FAMILIAS_PUBLICAVEIS = {"app", "painel"}
+FAMILIAS_PUBLICAVEIS = {"app", "painel", "narrativa"}
 
 
 def _slug_ok(slug: str) -> str:
@@ -146,13 +146,26 @@ def publicar(
 ) -> dict:
     r = exigir_edicao(cur, item_id)
     if tipos.familia_de(r["tipo"]) not in FAMILIAS_PUBLICAVEIS:
-        raise ErroAPI(422, "tipo_nao_publicavel", "só documentos de construtor (app/painel) publicam em /p/")
+        raise ErroAPI(422, "tipo_nao_publicavel", "só documentos de construtor (app/painel/narrativa) publicam em /p/")
     slug = _slug_ok(slug)
     dominios = _dominios_ok(dominios)
     alvo = versao if versao is not None else r["versao_atual"]
-    cur.execute("SELECT 1 FROM plat.item_versao WHERE item_id = %s::uuid AND versao = %s", (item_id, alvo))
-    if cur.fetchone() is None:
+    cur.execute("SELECT corpo FROM plat.item_versao WHERE item_id = %s::uuid AND versao = %s", (item_id, alvo))
+    linha_versao = cur.fetchone()
+    if linha_versao is None:
         raise ErroAPI(404, "versao_inexistente", "versão inexistente")
+    if tipos.familia_de(r["tipo"]) == "narrativa":
+        # L5-04-a: imagem sem texto alternativo (e endereço inseguro, tipo desconhecido) não publica — a versão
+        # é gravada mesmo assim (rascunho), só a PUBLICAÇÃO é recusada, com a lista de blocos e o motivo
+        retrato = linha_versao["corpo"] or {}
+        problemas = narrativa.problemas_para_publicar(retrato.get("dados") if isinstance(retrato, dict) else None)
+        if problemas:
+            raise ErroAPI(
+                422, "narrativa_nao_publicavel",
+                "a narrativa não pode ser publicada: " + "; ".join(p["erro"] for p in problemas[:5])
+                + (f" (+{len(problemas) - 5})" if len(problemas) > 5 else ""),
+                problemas,
+            )
     cur.execute(
         "SELECT item_id FROM plat.item_publicacao WHERE tenant_id = %s AND slug = %s", (auth.tenant_id, slug)
     )
