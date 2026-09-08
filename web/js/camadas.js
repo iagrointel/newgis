@@ -421,9 +421,9 @@ export class Arvore {
   _controleDeEscala(no) {
     const faixa = no.faixaEscala || [null, null];
     const min = h('input', { type: 'number', min: '0', max: '24', step: '1', class: 'escala-min',
-      value: faixa[0] === null ? '' : String(faixa[0]), placeholder: '0', 'aria-label': 'zoom mínimo' });
+      value: faixa[0] === null ? '' : String(faixa[0]), 'aria-label': 'zoom mínimo' });
     const max = h('input', { type: 'number', min: '0', max: '24', step: '1', class: 'escala-max',
-      value: faixa[1] === null ? '' : String(faixa[1]), placeholder: '24', 'aria-label': 'zoom máximo' });
+      value: faixa[1] === null ? '' : String(faixa[1]), 'aria-label': 'zoom máximo' });
     const aplicar = () => {
       const mn = min.value === '' ? null : Number(min.value);
       const mx = max.value === '' ? null : Number(max.value);
