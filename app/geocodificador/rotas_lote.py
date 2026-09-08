@@ -153,9 +153,10 @@ def regeocodificar(item_id: str, corpo: RegeocodificarEntrada, auth: Auth = aute
                     f"WHERE pendente AND origem = 'automatica' ORDER BY fid")
         pendentes_atuais = cur.fetchall()
         atualizados = 0
+        cache: dict = {}  # mesmo motivo do job: vias repetidas entre pendentes não devem reconsultar o trgm
         for linha in pendentes_atuais:
             resultado = lote.geocodificar_campos(cur, linha["linha_origem"], linha["campos_entrada"],
-                                                  limiar_pendente=limiar)
+                                                  limiar_pendente=limiar, cache=cache)
             geom = f"SRID=4326;POINT({resultado.lon} {resultado.lat})" if resultado.lon is not None else None
             cur.execute(
                 f'UPDATE "{schema}"."{tabela}" SET '
