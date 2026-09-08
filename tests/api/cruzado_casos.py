@@ -169,12 +169,6 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     })
     assert r.status_code == 201, r.text
     execucao_b = r.json()
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
-                      convite_b=convite_b)
     # L3-01-a/b: modelo, conjunto de unidades e execução de B (a camada do modelo é o item de B, que já existe)
     definicao = amc_exemplos.modelo_sem_camada_externa()
     definicao["nome"] = f"{PREFIXO}amc-{sufixo}"
@@ -193,9 +187,9 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, camada_acervo=camada_acervo,
-                      conexao_b=conexao_b, convite_b=convite_b, amc_modelo_b=amc_modelo_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, amc_modelo_b=amc_modelo_b,
-                      amc_conjunto_b=amc_conjunto_b, amc_execucao_b=amc_execucao_b)
+                      conexao_b=conexao_b, convite_b=convite_b,
+                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b,
+                      amc_modelo_b=amc_modelo_b, amc_conjunto_b=amc_conjunto_b, amc_execucao_b=amc_execucao_b)
 
 
 def amc_feicoes(*ids: str) -> dict:
@@ -977,58 +971,6 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
-    # ---- L3-01-a/b motor multicritério: modelo, conjunto de unidades e execução de B
-    ("POST", "/api/amc/modelos/validar"): Caso(
-        lambda p: "/api/amc/modelos/validar",
-        lambda p: {"definicao": amc_exemplos.modelo_sem_camada_externa()},
-        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
-    ),
-    ("GET", "/api/amc/modelos"): Caso(
-        lambda p: "/api/amc/modelos?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
-    ),
-    ("POST", "/api/amc/modelos"): Caso(
-        lambda p: "/api/amc/modelos", lambda p: {"definicao": amc_exemplos.modelo_sem_camada_externa()},
-        proprio=True, aceita=frozenset({201}), verificar=_so_a,
-        limpar=_apagar_criado(("DELETE", "/api/amc/modelos/{id}")),
-    ),
-    ("GET", "/api/amc/modelos/{modelo_id}"): Caso(lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}"),
-    ("PUT", "/api/amc/modelos/{modelo_id}"): Caso(
-        lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}",
-        lambda p: {"definicao": amc_exemplos.modelo_sem_camada_externa()},
-    ),
-    ("DELETE", "/api/amc/modelos/{modelo_id}"): Caso(lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}"),
-    ("GET", "/api/amc/modelos/{modelo_id}/versoes"): Caso(
-        lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}/versoes"
-    ),
-    ("GET", "/api/amc/modelos/{modelo_id}/versoes/{versao_hash}"): Caso(
-        lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}/versoes/{p.amc_modelo_b['versao_hash']}"
-    ),
-    ("GET", "/api/amc/conjuntos"): Caso(
-        lambda p: "/api/amc/conjuntos?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
-    ),
-    ("POST", "/api/amc/conjuntos"): Caso(
-        lambda p: "/api/amc/conjuntos",
-        lambda p: {"nome": f"{PREFIXO}amc-conj-a", "tipo": "feicoes", "feicoes": amc_feicoes("a1")},
-        proprio=True, aceita=frozenset({201}), verificar=_so_a,
-        limpar=_apagar_criado(("DELETE", "/api/amc/conjuntos/{id}")),
-    ),
-    ("GET", "/api/amc/conjuntos/{conjunto_id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.amc_conjunto_b['id']}"),
-    ("DELETE", "/api/amc/conjuntos/{conjunto_id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.amc_conjunto_b['id']}"),
-    ("GET", "/api/amc/conjuntos/{conjunto_id}/unidades"): Caso(
-        lambda p: f"/api/amc/conjuntos/{p.amc_conjunto_b['id']}/unidades?limite=5"
-    ),
-    ("GET", "/api/amc/execucoes"): Caso(
-        lambda p: "/api/amc/execucoes?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
-    ),
-    # a execução aponta modelo E conjunto de B: A não pode criar execução sobre o que não é dela
-    ("POST", "/api/amc/execucoes"): Caso(
-        lambda p: "/api/amc/execucoes",
-        lambda p: {"modelo_id": p.amc_modelo_b["id"], "conjunto_id": p.amc_conjunto_b["id"]},
-    ),
-    ("GET", "/api/amc/execucoes/{execucao_id}"): Caso(lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}"),
-    ("DELETE", "/api/amc/execucoes/{execucao_id}"): Caso(lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}"),
-    ("GET", "/api/amc/execucoes/{execucao_id}/resultados"): Caso(
-        lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}/resultados"
     ),
     # ---- L3-01-a/b motor multicritério: modelo, conjunto de unidades e execução de B
     ("POST", "/api/amc/modelos/validar"): Caso(
@@ -1082,6 +1024,18 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("DELETE", "/api/amc/execucoes/{execucao_id}"): Caso(lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}"),
     ("GET", "/api/amc/execucoes/{execucao_id}/resultados"): Caso(
         lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}/resultados"
+    ),
+    # ---- L3-01-g tela do motor: a matriz é o dado mais rico da execução (valor bruto e favorabilidade de
+    # cada fator em cada unidade) e por isso é o alvo mais valioso de um vazamento entre inquilinos.
+    ("GET", "/api/amc/execucoes/{execucao_id}/matriz"): Caso(
+        lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}/matriz"
+    ),
+    # a previsão do histograma não toca banco: os valores vêm de quem chama, então o 200 é da própria A
+    ("POST", "/api/amc/transformacoes/previsao"): Caso(
+        lambda p: "/api/amc/transformacoes/previsao",
+        lambda p: {"transformacao": {"tipo": "linear", "minimo": 0, "maximo": 10, "direcao": "crescente"},
+                   "valores": [0.0, 5.0, 10.0]},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
 }
 
