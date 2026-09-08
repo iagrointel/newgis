@@ -63,8 +63,12 @@ def test_404_para_nao_superadmin_em_todas_as_rotas(sessao_a, cliente, token_a, m
         assert r.status_code == 404, ("anonimo", metodo, caminho, r.status_code)
         r = forjado.request(metodo, _url(caminho), **kw)
         assert r.status_code in (401, 404), ("cookie forjado", metodo, caminho, r.status_code)
-    medida(ITEM)("rotas_plataforma_404_nao_superadmin", len(rotas), "rotas",
-                 "rotas /api/plataforma do docs/openapi.json chamadas com sessão comum, token, anônimo e cookie forjado")
+    medida(ITEM)(
+        "rotas_plataforma_404_nao_superadmin",
+        len(rotas),
+        "rotas",
+        "rotas /api/plataforma do docs/openapi.json chamadas com sessão comum, token, anônimo e cookie forjado",
+    )
 
 
 def test_superadmin_nao_se_forja_pelo_proprio_perfil(sessao_a, ids):
@@ -144,7 +148,8 @@ def test_listar_criar_suspender(sessao_plat, cred):
     r = c.get("/api/eu")
     assert r.status_code == 503 and r.json()["erro"] == "inquilino_suspenso", r.text
     assert "manutenção até sexta" in r.json()["mensagem"] and r.json()["detalhe"]["mensagem"] == "manutenção até sexta"
-    r = novo_cliente().post("/api/login", json={"inquilino": slug, "login": "gestor", "senha": novo["senha_temporaria"]})
+    corpo = {"inquilino": slug, "login": "gestor", "senha": novo["senha_temporaria"]}
+    r = novo_cliente().post("/api/login", json=corpo)
     assert r.status_code == 503 and "manutenção até sexta" in r.json()["mensagem"]
     lista = {t["slug"]: t for t in sessao_plat.get("/api/plataforma/inquilinos").json()}
     assert lista[slug]["ativo"] is False and lista[slug]["suspensao"]["mensagem"] == "manutenção até sexta"
@@ -222,7 +227,8 @@ def test_criar_com_cotas_detalhe_e_alterar_cotas(sessao_plat):
         # a cota vale de verdade: o admin do inquilino vê o mesmo número em GET /api/org
         c = novo_cliente()
         assert entrar(c, slug, "admin", temporaria).status_code == 200
-        assert c.put("/api/eu/senha", json={"atual": temporaria, "nova": "Senha-definitiva-1" + secrets.token_hex(3)}).status_code == 204
+        nova = "Senha-definitiva-1" + secrets.token_hex(3)
+        assert c.put("/api/eu/senha", json={"atual": temporaria, "nova": nova}).status_code == 204
         org = c.get("/api/org").json()
         assert org["usuarios"]["cota"] == 9 and org["armazenamento"]["cota_bytes"] == 200 * 1024 * 1024
         lista = {t["slug"]: t for t in sessao_plat.get("/api/plataforma/inquilinos").json()}
@@ -249,7 +255,8 @@ def test_2fa_de_admin_desligado_pelo_operador(sessao_plat, sessao_a, ids):
         r = sessao_plat.post(f"/api/plataforma/inquilinos/{inq.id}/admins/{ids['a']['id']}/2fa/desativar")
         assert r.status_code == 404, r.text
         # nunca no inquilino da plataforma (o 2FA do operador é obrigatório)
-        plat_id = next(t["id"] for t in sessao_plat.get("/api/plataforma/inquilinos").json() if t["slug"] == "plataforma")
+        lista = sessao_plat.get("/api/plataforma/inquilinos").json()
+        plat_id = next(t["id"] for t in lista if t["slug"] == "plataforma")
         r = sessao_plat.post(f"/api/plataforma/inquilinos/{plat_id}/admins/{ids['plat']['id']}/2fa/desativar")
         assert r.status_code == 409 and r.json()["erro"] == "plataforma_2fa_obrigatorio", r.text
         assert sessao_plat.get("/api/eu").status_code == 200  # a sessão do operador segue viva
