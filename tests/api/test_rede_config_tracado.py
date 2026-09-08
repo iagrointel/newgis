@@ -76,21 +76,28 @@ def _linha(sessao, rid, coordenadas, grupo, atributos=None, fase=None):
 def _rede(sessao, rid):
     """A cooperativa de teste deste item, com as coordenadas em variável para que a conta feche à mão.
 
-        disjuntor(a) ──MT1(ABC,100)── fusivel(b) ──MT2(AB,200)── trafo1(75 kVA) ──BT1── uc1
-              └────────MT3(ABC,300)── trafo2(45 kVA) ──BT2── uc2
+        disjuntor(a0) ──MT0── a ──MT1(ABC,100)── fusivel(b) ──MT2(AB,200)── trafo1(75 kVA) ──BT1──ramal── uc1
+                              └──MT3(ABC,300)── trafo2(45 kVA) ──BT2──ramal── uc2
 
-    Sob o trafo1 há um poste (estrutura de suporte, sem terminal: nunca é percorrido).
+    Sob o trafo1 há um poste (estrutura de suporte, sem terminal: nunca é percorrido). A unidade consumidora
+    liga por RAMAL DE LIGAÇÃO, não direto no trecho de baixa tensão — é a regra de conectividade que o pacote
+    elétrica-BR declara, e sem o ramal a unidade fica com grau zero na topologia.
     """
-    a = (LON0, LAT0)
-    b = (LON0 + D, LAT0)
+    a0 = (LON0 - D, LAT0)             # disjuntor de saída, sozinho na ponta: terminal 2 fica livre
+    a = (LON0, LAT0)                  # derivação: daqui saem os dois ramos
+    b = (LON0 + D, LAT0)              # chave fusível
     c = (LON0 + 2 * D, LAT0)          # trafo 1
-    bt1 = (LON0 + 2 * D, LAT0 + D)
+    d = (LON0 + 2 * D, LAT0 + D)
+    u1 = (LON0 + 2 * D, LAT0 + 2 * D)
     e = (LON0, LAT0 + 3 * D)          # trafo 2
-    bt2 = (LON0 + D, LAT0 + 3 * D)
+    g = (LON0 + D, LAT0 + 3 * D)
+    u2 = (LON0 + 2 * D, LAT0 + 3 * D)
     at = {"ctmt": CTMT, "sub": "CFG"}
 
-    disjuntor = _ponto(sessao, rid, *a, "chave_de_media_tensao", DISJUNTOR,
+    disjuntor = _ponto(sessao, rid, *a0, "chave_de_media_tensao", DISJUNTOR,
                        {**at, "cod_id": "DJ1", "estado": "fechado"})
+    _linha(sessao, rid, [list(a0), list(a)], "trecho_de_media_tensao",
+           {**at, "cod_id": "MT0", "comp": 10, "fas_con": "ABC"}, fase=7)
     fusivel = _ponto(sessao, rid, *b, "chave_de_media_tensao", FUSIVEL,
                      {**at, "cod_id": "FU1", "estado": "fechado"})
     _linha(sessao, rid, [list(a), list(b)], "trecho_de_media_tensao",
@@ -99,17 +106,21 @@ def _rede(sessao, rid):
            {**at, "cod_id": "MT2", "comp": 200, "fas_con": "AB"}, fase=3)
     trafo1 = _ponto(sessao, rid, *c, "transformador_de_distribuicao", 1,
                     {**at, "cod_id": "TR1", "pot_nom": 75})
-    _linha(sessao, rid, [list(c), list(bt1)], "trecho_de_baixa_tensao",
+    _linha(sessao, rid, [list(c), list(d)], "trecho_de_baixa_tensao",
            {**at, "cod_id": "BT1", "uni_tr_mt": "TR1", "comp": 50}, fase=7)
-    uc1 = _ponto(sessao, rid, *bt1, "unidade_consumidora", UC_BT,
+    _linha(sessao, rid, [list(d), list(u1)], "ramal_de_ligacao",
+           {**at, "cod_id": "RL1", "uni_tr_mt": "TR1", "comp": 5}, fase=7)
+    uc1 = _ponto(sessao, rid, *u1, "unidade_consumidora", UC_BT,
                  {**at, "cod_id": "UC1", "uni_tr_mt": "TR1", "clas_sub": "RE1", "ene": 1200})
     _linha(sessao, rid, [list(a), list(e)], "trecho_de_media_tensao",
            {**at, "cod_id": "MT3", "comp": 300, "fas_con": "ABC"}, fase=7)
     trafo2 = _ponto(sessao, rid, *e, "transformador_de_distribuicao", 1,
                     {**at, "cod_id": "TR2", "pot_nom": 45})
-    _linha(sessao, rid, [list(e), list(bt2)], "trecho_de_baixa_tensao",
+    _linha(sessao, rid, [list(e), list(g)], "trecho_de_baixa_tensao",
            {**at, "cod_id": "BT2", "uni_tr_mt": "TR2", "comp": 60}, fase=7)
-    uc2 = _ponto(sessao, rid, *bt2, "unidade_consumidora", UC_BT,
+    _linha(sessao, rid, [list(g), list(u2)], "ramal_de_ligacao",
+           {**at, "cod_id": "RL2", "uni_tr_mt": "TR2", "comp": 6}, fase=7)
+    uc2 = _ponto(sessao, rid, *u2, "unidade_consumidora", UC_BT,
                  {**at, "cod_id": "UC2", "uni_tr_mt": "TR2", "clas_sub": "RU1", "ene": 600})
     poste = _ponto(sessao, rid, *c, "ponto_notavel", POSTE, {**at, "cod_id": "PN1"})
 
