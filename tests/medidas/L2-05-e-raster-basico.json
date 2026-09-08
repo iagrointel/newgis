@@ -1,0 +1,64 @@
+{
+  "declividade_gdaldem": {
+    "bytes": 1897712,
+    "carga_1min": 11.02197265625,
+    "dimensoes": [
+      1078,
+      1110
+    ],
+    "fonte": "modelo de elevação de 1 segundo de arco do acervo, reprojetado para EPSG:32724 a 30 m",
+    "igual_byte_a_byte": true,
+    "medido_em": "2026-09-08T12:29:06+0000",
+    "ram_livre_gb": 6.6
+  },
+  "item": "L2-05-e-raster-basico",
+  "memoria_10gb": {
+    "carga_1min": 11.02197265625,
+    "faixa_linhas": 64,
+    "medido_em": "2026-09-08T12:29:11+0000",
+    "observacao": "o VRT apresenta 10,5 GB de pixels a partir de um ladrilho no disco; o que se mede é a memória da leitura por janela, que não depende do tamanho do arquivo",
+    "pico_rss_mb": 772.2,
+    "pixels_lidos": 21000000,
+    "ram_livre_gb": 6.73,
+    "raster_gb_de_pixels": 9.77,
+    "raster_pixels": 10485760000,
+    "teto_mb": 2048,
+    "zonas": 21
+  },
+  "visibilidade_gdal_viewshed": {
+    "altura_observador_m": 10.0,
+    "carga_1min": 11.02197265625,
+    "igual_byte_a_byte": true,
+    "medido_em": "2026-09-08T12:29:07+0000",
+    "observador": [
+      408642.7693291105,
+      8324920.333861178
+    ],
+    "pixels_visiveis": 33874,
+    "ram_livre_gb": 6.57
+  },
+  "zonais_5570": {
+    "carga_1min": 11.02197265625,
+    "erro_relativo_max_classico": 0.0,
+    "erro_relativo_max_fracao": 0.04696560504407607,
+    "erro_relativo_medio_fracao": 0.0030481601587732136,
+    "erro_relativo_p99_fracao": 0.01774899169867283,
+    "leitura": "no modo clássico (pixel pelo centro) a ferramenta REPRODUZ o rasterstats; com peso por fração de pixel a média difere de propósito, e a diferença vive na borda da zona: aqui cada zona tem cerca de 44 x 41 pixels de um mapa de CLASSES, onde trocar o peso de um pixel de borda muda o número inteiro da média",
+    "medido_em": "2026-09-08T12:29:06+0000",
+    "nota_de_tempo": "os três tempos foram medidos na MESMA rodada e na mesma máquina; a carga do instante está neste registro, e é por isso que eles valem entre si e não como número absoluto",
+    "ram_livre_gb": 6.68,
+    "raster": "mapbiomas_col10_recorte.tif",
+    "raster_dimensoes": [
+      3340,
+      3080
+    ],
+    "raster_fonte": "MapBiomas coleção 10 (recorte do acervo)",
+    "tempo_s_classico": 1.78,
+    "tempo_s_fracao": 3.31,
+    "tempo_s_rasterstats": 5.99,
+    "zonas": 5570,
+    "zonas_acima_de_meio_por_cento_com_fracao": 1118,
+    "zonas_comparadas": 5453,
+    "zonas_sao": "grade regular sobre a extensão do raster (o recorte não cobre o país inteiro)"
+  }
+}
