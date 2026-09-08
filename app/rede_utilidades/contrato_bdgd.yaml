@@ -1,0 +1,535 @@
+# Contrato de dado da BDGD — expectativas por camada e por transformador
+# Lido por contrato_bdgd.py. Cada limiar está AQUI (o executor não tem número solto), com a justificativa ao lado.
+# Linguagem: "inconsistência / valor fora do padrão". Contrato de dado, não auditoria.
+# `nota_calibracao` = o que foi medido na concessão de calibração; só é impresso no relatório dessa concessão (campo `calibracao`).
+versao: "1.1 (setembro de 2026; revisão do juiz cego C1–C9)"
+calibracao: EDP_ES          # rótulo da concessão onde os limiares foram calibrados; fora dela, as notas de calibração não são impressas
+objetivo: >
+  Verificar uma entrega da BDGD (geodatabase no formato do Módulo 10 do PRODIST) ANTES do envio à ANEEL,
+  camada a camada e transformador a transformador, com expectativas parametrizadas, três níveis de
+  severidade e um relatório HTML por safra. Reexecutável só com o pacote .gdb; nada depende de dado interno.
+  Esquema (nomes de camada/coluna, chaves, domínios) é o do Módulo 10 e vale para qualquer distribuidora;
+  os limiares semânticos (unidades, horas de IP, fechamento do balanço) foram calibrados numa concessão e
+  devem ser recalibrados por distribuidora — ver `nota_calibracao` e o relatório.
+
+severidades:
+  bloqueia: >
+    Impossibilidade física ou referencial — o registro não pode existir como está (chave duplicada, referência que não existe,
+    energia negativa, texto onde vai número, placa nula em transformador de distribuição, data futura, energia ≥ 2× a placa).
+    A entrega não deve seguir para a ANEEL sem correção. Tolerância sempre zero.
+  avisa: >
+    Contradição com explicação de processo possível, ou teste que depende da semântica de um campo cadastral (CAR_INST, POT_LAMP,
+    PERD_*). Cada registro precisa de correção OU de explicação escrita antes da entrega. A tolerância declarada é a fração de
+    registros que a expectativa aceita sem falhar; onde há referência nula simulada, a tolerância é um múltiplo dessa referência.
+  informa: >
+    Padrão descritivo (forma dos números, episódios por código, dígitos, coordenada partilhada, contexto de setor).
+    Só registra o número para a próxima safra; nunca falha.
+
+camadas_obrigatorias: [UNTRMT, UCBT_tab, CTMT, SSDBT, PONNOT]
+camadas_opcionais: [PIP, UGBT_tab, UCMT_tab]
+
+parametros_globais:
+  bbox_brasil: {lon_min: -74.0, lon_max: -28.5, lat_min: -34.0, lat_max: 5.5}   # inclui Fernando de Noronha (−32,4°) e Trindade
+  precisao_coord_casas: 6        # 1e-6 grau ≈ 0,1 m — duas unidades com a mesma coordenada nessa precisão partilham o ponto
+  meses: 12
+  formatos_data: ["%d/%m/%Y", "%Y-%m-%d", "%Y/%m/%d"]   # aceitos em DAT_CON; "ilegível" só quando nenhum casa
+  # fração máxima de transformadores em falha para uma expectativa "avisa" PASSAR quando não há referência nula:
+  # é parâmetro de PROCESSO (o que a equipe consegue explicar por escrito numa entrega), declarado, não medido; ajustar por distribuidora.
+  fracao_aviso_max: 0.001
+  multiplo_nulo_max: 2.0         # com referência nula simulada: o observado pode ir até 2× o acaso
+  fronteiras_safra: auto         # lista de anos (ex.: [2020, 2023]) ou "auto" = detectada pelo resumo das safras
+                                 # (chave do trafo muda de coluna, ou fração de valores decimais muda mais que fronteira_delta_decimais)
+  fronteira_delta_decimais: 0.30
+
+expectativas:
+# ------------------------------------------------------------------ UNTRMT (transformadores MT/BT)
+- id: UNTRMT-01
+  camada: UNTRMT
+  nivel: camada
+  nome: colunas obrigatórias presentes
+  parametros: {colunas: [COD_ID, POT_NOM, TIP_TRAFO, TIP_UNID, CTMT, SIT_ATIV, X, Y]}
+  severidade: bloqueia
+  justificativa: sem essas colunas nenhuma expectativa de transformador é calculável (X/Y = geometria do ponto).
+- id: UNTRMT-02
+  camada: UNTRMT
+  nivel: camada
+  nome: COD_ID único
+  parametros: {}
+  severidade: bloqueia
+  justificativa: o código do transformador é a chave de UCBT/PIP/SSDBT; duplicado torna o vínculo ambíguo.
+- id: UNTRMT-03
+  camada: UNTRMT
+  nivel: camada
+  nome: POT_NOM > 0 nos transformadores de distribuição
+  parametros: {tip_trafo_distribuicao: ["T"]}
+  severidade: bloqueia
+  justificativa: transformador de distribuição sem placa (nula ou zero) não existe fisicamente; sem POT_NOM não há fator de carga.
+- id: UNTRMT-04
+  camada: UNTRMT
+  nivel: camada
+  nome: POT_NOM em valor de catálogo
+  parametros: {catalogo_kva: [3, 5, 7.5, 10, 15, 25, 30, 37.5, 45, 50, 75, 100, 112.5, 150, 225, 300, 400, 500, 750, 1000, 1250, 1500, 2000, 2500, 3000]}
+  severidade: informa
+  justificativa: placas fora da série NBR 5440 existem (unidades especiais, bancos); registra a fração para comparar entre safras.
+- id: UNTRMT-05
+  camada: UNTRMT
+  nivel: camada
+  nome: coordenada presente e dentro do território brasileiro
+  parametros: {usa: bbox_brasil}
+  severidade: bloqueia
+  justificativa: ponto sem coordenada ou fora da caixa que contém todo o território (inclusive ilhas oceânicas) não pode ser localizado; toda distância depende dele.
+- id: UNTRMT-06
+  camada: UNTRMT
+  nivel: camada
+  nome: CTMT do transformador existe na camada CTMT
+  parametros: {}
+  severidade: bloqueia
+  justificativa: integridade referencial — alimentador inexistente quebra o balanço e a topologia.
+- id: UNTRMT-07
+  camada: UNTRMT
+  nivel: camada
+  nome: placa (POT_NOM) estável em relação à safra anterior
+  parametros: {fracao_max_mudou: 0.05}
+  severidade: avisa
+  justificativa: >
+    trocas reais de transformador rondam 1 % ao ano; acima de 5 % dos códigos com placa diferente da safra anterior o padrão é de
+    coluna/unidade e não de campo. Só avaliada quando existe resumo da safra anterior no diretório de trabalho.
+  nota_calibracao: na concessão de calibração, 34.721 unidades declaradas com 45 kVA numa safra apareceram com 15 kVA na seguinte (35.770 mudanças, 23 %); nas outras safras 1,0 %.
+- id: UNTRMT-08
+  camada: UNTRMT
+  nivel: camada
+  nome: DAT_CON legível e não posterior à data-base
+  parametros: {usa: formatos_data, data_base: "31/12 da safra"}
+  severidade: avisa
+  justificativa: >
+    data de conexão depois de 31/12 da safra é impossível e data ilegível impede qualquer série; o formato, porém, é convenção
+    (dd/mm/aaaa, aaaa-mm-dd e aaaa/mm/dd são aceitos) — por isso a expectativa avisa em vez de bloquear.
+- id: UNTRMT-09
+  camada: UNTRMT
+  nivel: camada
+  nome: transformador sem nenhuma UC de baixa nem ponto de IP
+  parametros: {}
+  severidade: informa
+  justificativa: unidades só com IP, vazias ou de outro uso existem; a versão com rede desenhada é F15.
+  nota_calibracao: 8–12 mil por safra na concessão de calibração.
+
+# ------------------------------------------------------------------ UCBT_tab (unidades consumidoras BT)
+- id: UCBT-01
+  camada: UCBT_tab
+  nivel: camada
+  nome: colunas obrigatórias presentes
+  parametros: {colunas: [COD_ID, "UNI_TR_MT|UNI_TR_D", CLAS_SUB, SIT_ATIV, ENE_01, ENE_12]}
+  severidade: bloqueia
+  justificativa: chave do trafo (UNI_TR_MT; UNI_TR_D nas safras até 2020), classe, situação e energia mensal são o mínimo.
+- id: UCBT-02
+  camada: UCBT_tab
+  nivel: camada
+  nome: ENE_01..12 numéricas
+  parametros: {}
+  severidade: bloqueia
+  justificativa: texto no lugar de número (vírgula decimal, espaço, "NA") não é energia; zero registros tolerados.
+- id: UCBT-03
+  camada: UCBT_tab
+  nivel: camada
+  nome: ENE_01..12 não negativas
+  parametros: {}
+  severidade: bloqueia
+  justificativa: consumo faturado negativo é impossível — a injeção de geração vai na UGBT_tab, não na UCBT.
+- id: UCBT-04
+  camada: UCBT_tab
+  nivel: camada
+  nome: SIT_ATIV no domínio
+  parametros: {dominio: [AT, DS]}
+  severidade: bloqueia
+  justificativa: domínio fechado do Módulo 10 (AT = ativa, DS = desativada).
+- id: UCBT-05
+  camada: UCBT_tab
+  nivel: camada
+  nome: transformador da UC existe na UNTRMT
+  parametros: {}
+  severidade: bloqueia
+  justificativa: integridade referencial — UC ligada a transformador inexistente não entra em nenhum agregado.
+- id: UCBT-06
+  camada: UCBT_tab
+  nivel: camada
+  nome: ponto de conexão (PN_CON) existe na PONNOT
+  parametros: {fracao_max: 0.001}
+  severidade: avisa
+  justificativa: sem o ponto a UC não tem coordenada; tolera-se 0,1 % (pontos em outras camadas de nó).
+- id: UCBT-07
+  camada: UCBT_tab
+  nivel: camada
+  nome: linhas por COD_ID (episódios)
+  parametros: {}
+  severidade: informa
+  justificativa: >
+    o mesmo COD_ID pode aparecer em 2 ou mais linhas (uma por trecho de classe/situação no ano). Não é erro, é forma: quem consome
+    a tabela tem de SOMAR os 12 meses por código. Registra quantos códigos têm mais de uma linha.
+  nota_calibracao: na concessão de calibração, a partir da safra 2022 (154.200 códigos em 2 + linhas em 2024).
+- id: UCBT-08
+  camada: UCBT_tab
+  nivel: camada
+  nome: forma dos valores — leitura (inteiros) e não rateio (decimais)
+  parametros: {fracao_max_decimais: 0.01}
+  severidade: avisa
+  justificativa: >
+    leitura de medidor produz kWh inteiros; rateio de ciclo para mês-calendário produz muitas casas decimais. Acima de 1 % dos
+    valores mensais positivos com parte decimal a coluna foi construída por rateio e não é comparável, em dígitos, com uma safra de leitura.
+  nota_calibracao: 72 % dos valores com decimais em 2019 → 0,01 % em 2024 na concessão de calibração.
+- id: UCBT-09
+  camada: UCBT_tab
+  nivel: camada
+  nome: unidade de ENE plausível (mediana residencial ativa em kWh/mês)
+  parametros: {mediana_min_kwh_mes: 30, mediana_max_kwh_mes: 1000, classe_prefixo: RE}
+  severidade: avisa
+  justificativa: >
+    proxy estatístico de unidade: em MWh a mediana ficaria < 1, em Wh > 10.000; a faixa cobre qualquer distribuidora do país.
+    É indicador, não impossibilidade — por isso avisa; sem residenciais fica NÃO AVALIADA.
+- id: UCBT-10
+  camada: UCBT_tab
+  nivel: camada
+  nome: unidade de CAR_INST plausível e sem mistura (mediana residencial em kW; frações ≥ 300 e < 1)
+  parametros: {mediana_min_kw: 0.5, mediana_max_kw: 50, classe_prefixo: RE, fracao_mistura_max: 0.05, limiar_w: 300, limiar_baixo: 1}
+  severidade: avisa
+  justificativa: >
+    carga instalada residencial em W ou VA dá mediana de milhares; em kW fica entre 1 e 20. A mediana sozinha não vê campo com unidades
+    MISTURADAS, por isso o teste também falha quando mais de 5 % dos valores residenciais estão ≥ 300 (W) E mais de 5 % estão < 1.
+    Quando esta expectativa falha, F09 e F10 devem ser lidas como consequência do campo, não do transformador.
+- id: UCBT-11
+  camada: UCBT_tab
+  nivel: camada
+  nome: perfis planos fora do mínimo de faturamento
+  parametros: {minimos_kwh: [30, 50, 100]}
+  severidade: informa
+  justificativa: 12 meses idênticos são legítimos no custo de disponibilidade (30/50/100 kWh); fora dele são número repetido.
+  nota_calibracao: 1,9 % das UCs em 2019 → 0,02 % em 2024 na concessão de calibração.
+- id: UCBT-12
+  camada: UCBT_tab
+  nivel: camada
+  nome: UCs ativas com zero nos 12 meses
+  parametros: {}
+  severidade: informa
+  justificativa: codificação de situação, não consumo; a versão por transformador (com corte de data de ligação) é F05.
+  nota_calibracao: 0,14 % → 3,21 % entre 2019 e 2024 na concessão de calibração; quem liga no 4º trimestre tem 31–40 % de zero.
+- id: UCBT-13
+  camada: UCBT_tab
+  nivel: camada
+  nome: UCs desativadas com energia nos 12 meses
+  parametros: {}
+  severidade: informa
+  justificativa: desligamento no meio do ano é normal; 12 meses cheios com SIT_ATIV = DS é contradição — a versão por transformador é F06.
+- id: UCBT-14
+  camada: UCBT_tab
+  nivel: camada
+  nome: UC com CEG_GD tem registro na UGBT_tab
+  parametros: {fracao_max: 0.01}
+  severidade: avisa
+  justificativa: geração distribuída declarada na UC sem unidade geradora correspondente deixa a injeção fora do balanço.
+- id: UCBT-15
+  camada: UCBT_tab
+  nivel: camada
+  nome: ponto de conexão da UC = ponto do transformador
+  parametros: {dist_max_km_poste: 0.001}
+  severidade: informa
+  justificativa: quando todas as UCs de um trafo estão no poste dele (um só PN_CON a menos de 1 m), a distância só vê erro grosseiro e o setor censitário é herdado — limite declarado.
+  nota_calibracao: 76 % dos trafos com UC na concessão de calibração; 2,5 % na segunda distribuidora examinada.
+
+# ------------------------------------------------------------------ CTMT (alimentadores)
+- id: CTMT-01
+  camada: CTMT
+  nivel: camada
+  nome: colunas obrigatórias presentes
+  parametros: {colunas: [COD_ID, ENE_01, ENE_12, PERD_A4, PERD_B, PNTBT_01, PNTMT_01]}
+  severidade: bloqueia
+  justificativa: sem energia injetada e perdas declaradas não há balanço por alimentador.
+- id: CTMT-02
+  camada: CTMT
+  nivel: camada
+  nome: COD_ID único
+  parametros: {}
+  severidade: bloqueia
+  justificativa: chave de UNTRMT/UCBT/SSDBT.
+- id: CTMT-03
+  camada: CTMT
+  nivel: camada
+  nome: alimentador com pelo menos um transformador na UNTRMT
+  parametros: {fracao_max: 0.01}
+  severidade: avisa
+  justificativa: alimentador sem trafo é topologia incompleta (ou alimentador só de MT); tolera-se 1 % dos alimentadores com explicação.
+- id: CTMT-04
+  camada: CTMT
+  nivel: camada
+  nome: balanço fecha — |injetada + GD − faturada − técnica − PNT| ≤ tolerância da oferta
+  parametros: {tolerancia_rel: 0.02, injecao_min_kwh: 1000000, fracao_max_alimentadores: 0.10, tecnica: "TODAS as colunas PERD_*", faturada: "UCBT + UCMT + PIP", gd: "UGBT ENE"}
+  severidade: avisa
+  justificativa: >
+    a BDGD declara, para o mesmo alimentador, injeção (ENE_xx), perdas técnicas por nível e por transformação (PERD_*) e PNT mensal
+    (PNTMT/PNTBT); a soma deveria fechar. Resíduo acima de `tolerancia_rel` da oferta (injeção + GD; só em alimentadores com ≥ 1 GWh) é
+    alimentador que não fecha; a expectativa falha quando mais de `fracao_max_alimentadores` deles não fecham. A definição de "técnica"
+    (quais PERD_* entram) e a tolerância são CALIBRADAS por distribuidora — o recomendado é fixar a tolerância no p90 do resíduo da própria
+    safra anterior e confirmar com a equipe com quais colunas a PNT foi fechada (CTMT-07 mostra a variante só-rede).
+  nota_calibracao: na concessão de calibração, mediana do resíduo por alimentador −0,14 % com todas as PERD_* e +2,6 % só com rede MT+BT; na segunda distribuidora examinada, +3,18 % com todas as PERD_* (1.044 de 1.526 alimentadores fora de ±2 %).
+- id: CTMT-07
+  camada: CTMT
+  nivel: camada
+  nome: resíduo do balanço com a técnica só de rede (variante para leitura)
+  parametros: {tecnica_alternativa: "PERD_A4 + PERD_B", usa: "tolerancia_rel e injecao_min_kwh de CTMT-04"}
+  severidade: informa
+  justificativa: registra como o fechamento muda quando transformador e medição saem da técnica — mostra COM QUAIS colunas a distribuidora fechou a PNT; nunca falha.
+- id: CTMT-05
+  camada: CTMT
+  nivel: camada
+  nome: PNT declarada negativa em algum mês
+  parametros: {}
+  severidade: informa
+  justificativa: PNT mensal negativa é sinal de que a PNT foi obtida por diferença (soma que se cancela); registra o número de alimentadores.
+- id: CTMT-06
+  camada: CTMT
+  nivel: camada
+  nome: injeção anual não negativa
+  parametros: {}
+  severidade: informa
+  justificativa: alimentador exportador (GD > carga) pode ter injeção líquida negativa — registra, não falha.
+
+# ------------------------------------------------------------------ SSDBT (segmentos de rede BT)
+- id: SSDBT-01
+  camada: SSDBT
+  nivel: camada
+  nome: colunas obrigatórias presentes
+  parametros: {colunas: [COD_ID, UNI_TR_MT, COMP]}
+  severidade: bloqueia
+  justificativa: segmento sem transformador de origem ou sem comprimento não compõe rede.
+- id: SSDBT-02
+  camada: SSDBT
+  nivel: camada
+  nome: transformador do segmento existe na UNTRMT
+  parametros: {fracao_max: 0.001}
+  severidade: avisa
+  justificativa: segmento órfão não pertence a nenhuma rede BT; tolera-se 0,1 % (trechos em transição de cadastro).
+- id: SSDBT-03
+  camada: SSDBT
+  nivel: camada
+  nome: comprimento COMP > 0
+  parametros: {fracao_max: 0.001}
+  severidade: avisa
+  justificativa: segmento de comprimento zero não conduz; pode ser conector de desenho — precisa de explicação acima de 0,1 %.
+
+# ------------------------------------------------------------------ PONNOT (pontos notáveis)
+- id: PONNOT-01
+  camada: PONNOT
+  nivel: camada
+  nome: colunas obrigatórias presentes
+  parametros: {colunas: [COD_ID, X, Y]}
+  severidade: bloqueia
+  justificativa: ponto sem código ou sem coordenada.
+- id: PONNOT-02
+  camada: PONNOT
+  nivel: camada
+  nome: COD_ID único
+  parametros: {}
+  severidade: bloqueia
+  justificativa: PN_CON da UC e do IP aponta para este código.
+- id: PONNOT-03
+  camada: PONNOT
+  nivel: camada
+  nome: coordenada dentro do território brasileiro
+  parametros: {usa: bbox_brasil}
+  severidade: bloqueia
+  justificativa: idem UNTRMT-05.
+
+# ------------------------------------------------------------------ PIP (iluminação pública)
+- id: PIP-01
+  camada: PIP
+  nivel: camada
+  nome: colunas obrigatórias presentes
+  parametros: {colunas: [UNI_TR_MT, POT_LAMP, ENE_01, ENE_12]}
+  severidade: bloqueia
+  justificativa: sem potência da lâmpada e energia não há teste de IP.
+- id: PIP-02
+  camada: PIP
+  nivel: camada
+  nome: transformador do ponto de IP existe na UNTRMT
+  parametros: {fracao_max: 0.001}
+  severidade: avisa
+  justificativa: idem SSDBT-02.
+- id: PIP-03
+  camada: PIP
+  nivel: camada
+  nome: ponto de IP com energia tem potência de lâmpada > 0
+  parametros: {fracao_max: 0.001}
+  severidade: avisa
+  justificativa: energia sem lâmpada declarada não tem origem física.
+
+# ------------------------------------------------------------------ UGBT_tab (geração distribuída BT)
+- id: UGBT-01
+  camada: UGBT_tab
+  nivel: camada
+  nome: colunas obrigatórias presentes
+  parametros: {colunas: [CEG_GD, UNI_TR_MT, POT_INST, ENE_01, ENE_12]}
+  severidade: bloqueia
+  justificativa: sem potência instalada e injeção não há balanço com GD.
+- id: UGBT-02
+  camada: UGBT_tab
+  nivel: camada
+  nome: POT_INST > 0
+  parametros: {}
+  severidade: bloqueia
+  justificativa: unidade geradora sem potência não existe.
+- id: UGBT-03
+  camada: UGBT_tab
+  nivel: camada
+  nome: transformador da unidade geradora existe na UNTRMT
+  parametros: {fracao_max: 0.001}
+  severidade: avisa
+  justificativa: idem SSDBT-02.
+- id: UGBT-04
+  camada: UGBT_tab
+  nivel: camada
+  nome: potência da GD acima da placa do transformador
+  parametros: {}
+  severidade: informa
+  justificativa: GD maior que o trafo é possível (placa errada ou GD real com curtailment) — registra para conferência contra o registro da ANEEL.
+
+# ------------------------------------------------------------------ Regras por transformador (F01–F17, documento de método, §8.4)
+# nivel: transformador — avaliadas com pandera sobre o quadro por transformador; cada uma lista os códigos que disparam.
+- id: F01
+  camada: UCBT_tab
+  nivel: transformador
+  nome: último dígito fora do padrão
+  parametros: {p_max: 0.001, min_valores: 60, valor_min_kwh: 100, min_valores_inteiros_arquivo: 1000, so_safra_de_leitura: true}
+  severidade: informa
+  referencia_nula: multinomial com a distribuição global do próprio arquivo e o n de cada transformador (3 sorteios, semente fixa)
+  justificativa: >
+    distribuição do último dígito das energias mensais inteiras ≥ 100 kWh contra a distribuição global do próprio arquivo
+    (qui-quadrado, 9 g.l.). 60 valores = mínimo para esperado ≥ 6 por dígito; o teste só corre se o arquivo tiver ≥ 1.000 valores
+    inteiros e for safra de leitura (UCBT-08 dentro da tolerância). Padrão de arredondamento, não erro — informa.
+  nota_calibracao: 0,36 % dos trafos testáveis × nulo 0,11 % (3,3×) na concessão de calibração 2024; 0,14 % × 0,11 % (1,3×) na segunda distribuidora.
+- id: F02
+  camada: UCBT_tab
+  nivel: transformador
+  nome: excesso de valores redondos (..00)
+  parametros: {fracao_min: 0.05, p_max: 0.001, min_valores: 60}
+  severidade: informa
+  referencia_nula: binomial com a taxa global de ..00 do próprio arquivo e o n de cada transformador
+  justificativa: fração de valores inteiros ≥ 100 kWh terminados em 00 ≥ 5 % e binomial p < 0,001 contra a taxa global. Padrão, não erro.
+  nota_calibracao: 0,48 % × nulo 0,02 % na concessão de calibração 2024.
+- id: F03
+  camada: UCBT_tab
+  nivel: transformador
+  nome: perfis planos (12 meses iguais) fora do mínimo
+  parametros: {fracao_min: 0.20, min_planas: 2, min_uc_energia: 5, minimos_kwh: [30, 50, 100]}
+  severidade: avisa
+  justificativa: ≥ 20 % das UCs ativas com energia com os 12 meses idênticos em valor que não é custo de disponibilidade — número repetido, precisa de explicação.
+- id: F04
+  camada: UCBT_tab
+  nivel: transformador
+  nome: vetores de 12 meses copiados entre UCs do trafo
+  parametros: {fracao_min: 0.20, min_uc: 3, piso_kwh_ano: 360}
+  severidade: avisa
+  justificativa: duas UCs com os 12 valores idênticos (não planos, ≥ 360 kWh/ano) são cópia; piso evita o mínimo de faturamento.
+- id: F05
+  camada: UCBT_tab
+  nivel: transformador
+  nome: UCs ativas com zero o ano todo (só ligadas até a data de corte)
+  parametros: {fracao_min: 0.50, min_ativas: 5, ligadas_ate: "30/06"}
+  severidade: avisa
+  justificativa: >
+    metade ou mais das ativas sem nenhum kWh contradiz a situação AT. Numerador e denominador só com UCs ligadas (DAT_CON) até 30/06 da
+    safra: quem liga no 2º semestre tem menos de 6 meses de leitura e "zero" vira calendário, não contradição.
+  nota_calibracao: na concessão de calibração 2024, 118 trafos sem o corte → 75 com o corte (43 só tinham zero por ligação no 2º semestre).
+- id: F06
+  camada: UCBT_tab
+  nivel: transformador
+  nome: UCs desativadas com energia nos 12 meses
+  parametros: {min_uc: 2}
+  severidade: avisa
+  justificativa: DS com 12 meses cheios contradiz a situação; 2 no mesmo trafo afasta coincidência de dezembro.
+- id: F07
+  camada: UNTRMT
+  nivel: transformador
+  nome: energia acima da placa (fator de carga ≥ 1)
+  parametros: {fc_min: 1.0, horas_ano: 8760}
+  severidade: avisa
+  justificativa: energia anual (UC + IP) ≥ kVA × 8.760 h — o transformador teria operado acima da placa o ano inteiro; placa ou energia precisa de explicação.
+- id: F08
+  camada: UNTRMT
+  nivel: transformador
+  nome: energia ≥ 2× a placa
+  parametros: {fc_min: 2.0, horas_ano: 8760}
+  severidade: bloqueia
+  justificativa: >
+    o dobro da placa em média anual não é sobrecarga, é impossibilidade física para a placa declarada. Explicações admissíveis por
+    escrito: troca do transformador durante o ano (energia do ano × placa do fim do ano) ou UCs realocadas; sem uma delas, placa ou
+    energia está em unidade errada e o registro não pode seguir.
+- id: F09
+  camada: UCBT_tab
+  nivel: transformador
+  nome: kWh/kW acima de 8.760 h em várias UCs
+  parametros: {horas_max: 8760, min_uc: 3, fracao_min: 0.20, min_ativas: 5}
+  severidade: avisa
+  justificativa: >
+    energia anual ÷ carga instalada > 8.760 h é mais que carga plena o ano todo — impossível SE CAR_INST estiver em kW e for confiável.
+    Como CAR_INST é campo cadastral (e há distribuidoras com unidades misturadas — ver UCBT-10), a expectativa avisa e deve ser lida
+    junto com UCBT-10: se UCBT-10 falha, F09 e F10 são consequência do campo, não do transformador.
+  nota_calibracao: 50 trafos (0,03 %) na concessão de calibração; 32.396 (13,6 %) na segunda distribuidora, onde CAR_INST vem em unidades misturadas.
+- id: F10
+  camada: UCBT_tab
+  nivel: transformador
+  nome: carga instalada residencial em unidade suspeita
+  parametros: {car_inst_min: 300, fracao_min: 0.20, min_residenciais: 5}
+  severidade: avisa
+  justificativa: CAR_INST ≥ 300 (kW) em residência sugere W ou VA; ≥ 20 % das residenciais do trafo indica erro de unidade local. Ler com UCBT-10.
+- id: F11
+  camada: PIP
+  nivel: transformador
+  nome: IP — energia incompatível com a lâmpada
+  parametros: {horas_dia_min: 6, horas_dia_max: 16, fracao_min: 0.50, min_pontos: 3, dias_mes: 30.42, unidade_pot_lamp: W, precondicao_mediana_concessao: true}
+  severidade: avisa
+  justificativa: >
+    horas/dia implícitas = energia mensal ÷ (POT_LAMP em W ÷ 1000) ÷ 30,42; fora de 6–16 h/dia a potência declarada não fecha com a energia.
+    Pré-condição: a mediana de horas/dia da concessão inteira tem de estar dentro de 6–16 h; se não estiver, a semântica de POT_LAMP/ENE da
+    PIP é outra (unidade, energia estimada) e a regra fica NÃO AVALIADA em vez de marcar a concessão inteira.
+  nota_calibracao: na concessão de calibração a energia de IP deriva da lâmpada (mediana 12,1 h/dia; 99 % em 12–15 h); na segunda distribuidora a mediana é 1,4 h/dia e 99,5 % dos pontos ficariam "fora".
+- id: F12
+  camada: UCBT_tab
+  nivel: transformador
+  nome: salto na série entre safras (fora das fronteiras)
+  parametros: {razao_max: 3.0, mwh_min: 3, ativas_min: 5, carteira_estavel: [0.8, 1.25]}
+  severidade: avisa
+  justificativa: energia anual ≥ 3× ou ≤ 1/3 entre safras consecutivas com carteira estável (UCs ativas ±20 %) é salto da coluna, não da rede.
+- id: F13
+  camada: UCBT_tab
+  nivel: transformador
+  nome: salto só em fronteira de safra
+  parametros: {usa: fronteiras_safra}
+  severidade: informa
+  justificativa: mesmo critério de F12 apenas nas fronteiras declaradas ou detectadas (troca de chave ou de forma dos valores) — declarado, peso zero.
+- id: F14
+  camada: PONNOT
+  nivel: transformador
+  nome: UCs longe do transformador
+  parametros: {dist_km_fracao: 0.5, fracao_min: 0.30, min_uc: 5, dist_km_qualquer: 2.0}
+  severidade: avisa
+  justificativa: rede BT não passa de algumas centenas de metros; 2 km é coordenada em outro lugar.
+  nota_calibracao: máximos de 300–330 km na concessão de calibração (ponto ou trafo em outro município).
+- id: F15
+  camada: SSDBT
+  nivel: transformador
+  nome: rede BT desenhada sem nenhuma UC nem IP
+  parametros: {min_segmentos: 3, tip_trafo_distribuicao: ["T"]}
+  severidade: avisa
+  justificativa: transformador de distribuição com ≥ 3 segmentos de BT e zero carga é rede sem cliente ou cliente sem rede.
+- id: F16
+  camada: UNTRMT
+  nivel: transformador
+  nome: coordenada duplicada entre transformadores
+  parametros: {usa: precisao_coord_casas}
+  severidade: informa
+  justificativa: unidades de subestação e bancos partilham o ponto legitimamente; registra e separa por TIP_TRAFO.
+- id: F17
+  camada: externo
+  nivel: transformador
+  nome: cadastro residencial acima do Censo no setor
+  parametros: {dppo_min: 30, cobertura_max: 2.0}
+  severidade: informa
+  justificativa: UCs residenciais ativas ÷ domicílios ocupados do setor > 2 é contexto de setor (precisa da malha do Censo, referência externa opcional).
