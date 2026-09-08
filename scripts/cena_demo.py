@@ -28,6 +28,10 @@ import psycopg2  # noqa: E402
 
 DSN = os.environ["PLAT_DSN"]
 MARCA = "cena-l2-09-b"
+# a marca do item de CENA vai no título, não em `dados`: o esquema do tipo `cena` não aceita chave
+# fora de {esquema_versao, corpo}, e a primeira gravação feita pela tela apagaria uma marca que a
+# bancada tivesse escondido ali (foi o que aconteceu: a bancada "sumia" depois do primeiro e2e).
+TITULO_CENA = "cena-demonstracao (L2-09-b)"
 CENTRO = (-46.593018, -23.493476)
 LADO_GRAU = 0.00025  # ~28 m de lado; quadra de 4.000 edificações cabe no campo de visão inclinado
 N_EDIF = int(os.environ.get("CENA_DEMO_N", "4000"))
@@ -121,8 +125,8 @@ def criar():
             }
             cur.execute("INSERT INTO plat.item(tenant_id, tipo, titulo, dono_id, criado_por, dados) "
                         "VALUES (%s, 'cena', %s, %s, %s, %s::jsonb) RETURNING id",
-                        (adm["tenant_id"], "cena-demonstracao (L2-09-b)", adm["usuario_id"], adm["usuario_id"],
-                         json.dumps({"esquema_versao": 1, "corpo": corpo, "marca": MARCA})))
+                        (adm["tenant_id"], TITULO_CENA, adm["usuario_id"], adm["usuario_id"],
+                         json.dumps({"esquema_versao": 1, "corpo": corpo})))
             cena_id = str(cur.fetchone()["id"])
         con.commit()
         saida = {"camada": {"item": camada_id, "tabela": tabela, "funcao": funcao, "n": r["n"]},
@@ -141,7 +145,8 @@ def apagar():
         with con.cursor() as cur:
             _contexto(cur, "demo")
             cur.execute("SELECT id, tipo, dados->>'schema' AS e, dados->>'tabela' AS t FROM plat.item "
-                        "WHERE dados->>'marca' = %s AND apagado_em IS NULL", (MARCA,))
+                        "WHERE (dados->>'marca' = %s OR titulo = %s) AND apagado_em IS NULL",
+                        (MARCA, TITULO_CENA))
             itens = cur.fetchall()
             for it in itens:
                 cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (it["id"],))
