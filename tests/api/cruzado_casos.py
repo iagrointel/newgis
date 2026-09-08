@@ -848,6 +848,24 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     # ---- L0-09 metadado ISO 19139 do item: mesmo `item_ou_404` + RLS de `IT` acima.
     ("GET", IT + "/metadado.xml"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/metadado.xml"),
+    # ---- L2-01-mapa-web: leituras de lista agem só no chamador (RLS); camada de B como alvo = 404 em toda perna.
+    ("GET", "/api/mapa/camadas"): Caso(lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}),
+                                       verificar=_sem_marca),
+    ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}"),
+    ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/tilejson"),
+    # ---- L2-06-e / L2-01-i: agregação e gráfico sobre a camada de B — o item de B (mapa) não é camada
+    # vetorial, e RLS esconde o item: 404 em toda perna, nunca uma linha agregada.
+    ("POST", "/api/camadas/{item_id}/estatisticas"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/estatisticas",
+        lambda p: {"estatisticas": [{"campo": "id", "tipo": "count"}]},
+    ),
+    ("POST", "/api/camadas/{item_id}/grafico"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/grafico", lambda p: {"tipo": "contagem"},
+    ),
+    ("GET", "/api/geocodificar"): Caso(
+        lambda p: "/api/geocodificar?endereco=Avenida+Paulista,+Sao+Paulo+-+SP", proprio=True,
+        aceita=frozenset({200, 422}), verificar=_sem_marca,
+    ),
     # ---- L2-11-b geocodificador próprio (dado aberto CNEFE/IBGE, sem tabela de inquilino, mesmo padrão de
     # /api/rota-/api/matriz-/api/isocrona acima): 422 é resposta de NEGÓCIO (UF/logradouro não instalado
     # nesta trilha), não vazamento — aceito ao lado de 200.
