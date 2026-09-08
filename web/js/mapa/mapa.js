@@ -72,6 +72,9 @@ async function iniciarMapa() {
   map.addControl(new window.maplibregl.NavigationControl({ showCompass: true }), 'top-right');
   map.addControl(new window.maplibregl.ScaleControl({ maxWidth: 140, unit: 'metric' }), 'bottom-left');
   map.addControl(new window.maplibregl.AttributionControl({ compact: false }), 'bottom-right');
+  /* item L7-13-a-chamados: registro da instância viva para a captura do botão "reportar"
+     (web/js/chamados/reportar.js) — o quadro do canvas só é capturável dentro de um evento 'render'. */
+  window.platMapa = map;
 
   montarSeletorBase(map);
   montarCoordenadas(map);
