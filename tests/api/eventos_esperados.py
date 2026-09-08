@@ -158,4 +158,20 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- rede de utilidades (L4-01-a/b, L4-02-a, L4-05-d, L4-05-e; vocabulário nas migrações
+    # 20260906T1553, 20260906T2000, 20260906T2048, 20260907T1306, 20260907T1629 e 20260908T1032). As rotas de
+    # escrita desta família já existiam sem entrada aqui — o portão de cobertura só passou a alcançá-las quando
+    # `docs/openapi.json` foi regerado (item L4-05-e); o GET .../epanet e as duas conferências de gás e esgoto
+    # são leitura e não aparecem, como as demais leituras.
+    ("POST", "/api/rede"): ["redes/criar"],
+    ("DELETE", "/api/rede/{rede_id}"): ["redes/apagar"],
+    ("POST", "/api/rede/{rede_id}/pacote"): ["redes/importar_pacote"],
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos"): ["redes/feicao_criar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas"): ["redes/feicao_criar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): ["redes/feicao_editar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas/applyEdits"): ["redes/feicao_editar"],
+    ("POST", "/api/rede/{rede_id}/topologia/habilitar"): ["redes/topologia_habilitar"],
+    ("POST", "/api/rede/{rede_id}/tracar"): ["redes/tracar"],
+    ("POST", "/api/rede/{rede_id}/epanet"): ["redes/epanet_importar"],
+    ("POST", "/api/rede/{rede_id}/teksi"): ["redes/teksi_importar"],
 }
