@@ -651,6 +651,12 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/itens/{p.app_b['id']}/publicacao/visualizacoes"
     ),
     ("GET", "/api/p/{inquilino}/{slug}"): Caso(lambda p: f"/api/p/demo2/{p.publicacao_b['slug']}"),
+    # ---- L5-20-sites-paginas-publicas: as três rotas do site passam por `exigir_edicao` sobre um item de B,
+    # logo são 404 para A (a vitrine `/s/<inquilino>/...` não entra aqui porque é página, fora do OpenAPI —
+    # ela é anônima por desenho e o que ela pode mostrar é medido em tests/api/catalogo/test_site.py).
+    ("GET", IT + "/site"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/site"),
+    ("PUT", IT + "/site"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/site", lambda p: {"indexavel": True}),
+    ("DELETE", IT + "/site"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/site"),
     # ---- L5-37-pacotes-modelos-entre-inquilinos: exportar o pacote de um item de B, ou usar um modelo de B
     # como origem de importação, é a mesma leitura de item barrada pela política de linha (404, nunca 403 com
     # confirmação de existência). A lista de modelos é a única `proprio`: devolve os de A e os de escopo
