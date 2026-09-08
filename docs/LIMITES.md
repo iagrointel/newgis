@@ -230,3 +230,12 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## regras de atributo de rede (L4-29-regras-de-atributo-de-rede; migração 20260908T1934_regras_atributo_rede.sql):
+
+| nome | valor | explicação |
+|---|---|---|
+| `REDE_REGRA_MAX` | `1000` | regras ativas por (inquilino, perfil) numa rodada |
+| `REDE_REGRAS_OBJETOS_MAX` | `50000` | objetos de rede avaliados por rodada de cálculo |
+| `REDE_REGRAS_ITENS_MAX` | `10000` | itens de uma validação em lote (acima disso: truncado=true) |
+| `REDE_REGRAS_ERROS_MAX` | `100` | erros de avaliação guardados no resultado de uma rodada (o total é contado) |
