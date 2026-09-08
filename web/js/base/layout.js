@@ -5,6 +5,7 @@ import { h, limpar } from './dom.js';
 import { t } from './i18n.js';
 import { tem } from './estado.js';
 import { sair } from '../auth/sessao.js';
+import { instalarAjuda } from './ajuda.js';
 
 export const TELAS = [
   { caminho: '/', chave: 'nav.inicio' },
@@ -51,6 +52,8 @@ export function montarLayout({ usuario, ativo = location.pathname }) {
       foto,
       h('a', { href: '/conta', id: 'pessoa-nome' }, usuario.nome || usuario.login, h('small', {}, `${usuario.login} · ${t(`perfil.${usuario.perfil}`)}`))),
     btSair));
+  /* item L7-04-a: ajuda por contexto — o painel abre na seção da tela atual (body[data-ajuda]) */
+  instalarAjuda(aside);
 }
 
 /* cabeçalho da tela: h1 com contagem opcional + área de botões à direita */
