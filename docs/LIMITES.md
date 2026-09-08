@@ -229,6 +229,7 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_NOME_MAX` | `200` | mesmo teto de CHECK(length(nome)<=200) da migração |
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
+| `ESCALA_CELULAS_GEOJSON_MAX` | `50000` | feições de GET /api/multiescala/execucoes/{id}/celulas (UX-08); acima disso `truncado` |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
 
 ## tabela de atributos da camada (L2-01-g-tabela-atributos): paginação no servidor, busca em texto, filtro
@@ -268,3 +269,9 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `EXPORTACAO_CSV_SEPARADORES` | `(',', ';', '\t', '|')` | — |
 | `EXPORTACAO_CSV_DECIMAIS` | `('.', ',')` | — |
 | `EXPORTACAO_BLOCO_LEITURA_BYTES` | `8388608` | leitura do arquivo pronto em blocos (sha256 e envio); NUNCA |
+
+## widgets de página e de menu (L5-01-d)
+
+| nome | valor | explicação |
+|---|---|---|
+| `QR_TEXTO_MAX` | `2048` | conteúdo máximo do QR de compartilhar (uma URL longa cabe) |
