@@ -106,6 +106,7 @@ def test_no_e_aresta_apontam_para_a_tabela_unificada(conexao_plat_app):
 def test_as_duas_origens_na_mesma_tabela(rede_importada, conexao_plat_app):
     rid, _rede, _contagem = rede_importada
     con = conexao_plat_app
+    contexto(con, ids_por_slug(con)["demo"])  # leitura direta passa pela RLS: sem inquilino, zero linha
     with con.cursor() as cur:
         cur.execute(
             "SELECT origem, count(*) AS n, count(tier_id) AS com_tier, count(nivel) AS com_nivel, "
@@ -172,6 +173,7 @@ def test_ctmt_sem_disjuntor_reconcilia_pelo_no_de_cabeca(rede_importada, sessao_
     arquivo tem de acabar com controlador no nó de cabeça e reconciliado — nunca subrede órfã."""
     rid, _rede, _c = rede_importada
     con = conexao_plat_app
+    contexto(con, ids_por_slug(con)["demo"])
     with con.cursor() as cur:
         cur.execute(
             "SELECT d.codigo_externo, d.equivalente_id, c.nome AS derivada, c.origem AS origem_derivada "
@@ -191,58 +193,52 @@ def test_ctmt_sem_disjuntor_reconcilia_pelo_no_de_cabeca(rede_importada, sessao_
 
 # --- a tabela única não afrouxou regra -------------------------------------------------------------------
 
-def test_forma_da_linha_depende_da_origem(conexao_plat_app):
+def test_forma_da_linha_depende_da_origem(rede_importada, conexao_plat_app):
+    """O CHECK por origem impede a mistura: declarada com tier ou derivada com nível é recusada pelo BANCO."""
+    rid, _rede, _c = rede_importada
     con = conexao_plat_app
-    ids = ids_por_slug(con)
-    tenant_id = ids["demo"]
+    tenant_id = ids_por_slug(con)["demo"]
+    contexto(con, tenant_id)
     with con.cursor() as cur:
-        contexto(con, tenant_id)
-        cur.execute("SELECT id FROM plat.rede LIMIT 1")
-        linha = cur.fetchone()
-        if linha is None:
-            pytest.skip("o inquilino demo não tem rede nenhuma nesta base")
-        rede_id = linha["id"]
+        cur.execute("SELECT id FROM plat.rede_tier WHERE rede_id = %s::uuid LIMIT 1", (rid,))
+        tier_id = cur.fetchone()["id"]
         with pytest.raises(Exception, match="rede_subrede_forma_da_origem"):
             cur.execute(
-                "INSERT INTO plat.rede_subrede (tenant_id, rede_id, origem, estado, nome) "
-                "VALUES (%s, %s::uuid, 'bdgd', 'declarada', 'zt-sem-nivel')",
-                (tenant_id, rede_id),
+                "INSERT INTO plat.rede_subrede (tenant_id, rede_id, origem, estado, nome, nivel, "
+                "codigo_externo, tier_id) VALUES (%s, %s::uuid, 'bdgd', 'declarada', 'zt-com-tier', 1, "
+                "'zt-com-tier', %s::uuid)",
+                (tenant_id, rid, tier_id),
             )
     con.rollback()
+    contexto(con, tenant_id)
     with con.cursor() as cur:
-        contexto(con, tenant_id)
         with pytest.raises(Exception, match="rede_subrede_forma_da_origem"):
             cur.execute(
                 "INSERT INTO plat.rede_subrede (tenant_id, rede_id, origem, estado, nome, nivel, "
                 "codigo_externo) VALUES (%s, %s::uuid, 'controlador', 'suja', 'zt-com-nivel', 1, 'zt')",
-                (tenant_id, rede_id),
+                (tenant_id, rid),
             )
     con.rollback()
 
 
-def test_nivel_invertido_continua_recusado(conexao_plat_app):
+def test_nivel_invertido_continua_recusado(rede_importada, conexao_plat_app):
     """A regra de nível estrito do item L4-01-c sobreviveu à unificação, com o MESMO nome de exceção."""
+    rid, _rede, _c = rede_importada
     con = conexao_plat_app
-    ids = ids_por_slug(con)
-    tenant_id = ids["demo"]
+    tenant_id = ids_por_slug(con)["demo"]
+    contexto(con, tenant_id)
     with con.cursor() as cur:
-        contexto(con, tenant_id)
-        cur.execute("SELECT id FROM plat.rede LIMIT 1")
-        linha = cur.fetchone()
-        if linha is None:
-            pytest.skip("o inquilino demo não tem rede nenhuma nesta base")
-        rede_id = linha["id"]
         cur.execute(
             "INSERT INTO plat.rede_subrede (tenant_id, rede_id, origem, estado, nivel, codigo_externo, "
             "nome) VALUES (%s, %s::uuid, 'bdgd', 'declarada', 1, 'zt-u1', 'zt-u1') RETURNING id",
-            (tenant_id, rede_id),
+            (tenant_id, rid),
         )
         nivel1 = cur.fetchone()["id"]
         with pytest.raises(Exception, match="subrede_nivel_invertido"):
             cur.execute(
                 "INSERT INTO plat.rede_subrede (tenant_id, rede_id, origem, estado, nivel, "
                 "codigo_externo, nome, pai_id) "
-                "VALUES (%s, %s::uuid, 'bdgd', 'declarada', 3, 'zt-u3', 'zt-u3', %s::uuid)",
-                (tenant_id, rede_id, nivel1),
+                "VALUES (%s, %s::uuid, 'bdgd', 'declarada', 3, 'zt-u3', 'zt-u3', %s::uuid) ",
+                (tenant_id, rid, nivel1),
             )
     con.rollback()
