@@ -10,18 +10,25 @@ de conteúdo (`app/varredura_conteudo.py`) antes de tocar o Garage — na 1ª pa
 `objetos.guardar` (arquivo pequeno, 1 PUT só); 415 `conteudo_recusado` quando os bytes não batem com o
 `Content-Type` declarado."""
 
+import datetime
 import re
 
 from fastapi import APIRouter, Request, Response
 
-from app import db, limites, objetos
-from app.auth.sessao import Auth, autenticado
+from app import db, limites, objetos, objetos_raster
+from app.auth.sessao import Auth, autenticado, ip_de, sha256_hex
 from app.erros import ErroAPI
 
 router = APIRouter(tags=["arquivos"])
 X = {"x-auth": "S/T", "x-privilegio": "proprio"}
 CLASSE = re.compile(r"^[a-z0-9_]{1,40}$")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
+# mesma forma do `location ~ ^/svc/.../cog/...` de deploy/nginx.conf: se as duas divergirem, o nginx entrega
+# um caminho que esta rota não sabe autorizar (403) — nunca o contrário (a rota é a mais restritiva das duas)
+COG_URI = re.compile(
+    r"^/svc/(?P<token>plat_[A-Za-z0-9_-]{20,128})/cog/(?P<slug>[a-z0-9][a-z0-9-]{1,38})/"
+    r"(?P<objeto>[0-9A-Za-z][0-9A-Za-z_-]{0,63}/[a-z][a-z0-9_]{0,39}_[0-9a-f]{8}\.[a-z0-9]{1,8})$"
+)
 
 
 def _classe_ok(classe: str) -> str:
@@ -55,10 +62,62 @@ def varredura(auth: Auth = autenticado(so_sessao=True)):
 
 @router.get("/api/arquivos", openapi_extra=X)
 def uso(auth: Auth = autenticado()):
+    """Uso × cota do balde do inquilino, lido do PRÓPRIO Garage (GetBucketInfo), nas DUAS dimensões que o balde
+    tem desde o item L1-01-d: bytes e número de objetos. `cota_bytes` continua no corpo com o mesmo nome e o
+    mesmo significado de antes (item L0-11); `objetos_usados`/`cota_objetos` são os campos novos."""
     with db.db(auth.contexto()) as cur:
-        cur.execute("SELECT cota_bytes FROM plat.tenant WHERE id = %s", (auth.tenant_id,))
-        cota = cur.fetchone()["cota_bytes"]
-    return {"bytes_usados": objetos.uso(auth.tenant_slug), "cota_bytes": cota}
+        cur.execute("SELECT cota_bytes, cota_objetos FROM plat.tenant WHERE id = %s", (auth.tenant_id,))
+        t = cur.fetchone()
+    u = objetos.uso_detalhado(auth.tenant_slug)
+    return {
+        "bytes_usados": u["bytes_usados"],
+        "cota_bytes": t["cota_bytes"],
+        "objetos_usados": u["objetos_usados"],
+        "cota_objetos": t["cota_objetos"],
+    }
+
+
+@router.get("/api/arquivos/_chave-leitura", openapi_extra={"x-auth": "S", "x-privilegio": "org.integracoes"})
+def chave_leitura(auth: Auth = autenticado("org.integracoes", so_sessao=True)):
+    """A chave S3 SÓ-LEITURA do balde do inquilino: é o que a conexão S3 do ArcGIS Pro (`Create Cloud Storage
+    Connection File`, provedor S3 compatível, endereçamento por caminho) e o TiTiler (`/vsis3`) precisam para ler
+    o COG direto do Garage, sem passar byte por esta API. Nunca a chave de escrita — essa só existe dentro do
+    processo da API e do worker (ADR 20260908T1255 seção 4). Só sob sessão e com `org.integracoes`: um token de serviço
+    não troca a si mesmo por uma credencial de armazenamento."""
+    with db.db(auth.contexto()) as cur:
+        return objetos_raster.credenciais_leitura(cur)
+
+
+@router.get(
+    "/api/arquivos/_cog/autorizar",
+    status_code=204,
+    response_class=Response,
+    openapi_extra={"x-auth": "-", "x-privilegio": "publico"},
+)
+def cog_autorizar(request: Request):
+    """Subrequisição `auth_request` do bloco `/svc/<token>/cog/<slug>/...` do nginx (deploy/nginx.conf). Recebe o
+    caminho original em `X-Original-URI` e responde 204 (o nginx serve a fatia do Garage) ou 403 (não serve).
+    Autoriza quando: o caminho está na forma esperada, o token existe, não está revogado nem expirado, e o
+    inquilino do token é o dono do `<slug>` do caminho. Nunca diz QUAL das condições falhou — a resposta é a
+    mesma 403 para token inexistente e para token de outro inquilino, senão a rota vira oráculo de token.
+    É rota pública de propósito: a subrequisição do nginx não carrega cookie nem `Authorization`."""
+    uri = (request.headers.get("x-original-uri") or "").split("?")[0]
+    m = COG_URI.match(uri)
+    if m is None:
+        raise ErroAPI(403, "cog_negado", "caminho de COG não autorizado")
+    valor = m.group("token")
+    with db.db() as cur:
+        cur.execute("SELECT * FROM plat.auth_token(%s, %s)", (sha256_hex(valor), ip_de(request)))
+        r = cur.fetchone()
+    agora = datetime.datetime.now(datetime.UTC)
+    if (
+        r is None
+        or r["revogado_em"] is not None
+        or (r["expira_em"] is not None and r["expira_em"] <= agora)
+        or r["tenant_slug"] != m.group("slug")
+    ):
+        raise ErroAPI(403, "cog_negado", "caminho de COG não autorizado")
+    return Response(status_code=204)
 
 
 @router.post("/api/arquivos", status_code=201, openapi_extra={"x-auth": "T", "x-privilegio": "proprio"})
