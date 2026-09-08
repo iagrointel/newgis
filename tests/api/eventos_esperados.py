@@ -59,6 +59,8 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- catálogo (L0-03; vocabulário na migração 011)
     ("POST", "/api/itens"): ["itens/adicionar"],
     ("POST", "/api/acervo/{fonte_id}/adicionar"): ["itens/adicionar", "acervo/adicionar_recusado_pii"],
+    # L6-01-i-raster-e-arquivos: a rota de exposição enfileira jobs e registra o pedido (o job registra o item)
+    ("POST", "/api/acervo/arquivos/expor"): ["acervo/arquivo_expor"],
     ("PUT", "/api/itens/{id}"): ["itens/atualizar", "itens/status", "itens/proteger", "itens/desproteger"],
     ("PATCH", "/api/itens/{id}"): ["itens/atualizar", "itens/status", "itens/proteger", "itens/desproteger"],
     ("DELETE", "/api/itens/{id}"): ["itens/apagar"],

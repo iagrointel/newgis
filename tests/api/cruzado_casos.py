@@ -937,3 +937,16 @@ def _link_so_o_item(p: Preparacao, j: Any) -> None:
     assert "login" not in item["dono"] and "pode_editar" not in item and item["id"] == p.item_b["id"]
     for marca in (p.usuario_b["login"], p.grupo_b["nome"], p.papel_b["nome"], p.token_b["prefixo"], "demo2"):
         assert marca not in str(j), marca
+
+
+# ---- L6-01-i-raster-e-arquivos: o acervo é da CASA (global, sem tenant_id) — a lista é igual para todo
+# inquilino (nada de B nela) e a exposição só cria item no inquilino de quem chama
+CASOS.update({
+    ("GET", "/api/acervo/arquivos"): Caso(lambda p: "/api/acervo/arquivos?limite=1", aceita=frozenset({200}),
+                                          verificar=_sem_marca),
+    ("POST", "/api/acervo/arquivos/expor"): Caso(
+        lambda p: "/api/acervo/arquivos/expor", lambda p: {"caminhos": ["zz/inexistente-no-registro.geojson"]},
+        aceita=frozenset({202, 409}), verificar=_sem_marca,
+    ),
+})
+

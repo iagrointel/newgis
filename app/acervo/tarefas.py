@@ -63,6 +63,15 @@ def _procedencia(r: dict, sha_conferido: str) -> dict:
     }
 
 
+def _tags(r: dict) -> list[str]:
+    """`acervo` + o fonte_id (slug). O DOMÍNIO da fonte não vira tag: o vocabulário do acervo tem vírgula
+    ("Empresas, trabalho e renda") e `plat.tags_validas` recusa vírgula em tag."""
+    tags = ["acervo"]
+    if r.get("fonte_id"):
+        tags.append(str(r["fonte_id"])[:128])
+    return tags
+
+
 def _titulo(r: dict, pedido: str | None) -> str:
     base = (pedido or r["nome"] or r["caminho"]).strip()
     return (base[:190] + "…") if len(base) > 195 else base
@@ -111,7 +120,7 @@ def _expor_raster(ctx, cur, r: dict, a: arq.Arquivo, sha: str, titulo: str, usua
         "INSERT INTO plat.item(id, tenant_id, tipo, titulo, dono_id, dados, tamanho_bytes, acesso, "
         "criado_por, modificado_por, tags) VALUES (%s::uuid, %s, 'raster', %s, %s, %s, %s, 'privado', %s, %s, %s)",
         (item_id, ctx.tenant_id, titulo, usuario_id, _jsonb(dados), a.absoluto.stat().st_size,
-         usuario_id, usuario_id, ["acervo", r["dominio"] or "sem-dominio"]),
+         usuario_id, usuario_id, _tags(r)),
     )
     return item_id
 
@@ -180,8 +189,7 @@ def _expor_vetor(ctx, cur_slug: str, r: dict, a: arq.Arquivo, sha: str, titulo: 
         cur.execute(
             "INSERT INTO plat.item(id, tenant_id, tipo, titulo, dono_id, dados, acesso, criado_por, "
             "modificado_por, tags) VALUES (%s::uuid, %s, 'camada_vetorial', %s, %s, %s, 'privado', %s, %s, %s)",
-            (item_id, ctx.tenant_id, titulo, usuario_id, _jsonb(dados), usuario_id, usuario_id,
-             ["acervo", r["dominio"] or "sem-dominio"]),
+            (item_id, ctx.tenant_id, titulo, usuario_id, _jsonb(dados), usuario_id, usuario_id, _tags(r)),
         )
     return item_id
 
@@ -205,10 +213,14 @@ def acervo_expor_arquivo(ctx, caminho: str, titulo: str | None = None) -> dict:
         usuario_id = dono["id"] if dono else None
         cur.execute("SELECT slug FROM plat.tenant WHERE id = %s", (ctx.tenant_id,))
         slug = cur.fetchone()["slug"]
-        cur.execute("SELECT item_id::text AS item_id FROM plat.acervo_arquivo_exposto WHERE caminho = %s", (caminho,))
+        cur.execute("SELECT item_id::text AS item_id, tipo, sha256_conferido, bytes, publicavel "
+                    "FROM plat.acervo_arquivo_exposto WHERE caminho = %s", (caminho,))
         ja = cur.fetchone()
     if ja:
-        return {"caminho": caminho, "item_id": ja["item_id"], "ja_exposto": True}
+        # idempotente: o mesmo caminho exposto duas vezes devolve o item que já existe, no MESMO formato
+        return {"caminho": caminho, "item_id": ja["item_id"], "tipo": ja["tipo"], "sha256": ja["sha256_conferido"],
+                "publicavel": bool(ja["publicavel"]), "bytes": ja["bytes"], "ja_exposto": True,
+                "teto_bytes": limites.ACERVO_ARQUIVO_BYTES_MAX}
     if usuario_id is None:
         raise FalhaDefinitiva("job sem usuário dono: a exposição precisa de um autor")
     ctx.progresso(10, "conferindo sha256")
