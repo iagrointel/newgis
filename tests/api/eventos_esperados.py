@@ -161,4 +161,5 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
     # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
     ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
+    ("POST", "/api/camadas/{id}/lote"): ["camadas/lote"],  # L2-03-f: síncrono e job registram o mesmo evento
 }
