@@ -3,6 +3,28 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L2-05-e-raster-basico: treze ferramentas raster sobre COG)
+
+- **Treze ferramentas raster** (`app/ferramentas/raster.py`) no mesmo registro das vetoriais: estatísticas zonais,
+  calculadora, reclassificar, recortar, reprojetar, mosaico, terreno (declividade, orientação, sombreamento,
+  rugosidade, TPI), curvas de nível, vetorizar, rasterizar, amostrar em pontos, visibilidade e distância euclidiana.
+- **Leitura por janela sobre o COG onde ele está** (`app/raster/fonte.py`, `app/raster/zonal.py`): caminho virtual do
+  GDAL com a credencial só-leitura do balde do inquilino; faixas de 64 linhas. Medido: **pico de 777 MB de memória
+  residente num raster de 9,77 GB de pixels**, contra teto de 2 GB (`tests/medidas/L2-05-e-raster-basico.json`).
+- **Igualdade com a referência, medida**: declividade e visibilidade **iguais byte a byte** ao `gdaldem` e ao
+  `gdal_viewshed` diretos; NDVI de cena Sentinel-2 real **igual ao avaliador do TiTiler a menos de 1e-6**;
+  5.570 zonas sobre o COG de uso do solo do acervo em **3,35 s** (modo clássico 1,81 s; `rasterstats` 6,03 s na
+  mesma rodada, carga 11,9 registrada ao lado). No modo comparável a média por zona **reproduz o `rasterstats`**
+  (erro máximo 0,0); com peso por fração de pixel o erro médio é 0,30 % e o máximo, 4,7 %, está gravado.
+- **Resultado raster com procedência** (`app/ferramentas/saida_raster.py`): COG validado pelo `rio-cogeo` no
+  armazenamento, item STAC na coleção `analises` do inquilino, item de catálogo com `procedencia.ferramenta` e
+  relação `derivado_de` por entrada. Migração `20260908T1159_raster_procedencia.sql` abre `procedencia` no tipo.
+- **Refutação atendida**: raster sem nodata declarado segue com aviso registrado no resultado; declividade em CRS
+  geográfico é recusada com o motivo e só passa com `escala` declarada; polígono de recorte fora da extensão é erro
+  nomeado, e não produto vazio; o disco de cada saída é conferido contra o arquivo real.
+- **Fora desta fase, escrito**: hidrologia, distância de custo, estatística focal e funções encadeadas do Image
+  Server (`docs/PARIDADE_FERRAMENTAS_RASTER.md`, ADR `20260908T1240-ferramentas-raster.md`).
+
 ## turno 4, setembro de 2026 (item L2-05-a-catalogo-ferramentas-gpserver: registro de ferramentas e GPServer)
 
 - **Registro `@ferramenta`** (`app/ferramentas/registro.py`): manifesto tipado no vocabulário GP da Esri, validado
