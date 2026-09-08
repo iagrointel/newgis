@@ -92,7 +92,7 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/LoginEntrada"
+        "$ref": "#/components/schemas/app__auth__modelos__LoginEntrada"
        }
       }
      },
@@ -2855,7 +2855,7 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/LoginEntrada"
+        "$ref": "#/components/schemas/app__auth__modelos__LoginEntrada"
        }
       }
      },
@@ -2996,6 +2996,131 @@
     },
     "x-auth": "S/T",
     "x-privilegio": "org.integracoes"
+   }
+  },
+  "/api/org/logins": {
+   "get": {
+    "tags": [
+     "logins"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_org_logins_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Logins"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "org.integracoes"
+   }
+  },
+  "/api/org/logins/{tipo}/{id}": {
+   "put": {
+    "tags": [
+     "logins"
+    ],
+    "summary": "Configurar",
+    "description": "Rótulo, ordem, habilitação e regras de provisionamento de um provedor; para `ldap` o id é o do inquilino\n(único). Papel e grupos citados têm de existir neste inquilino (422 nomeando o que falta).",
+    "operationId": "configurar_api_org_logins__tipo___id__put",
+    "parameters": [
+     {
+      "name": "tipo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tipo"
+      }
+     },
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/app__auth__rotas_logins__LoginEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoginProvedor"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "org.integracoes"
+   }
+  },
+  "/api/usuarios/{id}/desregistrar": {
+   "post": {
+    "tags": [
+     "logins"
+    ],
+    "summary": "Desregistrar",
+    "description": "Conta federada (ldap/oidc/saml): remove o vínculo com o IdP e desativa; sessões caem; a conta no IdP\ncontinua. Conta local = 409. Em modo automático o próximo login religa; em modo convite exige novo convite.",
+    "operationId": "desregistrar_api_usuarios__id__desregistrar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "membros.gerir"
    }
   },
   "/api/sso/oidc/iniciar": {
@@ -15825,35 +15950,83 @@
     ],
     "title": "Login2FAEntrada"
    },
-   "LoginEntrada": {
+   "LoginProvedor": {
     "properties": {
-     "inquilino": {
+     "tipo": {
       "type": "string",
-      "maxLength": 40,
-      "minLength": 1,
-      "title": "Inquilino"
+      "title": "Tipo"
      },
-     "login": {
-      "type": "string",
-      "maxLength": 128,
-      "minLength": 1,
-      "title": "Login"
+     "id": {
+      "type": "integer",
+      "title": "Id"
      },
-     "senha": {
-      "type": "string",
-      "maxLength": 4096,
-      "minLength": 1,
-      "title": "Senha"
+     "habilitado": {
+      "type": "boolean",
+      "title": "Habilitado"
+     },
+     "rotulo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rotulo"
+     },
+     "ordem": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ordem"
+     },
+     "identificador": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Identificador"
+     },
+     "provisionamento": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Provisionamento"
+     },
+     "atualizado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atualizado Em"
      }
     },
-    "additionalProperties": false,
+    "additionalProperties": true,
     "type": "object",
     "required": [
-     "inquilino",
-     "login",
-     "senha"
+     "tipo",
+     "id",
+     "habilitado",
+     "rotulo",
+     "ordem",
+     "identificador",
+     "provisionamento",
+     "atualizado_em"
     ],
-    "title": "LoginEntrada"
+    "title": "LoginProvedor"
    },
    "LoginSaida": {
     "properties": {
@@ -15911,6 +16084,39 @@
      "ok"
     ],
     "title": "LoginSaida"
+   },
+   "Logins": {
+    "properties": {
+     "provedores": {
+      "items": {
+       "$ref": "#/components/schemas/LoginProvedor"
+      },
+      "type": "array",
+      "title": "Provedores"
+     },
+     "criacoes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Criacoes"
+     },
+     "perfis": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Perfis"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "provedores",
+     "criacoes",
+     "perfis"
+    ],
+    "title": "Logins"
    },
    "Membro": {
     "properties": {
@@ -19136,6 +19342,36 @@
     ],
     "title": "VersaoCompleta"
    },
+   "app__auth__modelos__LoginEntrada": {
+    "properties": {
+     "inquilino": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Inquilino"
+     },
+     "login": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Login"
+     },
+     "senha": {
+      "type": "string",
+      "maxLength": 4096,
+      "minLength": 1,
+      "title": "Senha"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "inquilino",
+     "login",
+     "senha"
+    ],
+    "title": "LoginEntrada"
+   },
    "app__auth__modelos__LoteEntrada": {
     "properties": {
      "ids": {
@@ -19226,6 +19462,62 @@
      "itens"
     ],
     "title": "Pagina"
+   },
+   "app__auth__rotas_logins__LoginEntrada": {
+    "properties": {
+     "habilitado": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Habilitado"
+     },
+     "rotulo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 120,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rotulo"
+     },
+     "ordem": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 99.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ordem"
+     },
+     "provisionamento": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Provisionamento"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "LoginEntrada"
    },
    "app__catalogo__modelos__LoteEntrada": {
     "properties": {
