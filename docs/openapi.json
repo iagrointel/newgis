@@ -14952,6 +14952,15 @@
      "url": {
       "type": "string",
       "title": "Url"
+     },
+     "avisos": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Avisos",
+      "default": []
      }
     },
     "additionalProperties": true,
