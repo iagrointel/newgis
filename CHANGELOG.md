@@ -3,6 +3,21 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L2-04-i-wms-wmts-sld: WMS 1.3.0 e WMTS 1.0.0 por token)
+
+A camada hospedada passa a ser servida como IMAGEM para qualquer cliente OGC, além de feição: `/wms/{item}`
+com `GetCapabilities`, `GetMap` (png/png8/jpeg, transparência, estilos, `SLD_BODY`, 9 CRS e a ordem de eixo do
+1.3.0), `GetFeatureInfo` (json/html/texto/GML) e `GetLegendGraphic`; `/wmts/{item}` em KVP e RESTful na grade
+`GoogleMapsCompatible`, a mesma dos tiles do visualizador. A imagem sai de um rasterizador próprio (Pillow)
+sobre as feições da caixa, com o estilo do L2-02-a — a cor do WMS é a mesma do mapa da casa. O job
+`wmts.publicar` pré-renderiza a camada num PMTiles raster no bucket do inquilino, e o `GetTile` passa a servir
+por leitura de faixa. Os dois `GetCapabilities` validam contra a XSD oficial do OGC, em cache local
+(`docs/xsd/baixar_ogc_servicos.py`, rodado pelo `install.sh`). Medido em `tests/medidas/L2-04-i-wms-wmts-sld.json`:
+GetMap 1024x768 quente p95 882 ms e frio 1.118 ms sobre 100 mil pontos; pré-renderização z0-z14 de 100 mil
+feições em 40,5 s (836 tiles, 3,0 MB); GetMap em 3857 com 0 % de cobertura diferente do raster de referência.
+Rajada de imagens grandes é enfileirada por orçamento de megapixels, com 503 `ServerBusy` no excedente.
+Paridade: `docs/PARIDADE.md`; ADR `20260908T1900-wms-wmts`.
+
 ## turno 4, setembro de 2026 (item L2-04-d-featureserver-edicao-anexos: escrita pelo protocolo Esri sobre a porta única)
 
 `applyEdits` (na camada e no serviço), `addFeatures`/`updateFeatures`/`deleteFeatures`, `calculate`, os seis
