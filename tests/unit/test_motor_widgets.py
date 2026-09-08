@@ -25,7 +25,8 @@ def test_registro_declara_seis_widgets_com_contrato_valido():
       });
       console.log(JSON.stringify(nomes));
     """)
-    assert {item["nome"] for item in resultado} == {"mapa", "legenda", "tabela", "texto", "botao", "filtro"}
+    # sete desde o L5-07 (gráfico); o nome do teste segue o do portão do L5-06 (">= 6 widgets")
+    assert {item["nome"] for item in resultado} == {"mapa", "legenda", "tabela", "texto", "botao", "filtro", "grafico"}
     assert all(item["elemento"] == f"plat-{item['nome']}" for item in resultado)
     assert all(isinstance(item["eventos"], list) and isinstance(item["acoes"], list) for item in resultado)
 
