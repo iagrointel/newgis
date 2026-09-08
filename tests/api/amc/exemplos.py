@@ -69,6 +69,55 @@ def modelo_valido() -> dict:
     })
 
 
+def modelo_cinco_fatores() -> dict:
+    """Cinco fatores — dois de raster, dois de polígono e um de ponto — mais uma restrição, como o portão do
+    item L3-01-g-tela-motor exige. Sintético e sem nome de cliente: prova a FORMA (cinco extratores de três
+    geometrias diferentes num modelo só) e serve de entrada para a tela do motor. As camadas ficam com id
+    marcador que o teste troca por itens reais do catálogo antes de gravar."""
+    m = modelo_valido()
+    base = m["fatores"][0]
+    quinto = [
+        {**copy.deepcopy(base), "id": "declividade", "nome": "declividade média",
+         "camada": {"tipo": "item", "id": "00000000-0000-0000-0000-000000000001", "banda": 1},
+         "extrator": {"tipo": "raster_media"},
+         "transformacao": {"tipo": "linear", "minimo": 0, "maximo": 30, "direcao": "decrescente"},
+         "unidade": "%", "direcao": "menor_melhor", "peso": 3.0},
+        {**copy.deepcopy(base), "id": "altitude", "nome": "altitude mediana",
+         "criterio": "cota mais alta afasta a unidade da várzea",
+         "fonte": "modelo digital de elevação de teste", "unidade": "m", "direcao": "maior_melhor",
+         "camada": {"tipo": "item", "id": "00000000-0000-0000-0000-000000000004", "banda": 1},
+         "extrator": {"tipo": "raster_mediana"},
+         "transformacao": {"tipo": "linear", "minimo": 500, "maximo": 900, "direcao": "crescente"},
+         "peso": 1.0},
+        {**copy.deepcopy(base), "id": "uso_urbano", "nome": "fração de uso urbano",
+         "criterio": "mais mancha urbana em volta, mais infraestrutura",
+         "fonte": "uso e cobertura de teste", "unidade": "fração", "direcao": "maior_melhor",
+         "camada": {"tipo": "item", "id": "00000000-0000-0000-0000-000000000005"},
+         "extrator": {"tipo": "poligono_fracao_area"},
+         "transformacao": {"tipo": "linear", "minimo": 0, "maximo": 1, "direcao": "crescente"},
+         "peso": 2.0},
+        {**copy.deepcopy(base), "id": "restricao_amb", "nome": "fração em área de restrição ambiental",
+         "criterio": "quanto menos área restrita, melhor",
+         "fonte": "camada ambiental de teste", "unidade": "fração", "direcao": "menor_melhor",
+         "camada": {"tipo": "item", "id": "00000000-0000-0000-0000-000000000006"},
+         "extrator": {"tipo": "poligono_fracao_area"},
+         "transformacao": {"tipo": "linear", "minimo": 0, "maximo": 1, "direcao": "decrescente"},
+         "peso": 2.5},
+        {**copy.deepcopy(base), "id": "dist_acesso", "nome": "distância ao ponto de acesso mais próximo",
+         "criterio": "quanto mais perto do acesso, melhor",
+         "fonte": "pontos de acesso de teste", "unidade": "m", "direcao": "menor_melhor",
+         "camada": {"tipo": "item", "id": "00000000-0000-0000-0000-000000000007"},
+         "extrator": {"tipo": "ponto_distancia_mais_proximo"},
+         "transformacao": {"tipo": "degraus",
+                           "bandas": [{"ate": 500, "nota": 100}, {"ate": 2000, "nota": 60},
+                                      {"ate": 10000, "nota": 20}], "acima": 0},
+         "peso": 1.5},
+    ]
+    m["fatores"] = quinto
+    m["nome"] = "modelo de teste interno com cinco fatores"
+    return m
+
+
 def modelo_sem_camada_externa() -> dict:
     """O mesmo modelo sem NENHUMA camada: serve para provar a forma do documento sem depender do catálogo."""
     m = modelo_valido()
