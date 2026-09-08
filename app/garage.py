@@ -297,7 +297,8 @@ class ClienteAdmin:
         mas a linha de `plat.arquivo_bucket` não (base recriada sem apagar o bucket external, ex.: trilha
         recriada com o schema dropado — o Garage não é dropado junto). Corrigido: no caminho idempotente, busca
         o objeto completo por `GetKeyInfo?showSecretKey=true` (Garage guarda o segredo e devolve de novo; não é
-        rotação, é a MESMA chave)."""
+        rotação, é a MESMA chave). O item L2-03-edicao chegou ao mesmo achado por outro caminho; fica a versão
+        que devolve o objeto completo, porque ela também recupera o segredo."""
         existente = self.chave_por_nome(nome)
         if existente is not None:
             log.info("garage: chave %s já existe (id=%s), reaproveitada sem novo segredo", nome, existente["id"])
