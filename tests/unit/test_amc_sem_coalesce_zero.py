@@ -26,7 +26,16 @@ PADRAO_OR_ZERO_ATRIBUICAO = re.compile(r"=\s*[\w\.\[\]]+\s+or\s+0\b")
 
 # Exceções declaradas: (arquivo relativo a app/amc/, trecho da linha, motivo). Vazia por enquanto —
 # nenhum caso legítimo de COALESCE(...,0) apareceu dentro do motor AMC.
-EXCECOES: set[tuple[str, str]] = set()
+EXCECOES: set[tuple[str, str]] = {
+    # As duas somam a ÁREA das unidades já gravadas de um conjunto, junto com `count(*)`, para escrever a
+    # ficha. O zero aqui não é medida ausente: é o resultado de somar zero linha (`sum()` de conjunto vazio
+    # devolve NULL em SQL), e o `count(*)` ao lado diz que não havia unidade nenhuma. Nenhuma coluna de fator
+    # ou de favorabilidade passa por estas duas linhas.
+    ("unidades.py",
+     'cur.execute("SELECT count(*) AS n, coalesce(sum(area_m2), 0) AS a FROM plat.amc_unidade '
+     'WHERE conjunto_id = %s",'),
+    ("unidades.py", '"  SELECT count(*) AS n, coalesce(sum(area_m2), 0) AS a, "'),
+}
 
 
 def _arquivos_amc() -> list[Path]:

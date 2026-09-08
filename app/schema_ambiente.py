@@ -26,6 +26,8 @@ SCHEMA_TRABALHO_PADRAO = "plat_trabalho"
 # sem espaço entre o parêntese e a aspa (conferido: as 16+12 ocorrências da árvore batem 1 a 1).
 _SCHEMA = re.compile(r"(?<!current_setting\(')(?<!set_config\(')\bplat\b")
 _TRABALHO = re.compile(r"\bplat_trabalho\b")
+
+
 # item L6-01-b: as views de publicação sem cópia moram no schema `plat_acervo` e são de
 # `plat_acervo_publicador`. Nenhum dos dois casa com `\bplat\b` (o `_` seguinte mata a fronteira de palavra),
 # então sem esta linha uma trilha/homologação escreveria no `plat_acervo` de PRODUÇÃO. O grupo opcional
@@ -91,15 +93,9 @@ class MixinReescritaSchema:
         # L4-01-modelo-rede/L4-05-g-osm-power) monta a consulta em BYTES antes de chamar cur.execute
         # -- isinstance(query, str) nunca batia para essas chamadas, então o schema de homologação/
         # trilha nunca era aplicado nelas e o INSERT ia parar no `plat` de produção com permissão
-        # negada (achado do item L4-05-g-osm-power). Decodifica na codificação da conexão, reescreve
-        # e devolve como texto -- psycopg2 aceita str no lugar de bytes sem custo extra.
-        if isinstance(query, (bytes, bytearray)):
-            from psycopg2 import extensions as _ext
-
-            query = bytes(query).decode(_ext.encodings[self.connection.encoding])
-        if isinstance(query, str):
-            query = self._reescrever(query)
-        return super().execute(query, *args, **kwargs)
+        # negada (achado do item L4-05-g-osm-power). `_reescrever` trata texto e bytes e devolve o mesmo
+        # tipo que entrou, então nada aqui precisa saber de codificação.
+        return super().execute(self._reescrever(query), *args, **kwargs)
 
     def executemany(self, query, vars_list):
         # mesma classe de defeito do bytes/`execute_values` acima, achada agora em `cur.executemany`
@@ -109,13 +105,7 @@ class MixinReescritaSchema:
         # Sem esta sobrecarga, o INSERT ia com o literal `plat.` para o schema de PRODUÇÃO em qualquer
         # ambiente isolado (trilha/homologação), e a permissão negada aparecia traduzida como "operação
         # fora do inquilino da sessão" — não uma checagem de inquilino, um schema errado na consulta.
-        if isinstance(query, (bytes, bytearray)):
-            from psycopg2 import extensions as _ext
-
-            query = bytes(query).decode(_ext.encodings[self.connection.encoding])
-        if isinstance(query, str):
-            query = self._reescrever(query)
-        return super().executemany(query, vars_list)
+        return super().executemany(self._reescrever(query), vars_list)
 
     def callproc(self, procname, *args, **kwargs):
         return super().callproc(self._reescrever(procname), *args, **kwargs)
