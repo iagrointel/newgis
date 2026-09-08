@@ -161,3 +161,13 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
 }
+
+# ---- rotas de SERVIÇO com token no caminho (item L1-02-tiles-token, mesclado na trilha do L6-01-i por ser
+# dependência): são a porta de cliente externo (QGIS, ArcGIS, STAC) e não escrevem no domínio do catálogo — o
+# rastro delas é `plat.log_acesso` (toda requisição) e `plat.tile_leitura` (contagem por token), não `plat.evento`.
+EVENTOS_POR_ROTA.update({
+    ("POST", "/svc/{token}/stac/search"): [],
+    ("POST", "/svc/{token}/stac/collections"): [],
+    ("POST", "/svc/{token}/stac/collections/{colecao_id}/items"): [],
+})
+

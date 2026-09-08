@@ -237,3 +237,28 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `RASTER_ESTATISTICA_AMOSTRA` | `100000` | pixels amostrados por banda para percentis do perfil visual |
 | `RASTER_TILE_CACHE_DATASET_MAX` | `8` | datasets abertos por processo no handler de tiles (LRU) |
 | `RASTER_TILE_TIMEOUT_S` | `30` | teto de renderização de um tile (mata a requisição, não o worker) |
+
+## grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
+
+| nome | valor | explicação |
+|---|---|---|
+| `ESCALA_AREA_VERTICES_MAX` | `5000` | vértices do polígono de estudo (mesma ordem de grandeza de INGESTAO_*) |
+| `ESCALA_RESOLUCAO_MIN_M` | `1.0` | — |
+| `ESCALA_RESOLUCAO_MAX_M` | `100000.0` | — |
+| `ESCALA_CELULAS_MAX` | `250000` | — |
+| `ESCALA_FATORES_MAX` | `20` | — |
+| `ESCALA_LIGACOES_MAX` | `2000000` | — |
+| `ESCALA_APROVACAO_TIPOS` | `('limiar', 'top_pct')` | — |
+| `ESCALA_NOME_MAX` | `200` | mesmo teto de CHECK(length(nome)<=200) da migração |
+| `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
+| `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
+| `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## - L6-01-i-raster-e-arquivos: camadas de ARQUIVO do acervo da casa (acervo.camada_arquivo) no catálogo
+
+| nome | valor | explicação |
+|---|---|---|
+| `ACERVO_ARQUIVO_BYTES_MAX` | `2147483648` | teto por arquivo (igual a RASTER_BYTES_MAX; guardrail D21) |
+| `ACERVO_ARQUIVO_LOTE_MAX` | `50` | arquivos por chamada de exposição em lote |
+| `ACERVO_ARQUIVO_LOTE_BYTES_MAX` | `3221225472` | soma do lote (D21: a trilha trabalha com <= 3 GB) |
+| `ACERVO_ARQUIVO_LISTA_MAX` | `500` | linhas por página de GET /api/acervo/arquivos |

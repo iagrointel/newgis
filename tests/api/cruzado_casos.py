@@ -942,11 +942,54 @@ def _link_so_o_item(p: Preparacao, j: Any) -> None:
 # ---- L6-01-i-raster-e-arquivos: o acervo é da CASA (global, sem tenant_id) — a lista é igual para todo
 # inquilino (nada de B nela) e a exposição só cria item no inquilino de quem chama
 CASOS.update({
-    ("GET", "/api/acervo/arquivos"): Caso(lambda p: "/api/acervo/arquivos?limite=1", aceita=frozenset({200}),
-                                          verificar=_sem_marca),
+    ("GET", "/api/acervo/arquivos"): Caso(lambda p: "/api/acervo/arquivos?limite=1", proprio=True,
+                                          aceita=frozenset({200}), verificar=_sem_marca),
     ("POST", "/api/acervo/arquivos/expor"): Caso(
         lambda p: "/api/acervo/arquivos/expor", lambda p: {"caminhos": ["zz/inexistente-no-registro.geojson"]},
-        aceita=frozenset({202, 409}), verificar=_sem_marca,
+        proprio=True, aceita=frozenset({202, 409}), verificar=_sem_marca,
     ),
 })
+
+
+# ---- rotas de SERVIÇO com token NO CAMINHO (item L1-02-tiles-token, mesclado nesta trilha por ser dependência
+# do L6-01-i): a credencial é a própria URL, então a matriz de chamadores desta suíte (sessão de A, token de A,
+# sessão de B, sem autenticação) recebe SEMPRE a mesma resposta — o token do caminho é um valor inválido aqui.
+# O cruzamento de verdade dessas rotas (token de um inquilino pedindo item de outro) está em
+# `tests/api/imagens/test_isolamento.py`, escrito pelo próprio item L1-02.
+_TOK = "zz-token-invalido-de-teste"
+_ITEM_NULO = "00000000-0000-4000-8000-000000000000"
+_SVC = (
+    ("GET", "/svc/{token}/raster/{item}/info.json", f"/svc/{_TOK}/raster/{_ITEM_NULO}/info.json"),
+    ("GET", "/svc/{token}/raster/{item}/tilejson.json", f"/svc/{_TOK}/raster/{_ITEM_NULO}/tilejson.json"),
+    ("GET", "/svc/{token}/raster/{item}/wmts", f"/svc/{_TOK}/raster/{_ITEM_NULO}/wmts"),
+    ("GET", "/svc/{token}/raster/{item}/wmts/1.0.0/WMTSCapabilities.xml",
+     f"/svc/{_TOK}/raster/{_ITEM_NULO}/wmts/1.0.0/WMTSCapabilities.xml"),
+    ("GET", "/svc/{token}/raster/{item}/{z}/{x}/{y}", f"/svc/{_TOK}/raster/{_ITEM_NULO}/1/0/0"),
+    ("GET", "/svc/{token}/raster/{item}/{z}/{x}/{y}.{ext}", f"/svc/{_TOK}/raster/{_ITEM_NULO}/1/0/0.png"),
+    ("GET", "/svc/{token}/mosaico/{colecao}/{z}/{x}/{y}", f"/svc/{_TOK}/mosaico/zz-colecao/1/0/0"),
+    ("GET", "/svc/{token}/stac/", f"/svc/{_TOK}/stac/"),
+    ("GET", "/svc/{token}/stac/api", f"/svc/{_TOK}/stac/api"),
+    ("GET", "/svc/{token}/stac/conformance", f"/svc/{_TOK}/stac/conformance"),
+    ("GET", "/svc/{token}/stac/queryables", f"/svc/{_TOK}/stac/queryables"),
+    ("GET", "/svc/{token}/stac/search", f"/svc/{_TOK}/stac/search"),
+    ("GET", "/svc/{token}/stac/collections", f"/svc/{_TOK}/stac/collections"),
+    ("GET", "/svc/{token}/stac/collections/{colecao_id}", f"/svc/{_TOK}/stac/collections/zz-colecao"),
+    ("GET", "/svc/{token}/stac/collections/{colecao_id}/queryables",
+     f"/svc/{_TOK}/stac/collections/zz-colecao/queryables"),
+    ("GET", "/svc/{token}/stac/collections/{colecao_id}/items", f"/svc/{_TOK}/stac/collections/zz-colecao/items"),
+    ("GET", "/svc/{token}/stac/collections/{colecao_id}/items/{item_id}",
+     f"/svc/{_TOK}/stac/collections/zz-colecao/items/{_ITEM_NULO}"),
+    ("POST", "/svc/{token}/stac/search", f"/svc/{_TOK}/stac/search"),
+    # `slug` é parâmetro de consulta obrigatório: sem ele o 422 do pydantic vem ANTES do token
+    ("POST", "/svc/{token}/stac/collections", f"/svc/{_TOK}/stac/collections?slug=zz-colecao"),
+    ("POST", "/svc/{token}/stac/collections/{colecao_id}/items", f"/svc/{_TOK}/stac/collections/zz-colecao/items"),
+)
+CASOS.update({
+    (metodo, caminho): Caso(lambda p, u=url: u, lambda p: {}, publico=True, verificar=_sem_marca)
+    for metodo, caminho, url in _SVC
+})
+
+# `/api/tiles/leituras` (L1-02): contagem de leitura do PRÓPRIO inquilino, agregada — nunca linha de outro.
+CASOS[("GET", "/api/tiles/leituras")] = Caso(lambda p: "/api/tiles/leituras", proprio=True,
+                                             aceita=frozenset({200}), verificar=_sem_marca)
 
