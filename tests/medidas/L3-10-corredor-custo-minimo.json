@@ -1,0 +1,56 @@
+{
+ "item": "L3-10-corredor-custo-minimo",
+ "medidas": {
+  "referencia_superficie_igual_bit_a_bit": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "scripts/corredor_referencia.py --referencia rs-coop/tracado-lt --superficie saida/superficie.npz"
+  },
+  "referencia_hausdorff_m": {
+   "valor": 100.0,
+   "unidade": "m",
+   "comando": "rota recalculada (motor esparso) contra a rota oficial da rodada"
+  },
+  "referencia_382km_s": {
+   "valor": 6.6,
+   "unidade": "s",
+   "comando": "rota com janela de 400 células; a reta entre as pontas mede 382.4 km"
+  },
+  "referencia_sinuosidade": {
+   "valor": 1.3873,
+   "unidade": "razão",
+   "comando": "rota recalculada; limiar p90 das LTs construídas do SIGEL na casa = 1.2204"
+  },
+  "referencia_corredor_5pct_celulas": {
+   "valor": 1877780,
+   "unidade": "células",
+   "comando": "corredor-epsilon de 5 % sobre a superfície oficial"
+  },
+  "api_grade_celulas": {
+   "valor": 147,
+   "unidade": "células",
+   "comando": "POST /api/multiescala/execucoes/{id}/corredor sobre estudo de 2x2 km, grade de 200 m"
+  },
+  "api_duracao_ms": {
+   "valor": 214,
+   "unidade": "ms",
+   "comando": "duração medida na resposta da rota (grade de 100 células)"
+  },
+  "api_corredor_celulas_5pct": {
+   "valor": 70,
+   "unidade": "células",
+   "comando": "epsilon padrão de 0,05"
+  },
+  "api_corredor_por_epsilon": {
+   "valor": {
+    "0.0": 25,
+    "0.05": 70,
+    "0.1": 80
+   },
+   "unidade": "células",
+   "comando": "POST .../corredor com epsilon 0 / 0,05 / 0,10 na mesma execução"
+  }
+ },
+ "gerado_em": "2026-09-08T15:57:10Z",
+ "git_sha": "88eeccaf3c8d"
+}
