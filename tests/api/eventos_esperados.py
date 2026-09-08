@@ -162,4 +162,10 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
     ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
     ("POST", "/api/camadas/{id}/lote"): ["camadas/lote"],  # L2-03-f: síncrono e job registram o mesmo evento
+    # L2-03-edicao (histórico/restauração, anexos, unir/dividir)
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): ["camadas/restaurar"],
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): ["camadas/anexo_enviar"],
+    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): ["camadas/anexo_apagar"],
+    ("POST", "/api/camadas/{id}/feicoes/unir"): ["camadas/unir"],
+    ("POST", "/api/camadas/{id}/feicoes/dividir"): ["camadas/dividir"],
 }

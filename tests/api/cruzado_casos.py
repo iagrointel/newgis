@@ -558,6 +558,51 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"resolucao_m": 100.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
                    "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
     ),
+    # ---- L2-03-a / L2-03-edicao / L2-03-f: edição de feições sobre a camada de B — o item de B (mapa) não é
+    # camada vetorial e a RLS esconde o item: 404 em toda perna, antes de qualquer corpo ser lido.
+    ("POST", "/api/camadas/{id}/edicoes"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/edicoes",
+        lambda p: {"adicionar": [{"atributos": {"nome": "x"},
+                                  "geometria": {"type": "Point", "coordinates": [-46.5, -23.5]}}]},
+    ),
+    ("POST", "/api/camadas/{id}/lote"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/lote",
+        lambda p: {"operacao": "atribuir", "campo": "nome", "valor": "x", "selecao": {"todas": True}},
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}"),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/historico"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/historico"),
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/historico/1/restaurar", lambda p: {}),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/anexos"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/anexos"),
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/anexos",
+        lambda p: {"nome": "a.png", "content_type": "image/png", "conteudo": _PNG_1X1_B64},
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"),
+    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"),
+    ("POST", "/api/camadas/{id}/feicoes/unir"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/unir",
+        lambda p: {"ids": [UUID_NULO, "00000000-0000-0000-0000-000000000001"],
+                   "versoes": {UUID_NULO: 1, "00000000-0000-0000-0000-000000000001": 1}},
+    ),
+    ("POST", "/api/camadas/{id}/feicoes/dividir"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/dividir",
+        lambda p: {"id": UUID_NULO, "versao": 1, "ponto": [-46.5, -23.5]},
+    ),
+    # ---- L2-01-mapa-web (mesmos casos do ramo wt/cx201i, para a junção não depender da ordem da fila)
+    ("GET", "/api/mapa/camadas"): Caso(lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}),
+                                       verificar=_sem_marca),
+    ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}"),
+    ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/tilejson"),
+    ("GET", "/api/geocodificar"): Caso(
+        lambda p: "/api/geocodificar?endereco=Avenida+Paulista,+Sao+Paulo+-+SP", proprio=True,
+        aceita=frozenset({200, 422}), verificar=_sem_marca,
+    ),
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,
