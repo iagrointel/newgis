@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Série temporal da rede · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/vendor/maplibre-gl-4.7.1.css">
+<link rel="stylesheet" href="/static/mapa.css">
+</head>
+<body class="tela instrumento mapa redes-serie">
+<a class="pular" href="#mapa" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal mapa-tela" tabindex="-1">
+    <div class="linha-ferramentas mapa-barra" id="ferramentas">
+      <h1 data-i18n="redeserie.titulo">Série temporal da rede</h1>
+      <label for="seletor-serie" data-i18n="redeserie.serie">série</label>
+      <select id="seletor-serie"></select>
+      <plat-aviso id="aviso"></plat-aviso>
+    </div>
+    <div class="mapa-area">
+      <div id="mapa" aria-label="mapa" role="application"></div>
+      <div class="mapa-painel mapa-painel-tempo">
+        <label for="controle-safra" data-i18n="redeserie.safra">safra</label>
+        <input id="controle-safra" type="range" min="0" max="0" step="1" value="0"
+               aria-label="safra" list="safras-marcas">
+        <datalist id="safras-marcas"></datalist>
+        <output id="safra-atual" for="controle-safra">—</output>
+        <div id="safra-resumo" class="resumo" aria-live="polite">—</div>
+        <div id="safra-ressalva" class="ressalva" aria-live="polite"></div>
+      </div>
+      <div class="mapa-painel mapa-coordenadas" id="coordenadas" aria-live="off">—</div>
+    </div>
+  </main>
+</div>
+<script src="/static/vendor/maplibre-gl-4.7.1.js"></script>
+<script src="/static/vendor/pmtiles-4.5.0.js"></script>
+<script type="module" src="/static/js/rede/serie.js"></script>
+</body>
+</html>

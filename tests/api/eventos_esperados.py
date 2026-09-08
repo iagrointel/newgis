@@ -176,6 +176,12 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/rede/{rede_id}"): ["redes/apagar"],
     ("POST", "/api/rede/{rede_id}/pacote"): ["redes/importar_pacote"],
     ("POST", "/api/rede/{rede_id}/importar-bdgd"): ["redes/importar_bdgd"],
+    # L4-15 série temporal da rede
+    ("POST", "/api/rede-serie"): ["redes/serie_criar"],
+    ("DELETE", "/api/rede-serie/{serie_id}"): ["redes/serie_apagar"],
+    ("POST", "/api/rede-serie/{serie_id}/safras"): ["redes/serie_safra_anexar"],
+    ("DELETE", "/api/rede-serie/{serie_id}/safras/{ano}"): ["redes/serie_safra_remover"],
+    ("POST", "/api/rede-serie/{serie_id}/calcular"): ["redes/serie_calcular"],
     ("POST", "/api/rede/simples"): ["redes/simples_criar"],
     ("POST", "/api/rede/{rede_id}/promover"): ["redes/simples_promover"],
     ("POST", "/api/rede/{rede_id}/feicoes/pontos"): ["redes/feicao_criar"],

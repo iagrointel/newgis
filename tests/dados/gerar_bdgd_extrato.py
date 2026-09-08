@@ -34,6 +34,10 @@ from pathlib import Path
 RAIZ_GERADOS = Path(__file__).resolve().parent / "gerados"
 DESTINO = RAIZ_GERADOS / "bdgd_referencia.gdb"
 DESTINO_PEQUENO = RAIZ_GERADOS / "bdgd_referencia_ctmt.gdb"
+# safra ANTERIOR da MESMA distribuidora de referência (item L4-15-serie-temporal-da-rede): a série
+# temporal precisa de duas safras, e `PLAT_REDE_REFERENCIA_GDB_ANTERIOR` aponta o outro `.gdb.zip`.
+DESTINO_ANTERIOR = RAIZ_GERADOS / "bdgd_referencia_anterior.gdb"
+DESTINO_PEQUENO_ANTERIOR = RAIZ_GERADOS / "bdgd_referencia_ctmt_anterior.gdb"
 # O alimentador (CTMT) do recorte pequeno também vem do ambiente: o código traz a sigla da distribuidora.
 CTMT_PEQUENO = os.environ.get("PLAT_REDE_REFERENCIA_CTMT", "")
 
@@ -41,6 +45,12 @@ CTMT_PEQUENO = os.environ.get("PLAT_REDE_REFERENCIA_CTMT", "")
 def fonte() -> Path | None:
     """O pacote `.gdb.zip` da distribuidora de referência, do ambiente. None quando a máquina não o tem."""
     caminho = os.environ.get("PLAT_REDE_REFERENCIA_GDB", "").strip()
+    return Path(caminho) if caminho else None
+
+
+def fonte_anterior() -> Path | None:
+    """O `.gdb.zip` da safra ANTERIOR da mesma distribuidora, do ambiente (item L4-15)."""
+    caminho = os.environ.get("PLAT_REDE_REFERENCIA_GDB_ANTERIOR", "").strip()
     return Path(caminho) if caminho else None
 
 
@@ -69,20 +79,46 @@ def obter_extrato() -> str:
     return str(DESTINO)
 
 
-def obter_extrato_pequeno() -> str:
+def obter_extrato_anterior() -> str:
+    """O FileGDB da safra anterior, extraído (item L4-15). Levanta FileNotFoundError sem o ativo."""
+    if DESTINO_ANTERIOR.exists() and any(DESTINO_ANTERIOR.iterdir()):
+        return str(DESTINO_ANTERIOR)
+    origem = fonte_anterior()
+    if origem is None or not origem.exists():
+        raise FileNotFoundError(
+            "ativo da casa ausente: defina PLAT_REDE_REFERENCIA_GDB_ANTERIOR com o caminho do .gdb.zip "
+            "da safra anterior da distribuidora de referência (item L4-15); sem ela, os testes de série "
+            "temporal contra dado real pulam"
+        )
+    RAIZ_GERADOS.mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(DESTINO_ANTERIOR, ignore_errors=True)
+    with zipfile.ZipFile(origem) as z:
+        nomes_gdb = {n.split("/", 1)[0] for n in z.namelist() if ".gdb/" in n}
+        raiz_no_zip = next(iter(sorted(nomes_gdb)), None)
+        if raiz_no_zip is None:
+            raise FileNotFoundError(f"{origem} não contém um .gdb dentro do zip")
+        z.extractall(RAIZ_GERADOS)
+    (RAIZ_GERADOS / raiz_no_zip).rename(DESTINO_ANTERIOR)
+    return str(DESTINO_ANTERIOR)
+
+
+def obter_extrato_pequeno(anterior: bool = False) -> str:
     """Um alimentador (CTMT) só, da mesma distribuidora real — rápido o bastante para a suíte
-    automatizada, com as mesmas esquisitices de dado real (RAMLIG sem PN_CON_2 etc.)."""
-    if DESTINO_PEQUENO.exists() and any(DESTINO_PEQUENO.iterdir()):
-        return str(DESTINO_PEQUENO)
+    automatizada, com as mesmas esquisitices de dado real (RAMLIG sem PN_CON_2 etc.). Com
+    `anterior=True`, o MESMO alimentador na safra anterior (item L4-15: a série temporal precisa do
+    recorte equivalente nos dois anos, senão a linhagem compararia universos diferentes)."""
+    destino = DESTINO_PEQUENO_ANTERIOR if anterior else DESTINO_PEQUENO
+    if destino.exists() and any(destino.iterdir()):
+        return str(destino)
     if not CTMT_PEQUENO:
         raise FileNotFoundError(
             "defina PLAT_REDE_REFERENCIA_CTMT com o código do alimentador do recorte pequeno "
             "(medido: o menor CTMT com as 5 camadas de aresta/nó todas presentes)"
         )
-    completo = obter_extrato()
+    completo = obter_extrato_anterior() if anterior else obter_extrato()
     import pyogrio
 
-    shutil.rmtree(DESTINO_PEQUENO, ignore_errors=True)
+    shutil.rmtree(destino, ignore_errors=True)
     sub = pyogrio.read_dataframe(completo, layer="SUB")
     ctmt = pyogrio.read_dataframe(completo, layer="CTMT", where=f"COD_ID = '{CTMT_PEQUENO}'", read_geometry=False)
     camadas_geo = {
@@ -101,17 +137,17 @@ def obter_extrato_pequeno() -> str:
     ponnot = pyogrio.read_dataframe(completo, layer="PONNOT")
     ponnot = ponnot[ponnot["COD_ID"].astype(str).isin(pn_cons)]
 
-    pyogrio.write_dataframe(sub, DESTINO_PEQUENO, layer="SUB", driver="OpenFileGDB",
+    pyogrio.write_dataframe(sub, destino, layer="SUB", driver="OpenFileGDB",
                              geometry_type="MultiPolygon", append=False)
-    pyogrio.write_dataframe(ctmt, DESTINO_PEQUENO, layer="CTMT", driver="OpenFileGDB", append=True)
+    pyogrio.write_dataframe(ctmt, destino, layer="CTMT", driver="OpenFileGDB", append=True)
     for camada, tipo in camadas_geo.items():
-        pyogrio.write_dataframe(quadros[camada], DESTINO_PEQUENO, layer=camada, driver="OpenFileGDB",
+        pyogrio.write_dataframe(quadros[camada], destino, layer=camada, driver="OpenFileGDB",
                                  geometry_type=tipo, append=True)
     for camada in camadas_sem_geo:
-        pyogrio.write_dataframe(quadros[camada], DESTINO_PEQUENO, layer=camada, driver="OpenFileGDB", append=True)
-    pyogrio.write_dataframe(ponnot, DESTINO_PEQUENO, layer="PONNOT", driver="OpenFileGDB",
+        pyogrio.write_dataframe(quadros[camada], destino, layer=camada, driver="OpenFileGDB", append=True)
+    pyogrio.write_dataframe(ponnot, destino, layer="PONNOT", driver="OpenFileGDB",
                              geometry_type="Point", append=True)
-    return str(DESTINO_PEQUENO)
+    return str(destino)
 
 
 if __name__ == "__main__":

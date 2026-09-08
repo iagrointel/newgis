@@ -11541,6 +11541,525 @@
     "x-privilegio": "rede.editar"
    }
   },
+  "/api/rede-serie": {
+   "get": {
+    "tags": [
+     "rede de utilidades — série temporal"
+    ],
+    "summary": "Listar",
+    "description": "As séries do inquilino, com as safras de cada uma (é o que alimenta o controle de tempo do mapa).",
+    "operationId": "listar_api_rede_serie_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "rede de utilidades — série temporal"
+    ],
+    "summary": "Criar",
+    "description": "Cria a série. As safras entram depois, uma a uma, por `POST /api/rede-serie/{id}/safras`.",
+    "operationId": "criar_api_rede_serie_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SerieEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede-serie/{serie_id}": {
+   "get": {
+    "tags": [
+     "rede de utilidades — série temporal"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_rede_serie__serie_id__get",
+    "parameters": [
+     {
+      "name": "serie_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Serie Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "delete": {
+    "tags": [
+     "rede de utilidades — série temporal"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_rede_serie__serie_id__delete",
+    "parameters": [
+     {
+      "name": "serie_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Serie Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede-serie/{serie_id}/safras": {
+   "post": {
+    "tags": [
+     "rede de utilidades — série temporal"
+    ],
+    "summary": "Anexar Safra",
+    "description": "Anexa uma rede já importada como a safra de um ano. A rede tem de ser do inquilino (a RLS garante),\no ano é único na série e uma rede só participa de uma série — safra é a rede inteira daquele ano.",
+    "operationId": "anexar_safra_api_rede_serie__serie_id__safras_post",
+    "parameters": [
+     {
+      "name": "serie_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Serie Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SafraEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede-serie/{serie_id}/safras/{ano}": {
+   "delete": {
+    "tags": [
+     "rede de utilidades — série temporal"
+    ],
+    "summary": "Remover Safra",
+    "description": "Tira o ano da série. O que foi calculado com ele continua no banco até o próximo cálculo — por isso\na resposta do cálculo carrega a lista de safras que ela usou.",
+    "operationId": "remover_safra_api_rede_serie__serie_id__safras__ano__delete",
+    "parameters": [
+     {
+      "name": "serie_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Serie Id"
+      }
+     },
+     {
+      "name": "ano",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Ano"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede-serie/{serie_id}/calcular": {
+   "post": {
+    "tags": [
+     "rede de utilidades — série temporal"
+    ],
+    "summary": "Calcular",
+    "description": "Recalcula linhagem por COD_ID, carregamento por transformador e crescimento por alimentador. O\ntrabalho é de banco (consultas de conjunto) e vai para o threadpool, para não segurar o laço de\neventos da API.",
+    "operationId": "calcular_api_rede_serie__serie_id__calcular_post",
+    "parameters": [
+     {
+      "name": "serie_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Serie Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede-serie/{serie_id}/linhagem": {
+   "get": {
+    "tags": [
+     "rede de utilidades — série temporal"
+    ],
+    "summary": "Linhagem",
+    "description": "Contagens por classe (sempre) e uma amostra das linhas, filtrável por entidade e classe.",
+    "operationId": "linhagem_api_rede_serie__serie_id__linhagem_get",
+    "parameters": [
+     {
+      "name": "serie_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Serie Id"
+      }
+     },
+     {
+      "name": "entidade",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "trafo",
+       "title": "Entidade"
+      }
+     },
+     {
+      "name": "classe",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Classe"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede-serie/{serie_id}/tendencia": {
+   "get": {
+    "tags": [
+     "rede de utilidades — série temporal"
+    ],
+    "summary": "Tendencia",
+    "description": "Tendência de carregamento por transformador ao longo das safras. `formato=csv` devolve o arquivo\nexportável; `so_sobrecarga=true` deixa só os que passaram de abaixo de 80 % a acima de 100 %.\n\nO carregamento é PROXY de triagem (energia declarada na fonte com fator de carga e fator de potência\nfixos), e a coluna `pot_nom_confiavel` diz quando a potência nominal de alguma safra do transformador\nnão serve como placa.",
+    "operationId": "tendencia_api_rede_serie__serie_id__tendencia_get",
+    "parameters": [
+     {
+      "name": "serie_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Serie Id"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "json",
+       "title": "Formato"
+      }
+     },
+     {
+      "name": "so_sobrecarga",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "So Sobrecarga"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede-serie/{serie_id}/alimentadores": {
+   "get": {
+    "tags": [
+     "rede de utilidades — série temporal"
+    ],
+    "summary": "Alimentadores",
+    "description": "Crescimento de rede por alimentador: km de trecho, unidades consumidoras e transformadores por safra,\ncom a variação entre a primeira e a última safra em que o alimentador aparece.",
+    "operationId": "alimentadores_api_rede_serie__serie_id__alimentadores_get",
+    "parameters": [
+     {
+      "name": "serie_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Serie Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede-serie/{serie_id}/mapa": {
+   "get": {
+    "tags": [
+     "rede de utilidades — série temporal"
+    ],
+    "summary": "Mapa",
+    "description": "Os transformadores de UMA safra como GeoJSON, com o carregamento e a classe de linhagem em relação\nà safra anterior. É a camada que o controle deslizante de safra do mapa troca a cada ano.",
+    "operationId": "mapa_api_rede_serie__serie_id__mapa_get",
+    "parameters": [
+     {
+      "name": "serie_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Serie Id"
+      }
+     },
+     {
+      "name": "ano",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Ano"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/geocodificar": {
    "post": {
     "tags": [
@@ -19166,6 +19685,29 @@
     ],
     "title": "SMTPTestarSaida"
    },
+   "SafraEntrada": {
+    "properties": {
+     "rede_id": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Rede Id",
+      "description": "rede já importada com a safra daquele ano"
+     },
+     "ano": {
+      "type": "integer",
+      "maximum": 2100.0,
+      "minimum": 1990.0,
+      "title": "Ano"
+     }
+    },
+    "type": "object",
+    "required": [
+     "rede_id",
+     "ano"
+    ],
+    "title": "SafraEntrada"
+   },
    "SaudeHistoricoItem": {
     "properties": {
      "verificada_em": {
@@ -19305,6 +19847,33 @@
      "senha_temporaria"
     ],
     "title": "SenhaTemporaria"
+   },
+   "SerieEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome"
+    ],
+    "title": "SerieEntrada"
    },
    "Sessao": {
     "properties": {

@@ -37,6 +37,8 @@ PAGINAS = {
     "/redes/simples": "redes_simples.html",
     # --- controladores de subrede e tiers (L4-04-a-controladores-e-tiers)
     "/redes/controladores": "redes_controladores.html",
+    # --- série temporal da rede (L4-15-serie-temporal-da-rede): mapa com controle de tempo por safra
+    "/redes/serie": "redes_serie.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>

@@ -45,6 +45,14 @@ CAMPOS_ENERGIA = tuple(f"ENE_{m:02d}" for m in range(1, 13))
 CAMPO_POT_NOM = "POT_NOM"
 CAMPO_ALIMENTADOR = "CTMT"
 CAMPO_UC_TRAFO = "UNI_TR_MT"  # a UC de baixa tensão declara o transformador que a alimenta
+CAMPO_COD_ID = "COD_ID"
+
+# Identidade do elemento entre safras. Achado deste item, medido no recorte real da cooperativa de teste:
+# o importador (L4-01-c) grava, para UCBT_tab/UCMT_tab, o OBJECTID da linha em `codigo_externo` — um número
+# de linha do arquivo, que MUDA de uma safra para outra e não é identidade nenhuma. O COD_ID de 64
+# hexadecimais que a fonte declara está preservado em `atributos`, e é ele que a linhagem usa. Para o
+# transformador os dois coincidem; a expressão vale para os dois casos e não exige mexer no importador.
+SQL_IDENTIDADE = f"coalesce(nullif(btrim(n.atributos->>'{CAMPO_COD_ID}'), ''), n.codigo_externo)"
 
 # Régua da linhagem (método da casa, §2 do relatório de linhagem).
 J_RECODIFICADO = 0.6          # Jaccard das UCs identificadas que basta sozinho
@@ -123,23 +131,23 @@ SQL_POT_NOM = _numero(f"n.atributos->>'{CAMPO_POT_NOM}'")
 
 def _codigos(cur, rede_id: str, grupo: str) -> set[str]:
     cur.execute(
-        "SELECT n.codigo_externo FROM plat.rede_no n "
+        f"SELECT DISTINCT {SQL_IDENTIDADE} AS cod FROM plat.rede_no n "
         "JOIN plat.rede_tipo t ON t.id = n.tipo_id "
         "JOIN plat.rede_grupo g ON g.id = t.grupo_id "
-        "WHERE n.rede_id = %s::uuid AND g.codigo = %s AND n.codigo_externo IS NOT NULL",
+        f"WHERE n.rede_id = %s::uuid AND g.codigo = %s AND {SQL_IDENTIDADE} IS NOT NULL",
         (rede_id, grupo),
     )
-    return {r["codigo_externo"] for r in cur.fetchall()}
+    return {r["cod"] for r in cur.fetchall()}
 
 
 def _ucs_por_trafo(cur, rede_id: str) -> dict[str, set[str]]:
     """COD_ID do transformador -> conjunto de COD_ID das unidades consumidoras que o declaram."""
     cur.execute(
-        f"SELECT n.atributos->>'{CAMPO_UC_TRAFO}' AS trafo, n.codigo_externo AS uc FROM plat.rede_no n "
+        f"SELECT n.atributos->>'{CAMPO_UC_TRAFO}' AS trafo, {SQL_IDENTIDADE} AS uc FROM plat.rede_no n "
         "JOIN plat.rede_tipo t ON t.id = n.tipo_id "
         "JOIN plat.rede_grupo g ON g.id = t.grupo_id "
         f"WHERE n.rede_id = %s::uuid AND g.codigo = %s AND n.atributos->>'{CAMPO_UC_TRAFO}' IS NOT NULL "
-        "AND n.codigo_externo IS NOT NULL",
+        f"AND {SQL_IDENTIDADE} IS NOT NULL",
         (rede_id, GRUPO_UC),
     )
     out: dict[str, set[str]] = {}
@@ -155,10 +163,10 @@ def _pares_por_geometria(cur, rede_base: str, rede_alvo: str,
     if not somem or not nascem:
         return set()
     cur.execute(
-        "WITH b AS (SELECT n.codigo_externo AS cod, n.geom FROM plat.rede_no n "
-        "            WHERE n.rede_id = %s::uuid AND n.codigo_externo = ANY(%s) AND n.geom IS NOT NULL), "
-        "     a AS (SELECT n.codigo_externo AS cod, n.geom FROM plat.rede_no n "
-        "            WHERE n.rede_id = %s::uuid AND n.codigo_externo = ANY(%s) AND n.geom IS NOT NULL) "
+        f"WITH b AS (SELECT {SQL_IDENTIDADE} AS cod, n.geom FROM plat.rede_no n "
+        f"            WHERE n.rede_id = %s::uuid AND {SQL_IDENTIDADE} = ANY(%s) AND n.geom IS NOT NULL), "
+        f"     a AS (SELECT {SQL_IDENTIDADE} AS cod, n.geom FROM plat.rede_no n "
+        f"            WHERE n.rede_id = %s::uuid AND {SQL_IDENTIDADE} = ANY(%s) AND n.geom IS NOT NULL) "
         "SELECT b.cod AS base, a.cod AS alvo FROM b JOIN a "
         "  ON ST_DWithin(b.geom::geography, a.geom::geography, %s)",
         (rede_base, sorted(somem), rede_alvo, sorted(nascem), GEO_TOLERANCIA_M),
@@ -298,10 +306,10 @@ def _linhagem_do_par(cur, tenant_id: int, serie_id: str, base: dict, alvo: dict)
 
 def _placa(cur, rede_id: str) -> dict[str, float]:
     cur.execute(
-        f"SELECT n.codigo_externo AS cod, {SQL_POT_NOM} AS pot "
+        f"SELECT {SQL_IDENTIDADE} AS cod, {SQL_POT_NOM} AS pot "
         "FROM plat.rede_no n JOIN plat.rede_tipo t ON t.id = n.tipo_id "
         "JOIN plat.rede_grupo g ON g.id = t.grupo_id "
-        "WHERE n.rede_id = %s::uuid AND g.codigo = %s AND n.codigo_externo IS NOT NULL",
+        f"WHERE n.rede_id = %s::uuid AND g.codigo = %s AND {SQL_IDENTIDADE} IS NOT NULL",
         (rede_id, GRUPO_TRAFO),
     )
     return {r["cod"]: r["pot"] for r in cur.fetchall() if r["pot"] is not None}
@@ -314,7 +322,7 @@ def _veredito_pot_nom(cur, tenant_id: int, serie_id: str, lista: list[dict]) -> 
                 "WHERE serie_id = %s::uuid", (serie_id,))
     vereditos = []
     placas = {s["ano"]: _placa(cur, s["rede_id"]) for s in lista}
-    for base, alvo in zip(lista, lista[1:]):
+    for base, alvo in zip(lista, lista[1:], strict=False):
         pb, pa = placas[base["ano"]], placas[alvo["ano"]]
         comuns = set(pb) & set(pa)
         trocaram = sum(1 for c in comuns if pb[c] != pa[c])
@@ -346,12 +354,12 @@ def _carga_da_safra(cur, tenant_id: int, serie_id: str, safra: dict, confiavel: 
     preservou em `atributos`."""
     cur.execute(
         "WITH trafo AS ("
-        "  SELECT n.codigo_externo AS cod, "
+        f"  SELECT {SQL_IDENTIDADE} AS cod, "
         f"        {SQL_POT_NOM} AS pot, "
         f"        n.atributos->>'{CAMPO_ALIMENTADOR}' AS alimentador "
         "  FROM plat.rede_no n JOIN plat.rede_tipo t ON t.id = n.tipo_id "
         "  JOIN plat.rede_grupo g ON g.id = t.grupo_id "
-        "  WHERE n.rede_id = %(rede)s::uuid AND g.codigo = %(grupo_trafo)s AND n.codigo_externo IS NOT NULL"
+        f"  WHERE n.rede_id = %(rede)s::uuid AND g.codigo = %(grupo_trafo)s AND {SQL_IDENTIDADE} IS NOT NULL"
         "), uc AS ("
         f"  SELECT n.atributos->>'{CAMPO_UC_TRAFO}' AS cod, count(*) AS n_uc, "
         f"        sum({_sql_energia()}) AS energia "
@@ -421,7 +429,7 @@ def calcular(cur, tenant_id: int, serie_id: str) -> dict:
         cur.execute(f"DELETE FROM plat.{tabela} WHERE serie_id = %s::uuid", (serie_id,))
 
     contagens = {}
-    for base, alvo in zip(lista, lista[1:]):
+    for base, alvo in zip(lista, lista[1:], strict=False):
         contagens[f"{base['ano']}-{alvo['ano']}"] = _linhagem_do_par(cur, tenant_id, serie_id, base, alvo)
 
     vereditos = _veredito_pot_nom(cur, tenant_id, serie_id, lista)
