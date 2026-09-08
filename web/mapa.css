@@ -145,3 +145,17 @@ body.mapa .popup-tabela th { text-align: left; font-weight: 500; color: var(--fr
 body.mapa .popup-tabela td { padding: .12rem 0; font-family: var(--mono); }
 body.mapa .popup-tabela td.nulo { color: var(--fraco); font-style: italic; }
 body.mapa .popup-mais { margin: 0; font-size: .75rem; color: var(--fraco); }
+
+/* gráficos por camada (item L2-01-i-graficos-de-camada; web/js/mapa/graficos.js + grafico_svg.js) */
+body.mapa .graficos { display: flex; flex-direction: column; gap: var(--e2); }
+body.mapa .graficos .grafico-linha { align-items: flex-end; }
+body.mapa .graficos .grafico-rotulo { display: flex; flex-direction: column; gap: .15rem; font-size: .72rem; color: var(--fraco); flex: 1; min-width: 6rem; }
+body.mapa .graficos .grafico-rotulo.grafico-caixa { flex-direction: row; align-items: center; gap: var(--e2); }
+body.mapa .graficos select, body.mapa .graficos input[type=text], body.mapa .graficos input[type=number] {
+  width: 100%; background: var(--superficie); color: var(--texto); border: 1px solid var(--borda); border-radius: var(--raio); font-size: .78rem; padding: .2rem .3rem;
+}
+body.mapa .graficos .grafico-area { background: var(--i-superficie, #12181a); border: 1px solid var(--borda); border-radius: var(--raio); min-height: 3rem; }
+body.mapa .graficos .grafico-area svg { display: block; width: 100%; height: auto; }
+body.mapa .graficos[data-ocupado="1"] .grafico-area { opacity: .5; }
+body.mapa .graficos .grafico-salvos li { display: flex; align-items: center; gap: var(--e2); }
+body.mapa .graficos .grafico-salvos .sugestao { flex: 1; }
