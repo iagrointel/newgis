@@ -22,6 +22,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 
 from app import db
+from app.catalogo.tipos import TIPOS_CAMADA
 from app.consulta import campos as campos_mod
 from app.consulta import renderizador
 from app.consulta.rotas_query import PREFIXO as PREFIXO_CAMADA
@@ -40,10 +41,11 @@ def _camada_e_titulo(cur, item_id: str) -> tuple[dict, str]:
     formato de `item_id` ANTES do banco (mesmo achado/conserto do adversário em `rotas_query.py`)."""
     _item_id_valido(item_id)
     cur.execute(
-        "SELECT dados, titulo FROM plat.item WHERE id = %s::uuid AND tipo = 'camada_vetorial'", (item_id,)
+        "SELECT dados, titulo FROM plat.item WHERE id = %s::uuid AND tipo = ANY(%s)",
+        (item_id, list(TIPOS_CAMADA)),
     )
     r = cur.fetchone()
-    if r is None:
+    if r is None or not (r["dados"] or {}).get("tabela"):  # ver rotas_query._camada_do_item (item L5-32)
         raise ErroAPI(404, "camada_nao_encontrada", "item inexistente, não é camada vetorial, ou sem permissão")
     return r["dados"], r["titulo"]
 
@@ -292,7 +294,7 @@ def montar_item_info(auth, item_id: str) -> dict:
     with db.db(auth.contexto()) as cur:
         cur.execute(
             "SELECT titulo, resumo, descricao, tags, creditos, termos_de_uso, acesso "
-            "FROM plat.item WHERE id = %s::uuid AND tipo = 'camada_vetorial'", (item_id,))
+            "FROM plat.item WHERE id = %s::uuid AND tipo = ANY(%s)", (item_id, list(TIPOS_CAMADA)))
         r = cur.fetchone()
     if r is None:
         raise ErroAPI(404, "camada_nao_encontrada", "item inexistente, não é camada vetorial, ou sem permissão")
