@@ -54,6 +54,11 @@ def _rede(dados: dict) -> list[tuple[str, str, int | None]]:
     ]
 
 
+def _colecao(dados: dict) -> list[tuple[str, str, int | None]]:
+    corpo = dados.get("corpo") or {}
+    return [(u, "item_de_colecao", i) for i, u in enumerate(_uuids(x.get("item_id") for x in corpo.get("itens") or []))]
+
+
 EXTRATORES: dict[str, Callable[[dict], list[tuple[str, str, int | None]]]] = {
     "mapa": _mapa,
     "cena": _mapa,
@@ -62,6 +67,7 @@ EXTRATORES: dict[str, Callable[[dict], list[tuple[str, str, int | None]]]] = {
     "painel": _app,
     "modelo_amc": _amc,
     "rede": _rede,
+    "colecao": _colecao,
 }
 
 
