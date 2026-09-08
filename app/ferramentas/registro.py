@@ -99,7 +99,9 @@ def _validar_parametro(nome_ferramenta: str, p: Parametro) -> None:
         raise ErroRegistro(f"{onde}: rótulo obrigatório")
     if p.opcoes and p.tipo != "GPString":
         raise ErroRegistro(f"{onde}: opcoes só vale para GPString")
-    if (p.minimo is not None or p.maximo is not None) and p.tipo not in ("GPDouble", "GPLong", "GPLinearUnit"):
+    numerico = p.subtipo if p.tipo == "GPMultiValue" else p.tipo
+    if (p.minimo is not None or p.maximo is not None) and numerico not in ("GPDouble", "GPLong", "GPLinearUnit"):
+        # faixa vale também na lista (GPMultiValue de número): é aplicada a cada valor por _normalizar
         raise ErroRegistro(f"{onde}: minimo/maximo só vale para número ou unidade linear")
     if p.padrao is not None and p.direcao == "entrada":
         try:
