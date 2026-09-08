@@ -11,6 +11,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.app_modelo.contratos import CONTRATOS, EVENTOS_VISTA
+
 EVENTOS = ("clique", "dado_adicionado", "filtro_mudou", "extensao_mudou", "localizacao", "registros_carregados",
            "selecao_mudou", "vista_mudou")
 ACOES_DADO = ("filtrar", "selecionar", "limpar_filtro", "limpar_selecao")
@@ -271,10 +273,38 @@ def _validar_vistas(vistas: list, ids: set, idx: _Indice, erros: list) -> None:
             _erro(erros, f"{c}.selecao", f"seleção precisa ser lista de até {LIMITES['selecao']} ids", "selecao")
 
 
+def _nome_no(idx: _Indice, ident: Any) -> str:
+    v = idx.vistas.get(ident)
+    if v is not None:
+        return f"vista {v.get('nome') or ident}"
+    n = idx.nos.get(ident)
+    if n is not None:
+        return f"{n.get('tipo')} {str(ident)[-4:]}"
+    return str(ident)
+
+
+def eventos_de(idx: _Indice, ident: Any) -> list[str]:
+    """Eventos que a origem emite (item L5-01-e): vista = os cinco de dado; widget = os do contrato do tipo."""
+    if ident in idx.vistas:
+        return [e for e in EVENTOS_VISTA if e in EVENTOS]
+    n = idx.nos.get(ident)
+    c = CONTRATOS.get(n.get("tipo")) if n else None
+    return [e for e in c["eventos"] if e in EVENTOS] if c else []
+
+
+def acoes_de(idx: _Indice, ident: Any) -> list[str]:
+    if ident in idx.vistas:
+        return list(ACOES_DADO)
+    n = idx.nos.get(ident)
+    c = CONTRATOS.get(n.get("tipo")) if n else None
+    return [a for a in c["acoes"] if a in ACOES] if c else []
+
+
 def _validar_mensagens(mensagens: list, idx: _Indice, erros: list) -> None:
     def alvos(ident: Any) -> bool:
         return ident in idx.nos or ident in idx.vistas
 
+    vistos: dict[str, int] = {}  # item L5-01-e: gatilho + alvo + ação repetidos = erro `gatilho_repetido`
     for i, m in enumerate(mensagens):
         c = f"corpo.mensagens.{i}"
         if not isinstance(m, dict):
@@ -289,6 +319,12 @@ def _validar_mensagens(mensagens: list, idx: _Indice, erros: list) -> None:
         if g.get("evento") not in EVENTOS:
             _erro(erros, f"{c}.gatilho.evento",
                   f"evento desconhecido: {g.get('evento')} (aceitos: {', '.join(EVENTOS)})", "evento")
+        elif alvos(g.get("origem")):
+            emitidos = eventos_de(idx, g["origem"])
+            if g["evento"] not in emitidos:
+                _erro(erros, f"{c}.gatilho.evento",
+                      f"a origem {_nome_no(idx, g['origem'])} não emite {g['evento']} "
+                      f"(emite: {', '.join(emitidos) or 'nada'})", "evento_incompativel")
         acoes = m.get("acoes")
         if not isinstance(acoes, list) or not acoes:
             _erro(erros, f"{c}.acoes", "mensagem sem ações", "acoes")
@@ -307,8 +343,32 @@ def _validar_mensagens(mensagens: list, idx: _Indice, erros: list) -> None:
             if a.get("acao") not in ACOES:
                 _erro(erros, f"{ca}.acao", f"ação desconhecida: {a.get('acao')} (aceitas: {', '.join(ACOES)})", "acao")
                 continue
+            aceitas = acoes_de(idx, a["alvo"])
+            if a["acao"] not in aceitas:
+                _erro(erros, f"{ca}.acao", f"o alvo {_nome_no(idx, a['alvo'])} não aceita {a['acao']} "
+                      f"(aceita: {', '.join(aceitas) or 'nada'})", "alvo_incompativel")
+                continue
+            chave = f"{g.get('origem')}|{g.get('evento')}|{a['alvo']}|{a['acao']}"
+            if chave in vistos:
+                _erro(erros, ca, f"gatilho já usado: {g.get('evento')} de {_nome_no(idx, g.get('origem'))} já dispara "
+                      f"{a['acao']} em {_nome_no(idx, a['alvo'])} (mensagem {vistos[chave]})", "gatilho_repetido")
+            else:
+                vistos[chave] = i
             if a["acao"] in ACOES_DADO and g.get("origem"):
                 validar_relacao(idx, g["origem"], a["alvo"], a.get("relacao"), ca, erros)
+            cond = (a.get("parametros") or {}).get("condicao") if isinstance(a.get("parametros"), dict) else None
+            if cond is not None:
+                try:
+                    validar_cql2(cond)
+                except ValueError as e:
+                    _erro(erros, f"{ca}.parametros.condicao", f"condição inválida: {e}", "cql2")
+                else:
+                    fo = idx.fonte_de(g.get("origem")) if g.get("origem") else None
+                    if fo is not None:
+                        for p in sorted(propriedades_cql2(cond)):
+                            if _campo(fo, p) is None:
+                                _erro(erros, f"{ca}.parametros.condicao",
+                                      f"condição cita campo inexistente na fonte de origem: {p}", "campo_inexistente")
             if a["acao"] == "definir_parametro" and not isinstance((a.get("parametros") or {}).get("nome"), str):
                 _erro(erros, f"{ca}.parametros.nome", "definir_parametro exige parametros.nome", "parametros")
 
