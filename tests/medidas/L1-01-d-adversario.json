@@ -1,0 +1,299 @@
+{
+  "item": "L1-01-d-garage-por-inquilino",
+  "papel": "adversario",
+  "ataques": {
+    "1_escrita_com_chave_ro": {
+      "verbos": {
+        "PutObject": {
+          "escreveu": false,
+          "codigo": "AccessDenied"
+        },
+        "DeleteObject": {
+          "escreveu": false,
+          "codigo": "AccessDenied"
+        },
+        "DeleteObjects": {
+          "escreveu": false,
+          "codigo": "AccessDenied"
+        },
+        "CopyObject_mesmo_balde": {
+          "escreveu": false,
+          "codigo": "AccessDenied"
+        },
+        "CopyObject_entre_baldes": {
+          "escreveu": false,
+          "codigo": "AccessDenied"
+        },
+        "CreateMultipartUpload": {
+          "escreveu": false,
+          "codigo": "AccessDenied"
+        },
+        "PutObjectAcl": {
+          "escreveu": false,
+          "codigo": "AccessDenied"
+        },
+        "PutBucketPolicy": {
+          "escreveu": false,
+          "codigo": "AccessDenied"
+        },
+        "PutBucketCors": {
+          "escreveu": false,
+          "codigo": "AccessDenied"
+        },
+        "PutObjectTagging": {
+          "escreveu": false,
+          "codigo": "AccessDenied"
+        },
+        "RestoreObject": {
+          "escreveu": false,
+          "codigo": "AccessDenied"
+        },
+        "CreateBucket": {
+          "escreveu": false,
+          "codigo": "AccessDenied"
+        },
+        "DeleteBucket": {
+          "escreveu": false,
+          "codigo": "AccessDenied"
+        }
+      },
+      "escritas_bem_sucedidas": [],
+      "alvo_intacto": true
+    },
+    "1b_admin_api_com_credencial_s3": {
+      "chave_ro_id": 403,
+      "chave_ro_segredo": 403,
+      "chave_rw_segredo": 403
+    },
+    "2_controle_positivo": {
+      "balde": "til101dgarag-plat-demo2",
+      "bytes": 2176,
+      "sha_bate": true
+    },
+    "2b_cruzado": {
+      "GetObject_balde_de_B": "AccessDenied",
+      "HeadObject_balde_de_B": "403",
+      "ListObjects_balde_de_B": "AccessDenied",
+      "HeadBucket_balde_de_B": "403",
+      "GetBucketLocation_de_B": "AccessDenied",
+      "GetObject_virtualhost_de_B": "AccessDenied",
+      "GetObject_prefixo_do_alias_de_A": "NoSuchKey",
+      "travessia_ponto_ponto": "GET til101dgarag-plat-demo/../til101dgarag-plat-demo2/zadv/alvo_90185099.bin: 40",
+      "travessia_codificada": "GET til101dgarag-plat-demo/..%2Ftil101dgarag-plat-demo2%2Fzadv/alvo_90185099.bin",
+      "travessia_codificada_dupla": "GET til101dgarag-plat-demo/..%252Ftil101dgarag-plat-demo2%252Fzadv/alvo_90185099",
+      "sufixo_no_nome_do_balde": "404",
+      "caminho_cru_sem_assinatura": "403"
+    },
+    "2c_web_anonimo": {
+      "status": 200,
+      "leu_o_conteudo": true,
+      "porta_3902_so_em_127_0_0_1": true,
+      "web_ativo_no_balde": true
+    },
+    "3_multipart_acima_da_cota": {
+      "cota_bytes": 5246016,
+      "usado_antes": 2112,
+      "partes": 2,
+      "bytes_enviados": 10485760,
+      "parte_1": "aceita",
+      "parte_2": "aceita",
+      "concluir": "AccessDenied",
+      "bytes_no_garage_depois": 2112,
+      "ultrapassou_a_cota": false
+    },
+    "3b_cota_de_objetos": {
+      "objetos_antes": 1,
+      "cota_objetos": 4,
+      "tentativas": 6,
+      "aceitos": 3,
+      "recusados": 3,
+      "codigos": [
+        "AccessDenied"
+      ],
+      "objetos_no_garage_depois": 4
+    },
+    "3c_concorrencia": {
+      "rodadas": [
+        {
+          "gravacoes_simultaneas": 32,
+          "tamanho_cada": 16384,
+          "cabem_pela_cota": 1,
+          "cota_bytes": 19520,
+          "aceitos": 2,
+          "codigos_de_recusa": [
+            "AccessDenied"
+          ],
+          "bytes_no_garage_depois": 34880,
+          "sobra_sobre_a_cota": 15360,
+          "razao": 1.79
+        },
+        {
+          "gravacoes_simultaneas": 32,
+          "tamanho_cada": 16384,
+          "cabem_pela_cota": 1,
+          "cota_bytes": 19520,
+          "aceitos": 1,
+          "codigos_de_recusa": [
+            "AccessDenied"
+          ],
+          "bytes_no_garage_depois": 18496,
+          "sobra_sobre_a_cota": -1024,
+          "razao": 0.95
+        },
+        {
+          "gravacoes_simultaneas": 32,
+          "tamanho_cada": 16384,
+          "cabem_pela_cota": 1,
+          "cota_bytes": 19520,
+          "aceitos": 1,
+          "codigos_de_recusa": [
+            "AccessDenied"
+          ],
+          "bytes_no_garage_depois": 18496,
+          "sobra_sobre_a_cota": -1024,
+          "razao": 0.95
+        }
+      ],
+      "pior": {
+        "gravacoes_simultaneas": 32,
+        "tamanho_cada": 16384,
+        "cabem_pela_cota": 1,
+        "cota_bytes": 19520,
+        "aceitos": 2,
+        "codigos_de_recusa": [
+          "AccessDenied"
+        ],
+        "bytes_no_garage_depois": 34880,
+        "sobra_sobre_a_cota": 15360,
+        "razao": 1.79
+      }
+    },
+    "4_sobrescrita_no_garage": {
+      "sha_v1": "5dab20ad5eb48c3462aee3eb86c25306dca890e531a0cee92ab8fae34cd180d6",
+      "put_sobrescreveu": true,
+      "multipart_sobrescreveu": true,
+      "copy_sobre_si_mesma": "aceito"
+    },
+    "4b_adaptador_nao_sobrescreve": {
+      "chave_v1": "demo/zadvitem/cog_4e0c3f16.tif",
+      "sha8_v1": "4e0c3f16",
+      "chave_v2": "demo/zadvitem/cog_5a410769.tif",
+      "chaves_diferentes": true,
+      "v1_intacta_byte_a_byte": true
+    },
+    "5_faixas": {
+      "faixa_normal": {
+        "status": 206,
+        "content_range": "bytes 1048576-1048591/3146505",
+        "bytes": 16
+      },
+      "faixa_aberta": {
+        "status": 206,
+        "content_range": "bytes 100-3146504/3146505",
+        "bytes": 3146405
+      },
+      "faixa_alem_do_fim": {
+        "status": 416,
+        "content_range": "bytes */3146505"
+      },
+      "faixa_invalida": {
+        "status": 416,
+        "bytes": 206
+      },
+      "multiplas_faixas": {
+        "status": 200,
+        "content_range": null,
+        "content_type": "image/tiff",
+        "bytes": 3146505
+      },
+      "sem_faixa": {
+        "status": 200,
+        "bytes": 3146505,
+        "accept_ranges": "bytes"
+      }
+    },
+    "5b_token": {
+      "token_inventado": {
+        "status": 403,
+        "abriu": false
+      },
+      "token_truncado": {
+        "status": 403,
+        "abriu": false
+      },
+      "token_com_um_char_trocado": {
+        "status": 403,
+        "abriu": false
+      },
+      "token_de_outro_inquilino": {
+        "status": 403,
+        "abriu": false
+      },
+      "sem_token": {
+        "status": 404,
+        "abriu": false
+      },
+      "caminho_do_balde_direto": {
+        "status": 404,
+        "abriu": false
+      }
+    },
+    "5d_multiplas_faixas": {
+      "status": 200,
+      "content_type": "image/tiff",
+      "bytes_pedidos": 32,
+      "bytes_recebidos": 3146505,
+      "objeto_inteiro": true
+    },
+    "6_listbuckets": {
+      "status": 200,
+      "baldes_listados": [
+        "til101dgarag-plat-demo"
+      ],
+      "traz_o_proprio": true,
+      "traz_o_do_vizinho": false,
+      "veredito": "ruído"
+    },
+    "7_cota_dessincronizada": {
+      "cota_declarada_no_tenant": 21474836480,
+      "cota_no_garage_depois_da_queda": 500,
+      "gravacao_de_4096_bytes": "AccessDenied",
+      "cota_no_garage_depois_da_cura": 21474836480
+    },
+    "8_semeadura_idempotente": {
+      "primeira_alterados": 0,
+      "segunda_alterados": 0,
+      "segunda_sem_mudanca": 1,
+      "cota_declarada": {
+        "bytes": 21474836480,
+        "objetos": 200000
+      },
+      "cota_no_garage": {
+        "bytes": 21474836480,
+        "objetos": 200000
+      }
+    },
+    "9_apagar_devolve_contadores": {
+      "antes": {
+        "objetos": 2,
+        "bytes": 3148617
+      },
+      "com_os_tres": {
+        "objetos": 5,
+        "bytes": 3154761
+      },
+      "depois": {
+        "objetos": 2,
+        "bytes": 3148617
+      },
+      "liberado": {
+        "objetos": 3,
+        "bytes": 6144
+      },
+      "segunda_chamada": {
+        "objetos": 0,
+        "bytes": 0
+      }
+    }
+  }
+}
