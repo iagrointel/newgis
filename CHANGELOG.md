@@ -250,6 +250,33 @@ rodar de novo não duplicou nada (3 já marcados). 17 testes de API e 1 e2e da f
 tier (tier group) não existe** no modelo — a fonte o exige em domínio hierárquico e o dispensa em particionado,
 que é o caso do pacote elétrico entregue.
 
+## turno 4, setembro de 2026 (item L4-04-c-sumarios-por-subrede: sumário por subrede, tabela e CSV)
+
+Quanto tem cada alimentador passou a ser tabela, e não conta feita à mão (ADR
+`docs/adr/20260907T2243-sumario-por-subrede.md`; paridade em `docs/PARIDADE.md`, seção "sumário por
+subrede"). `plat.rede_subrede_resumo` tem uma linha por subrede com quilômetro por nível de tensão
+(declarado pelo cadastro e pela geometria, com a diferença em porcento ao lado), transformadores e kVA
+instalado, unidades consumidoras e sua distribuição por classe, energia anual faturada, dispositivos por
+categoria de rede, geração distribuída (unidades e kW) e o tronco — a maior distância, andando pela rede,
+de um controlador até um ponto alcançável da subrede. `POST /api/rede/{id}/subredes/resumos/calcular`
+recalcula (a rede inteira, um tier ou uma subrede) e `GET /api/rede/{id}/subredes/resumos` devolve a
+tabela com a DESCRIÇÃO das colunas ao lado das linhas — código, nome, tipo e unidade, que é o que um
+elemento de painel precisa para se ligar à fonte sem rótulo escrito à mão; `formato=csv` devolve a mesma
+tabela como arquivo.
+
+A filiação de cada elemento à subrede vem do atributo que o arquivo declara por tier (`ctmt` na média
+tensão, `uni_tr_mt` na baixa), a mesma convenção com que a importação da BDGD nomeia as subredes. É o
+retrato do CADASTRO, não do que a topologia alcança, e está dito assim no ADR e na tabela de paridade.
+
+Medido em `tests/medidas/L4-04-c-sumarios-por-subrede.json`, sobre o arquivo real da cooperativa de teste
+(44.268 trechos de média tensão, 5.481 transformadores, 27.587 unidades consumidoras, 1.385 gerações):
+**20 alimentadores somados em 1,5 s**, quilômetro de média tensão idêntico à soma do comprimento declarado
+no arquivo nos 20 (tolerância do portão: 0,1 %), contagem de unidades consumidoras idêntica nos 20 e
+**soma das unidades dos 20 sumários = 27.587 = total do arquivo** — nenhuma unidade contada em dois
+alimentadores. A diferença entre o comprimento declarado e o da geometria, medida e guardada por
+alimentador, vai de +0,03 % a −8,49 %. Um alimentador declarado na camada CTMT não tem trecho nenhum no
+arquivo e ficou anotado (não vira subrede). 9 testes de API rápidos e 1 medição em escala real.
+
 ## turno 4, setembro de 2026 (item L4-18-rede-simples-trace-network: rede simples, direção de fluxo, montante e jusante)
 
 Rede sem pacote de ativos, o equivalente de disciplina ao Trace Network da Esri (ADR 20260907T2005; documento

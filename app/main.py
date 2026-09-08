@@ -48,6 +48,7 @@ from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_controladores import router as rotas_rede_controladores
+from app.rede_utilidades.rotas_resumos import router as rotas_rede_resumos
 from app.rede_utilidades.rotas_simples import router as rotas_rede_simples
 from app.rede_utilidades.rotas_subredes import router as rotas_rede_subredes
 from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
@@ -134,6 +135,9 @@ ROUTERS = [
     # --- atualizar e exportar subrede (L4-04-b): /api/rede/{rede_id}/subredes/atualizar (job),
     # /api/rede/{rede_id}/subredes/conferencia, /api/rede/{rede_id}/subrede/{nome}/exportar e os propagadores
     rotas_rede_subredes,
+    # --- sumário por subrede (L4-04-c): /api/rede/{rede_id}/subredes/resumos (tabela e CSV) e
+    # /api/rede/{rede_id}/subredes/resumos/calcular
+    rotas_rede_resumos,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,

@@ -6,6 +6,10 @@ escrito em arquivo: quem tem o ativo na máquina põe a variável no ambiente, q
 pularem com a razão. As tabelas dentro dele seguem o vocabulário da BDGD da ANEEL (ssdmt, ssdbt, ramlig,
 trafo, ponnot, ucbt).
 
+O ativo vive num schema próprio do banco compartilhado. O nome desse schema NÃO está escrito aqui: vem da
+variável de ambiente `PLAT_REDE_REFERENCIA_ESQUEMA` (ver `esquema()` abaixo), porque este repositório é
+público e o schema carrega o nome de um parceiro.
+
 ⛔ Não é gerador sintético (esse é `gerar_rede.py`, dos testes rápidos): aqui cada linha vem das tabelas
 `<esquema>.ssdmt` (44.268 trechos de MT), `<esquema>.ssdbt` (29.244 de BT), `<esquema>.ramlig` (26.581
 ramais), `<esquema>.trafo` (5.481 transformadores) e `<esquema>.ponnot` (60.549 postes) — a contagem que o portão
@@ -33,15 +37,23 @@ fabricar uma linha que o arquivo não tem, o que a metodologia da casa proíbe. 
 
 import math
 import os
+import re
 import time
 from collections import defaultdict
+
+# o nome do schema entra em SQL por interpolação: só identificador simples do Postgres passa
+_RX_IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
 
 
 def esquema() -> str:
     """Schema do iagro_sat onde a BDGD da distribuidora de referência está carregada (só leitura), lido de
     `PLAT_REDE_REFERENCIA_ESQUEMA`. Devolve "" quando a máquina não tem o ativo — o chamador pula o teste
-    com essa razão. O nome nunca aparece no repositório."""
-    return os.environ.get("PLAT_REDE_REFERENCIA_ESQUEMA", "").strip()
+    com essa razão. O nome nunca aparece no repositório; como ele entra em SQL por interpolação, só passa
+    se for um identificador de schema do Postgres."""
+    nome = os.environ.get("PLAT_REDE_REFERENCIA_ESQUEMA", "").strip()
+    if nome and not _RX_IDENT.match(nome):
+        raise ValueError("PLAT_REDE_REFERENCIA_ESQUEMA não é um identificador de schema do Postgres")
+    return nome
 
 
 def exigir_esquema() -> str:
@@ -53,6 +65,7 @@ def exigir_esquema() -> str:
             "referência carregada num schema do iagro_sat (ativo da casa, só leitura)"
         )
     return e
+
 
 TOLERANCIA_PADRAO_M = 0.05
 _M_POR_GRAU_LAT = 110_540.0
@@ -309,6 +322,7 @@ def esperado_orfaos_alta(cur, tolerancia_m: float = TOLERANCIA_PADRAO_M) -> int:
 
 def contagens_arquivo(cur) -> dict:
     """As contagens do arquivo que o portão declara — medidas, nunca copiadas do enunciado."""
+    esq = esquema()
     saida = {}
     for tabela in ("ssdmt", "ssdbt", "ramlig", "trafo", "ponnot", "ctmt"):
         cur.execute(f"SELECT count(*) AS n FROM {exigir_esquema()}.{tabela}")
