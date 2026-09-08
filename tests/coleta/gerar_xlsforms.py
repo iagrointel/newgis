@@ -137,6 +137,27 @@ def repeticao():
     _gravar("repeticao", survey, choices, "Domicílio com membros")
 
 
+def campo_odk():
+    """Sétimo formulário, do item L2-07-e: o que uma equipe coleta no ODK Collect e nós puxamos do Central —
+    identificação, geopoint, foto (o binário vem por /attachments), grupo (que o OData aninha) e repetição."""
+    survey = [
+        _linha("start", "inicio"), _linha("end", "fim"),
+        _linha("text", "ponto", "Identificação do ponto", "Point id", "", "yes"),
+        _linha("geopoint", "local", "Posição", "Position"),
+        _linha("begin group", "detalhe", "Detalhes", "Details"),
+        _linha("integer", "arvores", "Árvores contadas", "Trees counted", "", "", "", ". >= 0", "Nunca negativo"),
+        _linha("select_one estado_ponto", "estado_ponto", "Estado do ponto", "Point condition"),
+        _linha("end group", ""),
+        _linha("image", "foto", "Foto do ponto", "Point photo"),
+        _linha("begin repeat", "amostras", "Amostras", "Samples"),
+        _linha("text", "codigo_a", "Código", "Code", "", "yes"),
+        _linha("decimal", "peso_a", "Peso (kg)", "Weight (kg)"),
+        _linha("end repeat", ""),
+    ]
+    choices = [("estado_ponto", "bom", "Bom", "Good", {}), ("estado_ponto", "ruim", "Ruim", "Bad", {})]
+    _gravar("campo_odk", survey, choices, "Coleta de campo (ODK)")
+
+
 def circular():
     survey = [
         _linha("integer", "base", "Base", "Base"),
@@ -148,6 +169,6 @@ def circular():
 
 
 if __name__ == "__main__":
-    for f in (basico, regras, calculos, cascata, repeticao, circular):
+    for f in (basico, regras, calculos, cascata, repeticao, campo_odk, circular):
         f()
     print("gravados em", PASTA)
