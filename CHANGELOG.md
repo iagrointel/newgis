@@ -3,6 +3,25 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L5-04-c-temas-capa-colecao: coleção com capa, aviso de citação privada ao publicar e og: só na página pública)
+
+Novo tipo de item `colecao` (família documento): o corpo traz `capa` (título, subtítulo, mídia) e `itens`
+citados por uuid com rótulo opcional, e as relações `item_de_colecao` (vocabulário novo em `plat.relacao_tipo`)
+são sincronizadas do corpo a cada POST/PUT pelo extrator de `app/catalogo/relacoes.py` — editar a coleção
+reordena e remove relações sem passo extra, e citar item inexistente ou a si mesma reprova com 422
+`relacao_com_outro_inquilino` (gatilho `plat.tg_item_relacao`). `capa.midia` e `metadados.miniatura` só aceitam
+caminho da casa ou URL https (422 `colecao_invalida`; `javascript:` e `data:` não passam). Publicar por link
+continua conservador: o link nasce minimalista e `POST /links` devolve `avisos` nomeando cada item citado que
+ficou de fora (API e tela — a tela oferece o botão "corrigir", que recria o link incluindo os citados); o
+anônimo com um link parcial lê o aviso do que ficou fora, nunca um leitor vazio sem dizer por quê
+(tests/e2e/test_colecao.py). A página pública `/c/<token>` passa a levar `og:title`/`og:description`/`og:image`
+dos metadados da coleção (miniatura absolutizada com `PLAT_URL_PUBLICA`, todo atributo por `html.escape`,
+`cache-control: no-store`); as páginas internas não levam og:. Leitora compartilhada `web/js/colecao/leitor.js`
+(capas e fichas com navegação por clique e teclado, posição pelo fragmento, sem recarregar a página — 125,7 ms para
+3 cliques, medida com carga 2,73 e 9 GB livres) usada pela página interna `/colecao` e pela anônima. Cláusula
+"tema trocado sem reeditar blocos" fica PENDENTE por dependência: L5-10 (temas) não está em master nesta data;
+o esquema já carrega `corpo.tema` para conformar quando aterrissar (`tests/medidas/L5-04-c-temas-capa-colecao.json`).
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
