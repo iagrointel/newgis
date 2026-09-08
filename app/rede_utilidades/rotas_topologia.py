@@ -20,7 +20,7 @@ from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
-from app.rede_utilidades import direcao, feicoes, fluxo, lacos, topologia, tracado
+from app.rede_utilidades import config_tracado, direcao, feicoes, fluxo, lacos, topologia, tracado
 from app.rede_utilidades.modelos import (
     Feicao,
     FeicaoLinhaEntrada,
@@ -316,7 +316,18 @@ def _tracar_sincrono(rid: str, corpo: TracadoEntrada, auth: Auth, request: Reque
         _rede_existe(cur, rid)
         barreiras = [b.model_dump() for b in corpo.barreiras]
         try:
-            if corpo.tipo in tracado.TIPOS_TRACADO:
+            if corpo.config_id is not None:
+                # item L4-02-e: o pedido inteiro (tipo, barreiras de condição e de filtro, filtro de saída,
+                # funções e tipo de resultado) vem da configuração salva; do corpo só valem os pontos de
+                # partida e as barreiras pontuais deste traçado.
+                ficha = config_tracado.obter(cur, rid, corpo.config_id, auth.usuario_id)
+                resultado = config_tracado.executar(
+                    cur, auth.tenant_id, rid, ficha,
+                    [p.model_dump() for p in corpo.pontos_partida], barreiras)
+            elif corpo.tipo is None:
+                raise ErroAPI(422, "tipo_obrigatorio",
+                              "informe 'tipo' ou 'config_id' (a configuração salva traz o tipo)")
+            elif corpo.tipo in tracado.TIPOS_TRACADO:
                 resultado = tracado.tracar(
                     cur, auth.tenant_id, rid, corpo.tipo,
                     [p.model_dump() for p in corpo.pontos_partida], barreiras,
@@ -347,7 +358,9 @@ def _tracar_sincrono(rid: str, corpo: TracadoEntrada, auth: Auth, request: Reque
         except psycopg2.Error as e:  # noqa: BLE001 — erro do banco vira mensagem legível, nunca 500 cru
             raise auth_comum.erro_do_banco(e) from e
         registrar_evento(cur, request, "redes/tracar", "rede", rid,
-                         {"tipo": corpo.tipo, "contagem": resultado.get("contagem"),
+                         {"tipo": resultado.get("tipo") or corpo.tipo,
+                          "config_id": corpo.config_id,
+                          "contagem": resultado.get("contagem"),
                           "duracao_ms": resultado.get("duracao_ms")})
     return resultado
 
@@ -374,5 +387,11 @@ async def tracar_rede(rede_id: str, corpo: TracadoEntrada, request: Request,
     Sem `response_model` fixo porque cada `tipo` devolve um formato diferente (ver `docs/openapi.json` para o
     formato de cada um, e os testes de cada item para exemplo)."""
     rid = _uuid_ok(rede_id)
+    if corpo.config_id is not None:
+        try:
+            corpo.config_id = str(uuid_mod.UUID(corpo.config_id))
+        except (ValueError, AttributeError, TypeError) as e:
+            raise ErroAPI(404, "config_inexistente",
+                          "configuração de traçado inexistente nesta rede") from e
     resultado = await run_in_threadpool(_tracar_sincrono, rid, corpo, auth, request)
     return resultado

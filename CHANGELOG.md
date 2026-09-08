@@ -3,6 +3,29 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 7, setembro de 2026 (item L4-02-e-configuracoes-de-tracado: o pedido de traçado vira documento salvo)
+
+Configuração de traçado nomeada e compartilhável, o que a rede de utilidades da Esri chama *trace
+configuration*: tipo do traçado, barreiras de condição (atributo, fase, categoria, grupo ou tipo), barreiras
+de filtro, filtro de saída, funções sobre atributo (soma, contagem, mínimo, máximo, média) e tipo de
+resultado (elementos, geometria agregada, conectividade). Tabela `plat.rede_config_tracado` com RLS por
+inquilino, dono e `compartilhada`; CRUD em `/api/rede/{id}/config_tracado`. **Não existe rota nova de
+traçado**: `POST /api/rede/{id}/tracar` ganhou o campo `config_id`, e do corpo continuam valendo só os pontos
+de partida e as barreiras pontuais. A barreira de condição é traduzida para o que o motor já sabia recusar —
+a feição de ponto que casa perde os terminais, a de linha perde a aresta (`arestas_excluidas`, o único
+parâmetro novo em `tracado._montar_sql_arestas`); a barreira de FILTRO faz o traçado correr uma segunda vez
+com as duas listas somadas e publica a interseção, com `passagens` na resposta dizendo qual valeu.
+
+Seis configurações vêm prontas com o pacote elétrica-BR (clientes a jusante, kVA instalado a jusante,
+isolamento por chave fusível, alimentador inteiro, protetores a montante, trechos sem fase C), semeadas na
+importação do pacote — ficam em `config_tracado.CONFIGS_PADRAO` e não dentro do arquivo do pacote, cujo
+esquema JSON é fechado. Atributo, categoria, grupo, tipo, operador, função e tipo de resultado são conferidos
+contra o catálogo DA REDE na criação: o que a rede não tem vira 422 dizendo o nome, nunca uma configuração
+salva que só falharia ao ser usada. Tela `/redes/configuracoes` com a lista e o formulário. Paridade e
+lacunas declaradas (sem *function barrier*, sem *filter bitset*, sem `SUBTRACT`, contenção por coincidência
+de posição) em `docs/rede/CONFIG_TRACADO.md`; decisão em
+`docs/adr/20260908T0145-configuracoes-de-tracado.md`.
+
 ## turno 7, setembro de 2026 (item L4-01-e-dicionario-unidades-bdgd: a unidade vem do arquivo, medida)
 
 O dicionário do pacote `eletrica-br` declarava `COMP` em quilômetro e `ENE_SUM` em megawatt-hora; o extrato

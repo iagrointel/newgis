@@ -127,7 +127,11 @@ class TracadoEntrada(BaseModel):
     exige um único ponto em `pontos_partida` (a origem) e `destino`; `tipo=lacos` e `tipo=isolados` não
     exigem `pontos_partida` (operam sobre a rede inteira) — a validação por tipo é feita na rota, não aqui,
     porque cada tipo tem uma exigência diferente sobre a MESMA lista."""
-    tipo: str = Field(pattern="^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante)$")
+    tipo: str | None = Field(
+        default=None, pattern="^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante)$")
+    # item L4-02-e: quando vem `config_id`, o TIPO e todo o resto do pedido saem da configuração salva
+    # (`plat.rede_config_tracado`) e só os pontos de partida e as barreiras pontuais continuam vindo daqui.
+    config_id: str | None = Field(default=None, min_length=36, max_length=36)
     pontos_partida: list[PontoTracado] = Field(default_factory=list, max_length=50)
     destino: PontoTracado | None = None
     barreiras: list[PontoTracado] = Field(default_factory=list, max_length=200)
@@ -241,3 +245,38 @@ class PropagadoresEntrada(BaseModel):
     é legítima: significa "este tier não propaga nada"."""
 
     propagadores: list[str] = Field(default_factory=list, max_length=20)
+
+
+# --- configuração de traçado (item L4-02-e-configuracoes-de-tracado) ------------------------------------
+
+class ConfigTracadoEntrada(BaseModel):
+    """O documento salvo que preenche o pedido de traçado. `config` é validado contra o catálogo DA REDE em
+    `config_tracado.validar_documento` (atributo, categoria, grupo, tipo, operador, função e tipo de
+    resultado), e não por pydantic: a mensagem de erro precisa dizer qual atributo a rede não tem."""
+
+    codigo: str = Field(min_length=1, max_length=63, pattern="^[a-z0-9][a-z0-9_-]{0,62}$")
+    nome: str = Field(min_length=1, max_length=200)
+    descricao: str | None = Field(default=None, max_length=2000)
+    tipo: str = Field(pattern="^(conectado|subrede|montante|jusante)$")
+    config: dict = Field(default_factory=dict)
+    compartilhada: bool = True
+
+
+class ConfigTracado(BaseModel):
+    id: str
+    rede_id: str
+    codigo: str
+    nome: str
+    descricao: str | None
+    tipo: str
+    config: dict
+    origem: str
+    compartilhada: bool
+    dono_id: int | None
+    criado_em: str
+    atualizado_em: str
+
+
+class ConfigTracadoPagina(BaseModel):
+    total: int
+    itens: list[ConfigTracado]

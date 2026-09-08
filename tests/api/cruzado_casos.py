@@ -811,6 +811,25 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/rede/{rede_id}/simples"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/simples"),
     ("POST", "/api/rede/{rede_id}/promover"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/promover", lambda p: {}),
+    # ---- L4-02-e configuração de traçado: tudo endereça a rede de B e tem de dar 404 de REDE (a rede nem é
+    # vista); o id de configuração é forjado, e mesmo trocar o 404 de rede por 404 de configuração vazaria
+    # a existência da rede do outro inquilino.
+    ("POST", "/api/rede/{rede_id}/config_tracado"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/config_tracado",
+        lambda p: {"codigo": f"zt-cfg-{secrets.token_hex(3)}", "nome": "zt", "tipo": "conectado",
+                   "config": {}},
+    ),
+    ("GET", "/api/rede/{rede_id}/config_tracado"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/config_tracado"),
+    ("GET", "/api/rede/{rede_id}/config_tracado/{config_id}"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/config_tracado/{UUID_NULO}"),
+    ("PUT", "/api/rede/{rede_id}/config_tracado/{config_id}"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/config_tracado/{UUID_NULO}",
+        lambda p: {"codigo": f"zt-cfg-{secrets.token_hex(3)}", "nome": "zt", "tipo": "conectado",
+                   "config": {}},
+    ),
+    ("DELETE", "/api/rede/{rede_id}/config_tracado/{config_id}"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/config_tracado/{UUID_NULO}"),
     # ---- L4-04-a controlador de subrede e tiers: tudo em /api/rede/{rede_id} aponta a rede de B e tem de
     # dar 404 (a rede nem é vista). O id de controlador/subrede é forjado: se a rede fosse alcançável, a
     # resposta mudaria de 404 de rede para 404 de controlador — e mesmo isso vazaria a existência da rede.

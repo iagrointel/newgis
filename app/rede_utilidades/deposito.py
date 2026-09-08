@@ -126,10 +126,17 @@ def importar(cur, tenant_id: int, rede_id: str, doc: dict, usuario_id: int, sha2
              _texto(r.get("descricao"))),
         )
 
+    # item L4-02-e: as configurações de traçado que vêm prontas com este pacote. Ficam em módulo Python e
+    # não no arquivo do pacote porque o esquema JSON do pacote é fechado (ver config_tracado.CONFIGS_PADRAO).
+    from app.rede_utilidades import config_tracado
+
+    configs = config_tracado.semear(cur, tenant_id, rede_id, meta["codigo"], usuario_id)
+
     return {
         "dominios": len(doc["dominios"]), "tiers": len(doc["tiers"]), "categorias": len(doc["categorias"]),
         "terminais": len(doc["terminais"]), "grupos": len(doc["grupos"]), "tipos": len(doc["tipos"]),
         "atributos": len(doc["atributos"]), "regras": len(doc["regras"]),
+        "configuracoes_de_tracado": configs,
     }
 
 

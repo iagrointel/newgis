@@ -51,6 +51,11 @@ def _uuid_lista(cur, valores: list[str]) -> str:
 def _resolver_ponto(cur, rede_id: str, tolerancia_padrao_m: float, ponto: dict) -> str:
     """Devolve o id (uuid, texto) do `rede_topo_no` para um ponto de partida ou barreira: por feição+terminal
     ou por coordenada com tolerância (própria do ponto, ou a tolerância DA REDE por padrão)."""
+    no_id = ponto.get("no_id")
+    if no_id:
+        # forma interna: a barreira já é um nó de topologia resolvido (barreira de condição de uma
+        # configuração de traçado, item L4-02-e). Nunca chega do pedido cru — o modelo de entrada não a tem.
+        return str(no_id)
     feicao_id = ponto.get("feicao_id")
     lon, lat = ponto.get("lon"), ponto.get("lat")
     if feicao_id and (lon is not None or lat is not None):
@@ -97,7 +102,7 @@ def _resolver_ponto(cur, rede_id: str, tolerancia_padrao_m: float, ponto: dict) 
     return str(r["id"])
 
 
-def _montar_sql_arestas(cur, rede_id: str, ignorar_transformacao: bool) -> str:
+def _montar_sql_arestas(cur, rede_id: str, ignorar_transformacao: bool, arestas_excluidas=()) -> str:
     """Texto SQL (sem bind — vai para `pgr_connectedComponents`) com a UNIÃO das arestas reais da topologia e
     das arestas virtuais de dispositivo (um `caminho_valido` do terminal config = uma aresta condicionada à
     traversabilidade e, no traçado de subrede, também à categoria `transformacao`). `tracado_mapa` (temp table
@@ -109,10 +114,16 @@ def _montar_sql_arestas(cur, rede_id: str, ignorar_transformacao: bool) -> str:
         "ON rc.id = rtc.categoria_id WHERE rtc.tipo_id = f.tipo_id AND rc.codigo = 'transformacao')"
         if ignorar_transformacao else ""
     )
+    # `arestas_excluidas`: arestas de topologia que uma barreira de condição de configuração de traçado
+    # (item L4-02-e) tornou não traversáveis — a feição de LINHA que casa com a condição perde a aresta dela,
+    # do mesmo jeito que a feição de PONTO que casa perde os terminais (esses saem por `tracado_mapa`).
+    filtro_aresta = (f" AND id <> ALL({_uuid_lista(cur, list(arestas_excluidas))})"
+                     if arestas_excluidas else "")
     return (
         "SELECT row_number() OVER () AS id, m1.iid AS source, m2.iid AS target, 1.0::float AS cost FROM ("
         f"  SELECT no_origem_id AS a, no_destino_id AS b FROM plat.rede_topo_aresta"
         f"  WHERE rede_id = {rede_lit} AND no_origem_id IS NOT NULL AND no_destino_id IS NOT NULL"
+        f"  {filtro_aresta}"
         "  UNION ALL"
         "  SELECT n1.id AS a, n2.id AS b"
         "  FROM plat.rede_feicao_ponto f"
@@ -194,7 +205,7 @@ def elementos_e_geometria(cur, rede_id: str, alcancados) -> tuple[list[dict], di
 
 
 def tracar(cur, tenant_id: int, rede_id: str, tipo: str, pontos_partida: list[dict],
-           barreiras: list[dict]) -> dict:
+           barreiras: list[dict], arestas_excluidas=()) -> dict:
     """Traça `tipo` ('conectado' ou 'subrede') a partir de `pontos_partida`, parando em `barreiras`. Devolve
     elementos (id de ativo, tipo, terminal), geometria agregada (GeoJSON) e contagem, com o tempo medido."""
     if tipo not in TIPOS_TRACADO:
@@ -227,7 +238,8 @@ def tracar(cur, tenant_id: int, rede_id: str, tipo: str, pontos_partida: list[di
         (rede_id,),
     )
 
-    sql_arestas = _montar_sql_arestas(cur, rede_id, ignorar_transformacao=(tipo == "subrede"))
+    sql_arestas = _montar_sql_arestas(cur, rede_id, ignorar_transformacao=(tipo == "subrede"),
+                                     arestas_excluidas=arestas_excluidas)
     sql_cc = f"SELECT * FROM public.pgr_connectedComponents(${_TAG_SQL}$ {sql_arestas} ${_TAG_SQL}$)"
     cur.execute(
         f"WITH cc AS ({sql_cc}), "
