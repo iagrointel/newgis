@@ -241,3 +241,11 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `EDICAO_REGRA_CAMPO_MAX` | `500` | entradas em dados.regras_campo (mesmo teto de campos da camada) |
 | `EDICAO_DOMINIO_VALORES_MAX` | `1000` | valores aceitos por regra de domínio codificado |
 | `EDICAO_SRID_MAX` | `999999` | mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql) |
+
+## importação de metadado ISO 19139 (L0-09-c-xml-iso-validacao; POST /api/itens/{id}/metadado.xml). O teto
+
+| nome | valor | explicação |
+|---|---|---|
+| `METADADO_XML_BYTES_MAX` | `2097152` | — |
+| `METADADO_XML_ELEMENTOS_MAX` | `20000` | — |
+| `METADADO_NAO_COUBE_MAX` | `200` | linhas distintas no relatório do que não coube |

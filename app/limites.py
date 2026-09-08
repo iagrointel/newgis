@@ -233,3 +233,12 @@ EDICAO_TEXTO_MAX = 65_536                 # 64 KiB por valor de campo texto (mes
 EDICAO_REGRA_CAMPO_MAX = 500              # entradas em dados.regras_campo (mesmo teto de campos da camada)
 EDICAO_DOMINIO_VALORES_MAX = 1_000        # valores aceitos por regra de domínio codificado
 EDICAO_SRID_MAX = 999_999                 # mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql)
+
+# --- importação de metadado ISO 19139 (L0-09-c-xml-iso-validacao; POST /api/itens/{id}/metadado.xml). O teto
+# de bytes é 2 MiB: o maior registro do catálogo aberto da INDE medido neste item tem 31 KiB, e o corpo padrão
+# da API (CORPO_MAX_PADRAO_BYTES, 10 MiB) é generoso demais para um documento de metadado — a refutação do item
+# manda recusar um XML de 50 MB antes de o analisador tocar nele. ELEMENTOS_MAX limita o relatório do que não
+# coube (documento com dezenas de milhares de elementos vira relatório inútil, não erro).
+METADADO_XML_BYTES_MAX = 2 * 1024 * 1024
+METADADO_XML_ELEMENTOS_MAX = 20_000
+METADADO_NAO_COUBE_MAX = 200              # linhas distintas no relatório do que não coube

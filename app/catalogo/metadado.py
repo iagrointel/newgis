@@ -18,11 +18,14 @@ Decisões (a ADR completa de L0-09 fica pendente de um turno próprio; isto docu
 - `dono_id` vira `pointOfContact` com `role="owner"`; o inquilino (`tenant_nome`) vira o `contact` do
   `MD_Metadata` (o "quem responde por este catálogo"), com `role="pointOfContact"`, refletindo D17."""
 
+import dataclasses
 import datetime
 import functools
 from pathlib import Path
 
 from lxml import etree
+
+from app import limites
 
 GMD = "http://www.isotc211.org/2005/gmd"
 GCO = "http://www.isotc211.org/2005/gco"
@@ -43,6 +46,30 @@ XSD_ENTRADA = (
 )
 
 MD_PROGRESSO = {"autoritativo": "completed", "obsoleto": "obsolete"}
+MD_PROGRESSO_INVERSO = {v: k for k, v in MD_PROGRESSO.items()}
+# listas de códigos da ISO 19115 (gmxCodelists.xml) usadas na LEITURA: valor fora da lista não entra no jsonb —
+# vai para o relatório do que não coube, porque gravar código inválido é pior que não gravar (D17).
+CI_ROLE_CODE = (
+    "resourceProvider", "custodian", "owner", "user", "distributor", "originator",
+    "pointOfContact", "principalInvestigator", "processor", "publisher", "author",
+)
+MD_MAINTENANCE_FREQUENCY_CODE = (
+    "continual", "daily", "weekly", "fortnightly", "monthly", "quarterly", "biannually",
+    "annually", "asNeeded", "irregular", "notPlanned", "unknown",
+)
+# vocabulário de `dados.procedencia` (item L0-09-a) e o rótulo com que ele entra e sai do `LI_Lineage/statement`:
+# a MESMA tabela serve à exportação e à importação, para que a ida e volta feche sem uma segunda lista.
+PROCEDENCIA_ROTULOS = (
+    ("fonte", "fonte"),
+    ("url", "endereço"),
+    ("licenca", "licença"),
+    ("data_do_dado", "data do dado"),
+    ("data_de_acesso", "data de acesso"),
+    ("metodo", "método"),
+    ("confianca", "confiança"),
+    ("frescor", "frescor"),
+)
+PROCEDENCIA_POR_ROTULO = {rotulo: chave for chave, rotulo in PROCEDENCIA_ROTULOS}
 
 
 class ErroXSDAusente(RuntimeError):
@@ -230,16 +257,7 @@ def montar_md_metadata(row: dict, tenant_nome: str, base_url: str) -> etree._Ele
         lineage_prop = _e(dq, "lineage")
         lineage = _e(lineage_prop, "LI_Lineage")
         partes = []
-        for chave, rotulo in (
-            ("fonte", "fonte"),
-            ("url", "endereço"),
-            ("licenca", "licença"),
-            ("data_do_dado", "data do dado"),
-            ("data_de_acesso", "data de acesso"),
-            ("metodo", "método"),
-            ("confianca", "confiança"),
-            ("frescor", "frescor"),
-        ):
+        for chave, rotulo in PROCEDENCIA_ROTULOS:
             v = procedencia.get(chave)
             if v:
                 partes.append(f"{rotulo}: {v}")
@@ -269,3 +287,444 @@ def validar(xml_bytes: bytes) -> None:
     schema = _schema()
     if not schema.validate(doc):
         raise ErroMetadadoInvalido(schema.error_log)
+
+
+# ------------------------------------------------------------------ importação (item L0-09-c-xml-iso-validacao)
+# O analisador é o MESMO módulo da exportação de propósito: a tabela de rótulos de procedência, o mapa de
+# `MD_ProgressCode` e o XSD em cache são únicos, e é isso que faz a ida e volta (exportar → importar) fechar sem
+# perda. Três decisões que a leitura de metadado real impôs (medidas no registro aberto da INDE deste item):
+#
+# 1. XSD é PARECER, não porteiro. O registro real da INDE não valida contra o XSD oficial do ISO/TC 211 (ordem
+#    de elementos e extensões do Perfil MGB); recusar o que o catálogo nacional publica seria recusar o dado
+#    aberto do país. Então: XML malformado ou com raiz errada = 422 com linha e coluna; XML bem formado que não
+#    valida = importa e devolve os erros do XSD com linha/coluna em `avisos_xsd` — e `?estrito=1` transforma
+#    esses mesmos avisos em 422, para quem quer o rigor.
+# 2. Entidade externa nunca é resolvida (`resolve_entities=False`, `no_network=True`, sem DTD): o corpo é
+#    documento de terceiro por definição.
+# 3. O que não tem onde ser guardado NÃO é inventado: vira relatório (`nao_coube`), com caminho, quantas vezes
+#    apareceu, um exemplo e a linha do XML. Guardar contato/manutenção/formato é o item L0-09-b (coluna
+#    `plat.item.metadado_iso`), que ainda não entrou em master — enquanto não entra, esses campos saem no
+#    relatório em vez de irem para um armazém improvisado.
+
+PARSER_SEGURO = etree.XMLParser(
+    resolve_entities=False,
+    no_network=True,
+    load_dtd=False,
+    dtd_validation=False,
+    huge_tree=False,
+)
+NS = {"gmd": GMD, "gco": GCO}
+RAIZ_ESPERADA = f"{{{GMD}}}MD_Metadata"
+
+
+class ErroXMLIlegivel(ValueError):
+    """XML malformado, grande demais ou com raiz que não é gmd:MD_Metadata: erro do PEDIDO (422), com posição."""
+
+    def __init__(self, mensagem: str, linha: int = 0, coluna: int = 0):
+        self.mensagem, self.linha, self.coluna = mensagem, int(linha or 0), int(coluna or 0)
+        super().__init__(f"{mensagem} (linha {self.linha}, coluna {self.coluna})")
+
+
+@dataclasses.dataclass
+class Analise:
+    """Resultado da leitura de um XML ISO 19139: o que vai para o item, o que vai para `dados.procedencia`,
+    o que não coube em lugar nenhum e o que o XSD achou."""
+
+    campos: dict = dataclasses.field(default_factory=dict)
+    procedencia: dict = dataclasses.field(default_factory=dict)
+    metadado_iso: dict = dataclasses.field(default_factory=dict)
+    identificador_arquivo: str | None = None
+    nao_coube: list = dataclasses.field(default_factory=list)
+    avisos_xsd: list = dataclasses.field(default_factory=list)
+
+    @property
+    def preenchidos(self) -> list[str]:
+        """Nome pontilhado de cada campo que a leitura preencheu — é o que a cláusula '≥ 15 campos' conta.
+        Folha é o que tem valor final: `contato.email` conta um; `contato` não conta."""
+        nomes = sorted(self.campos) + sorted(f"procedencia.{k}" for k in self.procedencia)
+        for grupo, valor in sorted(self.metadado_iso.items()):
+            nomes.extend(_folhas(f"metadado_iso.{grupo}", valor))
+        return nomes
+
+
+def _folhas(prefixo: str, valor) -> list[str]:
+    if isinstance(valor, dict):
+        saida = []
+        for chave, v in sorted(valor.items()):
+            saida.extend(_folhas(f"{prefixo}.{chave}", v))
+        return saida
+    return [prefixo]
+
+
+def ler_documento(dados: bytes) -> etree._Element:
+    if len(dados) > limites.METADADO_XML_BYTES_MAX:
+        raise ErroXMLIlegivel(
+            f"XML acima do teto de {limites.METADADO_XML_BYTES_MAX} bytes ({len(dados)} enviados)"
+        )
+    try:
+        doc = etree.fromstring(dados, parser=PARSER_SEGURO)
+    except etree.XMLSyntaxError as e:
+        linha, coluna = (e.position or (0, 0)) if hasattr(e, "position") else (0, 0)
+        raise ErroXMLIlegivel(str(e).split(", line")[0], linha, coluna) from e
+    if doc.tag != RAIZ_ESPERADA:
+        raise ErroXMLIlegivel(
+            f"raiz {doc.tag} não é {RAIZ_ESPERADA} (o corpo precisa ser um metadado ISO 19139/GMD)",
+            doc.sourceline or 0,
+        )
+    return doc
+
+
+def erros_xsd(doc: etree._Element) -> list[dict]:
+    """[{linha, coluna, mensagem}] do XSD oficial em cache. Lista vazia = documento válido."""
+    if _schema().validate(doc.getroottree()):
+        return []
+    return [
+        {"linha": int(e.line or 0), "coluna": int(e.column or 0), "mensagem": e.message}
+        for e in _schema().error_log
+    ]
+
+
+class _Leitor:
+    """Percorre o documento marcando o que foi lido; o que sobra com texto vira o relatório do que não coube."""
+
+    def __init__(self, doc: etree._Element):
+        self.doc = doc
+        self.lidos: set = set()
+
+    def _marcar(self, el):
+        self.lidos.add(el)
+        return el
+
+    def texto(self, pai, caminho: str) -> str | None:
+        """Texto de um gco:CharacterString (ou gco:Date/DateTime/Decimal) sob `caminho`, marcando-o como lido."""
+        if pai is None:
+            return None
+        for el in pai.iterfind(caminho, NS):
+            for filho in el:
+                if filho.tag in (
+                    f"{{{GCO}}}CharacterString",
+                    f"{{{GCO}}}Date",
+                    f"{{{GCO}}}DateTime",
+                    f"{{{GCO}}}Decimal",
+                    f"{{{GCO}}}Integer",
+                    f"{{{GCO}}}Boolean",
+                ):
+                    v = (filho.text or "").strip()
+                    if v:
+                        self._marcar(filho)
+                        return v
+        return None
+
+    def textos(self, pai, caminho: str) -> list[str]:
+        saida = []
+        if pai is None:
+            return saida
+        for el in pai.iterfind(caminho, NS):
+            for filho in el:
+                v = (filho.text or "").strip()
+                if filho.tag == f"{{{GCO}}}CharacterString" and v:
+                    self._marcar(filho)
+                    saida.append(v)
+        return saida
+
+    def codigo(self, pai, caminho: str) -> str | None:
+        """codeListValue de um elemento de lista de códigos (MD_ScopeCode, CI_RoleCode, ...)."""
+        if pai is None:
+            return None
+        for el in pai.iterfind(caminho, NS):
+            v = (el.get("codeListValue") or "").strip()
+            if v:
+                self._marcar(el)
+                return v
+            texto = (el.text or "").strip()
+            if texto:
+                self._marcar(el)
+                return texto
+        return None
+
+    def acha(self, pai, caminho: str):
+        return None if pai is None else pai.find(caminho, NS)
+
+    def relatorio(self) -> list[dict]:
+        """Elementos com valor que nenhuma regra leu, agrupados por caminho (nomes locais), na ordem do XML."""
+        por_caminho: dict[str, dict] = {}
+        for n, el in enumerate(self.doc.iter()):
+            if n > limites.METADADO_XML_ELEMENTOS_MAX:
+                break
+            if not isinstance(el.tag, str) or el in self.lidos:
+                continue
+            valor = (el.text or "").strip() or (el.get("codeListValue") or "").strip()
+            if not valor:
+                continue
+            partes = []
+            no = el
+            while no is not None and no is not self.doc:
+                partes.append(etree.QName(no).localname)
+                no = no.getparent()
+            caminho = "/".join(reversed(partes))
+            entrada = por_caminho.get(caminho)
+            if entrada is None:
+                if len(por_caminho) >= limites.METADADO_NAO_COUBE_MAX:
+                    continue
+                por_caminho[caminho] = {
+                    "caminho": caminho,
+                    "vezes": 1,
+                    "exemplo": valor[:200],
+                    "linha": int(el.sourceline or 0),
+                }
+            else:
+                entrada["vezes"] += 1
+        return list(por_caminho.values())
+
+
+def _procedencia_do_statement(statement: str) -> dict:
+    """`LI_Lineage/statement` de volta ao vocabulário de `dados.procedencia`. Só decompõe quando TODAS as partes
+    do texto casam com os rótulos que a exportação escreve (ida e volta fechada); linhagem de terceiro, que é
+    prosa livre, entra inteira como `metodo` — o que a plataforma sabe é que aquilo descreve como o dado foi
+    feito, e inventar chave para prosa livre seria procedência errada (D17)."""
+    partes = [p.strip() for p in statement.split(";") if p.strip()]
+    saida = {}
+    for parte in partes:
+        rotulo, sep, valor = parte.partition(":")
+        chave = PROCEDENCIA_POR_ROTULO.get(rotulo.strip())
+        if not sep or chave is None or not valor.strip():
+            return {"metodo": statement.strip()}
+        saida[chave] = valor.strip()
+    return saida or {"metodo": statement.strip()}
+
+
+def analisar(dados: bytes) -> Analise:
+    """XML ISO 19139 (bytes) → campos do item + `dados.procedencia` + relatório do que não coube + avisos do XSD."""
+    doc = ler_documento(dados)
+    lt = _Leitor(doc)
+    a = Analise(avisos_xsd=erros_xsd(doc))
+
+    ident = lt.acha(doc, "gmd:identificationInfo/gmd:MD_DataIdentification")
+    if ident is None:  # serviço (SV_ServiceIdentification) ou perfil que troca o nome do bloco
+        info = lt.acha(doc, "gmd:identificationInfo")
+        ident = info[0] if info is not None and len(info) else None
+    citacao = lt.acha(ident, "gmd:citation/gmd:CI_Citation")
+
+    titulo = lt.texto(citacao, "gmd:title")
+    if titulo:
+        a.campos["titulo"] = titulo[: limites.ITEM_TITULO_MAX]
+    resumo = lt.texto(ident, "gmd:abstract")
+    if resumo:
+        a.campos["resumo"] = resumo[: limites.ITEM_RESUMO_MAX]
+    proposito = lt.texto(ident, "gmd:purpose")
+    if proposito:
+        a.campos["descricao"] = proposito[: limites.ITEM_DESCRICAO_MAX]
+    creditos = lt.texto(ident, "gmd:credit")
+    if creditos:
+        a.campos["creditos"] = creditos[: limites.ITEM_CREDITOS_MAX]
+
+    tags = []
+    for kw in (ident.iterfind("gmd:descriptiveKeywords/gmd:MD_Keywords", NS) if ident is not None else ()):
+        tags.extend(lt.textos(kw, "gmd:keyword"))
+    vistas = set()
+    tags = [t for t in tags if len(t) <= limites.TAG_MAX and not (t.lower() in vistas or vistas.add(t.lower()))]
+    if tags:
+        a.campos["tags"] = tags[: limites.ITEM_TAGS_MAX]
+
+    usos = lt.textos(ident, "gmd:resourceConstraints/gmd:MD_LegalConstraints/gmd:useLimitation")
+    usos += lt.textos(ident, "gmd:resourceConstraints/gmd:MD_Constraints/gmd:useLimitation")
+    if usos:
+        a.campos["termos_de_uso"] = "; ".join(usos)[: limites.ITEM_DESCRICAO_MAX]
+
+    progresso = lt.codigo(ident, "gmd:status/gmd:MD_ProgressCode")
+    if progresso in MD_PROGRESSO_INVERSO:
+        a.campos["status"] = MD_PROGRESSO_INVERSO[progresso]
+
+    bbox = lt.acha(ident, "gmd:extent/gmd:EX_Extent/gmd:geographicElement/gmd:EX_GeographicBoundingBox")
+    if bbox is not None:
+        cantos = [
+            lt.texto(bbox, "gmd:westBoundLongitude"),
+            lt.texto(bbox, "gmd:southBoundLatitude"),
+            lt.texto(bbox, "gmd:eastBoundLongitude"),
+            lt.texto(bbox, "gmd:northBoundLatitude"),
+        ]
+        if all(c is not None for c in cantos):
+            try:
+                a.campos["extent"] = [float(c) for c in cantos]
+            except ValueError:
+                pass  # canto ilegível: cai no relatório do que não coube, como qualquer outro valor não lido
+
+    # ---- dados.procedencia (item L0-09-a): o bloco que a exportação escreve como linhagem, de volta
+    linhagem = lt.texto(doc, "gmd:dataQualityInfo/gmd:DQ_DataQuality/gmd:lineage/gmd:LI_Lineage/gmd:statement")
+    if linhagem:
+        a.procedencia.update(_procedencia_do_statement(linhagem))
+    if "fonte" not in a.procedencia:
+        fonte = lt.texto(
+            ident, "gmd:pointOfContact/gmd:CI_ResponsibleParty/gmd:organisationName"
+        ) or lt.texto(doc, "gmd:contact/gmd:CI_ResponsibleParty/gmd:organisationName")
+        if fonte:
+            a.procedencia["fonte"] = fonte
+    if "url" not in a.procedencia:
+        recurso = lt.acha(
+            doc,
+            "gmd:distributionInfo/gmd:MD_Distribution/gmd:transferOptions/"
+            "gmd:MD_DigitalTransferOptions/gmd:onLine/gmd:CI_OnlineResource",
+        )
+        url = lt.texto(recurso, "gmd:linkage") if recurso is not None else None
+        if url is None and recurso is not None:
+            ligacao = lt.acha(recurso, "gmd:linkage")
+            alvo = None if ligacao is None else ligacao.find(f"{{{GMD}}}URL")
+            if alvo is not None and (alvo.text or "").strip():
+                lt._marcar(alvo)
+                url = alvo.text.strip()
+        if url:
+            a.procedencia["url"] = url
+    if "licenca" not in a.procedencia:
+        licenca = lt.textos(ident, "gmd:resourceConstraints/gmd:MD_LegalConstraints/gmd:otherConstraints")
+        if licenca:
+            a.procedencia["licenca"] = "; ".join(licenca)
+    if "data_de_acesso" not in a.procedencia:
+        carimbo = lt.texto(doc, "gmd:dateStamp")
+        if carimbo:
+            a.procedencia["data_de_acesso"] = carimbo[:10]
+    if "data_do_dado" not in a.procedencia and citacao is not None:
+        for ci in citacao.iterfind("gmd:date/gmd:CI_Date", NS):
+            tipo = lt.codigo(ci, "gmd:dateType/gmd:CI_DateTypeCode")
+            data = lt.texto(ci, "gmd:date")
+            if data and tipo in ("creation", "publication"):
+                a.procedencia["data_do_dado"] = data[:10]
+                break
+    if "frescor" not in a.procedencia:
+        frequencia = lt.codigo(
+            ident,
+            "gmd:resourceMaintenance/gmd:MD_MaintenanceInformation/"
+            "gmd:maintenanceAndUpdateFrequency/gmd:MD_MaintenanceFrequencyCode",
+        )
+        if frequencia:
+            a.procedencia["frescor"] = frequencia
+
+    # ---- metadado_iso (coluna jsonb do item; forma do Perfil MGB 2.0 desenhada no item irmão L0-09-b): o que a
+    # ISO traz e não tem coluna própria no item — contato, sistema de referência, formato de distribuição e a
+    # extensão espacial DECLARADA (que pode divergir do extent do dado, e é por isso que fica separada).
+    contato_el = lt.acha(ident, "gmd:pointOfContact/gmd:CI_ResponsibleParty")
+    if contato_el is None:
+        contato_el = lt.acha(doc, "gmd:contact/gmd:CI_ResponsibleParty")
+    contato = {}
+    if contato_el is not None:
+        for chave, caminho, teto in (
+            ("organizacao", "gmd:organisationName", 250),
+            ("individuo", "gmd:individualName", 250),
+            ("email", "gmd:contactInfo/gmd:CI_Contact/gmd:address/gmd:CI_Address/gmd:electronicMailAddress", 250),
+        ):
+            v = lt.texto(contato_el, caminho)
+            if v:
+                contato[chave] = v[:teto]
+        papel = lt.codigo(contato_el, "gmd:role/gmd:CI_RoleCode")
+        if papel in CI_ROLE_CODE:
+            contato["papel"] = papel
+    if contato:
+        a.metadado_iso["contato"] = contato
+
+    rs = lt.acha(doc, "gmd:referenceSystemInfo/gmd:MD_ReferenceSystem/gmd:referenceSystemIdentifier/gmd:RS_Identifier")
+    sistema = {}
+    for chave, caminho in (("codigo", "gmd:code"), ("codespace", "gmd:codeSpace")):
+        v = lt.texto(rs, caminho)
+        if v:
+            sistema[chave] = v[:20]
+    if sistema:
+        a.metadado_iso["sistema_referencia"] = sistema
+
+    formato = lt.texto(
+        doc, "gmd:distributionInfo/gmd:MD_Distribution/gmd:distributionFormat/gmd:MD_Format/gmd:name"
+    ) or lt.texto(
+        doc, "gmd:distributionInfo/gmd:MD_Distribution/gmd:distributionFormat/gmd:MD_Format/gmd:nameFormat"
+    )
+    if formato:
+        a.metadado_iso["distribuicao"] = {"formato": formato[:100]}
+
+    frequencia = lt.codigo(
+        ident,
+        "gmd:resourceMaintenance/gmd:MD_MaintenanceInformation/"
+        "gmd:maintenanceAndUpdateFrequency/gmd:MD_MaintenanceFrequencyCode",
+    )
+    if frequencia in MD_MAINTENANCE_FREQUENCY_CODE:
+        a.metadado_iso["manutencao"] = {"frequencia": frequencia}
+
+    if "extent" in a.campos:
+        x0, y0, x1, y1 = a.campos["extent"]
+        a.metadado_iso["extensao"] = {"espacial": {"xmin": x0, "ymin": y0, "xmax": x1, "ymax": y1}}
+
+    a.identificador_arquivo = lt.texto(doc, "gmd:fileIdentifier")
+    a.nao_coube = lt.relatorio()
+    return a
+
+
+def perfil_do_item(row: dict, tenant_nome: str, base_url: str) -> Analise:
+    """O que uma leitura do XML exportado do MESMO item TEM de devolver — montado da linha do banco, não do XML.
+    É o lado esperado da cláusula de ida e volta: `analisar(gerar_xml(row))` tem de bater com isto, campo a
+    campo. Fora do perfil ficam, de propósito, os elementos que a exportação escreve para quem LÊ o metadado e
+    que não são campo editável do item (dono, miniatura, endereços da própria API, idioma/conjunto de caracteres
+    fixos, nome e versão do padrão): reimportá-los seria reinventar identidade da plataforma a partir do texto."""
+    esperado = Analise()
+    for chave in ("titulo", "resumo", "creditos", "termos_de_uso"):
+        if row.get(chave):
+            esperado.campos[chave] = row[chave]
+    if row.get("tags"):
+        esperado.campos["tags"] = list(row["tags"])
+    if row.get("status") in MD_PROGRESSO:
+        esperado.campos["status"] = row["status"]
+    if row.get("xmin") is not None:
+        esperado.campos["extent"] = [float(row["xmin"]), float(row["ymin"]), float(row["xmax"]), float(row["ymax"])]
+        esperado.metadado_iso["extensao"] = {
+            "espacial": {
+                "xmin": float(row["xmin"]),
+                "ymin": float(row["ymin"]),
+                "xmax": float(row["xmax"]),
+                "ymax": float(row["ymax"]),
+            }
+        }
+    dados = row.get("dados") or {}
+    procedencia = dados.get("procedencia") if isinstance(dados, dict) else None
+    if procedencia:
+        esperado.procedencia = {
+            chave: str(procedencia[chave])
+            for chave, _rotulo in PROCEDENCIA_ROTULOS
+            if procedencia.get(chave)
+        }
+    # o que a exportação escreve fora do bloco de procedência e a leitura recolhe de volta para ele: a
+    # organização do inquilino (gmd:contact), o endereço do próprio item (distributionInfo) e as duas datas
+    # do item. Quando o item JÁ tem esses valores em `dados.procedencia`, o do item manda — é ele que a
+    # exportação escreveu na linhagem.
+    esperado.procedencia.setdefault("fonte", tenant_nome)
+    esperado.procedencia.setdefault("url", f"{base_url.rstrip('/')}/api/itens/{row['id']}")
+    esperado.procedencia.setdefault(
+        "data_de_acesso",
+        (row["modificado_em"].date() if hasattr(row["modificado_em"], "date") else row["modificado_em"]).isoformat(),
+    )
+    esperado.procedencia.setdefault(
+        "data_do_dado",
+        (row["criado_em"].date() if hasattr(row["criado_em"], "date") else row["criado_em"]).isoformat(),
+    )
+    # contato: a exportação põe o DONO como pointOfContact do recurso (papel owner) e o inquilino como
+    # contato do metadado; a leitura prefere o do recurso, que é o mais específico.
+    if row.get("dono_nome"):
+        esperado.metadado_iso["contato"] = {"individuo": row["dono_nome"], "papel": "owner"}
+    else:
+        esperado.metadado_iso["contato"] = {"organizacao": tenant_nome, "papel": "pointOfContact"}
+    esperado.metadado_iso["sistema_referencia"] = {"codigo": "4326", "codespace": "EPSG"}
+    esperado.identificador_arquivo = str(row["id"])
+    return esperado
+
+
+def diferencas(esperado: Analise, lido: Analise) -> list[dict]:
+    """[{campo, esperado, lido}] entre duas análises — vazio é a cláusula 'ida e volta sem perda (diff = 0)'."""
+    saida = []
+    for grupo in ("campos", "procedencia", "metadado_iso"):
+        a, b = getattr(esperado, grupo), getattr(lido, grupo)
+        for chave in sorted(set(a) | set(b)):
+            if a.get(chave) != b.get(chave):
+                saida.append({"campo": f"{grupo}.{chave}", "esperado": a.get(chave), "lido": b.get(chave)})
+    if esperado.identificador_arquivo != lido.identificador_arquivo:
+        saida.append(
+            {
+                "campo": "identificador_arquivo",
+                "esperado": esperado.identificador_arquivo,
+                "lido": lido.identificador_arquivo,
+            }
+        )
+    return saida
