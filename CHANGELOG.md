@@ -1113,3 +1113,19 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 4, setembro de 2026 (item L6-02-j-bancos-externos: PostgreSQL/PostGIS externo referenciado e consulta SQL do cliente)
+
+Sobre o conector `postgres_fdw` do L0-04-i, o item fecha o "banco externo" como o Esri e o GeoServer o
+entendem: a tabela PostGIS remota é referenciada e publicada como camada (geometria e SRID lidos de
+`geometry_columns`), e o cliente pode rodar **uma consulta SQL de leitura** sobre o banco dele pela rota
+`POST /api/conexoes/{id}/consulta`. O validador (`app/conexao/consulta_sql.py`) recusa, antes de abrir
+conexão, tudo que não é um único SELECT com LIMIT explícito sobre tabelas que a própria conexão lista:
+`SELECT ...; DROP TABLE`, DELETE/UPDATE/INSERT em qualquer posição (CTE, subconsulta), funções de sistema
+(`pg_sleep`, `pg_read_file`, `dblink`...), `pg_catalog`, outro schema, consulta sem LIMIT, LIMIT acima de
+5.000. A execução é só-leitura com `statement_timeout` e devolve `tempo_ms`. Evento `conexoes/consultar`
+(tabelas, linhas, tempo; nunca o texto). ADR `docs/adr/20260908T0640-bancos-externos-consulta-sql.md`.
+Testes: `tests/unit/test_consulta_sql.py` (39 casos) e `tests/api/test_bancos_externos.py` (docker
+PostGIS na porta 55499, pulado sem o container). **SQL Server e Oracle ficam pendentes** (sem container
+liberado pelo dono não há teste; registrado no handoff). Limites novos em `docs/LIMITES.md`
+(`CONEXAO_PG_CONSULTA_LINHAS_MAX`, `CONEXAO_PG_CONSULTA_TEXTO_MAX`).
