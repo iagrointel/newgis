@@ -25,6 +25,7 @@ armazenada definida pelo cliente (`CreateStoredQuery`) e bloqueio (`LockFeature`
 from __future__ import annotations
 
 import json as _json
+from xml.sax.saxutils import escape as _e
 
 from fastapi import APIRouter, Request, Response
 
@@ -87,7 +88,7 @@ def _versao(p: dict) -> str:
 def _crs_saida(p: dict, versao: str) -> tuple[int, str, bool]:
     """(srid, srsName devolvido no documento, eixos em lat/lon). Sem SRSNAME vale o padrão da
     versão: URN 4326 (lat/lon) no 2.0, EPSG:4326 (lon/lat) no 1.1."""
-    bruto = (p.get("SRSNAME") or p.get("SRSNAME2") or "").strip()
+    bruto = (p.get("SRSNAME") or "").strip()
     if not bruto:
         bruto = gml_mod.CRS_PADRAO if versao == "2.0.0" else "EPSG:4326"
     srid = fes_mod.srid_de_srsname(bruto) or 4326
@@ -190,8 +191,6 @@ def _capabilities(request: Request, item_id: str, titulo: str, extent: list | No
     if extent:
         caixa = (f"<ows:WGS84BoundingBox><ows:LowerCorner>{extent[0]} {extent[1]}</ows:LowerCorner>"
                  f"<ows:UpperCorner>{extent[2]} {extent[3]}</ows:UpperCorner></ows:WGS84BoundingBox>")
-    from xml.sax.saxutils import escape as _e
-
     formatos = "".join(f"<ows:Value>{f}</ows:Value>" for f in (
         "application/gml+xml; version=3.2", "text/xml; subtype=gml/3.2", "application/json"))
     if versao == "1.1.0":

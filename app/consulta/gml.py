@@ -123,14 +123,14 @@ def _lista(coords, lat_lon: bool) -> str:
     return " ".join(_c(p, lat_lon) for p in coords)
 
 
-def _anel(coords, lat_lon: bool, gid: str) -> str:
-    return (f'<gml:LinearRing><gml:posList>{_lista(coords, lat_lon)}</gml:posList></gml:LinearRing>')
+def _anel(coords, lat_lon: bool) -> str:
+    return f"<gml:LinearRing><gml:posList>{_lista(coords, lat_lon)}</gml:posList></gml:LinearRing>"
 
 
 def _poligono(coords, lat_lon: bool, gid: str) -> str:
-    partes = [f'<gml:exterior>{_anel(coords[0], lat_lon, gid)}</gml:exterior>']
-    for i, anel in enumerate(coords[1:], start=1):
-        partes.append(f'<gml:interior>{_anel(anel, lat_lon, f"{gid}.i{i}")}</gml:interior>')
+    partes = [f"<gml:exterior>{_anel(coords[0], lat_lon)}</gml:exterior>"]
+    for anel in coords[1:]:
+        partes.append(f"<gml:interior>{_anel(anel, lat_lon)}</gml:interior>")
     return f'<gml:Polygon gml:id="{gid}" srsName="{{srs}}">' + "".join(partes) + "</gml:Polygon>"
 
 
