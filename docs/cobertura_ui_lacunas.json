@@ -3,13 +3,11 @@
  "lacunas": [
   "DELETE /api/anotacoes/{id}",
   "DELETE /api/arquivos/{sha256}",
-  "DELETE /api/importacoes/{id}",
   "DELETE /api/multiescala/conjuntos/{id}",
   "DELETE /api/multiescala/fatores/{id}",
   "DELETE /api/plataforma/inquilinos/{id}",
   "PATCH /api/anotacoes/{id}",
   "POST /api/arquivos",
-  "POST /api/importacoes",
   "POST /api/isocrona",
   "POST /api/login/ldap",
   "POST /api/mapa/camadas/{id}/filtrar",
@@ -27,7 +25,6 @@
   "POST /api/plataforma/inquilinos/{id}/reativar",
   "POST /api/plataforma/inquilinos/{id}/suspender",
   "POST /api/rota",
-  "PUT /api/importacoes/{id}/confirmar",
   "PUT /api/org/ldap",
   "PUT /api/papeis/{id}"
  ]
