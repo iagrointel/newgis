@@ -3,6 +3,24 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item UX-04-tela-mapa-polimento: chrome único do visualizador; ramos de painel juntados)
+
+Trilha de interface. Juntados no mesmo tronco os ramos de painel do mapa (`wt/l201mapa`, `wt/il201gtabel`,
+`wt/desenho`, `wt/il201dpopup`, `wt/il201lexpor`); os arquivos que todos tocavam foram refeitos por junção de três
+vias sobre a base `wt/l201mapa` (não por união de texto). O visualizador ganhou UM chrome: barra no topo, trilho à
+esquerda com um botão por painel, gaveta com um `<plat-painel>` por função (pesquisar, camadas, legenda, medição,
+desenho, anotações, impressão, exportar) e a tabela de atributos ancorada ao rodapé do mapa; atalhos de teclado
+(b c l m d a i e t, f tela cheia, Esc, ?), tela cheia, impressão pelo navegador (@media print só o mapa), painel
+inferior de 390 px em celular, navegação do produto como gaveta sobre o mapa, mapa-base escuro. `web/mapa.css` só
+com tokens. e2e `tests/e2e/test_mapa_chrome.py` (cada painel em 1280 e 390, axe, i18n, atalhos, impressão, base);
+os e2e dos painéis passam a abrir o painel que usam (`window.plat.mapa.abrirPainel`). Consertos achados ao juntar:
+`<select>` de camada da tabela de atributos vazio (`append(nó, array)` em `tabela.js`), fuga da variável `simbologia`
+duplicada em `app/mapa/rotas.py`, `return` morto em `simbologia.py`, `servir_local.py` e `main.py` duplicados pela
+união; aviso da barra passa a flutuar sobre o mapa (um aviso mudava a altura do canvas e a composição do PNG). Chaves
+de i18n dos painéis traduzidas para en e es (paridade mantida). Fora do escopo e registrado no handoff: o teste
+`test_ordem_opacidade_e_enquadrar` depende da ordem da bancada (a camada inativa entre as duas ativas); o Martin de
+produção não enxerga funções novas sem reinício, por isso o e2e da trilha sobe um Martin próprio.
+
 ## turno 8, setembro de 2026 (item UX-03-tela-conteudo-item-lixeira: estados explícitos, arrastar e soltar, seleção que sobrevive, 1.000 itens medidos)
 
 Trilha de interface. A lista do catálogo passa a mostrar `<plat-estado>` em vez de ficar em branco: vazio (com "Novo
