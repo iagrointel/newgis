@@ -11266,6 +11266,227 @@
     "x-privilegio": "rede.editar"
    }
   },
+  "/api/rede/{rede_id}/tracar/exportar": {
+   "post": {
+    "tags": [
+     "rede de utilidades — resultado de traçado"
+    ],
+    "summary": "Exportar Tracado",
+    "description": "O mesmo pedido de `POST .../tracar`, devolvido como arquivo. `formato=csv` (padrão), `geojson` ou\n`gpkg`. Nenhum elemento se perde entre os três: os três saem da MESMA lista de linhas.",
+    "operationId": "exportar_tracado_api_rede__rede_id__tracar_exportar_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "csv",
+       "title": "Formato"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TracadoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/tracar/camada": {
+   "post": {
+    "tags": [
+     "rede de utilidades — resultado de traçado"
+    ],
+    "summary": "Salvar Tracado Como Camada",
+    "description": "Traça e guarda o resultado como item de catálogo do tipo `camada_tracado`, com procedência.",
+    "operationId": "salvar_tracado_como_camada_api_rede__rede_id__tracar_camada_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CamadaDoTracadoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar"
+   }
+  },
+  "/api/rede/{rede_id}/tracados": {
+   "get": {
+    "tags": [
+     "rede de utilidades — resultado de traçado"
+    ],
+    "summary": "Listar Tracados",
+    "description": "Os últimos traçados de QUEM PEDE nesta rede (padrão e teto: 20), do mais novo ao mais velho, com o\npedido inteiro para repetir.",
+    "operationId": "listar_tracados_api_rede__rede_id__tracados_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 20,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/tracados/{execucao_id}/repetir": {
+   "post": {
+    "tags": [
+     "rede de utilidades — resultado de traçado"
+    ],
+    "summary": "Repetir Tracado",
+    "description": "Roda de novo o pedido guardado, sobre a rede de HOJE. A resposta traz `contagem_anterior` ao lado da\ncontagem nova: se a rede mudou desde então, os dois números divergem, e é isso que se quer ver.",
+    "operationId": "repetir_tracado_api_rede__rede_id__tracados__execucao_id__repetir_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "execucao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Execucao Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/rede/simples": {
    "post": {
     "tags": [
@@ -14006,6 +14227,105 @@
     ],
     "title": "AtributoRede",
     "description": "Atributo DE REDE: um campo da camada de origem que o inquilino declara como parte do modelo de rede\n(é o que o traçado pode usar como custo em `caminho_curto`). Declarar é o que separa um campo qualquer\nda camada de um atributo de rede."
+   },
+   "CamadaDoTracadoEntrada": {
+    "properties": {
+     "tipo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo"
+     },
+     "config_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 36,
+        "minLength": 36
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Config Id"
+     },
+     "pontos_partida": {
+      "items": {
+       "$ref": "#/components/schemas/PontoTracado"
+      },
+      "type": "array",
+      "maxItems": 50,
+      "title": "Pontos Partida"
+     },
+     "destino": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PontoTracado"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "barreiras": {
+      "items": {
+       "$ref": "#/components/schemas/PontoTracado"
+      },
+      "type": "array",
+      "maxItems": 200,
+      "title": "Barreiras"
+     },
+     "atributo_custo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 63
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atributo Custo"
+     },
+     "k": {
+      "type": "integer",
+      "maximum": 10.0,
+      "minimum": 1.0,
+      "title": "K",
+      "default": 1
+     },
+     "categoria_controlador": {
+      "type": "string",
+      "maxLength": 63,
+      "minLength": 1,
+      "title": "Categoria Controlador",
+      "default": "fonte"
+     },
+     "origem_direcao": {
+      "type": "string",
+      "pattern": "^(auto|controlador|atributo)$",
+      "title": "Origem Direcao",
+      "default": "auto"
+     },
+     "titulo": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 1,
+      "title": "Titulo"
+     }
+    },
+    "type": "object",
+    "required": [
+     "titulo"
+    ],
+    "title": "CamadaDoTracadoEntrada",
+    "description": "O mesmo pedido de traçado mais o TÍTULO da camada que vai guardar o resultado. Herda de\n`TracadoEntrada` de propósito: salvar como camada é traçar e guardar, nunca um pedido diferente."
    },
    "CategoriaNo": {
     "properties": {

@@ -3,6 +3,28 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 7, setembro de 2026 (item L4-02-f-resultados-e-exportacao: o resultado vira seleção, camada e arquivo)
+
+O resultado de um traçado deixa de morrer na resposta da chamada. A resposta ganha `agregacoes` — contagem e
+comprimento por tipo de ativo e por nível de tensão, sendo o nível o tier declarado no pacote de ativos, com
+a linha própria de "sem nível declarado" para o que não tem. Três portas novas, todas sobre o mesmo motor de
+traçado, que saiu da rota para `app/rede_utilidades/despacho.py`:
+
+- `POST /api/rede/{id}/tracar/exportar?formato=csv|geojson|gpkg` devolve o arquivo. O CSV abre com as
+  colunas id, tipo, grupo, terminal, comprimento_m e nivel; o GeoJSON traz a geometria de cada elemento e a
+  procedência; o GeoPackage é escrito com o `sqlite3` da biblioteca padrão (ADR 20260908T0607) e lido de
+  volta pelo `ogrinfo` no teste.
+- `POST /api/rede/{id}/tracar/camada` guarda o resultado como item de catálogo do tipo novo
+  `camada_tracado`, com procedência: rede, configuração, pontos de partida, versão da topologia e data.
+- `GET /api/rede/{id}/tracados` e `POST .../tracados/{id}/repetir`: o histórico dos 20 últimos traçados da
+  pessoa, guardando o PEDIDO e não o resultado — repetir roda sobre a rede de hoje e a resposta traz
+  `contagem_anterior` ao lado da contagem nova.
+
+Tela `/redes/tracado` com os botões selecionar, salvar como camada e exportar, o painel lateral das duas
+agregações e o histórico com repetir. Provas: `tests/api/test_rede_tracado_resultado.py` (7 casos) e
+`tests/e2e/test_rede_tracado_resultado.py` (caminho inteiro pela tela). Fora do escopo deste turno, e
+declarado: a medida de tempo sob carga e a exportação de 20 mil elementos da refutação do item.
+
 ## turno 7, setembro de 2026 (item L4-02-e-configuracoes-de-tracado: o pedido de traçado vira documento salvo)
 
 Configuração de traçado nomeada e compartilhável, o que a rede de utilidades da Esri chama *trace
