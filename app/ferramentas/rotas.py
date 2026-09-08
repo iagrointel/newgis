@@ -16,6 +16,7 @@ from app.auth.sessao import Auth, autenticado
 from app.erros import ErroAPI
 from app.ferramentas import buffer as _buffer  # noqa: F401 — a importação registra a ferramenta de exemplo
 from app.ferramentas import executor, registro
+from app.ferramentas import raster as _raster  # noqa: F401 — registra as 13 ferramentas raster (L2-05-e)
 from app.jobs import servico
 from app.jobs.contexto import ErroServico, sessao_de
 
@@ -68,7 +69,7 @@ def preparar(auth: Auth, f: registro.Ferramenta, parametros: dict) -> tuple[dict
     try:
         normalizados = registro.validar_parametros(f, parametros or {})
         with db.db(auth.contexto()) as cur:
-            entradas = executor.resolver_entradas(cur, f, normalizados)
+            entradas = executor.resolver_entradas(cur, f, normalizados, auth.tenant_id)
         return normalizados, entradas, executor.custo_estimado(f, entradas, normalizados)
     except (registro.ErroParametro, executor.ErroExecucao) as e:
         raise erro_api(e) from e
@@ -81,6 +82,8 @@ def executar_sincrono(request: Request, auth: Auth, f: registro.Ferramenta, norm
         return executor.executar(ctx, f, normalizados, titulo, request=request)
     except (registro.ErroParametro, executor.ErroExecucao) as e:
         raise erro_api(e) from e
+    finally:
+        ctx.fechar()
 
 
 def enfileirar(request: Request, auth: Auth, f: registro.Ferramenta, normalizados: dict, titulo: str | None) -> dict:
