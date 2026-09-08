@@ -11,7 +11,7 @@ regra "só as próprias" (a seleção é restringida às feições do ator quand
 não tem `feicoes.editar_total`), mesmos gatilhos da tabela (`tg_versao`, `tg_historico` → uma linha de
 `plat.feicao_historico` por feição tocada, também no job), mesmo bump de `tiles_versao` e um evento por lote.
 
-Transação: TODO o lote (síncrono ou job) roda numa transação só, em sub-lotes de LOTE_TRANSACAO feições com
+Transação: o lote inteiro (síncrono ou job) roda numa transação só, em sub-lotes de LOTE_TRANSACAO feições com
 progresso entre eles; erro no modo `transacao` ou cancelamento do job desfaz tudo — a camada volta ao estado
 anterior (portão do item). O modo `parcial` (só calcular/atribuir) grava as linhas válidas e devolve as falhas
 nomeadas por feição; ele sempre avalia linha a linha (uma linha errada não pode derrubar o UPDATE do sub-lote).
