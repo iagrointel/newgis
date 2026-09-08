@@ -715,8 +715,10 @@ def test_ataque_6_o_mesmo_nome_do_arcade_nao_carrega_estados_contraditorios():
 
 
 def test_ataque_7_contagem_independente_de_funcoes_e_vetores():
-    """Contado dos arquivos, não do handoff: 43 funções na tabela do Python, as MESMAS 43 no
-    JavaScript (lidas pelo `--nomes-funcoes` do executor) e 309 vetores."""
+    """Contado dos arquivos, não do handoff: a tabela do Python e a do JavaScript têm de ter
+    exatamente o mesmo vocabulário, e nem função nem vetor pode ENCOLHER. Os pisos são os números
+    fechados no L2-10-c (43 funções, 309 vetores); o L5-11 subiu os dois ao acrescentar feição e
+    geometria, e o piso continua valendo como defesa contra remoção silenciosa."""
     from app.expressao.avaliador_py import TABELA_FUNCOES
 
     vetores = json.loads((RAIZ / "tests" / "expressoes" / "vetores.json").read_text(encoding="utf-8"))
@@ -729,9 +731,9 @@ def test_ataque_7_contagem_independente_de_funcoes_e_vetores():
         check=True,
     )
     nomes_js = set(json.loads(r.stdout))
-    assert len(TABELA_FUNCOES) == 43
+    assert len(TABELA_FUNCOES) >= 43
     assert nomes_js == set(TABELA_FUNCOES)
-    assert len(vetores) == 309
+    assert len(vetores) >= 309
     assert MAX_PASSOS_PADRAO == 100_000
 
 

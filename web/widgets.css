@@ -1,0 +1,55 @@
+.plat-widgets { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--espaco-4, 1rem); }
+.plat-widgets > * { min-width: 0; }
+.plat-widget-erro { border: 1px solid var(--cor-erro, #b42318); padding: 1rem; color: var(--cor-erro, #b42318); }
+plat-mapa { display: block; min-height: 18rem; }
+plat-legenda ul { list-style: none; padding: 0; }
+plat-legenda button::before { content: ''; display: inline-block; width: .8rem; height: .8rem; margin-right: .4rem; background: var(--cor); }
+plat-tabela { display: block; overflow: auto; }
+plat-tabela table { width: 100%; border-collapse: collapse; }
+plat-tabela th, plat-tabela td { padding: .45rem; text-align: left; border-bottom: 1px solid var(--cor-borda, #ccd3d4); }
+plat-filtro label { display: grid; gap: .35rem; }
+/* chrome de edição (construtor): só CSS sobre o atributo que motor.js alterna; o widget não muda */
+.plat-widgets[data-edicao] > [data-no-id] { position: relative; outline: 1px dashed var(--cor-acento, #1f6f8b); outline-offset: 2px; }
+.plat-widgets[data-edicao] > [data-no-id]::before {
+  content: attr(data-tipo); position: absolute; top: -1.1rem; left: 0; font-size: .7rem; line-height: 1;
+  padding: .15rem .35rem; background: var(--cor-acento, #1f6f8b); color: var(--cor-fundo, #fff);
+}
+.plat-widgets[data-edicao] > [data-no-id]:focus { outline-style: solid; }
+/* item L5-07: dado nos widgets (vista) */
+plat-mapa svg { display: block; width: 100%; background: var(--cor-fundo-secundario, #f3f5f6); border: 1px solid var(--cor-borda, #ccd3d4); }
+plat-mapa .feicao { fill: var(--cor-acento, #1f6f8b); fill-opacity: .55; stroke: var(--cor-acento, #1f6f8b); stroke-width: 1.5; cursor: pointer; }
+plat-mapa polyline.feicao { fill: none; stroke-width: 2.5; }
+plat-mapa .feicao.selecionada { fill: var(--cor-atencao, #d98a2b); stroke: var(--cor-atencao, #d98a2b); fill-opacity: .85; }
+plat-mapa .feicao.destaque { stroke: var(--cor-erro, #b42318); stroke-width: 4; }
+plat-mapa .feicao:focus { outline: none; stroke-width: 4; }
+plat-mapa .mapa-barra { font-size: .8rem; color: var(--cor-texto-fraco, #666); padding: .25rem 0; }
+plat-mapa dialog.mapa-popup { position: relative; margin: .25rem 0; border: 1px solid var(--cor-borda, #ccd3d4); }
+plat-mapa dialog.mapa-popup dl { display: grid; grid-template-columns: max-content 1fr; gap: .2rem .6rem; margin: 0 0 .5rem; }
+plat-tabela tr[aria-selected="true"] td { background: var(--cor-atencao-fundo, #fff3e0); font-weight: 600; }
+plat-tabela caption { text-align: left; font-size: .8rem; color: var(--cor-texto-fraco, #666); padding: .25rem 0; }
+plat-grafico { display: block; }
+plat-grafico .grafico-titulo { margin: 0 0 .25rem; font-weight: 600; }
+plat-grafico .barra rect { fill: var(--cor-acento, #1f6f8b); cursor: pointer; }
+plat-grafico .barra.selecionada rect { fill: var(--cor-atencao, #d98a2b); }
+plat-grafico .barra text { font-size: 10px; fill: var(--cor-texto, #222); }
+[data-piscando] { outline: 3px solid var(--cor-erro, #b42318); outline-offset: 2px; }
+.plat-avisos p { color: var(--cor-atencao, #d98a2b); font-size: .85rem; margin: .25rem 0; }
+.plat-avisos p[data-tipo="ciclo_cortado"]::before { content: 'ciclo cortado: '; font-weight: 600; }
+/* item L5-01-c: widgets de dado */
+plat-tabela .tabela-barra, plat-lista .lista-barra { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; font-size: .8rem; color: var(--cor-texto-fraco, #666); padding: .25rem 0; }
+plat-tabela th[aria-sort] { cursor: pointer; user-select: none; }
+plat-tabela th[aria-sort="ascending"]::after { content: ' ▲'; font-size: .7em; }
+plat-tabela th[aria-sort="descending"]::after { content: ' ▼'; font-size: .7em; }
+plat-tabela tbody tr { cursor: pointer; }
+plat-tabela[data-carregando] table { opacity: .6; }
+plat-tabela .tabela-erro, plat-lista .lista-erro, plat-grafico .grafico-erro { color: var(--cor-erro, #b42318); font-size: .85rem; }
+plat-grafico .grafico-caixa { position: relative; width: 100%; }
+plat-lista .lista-cartoes { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+plat-lista .lista-cartoes li { padding: .5rem .6rem; border: 1px solid var(--cor-borda, #ccd3d4); border-radius: 4px; cursor: pointer; background: var(--cor-fundo, #fff); }
+plat-lista .lista-cartoes li[aria-selected="true"] { border-color: var(--cor-atencao, #d98a2b); background: var(--cor-atencao-fundo, #fff3e0); }
+plat-filtro label { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+plat-consulta .consulta-form, plat-selecao .selecao-form, plat-adicionar-dado .adicionar-form { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+plat-consulta output, plat-selecao output, plat-adicionar-dado output { font-size: .85rem; color: var(--cor-texto-fraco, #666); }
+plat-info-feicao dl { display: grid; grid-template-columns: max-content 1fr; gap: .2rem .6rem; margin: 0; }
+plat-info-feicao .info-nav { display: flex; gap: .4rem; align-items: center; font-size: .85rem; margin-bottom: .3rem; }
+plat-info-feicao .info-vazia { color: var(--cor-texto-fraco, #666); font-size: .85rem; margin: 0; }

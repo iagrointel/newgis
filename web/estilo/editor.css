@@ -40,3 +40,17 @@
   .editor { grid-template-columns: minmax(0, 1fr); }
   .editor-tela { grid-template-columns: repeat(12, minmax(0, 1fr)); }
 }
+/* item L5-07: painel de dados e mensagens do construtor */
+.painel-dados { margin-top: 1rem; }
+.painel-dados .lista-dados { list-style: none; padding: 0; margin: 0 0 .5rem; }
+.painel-dados .lista-dados li { padding: .25rem 0; border-bottom: 1px solid var(--cor-borda, #ccd3d4); }
+.painel-dados .form.linha { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-end; }
+.painel-dados .form.linha .campo { display: grid; gap: .2rem; font-size: .85rem; }
+.painel-dados .dados-erros { list-style: none; padding: 0; margin: 0 0 .5rem; }
+.painel-dados .dados-erros li.erro { color: var(--cor-erro, #b42318); }
+.painel-dados .dados-erros li.aviso { color: var(--cor-atencao, #d98a2b); }
+.painel-dados .erro-form { color: var(--cor-erro, #b42318); margin: .25rem 0 0; flex-basis: 100%; }
+.painel-dados > summary { cursor: pointer; font-weight: 600; font-size: 1.05rem; margin: .5rem 0; }
+/* item L5-01-c: a paleta cresceu (widgets de dado); fica presa ao topo e rola por dentro para a altura da página
+   não depender do número de itens (o arrasto da paleta é medido por coordenadas de tela) */
+.editor-paleta { position: sticky; top: 0; max-height: calc(100vh - 1rem); overflow: auto; }

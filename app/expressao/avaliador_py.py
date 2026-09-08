@@ -739,6 +739,13 @@ _EXT_FUNCOES: dict[str, tuple[int, int | None, str, str]] = {
         "data UTC em pt-BR: 'data' (padrão), 'data_hora', 'data_hora_segundos', 'extenso'",
         "TextoData(0) → '01/01/1970'",
     ),
+    # feição e geometria (item L5-11): a feição é o dicionário {"atributos": {...}, "geometria": {...}}
+    "Atributo": (2, 3, "atributo da feição por nome; ausente devolve o padrão (ou nulo)", "Atributo($feicao, 'uso')"),
+    "Geometria": (1, 1, "geometria da feição (nulo se a feição não tiver)", "Geometria($feicao)"),
+    "Area": (1, 1, "área do polígono em metros quadrados", "Area($area) → 12363718145.180046"),
+    "Comprimento": (1, 1, "comprimento da linha em metros", "Comprimento($linha) → 111195.080234"),
+    "Distancia": (2, 2, "distância entre dois pontos em metros", "Distancia($a, $b) → 111195.080234"),
+    "Dentro": (2, 2, "verdadeiro se o ponto está dentro do polígono", "Dentro($p, $area) → verdadeiro"),
 }
 _EXT_ARIDADES = {nome: (minimo, maximo) for nome, (minimo, maximo, _d, _e) in _EXT_FUNCOES.items()}
 TABELA_FUNCOES.update(_EXT_FUNCOES)
@@ -851,6 +858,130 @@ def _indice(a):
     return int(a)
 
 
+# --- feição e geometria (item L5-11) --------------------------------------------------------------
+# Geometria é GeoJSON (RFC 7946) com as chaves do próprio padrão — {"type": "Point"|"LineString"|
+# "Polygon", "coordinates": ...} —, grau decimal em WGS-84 e longitude ANTES da latitude. O modelo da
+# Terra é a ESFERA de raio autálico 6.371.008,8 m (IUGG): sem elipsoide, sem projeção, sem PostGIS, e
+# a mesma fórmula fechada nos dois avaliadores, porque o portão exige o MESMO número no servidor e no
+# navegador. `sin`/`cos`/`asin` do Python (biblioteca matemática do sistema) e do JavaScript (fdlibm do
+# V8) podem divergir no último bit, então todo resultado métrico é arredondado a CASAS_GEO casas
+# (1 micrômetro quando a unidade é metro) — muitas ordens de grandeza acima da divergência de último
+# bit e muitas abaixo do erro do próprio modelo esférico (até 0,5 %, seção 5 de EXPRESSAO.md).
+RAIO_TERRA_M = 6371008.8
+CASAS_GEO = 6
+_GRAU = math.pi / 180.0
+_TIPOS_GEOMETRIA = ("Point", "LineString", "Polygon")
+
+
+def _coordenada(p):
+    if type(p) is not list or len(p) < 2:
+        _falha("geometria_invalida")
+    lon, lat = p[0], p[1]
+    if not _eh_numero(lon) or not _eh_numero(lat):
+        _falha("geometria_invalida")
+    if not (-180.0 <= lon <= 180.0) or not (-90.0 <= lat <= 90.0):
+        _falha("geometria_invalida")
+    return (float(lon), float(lat))
+
+
+def _coordenadas_de(g, tipo):
+    if type(g) is not dict or g.get("type") != tipo:
+        _falha("geometria_invalida")
+    return g.get("coordinates")
+
+
+def _linha_de(coords, contador):
+    if type(coords) is not list or len(coords) < 2:
+        _falha("geometria_invalida")
+    pontos = []
+    for p in coords:
+        contador.passo()
+        pontos.append(_coordenada(p))
+    return pontos
+
+
+def _anel_de(coords, contador):
+    pontos = _linha_de(coords, contador)
+    if len(pontos) < 4 or pontos[0] != pontos[-1]:
+        _falha("geometria_invalida")  # anel de polígono tem de fechar (RFC 7946, seção 3.1.6)
+    return pontos
+
+
+def _aneis_de(coords, contador):
+    if type(coords) is not list or not coords:
+        _falha("geometria_invalida")
+    return [_anel_de(c, contador) for c in coords]
+
+
+def _area_do_anel(pontos):
+    """Chamberlain & Duquette: A = R²/2 · Σ (λ₂−λ₁)(sin φ₁ + sin φ₂). O sinal dá a orientação."""
+    total = 0.0
+    for i in range(len(pontos) - 1):
+        lon1, lat1 = pontos[i]
+        lon2, lat2 = pontos[i + 1]
+        total += (lon2 - lon1) * _GRAU * (math.sin(lat1 * _GRAU) + math.sin(lat2 * _GRAU))
+    return total * RAIO_TERRA_M * RAIO_TERRA_M / 2.0
+
+
+def _haversine(a, b):
+    lon1, lat1 = a
+    lon2, lat2 = b
+    sdlat = math.sin((lat2 - lat1) * _GRAU / 2.0)
+    sdlon = math.sin((lon2 - lon1) * _GRAU / 2.0)
+    h = sdlat * sdlat + math.cos(lat1 * _GRAU) * math.cos(lat2 * _GRAU) * sdlon * sdlon
+    return 2.0 * RAIO_TERRA_M * math.asin(math.sqrt(h) if h < 1.0 else 1.0)
+
+
+def _no_segmento(x, y, x1, y1, x2, y2):
+    if (x - x1) * (y2 - y1) - (y - y1) * (x2 - x1) != 0.0:
+        return False
+    return min(x1, x2) <= x <= max(x1, x2) and min(y1, y2) <= y <= max(y1, y2)
+
+
+def _ponto_no_anel(ponto, anel, contador):
+    """Cruzamento de raio (par-ímpar) no plano de graus. Ponto sobre a borda conta como DENTRO."""
+    lon, lat = ponto
+    dentro = False
+    for i in range(len(anel) - 1):
+        contador.passo()
+        x1, y1 = anel[i]
+        x2, y2 = anel[i + 1]
+        if _no_segmento(lon, lat, x1, y1, x2, y2):
+            return True
+        if (y1 > lat) != (y2 > lat):
+            if lon < (x2 - x1) * (lat - y1) / (y2 - y1) + x1:
+                dentro = not dentro
+    return dentro
+
+
+def _geo_funcao(nome, a, contador):
+    if nome == "Area":
+        aneis = _aneis_de(_coordenadas_de(a[0], "Polygon"), contador)
+        area = abs(_area_do_anel(aneis[0]))
+        for buraco in aneis[1:]:
+            area -= abs(_area_do_anel(buraco))
+        return _arredondar(area if area > 0.0 else 0.0, CASAS_GEO)
+    if nome == "Comprimento":
+        pontos = _linha_de(_coordenadas_de(a[0], "LineString"), contador)
+        total = 0.0
+        for i in range(len(pontos) - 1):
+            contador.passo()
+            total += _haversine(pontos[i], pontos[i + 1])
+        return _arredondar(total, CASAS_GEO)
+    if nome == "Distancia":
+        p1 = _coordenada(_coordenadas_de(a[0], "Point"))
+        p2 = _coordenada(_coordenadas_de(a[1], "Point"))
+        return _arredondar(_haversine(p1, p2), CASAS_GEO)
+    ponto = _coordenada(_coordenadas_de(a[0], "Point"))
+    aneis = _aneis_de(_coordenadas_de(a[1], "Polygon"), contador)
+    if not _ponto_no_anel(ponto, aneis[0], contador):
+        return False
+    for buraco in aneis[1:]:
+        if _ponto_no_anel(ponto, buraco, contador):
+            return False  # borda de buraco conta como FORA (assimetria documentada em EXPRESSAO.md)
+    return True
+
+
 def _ext_funcao(nome, a, contador):
     minimo, maximo = _EXT_ARIDADES[nome]
     if len(a) < minimo or (maximo is not None and len(a) > maximo):
@@ -870,6 +1001,21 @@ def _ext_funcao(nome, a, contador):
         if k in _PROIBIDOS:
             _falha("campo_nao_permitido")
         return c.get(k, default)
+    if nome == "Atributo":
+        feicao, chave = a[0], a[1]
+        default = a[2] if len(a) == 3 else None
+        if feicao is None:
+            return default
+        if type(feicao) is not dict or type(chave) is not str:
+            _falha()
+        if chave in _PROIBIDOS:
+            _falha("campo_nao_permitido")
+        atributos = feicao.get("atributos")
+        if atributos is None:
+            return default
+        if type(atributos) is not dict:
+            _falha()
+        return atributos.get(chave, default)
     if nome == "Contem":
         if a[0] is None:
             return None
@@ -878,6 +1024,12 @@ def _ext_funcao(nome, a, contador):
         return any(_igual_json(x, a[1], contador) for x in a[0])
     if any(x is None for x in a):
         return None
+    if nome == "Geometria":
+        if type(a[0]) is not dict:
+            _falha()
+        return a[0].get("geometria")
+    if nome in ("Area", "Comprimento", "Distancia", "Dentro"):
+        return _geo_funcao(nome, a, contador)
     if nome in ("Trim", "Left", "Right", "Mid", "Find", "Split", "Replace"):
         if type(a[0]) is not str:
             _falha()

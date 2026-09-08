@@ -36,6 +36,25 @@ próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo:
 segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+## turno 3, setembro de 2026 (item L5-11-expressoes-no-navegador: perfis de uso, feição e geometria)
+
+- A linguagem de expressão ganhou os sete PERFIS de uso (`app/expressao/perfis.py`,
+  `web/js/expressao/perfis.js`): popup, rótulo, cálculo de formulário, visibilidade, restrição,
+  indicador de painel e título dinâmico. Cada perfil declara os tipos de retorno que aceita e o
+  orçamento de tempo (50 ms no navegador, 500 ms no servidor); o contexto é montado só da feição
+  recebida (`$feicao`, `$geometria` e um `$campo` por atributo com nome de identificador).
+- Seis funções novas nos dois avaliadores (43 → 49): `Atributo`, `Geometria`, `Area`,
+  `Comprimento`, `Distancia` e `Dentro`. Geometria é GeoJSON, o modelo é a esfera de raio autálico
+  6.371.008,8 m e o resultado métrico é arredondado a 6 casas para servidor e navegador devolverem
+  o mesmo número — erro de modelo de até 0,5 %, sem valor de medição legal de área.
+- Vetores compartilhados: 309 → 339 em `tests/expressoes/vetores.json`, mais 11 vetores de erro de
+  geometria em `tests/expressoes/vetores_geometria_erros.json` e 57 vetores de perfil em
+  `tests/expressoes/vetores_perfis.json`, todos rodados em Python e em Node.
+- `MANUAL.md` seção 25, gerada de `TABELA_FUNCOES`/`PERFIS` por `docs/gerar_manual_expressao.py`,
+  com uma linha e um exemplo por função. `docs/EXPRESSAO.md` ganhou a subseção de feição/geometria
+  e a seção 12 (perfis). ADR `docs/adr/20260908T1331-expressoes-no-navegador.md`.
+- Nenhuma tela chama os perfis ainda: o que entrou é a biblioteca, provada nos dois runtimes.
+
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
 Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,
@@ -129,6 +148,105 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 4, setembro de 2026 (item L5-06-motor-widgets: motor de widgets sem framework)
+
+- **Motor de widgets** (`web/js/widgets/`): registro com 6 manifestos validados (mapa, legenda, tabela, texto,
+  botão, filtro), `import()` só dos módulos citados no documento, barramento com corte de recursão, ligações
+  evento → ação por id de nó, caixa de erro nomeada para tipo desconhecido, configuração fora do esquema e
+  módulo que não carrega; alternador de chrome de edição no mesmo módulo; página `/aplicativo`; `<plat-mapa>`
+  embrulha o visualizador. Medido em `tests/medidas/L5-06-motor-widgets.json` (3 módulos = 1,32 kB por widget,
+  primeira pintura 48 ms, carga 5,1). ADR `docs/adr/20260907T1930-motor-de-widgets.md`.
+
+## turno 4, setembro de 2026 (item L2-01-mapa-web: visualizador de mapa próprio, do Martin à impressão)
+
+Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava chegar a `master`.
+
+- **Servidor de tiles**: Martin 1.15.0 (musl, sha256 do pacote fixado em `deploy/martin_instalar.sh`) como
+  unidade `plat-martin` em `127.0.0.1:8151`, publicando SÓ funções (`auto_publish.tables: false`) — a
+  tabela crua da camada nunca é exposta. Papel de leitura `plat_leitor` (LOGIN, sem BYPASSRLS, sem ser
+  dono), `plat.contexto_por_token` e a função de tile por camada com RLS vieram do trabalho dos itens
+  L2-01-b/L2-04-a, que nunca tinha sido juntado.
+- **API do mapa** (`app/mapa/`): `GET /api/mapa/camadas` com estilo MapLibre e legenda geradas da
+  simbologia; `GET /api/mapa/camadas/{id}/tilejson` cunhando token de 12 h com escopo de UMA camada;
+  repasse `GET /tiles/{esquema}/{funcao}/{z}/{x}/{y}` com a mesma autorização do `auth_request` do nginx
+  (uma implementação, duas portas); `plat.camada_extensao` para o "enquadrar".
+- **Tela `/mapa`**: lista de camadas com ordem (arrastar e por botão), opacidade, ligar/desligar e
+  enquadrar; legenda; janela de atributos (campo nulo aparece marcado, multi-geometria não se repete);
+  medição geodésica de distância e área; pesquisa de endereço (CNEFE) e de coordenada em decimal e em
+  grau-minuto-segundo; escala, coordenadas e escala numérica 1:N; troca de mapa-base; impressão em PNG e
+  em PDF com escala, barra de escala e seta de norte.
+- **`GET /api/geocodificar`**: geocodificar é leitura e agora tem o verbo certo (o POST continua).
+- Medido com 1.000.000 de feições: 2,4 s do clique ao primeiro desenho, 1,5 s de zoom até `idle`, 61 MB
+  de heap; 10 camadas ao mesmo tempo em 4,3 s, pan em 302 ms, 24,8 MB. Tile z8 pelo repasse: 406 ms
+  frio, 21 ms quente. Detalhe em `tests/medidas/L2-01-mapa-web.json`.
+- Dois defeitos reais achados pelos testes e corrigidos: `attribution: undefined` fazia o MapLibre
+  recusar a fonte inteira em silêncio; repassar `Content-Encoding: gzip` com corpo já descompactado
+  entregava tile ilegível ao navegador. Registrados no ADR 20260907T0400.
+## turno 4, setembro de 2026 (item L2-04-servicos-esri-ogc: diretório do FeatureServer, OGC API Features e WFS 2.0)
+
+Construído em volta da operação `query` do FeatureServer (item L2-04-c, `wt/fsquery`, ADR 0018) sem reescrevê-la:
+`app/consulta/rotas_servico.py` (descritor de serviço `.../FeatureServer?f=json` e de camada `.../FeatureServer/0
+?f=json` — `fields`, `geometryType`, `objectIdField`, `fullExtent`), `app/consulta/rotas_ogc_features.py` (OGC API
+Features Part 1: landing, conformance, collections, items com bbox/limit/offset, item único, GeoJSON puro) e
+`app/consulta/rotas_wfs.py` (WFS 2.0 KVP: GetCapabilities validado pelo cliente real `owslib.wfs.WebFeatureService`,
+DescribeFeatureType mínimo, GetFeature em GeoJSON e GML 3.2 simples). `applyEdits`/anexos/`queryRelatedRecords`/
+`relationships` ficam de fora — dependem de L2-03-edicao e L2-10-b, nenhum construído (ADR 0019).
+
+Bateria de 13 ataques (item_id com aspas/comentário SQL/`;`, bbox com sub-select/`pg_sleep()`/função não prevista,
+BBOX do WFS com injeção, `REQUEST` desconhecida, `feature_id` não inteiro, unicode no item_id, cross-tenant nas 3
+raízes): **13/13 recusados com 400/404, nenhum 500**. Dois achados corrigidos no mesmo turno: (1) `item_id::uuid`
+sem validar antes deixava o Postgres levantar exceção sem handler → 500 real, inclusive na `/query` original do
+L2-04-c — corrigido com validação de UUID compartilhada; (2) landing/conformance do OGC API Features respondiam 200
+para item de outro inquilino (sem vazar dado, mas sem checar posse) — corrigido tocando `plat.item` sob RLS antes de
+responder. `docs/PARIDADE.md` e `tests/medidas/L2-04-servicos-esri-ogc.json` têm a tabela cláusula a cláusula.
+
+Fora do turno: QGIS/ArcGIS Pro/AGOL reais carregando o serviço (sem ambiente gráfico nesta máquina, mesma limitação
+já registrada para L2-04-c e para Chrome headless); OGC API Features Part 3 (CQL2), WFS-T; GML validado contra o
+XSD de referência do OGC.
+## turno 3, setembro de 2026 (item L2-03-a-api-edicao-transacional: edição transacional de feições — única porta de escrita)
+
+`POST /api/camadas/{id}/edicoes` (`app/edicao/`): equivalente do `applyEdits` da Esri e, a partir
+daqui, a única porta de escrita de feição para navegador, PWA, FeatureServer (L2-04-d) e OGC
+(L2-04-g). Corpo com `adicionar`/`atualizar`/`apagar` numa transação — tudo-ou-nada por padrão
+(`modo=transacao`), ou `modo=parcial` com `SAVEPOINT` por feição, devolvendo resultado feição a
+feição (como o `applyEdits` com `rollbackOnFailure=false`). Roda direto contra a tabela de camada
+`d_<slug>.c_<uuid16>` que `plat.camada_preparar` (029_ingestao_vetor.sql) já cria — nenhuma tabela
+nova (migração 20260906T1859, bump do esquema `camada_vetorial` v2→v3, só propriedades opcionais).
+
+Validação sempre no servidor: tipo de geometria e SRID da coluna (com a mesma promoção
+Point/LineString/Polygon → Multi* que `app/ingestao/carregar.py` usa na carga); `ST_IsValid`, com
+`ST_MakeValid` só quando `corrigir_geometria=true` (sem isso, polígono inválido é 422); domínio de
+atributo por `dados.regras_campo` (obrigatório, somente-leitura, lista de valores ou
+mínimo/máximo — mecanismo próprio deste item; quando o L2-10-a-dominios-subtipos, entregue noutra
+trilha, for integrado, ganha uma segunda fonte compartilhada entre camadas, não substitui esta);
+tamanho de texto (64 KiB); concorrência otimista pela coluna `versao` já existente na tabela de
+camada — atualizar/apagar com a versão errada devolve `409` com a feição ATUAL, nunca sobrescreve
+em silêncio; campos de rastreio (`fid`, `globalid`, `versao`, `tenant_id`, `criado_*`,
+`atualizado_*`) NUNCA aceitos do corpo, sempre preenchidos pelo servidor; "só as próprias feições"
+(`edicao.somente_proprias`) e "geometria travada" (`edicao.geometria_travada`) por camada, com
+`feicoes.editar_total` (perfil admin) ignorando as duas. Sanidade de CRS não declarado: coordenada
+fora de `[-180,180]`/`[-90,90]` numa camada de SRID geográfico sem `crs.srid` declarado é `422
+geometria_fora_do_crs` (cobre o envio de metros — UTM/Web Mercator — sem declarar). Um evento por
+LOTE (`camadas/editar`, nunca um por feição) com a contagem de adicionadas/atualizadas/apagadas, e
+bump de `dados.tiles_versao` no item (ponto de integração para a invalidação de tiles do L2-01-b,
+ainda pendente). Isolamento entre inquilinos por RLS FORCE já existente: o inquilino B recebe `404`
+ao ler, atualizar ou apagar feição de A — nunca `403`, nunca sucesso silencioso, porque a existência
+não é confirmada a quem não pode ver (ADR 20260907T0216).
+
+Medido: 1.000 feições em `adicionar` (modo transação) em menos de 1 s, contra o teto de 3 s do
+portão (`tests/medidas/L2-03-a-api-edicao-transacional.json`). Refutação do item (roteiro do
+adversário) rodada nesta passagem: lote de 100 mil feições recusado pelo teto de lista
+(`EDICAO_LOTE_MAX=2.000`); `crs.srid=0` recusado pela própria validação de entrada; texto de 1 MB
+recusado (`EDICAO_TEXTO_MAX=64 KiB`); geometria em outro CRS sem declarar recusada pela sanidade de
+grau; feição de outro inquilino nunca aceita (404); duas sessões editando a mesma feição — só uma
+ganha (200), a outra recebe 409 com a versão atual, nunca as duas 200. 20 testes verdes em
+`tests/api/test_edicao_transacional.py`.
+
+Fora desta passagem (fronteira honesta, ver ADR): matriz fina de permissão por operação × grupo
+(ficou em `edicao.habilitada`/`somente_proprias`/`geometria_travada` + privilégio único);
+integração com `plat.dominio` do L2-10-a; consumidor da invalidação de tiles (L2-01-b); histórico/
+restauração de feição (L2-03-d-historico-restauracao) — a coluna `versao` cobre só a concorrência
+otimista, não um log de mudanças.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
@@ -1069,3 +1187,46 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 4, setembro de 2026 (item L2-10-d-regras-de-atributo: regras de atributo por camada)
+
+Sobre a porta única de escrita (L2-03-a, mesclada aqui) e a linguagem de expressão (L2-10-c): `dados.regras` da
+camada (esquema v4) com regras de **cálculo** (campo alvo = expressão, gatilho por campo, ordem, encadeamento),
+**restrição** (booleana; falso = 422 com código e mensagem configurados) e **validação** (job `camadas.validar`
+grava erros em `e_<hex16>` e cria a camada de erros no catálogo), mais **campos virtuais** só-leitura avaliados na
+leitura. Motor em `app/regras/motor.py` (ciclo detectado na configuração: `regra_ciclo` com o caminho); rotas
+`GET/PUT /api/camadas/{id}/regras`, `POST /api/camadas/{id}/validar`, `GET /api/camadas/{id}/feicoes`,
+`GET /api/camadas/{id}/erros`; `em_massa` no corpo de edição pula regras marcadas `excluir_em_massa`. Testes:
+`tests/unit/test_regras_motor.py` (12) e `tests/api/test_regras_atributo.py` (validação de 100 mil como job com
+N conferido por SQL; 1.000 edições com 3 regras contra sem regras, medido). ADR
+`docs/adr/20260908T0740-regras-de-atributo.md`; paridade contra "attribute rules" (Pro/hosted 11.4) em
+`docs/PARIDADE.md`. Fora: compilação para SQL (L2-10-e), WFS-T (não existe em master), tela.
+## turno 8, setembro de 2026 (item L5-01-c-widgets-dado: widgets de dado do app sobre camada no servidor)
+
+Os widgets de dado do app deixam de depender de a fonte estar inteira no navegador: a Vista ganha uma API assíncrona
+(página, total, agregação, histograma, valores únicos, ids do filtro, exportação) que em fonte de camada delega ao
+FeatureServer do L2-04 (`where` traduzido do CQL2-JSON, `orderByFields`, `resultOffset`, `outStatistics` por grupo,
+`returnDistinctValues`, `returnIdsOnly`, `geometry`) e em fonte embutida/arquivo roda em memória. Tabela 2.0.0
+(página/ordenação/contagem no servidor, exportar CSV e GeoJSON do filtro ativo), gráfico 2.0.0 (barra, linha, pizza,
+histograma, dispersão; Chart.js 4.5.1 vendido, agregação no servidor), filtro 2.0.0 (texto, valores únicos,
+intervalo, data), e os novos `lista` (cartões com modelo e expressão), `consulta` (atributo + espacial), `selecao`
+(por atributo, tudo, inverter), `info-feicao` e `adicionar-dado` (GeoJSON temporário em fonte de memória). Filtros
+dinâmicos de origens diferentes se combinam por AND na vista. Medido: p95 por página com 100 mil pontos e as 5
+agregações comparadas com SQL direto em `tests/medidas/L5-01-c-widgets-dado.json`. Paridade: `docs/PARIDADE.md`
+("Widgets de dado do aplicativo", 15 widgets Data centric do Experience Builder); ADR `20260908T1500-widgets-de-dado`.
+
+## turno 8, setembro de 2026 (item L5-07-fontes-vistas-mensagens: modelo de dado do app e barramento de mensagens)
+
+O documento `app` (esquema 3) ganha `fontes` (item do catálogo, caminho do servidor ou embutida; campos tipados),
+`vistas` (fonte + filtro CQL2-JSON + seleção + ordenação + campos) e `mensagens` (gatilho {origem, evento} → ações
+[{alvo, ação, parâmetros, relação}]) com os 8 gatilhos do Experience Builder e as ações de dado (filtrar,
+selecionar, limpar_*) e de widget (zoom, pan, piscar, popup, abrir, fechar, definir_parametro). Regra de relação
+dos Dashboards entre fontes diferentes (atributo com tipos que casam, ou espacial); sem relação é recusado no
+construtor com mensagem e na API (422 `modelo_invalido`) — o mesmo validador em JS e Python, provado igual.
+Barramento EventTarget com corte de ciclo em uma volta (aviso `ciclo_cortado`); estado de seleção e filtros na URL
+por vista; widgets de tabela, gráfico (novo) e mapa (renderizador SVG da vista) ligados a vistas; painel "Dados e
+mensagens" no construtor. Medido em node com 10 mil feições em memória: latência gatilho→ação p95 em
+`tests/medidas/L5-07-fontes-vistas-mensagens.json` (com carga e RAM ao lado). e2e: seleção no mapa filtra tabela e
+gráfico (2 vistas da mesma fonte) e a tabela de outra fonte por relação de atributo; URL reabre igual; recusa no
+construtor com captura. Tabela gatilhos × ações contra a doc do Experience Builder em `docs/PARIDADE.md`. ADR
+`20260908T1050-fontes-vistas-mensagens.md`. Ramo contém `wt/cx506` (L5-06) por merge.
