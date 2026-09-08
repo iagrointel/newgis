@@ -11,6 +11,7 @@ existia antes, escritos uma vez só, nunca regerados)."""
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -31,11 +32,20 @@ def _tipos_com_esquema_publicado() -> list[dict]:
     return [r for r in linhas if r["familia"] in FAMILIAS_GRAFO]
 
 
+def _sem_nome_de_trilha(texto: str) -> str:
+    """O arquivo publicado fala do schema de PRODUÇÃO. Numa trilha isolada, `trilha_ambiente.sh` reescreve
+    `plat.` para `plat_t<nome>.` no texto inteiro da migração — inclusive DENTRO das descrições do JSON Schema
+    —, e sem esta normalização o gerador carimbaria o nome da trilha de quem rodou por último no documento
+    (aconteceu: `painel-v3.json` chegou a esta passagem citando a trilha de outro item)."""
+    return re.sub(r"\bplat_t[a-z0-9]+\.", "plat.", texto)
+
+
 def gerar() -> dict[Path, str]:
     saida = {}
     for t in _tipos_com_esquema_publicado():
         caminho = DESTINO / f"{t['nome']}-v{t['esquema_versao']}.json"
-        saida[caminho] = json.dumps(t["esquema"], ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        corpo = json.dumps(t["esquema"], ensure_ascii=False, indent=2, sort_keys=True)
+        saida[caminho] = _sem_nome_de_trilha(corpo) + "\n"
     return saida
 
 
