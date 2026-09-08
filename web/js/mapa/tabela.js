@@ -405,8 +405,9 @@ export function criarTabela(map, aviso) {
   async function iniciar() {
     const camadas = await listarCamadas();
     const sel = el('tabela-camada');
+    // espalhar a lista: `append(no, array)` converte o array em texto e o <select> fica só com a opção vazia
     limpar(sel).append(h('option', { value: '' }, t('tabela.escolha_camada')),
-      camadas.map((c) => h('option', { value: c.id }, c.titulo)));
+      ...camadas.map((c) => h('option', { value: c.id }, c.titulo)));
     sel.addEventListener('change', () => trocarCamada(sel.value));
 
     el('tabela-busca').addEventListener('change', () => {
