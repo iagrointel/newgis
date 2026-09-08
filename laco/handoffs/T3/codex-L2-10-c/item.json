@@ -1,0 +1,32 @@
+{
+  "id": "L2-10-c-linguagem-expressao",
+  "linha": "L2 plataforma",
+  "prioridade": 1,
+  "estado": "parcial",
+  "dependencias": [
+    "L0-12-contrato-api-e-limites"
+  ],
+  "hipotese": "linguagem de expressão própria (equivalente ao Arcade nos perfis popup, rótulo, cálculo, restrição, validação, visibilidade, indicador): gramática publicada em EBNF (docs/EXPRESSOES.md) e implementada com analisador descendente recursivo escrito à mão em Python (sem lark/pyparsing como dependência de runtime: pyparsing está na máquina, mas o L5-11 precisa reimplementar a MESMA gramática em JavaScript, por isso a gramática é pequena e fechada), AST em JSON (exportável, é o que se grava no documento junto com o texto), tipos (número, texto, booleano, data com fuso, lista, dicionário, geometria, nulo com propagação definida), variáveis $feicao, $camada, $usuario, $mapa, $agora; ≥ 40 funções: texto (Concat, Upper, Lower, Trim, Replace, Split, Left, Right, Mid, Find, Proper, Text com formato pt-BR), número (Round, Floor, Ceil, Abs, Pow, Sqrt, Min, Max, Mean, Sum, Number), data (Today, Now, Date, DateDiff, DateAdd, Year, Month, Day, Weekday, Text de data), lógica (IIf, When, IsEmpty, DefaultValue, Decode), lista (Count, First, Includes, Filter, Map), domínio (DomainName, DomainCode, Subtypes), geometria (Area, Length, Distance, Centroid, Intersects, Within, Buffer — geodésicos, calculados no servidor por PostGIS ou no cliente por fórmula esférica com tolerância declarada), feição relacionada (FeatureSetByRelationship com limite), com limite de passos (10^5), de tempo (50 ms cliente / 500 ms servidor), sem rede, sem acesso a outra camada não permitida; vetores de teste em tests/expressoes/*.json (entrada, contexto, saída) compartilhados com o L5-11; documentação com 1 exemplo por função",
+  "portao_de_pronto": "≥ 40 funções com ≥ 200 vetores passando em Python; EBNF publicada e gerada a partir da tabela de tokens (teste que a gramática do documento é a do código); laço infinito (recursão em Map) cortado em ≤ 50 ms com erro nomeado (refutação do item-pai); expressão que acessa camada de outro inquilino = erro de permissão; AST exportado e reimportado avalia igual; formatação de número e data em pt-BR conferida; tabela de paridade contra o Arcade function reference por função (feito/parcial/fora) escrita; erro de sintaxe devolve linha e coluna NÚCLEO CONSTRUÍDO 06/09/2026 (arquiteto+backend, passagem única, pedido direto do dono — item grande, esta passagem é só o núcleo, sem integração com popup/simbologia): EBNF publicada em docs/EXPRESSAO.md; AST tipada + avaliador em app/expressao/avaliador_py.py (sem eval/exec/compile) e o MESMO analisador/avaliador em web/js/expressao/avaliador.js (sem eval/new Function); 18 funções (>= 15 do portão desta passagem: texto Maiuscula/Minuscula/Concatenar/Texto, número Arredondar/Absoluto/Minimo/Maximo/Numero/Potencia, data (convenção epoch-ms UTC) AgoraUTC/Ano/Mes/Dia/DiferencaDias, nulo SeNulo/EhNulo, condicional Se); 41 vetores em tests/expressoes/vetores.json comparados byte a byte entre os dois avaliadores (test_expressao_equivalencia.py, todos concordam); AST exportável/reimportável (ast_para_json/ast_de_json) com os MESMOS limites de profundidade/aridade que o texto, para uma AST fabricada à mão não contornar os guarda-corpos; erro de sintaxe devolve linha/coluna; dois guarda-corpos de profundidade (parser recursivo-descendente + medição da árvore inteira, pega a cadeia longa do mesmo operador que o parser constrói em laço); limite de passos (10^5) e de tempo (500 ms servidor / 50 ms cliente) medidos sob ataque em tests/unit/test_expressao_seguranca.py. PENDENTE (fica para quando a hipótese cheia entrar): >= 40 funções (faltam os sinônimos Trim/Left/Right/Mid/Find/Split/Floor/Ceil/Sqrt/Weekday/Decode e as funções de lista/domínio/geometria/FeatureSetByRelationship), >= 200 vetores, tipos lista/dicionário/geometria, fuso horário de data, formatação pt-BR, compilação para expressão MapLibre e para SQL, integração com popup/rótulo/formulário/regra de atributo (L5-11), tabela de paridade com o Arcade function reference completo, erro de permissão de camada de outro inquilino (não há camada ainda para testar). Ver laco/handoffs/T3/L2-10-c-expressao.md.",
+  "refutacao": "adversário escreve expressão maliciosa: laço infinito, recursão profunda (10^6), texto de 10 MB, acesso a tabela de outro inquilino (refutação do item-pai), e mede se o limite de tempo vale sob carga",
+  "papeis": [
+    "arquiteto",
+    "esri",
+    "backend",
+    "testador",
+    "adversario"
+  ],
+  "tamanho": "G",
+  "tentativas": 1,
+  "turno": 3,
+  "bloqueio": "nucleo entregue (18 funcoes, EBNF, 2 avaliadores concordantes); faltam >=40 funcoes, >=200 vetores, tipos lista/dicionario/geometria e integracao com popup/formulario/L5-11",
+  "pai": "L2-10-relacoes-regras",
+  "origem": "esri",
+  "fontes": [
+    "https://developers.arcgis.com/arcade/",
+    "https://developers.arcgis.com/arcade/function-reference/",
+    "https://developers.arcgis.com/arcade/guide/profiles/"
+  ],
+  "ativo_da_casa": "L5-11 (avaliador JavaScript com os mesmos vetores); L5-03-b (lógica de formulário); regra do L5: gramática EBNF e vetores compartilháveis",
+  "origem_arquivo": "L2.json"
+}

@@ -11,9 +11,6 @@ Reproduzir:
   venv/bin/pytest tests/api/catalogo/test_adversario_g2.py -q -rx
 """
 
-import datetime
-import json
-import time
 
 import pytest
 
@@ -177,16 +174,8 @@ def test_g2_7_notificacoes_internas_existem(sessao_a):
 
 
 # ---------------------------------------------------------------- transversal (segurança de esquema)
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G2-8: funções do schema plat sem REVOKE de PUBLIC (proacl nulo ou com '='). São 13 no "
-    "schema de produção `plat` (6 delas SECURITY DEFINER: convite_aceitar, convite_resolver, "
-    "redefinicao_contexto/resolver/solicitar, uploads_expirar_candidatos) e 9 no schema desta trilha. "
-    "É o mesmo teste que já existe no repositório (tests/api/catalogo/"
-    "test_eventos_e_seguranca.py::test_funcoes_do_catalogo_sem_public_e_worker_fechado_a_plat_app), "
-    "que está VERMELHO no master — as migrações novas (030 conexão, 046 uploads, 047 convites) não "
-    "repetiram o padrão de REVOKE da 011.",
-)
+# ACHADO G2-8 CORRIGIDO (conferido em 08/09/2026): a migração 20260906T1615_revoke_public_uploads_expirar
+# fechou EXECUTE para PUBLIC em todo o schema plat. A marca xfail estrita saiu; o teste fica como regressão.
 def test_g2_8_funcoes_do_plat_sem_execute_para_public(conexao_plat_app, env):
     esquema = env.get("PLAT_SCHEMA") or "plat"
     with conexao_plat_app.cursor() as cur:

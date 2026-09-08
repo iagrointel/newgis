@@ -47,8 +47,12 @@ def solicitar(corpo: RedefinicaoSolicitarEntrada, request: Request):
                       "minutos e tente de novo")
     if r["token"] is None:
         return {"ok": True}  # e-mail não encontrado: mesma resposta, sem enfileirar nada (não revela existência)
-    with db.db() as cur:
-        cur.execute("SELECT config FROM plat.tenant WHERE id = %s", (r["tenant_id"],))
+    # ctx com o usuário resolvido (já sabemos tenant_id/usuario_id/login): sem ele, RLS de plat.tenant filtra a
+    # linha (plat.tenant_atual() é NULL sem contexto) e a consulta abaixo devolve None, não 404 (achado desta
+    # verificação, antes do adversário).
+    ctx = db.Contexto(r["tenant_id"], r["usuario_id"], r["login"])
+    with db.db(ctx) as cur:
+        cur.execute("SELECT config FROM plat.tenant WHERE id = plat.tenant_atual()")
         config = cur.fetchone()["config"]
     if smtp_efetivo(config, settings) is not None:
         jobs_sistema.enfileirar(

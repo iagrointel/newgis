@@ -17,10 +17,10 @@ from app import db, limites
 from app.auth import privilegios as priv
 from app.auth.comum import erro_do_banco, paginacao, registrar_evento
 from app.auth.modelos_convite import (
-    Convite,
     ConviteAceitarEntrada,
     ConviteAceito,
-    ConviteEntrada,
+    ConviteMembro,
+    ConviteMembroEntrada,
     ConviteResolvido,
 )
 from app.auth.politica import email_permitido
@@ -60,7 +60,7 @@ def _link(token: str) -> str:
     return f"{settings.PLAT_URL_PUBLICA}/aceitar-convite?token={token}"
 
 
-@router.get("", response_model=list[Convite], openapi_extra=PRIV)
+@router.get("", response_model=list[ConviteMembro], openapi_extra=PRIV)
 def listar(limite: int | None = None, deslocamento: int | None = None, auth: Auth = autenticado("membros.gerir")):
     lim, desl = paginacao(limite, deslocamento, maximo=limites.CONVITE_LISTA_MAX)
     with db.db(auth.contexto()) as cur:
@@ -69,8 +69,8 @@ def listar(limite: int | None = None, deslocamento: int | None = None, auth: Aut
         return [_json(r) for r in cur.fetchall()]
 
 
-@router.post("", response_model=Convite, status_code=201, openapi_extra=PRIV)
-def convidar(corpo: ConviteEntrada, request: Request, auth: Auth = autenticado("membros.gerir")):
+@router.post("", response_model=ConviteMembro, status_code=201, openapi_extra=PRIV)
+def convidar(corpo: ConviteMembroEntrada, request: Request, auth: Auth = autenticado("membros.gerir")):
     if corpo.perfil == "admin" and auth.perfil != "admin":
         raise ErroAPI(403, "so_admin_convida_admin", "só um administrador convida outro administrador")
     if (corpo.perfil != "visualizador" or corpo.papel_id is not None) and not auth.tem("membros.papel"):
@@ -161,10 +161,10 @@ def aceitar(corpo: ConviteAceitarEntrada, request: Request):
     if info["motivo"] != "ok":
         raise ErroAPI(410, f"convite_{info['motivo']}", "este convite não pode mais ser usado",
                       {"motivo": info["motivo"]})
-    with db.db() as cur:
-        cur.execute("SELECT config FROM plat.tenant WHERE slug = %s", (info["tenant_slug"],))
-        config = cur.fetchone()["config"]
-    politica = politica_de(config, info["tenant_slug"])
+    # a política de senha vem do MESMO resultado (convite_resolver já faz LEFT JOIN com plat.tenant): uma
+    # segunda consulta sem contexto de inquilino (a conta ainda não existe) cairia na RLS de plat.tenant e
+    # devolveria None em vez da linha (achado desta verificação, migração 049).
+    politica = politica_de(info["config"], info["tenant_slug"])
     regra = regra_da_senha(corpo.senha, politica, corpo.login, info["tenant_slug"], corpo.nome)
     if regra:
         raise ErroAPI(422, "senha_fraca", mensagem_da_regra(regra, politica), {"regra": regra})

@@ -1,0 +1,1915 @@
+{
+ "linha": "L0 fundação",
+ "gerado_em": "2026-09-05",
+ "gerado_por": "decomposição L0 (agente), a partir de BRIEF.md; URLs testadas por HTTP HEAD em 2026-09-05 12:39-13:03 UTC",
+ "itens_existentes_na_linha": [
+  "L0-01-repo",
+  "L0-02-tenant-auth",
+  "L0-03-catalogo",
+  "L0-04-ingest-vetor",
+  "L0-05-jobs",
+  "L0-06-backup-status",
+  "L0-07-admin-org",
+  "L0-08-sso",
+  "L0-09-metadado-catalogo"
+ ],
+ "itens_novos": 58,
+ "resumo_por_pai": {
+  "L0-01-repo": [],
+  "L0-02-tenant-auth": [
+   "L0-02-a-login-sessao",
+   "L0-02-b-politica-senha-bloqueio",
+   "L0-02-c-2fa-totp",
+   "L0-02-d-token-servico",
+   "L0-02-e-varredura-cruzada-rls",
+   "L0-02-f-tela-usuarios",
+   "L0-02-g-perfil-usuario"
+  ],
+  "L0-03-catalogo": [
+   "L0-03-a-modelo-item",
+   "L0-03-b-pastas-tags-categorias-classificacao",
+   "L0-03-c-busca",
+   "L0-03-d-grupos",
+   "L0-03-e-compartilhamento",
+   "L0-03-f-tela-conteudo",
+   "L0-03-g-detalhe-item-miniatura",
+   "L0-03-h-lixeira-protecao-status",
+   "L0-03-i-dependencias",
+   "L0-03-j-transferencia-dono",
+   "L0-03-k-favoritos-notificacoes",
+   "L0-03-l-versoes-item"
+  ],
+  "L0-04-ingest-vetor": [
+   "L0-04-a-upload-arquivo",
+   "L0-04-b-inspecao",
+   "L0-04-c-tabela-camada",
+   "L0-04-d-formatos-base",
+   "L0-04-e-formatos-cad",
+   "L0-04-f-fgdb-parquet-fgb-gml",
+   "L0-04-g-atualizar-dados",
+   "L0-04-h-exportar",
+   "L0-04-i-fonte-registrada",
+   "L0-04-j-camada-vista"
+  ],
+  "L0-05-jobs": [
+   "L0-05-a-fila-postgres",
+   "L0-05-b-progresso-cancelamento",
+   "L0-05-c-tela-tarefas",
+   "L0-05-d-periodicos"
+  ],
+  "L0-06-backup-status": [
+   "L0-06-a-dump-logico",
+   "L0-06-b-pitr-pgbackrest",
+   "L0-06-c-restore-drill",
+   "L0-06-d-exportar-inquilino",
+   "L0-06-e-status"
+  ],
+  "L0-07-admin-org": [
+   "L0-07-a-configuracoes-org",
+   "L0-07-b-papeis-privilegios",
+   "L0-07-c-cotas-uso",
+   "L0-07-d-smtp-convites",
+   "L0-07-e-relatorios",
+   "L0-07-f-console-plataforma"
+  ],
+  "L0-08-sso": [
+   "L0-08-a-oidc",
+   "L0-08-b-saml",
+   "L0-08-c-govbr",
+   "L0-08-d-ldap",
+   "L0-08-e-mapeamento-provisionamento"
+  ],
+  "L0-09-metadado-catalogo": [
+   "L0-09-a-procedencia",
+   "L0-09-b-editor-iso-mgb",
+   "L0-09-c-xml-iso-validacao",
+   "L0-09-d-ogc-records-csw"
+  ],
+  "(topo)": [
+   "L0-10-eventos-historico",
+   "L0-11-arquivos-objetos",
+   "L0-12-contrato-api-e-limites",
+   "L0-13-dado-demonstracao",
+   "L0-14-cli-admin"
+  ]
+ },
+ "dependencias_externas_propostas": [
+  {
+   "id": "L2-11-a-geocodificacao-csv",
+   "linha": "L2 plataforma",
+   "motivo": "CSV/XLSX com endereço e sem coordenada (a Esri geocodifica ao publicar); L0-04-d importa como tabela e este item transforma em pontos",
+   "pai": "L2-11-geocodificacao-rota"
+  },
+  {
+   "id": "L7-03-a-antivirus-upload",
+   "linha": "L7 operação",
+   "motivo": "varredura opcional de arquivo enviado (clamscan ausente na máquina); L0-04-a deixa o gancho (estado 'em quarentena')",
+   "pai": "L7-03-seguranca"
+  },
+  {
+   "id": "L7-08-a-webhooks-eventos",
+   "linha": "L7 operação",
+   "motivo": "entrega HTTP assinada dos eventos de plat.evento (L0-10) por assinatura de webhook por inquilino, com retentativa e desativação após 5 falhas, espelhando os gatilhos/payloads da Esri",
+   "pai": "L7-08-sdk-api-webhooks"
+  },
+  {
+   "id": "L6-01-a-procedencia-acervo",
+   "linha": "L6 conectores",
+   "motivo": "o conector do acervo preenche o bloco de procedência (L0-09-a) a partir de acervo.fonte/objeto/endpoint em vez de campos vazios",
+   "pai": "L6-01-acervo-casa"
+  },
+  {
+   "id": "L2-04-a-leitor-rls-martin",
+   "linha": "L2 plataforma",
+   "motivo": "role só-leitura para Martin/tipg que entra no contexto do inquilino por token (plat.contexto_por_token) sobre as tabelas d_<slug> com RLS criadas em L0-04-c",
+   "pai": "L2-04-servicos-esri-ogc"
+  }
+ ],
+ "decisoes_do_dono_propostas": [
+  {
+   "id": "D22",
+   "pergunta": "reiniciar o Postgres compartilhado para ligar archive_mode=on (PITR/pgBackRest, L0-06-b): janela e autorização",
+   "item": "L0-06-b-pitr-pgbackrest"
+  },
+  {
+   "id": "D23",
+   "pergunta": "DWG: LibreDWG (GPL, fora do processo web, já usado no GPU box) basta, ou aceitar o binário do ODA File Converter (licença própria) no servidor?",
+   "item": "L0-04-e-formatos-cad"
+  },
+  {
+   "id": "D24",
+   "pergunta": "compartilhamento público anônimo: permitido por inquilino (padrão desligado) ou nunca? Impacta OGC Records/CSW externo e o link por token",
+   "item": "L0-03-e-compartilhamento"
+  },
+  {
+   "id": "D25",
+   "pergunta": "gov.br: qual órgão/credencial de teste e quem assina o ofício",
+   "item": "L0-08-c-govbr"
+  },
+  {
+   "id": "D26",
+   "pergunta": "Garage: reusar o daemon plataforma-garage com buckets próprios ou subir plat-garage separado (mesmo disco)",
+   "item": "L0-11-arquivos-objetos"
+  }
+ ],
+ "itens": [
+  {
+   "id": "L0-02-a-login-sessao",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-01-repo",
+    "L0-12-contrato-api-e-limites"
+   ],
+   "hipotese": "login por inquilino (slug + login + senha) com cookie de sessão HttpOnly/Secure/SameSite=Lax cujo valor só existe em hash no banco; sessão expira após 12 h sem uso e 7 dias no máximo; logout apaga a linha; rotas /api/login, /api/logout, /api/eu; tela de entrada com o inquilino na URL (/entrar?inquilino=demo) como o SIG de teste interno",
+   "portao_de_pronto": "e2e playwright: entrar em demo, ver /api/eu com tenant/usuario/perfil, sair, ver 401; captura de tela; teste api: cookie com Secure+HttpOnly+SameSite; sessão com ultimo_uso > 12 h devolve 401 e a linha é apagada pelo periódico; sessão com criado_em > 7 d idem; token de sessão nunca aparece em log nem em journal (grep 0 ocorrências após 20 logins); login e logout gravados em log_acesso com resultado; medida latencia_login_ms mediana de 20 < 400 ms (pbkdf2 600 mil iterações incluído)",
+   "refutacao": "adversário reusa cookie após logout, altera 1 caractere do cookie, envia cookie de demo em rota com inquilino demo2 na URL, faz 200 logins em 60 s e mede se o hash de senha vaza no journal; qualquer 200 indevido = refutado",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-02-tenant-auth",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-security.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/specify-the-default-token-expiration-time.htm",
+    "https://developers.arcgis.com/rest/users-groups-and-items/generate-token/"
+   ],
+   "ativo_da_casa": "SIG de teste interno (db/schema_v3.sql) funções auth_*; ADR 0001 seção 6 (sessao.token_hash)"
+  },
+  {
+   "id": "L0-02-b-politica-senha-bloqueio",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-a-login-sessao"
+   ],
+   "hipotese": "política de senha declarada e aplicada no servidor: mínimo 10 caracteres com pelo menos uma letra e um número (regra já lida em SIG de teste interno (pipeline/novo_inquilino.py)), diferente do login, não reutilizar as últimas 5, expiração opcional em dias por inquilino; bloqueio 5 falhas em 15 min por 15 min (padrão da Esri) configurável pelo admin do inquilino; troca de senha pelo próprio usuário e redefinição por admin com senha temporária que obriga troca no primeiro acesso",
+   "portao_de_pronto": "teste api com 12 senhas inválidas (curta, sem número, igual ao login, repetida) recusadas com mensagem que nomeia a regra; 5 falhas seguidas bloqueiam e a 6ª tentativa com senha certa devolve 423 com 'bloqueado até <hora>'; após 15 min entra; tabela plat.senha_historico com 5 hashes por usuário; e2e da troca de senha com captura; limiares em tenant.config validados por JSON Schema; paridade escrita contra 'Sign-in policy' 11.4",
+   "refutacao": "adversário tenta 1.000 senhas em 3 min contra um usuário e contra 200 logins diferentes do mesmo inquilino (bloqueio por usuário não pode virar negação de serviço do inquilino inteiro: o admin ainda entra); tenta reutilizar a 3ª senha anterior",
+   "papeis": [
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-02-tenant-auth",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-security.htm",
+    "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html"
+   ],
+   "ativo_da_casa": "SIG de teste interno (pipeline/novo_inquilino.py) (mínimo 10 + dígito)"
+  },
+  {
+   "id": "L0-02-c-2fa-totp",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-a-login-sessao"
+   ],
+   "hipotese": "segundo fator TOTP (RFC 6238, SHA-1, 30 s, janela ±1) implementado com hmac/struct da biblioteca padrão (pyotp não está na venv, medido), segredo base32 cifrado com PLAT_SECRET, QR gerado com a biblioteca qrcode já presente, 8 códigos de recuperação de uso único; o usuário liga/desliga; o admin do inquilino desliga (fluxo 'Disable multifactor' da Esri); exigência para todos os membros é opção do inquilino (o 'Enforce MFA' que a Esri só tem na 12.1)",
+   "portao_de_pronto": "e2e: ligar 2FA lendo o QR, sair, entrar com código gerado no teste (mesmo segredo), captura; código reusado dentro dos 30 s é recusado (replay); código de recuperação funciona uma vez; admin desliga e o usuário entra só com senha; com 'exigir 2FA' ligado no inquilino, usuário sem 2FA cai na tela de configuração antes de qualquer rota; segredo nunca em claro no banco (SELECT mostra prefixo 'enc:')",
+   "refutacao": "adversário força 1.000.000 de códigos de 6 dígitos em 90 s contra um usuário (tem de haver limite: 5 códigos errados = bloqueio de 15 min), reusa o código anterior, usa código com relógio adiantado 5 min",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-02-tenant-auth",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-security.htm",
+    "https://www.rfc-editor.org/rfc/rfc6238"
+   ],
+   "ativo_da_casa": "SIG de teste interno schema_v3 (totp_secret/totp_ativo)"
+  },
+  {
+   "id": "L0-02-d-token-servico",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-a-login-sessao"
+   ],
+   "hipotese": "token de serviço de longa duração com escopo fechado (vocabulário: catalogo:ler, camada:ler[:<id>], camada:editar[:<id>], tiles:ler, jobs:executar, admin:inquilino), restrição por Referer e por IP/CIDR, expiração padrão 90 d e máxima 365 d (a chave de API da Esri vai a 1 ano), valor mostrado uma única vez, prefixo de 8 caracteres na lista, revogação imediata, renovação sem derrubar o cliente (dois tokens válidos por 24 h), erro 401 com motivo legível ('expirado em', 'revogado em', 'escopo insuficiente', 'referer não permitido')",
+   "portao_de_pronto": "teste api: token com escopo catalogo:ler recebe 403 em POST; token revogado recebe 401 com 'revogado em' na resposta em ≤ 1 s após a revogação; restrição de IP 10.0.0.0/8 nega 127.0.0.1; Referer com curinga https://*.exemplo.gov.br aceito só para subdomínios; pedido de expiração de 400 d é gravado com 365 d (comportamento da Esri: teto silencioso vira erro 400 aqui, decisão escrita); cada leitura autenticada por token aparece em plat.log_acesso com token_id, ip, rota, bytes; tela 'Tokens' com criar/listar/revogar e captura; medida latencia_auth_token_ms (sha256 + 1 SELECT) mediana < 5 ms",
+   "refutacao": "adversário usa token de demo em rota de demo2, token expirado, token com escopo camada:ler:<id A> em camada B, altera o Referer, e tenta ler o hash na tabela via rota de listagem; qualquer 200 = refutado",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-02-tenant-auth",
+   "origem": "esri",
+   "fontes": [
+    "https://developers.arcgis.com/documentation/security-and-authentication/api-key-authentication/",
+    "https://doc.esri.com/en/arcgis-enterprise/latest/share/limit-usage-of-secure-services.html",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/specify-the-default-token-expiration-time.htm"
+   ],
+   "ativo_da_casa": "SIG de teste interno schema_v2 (api_token); ADR 0001 token_servico"
+  },
+  {
+   "id": "L0-02-e-varredura-cruzada-rls",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-a-login-sessao",
+    "L0-02-d-token-servico"
+   ],
+   "hipotese": "gerador de teste que lê docs/openapi.json e, para TODA rota, executa como sessão de demo e token de demo contra recursos criados em demo2 (e vice-versa), exigindo 401/403/404 e nunca 200; mais o endurecimento que o adversário do T1 achou: REVOKE EXECUTE ... FROM PUBLIC em toda função SECURITY DEFINER, GRANT só para plat_app, e checagem interna do inquilino nas funções auth_sessao_criar/auth_falha/tenant_criar (a GUC plat.usuario_id forjada não pode criar inquilino)",
+   "portao_de_pronto": "tests/api/test_cruzado.py enumera N rotas do OpenAPI e falha se alguma rota não tiver caso de teste registrado (cobertura 100 % é cláusula, medida em tests/medidas/L0-02-e.json: rotas_total = rotas_cobertas); 0 respostas 200 cruzadas; pg_proc mostra proacl sem PUBLIC para todas as funções SECURITY DEFINER do schema plat; teste que forja set_config('plat.usuario_id','1') como plat_app e chama plat.tenant_criar recebe exceção; teste roda dentro de make check e é o portão P6 executável para os itens seguintes",
+   "refutacao": "adversário acrescenta uma rota nova sem teste e roda make check: tem de reprovar; chama cada função SECURITY DEFINER diretamente por psql como plat_app com contexto de outro inquilino",
+   "papeis": [
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-02-tenant-auth",
+   "origem": "casa",
+   "fontes": [
+    "https://www.postgresql.org/docs/16/ddl-rowsecurity.html"
+   ],
+   "ativo_da_casa": "laco/handoffs/T1/refutacao.json ataque 4 (funções SECURITY DEFINER sem checagem de inquilino)"
+  },
+  {
+   "id": "L0-02-f-tela-usuarios",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-a-login-sessao",
+    "L0-02-b-politica-senha-bloqueio",
+    "L0-10-eventos-historico"
+   ],
+   "hipotese": "tela 'Usuários' do admin do inquilino: criar (login, nome, e-mail corporativo, perfil), editar, desabilitar/reabilitar (desabilitado não entra e continua contado), redefinir senha (temporária), desligar 2FA, ver último acesso, filtro por perfil/estado/último acesso, seleção em massa até 100 (limite da Esri) para mudar perfil/desabilitar; regra 'último administrador ativo não se desabilita nem rebaixa'; apagar usuário exige transferir ou apagar o conteúdo dele (L0-03-j) e é recusado antes disso com a lista do que ele possui",
+   "portao_de_pronto": "e2e com captura: criar, editar, desabilitar, redefinir senha, mudar perfil em massa (3 usuários), tentar desabilitar o último admin (mensagem exata), tentar apagar usuário com 2 itens (recusa listando os 2); usuário desabilitado recebe 401 na próxima requisição em ≤ 1 s; cada ação vira linha em plat.evento; paridade escrita contra 'Manage members' 11.4 (feito/parcial/fora)",
+   "refutacao": "adversário, como editor, chama as rotas de admin; como admin de demo, cria usuário em demo2 pela API; desabilita o próprio usuário admin único",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-02-tenant-auth",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/manage-members.htm",
+    "https://support.esri.com/en-us/knowledge-base/error-unable-to-delete-member-user-name-member-must-not-000024210",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/roles.htm"
+   ]
+  },
+  {
+   "id": "L0-02-g-perfil-usuario",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-f-tela-usuarios",
+    "L0-11-arquivos-objetos"
+   ],
+   "hipotese": "página 'Meu perfil': nome, e-mail (só corporativo, validado por domínio permitido do inquilino), idioma preferido (pt-BR/en/es, aplicado no L7-10), unidades (métrico/imperial), formato de data, foto 200×200 no bucket, visibilidade do perfil (privado/inquilino), pergunta de segurança NÃO (a Esri usa; aqui a redefinição é por e-mail ou admin)",
+   "portao_de_pronto": "e2e: editar nome e unidades, enviar foto, ver a foto na barra; captura; e-mail com domínio fora da lista recusado com mensagem; foto > 1 MB recusada; teste api: usuário não altera o próprio perfil de acesso nem o login",
+   "refutacao": "adversário envia SVG com script como foto (tem de ser recodificada para PNG/JPEG no servidor), e-mail de outro inquilino, login novo no PUT",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-02-tenant-auth",
+   "origem": "esri",
+   "fontes": [
+    "https://doc.esri.com/en/arcgis-enterprise/latest/create/profile.html"
+   ]
+  },
+  {
+   "id": "L0-03-a-modelo-item",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-a-login-sessao",
+    "L0-12-contrato-api-e-limites"
+   ],
+   "hipotese": "tabela plat.item com id uuid (gen_random_uuid, pgcrypto já instalado) opaco e estável, tenant_id + RLS, tipo (registro plat.tipo_item com família e JSON Schema do campo dados), dono, pasta, título, resumo (≤ 2.048 caracteres), descrição (markdown saneado), tags[], créditos, termos de uso, extent em EPSG:4326, miniatura (chave no bucket), status (null|autoritativo|obsoleto), protegido, criado/modificado, dados jsonb; rotas CRUD /api/itens com paginação; referências entre itens sempre por uuid, nunca por URL absoluta (irritação 1 da migração Esri)",
+   "portao_de_pronto": "migração 00N_catalogo.sql idempotente; RLS FOR ALL USING/WITH CHECK em item, tipo_item por inquilino; OpenAPI com /api/itens (GET lista paginada, POST, GET/PUT/DELETE /api/itens/{id}); JSON Schema de dados validado por tipo (POST com dados inválido = 422 com o caminho do campo); teste de que o uuid não muda em PUT nem em mover de pasta; teste cruzado (L0-02-e) cobre as rotas; medida: 10 mil itens semeados em demo, GET lista com filtro por tipo p95 < 100 ms",
+   "refutacao": "adversário cria item com tipo inexistente, resumo de 5.000 caracteres, descrição com <script>, extent fora de [-180,180], e PUT trocando tenant_id/dono; tudo tem de ser 4xx com mensagem",
+   "papeis": [
+    "arquiteto",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-03-catalogo",
+   "origem": "esri",
+   "fontes": [
+    "https://developers.arcgis.com/rest/users-groups-and-items/items-and-item-types/",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/item-details.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/configure-item-details.htm"
+   ],
+   "ativo_da_casa": "SIG de teste interno (uid uuid nas tabelas); catálogo de camadas do motor logístico (23 colunas de procedência)"
+  },
+  {
+   "id": "L0-03-b-pastas-tags-categorias-classificacao",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-a-modelo-item"
+   ],
+   "hipotese": "pastas hierárquicas por inquilino (parent_id + caminho materializado, profundidade ≤ 5, nome único entre irmãs) visíveis por todos com acesso ao item, ao contrário da pasta da Esri (um nível, por membro; irritação 3); tags livres (≤ 50 por item, ≤ 128 caracteres); categorias da organização em árvore de 3 níveis e 200 nós, com modelos ISO 19115 e INSPIRE para começar, ≤ 20 por item; esquema de classificação por JSON opcional (sigilo: público/interno/restrito/pessoal, ligado ao L7-12), obrigatório em item novo quando ligado",
+   "portao_de_pronto": "e2e: criar pasta dentro de pasta, mover 3 itens em massa, renomear pasta, apagar pasta vazia (pasta com item recusa); atribuir 2 categorias e 1 classificação; captura; API recusa 21ª categoria e 6º nível; importar o modelo ISO cria 19 categorias de topo; filtro por categoria e por classificação na lista; paridade contra 'Content categories' e 'Configure a classification schema' 11.4",
+   "refutacao": "adversário cria ciclo de pasta (A dentro de B dentro de A) por PUT direto, nome de pasta com 10 mil caracteres, categoria de outro inquilino por id",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-03-catalogo",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/move-items.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/content-categories.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/manage-items.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-classification-schema.htm",
+    "https://developers.arcgis.com/rest/users-groups-and-items/create-folder/"
+   ]
+  },
+  {
+   "id": "L0-03-c-busca",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-a-modelo-item"
+   ],
+   "hipotese": "busca no catálogo com PostgreSQL: coluna tsvector gerada (peso A título, B tags, C resumo, D descrição; configuração portuguese + unaccent, extensão já instalada), pg_trgm (instalado) para prefixo e erro de digitação, ordenação ts_rank com desempate por modificado_em; índice atualizado na mesma transação da edição (coluna gerada, sem fila); sintaxe por campo (titulo:, tags:, dono:, tipo:, criado:[a TO b], modificado:, id:, categoria:, grupo:) e operadores AND/OR/NOT/aspas como a busca avançada da Esri; filtros laterais por tipo, dono, tags, data, status, categoria, extent (bbox)",
+   "portao_de_pronto": "teste api com corpus de 10 mil itens semeados: 'municipio' acha 'Município' (acento) e 'municpio' (trigram) em ≤ 200 ms p95; item cujo título bate exatamente vem em 1º (irritação 9); tags criadas por API aparecem na busca na mesma requisição seguinte; 12 consultas com sintaxe por campo com resultado esperado; busca não devolve item de outro inquilino nem item privado de outro dono (a RLS + o filtro de compartilhamento de L0-03-e); medida busca_p95_ms em tests/medidas",
+   "refutacao": "adversário injeta sintaxe tsquery inválida, ':' sem campo, 200 termos, e mede se um item privado de outro usuário aparece por 'id:'",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-03-catalogo",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/search.htm",
+    "https://doc.esri.com/en/arcgis-enterprise/latest/create/advanced-search.html",
+    "https://developers.arcgis.com/rest/users-groups-and-items/search-reference/",
+    "https://www.postgresql.org/docs/16/textsearch-controls.html",
+    "https://www.postgresql.org/docs/16/textsearch-tables.html",
+    "https://www.postgresql.org/docs/16/unaccent.html",
+    "https://www.postgresql.org/docs/16/pgtrgm.html"
+   ]
+  },
+  {
+   "id": "L0-03-d-grupos",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-a-modelo-item",
+    "L0-02-f-tela-usuarios",
+    "L0-10-eventos-historico"
+   ],
+   "hipotese": "grupo por inquilino com id uuid, nome, resumo, miniatura, tags; visibilidade (só membros / inquilino); entrada (convite / pedido / livre); quem contribui (todos / dono e gerentes); papéis de grupo dono, gerente, membro; 'atualização compartilhada' (membros editam itens compartilhados) e 'grupo administrativo' (membro não sai) como na Esri; proteção contra exclusão; itens em destaque; convite gera notificação interna (a Esri não manda e-mail) e, se SMTP ligado (L0-07-d), e-mail",
+   "portao_de_pronto": "e2e: criar grupo, convidar 2 usuários, um aceita, outro pede entrada e o gerente aprova, compartilhar item com o grupo, membro vê o item, não-membro não vê; sair do grupo; captura; API: só dono/gerente convida; grupo administrativo recusa 'sair'; grupo protegido recusa DELETE; apagar grupo remove compartilhamentos (itens continuam); paridade contra 'Create groups'/'Manage groups' (feito/parcial/fora)",
+   "refutacao": "adversário se adiciona a grupo por convite como membro comum, convida usuário de outro inquilino, altera papel do dono, apaga grupo protegido",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-03-catalogo",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/create-groups.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-groups.htm",
+    "https://developers.arcgis.com/rest/users-groups-and-items/notifications/"
+   ]
+  },
+  {
+   "id": "L0-03-e-compartilhamento",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-d-grupos",
+    "L0-02-d-token-servico",
+    "L0-03-i-dependencias"
+   ],
+   "hipotese": "nível de acesso do item: privado (dono), grupos (lista), inquilino, link (token opaco na URL, revogável, com validade e contagem de acessos) e público anônimo (só se o admin do inquilino ligar 'permitir público'; padrão desligado); função plat.pode_ler(item) / pode_editar(item) usada na RLS de item e de toda tabela dependente; ao compartilhar um mapa/app, a árvore de dependências mostra o nível de cada camada e oferece 'elevar ao nível do mapa' como escolha explícita, nunca rebaixa nem eleva em silêncio (irritação 2 da Esri); regra Esri copiada: só se compartilha com grupo em que o dono pode contribuir",
+   "portao_de_pronto": "e2e: compartilhar item com grupo, com o inquilino, por link; abrir o link em contexto anônimo do playwright (200), revogar, abrir de novo (404 em ≤ 1 s); compartilhar mapa com camada privada mostra o aviso e a opção; captura; API: usuário sem acesso recebe 404 (não 403, para não confirmar a existência); link expirado 410; contagem de acessos por link em plat.compartilhamento_link; 'público' com o inquilino desligado = 400; teste cruzado A→B em todas as rotas de compartilhamento; paridade contra 'Share items' 11.4",
+   "refutacao": "adversário revoga e reabre o link em 20 clientes simultâneos (cache não pode servir), adivinha tokens de 16 caracteres (tem de ser ≥ 32 hex), compartilha item de outro com o próprio grupo, eleva camada de outro dono via 'elevar ao nível do mapa'",
+   "papeis": [
+    "arquiteto",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-03-catalogo",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/share-items.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/create-groups.htm",
+    "https://doc.esri.com/en/arcgis-enterprise/latest/share/limit-usage-of-secure-services.html"
+   ],
+   "ativo_da_casa": "SIG de teste interno: selecao.chave (link compartilhável) e a função pode() do SIG de teste interno na RLS"
+  },
+  {
+   "id": "L0-03-f-tela-conteudo",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-a-modelo-item",
+    "L0-03-b-pastas-tags-categorias-classificacao",
+    "L0-03-c-busca"
+   ],
+   "hipotese": "tela 'Conteúdo' (abas Meu conteúdo / Favoritos / Meus grupos / Inquilino), vistas tabela/lista/grade, ordenação, filtros laterais (tipo, dono, tags, categoria, data, status, extent), busca com sintaxe, seleção em massa (mover, compartilhar, apagar, tags, categorias, dono), criar pasta, novo item (arquivo, URL, camada em branco), teclado e responsivo; módulos ES sem bundler (ADR 0001), ≤ 60 kB por módulo",
+   "portao_de_pronto": "e2e com 6 capturas (cada aba e cada vista) e 0 erro de console; lista de 10 mil itens pagina em ≤ 1,5 s de primeira pintura medida (medida pagina_conteudo_ms); seleção em massa de 50 itens move para pasta; filtros combinam (tipo+tag+data) com resultado igual ao da API; captura da busca por campo; soma dos módulos da tela ≤ 400 kB (regra do ADR); paridade contra 'Content page' 11.4",
+   "refutacao": "adversário abre a tela com 0 itens, com 50 mil itens, com nome de item de 2.048 caracteres e com miniatura ausente; qualquer erro de console ou botão inerte = refutado",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-03-catalogo",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/search.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/manage-items.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/supported-items.htm"
+   ]
+  },
+  {
+   "id": "L0-03-g-detalhe-item-miniatura",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-f-tela-conteudo",
+    "L0-11-arquivos-objetos",
+    "L0-05-a-fila-postgres"
+   ],
+   "hipotese": "página do item (abas Visão geral / Dados / Configurações / Uso) com metadado editável em linha, miniatura 600×400 enviada ou gerada por job (camada vetorial: render estático da extensão com MapLibre no chromium do playwright ou ST_AsPNG? decisão no ADR: geração no worker com o mesmo MapLibre em modo headless), extent editado no mapa ou calculado do dado, 'pontuação de informação' (campos preenchidos de 10), copiar URL/uuid, abrir em (mapa, tabela), ações (mover, compartilhar, apagar, proteger, status), 'criado a partir de' e 'usado por' (L0-03-i)",
+   "portao_de_pronto": "e2e: editar título/resumo/tags em linha e ver na lista; enviar miniatura JPEG e ver o PNG 600×400 gerado; gerar miniatura de uma camada por job e ver na página em ≤ 30 s; captura; API: miniatura > 10 MB recusada, formato fora de PNG/JPEG/GIF recusado; pontuação recalculada em PUT; paridade contra 'Item details' 11.4 (o que fica fora: comentários, avaliações por estrela, RSS — declarado)",
+   "refutacao": "adversário envia PNG de 20.000×20.000 px (bomba de descompressão: limite de pixels no servidor), miniatura com EXIF com script, edita item de outro dono por PUT",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-03-catalogo",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/item-details.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/configure-item-details.htm"
+   ]
+  },
+  {
+   "id": "L0-03-h-lixeira-protecao-status",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-a-modelo-item",
+    "L0-05-d-periodicos",
+    "L0-03-i-dependencias"
+   ],
+   "hipotese": "exclusão lógica com lixeira de 30 dias por inquilino (apagado_em, apagado_por), restauração pela tela com o mesmo uuid, expurgo por job periódico que apaga a tabela física/objetos do bucket; 'proteger contra exclusão' (campo, não segredo) que o superadmin sempre consegue desligar com registro em evento (irritação 6); status autoritativo (só admin; liga proteção; sobe na busca) e obsoleto (dono ou admin; desce na busca e mostra selo); apagar item com dependentes lista os dependentes e recusa, salvo 'apagar em cascata' explícito. A Esri não tem lixeira no Enterprise (base de conhecimento oficial), só no Online desde 06/2024 com 14 dias",
+   "portao_de_pronto": "e2e: apagar, ver na lixeira, restaurar (uuid igual, compartilhamentos preservados), apagar de novo, esvaziar; captura; item protegido devolve 409 no DELETE com a instrução; periódico com relógio simulado (apagado_em - 31 d) expurga e a tabela física some (pg_class); item autoritativo aparece antes na busca por ts_rank + peso declarado; obsoleto mostra selo; paridade contra 'Delete items' e 'Item status' 11.4",
+   "refutacao": "adversário restaura item de outro inquilino por uuid, apaga item protegido como admin de inquilino (deve falhar) e como superadmin (deve passar com evento), apaga camada usada por mapa sem cascata",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-03-catalogo",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/delete-items.htm",
+    "https://support.esri.com/en-us/knowledge-base/faq-can-deleted-items-be-recovered-in-arcgis-enterprise-000031852",
+    "https://developers.arcgis.com/rest/users-groups-and-items/recycle-bin-reference/",
+    "https://developers.arcgis.com/rest/users-groups-and-items/protect/",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/configure-item-details.htm"
+   ]
+  },
+  {
+   "id": "L0-03-i-dependencias",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-a-modelo-item"
+   ],
+   "hipotese": "tabela plat.item_relacao (origem uuid, destino uuid, tipo ∈ {camada_de_mapa, dado_de_camada, mapa_de_app, vista_de_camada, estilo_de_camada, arquivo_de_camada, formulario_de_camada, resultado_de_job, anexo_de_item, fator_de_motor, rede_de_camada}, tenant_id, RLS) com vocabulário fechado inspirado nos 45 tipos REST da Esri, gravada pelo item que cria o vínculo (mapa salva a lista de camadas → relações), consultável em 'usado por' e 'criado a partir de', ordem de exclusão calculada (dependentes primeiro), aviso ao sobrescrever camada com a lista de mapas afetados (irritação 7)",
+   "portao_de_pronto": "teste api: criar camada, mapa com a camada, app com o mapa; GET /api/itens/{camada}/usado_por devolve mapa e app em profundidade 2; DELETE da camada sem cascata = 409 com a lista; com cascata apaga na ordem certa (evento por item); relação com item de outro inquilino = 422; vocabulário fora da lista = 422; medida: 'usado por' em grafo de 10 mil itens/30 mil relações p95 < 50 ms (índice em destino)",
+   "refutacao": "adversário cria ciclo (A depende de B que depende de A) e pede a ordem de exclusão (tem de detectar e recusar), relação órfã após apagar item (FK ON DELETE CASCADE), 100 mil relações no mesmo item",
+   "papeis": [
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-03-catalogo",
+   "origem": "esri",
+   "fontes": [
+    "https://developers.arcgis.com/rest/users-groups-and-items/relationship-types/",
+    "https://developers.arcgis.com/rest/users-groups-and-items/related-items/",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/hosted-web-layers.htm"
+   ]
+  },
+  {
+   "id": "L0-03-j-transferencia-dono",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-e-compartilhamento",
+    "L0-03-i-dependencias",
+    "L0-02-f-tela-usuarios"
+   ],
+   "hipotese": "transferência de propriedade de um item, de uma seleção ou de todo o conteúdo de um usuário, com pré-checagem que lista o que vai falhar antes de executar (novo dono precisa ver os grupos com que o item está compartilhado; camada primária arrasta vistas, arquivo de origem e estilos dependentes; mapas que usam a camada NÃO mudam de dono, como na Esri), preservando compartilhamentos, pastas (opção 'manter estrutura' ou pasta única 'de_<login>'), uuid e URLs; usado por 'apagar usuário' (irritação 4)",
+   "portao_de_pronto": "e2e: transferir 3 itens com 1 falha prevista (o novo dono não está no grupo) — a pré-checagem mostra a falha e a opção de adicionar ao grupo; transferir tudo de um usuário e apagá-lo em seguida; captura; API: transferência de camada leva as vistas junto (teste com 2 vistas); uuid inalterado; compartilhamentos iguais antes/depois (diff = 0); evento por item; paridade contra 'Change owner' 11.4",
+   "refutacao": "adversário transfere item de outro inquilino, transfere para usuário desabilitado, transfere só a vista sem a camada primária (deve recusar), mede se o link compartilhado sobrevive",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-03-catalogo",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/manage-items.htm",
+    "https://developers.arcgis.com/rest/users-groups-and-items/reassign-item/",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/hosted-web-layers.htm",
+    "https://support.esri.com/en-us/knowledge-base/error-unable-to-delete-member-user-name-member-must-not-000024210"
+   ]
+  },
+  {
+   "id": "L0-03-k-favoritos-notificacoes",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-a-modelo-item",
+    "L0-10-eventos-historico"
+   ],
+   "hipotese": "favoritos por usuário (aba 'Favoritos' na tela Conteúdo e no seletor de camadas do mapa) e notificações internas por usuário (convite de grupo, pedido de entrada, job concluído/falhou, item compartilhado comigo, prazo de token) com lida/não lida, dedup por chave (padrão da notificacao do SIG de teste interno), sino na barra, expurgo em 90 dias",
+   "portao_de_pronto": "e2e: favoritar 2 itens, ver na aba, desfavoritar; receber notificação de convite e de job concluído com o sino mostrando 2; marcar lida; captura; API: notificação de outro usuário invisível (RLS por usuario_id); chave repetida não duplica; medida: sino consulta ≤ 20 ms",
+   "refutacao": "adversário favorita item sem acesso (deve recusar), cria 10 mil notificações para um usuário em 1 min (limite por origem), lê notificação de outro por id",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-03-catalogo",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/item-details.htm",
+    "https://developers.arcgis.com/rest/users-groups-and-items/notifications/"
+   ],
+   "ativo_da_casa": "SIG de teste interno schema_v3: notificacao com ux_notif_chave"
+  },
+  {
+   "id": "L0-03-l-versoes-item",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-a-modelo-item",
+    "L0-10-eventos-historico"
+   ],
+   "hipotese": "histórico de versões do metadado e da configuração de cada item (mapa, app, painel, formulário, estilo): cada PUT grava versão numerada com diff JSON, autor e comentário opcional; restaurar versão anterior cria versão nova (nunca apaga); 50 versões por item, as mais antigas compactadas em uma a cada 10; a Esri não tem histórico de item no Enterprise (registrado no handoff como 'não encontrado na doc'), a exportação de grupo (.epk) é o único caminho lá",
+   "portao_de_pronto": "teste api: 5 PUTs geram 5 versões com diff correto; restaurar a 2ª gera a 6ª igual à 2ª; lista de versões paginada; usuário sem edição não restaura; medida: PUT com versão custa ≤ +5 ms sobre PUT sem versão; e2e da tela 'Versões' com captura",
+   "refutacao": "adversário faz 1.000 PUTs no mesmo item em 1 min (compactação tem de manter ≤ 50 linhas), restaura versão de item de outro inquilino, envia diff forjado",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-03-catalogo",
+   "origem": "usuario",
+   "fontes": [
+    "https://doc.esri.com/en/arcgis-enterprise/latest/administer/migrate-group-content.html"
+   ],
+   "ativo_da_casa": "SIG de teste interno: historico (dados_antes/dados_depois por trigger)"
+  },
+  {
+   "id": "L0-04-a-upload-arquivo",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-11-arquivos-objetos",
+    "L0-03-a-modelo-item"
+   ],
+   "hipotese": "upload pelo navegador em partes (16 MiB, retomável, partes fora de ordem como o addPart da Esri) até 2 GiB por arquivo nesta fase (a Esri aceita 500 GB; ampliar é mudar dois números), sha256 calculado no servidor, arquivo guardado no bucket do inquilino como item 'arquivo' (tipo shapefile.zip, gpkg, geojson, kml, kmz, csv, gpx, xlsx, dxf, dwg, gdb.zip, parquet, fgb, gml, zip genérico) com o tipo declarado pelo usuário e conferido pelo conteúdo (magic + extensão); cota do inquilino checada ANTES da primeira parte (tamanho declarado) e DEPOIS (real); limpeza de uploads incompletos em 24 h",
+   "portao_de_pronto": "teste api: arquivo de 100 MB em 7 partes, com a parte 4 reenviada, sha256 igual ao local; arquivo com extensão .gpkg e conteúdo zip recusado com 'conteúdo não corresponde ao tipo'; cota de 20 GiB: declarar 21 GiB = 413 antes de qualquer byte; e2e com barra de progresso e captura; upload interrompido some em 24 h pelo periódico; medida taxa_upload_mb_s local",
+   "refutacao": "adversário envia zip com 1 milhão de arquivos (bomba: limite de entradas e de razão de compressão), caminho '../' no zip, arquivo de 2,1 GiB, e duas sessões subindo o mesmo uploadId",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-04-ingest-vetor",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/add-files-as-items.htm",
+    "https://developers.arcgis.com/rest/users-groups-and-items/add-item-part/",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/supported-items.htm"
+   ],
+   "ativo_da_casa": "SIG de teste interno app/v2.py _save() (sha256 + pasta por inquilino)"
+  },
+  {
+   "id": "L0-04-b-inspecao",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-a-upload-arquivo"
+   ],
+   "hipotese": "inspeção do arquivo antes de importar (ogrinfo -json do GDAL 3.8.4 instalado): camadas, contagem, tipo de geometria, campos com tipo/largura, CRS detectado (EPSG ou WKT sem código), codificação (.cpg do shapefile, BOM/UTF-8/latin-1 por amostra), delimitador do CSV (vírgula, ponto e vírgula, tabulação), colunas de latitude/longitude por nome e por faixa de valores, vírgula decimal, formatos de data por amostra, geometrias inválidas (contagem por ST_IsValidReason em amostra de 1.000), duplicatas de nome de campo; resultado devolvido como proposta editável (nome da camada, tipos, CRS, colunas de coordenada, fuso horário) que o usuário confirma; CRS ausente ou WKT sem EPSG é PERGUNTADO com sugestão (SIRGAS 2000 EPSG:4674 para arquivo com valores em graus no Brasil), nunca assumido",
+   "portao_de_pronto": "teste api com 12 arquivos de dado aberto no repositório (shapefile sem .prj, shapefile latin-1, CSV com ';' e vírgula decimal, CSV com 'lat'/'long', GeoJSON com polígono auto-intersectado, GPKG com 3 camadas, KML com pastas, XLSX com 2 planilhas, DXF com blocos, GML, GDB zipada, FlatGeobuf): cada um devolve a proposta esperada (fixture JSON) e o que falta é marcado 'perguntar'; nenhum arquivo cria tabela nesta etapa; medida tempo_inspecao_s por arquivo (100 mil feições ≤ 5 s)",
+   "refutacao": "adversário envia CSV com 300 colunas e 0 linhas, shapefile com .dbf de 4 GB, GeoJSON de 1 feição com 10 milhões de vértices, arquivo com nome de camada em caracteres de controle; silêncio ou 500 = refutado",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-04-ingest-vetor",
+   "origem": "geoserver",
+   "fontes": [
+    "https://gdal.org/en/stable/programs/ogrinfo.html",
+    "https://gdal.org/en/stable/drivers/vector/csv.html",
+    "https://gdal.org/en/stable/drivers/vector/shapefile.html",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/csv-gpx.htm",
+    "https://docs.geoserver.org/stable/en/user/extensions/importer/index.html"
+   ],
+   "ativo_da_casa": "SIG de teste interno app/ingest.py (camadas_do_dxf, inspecionar antes de importar)"
+  },
+  {
+   "id": "L0-04-c-tabela-camada",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-b-inspecao",
+    "L0-05-a-fila-postgres",
+    "L0-03-i-dependencias"
+   ],
+   "hipotese": "carga como job: ogr2ogr → tabela física no schema do inquilino d_<slug> com nome c_<uuid16>, colunas fid bigserial, tenant_id (DEFAULT plat.tenant_atual(), RLS igual às tabelas de catálogo), geom geometry(<tipo>, <srid do arquivo ou o confirmado>), campos saneados (minúsculo, sem acento, ≤ 63 bytes, palavras reservadas com sufixo, mapa original→novo guardado no item), criado_em/atualizado_em/criado_por/atualizado_por, índice GIST + índice por fid; ST_MakeValid + ST_ReducePrecision com relatório (quantas corrigidas, quantas descartadas, por quê); promoção para Multi quando misto; estatísticas (contagem, extent, por campo: nulos, distintos, mín/máx) gravadas no item; item 'camada' ligado ao item 'arquivo' por relação dado_de_camada; 1 job por arquivo, N camadas",
+   "portao_de_pronto": "teste api: shapefile de 100 mil feições (dado aberto, ex. setores censitários de um estado) importa e aparece na lista em ≤ 60 s medido (medida tempo_import_100k_s); tabela tem RLS e política (pg_class.relrowsecurity); plat_app sem contexto vê 0 linhas; relatório de inválidas com números; nome de campo 'SELECT' vira 'select_'; campo 'Município' vira 'municipio'; estatísticas batem com COUNT(*) e ST_Extent; job cancelado deixa 0 tabela órfã (DROP no rollback/limpeza); cota: import que passar do limite falha com mensagem e sem tabela",
+   "refutacao": "adversário importa o mesmo arquivo 2 vezes em paralelo (dois itens distintos, nenhum erro), importa com CRS mentido (o extent sai do planeta → aviso), mata o worker no meio (L0-05) e confere que não fica tabela sem item nem item sem tabela",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-04-ingest-vetor",
+   "origem": "esri",
+   "fontes": [
+    "https://gdal.org/en/stable/programs/ogr2ogr.html",
+    "https://gdal.org/en/stable/drivers/vector/pg.html",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/publish-features.htm",
+    "https://www.postgresql.org/docs/16/ddl-rowsecurity.html"
+   ],
+   "ativo_da_casa": "SIG de teste interno pipeline/06_carga.py; ADR 0001 seção 3.3 (RLS com tenant_atual)"
+  },
+  {
+   "id": "L0-04-d-formatos-base",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-c-tabela-camada"
+   ],
+   "hipotese": "formatos do portão do item pai com regra escrita por formato: shapefile zipado (multi-shapefile no zip = N camadas; .cpg ou pergunta de codificação; .prj ausente = pergunta), GeoPackage (todas as tabelas espaciais e não espaciais), GeoJSON/GeoJSONSeq (sempre 4326 pelo RFC 7946; sem limite de 100 MB como na Esri, mas com aviso acima de 500 MB), KML/KMZ (pastas viram camadas, estilo descartado com aviso), CSV/TXT (vírgula, ponto e vírgula, tabulação; lat/lon em graus decimais; tabela sem geometria vira 'tabela'; endereço sem coordenada vai para L2-11), GPX (trilhas, rotas, pontos), XLSX/XLS (planilha por camada); fuso horário das datas escolhido na inspeção (a Esri assume UTC)",
+   "portao_de_pronto": "teste automatizado com 1 arquivo aberto por formato (9 arquivos) e fixture do resultado (contagem, tipo, srid, campos); CSV com vírgula decimal importa 1.234,5 como 1234.5; CSV sem coluna de coordenada vira tabela sem geom; KMZ com 3 pastas gera 3 camadas; e2e do fluxo completo (enviar → inspecionar → confirmar → ver no catálogo) com captura por formato; paridade contra 'Publish hosted feature layers' 11.4 e 'CSV, TXT, and GPX files'",
+   "refutacao": "adversário envia CSV com aspas desbalanceadas, GeoJSON com 'crs' legado em 31982 (deve avisar e reprojetar ou perguntar), XLSX com célula de data como texto, shapefile com campo de 254 caracteres truncado; cada um importa certo ou recusa com mensagem exata",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-04-ingest-vetor",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/publish-features.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/csv-gpx.htm",
+    "https://gdal.org/en/stable/drivers/vector/gpkg.html",
+    "https://gdal.org/en/stable/drivers/vector/libkml.html",
+    "https://gdal.org/en/stable/drivers/vector/gpx.html",
+    "https://gdal.org/en/stable/drivers/vector/xlsx.html",
+    "https://docs.geoserver.org/stable/en/user/extensions/importer/formats/"
+   ]
+  },
+  {
+   "id": "L0-04-e-formatos-cad",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-c-tabela-camada"
+   ],
+   "hipotese": "DXF pelo driver do GDAL (camadas do DXF viram camadas; blocos explodidos ou mantidos como pontos com atributo do bloco; cotas, textos e hachuras separados; unidade e georreferência perguntadas: o DXF raramente tem CRS; ferramenta de georreferência por 2-4 pontos com Helmert como o georef.py do SIG de teste interno) e DWG por conversão prévia com LibreDWG (dwg2dxf, GPL, roda no GPU box como no roundtrip do SIG; não roda dentro do processo web) ou pelo ODA File Converter (binário gratuito, licença própria: decisão do dono); ezdxf (MIT, ausente na venv) entra só se o driver do GDAL não bastar para blocos aninhados, medido com o corpus da casa (654 IFC/DWG/DXF do GABARITO)",
+   "portao_de_pronto": "teste com 4 DXF abertos (blocos, polilinhas 2D/3D, textos, camadas com nome longo) e 2 DWG (R2000 e R2018) convertidos: contagem por camada igual à do ogrinfo; georreferência por 3 pontos com RMSE reportado; DWG que o LibreDWG não lê devolve mensagem com a versão do arquivo; e2e do fluxo com captura; decisão ODA registrada em decisoes_do_dono se LibreDWG falhar em > 10 % do corpus",
+   "refutacao": "adversário envia DXF binário, DXF com 2 milhões de entidades, DWG cifrado, DXF em unidade polegada sem declarar (a escala tem de ser perguntada)",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-04-ingest-vetor",
+   "origem": "casa",
+   "fontes": [
+    "https://gdal.org/en/stable/drivers/vector/dxf.html",
+    "https://gdal.org/en/stable/drivers/vector/cad.html",
+    "https://gdal.org/en/stable/drivers/vector/dwg.html",
+    "https://ezdxf.readthedocs.io/en/stable/",
+    "https://www.opendesign.com/guestfiles/oda_file_converter"
+   ],
+   "ativo_da_casa": "SIG de teste interno app/georef.py (Helmert), pipeline/03_dxf.py, 04_dwg_roundtrip.sh (LibreDWG no GPU box)"
+  },
+  {
+   "id": "L0-04-f-fgdb-parquet-fgb-gml",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-c-tabela-camada"
+   ],
+   "hipotese": "File Geodatabase zipada pelo driver OpenFileGDB do GDAL 3.8.4 (leitura de feature classes, tabelas, domínios codificados → tabela plat.dominio do inquilino, subtipos → campo, anexos → L2-03, classes de relacionamento → L2-10, z/m descartados com aviso como na Esri); FlatGeobuf (driver presente); GML 3.2 com esquema; GeoParquet: o driver Parquet NÃO está no GDAL desta máquina (medido) → decisão: ler por DuckDB spatial (já usado na casa) ou instalar libgdal com Arrow; MapInfo TAB/MIF (driver presente)",
+   "portao_de_pronto": "teste com 1 arquivo aberto por formato (GDB do IBGE ou de órgão federal, FGB gerado do shapefile de teste, GML de WFS aberto, Parquet do Overture já baixado na casa, TAB): contagem e campos batem com ogrinfo; domínio codificado da GDB aparece como lista de valores no item; raster dentro da GDB é listado como 'não importado' no relatório; medida tempo por formato",
+   "refutacao": "adversário envia GDB com feature dataset aninhado e nome com espaço, Parquet sem coluna de geometria, GML de 2 GB, FGB sem índice espacial",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-04-ingest-vetor",
+   "origem": "esri",
+   "fontes": [
+    "https://gdal.org/en/stable/drivers/vector/openfilegdb.html",
+    "https://gdal.org/en/stable/drivers/vector/flatgeobuf.html",
+    "https://gdal.org/en/stable/drivers/vector/gml.html",
+    "https://gdal.org/en/stable/drivers/vector/parquet.html",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/publish-features.htm"
+   ],
+   "ativo_da_casa": "DOC.md 17.2: Overture 596 mil edifícios lidos em 87 s por DuckDB spatial"
+  },
+  {
+   "id": "L0-04-g-atualizar-dados",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-c-tabela-camada",
+    "L0-03-i-dependencias",
+    "L0-03-l-versoes-item"
+   ],
+   "hipotese": "'Atualizar dados' da camada por arquivo do mesmo formato: substituir tudo (mantém uuid do item, nome e id das subcamadas, estilo, pop-up, compartilhamento, índices e as configurações de campo, que a Esri perde ao sobrescrever), acrescentar (append com mapeamento de campos), acrescentar e atualizar por chave; comparação de esquema ANTES de aceitar (campos novos/ausentes/tipo diferente, com a lista de mapas e apps dependentes que serão afetados — irritação 7); executado como job com transação única (tabela nova + troca atômica por RENAME) e com a versão anterior retida 30 dias na lixeira de tabelas",
+   "portao_de_pronto": "teste api: substituir 100 mil feições por 120 mil em ≤ 60 s, uuid e índices iguais, mapas dependentes seguem abrindo (contagem de relações antes = depois); esquema divergente devolve 409 com o diff de campos; append de 10 mil com 2 campos mapeados; upsert por chave atualiza 500 e insere 100 (contagens verificadas); job morto no meio deixa a tabela antiga intacta (teste de morte de L0-05); e2e com captura; paridade contra 'Overwrite hosted feature layers'/'Update Data' 11.4",
+   "refutacao": "adversário sobrescreve com arquivo de tipo de geometria diferente (ponto → polígono: deve recusar), com CRS diferente (deve reprojetar e avisar), e chama a rota com o arquivo de outro inquilino por uuid",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-04-ingest-vetor",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/manage-hosted-feature-layers.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/hosted-web-layers.htm"
+   ]
+  },
+  {
+   "id": "L0-04-h-exportar",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-c-tabela-camada",
+    "L0-05-a-fila-postgres",
+    "L0-11-arquivos-objetos"
+   ],
+   "hipotese": "exportação de camada/tabela como job (ogr2ogr): shapefile zipado, GeoPackage, GeoJSON, CSV (x/y configuráveis), XLSX, KML/KMZ, FlatGeobuf, GML, DXF, GeoParquet (por DuckDB se o driver faltar), com filtro (where + bbox), campos escolhidos, CRS de saída (EPSG), codificação; arquivo resultante vira item na pasta do usuário com validade de 7 dias e link; opção do dono 'permitir que outros exportem' (padrão desligado, como a Esri); exportação de vista respeita o filtro da vista",
+   "portao_de_pronto": "teste api: 10 formatos gerados de uma camada de 100 mil feições, cada um reaberto por ogrinfo com a mesma contagem; CSV com vírgula decimal opcional; export com where inválido devolve 400 com o erro do banco saneado; usuário sem 'exportar' recebe 403 na camada de outro; arquivo expira e some em 7 dias; e2e do botão Exportar com captura; medida tempo por formato",
+   "refutacao": "adversário exporta 5 vezes em paralelo a mesma camada de 5 milhões de feições (limite de jobs por usuário e de disco temporário), injeta SQL no where, pede EPSG inexistente",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-04-ingest-vetor",
+   "origem": "esri",
+   "fontes": [
+    "https://developers.arcgis.com/rest/users-groups-and-items/export-item/",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/manage-hosted-feature-layers.htm",
+    "https://gdal.org/en/stable/programs/ogr2ogr.html"
+   ],
+   "ativo_da_casa": "SIG de teste interno main.py /api/exportar/{emp}/{camada}.geojson"
+  },
+  {
+   "id": "L0-04-i-fonte-registrada",
+   "linha": "L0 fundação",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-c-tabela-camada",
+    "L0-02-d-token-servico"
+   ],
+   "hipotese": "fonte de dado registrada (o 'data store item' da Esri e o 'store' do GeoServer): conexão PostgreSQL/PostGIS externa do cliente (postgres_fdw, extensão instalada) com credencial guardada cifrada, só leitura por padrão, teste de conexão, listagem de tabelas e 'publicar em massa' (uma camada referenciada por tabela, sem copiar dado, como o bulk publish da Esri); tabela referenciada entra no catálogo como camada tipo 'referenciada' com tenant_id/RLS na tabela estrangeira via view; pasta de rede e bucket S3 externo ficam para L6-02",
+   "portao_de_pronto": "teste com um segundo banco Postgres local (docker, dado aberto): registrar, listar 3 tabelas, publicar em massa, ver as 3 camadas no catálogo e no mapa; credencial nunca em claro no banco nem no log; conexão que cai devolve 503 com mensagem e a camada continua no catálogo com estado 'fonte indisponível'; e2e com captura; paridade contra 'Data store items' 11.4 e 'Stores' do GeoServer",
+   "refutacao": "adversário registra conexão com usuário superuser (deve avisar e recusar escrita), aponta para o próprio iagro_sat (deve recusar por lista de hosts proibidos), injeta no nome da tabela",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-04-ingest-vetor",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/data-store-items.htm",
+    "https://docs.geoserver.org/stable/en/user/data/webadmin/workspaces/",
+    "https://gdal.org/en/stable/drivers/vector/pg.html"
+   ]
+  },
+  {
+   "id": "L0-04-j-camada-vista",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-c-tabela-camada",
+    "L0-03-i-dependencias"
+   ],
+   "hipotese": "vista de camada (hosted feature layer view da Esri): item novo que aponta para a tabela da camada primária com filtro de linhas (where validado), área de interesse (bbox/polígono), subconjunto de campos, somente leitura ou editável, compartilhamento próprio; implementada como VIEW SQL no schema do inquilino com security_barrier e a mesma RLS; limite declarado 20 vistas por camada (igual à Esri); vistas herdam anexos e domínios; 'a vista não define filtro se tem tile dependente' (regra da Esri) vira 'tile é recalculado' aqui",
+   "portao_de_pronto": "teste api: criar vista com where e 3 campos, contagem = SELECT direto com o where; vista não expõe campo oculto nem por 'select *' no FeatureServer (L2-04) nem na exportação; 21ª vista = 422; apagar a primária com vistas = 409; RLS ativa na view (pg_class + política) e teste cruzado; e2e com captura",
+   "refutacao": "adversário põe 'OR 1=1' e subconsulta no where (validador só aceita a gramática de filtro declarada), cria vista sobre vista, cria vista de camada de outro inquilino por uuid",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-04-ingest-vetor",
+   "origem": "esri",
+   "fontes": [
+    "https://doc.esri.com/en/arcgis-enterprise/latest/share/create-hosted-views.html",
+    "https://enterprise.arcgis.com/en/portal/11.4/use/hosted-web-layers.htm"
+   ]
+  },
+  {
+   "id": "L0-05-a-fila-postgres",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-01-repo",
+    "L0-12-contrato-api-e-limites"
+   ],
+   "hipotese": "fila própria só com Postgres (decisão do CONCEITO: Procrastinate não está instalado, exige psycopg 3 e traz esquema próprio; a fila própria são ~300 linhas sobre o pool psycopg2 do ADR): tabela plat.job (id uuid, tenant_id, usuario_id, tipo, parametros jsonb, estado ∈ {na_fila, executando, concluido, falhou, cancelado}, prioridade, tentativa/max_tentativas, agendado_para, iniciado_em, heartbeat_em, terminado_em, progresso, mensagem, resultado jsonb, erro, worker, chave_de_lock) com RLS; retirada com SELECT ... FOR UPDATE SKIP LOCKED; LISTEN/NOTIFY para acordar o worker; heartbeat a cada 10 s; job sem heartbeat por 60 s é devolvido à fila (até max_tentativas, padrão 3) por um ceifador; tarefas registradas por decorador com timeout e limite de RAM (o worker é a unidade systemd plat-worker :8153 com MemoryMax); 1 worker e 2 processos por padrão; lock por chave (mesma camada não importa duas vezes ao mesmo tempo)",
+   "portao_de_pronto": "unidade plat-worker ativa com /saude do worker em :8153 e campo 'worker' no /saude da API; teste api: 100 jobs enfileirados são executados exatamente uma vez com 2 processos (contagem em tabela de prova = 100, sem duplicata); job com exceção é retentado 3 vezes com espera 2·4·8 s e termina 'falhou' com o traceback saneado; job de 5 min mostra heartbeat e progresso; SIGTERM no worker no meio de um job → job volta a 'na_fila' e é concluído após reinício (teste de morte automatizado, rc do systemctl kill); lock: dois jobs com a mesma chave rodam em série; medida jobs_por_minuto_vazio (job nulo) ≥ 600; RLS: inquilino A não vê job de B",
+   "refutacao": "adversário mata o worker com SIGKILL (não SIGTERM) 3 vezes seguidas no mesmo job e verifica que o job termina 'falhou' na 4ª e nunca 'concluido'; enfileira 10 mil jobs e mede se a API continua respondendo /saude em < 50 ms; muda o relógio do heartbeat",
+   "papeis": [
+    "arquiteto",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-05-jobs",
+   "origem": "spec",
+   "fontes": [
+    "https://www.postgresql.org/docs/16/sql-select.html",
+    "https://www.postgresql.org/docs/16/sql-notify.html",
+    "https://procrastinate.readthedocs.io/en/stable/",
+    "https://procrastinate.readthedocs.io/en/stable/howto/advanced/retry.html",
+    "https://procrastinate.readthedocs.io/en/stable/howto/advanced/locks.html",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/gp-job/",
+    "https://developers.arcgis.com/rest/enterprise-administration/server/jobs/"
+   ],
+   "ativo_da_casa": "DOC.md 17.2 (Procrastinate ou própria); o SIG de teste interno usa BackgroundTasks e perde o job no reinício (LIDO em app/v2.py)"
+  },
+  {
+   "id": "L0-05-b-progresso-cancelamento",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-05-a-fila-postgres"
+   ],
+   "hipotese": "progresso (0-100 + mensagem, atualizado pela tarefa a cada passo, ≤ 1 escrita/s), log por job (tabela plat.job_log: nível, mensagem, em; ≤ 10 mil linhas por job, as demais resumidas), cancelamento cooperativo (flag no banco lida pela tarefa a cada passo + SIGTERM no processo do job após 30 s sem resposta), estados finais imutáveis; canal SSE /api/jobs/{id}/eventos que empurra progresso e linhas de log em ≤ 2 s (NOTIFY → SSE), e polling /api/jobs/{id} como reserva; máquina de estados igual à do GP job da Esri (Submitted/Waiting/Executing/Cancelling/Cancelled/Failed/TimedOut/Succeeded) traduzida",
+   "portao_de_pronto": "teste api: job de prova de 60 s com 60 passos mostra progresso crescente por SSE com atraso medido ≤ 2 s (medida latencia_progresso_s); cancelar no passo 10 termina 'cancelado' em ≤ 5 s e o efeito parcial é desfeito (a tarefa de prova cria tabela temporária que não pode sobrar); job que ignora a flag é morto por SIGTERM em 30 s e fica 'cancelado'; log com 10 mil linhas é resumido; timeout de tarefa (declarado no decorador) vira 'falhou: tempo esgotado'",
+   "refutacao": "adversário cancela job já concluído (409), cancela job de outro inquilino (404), abre 200 conexões SSE no mesmo job (limite por usuário e fechamento em 30 min), envia progresso 150 %",
+   "papeis": [
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-05-jobs",
+   "origem": "esri",
+   "fontes": [
+    "https://developers.arcgis.com/rest/services-reference/enterprise/gp-job/",
+    "https://procrastinate.readthedocs.io/en/stable/howto/advanced/cancellation.html",
+    "https://www.postgresql.org/docs/16/sql-notify.html"
+   ]
+  },
+  {
+   "id": "L0-05-c-tela-tarefas",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-05-b-progresso-cancelamento",
+    "L0-03-f-tela-conteudo"
+   ],
+   "hipotese": "tela 'Tarefas' por inquilino: lista com estado, tipo, quem, quando, duração, progresso ao vivo (SSE), filtros (estado, tipo, usuário, período), detalhe com log, parâmetros, resultado (link para o item gerado), botões cancelar/repetir/baixar log; admin vê todas, usuário vê as suas; indicador na barra com jobs ativos",
+   "portao_de_pronto": "e2e: disparar importação, ver a linha aparecer sem recarregar, progresso subir, concluir e o link levar ao item; cancelar uma exportação; captura de lista e de detalhe; 0 erro de console; filtro por estado bate com a API; medida primeira pintura ≤ 1 s com 1.000 jobs",
+   "refutacao": "adversário abre a tela com 100 mil jobs (paginação obrigatória), deixa a aba aberta 2 h (reconexão do SSE), e clica 'repetir' num job de outro usuário",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-05-jobs",
+   "origem": "usuario",
+   "fontes": [
+    "https://developers.arcgis.com/rest/services-reference/enterprise/gp-job/"
+   ]
+  },
+  {
+   "id": "L0-05-d-periodicos",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-05-a-fila-postgres"
+   ],
+   "hipotese": "tarefas periódicas declaradas em código com expressão cron (ex.: expurgo de sessões vencidas 0 */1, uploads incompletos 24 h, lixeira 30 d, notificações 90 d, medição de uso por inquilino diária 02:00, verificação de backup 04:00, reindex/ANALYZE semanal) registradas em plat.job_periodico com última/próxima execução, ligáveis por inquilino quando fizer sentido; execução única mesmo com 2 processos (lock por chave); tela lista os periódicos e permite 'rodar agora' (admin)",
+   "portao_de_pronto": "teste api com relógio injetado: 5 periódicos disparam na hora certa exatamente uma vez com 2 processos concorrentes; periódico que falha não bloqueia os outros e fica marcado; 'rodar agora' cria job normal; tabela mostra próxima execução coerente com a cron; e2e da tela com captura",
+   "refutacao": "adversário registra cron inválida (422), dispara 'rodar agora' 50 vezes (dedup por lock), muda o relógio do sistema 1 dia para trás",
+   "papeis": [
+    "backend",
+    "testador"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-05-jobs",
+   "origem": "esri",
+   "fontes": [
+    "https://procrastinate.readthedocs.io/en/stable/howto/advanced/cron.html"
+   ]
+  },
+  {
+   "id": "L0-06-a-dump-logico",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-c-tabela-camada",
+    "L0-05-d-periodicos",
+    "L0-11-arquivos-objetos"
+   ],
+   "hipotese": "fase 1 sem reiniciar o Postgres (archive_mode=off medido; ligar exige reinício de um banco compartilhado com outros serviços = decisão do gerente/dono): pg_dump -Fc diário 03:00 do schema plat e de cada d_<slug> (um arquivo por inquilino, paralelizável e restaurável por inquilino), sha256 e tamanho registrados em plat.backup, retenção 14 diários + 8 semanais, cópia para bucket 'plat-backup' do Garage e para destino externo configurável (rclone ausente: cópia por API S3 do próprio boto3/mc já presente); manifesto dos objetos do bucket por inquilino (chave, sha256, bytes) gravado junto; espaço checado antes (df) com aviso quando < 10 GB",
+   "portao_de_pronto": "periódico roda e a linha em plat.backup tem sha256 igual ao do arquivo; 1 arquivo por inquilino + 1 do plat; retenção apaga o 15º; falha de espaço vira job 'falhou' e notificação ao superadmin (não silêncio); medida tempo_dump_s e bytes por inquilino; restauração do dump de demo2 em banco temporário conta as mesmas linhas (L0-06-c); paridade escrita contra webgisdr (o que a Esri inclui e não inclui: caches de tile, dado referenciado, spatiotemporal)",
+   "refutacao": "adversário corrompe 1 byte do último dump e roda a verificação (tem de acusar pelo sha256); enche o disco a 99 % e dispara o backup (tem de falhar com mensagem antes de escrever); apaga a linha de plat.backup e confere que o arquivo órfão é listado",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-06-backup-status",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/create-web-gis-backup.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/overview-backup-restore-web-gis.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/backup-and-restore-best-practices.htm",
+    "https://doc.esri.com/en/arcgis-enterprise/12.1/administer/data-store-backups.html",
+    "https://www.postgresql.org/docs/16/app-pgdump.html"
+   ],
+   "ativo_da_casa": "SIG de teste interno pipeline/backup.sh (pg_dump -Fc + tabela backup do SIG de teste interno + retenção 14)"
+  },
+  {
+   "id": "L0-06-b-pitr-pgbackrest",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-06-a-dump-logico"
+   ],
+   "hipotese": "fase 2: pgBackRest (ausente; apt pelo gerente) com repositório fora da máquina, backup full semanal + diferencial diário + arquivamento contínuo de WAL, retenção 14 dias, RPO ≤ 15 min (meta da spec 17.4), restauração a ponto no tempo testada; exige wal_level=replica (já) e archive_mode=on + archive_command (reinício do Postgres compartilhado → decisão registrada em decisoes_do_dono com janela); a Esri faz o mesmo com backups do relational data store a cada 4 dias e PITR opcional a cada 5 min de log",
+   "portao_de_pronto": "pgbackrest info mostra full + diff válidos; pgbackrest check ok; restauração em cluster temporário a um instante T (cluster em porta 5433, dado de demo alterado após T não aparece); RPO medido = intervalo real entre WALs arquivados ≤ 15 min; espaço do repositório monitorado no status; runbook de restauração completa em docs/ com comandos e tempo medido (RTO)",
+   "refutacao": "adversário apaga o último WAL arquivado e tenta restaurar a T (tem de falhar com mensagem clara, não restaurar silenciosamente T-1); simula perda do disco do repositório (cópia off-site tem de existir)",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-06-backup-status",
+   "origem": "esri",
+   "fontes": [
+    "https://pgbackrest.org/user-guide.html",
+    "https://www.postgresql.org/docs/16/continuous-archiving.html",
+    "https://doc.esri.com/en/arcgis-enterprise/12.1/administer/data-store-backups.html",
+    "https://doc.esri.com/en/arcgis-enterprise/12.1/administer/data-store-recovery.html",
+    "https://enterprise.arcgis.com/en/data-store/11.4/install/windows/data-store-utility-reference.htm"
+   ]
+  },
+  {
+   "id": "L0-06-c-restore-drill",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-06-a-dump-logico"
+   ],
+   "hipotese": "restore_drill.sh: restaura o último dump de cada inquilino em banco temporário (padrão do restore_test.sh do SIG de teste interno), compara COUNT(*) de TODAS as tabelas com tenant_id contra produção, compara sha256 de 3 objetos do bucket por inquilino com o manifesto, registra resultado em plat.backup_drill (data, tabelas, linhas, divergências, duração) e publica na página de status; roda mensalmente pelo periódico e no make check (versão curta com demo2)",
+   "portao_de_pronto": "drill mensal registra 0 divergências com dumps íntegros; drill com dump corrompido de propósito registra a divergência e notifica; make check inclui o drill curto (≤ 60 s medido); relatório em docs/ e status com data do último drill; medida duracao_drill_s",
+   "refutacao": "adversário restaura o backup mais recente e compara COUNT(*) de todas as tabelas com tenant_id (refutação do item pai); acrescenta uma linha em produção após o dump e confere que o drill acusa a diferença esperada (drill compara com o instante do dump, não com 'agora')",
+   "papeis": [
+    "dados",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-06-backup-status",
+   "origem": "casa",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/backup-and-restore-best-practices.htm"
+   ],
+   "ativo_da_casa": "SIG de teste interno pipeline/restore_test.sh (banco temporário + contagem contra o vivo)"
+  },
+  {
+   "id": "L0-06-d-exportar-inquilino",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-h-exportar",
+    "L0-05-a-fila-postgres",
+    "L0-03-a-modelo-item"
+   ],
+   "hipotese": "botão 'Exportar meu inquilino' (admin do inquilino): job que gera um GeoPackage com todas as camadas e tabelas (com estilo em JSON e metadado como tabelas gpkg_metadata), um JSON do catálogo (itens, pastas, grupos, compartilhamentos, relações, usuários sem hash de senha), os arquivos do bucket em zip por item e um manifesto com sha256; formato aberto para o cliente sair sem depender de nós (escrow prático da spec 17.4); tamanho estimado antes e limite de 1 execução por dia",
+   "portao_de_pronto": "teste: exportar demo (dado aberto) e reabrir o GeoPackage com ogrinfo listando N camadas = N camadas do catálogo; JSON válido contra JSON Schema publicado em docs/; manifesto confere; importar o pacote num inquilino novo (L0-15) recria itens com os mesmos uuids (prova de portabilidade); e2e com captura; medida tempo e bytes",
+   "refutacao": "adversário pede exportação em demo2 com sessão de demo (404), pede 2 no mesmo dia (429), modifica o pacote e importa (sha256 tem de acusar)",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "testador"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-06-backup-status",
+   "origem": "spec",
+   "fontes": [
+    "https://doc.esri.com/en/arcgis-enterprise/latest/administer/migrate-group-content.html",
+    "https://gdal.org/en/stable/drivers/vector/gpkg.html"
+   ]
+  },
+  {
+   "id": "L0-06-e-status",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-05-d-periodicos",
+    "L0-06-a-dump-logico"
+   ],
+   "hipotese": "página interna /status (noindex, sem login, sem nome de inquilino) e JSON /api/status: estado de api, worker, banco, martin, titiler, garage (sondas do /saude), migrações, fila (na_fila/executando/falhas 24 h), último backup e último drill com data e resultado, espaço em disco e no bucket, certificado TLS (dias), histórico de 90 dias por serviço (verificação a cada 5 min pelo periódico, gravada em plat.status_amostra) com percentual de disponibilidade mensal calculado; log de correções (CHANGELOG filtrado por 'correção') na mesma página",
+   "portao_de_pronto": "e2e: /status responde 200 sem sessão, com todos os campos e captura; derrubar o worker (systemctl stop) muda o campo em ≤ 5 min e volta ao religar; percentual do mês bate com as amostras (teste recalcula); /api/status não expõe versão de dependência nem caminho de disco; X-Robots-Tag noindex; paridade contra o portalScan/operationalHealth.py da Esri (critérios que cobrimos e os que não se aplicam)",
+   "refutacao": "adversário procura na página nome de inquilino, IP interno, senha, versão exata de biblioteca; faz 1.000 pedidos/min (a página é cache de 30 s, não consulta o banco por pedido)",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-06-backup-status",
+   "origem": "spec",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/scan-your-portal-for-operational-health-issues.htm",
+    "https://developers.arcgis.com/rest/enterprise-administration/portal/health-check-portal/",
+    "https://docs.geoserver.org/stable/en/user/configuration/status/"
+   ]
+  },
+  {
+   "id": "L0-07-a-configuracoes-org",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-f-tela-usuarios",
+    "L0-11-arquivos-objetos"
+   ],
+   "hipotese": "tela 'Organização > Configurações' do admin do inquilino sobre tenant.config validado por JSON Schema: nome (≤ 55), logotipo (300×300), cor principal e tema, resumo (≤ 310), idioma padrão e formato de número/data, contato, contatos administrativos (≥ 1), mapa padrão (centro, zoom, basemap, extent, CRS de exibição), unidades, página inicial com blocos (texto, galeria de itens, links; ≤ 15 blocos, ≤ 8 links por bloco), galeria em destaque (grupo), banner de aviso e termo de acesso (texto exibido antes do login), domínio de e-mail permitido, 'permitir compartilhamento público', 'exigir 2FA'",
+   "portao_de_pronto": "e2e: alterar nome, logo, cor, mapa padrão e um bloco da página inicial; ver o resultado na tela de entrada e no mapa; captura; API: config inválida (cor sem #, 16 blocos) = 422 com caminho; logo > 1 MB recusado; paridade contra 'General', 'Home page', 'Map', 'Gallery', 'Security' 11.4 (o que fica fora: legado, Bing, Living Atlas)",
+   "refutacao": "adversário injeta HTML no texto do banner (saneado), define contato administrativo vazio, muda config de outro inquilino por PUT",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-07-admin-org",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-general.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-home.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-map.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-gallery.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-security.htm"
+   ],
+   "ativo_da_casa": "SIG de teste interno tenant.config (logo_url, cor, centro, zoom, basemap, srid)"
+  },
+  {
+   "id": "L0-07-b-papeis-privilegios",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-f-tela-usuarios",
+    "L0-03-e-compartilhamento"
+   ],
+   "hipotese": "privilégios finos com vocabulário fechado (≈ 40 nomes em português, espelho dos gerais e administrativos da Esri: conteúdo.criar, conteúdo.publicar_camada, conteúdo.ver_tudo, grupos.criar, grupos.atualizacao_compartilhada, compartilhar.inquilino, compartilhar.publico, feicoes.editar, feicoes.editar_total, jobs.executar, membros.ver, membros.gerir, papeis.gerir, org.configurar, tokens.gerar, webhooks.gerir, backups.exportar…) em plat.privilegio; papéis padrão fixos (visualizador, editor de dados, usuário, publicador, administrador) mapeados dos 4 perfis do ADR, e papéis personalizados por inquilino (nome ≤ 128, descrição ≤ 250, 'a partir de papel existente'); tipo de usuário (visualizador/contribuidor/campo/criador) define o teto de privilégios; checagem por função plat.tem(privilegio) usada em rota e RLS; 'pelo menos um administrador' e 'só administrador muda administrador'",
+   "portao_de_pronto": "tabela de privilégios publicada em docs/PRIVILEGIOS.md gerada do banco; teste que percorre TODA rota do OpenAPI e exige privilégio declarado (rota sem privilégio = falha de teste); e2e: criar papel 'Curador' (conteúdo.criar + categorias.gerir) atribuir a usuário e ver que ele categoriza mas não publica; captura; rebaixar tipo de usuário com conteúdo é recusado (regra Esri); paridade linha a linha contra 'Privileges for roles' 11.4 (feito/parcial/fora)",
+   "refutacao": "adversário cria papel com privilégio administrativo para tipo visualizador (422), dá a si mesmo 'papeis.gerir' sendo editor (403), apaga o papel em uso (409), e chama cada rota com um usuário sem o privilégio declarado",
+   "papeis": [
+    "esri",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-07-admin-org",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/roles.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/privileges-for-roles-orgs.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/user-types-orgs.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-new-member-defaults.htm"
+   ]
+  },
+  {
+   "id": "L0-07-c-cotas-uso",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-c-tabela-camada",
+    "L0-11-arquivos-objetos",
+    "L0-05-d-periodicos"
+   ],
+   "hipotese": "medição diária por inquilino (job): bytes no banco (pg_total_relation_size das tabelas do schema d_<slug> + parte do plat), bytes no bucket (API admin do Garage), nº de itens, usuários ativos (30 d), jobs e tempo de CPU de jobs, requisições e bytes servidos (de plat.log_acesso), gravados em plat.uso_inquilino (série); cotas em tenant (cota_bytes já existe; + cota_usuarios, cota_itens, cota_jobs_dia) aplicadas nas rotas de criação com 413/429 e mensagem que diz o uso atual e o limite; aviso a 80 %; sem crédito nem assento (regra da spec: taxímetro de TB, nunca crédito); a Esri não tem cota de armazenamento por membro no Enterprise (a doc de armazenamento trata só de onde o dado fica), o GeoServer só tem cota de cache de tiles (500 MiB padrão)",
+   "portao_de_pronto": "teste api: inquilino com cota 100 MB recebe 413 ao importar 120 MB (antes de gravar), 429 no 11º job do dia com cota 10; medição bate com pg_total_relation_size e com o bucket (diferença ≤ 1 %); série diária com 30 pontos após simular 30 dias; tela 'Uso' do admin do inquilino com gráfico e captura; superadmin altera cota e o efeito é imediato",
+   "refutacao": "adversário ultrapassa a cota pela API direta em 20 uploads paralelos de 6 MB com cota de 100 MB (a reserva tem de ser atômica: SELECT ... FOR UPDATE no tenant), e apaga item para 'liberar' cota antes do expurgo (a lixeira conta na cota)",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-07-admin-org",
+   "origem": "spec",
+   "fontes": [
+    "https://docs.geoserver.org/stable/en/user/geowebcache/webadmin/diskquotas/",
+    "https://garagehq.deuxfleurs.fr/documentation/reference-manual/admin-api/",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/about-usage-reports.htm"
+   ]
+  },
+  {
+   "id": "L0-07-d-smtp-convites",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-f-tela-usuarios",
+    "L0-05-a-fila-postgres"
+   ],
+   "hipotese": "SMTP configurável na instalação (.env) e opcionalmente por inquilino (host, porta, TLS, usuário, senha cifrada, remetente, rótulo), botão 'testar envio'; e-mails como job com retentativa: convite de membro (link com token de uso único, validade 7 d, cria a conta ao aceitar), redefinição de senha por e-mail (token 1 h), avisos de política e de expiração de token (90/30/7/1 d, como os avisos de licença da Esri), notificações de grupo opcionais; modelos em português com o nome do inquilino; sem SMTP, os fluxos caem no caminho manual (senha temporária mostrada ao admin)",
+   "portao_de_pronto": "teste com servidor SMTP de captura escrito em stdlib (asyncio, porta local; aiosmtpd está ausente) dentro do pytest: convite chega, link aceita e cria conta, link usado de novo = 410, link após 7 d = 410; redefinição chega e troca a senha; 'testar envio' devolve erro legível com host errado; senha SMTP nunca em log; e2e do convite ponta a ponta com captura",
+   "refutacao": "adversário usa convite expirado e convite de outro inquilino (refutação do item pai), altera o e-mail do convite no link (assinado), dispara 1.000 redefinições para o mesmo e-mail em 1 min (limite)",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-07-admin-org",
+   "origem": "esri",
+   "fontes": [
+    "https://developers.arcgis.com/rest/enterprise-administration/portal/email-settings/",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-security.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/manage-members.htm"
+   ]
+  },
+  {
+   "id": "L0-07-e-relatorios",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-07-c-cotas-uso",
+    "L0-10-eventos-historico"
+   ],
+   "hipotese": "relatórios do admin do inquilino gerados como job e baixáveis em CSV: membros (papel, tipo, último acesso, itens, grupos), itens (tipo, dono, tamanho, compartilhamento, acessos 30 d, última modificação), grupos, atividade (eventos por tipo e dia), uso (série de L0-07-c); agendáveis (diário/semanal/mensal) com entrega por e-mail; painel 'Atividade' com os 10 itens mais acessados e gráficos simples; janela de até 12 meses e 10 mil itens por relatório (limites iguais aos da Esri, declarados)",
+   "portao_de_pronto": "teste api: cada relatório gera CSV com cabeçalho documentado e N linhas = COUNT correspondente; agendamento cria job periódico; e2e do painel com captura; relatório de outro inquilino inacessível; medida tempo do relatório de itens com 10 mil itens ≤ 10 s",
+   "refutacao": "adversário pede relatório de 24 meses (422), 100 relatórios em 1 h (limite 1 por tipo por hora, igual à Esri), e procura CPF/e-mail pessoal no CSV (só e-mail corporativo)",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-07-admin-org",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/about-usage-reports.htm"
+   ]
+  },
+  {
+   "id": "L0-07-f-console-plataforma",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-07-c-cotas-uso",
+    "L0-02-f-tela-usuarios"
+   ],
+   "hipotese": "console do superadmin (fora de qualquer inquilino, rota /plataforma como no SIG de teste interno): criar inquilino (slug, nome, admin inicial com senha temporária, cotas, config inicial), suspender/reativar (suspenso: 503 com mensagem para os membros, dado intacto), listar com uso e último acesso, alterar cotas, ver fila e status agregados, forçar desligamento de 2FA de um admin de inquilino, ver eventos da plataforma; nunca 'entrar como' membro sem trilha (se existir 'assumir', cada ação sai com o evento marcado); a Esri resolve isso com um portal por organização, aqui é um portal com N inquilinos",
+   "portao_de_pronto": "e2e: criar inquilino 'demo3', entrar como o admin dele, suspender, ver o 503 no navegador, reativar; captura; API: superadmin false = 404 em todas as rotas /api/plataforma; criar slug repetido = 409; slug inválido pelo CHECK = 422; suspenso não autentica nem por token; teste cruzado cobre as rotas",
+   "refutacao": "adversário forja superadmin no cookie, cria inquilino com slug 'plat' ou 'public' (lista reservada), suspende o próprio inquilino do superadmin",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-07-admin-org",
+   "origem": "casa",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/user-types-orgs.htm"
+   ],
+   "ativo_da_casa": "SIG de teste interno schema_v3 plat_criar_tenant/plat_tenants; ADR 0001 tenant_criar"
+  },
+  {
+   "id": "L0-08-a-oidc",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-a-login-sessao",
+    "L0-07-a-configuracoes-org"
+   ],
+   "hipotese": "login OpenID Connect por inquilino (Authorization Code + PKCE S256, descoberta por issuer, validação de id_token por JWKS com cache e rotação, nonce/state, client_secret cifrado ou par de chaves), claims de login/identificador (sub, configurado uma vez: mudar depois quebra as contas, como avisa a doc Esri), e-mail, nome, grupos; biblioteca: Authlib (BSD, ausente na venv) por decisão medida contra implementação própria com httpx+jwt (custo/risco no ADR); provedor de teste = Keycloak em contêiner (docker presente) com realm de teste versionado no repositório; botão com rótulo configurável e ordem na tela de entrada",
+   "portao_de_pronto": "e2e: entrar via Keycloak de teste, cair no inquilino e perfil certos, sair (logout propagado), captura; id_token com assinatura errada, expirado, nonce errado e issuer errado = 401 com motivo no log (não na tela); conta OIDC não tem senha local nem 2FA local (fica no IdP, como na Esri); provedor desligado não impede o login local do admin; teste cruzado cobre /api/sso/*",
+   "refutacao": "adversário reusa um code, troca o state, envia id_token de outro client_id, e tenta 'aud' de outro inquilino; qualquer sessão criada = refutado",
+   "papeis": [
+    "pesquisador",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-08-sso",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/openid-connect-logins.htm",
+    "https://docs.authlib.org/en/latest/",
+    "https://www.keycloak.org/documentation",
+    "https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc",
+    "https://docs.geoserver.org/stable/en/user/community/keycloak/index.html"
+   ]
+  },
+  {
+   "id": "L0-08-b-saml",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-08-a-oidc"
+   ],
+   "hipotese": "SAML 2.0 Web SSO (SP-initiated e IdP-initiated) por inquilino: metadado do SP em /api/sso/saml/metadata, metadado do IdP por URL/arquivo/parâmetros, assinatura de resposta e de asserção obrigatórias, asserção cifrada opcional, logout propagado, atributos NameID→login (regra Esri: só alfanumérico, '_', '.', '@'), e-mail, nome, grupos; biblioteca python3-saml (MIT) exige xmlsec1 (ausente: apt pelo gerente) — alternativa pysaml2; IdP de teste = Keycloak (também fala SAML)",
+   "portao_de_pronto": "e2e: SP-initiated e IdP-initiated contra o Keycloak de teste com captura; asserção sem assinatura = 401 (refutação do item pai); asserção com relógio 10 min à frente = 401; replay da mesma asserção = 401 (cache de ID de asserção por validade); metadado do SP valida contra o XSD do SAML; provedor desligado não afeta login local",
+   "refutacao": "adversário forja assertion sem assinatura, com assinatura de outra chave, com XML Signature Wrapping (comment/duplicate subject); qualquer sessão = refutado",
+   "papeis": [
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-08-sso",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configuring-a-saml-compliant-identity-provider-with-your-portal.htm",
+    "https://github.com/SAML-Toolkits/python3-saml",
+    "https://pysaml2.readthedocs.io/en/latest/",
+    "https://www.keycloak.org/documentation"
+   ]
+  },
+  {
+   "id": "L0-08-c-govbr",
+   "linha": "L0 fundação",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-08-a-oidc"
+   ],
+   "hipotese": "gov.br como provedor OIDC configurável por inquilino (órgão público com credencial própria; o roteiro técnico é público em acesso.gov.br, mas as páginas internas respondem 500 hoje ao curl e o cadastro exige ofício do órgão: decisão/ação do dono), com leitura do nível da conta (bronze/prata/ouro) e dos selos como claims para o mapeamento de perfil; sem credencial real, o item entrega o adaptador testado contra um mock OIDC que reproduz o formato de claims documentado",
+   "portao_de_pronto": "adaptador passa nos testes com o mock (claims de nível e selos → perfil); tela de configuração com os campos que o roteiro pede (client_id, secret, redirect); teste real fica 'pendente: credencial do órgão' em docs/PARIDADE.md, nunca 'feito'",
+   "refutacao": "adversário envia claims de nível 'ouro' forjados num id_token assinado por outro issuer",
+   "papeis": [
+    "pesquisador",
+    "backend",
+    "testador"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-08-sso",
+   "origem": "usuario",
+   "fontes": [
+    "https://acesso.gov.br/roteiro-tecnico/index.html"
+   ]
+  },
+  {
+   "id": "L0-08-d-ldap",
+   "linha": "L0 fundação",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-a-login-sessao"
+   ],
+   "hipotese": "LDAP/Active Directory por inquilino: bind de serviço, busca de usuário por atributo, autenticação por bind do usuário, grupos por memberOf, StartTLS/LDAPS, importação em massa de um grupo do diretório (como a Esri e o GeoServer fazem); ldap3 (MIT, ausente) ou implementação sobre o módulo ldap do sistema: decisão medida; servidor de teste = contêiner OpenLDAP com dado sintético",
+   "portao_de_pronto": "e2e: entrar com usuário do OpenLDAP de teste, cair no perfil mapeado pelo grupo; senha errada = 401 com bloqueio local; diretório fora do ar = mensagem e login local intacto; importar grupo cria N usuários desabilitados até o primeiro login (opção); credencial de bind cifrada",
+   "refutacao": "adversário injeta filtro LDAP no login ('*)(uid=*'), usa bind anônimo, e faz 1.000 binds/min",
+   "papeis": [
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-08-sso",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configuring-a-saml-compliant-identity-provider-with-your-portal.htm",
+    "https://docs.geoserver.org/stable/en/user/security/usergrouprole/usergroupservices/",
+    "https://docs.geoserver.org/stable/en/user/security/auth/index.html"
+   ]
+  },
+  {
+   "id": "L0-08-e-mapeamento-provisionamento",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-08-a-oidc"
+   ],
+   "hipotese": "regras de provisionamento por provedor: criar conta no primeiro login (automático) ou só por convite prévio (como a Esri), padrões para membro novo (tipo, papel, grupos, pasta), mapeamento grupo do IdP → papel e grupos internos (valor exato do atributo, como a Esri exige), atualização do perfil a cada login (opcional), desligamento de conta quando o IdP deixa de mandar o grupo (opcional), ordem e rótulo dos botões de login, e 'desregistrar' conta federada (a conta continua no IdP)",
+   "portao_de_pronto": "teste api com o mock/Keycloak: usuário novo com grupo 'gis-editores' vira editor no grupo interno certo; sem grupo cai no padrão; com 'só por convite', usuário desconhecido recebe tela 'peça convite'; mudança de grupo no IdP muda o papel no próximo login; e2e da tela 'Logins' com captura; paridade contra 'New member defaults' e 'group membership' SAML/OIDC 11.4",
+   "refutacao": "adversário manda 500 grupos na asserção, grupo com nome do papel 'administrador' (mapeamento é por regra explícita, nunca por nome igual), e conta desligada no IdP que ainda tem sessão local (expira no próximo login)",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-08-sso",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-new-member-defaults.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configuring-a-saml-compliant-identity-provider-with-your-portal.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/openid-connect-logins.htm"
+   ]
+  },
+  {
+   "id": "L0-09-a-procedencia",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-a-modelo-item",
+    "L0-05-a-fila-postgres"
+   ],
+   "hipotese": "bloco de procedência em todo item de dado, com as colunas que a casa já usa no catálogo de camadas do motor logístico (298 camadas) e acervo.fonte (376 fontes): fonte, fonte_url, licença, data_dado, data_acesso, script/job gerador, sha256 do conteúdo e comando de reexecução, método, confiança, limites, frescor e próxima verificação, responsável; preenchido automaticamente pela ingestão (arquivo → sha256, job → gerador) e pelo conector do acervo (L6-01); 'pontuação de procedência' 0-10 igual à v_completude do acervo; regra da casa: procedência errada é pior que nenhuma → campos livres têm 'origem: declarado|medido'",
+   "portao_de_pronto": "toda camada importada nasce com ≥ 4 campos preenchidos (sha256, data_acesso, gerador, método) medidos no teste; tela do item mostra o bloco e a pontuação; filtro na busca por licença e pontuação; exportação (L0-06-d) leva a procedência; docs/PROCEDENCIA.md descreve cada campo com o mesmo vocabulário de acervo.*",
+   "refutacao": "adversário importa o mesmo arquivo 2 vezes e confere sha256 igual; muda 1 byte e confere diferente; preenche 'licença' com texto vazio (vira NULL, não string vazia)",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "testador"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-09-metadado-catalogo",
+   "origem": "casa",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/metadata.htm"
+   ],
+   "ativo_da_casa": "catálogo de camadas do motor logístico (23 colunas), acervo.fonte/v_completude (10 campos), acervo.registro.sql"
+  },
+  {
+   "id": "L0-09-b-editor-iso-mgb",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-09-a-procedencia",
+    "L0-03-g-detalhe-item-miniatura"
+   ],
+   "hipotese": "metadado completo por item em jsonb com o Perfil MGB 2.0 da INDE (ISO 19115-1 núcleo: identificação, contato, restrições, extensão temporal/espacial, qualidade/linhagem, distribuição, sistema de referência, manutenção) como JSON Schema, editor em abas ('essencial' e 'completo'), validação de obrigatórios do perfil, sincronização com os campos do item (título, resumo, extent, palavras-chave, créditos, termos: o título É sincronizado, ao contrário da Esri), campos de linhagem alimentados pela procedência e pelos jobs; um estilo por inquilino (MGB 2.0 padrão; ISO 19115-3 e Dublin Core como alternativa) apenas muda a apresentação, o armazenamento é um só",
+   "portao_de_pronto": "e2e: preencher o essencial de uma camada, validar (lista de faltantes), salvar, ver na página do item; captura; teste api: JSON inválido contra o schema = 422 com caminho; mudar o título no editor muda o item e vice-versa; metadado exportado no L0-06-d; paridade contra 'Metadata' 11.4 (estilos, Validate, XML, Overwrite, Synchronize) feito/parcial/fora",
+   "refutacao": "adversário envia 5 MB de metadado (limite 1 MB), datas fora de ordem (fim antes do início: 422), e extent que contradiz o dado (aviso, não bloqueio)",
+   "papeis": [
+    "pesquisador",
+    "backend",
+    "frontend",
+    "testador"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-09-metadado-catalogo",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/metadata.htm",
+    "https://doc.esri.com/en/arcgis-enterprise/latest/share/edit-metadata.html",
+    "https://inde.gov.br/images/inde/2020-01-30_PerfilMGBVersao2-0.pdf",
+    "https://metadados.inde.gov.br/geonetwork/",
+    "https://docs.geoserver.org/stable/en/user/extensions/metadata/"
+   ]
+  },
+  {
+   "id": "L0-09-c-xml-iso-validacao",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-09-b-editor-iso-mgb"
+   ],
+   "hipotese": "exportação do metadado como XML ISO 19139 (e 19115-3) por modelo Jinja2 (presente), importação de XML ISO 19139 (inclusive o formato que o ArcGIS exporta) com mapeamento para o jsonb e relatório do que não coube; validação contra os XSD oficiais do ISO/TC 211 guardados no repositório (download único e pequeno; decisão de disco) com lxml (presente); download pelo botão e por /api/itens/{id}/metadado.xml",
+   "portao_de_pronto": "XML gerado de 3 itens valida no XSD (xmlschema/lxml, 0 erros); importar o XML de um item da INDE (dado aberto) preenche ≥ 15 campos; ida e volta (exportar → importar) sem perda nos campos do perfil (diff = 0); XML inválido enviado = 422 com linha/coluna; teste em make check",
+   "refutacao": "adversário envia XML com entidade externa (XXE: o parser tem de ter resolve_entities=False), XML de 50 MB, e XML ISO com namespace errado",
+   "papeis": [
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-09-metadado-catalogo",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/use/metadata.htm",
+    "https://doc.esri.com/en/arcgis-enterprise/latest/share/edit-metadata.html",
+    "https://docs.geoserver.org/stable/en/user/extensions/csw-iso/",
+    "https://docs.geoserver.org/stable/en/user/extensions/inspire/"
+   ]
+  },
+  {
+   "id": "L0-09-d-ogc-records-csw",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-09-b-editor-iso-mgb",
+    "L0-03-e-compartilhamento"
+   ],
+   "hipotese": "catálogo de descoberta externo sobre o mesmo catálogo: OGC API - Records (Part 1 core: /ogc/records/collections/{catalogo}/items com q, bbox, datetime, type, paginação, JSON e HTML) e CSW 2.0.2 (GetCapabilities, GetRecords com filtro básico, GetRecordById em Dublin Core e ISO 19139) implementados na API (pycsw/pygeoapi ficam como referência de comportamento, não como dependência: RAM), expondo só itens com acesso 'link', 'inquilino' (com sessão) ou 'público'; endpoint por inquilino; harvestável pelo GeoNetwork da INDE",
+   "portao_de_pronto": "GetCapabilities e GetRecords respondem XML que valida no XSD do CSW 2.0.2; Records passa nos exemplos da especificação (conformance classes core, json, html listados em /conformance); item privado nunca aparece (teste cruzado); GeoNetwork em contêiner de teste faz harvest de 3 registros; medida latência p95 < 200 ms com 10 mil itens; paridade contra 'CSW' do GeoServer (o Portal Esri não oferece CSW)",
+   "refutacao": "adversário injeta CQL/OGC Filter malicioso, pede 1 milhão de registros por página (limite 1.000), e busca por uuid de item privado",
+   "papeis": [
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L0-09-metadado-catalogo",
+   "origem": "geoserver",
+   "fontes": [
+    "https://docs.ogc.org/is/20-004r1/20-004r1.html",
+    "https://docs.geoserver.org/stable/en/user/services/csw/",
+    "https://docs.geoserver.org/stable/en/user/extensions/csw-iso/",
+    "https://docs.pycsw.org/en/latest/",
+    "https://docs.pygeoapi.io/en/latest/",
+    "https://metadados.inde.gov.br/geonetwork/"
+   ]
+  },
+  {
+   "id": "L0-10-eventos-historico",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-a-login-sessao"
+   ],
+   "hipotese": "duas trilhas: plat.evento (append-only, RLS por inquilino, escrita só por função SECURITY DEFINER: tipo com vocabulário fechado espelhado nos gatilhos de webhook da Esri — itens/adicionar, itens/atualizar, itens/apagar, itens/mover, itens/compartilhar, itens/descompartilhar, itens/transferir, grupos/*, usuarios/entrar, usuarios/sair, usuarios/criar, usuarios/desabilitar, usuarios/papel, org/config, tokens/criar, tokens/revogar, jobs/*, backup/*; ator, alvo, propriedades jsonb, ip, req_id) e plat.historico (antes/depois JSON por gatilho nas tabelas de catálogo, padrão fn_historico do SIG, sem geom); tela 'Auditoria' do admin com filtros e exportação CSV/JSON; retenção 12 meses (spec 17.4) com partição mensal; é a fonte de notificações (L0-03-k), relatórios (L0-07-e) e webhooks (L7-08)",
+   "portao_de_pronto": "toda rota que altera estado grava 1 evento (teste enumera rotas de escrita do OpenAPI e exige evento correspondente; cobertura = 100 % medida); plat_app não consegue UPDATE/DELETE em evento (permission denied); e2e da tela com filtro por usuário e período e captura; partição do mês seguinte criada pelo periódico; exportação de 100 mil eventos em CSV ≤ 10 s; paridade contra 'audit logs' e 'portal logs' da Esri: cobrimos também a leitura por token, que a Esri não registra",
+   "refutacao": "adversário procura ação sem evento (edita um item por PUT parcial, move em massa, revoga token) e tenta apagar o próprio rastro como admin de inquilino",
+   "papeis": [
+    "arquiteto",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/understand-audit-logs.htm",
+    "https://doc.esri.com/en/arcgis-enterprise/12.1/administer/audit-logs.html",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/work-with-portal-logs.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/webhook-triggers.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/webhook-payloads.htm",
+    "https://docs.geoserver.org/stable/en/user/extensions/monitoring/audit/"
+   ],
+   "ativo_da_casa": "SIG de teste interno schema_v3 fn_historico + login_audit; ADR 0001 log_acesso"
+  },
+  {
+   "id": "L0-11-arquivos-objetos",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-01-repo"
+   ],
+   "hipotese": "armazenamento de objetos por inquilino no Garage já ativo (:3900, admin :3903, v2.3.0 medido): 1 bucket por inquilino (nome = slug), 1 chave de escrita da API (nunca entregue) e 1 chave só-leitura por inquilino para tiles (L1-02), cota de bucket pela API admin (espelho de tenant.cota_bytes), chave de objeto = <classe>/<uuid do item>/<sha256>.<ext> (nunca sobrescrever: o bug de cache VSI do TiTiler já visto na casa), metadados (content-type, sha256, bytes) gravados em plat.arquivo com RLS; entrega ao navegador SEMPRE pela API/nginx com checagem de acesso (URL pré-assinada só para o worker); varredura de órfãos (objeto sem linha, linha sem objeto) pelo periódico; decisão: reusar o daemon plataforma-garage com buckets próprios (custo de mudar = copiar buckets)",
+   "portao_de_pronto": "install.sh cria bucket e chaves de demo/demo2 de forma idempotente (segunda execução = 0 mudanças); teste api: enviar, baixar (sha256 igual), apagar; objeto de demo inacessível com sessão de demo2 (404) e por URL direta do Garage (403: só a API tem a chave); cota do bucket = tenant.cota_bytes após alterar; varredura acusa 1 órfão plantado; medida taxa_mb_s de escrita e leitura local; /saude marca garage como obrigatório a partir deste item (ADR novo)",
+   "refutacao": "adversário tenta o endpoint S3 direto com a chave só-leitura para escrever, lista o bucket de outro inquilino, envia chave com '../', e sobrescreve um objeto existente pela API (deve recusar)",
+   "papeis": [
+    "arquiteto",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "spec",
+   "fontes": [
+    "https://garagehq.deuxfleurs.fr/documentation/reference-manual/admin-api/",
+    "https://garagehq.deuxfleurs.fr/documentation/cookbook/"
+   ],
+   "ativo_da_casa": "plataforma/pipeline (Garage systemd, ingest.py nomeia por sha8, .env.pipeline RW / .env.titiler R)"
+  },
+  {
+   "id": "L0-12-contrato-api-e-limites",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-01-repo"
+   ],
+   "hipotese": "contrato transversal da API antes de qualquer rota de produto: erros sempre JSON {erro, mensagem, detalhe?, req_id} com códigos declarados (400 validação, 401 sem sessão, 403 sem privilégio, 404 sem acesso ou inexistente, 409 conflito, 410 expirado, 413 cota, 422 esquema, 423 bloqueado, 429 limite, 503 dependência), paginação por limite/deslocamento com total e cabeçalho Link, ordenação ordenar=campo:asc, filtros por query, datas ISO 8601 UTC, ids uuid, sem versão na URL (mudança incompatível = rota nova; OpenAPI comitado é o contrato), CORS por lista do inquilino (≤ 100 origens, como a Esri), rate limit por sessão/token/IP no nginx e na API; tabela de LIMITES declarados (upload 2 GiB, resumo 2.048, tags 50, categorias 20/item e 200/inquilino, grupos sem limite, vistas 20/camada, links compartilhados 100/item, 100 seleções em massa) em docs/LIMITES.md gerada de app/limites.py e aplicada por validação",
+   "portao_de_pronto": "docs/CONTRATO_API.md escrito e testado: teste que provoca cada código de erro e confere o JSON; OpenAPI regenerado sem diff em make check; toda rota nova sem esquema de resposta reprova o lint (script em tests/); rate limit medido (101ª requisição em 60 s = 429 com Retry-After); docs/LIMITES.md gerado do código e conferido no teste (número no doc = número no código)",
+   "refutacao": "adversário procura rota que devolve HTML ou traceback em erro, campo de erro em inglês, paginação sem total, e limite documentado que a API não aplica",
+   "papeis": [
+    "arquiteto",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/configure-security.htm",
+    "https://developers.arcgis.com/rest/users-groups-and-items/search-reference/"
+   ],
+   "ativo_da_casa": "ADR 0001 seção 12 (português nos identificadores; OpenAPI comitado)"
+  },
+  {
+   "id": "L0-13-dado-demonstracao",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-d-formatos-base",
+    "L0-03-e-compartilhamento"
+   ],
+   "hipotese": "conjunto de demonstração aberto e pequeno (≤ 50 MB no repositório, licença registrada por arquivo) semeado em demo e demo2 pelo install.sh via a própria ingestão: limites municipais de 2 estados (IBGE), sedes municipais (pontos), rodovias federais de 1 estado (DNIT), hidrografia de 1 bacia (ANA), um CSV de estações (INMET), um GeoPackage com 3 camadas, um DXF de exemplo gerado pela casa (sem cliente), um XLSX; itens com metadado, tags, categorias, 2 grupos, 1 link compartilhado, 1 item na lixeira; usado por todo e2e das linhas seguintes e pela captura do MANUAL",
+   "portao_de_pronto": "install.sh idempotente semeia N itens (contagem fixa no teste) em ≤ 90 s medidos; cada arquivo tem linha em docs/DADO_DEMO.md com fonte, URL, licença, data de acesso; nenhum nome de cliente/parceiro/piloto (grep do driver = 0); demo2 tem conjunto diferente (prova de isolamento visível na tela); tamanho do repositório ≤ 3 GB (guardrail) medido",
+   "refutacao": "adversário procura no dado nome de pessoa, CPF, nome de empresa privada, e arquivo sem licença declarada; procura item de demo visível em demo2",
+   "papeis": [
+    "dados",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm"
+   ],
+   "ativo_da_casa": "acervo.fonte (URLs e licenças já registradas); guardrail P7"
+  },
+  {
+   "id": "L0-14-cli-admin",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-a-login-sessao",
+    "L0-04-c-tabela-camada",
+    "L0-06-d-exportar-inquilino"
+   ],
+   "hipotese": "linha de comando 'plat' (venv/bin/plat, argparse, sem dependência) que faz por script tudo o que o console e o admin fazem pela tela, para o install.sh, o laço agêntico da operação (DOC.md seção 19) e o cliente que instala em casa (L7-11): inquilino criar/listar/suspender/cota, usuário criar/redefinir-senha/desabilitar, token criar/revogar, camada importar <arquivo> --inquilino --crs, item exportar/importar pacote (L0-06-d), backup agora/verificar/restaurar-drill, job listar/cancelar/repetir, evento exportar; saída JSON com --json; cada comando chama a mesma função de serviço da API (nunca SQL paralelo)",
+   "portao_de_pronto": "cada subcomando tem teste que compara o efeito com o da rota equivalente (mesmo evento gravado, mesmo resultado); 'plat inquilino criar' é o que o install.sh usa para demo/demo2 (a senha vai por stdin/arquivo 600, nunca em argv: correção do achado 6a do adversário do T1); --help em português; docs/CLI.md gerado do argparse",
+   "refutacao": "adversário roda a CLI como usuário sem acesso ao .env (deve falhar sem vazar), passa senha em argv (deve recusar), e importa camada para inquilino inexistente",
+   "papeis": [
+    "backend",
+    "testador"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/data-store/11.4/install/windows/data-store-utility-reference.htm",
+    "https://enterprise.arcgis.com/en/portal/11.4/administer/windows/manage-members.htm"
+   ],
+   "ativo_da_casa": "SIG de teste interno pipeline/novo_inquilino.py; refutacao.json T1 (senha em argv do sudo no journal)"
+  }
+ ]
+}

@@ -8,10 +8,9 @@ import uuid
 
 import psycopg2
 import psycopg2.extras
-
-from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 import pytest
 
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 from tests import jobs_sessao
 from tests.api.jobs.conftest import criar_job, esperar
 

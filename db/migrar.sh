@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Aplicador de migrações do plat (ADR 0001 seção 5). Roda como postgres (sudo -u postgres), nunca como plat_app.
-#  - lista db/migracoes/ em ordem de aplicação: legado NNN_*.sql (001-047, fechado) e depois carimbo
+#  - lista db/migracoes/ em ordem de aplicação: legado NNN_*.sql (001-048, fechado) e depois carimbo
 #    YYYYMMDDTHHMM_*.sql, cada família em ordem lexicográfica (ADR 0014);
 #  - nome ausente em plat.versao_migracao: aplica arquivo + INSERT na MESMA transação (psql -1 -f - por stdin);
 #  - nome presente com o mesmo sha256: pula;
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS plat.versao_migracao (
 SQL
 
 # Lista as migrações na ORDEM DE APLICAÇÃO. Duas famílias de nome (ADR 0014):
-#  - legada `NNN_slug.sql` (001 a 047), FECHADA e imutável;
+#  - legada `NNN_slug.sql` (001 a 048), FECHADA e imutável;
 #  - carimbo de tempo `YYYYMMDDTHHMM_slug.sql`, com 3 hex opcionais quando duas nascem no mesmo minuto.
 # Chave de ordenação: prefixo "0" para o legado e "1" para o carimbo, depois o nome. Assim todo o
 # legado vem antes de qualquer carimbo e a ordem lexicográfica continua válida dentro de cada família.

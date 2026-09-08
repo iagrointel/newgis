@@ -39,15 +39,19 @@ def _configurar_smtp(cliente, porta: int, usuario: str = "", senha: str = "") ->
     return r.json()
 
 
-def _expirar_convite(conexao_plat_app, token: str) -> None:
+def _expirar_convite(conexao_plat_app, tenant_id: int, token: str) -> None:
+    # RLS de plat.convite exige plat.tenant_atual() (o GUC de sessão) — sem ele o UPDATE afeta 0 linhas em
+    # silêncio (achado desta sessão: o teste "passava" comparando 200 == 200, nunca expirando de verdade).
     with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT set_config('plat.tenant_id', %s, false)", (str(tenant_id),))
         cur.execute("UPDATE plat.convite SET expira_em = now() - interval '1 hour' WHERE token_hash = %s",
                     (sha256_hex(token),))
     conexao_plat_app.commit()
 
 
-def _expirar_redefinicao(conexao_plat_app, token: str) -> None:
+def _expirar_redefinicao(conexao_plat_app, tenant_id: int, token: str) -> None:
     with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT set_config('plat.tenant_id', %s, false)", (str(tenant_id),))
         cur.execute("UPDATE plat.redefinicao_senha SET expira_em = now() - interval '1 hour' WHERE token_hash = %s",
                     (sha256_hex(token),))
     conexao_plat_app.commit()
@@ -89,7 +93,7 @@ def test_smtp_testar_com_host_errado_devolve_erro_legivel(inquilino_temporario):
     )
     assert r.status_code == 200, r.text
     t0 = time.monotonic()
-    r = inq.admin.post("/api/org/smtp/testar", json={})
+    r = inq.admin.post("/api/org/smtp/testar", json={"destinatario": "verificacao@teste.exemplo"})
     dt = time.monotonic() - t0
     assert r.status_code == 502, r.text
     assert r.json()["erro"] == "smtp_falhou"
@@ -168,7 +172,7 @@ def test_convite_expirado_apos_7_dias_e_410(inquilino_temporario, conexao_plat_a
     link = r.json()["link_manual"]  # sem SMTP configurado neste teste: link manual disponível de propósito
     assert link is not None
     token = _token_do_link(link)
-    _expirar_convite(conexao_plat_app, token)
+    _expirar_convite(conexao_plat_app, inq.id, token)
     anonimo = novo_cliente()
     r = anonimo.get(f"/api/convites/resolver?token={token}")
     assert r.status_code == 410 and r.json()["detalhe"]["motivo"] == "expirado"
@@ -189,17 +193,24 @@ def test_convite_cancelado_por_outro_inquilino_e_404(inquilino_temporario, sessa
 
 
 def test_convite_admin_exige_membros_papel(inquilino_temporario):
-    """Mesmo teto de POST /api/usuarios: convidar com perfil != visualizador exige membros.papel."""
+    """Mesmo teto de POST /api/usuarios: convidar com perfil != visualizador exige membros.papel. O papel
+    de piso usa `membros.gerir` (privilégio administrativo, ADR 0002 §2.3), então o `perfil_minimo`
+    calculado é `admin` — o usuário de teste tem de nascer admin (o papel é o que restringe, não o
+    perfil) senão a própria criação do usuário cai em 422 `papel_incompativel` antes de chegar ao convite
+    (achado desta sessão)."""
     inq = inquilino_temporario
     r = inq.admin.post("/api/papeis", json={"nome": f"zt-piso-{secrets.token_hex(2)}",
                                             "privilegios": ["membros.ver", "membros.gerir"]})
     assert r.status_code == 201, r.text
+    assert r.json()["perfil_minimo"] == "admin"
     c = novo_cliente()
     u = inq.admin.post("/api/usuarios", json={"login": f"zt{secrets.token_hex(3)}", "nome": "piso",
-                                              "perfil": "editor", "papel_id": r.json()["id"]})
+                                              "perfil": "admin", "papel_id": r.json()["id"]})
     assert u.status_code == 201, u.text
     temporaria = u.json()["senha_temporaria"]
     assert entrar(c, inq.slug, u.json()["usuario"]["login"], temporaria).status_code == 200
+    nova = "Senha-forte-1" + secrets.token_hex(3)
+    assert c.put("/api/eu/senha", json={"atual": temporaria, "nova": nova}).status_code == 204
     r2 = c.post("/api/convites", json={"email": "quemquer@teste.exemplo", "perfil": "editor"})
     assert r2.status_code == 403 and r2.json()["erro"] == "sem_privilegio"
 
@@ -272,8 +283,11 @@ def test_redefinicao_expirada_e_410(inquilino_temporario, conexao_plat_app):
     r = anonimo.post("/api/senha/redefinir/solicitar", json={"inquilino": inq.slug, "email": email})
     assert r.status_code == 202
     # sem SMTP configurado neste teste: o token não chega por e-mail, então lemos direto do banco (fixture
-    # de teste, nunca um caminho de produção) só para provar a expiração
+    # de teste, nunca um caminho de produção) só para provar a expiração. RLS de plat.redefinicao_senha/
+    # plat.usuario exige o GUC de tenant (achado desta sessão: sem ele o SELECT abaixo volta None em
+    # silêncio, não um erro).
     with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT set_config('plat.tenant_id', %s, false)", (str(inq.id),))
         cur.execute(
             "SELECT rs.token_hash FROM plat.redefinicao_senha rs JOIN plat.usuario u ON u.id = rs.usuario_id "
             "WHERE u.login = %s ORDER BY rs.criado_em DESC LIMIT 1", (login,),

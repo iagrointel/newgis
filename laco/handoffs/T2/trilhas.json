@@ -1,0 +1,37 @@
+{
+ "L0-02-tenant-auth": {
+  "etapa_atual": "30 backend + 31 frontend em paralelo (ADR 0002 comitado)",
+  "iniciado": "2026-09-05T13:21",
+  "terminado": null
+ },
+ "L0-05-jobs": {
+  "etapa_atual": "30 backend + 31 frontend em paralelo (ADR 0003 comitado)",
+  "iniciado": "2026-09-05T13:21",
+  "terminado": null
+ },
+ "decomposicao": {
+  "etapa_atual": "integrada: 444 itens novos + 7 esboços, total 501; 3 ciclos cortados",
+  "iniciado": "2026-09-05T13:07",
+  "terminado": "2026-09-05T14:0x"
+ },
+ "prep-L0-03-catalogo": {
+  "etapa_atual": "ADR 0004 comitado; pronto para 30/31 quando A e B fecharem (pendência: numeração 006/007; gancho registrar_periodicos na trilha B; leitura tipo_item global)",
+  "iniciado": "2026-09-05T14:0x",
+  "terminado": "2026-09-05T15:2x"
+ },
+ "prep-L0-04-ingest-vetor": {
+  "etapa_atual": "20_arquitetura (ADR 0005)",
+  "iniciado": "2026-09-05T14:0x",
+  "terminado": null
+ },
+ "L0-03-catalogo": {
+  "etapa_atual": "30 backend + 31 frontend (ADR 0004 comitado; identidade e jobs em verificação final)",
+  "iniciado": "2026-09-05T17:16",
+  "terminado": null
+ },
+ "L0-14-identidade-visual": {
+  "etapa_atual": "parcial: tela de entrada + tokens entregues (commit 4027ce1); resto do item pendente",
+  "iniciado": "2026-09-06T00:57",
+  "terminado": "2026-09-06T01:10"
+ }
+}

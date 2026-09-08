@@ -950,7 +950,7 @@ Curadoria (evidência, não suposição): das 68 fontes licenciadas, uma varredu
 `information_schema.columns` nas 219 tabelas canônicas ligadas a elas (contra um padrão amplo de nome de
 coluna — cpf/cnpj/nome/email/telefone/endereço/titular/...) achou 114 colunas suspeitas; lidas uma a uma, a
 esmagadora maioria é nome de LUGAR (`zona_nome`, `nome_municipio`), CNPJ de FUNDO (não de pessoa física) ou
-endereço de IMÓVEL já público por natureza (leilão/edital). Um caso quase enganou: `cbre.cad_gu_face_pgv`
+endereço de IMÓVEL já público por natureza (leilão/edital). Um caso quase enganou: `<frente>.cad_gu_face_pgv`
 tem `telefone`/`telefone_p`, mas são FLAGS de infraestrutura de rua (a rua tem rede telefônica?), não contato
 de pessoa. O único achado real: **`onr`** (ONR/matrículas) — a tabela ingerida não guarda nome do titular,
 mas `url_mat` aponta para o visualizador de matrícula do cartório, que guarda. Marcada `risco_pii = true`.
@@ -1033,3 +1033,40 @@ disfarçado de SP real. Sem `outSR`/`searchExtent`/boost por proximidade/`catego
 `findAddressCandidates` (o item-irmão `L2-11-a-geocodificacao-csv`, lote de planilha do usuário, também não
 foi construído nesta passagem — reusa o mesmo motor). Ver `laco/handoffs/T3/L2-11-b-geocodificador-brasil.md`
 e ADR 0013 para o estado exato.
+
+## 21. SMTP, convite de membro e redefinição de senha (item L0-07-d-smtp-convites)
+
+### 21.1 SMTP (`/admin/organizacao`, seção "E-mail (SMTP)")
+
+`GET/PUT /api/org/smtp` (privilégio `org.integracoes`) grava host, porta, STARTTLS, usuário, senha (cifrada,
+nunca devolvida — só `senha_configurada: bool`), remetente e rótulo em `tenant.config->'smtp'`. Sem SMTP
+próprio, o inquilino usa o da instalação (`PLAT_SMTP_*` do `.env`); sem nenhum dos dois, os fluxos abaixo
+caem no caminho manual já existente (senha temporária mostrada uma vez ao admin). Deixar `host` em branco no
+PUT remove o override do inquilino. `POST /api/org/smtp/testar` envia um e-mail de teste SÍNCRONO (não pela
+fila) para o próprio e-mail do admin (ou outro informado) e devolve o erro em texto simples na mesma
+resposta quando falha — nunca um traceback, nunca a senha.
+
+### 21.2 Convite de membro (`/admin/usuarios`, seção "Convidar por e-mail")
+
+Um admin com `membros.gerir` convida por e-mail (perfil diferente de visualizador ou com papel exige
+`membros.papel`, mesmo teto de `POST /api/usuarios`). Com SMTP configurado, o convite sai por e-mail (job
+`correio.enviar` da fila do L0-05); sem SMTP, a resposta devolve `link_manual` para o admin repassar. O link
+(`/aceitar-convite?token=...`) carrega só o token — nunca o e-mail nem o perfil, que o servidor sempre lê do
+convite. O convidado escolhe login, nome e senha; a conta nasce com o perfil/papel do convite. Token de uso
+único, válido por 7 dias; usar de novo ou usar depois de expirado devolve `410`. Reenviar um convite para o
+mesmo e-mail cancela o anterior (nunca acumula links vivos).
+
+### 21.3 Redefinição de senha por e-mail (`/redefinir-senha`, pública)
+
+`POST /api/senha/redefinir/solicitar {inquilino, email}` sempre responde `202 {"ok": true}` — existindo ou
+não a conta, exceto quando o limite de taxa por (inquilino, e-mail) estoura (`429`, no máximo 5 pedidos a
+cada 15 minutos). Com SMTP configurado e a conta existindo, chega um e-mail com um link de 1 hora,
+uso único; `POST /api/senha/redefinir/aplicar {token, senha}` troca a senha pela MESMA regra de política e
+histórico que `/conta` já usa, encerra as sessões do usuário e registra o evento. Sem SMTP, o pedido fica
+registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usuário pede ao admin.
+
+### 21.4 O que ficou de fora
+
+Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
+turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
+os dois, falta só o gatilho periódico.
