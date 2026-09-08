@@ -1,0 +1,17 @@
+{
+ "item": "L2-04-k-sync-replicas-esri",
+ "medidas": {
+  "esri_create_replica_200f_segundos": {
+   "valor": 0.35,
+   "unidade": "s",
+   "comando": "pytest tests/api/test_sync_esri.py::test_medida_create_replica_de_200_feicoes [carga_1min=3.07; ram_livre_gb=0.6; medido_em=2026-09-08T21:58:56Z]"
+  },
+  "esri_create_replica_200f_bytes": {
+   "valor": 172032,
+   "unidade": "bytes",
+   "comando": "pytest tests/api/test_sync_esri.py::test_medida_create_replica_de_200_feicoes [carga_1min=3.07; ram_livre_gb=0.6; medido_em=2026-09-08T21:58:56Z]"
+  }
+ },
+ "gerado_em": "2026-09-08T21:58:56Z",
+ "git_sha": "1959c4b1ebba"
+}
