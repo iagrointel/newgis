@@ -37,6 +37,7 @@ let desafio = null;
 let recuperacao = false;
 let relogio = null;
 let listaProvedores = [];
+let modoLdap = false; // UX-17: entrar pelo diretório (POST /api/login/ldap) com os mesmos campos usuário/senha
 
 function mostrarInquilino(nome) {
   el('inquilino-rotulo').textContent = nome;
@@ -58,9 +59,27 @@ function mostrarProvedores(lista) {
   listaProvedores = lista || [];
   limpar(provedores);
   for (const p of listaProvedores) {
+    if (p && p.tipo === 'ldap') {
+      // diretório LDAP/AD do inquilino: mesmo formulário, outra rota; o botão alterna e diz o que muda
+      const b = h('button', { type: 'button', class: 'botao', id: 'entrar-ldap', 'aria-pressed': String(modoLdap) },
+        t(modoLdap ? 'login.ldap_usar_local' : 'login.entrar_com', { nome: p.nome || 'LDAP' }));
+      b.addEventListener('click', () => alternarLdap(!modoLdap));
+      provedores.append(b);
+      continue;
+    }
     if (!p || typeof p.url !== 'string' || !p.url.startsWith('/')) continue;
     provedores.append(h('a', { class: 'botao', href: p.url }, t('login.entrar_com', { nome: p.nome || p.tipo || '' })));
   }
+  const dica = el('ldap-dica');
+  dica.hidden = !modoLdap;
+  dica.textContent = modoLdap ? t('login.ldap_dica') : '';
+}
+
+function alternarLdap(ligar) {
+  modoLdap = !!ligar && listaProvedores.some((p) => p && p.tipo === 'ldap');
+  mostrarProvedores(listaProvedores);
+  aviso.limpar();
+  inputLogin.focus();
 }
 
 async function carregarInquilino() {
@@ -97,6 +116,9 @@ function concluir(json) {
 
 function mensagemLogin(r) {
   const j = r.json || {};
+  if (j.erro === 'ldap_indisponivel' || j.erro === 'ldap_sem_configuracao') return t('login.ldap_indisponivel');
+  if (j.erro === 'sem_grupo_mapeado') return t('login.ldap_sem_grupo');
+  if (j.erro === 'login_em_uso_local') return t('login.ldap_login_local');
   if (r.status === 423 && j.detalhe?.bloqueado_ate) return t('login.bloqueado_ate', { quando: formatarData(j.detalhe.bloqueado_ate) });
   if (r.status === 429) return t('login.muitas_tentativas');
   if (r.status === 0) return t('login.sem_servidor');
@@ -166,10 +188,12 @@ formSenha.addEventListener('submit', async (e) => {
   if (!validar(pares)) return;
   ocupado(btEntrar, true, t('login.entrando'));
   formSenha.setAttribute('aria-busy', 'true');
-  const r = await enviar('/api/login', { inquilino: slug, login: inputLogin.value.trim(), senha: inputSenha.value });
+  const credenciais = { inquilino: slug, login: inputLogin.value.trim(), senha: inputSenha.value };
+  const r = modoLdap ? await enviar('/api/login/ldap', credenciais) : await enviar('/api/login', credenciais);
   formSenha.removeAttribute('aria-busy');
   ocupado(btEntrar, false);
   if (r.status === 200 && r.json.ok === true) { concluir(r.json); return; }
+  if (modoLdap && r.status === 403 && r.json?.erro === 'login_ldap_desabilitado') { alternarLdap(false); aviso.erro(t('login.ldap_desabilitado')); return; }
   if (r.status === 200 && r.json.exige_2fa) { mostrar2fa(r.json); return; }
   if (r.status === 404) { pedirInquilino(t('login.inquilino_inexistente', { slug })); inputInquilino.focus(); return; }
   if (r.status === 422 && errosDoServidor(r, { inquilino: inputInquilino, login: inputLogin, senha: inputSenha })) { return; }

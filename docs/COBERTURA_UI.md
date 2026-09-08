@@ -7,13 +7,13 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | medida | valor |
 |---|---|
 | rotas (método × caminho) | 240 |
-| coberto | 191 |
-| sem controle | 20 |
-| sem tela | 12 |
+| coberto | 200 |
+| sem controle | 16 |
+| sem tela | 7 |
 | externo | 1 |
 | externo sem exposição | 16 |
-| cobertas sem estado de erro perto da chamada | 5 |
-| lacunas de ESCRITA (linha de base do teste) | 18 |
+| cobertas sem estado de erro perto da chamada | 3 |
+| lacunas de ESCRITA (linha de base do teste) | 11 |
 | URLs chamadas pela tela que não existem na API | 2 |
 
 ## Rotas → tela/controle → estado
@@ -35,11 +35,11 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | POST | `/api/anotacoes` | mapa | `/mapa` | `web/js/mapa/anotacoes.js:151` | **coberto** | com erro |
 | PATCH | `/api/anotacoes/{id}` | mapa | `/mapa` | `web/js/mapa/anotacoes.js:130` | **coberto** | com erro |
 | DELETE | `/api/anotacoes/{id}` | mapa | `/mapa` | `web/js/mapa/anotacoes.js:138` | **coberto** | com erro |
-| GET | `/api/arquivos` | arquivos | — | — | **sem controle** | não se aplica |
-| POST | `/api/arquivos` | arquivos | — | — | **sem controle** | não se aplica |
-| GET | `/api/arquivos/_varredura` | arquivos | `/admin/organizacao` | `web/js/auth/organizacao.js:185` | **coberto** | sem estado de erro |
-| GET | `/api/arquivos/{sha256}` | arquivos | `/admin/organizacao` | `web/js/auth/organizacao.js:185` | **coberto** | sem estado de erro |
-| DELETE | `/api/arquivos/{sha256}` | arquivos | — | — | **sem controle** | não se aplica |
+| GET | `/api/arquivos` | arquivos | `/admin/organizacao` | `web/js/auth/organizacao.js:415` | **coberto** | com erro |
+| POST | `/api/arquivos` | arquivos | `/admin/organizacao` | `web/js/auth/organizacao.js:487` | **coberto** | com erro |
+| GET | `/api/arquivos/_varredura` | arquivos | `/admin/organizacao` | `web/js/auth/organizacao.js:185`<br>`web/js/auth/organizacao.js:431`<br>`web/js/auth/organizacao.js:443` | **coberto** | com erro |
+| GET | `/api/arquivos/{sha256}` | arquivos | `/admin/organizacao` | `web/js/auth/organizacao.js:185`<br>`web/js/auth/organizacao.js:431`<br>`web/js/auth/organizacao.js:443` | **coberto** | com erro |
+| DELETE | `/api/arquivos/{sha256}` | arquivos | `/admin/organizacao` | `web/js/auth/organizacao.js:455` | **coberto** | com erro |
 | GET | `/api/camadas/{id}/feicoes/{fid}/popup` | mapa-popup | `/mapa` | `web/js/mapa/atributos.js:97` | **coberto** | com erro |
 | GET | `/api/camadas/{item_id}/tabela/colunas` | tabela | `/mapa` | `web/js/mapa/tabela.js:105` | **coberto** | com erro |
 | POST | `/api/camadas/{item_id}/tabela/estatisticas` | tabela | `/mapa` | `web/js/mapa/tabela.js:369` | **coberto** | com erro |
@@ -67,7 +67,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | DELETE | `/api/convites/{id}` | convites | `/admin/usuarios` | `web/js/auth/convites.js:25` | **coberto** | com erro |
 | GET | `/api/esquemas` | catalogo | — | — | **sem controle** | não se aplica |
 | GET | `/api/esquemas/{tipo}` | catalogo | — | — | **sem controle** | não se aplica |
-| GET | `/api/eu` | eu | `/`, `/admin`, `/admin/acervo`, `/admin/grupos`, `/admin/log`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/c/{token}`, `/conexoes`, `/construtor`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/entrar`, `/estilo-guia`, `/executar`, `/ferramentas`, `/mapa`, `/tarefas`, `/tarefas/{job_id}`, `/uploads` | `web/app.js:36`<br>`web/js/auth/conta.js:90`<br>`web/js/auth/sessao.js:59`<br>`web/js/conexoes/conexoes.js:451`<br>`web/js/jobs/tarefas.js:54` | **coberto** | com erro |
+| GET | `/api/eu` | eu | `/`, `/admin`, `/admin/acervo`, `/admin/grupos`, `/admin/log`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/c/{token}`, `/conexoes`, `/construtor`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/entrar`, `/estilo-guia`, `/executar`, `/ferramentas`, `/mapa`, `/plataforma`, `/tarefas`, `/tarefas/{job_id}`, `/uploads` | `web/app.js:36`<br>`web/js/auth/conta.js:90`<br>`web/js/auth/sessao.js:59`<br>`web/js/conexoes/conexoes.js:451`<br>`web/js/jobs/tarefas.js:54` | **coberto** | com erro |
 | PUT | `/api/eu` | eu | `/conta` | `web/js/auth/conta.js:143` | **coberto** | com erro |
 | POST | `/api/eu/2fa/codigos` | eu | `/conta` | `web/js/auth/conta.js:350` | **coberto** | com erro |
 | POST | `/api/eu/2fa/confirmar` | eu | `/conta` | `web/js/auth/conta.js:305` | **coberto** | com erro |
@@ -80,7 +80,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/eu/sessoes` | eu | `/conta` | `web/js/auth/conta.js:375` | **coberto** | com erro |
 | DELETE | `/api/eu/sessoes` | eu | `/conta` | `web/js/auth/conta.js:383` | **coberto** | com erro |
 | DELETE | `/api/eu/sessoes/{id}` | eu | `/conta` | `web/js/auth/conta.js:370` | **coberto** | com erro |
-| GET | `/api/eventos` | log | `/admin`, `/admin/acervo`, `/admin/grupos`, `/admin/log`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/auth/admin.js:125`<br>`web/js/auth/comum.js:67`<br>`web/js/auth/log.js:165` | **coberto** | com erro |
+| GET | `/api/eventos` | log | `/admin`, `/admin/acervo`, `/admin/grupos`, `/admin/log`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/plataforma` | `web/js/auth/admin.js:125`<br>`web/js/auth/comum.js:67`<br>`web/js/auth/log.js:165` | **coberto** | com erro |
 | GET | `/api/exportacoes` | exportacao | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:137` | **coberto** | com erro |
 | POST | `/api/exportacoes` | exportacao | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa` | `web/js/catalogo/api.js:135`<br>`web/js/mapa/exportar.js:259` | **coberto** | com erro |
 | GET | `/api/exportacoes/formatos` | exportacao | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/mapa` | `web/js/catalogo/api.js:134`<br>`web/js/catalogo/api.js:136`<br>`web/js/mapa/exportar.js:29`<br>`web/js/mapa/exportar.js:58` | **coberto** | com erro |
@@ -155,11 +155,11 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | POST | `/api/lixeira/esvaziar` | lixeira | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:156` | **coberto** | com erro |
 | POST | `/api/lixeira/{id}/restaurar` | lixeira | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:155` | **coberto** | com erro |
 | GET | `/api/log` | log | `/admin`, `/admin/log` | `web/js/auth/admin.js:100`<br>`web/js/auth/log.js:119`<br>`web/js/auth/log.js:123` | **coberto** | com erro |
-| POST | `/api/login` | login | `/entrar` | `web/js/auth/login.js:169` | **coberto** | com erro |
-| POST | `/api/login/2fa` | login | `/entrar` | `web/js/auth/login.js:200` | **coberto** | com erro |
-| POST | `/api/login/ldap` | login | — | — | **sem controle** | não se aplica |
-| GET | `/api/login/provedores` | login | `/entrar` | `web/js/auth/login.js:71` | **coberto** | com erro |
-| POST | `/api/logout` | login | `/`, `/admin`, `/admin/acervo`, `/admin/grupos`, `/admin/log`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/c/{token}`, `/conexoes`, `/construtor`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/entrar`, `/estilo-guia`, `/executar`, `/ferramentas`, `/mapa`, `/tarefas`, `/tarefas/{job_id}`, `/uploads` | `web/js/auth/sessao.js:76` | **coberto** | sem estado de erro |
+| POST | `/api/login` | login | `/entrar` | `web/js/auth/login.js:192` | **coberto** | com erro |
+| POST | `/api/login/2fa` | login | `/entrar` | `web/js/auth/login.js:224` | **coberto** | com erro |
+| POST | `/api/login/ldap` | login | `/entrar` | `web/js/auth/login.js:192` | **coberto** | com erro |
+| GET | `/api/login/provedores` | login | `/entrar` | `web/js/auth/login.js:90` | **coberto** | com erro |
+| POST | `/api/logout` | login | `/`, `/admin`, `/admin/acervo`, `/admin/grupos`, `/admin/log`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/c/{token}`, `/conexoes`, `/construtor`, `/conta`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/entrar`, `/estilo-guia`, `/executar`, `/ferramentas`, `/mapa`, `/plataforma`, `/tarefas`, `/tarefas/{job_id}`, `/uploads` | `web/js/auth/sessao.js:76` | **coberto** | sem estado de erro |
 | GET | `/api/mapa/camadas` | mapa | `/mapa` | `web/js/mapa/catalogo.js:30` | **coberto** | com erro |
 | GET | `/api/mapa/camadas/{id}` | mapa | `/mapa` | `web/js/mapa/catalogo.js:145` | **coberto** | com erro |
 | GET | `/api/mapa/camadas/{id}/estilo` | mapa | `/mapa` | `web/js/mapa/exportar.js:225` | **coberto** | com erro |
@@ -198,7 +198,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/org/smtp` | smtp | `/admin/organizacao` | `web/js/auth/organizacao.js:235` | **coberto** | com erro |
 | PUT | `/api/org/smtp` | smtp | `/admin/organizacao` | `web/js/auth/organizacao.js:263` | **coberto** | com erro |
 | POST | `/api/org/smtp/testar` | smtp | `/admin/organizacao` | `web/js/auth/organizacao.js:389` | **coberto** | com erro |
-| GET | `/api/papeis` | usuarios | `/admin`, `/admin/acervo`, `/admin/grupos`, `/admin/log`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/auth/admin.js:75`<br>`web/js/auth/comum.js:25`<br>`web/js/auth/papeis.js:70` | **coberto** | com erro |
+| GET | `/api/papeis` | usuarios | `/admin`, `/admin/acervo`, `/admin/grupos`, `/admin/log`, `/admin/organizacao`, `/admin/papeis`, `/admin/tokens`, `/admin/usuarios`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/plataforma` | `web/js/auth/admin.js:75`<br>`web/js/auth/comum.js:25`<br>`web/js/auth/papeis.js:70` | **coberto** | com erro |
 | POST | `/api/papeis` | usuarios | `/admin/papeis` | `web/js/auth/papeis.js:118` | **coberto** | com erro |
 | PUT | `/api/papeis/{id}` | usuarios | `/admin/papeis` | `web/js/auth/papeis.js:118` | **coberto** | com erro |
 | DELETE | `/api/papeis/{id}` | usuarios | `/admin/papeis` | `web/js/auth/papeis.js:58` | **coberto** | com erro |
@@ -207,11 +207,11 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/pastas/arvore` | pastas | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:141` | **coberto** | com erro |
 | PUT | `/api/pastas/{id}` | pastas | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:143` | **coberto** | com erro |
 | DELETE | `/api/pastas/{id}` | pastas | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:144` | **coberto** | com erro |
-| GET | `/api/plataforma/inquilinos` | plataforma | — | — | **sem tela** | não se aplica |
-| POST | `/api/plataforma/inquilinos` | plataforma | — | — | **sem tela** | não se aplica |
-| DELETE | `/api/plataforma/inquilinos/{id}` | plataforma | — | — | **sem tela** | não se aplica |
-| POST | `/api/plataforma/inquilinos/{id}/reativar` | plataforma | — | — | **sem tela** | não se aplica |
-| POST | `/api/plataforma/inquilinos/{id}/suspender` | plataforma | — | — | **sem tela** | não se aplica |
+| GET | `/api/plataforma/inquilinos` | plataforma | `/plataforma` | `web/js/auth/plataforma.js:59` | **coberto** | com erro |
+| POST | `/api/plataforma/inquilinos` | plataforma | `/plataforma` | `web/js/auth/plataforma.js:128` | **coberto** | com erro |
+| DELETE | `/api/plataforma/inquilinos/{id}` | plataforma | `/plataforma` | `web/js/auth/plataforma.js:84` | **coberto** | com erro |
+| POST | `/api/plataforma/inquilinos/{id}/reativar` | plataforma | `/plataforma` | `web/js/auth/plataforma.js:93` | **coberto** | com erro |
+| POST | `/api/plataforma/inquilinos/{id}/suspender` | plataforma | `/plataforma` | `web/js/auth/plataforma.js:89` | **coberto** | com erro |
 | GET | `/api/privilegios` | usuarios | `/admin/papeis`, `/conta` | `web/js/auth/conta.js:426`<br>`web/js/auth/papeis.js:26` | **coberto** | com erro |
 | GET | `/api/publico/itens/{id}` | compartilhamento | — | `leitura de item público por quem recebe o link, sem sessão; a ficha do item mostra o link` | **externo sem exposição** | não se aplica |
 | GET | `/api/publico/itens/{id}/miniatura` | compartilhamento | — | `leitura de item público por quem recebe o link, sem sessão; a ficha do item mostra o link` | **externo sem exposição** | não se aplica |
@@ -224,9 +224,9 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | GET | `/api/sugerir` | geocodificador | `/mapa` | `web/js/mapa/busca.js:47` | **coberto** | com erro |
 | GET | `/api/tipos-item` | catalogo | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}` | `web/js/catalogo/api.js:87` | **coberto** | com erro |
 | GET | `/api/tokens` | tokens | `/admin`, `/admin/log`, `/admin/tokens` | `web/js/auth/admin.js:78`<br>`web/js/auth/log.js:38`<br>`web/js/auth/tokens.js:91` | **coberto** | com erro |
-| POST | `/api/tokens` | tokens | `/admin/tokens`, `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/uploads` | `web/js/auth/tokens.js:162`<br>`web/js/catalogo/api.js:43`<br>`web/js/uploads/enviar.js:36` | **coberto** | com erro |
+| POST | `/api/tokens` | tokens | `/admin/organizacao`, `/admin/tokens`, `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/uploads` | `web/js/auth/organizacao.js:482`<br>`web/js/auth/tokens.js:162`<br>`web/js/catalogo/api.js:43`<br>`web/js/uploads/enviar.js:36` | **coberto** | com erro |
 | GET | `/api/tokens/{id}` | tokens | `/admin/tokens` | `web/js/auth/tokens.js:199` | **coberto** | com erro |
-| DELETE | `/api/tokens/{id}` | tokens | `/admin/tokens` | `web/js/auth/tokens.js:131` | **coberto** | com erro |
+| DELETE | `/api/tokens/{id}` | tokens | `/admin/organizacao`, `/admin/tokens` | `web/js/auth/organizacao.js:493`<br>`web/js/auth/tokens.js:131` | **coberto** | com erro |
 | GET | `/api/tokens/{id}/log` | tokens | `/admin/tokens` | `web/js/auth/tokens.js:193` | **coberto** | com erro |
 | POST | `/api/tokens/{id}/renovar` | tokens | `/admin/tokens` | `web/js/auth/tokens.js:122` | **coberto** | com erro |
 | POST | `/api/uploads` | uploads | `/c/{token}`, `/conteudo`, `/conteudo/lixeira`, `/conteudo/{id}`, `/uploads` | `web/js/catalogo/api.js:163`<br>`web/js/uploads/enviar.js:342` | **coberto** | com erro |
@@ -290,18 +290,16 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | `/construtor` | construtor.html | sim | sim | sim | sim | sim |
 | `/executar` | executar.html | sim | sim | sim | sim | sim |
 | `/ferramentas` | ferramentas.html | sim | sim | sim | sim | sim |
+| `/plataforma` | plataforma.html | sim | sim | sim | sim | sim |
 | `/tarefas` | tarefas.html | sim | sim | sim | sim | sim |
 | `/tarefas/{job_id}` | tarefas.html | sim | sim | sim | sim | sim |
 
 ## Lacunas de escrita (cada grupo vira um item UX-<n> no backlog via `--registrar`)
 
-- **arquivos**: POST `/api/arquivos` (sem controle); DELETE `/api/arquivos/{sha256}` (sem controle)
 - **categorias**: PUT `/api/categorias` (sem controle); POST `/api/categorias/importar` (sem controle)
 - **geocodificador**: POST `/api/geocodificar` (sem controle); POST `/api/reverso` (sem controle)
 - **geocodificador-esri**: POST `/rest/services/Geocodificador/GeocodeServer` (externo sem exposição); POST `/rest/services/Geocodificador/GeocodeServer/findAddressCandidates` (externo sem exposição); POST `/rest/services/Geocodificador/GeocodeServer/geocodeAddresses` (externo sem exposição); POST `/rest/services/Geocodificador/GeocodeServer/reverseGeocode` (externo sem exposição)
 - **ingestao**: POST `/api/importacoes` (sem tela); DELETE `/api/importacoes/{id}` (sem tela); PUT `/api/importacoes/{id}/confirmar` (sem tela)
-- **login**: POST `/api/login/ldap` (sem controle)
-- **plataforma**: POST `/api/plataforma/inquilinos` (sem tela); DELETE `/api/plataforma/inquilinos/{id}` (sem tela); POST `/api/plataforma/inquilinos/{id}/reativar` (sem tela); POST `/api/plataforma/inquilinos/{id}/suspender` (sem tela)
 
 ## URLs chamadas pela tela sem rota correspondente na API
 
@@ -320,7 +318,7 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | L0-03-a-modelo-item | entregue | `/api/itens/{id}` | rota coberta |
 | L0-03-i-dependencias | entregue | `/api/itens/{camada}/usado_por` | rota sem tela |
 | L0-06-e-status | parcial | `/api/status` | rota sem tela |
-| L0-07-f-console-plataforma | parcial | `/api/plataforma` | rota sem tela |
+| L0-07-f-console-plataforma | parcial | `/api/plataforma` | rota coberta |
 | L0-07-f-console-plataforma | parcial | `/p` | página inexistente |
 | L0-08-a-oidc | parcial | `/api/sso` | rota sem tela |
 | L0-08-b-saml | parcial | `/api/sso/saml/metadata` | rota sem tela |
@@ -382,5 +380,10 @@ Gerado por `docs/gerar_cobertura_ui.py` (item UX-00-mapa-de-cobertura-da-interfa
 | UX-21-multiescala-sem-tela | parcial | `/api/multiescala/fatores` | rota coberta |
 | UX-21-multiescala-sem-tela | parcial | `/api/multiescala/fatores/{id}` | rota coberta |
 | UX-21-multiescala-sem-tela | parcial | `/api/multiescala/fatores/{id}/amostras` | rota coberta |
+| UX-23-mapa-sem-controle | parcial | `/api/anotacoes/{id}` | rota coberta |
+| UX-23-mapa-sem-controle | parcial | `/api/mapa/camadas/{id}/filtrar` | rota coberta |
+| UX-23-mapa-sem-controle | parcial | `/api/mapa/camadas/{id}/selecionar` | rota coberta |
+| UX-23-mapa-sem-controle | parcial | `/api/mapa/pacotes/importar` | rota coberta |
+| UX-23-mapa-sem-controle | parcial | `/api/mapa/selecao-espacial` | rota coberta |
 
-Itens com efeito visível que não citam página nem rota no texto (113; a cobertura deles é conferida pelo e2e do item, não por este cruzamento): L0-02-b-politica-senha-bloqueio, L0-02-c-2fa-totp, L0-02-d-token-servico, L0-02-f-tela-usuarios, L0-02-tenant-auth, L0-03-b-pastas-tags-categorias-classificacao, L0-03-catalogo, L0-03-d-grupos, L0-03-g-detalhe-item-miniatura, L0-04-d-formatos-base, L0-04-e-formatos-cad, L0-04-h-exportar, L0-04-i-fonte-registrada, L0-04-ingest-vetor, L0-05-d-periodicos, L0-05-e-justica-entre-inquilinos, L0-05-jobs, L0-06-c-restore-drill, L0-06-d-exportar-inquilino, L0-07-a-configuracoes-org, L0-07-b-papeis-privilegios, L0-07-c-cotas-uso, L0-07-d-smtp-convites, L0-07-e-relatorios, L0-08-c-govbr, L0-08-d-ldap, L0-08-e-mapeamento-provisionamento, L0-09-a-procedencia, L0-09-b-editor-iso-mgb, L0-10-eventos-historico, L0-11-arquivos-objetos, L0-12-contrato-api-e-limites, L0-13-dado-demonstracao, L0-14-cli-admin, L1-01-ingest-raster, L2-01-b-martin-tiles-vetoriais, L2-01-c-lista-camadas-legenda, L2-01-e-mapas-base, L2-01-f-navegacao-medicao-coordenadas, L2-01-g-tabela-atributos, L2-01-h-selecao-filtros, L2-01-i-graficos-de-camada, L2-01-mapa-web, L2-02-a-modelo-estilo, L2-02-c-editor-simbologia-vetor, L2-02-d-rotulos, L2-03-b-ferramentas-geometria, L2-03-c-formulario-atributos-runtime, L2-03-f-edicao-em-lote-calculo-campo, L2-04-b-featureserver-catalogo-metadados, L2-04-c-featureserver-query, L2-04-f-mapserver-identify-legend-geometryserver, L2-04-h-wfs-2-gml, L2-04-j-conformidade-clientes-e-paridade, L2-04-servicos-esri-ogc, L2-05-a-catalogo-ferramentas-gpserver, L2-05-b-vetor-basico, L2-05-c-sobreposicao-agregacao, L2-05-d-grades-densidade-padroes-interpolacao, L2-05-f-rede-isocrona-rota-ferramentas, L2-06-a-modelo-painel-fontes, L2-07-b-formulario-de-coleta-xlsform, L2-08-a-leitor-portal-inventario, L2-08-b-clonar-camadas-hospedadas, L2-09-a-terreno-terrain-rgb-relevo, L2-10-c-linguagem-expressao, L2-10-d-regras-de-atributo, L2-11-a-geocodificacao-csv, L2-12-a-motor-render-servidor, L3-01-b-unidades, L3-01-e-combinacao, L3-01-f-explicacao, L3-06-criterios-de-feicao, L3-14-cobertura-dado-ausente, L3-16-desempenho-escala, L4-02-b-montante-jusante, L4-02-c-isolamento, L4-02-d-lacos-e-caminho-curto, L4-02-f-resultados-e-exportacao, L4-04-b-atualizar-e-exportar-subrede, L4-04-c-sumarios-por-subrede, L5-01-a-layout-paginas, L5-01-d-widgets-pagina-menu, L5-04-a-blocos-de-conteudo, L5-06-motor-widgets, L5-07-fontes-vistas-mensagens, L5-08-editor-arrasto, L5-09-desfazer-refazer-rascunho, L5-12-acessibilidade-i18n-construtores, L5-13-edicao-concorrente, L5-15-vista-movel-responsivo, L5-31-construtor-de-camada-esquema, L6-01-b-view-so-leitura, L6-01-d-ficha-fonte, L6-01-g-licenca-curada, L6-02-c-wfs-ogcapi, L6-02-j-bancos-externos, L6-02-k-agendamento, L6-02-l-saude, L6-02-m-catalogo-endpoints-brasil, L6-05-proveniencia-camada-externa, L7-03-e-cabecalhos-csp-tls, L7-06-b-alertas, L7-06-c-logs-consulta-req-id, L7-06-d-paineis, L7-08-c-sdk-js, L7-11-b-appliance-sem-internet, L7-11-c-telemetria-opcional, L7-20-trilha-auditoria, UX-00-mapa-de-cobertura-da-interface, UX-07-telas-do-construtor-e-aplicativo, UX-08-telas-rede-de-utilidades-e-motor, UX-15-geocodificador-esri-sem-controle
+Itens com efeito visível que não citam página nem rota no texto (117; a cobertura deles é conferida pelo e2e do item, não por este cruzamento): L0-02-b-politica-senha-bloqueio, L0-02-c-2fa-totp, L0-02-d-token-servico, L0-02-f-tela-usuarios, L0-02-tenant-auth, L0-03-b-pastas-tags-categorias-classificacao, L0-03-catalogo, L0-03-d-grupos, L0-03-g-detalhe-item-miniatura, L0-04-d-formatos-base, L0-04-e-formatos-cad, L0-04-h-exportar, L0-04-i-fonte-registrada, L0-04-ingest-vetor, L0-05-d-periodicos, L0-05-e-justica-entre-inquilinos, L0-05-jobs, L0-06-c-restore-drill, L0-06-d-exportar-inquilino, L0-07-a-configuracoes-org, L0-07-b-papeis-privilegios, L0-07-c-cotas-uso, L0-07-d-smtp-convites, L0-07-e-relatorios, L0-08-c-govbr, L0-08-d-ldap, L0-08-e-mapeamento-provisionamento, L0-09-a-procedencia, L0-09-b-editor-iso-mgb, L0-10-eventos-historico, L0-11-arquivos-objetos, L0-12-contrato-api-e-limites, L0-13-dado-demonstracao, L0-14-cli-admin, L1-01-ingest-raster, L2-01-b-martin-tiles-vetoriais, L2-01-c-lista-camadas-legenda, L2-01-e-mapas-base, L2-01-f-navegacao-medicao-coordenadas, L2-01-g-tabela-atributos, L2-01-h-selecao-filtros, L2-01-i-graficos-de-camada, L2-01-mapa-web, L2-02-a-modelo-estilo, L2-02-c-editor-simbologia-vetor, L2-02-d-rotulos, L2-03-b-ferramentas-geometria, L2-03-c-formulario-atributos-runtime, L2-03-f-edicao-em-lote-calculo-campo, L2-04-b-featureserver-catalogo-metadados, L2-04-c-featureserver-query, L2-04-f-mapserver-identify-legend-geometryserver, L2-04-h-wfs-2-gml, L2-04-j-conformidade-clientes-e-paridade, L2-04-servicos-esri-ogc, L2-05-a-catalogo-ferramentas-gpserver, L2-05-b-vetor-basico, L2-05-c-sobreposicao-agregacao, L2-05-d-grades-densidade-padroes-interpolacao, L2-05-f-rede-isocrona-rota-ferramentas, L2-06-a-modelo-painel-fontes, L2-07-b-formulario-de-coleta-xlsform, L2-08-a-leitor-portal-inventario, L2-08-b-clonar-camadas-hospedadas, L2-09-a-terreno-terrain-rgb-relevo, L2-09-b-cena-extrusao-slides, L2-10-c-linguagem-expressao, L2-10-d-regras-de-atributo, L2-11-a-geocodificacao-csv, L2-12-a-motor-render-servidor, L3-01-b-unidades, L3-01-e-combinacao, L3-01-f-explicacao, L3-06-criterios-de-feicao, L3-14-cobertura-dado-ausente, L3-16-desempenho-escala, L4-02-b-montante-jusante, L4-02-c-isolamento, L4-02-d-lacos-e-caminho-curto, L4-02-f-resultados-e-exportacao, L4-04-b-atualizar-e-exportar-subrede, L4-04-c-sumarios-por-subrede, L4-15-serie-temporal-da-rede, L5-01-a-layout-paginas, L5-01-d-widgets-pagina-menu, L5-01-e-acoes-configuraveis, L5-04-a-blocos-de-conteudo, L5-06-motor-widgets, L5-07-fontes-vistas-mensagens, L5-08-editor-arrasto, L5-09-desfazer-refazer-rascunho, L5-12-acessibilidade-i18n-construtores, L5-13-edicao-concorrente, L5-15-vista-movel-responsivo, L5-31-construtor-de-camada-esquema, L5-37-pacotes-modelos-entre-inquilinos, L6-01-b-view-so-leitura, L6-01-d-ficha-fonte, L6-01-g-licenca-curada, L6-02-c-wfs-ogcapi, L6-02-j-bancos-externos, L6-02-k-agendamento, L6-02-l-saude, L6-02-m-catalogo-endpoints-brasil, L6-05-proveniencia-camada-externa, L7-03-e-cabecalhos-csp-tls, L7-06-b-alertas, L7-06-c-logs-consulta-req-id, L7-06-d-paineis, L7-08-c-sdk-js, L7-11-b-appliance-sem-internet, L7-11-c-telemetria-opcional, L7-20-trilha-auditoria, UX-00-mapa-de-cobertura-da-interface, UX-07-telas-do-construtor-e-aplicativo, UX-08-telas-rede-de-utilidades-e-motor, UX-15-geocodificador-esri-sem-controle

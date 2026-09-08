@@ -391,3 +391,122 @@ document.getElementById('smtp-testar')?.addEventListener('click', async () => {
   if (r.status !== 200) { aviso.erro(`${t('smtp.testar_falhou')}: ${mensagemDe(r)}`); return; }
   aviso.ok(t('smtp.testar_ok', { destinatario: r.json.destinatario }));
 });
+
+
+/* ---------------------------------------------------------------- arquivos e objetos (UX-11; L0-11, ADR 0006)
+   GET /api/arquivos (uso × cota), GET /api/arquivos/_varredura (órfãos), POST /api/arquivos?classe= (corpo cru,
+   SÓ com token de serviço: sob cookie a escrita tem de ser JSON, proteção contra CSRF) e DELETE
+   /api/arquivos/{sha256}. O envio cunha um token `admin:inquilino` de 1 dia por POST /api/tokens, envia com
+   Authorization: Bearer e credentials 'omit' (cookie + Authorization juntos dão 400 autenticacao_ambigua) e
+   REVOGA o token no fim, dando certo ou errado. O servidor não lista objetos: a tabela mostra os enviados nesta
+   sessão, cada um com baixar (GET) e apagar (DELETE). */
+import { confirmar } from '../base/componentes.js';
+import { h, limpar } from '../base/dom.js';
+
+const arquivosEnviados = [];
+
+function enviarBruto(metodo, url, corpo, cabecalhos) {
+  return fetch(url, { method: metodo, body: corpo, credentials: 'omit', cache: 'no-store', headers: cabecalhos });
+}
+
+function mbTexto(bytes) { return `${(bytes / (1024 * 1024)).toFixed(1)} MB`; }
+
+async function carregarUsoArquivos() {
+  const r = await obter('/api/arquivos');
+  const texto = document.getElementById('arquivos-uso-texto');
+  const barra = document.getElementById('arquivos-uso-barra');
+  const prog = document.getElementById('arquivos-uso');
+  if (!texto) return;
+  if (r.status !== 200) { texto.textContent = mensagemDe(r); return; }
+  const pct = r.json.cota_bytes ? Math.min(100, Math.round((r.json.bytes_usados / r.json.cota_bytes) * 100)) : 0;
+  barra.style.width = `${pct}%`;
+  prog.setAttribute('aria-valuenow', String(pct));
+  texto.textContent = t('org.arquivos_uso', { usado: mbTexto(r.json.bytes_usados), cota: mbTexto(r.json.cota_bytes), pct });
+}
+
+async function varrerOrfaos() {
+  const estado = document.getElementById('arquivos-estado');
+  const saida = document.getElementById('arquivos-varredura');
+  estado.carregando(t('org.arquivos_varrendo'));
+  const r = await obter('/api/arquivos/_varredura');
+  if (r.status !== 200) { estado.erro(r, [{ id: 'varrer', rotulo: t('estado.tentar_de_novo') }]); return; }
+  estado.limpar();
+  const j = r.json || {};
+  saida.textContent = t('org.arquivos_varredura', { objetos: j.objetos_no_garage ?? 0, linhas: j.linhas_no_banco ?? 0, sem_linha: (j.sem_linha || []).length, sem_objeto: (j.sem_objeto || []).length });
+}
+
+function desenharArquivos() {
+  const tabela = document.getElementById('arquivos-lista');
+  const corpo = limpar(document.getElementById('arquivos-corpo'));
+  tabela.hidden = !arquivosEnviados.length;
+  for (const a of arquivosEnviados) {
+    const url = `/api/arquivos/${encodeURIComponent(a.sha256)}?classe=${encodeURIComponent(a.classe)}`;
+    const btApagar = h('button', { type: 'button', class: 'pequeno perigo', dataset: { apagar: a.sha256 } }, t('acao.apagar'));
+    btApagar.addEventListener('click', () => apagarArquivo(a));
+    corpo.append(h('tr', { dataset: { sha256: a.sha256 } },
+      h('td', {}, a.classe), h('td', {}, h('code', { class: 'mono' }, `${a.sha256.slice(0, 12)}…`)), h('td', {}, mbTexto(a.bytes)), h('td', {}, a.content_type || ''),
+      h('td', { class: 'acoes' }, h('a', { class: 'botao pequeno', href: url, download: '' }, t('org.arquivo_baixar')), ' ', btApagar)));
+  }
+}
+
+async function apagarArquivo(a) {
+  const estado = document.getElementById('arquivos-estado');
+  if (!(await confirmar(t('acao.apagar'), t('org.arquivo_apagar_confirma', { sha: a.sha256.slice(0, 12) }), { perigo: true, ok: t('acao.apagar') }))) return;
+  const r = await apagar(`/api/arquivos/${encodeURIComponent(a.sha256)}?classe=${encodeURIComponent(a.classe)}`);
+  if (r.status !== 204) { estado.erro(r, []); return; }
+  estado.limpar();
+  arquivosEnviados.splice(arquivosEnviados.indexOf(a), 1);
+  desenharArquivos();
+  document.getElementById('aviso').ok(t('org.arquivo_apagado'));
+  carregarUsoArquivos();
+}
+
+function textoErroArquivo(r, j) {
+  if (r.status === 413) return t('org.arquivo_cota', { mensagem: (j && j.mensagem) || '' });
+  if (r.status === 415) return t('org.arquivo_recusado', { tipo: (j && j.detalhe && j.detalhe.tipo_detectado) || '?' });
+  if (r.status === 0) return t('login.sem_servidor');
+  return (j && j.mensagem) ? j.mensagem : `${t('erro.carregar')} (${r.status})`;
+}
+
+async function enviarArquivo() {
+  const estado = document.getElementById('arquivos-estado');
+  const entrada = document.getElementById('arquivo-envio');
+  const classe = (document.getElementById('arquivo-classe').value || '').trim();
+  const botao = document.getElementById('arquivo-enviar');
+  const arquivo = entrada.files && entrada.files[0];
+  if (!arquivo) { estado.erro(t('org.arquivo_sem_arquivo'), []); return; }
+  if (!/^[a-z0-9_]{1,40}$/.test(classe)) { estado.erro(t('org.arquivo_classe_invalida'), []); document.getElementById('arquivo-classe').focus(); return; }
+  if (!tem('tokens.gerar')) { estado.negado(t('org.arquivo_sem_token')); return; }
+  botao.disabled = true;
+  estado.carregando(t('org.arquivo_enviando', { nome: arquivo.name, mb: mbTexto(arquivo.size) }));
+  const tk = await enviar('/api/tokens', { nome: t('org.arquivo_token_nome'), escopos: ['admin:inquilino'], validade_dias: 1 });
+  if (tk.status !== 201) { botao.disabled = false; estado.mostrar({ tipo: tk.status === 403 ? 'negado' : 'erro', texto: mensagemDe(tk), ref: tk.json?.req_id }); return; }
+  let resp; let json = null;
+  try {
+    // cada chamada com o caminho na própria linha: é assim que docs/gerar_cobertura_ui.py liga rota → tela
+    resp = await enviarBruto('POST', `/api/arquivos?classe=${encodeURIComponent(classe)}`, arquivo,
+      { Authorization: `Bearer ${tk.json.token}`, 'Content-Type': arquivo.type || 'application/octet-stream', Accept: 'application/json' });
+    try { json = await resp.json(); } catch { json = null; }
+  } catch (e) {
+    resp = { status: 0 }; json = { mensagem: (e && e.message) || String(e) };
+  } finally {
+    await apagar(`/api/tokens/${encodeURIComponent(tk.json.id)}`); // o token vive só o tempo do envio
+  }
+  botao.disabled = false;
+  if (resp.status !== 201) { estado.mostrar({ tipo: resp.status === 403 ? 'negado' : 'erro', texto: textoErroArquivo(resp, json), ref: json && json.req_id }); return; }
+  estado.limpar();
+  entrada.value = '';
+  botao.disabled = true;
+  arquivosEnviados.unshift({ classe, sha256: json.sha256, bytes: json.bytes ?? arquivo.size, content_type: json.content_type || arquivo.type });
+  desenharArquivos();
+  document.getElementById('aviso').ok(t('org.arquivo_enviado', { sha: String(json.sha256).slice(0, 12) }));
+  carregarUsoArquivos();
+}
+
+if (document.getElementById('arquivos')) {
+  document.getElementById('arquivo-envio').addEventListener('change', (e) => { document.getElementById('arquivo-enviar').disabled = !(e.target.files && e.target.files.length); });
+  document.getElementById('arquivo-enviar').addEventListener('click', enviarArquivo);
+  document.getElementById('arquivos-varrer').addEventListener('click', varrerOrfaos);
+  document.getElementById('arquivos-estado').addEventListener('acao', (ev) => { if (ev.detail.id === 'varrer') varrerOrfaos(); });
+  carregarUsoArquivos();
+}

@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (itens UX-11-arquivos-sem-controle, UX-17-login-sem-controle e UX-18-plataforma-sem-tela: últimas lacunas da trilha de interface)
+
+Trilha de interface. **UX-11**: seção "Arquivos e objetos" em `/admin/organizacao` — uso × cota (`GET
+/api/arquivos`), varredura de órfãos, envio de arquivo cru com token de serviço `admin:inquilino` cunhado e revogado
+em volta do `POST /api/arquivos` (cookie + Authorization dão 400; por isso `credentials: 'omit'`), baixar e apagar
+(`DELETE /api/arquivos/{sha256}`) com confirmação; classe inválida recusada no navegador; 413/415 nomeados.
+**UX-17**: `GET /api/login/provedores` declara o LDAP habilitado do inquilino; `/entrar` ganha o botão que alterna
+para `POST /api/login/ldap` com os mesmos campos; 503 do diretório, 403 desabilitado/sem grupo e 409 login local
+viram texto próprio e o login local segue disponível. **UX-18**: tela `/plataforma` (barra lateral só para
+superadmin): lista de inquilinos com filtro e estados, criar (senha temporária mostrada uma vez com copiar; 409 e
+422 no campo; slug e login validados antes), suspender/reativar/apagar com confirmação; sessão comum vê "sem
+permissão". `button.perigo:hover` invertido (contraste). i18n +74 chaves (pt-BR/en/es). e2e
+`tests/e2e/test_ux11_17_18_arquivos_ldap_plataforma.py` (4 testes; o do superadmin cria a sessão no banco e liga
+o 2FA obrigatório pela API). Cobertura regenerada: 240 rotas, 11 lacunas de escrita (era 18) — nenhuma da trilha
+de interface. ADR `docs/adr/20260908T1700-*`.
+
 ## turno 8, setembro de 2026 (item UX-23-mapa-sem-controle: painel Seleção, anotações com controle, importar pacote)
 
 Trilha de interface. Painel **Seleção** (atalho `s`) no visualizador: por atributo (condições campo · operador ·

@@ -47,6 +47,8 @@ PAGINAS = {
     "/executar": "executar.html",
     # --- catálogo de ferramentas (UX-09): formulário gerado do esquema de parâmetros de cada tipo de tarefa
     "/ferramentas": "ferramentas.html",
+    # --- console do operador da plataforma (UX-18): superadmin
+    "/plataforma": "plataforma.html",
 }
 router = APIRouter()
 

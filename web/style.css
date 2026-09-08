@@ -90,7 +90,7 @@ body:not(.com-lateral) .lateral { display: none; }
 .botao[disabled], button[disabled], .botao[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
 .botao.primario, button.primario { background: var(--acento); color: var(--acento-texto); border-color: var(--acento); font-weight: 600; }
 .botao.perigo, button.perigo { color: var(--falha); border-color: var(--falha); background: transparent; }
-.botao.perigo:hover, button.perigo:hover { background: var(--perigo-fraco); }
+.botao.perigo:hover, button.perigo:hover { background: var(--falha); color: var(--painel); } /* UX-18: texto vermelho sobre vermelho-fraco não chegava a 4,5:1 */
 .botao.pequeno, button.pequeno { padding: var(--e1) var(--e2); font-size: var(--t-1); }
 .botao.texto, button.texto { background: transparent; border-color: transparent; color: var(--acento); padding-left: var(--e1); padding-right: var(--e1); }
 .botao.texto:hover, button.texto:hover { color: var(--texto); }

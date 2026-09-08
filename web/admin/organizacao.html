@@ -42,6 +42,29 @@
       <h2 id="t-armazenamento" data-i18n="org.armazenamento">Armazenamento</h2>
       <plat-formulario id="form-armazenamento"></plat-formulario>
     </section>
+    <section class="cartao" id="arquivos" aria-labelledby="t-arquivos">
+      <h2 id="t-arquivos" data-i18n="org.arquivos">Arquivos e objetos</h2>
+      <p class="fraco" data-i18n="org.arquivos_ajuda">objetos genéricos do inquilino no armazenamento (logotipo, anexos, exportações); o envio usa um token de serviço de uma hora criado e revogado aqui</p>
+      <div class="progresso" id="arquivos-uso" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-i18n-aria="org.arquivos_uso_rotulo" aria-label="uso do armazenamento">
+        <div class="barra-progresso"><div class="preenchido" id="arquivos-uso-barra"></div></div>
+        <output class="valor" id="arquivos-uso-texto">…</output>
+      </div>
+      <plat-estado id="arquivos-estado" hidden></plat-estado>
+      <div class="form">
+        <div class="campo"><label for="arquivo-classe" data-i18n="org.arquivo_classe">classe</label><input id="arquivo-classe" type="text" value="objeto" maxlength="40" autocomplete="off" spellcheck="false" pattern="[a-z0-9_]{1,40}"><span class="ajuda" data-i18n="org.arquivo_classe_ajuda">letras minúsculas, dígitos e sublinhado; agrupa os objetos (objeto, anexo, org_logo)</span></div>
+        <div class="campo"><label for="arquivo-envio" data-i18n="org.arquivo_escolher">arquivo</label><input id="arquivo-envio" type="file"></div>
+        <div class="botoes">
+          <button type="button" id="arquivo-enviar" class="primario" disabled data-i18n="org.arquivo_enviar">Enviar arquivo</button>
+          <button type="button" id="arquivos-varrer" class="pequeno" data-i18n="org.arquivos_varrer">Varrer órfãos</button>
+        </div>
+      </div>
+      <p id="arquivos-varredura" class="saida" aria-live="polite"></p>
+      <table class="tabela" id="arquivos-lista" hidden>
+        <caption class="sr-only" data-i18n="org.arquivos_enviados">arquivos enviados nesta sessão</caption>
+        <thead><tr><th scope="col" data-i18n="org.arquivo_classe">classe</th><th scope="col">sha256</th><th scope="col" data-i18n="org.arquivo_tamanho">tamanho</th><th scope="col" data-i18n="org.arquivo_tipo">tipo</th><th scope="col" data-i18n="geral.acoes">ações</th></tr></thead>
+        <tbody id="arquivos-corpo"></tbody>
+      </table>
+    </section>
     <section class="cartao" id="usuarios" aria-labelledby="t-usuarios">
       <h2 id="t-usuarios" data-i18n="org.usuarios">Usuários</h2>
       <plat-formulario id="form-usuarios"></plat-formulario>

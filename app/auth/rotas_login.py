@@ -104,8 +104,15 @@ def provedores(inquilino: str):
         t = cur.fetchone()
     if t is None:
         raise ErroAPI(404, "inquilino_inexistente", "inquilino inexistente")
-    # provedores externos nascem no L0-08; a lista vazia é o estado real, não um dado fixo
-    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": [], "login_local": True}
+    # provedores externos: hoje só o diretório LDAP/AD do inquilino (L0-08-d), declarado aqui para a tela de
+    # entrada mostrar o controle (UX-17). Nada de segredo sai: só tipo, nome e a rota de login.
+    provedores_lista: list[dict] = []
+    with db.db() as cur:
+        cur.execute("SELECT habilitado FROM plat.provedor_ldap_de(%s)", (inquilino,))
+        pl = cur.fetchone()
+    if pl is not None and pl["habilitado"]:
+        provedores_lista.append({"tipo": "ldap", "nome": "LDAP / Active Directory", "rota": "/api/login/ldap"})
+    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": provedores_lista, "login_local": True}
 
 
 @router.post(

@@ -25,10 +25,13 @@ export const TELAS = [
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
   { caminho: '/admin/acervo', chave: 'nav.acervo', privilegio: 'conteudo.registrar_fonte' },
   { caminho: '/estilo-guia', chave: 'nav.estilo_guia', privilegio: 'org.configurar' },
+  // console do operador (UX-18): só para superadmin (inquilino plataforma), nunca por privilégio de inquilino
+  { caminho: '/plataforma', chave: 'nav.plataforma', superadmin: true },
 ];
 
 export function telasVisiveis(usuario) {
   return TELAS.filter((tela) => {
+    if (tela.superadmin) return !!(usuario && usuario.superadmin);
     if (tela.qualquer) return tela.qualquer.some((p) => tem(p, usuario));
     return !tela.privilegio || tem(tela.privilegio, usuario);
   });
