@@ -167,21 +167,25 @@ def sql_linha(schema, tabela, p: PedidoGrafico, colunas, where_sql, where_params
 def sql_histograma(schema, tabela, p: PedidoGrafico, colunas, where_sql, where_params) -> Sql:
     """Bordas = linspace(lo, hi, N+1) do numpy, em float8 dentro do Postgres (mesma aritmética IEEE:
     `lo + i*passo`, passo = (hi-lo)/N, última borda = hi); atribuição por width_bucket(x, bordas[]),
-    com x = hi (faixa N+1) somado à última faixa, como o numpy fecha a última à direita."""
+    com x = hi (faixa N+1) somado à última faixa, como o numpy fecha a última à direita.
+
+    Forma da consulta MEDIDA na camada de 1 mi de linhas: as bordas entram na agregação como InitPlan
+    (`(SELECT bordas FROM b)`, parâmetro avaliado uma vez e passado aos trabalhadores), o que mantém as
+    duas passagens em varredura paralela — 113 ms; a mesma lógica com LEFT JOIN LATERAL correlacionado
+    perdia o paralelismo e levava 645 ms (p95), acima do portão de 500 ms."""
     cx = _exigir(p.campo, colunas, "campo", TIPOS_NUMERICOS) + "::float8"
     de, onde = _de(schema, tabela), _onde(where_sql)
     sql = (
-        f"WITH lim AS (SELECT min({cx}) AS lo, max({cx}) AS hi, count({cx}) AS n, "
+        f"WITH lim AS MATERIALIZED (SELECT min({cx}) AS lo, max({cx}) AS hi, count({cx}) AS n, "
         f"count(*) - count({cx}) AS nulos FROM {de}{onde}), "
-        f"b AS (SELECT CASE WHEN lo = hi THEN lo - 0.5 ELSE lo END AS lo, "
-        f"CASE WHEN lo = hi THEN hi + 0.5 ELSE hi END AS hi, n, nulos FROM lim), "
-        f"bordas AS (SELECT (ARRAY(SELECT lo + i * ((hi - lo) / %s) FROM generate_series(0, %s - 1) i) "
-        f"|| ARRAY[hi]) AS bordas, lo, hi, n, nulos FROM b) "
-        f"SELECT bordas.bordas, bordas.lo, bordas.hi, bordas.n, bordas.nulos, c.faixa, c.conta "
-        f"FROM bordas LEFT JOIN LATERAL ("
-        f"SELECT least(width_bucket({cx}, bordas.bordas), %s) AS faixa, count(*) AS conta "
-        f"FROM {de}{_onde(where_sql, f'{cx} IS NOT NULL')} GROUP BY 1) c ON bordas.lo IS NOT NULL "
-        f"ORDER BY c.faixa"
+        f"b AS MATERIALIZED (SELECT (ARRAY(SELECT lo2 + i * ((hi2 - lo2) / %s) FROM generate_series(0, %s - 1) i) "
+        f"|| ARRAY[hi2]) AS bordas, lo2 AS lo, hi2 AS hi FROM "
+        f"(SELECT CASE WHEN lo = hi THEN lo - 0.5 ELSE lo END AS lo2, "
+        f"CASE WHEN lo = hi THEN hi + 0.5 ELSE hi END AS hi2 FROM lim) s), "
+        f"c AS (SELECT least(width_bucket({cx}, (SELECT bordas FROM b)), %s) AS faixa, count(*) AS conta "
+        f"FROM {de}{_onde(where_sql, f'{cx} IS NOT NULL')} GROUP BY 1) "
+        f"SELECT b.bordas, b.lo, b.hi, lim.n, lim.nulos, c.faixa, c.conta "
+        f"FROM lim CROSS JOIN b LEFT JOIN c ON true ORDER BY c.faixa"
     )
     params = list(where_params) + [p.faixas, p.faixas, p.faixas] + list(where_params)
     return Sql(sql, params)

@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import time
 
+import psycopg2.extensions
 from fastapi import APIRouter, Request
 
 from app import db
@@ -39,9 +40,16 @@ def _num(v):
     return v
 
 
+# date/timestamp/timestamptz chegam como TEXTO do Postgres, não como datetime do Python: a faixa de um
+# gráfico é um rótulo, e o datetime do Python não representa ano 0 (que é onde '0001-01-01 UTC' cai ao
+# ser truncado em America/Sao_Paulo), nem 'infinity' — refutação "datas fora de faixa" do item.
+_DATA_COMO_TEXTO = psycopg2.extensions.new_type((1082, 1114, 1184), "PLAT_DATA_TEXTO", lambda v, _cur: v)
+
+
 def _executar(cur, sql: gr.Sql) -> list[dict]:
     sql_final = reescrever_schema(sql.sql, settings.PLAT_SCHEMA, settings.PLAT_SCHEMA_TRABALHO)
     with cur.connection.cursor() as tcur:
+        psycopg2.extensions.register_type(_DATA_COMO_TEXTO, tcur)
         tcur.execute(sql_final, sql.params)
         nomes = [d.name for d in tcur.description]
         return [dict(zip(nomes, linha, strict=True)) for linha in tcur.fetchall()]
@@ -101,7 +109,7 @@ def _linha(cur, camada, p, colunas, where_sql, where_params) -> dict:
 
 def _histograma(cur, camada, p, colunas, where_sql, where_params) -> dict:
     linhas = _executar(cur, gr.sql_histograma(camada["schema"], camada["tabela"], p, colunas, where_sql, where_params))
-    if not linhas or linhas[0]["lo"] is None:
+    if not linhas or linhas[0]["lo"] is None or int(linhas[0]["n"]) == 0:
         nulos = int(linhas[0]["nulos"]) if linhas else 0
         return {"series": [], "bordas": [], "total": nulos, "nulos": nulos, "grupos": 0, "truncado": False,
                 "outros": None}
