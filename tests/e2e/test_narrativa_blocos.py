@@ -222,7 +222,10 @@ def test_imagem_sem_texto_alternativo_bloqueia_e_com_texto_publica_por_link(tela
         p2 = ctx.new_page()
         erros = []
         p2.on("console", lambda m: erros.append(m.text) if m.type == "error" else None)
-        p2.goto(url, wait_until="domcontentloaded")
+        # o endereço publicado é o da URL pública da trilha; o e2e abre o mesmo caminho no servidor local
+        from urllib.parse import urlparse
+        u = urlparse(url)
+        p2.goto(f"{u.path}?{u.query}", wait_until="domcontentloaded")
         p2.wait_for_selector("article.narrativa", timeout=20000)
         assert p2.locator("article.narrativa .bloco").count() == 5
         assert p2.get_attribute("article.narrativa img", "alt") == "logotipo da plataforma"
