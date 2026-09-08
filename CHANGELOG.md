@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item UX-09-ferramentas-e-tarefas: catálogo de ferramentas com formulário gerado do esquema)
+
+Trilha de interface. Nova tela `/ferramentas` (entrada na barra lateral com `jobs.executar`): catálogo dos tipos de
+tarefa de `GET /api/jobs/tipos` em cartões por grupo, com custo declarado (memória, tempo, pesada, executor, perfil
+mínimo) e número de parâmetros; busca; as de diagnóstico só com o filtro ligado. O formulário de cada ferramenta é
+GERADO do JSON Schema dos parâmetros (número com limites, enum, caixa, lista, JSON, uuid, data-hora; obrigatório e
+padrão do esquema; rótulo = nome do parâmetro, descrição e limites na ajuda). Validação no navegador com o motivo
+no campo antes de qualquer chamada; 422 do serviço (`[{campo, mensagem}]`) volta ao campo. Executar cria a tarefa e
+mostra a execução ao vivo no mesmo painel (canal SSE/polling da tela Tarefas): barra, log, cancelar enquanto roda,
+ligação para `/tarefas/<id>` e para o item do resultado. Estados: catálogo vazio/erro com tentar de novo, filtro
+sem resultado com limpar, ferramenta inexistente pela URL, perfil insuficiente, sem permissão. Módulo com funções
+içadas porque inicia no topo (`await iniciar()` antes das `const`). i18n `ferramentas.*` + `nav.ferramentas` (três
+idiomas). ADR `docs/adr/20260908T1400-*`. e2e `tests/e2e/test_ux09_ferramentas.py` (3 testes; `prova.progresso`
+de 4 passos roda até "concluído"; cancelamento; capturas 390/1280; axe; console limpo). Parte NÃO coberta: ferramentas
+GP no vocabulário Esri (L2-05-a) não existem em ramo nenhum.
+
 ## turno 8, setembro de 2026 (item UX-08-telas-rede-de-utilidades-e-motor: painéis Rotas e Motor no visualizador; rede de utilidades fica nos ramos L4)
 
 Trilha de interface. O visualizador ganha dois painéis no mesmo chrome de UX-04, com atalhos `r` e `o`: **Rotas**
