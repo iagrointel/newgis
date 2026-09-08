@@ -1025,6 +1025,23 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/amc/execucoes/{execucao_id}/resultados"): Caso(
         lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}/resultados"
     ),
+    # a explicação de uma unidade da execução de B (item L3-01-f): a unidade nem precisa existir, o que se
+    # prova é que A não atravessa a execução alheia
+    ("GET", "/api/amc/execucoes/{execucao_id}/unidades/{unidade_id}/explicacao"): Caso(
+        lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}/unidades/u1/explicacao"
+    ),
+    # ---- L3-17 localização semelhante: a conta é sobre a matriz que o CHAMADOR envia, não sobre tabela do
+    # inquilino; por isso o 200 é da própria A e a resposta não pode carregar marca de B
+    ("POST", "/api/amc/similaridade"): Caso(
+        lambda p: "/api/amc/similaridade",
+        lambda p: {"unidades": {"a1": {"f": 1.0}, "a2": {"f": 2.0}}, "referencias": ["a1"]},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/api/amc/similaridade/exportar"): Caso(
+        lambda p: "/api/amc/similaridade/exportar?formato=geojson",
+        lambda p: {"unidades": {"a1": {"f": 1.0}, "a2": {"f": 2.0}}, "referencias": ["a1"]},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
     # ---- L3-01-g tela do motor: a matriz é o dado mais rico da execução (valor bruto e favorabilidade de
     # cada fator em cada unidade) e por isso é o alvo mais valioso de um vazamento entre inquilinos.
     ("GET", "/api/amc/execucoes/{execucao_id}/matriz"): Caso(
