@@ -31,6 +31,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse, Response
 
 from app import db, objetos
+from app.acervo import arquivos as arquivos_acervo
 from app.auth import escopos as esc
 from app.auth import sessao as sessao_auth
 from app.auth.sessao import _auth_de_token
@@ -103,15 +104,28 @@ def esquecer_autorizacao() -> None:
     _FONTES.clear()
 
 
-def _chave_do_asset(item_stac: dict, asset: str) -> str:
+PREFIXO_ACERVO = "acervo://"
+
+
+def _href_do_asset(item_stac: dict, asset: str) -> str:
     ativos = item_stac.get("assets") or {}
     if asset not in ativos:
         raise ErroAPI(404, "asset_inexistente", f"o item não tem o asset '{asset}'",
                       {"disponiveis": sorted(ativos)})
     href = ativos[asset].get("href") or ""
-    if not href.startswith("/api/objetos/"):
-        raise ErroAPI(422, "asset_externo",
-                      "este asset não é um objeto do armazenamento da plataforma (item referenciado)",
+    # `/api/objetos/<chave>`: COG no balde do inquilino (L1-01). `acervo://<caminho>`: raster do acervo da CASA,
+    # lido do disco onde ele já está (item L6-01-i) — nunca copiado para o balde, guardrail de disco D21.
+    if href.startswith("/api/objetos/") or href.startswith(PREFIXO_ACERVO):
+        return href
+    raise ErroAPI(422, "asset_externo",
+                  "este asset não é um objeto do armazenamento da plataforma nem um arquivo do acervo da casa",
+                  {"asset": asset})
+
+
+def _chave_do_asset(item_stac: dict, asset: str) -> str:
+    href = _href_do_asset(item_stac, asset)
+    if href.startswith(PREFIXO_ACERVO):
+        raise ErroAPI(422, "asset_externo", "asset do acervo da casa não é objeto do armazenamento",
                       {"asset": asset})
     return href[len("/api/objetos/"):]
 
@@ -135,10 +149,19 @@ def _fonte_do_item(auth, item: str, asset: str) -> tuple[tiles.Fonte, dict]:
         stac = ps.item_obter(cur, auth.tenant_id, linha["colecao"], item)
     if stac is None:
         raise ErroAPI(403, "item_indisponivel", "item de imagem sem registro STAC", {"item": item})
-    chave = _chave_do_asset(stac, asset)
-    caminho, opcoes = objetos.fonte_gdal(chave)
-    tiles.preparar_ambiente_s3(settings.PLAT_GARAGE_URL or "")
-    fonte = tiles.Fonte(caminho, tiles.env_gdal(), tiles.sessao_s3(opcoes))
+    href = _href_do_asset(stac, asset)
+    if href.startswith(PREFIXO_ACERVO):
+        # arquivo do acervo da casa: caminho local dentro da raiz configurada, sem sessão S3 e sem cópia
+        alvo = arquivos_acervo.resolver(href[len(PREFIXO_ACERVO):])
+        if not alvo.is_file():
+            raise ErroAPI(422, "arquivo_ausente", "o arquivo do acervo saiu do disco desta instalação",
+                          {"item": item})
+        fonte = tiles.Fonte(str(alvo), tiles.env_gdal(), None)
+    else:
+        chave = href[len("/api/objetos/"):]
+        caminho, opcoes = objetos.fonte_gdal(chave)
+        tiles.preparar_ambiente_s3(settings.PLAT_GARAGE_URL or "")
+        fonte = tiles.Fonte(caminho, tiles.env_gdal(), tiles.sessao_s3(opcoes))
     _guardar(_FONTES, chave_cache, (fonte, stac))
     return fonte, stac
 

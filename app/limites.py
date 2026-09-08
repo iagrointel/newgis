@@ -247,3 +247,9 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# ---- L6-01-i-raster-e-arquivos: camadas de ARQUIVO do acervo da casa (acervo.camada_arquivo) no catálogo
+ACERVO_ARQUIVO_BYTES_MAX = 2 * 1024 * 1024 * 1024  # teto por arquivo (igual a RASTER_BYTES_MAX; guardrail D21)
+ACERVO_ARQUIVO_LOTE_MAX = 50                       # arquivos por chamada de exposição em lote
+ACERVO_ARQUIVO_LOTE_BYTES_MAX = 3 * 1024 * 1024 * 1024  # soma do lote (D21: a trilha trabalha com <= 3 GB)
+ACERVO_ARQUIVO_LISTA_MAX = 500                     # linhas por página de GET /api/acervo/arquivos

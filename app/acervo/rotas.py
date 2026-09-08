@@ -18,16 +18,27 @@ import uuid
 import psycopg2
 from fastapi import APIRouter, Query, Request
 
-from app import db
-from app.acervo.modelos import AcervoAdicionarEntrada, AcervoFicha, AcervoPagina
+from app import db, limites
+from app.acervo import arquivos as arq
+from app.acervo.modelos import (
+    AcervoAdicionarEntrada,
+    AcervoArquivosPagina,
+    AcervoExporEntrada,
+    AcervoExporSaida,
+    AcervoFicha,
+    AcervoPagina,
+)
 from app.auth.comum import paginacao
 from app.auth.sessao import Auth, autenticado
 from app.catalogo import comum, tipos
 from app.catalogo.comum import item_json, item_ou_404, jsonb, registrar_evento
 from app.catalogo.modelos import Item
 from app.erros import ErroAPI
+from app.jobs import servico as jobs_servico
+from app.jobs.contexto import ErroServico, dependencia_jobs, sessao_de
 
 router = APIRouter(tags=["acervo"])
+AUTH_JOBS = dependencia_jobs()  # singleton de módulo, como em app/jobs/rotas.py (item L6-01-i)
 LER = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade"}
 CAMPOS_FICHA = (
     "f.fonte_id, f.nome, f.orgao, f.dominio, f.url, f.url_http, f.url_conferida_em, f.licenca, f.frescor, "
@@ -88,6 +99,119 @@ def listar(
         )
         itens = [_iso_datas(r) for r in cur.fetchall()]
     return {"total": total, "itens": itens}
+
+
+# NOTA de ordem: as rotas de ARQUIVO ficam ANTES de `/api/acervo/{fonte_id}` — declarada depois, a rota de
+# caminho variável capturaria `arquivos` como se fosse um fonte_id e a lista responderia 404 (item L6-01-i).
+# ---------------------------------------------------------------- item L6-01-i: camadas de ARQUIVO do acervo
+@router.get("/api/acervo/arquivos", response_model=AcervoArquivosPagina, openapi_extra=LER)
+def arquivos_listar(
+    auth: Auth = autenticado(escopo_token="catalogo:ler"),
+    tipo: str | None = Query(default=None, pattern="^(raster|vetor)$"),
+    fonte_id: str | None = Query(default=None, max_length=200),
+    q: str | None = Query(default=None, max_length=200),
+    so_no_disco: bool = Query(default=False, description="só os arquivos que existem nesta instalação"),
+    limite: int = Query(default=100, ge=1, le=limites.ACERVO_ARQUIVO_LISTA_MAX),
+    deslocamento: int = Query(default=0, ge=0),
+):
+    """Lista as camadas de ARQUIVO do acervo da casa (`acervo.camada_arquivo`), com a mesma ficha de fonte da
+    lista de fontes e o estado de exposição neste inquilino. `no_disco` diz se o arquivo do registro existe nesta
+    instalação — o registro é da casa, a instalação pode ser outra."""
+    condicoes, params = [], []
+    if tipo:
+        condicoes.append("a.tipo = %s")
+        params.append(tipo)
+    if fonte_id:
+        condicoes.append("a.fonte_id = %s")
+        params.append(fonte_id)
+    if q:
+        condicoes.append("(a.caminho ILIKE %s OR a.nome ILIKE %s OR coalesce(a.fonte_nome,'') ILIKE %s)")
+        params += [f"%{q}%"] * 3
+    onde = (" WHERE " + " AND ".join(condicoes)) if condicoes else ""
+    with db.db(auth.contexto()) as cur:
+        cur.execute(f"SELECT count(*) AS n FROM plat.acervo_arquivo a{onde}", params)
+        total = cur.fetchone()["n"]
+        cur.execute(
+            f"SELECT a.*, e.item_id::text AS item_id FROM plat.acervo_arquivo a "
+            f"LEFT JOIN plat.acervo_arquivo_exposto e ON e.caminho = a.caminho{onde} "
+            "ORDER BY a.tipo, a.bytes NULLS LAST, a.caminho LIMIT %s OFFSET %s",
+            [*params, limite, deslocamento],
+        )
+        linhas = [dict(r) for r in cur.fetchall()]
+        cur.execute(
+            f"SELECT count(*) FILTER (WHERE a.tipo = 'raster') AS rasters, "
+            f"count(*) FILTER (WHERE a.tipo = 'vetor') AS vetores FROM plat.acervo_arquivo a{onde}", params
+        )
+        contagem = cur.fetchone()
+    itens = []
+    for r in linhas:
+        no_disco = None
+        if arq.configurado():
+            try:
+                no_disco = arq.resolver(r["caminho"]).is_file()
+            except arq.ArquivoRecusado:
+                no_disco = False
+        if so_no_disco and no_disco is not True:
+            continue
+        itens.append({**r, "exposto": r["item_id"] is not None, "no_disco": no_disco})
+    return {"total": total, "itens": itens, "raiz_configurada": arq.configurado(),
+            "rasters": contagem["rasters"], "vetores": contagem["vetores"]}
+
+
+@router.post("/api/acervo/arquivos/expor", response_model=AcervoExporSaida, status_code=202,
+             openapi_extra={"x-auth": "S/T", "x-privilegio": "jobs.executar"})
+def arquivos_expor(corpo: AcervoExporEntrada, request: Request, auth: Auth = AUTH_JOBS):
+    """Enfileira `acervo.expor_arquivo` por caminho: o job confere o sha256 ANTES de ingerir. Recusa aqui, sem
+    job, o que já dá para saber pelo registro (caminho inexistente, arquivo fora do disco, acima do teto de
+    tamanho, soma do lote acima do teto de disco D21, ou já exposto)."""
+    from app.acervo import tarefas as acervo_tarefas
+
+    if not arq.configurado():
+        raise ErroAPI(409, "acervo_sem_raiz", "esta instalação não tem raiz de arquivos do acervo configurada")
+    jobs, recusados, soma = [], [], 0
+    with db.db(auth.contexto()) as cur:
+        for caminho in dict.fromkeys(corpo.caminhos):
+            r = acervo_tarefas.registro_de(cur, caminho)
+            if r is None:
+                recusados.append({"caminho": caminho, "erro": "caminho_inexistente"})
+                continue
+            cur.execute("SELECT item_id::text AS item_id FROM plat.acervo_arquivo_exposto WHERE caminho = %s",
+                        (caminho,))
+            ja = cur.fetchone()
+            if ja:
+                recusados.append({"caminho": caminho, "erro": "ja_exposto", "item_id": ja["item_id"]})
+                continue
+            try:
+                a = arq.resolver(caminho)
+            except arq.ArquivoRecusado as e:
+                recusados.append({"caminho": caminho, "erro": e.erro})
+                continue
+            if not a.is_file():
+                recusados.append({"caminho": caminho, "erro": "arquivo_ausente"})
+                continue
+            tamanho = a.stat().st_size
+            if tamanho > limites.ACERVO_ARQUIVO_BYTES_MAX:
+                recusados.append({"caminho": caminho, "erro": "arquivo_grande_demais", "bytes": tamanho})
+                continue
+            if soma + tamanho > limites.ACERVO_ARQUIVO_LOTE_BYTES_MAX:
+                recusados.append({"caminho": caminho, "erro": "lote_grande_demais", "bytes": tamanho})
+                continue
+            soma += tamanho
+            jobs.append({"caminho": caminho, "tipo": r["tipo"], "bytes": tamanho})
+    criados = []
+    for j in jobs:
+        try:
+            job = jobs_servico.criar(sessao_de(auth), "acervo.expor_arquivo",
+                                     {"caminho": j["caminho"], "titulo": corpo.titulo})
+        except ErroServico as e:
+            recusados.append({"caminho": j["caminho"], "erro": e.codigo})
+            continue
+        criados.append({**j, "job_id": str(job["id"]), "estado": job["estado"]})
+    with db.db(auth.contexto()) as cur:
+        registrar_evento(cur, request, "acervo/arquivo_expor", "item", None,
+                         {"pedidos": len(corpo.caminhos), "enfileirados": len(criados),
+                          "recusados": len(recusados), "bytes": soma})
+    return {"jobs": criados, "recusados": recusados}
 
 
 @router.get("/api/acervo/{fonte_id}", response_model=AcervoFicha, openapi_extra=LER)

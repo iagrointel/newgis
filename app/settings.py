@@ -56,6 +56,9 @@ class Settings:
     PLAT_WORKER_PROCESSOS: int
     PLAT_WORKER_MEMORIA_MB: int
     PLAT_JOBS_DIR: str | None
+    # item L6-01-i: raiz dos arquivos do acervo da casa (`acervo.camada_arquivo.caminho` é relativo a ela);
+    # vazia = a casa não tem acervo de arquivo nesta instalação e as rotas do acervo de arquivo respondem vazio
+    PLAT_ACERVO_ARQUIVOS_RAIZ: str | None
     PLAT_JOB_MAX_REINICIOS: int
     PLAT_GPU_SSH: str | None
     PLAT_GPU_DIR: str | None
@@ -214,6 +217,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_WORKER_PROCESSOS=_inteiro(valores, "PLAT_WORKER_PROCESSOS", 1, 1),
         PLAT_WORKER_MEMORIA_MB=_inteiro(valores, "PLAT_WORKER_MEMORIA_MB", 1536, 128),
         PLAT_JOBS_DIR=_opcional(valores, "PLAT_JOBS_DIR"),
+        PLAT_ACERVO_ARQUIVOS_RAIZ=_opcional(valores, "PLAT_ACERVO_ARQUIVOS_RAIZ"),
         PLAT_JOB_MAX_REINICIOS=_inteiro(valores, "PLAT_JOB_MAX_REINICIOS", 5, 1),
         PLAT_GPU_SSH=_opcional(valores, "PLAT_GPU_SSH"),
         PLAT_GPU_DIR=_opcional(valores, "PLAT_GPU_DIR"),
