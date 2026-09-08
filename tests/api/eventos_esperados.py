@@ -158,4 +158,14 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- fachada ParcelFabricServer da malha de parcelas (L4-parcelas-02-fluxos-cogo): cada
+    # operação narra o próprio evento (vocabulário semeado em 20260908T2330_parcelas_fluxos.sql);
+    # a malha é tabela do inquilino com dono humano, então toda escrita narra.
+    ("POST", "/api/parcelas/fabrica/build"): ["parcelas/build"],
+    ("POST", "/api/parcelas/fabrica/divide"): ["parcelas/divide"],
+    ("POST", "/api/parcelas/fabrica/merge"): ["parcelas/merge"],
+    ("POST", "/api/parcelas/fabrica/clip"): ["parcelas/clip"],
+    ("POST", "/api/parcelas/fabrica/createSeeds"): ["parcelas/create_seeds"],
+    ("POST", "/api/parcelas/fabrica/reconstructFromSeeds"): ["parcelas/reconstruct_from_seeds"],
+    ("POST", "/api/parcelas/fabrica/assignFeaturesToRecord"): ["parcelas/assign_features_to_record"],
 }
