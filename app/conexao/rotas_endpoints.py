@@ -81,7 +81,7 @@ def listar(
     vivo: bool = True,
     limite: int | None = None,
     deslocamento: int | None = None,
-    auth: Auth = autenticado(escopo_token="catalogo:ler"),
+    auth: Auth = autenticado("conteudo.ver_inquilino", escopo_token="catalogo:ler"),
 ):
     lim, desl = paginacao(limite, deslocamento, maximo=limites.ENDPOINT_PUBLICO_PAGINA_MAX)
     onde, params = ["vivo IS NOT DISTINCT FROM %s"], [vivo]
@@ -124,7 +124,7 @@ def _ficha(cur, eid: int) -> dict:
 
 
 @router.get("/{id}", response_model=EndpointPublico, openapi_extra=LER)
-def ver(id: int, auth: Auth = autenticado(escopo_token="catalogo:ler")):
+def ver(id: int, auth: Auth = autenticado("conteudo.ver_inquilino", escopo_token="catalogo:ler")):
     with db.db(auth.contexto()) as cur:
         return _linha(_ficha(cur, id))
 

@@ -146,6 +146,10 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PATCH", "/api/conexoes/{id}"): ["conexoes/editar"],
     ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
+    # o catálogo de conectores públicos (L6-02-m) não cria um tipo de evento próprio: adicionar uma
+    # entrada do catálogo cria uma CONEXÃO, e o evento gravado é o mesmo `conexoes/criar`, com
+    # `origem: endpoint_publico` no dado do evento.
+    ("POST", "/api/endpoints-publicos/{id}/adicionar"): ["conexoes/criar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
     # ---- motor multicritério em grades aninhadas (L3-19-multiescala; vocabulário nas migrações
     # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
