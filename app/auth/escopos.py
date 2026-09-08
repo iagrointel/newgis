@@ -8,16 +8,11 @@ from app.erros import ErroAPI
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 ESCOPO = re.compile(
     rf"^(catalogo:ler|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|rota:usar|"
-    rf"geocodificar:usar|multiescala:usar|admin:inquilino)$"
+    rf"geocodificar:usar|multiescala:usar|amc:usar|admin:inquilino)$"
 )
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "multiescala:usar", "admin:inquilino",
-    rf"geocodificar:usar|amc:usar|admin:inquilino)$"
-)
-ESCOPOS_SEM_UUID = (
-    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "amc:usar", "admin:inquilino",
+    "geocodificar:usar", "multiescala:usar", "amc:usar", "admin:inquilino",
 )
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
