@@ -151,6 +151,9 @@ export class Barramento extends EventTarget {
     if (!alvoWidget || typeof alvoWidget.executar !== 'function') { this.#aviso('alvo_sem_widget', `ação ${acao.acao} em alvo que não é widget: ${acao.alvo}`, { alvo: acao.alvo }); return; }
     const vistaOrigem = this.#vistaDe(origem);
     const regs = vistaOrigem ? this.#registrosDeOrigem(origem, m.gatilho.evento, detalhe, acao) : [];
+    // ação de widget com condição: só dispara se algum registro de origem a satisfaz (item L5-01-e)
+    const cond = acao.parametros?.condicao;
+    if (vistaOrigem && cond !== undefined && cond !== null && !regs.length) return;
     try { alvoWidget.executar(acao.acao, { ...(acao.parametros || {}), origem, registros: regs, detalhe }); }
     catch (e) { this.#aviso('acao_falhou', `${acao.acao} em ${acao.alvo}: ${e.message}`, { alvo: acao.alvo }); }
   }
