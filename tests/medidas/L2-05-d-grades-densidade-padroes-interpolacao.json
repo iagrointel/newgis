@@ -18,13 +18,13 @@
     "integral": 6389.582478391498
   },
   "densidade_pontos": {
-    "carga_1min": 9.01,
+    "carga_1min": 3.91,
     "celulas": 474,
     "erro_relativo": 0.00010995306844196288,
     "integral": 59.99340281589348,
-    "medido_em": "2026-09-08T01:40:02+00:00",
+    "medido_em": "2026-09-08T01:47:24+00:00",
     "pontos": 60,
-    "ram_livre_gb": 6.44
+    "ram_livre_gb": 7.02
   },
   "ferramentas_registradas": [
     "centro_medio",
@@ -36,6 +36,15 @@
     "tesselacao",
     "vizinho_mais_proximo_medio"
   ],
+  "grade_de_referencia_interna": {
+    "area_mediana_da_casa_m2": 54126.612,
+    "area_mediana_da_formula_m2": 54126.58773652742,
+    "area_mediana_reproduzida_m2": 54126.588,
+    "celulas_da_casa": 73115,
+    "celulas_reproduzidas": 73124,
+    "diferenca_relativa_de_contagem": 0.00012309375641113315,
+    "nota": "mesma mediana de área até 2,4e-2 m² (4,4e-7 relativo, ida e volta de projeção); a contagem difere em 9 células, todas lascas de área abaixo de 1,7 m² na borda — a regra de descarte de lasca do motor da casa não está registrada em lugar nenhum, então não foi copiada"
+  },
   "hot_spot_gi_estrela": {
     "maior_diferenca_z_contra_esda": 8.881784197001252e-16,
     "n": 60,

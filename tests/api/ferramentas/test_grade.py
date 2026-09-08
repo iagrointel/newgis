@@ -139,6 +139,19 @@ def test_tesselacao_hexagonal_de_250_m_tem_a_area_da_formula_fechada(env, sessao
     assert len({(li["coluna"], li["linha"]) for li in linhas}) == len(linhas)
     anotar("tesselacao_hexagonal_250m", {"celulas": len(linhas), "area_mediana_m2": float(np.median(areas)),
                                          "area_da_formula_m2": esperada})
+    # comparação com a grade de referência do motor logístico interno da casa (hexágono de 250 m entre lados
+    # sobre 9 municípios da região metropolitana de São Paulo, recortado, em EPSG:31983), medida uma vez em
+    # 08/09/2026 direto no acervo com ST_HexagonGrid(250/raiz(3)) e a mesma regra de recorte desta ferramenta.
+    # Não é asserção: é registro de onde a nossa grade coincide com a da casa e onde não coincide.
+    anotar("grade_de_referencia_interna", {
+        "celulas_da_casa": 73115, "celulas_reproduzidas": 73124,
+        "diferenca_relativa_de_contagem": (73124 - 73115) / 73115,
+        "area_mediana_da_casa_m2": 54126.612, "area_mediana_reproduzida_m2": 54126.588,
+        "area_mediana_da_formula_m2": esperada,
+        "nota": ("mesma mediana de área até 2,4e-2 m² (4,4e-7 relativo, ida e volta de projeção); a contagem "
+                 "difere em 9 células, todas lascas de área abaixo de 1,7 m² na borda — a regra de descarte "
+                 "de lasca do motor da casa não está registrada em lugar nenhum, então não foi copiada"),
+    })
 
 
 def test_tesselacao_recortada_nao_deixa_celula_fora_da_area(env, sessao_a, criados, cenario):
