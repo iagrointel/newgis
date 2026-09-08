@@ -150,9 +150,28 @@ def _migrar_app_v1_v2(dados: dict) -> dict:
     return {**dados, "corpo": corpo, "esquema_versao": 2}
 
 
+def _migrar_painel_v2_v3(dados: dict) -> dict:
+    """v2→v3 (`docs/esquemas/painel-v2.json` → `painel-v3.json`, item L2-06-a-modelo-painel-fontes,
+    migração `20260906T2145_documento_painel.sql`): o tipo `painel` ganha o modelo de painel de verdade
+    (grade, elementos, fontes-vista, filtros globais, parâmetros de URL, tema) por cima do grafo genérico
+    v2. `nos`/`ligacoes`/`mapa_id`/`mapas` continuam aceitos (opcionais, v3 os herda do v2 sem exigi-los);
+    documento v2 sem nada disso ganha as listas/objetos vazios na leitura, nunca perde `nos`/`ligacoes`
+    existentes (útil só quando o documento v2 vier a ser reaproveitado como base de um painel — hoje os
+    dois tipos de `corpo` coexistem no mesmo objeto até o usuário editar e gravar a forma nova)."""
+    corpo = dict(dados.get("corpo") or {})
+    corpo.setdefault("grade", {"colunas": 12, "linha_px": 36})
+    corpo.setdefault("tema", {"modo": "claro"})
+    corpo.setdefault("fontes", [])
+    corpo.setdefault("elementos", [])
+    corpo.setdefault("filtros", [])
+    corpo.setdefault("parametros_url", [])
+    return {**dados, "corpo": corpo, "esquema_versao": 3}
+
+
 # registro fechado: (tipo, versão de origem) -> função que devolve o documento na versão seguinte
 _MIGRACOES = {
     ("painel", 1): _migrar_painel_v1_v2,
+    ("painel", 2): _migrar_painel_v2_v3,
     ("app", 1): _migrar_app_v1_v2,
 }
 
