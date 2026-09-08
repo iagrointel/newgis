@@ -145,6 +145,31 @@ isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não 
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
 
+## turno 3, setembro de 2026 (item L2-05-d: grades, densidade, padrões espaciais e interpolação)
+
+Oito ferramentas no mesmo registro e no mesmo executor dos itens L2-05-a/b/c: `tesselacao` (grade quadrada,
+hexagonal e H3 de nível 5 a 10, tamanho em metros entre lados opostos, desenhada no UTM local, com recorte
+opcional pela área), `densidade_kernel` (pontos e linhas, quártica/gaussiana/triangular/uniforme, raio e
+célula declarados), `hot_spot` (Getis-Ord Gi* com vizinhança por distância fixa, z, p e faixa no vocabulário
+do Gi_Bin), `centro_medio` (centro médio, círculo da distância padrão e elipse de desvio padrão, com peso
+opcional), `vizinho_mais_proximo_medio` (índice R de Clark & Evans), `moran_global` (I de Moran com
+significância sob normalidade), `interpolacao_idw` e `contorno` (superfície por IDW ou triangulação de
+Delaunay e isolinhas pelo gerador do GDAL).
+
+A estatística vive em `app/ferramentas/estatistica_espacial.py`, em numpy/scipy, sem banco. O teste do item
+confere Gi* e I de Moran contra `esda`/`libpysal` na forma binária dos pesos (diferença medida de 8,9e-16 no
+z do Gi* e de 3e-16 no I), a área do hexágono contra a fórmula fechada, a integral da densidade contra o
+número de pontos (erro relativo de 1,1e-4) e contra o comprimento das linhas, o IDW contra uma implementação
+escrita de novo no teste (diferença 0) e as isolinhas relidas pelo OGR do GDAL, que é o leitor do QGIS.
+
+A saída de densidade e de IDW é camada de células enquanto o caminho de ingestão de raster do item L1-01 não
+estiver em master; a mesma conta em array já está pronta e testada para virar COG por lá. Ver a decisão 4 do
+ADR `docs/adr/20260908T0150-grades-densidade-padroes-e-interpolacao.md` e a tabela de paridade em
+`docs/PARIDADE_FERRAMENTAS_GRADE.md`.
+
+Correção de passagem no executor do L2-05-a: camada de saída com uma feição pontual quebrava a publicação
+(extensão lida do anel do GeoJSON e retângulo degenerado recusado pelo CHECK `item_extent_check`).
+
 ## turno 3, setembro de 2026 (item L2-05-c-sobreposicao-agregacao: relação entre camadas)
 
 Nove ferramentas que relacionam DUAS camadas, no mesmo registro e no mesmo executor dos itens L2-05-a e

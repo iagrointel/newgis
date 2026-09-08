@@ -255,3 +255,14 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `GRADE_CELULAS_MAX` | `250000` | células que agregar_pontos aceita desenhar antes de recusar o tamanho |
 | `DISTANCIAS_PARES_MAX` | `5000000` | pares origem x destino sem vizinhos_por_origem nem distancia_maxima |
 | `DISTANCIAS_VIZINHOS_MAX` | `1000` | teto de vizinhos_por_origem na tabela de distâncias |
+
+## grades, densidade, padrões espaciais e interpolação (L2-05-d)
+
+| nome | valor | explicação |
+|---|---|---|
+| `PADROES_FEICOES_MAX` | `200000` | Gi*, Moran e vizinho mais próximo carregam as coordenadas em memória |
+| `H3_NIVEL_MIN` | `5` | níveis aceitos na tesselação H3 (aresta de ~ 8 km a ~ 66 m) |
+| `H3_NIVEL_MAX` | `10` | — |
+| `DENSIDADE_RAIO_M_MAX` | `100000` | raio do kernel: mesmo teto do buffer geodésico |
+| `IDW_VIZINHOS_MAX` | `64` | amostras usadas por célula na interpolação por inverso da distância |
+| `CONTORNO_LINHAS_MAX` | `200000` | isolinhas geradas antes de a ferramenta recusar o intervalo |

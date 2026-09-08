@@ -38,7 +38,6 @@ from app.ferramentas.relacao import (
     ErroFerramenta,
     familia,
     ident,
-    no_srid_de,
     tabela_de,
     tipos_de,
     utm_da_camada,
@@ -48,7 +47,7 @@ from app.ferramentas.vetor import NUMERICAS, escrever
 
 TIPOS_GRADE = ("quadrada", "hexagonal", "h3")
 FORMAS_CENTRO = ("centro", "circulo_distancia_padrao", "elipse")
-METODOS_SUPERFICIE = ("idw", "tin")
+INTERPOLADORES = ("idw", "tin")
 # faixas do Gi* no vocabulário do ArcGIS (Gi_Bin): 3 = 99 %, 2 = 95 %, 1 = 90 % de confiança
 FAIXAS_GI = ((2.576, 3), (1.960, 2), (1.645, 1))
 
@@ -396,7 +395,7 @@ def hot_spot(ctx, entradas, parametros, destino) -> dict:
         fids = [x["fid"] for x in cur.fetchall()]
     tipo_saida = familia(camada)[1]
     select = (
-        f"WITH r(fid_origem, valor, z, p, vizinhos, faixa) AS (VALUES "
+        "WITH r(fid_origem, valor, z, p, vizinhos, faixa) AS (VALUES "
         + ", ".join(
             f"({int(f)}, {float(v)!r}::double precision, "
             f"{('NULL' if not math.isfinite(float(z)) else repr(float(z)))}::double precision, "
@@ -588,7 +587,7 @@ def superficie(ctx, camada: dict, campo: str, metodo: str, celula: float, potenc
             raise ErroFerramenta("amostras_insuficientes", "a triangulação exige pelo menos três amostras")
         z = LinearNDInterpolator(xy, valores)(alvos)
     else:
-        raise ErroFerramenta("metodo_invalido", f"metodo: {metodo!r} fora de {list(METODOS_SUPERFICIE)}")
+        raise ErroFerramenta("metodo_invalido", f"metodo: {metodo!r} fora de {list(INTERPOLADORES)}")
     return gx, gy, np.asarray(z, dtype=float).reshape(malha_x.shape), xy.shape[0]
 
 
@@ -643,7 +642,7 @@ def interpolacao_idw(ctx, entradas, parametros, destino) -> dict:
         Parametro("campo", "GPString", "campo numérico interpolado"),
         Parametro("intervalo", "GPDouble", "intervalo entre isolinhas", minimo=1e-9),
         Parametro("metodo", "GPString", "método de superfície", obrigatorio=False, padrao="idw",
-                  opcoes=METODOS_SUPERFICIE),
+                  opcoes=INTERPOLADORES),
         Parametro("potencia", "GPDouble", "potência do IDW", obrigatorio=False, padrao=2.0, minimo=0.1,
                   maximo=10.0),
         Parametro("vizinhos", "GPLong", "amostras por célula", obrigatorio=False, padrao=12, minimo=1,
