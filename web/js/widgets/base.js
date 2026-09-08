@@ -23,7 +23,7 @@ export class PlatWidget extends HTMLElement {
     if (this.#vista && this.#aoMudarVista) this.#vista.removeEventListener('vista_mudou', this.#aoMudarVista);
     this.#vista = v || null;
     if (this.#vista) {
-      this.#aoMudarVista = () => { if (this.isConnected) this.renderizar(); };
+      this.#aoMudarVista = (e) => { if (this.isConnected) this.renderizar(e?.detail || null); };
       this.#vista.addEventListener('vista_mudou', this.#aoMudarVista);
     }
     if (this.isConnected) this.renderizar();
@@ -65,7 +65,8 @@ export class PlatWidget extends HTMLElement {
 
   disconnectedCallback() { if (this.#vista && this.#aoMudarVista) this.#vista.removeEventListener('vista_mudou', this.#aoMudarVista); }
 
-  renderizar() {}
+  /* `mudanca` é o detalhe de `vista_mudou` ({causa, origem}) quando a repintura vem da vista; null nos demais casos */
+  renderizar(mudanca = null) {}  // eslint-disable-line no-unused-vars
 }
 
 export function definir(nome, classe) {
