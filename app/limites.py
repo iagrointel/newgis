@@ -250,3 +250,18 @@ ANEXO_TIPOS_PERMITIDOS = ("application/pdf", "image/gif", "image/jpeg", "image/p
 AMC_NOME_MAX = 250                # mesmo teto de ITEM_TITULO_MAX
 AMC_FATORES_MAX = 50              # mesmo teto de docs/esquemas/amc_modelo.v1.json fatores.maxItems
 AMC_CAMADAS_MAX = 50              # camadas de entrada declaradas por execução (A10)
+
+# --- MapServer compatível com Esri (item L2-04-f): export/identify/legend/find e o GeometryServer.
+# O lado máximo é o mesmo `maxImageWidth`/`maxImageHeight` que o ArcGIS Server traz de fábrica (4096);
+# o teto de pixels é o quadrado desse lado, e existe separado porque 4096×4096 já é imagem de 16,8 Mpx
+# — um pedido de 8.000×8.000 (a refutação declarada do item) bate no lado e volta 400 antes de alocar
+# um único byte de imagem.
+MAPSERVER_LADO_MAX = 4096
+MAPSERVER_PIXELS_MAX = 4096 * 4096
+MAPSERVER_DPI_MAX = 600                   # acima disso o traço em pixel passa a não caber na memória prometida
+MAPSERVER_FEICOES_POR_CAMADA = 50_000     # teto de feições desenhadas por camada num único export
+MAPSERVER_CAMADAS_MAX = 50                # camadas desenhadas por pedido (o documento de mapa aceita 200)
+MAPSERVER_IDENTIFY_MAX = 100              # resultados por identify (`maxAllowableOffset` da doc Esri é outro eixo)
+MAPSERVER_FIND_MAX = 100                  # resultados por find
+GEOMETRIA_FEICOES_MAX = 1_000             # geometrias por chamada do GeometryServer (project/buffer/...)
+GEOMETRIA_VERTICES_MAX = 200_000          # vértices somados por chamada (mesmo teto do filtro espacial da query)

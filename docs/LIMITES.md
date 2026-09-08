@@ -230,3 +230,44 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## edição transacional de feições (L2-03-a-api-edicao-transacional; POST /api/camadas/{id}/edicoes, única
+
+| nome | valor | explicação |
+|---|---|---|
+| `EDICAO_LOTE_MAX` | `2000` | — |
+| `EDICAO_ATRIBUTOS_MAX` | `500` | campos por feição num único pedido (mesmo teto de INGESTAO_CAMPOS_MAX) |
+| `EDICAO_TEXTO_MAX` | `65536` | 64 KiB por valor de campo texto (mesma ordem de ITEM_DESCRICAO_MAX) |
+| `EDICAO_REGRA_CAMPO_MAX` | `500` | entradas em dados.regras_campo (mesmo teto de campos da camada) |
+| `EDICAO_DOMINIO_VALORES_MAX` | `1000` | valores aceitos por regra de domínio codificado |
+| `EDICAO_SRID_MAX` | `999999` | mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql) |
+
+## edição no mapa: histórico/restauração e anexos por feição (item L2-03-edicao)
+
+| nome | valor | explicação |
+|---|---|---|
+| `HISTORICO_LISTA_MAX` | `500` | entradas devolvidas por consulta (mais recentes primeiro) |
+| `ANEXO_TAMANHO_MAX` | `7340032` | 7 MiB por anexo — NÃO 10: o envio é JSON com o conteúdo em base64 |
+| `ANEXO_TIPOS_PERMITIDOS` | `('application/pdf', 'image/gif', 'image/jpeg', 'image/png', 'image/webp')` | — |
+
+## motor multicritério, modelo (L3-01-a-modelo-dado; laco/decomposicao/L3L6_CONCEITO.md decisões A1/A4/A10).
+
+| nome | valor | explicação |
+|---|---|---|
+| `AMC_NOME_MAX` | `250` | mesmo teto de ITEM_TITULO_MAX |
+| `AMC_FATORES_MAX` | `50` | mesmo teto de docs/esquemas/amc_modelo.v1.json fatores.maxItems |
+| `AMC_CAMADAS_MAX` | `50` | camadas de entrada declaradas por execução (A10) |
+
+## MapServer compatível com Esri (item L2-04-f): export/identify/legend/find e o GeometryServer.
+
+| nome | valor | explicação |
+|---|---|---|
+| `MAPSERVER_LADO_MAX` | `4096` | — |
+| `MAPSERVER_PIXELS_MAX` | `16777216` | — |
+| `MAPSERVER_DPI_MAX` | `600` | acima disso o traço em pixel passa a não caber na memória prometida |
+| `MAPSERVER_FEICOES_POR_CAMADA` | `50000` | teto de feições desenhadas por camada num único export |
+| `MAPSERVER_CAMADAS_MAX` | `50` | camadas desenhadas por pedido (o documento de mapa aceita 200) |
+| `MAPSERVER_IDENTIFY_MAX` | `100` | resultados por identify (`maxAllowableOffset` da doc Esri é outro eixo) |
+| `MAPSERVER_FIND_MAX` | `100` | resultados por find |
+| `GEOMETRIA_FEICOES_MAX` | `1000` | geometrias por chamada do GeometryServer (project/buffer/...) |
+| `GEOMETRIA_VERTICES_MAX` | `200000` | vértices somados por chamada (mesmo teto do filtro espacial da query) |
