@@ -128,7 +128,8 @@ def test_criar_demo3_suspender_ver_503_e_reativar(page, browser, browser_context
         assert page2.locator("plat-aviso[data-tipo='erro']").count() == 0
         # a trilha da plataforma registrou tudo, na tela
         page.wait_for_function(
-            "() => [...document.querySelectorAll('#eventos-tabela tbody td')].some(td => td.textContent === 'inquilinos/reativar')",
+            "() => [...document.querySelectorAll('#eventos-tabela tbody td')]"
+            ".some(td => td.textContent === 'inquilinos/reativar')",
             timeout=15000,
         )
         tipos = [td.strip() for td in page.locator("#eventos-tabela tbody td.mono").all_text_contents()]
@@ -137,8 +138,13 @@ def test_criar_demo3_suspender_ver_503_e_reativar(page, browser, browser_context
         tela2.verificar()
         gravar = medida(ITEM)
         for nome, valor in tela.medidas.items():
-            gravar(nome, valor, "ms", "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)")
-        gravar("e2e_demo3_criar_suspender_503_reativar", 1, "fluxo", "tests/e2e/test_plataforma.py: criar demo3 pela tela, admin entra, suspender com mensagem, 503 no navegador, reativar")
+            gravar(nome, valor, "ms", "goto até body[data-pronto=1] no chromium do playwright (apoio.py Tela.ir)")
+        gravar(
+            "e2e_demo3_criar_suspender_503_reativar",
+            1,
+            "fluxo",
+            "tests/e2e/test_plataforma.py: criar demo3 pela tela, admin entra, suspender com mensagem, 503, reativar",
+        )
     finally:
         _apagar_demo3(tela)
         ctx2.close()
