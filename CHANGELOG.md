@@ -124,8 +124,10 @@ garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca l�
   administrador. Vista editável nasce `WITH CASCADED CHECK OPTION`, e a violação vira 422 `fora_da_vista`.
 - Compartilhar a vista não compartilha a camada-mãe: a ficha pública da vista deixa de trazer
   `campos_ocultos` e `camada_id`, e um token com escopo `camada:ler:<vista>` recebe 403 na camada-mãe.
-- Dívida trazida junto e fechada em arquivo novo: `plat.feicao_historico_registrar()` e `plat.origem_atual()`
-  tinham EXECUTE para PUBLIC.
+- Dívidas trazidas junto e fechadas em arquivo novo: `plat.feicao_historico_registrar()` e
+  `plat.origem_atual()` tinham EXECUTE para PUBLIC; e `plat.camada_schema_garantir` refazia o
+  `GRANT USAGE ON SCHEMA` a cada chamada, o que fazia duas trilhas escreverem a mesma linha de `pg_namespace`
+  ao mesmo tempo ("tuple concurrently updated"). Agora o GRANT só corre quando falta.
 
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
