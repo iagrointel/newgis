@@ -1,0 +1,12 @@
+{
+ "item": "L2-06-d-atualizacao-viva-sse",
+ "medidas": {
+  "latencia_commit_ate_evento_s": {
+   "valor": 0.001,
+   "unidade": "s",
+   "comando": "do COMMIT do UPDATE na tabela da camada até o quadro SSE chegar ao consumidor (um assinante, uma camada, gerador lido no mesmo processo)"
+  }
+ },
+ "gerado_em": "2026-09-08T10:29:42Z",
+ "git_sha": "e4ae3223ab80"
+}

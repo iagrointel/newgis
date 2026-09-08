@@ -906,6 +906,21 @@ CASOS: dict[tuple[str, str], Caso] = {
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # ---- painel (L2-06-a) e atualização viva (L2-06-d). Nos três casos o recurso apontado é de B: o
+    # documento de painel é resolvido por `item_ou_404` sob RLS (404 para A), o link de B resolve mas o item
+    # incluído não é painel (404), e a camada assinada no fluxo de eventos não existe para A (404 — nunca 403,
+    # que revelaria que a camada existe em outro inquilino).
+    ("POST", "/api/itens/{item_id}/paineis/fontes/{fonte_id}/dados"): Caso(
+        lambda p: f"/api/itens/{p.item_b['id']}/paineis/fontes/01JPA1NEKEXEMPK0F0NTE0000A/dados",
+        lambda p: {"pedidos": {"n": {"agregacao": "contagem"}}, "filtro_execucao": {}},
+    ),
+    ("POST", "/api/compartilhado/{token}/paineis/{item_id}/fontes/{fonte_id}/dados"): Caso(
+        lambda p: (f"/api/compartilhado/{p.link_b['token']}/paineis/{p.item_b['id']}"
+                   "/fontes/01JPA1NEKEXEMPK0F0NTE0000A/dados"),
+        lambda p: {"pedidos": {"n": {"agregacao": "contagem"}}, "filtro_execucao": {}},
+        publico=True,
+    ),
+    ("GET", "/api/eventos/camadas"): Caso(lambda p: f"/api/eventos/camadas?camadas={p.item_b['id']}"),
 }
 
 

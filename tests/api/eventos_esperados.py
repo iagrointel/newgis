@@ -158,4 +158,8 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- painel: dados por fonte (L2-06-a). São LEITURAS agregadas feitas por POST (o corpo carrega o
+    # conjunto de pedidos e o filtro, que não cabem em query string); não mudam nada, logo não narram evento.
+    ("POST", "/api/itens/{item_id}/paineis/fontes/{fonte_id}/dados"): [],
+    ("POST", "/api/compartilhado/{token}/paineis/{item_id}/fontes/{fonte_id}/dados"): [],
 }
