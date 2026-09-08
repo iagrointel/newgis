@@ -29,7 +29,6 @@ import threading
 import time
 
 import numpy as np
-import pytest
 import rasterio
 from rasterio.transform import from_origin
 
@@ -106,8 +105,7 @@ def _vrt_warped(fonte: str, isca: str = _ISCA) -> str:
 
 
 # ============================================================================= ATAQUE 1 e 2 — VRT/seccomp
-@pytest.mark.xfail(strict=True, reason="H1: _conferir_vrt só olha <SourceFilename>; <SourceDataset> do "
-                                       "VRTWarpedDataset não é conferido e lê arquivo fora do envio")
+# CONSERTADO (turno 4): a conferência percorre todo nó do XML, inclusive <SourceDataset>.
 def test_vrt_warped_sourcedataset_nao_deve_ler_arquivo_fora_do_envio(tmp_path):
     """Achado 1 do 1º adversário RENASCE por outro elemento do VRT. O construtor confere <SourceFilename>
     recursivamente, mas o VRTWarpedDataset referencia a fonte em <SourceDataset>, que passa direto."""
@@ -126,8 +124,8 @@ def test_vrt_warped_sourcedataset_nao_deve_ler_arquivo_fora_do_envio(tmp_path):
         f"info={r['info'].get('arquivos')}")
 
 
-@pytest.mark.xfail(strict=True, reason="H1: com o seccomp degradado, um VRT warped com /vsicurl leva "
-                                       "validar() a bater na rede de um host escolhido por quem enviou (SSRF)")
+# CONSERTADO (turno 4): a fonte remota do warp é recusada no XML, antes de o GDAL abrir o arquivo — a
+# rede deixa de depender só do filtro de chamadas de sistema.
 def test_vrt_warped_com_seccomp_degradado_nao_deve_bater_na_rede(tmp_path, monkeypatch):
     """A rede fechada depende SÓ do seccomp: as variáveis do GDAL não barram /vsicurl com a extensão que o
     atacante escolhe. Se a instalação do filtro falhar (kernel/arquitetura/libc), a SSRF volta e o
@@ -239,8 +237,7 @@ def test_seccomp_degradado_e_registrado_no_relatorio(tmp_path, monkeypatch):
 
 
 # ============================================================================= ATAQUE 1 — furo AF_UNIX + segredos
-@pytest.mark.xfail(strict=True, reason="H2: o ambiente do filho vaza PLAT_DSN_WORKER e "
-                                       "PLAT_GARAGE_ADMIN_TOKEN; só PLAT_DSN/PLAT_SECRET são removidos")
+# CONSERTADO (turno 4): o ambiente do filho é montado por lista de permissão (`ambiente_do_filho`).
 def test_segredos_do_worker_nao_devem_vazar_para_o_filho(monkeypatch):
     """`_executar_filho` faz {**os.environ, **AMBIENTE_FILHO} e remove só PLAT_DSN e PLAT_SECRET. A senha da
     role que ESCREVE no banco (PLAT_DSN_WORKER) e o token de administração do Garage seguem no ambiente do
@@ -248,9 +245,7 @@ def test_segredos_do_worker_nao_devem_vazar_para_o_filho(monkeypatch):
     credencial não esteja lá."""
     monkeypatch.setenv("PLAT_DSN_WORKER", "postgresql://plat_worker:SENHA@127.0.0.1/iagro_sat")
     monkeypatch.setenv("PLAT_GARAGE_ADMIN_TOKEN", "token-admin-garage")
-    ambiente = {**os.environ, **V.AMBIENTE_FILHO}
-    ambiente.pop("PLAT_DSN", None)
-    ambiente.pop("PLAT_SECRET", None)
+    ambiente = V.ambiente_do_filho()
     vazados = [k for k in ("PLAT_DSN_WORKER", "PLAT_GARAGE_ADMIN_TOKEN") if k in ambiente]
     assert vazados == [], f"o filho recebe segredos do worker: {vazados}"
 
