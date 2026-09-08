@@ -38,8 +38,14 @@ def test_instalador_grava_plat_git_sha_e_confere_hsts():
     assert "grep -q 'max-age=31536000'" in INSTALL  # conferência pública
 
 
+def _locais_do_modelo() -> int:
+    """Conta só bloco de verdade: o modelo traz exemplos COMENTADOS de `location` (o repasse direto ao Martin,
+    deploy/nginx.conf), e contar a palavra solta fazia o teste reprovar por causa de um comentário."""
+    return len(re.findall(r"^\s*location [^\n]*\{", NGINX, re.M))
+
+
 def test_hsts_em_todo_bloco_de_add_header_do_modelo():
-    locais = NGINX.count("location ")
+    locais = _locais_do_modelo()
     hsts = NGINX.count('add_header Strict-Transport-Security "max-age=31536000" always;')
     # 5 desde o item L2-01-a (location nova para o PMTiles do mapa-base, deploy/nginx.conf)
     assert locais == 5 and hsts == locais + 1, (locais, hsts)
@@ -47,7 +53,7 @@ def test_hsts_em_todo_bloco_de_add_header_do_modelo():
 
 def test_referrer_policy_em_todo_bloco_de_add_header_do_modelo():
     """Achado do testador do T2: declarado no server{} não chegava às rotas (add_header no bloco cancela o herdado)."""
-    locais = NGINX.count("location ")
+    locais = _locais_do_modelo()
     assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == locais + 1, locais
 
 
