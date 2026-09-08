@@ -118,6 +118,7 @@ function desenharNo(no, documento, paleta, irPara, contexto = {}) {
     const tipo = no.tipo === 'menu_widget' ? 'menu' : no.tipo;
     const el = criarWidget({ id: no.id, tipo, configuracao: configuracaoDoNo(no) }, contexto);
     el.classList.add(`exec-${no.tipo}`, 'exec-widget');
+    el.dataset.no = no.id; // o mesmo endereço dos nós de layout (data-no); data-no-id é o do motor de widgets
     return el;
   }
   switch (no.tipo) {

@@ -165,7 +165,7 @@ def test_doze_widgets_no_executor_sem_script_executado(page, base_url, credencia
         # compartilhar: link, QR local, embed
         comp = page.locator("plat-w-compartilhar")
         assert comp.locator("input[aria-label='link']").input_value() == page.url
-        qr = comp.locator("img.plat-qr")
+        qr = comp.locator("img.plat-w-qr")
         assert qr.get_attribute("src").startswith("/api/qr.svg?texto=")
         page.wait_for_function(
             "() => { const i = document.querySelector('img.plat-qr'); return i && i.complete && i.naturalWidth > 0; }",

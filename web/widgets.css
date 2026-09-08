@@ -5,6 +5,7 @@
 .plat-widget-erro { border: var(--borda-largura) solid var(--falha); padding: var(--e4); color: var(--falha); border-radius: var(--raio); }
 plat-w-mapa { display: block; min-height: 18rem; }
 plat-w-legenda ul { list-style: none; padding: 0; }
+plat-w-legenda button { --cor: transparent; } /* o widget define --cor por item; o valor local é o padrão da guarda de tokens */
 plat-w-legenda button::before { content: ''; display: inline-block; width: var(--e3); height: var(--e3); margin-right: var(--e2); background: var(--cor); }
 plat-w-tabela { display: block; overflow: auto; }
 plat-w-tabela table { width: 100%; border-collapse: collapse; }

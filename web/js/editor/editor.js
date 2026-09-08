@@ -246,7 +246,6 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
       const bt = h('button', {
         type: 'button', class: `arvore-item${selecionado === no.id ? ' selecionado' : ''}`,
         dataset: { arvore: no.id, nivel: String(nivel), pai: no.pai ?? '' },
-        role: 'treeitem', 'aria-level': String(nivel + 1), 'aria-selected': selecionado === no.id ? 'true' : 'false',
       },
         h('span', { class: 'arvore-rotulo' }, `${def.rotulo}`),
         h('span', { class: 'arvore-resumo', dataset: { arvoreResumo: no.id } }, resumoDe(no)),
@@ -259,7 +258,11 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
         botao('−', t('construtor.diminuir_largura', { rotulo: def.rotulo }), () => api.largura(no.id, no.largura_colunas - 1), { larguraMenos: no.id }),
         botao('+', t('construtor.aumentar_largura', { rotulo: def.rotulo }), () => api.largura(no.id, no.largura_colunas + 1), { larguraMais: no.id }),
         botao(t('construtor.remover'), t('construtor.remover_rotulo', { rotulo: def.rotulo }), () => api.remover(no.id), { remover: no.id }));
-      elEstrutura.append(h('div', { class: 'arvore-linha', dataset: { linha: no.id } }, bt, acoes));
+      /* a linha é o treeitem (filho direto do role=tree, como a ARIA exige); o botão dentro dela é o que recebe foco */
+      elEstrutura.append(h('div', {
+        class: 'arvore-linha', dataset: { linha: no.id }, role: 'treeitem',
+        'aria-level': String(nivel + 1), 'aria-selected': selecionado === no.id ? 'true' : 'false',
+      }, bt, acoes));
     }
   }
 
