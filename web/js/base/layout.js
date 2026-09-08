@@ -20,6 +20,8 @@ export const TELAS = [
   { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar' },
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver' },
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
+  // item L0-08-e: provedores de login externo e regras de provisionamento
+  { caminho: '/admin/logins', chave: 'nav.logins', privilegio: 'org.integracoes' },
 ];
 
 export function telasVisiveis(usuario) {
