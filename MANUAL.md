@@ -1098,3 +1098,38 @@ O formulário padrão (L5-03) e o popup padrão (L5-26) que a hipótese do item 
 passagem — dependem desses dois itens existirem nesta árvore; o contrato que eles vão consumir
 (`GET /api/camadas/{id}/campos`, formato `fields`) já está pronto e testado. Modelos de camada por setor
 (agro, energia, ...) também ficaram de fora — não fazem parte do portão literal deste item.
+## 22. Edição de feições no mapa (`/mapa`, painel "Edição", item L2-03-edicao)
+
+Aparece na tela `/mapa` (seção 13) sempre que houver ao menos uma camada com edição habilitada
+(`dados.edicao.habilitada`) — o seletor "camada a editar" lista só essas.
+
+- **Criar**: botões Ponto/Linha/Polígono; ponto entra com um clique, linha/polígono acumulam cliques
+  até "Concluir". Um formulário abre com os campos da camada, domínio (lista fechada vira `<select>`,
+  faixa numérica é conferida) e obrigatório marcados — a mesma regra que `app/edicao/servico.py`
+  aplica no servidor (a tela nunca é a única barreira: mandar um valor fora do domínio direto na API
+  também volta `422`).
+- **Selecionar/mover/editar vértice**: botão "Selecionar" e clique numa feição desenhada; a geometria
+  de trabalho é sempre lida de `GET /api/camadas/{id}/feicoes/{globalid}` (exata), nunca a versão
+  recortada por tile. Vértices aparecem como círculos arrastáveis — soltar salva na hora.
+- **Apagar**: com uma feição selecionada, botão "Apagar".
+- **Aderência**: caixa "aderir a vértice próximo" (ligada por padrão); ao desenhar ou arrastar, um
+  vértice a até 12 px de outra feição desenhada salta para a coordenada exata dela.
+- **Edição em lote**: selecionar mais de uma feição (shift+clique) muda um atributo e clicar "Aplicar
+  às selecionadas" grava o mesmo valor em todas, num único lote.
+- **Dividir/Unir**: "Dividir" pede um clique no meio de uma linha selecionada (LineString de uma parte
+  só nesta passagem — polígono e linha de mais de uma parte ficam fora, ver ADR); "Unir" combina duas
+  ou mais feições selecionadas (qualquer geometria) numa só.
+- **Desfazer**: o histórico de cada feição (abaixo do formulário, ao selecionar UMA) lista toda escrita
+  — inclusive as que não passaram pela tela — com botão "restaurar" por entrada; restaurar uma feição
+  apagada a recria com o MESMO identificador.
+- **Anexos**: por feição, envia (limite de tamanho e de tipo aplicados no servidor, contra o conteúdo
+  de verdade, não só o `Content-Type` declarado), lista e apaga.
+- **Edição concorrente**: duas sessões na mesma feição — quem salva por último recebe o aviso "outra
+  sessão alterou esta feição" (nunca sobrescreve calado; versão otimista do L2-03-a).
+
+### 22.1 O que ficou de fora
+
+Dividir polígono por linha de corte; união com política de mesclagem de atributo além de "usa os da
+primeira feição ou o que o chamador mandar"; desfazer/refazer por atalho de teclado (o mecanismo hoje
+é o histórico por feição, não uma pilha global de ações). Ver
+`docs/adr/20260907T1123-historico-restauracao-anexos-feicao.md`.
