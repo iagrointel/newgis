@@ -927,6 +927,20 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: "/api/geocodificar", lambda p: {"endereco": "Avenida Paulista, São Paulo - SP"},
         proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
     ),
+    # ---- L2-01-mapa-web (rotas que chegaram por ramo ainda não em master, sem caso próprio; a cobertura é
+    # cláusula da varredura, então o caso entra aqui): a lista é `proprio` (devolve as camadas de A e não pode
+    # trazer marca de B) e as duas por id passam pela RLS de plat.item sobre um item de B = 404.
+    ("GET", "/api/mapa/camadas"): Caso(
+        lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}"),
+    ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/tilejson"),
+    # a versão GET do geocodificador tem a mesma natureza da POST logo acima: dado aberto, sem tabela de
+    # inquilino; 422 é resposta de negócio (UF não instalada nesta trilha), não vazamento.
+    ("GET", "/api/geocodificar"): Caso(
+        lambda p: "/api/geocodificar?endereco=Avenida+Paulista,+S%C3%A3o+Paulo+-+SP",
+        proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
+    ),
     ("POST", "/api/reverso"): Caso(
         lambda p: "/api/reverso", lambda p: {"lon": -46.6333, "lat": -23.5505},
         proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
