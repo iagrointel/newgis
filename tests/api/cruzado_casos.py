@@ -185,13 +185,6 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
                       json={"modelo_id": modelo_amc_b["id"], "conjunto_id": conjunto_amc_b["id"], "semente": 1})
     assert r.status_code == 201, r.text
     execucao_amc_b = r.json()
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
-                      modelo_amc_b=modelo_amc_b, conjunto_amc_b=conjunto_amc_b,
-                      execucao_amc_b=execucao_amc_b)
     # L4-01-a: rede de utilidades de B com o pacote de ativos JÁ importado — é o alvo das rotas /api/rede/{rede_id}
     # (inclusive a exportação, que é onde um vazamento de esquema apareceria)
     r = sessao_b.post("/api/rede", json={"nome": f"{PREFIXO}rede-{sufixo}", "disciplina": "agua"})
@@ -202,7 +195,10 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     assert r.status_code == 201, r.text
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b, rede_b=rede_b)
+                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
+                      convite_b=convite_b, conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b,
+                      modelo_amc_b=modelo_amc_b, conjunto_amc_b=conjunto_amc_b,
+                      execucao_amc_b=execucao_amc_b, rede_b=rede_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -608,6 +604,7 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}/micro",
         lambda p: {"resolucao_m": 100.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
                    "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
+    ),
     # L6-02-c (conector WFS/OGC API): as três rotas de leitura do modo referenciado. A conexão de B é
     # cross-tenant puro — `_carregar` (RLS) roda ANTES de qualquer ida ao serviço externo, então a rota nem
     # chega a abrir conexão de rede quando o id é de outro inquilino.
