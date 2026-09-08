@@ -1113,3 +1113,40 @@ pede; a miniatura própria do item, seção de catálogo, continua valendo), ace
 autenticada, e o envio automático da exportação para hub/appliance (o endpoint devolve o arquivo; a
 distribuição é integração de outro item). O token gerado pela SEÇÃO 7 (`/admin/tokens`) e o desta seção
 usam a MESMA tabela e o MESMO mecanismo de escopo/restrição — nenhuma autorização nova nasceu aqui.
+
+## 23. Pacote entre inquilinos e galeria de modelos (item L5-37-pacotes-modelos-entre-inquilinos)
+
+Levar um app, um painel, um formulário ou um fluxo de um inquilino para outro — ou para outra instalação —
+é baixar um **pacote** e importá-lo dizendo, fonte a fonte, qual camada do destino faz cada papel.
+
+`GET /api/itens/{id}/pacote` devolve um zip com `manifesto.json` e um `documentos/<id>.json` por documento
+do fecho de dependências (o app, o mapa que ele usa, o estilo, o formulário). **Camada, vista, imagem,
+arquivo e rede não entram**: são declaradas como FONTES, com os campos, a geometria e o SRID que o
+documento assume. O pacote, portanto, não leva dado nenhum — o do app de exemplo, com 2 documentos e 3
+fontes, tem 1,6 kB.
+
+Na tela `/modelos` (ou por `POST /api/pacotes/verificar`) o pacote é conferido ANTES de qualquer escrita:
+para cada fonte já mapeada aparece a diferença de esquema **campo a campo** — campo que falta no destino,
+campo com tipo diferente e geometria diferente impedem a importação; sistema de coordenadas diferente é
+mostrado e não impede (reprojetar é rotina e o documento não guarda coordenada). Só quando a análise diz
+`pronto` é que `POST /api/pacotes/importar` cria os itens, tudo numa transação.
+
+Na importação **todo identificador é regerado**: o UUID de cada documento e o ULID de cada nó, com as
+referências reescritas na mesma passada. Importar o mesmo pacote duas vezes dá dois apps completamente
+separados. E todo UUID citado pelo documento tem de ser outro documento do pacote ou uma fonte mapeada:
+qualquer id que não seja nenhum dos dois (por exemplo, o id de um item de outro inquilino) para a
+importação inteira, sem criar nada. Um zip com caminho para fora (`../`), link simbólico ou zip aninhado é
+recusado pela mesma guarda que já protege o upload de dado, antes de o conteúdo ser lido.
+
+O manifesto traz `sha256_conteudo` (o sha256 da forma canônica do manifesto sem esse campo) e o sha256 de
+cada documento: um byte trocado em qualquer arquivo do zip é recusado como `pacote_adulterado`. É soma de
+verificação de integridade, **não** prova de autoria — pacote assinado com chave é o mecanismo do pacote de
+atualização, seção de instalação.
+
+Galeria (`/modelos`): publicar guarda o pacote para reusar depois, com escopo `inquilino` (só quem publicou
+enxerga) ou `plataforma` (todos os inquilinos enxergam, e só superadmin publica assim). Modelo é imutável:
+para mudar, publique outro e apague o antigo. Publicar aceita `item_id` (exporta e guarda de uma vez) ou o
+zip em base64; importar aceita `modelo_id` no lugar do conteúdo.
+
+Fora deste turno: modelo "do canal" (parceiro publicando para os inquilinos dele) depende de uma hierarquia
+de inquilino que ainda não existe — hoje há `plataforma` e `inquilino`, e nada entre os dois.
