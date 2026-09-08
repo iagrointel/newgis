@@ -167,11 +167,6 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     })
     assert r.status_code == 201, r.text
     execucao_b = r.json()
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
     # L3-01-a: modelo + conjunto + execução de B, alvos das rotas de /api/amc — a execução marca o modelo
     # como "executado" (permanente, é a regra do item); por isso o modelo NÃO é apagado em desfazer()
     r = sessao_b.post("/api/amc/modelos", json={"nome": f"{PREFIXO}amc-modelo-{sufixo}", "definicao": AMC_DEF_MINIMA})
@@ -188,6 +183,8 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
+                      convite_b=convite_b,
+                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b,
                       modelo_amc_b=modelo_amc_b, conjunto_amc_b=conjunto_amc_b, execucao_amc_b=execucao_amc_b)
 
 
@@ -983,6 +980,102 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/amc/execucoes/{id}/resultados"): Caso(
         lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}/resultados",
     ),
+    # ---- documento de mapa (L2-01-a): o item de B usado como alvo É um `mapa`, então estas rotas medem o
+    # caso forte — o id existe, é do tipo certo, e ainda assim A não pode lê-lo nem gravá-lo.
+    ("GET", "/api/mapas"): Caso(lambda p: "/api/mapas", proprio=True, aceita=frozenset({200}),
+                                verificar=_sem_marca),
+    ("POST", "/api/mapas"): Caso(
+        lambda p: "/api/mapas", lambda p: {"titulo": f"{PREFIXO}mapa-a"},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/itens/{id}")),
+    ),
+    ("GET", "/api/mapas/{id}"): Caso(lambda p: f"/api/mapas/{p.item_b['id']}"),
+    ("PUT", "/api/mapas/{id}"): Caso(lambda p: f"/api/mapas/{p.item_b['id']}",
+                                     lambda p: {"titulo": f"{PREFIXO}mapa-invadido"}),
+    ("GET", "/api/mapas/{id}/completo"): Caso(lambda p: f"/api/mapas/{p.item_b['id']}/completo"),
+    # ---- edição transacional de feições (L2-03-a): a camada é de B; o lote nunca chega a ser aplicado
+    ("POST", "/api/camadas/{id}/edicoes"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/edicoes",
+        lambda p: {"adicionar": [{"atributos": {}, "geometria": None}]},
+    ),
+    # ---- serviços Esri e OGC por item (L2-04, L2-04-c, L2-04-e, L2-04-g). O `item_id` é sempre o item de B:
+    # o descritor do serviço, a coleção, a consulta e a edição têm de parar em 401/403/404 antes de tocar dado.
+    # `colecao_id` é 0 (a primeira coleção do serviço) e `feature_id` é 1 — números que existiriam se o item
+    # fosse de A; o que se mede é a porta, não o identificador.
+    ("GET", "/rest/services/{item_id}/FeatureServer"): Caso(
+        lambda p: f"/rest/services/{p.item_b['id']}/FeatureServer?f=json"),
+    ("GET", "/rest/services/{item_id}/FeatureServer/{camada_id}"): Caso(
+        lambda p: f"/rest/services/{p.item_b['id']}/FeatureServer/0?f=json"),
+    ("GET", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): Caso(
+        lambda p: f"/rest/services/{p.item_b['id']}/FeatureServer/0/query?where=1%3D1&f=json"),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): Caso(
+        lambda p: f"/rest/services/{p.item_b['id']}/FeatureServer/0/query",
+        lambda p: {"where": "1=1", "f": "json"}),
+    ("GET", "/ogc/features/{item_id}"): Caso(lambda p: f"/ogc/features/{p.item_b['id']}"),
+    ("GET", "/ogc/features/{item_id}/conformance"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/conformance"),
+    ("GET", "/ogc/features/{item_id}/api"): Caso(lambda p: f"/ogc/features/{p.item_b['id']}/api"),
+    ("GET", "/ogc/features/{item_id}/collections"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections"),
+    ("GET", "/ogc/features/{item_id}/collections/{colecao_id}"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0"),
+    ("GET", "/ogc/features/{item_id}/collections/{colecao_id}/queryables"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/queryables"),
+    ("GET", "/ogc/features/{item_id}/collections/{colecao_id}/items"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/items"),
+    ("POST", "/ogc/features/{item_id}/collections/{colecao_id}/items"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/items",
+        lambda p: {"type": "Feature", "geometry": None, "properties": {}}),
+    ("GET", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/items/1"),
+    ("PUT", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/items/1",
+        lambda p: {"type": "Feature", "geometry": None, "properties": {}}),
+    ("PATCH", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/items/1",
+        # o PATCH confere a FORMA do corpo antes de resolver o item (nada de B é lido nessa conferência),
+        # então o caso manda um Feature válido para medir a porta, não o validador
+        lambda p: {"type": "Feature", "geometry": None, "properties": {"nome": f"{PREFIXO}invadido"}}),
+    ("DELETE", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/items/1"),
+    ("GET", "/wfs/{item_id}"): Caso(
+        lambda p: f"/wfs/{p.item_b['id']}?service=WFS&request=GetCapabilities&version=2.0.0"),
+    # ---- tiles e exportação por TOKEN no caminho (L2-04-a, L2-04-e): não há sessão, o token vai na URL.
+    # Usa-se o token REAL de B (escopo `catalogo:ler`, nunca `camada:ler`) contra o item de B: mesmo com o
+    # token do dono do dado, a porta tem de recusar, porque nem o escopo nem o tipo do item servem. Por não
+    # depender de sessão, o caso é `publico`: as quatro chamadas da varredura recebem o mesmo conjunto.
+    ("GET", "/tiles/{token}/{item_id}/tilejson.json"): Caso(
+        lambda p: f"/tiles/{p.token_b['token']}/{p.item_b['id']}/tilejson.json", publico=True),
+    ("GET", "/tiles/{token}/{item_id}/{z}/{x}/{y}.pbf"): Caso(
+        lambda p: f"/tiles/{p.token_b['token']}/{p.item_b['id']}/0/0/0.pbf", publico=True),
+    ("GET", "/svc/{token}/rest/services/{item_id}/VectorTileServer"): Caso(
+        lambda p: f"/svc/{p.token_b['token']}/rest/services/{p.item_b['id']}/VectorTileServer?f=json",
+        publico=True),
+    ("GET", "/svc/{token}/rest/services/{item_id}/VectorTileServer/resources/styles/root.json"): Caso(
+        lambda p: f"/svc/{p.token_b['token']}/rest/services/{p.item_b['id']}"
+                  "/VectorTileServer/resources/styles/root.json", publico=True),
+    ("GET", "/svc/{token}/rest/services/{item_id}/VectorTileServer/resources/sprites/sprite.json"): Caso(
+        lambda p: f"/svc/{p.token_b['token']}/rest/services/{p.item_b['id']}"
+                  "/VectorTileServer/resources/sprites/sprite.json", publico=True),
+    ("GET", "/svc/{token}/rest/services/{item_id}/VectorTileServer/resources/sprites/sprite.png"): Caso(
+        lambda p: f"/svc/{p.token_b['token']}/rest/services/{p.item_b['id']}"
+                  "/VectorTileServer/resources/sprites/sprite.png", publico=True),
+    ("GET", "/svc/{token}/rest/services/{item_id}/VectorTileServer/resources/fonts/{fontstack}/{faixa}.pbf"):
+        Caso(lambda p: f"/svc/{p.token_b['token']}/rest/services/{p.item_b['id']}"
+                       "/VectorTileServer/resources/fonts/Open%20Sans%20Regular/0-255.pbf", publico=True),
+    ("GET", "/svc/{token}/rest/services/{item_id}/VectorTileServer/tile/{z}/{y}/{x}.pbf"): Caso(
+        lambda p: f"/svc/{p.token_b['token']}/rest/services/{p.item_b['id']}"
+                  "/VectorTileServer/tile/0/0/0.pbf", publico=True),
+    ("GET", "/svc/{token}/camadas/{item_id}.geojson"): Caso(
+        lambda p: f"/svc/{p.token_b['token']}/camadas/{p.item_b['id']}.geojson", publico=True),
+    ("GET", "/svc/{token}/camadas/{item_id}.csv"): Caso(
+        lambda p: f"/svc/{p.token_b['token']}/camadas/{p.item_b['id']}.csv", publico=True),
+    ("GET", "/svc/{token}/camadas/{item_id}.kml"): Caso(
+        lambda p: f"/svc/{p.token_b['token']}/camadas/{p.item_b['id']}.kml", publico=True),
+    ("GET", "/svc/{token}/camadas/{item_id}.fgb"): Caso(
+        lambda p: f"/svc/{p.token_b['token']}/camadas/{p.item_b['id']}.fgb", publico=True),
+    ("GET", "/svc/{token}/camadas/{item_id}.gpkg"): Caso(
+        lambda p: f"/svc/{p.token_b['token']}/camadas/{p.item_b['id']}.gpkg", publico=True),
 }
 
 

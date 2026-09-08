@@ -161,4 +161,25 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
     # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
     ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
+    # ---- documento de mapa (L2-01-a): as rotas de /api/mapas são atalhos tipados sobre as do catálogo
+    # (criar_item / editar_item), então o evento é o MESMO do item — não existe vocabulário "mapas/*"
+    ("POST", "/api/mapas"): ["itens/adicionar"],
+    ("PUT", "/api/mapas/{id}"): ["itens/atualizar"],
+    # ---- motor de análise multicritério (L3-01-a)
+    ("POST", "/api/amc/modelos/validar"): [],  # confere o documento e não grava nada: nada a registrar
+    ("POST", "/api/amc/modelos"): ["amc/modelo_criar"],
+    ("PUT", "/api/amc/modelos/{id}"): ["amc/modelo_editar"],
+    ("DELETE", "/api/amc/modelos/{id}"): ["amc/modelo_apagar"],
+    ("POST", "/api/amc/conjuntos"): ["amc/conjunto_criar"],
+    ("DELETE", "/api/amc/conjuntos/{id}"): ["amc/conjunto_apagar"],
+    ("POST", "/api/amc/execucoes"): ["amc/execucao_criar"],
+    ("DELETE", "/api/amc/execucoes/{id}"): ["amc/execucao_apagar"],
+    # ---- OGC API Features Part 4 (L2-04-g): a escrita entra pela MESMA porta da edição transacional
+    # (app/edicao/servico.py), logo o evento é `camadas/editar`, um por chamada
+    ("POST", "/ogc/features/{item_id}/collections/{colecao_id}/items"): ["camadas/editar"],
+    ("PUT", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
+    ("PATCH", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
+    ("DELETE", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): ["camadas/editar"],
+    # o POST do FeatureServer query é LEITURA (o Esri manda consulta por POST quando o where é grande)
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): [],
 }
