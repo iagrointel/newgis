@@ -74,6 +74,17 @@ def instalador(env, tmp_path_factory):
     # ela, o comportamento antigo (diretório temporário) continua valendo.
     cred = pathlib.Path(os.environ["PLAT_CRED_DIR"]) if os.environ.get("PLAT_CRED_DIR") \
         else tmp_path_factory.mktemp("cred_leitor")
+    # Mesmo achado, segunda metade (medido 08/09 ao juntar com master): a trilha NÃO exporta
+    # PLAT_CRED_DIR, só PLAT_DSN_LEITOR. Sem credential no diretório temporário o instalador sorteia
+    # senha nova e faz ALTER ROLE; a partir dali o DSN que o resto da suíte já tem na mão (o pool de
+    # app/db_leitor, usado pelo repasse /tiles/... de tests/api/test_mapa_api.py, que roda DEPOIS
+    # nesta mesma sessão) autentica com "password authentication failed" e o tile vira 503. Semeia-se
+    # aqui o credential com o DSN que o ambiente já usa: o script reusa a senha (passo c) e confere que
+    # ela vale (passo e), e nada é rodado. Sem PLAT_DSN_LEITOR no ambiente, o comportamento antigo fica.
+    alvo = cred / "PLAT_DSN_LEITOR"
+    if not os.environ.get("PLAT_CRED_DIR") and os.environ.get("PLAT_DSN_LEITOR") and not alvo.exists():
+        alvo.write_text(os.environ["PLAT_DSN_LEITOR"].strip(), encoding="utf-8")
+        alvo.chmod(0o600)
 
     def rodar():
         return subprocess.run(
