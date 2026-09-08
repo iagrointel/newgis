@@ -79,6 +79,10 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # `.../visualizacoes`, `.../exportacao`) não entram aqui: só rota de escrita é exigida.
     ("POST", "/api/itens/{id}/publicacao"): ["publicacao/publicar"],
     ("DELETE", "/api/itens/{id}/publicacao"): ["publicacao/despublicar"],
+    # ---- site do inquilino (L5-20-sites-paginas-publicas; vocabulário na migração
+    # 20260908T1134_site_paginas_publicas.sql). O GET não é escrita e não registra evento.
+    ("PUT", "/api/itens/{id}/site"): ["site/publicar"],
+    ("DELETE", "/api/itens/{id}/site"): ["site/despublicar"],
     ("DELETE", "/api/itens/{id}/links/{lid}"): ["compartilhamento/link_revogar"],
     ("POST", "/api/pastas"): ["pastas/criar"],
     ("PUT", "/api/pastas/{id}"): ["pastas/renomear", "pastas/mover"],
