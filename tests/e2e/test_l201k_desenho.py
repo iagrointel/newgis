@@ -33,11 +33,13 @@ def _clicar_no_mapa(page, x=640, y=380):
 
 
 def _desenhar_ponto(page, dx=0, dy=0):
+    page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.click('[data-desenho="ponto"]')
     _clicar_no_mapa(page, 640 + dx, 380 + dy)
 
 
 def _desenhar_linha(page):
+    page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.click('[data-desenho="linha"]')
     _clicar_no_mapa(page, 600, 350)
     _clicar_no_mapa(page, 700, 400)
@@ -45,6 +47,7 @@ def _desenhar_linha(page):
 
 
 def _desenhar_poligono(page, deslocamento=0):
+    page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.click('[data-desenho="poligono"]')
     _clicar_no_mapa(page, 560 + deslocamento, 300)
     _clicar_no_mapa(page, 620 + deslocamento, 300)
@@ -56,6 +59,7 @@ def _desenhar_poligono(page, deslocamento=0):
 def _desenhar_retangulo(page):
     """O modo `rectangle` do terra-draw é clique-move-clique (canto e canto oposto), não arrasto — arrastar
     não fecha o retângulo e a feição nunca chega ao `finish` (medido nesta tela)."""
+    page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.click('[data-desenho="retangulo"]')
     box = page.locator("#mapa canvas").bounding_box()
     cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
@@ -72,6 +76,7 @@ def test_sete_tipos_desenham_e_contam(mapa, page):
     _desenhar_retangulo(page)
 
     page.once("dialog", lambda d: d.accept("300"))
+    page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.click('[data-desenho="circulo"]')
     _clicar_no_mapa(page, 500, 500)
     page.wait_for_timeout(150)
@@ -100,6 +105,7 @@ def test_texto_com_halo_renderizado(mapa, page):
     MEDIDO: o MapLibre aceita o addLayer e descarta a camada em silêncio. Por isso o texto é desenhado num
     canvas (halo por `strokeText`, letra por `fillText`) e entra como imagem da feição."""
     page.once("dialog", lambda d: d.accept("halo visível"))
+    page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.click('[data-desenho="texto"]')
     _clicar_no_mapa(page, 640, 380)
     page.wait_for_timeout(250)
@@ -117,6 +123,7 @@ def test_salvar_e_reabrir_identico(mapa, page, base_url):
     _desenhar_ponto(page)
     _desenhar_poligono(page, deslocamento=40)
     antes = page.evaluate("JSON.stringify(window.plat.mapa.desenho.lista())")
+    page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.click("#btn-desenho-salvar")
     page.wait_for_function("window.plat.mapa.mapaId", timeout=10000)
     mapa_id = page.evaluate("window.plat.mapa.mapaId")
@@ -142,6 +149,7 @@ def test_salvar_e_reabrir_identico(mapa, page, base_url):
 def test_promover_a_camada(mapa, page):
     _desenhar_ponto(page)
     _desenhar_poligono(page)
+    page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.click("#btn-desenho-salvar")
     page.wait_for_function("window.plat.mapa.mapaId", timeout=10000)
 
@@ -158,6 +166,7 @@ def test_promover_a_camada(mapa, page):
 def test_apagar_e_mover_na_lista(mapa, page):
     _desenhar_ponto(page)
     _desenhar_ponto(page, dx=40)
+    page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     itens = page.locator("#lista-desenho li")
     assert itens.count() == 2
     primeiro_id = page.evaluate("window.plat.mapa.desenho.lista()[0].id")
@@ -172,6 +181,7 @@ def test_texto_de_10_mil_caracteres_e_rejeitado_pelo_servidor(mapa, page):
     tests/api/catalogo/test_desenho_anotacoes.py::test_texto_com_10001_caracteres_e_422)."""
     grande = "x" * 10001
     page.once("dialog", lambda d: d.accept(grande))
+    page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.click('[data-desenho="texto"]')
     _clicar_no_mapa(page, 640, 380)
     page.wait_for_timeout(200)
@@ -236,6 +246,7 @@ def test_encaixe_10px_cai_no_vertice_da_feicao_alvo(mapa, page):
     inequívoca: em cima do vértice do polígono (distância zero, nenhum outro vértice pode ganhar). Perto,
     mas não em cima, o que se prova é o contrato da tolerância: o que volta é um vértice dentro dela."""
     _desenhar_poligono(page)
+    page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.check("#desenho-snap")
     alvo = page.evaluate("window.plat.mapa.desenho.lista()[0].geometry.coordinates[0][0]")
     pixel = _pixel_de(page, alvo)
@@ -265,6 +276,7 @@ def test_encaixe_leva_o_vertice_novo_para_cima_do_alvo(mapa, page):
     pixel = _pixel_de(page, alvo)
     box = page.locator("#mapa canvas").bounding_box()
 
+    page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.check("#desenho-snap")
     page.click('[data-desenho="linha"]')
     page.mouse.click(box["x"] + pixel[0], box["y"] + pixel[1])
@@ -282,6 +294,7 @@ def test_html_no_texto_do_desenho_nao_vira_marcacao(mapa, page):
     (`text-field`, que só aceita string) e o rótulo da lista lateral entra por textContent."""
     bruto = "<img src=x onerror=alert(1)><b>oi</b>"
     page.once("dialog", lambda d: d.accept(bruto))
+    page.evaluate("() => window.plat.mapa.abrirPainel('desenho', { foco: false })")  # UX-04: painel na gaveta
     page.click('[data-desenho="texto"]')
     _clicar_no_mapa(page, 640, 380)
     page.wait_for_timeout(200)

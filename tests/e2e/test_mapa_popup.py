@@ -37,6 +37,7 @@ def mapa(page, base_url, credenciais_demo, martin_no_ar):  # noqa: F811 (fixture
     tela = Tela(page, base_url)
     tela.entrar(slug, login, senha)
     tela.ir("/mapa", "pagina_pronta_ms_mapa_popup")
+    page.evaluate("() => window.plat.mapa.abrirPainel('camadas', { foco: false })")  # UX-04: painel na gaveta
     page.wait_for_selector("#lista-camadas li", timeout=20000)
     titulos = page.locator(".camada-titulo").all_inner_texts()
     if not any(BANCADA_ITEM in t for t in titulos):

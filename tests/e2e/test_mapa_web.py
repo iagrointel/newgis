@@ -46,6 +46,7 @@ def mapa(page, base_url, credenciais_demo, martin_no_ar):
     tela = Tela(page, base_url)
     tela.entrar(slug, login, senha)
     tela.ir("/mapa", "pagina_pronta_ms_mapa")
+    page.evaluate("() => window.plat.mapa.abrirPainel('camadas', { foco: false })")  # UX-04: painel na gaveta
     page.wait_for_selector("#lista-camadas li", timeout=20000)
     titulos = page.locator(".camada-titulo").all_inner_texts()
     if not any(BANCADA in t for t in titulos):
@@ -54,6 +55,7 @@ def mapa(page, base_url, credenciais_demo, martin_no_ar):
 
 
 def _linha_da_camada(page, trecho):
+    page.evaluate("() => window.plat.mapa.abrirPainel('camadas', { foco: false })")  # UX-04: painel na gaveta
     return page.locator(f'#lista-camadas li:has(.camada-titulo:text-matches("{trecho}"))').first
 
 
@@ -154,6 +156,7 @@ def test_ordem_opacidade_e_enquadrar(mapa, page):
     }""")
     assert posicoes == sorted(posicoes, reverse=True), posicoes
 
+    page.evaluate("() => window.plat.mapa.abrirPainel('camadas', { foco: false })")  # UX-04: painel na gaveta
     faixa = _linha_da_camada(page, "poligonos").locator("input.camada-opacidade")
     faixa.fill("30")
     faixa.dispatch_event("input")
@@ -175,6 +178,7 @@ def test_ordem_opacidade_e_enquadrar(mapa, page):
 
 def test_legenda_mostra_as_cores_que_o_mapa_pinta(mapa, page):
     _ligar(page, "1mi", enquadrar=True)
+    page.evaluate("() => window.plat.mapa.abrirPainel('legenda', { foco: false })")  # UX-04: painel na gaveta
     page.wait_for_selector("#legenda .legenda-bloco")
     cores_legenda = page.evaluate("""() => Array.from(
       document.querySelectorAll('#legenda .legenda-bloco:first-child .legenda-amostra'))
@@ -223,9 +227,6 @@ def test_janela_de_atributos_com_campo_nulo_e_geometria_multi(mapa, page):
     if not alvo["temNome"]:
         assert page.locator('.popup-tabela tr[data-nulo="1"] td.nulo').count() >= 1
 
-    # geometria multi: a mesma feição chega em pedaços e a janela não a repete
-    blocos = page.locator(".popup-plat .popup-camada").count()
-    assert blocos == 1, blocos
     # geometria multi: a mesma feição chega em pedaços e a janela não a repete — desde o item
     # L2-01-d-popup-runtime a paginação "i de N" só aparece quando há mais de UMA feição coincidente;
     # multi-parte de uma feição só não deve mostrar o paginador
@@ -234,6 +235,7 @@ def test_janela_de_atributos_com_campo_nulo_e_geometria_multi(mapa, page):
 
 
 def test_pesquisa_por_coordenada_e_por_endereco(mapa, page):
+    page.evaluate("() => window.plat.mapa.abrirPainel('busca', { foco: false })")  # UX-04: painel na gaveta
     page.fill("#busca-campo", "2.82, -60.67")   # Boa Vista/RR, a UF do CNEFE instalado
     page.click("#busca-form button[type=submit]")
     page.wait_for_timeout(500)
@@ -268,6 +270,7 @@ def test_escala_coordenadas_e_troca_de_mapa_base(mapa, page):
     assert "," in coord and "z" in coord and "1:" in coord, coord
 
     _ligar(page, "1mi", enquadrar=True)
+    page.evaluate("() => window.plat.mapa.abrirPainel('camadas', { foco: false })")  # UX-04: painel na gaveta
     page.select_option("#seletor-base", "sem-base")
     page.wait_for_function("() => window.plat.mapa.catalogo.ativas.length === 1", timeout=20000)
     # a camada do catálogo sobrevive à troca de mapa-base (o estilo é refeito e ela é re-somada)
@@ -280,6 +283,7 @@ def test_escala_coordenadas_e_troca_de_mapa_base(mapa, page):
 
 
 def test_medicao_geodesica_de_distancia_e_area(mapa, page):
+    page.evaluate("() => window.plat.mapa.abrirPainel('medicao', { foco: false })")  # UX-04: painel na gaveta
     page.click("#btn-distancia")
     caixa = page.locator("#mapa").bounding_box()
     # dois cliques com separação conhecida em graus, medidos pelo próprio mapa
@@ -326,6 +330,7 @@ def test_impressao_png_e_pdf_com_escala_e_norte(mapa, page, medida, tmp_path):
     CAPTURAS.mkdir(parents=True, exist_ok=True)
 
     with page.expect_download(timeout=30000) as espera:
+        page.evaluate("() => window.plat.mapa.abrirPainel('impressao', { foco: false })")  # UX-04: painel na gaveta
         page.click("#btn-png")
     png = CAPTURAS / f"{ITEM}_impressao.png"
     espera.value.save_as(str(png))
@@ -366,6 +371,7 @@ def test_impressao_png_e_pdf_com_escala_e_norte(mapa, page, medida, tmp_path):
 def test_dez_camadas_ao_mesmo_tempo(mapa, page, medida):
     """Refutação declarada do item: o adversário liga 10 camadas e mede tempo e memória."""
     gravar = medida(ITEM)
+    page.evaluate("() => window.plat.mapa.abrirPainel('camadas', { foco: false })")  # UX-04: painel na gaveta
     linhas = page.locator("#lista-camadas li")
     total = min(10, linhas.count())
     inicio = page.evaluate("() => performance.now()")
