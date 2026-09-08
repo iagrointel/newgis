@@ -143,7 +143,7 @@ def provedor(servidor_oidc, sessao_a, grupos_internos):
     assert r.status_code == 200, r.text
     assert r.json()["provisionamento"]["mapa"]["gis-editores"]["perfil"] == "editor"
     yield {**criado, "regras": regras}
-    for u in sessao_a.get("/api/usuarios?limite=1000&ativo=").json().get("itens", []):
+    for u in sessao_a.get("/api/usuarios?limite=1000").json().get("itens", []):
         if u["origem"] == "oidc" and u["login"].startswith("prov"):
             sessao_a.delete(f"/api/usuarios/{u['id']}")
     sessao_a.put(f"/api/org/oidc/{criado['id']}", json={**corpo, "habilitado": False})
@@ -170,7 +170,7 @@ def _login_federado(cliente, username: str, senha: str, provedor_id: int):
 
 
 def _usuario(sessao_a, login: str) -> dict:
-    itens = sessao_a.get(f"/api/usuarios?q={login}&limite=50&ativo=").json()["itens"]
+    itens = sessao_a.get(f"/api/usuarios?q={login}&limite=50").json()["itens"]
     return next(u for u in itens if u["login"] == login)
 
 
@@ -278,15 +278,17 @@ def test_so_por_convite_desconhecido_recebe_peca_convite_e_convidado_entra(kc, s
         assert c.get("/api/eu").status_code == 401
         r = sessao_a.post("/api/convites", json={"email": f"prov-conv-{s}@exemplo.test", "perfil": "editor"})
         assert r.status_code == 201, r.text
-        convite_id = r.json()["id"]
+        convite_id, link = r.json()["id"], r.json().get("link") or ""
+        assert convite_id in {x["id"] for x in sessao_a.get("/api/convites?limite=100").json()}
         c = novo_cliente()
         r = _login_federado(c, f"prov-conv-{s}", "Teste-prov-5", provedor["id"])
         assert r.status_code == 200, r.text
         assert c.get("/api/eu").json()["perfil"] == "editor"  # perfil do convite (o IdP não mandou grupo)
-        convites = sessao_a.get("/api/convites?limite=100").json()
-        itens = convites["itens"] if isinstance(convites, dict) else convites
-        usado = next(x for x in itens if x["id"] == convite_id)
-        assert usado.get("usado_em") or usado.get("estado") in ("usado", "aceito")
+        # o convite foi consumido pelo login federado: some da lista de pendentes e o token não resolve mais
+        assert convite_id not in {x["id"] for x in sessao_a.get("/api/convites?limite=100").json()}
+        if "token=" in link:
+            token = link.split("token=", 1)[1].split("&", 1)[0]
+            assert sessao_a.get(f"/api/convites/resolver?token={token}").status_code == 410
     finally:
         _regras(sessao_a, provedor)
 
@@ -329,8 +331,12 @@ def test_desligar_sem_grupo_e_conta_desligada_no_idp_com_sessao_local(kc, sessao
     kc.habilitar(f"prov-idp-{s}", False)
     assert c3.get("/api/eu").status_code == 200  # expira no próximo login (política de sessão), não na hora
     c4 = novo_cliente()
-    r = _login_federado(c4, f"prov-idp-{s}", "Teste-prov-7", provedor["id"])
-    assert r.status_code == 401 and c4.get("/api/eu").status_code == 401
+    try:
+        r = _login_federado(c4, f"prov-idp-{s}", "Teste-prov-7", provedor["id"])
+        recusado = r.status_code == 401
+    except AssertionError:
+        recusado = True  # o Keycloak nem redireciona: devolve a própria tela com "conta desabilitada"
+    assert recusado and c4.get("/api/eu").status_code == 401  # nunca nasce sessão nova
 
 
 def test_desregistrar_conta_federada(kc, sessao_a, provedor):
