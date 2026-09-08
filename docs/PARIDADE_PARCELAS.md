@@ -1,0 +1,174 @@
+# Paridade da malha de parcelas com o parcel fabric do ArcGIS Pro (item L4-parcelas-01-modelo-de-parcelas)
+
+Documento de paridade do modelo de parcelas (`app/parcelas/`, migração
+`20260908T2140_parcelas.sql`). Compara as seis tabelas por inquilino (`parcela_registro`,
+`parcela_ponto`, `parcela_linha`, `parcela_linha_parcela`, `parcela`, `parcela_conexao`) e as duas
+visões (`v_parcela_atual`, `v_parcela_historico`) com o modelo de dados do parcel fabric do ArcGIS
+Pro 3.4.
+
+Fontes (consultadas em 08/09/2026; as URLs sob `help/data/parcel-fabric/` estão FORA DO AR nesta
+data — 404 —, então os fatos vêm das páginas vivas sob `help/data/parcel-editing/`):
+
+- O que é o parcel fabric — `pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/whatisparcelfabric.htm`
+- Esquema do parcel fabric (classes de feição, campos, domínios, editor tracking) — `pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/aboutparcelfabricschema.htm`
+- Criar registros — `pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/createparcelfabricrecords.htm`
+- Ver a linhagem (lineage) — `pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/viewparcellineage.htm`
+- Parcelas estrato (strata parcels) — `pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/createstrataparcels.htm`
+
+Regra do documento: paridade ≠ identidade. Onde o modelo diverge de propósito, a divergência está
+marcada **[diverge — decidido]** com o motivo; onde falta por escopo do item, marca **[falta]** com
+quem cobre. Nada aqui afirma comportamento do produto Esri além do que as páginas acima dizem.
+
+Regra da casa que atravessa tudo: parcela ≠ gleba ≠ lote ≠ matrícula. O `codigo` do registro e da
+parcela é texto do inquilino; nenhuma matrícula real e nenhum nome entra no modelo. SIGEF e CAR são
+camada de referência, nunca parcela oficial.
+
+## 1. O modelo em uma tabela
+
+| conceito Esri (parcel fabric) | o que a documentação diz | aqui | estado |
+|---|---|---|---|
+| Records | classe de feição com **Name** (único), **Record Type**, **Recorded Date**, **GlobalID**, **Created Parcel Count**, **Retired Parcel Count** | `plat.parcela_registro`: `codigo` único por inquilino, `tipo` com vocabulário fechado (matricula, escritura, loteamento, desmembramento, remembramento, aprovacao, outro), `data_registro` | feito (sem contador gravado — computa à hora; §3) |
+| Created By Record / Retired By Record | campos Guid no polígono, na linha, no ponto e na connection line; a parcela retirada vira **historic parcel** | `criada_por_registro` / `retirada_por_registro` em `parcela`, `parcela_linha`, `parcela_ponto`, `parcela_conexao`; retirada = `ativa = false` + `retirada_em` | feito |
+| current × historic | a visão do "atual" contra o acervo histórico com o registro que retirou | `v_parcela_atual` (ativa) e `v_parcela_historico` (com `retirada_por_codigo`, `retirada_por_tipo`, `retirada_em`), ambas `security_invoker` — respondem com a RLS de quem consulta | feito |
+| parcel type | classe de polígono + classe de linha SEPARADAS definidas pela organização (ex.: ownership, subdivision) | uma tabela `parcela` com coluna `tipo` e vocabulário fechado (lote, gleba, quadra, servidao, estrato) | feito **[diverge — decidido, §6]** |
+| COGO nas linhas | **Direction**, **Distance**, **Radius**, **Arc Length**, **COGO Type**, Direction Accuracy, Distance Accuracy | `rumo_graus`, `distancia_m`, `raio_m` (com sinal), `arco_m`, `tipo_cogo` ('reta'/'arco'), `precisao_rumo_s`, `precisao_dist_cm` | feito (convenções divergem — §4) |
+| Stated Area / Calculated Area | área declarada pelo registro contra a área calculada da geometria | `area_declarada_m2` declarado pelo chamador; `area_calculada_m2` SEMPRE do banco (`ST_Area`), nunca do chamador | feito |
+| Misclose Ratio / Misclose Distance | erro de fechamento da malha de medidas | `erro_fechamento_m` (distância) e `erro_fechamento_razao` (perímetro ÷ erro; nulo quando fecha exato) | feito |
+| Points | Name, **Fixed Shape**, **XY Accuracy**, Created/Retired By Record | `parcela_ponto`: `nome`, `fixo`, `precisao_xy_m`, `criada_por_registro`/`retirada_por_registro` | feito (ponto NÃO se retira por retirada de parcela — §5) |
+| Connection Lines | "measurements between points that are not parcel boundaries", com COGO e Created/Retired By Record | `parcela_conexao` com rumo, distância, descrição e registro | feito (sem COGO de arco na conexão — §4) |
+| Validation status (coluna) | campo na feição atualizado pela avaliação de regras | não é coluna: validação é consulta viva de sobreposição (`app/parcelas/validacao.py`), item por par com área de interseção | feito **[diverge — decidido, §7]** |
+| Is Seed | domínio PF_YesNo marcando semente (parcela só com linhas de contorno pendentes) | não existe | fora (semeadura por geometria pronta é o import; §8) |
+| branch versioning | versionamento de ramo do parcel fabric em feature service | não existe aqui | falta (linha L2-13) |
+| ajuste por mínimos quadrados | três classes de Adjustment no esquema | não existe | fora do portão |
+
+## 2. Registro como ato (Records)
+
+No parcel fabric o record é o documento legal (planta, escritura, aprovação) que cria e retira
+feições; a documentação diz que o Name do record deve ser único. Aqui `plat.parcela_registro` é o
+mesmo ato: `criar_registro` exige `codigo` de texto não vazio e único por inquilino, `tipo` no
+vocabulário fechado e `origem` manual/importado/sintetico. O `Recorded Date` é `data_registro`. Os
+contadores **Created Parcel Count / Retired Parcel Count** não são gravados: a contagem é consulta
+(`ficha` e visões), e contador gravado em banco envelhece mal quando a rodada de import é grande.
+O `Record Type` da Esri é um Long com domínio; aqui `tipo` é texto com `CHECK` — ver §8.
+
+## 3. Linhagem nos dois sentidos (lineage)
+
+A página de lineage da Esri desenha as parcelas históricas ACIMA do registro que as retirou e as
+parcelas atuais ABAIXO do registro que as criou, e mostra só as parcelas diretamente afetadas pelo
+registro escolhido. A `ficha(cur, tenant_id, parcela_id)` devolve o mesmo desenho em duas listas:
+
+- `predecessoras`: parcelas retiradas PELO registro que criou esta (o "para trás");
+- `sucessoras`: parcelas criadas PELO registro que retirou esta (o "para frente").
+
+A retirada é a refutação do item e não apaga nada: `retirar_parcela` marca `ativa = false` +
+`retirada_por_registro` + `retirada_em`; a parcela sai de `v_parcela_atual` e entra em
+`v_parcela_historico` com o registro. Linha que só servia à parcela retirada é retirada junto;
+linha PARTILHADA com parcela ativa continua ativa (`parcela_linha_parcela` é n:n — é aqui que a
+divisa comum de dois lotes vive uma única vez). Segunda retirada na mesma parcela é recusada
+(422). Testes: `test_retirada_sai_do_atual_e_fica_no_historico`,
+`test_linha_partilhada_sobrevive_a_retirada_de_um_dos_lados`,
+`test_ficha_mostra_linhagem_nos_dois_sentidos`.
+
+## 4. COGO nas linhas
+
+A classe de linha do parcel fabric é "COGO-enabled" com Direction, Distance, Radius, Arc Length,
+COGO Type e campos de precisão (Direction Accuracy padrão de 30 segundos, Distance Accuracy padrão
+de 0,15 m). Convenções aqui:
+
+- `rumo_graus` é AZIMUTE em graus decimais, 0 = norte (+Y), sentido 0–360. A Esri documenta
+  Direction em graus-minutos-segundos com quadrantes **[diverge — decidido: grau decimal de
+  máquina, a conversão de planta fica para a camada de entrada]**.
+- `raio_m` COM SINAL: positivo curva à direita (horário), negativo à esquerda — o sinal é o que
+  distingue a direção da curva sem campo extra de rotação. A restrição do banco é `raio_m <> 0`
+  (arco de raio zero não existe; `CHECK (tipo_cogo = 'arco') = (raio IS NOT NULL)`).
+- `arco_m` é o comprimento de arco declarado; a GEOMETRIA gravada é a CORDA entre os dois pontos
+  **[diverge — decidido: a malha fecha com corda; o arco de verdade é desenho, fase posterior;
+  o raio e o comprimento ficam declarados na linha e o ponto de chegada do trajeto COGO é
+  calculado analiticamente no centro, não pela corda]**.
+- `precisao_rumo_s` (segundos de arco) e `precisao_dist_cm` (centímetros) são os campos de
+  accuracy, SEM padrão inventado — quem mediu declara; NULL é ausência declarada.
+- `tipo_cogo` fecha o par da Esri COGO Type no vocabulário 'reta'/'arco'.
+
+O trajeto (`app/parcelas/cogo.py`) caminha do ponto inicial por (rumo, distância) ou (rumo, arco,
+raio com sinal), cria um ponto por vértice e uma linha por lado, e devolve o erro de fechamento:
+`erro_fechamento_m` é a distância do último ponto ao primeiro e `erro_fechamento_razao` é
+perímetro ÷ erro (nulo quando fecha exato) — o par Misclose Distance / Misclose Ratio. Teto de
+200 segmentos por trajeto (`PARCELA_TRAJETO_MAX`).
+
+## 5. Pontos e connection lines
+
+Ponto é vértice com nome, precisão declarada e sinal de controle: `precisao_xy_m` (XY Accuracy),
+`fixo` (Fixed Shape, domínio PF_YesNo lá; boolean aqui), `origem` medida/escaneada/derivada. A
+documentação Esri diz que o ponto "torna-se histórico se todas as parcelas adjacentes forem
+históricas" — aqui o ponto NÃO é retirado quando a parcela sai **[diverge — decidido: ponto é
+acervo cadastral do inquilino, não da parcela; a retirada é da parcela e das linhas exclusivas;
+`test_retirada…` confere que os 4 pontos ficam]**.
+
+Connection Lines da Esri são "measurements between points that are not parcel boundaries" com
+COGO e registro. `parcela_conexao` cobre o mesmo papel com rumo, distância, descrição e registro
+de criação/retirada, sem arco **[diverge — decidido: medida direta entre pontos; arco de conexão
+não tem caso de uso na casa hoje]**.
+
+## 6. parcel type
+
+Na Esri, parcel type é um PAR de classes (polígono + linha) criado pela organização por tipo de
+parcela (ownership, subdivision, …); o esquema do fabric cresce um par de classes por tipo. Aqui é
+uma tabela `parcela` com `tipo` fechado em lote, gleba, quadra, servidao, estrato, e a classe de
+linha é única e compartilhada entre tipos (`parcela_linha_parcela`) **[diverge — decidido: RLS e
+índices em UMA tabela valem para todo tipo novo sem migração de DDL por inquilino; criar classe
+por tipo em banco por inquilino multiplicaria DDL]. O vocabulário é CHECK no banco e tupla em
+`app/parcelas/modelo.py` (TIPOS, TIPOS_REGISTRO); fora do vocabulário é 422, nunca silêncio.
+A parcela estrato da Esri (strata parcels, ex.: unidades de condomínio) é o tipo `estrato`.
+
+## 7. Validação
+
+A coluna Validation status do fabric é escrita pela avaliação de regras (ferramenta Evaluate
+Rules) e as violações viram feições de erro. Aqui não há coluna nem feição de erro: a validação é
+consulta viva (`validacao.sobreposicoes`), par de parcelas ATIVAS do MESMO TIPO com interseção
+acima da tolerância (1 cm² — lascas de malha flutuante não são sobreposição), ordenada por área,
+com total contado e teto de lista (`PARCELA_VALIDACAO_PARES_MAX`) **[diverge — decidido: a sobreposição
+é pergunta sobre o dado de agora, não estado gravado que envelhece; o motor de regras de atributo
+da rede (item L4-29) já cobre o perfil validação onde ele pertence]**. Parcela histórica nunca
+aponta: só o "atual" se valida. Testes: `test_sobreposicao_mesmo_tipo_aponta` (par de lote 200 m²,
+par de gleba 400 m², cruzamento lote × gleba NÃO aponta, retirada tira o par) e
+`test_sobreposicao_de_tipo_diferente_nao_aponta`.
+
+## 8. Domínios e editor tracking
+
+Os domínios PF_* do fabric (PF_COGOType, PF_YesNo, PF_AreaUnits, PF_COGOAccuracy,
+PF_LabelPosition, PF_AdjustmentConstraint) são, aqui, restrições CHECK na coluna e tuplas no
+módulo — vocabulário fechado com recusa nomeada, sem tabela de domínio por inquilino. Editor
+tracking "habilitado em todas as classes" é `criado_em`/`atualizado_em` em toda tabela.
+
+## 9. Importação de malha pronta (o caminho de entrada da casa)
+
+O portão pede importar os lotes derivados do SIG de teste interno (dado aberto, schema `sigcorp`,
+SÓ LEITURA) como parcelas do tipo 'lote'. `app/parcelas/importar.py` + `scripts/importar_lotes_sig.py`:
+
+- um registro SINTÉTICO por empreendimento de origem (tipo 'loteamento', origem 'sintetico',
+  código `LS-<empreendimento>` — número, nunca nome), marca em `parcela.atributos`
+  (`origem = sig_lote_derivado`, `empreendimento_origem`);
+- vértice deduplicado por coordenada (arredondada a 1e-6 m) e linha deduplicada pelo par de
+  pontos — é o que faz a divisa comum nascer UMA vez com dois usos;
+- `precisao_xy_m` fica NULA de propósito: malha derivada não declara precisão, e inventar número
+  é pior que nulo;
+- anel com vértice consecutivo repetido é limpo na entrada (malha derivada traz vértice
+  duplicado; sem isso o par de/ponto=ponto viola a restrição da linha); buraco e não-polígono são
+  recusados (422);
+- o import NÃO é idempotente de propósito: rodar duas vezes cria dois registros — segundo
+  registro é segundo documento, não a mesma carga. Teto de rodada `PARCELA_IMPORT_LOTES_MAX`.
+
+## 10. Estado
+
+Feito: registro como ato com vocabulário fechado; linhagem nos dois sentidos via `ficha`; retirada
+sem apagar (parcela histórica + linha exclusiva sai, partilhada fica); COGO com rumo/distância/
+raio com sinal/arco e precisão declarada; fechamento (erro + razão); pontos com precisão e ponto
+fixo; conexão; import real medido (`tests/medidas/L4-parcelas-01-modelo-de-parcelas.json`);
+RLS por inquilino nas seis tabelas e nas duas visões; tetos em `app/limites.py` documentados.
+
+Falta (com quem está): versionamento de ramo do fabric (branch versioning) — linha L2-13; rota de
+API REST para o modelo — itens seguintes da linha; desenho de arco como arco (a corda fecha a
+malha) — fase de desenho.
+
+Fora do portão: ajuste por mínimos quadrados (classes de Adjustment); Is Seed; feição de erro
+persistente de validação.
