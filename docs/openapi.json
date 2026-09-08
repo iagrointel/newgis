@@ -2716,6 +2716,103 @@
     "x-privilegio": "superadmin"
    }
   },
+  "/api/plataforma/inquilinos/{id}/cotas": {
+   "get": {
+    "tags": [
+     "plataforma"
+    ],
+    "summary": "Cotas Ler",
+    "operationId": "cotas_ler_api_plataforma_inquilinos__id__cotas_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/InquilinoCotas"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   },
+   "put": {
+    "tags": [
+     "plataforma"
+    ],
+    "summary": "Cotas Gravar",
+    "description": "Teto de cota de um inquilino (achados G4-04/G4-05 do ataque ao G4). O admin do inquilino escolhe a cota\nABAIXO deste teto por `PUT /api/org`; o teto só muda aqui, e `plat.tenant_cotas_teto_definir` ainda o\nlimita ao teto absoluto da instalação. Baixar o teto abaixo da cota vigente baixa a cota junto.",
+    "operationId": "cotas_gravar_api_plataforma_inquilinos__id__cotas_put",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/InquilinoCotasEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/InquilinoCotas"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   }
+  },
   "/api/org": {
    "get": {
     "tags": [
@@ -14167,6 +14264,69 @@
     ],
     "title": "Inquilino"
    },
+   "InquilinoCotas": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "slug": {
+      "type": "string",
+      "title": "Slug"
+     },
+     "cota_bytes": {
+      "type": "integer",
+      "title": "Cota Bytes"
+     },
+     "cota_bytes_teto": {
+      "type": "integer",
+      "title": "Cota Bytes Teto"
+     },
+     "cota_usuarios": {
+      "type": "integer",
+      "title": "Cota Usuarios"
+     },
+     "cota_usuarios_teto": {
+      "type": "integer",
+      "title": "Cota Usuarios Teto"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "slug",
+     "cota_bytes",
+     "cota_bytes_teto",
+     "cota_usuarios",
+     "cota_usuarios_teto"
+    ],
+    "title": "InquilinoCotas"
+   },
+   "InquilinoCotasEntrada": {
+    "properties": {
+     "cota_bytes_teto": {
+      "type": "integer",
+      "maximum": 1099511627776.0,
+      "minimum": 104857600.0,
+      "title": "Cota Bytes Teto"
+     },
+     "cota_usuarios_teto": {
+      "type": "integer",
+      "maximum": 100000.0,
+      "minimum": 1.0,
+      "title": "Cota Usuarios Teto"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "cota_bytes_teto",
+     "cota_usuarios_teto"
+    ],
+    "title": "InquilinoCotasEntrada",
+    "description": "Teto de cota de UM inquilino, escrito só pela plataforma (achados G4-04/G4-05). O `le` aqui é o teto\nabsoluto da instalação (`app/limites.py`), repetido em `plat.tenant_cotas_teto_definir`."
+   },
    "InquilinoCriado": {
     "properties": {
      "id": {
@@ -15423,11 +15583,13 @@
      },
      "cota_bytes": {
       "type": "integer",
+      "maximum": 1099511627776.0,
       "minimum": 104857600.0,
       "title": "Cota Bytes"
      },
      "cota_usuarios": {
       "type": "integer",
+      "maximum": 100000.0,
       "minimum": 1.0,
       "title": "Cota Usuarios"
      },
