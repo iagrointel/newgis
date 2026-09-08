@@ -853,6 +853,12 @@ CASOS: dict[tuple[str, str], Caso] = {
                                        verificar=_sem_marca),
     ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}"),
     ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/tilejson"),
+    # ---- L2-09-b cena 3D: cálculo puro (posição do Sol), sem tabela e sem dado de inquilino — como o
+    # geocodificador abaixo, age só sobre o que o chamador mandou na query.
+    ("GET", "/api/cena/sol"): Caso(
+        lambda p: "/api/cena/sol?lat=-23.5&lon=-46.6&instante=2026-06-21T12:00:00-03:00",
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
     ("GET", "/api/geocodificar"): Caso(
         lambda p: "/api/geocodificar?endereco=Avenida+Paulista,+Sao+Paulo+-+SP", proprio=True,
         aceita=frozenset({200, 422}), verificar=_sem_marca,
