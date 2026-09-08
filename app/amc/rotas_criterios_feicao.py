@@ -74,34 +74,32 @@ class PedidoCriteriosFeicao(BaseModel):
         return v
 
 
-def _centroide_e_bbox(feicoes: list[dict]) -> tuple[list[tuple[float, float]], tuple[float, float, float, float],
-                                                    tuple[float, float]]:
-    pontos: list[tuple[float, float]] = []
-    for i, f in enumerate(feicoes):
-        geom = (f.get("geometry") or {}) if isinstance(f, dict) else {}
-        for lon, lat in _percorrer(geom.get("coordinates")):
-            pontos.append((lon, lat))
-        if not pontos and i == len(feicoes) - 1:
-            raise ErroAPI(422, "feicao_sem_geometria",
-                          "nenhuma feição do pedido tem coordenada: sem geometria não há CRS de trabalho a escolher")
+def _centroide_e_bbox(feicoes: list[dict]):
+    """Vértices, bbox e centróide das feições, para `app.amc.crs.ficha_crs` escolher a zona UTM. Quem extrai as
+    coordenadas de qualquer geometria GeoJSON é o shapely (`get_coordinates`), que este módulo já carrega pela
+    cadeia do extrator — não há percurso de listas aninhadas escrito à mão aqui."""
+    import shapely
+    from shapely.geometry import shape
+
+    geometrias = []
+    for f in feicoes:
+        geom = (f.get("geometry") or None) if isinstance(f, dict) else None
+        if not geom:
+            continue
+        try:
+            geometrias.append(shape(geom))
+        except (AttributeError, KeyError, TypeError, ValueError) as e:
+            raise ErroAPI(422, "geometria_invalida", f"geometria que não é GeoJSON válido: {e}") from e
+    coords = shapely.get_coordinates(geometrias) if geometrias else []
+    if len(coords) == 0:
+        raise ErroAPI(422, "feicao_sem_geometria",
+                      "nenhuma feição do pedido tem coordenada: sem geometria não há CRS de trabalho a escolher")
+    pontos = [(float(x), float(y)) for x, y in coords]
     xs = [p[0] for p in pontos]
     ys = [p[1] for p in pontos]
     bbox = (min(xs), min(ys), max(xs), max(ys))
     centro = ((bbox[0] + bbox[2]) / 2.0, (bbox[1] + bbox[3]) / 2.0)
     return pontos, bbox, centro
-
-
-def _percorrer(coords):
-    """Gera os pares (lon, lat) de qualquer geometria GeoJSON, em qualquer profundidade de aninhamento."""
-    if coords is None:
-        return
-    if (isinstance(coords, list | tuple) and len(coords) >= 2
-            and all(isinstance(c, int | float) and not isinstance(c, bool) for c in coords[:2])):
-        yield float(coords[0]), float(coords[1])
-        return
-    if isinstance(coords, list | tuple):
-        for parte in coords:
-            yield from _percorrer(parte)
 
 
 def _avaliar_ou_422(pedido: PedidoCriteriosFeicao) -> tuple[motor.Avaliacao, dict]:
