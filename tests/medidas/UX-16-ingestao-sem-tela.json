@@ -1,0 +1,27 @@
+{
+ "item": "UX-16-ingestao-sem-tela",
+ "medidas": {
+  "estados_provados": {
+   "valor": 13,
+   "unidade": "estados",
+   "comando": "lista:vazio; lista:erro; lista:negado; lista:conteudo; nova:422:formato; nova:negado; nova:ok:inspecionada; confirmar:422:perguntas; confirmar:409; confirmar:negado; confirmar:ok:carregada; apagar:409; apagar:ok"
+  },
+  "violacoes_serias_axe": {
+   "valor": 0,
+   "unidade": "violações",
+   "comando": "axe-core 4.10.3 wcag2a/aa em /importacoes vazia, /importacoes nova, /importacoes proposta, /importacoes lista"
+  },
+  "erros_de_console": {
+   "valor": 0,
+   "unidade": "erros",
+   "comando": "Tela.verificar (console.error, pageerror, respostas >= 400 não declaradas)"
+  },
+  "pagina_pronta_ms_importacoes": {
+   "valor": 95.5,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  }
+ },
+ "gerado_em": "2026-09-08T11:07:25Z",
+ "git_sha": "a7433b01aa04"
+}
