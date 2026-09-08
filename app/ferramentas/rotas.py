@@ -14,6 +14,8 @@ from app import db, limites
 from app.auth.comum import registrar_evento
 from app.auth.sessao import Auth, autenticado
 from app.erros import ErroAPI
+from app.consulta_grande import consulta_livre as _consulta_livre  # noqa: F401 — L2-15-b: registra consulta_sql
+from app.consulta_grande import ferramentas_grandes as _grandes  # noqa: F401 — L2-15-b: registra as grandes
 from app.ferramentas import buffer as _buffer  # noqa: F401 — a importação registra a ferramenta de exemplo
 from app.ferramentas import executor, registro
 from app.jobs import servico

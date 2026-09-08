@@ -108,11 +108,32 @@ def resolver_camada(cur, item_id: str, nome_parametro: str) -> dict:
     }
 
 
+def resolver_fonte(cur, item_id: str, nome_parametro: str, aceita_parquet: bool) -> dict:
+    """Camada vetorial do Postgres ou, quando a ferramenta declara `limites={"aceita_parquet": True}` (as
+    ferramentas grandes do L2-15-b), item de catálogo tipo `parquet`. As duas formas devolvem `item_id`,
+    `titulo`, `versao`, `sha256` e `feicoes` — é o que o custo, a proveniência e o `derivado_de` usam."""
+    if aceita_parquet:
+        from app.consulta_grande import motor as motor_consulta_grande
+
+        try:
+            fonte = motor_consulta_grande.resolver_parquet(cur, item_id, nome_parametro)
+        except motor_consulta_grande.ErroConsulta:
+            pass  # não é item Parquet legível: tenta a camada, e o erro que sai é o dela
+        else:
+            fonte.update({"formato": "parquet", "feicoes": fonte["linhas"], "srid": fonte["crs"],
+                          "campos": [c["nome"] for c in fonte["esquema"]]})
+            return fonte
+    entrada = resolver_camada(cur, item_id, nome_parametro)
+    entrada["formato"] = "postgis"
+    return entrada
+
+
 def resolver_entradas(cur, f: registro.Ferramenta, parametros: dict) -> dict:
     entradas = {}
+    aceita_parquet = bool(f.limites.get("aceita_parquet"))
     for p in f.entradas:
         if p.tipo == "GPFeatureRecordSetLayer" and parametros.get(p.nome):
-            entradas[p.nome] = resolver_camada(cur, parametros[p.nome], p.nome)
+            entradas[p.nome] = resolver_fonte(cur, parametros[p.nome], p.nome, aceita_parquet)
         elif p.tipo == "GPRasterDataLayer" and parametros.get(p.nome):
             raise ErroExecucao(422, "raster_nao_suportado", f"{p.nome}: entrada raster depende do item L1-01")
     return entradas
@@ -206,6 +227,10 @@ def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None =
                             "sha256": sha_saida, "job_id": proveniencia["job_id"], "ferramenta": proveniencia},
             "estatisticas": {"feicoes": int(est["feicoes"]), "extent_nativo": extent, "calculadas_em": None},
         }
+        if saida.get("consulta_grande"):
+            # item L2-15-b: o SQL que rodou e o sha256 de cada arquivo Parquet lido. Sem isto a camada de
+            # resultado não é reproduzível, e "proveniência" viraria só o nome da ferramenta.
+            dados["procedencia"]["consulta_grande"] = saida["consulta_grande"]
         titulo_final = (titulo or f"{f.titulo}: " + ", ".join(e["titulo"] for e in entradas.values()))[:250] or f.titulo
         with ctx.db() as cur:
             cur.execute(

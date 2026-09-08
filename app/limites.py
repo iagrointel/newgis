@@ -264,3 +264,24 @@ GEOPARQUET_CAMPOS_MAX = 500
 GEOPARQUET_WHERE_MAX = 4000
 GEOPARQUET_POR_USUARIO_EM_CURSO = 3
 GEOPARQUET_URL_ASSINADA_SEGUNDOS = 900   # 15 min: o bastante para DuckDB/QGIS/Pro abrirem o arquivo
+
+# --- consulta grande sobre Parquet com DuckDB (L2-15-b-consultas-duckdb-em-escala). O motor roda num processo
+# próprio, lançado pelo job (que é `pesado`: o worker já serializa "1 pesado por vez" por advisory lock, e é
+# essa trava, não uma nova, que garante UMA consulta grande de cada vez por base). MEMORIA_MB é o
+# `memory_limit` declarado ao DuckDB e THREADS o seu `threads`: os dois vão para a proveniência do resultado,
+# porque tempo medido sem eles não quer dizer nada.
+CONSULTA_GRANDE_MEMORIA_MB = 2048
+CONSULTA_GRANDE_THREADS = 4
+CONSULTA_GRANDE_TEMPO_S = 900            # teto do relógio que interrompe a consulta (con.interrupt)
+CONSULTA_GRANDE_JOB_TIMEOUT_S = 1200     # teto do JOB; folgado sobre o teto da consulta para a mensagem chegar
+CONSULTA_GRANDE_JOB_MEMORIA_MB = 3072    # RLIMIT_DATA do filho; o processo do DuckDB é neto e cabe dentro
+CONSULTA_GRANDE_LINHAS_SAIDA_MAX = 2_000_000   # resultado acima disso é recusado, nunca truncado em silêncio
+CONSULTA_GRANDE_SQL_MAX = 2_000          # caracteres do SQL livre: é o teto de GPString do
+                                         # vocabulário GP da Esri (app/ferramentas/registro.py),
+                                         # e não um número escolhido aqui — quem manda a consulta
+                                         # por cliente Esri cabe no mesmo limite da API própria
+CONSULTA_GRANDE_ARQUIVOS_MAX = 4_096     # partes Parquet de uma fonte (partição hive fina cabe aqui)
+CONSULTA_GRANDE_FONTES_MAX = 8           # fontes Parquet numa consulta (uma view cada)
+CONSULTA_GRANDE_GRADE_METROS_MIN = 10
+CONSULTA_GRANDE_GRADE_METROS_MAX = 500_000
+CONSULTA_GRANDE_LIMIAR_LINHAS_DUCKDB = 5_000_000  # acima disto a ferramenta grande é o caminho, não o PostGIS
