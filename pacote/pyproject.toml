@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plat"
+version = "0.1.0"
+description = "SDK Python da plataforma: catálogo, acervo, jobs e ferramentas por token de serviço"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietária" }
+authors = [{ name = "plataforma (L2)" }]
+keywords = ["geoespacial", "catalogo", "acervo", "jobs"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = ["requests>=2.31"]
+
+[project.urls]
+Documentacao = "docs/PARIDADE.md"
+
+[tool.setuptools]
+packages = ["plat"]
+package-dir = { "" = "." }
