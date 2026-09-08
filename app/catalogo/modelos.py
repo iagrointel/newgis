@@ -86,6 +86,9 @@ class ItemEditar(Modelo):
     protegido: bool | None = None
     status: str | None = Field(default=None, pattern="^(autoritativo|obsoleto|nenhum)$")
     versao_atual: int | None = None  # edição concorrente: se vier diferente do banco = 409 versao_conflito
+    # L5-13: versão que o cliente LEU; diferente do banco = mesclagem por nó com a versão atual (409 só se o mesmo
+    # nó mudou dos dois lados, com o documento atual e os ids em conflito no detalhe)
+    base_versao: int | None = Field(default=None, ge=1)
 
     _t = field_validator("tags")(_tags)
     _e = field_validator("extent")(_extent)

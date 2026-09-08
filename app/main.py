@@ -36,6 +36,7 @@ from app.catalogo import (
     rotas_miniatura,
     rotas_ogc,
     rotas_pastas,
+    rotas_presenca,  # L5-13: presença em documento (SSE)
     transferencia,
 )
 from app.conexao import rotas as rotas_conexao
@@ -100,6 +101,7 @@ ROUTERS = [
     rotas_lixeira.router,
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
+    rotas_presenca.router,
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar
     rotas_acervo.router,
     # --- conexão externa (L6-02-a): /api/conexoes, /api/conexoes/{id}, /api/conexoes/{id}/testar

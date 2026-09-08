@@ -937,3 +937,13 @@ def _link_so_o_item(p: Preparacao, j: Any) -> None:
     assert "login" not in item["dono"] and "pode_editar" not in item and item["id"] == p.item_b["id"]
     for marca in (p.usuario_b["login"], p.grupo_b["nome"], p.papel_b["nome"], p.token_b["prefixo"], "demo2"):
         assert marca not in str(j), marca
+
+
+# ---- L5-13-edicao-concorrente: presença no item de B é cross-tenant puro (404 pela RLS de plat.item)
+CASOS.update({
+    ("POST", "/api/itens/{id}/presenca"): Caso(
+        lambda p: f"/api/itens/{p.item_b['id']}/presenca", lambda p: {"sessao": "aba-teste-cruzado", "no": None},
+    ),
+    ("GET", "/api/itens/{id}/presenca"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/presenca"),
+    ("GET", "/api/itens/{id}/presenca/eventos"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/presenca/eventos"),
+})

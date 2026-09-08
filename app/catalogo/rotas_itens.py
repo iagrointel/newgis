@@ -21,7 +21,7 @@ from app import db, limites
 from app.auth.comum import campos_json, paginacao
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo import busca as mod_busca
-from app.catalogo import comum, diff, documento, metadado, relacoes, texto, tipos
+from app.catalogo import comum, diff, documento, mesclagem, metadado, relacoes, texto, tipos
 from app.catalogo.comum import (
     carregar,
     exigir_edicao,
@@ -688,6 +688,13 @@ def editar_item(
                 {"versao_atual": r["versao_atual"]},
             )
         campos.pop("versao_atual")
+    mesclagem_relatorio = None
+    if "base_versao" in campos:
+        base_versao = campos.pop("base_versao")
+        if base_versao is not None and base_versao != r["versao_atual"]:
+            # L5-13: o cliente leu `base_versao` e o servidor já está adiante — mescla por nó (documento de grafo)
+            # ou recusa com o documento atual; para item sem grafo vale a regra estrita do versao_atual
+            mesclagem_relatorio = _mesclar_com_base(cur, r, campos, base_versao)
     if not campos:
         raise ErroAPI(422, "validacao", "nada a alterar")
     dados = campos.get("dados", r["dados"])
@@ -761,6 +768,8 @@ def editar_item(
     if "dados" in campos and relacoes.tem_extrator(r["tipo"]):
         relacoes.sincronizar(cur, auth.tenant_id, iid, relacoes.extrair(r["tipo"], dados))
     novo = item_ou_404(cur, iid)
+    if mesclagem_relatorio:
+        novo["mesclagem"] = mesclagem_relatorio
     mudados = sorted(k for k in campos if k in CAMPOS_VERSAO)
     if mudados:
         registrar_evento(
@@ -773,12 +782,52 @@ def editar_item(
     return novo
 
 
+def _mesclar_com_base(cur, r: dict, campos: dict, base_versao: int) -> dict:
+    """Mesclagem de três vias por nó (item L5-13, `app/catalogo/mesclagem.py`): base = corpo da versão que o cliente
+    leu (`plat.item_versao`), servidor = `dados` atual, cliente = `campos["dados"]`. Sem conflito, `campos["dados"]`
+    passa a ser o resultado mesclado e a edição segue; com conflito, 409 `versao_conflito` com o documento atual
+    inteiro e os ids dos nós em conflito — nunca uma escolha às escondidas (refutação do item)."""
+    if r["tipo"] not in documento.FAMILIAS_GRAFO or "dados" not in campos:
+        raise ErroAPI(
+            409, "versao_conflito", "o item foi editado por outra pessoa; recarregue",
+            {"versao_atual": r["versao_atual"], "base_versao": base_versao, "dados": r["dados"]},
+        )
+    cur.execute(
+        "SELECT corpo FROM plat.item_versao WHERE item_id = %s::uuid AND versao = %s", (r["id"], base_versao)
+    )
+    linha = cur.fetchone()
+    if linha is None:
+        raise ErroAPI(
+            409, "versao_conflito", f"a versão base {base_versao} não existe mais (compactada ou inválida); recarregue",
+            {"versao_atual": r["versao_atual"], "base_versao": base_versao, "dados": r["dados"]},
+        )
+    dados_base = (linha["corpo"] or {}).get("dados") or {}
+    dados_cliente = campos["dados"] if isinstance(campos["dados"], dict) else {}
+    dados_servidor = r["dados"] or {}
+    resultado = mesclagem.mesclar(
+        dados_base.get("corpo") or {}, dados_servidor.get("corpo") or {}, dados_cliente.get("corpo") or {}
+    )
+    if not resultado.ok:
+        raise ErroAPI(
+            409, "versao_conflito",
+            "o mesmo nó foi alterado por outra pessoa; veja a diferença e escolha",
+            {"versao_atual": r["versao_atual"], "base_versao": base_versao, "dados": dados_servidor,
+             **resultado.relatorio()},
+        )
+    campos["dados"] = {**dados_servidor, **dados_cliente, "corpo": resultado.corpo}
+    return {"base_versao": base_versao, "versao_servidor": r["versao_atual"], **resultado.relatorio()}
+
+
 def _editar(id: str, corpo, request: Request, auth: Auth, rotulo: str | None = None) -> dict:
     iid = uuid_ok(id)
     campos = campos_json(corpo, set(CAMPOS_EDITAVEIS))
     try:
         with db.db(auth.contexto()) as cur:
-            return item_json(editar_item(cur, request, auth, iid, campos, rotulo=rotulo), auth)
+            novo = editar_item(cur, request, auth, iid, campos, rotulo=rotulo)
+            saida = item_json(novo, auth)
+            if novo.get("mesclagem"):
+                saida["mesclagem"] = novo["mesclagem"]  # L5-13: o que veio do servidor e o que ficou do cliente
+            return saida
     except psycopg2.Error as e:
         raise comum.erro_do_banco(e) from e
 
