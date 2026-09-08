@@ -22,6 +22,7 @@ from app.auth import (
     rotas_grupos,
     rotas_log,
     rotas_login,
+    rotas_logins,
     rotas_org,
     rotas_plataforma,
     rotas_redefinicao,
@@ -84,6 +85,8 @@ ROUTERS = [
     rotas_org.router,
     # --- LDAP/Active Directory (L0-08-d): POST /api/login/ldap; GET/PUT /api/org/ldap; POST /api/org/ldap/importar
     rotas_ldap.router,
+    # --- provedores de login e provisionamento (L0-08-e): GET/PUT /api/org/logins, POST /api/usuarios/{id}/desregistrar
+    rotas_logins.router,
     # --- OpenID Connect (L0-08-a): GET /api/sso/oidc/{iniciar,retorno,logout}; GET/POST/PUT/DELETE /api/org/oidc
     rotas_oidc.router,
     # --- SAML 2.0 (L0-08-b): /api/sso/saml/{metadata,iniciar,acs,slo,logout}; GET/POST/PUT/DELETE /api/org/saml
