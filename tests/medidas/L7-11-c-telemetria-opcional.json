@@ -1,0 +1,22 @@
+{
+ "item": "L7-11-c-telemetria-opcional",
+ "medidas": {
+  "pedidos_de_rede_desligada": {
+   "valor": 0,
+   "unidade": "pedidos",
+   "comando": "chamadas a httpx.post com a telemetria desligada (job + POST /api/telemetria/enviar)"
+  },
+  "campos_do_relatorio": {
+   "valor": 13,
+   "unidade": "campos",
+   "comando": "app/telemetria.py::CAMPOS (os mesmos de docs/APPLIANCE.md §5)"
+  },
+  "previa_igual_ao_enviado": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "GET /api/telemetria previa == corpo capturado de httpx.post, fora enviado_em"
+  }
+ },
+ "gerado_em": "2026-09-08T06:05:00Z",
+ "git_sha": "9ac92cde4a8b"
+}
