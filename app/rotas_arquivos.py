@@ -92,7 +92,7 @@ def chave_leitura(auth: Auth = autenticado("org.integracoes", so_sessao=True)):
     "/api/arquivos/_cog/autorizar",
     status_code=204,
     response_class=Response,
-    openapi_extra={"x-auth": "publico", "x-privilegio": "publico"},
+    openapi_extra={"x-auth": "-", "x-privilegio": "publico"},
 )
 def cog_autorizar(request: Request):
     """Subrequisição `auth_request` do bloco `/svc/<token>/cog/<slug>/...` do nginx (deploy/nginx.conf). Recebe o

@@ -9347,7 +9347,7 @@
       "description": "Successful Response"
      }
     },
-    "x-auth": "publico",
+    "x-auth": "-",
     "x-privilegio": "publico"
    }
   },
