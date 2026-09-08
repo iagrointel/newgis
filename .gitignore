@@ -25,6 +25,10 @@ laco/var/
 laco/vivo/
 laco/*.lock
 laco/*.log
+
+# fixture real de rede de agua (item L4-05-d): 2 MB, dado de operadora — repositorio publico,
+# fica so no disco da casa; os testes que dependem dela pulam quando ela nao esta no checkout
+tests/dados/rede_agua_real.inp
 .login.lock
 # saída bruta GERADA pelas provas do item L7-19 a cada rodada (o e2e regrava; o número que se cita
 # fica no curado tests/medidas/L7-19.json)
