@@ -1,7 +1,10 @@
 {
- "gerado_em": "2026-09-06T12:10:42Z",
- "entrada": "schemas.opengis.net/iso/19139/20070417/gmd/gmd.xsd",
- "perfil": "ISO 19139 (schemas.opengis.net, revisão 2007-04-17) — o que GeoNetwork/INDE chamam de schema iso19139; usado pelo Perfil MGB 2.0 (D17)",
+ "gerado_em": "2026-09-08T13:13:36Z",
+ "entrada": [
+  "schemas.opengis.net/iso/19139/20070417/gmd/gmd.xsd",
+  "www.isotc211.org/2005/gmi/gmi.xsd"
+ ],
+ "perfil": "ISO 19139 (schemas.opengis.net, revisão 2007-04-17) — o que GeoNetwork/INDE chamam de schema iso19139; usado pelo Perfil MGB 2.0 (D17) — mais ISO 19115-2/gmi (www.isotc211.org/2005/gmi), o perfil de imagem do item L1-27",
  "arquivos": [
   {
    "arquivo": "schemas.opengis.net/gml/3.2.1/basicTypes.xsd",
@@ -101,7 +104,7 @@
   },
   {
    "arquivo": "schemas.opengis.net/gml/3.2.1/gml.xsd",
-   "url_origem": "http://schemas.opengis.net/gml/3.2.1/gml.xsd",
+   "url_origem": "https://schemas.opengis.net/gml/3.2.1/gml.xsd",
    "sha256": "eb1e652fdc10fa70352c3fc554cd3bfacc5a863e964a4e64c76f25c762b80a3f",
    "bytes": 1076
   },
@@ -179,7 +182,7 @@
   },
   {
    "arquivo": "schemas.opengis.net/iso/19139/20070417/gco/gco.xsd",
-   "url_origem": "http://schemas.opengis.net/iso/19139/20070417/gco/gco.xsd",
+   "url_origem": "https://schemas.opengis.net/iso/19139/20070417/gco/gco.xsd",
    "sha256": "bc3ea300204f6b99e696976aeb32207d604295f8e4c1d397cf5bb7b9e59bdabf",
    "bytes": 1159
   },
@@ -311,7 +314,7 @@
   },
   {
    "arquivo": "schemas.opengis.net/iso/19139/20070417/gss/gss.xsd",
-   "url_origem": "http://schemas.opengis.net/iso/19139/20070417/gss/gss.xsd",
+   "url_origem": "https://schemas.opengis.net/iso/19139/20070417/gss/gss.xsd",
    "sha256": "1cb5492d7cb110ced0d46e8bc858dc3b340e1350b0b16f99772318c7df4d3906",
    "bytes": 1166
   },
@@ -326,6 +329,42 @@
    "url_origem": "http://schemas.opengis.net/iso/19139/20070417/gts/temporalObjects.xsd",
    "sha256": "de4cdfee6b9f8bb72f705d05686cea8f2cbf865eb7c36265187631e9d2a7c688",
    "bytes": 2729
+  },
+  {
+   "arquivo": "www.isotc211.org/2005/gmi/acquisitionInformation.xsd",
+   "url_origem": "https://www.isotc211.org/2005/gmi/acquisitionInformation.xsd",
+   "sha256": "53f76e442374f4f767e398aa5196fff42f9453e54e640902dc2c3307151c5127",
+   "bytes": 22626
+  },
+  {
+   "arquivo": "www.isotc211.org/2005/gmi/contentInformation.xsd",
+   "url_origem": "https://www.isotc211.org/2005/gmi/contentInformation.xsd",
+   "sha256": "9dce3458bbb4336cc67ab04f7ebd5a4d44ff340f561db0322a2bd31995724ed0",
+   "bytes": 8158
+  },
+  {
+   "arquivo": "www.isotc211.org/2005/gmi/dataQualityInformation.xsd",
+   "url_origem": "https://www.isotc211.org/2005/gmi/dataQualityInformation.xsd",
+   "sha256": "1a6880b3f6d7778e8ab00a762403792fd535a30e8f27286bf3a2fb39d83c60db",
+   "bytes": 12153
+  },
+  {
+   "arquivo": "www.isotc211.org/2005/gmi/gmi.xsd",
+   "url_origem": "https://www.isotc211.org/2005/gmi/gmi.xsd",
+   "sha256": "5c66f75ed13b4bd7ec4a89c4bb8411ea270b62edb2afa708e807d466d9852f3b",
+   "bytes": 1359
+  },
+  {
+   "arquivo": "www.isotc211.org/2005/gmi/metadataEntitySet.xsd",
+   "url_origem": "https://www.isotc211.org/2005/gmi/metadataEntitySet.xsd",
+   "sha256": "3c14d54e607d51af93f6c2b255be1e594ef3570f399b031d76fe08b0d7186669",
+   "bytes": 2391
+  },
+  {
+   "arquivo": "www.isotc211.org/2005/gmi/spatialRepresentationInformation.xsd",
+   "url_origem": "https://www.isotc211.org/2005/gmi/spatialRepresentationInformation.xsd",
+   "sha256": "8472dafc3ad48a4992bc78c5a0312d37e627ede9650c89384734f02a84b7bf7e",
+   "bytes": 7717
   },
   {
    "arquivo": "www.w3.org/1999/xlink.xsd",

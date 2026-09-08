@@ -29,15 +29,39 @@ from urllib.parse import urljoin, urlparse
 RAIZ = Path(__file__).resolve().parent
 CACHE = RAIZ / "cache"
 MANIFESTO = CACHE / "MANIFESTO.json"
-SEMENTES = ("https://schemas.opengis.net/iso/19139/20070417/gmd/gmd.xsd",)
+SEMENTES = (
+    "https://schemas.opengis.net/iso/19139/20070417/gmd/gmd.xsd",
+    # ISO 19115-2 (perfil de imagem), namespace http://www.isotc211.org/2005/gmi: acrescenta
+    # gmi:MI_Metadata (extensão de gmd:MD_Metadata com acquisitionInformation), MI_ImageDescription
+    # e MI_Platform/MI_Instrument. É o perfil que a ficha de imagem do item L1-27 exporta.
+    "https://www.isotc211.org/2005/gmi/gmi.xsd",
+)
+# A árvore do gmi importa gmd/gco/gss de um endereço do ITTF que hoje responde 302 para uma listagem de
+# diretório (medido 08/09/2026): a MESMA revisão publicada desses schemas já está em cache vinda do
+# schemas.opengis.net, então a importação é redirecionada para lá em vez de baixada duas vezes.
+EQUIVALENTES = {
+    "http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/":
+        "https://schemas.opengis.net/iso/19139/20070417/",
+    # o mesmo caso para o GML 3.2.1 do ISO 19136, que a árvore do gmi importa pelo endereço do ITTF
+    "http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19136_Schemas/":
+        "https://schemas.opengis.net/gml/3.2.1/",
+}
 SCHEMA_LOCATION = re.compile(r'schemaLocation\s*=\s*"([^"]+)"')
 TIMEOUT_S = 20
+
+
+def canonico(url: str) -> str:
+    """Endereço que se baixa de fato: aplica EQUIVALENTES antes de qualquer busca ou chave de cache."""
+    for de, para in EQUIVALENTES.items():
+        if url.startswith(de):
+            return para + url[len(de):]
+    return url
 
 
 def chave(url: str) -> str:
     """netloc+path, sem esquema (http e https do mesmo host são o MESMO arquivo — a árvore real mistura os dois:
     gmd.xsd é servido por https, mas importa o resto por http:// absoluto)."""
-    p = urlparse(url)
+    p = urlparse(canonico(url))
     return f"{p.netloc}{p.path}"
 
 
@@ -54,7 +78,7 @@ def relativo(de_url: str, para_url: str) -> str:
 
 
 def buscar(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": "iAgroIntel-plataforma-enterprise/1.0"})
+    req = urllib.request.Request(canonico(url), headers={"User-Agent": "iAgroIntel-plataforma-enterprise/1.0"})
     with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:  # noqa: S310 - URL fixa do OGC, só neste script
         return r.read()
 
@@ -65,7 +89,7 @@ def baixar(forcar: bool) -> dict:
     conteudo: dict[str, bytes] = {}
     origem_url: dict[str, str] = {}
     while fila:
-        url = fila.popleft()
+        url = canonico(fila.popleft())
         k = chave(url)
         if k in vistos:
             continue
@@ -98,7 +122,7 @@ def baixar(forcar: bool) -> dict:
             else:
                 continue
             if chave(alvo_url) not in vistos:
-                fila.append(alvo_url)
+                fila.append(canonico(alvo_url))
     # reescreve todo schemaLocation absoluto para caminho relativo dentro do cache (autossuficiente, sem rede)
     saida: dict[str, bytes] = {}
     for k, dados in conteudo.items():
@@ -155,9 +179,10 @@ def gravar_manifesto(mapa_url: dict[str, str]) -> None:
         json.dumps(
             {
                 "gerado_em": agora,
-                "entrada": chave(SEMENTES[0]),
+                "entrada": [chave(s) for s in SEMENTES],
                 "perfil": "ISO 19139 (schemas.opengis.net, revisão 2007-04-17) — o que GeoNetwork/INDE chamam de "
-                "schema iso19139; usado pelo Perfil MGB 2.0 (D17)",
+                "schema iso19139; usado pelo Perfil MGB 2.0 (D17) — mais ISO 19115-2/gmi "
+                "(www.isotc211.org/2005/gmi), o perfil de imagem do item L1-27",
                 "arquivos": itens,
             },
             ensure_ascii=False,
