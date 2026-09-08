@@ -97,9 +97,12 @@ def _validar_parametro(nome_ferramenta: str, p: Parametro) -> None:
         raise ErroRegistro(f"{onde}: direcao deve ser entrada ou saida")
     if not p.rotulo:
         raise ErroRegistro(f"{onde}: rótulo obrigatório")
-    if p.opcoes and p.tipo != "GPString":
+    # em GPMultiValue quem manda é o SUBTIPO: `_normalizar` já repassa opcoes/minimo/maximo ao elemento
+    tipo_efetivo = p.subtipo if p.tipo == "GPMultiValue" else p.tipo
+    if p.opcoes and tipo_efetivo != "GPString":
         raise ErroRegistro(f"{onde}: opcoes só vale para GPString")
-    if (p.minimo is not None or p.maximo is not None) and p.tipo not in ("GPDouble", "GPLong", "GPLinearUnit"):
+    if (p.minimo is not None or p.maximo is not None) and tipo_efetivo not in ("GPDouble", "GPLong",
+                                                                               "GPLinearUnit"):
         raise ErroRegistro(f"{onde}: minimo/maximo só vale para número ou unidade linear")
     if p.padrao is not None and p.direcao == "entrada":
         try:
