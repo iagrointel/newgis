@@ -9895,6 +9895,581 @@
     "x-privilegio": "proprio"
    }
   },
+  "/api/camadas/{id}/edicoes": {
+   "post": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Editar Feicoes",
+    "operationId": "editar_feicoes_api_camadas__id__edicoes_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EdicoesEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EdicoesSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total"
+   }
+  },
+  "/api/camadas/{id}/feicoes/{globalid}": {
+   "get": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Obter Feicao Rota",
+    "operationId": "obter_feicao_rota_api_camadas__id__feicoes__globalid__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Obter Feicao Rota Api Camadas  Id  Feicoes  Globalid  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/camadas/{id}/feicoes/{globalid}/historico": {
+   "get": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Listar Historico",
+    "operationId": "listar_historico_api_camadas__id__feicoes__globalid__historico_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": true
+         },
+         "title": "Response Listar Historico Api Camadas  Id  Feicoes  Globalid  Historico Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar": {
+   "post": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Restaurar Feicao",
+    "operationId": "restaurar_feicao_api_camadas__id__feicoes__globalid__historico__historico_id__restaurar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     },
+     {
+      "name": "historico_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Historico Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RestaurarSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total"
+   }
+  },
+  "/api/camadas/{id}/feicoes/{globalid}/anexos": {
+   "get": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Listar Anexos",
+    "operationId": "listar_anexos_api_camadas__id__feicoes__globalid__anexos_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": true
+         },
+         "title": "Response Listar Anexos Api Camadas  Id  Feicoes  Globalid  Anexos Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Enviar Anexo",
+    "operationId": "enviar_anexo_api_camadas__id__feicoes__globalid__anexos_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AnexoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Enviar Anexo Api Camadas  Id  Feicoes  Globalid  Anexos Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total"
+   }
+  },
+  "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}": {
+   "get": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Baixar Anexo",
+    "operationId": "baixar_anexo_api_camadas__id__feicoes__globalid__anexos__anexo_id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     },
+     {
+      "name": "anexo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Anexo Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "delete": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Apagar Anexo",
+    "operationId": "apagar_anexo_api_camadas__id__feicoes__globalid__anexos__anexo_id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "globalid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Globalid"
+      }
+     },
+     {
+      "name": "anexo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Anexo Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total"
+   }
+  },
+  "/api/camadas/{id}/feicoes/unir": {
+   "post": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Unir Feicoes",
+    "operationId": "unir_feicoes_api_camadas__id__feicoes_unir_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UniaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Unir Feicoes Api Camadas  Id  Feicoes Unir Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total"
+   }
+  },
+  "/api/camadas/{id}/feicoes/dividir": {
+   "post": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Dividir Feicao",
+    "operationId": "dividir_feicao_api_camadas__id__feicoes_dividir_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DivisaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Dividir Feicao Api Camadas  Id  Feicoes Dividir Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total"
+   }
+  },
   "/api/rota": {
    "post": {
     "tags": [
@@ -10026,15 +10601,180 @@
     "summary": "Geocodificar",
     "operationId": "geocodificar_api_geocodificar_post",
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/PedidoGeocodificar"
        }
       }
-     },
-     "required": true
+     }
     },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "get": {
+    "tags": [
+     "geocodificador"
+    ],
+    "summary": "Geocodificar Get",
+    "description": "Mesma busca do POST, por parâmetro de consulta.\n\nExiste porque geocodificar é LEITURA e o verbo certo para leitura é GET: a caixa de pesquisa do\nvisualizador de mapa (item L2-01-mapa-web) não deve passar pela porta de escrita sob cookie, que\nexige a checagem de origem do ADR 0002 seção 5.3 (e falha, corretamente, em qualquer ambiente cuja\nURL pública não seja a mesma do navegador). O POST continua valendo, com o mesmo contrato.",
+    "operationId": "geocodificar_get",
+    "parameters": [
+     {
+      "name": "endereco",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 300
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Endereco"
+      }
+     },
+     {
+      "name": "logradouro",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 200
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Logradouro"
+      }
+     },
+     {
+      "name": "numero",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 999999,
+         "minimum": 0
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Numero"
+      }
+     },
+     {
+      "name": "bairro",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 120
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Bairro"
+      }
+     },
+     {
+      "name": "municipio",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 120
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Municipio"
+      }
+     },
+     {
+      "name": "uf",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 2,
+         "maxLength": 2
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Uf"
+      }
+     },
+     {
+      "name": "cep",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 9
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Cep"
+      }
+     },
+     {
+      "name": "max_locations",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 50,
+       "minimum": 1,
+       "default": 10,
+       "title": "Max Locations"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "Successful Response",
@@ -10987,6 +11727,492 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/mapa/camadas": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Listar Camadas",
+    "description": "Camadas vetoriais que a sessão pode ler (a RLS de plat.item decide), prontas para o mapa.",
+    "operationId": "listar_camadas_api_mapa_camadas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Obter Camada",
+    "operationId": "obter_camada_api_mapa_camadas__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}/tilejson": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Tilejson",
+    "operationId": "tilejson_api_mapa_camadas__id__tilejson_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/formularios/equivalencia": {
+   "get": {
+    "tags": [
+     "formularios"
+    ],
+    "summary": "Equivalencia",
+    "description": "Tabela XLSForm -> linguagem própria por função (feito / parcial / fora), C6.",
+    "operationId": "equivalencia_api_formularios_equivalencia_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Equivalencia Api Formularios Equivalencia Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/formularios/xlsform": {
+   "post": {
+    "tags": [
+     "formularios"
+    ],
+    "summary": "Importar Xlsform",
+    "operationId": "importar_xlsform_api_formularios_xlsform_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/XlsformEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FormularioSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.publicar_camada"
+   }
+  },
+  "/api/formularios/{id}": {
+   "get": {
+    "tags": [
+     "formularios"
+    ],
+    "summary": "Obter Formulario",
+    "operationId": "obter_formulario_api_formularios__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FormularioSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/formularios/{id}/respostas": {
+   "post": {
+    "tags": [
+     "formularios"
+    ],
+    "summary": "Responder Formulario",
+    "operationId": "responder_formulario_api_formularios__id__respostas_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RespostaEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Responder Formulario Api Formularios  Id  Respostas Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total"
+   }
+  },
+  "/api/odk/pontes": {
+   "get": {
+    "tags": [
+     "odk"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_odk_pontes_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PontePagina"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "odk"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_odk_pontes_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PonteEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PonteSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.registrar_fonte"
+   }
+  },
+  "/api/odk/pontes/{id}": {
+   "get": {
+    "tags": [
+     "odk"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_odk_pontes__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Ver Api Odk Pontes  Id  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/odk/pontes/{id}/sincronizar": {
+   "post": {
+    "tags": [
+     "odk"
+    ],
+    "summary": "Sincronizar",
+    "operationId": "sincronizar_api_odk_pontes__id__sincronizar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Sincronizar Api Odk Pontes  Id  Sincronizar Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total"
+   }
+  },
+  "/api/odk/pontes/{id}/entidades/{dataset}": {
+   "get": {
+    "tags": [
+     "odk"
+    ],
+    "summary": "Entidades",
+    "operationId": "entidades_api_odk_pontes__id__entidades__dataset__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "dataset",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Dataset"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Entidades Api Odk Pontes  Id  Entidades  Dataset  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
   }
  },
  "components": {
@@ -11713,6 +12939,71 @@
     ],
     "title": "AmostrasResultado"
    },
+   "AnexoEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "content_type": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Content Type"
+     },
+     "conteudo": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Conteudo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "content_type",
+     "conteudo"
+    ],
+    "title": "AnexoEntrada"
+   },
+   "AnexoResposta": {
+    "properties": {
+     "campo": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Campo"
+     },
+     "nome": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "content_type": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Content Type"
+     },
+     "conteudo": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Conteudo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "campo",
+     "nome",
+     "content_type",
+     "conteudo"
+    ],
+    "title": "AnexoResposta"
+   },
    "CategoriaNo": {
     "properties": {
      "id": {
@@ -12263,7 +13554,7 @@
     "properties": {
      "tipo": {
       "type": "string",
-      "pattern": "^(wms|wmts|wfs|ogc_api|esri_rest|stac|geoparquet|pmtiles|postgres_fdw|s3|http)$",
+      "pattern": "^(wms|wmts|wfs|ogc_api|esri_rest|stac|geoparquet|pmtiles|postgres_fdw|s3|http|odk_central)$",
       "title": "Tipo"
      },
      "nome": {
@@ -12882,6 +14173,53 @@
     ],
     "title": "ConviteResolvido"
    },
+   "Crs": {
+    "properties": {
+     "srid": {
+      "type": "integer",
+      "maximum": 999999.0,
+      "minimum": 1.0,
+      "title": "Srid"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "srid"
+    ],
+    "title": "Crs"
+   },
+   "DivisaoEntrada": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Id"
+     },
+     "versao": {
+      "type": "integer",
+      "minimum": 1.0,
+      "title": "Versao"
+     },
+     "ponto": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Ponto"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "id",
+     "versao",
+     "ponto"
+    ],
+    "title": "DivisaoEntrada"
+   },
    "Dono": {
     "properties": {
      "id": {
@@ -12911,6 +14249,103 @@
      "login"
     ],
     "title": "Dono"
+   },
+   "EdicoesEntrada": {
+    "properties": {
+     "modo": {
+      "type": "string",
+      "pattern": "^(transacao|parcial)$",
+      "title": "Modo",
+      "default": "transacao"
+     },
+     "crs": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Crs"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "corrigir_geometria": {
+      "type": "boolean",
+      "title": "Corrigir Geometria",
+      "default": false
+     },
+     "adicionar": {
+      "items": {
+       "$ref": "#/components/schemas/FeicaoAdicionar"
+      },
+      "type": "array",
+      "maxItems": 2000,
+      "title": "Adicionar"
+     },
+     "atualizar": {
+      "items": {
+       "$ref": "#/components/schemas/FeicaoAtualizar"
+      },
+      "type": "array",
+      "maxItems": 2000,
+      "title": "Atualizar"
+     },
+     "apagar": {
+      "items": {
+       "$ref": "#/components/schemas/FeicaoApagar"
+      },
+      "type": "array",
+      "maxItems": 2000,
+      "title": "Apagar"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "EdicoesEntrada"
+   },
+   "EdicoesSaida": {
+    "properties": {
+     "modo": {
+      "type": "string",
+      "title": "Modo"
+     },
+     "adicionar": {
+      "items": {
+       "$ref": "#/components/schemas/ResultadoFeicao"
+      },
+      "type": "array",
+      "title": "Adicionar"
+     },
+     "atualizar": {
+      "items": {
+       "$ref": "#/components/schemas/ResultadoFeicao"
+      },
+      "type": "array",
+      "title": "Atualizar"
+     },
+     "apagar": {
+      "items": {
+       "$ref": "#/components/schemas/ResultadoFeicao"
+      },
+      "type": "array",
+      "title": "Apagar"
+     },
+     "avisos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Avisos"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "modo",
+     "adicionar",
+     "atualizar",
+     "apagar"
+    ],
+    "title": "EdicoesSaida"
    },
    "Erro": {
     "properties": {
@@ -13577,6 +15012,129 @@
      "peso"
     ],
     "title": "FatorPesoEntrada"
+   },
+   "FeicaoAdicionar": {
+    "properties": {
+     "atributos": {
+      "additionalProperties": true,
+      "type": "object",
+      "maxProperties": 500,
+      "title": "Atributos"
+     },
+     "geometria": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Geometria"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "FeicaoAdicionar"
+   },
+   "FeicaoApagar": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Id"
+     },
+     "versao": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Versao"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "id"
+    ],
+    "title": "FeicaoApagar"
+   },
+   "FeicaoAtualizar": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Id"
+     },
+     "versao": {
+      "type": "integer",
+      "minimum": 1.0,
+      "title": "Versao"
+     },
+     "atributos": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object",
+        "maxProperties": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atributos"
+     },
+     "geometria": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Geometria"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "id",
+     "versao"
+    ],
+    "title": "FeicaoAtualizar"
+   },
+   "FormularioSaida": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "titulo": {
+      "type": "string",
+      "title": "Titulo"
+     },
+     "documento": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Documento"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "titulo",
+     "documento"
+    ],
+    "title": "FormularioSaida"
    },
    "FotoEntrada": {
     "properties": {
@@ -16161,6 +17719,144 @@
     ],
     "title": "PedidoRota"
    },
+   "PonteEntrada": {
+    "properties": {
+     "conexao": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Conexao"
+     },
+     "formulario": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Formulario"
+     },
+     "projeto": {
+      "type": "integer",
+      "minimum": 1.0,
+      "title": "Projeto"
+     },
+     "conteudo": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Conteudo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "conexao",
+     "formulario",
+     "projeto",
+     "conteudo"
+    ],
+    "title": "PonteEntrada"
+   },
+   "PontePagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/PonteSaida"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "PontePagina"
+   },
+   "PonteSaida": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "conexao": {
+      "type": "string",
+      "title": "Conexao"
+     },
+     "conexao_nome": {
+      "type": "string",
+      "title": "Conexao Nome"
+     },
+     "formulario": {
+      "type": "string",
+      "title": "Formulario"
+     },
+     "projeto": {
+      "type": "integer",
+      "title": "Projeto"
+     },
+     "xml_form_id": {
+      "type": "string",
+      "title": "Xml Form Id"
+     },
+     "versao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Versao"
+     },
+     "hash_central": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Hash Central"
+     },
+     "publicado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Publicado Em"
+     },
+     "sincronizado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sincronizado Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "conexao",
+     "conexao_nome",
+     "formulario",
+     "projeto",
+     "xml_form_id"
+    ],
+    "title": "PonteSaida"
+   },
    "Privilegio": {
     "properties": {
      "nome": {
@@ -16563,6 +18259,128 @@
     ],
     "title": "RelacoesEntrada"
    },
+   "RespostaEntrada": {
+    "properties": {
+     "valores": {
+      "additionalProperties": true,
+      "type": "object",
+      "maxProperties": 500,
+      "title": "Valores"
+     },
+     "repeticoes": {
+      "additionalProperties": {
+       "items": {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       "type": "array"
+      },
+      "type": "object",
+      "maxProperties": 50,
+      "title": "Repeticoes"
+     },
+     "inicio": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Inicio"
+     },
+     "fim": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fim"
+     },
+     "dispositivo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dispositivo"
+     },
+     "anexos": {
+      "items": {
+       "$ref": "#/components/schemas/AnexoResposta"
+      },
+      "type": "array",
+      "maxItems": 20,
+      "title": "Anexos"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "RespostaEntrada"
+   },
+   "RestaurarSaida": {
+    "properties": {
+     "sucesso": {
+      "type": "boolean",
+      "title": "Sucesso"
+     },
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "fid": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fid"
+     },
+     "versao": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Versao"
+     },
+     "recriada": {
+      "type": "boolean",
+      "title": "Recriada"
+     },
+     "avisos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Avisos"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "sucesso",
+     "id",
+     "recriada"
+    ],
+    "title": "RestaurarSaida"
+   },
    "RestaurarVersaoEntrada": {
     "properties": {
      "comentario": {
@@ -16581,6 +18399,90 @@
     "additionalProperties": false,
     "type": "object",
     "title": "RestaurarVersaoEntrada"
+   },
+   "ResultadoFeicao": {
+    "properties": {
+     "sucesso": {
+      "type": "boolean",
+      "title": "Sucesso"
+     },
+     "id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Id"
+     },
+     "fid": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fid"
+     },
+     "versao": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Versao"
+     },
+     "atributos": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atributos"
+     },
+     "erro": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Erro"
+     },
+     "mensagem": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mensagem"
+     },
+     "detalhe": {
+      "title": "Detalhe"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "sucesso"
+    ],
+    "title": "ResultadoFeicao"
    },
    "Resumo": {
     "properties": {
@@ -17513,6 +19415,45 @@
     ],
     "title": "TransferenciaEntrada"
    },
+   "UniaoEntrada": {
+    "properties": {
+     "ids": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 200,
+      "minItems": 2,
+      "title": "Ids"
+     },
+     "versoes": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Versoes"
+     },
+     "atributos": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atributos"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "ids",
+     "versoes"
+    ],
+    "title": "UniaoEntrada"
+   },
    "UploadCriar": {
     "properties": {
      "nome": {
@@ -17993,6 +19934,52 @@
      "corpo"
     ],
     "title": "VersaoCompleta"
+   },
+   "XlsformEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "conteudo": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Conteudo"
+     },
+     "titulo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 250
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Titulo"
+     },
+     "camada_destino": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Camada Destino"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "conteudo"
+    ],
+    "title": "XlsformEntrada"
    },
    "app__auth__modelos__LoteEntrada": {
     "properties": {
