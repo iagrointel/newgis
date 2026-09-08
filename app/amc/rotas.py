@@ -26,6 +26,7 @@ from app.amc import MOTOR_VERSAO
 from app.amc import camadas as mod_camadas
 from app.amc import esquema as mod_esquema
 from app.amc import explicacao as mod_explicacao
+from app.amc import transformacoes as mod_transformacoes
 from app.amc import unidades as mod_unidades
 from app.auth.comum import erro_do_banco, paginacao, registrar_evento
 from app.auth.sessao import Auth, autenticado
@@ -611,3 +612,126 @@ def apagar_execucao(execucao_id: str, request: Request, auth: Auth = autenticado
     except psycopg2.Error as e:
         raise erro_do_banco(e) from e
     return None
+
+
+# ================================================================ matriz da execução (tela do motor, L3-01-g)
+def _fatores_da_definicao(definicao: dict) -> list[dict]:
+    """Ficha de cada fator como a tela do motor precisa: o que se mede, de onde vem, o que NÃO sustenta."""
+    fichas = []
+    for f in definicao.get("fatores") or []:
+        proxy = f.get("proxy") or {}
+        fichas.append({
+            "id": f["id"], "nome": f["nome"], "criterio": f.get("criterio"), "fonte": f["fonte"],
+            "unidade": f["unidade"], "direcao": f["direcao"], "base": f["base"],
+            "peso_modelo": float(f["peso"]),
+            "camada": f.get("camada") or {}, "extrator_tipo": (f.get("extrator") or {}).get("tipo"),
+            "transformacao": f.get("transformacao") or {},
+            "proxy_descricao": proxy.get("descricao"),
+            "proxy_teto_peso": proxy.get("teto_peso"),
+            "nao_sustenta": f.get("nao_sustenta"),
+        })
+    return fichas
+
+
+@router.get("/execucoes/{execucao_id}/matriz", openapi_extra=LER)
+def matriz_execucao(execucao_id: str, auth: Auth = autenticado("analise.amc", escopo_token="catalogo:ler"),
+                    limite: int = Query(500, ge=1, le=limites.AMC_MATRIZ_PAGINA_MAX),
+                    deslocamento: int = Query(0, ge=0)):
+    """Item L3-01-g-tela-motor: valor bruto E favorabilidade de CADA fator em CADA unidade, para que a tela
+    recombine no navegador quando o usuário move um peso — sem novo job e sem nova extração. É a mesma conta
+    que `GET .../unidades/{id}/explicacao` faz para uma unidade, feita de uma vez para uma página de unidades.
+
+    A favorabilidade por fator sai de `app/amc/transformacoes.py` (item L3-01-d), vetorizada por fator: uma
+    chamada com todos os valores brutos daquele fator, não uma por unidade. Fator sem dado na unidade continua
+    NULL — nunca 0. Quem combina os fatores no navegador é `web/js/amc/combinacao.js`, provado equivalente ao
+    `app/amc/combinacao.py` em tests/unit/test_amc_combinacao_equivalencia.py; esta rota NÃO combina nada, para
+    não existir uma terceira implementação da mesma conta."""
+    eid = _uuid(execucao_id, "execucao_id")
+    with db.db(auth.contexto()) as cur:
+        execucao = _execucao_ou_404(cur, eid)
+        cur.execute("SELECT definicao FROM plat.amc_modelo_versao WHERE modelo_id = %s::uuid AND versao_hash = %s",
+                    (execucao["modelo_id"], execucao["versao_hash"]))
+        versao = cur.fetchone()
+        if versao is None:
+            raise ErroAPI(404, "nao_encontrado", "a versão do modelo desta execução não existe mais")
+        definicao = versao["definicao"]
+        cur.execute("SELECT count(DISTINCT unidade_id) AS n FROM plat.amc_fator_bruto WHERE execucao_id = %s::uuid",
+                    (eid,))
+        total = cur.fetchone()["n"]
+        cur.execute("SELECT unidade_id FROM plat.amc_fator_bruto WHERE execucao_id = %s::uuid "
+                    "GROUP BY unidade_id ORDER BY unidade_id LIMIT %s OFFSET %s", (eid, limite, deslocamento))
+        ids = [r["unidade_id"] for r in cur.fetchall()]
+        brutos: dict[str, dict[str, float]] = {u: {} for u in ids}
+        gravados: dict[str, dict] = {}
+        if ids:
+            cur.execute("SELECT unidade_id, fator, valor FROM plat.amc_fator_bruto "
+                        "WHERE execucao_id = %s::uuid AND unidade_id = ANY(%s)", (eid, ids))
+            for r in cur.fetchall():
+                brutos[r["unidade_id"]][r["fator"]] = r["valor"]
+            cur.execute("SELECT unidade_id, favorabilidade, vetado, motivo, cobertura FROM plat.amc_resultado "
+                        "WHERE execucao_id = %s::uuid AND unidade_id = ANY(%s)", (eid, ids))
+            gravados = {r["unidade_id"]: dict(r) for r in cur.fetchall()}
+
+    fichas = _fatores_da_definicao(definicao)
+    colunas: dict[str, list] = {}
+    for ficha in fichas:
+        crus = [brutos[u].get(ficha["id"]) for u in ids]
+        try:
+            transformados = mod_transformacoes.transformar(crus, ficha["transformacao"])
+        except (mod_transformacoes.ErroTransformacao, ValueError, KeyError) as e:
+            raise ErroAPI(422, "transformacao_invalida",
+                          f"o fator {ficha['id']!r} tem transformação que não se aplica aos valores extraídos: {e}",
+                          {"fator": ficha["id"]}) from e
+        colunas[ficha["id"]] = [None if v is None or v != v else float(v) for v in transformados]
+
+    unidades = []
+    for k, u in enumerate(ids):
+        g = gravados.get(u) or {}
+        unidades.append({
+            "unidade_id": u,
+            "brutos": [brutos[u].get(f["id"]) for f in fichas],
+            "favorabilidades": [colunas[f["id"]][k] for f in fichas],
+            "vetado": bool(g.get("vetado")) if g else False,
+            "motivo": g.get("motivo"),
+            "favorabilidade_gravada": g.get("favorabilidade"),
+            "cobertura_gravada": g.get("cobertura"),
+        })
+    comb = definicao.get("combinador") or {}
+    return {
+        "execucao_id": eid, "estado": execucao["estado"], "motor_versao": execucao["motor_versao"],
+        "modelo_id": str(execucao["modelo_id"]), "versao_hash": execucao["versao_hash"],
+        "conjunto_id": str(execucao["conjunto_id"]),
+        "aviso_pesos": "pesos escolhidos pelo usuário, não medidos",
+        "escala": "favorabilidade 0-100 (NULL = sem dado, nunca 0)",
+        "combinador": {"tipo": comb.get("tipo", "soma_ponderada_normalizada"), "gama": comb.get("gama")},
+        "dado_ausente": definicao.get("dado_ausente", "excluir_fator"),
+        "nota_pessimista_valor": definicao.get("nota_pessimista_valor", 0),
+        "pesos": execucao["pesos"], "fatores": fichas,
+        "total": total, "limite": limite, "deslocamento": deslocamento, "unidades": unidades,
+    }
+
+
+class PrevisaoEntrada(BaseModel):
+    transformacao: dict
+    valores: list[float | None] = Field(..., min_length=1, max_length=limites.AMC_PREVISAO_VALORES_MAX)
+    bins: int = Field(30, ge=2, le=200)
+
+
+@router.post("/transformacoes/previsao", openapi_extra=LER)
+def previsao_transformacao(corpo: PrevisaoEntrada, auth: Auth = autenticado("analise.amc"),
+                           _cru=SEM_CHAVE_REPETIDA):
+    """Pré-visualização da transformação escolhida (item L3-01-g): histograma do valor bruto, histograma da
+    favorabilidade resultante e a curva desenhada. Não grava nada e não abre o banco — os valores vêm de quem
+    chama (a tela manda a coluna do fator que `GET .../matriz` já lhe entregou). É a porta HTTP da função
+    `app.amc.transformacoes.pre_visualizar`, do item L3-01-d; a conta não é reimplementada aqui."""
+    try:
+        p = mod_transformacoes.pre_visualizar(corpo.valores, corpo.transformacao, bins=corpo.bins)
+        curva = mod_transformacoes.curva(corpo.valores, corpo.transformacao)
+    except (mod_transformacoes.ErroTransformacao, ValueError, KeyError) as e:
+        raise ErroAPI(422, "transformacao_invalida", str(e)) from e
+    return {
+        "tipo": corpo.transformacao.get("tipo"),
+        "entrada_histograma": p.entrada_histograma, "saida_histograma": p.saida_histograma,
+        "n": p.n, "n_nulo": p.n_nulo, "tempo_ms": round(p.tempo_ms, 3), "curva": curva,
+        "escala": "favorabilidade 0-100 (NULL = sem dado, nunca 0)",
+    }
