@@ -80,10 +80,14 @@ def _rede_de_transmissao(sessao, sufixo, limpar):
     return rid
 
 
-def _importar(sessao, rid, nome_do_caso, prefixo=""):
-    return sessao.post(f"/api/rede/{rid}/matpower?prefixo={prefixo}",
-                       content=(DADOS / f"matpower_{nome_do_caso}.m").read_bytes(),
-                       headers={"Content-Type": "text/plain; charset=utf-8"})
+def _importar(sessao, rid, nome_do_caso, prefixo="", corpo=None):
+    """O `Content-Type: application/json` é exigência da defesa contra CSRF da casa
+    (`auth.sessao.checar_escrita_sob_cookie`): sob cookie, todo corpo de escrita tem de se declarar
+    JSON. É a mesma chamada de `POST .../pacote`, que também recebe bytes crus."""
+    if corpo is None:
+        corpo = (DADOS / f"matpower_{nome_do_caso}.m").read_bytes()
+    return sessao.post(f"/api/rede/{rid}/matpower?prefixo={prefixo}", content=corpo,
+                       headers={"Content-Type": "application/json"})
 
 
 # --- cláusula: exportação para pandapower, com as contagens conferidas -------------------------------
@@ -149,7 +153,7 @@ def test_formato_desconhecido_e_recusado(sessao_a, env, limpar_redes):
     _atualizar_tudo(sessao_a, env, rid)
     r = sessao_a.get(f"/api/rede/{rid}/subrede/{CTMT}/exportar?formato=pypsa")
     assert r.status_code == 422, r.text
-    assert r.json()["erro"]["codigo"] == "formato_desconhecido"
+    assert r.json()["erro"] == "formato_desconhecido"
 
 
 # --- cláusula: importar caso público e traçar --------------------------------------------------------
@@ -235,28 +239,29 @@ def test_importar_sem_o_pacote_de_transmissao_e_recusado(sessao_a, limpar_redes)
     rid = _criar_rede(sessao_a, "sempacote", limpar_redes)      # rede com o pacote de distribuição
     r = _importar(sessao_a, rid, "case9")
     assert r.status_code == 422, r.text
-    assert r.json()["erro"]["codigo"] == "pacote_de_transmissao_ausente"
+    assert r.json()["erro"] == "pacote_de_transmissao_ausente"
 
 
 def test_caso_invalido_e_recusado_com_a_linha(sessao_a, limpar_redes):
     rid = _rede_de_transmissao(sessao_a, "invalido", limpar_redes)
-    r = sessao_a.post(f"/api/rede/{rid}/matpower",
-                      content=b"mpc.baseMVA = 100;\nmpc.bus = [\n1 3 tres;\n];\n")
+    r = _importar(sessao_a, rid, None, corpo=b"mpc.baseMVA = 100;\nmpc.bus = [\n1 3 tres;\n];\n")
     assert r.status_code == 422, r.text
-    erro = r.json()["erro"]
-    assert erro["codigo"] == "valor_nao_numerico"
-    assert erro["detalhes"][0]["linha"] == 3, erro
+    corpo = r.json()
+    assert corpo["erro"] == "valor_nao_numerico", corpo
+    assert corpo["detalhe"][0]["linha"] == 3, corpo
 
 
 def test_corpo_vazio_e_recusado(sessao_a, limpar_redes):
     rid = _rede_de_transmissao(sessao_a, "vazio", limpar_redes)
-    r = sessao_a.post(f"/api/rede/{rid}/matpower", content=b"")
-    assert r.status_code == 422 and r.json()["erro"]["codigo"] == "caso_vazio", r.text
+    r = sessao_a.post(f"/api/rede/{rid}/matpower", content=b" ",
+                      headers={"Content-Type": "application/json"})
+    assert r.status_code == 422 and r.json()["erro"] == "caso_vazio", r.text
 
 
 def test_rede_inexistente_da_404_antes_de_ler_o_corpo(sessao_a):
     r = sessao_a.post("/api/rede/00000000-0000-0000-0000-000000000000/matpower",
-                      content=b"lixo que nao e caseformat")
+                      content=b"lixo que nao e caseformat",
+                      headers={"Content-Type": "application/json"})
     assert r.status_code == 404, r.text
 
 
