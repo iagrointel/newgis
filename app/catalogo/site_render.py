@@ -293,12 +293,26 @@ RENDERIZADORES = {
 assert set(RENDERIZADORES) == CARTOES  # um renderizador por cartão do vocabulário: sem cartão mudo
 
 
-def hosts_incorporados(corpo: dict) -> list[str]:
-    """Origens dos cartões `incorporado`, para o `frame-src` da política de conteúdo da página (a página só
-    pode emoldurar o que o próprio documento declara)."""
+def _raiz_de(por_id: dict, no: dict) -> str | None:
+    """Sobe pelo `pai` até a raiz e devolve o id do nó de raiz (a página, para cartão e seção)."""
+    atual, voltas = no, 0
+    while atual and atual.get("pai") and voltas < 100:
+        atual = por_id.get(atual["pai"])
+        voltas += 1
+    return atual.get("id") if atual else None
+
+
+def hosts_incorporados(corpo: dict, pagina_id: str | None = None) -> list[str]:
+    """Origens dos cartões `incorporado`, para o `frame-src` da política de conteúdo (a página só pode
+    emoldurar o que o próprio documento declara). Com `pagina_id`, só os cartões DAQUELA página: uma página
+    sem quadro externo não deve autorizar a origem que outra página usa."""
+    nos = _nos(corpo)
+    por_id = {n.get("id"): n for n in nos}
     saida: list[str] = []
-    for n in _nos(corpo):
+    for n in nos:
         if n.get("tipo") != "incorporado":
+            continue
+        if pagina_id is not None and _raiz_de(por_id, n) != pagina_id:
             continue
         url = str(_prop(n).get("url") or "")
         if url.startswith("https://"):
