@@ -47,7 +47,7 @@ NOME_TOKEN = "mapa-web"
 SQL_CAMADA = """
 SELECT i.id, i.titulo, i.descricao, i.dados, i.criado_em
 FROM plat.item i
-WHERE i.tipo = 'camada_vetorial' AND i.apagado_em IS NULL
+WHERE i.tipo IN ('camada_vetorial', 'vista_de_camada') AND i.apagado_em IS NULL
 """
 
 
