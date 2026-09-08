@@ -3,6 +3,15 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L6-02-i-google-sheets: camada_schema_garantir serializado por slug)
+
+A rodada completa da suíte de conexões (a cláusula que faltava ao item) esbarrava em "tuple concurrently
+updated": com dois processos de worker na 1ª carga do mesmo inquilino, os dois executavam CREATE SCHEMA
+IF NOT EXISTS + GRANT USAGE no mesmo schema ao mesmo tempo, e o GRANT reescreve a ACL da mesma tupla do
+catálogo. A migração 20260908T2210 acrescenta pg_advisory_xact_lock por slug em plat.camada_schema_garantir:
+a segunda chamada espera a primeira commitar e reconfere o IF NOT EXISTS. Duas rodadas completas seguidas
+de tests/api/conexao/test_google_sheets.py: 8 passed (carga 3,5).
+
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
 SMTP configurável na instalação (`.env`, `PLAT_SMTP_*`) e por inquilino (`tenant.config->'smtp'`, senha
