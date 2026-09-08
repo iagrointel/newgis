@@ -10987,6 +10987,337 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/relatorios/tipos": {
+   "get": {
+    "tags": [
+     "relatorios"
+    ],
+    "summary": "Tipos",
+    "operationId": "tipos_api_relatorios_tipos_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TiposRelatorio"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.exportar"
+   }
+  },
+  "/api/relatorios": {
+   "get": {
+    "tags": [
+     "relatorios"
+    ],
+    "summary": "Listar",
+    "description": "Jobs `relatorios.gerar` do inquilino (a lista da fila filtrada pelo tipo de job; `tipo` filtra o relatório).",
+    "operationId": "listar_api_relatorios_get",
+    "parameters": [
+     {
+      "name": "tipo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tipo"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 50,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.exportar"
+   },
+   "post": {
+    "tags": [
+     "relatorios"
+    ],
+    "summary": "Pedir",
+    "operationId": "pedir_api_relatorios_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RelatorioPedido"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.exportar"
+   }
+  },
+  "/api/relatorios/agendas": {
+   "get": {
+    "tags": [
+     "relatorios"
+    ],
+    "summary": "Agendas",
+    "operationId": "agendas_api_relatorios_agendas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.exportar"
+   },
+   "post": {
+    "tags": [
+     "relatorios"
+    ],
+    "summary": "Agendar",
+    "description": "Agenda diária/semanal/mensal (`plat.agenda`, tipo relatorios.gerar): a janela de cada execução é o período\n(1, 7 ou 31 dias até a hora do disparo) e o link vai por e-mail ao dono da agenda quando `email`.",
+    "operationId": "agendar_api_relatorios_agendas_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AgendaPedido"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.exportar"
+   }
+  },
+  "/api/relatorios/{job_id}": {
+   "get": {
+    "tags": [
+     "relatorios"
+    ],
+    "summary": "Obter",
+    "operationId": "obter_api_relatorios__job_id__get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.exportar"
+   }
+  },
+  "/api/relatorios/{job_id}/csv": {
+   "get": {
+    "tags": [
+     "relatorios"
+    ],
+    "summary": "Csv",
+    "description": "O CSV do relatório concluído (409 enquanto não terminou); job de outro inquilino = 404 pela RLS.",
+    "operationId": "csv_api_relatorios__job_id__csv_get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "text/csv": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.exportar"
+   }
+  },
+  "/api/atividade": {
+   "get": {
+    "tags": [
+     "relatorios"
+    ],
+    "summary": "Atividade",
+    "operationId": "atividade_api_atividade_get",
+    "parameters": [
+     {
+      "name": "dias",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 366,
+       "minimum": 1,
+       "default": 30,
+       "title": "Dias"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Painel"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.exportar"
+   }
   }
  },
  "components": {
@@ -11646,6 +11977,45 @@
      "criado_em"
     ],
     "title": "Agenda"
+   },
+   "AgendaPedido": {
+    "properties": {
+     "tipo": {
+      "type": "string",
+      "pattern": "^(membros|itens|grupos|atividade|uso)$",
+      "title": "Tipo"
+     },
+     "periodicidade": {
+      "type": "string",
+      "pattern": "^(diario|semanal|mensal)$",
+      "title": "Periodicidade"
+     },
+     "hora": {
+      "type": "integer",
+      "maximum": 23.0,
+      "minimum": 0.0,
+      "title": "Hora",
+      "default": 6
+     },
+     "email": {
+      "type": "boolean",
+      "title": "Email",
+      "default": true
+     },
+     "fuso": {
+      "type": "string",
+      "maxLength": 64,
+      "title": "Fuso",
+      "default": "America/Sao_Paulo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "tipo",
+     "periodicidade"
+    ],
+    "title": "AgendaPedido"
    },
    "AmostraEntrada": {
     "properties": {
@@ -14772,6 +15142,30 @@
     ],
     "title": "JobCriado"
    },
+   "Limites": {
+    "properties": {
+     "janela_dias": {
+      "type": "integer",
+      "title": "Janela Dias"
+     },
+     "linhas_max": {
+      "type": "integer",
+      "title": "Linhas Max"
+     },
+     "por_tipo_por_hora": {
+      "type": "integer",
+      "title": "Por Tipo Por Hora"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "janela_dias",
+     "linhas_max",
+     "por_tipo_por_hora"
+    ],
+    "title": "Limites"
+   },
    "LinhaLog": {
     "properties": {
      "id": {
@@ -15564,6 +15958,65 @@
      "auth"
     ],
     "title": "OrgSaida"
+   },
+   "Painel": {
+    "properties": {
+     "janela": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Janela"
+     },
+     "totais": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Totais"
+     },
+     "top_itens": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Top Itens"
+     },
+     "eventos_por_dia": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Eventos Por Dia"
+     },
+     "eventos_por_tipo": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Eventos Por Tipo"
+     },
+     "acessos_por_dia": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Acessos Por Dia"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "janela",
+     "totais",
+     "top_itens",
+     "eventos_por_dia",
+     "eventos_por_tipo",
+     "acessos_por_dia"
+    ],
+    "title": "Painel"
    },
    "Papeis": {
     "properties": {
@@ -16563,6 +17016,50 @@
     ],
     "title": "RelacoesEntrada"
    },
+   "RelatorioPedido": {
+    "properties": {
+     "tipo": {
+      "type": "string",
+      "pattern": "^(membros|itens|grupos|atividade|uso)$",
+      "title": "Tipo"
+     },
+     "desde": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Desde"
+     },
+     "ate": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ate"
+     },
+     "email": {
+      "type": "boolean",
+      "title": "Email",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "tipo"
+    ],
+    "title": "RelatorioPedido"
+   },
    "RestaurarVersaoEntrada": {
     "properties": {
      "comentario": {
@@ -17144,6 +17641,54 @@
      "parametros_schema"
     ],
     "title": "TipoJob"
+   },
+   "TipoRelatorio": {
+    "properties": {
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "descricao": {
+      "type": "string",
+      "title": "Descricao"
+     },
+     "cabecalho": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Cabecalho"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "tipo",
+     "descricao",
+     "cabecalho"
+    ],
+    "title": "TipoRelatorio"
+   },
+   "TiposRelatorio": {
+    "properties": {
+     "tipos": {
+      "items": {
+       "$ref": "#/components/schemas/TipoRelatorio"
+      },
+      "type": "array",
+      "title": "Tipos"
+     },
+     "limites": {
+      "$ref": "#/components/schemas/Limites"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "tipos",
+     "limites"
+    ],
+    "title": "TiposRelatorio"
    },
    "Token": {
     "properties": {
