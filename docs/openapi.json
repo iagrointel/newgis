@@ -9227,6 +9227,207 @@
     "x-privilegio": "conteudo.registrar_fonte"
    }
   },
+  "/api/telemetria": {
+   "get": {
+    "tags": [
+     "telemetria"
+    ],
+    "summary": "Ver",
+    "description": "estado + PRÉVIA: o JSON exatamente como sairia agora (é o que a tela mostra antes de ligar).",
+    "operationId": "ver_api_telemetria_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   },
+   "put": {
+    "tags": [
+     "telemetria"
+    ],
+    "summary": "Ligar Ou Desligar",
+    "operationId": "ligar_ou_desligar_api_telemetria_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TelemetriaEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   }
+  },
+  "/api/telemetria/enviar": {
+   "post": {
+    "tags": [
+     "telemetria"
+    ],
+    "summary": "Enviar Agora",
+    "operationId": "enviar_agora_api_telemetria_enviar_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   }
+  },
+  "/api/telemetria/appliances": {
+   "get": {
+    "tags": [
+     "telemetria"
+    ],
+    "summary": "Appliances",
+    "operationId": "appliances_api_telemetria_appliances_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   },
+   "post": {
+    "tags": [
+     "telemetria"
+    ],
+    "summary": "Registrar Appliance",
+    "operationId": "registrar_appliance_api_telemetria_appliances_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ApplianceEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   }
+  },
+  "/api/telemetria/appliances/{chave}": {
+   "delete": {
+    "tags": [
+     "telemetria"
+    ],
+    "summary": "Apagar Appliance",
+    "operationId": "apagar_appliance_api_telemetria_appliances__chave__delete",
+    "parameters": [
+     {
+      "name": "chave",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Chave"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   }
+  },
+  "/api/telemetria/receber": {
+   "post": {
+    "tags": [
+     "telemetria"
+    ],
+    "summary": "Receber",
+    "description": "Sem sessão: a autenticação é a chave do appliance. Chave desconhecida = 403 e NADA gravado.",
+    "operationId": "receber_api_telemetria_receber_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
   "/api/arquivos/_varredura": {
    "get": {
     "tags": [
@@ -11712,6 +11913,30 @@
      "gravadas"
     ],
     "title": "AmostrasResultado"
+   },
+   "ApplianceEntrada": {
+    "properties": {
+     "chave": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 16,
+      "pattern": "^[0-9a-f]+$",
+      "title": "Chave"
+     },
+     "nome": {
+      "type": "string",
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Nome"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "chave",
+     "nome"
+    ],
+    "title": "ApplianceEntrada"
    },
    "CategoriaNo": {
     "properties": {
@@ -17017,6 +17242,32 @@
      "atual"
     ],
     "title": "Sessao"
+   },
+   "TelemetriaEntrada": {
+    "properties": {
+     "ligada": {
+      "type": "boolean",
+      "title": "Ligada"
+     },
+     "nome_instalacao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 120
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome Instalacao"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "ligada"
+    ],
+    "title": "TelemetriaEntrada"
    },
    "TipoItem": {
     "properties": {
