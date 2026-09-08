@@ -11,8 +11,8 @@
 #
 # 1. `network_mode: host` (não uma rede em ponte própria): Postgres e Garage nesta máquina escutam SÓ em
 #    127.0.0.1 (postgresql.conf: listen_addresses = '127.0.0.1'; pg_hba.conf: as roles plat_app/plat_worker
-#    só têm linha para 127.0.0.1/32 — MEDIDO 06/09/2026) e o .env do repositório já usa esses mesmos
-#    endereços (PLAT_DSN, PLAT_GARAGE_URL). Um contêiner em rede-ponte chegaria de outro IP (o gateway da
+#    só têm linha para 127.0.0.1/32 — MEDIDO 06/09/2026) e o .env/credential do repositório já usam esses
+#    mesmos endereços (PLAT_DSN, PLAT_GARAGE_URL). Um contêiner em rede-ponte chegaria de outro IP (o gateway da
 #    ponte, ex. 172.17.0.1) — a conexão TCP nem chegaria a autenticar, e abrir esse caminho exigiria mexer em
 #    listen_addresses/pg_hba.conf de um Postgres compartilhado por 20 bancos de outros produtos da casa, fora
 #    do escopo deste item. O custo aceito: o contêiner enxerga toda porta do host (perde o isolamento de rede
@@ -66,6 +66,7 @@ services:
     secrets:
       - PLAT_SECRET
       - PLAT_DSN_WORKER
+      - PLAT_DSN
     mem_limit: 2g
     memswap_limit: 2g
     restart: "no"
@@ -76,3 +77,7 @@ secrets:
     file: /etc/plat/segredos/PLAT_SECRET
   PLAT_DSN_WORKER:
     file: /etc/plat/segredos/PLAT_DSN_WORKER
+  # item L7-19: PLAT_DSN (senha de plat_app) saiu do .env montado por env_file — settings.py exige a chave
+  # sempre, mesmo aqui, então entra pelo mesmo caminho de secret que os outros dois.
+  PLAT_DSN:
+    file: /etc/plat/segredos/PLAT_DSN
