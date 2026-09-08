@@ -43,10 +43,21 @@ def test_transformacao_ausencia_nunca_vira_numero():
     assert aplicar_transformacao(None, {"tipo": "linear", "minimo": 0, "maximo": 10}) == (None, None)
 
 
-def test_transformacao_tipo_continuo_fora_de_escopo_declara_a_lacuna():
-    fav, obs = aplicar_transformacao(5.0, {"tipo": "gaussiana", "media": 5})
+def test_transformacao_continua_e_delegada_a_biblioteca_de_transformacoes():
+    """Enquanto o item L3-01-d era pendente, as doze funções contínuas saíam sem nota e com a lacuna nomeada.
+    Com ele entregue, a explicação DELEGA a app/amc/transformacoes.py — é o que impede a explicação de uma
+    unidade e a matriz da tela do motor (item L3-01-g) de darem números diferentes para o mesmo fator."""
+    fav, obs = aplicar_transformacao(5.0, {"tipo": "gaussiana", "midpoint": 5, "spread": 1})
+    assert fav == pytest.approx(100.0)  # no ponto médio a gaussiana vale o máximo
+    assert obs is None
+    longe, _ = aplicar_transformacao(9.0, {"tipo": "gaussiana", "midpoint": 5, "spread": 1})
+    assert longe < fav
+
+
+def test_transformacao_de_tipo_inexistente_continua_sem_nota_e_com_a_lacuna_nomeada():
+    fav, obs = aplicar_transformacao(5.0, {"tipo": "nao_existe"})
     assert fav is None
-    assert "L3-01-d-transformacoes" in obs
+    assert "nao_existe" in obs
 
 
 @pytest.mark.parametrize(

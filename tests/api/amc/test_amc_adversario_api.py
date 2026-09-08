@@ -215,7 +215,7 @@ def test_adv_versao_forjada_no_banco_e_aceita_pelo_banco_mas_denunciada_pelo_rec
     conexao_plat_app.rollback()
 
 
-# ================================================================ 2. vazamento entre inquilinos: 18 rotas
+# ================================================================ 2. vazamento entre inquilinos: TODAS as rotas
 def _rotas_amc() -> list[tuple[str, str]]:
     from tests.api.conftest import arquivo_openapi
 
@@ -223,11 +223,14 @@ def _rotas_amc() -> list[tuple[str, str]]:
     return sorted((m.upper(), p) for p, v in doc["paths"].items() if p.startswith("/api/amc") for m in v)
 
 
-def test_adv_as_18_rotas_de_amc_estao_todas_cobertas_por_este_ataque():
-    assert len(_rotas_amc()) == 18, _rotas_amc()
+def test_adv_todas_as_rotas_de_amc_estao_cobertas_por_este_ataque():
+    """Sem número fixo: a lista de sondas abaixo é conferida contra o OpenAPI, então rota nova sem sonda
+    reprova aqui — que é o ponto. Eram 18 quando este ataque foi escrito; a explicação (L3-01-f), a
+    similaridade (L3-17) e a matriz/previsão (L3-01-g) entraram depois."""
+    assert len(_rotas_amc()) >= 18, _rotas_amc()
 
 
-def test_adv_nenhuma_das_18_rotas_entrega_dado_de_outro_inquilino(sessao_a, sessao_b, conexao_plat_app):
+def test_adv_nenhuma_rota_de_amc_entrega_dado_de_outro_inquilino(sessao_a, sessao_b, conexao_plat_app):
     """A de B, lida por A: id no caminho, id no corpo, id no parâmetro de consulta e id do CONJUNTO de unidades.
     Qualquer 200 que carregue identificador de B é vazamento."""
     definicao_b = modelo_com_itens(sessao_b)
@@ -274,8 +277,22 @@ def test_adv_nenhuma_das_18_rotas_entrega_dado_de_outro_inquilino(sessao_a, sess
         ("GET", "/api/amc/execucoes/{execucao_id}", f"/api/amc/execucoes/{eid}", None),
         ("GET", "/api/amc/execucoes/{execucao_id}/resultados", f"/api/amc/execucoes/{eid}/resultados", None),
         ("DELETE", "/api/amc/execucoes/{execucao_id}", f"/api/amc/execucoes/{eid}", None),
+        ("GET", "/api/amc/execucoes/{execucao_id}/unidades/{unidade_id}/explicacao",
+         f"/api/amc/execucoes/{eid}/unidades/{MARCA_UNIDADE}/explicacao", None),
+        # item L3-01-g: a matriz é o dado mais rico da execução (valor bruto E favorabilidade de cada fator em
+        # cada unidade); se alguma rota vazasse, seria a mais cara de vazar
+        ("GET", "/api/amc/execucoes/{execucao_id}/matriz", f"/api/amc/execucoes/{eid}/matriz", None),
+        # as três que não tocam tabela do inquilino: a conta é sobre o que o CHAMADOR manda. A sonda existe
+        # para provar que continuam assim — se um dia lerem o banco, a marca de B aparece aqui.
+        ("POST", "/api/amc/transformacoes/previsao", "/api/amc/transformacoes/previsao",
+         {"transformacao": {"tipo": "linear", "minimo": 0, "maximo": 10, "direcao": "crescente"},
+          "valores": [0.0, 5.0, 10.0]}),
+        ("POST", "/api/amc/similaridade", "/api/amc/similaridade",
+         {"unidades": {"a1": {"f": 1.0}, "a2": {"f": 2.0}}, "referencias": ["a1"]}),
+        ("POST", "/api/amc/similaridade/exportar", "/api/amc/similaridade/exportar?formato=geojson",
+         {"unidades": {"a1": {"f": 1.0}, "a2": {"f": 2.0}}, "referencias": ["a1"]}),
     ]
-    assert sorted((m, p) for m, p, _u, _c in sondas) == _rotas_amc(), "sonda não cobre as 18 rotas"
+    assert sorted((m, p) for m, p, _u, _c in sondas) == _rotas_amc(), "sonda não cobre todas as rotas de /api/amc"
     criados = []
     try:
         for metodo, _padrao, url, corpo in sondas:
@@ -564,7 +581,7 @@ def test_adv_execute_values_e_o_unico_desvio_da_reescrita_de_schema():
        tests/unit/test_schema_ambiente.py)."""
     import inspect
 
-    from app.schema_ambiente import CursorSchemaAmbiente, MixinReescritaSchema, reescrever_schema
+    from app.schema_ambiente import CursorSchemaAmbiente, reescrever_schema
 
     fonte_unidades = inspect.getsource(mod_unidades)
     assert "execute_values" not in fonte_unidades.replace("`psycopg2.extras.execute_values`", ""), \
@@ -573,9 +590,13 @@ def test_adv_execute_values_e_o_unico_desvio_da_reescrita_de_schema():
 
     assert reescrever_schema("SELECT 1 FROM plat.amc_unidade", "plat_homolog") == \
         "SELECT 1 FROM plat_homolog.amc_unidade"
-    # a mesma consulta em bytes, que era o buraco
-    assert CursorSchemaAmbiente._reescrever is MixinReescritaSchema._reescrever
-    assert set(MixinReescritaSchema.PONTOS_COM_CONSULTA) >= {"execute", "executemany", "callproc"}
+    # a mesma consulta em bytes, que era o buraco: em master o cursor decodifica os bytes em `_texto` antes de
+    # reescrever, em vez de um mixin com lista de pontos de entrada — a trava continua sendo
+    # tests/unit/test_schema_ambiente.py, que é quem impede um caminho novo de escapar
+    fonte_cursor = inspect.getsource(CursorSchemaAmbiente)
+    for ponto in ("execute", "executemany", "callproc", "copy_expert"):
+        assert f"def {ponto}(" in fonte_cursor, f"o cursor deixou de cobrir {ponto}: consulta escaparia da reescrita"
+    assert "_texto" in fonte_cursor, "o caminho de bytes sumiu do cursor: execute_values voltaria a escapar"
 
 
 @pytest.mark.lento
