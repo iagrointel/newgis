@@ -58,8 +58,38 @@
    },
    "unidade": "medida",
    "comando": "venv/bin/pytest tests/unit/test_modelos3d_ifc_grande.py -m lento"
+  },
+  "ifc_aberto_elementos_na_tabela": {
+   "valor": {
+    "elementos_no_arquivo": 13,
+    "linhas_na_tabela": 13,
+    "com_forma": 11,
+    "sem_forma": 2,
+    "arquivo": "Building-Architecture.ifc (buildingSMART, CC BY 4.0)"
+   },
+   "unidade": "contagem",
+   "comando": "venv/bin/pytest tests/api/test_modelos3d_api.py -k uma_linha_por_elemento"
   }
  },
- "gerado_em": "2026-09-08T12:55:12Z",
- "git_sha": "51bdfbbb91b0"
+ "gerado_em": "2026-09-08T12:58:32Z",
+ "git_sha": "51bdfbbb91b0",
+ "pendencias": [
+  {
+   "clausula": "Pro consumindo o tileset",
+   "estado": "PENDENTE",
+   "decisao": "D20",
+   "razao": "depende da credencial do parceiro; nao foi medido nem simulado. A rota do tileset e autenticada pela porta padrao da casa (sessao ou token de servico com escopo catalogo:ler)."
+  },
+  {
+   "clausula": "i3s",
+   "estado": "FORA, declarado",
+   "razao": "nao ha produtor aberto do formato na pilha; existe a especificacao e implementacoes do fabricante. Nao foi construido e nao se promete."
+  },
+  {
+   "clausula": "geometria IFC de fronteira generica, booleana e varredura",
+   "estado": "NAO CONVERTIDA, contada",
+   "decisao": "D32",
+   "razao": "o leitor em Python puro converte malha tesselada e solido de extrusao; o resto entra na tabela com tem_geometria=false e soma em elementos_sem_forma. Converter o resto exige o IfcOpenShell, que a casa tem no servidor de GPU e esta maquina nao tem."
+  }
+ ]
 }

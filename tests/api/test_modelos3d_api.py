@@ -162,7 +162,7 @@ def modelo_ifc(sessao_a, criar_modelo, ctx_a):
     return sessao_a.get(f"/api/modelos/{modelo['id']}").json()
 
 
-def test_ifc_convertido_tem_uma_linha_por_elemento(sessao_a, modelo_ifc):
+def test_ifc_convertido_tem_uma_linha_por_elemento(sessao_a, modelo_ifc, medida):
     """Cláusula do portão: N elementos no arquivo = N linhas na tabela."""
     assert modelo_ifc["estado"] == "pronto"
     assert modelo_ifc["elementos"] == ELEMENTOS_IFC
@@ -172,6 +172,12 @@ def test_ifc_convertido_tem_uma_linha_por_elemento(sessao_a, modelo_ifc):
     assert r.json()["total"] == ELEMENTOS_IFC
     assert len(r.json()["itens"]) == ELEMENTOS_IFC
     assert len({e["guid"] for e in r.json()["itens"]}) == ELEMENTOS_IFC
+    medida("L2-09-c-modelos-gltf-ifc-3dtiles")(
+        "ifc_aberto_elementos_na_tabela",
+        {"elementos_no_arquivo": ELEMENTOS_IFC, "linhas_na_tabela": r.json()["total"],
+         "com_forma": COM_FORMA_IFC, "sem_forma": ELEMENTOS_IFC - COM_FORMA_IFC,
+         "arquivo": "Building-Architecture.ifc (buildingSMART, CC BY 4.0)"},
+        "contagem", "venv/bin/pytest tests/api/test_modelos3d_api.py -k uma_linha_por_elemento")
 
 
 def test_clique_no_elemento_traz_as_propriedades(sessao_a, modelo_ifc):
