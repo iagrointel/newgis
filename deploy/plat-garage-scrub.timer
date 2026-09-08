@@ -1,0 +1,10 @@
+[Unit]
+Description=plat — scrub semanal do Garage, domingo 03:00 (item L7-07-b)
+
+[Timer]
+OnCalendar=Sun *-*-* 03:00:00
+Persistent=true
+RandomizedDelaySec=30min
+
+[Install]
+WantedBy=timers.target
