@@ -501,11 +501,18 @@ def _envolver(caminho: Path, fonte: str) -> Path:
 # ------------------------------------------------------------------ registro do tipo de job
 def test_tipo_de_job_registrado(monkeypatch):
     from app import settings as cfg
+    # Só COMPLETA o que faltar no ambiente: sobrescrever PLAT_DSN aqui envenenava o resto da sessão de teste.
+    # `app/db.py` faz `from app.settings import settings`, ou seja, guarda a INSTÂNCIA criada na primeira
+    # leitura; se ela nascer com um DSN inventado, o `cache_clear()` no fim deste teste não a substitui e
+    # toda suíte de API que rodar DEPOIS neste worker morre no setup ("plat_app:x" no pool). Medido em 08/09
+    # rodando este arquivo junto com tests/api/test_privilegio_escalonamento.py.
     for k, val in {"PLAT_DSN": "postgresql://plat_app:x@127.0.0.1:5432/iagro_sat", "PLAT_SECRET": "ab" * 32,
                    "PLAT_AMBIENTE": "dev", "PLAT_URL_PUBLICA": "https://exemplo.invalido",
                    "PLAT_WORKER_MEMORIA_MB": "2048"}.items():
-        monkeypatch.setenv(k, val)
-    cfg.obter.cache_clear()
+        if not os.environ.get(k):
+            monkeypatch.setenv(k, val)
+    if cfg.obter.cache_info().currsize == 0:
+        cfg.obter.cache_clear()
     from app.jobs.registro import REGISTRO, validar_parametros
     from app.raster import tarefas  # noqa: F401
     t = REGISTRO["raster.validar"]
