@@ -39,6 +39,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- console do superadmin (L0-07-f-console-plataforma): fora de qualquer inquilino, só superadmin de `plataforma`
+    "/plataforma": "plataforma.html",
 }
 router = APIRouter()
 
