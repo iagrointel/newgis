@@ -104,6 +104,73 @@ def test_indicador_uma_feicao_traz_a_linha_e_nao_um_agregado(sessao_a, painel_ex
     assert api["valores"]["valor"] == pytest.approx(float(esperado["valor"]))
 
 
+
+def test_indicador_e_barras_batem_com_sql_em_um_painel_de_CINCO_fontes(
+    sessao_a, painel_exemplo_demo, conexao_plat_app,
+):
+    """Cláusula literal do portão: "soma/média/contagem do indicador e das barras batem com SQL direto
+    (teste com 5 fontes)". Um painel com CINCO vistas sobre a mesma camada — uma sem filtro e uma por
+    categoria —, e para cada uma a contagem, a soma e a média do indicador, mais a série de barras por
+    categoria, conferidas contra a MESMA consulta em SQL com o WHERE da vista."""
+    categorias = [x["categoria"] for x in
+                  _sql(conexao_plat_app, "SELECT DISTINCT categoria FROM {t} ORDER BY 1")]
+    assert len(categorias) >= 4, categorias
+    camada = {"ref": painel_exemplo_demo["camada_id"]}
+    fontes = [{"id": "01JPA1NEKEXEMPK0F0NTE0001A", "nome": "todas", "camada": camada,
+               "campos": ["categoria", "valor"]}]
+    for i, categoria in enumerate(categorias[:4]):
+        fontes.append({"id": f"01JPA1NEKEXEMPK0F0NTE0002{i}", "nome": f"só {categoria}",
+                       "camada": {"ref": painel_exemplo_demo["camada_id"]}, "campos": ["categoria", "valor"],
+                       "filtro": {"op": "=", "args": [{"property": "categoria"}, categoria]}})
+    corpo = {"grade": {"colunas": 12, "linha_px": 36}, "fontes": fontes,
+             "elementos": [{"id": f"01JPA1NEKEXEMPK0F0NTE0003{i}", "tipo": "indicador", "x": 0, "y": i,
+                            "largura": 3, "altura": 3, "fonte": f["id"], "opcoes": {"agregacao": "contagem"}}
+                           for i, f in enumerate(fontes)]}
+    r = sessao_a.post("/api/itens", json={"tipo": "painel", "titulo": "zt L2-06-b cinco fontes",
+                                          "dados": {"tipo": "painel", "esquema_versao": 3, "corpo": corpo}})
+    assert r.status_code == 201, r.text
+    painel_id = r.json()["id"]
+    try:
+        for i, fonte in enumerate(fontes):
+            onde = "" if i == 0 else " WHERE categoria = %s"
+            params = () if i == 0 else (categorias[i - 1],)
+            r = _pedir(sessao_a, painel_id, {
+                "c": {"agregacao": "indicador", "estatistica": "contagem"},
+                "s": {"agregacao": "indicador", "estatistica": "soma", "campo": "valor"},
+                "m": {"agregacao": "indicador", "estatistica": "media", "campo": "valor"},
+                "b": {"agregacao": "serie", "grupo": "categoria",
+                      "series": [{"estatistica": "contagem"}, {"estatistica": "soma", "campo": "valor"}]},
+            }, fonte=fonte["id"])
+            assert r.status_code == 200, (fonte["nome"], r.text)
+            res = r.json()["resultados"]
+            esperado = _sql(conexao_plat_app,
+                            "SELECT count(*) AS c, sum(valor) AS s, avg(valor) AS m FROM {t}" + onde, params)[0]
+            assert res["c"]["valor"] == esperado["c"], fonte["nome"]
+            assert res["s"]["valor"] == pytest.approx(float(esperado["s"])), fonte["nome"]
+            assert res["m"]["valor"] == pytest.approx(float(esperado["m"])), fonte["nome"]
+            barras = _sql(conexao_plat_app,
+                          "SELECT categoria, count(*) AS c, sum(valor) AS s FROM {t}" + onde
+                          + " GROUP BY 1", params)
+            # compara por CATEGORIA, não por posição: com contagens empatadas a ordem entre iguais é livre
+            por_categoria = {chave: (res["b"]["series"][0]["valores"][j], res["b"]["series"][1]["valores"][j])
+                             for j, chave in enumerate(res["b"]["chaves"])}
+            assert set(por_categoria) == {x["categoria"] for x in barras}, fonte["nome"]
+            for x in barras:
+                c_api, s_api = por_categoria[x["categoria"]]
+                assert c_api == x["c"] and s_api == pytest.approx(float(x["s"])), (fonte["nome"], x["categoria"])
+            # a soma das barras é o indicador: a tela nunca precisa somar nada
+            assert sum(res["b"]["series"][0]["valores"]) == res["c"]["valor"], fonte["nome"]
+        # as quatro vistas por categoria somam a vista sem filtro (prova de que os filtros não se sobrepõem)
+        total = 0
+        for fonte in fontes[1:]:
+            r = _pedir(sessao_a, painel_id, {"c": {"agregacao": "indicador", "estatistica": "contagem"}},
+                       fonte=fonte["id"])
+            total += r.json()["resultados"]["c"]["valor"]
+        assert total == _sql(conexao_plat_app, "SELECT count(*) AS c FROM {t}")[0]["c"]
+    finally:
+        sessao_a.delete(f"/api/itens/{painel_id}")
+
+
 # ---------------------------------------------------------------- gráfico serial: categoria, data e séries
 def test_serie_por_categoria_com_duas_series_bate_com_sql(sessao_a, painel_exemplo_demo, conexao_plat_app):
     r = _pedir(sessao_a, painel_exemplo_demo["painel_id"], {"s": {
@@ -142,6 +209,31 @@ def test_serie_por_mes_usa_o_fuso_do_inquilino_e_bate_com_sql(sessao_a, painel_e
                      "count(*) AS n FROM {t} GROUP BY 1 ORDER BY 1",
                      ("Pacific/Kiritimati", "Pacific/Kiritimati"))
     assert r2.json()["resultados"]["s"]["series"][0]["valores"] == [x["n"] for x in esperado2]
+
+
+
+def test_serie_por_mes_com_filtro_de_execucao_nao_troca_o_fuso_pelo_valor_do_filtro(
+    sessao_a, painel_exemplo_demo, conexao_plat_app,
+):
+    """Regressão do e2e do L2-06-b: gráfico por mês MAIS filtro global. Os `%s` do SQL aparecem na ordem
+    SELECT (fuso, fuso), WHERE (valor do filtro), GROUP BY (fuso, fuso); montar a lista de parâmetros na
+    ordem de descoberta (where primeiro) ligava o valor do filtro ao `AT TIME ZONE` e o Postgres reprovava
+    com `column ... must appear in the GROUP BY clause` — o painel inteiro caía em 500 ao filtrar."""
+    pedido = {"agregacao": "serie", "series": [{"estatistica": "contagem"}],
+              "faixa_data": {"campo": "registrado_em", "granularidade": "mes", "fuso": FUSO}}
+    r = _pedir(sessao_a, painel_exemplo_demo["painel_id"], {"s": pedido}, filtro={"categoria": "agua"})
+    assert r.status_code == 200, r.text
+    api = r.json()["resultados"]["s"]
+    esperado = _sql(conexao_plat_app,
+                    "SELECT (date_trunc('month', registrado_em AT TIME ZONE %s) AT TIME ZONE %s) AS faixa, "
+                    "count(*) AS n FROM {t} WHERE categoria = %s GROUP BY 1 ORDER BY 1", (FUSO, FUSO, "agua"))
+    assert api["series"][0]["valores"] == [x["n"] for x in esperado]
+    assert sum(api["series"][0]["valores"]) < 120, "o filtro não recortou nada — o teste não prova o conserto"
+    # filtro que não casa: série vazia, nunca erro
+    r2 = _pedir(sessao_a, painel_exemplo_demo["painel_id"], {"s": pedido},
+                filtro={"categoria": "nao-existe-zt"})
+    assert r2.status_code == 200, r2.text
+    assert r2.json()["resultados"]["s"]["chaves"] == []
 
 
 # ---------------------------------------------------------------- tabela agrupada com subtotal e total
