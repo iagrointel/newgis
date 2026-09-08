@@ -230,3 +230,9 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## ------------------------------------------------------------- console da plataforma (item L0-07-f)
+
+| nome | valor | explicação |
+|---|---|---|
+| `PLATAFORMA_SUSPENSAO_MENSAGEM_MAX` | `300` | mensagem mostrada aos membros do inquilino suspenso (503); cabe num aviso |
