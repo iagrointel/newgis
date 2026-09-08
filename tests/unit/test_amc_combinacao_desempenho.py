@@ -1,5 +1,5 @@
 """Cláusula de desempenho do combinador (item L3-01-e-combinacao): recálculo de 4.346 unidades × 19
-fatores — o tamanho medido do motor logístico da casa (`cbre.imoveis_fav`/`cbre.hex_fatores`, 19
+fatores — o tamanho medido do motor logístico de referência da casa (19
 fatores) — em no máximo 50 ms no servidor (Python/numpy) e 20 ms no navegador (JavaScript via node,
 mesmo relógio `performance.now` que o browser usa).
 
