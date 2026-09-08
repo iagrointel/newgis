@@ -87,46 +87,18 @@ class MixinReescritaSchema:
     }
 
     def execute(self, query, *args, **kwargs):
-        # `psycopg2.extras.execute_values` (usado pelos importadores em lote da rede de utilidades,
-        # L4-01-modelo-rede/L4-05-g-osm-power) monta a consulta em BYTES antes de chamar cur.execute
-        # -- isinstance(query, str) nunca batia para essas chamadas, então o schema de homologação/
-        # trilha nunca era aplicado nelas e o INSERT ia parar no `plat` de produção com permissão
-        # negada (achado do item L4-05-g-osm-power). Decodifica na codificação da conexão, reescreve
-        # e devolve como texto -- psycopg2 aceita str no lugar de bytes sem custo extra.
-        if isinstance(query, (bytes, bytearray)):
-            query = self._texto(query)
-        if isinstance(query, str):
-            query = self._reescrever(query)
-        return super().execute(query, *args, **kwargs)
+        # `psycopg2.extras.execute_values` (importadores em lote da rede de utilidades, L4-01-modelo-rede /
+        # L4-05-g-osm-power) monta a consulta em BYTES antes de chamar cur.execute: `isinstance(query, str)`
+        # nunca batia nessas chamadas, o schema de trilha/homologação não era aplicado e o INSERT ia parar no
+        # `plat` de PRODUÇÃO com permissão negada. Quem trata os dois tipos é `_reescrever`.
+        return super().execute(self._reescrever(query), *args, **kwargs)
 
     def executemany(self, query, vars_list):
-        # mesma classe de defeito do bytes/`execute_values` acima, achada agora em `cur.executemany`
-        # (usado por `POST /api/papeis` para `plat.papel_privilegio`, app/auth/rotas_usuarios.py, e pelo
-        # item L3-19-multiescala em execuções de grade aninhada): psycopg2 implementa executemany em C
-        # chamando pq_execute diretamente por linha, NUNCA através do `self.execute()` Python —
-        # subclassificar só `execute()` não intercepta nada aqui. Sem esta sobrecarga, o INSERT ia com o
-        # literal `plat.` para o schema de PRODUÇÃO em qualquer ambiente isolado (trilha/homologação), e a
-        # permissão negada aparecia traduzida como "operação fora do inquilino da sessão" — não uma
-        # checagem de inquilino, um schema errado na consulta.
-        if isinstance(query, (bytes, bytearray)):
-            query = self._texto(query)
-        if isinstance(query, str):
-            query = self._reescrever(query)
-        return super().executemany(query, vars_list)
-
-    def copy_expert(self, sql, *args, **kwargs):
-        # `COPY plat.geo_endereco ... FROM STDIN` da carga do geocodificador (achado F2, item F9): o COPY em
-        # lote também não passa pelo `execute` da subclasse.
-        if isinstance(sql, (bytes, bytearray)):
-            sql = self._texto(sql)
-        if isinstance(sql, str):
-            sql = self._reescrever(sql)
-        return super().copy_expert(sql, *args, **kwargs)
-
-    def _texto(self, query) -> str:
-        from psycopg2 import extensions as _ext
-
-        return bytes(query).decode(_ext.encodings[self.connection.encoding])
+        # mesma classe de defeito do bytes acima, achada em `cur.executemany` (`POST`/`PUT /api/papeis` grava
+        # `plat.papel_privilegio` por essa via, e o item L3-19-multiescala grava execuções de grade aninhada):
+        # psycopg2 implementa executemany em C chamando pq_execute por linha, NUNCA através do `self.execute()`
+        # Python — sobrecarregar só `execute()` não intercepta nada aqui.
+        return super().executemany(self._reescrever(query), vars_list)
 
     def callproc(self, procname, *args, **kwargs):
         return super().callproc(self._reescrever(procname), *args, **kwargs)
@@ -135,11 +107,36 @@ class MixinReescritaSchema:
         return super().mogrify(self._reescrever(query), *args, **kwargs)
 
     def copy_expert(self, sql, *args, **kwargs):
+        # `COPY plat.geo_endereco ... FROM STDIN` da carga do geocodificador: o COPY em lote também não passa
+        # pelo `execute` da subclasse.
         return super().copy_expert(self._reescrever(sql), *args, **kwargs)
 
     @staticmethod
-    def _reescrever(sql: str) -> str:
+    def _reescrever(consulta):
+        """Reescreve texto OU bytes, devolvendo o mesmo tipo que entrou; qualquer outro tipo (por exemplo um
+        `psycopg2.sql.Composed`, que a casa não usa) passa cru, como sempre passou. No-op quando os dois schemas
+        já são o padrão: é o que garante que produção não paga nem uma regex.
+
+        O par de schemas vem de `esquemas_do_ambiente()`, que lê `app.settings` quando ele existe e cai nas
+        variáveis de ambiente quando não existe (script solto rodando sem venv). A decodificação de bytes é
+        UTF-8 fixa, e não a codificação da conexão, porque este método também roda em cursor sem conexão
+        (a base espiã de `tests/unit/test_schema_ambiente.py`) e porque todo comando que a casa monta em bytes
+        é UTF-8; bytes que não decodificam passam crus, para nunca corromper o comando."""
         schema, trabalho = esquemas_do_ambiente()  # tardio: evita ciclo settings <-> schema_ambiente
         if schema == SCHEMA_PADRAO and trabalho == SCHEMA_TRABALHO_PADRAO:
-            return sql  # caminho de produção: nenhuma regex roda
-        return reescrever_schema(sql, schema, trabalho)
+            return consulta  # caminho de produção: nenhuma regex roda, nem sobre texto nem sobre bytes
+        if isinstance(consulta, str):
+            return reescrever_schema(consulta, schema, trabalho)
+        if isinstance(consulta, (bytes, bytearray)):
+            try:
+                texto = bytes(consulta).decode("utf-8")
+            except UnicodeDecodeError:
+                return consulta  # não é SQL em UTF-8: melhor mandar cru do que corromper o comando
+            return reescrever_schema(texto, schema, trabalho).encode("utf-8")
+        return consulta
+
+
+class CursorSchemaAmbiente(MixinReescritaSchema, psycopg2.extras.RealDictCursor):
+    """RealDictCursor que reescreve o texto da consulta para o schema do ambiente antes de mandar ao servidor,
+    em todos os pontos de entrada listados em `MixinReescritaSchema.PONTOS_COM_CONSULTA`. O mixin vem primeiro
+    na MRO para que `super()` caia no cursor do psycopg2."""
