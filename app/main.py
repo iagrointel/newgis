@@ -44,8 +44,8 @@ from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
-from app.multiescala.rotas import router as rotas_multiescala
 from app.mapas.rotas import router as rotas_mapas
+from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_esri_un import router as rotas_rede_un_esri
