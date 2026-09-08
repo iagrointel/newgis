@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Vídeos · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="tela videos">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <div id="ferramentas" class="linha-ferramentas">
+      <h1>Vídeos por tarefa</h1>
+    </div>
+    <p class="aviso-beta">análise / beta privado</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" id="videos-cartao" aria-labelledby="t-videos">
+      <h2 id="t-videos">tarefas filmadas <span id="videos-total" class="contagem">…</span></h2>
+      <p class="ajuda">cada vídeo nasce do teste que percorre a mesma tarefa na instalação real. A narração
+        é sintética em português e a legenda existe em português, inglês e espanhol. O vídeo tem até três
+        minutos e cada um corresponde a uma seção do manual (MANUAL.md no repositório).</p>
+      <div id="videos-lista"></div>
+      <p id="videos-vazio" class="ajuda" hidden>os vídeos ainda não foram gerados nesta instalação.
+        O comando que gera é <code>make videos</code> na raiz do repositório.</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/videos.js"></script>
+</body>
+</html>
