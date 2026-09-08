@@ -130,6 +130,7 @@ LDAP_IMPORTAR_MAX = 2000            # tamanho máximo de uma importação de gru
 # e o proxy nunca vira um jeito de esgotar a máquina com um serviço lento de propósito (ADR 0012).
 CONEXAO_TIPOS = (
     "wms", "wmts", "wfs", "ogc_api", "esri_rest", "stac", "geoparquet", "pmtiles", "postgres_fdw", "s3", "http",
+    "odk_central",
 )
 CONEXAO_MODOS = ("referenciada", "copiada")
 CONEXAO_NOME_MAX = 200
@@ -141,6 +142,20 @@ CONEXAO_LER_TIMEOUT_S = 6.0              # teste de saúde: curto de propósito 
 CONEXAO_REDIRECT_MAX = 5                 # cada hop é revalidado do zero (host novo pode ser interno)
 CONEXAO_RESPOSTA_MAX_BYTES = 1 * 1024 * 1024  # 1 MiB: o teste de saúde confere status/corpo curto
                                                 # (nunca baixa o serviço inteiro)
+
+# --- ponte com o ODK Central (L2-07-e-odk-central-ponte; app/odk/): conexão do tipo `odk_central`, publicação do
+# XLSForm e leitura dos envios por OData. Os tempos são maiores que os do teste de saúde porque aqui há
+# transferência de verdade (planilha, página de envios, anexo), e continuam pequenos o bastante para o job não
+# prender o worker: quem tem muito envio pagina, não espera uma resposta gigante.
+ODK_LER_TIMEOUT_S = 30.0
+ODK_PAGINA_ENVIOS = 100                    # $top do OData por página (o Central aceita até 1000; 100 é o padrão dele)
+ODK_ENVIOS_MAX_POR_EXECUCAO = 1000         # teto de envios lidos numa sincronização (o resto fica para a próxima)
+ODK_PAGINAS_MAX = 50                       # trava contra paginação que nunca termina (página sempre cheia)
+ODK_RESPOSTA_MAX_BYTES = 8 * 1024 * 1024   # página de OData / lista de entidades
+# a planilha publicada é a MESMA que a importação aceita (XLSFORM_TAMANHO_MAX) e o anexo puxado é o mesmo que a
+# API de anexo aceita (ANEXO_TAMANHO_MAX): dois tetos para a mesma coisa deixariam passar aqui o que a outra
+# porta recusa, e o envio só quebraria depois de baixado.
+ODK_ENTIDADES_MAX = 5000                   # entidades lidas de um dataset para virar lista de escolhas
 
 # --- ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 INGESTAO_AMOSTRA_VALIDADE = 1000          # feições lidas na amostra de ST_IsValid (ogr2ogr -limit, MEDIDO no ADR)

@@ -139,7 +139,7 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 
 | nome | valor | explicação |
 |---|---|---|
-| `CONEXAO_TIPOS` | `('wms', 'wmts', 'wfs', 'ogc_api', 'esri_rest', 'stac', 'geoparquet', 'pmtiles', 'postgres_fdw', 's3', 'http')` | — |
+| `CONEXAO_TIPOS` | `('wms', 'wmts', 'wfs', 'ogc_api', 'esri_rest', 'stac', 'geoparquet', 'pmtiles', 'postgres_fdw', 's3', 'http', 'odk_central')` | — |
 | `CONEXAO_MODOS` | `('referenciada', 'copiada')` | — |
 | `CONEXAO_NOME_MAX` | `200` | — |
 | `CONEXAO_URL_MAX` | `2048` | — |
@@ -149,6 +149,17 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `CONEXAO_LER_TIMEOUT_S` | `6.0` | teste de saúde: curto de propósito (POST /api/conexoes/{id}/testar) |
 | `CONEXAO_REDIRECT_MAX` | `5` | cada hop é revalidado do zero (host novo pode ser interno) |
 | `CONEXAO_RESPOSTA_MAX_BYTES` | `1048576` | 1 MiB: o teste de saúde confere status/corpo curto |
+
+## ponte com o ODK Central (L2-07-e-odk-central-ponte; app/odk/): conexão do tipo `odk_central`, publicação do
+
+| nome | valor | explicação |
+|---|---|---|
+| `ODK_LER_TIMEOUT_S` | `30.0` | — |
+| `ODK_PAGINA_ENVIOS` | `100` | $top do OData por página (o Central aceita até 1000; 100 é o padrão dele) |
+| `ODK_ENVIOS_MAX_POR_EXECUCAO` | `1000` | teto de envios lidos numa sincronização (o resto fica para a próxima) |
+| `ODK_PAGINAS_MAX` | `50` | trava contra paginação que nunca termina (página sempre cheia) |
+| `ODK_RESPOSTA_MAX_BYTES` | `8388608` | página de OData / lista de entidades |
+| `ODK_ENTIDADES_MAX` | `5000` | entidades lidas de um dataset para virar lista de escolhas |
 
 ## ingestão vetorial (L0-04; ADR 0005, reduzido a 4 formatos: shapefile.zip, gpkg, geojson, csv)
 
@@ -230,3 +241,32 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## edição transacional de feições (L2-03-a-api-edicao-transacional; POST /api/camadas/{id}/edicoes, única
+
+| nome | valor | explicação |
+|---|---|---|
+| `EDICAO_LOTE_MAX` | `2000` | — |
+| `EDICAO_ATRIBUTOS_MAX` | `500` | campos por feição num único pedido (mesmo teto de INGESTAO_CAMPOS_MAX) |
+| `EDICAO_TEXTO_MAX` | `65536` | 64 KiB por valor de campo texto (mesma ordem de ITEM_DESCRICAO_MAX) |
+| `EDICAO_REGRA_CAMPO_MAX` | `500` | entradas em dados.regras_campo (mesmo teto de campos da camada) |
+| `EDICAO_DOMINIO_VALORES_MAX` | `1000` | valores aceitos por regra de domínio codificado |
+| `EDICAO_SRID_MAX` | `999999` | mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql) |
+
+## edição no mapa: histórico/restauração e anexos por feição (item L2-03-edicao)
+
+| nome | valor | explicação |
+|---|---|---|
+| `HISTORICO_LISTA_MAX` | `500` | entradas devolvidas por consulta (mais recentes primeiro) |
+| `ANEXO_TAMANHO_MAX` | `7340032` | 7 MiB por anexo — NÃO 10: o envio é JSON com o conteúdo em base64 |
+| `ANEXO_TIPOS_PERMITIDOS` | `('application/pdf', 'image/gif', 'image/jpeg', 'image/png', 'image/webp')` | — |
+
+## formulário de coleta por XLSForm (L2-07-b-formulario-de-coleta-xlsform; app/coleta)
+
+| nome | valor | explicação |
+|---|---|---|
+| `XLSFORM_TAMANHO_MAX` | `2097152` | 2 MiB por planilha (formulários reais têm dezenas de KiB) |
+| `FORMULARIO_CAMPOS_MAX` | `500` | perguntas por formulário (mesmo teto de campos da camada) |
+| `FORMULARIO_LISTA_MAX` | `5000` | linhas por lista de escolhas (cascata de município cabe) |
+| `FORMULARIO_REPETICOES_MAX` | `200` | linhas por repetição numa única resposta |
+| `FORMULARIO_ANEXOS_MAX` | `20` | anexos por resposta |
