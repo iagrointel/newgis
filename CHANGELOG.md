@@ -1169,6 +1169,20 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
 
+## turno 8, setembro de 2026 (item L5-01-c-widgets-dado: widgets de dado do app sobre camada no servidor)
+
+Os widgets de dado do app deixam de depender de a fonte estar inteira no navegador: a Vista ganha uma API assíncrona
+(página, total, agregação, histograma, valores únicos, ids do filtro, exportação) que em fonte de camada delega ao
+FeatureServer do L2-04 (`where` traduzido do CQL2-JSON, `orderByFields`, `resultOffset`, `outStatistics` por grupo,
+`returnDistinctValues`, `returnIdsOnly`, `geometry`) e em fonte embutida/arquivo roda em memória. Tabela 2.0.0
+(página/ordenação/contagem no servidor, exportar CSV e GeoJSON do filtro ativo), gráfico 2.0.0 (barra, linha, pizza,
+histograma, dispersão; Chart.js 4.5.1 vendido, agregação no servidor), filtro 2.0.0 (texto, valores únicos,
+intervalo, data), e os novos `lista` (cartões com modelo e expressão), `consulta` (atributo + espacial), `selecao`
+(por atributo, tudo, inverter), `info-feicao` e `adicionar-dado` (GeoJSON temporário em fonte de memória). Filtros
+dinâmicos de origens diferentes se combinam por AND na vista. Medido: p95 por página com 100 mil pontos e as 5
+agregações comparadas com SQL direto em `tests/medidas/L5-01-c-widgets-dado.json`. Paridade: `docs/PARIDADE.md`
+("Widgets de dado do aplicativo", 15 widgets Data centric do Experience Builder); ADR `20260908T1500-widgets-de-dado`.
+
 ## turno 8, setembro de 2026 (item L5-07-fontes-vistas-mensagens: modelo de dado do app e barramento de mensagens)
 
 O documento `app` (esquema 3) ganha `fontes` (item do catálogo, caminho do servidor ou embutida; campos tipados),
