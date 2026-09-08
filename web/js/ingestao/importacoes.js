@@ -64,7 +64,9 @@ function rotuloEstado(estado) {
 function montarTabela() {
   const tab = el('tabela');
   tab.colunas = [
-    { chave: 'proposta', titulo: t('importacoes.col_titulo'), formatar: (p, imp) => (p && p.titulo) || (imp.confirmacao && imp.confirmacao.titulo) || '—' },
+    // o título confirmado vale mais que o proposto (é o que a camada recebe)
+    { chave: 'proposta', titulo: t('importacoes.col_titulo'),
+      formatar: (p, imp) => (imp.confirmacao && imp.confirmacao.titulo) || (p && p.titulo) || '—' },
     { chave: 'formato', titulo: t('importacoes.col_formato'), classe: 'mono' },
     { chave: 'estado', titulo: t('campo.estado'), formatar: (v) => marcador(rotuloEstado(v), MARCADOR[v] || 'info') },
     { chave: 'proposta', titulo: t('importacoes.col_feicoes'), classe: 'num',
@@ -247,17 +249,21 @@ async function abrirConfirmar(imp) {
   const estado = h('plat-estado', { id: 'confirmar-estado' });
   const form = h('form', { class: 'importacao-form', id: 'form-confirmar' });
   const linha = (nome, rotulo, controle, ajuda) => h('label', { class: 'campo', dataset: { campo: nome } },
-    h('span', {}, rotulo), controle, ajuda ? h('small', { class: 'fraco' }, ajuda) : null);
+    h('span', {}, rotulo), controle, ...(ajuda ? [h('small', { class: 'fraco' }, ajuda)] : []));
   const titulo = h('input', { name: 'titulo', type: 'text', value: p.titulo || '', maxlength: '250', required: true });
   form.append(
     h('dl', { class: 'importacao-resumo' },
       h('div', {}, h('dt', {}, t('importacoes.col_formato')), h('dd', {}, `${p.formato || imp.formato} · ${p.camada_origem || ''}`)),
       h('div', {}, h('dt', {}, t('importacoes.col_feicoes')), h('dd', {}, p.feicoes >= 0 ? formatarNumero(p.feicoes) : '—')),
-      p.validade ? h('div', {}, h('dt', {}, t('importacoes.validade')), h('dd', {},
-        t('importacoes.validade_resumo', { amostra: p.validade.amostra, invalidas: p.validade.invalidas }))) : null),
-    (p.avisos || []).length ? h('ul', { class: 'importacao-avisos', id: 'confirmar-avisos' }, ...p.avisos.map((a) => h('li', {}, a))) : null,
+      ...(p.validade ? [h('div', {}, h('dt', {}, t('importacoes.validade')), h('dd', {},
+        t('importacoes.validade_resumo', { amostra: p.validade.amostra, invalidas: p.validade.invalidas })))] : [])),
     linha('titulo', t('importacoes.campo_titulo'), titulo),
   );
+  // Node.append(null) escreve o texto "null": os opcionais entram só quando existem
+  if ((p.avisos || []).length) {
+    form.insertBefore(h('ul', { class: 'importacao-avisos', id: 'confirmar-avisos' }, ...p.avisos.map((a) => h('li', {}, a))),
+      form.querySelector('[data-campo="titulo"]'));
+  }
   let srid = null, codificacao = null, geometria = null, validade = null;
   if (perguntas.has('crs') || (p.crs && p.crs.srid === null)) {
     srid = h('input', { name: 'srid', type: 'number', min: '1', value: (p.crs && (p.crs.srid || p.crs.sugestao)) || '', required: true });
@@ -285,7 +291,7 @@ async function abrirConfirmar(imp) {
     h('tbody', {}, ...campos.map((c) => h('tr', { dataset: { campo: c.nome } },
       h('td', {}, h('input', { type: 'checkbox', name: `importar:${c.nome}`, checked: true, 'aria-label': t('importacoes.campo_importar_nome', { nome: c.nome }) })),
       h('td', { class: 'mono' }, c.nome),
-      h('td', {}, c.origem || c.nome, (c.avisos || []).length ? h('small', { class: 'fraco' }, ` · ${c.avisos.join('; ')}`) : null),
+      h('td', {}, c.origem || c.nome, ...((c.avisos || []).length ? [h('small', { class: 'fraco' }, ` · ${c.avisos.join('; ')}`)] : [])),
       h('td', {}, h('select', { name: `tipo:${c.nome}`, 'aria-label': t('importacoes.campo_tipo_nome', { nome: c.nome }) },
         ...(c.opcoes_tipo || [c.tipo]).map((o) => h('option', { value: o, selected: o === c.tipo }, o))))))));
   form.append(h('div', { class: 'campo', dataset: { campo: 'campos' } }, h('span', {}, t('importacoes.campos', { n: campos.length })), tabela), estado,

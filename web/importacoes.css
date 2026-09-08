@@ -2,7 +2,7 @@
 .importacao-form { display: grid; gap: var(--e2); }
 .importacao-form .campo { display: flex; flex-direction: column; gap: var(--e1); font-size: var(--t-1); }
 .importacao-form .campo > span { color: var(--fraco); }
-.importacao-form .erro-campo { color: var(--erro); font-size: var(--t-2); }
+.importacao-form .erro-campo { color: var(--falha); font-size: var(--t-2); }
 .importacao-campos { border-collapse: collapse; width: 100%; font-size: var(--t-2); }
 .importacao-campos th, .importacao-campos td { text-align: left; padding: var(--e1) var(--e2); border-bottom: 1px solid var(--borda); }
 .importacao-resumo { display: grid; gap: var(--e1); font-size: var(--t-2); color: var(--fraco); margin: 0; }
