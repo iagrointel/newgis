@@ -42,7 +42,7 @@ def _postgres(sql: str) -> str:
     assert r.returncode == 0, r.stderr
     # psql -A -t ainda ecoa o rótulo de comando (SET/BEGIN/INSERT 0 1/ROLLBACK): só as linhas de RESULTADO
     ruido = re.compile(r"^(SET|BEGIN|COMMIT|ROLLBACK|DO|CREATE .*|SELECT \d+|INSERT \d+ \d+|UPDATE \d+|DELETE \d+)$")
-    return "\n".join(l for l in r.stdout.splitlines() if l.strip() and not ruido.match(l.strip()))
+    return "\n".join(ln for ln in r.stdout.splitlines() if ln.strip() and not ruido.match(ln.strip()))
 
 
 # ---------------------------------------------------------------- L0-05-a: isolamento entre inquilinos
@@ -61,13 +61,16 @@ def test_lock_por_chave_nao_atravessa_inquilino():
       SELECT (job_pegar('adv3:1', true)).tipo;
       SELECT coalesce((job_pegar('adv3:2', true)).tipo, 'NENHUM');
       ROLLBACK;""")
-    linhas = [l for l in saida.splitlines() if l.strip()]
+    linhas = [ln for ln in saida.splitlines() if ln.strip()]
     assert linhas[-1] != "NENHUM", (
         "o job do inquilino B ficou impedido pela chave em uso pelo inquilino A "
         f"(saída do psql: {linhas})")
 
 
-@pytest.mark.xfail(strict=True, reason="L0-05-a: ordenacao global e prioridade 1..9 livre ao usuario; sem justica entre inquilinos")
+@pytest.mark.xfail(
+    strict=True,
+    reason="L0-05-a: ordenacao global e prioridade 1..9 livre ao usuario; sem justica entre inquilinos",
+)
 def test_fila_serve_o_inquilino_que_chegou_primeiro():
     """Refutação do L0-05-a: 'enfileira 10 mil jobs e mede se a API continua respondendo'. O ponto que a
     fila não cobre é a JUSTIÇA: a ordenação é global (prioridade, agendado_para, criado_em) e a prioridade
@@ -89,12 +92,15 @@ def test_fila_serve_o_inquilino_que_chegou_primeiro():
         END LOOP; END$$;
       SELECT posicao FROM ordem WHERE tipo = 'zadvA.espera';
       ROLLBACK;""")
-    posicao = int([l for l in saida.splitlines() if l.strip()][-1])
+    posicao = int([ln for ln in saida.splitlines() if ln.strip()][-1])
     assert posicao == 1, (f"o inquilino A criou o job PRIMEIRO e foi servido na posição {posicao} de 21: "
                           "20 jobs criados depois, por outro inquilino, com prioridade 1, passaram na frente")
 
 
-@pytest.mark.xfail(strict=True, reason="L0-05-d: as chaves dos periodicos sao constantes e qualquer inquilino pode ocupa-las")
+@pytest.mark.xfail(
+    strict=True,
+    reason="L0-05-d: as chaves dos periodicos sao constantes e qualquer inquilino pode ocupa-las",
+)
 def test_periodico_da_plataforma_nao_e_travado_por_chave_escolhida_por_inquilino():
     """As chaves dos periódicos são CONSTANTES no código ('sessoes_expurgar', 'manutencao_analyze', …,
     app/jobs/periodicos.py). Um usuário 'editor' de qualquer inquilino pode enfileirar prova.progresso com
@@ -109,14 +115,17 @@ def test_periodico_da_plataforma_nao_e_travado_por_chave_escolhida_por_inquilino
       SELECT (job_pegar('adv3:1', true)).tipo;
       SELECT coalesce((job_pegar('adv3:2', true)).tipo, 'NENHUM');
       ROLLBACK;""")
-    linhas = [l for l in saida.splitlines() if l.strip()]
+    linhas = [ln for ln in saida.splitlines() if ln.strip()]
     assert linhas[-1] == "jobs.sessoes_expurgar", (
         "o periódico do inquilino técnico ficou impedido pela chave escolhida por um inquilino comum: "
         f"{linhas}")
 
 
 # ---------------------------------------------------------------- L0-05-a: traceback saneado
-@pytest.mark.xfail(strict=True, reason="L0-05-a: filho.py grava traceback.format_exception() cru em plat.job_log; nao ha saneamento")
+@pytest.mark.xfail(
+    strict=True,
+    reason="L0-05-a: filho.py grava traceback.format_exception() cru em plat.job_log; nao ha saneamento",
+)
 def test_traceback_do_job_que_falhou_e_saneado(cliente, sessao_a):
     """Portão literal do L0-05-a: 'job com exceção é retentado 3 vezes ... e termina falhou com o traceback
     SANEADO'. app/jobs/filho.py grava traceback.format_exception() inteiro em plat.job_log."""
@@ -132,7 +141,7 @@ def test_traceback_do_job_que_falhou_e_saneado(cliente, sessao_a):
         time.sleep(0.3)
     assert estado == "falhou", f"job terminou em {estado}"
     linhas = sessao_a.get(f"/api/jobs/{jid}/log?limite=2000").json()["linhas"]
-    texto = "\n".join(l["mensagem"] for l in linhas)
+    texto = "\n".join(ln["mensagem"] for ln in linhas)
     vazamentos = [p for p in ("/home/dev/plataforma", "site-packages", "venv/lib") if p in texto]
     assert not vazamentos, (f"o log do job devolvido pela API expõe o caminho absoluto do servidor "
                             f"{vazamentos}; trecho: ...{texto[max(0, texto.find(vazamentos[0]) - 60):][:220]}...")
@@ -169,7 +178,10 @@ def test_log_do_job_nao_aceita_linha_depois_do_estado_final(con_pg, env):
 
 
 # ---------------------------------------------------------------- L0-05-b: limite de conexões SSE
-@pytest.mark.xfail(strict=True, reason="L0-05-b refutacao: _por_usuario e contador em memoria do processo e a unidade sobe --workers 2")
+@pytest.mark.xfail(
+    strict=True,
+    reason="L0-05-b refutacao: _por_usuario e contador em memoria do processo e a unidade sobe --workers 2",
+)
 def test_limite_de_conexoes_sse_vale_para_a_instalacao_e_nao_por_processo():
     """Refutação literal do L0-05-b: 'abre 200 conexões SSE no mesmo job (limite por usuário ...)'. O contador
     é um dicionário em memória do processo (app/jobs/eventos.py `_por_usuario`), e a unidade roda uvicorn com
@@ -185,7 +197,10 @@ def test_limite_de_conexoes_sse_vale_para_a_instalacao_e_nao_por_processo():
 
 
 # ---------------------------------------------------------------- L0-05-e: portão nunca escrito
-@pytest.mark.xfail(strict=True, reason="L0-05-e: item marcado entregue com o portao ainda no texto 'portao a fixar pelo arquiteto'")
+@pytest.mark.xfail(
+    strict=True,
+    reason="L0-05-e: item marcado entregue com o portao ainda no texto 'portao a fixar pelo arquiteto'",
+)
 def test_portao_do_worker_em_container_foi_fixado_antes_de_construir():
     """O próprio portão do L0-05-e diz: 'portão a fixar pelo arquiteto no turno em que o item que a pediu
     entrar (registrar aqui antes de construir)'. O item está marcado ENTREGUE com o portão ainda em branco."""
