@@ -159,7 +159,7 @@ def rodar(ctx, entradas: dict, parametros: dict, destino: dict, construtor, meto
 
 
 # ---------------------------------------------------------------- SQL livre do usuário
-def rodar_sql_livre(ctx, entradas: dict, sql: str, destino: dict) -> dict:
+def rodar_sql_livre(ctx, entradas: dict, sql: str, destino: dict, tempo_s: int | None = None) -> dict:
     """Mesmo caminho das ferramentas grandes, só que o SQL vem do usuário. Cada fonte vira uma view com o
     NOME DO PARÂMETRO (`fonte_a`… `fonte_d`): o usuário nunca escreve caminho de arquivo, e o portão de
     `app.consulta_grande.seguranca` recusa qualquer tentativa de escrever um.
@@ -185,7 +185,8 @@ def rodar_sql_livre(ctx, entradas: dict, sql: str, destino: dict) -> dict:
             views[f["view"]] = motor.preparar_dados(f, base / "dados" / f["nome"])
         ctx.progresso(35, "rodando o SQL no DuckDB")
         try:
-            manifesto = motor.executar_sql(ctx, sql=sql, views=views, dir_trabalho=base / "saida")
+            manifesto = motor.executar_sql(ctx, sql=sql, views=views, dir_trabalho=base / "saida",
+                                           tempo_s=tempo_s)
         except motor.ErroConsulta as e:
             raise ErroFerramentaGrande(str(e), e.motivo, 504 if e.tempo else 422) from e
         ctx.log("INFO", f"SQL livre: {manifesto['linhas']} linha(s) em {manifesto['ms']} ms")

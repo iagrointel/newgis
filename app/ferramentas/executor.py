@@ -170,6 +170,40 @@ def _apagar_tabela(ctx, schema: str, tabela: str) -> None:
         ctx.log("AVISO", f"não foi possível apagar {schema}.{tabela}: {e}")
 
 
+def _extent_de(geojson: str | None) -> list | None:
+    """Retângulo [xmin, ymin, xmax, ymax] a partir do GeoJSON do `ST_Extent` já em 4326.
+
+    O `ST_Extent` de uma camada NÃO devolve sempre um polígono: com uma feição só devolve um POINT, e com
+    feições colineares devolve um LINESTRING. Nesses casos o encadeamento antigo (`["coordinates"][0]` e
+    depois `c[0]`) tentava indexar um número e o job morria com "'int' object is not subscriptable" — achado
+    ao rodar a ferramenta `detectar_duplicatas` do item L2-15-b, cujo resultado é uma linha por grupo e pode,
+    legitimamente, ficar sobre uma reta. A leitura agora é por achatamento: os números do GeoJSON em ordem
+    são x, y, x, y…, qualquer que seja o tipo de geometria."""
+    if not geojson:
+        return None
+    numeros: list[float] = []
+
+    def achatar(valor):
+        if isinstance(valor, (int, float)) and not isinstance(valor, bool):
+            numeros.append(float(valor))
+            return
+        for parte in valor:
+            achatar(parte)
+
+    achatar(json.loads(geojson)["coordinates"])
+    xs, ys = numeros[0::2], numeros[1::2]
+    if not xs or not ys:
+        return None
+    if min(xs) == max(xs) or min(ys) == max(ys):
+        # a coluna `plat.item.extent` é `geometry(Polygon, 4326)`: um retângulo de lado zero (camada de uma
+        # feição só, ou feições colineares) não é polígono e a inserção seria recusada pelo tipo. Fica sem
+        # extent — melhor do que alargar a caixa por conta própria e gravar um retângulo que ninguém mediu.
+        return None
+    if -180 <= min(xs) and max(xs) <= 180 and -90 <= min(ys) and max(ys) <= 90:
+        return [min(xs), min(ys), max(xs), max(ys)]
+    return None
+
+
 def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None = None, autor: dict | None = None,
              request=None) -> dict:
     """Roda a ferramenta e publica o item de resultado. `parametros` já normalizados por `validar_parametros`.
@@ -206,12 +240,7 @@ def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None =
             cur.execute('SELECT pg_total_relation_size(%s::regclass) AS b', (f'"{schema}"."{tabela}"',))
             tamanho = int(cur.fetchone()["b"])
         ctx.progresso(90, "publicando no catálogo")
-        extent = None
-        if est["extent"]:
-            coords = json.loads(est["extent"])["coordinates"][0]
-            xs, ys = [c[0] for c in coords], [c[1] for c in coords]
-            if -180 <= min(xs) and max(xs) <= 180 and -90 <= min(ys) and max(ys) <= 90:
-                extent = [min(xs), min(ys), max(xs), max(ys)]
+        extent = _extent_de(est["extent"])
         proveniencia = {
             "ferramenta": f.nome, "versao": f.versao, "parametros": parametros,
             "entradas": [{"parametro": n, "item_id": e["item_id"], "versao": e["versao"], "sha256": e["sha256"]}

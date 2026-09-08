@@ -37,6 +37,10 @@ FONTES = ("fonte_a", "fonte_b", "fonte_c", "fonte_d")
         Parametro("fonte_b", "GPFeatureRecordSetLayer", "fonte Parquet B", obrigatorio=False),
         Parametro("fonte_c", "GPFeatureRecordSetLayer", "fonte Parquet C", obrigatorio=False),
         Parametro("fonte_d", "GPFeatureRecordSetLayer", "fonte Parquet D", obrigatorio=False),
+        Parametro("tempo_maximo_s", "GPLong", "teto de tempo em segundos", obrigatorio=False,
+                  minimo=1, maximo=limites.CONSULTA_GRANDE_TEMPO_S,
+                  descricao="teto MENOR que o da plataforma, para experimentar sem prender a fila; vazio "
+                            "usa o teto cheio"),
         Parametro("sql", "GPString", "consulta",
                   descricao="um único SELECT; COPY, CREATE, ATTACH, INSTALL, LOAD, PRAGMA e SET são recusados"),
         Parametro("saida", "GPFeatureRecordSetLayer", "camada de saída", direcao="saida"),
@@ -51,4 +55,5 @@ FONTES = ("fonte_a", "fonte_b", "fonte_c", "fonte_d")
              "threads": limites.CONSULTA_GRANDE_THREADS},
 )
 def consulta_sql(ctx, entradas, parametros, destino):
-    return execucao.rodar_sql_livre(ctx, entradas, parametros["sql"], destino)
+    return execucao.rodar_sql_livre(ctx, entradas, parametros["sql"], destino,
+                                    tempo_s=parametros.get("tempo_maximo_s"))

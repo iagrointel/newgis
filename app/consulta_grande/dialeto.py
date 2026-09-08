@@ -41,7 +41,10 @@ class Dialeto:
     def ponto(self, x: str, y: str) -> str:
         return f"ST_Point({x}, {y})"
 
-    def envelope(self, x1: str, y1: str, x2: str, y2: str) -> str:
+    def envelope(self, x1: str, y1: str, x2: str, y2: str, srid: int | None = None) -> str:
+        """Retângulo a partir dos quatro cantos. O PostGIS exige o SRID no próprio `ST_MakeEnvelope` (sem ele
+        a geometria nasce com SRID 0 e o `ST_Transform` seguinte falha com "unknown (0) SRID"); o DuckDB não
+        tem SRID na geometria e ignora o argumento."""
         return f"ST_MakeEnvelope({x1}, {y1}, {x2}, {y2})"
 
     def coluna(self, nome: str) -> str:
@@ -80,6 +83,11 @@ class PostGIS(Dialeto):
 
     def distancia_esferica(self, a: str, b: str) -> str:
         return f"ST_DistanceSphere({a}, {b})"
+
+    def envelope(self, x1: str, y1: str, x2: str, y2: str, srid: int | None = None) -> str:
+        if srid is None:
+            return f"ST_MakeEnvelope({x1}, {y1}, {x2}, {y2})"
+        return f"ST_MakeEnvelope({x1}, {y1}, {x2}, {y2}, {int(srid)})"
 
 
 DUCKDB = DuckDB()

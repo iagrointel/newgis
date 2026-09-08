@@ -112,7 +112,8 @@ def _sql_agregar_em_grade(d: dial.Dialeto, fontes: dict, parametros: dict) -> tu
         colunas.append(f"{campo} AS valor")
         agregados.append("sum(valor)::double precision AS soma_valor" if d.nome == "postgis"
                          else "sum(valor)::DOUBLE AS soma_valor")
-    celula = d.envelope(f"ix * {lado}", f"iy * {lado}", f"(ix + 1) * {lado}", f"(iy + 1) * {lado}")
+    celula = d.envelope(f"ix * {lado}", f"iy * {lado}", f"(ix + 1) * {lado}", f"(iy + 1) * {lado}",
+                        srid=epsg)
     sql = (
         f"WITH base AS (SELECT {', '.join(colunas)} FROM {d.relacao(fonte)} WHERE geom IS NOT NULL), "
         f"grade AS (SELECT {', '.join(selecao)}, {', '.join(agregados)} FROM base GROUP BY {', '.join(grupos)}) "
