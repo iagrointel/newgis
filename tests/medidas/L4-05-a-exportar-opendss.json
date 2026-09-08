@@ -1,0 +1,52 @@
+{
+ "item": "L4-05-a-exportar-opendss",
+ "gerado_em": "2026-09-07T23:19:02Z",
+ "git_sha": "36e562fa7a13d10d678ec01ca72a09c00fec63ca",
+ "maquina": "PostgreSQL 16 em iagro_sat, base da trilha (plat_til405aexpor); opendssdirect.py 0.9.4; rede de teste sintética do próprio teste",
+ "medidas": {
+  "dicionario_tensao": {
+   "codigos": 110,
+   "dominio_esperado": "0 a 109 (TTEN da BDGD)",
+   "kv_do_codigo_63": 23.1
+  },
+  "curva": {
+   "pontos": 864,
+   "meses": 12,
+   "tipos_de_dia": 3,
+   "horas": 24
+  },
+  "arquivos_da_pasta": [
+   "Cargas.dss",
+   "Curvas.dss",
+   "Linhas.dss",
+   "Master.dss",
+   "NAO_FAZ.md",
+   "Transformadores.dss",
+   "resumo.json"
+  ],
+  "subrede_por_caminho_independente": {
+   "trechos": 5,
+   "nos": 8,
+   "subredes": 2
+  },
+  "conferencia_do_exportador": {
+   "nos_da_subrede": 8,
+   "fusoes_por_chave_fechada": 1,
+   "barras_esperadas": 7,
+   "trechos_da_subrede": 5,
+   "trechos_sem_no_na_topologia": 0,
+   "linhas_esperadas": 5,
+   "transformadores": 1,
+   "cargas": 1,
+   "geracao_distribuida": 1
+  },
+  "circuito_compilado": {
+   "erro": "",
+   "barras": 7,
+   "linhas": 5,
+   "transformadores": 1,
+   "cargas": 2
+  }
+ },
+ "comando": "bash laco/roda_teste.sh tests/api/test_rede_opendss.py tests/unit/test_opendss.py -q"
+}

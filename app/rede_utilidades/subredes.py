@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 from jsonschema import Draft202012Validator
 
 from app.erros import ErroAPI
-from app.rede_utilidades import controladores, esquema_exportacao, tracado
+from app.rede_utilidades import controladores, esquema_exportacao, opendss, tracado
 
 _VALIDADOR = Draft202012Validator(esquema_exportacao.ESQUEMA)
 
@@ -436,3 +436,46 @@ def exportar(cur, rede_id: str, nome: str, tier: str | None = None) -> dict:
         raise ErroAPI(500, "exportacao_fora_do_esquema",
                       "a exportação não bate com o esquema declarado: " + erro)
     return saida
+
+
+def exportar_dss(cur, rede_id: str, nome: str, tier: str | None = None, ano: int | None = None,
+                 jusante: bool = False) -> dict:
+    """`Export Subnetwork` no formato do OpenDSS (item L4-05-a-exportar-opendss): a pasta `.dss` da subrede.
+
+    Devolve `{"arquivos": {nome_do_arquivo: texto}, "resumo": {...}}`. O resumo traz a conferência que o
+    portão do item exige — barras esperadas × nós da subrede, linhas esperadas × trechos — junto com os
+    avisos e o que o conversor ignorou. Quem chama embrulha em zip.
+
+    A recusa da subrede nunca atualizada é a MESMA de `exportar`: sem elemento gravado não há o que
+    converter, e devolver um circuito vazio seria pior que recusar."""
+    s = por_nome(cur, rede_id, nome, tier)
+    if s["atualizado_em"] is None:
+        raise ErroAPI(409, "subrede_nunca_atualizada",
+                      "esta subrede ainda não foi atualizada: não há elementos gravados para exportar")
+    dela = [c for c in controladores.listar_controladores(cur, rede_id, 1000)
+            if c["subrede_id"] == str(s["id"])]
+    s = dict(s)
+    s["propagados"] = (dict(s["resumo"] or {})).get("propagados") or {}
+    ids = [str(s["id"])]
+    if jusante:
+        ids = opendss.subredes_de_jusante(cur, rede_id, ids, s["tier_ordem"])
+    try:
+        modelo = opendss.montar_da_subrede(cur, rede_id, s, dela,
+                                           ano if ano is not None else datetime.now(timezone.utc).year,
+                                           ids)
+    except opendss.ErroConversao as e:
+        # 422: o pedido é legítimo, o DADO é que não permite converter. O código do erro nomeia o que falta.
+        raise ErroAPI(422, e.codigo, e.mensagem) from e
+    arquivos = opendss.linhas_do_circuito(modelo)
+    resumo = {
+        "subrede": s["nome"], "tier": s["tier"], "ano_da_curva": modelo["ano"],
+        "subredes_no_circuito": len(modelo["subredes"]), "com_jusante": jusante,
+        "exportado_em": datetime.now(timezone.utc).isoformat(),
+        "barra_fonte": modelo["barra_fonte"], "kv_fonte": modelo["kv_fonte"],
+        "codigo_tensao_nominal": modelo["codigo_tensao_nominal"],
+        "conferencia": modelo["conferencia"], "avisos": modelo["avisos"], "ignorados": modelo["ignorados"],
+        "chaves": [{"codigo": c["codigo"], "tipo": c["tipo"], "estado": c["estado"]} for c in modelo["chaves"]],
+        "pontos_por_curva": opendss.PONTOS_DA_CURVA,
+    }
+    arquivos["resumo.json"] = json.dumps(resumo, ensure_ascii=False, indent=1) + "\n"
+    return {"arquivos": arquivos, "resumo": resumo}

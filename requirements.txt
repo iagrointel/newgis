@@ -75,3 +75,12 @@ sortedcontainers==2.4.0
 tomli==2.4.1
 tomli_w==1.2.0
 Markdown==3.10.2
+
+# OpenDSS (item L4-05-a-exportar-opendss): SÓ A SUÍTE importa. A aplicação escreve o `.dss` com a biblioteca
+# padrão — o conversor é texto — e nada em `app/` importa opendssdirect. Ele entra aqui porque a cláusula do
+# portão do item é "o circuito exportado COMPILA no OpenDSS", e provar isso exige o motor de verdade. Sem ele
+# na máquina, `tests/api/test_rede_opendss.py` pula a compilação com a razão escrita, e o resto do teste vale.
+# opendssdirect.py 0.9.4 = DSS C-API 0.14.5, a mesma versão do conversor que a casa já rodava.
+opendssdirect.py==0.9.4
+dss_python==0.15.7
+dss_python_backend==0.14.5

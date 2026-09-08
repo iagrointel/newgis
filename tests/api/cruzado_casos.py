@@ -179,7 +179,6 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b, rede_b=rede_b,
-                      rede_b=rede_b, convite_b=convite_b,
                       conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
 
 
@@ -766,11 +765,6 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/rede/{rede_id}/pacote"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/pacote",
         lambda p: json.loads(instalados.bruto("agua-epanet")),
-    # o corpo é um pacote VÁLIDO de propósito: a rota valida o documento (CPU) antes de abrir conexão, então
-    # um corpo inválido pararia em 422 e a chamada nunca chegaria a provar que a RLS derruba a rede de B.
-    ("POST", "/api/rede/{rede_id}/pacote"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/pacote",
-        lambda p: json.loads(instalados.bruto("agua-epanet")),
     ),
     # L4-01-c: importação BDGD por job — a rede de B não pode ser alvo de A (o job nem é criado)
     ("POST", "/api/rede/{rede_id}/importar-bdgd"): Caso(
@@ -1037,50 +1031,6 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
-    ),
-    # ---- rede de utilidades: feições, topologia, traçado e rede simples (L4-01-b, L4-02-a/d, L4-18). As 16
-    # rotas abaixo nasceram em ramos paralelos e nenhuma tinha caso aqui — a cobertura cruzada reprovava o
-    # lote inteiro de L4 por este registro. Todas apontam a rede de B: a RLS derruba antes de qualquer
-    # trabalho, então a resposta é 404 de rede (nunca 422 de corpo — por isso os corpos abaixo são válidos).
-    ("GET", "/api/rede/{rede_id}/feicoes/pontos"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos"),
-    ("GET", "/api/rede/{rede_id}/feicoes/linhas"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas"),
-    ("POST", "/api/rede/{rede_id}/feicoes/pontos"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos",
-        lambda p: {"grupo": "juncao", "tipo_codigo": 1, "lon": -46.60, "lat": -23.50},
-    ),
-    ("POST", "/api/rede/{rede_id}/feicoes/linhas"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas",
-        lambda p: {"grupo": "tubulacao", "tipo_codigo": 1,
-                   "coordenadas": [[-46.60, -23.50], [-46.59, -23.50]]},
-    ),
-    ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos/applyEdits", lambda p: {"adds": []},
-    ),
-    ("POST", "/api/rede/{rede_id}/feicoes/linhas/applyEdits"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas/applyEdits", lambda p: {"adds": []},
-    ),
-    ("GET", "/api/rede/{rede_id}/topologia"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia"),
-    ("GET", "/api/rede/{rede_id}/topologia/nos"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia/nos"),
-    ("GET", "/api/rede/{rede_id}/topologia/arestas"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/arestas"),
-    ("GET", "/api/rede/{rede_id}/topologia/areas-sujas"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/areas-sujas"),
-    ("GET", "/api/rede/{rede_id}/topologia/alcance"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/alcance?no={UUID_NULO}"),
-    ("POST", "/api/rede/{rede_id}/topologia/habilitar"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/habilitar"),
-    ("POST", "/api/rede/{rede_id}/tracar"): Caso(
-        lambda p: f"/api/rede/{p.rede_b['id']}/tracar",
-        lambda p: {"tipo": "conectado", "pontos_partida": [{"lon": -46.60, "lat": -23.50}]},
-    ),
-    ("GET", "/api/rede/{rede_id}/simples"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/simples"),
-    ("POST", "/api/rede/{rede_id}/promover"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/promover"),
-    # a rede simples nasce de uma CAMADA do inquilino: o id nulo não é de A nem de B, e a rota devolve 404
-    # de camada sem criar nada — por isso este caso não precisa de limpeza.
-    ("POST", "/api/rede/simples"): Caso(
-        lambda p: "/api/rede/simples",
-        lambda p: {"nome": f"{PREFIXO}simples-{secrets.token_hex(4)}", "disciplina": "agua",
-                   "camada_linha_id": UUID_NULO},
     ),
 }
 

@@ -3,6 +3,31 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 7, setembro de 2026 (item L4-05-a-exportar-opendss: a subrede vira circuito OpenDSS)
+
+`GET /api/rede/{id}/subrede/{nome}/exportar?formato=dss` devolve a pasta `.dss` da subrede num zip:
+`Master.dss`, `Linhas.dss`, `Transformadores.dss`, `Cargas.dss`, `Curvas.dss`, `resumo.json` e `NAO_FAZ.md`.
+Barra do circuito = nó da topologia (com os dois terminais de uma chave fechada fundidos numa barra só),
+`Line` = trecho com comprimento geodésico medido, `Transformer` = transformador com kVA e perdas de PER_FER e
+PER_TOT, `Load` = unidade consumidora, e a geração distribuída como carga negativa de corrente constante.
+`jusante=true` inclui as subredes de tier inferior: é o alimentador inteiro, e não só o tier pedido.
+
+O dicionário de códigos de tensão da BDGD (domínio TTEN) entra completo: **110 códigos, de 0 a 109, sem
+buraco**, contra os 13 do conversor que a casa já rodava — que por isso não resolvia o **código 63 (23,1 kV)**,
+presente num alimentador da cooperativa de teste. Todo código de tensão do acervo da casa (TEN_NOM, TEN_PRI e
+TEN_SEC) é resolvido pelo dicionário, medido no próprio acervo. A curva de carga tem **864 pontos**
+(12 meses x 3 tipos de dia x 24 horas, PRODIST Módulo 7), com feriado contando como domingo e energia
+conservada.
+
+Medido (`tests/medidas/L4-05-a-exportar-opendss.json`, opendssdirect.py 0.9.4): o circuito exportado compila
+sem erro, e o circuito compilado tem **7 barras e 5 linhas** contra **8 nós menos 1 fusão de chave fechada, e
+5 trechos**, contados por consulta independente ao banco.
+
+O conversor falha alto em vez de completar cadastro: transformador sem POT_NOM, tensão nominal ausente ou
+código fora do domínio TTEN param a exportação com 422. O que ele não faz — impedância de condutor, reatância
+de transformador, chave manobrável, curva típica por classe, regulador e capacitor — sai escrito em
+`NAO_FAZ.md`, dentro da pasta exportada. ADR `20260907T2319-exportador-opendss.md`.
+
 ## turno 7, setembro de 2026 (item L4-04-b-atualizar-e-exportar-subrede: nome da subrede no elemento, propagação, SubnetLine e exportação)
 
 `Update Subnetwork` passa a fazer o que a fonte descreve: traça a subrede a partir dos controladores, grava o

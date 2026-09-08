@@ -8,12 +8,16 @@
     ARQUIVO no mesmo elemento; a diferença sai listada como candidata a erro de cadastro, nunca como erro
     provado.
   * `GET /api/rede/{rede_id}/subrede/{nome}/exportar` — o JSON da subrede (elementos, conectividade,
-    controladores, resumo), validado contra o esquema declarado antes de sair."""
+    controladores, resumo), validado contra o esquema declarado antes de sair. Com `formato=dss`
+    (item L4-05-a-exportar-opendss) a mesma rota devolve a PASTA OpenDSS da subrede, num zip: Master.dss,
+    Linhas.dss, Transformadores.dss, Cargas.dss, Curvas.dss, resumo.json e NAO_FAZ.md."""
 
+import io
 import uuid as uuid_mod
+import zipfile
 
 import psycopg2
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from starlette.concurrency import run_in_threadpool
 
 from app import db
@@ -23,7 +27,7 @@ from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
 from app.jobs import servico
 from app.jobs.contexto import sessao_de
-from app.rede_utilidades import subredes
+from app.rede_utilidades import opendss, subredes
 from app.rede_utilidades.modelos import PropagadoresEntrada
 
 router = APIRouter(prefix="/api/rede", tags=["rede de utilidades — subredes"])
@@ -97,10 +101,41 @@ def _exportar_sincrono(rid: str, nome: str, tier: str | None, auth: Auth) -> dic
         return subredes.exportar(cur, rid, nome, tier)
 
 
+def _exportar_dss_sincrono(rid: str, nome: str, tier: str | None, ano: int | None, jusante: bool,
+                           auth: Auth) -> bytes:
+    with db.db(auth.contexto()) as cur:
+        _rede_existe(cur, rid)
+        saida = subredes.exportar_dss(cur, rid, nome, tier, ano, jusante)
+    pasta = opendss.sanear(nome)
+    memoria = io.BytesIO()
+    # ZIP_DEFLATED e não ZIP_STORED: a curva de 864 pontos é texto muito repetido e o zip cai a uma fração.
+    with zipfile.ZipFile(memoria, "w", zipfile.ZIP_DEFLATED) as z:
+        for arquivo, texto in saida["arquivos"].items():
+            z.writestr(f"{pasta}/{arquivo}", texto)
+    return memoria.getvalue()
+
+
 @router.get("/{rede_id}/subrede/{nome}/exportar", openapi_extra=LER)
-async def exportar_subrede(rede_id: str, nome: str, tier: str | None = None,
+async def exportar_subrede(rede_id: str, nome: str, tier: str | None = None, formato: str = "json",
+                           ano: int | None = None, jusante: bool = False,
                            auth: Auth = autenticado(escopo_token="catalogo:ler")):
-    """O JSON da subrede: rede, subrede (com a linha agregada), controladores, elementos, conectividade e
-    resumo. Validado contra `plat.rede.subrede_exportada` antes de sair."""
+    """`formato=json` (padrão): rede, subrede (com a linha agregada), controladores, elementos,
+    conectividade e resumo, validado contra `plat.rede.subrede_exportada` antes de sair.
+
+    `formato=dss`: a pasta OpenDSS da subrede, num zip. `ano` escolhe o calendário da curva de 864 pontos
+    (24 h x 3 tipos de dia x 12 meses); o padrão é o ano corrente. `jusante=true` inclui as subredes de tier
+    inferior que penduram nesta — é o alimentador inteiro, com transformador e carga, em vez de só o tier
+    pedido."""
     rid = _uuid_ok(rede_id)
-    return await run_in_threadpool(_exportar_sincrono, rid, nome, tier, auth)
+    if formato == "json":
+        return await run_in_threadpool(_exportar_sincrono, rid, nome, tier, auth)
+    if formato != "dss":
+        raise ErroAPI(422, "formato_desconhecido", "formato tem de ser 'json' ou 'dss'")
+    if ano is not None and not 1970 <= ano <= 2200:
+        raise ErroAPI(422, "ano_fora_da_faixa", "ano tem de estar entre 1970 e 2200")
+    bruto = await run_in_threadpool(_exportar_dss_sincrono, rid, nome, tier, ano, jusante, auth)
+    return Response(
+        content=bruto, media_type="application/zip",
+        headers={"Cache-Control": "no-store",
+                 "Content-Disposition": f'attachment; filename="{opendss.sanear(nome)}-dss.zip"'},
+    )
