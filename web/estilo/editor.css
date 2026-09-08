@@ -56,3 +56,15 @@
 .diferenca-adicionado { background: color-mix(in srgb, var(--sucesso, #2e7d32) 15%, transparent); }
 .diferenca-removido { background: color-mix(in srgb, var(--falha) 15%, transparent); text-decoration: line-through; }
 .diferenca-alterado { background: color-mix(in srgb, var(--acento) 15%, transparent); }
+
+/* presença e bloqueio leve por nó (item L5-13-edicao-concorrente) */
+.presenca { font-size: 12px; color: var(--i-texto-fraco, #8fa19c); margin: 4px 0; }
+.presenca-lista { display: inline; list-style: none; padding: 0; margin: 0; }
+.presenca-lista li { display: inline-block; margin-right: 10px; padding: 1px 6px; border: 1px solid var(--i-linha, #263133); border-radius: 10px; }
+.presenca-nome { font-weight: 600; }
+.aviso-no-ocupado { background: #3a2f12; color: #f2d38a; border: 1px solid #d98a2b; padding: 6px 10px; margin: 4px 0; border-radius: 4px; }
+.no-editor[data-ocupado] { outline: 2px dashed #d98a2b; outline-offset: 2px; }
+.no-editor[data-ocupado]::after { content: 'em edição por ' attr(data-ocupado); font-size: 11px; color: #d98a2b; display: block; }
+.estado[data-tipo='mesclado'] { color: #7fc8a9; }
+.diferenca-arvore li.em-conflito { outline: 2px solid #c04a3a; outline-offset: 1px; }
+.conflito-nos { color: #f2a08a; }

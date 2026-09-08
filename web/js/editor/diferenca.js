@@ -55,7 +55,7 @@ export function montarArvoreDiferenca(h, comparacao, paleta) {
     if (item.estado === 'alterado') texto += ` — mudou: ${item.campos.join(', ')}`;
     const li = h(
       'li',
-      { class: `diferenca-${item.estado}`, dataset: { diferenca: item.id, estado: item.estado } },
+      { 'data-no': item.id, 'data-estado': item.estado, class: `diferenca-${item.estado}`, dataset: { diferenca: item.id, estado: item.estado } },
       h('span', { class: 'diferenca-rotulo' }, texto),
     );
     li.style.paddingLeft = `${item.nivel * 16 + 8}px`;
