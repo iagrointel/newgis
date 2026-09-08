@@ -30,6 +30,8 @@ PAGINAS = {
     "/mapa": "mapa.html",
     # --- conexões externas (L6-02-a/L6-02-l/L6-05)
     "/conexoes": "conexoes.html",
+    # --- motor multicritério, presets (L3-01-h-presets)
+    "/amc/presets": "amc_presets.html",
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
     "/aceitar-convite": "aceitar_convite.html",
     "/redefinir-senha": "redefinir_senha.html",
