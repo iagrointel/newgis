@@ -536,3 +536,26 @@ def pre_visualizar(valores, transformacao: dict, bins: int = 30) -> PreVisualiza
     dt_ms = (time.perf_counter() - t0) * 1000.0
     n_nulo = int(np.isnan(saida).sum())
     return PreVisualizacao(hist_entrada, hist_saida, len(valores), n_nulo, dt_ms)
+
+
+def curva(valores, transformacao: dict, pontos: int = 120) -> dict:
+    """Curva desenhada da transformação (item L3-01-g): pares (entrada, favorabilidade) sobre o domínio dos
+    valores REAIS recebidos, para a tela desenhar a linha por cima do histograma. Para `categoria` não existe
+    curva contínua — devolve `{"tipo": "categorico", "pares": []}` e a tela mostra as notas por categoria a
+    partir do próprio documento do modelo. Sem dado numérico: pares vazio, nunca um domínio inventado."""
+    if transformacao.get("tipo") == "categoria":
+        return {"tipo": "categorico", "pares": []}
+    limpos = [float(v) for v in valores
+              if v is not None and not (isinstance(v, float) and math.isnan(v))]
+    if not limpos:
+        return {"tipo": "numerico", "pares": []}
+    lo, hi = min(limpos), max(limpos)
+    if hi <= lo:
+        amostra = [lo]
+    else:
+        passo = (hi - lo) / (pontos - 1)
+        amostra = [lo + passo * i for i in range(pontos)]
+    saida = transformar(amostra, transformacao)
+    pares = [[x, None if y is None or (isinstance(y, float) and math.isnan(y)) else float(y)]
+             for x, y in zip(amostra, saida, strict=True)]
+    return {"tipo": "numerico", "pares": pares}
