@@ -1,0 +1,22 @@
+{
+ "item": "L4-parcelas-01-modelo-de-parcelas",
+ "medidas": {
+  "import_real_parcelas": {
+   "valor": 11473,
+   "unidade": "parcelas",
+   "comando": "pytest tests/api/parcelas/test_modelo.py::test_import_real_sig_casa PLAT_GRAVAR_MEDIDAS=1"
+  },
+  "import_real_linhas_partilhadas": {
+   "valor": 201990,
+   "unidade": "linhas",
+   "comando": "idem"
+  },
+  "sobreposicao_area_m2": {
+   "valor": 200.0,
+   "unidade": "m2",
+   "comando": "pytest tests/api/parcelas/test_modelo.py::test_sobreposicao_mesmo_tipo_aponta PLAT_GRAVAR_MEDIDAS=1"
+  }
+ },
+ "gerado_em": "2026-09-08T21:13:13Z",
+ "git_sha": "610896979710"
+}
