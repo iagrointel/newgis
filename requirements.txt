@@ -79,3 +79,4 @@ sortedcontainers==2.4.0
 tomli==2.4.1
 tomli_w==1.2.0
 Markdown==3.10.2
+pmtiles==3.7.0
