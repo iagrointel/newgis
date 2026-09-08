@@ -341,23 +341,15 @@ def login_ldap(corpo: LoginEntrada, request: Request, resposta: Response):
         request.state.resultado = "credenciais_invalidas"
         raise ErroAPI(401, "credenciais_invalidas", "inquilino, usuário ou senha inválidos") from e
     _limpar_falhas_bind(r["tenant_id"], login)
-    perfil = perfil_por_grupos(achado["grupos"], r["mapa_grupo_perfil"] or {}, r["perfil_padrao"])
-    if perfil is None:
-        request.state.resultado = "sem_grupo_mapeado"
-        raise ErroAPI(
-            403,
-            "sem_grupo_mapeado",
-            "nenhum grupo do diretório está mapeado para um perfil desta plataforma; fale com o administrador",
-        )
+    # item L0-08-e: regras de provisionamento do provedor (mesmo laço do OIDC e do SAML); o LDAP é único por
+    # inquilino, então o identificador do provedor é o do inquilino
+    from app.auth import provisionamento  # importação tardia: provisionamento importa perfil_por_grupos daqui
+
     try:
-        with db.db() as cur:
-            cur.execute(
-                "SELECT * FROM plat.ldap_provisionar(%s, %s, %s, %s, %s, %s, true)",
-                (r["tenant_id"], login, achado["nome"], achado["email"], perfil, achado["dn"]),
-            )
-            prov = cur.fetchone()
-            cur.execute("SELECT * FROM plat.auth_login(%s, %s)", (tenant_slug, login))
-            linha = cur.fetchone()
+        resultado = provisionamento.aplicar(
+            request, "ldap", r["tenant_id"], r["tenant_id"], tenant_slug, login, achado["nome"], achado["email"],
+            achado["grupos"], achado["dn"], r["mapa_grupo_perfil"], r["perfil_padrao"],
+        )
     except psycopg2.errors.RaiseException as e:
         if (e.diag.message_primary or "").strip() == "login_em_uso_local":
             request.state.resultado = "login_em_uso_local"
@@ -367,16 +359,19 @@ def login_ldap(corpo: LoginEntrada, request: Request, resposta: Response):
         raise erro_do_banco(e) from e
     except psycopg2.Error as e:
         raise erro_do_banco(e) from e
+    linha = resultado["linha"]
+    perfil = resultado["perfil"]
     ctx = db.Contexto(linha["tenant_id"], linha["usuario_id"], login)
     with db.db(ctx) as cur:
         registrar_evento(
             cur,
             request,
-            "usuarios/criar" if prov["criado"] else "usuarios/atualizar",
+            "usuarios/criar" if resultado["criado"] else "usuarios/atualizar",
             "usuario",
             linha["usuario_id"],
-            {"origem": "ldap", "perfil": perfil, "perfil_anterior": prov["perfil_anterior"]},
+            {"origem": "ldap", "perfil": perfil, "perfil_anterior": resultado["perfil_anterior"]},
         )
+        provisionamento.registrar_efeitos(cur, request, resultado, "ldap", linha["usuario_id"])
     politica_sessao = politica_de(linha["config"], tenant_slug)
     return _abrir_sessao(request, resposta, ctx, linha["usuario_id"], politica_sessao, "ldap", None)
 
