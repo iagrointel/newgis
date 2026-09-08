@@ -39,6 +39,12 @@ from app.catalogo import (
     transferencia,
 )
 from app.conexao import rotas as rotas_conexao
+from app.consulta import cors_servicos
+from app.consulta.rotas_diretorio import router as rotas_diretorio_esri
+from app.consulta.rotas_ogc_features import router as rotas_ogc_features
+from app.consulta.rotas_query import router as rotas_consulta_esri
+from app.consulta.rotas_servico import router as rotas_consulta_servico
+from app.consulta.rotas_wfs import router as rotas_wfs
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.edicao.rotas import router as rotas_edicao
 from app.geocodificador.rotas import router as rotas_geocodificador
@@ -70,6 +76,8 @@ auth_middleware.instalar(app)
 # acrescentado por último: no empilhamento do Starlette isso o torna o mais externo, executando ANTES do
 # middleware de log/sessão acima (ADR 0001 seção 12; app/limite_corpo.py) — corpo grande nunca chega à sessão.
 limite_corpo.instalar(app)
+# CORS aberto só em /svc, /ogc e /tiles (item L2-04-b): lá a credencial é o token da URL, nunca o cookie.
+cors_servicos.instalar(app)
 
 ROUTERS = [
     rotas_saude,
@@ -131,6 +139,17 @@ ROUTERS = [
     rotas_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
+    # --- operação query do FeatureServer (L2-04-c): /rest/services/{item}/FeatureServer/{camada}/query
+    # --- diretório/metadados do FeatureServer + OGC API Features Part 1 + WFS 2.0 (item
+    # L2-04-servicos-esri-ogc, construído EM VOLTA da query acima, sem reescrevê-la): descritor de
+    # serviço/camada (`?f=json`), `/ogc/features/{item}` e `/wfs/{item}`. applyEdits/attachments/
+    # relationships ficam de fora (dependem de L2-03-edicao e L2-10-b, nenhum construído).
+    rotas_consulta_esri,
+    rotas_consulta_servico,
+    # --- diretório de serviços Esri por token (L2-04-b): /svc/{token}/rest/info|generateToken|services
+    rotas_diretorio_esri,
+    rotas_ogc_features,
+    rotas_wfs,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
