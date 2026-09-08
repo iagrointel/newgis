@@ -517,6 +517,9 @@ def test_varredura_cruzada_nas_funcoes_de_tile(env, leitor, camadas, medida):
                             mvt = _tile(cur, alvo, token=token)
                             com_dado += 1 if mvt else 0
                         except psycopg2.Error as e:
+                            # rollback ANTES do assert: o `leitor` é de escopo de módulo — transação abortada
+                            # que sobreviva ao falho envenena os testes seguintes com InFailedSqlTransaction
+                            leitor.rollback()
                             assert any(m in str(e) for m in ("tile_de_outro_inquilino", "escopo_insuficiente")), e
                     leitor.rollback()
                 chamadas += 1
