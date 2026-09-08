@@ -75,6 +75,23 @@ def test_detector_resolve_apelido_e_template_aninhado(tmp_path):
     assert ("GET", "/api/itens/{x}/miniatura") in vistas  # URL de imagem: sem chamada = leitura
 
 
+def test_detector_da_o_metodo_da_chamada_mais_proxima_na_mesma_linha(tmp_path):
+    """UX-06: `novo ? enviar('/api/papeis', c) : alterar(`/api/papeis/${p.id}`, c)` numa linha só — antes o PUT
+    era lido como POST (o primeiro nome da linha valia para todos os literais) e /api/papeis/{id} ficava
+    'sem controle' na cobertura."""
+    arq = tmp_path / "papeis.js"
+    arq.write_text(
+        "const r = novo ? await enviar('/api/papeis', corpo) : await alterar(`/api/papeis/${p.id}`, corpo);\n"
+        "const x = await apagar(`/api/tokens/${tk.id}`); const y = await obter('/api/tokens');\n",
+        encoding="utf-8",
+    )
+    vistas = {(c["metodo"], c["url"]) for c in cob.chamadas([arq])}
+    assert ("POST", "/api/papeis") in vistas
+    assert ("PUT", "/api/papeis/{x}") in vistas
+    assert ("DELETE", "/api/tokens/{x}") in vistas
+    assert ("GET", "/api/tokens") in vistas
+
+
 def test_casamento_de_template_com_rota():
     assert cob._casa("/api/itens/{x}/versoes/{x}", "/api/itens/{id}/versoes/{n}")
     assert not cob._casa("/api/itens/{x}", "/api/itens/{id}/versoes")
