@@ -1,0 +1,10 @@
+[Unit]
+Description=plat — scrub semanal do Garage (integridade de todos os blocos em disco; item L7-07-b)
+After=plataforma-garage.service
+
+[Service]
+Type=oneshot
+# GARAGE_BIN e GARAGE_CONFIG vêm de /etc/plat/garage.env (ver docs/RUNBOOKS/garage.md); sem o arquivo valem os
+# caminhos da prova desta máquina. `--yes` porque o comando é interativo por padrão.
+EnvironmentFile=-/etc/plat/garage.env
+ExecStart=/bin/sh -c '"${GARAGE_BIN:-/home/dev/plataforma/pipeline/bin/garage}" -c "${GARAGE_CONFIG:-/home/dev/plataforma/pipeline/garage/garage.toml}" repair --yes scrub start'
