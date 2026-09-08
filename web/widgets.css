@@ -35,3 +35,10 @@ plat-grafico .barra text { font-size: 10px; fill: var(--cor-texto, #222); }
 [data-piscando] { outline: 3px solid var(--cor-erro, #b42318); outline-offset: 2px; }
 .plat-avisos p { color: var(--cor-atencao, #d98a2b); font-size: .85rem; margin: .25rem 0; }
 .plat-avisos p[data-tipo="ciclo_cortado"]::before { content: 'ciclo cortado: '; font-weight: 600; }
+
+/* item L5-01-e: botão "Ações" do usuário nos widgets de dado */
+.plat-widgets .widget-acoes { margin-top: var(--e1); font-size: var(--t-2); }
+.plat-widgets .widget-acoes summary { cursor: pointer; color: var(--fraco); }
+.plat-widgets .widget-acoes button { margin: var(--e1) var(--e1) 0 0; }
+.plat-widgets .widget-acoes-saida { margin: var(--e1) 0 0; color: var(--fraco); }
+.plat-widgets .widget-acoes-saida[data-tipo="erro"] { color: var(--falha); }

@@ -43,7 +43,8 @@ class PlatTabela extends PlatWidget {
     rodape.textContent = `${linhas.length} registro(s)` + (linhas.length > limite ? `, mostrando ${limite}` : '');
     tabela.prepend(rodape);
     this.dataset.total = String(linhas.length);
-    this.replaceChildren(tabela);
+    const acoes = this.montarAcoesUsuario();
+    this.replaceChildren(tabela, ...(acoes ? [acoes] : []));
   }
 
   #clique(linha) {
