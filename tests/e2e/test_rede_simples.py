@@ -16,12 +16,13 @@ import time
 import pytest
 import uvicorn
 
+from tests.api.apoio_camada_teste import schema_dado
 from tests.e2e.apoio import RAIZ, Tela, sufixo
 
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
 ITEM = "L4-18-rede-simples-trace-network"
-SCHEMA_DADO = "d_demo"
+SCHEMA_DADO = schema_dado()
 TAB_LINHAS = "zt_l418_e2e_trechos"
 TAB_PONTOS = "zt_l418_e2e_juncoes"
 CAMPOS_LINHA = ["nome", "sentido"]
@@ -102,7 +103,11 @@ def camadas_e2e(admin_api):
     import psycopg2
     import psycopg2.extras
 
-    from tests.api.apoio_camada_teste import criar_tabela_linhas, criar_tabela_pontos
+    from tests.api.apoio_camada_teste import (
+        apagar_tabelas,
+        criar_tabela_linhas,
+        criar_tabela_pontos,
+    )
 
     dsn = os.environ.get("PLAT_DSN")
     if not dsn:
@@ -127,9 +132,17 @@ def camadas_e2e(admin_api):
                       "campos": [{"nome": c, "tipo": "text"} for c in campos], "fonte": "hospedada"}})
         assert r.status == 201, r.text()
         ids[chave] = (r.json()["id"], titulo)
-    yield ids
-    for iid, _titulo in ids.values():
-        admin_api.delete(f"/api/itens/{iid}")
+    try:
+        yield ids
+    finally:
+        for iid, _titulo in ids.values():
+            admin_api.delete(f"/api/itens/{iid}")
+        con = psycopg2.connect(dsn, cursor_factory=psycopg2.extras.RealDictCursor)
+        con.autocommit = True
+        try:
+            apagar_tabelas(con, SCHEMA_DADO, [TAB_LINHAS, TAB_PONTOS])
+        finally:
+            con.close()
 
 
 def test_cria_rede_simples_em_ate_tres_cliques(page, base_url, credenciais_demo, camadas_e2e, medida):
