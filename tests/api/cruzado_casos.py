@@ -440,6 +440,35 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/plataforma/inquilinos/{id}/reativar"): Caso(
         lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/reativar"
     ),
+    # ---- L0-07-e relatórios do admin: leituras e pedidos agem só no chamador; job/agenda de B = 404 (RLS)
+    ("GET", "/api/relatorios/tipos"): Caso(lambda p: "/api/relatorios/tipos", proprio=True, aceita=frozenset({200})),
+    ("GET", "/api/relatorios"): Caso(
+        lambda p: "/api/relatorios?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("POST", "/api/relatorios"): Caso(
+        lambda p: "/api/relatorios",
+        lambda p: {"tipo": "grupos"},
+        proprio=True,
+        aceita=frozenset({201, 429}),  # 1 por tipo por hora: a 2ª chamada da varredura recebe 429
+        verificar=_sem_marca,
+        limpar=lambda p, j: p.sessao_a.post(f"/api/jobs/{j['id']}/cancelar") if j.get("id") else None,
+    ),
+    ("GET", "/api/relatorios/agendas"): Caso(
+        lambda p: "/api/relatorios/agendas", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("POST", "/api/relatorios/agendas"): Caso(
+        lambda p: "/api/relatorios/agendas",
+        lambda p: {"tipo": "grupos", "periodicidade": "mensal", "hora": 3, "email": False},
+        proprio=True,
+        aceita=frozenset({201, 409}),  # nome único por inquilino: a 2ª chamada recebe 409
+        verificar=_sem_marca,
+        limpar=lambda p, j: p.sessao_a.delete(f"/api/agendas/{j['id']}") if j.get("id") else None,
+    ),
+    ("GET", "/api/relatorios/{job_id}"): Caso(lambda p: f"/api/relatorios/{p.job_b['id']}"),
+    ("GET", "/api/relatorios/{job_id}/csv"): Caso(lambda p: f"/api/relatorios/{p.job_b['id']}/csv"),
+    ("GET", "/api/atividade"): Caso(
+        lambda p: "/api/atividade?dias=7", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
     # ---- L0-05 fila de jobs: leituras e criação agem só no chamador (RLS + filtro de dono); alvos de B = 404
     ("GET", "/api/jobs"): Caso(
         lambda p: "/api/jobs?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
