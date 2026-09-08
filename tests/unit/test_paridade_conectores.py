@@ -5,8 +5,14 @@ para um teste que exista. Três travas, lidas dos arquivos:
 1. toda linha `feito` ou `parcial` da seção cita ao menos um caminho `tests/...` que existe em `master` (a
    árvore atual) OU no ramo nomeado entre parênteses na mesma célula (ramo wt/...), conferido com
    `git cat-file -e <ramo>:<caminho>` — o ramo da fila ainda não juntado é onde o adversário reproduz;
-2. toda linha `fora` NÃO cita teste (o que não existe não tem prova) e nomeia o item ou a decisão que a cobre;
-3. `docs/urls_paridade.txt` tem toda chave `[X-...]` citada nos títulos da seção, e cada URL da lista está com
+2. toda linha `fora` NÃO cita teste em `testado por` (o que não existe não tem prova) e nomeia o que a cobre:
+   um item (`L<n>-<n>...`) ou uma decisão do dono (`D<n>`) na célula de estado, ou a declaração explícita
+   "nenhum item do backlog pede" quando nada cobre (achado do adversário de 08/09/2026: `fora (decisão)` sem
+   decisão nenhuma no registro — D18-D41 não falam de armazém em nuvem nem de Knowledge Server — era mentira);
+3. TODO caminho `tests/...` citado em QUALQUER célula da linha (coluna "nós" inclusive) existe em `master` ou
+   num ramo nomeado na própria linha (o mesmo achado: a linha STAC citava um teste no ramo `wt/stac`, que não
+   tinha o arquivo — a travas 1 a citação na coluna "nós" escapava);
+4. `docs/urls_paridade.txt` tem toda chave `[X-...]` citada nos títulos da seção, e cada URL da lista está com
    HTTP 200 em `tests/medidas/L6-03-paridade-conectores.json` (gerado por `scripts/paridade_urls_testar.py`;
    o teste não vai à rede — lê a medida gravada e a data dela)."""
 
@@ -27,6 +33,8 @@ TITULO = "## Conectores e acervo (item L6-03-paridade-conectores"
 RE_TESTE = re.compile(r"`(tests/[A-Za-z0-9_./-]+\.py)`")
 RE_RAMO = re.compile(r"ramo `(wt/[A-Za-z0-9_-]+)`")
 RE_CHAVE = re.compile(r"\[([A-Z]+(?:-[a-z0-9-]+)+(?:, [A-Z]+(?:-[a-z0-9-]+)+)*)\]")
+RE_ITEM = re.compile(r"\bL\d+-\d+")
+RE_DECISAO = re.compile(r"\bD\d+")
 
 
 def _secao() -> str:
@@ -69,19 +77,35 @@ def test_secao_tem_linhas_e_estados_validos():
 def test_feito_e_parcial_apontam_para_teste_existente(linha):
     testes = RE_TESTE.findall(linha["testado_por"])
     ramos = RE_RAMO.findall(linha["testado_por"])
+    celula_estado = linha["linha"].split(" | ")[3]
     if linha["estado"] == "fora":
-        assert not testes, "linha `fora` não pode citar teste"
-        assert "(" in linha["linha"].split(" | ")[3], "linha `fora` nomeia o item ou a decisão que a cobre"
-        return
-    assert testes, f"linha `{linha['estado']}` sem teste citado: {linha['capacidade']}"
-    faltando = []
-    for t in testes:
+        assert not testes, "linha `fora` não pode citar teste em `testado por`"
+        assert "(" in celula_estado, "linha `fora` nomeia o item ou a decisão que a cobre"
+        assert (
+            RE_ITEM.search(celula_estado) or RE_DECISAO.search(celula_estado) or "nenhum item" in celula_estado
+        ), f"linha `fora` sem item nem decisão nomeados e sem declarar que nada cobre: {celula_estado}"
+    else:
+        assert testes, f"linha `{linha['estado']}` sem teste citado: {linha['capacidade']}"
+        faltando = []
+        for t in testes:
+            if (RAIZ / t).exists():
+                continue
+            if any(_existe_em(r, t) for r in ramos):
+                continue
+            faltando.append(t)
+        assert not faltando, f"{linha['capacidade']}: teste(s) inexistente(s) em master e nos ramos {ramos}: {faltando}"
+    # trava 3: citação de teste em QUALQUER célula (nós inclusive) tem de existir em master ou num ramo da linha
+    ramos_toda_linha = RE_RAMO.findall(linha["linha"])
+    soltos = []
+    for t in RE_TESTE.findall(linha["linha"]):
         if (RAIZ / t).exists():
             continue
-        if any(_existe_em(r, t) for r in ramos):
+        if any(_existe_em(r, t) for r in ramos_toda_linha):
             continue
-        faltando.append(t)
-    assert not faltando, f"{linha['capacidade']}: teste(s) inexistente(s) em master e nos ramos {ramos}: {faltando}"
+        soltos.append(t)
+    assert not soltos, (
+        f"{linha['capacidade']}: citação de teste inexistente em master e nos ramos {ramos_toda_linha}: {soltos}"
+    )
 
 
 def test_urls_de_referencia_com_200_na_data():
