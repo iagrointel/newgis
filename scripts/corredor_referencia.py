@@ -97,14 +97,13 @@ def hausdorff_m(a: np.ndarray, b: np.ndarray, res: float) -> float:
     return max(float(tb.query(a.astype(float))[0].max()), float(ta.query(b.astype(float))[0].max())) * res
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--referencia", required=True, help="diretório do motor de traçado da casa")
-    ap.add_argument("--superficie", required=True, help="arquivo .npz da rodada oficial (só leitura)")
-    ap.add_argument("--janela", type=int, default=400, help="margem em células da janela declarada")
-    a = ap.parse_args()
-    ref = Path(a.referencia).resolve()
-    z = np.load(a.superficie)
+def reproduzir(ref: Path, superficie: Path, janela: int = 400) -> dict:
+    """Roda a conferência inteira e devolve o relatório (o mesmo JSON que o main imprime).
+
+    Separada do main para o TESTE de unidade (`tests/unit/test_corredor_referencia.py`) exercitar
+    EXATAMENTE o mesmo caminho de código deste instrumento — cópia colada no teste ia divergir."""
+    ref = ref.resolve()
+    z = np.load(superficie)
     oficial = z["cost"]
     alt, larg = oficial.shape
     veto_oficial = np.unpackbits(z["veto"], count=alt * larg).astype(bool).reshape(alt, larg)
@@ -170,8 +169,9 @@ def main() -> int:
     A = tuple(int(x) for x in rota_oficial[0])
     B = tuple(int(x) for x in rota_oficial[-1])
     saida["reta_entre_as_pontas_km"] = round(float(np.hypot(A[0] - B[0], A[1] - B[1])) * res / 1000.0, 1)
+    saida["sinuosidade_da_rota_oficial"] = round(C.sinuosidade(rota_oficial), 4)
     for nome, kw in (("esparso", {"motor": "esparso"}),
-                     ("esparso_com_janela", {"motor": "esparso", "margem_celulas": a.janela})):
+                     ("esparso_com_janela", {"motor": "esparso", "margem_celulas": janela})):
         t0 = time.perf_counter()
         r = C.caminho(custo, veto_oficial, A, B, vizinhanca=16, **kw)
         dt = time.perf_counter() - t0
@@ -202,8 +202,18 @@ def main() -> int:
         oficial5 = np.unpackbits(z["corr5"], count=alt * larg).astype(bool).reshape(alt, larg)
         saida["corredor_oficial_celulas"] = int(oficial5.sum())
     saida["pico_memoria_gib"] = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024, 2)
+    return saida
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--referencia", required=True, help="diretório do motor de traçado da casa")
+    ap.add_argument("--superficie", required=True, help="arquivo .npz da rodada oficial (só leitura)")
+    ap.add_argument("--janela", type=int, default=400, help="margem em células da janela declarada")
+    a = ap.parse_args()
+    saida = reproduzir(Path(a.referencia), Path(a.superficie), janela=a.janela)
     print(json.dumps(saida, ensure_ascii=False, indent=1))
-    return 0 if igual else 1
+    return 0 if saida["superficie_igual_bit_a_bit"] else 1
 
 
 if __name__ == "__main__":
