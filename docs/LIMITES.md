@@ -230,3 +230,15 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## análise 3D sobre terreno e extrusões (L2-09-d-analise-3d-visibilidade): terreno chega INLINE na
+
+| nome | valor | explicação |
+|---|---|---|
+| `ANALISE3D_CELULAS_MAX` | `250000` | mesma ordem do teto multiescala (proteção de RAM/disco) |
+| `ANALISE3D_ALTURA_MAX_M` | `10000.0` | altura de terreno/observador/alvo/sólido; Everest × 1 sobra |
+| `ANALISE3D_DISTANCIA_MAX_M` | `30000.0` | visada e viewshed recusam alvo além disso (refutação: 200 km) |
+| `ANALISE3D_AMOSTRAS_MAX` | `20000` | pontos de perfil/visada por chamada |
+| `ANALISE3D_GDAL_TIMEOUT_S` | `120` | gdal_viewshed por subprocesso, sempre com relógio |
+| `ANALISE3D_SOLIDOS_MAX` | `500` | sólidos (extrusões) por análise de sombra |
+| `ANALISE3D_SOLIDO_VERTICES_MAX` | `200` | vértices do polígono de cada sólido |
