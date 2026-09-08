@@ -1,0 +1,27 @@
+{
+ "item": "L2-11-a-geocodificacao-csv",
+ "medidas": {
+  "lote_numero_exato_50m": {
+   "valor": 95.0,
+   "unidade": "%",
+   "comando": "test_1000_enderecos_boa_vista_85pct_numero_exato_0pct_fora_municipio"
+  },
+  "lote_fora_municipio": {
+   "valor": 0.0,
+   "unidade": "%",
+   "comando": "test_1000_enderecos_boa_vista_85pct_numero_exato_0pct_fora_municipio"
+  },
+  "lote_1000_enderecos_duracao_s": {
+   "valor": 8.72,
+   "unidade": "s",
+   "comando": "test_1000_enderecos_boa_vista_85pct_numero_exato_0pct_fora_municipio"
+  },
+  "lote_1000_enderecos_job_duracao_s": {
+   "valor": 8.511,
+   "unidade": "s",
+   "comando": "test_1000_enderecos_boa_vista_85pct_numero_exato_0pct_fora_municipio"
+  }
+ },
+ "gerado_em": "2026-09-08T20:20:03Z",
+ "git_sha": "942ec20c986f"
+}
