@@ -68,6 +68,33 @@ salva que só falharia ao ser usada. Tela `/redes/configuracoes` com a lista e o
 lacunas declaradas (sem *function barrier*, sem *filter bitset*, sem `SUBTRACT`, contenção por coincidência
 de posição) em `docs/rede/CONFIG_TRACADO.md`; decisão em
 `docs/adr/20260908T0145-configuracoes-de-tracado.md`.
+## turno 7, setembro de 2026 (item L4-27-curto-circuito-e-protecao: corrente de curto por barra e coordenação)
+
+`POST /api/rede/{id}/subrede/{nome}/curto` calcula a corrente de curto-circuito de cada barra do
+alimentador — trifásica e fase-terra — pela fonte de tensão equivalente no ponto de falta, sobre o MESMO
+modelo em memória que os exportadores OpenDSS e pandapower usam. O resultado sai como tabela
+(`GET .../curto`) e como camada de pontos (`GET .../curto/camada`, com a coordenada lida da topologia na
+hora, nunca copiada), e para cada barra vem o dispositivo a montante com o veredito de coordenação contra
+a faixa de interrupção CADASTRADA: `interrompe`, `abaixo_da_faixa`, `acima_da_capacidade` ou `sem_dado`.
+
+As premissas são o produto tanto quanto o número, e voltam gravadas em toda execução e toda leitura:
+potência de curto da fonte, relação X/R, fator de tensão `c`, razão de sequência zero de linha e de fonte,
+base de potência. Fonte sem potência de curto declarada é RECUSADA (`422 impedancia_de_fonte_ausente`), e
+potência zero também (`impedancia_de_fonte_nula`): impedância nula daria corrente infinita, e isso não é
+resultado.
+
+Medido em `tests/medidas/L4-27-curto-circuito-e-protecao.json`, num alimentador real da cooperativa de
+teste (191 dos trechos de média tensão de 20 alimentadores do arquivo): 192 barras, todas com corrente
+calculada, de 6.442 A a 10.982 A trifásicos com fonte de 250 MVA, em 0,205 s (carga 8,57 e 2,75 GB de RAM
+livre no instante da medida). Nesse alimentador, 191 das 192 barras saíram `sem_dado` na coordenação —
+a BDGD não tem campo de faixa de interrupção, e nenhuma faixa foi suposta. Em `tests/unit`, a corrente
+bate com a conta fechada `Ik = c·Un/(√3·|Z|)` em três barras de um alimentador sintético.
+
+Limitações declaradas no cabeçalho do módulo e em `docs/PARIDADE.md`: impedância de condutor e de
+transformador são valores de REFERÊNCIA (o cadastro não os traz), a rede é tratada como radial (onde há
+laço a corrente sai subestimada, com aviso e contagem) e como equilibrada. Triagem: sinal, não prova.
+O ArcGIS Utility Network não faz cálculo elétrico — isto é "além da paridade", nunca paridade.
+
 ## turno 7, setembro de 2026 (item L4-05-c-pandapower-e-matpower: conector para rede equilibrada)
 
 A subrede passou a sair em mais dois formatos, na MESMA rota do OpenDSS:

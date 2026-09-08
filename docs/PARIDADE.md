@@ -503,3 +503,30 @@ Fontes declaradas no item (`pandapower.readthedocs.io`, `github.com/e2nIEE/panda
 | objeto sem geometria | o Utility Network exige geometria em toda feição | o caso MATPOWER não tem coordenada nenhuma: a barra entra no grafo de negócio (`plat.rede_no`, geometria opcional) com `geom` NULO, e o pacote declara os grupos como `sem_geometria`. Nunca ponto (0, 0) | feito (acima da Esri neste ponto) | `::test_barra_importada_fica_sem_geometria` | 2026-09-08 | não se aplica |
 | desequilíbrio entre fases | não se aplica | o `runpp` do pandapower e o caseformat do MATPOWER são de rede EQUILIBRADA (sequência positiva); as fases declaradas por trecho não são representadas nesses dois formatos. Onde o desequilíbrio importa, o formato é o `dss` | limitação declarada | `NAO_FAZ.md` do próprio arquivo exportado | 2026-09-08 | não se aplica |
 | impedância de condutor | não se aplica | o pacote de ativos não tem catálogo de condutor: toda linha sai com a impedância de REFERÊNCIA, que é o valor padrão do motor OpenDSS, escrito em vez de implícito. O perfil de tensão do fluxo não é medição desta rede | limitação declarada | idem | 2026-09-08 | não se aplica |
+
+## Rede de utilidades — curto-circuito e coordenação de proteção (item L4-27-curto-circuito-e-protecao)
+
+Como a seção anterior, esta capacidade **NÃO é paridade**: o ArcGIS Utility Network não calcula corrente
+de curto-circuito nem verifica coordenação de proteção — ele modela a rede, traça e valida topologia. O
+cálculo elétrico é "além da paridade" (a expressão está no `L4_CONCEITO.md`, decisão C17), e a linha
+"Pro editando o nosso curto = FORA" vale aqui como em todo o L4. Não se vende isto como "fazemos o que a
+Esri faz": a Esri resolve outro problema.
+
+Texto obrigatório junto de qualquer número que saia daqui: **triagem, sinal, não prova**. A impedância de
+condutor e a de dispersão do transformador são valores de REFERÊNCIA declarados, porque o cadastro de
+distribuição não os traz; a corrente ordena barras e confere faixa de dispositivo, e não dimensiona
+equipamento.
+
+Fontes declaradas no item: `pandapower.readthedocs.io/en/latest/shortcircuit.html` e
+`opendss.epri.com/opendss_documentation.html`, acesso 2026-09-08.
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| corrente de curto por barra (trifásica e fase-terra) | não existe | `POST /api/rede/{id}/subrede/{nome}/curto` calcula pela fonte de tensão equivalente no ponto de falta, sobre o MESMO modelo em memória dos exportadores OpenDSS/pandapower; resultado por barra em `plat.rede_curto_barra` | feito (além da paridade) | `tests/unit/test_curto_circuito.py::test_ik_bate_com_a_conta_analitica_em_tres_barras` (resposta analítica em 3 barras) e a medida no alimentador real em `tests/medidas/L4-27-curto-circuito-e-protecao.json` | 2026-09-08 | não se aplica |
+| premissas declaradas ao lado do número | não se aplica | potência de curto da fonte, relação X/R, fator de tensão `c`, razão de sequência zero de linha e de fonte e base de potência voltam gravadas em cada execução e em cada leitura | feito | `::test_premissas_saem_gravadas_no_resultado` | 2026-09-08 | não se aplica |
+| fonte sem impedância declarada | não se aplica | recusa `422 impedancia_de_fonte_ausente`/`impedancia_de_fonte_nula`: corrente infinita não é resultado | feito | `::test_fonte_com_impedancia_nula_e_recusada`; na rede real, na medida do item | 2026-09-08 | não se aplica |
+| coordenação simples do dispositivo a montante | não existe | para cada barra, o primeiro dispositivo entre ela e a fonte, com veredito `interrompe`/`abaixo_da_faixa`/`acima_da_capacidade` contra a faixa de interrupção CADASTRADA | feito (além da paridade) | `tests/api/test_rede_curto.py::test_dispositivo_sem_faixa_sai_sem_dado_e_com_faixa_interrompe` | 2026-09-08 | não se aplica |
+| dispositivo sem faixa cadastrada | não se aplica | sai `sem_dado`. A BDGD não tem campo de faixa de interrupção: no alimentador real medido, 191 de 192 barras saíram `sem_dado` e nenhuma recebeu faixa suposta | feito | medida do item | 2026-09-08 | não se aplica |
+| resultado como camada e como tabela | a Esri publica resultado de traçado como seleção, não como camada de análise elétrica | `GET .../curto` devolve a tabela com as colunas descritas; `GET .../curto/camada` devolve GeoJSON de pontos com a coordenada lida da topologia na hora (nunca cópia) | feito | `::test_tabela_e_camada_do_mesmo_calculo` | 2026-09-08 | não se aplica |
+| rede em malha | não se aplica | limitação declarada: a impedância é somada ao longo do caminho de menor impedância até a fonte, e onde há laço a corrente sai SUBESTIMADA, com o aviso `rede_com_laco` e a contagem de trechos fora da árvore | limitação declarada | `::test_laco_sai_com_aviso` | 2026-09-08 | não se aplica |
+| desequilíbrio entre fases | não se aplica | o cálculo é por sequências, com a rede tratada como equilibrada; trecho monofásico entra com a mesma impedância do trifásico | limitação declarada | cabeçalho de `app/rede_utilidades/curto_circuito.py` | 2026-09-08 | não se aplica |

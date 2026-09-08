@@ -21,7 +21,8 @@ Mapa de carga (vocabulário do pacote `eletrica-br`, item L4-01-a):
   ssdmt  → grupo trecho_de_media_tensao/1  (atributos: cod_id, ctmt, uni_tr_at, sub, conj, fas_con, comp, pos)
   ssdbt  → grupo trecho_de_baixa_tensao/1  (atributos: cod_id, ctmt, uni_tr_mt, fas_con, comp, tip_cnd)
   ramlig → grupo ramal_de_ligacao/1        (atributos: cod_id, ctmt, uni_tr_mt, fas_con, comp, tip_cnd)
-  trafo  → grupo transformador_de_distribuicao/1 (atributos: cod_id, pot_nom, tip_trafo, ctmt, uni_tr_at)
+  trafo  → grupo transformador_de_distribuicao/1 (atributos: cod_id, pot_nom, tip_trafo, ctmt,
+           uni_tr_at, ten_lin_se, per_fer, per_tot)
   ponnot → grupo ponto_notavel/1           (poste — `sem_terminal`: tem de dar ZERO nó de topologia)
 `fas_con` ('A','AB','CA'...) vira o bitmask de fase A=1, B=2, C=4. O wkt é MULTILINESTRING de parte única
 (medido: 0 linhas com ST_NumGeometries > 1 em ssdmt) — `ST_GeometryN(...,1)` devolve a LineString.
@@ -152,7 +153,11 @@ def carregar(cur, tenant_id: int, rede_id: str, ctmts: list[str] | None = None,
           INSERT INTO plat.rede_feicao_ponto(tenant_id, rede_id, tipo_id, geom, atributos)
           SELECT %(a)s, %(b)s::uuid, %(c)s::uuid, ST_SetSRID(ST_MakePoint(x, y), 4326),
                  jsonb_build_object('cod_id', cod_id, 'pot_nom', pot_nom, 'tip_trafo', tip_trafo,
-                                    'ctmt', ctmt, 'uni_tr_at', uni_tr_at)
+                                    'ctmt', ctmt, 'uni_tr_at', uni_tr_at,
+                                    -- colunas da MESMA tabela do arquivo que a conversão elétrica lê
+                                    -- (item L4-05-a/L4-27): sem TEN_LIN_SE não há tensão de base do
+                                    -- secundário, e sem PER_FER/PER_TOT não há perda do transformador
+                                    'ten_lin_se', ten_lin_se, 'per_fer', per_fer, 'per_tot', per_tot)
           FROM {exigir_esquema()}.trafo {recorte_ponto}
           RETURNING 1
         ) SELECT count(*) AS n FROM carga
@@ -327,3 +332,15 @@ def contagens_arquivo(cur) -> dict:
         cur.execute(f"SELECT count(*) AS n FROM {exigir_esquema()}.{tabela}")
         saida[tabela] = cur.fetchone()["n"]
     return saida
+
+
+def tensao_nominal_do_alimentador(cur, ctmt: str):
+    """`TEN_NOM` do alimentador, lido da tabela `ctmt` do MESMO arquivo.
+
+    ⛔ Por que isto existe: a extração da casa NÃO tem a camada `unsemt` (as chaves de média tensão), que
+    é onde a BDGD guarda o equipamento de saída da subestação com a tensão nominal do alimentador. Sem
+    ela, quem monta o modelo elétrico não acha a tensão de base em feição nenhuma. O valor devolvido aqui
+    vem do arquivo, não de suposição — quem o usa tem de dizer em que feição o escreveu."""
+    cur.execute(f"SELECT ten_nom FROM {exigir_esquema()}.ctmt WHERE cod_id = %s", (ctmt,))
+    linha = cur.fetchone()
+    return None if linha is None else linha["ten_nom"]

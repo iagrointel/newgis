@@ -452,11 +452,18 @@ def montar_da_subrede(cur, rede_id: str, subrede: dict, controladores_da: list[d
             fechada = str(estado_bruto).strip().upper().startswith("F")
         chaves.append({"feicao_id": feicao_id, "tipo": linhas_da_feicao[0]["tipo_chave"],
                        "estado": "fechada" if fechada else "aberta", "nos": nos,
-                       "codigo": atributo(linhas_da_feicao[0]["atributos"] or {}, "unsemt_cod_id", "cod_id")})
+                       "codigo": atributo(linhas_da_feicao[0]["atributos"] or {}, "unsemt_cod_id", "cod_id"),
+                       # os atributos da feição seguem com a chave porque quem consome o modelo precisa
+                       # deles sem voltar ao banco (item L4-27: a faixa de interrupção do dispositivo)
+                       "atributos": linhas_da_feicao[0]["atributos"] or {}})
         if fechada and len(nos) == 2:
             fusao.unir(nos[0], nos[1])
         elif not fechada:
             avisar("chave_aberta_deixa_trecho_ilhado")
+    # a barra de cada chave só existe depois que TODA fusão por chave fechada foi feita, por isso esta
+    # segunda passada. Chave fechada tem os dois terminais na mesma barra; chave aberta tem duas.
+    for c in chaves:
+        c["barras"] = sorted({_barra(fusao.achar(n)) for n in c["nos"]})
 
     # 2. barras e linhas
     nos_da_subrede: set[str] = set()
