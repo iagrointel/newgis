@@ -16,6 +16,11 @@ AREA_MULTIESCALA_TESTE = {
     "type": "Polygon",
     "coordinates": [[[-46.61, -23.51], [-46.59, -23.51], [-46.59, -23.49], [-46.61, -23.49], [-46.61, -23.51]]],
 }
+# L4-parcelas-02: recorte de teste da malha de parcelas (coordenada local da malha, metros)
+AREA_PARCELAS_TESTE = {
+    "type": "Polygon",
+    "coordinates": [[[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0], [0.0, 0.0]]],
+}
 PADRAO = frozenset({401, 403, 404})
 UUID_NULO = "00000000-0000-0000-0000-000000000000"  # id que não é de A nem de B: 404 garantido pela RLS/dono
 
@@ -905,6 +910,41 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    # ---- fachada ParcelFabricServer da malha de parcelas (L4-parcelas-02-fluxos-cogo): o
+    # `record` no corpo aponta para UUID nulo — a RLS do inquilino devolve 404 antes de qualquer
+    # fluxo (a casa exige registro em toda operação que nasce/mata feição, paridade §11).
+    ("POST", "/api/parcelas/fabrica/build"): Caso(
+        lambda p: "/api/parcelas/fabrica/build",
+        lambda p: {"record": UUID_NULO},
+    ),
+    ("POST", "/api/parcelas/fabrica/divide"): Caso(
+        lambda p: "/api/parcelas/fabrica/divide",
+        lambda p: {"divideParcelGuid": UUID_NULO, "record": UUID_NULO,
+                   "divideOption": "EqualArea", "divideNumberOfParts": 2, "divideLineBearing": 90.0},
+    ),
+    ("POST", "/api/parcelas/fabrica/merge"): Caso(
+        lambda p: "/api/parcelas/fabrica/merge",
+        lambda p: {"parentParcels": [{"id": UUID_NULO, "layerId": "parcela"}], "record": UUID_NULO},
+    ),
+    ("POST", "/api/parcelas/fabrica/clip"): Caso(
+        lambda p: "/api/parcelas/fabrica/clip",
+        lambda p: {"parentParcels": [{"id": UUID_NULO, "layerId": "parcela"}], "record": UUID_NULO,
+                   "clipOption": "PreserveArea",
+                   "clippingGeometry": AREA_PARCELAS_TESTE},
+    ),
+    ("POST", "/api/parcelas/fabrica/createSeeds"): Caso(
+        lambda p: "/api/parcelas/fabrica/createSeeds",
+        lambda p: {"record": UUID_NULO},
+    ),
+    ("POST", "/api/parcelas/fabrica/reconstructFromSeeds"): Caso(
+        lambda p: "/api/parcelas/fabrica/reconstructFromSeeds",
+        lambda p: {"record": UUID_NULO, "extent": {"xmin": 0.0, "ymin": 0.0, "xmax": 1.0, "ymax": 1.0}},
+    ),
+    ("POST", "/api/parcelas/fabrica/assignFeaturesToRecord"): Caso(
+        lambda p: "/api/parcelas/fabrica/assignFeaturesToRecord",
+        lambda p: {"parcelFeatures": [{"id": UUID_NULO, "layerId": "parcela"}],
+                   "record": UUID_NULO, "writeAttribute": "RetiredByRecord"},
     ),
 }
 
