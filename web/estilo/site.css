@@ -1,0 +1,118 @@
+/* plat — folha do SITE PÚBLICO do inquilino (item L5-20-sites-paginas-publicas).
+
+   Separada das folhas do produto (`style.css`, `estilo/tokens.css`) de propósito: a página do site é anônima,
+   servida pronta pelo servidor e lida por quem nunca entrou na plataforma — não herda o "instrumento" escuro
+   das telas de trabalho nem depende de nenhum script. A cor da marca chega por `--site-cor`, gravada na
+   própria página a partir da configuração do inquilino, e a cor do texto sobre ela (`--site-cor-texto`) é
+   escolhida no servidor pelo contraste (WCAG 1.4.3), nunca fixada aqui. */
+
+:root {
+  --site-fundo: #ffffff;
+  --site-tinta: #16191d;
+  --site-tinta-fraca: #4a5058;
+  --site-borda: #d7dce2;
+  --site-fundo-alt: #f2f4f7;
+  --site-cor: #1f4b99;
+  --site-cor-texto: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+body.site {
+  margin: 0;
+  background: var(--site-fundo);
+  color: var(--site-tinta);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.site-pular {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--site-cor);
+  color: var(--site-cor-texto);
+  padding: .6rem 1rem;
+}
+
+.site-pular:focus { left: 0; z-index: 10; }
+
+.site-cabecalho {
+  background: var(--site-cor);
+  color: var(--site-cor-texto);
+  padding: 1.2rem clamp(1rem, 5vw, 3rem);
+}
+
+.site-marca { display: flex; align-items: center; gap: .75rem; }
+.site-logo { border-radius: 4px; background: #fff; }
+.site-titulo { font-size: 1.6rem; font-weight: 700; }
+.site-subtitulo { margin: .35rem 0 0; opacity: .92; }
+
+.site-menu ul { display: flex; flex-wrap: wrap; gap: 1rem; list-style: none; margin: .9rem 0 0; padding: 0; }
+.site-menu a { color: var(--site-cor-texto); text-decoration: none; border-bottom: 2px solid transparent; padding: .2rem 0; }
+.site-menu a:hover, .site-menu a:focus { border-bottom-color: var(--site-cor-texto); }
+.site-menu a[aria-current="page"] { border-bottom-color: var(--site-cor-texto); font-weight: 600; }
+
+.site-conteudo { padding: 0 0 2rem; }
+.site-conteudo > h1 { margin: 2rem clamp(1rem, 5vw, 3rem) 1rem; font-size: 2rem; line-height: 1.2; }
+
+.site-secao { padding: 1.5rem clamp(1rem, 5vw, 3rem); }
+.site-secao > h2 { margin-top: 0; font-size: 1.4rem; }
+.site-fundo-escuro { background: var(--site-fundo-alt); }
+
+.site-cartoes { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.cartao { min-width: 0; }
+.cartao h3 { margin: 0 0 .5rem; font-size: 1.15rem; }
+.cartao-galeria, .cartao-estatisticas, .cartao-mapa, .cartao-incorporado { grid-column: 1 / -1; }
+
+.cartao img, .cartao iframe { max-width: 100%; }
+.cartao iframe { width: 100%; border: 1px solid var(--site-borda); border-radius: 6px; }
+figure.cartao-imagem { margin: 0; }
+figure.cartao-imagem figcaption { color: var(--site-tinta-fraca); font-size: .92rem; margin-top: .4rem; }
+
+.site-lista { list-style: none; margin: .75rem 0 0; padding: 0; display: grid; gap: .75rem;
+              grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.site-lista li { border: 1px solid var(--site-borda); border-radius: 6px; padding: .8rem 1rem; }
+/* link com a cor do texto e sublinhado: a cor da marca do inquilino pode não ter contraste
+   suficiente sobre o fundo (claro ou escuro), e contraste é cláusula do portão, não gosto. */
+.site-lista a { color: inherit; text-decoration: underline; font-weight: 600; }
+.site-lista p { margin: .35rem 0 0; color: var(--site-tinta-fraca); font-size: .95rem; }
+.site-tipo { display: block; color: var(--site-tinta-fraca); font-size: .85rem; }
+
+.site-filtro, .site-busca { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .5rem 0 0; }
+.site-filtro label, .site-busca label { color: var(--site-tinta-fraca); font-size: .95rem; }
+.site-filtro select, .site-busca input { padding: .4rem .6rem; border: 1px solid var(--site-borda); border-radius: 4px;
+                                         font: inherit; color: var(--site-tinta); background: var(--site-fundo); }
+.site-filtro button, .site-busca button, .site-botao {
+  display: inline-block; padding: .45rem .9rem; border: 1px solid var(--site-cor); border-radius: 4px;
+  background: var(--site-cor); color: var(--site-cor-texto); font: inherit; text-decoration: none; cursor: pointer;
+}
+
+.site-numeros { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: .5rem; }
+.site-numero { min-width: 8rem; }
+.site-numero strong { display: block; font-size: 2rem; line-height: 1.1; }
+.site-numero span { color: var(--site-tinta-fraca); font-size: .95rem; }
+
+.site-indisponivel { color: var(--site-tinta-fraca); font-style: italic; }
+
+.site-rodape {
+  border-top: 1px solid var(--site-borda);
+  padding: 1.5rem clamp(1rem, 5vw, 3rem);
+  color: var(--site-tinta-fraca);
+}
+.site-aviso { font-size: .9rem; }
+
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid var(--site-cor); outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --site-fundo: #14171b;
+    --site-tinta: #eef1f5;
+    --site-tinta-fraca: #b4bcc6;
+    --site-borda: #333a42;
+    --site-fundo-alt: #1c2026;
+  }
+}
