@@ -1,0 +1,11 @@
+[Unit]
+Description=plat — soquete de ativação da API (:PORTA). Segura conexão nova na fila do kernel enquanto plat-api.service está parada (rotação de segredo PLAT_DSN, item L7-19: a cláusula "0 erro 5xx" só vale de verdade com isto — sem o soquete o nginx devolve 502 na janela do stop).
+# provado no spike plat-spike-fd (07/09): uvicorn --fd 3 --workers 2 aceita o fd do systemd e uma
+# conexão que chega com o serviço parado espera ~1 s e recebe 200 (ativação sob demanda), nunca refused.
+
+[Socket]
+ListenStream=127.0.0.1:PORTA
+NoDelay=true
+
+[Install]
+WantedBy=sockets.target

@@ -7,6 +7,7 @@ publicado nunca se confundem; ULID de nó nunca se repete entre versões; migra�
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import time
@@ -18,6 +19,12 @@ from tests.api.catalogo.conftest import titulo_zt
 from tests.api.test_rls import contexto, ids_por_slug
 
 ITEM = "L5-05-documento-versoes"
+# `sudo -u postgres psql` (abaixo) fala direto com o Postgres, fora da conexão da aplicação — por isso NÃO
+# passa pelo `CursorSchemaAmbiente` que reescreve `plat.` para o schema da trilha/homologação (achado desta
+# verificação: o literal `plat.item_versao` sempre mirava o schema de PRODUÇÃO, então em qualquer base
+# isolada (trilha/homologação) a adulteração caía numa linha que não existia e o teste falhava sempre,
+# não só às vezes). `PLAT_SCHEMA` é a MESMA variável que `app/schema_ambiente.py` lê.
+SCHEMA_SQL = os.environ.get("PLAT_SCHEMA") or "plat"
 
 
 def _no(tipo="widget"):
@@ -247,7 +254,7 @@ def test_integridade_acusa_linha_de_versao_editada_direto_no_banco(sessao_a, ite
             "-v",
             "ON_ERROR_STOP=1",
             "-c",
-            f"UPDATE plat.item_versao SET corpo = jsonb_set(corpo, '{{titulo}}', '\"adulterado\"') "
+            f"UPDATE {SCHEMA_SQL}.item_versao SET corpo = jsonb_set(corpo, '{{titulo}}', '\"adulterado\"') "
             f"WHERE item_id = '{iid}'::uuid AND versao = 1",
         ],
         capture_output=True,
