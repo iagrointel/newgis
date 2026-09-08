@@ -63,10 +63,13 @@ O QUE ESTE MÓDULO NÃO FAZ (limitações medidas, não desculpas):
 5. **Ponto de operação da chave** é o do cadastro: chave fechada vira barra única, chave aberta ilha o
    jusante. Não há manobra dentro do OpenDSS (limitação 3 do `NAO_FAZ.md`).
 
-MOTOR GLOBAL, uma armadilha real. O `opendssdirect` conversa com UMA instância do motor por processo: dois
-cálculos ao mesmo tempo no mesmo processo misturariam circuitos e devolveriam número de outro alimentador.
-Por isso todo acesso ao motor passa por `_TRAVA_MOTOR`, e o caminho pesado (16 alimentadores) é um JOB, que
-roda em processo próprio do worker.
+MOTOR EM PROCESSO PRÓPRIO, e não por gosto. O `opendssdirect` é uma biblioteca em Pascal com estado global,
+e num processo que também carrega GDAL ela só sobrevive na thread que a iniciou: chamada de qualquer outra
+thread — que é o que a rota faz — ela derruba o interpretador inteiro com falha de segmentação, sem erro
+que se possa capturar. Medido em 08/09/2026, com pilha de 64 MB e com troca de ordem de importação: cai do
+mesmo jeito. Por isso `resolver` roda a conta num processo filho e lê o resultado em JSON. De quebra, o pico
+de memória sai medido no filho, o diretório de trabalho do servidor não é mexido e dois alimentadores ao
+mesmo tempo não disputam o estado global do motor.
 
 Fontes declaradas no item: opendss.epri.com/opendss_documentation.html, dss-extensions.org,
 github.com/dss-extensions/OpenDSSDirect.py e o PRODIST Módulo 7 da ANEEL (acesso 2026-09-08).
@@ -76,15 +79,28 @@ import json
 import math
 import os
 import resource
+import subprocess
+import sys
 import tempfile
-import threading
 import time
 from pathlib import Path
 
 from app.rede_utilidades import opendss
 
-# uma instância do motor OpenDSS por processo: nunca dois cálculos ao mesmo tempo (ver cabeçalho)
-_TRAVA_MOTOR = threading.Lock()
+# ⛔⛔ O MOTOR RODA EM PROCESSO PRÓPRIO, e isto não é preferência de arquitetura.
+# MEDIDO em 08/09/2026: o mesmo alimentador passa quando o OpenDSS é chamado da thread principal e DERRUBA
+# O INTERPRETADOR INTEIRO com falha de segmentação quando é chamado de qualquer outra thread deste processo
+# — que é exatamente o que a rota faz (o servidor manda trabalho síncrono para um conjunto de threads) e o
+# que a suíte fazia. Não adiantou pilha maior (64 MB), não adiantou trocar a ordem de importação: o motor é
+# uma biblioteca em Pascal com estado global e não sobrevive fora da thread que o iniciou num processo que
+# também carrega GDAL. E não há como capturar a falha: o processo simplesmente some, levando junto a API ou
+# o worker e todo trabalho em curso.
+# Por isso `resolver` escreve o modelo num processo filho (`python -m app.rede_utilidades.fluxo_potencia`),
+# que faz a conta e devolve JSON. O que se ganha, além de não cair: o pico de memória sai medido no filho
+# (é o número que o portão do item pede), o diretório de trabalho do processo servidor nunca é mexido, e
+# dois alimentadores ao mesmo tempo não disputam o estado global do motor.
+LIMITE_DE_TEMPO_S = 1800
+RAIZ = Path(__file__).resolve().parents[2]
 
 MODOS = ("anual", "hora")
 MODELOS_DE_CARGA = {
@@ -441,38 +457,42 @@ def _perda_de_ferro_declarada_kwh(modelo: dict, horas_do_ano: float) -> dict:
     }
 
 
-def resolver(modelo: dict, parametros: dict) -> dict:
-    """Resolve o fluxo de potência do modelo e devolve convergência, resumo, energia e o estado por
-    elemento no ponto crítico. Não toca banco: recebe o modelo em memória e devolve números.
-
-    `parametros` já veio de `validar_parametros`."""
+def resolver_neste_processo(modelo: dict, parametros: dict) -> dict:
+    """A conta em si, chamando o motor OpenDSS DIRETO. Só o processo filho a chama (ver o aviso no
+    cabeçalho do módulo): num processo que também serve a API, o motor derruba o interpretador quando é
+    usado fora da thread principal. Quem quer o resultado chama `resolver`."""
     dss = _motor()
     inicio = time.perf_counter()
     ano = parametros["ano"] if parametros["ano"] is not None else modelo["ano"]
     horas = opendss.horas_dos_pontos(ano)
     horas_do_ano = sum(horas)
 
-    with _TRAVA_MOTOR, tempfile.TemporaryDirectory(prefix="plat-fluxo-") as tmp:
-        # ⛔ o `Compile` do OpenDSS troca o DIRETÓRIO DE TRABALHO DO PROCESSO para a pasta do circuito.
-        # Como a pasta é temporária e some no fim deste bloco, o processo ficaria sem diretório válido —
-        # e a chamada seguinte ao motor morre com falha de segmentação (medido em 08/09/2026: a suíte
-        # inteira derrubava o interpretador, e o mesmo aconteceria ao worker no segundo alimentador).
-        # Por isso o diretório é guardado aqui e devolvido ANTES de a pasta ser apagada.
-        volta_para = os.getcwd()
-        try:
-            pasta = Path(tmp)
-            _abrir_circuito(dss, modelo, parametros, pasta)
-            varredura = _varrer(dss, parametros, horas)
-            convergiu = varredura["pontos_sem_convergencia"] < varredura["pontos"]
-            elementos: list[dict] = []
-            if convergiu:
-                # o estado por elemento é lido no ponto crítico: resolve de novo NAQUELE ponto e lê ali
-                dss.Text.Command(f"Set mode=yearly stepsize=1h number=1 hour={varredura['ponto_critico']}")
-                dss.Solution.Solve()
-                elementos = _elementos_no_ponto(dss, modelo, parametros)
-        finally:
-            os.chdir(volta_para)
-            dss.Basic.DataPath(volta_para)
+    def no_motor() -> tuple[dict, list[dict], bool]:
+        with tempfile.TemporaryDirectory(prefix="plat-fluxo-") as tmp:
+            # ⛔ o `Compile` do OpenDSS troca o DIRETÓRIO DE TRABALHO DO PROCESSO para a pasta do circuito.
+            # Como a pasta é temporária e some no fim deste bloco, o processo ficaria sem diretório válido
+            # — e a chamada seguinte ao motor morre com falha de segmentação (medido em 08/09/2026: a suíte
+            # inteira derrubava o interpretador, e o mesmo aconteceria ao worker no segundo alimentador).
+            # Por isso o diretório é guardado aqui e devolvido ANTES de a pasta ser apagada.
+            volta_para = os.getcwd()
+            try:
+                pasta = Path(tmp)
+                _abrir_circuito(dss, modelo, parametros, pasta)
+                varredura = _varrer(dss, parametros, horas)
+                convergiu = varredura["pontos_sem_convergencia"] < varredura["pontos"]
+                elementos: list[dict] = []
+                if convergiu:
+                    # estado por elemento no ponto crítico: resolve de novo NAQUELE ponto e lê ali
+                    dss.Text.Command(
+                        f"Set mode=yearly stepsize=1h number=1 hour={varredura['ponto_critico']}")
+                    dss.Solution.Solve()
+                    elementos = _elementos_no_ponto(dss, modelo, parametros)
+                return varredura, elementos, convergiu
+            finally:
+                os.chdir(volta_para)
+                dss.Basic.DataPath(volta_para)
+
+    varredura, elementos, convergiu = no_motor()
 
     declarada = _perda_de_ferro_declarada_kwh(modelo, horas_do_ano)
     simulada = varredura["energia_perda_de_ferro_kwh"]
@@ -540,6 +560,44 @@ def resolver(modelo: dict, parametros: dict) -> dict:
         "duracao_ms": int((time.perf_counter() - inicio) * 1000),
         "pico_ram_mb": _pico_ram_mb(),
     }
+
+
+def resolver(modelo: dict, parametros: dict) -> dict:
+    """Resolve o fluxo de potência do modelo e devolve convergência, resumo, energia e o estado por
+    elemento no ponto crítico. Não toca banco: recebe o modelo em memória e devolve números.
+
+    A conta roda num PROCESSO FILHO (ver o aviso no cabeçalho do módulo). O modelo vai por entrada padrão
+    e o resultado volta por saída padrão, os dois em JSON. Falha do filho vira `ErroFluxo` nomeado, com o
+    fim do que ele escreveu no canal de erro — inclusive quando ele morre por sinal, que é o caso que
+    justifica o processo separado.
+
+    `parametros` já veio de `validar_parametros`."""
+    pedido = json.dumps({"modelo": modelo, "parametros": parametros}, ensure_ascii=False)
+    ambiente = {**os.environ, "PYTHONNOUSERSITE": "1", "PYTHONPATH": str(RAIZ)}
+    try:
+        filho = subprocess.run(  # noqa: S603 — argumentos fixos, nada vem do pedido do usuário
+            [sys.executable, "-m", "app.rede_utilidades.fluxo_potencia"],
+            input=pedido, capture_output=True, text=True, cwd=str(RAIZ), env=ambiente,
+            timeout=LIMITE_DE_TEMPO_S, check=False)
+    except subprocess.TimeoutExpired as e:
+        raise ErroFluxo("fluxo_demorou_demais",
+                        f"o fluxo de potência passou de {LIMITE_DE_TEMPO_S} s e foi interrompido") from e
+    if filho.returncode != 0:
+        fim = (filho.stderr or "").strip().splitlines()[-3:]
+        if filho.returncode < 0:
+            raise ErroFluxo(
+                "motor_caiu",
+                f"o motor OpenDSS morreu com o sinal {-filho.returncode} ao resolver este alimentador: "
+                + " | ".join(fim))
+        raise ErroFluxo("motor_falhou", "o motor OpenDSS não resolveu este alimentador: " + " | ".join(fim))
+    try:
+        saida = json.loads(filho.stdout)
+    except ValueError as e:
+        raise ErroFluxo("motor_sem_resposta",
+                        "o motor OpenDSS terminou sem devolver resultado legível") from e
+    if "erro" in saida:
+        raise ErroFluxo(saida["erro"]["codigo"], saida["erro"]["mensagem"])
+    return saida["resultado"]
 
 
 def agregar(execucoes: list[dict]) -> dict:
@@ -759,3 +817,22 @@ def camada(cur, rede_id: str, nome: str, grandeza: str) -> dict:
     return {"type": "FeatureCollection", "features": feicoes, "grandeza": grandeza,
             "elementos_do_tipo": do_tipo, "elementos_sem_geometria": do_tipo - len(feicoes),
             **_ficha(e)}
+
+
+def _principal() -> int:
+    """Entrada do processo filho: lê `{"modelo": ..., "parametros": ...}` da entrada padrão, resolve e
+    escreve `{"resultado": ...}` na saída padrão. Erro conhecido do cálculo volta como
+    `{"erro": {"codigo": ..., "mensagem": ...}}` e saída 0 — quem chama o traduz para 422. Saída diferente
+    de zero (ou morte por sinal) é o pai quem interpreta."""
+    pedido = json.loads(sys.stdin.read())
+    try:
+        resultado = resolver_neste_processo(pedido["modelo"], pedido["parametros"])
+    except ErroFluxo as e:
+        json.dump({"erro": {"codigo": e.codigo, "mensagem": e.mensagem}}, sys.stdout, ensure_ascii=False)
+        return 0
+    json.dump({"resultado": resultado}, sys.stdout, ensure_ascii=False)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_principal())
