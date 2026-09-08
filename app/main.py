@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 
 from app import erros, limite_corpo, paginas
 from app import log as plat_log
+from app import telemetria as rotas_telemetria
 from app.acervo import rotas as rotas_acervo
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
@@ -104,6 +105,8 @@ ROUTERS = [
     rotas_acervo.router,
     # --- conexão externa (L6-02-a): /api/conexoes, /api/conexoes/{id}, /api/conexoes/{id}/testar
     rotas_conexao.router,
+    # --- telemetria opcional do appliance (L7-11-c): /api/telemetria (superadmin), /api/telemetria/receber (casa)
+    rotas_telemetria.router,
     # --- arquivos/objetos (L0-11): /api/arquivos genérico por inquilino; /api/objetos/{chave} já vem do catálogo
     # (rotas_compartilhamento, entrega por URL assinada)
     rotas_arquivos,
