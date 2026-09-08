@@ -14,7 +14,7 @@ import psycopg2.extras
 
 from app.auth import comum as auth_comum
 from app.erros import ErroAPI
-from app.rede_utilidades import subredes
+from app.rede_utilidades import diagrama, subredes
 
 
 def _jsonb(v: dict) -> str:
@@ -128,6 +128,9 @@ def marcar_area_suja(cur, tenant_id: int, rede_id: str, motivo: str, feicao_id: 
     linha = cur.fetchone()
     if linha is not None:
         subredes.marcar_sujas(cur, rede_id, str(linha["id"]))
+        # item L4-04-d: o DIAGRAMA que desenha o que foi editado fica `inconsistente` na mesma hora,
+        # pelo mesmo motivo da subrede suja — `topologia.habilitar()` apaga as áreas sujas depois.
+        diagrama.marcar_inconsistentes(cur, rede_id, str(linha["id"]))
 
 
 def _wkt_ponto(lon: float, lat: float) -> str:
