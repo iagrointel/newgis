@@ -230,3 +230,15 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## consumidores e endereços da rede (L4-20-consumidores-e-enderecos; migração
+
+| nome | valor | explicação |
+|---|---|---|
+| `REDE_ENDERECOS_MAX` | `500000` | teto de endereços por geração (proteção de RAM/tempo da consulta) |
+| `REDE_RAIO_REDE_MAX_M` | `2000.0` | raio máximo de busca de rede a partir do endereço |
+| `REDE_RAIO_PADRAO_M` | `700.0` | portão do item: endereço com rede a até 700 m |
+| `REDE_RAIO_BT_PADRAO_M` | `135.0` | presença de baixa tensão (calibração na base da cooperativa de teste) |
+| `REDE_JUSANTE_TRECHOS_MAX` | `200000` | teto de trechos por cálculo de jusante (grafo em memória) |
+| `REDE_JUSANTE_NO_MAX` | `200000` | teto de nós do grafo |
+| `REDE_AGREGACAO_MIN_UCS` | `5` | regra do adversário: agregação mínima exibida quando há consumo |
