@@ -482,3 +482,24 @@ acesso 2026-09-07.
 | exportar subrede | `Export Subnetwork` / `exportSubnetwork` do Utility Network Server devolve JSON com controladores, elementos e conectividade | `GET /api/rede/{id}/subrede/{nome}/exportar` — JSON validado contra `plat.rede.subrede_exportada` (esquema em `app/rede_utilidades/esquema_exportacao.py`) antes de sair; exporta o que a última atualização gravou, não um traçado novo | feito | `test_exportar_valida_no_esquema_e_bate_com_o_tracado` (elemento a elemento contra `POST .../tracar` tipo `subrede`) | 2026-09-07 | pendente (D20) |
 | ligação interna do dispositivo na exportação | a conectividade exportada inclui as associações do modelo | só as arestas REAIS da topologia; o caminho interno de um dispositivo multi-terminal é montado por chamada dentro do traçado e não vira linha de conectividade | parcial (declarado no código e aqui) | idem | 2026-09-07 | pendente (D20) |
 | exportar em lote / assíncrono | a ferramenta exporta várias subredes e o serviço tem forma assíncrona | uma subrede por chamada, síncrona; o lote existe só para ATUALIZAR | fora desta passagem | — | 2026-09-07 | pendente (D20) |
+
+## Rede de utilidades — pandapower e MATPOWER (item L4-05-c-pandapower-e-matpower)
+
+Estes formatos NÃO são paridade com a Esri: o ArcGIS Utility Network não exporta para pandapower nem para
+MATPOWER, e não roda fluxo de potência. A linha existe aqui porque a tabela é o lugar onde a casa registra
+o que sabe fazer, e a leitura honesta é esta: **é CONECTOR**, isto é, troca de rede com quem já trabalha em
+outro motor. Não é capacidade equivalente a nada do produto da Esri, e não deve ser vendida como se fosse
+— nem como "fazemos o que a Esri faz", nem como "a Esri não faz". A Esri resolve outro problema.
+
+Fontes declaradas no item (`pandapower.readthedocs.io`, `github.com/e2nIEE/pandapower`,
+`github.com/MATPOWER/matpower`, `github.com/PyPSA/PyPSA`), acesso 2026-09-08.
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| exportar alimentador para pandapower | não existe | `GET /api/rede/{id}/subrede/{nome}/exportar?formato=pandapower` devolve, em zip, o `rede.json` que `pandapower.from_json` lê (bus, line, trafo, load, sgen, ext_grid), mais `resumo.json` e `NAO_FAZ.md`; o modelo em memória é o MESMO do exportador OpenDSS | feito (conector) | `tests/api/test_rede_matpower.py::test_exportar_pandapower_conta_bus_line_trafo` (bus/line/trafo contra consulta independente ao banco) | 2026-09-08 | não se aplica |
+| fluxo de potência de prova | não existe | `pandapower.runpp` converge sobre o arquivo exportado, e a mesma rede exportada em MATPOWER e relida por `from_mpc` converge com a mesma tensão dentro de 1 % | feito (medido) | `tests/unit/test_matpower_e_pandapower.py::test_fluxo_de_potencia_converge`; medida em `tests/medidas/L4-05-c-pandapower-e-matpower.json` | 2026-09-08 | não se aplica |
+| exportar para MATPOWER (`.m`, caseformat 2) | não existe | `...?formato=matpower`: matrizes `bus`, `gen` e `branch` do caseformat versão 2, com impedância em por unidade na base do sistema | feito (conector) | `::test_exportar_matpower_devolve_o_caso` | 2026-09-08 | não se aplica |
+| importar caso MATPOWER público | não existe | `POST /api/rede/{id}/matpower` lê o `.m` e grava barras e ramos no grafo da rede, sobre o pacote de ativos `transmissao-matpower`; `case9` e `case30` importados e traçados na suíte | feito | `::test_importar_caso_publico_e_tracar` | 2026-09-08 | não se aplica |
+| objeto sem geometria | o Utility Network exige geometria em toda feição | o caso MATPOWER não tem coordenada nenhuma: a barra entra no grafo de negócio (`plat.rede_no`, geometria opcional) com `geom` NULO, e o pacote declara os grupos como `sem_geometria`. Nunca ponto (0, 0) | feito (acima da Esri neste ponto) | `::test_barra_importada_fica_sem_geometria` | 2026-09-08 | não se aplica |
+| desequilíbrio entre fases | não se aplica | o `runpp` do pandapower e o caseformat do MATPOWER são de rede EQUILIBRADA (sequência positiva); as fases declaradas por trecho não são representadas nesses dois formatos. Onde o desequilíbrio importa, o formato é o `dss` | limitação declarada | `NAO_FAZ.md` do próprio arquivo exportado | 2026-09-08 | não se aplica |
+| impedância de condutor | não se aplica | o pacote de ativos não tem catálogo de condutor: toda linha sai com a impedância de REFERÊNCIA, que é o valor padrão do motor OpenDSS, escrito em vez de implícito. O perfil de tensão do fluxo não é medição desta rede | limitação declarada | idem | 2026-09-08 | não se aplica |

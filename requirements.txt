@@ -84,3 +84,18 @@ Markdown==3.10.2
 opendssdirect.py==0.9.4
 dss_python==0.15.7
 dss_python_backend==0.14.5
+
+# pandapower (item L4-05-c-pandapower-e-matpower): SÓ A SUÍTE importa, pela mesma razão do
+# opendssdirect acima. A aplicação escreve o JSON do pandapower e o `.m` do MATPOWER com a biblioteca
+# padrão (os dois são texto) e nada em `app/` importa pandapower. Ele entra aqui porque as cláusulas do
+# portão do item são "o arquivo é lido por pp.from_json" e "pp.runpp converge", e provar isso exige o
+# motor de verdade.
+# ⚠ NÃO instalado na venv compartilhada desta máquina em 08/09/2026: pandapower 3.5.4 exige `pandas~=2.3`
+# e a venv está com pandas 3.0.2, então o resolvedor REBAIXARIA pandas e scipy para todo mundo que
+# compartilha a venv. A regra do laço manda parar e registrar em vez de instalar. A medida do fluxo foi
+# feita num ambiente SEPARADO (fora do repositório) e o teste procura, nesta ordem, o interpretador de
+# `PLAT_PYTHON_PANDAPOWER`, o da própria suíte e o do laço; não achando nenhum, PULA com a razão escrita.
+# matpowercaseframes é dependência opcional do pandapower para ler `.m` (o `from_mpc` só aceita `.mat`
+# sem ela) e serve à conferência cruzada da suíte, nunca ao produto.
+pandapower==3.5.4
+matpowercaseframes==1.1.1
