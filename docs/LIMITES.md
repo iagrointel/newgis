@@ -223,3 +223,32 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `FERRAMENTA_JOB_MEMORIA_MB` | `1024` | RLIMIT_DATA do filho que roda uma ferramenta |
 | `FERRAMENTA_JOB_TIMEOUT_S` | `1800` | 30 min por execução; ferramenta mais longa é outro tipo de job |
 | `BUFFER_DISTANCIA_M_MAX` | `100000` | 100 km: acima disso o buffer geodésico deixa de fazer sentido em camada |
+
+## grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
+
+| nome | valor | explicação |
+|---|---|---|
+| `ESCALA_AREA_VERTICES_MAX` | `5000` | vértices do polígono de estudo (mesma ordem de grandeza de INGESTAO_*) |
+| `ESCALA_RESOLUCAO_MIN_M` | `1.0` | — |
+| `ESCALA_RESOLUCAO_MAX_M` | `100000.0` | — |
+| `ESCALA_CELULAS_MAX` | `250000` | — |
+| `ESCALA_FATORES_MAX` | `20` | — |
+| `ESCALA_LIGACOES_MAX` | `2000000` | — |
+| `ESCALA_APROVACAO_TIPOS` | `('limiar', 'top_pct')` | — |
+| `ESCALA_NOME_MAX` | `200` | mesmo teto de CHECK(length(nome)<=200) da migração |
+| `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
+| `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
+| `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## ferramentas de rede (L2-05-f): isócrona, rota por paradas, matriz origem-destino, K mais próximas,
+
+| nome | valor | explicação |
+|---|---|---|
+| `REDE_ISOCRONAS_MAX` | `25` | origens × intervalos por execução de área de serviço |
+| `REDE_INTERVALOS_MAX` | `5` | intervalos de tempo por execução (anéis da área de serviço) |
+| `REDE_PARADAS_MAX` | `25` | paradas por rota (mesmo teto que a otimização por /trip aguenta bem) |
+| `REDE_MATRIZ_LADO_MAX` | `1000` | N e M da matriz origem-destino, cada um |
+| `REDE_MATRIZ_PARES_MAX` | `1000000` | N×M declarado (1.000×1.000); o serviço parte em blocos do teto do OSRM |
+| `REDE_SNAP_PONTOS_MAX` | `500` | pontos por execução de conectar à rede (1 chamada /nearest por ponto) |
+| `REDE_K_MAX` | `20` | K de "K instalações mais próximas" |
+| `REDE_ALOCAR_P_MAX` | `25` | P instalações escolhidas por localizar-alocar (heurística gulosa) |

@@ -227,3 +227,16 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# --- ferramentas de rede (L2-05-f): isócrona, rota por paradas, matriz origem-destino, K mais próximas,
+# conexão à rede (snap) e localizar-alocar. Todas chamam o serviço de rota do L2-11-c (app/rede), que fala
+# com o OSRM isolado `plat-osrm-guarulhos`; os tetos abaixo são do PEDIDO, não do grafo, e aparecem no
+# manifesto de cada ferramenta (campo `limites`) para o cliente ler antes de mandar trabalho grande.
+REDE_ISOCRONAS_MAX = 25               # origens × intervalos por execução de área de serviço
+REDE_INTERVALOS_MAX = 5               # intervalos de tempo por execução (anéis da área de serviço)
+REDE_PARADAS_MAX = 25                 # paradas por rota (mesmo teto que a otimização por /trip aguenta bem)
+REDE_MATRIZ_LADO_MAX = 1000           # N e M da matriz origem-destino, cada um
+REDE_MATRIZ_PARES_MAX = 1_000_000     # N×M declarado (1.000×1.000); o serviço parte em blocos do teto do OSRM
+REDE_SNAP_PONTOS_MAX = 500            # pontos por execução de conectar à rede (1 chamada /nearest por ponto)
+REDE_K_MAX = 20                       # K de "K instalações mais próximas"
+REDE_ALOCAR_P_MAX = 25                # P instalações escolhidas por localizar-alocar (heurística gulosa)
