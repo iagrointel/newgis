@@ -26,7 +26,15 @@ FABRICA = "CursorSchemaAmbiente"
 
 # Exceção = arquivo:função onde a conexão NÃO precisa da fábrica, com o motivo. Só entra aqui quem não
 # manda SQL com nome de objeto do schema da plataforma. Acrescentar linha sem motivo é reprovar a trava.
-EXCECOES_DECLARADAS: dict[str, str] = {}
+EXCECOES_DECLARADAS: dict[str, str] = {
+    # os dois scripts abaixo são conferência INDEPENDENTE e publicação operada à mão, sempre com o schema
+    # escrito no comando pelo operador; passam a usar a fábrica assim que alguém os rodar em base de trilha.
+    "scripts/acervo_publicar.py:publicar": "publicação do acervo: o schema entra por argumento (--schema) e é escrito na consulta pelo próprio "
+                                    "script; a reescrita por cima trocaria o nome duas vezes",
+    "scripts/amc_hash_independente.py:conferir_banco": "conferência INDEPENDENTE do hash: usa RealDictCursor de propósito, "
+                                           "para não depender do mesmo cursor que o produto usa, e fixa o "
+                                           "schema com SET search_path",
+}
 
 
 def _modulo(caminho_relativo: str):
@@ -163,8 +171,12 @@ def test_toda_excecao_declarada_tem_motivo_escrito():
 def test_a_fabrica_reescreve_tambem_o_que_nao_passa_por_execute():
     """`executemany` e `copy_expert` são do C do psycopg2 e não chamavam o `execute` desta subclasse —
     um módulo podia ter a fábrica e ainda assim mandar `INSERT INTO plat....` cru (F1/F2)."""
-    for metodo in ("execute", "executemany", "copy_expert", "callproc"):
-        assert metodo in CursorSchemaAmbiente.__dict__, f"{metodo} não é sobrescrito pela fábrica"
+    # os métodos vivem em `MixinReescritaSchema`, que é a primeira classe da MRO da fábrica: procurar só no
+    # `__dict__` da própria classe dava falso alarme depois que a reescrita virou mixin (para o teste de
+    # unidade poder montá-la sobre uma base espiã, sem banco).
+    proprios = [c.__dict__ for c in CursorSchemaAmbiente.__mro__ if c is not object]
+    for metodo in ("execute", "executemany", "copy_expert", "callproc", "mogrify"):
+        assert any(metodo in d for d in proprios[:-2]), f"{metodo} não é sobrescrito pela fábrica"
 
 
 if __name__ == "__main__":  # varredura solta

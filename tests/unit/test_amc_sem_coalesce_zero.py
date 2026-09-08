@@ -26,7 +26,13 @@ PADRAO_OR_ZERO_ATRIBUICAO = re.compile(r"=\s*[\w\.\[\]]+\s+or\s+0\b")
 
 # Exceções declaradas: (arquivo relativo a app/amc/, trecho da linha, motivo). Vazia por enquanto —
 # nenhum caso legítimo de COALESCE(...,0) apareceu dentro do motor AMC.
-EXCECOES: set[tuple[str, str]] = set()
+EXCECOES: set[tuple[str, str]] = {
+    # soma de ÁREA de células, não valor de fator: um conjunto sem nenhuma unidade tem área total zero, e isso
+    # é o número certo. A regra que este teste protege é outra — fator ausente virar nota 0.
+    ("unidades.py", 'cur.execute("SELECT count(*) AS n, coalesce(sum(area_m2), 0) AS a FROM plat.amc_unidade '
+                    'WHERE conjunto_id = %s",'),
+    ("unidades.py", '"  SELECT count(*) AS n, coalesce(sum(area_m2), 0) AS a, "'),
+}
 
 
 def _arquivos_amc() -> list[Path]:
