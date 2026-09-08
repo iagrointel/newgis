@@ -157,5 +157,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/multiescala/fatores/{id}"): ["multiescala/fator_apagar"],
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
+    # L3-09-backtest-decisao-real: a rota não muda a execução, mas registra o pedido (escolhas, fora, AUC)
+    ("POST", "/api/multiescala/execucoes/{id}/backtest"): ["multiescala/backtest"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
 }

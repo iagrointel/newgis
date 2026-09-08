@@ -222,3 +222,8 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# ---- L3-09-backtest-decisao-real: comparar o ranking do modelo com as escolhas reais
+BACKTEST_PONTOS_MAX = 50_000          # escolhas por chamada (a grade regional de teste tem ~600)
+BACKTEST_PERMUTACOES_MAX = 20_000     # sorteios do nulo por chamada (a rota é síncrona)
+

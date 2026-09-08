@@ -10987,6 +10987,58 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/multiescala/execucoes/{id}/backtest": {
+   "post": {
+    "tags": [
+     "multiescala"
+    ],
+    "summary": "Backtest",
+    "operationId": "backtest_api_multiescala_execucoes__id__backtest_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BacktestEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
   }
  },
  "components": {
@@ -11712,6 +11764,82 @@
      "gravadas"
     ],
     "title": "AmostrasResultado"
+   },
+   "BacktestEntrada": {
+    "properties": {
+     "escolhas_item_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Escolhas Item Id"
+     },
+     "pontos": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/Ponto"
+        },
+        "type": "array",
+        "maxItems": 50000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pontos"
+     },
+     "n_permutacoes": {
+      "type": "integer",
+      "maximum": 20000.0,
+      "minimum": 1.0,
+      "title": "N Permutacoes",
+      "default": 1000
+     },
+     "semente": {
+      "type": "integer",
+      "maximum": 2147483647.0,
+      "minimum": 0.0,
+      "title": "Semente",
+      "default": 0
+     },
+     "data_decisao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 32
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data Decisao"
+     },
+     "data_camada": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 32
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data Camada"
+     },
+     "preferencia_revelada": {
+      "type": "boolean",
+      "title": "Preferencia Revelada",
+      "default": true
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "BacktestEntrada"
    },
    "CategoriaNo": {
     "properties": {
@@ -16160,6 +16288,29 @@
      "destino"
     ],
     "title": "PedidoRota"
+   },
+   "Ponto": {
+    "properties": {
+     "lon": {
+      "type": "number",
+      "maximum": 180.0,
+      "minimum": -180.0,
+      "title": "Lon"
+     },
+     "lat": {
+      "type": "number",
+      "maximum": 90.0,
+      "minimum": -90.0,
+      "title": "Lat"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "lon",
+     "lat"
+    ],
+    "title": "Ponto"
    },
    "Privilegio": {
     "properties": {

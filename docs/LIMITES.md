@@ -230,3 +230,10 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## - L3-09-backtest-decisao-real: comparar o ranking do modelo com as escolhas reais
+
+| nome | valor | explicação |
+|---|---|---|
+| `BACKTEST_PONTOS_MAX` | `50000` | escolhas por chamada (a grade regional de teste tem ~600) |
+| `BACKTEST_PERMUTACOES_MAX` | `20000` | sorteios do nulo por chamada (a rota é síncrona) |
