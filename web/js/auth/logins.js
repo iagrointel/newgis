@@ -97,7 +97,7 @@ function selecao(nome, opcoes, valor, vazio) {
 
 function linhaRegra(valor, regra) {
   const tr = h('tr', { class: 'regra' });
-  const inValor = h('input', { type: 'text', name: 'valor', value: valor || '', maxlength: 200, placeholder: t('logins.valor_exemplo'), spellcheck: 'false' });
+  const inValor = h('input', { type: 'text', name: 'valor', value: valor || '', maxlength: 200, spellcheck: 'false' });
   const perfil = selecao('perfil', opcoesPerfil(), regra?.perfil ?? '', t('logins.perfil_sem'));
   const papel = selecao('papel_id', papeis, regra?.papel_id ?? '', t('logins.papel_nenhum'));
   const caixa = seletorGrupos('grupos', regra?.grupos || []);
@@ -133,7 +133,7 @@ function abrirRegras(p) {
   const gruposPadrao = seletorGrupos('grupos_padrao', pr.padrao?.grupos || []);
   gruposPadrao.id = 'r-grupos-padrao';
   campos.push(h('div', { class: 'campo' }, h('span', { class: 'rotulo' }, t('logins.grupos_padrao')), gruposPadrao));
-  const pasta = h('input', { type: 'text', id: 'r-pasta', name: 'pasta', value: pr.pasta || '', maxlength: 128, placeholder: 'Pessoal de {login}' });
+  const pasta = h('input', { type: 'text', id: 'r-pasta', name: 'pasta', value: pr.pasta || '', maxlength: 128 });
   campos.push(h('div', { class: 'campo' }, h('label', { for: 'r-pasta' }, t('logins.pasta')), pasta, h('small', { class: 'fraco' }, t('logins.pasta_ajuda'))));
   const atualizar = h('input', { type: 'checkbox', id: 'r-atualizar' });
   atualizar.checked = pr.atualizar_a_cada_login !== false;
