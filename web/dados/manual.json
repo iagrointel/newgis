@@ -1,0 +1,641 @@
+{
+ "versao": "0.1.0",
+ "secoes": [
+  {
+   "id": "conexoes",
+   "titulo": "Conexões",
+   "titulo_en": "Connections",
+   "titulo_es": "Conexiones",
+   "resumo": "conexões externas de dados: teste de saúde, histórico de disponibilidade e publicação de camada",
+   "resumo_en": "external data connections: health test, availability history and layer publication",
+   "resumo_es": "conexiones externas de datos: prueba de salud, historial de disponibilidad y publicación de capa",
+   "palavras": [
+    "conexoes",
+    "externa",
+    "saude",
+    "historico",
+    "wms",
+    "wfs",
+    "ogc",
+    "publicar",
+    "camada"
+   ],
+   "palavras_en": [
+    "connections",
+    "external",
+    "health",
+    "history",
+    "wms",
+    "wfs",
+    "ogc",
+    "publish",
+    "layer"
+   ],
+   "palavras_es": [
+    "conexiones",
+    "externa",
+    "salud",
+    "historico",
+    "wms",
+    "wfs",
+    "ogc",
+    "publicar",
+    "capa"
+   ],
+   "caminho": "/conexoes",
+   "corpo": "<h2>Conexões</h2>\n<p>A tela Conexões registra fontes externas de dados (WMS, WFS, API OGC e afins) e vigia a saúde delas.</p>\n<h3>Registrar e testar</h3>\n<ol>\n<li>Escolha Nova conexão: nome, URL e tipo.</li>\n<li>O servidor valida a URL contra as defesas de rede (endereços internos e de link local são\n   recusados) e testa a conexão na hora.</li>\n<li>A lista marca a última teste: nunca testada, em ordem ou fora do ar.</li>\n</ol>\n<h3>Histórico e publicação</h3>\n<p>Cada conexão tem histórico de disponibilidade (as últimas testes com instante e resultado) e, para\nfontes de camada, a ação Publicar cria um item de catálogo que serve a camada com procedência: o\nitem aponta a origem, o instante da carga e o estado da fonte.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_conexoes.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "construtor",
+   "titulo": "Construtor de aplicativos",
+   "titulo_en": "App builder",
+   "titulo_es": "Constructor de aplicaciones",
+   "resumo": "montar um aplicativo por arrasto: páginas, grade, mapa e painéis, sem escrever código",
+   "resumo_en": "build an app by drag and drop: pages, grid, map and panels, without writing code",
+   "resumo_es": "montar una aplicación arrastrando: páginas, cuadrícula, mapa y paneles, sin escribir código",
+   "palavras": [
+    "construtor",
+    "aplicativo",
+    "app",
+    "arrastar",
+    "paginas",
+    "grade",
+    "mapa",
+    "painel",
+    "layout"
+   ],
+   "palavras_en": [
+    "builder",
+    "app",
+    "drag",
+    "drop",
+    "pages",
+    "grid",
+    "map",
+    "panel",
+    "layout"
+   ],
+   "palavras_es": [
+    "constructor",
+    "aplicacion",
+    "arrastrar",
+    "paginas",
+    "cuadricula",
+    "mapa",
+    "panel",
+    "diseño"
+   ],
+   "caminho": "/construtor",
+   "corpo": "<h2>Construtor de aplicativos</h2>\n<p>O construtor monta um aplicativo do inquilino por arrasto: páginas, linhas e colunas, mapa central,\npainéis laterais e janelas. O resultado é um item do catálogo (tipo aplicativo) que abre no\nexecutor.</p>\n<ol>\n<li>Abra o construtor pela lista de Conteúdo (novo aplicativo) ou por <code>/construtor?item=&lt;id&gt;</code>.</li>\n<li>Arraste um componente da paleta para a árvore de páginas: a soltura na posição certa cria a\n   linha e a coluna.</li>\n<li>O painel de propriedades edita título, proporção e conteúdo de cada nó.</li>\n<li>Salvar grava a estrutura; o executor (<code>/executar</code>) mostra o aplicativo ao usuário final.</li>\n</ol>\n<p>A estrutura nasce de arrasto de verdade (HTML5 Drag and Drop), não de formulário: o que o teste de\nponta a ponta prova é o mesmo gesto do usuário.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_layout_paginas.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "conta",
+   "titulo": "Minha conta",
+   "titulo_en": "My account",
+   "titulo_es": "Mi cuenta",
+   "resumo": "dados pessoais, foto, senha, segundo fator, sessões abertas e convites recebidos",
+   "resumo_en": "personal data, photo, password, second factor, open sessions and received invitations",
+   "resumo_es": "datos personales, foto, contraseña, segundo factor, sesiones abiertas e invitaciones recibidas",
+   "palavras": [
+    "conta",
+    "senha",
+    "foto",
+    "perfil",
+    "sessoes",
+    "convites",
+    "segundo fator",
+    "totp",
+    "dados pessoais"
+   ],
+   "palavras_en": [
+    "account",
+    "password",
+    "photo",
+    "profile",
+    "sessions",
+    "invitations",
+    "second factor",
+    "totp"
+   ],
+   "palavras_es": [
+    "cuenta",
+    "contrasena",
+    "foto",
+    "perfil",
+    "sesiones",
+    "invitaciones",
+    "segundo factor",
+    "totp"
+   ],
+   "caminho": "/conta",
+   "corpo": "<h2>Minha conta</h2>\n<p>A tela Minha conta reúne o que diz respeito à sua pessoa: dados, senha, segundo fator, sessões e\nconvites.</p>\n<h3>Dados e foto</h3>\n<p>O cartão Dados edita nome, foto e preferências do perfil (idioma, unidades, formato de data). A\nfoto aceita PNG, JPEG, GIF ou WEBP até 1 MB e é recortada num quadro de 200×200.</p>\n<h3>Senha</h3>\n<p>O cartão Senha troca a sua senha: a atual, a nova e a confirmação da nova. A nova precisa dos\nmínimos de política da organização.</p>\n<h3>Segundo fator</h3>\n<p>O cartão Segundo fator ativa um gerador de códigos TOTP: a tela mostra o segredo em QR e em texto;\no aplicativo de autenticação lê o QR e passa a gerar 6 dígitos a cada 30 segundos. O teste do\ncódigo no ativação confirma que o relógio do aplicativo está certo. Desligar o segundo fator pede\num código válido.</p>\n<h3>Sessões e convites</h3>\n<p>O cartão Sessões lista as sessões abertas da sua conta e permite encerrar cada uma. O cartão\nConvites mostra convites pendentes para você aceitar.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_conta.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "conteudo-item",
+   "titulo": "Detalhe do item",
+   "titulo_en": "Item detail",
+   "titulo_es": "Detalle del ítem",
+   "resumo": "ficha do item: atributos, metadado, permissões, histórico e ações",
+   "resumo_en": "item card: attributes, metadata, permissions, history and actions",
+   "resumo_es": "ficha del ítem: atributos, metadato, permisos, historial y acciones",
+   "palavras": [
+    "detalhe",
+    "item",
+    "atributos",
+    "metadado",
+    "permissões",
+    "historico",
+    "editar",
+    "apagar"
+   ],
+   "palavras_en": [
+    "detail",
+    "item",
+    "attributes",
+    "metadata",
+    "permissions",
+    "history",
+    "edit",
+    "delete"
+   ],
+   "palavras_es": [
+    "detalle",
+    "item",
+    "atributos",
+    "metadato",
+    "permisos",
+    "historial",
+    "editar",
+    "borrar"
+   ],
+   "caminho": "/conteudo/{id}",
+   "corpo": "<h2>Detalhe do item</h2>\n<p>Cada item tem uma ficha: nome, descrição, categoria, pastas, atributos próprios, metadado\n(descricao), permissões e histórico de mudanças.</p>\n<ol>\n<li>Abra um item a partir da lista de Conteúdo.</li>\n<li>A ficha mostra o que o item é: camada carregada, documento, conexão ou referência.</li>\n<li>Editar abre o painel de atributos; apagar manda para a lixeira (restaurável por 30 dias).</li>\n<li>Em itens de camada, a ficha aponta a pré-visualização no mapa e a exportação do metadado ISO.</li>\n</ol>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_conteudo.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "conteudo",
+   "titulo": "Conteúdo",
+   "titulo_en": "Content",
+   "titulo_es": "Contenido",
+   "resumo": "catálogo do inquilino: pastas, itens, busca, filtro por categoria, favoritos e compartilhamento",
+   "resumo_en": "tenant catalog: folders, items, search, category filter, favorites and sharing",
+   "resumo_es": "catálogo del inquilino: carpetas, ítems, búsqueda, filtro por categoría, favoritos y compartición",
+   "palavras": [
+    "conteudo",
+    "catalogo",
+    "pastas",
+    "itens",
+    "busca",
+    "favoritos",
+    "compartilhar",
+    "grade",
+    "lista"
+   ],
+   "palavras_en": [
+    "content",
+    "catalog",
+    "folders",
+    "items",
+    "search",
+    "favorites",
+    "share",
+    "grid",
+    "list"
+   ],
+   "palavras_es": [
+    "contenido",
+    "catalogo",
+    "carpetas",
+    "items",
+    "busqueda",
+    "favoritos",
+    "compartir",
+    "cuadricula",
+    "lista"
+   ],
+   "caminho": "/conteudo",
+   "corpo": "<h2>Conteúdo</h2>\n<p>A tela Conteúdo é o catálogo do inquilino: pastas e itens (camadas, documentos, conexões e\npacotes) em lista ou grade.</p>\n<h3>Navegar e buscar</h3>\n<ol>\n<li>A coluna de pastas navega a hierarquia; o painel principal lista o conteúdo da pasta aberta.</li>\n<li>A busca do topo filtra por nome e descrição; o filtro de categoria afina o resultado.</li>\n<li>O seletor Lista / Grade muda a apresentação; a grade mostra miniatura quando o item tem.</li>\n</ol>\n<h3>Favoritos e compartilhamento</h3>\n<p>A estrela de cada item marca favorito; a seção Favoritos concentra os seus. Compartilhar abre o\npainel de permissão: por membro, por grupo ou por link com token (o link pode ter validade).</p>\n<p>O catálogo respeita o inquilino: nenhum item de outro inquilino aparece, nem por busca nem por\nlink interno.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_conteudo.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "entrar",
+   "titulo": "Entrar",
+   "titulo_en": "Sign in",
+   "titulo_es": "Entrar",
+   "resumo": "login por inquilino, senha e segundo fator; bloqueio depois de erros seguidos",
+   "resumo_en": "sign in by tenant, password and second factor; lockout after repeated failures",
+   "resumo_es": "inicio de sesión por inquilino, contraseña y segundo factor; bloqueo tras errores repetidos",
+   "palavras": [
+    "entrar",
+    "login",
+    "senha",
+    "inquilino",
+    "segundo fator",
+    "bloqueio",
+    "ldap"
+   ],
+   "palavras_en": [
+    "sign in",
+    "login",
+    "password",
+    "tenant",
+    "second factor",
+    "lockout",
+    "ldap"
+   ],
+   "palavras_es": [
+    "entrar",
+    "inicio de sesion",
+    "contrasena",
+    "inquilino",
+    "segundo factor",
+    "bloqueo",
+    "ldap"
+   ],
+   "caminho": "/entrar",
+   "corpo": "<h2>Entrar</h2>\n<p>A tela de entrada pede três coisas: o inquilino (slug), o login e a senha.</p>\n<ol>\n<li>Abra <code>/entrar?inquilino=&lt;slug&gt;</code> (o link já vem preenchido quando a página inicial conhece o\n   inquilino).</li>\n<li>Digite login e senha e escolha Entrar.</li>\n<li>Se a conta tem segundo fator (TOTP), digite os 6 dígitos do aplicativo na mesma tela.</li>\n</ol>\n<p>Depois de 5 erros seguidos de senha a conta fica bloqueada por um tempo crescente; o administrador\npode desbloquear na tela Usuários. Quem entra por Active Directory usa o mesmo formulário: a\norganização decide por configuração se a autenticação vai ao LDAP.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_login.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "grupos",
+   "titulo": "Grupos",
+   "titulo_en": "Groups",
+   "titulo_es": "Grupos",
+   "resumo": "grupos de membros, entrada automática por regra e gerência de participantes",
+   "resumo_en": "member groups, automatic entry by rule and membership management",
+   "resumo_es": "grupos de miembros, entrada automática por regla y gestión de participantes",
+   "palavras": [
+    "grupos",
+    "membros",
+    "entrada",
+    "regra",
+    "participantes",
+    "admin"
+   ],
+   "palavras_en": [
+    "groups",
+    "members",
+    "entry",
+    "rule",
+    "membership",
+    "admin"
+   ],
+   "palavras_es": [
+    "grupos",
+    "miembros",
+    "entrada",
+    "regla",
+    "participantes",
+    "admin"
+   ],
+   "caminho": "/admin/grupos",
+   "corpo": "<h2>Grupos</h2>\n<p>A tela Grupos organiza os membros em grupos. Todo membro pode ver os grupos; gerir exige o\nprivilégio de gerência de grupos.</p>\n<ol>\n<li>Escolha Novo grupo e dê um nome.</li>\n<li>Acrescente membros pela busca do painel de edição.</li>\n<li>A entrada automática por regra (atributo do membro) pode ser configurada quando a organização\n   usa LDAP: o grupo espelha um grupo do diretório.</li>\n</ol>\n<p>Grupos servem para conceder papéis e compartilhamento em bloco: um item compartilhado com o grupo\nfica visível a todos os seus membros.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_grupos.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "inicio",
+   "titulo": "Início",
+   "titulo_en": "Home",
+   "titulo_es": "Inicio",
+   "resumo": "página de entrada: versão, saúde dos serviços e atalhos das telas do inquilino",
+   "resumo_en": "entry page: version, service health and shortcuts to the tenant screens",
+   "resumo_es": "página de entrada: versión, salud de los servicios y atajos de las pantallas del inquilino",
+   "palavras": [
+    "inicio",
+    "saude",
+    "versao",
+    "servicos",
+    "banco",
+    "worker",
+    "garage"
+   ],
+   "palavras_en": [
+    "home",
+    "health",
+    "version",
+    "services",
+    "database",
+    "worker",
+    "garage"
+   ],
+   "palavras_es": [
+    "inicio",
+    "salud",
+    "version",
+    "servicios",
+    "banco",
+    "worker",
+    "garage"
+   ],
+   "caminho": "/",
+   "corpo": "<h2>Início</h2>\n<p>A página de entrada mostra o nome do produto, o aviso de análise / beta privado e dois painéis:\nversão e saúde.</p>\n<p>O painel versão mostra o número de versão do arquivo <code>VERSAO</code>, o commit em execução, o ambiente e\no endereço público. O painel saúde mostra a resposta do <code>/saude</code>: banco, migrações pendentes,\nserviços auxiliares (garage e worker) e a fila de tarefas. HTTP 200 só com banco em ordem.</p>\n<p>Sem sessão, a página oferece o link Entrar. Com sessão, mostra a barra lateral com as telas que o\nseu perfil alcança e atalhos para elas.</p>\n<h3>Como conferir a saúde</h3>\n<ol>\n<li>Abra a página inicial.</li>\n<li>Leia o painel saúde: <code>banco: ok</code> e <code>migracoes_pendentes: 0</code> significam serviço em ordem.</li>\n<li>Se <code>banco</code> vier <code>desatualizado</code>, há migração sem aplicar: rode a instalação de novo\n   (seção Instalação do manual do administrador).</li>\n<li>Se <code>workers_vivos</code> vier 0, a fila não está sendo processada: confira a unidade <code>plat-worker</code>.</li>\n</ol>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_saude_pagina.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "lixeira",
+   "titulo": "Lixeira",
+   "titulo_en": "Trash",
+   "titulo_es": "Papelera",
+   "resumo": "itens apagados ficam aqui por 30 dias; restaurar ou expurgar de verdade",
+   "resumo_en": "deleted items stay here for 30 days; restore or purge for good",
+   "resumo_es": "los ítems borrados quedan aquí por 30 días; restaurar o expulsar de verdad",
+   "palavras": [
+    "lixeira",
+    "apagar",
+    "restaurar",
+    "expurgar",
+    "30 dias",
+    "trash"
+   ],
+   "palavras_en": [
+    "trash",
+    "delete",
+    "restore",
+    "purge",
+    "30 days"
+   ],
+   "palavras_es": [
+    "papelera",
+    "borrar",
+    "restaurar",
+    "expulsar",
+    "30 dias"
+   ],
+   "caminho": "/conteudo/lixeira",
+   "corpo": "<h2>Lixeira</h2>\n<p>Apagar um item manda para a lixeira: o item sai do catálogo e das buscas, mas continua no\ninquilino por 30 dias.</p>\n<ol>\n<li>Abra a lixeira pelo menu de Conteúdo.</li>\n<li>Restaurar devolve o item à pasta de origem com as permissões que tinha.</li>\n<li>Expurgar remove de verdade (com a tabela física, em itens de camada); a ação pede confirmação.</li>\n</ol>\n<p>Passados 30 dias, o expurgo é automático.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_conteudo.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "log",
+   "titulo": "Log de acesso",
+   "titulo_en": "Access log",
+   "titulo_es": "Registro de acceso",
+   "resumo": "eventos do inquilino: entradas, mudanças de configuração e chamadas da API por membro",
+   "resumo_en": "tenant events: sign-ins, configuration changes and API calls per member",
+   "resumo_es": "eventos del inquilino: inicios de sesión, cambios de configuración y llamadas a la API por miembro",
+   "palavras": [
+    "log",
+    "acesso",
+    "eventos",
+    "auditoria",
+    "quem fez",
+    "admin"
+   ],
+   "palavras_en": [
+    "log",
+    "access",
+    "events",
+    "audit",
+    "who did",
+    "admin"
+   ],
+   "palavras_es": [
+    "registro",
+    "acceso",
+    "eventos",
+    "auditoria",
+    "quien hizo",
+    "admin"
+   ],
+   "caminho": "/admin/log",
+   "corpo": "<h2>Log de acesso</h2>\n<p>A tela Log mostra os eventos do inquilino em ordem do mais recente para o mais antigo: entradas e\nsaídas, criação e mudança de membros, papéis, tokens, configuração da organização e chamadas\nrelevantes da API. Exige o privilégio <code>org.log_ver</code>.</p>\n<ol>\n<li>Filtre por membro, tipo de evento ou faixa de tempo pelos campos do topo.</li>\n<li>Cada linha mostra instante, membro (ou token), evento e detalhe.</li>\n</ol>\n<p>O log é de leitura: nenhum evento se apaga pela tela. A retenção segue a configuração da\norganização.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_log_acesso.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "mapa",
+   "titulo": "Mapa",
+   "titulo_en": "Map",
+   "titulo_es": "Mapa",
+   "resumo": "visualização de camadas do inquilino sobre mapa-base local, com busca de endereço",
+   "resumo_en": "visualization of tenant layers over a local basemap, with address search",
+   "resumo_es": "visualización de capas del inquilino sobre mapa-base local, con búsqueda de dirección",
+   "palavras": [
+    "mapa",
+    "camadas",
+    "basemap",
+    "pmtiles",
+    "escala",
+    "endereco",
+    "geocodificar"
+   ],
+   "palavras_en": [
+    "map",
+    "layers",
+    "basemap",
+    "pmtiles",
+    "scale",
+    "address",
+    "geocode"
+   ],
+   "palavras_es": [
+    "mapa",
+    "capas",
+    "basemap",
+    "pmtiles",
+    "escala",
+    "direccion",
+    "geocodificar"
+   ],
+   "caminho": "/mapa",
+   "corpo": "<h2>Mapa</h2>\n<p>A tela Mapa mostra as camadas do inquilino sobre um mapa-base servido da própria máquina (PMTiles\nlocal): nada depende de serviço de mapa de terceiros.</p>\n<ol>\n<li>O painel de camadas liga e desliga cada camada e ajusta transparência.</li>\n<li>A busca de endereço usa o geocodificador local (CNEFE do IBGE) quando instalado.</li>\n<li>A régua de escala e o nível de zoom acompanham o movimento; a URL guarda a posição para\n   compartilhar a vista.</li>\n</ol>\n<p>O mapa-base cobre o território nacional nas escalas carregadas pela instalação; onde não há\ntmestre local, o quadro fica vazio em vez de chamar serviço externo.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_mapa.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "papeis",
+   "titulo": "Papéis e privilégios",
+   "titulo_en": "Roles and privileges",
+   "titulo_es": "Paples y privilegios",
+   "resumo": "papéis personalizados sobre privilégios nomeados; o que cada perfil pode fazer",
+   "resumo_en": "custom roles over named privileges; what each profile can do",
+   "resumo_es": "papeles personalizados sobre privilegios nombrados; qué puede hacer cada perfil",
+   "palavras": [
+    "papeis",
+    "privilegios",
+    "perfil",
+    "administrador",
+    "editor",
+    "visualizador",
+    "personalizado",
+    "admin"
+   ],
+   "palavras_en": [
+    "roles",
+    "privileges",
+    "profile",
+    "administrator",
+    "editor",
+    "viewer",
+    "custom",
+    "admin"
+   ],
+   "palavras_es": [
+    "papeles",
+    "privilegios",
+    "perfil",
+    "administrador",
+    "editor",
+    "visualizador",
+    "personalizado",
+    "admin"
+   ],
+   "caminho": "/admin/papeis",
+   "corpo": "<h2>Papéis e privilégios</h2>\n<p>A tela Papéis lista os privilégios nomeados da plataforma (cada um cobre uma família de rotas da\nAPI) e deixa a organização criar papéis personalizados: um nome e um conjunto de privilégios.</p>\n<p>Os três perfis de fábrica cobrem os casos comuns:</p>\n<ul>\n<li>administrador: tudo no inquilino;</li>\n<li>editor: cria e edita conteúdo e roda tarefas;</li>\n<li>visualizador: só leitura.</li>\n</ul>\n<p>Para o caso intermediário (por exemplo, quem gerencia conteúdo mas não membros), crie um papel com\nos privilégios exatos e atribua-o ao membro na tela Usuários. A lista de privilégios e o que cada\num cobre está documentada em <code>docs/PRIVILEGIOS.md</code>, gerada do banco.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_papeis.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "tarefas",
+   "titulo": "Tarefas",
+   "titulo_en": "Tasks",
+   "titulo_es": "Tareas",
+   "resumo": "fila de jobs: executados, em curso e falhos; agendas e periódicos; log e repetição",
+   "resumo_en": "job queue: done, running and failed; schedules and periodic jobs; log and retry",
+   "resumo_es": "fila de trabajos: ejecutados, en curso y fallidos; agendas y periódicos; registro y repetición",
+   "palavras": [
+    "tarefas",
+    "jobs",
+    "fila",
+    "agenda",
+    "periodico",
+    "log",
+    "repetir",
+    "cancelar",
+    "worker"
+   ],
+   "palavras_en": [
+    "tasks",
+    "jobs",
+    "queue",
+    "schedule",
+    "periodic",
+    "log",
+    "retry",
+    "cancel",
+    "worker"
+   ],
+   "palavras_es": [
+    "tareas",
+    "jobs",
+    "fila",
+    "agenda",
+    "periodico",
+    "registro",
+    "repetir",
+    "cancelar",
+    "worker"
+   ],
+   "caminho": "/tarefas",
+   "corpo": "<h2>Tarefas</h2>\n<p>A tela Tarefas é a fila de trabalho do inquilino: cargas de dados, ingestões e rotinas aparecem\naqui como jobs. Exige o privilégio <code>jobs.executar</code>.</p>\n<h3>Lista e detalhe</h3>\n<p>A lista mostra cada job com tipo, estado (pendente, em execução, concluído, falho) e tempo. O\ndetalhe traz o log completo do worker, linha por linha, e os parâmetros do job.</p>\n<h3>Cancelar e repetir</h3>\n<p>Um job pendente ou em execução pode ser cancelado; um job concluído ou falho pode ser repetido com\nos mesmos parâmetros. O log do job anterior fica guardado.</p>\n<h3>Agendas</h3>\n<p>A seção Agendas cria repetição por expressão cron (fuso do inquilino) e a seção Periódicos mostra\nas rotinas de fábrica da plataforma. Cada agenda lista as próximas execuções e pode ser pausada.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_tarefas.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "tokens",
+   "titulo": "Tokens de serviço",
+   "titulo_en": "Service tokens",
+   "titulo_es": "Tokens de servicio",
+   "resumo": "tokens com escopo, restrição de rede e validade para integrações sem navegador",
+   "resumo_en": "tokens with scope, network restriction and validity for integrations without a browser",
+   "resumo_es": "tokens con alcance, restricción de red y validez para integraciones sin navegador",
+   "palavras": [
+    "tokens",
+    "api",
+    "escopo",
+    "restricao",
+    "validade",
+    "integracao",
+    "servico",
+    "admin"
+   ],
+   "palavras_en": [
+    "tokens",
+    "api",
+    "scope",
+    "restriction",
+    "validity",
+    "integration",
+    "service",
+    "admin"
+   ],
+   "palavras_es": [
+    "tokens",
+    "api",
+    "alcance",
+    "restriccion",
+    "validez",
+    "integracion",
+    "servicio",
+    "admin"
+   ],
+   "caminho": "/admin/tokens",
+   "corpo": "<h2>Tokens de serviço</h2>\n<p>A tela Tokens cria e gerencia tokens de serviço: credenciais para um programa chamar a API sem\nnavegador. Exige o privilégio <code>tokens.gerar</code>.</p>\n<h3>Criar e usar</h3>\n<ol>\n<li>Escolha Novo token.</li>\n<li>Dê um nome, escolha os escopos (famílias de rotas que o token alcança), a restrição de rede\n   (lista de faixas de IP) e a validade.</li>\n<li>O valor do token é mostrado uma única vez. A chamada leva o cabeçalho <code>Authorization: Bearer\n   &lt;token&gt;</code>.</li>\n</ol>\n<h3>Renovar, revogar e conferir acessos</h3>\n<p>Cada token lista as últimas chamadas aceitas e recusadas. Renovar troca o valor mantendo a\nconfiguração; revogar desliga na hora. A validade nunca é infinita: o campo de validade é\nobrigatório.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_tokens.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "uploads",
+   "titulo": "Uploads",
+   "titulo_en": "Uploads",
+   "titulo_es": "Cargas",
+   "resumo": "upload retomável de arquivo grande por partes, com retomada e confirmação por conteúdo",
+   "resumo_en": "resumable large file upload by parts, with resume and content confirmation",
+   "resumo_es": "carga reanudable de archivo grande por partes, con reanudación y confirmación por contenido",
+   "palavras": [
+    "upload",
+    "arquivo",
+    "partes",
+    "retomar",
+    "grande",
+    "dropzone",
+    "carga"
+   ],
+   "palavras_en": [
+    "upload",
+    "file",
+    "parts",
+    "resume",
+    "large",
+    "dropzone"
+   ],
+   "palavras_es": [
+    "carga",
+    "archivo",
+    "partes",
+    "reanudar",
+    "grande",
+    "dropzone"
+   ],
+   "caminho": "/uploads",
+   "corpo": "<h2>Uploads</h2>\n<p>A tela Uploads envia arquivos grandes por partes: a conexão pode cair e o envio recomeça do ponto\nem que parou. Exige privilégio de criar conteúdo.</p>\n<ol>\n<li>Arraste o arquivo para a zona de soltura ou escolha pelo seletor.</li>\n<li>A tela mostra o progresso por parte; fechar a tela não perde o que já subiu.</li>\n<li>Ao terminar, confirme o tipo pelo conteúdo (o servidor confere a assinatura do arquivo, não a\n   extensão) e o item entra no catálogo.</li>\n</ol>\n<p>Arquivos permitidos seguem a lista da organização; o que o servidor recusa, a tela explica.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_uploads.py</code>) contra a versão atual.</p>"
+  },
+  {
+   "id": "usuarios",
+   "titulo": "Usuários",
+   "titulo_en": "Users",
+   "titulo_es": "Usuarios",
+   "resumo": "criar membros com senha temporária, convidar por e-mail, editar, desabilitar e agir em lote",
+   "resumo_en": "create members with a temporary password, invite by e-mail, edit, disable and bulk actions",
+   "resumo_es": "crear miembros con contraseña temporal, invitar por correo, editar, deshabilitar y acciones en lote",
+   "palavras": [
+    "usuarios",
+    "membros",
+    "criar",
+    "convite",
+    "senha temporaria",
+    "desabilitar",
+    "lote",
+    "desbloquear",
+    "admin"
+   ],
+   "palavras_en": [
+    "users",
+    "members",
+    "create",
+    "invite",
+    "temporary password",
+    "disable",
+    "bulk",
+    "unlock",
+    "admin"
+   ],
+   "palavras_es": [
+    "usuarios",
+    "miembros",
+    "crear",
+    "invitacion",
+    "contrasena temporal",
+    "deshabilitar",
+    "lote",
+    "admin"
+   ],
+   "caminho": "/admin/usuarios",
+   "corpo": "<h2>Usuários</h2>\n<p>A tela Usuários administra os membros do inquilino. Exige o privilégio <code>membros.ver</code>; agir exige\n<code>membros.gerir</code>.</p>\n<h3>Criar</h3>\n<ol>\n<li>Escolha Novo usuário.</li>\n<li>Preencha login, nome e perfil (administrador, editor ou visualizador).</li>\n<li>A resposta mostra a senha temporária uma única vez: copie e passe ao usuário. O sistema pede a\n   troca no primeiro acesso.</li>\n</ol>\n<h3>Convidar por e-mail</h3>\n<p>Com SMTP configurado na organização, a seção Convidar por e-mail envia um convite com link\npróprio, válido por 7 dias. Sem SMTP, a resposta traz o link para você repassar.</p>\n<h3>Editar, desabilitar e apagar</h3>\n<p>Cada linha tem Editar (nome, perfil), Redefinir senha (gera nova temporária), Desligar segundo\nfator e Desbloquear. Desabilitar preserva o histórico e impede o acesso; apagar remove o membro\n(queda recusada para o último administrador do inquilino).</p>\n<h3>Ação em lote</h3>\n<p>Marque várias linhas para desabilitar ou reabilitar em lote. A operação recusa desabilitar o\núltimo administrador.</p>\n<p>A captura desta seção é produzida pelo teste de ponta a ponta da própria tela\n(<code>tests/e2e/test_usuarios.py</code>) contra a versão atual.</p>"
+  }
+ ]
+}
