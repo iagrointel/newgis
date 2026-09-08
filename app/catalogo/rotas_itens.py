@@ -40,6 +40,7 @@ from app.catalogo.modelos import (
     ItemEntrada,
     LoteEntrada,
     LoteSaida,
+    MetadadoIsoEntrada,
     MoverEntrada,
     OrdemExclusao,
     Pagina,
@@ -652,6 +653,100 @@ def metadado_iso(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler"))
         # nunca deveria acontecer para um item bem formado; erro de build do gerador, não do pedido do cliente
         raise ErroAPI(500, "metadado_invalido", "metadado gerado não validou contra o XSD", e.erros) from e
     return Response(content=xml, media_type="application/xml")
+
+
+@router.post("/api/itens/{id}/metadado.xml", openapi_extra=EDITAR)
+def importar_metadado_iso(
+    id: str,
+    request: Request,
+    corpo: MetadadoIsoEntrada,
+    aplicar: bool = Query(True, description="false: só lê e devolve o relatório, sem gravar"),  # noqa: B008
+    estrito: bool = Query(False, description="true: erro do XSD vira 422 em vez de aviso"),  # noqa: B008
+    auth: Auth = autenticado(),  # noqa: B008
+):
+    """Importa um metadado ISO 19139/GMD para dentro do item (item L0-09-c-xml-iso-validacao).
+
+    O que entra: título, resumo, descrição (purpose), palavras-chave, créditos, termos de uso, situação e
+    extensão viram campos do item pelo MESMO caminho do PUT/PATCH (`editar_item`: versão, permissão, evento
+    `itens/atualizar`); a linhagem volta para `dados.procedencia` (item L0-09-a) quando o esquema do tipo
+    aceita; contato, sistema de referência, formato e extensão declarada vão para `plat.item.metadado_iso`.
+    O que não tem onde ser guardado sai no relatório `nao_coube`, com caminho, linha e exemplo — nunca é
+    inventado um lugar para ele. `aplicar=false` devolve o mesmo relatório sem gravar nada.
+
+    O XML vai no campo `xml` de um corpo JSON, não como `application/xml`: a defesa de CSRF sob cookie (ADR
+    0002 seção 5.3, `checar_escrita_sob_cookie`) só aceita corpo JSON em escrita, e afrouxá-la para uma rota
+    de importação seria trocar uma defesa de toda a API por uma comodidade desta."""
+    iid = uuid_ok(id)
+    try:
+        analise = metadado.analisar(corpo.xml.encode("utf-8"))
+    except metadado.ErroXMLIlegivel as e:
+        raise ErroAPI(
+            422,
+            "xml_invalido",
+            "XML de metadado ilegível",
+            [{"campo": "(corpo)", "erro": e.mensagem, "linha": e.linha, "coluna": e.coluna}],
+        ) from e
+    except metadado.ErroXSDAusente as e:
+        raise ErroAPI(503, "indisponivel", "cache do XSD ISO 19139 ausente nesta máquina") from e
+    if estrito and analise.avisos_xsd:
+        raise ErroAPI(
+            422,
+            "xml_invalido",
+            "XML não valida contra o XSD ISO 19139",
+            [
+                {"campo": "(corpo)", "erro": a["mensagem"], "linha": a["linha"], "coluna": a["coluna"]}
+                for a in analise.avisos_xsd[: limites.METADADO_NAO_COUBE_MAX]
+            ],
+        )
+    campos = dict(analise.campos)
+    nao_coube = list(analise.nao_coube)
+    procedencia = dict(analise.procedencia)
+    try:
+        with db.db(auth.contexto()) as cur:
+            r = exigir_edicao(cur, iid)
+            if procedencia:
+                dados = dict(r["dados"] or {})
+                proposto = {**dados, "procedencia": {**(dados.get("procedencia") or {}), **procedencia}}
+                if tipos.erros_de(r["tipo"], proposto):
+                    nao_coube.append(
+                        {
+                            "caminho": "dataQualityInfo/DQ_DataQuality/lineage/LI_Lineage/statement",
+                            "vezes": 1,
+                            "exemplo": next(iter(procedencia.values()))[:200],
+                            "linha": 0,
+                            "motivo": f"o esquema do tipo {r['tipo']} não aceita procedencia em dados",
+                        }
+                    )
+                    procedencia = {}
+                else:
+                    campos["dados"] = proposto
+            if aplicar:
+                if campos:
+                    editar_item(cur, request, auth, iid, campos, comentario="importação de metadado ISO 19139")
+                if analise.metadado_iso:
+                    cur.execute(
+                        "UPDATE plat.item SET metadado_iso = metadado_iso || %s::jsonb WHERE id = %s::uuid",
+                        (jsonb(analise.metadado_iso), iid),
+                    )
+            cur.execute("SELECT metadado_iso FROM plat.item WHERE id = %s::uuid", (iid,))
+            guardado = (cur.fetchone() or {}).get("metadado_iso") or {}
+    except psycopg2.Error as e:
+        raise comum.erro_do_banco(e) from e
+    return {
+        "item_id": iid,
+        "aplicado": aplicar,
+        "campos": {k: v for k, v in campos.items() if k != "dados"},
+        "procedencia": procedencia,
+        "metadado_iso": analise.metadado_iso if aplicar else {},
+        "metadado_iso_guardado": guardado,
+        "preenchidos": analise.preenchidos,
+        "identificador_arquivo": analise.identificador_arquivo,
+        "identificador_estrangeiro": bool(
+            analise.identificador_arquivo and analise.identificador_arquivo != iid
+        ),
+        "nao_coube": nao_coube,
+        "avisos_xsd": analise.avisos_xsd,
+    }
 
 
 def editar_item(

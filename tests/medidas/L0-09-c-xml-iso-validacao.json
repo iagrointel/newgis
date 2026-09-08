@@ -1,0 +1,117 @@
+{
+ "item": "L0-09-c-xml-iso-validacao",
+ "medido_em": "2026-09-08T06:10:19+00:00",
+ "como_reproduzir": "bash /home/dev/plataforma/laco/roda_teste.sh tests/unit/test_metadado_iso_importacao.py tests/api/catalogo/test_metadado_importar.py -q",
+ "clausulas": {
+  "xml_gerado_de_3_itens_valida_no_xsd_0_erros": {
+   "estado": "passou",
+   "prova": "tests/unit/test_metadado_iso_importacao.py::test_xml_gerado_valida_no_xsd_sem_nenhum_erro[minimo|completo|obsoleto]",
+   "erros_xsd": 0,
+   "xsd": "docs/xsd/cache/schemas.opengis.net/iso/19139/20070417/gmd/gmd.xsd (lxml XMLSchema, sem rede)"
+  },
+  "importar_xml_da_inde_preenche_15_campos": {
+   "estado": "passou",
+   "campos_preenchidos": 22,
+   "campos": [
+    "creditos",
+    "descricao",
+    "extent",
+    "resumo",
+    "status",
+    "tags",
+    "titulo",
+    "procedencia.data_de_acesso",
+    "procedencia.data_do_dado",
+    "procedencia.fonte",
+    "procedencia.metodo",
+    "procedencia.url",
+    "metadado_iso.contato.email",
+    "metadado_iso.contato.individuo",
+    "metadado_iso.contato.organizacao",
+    "metadado_iso.contato.papel",
+    "metadado_iso.distribuicao.formato",
+    "metadado_iso.extensao.espacial.xmax",
+    "metadado_iso.extensao.espacial.xmin",
+    "metadado_iso.extensao.espacial.ymax",
+    "metadado_iso.extensao.espacial.ymin",
+    "metadado_iso.sistema_referencia.codigo"
+   ],
+   "campos_sem_contar_os_4_cantos_da_extensao_declarada": 18,
+   "fonte": "registro do catálogo aberto da INDE (produtor IBGE), CSW de metadados.inde.gov.br, obtido 08/09/2026",
+   "arquivo": "tests/dados/inde_iso19139_carta_imagem.xml",
+   "sha256": "1b83cc2056fa3a987afe54e0db2419d90cc6b0a64d3a19edbfe50712ac472aa6",
+   "prova": "tests/api/catalogo/test_metadado_importar.py::test_registro_da_inde_preenche_ao_menos_quinze_campos_do_item"
+  },
+  "ida_e_volta_sem_perda_diff_0": {
+   "estado": "passou",
+   "diferencas": 0,
+   "prova": "unit: test_ida_e_volta_nao_perde_campo_do_perfil (3 itens, metadado.diferencas == []); API: test_ida_e_volta_pela_api_nao_perde_campo_do_perfil (exporta de um item, importa noutro, compara titulo/resumo/creditos/termos_de_uso/status/tags/extent)",
+   "fora_do_perfil_por_decisao": [
+    "dono_nome (pointOfContact do recurso, identidade da plataforma)",
+    "endereços da própria API (distributionInfo)",
+    "idioma/conjunto de caracteres fixos",
+    "nome e versão do padrão",
+    "miniatura"
+   ]
+  },
+  "xml_invalido_422_com_linha_e_coluna": {
+   "estado": "passou",
+   "prova": "test_xml_ilegivel_responde_422_com_linha_e_coluna (malformado), test_raiz_de_outro_namespace_responde_422, test_estrito_recusa_o_que_o_xsd_reprova_e_o_padrao_so_avisa (estrito=1 sobre o XML da INDE)",
+   "observacao": "XML bem formado que só reprova no XSD entra por padrão e devolve avisos com linha; a recusa por XSD é pedida com ?estrito=1 (ADR do item, decisão 1)"
+  },
+  "teste_em_make_check": {
+   "estado": "passou",
+   "prova": "os dois arquivos ficam em tests/unit e tests/api, varridos por `make teste` dentro de `make check`; a rota nova entrou em docs/openapi.json, tests/api/cruzado_casos.py e tests/api/eventos_esperados.py (test_cruzado e test_eventos verdes)"
+  }
+ },
+ "refutacao": {
+  "xxe_entidade_externa": {
+   "estado": "passou",
+   "como": "etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False); teste lê file:///etc/passwd e nada do arquivo aparece",
+   "prova": "test_entidade_externa_nunca_e_resolvida"
+  },
+  "bomba_de_entidade": {
+   "estado": "passou",
+   "prova": "test_bomba_de_entidade_nao_expande"
+  },
+  "xml_de_50_mb": {
+   "estado": "passou",
+   "teto_bytes": 2097152,
+   "prova": "test_xml_de_cinquenta_megabytes_e_recusado_antes_de_analisar (recusa pelo tamanho ANTES de analisar) e test_xml_grande_demais_e_recusado (pela API)"
+  },
+  "namespace_errado": {
+   "estado": "passou",
+   "prova": "test_namespace_errado_e_recusado_com_a_raiz_no_texto e test_raiz_de_outro_namespace_responde_422"
+  }
+ },
+ "achados": {
+  "registro_real_da_inde_nao_valida_no_xsd_oficial": {
+   "erros_xsd": 20,
+   "exemplos": [
+    {
+     "linha": 32,
+     "coluna": 0,
+     "mensagem": "Element '{http://www.isotc211.org/2005/gmd}contactInfo': This element is not expected."
+    },
+    {
+     "linha": 92,
+     "coluna": 0,
+     "mensagem": "Element '{http://www.isotc211.org/2005/gmd}MD_GridSpatialRepresentation': This element is not expected."
+    },
+    {
+     "linha": 129,
+     "coluna": 0,
+     "mensagem": "Element '{http://www.isotc211.org/2005/gmd}elipsoide': This element is not expected."
+    }
+   ],
+   "consequencia": "o XSD virou parecer com posição, não porteiro; recusar seria recusar o dado aberto do país"
+  },
+  "caminhos_sem_destino_na_plataforma": 69,
+  "produzido_por": "ArcGIS 10.3 (environmentDescription do próprio registro) — é também a prova de que o formato que o ArcGIS exporta é lido"
+ },
+ "fora_do_escopo": [
+  "ISO 19115-3 (mdb): não exportado nem importado",
+  "botão de importar na tela do item (a exportação por botão/rota já existia)",
+  "criar item novo a partir do XML: a importação preenche item existente"
+ ]
+}

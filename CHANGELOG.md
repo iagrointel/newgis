@@ -3,6 +3,28 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L0-09-c-xml-iso-validacao: importar metadado ISO 19139)
+
+A exportação de metadado ISO existia desde o item `L0-09-metadado-catalogo`; agora existe o caminho de volta.
+
+- **`POST /api/itens/{id}/metadado.xml`** recebe um metadado ISO 19139/GMD e preenche o item: título, resumo,
+  descrição, palavras-chave, créditos, termos de uso, situação e extensão pelo mesmo `editar_item` do
+  PUT/PATCH (versão, permissão e evento `itens/atualizar`); a linhagem volta para `dados.procedencia`; contato,
+  sistema de referência, formato e extensão declarada vão para `plat.item.metadado_iso`, a mesma coluna do
+  editor MGB do item irmão L0-09-b (migração idempotente e idêntica). `?aplicar=false` lê sem gravar.
+- **O XSD é parecer, não porteiro.** O registro real do catálogo aberto da INDE guardado em `tests/dados/`
+  (produtor IBGE, gerado por ArcGIS 10.3) tem 20 erros contra o XSD oficial — ordem de elementos e extensões
+  do Perfil MGB — e mesmo assim preenche 22 campos do item. XML malformado, grande demais ou com raiz que não
+  é `gmd:MD_Metadata` responde 422 com linha e coluna; erro só de XSD sai como aviso posicionado, e `?estrito=1`
+  o transforma em recusa.
+- **O que não tem onde ser guardado sai nomeado**: 69 caminhos do registro da INDE (telefone, endereço postal,
+  catálogo de feições) vêm no relatório `nao_coube`, com caminho, linha, contagem e exemplo — nenhuma gaveta
+  inventada para eles.
+- **Ida e volta fechada**: exportar e reimportar não perde campo do perfil (`metadado.diferencas` vazia nos três
+  itens do teste e na prova pela API, de um item para outro).
+- Refutação: entidade externa nunca é resolvida (sem rede, sem DTD), bomba de entidade não expande, XML de
+  50 MB é recusado pelo tamanho antes de qualquer análise, namespace errado é recusado com a raiz no texto.
+
 ## turno 3, setembro de 2026 (item L2-04-h-wfs-2-gml: WFS 2.0 com filtro FES e GML 3.2 por token)
 
 O WFS que existia desde o item `L2-04-servicos-esri-ogc` respondia às três operações básicas com um

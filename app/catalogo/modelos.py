@@ -91,6 +91,14 @@ class ItemEditar(Modelo):
     _e = field_validator("extent")(_extent)
 
 
+class MetadadoIsoEntrada(Modelo):
+    """Corpo de POST /api/itens/{id}/metadado.xml (item L0-09-c): o documento ISO 19139 inteiro num campo de
+    texto. O teto aqui é de caracteres; o de bytes, que é o que vale para o analisador, está em
+    `limites.METADADO_XML_BYTES_MAX` e é conferido em `metadado.ler_documento`."""
+
+    xml: str = Field(min_length=1, max_length=limites.METADADO_XML_BYTES_MAX)
+
+
 class MoverEntrada(Modelo):
     pasta_id: str | None = Field(default=None, pattern=UUID_PADRAO)
 

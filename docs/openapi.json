@@ -6546,6 +6546,81 @@
     },
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Importar Metadado Iso",
+    "description": "Importa um metadado ISO 19139/GMD para dentro do item (item L0-09-c-xml-iso-validacao).\n\nO que entra: título, resumo, descrição (purpose), palavras-chave, créditos, termos de uso, situação e\nextensão viram campos do item pelo MESMO caminho do PUT/PATCH (`editar_item`: versão, permissão, evento\n`itens/atualizar`); a linhagem volta para `dados.procedencia` (item L0-09-a) quando o esquema do tipo\naceita; contato, sistema de referência, formato e extensão declarada vão para `plat.item.metadado_iso`.\nO que não tem onde ser guardado sai no relatório `nao_coube`, com caminho, linha e exemplo — nunca é\ninventado um lugar para ele. `aplicar=false` devolve o mesmo relatório sem gravar nada.\n\nO XML vai no campo `xml` de um corpo JSON, não como `application/xml`: a defesa de CSRF sob cookie (ADR\n0002 seção 5.3, `checar_escrita_sob_cookie`) só aceita corpo JSON em escrita, e afrouxá-la para uma rota\nde importação seria trocar uma defesa de toda a API por uma comodidade desta.",
+    "operationId": "importar_metadado_iso_api_itens__id__metadado_xml_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "aplicar",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "false: só lê e devolve o relatório, sem gravar",
+       "default": true,
+       "title": "Aplicar"
+      },
+      "description": "false: só lê e devolve o relatório, sem gravar"
+     },
+     {
+      "name": "estrito",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "true: erro do XSD vira 422 em vez de aviso",
+       "default": false,
+       "title": "Estrito"
+      },
+      "description": "true: erro do XSD vira 422 em vez de aviso"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MetadadoIsoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
    }
   },
   "/api/itens/lote": {
@@ -16585,6 +16660,23 @@
      "criado_em"
     ],
     "title": "Membro"
+   },
+   "MetadadoIsoEntrada": {
+    "properties": {
+     "xml": {
+      "type": "string",
+      "maxLength": 2097152,
+      "minLength": 1,
+      "title": "Xml"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "xml"
+    ],
+    "title": "MetadadoIsoEntrada",
+    "description": "Corpo de POST /api/itens/{id}/metadado.xml (item L0-09-c): o documento ISO 19139 inteiro num campo de\ntexto. O teto aqui é de caracteres; o de bytes, que é o que vale para o analisador, está em\n`limites.METADADO_XML_BYTES_MAX` e é conferido em `metadado.ler_documento`."
    },
    "Miniatura": {
     "properties": {

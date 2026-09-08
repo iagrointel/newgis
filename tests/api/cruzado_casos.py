@@ -19,6 +19,15 @@ AREA_MULTIESCALA_TESTE = {
 PADRAO = frozenset({401, 403, 404})
 FS = "/rest/services/{item_id}/FeatureServer"  # família L2-04: serviços de camada por item
 OGCF = "/ogc/features/{item_id}"
+# L0-09-c: metadado ISO 19139 mínimo e bem formado (a varredura cruzada precisa de um corpo que o analisador
+# aceite, para que o veredito venha da RLS do item e não do formato).
+XML_ISO_MINIMO = (
+    '<?xml version="1.0" encoding="UTF-8"?>'
+    '<gmd:MD_Metadata xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:gco="http://www.isotc211.org/2005/gco">'
+    "<gmd:identificationInfo><gmd:MD_DataIdentification><gmd:citation><gmd:CI_Citation><gmd:title>"
+    "<gco:CharacterString>zt-cruzado-iso</gco:CharacterString></gmd:title></gmd:CI_Citation></gmd:citation>"
+    "</gmd:MD_DataIdentification></gmd:identificationInfo></gmd:MD_Metadata>"
+)
 UUID_NULO = "00000000-0000-0000-0000-000000000000"  # id que não é de A nem de B: 404 garantido pela RLS/dono
 
 
@@ -850,6 +859,12 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     # ---- L0-09 metadado ISO 19139 do item: mesmo `item_ou_404` + RLS de `IT` acima.
     ("GET", IT + "/metadado.xml"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/metadado.xml"),
+    # L0-09-c: importar metadado para dentro de um item de B — o corpo é XML bem formado e mínimo, para que a
+    # recusa venha do item (404/403), nunca do analisador.
+    ("POST", IT + "/metadado.xml"): Caso(
+        lambda p: f"/api/itens/{p.item_b['id']}/metadado.xml?aplicar=false",
+        lambda p: {"xml": XML_ISO_MINIMO},
+    ),
     # ---- L2-11-b geocodificador próprio (dado aberto CNEFE/IBGE, sem tabela de inquilino, mesmo padrão de
     # /api/rota-/api/matriz-/api/isocrona acima): 422 é resposta de NEGÓCIO (UF/logradouro não instalado
     # nesta trilha), não vazamento — aceito ao lado de 200.

@@ -70,6 +70,9 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/itens/{id}/miniatura/gerar"): ["itens/miniatura"],
     ("DELETE", "/api/itens/{id}/miniatura"): ["itens/miniatura"],
     ("POST", "/api/itens/{id}/versoes/{n}/restaurar"): ["itens/atualizar", "itens/versao_restaurar"],
+    # L0-09-c: a importação de metadado ISO grava pelo MESMO editar_item do PUT/PATCH, e por isso registra os
+    # mesmos eventos; a parte que vai para plat.item.metadado_iso não é campo versionado do item.
+    ("POST", "/api/itens/{id}/metadado.xml"): ["itens/atualizar", "itens/status"],
     ("POST", "/api/itens/{id}/versoes/{n}/publicar"): ["itens/versao_publicar"],
     ("PUT", "/api/itens/{id}/relacoes"): ["itens/relacoes"],
     ("PUT", "/api/itens/{id}/compartilhamento"): ["compartilhamento/alterar"],
