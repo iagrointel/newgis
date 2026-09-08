@@ -1,0 +1,42 @@
+{
+ "item": "L5-01-e-acoes-configuraveis",
+ "medidas": {
+  "cadeia_30_acoes_p95_ms": {
+   "valor": 0.471,
+   "unidade": "ms",
+   "comando": "node tests/app/executar_js.mjs cadeia 30 5000: seleção no mapa atravessa 30 vistas encadeadas (filtrar mesma_fonte), 100 voltas, 5.000 feições; p95 por volta (tests/unit/test_app_acoes.py)"
+  },
+  "cadeia_30_acoes_max_ms": {
+   "valor": 3.327,
+   "unidade": "ms",
+   "comando": "mesma medição, pior volta"
+  },
+  "cadeia_30_acoes_profundidade": {
+   "valor": 31,
+   "unidade": "níveis",
+   "comando": "maior profundidade da pilha de disparo observada (recursão do barramento) numa volta"
+  },
+  "passos_provados": {
+   "valor": 11,
+   "unidade": "passos",
+   "comando": "mapa->tabela:filtrar; gatilho_repetido:recusado; condicao_campo_inexistente:recusada; mapa->grafico:piscar(condicao); mapa->lista:filtrar(atributo); tabela->mapa:zoom; app:selecao->tabela->grafico->lista; app:condicao_nao_satisfeita; app:tabela->mapa:zoom; usuario:exportar_csv+geojson(filtradas); usuario:zoom+criar_item"
+  },
+  "erros_de_console": {
+   "valor": 0,
+   "unidade": "erros",
+   "comando": "Tela.verificar"
+  },
+  "pagina_pronta_ms_construtor": {
+   "valor": 61.2,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  },
+  "pagina_pronta_ms_aplicativo": {
+   "valor": 111.0,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  }
+ },
+ "gerado_em": "2026-09-08T11:24:29Z",
+ "git_sha": "a7fc3da0a2e4"
+}
