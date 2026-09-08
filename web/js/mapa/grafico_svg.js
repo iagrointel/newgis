@@ -184,7 +184,8 @@ function pizza(dados, opcoes) {
   const cx = 90;
   const cy = ALTURA / 2;
   const R = 78;
-  const r = 40;
+  // rosca por padrão (o painel do L2-06-b pede as duas formas; `rosca: false` fecha o meio e vira pizza)
+  const r = opcoes.rosca === false ? 0 : 40;
   const filhos = [];
   let ang = -Math.PI / 2;
   const legenda = [];
@@ -334,6 +335,16 @@ export function csv(dados, opcoes = {}) {
 /* ------------------------------------------------------------------ serialização em texto (teste no node e PNG) */
 function escapar(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* árvore virtual -> DOM SVG real (sem innerHTML: nada de texto do dado vira marcação) */
+export function paraDom(arvore, doc = (typeof document !== 'undefined' ? document : null)) {
+  const NS = 'http://www.w3.org/2000/svg';
+  if (typeof arvore === 'string') return doc.createTextNode(arvore);
+  const el = doc.createElementNS(NS, arvore.tag);
+  for (const [k, v] of Object.entries(arvore.atrs || {})) el.setAttribute(k, String(v));
+  for (const f of arvore.filhos || []) el.append(paraDom(f, doc));
+  return el;
 }
 
 export function paraTexto(arvore) {

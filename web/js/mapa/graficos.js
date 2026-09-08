@@ -14,9 +14,8 @@
 import { h, limpar } from '../base/dom.js';
 import { enviar, mensagemDe } from '../base/api.js';
 import { t } from '../base/i18n.js';
-import { desenhar, tabela, csv, paraTexto, LARGURA, ALTURA } from './grafico_svg.js';
+import { desenhar, tabela, csv, paraDom, paraTexto, LARGURA, ALTURA } from './grafico_svg.js';
 
-const NS = 'http://www.w3.org/2000/svg';
 const CHAVE = 'plat.mapa.graficos';
 const TIPOS = ['barras', 'pizza', 'linha', 'histograma', 'dispersao'];
 const ESTATISTICAS = ['count', 'sum', 'avg'];
@@ -24,14 +23,6 @@ const GRANULARIDADES = ['dia', 'semana', 'mes', 'trimestre', 'ano'];
 const NUMERICOS = /^(smallint|integer|bigint|numeric|real|double precision|int|int4|int8|float|float8|decimal)/i;
 const DATAS = /^(date|timestamp)/i;
 const MAX_LINHAS_TABELA = 2000;
-
-function paraDom(arvore) {
-  if (typeof arvore === 'string') return document.createTextNode(arvore);
-  const el = document.createElementNS(NS, arvore.tag);
-  for (const [k, v] of Object.entries(arvore.atrs || {})) el.setAttribute(k, String(v));
-  for (const f of arvore.filhos || []) el.append(paraDom(f));
-  return el;
-}
 
 /* texto SQL-92 (gramática do app.consulta.where_ast) que seleciona o que uma barra representa */
 export function filtroDaBarra(campo, el) {
