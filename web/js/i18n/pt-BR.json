@@ -752,6 +752,8 @@
  "mapa.erro_biblioteca": "biblioteca de mapa não carregou (MapLibre ou PMTiles ausente)",
  "mapa.erro_carregar": "não foi possível carregar o mapa",
  "nav.organizacao": "Organização",
+ "nav.temas": "Temas",
+ "nav.temas_desc": "temas de marca: padrões, tema do inquilino, exportação e importação em JSON",
  "nav.organizacao_desc": "nome, identidade visual, mapa padrão, cotas e política de senha/2FA do inquilino",
  "org.titulo": "Organização",
  "org.identidade": "Identidade",
