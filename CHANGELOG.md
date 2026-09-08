@@ -3,6 +3,31 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L3-08-pareto: fronteira de Pareto, análise sem agregação)
+
+A pergunta que vem antes do peso: quais unidades podem ser as melhores para QUALQUER escolha de peso.
+`app/amc/pareto.py` faz a ordenação não dominada de 2 a 4 objetivos em ordens (1ª, 2ª e 3ª fronteiras),
+com direção declarada por objetivo, empate na mesma ordem e unidade com objetivo ausente FORA da
+ordenação — nunca com o valor zero no lugar do que falta. A peneira rápida (ordem lexicográfica
+decrescente, comparação só contra a fronteira em formação) foi conferida contra um laço ingênuo O(n²)
+escrito do zero no teste, em **2.000 unidades** e em cinco combinações de objetivos e direções, com e
+sem ausência de dado: ordem idêntica unidade a unidade em todas
+(`tests/medidas/L3-08-pareto.json`). A refutação exigida pelo item passa: com dois objetivos iguais a
+fronteira é a unidade de valor máximo e todos os seus empates, tanto no módulo quanto pela API.
+
+Duas rotas de leitura sobre a execução do motor de grades aninhadas (L3-19): `POST /api/amc/pareto`
+devolve a ordem por unidade com os valores que a produziram, e `POST /api/amc/pareto/camada` devolve as
+ordens pedidas como GeoJSON, com os objetivos, a contagem por ordem e o aviso dos pesos em `metadados`
+— o método viaja junto com o dado. Tela `/amc/pareto` com gráfico de dispersão e mapa ligados: escovar
+um retângulo no gráfico aplica na camada de realce do MapLibre o filtro com exatamente aqueles
+identificadores. A conta dessa ligação (`web/js/amc/pareto.js`) é executada em node pelos testes, como
+já se faz com o combinador; o e2e do arrasto está escrito e **não foi corrido nesta trilha**, que não
+tem nginx para servir `/static`. Nenhuma migração, nenhuma tabela nova: a catalogação do resultado
+continua sendo o item L3-13. O teto de unidades da rota (`PARETO_UNIDADES_MAX = 50.000`) foi rodado, não
+suposto: ordenar 50.000 unidades × 4 objetivos em 3 ordens levou **6.836 ms** com carga de 1 min de 5,51
+e 5,81 GB livres — é teto de tamanho, não de conforto, e análise nessa escala deve virar job. ADR
+`20260908T1140-fronteira-de-pareto-sem-agregacao.md`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
