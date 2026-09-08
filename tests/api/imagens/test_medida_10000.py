@@ -60,10 +60,23 @@ def colecao_10k(token_stac_a, tenant_id_a, env):
     with db.db(ctx) as cur:
         cur.execute("SELECT count(*) AS n FROM pgstac.items WHERE collection = %s", (colecao_id,))
         ja = cur.fetchone()["n"]
-        if ja < N_ITENS:
-            LOTE = 1000
-            for i in range(0, len(itens), LOTE):
+        cur.execute(
+            "SELECT count(*) AS n FROM plat.raster_item WHERE tenant_id = %s AND colecao = %s",
+            (tenant_id_a, colecao_id),
+        )
+        espelhados = cur.fetchone()["n"]
+    LOTE = 1000
+    if ja < N_ITENS:
+        for i in range(0, len(itens), LOTE):
+            with db.db(ctx) as cur:
                 ps.itens_criar_lote(cur, colecao_id, itens[i : i + LOTE])
+                ri.espelhar_lote(cur, tenant_id_a, colecao_id, [it["id"] for it in itens[i : i + LOTE]])
+    elif espelhados < N_ITENS:
+        # o banco da trilha PERSISTE entre rodadas: o pgstac pode já ter os 10.000 de uma execução
+        # anterior em que o espelho não chegou a ser preenchido (estado sujo) — `espelhar_lote` é
+        # ON CONFLICT DO NOTHING, então recompletar o espelho é idempotente e não toca no STAC
+        for i in range(0, len(itens), LOTE):
+            with db.db(ctx) as cur:
                 ri.espelhar_lote(cur, tenant_id_a, colecao_id, [it["id"] for it in itens[i : i + LOTE]])
     return colecao_id
 
