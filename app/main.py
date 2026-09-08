@@ -42,12 +42,13 @@ from app.catalogo import (
 from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
 from app.edicao.rotas import router as rotas_edicao
+from app.fluxo.rotas import router as rotas_fluxos
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
-from app.multiescala.rotas import router as rotas_multiescala
 from app.mapa.rotas import router as rotas_mapa
+from app.multiescala.rotas import router as rotas_multiescala
 from app.paineis.rotas import router as rotas_paineis
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
@@ -133,6 +134,10 @@ ROUTERS = [
     # --- edição transacional de feições (L2-03-a): POST /api/camadas/{id}/edicoes (adicionar/atualizar/apagar
     # numa transação; única porta de escrita de feição — FeatureServer/OGC futuros chamam este mesmo caminho)
     rotas_edicao,
+    # --- entrada de eventos em tempo real (L2-14-a): /api/fluxos (gestão da fonte, métrica, eventos
+    # gravados). Quem RECEBE evento é o processo plat-fluxo na porta 8155 (app/fluxo/receptor.py), fora
+    # desta aplicação — uma linha de registro de acesso por evento custaria mais que o próprio evento.
+    rotas_fluxos,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível

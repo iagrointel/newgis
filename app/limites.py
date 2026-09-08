@@ -255,3 +255,33 @@ VIVO_SSE_DURACAO_MAX_S = 1800         # a conexão fecha sozinha em 30 min; o na
 VIVO_SSE_KEEPALIVE_S = 15             # comentário `: keepalive` que impede proxy de derrubar conexão ociosa
 VIVO_EVENTO_JANELA_MIN = 15           # retenção de plat.camada_evento = janela de recuperação da reconexão
 VIVO_DEBOUNCE_MS = 1000               # atraso do navegador antes de refazer a consulta (coalesce de rajada)
+
+# --- entrada de eventos em tempo real (item L2-14-a-ingestao-de-fluxos; processo plat-fluxo, porta 8155).
+# O teto de corpo do receptor é MENOR que CORPO_MAX_PADRAO_BYTES da API: um evento de fluxo é uma linha de
+# telemetria, não um arquivo; a refutação do item manda recusar um JSON de 10 MB, e é este número que recusa.
+FLUXO_PORTA = 8155                        # unidade plat-fluxo (deploy/plat-fluxo.service; C14 do L2_CONCEITO)
+FLUXO_CORPO_MAX_BYTES = 4 * 1024 * 1024   # 4 MiB por pedido do receptor HTTP (e por quadro de WebSocket)
+FLUXO_LOTE_MAX = 20_000                   # eventos por pedido; 10 mil/s com 2 pedidos/s cabe num lote só
+FLUXO_CAMPOS_MAX = 200                    # campos mapeados por fonte (mesma ordem de EDICAO_ATRIBUTOS_MAX)
+FLUXO_TEXTO_MAX = 4_096                   # caracteres por valor de campo texto
+FLUXO_RASTRO_MAX = 200                    # caracteres do id de rastro (refutação: id de 1 MB é recusado)
+FLUXO_WKT_MAX = 4_096                     # caracteres do WKT de um ponto
+FLUXO_URL_MAX = 2_048                     # mesma ordem do CHECK de plat.conexao.url
+FLUXO_MQTT_TOPICO_MAX = 500               # filtro de tópico assinado no broker externo
+FLUXO_INTEIRO_MAX = 9_007_199_254_740_992  # 2^53: acima disso o número não sobrevive ao JSON do navegador
+FLUXO_TEMPO_FUTURO_MAX_S = 300            # 5 min de folga de relógio; além disso o evento é descartado
+FLUXO_TEMPO_PASSADO_MAX_DIAS = 3_650      # 10 anos: histórico legítimo passa, lixo com época zerada não
+FLUXO_FILA_MAX = 200_000                  # eventos na fila em memória do processo antes de descartar (contado)
+FLUXO_LOTE_INTERVALO_S = 1.0              # um lote por segundo (C14)
+FLUXO_LOTE_LINHAS_MAX = 20_000            # linhas por INSERT em lote; acima disso o lote é partido
+FLUXO_FILTRO_PASSOS_MAX = 2_000           # orçamento do filtro POR EVENTO (o padrão do servidor é 100 mil)
+FLUXO_FILTRO_MS = 50.0                    # orçamento de relógio do filtro por evento
+FLUXO_BUFFER_PAUSA_S = 30                 # fonte pausada guarda este tanto de segundos de eventos
+FLUXO_BUFFER_PAUSA_MAX = 50_000           # ... e nunca mais que isto, mesmo com teto por segundo alto
+FLUXO_SONDAGEM_INTERVALO_MIN_S = 5        # sondar mais rápido que isto é abusar do serviço de terceiro
+FLUXO_SONDAGEM_INTERVALO_MAX_S = 86_400
+FLUXO_EVENTOS_LISTA_MAX = 1_000           # eventos por página em GET /api/fluxos/{id}/eventos
+FLUXO_RECONEXAO_MIN_S = 1.0               # espera inicial de reconexão do conector (MQTT/WebSocket/AIS)
+FLUXO_RECONEXAO_MAX_S = 60.0              # ... com dobra a cada tentativa, até este teto
+FLUXO_MQTT_KEEPALIVE_S = 60               # keep-alive anunciado no CONNECT do MQTT 3.1.1
+FLUXO_AIS_LINHA_MAX = 1_024               # bytes de uma sentença NMEA (o padrão é 82; a folga é para lixo)

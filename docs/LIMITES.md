@@ -231,6 +231,25 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
 
+## edição transacional de feições (L2-03-a-api-edicao-transacional; POST /api/camadas/{id}/edicoes, única
+
+| nome | valor | explicação |
+|---|---|---|
+| `EDICAO_LOTE_MAX` | `2000` | — |
+| `EDICAO_ATRIBUTOS_MAX` | `500` | campos por feição num único pedido (mesmo teto de INGESTAO_CAMPOS_MAX) |
+| `EDICAO_TEXTO_MAX` | `65536` | 64 KiB por valor de campo texto (mesma ordem de ITEM_DESCRICAO_MAX) |
+| `EDICAO_REGRA_CAMPO_MAX` | `500` | entradas em dados.regras_campo (mesmo teto de campos da camada) |
+| `EDICAO_DOMINIO_VALORES_MAX` | `1000` | valores aceitos por regra de domínio codificado |
+| `EDICAO_SRID_MAX` | `999999` | mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql) |
+
+## edição no mapa: histórico/restauração e anexos por feição (item L2-03-edicao)
+
+| nome | valor | explicação |
+|---|---|---|
+| `HISTORICO_LISTA_MAX` | `500` | entradas devolvidas por consulta (mais recentes primeiro) |
+| `ANEXO_TAMANHO_MAX` | `7340032` | 7 MiB por anexo — NÃO 10: o envio é JSON com o conteúdo em base64 |
+| `ANEXO_TIPOS_PERMITIDOS` | `('application/pdf', 'image/gif', 'image/jpeg', 'image/png', 'image/webp')` | — |
+
 ## atualização viva de painel e mapa por SSE (L2-06-d; migração 20260908T0702_camada_eventos_vivos.sql).
 
 | nome | valor | explicação |
@@ -242,3 +261,34 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `VIVO_SSE_KEEPALIVE_S` | `15` | comentário `: keepalive` que impede proxy de derrubar conexão ociosa |
 | `VIVO_EVENTO_JANELA_MIN` | `15` | retenção de plat.camada_evento = janela de recuperação da reconexão |
 | `VIVO_DEBOUNCE_MS` | `1000` | atraso do navegador antes de refazer a consulta (coalesce de rajada) |
+
+## entrada de eventos em tempo real (item L2-14-a-ingestao-de-fluxos; processo plat-fluxo, porta 8155).
+
+| nome | valor | explicação |
+|---|---|---|
+| `FLUXO_PORTA` | `8155` | unidade plat-fluxo (deploy/plat-fluxo.service; C14 do L2_CONCEITO) |
+| `FLUXO_CORPO_MAX_BYTES` | `4194304` | 4 MiB por pedido do receptor HTTP (e por quadro de WebSocket) |
+| `FLUXO_LOTE_MAX` | `20000` | eventos por pedido; 10 mil/s com 2 pedidos/s cabe num lote só |
+| `FLUXO_CAMPOS_MAX` | `200` | campos mapeados por fonte (mesma ordem de EDICAO_ATRIBUTOS_MAX) |
+| `FLUXO_TEXTO_MAX` | `4096` | caracteres por valor de campo texto |
+| `FLUXO_RASTRO_MAX` | `200` | caracteres do id de rastro (refutação: id de 1 MB é recusado) |
+| `FLUXO_WKT_MAX` | `4096` | caracteres do WKT de um ponto |
+| `FLUXO_URL_MAX` | `2048` | mesma ordem do CHECK de plat.conexao.url |
+| `FLUXO_MQTT_TOPICO_MAX` | `500` | filtro de tópico assinado no broker externo |
+| `FLUXO_INTEIRO_MAX` | `9007199254740992` | 2^53: acima disso o número não sobrevive ao JSON do navegador |
+| `FLUXO_TEMPO_FUTURO_MAX_S` | `300` | 5 min de folga de relógio; além disso o evento é descartado |
+| `FLUXO_TEMPO_PASSADO_MAX_DIAS` | `3650` | 10 anos: histórico legítimo passa, lixo com época zerada não |
+| `FLUXO_FILA_MAX` | `200000` | eventos na fila em memória do processo antes de descartar (contado) |
+| `FLUXO_LOTE_INTERVALO_S` | `1.0` | um lote por segundo (C14) |
+| `FLUXO_LOTE_LINHAS_MAX` | `20000` | linhas por INSERT em lote; acima disso o lote é partido |
+| `FLUXO_FILTRO_PASSOS_MAX` | `2000` | orçamento do filtro POR EVENTO (o padrão do servidor é 100 mil) |
+| `FLUXO_FILTRO_MS` | `50.0` | orçamento de relógio do filtro por evento |
+| `FLUXO_BUFFER_PAUSA_S` | `30` | fonte pausada guarda este tanto de segundos de eventos |
+| `FLUXO_BUFFER_PAUSA_MAX` | `50000` | ... e nunca mais que isto, mesmo com teto por segundo alto |
+| `FLUXO_SONDAGEM_INTERVALO_MIN_S` | `5` | sondar mais rápido que isto é abusar do serviço de terceiro |
+| `FLUXO_SONDAGEM_INTERVALO_MAX_S` | `86400` | — |
+| `FLUXO_EVENTOS_LISTA_MAX` | `1000` | eventos por página em GET /api/fluxos/{id}/eventos |
+| `FLUXO_RECONEXAO_MIN_S` | `1.0` | espera inicial de reconexão do conector (MQTT/WebSocket/AIS) |
+| `FLUXO_RECONEXAO_MAX_S` | `60.0` | ... com dobra a cada tentativa, até este teto |
+| `FLUXO_MQTT_KEEPALIVE_S` | `60` | keep-alive anunciado no CONNECT do MQTT 3.1.1 |
+| `FLUXO_AIS_LINHA_MAX` | `1024` | bytes de uma sentença NMEA (o padrão é 82; a folga é para lixo) |
