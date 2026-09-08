@@ -183,6 +183,11 @@ ESQUEMA = {
                     "de": {"type": "string", "maxLength": 130},
                     "para": {"type": "string", "maxLength": 130},
                     "descricao": _DESCRICAO,
+                    # tolerância de coincidência DESTE par de tipos, em metros (item L4-01-f). Ausente = a
+                    # tolerância da rede. Existe porque a precisão da coordenada não é a mesma em toda camada:
+                    # cadastro de ponto escrito com menos casas decimais que o vértice da linha desloca o
+                    # MESMO ponto físico por meia unidade da última casa, e isso é do par, não da rede.
+                    "tolerancia_m": {"type": "number", "exclusiveMinimum": 0, "maximum": 5},
                 },
                 ["tipo", "de", "para"],
             ),

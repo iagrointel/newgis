@@ -3512,7 +3512,7 @@
   "disciplina": "eletrica",
   "fonte": "https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd",
   "nome": "Elétrica de distribuição (Brasil, BDGD Módulo 10)",
-  "versao": "1.0.0"
+  "versao": "1.1.0"
  },
  "regras": [
   {
@@ -3525,97 +3525,113 @@
    "de": "ramal_de_ligacao/1",
    "descricao": "consumidor de baixa tensão ligado pelo ramal",
    "para": "unidade_consumidora/1",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_baixa_tensao/1",
    "descricao": "geração em baixa tensão ligada ao trecho de baixa tensão",
    "para": "geracao_distribuida/1",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_baixa_tensao/1",
    "descricao": "luminária ligada ao trecho de baixa tensão",
    "para": "ponto_de_iluminacao_publica/1",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_baixa_tensao/1",
    "descricao": "secundário do transformador no trecho de baixa tensão",
    "para": "transformador_de_distribuicao/1",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_baixa_tensao/1",
    "descricao": "secundário do banco no trecho de baixa tensão",
    "para": "transformador_de_distribuicao/2",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_media_tensao/1",
    "descricao": "banco de capacitores derivado do trecho de média tensão",
    "para": "banco_de_capacitores/1",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_media_tensao/1",
    "descricao": "chave em série no trecho de média tensão",
    "para": "chave_de_media_tensao/1",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_media_tensao/1",
    "descricao": "chave fusível em série no trecho de média tensão",
    "para": "chave_de_media_tensao/2",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_media_tensao/1",
    "descricao": "religador em série no trecho de média tensão",
    "para": "chave_de_media_tensao/3",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_media_tensao/1",
    "descricao": "disjuntor em série no trecho de média tensão",
    "para": "chave_de_media_tensao/4",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_media_tensao/1",
    "descricao": "seccionalizador em série no trecho de média tensão",
    "para": "chave_de_media_tensao/5",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_media_tensao/1",
    "descricao": "regulador em série no trecho de média tensão",
    "para": "regulador_de_tensao/1",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_media_tensao/1",
    "descricao": "saída da subestação alimenta o trecho de média tensão",
    "para": "subestacao/1",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_media_tensao/1",
    "descricao": "primário do transformador no trecho de média tensão",
    "para": "transformador_de_distribuicao/1",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_media_tensao/1",
    "descricao": "primário do banco no trecho de média tensão",
    "para": "transformador_de_distribuicao/2",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "trecho_de_media_tensao/1",
    "descricao": "consumidor de média tensão ligado ao trecho de média tensão",
    "para": "unidade_consumidora/2",
-   "tipo": "conectividade_no_trecho"
+   "tipo": "conectividade_no_trecho",
+   "tolerancia_m": 0.1
   },
   {
    "de": "subestacao/1",

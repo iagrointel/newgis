@@ -148,12 +148,12 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 
 | campo | valor |
 |---|---|
-| versão do pacote | 1.0.0 |
+| versão do pacote | 1.1.0 |
 | versão do esquema | 1 |
 | disciplina | eletrica |
 | fonte | https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd |
-| tamanho | 98436 bytes |
-| sha256 | `57d121ad8a6adaeaca5e4df42915c85a164e9a96f8f9d68ad52a4cceac4cbe42` |
+| tamanho | 98820 bytes |
+| sha256 | `dc7f4b7957026b7ab621046a69cdcc830c945872414ceac246f1807b33c131a7` |
 
 ### Redes de domínio e tiers
 
