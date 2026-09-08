@@ -12,9 +12,9 @@
    "comando": "du -sb dados_demo/arquivos"
   },
   "repositorio_medido": {
-   "valor": 151.91,
+   "valor": 234.26,
    "unidade": "MB",
-   "comando": "árvore de trabalho versionada mais /home/dev/plataforma/enterprise/.git (59.0 MB); limite 3221 MB"
+   "comando": "árvore de trabalho versionada mais /home/dev/plataforma/enterprise/.git (140.01 MB); limite 3221 MB"
   },
   "itens_semeados_em_demo": {
    "valor": 15,
@@ -27,7 +27,7 @@
    "comando": "0 itens de demo vistos em demo2 (pytest tests/api/test_dado_demo.py::test_demo2_tem_conjunto_diferente_e_nao_ve_o_de_demo)"
   },
   "segundos_da_semeadura": {
-   "valor": 124.74,
+   "valor": 22.18,
    "unidade": "s",
    "comando": "scripts/semear_dado_demo.py --medida (criou 21 itens; alvo do portão: 90 s)"
   },
@@ -37,6 +37,6 @@
    "comando": "grep de 21 nomes em 15 arquivos (pytest tests/api/test_dado_demo.py::test_nenhum_nome_de_cliente_parceiro_ou_piloto)"
   }
  },
- "gerado_em": "2026-09-06T16:23:31Z",
- "git_sha": "90d03c07da0c"
+ "gerado_em": "2026-09-08T21:37:06Z",
+ "git_sha": "f697cf77ff41"
 }
