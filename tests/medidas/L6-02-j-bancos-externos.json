@@ -1,0 +1,37 @@
+{
+ "item": "L6-02-j-bancos-externos",
+ "medidas": {
+  "consulta_limit_5000_s": {
+   "valor": 0.144,
+   "unidade": "s",
+   "comando": "POST consulta 'SELECT id FROM tabela_grande LIMIT 5000'"
+  },
+  "consulta_count_2mi_s": {
+   "valor": 0.089,
+   "unidade": "s",
+   "comando": "POST .../consulta 'SELECT count(*) FROM tabela_grande LIMIT 1'"
+  },
+  "tempo_ms_devolvido": {
+   "valor": 31,
+   "unidade": "ms",
+   "comando": "campo tempo_ms da resposta (medido no servidor)"
+  },
+  "recusa_sem_limit_4_consultas_s": {
+   "valor": 0.198,
+   "unidade": "s",
+   "comando": "4 consultas sem LIMIT/acima do teto recusadas (inclui o GET de tabelas por chamada)"
+  },
+  "listar_tabelas_s": {
+   "valor": 0.054,
+   "unidade": "s",
+   "comando": "GET /api/conexoes/{id}/tabelas contra o PostGIS docker"
+  },
+  "postgis_geometria_detectada": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "sedes_municipais: tipo POINT srid 4674 vindo de geometry_columns"
+  }
+ },
+ "gerado_em": "2026-09-08T06:35:31Z",
+ "git_sha": "937865411946"
+}

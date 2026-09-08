@@ -78,9 +78,9 @@ def test_postgis_remoto_referenciado_e_publicado_como_camada(sessao_a, conexao, 
     assert r.status_code == 200, r.text
     por_nome = {t["tabela"]: t for t in r.json()["itens"]}
     assert "sedes_municipais" in por_nome and "tabela_grande" in por_nome
-    geo = por_nome["sedes_municipais"]["geometria"]
-    assert geo and geo["tipo"].upper() == "POINT" and geo["srid"] == 4674, geo  # PostGIS visto pelo conector
-    assert por_nome["tabela_grande"]["geometria"] is None
+    geo = por_nome["sedes_municipais"]
+    assert geo["geometria_coluna"] == "geom" and geo["geometria_tipo"].upper() == "POINT" and geo["srid"] == 4674, geo
+    assert por_nome["tabela_grande"]["geometria_coluna"] is None
     # referenciada (view sobre FOREIGN TABLE), vira item camada_vetorial que a lista de camadas e o mapa leem
     r = sessao_a.post(f"/api/conexoes/{conexao['id']}/publicar-em-massa", json={"tabelas": ["sedes_municipais"]})
     assert r.status_code == 201, r.text

@@ -148,6 +148,8 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
     ("POST", "/api/conexoes/{id}/consulta"): ["conexoes/consultar"],  # L6-02-j: consulta SQL só-leitura
+    # L0-04-i (ramo wt/il004ifonte, mesclado aqui): a rota em massa registra 1 evento por camada + 1 do lote
+    ("POST", "/api/conexoes/{id}/publicar-em-massa"): ["camadas/importar", "conexoes/publicar_em_massa"],
     # ---- motor multicritério em grades aninhadas (L3-19-multiescala; vocabulário nas migrações
     # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
     # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por
