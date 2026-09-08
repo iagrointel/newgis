@@ -39,6 +39,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- painel Atividade e relatórios do admin (L0-07-e-relatorios)
+    "/admin/atividade": "admin/atividade.html",
 }
 router = APIRouter()
 
