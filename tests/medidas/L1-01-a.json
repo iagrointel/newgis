@@ -1,0 +1,22 @@
+{
+ "item": "L1-01-a",
+ "medidas": {
+  "busca_bbox_10000_itens_mediana_ms": {
+   "valor": 234.73,
+   "unidade": "ms",
+   "comando": "GET /svc/<token>/stac/search?collections=<tenant>-medida10k&bbox=-55.0,-17.0,-45.0,-9.0&limit=1000  (10.000 itens sintéticos previamente carregados na coleção; mediana de 5 chamadas HTTP completas, 1ª chamada de aquecimento descartada)"
+  },
+  "busca_bbox_itens_encontrados": {
+   "valor": 567,
+   "unidade": "itens",
+   "comando": "GET /svc/<token>/stac/search?collections=<tenant>-medida10k&bbox=-55.0,-17.0,-45.0,-9.0&limit=1000  (10.000 itens sintéticos previamente carregados na coleção; mediana de 5 chamadas HTTP completas, 1ª chamada de aquecimento descartada)"
+  },
+  "busca_bbox_itens_no_catalogo": {
+   "valor": 10000,
+   "unidade": "itens",
+   "comando": "GET /svc/<token>/stac/search?collections=<tenant>-medida10k&bbox=-55.0,-17.0,-45.0,-9.0&limit=1000  (10.000 itens sintéticos previamente carregados na coleção; mediana de 5 chamadas HTTP completas, 1ª chamada de aquecimento descartada)"
+  }
+ },
+ "gerado_em": "2026-09-06T19:39:56Z",
+ "git_sha": "90d03c07da0c"
+}

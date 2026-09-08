@@ -380,7 +380,16 @@ echo "== i. nginx"
 SITE=/etc/nginx/sites-enabled/$DOM
 # zona limit_req própria: 10 tentativas/min por IP em /api/login e /api/login/2fa (ADR 0002 seção 6.2)
 LIMITES=/etc/nginx/conf.d/plat_limites.conf
-printf '# plat: limite por IP nos logins (ADR 0002 secao 6.2); escrito pelo install.sh\nlimit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\n' > "$LIMITES.novo"
+mkdir -p /var/cache/nginx/plat_tiles /var/cache/nginx/plat_tiles_auth
+chown -R www-data:www-data /var/cache/nginx/plat_tiles /var/cache/nginx/plat_tiles_auth
+{
+  printf '# plat: limite por IP nos logins (ADR 0002 secao 6.2); escrito pelo install.sh\n'
+  printf 'limit_req_zone $binary_remote_addr zone=plat_login:10m rate=10r/m;\n'
+  # cache de ladrilho raster (item L1-02): NVMe, 20 GB, 14 dias sem uso; a zona de autorizacao e pequena
+  # e vive 2 s (ver o bloco /svc/.../raster/ em deploy/nginx.conf)
+  printf 'proxy_cache_path /var/cache/nginx/plat_tiles levels=1:2 keys_zone=plat_tiles:64m max_size=20g inactive=14d use_temp_path=off;\n'
+  printf 'proxy_cache_path /var/cache/nginx/plat_tiles_auth levels=1:2 keys_zone=plat_tiles_auth:8m max_size=64m inactive=1m use_temp_path=off;\n'
+} > "$LIMITES.novo"
 if [ -f "$LIMITES" ] && cmp -s "$LIMITES" "$LIMITES.novo"; then rm -f "$LIMITES.novo"; echo "$LIMITES já existe (igual)"; else mv "$LIMITES.novo" "$LIMITES"; echo "$LIMITES escrito"; fi
 escrever_nginx() {
   local bloco certbot_443 bloco_80

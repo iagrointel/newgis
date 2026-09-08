@@ -18,6 +18,31 @@ os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutaca
 - Migração `20260907T2005_ferramentas.sql` (relação `derivado_de`, evento `analises/executar`); limites em
   `app/limites.py` (seção ferramentas). ADR `docs/adr/20260907T2010-ferramentas-gpserver.md`.
 
+## turno 4, setembro de 2026 (item L1-02-tiles-token: ladrilho raster por inquilino, token no caminho)
+
+Serviço de ladrilho raster sobre o COG que a ingestão (L1-01) deixou no Garage, com o token de serviço
+no CAMINHO da URL (decisão C6 do conceito L1; ADR 20260907T0300).
+
+- `/svc/<token>/raster/<item>/{z}/{x}/{y}[.png|.jpg|.webp]` (XYZ), `/tilejson.json`, `/info.json`,
+  `/wmts` (KVP GetCapabilities e GetTile) e `/wmts/1.0.0/WMTSCapabilities.xml` (REST); mosaico da
+  coleção em `/svc/<token>/mosaico/<colecao>/{z}/{x}/{y}`.
+- Motor rio-tiler 9.4.3 lendo o COG por `/vsis3` com a chave só-leitura do balde do inquilino. Nenhuma
+  rota aceita endereço de arquivo: o caminho nasce do catálogo do inquilino do token (sem `?url=`).
+- Expressão sobre bandas por parâmetro (NDVI = `(b4-b3)/(b4+b3)`), com gramática própria antes do
+  numexpr; faixa, colormap (211 do rio-tiler), seleção de bandas e escolha do asset.
+- GetCapabilities do WMTS **valida contra o esquema oficial do OGC** (XSD vendorizado em
+  `tests/dados/ogc_xsd`, validação sem rede).
+- Cache no nginx com chave SEM o token e `auth_request` que confere token E dono do item a cada
+  requisição — sem essa conferência, um token de outro inquilino recebia o ladrilho do cache (achado
+  desta bancada, hoje é teste).
+- Registro de uso agregado por token em `plat.tile_leitura` (migração `20260907T0249_tile_leitura.sql`)
+  e leitura em `GET /api/tiles/leituras`. O token nunca é gravado, só o `token_id`.
+- Bancada: `scripts/bench_tiles.py` (carga, `proxy_cache_lock`, revogação) e
+  `scripts/prova_cliente_ogc.sh` (driver WMTS e WMS/TMS do GDAL lendo pixel do serviço).
+- Medido: **68.738 ladrilhos/s** quente com o cache do nginx (`ab -c 32`, 0 erro; o mesmo nginx serve
+  arquivo estático a 68.484/s — o serviço está no teto da máquina); frio 96 ladrilhos/s numa conexão,
+  mediana 9,8 ms; 20 pedidos simultâneos ao mesmo ladrilho frio = **1 leitura + 19 acertos**; revogar
+  o token passa a 403 em **2,86-2,90 s**. Números e comandos em `tests/medidas/L1-02-tiles-token.json`.
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a

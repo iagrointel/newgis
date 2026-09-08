@@ -210,6 +210,31 @@ FERRAMENTA_SINCRONO_CUSTO_MAX = 5000       # custo = feições × complexidade d
 FERRAMENTA_JOB_MEMORIA_MB = 1024            # RLIMIT_DATA do filho que roda uma ferramenta
 FERRAMENTA_JOB_TIMEOUT_S = 1800             # 30 min por execução; ferramenta mais longa é outro tipo de job
 BUFFER_DISTANCIA_M_MAX = 100_000            # 100 km: acima disso o buffer geodésico deixa de fazer sentido em camada
+# --- imagens/STAC (L1-01-a-pgstac-e-stac-api-por-inquilino; app/imagens/): catálogo é o pgstac (schema
+# `pgstac`, global ao banco), isolado por inquilino por convenção de nome de coleção `<tenant_id>-<slug>`,
+# nunca por RLS do pgstac (ele não tem). STAC_SLUG_MAX é o que sobra de 63 bytes (limite de identificador do
+# Postgres, embora `id` do pgstac seja `text` livre — o teto aqui é POLÍTICA, não do banco) depois do prefixo
+# `<tenant_id>-`: numa instalação com tenant_id de até 6 dígitos, 58 caracteres de slug cabem com folga no
+# CHECK de plat.raster_item.colecao.
+STAC_SLUG_MAX = 58
+STAC_ITEM_ID_MAX = 256
+STAC_PAGINA_PADRAO = 10      # `limit` padrão da busca (mesmo padrão da spec STAC API Item Search)
+STAC_PAGINA_MAX = 1000       # `limit` máximo aceito por pedido (pgstac pagina por token, não por offset)
+STAC_COLECOES_POR_INQUILINO = 500
+STAC_LOTE_ITENS_MAX = 10_000  # POST .../items:lote (semeadura de teste/ingestão em massa; ADR do item L1-01-h)
+
+# --- ingestão de raster (L1-01-ingest-raster; ADR 20260906T2127): validação isolada + COG dois perfis +
+# STAC no pgstac. RASTER_DIMENSAO_MAX/RASTER_BANDAS_MAX são recusa da validação (acima disto o COG não é
+# manejável pelo appliance: 200k×200k px uint8 já são 40 GB por banda); RASTER_VISUAL_MAX_LADO só limita a
+# MINIATURA/estatística amostrada, nunca o COG. TILE_CACHE_DATASET_MAX limita datasets abertos por processo
+# no handler de tiles (mínimo honesto até o TiTiler do L1-02).
+RASTER_DIMENSAO_MAX = 200_000           # pixels por eixo (linhas ou colunas) — acima: recusa na validação
+RASTER_BANDAS_MAX = 64                  # bandas por raster — acima: recusa na validação
+RASTER_BYTES_MAX = 2 * 1024 * 1024 * 1024  # bruto aceito para ingestão (igual a UPLOAD_BYTES_MAX)
+RASTER_VISUAL_MAX_LADO = 1024           # miniatura PNG (lado maior)
+RASTER_ESTATISTICA_AMOSTRA = 100_000    # pixels amostrados por banda para percentis do perfil visual
+RASTER_TILE_CACHE_DATASET_MAX = 8       # datasets abertos por processo no handler de tiles (LRU)
+RASTER_TILE_TIMEOUT_S = 30              # teto de renderização de um tile (mata a requisição, não o worker)
 # --- grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
 # macro (grosseira, ex. 1 km) triando regiões e micro (fina, ex. 100 m) gerada SÓ dentro das aprovadas.
 # ESCALA_CELULAS_MAX vale tanto para a grade macro inteira quanto para o refino micro (aprovadas × k²) — é o
