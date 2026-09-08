@@ -171,11 +171,18 @@ def geometria_gml(g: dict | None, srs: str, gid: str, lat_lon: bool) -> str:
 
 
 # ------------------------------------------------------------------------------------ documentos
-def _valor(v) -> str:
+def _valor(v, tipo_esri: str | None = None) -> str:
+    """Campo de data sai em ISO 8601, nunca no milissegundo de época que o protocolo Esri usa: o
+    XSD publicado diz `xsd:dateTime`, e o cliente XML valida contra ele."""
     if isinstance(v, bool):
         return "true" if v else "false"
     if hasattr(v, "isoformat"):
         return v.isoformat()
+    if tipo_esri in ("esriFieldTypeDate", "esriFieldTypeDateOnly") and isinstance(v, (int, float)):
+        instante = datetime.datetime.fromtimestamp(v / 1000, datetime.UTC)
+        if tipo_esri == "esriFieldTypeDateOnly":
+            return instante.date().isoformat()
+        return instante.strftime("%Y-%m-%dT%H:%M:%SZ")
     return escape(str(v))
 
 
@@ -193,7 +200,8 @@ def feicao_xml(item_id: str, feicao: dict, meta: list[dict], srs: str, lat_lon: 
         v = props.get(c["nome"])
         if v is None:
             continue
-        linhas.append(f"      <{PREFIXO_PLAT}:{c['nome']}>{_valor(v)}</{PREFIXO_PLAT}:{c['nome']}>")
+        linhas.append(f"      <{PREFIXO_PLAT}:{c['nome']}>{_valor(v, c.get('tipo_esri'))}"
+                       f"</{PREFIXO_PLAT}:{c['nome']}>")
     if (campos is None or "geometria" in campos) and feicao.get("geometry"):
         g = geometria_gml(feicao["geometry"], srs, f"{nome}.{fid}.geom", lat_lon)
         linhas.append(f"      <{PREFIXO_PLAT}:geometria>{g}</{PREFIXO_PLAT}:geometria>")
@@ -208,9 +216,10 @@ def _cabecalho_ns() -> str:
 
 
 def colecao_feicoes(item_id: str, geojson: dict, meta: list[dict], srs: str, lat_lon: bool,
-                    campo_oid: str, numero_total: int, url_esquema: str) -> str:
+                    campo_oid: str, numero_total: int, url_esquema: str,
+                    campos: list[str] | None = None) -> str:
     membros = "\n".join(
-        f"  <wfs:member>\n{feicao_xml(item_id, f, meta, srs, lat_lon, campo_oid)}\n  </wfs:member>"
+        f"  <wfs:member>\n{feicao_xml(item_id, f, meta, srs, lat_lon, campo_oid, campos)}\n  </wfs:member>"
         for f in geojson.get("features", [])
     )
     n = len(geojson.get("features", []))
@@ -240,7 +249,8 @@ def colecao_valores(item_id: str, geojson: dict, meta: list[dict], srs: str, lat
             v = (f.get("properties") or {}).get(campo)
             if v is None:
                 continue
-            membros.append(f"  <wfs:member><{PREFIXO_PLAT}:{campo}>{_valor(v)}"
+            tipo = next((c["tipo_esri"] for c in meta if c["nome"] == campo), None)
+            membros.append(f"  <wfs:member><{PREFIXO_PLAT}:{campo}>{_valor(v, tipo)}"
                            f"</{PREFIXO_PLAT}:{campo}></wfs:member>")
     corpo = "\n".join(membros)
     return f"""<?xml version="1.0" encoding="UTF-8"?>
