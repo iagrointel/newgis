@@ -155,6 +155,11 @@ def test_html_sem_navegador_tem_o_texto_das_tres_paginas(site_publicado, medida)
     # cada quadro tem título (exigência de acessibilidade) e nenhuma imagem sem texto alternativo
     assert not re.search(r"<iframe(?![^>]*\btitle=)", r3.text)
     assert not re.search(r"<img(?![^>]*\balt=)", r.text + r3.text)
+    csp = r.headers["content-security-policy"]
+    assert "default-src 'self'" in csp and "script-src 'self'" in csp and "base-uri 'none'" in csp
+    # o quadro externo do cartão `incorporado` só é permitido para a origem que o documento declara
+    assert "frame-src 'self' https://www.openstreetmap.org" in r3.headers["content-security-policy"]
+    assert "frame-src 'self'" in csp and "openstreetmap" not in csp  # a página inicial não tem quadro externo
     medida(ITEM)("paginas_publicadas", 3, "páginas", "GET /s/<inquilino>/{,dados,mapas} = 200")
     medida(ITEM)("cartoes_no_html", len(CARTOES), "tipos de cartão",
                  "classes cartao-<tipo> presentes no HTML das 3 páginas")
