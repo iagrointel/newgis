@@ -161,4 +161,19 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- motor multicritério (L3-01-a/b/d/f/g; vocabulário na migração 20260907T1206_amc.sql). As três
+    # tabelas do inquilino com dono humano (modelo, conjunto de unidades, execução) narram toda escrita.
+    # As rotas de LEITURA que usam POST por causa do tamanho do corpo declaram lista vazia, com o motivo:
+    # não escrevem nada, logo não há o que narrar.
+    ("POST", "/api/amc/modelos"): ["amc/modelo_criar"],
+    ("PUT", "/api/amc/modelos/{modelo_id}"): ["amc/modelo_atualizar"],
+    ("DELETE", "/api/amc/modelos/{modelo_id}"): ["amc/modelo_apagar"],
+    ("POST", "/api/amc/conjuntos"): ["amc/conjunto_criar"],
+    ("DELETE", "/api/amc/conjuntos/{conjunto_id}"): ["amc/conjunto_apagar"],
+    ("POST", "/api/amc/execucoes"): ["amc/execucao_criar"],
+    ("DELETE", "/api/amc/execucoes/{execucao_id}"): ["amc/execucao_apagar"],
+    ("POST", "/api/amc/modelos/validar"): [],       # valida sem gravar: nada muda de estado
+    ("POST", "/api/amc/similaridade"): [],          # consulta; POST só porque a lista de referências é grande
+    ("POST", "/api/amc/similaridade/exportar"): [],  # a mesma consulta, servida como arquivo
+    ("POST", "/api/amc/transformacoes/previsao"): [],  # histograma de valores enviados pelo cliente; não abre banco
 }
