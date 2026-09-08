@@ -280,3 +280,29 @@ class ConfigTracado(BaseModel):
 class ConfigTracadoPagina(BaseModel):
     total: int
     itens: list[ConfigTracado]
+
+
+# --- diagrama de rede (item L4-04-d-diagrama-esquematico) -----------------------------------------------
+
+class DiagramaEntrada(BaseModel):
+    """Pedido de geração de diagrama. `origem` é validada em `diagrama._elementos_da_origem`, não aqui: as
+    três formas (subrede, traçado, seleção) têm campos diferentes, e a mensagem de erro precisa dizer qual
+    subrede/feição não existe NESTA rede — coisa que pydantic não sabe."""
+
+    nome: str = Field(min_length=1, max_length=200)
+    origem: dict = Field(default_factory=dict)
+    modelo: str = Field(default="basico", min_length=1, max_length=60)
+    layout: str | None = Field(default=None, max_length=40)
+
+
+class DiagramaLayoutEntrada(BaseModel):
+    layout: str = Field(min_length=1, max_length=40)
+
+
+class DiagramaModeloEntrada(BaseModel):
+    """Modelo (template) de diagrama do inquilino: as regras de construção e o layout padrão. As regras são
+    validadas em `diagrama._validar_regras` contra o vocabulário fechado do módulo."""
+
+    nome: str = Field(min_length=1, max_length=200)
+    regras: list[dict] = Field(default_factory=list, max_length=20)
+    layout: str = Field(min_length=1, max_length=40)
