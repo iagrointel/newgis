@@ -1,0 +1,177 @@
+{
+  "item": "L2-04-servicos-esri-ogc",
+  "reusa": "L2-04-c-featureserver-query (wt/fsquery, ADR 0018) — motor.PedidoQuery/preparar_pedido/executar_features/executar_count, campos_da_camada, GEOM_PG_PARA_ESRI, _autenticar; NENHUMA reescrita da consulta",
+  "clausulas": [
+    {
+      "clausula": "featureserver_descritor_servico",
+      "estado": "suportado",
+      "evidencia": "status=200 corpo={\"currentVersion\":11.4,\"serviceDescription\":\"cobertura\",\"serviceItemId\":\"0f2ab8c9-6e19-4a6f-9d60-722df235fa60\",\"hasVersionedData\":false,\"supportsDisconnectedEditing\":false,\"syncEnabled\":false,\"hasStaticData\":false,\"maxRecordCount\":2000,\"supportedQueryFormats\":\"JSON,geoJSON,PBF\",\"capabilities\":\"Query",
+      "motivo": ""
+    },
+    {
+      "clausula": "featureserver_descritor_camada",
+      "estado": "suportado",
+      "evidencia": "geometryType=esriGeometryPolygon nfields=12 objectIdField=fid capabilities=Query",
+      "motivo": ""
+    },
+    {
+      "clausula": "applyEdits_attachments_relationships",
+      "estado": "fora",
+      "evidencia": "capabilities declarado = 'Query' apenas; relationships=[] sempre",
+      "motivo": "dependem de L2-03-edicao (escrita transacional) e L2-10-b (relacionamentos), NENHUM construído ainda no repositório — bloqueio real, não falta de tempo"
+    },
+    {
+      "clausula": "ogc_features_pouso",
+      "estado": "suportado",
+      "evidencia": "status=200",
+      "motivo": ""
+    },
+    {
+      "clausula": "ogc_features_conformance",
+      "estado": "suportado",
+      "evidencia": "conformsTo=['http://www.opengis.net/spec/ogcapi-common-1/1.0/conf/core', 'http://www.opengis.net/spec/ogcapi-common-2/1.0/conf/collections', 'http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/core', 'http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson', 'http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/oas30', 'http://www.opengis.net/spec/ogcapi-features-2/1.0/conf/crs', 'http://www.opengis.net/spec/ogcapi-features-2/1.0/conf/crs-by-reference', 'http://www.opengis.net/spec/ogcapi-features-3/1.0/conf/filter', 'http://www.opengis.net/spec/ogcapi-features-3/1.0/conf/features",
+      "motivo": ""
+    },
+    {
+      "clausula": "ogc_features_collections",
+      "estado": "suportado",
+      "evidencia": "collections=['0']",
+      "motivo": ""
+    },
+    {
+      "clausula": "ogc_features_items_limit",
+      "estado": "suportado",
+      "evidencia": "numberReturned=5 numberMatched=80 status=200",
+      "motivo": ""
+    },
+    {
+      "clausula": "ogc_features_item_um",
+      "estado": "suportado",
+      "evidencia": "status=200 id_pedido=1 id_voltou=1",
+      "motivo": ""
+    },
+    {
+      "clausula": "ogc_features_bbox",
+      "estado": "suportado",
+      "evidencia": "bbox=-46.620000601,-23.402764905,-46.519999802,-23.391381681 numberMatched_total=80 numberMatched_bbox=9",
+      "motivo": ""
+    },
+    {
+      "clausula": "ogc_features_cql2_part3",
+      "estado": "fora",
+      "evidencia": "não implementado nesta passagem",
+      "motivo": "Filter Encoding/CQL2 é o item próprio L2-04-g; aqui só Part 1 Core"
+    },
+    {
+      "clausula": "wfs_getcapabilities",
+      "estado": "suportado",
+      "evidencia": "owslib.WebFeatureService parseou; contents=['plat:0f2ab8c9_6e19_4a6f_9d60_722df235fa60']",
+      "motivo": ""
+    },
+    {
+      "clausula": "wfs_describefeaturetype",
+      "estado": "parcial",
+      "evidencia": "status=200; XSD mínimo, não validado contra o schema de referência OGC",
+      "motivo": ""
+    },
+    {
+      "clausula": "wfs_getfeature_json",
+      "estado": "suportado",
+      "evidencia": "status=200 nfeatures=5",
+      "motivo": ""
+    },
+    {
+      "clausula": "wfs_getfeature_gml",
+      "estado": "parcial",
+      "evidencia": "status=200 contentType=text/xml; subtype=\"gml/3.2\"; charset=utf-8 trecho=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<wfs:FeatureCollection xmlns:wfs=\"http://www.opengis.net/wfs/2.0\" xmlns:gml=\"http://www.opengis.net/gml/3.2\"\n    numberMa",
+      "motivo": "GML 3.2 escrito à mão, não validado contra o XSD oficial (owslib só valida GetCapabilities)"
+    },
+    {
+      "clausula": "bateria_de_ataque",
+      "estado": "suportado",
+      "evidencia": "13/13 ataques recusados com 400/401/403/404/422, nenhum 500",
+      "motivo": ""
+    }
+  ],
+  "ataques": [
+    {
+      "ataque": "item_id_com_aspas",
+      "status": 404,
+      "passou": true,
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"7a2fc42f2b9dae8a\"}"
+    },
+    {
+      "ataque": "item_id_comentario_sql",
+      "status": 404,
+      "passou": true,
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"a734596b956f2a60\"}"
+    },
+    {
+      "ataque": "item_id_ponto_e_virgula",
+      "status": 404,
+      "passou": true,
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"67909cf5a4d843f2\"}"
+    },
+    {
+      "ataque": "bbox_subselect",
+      "status": 400,
+      "passou": true,
+      "corpo": "{\"erro\":\"bbox_invalido\",\"mensagem\":\"bbox precisa ser 4 números\",\"req_id\":\"083365b00b9d817b\"}"
+    },
+    {
+      "ataque": "bbox_pg_sleep",
+      "status": 400,
+      "passou": true,
+      "corpo": "{\"erro\":\"bbox_invalido\",\"mensagem\":\"bbox precisa ser 4 números\",\"req_id\":\"2d63442fe17f3fd9\"}"
+    },
+    {
+      "ataque": "bbox_funcao_nao_prevista",
+      "status": 400,
+      "passou": true,
+      "corpo": "{\"erro\":\"bbox_invalido\",\"mensagem\":\"bbox precisa ser 4 números\",\"req_id\":\"2125200d90ef7429\"}"
+    },
+    {
+      "ataque": "wfs_bbox_injecao",
+      "status": 400,
+      "passou": true,
+      "corpo": "{\"erro\":\"geometria_invalida\",\"mensagem\":\"envelope não numérica: '0); DROP TABLE plat.item;--'\",\"req_id\":\"8cc15a6e6fe34bb7\"}"
+    },
+    {
+      "ataque": "wfs_request_desconhecida",
+      "status": 400,
+      "passou": true,
+      "corpo": "{\"erro\":\"request_invalido\",\"mensagem\":\"REQUEST='GetCoverage' não suportado (use GetCapabilities, DescribeFeatureType ou GetFeature)\",\"req_id\":\"3fcb67466249758f\"}"
+    },
+    {
+      "ataque": "feature_id_nao_inteiro",
+      "status": 400,
+      "passou": true,
+      "corpo": "{\"erro\":\"feature_id_invalido\",\"mensagem\":\"id da feição precisa ser o OID inteiro (fid)\",\"req_id\":\"e379ae5ab0122fc0\"}"
+    },
+    {
+      "ataque": "unicode_no_item_id",
+      "status": 404,
+      "passou": true,
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"c02acbe6e90e93b6\"}"
+    },
+    {
+      "ataque": "cross_tenant_rest",
+      "status": 404,
+      "passou": true,
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"9604d182ab5929e2\"}"
+    },
+    {
+      "ataque": "cross_tenant_ogc",
+      "status": 404,
+      "passou": true,
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"fe8d462a5a86ee21\"}"
+    },
+    {
+      "ataque": "cross_tenant_wfs",
+      "status": 404,
+      "passou": true,
+      "corpo": "{\"erro\":\"camada_nao_encontrada\",\"mensagem\":\"item inexistente, não é camada vetorial, ou sem permissão\",\"req_id\":\"00ab2cb4bd52a9d2\"}"
+    }
+  ],
+  "medido_em": "2026-09-07T21:27:17.380752+00:00"
+}

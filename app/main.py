@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 from app import erros, limite_corpo, paginas
 from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
+from app.amc import rotas as rotas_amc
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import (
@@ -39,13 +40,22 @@ from app.catalogo import (
     transferencia,
 )
 from app.conexao import rotas as rotas_conexao
+from app.consulta import cors_servicos
+from app.consulta.rotas_diretorio import router as rotas_diretorio_esri
+from app.consulta.rotas_edicao_esri import router as rotas_edicao_esri
+from app.consulta.rotas_ogc_features import router as rotas_ogc_features
+from app.consulta.rotas_query import router as rotas_consulta_esri
+from app.consulta.rotas_servico import router as rotas_consulta_servico
+from app.consulta.rotas_wfs import router as rotas_wfs
 from app.correio.rotas_smtp import router as rotas_smtp
+from app.edicao.rotas import router as rotas_edicao
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.mapa.rotas import router as rotas_mapa
 from app.multiescala.rotas import router as rotas_multiescala
+from app.mapas.rotas import router as rotas_mapas
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
@@ -61,6 +71,9 @@ from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
 from app.tiles.rotas import router as rotas_tiles
+from app.tiles.exportacao import router as rotas_tiles_exportacao
+from app.tiles.rotas import router as rotas_tiles
+from app.tiles.vector_tile_server import router as rotas_vector_tile_server
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 
@@ -79,6 +92,8 @@ auth_middleware.instalar(app)
 # acrescentado por último: no empilhamento do Starlette isso o torna o mais externo, executando ANTES do
 # middleware de log/sessão acima (ADR 0001 seção 12; app/limite_corpo.py) — corpo grande nunca chega à sessão.
 limite_corpo.instalar(app)
+# CORS aberto só em /svc, /ogc e /tiles (item L2-04-b): lá a credencial é o token da URL, nunca o cookie.
+cors_servicos.instalar(app)
 
 ROUTERS = [
     rotas_saude,
@@ -124,6 +139,11 @@ ROUTERS = [
     rotas_uploads,
     # --- ingestão vetorial (L0-04): /api/importacoes (upload -> inspeção -> confirmação -> carga -> camada)
     rotas_ingestao,
+    # --- edição transacional de feições (L2-03-a): POST /api/camadas/{id}/edicoes (adicionar/atualizar/apagar
+    # numa transação; única porta de escrita de feição — FeatureServer/OGC futuros chamam este mesmo caminho)
+    rotas_edicao,
+    # --- mapa (L2-01-a-documento-mapa): /api/mapas (lista, criar, ler, editar) e /api/mapas/{id}/completo
+    rotas_mapas,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
@@ -161,10 +181,36 @@ ROUTERS = [
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     rotas_multiescala,
+    # --- servidor de tiles vetoriais em 3 contratos (L2-04-e): TileJSON+XYZ, VectorTileServer Esri
+    # (descritor, estilo, sprites/fontes, tile z/y/x) e exportação por URL (geojson/kml/csv/fgb/gpkg).
+    # ORDEM IMPORTA: tem de vir ANTES de `rotas_mapa`. As duas famílias moram em /tiles/, e o repasse
+    # do visualizador (`/tiles/{esquema}/{funcao}/{z}/{x}/{y}`) casa, por forma de caminho, com o tile
+    # vetorial (`/tiles/{token}/{item}/{z}/{x}/{y}.pbf`); quem casa primeiro responde, e como o
+    # visualizador exige `y` inteiro, o `.pbf` do tile vetorial virava 422 em vez de tile. O tile
+    # vetorial exige o sufixo `.pbf` no caminho, então as URLs do visualizador (sem sufixo) continuam
+    # caindo nele normalmente.
+    rotas_vector_tile_server,
     # --- visualizador de mapa (L2-01-mapa-web): /api/mapa/camadas, TileJSON com token curto, repasse /tiles
     rotas_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
+    # --- operação query do FeatureServer (L2-04-c): /rest/services/{item}/FeatureServer/{camada}/query
+    # --- diretório/metadados do FeatureServer + OGC API Features Part 1 + WFS 2.0 (item
+    # L2-04-servicos-esri-ogc, construído EM VOLTA da query acima, sem reescrevê-la): descritor de
+    # serviço/camada (`?f=json`), `/ogc/features/{item}` e `/wfs/{item}`. applyEdits/attachments/
+    # relationships ficam de fora (dependem de L2-03-edicao e L2-10-b, nenhum construído).
+    rotas_consulta_esri,
+    rotas_consulta_servico,
+    # --- diretório de serviços Esri por token (L2-04-b): /svc/{token}/rest/info|generateToken|services
+    rotas_diretorio_esri,
+    rotas_ogc_features,
+    rotas_wfs,
+    # --- escrita compatível Esri (L2-04-d): applyEdits/addFeatures/updateFeatures/deleteFeatures, calculate,
+    # anexos e uploads sobre a MESMA porta de escrita do L2-03-a
+    rotas_edicao_esri,
+    # --- motor de análise multicritério (L3-01-a): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
+    rotas_amc.router,
+    rotas_tiles_exportacao,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

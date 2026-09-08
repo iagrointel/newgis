@@ -18,9 +18,16 @@
   <main id="principal" class="principal mapa-tela" tabindex="-1">
     <div class="linha-ferramentas mapa-barra" id="ferramentas">
       <h1 data-i18n="mapa.titulo">Mapa</h1>
+      <span class="mapa-nome" id="mapa-nome"></span>
       <plat-aviso id="aviso"></plat-aviso>
+      <button type="button" id="salvar-mapa" class="pequeno" hidden data-i18n="mapa.salvar">salvar</button>
     </div>
     <div class="mapa-corpo">
+      <section class="mapa-camadas" id="painel-camadas" hidden aria-labelledby="camadas-titulo">
+        <h2 id="camadas-titulo" data-i18n="mapa.camadas">Camadas</h2>
+        <p class="fraco" id="camadas-ajuda" data-i18n="mapa.camadas_ajuda">arraste para reordenar; a de cima desenha por último</p>
+        <div id="camadas"></div>
+      </section>
       <section class="mapa-painel-lateral" aria-label="painel do mapa">
         <form id="busca-form" class="bloco" role="search">
           <h2 data-i18n="mapa.busca">Pesquisar</h2>
@@ -41,6 +48,8 @@
           </div>
           <ul id="lista-camadas" class="lista-camadas arvore" role="tree" aria-label="Camadas"></ul>
         </section>
+
+        <section class="bloco" id="edicao-painel" aria-label="edição de feições"></section>
 
         <section class="bloco">
           <h2 data-i18n="mapa.legenda">Legenda</h2>

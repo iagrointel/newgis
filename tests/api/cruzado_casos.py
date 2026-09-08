@@ -21,6 +21,13 @@ AREA_MULTIESCALA_TESTE = {
 }
 PADRAO = frozenset({401, 403, 404})
 UUID_NULO = "00000000-0000-0000-0000-000000000000"  # id que não é de A nem de B: 404 garantido pela RLS/dono
+# L3-01-a: documento mínimo válido de amc_modelo.v1 (mesmo shape de tests/unit/test_amc_esquema.py)
+AMC_DEF_MINIMA = {
+    "combinador": "soma_ponderada",
+    "fatores": [
+        {"id": "f1", "criterio": "c", "peso": 1, "transformacao": {"tipo": "linear", "minimo": 0, "maximo": 1}},
+    ],
+}
 
 
 @dataclass
@@ -63,6 +70,9 @@ class Preparacao:
     conjunto_b: dict = field(default_factory=dict)  # L3-19-multiescala: área de estudo de B
     fator_b: dict = field(default_factory=dict)  # L3-19-multiescala: fator de B
     execucao_b: dict = field(default_factory=dict)  # L3-19-multiescala: execução macro de B (sobre conjunto_b)
+    modelo_amc_b: dict = field(default_factory=dict)  # L3-01-a: modelo AMC de B (fica "executado" p/ sempre)
+    conjunto_amc_b: dict = field(default_factory=dict)  # L3-01-a: conjunto de unidades AMC de B
+    execucao_amc_b: dict = field(default_factory=dict)  # L3-01-a: execução AMC de B
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -78,6 +88,8 @@ class Preparacao:
             marcas.append(self.convite_b["email"])
         if self.conjunto_b:
             marcas += [self.conjunto_b["nome"], self.fator_b["nome"]]
+        if self.modelo_amc_b:
+            marcas.append(self.modelo_amc_b["nome"])
         return marcas
 
 
@@ -174,6 +186,25 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b, rede_b=rede_b,
                       conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
+    # L3-01-a: modelo + conjunto + execução de B, alvos das rotas de /api/amc — a execução marca o modelo
+    # como "executado" (permanente, é a regra do item); por isso o modelo NÃO é apagado em desfazer()
+    r = sessao_b.post("/api/amc/modelos", json={"nome": f"{PREFIXO}amc-modelo-{sufixo}", "definicao": AMC_DEF_MINIMA})
+    assert r.status_code == 201, r.text
+    modelo_amc_b = r.json()
+    r = sessao_b.post("/api/amc/conjuntos",
+                      json={"nome": f"{PREFIXO}amc-conjunto-{sufixo}", "tipo": "hexagonal", "lado_m": 250})
+    assert r.status_code == 201, r.text
+    conjunto_amc_b = r.json()
+    r = sessao_b.post("/api/amc/execucoes",
+                      json={"modelo_id": modelo_amc_b["id"], "conjunto_id": conjunto_amc_b["id"], "semente": 1})
+    assert r.status_code == 201, r.text
+    execucao_amc_b = r.json()
+    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
+                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
+                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
+                      convite_b=convite_b,
+                      modelo_amc_b=modelo_amc_b, conjunto_amc_b=conjunto_amc_b,
+                      execucao_amc_b=execucao_amc_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -204,6 +235,12 @@ def desfazer(p: Preparacao) -> None:
     if p.conjunto_b:
         p.sessao_b.delete(f"/api/multiescala/conjuntos/{p.conjunto_b['id']}")  # cascata apaga a execução também
         p.sessao_b.delete(f"/api/multiescala/fatores/{p.fator_b['id']}")
+    if p.execucao_amc_b:
+        p.sessao_b.delete(f"/api/amc/execucoes/{p.execucao_amc_b['id']}")
+    if p.conjunto_amc_b:
+        p.sessao_b.delete(f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}")
+    # modelo_amc_b NUNCA se apaga (já foi executado — regra do item L3-01-a-modelo-dado); fica como
+    # resíduo esperado do inquilino de teste demo2, do mesmo jeito que a semente de catálogo
     if p.agenda_b:
         p.sessao_b.delete(f"/api/agendas/{p.agenda_b['id']}")
     p.sessao_b.delete(f"/api/grupos/{p.grupo_b['id']}")
@@ -1066,6 +1103,10 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: "/api/geocodificar", lambda p: {"endereco": "Avenida Paulista, São Paulo - SP"},
         proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
     ),
+    ("GET", "/api/geocodificar"): Caso(
+        lambda p: "/api/geocodificar?endereco=Avenida+Paulista%2C+S%C3%A3o+Paulo+-+SP",
+        proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
+    ),
     ("POST", "/api/reverso"): Caso(
         lambda p: "/api/reverso", lambda p: {"lon": -46.6333, "lat": -23.5505},
         proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
@@ -1116,6 +1157,143 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    # ---- edição de feição (L2-03-a / L2-03-edicao) e escrita compatível Esri (L2-04-d): o alvo é sempre um
+    # UUID que não é de A nem de B, então a RLS de `plat.item` responde 404 antes de qualquer escrita. As
+    # rotas de anexo em multipart leem o corpo só DEPOIS de a camada existir, para que o pedido cruzado morra
+    # no 404 sem consumir formulário.
+    ("POST", "/api/camadas/{id}/edicoes"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/edicoes", lambda p: {"adicionar": []}
+    ),
+    ("POST", "/api/camadas/{id}/feicoes/unir"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/unir",
+        lambda p: {"ids": [UUID_NULO, UUID_NULO], "versoes": {UUID_NULO: 1}},
+    ),
+    ("POST", "/api/camadas/{id}/feicoes/dividir"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/dividir",
+        lambda p: {"id": UUID_NULO, "versao": 1, "ponto": [0.0, 0.0]},
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}"
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/historico"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/historico"
+    ),
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/historico/1/restaurar"
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/anexos"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos"
+    ),
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos",
+        lambda p: {"nome": "zt.png", "content_type": "image/png", "conteudo": "aGk="},
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"
+    ),
+    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"
+    ),
+    # ---- visualizador de mapa (L2-01-mapa-web): a lista é do próprio chamador; o resto é por id
+    ("GET", "/api/mapa/camadas"): Caso(
+        lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{UUID_NULO}"),
+    ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{UUID_NULO}/tilejson"),
+    # ---- FeatureServer compatível Esri: leitura (L2-04-c) e escrita (L2-04-d)
+    ("GET", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/query?where=1%3D1&f=json"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/query", lambda p: {"where": "1=1", "f": "json"}
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/applyEdits"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/applyEdits",
+        lambda p: {"edits": [{"id": 0, "adds": []}]},
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/uploads/upload"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/uploads/upload"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/applyEdits"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/applyEdits", lambda p: {"adds": []}
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/addFeatures"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/addFeatures", lambda p: {"features": []}
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/updateFeatures"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/updateFeatures", lambda p: {"features": []}
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/deleteFeatures"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/deleteFeatures", lambda p: {"objectIds": "1"}
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/calculate"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/calculate",
+        lambda p: {"where": "1=1", "calcExpression": [{"field": "nome", "value": "x"}]},
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/{camada_id}/queryAttachments"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/queryAttachments?objectIds=1"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/queryAttachments"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/queryAttachments", lambda p: {"objectIds": "1"}
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/attachments"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/1/attachments"
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/attachments/{anexo_numero}"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/1/attachments/1"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/addAttachment"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/1/addAttachment"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/updateAttachment"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/1/updateAttachment"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/deleteAttachments"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/1/deleteAttachments",
+        lambda p: {"attachmentIds": "1"},
+    ),
+    # ---- motor de análise multicritério (L3-01-a-modelo-dado): modelo/conjunto têm ciclo de vida limpo
+    # (limpar apaga o que a chamada de A criou); execução/resultado de B são só lidos — nenhuma rota de A
+    # resolve o id de B (404 antes de tocar amc_execucao/amc_resultado; ver também o teste dedicado
+    # tests/api/amc/test_modelo.py::test_a_nao_le_modelo_execucao_nem_resultado_de_b_pela_api).
+    ("POST", "/api/amc/modelos/validar"): Caso(
+        lambda p: "/api/amc/modelos/validar", lambda p: {"definicao": AMC_DEF_MINIMA},
+        proprio=True, aceita=frozenset({200}),
+    ),
+    ("POST", "/api/amc/modelos"): Caso(
+        lambda p: "/api/amc/modelos",
+        lambda p: {"nome": f"{PREFIXO}amc-modelo-a", "definicao": AMC_DEF_MINIMA},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/amc/modelos/{id}")),
+    ),
+    ("GET", "/api/amc/modelos"): Caso(lambda p: "/api/amc/modelos", proprio=True, aceita=frozenset({200}),
+                                      verificar=_sem_marca),
+    ("GET", "/api/amc/modelos/{id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
+    ("PUT", "/api/amc/modelos/{id}"): Caso(
+        lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}", lambda p: {"nome": f"{PREFIXO}amc-invadido"},
+    ),
+    ("DELETE", "/api/amc/modelos/{id}"): Caso(lambda p: f"/api/amc/modelos/{p.modelo_amc_b['id']}"),
+    ("POST", "/api/amc/conjuntos"): Caso(
+        lambda p: "/api/amc/conjuntos",
+        lambda p: {"nome": f"{PREFIXO}amc-conjunto-a", "tipo": "hexagonal", "lado_m": 250},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/amc/conjuntos/{id}")),
+    ),
+    ("GET", "/api/amc/conjuntos"): Caso(lambda p: "/api/amc/conjuntos", proprio=True, aceita=frozenset({200}),
+                                        verificar=_sem_marca),
+    ("GET", "/api/amc/conjuntos/{id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
+    ("DELETE", "/api/amc/conjuntos/{id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.conjunto_amc_b['id']}"),
+    ("POST", "/api/amc/execucoes"): Caso(
+        lambda p: "/api/amc/execucoes",
+        lambda p: {"modelo_id": p.modelo_amc_b["id"], "conjunto_id": p.conjunto_amc_b["id"], "semente": 1},
+    ),
+    ("GET", "/api/amc/execucoes"): Caso(lambda p: "/api/amc/execucoes", proprio=True, aceita=frozenset({200}),
+                                        verificar=_sem_marca),
+    ("GET", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}"),
+    ("DELETE", "/api/amc/execucoes/{id}"): Caso(lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}"),
+    ("GET", "/api/amc/execucoes/{id}/resultados"): Caso(
+        lambda p: f"/api/amc/execucoes/{p.execucao_amc_b['id']}/resultados",
     ),
 }
 

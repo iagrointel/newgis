@@ -21,7 +21,7 @@ SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); \
 	[ -n "$$PLAT_DSN" ] && export PLAT_DSN; \
 	[ -n "$$PLAT_GARAGE_ADMIN_TOKEN" ] && export PLAT_GARAGE_ADMIN_TOKEN;
 
-.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps homolog pacote-rede
+.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps homolog pacote-rede conformidade conformidade-conferir
 
 check: lint sem-marcador limites teste e2e  ## suíte inteira (portão P3)
 
@@ -53,6 +53,12 @@ teste:
 
 e2e:
 	$(SEGREDOS) $(VENV)/pytest -m lento --base-url $(URL_PUBLICA)
+
+conformidade:                               ## item L2-04-j: roda as provas dos serviços Esri/OGC e regrava tests/esri/conformidade.json + a seção de docs/PARIDADE.md
+	$(SEGREDOS) $(VENV)/python tests/esri/conformidade.py
+
+conformidade-conferir:                      ## reprova se docs/PARIDADE.md divergir da matriz gerada (mesmo que make check confere por teste)
+	$(VENV)/python tests/esri/conformidade.py --conferir
 
 medidas:                                    ## suíte inteira gravando tests/medidas/<item>.json (ADR 0001 seção 10)
 	$(SEGREDOS) PLAT_GRAVAR_MEDIDAS=1 $(VENV)/pytest --base-url $(URL_PUBLICA)

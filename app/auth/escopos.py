@@ -13,6 +13,11 @@ ESCOPO = re.compile(
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
     "geocodificar:usar", "multiescala:usar", "admin:inquilino",
+    rf"geocodificar:usar|amc:usar|admin:inquilino)$"
+)
+ESCOPOS_SEM_UUID = (
+    "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
+    "geocodificar:usar", "amc:usar", "admin:inquilino",
 )
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
@@ -25,6 +30,7 @@ DESCRICAO = {
     "sem PII); mesmo escopo cobre o GeocodeServer compatível Esri",
     "multiescala:usar": "criar área de estudo, fator e amostra, e rodar execução macro/micro do motor "
     "multicritério em grades aninhadas (L3-19-multiescala; dado e execução do próprio inquilino)",
+    "amc:usar": "criar e executar modelo multicritério (exige analise.amc no dono; L3-01-a)",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 
