@@ -473,3 +473,12 @@ def aplicar_edicoes(cur, request: Request, auth: Auth, camada_id: str, corpo: Ed
     return EdicoesSaida(
         modo=corpo.modo, adicionar=resultados_add, atualizar=resultados_upd, apagar=resultados_del, avisos=avisos
     )
+
+
+# Portas públicas de UMA feição, para quem aplica edição fora da rota de lote. O item L2-13-b (sincronização
+# de réplica) precisa decidir feição a feição — conferir a versão, escolher pela política de conflito da
+# réplica e só então aplicar — o que `aplicar_edicoes` (lote inteiro, política fixa) não permite. Mesmo
+# código, mesma validação, mesma RLS: não é uma segunda porta de escrita, é a mesma sem o laço por cima.
+inserir = _inserir
+atualizar = _atualizar
+apagar = _apagar
