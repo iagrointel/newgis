@@ -280,9 +280,9 @@ def test_reage_a_filtro_extensao_e_evento_externo(mapa, page, conexao_plat_app):
     page.fill("#grafico-filtro", "")
     page.evaluate("() => window.plat.mapa.map.jumpTo({ center: [-47.9, -15.8], zoom: 6 })")
     page.check("#grafico-extensao")
+    # gerar() marca data-ocupado de forma síncrona: esperar pelo fim é esperar a resposta NOVA, não a anterior
     page.click("#grafico-gerar")
-    page.wait_for_function("() => window.plat.mapa.graficos.dados && window.plat.mapa.graficos.dados.total < 1000000",
-                           timeout=30000)
+    page.wait_for_function("() => !document.getElementById('graficos').dataset.ocupado", timeout=30000)
     d = page.evaluate("() => window.plat.mapa.graficos.dados")
     caixa = page.evaluate("() => { const b = window.plat.mapa.map.getBounds(); "
                           "return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]; }")
@@ -291,7 +291,7 @@ def test_reage_a_filtro_extensao_e_evento_externo(mapa, page, conexao_plat_app):
     assert 0 < d["total"] == n_sql < 1_000_000
     # mover o mapa regera sozinho
     page.evaluate("() => window.plat.mapa.map.jumpTo({ center: [-47.9, -15.8], zoom: 4 })")
-    page.wait_for_function(f"() => window.plat.mapa.graficos.dados.total !== {d['total']}", timeout=30000)
+    page.wait_for_function(f"() => window.plat.mapa.graficos.dados.total > {d['total']}", timeout=30000)
     _capturar(page, "filtro_extensao")
     mapa.verificar()
 
