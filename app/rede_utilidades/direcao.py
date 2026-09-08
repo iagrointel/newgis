@@ -72,10 +72,11 @@ def _controladores_raiz(cur, rede_id: str) -> tuple[list[dict], str | None]:
     return raizes, raizes[0]["tier_tipo"]
 
 
-def _montar_arvore(cur, rede_id: str, ids_raiz: list[str]) -> None:
+def _montar_arvore(cur, rede_id: str, ids_raiz: list[str], arestas_excluidas=()) -> None:
     """`TEMP TABLE direcao_aresta` (o grafo traversável, o mesmo de `tracado.py`) e `TEMP TABLE direcao_arvore`
     (no, pai, profundidade, raiz, aresta usada) — a árvore de caminhos mínimos a partir dos controladores."""
-    sql_arestas = _tr._montar_sql_arestas(cur, rede_id, ignorar_transformacao=False)
+    sql_arestas = _tr._montar_sql_arestas(cur, rede_id, ignorar_transformacao=False,
+                                         arestas_excluidas=arestas_excluidas)
     cur.execute("DROP TABLE IF EXISTS direcao_aresta")
     cur.execute(f"CREATE TEMP TABLE direcao_aresta AS {sql_arestas}")
     cur.execute("CREATE INDEX ix_direcao_aresta_id ON direcao_aresta (id)")
@@ -160,7 +161,7 @@ def _indeterminado(tipo: str, motivo: str, mensagem: str, inicio: float, *, nos_
 
 
 def tracar_direcao(cur, tenant_id: int, rede_id: str, tipo: str, pontos_partida: list[dict],
-                   barreiras: list[dict], origem: str = "auto") -> dict:
+                   barreiras: list[dict], origem: str = "auto", arestas_excluidas=()) -> dict:
     """`tipo='jusante'`/`'montante'` no MESMO endpoint dos outros traçados. `origem`: `auto` (controlador
     quando a rede tem controlador com nó, atributo quando não tem), `controlador` ou `atributo`."""
     if tipo not in TIPOS:
@@ -203,7 +204,7 @@ def tracar_direcao(cur, tenant_id: int, rede_id: str, tipo: str, pontos_partida:
     if [i for i in ids_inicio if i in ids_barreira]:
         raise ErroAPI(422, "inicio_e_barreira", "um ponto de partida não pode também ser barreira")
 
-    _montar_arvore(cur, rede_id, [str(r["no_id"]) for r in raizes])
+    _montar_arvore(cur, rede_id, [str(r["no_id"]) for r in raizes], arestas_excluidas)
     cur.execute("SELECT no, raiz FROM direcao_arvore WHERE no = ANY(%s::uuid[])", (ids_inicio,))
     na_arvore = {str(r["no"]): str(r["raiz"]) for r in cur.fetchall()}
     fora = [i for i in ids_inicio if i not in na_arvore]

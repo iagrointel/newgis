@@ -1,7 +1,10 @@
 /* plat — tela /redes/controladores (item L4-04-a-controladores-e-tiers): a tabela de subredes da rede
    escolhida (tier, controladores, estado limpa/suja, resumo) e a FICHA de um controlador — qual dispositivo,
    qual terminal, em que tier, de que subrede, e o nó que ele ocupa na topologia corrente. A ficha traz as
-   duas ações do ciclo de vida: atualizar a subrede (ela volta a limpa) e remover o controlador. */
+   duas ações do ciclo de vida: atualizar a subrede (ela volta a limpa) e remover o controlador.
+   Item L4-04-b: a tabela ganha o comprimento da linha agregada da subrede, o link de exportação e o botão
+   que enfileira a atualização em LOTE das subredes sujas (é job: a resposta traz o identificador do
+   trabalho, e quem acompanha é a tela de Trabalhos). */
 import { obter, enviar, apagar } from '../base/api.js';
 import { h, limpar } from '../base/dom.js';
 import { carregar, t } from '../base/i18n.js';
@@ -48,15 +51,23 @@ async function iniciar() {
       h('td', {}, `${s.tier_nome} (${s.tier_tipo})`),
       h('td', { class: `estado-${s.estado}` }, s.estado),
       h('td', {}, String((s.resumo && s.resumo.elementos) ?? '—')),
+      h('td', { class: 'comprimento' },
+        s.resumo && s.resumo.comprimento_m !== undefined
+          ? String(s.resumo.comprimento_m) : t('controladores.sem_comprimento')),
       h('td', {}, ...s.controladores.map((c) => h('button', {
         type: 'button', class: 'controlador', 'data-controlador': c.id,
         onclick: () => desenharFicha(c.id),
-      }, c.nome))))));
+      }, c.nome))),
+      h('td', {}, h('a', {
+        class: 'exportar', 'data-subrede-nome': s.nome,
+        href: `/api/rede/${selRede.value}/subrede/${encodeURIComponent(s.nome)}/exportar?tier=${s.tier}`,
+      }, t('controladores.exportar'))))));
     tabela.append(h('table', { class: 'grade' },
       h('thead', {}, h('tr', {},
         h('th', {}, t('controladores.subrede')), h('th', {}, t('controladores.tier')),
         h('th', {}, t('controladores.estado')), h('th', {}, t('controladores.elementos')),
-        h('th', {}, t('controladores.controladores')))),
+        h('th', {}, t('controladores.comprimento')),
+        h('th', {}, t('controladores.controladores')), h('th', {}, t('controladores.exportar')))),
       corpo));
   }
 
@@ -95,8 +106,17 @@ async function iniciar() {
     ficha.hidden = false;
   }
 
+  const lote = h('button', { id: 'atualizar-sujas', type: 'button' }, t('controladores.atualizar_sujas'));
+  lote.addEventListener('click', async () => {
+    if (!selRede.value) return;
+    const r = await enviar(`/api/rede/${selRede.value}/subredes/atualizar`, {});
+    if (r.status !== 202) { aviso.mostrar((r.json && r.json.mensagem) || t('controladores.falhou'), 'erro'); return; }
+    aviso.mostrar(t('controladores.lote_enfileirado').replace('{job}', r.json.job_id), 'ok');
+  });
+
   principal.append(
     h('p', { class: 'ajuda' }, t('controladores.ajuda')),
     h('div', { class: 'formulario' }, h('label', { for: 'rede' }, t('controladores.rede')), selRede),
+    h('div', { class: 'acoes' }, lote),
     tabela, ficha);
 }

@@ -184,6 +184,14 @@ def _importar_pacote_sincrono(rid: str, bruto: bytes, auth: Auth, request: Reque
     if len(bruto) > PACOTE_MAX_BYTES:
         raise ErroAPI(413, "pacote_grande_demais",
                       f"o pacote passa de {PACOTE_MAX_BYTES} bytes ({len(bruto)})")
+    # A REDE PRIMEIRO, o corpo depois: quem não pode ver esta rede recebe 404 sem que o corpo diga nada
+    # sobre ela. Sem esta consulta, um pacote malformado apontado para a rede de OUTRO inquilino devolvia
+    # 422 de esquema — a resposta dependia do corpo antes da autorização, e a varredura cruzada A→B
+    # reprovava (`tests/api/test_cruzado.py`). É uma leitura barata, sob RLS, fora do laço de eventos.
+    with db.db(auth.contexto()) as cur:
+        cur.execute("SELECT 1 FROM plat.rede WHERE id = %s::uuid", (rid,))
+        if cur.fetchone() is None:
+            raise ErroAPI(404, "rede_inexistente", "rede inexistente")
     try:
         doc = pacote_mod.ler(bruto)
     except pacote_mod.ErroPacote as e:

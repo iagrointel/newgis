@@ -12,6 +12,13 @@ Ordem dentro do job:
 
 ⛔ D21 (disco): o job NÃO baixa pacote da ANEEL. Importação "pelo nome da distribuidora" fica
 registrada como pendente de decisão do dono — o parâmetro é sempre um caminho local já existente.
+
+Este módulo também abriga o job `redes.subredes_atualizar`
+(item L4-04-b-atualizar-e-exportar-subrede): as duas trilhas nomearam o mesmo arquivo, e as
+tarefas de rede de utilidades ficam juntas aqui. O trabalho em si é `subredes.atualizar_todas` —
+o MESMO caminho da rota síncrona de uma subrede só; o job é apenas o transporte, porque numa rede
+de cooperativa a atualização percorre dezenas de milhares de elementos por subrede e não cabe
+numa requisição HTTP.
 """
 
 from __future__ import annotations
@@ -21,12 +28,11 @@ import uuid
 import zipfile
 from pathlib import Path
 
-import pyogrio
 from pydantic import BaseModel, Field
 
 from app import settings as cfg
 from app.jobs.registro import FalhaDefinitiva, tarefa
-from app.rede_utilidades import bdgd, contrato
+from app.rede_utilidades import bdgd, contrato, subredes
 
 
 class ImportarBdgdParametros(BaseModel):
@@ -88,6 +94,9 @@ def _ano_da_safra(p: Path) -> int | None:
 
 
 def _ler_camadas_do_contrato(gdb: Path, progresso) -> dict:
+    # import tardio do pyogrio: ver bdgd._pyogrio — só o job que abre o GDB depende do GDAL,
+    # a subida da API não
+    pyogrio = bdgd._pyogrio()
     camadas = {}
     for i, nome in enumerate(contrato.CAMADAS_DO_CONTRATO):
         try:
@@ -172,3 +181,30 @@ def rede_importar_bdgd(ctx, rede_id: uuid.UUID, caminho: str, seguir_com_bloquei
         },
         "duracao_ms": resultado["duracao_ms"],
     }
+
+
+class AtualizarSubredesParametros(BaseModel):
+    rede_id: str = Field(min_length=36, max_length=36)
+    # `todas=False` (padrão) é a atualização INCREMENTAL: só as subredes sujas, inclusive as que a área suja
+    # da última edição tocou. `todas=True` refaz a rede inteira (primeira carga, ou desconfiança do índice).
+    todas: bool = False
+    # `tier` restringe o lote a um tier da rede (código do pacote); vazio = todos.
+    tier: str | None = Field(default=None, max_length=63)
+
+
+@tarefa(
+    nome="redes.subredes_atualizar",
+    descricao="Atualiza as subredes sujas de uma rede de utilidades (traçado, nome nos elementos, "
+              "propagação, linha agregada)",
+    parametros=AtualizarSubredesParametros,
+    pesado=True,
+    memoria_mb=1024,
+    timeout_s=3600,
+    tentativas=1,
+    chave=lambda p: f"redes_subredes_atualizar:{p['rede_id']}",
+    perfil_minimo="editor",
+)
+def redes_subredes_atualizar(ctx, rede_id: str, todas: bool = False, tier: str | None = None) -> dict:
+    with ctx.db() as cur:
+        return subredes.atualizar_todas(cur, ctx.tenant_id, rede_id, todas=todas, tier=tier,
+                                        progresso=ctx.progresso)

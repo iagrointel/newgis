@@ -88,10 +88,20 @@ def _carregar_esquema(cur, rede_id: str) -> dict:
     cur.execute("SELECT id, terminais FROM plat.rede_terminal_config WHERE rede_id = %s::uuid", (rede_id,))
     terminais_por_config = {r["id"]: r["terminais"] for r in cur.fetchall()}
     cur.execute(
-        "SELECT tipo, de_tipo_id, para_tipo_id FROM plat.rede_regra WHERE rede_id = %s::uuid AND tipo = ANY(%s)",
+        "SELECT tipo, de_tipo_id, para_tipo_id, tolerancia_m FROM plat.rede_regra "
+        "WHERE rede_id = %s::uuid AND tipo = ANY(%s)",
         (rede_id, list(TIPOS_REGRA_CONECTIVIDADE)),
     )
-    regra_pares = {frozenset((r["de_tipo_id"], r["para_tipo_id"])) for r in cur.fetchall()}
+    regra_pares = set()
+    regra_tolerancia: dict = {}
+    for r in cur.fetchall():
+        par = frozenset((r["de_tipo_id"], r["para_tipo_id"]))
+        regra_pares.add(par)
+        if r["tolerancia_m"] is not None:
+            # duas regras sobre o mesmo par (tipos diferentes de conectividade) valem pela MAIOR: a
+            # tolerância declarada é uma afirmação sobre a precisão da coordenada das duas camadas, e essa
+            # precisão não muda conforme o tipo da regra.
+            regra_tolerancia[par] = max(float(r["tolerancia_m"]), regra_tolerancia.get(par, 0.0))
 
     def terminais_do_tipo(tipo_id):
         cfg_id = tipos[tipo_id]["terminal_id"]
@@ -101,7 +111,7 @@ def _carregar_esquema(cur, rede_id: str) -> dict:
 
     return {
         "tipos": tipos, "tier_ordem": tier_ordem, "regra_pares": regra_pares,
-        "terminais_do_tipo": terminais_do_tipo,
+        "regra_tolerancia": regra_tolerancia, "terminais_do_tipo": terminais_do_tipo,
     }
 
 
@@ -154,9 +164,16 @@ def _montar_candidatos(linhas: list[dict], pontos: list[dict], esquema: dict):
     return candidatos, idx_trecho, idx_terminal, sem_no
 
 
-def _pares_proximos(cur, candidatos: list[dict], tolerancia_m: float) -> list[tuple]:
+def _pares_proximos(cur, candidatos: list[dict], tolerancia_busca_m: float) -> list[tuple]:
+    """Pares de candidatos a menos de `tolerancia_busca_m` um do outro, COM a distância geodésica de cada par.
+
+    A busca é feita pela MAIOR tolerância em jogo na rede (a da rede ou a maior declarada num par de tipos,
+    item L4-01-f) e a distância volta junto: quem decide se o par funde é `_resolver_uniao`, que conhece a
+    tolerância DAQUELE par de tipos. Buscar pela maior e filtrar depois é o que permite que o par
+    (dispositivo de ponto, trecho) tenha folga maior que o par (trecho, trecho) sem duas varreduras."""
     if not candidatos:
         return []
+    tolerancia_m = tolerancia_busca_m
     cur.execute("CREATE TEMP TABLE IF NOT EXISTS topo_cand ("
                 "idx int PRIMARY KEY, kind text NOT NULL, feicao_id uuid NOT NULL, tipo_id uuid NOT NULL, "
                 "grupo_id uuid, terminal_num int, geom geometry(Point,4326) NOT NULL)")
@@ -186,7 +203,8 @@ def _pares_proximos(cur, candidatos: list[dict], tolerancia_m: float) -> list[tu
         "SELECT a.idx AS a_idx, a.kind AS a_kind, a.feicao_id AS a_feicao_id, a.tipo_id AS a_tipo_id, "
         "       a.grupo_id AS a_grupo_id, a.terminal_num AS a_terminal_num, "
         "       b.idx AS b_idx, b.kind AS b_kind, b.feicao_id AS b_feicao_id, b.tipo_id AS b_tipo_id, "
-        "       b.grupo_id AS b_grupo_id, b.terminal_num AS b_terminal_num "
+        "       b.grupo_id AS b_grupo_id, b.terminal_num AS b_terminal_num, "
+        "       ST_Distance(a.geom::geography, b.geom::geography) AS dist_m "
         "FROM topo_cand a JOIN topo_cand b ON a.idx < b.idx "
         "WHERE ST_DWithin(a.geom, b.geom, %s) "
         "  AND ST_DWithin(a.geom::geography, b.geom::geography, %s) "
@@ -198,7 +216,51 @@ def _pares_proximos(cur, candidatos: list[dict], tolerancia_m: float) -> list[tu
     return pares
 
 
-def _resolver_uniao(candidatos: list[dict], pares: list, esquema: dict) -> UniaoBusca:
+def _admitir_pares(candidatos: list[dict], pares: list, esquema: dict, tolerancia_rede_m: float) -> list:
+    """Filtra os pares crus pela tolerância DAQUELE par de tipos e pela regra do alcance de dispositivo.
+
+    Duas coisas diferentes, na mesma passada:
+
+    1. tolerância por par de tipos (item L4-01-f): continuação natural do mesmo grupo (trecho com trecho)
+       vale sempre pela tolerância da REDE; par ligado por regra vale pela tolerância declarada na regra,
+       quando há. Fundir duas pontas de trechos vizinhos é o que fabrica laço, e esse par não ganha folga.
+
+    2. a folga extra é sobre PRECISÃO DE COORDENADA, nunca sobre alcance. A folga existe porque o cadastro
+       de ponto guarda menos casas decimais que o vértice da linha, ou seja, para reencontrar o MESMO ponto
+       escrito de dois jeitos. Se ela também servisse para alcançar um SEGUNDO ponto, um dispositivo de dois
+       terminais soldaria duas pontas distintas e fecharia um ciclo que a rede não tem — foi o que o teste
+       da refutação pegou. Por isso, POR DISPOSITIVO: havendo candidato dentro da tolerância da rede, só
+       esses valem; não havendo, vale o mais próximo (e o que estiver a menos da tolerância da rede DELE,
+       que é o mesmo ponto físico)."""
+    admitidos = []
+    por_dispositivo: dict = defaultdict(list)
+    for r in pares:
+        ka, tia, ga = r["a_kind"], r["a_tipo_id"], r["a_grupo_id"]
+        kb, tib, gb = r["b_kind"], r["b_tipo_id"], r["b_grupo_id"]
+        par = frozenset((tia, tib))
+        por_grupo = ka == "trecho" and kb == "trecho" and ga == gb
+        if not (por_grupo or par in esquema["regra_pares"]):
+            continue
+        tol_par = tolerancia_rede_m if por_grupo else esquema["regra_tolerancia"].get(par, tolerancia_rede_m)
+        distancia = float(r["dist_m"])
+        if distancia > tol_par:
+            continue
+        if ka == "terminal" or kb == "terminal":
+            dono = candidatos[r["a_idx"] if ka == "terminal" else r["b_idx"]]["feicao_id"]
+            por_dispositivo[dono].append((distancia, r))
+        else:
+            admitidos.append(r)
+
+    for lista in por_dispositivo.values():
+        menor = min(d for d, _ in lista)
+        corte = tolerancia_rede_m if menor <= tolerancia_rede_m else menor + tolerancia_rede_m
+        admitidos += [r for d, r in lista if d <= corte]
+    return admitidos
+
+
+def _resolver_uniao(candidatos: list[dict], pares: list, esquema: dict,
+                    tolerancia_rede_m: float) -> UniaoBusca:
+    pares = _admitir_pares(candidatos, pares, esquema, tolerancia_rede_m)
     uf = UniaoBusca()
     # feicao_id do dispositivo multi-terminal -> [(meu_idx, terminal_num, outro_idx, outro_tipo_id)]
     diferido: dict = defaultdict(list)
@@ -207,14 +269,9 @@ def _resolver_uniao(candidatos: list[dict], pares: list, esquema: dict) -> Uniao
         return len(esquema["terminais_do_tipo"](tipo_id))
 
     for r in pares:
-        ia, ka, tia, ga = r["a_idx"], r["a_kind"], r["a_tipo_id"], r["a_grupo_id"]
-        ib, kb, tib, gb = r["b_idx"], r["b_kind"], r["b_tipo_id"], r["b_grupo_id"]
-        if ka == "trecho" and kb == "trecho":
-            permitido = ga == gb or frozenset((tia, tib)) in esquema["regra_pares"]
-        else:
-            permitido = frozenset((tia, tib)) in esquema["regra_pares"]
-        if not permitido:
-            continue
+        ia, ka, tia = r["a_idx"], r["a_kind"], r["a_tipo_id"]
+        ib, kb, tib = r["b_idx"], r["b_kind"], r["b_tipo_id"]
+        # `_admitir_pares` já aplicou a tolerância do par e a regra do alcance de dispositivo
         multi_a = ka == "terminal" and n_terminais(tia) >= 2
         multi_b = kb == "terminal" and n_terminais(tib) >= 2
         if not multi_a and not multi_b:
@@ -285,8 +342,9 @@ def habilitar(cur, tenant_id: int, rede_id: str, usuario_id: int | None) -> dict
     esquema = _carregar_esquema(cur, rede_id)
     linhas, pontos = _carregar_feicoes(cur, rede_id)
     candidatos, idx_trecho, _idx_terminal, sem_no = _montar_candidatos(linhas, pontos, esquema)
-    pares = _pares_proximos(cur, candidatos, tolerancia_m)
-    uf = _resolver_uniao(candidatos, pares, esquema)
+    tolerancia_busca_m = max([tolerancia_m, *esquema["regra_tolerancia"].values()])
+    pares = _pares_proximos(cur, candidatos, tolerancia_busca_m)
+    uf = _resolver_uniao(candidatos, pares, esquema, tolerancia_m)
 
     grupos: dict = defaultdict(list)
     for i in range(len(candidatos)):

@@ -6,6 +6,10 @@ escrito em arquivo: quem tem o ativo na máquina põe a variável no ambiente, q
 pularem com a razão. As tabelas dentro dele seguem o vocabulário da BDGD da ANEEL (ssdmt, ssdbt, ramlig,
 trafo, ponnot, ucbt).
 
+O ativo vive num schema próprio do banco compartilhado. O nome desse schema NÃO está escrito aqui: vem da
+variável de ambiente `PLAT_REDE_REFERENCIA_ESQUEMA` (ver `esquema()` abaixo), porque este repositório é
+público e o schema carrega o nome de um parceiro.
+
 ⛔ Não é gerador sintético (esse é `gerar_rede.py`, dos testes rápidos): aqui cada linha vem das tabelas
 `<esquema>.ssdmt` (44.268 trechos de MT), `<esquema>.ssdbt` (29.244 de BT), `<esquema>.ramlig` (26.581
 ramais), `<esquema>.trafo` (5.481 transformadores) e `<esquema>.ponnot` (60.549 postes) — a contagem que o portão
@@ -33,15 +37,23 @@ fabricar uma linha que o arquivo não tem, o que a metodologia da casa proíbe. 
 
 import math
 import os
+import re
 import time
 from collections import defaultdict
+
+# o nome do schema entra em SQL por interpolação: só identificador simples do Postgres passa
+_RX_IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
 
 
 def esquema() -> str:
     """Schema do iagro_sat onde a BDGD da distribuidora de referência está carregada (só leitura), lido de
     `PLAT_REDE_REFERENCIA_ESQUEMA`. Devolve "" quando a máquina não tem o ativo — o chamador pula o teste
-    com essa razão. O nome nunca aparece no repositório."""
-    return os.environ.get("PLAT_REDE_REFERENCIA_ESQUEMA", "").strip()
+    com essa razão. O nome nunca aparece no repositório; como ele entra em SQL por interpolação, só passa
+    se for um identificador de schema do Postgres."""
+    nome = os.environ.get("PLAT_REDE_REFERENCIA_ESQUEMA", "").strip()
+    if nome and not _RX_IDENT.match(nome):
+        raise ValueError("PLAT_REDE_REFERENCIA_ESQUEMA não é um identificador de schema do Postgres")
+    return nome
 
 
 def exigir_esquema() -> str:
@@ -53,6 +65,7 @@ def exigir_esquema() -> str:
             "referência carregada num schema do iagro_sat (ativo da casa, só leitura)"
         )
     return e
+
 
 TOLERANCIA_PADRAO_M = 0.05
 _M_POR_GRAU_LAT = 110_540.0
@@ -78,12 +91,21 @@ _SQL_FASE = (
 )
 
 
-def carregar(cur, tenant_id: int, rede_id: str) -> dict:
-    """Insere a rede inteira da cooperativa nas camadas `plat.rede_feicao_*` da rede `rede_id` (que já tem de
-    estar com o pacote eletrica-br importado). Um INSERT...SELECT por tabela de origem; devolve a contagem e
-    o tempo de cada uma. A conexão já vem com o contexto do inquilino (RLS vale para esta carga também)."""
+def carregar(cur, tenant_id: int, rede_id: str, ctmts: list[str] | None = None,
+             com_postes: bool = True) -> dict:
+    """Insere a rede da cooperativa nas camadas `plat.rede_feicao_*` da rede `rede_id` (que já tem de estar
+    com o pacote eletrica-br importado). Um INSERT...SELECT por tabela de origem; devolve a contagem e o
+    tempo de cada uma. A conexão já vem com o contexto do inquilino (RLS vale para esta carga também).
+
+    `ctmts` (item L4-04-b) restringe a carga a uma lista de alimentadores DO ARQUIVO — nada é fabricado, é o
+    mesmo dado com um recorte declarado. Serve para medir em janela de tempo menor que a da rede inteira, e
+    quem usa tem de dizer no relatório quantos dos 20 alimentadores entraram. `com_postes=False` deixa de
+    fora `<esquema>.ponnot` (60.549 postes que, por serem `sem_terminal`, dão zero nó de topologia — medido no
+    item L4-01-b)."""
     tipos = _tipos_da_rede(cur, rede_id)
     cron = {}
+    recorte_linha = "" if ctmts is None else " AND ctmt = ANY(%(ctmts)s)"
+    recorte_ponto = "" if ctmts is None else " WHERE ctmt = ANY(%(ctmts)s)"
 
     def rodar(rotulo, sql, params):
         t0 = time.perf_counter()
@@ -99,15 +121,15 @@ def carregar(cur, tenant_id: int, rede_id: str) -> dict:
         rodar(rotulo, f"""
             WITH carga AS (
               INSERT INTO plat.rede_feicao_linha(tenant_id, rede_id, tipo_id, geom, fase_bitmask, atributos)
-              SELECT %s, %s::uuid, %s::uuid,
+              SELECT %(a)s, %(b)s::uuid, %(c)s::uuid,
                      ST_GeometryN(ST_GeomFromText(wkt, 4326), 1),
                      {_SQL_FASE},
                      {atributos_json}
               FROM {origem}
-              WHERE wkt IS NOT NULL
+              WHERE wkt IS NOT NULL{recorte_linha}
               RETURNING 1
             ) SELECT count(*) AS n FROM carga
-        """, (tenant_id, rede_id, tipo_id))
+        """, {"a": tenant_id, "b": rede_id, "c": tipo_id, "ctmts": ctmts})
 
     carga_linha(
         "ssdmt", f"{exigir_esquema()}.ssdmt",
@@ -128,23 +150,24 @@ def carregar(cur, tenant_id: int, rede_id: str) -> dict:
     rodar("trafo", f"""
         WITH carga AS (
           INSERT INTO plat.rede_feicao_ponto(tenant_id, rede_id, tipo_id, geom, atributos)
-          SELECT %s, %s::uuid, %s::uuid, ST_SetSRID(ST_MakePoint(x, y), 4326),
+          SELECT %(a)s, %(b)s::uuid, %(c)s::uuid, ST_SetSRID(ST_MakePoint(x, y), 4326),
                  jsonb_build_object('cod_id', cod_id, 'pot_nom', pot_nom, 'tip_trafo', tip_trafo,
                                     'ctmt', ctmt, 'uni_tr_at', uni_tr_at)
-          FROM {exigir_esquema()}.trafo
+          FROM {exigir_esquema()}.trafo {recorte_ponto}
           RETURNING 1
         ) SELECT count(*) AS n FROM carga
-    """, (tenant_id, rede_id, tipos[("transformador_de_distribuicao", 1)]))
+    """, {"a": tenant_id, "b": rede_id, "c": tipos[("transformador_de_distribuicao", 1)], "ctmts": ctmts})
 
-    rodar("ponnot", f"""
-        WITH carga AS (
-          INSERT INTO plat.rede_feicao_ponto(tenant_id, rede_id, tipo_id, geom, atributos)
-          SELECT %s, %s::uuid, %s::uuid, ST_SetSRID(ST_MakePoint(x, y), 4326),
-                 jsonb_build_object('cod_id', cod_id, 'tip_pn', tip_pn, 'pos', pos)
-          FROM {exigir_esquema()}.ponnot
-          RETURNING 1
-        ) SELECT count(*) AS n FROM carga
-    """, (tenant_id, rede_id, tipos[("ponto_notavel", 1)]))
+    if com_postes:
+        rodar("ponnot", f"""
+            WITH carga AS (
+              INSERT INTO plat.rede_feicao_ponto(tenant_id, rede_id, tipo_id, geom, atributos)
+              SELECT %s, %s::uuid, %s::uuid, ST_SetSRID(ST_MakePoint(x, y), 4326),
+                     jsonb_build_object('cod_id', cod_id, 'tip_pn', tip_pn, 'pos', pos)
+              FROM {exigir_esquema()}.ponnot
+              RETURNING 1
+            ) SELECT count(*) AS n FROM carga
+        """, (tenant_id, rede_id, tipos[("ponto_notavel", 1)]))
 
     return cron
 

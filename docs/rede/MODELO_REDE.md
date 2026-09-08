@@ -51,6 +51,25 @@ distribuidora pequena sem PONNOT, sem UNSEMT, ou até sem SUB/CTMT (achado deste
 primeiras eram as únicas sem esse tratamento, corrigido) entra com contagem 0 declarada e um desvio
 único explicando, nunca com a importação inteira abortando.
 
+### 3.1 Unidade do campo numérico: medida no arquivo (item L4-01-e)
+
+O dicionário do pacote declara `COMP` em quilômetro e `ENE_SUM` em megawatt-hora (é o que o Módulo 10 da
+ANEEL escreve), mas o extrato de referência da casa traz os dois em **metro** e em **quilowatt-hora**. A
+unidade, portanto, não é fixada pela BDGD: é escolha de quem extraiu o arquivo, e por isso é MEDIDA na
+importação (`app/rede_utilidades/unidades.py`):
+
+| família | régua da medida | faixas |
+|---|---|---|
+| `comp` | razão entre Σ COMP e Σ comprimento geodésico das mesmas geometrias | metro 0,5–2 · quilômetro 0,0005–0,002 |
+| `ene` | energia anual contra Σ POT_NOM × 8.760 h **e** contra o número de unidades consumidoras | quilowatt-hora e megawatt-hora, mil vezes uma da outra |
+
+O resultado sai por campo em `plat.rede_importacao.unidades` (declarada, detectada, fator para a unidade da
+base, evidência). Quem soma (sumário por subrede) e quem exporta (OpenDSS, exportação de subrede em JSON) lê
+o fator de lá por `unidades.fatores_da_rede`. **Sem medida, nada é convertido**: fator 1 e
+`origem: nao_medida` ao lado do número — aplicar o fator do dicionário seria o erro que este tratamento
+existe para evitar. Entre uma faixa e a outra há um vão de propósito; razão que cai no vão e âncoras que
+discordam viram `indeterminada`, com desvio contado.
+
 ## 4. Achado de dado real: RAMLIG não tem segundo ponto de conexão nomeado
 
 Medido contra um extrato real de distribuidora (cooperativa de teste, `tests/dados/bdgd_extrato_etb23.gdb`,

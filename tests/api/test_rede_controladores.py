@@ -286,20 +286,34 @@ def test_tabela_de_subredes_lista_tier_estado_e_resumo(sessao_a, limpar_redes):
 
 
 def test_edicao_depois_da_topologia_deixa_a_subrede_suja(sessao_a, limpar_redes):
-    """Ciclo de vida: a subrede limpa volta a suja quando aparece área suja na rede (edição depois da última
-    construção da topologia)."""
+    """Ciclo de vida: a subrede limpa volta a suja quando a edição TOCA um elemento dela.
+
+    Atualizado no item L4-04-b: a versão anterior deste teste dava a subrede por suja diante de QUALQUER área
+    suja da rede, mesmo a quilômetros dela. Isso é grosseiro demais para a cooperativa (uma edição num
+    alimentador sujaria os outros noventa) e contraria a cláusula do portão do L4-04-b — "só as 2 subredes
+    afetadas ficam sujas". Aqui ficam os dois lados da mesma regra: edição LONGE não suja; edição EM CIMA
+    suja, e a marcação fica gravada no registro (`estado_gravado`), porque reconstruir a topologia apaga a
+    área suja e o estado da subrede não pode desaparecer com ela."""
     rid = _criar_rede(sessao_a, "ciclo-de-vida", limpar_redes)
     _rede_bdgd(sessao_a, rid)
     assert sessao_a.post(f"/api/rede/{rid}/controladores/importar").status_code == 200
     alvo = [s for s in sessao_a.get(f"/api/rede/{rid}/subredes").json()["itens"]
             if s["nome"] == CTMT_COM_EQUIPAMENTO][0]
     assert sessao_a.post(f"/api/rede/{rid}/subredes/{alvo['id']}/atualizar").status_code == 200
+
     _ponto(sessao_a, rid, 40.0, 40.0, "banco_de_capacitores")
+    longe = [s for s in sessao_a.get(f"/api/rede/{rid}/subredes").json()["itens"]
+             if s["nome"] == CTMT_COM_EQUIPAMENTO][0]
+    assert longe["estado"] == "limpa", "edição longe da subrede não a suja"
+    assert longe["areas_sujas_abertas"] >= 1, "a área suja da rede existe, só não toca esta subrede"
+
+    # o disjuntor da rede de teste fica em (30.0, 10.0), o começo do primeiro trecho de média tensão
+    _ponto(sessao_a, rid, 30.0, 10.0, "banco_de_capacitores")
     depois = [s for s in sessao_a.get(f"/api/rede/{rid}/subredes").json()["itens"]
               if s["nome"] == CTMT_COM_EQUIPAMENTO][0]
     assert depois["estado"] == "suja", depois
-    assert depois["estado_gravado"] == "limpa", "o registro continua limpo; suja é o chão"
-    assert depois["areas_sujas_abertas"] >= 1
+    assert depois["estado_gravado"] == "suja", "a marcação fica gravada e sobrevive a reconstruir a topologia"
+    assert depois["tocada_por_area_suja"] is True
 
 
 def test_atualizar_subrede_sem_controlador_e_recusado(sessao_a, limpar_redes):

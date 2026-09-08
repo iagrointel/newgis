@@ -14,6 +14,7 @@ import psycopg2.extras
 
 from app.auth import comum as auth_comum
 from app.erros import ErroAPI
+from app.rede_utilidades import subredes
 
 
 def _jsonb(v: dict) -> str:
@@ -107,7 +108,12 @@ def marcar_area_suja(cur, tenant_id: int, rede_id: str, motivo: str, feicao_id: 
                      wkts: list[str | None], tolerancia_m: float) -> None:
     """Grava o polígono da área suja: envelope da geometria velha U nova, expandido pela tolerância da rede
     (em `geography`, metros de verdade) — qualquer nó/aresta da topologia gravada dentro dele é suspeito até
-    o próximo `habilitar`."""
+    o próximo `habilitar`.
+
+    Item L4-04-b: a mesma edição marca `suja` a SUBREDE que a área toca. A marcação tem de acontecer AQUI, no
+    instante da edição, porque `topologia.habilitar()` apaga as áreas sujas ao reconstruir o índice: se o
+    estado da subrede só fosse calculado a partir das áreas abertas, reconstruir a topologia limparia
+    silenciosamente subredes obsoletas."""
     geoms = [w for w in wkts if w]
     if not geoms:
         return
@@ -115,9 +121,13 @@ def marcar_area_suja(cur, tenant_id: int, rede_id: str, motivo: str, feicao_id: 
     cur.execute(
         "INSERT INTO plat.rede_topo_area_suja(tenant_id, rede_id, motivo, feicao_id, geom) "
         f"SELECT %s, %s::uuid, %s, %s::uuid, "
-        f"ST_Buffer(ST_Envelope(ST_Collect(ARRAY[{partes}]))::geography, %s)::geometry",
+        f"ST_Buffer(ST_Envelope(ST_Collect(ARRAY[{partes}]))::geography, %s)::geometry "
+        "RETURNING id",
         (tenant_id, rede_id, motivo, feicao_id, *geoms, tolerancia_m),
     )
+    linha = cur.fetchone()
+    if linha is not None:
+        subredes.marcar_sujas(cur, rede_id, str(linha["id"]))
 
 
 def _wkt_ponto(lon: float, lat: float) -> str:

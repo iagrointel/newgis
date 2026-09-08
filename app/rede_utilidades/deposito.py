@@ -120,16 +120,23 @@ def importar(cur, tenant_id: int, rede_id: str, doc: dict, usuario_id: int, sha2
         de_g, _, de_c = r["de"].partition("/")
         pa_g, _, pa_c = r["para"].partition("/")
         cur.execute(
-            "INSERT INTO plat.rede_regra(tenant_id, rede_id, tipo, de_tipo_id, para_tipo_id, descricao) "
-            "VALUES (%s, %s::uuid, %s, %s, %s, %s)",
+            "INSERT INTO plat.rede_regra(tenant_id, rede_id, tipo, de_tipo_id, para_tipo_id, descricao, "
+            "tolerancia_m) VALUES (%s, %s::uuid, %s, %s, %s, %s, %s)",
             (tenant_id, rede_id, r["tipo"], tipos[(de_g, int(de_c))], tipos[(pa_g, int(pa_c))],
-             _texto(r.get("descricao"))),
+             _texto(r.get("descricao")), r.get("tolerancia_m")),
         )
+
+    # item L4-02-e: as configurações de traçado que vêm prontas com este pacote. Ficam em módulo Python e
+    # não no arquivo do pacote porque o esquema JSON do pacote é fechado (ver config_tracado.CONFIGS_PADRAO).
+    from app.rede_utilidades import config_tracado
+
+    configs = config_tracado.semear(cur, tenant_id, rede_id, meta["codigo"], usuario_id)
 
     return {
         "dominios": len(doc["dominios"]), "tiers": len(doc["tiers"]), "categorias": len(doc["categorias"]),
         "terminais": len(doc["terminais"]), "grupos": len(doc["grupos"]), "tipos": len(doc["tipos"]),
         "atributos": len(doc["atributos"]), "regras": len(doc["regras"]),
+        "configuracoes_de_tracado": configs,
     }
 
 
@@ -173,8 +180,8 @@ def exportar(cur, rede_id: str) -> dict | None:
     cur.execute("SELECT grupo_id, tipo_id, codigo, nome, tipo_dado, unidade, obrigatorio, origem "
                 "FROM plat.rede_atributo WHERE rede_id = %s::uuid", (rede_id,))
     atributos = [dict(r) for r in cur.fetchall()]
-    cur.execute("SELECT tipo, de_tipo_id, para_tipo_id, descricao FROM plat.rede_regra WHERE rede_id = %s::uuid",
-                (rede_id,))
+    cur.execute("SELECT tipo, de_tipo_id, para_tipo_id, descricao, tolerancia_m FROM plat.rede_regra "
+                "WHERE rede_id = %s::uuid", (rede_id,))
     regras = [dict(r) for r in cur.fetchall()]
 
     meta = {"codigo": rede["pacote_codigo"], "nome": rede["pacote_nome"], "versao": rede["pacote_versao"],
@@ -230,8 +237,9 @@ def exportar(cur, rede_id: str) -> dict | None:
             for a in atributos
         ],
         "regras": [
-            _com({"tipo": r["tipo"], "de": _alvo(r["de_tipo_id"]), "para": _alvo(r["para_tipo_id"])},
-                 "descricao", r["descricao"])
+            _com(_com({"tipo": r["tipo"], "de": _alvo(r["de_tipo_id"]), "para": _alvo(r["para_tipo_id"])},
+                      "descricao", r["descricao"]),
+                 "tolerancia_m", r["tolerancia_m"])
             for r in regras
         ],
     }
