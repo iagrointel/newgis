@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Construtor de camada · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/estilo/camada_esquema.css">
+</head>
+<body class="tela instrumento construtor-camada">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <div id="ferramentas" class="linha-ferramentas">
+      <h1>Construtor de camada</h1>
+    </div>
+    <p class="aviso-beta">análise / beta privado</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" aria-labelledby="t-basico">
+      <h2 id="t-basico">1. dados básicos</h2>
+      <div class="grade-formulario">
+        <label>título da camada
+          <input type="text" id="camada-titulo" maxlength="250" required>
+        </label>
+        <label>tipo de geometria
+          <select id="camada-geometria">
+            <option value="Point">ponto</option>
+            <option value="MultiPoint">multiponto</option>
+            <option value="LineString">linha</option>
+            <option value="MultiLineString">multilinha</option>
+            <option value="Polygon">polígono</option>
+            <option value="MultiPolygon">multipolígono</option>
+            <option value="Geometry">geometria mista</option>
+          </select>
+        </label>
+        <label>SRID
+          <input type="number" id="camada-srid" value="4674" min="1" max="999999" required>
+        </label>
+      </div>
+    </section>
+
+    <section class="cartao" aria-labelledby="t-campos">
+      <h2 id="t-campos">2. campos — arraste da paleta ou use o botão “adicionar”</h2>
+      <p class="ajuda">cada tipo é um cartão que pode ser arrastado para a lista abaixo (arraste-e-solte HTML5,
+        sem biblioteca); quem não usa mouse clica no tipo para adicioná-lo ao fim da lista — as duas formas
+        produzem exatamente o mesmo campo.</p>
+      <ul id="paleta" class="paleta-tipos" aria-label="tipos de campo (arraste ou clique)"></ul>
+
+      <ul id="zona-campos" class="zona-drop" aria-label="campos da camada" aria-dropeffect="copy"></ul>
+      <p id="zona-vazia" class="ajuda">nenhum campo ainda — arraste um tipo da paleta acima até aqui, ou clique nele.</p>
+    </section>
+
+    <section class="cartao">
+      <button type="button" id="criar-camada" class="primario">criar camada</button>
+    </section>
+
+    <section class="cartao" id="resultado-cartao" hidden aria-labelledby="t-resultado">
+      <h2 id="t-resultado">camada criada</h2>
+      <p id="resultado-resumo"></p>
+      <div class="tabela-rolagem">
+        <table id="resultado-tabela" class="tabela">
+          <caption class="sr-only">campos da camada no formato FeatureServer</caption>
+          <thead>
+            <tr><th scope="col">coluna</th><th scope="col">alias</th><th scope="col">tipo</th>
+                <th scope="col">obrigatório</th><th scope="col">domínio</th></tr>
+          </thead>
+          <tbody id="resultado-corpo"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/catalogo/camada_esquema.js"></script>
+</body>
+</html>

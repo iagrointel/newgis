@@ -3,6 +3,52 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 5, setembro de 2026 (item L5-31-construtor-de-camada-esquema: construtor de camada por esquema)
+
+Camada vazia criada por lista de campos arrastados (`POST /api/camadas/esquema`): tipo, tamanho, alias,
+obrigatório, valor padrão, domínio (lista código→rótulo) e índice, mais tipo de geometria e SRID. Reaproveita
+inteiramente o núcleo do L0-04-ingest-vetor — `plat.camada_schema_garantir`/`plat.camada_preparar` (a mesma
+tabela nasce com colunas obrigatórias, `FORCE ROW LEVEL SECURITY`, índice GIST e gatilhos de tenant/versão
+que uma camada importada) e `app.ingestao.nomes.normalizar` para o nome de cada campo (mesma regra de acento,
+palavra reservada e duplicata da ingestão). Alias e domínio — o que o PostgreSQL não guarda — vivem numa
+tabela nova, `plat.camada_campo_meta`, com FK simples para `plat.item(id)` e coerência de inquilino por
+gatilho `plat.tg_camada_campo_meta` (migração `20260907T1509_camada_esquema.sql`, mesmo padrão de
+`plat.item_relacao`/`plat.item_grupo`): mesmo que uma política de RLS falhasse em algum caminho futuro, o
+próprio banco recusaria uma linha de metadado apontando para item de outro inquilino. `GET /api/camadas/{id}/campos` devolve os campos no formato `fields` de um
+FeatureServer Esri (name/type/alias/length/nullable/domain) lendo tipo/tamanho/obrigatoriedade direto de
+`information_schema.columns` — nunca uma cópia que pode desalinhar do banco.
+
+Alterar esquema (`POST .../esquema/plano` mostra o plano; `PUT .../esquema` aplica) trata cada mudança por
+cláusula: adicionar campo e renomear alias sempre aplicam; alargar tamanho de texto ou tipo (`ALARGAMENTO_SEGURO`:
+inteiro→bigint→double, texto sempre aceito como destino) aplica; qualquer mudança que possa truncar ou
+invalidar dado existente (reduzir tamanho, ou um tipo fora da lista de alargamentos seguros — o caso do
+portão, texto→inteiro) só aplica se a camada estiver VAZIA; com dado, é recusada com a mensagem exata e
+NUNCA aplicada calada. Tela `/construtor-camada`: paleta de 8 tipos com Drag and Drop API nativa do HTML5 (0
+byte de biblioteca, mesmo princípio do editor de arrasto do L5-08) e clique como alternativa sem mouse — as
+duas vias produzem exatamente o mesmo campo, provado em e2e.
+
+Refutação do item (300 campos, um deles a palavra reservada `select` e outro com acento/símbolo/maiúscula):
+normalizou os 300 sem colisão de nome e sem 500; o `GET /campos` continuou respondendo certo para as 300
+colunas. Dois bugs reais achados e corrigidos ANTES do adversário: (1) a ordem de inserção tinha
+`camada_campo_meta` ANTES de `plat.item` — a própria FK para `plat.item` recusava a primeira
+gravação, sempre; (2) alargar de `text` (sem teto) para `varchar(N)` não conferia o maior valor já gravado —
+corrigido para medir `max(length(...))` antes de aceitar. Ver `docs/PARIDADE.md` para a tabela completa
+feito/parcial/fora contra a capacidade Esri.
+
+### Medições (`tests/medidas/L5-31-construtor-de-camada-esquema.json`)
+
+| medida | valor | comando |
+|---|---|---|
+| campos criados e lidos de volta em `/campos` | 5 | `GET /api/camadas/{id}/campos` |
+| refutação: 300 campos hostis (reservada, acento, duplicata) | passa | `POST /api/camadas/esquema` com 300 campos |
+| testes da suíte do item | 9/9 | `tests/api/catalogo/test_camada_esquema.py` |
+| e2e (arrasto + clique + criação, 0 erro de console) | 1/1 | `tests/e2e/test_construtor_camada.py`, capturas em `tests/e2e/capturas/L5-31-*` |
+
+### Commits
+
+Ver `git log` do ramo desta trilha (`wt/il531constr`) — migração, backend (`app/catalogo/camada_esquema.py`),
+frontend (`web/construtor_camada.html`, `web/js/catalogo/camada_esquema.js`, `web/estilo/camada_esquema.css`)
+e testes (API + e2e) num só commit por não haver como dividir sem quebrar o portão no meio.
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a

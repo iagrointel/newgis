@@ -945,3 +945,41 @@ fora do pytest, usando o MESMO `TestClient` e o MESMO banco, autenticado como ad
 não exige 2FA) — suficiente porque nenhuma rota nova deste item depende do superadmin. Os e2e (que batem no
 serviço `plat-api` ao vivo, não no `TestClient`) não são afetados por este bloqueio; o serviço foi reiniciado
 uma vez (`systemctl restart plat-api`) para servir o código novo, com RAM conferida antes e depois.
+
+## 18. Construtor de camada por esquema (item L5-31-construtor-de-camada-esquema, migração `20260907T1509_camada_esquema.sql`)
+
+`app/catalogo/camada_esquema.py` (router `/api/camadas/*`) reaproveita inteiramente as primitivas do
+L0-04-ingest-vetor para criar uma camada vazia: `plat.camada_schema_garantir(slug)` garante o schema
+`d_<slug>`, e uma `CREATE TABLE` própria (fid identity + geom + colunas do usuário) é seguida por
+`plat.camada_preparar(schema, tabela, srid, tipo, usuario_id)` — a MESMA função `SECURITY DEFINER` que a
+ingestão chama depois do `ogr2ogr`, adicionando `globalid`/`versao`/`tenant_id`/auditoria, `FORCE ROW LEVEL
+SECURITY`, índice GIST e os gatilhos `tg_tenant`/`tg_versao`. Nome de campo passa por
+`app.ingestao.nomes.normalizar` (mesma função do L0-04, sem duplicar regra).
+
+O que o PostgreSQL não guarda sobre um campo — alias de tela e domínio (lista código→rótulo, formato já
+compatível com o `domain` de um FeatureServer Esri) — vive em `plat.camada_campo_meta`, tabela nova com FK
+simples `item_id REFERENCES plat.item (id) ON DELETE CASCADE` (a chave primária que já existe; nenhuma
+constraint única nova é criada em `plat.item`). A coerência de inquilino é garantida por GATILHO,
+`plat.tg_camada_campo_meta`, no mesmo padrão de `plat.item_relacao` e `plat.item_grupo`: uma linha de
+metadado que aponte para item de OUTRO inquilino é recusada com `metadado_de_outro_inquilino`, mesmo que
+uma política de RLS falhe silenciosamente em algum caminho futuro — defesa em profundidade, não o único
+mecanismo (a RLS de `camada_campo_meta`, `FORCE`, com a política padrão `tenant_id = plat.tenant_atual()`,
+é a linha de frente). `GET
+/api/camadas/{id}/campos` junta as duas fontes: tipo/tamanho/obrigatoriedade vêm de
+`information_schema.columns` (autoridade única — nunca uma cópia que desalinha de um `ALTER TABLE` feito
+por fora), alias/domínio vêm de `camada_campo_meta`.
+
+Alterar esquema é sempre "avaliar, depois aplicar só o que passou": `_avaliar_mudanca` decide por cláusula
+(`adicionar_campo`/`renomear_alias` sempre aplicam; `mudar_tamanho`/`mudar_tipo` aplicam se alargam — tabela
+`ALARGAMENTO_SEGURO`, ex. `integer -> {integer, bigint, double precision, real, text}` — ou se a tabela está
+vazia). O mesmo código serve o `POST .../esquema/plano` (só avalia) e o `PUT .../esquema` (avalia e aplica
+as `aplicavel`), então os dois nunca podem divergir sobre o que é seguro.
+
+Frontend: `web/construtor_camada.html` + `web/js/catalogo/camada_esquema.js`, paleta de tipos com Drag and
+Drop API nativa do HTML5 (sem biblioteca, mesmo princípio "0 byte" do L5-08) e clique como via sem mouse.
+Armadilha encontrada e corrigida: um módulo ES cujo topo faz `await algo(); iniciar();` ANTES de declarar
+com `let` uma variável que `iniciar()` usa por baixo dos panos estoura `ReferenceError: Cannot access
+'x' before initialization` (TDZ do `let`, hoisted mas não inicializado) — a ordem certa é declarar o estado
+inteiro do módulo antes de qualquer chamada de nível superior que possa lê-lo, mesmo que a chamada esteja
+"antes" textualmente de onde o estado é usado dentro de uma função. Só apareceu no e2e real (o `TestClient`
+da API não carrega JS); nenhum teste de API pega esse tipo de erro.
