@@ -40,6 +40,20 @@
       </div>
     </section>
 
+    <section class="cartao" aria-labelledby="t-esri">
+      <h2 id="t-esri" data-i18n="geocodificar.esri_titulo">Serviço compatível com Esri (GeocodeServer)</h2>
+      <p class="fraco" data-i18n="geocodificar.esri_ajuda">o mesmo motor, no protocolo que o ArcGIS Pro, o AGOL e o QGIS consomem; para um cliente externo, acrescente ?token=&lt;token de serviço com o escopo geocodificar:usar&gt; à URL</p>
+      <div class="geo-url"><code id="esri-url" class="mono"></code><span id="esri-copiar"></span></div>
+      <div class="botoes">
+        <button type="button" id="esri-descritor" class="pequeno" data-i18n="geocodificar.esri_descritor">Ver descritor</button>
+        <button type="button" id="esri-candidatos" class="pequeno" data-i18n="geocodificar.esri_candidatos">findAddressCandidates com o endereço acima</button>
+        <button type="button" id="esri-reverso" class="pequeno" data-i18n="geocodificar.esri_reverso">reverseGeocode com a coordenada abaixo</button>
+      </div>
+      <plat-formulario id="form-lote"></plat-formulario>
+      <plat-estado id="esri-estado" hidden></plat-estado>
+      <div id="esri-resultado" class="geo-resultado" hidden aria-live="polite"></div>
+    </section>
+
     <section class="cartao" aria-labelledby="t-reverso">
       <h2 id="t-reverso" data-i18n="geocodificar.reverso_titulo">Coordenada para endereço</h2>
       <plat-formulario id="form-reverso"></plat-formulario>
