@@ -174,13 +174,22 @@ def descritor_da_camada(cur, item_id: str, dados: dict, titulo: str | None) -> d
         "displayField": next((c["nome"] for c in meta if c["papel"] == "atributo"), oid_campo),
         "fields": [_campo_json(c) for c in meta],
         # sem L2-03-a/L2-10-b: nunca anunciar Create/Update/Delete/Uploads (P2 — anúncio sem
-        # mecanismo é o mesmo defeito que um botão que não faz nada)
-        "capabilities": "Query",
+        # mecanismo é o mesmo defeito que um botão que não faz nada). Sync ENTRA (L2-04-k):
+        # createReplica/synchronizeReplica/extractChanges/unRegisterReplica existem e são o
+        # mecanismo de réplica do L2-13-b.
+        "capabilities": "Query,Sync",
         "supportedQueryFormats": "JSON,geoJSON,PBF",
         "hasAttachments": False,
         "hasStaticData": False,
         "isDataVersioned": False,
-        "syncCanReturnChanges": False,
+        "syncCanReturnChanges": True,
+        "syncCapabilities": {
+            "createReplica": True,
+            "synchronizeReplica": True,
+            "extractChanges": True,
+            "unRegisterReplica": True,
+        },
+        "syncModel": "perLayer",
         "relationships": [],
         # subtipos são a linha L2-10-a; typeIdField vazio e types vazio é exatamente como a Esri
         # descreve uma camada SEM subtipo, e é o estado real desta base
@@ -220,13 +229,20 @@ def descritor_do_servico(cur, item_id: str) -> dict:
         "currentVersion": CURRENT_VERSION,
         "serviceDescription": titulo or "",
         "serviceItemId": item_id,
-        "hasVersionedData": False,
-        "supportsDisconnectedEditing": False,
-        "syncEnabled": False,
+        "hasVersionedData": True,
+        "supportsDisconnectedEditing": True,
+        "syncEnabled": True,
         "hasStaticData": False,
         "maxRecordCount": 2000,
         "supportedQueryFormats": "JSON,geoJSON,PBF",
-        "capabilities": "Query",
+        "capabilities": "Query,Sync",
+        "syncCapabilities": {
+            "createReplica": True,
+            "synchronizeReplica": True,
+            "extractChanges": True,
+            "unRegisterReplica": True,
+        },
+        "syncModel": "perLayer",
         "description": "",
         "copyrightText": "",
         "spatialReference": camada["sourceSpatialReference"],
