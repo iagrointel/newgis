@@ -158,4 +158,11 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- análise 3D (L2-09-d; vocabulário na migração 20260908T1703_analise3d.sql): toda rota registra o
+    # evento analise3d/<analise>; com salvar_item o item é criado pela rota do catálogo, que registra o SEU
+    # itens/adicionar além deste
+    ("POST", "/api/analise3d/visada"): ["analise3d/visada"],
+    ("POST", "/api/analise3d/viewshed"): ["analise3d/viewshed"],
+    ("POST", "/api/analise3d/perfil"): ["analise3d/perfil"],
+    ("POST", "/api/analise3d/sombra"): ["analise3d/sombra"],
 }
