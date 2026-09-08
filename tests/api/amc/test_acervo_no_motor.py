@@ -295,7 +295,11 @@ def test_refutacao_revogar_assinatura_durante_o_job_falha_com_mensagem_nunca_zer
     assert r.status_code == 201, r.text
     eid = r.json()["id"]
 
-    original = executor.vetorial.extrair
+    # o executor importa `vetorial` DENTRO da função que extrai vetor (geopandas não está na venv da unidade
+    # systemd), então o remendo é no próprio módulo, não num atributo do executor
+    from app.amc import vetorial as mod_vetorial
+
+    original = mod_vetorial.extrair
     revogado = {"feito": False}
 
     def _extrair_e_revogar(unidades, camada, tipo, srid, parametros=None):
@@ -308,8 +312,7 @@ def test_refutacao_revogar_assinatura_durante_o_job_falha_com_mensagem_nunca_zer
             revogado["feito"] = True
         return saida
 
-    monkeypatch.setattr(executor, "vetorial", executor.vetorial)  # garante o módulo real antes de remendar
-    monkeypatch.setattr(executor.vetorial, "extrair", _extrair_e_revogar)
+    monkeypatch.setattr(mod_vetorial, "extrair", _extrair_e_revogar)
     tenant_id = _tenant_id("demo")
     ctx = ContextoDeTeste(tenant_id)
     try:
@@ -319,7 +322,7 @@ def test_refutacao_revogar_assinatura_durante_o_job_falha_com_mensagem_nunca_zer
         assert VIEW_TI.replace("public_", "").replace("_", "-") or True  # a mensagem cita o id da camada, não a view
         assert CAMADA_TI in str(exc.value), str(exc.value)
     finally:
-        monkeypatch.setattr(executor.vetorial, "extrair", original)
+        monkeypatch.setattr(mod_vetorial, "extrair", original)
         sessao_a.post(f"/api/acervo/camadas/{VIEW_TI}/assinatura")  # devolve para o resto do módulo
 
     with banco.db(banco.Contexto(tenant_id, 0, "teste")) as cur:
