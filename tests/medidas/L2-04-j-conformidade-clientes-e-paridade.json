@@ -1,0 +1,57 @@
+{
+ "item": "L2-04-j-conformidade-clientes-e-paridade",
+ "medido_em": "2026-09-07T21:27:28+00:00",
+ "versao_do_repositorio": "65d6e964de08943b99d8428874ce22aeb886f24a",
+ "comando": "venv/bin/python tests/esri/conformidade.py  (alvo: make conformidade)",
+ "clausulas": {
+  "conformidade_json_gerado_com_data_versao_e_resultado_por_linha": {
+   "resultado": "feito",
+   "prova": "tests/esri/conformidade.json tem gerado_em, versao_do_repositorio e uma entrada por linha com provas e resultado",
+   "linhas": 102,
+   "contagem": {
+    "suportado": 81,
+    "parcial": 5,
+    "fora": 12,
+    "nao_medido": 4,
+    "refutado": 0
+   }
+  },
+  "paridade_md_gerado_sem_edicao_manual": {
+   "resultado": "feito",
+   "prova": "venv/bin/python tests/esri/conformidade.py --conferir devolve 0; tests/unit/test_conformidade_matriz.py::test_secao_do_paridade_e_gerada_sem_edicao_a_mao passa"
+  },
+  "pyqgis_headless_em_docker_carrega_6_servicos": {
+   "resultado": "nao feito",
+   "motivo": "QGIS ausente da maquina (medido em tests/api/test_conformidade_clientes.py::test_clientes_ausentes_sao_medidos_nao_presumidos) e a imagem oficial em conteiner nao cabe no orcamento de disco desta trilha (raiz a 93 por cento). As 6 linhas do QGIS ficam nao_medido na matriz, nunca suportado"
+  },
+  "cliente_python_arcgis_featurelayer_query": {
+   "resultado": "nao feito",
+   "motivo": "pacote arcgis ausente da venv (medido no mesmo teste); instalar passa de 1 GB. Linha nao_medido na matriz"
+  },
+  "owslib_wfs_wms_sem_excecao": {
+   "resultado": "feito para WFS, nao se aplica para WMS",
+   "prova": "tests/api/test_conformidade_clientes.py::test_owslib_le_o_getcapabilities_do_nosso_wfs_2_0 e ::test_owslib_faz_getfeature_e_devolve_as_feicoes_da_camada passam contra uvicorn proprio na porta 8326; nao existe rota WMS neste repositorio (medido: 404 e nenhum caminho wms/wmts no OpenAPI)"
+  },
+  "protocolo_do_parceiro_pendente": {
+   "resultado": "feito",
+   "prova": "docs/TESTE_PARCEIRO_PRO_AGOL.md declara 'resultado: pendente'; tests/unit/test_conformidade_matriz.py::test_protocolo_do_parceiro_existe_e_esta_pendente reprova qualquer 'feito' sem evidencia"
+  },
+  "teamengine_ogc": {
+   "resultado": "nao feito",
+   "motivo": "suite oficial roda em conteiner ausente da maquina e fora do orcamento de disco; linha nao_medido"
+  },
+  "matriz_cobre_todos_os_irmaos_construidos": {
+   "resultado": "feito",
+   "prova": "tests/unit/test_conformidade_matriz.py::test_todo_item_irmao_construido_aparece_na_matriz"
+  }
+ },
+ "carga_1min": 6.6201171875,
+ "disco_livre_raiz_gb": 33.6,
+ "achados_de_integracao_consertados": [
+  "estilo do catalogo nao virava drawingInfo: o descritor entregava o documento inteiro ao conversor e o compilador da casa emite cadeia case, nao match",
+  "tile vetorial devolvia 422 porque o repasse do visualizador casava antes no mesmo prefixo /tiles/"
+ ],
+ "falhas_pre_existentes_nao_deste_item": [
+  "tests/api/test_mapa_api.py::test_tile_de_tabela_fora_do_catalogo_e_recusado e 4 de tests/api/test_leitor_tiles.py reprovam nesta trilha por PLAT_DSN_LEITOR ausente do ambiente; medido antes e depois das mudancas deste item, com o mesmo resultado"
+ ]
+}

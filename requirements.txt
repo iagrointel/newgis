@@ -20,6 +20,10 @@ typing_extensions==4.15.0
 anyio==4.13.0
 idna==3.13
 python-dotenv==1.2.2
+# python-multipart: exigido pelo starlette para `request.form()` com multipart, que é como o cliente Esri
+# manda anexo (`addAttachment`/`updateAttachment`/`uploads/upload` do item L2-04-d). Sem ele o starlette
+# levanta AssertionError na primeira leitura de formulário. Pacote puro, 30 KB, sem dependência transitiva.
+python-multipart==0.0.32
 #
 # httpx/httpcore: app/rede/osrm.py (L2-11-c) e app/conexao/seguranca.py (L6-02-a) importam direto (não é só
 # suíte); httpcore em particular porque app/conexao/seguranca.py monta um httpcore.ConnectionPool próprio com

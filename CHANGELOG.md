@@ -3,6 +3,33 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L2-04-d-featureserver-edicao-anexos: escrita pelo protocolo Esri sobre a porta única)
+
+`applyEdits` (na camada e no serviço), `addFeatures`/`updateFeatures`/`deleteFeatures`, `calculate`, os seis
+caminhos de anexo do protocolo Esri e `uploads/upload`, montados em
+`/rest/services/{item}/FeatureServer/0/*` (`app/consulta/rotas_edicao_esri.py` + `app/consulta/esri_edicao.py`).
+Nenhuma dessas rotas escreve em tabela de camada: todas traduzem o pedido Esri e chamam
+`app.edicao.servico.aplicar_edicoes`, a porta única de escrita do item L2-03-a — o que vale para a API da
+casa (tipo, domínio, CRS, propriedade, versão otimista) passou a valer para o cliente Esri sem cópia de regra.
+
+Três decisões, no ADR `docs/adr/20260907T2016-featureserver-escrita-esri.md`: (1) erro sai com o código HTTP
+REAL e o corpo no formato Esri, em vez do HTTP 200 com erro no corpo que a Esri usa; (2) `rollbackOnFailure`
+(padrão verdadeiro) é um `SAVEPOINT` de lote, e a resposta continua trazendo o resultado feição a feição, com
+`rolledBack`; (3) `calcExpression.sqlExpression` do `calculate` é traduzido para a linguagem de expressão da
+casa (L2-03-f) e avaliado em Python — SQL do cliente nunca chega ao banco.
+
+Migração `20260907T1927_featureserver_edicao.sql`: `origem` em `plat.feicao_historico` (preenchida pelo
+gatilho a partir do parâmetro de sessão `plat.origem`, padrão `api`), `numero bigserial` em
+`plat.feicao_anexo` (o protocolo Esri identifica anexo por inteiro; o uuid continua sendo a chave) e
+`plat.esri_upload` (o bilhete do arquivo enviado antes de existir feição-pai).
+
+Medidas em `tests/medidas/L2-04-d-featureserver-edicao-anexos.json`, com o comando exato: 26 testes de API
+dedicados, todos passando. Duas cláusulas do portão NÃO foram feitas e estão nomeadas lá: edição por QGIS
+(não instalado, sem ambiente gráfico) e a prova com o cliente Python `arcgis` (pacote não instalado). Ao
+regerar `docs/openapi.json` apareceu que a junção dos ramos de origem havia apagado as rotas de edição, de
+mapa e do FeatureServer do arquivo comitado; foram restauradas e cada um dos 29 (método, caminho) novos ganhou
+caso na varredura cruzada A→B, que segue em 100 % de cobertura.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -129,6 +156,363 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 3, setembro de 2026 (item L2-04-j-conformidade-clientes-e-paridade: matriz de conformidade viva)
+
+`tests/esri/conformidade.py` + `make conformidade`: a lista de serviços do `docs/PARIDADE.md` deixa de ser
+texto escrito à mão e passa a ser saída de medida. 102 linhas (45 parâmetros da operação `query`, diretório,
+edição, anexos, OGC API Features, WFS 2.0, tiles vetoriais, serviços ainda não construídos e clientes), cada
+uma nomeando a prova que a sustenta — um nó de teste ou uma chave dos roteiros de sonda dos itens irmãos. O
+script roda as provas, grava `tests/esri/conformidade.json` com data e versão do repositório, e reescreve a
+seção do documento entre marcadores. Regra: prova que falha derruba a linha para REFUTADO; linha sem prova
+executada cai para "não medido" e nunca vira "suportado". `tests/unit/test_conformidade_matriz.py` reprova
+documento editado à mão, linha afirmada sem prova, parâmetro da doc Esri ausente da matriz e item irmão
+construído fora dela.
+
+`tests/api/test_conformidade_clientes.py`: cliente OGC de terceiros (owslib) contra um uvicorn próprio da
+trilha — lê o `GetCapabilities` do nosso WFS 2.0, monta o catálogo e faz `GetFeature` pelo código dele.
+Também mede a AUSÊNCIA de rota WMS (404 e nenhum caminho no OpenAPI), e mede que QGIS e o pacote Python
+`arcgis` não estão nesta máquina: as linhas que dependem deles ficam "não medido", com o motivo escrito.
+`docs/TESTE_PARCEIRO_PRO_AGOL.md` traz o protocolo para quem tem ArcGIS Pro e ArcGIS Online executarem, com
+`resultado: pendente` até haver evidência devolvida.
+
+Dois defeitos que só aparecem com os ramos da família juntos foram consertados no caminho: o estilo do
+catálogo não chegava ao cliente Esri (o descritor entregava o documento de estilo inteiro ao conversor de
+`drawingInfo`, e o compilador da casa emite cadeia `case`, que o conversor não lia), e o tile vetorial
+devolvia 422 (o repasse do visualizador casava antes no mesmo prefixo `/tiles/`).
+
+## turno 3, setembro de 2026 (item L2-04-e-vector-tile-server-tilejson: servidor de tiles vetoriais em 3 contratos)
+
+`app/tiles/vector_tile_server.py` + `app/tiles/exportacao.py` + `app/tiles/{autorizacao,martin_cliente,
+tilejson,camada}.py`: **contrato 1** TileJSON 3.0.0 (`GET /tiles/{token}/{item}/tilejson.json`) + tile XYZ puro
+(`.../{z}/{x}/{y}.pbf`) para MapLibre/QGIS; **contrato 2** VectorTileServer compatível Esri
+(`GET /svc/{token}/rest/services/{item}/VectorTileServer` com `tileInfo` Web Mercator 512 px e `capabilities:
+TilesOnly`, estilo em `.../resources/styles/root.json` compilado por `app.estilos.padrao`/`compilador` — item
+L2-02-a, reusado sem reescrita —, sprites/glyphs REAIS mas vazios enquanto L2-02-e não existe, e o tile em ordem
+Esri `.../tile/{z}/{y}/{x}.pbf`); **contrato 3** exportação por URL (`GET /svc/{token}/camadas/{item}.geojson|
+.kml|.csv|.fgb|.gpkg`, filtro `where`/`bbox` reusando o AST do FeatureServer — L2-04-b/c). Token no CAMINHO em
+todos os três (decisão do ladrilho raster, item L1-02, citada como ativo da casa a reusar).
+
+Medido com Martin real (`.bin/martin` v1.15.0, mesmo binário do L2-01-b) e, para o contrato 2, com PyQGIS
+headless de verdade: TileJSON válido contra o esquema oficial 3.0.0 (vendorizado em
+`docs/esquemas/vendorizados/`); tile Esri (`z/y/x`) e MapLibre (`z/x/y`) **byte a byte idênticos** por construção
+(`_tile_bytes` é o único ponto que fala com o Martin); `root.json` passa no validador oficial
+`@maplibre/maplibre-gl-style-spec`; QGIS (`QgsVectorTileLayer` + `QgsMapBoxGlStyleConverter`) carregou a camada
+por URL do `root.json` e renderizou as feições com requisições HTTP reais ao servidor (captura em
+`tests/medidas/L2-04-e_qgis_captura.png`); KML de 10.000 feições confere com `ogrinfo`; GeoJSON de 1.000.000 de
+feições via cursor nomeado do Postgres, RSS de pico do worker **145 MB** (teto do portão: 300 MB); token
+revogado devolve 401 nas 10 rotas testadas (tiles, VectorTileServer, exportações).
+
+Achados do adversário, corrigidos ou registrados como fronteira: `/vsistdout/` não funciona com o driver
+FlatGeobuf nesta versão do GDAL (3.8.4) — FlatGeobuf e GeoPackage passaram a escrever em arquivo temporário via
+`ogr2ogr`, apagado ao fim; tile z25 (fora do intervalo 0-24 aceito por `plat.camada_tile_garantir`) vira 502
+nomeado, nunca 500 cru; `.csv` de camada com geometria MULTI funciona, e "camada sem geometria" não existe neste
+catálogo (item alheio ao escopo do token dá 403, nunca 404/500); o ETag muda de verdade depois de editar uma
+geometria, mas fica preso ao cache de 5 min em memória do próprio Martin (decisão já tomada pelo L2-01-b) dentro
+dessa janela — sem prazo declarado no portão, registrado como achado honesto, não como defeito. `docs/adr/
+20260907T1648-vector-tile-server-tres-contratos.md` e `tests/medidas/L2-04-e-vector-tile-server-tilejson.json`
+têm a cláusula a cláusula. Fora do turno: Pro/AGOL reais (D20, exige credencial do parceiro); sprite/glyphs de
+verdade (depende de L2-02-e, não construído).
+
+## turno 4, setembro de 2026 (item L2-04-servicos-esri-ogc: diretório do FeatureServer, OGC API Features e WFS 2.0)
+
+Construído em volta da operação `query` do FeatureServer (item L2-04-c, `wt/fsquery`, ADR 0018) sem reescrevê-la:
+`app/consulta/rotas_servico.py` (descritor de serviço `.../FeatureServer?f=json` e de camada `.../FeatureServer/0
+?f=json` — `fields`, `geometryType`, `objectIdField`, `fullExtent`), `app/consulta/rotas_ogc_features.py` (OGC API
+Features Part 1: landing, conformance, collections, items com bbox/limit/offset, item único, GeoJSON puro) e
+`app/consulta/rotas_wfs.py` (WFS 2.0 KVP: GetCapabilities validado pelo cliente real `owslib.wfs.WebFeatureService`,
+DescribeFeatureType mínimo, GetFeature em GeoJSON e GML 3.2 simples). `applyEdits`/anexos/`queryRelatedRecords`/
+`relationships` ficam de fora — dependem de L2-03-edicao e L2-10-b, nenhum construído (ADR 0019).
+
+Bateria de 13 ataques (item_id com aspas/comentário SQL/`;`, bbox com sub-select/`pg_sleep()`/função não prevista,
+BBOX do WFS com injeção, `REQUEST` desconhecida, `feature_id` não inteiro, unicode no item_id, cross-tenant nas 3
+raízes): **13/13 recusados com 400/404, nenhum 500**. Dois achados corrigidos no mesmo turno: (1) `item_id::uuid`
+sem validar antes deixava o Postgres levantar exceção sem handler → 500 real, inclusive na `/query` original do
+L2-04-c — corrigido com validação de UUID compartilhada; (2) landing/conformance do OGC API Features respondiam 200
+para item de outro inquilino (sem vazar dado, mas sem checar posse) — corrigido tocando `plat.item` sob RLS antes de
+responder. `docs/PARIDADE.md` e `tests/medidas/L2-04-servicos-esri-ogc.json` têm a tabela cláusula a cláusula.
+
+Fora do turno: QGIS/ArcGIS Pro/AGOL reais carregando o serviço (sem ambiente gráfico nesta máquina, mesma limitação
+já registrada para L2-04-c e para Chrome headless); OGC API Features Part 3 (CQL2), WFS-T; GML validado contra o
+XSD de referência do OGC.
+
+## turno 3, setembro de 2026 (item L2-04-b-featureserver-catalogo-metadados: diretório de serviços Esri por token)
+
+- Diretório de serviços compatível com Esri em `/svc/{token}/rest/...`: `rest/info`, `rest/generateToken`,
+  `rest/services` (pastas do catálogo), `rest/services/{pasta}`, `FeatureServer`, `FeatureServer/{id}`,
+  `FeatureServer/layers`, `FeatureServer/info/itemInfo` e `FeatureServer/info/metadata` (ISO 19139).
+  O token vai no caminho porque é uma URL que se entrega e o cliente navega sozinho a partir dela;
+  a consequência está declarada no ADR `20260907T1955-diretorio-servicos-esri-por-token.md`.
+- O FeatureServer não foi reescrito: `app/consulta/rotas_servico.py` passou a expor
+  `descritor_do_servico`/`descritor_da_camada` e o diretório as chama. O descritor da camada ganhou
+  `indexes` (lidos de `pg_index`), `editFieldsInfo`, `types`/`subtypes`/`typeIdField`, `timeInfo`,
+  `ownershipBasedAccessControlForFeatures` e `domain` por campo. `currentVersion` foi de 11.3 para 11.4.
+- `app/consulta/formato_esri.py`: `f=json|pjson|html` e `callback` (JSONP) num lugar só. `f` desconhecido
+  é 400 e nunca 500; nome de callback fora de identificador simples é recusado, nunca ecoado.
+- `app/consulta/renderizador.py`: estilo MapLibre → `drawingInfo`. Cor constante vira `simple`,
+  `["match", …]` vira `uniqueValue`, `["step", …]` vira `classBreaks`, `layout.text-field` vira
+  `labelingInfo`. Expressão fora desses casos não é aproximada: sai `simple` cinza com o motivo.
+- `app/consulta/cors_servicos.py`: CORS aberto em `/svc`, `/ogc` e `/tiles` — e só. Em `/api` a
+  credencial é o cookie de sessão, e abrir ali seria falsificação de requisição entre sítios legível.
+- O `drawingInfo` lê a relação `estilo_de_camada` (item de tipo `estilo` → camada), declarada pelo
+  `PUT /api/itens/{estilo}/relacoes` que já existia; nada foi acrescentado ao catálogo por causa disto.
+- Fica declarado como ausente, não simulado: `fields[].domain` nulo, `types`/`subtypes`/`relationships`
+  vazios e `capabilities` só `Query` — as linhas L2-10-a, L2-10-b e L2-03-a não estão nesta base.
+## turno 5, setembro de 2026 (item L2-03-edicao: fechamento — dois achados corrigidos, junção do turno 4)
+
+Retomada do turno 4 (sessão anterior morreu por limitação do servidor da API antes de registrar, comitar
+e enfileirar): conferência independente da suíte revelou dois defeitos reais, além do já corrigido pelo
+próprio turno 4. Corrigidos e cobertos por teste permanente (não script de auditoria à parte — removido,
+mesma convenção do commit `054286a`):
+
+1. `app/edicao/combinar.py::unir` checava `versao` declarada ANTES de checar existência/acesso do id — um
+   id inexistente ou de outro inquilino, quando listado depois de um id existente sem `versao`, nunca
+   chegava a 404 (ficava preso em 422 `versao_ausente`). Corrigido para existência de todos os ids primeiro,
+   depois versão de todos (`tests/api/test_edicao_dividir_unir.py::test_unir_sem_declarar_versao_de_uma_das_feicoes_e_422`
+   fecha o buraco original: `versoes` incompleto não pode mais deixar uma origem sem checagem de
+   concorrência).
+2. `limites.ANEXO_TAMANHO_MAX` (10 MiB) igual ao teto de corpo do middleware (`CORPO_MAX_PADRAO_BYTES`,
+   também 10 MiB) — como o anexo viaja em JSON com o conteúdo em base64 (~4/3 de inchaço), o 413 genérico
+   do corpo sempre disparava antes do 422 `anexo_grande` específico rodar; o limite documentado de anexo
+   era, na prática, letra morta. Reduzido para 7 MiB, com folga sob o teto de corpo mesmo codificado
+   (`tests/api/test_edicao_historico_anexos.py::test_anexo_no_teto_real_ainda_da_anexo_grande_nao_corpo_grande`).
+
+Suíte dedicada reconferida após os dois consertos: verde (mesmo comando do turno 4); `ruff` e
+`sem-marcador` verdes. Portão e veredito do item-pai continuam os do turno 4 (nenhuma cláusula mudou de
+prova, só a implementação ficou mais correta). Handoff em `laco/handoffs/T5/L2-03-edicao/`.
+
+## turno 4, setembro de 2026 (item L2-03-edicao: edição de feições no mapa — criar/mover/vértice/dividir/unir/apagar, formulário, anexos, desfazer, histórico e restauração)
+
+Constrói sobre o L2-03-a (API única de escrita) e o L2-01-mapa-web (visualizador): `web/js/mapa/edicao.js`
+inteiro novo, ligado à tela `/mapa`. Criar ponto/linha/polígono por clique; mover e editar vértice
+por arrasto (a geometria de trabalho vem sempre de `GET /api/camadas/{id}/feicoes/{globalid}`, exata,
+nunca da versão recortada por tile); apagar; formulário de atributos gerado dos mesmos `campos`/
+`regras_campo` da camada, com domínio/obrigatório espelhados no navegador — e reconferidos direto na
+API nesta rodada, sem passar pela tela, provando que a validação real mora no servidor (cláusula do
+item-pai). Aderência (checkbox "aderir a vértice próximo", tolerância de 12 px sobre feições
+renderizadas) e edição em lote (N feições selecionadas por shift-clique, um atributo aplicado a todas
+num único lote `atualizar`, reaproveitando o array heterogêneo que o L2-03-a já aceitava).
+
+Histórico e restauração são novos no banco: `plat.feicao_historico` + gatilho genérico
+`feicao_historico_registrar()` ligado por `plat.camada_preparar` a TODA tabela de camada (não só a
+escrita que passa pela API — SQL direto, importação e réplica também ficam registrados), migração
+`20260907T1025`. Restaurar reaplica pela MESMA porta de escrita (`_inserir`/`_atualizar` de
+`app.edicao.servico`) — feição existente vira `UPDATE`, feição apagada vira `INSERT` com o MESMO
+`globalid` (referência externa nunca quebra); a própria restauração grava um marcador
+`operacao='restaurar'` a mais no histórico, que nunca é reescrito.
+
+Anexos (`plat.feicao_anexo`, migração `20260907T1035`): limite de tamanho e de tipo aplicados no
+SERVIDOR em duas etapas (tamanho da string base64 antes de decodificar, depois o tamanho real) e
+contra o conteúdo de fato (item L7-03-b) — um PDF disfarçado de PNG é recusado mesmo com
+`content_type` mentindo. Objeto guardado no Garage por trás do adaptador já existente (`app.objetos`).
+
+Dividir/unir (`app/edicao/combinar.py`): geometria estrutural nunca sai do MVT (recortado/generalizado
+por tile) — as duas operações leem a geometria exata do banco e usam `ST_Union`/`ST_LineMerge`/
+`ST_LineSubstring`. `unir` funciona para qualquer família de geometria; `dividir` está escopado a
+LineString/MultiLineString de uma parte só nesta passagem (dividir polígono por linha de corte fica
+de fora, registrado no ADR, não escondido).
+
+Dois defeitos de infraestrutura achados e corrigidos nesta rodada (não só no código do item):
+`app/garage.py::criar_chave` devolvia um dicionário sem `accessKeyId` no caminho de reaproveitamento
+(`ListKeys` usa a chave `id`, `CreateKey` usa `accessKeyId`) — crashava com `KeyError` em vez de um
+erro que diz o que aconteceu; e `docs/gerar_limites.py` ficaria não determinístico se um limite fosse
+guardado como `frozenset` (a ordem de iteração de um set do Python varia entre execuções) — corrigido
+trocando `ANEXO_TIPOS_PERMITIDOS` para tupla ordenada antes de existir um segundo caso.
+
+ADR: `docs/adr/20260907T1123-historico-restauracao-anexos-feicao.md`. Medidas em
+`tests/medidas/L2-03-edicao.json` — sem cláusula numérica de tempo neste item; a suíte dedicada (75
+testes de API/unit) e o e2e dedicado (6 cláusulas no chromium do playwright, 0 erro de console) estão
+registrados lá com o comando exato. Fronteira honesta e vereditos completos no handoff do item.
+
+## turno 3, setembro de 2026 (item L2-03-a-api-edicao-transacional: edição transacional de feições — única porta de escrita)
+
+`POST /api/camadas/{id}/edicoes` (`app/edicao/`): equivalente do `applyEdits` da Esri e, a partir
+daqui, a única porta de escrita de feição para navegador, PWA, FeatureServer (L2-04-d) e OGC
+(L2-04-g). Corpo com `adicionar`/`atualizar`/`apagar` numa transação — tudo-ou-nada por padrão
+(`modo=transacao`), ou `modo=parcial` com `SAVEPOINT` por feição, devolvendo resultado feição a
+feição (como o `applyEdits` com `rollbackOnFailure=false`). Roda direto contra a tabela de camada
+`d_<slug>.c_<uuid16>` que `plat.camada_preparar` (029_ingestao_vetor.sql) já cria — nenhuma tabela
+nova (migração 20260906T1859, bump do esquema `camada_vetorial` v2→v3, só propriedades opcionais).
+
+Validação sempre no servidor: tipo de geometria e SRID da coluna (com a mesma promoção
+Point/LineString/Polygon → Multi* que `app/ingestao/carregar.py` usa na carga); `ST_IsValid`, com
+`ST_MakeValid` só quando `corrigir_geometria=true` (sem isso, polígono inválido é 422); domínio de
+atributo por `dados.regras_campo` (obrigatório, somente-leitura, lista de valores ou
+mínimo/máximo — mecanismo próprio deste item; quando o L2-10-a-dominios-subtipos, entregue noutra
+trilha, for integrado, ganha uma segunda fonte compartilhada entre camadas, não substitui esta);
+tamanho de texto (64 KiB); concorrência otimista pela coluna `versao` já existente na tabela de
+camada — atualizar/apagar com a versão errada devolve `409` com a feição ATUAL, nunca sobrescreve
+em silêncio; campos de rastreio (`fid`, `globalid`, `versao`, `tenant_id`, `criado_*`,
+`atualizado_*`) NUNCA aceitos do corpo, sempre preenchidos pelo servidor; "só as próprias feições"
+(`edicao.somente_proprias`) e "geometria travada" (`edicao.geometria_travada`) por camada, com
+`feicoes.editar_total` (perfil admin) ignorando as duas. Sanidade de CRS não declarado: coordenada
+fora de `[-180,180]`/`[-90,90]` numa camada de SRID geográfico sem `crs.srid` declarado é `422
+geometria_fora_do_crs` (cobre o envio de metros — UTM/Web Mercator — sem declarar). Um evento por
+LOTE (`camadas/editar`, nunca um por feição) com a contagem de adicionadas/atualizadas/apagadas, e
+bump de `dados.tiles_versao` no item (ponto de integração para a invalidação de tiles do L2-01-b,
+ainda pendente). Isolamento entre inquilinos por RLS FORCE já existente: o inquilino B recebe `404`
+ao ler, atualizar ou apagar feição de A — nunca `403`, nunca sucesso silencioso, porque a existência
+não é confirmada a quem não pode ver (ADR 20260907T0216).
+
+Medido: 1.000 feições em `adicionar` (modo transação) em menos de 1 s, contra o teto de 3 s do
+portão (`tests/medidas/L2-03-a-api-edicao-transacional.json`). Refutação do item (roteiro do
+adversário) rodada nesta passagem: lote de 100 mil feições recusado pelo teto de lista
+(`EDICAO_LOTE_MAX=2.000`); `crs.srid=0` recusado pela própria validação de entrada; texto de 1 MB
+recusado (`EDICAO_TEXTO_MAX=64 KiB`); geometria em outro CRS sem declarar recusada pela sanidade de
+grau; feição de outro inquilino nunca aceita (404); duas sessões editando a mesma feição — só uma
+ganha (200), a outra recebe 409 com a versão atual, nunca as duas 200. 20 testes verdes em
+`tests/api/test_edicao_transacional.py`.
+
+Fora desta passagem (fronteira honesta, ver ADR): matriz fina de permissão por operação × grupo
+(ficou em `edicao.habilitada`/`somente_proprias`/`geometria_travada` + privilégio único);
+integração com `plat.dominio` do L2-10-a; consumidor da invalidação de tiles (L2-01-b); histórico/
+restauração de feição (L2-03-d-historico-restauracao) — a coluna `versao` cobre só a concorrência
+otimista, não um log de mudanças.
+## turno 4, setembro de 2026 (item L2-01-mapa-web: visualizador de mapa próprio, do Martin à impressão)
+
+Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava chegar a `master`.
+
+- **Servidor de tiles**: Martin 1.15.0 (musl, sha256 do pacote fixado em `deploy/martin_instalar.sh`) como
+  unidade `plat-martin` em `127.0.0.1:8151`, publicando SÓ funções (`auto_publish.tables: false`) — a
+  tabela crua da camada nunca é exposta. Papel de leitura `plat_leitor` (LOGIN, sem BYPASSRLS, sem ser
+  dono), `plat.contexto_por_token` e a função de tile por camada com RLS vieram do trabalho dos itens
+  L2-01-b/L2-04-a, que nunca tinha sido juntado.
+- **API do mapa** (`app/mapa/`): `GET /api/mapa/camadas` com estilo MapLibre e legenda geradas da
+  simbologia; `GET /api/mapa/camadas/{id}/tilejson` cunhando token de 12 h com escopo de UMA camada;
+  repasse `GET /tiles/{esquema}/{funcao}/{z}/{x}/{y}` com a mesma autorização do `auth_request` do nginx
+  (uma implementação, duas portas); `plat.camada_extensao` para o "enquadrar".
+- **Tela `/mapa`**: lista de camadas com ordem (arrastar e por botão), opacidade, ligar/desligar e
+  enquadrar; legenda; janela de atributos (campo nulo aparece marcado, multi-geometria não se repete);
+  medição geodésica de distância e área; pesquisa de endereço (CNEFE) e de coordenada em decimal e em
+  grau-minuto-segundo; escala, coordenadas e escala numérica 1:N; troca de mapa-base; impressão em PNG e
+  em PDF com escala, barra de escala e seta de norte.
+- **`GET /api/geocodificar`**: geocodificar é leitura e agora tem o verbo certo (o POST continua).
+- Medido com 1.000.000 de feições: 2,4 s do clique ao primeiro desenho, 1,5 s de zoom até `idle`, 61 MB
+  de heap; 10 camadas ao mesmo tempo em 4,3 s, pan em 302 ms, 24,8 MB. Tile z8 pelo repasse: 406 ms
+  frio, 21 ms quente. Detalhe em `tests/medidas/L2-01-mapa-web.json`.
+- Dois defeitos reais achados pelos testes e corrigidos: `attribution: undefined` fazia o MapLibre
+  recusar a fonte inteira em silêncio; repassar `Content-Encoding: gzip` com corpo já descompactado
+  entregava tile ilegível ao navegador. Registrados no ADR 20260907T0400.
+## turno 4, setembro de 2026 (item L2-01-b-martin-tiles-vetoriais: servidor de tiles em produção, PARCIAL)
+
+Sobe o serviço Martin de verdade (v1.15.0, binário oficial, sha256 conferido; `deploy/martin.yaml`,
+`deploy/plat-martin.service`) em cima do contrato do L2-04-a, com generalização por zoom
+(`ST_SimplifyPreserveTopology` abaixo de z12) e corte de 10.000 feições por tile marcado (migração
+`20260906T1955_martin_generalizacao.sql`, já existente desta trilha antes deste turno). Duas peças novas:
+
+1. **`/internal/tiles/verificar`** (`app/tiles/rotas.py`): o Martin (`martin-core::GetTileWithQueryError`)
+   devolve 500 para QUALQUER erro do Postgres — nunca 401/403, conferido no código-fonte da tag
+   `martin-v1.15.0`. A cláusula "sem token = 401" só existe porque o nginx faz `auth_request` para esta
+   rota ANTES de repassar ao Martin. ADR `20260907T0235`.
+2. **`plat.item_da_tabela`** (migração `20260907T0213_item_da_tabela.sql`): fecha um achado do próprio
+   adversário desta rodada — a 1ª versão da rota acima recebia o item de query param do cliente, e um
+   token amplo de QUALQUER inquilino autenticava para o item de QUALQUER outro (a `escopo_cobre` só
+   compara texto do token, nunca dono do item). Agora o item vem da tabela que está na URL, nunca do
+   cliente.
+
+Medido (`tests/medidas/L2-01-b-martin-tiles-vetoriais.json`, trilha própria, Martin/nginx de teste em
+8351/8451, não a unidade de produção): camada de 100 mil pontos sintéticos — tile z8 frio p95 41,8 ms,
+quente p95 4,3 ms (limite 200/20 ms, passou); camada de 472.780 setores censitários do IBGE já na casa (a
+hipótese do item citava "1 mi", número real registrado) servida por PMTiles (tippecanoe v2.80.0, `-z14
+--drop-densest-as-needed --extend-zooms-if-still-dropping --maximum-tile-bytes=500000`) — 110 tiles
+amostrados em z4-z14, 0 erro, 1 excede 1 MB por 1,3% (z9, região metropolitana de SP); RLS cruzada,
+revogação de token e invalidação de cache por versão (0,12 s) passaram; 200 pedidos paralelos ao pior caso
+(z0 da camada de 472,8 mil) na fonte PMTiles: 200/200 OK, RAM do Martin 38-39 MB — na FUNÇÃO AO VIVO (fora
+do desenho, que é servir isso por PMTiles) o mesmo teste dá 180/200 em 500 sob a piscina pequena da trilha,
+registrado como fronteira, não escondido. PMTiles: 206 a Range, sem Content-Encoding; abertura real no
+QGIS Desktop NÃO verificada nesta máquina (sem GUI) — só o formato (magic bytes) e o protocolo HTTP.
+
+Fica de fora, honesto: `ST_Subdivide` para polígono > 4.096 vértices (nenhuma camada de teste tem isso); a
+unidade systemd `plat-martin` real não foi instalada como serviço do sistema nesta trilha (rodada como
+processo de teste); a fonte PMTiles do Martin não passa pelo mesmo `auth_request` de token que a função ao
+vivo (controle de acesso dela é o do arquivo/bucket, L0-11, fora do escopo medido).
+
+### Commits
+
+Ver `git log wt/il201bmarti` a partir do commit desta entrada.
+
+## turno 3, setembro de 2026 (item L2-04-a-leitor-rls-martin: quem serve o tile não sabe o que é inquilino)
+
+O servidor de tiles vetoriais fala direto com o PostGIS e não tem noção de sessão, privilégio ou inquilino.
+Passa a existir um **papel de banco só de leitura** — LOGIN, sem BYPASSRLS, sem ser dono de nada, com SELECT
+nas tabelas de camada e EXECUTE nas funções de tile — e uma função `plat.contexto_por_token`, que valida o
+token de serviço, confere escopo `camada:ler` e restrição de Referer/IP, grava o uso em `plat.log_acesso` e
+põe o inquilino na transação. Cada camada ganha a sua função de tile `d_<slug>.t_<16 hex>(z, x, y,
+query_params)`, criada junto com a tabela; a primeira instrução dela é o contexto por token. Contrato no ADR
+0020; o papel, a senha e a linha do `pg_hba.conf` saem de `db/leitor_instalar.sh`, chamado pelo `install.sh`.
+
+A política de RLS do papel de leitura **não olha a GUC `plat.tenant_id` crua**: qualquer papel conectado
+escreve nela, e o papel de leitura é o mesmo para todos os inquilinos. Ela olha `plat.tenant_leitor()`, que
+exige uma prova (sha256 de um segredo que nenhum papel comum lê, mais o inquilino e o processo) emitida só
+por `contexto_por_token`. Medido em `tests/medidas/L2-04-a-leitor-rls-martin.json`: `SET plat.tenant_id` feito
+pelo próprio leitor devolve **0 linhas**; **6 chamadas cruzadas** às funções de tile com o token do outro
+inquilino devolvem **0 tiles com dado**; token revogado deixa de valer em **0,002 s**; **1 linha de log por
+chamada** de contexto aceita; segunda execução do instalador = **0 mudanças**.
+
+⛔ Fronteira honesta: a linha de log de uma RECUSA é escrita e desfeita com a transação abortada (o PostgreSQL
+não tem transação autônoma) — medida `linhas_log_de_recusa_persistidas: 0`. O rastro da recusa fica no log do
+servidor (a exceção é nomeada) e no log de acesso da API. E o Martin em si não está instalado nem configurado
+por este item: o que se entrega é o contrato de banco que ele consome.
+## turno 5, setembro de 2026 (item L2-02-a-modelo-estilo: o estilo de uma camada vira documento versionado)
+
+O tipo `estilo` deixa de ter `corpo` livre e passa a carregar o **JSON Schema publicado**
+(`docs/esquemas/estilo-v1.json`): `plat_construtor` (a intenção do usuário — 7 tipos: `unico`, `categoria`,
+`classes`, `proporcional`, `calor`, `agrupamento`, `raster`, com campo, cortes, cores, rótulos, faixa de
+escala e transparência) e `maplibre` (as camadas MapLibre Style Spec v8 que o navegador desenha). O servidor
+recompila `maplibre` a partir de `plat_construtor` na gravação (`app/estilos/validador.py`) — nunca existe um
+`maplibre` gravado que não seja exatamente o que aquele `plat_construtor` implica, o que fecha a ida-e-volta
+sem perda sem depender do cliente calcular o documento certo. Validação em três camadas na gravação, nunca no
+desenho: (1) `plat_construtor` compila sem erro (campo ausente, faixa invertida, tipo desconhecido —
+`app/estilos/compilador.py`, `EstiloInvalido` → 422 `plat_construtor_invalido` com o campo apontado); (2)
+todo campo citado em expressões `get`/`has`/`in` está no vocabulário `plat_construtor.campos` (422
+`campo_inexistente`); (3) a Style Spec enviada é válida pelo pacote oficial `@maplibre/maplibre-gl-style-spec`
+20.4.0, chamado por subprocesso Node (`ferramentas/estilo/validar.mjs`) — 422 `estilo_invalido` com a
+mensagem literal do validador. `docs/adr/20260907T1200-modelo-de-estilo.md` registra a convivência com
+`app/mapa/simbologia.py` (item L2-01-mapa-web, ramo `wt/l201mapa`, ainda não juntado): as duas coisas ainda
+não se ligam (nenhum código resolve um `estilo.ref` desenhando-o), e o caminho de convergência fica descrito
+lá, com a mesma paleta categórica preservada nos dois lugares.
+
+`app/estilos/padrao.py::estilo_padrao` gera o estilo padrão de uma camada nova por hash sha256 do uuid do
+item — mesmo uuid, mesma cor, em qualquer instalação (testado em `tests/unit/test_estilos_compilador.py`);
+wiring dentro do INSERT de `app/ingestao/carregar.py` fica para quem tocar o L0-04-c/L2-02-e em seguida (a
+função está pronta e testada, a chamada dentro do pipeline de ingestão não foi feita neste item).
+`app/estilos/sld.py::gerar_sld` converte o subconjunto declarado (`unico`/`categoria`/`classes`) para SLD 1.0;
+provado por leitura do XML (as mesmas cores do construtor), não por abrir no QGIS — QGIS não está instalado
+nesta máquina (`SISTEMA.md` recursos), então essa metade da cláusula fica **parcial**, nomeada no handoff.
+
+Sete exemplos (um por tipo do construtor) em `tests/estilos/*.json`: todos compilam, passam no validador
+oficial e a ida-e-volta (compilar de novo o mesmo `plat_construtor`) dá byte a byte o mesmo `maplibre`.
+Bateria da refutação, todas recusadas em 422 na gravação: expressão com campo inexistente, 300 layers
+(o esquema limita a 200), sprite de URL externa (padrão restrito a `/sprites/...` interno), faixa de classe
+invertida, valor de categoria duplicado; item de um inquilino não é legível por outro (404, RLS genérico do
+catálogo). `tests/api/catalogo/conftest.py::DADOS_POR_TIPO["estilo"]` e duas fixtures de `test_mapas.py` que
+fabricavam um `estilo` de exemplo com a forma antiga (`corpo` livre) foram atualizadas para o novo formato.
+
+## turno 3, setembro de 2026
+, setembro de 2026 (item L2-01-a-documento-mapa: o mapa é um documento com esquema, não um punhado de URLs)
+
+O tipo `mapa` deixa de ter `corpo` livre e passa a carregar um **JSON Schema publicado**
+(`docs/esquemas/mapa-v1.json`, gerado de `plat.tipo_item`): mapa-base, lista ordenada de camadas com
+visibilidade, opacidade, faixa de escala, grupo (até 3 níveis), estilo, popup, filtro CQL2-JSON, rótulos,
+campo de tempo e intervalo de atualização; extensão inicial, rotação, CRS de exibição fixo em 3857 e
+favoritos. Cada camada aponta o item do catálogo por **uuid** (`ref`), nunca por URL — o oposto do Web Map
+JSON da Esri, onde a URL do portal fica congelada dentro de cada mapa salvo. Rotas novas: `POST/GET/PUT
+/api/mapas`, `GET /api/mapas` e `GET /api/mapas/{id}/completo`, que devolve o documento com as camadas já
+resolvidas (título, tipo, campos, estilo, popup) em UMA chamada. Contrato no ADR 0022; de-para chave a chave
+contra a Web Map Specification em `docs/PARIDADE.md`.
+
+Medido em `tests/medidas/L2-01-a.json`: `/completo` de um mapa com **10 camadas** responde com p95 de
+**20,7 ms** (mediana 12,2 ms) em **50 chamadas**, contra o teto de 150 ms do portão. Camada de outro inquilino
+citada no documento = **404** (o mesmo 404 de uuid inexistente, sem revelar que existe); apagar camada usada
+por mapa = **409** com a lista dos mapas dependentes; 500 camadas, 5 níveis de grupo, ciclo de grupo e
+extensão fora do mundo = **422**, nenhum 200 e nenhum 500. Na tela `/mapa?id=<uuid>` a lista de camadas
+reordena arrastando (e por teclado, Alt+seta): e2e grava a ordem, recarrega a página e confere que voltou a
+mesma, com captura em `tests/e2e/capturas/L2-01-a-documento-mapa_painel_camadas.png`.
+
+⛔ Fronteira honesta: `/completo` devolve o CONTRATO da URL de tiles com `pronto: false` e o motivo — não há
+servidor de tiles vetoriais nem raster instalado nesta máquina (itens L2-01-b e L1-02) —, e `dominios` sai
+vazio com o motivo escrito, porque a camada ainda não guarda vocabulário de domínio (L0-04-c, parcial). A tela
+lista e reordena as camadas do documento; não as desenha no canvas, pelo mesmo motivo, e diz isso em cada
+linha. ⛔ Quebra declarada: documento com `corpo.camadas` como lista de uuid soltos passa a ser 422.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 

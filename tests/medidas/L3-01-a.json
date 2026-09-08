@@ -1,0 +1,62 @@
+{
+ "item": "L3-01-a-modelo-dado",
+ "medidas": {
+  "tabelas_plat_amc": {
+   "valor": 5,
+   "unidade": "tabelas",
+   "comando": "grep -c '^CREATE TABLE IF NOT EXISTS plat.amc_' db/migracoes/20260906T1900_amc_modelo.sql"
+  },
+  "migracao_idempotente_2a_aplicacao_ms": {
+   "valor": 56,
+   "unidade": "ms",
+   "comando": "TRILHA=amcmodelo laco/trilha_reescrever.py db/migracoes/20260906T1900_amc_modelo.sql > /tmp/amc_migra_r.sql; time sudo -u postgres psql -d iagro_sat -X -q -v ON_ERROR_STOP=1 -1 -f /tmp/amc_migra_r.sql (rodado 2x seguidas sobre o schema já migrado; 0 erro nas duas)"
+  },
+  "casos_de_validacao_unitarios": {
+   "valor": 22,
+   "unidade": "casos",
+   "comando": "venv/bin/pytest tests/unit/test_amc_esquema.py --collect-only -q | tail -1"
+  },
+  "casos_de_teste_api": {
+   "valor": 20,
+   "unidade": "casos",
+   "comando": "venv/bin/pytest tests/api/amc --collect-only -q | tail -1"
+  },
+  "casos_de_teste_total": {
+   "valor": 42,
+   "unidade": "casos",
+   "comando": "venv/bin/pytest tests/unit/test_amc_esquema.py tests/api/amc --collect-only -q | tail -1"
+  },
+  "suite_amc_tempo_total_s": {
+   "valor": 3.18,
+   "unidade": "s",
+   "comando": "set -a; source laco/var/trilha/amcmodelo.env; set +a; time venv/bin/pytest tests/unit/test_amc_esquema.py tests/api/amc -q (SEM flock — base isolada da trilha, ADR 0014/laco/trilha_ambiente.sh)"
+  },
+  "rotas_amc_no_openapi": {
+   "valor": 15,
+   "unidade": "rotas",
+   "comando": "python3 -c \"import json; d=json.load(open('docs/openapi.json')); print(sum(len(m) for p,m in d['paths'].items() if p.startswith('/api/amc')))\""
+  },
+  "validacao_modelo_grande_50_fatores_media_ms": {
+   "valor": 11.6,
+   "unidade": "ms",
+   "comando": "média de 200 rodadas de esquema.erros_estruturais + erros_semanticos + hash_canonico sobre um modelo de 50 fatores (teto de fatores.maxItems), 24069 bytes de JSON, cada fator com transformação 'faixas' de 10 notas e o modelo com 20 restrições — script ad hoc, não commitado (medida pontual)"
+  },
+  "modelo_grande_bytes": {
+   "valor": 24069,
+   "unidade": "bytes",
+   "comando": "len(json.dumps(modelo_de_50_fatores)) — mesmo script da medida anterior"
+  },
+  "hash_script_independente_confere_banco": {
+   "valor": 1,
+   "unidade": "booleano (1=ok)",
+   "comando": "venv/bin/pytest tests/api/amc/test_modelo.py::test_script_independente_confere_o_que_esta_no_banco -q"
+  },
+  "linhas_de_codigo_novo": {
+   "valor": 1654,
+   "unidade": "linhas",
+   "comando": "wc -l app/amc/*.py scripts/amc_hash_independente.py tests/api/amc/*.py tests/unit/test_amc_esquema.py db/migracoes/20260906T1900_amc_modelo.sql | tail -1"
+  }
+ },
+ "gerado_em": "2026-09-06T19:23:04Z",
+ "git_sha": "90d03c07da0c"
+}
