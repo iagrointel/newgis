@@ -99,6 +99,12 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
       if (selecionado === id) selecionado = null;
       return tentar(() => doc.remover(documentoAtual, id), 'removido');
     },
+    /* propriedade gravada por um controle PERSONALIZADO da paleta (`def.personalizados`, item L5-04-a: a vista
+       salva do bloco de mapa vem de um mapa interativo, não de um campo de texto) — mesmo caminho de
+       `definirPropriedade` que o painel gerado do esquema usa */
+    propriedade(id, campo, valor) {
+      return tentar(() => doc.definirPropriedade(documentoAtual, id, campo, valor), `${campo} gravado`);
+    },
   };
 
   /* ---------------------------------------------------------------- tela */
@@ -134,7 +140,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
     });
 
     const titulo = h('span', { class: 'no-titulo' }, def.rotulo);
-    const resumo = h('span', { class: 'no-resumo', dataset: { resumo: no.id } }, resumoDe(no));
+    const resumo = h('span', { class: 'no-resumo', dataset: { resumo: no.id } }, typeof def.resumo === 'function' ? def.resumo(no) : resumoDe(no));
     el.append(h('header', { class: 'no-cabecalho' }, titulo, resumo));
 
     if (def.aceita_filhos) {
@@ -286,8 +292,24 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
     });
     elProps.append(h('label', { class: 'campo' }, h('span', {}, `Largura (colunas de ${doc.COLUNAS})`), largura));
 
+    const personalizados = def.personalizados || [];
     for (const [nome, esq] of Object.entries(def.esquema.properties || {})) {
+      if (personalizados.includes(nome)) continue; // desenhado abaixo pelo controle da própria paleta
       elProps.append(campoDeEsquema(no, nome, esq, (def.esquema.required || []).includes(nome)));
+    }
+    /* controle personalizado: a paleta desenha o campo (ex.: mapa interativo para a vista salva) e grava por
+       `api.propriedade`; o valor continua validado pelo esquema no servidor e pelo `validarValor` daqui */
+    if (personalizados.length && typeof def.controle === 'function') {
+      for (const nome of personalizados) {
+        const esq = (def.esquema.properties || {})[nome] || {};
+        const gravar = (valor) => {
+          const problemas = validarValor(esq, valor, nome);
+          if (problemas.length) { dizer(`${esq.title || nome}: ${problemas[0].erro}`, 'erro'); return false; }
+          return api.propriedade(no.id, nome, valor);
+        };
+        const el = def.controle(nome, { no, valor: (no.propriedades || {})[nome], gravar, api });
+        if (el) elProps.append(h('div', { class: 'campo campo-personalizado', dataset: { propPersonalizada: nome } }, el));
+      }
     }
   }
 
@@ -301,6 +323,10 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
     } else if (esq.type === 'boolean') {
       controle = h('input', { type: 'checkbox', dataset: { prop: nome } });
       controle.checked = !!valorAtual;
+    } else if (esq.type === 'string' && (esq.maxLength || 0) >= 1000) {
+      /* texto longo (Markdown de bloco de narrativa, L5-04-a): área de texto, não campo de uma linha */
+      controle = h('textarea', { dataset: { prop: nome }, rows: '8' });
+      controle.value = valorAtual === undefined || valorAtual === null ? '' : String(valorAtual);
     } else {
       controle = h('input', {
         type: esq.type === 'integer' || esq.type === 'number' ? 'number' : 'text',
