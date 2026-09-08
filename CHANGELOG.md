@@ -3,6 +3,21 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## codex cx1, setembro de 2026 (item UX-18-plataforma-sem-tela: console do superadmin em /admin/inquilinos)
+
+Fecha as lacunas "POST /api/plataforma/inquilinos", "POST .../suspender", "POST .../reativar" e "DELETE .../{id} sem
+tela" do mapa de cobertura (UX-00): tela nova `/admin/inquilinos` (entrada no menu só para o superadmin — `TELAS`
+ganha `superadmin: true` e `telasVisiveis` a honra) com a lista dos inquilinos (estado, usuários, criação, último
+acesso), "novo inquilino" (slug, nome, login e nome do primeiro administrador; a senha temporária aparece UMA vez, com
+copiar e o link de entrada), suspender/reativar com confirmação e apagar com dupla confirmação. Estados por
+`<plat-estado>`: carregando, vazio, erro com "tentar de novo" + referência, negado (a API responde 404 a quem não é
+superadmin — vira o estado negado nomeado) e o estado das ações; erro nomeado no campo (422 validacao e 409
+slug_existente/slug_reservado no slug; 409 plataforma_nao_suspende e 404 inquilino_inexistente no controle).
+`docs/COBERTURA_UI.md` e `docs/cobertura_ui_lacunas.json` regenerados (26 → 22). e2e `tests/e2e/test_inquilinos_ux18.py`
+com login do superadmin por TOTP na tela, negado real do admin de demo, criação/suspensão/reativação/apagamento
+reais (o admin novo entra com a senha temporária e perde a sessão na suspensão), erros forjados nomeados, axe 0
+sérias, capturas 390/1280; pt-BR/en/es.
+
 ## codex cx1, setembro de 2026 (item UX-16-ingestao-sem-tela: tela /importacoes para o fluxo arquivo → camada)
 
 Fecha as lacunas "POST /api/importacoes", "PUT /api/importacoes/{id}/confirmar" e "DELETE /api/importacoes/{id} sem
