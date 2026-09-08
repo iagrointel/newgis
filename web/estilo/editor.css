@@ -51,3 +51,6 @@
 .painel-dados .dados-erros li.aviso { color: var(--cor-atencao, #d98a2b); }
 .painel-dados .erro-form { color: var(--cor-erro, #b42318); margin: .25rem 0 0; flex-basis: 100%; }
 .painel-dados > summary { cursor: pointer; font-weight: 600; font-size: 1.05rem; margin: .5rem 0; }
+/* item L5-01-c: a paleta cresceu (widgets de dado); fica presa ao topo e rola por dentro para a altura da página
+   não depender do número de itens (o arrasto da paleta é medido por coordenadas de tela) */
+.editor-paleta { position: sticky; top: 0; max-height: calc(100vh - 1rem); overflow: auto; }
