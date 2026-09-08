@@ -10987,6 +10987,68 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/temas": {
+   "get": {
+    "tags": [
+     "temas"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_temas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/org/tema": {
+   "put": {
+    "tags": [
+     "temas"
+    ],
+    "summary": "Gravar Tema Do Inquilino",
+    "operationId": "gravar_tema_do_inquilino_api_org_tema_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TemaEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "org.configurar"
+   }
   }
  },
  "components": {
@@ -17017,6 +17079,29 @@
      "atual"
     ],
     "title": "Sessao"
+   },
+   "TemaEntrada": {
+    "properties": {
+     "tema": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tema",
+      "description": "definição de tema (tokens) ou null para remover"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "tema"
+    ],
+    "title": "TemaEntrada"
    },
    "TipoItem": {
     "properties": {

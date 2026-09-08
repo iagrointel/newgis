@@ -102,6 +102,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/org/ldap/importar"): ["org/ldap_importar"],
     # ---- configurações da organização (L0-07-a-configuracoes-org)
     ("PUT", "/api/org"): ["org/configurar"],
+    ("PUT", "/api/org/tema"): ["org/tema_gravar"],  # L5-10: tema do inquilino gravado ou removido (mesma rota)
     ("POST", "/api/org/logo"): ["org/logo_enviar"],
     ("DELETE", "/api/org/logo"): ["org/logo_remover"],
     # ---- convite de membro por e-mail (L0-07-d-smtp-convites; ADR 0013)

@@ -729,6 +729,17 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("DELETE", "/api/org/logo"): Caso(
         lambda p: "/api/org/logo", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # ---- temas de marca (L5-10): a leitura devolve os padrões GLOBAIS da plataforma (vocabulário da casa,
+    # igual para todos) + o tema do chamador — nunca o de B; a gravação é config do próprio inquilino
+    # (mesma coluna jsonb do PUT /api/org), com limpeza explícita para não deixar marca residual em A
+    ("GET", "/api/temas"): Caso(lambda p: "/api/temas", proprio=True, aceita=frozenset({200}),
+                                verificar=_sem_marca),
+    ("PUT", "/api/org/tema"): Caso(
+        lambda p: "/api/org/tema",
+        lambda p: {"tema": {"claro": {"cores": {"acento": "#123456"}, "raio": {"pequeno": "2px"}}}},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+        limpar=lambda p, j: p.sessao_a.put("/api/org/tema", json={"tema": None}),
+    ),
     # ---- L0-07-d convite de membro por e-mail (ADR 0013): GET/POST/DELETE agem só sobre o inquilino do
     # chamador (a tabela é por tenant_id, igual a papéis/tokens); POST usa o MESMO e-mail do convite de B de
     # propósito, para provar que a unicidade de convite pendente é por inquilino, não global (mesmo padrão de

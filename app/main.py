@@ -47,6 +47,7 @@ from app.jobs.rotas import router as rotas_jobs
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
+from app.rotas_temas import router as rotas_temas
 from app.saude import router as rotas_saude
 from app.settings import settings
 from app.uploads.rotas import router as rotas_uploads
@@ -121,6 +122,8 @@ ROUTERS = [
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     rotas_multiescala,
+    # --- temas de marca (L5-10): GET /api/temas (padrões + tema do inquilino); PUT /api/org/tema
+    rotas_temas,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
