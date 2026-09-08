@@ -11,65 +11,65 @@
 <link rel="stylesheet" href="/static/tarefas.css">
 </head>
 <body class="tela tarefas">
-<a class="pular" href="#principal">pular para o conteúdo</a>
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
 <div class="app">
   <aside id="lateral" class="lateral"></aside>
   <main id="principal" class="principal" tabindex="-1">
-    <h1>Tarefas</h1>
-    <p class="aviso-beta">análise / beta privado · <span id="resumo-texto" class="resumo-texto">…</span></p>
+    <h1 data-i18n="nav.tarefas">Tarefas</h1>
+    <p class="aviso-beta"><span data-i18n="app.beta">análise / beta privado</span> · <span id="resumo-texto" class="resumo-texto">…</span></p>
     <plat-aviso id="aviso"></plat-aviso>
 
     <div class="tarefas-grade">
     <div class="tarefas-coluna">
     <section class="cartao" id="filtros-cartao" aria-labelledby="t-filtros">
-      <h2 id="t-filtros">filtros</h2>
+      <h2 id="t-filtros" data-i18n="tarefas.filtros">filtros</h2>
       <div class="filtros">
-        <label>estado
+        <label><span data-i18n="tarefas.f_estado">estado</span>
           <select id="f-estado">
-            <option value="">todos</option>
-            <option value="pendente">pendente</option>
-            <option value="rodando">rodando</option>
-            <option value="concluido">concluído</option>
-            <option value="falhou">falhou</option>
-            <option value="cancelado">cancelado</option>
+            <option value="" data-i18n="geral.todos">todos</option>
+            <option value="pendente" data-i18n="tarefas.estado_pendente">pendente</option>
+            <option value="rodando" data-i18n="tarefas.estado_rodando">rodando</option>
+            <option value="concluido" data-i18n="tarefas.estado_concluido">concluído</option>
+            <option value="falhou" data-i18n="tarefas.estado_falhou">falhou</option>
+            <option value="cancelado" data-i18n="tarefas.estado_cancelado">cancelado</option>
           </select>
         </label>
-        <label>tipo
-          <select id="f-tipo"><option value="">todos</option></select>
+        <label><span data-i18n="tarefas.f_tipo">tipo</span>
+          <select id="f-tipo"><option value="" data-i18n="geral.todos">todos</option></select>
         </label>
-        <label hidden>quem
+        <label hidden><span data-i18n="tarefas.f_quem">quem</span>
           <select id="f-quem">
-            <option value="eu">eu</option>
-            <option value="todos">todos do inquilino</option>
+            <option value="eu" data-i18n="tarefas.f_quem_eu">eu</option>
+            <option value="todos" data-i18n="tarefas.f_quem_todos">todos do inquilino</option>
           </select>
         </label>
-        <label>período
+        <label><span data-i18n="tarefas.f_periodo">período</span>
           <select id="f-periodo">
-            <option value="24h">últimas 24 h</option>
-            <option value="7d" selected>últimos 7 dias</option>
-            <option value="30d">últimos 30 dias</option>
-            <option value="tudo">tudo</option>
+            <option value="24h" data-i18n="tarefas.f_24h">últimas 24 h</option>
+            <option value="7d" selected data-i18n="tarefas.f_7d">últimos 7 dias</option>
+            <option value="30d" data-i18n="tarefas.f_30d">últimos 30 dias</option>
+            <option value="tudo" data-i18n="tarefas.f_tudo">tudo</option>
           </select>
         </label>
-        <button type="button" id="f-limpar" class="pequeno">limpar</button>
+        <button type="button" id="f-limpar" class="pequeno" data-i18n="tarefas.limpar">limpar</button>
       </div>
     </section>
 
     <section class="cartao" id="lista-cartao" aria-labelledby="t-lista">
-      <h2 id="t-lista">tarefas <span id="lista-total" class="contagem">…</span> <span id="lista-modo" class="marcador ok modo-lista"></span></h2>
+      <h2 id="t-lista"><span data-i18n="tarefas.lista_titulo">tarefas</span> <span id="lista-total" class="contagem">…</span> <span id="lista-modo" class="marcador ok modo-lista"></span></h2>
       <plat-aviso id="lista-aviso"></plat-aviso>
-      <div class="tabela-rolagem">
-        <table id="lista" class="tabela">
-          <caption class="sr-only">tarefas do inquilino</caption>
+      <plat-estado id="lista-estado" hidden></plat-estado>
+      <div class="tabela-rolagem" id="lista-caixa">
+        <table id="lista" class="tabela" data-i18n-aria="tarefas.tabela_rotulo" aria-label="tarefas do inquilino">
           <thead>
             <tr>
-              <th scope="col" data-campo="estado" tabindex="0" aria-sort="none">estado</th>
-              <th scope="col" data-campo="tipo" tabindex="0" aria-sort="none">tipo</th>
-              <th scope="col">quem</th>
-              <th scope="col" data-campo="criado_em" tabindex="0" aria-sort="descending">criado</th>
-              <th scope="col" data-campo="iniciado_em" tabindex="0" aria-sort="none">duração</th>
-              <th scope="col">progresso</th>
-              <th scope="col"><span class="sr-only">ações</span></th>
+              <th scope="col" data-campo="estado" tabindex="0" aria-sort="none" data-i18n="tarefas.col_estado">estado</th>
+              <th scope="col" data-campo="tipo" tabindex="0" aria-sort="none" data-i18n="tarefas.col_tipo">tipo</th>
+              <th scope="col" data-i18n="tarefas.col_quem">quem</th>
+              <th scope="col" data-campo="criado_em" tabindex="0" aria-sort="descending" data-i18n="tarefas.col_criado">criado</th>
+              <th scope="col" data-campo="iniciado_em" tabindex="0" aria-sort="none" data-i18n="tarefas.col_duracao">duração</th>
+              <th scope="col" data-i18n="tarefas.col_progresso">progresso</th>
+              <th scope="col"><span class="sr-only" data-i18n="tabela.acoes">ações</span></th>
             </tr>
           </thead>
           <tbody id="lista-corpo"></tbody>
@@ -77,20 +77,21 @@
       </div>
       <div class="linha-ferramentas rodape-lista">
         <plat-paginacao id="paginacao"></plat-paginacao>
-        <div class="direita"><button type="button" id="exportar-csv" class="pequeno">exportar CSV da página</button></div>
+        <div class="direita"><button type="button" id="exportar-csv" class="pequeno" data-i18n="tarefas.exportar_csv">exportar CSV da página</button></div>
       </div>
     </section>
 
     <section class="cartao" id="agendas" aria-labelledby="t-agendas" hidden>
-      <h2 id="t-agendas">agendas <span id="agendas-total" class="contagem">…</span></h2>
+      <h2 id="t-agendas"><span data-i18n="tarefas.agendas">agendas</span> <span id="agendas-total" class="contagem">…</span></h2>
       <plat-aviso id="agendas-aviso"></plat-aviso>
       <div class="linha-ferramentas">
-        <div class="direita"><button type="button" id="agenda-nova" class="pequeno primario">nova agenda</button></div>
+        <div class="direita"><button type="button" id="agenda-nova" class="pequeno primario" data-i18n="tarefas.ag_nova">nova agenda</button></div>
       </div>
       <div id="agenda-form-caixa" class="agenda-form-caixa" hidden>
         <h3 id="agenda-form-titulo">nova agenda</h3>
         <plat-formulario id="agenda-form"></plat-formulario>
       </div>
+      <plat-estado id="agendas-estado" hidden></plat-estado>
       <plat-tabela id="agendas-tabela" legenda="agendas do inquilino"></plat-tabela>
     </section>
     </div>
@@ -98,27 +99,28 @@
     <section class="cartao detalhe" id="detalhe" aria-labelledby="t-detalhe" hidden>
       <div class="detalhe-cabecalho">
         <h2 id="t-detalhe"><span id="detalhe-tipo" class="mono">…</span> <span id="detalhe-estado" class="estado-job"></span> <span id="detalhe-modo" class="marcador ok" hidden></span></h2>
-        <button type="button" id="detalhe-fechar" class="pequeno texto" aria-label="fechar detalhe">fechar</button>
+        <button type="button" id="detalhe-fechar" class="pequeno texto" data-i18n-aria="tarefas.fechar_detalhe" aria-label="fechar detalhe" data-i18n="tarefas.fechar">fechar</button>
       </div>
+      <plat-estado id="detalhe-estado-area" hidden></plat-estado>
       <p id="detalhe-resumo" class="detalhe-resumo">…</p>
       <p id="detalhe-mensagem" class="detalhe-mensagem"></p>
       <p id="detalhe-erro" class="detalhe-erro" hidden></p>
       <p class="mono detalhe-id">id <span id="detalhe-id"></span></p>
       <plat-aviso id="detalhe-aviso"></plat-aviso>
       <div class="botoes">
-        <button type="button" id="detalhe-cancelar" class="perigo" hidden>cancelar</button>
-        <button type="button" id="detalhe-repetir" hidden>repetir</button>
-        <button type="button" id="detalhe-baixar-log" disabled>baixar log</button>
+        <button type="button" id="detalhe-cancelar" class="perigo" hidden data-i18n="tarefas.cancelar">cancelar</button>
+        <button type="button" id="detalhe-repetir" hidden data-i18n="tarefas.repetir">repetir</button>
+        <button type="button" id="detalhe-baixar-log" disabled data-i18n="tarefas.baixar_log">baixar log</button>
       </div>
-      <details open><summary>parâmetros</summary><pre id="detalhe-parametros">—</pre></details>
-      <details open><summary>resultado</summary><pre id="detalhe-resultado">—</pre> <a id="detalhe-item" class="botao pequeno" href="#" hidden>abrir item</a></details>
-      <details><summary>proveniência</summary><pre id="detalhe-proveniencia">—</pre></details>
+      <details open><summary data-i18n="tarefas.parametros">parâmetros</summary><pre id="detalhe-parametros">—</pre></details>
+      <details open><summary data-i18n="tarefas.resultado">resultado</summary><pre id="detalhe-resultado">—</pre> <a id="detalhe-item" class="botao pequeno" href="#" hidden data-i18n="tarefas.abrir_item">abrir item</a></details>
+      <details><summary data-i18n="tarefas.proveniencia">proveniência</summary><pre id="detalhe-proveniencia">—</pre></details>
       <details open class="log">
-        <summary>log <span id="log-contagem" class="contagem"></span></summary>
+        <summary><span data-i18n="tarefas.log">log</span> <span id="log-contagem" class="contagem"></span></summary>
         <div class="linha-ferramentas">
-          <label class="campo-rotulo">nível
+          <label class="campo-rotulo"><span data-i18n="tarefas.nivel">nível</span>
             <select id="log-nivel">
-              <option value="DEBUG">todos</option>
+              <option value="DEBUG" data-i18n="geral.todos">todos</option>
               <option value="INFO" selected>INFO</option>
               <option value="AVISO">AVISO</option>
               <option value="ERRO">ERRO</option>
