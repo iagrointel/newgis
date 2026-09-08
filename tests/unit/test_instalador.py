@@ -38,8 +38,15 @@ def test_instalador_grava_plat_git_sha_e_confere_hsts():
     assert "grep -q 'max-age=31536000'" in INSTALL  # conferência pública
 
 
+def _locais_ativos() -> int:
+    """`location ` de bloco VIVO. O modelo passou a trazer um bloco de tiles COMENTADO (item L2-01-b, caminho
+    alternativo com auth_request), e contar a string crua somava esses três: o teste ficava vermelho por causa
+    de linhas que o nginx nunca lê. Comentário não tem cabeçalho para conferir."""
+    return sum(1 for li in NGINX.splitlines() if "location " in li and not li.strip().startswith("#"))
+
+
 def test_hsts_em_todo_bloco_de_add_header_do_modelo():
-    locais = NGINX.count("location ")
+    locais = _locais_ativos()
     hsts = NGINX.count('add_header Strict-Transport-Security "max-age=31536000" always;')
     # 5 desde o item L2-01-a (location nova para o PMTiles do mapa-base, deploy/nginx.conf)
     assert locais == 5 and hsts == locais + 1, (locais, hsts)
@@ -47,7 +54,7 @@ def test_hsts_em_todo_bloco_de_add_header_do_modelo():
 
 def test_referrer_policy_em_todo_bloco_de_add_header_do_modelo():
     """Achado do testador do T2: declarado no server{} não chegava às rotas (add_header no bloco cancela o herdado)."""
-    locais = NGINX.count("location ")
+    locais = _locais_ativos()
     assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == locais + 1, locais
 
 
