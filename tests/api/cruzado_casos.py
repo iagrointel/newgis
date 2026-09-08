@@ -802,6 +802,20 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/rede/{rede_id}/tracar"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/tracar",
         lambda p: {"tipo": "conectado", "pontos_partida": [{"lon": 0.0, "lat": 0.0}]}),
+    # ---- L4-02-f: exportar, salvar como camada, histórico e repetir apontam a rede de B e têm de dar 404 de
+    # REDE (a rede nem é vista). O id de execução é forjado: mesmo trocar o 404 de rede pelo de execução
+    # vazaria a existência da rede do outro inquilino.
+    ("POST", "/api/rede/{rede_id}/tracar/exportar"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/tracar/exportar?formato=csv",
+        lambda p: {"tipo": "conectado", "pontos_partida": [{"lon": 0.0, "lat": 0.0}]}),
+    ("POST", "/api/rede/{rede_id}/tracar/camada"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/tracar/camada",
+        lambda p: {"tipo": "conectado", "titulo": f"{PREFIXO}camada",
+                   "pontos_partida": [{"lon": 0.0, "lat": 0.0}]}),
+    ("GET", "/api/rede/{rede_id}/tracados"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/tracados"),
+    ("POST", "/api/rede/{rede_id}/tracados/{execucao_id}/repetir"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/tracados/{UUID_NULO}/repetir", lambda p: {}),
     # criar rede simples não endereça a rede de B: aponta CAMADA por id, e o id que não é de ninguém tem de
     # dar 404 igual (a resposta não pode depender de existir camada em outro inquilino)
     ("POST", "/api/rede/simples"): Caso(
