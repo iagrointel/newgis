@@ -381,6 +381,15 @@ Referência Esri: `gp-service`, `gp-task`, `execute-gp-task`, `submit-gp-job`, `
 | Buffer (Create Buffers) | Map Viewer 11.4 "Use proximity" | `buffer` geodésico em metros, dissolver | feito | testes acima | 2026-09-07 | pendente (D20) |
 | demais ferramentas do "Perform analysis" 11.4 (Summarize, Find locations, Enrich, Analyze patterns, Manage data, Use proximity além do buffer) | Map Viewer 11.4 | itens irmãos do L2-05 (b em diante) sobre este registro | fora (itens separados) | — | 2026-09-07 | pendente (D20) |
 
+## Ferramentas raster (item L2-05-e-raster-basico, turno 4; ADR 20260908T1240)
+
+Treze ferramentas sobre COG do inquilino, lidas por janela onde o arquivo está. A tabela cláusula por
+cláusula, com o que está FORA (hidrologia, distância de custo, estatística focal, funções de raster do
+Image Server) e por quê, vive em `docs/PARIDADE_FERRAMENTAS_RASTER.md`. Medidas em
+`tests/medidas/L2-05-e-raster-basico.json`: declividade e visibilidade iguais byte a byte ao `gdaldem` e
+ao `gdal_viewshed` diretos; NDVI igual ao avaliador do TiTiler a menos de 1e-6; 5.570 zonas em 3,35 s;
+pico de memória de 777 MB num raster de 9,77 GB de pixels.
+
 ## SMTP, convite de membro e redefinição de senha (item L0-07-d-smtp-convites, turno 3; ADR 0017)
 
 | capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
