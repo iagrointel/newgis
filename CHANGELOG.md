@@ -3,6 +3,44 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 5, setembro de 2026 (item L5-20-sites-paginas-publicas: site do inquilino em /s/<inquilino>/)
+
+O inquilino monta um site por arrasto e o publica numa URL pública própria. O documento do site é o MESMO
+envelope de app e painel (`corpo.nos`, lista plana, aninhamento por `pai`), montado no MESMO editor de
+arrasto do L5-08 com uma paleta nova: `pagina` na raiz, `secao` dentro da página, cartão dentro da seção,
+mais `cabecalho`, `menu` e `rodape`, que pertencem ao site inteiro. São nove cartões — texto, imagem,
+galeria de itens do catálogo com filtro, mapa incorporado, aplicativo, busca de conteúdo, chamada com
+botão, estatísticas e conteúdo incorporado por https.
+
+A página publicada é renderizada NO SERVIDOR e não depende de JavaScript: `curl` sem navegador já lê o
+texto de cada cartão, e a página não tem uma linha de `<script>` (`tests/api/catalogo/test_site.py`). A
+galeria e a busca são formulários `GET` respondidos já filtrados; a estatística é contagem feita no pedido;
+o mapa e o aplicativo são quadros para a vitrine `/p/` do L5-14, com link equivalente ao lado. Medido no
+site de teste: **3 páginas publicadas e os 9 tipos de cartão presentes no HTML**
+(`tests/medidas/L5-20-sites-paginas-publicas.json`).
+
+Tudo o que a página anônima lê passa por função `SECURITY DEFINER` que filtra `acesso = 'publico'` e
+`plat.tenant_permite_publico` — a definição de "compartilhado com todos" nesta plataforma. O adversário
+procurou o item privado de três maneiras (filtro por tipo na galeria, busca pelo título exato e citação por
+uuid num cartão): **0 item privado vazado**; o cartão que aponta para item que deixou de ser público diz que
+o conteúdo não está compartilhado, em vez de mostrá-lo.
+
+`noindex, nofollow` é o padrão, no cabeçalho `X-Robots-Tag` e no `<meta>`; `index, follow` só com a opção
+ligada explicitamente na tela, que traz o aviso ao lado. Como o `add_header` do nginx acrescenta em vez de
+substituir, `deploy/nginx.conf` ganhou um `location /s/` sem o `X-Robots-Tag` herdado — nesse caminho quem
+decide é a aplicação; em homologação a exceção não existe, de propósito. A página manda ainda
+`default-src 'self'` com `frame-src` limitado às origens que AQUELA página declara.
+
+Acessibilidade da página publicada: auditoria axe-core 4.12.1 (o motor que o Lighthouse usa nessa
+categoria) nas etiquetas WCAG 2.0/2.1 A e AA, ponderada por impacto = **100 de 100, 0 violação crítica ou
+séria**. Não é o binário do Lighthouse, que não está instalado nesta máquina; a medida diz isso no campo
+`comando`. A cor do texto sobre a marca do inquilino é escolhida no servidor pelo contraste (WCAG 1.4.3),
+para que um inquilino de cor clara não fique com texto branco sobre fundo claro.
+
+Paridade escrita contra "Create a site" e os cartões do Hub em `docs/PARIDADE.md`, com a ressalva de método
+registrada: a doc do Hub monta o conteúdo por JavaScript e não devolve texto ao `curl`, então a coluna Esri
+vem da leitura do papel esri, nunca de citação literal de página estática.
+
 ## turno 5, setembro de 2026 (item L5-37-pacotes-modelos-entre-inquilinos: pacote de documentos e galeria de modelos)
 
 `GET /api/itens/{id}/pacote` devolve um zip com `manifesto.json` e um `documentos/<id>.json` por documento
