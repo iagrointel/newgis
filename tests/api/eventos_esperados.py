@@ -158,4 +158,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
+    # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
+    ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
 }

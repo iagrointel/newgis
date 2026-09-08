@@ -102,6 +102,31 @@ def geocodificar(pedido: PedidoGeocodificar, auth=autenticado(escopo_token="geoc
     return {"candidatos": [c.como_dict() for c in candidatos], "total": len(candidatos)}
 
 
+@router.get("/geocodificar", openapi_extra=X, operation_id="geocodificar_get")
+def geocodificar_get(
+    endereco: str | None = Query(default=None, max_length=300),
+    logradouro: str | None = Query(default=None, max_length=200),
+    numero: int | None = Query(default=None, ge=0, le=999999),
+    bairro: str | None = Query(default=None, max_length=120),
+    municipio: str | None = Query(default=None, max_length=120),
+    uf: str | None = Query(default=None, min_length=2, max_length=2),
+    cep: str | None = Query(default=None, max_length=9),
+    max_locations: int = Query(default=10, ge=1, le=MAX_LOCATIONS_TETO),
+    auth=autenticado(escopo_token="geocodificar:usar"),
+):
+    """Mesma busca do POST, por parâmetro de consulta.
+
+    Existe porque geocodificar é LEITURA e o verbo certo para leitura é GET: a caixa de pesquisa do
+    visualizador de mapa (item L2-01-mapa-web) não deve passar pela porta de escrita sob cookie, que
+    exige a checagem de origem do ADR 0002 seção 5.3 (e falha, corretamente, em qualquer ambiente cuja
+    URL pública não seja a mesma do navegador). O POST continua valendo, com o mesmo contrato."""
+    return geocodificar(
+        PedidoGeocodificar(endereco=endereco, logradouro=logradouro, numero=numero, bairro=bairro,
+                           municipio=municipio, uf=uf, cep=cep, max_locations=max_locations),
+        auth=auth,
+    )
+
+
 @router.post("/reverso", openapi_extra=X)
 def reverso(pedido: PedidoReverso, auth=autenticado(escopo_token="geocodificar:usar")):
     with db.db() as cur:
