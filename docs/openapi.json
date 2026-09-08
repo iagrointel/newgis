@@ -9895,6 +9895,257 @@
     "x-privilegio": "proprio"
    }
   },
+  "/api/exportacoes/formatos": {
+   "get": {
+    "tags": [
+     "exportacao"
+    ],
+    "summary": "Formatos",
+    "operationId": "formatos_api_exportacoes_formatos_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/exportacoes": {
+   "post": {
+    "tags": [
+     "exportacao"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_exportacoes_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ExportacaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.exportar"
+   },
+   "get": {
+    "tags": [
+     "exportacao"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_exportacoes_get",
+    "parameters": [
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 50,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     },
+     {
+      "name": "item_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/exportacoes/{exportacao_id}": {
+   "get": {
+    "tags": [
+     "exportacao"
+    ],
+    "summary": "Obter",
+    "operationId": "obter_api_exportacoes__exportacao_id__get",
+    "parameters": [
+     {
+      "name": "exportacao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Exportacao Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "delete": {
+    "tags": [
+     "exportacao"
+    ],
+    "summary": "Apagar",
+    "description": "Cancela a que ainda roda (o job é cancelado junto) ou apaga o arquivo da que já está pronta.",
+    "operationId": "apagar_api_exportacoes__exportacao_id__delete",
+    "parameters": [
+     {
+      "name": "exportacao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Exportacao Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/exportacoes/{exportacao_id}/baixar": {
+   "get": {
+    "tags": [
+     "exportacao"
+    ],
+    "summary": "Baixar",
+    "description": "Entrega o arquivo em blocos (`objetos.ler_stream`), nunca lendo o objeto inteiro para a memória: uma\nexportação de camada grande passa fácil de 1 GB e este processo atende outras requisições ao mesmo tempo.",
+    "operationId": "baixar_api_exportacoes__exportacao_id__baixar_get",
+    "parameters": [
+     {
+      "name": "exportacao_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Exportacao Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "application/octet-stream": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
   "/api/rota": {
    "post": {
     "tags": [
@@ -10026,15 +10277,180 @@
     "summary": "Geocodificar",
     "operationId": "geocodificar_api_geocodificar_post",
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/PedidoGeocodificar"
        }
       }
-     },
-     "required": true
+     }
     },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "get": {
+    "tags": [
+     "geocodificador"
+    ],
+    "summary": "Geocodificar Get",
+    "description": "Mesma busca do POST, por parâmetro de consulta.\n\nExiste porque geocodificar é LEITURA e o verbo certo para leitura é GET: a caixa de pesquisa do\nvisualizador de mapa (item L2-01-mapa-web) não deve passar pela porta de escrita sob cookie, que\nexige a checagem de origem do ADR 0002 seção 5.3 (e falha, corretamente, em qualquer ambiente cuja\nURL pública não seja a mesma do navegador). O POST continua valendo, com o mesmo contrato.",
+    "operationId": "geocodificar_get",
+    "parameters": [
+     {
+      "name": "endereco",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 300
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Endereco"
+      }
+     },
+     {
+      "name": "logradouro",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 200
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Logradouro"
+      }
+     },
+     {
+      "name": "numero",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 999999,
+         "minimum": 0
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Numero"
+      }
+     },
+     {
+      "name": "bairro",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 120
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Bairro"
+      }
+     },
+     {
+      "name": "municipio",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 120
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Municipio"
+      }
+     },
+     {
+      "name": "uf",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 2,
+         "maxLength": 2
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Uf"
+      }
+     },
+     {
+      "name": "cep",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 9
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Cep"
+      }
+     },
+     {
+      "name": "max_locations",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 50,
+       "minimum": 1,
+       "default": 10,
+       "title": "Max Locations"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "Successful Response",
@@ -10987,6 +11403,1022 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/mapa/camadas": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Listar Camadas",
+    "description": "Camadas vetoriais que a sessão pode ler (a RLS de plat.item decide), prontas para o mapa.",
+    "operationId": "listar_camadas_api_mapa_camadas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Obter Camada",
+    "operationId": "obter_camada_api_mapa_camadas__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}/tilejson": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Tilejson",
+    "operationId": "tilejson_api_mapa_camadas__id__tilejson_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/camadas/{item_id}/tabela/colunas": {
+   "get": {
+    "tags": [
+     "tabela"
+    ],
+    "summary": "colunas visíveis da tabela de atributos",
+    "description": "Só o que a vista do usuário mostra: coluna marcada como oculta não sai daqui (nem a geometria, que não\né atributo). Para ver o que está oculto e voltar atrás, `GET .../vista`.",
+    "operationId": "colunas_api_camadas__item_id__tabela_colunas_get",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/camadas/{item_id}/tabela/vista": {
+   "get": {
+    "tags": [
+     "tabela"
+    ],
+    "summary": "vista gravada da tabela (inclui colunas ocultas)",
+    "operationId": "vista_ver_api_camadas__item_id__tabela_vista_get",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "put": {
+    "tags": [
+     "tabela"
+    ],
+    "summary": "grava a vista da tabela para o usuário",
+    "description": "Ordem, rótulo, visibilidade, largura e domínio — por usuário e por camada. A largura persistida aqui é\no que a tela lê no próximo carregamento; nada disso fica no navegador.",
+    "operationId": "vista_gravar_api_camadas__item_id__tabela_vista_put",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PedidoVista"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/camadas/{item_id}/tabela/linhas": {
+   "post": {
+    "tags": [
+     "tabela"
+    ],
+    "summary": "página de linhas da tabela de atributos",
+    "operationId": "linhas_api_camadas__item_id__tabela_linhas_post",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PedidoLinhas"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/camadas/{item_id}/tabela/estatisticas": {
+   "post": {
+    "tags": [
+     "tabela"
+    ],
+    "summary": "estatísticas por coluna numérica sob o mesmo filtro",
+    "description": "Contagem, soma, média, mínimo, máximo e nulos, calculados no banco — nunca sobre a página carregada na\ntela (a página é 50 linhas de um milhão; a média dela não é a média da camada).",
+    "operationId": "estatisticas_api_camadas__item_id__tabela_estatisticas_post",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PedidoEstatisticas"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/mapa/{mapa_id}/desenho/promover": {
+   "post": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Promover",
+    "operationId": "promover_api_mapa__mapa_id__desenho_promover_post",
+    "parameters": [
+     {
+      "name": "mapa_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Mapa Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PromoverEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.publicar_camada"
+   }
+  },
+  "/api/anotacoes": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_anotacoes_get",
+    "parameters": [
+     {
+      "name": "camada_id",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Camada Id"
+      }
+     },
+     {
+      "name": "fid",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Fid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_anotacoes_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AnotacaoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/anotacoes/{id}": {
+   "patch": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Editar",
+    "operationId": "editar_api_anotacoes__id__patch",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AnotacaoEdicao"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "delete": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_anotacoes__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/mapa/fuso": {
+   "get": {
+    "tags": [
+     "mapa-popup"
+    ],
+    "summary": "Fuso Do Mapa",
+    "description": "O visualizador chama isto UMA vez ao abrir a tela para formatar data no fuso do inquilino sem\nround-trip por campo (`tenant.config.fuso`, mesma leitura que a rota do popup usa).",
+    "operationId": "fuso_do_mapa_api_mapa_fuso_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/camadas/{id}/feicoes/{fid}/popup": {
+   "get": {
+    "tags": [
+     "mapa-popup"
+    ],
+    "summary": "Popup Da Feicao",
+    "description": "Só o que o cliente NÃO tem: campos `servidor` (tabela companheira) e expressões (avaliadas\naqui). `fuso`, se dado na query, sobrepõe o do inquilino só nesta chamada (é assim que o e2e prova\na mesma data em dois fusos sem precisar reconfigurar o inquilino a cada teste; o padrão de produto\né o fuso do inquilino, lido de `tenant.config.fuso`).",
+    "operationId": "popup_da_feicao_api_camadas__id__feicoes__fid__popup_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "fid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "title": "Fid"
+      }
+     },
+     {
+      "name": "fuso",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Fuso"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}/valores": {
+   "get": {
+    "tags": [
+     "mapa",
+     "selecao"
+    ],
+    "summary": "Valores Unicos",
+    "operationId": "valores_unicos_api_mapa_camadas__id__valores_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "campo",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Campo"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}/filtrar": {
+   "post": {
+    "tags": [
+     "mapa",
+     "selecao"
+    ],
+    "summary": "Filtrar",
+    "operationId": "filtrar_api_mapa_camadas__id__filtrar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FiltrarEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}/selecionar": {
+   "post": {
+    "tags": [
+     "mapa",
+     "selecao"
+    ],
+    "summary": "Selecionar",
+    "operationId": "selecionar_api_mapa_camadas__id__selecionar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SelecionarEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/selecao-espacial": {
+   "post": {
+    "tags": [
+     "mapa",
+     "selecao"
+    ],
+    "summary": "Selecao Espacial",
+    "operationId": "selecao_espacial_api_mapa_selecao_espacial_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SelecaoEspacialEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}/feicoes/{fid}": {
+   "get": {
+    "tags": [
+     "mapa",
+     "exportacao"
+    ],
+    "summary": "Copiar Feicao",
+    "description": "A feição inteira (geometria da TABELA, não do tile) como texto para a área de transferência.",
+    "operationId": "copiar_feicao_api_mapa_camadas__id__feicoes__fid__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "fid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Fid"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "geojson",
+       "title": "Formato"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}/estilo": {
+   "get": {
+    "tags": [
+     "mapa",
+     "exportacao"
+    ],
+    "summary": "Estilo",
+    "description": "`maplibre` devolve as camadas de estilo da Style Spec; `sld` devolve SLD 1.0.0 (mesmas classes).",
+    "operationId": "estilo_api_mapa_camadas__id__estilo_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "maplibre",
+       "title": "Formato"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "application/vnd.ogc.sld+xml": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/pacotes/importar": {
+   "post": {
+    "tags": [
+     "mapa",
+     "exportacao"
+    ],
+    "summary": "Importar Pacote",
+    "description": "Recria, NESTE inquilino, o mapa que outro pacote levou: as camadas do GeoPackage viram tabelas\nnovas do inquilino, cada uma com a sua simbologia, e o documento de mapa volta a apontar para elas.\n\nO corpo é o zip CRU (`application/zip`), não multipart: é o mesmo caminho de `app/uploads/rotas.py`\ne de `app/rotas_arquivos.py` nesta casa, e evita uma dependência nova só para envelopar um arquivo\n(o `python-multipart` não está instalado, e o brief proíbe mexer no venv compartilhado por isto).",
+    "operationId": "importar_pacote_api_mapa_pacotes_importar_post",
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "conteudo.criar"
+   }
   }
  },
  "components": {
@@ -11713,6 +13145,68 @@
     ],
     "title": "AmostrasResultado"
    },
+   "AnotacaoEdicao": {
+    "properties": {
+     "texto": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 4000,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Texto"
+     },
+     "resolvido": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Resolvido"
+     }
+    },
+    "type": "object",
+    "title": "AnotacaoEdicao"
+   },
+   "AnotacaoEntrada": {
+    "properties": {
+     "camada_id": {
+      "type": "string",
+      "title": "Camada Id"
+     },
+     "fid": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Fid"
+     },
+     "grupo_id": {
+      "type": "string",
+      "title": "Grupo Id"
+     },
+     "texto": {
+      "type": "string",
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Texto"
+     }
+    },
+    "type": "object",
+    "required": [
+     "camada_id",
+     "fid",
+     "grupo_id",
+     "texto"
+    ],
+    "title": "AnotacaoEntrada"
+   },
    "CategoriaNo": {
     "properties": {
      "id": {
@@ -11837,6 +13331,64 @@
      "codigos_recuperacao"
     ],
     "title": "CodigosRecuperacao"
+   },
+   "ColunaVista": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 63,
+      "title": "Nome"
+     },
+     "alias": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Alias"
+     },
+     "oculta": {
+      "type": "boolean",
+      "title": "Oculta",
+      "default": false
+     },
+     "largura": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 2000.0,
+        "minimum": 40.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Largura"
+     },
+     "dominio": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dominio"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome"
+    ],
+    "title": "ColunaVista"
    },
    "Compartilhado": {
     "properties": {
@@ -13448,6 +15000,157 @@
     ],
     "title": "ExecucaoPagina"
    },
+   "ExportacaoEntrada": {
+    "properties": {
+     "item_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Item Id"
+     },
+     "formato": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Formato"
+     },
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 120
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "campos": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Campos"
+     },
+     "where": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 4000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Where"
+     },
+     "bbox": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array",
+        "maxItems": 4,
+        "minItems": 4
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bbox"
+     },
+     "srid_saida": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 999999.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Srid Saida"
+     },
+     "codificacao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 20
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Codificacao"
+     },
+     "pasta_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pasta Id"
+     },
+     "csv": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/OpcoesCsv"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "integer"
+        },
+        "type": "array",
+        "maxItems": 200000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ids"
+     },
+     "filtro": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Filtro"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "item_id",
+     "formato"
+    ],
+    "title": "ExportacaoEntrada"
+   },
    "Fator": {
     "properties": {
      "id": {
@@ -13577,6 +15280,27 @@
      "peso"
     ],
     "title": "FatorPesoEntrada"
+   },
+   "FiltrarEntrada": {
+    "properties": {
+     "filtro": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Filtro"
+     },
+     "limite_amostra": {
+      "type": "integer",
+      "maximum": 20000.0,
+      "minimum": 1.0,
+      "title": "Limite Amostra",
+      "default": 5000
+     }
+    },
+    "type": "object",
+    "required": [
+     "filtro"
+    ],
+    "title": "FiltrarEntrada"
    },
    "FotoEntrada": {
     "properties": {
@@ -15324,6 +17048,47 @@
     "type": "object",
     "title": "MoverEntrada"
    },
+   "OpcoesCsv": {
+    "properties": {
+     "separador": {
+      "type": "string",
+      "title": "Separador",
+      "default": ","
+     },
+     "decimal": {
+      "type": "string",
+      "title": "Decimal",
+      "default": "."
+     },
+     "coluna_x": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 63
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Coluna X"
+     },
+     "coluna_y": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 63
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Coluna Y"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "OpcoesCsv"
+   },
    "OrdemExclusao": {
     "properties": {
      "ordem": {
@@ -15909,6 +17674,72 @@
     ],
     "title": "PastaEntrada"
    },
+   "PedidoEstatisticas": {
+    "properties": {
+     "busca": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Busca"
+     },
+     "bbox": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array",
+        "maxItems": 4,
+        "minItems": 4
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bbox",
+      "description": "extensão do mapa em WGS84: [oeste, sul, leste, norte]"
+     },
+     "fids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "integer"
+        },
+        "type": "array",
+        "maxItems": 5000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fids",
+      "description": "seleção vinda do mapa: valores da chave primária"
+     },
+     "colunas": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Colunas"
+     }
+    },
+    "type": "object",
+    "title": "PedidoEstatisticas"
+   },
    "PedidoGeocodificar": {
     "properties": {
      "endereco": {
@@ -16052,6 +17883,97 @@
     ],
     "title": "PedidoIsocrona"
    },
+   "PedidoLinhas": {
+    "properties": {
+     "busca": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Busca"
+     },
+     "bbox": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "number"
+        },
+        "type": "array",
+        "maxItems": 4,
+        "minItems": 4
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bbox",
+      "description": "extensão do mapa em WGS84: [oeste, sul, leste, norte]"
+     },
+     "fids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "integer"
+        },
+        "type": "array",
+        "maxItems": 5000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fids",
+      "description": "seleção vinda do mapa: valores da chave primária"
+     },
+     "pagina": {
+      "type": "integer",
+      "minimum": 1.0,
+      "title": "Pagina",
+      "default": 1
+     },
+     "por_pagina": {
+      "type": "integer",
+      "title": "Por Pagina",
+      "default": 50
+     },
+     "ordenar_por": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 63
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ordenar Por"
+     },
+     "ordem": {
+      "type": "string",
+      "title": "Ordem",
+      "default": "asc"
+     },
+     "geometria": {
+      "type": "boolean",
+      "title": "Geometria",
+      "description": "devolve a geometria em GeoJSON 4326 para o mapa desenhar",
+      "default": false
+     },
+     "contar": {
+      "type": "boolean",
+      "title": "Contar",
+      "description": "conta o total sob o mesmo filtro; false devolve total nulo",
+      "default": true
+     }
+    },
+    "type": "object",
+    "title": "PedidoLinhas"
+   },
    "PedidoMatriz": {
     "properties": {
      "origens": {
@@ -16161,6 +18083,20 @@
     ],
     "title": "PedidoRota"
    },
+   "PedidoVista": {
+    "properties": {
+     "colunas": {
+      "items": {
+       "$ref": "#/components/schemas/ColunaVista"
+      },
+      "type": "array",
+      "maxItems": 500,
+      "title": "Colunas"
+     }
+    },
+    "type": "object",
+    "title": "PedidoVista"
+   },
    "Privilegio": {
     "properties": {
      "nome": {
@@ -16189,6 +18125,35 @@
      "administrativo"
     ],
     "title": "Privilegio"
+   },
+   "PromoverEntrada": {
+    "properties": {
+     "titulo": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 1,
+      "title": "Titulo"
+     },
+     "ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ids"
+     }
+    },
+    "type": "object",
+    "required": [
+     "titulo"
+    ],
+    "title": "PromoverEntrada"
    },
    "ProvedorLdapEntrada": {
     "properties": {
@@ -16867,6 +18832,94 @@
      "itens"
     ],
     "title": "SaudeHistoricoPagina"
+   },
+   "SelecaoEspacialEntrada": {
+    "properties": {
+     "camada_a": {
+      "type": "string",
+      "title": "Camada A"
+     },
+     "camada_b": {
+      "type": "string",
+      "title": "Camada B"
+     },
+     "relacao": {
+      "type": "string",
+      "title": "Relacao",
+      "default": "intersects"
+     },
+     "distancia_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Distancia M"
+     },
+     "limite_amostra": {
+      "type": "integer",
+      "maximum": 20000.0,
+      "minimum": 1.0,
+      "title": "Limite Amostra",
+      "default": 5000
+     }
+    },
+    "type": "object",
+    "required": [
+     "camada_a",
+     "camada_b"
+    ],
+    "title": "SelecaoEspacialEntrada"
+   },
+   "SelecionarEntrada": {
+    "properties": {
+     "geometria": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Geometria"
+     },
+     "relacao": {
+      "type": "string",
+      "title": "Relacao",
+      "default": "intersects"
+     },
+     "distancia_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Distancia M"
+     },
+     "modo": {
+      "type": "string",
+      "title": "Modo",
+      "default": "novo"
+     },
+     "ids_atuais": {
+      "items": {},
+      "type": "array",
+      "title": "Ids Atuais"
+     },
+     "limite_amostra": {
+      "type": "integer",
+      "maximum": 20000.0,
+      "minimum": 1.0,
+      "title": "Limite Amostra",
+      "default": 5000
+     }
+    },
+    "type": "object",
+    "required": [
+     "geometria"
+    ],
+    "title": "SelecionarEntrada"
    },
    "SenhaCodigoEntrada": {
     "properties": {
