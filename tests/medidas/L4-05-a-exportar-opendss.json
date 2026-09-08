@@ -1,8 +1,8 @@
 {
  "item": "L4-05-a-exportar-opendss",
- "gerado_em": "2026-09-08T00:51:57Z",
- "git_sha": "27fcccc1ab3c74c0ee972c795852780bb6dfd747",
- "maquina": "PostgreSQL 16 em iagro_sat, base da trilha (plat_til405aexpor); opendssdirect.py 0.9.4; rede de teste sintética do próprio teste",
+ "gerado_em": "2026-09-08T01:34:35Z",
+ "git_sha": "50ab3a7f885b221da5219a4642c58ade66797b71",
+ "maquina": "PostgreSQL 16 em iagro_sat, base da trilha (plat_til401edicio); opendssdirect.py 0.9.4; rede de teste sintética do próprio teste",
  "medidas": {
   "dicionario_tensao": {
    "codigos": 110,

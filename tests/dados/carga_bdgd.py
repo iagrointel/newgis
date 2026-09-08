@@ -322,7 +322,6 @@ def esperado_orfaos_alta(cur, tolerancia_m: float = TOLERANCIA_PADRAO_M) -> int:
 
 def contagens_arquivo(cur) -> dict:
     """As contagens do arquivo que o portão declara — medidas, nunca copiadas do enunciado."""
-    esq = esquema()
     saida = {}
     for tabela in ("ssdmt", "ssdbt", "ramlig", "trafo", "ponnot", "ctmt"):
         cur.execute(f"SELECT count(*) AS n FROM {exigir_esquema()}.{tabela}")
