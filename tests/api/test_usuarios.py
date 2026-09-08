@@ -70,6 +70,17 @@ def test_so_admin_cria_altera_e_apaga_admin(sessao_a, usuarios_a):
         },
     )
     assert r.status_code == 422 and r.json()["erro"] == "papel_incompativel"
+    # nem num visualizador (refutação literal do item L0-07-b: "papel administrativo para tipo visualizador")
+    r = sessao_a.post(
+        "/api/usuarios",
+        json={
+            "login": f"{PREFIXO_TESTE}{secrets.token_hex(3)}",
+            "nome": "x",
+            "perfil": "visualizador",
+            "papel_id": papel["id"],
+        },
+    )
+    assert r.status_code == 422 and r.json()["erro"] == "papel_incompativel", r.text
     # admin secundário com esse papel (subconjunto do teto): não é admin? é admin de perfil, então pode; o teste da
     # regra (b)(c) usa um editor puro
     c_ed, ed, _ = usuarios_a.sessao("editor")
@@ -257,6 +268,43 @@ def test_apagar_com_2_itens_do_catalogo_recusa_listando_os_2(sessao_a, usuarios_
     conexao_plat_app.commit()
     assert sessao_a.delete(f"/api/usuarios/{u['id']}").status_code == 204
     usuarios_a.criados.remove(u["id"])
+
+
+def test_rebaixar_perfil_com_itens_e_recusado(sessao_a, usuarios_a, conexao_plat_app, ids):
+    """Regra da Esri (E12-members): só se rebaixa o tipo de usuário se ele "não possui conteúdo nem grupos".
+    `_editar` já recusava com grupos (`possui_grupos`); achado do adversário do item L0-07-b-papeis-privilegios:
+    conteúdo (itens do catálogo) não era checado — um admin dono de mapa virava visualizador sem aviso e o
+    perfil novo não alcançava mais `conteudo.criar`, então o dono nem podia mais editar/apagar o próprio item."""
+    from tests.api.test_rls import contexto, ids_por_slug
+
+    c, u, _ = usuarios_a.sessao("editor")
+    r = c.post(
+        "/api/itens",
+        json={
+            "tipo": "mapa",
+            "titulo": f"{PREFIXO_TESTE}-rebaixa-{secrets.token_hex(2)}",
+            "dados": {"esquema_versao": 1, "corpo": {}},
+        },
+    )
+    assert r.status_code == 201, r.text
+    item = r.json()
+    r = sessao_a.put(f"/api/usuarios/{u['id']}", json={"perfil": "visualizador"})
+    assert r.status_code == 409 and r.json()["erro"] == "possui_itens", r.text
+    assert r.json()["detalhe"][0]["id"] == item["id"]
+    assert sessao_a.get(f"/api/usuarios/{u['id']}").json()["perfil"] == "editor"  # não mudou nada
+    # subir de perfil não esbarra na regra, mesmo com item — só descer é que exige "sem conteúdo"
+    assert sessao_a.put(f"/api/usuarios/{u['id']}", json={"perfil": "admin"}).status_code == 200
+    r = sessao_a.put(f"/api/usuarios/{u['id']}", json={"perfil": "editor"})  # admin -> editor também desce
+    assert r.status_code == 409 and r.json()["erro"] == "possui_itens", r.text
+    # purga física do item (mesmo caminho de test_apagar_com_2_itens...): sem ele, o rebaixamento passa
+    tenant_id = ids_por_slug(conexao_plat_app)["demo"]
+    contexto(conexao_plat_app, tenant_id, usuario_id=ids["a"]["id"], login="admin")
+    with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (item["id"],))
+        cur.execute("SELECT plat.item_expurgar(%s::uuid)", (item["id"],))
+    conexao_plat_app.commit()
+    r = sessao_a.put(f"/api/usuarios/{u['id']}", json={"perfil": "visualizador"})
+    assert r.status_code == 200 and r.json()["perfil"] == "visualizador", r.text
 
 
 def test_privilegios_e_papeis(sessao_a, usuarios_a):

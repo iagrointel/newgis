@@ -6,7 +6,7 @@ sem serviço de tiles dinâmico e sem chave de terceiro. Sem nome de cliente, se
 ## Fonte
 
 - Origem: OpenStreetMap, extrato regional `sudeste-latest.osm.pbf` já presente na casa em
-  `/home/dev/cbre/osm/area_estudo.osm.pbf` (baixado por outra frente, sem novo download — disco a
+  um recorte OSM já baixado por outra frente da casa (baixado por outra frente, sem novo download — disco a
   98 %). OSM © colaboradores do OpenStreetMap, licença **ODbL 1.0**
   (https://www.openstreetmap.org/copyright).
 - Recorte: bbox `-46.62, -23.53, -46.42, -23.38` (Guarulhos-SP, área de teste; ≈ 21 × 17 km),

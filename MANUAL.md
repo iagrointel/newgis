@@ -293,17 +293,28 @@ composição dos grupos. Página pronta em 60,8 ms (`pagina_pronta_ms_grupos`).
 
 Exige `papeis.gerir`. Captura `tests/e2e/capturas/L0-02-tenant-auth_papeis.png` (`tests/e2e/test_papeis.py`,
 `test_papel_criar_editar_apagar`): cartão "Perfis (teto de privilégios)" com os quatro perfis e a contagem de
-privilégios (administrador 46, dos quais 20 administrativos; editor 26; visualizador 7; campo 11) e o botão `Ver`;
+privilégios (administrador 47, dos quais 20 administrativos; editor 27; visualizador 8; campo 12) e o botão `Ver`;
 cartão "Papéis personalizados" com nome · descrição · perfil mínimo · privilégios · usuários e os botões `Editar` e
 `Apagar`; faixa verde "papel Curador E2E c5ec1c criado".
 
 Como funciona: o perfil do usuário define o teto de privilégios; o papel personalizado é um subconjunto do teto,
-criado com nome, descrição e a lista de privilégios (vocabulário fechado de 46 nomes, consultável em
-`GET /api/privilegios`). O servidor calcula o `perfil mínimo` do papel (um privilégio administrativo obriga perfil
-`admin`); usuário com perfil abaixo do mínimo não recebe o papel (`422 papel_incompativel`). Quem cria um papel só
-concede privilégios que a própria sessão tem (`403 privilegio_proprio_insuficiente`). Papel em uso não se apaga
-(`409 papel_em_uso`). Toda rota da API pergunta por privilégio, nunca por perfil; a lista de privilégios da sessão
-está em `GET /api/eu`.
+criado com nome, descrição e a lista de privilégios (vocabulário fechado de 47 nomes, gerado do banco em
+`docs/PRIVILEGIOS.md`, consultável também em `GET /api/privilegios`). O servidor calcula o `perfil mínimo` do papel
+(um privilégio administrativo obriga perfil `admin`); usuário com perfil abaixo do mínimo não recebe o papel
+(`422 papel_incompativel`). Quem cria um papel só concede privilégios que a própria sessão tem (`403
+privilegio_proprio_insuficiente`). Papel em uso não se apaga (`409 papel_em_uso`). Rebaixar o perfil de um usuário
+que ainda possui grupos ou itens do catálogo é recusado (`409 possui_grupos`/`409 possui_itens` — item
+L0-07-b-papeis-privilegios, T3: a checagem de conteúdo não existia até este turno). Toda rota da API pergunta por
+privilégio, nunca por perfil; a lista de privilégios da sessão está em `GET /api/eu`;
+`tests/api/test_privilegios_matriz.py` chama toda rota do OpenAPI vivo com um usuário sem o privilégio declarado e
+exige 403 em todas. Paridade linha a linha contra a lista de privilégios da Esri (43 gerais + 33 administrativos):
+`docs/PARIDADE.md` seção "Privilégios e papéis personalizados" (35 feito · 11 parcial · 30 fora de 76).
+
+Cenário provado ponta a ponta (`tests/e2e/test_papeis.py::test_papel_curador_categoriza_mas_nao_publica`, captura
+`L0-02-tenant-auth_papel_curador.png`): papel "Curador" com `conteudo.criar` + `conteudo.categorias` (este último
+administrativo, então o papel só cabe em perfil `admin`) atribuído a um usuário novo — ele reescreve a árvore de
+categorias do inquilino e cria conteúdo comum, mas uma tentativa de criar/publicar camada vetorial nega com `403
+sem_privilegio` (`exigido: conteudo.publicar_camada`, que o papel não deu).
 
 Página pronta em 58,7 ms (`pagina_pronta_ms_papeis`).
 
@@ -939,7 +950,7 @@ Curadoria (evidência, não suposição): das 68 fontes licenciadas, uma varredu
 `information_schema.columns` nas 219 tabelas canônicas ligadas a elas (contra um padrão amplo de nome de
 coluna — cpf/cnpj/nome/email/telefone/endereço/titular/...) achou 114 colunas suspeitas; lidas uma a uma, a
 esmagadora maioria é nome de LUGAR (`zona_nome`, `nome_municipio`), CNPJ de FUNDO (não de pessoa física) ou
-endereço de IMÓVEL já público por natureza (leilão/edital). Um caso quase enganou: `cbre.cad_gu_face_pgv`
+endereço de IMÓVEL já público por natureza (leilão/edital). Um caso quase enganou: `<frente>.cad_gu_face_pgv`
 tem `telefone`/`telefone_p`, mas são FLAGS de infraestrutura de rua (a rua tem rede telefônica?), não contato
 de pessoa. O único achado real: **`onr`** (ONR/matrículas) — a tabela ingerida não guarda nome do titular,
 mas `url_mat` aponta para o visualizador de matrícula do cartório, que guarda. Marcada `risco_pii = true`.
@@ -958,3 +969,104 @@ COLUNA (lista negra + regex de conteúdo sobre amostra) em TODA view exposta, in
 (L6-01-a-registro) — hoje só `colunas_expostas`/`colunas_bloqueadas` por nome, comentado como provisório
 naquele item. O que foi entregue é o gate no fluxo de "adicionar fonte" descrito no pedido desta passagem;
 o resto fica registrado como pendência, não prometido como feito.
+
+## 20. Geocodificador (item L2-11-b-geocodificador-brasil)
+
+Geocodificador PRÓPRIO em PostgreSQL/PostGIS — sem Nominatim nem Pelias instalados (exigiriam o OSM inteiro
+do Brasil em disco; decisão D28). Base: CNEFE 2022 do IBGE (endereço com coordenada por face de quadra),
+instalado por UF. Nesta demo: **Roraima** (o menor arquivo de UF do CNEFE, medido por `HEAD` antes de
+escolher), 260.515 pontos em 15 municípios.
+
+### 20.1 API própria
+
+- `POST /api/geocodificar` — corpo `{"endereco": "Rua X, 123, Bairro, Município - UF"}` (linha única) OU
+  campos separados (`logradouro`, `numero`, `bairro`, `municipio`, `uf`, `cep`) — os dois se misturam, o que
+  faltar num é completado pelo outro. Devolve até `max_locations` candidatos ordenados por `score` (0-100),
+  cada um com `tipo_acerto`: `numero_exato` (ponto do CNEFE com o mesmo número) → `interpolado_na_face`
+  (interpolação linear entre dois pontos conhecidos da MESMA face de quadra) → `aproximado_no_logradouro` →
+  `aproximado_no_bairro` → `aproximado_no_cep` → `aproximado_no_municipio`. CEP e município/UF que não
+  correspondem ao mesmo lugar no CNEFE carregado recusam com `422 cep_municipio_inconsistente`/
+  `cep_uf_inconsistente` (nomeando o lugar correto do CEP), ANTES de qualquer busca por logradouro. Nome
+  repetido em municípios diferentes (ex.: `Rua A`, que se repete em 8 dos 15 municípios de Roraima) devolve
+  vários candidatos, um por município — nunca escolhe um arbitrariamente.
+- `POST /api/reverso` — corpo `{"lon": ..., "lat": ..., "raio_m": 2000}`. Vizinho mais próximo por índice
+  GiST (`geom <->`, KNN); devolve o endereço, a distância em metros e `fora_do_raio` quando a distância passa
+  do raio pedido (o vizinho mais próximo sempre volta, mesmo fora do raio — quem decide descartar é o
+  chamador).
+- `GET /api/sugerir?q=...` — autocomplete por prefixo sobre índice GIN trigram (medido: p95 33,1 ms com 260
+  mil linhas instaladas).
+
+Todas exigem sessão de usuário ou token de serviço com o escopo `geocodificar:usar` (novo).
+
+### 20.2 GeocodeServer compatível Esri
+
+`GET /rest/services/Geocodificador/GeocodeServer` (descritor, sem autenticação — só metadado) e
+`findAddressCandidates` / `reverseGeocode` / `suggest` / `geocodeAddresses` sob o mesmo prefixo, com os
+mesmos parâmetros que o ArcGIS Enterprise usa (`SingleLine`, `address`/`city`/`region`/`postal`,
+`maxLocations`, `location=lon,lat`, `text`, `addresses.records[].attributes`). **Autenticação por
+`?token=<token de serviço>` na querystring** (o protocolo real do locator publicado pela Esri, diferente da
+regra geral de `/api/`, que só aceita `Authorization: Bearer` — ver seção sobre tokens) além do cabeçalho
+normal. `Addr_type` da resposta é uma tradução aproximada da hierarquia de recuo para o vocabulário Esri
+(`PointAddress`, `StreetAddress`, `StreetName`, `Locality`, `PostalExt`) — não é 1:1 com o locator real.
+Tabela de paridade completa (feito/parcial/fora) em `docs/PARIDADE.md`, seção "Geocodificador".
+
+**QGIS como locator real fica como PENDÊNCIA, não como feito**: esta máquina não tem QGIS instalado nem
+ambiente gráfico (mesma limitação do Chrome headless já registrada neste documento). O protocolo foi
+verificado por chamada HTTP direta simulando exatamente o que o QGIS/ArcGIS Pro mandariam — prova o
+protocolo, não a integração do produto.
+
+### 20.3 Instalação por UF
+
+`venv/bin/python3 scripts/geocodificador_instalar_uf.py --uf <SIGLA>` mede o tamanho do arquivo por `HEAD`
+antes de baixar (teto padrão 200 MB comprimidos, D28; `--forcar` ignora), baixa em streaming com sha256
+acumulado, lê o zip membro a membro (nunca extrai por inteiro em disco) e carrega por `COPY` em lotes de 20
+mil linhas. Reinstalar a mesma UF apaga e recarrega (idempotente). Proveniência em `plat.geo_instalacao`
+(tamanho do zip/CSV, linhas, municípios, duração, sha256) — Roraima: 4,52 MB comprimidos, 42,05 MB de CSV,
+260.515 linhas, 15 municípios, **10,4 s**, tabela final **126 MB com índices**.
+
+### 20.4 Limites desta fatia
+
+Sem São Paulo carregado (é o MAIOR arquivo de UF do CNEFE — fora do teto de disco D28); a ambiguidade
+multi-município foi provada com `Rua A` em Roraima, registrado explicitamente como substituto, nunca
+disfarçado de SP real. Sem `outSR`/`searchExtent`/boost por proximidade/`category`/`langCode`/paginação
+`search-start-num`. `magicKey` do `suggest` é devolvido mas ainda não é aceito de volta no
+`findAddressCandidates` (o item-irmão `L2-11-a-geocodificacao-csv`, lote de planilha do usuário, também não
+foi construído nesta passagem — reusa o mesmo motor). Ver `laco/handoffs/T3/L2-11-b-geocodificador-brasil.md`
+e ADR 0013 para o estado exato.
+
+## 21. SMTP, convite de membro e redefinição de senha (item L0-07-d-smtp-convites)
+
+### 21.1 SMTP (`/admin/organizacao`, seção "E-mail (SMTP)")
+
+`GET/PUT /api/org/smtp` (privilégio `org.integracoes`) grava host, porta, STARTTLS, usuário, senha (cifrada,
+nunca devolvida — só `senha_configurada: bool`), remetente e rótulo em `tenant.config->'smtp'`. Sem SMTP
+próprio, o inquilino usa o da instalação (`PLAT_SMTP_*` do `.env`); sem nenhum dos dois, os fluxos abaixo
+caem no caminho manual já existente (senha temporária mostrada uma vez ao admin). Deixar `host` em branco no
+PUT remove o override do inquilino. `POST /api/org/smtp/testar` envia um e-mail de teste SÍNCRONO (não pela
+fila) para o próprio e-mail do admin (ou outro informado) e devolve o erro em texto simples na mesma
+resposta quando falha — nunca um traceback, nunca a senha.
+
+### 21.2 Convite de membro (`/admin/usuarios`, seção "Convidar por e-mail")
+
+Um admin com `membros.gerir` convida por e-mail (perfil diferente de visualizador ou com papel exige
+`membros.papel`, mesmo teto de `POST /api/usuarios`). Com SMTP configurado, o convite sai por e-mail (job
+`correio.enviar` da fila do L0-05); sem SMTP, a resposta devolve `link_manual` para o admin repassar. O link
+(`/aceitar-convite?token=...`) carrega só o token — nunca o e-mail nem o perfil, que o servidor sempre lê do
+convite. O convidado escolhe login, nome e senha; a conta nasce com o perfil/papel do convite. Token de uso
+único, válido por 7 dias; usar de novo ou usar depois de expirado devolve `410`. Reenviar um convite para o
+mesmo e-mail cancela o anterior (nunca acumula links vivos).
+
+### 21.3 Redefinição de senha por e-mail (`/redefinir-senha`, pública)
+
+`POST /api/senha/redefinir/solicitar {inquilino, email}` sempre responde `202 {"ok": true}` — existindo ou
+não a conta, exceto quando o limite de taxa por (inquilino, e-mail) estoura (`429`, no máximo 5 pedidos a
+cada 15 minutos). Com SMTP configurado e a conta existindo, chega um e-mail com um link de 1 hora,
+uso único; `POST /api/senha/redefinir/aplicar {token, senha}` troca a senha pela MESMA regra de política e
+histórico que `/conta` já usa, encerra as sessões do usuário e registra o evento. Sem SMTP, o pedido fica
+registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usuário pede ao admin.
+
+### 21.4 O que ficou de fora
+
+Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
+turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
+os dois, falta só o gatilho periódico.

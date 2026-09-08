@@ -104,9 +104,21 @@ def _editar(cur, auth: Auth, request: Request, alvo: dict, campos: dict) -> dict
     if "email" in campos:
         _email_ok(campos["email"], auth)
     if "perfil" in campos and priv.ORDEM_PERFIL[novo_perfil] < priv.ORDEM_PERFIL[alvo["perfil"]]:
+        # regra da Esri (E12-members): rebaixar o tipo de usuário só se ele "não possui conteúdo nem grupos" —
+        # a rota já checava grupos; achado do adversário do item L0-07-b: conteúdo (itens do catálogo) não era
+        # checado, então um admin com mapas/camadas publicadas virava visualizador sem aviso, e o dono passava a
+        # não poder mais editar/apagar o próprio material (perfil não alcança mais `conteudo.criar`).
         grupos = _grupos_do_dono(cur, alvo["id"])
         if grupos:
             raise ErroAPI(409, "possui_grupos", "rebaixar quem possui grupos: transfira os grupos antes", grupos)
+        itens = _itens_do_dono(cur, alvo["id"])
+        if itens:
+            raise ErroAPI(
+                409,
+                "possui_itens",
+                "rebaixar quem possui itens: transfira-os antes (POST /api/itens/transferir) ou apague-os",
+                itens,
+            )
     papel_id = campos["papel_id"] if "papel_id" in campos else alvo["papel_id"]
     if "perfil" in campos or "papel_id" in campos:
         _papel_compativel(cur, papel_id, novo_perfil)

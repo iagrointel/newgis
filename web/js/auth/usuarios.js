@@ -220,10 +220,11 @@ function abrirPainel(u) {
       return;
     }
     if (r.status === 200) { painel.fechar('ok'); await carregarLista(); document.getElementById('aviso').ok(t('usuarios.salvo', { login: r.json.login })); return; }
-    const campoPorErro = { login_existente: 'login', email_dominio: 'email', papel_incompativel: 'papel_id', ultimo_admin: 'perfil', so_admin_cria_admin: 'perfil', so_admin_altera_admin: 'perfil', possui_grupos: 'perfil' };
+    const campoPorErro = { login_existente: 'login', email_dominio: 'email', papel_incompativel: 'papel_id', ultimo_admin: 'perfil', so_admin_cria_admin: 'perfil', so_admin_altera_admin: 'perfil', possui_grupos: 'perfil', possui_itens: 'perfil' };
     const campo = campoPorErro[r.json.erro];
     let m = mensagemDe(r);
     if (r.json.erro === 'possui_grupos' && Array.isArray(r.json.detalhe)) m += ` (${r.json.detalhe.map((g) => g.nome).join(', ')})`;
+    if (r.json.erro === 'possui_itens' && Array.isArray(r.json.detalhe)) m += ` (${r.json.detalhe.map((i) => i.titulo).join(', ')})`;
     if (campo) f.erro(campo, m); else f.mensagem(m, 'erro');
   });
   painel.abrir({ titulo: novo ? t('usuarios.novo') : t('usuarios.editar', { login: u.login }), corpo: f }).then(() => {});

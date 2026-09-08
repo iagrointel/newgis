@@ -1,0 +1,2000 @@
+{
+ "linha": "L4 rede de utilidades",
+ "gerado_em": "2026-09-05",
+ "gerado_por": "decomposição L4 (agente 'redes'), a partir do BRIEF de 05/09/2026",
+ "n_itens": 59,
+ "itens_existentes_detalhados": [
+  "L4-01-modelo-rede",
+  "L4-02-tracado",
+  "L4-03-edicao-rede",
+  "L4-04-subredes-diagramas",
+  "L4-05-conectores-rede",
+  "L4-06-estruturas-regras-avancadas"
+ ],
+ "dependencias_externas_propostas": [
+  {
+   "id": "L2-13-versionamento-sync",
+   "o_que_muda": "nascer com 'delta de topologia por versão' e 'post exige zero área suja' (decisão C8 do L4_CONCEITO); sem isso L4-03-e refaz o versionamento"
+  },
+  {
+   "id": "L2-10-relacoes-regras",
+   "o_que_muda": "a linguagem de expressão precisa de ponto de extensão para funções de rede (subrede(), jusante().contar()) — L4-29"
+  },
+  {
+   "id": "L2-14-tempo-real",
+   "o_que_muda": "entrada MQTT/HTTP tem de aceitar chave 'ativo global_id' e gravar em tabela particionada sem TSL (L4-13); TimescaleDB só com peça Apache-2"
+  },
+  {
+   "id": "L2-04-servicos-esri-ogc",
+   "o_que_muda": "FeatureServer precisa expor `queryRelatedRecords` e `applyEdits` com gancho de validação por camada (regras de rede recusam no servidor) — L4-03-a"
+  },
+  {
+   "id": "L2-02-simbologia",
+   "o_que_muda": "o formato de estilo tem de suportar símbolo rotacionado pelo trecho e cor por atributo derivado (fase bitmask) — L4-24"
+  },
+  {
+   "id": "L6-01-acervo-casa",
+   "o_que_muda": "expor BDGD (3 pacotes), SINDAT/SIGEL, continuidade ANEEL, CNEFE e as 322 camadas do motor de LT como fontes do acervo com licença escrita (D17)"
+  },
+  {
+   "id": "L0-05-jobs",
+   "o_que_muda": "job com 'executor remoto' (ssh gpu) para fluxo de potência quando a RAM local não permitir — L4-07"
+  },
+  {
+   "id": "L0-01-repo",
+   "o_que_muda": "instalar postgresql-16-pgrouting 4.0.1 (apt) no turno de L4-02-a; registrar em install.sh; pandapower/opendssdirect/wntr só na venv do repo, com decisão do arquiteto por item"
+  },
+  {
+   "id": "D21 (dono)",
+   "o_que_muda": "qualquer pacote BDGD novo (476 MB a 1 GB cada) e a rede da distribuidora grande dependem de disco; L4-01-c e L4-22 ficam parciais até D21"
+  }
+ ],
+ "fontes_esri_testadas": "351 URLs de doc Esri (Pro 3.4 = Enterprise 11.4: utility-network, network-diagrams, trace-network, parcel-editing, toolboxes, REST UtilityNetworkServer/NetworkDiagramServer/ParcelFabricServer/VersionManagementServer) responderam HTTP 200 em 2026-09-05; lista em scratchpad/esri_ok.txt. Esri não tem equivalente para fluxo de potência, perdas, DEC/FEC, hospedagem de GD e inspeção orbital — registrar como 'além da paridade'. GeoServer (WFS-T) e QGIS Server não têm topologia de rede nem traçado; QGIS desktop tem análise de rede (caminho mais curto/área de serviço) e edição topológica; TEKSI/QGEP é o modelo aberto de esgoto/água em PostGIS.",
+ "itens": [
+  {
+   "id": "L4-01-a-pacote-de-ativos",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-ingest-vetor"
+   ],
+   "hipotese": "o esquema da rede é DADO, não código: um pacote de ativos (JSON versionado + tabelas plat.rede_dominio/tier/grupo/tipo/categoria/terminal_config/regra) descreve rede de domínio (ex.: elétrica de distribuição, estrutura), tiers com ordem e tipo (hierárquico/particionado), grupos e tipos de ativo com subtipo codificado, categorias (ex.: dispositivo de proteção, controlador), atributos de rede e configurações de terminal; o mesmo formato serve para elétrica, água, gás, esgoto e telecom, e é o que se importa/exporta entre inquilinos",
+   "portao_de_pronto": "DDL `plat.rede_*` de catálogo em migração idempotente com RLS; `POST /api/v1/rede/{rede_id}/pacote` importa um pacote JSON e `GET .../pacote` devolve o mesmo JSON byte a byte (round-trip testado); pacote 'elétrica-BR' entregue com os grupos/tipos que cobrem as 13 camadas de rede da BDGD Módulo 10 (SUB, CTMT, SSDMT, SSDBT, UNTRMT, UNSEMT, UNCRMT, UNREMT, RAMLIG, UCBT/UCMT, UGBT/UGMT, PIP, PONNOT) com mapeamento coluna a coluna documentado; pacote 'água-EPANET' com junction/pipe/pump/valve/tank/reservoir; validação de esquema JSON recusa pacote sem tier ou com tipo sem grupo; teste automatizado; paridade contra domain networks/tiers/asset groups/asset types/categories escrita em docs/PARIDADE.md",
+   "refutacao": "adversário importa pacote com tier referenciando domínio inexistente e com dois tipos de mesmo código: ambos têm de ser recusados com mensagem que aponta a linha; exporta e reimporta em outro inquilino e confere que nada vazou do primeiro",
+   "papeis": [
+    "redes",
+    "arquiteto",
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-01-modelo-rede",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/domain-networks.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/tiers.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/tier-groups.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/network-hierarchies-with-tiers.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/utility-feature-classification.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/about-network-categories.htm",
+    "https://solutions.arcgis.com/utilities/electric/help/electric-utility-network-foundation/",
+    "https://solutions.arcgis.com/utilities/water/help/water-utility-network-foundation/",
+    "https://solutions.arcgis.com/utilities/gas/help/gas-utility-network-foundation/",
+    "https://solutions.arcgis.com/shared/help/utility-data-management-support/",
+    "https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd"
+   ],
+   "ativos_da_casa": [
+    "/home/dev/rs-coop/edp_es/contrato/contrato_bdgd.yaml v1.1 (expectativas por camada e por transformador com severidade bloqueia/avisa/informa; camadas obrigatórias UNTRMT, UCBT_tab, CTMT, SSDBT, PONNOT)",
+    "schema `certaja.*` no iagro_sat (só leitura): ssdmt 44.268 segmentos (COMP, CTMT, UNI_TR_AT, SUB, CONJ, FAS_CON, wkt), ctmt 20, trafo 5.481 (PAC_1..3, POT_NOM, TIP_TRAFO, PER_FER, PER_TOT, x, y), eqtrmt 5.505, ponnot 60.549 (postes), ramlig 26.581, ucbt 27.587 (PN_CON, UNI_TR_MT, ENE, DIC, FIC), pip 12.666, ugbt 1.385"
+   ]
+  },
+  {
+   "id": "L4-01-b-topologia-derivada",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-a-pacote-de-ativos"
+   ],
+   "hipotese": "as camadas de rede do inquilino continuam camadas normais (editáveis, servidas pelo FeatureServer) e a TOPOLOGIA é um índice derivado: `plat.rede_topo_no` (nó por vértice de conexão e por terminal de dispositivo) e `plat.rede_topo_aresta` (aresta por trecho, com source/target, custo geodésico, atributos de rede desnormalizados e bitmask de fase) construídas por 'habilitar topologia' e mantidas por área suja; coincidência geométrica com tolerância declarada por rede (padrão 0,05 m em geography) mais associações explícitas de conectividade para o que não coincide",
+   "portao_de_pronto": "`POST /api/v1/rede/{id}/topologia/habilitar` constrói a topologia da rede da cooperativa de teste (44.268 trechos de MT + 29.244 de BT + 26.581 ramais + 5.481 trafos + 60.549 postes) em tempo medido e registrado em tests/medidas; contagem de nós, arestas, nós órfãos e arestas sem nó gravada em `plat.rede_topo_resumo` e conferida contra o arquivo BDGD (SSDMT × CTMT × UNTRMT); tolerância de coincidência é parâmetro da rede e aparece na ficha; tabela de topologia tem RLS e índice espacial; ponto que cai a 0,04 m de vértice conecta e a 0,06 m não conecta (teste); documento docs/rede/TOPOLOGIA.md com o modelo e a paridade contra network topology/enable topology",
+   "refutacao": "adversário desloca um vértice em 0,10 m via applyEdits e confere que a topologia marca área suja e que o traçado não atravessa; conta nós de grau 1 em MT e compara com o nº de fins de linha esperado pelo arquivo; força dois trechos cruzados sem nó e confere que NÃO conectam (cruzar não é conectar)",
+   "papeis": [
+    "redes",
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-01-modelo-rede",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/about-network-topology.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/connectivity.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/geometric-concident-based-connectivity.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/coincident-features.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/set-edge-connectivity-for-line-features.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/enabletopology-utility-network-server/",
+    "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/utility-networks/rebuild-network-topology.htm",
+    "https://docs.pgrouting.org/4.0/en/pgr_extractVertices.html",
+    "https://docs.pgrouting.org/4.0/en/pgr_degree.html",
+    "https://postgis.net/docs/Topology.html"
+   ],
+   "ativos_da_casa": [
+    "schema `certaja.*` no iagro_sat (só leitura): ssdmt 44.268 segmentos (COMP, CTMT, UNI_TR_AT, SUB, CONJ, FAS_CON, wkt), ctmt 20, trafo 5.481 (PAC_1..3, POT_NOM, TIP_TRAFO, PER_FER, PER_TOT, x, y), eqtrmt 5.505, ponnot 60.549 (postes), ramlig 26.581, ucbt 27.587 (PN_CON, UNI_TR_MT, ENE, DIC, FIC), pip 12.666, ugbt 1.385",
+    "medido 2026-09-05: PostgreSQL 16.13; postgis 3.6.3 e postgis_topology 3.6.3 instaladas; timescaledb 2.26.4 instalada (TSL: ⛔ compressão/continuous aggregates proibidos como DBaaS); pgrouting NÃO instalada, candidato apt postgresql-16-pgrouting 4.0.1-1.pgdg24.04+1; nenhuma venv tem pandapower/opendssdirect/wntr (networkx 3.6.1, geopandas 1.1.3, scipy 1.17.1 no python do sistema); disco / 98 % (13 GB livres) e /mnt/pgdata 98 % (17 GB); RAM disponível 3 GB"
+   ],
+   "nota": "postgis_topology (instalada) modela faces/arestas/nós geométricos e não modela terminal, associação nem tier; serve de referência, não de base. pgRouting 4.0.1 (apt) é o motor de grafo; instalar no turno deste item (guardrail: apt = gerente)."
+  },
+  {
+   "id": "L4-01-c-importador-bdgd",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-b-topologia-derivada",
+    "L0-05-jobs"
+   ],
+   "hipotese": "importador BDGD como job: lê o `.gdb.zip` da ANEEL por GDAL (/vsizip), mapeia as camadas do Módulo 10 para o pacote 'elétrica-BR', monta pontos de conexão a partir de PAC_1..PAC_3 e PN_CON (a BDGD não traz geometria de nó, traz códigos de ponto de acoplamento), converte COMP em metros quando o arquivo declara em metros (razão COMP/geodésico ≈ 1.024 medida na casa), liga UC→trafo→alimentador→subestação e roda o contrato de dado (expectativas bloqueia/avisa/informa) antes de habilitar a topologia",
+   "portao_de_pronto": "os 3 pacotes BDGD 2024 já na máquina importam por job com barra de progresso; para a cooperativa de teste: 20 CTMT, 5.481 UNTRMT, 44.268 SSDMT, 29.244 SSDBT, 27.587 UCBT, 12.666 PIP, 60.549 PONNOT e 1.385 UGBT contados iguais ao arquivo (COUNT(*) × GetFeatureCount) e km de MT igual a Σ COMP convertido ± 0,1 %; relatório do contrato de dado (≥ 30 expectativas do YAML da casa) salvo com o job; UC sem trafo, trafo sem CTMT e PAC sem trecho contados e listados; ⛔ nenhum dado além dos 3 pacotes existentes (disco 98 %, D21); importação de distribuidora 'pelo nome' fica registrada como pendente de D21 (download de 476 MB a 1 GB por distribuidora)",
+   "refutacao": "adversário importa o 2º pacote (cooperativa B) e confere as contagens contra `ogrinfo -so`; troca a unidade de COMP num CSV de teste e confere que o importador detecta pela razão geodésica; sobe o pacote da distribuidora do ES (476 MB) e mede RAM (limite declarado do worker)",
+   "papeis": [
+    "redes",
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-01-modelo-rede",
+   "origem": "casa",
+   "fontes": [
+    "https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd",
+    "https://www.gov.br/aneel/pt-br/centrais-de-conteudos/procedimentos-regulatorios/prodist",
+    "https://solutions.arcgis.com/shared/help/utility-data-management-support/"
+   ],
+   "ativos_da_casa": [
+    "/home/dev/liga/*_2024.gdb.zip (3 pacotes BDGD 2024-12-31 V11 já na máquina: cooperativa de teste 13 MB; cooperativa B; distribuidora de teste do ES 476 MB)",
+    "/home/dev/rs-coop/produto-centelha/brasil_rede_2024/stats.json (101 distribuidoras; km_mt 3.102.276,04; 6.077.450 trafos; 103.114.921 UCs; 30.103.199 segmentos quantizados; medido 2026-07-23)",
+    "schema `certaja.*` no iagro_sat (só leitura): ssdmt 44.268 segmentos (COMP, CTMT, UNI_TR_AT, SUB, CONJ, FAS_CON, wkt), ctmt 20, trafo 5.481 (PAC_1..3, POT_NOM, TIP_TRAFO, PER_FER, PER_TOT, x, y), eqtrmt 5.505, ponnot 60.549 (postes), ramlig 26.581, ucbt 27.587 (PN_CON, UNI_TR_MT, ENE, DIC, FIC), pip 12.666, ugbt 1.385",
+    "/home/dev/rs-coop/edp_es/contrato/contrato_bdgd.yaml v1.1 (expectativas por camada e por transformador com severidade bloqueia/avisa/informa; camadas obrigatórias UNTRMT, UCBT_tab, CTMT, SSDBT, PONNOT)",
+    "/home/dev/rs-coop/research/20260903_linhagem_bdgd_edp_es.md (COD_ID de trafo estável em 99,0-99,4 % entre safras; UCBT traz episódios por COD_ID desde 2022; POT_NOM de 2021 não presta como placa)"
+   ],
+   "nota": "achados que o importador tem de respeitar: TIP_TRAFO 'MT' (monofásico a três fios) alimenta cliente de BT (3.727 de 5.481 na cooperativa de teste) — não descartar; ARE_LOC pode vir 100 % NU; UCBT traz episódios (2-4 linhas por COD_ID) desde 2022 — somar os 12 meses por COD_ID; COD_ID de trafo é estável entre safras (99 %)."
+  },
+  {
+   "id": "L4-01-d-atributos-de-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-b-topologia-derivada"
+   ],
+   "hipotese": "atributos de rede = colunas da topologia que o traçado lê sem ir à camada: fase (bitmask A/B/C, propagável), tensão nominal, estado do dispositivo (aberto/fechado, com 'traversabilidade'), capacidade/potência, comprimento geodésico, 'is_connected' e 'subrede'; propagação de atributo (ex.: fase) do controlador para jusante como parte de 'atualizar subrede'; substituição (ex.: chave de transferência que muda a fase) registrada por regra",
+   "portao_de_pronto": "tabela `plat.rede_atributo` declara cada atributo (nome, tipo, campo de origem por tipo de ativo, propagável S/N, apoia traversabilidade S/N); sincronização atributo→topologia por trigger na edição e por lote; propagação de fase ABC do controlador para jusante concorda com FAS_CON da BDGD em ≥ 95 % dos trechos de MT da cooperativa de teste (as diferenças listadas como candidatas a erro de cadastro, nunca corrigidas em silêncio); `is_connected` recalculado por job e usado como filtro; teste automatizado; paridade contra network attributes/attribute propagation/is connected/substitution escrita",
+   "refutacao": "adversário muda FAS_CON de um trecho a montante e confere que a propagação muda a jusante inteira e não muda ramos irmãos; abre uma chave e confere que 'traversável' da aresta cai e o atributo 'subrede' do lado morto vai a nulo depois de atualizar",
+   "papeis": [
+    "redes",
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-01-modelo-rede",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/network-attributes.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/attribute-propagation.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/is-connected-attribute.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/substitution.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/utility-networks/update-is-connected.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/trace-network/network-attributes.htm"
+   ]
+  },
+  {
+   "id": "L4-02-a-conectado-e-subrede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-b-topologia-derivada"
+   ],
+   "hipotese": "os dois traçados básicos sobre pgRouting: conectado (tudo que se alcança do ponto de partida respeitando traversabilidade e barreiras) e subrede (tudo que pertence à subrede do ponto, parando nos controladores de outra subrede); resultado = lista de elementos (id de ativo, tipo, terminal), geometria agregada e contagem, com tempo medido",
+   "portao_de_pronto": "pgRouting 4.0.1 instalada (`pg_available_extensions` mostra installed_version); `POST /api/v1/rede/{id}/tracar` com `tipo=conectado|subrede`, pontos de partida (feição + terminal ou coordenada com tolerância) e barreiras; resposta em ≤ 2 s (p95, medido 30 vezes) no maior alimentador da cooperativa de teste e registrada em tests/medidas; rede sintética de 12 nós com resposta conhecida em pytest (conectado = 9 elementos, subrede = 6); no mapa: clicar → resultado destacado + tabela lateral; e2e com captura",
+   "refutacao": "adversário fecha um laço na rede sintética e confere que conectado não duplica elementos e termina; abre uma chave entre duas subredes e confere que o traçado de subrede não passa; mede p95 com 3 clientes simultâneos",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-02-tracado",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/utility-network-trace-types.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/find-connected-features.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/trace-a-subnetwork.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/trace-utility-network-server/",
+    "https://docs.pgrouting.org/4.0/en/pgr_drivingDistance.html",
+    "https://docs.pgrouting.org/4.0/en/pgr_connectedComponents.html",
+    "https://docs.pgrouting.org/4.0/en/release_notes.html"
+   ],
+   "ativos_da_casa": [
+    "medido 2026-09-05: PostgreSQL 16.13; postgis 3.6.3 e postgis_topology 3.6.3 instaladas; timescaledb 2.26.4 instalada (TSL: ⛔ compressão/continuous aggregates proibidos como DBaaS); pgrouting NÃO instalada, candidato apt postgresql-16-pgrouting 4.0.1-1.pgdg24.04+1; nenhuma venv tem pandapower/opendssdirect/wntr (networkx 3.6.1, geopandas 1.1.3, scipy 1.17.1 no python do sistema); disco / 98 % (13 GB livres) e /mnt/pgdata 98 % (17 GB); RAM disponível 3 GB"
+   ]
+  },
+  {
+   "id": "L4-02-b-montante-jusante",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-02-a-conectado-e-subrede",
+    "L4-04-a-controladores-e-tiers"
+   ],
+   "hipotese": "montante/jusante exigem direção: em tier hierárquico a direção vem da distância ao controlador de subrede (BFS a partir da fonte), em tier particionado (malha) vem de atributo de fluxo ou é indefinida e o traçado devolve 'indeterminado' em vez de inventar; jusante de um ponto = elementos cujo caminho ao controlador passa pelo ponto",
+   "portao_de_pronto": "`tipo=montante|jusante` no mesmo endpoint; na cooperativa de teste, jusante de cada UNTRMT devolve exatamente as UCBT que o arquivo liga a ele (UNI_TR_MT) em ≥ 99 % dos trafos com rede desenhada até a UC, e os casos que não fecham saem listados com motivo (UC sem ramal, ramal sem PN_CON); montante de qualquer UC chega ao CTMT declarado; laço na rede sintética → resposta 'indeterminado' com os nós do laço; ≤ 2 s p95; e2e",
+   "refutacao": "adversário troca o controlador de lado do alimentador (chave de fronteira) e confere que jusante inverte; pede jusante em rede malhada sem atributo de fluxo e confere que a resposta não é uma direção arbitrária",
+   "papeis": [
+    "redes",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-02-tracado",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/find-upstream-and-downstream-features.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/configure-a-trace.htm",
+    "https://docs.pgrouting.org/4.0/en/pgr_dijkstra.html",
+    "https://docs.pgrouting.org/4.0/en/pgr_topologicalSort.html"
+   ],
+   "ativos_da_casa": [
+    "schema `certaja.*` no iagro_sat (só leitura): ssdmt 44.268 segmentos (COMP, CTMT, UNI_TR_AT, SUB, CONJ, FAS_CON, wkt), ctmt 20, trafo 5.481 (PAC_1..3, POT_NOM, TIP_TRAFO, PER_FER, PER_TOT, x, y), eqtrmt 5.505, ponnot 60.549 (postes), ramlig 26.581, ucbt 27.587 (PN_CON, UNI_TR_MT, ENE, DIC, FIC), pip 12.666, ugbt 1.385"
+   ]
+  },
+  {
+   "id": "L4-02-c-isolamento",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-02-b-montante-jusante",
+    "L4-06-d-categorias-e-restricoes"
+   ],
+   "hipotese": "isolamento = dado um ponto (ex.: trecho com falha), quais dispositivos de uma categoria (proteção/manobra) precisam abrir para desenergizar o ponto, e o que fica sem energia como consequência (clientes, trafos, km); com 'incluir isolados' e com 'ignorar dispositivo inoperante' (barreira de condição)",
+   "portao_de_pronto": "`tipo=isolamento` devolve {dispositivos_a_abrir, elementos_isolados, resumo: clientes, trafos, km por nível}; rede sintética com 3 chaves e 2 fusíveis dá exatamente o conjunto esperado em pytest; na cooperativa de teste, isolamento de um trecho aleatório de MT leva ≤ 2 s p95 e o nº de clientes afetados bate com a soma de UCBT a jusante; opção 'dispositivo inoperante' muda o conjunto e é testada; e2e com captura mostrando os dispositivos destacados em cor própria",
+   "refutacao": "adversário recalcula à mão o isolamento de 5 trechos sorteados (mínimo de dispositivos, não qualquer conjunto suficiente) e compara; marca um fusível como 'sem estado' e confere que o traçado não o considera operável",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-02-tracado",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/isolation-trace.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/barriers.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/locate-subnetwork-controllers.htm",
+    "https://docs.pgrouting.org/4.0/en/pgr_articulationPoints.html",
+    "https://docs.pgrouting.org/4.0/en/pgr_bridges.html",
+    "https://docs.pgrouting.org/4.0/en/pgr_biconnectedComponents.html"
+   ]
+  },
+  {
+   "id": "L4-02-d-lacos-e-caminho-curto",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-02-a-conectado-e-subrede"
+   ],
+   "hipotese": "laços (ciclos) por componentes biconexos; caminho mais curto entre dois pontos com custo = atributo de rede escolhido (comprimento geodésico por padrão, ou impedância/qualquer numérico), com k caminhos alternativos; 'isolados' = elementos sem caminho a nenhum controlador",
+   "portao_de_pronto": "`tipo=lacos|caminho_curto|isolados`; laços da cooperativa de teste listados (esperado ≈ 0 em rede radial de MT; qualquer laço achado é conferido no mapa e explicado); caminho mais curto entre duas UCs devolve comprimento geodésico igual ao Σ COMP dos trechos ± 0,5 %; k=3 alternativas quando existem; ≤ 2 s p95; e2e",
+   "refutacao": "adversário cria laço fechando uma chave normalmente aberta e confere que aparece; pede caminho com custo em atributo nulo em um trecho e confere que o sistema recusa com mensagem (nulo nunca vira zero)",
+   "papeis": [
+    "redes",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-02-tracado",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/detect-loops-in-your-network.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/discover-the-shortest-path.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/identify-isolated-features.htm",
+    "https://docs.pgrouting.org/4.0/en/pgr_biconnectedComponents.html",
+    "https://docs.pgrouting.org/4.0/en/pgr_KSP.html",
+    "https://docs.pgrouting.org/4.0/en/pgr_dijkstra.html"
+   ]
+  },
+  {
+   "id": "L4-02-e-configuracoes-de-tracado",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-02-c-isolamento",
+    "L4-02-d-lacos-e-caminho-curto"
+   ],
+   "hipotese": "configuração de traçado nomeada e compartilhável (o que a Esri chama trace configuration): tipo, domínio/tier, barreiras de condição (atributo op valor), barreiras de filtro, filtro de saída por categoria/tipo, funções sobre atributo (soma/contagem/mín/máx/média ao longo do caminho, ex.: Σ kVA a jusante, contagem de clientes), 'incluir contenção/estrutura', tipo de resultado (elementos, geometria agregada, conectividade); salva por inquilino, com dono e permissão",
+   "portao_de_pronto": "CRUD em `/api/v1/rede/{id}/config_tracado` e uso por `config_id` no endpoint de traçado; ≥ 6 configurações prontas no pacote elétrica-BR (clientes a jusante, kVA instalado a jusante, isolamento por fusível, alimentador inteiro, protetores a montante, trechos sem fase C); função Σ kVA a jusante de um CTMT = Σ POT_NOM dos UNTRMT do CTMT no arquivo (teste na cooperativa); e2e do formulário de configuração; paridade contra trace configuration/barriers/functions/result types escrita",
+   "refutacao": "adversário monta barreira de condição com atributo inexistente e com operador inválido e confere recusa; compartilha configuração com outro inquilino e confere que ela NÃO aparece lá",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-02-tracado",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/configure-a-trace.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/about-trace-configurations.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/barriers.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/starting-points.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/results.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/create-traceconfiguration-utility-network-server/"
+   ]
+  },
+  {
+   "id": "L4-02-f-resultados-e-exportacao",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-02-e-configuracoes-de-tracado"
+   ],
+   "hipotese": "resultado de traçado vira seleção, camada temporária, tabela exportável (CSV/GeoJSON/GeoPackage) e entrada de outra ferramenta (diagrama, geoprocessamento, painel); agregações por tipo de ativo e por nível de tensão no painel lateral; histórico dos últimos traçados do usuário",
+   "portao_de_pronto": "botões 'selecionar', 'salvar como camada', 'exportar' funcionam por e2e; a camada salva tem proveniência (rede, configuração, ponto de partida, versão da topologia, data); CSV abre com colunas id/tipo/grupo/terminal/comprimento; histórico lista os 20 últimos com repetir",
+   "refutacao": "adversário exporta 20 mil elementos e confere que nenhum se perde (contagem) e que o arquivo não contém coluna de outro inquilino",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-02-tracado",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/results.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/trace-utility-network-server/"
+   ]
+  },
+  {
+   "id": "L4-03-a-regras-de-conectividade",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-a-pacote-de-ativos"
+   ],
+   "hipotese": "regras como linhas de tabela (`plat.rede_regra`: tipo junção-junção, junção-aresta, aresta-junção-aresta, contenção, estrutura; de: grupo/tipo/terminal; para: grupo/tipo/terminal) avaliadas em dois lugares: no servidor a cada applyEdits (recusa) e na validação em lote (erro por feição); importação/exportação de regras em CSV no mesmo formato de colunas da Esri para reaproveitar pacotes de regras existentes",
+   "portao_de_pronto": "pacote elétrica-BR traz ≥ 40 regras (ex.: trecho MT só liga a trafo pelo terminal AT, chave MT liga trecho MT a trecho MT, ramal BT liga a UC e a trecho BT, poste contém trafo/chave/medidor); `applyEdits` que conecta trecho de MT direto a UC de BT é recusado com código e mensagem que cita a regra; CSV de regras exportado e reimportado dá o mesmo conjunto; 'sem regra = proibido' é o padrão (documentado); ≥ 20 casos em pytest; paridade contra network rules/add rule/import-export rules escrita",
+   "refutacao": "adversário liga MT em BT pela API e conecta trecho a nó inexistente (portão do pai); importa CSV de regras com tipo inexistente e confere recusa; tenta desligar a regra por atributo e confere que só admin da rede pode",
+   "papeis": [
+    "redes",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-03-edicao-rede",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/network-rules.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/add-connectivity-rules.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/add-containment-association-rules.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/add-structural-attachment-association-rules.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/import-utility-network-rules.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/export-utility-network-rules.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/about-utility-network-restrictions-and-rules.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/utility-networks/add-rule.htm"
+   ]
+  },
+  {
+   "id": "L4-03-b-terminais",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-03-a-regras-de-conectividade",
+    "L4-01-d-atributos-de-rede"
+   ],
+   "hipotese": "terminal = porta de um dispositivo (trafo tem AT e BT; chave tem lado 1 e 2; religador pode ter 3); configuração de terminal define nomes, direção (fonte/carga/ambos) e caminhos válidos entre terminais (aberto/fechado por estado); na topologia cada terminal é um nó e os caminhos internos são arestas com traversabilidade pelo estado; trecho conecta a dispositivo POR terminal, nunca ao dispositivo",
+   "portao_de_pronto": "≥ 5 configurações de terminal no pacote elétrica-BR (trafo 2 terminais direcional; chave 2; religador 2; banco de capacitores 1; regulador 2); ao importar BDGD, o lado AT do UNTRMT liga ao SSDMT e o lado BT ao SSDBT/RAMLIG (conferido em ≥ 99 % dos trafos com rede desenhada); UI mostra os terminais ao editar e obriga escolher; traçado jusante a partir do terminal BT não sobe para MT; teste automatizado; paridade contra device terminals/terminal configuration/terminal paths escrita",
+   "refutacao": "adversário liga dois trechos de MT no mesmo terminal onde a configuração só admite um e confere recusa; muda o estado de uma chave e confere que o caminho interno entre terminais muda a traversabilidade",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-03-edicao-rede",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/device-terminals.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/create-a-terminal-configuration.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/about-terminal-management.htm"
+   ]
+  },
+  {
+   "id": "L4-03-c-edicao-topologica-no-mapa",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-03-a-regras-de-conectividade",
+    "L2-03-edicao"
+   ],
+   "hipotese": "ferramentas de edição próprias de rede sobre a edição genérica de L2-03: inserir dispositivo em trecho (divide, reconecta por terminal), mover nó arrastando as arestas ligadas, estender trecho com snapping só em feições de rede (vértice/terminal), unir trechos coincidentes, apagar com aviso de desconexão (o que fica sem caminho ao controlador), colar em poste (estrutura) ao criar, modo de contenção; tudo por arrasta-e-solta com desfazer",
+   "portao_de_pronto": "cada operação listada por e2e com captura; inserir chave num trecho de MT gera 2 trechos + 1 dispositivo com terminais ligados (conferido por traçado conectado antes/depois = mesmo conjunto + 1); mover trafo 5 m arrasta o fim do trecho de MT e o início dos ramais; apagar trecho de tronco mostra aviso com nº de clientes que ficam sem caminho e exige confirmação; snapping ignora camadas que não são de rede; desfazer restaura topologia; 0 erro de console",
+   "refutacao": "adversário insere dispositivo exatamente sobre um vértice existente (caso degenerado) e sobre a ponta do trecho; move nó para cima de outro nó (fusão indevida) e confere que o sistema pergunta em vez de fundir; apaga com desfazer 10 vezes seguidas",
+   "papeis": [
+    "redes",
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-03-edicao-rede",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/set-edge-connectivity-for-line-features.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/coincident-features.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/apply-edits-feature-service-layer/",
+    "https://docs.qgis.org/3.40/en/docs/user_manual/working_with_vector/editing_geometry_attributes.html#topological-editing"
+   ]
+  },
+  {
+   "id": "L4-03-d-areas-sujas-e-validacao",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-b-topologia-derivada",
+    "L4-03-a-regras-de-conectividade"
+   ],
+   "hipotese": "toda edição de feição de rede grava uma área suja (polígono envolvente) por versão; 'validar' por extensão ou tudo reconstrói a topologia só dentro das áreas sujas, aplica regras e grava erros como feições (`plat.rede_erro`: código, mensagem, feição, geometria) que aparecem como camada; traçado em área suja é recusado ou avisado conforme configuração",
+   "portao_de_pronto": "editar 1 trecho cria 1 área suja visível no mapa; validar a extensão limpa a área e reconstrói só os nós/arestas dentro dela (contagem de linhas reescritas ≪ total, medida); ≥ 15 códigos de erro documentados (regra inexistente, terminal inválido, feição sem conexão, sobreposição de dispositivo, ciclo em tier hierárquico, subrede sem controlador, atributo obrigatório nulo); validar tudo na cooperativa de teste em tempo medido; traçado sobre área suja devolve aviso com o polígono; paridade contra dirty areas/validate/error features escrita",
+   "refutacao": "adversário faz 500 edições em lote e confere que o nº de áreas sujas é ≤ 500 e que validar por extensão pequena não toca o resto (checksum da topologia fora da extensão inalterado); provoca cada um dos 15 códigos",
+   "papeis": [
+    "redes",
+    "dados",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-03-edicao-rede",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/dirty-areas-in-a-utility-network.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/validate-a-network-topology.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/about-error-features.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/manage-error-features.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/validatenetworktopology-utiility-network-server/",
+    "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/utility-networks/validate-network-topology.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/utility-networks/verify-network-topology.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/utility-networks/repair-network-topology.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/trace-network/dirty-areas-in-a-trace-network.htm"
+   ]
+  },
+  {
+   "id": "L4-03-e-versao-de-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-03-d-areas-sujas-e-validacao",
+    "L2-13-versionamento-sync"
+   ],
+   "hipotese": "a rede obedece ao versionamento por ramo de L2-13: cada versão tem as suas áreas sujas e a sua topologia (diferença em relação à padrão, não cópia), publicar (post) exige zero área suja na versão, reconciliar detecta conflito topológico (mesmo trecho editado nos dois lados) além do conflito de atributo; 'momentos de rede' (quando a topologia foi validada, quando a subrede foi atualizada) consultáveis por versão",
+   "portao_de_pronto": "criar versão, inserir chave, validar na versão, reconciliar com a padrão que teve outra edição no mesmo trecho → conflito listado e resolvido, post aplica; post com área suja é recusado; `GET .../momentos` devolve validado_em/subrede_atualizada_em por versão; tamanho da tabela de topologia da versão = só o delta (medido); e2e; paridade contra branch versioning + UN (moments, validate before post) escrita",
+   "refutacao": "adversário edita a topologia na padrão enquanto uma versão está aberta e confere que o traçado na versão continua consistente com a versão, não com a padrão; tenta post sem validar",
+   "papeis": [
+    "redes",
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-03-edicao-rede",
+   "origem": "esri",
+   "fontes": [
+    "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/utility-network-services.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/geodatabases/overview/branch-version-scenarios.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/geodatabases/overview/reconcile-and-post-edits-to-a-branch-version.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/geodatabases/overview/versioning-types.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/version-management-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/querynetworkmoments-utility-network-server/"
+   ],
+   "nota": "a Esri exige branch versioning para serviço de utility network (página de 11.4); a nossa decisão C8 do CONCEITO obriga L2-13 a nascer com 'delta de topologia por versão'."
+  },
+  {
+   "id": "L4-04-a-controladores-e-tiers",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-d-atributos-de-rede"
+   ],
+   "hipotese": "controlador de subrede = terminal de um dispositivo marcado como fonte (ou sumidouro) de um tier, com nome da subrede; tier define hierarquia (subestação > alimentador > transformador > BT) e tipo (hierárquico ou particionado); definir/remover controlador via API e UI; regra: controlador só em tipo de ativo com categoria 'controlador'",
+   "portao_de_pronto": "`POST .../controlador` e `DELETE` com validação de categoria; importação BDGD marca 1 controlador por CTMT (o terminal do disjuntor/saída da SUB, ou o nó de cabeça do CTMT quando o arquivo não traz o equipamento) e 1 por UNTRMT no tier BT; tabela `plat.rede_subrede` lista subredes com controlador, tier, estado (limpa/suja) e resumo; e2e da ficha do controlador; paridade contra subnetwork controller/tiers/tier groups/subnetwork life cycle escrita",
+   "refutacao": "adversário marca controlador num poste (categoria errada) e confere recusa; marca dois controladores com o mesmo nome em tier hierárquico e confere que o sistema aponta (nomes repetidos só são válidos em tier que admite múltiplos controladores)",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-04-subredes-diagramas",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/subnetwork-controller.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/tiers.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/tier-groups.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/subnetwork-life-cycle.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/subnetwork-name.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/subnetworks-table.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/enablesubnetworkcontroller-utility-network-server/"
+   ]
+  },
+  {
+   "id": "L4-04-b-atualizar-e-exportar-subrede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-04-a-controladores-e-tiers",
+    "L4-02-a-conectado-e-subrede"
+   ],
+   "hipotese": "atualizar subrede = job que traça a partir do controlador, grava o nome da subrede em cada elemento (atributo de rede), propaga atributos propagáveis, gera a linha agregada da subrede (equivalente à SubnetLine) e o resumo; incremental por área suja; exportar subrede = JSON com elementos, conectividade, controladores e resumo (o formato que sistemas de operação consomem)",
+   "portao_de_pronto": "atualizar todas as subredes da cooperativa de teste em tempo medido; após mover uma chave de fronteira entre dois alimentadores, só as 2 subredes afetadas ficam 'sujas' e atualizam; nome da subrede em cada trecho de MT = CTMT do arquivo em ≥ 99 % (diferenças listadas como candidatas a erro de cadastro); `GET .../subrede/{nome}/exportar` devolve JSON validado por esquema com Σ elementos = traçado de subrede; e2e do botão 'atualizar'; paridade contra update subnetwork/export subnetwork/SubnetLine escrita",
+   "refutacao": "adversário abre chave de fronteira e confere a re-atribuição (refutação do pai); compara o JSON exportado com o resultado do traçado de subrede elemento a elemento",
+   "papeis": [
+    "redes",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-04-subredes-diagramas",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/update-subnetworks.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/export-subnetworks.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/subnetline-feature-class.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/utility-networks/update-subnetwork.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/utility-networks/export-subnetwork.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/exportsubnetwork-utility-network-server/"
+   ]
+  },
+  {
+   "id": "L4-04-c-sumarios-por-subrede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-04-b-atualizar-e-exportar-subrede"
+   ],
+   "hipotese": "resumo por subrede calculado na atualização e servido como tabela/camada: km por nível de tensão, nº de trafos e kVA instalado, nº de UCs por classe, energia anual faturada (Σ ENE), nº de dispositivos por categoria, GD conectada (kW), comprimento máximo do tronco; comparação com o que o arquivo BDGD declara por CTMT",
+   "portao_de_pronto": "tabela `plat.rede_subrede_resumo` com as colunas listadas; para a cooperativa de teste, km de MT por CTMT = Σ COMP do arquivo ± 0,1 % e nº de UCBT por CTMT = contagem do arquivo (teste automatizado sobre os 20 CTMT); painel (L2-06) consegue ligar a essa tabela; exportação CSV",
+   "refutacao": "adversário confere 3 alimentadores à mão com ogrinfo/SQL sobre o gdb; procura UC contada em dois alimentadores",
+   "papeis": [
+    "redes",
+    "backend",
+    "testador"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-04-subredes-diagramas",
+   "origem": "casa",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/subnetworks-table.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/export-subnetworks.htm"
+   ],
+   "ativos_da_casa": [
+    "schema `certaja.*` no iagro_sat (só leitura): ssdmt 44.268 segmentos (COMP, CTMT, UNI_TR_AT, SUB, CONJ, FAS_CON, wkt), ctmt 20, trafo 5.481 (PAC_1..3, POT_NOM, TIP_TRAFO, PER_FER, PER_TOT, x, y), eqtrmt 5.505, ponnot 60.549 (postes), ramlig 26.581, ucbt 27.587 (PN_CON, UNI_TR_MT, ENE, DIC, FIC), pip 12.666, ugbt 1.385"
+   ]
+  },
+  {
+   "id": "L4-04-d-diagrama-esquematico",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-04-b-atualizar-e-exportar-subrede",
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "diagrama de rede = grafo derivado de um traçado/subrede/seleção, com modelo (template) que define regras de construção (reduzir junções de passagem, colapsar contêiner, remover tipos) e layout (árvore inteligente, radial, linha principal, força dirigida, posição geográfica, grade); armazenado (`plat.rede_diagrama`, `rede_diagrama_no/aresta` com x,y no espaço do diagrama), visualizado no MapLibre em sistema de coordenadas próprio, ligado ao mapa (selecionar no diagrama seleciona no mapa e vice-versa)",
+   "portao_de_pronto": "gerar diagrama de 1 alimentador da cooperativa de teste a partir do traçado de subrede em ≤ 10 s (medido); ≥ 4 layouts implementados e testados (árvore inteligente, radial, linha principal, geográfico) com resultado sem sobreposição de nós (medido: 0 pares de nós a < 1 unidade); regra 'reduzir junção de passagem' reduz o nº de nós (medido) sem mudar a conectividade (grafo reduzido conexo = original conexo); seleção bidirecional por e2e; exportação SVG/PNG; paridade contra network diagrams/templates/layouts escrita",
+   "refutacao": "adversário gera diagrama de subrede com laço e confere que o layout de árvore não perde a aresta do laço; edita a rede e confere que o diagrama fica marcado 'inconsistente' até atualizar",
+   "papeis": [
+    "redes",
+    "frontend",
+    "backend",
+    "cartografo",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-04-subredes-diagramas",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/network-diagrams/about-network-diagrams.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/network-diagrams/introduce-diagram-templates.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/network-diagrams/diagram-layouts.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/network-diagrams/diagram-rules.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/network-diagrams/reduce-junction-rule-reference.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/network-diagrams/network-diagram-building.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/network-diagrams/network-diagram-consistency.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/network-diagrams/subnetwork-system-diagrams-and-their-specifics.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/network-diagram-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/diagram-templates-network-diagram-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/create-diagram-from-trace-locations-network-diagram-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/apply-layout-network-diagram-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/store-network-diagrams/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/export-network-diagram-service/",
+    "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/network-diagram/an-overview-of-the-network-diagram-toolbox.htm"
+   ],
+   "nota": "layout no servidor em Python (networkx para árvore/radial; algoritmo próprio de linha principal; força dirigida via scipy) — decisão C9 do CONCEITO; elkjs só se um layout ortogonal exigir e a licença (EPL-2.0) for aceita pelo arquiteto."
+  },
+  {
+   "id": "L4-04-e-diagrama-camadas-e-contencao",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-04-d-diagrama-esquematico",
+    "L4-06-a-contencao"
+   ],
+   "hipotese": "no diagrama: contêineres desenhados como polígonos em volta do conteúdo, associações de conectividade como arestas tracejadas, estrutura (poste) como agrupamento; definição de camadas do diagrama (simbologia própria por tipo, rótulos com atributos de rede); modelos de diagrama de sistema de subrede (um por tier) gerados automaticamente ao atualizar subrede",
+   "portao_de_pronto": "diagrama com ≥ 1 contêiner expandido/colapsado por clique (e2e); arestas de associação visíveis e distinguíveis do trecho; modelo 'sistema de subrede' gera 1 diagrama por alimentador ao atualizar (contagem = nº de subredes); rótulo com nome da subrede e kVA; paridade contra containment/connectivity associations in diagrams, diagram layer definitions escrita",
+   "refutacao": "adversário colapsa contêiner com 3 dispositivos e confere que as arestas externas continuam ligadas ao contêiner; apaga o contêiner na rede e confere consistência do diagrama",
+   "papeis": [
+    "redes",
+    "frontend",
+    "cartografo"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-04-subredes-diagramas",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/network-diagrams/containment-associations-in-network-diagrams.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/network-diagrams/manage-diagram-layer-definitions.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/network-diagrams/subnetwork-system-diagrams-and-their-specifics.htm"
+   ]
+  },
+  {
+   "id": "L4-05-a-exportar-opendss",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-c-importador-bdgd",
+    "L4-04-b-atualizar-e-exportar-subrede"
+   ],
+   "hipotese": "exportador de alimentador (subrede) para OpenDSS (.dss): barras = nós da topologia, Line por trecho com comprimento geodésico e código de condutor, Transformer por trafo (kVA, tensões, perdas de ferro/totais de PER_FER/PER_TOT), Load por UC com curva de 24 h × 3 tipos de dia × 12 meses (864 pontos, PRODIST Módulo 7), GD como carga negativa de corrente constante, chaves com estado; o conversor é 'só conversor' e diz o que não fez",
+   "portao_de_pronto": "`GET .../subrede/{nome}/exportar?formato=dss` gera pasta .dss; `opendssdirect` roda o alimentador exportado sem erro de compilação (o run acontece na máquina que tiver a venv: GPU box já tem opendssdirect.py 0.9.4; nesta máquina só se o gerente instalar na venv do repo); nº de barras e linhas do circuito compilado = nós e trechos da subrede (conferido por script); dicionário de códigos de tensão (TEN_NOM) completo para os 3 pacotes da casa (inclusive o código 63 que hoje falta); teste automatizado; relatório 'o que o conversor não faz' anexado",
+   "refutacao": "adversário roda OpenDSS e confere que nº de barras e linhas = trechos e nós (portão do pai); exporta alimentador com trafo sem POT_NOM e confere que o exportador FALHA ALTO em vez de escrever 0 kVA",
+   "papeis": [
+    "redes",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-05-conectores-rede",
+   "origem": "casa",
+   "fontes": [
+    "https://opendss.epri.com/opendss_documentation.html",
+    "https://dss-extensions.org/",
+    "https://pypi.org/project/opendssdirect.py/",
+    "https://github.com/dss-extensions/OpenDSSDirect.py",
+    "https://github.com/PauloRadatz/bdgd2opendss",
+    "https://www.gov.br/aneel/pt-br/centrais-de-conteudos/procedimentos-regulatorios/prodist"
+   ],
+   "ativos_da_casa": [
+    "GPU box `/home/dev/centelha/opendss/` (opendssdirect.py 0.9.4, DSS C-API 0.14.5): 455 de 456 alimentadores da distribuidora de teste modelados, 332 convergiram nos 864 fluxos, 15 h de CPU; cooperativa de teste inteira em ~40 s; espelho em /home/dev/rs-coop/edp_es/opendss/; ⛔ sem o passo de partição por CTMT o modelo devolve zero em silêncio; código TEN_NOM 63 fora do dicionário kV",
+    "schema `certaja.*` no iagro_sat (só leitura): ssdmt 44.268 segmentos (COMP, CTMT, UNI_TR_AT, SUB, CONJ, FAS_CON, wkt), ctmt 20, trafo 5.481 (PAC_1..3, POT_NOM, TIP_TRAFO, PER_FER, PER_TOT, x, y), eqtrmt 5.505, ponnot 60.549 (postes), ramlig 26.581, ucbt 27.587 (PN_CON, UNI_TR_MT, ENE, DIC, FIC), pip 12.666, ugbt 1.385",
+    "medido 2026-09-05: PostgreSQL 16.13; postgis 3.6.3 e postgis_topology 3.6.3 instaladas; timescaledb 2.26.4 instalada (TSL: ⛔ compressão/continuous aggregates proibidos como DBaaS); pgrouting NÃO instalada, candidato apt postgresql-16-pgrouting 4.0.1-1.pgdg24.04+1; nenhuma venv tem pandapower/opendssdirect/wntr (networkx 3.6.1, geopandas 1.1.3, scipy 1.17.1 no python do sistema); disco / 98 % (13 GB livres) e /mnt/pgdata 98 % (17 GB); RAM disponível 3 GB"
+   ]
+  },
+  {
+   "id": "L4-05-b-cim-iec-61970-61968",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-a-pacote-de-ativos",
+    "L4-04-b-atualizar-e-exportar-subrede"
+   ],
+   "hipotese": "CIM (IEC 61970-301 modelo de rede, IEC 61968-13 perfil de distribuição) como formato de troca: exportar subrede em RDF/XML nos perfis CGMES (EQ, TP, SSH, GL) e importar CIM de terceiros para o pacote de ativos; mapeamento tipo de ativo ↔ classe CIM (ACLineSegment, PowerTransformer, Switch/Breaker, EnergyConsumer, ConnectivityNode, Terminal, Substation, Feeder) declarado em tabela",
+   "portao_de_pronto": "exportar 1 alimentador da cooperativa de teste em CGMES; o XML valida contra o esquema do perfil (validador aberto: cimpy ou pandapower cgmes converter lê sem erro); reimportar o mesmo XML cria rede com o mesmo nº de elementos e conectividade (traçado conectado igual); importar 1 modelo CIM público de exemplo (do próprio pacote do conversor) e traçar; tabela de mapeamento em docs/rede/CIM.md; teste automatizado",
+   "refutacao": "adversário troca o ID de um Terminal no XML e confere que a importação reporta o elemento órfão em vez de descartar em silêncio; compara nº de ConnectivityNode com nº de nós da topologia",
+   "papeis": [
+    "redes",
+    "arquiteto",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-05-conectores-rede",
+   "origem": "usuario",
+   "fontes": [
+    "https://www.entsoe.eu/data/cim/cim-for-grid-models-exchange/",
+    "https://webstore.iec.ch/en/publication/68580",
+    "https://webstore.iec.ch/en/publication/62698",
+    "https://github.com/sogno-platform/cimpy",
+    "https://github.com/sogno-platform/cim4j",
+    "https://pandapower.readthedocs.io/en/latest/converter/cgmes.html"
+   ],
+   "nota": "a norma IEC é paga; o que se testa é o perfil CGMES publicado pela ENTSO-E e os conversores abertos. ⛔ nunca afirmar 'conforme IEC' sem validador; dizer 'lido e escrito pelos conversores X e Y'."
+  },
+  {
+   "id": "L4-05-c-pandapower-e-matpower",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-05-a-exportar-opendss"
+   ],
+   "hipotese": "pandapower (JSON nativo) e MATPOWER (.m / caseformat) como formatos de troca para rede equilibrada (transmissão/subtransmissão) e para quem usa esses motores: exportar subrede como pandapower net (bus/line/trafo/load/sgen/switch) e importar pandapower/MATPOWER para o pacote de ativos; conversor pandapower↔OpenDSS oficial como conferência cruzada",
+   "portao_de_pronto": "exportar 1 alimentador para pandapower JSON e `pp.from_json` + `pp.runpp` converge (na máquina com a venv); nº de bus/line/trafo = nós/trechos/trafos; importar caso MATPOWER público (case9/case30 do próprio pacote) cria rede de 'transmissão' e traçado funciona; teste automatizado; paridade escrita como 'conector', não como capacidade Esri (a Esri não tem)",
+   "refutacao": "adversário compara o fluxo pandapower com o OpenDSS no mesmo alimentador (tensão de barra dentro de ±1 % onde ambos convergem; diferenças explicadas por desequilíbrio); importa MATPOWER com barra sem geometria e confere que vira objeto não espacial, não ponto (0,0)",
+   "papeis": [
+    "redes",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-05-conectores-rede",
+   "origem": "usuario",
+   "fontes": [
+    "https://pandapower.readthedocs.io/en/latest/",
+    "https://pandapower.readthedocs.io/en/latest/powerflow/ac.html",
+    "https://pandapower.readthedocs.io/en/latest/converter/opendss.html",
+    "https://github.com/e2nIEE/pandapower",
+    "https://github.com/e2nIEE/pandapower/releases",
+    "https://github.com/MATPOWER/matpower",
+    "https://github.com/PyPSA/PyPSA"
+   ],
+   "ativos_da_casa": [
+    "medido 2026-09-05: PostgreSQL 16.13; postgis 3.6.3 e postgis_topology 3.6.3 instaladas; timescaledb 2.26.4 instalada (TSL: ⛔ compressão/continuous aggregates proibidos como DBaaS); pgrouting NÃO instalada, candidato apt postgresql-16-pgrouting 4.0.1-1.pgdg24.04+1; nenhuma venv tem pandapower/opendssdirect/wntr (networkx 3.6.1, geopandas 1.1.3, scipy 1.17.1 no python do sistema); disco / 98 % (13 GB livres) e /mnt/pgdata 98 % (17 GB); RAM disponível 3 GB"
+   ]
+  },
+  {
+   "id": "L4-05-d-epanet-inp",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-a-pacote-de-ativos",
+    "L4-01-b-topologia-derivada"
+   ],
+   "hipotese": "rede de água: importar/exportar EPANET .inp (JUNCTIONS, PIPES, PUMPS, VALVES, TANKS, RESERVOIRS, COORDINATES, VERTICES, PATTERNS, CURVES) para o pacote 'água-EPANET'; traçado de água = mesmo motor (jusante = sentido do fluxo por atributo ou por simulação); simulação hidráulica via WNTR/EPANET quando a biblioteca estiver instalada (item declara a instalação como bloqueante)",
+   "portao_de_pronto": "importar o .inp da casa (11.119 nós, 14.756 tubos, 941 km) por job com contagens iguais ao arquivo; topologia habilitada; traçado conectado a partir de um reservatório alcança N nós (medido, comparado com componente conexa calculada por networkx no próprio .inp); exportar .inp e reimportar dá o mesmo grafo; se WNTR instalado: `wntr.sim.EpanetSimulator` roda o .inp exportado sem erro; teste automatizado; paridade contra water utility network foundation (Esri) escrita como parcial",
+   "refutacao": "adversário remove uma linha de COORDINATES do .inp e confere que o importador cria objeto não espacial com aviso, não ponto (0,0); compara Σ comprimento de tubos com o arquivo",
+   "papeis": [
+    "redes",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-05-conectores-rede",
+   "origem": "usuario",
+   "fontes": [
+    "https://github.com/OpenWaterAnalytics/EPANET",
+    "https://www.epa.gov/water-research/epanet",
+    "https://usepa.github.io/WNTR/",
+    "https://github.com/USEPA/WNTR",
+    "https://solutions.arcgis.com/utilities/water/help/water-utility-network-foundation/",
+    "https://github.com/QGEP/QGEP",
+    "https://teksi.github.io/wastewater/",
+    "https://github.com/teksi/wastewater"
+   ],
+   "ativos_da_casa": [
+    "GPU box /home/dev/nascente/artifacts/edge_tests/brasilia_caesb.inp (EPANET 2.2, 11.119 nós, 7 reservatórios, 14.756 tubos, 941 km, elevação SRTM); /home/dev/nascente/DATA_INVENTORY.md §3 lista FeatureServers abertos de rede de água de 5 operadoras (1,66 mi tubos + 83 mil adutoras na maior) com licenseInfo VAZIO → só uso interno, nunca publicar derivado"
+   ],
+   "nota": "⛔ o .inp de 2 MB vive no GPU box; copiar só ele (não os 8,5 GB de satélite). Dados de FeatureServer de operadoras com licença vazia: nunca publicar derivado (regra da casa)."
+  },
+  {
+   "id": "L4-05-e-gas-e-esgoto",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-05-d-epanet-inp"
+   ],
+   "hipotese": "pacotes de domínio gás (tiers por pressão: transporte/alta/média/baixa; reguladores, válvulas, city gate; pandapipes como motor de simulação opcional) e esgoto/drenagem (tier por bacia; fluxo por gravidade = direção por cota; poços de visita, coletores, elevatórias; modelo TEKSI/QGEP como referência de esquema aberto em PostGIS)",
+   "portao_de_pronto": "2 pacotes de ativos entregues com regras (≥ 20 cada) e configurações de terminal; rede de esgoto sintética de 200 elementos com cotas: jusante calculado por cota concorda com a direção declarada em 100 % dos trechos; gás: regulador como controlador de tier de pressão; importação do esquema TEKSI (GeoPackage de exemplo do projeto) mapeada; teste automatizado; paridade contra gas utility network foundation escrita",
+   "refutacao": "adversário inverte a cota de um trecho de esgoto e confere que o sistema marca contrafluxo como erro, não muda a direção em silêncio",
+   "papeis": [
+    "redes",
+    "backend",
+    "testador"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-05-conectores-rede",
+   "origem": "usuario",
+   "fontes": [
+    "https://pandapipes.readthedocs.io/en/latest/",
+    "https://github.com/e2nIEE/pandapipes",
+    "https://solutions.arcgis.com/utilities/gas/help/gas-utility-network-foundation/",
+    "https://teksi.github.io/wastewater/",
+    "https://github.com/QGEP/QGEP"
+   ]
+  },
+  {
+   "id": "L4-05-f-transmissao-sindat-sigel",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-a-pacote-de-ativos",
+    "L6-01-acervo-casa"
+   ],
+   "hipotese": "domínio 'transmissão' alimentado pelo acervo: LTs e subestações do SINDAT/ONS e linhas do SIGEL/ANEEL (as-built quando existe) como rede de tier único particionado (malha), com trecho por LT e nó por SE; aviso de qualidade: geometria SINDAT é esquemática (desvio mediano de 3,1 a 11,2 km do as-built medido na casa) e por isso NUNCA serve de faixa de servidão",
+   "portao_de_pronto": "importar 1.850 LTs + 1.198 SEs do acervo para uma rede 'transmissão-BR' do inquilino (view do acervo, sem copiar dado quando possível); traçado conectado entre duas SEs devolve caminho; ficha de cada LT mostra origem/frescor/licença do acervo e o aviso de geometria esquemática; ligação LT→SE por proximidade com tolerância declarada e casos não ligados listados; teste automatizado",
+   "refutacao": "adversário mede a distância de 10 LTs do SINDAT ao as-built do SIGEL e confere que o aviso está na ficha; procura LT ligada a SE errada por tolerância larga",
+   "papeis": [
+    "redes",
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-05-conectores-rede",
+   "origem": "casa",
+   "fontes": [
+    "https://sindat.ons.org.br/SINDAT/Home/ControleSistema",
+    "https://sigel.aneel.gov.br/portal/home/"
+   ],
+   "ativos_da_casa": [
+    "cbre.sindat_lt 1.850 LTs (nome, agente, tensao_kv, extensao_km, tipo) e cbre.sindat_subestacoes 1.198; public.aneel_sigel_linhas 4.586 (fonte, nome, tensao_kv, concessionaria, situacao, extensao_km); /mnt/pgdata/observatorio_energia/ (raw_sindat_*.geojson, download_sindat.py, SIGEL_INGEST.md)"
+   ]
+  },
+  {
+   "id": "L4-05-g-osm-power",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-a-pacote-de-ativos",
+    "L0-04-ingest-vetor"
+   ],
+   "hipotese": "conector OpenStreetMap power=* (line, minor_line, substation, tower, pole, transformer, generator) via extrato .pbf já na casa ou Overpass, mapeado ao pacote elétrica como rede de baixa confiança (atributo 'fonte=OSM', licença ODbL exibida) para município sem BDGD carregada",
+   "portao_de_pronto": "importar power=* de 1 município a partir do .pbf existente (osm_raw da cooperativa de teste) → rede com topologia; ficha mostra ODbL e 'cadastro comunitário, não oficial'; contagem de linhas/torres = contagem do extrato; teste automatizado",
+   "refutacao": "adversário mistura OSM com BDGD no mesmo inquilino e confere que os elementos não se conectam entre fontes sem associação explícita",
+   "papeis": [
+    "redes",
+    "backend"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-05-conectores-rede",
+   "origem": "usuario",
+   "fontes": [
+    "https://inspire.ec.europa.eu/Themes/136/2892"
+   ]
+  },
+  {
+   "id": "L4-05-h-inspire-utility-networks",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-05-b-cim-iec-61970-61968"
+   ],
+   "hipotese": "exportação no modelo INSPIRE Utility and Governmental Services (US) – Utility Networks (GML: UtilityNetwork, UtilityNode, UtilityLinkSequence, Appurtenance, Pipe/Cable/Duct) para inquilino que precise entregar a órgão europeu ou que use esse esquema como interoperabilidade neutra",
+   "portao_de_pronto": "exportar 1 subrede em GML INSPIRE US; o GML valida contra o XSD publicado (xmllint); mapeamento tipo↔classe documentado; teste automatizado",
+   "refutacao": "adversário valida o GML com o XSD oficial e procura elemento obrigatório ausente",
+   "papeis": [
+    "redes",
+    "backend"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-05-conectores-rede",
+   "origem": "usuario",
+   "fontes": [
+    "https://inspire.ec.europa.eu/Themes/136/2892",
+    "https://inspire-mif.github.io/technical-guidelines/data/us/dataspecification_us.html"
+   ]
+  },
+  {
+   "id": "L4-06-a-contencao",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-03-a-regras-de-conectividade",
+    "L4-03-c-edicao-topologica-no-mapa"
+   ],
+   "hipotese": "associação de contenção: contêiner (subestação, câmara, armário, poste como contêiner de equipamentos) contém conteúdo espacial ou não espacial; regras de contenção por tipo; modo de edição 'dentro do contêiner'; visibilidade do conteúdo (mostrar/ocultar por contêiner); traçado pode incluir conteúdo ao passar pelo contêiner",
+   "portao_de_pronto": "tabela `plat.rede_associacao` (tipo contenção/estrutura/conectividade, de, para, terminal, estado, visível) com RLS; criar contenção por arrasto no mapa (e2e) e por API; regra recusa conteúdo proibido; ao importar BDGD, subestação (SUB) contém as saídas de CTMT e o poste (PONNOT) contém trafo/chave quando as coordenadas coincidem na tolerância (contagem de associações criadas conferida); traçado com 'incluir conteúdo' devolve mais elementos que sem (teste); paridade contra containment/associations table/association status escrita",
+   "refutacao": "adversário aninha contêiner dentro dele mesmo (ciclo) e confere recusa; apaga contêiner com conteúdo e confere que o sistema pergunta o destino do conteúdo",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-06-estruturas-regras-avancadas",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/associations.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/containment.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/associations-table.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/add-containment-association-rules.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/query-associations-utility-network-server/"
+   ]
+  },
+  {
+   "id": "L4-06-b-estrutura-postes",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-06-a-contencao"
+   ],
+   "hipotese": "rede de estrutura (domínio 'estrutura' com poste, torre, duto, vala) e associação de fixação estrutural: equipamento fixado a poste, cabo passando por duto; poste é o objeto que a inspeção de campo e a iluminação pública usam; regras de fixação por tipo; contagem de equipamentos por poste",
+   "portao_de_pronto": "importar PONNOT (60.549 postes com material/altura/esforço) como rede de estrutura; fixação automática trafo/chave/PIP→poste por coincidência dentro da tolerância, contagem conferida; ficha do poste lista o que está fixado; traçado 'estrutura' lista os postes de um trecho; e2e; paridade contra structural attachments/the structure network escrita",
+   "refutacao": "adversário monta poste com 3 trafos e trecho sem terminal e roda validação (refutação do pai); fixa equipamento a poste a 20 m e confere recusa fora da tolerância",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-06-estruturas-regras-avancadas",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/structural-attachments.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/the-structure-network.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/add-structural-attachment-association-rules.htm"
+   ],
+   "ativos_da_casa": [
+    "schema `certaja.*` no iagro_sat (só leitura): ssdmt 44.268 segmentos (COMP, CTMT, UNI_TR_AT, SUB, CONJ, FAS_CON, wkt), ctmt 20, trafo 5.481 (PAC_1..3, POT_NOM, TIP_TRAFO, PER_FER, PER_TOT, x, y), eqtrmt 5.505, ponnot 60.549 (postes), ramlig 26.581, ucbt 27.587 (PN_CON, UNI_TR_MT, ENE, DIC, FIC), pip 12.666, ugbt 1.385"
+   ]
+  },
+  {
+   "id": "L4-06-c-objetos-nao-espaciais",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-06-a-contencao",
+    "L4-03-b-terminais"
+   ],
+   "hipotese": "objetos de junção e de aresta sem geometria (barramento interno de subestação, cabo dentro de duto, fibra dentro de cabo) que participam da topologia por associação e aparecem no diagrama, não no mapa; edição em formulário; contagem por contêiner",
+   "portao_de_pronto": "tabelas `plat.rede_objeto_juncao/aresta` no pacote; criar barramento interno a uma subestação ligando 2 saídas por conectividade de associação e traçar através dele (teste); objeto aparece no diagrama com posição calculada e não no mapa; e2e do formulário; paridade contra nonspatial objects escrita",
+   "refutacao": "adversário liga objeto não espacial a feição de outro contêiner e confere recusa pela regra",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-06-estruturas-regras-avancadas",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/nonspatial-objects.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/circuits-utility-network-server/"
+   ],
+   "nota": "'circuits' (telecom) do UN de 11.4 fica FORA nesta rodada; registrar em PARIDADE como fora com a URL."
+  },
+  {
+   "id": "L4-06-d-categorias-e-restricoes",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-a-pacote-de-ativos"
+   ],
+   "hipotese": "categorias de rede (etiquetas por tipo de ativo: controlador, proteção, manobra, medição, derivação) usadas por traçado, isolamento e regras; restrições de feição (tipo que não pode ser ponto de partida, tipo sem terminal); 'tap' de subrede (ponto de derivação onde o traçado de subrede para); atribuição/alteração de categoria por tipo com validação",
+   "portao_de_pronto": "≥ 8 categorias no pacote elétrica-BR; isolamento usa a categoria 'proteção'; alterar categoria de um tipo dispara área suja em todas as feições do tipo (contagem); restrição impede traçado a partir de UC quando configurada; teste automatizado; paridade contra network categories/feature restrictions/subnetwork tap escrita",
+   "refutacao": "adversário remove a categoria 'controlador' do tipo que tem controladores ativos e confere que o sistema recusa até removê-los",
+   "papeis": [
+    "redes",
+    "backend"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-06-estruturas-regras-avancadas",
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/about-network-categories.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/about-utility-network-restrictions-and-rules.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/subnetwork-tap.htm"
+   ]
+  },
+  {
+   "id": "L4-07-fluxo-de-potencia",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-05-a-exportar-opendss",
+    "L0-05-jobs"
+   ],
+   "hipotese": "fluxo de potência como serviço da plataforma: job 'analisar alimentador' exporta a subrede para OpenDSS (trifásico desequilibrado, o motor que a casa já usa e que a ANEEL aceita no Módulo 7), roda 24 h × 3 tipos de dia × 12 meses (864 pontos) ou uma hora escolhida, e grava resultado por elemento (tensão por barra/fase, corrente e carregamento por trecho, carregamento por trafo, perda por segmento) em `plat.rede_fluxo_resultado` com a versão da topologia, os parâmetros (fator de carga, modelo de carga ZIP, GD) e os avisos de convergência; o resultado vira camadas simbolizadas",
+   "portao_de_pronto": "job roda o alimentador da cooperativa de teste inteiro (16 alimentadores com cliente) em tempo medido (referência da casa: ~40 s na máquina GPU); convergência por alimentador registrada (convergiu, nº de passos sem convergência) e mostrada — nunca resultado sem o estado de convergência ao lado; perda de ferro simulada × PER_FER×8760 do arquivo dentro de ±2 % (referência da casa 99,5 %); parâmetros declarados na ficha do resultado; camadas tensão/corrente/carregamento aparecem no mapa (e2e); teste automatizado com alimentador sintético de resposta analítica conhecida (queda de tensão em linha única = I×Z); onde roda: worker desta máquina se RAM permitir (pico medido) ou job remoto no GPU box por ssh com log; paridade: FORA na Esri (o UN não faz fluxo; registrar como capacidade além da paridade)",
+   "refutacao": "adversário compara tensão de 5 barras com cálculo manual em alimentador sintético; roda com trafo sem POT_NOM e confere falha alta; roda o mesmo alimentador duas vezes e confere resultado idêntico (determinismo); confere que resultado de alimentador que não convergiu aparece com tarja e não entra em agregação",
+   "papeis": [
+    "redes",
+    "backend",
+    "dados",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://opendss.epri.com/opendss_documentation.html",
+    "https://dss-extensions.org/",
+    "https://github.com/dss-extensions/OpenDSSDirect.py",
+    "https://www.gov.br/aneel/pt-br/centrais-de-conteudos/procedimentos-regulatorios/prodist",
+    "https://pandapower.readthedocs.io/en/latest/powerflow/ac.html"
+   ],
+   "ativos_da_casa": [
+    "GPU box `/home/dev/centelha/opendss/` (opendssdirect.py 0.9.4, DSS C-API 0.14.5): 455 de 456 alimentadores da distribuidora de teste modelados, 332 convergiram nos 864 fluxos, 15 h de CPU; cooperativa de teste inteira em ~40 s; espelho em /home/dev/rs-coop/edp_es/opendss/; ⛔ sem o passo de partição por CTMT o modelo devolve zero em silêncio; código TEN_NOM 63 fora do dicionário kV",
+    "tabelas edp_es.perda_tecnica_modelo (perda por segmento MT/trafo/BT/ramal/medidor, convergiu, n_passos_nao_conv, avisos jsonb) e edp_es.trafo_perda_tecnica (só leitura)",
+    "medido 2026-09-05: PostgreSQL 16.13; postgis 3.6.3 e postgis_topology 3.6.3 instaladas; timescaledb 2.26.4 instalada (TSL: ⛔ compressão/continuous aggregates proibidos como DBaaS); pgrouting NÃO instalada, candidato apt postgresql-16-pgrouting 4.0.1-1.pgdg24.04+1; nenhuma venv tem pandapower/opendssdirect/wntr (networkx 3.6.1, geopandas 1.1.3, scipy 1.17.1 no python do sistema); disco / 98 % (13 GB livres) e /mnt/pgdata 98 % (17 GB); RAM disponível 3 GB"
+   ],
+   "nota": "regra da casa: carregamento a partir de energia anual é ESTIMATIVA com fator de carga assumido (0,45) — declarar sempre; o fluxo horário substitui a premissa quando a curva existe."
+  },
+  {
+   "id": "L4-08-queda-de-tensao-e-carregamento",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-07-fluxo-de-potencia"
+   ],
+   "hipotese": "leitura de engenharia do fluxo: queda de tensão ao longo do tronco (perfil por distância), classificação de tensão por faixa do PRODIST Módulo 8 (adequada/precária/crítica, por nível de tensão, com os limites lidos da norma e gravados em tabela com a fonte), carregamento de trafo (% da placa, horas acima de 100 %), carregamento de condutor (% da ampacidade quando o código de condutor tem ampacidade; senão nulo, nunca zero), lista de prioridade por alimentador",
+   "portao_de_pronto": "perfil de tensão por alimentador como gráfico (distância × V pu) e camada; tabela `plat.rede_limite_tensao` com os limites do Módulo 8 por faixa e a URL/data da fonte; trafos com carregamento >100 % listados com nº de horas e comparados com a régua da casa por energia anual (as duas colunas lado a lado, nunca uma só); condutor sem ampacidade aparece como 'sem dado'; exportação CSV; e2e; teste automatizado",
+   "refutacao": "adversário confere os limites do Módulo 8 contra o PDF da ANEEL; procura trafo com carregamento 0 % que na verdade é 'sem curva'; confere que a % de carregamento usa a placa de 2022+ quando a série da casa mostra placa suspeita",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://www.gov.br/aneel/pt-br/centrais-de-conteudos/procedimentos-regulatorios/prodist",
+    "https://pandapower.readthedocs.io/en/latest/powerflow/ac.html"
+   ],
+   "ativos_da_casa": [
+    "/home/dev/liga/pipelines/bdgd_temporal/ (série 2018-2024 por COD_ID; carga = ((Σ ENE/8760)/0,45)/0,92/POT_NOM; 135 trafos que passaram de <80 % a >100 %)",
+    "/home/dev/rs-coop/research/20260903_linhagem_bdgd_edp_es.md (COD_ID de trafo estável em 99,0-99,4 % entre safras; UCBT traz episódios por COD_ID desde 2022; POT_NOM de 2021 não presta como placa)"
+   ]
+  },
+  {
+   "id": "L4-09-perdas-tecnicas-por-segmento",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-07-fluxo-de-potencia"
+   ],
+   "hipotese": "perda técnica por segmento (MT, trafo com ferro separado, BT, ramal, medidor) por alimentador e por trafo, no rito do Módulo 7 (realocação da perda não técnica na carga, +5 % de adicional quando aplicável), comparada com a perda declarada no arquivo (PERD_A3a/A4/B do CTMT) e com o balanço injetada − faturada; resultado como tabela e camada; sempre com o estado de convergência",
+   "portao_de_pronto": "tabela `plat.rede_perda_tecnica` com as colunas da tabela da casa (perda_mt_kwh, perda_trafo_kwh, perda_trafo_vazio_kwh, perda_bt_kwh, perda_ramal_kwh, perda_medidor_kwh, pct_inj, convergiu, avisos); para a cooperativa de teste, perda total em GWh reproduz a rodada da casa dentro de ±5 % (8,82 GWh sem adicional); ⛔ percentual só quando o balanço do arquivo fecha (na cooperativa de teste a faturada supera a injetada em 10 % — o sistema mostra 'balanço não fecha' e não imprime %); relatório por alimentador com declarado × modelo; teste automatizado",
+   "refutacao": "adversário confere a perda de ferro contra PER_FER×8760; roda com arquivo cuja injetada < faturada e confere que nenhuma % é impressa",
+   "papeis": [
+    "redes",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://www.gov.br/aneel/pt-br/centrais-de-conteudos/procedimentos-regulatorios/prodist",
+    "https://opendss.epri.com/opendss_documentation.html"
+   ],
+   "ativos_da_casa": [
+    "GPU box `/home/dev/centelha/opendss/` (opendssdirect.py 0.9.4, DSS C-API 0.14.5): 455 de 456 alimentadores da distribuidora de teste modelados, 332 convergiram nos 864 fluxos, 15 h de CPU; cooperativa de teste inteira em ~40 s; espelho em /home/dev/rs-coop/edp_es/opendss/; ⛔ sem o passo de partição por CTMT o modelo devolve zero em silêncio; código TEN_NOM 63 fora do dicionário kV",
+    "tabelas edp_es.perda_tecnica_modelo (perda por segmento MT/trafo/BT/ramal/medidor, convergiu, n_passos_nao_conv, avisos jsonb) e edp_es.trafo_perda_tecnica (só leitura)"
+   ]
+  },
+  {
+   "id": "L4-10-continuidade-dec-fec",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-04-c-sumarios-por-subrede",
+    "L6-01-acervo-casa"
+   ],
+   "hipotese": "continuidade por conjunto elétrico e por alimentador: DEC/FEC apurados e limites (dados abertos ANEEL, já na casa: 3,7 GB), DIC/FIC por UC quando a BDGD traz (UCBT.DIC/FIC), interrupções com causa e data; junção pela chave CONJ da BDGD; agregação por alimentador ponderada por UC; compensação paga; série por ano; tudo como tabela do inquilino ligada à rede e ao painel",
+   "portao_de_pronto": "importar os parquets de continuidade para `plat.rede_continuidade` (job, contagem = arquivo); para a cooperativa de teste, DEC/FEC por CONJ aparecem na ficha do conjunto e do alimentador (via UCs); 'dentro do limite' / 'acima do limite' calculado com o limite do ano e a fonte; DIC/FIC médio por trafo a partir de UCBT; painel com série 2020-2025; ⛔ frase 'transgressão' nunca aparece — só 'acima do limite regulatório' com o número; teste automatizado",
+   "refutacao": "adversário confere 3 conjuntos contra o CSV da ANEEL; procura conjunto da BDGD sem par no arquivo de continuidade e confere que aparece como 'sem dado', não como zero",
+   "papeis": [
+    "redes",
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://dadosabertos.aneel.gov.br/dataset/indicadores-coletivos-de-continuidade-dec-e-fec",
+    "https://dadosabertos.aneel.gov.br/dataset/interrupcoes-de-energia-eletrica-nas-redes-de-distribuicao",
+    "https://www.gov.br/aneel/pt-br/centrais-de-conteudos/procedimentos-regulatorios/prodist"
+   ],
+   "ativos_da_casa": [
+    "/home/dev/liga/aneel_continuidade/ (3,7 GB: dec_2020_2029.parquet, compensacao_2020_2029.parquet, dec_fec_limite.csv, dict_interrupcoes.pdf) + campo CONJ em SSDMT/UNTRMT/UCBT e DIC/FIC por UC na BDGD",
+    "schema `certaja.*` no iagro_sat (só leitura): ssdmt 44.268 segmentos (COMP, CTMT, UNI_TR_AT, SUB, CONJ, FAS_CON, wkt), ctmt 20, trafo 5.481 (PAC_1..3, POT_NOM, TIP_TRAFO, PER_FER, PER_TOT, x, y), eqtrmt 5.505, ponnot 60.549 (postes), ramlig 26.581, ucbt 27.587 (PN_CON, UNI_TR_MT, ENE, DIC, FIC), pip 12.666, ugbt 1.385"
+   ]
+  },
+  {
+   "id": "L4-11-gd-conectada-e-hospedagem",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-07-fluxo-de-potencia",
+    "L4-04-c-sumarios-por-subrede"
+   ],
+   "hipotese": "geração distribuída na rede: UGBT/UGMT como ativos com kW, CEG e ponto de conexão; verificações de consistência da casa (GD maior que o trafo, GD sem UC, injeção fisicamente impossível, datas) como camada de avisos; capacidade de hospedagem em dois níveis declarados: (1) triagem por carregamento × GD já conectada por trafo/alimentador (tabela) e (2) física, por fluxo de potência iterativo: aumenta injeção em um ponto até violar tensão (Módulo 8) ou carregamento térmico e grava o kW limite por barra",
+   "portao_de_pronto": "camada 'GD' com 1.385 unidades da cooperativa de teste e os 7 checks (A-G) rodando com contagens; hospedagem por triagem para todos os trafos; hospedagem física para ≥ 1 alimentador inteiro (kW limite por barra de MT, critério de parada declarado, nº de iterações, tempo medido); mapa de calor de hospedagem; ⛔ texto sempre 'triagem' no nível 1 e 'simulação com premissas X' no nível 2; teste automatizado com alimentador sintético (limite analítico de sobretensão)",
+   "refutacao": "adversário injeta GD acima da placa do trafo e confere que a hospedagem física dá 0 kW e a triagem marca; confere que barra sem convergência sai 'sem resultado'",
+   "papeis": [
+    "redes",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://pandapower.readthedocs.io/en/latest/timeseries.html",
+    "https://opendss.epri.com/opendss_documentation.html"
+   ],
+   "ativos_da_casa": [
+    "/home/dev/rs-coop/research/20260731_bdgd_consistencia_interna.md (checks A-G: GD maior que o trafo, GD sem UC, coordenada truncada, consumo pós-GD, datas impossíveis, CEG cruzado, injeção fisicamente impossível) + certaja.ugbt / edp_es.gd_unidade",
+    "GPU box `/home/dev/centelha/opendss/` (opendssdirect.py 0.9.4, DSS C-API 0.14.5): 455 de 456 alimentadores da distribuidora de teste modelados, 332 convergiram nos 864 fluxos, 15 h de CPU; cooperativa de teste inteira em ~40 s; espelho em /home/dev/rs-coop/edp_es/opendss/; ⛔ sem o passo de partição por CTMT o modelo devolve zero em silêncio; código TEN_NOM 63 fora do dicionário kV"
+   ]
+  },
+  {
+   "id": "L4-12-inspecao-vegetacao-na-faixa",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-c-importador-bdgd",
+    "L1-03-conectores-sensores",
+    "L0-05-jobs"
+   ],
+   "hipotese": "inspeção orbital da faixa: por vão (trecho entre postes/estruturas) calcular a faixa legal (7,5 m por lado em distribuição, NBR 15688 §5.6; largura declarada por LT em transmissão), amostrar NDVI Sentinel-2 (mediana de N cenas, nuvem declarada) e altura de dossel (CHM 1 m) na faixa, aplicar o classificador calibrado da casa (limiar P90 por estado/zona) e gravar classe por vão com a data das cenas; resultado como camada com legenda e fila de prioridade (km de vão ALTO por alimentador); tudo com a ressalva de que o CHM é modelo de 2018-2020 e nenhum vão foi visto em campo",
+   "portao_de_pronto": "job roda para ≥ 1 alimentador da cooperativa de teste (≥ 1.000 vãos) com tempo medido; por vão: NDVI P90, fração acima de 6 m no CHM, classe, nº de cenas, nuvem; km ALTO por alimentador na tabela de subrede; legenda e ficha do vão com as datas; ressalva impressa na ficha e no relatório; ⛔ transmissão só com eixo as-built (SIGEL); com SINDAT o job recusa e explica; teste automatizado com vão sintético (raster conhecido → classe conhecida)",
+   "refutacao": "adversário compara 50 vãos com a saída do classificador da casa (mesma classe em ≥ 95 %); roda sobre LT com geometria SINDAT e confere a recusa; procura vão com NDVI calculado com 0 cenas",
+   "papeis": [
+    "raster",
+    "redes",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://www.gov.br/aneel/pt-br/centrais-de-conteudos/procedimentos-regulatorios/prodist"
+   ],
+   "ativos_da_casa": [
+    "/home/dev/liga/frontier/classificador/ (69.504 vãos de MT, 7 redes, 2 estados, 4.139,3 km; P90 do NDVI Sentinel-2 na faixa de 7,5 m por lado, NBR 15688 §5.6; AUC 0,74-0,81 contra CHM Meta/WRI 1 m 2018-2020; nenhum vão visto em campo) + /home/dev/rs-coop/produto-centelha/transmissora_veg/MODELO_VEG.md (S2→altura de dossel, AUC 0,953; ⛔ geometria SINDAT é esquemática, desvio mediano 3,1-11,2 km do as-built)"
+   ],
+   "nota": "regra da casa: 'localiza', não 'antecipa'; 4-7× o acaso, nunca 10×; nunca 'NDVI erra 75 %'; classe por vão, nunca por árvore."
+  },
+  {
+   "id": "L4-13-integracao-telemetria",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-b-topologia-derivada",
+    "L2-14-tempo-real"
+   ],
+   "hipotese": "medição ligada ao ativo: `plat.rede_medicao` (tenant, ativo global_id, cod_id externo, ts, fonte, grandeza, valor, unidade, leitura bruta jsonb) particionada por tempo com pg_partman/partição nativa (⛔ sem compressão TSL do TimescaleDB para dado do cliente), entrada por HTTP/MQTT do L2-14, última leitura na ficha do ativo, gráfico por período, alarme contra nominal (kVA da placa, faixa de tensão do Módulo 8) que vira evento; a topologia permite agregar medição a jusante (ex.: soma das correntes dos trafos de um alimentador)",
+   "portao_de_pronto": "simulador de 20 sensores de trafo (corrente por fase 5 min, temperatura, tensão 10 min) publica e a ficha do trafo mostra a última leitura em ≤ 5 s; alarme 'carregamento > 100 % por 30 min' dispara evento e aparece no mapa; gráfico de 7 dias; consulta de 1 mês de 20 sensores em tempo medido; agregação a jusante por traçado; RLS; teste automatizado; paridade: GeoEvent/Velocity + UN não têm medição por ativo nativa (registrar como além)",
+   "refutacao": "adversário envia leitura para cod_id de outro inquilino e confere rejeição; envia timestamp futuro e unidade errada e confere recusa com mensagem",
+   "papeis": [
+    "redes",
+    "dados",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://www.gov.br/aneel/pt-br/centrais-de-conteudos/procedimentos-regulatorios/prodist"
+   ],
+   "ativos_da_casa": [
+    "edpsig.telemetria_leitura (id, tenant_id, alvo_id, cod_id, ts, fonte, leitura jsonb, recebido_em) do SIG de teste interno; /home/dev/rs-coop/produto-centelha/P4_TELEMETRIA_DOSSIE.md (curva de carga 5-15 min por fase, temperatura de tanque, tensão agregada 10 min = PRODIST Módulo 8 DRP/DRC)",
+    "medido 2026-09-05: PostgreSQL 16.13; postgis 3.6.3 e postgis_topology 3.6.3 instaladas; timescaledb 2.26.4 instalada (TSL: ⛔ compressão/continuous aggregates proibidos como DBaaS); pgrouting NÃO instalada, candidato apt postgresql-16-pgrouting 4.0.1-1.pgdg24.04+1; nenhuma venv tem pandapower/opendssdirect/wntr (networkx 3.6.1, geopandas 1.1.3, scipy 1.17.1 no python do sistema); disco / 98 % (13 GB livres) e /mnt/pgdata 98 % (17 GB); RAM disponível 3 GB"
+   ]
+  },
+  {
+   "id": "L4-14-balanco-de-energia-por-alimentador",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-04-c-sumarios-por-subrede",
+    "L4-09-perdas-tecnicas-por-segmento"
+   ],
+   "hipotese": "balanço por alimentador e por trafo a partir do que o arquivo declara e do que o modelo calcula: injetada (CTMT) + GD − faturada (UCBT+UCMT+PIP) − técnica (modelo) = resíduo; resíduo como candidato a perda não técnica com a régua declarada (taxa-base, quintis), sem nome, sem acusação; o mesmo método da casa, agora como tela",
+   "portao_de_pronto": "tabela e tela 'balanço' por alimentador com as 5 parcelas e o resíduo; quando o arquivo não fecha (faturada > injetada) a tela diz isso e não calcula resíduo; para a distribuidora de teste (se o pacote couber no disco) reproduz a ordem de alimentadores da casa (Spearman ≥ 0,9 com a tabela edp_es.balanco_v2); exportação CSV; texto segue a regra de escrita de 03/09",
+   "refutacao": "adversário confere que nenhuma tela usa a palavra 'fraude' ou 'irregular'; confere a soma das parcelas",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://www.gov.br/aneel/pt-br/centrais-de-conteudos/procedimentos-regulatorios/prodist"
+   ],
+   "ativos_da_casa": [
+    "tabelas edp_es.perda_tecnica_modelo (perda por segmento MT/trafo/BT/ramal/medidor, convergiu, n_passos_nao_conv, avisos jsonb) e edp_es.trafo_perda_tecnica (só leitura)",
+    "GPU box `/home/dev/centelha/opendss/` (opendssdirect.py 0.9.4, DSS C-API 0.14.5): 455 de 456 alimentadores da distribuidora de teste modelados, 332 convergiram nos 864 fluxos, 15 h de CPU; cooperativa de teste inteira em ~40 s; espelho em /home/dev/rs-coop/edp_es/opendss/; ⛔ sem o passo de partição por CTMT o modelo devolve zero em silêncio; código TEN_NOM 63 fora do dicionário kV"
+   ]
+  },
+  {
+   "id": "L4-15-serie-temporal-da-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-c-importador-bdgd"
+   ],
+   "hipotese": "várias safras da mesma rede no mesmo inquilino (BDGD 2018-2024): linhagem por COD_ID de trafo e de UC (persistente/recodificado/novo/extinto pelo método da casa), carregamento por safra, trafos que passaram de <80 % a >100 %, crescimento de rede (km, UC) por alimentador; controle de tempo no mapa por safra",
+   "portao_de_pronto": "importar 2 safras da cooperativa de teste (2024 e a anterior disponível) e a tabela `plat.rede_linhagem` classifica cada COD_ID; contagens de persistente/novo/extinto conferidas contra a tabela da casa quando a distribuidora coincide; controle deslizante de safra no mapa (e2e); tabela de tendência por trafo exportável; ⛔ POT_NOM de 2021 marcado como não confiável quando a série mostrar troca em massa (regra da casa)",
+   "refutacao": "adversário recodifica 10 COD_ID à mão entre safras e confere que a linhagem os casa por geometria/UCs e os marca como 'recodificado'",
+   "papeis": [
+    "redes",
+    "dados",
+    "backend",
+    "frontend"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd"
+   ],
+   "ativos_da_casa": [
+    "/home/dev/liga/pipelines/bdgd_temporal/ (série 2018-2024 por COD_ID; carga = ((Σ ENE/8760)/0,45)/0,92/POT_NOM; 135 trafos que passaram de <80 % a >100 %)",
+    "/home/dev/rs-coop/research/20260903_linhagem_bdgd_edp_es.md (COD_ID de trafo estável em 99,0-99,4 % entre safras; UCBT traz episódios por COD_ID desde 2022; POT_NOM de 2021 não presta como placa)"
+   ]
+  },
+  {
+   "id": "L4-16-api-rest-compativel-un",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-02-e-configuracoes-de-tracado",
+    "L4-03-d-areas-sujas-e-validacao",
+    "L4-04-b-atualizar-e-exportar-subrede",
+    "L2-04-servicos-esri-ogc"
+   ],
+   "hipotese": "fachada REST com a forma do UtilityNetworkServer da Esri (trace, validateNetworkTopology, queryAssociations, updateSubnetwork, exportSubnetwork, traceConfigurations query/create/alter/delete, locations/queryLocations, queryNetworkMoments) e do NetworkDiagramServer (diagram templates, createDiagramFromFeatures, applyLayout, export) sobre os nossos endpoints, com JSON de requisição/resposta conforme a doc REST; objetivo: cliente próprio e scripts que hoje falam com a Esri; ⛔ ArcGIS Pro editando UN contra nós = FORA (exige geodatabase corporativa e serviço branch-versioned da Esri) e fica declarado assim",
+   "portao_de_pronto": "script de conformidade percorre os parâmetros de cada operação listada na doc REST (datada) e marca cada um feito/parcial/fora em docs/PARIDADE.md; `trace` aceita o JSON da doc (traceType, traceLocations, traceConfiguration) e devolve `traceResults.elements` no formato da doc; QGIS/curl consomem; teste automatizado por operação; a linha 'Pro edita UN contra nós' consta como FORA com a URL da doc que exige branch versioning",
+   "refutacao": "adversário envia o exemplo literal da doc de `trace` e de `validateNetworkTopology` e compara a forma da resposta campo a campo; envia traceType não suportado e confere erro no formato Esri (code/message)",
+   "papeis": [
+    "esri",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://developers.arcgis.com/rest/services-reference/enterprise/utility-network-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/overview-of-utility-network-services/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/trace-utility-network-server/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/validatenetworktopology-utiility-network-server/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/query-associations-utility-network-server/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/exportsubnetwork-utility-network-server/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/create-traceconfiguration-utility-network-server/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/locations-utility-network-server/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/querynetworkmoments-utility-network-server/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/unitIdentifiers-utility-network-server/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/appendix-working-with-the-feature-server-utility-network-server/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/network-diagram-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/diagram-templates-network-diagram-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/create-diagram-from-trace-locations-network-diagram-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/apply-layout-network-diagram-service/",
+    "https://enterprise.arcgis.com/en/server/11.4/publish-services/windows/utility-network-services.htm",
+    "https://developers.arcgis.com/javascript/latest/api-reference/esri-networks-UtilityNetwork.html",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/trace-network-service/"
+   ],
+   "ativos_da_casa": [
+    "/home/dev/fgr/sig (só leitura): FeatureServer Esri-compatível + OGC API Features por token, RLS com 20 políticas, `bash sig/pipeline/testar.sh` = 9/9"
+   ]
+  },
+  {
+   "id": "L4-17-migracao-de-un-e-rede-geometrica",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-a-pacote-de-ativos",
+    "L4-05-b-cim-iec-61970-61968",
+    "L2-08-migracao-agol"
+   ],
+   "hipotese": "trazer rede de quem já tem Esri: (1) de utility network publicada — ler as camadas pelo FeatureServer (query) e as regras/categorias/terminais pelo JSON de definição do serviço, e as associações pela tabela de associações, gerando o nosso pacote de ativos; (2) de rede geométrica antiga (file geodatabase) — ler por GDAL as feature classes e a conectividade por coincidência (é o que a própria Esri faz ao migrar); (3) de asset package (o gdb da Esri) — ler domínios/regras; relatório 'o que veio, o que não veio'",
+   "portao_de_pronto": "ferramenta de migração aceita URL de serviço UN público de exemplo (a Esri publica amostras; se nenhuma responder, gdb de rede geométrica de exemplo) e produz pacote + rede com topologia; relatório com contagem por tipo e lista de regras não mapeadas; ⛔ nunca copiar item de dono Esri; teste automatizado com gdb de exemplo pequeno (dado aberto); paridade contra Utility Network Data Management Support (asset package/migrate) escrita",
+   "refutacao": "adversário compara nº de regras do serviço de origem com o pacote gerado; procura associação perdida",
+   "papeis": [
+    "esri",
+    "redes",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://solutions.arcgis.com/shared/help/utility-data-management-support/",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/utility-network-dataset-administration.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/utility-network-compatibility.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/utility-network-upgrade-history.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/trace-network/convert-geometric-network-to-trace-network.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/appendix-working-with-the-feature-server-utility-network-server/"
+   ]
+  },
+  {
+   "id": "L4-18-rede-simples-trace-network",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-b-topologia-derivada",
+    "L4-02-a-conectado-e-subrede"
+   ],
+   "hipotese": "modo 'rede simples' (equivalente ao Trace Network da Esri, para hidrografia, ferrovia, drenagem): rede sem pacote de ativos, sem regra e sem terminal — só junções e arestas com direção de fluxo por atributo (digitalizada/contra/indeterminada) e atributos de rede; traçados conectado/montante/jusante/caminho mais curto sobre a mesma topologia; converter rede simples em rede de utilidades quando o inquilino evoluir",
+   "portao_de_pronto": "criar rede simples a partir de 2 camadas (linhas + pontos) do inquilino em ≤ 3 cliques (e2e); direção de fluxo por atributo; montante/jusante em rede hidrográfica de exemplo (dado aberto BC250 do acervo, 1 bacia) devolve resultado igual ao calculado por networkx no teste; 'promover a rede de utilidades' cria pacote mínimo; paridade contra trace network escrita",
+   "refutacao": "adversário define direção 'indeterminada' em um trecho e confere que montante/jusante param nele com aviso",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/trace-network/what-is-a-trace-network-.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/trace-network/network-attributes.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/trace-network/dirty-areas-in-a-trace-network.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/trace-network-service/",
+    "https://docs.qgis.org/3.40/en/docs/user_manual/processing_algs/qgis/networkanalysis.html"
+   ]
+  },
+  {
+   "id": "L4-19-planejamento-de-linha-nova",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-motor-servico",
+    "L4-01-a-pacote-de-ativos"
+   ],
+   "hipotese": "traçado de LINHA NOVA (corredor e eixo de LT ou de alimentador) por superfície de custo sobre o motor de LT da casa (322 camadas, custo/veto por camada, caminho de custo mínimo), como job da plataforma que recebe origem/destino/pontos de passagem e o preset de pesos do usuário (L3) e devolve corredor, eixo candidato, métricas por camada (km em UC, km em RL, km em água, imóveis na faixa) e o relatório de método; o eixo candidato pode virar rede 'planejada' no modelo (tier 'projeto')",
+   "portao_de_pronto": "job roda o trecho de 382 km do spike da casa em tempo medido (referência 3,7 s no motor) e devolve as mesmas métricas do motor ± 1 %; camada água com custo de veto obrigatória (o erro de 06/08 da casa não pode voltar: km em água do eixo ≤ 1 % do comprimento, medido); sinuosidade calculada e comparada com a régua declarada; método exportado em PDF/JSON; ⛔ texto 'triagem, não estudo de traçado'; e2e; paridade: Esri = Spatial Analyst (least cost path) + suitability modeler, escrita",
+   "refutacao": "adversário remove a camada água do preset e confere que o job recusa (camada obrigatória); compara o eixo com o do motor da casa (Hausdorff ≤ 100 m)",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [],
+   "ativos_da_casa": [
+    "/home/dev/rs-coop/tracado-lt/ (motor de LT: superfície de custo com 322 camadas auditadas por sha256, 1,2 mi de feições; trecho de 382 km em 3,7 s; METODOLOGIA.md prescritiva; ⛔ eixo da linha inteira suspenso desde 06/08)",
+    "motor logístico (cbre, 25 fatores) e L3-01-motor-servico (favorabilidade 0-100 explicável)"
+   ],
+   "nota": "depende de o motor de LT ser copiado (não editado) para o repositório; as 322 camadas ficam no acervo (L6) — o job lê, não copia. Disco 98 %: sem reprocessar raster nacional."
+  },
+  {
+   "id": "L4-20-consumidores-e-enderecos",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-c-importador-bdgd",
+    "L6-01-acervo-casa"
+   ],
+   "hipotese": "consumidor como ativo terminal da rede (UC em ponto de conexão, PN_CON) e cruzamento com endereços do CNEFE/IBGE do acervo: endereço sem rede a X m (candidato a ligação ou a cadastro faltante), UCs por endereço, nº de clientes a jusante como atributo de rede (usado por isolamento e continuidade); nunca nome, nunca CPF, nunca dado de consumo por pessoa fora do agregado",
+   "portao_de_pronto": "camada 'endereços sem rede a 700 m' gerada para a cooperativa de teste com contagem comparável à tabela da casa (10.911 ± 5 %); atributo 'clientes a jusante' em cada trecho de MT = Σ UCBT (teste); ficha de UC sem campo identificável (revisão do adversário); teste automatizado; RLS",
+   "refutacao": "adversário procura qualquer coluna com nome/CPF/telefone no esquema e na resposta da API; confere que a agregação mínima exibida é ≥ 5 UCs quando há consumo",
+   "papeis": [
+    "redes",
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [],
+   "ativos_da_casa": [
+    "certaja.cnefe 224.097 / certaja.cnefe_pt 182.750 endereços IBGE (pontos) e certaja.end_sem_rede 10.911 (endereço sem rede a 700 m) — método de consumidor sem cadastro já rodado",
+    "schema `certaja.*` no iagro_sat (só leitura): ssdmt 44.268 segmentos (COMP, CTMT, UNI_TR_AT, SUB, CONJ, FAS_CON, wkt), ctmt 20, trafo 5.481 (PAC_1..3, POT_NOM, TIP_TRAFO, PER_FER, PER_TOT, x, y), eqtrmt 5.505, ponnot 60.549 (postes), ramlig 26.581, ucbt 27.587 (PN_CON, UNI_TR_MT, ENE, DIC, FIC), pip 12.666, ugbt 1.385"
+   ]
+  },
+  {
+   "id": "L4-21-qualidade-e-saude-da-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-03-d-areas-sujas-e-validacao",
+    "L4-04-c-sumarios-por-subrede"
+   ],
+   "hipotese": "painel de saúde da rede por inquilino: resultado do contrato de dado (expectativas bloqueia/avisa/informa da casa, generalizadas para o pacote de ativos), erros de topologia por código, nós órfãos, trechos pendurados, laços em tier hierárquico, trafo sem UC, UC sem trafo, atributo obrigatório nulo, coordenada fora do território, placa fora do catálogo; tendência entre validações; exportação do relatório",
+   "portao_de_pronto": "≥ 30 expectativas parametrizadas por pacote (YAML da casa como base) rodando como job após importação e após validação; painel com contagem por expectativa e lista por feição (e2e); relatório HTML/PDF com a versão da topologia e a data; para a cooperativa de teste, os 3 achados da casa (ARE_LOC 100 % NU; TIP_TRAFO MT com cliente; ausência de zero) aparecem como 'informa'; teste automatizado",
+   "refutacao": "adversário injeta 5 defeitos conhecidos (trafo sem CTMT, UC com data futura, POT_NOM 0, coordenada no oceano, COD_ID duplicado) e confere que os 5 aparecem com a severidade certa",
+   "papeis": [
+    "redes",
+    "dados",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/about-error-features.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/manage-error-features.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/parcelfabricdataqualitylayers.htm"
+   ],
+   "ativos_da_casa": [
+    "/home/dev/rs-coop/edp_es/contrato/contrato_bdgd.yaml v1.1 (expectativas por camada e por transformador com severidade bloqueia/avisa/informa; camadas obrigatórias UNTRMT, UCBT_tab, CTMT, SSDBT, PONNOT)"
+   ]
+  },
+  {
+   "id": "L4-22-desempenho-em-escala",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-c-importador-bdgd",
+    "L4-02-e-configuracoes-de-tracado",
+    "L4-03-d-areas-sujas-e-validacao"
+   ],
+   "hipotese": "a rede de uma distribuidora grande (referência: a maior da BDGD tem 5,63 mi de trechos de MT e 0,95 mi de trafos) cabe e responde: topologia por partição (subrede) e índices; traçado ≤ 2 s p95 em alimentador de 10 mil trechos; validação incremental proporcional à área suja; atualização de todas as subredes em tempo declarado; consumo de RAM do worker limitado; medido com a distribuidora de teste do ES (476 MB, 456 alimentadores) quando o disco permitir (D21) e com rede sintética replicada 10× enquanto não permitir",
+   "portao_de_pronto": "tests/medidas/L4-22.json com: tempo de habilitar topologia, tamanho das tabelas, p50/p95 de cada tipo de traçado em alimentador de ≥ 10 mil trechos, tempo de validar 1 área suja × validar tudo, RAM pico do worker; todos os limiares do item L4-02 e L4-03 confirmados na rede grande; plano de partição documentado em docs/rede/ESCALA.md; se a rede grande não couber, o item fica `parcial` com a medição sintética e D21 citado",
+   "refutacao": "adversário roda 3 traçados simultâneos + 1 validação e mede p95; confere que o k6/ab aponta para URL que devolve 200 com corpo (não 404)",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "spec",
+   "fontes": [
+    "https://docs.pgrouting.org/4.0/en/pgr_contraction.html",
+    "https://docs.pgrouting.org/4.0/en/pgr_drivingDistance.html"
+   ],
+   "ativos_da_casa": [
+    "/home/dev/rs-coop/produto-centelha/brasil_rede_2024/stats.json (101 distribuidoras; km_mt 3.102.276,04; 6.077.450 trafos; 103.114.921 UCs; 30.103.199 segmentos quantizados; medido 2026-07-23)",
+    "/home/dev/liga/*_2024.gdb.zip (3 pacotes BDGD 2024-12-31 V11 já na máquina: cooperativa de teste 13 MB; cooperativa B; distribuidora de teste do ES 476 MB)",
+    "medido 2026-09-05: PostgreSQL 16.13; postgis 3.6.3 e postgis_topology 3.6.3 instaladas; timescaledb 2.26.4 instalada (TSL: ⛔ compressão/continuous aggregates proibidos como DBaaS); pgrouting NÃO instalada, candidato apt postgresql-16-pgrouting 4.0.1-1.pgdg24.04+1; nenhuma venv tem pandapower/opendssdirect/wntr (networkx 3.6.1, geopandas 1.1.3, scipy 1.17.1 no python do sistema); disco / 98 % (13 GB livres) e /mnt/pgdata 98 % (17 GB); RAM disponível 3 GB"
+   ]
+  },
+  {
+   "id": "L4-23-isolamento-por-inquilino-na-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-b-topologia-derivada",
+    "L0-02-tenant-auth"
+   ],
+   "hipotese": "toda tabela de rede (catálogo, topologia, associações, subredes, erros, diagramas, medições, resultados de análise) tem tenant_id e RLS; as consultas do pgRouting recebem SQL de arestas que já filtra por tenant e rodam sob a role da aplicação, nunca como superusuário; token com escopo 'rede:ler/editar/validar/analisar'",
+   "portao_de_pronto": "teste cruzado A→B em TODAS as rotas de rede (lista gerada do OpenAPI, ≥ 40 rotas) falha com 403/404; `EXPLAIN` de um traçado mostra o filtro de tenant na SQL de arestas; tentativa de traçado com ponto de partida de outro inquilino devolve vazio com 404; escopos testados; registro em tests/medidas",
+   "refutacao": "adversário forja tenant_id no corpo do traçado e no `traceLocations` da fachada Esri; tenta ler `plat.rede_topo_aresta` com a role da aplicação sem SET do tenant",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "spec",
+   "fontes": [
+    "https://docs.pgrouting.org/4.0/en/pgr_dijkstra.html"
+   ],
+   "ativos_da_casa": [
+    "/home/dev/fgr/sig (só leitura): FeatureServer Esri-compatível + OGC API Features por token, RLS com 20 políticas, `bash sig/pipeline/testar.sh` = 9/9"
+   ]
+  },
+  {
+   "id": "L4-24-cartografia-de-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-02-simbologia",
+    "L4-01-d-atributos-de-rede"
+   ],
+   "hipotese": "simbologia própria de rede: cor por nível de tensão e por fase (ABC), símbolo por tipo de ativo com rotação pelo trecho, estado aberto/fechado visível, subrede por cor categórica estável, associações como linhas finas quando 'mostrar associações' está ligado, terminais visíveis na escala de edição, rótulo com nome da subrede/código, escala mínima por camada para não travar em 1 mi de trechos, mapa escuro/claro",
+   "portao_de_pronto": "pacote elétrica-BR traz o estilo (formato de estilo de L2-02) com ≥ 15 tipos simbolizados; e2e em 3 escalas com captura; 1 mi de trechos (rede sintética ou BDGD grande) navega sem travar (medido, tiles vetoriais Martin com função por tenant); legenda gerada do estilo; revisão do cartógrafo registrada em handoff; paridade contra a simbologia da Electric UN Foundation escrita",
+   "refutacao": "adversário abre o mapa em 100 % de zoom sobre a subestação mais densa e conta sobreposição de símbolos; confere daltonismo (fase A/B/C distinguíveis sem cor)",
+   "papeis": [
+    "cartografo",
+    "frontend",
+    "redes"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://solutions.arcgis.com/utilities/electric/help/electric-utility-network-foundation/",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/set-edge-connectivity-for-line-features.htm"
+   ]
+  },
+  {
+   "id": "L4-25-cenarios-e-se",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-03-e-versao-de-rede",
+    "L4-07-fluxo-de-potencia"
+   ],
+   "hipotese": "cenário 'e se' = versão de rede + análise: abrir/fechar chaves, inserir trafo, transferir carga entre alimentadores, adicionar GD, e rodar traçado + fluxo na versão sem tocar a padrão; comparação lado a lado (clientes afetados, perdas, tensão mínima) entre padrão e cenário; cenário aprovado vira post",
+   "portao_de_pronto": "criar cenário, abrir 1 chave e fechar outra (transferência), atualizar subredes na versão, rodar fluxo; tela de comparação com 5 indicadores (clientes por alimentador, km, kVA, perdas, V mínima) para padrão × cenário; e2e; teste automatizado que confere que a padrão não mudou (checksum)",
+   "refutacao": "adversário roda fluxo no cenário e na padrão em paralelo e confere que os resultados são gravados na versão certa",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "usuario",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/geodatabases/overview/branch-version-scenarios.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/querynetworkmoments-utility-network-server/"
+   ]
+  },
+  {
+   "id": "L4-26-inspecao-de-campo-do-ativo",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-07-campo",
+    "L4-06-b-estrutura-postes"
+   ],
+   "hipotese": "inspeção de campo ligada ao ativo de rede: formulário (L2-07) aberto a partir do poste/trafo/chave com foto, defeito codificado, gravidade, GPS; o registro vira atributo de rede (ex.: 'estado=defeituoso' que o traçado de isolamento respeita como barreira de condição) e entra na fila de manutenção; rota de inspeção por alimentador a partir do traçado",
+   "portao_de_pronto": "formulário 'inspeção de poste' no pacote; coleta offline de 10 postes no PWA e sincronização (e2e móvel); defeito 'chave inoperante' muda o atributo e o isolamento passa a ignorar a chave (teste); lista de inspeções por alimentador exportável; fotos com limite de tamanho",
+   "refutacao": "adversário sincroniza inspeção de poste que foi apagado entre a coleta e o envio e confere tratamento",
+   "papeis": [
+    "redes",
+    "frontend",
+    "backend"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://solutions.arcgis.com/utilities/electric/help/electric-utility-network-foundation/"
+   ]
+  },
+  {
+   "id": "L4-27-curto-circuito-e-protecao",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-05-c-pandapower-e-matpower"
+   ],
+   "hipotese": "corrente de curto-circuito por barra (trifásico e fase-terra, IEC 60909 via pandapower ou OpenDSS faultstudy) e verificação de coordenação simples (dispositivo a montante interrompe a corrente calculada na sua faixa); resultado por barra e por dispositivo como camada; premissas (impedância da fonte, tensão pré-falta) declaradas",
+   "portao_de_pronto": "curto em 1 alimentador da cooperativa de teste com Ik por barra; alimentador sintético com resposta analítica (Ik = V/Z) no teste; dispositivo sem faixa de interrupção cadastrada sai 'sem dado'; camada e tabela; paridade: FORA na Esri",
+   "refutacao": "adversário compara Ik em 3 barras com cálculo manual; confere que impedância nula da fonte é recusada",
+   "papeis": [
+    "redes",
+    "backend",
+    "testador"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "usuario",
+   "fontes": [
+    "https://pandapower.readthedocs.io/en/latest/shortcircuit.html",
+    "https://opendss.epri.com/opendss_documentation.html"
+   ]
+  },
+  {
+   "id": "L4-28-identificadores-e-numeracao",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-a-pacote-de-ativos"
+   ],
+   "hipotese": "identidade de ativo: global_id (UUID) interno estável + código externo do cliente (ex.: COD_ID da BDGD) único por rede + numeração automática por tipo com faixa reservada (o que a Esri chama unit identifiers) para quem cria ativos em campo sem conflito; histórico de renomeação",
+   "portao_de_pronto": "reservar faixa de 100 códigos para um usuário e criar 100 ativos offline sem colisão (teste); código externo duplicado recusado; renomear mantém o global_id e grava histórico; API `unitIdentifiers` da fachada Esri mapeada; teste automatizado",
+   "refutacao": "adversário reserva a mesma faixa em dois clientes e confere que o segundo recebe outra",
+   "papeis": [
+    "backend",
+    "dados"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://developers.arcgis.com/rest/services-reference/enterprise/unitIdentifiers-utility-network-server/"
+   ]
+  },
+  {
+   "id": "L4-29-regras-de-atributo-de-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-10-relacoes-regras",
+    "L4-04-b-atualizar-e-exportar-subrede"
+   ],
+   "hipotese": "regras de atributo específicas de rede na linguagem de expressão da plataforma (L2-10): cálculo (nome da subrede, tensão herdada do alimentador, nº de clientes a jusante), restrição (chave só pode fechar se as duas subredes forem compatíveis em tensão), validação (trafo sem UC há 2 safras); funções de rede na linguagem: subrede(), jusante(...).contar(), atributo_de_rede(...)",
+   "portao_de_pronto": "≥ 6 funções de rede na linguagem documentadas e testadas; regra de restrição recusa fechar chave entre 13,8 kV e 34,5 kV (teste); regra de cálculo preenche tensão em trecho novo; validação em lote lista trafos sem UC; paridade contra UN attribute rules (Arcade perfis) escrita",
+   "refutacao": "adversário escreve regra com laço infinito (jusante de jusante) e confere limite de tempo/profundidade",
+   "papeis": [
+    "redes",
+    "backend"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/attribute-propagation.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/is-connected-attribute.htm"
+   ]
+  },
+  {
+   "id": "L4-30-manual-e-tour-de-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-04-d-diagrama-esquematico",
+    "L4-08-queda-de-tensao-e-carregamento"
+   ],
+   "hipotese": "seção de rede no MANUAL (importar, editar com regras, validar, traçar, subredes, diagrama, análise, telemetria) com capturas reais e um tour guiado no produto sobre a cooperativa de teste; glossário que traduz o vocabulário da Esri para o nosso (tier=nível, subnetwork=subrede, dirty area=área suja, association=associação, terminal=terminal, trace=traçado) e o vocabulário do setor (PRODIST, BDGD, CTMT); texto segue a regra de escrita de 03/09 e passa por revisor separado",
+   "portao_de_pronto": "MANUAL.md com ≥ 10 telas de rede documentadas com captura de tests/e2e/capturas; tour de ≥ 8 passos executável (e2e); glossário com ≥ 40 termos; revisor separado assinou (handoff)",
+   "refutacao": "adversário procura número digitado à mão (não vindo de tests/medidas) e metáfora no texto",
+   "papeis": [
+    "cronista",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "spec",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/what-is-a-utility-network-.htm"
+   ]
+  },
+  {
+   "id": "L4-parcelas-01-modelo-de-parcelas",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-ingest-vetor",
+    "L2-03-edicao",
+    "L2-13-versionamento-sync"
+   ],
+   "hipotese": "malha de parcelas (equivalente ao Parcel Fabric): registros (documento legal: matrícula, escritura, loteamento) que criam/retiram parcelas; tipos de parcela (lote, gleba, quadra, servidão, estrato/unidade) cada um com polígono + linhas; linhas com atributos COGO (rumo, distância, raio, arco) e origem (medida/escaneada/derivada); pontos com precisão declarada; histórico por registro (parcela histórica retirada por registro X, criada por registro Y); topologia própria (linhas partilhadas, sem lacuna/sobreposição por tipo)",
+   "portao_de_pronto": "DDL `plat.parcela_*` (registro, parcela por tipo, linha, ponto, conexão) com RLS e versionamento; importar lotes derivados do SIG de teste interno (dado aberto: 8.638 lotes de exemplo) como parcelas do tipo 'lote' com registro sintético; criar registro, criar parcela por linhas COGO (e2e), retirar parcela por novo registro e ver histórico (linhagem) na ficha; ⛔ nenhuma matrícula real, nenhum nome; paridade contra parcel fabric schema/records/parcel types escrita",
+   "refutacao": "adversário cria duas parcelas ativas do mesmo tipo sobrepostas e confere que a validação aponta; retira parcela e confere que ela some do 'atual' e fica no 'histórico' com o registro",
+   "papeis": [
+    "arquiteto",
+    "dados",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/whatisparcelfabric.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/whatisaparcel.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/aboutparcelfabricschema.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/aboutparcelfabrictopology.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/createparcelfabricrecords.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/viewparcellineage.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/createstrataparcels.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/overview-of-parcel-fabric-sevices/"
+   ],
+   "ativos_da_casa": [
+    "/home/dev/fgr/sig (só leitura): FeatureServer Esri-compatível + OGC API Features por token, RLS com 20 políticas, `bash sig/pipeline/testar.sh` = 9/9"
+   ],
+   "nota": "parcela ≠ gleba ≠ lote ≠ matrícula (regra da casa). O SIGEF/INCRA e o CAR são fontes de polígono declarado, não malha cadastral; entram como camada de referência, nunca como parcela 'oficial'."
+  },
+  {
+   "id": "L4-parcelas-02-fluxos-cogo",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-parcelas-01-modelo-de-parcelas"
+   ],
+   "hipotese": "fluxos de edição cadastral: dividir (área/proporção/deslocamento), unir, recortar, subdividir por metes-e-bounds (traverse COGO: sequência de rumo/distância com fechamento e erro de fechamento calculado), construir parcela a partir de linhas (build), copiar linhas de CAD, duplicar, mudar tipo, atribuir a registro; tudo por arrasta-e-solta com pré-visualização",
+   "portao_de_pronto": "cada fluxo listado por e2e com captura; traverse de 6 lados com erro de fechamento calculado e exibido (teste com poligonal conhecida: erro = valor esperado ± 1 mm); dividir lote em 2 por área igual devolve áreas iguais ± 0,01 m²; unir mantém linhas externas e apaga a interna; build a partir de linhas de DXF importado (dado aberto) gera N parcelas fechadas (contagem); fachada REST `ParcelFabricServer` (build, divide, merge, clip, createSeeds, reconstructFromSeeds, assignToRecord) mapeada com forma da doc; paridade escrita",
+   "refutacao": "adversário divide parcela com linha que não cruza e confere recusa; traverse que não fecha por 5 m e confere que o sistema mostra o erro e não fecha em silêncio",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/divideparcelworkflow.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/split-parcels.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/mergeparcelsworkflow.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/buildfromcadworkflow.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/splitmetesandboundsworkflow.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/parcel-fabric-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/build-parcel-fabric-server/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/divide-parcel-fabric-server/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/merge-parcel-fabric-server/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/clip-parcel-fabric-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/createseeds-parcel-fabric-server/"
+   ]
+  },
+  {
+   "id": "L4-parcelas-03-ajuste-e-qualidade",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-parcelas-02-fluxos-cogo"
+   ],
+   "hipotese": "qualidade da malha: lacunas e sobreposições por tipo como camada de erro; precisão por ponto/linha (categoria declarada); ajuste por mínimos quadrados (rede de linhas com medidas COGO + pontos de controle com peso → novas coordenadas e resíduos por linha; analisar antes, aplicar depois), com a matemática em numpy/scipy e o relatório de resíduos; regras de atributo de parcela (área calculada × declarada, fechamento)",
+   "portao_de_pronto": "camada 'lacunas e sobreposições' gerada para os 8.638 lotes de exemplo (contagem conferida com ST_Overlaps/ST_Difference independente); ajuste por mínimos quadrados em malha sintética de 20 parcelas com 3 pontos de controle: resíduos ≤ tolerância e coordenadas reproduzem a solução analítica (teste); 'analisar' não altera geometria, 'aplicar' altera e grava versão; `analyzeByLSA`/`applyLSA` da fachada mapeados; paridade escrita",
+   "refutacao": "adversário adiciona medida grosseiramente errada (1 m em 100) e confere que o resíduo a destaca e que o ajuste sem ela converge; confere que 'analisar' não escreveu nada (checksum)",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/least-squares-parcel-fabric.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/runleastsquaresadjustment.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/aboutmeasurementaccuracy.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/findgapsoverlaps.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/parcelfabricattributerules.htm",
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/parcelfabricdataqualitylayers.htm",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/analyzebylsa-parcel-fabric-service/",
+    "https://developers.arcgis.com/rest/services-reference/enterprise/applylsa-parcel-fabric-service/"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+{
+  "quando": "2026-09-06T00:48:59.947245+00:00",
+  "git_head": "94a669c6601f119a240648f5dad6e7db37049f93",
+  "arquivos": {
+    "estado.json": {
+      "sha256": "41a05fa5e81a3f26614da0e73aba3fc6e2a20642e29fab1674a0a26d5b872950",
+      "mtime_utc": "2026-09-06T00:45:45.322790+00:00"
+    },
+    "PAINEL.md": {
+      "sha256": "2c340a91fbb310fb067f73975d0302535f4d14f17144550e6418d4119ec109e6",
+      "mtime_utc": "2026-09-05T17:55:11.673425+00:00"
+    },
+    "handoffs/T2/trilhas.json": {
+      "sha256": "348b10a7426de9b597fb5173151342f1e8c433763d685dc00dfbe4581e91972d",
+      "mtime_utc": "2026-09-05T17:24:29.857173+00:00"
+    },
+    "handoffs/T2/L0-03-catalogo/40_testes.md": {
+      "sha256": "47f80a19b03582c2000797db87df56bf41aee9a677151b3c57c1d5a3d630bd99",
+      "mtime_utc": "2026-09-06T00:29:35.301958+00:00"
+    }
+  }
+}

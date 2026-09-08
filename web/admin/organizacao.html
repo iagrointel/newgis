@@ -48,6 +48,14 @@
       <p class="fraco" data-i18n="org.seguranca_ajuda">a mesma política que /conta já mostra a cada membro ao trocar a senha (tenant.config.auth)</p>
       <plat-formulario id="form-seguranca"></plat-formulario>
     </section>
+    <section class="cartao" id="smtp" aria-labelledby="t-smtp">
+      <h2 id="t-smtp" data-i18n="smtp.titulo">E-mail (SMTP)</h2>
+      <p class="fraco" id="smtp-origem" data-i18n="smtp.ajuda">convite de membro, redefinição de senha e avisos saem por este servidor; sem SMTP, esses fluxos caem no caminho manual (senha temporária mostrada ao admin)</p>
+      <plat-formulario id="form-smtp"></plat-formulario>
+      <div class="botoes">
+        <button type="button" id="smtp-testar" class="pequeno" data-i18n="smtp.testar">Testar envio</button>
+      </div>
+    </section>
   </main>
 </div>
 <script type="module" src="/static/js/auth/organizacao.js"></script>
