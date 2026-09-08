@@ -20,7 +20,16 @@ from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
-from app.rede_utilidades import config_tracado, direcao, feicoes, fluxo, lacos, topologia, tracado
+from app.rede_utilidades import (
+    config_tracado,
+    diagnostico,
+    direcao,
+    feicoes,
+    fluxo,
+    lacos,
+    topologia,
+    tracado,
+)
 from app.rede_utilidades.modelos import (
     Feicao,
     FeicaoLinhaEntrada,
@@ -214,6 +223,26 @@ def listar_arestas(rede_id: str, limite: int = 200, auth: Auth = autenticado(esc
             for r in cur.fetchall()
         ]
         return {"total": len(itens), "itens": itens}
+
+
+@router.get("/{rede_id}/topologia/diagnostico", openapi_extra=LER)
+async def diagnosticar_topologia(rede_id: str, limiar_m: float = diagnostico.LIMIAR_PADRAO_M,
+                                 exemplos: int = 1,
+                                 auth: Auth = autenticado(escopo_token="catalogo:ler")):
+    """Nós órfãos da topologia separados por CLASSE, com contagem, distância medida e exemplo (item L4-01-f).
+
+    Contar órfão não diz o que consertar: cada classe tem uma causa e um conserto diferente — ver
+    `app/rede_utilidades/diagnostico.py`. Só leitura; a varredura vai ao threadpool porque percorre a camada
+    de linha com índice espacial e, em rede grande, passa de um segundo."""
+    rid = _uuid_ok(rede_id)
+    exemplos = max(0, min(int(exemplos), 20))
+
+    def trabalho():
+        with db.db(auth.contexto()) as cur:
+            _rede_existe(cur, rid)
+            return diagnostico.diagnosticar(cur, rid, limiar_m=limiar_m, exemplos=exemplos)
+
+    return await run_in_threadpool(trabalho)
 
 
 # --- área suja e traçado mínimo (refutação do item) ---------------------------------------------------------

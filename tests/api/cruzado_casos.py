@@ -795,6 +795,8 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("GET", "/api/rede/{rede_id}/topologia/nos"): Caso(lambda p: f"/api/rede/{p.rede_b['id']}/topologia/nos"),
     ("GET", "/api/rede/{rede_id}/topologia/arestas"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/topologia/arestas"),
+    ("GET", "/api/rede/{rede_id}/topologia/diagnostico"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/diagnostico"),
     ("GET", "/api/rede/{rede_id}/topologia/areas-sujas"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/topologia/areas-sujas"),
     ("GET", "/api/rede/{rede_id}/topologia/alcance"): Caso(
