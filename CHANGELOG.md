@@ -3,6 +3,24 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L7-04-a-manual-capturas-geradas: manual gerado do registro vivo do e2e, com ajuda por contexto)
+
+O manual deixou de ser texto à mão que apodrece: cada tela tem uma seção em `docs/manual/<tela>.md`
+(uma fonte só, com front matter nos 3 idiomas) e a captura da seção é o arquivo que o TESTE de ponta a
+ponta da própria tela produziu contra a versão atual — `make manual` valida o conjunto, roda os 14
+arquivos de e2e pelo semáforo, copia cada captura para `<tela>@<versao>.png` e monta o site interno
+(`docs/manual/index.html`, noindex, servido em `/manual`) e o PDF (17 páginas conferidas uma a uma).
+Captura de versão diferente da versão do app REPROVA o build. Dentro do app, a ajuda por contexto
+(`web/js/base/ajuda.js`, instalada pelo layout) abre no botão da barra lateral um painel na seção da
+tela atual (`data-ajuda` no `<body>`), com busca sem diacríticos (mesma função exposta em
+`window.platAjuda.buscar`, que o e2e exerce com 20 perguntas: 5,1 ms), seletor pt-BR/en/es e fecho por
+Esc; HTML do corpo entra só por `htmlSeguro` (DOMPurify). `web/dados/manual.json` é gerado e commitado
+(teste de unidade reprova se divergir da regeneração) para o painel funcionar sem build prévio.
+Medição em `tests/medidas/L7-04-a-manual-capturas-geradas.json`: abrir o painel 56,1 ms, busca das 20
+perguntas 5,1 ms (chromium do playwright contra a trilha). As rotas de página ganharam a rota
+`/manual` em `app/paginas.py` (estático do disco, sem autenticação, noindex). Registro de construção
+em `docs/adr/20260908T1925-manual-gerado-pelo-e2e.md`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
