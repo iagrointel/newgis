@@ -1070,3 +1070,31 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 25. Edição concorrente no construtor (item L5-13-edicao-concorrente)
+
+Várias pessoas podem ter o mesmo documento (`app`, `painel`) aberto. O construtor mostra, no alto, quem mais
+está no documento e em que nó; um nó que outra aba está editando aparece com contorno tracejado e, ao selecioná-lo,
+um aviso diz quem está lá. Nada trava: o aviso só evita que duas pessoas mexam no mesmo nó sem saber.
+
+Ao gravar, a tela manda `base_versao` (a versão que ela leu). Se alguém gravou antes:
+- nós DIFERENTES: o servidor mescla por nó e grava; a tela absorve o resultado e o estado diz
+  "gravado (versão N; mesclado com a versão M de outra sessão)";
+- o MESMO nó: HTTP 409 com o documento atual; o painel mostra a diferença com o nó em conflito marcado e oferece
+  "gravar a minha nos nós em conflito (e mesclar o resto)" ou "descartar a minha e recarregar".
+
+Pela API:
+
+```
+PATCH /api/itens/{id}   {"dados": {...}, "base_versao": 7}
+  200 -> item (com "mesclagem": {"do_cliente": [...], "do_servidor": [...], "versao_servidor": 8}) quando mesclou
+  409 -> {"erro": "versao_conflito", "detalhe": {"versao_atual": 8, "base_versao": 7, "conflitos": ["<id do nó>"],
+          "do_cliente": [...], "do_servidor": [...], "dados": {...documento atual...}}}
+POST /api/itens/{id}/presenca            {"sessao": "<id da aba>", "no": "<id do nó ou null>", "sair": false}
+GET  /api/itens/{id}/presenca            -> {"itens": [{"login", "nome", "sessao", "no", "em", "usuario_id"}], "expira_s": 12}
+GET  /api/itens/{id}/presenca/eventos    -> SSE, evento `presenca` com a lista a cada mudança
+```
+
+`versao_atual` (regra estrita: qualquer diferença = 409) continua aceito. Item sem grafo com `base_versao`
+diferente recebe o 409 com o documento atual, sem mesclagem. A presença expira em 12 s sem batimento (a tela bate a
+cada 5 s) e some ao fechar a aba.

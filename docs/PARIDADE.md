@@ -398,3 +398,21 @@ da busca com os trechos citados literalmente, não de navegação própria pela 
 | Accordion widget | organiza widgets num menu empilhado verticalmente; cada widget vira um cabeçalho com estado aberto/fechado | `acordeao`: um painel por filho, cabeçalho sempre visível, corpo com `hidden`; `multiplo_aberto` controla se fecha os outros | feito | construído; sem e2e próprio nesta passagem | 2026-09-07 | pendente (D20) |
 | Window (modal / ancorada) | "Window" NÃO é um widget de layout na doc da Esri — é um TIPO de página à parte, com dois modos de exibição (centralizado/modal e ancorado perto do que a abriu) | `janela`: um nó de conteúdo com `modo` `modal` (`<dialog>` nativo, Esc/backdrop do navegador) ou `ancorada` (`div` posicionado, Esc por `keydown` manual); modelamos como WIDGET, não como página — divergência deliberada (documento único por app, sem página extra para cada popup) | parcial (cobre os dois modos; modelo diferente do da Esri) | idem (cláusula "janela modal abre por botão e fecha por Esc") | 2026-09-07 | pendente (D20) |
 | Tab (seção com vistas/abas) | não está entre os 6 widgets confirmados na busca desta passagem (candidato a widget "layout adjacente"; não confirmado por citação literal) | `secao_vistas`/`vista`: barra de abas + painel único visível (`role="tab"`, `aria-selected`) | não comparável (Esri não confirmada nesta busca) | construído; sem e2e próprio nesta passagem | 2026-09-07 | pendente (D20) |
+
+## Edição concorrente no construtor (item L5-13-edicao-concorrente, turno 4; ADR `20260908T1130-edicao-concorrente`)
+
+Referência: ArcGIS Experience Builder / Dashboards / Web Map (edição de configuração por um editor de cada vez;
+"last save wins" no item do portal, sem presença nem mesclagem) e, para o conceito de presença/mesclagem por nó,
+o que ferramentas de edição colaborativa de documento fazem — conhecimento geral do papel `esri`; sem doc datada
+por HTTP nesta trilha, só estrutura. Nosso lado: `app/catalogo/mesclagem.py`, `app/catalogo/presenca.py`,
+`web/js/editor/{tela,presenca}.js`; testes `tests/unit/test_mesclagem.py`, `tests/api/catalogo/test_edicao_concorrente.py`,
+`tests/e2e/test_edicao_concorrente.py`; medidas em `tests/medidas/L5-13-edicao-concorrente.json`.
+
+| capacidade | Esri (Experience Builder / itens do portal) | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| duas pessoas editam a mesma configuração | o item é gravado inteiro; a última gravação sobrescreve a anterior sem aviso (não há detecção de conflito documentada para configuração de app) | versão otimista (`base_versao`) + mesclagem por nó quando os nós são diferentes; 409 com o documento atual quando é o mesmo nó | feito (mais estrito) | e2e `test_nos_diferentes_...`, `test_mesmo_no_...` | 2026-09-08 | pendente (D20) |
+| perda de trabalho em gravações fora de ordem | não documentado; depende de quem grava por último | 100 pares aleatórios em nós disjuntos (unidade e API) e PATCH retido 3 s fora de ordem nos dois sentidos: 0 alteração perdida | feito | `test_cem_pares_...` (2), `test_adversario_rede_lenta_...` | 2026-09-08 | pendente (D20) |
+| presença ("quem está aqui") | não existe no Experience Builder (existe em produtos de edição de dado, não de configuração) | lista de quem está no documento e em que nó, SSE, aparece em 1,28 s medido; expira em 12 s | feito | e2e (medida `presenca_aparece_s`) | 2026-09-08 | pendente (D20) |
+| bloqueio de edição | não existe para configuração de app | bloqueio LEVE por nó: marca e avisa, nunca trava (D12) | feito | `test_bloqueio_leve_...` | 2026-09-08 | pendente (D20) |
+| diferença mostrada no conflito | não existe | árvore de diferença por id de nó com o nó em conflito marcado, documento atual vindo no próprio 409 | feito | `test_mesmo_no_...` | 2026-09-08 | pendente (D20) |
+| edição simultânea caractere a caractere (CRDT) | não existe | adiado por decisão (D12): só se o e2e medir perda; não mediu | fora | — | 2026-09-08 | pendente (D20) |

@@ -1100,3 +1100,15 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 4, setembro de 2026 (item L5-13-edicao-concorrente: mesclagem por nó, presença e bloqueio leve)
+
+Sobre o construtor com desfazer/rascunho (L5-09, mesclado aqui): `base_versao` no PUT/PATCH de item — quando o
+servidor já está adiante, `app/catalogo/mesclagem.py` mescla por nó (id ULID) a versão lida, a atual e a do
+cliente; nós diferentes = 200 com `mesclagem`, o mesmo nó = 409 `versao_conflito` com o documento atual e os ids em
+conflito (`detalhe.dados`, `detalhe.conflitos`). Presença efêmera por `POST/GET /api/itens/{id}/presenca` e SSE
+`.../presenca/eventos` (memória + NOTIFY entre processos; expira em 12 s). Tela: absorve a mesclagem sem tocar o
+histórico, mostra quem está no documento e em que nó, marca nós ocupados e avisa sem travar; o painel de 409 marca
+o nó em conflito. Medido (`tests/medidas/L5-13-edicao-concorrente.json`): 100 pares aleatórios em nós disjuntos
+sem perda (unidade e API), presença de outra aba em 1,28 s no navegador, PATCH retido 3 s fora de ordem nos dois
+sentidos com 0 alteração perdida. Sem CRDT (D12). ADR `docs/adr/20260908T1130-edicao-concorrente.md`.
