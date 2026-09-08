@@ -212,6 +212,9 @@ def _lote_recusado(p: Preparacao, j: Any) -> None:
     assert j["alterados"] == 0 and [x["erro"] for x in j["recusados"]] == ["usuario_inexistente"], j
 
 
+TOKEN_FALSO = "0" * 64  # token de serviço que não existe: nem A nem B abrem o diretório Esri por ele
+
+
 def _apagar_criado(metodo_url):
     """Rota de criação que age só em A: o recurso criado é apagado logo após a chamada (a chamada seguinte, por
     token, cria o mesmo nome de novo e não pode colidir)."""
@@ -953,6 +956,73 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{UUID_NULO}"),
     ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{UUID_NULO}/tilejson"),
+    # ---- construtor de camada por esquema (L5-31) e vista de camada (L5-32): tudo age no inquilino do
+    # chamador; a camada-mãe apontada pelo caminho nunca é de B (UUID_NULO = de ninguém)
+    # Corpo recusado na fronteira (geometria fora da lista), igual para as quatro chamadas — daí o
+    # `publico=True`, que aqui quer dizer "as quatro recebem o mesmo", não "a rota é pública". Duas razões:
+    # a rota cria só no inquilino do chamador e não tem recurso de B para apontar; e criar de VERDADE faz
+    # cada chamada rodar `plat.camada_schema_garantir` no schema `d_demo`, que é COMPARTILHADO entre as
+    # trilhas — o GRANT concorrente de outra trilha devolve "tuple concurrently updated" e o caso ficaria
+    # instável por causa da casa, não do produto. O que se precisa provar (nenhuma chamada alcança dado de
+    # B, e B não muda) vale igual com a recusa na fronteira, que nem chega ao banco.
+    ("POST", "/api/camadas/esquema"): Caso(
+        lambda p: "/api/camadas/esquema",
+        lambda p: {"titulo": f"{PREFIXO}camada", "geometria": "Hipercubo", "srid": 4674, "campos": []},
+        publico=True, aceita=frozenset({422}),
+    ),
+    ("GET", "/api/camadas/{item_id}/campos"): Caso(lambda p: f"/api/camadas/{UUID_NULO}/campos"),
+    ("POST", "/api/camadas/{item_id}/esquema/plano"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/esquema/plano", lambda p: {"mudancas": []}
+    ),
+    ("PUT", "/api/camadas/{item_id}/esquema"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/esquema", lambda p: {"mudancas": []}
+    ),
+    ("POST", "/api/camadas/{camada_id}/vistas"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/vistas",
+        lambda p: {"titulo": f"{PREFIXO}vista", "campos_ocultos": []},
+    ),
+    ("GET", "/api/vistas/{vista_id}"): Caso(lambda p: f"/api/vistas/{UUID_NULO}"),
+    ("PUT", "/api/vistas/{vista_id}"): Caso(
+        lambda p: f"/api/vistas/{UUID_NULO}", lambda p: {"campos_ocultos": []}
+    ),
+    # ---- diretório de serviços Esri por token (L2-04-b): o token do caminho é de mentira, então nem A nem B
+    # abrem nada; `rest/info` é público de propósito (é onde o cliente Esri descobre como se autenticar) e
+    # não conta inquilino nenhum
+    ("GET", "/svc/{token}/rest/info"): Caso(lambda p: f"/svc/{TOKEN_FALSO}/rest/info", publico=True,
+                                            aceita=frozenset({200})),
+    ("POST", "/svc/{token}/rest/info"): Caso(lambda p: f"/svc/{TOKEN_FALSO}/rest/info", lambda p: {},
+                                             publico=True, aceita=frozenset({200})),
+    ("GET", "/svc/{token}/rest/generateToken"): Caso(lambda p: f"/svc/{TOKEN_FALSO}/rest/generateToken"),
+    ("POST", "/svc/{token}/rest/generateToken"): Caso(
+        lambda p: f"/svc/{TOKEN_FALSO}/rest/generateToken", lambda p: {"username": "x", "password": "y"}
+    ),
+    ("GET", "/svc/{token}/rest/services"): Caso(lambda p: f"/svc/{TOKEN_FALSO}/rest/services"),
+    ("GET", "/svc/{token}/rest/services/{pasta}"): Caso(lambda p: f"/svc/{TOKEN_FALSO}/rest/services/pasta"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/FeatureServer"): Caso(
+        lambda p: f"/svc/{TOKEN_FALSO}/rest/services/{UUID_NULO}/FeatureServer"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/FeatureServer/{camada_id}"): Caso(
+        lambda p: f"/svc/{TOKEN_FALSO}/rest/services/{UUID_NULO}/FeatureServer/0"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/FeatureServer/layers"): Caso(
+        lambda p: f"/svc/{TOKEN_FALSO}/rest/services/{UUID_NULO}/FeatureServer/layers"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/FeatureServer/info/itemInfo"): Caso(
+        lambda p: f"/svc/{TOKEN_FALSO}/rest/services/{UUID_NULO}/FeatureServer/info/itemInfo"),
+    ("GET", "/svc/{token}/rest/services/{item_id}/FeatureServer/info/metadata"): Caso(
+        lambda p: f"/svc/{TOKEN_FALSO}/rest/services/{UUID_NULO}/FeatureServer/info/metadata"),
+    # ---- descritor do FeatureServer e OGC API Features / WFS (L2-04-b): item de ninguém = 404 sempre
+    ("GET", "/rest/services/{item_id}/FeatureServer"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer"),
+    ("GET", "/rest/services/{item_id}/FeatureServer/{camada_id}"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0"),
+    ("GET", "/ogc/features/{item_id}"): Caso(lambda p: f"/ogc/features/{UUID_NULO}"),
+    ("GET", "/ogc/features/{item_id}/conformance"): Caso(lambda p: f"/ogc/features/{UUID_NULO}/conformance"),
+    ("GET", "/ogc/features/{item_id}/collections"): Caso(lambda p: f"/ogc/features/{UUID_NULO}/collections"),
+    ("GET", "/ogc/features/{item_id}/collections/{colecao_id}"): Caso(
+        lambda p: f"/ogc/features/{UUID_NULO}/collections/0"),
+    ("GET", "/ogc/features/{item_id}/collections/{colecao_id}/items"): Caso(
+        lambda p: f"/ogc/features/{UUID_NULO}/collections/0/items"),
+    ("GET", "/ogc/features/{item_id}/collections/{colecao_id}/items/{feature_id}"): Caso(
+        lambda p: f"/ogc/features/{UUID_NULO}/collections/0/items/1"),
+    ("GET", "/wfs/{item_id}"): Caso(lambda p: f"/wfs/{UUID_NULO}?service=WFS&request=GetCapabilities"),
     # ---- FeatureServer compatível Esri: leitura (L2-04-c) e escrita (L2-04-d)
     ("GET", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): Caso(
         lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/query?where=1%3D1&f=json"
