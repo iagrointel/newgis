@@ -6410,6 +6410,7 @@
      "catalogo"
     ],
     "summary": "Editar Parcial",
+    "description": "item L5-09-desfazer-refazer-rascunho: `?rotulo=rascunho` é a ÚNICA forma de rótulo que o cliente pode\npedir por fora (as outras — 'restauracao', 'publicacao', 'compactada', 'migracao' — só o servidor grava,\nver `restaurar_versao`/`app/catalogo/comum.py::rotular_versao`). Grava uma versão nova rotulada 'rascunho'\ndo MESMO jeito que o PATCH normal grava 'edicao': não toca `versao_publicada` (só\n`.../versoes/{n}/publicar` muda isso), então o link público de quem já publicou não se altera.",
     "operationId": "editar_parcial_api_itens__id__patch",
     "parameters": [
      {
@@ -6419,6 +6420,23 @@
       "schema": {
        "type": "string",
        "title": "Id"
+      }
+     },
+     {
+      "name": "rotulo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^rascunho$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Rotulo"
       }
      }
     ],
@@ -8621,6 +8639,141 @@
        "application/json": {
         "schema": {}
        }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/itens/{id}/presenca": {
+   "post": {
+    "tags": [
+     "presenca"
+    ],
+    "summary": "Bater",
+    "operationId": "bater_api_itens__id__presenca_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PresencaEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "get": {
+    "tags": [
+     "presenca"
+    ],
+    "summary": "Listar",
+    "operationId": "listar_api_itens__id__presenca_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/itens/{id}/presenca/eventos": {
+   "get": {
+    "tags": [
+     "presenca"
+    ],
+    "summary": "Eventos",
+    "operationId": "eventos_api_itens__id__presenca_eventos_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "text/event-stream": {}
       }
      },
      "422": {
@@ -16160,6 +16313,41 @@
      "destino"
     ],
     "title": "PedidoRota"
+   },
+   "PresencaEntrada": {
+    "properties": {
+     "sessao": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 8,
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "title": "Sessao"
+     },
+     "no": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 26,
+        "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "No"
+     },
+     "sair": {
+      "type": "boolean",
+      "title": "Sair",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "sessao"
+    ],
+    "title": "PresencaEntrada"
    },
    "Privilegio": {
     "properties": {

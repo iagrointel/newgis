@@ -22,7 +22,7 @@
    "comando": "batimento de outra aba -> evento presenca no gerador SSE (mesmo processo)"
   },
   "presenca_aparece_s": {
-   "valor": 1.282,
+   "valor": 1.314,
    "unidade": "s",
    "comando": "B abre o construtor -> li[data-sessao] na aba A (SSE + batimento)"
   },
@@ -37,6 +37,6 @@
    "comando": "2 rodadas com PATCH retido >= 3 s (playwright route) e liberado depois da outra aba gravar; 4 nós no servidor e nas 2 telas"
   }
  },
- "gerado_em": "2026-09-08T11:06:03Z",
- "git_sha": "34e4a323a105"
+ "gerado_em": "2026-09-08T11:11:05Z",
+ "git_sha": "36665b9a6d91"
 }

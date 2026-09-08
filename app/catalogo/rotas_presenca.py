@@ -64,6 +64,7 @@ async def eventos(id: str, request: Request, auth: Auth = autenticado(escopo_tok
     if not presenca.reservar(auth.tenant_id, auth.usuario_id):
         raise ErroAPI(429, "sse_limite", f"máximo de {presenca.POR_USUARIO_MAX} conexões de presença por usuário")
     return StreamingResponse(
-        presenca.gerar(auth.tenant_id, iid, auth.usuario_id), media_type="text/event-stream",
+        presenca.gerar(auth.tenant_id, iid, auth.usuario_id, request.is_disconnected),
+        media_type="text/event-stream",
         headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
     )

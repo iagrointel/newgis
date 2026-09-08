@@ -255,6 +255,10 @@ def test_autosave_de_rascunho_nao_altera_versao_publicada(page, base_url, creden
 
 # ---------------------------------------------------------------- refutação do adversário: conflito em 2 abas
 def test_adversario_duas_abas_conflito_sem_perda_silenciosa(context, page, base_url, credenciais_demo, admin_api):
+    """Duas abas, nós DIFERENTES: desde o item L5-13 (mesclagem por nó, D12) a segunda gravação não é mais um
+    409 — o servidor mescla e a aba B recebe o documento com as duas edições. O que este teste continua provando
+    é a cláusula do L5-09: nada se perde em silêncio (a edição de A sobrevive, a de B entra, nenhum aviso falso).
+    O 409 com diferença mostrada, agora só para o MESMO nó, está em tests/e2e/test_edicao_concorrente.py."""
     slug, login, senha = credenciais_demo
     tela = Tela(page, base_url)
     tela.entrar(slug, login, senha)
@@ -273,28 +277,16 @@ def test_adversario_duas_abas_conflito_sem_perda_silenciosa(context, page, base_
         "() => document.getElementById('estado-salvo').textContent.startsWith('gravado')", timeout=10000
     )
 
-    # aba B, com a base ANTIGA (versao_atual de antes do salvamento de A), edita algo diferente e salva
+    # aba B, com a base ANTIGA, edita algo diferente e salva: mesclado (sem 409), sem perda de nenhum lado
     _adicionar_por_teclado(pagina_b, "texto")
-    tela_b.esperar_status(409)
     pagina_b.click("#salvar")
-    pagina_b.wait_for_selector("#conflito-versao", timeout=10000)
-    aviso = pagina_b.text_content("#conflito-versao")
-    assert "editado por outra sessão" in aviso
-    # a diferença entre a versão do servidor (a de A) e a de B aparece — nunca silêncio
-    pagina_b.wait_for_selector("#conflito-versao .diferenca-arvore li", timeout=5000)
-
-    # nada foi perdido: a edição de B ainda está na tela dela, e o servidor ainda tem só a de A
-    assert pagina_b.eval_on_selector_all("[data-arvore]", "e => e.length") == 1
-    d_servidor = _item(admin_api, iid)
-    assert d_servidor["dados"]["corpo"]["nos"][0]["tipo"] == "grupo"
-
-    # B escolhe gravar mesmo assim: as duas edições ficam registradas em sequência (nunca sobrescrita muda)
-    pagina_b.click("#conflito-versao button:has-text('Gravar minha versão mesmo assim')")
     pagina_b.wait_for_function(
-        "() => document.getElementById('estado-salvo').textContent.startsWith('gravado')", timeout=10000
+        "() => document.getElementById('estado-salvo').textContent.includes('mesclado')", timeout=10000
     )
+    assert pagina_b.locator("#conflito-versao").count() == 0
+    pagina_b.wait_for_function("() => document.querySelectorAll('[data-arvore]').length === 2", timeout=5000)
     d_final = _item(admin_api, iid)
-    tipos_finais = [n["tipo"] for n in d_final["dados"]["corpo"]["nos"]]
-    assert "texto" in tipos_finais
+    tipos_finais = sorted(n["tipo"] for n in d_final["dados"]["corpo"]["nos"])
+    assert tipos_finais == ["grupo", "texto"] and d_final["versao_atual"] == 3
     tela.verificar()
     tela_b.verificar()

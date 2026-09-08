@@ -27,7 +27,7 @@ log = logging.getLogger("plat.presenca")
 EXPIRA_S = 12          # sem batimento por mais que isto, a presença some (o cliente bate a cada 5 s)
 KEEPALIVE_S = 15
 DURACAO_MAX_S = 1800
-POR_USUARIO_MAX = 10
+POR_USUARIO_MAX = 50  # conexões de presença são baratas (1 varredura/s) e o e2e abre muitas abas
 CAMPOS = ("usuario_id", "login", "nome", "sessao", "no", "em")
 
 _trava = threading.Lock()
@@ -178,9 +178,11 @@ def _liberar(tenant_id: int, usuario_id: int) -> None:
         _por_usuario[chave] = max(0, _por_usuario[chave] - 1)
 
 
-async def gerar(tenant_id: int, item_id: str, usuario_id: int):
+async def gerar(tenant_id: int, item_id: str, usuario_id: int, desconectou=None):
     """Gerador SSE: manda `presenca` (lista inteira) na conexão e a cada mudança; keepalive; expira os batimentos
-    velhos mesmo sem mudança (varredura a cada segundo enquanto houver alguém)."""
+    velhos mesmo sem mudança (varredura a cada segundo enquanto houver alguém). `desconectou` (corrotina, a
+    `request.is_disconnected` da rota) encerra o gerador na varredura seguinte à saída do cliente — e libera a vaga
+    por usuário mesmo quando o servidor não cancela a tarefa por conta própria."""
     _garantir_thread()
     chave = (tenant_id, item_id)
     loop = asyncio.get_running_loop()
@@ -197,6 +199,8 @@ async def gerar(tenant_id: int, item_id: str, usuario_id: int):
                 await asyncio.wait_for(fila.get(), 1.0)
             except TimeoutError:
                 pass
+            if desconectou is not None and await desconectou():
+                return
             atual = listar(tenant_id, item_id)
             if atual != ultimo:
                 ultimo = atual
