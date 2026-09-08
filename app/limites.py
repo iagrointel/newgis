@@ -221,7 +221,7 @@ ESCALA_APROVACAO_TIPOS = ("limiar", "top_pct")
 ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) da migração
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
-ESCALA_CELULAS_GEOJSON_MAX = 50_000   # feições de GET /api/multiescala/execucoes/{id}/celulas (UX-08); acima disso `truncado`
+ESCALA_CELULAS_GEOJSON_MAX = 50_000   # feições de GET /api/multiescala/execucoes/{id}/celulas (UX-08); além = truncado
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
 # --- tabela de atributos da camada (L2-01-g-tabela-atributos): paginação no servidor, busca em texto, filtro
 # pela extensão do mapa, seleção e a vista por usuário (colunas visíveis, alias, largura, domínio). As páginas
