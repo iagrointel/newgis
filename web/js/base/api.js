@@ -32,6 +32,8 @@ export function normalizarErro(status, json, reqId) {
 
 export async function chamar(metodo, url, corpo, opcoes = {}) {
   const init = { method: metodo, credentials: 'same-origin', cache: 'no-store', headers: { ...(opcoes.headers || {}) } };
+  // item L2-01-d-popup-runtime: cancelar a chamada anterior em cliques rápidos (AbortController do chamador)
+  if (opcoes.signal) init.signal = opcoes.signal;
   if (metodo !== 'GET' && metodo !== 'HEAD') {
     // escrita sob cookie exige Content-Type application/json (ADR 0002 seção 5.3); DELETE vai sem corpo
     init.headers['Content-Type'] = 'application/json';
@@ -53,7 +55,7 @@ export async function chamar(metodo, url, corpo, opcoes = {}) {
   return { status: resp.status, json: json ?? {} };
 }
 
-export const obter = (url) => chamar('GET', url);
+export const obter = (url, opcoes) => chamar('GET', url, undefined, opcoes);
 export const enviar = (url, corpo) => chamar('POST', url, corpo ?? {});
 export const alterar = (url, corpo) => chamar('PUT', url, corpo ?? {});
 export const apagar = (url) => chamar('DELETE', url);

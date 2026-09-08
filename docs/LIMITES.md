@@ -169,7 +169,7 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 |---|---|---|
 | `ORG_NOME_MAX` | `55` | mesmo teto do "Organization name" da Esri (portão do item-pai L0-07-a) |
 | `ORG_COR_PADRAO` | `'#2463a8'` | mesmo azul de app/catalogo/miniatura.py TRACO, cor de marca padrão |
-| `ORG_IDIOMAS` | `('pt-BR',)` | só o que existe em web/js/i18n/; L7-10 acrescenta idioma novo aqui |
+| `ORG_IDIOMAS` | `('pt-BR', 'en', 'es')` | só o que existe em web/js/i18n/ (UX-02: en e es com paridade de chaves) |
 | `ORG_ZOOM_MAX` | `24` | teto de zoom de um webmap (padrão MapLibre/Leaflet) |
 | `ORG_BASEMAP_MAX` | `100` | — |
 | `ORG_LOGO_BYTES_MAX` | `1048576` | 1 MiB (portão do item-pai: "logo > 1 MB recusado") |
@@ -230,3 +230,41 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## tabela de atributos da camada (L2-01-g-tabela-atributos): paginação no servidor, busca em texto, filtro
+
+| nome | valor | explicação |
+|---|---|---|
+| `TABELA_PAGINAS` | `(50, 200, 1000)` | — |
+| `TABELA_BUSCA_MAX` | `200` | termo de busca (ILIKE + unaccent) — acima disso é ataque, não busca |
+| `TABELA_FIDS_MAX` | `5000` | seleção vinda do mapa: identificadores enviados de uma vez |
+| `TABELA_COLUNAS_MAX` | `500` | mesmo teto de `campos` no esquema do tipo camada_vetorial (029) |
+| `TABELA_ALIAS_MAX` | `200` | mesmo teto de `alias` no esquema do tipo camada_vetorial (029) |
+| `TABELA_LARGURA_MIN` | `40` | pixels; abaixo disso a coluna some da tela e não dá para arrastar |
+| `TABELA_LARGURA_MAX` | `2000` | — |
+| `TABELA_DOMINIO_ITENS_MAX` | `1000` | pares código -> descrição por coluna |
+| `TABELA_DOMINIO_TEXTO_MAX` | `250` | — |
+| `TABELA_GEOMETRIA_LIMITE` | `2000` | feições com geometria devolvidas para desenhar no mapa (por página) |
+
+## exportação de camada (L0-04-h-exportar; ADR 0018). Os tempos e tetos abaixo saem de MEDIÇÃO nesta
+
+| nome | valor | explicação |
+|---|---|---|
+| `EXPORTACAO_VALIDADE_DIAS` | `7` | arquivo gerado some depois disso (periódico exportacao.expirar) |
+| `EXPORTACAO_POR_USUARIO_EM_CURSO` | `3` | exportações pendentes/gerando por usuário (refutação: 5 em paralelo) |
+| `EXPORTACAO_MEMORIA_MB` | `1024` | job exportacao.gerar (mesmo teto de ingestao.carregar) |
+| `EXPORTACAO_TIMEOUT_S` | `3600` | — |
+| `EXPORTACAO_DISCO_MIN_LIVRE_BYTES` | `2147483648` | nunca começa com menos que isto livre (disco a 98%) |
+| `EXPORTACAO_FATOR_DISCO` | `3` | arquivo temporário estimado = tamanho da tabela x isto (GML mede 3,4x |
+| `PACOTE_CAMADAS_MAX` | `50` | camadas num pacote de mapa (item L2-01-l) |
+| `PACOTE_IMPORTAR_MAX_BYTES` | `209715200` | pacote enviado para reimportação (acima disso, 413) |
+| `PACOTE_OGR_TIMEOUT_S` | `900` | ogr2ogr de UMA camada do pacote na reimportação |
+| `EXPORTACAO_IDS_MAX` | `200000` | fids de uma seleção exportada (mesmo teto do tipo de item `selecao`) |
+| `EXPORTACAO_CAMPOS_MAX` | `500` | mesmo teto de INGESTAO_CAMPOS_MAX (a lista vem do mesmo item) |
+| `EXPORTACAO_WHERE_MAX` | `4000` | caracteres do filtro `where` (o parser do L2-04-b recusa o resto) |
+| `EXPORTACAO_NOME_MAX` | `120` | nome do arquivo pedido pelo usuário (sem extensão) |
+| `EXPORTACAO_ERRO_BANCO_MAX` | `300` | tamanho do erro do banco depois de saneado, no corpo do 400 |
+| `EXPORTACAO_CODIFICACOES` | `('UTF-8', 'ISO-8859-1')` | — |
+| `EXPORTACAO_CSV_SEPARADORES` | `(',', ';', '\t', '|')` | — |
+| `EXPORTACAO_CSV_DECIMAIS` | `('.', ',')` | — |
+| `EXPORTACAO_BLOCO_LEITURA_BYTES` | `8388608` | leitura do arquivo pronto em blocos (sha256 e envio); NUNCA |

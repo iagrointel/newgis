@@ -130,6 +130,13 @@ def listar(limite: int = 50, deslocamento: int = 0, auth: Auth = autenticado(esc
     return {"itens": [_importacao_json(r) for r in linhas], "total": len(linhas)}
 
 
+@router.get("/api/importacoes/formatos", openapi_extra=LER)
+def formatos_aceitos():
+    """Declarada ANTES de `/api/importacoes/{id}`: com a ordem invertida o FastAPI casava `{id}` = "formatos" e a rota
+    devolvia 404 importacao_inexistente (achado do item UX-16, que é a primeira tela a chamá-la)."""
+    return [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo} for f in FORMATOS.values()]
+
+
 @router.get("/api/importacoes/{id}", openapi_extra=LER)
 def ver(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
     with db.db(auth.contexto()) as cur:
@@ -222,8 +229,3 @@ def apagar(id: str, auth: Auth = autenticado("conteudo.publicar_camada")):
             raise ErroAPI(409, "estado_invalido", f"importação em estado {r['estado']!r} não pode ser apagada")
         cur.execute("DELETE FROM plat.importacao WHERE id = %s::uuid", (r["id"],))
     return Response(status_code=204)
-
-
-@router.get("/api/importacoes/formatos", openapi_extra=LER)
-def formatos_aceitos():
-    return [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo} for f in FORMATOS.values()]

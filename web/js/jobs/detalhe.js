@@ -5,6 +5,7 @@
 import { confirmar } from '../base/componentes.js';
 import { h, limpar } from '../base/dom.js';
 import { formatarJSON } from '../core.js';
+import { t } from '../base/i18n.js';
 import * as api from './api.js';
 import { assinar, cancelarAssinatura } from './eventos.js';
 import {
@@ -41,13 +42,13 @@ function proveniencia(p) {
     delete restante[chave];
   };
   pegar('git_sha', 'git');
-  pegar('versao', 'versão');
-  pegar('tipo_versao', 'versão do tipo');
+  pegar('versao', t('tarefas.prov_versao'));
+  pegar('tipo_versao', t('tarefas.prov_versao_tipo'));
   pegar('gdal', 'gdal');
-  pegar('repetido_de', 'repetido de');
+  pegar('repetido_de', t('tarefas.prov_repetido_de'));
   if (Array.isArray(restante.entradas)) {
     for (const e of restante.entradas) {
-      partes.push(`entrada: ${e.nome || e.caminho || '?'}${e.sha256 ? ` sha256 ${String(e.sha256).slice(0, 12)}…` : ''}`
+      partes.push(`${t('tarefas.prov_entrada')}: ${e.nome || e.caminho || '?'}${e.sha256 ? ` sha256 ${String(e.sha256).slice(0, 12)}…` : ''}`
         + `${e.bytes != null ? ` ${numero(e.bytes)} bytes` : ''}`);
     }
     delete restante.entradas;
@@ -64,15 +65,15 @@ function renderizarCabecalho() {
   const marc = porId('detalhe-estado');
   marc.className = `estado-job ${e.classe}`;
   limpar(marc).append(h('span', { class: 'simbolo', 'aria-hidden': 'true' }, e.simbolo), ' ', e.rotulo);
-  const partes = [`${job.progresso ?? 0} %`, `tentativa ${job.tentativa ?? 0} de ${job.max_tentativas ?? '—'}`];
-  if (job.reinicios) partes.push(`${job.reinicios} ${job.reinicios === 1 ? 'reinício' : 'reinícios'}`);
-  partes.push(`worker ${job.worker || '—'}`, `criado ${dataHora(job.criado_em)}`);
-  if (job.iniciado_em) partes.push(`iniciado ${hora(job.iniciado_em)}`);
+  const partes = [`${job.progresso ?? 0} %`, t('tarefas.tentativa', { n: job.tentativa ?? 0, max: job.max_tentativas ?? '—' })];
+  if (job.reinicios) partes.push(job.reinicios === 1 ? t('tarefas.reinicio_um') : t('tarefas.reinicios', { n: job.reinicios }));
+  partes.push(`worker ${job.worker || '—'}`, t('tarefas.det_criado', { quando: dataHora(job.criado_em) }));
+  if (job.iniciado_em) partes.push(t('tarefas.det_iniciado', { quando: hora(job.iniciado_em) }));
   partes.push(duracao(duracaoJob(job)));
   porId('detalhe-resumo').textContent = partes.join(' · ');
   porId('detalhe-mensagem').textContent = job.mensagem || '';
   const erro = porId('detalhe-erro');
-  erro.textContent = job.erro ? `erro: ${job.erro}` : '';
+  erro.textContent = job.erro ? t('tarefas.det_erro', { erro: job.erro }) : '';
   erro.hidden = !job.erro;
   porId('detalhe-id').textContent = job.id;
 
@@ -80,12 +81,12 @@ function renderizarCabecalho() {
   const btnCancelar = porId('detalhe-cancelar');
   btnCancelar.hidden = final || !podeExecutar();
   btnCancelar.disabled = Boolean(job.cancelar_solicitado);
-  btnCancelar.textContent = job.cancelar_solicitado ? 'cancelando' : 'cancelar';
+  btnCancelar.textContent = job.cancelar_solicitado ? t('tarefas.cancelando') : t('tarefas.cancelar');
   porId('detalhe-repetir').hidden = !final || !podeExecutar();
   porId('detalhe-baixar-log').disabled = !(job.linhas_log > 0 || s.linhas.length > 0);
 
   porId('detalhe-parametros').textContent = job.parametros ? formatarJSON(job.parametros) : '—';
-  porId('detalhe-resultado').textContent = job.resultado ? formatarJSON(job.resultado) : (final ? '—' : 'ainda sem resultado');
+  porId('detalhe-resultado').textContent = job.resultado ? formatarJSON(job.resultado) : (final ? '—' : t('tarefas.sem_resultado'));
   const link = porId('detalhe-item');
   const itemId = job.resultado && job.resultado.item_id;
   link.hidden = !itemId;
@@ -107,7 +108,7 @@ function renderizarLog() {
   const ol = limpar(porId('log-linhas'));
   for (const l of s.linhas) ol.append(itemLog(l));
   porId('log-nota').textContent = s.totalLog > s.linhas.length && s.job && FINAIS.has(s.job.estado)
-    ? `mostrando ${numero(s.linhas.length)} de ${numero(s.totalLog)} linhas; "baixar log" traz até 2.000`
+    ? t('tarefas.log_nota', { n: numero(s.linhas.length), total: numero(s.totalLog) })
     : '';
   ol.scrollTop = ol.scrollHeight;
 }
@@ -133,7 +134,7 @@ function mostrarModo(modo) {
   s.modo = modo;
   const n = porId('detalhe-modo');
   n.hidden = !modo;
-  n.textContent = modo === 'sse' ? 'ao vivo' : (modo ? 'atualização a cada 3 s' : '');
+  n.textContent = modo === 'sse' ? t('tarefas.modo_sse') : (modo ? t('tarefas.modo_polling_detalhe') : '');
   n.className = `marcador ${modo === 'sse' ? 'ok' : 'atencao'}`;
 }
 
@@ -153,24 +154,24 @@ function ouvinte(ev) {
   } else if (ev.tipo === 'modo' && ev.dados) {
     mostrarModo(ev.dados.modo);
   } else if (ev.tipo === 'erro' && ev.dados) {
-    aviso('detalhe-aviso', `atualização interrompida (${ev.dados.status || 'rede'}): ${ev.dados.message}`, 'atencao');
+    aviso('detalhe-aviso', t('tarefas.atualizacao_interrompida', { status: ev.dados.status || t('tarefas.rede'), erro: ev.dados.message }), 'atencao');
   }
 }
 
 /* ---------- ações ---------- */
 
 async function cancelar() {
-  if (!s.job || !(await confirmar('Cancelar tarefa', `Cancelar a tarefa ${s.job.tipo}?`, { ok: 'cancelar tarefa', perigo: true }))) return;
+  if (!s.job || !(await confirmar(t('tarefas.cancelar_titulo'), t('tarefas.cancelar_texto', { tipo: s.job.tipo }), { ok: t('tarefas.cancelar_ok'), perigo: true }))) return;
   const btn = porId('detalhe-cancelar');
   btn.disabled = true;
-  btn.textContent = 'cancelando';
+  btn.textContent = t('tarefas.cancelando');
   try {
     s.job = await api.cancelar(s.id);
     renderizarCabecalho();
   } catch (e) {
     btn.disabled = false;
-    btn.textContent = 'cancelar';
-    aviso('detalhe-aviso', `não foi possível cancelar (${e.status || 'rede'}): ${e.message}`);
+    btn.textContent = t('tarefas.cancelar');
+    aviso('detalhe-aviso', t('tarefas.erro_cancelar', { status: e.status || t('tarefas.rede'), erro: e.message }));
   }
 }
 
@@ -181,7 +182,7 @@ async function repetir() {
     if (s.aoNovoJob) s.aoNovoJob(novo);
     await abrir(novo.id);
   } catch (e) {
-    aviso('detalhe-aviso', `não foi possível repetir (${e.status || 'rede'}): ${e.message}`);
+    aviso('detalhe-aviso', t('tarefas.erro_repetir', { status: e.status || t('tarefas.rede'), erro: e.message }));
   }
 }
 
@@ -192,7 +193,7 @@ async function baixarLog() {
     const texto = (r.linhas || []).map((l) => `${dataHora(l.em)} ${String(l.nivel).padEnd(5)} ${l.mensagem}`).join('\n') + '\n';
     baixar(`tarefa-${s.id}.log`, texto);
   } catch (e) {
-    aviso('detalhe-aviso', `não foi possível baixar o log (${e.status || 'rede'}): ${e.message}`);
+    aviso('detalhe-aviso', t('tarefas.erro_baixar_log', { status: e.status || t('tarefas.rede'), erro: e.message }));
   }
 }
 
@@ -214,6 +215,8 @@ export async function abrir(id, { empurrarUrl = true } = {}) {
   limpar(porId('log-linhas'));
   aviso('detalhe-aviso', '');
   mostrarModo(null);
+  const estadoArea = document.getElementById('detalhe-estado-area');
+  if (estadoArea) estadoArea.carregando(t('tarefas.carregando_tarefa'));
   sec().hidden = false;
   document.body.dataset.detalhe = '1';
   if (empurrarUrl && location.pathname !== `/tarefas/${id}`) history.pushState({ id }, '', `/tarefas/${id}`);
@@ -229,11 +232,16 @@ export async function abrir(id, { empurrarUrl = true } = {}) {
     if (s.id !== id) return;
     s.totalLog = Number(r.total) || 0;
     acrescentarLinhas(r.linhas);
+    if (estadoArea) estadoArea.limpar();
     sec().dataset.carregado = '1';
   } catch (e) {
-    aviso('detalhe-aviso', e.status === 404
-      ? 'tarefa não encontrada (inexistente, de outro inquilino ou de outro usuário)'
-      : `não foi possível carregar a tarefa (${e.status || 'rede'}): ${e.message}`);
+    const estado = document.getElementById('detalhe-estado-area');
+    if (estado) {
+      if (e.status === 404) estado.mostrar({ tipo: 'vazio', titulo: t('tarefas.nao_encontrada_titulo'), texto: t('tarefas.nao_encontrada'), acoes: [{ id: 'fechar', rotulo: t('tarefas.fechar') }] });
+      else estado.erro({ status: e.status, json: { mensagem: e.message, req_id: e.reqId } });
+    } else {
+      aviso('detalhe-aviso', e.status === 404 ? t('tarefas.nao_encontrada') : t('tarefas.erro_carregar_tarefa', { status: e.status || t('tarefas.rede'), erro: e.message }));
+    }
     sec().dataset.carregado = '0';
   }
   sec().scrollIntoView({ block: 'nearest' });
@@ -261,6 +269,8 @@ export function iniciar({ aoAbrir = null, aoFechar = null, aoNovoJob = null } = 
   s.aoFechar = aoFechar;
   s.aoNovoJob = aoNovoJob;
   porId('detalhe-fechar').addEventListener('click', () => fechar());
+  const estadoArea = document.getElementById('detalhe-estado-area');
+  if (estadoArea) estadoArea.addEventListener('acao', (ev) => { if (ev.detail.id === 'fechar') fechar(); else if (ev.detail.id === 'tentar' && s.id) abrir(s.id, { empurrarUrl: false }); });
   porId('detalhe-cancelar').addEventListener('click', cancelar);
   porId('detalhe-repetir').addEventListener('click', repetir);
   porId('detalhe-baixar-log').addEventListener('click', baixarLog);
