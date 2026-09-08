@@ -1,0 +1,39 @@
+{
+  "item": "L2-09-a-terreno-terrain-rgb-relevo",
+  "medido_em": "2026-09-07T13:00:00Z",
+  "clausulas": [
+    {
+      "clausula": "altura decodificada de 20 pontos conhecidos (RN IBGE) a <=1m do COG original",
+      "resultado": "passou",
+      "prova": "tests/unit/test_relevo_malha.py::test_altura_decodificada_de_20_pontos_rn_ibge_a_menos_de_1m_do_cog",
+      "detalhe": "20 estacoes RN do IBGE (WFS geoservicos.ibge.gov.br/geoserver/CGED, tipo V_INDE_RN_2, fixture tests/dados/rn_ibge_lorena.json), tile z=13 gerado do GLO-30 real via /vsicurl (2 blocos S23_00_W046_00 + S23_00_W045_00, laco/var/dem_lorena/lorena_glo30.vrt), codificado terrain-RGB, salvo em PNG, relido com PIL, decodificado e comparado a leitura direta e independente do COG no mesmo pixel (rasterio.sample, reamostragem nearest). Diferenca maxima medida: bem abaixo de 1 m em todos os 20 pontos (o teste falha se algum passar de 1 m; rodou verde).",
+      "carga_1min": "nao aplicavel (correcao, nao desempenho)"
+    },
+    {
+      "clausula": "nenhum degrau > 5m entre tiles vizinhos numa area plana",
+      "resultado": "passou",
+      "prova": "tests/unit/test_relevo_malha.py::test_degrau_entre_tiles_vizinhos_menor_que_5m_em_area_plana",
+      "detalhe": "area plana medida no proprio GLO-30 (vale do rio Paraiba do Sul perto de Lorena-SP, lat -22,72/lon -45,16, janela 2x2 km, desvio-padrao de altura ~1,7 m, faixa 518,5-534,4 m). Tiles z=14 vizinhos (leste e sul) gerados direto da fonte (sem reamostrar tile ja codificado); degrau horizontal e vertical medidos na borda comum, ambos < 5 m.",
+      "carga_1min": "nao aplicavel (correcao, nao desempenho)"
+    },
+    {
+      "clausula": "perfil de 10km com 200 amostras confere com rasterio.sample",
+      "resultado": "passou",
+      "prova": "tests/unit/test_relevo_perfil.py::test_perfil_de_10km_com_200_amostras_confere_com_rasterio_sample_direto",
+      "detalhe": "reta de ~10 km cruzando a serra perto de Lorena-SP (-22,75/-45,20 a -22,68/-45,13), 200 amostras via app.relevo.perfil.perfil_elevacao (amostragem no servidor sobre o COG, rasterio.sample), comparadas ponto a ponto com uma chamada independente a rasterio.sample nas mesmas coordenadas: bate exatamente (abs<=1e-6) em >80% dos pontos (os demais sao nodata declarado do GLO-30, tratados como None dos dois lados).",
+      "carga_1min": "nao aplicavel (correcao, nao desempenho)"
+    },
+    {
+      "clausula": "cena com terreno + hillshade + contornos a >=30fps (playwright) ou limiar declarado",
+      "resultado": "nao medida",
+      "prova": null,
+      "detalhe": "nao construido nesta rodada: exige MapLibre setTerrain + Martin 1.15 com convert_to_hillshade/convert_to_contour rodando de verdade sobre os tiles gerados aqui, e um front (PWA/visualizador) que ainda nao existe nesta trilha. codec.py e malha.py (as duas pecas que faltavam) foram entregues e testados; a integracao com Martin e o front e a parte que fica pendente. Ver handoff."
+    },
+    {
+      "clausula": "e2e com captura em 3 inclinacoes",
+      "resultado": "nao medida",
+      "prova": null,
+      "detalhe": "depende da clausula anterior (front + Martin); nao construido nesta rodada."
+    }
+  ]
+}

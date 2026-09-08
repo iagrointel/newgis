@@ -36,6 +36,7 @@ import re
 import time
 
 from app.catalogo import tipos
+from app.cena import documento as cena_documento
 from app.erros import ErroAPI
 
 # Crockford base32, 26 caracteres, primeiro em 0-7 (timestamp de 48 bits nunca estoura o 7º bit do 1º caractere)
@@ -87,6 +88,10 @@ def validar_grafo(tipo: str, dados) -> None:
     nó, tipos de `corpo`/`nos`/`ligacoes`) já é responsabilidade do JSON Schema do tipo (`tipos.validar`,
     chamado ANTES desta função nas duas rotas que escrevem `dados`); aqui só entra o que precisa da lista
     inteira para ser conferido."""
+    # o tipo `cena` (L2-09-b) tem a mesma natureza — regras que precisam do documento inteiro e que o
+    # JSON Schema não expressa — e entra pela MESMA porta, para não haver dois lugares onde um item é
+    # conferido antes de gravar. Para qualquer outro tipo a chamada não faz nada.
+    cena_documento.validar(tipo, dados)
     corpo = _corpo_do_documento(tipo, dados)
     if corpo is None:
         return

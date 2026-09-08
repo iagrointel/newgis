@@ -3,6 +3,29 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L2-09-b-cena-extrusao-slides: documento de cena 3D, extrusão por atributo e slides)
+
+O tipo de item `cena`, que existia desde a migração 011 com envelope vazio, ganhou esquema próprio
+(`db/migracoes/20260908T0601_cena_esquema.sql`): câmera, terreno com exagero, iluminação por data e
+hora, atmosfera, camadas com extrusão por atributo e slides. Nenhuma tabela nova e nenhuma rota nova de
+documento — a cena é criada, versionada e publicada pelas rotas genéricas de `/api/itens`, e o esquema
+continua na versão 1 porque todo documento que já existia (corpo vazio) segue válido. O que o JSON
+Schema não expressa (id repetido, slide que cita camada ausente, extrusão sem altura, base acima do
+topo) entra por `app/cena/documento.py`, chamado da MESMA porta que valida o grafo dos construtores.
+
+A tela `/cena` usa o mesmo MapLibre do visualizador 2D — `fill-extrusion` para volume, `setTerrain`
+para relevo, `setSky` e `setLight` para atmosfera e luz —, sem nenhuma segunda biblioteca 3D. Altura
+vem de um atributo, com escala explícita, e é presa em 0 quando o valor é nulo, ausente ou negativo
+(sem isso o MapLibre desenha caixa invertida em silêncio). Slide é vista salva no corpo do documento:
+nome, câmera, camadas visíveis, hora e miniatura JPEG feita do próprio canvas; restaurar usa `jumpTo`,
+não `flyTo`, para a vista voltar igual.
+
+A posição do Sol é calculada no servidor (`app/cena/sol.py`, algoritmo do NOAA) e exposta em
+`GET /api/cena/sol`, com a luz já no formato do estilo. A conferência do teste não é contra a própria
+implementação: é contra a fórmula do Astronomical Almanac, escrita dentro do teste, em três datas e
+horas, mais o invariante do ponto subsolar. Decisão de desenho em
+`docs/adr/20260908T0620-documento-de-cena-3d.md`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -129,6 +152,31 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 4, setembro de 2026 (item L2-01-mapa-web: visualizador de mapa próprio, do Martin à impressão)
+
+Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava chegar a `master`.
+
+- **Servidor de tiles**: Martin 1.15.0 (musl, sha256 do pacote fixado em `deploy/martin_instalar.sh`) como
+  unidade `plat-martin` em `127.0.0.1:8151`, publicando SÓ funções (`auto_publish.tables: false`) — a
+  tabela crua da camada nunca é exposta. Papel de leitura `plat_leitor` (LOGIN, sem BYPASSRLS, sem ser
+  dono), `plat.contexto_por_token` e a função de tile por camada com RLS vieram do trabalho dos itens
+  L2-01-b/L2-04-a, que nunca tinha sido juntado.
+- **API do mapa** (`app/mapa/`): `GET /api/mapa/camadas` com estilo MapLibre e legenda geradas da
+  simbologia; `GET /api/mapa/camadas/{id}/tilejson` cunhando token de 12 h com escopo de UMA camada;
+  repasse `GET /tiles/{esquema}/{funcao}/{z}/{x}/{y}` com a mesma autorização do `auth_request` do nginx
+  (uma implementação, duas portas); `plat.camada_extensao` para o "enquadrar".
+- **Tela `/mapa`**: lista de camadas com ordem (arrastar e por botão), opacidade, ligar/desligar e
+  enquadrar; legenda; janela de atributos (campo nulo aparece marcado, multi-geometria não se repete);
+  medição geodésica de distância e área; pesquisa de endereço (CNEFE) e de coordenada em decimal e em
+  grau-minuto-segundo; escala, coordenadas e escala numérica 1:N; troca de mapa-base; impressão em PNG e
+  em PDF com escala, barra de escala e seta de norte.
+- **`GET /api/geocodificar`**: geocodificar é leitura e agora tem o verbo certo (o POST continua).
+- Medido com 1.000.000 de feições: 2,4 s do clique ao primeiro desenho, 1,5 s de zoom até `idle`, 61 MB
+  de heap; 10 camadas ao mesmo tempo em 4,3 s, pan em 302 ms, 24,8 MB. Tile z8 pelo repasse: 406 ms
+  frio, 21 ms quente. Detalhe em `tests/medidas/L2-01-mapa-web.json`.
+- Dois defeitos reais achados pelos testes e corrigidos: `attribution: undefined` fazia o MapLibre
+  recusar a fonte inteira em silêncio; repassar `Content-Encoding: gzip` com corpo já descompactado
+  entregava tile ilegível ao navegador. Registrados no ADR 20260907T0400.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 

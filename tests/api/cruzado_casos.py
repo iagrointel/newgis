@@ -848,6 +848,21 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     # ---- L0-09 metadado ISO 19139 do item: mesmo `item_ou_404` + RLS de `IT` acima.
     ("GET", IT + "/metadado.xml"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/metadado.xml"),
+    # ---- L2-01-mapa-web: leituras de lista agem só no chamador (RLS); camada de B como alvo = 404 em toda perna.
+    ("GET", "/api/mapa/camadas"): Caso(lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}),
+                                       verificar=_sem_marca),
+    ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}"),
+    ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/tilejson"),
+    # ---- L2-09-b cena 3D: cálculo puro (posição do Sol), sem tabela e sem dado de inquilino — como o
+    # geocodificador abaixo, age só sobre o que o chamador mandou na query.
+    ("GET", "/api/cena/sol"): Caso(
+        lambda p: "/api/cena/sol?lat=-23.5&lon=-46.6&instante=2026-06-21T12:00:00-03:00",
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/geocodificar"): Caso(
+        lambda p: "/api/geocodificar?endereco=Avenida+Paulista,+Sao+Paulo+-+SP", proprio=True,
+        aceita=frozenset({200, 422}), verificar=_sem_marca,
+    ),
     # ---- L2-11-b geocodificador próprio (dado aberto CNEFE/IBGE, sem tabela de inquilino, mesmo padrão de
     # /api/rota-/api/matriz-/api/isocrona acima): 422 é resposta de NEGÓCIO (UF/logradouro não instalado
     # nesta trilha), não vazamento — aceito ao lado de 200.

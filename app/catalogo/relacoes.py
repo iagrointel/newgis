@@ -14,14 +14,19 @@ from app.erros import ErroAPI
 def _uuids(valores) -> list[str]:
     saida = []
     for v in valores or []:
-        if isinstance(v, dict):
-            v = v.get("id") or v.get("item_id") or v.get("camada_id")
-        try:
-            u = str(uuid.UUID(str(v)))
-        except (ValueError, TypeError):
-            continue
-        if u not in saida:
-            saida.append(u)
+        # dicionário: o primeiro dos campos conhecidos que SEJA um uuid. Não basta o primeiro que
+        # exista: no documento de cena (L2-09-b) `id` é o identificador da camada DENTRO da cena (ULID,
+        # citado pelos slides) e o item do catálogo está em `camada_id` — com `or`, o ULID vencia e a
+        # relação da cena com a camada nunca era registrada.
+        candidatos = [v.get("id"), v.get("item_id"), v.get("camada_id")] if isinstance(v, dict) else [v]
+        for candidato in candidatos:
+            try:
+                u = str(uuid.UUID(str(candidato)))
+            except (ValueError, TypeError):
+                continue
+            if u not in saida:
+                saida.append(u)
+            break
     return saida
 
 
