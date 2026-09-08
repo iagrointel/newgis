@@ -18,9 +18,14 @@ chromium quentes** (`app/render/motor.py::Motor`), com:
    fundo que derrube a máquina compartilhada.
 2. **Teto de tempo único** (`PLAT_RENDER_TIMEOUT_S`, padrão 30) cobrindo fila **+** execução — um pedido que
    espera 25 s na fila só tem 5 s de render, não 30 s do zero.
-3. **Isolamento de rede**: cada contexto do chromium intercepta toda requisição e só deixa passar
-   `127.0.0.1`/`::1`/`localhost` (e o host de `PLAT_URL_PUBLICA` em produção) — uma página com um estilo
-   malicioso apontando para fora nunca sai da máquina.
+3. **Isolamento de rede**: o chromium do render nasce com `--host-resolver-rules` respondendo `~NOTFOUND`
+   para todo host, exceto `127.0.0.1`/`::1`/`localhost` (e o host de `PLAT_URL_PUBLICA` em produção) — uma
+   página com um estilo malicioso apontando para um domínio de fora rejeita na hora, dentro do navegador.
+   Era antes interceptação por `context.route` (achado 08/09: no playwright 1.59 qualquer `route` vira um
+   `Fetch.enable` com `urlPattern: "*"` — todo pedido pausa e cruza chromium→node→python, e o pedágio por
+   faixa de tile custou ~430 ms no p95 quente do portão). Fronteira declarada: host em IP literal não
+   consulta resolvedor e não é alcançado pela regra; o vetor real (recurso externo por domínio) está
+   coberto.
 4. **Token interno de curta duração** (`app/render/token.py`): HMAC sobre `PLAT_SECRET`, TTL cortado a
    60 s mesmo se alguém pedir mais, mais bloqueio por host (`request.client.host` tem de ser loopback). Não é
    uma sessão — não abre `plat.sessao`, não tem cookie.
