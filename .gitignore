@@ -30,3 +30,6 @@ laco/*.log
 # fica no curado tests/medidas/L7-19.json)
 tests/medidas/_prova_segredos_bruta.json
 tests/medidas/_prova_garage_chave_s3.json
+.regeneracao_teste_*/
+sdk/python/src/*.egg-info/
+sdk/python/build/

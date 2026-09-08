@@ -1,0 +1,5 @@
+# Configuração de geração do SDK Python (item L7-08-b-sdk-python). Usada por scripts/gerar_sdk.sh e pelo
+# teste de reprodutibilidade (tests/sdk/test_regeneracao.py). Nomes plurais evitados de propósito: um
+# arquivo, uma fonte de verdade, comitado junto do cliente gerado.
+package_name_override: plat_gerado
+project_name_override: plat_gerado

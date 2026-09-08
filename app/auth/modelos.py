@@ -72,6 +72,7 @@ class UsuarioEditar(Modelo):
 
 
 class LoteEntrada(Modelo):
+    model_config = ConfigDict(title="LoteEntradaAuth")
     ids: list[int] = Field(min_length=1, max_length=limites.LOTE_MAX * 10)
     acao: str = Field(pattern="^(perfil|papel|desabilitar|reabilitar)$")
     perfil: str | None = Field(default=None, pattern="^(admin|editor|visualizador|campo)$")
@@ -228,6 +229,7 @@ class Papeis(Saida):
 
 
 class Pagina(Saida):
+    model_config = ConfigDict(title="PaginaAuth")
     total: int
     itens: list[Any]
 
@@ -242,6 +244,7 @@ class SenhaTemporaria(Saida):
 
 
 class LoteSaida(Saida):
+    model_config = ConfigDict(title="LoteSaidaAuth")
     alterados: int
     recusados: list[dict]
 

@@ -1,0 +1,63 @@
+{
+ "item": "L7-08-b-sdk-python",
+ "medidas": {
+  "openapi_operacoes_total": {
+   "valor": 196,
+   "unidade": "operacoes",
+   "comando": "python3 -c \"import json; d=json.load(open('docs/openapi.json')); print(sum(1 for p in d['paths'].values() for m in p if m in ('get','post','put','patch','delete')))\""
+  },
+  "sdk_operacoes_cobertas": {
+   "valor": 196,
+   "unidade": "operacoes",
+   "comando": "tests/sdk/test_cobertura_openapi.py::test_contagem_de_modulos_gerados_bate_com_a_contagem_de_operacoes"
+  },
+  "sdk_cobertura_percentual": {
+   "valor": 100.0,
+   "unidade": "%",
+   "comando": "196/196, tests/sdk/test_cobertura_openapi.py"
+  },
+  "exemplos_executaveis": {
+   "valor": 10,
+   "unidade": "exemplos",
+   "comando": "ls sdk/python/exemplos/*.py | grep -v _ambiente | wc -l"
+  },
+  "exemplos_passam": {
+   "valor": 10,
+   "unidade": "exemplos",
+   "comando": "tests/sdk/test_exemplos.py (10 parametrizados + 1 de contagem = 11 testes)"
+  },
+  "regeneracao_diff_arquivos": {
+   "valor": 0,
+   "unidade": "arquivos",
+   "comando": "tests/sdk/test_regeneracao.py::test_regeneracao_do_sdk_e_reproducivel (gerado numa pasta irmã do repo, comparado byte a byte com sdk/python/src/plat_gerado/ comitado)"
+  },
+  "suite_sdk_testes_total": {
+   "valor": 19,
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/sdk -v"
+  },
+  "suite_sdk_tempo_s": {
+   "valor": 10.17,
+   "unidade": "s",
+   "comando": "bash laco/roda_teste.sh tests/sdk -v (19 passed in 10.17s)",
+   "carga_1min": 6.61,
+   "ram_livre_gb": 0,
+   "medido_em": "2026-09-07T15:36:18Z"
+  },
+  "adversario_ataques": {
+   "valor": 3,
+   "unidade": "ataques",
+   "comando": "tests/sdk/test_adversario.py (escopo catalogo:ler tentando escrever; token de um inquilino lendo/apagando item de outro; varredura de rota do OpenAPI sem metodo no SDK gerado)"
+  },
+  "adversario_veredito": {
+   "valor": 1,
+   "unidade": "PASSA=1/REFUTADO=0",
+   "comando": "tests/sdk/refutacao.json"
+  },
+  "modelos_pydantic_titulo_corrigido": {
+   "valor": 6,
+   "unidade": "classes",
+   "comando": "app/auth/modelos.py + app/catalogo/modelos.py: Pagina, LoteEntrada, LoteSaida (2 modulos x 3 classes) — colisao de title que impedia geracao de qualquer SDK"
+  }
+ }
+}
