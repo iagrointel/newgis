@@ -59,6 +59,7 @@ class Preparacao:
     conjunto_b: dict = field(default_factory=dict)  # L3-19-multiescala: área de estudo de B
     fator_b: dict = field(default_factory=dict)  # L3-19-multiescala: fator de B
     execucao_b: dict = field(default_factory=dict)  # L3-19-multiescala: execução macro de B (sobre conjunto_b)
+    modelo_b: dict = field(default_factory=dict)  # L2-09-c: modelo 3D de B (GLB de caixa, já convertido ou não)
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -72,6 +73,8 @@ class Preparacao:
             marcas.append(self.convite_b["email"])
         if self.conjunto_b:
             marcas += [self.conjunto_b["nome"], self.fator_b["nome"]]
+        if self.modelo_b:
+            marcas.append(self.modelo_b["nome"])
         return marcas
 
 
@@ -155,11 +158,32 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     })
     assert r.status_code == 201, r.text
     execucao_b = r.json()
+    # L2-09-c: modelo 3D de B. O arquivo entra por `POST /api/arquivos`, que é só por TOKEN de serviço
+    # (corpo cru, nunca cookie: ADR 0002 seção 5.3) — daí o token de admin criado e revogado aqui mesmo.
+    from tests.apoio_modelos3d import glb_caixa
+
+    r = sessao_b.post("/api/tokens", json={"nome": f"{PREFIXO}modelo-{sufixo}", "escopos": ["admin:inquilino"]})
+    assert r.status_code == 201, r.text
+    token_arquivo_b = r.json()
+    from tests.api.conftest import novo_cliente
+
+    sem_cookie = novo_cliente()  # cookie + Authorization juntos = 400 autenticacao_ambigua (ADR 0002 5.3)
+    envio = sem_cookie.post("/api/arquivos?classe=modelo3d", content=glb_caixa(nome=f"{PREFIXO}modelo-{sufixo}"),
+                            headers={"Content-Type": "application/octet-stream",
+                                     "Authorization": f"Bearer {token_arquivo_b['token']}"})
+    assert envio.status_code == 201, envio.text
+    sessao_b.delete(f"/api/tokens/{token_arquivo_b['id']}")
+    r = sessao_b.post("/api/modelos", json={
+        "nome": f"{PREFIXO}modelo-{sufixo}", "origem": "gltf", "arquivo_sha256": envio.json()["sha256"],
+        "lon": -46.6333, "lat": -23.5505, "altura_m": 760.0,
+    })
+    assert r.status_code == 201, r.text
+    modelo_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
+                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b, modelo_b=modelo_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -185,6 +209,9 @@ def desfazer(p: Preparacao) -> None:
         p.sessao_b.delete(f"/api/pastas/{p.pasta_b['id']}")
     if p.conexao_b:
         p.sessao_b.delete(f"/api/conexoes/{p.conexao_b['id']}")
+    if p.modelo_b:
+        p.sessao_b.post(f"/api/jobs/{p.modelo_b['job_id']}/cancelar")
+        p.sessao_b.delete(f"/api/modelos/{p.modelo_b['id']}")
     if p.conjunto_b:
         p.sessao_b.delete(f"/api/multiescala/conjuntos/{p.conjunto_b['id']}")  # cascata apaga a execução também
         p.sessao_b.delete(f"/api/multiescala/fatores/{p.fator_b['id']}")
@@ -518,6 +545,25 @@ CASOS: dict[tuple[str, str], Caso] = {
     # quando o alvo é de B (a rota lê a conexão pelo RLS de _carregar ANTES de qualquer efeito colateral).
     ("GET", "/api/conexoes/{id}/saude-historico"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/saude-historico"),
     ("POST", "/api/conexoes/{id}/publicar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar"),
+    # ---- L2-09-c: modelos 3D. Modelo e elementos são do INQUILINO (tenant_id + RLS): a lista e a criação
+    # agem só sobre o próprio chamador; tudo por id de B é cross-tenant puro (404 pela RLS, nunca 403 que
+    # confirmaria a existência). A criação em A aponta um sha256 que não existe em A: 404 antes de qualquer
+    # escrita — e o `limpar` cobre o caso de a rota um dia passar a criar.
+    ("GET", "/api/modelos"): Caso(lambda p: "/api/modelos", proprio=True, aceita=frozenset({200}),
+                                  verificar=_sem_marca),
+    ("POST", "/api/modelos"): Caso(
+        lambda p: "/api/modelos",
+        lambda p: {"nome": f"{PREFIXO}modelo-a-{secrets.token_hex(3)}", "origem": "gltf",
+                   "arquivo_sha256": "0" * 64, "lon": -46.6333, "lat": -23.5505},
+    ),
+    ("GET", "/api/modelos/{id}"): Caso(lambda p: f"/api/modelos/{p.modelo_b['id']}"),
+    ("DELETE", "/api/modelos/{id}"): Caso(lambda p: f"/api/modelos/{p.modelo_b['id']}"),
+    ("GET", "/api/modelos/{id}/elementos"): Caso(lambda p: f"/api/modelos/{p.modelo_b['id']}/elementos"),
+    ("GET", "/api/modelos/{id}/elementos/{guid}"): Caso(
+        lambda p: f"/api/modelos/{p.modelo_b['id']}/elementos/0CAIXA0000000000000001"),
+    ("GET", "/api/modelos/{id}/glb"): Caso(lambda p: f"/api/modelos/{p.modelo_b['id']}/glb"),
+    ("GET", "/api/modelos/{id}/3dtiles/{caminho}"): Caso(
+        lambda p: f"/api/modelos/{p.modelo_b['id']}/3dtiles/tileset.json"),
     # ---- L3-19-multiescala: conjunto/fator/execução são do INQUILINO (tenant_id + RLS, mesma classe da
     # conexão acima, não do registro compartilhado do acervo); GET/POST/DELETE de lista agem só sobre o
     # próprio chamador, GET/DELETE/POST por id de B são cross-tenant puro (404, a RLS nunca deixa ver a linha).

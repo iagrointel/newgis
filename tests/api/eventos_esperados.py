@@ -151,6 +151,11 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
     # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por
     # isso tem tipo próprio (`_apagar`), separado do de criação.
+    # ---- L2-09-c: modelos 3D. A conversão e a geração do tileset acontecem no WORKER (jobs
+    # modelo3d.converter / modelo3d.tileset) e registram `modelos3d/converter` e `modelos3d/tileset`
+    # lá dentro; a rota de criação só grava `modelos3d/criar` e enfileira.
+    ("POST", "/api/modelos"): ["modelos3d/criar"],
+    ("DELETE", "/api/modelos/{id}"): ["modelos3d/apagar"],
     ("POST", "/api/multiescala/conjuntos"): ["multiescala/conjunto"],
     ("DELETE", "/api/multiescala/conjuntos/{id}"): ["multiescala/conjunto_apagar"],
     ("POST", "/api/multiescala/fatores"): ["multiescala/fator"],
