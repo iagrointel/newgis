@@ -1,0 +1,172 @@
+{
+ "item": "L4-04-d-diagrama-esquematico",
+ "assinado_por": "redes+frontend+backend+cartografo+adversario (trilha il404ddiagr)",
+ "gerado_em": "2026-09-08T12:01:55Z",
+ "git_sha": "81d6a9fdc9c985388b4c08657d0ec65da97215e9",
+ "maquina": "PostgreSQL 16 em iagro_sat; base própria da trilha (plat_til404ddiagr); fonte = BDGD da cooperativa de teste (ativo da casa, somente leitura); outras sessões da casa na mesma máquina",
+ "medidas": {
+  "rede_id": "8ac8377f-0b84-4847-b31a-0c7023d1a970",
+  "clausulas": {
+   "gerar_um_alimentador_ate_10s": {
+    "prova": "diagrama do alimentador 5_VAS_1 (4963 trechos de média tensão no arquivo, 1 de 20): 4963 nós e 4963 ligações gerados em 0.694 s (teto 10.0 s), com carga 6.06 e 6.79 GB de RAM livre",
+    "ok": true
+   },
+   "quatro_layouts_sem_sobreposicao": {
+    "prova": "arvore_inteligente: 0 par(es) a menos de 1 unidade em 1.232 s; radial: 0 par(es) a menos de 1 unidade em 1.193 s; linha_principal: 0 par(es) a menos de 1 unidade em 1.32 s; geografico: 0 par(es) a menos de 1 unidade em 1.759 s",
+    "ok": true
+   },
+   "reduzir_juncao_reduz_os_nos": {
+    "prova": "4963 nós no grafo bruto e 1037 depois da regra (3926 junções de passagem removidas)",
+    "ok": true
+   },
+   "reducao_preserva_a_conectividade": {
+    "prova": "1 componente(s) conexo(s) no grafo bruto e 1 no reduzido",
+    "ok": true
+   }
+  },
+  "avisos": [],
+  "recorte": {
+   "alimentador": "5_VAS_1",
+   "de_quantos_no_arquivo": 20,
+   "trechos_mt_no_arquivo": 4963,
+   "postes": "fora (0 nó de topologia)"
+  },
+  "carga_bdgd": {
+   "ssdmt": {
+    "linhas": 4963,
+    "segundos": 0.153
+   },
+   "ssdbt": {
+    "linhas": 2721,
+    "segundos": 1.394
+   },
+   "ramlig": {
+    "linhas": 0,
+    "segundos": 0.522
+   },
+   "trafo": {
+    "linhas": 624,
+    "segundos": 0.662
+   }
+  },
+  "topologia": {
+   "rede_id": "8ac8377f-0b84-4847-b31a-0c7023d1a970",
+   "tolerancia_m": 0.05,
+   "nos": 8229,
+   "arestas": 7684,
+   "nos_orfaos": 156,
+   "arestas_sem_no": 0,
+   "duracao_ms": 2368,
+   "construido_em": "2026-09-08T12:00:47Z"
+  },
+  "importacao_de_controladores": {
+   "tier_media_tensao": "media_tensao",
+   "tier_baixa_tensao": "baixa_tensao",
+   "alimentadores": 1,
+   "alimentadores_por_dispositivo": 0,
+   "alimentadores_por_no_de_cabeca": 1,
+   "alimentadores_sem_no": 0,
+   "transformadores": 624,
+   "transformadores_marcados": 624,
+   "ja_marcados": 0,
+   "declarado": {
+    "subestacoes": 1,
+    "alimentadores": 1,
+    "transformadores": 624,
+    "alimentadores_sem_subestacao": 0,
+    "transformadores_sem_alimentador": 0,
+    "ja_declaradas": 0
+   },
+   "reconciliacao": {
+    "alimentadores": {
+     "declaradas": 1,
+     "com_equivalente": 1,
+     "sem_equivalente": 0,
+     "taxa": 1.0
+    },
+    "transformadores": {
+     "declaradas": 624,
+     "com_equivalente": 624,
+     "sem_equivalente": 0,
+     "taxa": 1.0
+    }
+   }
+  },
+  "atualizacao_da_subrede": {
+   "candidatas": 1,
+   "atualizadas": 1,
+   "elementos": 5587,
+   "duracao_ms": 32400
+  },
+  "geracao": {
+   "segundos": 0.694,
+   "nos": 4963,
+   "arestas": 4963,
+   "etapas_ms": {
+    "recorte": 12,
+    "grafo": 167,
+    "regras": 0,
+    "layout": 25,
+    "total": 690
+   },
+   "carga_1min": 6.06,
+   "ram_livre_gb": 6.79,
+   "medido_em": "2026-09-08T12:01:42Z"
+  },
+  "layouts": {
+   "arvore_inteligente": {
+    "segundos": 1.232,
+    "pares_sobrepostos": 0,
+    "menor_distancia_proxima": 2.0,
+    "carga_1min": 6.06,
+    "ram_livre_gb": 6.74,
+    "medido_em": "2026-09-08T12:01:43Z"
+   },
+   "radial": {
+    "segundos": 1.193,
+    "pares_sobrepostos": 0,
+    "menor_distancia_proxima": 4.0,
+    "carga_1min": 6.06,
+    "ram_livre_gb": 6.73,
+    "medido_em": "2026-09-08T12:01:44Z"
+   },
+   "linha_principal": {
+    "segundos": 1.32,
+    "pares_sobrepostos": 0,
+    "menor_distancia_proxima": 1.0,
+    "carga_1min": 6.06,
+    "ram_livre_gb": 6.76,
+    "medido_em": "2026-09-08T12:01:45Z"
+   },
+   "geografico": {
+    "segundos": 1.759,
+    "pares_sobrepostos": 0,
+    "menor_distancia_proxima": 1.000039,
+    "carga_1min": 6.13,
+    "ram_livre_gb": 6.81,
+    "medido_em": "2026-09-08T12:01:47Z"
+   }
+  },
+  "reducao": {
+   "segundos": 0.232,
+   "bruto": {
+    "nos": 4963,
+    "arestas": 4963,
+    "componentes": 1
+   },
+   "nos": 1037,
+   "arestas": 1037,
+   "componentes": 1,
+   "regras": [
+    {
+     "regra": "reduzir_juncao_de_passagem",
+     "tipos": [],
+     "nos_removidos": 3926,
+     "arestas_fundidas": 7852
+    }
+   ]
+  },
+  "ok": true
+ },
+ "comando": "venv/bin/pytest tests/api/test_rede_diagrama_medida.py -m lento -q"
+}
