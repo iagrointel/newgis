@@ -3,6 +3,25 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 48, setembro de 2026 (item L2-16-a-sdk-python-geo: SDK Python `plat` e ferramenta por job cujo resultado vira item)
+
+Pacote Python `plat` (`pacote/`, wheel interno por `make pacote`, sem PyPI até decisão do dono): `Plataforma(url,
+token)` com quatro domínios — `catalogo`, `acervo`, `jobs` e `ferramentas`. Camada fina espelho da API (mesma
+rota, mesmos parâmetros), paginação transparente (`iterar` segue o cursor), espera de job com `ao_progresso`, e
+toda recusa vira exceção tipada por status: `ErroPermissao` (403) carrega o código nomeado da casa e o privilégio
+`.exigido`; item de outro inquilino é `NaoEncontrado`, porque a RLS da casa devolve 404 de propósito e o SDK não
+traduz 404 em 403. A ferramenta `ferramentas.buffer` é um tipo de job comum: buffer PLANO em srid MÉTRICO (srid
+geográfico é recusado na porta com pyproj; teto de distância em `app/limites.py`), e o resultado vira ITEM do
+catálogo do tipo novo `ferramenta_resultado` — com procedência (sha256 da geometria de entrada, biblioteca e
+aproximação declarada) e evento de domínio `ferramentas/buffer` (migrações `20260908T1847` e `20260908T1929`).
+`tests/sdk/` (18 testes) prova o HTTP de verdade: a suíte sobe uvicorn e worker próprios em portas efêmeras no
+schema da trilha, e os exemplos dos docstrings rodam como doctest contra essa instalação
+(`test_sdk_doctests.py`). Medida `ferramenta_buffer_fim_a_fim_s` em `tests/medidas/L2-16-a-sdk-python-geo.json`,
+gravada só com carga de 1 min ≤ 8 (a primeira tomada, sob disputa da suíte inteira, foi descartada). Paridade com
+o ArcGIS API for Python em `docs/PARIDADE.md` (seção SDK); decisões no ADR `20260908T1955-sdk-python-pacote`. As
+cláusulas do portão que dependem de FeatureServer (L2-04-c, parcial sem merge), edição transacional (L2-03-a,
+refutado), TiTiler/STAC e nbconvert ficaram PENDENTES declaradas no handoff do item.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
