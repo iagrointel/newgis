@@ -222,3 +222,11 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# --- malha de parcelas (L4-parcelas-01-modelo-de-parcelas; migração 20260908T2140_parcelas.sql):
+# seis tabelas orientadas a registro (criada_por/retirada_por = linhagem, paridade com parcel
+# fabric em docs/PARIDADE_PARCELAS.md). Os tetos abaixo freiam o TAMANHO de uma rodada
+# (importação, consulta de validação, trajeto COGO de uma criação) — a linhagem não itera.
+PARCELA_IMPORT_LOTES_MAX = 50_000     # lotes por rodada de import (acima disso: 422, rodada menor)
+PARCELA_VALIDACAO_PARES_MAX = 500     # pares de sobreposição devolvidos por consulta (o total é contado)
+PARCELA_TRAJETO_MAX = 200             # segmentos COGO na criação de UMA parcela por trajeto
