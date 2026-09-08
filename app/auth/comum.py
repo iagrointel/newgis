@@ -112,6 +112,12 @@ def erro_do_banco(e: Exception) -> ErroAPI:
         return ErroAPI(409, "regra_do_banco", codigo or "regra do banco recusou a operação")
     if isinstance(e, psycopg2.errors.UniqueViolation):
         return ErroAPI(409, "conflito", "já existe um registro com esse valor", {"restricao": e.diag.constraint_name})
+    if isinstance(e, psycopg2.errors.WithCheckOptionViolation):
+        # vista de camada criada `WITH CASCADED CHECK OPTION` (item L5-32): a linha nasceria/ficaria fora do
+        # filtro ou da extensão da vista. É recusa de regra declarada, nunca falha do servidor.
+        return ErroAPI(422, "fora_da_vista",
+                       "a feição ficaria fora do filtro ou da extensão desta vista de camada",
+                       {"restricao": e.diag.constraint_name})
     if isinstance(e, psycopg2.errors.CheckViolation):
         return ErroAPI(422, "validacao", "valor fora do permitido", {"restricao": e.diag.constraint_name})
     if isinstance(e, psycopg2.errors.ForeignKeyViolation):
