@@ -1,17 +1,19 @@
-.plat-widgets { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--espaco-4, 1rem); }
+/* plat — motor de widgets (L5-06): grade de 12 colunas, caixa de erro nomeada e chrome de edição por atributo.
+   Só tokens do sistema de design (UX-01): nenhuma cor nem tamanho literal fora de estilo/tokens.css. */
+.plat-widgets { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--e4); }
 .plat-widgets > * { min-width: 0; }
-.plat-widget-erro { border: 1px solid var(--cor-erro, #b42318); padding: 1rem; color: var(--cor-erro, #b42318); }
+.plat-widget-erro { border: var(--borda-largura) solid var(--falha); padding: var(--e4); color: var(--falha); border-radius: var(--raio); }
 plat-mapa { display: block; min-height: 18rem; }
 plat-legenda ul { list-style: none; padding: 0; }
-plat-legenda button::before { content: ''; display: inline-block; width: .8rem; height: .8rem; margin-right: .4rem; background: var(--cor); }
+plat-legenda button::before { content: ''; display: inline-block; width: var(--e3); height: var(--e3); margin-right: var(--e2); background: var(--cor); }
 plat-tabela { display: block; overflow: auto; }
 plat-tabela table { width: 100%; border-collapse: collapse; }
-plat-tabela th, plat-tabela td { padding: .45rem; text-align: left; border-bottom: 1px solid var(--cor-borda, #ccd3d4); }
-plat-filtro label { display: grid; gap: .35rem; }
+plat-tabela th, plat-tabela td { padding: var(--e2); text-align: left; border-bottom: var(--borda-largura) solid var(--borda); }
+plat-filtro label { display: grid; gap: var(--e1); }
 /* chrome de edição (construtor): só CSS sobre o atributo que motor.js alterna; o widget não muda */
-.plat-widgets[data-edicao] > [data-no-id] { position: relative; outline: 1px dashed var(--cor-acento, #1f6f8b); outline-offset: 2px; }
+.plat-widgets[data-edicao] > [data-no-id] { position: relative; outline: var(--borda-largura) dashed var(--acento); outline-offset: var(--e0); }
 .plat-widgets[data-edicao] > [data-no-id]::before {
-  content: attr(data-tipo); position: absolute; top: -1.1rem; left: 0; font-size: .7rem; line-height: 1;
-  padding: .15rem .35rem; background: var(--cor-acento, #1f6f8b); color: var(--cor-fundo, #fff);
+  content: attr(data-tipo); position: absolute; top: calc(-1 * var(--e4)); left: 0; font-size: var(--t-3); line-height: var(--linha-justa);
+  padding: var(--e0) var(--e1); background: var(--acento); color: var(--acento-texto);
 }
 .plat-widgets[data-edicao] > [data-no-id]:focus { outline-style: solid; }
