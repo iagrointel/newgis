@@ -95,6 +95,7 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
   const ajustes = {};              // por elemento: paginação da lista (deslocamento)
   const estados = new Map();       // por elemento: ordenação da tabela (só no cliente, sobre a página lida)
   const ultimos = new Map();       // último resultado por elemento (repintar sem nova requisição)
+  const geracoes = new Map();      // número de ordem do último pedido de cada fonte (descarta resposta atrasada)
   let atualizadoEm = null;
 
   const ctx = {
@@ -131,10 +132,17 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
   async function atualizarFonte(fonteId) {
     const pedidos = porFonteAtual().get(fonteId);
     if (!pedidos || !Object.keys(pedidos).length) return;
+    // uma requisição por fonte, mas quem usa troca de filtro mais depressa do que o servidor responde:
+    // cada pedido leva um número de ordem e a resposta que chega atrasada é DESCARTADA (senão o painel volta
+    // a mostrar o resultado do filtro anterior — a tela mentiria sobre o filtro que está na barra)
+    const ordem = (geracoes.get(fonteId) || 0) + 1;
+    geracoes.set(fonteId, ordem);
     let resposta;
     try {
       resposta = await buscarDados(fonteId, pedidos, filtroExecucao);
+      if (geracoes.get(fonteId) !== ordem) return;
     } catch {
+      if (geracoes.get(fonteId) !== ordem) return;
       for (const elId of Object.keys(pedidos)) {
         const el = elementos.find((e) => e.id === elId);
         if (el) { ultimos.set(elId, null); pintarResultado(container, el, null, ctx); }
