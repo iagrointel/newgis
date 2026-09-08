@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "corpo": {
+      "additionalProperties": false,
+      "properties": {
+        "ligacoes": {
+          "maxItems": 0,
+          "type": "array"
+        },
+        "nos": {
+          "items": {
+            "properties": {
+              "id": {
+                "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                "type": "string"
+              },
+              "largura_colunas": {
+                "maximum": 12,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "pai": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "propriedades": {
+                "type": "object"
+              },
+              "tipo": {
+                "enum": [
+                  "capa",
+                  "texto",
+                  "imagem",
+                  "video",
+                  "audio",
+                  "mapa",
+                  "tabela",
+                  "botao",
+                  "separador",
+                  "incorporar",
+                  "aplicativo"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "tipo"
+            ],
+            "type": "object"
+          },
+          "maxItems": 2000,
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "esquema_versao": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "tipo": {
+      "const": "narrativa"
+    }
+  },
+  "required": [
+    "tipo",
+    "esquema_versao",
+    "corpo"
+  ],
+  "title": "Documento de construtor — narrativa",
+  "type": "object"
+}

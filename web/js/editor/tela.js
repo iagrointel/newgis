@@ -91,9 +91,14 @@ async function iniciar() {
       return;
     }
     aviso.limpar?.();
+    // publicado por LINK (L5-14): a página /p/ exige um link de acesso; um link nomeado pela publicação é criado
+    // aqui e o endereço completo (com ?link=) é o que o autor copia e compartilha
+    let url = r.json.url;
+    const rl = await chamar('POST', `/api/itens/${item.id}/links`, { nome: `publicação ${slug}` });
+    if ((rl.status === 201 || rl.status === 200) && rl.json && rl.json.token) url = `${r.json.url}?link=${encodeURIComponent(rl.json.token)}`;
     limparFilhos(linkPublicado);
     linkPublicado.dataset.estado = 'publicado';
-    linkPublicado.append('publicado em ', h('a', { href: r.json.url, target: '_blank', rel: 'noopener', id: 'link-publicado' }, r.json.url));
+    linkPublicado.append('publicado em ', h('a', { href: url, target: '_blank', rel: 'noopener', id: 'link-publicado' }, url));
   });
 
   btSalvar.addEventListener('click', async () => {

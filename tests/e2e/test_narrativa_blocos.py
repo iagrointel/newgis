@@ -198,7 +198,7 @@ def test_imagem_sem_texto_alternativo_bloqueia_e_com_texto_publica_por_link(tela
                               ("separador", {}), ("botao", {"rotulo": "Site", "url": "https://exemplo.org"}))
     iid = _criar(admin_api, f"zt-narrativa-publica-{sufixo()}", blocos)
     _abrir(tela, page, iid)
-    page.on("dialog", lambda d: d.accept())
+    page.on("dialog", lambda d: d.accept(d.default_value))
     tela.esperar_status(422)
     page.click("#publicar")
     page.wait_for_selector('#publicado-em[data-estado="recusado"]', timeout=15000)
@@ -242,6 +242,7 @@ def test_html_hostil_no_texto_e_sanitizado(tela, page, admin_api):
     blocos = _blocos_de_teste(("texto", {"markdown": hostil}),
                               ("tabela", {"cabecalho": "a | <b>b</b>", "linhas": "<script>x</script> | 2"}))
     iid = _criar(admin_api, f"zt-narrativa-xss-{sufixo()}", blocos)
+    tela.esperar_status(404)  # a <img src=x> hostil vira imagem quebrada (src relativo inexistente): 404 legítimo
     tela.ir(f"/executar?item={iid}")
     page.wait_for_selector("article.narrativa .bloco-texto", timeout=15000)
     page.wait_for_timeout(300)

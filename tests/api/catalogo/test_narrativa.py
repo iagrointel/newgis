@@ -63,7 +63,11 @@ def test_imagem_sem_texto_alternativo_bloqueia_a_publicacao_com_mensagem(sessao_
     r = sessao_a.post(f"/api/itens/{n['id']}/publicacao", json={"slug": slug})
     assert r.status_code == 201, r.text
     assert r.json()["url"].endswith(f"/p/demo/{slug}")
-    r = sessao_a.get(f"/api/p/demo/{slug}")
+    # a página pública exige link de acesso (L5-14): um link do item abre a narrativa publicada
+    rl = sessao_a.post(f"/api/itens/{n['id']}/links", json={"nome": "zt narrativa"})
+    assert rl.status_code == 201, rl.text
+    link = rl.json()["token"]
+    r = sessao_a.get(f"/api/p/demo/{slug}?link={link}")
     assert r.status_code == 200, r.text
     corpo = r.json()["corpo"]
     assert corpo["tipo"] == "narrativa" and [b["tipo"] for b in corpo["corpo"]["nos"]] == ["capa", "imagem", "texto"]
@@ -73,8 +77,8 @@ def test_imagem_sem_texto_alternativo_bloqueia_a_publicacao_com_mensagem(sessao_
     atual = sessao_a.get(f"/api/itens/{n['id']}").json()["versao_atual"]
     r = sessao_a.patch(f"/api/itens/{n['id']}", json={"dados": n["dados"], "versao_atual": atual})
     assert r.status_code == 200, r.text
-    assert sessao_a.get(f"/api/p/demo/{slug}").json()["corpo"]["corpo"]["nos"][1]["propriedades"]["alternativo"] \
-        == "logotipo da plataforma"
+    publicado = sessao_a.get(f"/api/p/demo/{slug}?link={link}").json()
+    assert publicado["corpo"]["corpo"]["nos"][1]["propriedades"]["alternativo"] == "logotipo da plataforma"
 
 
 def test_bloco_de_mapa_cita_o_mapa_e_o_token_le_as_camadas_dele(sessao_a, itens_a):
