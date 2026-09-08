@@ -74,6 +74,7 @@ github.com/dss-extensions/OpenDSSDirect.py e o PRODIST Módulo 7 da ANEEL (acess
 
 import json
 import math
+import os
 import resource
 import tempfile
 import threading
@@ -103,6 +104,10 @@ PARAMETROS_PADRAO = {
     "corrente_nominal_a": 400.0,
     "com_geracao_distribuida": True,
 }
+# alvo do `BatchEdit` do OpenDSS: EXPRESSÃO REGULAR sobre o nome do elemento (ver `_comandos_de_ajuste`).
+# O exportador nomeia carga de consumo `u<n>` e geração distribuída `g<n>`; a âncora é o que separa as duas.
+ALVO_CONSUMO = "^u"
+ALVO_GERACAO = "^g"
 # quantos pontos sem convergência a execução ainda nomeia um a um (o resto vira só contagem)
 MAXIMO_PONTOS_LISTADOS = 50
 # tensão em por unidade abaixo da qual o nó é considerado NÃO ENERGIZADO e sai de fora do extremo do
@@ -230,13 +235,17 @@ def _comandos_de_ajuste(parametros: dict) -> list[str]:
     ]
     modelo_num = MODELOS_DE_CARGA[parametros["modelo_de_carga"]]
     # a geração distribuída é carga NEGATIVA de corrente constante no exportador; mudar o modelo de carga
-    # do consumo não pode mudar o da injeção, então o BatchEdit vale só para as cargas positivas (nome `u*`)
-    comandos.append(f"BatchEdit Load.u* model={modelo_num}")
+    # do consumo não pode mudar o da injeção, então o BatchEdit vale só para as cargas positivas.
+    # ⛔ o alvo do `BatchEdit` do OpenDSS é EXPRESSÃO REGULAR, não curinga de arquivo: `Load.u*` significa
+    # "zero ou mais letras u" e casa com TODA carga do circuito, geração inclusive. Medido em 08/09/2026:
+    # com `Load.u*` o modelo de carga entrava também na injeção e desligar a geração desligava o consumo —
+    # o resultado saía plausível e errado. Daí a âncora `^`.
+    comandos.append(f"BatchEdit Load.{ALVO_CONSUMO} model={modelo_num}")
     if parametros["modelo_de_carga"] == "zip":
         vetor = " ".join(f"{v:g}" for v in parametros["zipv"])
-        comandos.append(f"BatchEdit Load.u* ZIPV=({vetor})")
+        comandos.append(f"BatchEdit Load.{ALVO_CONSUMO} ZIPV=({vetor})")
     if not parametros["com_geracao_distribuida"]:
-        comandos.append("BatchEdit Load.g* enabled=no")
+        comandos.append(f"BatchEdit Load.{ALVO_GERACAO} enabled=no")
     return comandos
 
 
@@ -444,16 +453,26 @@ def resolver(modelo: dict, parametros: dict) -> dict:
     horas_do_ano = sum(horas)
 
     with _TRAVA_MOTOR, tempfile.TemporaryDirectory(prefix="plat-fluxo-") as tmp:
-        pasta = Path(tmp)
-        _abrir_circuito(dss, modelo, parametros, pasta)
-        varredura = _varrer(dss, parametros, horas)
-        convergiu = varredura["pontos_sem_convergencia"] < varredura["pontos"]
-        elementos: list[dict] = []
-        if convergiu:
-            # o estado por elemento é lido no ponto crítico: resolve de novo NAQUELE ponto e lê ali
-            dss.Text.Command(f"Set mode=yearly stepsize=1h number=1 hour={varredura['ponto_critico']}")
-            dss.Solution.Solve()
-            elementos = _elementos_no_ponto(dss, modelo, parametros)
+        # ⛔ o `Compile` do OpenDSS troca o DIRETÓRIO DE TRABALHO DO PROCESSO para a pasta do circuito.
+        # Como a pasta é temporária e some no fim deste bloco, o processo ficaria sem diretório válido —
+        # e a chamada seguinte ao motor morre com falha de segmentação (medido em 08/09/2026: a suíte
+        # inteira derrubava o interpretador, e o mesmo aconteceria ao worker no segundo alimentador).
+        # Por isso o diretório é guardado aqui e devolvido ANTES de a pasta ser apagada.
+        volta_para = os.getcwd()
+        try:
+            pasta = Path(tmp)
+            _abrir_circuito(dss, modelo, parametros, pasta)
+            varredura = _varrer(dss, parametros, horas)
+            convergiu = varredura["pontos_sem_convergencia"] < varredura["pontos"]
+            elementos: list[dict] = []
+            if convergiu:
+                # o estado por elemento é lido no ponto crítico: resolve de novo NAQUELE ponto e lê ali
+                dss.Text.Command(f"Set mode=yearly stepsize=1h number=1 hour={varredura['ponto_critico']}")
+                dss.Solution.Solve()
+                elementos = _elementos_no_ponto(dss, modelo, parametros)
+        finally:
+            os.chdir(volta_para)
+            dss.Basic.DataPath(volta_para)
 
     declarada = _perda_de_ferro_declarada_kwh(modelo, horas_do_ano)
     simulada = varredura["energia_perda_de_ferro_kwh"]
