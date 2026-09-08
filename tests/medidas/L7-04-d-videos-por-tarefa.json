@@ -1,0 +1,25 @@
+{
+ "item": "L7-04-d-videos-por-tarefa",
+ "medido_em": "2026-09-08T21:31:29+00:00",
+ "versao": "0.1.0",
+ "videos": 11,
+ "limite_duracao_s": 180.0,
+ "maior_duracao_s": 17.7,
+ "duracoes_s": {
+  "saude": 7.4,
+  "entrar": 9.4,
+  "conta": 7.1,
+  "usuarios": 8.0,
+  "grupos": 7.4,
+  "papeis": 7.0,
+  "tokens": 10.9,
+  "log": 7.0,
+  "tarefas": 17.7,
+  "mapa": 13.3,
+  "conexoes": 10.1
+ },
+ "bytes_total": 4565232,
+ "carga_1min": 5.29,
+ "ram_livre_gb": 7.0,
+ "comando": "make videos (scripts/videos/gerar.py)"
+}
