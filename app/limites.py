@@ -237,6 +237,13 @@ AMC_CONJUNTOS_POR_INQUILINO = 200     # conjuntos de unidades por inquilino
 AMC_VERSOES_POR_MODELO = 500          # versões de um modelo (cada edição cria uma; imutáveis, nunca apagadas)
 AMC_UNIDADES_PAGINA_MAX = 5_000       # unidades por página em GET /api/amc/conjuntos/{id}/unidades
 AMC_RESULTADOS_PAGINA_MAX = 5_000     # linhas por página em GET /api/amc/execucoes/{id}/resultados
+AMC_MATRIZ_PAGINA_MAX = 2_000         # unidades por página em GET /api/amc/execucoes/{id}/matriz (tela do motor
+                                      # recombina no navegador: cada unidade traz valor bruto E favorabilidade
+                                      # de cada fator, até 64 fatores, logo a página é ~64x mais pesada que a
+                                      # de resultados e o teto é proporcionalmente menor)
+AMC_PREVISAO_VALORES_MAX = 200_000    # valores por chamada de POST /api/amc/transformacoes/previsao (histograma
+                                      # da transformação escolhida; o portão do item L3-01-d mede 100 mil em
+                                      # <= 300 ms, este teto deixa o dobro de folga e nada além)
 
 # --- localização semelhante (L3-17-similaridade): pedido é síncrono (sem job), então o teto é o que a
 # requisição aguenta responder em segundos, não o que o motor AMC aguenta processar em lote.
