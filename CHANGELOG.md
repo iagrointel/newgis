@@ -3,6 +3,24 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## codex cx1, setembro de 2026 (item UX-16-ingestao-sem-tela: tela /importacoes para o fluxo arquivo → camada)
+
+Fecha as lacunas "POST /api/importacoes", "PUT /api/importacoes/{id}/confirmar" e "DELETE /api/importacoes/{id} sem
+tela" do mapa de cobertura (UX-00): tela nova `/importacoes` (menu com `conteudo.publicar_camada`) — lista das
+importações (estado, formato, feições, erro), "nova importação" (item de arquivo já enviado + formato, com sugestão pela
+extensão; dispara a inspeção e a tela acompanha o job até a proposta), "conferir e carregar" (proposta editada: título,
+CRS quando o arquivo não declara, codificação, tipo de geometria, ação para geometrias inválidas, campos com tipo e
+importar/não importar; dispara a carga e a tela acompanha até `concluída`, com "ver camada") e "apagar" (com
+confirmação). Estados por `<plat-estado>` (lista: carregando, vazio com "nova importação", erro com "tentar de novo",
+negado; fluxo: inspecionando/carregando, falhou nomeado; formulários) e erro da API NOMEADO no campo
+(conteudo_nao_corresponde/formato_nao_suportado → formato; srid_inexistente → CRS; perguntas_pendentes → lista;
+estado_invalido 409 e 403 no controle). Achado de API: `GET /api/importacoes/formatos` respondia 404
+importacao_inexistente porque estava declarada depois de `/api/importacoes/{id}` — reordenada, com teste. A carga
+morria na trilha com `tuple concurrently updated` (GRANT no d_demo partilhado): a mesma migração 20260908T0815 do
+wt/cx203f entra aqui. `docs/COBERTURA_UI.md` e `docs/cobertura_ui_lacunas.json` regenerados (29 → 26). e2e
+`tests/e2e/test_importacoes_ux16.py` com o fluxo REAL (upload pela API, inspeção e carga pelo worker da trilha,
+apagar) e os erros forjados nomeados; axe 0 sérias; capturas 390/1280; pt-BR/en/es.
+
 ## codex cx1, setembro de 2026 (item UX-15-geocodificador-esri-sem-controle: GeocodeServer compatível com Esri com controle na tela e URL exposta)
 
 Fecha as lacunas "POST /rest/services/Geocodificador/GeocodeServer[/findAddressCandidates|/geocodeAddresses|/reverseGeocode]
