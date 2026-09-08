@@ -1,0 +1,7 @@
+/* plat — tela /geocodificar (item UX-14-geocodificador-sem-tela): só tokens */
+.geo-resultado { display: grid; gap: var(--e1); font-size: var(--t-1); }
+.geo-resultado .campo { display: flex; gap: var(--e2); align-items: baseline; }
+.geo-resultado .campo strong { color: var(--fraco); font-weight: 500; min-width: 8rem; }
+.geo-coordenada { font-family: var(--mono); font-size: var(--t-2); white-space: nowrap; }
+.geo-score { display: inline-block; min-width: 3rem; font-family: var(--mono); }
+.geo-avisos { color: var(--fraco); font-size: var(--t-2); margin: var(--e1) 0 0; }
