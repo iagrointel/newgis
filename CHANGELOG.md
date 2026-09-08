@@ -3,6 +3,21 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## codex cx1, setembro de 2026 (item UX-15-geocodificador-esri-sem-controle: GeocodeServer compatível com Esri com controle na tela e URL exposta)
+
+Fecha as lacunas "POST /rest/services/Geocodificador/GeocodeServer[/findAddressCandidates|/geocodeAddresses|/reverseGeocode]
+sem controle" do mapa de cobertura (UX-00). A tela `/geocodificar` (UX-14) ganha a seção "Serviço compatível com Esri":
+a URL do GeocodeServer para copiar (com a dica do `?token=` e do escopo `geocodificar:usar`), "ver descritor" (POST no
+descritor, público), "findAddressCandidates com o endereço acima", "reverseGeocode com a coordenada abaixo" e
+"geocodeAddresses em lote" (um endereço por linha, até 500, OBJECTID + SingleLine como o cliente Esri manda) — a
+resposta aparece no formato Esri (tabela Score/Match_addr/Addr_type ou ResultID/Status, mais o JSON) e as respostas de
+negócio do protocolo (400 fora_da_distancia, 404 nao_encontrado, 422 lote_vazio/location_ausente) viram estado vazio
+NOMEADO; 403 no formato Esri (`{error:{code,message}}`) vira negado com o código; 5xx vira erro com "tentar de novo" e
+referência. A tela `/admin/tokens` expõe as URLs do GeocodeServer e do OGC API Records com o escopo exigido e botão
+copiar (o mesmo motivo que o gerador de cobertura registra para as rotas de cliente externo). `docs/COBERTURA_UI.md` e
+`docs/cobertura_ui_lacunas.json` regenerados (33 → 29). e2e `tests/e2e/test_geocodificar_esri_ux15.py` (chamadas reais
+ao descritor, candidatos, reverso e lote; forjados 200/403/500; axe 0 sérias; capturas 390/1280); pt-BR/en/es.
+
 ## codex cx1, setembro de 2026 (item UX-14-geocodificador-sem-tela: tela /geocodificar para POST /api/geocodificar e /api/reverso)
 
 Fecha as lacunas "POST /api/geocodificar" e "POST /api/reverso sem controle" do mapa de cobertura (UX-00): tela nova
