@@ -154,6 +154,8 @@ def test_exportar_de_a_importar_em_b_com_tres_fontes(sessao_a, sessao_b, itens_a
     assert r.json()["dados"]["corpo"]["mapas"] == [mapa_a["id"]]
     medida(ITEM)("documentos_no_pacote", len(m["documentos"]), "documentos", "GET /api/itens/{id}/pacote")
     medida(ITEM)("fontes_mapeadas", 3, "fontes", "POST /api/pacotes/importar")
+    # o pacote leva documento e declaração de fonte, nunca dado: por isso cabe em poucos milhares de bytes
+    medida(ITEM)("bytes_do_pacote", len(conteudo), "bytes", "GET /api/itens/{id}/pacote")
 
 
 # ---------------------------------------------------------------- cláusula 2: esquema campo a campo

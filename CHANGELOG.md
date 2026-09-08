@@ -3,6 +3,43 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 5, setembro de 2026 (item L5-37-pacotes-modelos-entre-inquilinos: pacote de documentos e galeria de modelos)
+
+`GET /api/itens/{id}/pacote` devolve um zip com `manifesto.json` e um `documentos/<id>.json` por documento
+do fecho de dependências: o app, o mapa, o estilo, o formulário, o fluxo. Item cujo tipo tem
+`tem_dado_fisico` (camada, vista, imagem, arquivo, rede) NÃO entra — é declarado como FONTE, com os campos,
+a geometria e o SRID que o documento assume, e nada mais. Por isso o pacote do app de teste (2 documentos,
+3 fontes) tem **1.622 bytes** (`tests/medidas/L5-37-pacotes-modelos-entre-inquilinos.json`): não há dado
+dentro, o que o torna transportável entre inquilinos e entre instalações.
+
+`POST /api/pacotes/verificar` é a tela do "antes de importar": não escreve nada e devolve, por fonte, a
+diferença de esquema **campo a campo** (`campo_ausente`, `tipo_diferente`, `geometria_diferente` bloqueiam;
+`srid_diferente` é reportado e não bloqueia, porque reprojetar é rotina e o documento não guarda
+coordenada). `POST /api/pacotes/importar` só passa quando a análise diz `pronto`, e faz tudo numa transação.
+
+Na importação, cada identificador é regerado — UUID de documento e ULID de nó — e todas as referências são
+reescritas numa passada só; importar o mesmo pacote duas vezes dá dois conjuntos de itens sem nenhum id em
+comum. A trava de segurança é a mesma passada: **todo UUID citado em qualquer lugar do documento** tem de
+ser outro documento do pacote ou uma fonte mapeada para item que o inquilino de destino enxerga; qualquer
+outro faz a importação inteira parar com `referencia_desconhecida`, sem criar nada. A leitura do zip
+reaproveita literalmente `app/ingestao/formatos.py::conferir_zip` (a guarda que o upload de dado já usa),
+então `../`, caminho absoluto, link simbólico, zip aninhado e zip-bomba são recusados antes de qualquer
+`json.loads`. A assinatura é o sha256 da forma canônica do manifesto (a mesma do L5-05, reproduzível com
+`jq -cS | sha256sum`), e o manifesto traz o sha256 de cada documento: um byte trocado em qualquer lugar
+vira `pacote_adulterado`.
+
+Galeria de modelos: `plat.pacote_modelo` (migração `20260908T1055`) guarda o zip em `bytea` — pacote é
+pequeno e a galeria tem de funcionar no appliance, onde pode não haver armazenamento de objetos. Escopo
+`inquilino` (só quem publicou vê) ou `plataforma` (todos veem); quem recusa o escopo `plataforma` de quem
+não é superadmin é a POLÍTICA DE LINHA, não um `if` da rota. Modelo é imutável: republicar é publicar outro.
+Tela `/modelos` lista a galeria, aceita zip do disco, monta o mapeamento fonte a fonte por seleção e mostra
+as diferenças de esquema antes do botão de importar.
+
+Limitação honesta, registrada aqui para ninguém prometer o que não existe: a parte "do canal" da hipótese
+(parceiro publica modelo para OS INQUILINOS DELE) ficou de fora porque não existe hierarquia de inquilino
+nesta plataforma — há `plataforma` e há `inquilino`, e nada entre os dois. Quando o item que criar a relação
+parceiro→inquilinos chegar, é um valor a mais no `CHECK` do escopo e uma cláusula a mais na política.
+
 ## turno 5, setembro de 2026 (item L5-14-publicacao-links-embed: publicação de documento de construtor — links e embed)
 
 Publicar um documento de construtor (`app`/`painel`) por `POST /api/itens/{id}/publicacao` faz três coisas
