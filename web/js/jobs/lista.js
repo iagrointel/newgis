@@ -178,7 +178,8 @@ function mostrarEstado(tipo, extra) {
   const caixa = document.getElementById('lista-caixa');
   if (!estado || !caixa) return;
   if (!tipo) { estado.limpar(); caixa.hidden = false; return; }
-  caixa.hidden = true;
+  // vazio deixa o cabeçalho da tabela à vista (as colunas ordenáveis continuam sendo o controle); carregando e erro escondem
+  caixa.hidden = tipo !== 'vazio';
   if (tipo === 'carregando') estado.carregando(t('tarefas.carregando'));
   else if (tipo === 'vazio') {
     const filtrado = Boolean(s.filtros.estado || s.filtros.tipo || s.filtros.periodo !== 'tudo');

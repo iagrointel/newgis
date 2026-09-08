@@ -427,13 +427,14 @@ def test_tarefas_estados_detalhe_inexistente_e_idioma(page, base_url, credenciai
     page.select_option("#f-estado", "cancelado")
     page.wait_for_selector("#lista-estado[tipo='vazio']:not([hidden])")
     assert page.locator("#lista-estado button", has_text="limpar filtros").count() == 1
-    assert page.locator("#lista-caixa").is_hidden()
+    assert page.locator("#lista-caixa").is_visible() and page.locator("#lista-corpo tr").count() == 0
     _capturar(page, "tarefas_vazio", larguras=(1280,))
     page.unroute(ROTA_JOBS)
     page.route(ROTA_JOBS, lambda r: r.fulfill(**_erro_json(500, "fila indisponível (provocado)")))
     page.locator("#lista-estado button", has_text="limpar filtros").click()
     page.wait_for_selector("#lista-estado[tipo='erro']:not([hidden])")
     assert "e2e-ux05-ref" in (page.text_content("#lista-estado") or "")
+    assert page.locator("#lista-caixa").is_hidden()
     page.unroute(ROTA_JOBS)
     page.route(ROTA_JOBS, lambda r: r.fulfill(**_erro_json(403, "sem jobs.ver (provocado)")))
     page.locator("#lista-estado button", has_text="tentar de novo").click()
