@@ -200,7 +200,8 @@ function lerComoBase64(arquivo) {
   });
 }
 
-document.getElementById('logo-arquivo').addEventListener('change', async (e) => {
+// `?.`: sem org.configurar o exigirSessao troca o <main> pela página "sem permissão" e estes elementos não existem
+document.getElementById('logo-arquivo')?.addEventListener('change', async (e) => {
   const arquivo = e.target.files?.[0];
   e.target.value = '';
   if (!arquivo) return;
@@ -215,7 +216,7 @@ document.getElementById('logo-arquivo').addEventListener('change', async (e) => 
   eventoRegistrado();
 });
 
-document.getElementById('logo-remover').addEventListener('click', async () => {
+document.getElementById('logo-remover')?.addEventListener('click', async () => {
   const aviso = document.getElementById('aviso');
   aviso.limpar();
   const r = await apagar('/api/org/logo');
@@ -380,7 +381,7 @@ function montarLdapImportar() {
   });
 }
 
-document.getElementById('smtp-testar').addEventListener('click', async () => {
+document.getElementById('smtp-testar')?.addEventListener('click', async () => {
   const aviso = document.getElementById('aviso');
   aviso.limpar();
   const bt = document.getElementById('smtp-testar');

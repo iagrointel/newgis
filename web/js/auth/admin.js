@@ -106,7 +106,8 @@ async function montarResumo() {
   for (const c of cartoes) if (c) grade.append(c);
 }
 
-const mb = (n) => `${formatarNumero(Math.round((n || 0) / (1024 * 1024)))} MB`;
+// declaração de função (içada): o `await iniciar()` de nível de módulo roda antes desta linha (achado UX-01/UX-06)
+function mb(n) { return `${formatarNumero(Math.round((n || 0) / (1024 * 1024)))} MB`; }
 
 async function montarEventos() {
   const sec = document.getElementById('eventos');

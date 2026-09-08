@@ -3,6 +3,28 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item UX-06-tela-administracao-inquilino: porta única /admin, acervo com licença, diretório LDAP, evento registrado)
+
+Trilha de interface. `/admin` é a porta única da administração: um cartão por assunto (usuários ativos, convites
+pendentes, grupos, papéis, tokens válidos, armazenamento uso/cota, usuários/cota, provedor LDAP, acervo com licença,
+acessos em 24 h) com o número lido da rota que já existe e o caminho da tela que gere o assunto; entrada na barra
+lateral por lista "ou" de privilégios; sem privilégio administrativo o hub mostra "sem permissão" com o caminho de
+volta (refutação: 403 amigável, nunca tela quebrada). `/admin/acervo` (fecha UX-10): lista com busca e domínio, ficha
+de procedência (endereço, licença, método, frescor, sha256, comando de reexecução, endereços testados) e "adicionar ao
+catálogo", com o `409 confirmacao_pii_exigida` virando diálogo de confirmação antes da segunda chamada. Seção LDAP em
+`/admin/organizacao` (`GET/PUT /api/org/ldap`, `POST /api/org/ldap/importar`, que estavam sem tela): senha de bind
+só sobe quando preenchida, mapa grupo → perfil conferido no cliente, 409 do importar nomeado. Ficha do membro
+(`GET /api/usuarios/{id}`, sem tela até aqui). Toda escrita administrativa mostra o evento registrado
+(`comum.js::eventoRegistrado`, só com `org.log_ver`, nunca finge) com link para `/admin/log?aba=eventos&tipo=`; o
+log ganhou link profundo. Estados explícitos (`estadoDeLista`) nas seis telas. Achados consertados: o gerador de
+cobertura dava o método do PRIMEIRO nome da linha a todos os literais (`PUT /api/papeis/{id}` aparecia como lacuna
+sem ser) e procurava o literal sem delimitador; `/admin/organizacao` registrava ouvintes em elementos que a página
+"sem permissão" removeu (pageerror para quem não tem `org.configurar`); função declarada depois do `await` de
+módulo em `/admin` (TDZ). e2e `tests/e2e/test_ux06_admin.py` (hub, visualizador conforme os privilégios reais do
+perfil + sessão sem privilégio interceptada, acervo com o caminho LGPD, LDAP, PUT de papel, ficha do membro,
+estados, link profundo); suítes anteriores das seis telas, convite, login, i18n, layout e guia passam. Cobertura
+regenerada: 238 rotas, 34 lacunas de escrita (eram 38).
+
 ## turno 8, setembro de 2026 (item UX-05-telas-conexoes-uploads-tarefas-compartilhado: conexões com controle, fila de envio, tarefas traduzidas, página pública sem chrome)
 
 Trilha de interface. `/conexoes` ganhou criar, editar e apagar (confirmação) por `<plat-formulario>` — nome, tipo
