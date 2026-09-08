@@ -50,7 +50,10 @@ def gerar_grade(centro: list[float], raio_km: float, resolucao_m: float) -> list
 
 
 def _alcancaveis(centro: list[float], grade: list[list[float]], perfil: str, orcamento_s: float):
-    resultado = osrm.tabela_1_para_n(centro, grade, perfil)
+    """Uma linha de matriz (1 fonte × N destinos) partida em blocos do teto do OSRM: a grade de uma isócrona
+    grande passa de `--max-table-size` e, antes de partir em blocos, um pedido de 30 min estourava o tamanho
+    de URL do cliente (achado no item L2-05-f, ao pedir a isócrona de 30 min do portão)."""
+    resultado = osrm.matriz_grande([centro], grade, perfil)
     duracoes = resultado["durations"][0]
     return [grade[i] for i, d in enumerate(duracoes) if d is not None and d <= orcamento_s]
 
