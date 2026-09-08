@@ -76,8 +76,10 @@ CREATE TABLE IF NOT EXISTS plat.fluxo_metrica (
   descartados_filtro   bigint NOT NULL DEFAULT 0,
   descartados_limite   bigint NOT NULL DEFAULT 0,
   descartados_invalido bigint NOT NULL DEFAULT 0,
-  atraso_ms_ultimo     int,
-  atraso_ms_p50        int,
+  -- bigint, não int: o atraso é (recebimento - tempo do evento) e uma carga histórica legítima tem meses
+  -- de atraso, o que estoura int4 em 24 dias. Achado no teste do receptor, com um evento de janeiro.
+  atraso_ms_ultimo     bigint,
+  atraso_ms_p50        bigint,
   ultimo_evento_em     timestamptz,
   atualizado_em        timestamptz NOT NULL DEFAULT now()
 );
@@ -144,6 +146,18 @@ SELECT plat.fluxo_particao_garantir(now() + interval '1 month');
 GRANT SELECT, INSERT, DELETE ON plat.fluxo_evento TO plat_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON plat.fluxo_fonte, plat.fluxo_metrica TO plat_app;
 GRANT EXECUTE ON FUNCTION plat.fluxo_particao_garantir(timestamptz) TO plat_app;
+
+-- O processo plat-fluxo atende TODOS os inquilinos e conecta como `plat_app`, que sob RLS não enxerga
+-- nada sem contexto de inquilino — nem `plat.tenant`, nem `plat.fluxo_fonte`. Para saber QUAIS inquilinos
+-- têm fonte (e então ler a lista de cada um já com o contexto certo), existe esta função SECURITY DEFINER,
+-- no mesmo padrão de `plat.auth_login`/`plat.auth_token`: ela devolve SÓ os identificadores de inquilino que
+-- têm ao menos uma fonte de fluxo — nenhum nome, nenhuma configuração, nenhuma credencial. Sem ela o
+-- processo teria de conectar como uma role sem RLS, que é justamente o que o isolamento não admite.
+CREATE OR REPLACE FUNCTION plat.fluxo_inquilinos() RETURNS SETOF int
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = plat, public AS
+  $$ SELECT DISTINCT tenant_id FROM plat.fluxo_fonte $$;
+REVOKE EXECUTE ON FUNCTION plat.fluxo_inquilinos() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION plat.fluxo_inquilinos() TO plat_app;
 
 INSERT INTO plat.evento_tipo(nome, descricao) VALUES
   ('fluxos/criar', 'fonte de fluxo criada (tipo, nome)'),

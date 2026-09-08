@@ -93,12 +93,14 @@ class Registro:
 
     # ------------------------------------------------------------ carga
     def carregar(self) -> int:
-        """Lê TODAS as fontes de todos os inquilinos. Roda como `plat_app` sem contexto de inquilino, o que
-        a RLS zeraria — por isso a consulta usa a função de leitura por inquilino: uma passada por inquilino
-        que tem fonte. Devolve quantas fontes ficaram no registro."""
+        """Lê TODAS as fontes de todos os inquilinos. Como `plat_app` sem contexto de inquilino a RLS não
+        devolve linha nenhuma — nem de `plat.tenant`, nem de `plat.fluxo_fonte` —, então a lista de
+        inquilinos vem da função SECURITY DEFINER `plat.fluxo_inquilinos()` (só identificadores) e as fontes
+        de cada um são lidas JÁ com o contexto daquele inquilino, sob a RLS normal. Devolve quantas fontes
+        ficaram no registro."""
         try:
             with db.db() as cur:
-                cur.execute("SELECT DISTINCT tenant_id FROM plat.fluxo_fonte")
+                cur.execute("SELECT plat.fluxo_inquilinos() AS tenant_id")
                 inquilinos = [r["tenant_id"] for r in cur.fetchall()]
         except Exception as e:  # noqa: BLE001 — banco fora: mantém o registro anterior e segue
             self.erro_da_carga = f"{type(e).__name__}: {e}"

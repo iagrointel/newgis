@@ -76,7 +76,10 @@ def url_websocket_validada(url: str) -> str:
     equivalente = {"ws": "http", "wss": "https"}.get(partes.scheme)
     if equivalente is None:
         raise ErroConfig("url_insegura", "esquema tem de ser ws:// ou wss://")
-    seguranca.validar_url(urlunsplit((equivalente, partes.netloc, partes.path, partes.query, "")))
+    try:
+        seguranca.validar_url(urlunsplit((equivalente, partes.netloc, partes.path, partes.query, "")))
+    except seguranca.ErroURLInsegura as e:
+        raise ErroConfig("url_insegura", f"URL recusada: {e.motivo}") from e
     return url
 
 
@@ -84,7 +87,10 @@ def _host_porta_validados(host: str, porta: int, *, tls: bool) -> None:
     """MQTT e AIS não falam HTTP, mas o host é um endereço de rede igual: passa pela MESMA validação de
     SSRF (resolução de DNS + faixas privadas/loopback/link-local) que uma URL de conector."""
     esquema = "https" if tls else "http"
-    seguranca.validar_url(f"{esquema}://{host}:{porta}/")
+    try:
+        seguranca.validar_url(f"{esquema}://{host}:{porta}/")
+    except seguranca.ErroURLInsegura as e:
+        raise ErroConfig("url_insegura", f"endereço recusado: {e.motivo}") from e
 
 
 def validar_config(tipo: str, config: dict) -> dict:
