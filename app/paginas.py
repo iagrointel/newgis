@@ -39,6 +39,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- editor de tema do inquilino (L5-10-temas-marca)
+    "/temas": "temas.html",
 }
 router = APIRouter()
 
