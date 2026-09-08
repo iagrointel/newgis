@@ -178,3 +178,39 @@ class TopoArestaModelo(BaseModel):
     comprimento_m: float
     fase_bitmask: int | None
     atributos: dict
+
+
+# --- gás e esgoto (item L4-05-e-gas-e-esgoto) ----------------------------------------------------------
+
+class ConferenciaEscoamento(BaseModel):
+    """Resposta da conferência de escoamento por gravidade. `alterou_a_rede` é sempre falso: a conferência
+    nomeia a divergência e nunca inverte o trecho."""
+
+    total: int
+    sob_pressao: int
+    conferidos: int
+    conformes: int
+    com_testemunha_nas_estruturas: int
+    percentual_concordancia: float | None
+    alterou_a_rede: bool
+    problemas: list[dict]
+
+
+class ConferenciaPressao(BaseModel):
+    controladores: int
+    controladores_conformes: int
+    transicoes_sem_regulador: int
+    tolerancia_m: float
+    tiers: list[dict]
+    alterou_a_rede: bool
+    problemas: list[dict]
+
+
+class TeksiImportacaoResultado(BaseModel):
+    rede_id: str
+    sha256: str
+    bytes: int
+    contagens: dict
+    gravadas: dict
+    recusadas: list[dict]
+    avisos: list[dict]
