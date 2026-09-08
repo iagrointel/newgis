@@ -169,11 +169,6 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     })
     assert r.status_code == 201, r.text
     execucao_b = r.json()
-    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
-                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
-                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
-                      convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
     # L3-01-a/b: modelo, conjunto de unidades e execução de B (a camada do modelo é o item de B, que já existe)
     definicao = amc_exemplos.modelo_sem_camada_externa()
     definicao["nome"] = f"{PREFIXO}amc-{sufixo}"
@@ -192,8 +187,27 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, camada_acervo=camada_acervo,
-                      conexao_b=conexao_b, convite_b=convite_b, amc_modelo_b=amc_modelo_b,
-                      amc_conjunto_b=amc_conjunto_b, amc_execucao_b=amc_execucao_b)
+                      conexao_b=conexao_b, convite_b=convite_b,
+                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b,
+                      amc_modelo_b=amc_modelo_b, amc_conjunto_b=amc_conjunto_b, amc_execucao_b=amc_execucao_b)
+
+
+def amc_criterios_feicao_pedido() -> dict:
+    """Pedido mínimo do item L3-06: duas feições do próprio chamador, um critério de atributo e um de raio."""
+    feicoes = [
+        {"id": "cf1", "geometry": {"type": "Point", "coordinates": [-46.60, -23.50]}, "properties": {"a": 1.0}},
+        {"id": "cf2", "geometry": {"type": "Point", "coordinates": [-46.59, -23.49]}, "properties": {"a": 5.0}},
+    ]
+    return {
+        "feicoes": feicoes,
+        "camadas": {"pontos": [{"id": "cp1", "geometry": {"type": "Point", "coordinates": [-46.595, -23.495]},
+                                "properties": {}}]},
+        "criterios": [
+            {"id": "a", "tipo": "atributo", "campo": "a", "influencia": "positiva", "peso": 1},
+            {"id": "perto", "tipo": "contagem_raio", "camada": "pontos", "raio_m": 5000, "influencia": "positiva",
+             "peso": 1},
+        ],
+    }
 
 
 def amc_feicoes(*ids: str) -> dict:
@@ -1028,6 +1042,29 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("DELETE", "/api/amc/execucoes/{execucao_id}"): Caso(lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}"),
     ("GET", "/api/amc/execucoes/{execucao_id}/resultados"): Caso(
         lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}/resultados"
+    ),
+    ("GET", "/api/amc/execucoes/{execucao_id}/unidades/{unidade_id}/explicacao"): Caso(
+        lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}/unidades/b1/explicacao"
+    ),
+    # ---- L3-17 e L3-06: cálculo sobre o que chega no corpo, sem tocar em linha de inquilino nenhuma. Não há
+    # recurso de B a apontar; o que se prova é que a resposta de A não carrega marca de B e que B fica intacto.
+    ("POST", "/api/amc/similaridade"): Caso(
+        lambda p: "/api/amc/similaridade",
+        lambda p: {"unidades": {"u1": {"a": 1.0}, "u2": {"a": 2.0}}, "referencias": ["u1"]},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/api/amc/similaridade/exportar"): Caso(
+        lambda p: "/api/amc/similaridade/exportar?formato=csv",
+        lambda p: {"unidades": {"u1": {"a": 1.0}, "u2": {"a": 2.0}}, "referencias": ["u1"]},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/api/amc/criterios-feicao"): Caso(
+        lambda p: "/api/amc/criterios-feicao", lambda p: amc_criterios_feicao_pedido(),
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("POST", "/api/amc/criterios-feicao/exportar"): Caso(
+        lambda p: "/api/amc/criterios-feicao/exportar?formato=csv", lambda p: amc_criterios_feicao_pedido(),
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
 }
 

@@ -161,4 +161,24 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- motor multicritério (L3-01-a/b; vocabulário na migração 20260907T1206_amc.sql). Modelo, conjunto e
+    # execução são tabelas do inquilino com dono humano, então toda escrita narra evento. As entradas abaixo
+    # faltavam desde que as rotas nasceram: só não reprovavam porque docs/openapi.json comitado ainda não
+    # trazia /api/amc (o arquivo foi regerado no item L3-06-criterios-de-feicao).
+    ("POST", "/api/amc/modelos"): ["amc/modelo_criar"],
+    ("PUT", "/api/amc/modelos/{modelo_id}"): ["amc/modelo_atualizar"],
+    ("DELETE", "/api/amc/modelos/{modelo_id}"): ["amc/modelo_apagar"],
+    ("POST", "/api/amc/conjuntos"): ["amc/conjunto_criar"],
+    ("DELETE", "/api/amc/conjuntos/{conjunto_id}"): ["amc/conjunto_apagar"],
+    ("POST", "/api/amc/execucoes"): ["amc/execucao_criar"],
+    ("DELETE", "/api/amc/execucoes/{execucao_id}"): ["amc/execucao_apagar"],
+    # cálculo puro sobre o que chegou no corpo: não cria, não muda e não apaga linha de inquilino nenhuma —
+    # mesma decisão já usada acima em /api/rota, /api/matriz e /api/geocodificar. `validar` é POST por causa do
+    # tamanho do documento, não porque escreva algo.
+    ("POST", "/api/amc/modelos/validar"): [],
+    ("POST", "/api/amc/similaridade"): [],
+    ("POST", "/api/amc/similaridade/exportar"): [],
+    # ---- critérios sobre a própria feição (L3-06-criterios-de-feicao): idem, cálculo sobre o corpo do pedido
+    ("POST", "/api/amc/criterios-feicao"): [],
+    ("POST", "/api/amc/criterios-feicao/exportar"): [],
 }
