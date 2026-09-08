@@ -53,9 +53,11 @@ from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
-from app.multiescala.rotas import router as rotas_multiescala
 from app.mapa.rotas import router as rotas_mapa
 from app.mapas.rotas import router as rotas_mapas
+from app.multiescala.rotas import router as rotas_multiescala
+from app.ogc_mapas.rotas_wms import router as rotas_wms
+from app.ogc_mapas.rotas_wmts import router as rotas_wmts
 from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.render.rotas import router as rotas_render
@@ -186,6 +188,9 @@ ROUTERS = [
     rotas_diretorio_esri,
     rotas_ogc_features,
     rotas_wfs,
+    # --- WMS 1.3.0 e WMTS 1.0.0 por token (L2-04-i): imagem da mesma camada, o que QGIS/Pro/AGOL leem
+    rotas_wms,
+    rotas_wmts,
     # --- escrita compatível Esri (L2-04-d): applyEdits/addFeatures/updateFeatures/deleteFeatures, calculate,
     # anexos e uploads sobre a MESMA porta de escrita do L2-03-a
     rotas_edicao_esri,
