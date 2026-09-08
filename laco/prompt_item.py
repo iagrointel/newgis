@@ -42,7 +42,7 @@ SAIDA = f"{BASE}/vivo/prompts"
 DIR_TRILHA = f"{BASE}/var/trilha"
 MAPA_PORTAS = f"{DIR_TRILHA}/portas.json"
 PORTAS_HISTORICAS = {"garage": 8161, "stac": 8162, "valida": 8163, "amc": 8164}
-FAIXA_PORTAS = range(8165, 8200)
+FAIXA_PORTAS = range(8165, 8400)  # 06/09: 8165-8199 esgotou com 35 trilhas; ampliada
 
 
 def _portas_gravadas():

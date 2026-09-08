@@ -100,6 +100,10 @@ cd /home/dev/plataforma
 # script chamava o binario pelo nome. Caminho absoluto resolve, e e a mesma regra que o proprio
 # SKILL.md ja manda seguir para setsid/nohup.
 CLAUDE=/home/dev/.local/bin/claude
+# 06/09: se laco/var/kimi.env existir, o turno autônomo roda no modelo do dono (Kimi K3, janela de 1 Mi)
+# em vez de consumir a cota da conta Anthropic — foi ela que derrubou agentes em massa 3x hoje.
+if [ -f "$B/var/kimi.env" ]; then set -a; . "$B/var/kimi.env"; set +a; unset ANTHROPIC_API_KEY
+  echo "[$AG] AUTOTURNO: modelo $ANTHROPIC_MODEL via $ANTHROPIC_BASE_URL" >> "$LOG"; fi
 if [ ! -x "$CLAUDE" ]; then echo "[$AG] AUTOTURNO abortado: $CLAUDE nao existe" >> "$LOG"; exit 0; fi
 setsid nohup "$CLAUDE" -p "Execute UM turno do laço PLATAFORMA ENTERPRISE seguindo à risca /home/dev/.claude/skills/plataforma-enterprise/SKILL.md (você é o GERENTE). Ao terminar o turno, pare." --dangerously-skip-permissions \
   > "$B/autoturno_$(date +%Y%m%d_%H%M).log" 2>&1 < /dev/null &

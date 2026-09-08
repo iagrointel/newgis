@@ -12,7 +12,7 @@ O ArcGIS Enterprise publica um `GeocodeServer` (locator) a partir de uma tabela 
 endereços — no Brasil, tipicamente construída sobre o Cadastro Nacional de Endereços para Fins
 Estatísticos (CNEFE) do IBGE, base do Censo 2022, porque é o único cadastro de endereço nacional aberto
 com coordenada por face de quadra (o cadastro dos Correios não é aberto). A casa já usa CNEFE em três
-frentes (`cbre.geo_cnefe_*`, `certaja.cnefe*`, `edp_es.cnefe`), sempre como camada de apoio (agregado por
+frentes (`<frente_a>.geo_cnefe_*`, `<frente_b>.cnefe*`, `<frente_c>.cnefe`), sempre como camada de apoio (agregado por
 CEP/bairro, ou já casado com outra fonte) — nenhuma delas é um GEOCODIFICADOR (busca por endereço →
 coordenada, hierarquia de recuo, reverso, sugestão, protocolo Esri). Este item constrói isso do zero,
 schema `plat`, sem tabela de nenhuma outra frente tocada.

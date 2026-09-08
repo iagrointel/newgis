@@ -8,11 +8,11 @@ from app.erros import ErroAPI
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 ESCOPO = re.compile(
     rf"^(catalogo:ler|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|rota:usar|"
-    rf"geocodificar:usar|amc:usar|admin:inquilino)$"
+    rf"geocodificar:usar|amc:usar|multiescala:usar|admin:inquilino)$"
 )
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "amc:usar", "admin:inquilino",
+    "geocodificar:usar", "amc:usar", "multiescala:usar", "admin:inquilino",
 )
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
@@ -24,6 +24,8 @@ DESCRICAO = {
     "geocodificar:usar": "geocodificar, geocodificar reverso e sugerir endereço (L2-11-b; dado aberto CNEFE, "
     "sem PII); mesmo escopo cobre o GeocodeServer compatível Esri",
     "amc:usar": "criar e executar modelo multicritério (exige analise.amc no dono; L3-01-a)",
+    "multiescala:usar": "criar área de estudo, fator e amostra, e rodar execução macro/micro do motor "
+    "multicritério em grades aninhadas (L3-19-multiescala; dado e execução do próprio inquilino)",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 

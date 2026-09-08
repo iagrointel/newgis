@@ -16,10 +16,22 @@ ROOT = Path(__file__).resolve().parents[2]
 SYNC = ROOT / "scripts" / "acervo_sync.py"
 
 
+# `sudo` limpa o ambiente do processo filho (env_reset): PLAT_SCHEMA/PLAT_SCHEMA_TRABALHO precisam
+# ser repassados na linha de comando com `env`, senao o script roda com o schema padrao e escreve no
+# `plat` de PRODUCAO enquanto o teste le do schema isolado -- era esta a causa da falha destes dois
+# arquivos em QUALQUER trilha (achado F9).
+_REPASSAR = ("PLAT_SCHEMA", "PLAT_SCHEMA_TRABALHO", "PLAT_DSN", "PLAT_CANAL_JOB")
+
+
+def _env_da_trilha() -> list[str]:
+    passar = [f"{k}={os.environ[k]}" for k in _REPASSAR if k in os.environ]
+    return ["env", *passar] if passar else []
+
+
 def _rodar_sync(limite: int, servidor: str = "vultr", banco: str = "iagro_sat"):
     return subprocess.run(
-        ["sudo", "-u", "postgres", "python3", str(SYNC), "--banco", banco, "--servidor", servidor,
-         "--limite", str(limite)],
+        ["sudo", "-u", "postgres", *_env_da_trilha(), "python3", str(SYNC), "--banco", banco,
+         "--servidor", servidor, "--limite", str(limite)],
         capture_output=True, text=True, env=os.environ.copy(), timeout=320,
     )
 
@@ -115,10 +127,14 @@ def test_pendente_de_licenca_bate_com_acervo_fonte(conexao_plat_app):
 
 
 def test_plat_app_so_le_acervo_camada(conexao_plat_app):
+    """O papel da aplicacao so LE o registro. O nome do papel vem de `current_user`, nao escrito na mao:
+    o reescritor de schema troca `plat` por `plat_t<trilha>` mas nao toca em `plat_app` (o `_` e caractere
+    de palavra, achado F6), entao a forma literal media o papel de PRODUCAO e voltava vazia em toda trilha.
+    Como a conexao ja e a do papel da aplicacao daquele ambiente, `current_user` e a resposta certa nos dois."""
     with conexao_plat_app.cursor() as cur:
         cur.execute(
             "SELECT privilege_type FROM information_schema.role_table_grants "
-            "WHERE table_schema = 'plat' AND table_name = 'acervo_camada' AND grantee = 'plat_app'"
+            "WHERE table_schema = 'plat' AND table_name = 'acervo_camada' AND grantee = current_user"
         )
         privilegios = {r["privilege_type"] for r in cur.fetchall()}
     assert privilegios == {"SELECT"}

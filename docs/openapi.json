@@ -10174,7 +10174,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "-",
+    "x-privilegio": "publico"
    },
    "post": {
     "tags": [
@@ -10193,7 +10194,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "-",
+    "x-privilegio": "publico"
    }
   },
   "/rest/services/Geocodificador/GeocodeServer/findAddressCandidates": {
@@ -10213,7 +10215,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    },
    "post": {
     "tags": [
@@ -10231,7 +10234,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    }
   },
   "/rest/services/Geocodificador/GeocodeServer/reverseGeocode": {
@@ -10251,7 +10255,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    },
    "post": {
     "tags": [
@@ -10269,7 +10274,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    }
   },
   "/rest/services/Geocodificador/GeocodeServer/suggest": {
@@ -10289,7 +10295,8 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    }
   },
   "/rest/services/Geocodificador/GeocodeServer/geocodeAddresses": {
@@ -10310,34 +10317,34 @@
       }
      }
     },
-    "x-auth": "S/T"
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    }
   },
-  "/api/amc/modelos/validar": {
+  "/api/multiescala/conjuntos": {
    "post": {
     "tags": [
-     "amc"
+     "multiescala"
     ],
-    "summary": "Validar",
-    "description": "Valida sem gravar (não toca o banco; qualquer membro autenticado pode conferir o próprio rascunho).",
-    "operationId": "validar_api_amc_modelos_validar_post",
+    "summary": "Criar Conjunto",
+    "operationId": "criar_conjunto_api_multiescala_conjuntos_post",
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/ValidarEntrada"
+        "$ref": "#/components/schemas/ConjuntoEntrada"
        }
       }
-     },
-     "required": true
+     }
     },
     "responses": {
-     "200": {
+     "201": {
       "description": "Successful Response",
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/ModeloValidado"
+         "$ref": "#/components/schemas/Conjunto"
         }
        }
       }
@@ -10348,29 +10355,6 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "rls:visibilidade"
-   }
-  },
-  "/api/amc/modelos": {
-   "get": {
-    "tags": [
-     "amc"
-    ],
-    "summary": "Listar Modelos",
-    "operationId": "listar_modelos_api_amc_modelos_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/ModeloPagina"
         }
        }
       }
@@ -10379,29 +10363,53 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    },
-   "post": {
+   "get": {
     "tags": [
-     "amc"
+     "multiescala"
     ],
-    "summary": "Criar",
-    "operationId": "criar_api_amc_modelos_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/ModeloEntrada"
-       }
+    "summary": "Listar Conjuntos",
+    "operationId": "listar_conjuntos_api_multiescala_conjuntos_get",
+    "parameters": [
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
       }
      },
-     "required": true
-    },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
     "responses": {
-     "201": {
+     "200": {
       "description": "Successful Response",
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/Modelo"
+         "$ref": "#/components/schemas/ConjuntoPagina"
         }
        }
       }
@@ -10418,16 +10426,16 @@
      }
     },
     "x-auth": "S/T",
-    "x-privilegio": "analise.amc"
+    "x-privilegio": "rls:visibilidade"
    }
   },
-  "/api/amc/modelos/{id}": {
+  "/api/multiescala/conjuntos/{id}": {
    "get": {
     "tags": [
-     "amc"
+     "multiescala"
     ],
-    "summary": "Ver Modelo",
-    "operationId": "ver_modelo_api_amc_modelos__id__get",
+    "summary": "Ver Conjunto",
+    "operationId": "ver_conjunto_api_multiescala_conjuntos__id__get",
     "parameters": [
      {
       "name": "id",
@@ -10445,7 +10453,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/Modelo"
+         "$ref": "#/components/schemas/Conjunto"
         }
        }
       }
@@ -10464,12 +10472,238 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    },
-   "put": {
+   "delete": {
     "tags": [
-     "amc"
+     "multiescala"
     ],
-    "summary": "Editar Modelo",
-    "operationId": "editar_modelo_api_amc_modelos__id__put",
+    "summary": "Apagar Conjunto",
+    "description": "Cascata (FK `ON DELETE CASCADE` da migração): apaga grades, células, execuções e seus fatores/resultados\ndo conjunto inteiro. Nenhum fator é apagado (fatores são do inquilino, reusáveis entre conjuntos).",
+    "operationId": "apagar_conjunto_api_multiescala_conjuntos__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/multiescala/fatores": {
+   "post": {
+    "tags": [
+     "multiescala"
+    ],
+    "summary": "Criar Fator",
+    "operationId": "criar_fator_api_multiescala_fatores_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FatorEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Fator"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "get": {
+    "tags": [
+     "multiescala"
+    ],
+    "summary": "Listar Fatores",
+    "operationId": "listar_fatores_api_multiescala_fatores_get",
+    "parameters": [
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FatorPagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/multiescala/fatores/{id}": {
+   "get": {
+    "tags": [
+     "multiescala"
+    ],
+    "summary": "Ver Fator",
+    "operationId": "ver_fator_api_multiescala_fatores__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Fator"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "delete": {
+    "tags": [
+     "multiescala"
+    ],
+    "summary": "Apagar Fator",
+    "description": "Cascata: amostras, blocos calculados e as linhas do fator em qualquer execução (passada ou futura) que\no tenha usado. A execução em si (e o resultado por célula dos OUTROS fatores dela) não é afetada.",
+    "operationId": "apagar_fator_api_multiescala_fatores__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/multiescala/fatores/{id}/amostras": {
+   "post": {
+    "tags": [
+     "multiescala"
+    ],
+    "summary": "Carregar Amostras",
+    "operationId": "carregar_amostras_api_multiescala_fatores__id__amostras_post",
     "parameters": [
      {
       "name": "id",
@@ -10486,109 +10720,10 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/ModeloEditar"
+        "$ref": "#/components/schemas/AmostrasEntrada"
        }
       }
      }
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/Modelo"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "analise.amc"
-   },
-   "delete": {
-    "tags": [
-     "amc"
-    ],
-    "summary": "Apagar Modelo",
-    "operationId": "apagar_modelo_api_amc_modelos__id__delete",
-    "parameters": [
-     {
-      "name": "id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Id"
-      }
-     }
-    ],
-    "responses": {
-     "204": {
-      "description": "Successful Response"
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "analise.amc"
-   }
-  },
-  "/api/amc/conjuntos": {
-   "get": {
-    "tags": [
-     "amc"
-    ],
-    "summary": "Listar Conjuntos",
-    "operationId": "listar_conjuntos_api_amc_conjuntos_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/ConjuntoPagina"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "rls:visibilidade"
-   },
-   "post": {
-    "tags": [
-     "amc"
-    ],
-    "summary": "Criar Conjunto",
-    "operationId": "criar_conjunto_api_amc_conjuntos_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/ConjuntoEntrada"
-       }
-      }
-     },
-     "required": true
     },
     "responses": {
      "201": {
@@ -10596,51 +10731,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/Conjunto"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "analise.amc"
-   }
-  },
-  "/api/amc/conjuntos/{id}": {
-   "get": {
-    "tags": [
-     "amc"
-    ],
-    "summary": "Ver Conjunto",
-    "operationId": "ver_conjunto_api_amc_conjuntos__id__get",
-    "parameters": [
-     {
-      "name": "id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/Conjunto"
+         "$ref": "#/components/schemas/AmostrasResultado"
         }
        }
       }
@@ -10658,13 +10749,16 @@
     },
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
-   },
-   "delete": {
+   }
+  },
+  "/api/multiescala/conjuntos/{id}/macro": {
+   "post": {
     "tags": [
-     "amc"
+     "multiescala"
     ],
-    "summary": "Apagar Conjunto",
-    "operationId": "apagar_conjunto_api_amc_conjuntos__id__delete",
+    "summary": "Executar Macro",
+    "description": "Gera a grade macro sobre a área inteira e executa a combinação — a primeira das 'duas execuções\nligadas' do portão. `aprovacao_tipo`/`aprovacao_valor` decidem as regiões que seguem para o micro.",
+    "operationId": "executar_macro_api_multiescala_conjuntos__id__macro_post",
     "parameters": [
      {
       "name": "id",
@@ -10676,32 +10770,6 @@
       }
      }
     ],
-    "responses": {
-     "204": {
-      "description": "Successful Response"
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "analise.amc"
-   }
-  },
-  "/api/amc/execucoes": {
-   "post": {
-    "tags": [
-     "amc"
-    ],
-    "summary": "Criar Execucao",
-    "operationId": "criar_execucao_api_amc_execucoes_post",
     "requestBody": {
      "required": true,
      "content": {
@@ -10735,39 +10803,45 @@
      }
     },
     "x-auth": "S/T",
-    "x-privilegio": "analise.amc"
-   },
-   "get": {
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/multiescala/execucoes/{id}/micro": {
+   "post": {
     "tags": [
-     "amc"
+     "multiescala"
     ],
-    "summary": "Listar Execucoes",
-    "operationId": "listar_execucoes_api_amc_execucoes_get",
+    "summary": "Executar Micro",
+    "description": "Gera a grade micro SÓ dentro das regiões aprovadas pela execução macro `id` e executa a combinação — a\nsegunda das 'duas execuções ligadas'. Célula micro fora das regiões macro nunca é gerada (aritmético, não\nfiltrado depois): é a cláusula central do portão.",
+    "operationId": "executar_micro_api_multiescala_execucoes__id__micro_post",
     "parameters": [
      {
-      "name": "modelo_id",
-      "in": "query",
-      "required": false,
+      "name": "id",
+      "in": "path",
+      "required": true,
       "schema": {
-       "anyOf": [
-        {
-         "type": "string"
-        },
-        {
-         "type": "null"
-        }
-       ],
-       "title": "Modelo Id"
+       "type": "string",
+       "title": "Id"
       }
      }
     ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ExecucaoEntrada"
+       }
+      }
+     }
+    },
     "responses": {
-     "200": {
+     "201": {
       "description": "Successful Response",
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/ExecucaoPagina"
+         "$ref": "#/components/schemas/Execucao"
         }
        }
       }
@@ -10787,13 +10861,13 @@
     "x-privilegio": "rls:visibilidade"
    }
   },
-  "/api/amc/execucoes/{id}": {
+  "/api/multiescala/execucoes/{id}": {
    "get": {
     "tags": [
-     "amc"
+     "multiescala"
     ],
     "summary": "Ver Execucao",
-    "operationId": "ver_execucao_api_amc_execucoes__id__get",
+    "operationId": "ver_execucao_api_multiescala_execucoes__id__get",
     "parameters": [
      {
       "name": "id",
@@ -10829,59 +10903,62 @@
     },
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
-   },
-   "delete": {
-    "tags": [
-     "amc"
-    ],
-    "summary": "Apagar Execucao",
-    "operationId": "apagar_execucao_api_amc_execucoes__id__delete",
-    "parameters": [
-     {
-      "name": "id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "title": "Id"
-      }
-     }
-    ],
-    "responses": {
-     "204": {
-      "description": "Successful Response"
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "x-auth": "S/T",
-    "x-privilegio": "analise.amc"
    }
   },
-  "/api/amc/execucoes/{id}/resultados": {
+  "/api/multiescala/execucoes": {
    "get": {
     "tags": [
-     "amc"
+     "multiescala"
     ],
-    "summary": "Listar Resultados",
-    "description": "Explicabilidade é o contrato (A9/A10): a tabela existe vazia até L3-01-d calcular; a rota já garante que\nA não lê resultado de execução de B (404 na execução-mãe barra tudo antes de tocar amc_resultado).",
-    "operationId": "listar_resultados_api_amc_execucoes__id__resultados_get",
+    "summary": "Listar Execucoes",
+    "operationId": "listar_execucoes_api_multiescala_execucoes_get",
     "parameters": [
      {
-      "name": "id",
-      "in": "path",
-      "required": true,
+      "name": "conjunto_id",
+      "in": "query",
+      "required": false,
       "schema": {
-       "type": "string",
-       "title": "Id"
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Conjunto Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
       }
      }
     ],
@@ -10891,7 +10968,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/ResultadoPagina"
+         "$ref": "#/components/schemas/ExecucaoPagina"
         }
        }
       }
@@ -11570,58 +11647,71 @@
     ],
     "title": "Agenda"
    },
-   "CamadaEntrada": {
+   "AmostraEntrada": {
     "properties": {
-     "id": {
-      "type": "string",
-      "maxLength": 200,
-      "minLength": 1,
-      "title": "Id"
+     "lon": {
+      "type": "number",
+      "maximum": 180.0,
+      "minimum": -180.0,
+      "title": "Lon"
      },
-     "papel": {
-      "anyOf": [
-       {
-        "type": "string",
-        "maxLength": 100
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Papel"
+     "lat": {
+      "type": "number",
+      "maximum": 90.0,
+      "minimum": -90.0,
+      "title": "Lat"
      },
-     "sha256": {
-      "anyOf": [
-       {
-        "type": "string",
-        "pattern": "^[0-9a-f]{64}$"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Sha256"
-     },
-     "contagem": {
-      "anyOf": [
-       {
-        "type": "integer",
-        "minimum": 0.0
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Contagem"
+     "valor": {
+      "type": "number",
+      "title": "Valor"
      }
     },
     "additionalProperties": false,
     "type": "object",
     "required": [
-     "id"
+     "lon",
+     "lat",
+     "valor"
     ],
-    "title": "CamadaEntrada",
-    "description": "Proveniência DECLARADA de uma camada de entrada (A10): id do item/fonte, sha256 ou 'nao_registrado',\ncontagem ou null. A resolução automática (medir de verdade a camada hospedada) é do item de extração\n(L3-01-c); aqui a execução só CONGELA o que foi declarado no momento em que rodou."
+    "title": "AmostraEntrada"
+   },
+   "AmostrasEntrada": {
+    "properties": {
+     "amostras": {
+      "items": {
+       "$ref": "#/components/schemas/AmostraEntrada"
+      },
+      "type": "array",
+      "maxItems": 20000,
+      "minItems": 1,
+      "title": "Amostras"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "amostras"
+    ],
+    "title": "AmostrasEntrada"
+   },
+   "AmostrasResultado": {
+    "properties": {
+     "fator_id": {
+      "type": "string",
+      "title": "Fator Id"
+     },
+     "gravadas": {
+      "type": "integer",
+      "title": "Gravadas"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "fator_id",
+     "gravadas"
+    ],
+    "title": "AmostrasResultado"
    },
    "CategoriaNo": {
     "properties": {
@@ -12382,46 +12472,32 @@
       "type": "string",
       "title": "Nome"
      },
-     "tipo": {
+     "srid_trabalho": {
+      "type": "integer",
+      "title": "Srid Trabalho"
+     },
+     "srid_nome": {
       "type": "string",
-      "title": "Tipo"
+      "title": "Srid Nome"
      },
-     "lado_m": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Lado M"
+     "origem_x_m": {
+      "type": "number",
+      "title": "Origem X M"
      },
-     "n_unidades": {
-      "anyOf": [
-       {
-        "type": "integer"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "N Unidades"
+     "origem_y_m": {
+      "type": "number",
+      "title": "Origem Y M"
      },
-     "config": {
-      "additionalProperties": true,
-      "type": "object",
-      "title": "Config"
+     "largura_m": {
+      "type": "number",
+      "title": "Largura M"
+     },
+     "altura_m": {
+      "type": "number",
+      "title": "Altura M"
      },
      "criado_em": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
+      "type": "string",
       "title": "Criado Em"
      }
     },
@@ -12430,10 +12506,12 @@
     "required": [
      "id",
      "nome",
-     "tipo",
-     "lado_m",
-     "n_unidades",
-     "config",
+     "srid_trabalho",
+     "srid_nome",
+     "origem_x_m",
+     "origem_y_m",
+     "largura_m",
+     "altura_m",
      "criado_em"
     ],
     "title": "Conjunto"
@@ -12442,50 +12520,22 @@
     "properties": {
      "nome": {
       "type": "string",
-      "maxLength": 250,
+      "maxLength": 200,
       "minLength": 1,
       "title": "Nome"
      },
-     "tipo": {
-      "type": "string",
-      "pattern": "^(hexagonal|quadrada|feicoes)$",
-      "title": "Tipo"
-     },
-     "lado_m": {
-      "anyOf": [
-       {
-        "type": "number",
-        "exclusiveMinimum": 0.0
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Lado M"
-     },
-     "n_unidades": {
-      "anyOf": [
-       {
-        "type": "integer",
-        "minimum": 0.0
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "N Unidades"
-     },
-     "config": {
+     "area": {
       "additionalProperties": true,
       "type": "object",
-      "title": "Config"
+      "title": "Area",
+      "description": "polígono GeoJSON (Polygon) em EPSG:4326"
      }
     },
     "additionalProperties": false,
     "type": "object",
     "required": [
      "nome",
-     "tipo"
+     "area"
     ],
     "title": "ConjuntoEntrada"
    },
@@ -12496,7 +12546,9 @@
       "title": "Total"
      },
      "itens": {
-      "items": {},
+      "items": {
+       "$ref": "#/components/schemas/Conjunto"
+      },
       "type": "array",
       "title": "Itens"
      }
@@ -13167,129 +13219,212 @@
       "type": "string",
       "title": "Id"
      },
-     "modelo_id": {
-      "type": "string",
-      "title": "Modelo Id"
-     },
-     "modelo_versao_hash": {
-      "type": "string",
-      "title": "Modelo Versao Hash"
-     },
      "conjunto_id": {
       "type": "string",
       "title": "Conjunto Id"
      },
-     "pesos": {
-      "additionalProperties": true,
-      "type": "object",
-      "title": "Pesos"
-     },
-     "camadas": {
-      "items": {},
-      "type": "array",
-      "title": "Camadas"
-     },
-     "motor_versao": {
+     "nivel": {
       "type": "string",
-      "title": "Motor Versao"
+      "title": "Nivel"
      },
-     "semente": {
+     "execucao_pai_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Execucao Pai Id"
+     },
+     "aprovacao_tipo": {
+      "type": "string",
+      "title": "Aprovacao Tipo"
+     },
+     "aprovacao_valor": {
+      "type": "number",
+      "title": "Aprovacao Valor"
+     },
+     "celulas": {
       "type": "integer",
-      "title": "Semente"
+      "title": "Celulas"
      },
-     "estado": {
-      "type": "string",
-      "title": "Estado"
+     "celulas_possiveis": {
+      "type": "integer",
+      "title": "Celulas Possiveis"
+     },
+     "celulas_com_nota": {
+      "type": "integer",
+      "title": "Celulas Com Nota"
+     },
+     "celulas_aprovadas": {
+      "type": "integer",
+      "title": "Celulas Aprovadas"
+     },
+     "duracao_ms": {
+      "type": "integer",
+      "title": "Duracao Ms"
      },
      "criado_em": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
+      "type": "string",
       "title": "Criado Em"
      },
-     "atualizado_em": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Atualizado Em"
+     "grade": {
+      "$ref": "#/components/schemas/GradeSaida"
+     },
+     "fatores": {
+      "items": {
+       "$ref": "#/components/schemas/ExecucaoFatorSaida"
+      },
+      "type": "array",
+      "title": "Fatores"
      }
     },
     "additionalProperties": true,
     "type": "object",
     "required": [
      "id",
-     "modelo_id",
-     "modelo_versao_hash",
      "conjunto_id",
-     "pesos",
-     "camadas",
-     "motor_versao",
-     "semente",
-     "estado",
+     "nivel",
+     "aprovacao_tipo",
+     "aprovacao_valor",
+     "celulas",
+     "celulas_possiveis",
+     "celulas_com_nota",
+     "celulas_aprovadas",
+     "duracao_ms",
      "criado_em",
-     "atualizado_em"
+     "grade",
+     "fatores"
     ],
     "title": "Execucao"
    },
    "ExecucaoEntrada": {
     "properties": {
-     "modelo_id": {
-      "type": "string",
-      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
-      "title": "Modelo Id"
+     "resolucao_m": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Resolucao M"
      },
-     "conjunto_id": {
-      "type": "string",
-      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
-      "title": "Conjunto Id"
-     },
-     "pesos": {
-      "additionalProperties": {
-       "type": "number"
-      },
-      "type": "object",
-      "maxProperties": 50,
-      "title": "Pesos"
-     },
-     "camadas": {
+     "fatores": {
       "items": {
-       "$ref": "#/components/schemas/CamadaEntrada"
+       "$ref": "#/components/schemas/FatorPesoEntrada"
       },
       "type": "array",
-      "maxItems": 50,
-      "title": "Camadas"
+      "maxItems": 20,
+      "minItems": 1,
+      "title": "Fatores"
      },
-     "semente": {
-      "anyOf": [
-       {
-        "type": "integer",
-        "maximum": 9.223372036854776e+18,
-        "minimum": 0.0
-       },
-       {
-        "type": "null"
-       }
+     "aprovacao_tipo": {
+      "type": "string",
+      "enum": [
+       "limiar",
+       "top_pct"
       ],
-      "title": "Semente"
+      "title": "Aprovacao Tipo"
+     },
+     "aprovacao_valor": {
+      "type": "number",
+      "minimum": 0.0,
+      "title": "Aprovacao Valor"
      }
     },
     "additionalProperties": false,
     "type": "object",
     "required": [
-     "modelo_id",
-     "conjunto_id"
+     "resolucao_m",
+     "fatores",
+     "aprovacao_tipo",
+     "aprovacao_valor"
     ],
     "title": "ExecucaoEntrada"
+   },
+   "ExecucaoFatorSaida": {
+    "properties": {
+     "fator_id": {
+      "type": "string",
+      "title": "Fator Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "peso": {
+      "type": "number",
+      "title": "Peso"
+     },
+     "resolucao_fonte_m": {
+      "type": "number",
+      "title": "Resolucao Fonte M"
+     },
+     "resolucao_grade_m": {
+      "type": "number",
+      "title": "Resolucao Grade M"
+     },
+     "razao_escala": {
+      "type": "number",
+      "title": "Razao Escala"
+     },
+     "escala": {
+      "type": "string",
+      "title": "Escala"
+     },
+     "escala_grosseira": {
+      "type": "boolean",
+      "title": "Escala Grosseira"
+     },
+     "blocos_usados": {
+      "type": "integer",
+      "title": "Blocos Usados"
+     },
+     "blocos_calculados": {
+      "type": "integer",
+      "title": "Blocos Calculados"
+     },
+     "celulas_com_dado": {
+      "type": "integer",
+      "title": "Celulas Com Dado"
+     },
+     "valor_min": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Valor Min"
+     },
+     "valor_max": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Valor Max"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "fator_id",
+     "nome",
+     "peso",
+     "resolucao_fonte_m",
+     "resolucao_grade_m",
+     "razao_escala",
+     "escala",
+     "escala_grosseira",
+     "blocos_usados",
+     "blocos_calculados",
+     "celulas_com_dado"
+    ],
+    "title": "ExecucaoFatorSaida"
    },
    "ExecucaoPagina": {
     "properties": {
@@ -13298,7 +13433,9 @@
       "title": "Total"
      },
      "itens": {
-      "items": {},
+      "items": {
+       "$ref": "#/components/schemas/Execucao"
+      },
       "type": "array",
       "title": "Itens"
      }
@@ -13310,6 +13447,136 @@
      "itens"
     ],
     "title": "ExecucaoPagina"
+   },
+   "Fator": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "resolucao_fonte_m": {
+      "type": "number",
+      "title": "Resolucao Fonte M"
+     },
+     "papel": {
+      "type": "string",
+      "title": "Papel"
+     },
+     "unidade": {
+      "type": "string",
+      "title": "Unidade"
+     },
+     "fonte": {
+      "type": "string",
+      "title": "Fonte"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "resolucao_fonte_m",
+     "papel",
+     "unidade",
+     "fonte",
+     "criado_em"
+    ],
+    "title": "Fator"
+   },
+   "FatorEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "resolucao_fonte_m": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Resolucao Fonte M",
+      "description": "escala nativa DECLARADA da fonte, em metros"
+     },
+     "papel": {
+      "type": "string",
+      "enum": [
+       "atrai",
+       "custo"
+      ],
+      "title": "Papel"
+     },
+     "unidade": {
+      "type": "string",
+      "maxLength": 40,
+      "title": "Unidade",
+      "default": ""
+     },
+     "fonte": {
+      "type": "string",
+      "maxLength": 500,
+      "title": "Fonte",
+      "default": ""
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "resolucao_fonte_m",
+     "papel"
+    ],
+    "title": "FatorEntrada"
+   },
+   "FatorPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/Fator"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "FatorPagina"
+   },
+   "FatorPesoEntrada": {
+    "properties": {
+     "fator_id": {
+      "type": "string",
+      "title": "Fator Id"
+     },
+     "peso": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Peso"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "fator_id",
+     "peso"
+    ],
+    "title": "FatorPesoEntrada"
    },
    "FotoEntrada": {
     "properties": {
@@ -13347,6 +13614,61 @@
      "foto_url"
     ],
     "title": "FotoSaida"
+   },
+   "GradeSaida": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nivel": {
+      "type": "string",
+      "title": "Nivel"
+     },
+     "resolucao_m": {
+      "type": "number",
+      "title": "Resolucao M"
+     },
+     "fator_aninhamento": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fator Aninhamento"
+     },
+     "colunas": {
+      "type": "integer",
+      "title": "Colunas"
+     },
+     "linhas": {
+      "type": "integer",
+      "title": "Linhas"
+     },
+     "celulas": {
+      "type": "integer",
+      "title": "Celulas"
+     },
+     "celulas_possiveis": {
+      "type": "integer",
+      "title": "Celulas Possiveis"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "nivel",
+     "resolucao_m",
+     "colunas",
+     "linhas",
+     "celulas",
+     "celulas_possiveis"
+    ],
+    "title": "GradeSaida"
    },
    "Grupo": {
     "properties": {
@@ -14983,173 +15305,6 @@
     "title": "MiniaturaEntrada",
     "description": "Imagem em base64 (JSON: o CSRF sob cookie exige application/json; multipart entra com o L0-11)."
    },
-   "Modelo": {
-    "properties": {
-     "id": {
-      "type": "string",
-      "title": "Id"
-     },
-     "nome": {
-      "type": "string",
-      "title": "Nome"
-     },
-     "definicao": {
-      "additionalProperties": true,
-      "type": "object",
-      "title": "Definicao"
-     },
-     "versao_hash": {
-      "type": "string",
-      "title": "Versao Hash"
-     },
-     "executado": {
-      "type": "boolean",
-      "title": "Executado"
-     },
-     "criado_em": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Criado Em"
-     },
-     "atualizado_em": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Atualizado Em"
-     }
-    },
-    "additionalProperties": true,
-    "type": "object",
-    "required": [
-     "id",
-     "nome",
-     "definicao",
-     "versao_hash",
-     "executado",
-     "criado_em",
-     "atualizado_em"
-    ],
-    "title": "Modelo"
-   },
-   "ModeloEditar": {
-    "properties": {
-     "nome": {
-      "anyOf": [
-       {
-        "type": "string",
-        "maxLength": 250,
-        "minLength": 1
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Nome"
-     },
-     "definicao": {
-      "anyOf": [
-       {
-        "additionalProperties": true,
-        "type": "object"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Definicao"
-     }
-    },
-    "additionalProperties": false,
-    "type": "object",
-    "title": "ModeloEditar"
-   },
-   "ModeloEntrada": {
-    "properties": {
-     "nome": {
-      "type": "string",
-      "maxLength": 250,
-      "minLength": 1,
-      "title": "Nome"
-     },
-     "definicao": {
-      "additionalProperties": true,
-      "type": "object",
-      "title": "Definicao"
-     }
-    },
-    "additionalProperties": false,
-    "type": "object",
-    "required": [
-     "nome",
-     "definicao"
-    ],
-    "title": "ModeloEntrada"
-   },
-   "ModeloPagina": {
-    "properties": {
-     "total": {
-      "type": "integer",
-      "title": "Total"
-     },
-     "itens": {
-      "items": {},
-      "type": "array",
-      "title": "Itens"
-     }
-    },
-    "additionalProperties": true,
-    "type": "object",
-    "required": [
-     "total",
-     "itens"
-    ],
-    "title": "ModeloPagina"
-   },
-   "ModeloValidado": {
-    "properties": {
-     "valido": {
-      "type": "boolean",
-      "title": "Valido"
-     },
-     "versao_hash": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Versao Hash"
-     },
-     "erros": {
-      "items": {
-       "additionalProperties": true,
-       "type": "object"
-      },
-      "type": "array",
-      "title": "Erros",
-      "default": []
-     }
-    },
-    "additionalProperties": true,
-    "type": "object",
-    "required": [
-     "valido"
-    ],
-    "title": "ModeloValidado"
-   },
    "MoverEntrada": {
     "properties": {
      "pasta_id": {
@@ -16426,26 +16581,6 @@
     "additionalProperties": false,
     "type": "object",
     "title": "RestaurarVersaoEntrada"
-   },
-   "ResultadoPagina": {
-    "properties": {
-     "total": {
-      "type": "integer",
-      "title": "Total"
-     },
-     "itens": {
-      "items": {},
-      "type": "array",
-      "title": "Itens"
-     }
-    },
-    "additionalProperties": true,
-    "type": "object",
-    "required": [
-     "total",
-     "itens"
-    ],
-    "title": "ResultadoPagina"
    },
    "Resumo": {
     "properties": {
@@ -17724,21 +17859,6 @@
     "additionalProperties": false,
     "type": "object",
     "title": "UsuarioEditar"
-   },
-   "ValidarEntrada": {
-    "properties": {
-     "definicao": {
-      "additionalProperties": true,
-      "type": "object",
-      "title": "Definicao"
-     }
-    },
-    "additionalProperties": false,
-    "type": "object",
-    "required": [
-     "definicao"
-    ],
-    "title": "ValidarEntrada"
    },
    "ValidationError": {
     "properties": {
