@@ -183,6 +183,8 @@ function abrirFerramenta(nome) {
   if (!tp) { sec.hidden = false; estado.mostrar({ tipo: 'vazio', titulo: t('ferramentas.inexistente_titulo'), texto: t('ferramentas.inexistente', { nome }) }); el('ferramenta-form').campos = []; return; }
   s.tipo = tp;
   history.replaceState({}, '', `/ferramentas?tipo=${encodeURIComponent(nome)}`);
+  // ferramenta de diagnóstico aberta pela URL: liga o filtro para o cartão selecionado aparecer no catálogo
+  if (ehDiagnostico(tp) && !s.diagnostico) { s.diagnostico = true; el('catalogo-diagnostico').checked = true; }
   desenharCatalogo();
   sec.hidden = false;
   document.body.dataset.detalhe = '1';
@@ -240,10 +242,13 @@ async function executar(valores) {
   } catch (e) {
     f.ocupado = false;
     if (e.status === 422 && Array.isArray(e.detalhe)) {
+      // detalhe do serviço de jobs: [{campo, mensagem}] (app/jobs/servico.py); o campo pode vir "a.b" em aninhados
       for (const d of e.detalhe) {
-        const loc = Array.isArray(d.loc) ? d.loc.filter((x) => typeof x === 'string' && !['body', 'parametros'].includes(x)) : [];
-        if (loc[0] && f.campo(loc[0])) f.erro(loc[0], d.msg || JSON.stringify(d)); else f.mensagem(d.msg || JSON.stringify(d), 'erro');
+        const campo = String(d.campo || '').split('.')[0];
+        const msg = d.mensagem || JSON.stringify(d);
+        if (campo && f.campo(campo)) f.erro(campo, msg); else f.mensagem(campo ? `${campo}: ${msg}` : msg, 'erro');
       }
+      f.querySelector('[aria-invalid="true"]')?.focus();
     } else if (e.status === 422 && e.detalhe && typeof e.detalhe === 'object') {
       for (const [campo, msg] of Object.entries(e.detalhe)) { if (f.campo(campo)) f.erro(campo, String(msg)); else f.mensagem(`${campo}: ${msg}`, 'erro'); }
     } else f.mensagem(e.status === 403 ? t('ferramentas.negado_executar') : t('ferramentas.erro_criar', { status: e.status || t('tarefas.rede'), erro: e.message }), 'erro');
