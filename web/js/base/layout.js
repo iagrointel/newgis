@@ -20,6 +20,7 @@ export const TELAS = [
   { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar' },
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver' },
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
+  { caminho: '/temas', chave: 'nav.temas' },
 ];
 
 export function telasVisiveis(usuario) {
