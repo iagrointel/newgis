@@ -20,6 +20,7 @@ export const TELAS = [
   { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar' },
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver' },
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
+  { caminho: '/admin/categorias', chave: 'nav.categorias', privilegio: 'conteudo.categorias' },
   { caminho: '/estilo-guia', chave: 'nav.estilo_guia', privilegio: 'org.configurar' },
 ];
 
