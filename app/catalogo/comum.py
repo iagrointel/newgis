@@ -198,6 +198,11 @@ def item_json(r: dict, auth=None, completo: bool = True, publico: bool = False) 
                 "dados": r["dados"] or {},
             }
         )
+        if publico and r["tipo"] == "vista_de_camada":
+            # A vista de camada (item L5-32) existe para esconder. Publicar `campos_ocultos` entregaria a
+            # LISTA do que ela esconde, e `camada_id` entregaria o identificador da camada-mãe a quem só
+            # recebeu a vista — as duas coisas que a cláusula cruzada do item proíbe.
+            j["dados"] = {k: v for k, v in j["dados"].items() if k not in ("camada_id", "campos_ocultos")}
     return j
 
 
