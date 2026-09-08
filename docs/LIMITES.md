@@ -238,3 +238,9 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `PARCELA_IMPORT_LOTES_MAX` | `50000` | lotes por rodada de import (acima disso: 422, rodada menor) |
 | `PARCELA_VALIDACAO_PARES_MAX` | `500` | pares de sobreposição devolvidos por consulta (o total é contado) |
 | `PARCELA_TRAJETO_MAX` | `200` | segmentos COGO na criação de UMA parcela por trajeto |
+| `PARCELA_DXF_LINHAS_MAX` | `20000` | segmentos de DXF por rodada de "copiar linhas de CAD" |
+| `PARCELA_BUILD_LINHAS_MAX` | `20000` | linhas livres por chamada de build |
+| `PARCELA_BUILD_FACES_MAX` | `2000` | faces fechadas aceitas em um build (acima: 422, estique a extent) |
+| `PARCELA_DIVIDE_PARTES_MAX` | `100` | partes por divisão (EqualArea/ProportionalArea/EqualWidth) |
+| `PARCELA_UNIR_MAX` | `50` | parcelas por união (merge) |
+| `PARCELA_ATRIBUICAO_MAX` | `1000` | feições por assignFeaturesToRecord |
