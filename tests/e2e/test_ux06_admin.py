@@ -153,22 +153,45 @@ def test_visualizador_ve_403_amigavel_nunca_tela_quebrada(page, base_url, cookie
     )
     tela = Tela(page, base_url)
     tela.esperar_status(403)
+    # o perfil visualizador TEM membros.ver e tokens.gerar: /admin abre para ele só com os cartões que ele pode ler
+    tela.ir("/admin")
+    page.wait_for_selector("#resumo:not([hidden]) .admin-cartao", timeout=15000)
+    cartoes = set(
+        page.eval_on_selector_all("#resumo .admin-cartao", "els => els.map(e => e.id.replace('cartao-', ''))")
+    )
+    assert {"usuarios", "tokens", "grupos"} <= cartoes, cartoes
+    assert not ({"papeis", "log", "acervo", "armazenamento", "ldap"} & cartoes), cartoes
+    assert page.locator("#resumo .admin-cartao.erro").count() == 0
+    assert page.locator("#eventos:not([hidden])").count() == 0
+    _capturar(page, "admin_visualizador", larguras=(1280,))
+    # sem privilégio administrativo NENHUM (sessão devolvida sem privilégios): estado "sem permissão" com o caminho
+    # de volta, e a barra lateral sem a entrada da administração
+    page.route("**/api/eu", _sem_privilegios)
     tela.ir("/admin")
     page.wait_for_selector("#estado[tipo='negado']:not([hidden])")
     assert page.locator("#resumo").is_hidden()
     assert page.locator("#estado button").count() == 2
     assert "privilégio" in (page.text_content("#estado") or "")
-    # a barra lateral não oferece a administração a quem não a tem
     assert page.locator("#lateral nav a[href='/admin']").count() == 0
     _axe(page, "admin negado")
     _capturar(page, "admin_negado")
-    for caminho in ("/admin/usuarios", "/admin/acervo", "/admin/organizacao"):
+    page.unroute("**/api/eu")
+    # telas filhas que o visualizador não pode abrir: página "sem permissão" do exigirSessao, nunca tela quebrada
+    for caminho in ("/admin/acervo", "/admin/organizacao", "/admin/papeis"):
         tela.ir(caminho)
         page.wait_for_selector("main.sem-permissao")
         assert page.locator("main.sem-permissao a[href='/']").count() == 1
         assert page.locator("plat-aviso[data-tipo='atencao']").count() == 1
-    _capturar(page, "usuarios_negado", larguras=(1280,))
+    _capturar(page, "acervo_negado", larguras=(1280,))
     tela.verificar()
+
+
+def _sem_privilegios(route):
+    """responde /api/eu com a sessão real, mas sem nenhum privilégio (só para provar o estado do hub)."""
+    resp = route.fetch()
+    corpo = resp.json()
+    corpo["privilegios"] = []
+    route.fulfill(response=resp, body=json.dumps(corpo))
 
 
 # ---------------------------------------------------------------- 3. acervo
@@ -250,7 +273,7 @@ def test_acervo_lista_ficha_e_adicionar_com_confirmacao_lgpd(page, base_url, cre
         href = page.get_attribute("#aviso a", "href")
         criados.append(href.rsplit("/", 1)[-1])
         assert page.locator("#evento-registrado:not([hidden])").count() == 1
-        assert "acervo" in (page.text_content("#evento-registrado") or "")
+        assert "itens/adicionar" in (page.text_content("#evento-registrado") or "")  # tipo do evento da rota
         _capturar(page, "acervo_adicionado", larguras=(1280,))
         tela.verificar()
     finally:
