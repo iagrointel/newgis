@@ -151,6 +151,16 @@ def reconciliar(cur, rede_id: str) -> dict:
                             "sem_equivalente": None, "taxa": None,
                             "sem_tier": f"o pacote desta rede não tem o grupo '{grupo}'"}
             continue
+        # primeiro DESFAZ a ligação que deixou de valer (a derivada foi renomeada, ou trocou de tier): o
+        # número tem de descrever o estado de agora, não o de uma reconciliação antiga.
+        cur.execute(
+            "UPDATE plat.rede_subrede d SET equivalente_id = NULL "
+            "WHERE d.rede_id = %(rede)s::uuid AND d.origem = 'bdgd' AND d.nivel = %(nivel)s "
+            "  AND d.equivalente_id IS NOT NULL AND NOT EXISTS ("
+            "    SELECT 1 FROM plat.rede_subrede c WHERE c.id = d.equivalente_id "
+            "      AND c.tier_id = %(tier)s::uuid AND c.nome = d.codigo_externo)",
+            {"rede": rede_id, "nivel": nivel, "tier": tier_id},
+        )
         cur.execute(
             "UPDATE plat.rede_subrede d SET equivalente_id = c.id "
             "FROM plat.rede_subrede c "
