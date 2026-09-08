@@ -361,6 +361,29 @@ demo = Roraima (260.515 pontos, 15 municípios; escolhida por ser o MENOR arquiv
 | `outSR`, `searchExtent`, boost por `location=`, `category`, `langCode`, paginação `search/start/num` | parâmetros documentados do `findAddressCandidates` | fora desta versão (saída sempre 4326; sem filtro geográfico nem boost de proximidade) | fora | — | 2026-09-06 | pendente (D20) |
 | geocodificação em lote de planilha/CSV do usuário (upload → coluna de endereço → resultado) | não é o `GeocodeServer`; é uma ferramenta de geoprocessamento separada (`Geocode Addresses` do Pro/ArcMap) | item-irmão `L2-11-a-geocodificacao-csv`, ainda não construído (reusa `motor.buscar()`) | fora (item separado) | — | 2026-09-06 | pendente (D20) |
 
+## Widgets de página e de menu (item L5-01-d-widgets-pagina-menu, turno 4; ADR 20260907T2245)
+
+Referência Esri: Experience Builder, categorias "Page elements" (Text, Image, Button, Card, Embed, Divider) e
+"Menu and toolbar" (Menu, Widget Controller, Share, Login, Language switcher, Theme switcher) — os 12 widgets que a
+hipótese do item enumera a partir da doc do EXB. A página de visão geral dos widgets (doc.arcgis.com/en/
+experience-builder/latest/configure-widgets/) devolveu 404 nos dois endereços tentados em 07/09/2026; a lista NÃO foi
+reconferida na doc nesta rodada — vale a enumeração do item. Sem Experience Builder real para comparar (D20).
+
+| capacidade | Esri | nós | estado | testado por | data |
+|---|---|---|---|---|---|
+| Text (texto rico, expressões `{campo}` da feição selecionada) | rich text + dynamic content | `texto` Markdown mínimo + DOMPurify, `{campo}` escapado; texto puro por textContent | feito (Markdown, não editor WYSIWYG) | `tests/unit/test_widgets_pagina.py`, e2e `test_widgets_pagina.py` (10 vetores XSS) | 2026-09-07 |
+| Image (estática, por campo/anexo, ajuste, legenda, clique) | image widget | `imagem` (url ou campo; `data:image/*` aceito, `javascript:` recusado com erro nomeado) | feito (anexo de item = L0-11, referência por URL) | e2e | 2026-09-07 |
+| Button (link, página, ação) | button widget | `botao` (evento no barramento, link seguro com rel/target, página) | feito | e2e | 2026-09-07 |
+| Card (imagem + título + texto + link/página) | card widget | `cartao` | feito (sem estados hover/regular separados) | e2e | 2026-09-07 |
+| Embed (URL ou código) | embed widget | `incorporar`: só https em domínio da lista, sandbox sem allow-same-origin; HTML sanitizado em srcdoc | feito (supera: lista de domínios obrigatória) | unidade + e2e | 2026-09-07 |
+| Divider | divider widget | `divisor` (linha, tracejado, espaço; vertical) | feito | e2e | 2026-09-07 |
+| Menu | menu widget | `menu_widget` (itens com página ou link; horizontal/vertical) + `menu` automático do L5-01-a | feito | e2e | 2026-09-07 |
+| Widget Controller (abre/fecha widgets em painel) | widget controller | `controlador` (alvos por id de nó; `hidden` + aria-expanded) | parcial (abre no lugar, não em painel flutuante) | e2e | 2026-09-07 |
+| Share (link, QR, embed, redes) | share widget | `compartilhar`: link com copiar, QR gerado localmente (`/api/qr.svg`), código de incorporação | parcial (sem botões de rede social, de propósito) | `tests/api/test_qr.py`, e2e | 2026-09-07 |
+| Login (Sign in/out) | login widget | `login` (GET /api/eu, sair, entrar) | feito | e2e | 2026-09-07 |
+| Language switcher | language switcher | `idioma` (idiomas do documento existentes em web/js/i18n; hoje só pt-BR) | parcial (um idioma instalado; L7-10) | e2e | 2026-09-07 |
+| Theme switcher | theme switcher | `tema` (sistema/claro/escuro via data-theme dos tokens) | feito | e2e | 2026-09-07 |
+
 ## SMTP, convite de membro e redefinição de senha (item L0-07-d-smtp-convites, turno 3; ADR 0017)
 
 | capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |

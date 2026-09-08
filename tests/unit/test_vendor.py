@@ -20,17 +20,24 @@ def _linhas():
 
 
 def test_todo_arquivo_do_vendor_esta_em_versoes_com_sha_e_licenca():
+    """Declarado em VERSOES.txt pelo caminho relativo a web/vendor/ — inclui subpasta (ex. `terra-draw/…`,
+    item L2-01-h/L2-01-k): o nome do ARQUIVO ainda segue <nome>-<versão>.js|css|woff2, só o caminho ganha
+    prefixo de diretório. Antes esta verificação usava `VENDOR.iterdir()` (só os filhos diretos), então um
+    vendor em subpasta nunca era conferido — corrigido para `rglob` percorrer a árvore inteira."""
     declarados = {}
-    for nome, versao, sha, licenca, origem in _linhas():
+    for caminho, versao, sha, licenca, origem in _linhas():
+        nome = caminho.rsplit("/", 1)[-1]
         m = NOME.match(nome)
         assert m and m["versao"] == versao, f"nome fora da convenção <nome>-<versão>.js|css: {nome}"
         assert licenca in LICENCAS, (nome, licenca)
         assert origem.startswith("https://"), (nome, origem)
-        declarados[nome] = sha
-    arquivos = {p.name for p in VENDOR.iterdir() if p.name != "VERSOES.txt"}
+        declarados[caminho] = sha
+    arquivos = {
+        str(p.relative_to(VENDOR)) for p in VENDOR.rglob("*") if p.is_file() and p.name != "VERSOES.txt"
+    }
     assert arquivos == set(declarados), arquivos ^ set(declarados)
-    for nome, sha in declarados.items():
-        assert hashlib.sha256((VENDOR / nome).read_bytes()).hexdigest() == sha, nome
+    for caminho, sha in declarados.items():
+        assert hashlib.sha256((VENDOR / caminho).read_bytes()).hexdigest() == sha, caminho
 
 
 def test_swagger_referenciado_pela_api_existe_no_vendor():

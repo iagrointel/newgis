@@ -6,6 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Usuários · plat</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="tela">
@@ -16,8 +17,10 @@
     <h1 data-i18n="usuarios.titulo">Usuários</h1>
     <div class="linha-ferramentas" id="ferramentas"></div>
     <plat-aviso id="aviso"></plat-aviso>
+    <p id="evento-registrado" class="evento-registrado" hidden aria-live="polite"></p>
     <div class="filtros" id="filtros"></div>
     <div class="linha-ferramentas" id="lote" hidden></div>
+    <plat-estado id="estado" hidden></plat-estado>
     <plat-tabela id="tabela" legenda="usuários do inquilino"></plat-tabela>
     <plat-paginacao id="paginacao"></plat-paginacao>
     <p class="rodape-tela" data-i18n="usuarios.rodape">recomendação: mantenha dois administradores ativos; o bloqueio por senha vale para administradores</p>

@@ -75,6 +75,10 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
         return super().execute(query, *args, **kwargs)
 
     def executemany(self, query, vars_list):
+        # Achado duas vezes, por dois itens (L0-04-h e L4-05-g), e por um tempo houve DUAS definições
+        # deste método nesta classe — a segunda, sem o tratamento de bytes, apagava a primeira em
+        # silêncio (Python fica com a última). Uma só, e é esta.
+        #
         # mesma classe de defeito do bytes/`execute_values` acima, achada agora em `cur.executemany`
         # (usado por `POST /api/papeis` para `plat.papel_privilegio`, app/auth/rotas_usuarios.py, e pelo
         # item L3-19-multiescala em execuções de grade aninhada): psycopg2 implementa executemany em C
@@ -107,6 +111,12 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
         if isinstance(procname, str):
             procname = self._reescrever(procname)
         return super().callproc(procname, *args, **kwargs)
+
+    def mogrify(self, query, *args, **kwargs):
+        """Idem: `mogrify` produz o texto final do comando (o `-sql` do ogr2ogr na exportação sai daqui)."""
+        if isinstance(query, str):
+            query = self._reescrever(query)
+        return super().mogrify(query, *args, **kwargs)
 
     @staticmethod
     def _reescrever(sql: str) -> str:

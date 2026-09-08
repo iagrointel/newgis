@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Administração · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="tela admin-inicio">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="admin.titulo">Administração</h1>
+    <p class="aviso-beta" data-i18n="app.beta">análise / beta privado</p>
+    <plat-aviso id="aviso"></plat-aviso>
+    <plat-estado id="estado" hidden></plat-estado>
+    <p id="evento-registrado" class="evento-registrado" hidden aria-live="polite"></p>
+    <section id="resumo" class="admin-grade" aria-labelledby="t-resumo" hidden>
+      <h2 id="t-resumo" class="sr-only" data-i18n="admin.resumo">Resumo do inquilino</h2>
+    </section>
+    <section id="eventos" class="cartao" aria-labelledby="t-eventos" hidden>
+      <h2 id="t-eventos"><span data-i18n="admin.eventos_recentes">Eventos recentes</span> <a id="eventos-todos" class="botao pequeno texto" href="/admin/log?aba=eventos" data-i18n="admin.eventos_todos">ver o log completo</a></h2>
+      <plat-estado id="eventos-estado" hidden></plat-estado>
+      <plat-tabela id="eventos-tabela" legenda="eventos recentes"></plat-tabela>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/auth/admin.js"></script>
+</body>
+</html>

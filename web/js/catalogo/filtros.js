@@ -13,6 +13,8 @@ let facetas = {};
 let mostrarTudo = new Set();
 const el = (id) => document.getElementById(id);
 
+export function limparTudo() { limparFiltros(); ctx.definir({ pastaId: null }); }
+
 export function iniciar({ mudou }) {
   aoMudar = mudou;
   ctx.assinar(() => render(), ['filtros', 'tipos']);

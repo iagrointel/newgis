@@ -6,6 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Papéis · plat</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="tela">
@@ -16,6 +17,8 @@
     <h1 data-i18n="papeis.titulo">Papéis</h1>
     <div class="linha-ferramentas" id="ferramentas"></div>
     <plat-aviso id="aviso"></plat-aviso>
+    <p id="evento-registrado" class="evento-registrado" hidden aria-live="polite"></p>
+    <plat-estado id="estado" hidden></plat-estado>
     <section class="cartao" aria-labelledby="t-perfis"><h2 id="t-perfis" data-i18n="papeis.perfis">Perfis (teto de privilégios)</h2>
       <plat-tabela id="tabela-perfis" legenda="perfis"></plat-tabela></section>
     <section class="cartao" aria-labelledby="t-personalizados"><h2 id="t-personalizados" data-i18n="papeis.personalizados">Papéis personalizados</h2>

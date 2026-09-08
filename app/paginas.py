@@ -14,6 +14,8 @@ PAGINAS = {
     # --- identidade (L0-02)
     "/entrar": "login.html",
     "/conta": "conta.html",
+    "/admin": "admin/index.html",
+    "/admin/acervo": "admin/acervo.html",
     "/admin/usuarios": "admin/usuarios.html",
     "/admin/grupos": "admin/grupos.html",
     "/admin/papeis": "admin/papeis.html",
@@ -28,6 +30,8 @@ PAGINAS = {
     "/c/{token}": "compartilhado.html",
     # --- mapa (L2-01-a)
     "/mapa": "mapa.html",
+    # --- publicação de documento do construtor (L5-06): o mesmo motor usado pelo construtor
+    "/aplicativo": "aplicativo.html",
     # --- conexões externas (L6-02-a/L6-02-l/L6-05)
     "/conexoes": "conexoes.html",
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
@@ -35,10 +39,14 @@ PAGINAS = {
     "/redefinir-senha": "redefinir_senha.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
+    # --- sistema de design (UX-01-sistema-de-design): guia viva de tokens e componentes
+    "/estilo-guia": "estilo_guia.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- catálogo de ferramentas (UX-09): formulário gerado do esquema de parâmetros de cada tipo de tarefa
+    "/ferramentas": "ferramentas.html",
 }
 router = APIRouter()
 

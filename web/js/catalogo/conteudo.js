@@ -19,6 +19,7 @@ import * as pastas from './pastas.js';
 import * as selecao from './selecao.js';
 import * as lixeira from './lixeira.js';
 import * as item from './item.js';
+import * as soltar from './soltar.js';
 import { botaoNovo } from './novo.js';
 
 const UUID_NA_URL = /^\/conteudo\/([0-9a-f-]{36})\/?$/i;
@@ -55,6 +56,8 @@ async function iniciar() {
   pastas.iniciar({ mudou: () => recarregarLista() });
   selecao.iniciar({ mudou: () => recarregarTudo() });
   lixeira.iniciar({ mudou: () => {} });
+  if (tem('conteudo.criar')) soltar.iniciar({ criados: (novos) => { recarregarTudo(); if (novos.length) item.abrir(novos[novos.length - 1].id); } });
+  document.addEventListener('catalogo:limpar_filtros', () => { filtros.limparTudo(); recarregarLista(); });
   item.iniciar({
     fechou: () => { ctx.definir({ itemAberto: null }); if (UUID_NA_URL.test(location.pathname)) history.pushState({}, '', '/conteudo'); },
     mudou: (it, info) => { if (info && (info.pasta || info.apagado)) recarregarTudo(); },

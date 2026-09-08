@@ -6,6 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Organização · plat</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="tela">
@@ -15,6 +16,8 @@
   <main id="principal" class="principal" tabindex="-1">
     <h1 data-i18n="org.titulo">Organização</h1>
     <plat-aviso id="aviso"></plat-aviso>
+    <p id="evento-registrado" class="evento-registrado" hidden aria-live="polite"></p>
+    <plat-estado id="estado" hidden></plat-estado>
     <section class="cartao" id="identidade" aria-labelledby="t-identidade">
       <h2 id="t-identidade" data-i18n="org.identidade">Identidade</h2>
       <plat-formulario id="form-identidade"></plat-formulario>
@@ -55,6 +58,15 @@
       <div class="botoes">
         <button type="button" id="smtp-testar" class="pequeno" data-i18n="smtp.testar">Testar envio</button>
       </div>
+    </section>
+    <section class="cartao" id="ldap" aria-labelledby="t-ldap" hidden>
+      <h2 id="t-ldap" data-i18n="ldap.titulo">Diretório corporativo (LDAP)</h2>
+      <p class="fraco" id="ldap-estado-texto" data-i18n="ldap.ajuda">login pelo diretório da organização; a senha de bind é guardada cifrada e nunca volta pela API</p>
+      <plat-estado id="ldap-estado" hidden></plat-estado>
+      <plat-formulario id="form-ldap"></plat-formulario>
+      <h3 data-i18n="ldap.importar_titulo">Importar membros de um grupo do diretório</h3>
+      <p class="fraco" data-i18n="ldap.importar_ajuda">cria contas para os membros do grupo informado, com o perfil escolhido; exige o provedor habilitado</p>
+      <plat-formulario id="form-ldap-importar"></plat-formulario>
     </section>
   </main>
 </div>

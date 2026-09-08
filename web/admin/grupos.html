@@ -6,6 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Grupos · plat</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="tela">
@@ -17,7 +18,9 @@
     <div class="linha-ferramentas" id="ferramentas"></div>
     <plat-aviso id="aviso"></plat-aviso>
     <div class="abas" role="tablist" id="abas"></div>
+    <p id="evento-registrado" class="evento-registrado" hidden aria-live="polite"></p>
     <div role="tabpanel" id="painel-lista">
+      <plat-estado id="estado" hidden></plat-estado>
       <plat-tabela id="tabela" legenda="grupos"></plat-tabela>
       <plat-paginacao id="paginacao"></plat-paginacao>
     </div>

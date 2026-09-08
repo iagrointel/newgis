@@ -32,6 +32,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import os
 import re
 import time
 import uuid
@@ -57,6 +58,16 @@ EXTENSOES = {
     "application/zip": "zip",
     "application/vnd.google-earth.kmz": "kmz",
     "application/octet-stream": "bin",
+    # formatos de exportação de camada (item L0-04-h-exportar; app/exportacao/formatos.py)
+    "application/geopackage+sqlite3": "gpkg",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "application/vnd.google-earth.kml+xml": "kml",
+    "application/gml+xml": "gml",
+    "image/vnd.dxf": "dxf",
+    "application/vnd.apache.parquet": "parquet",
+    # acrescentados pelo item L2-01-l (exportação a partir do mapa)
+    "application/geo+json-seq": "geojsonl",
+    "application/vnd.pmtiles": "pmtiles",
 }
 _SLUG = r"[a-z0-9][a-z0-9-]{1,38}"
 _CLASSE = r"[a-z0-9_]{1,40}"
@@ -243,6 +254,86 @@ def guardar(
         cli.put(bucket["bucket_alias"], obj_key, dados, content_type)
     _registrar_metadado(cur, tenant_id, classe, referencia, sha, len(dados), content_type, chave, usuario_id)
     return {"chave": chave, "sha256": sha, "bytes": len(dados), "content_type": content_type}
+
+
+def guardar_arquivo(
+    cur, classe: str, caminho, content_type: str, item_id: Any = None, usuario_id: int | None = None,
+    extensao: str | None = None,
+) -> dict:
+    """Mesmo contrato de `guardar`, mas a origem é um ARQUIVO NO DISCO e o conteúdo NUNCA é montado inteiro em
+    memória (item L0-04-h-exportar: a exportação de uma camada grande pode passar de 1 GB; a casa já derrubou
+    o Postgres uma vez por processo que segurou tudo em RAM). O caminho é lido em blocos de
+    `limites.ARQUIVO_PARTE_BYTES`: até um bloco, 1 PUT só; acima disso, o multipart real do Garage
+    (`parte_iniciar`/`parte_enviar`/`parte_concluir`), uma parte por vez.
+
+    `extensao` sobrepõe a tabela EXTENSOES (a exportação usa `.fgb`, `.parquet`, `.dxf`… que não são tipos de
+    conteúdo registrados no navegador).
+    """
+    from app import limites
+
+    caminho = str(caminho)
+    tamanho_total = os.path.getsize(caminho)
+    if tamanho_total <= 0:
+        raise ValueError(f"guardar_arquivo: {caminho} está vazio")
+    parte = limites.ARQUIVO_PARTE_BYTES
+    if tamanho_total <= limites.ARQUIVO_BUFFER_UNICO_BYTES:
+        with open(caminho, "rb") as f:
+            dados = f.read()
+        resultado = guardar(cur, classe, dados, content_type, item_id=item_id, usuario_id=usuario_id)
+        if extensao and not resultado["chave"].endswith(extensao):
+            resultado = _renomear_extensao(cur, resultado, extensao)
+        return resultado
+    r = parte_iniciar(cur, classe, content_type, item_id=item_id)
+    upload_id = r["upload_id"]
+    partes: list[tuple[int, str]] = []
+    numero = 1
+    try:
+        with open(caminho, "rb") as f:
+            while True:
+                bloco = f.read(parte)
+                if not bloco:
+                    break
+                partes.append((numero, parte_enviar(cur, upload_id, numero, bloco)))
+                numero += 1
+        resultado = parte_concluir(cur, upload_id, partes)
+    except Exception:
+        try:
+            parte_abortar(cur, upload_id)
+        except Exception:  # noqa: BLE001 — o abortamento é melhor-esforço; o erro original é o que importa
+            log.warning("objetos: falha ao abortar o multipart %s", upload_id)
+        raise
+    if extensao and not resultado["chave"].endswith(extensao):
+        resultado = _renomear_extensao(cur, resultado, extensao)
+    return resultado
+
+
+def _renomear_extensao(cur, resultado: dict, extensao: str) -> dict:
+    """Copia o objeto para a MESMA chave com outra extensão e apaga a anterior. A chave é
+    `<slug>/<classe>/[<ref>/]<sha256>.<ext>`: só o sufixo muda, o conteúdo (e portanto o sha256) é o mesmo."""
+    ext = extensao.lstrip(".")
+    if not re.fullmatch(_EXT, ext):
+        raise ChaveInvalida(f"extensão inválida: {extensao!r}")
+    p = _partes(resultado["chave"])
+    if p["ext"] == ext:
+        return resultado
+    bucket, obj_key = _chave_e_objeto(resultado["chave"])
+    novo_obj = obj_key[: -(len(p["ext"]))] + ext
+    cli = _cliente(bucket)
+    if cli.head(bucket["bucket_alias"], novo_obj) is None:
+        cli.copiar(bucket["bucket_alias"], obj_key, novo_obj)
+    cli.delete(bucket["bucket_alias"], obj_key)
+    nova_chave = f"{p['slug']}/{novo_obj}"
+    cur.execute(
+        "UPDATE plat.arquivo SET chave = %s WHERE tenant_id = %s AND chave = %s AND apagado_em IS NULL",
+        (nova_chave, bucket["tenant_id"], resultado["chave"]),
+    )
+    return {**resultado, "chave": nova_chave}
+
+
+def ler_stream(chave: str, pedaco_bytes: int = 1024 * 1024):
+    """Gerador de blocos do objeto (entrega de arquivo grande sem montá-lo em memória; item L0-04-h)."""
+    bucket, obj_key = _chave_e_objeto(chave)
+    return _cliente(bucket).get_stream(bucket["bucket_alias"], obj_key, pedaco_bytes)
 
 
 def existe(chave: str) -> bool:
