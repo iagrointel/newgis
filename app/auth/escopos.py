@@ -8,11 +8,11 @@ from app.erros import ErroAPI
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 ESCOPO = re.compile(
     rf"^(catalogo:ler|camada:(ler|editar)(:{UUID})?|tiles:ler(:{UUID})?|jobs:executar|rota:usar|"
-    rf"geocodificar:usar|multiescala:usar|admin:inquilino)$"
+    rf"geocodificar:usar|multiescala:usar|parcelas:usar|admin:inquilino)$"
 )
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
-    "geocodificar:usar", "multiescala:usar", "admin:inquilino",
+    "geocodificar:usar", "multiescala:usar", "parcelas:usar", "admin:inquilino",
 )
 DESCRICAO = {
     "catalogo:ler": "listar e ler metadado de itens que o dono pode ler",
@@ -25,6 +25,8 @@ DESCRICAO = {
     "sem PII); mesmo escopo cobre o GeocodeServer compatível Esri",
     "multiescala:usar": "criar área de estudo, fator e amostra, e rodar execução macro/micro do motor "
     "multicritério em grades aninhadas (L3-19-multiescala; dado e execução do próprio inquilino)",
+    "parcelas:usar": "rodar os fluxos da malha de parcelas do próprio inquilino na fachada "
+    "/api/parcelas/fabrica (L4-parcelas-02: build, divide, merge, clip, seeds, assignFeaturesToRecord)",
     "admin:inquilino": "tudo o que o dono pode fazer pela API, exceto gerir tokens, senha, 2FA e sessões",
 }
 
