@@ -209,7 +209,9 @@ export class PainelMotor {
     const r = await obter('/api/multiescala/fatores?limite=200');
     if (r.status !== 200) { this.estadoFatores.erro(r); return; }
     this.fatores = r.json.itens || [];
-    for (const f of this.fatores) if (!this.uso.has(f.id)) this.uso.set(f.id, { usar: true, peso: 1 });
+    // fator novo entra DESLIGADO: a composição do estudo é escolha do usuário (fatores e pesos declarados por ele);
+    // o fator que ele acabou de criar neste painel entra ligado, porque o criou para usar
+    for (const f of this.fatores) if (!this.uso.has(f.id)) this.uso.set(f.id, { usar: this.recemCriados?.has(f.id) || false, peso: 1 });
     this._listaFatores();
     if (!this.fatores.length) this.estadoFatores.vazio(t('motor.fatores_vazio'), [{ id: 'novo', rotulo: t('motor.fator_novo') }]);
     else this.estadoFatores.limpar();
@@ -245,6 +247,7 @@ export class PainelMotor {
     const r = await enviar('/api/multiescala/fatores', { ...dados, fonte: '' });
     if (r.status !== 201) { this.estadoFatores.erro(r, []); return; }
     this.formFator.nome.value = ''; this.formFator.unidade.value = '';
+    (this.recemCriados ||= new Set()).add(r.json.id);
     await this.carregarFatores();
   }
 
