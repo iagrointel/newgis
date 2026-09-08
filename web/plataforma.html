@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Plataforma · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="tela">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="plataforma.titulo">Plataforma</h1>
+    <plat-aviso id="aviso"></plat-aviso>
+    <section class="cartao" id="inquilinos" aria-labelledby="t-inquilinos">
+      <h2 id="t-inquilinos" data-i18n="plataforma.inquilinos">Inquilinos</h2>
+      <p class="fraco" data-i18n="plataforma.inquilinos_ajuda">um portal, N inquilinos: uso, cotas, suspensão com mensagem para os membros, segundo fator dos administradores. Nunca "entrar como" membro: toda ação sai com evento na trilha da plataforma.</p>
+      <div class="linha-ferramentas" id="ferramentas"></div>
+      <plat-tabela id="tabela" legenda="inquilinos da plataforma"></plat-tabela>
+    </section>
+    <section class="cartao" id="fila" aria-labelledby="t-fila">
+      <h2 id="t-fila" data-i18n="plataforma.fila">Fila de jobs</h2>
+      <p class="fraco" data-i18n="plataforma.fila_ajuda">totais de todos os inquilinos, o pendente mais antigo já vencido e os workers com batimento nos últimos 2 minutos</p>
+      <div id="fila-total" class="linha-ferramentas"></div>
+      <plat-tabela id="fila-tabela" legenda="jobs por inquilino"></plat-tabela>
+      <div id="fila-workers"></div>
+    </section>
+    <section class="cartao" id="eventos" aria-labelledby="t-eventos">
+      <h2 id="t-eventos" data-i18n="plataforma.eventos">Eventos da plataforma</h2>
+      <p class="fraco" data-i18n="plataforma.eventos_ajuda">trilha do próprio console (inquilino da plataforma); eventos de um inquilino continuam no log dele</p>
+      <div class="linha-ferramentas" id="eventos-filtros"></div>
+      <plat-tabela id="eventos-tabela" legenda="eventos da plataforma"></plat-tabela>
+      <plat-paginacao id="eventos-paginacao"></plat-paginacao>
+    </section>
+    <plat-dialogo id="painel"></plat-dialogo>
+  </main>
+</div>
+<script type="module" src="/static/js/auth/plataforma.js"></script>
+</body>
+</html>
