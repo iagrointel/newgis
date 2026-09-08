@@ -17,7 +17,7 @@ const UNIDADES = [
   { valor: 'esriFeet', rotulo: 'pés' }, { valor: 'esriMiles', rotulo: 'milhas' },
 ];
 let saindo = false;
-const s = { ferramentas: [], camadas: [], atual: null };
+const s = { ferramentas: [], camadas: [], rasters: [], atual: null };
 
 function porId(id) {
   const n = document.getElementById(id);
@@ -39,6 +39,10 @@ function camposDe(p) {
   switch (tipo) {
     case 'GPFeatureRecordSetLayer':
       return [{ ...base, tipo: 'select', opcoes: s.camadas.map((c) => ({ valor: c.id, rotulo: c.titulo })) }];
+    /* item raster do inquilino; quando o parâmetro é de valor múltiplo, a tela escolhe UM e o envio o
+       embrulha em lista (escolher vários numa só execução ainda é pela API). */
+    case 'GPRasterDataLayer':
+      return [{ ...base, tipo: 'select', opcoes: s.rasters.map((c) => ({ valor: c.id, rotulo: c.titulo })) }];
     case 'GPLinearUnit':
       return [
         { ...base, tipo: 'numero', padrao: p.padrao ? p.padrao.distance : 0, atributos: { min: 0, step: 'any' } },
@@ -63,7 +67,7 @@ function parametrosDe(valores) {
     const v = valores[p.nome];
     if (p.tipo === 'GPLinearUnit') { saida[p.nome] = { distance: Number(v ?? 0), units: valores[`${p.nome}__unidade`] || 'esriMeters' }; continue; }
     if (v === '' || v === null || v === undefined) continue;
-    saida[p.nome] = v;
+    saida[p.nome] = p.tipo === 'GPMultiValue:GPRasterDataLayer' && !Array.isArray(v) ? [v] : v;
   }
   return saida;
 }
@@ -73,7 +77,7 @@ function montarFormulario() {
   const entradas = s.atual.parametros.filter((p) => p.direcao === 'entrada');
   f.campos = [
     ...entradas.flatMap(camposDe),
-    { nome: 'titulo', rotulo: 'título da camada de saída', tipo: 'texto', obrigatorio: false, ajuda: 'em branco = nome da ferramenta e da entrada' },
+    { nome: 'titulo', rotulo: 'título do resultado', tipo: 'texto', obrigatorio: false, ajuda: 'em branco = nome da ferramenta e da entrada' },
   ];
   f.botoes = [{ id: 'executar', rotulo: 'executar', tipo: 'submit' }];
   porId('ferramenta-descricao').textContent = `${s.atual.descricao || ''} (v${s.atual.versao}; GPServer: ${s.atual.gpserver})`;
@@ -125,10 +129,15 @@ async function executar(valores) {
 }
 
 async function carregar() {
-  const [rf, rc] = await Promise.all([api.obter('/api/ferramentas'), api.obter('/api/itens?tipo=camada_vetorial&limite=200')]);
+  const [rf, rc, rr] = await Promise.all([
+    api.obter('/api/ferramentas'),
+    api.obter('/api/itens?tipo=camada_vetorial&limite=200'),
+    api.obter('/api/itens?tipo=raster&limite=200'),
+  ]);
   if (rf.status !== 200) { aviso('aviso', `não foi possível listar as ferramentas: ${api.mensagemDe(rf)}`); return; }
   s.ferramentas = rf.json;
   s.camadas = rc.status === 200 ? (rc.json.itens || []) : [];
+  s.rasters = rr.status === 200 ? (rr.json.itens || []) : [];
   const sel = porId('ferramenta');
   limpar(sel);
   for (const f of s.ferramentas) sel.append(h('option', { value: f.nome }, f.titulo));
