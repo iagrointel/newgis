@@ -147,6 +147,14 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
+    # --- entrada de eventos em tempo real (L2-14-a-ingestao-de-fluxos): a GESTÃO da fonte registra evento
+    # como qualquer objeto do inquilino; o RECEBIMENTO do evento não registra (é o processo plat-fluxo, fora
+    # desta aplicação, e uma linha de registro por evento custaria mais que o evento — está no ADR do item).
+    ("POST", "/api/fluxos"): ["fluxos/criar"],
+    ("PATCH", "/api/fluxos/{id}"): ["fluxos/editar", "fluxos/pausar", "fluxos/retomar"],
+    ("DELETE", "/api/fluxos/{id}"): ["fluxos/apagar"],
+    ("DELETE", "/api/fluxos/{id}/eventos"): ["fluxos/expurgar"],
+    ("POST", "/api/fluxos/{id}/simular"): [],  # não muda estado: aplica mapeamento e filtro e devolve
     # ---- motor multicritério em grades aninhadas (L3-19-multiescala; vocabulário nas migrações
     # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
     # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por

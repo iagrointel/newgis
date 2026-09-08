@@ -55,6 +55,7 @@ class Preparacao:
     categoria_b: dict = field(default_factory=dict)  # L0-03: categoria de B
     fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
     conexao_b: dict = field(default_factory=dict)  # L6-02-a: conexão externa de B
+    fluxo_b: dict = field(default_factory=dict)  # L2-14-a: fonte de fluxo de B
     convite_b: dict = field(default_factory=dict)  # L0-07-d: convite pendente de B
     conjunto_b: dict = field(default_factory=dict)  # L3-19-multiescala: área de estudo de B
     fator_b: dict = field(default_factory=dict)  # L3-19-multiescala: fator de B
@@ -139,6 +140,15 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     )
     assert r.status_code == 201, r.text
     conexao_b = r.json()
+    # L2-14-a: fonte de fluxo de B (tipo http = receptor passivo; nenhum endereço externo é tocado)
+    r = sessao_b.post("/api/fluxos", json={
+        "tipo": "http", "nome": f"{PREFIXO}fluxo-{sufixo}",
+        "mapeamento": {"campo_tempo": {"caminho": "ts", "tipo": "iso"},
+                       "campo_rastro": "id",
+                       "geometria": {"modo": "lonlat", "lon": "lon", "lat": "lat"}},
+    })
+    assert r.status_code == 201, r.text
+    fluxo_b = r.json()
     # L3-19-multiescala: conjunto + fator + execução macro de B (sem amostra: 0 aprovadas, mas a execução
     # existe de verdade para os casos GET/POST cross-tenant de /execucoes e /execucoes/{id}/micro)
     r = sessao_b.post("/api/multiescala/conjuntos",
@@ -158,6 +168,7 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
+                      fluxo_b=fluxo_b,
                       convite_b=convite_b,
                       conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
 
@@ -185,6 +196,8 @@ def desfazer(p: Preparacao) -> None:
         p.sessao_b.delete(f"/api/pastas/{p.pasta_b['id']}")
     if p.conexao_b:
         p.sessao_b.delete(f"/api/conexoes/{p.conexao_b['id']}")
+    if p.fluxo_b:
+        p.sessao_b.delete(f"/api/fluxos/{p.fluxo_b['id']}")
     if p.conjunto_b:
         p.sessao_b.delete(f"/api/multiescala/conjuntos/{p.conjunto_b['id']}")  # cascata apaga a execução também
         p.sessao_b.delete(f"/api/multiescala/fatores/{p.fator_b['id']}")
@@ -518,6 +531,29 @@ CASOS: dict[tuple[str, str], Caso] = {
     # quando o alvo é de B (a rota lê a conexão pelo RLS de _carregar ANTES de qualquer efeito colateral).
     ("GET", "/api/conexoes/{id}/saude-historico"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/saude-historico"),
     ("POST", "/api/conexoes/{id}/publicar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar"),
+    # ---- L2-14-a: fonte de fluxo é do INQUILINO (tenant_id + RLS, mesma classe de conexão). O RECEPTOR de
+    # evento não está aqui porque não é rota desta aplicação: vive no processo plat-fluxo, na porta 8155, e o
+    # seu isolamento entre inquilinos é provado em tests/api/test_fluxo_receptor.py.
+    ("GET", "/api/fluxos"): Caso(lambda p: "/api/fluxos", proprio=True, aceita=frozenset({200}),
+                                 verificar=_sem_marca),
+    ("POST", "/api/fluxos"): Caso(
+        lambda p: "/api/fluxos",
+        lambda p: {"tipo": "http", "nome": f"{PREFIXO}fluxo-a-{secrets.token_hex(4)}"},
+        proprio=True, aceita=frozenset({201}),
+        limpar=_apagar_criado(("DELETE", "/api/fluxos/{id}")),
+    ),
+    ("GET", "/api/fluxos/{id}"): Caso(lambda p: f"/api/fluxos/{p.fluxo_b['id']}"),
+    ("PATCH", "/api/fluxos/{id}"): Caso(
+        lambda p: f"/api/fluxos/{p.fluxo_b['id']}", lambda p: {"nome": f"{PREFIXO}invadida"}
+    ),
+    ("DELETE", "/api/fluxos/{id}"): Caso(lambda p: f"/api/fluxos/{p.fluxo_b['id']}"),
+    ("GET", "/api/fluxos/{id}/eventos"): Caso(lambda p: f"/api/fluxos/{p.fluxo_b['id']}/eventos"),
+    ("DELETE", "/api/fluxos/{id}/eventos"): Caso(
+        lambda p: f"/api/fluxos/{p.fluxo_b['id']}/eventos?antes_de=2099-01-01T00:00:00Z"
+    ),
+    ("POST", "/api/fluxos/{id}/simular"): Caso(
+        lambda p: f"/api/fluxos/{p.fluxo_b['id']}/simular", lambda p: {"ts": "2026-01-01T00:00:00Z"}
+    ),
     # ---- L3-19-multiescala: conjunto/fator/execução são do INQUILINO (tenant_id + RLS, mesma classe da
     # conexão acima, não do registro compartilhado do acervo); GET/POST/DELETE de lista agem só sobre o
     # próprio chamador, GET/DELETE/POST por id de B são cross-tenant puro (404, a RLS nunca deixa ver a linha).
