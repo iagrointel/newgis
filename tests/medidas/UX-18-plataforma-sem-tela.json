@@ -1,0 +1,27 @@
+{
+ "item": "UX-18-plataforma-sem-tela",
+ "medidas": {
+  "estados_provados": {
+   "valor": 13,
+   "unidade": "estados",
+   "comando": "lista:negado(real); lista:conteudo; lista:vazio; lista:erro; criar:422:slug(real); criar:409:slug_existente(real); criar:409:slug_reservado; criar:ok; suspender:409:nomeado; suspender:ok; reativar:404:nomeado; reativar:ok; apagar:ok"
+  },
+  "violacoes_serias_axe": {
+   "valor": 0,
+   "unidade": "violações",
+   "comando": "axe-core 4.10.3 wcag2a/aa em /admin/inquilinos negado, /admin/inquilinos lista, /admin/inquilinos novo, /admin/inquilinos criado, /admin/inquilinos final"
+  },
+  "erros_de_console": {
+   "valor": 0,
+   "unidade": "erros",
+   "comando": "Tela.verificar (console.error, pageerror, respostas >= 400 não declaradas)"
+  },
+  "pagina_pronta_ms_inquilinos_negado": {
+   "valor": 36.0,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  }
+ },
+ "gerado_em": "2026-09-08T11:39:03Z",
+ "git_sha": "aa1ed7c813c6"
+}
