@@ -109,6 +109,14 @@ def _porta_viva(porta: int, host: str = "127.0.0.1") -> bool:
         return s.connect_ex((host, porta)) == 0
 
 
+def _porta_livre() -> int:
+    """Porta efêmera pedida ao sistema: número fixo faz duas trilhas desta máquina disputarem o mesmo soquete,
+    e o risco não é erro de conexão — é uma delas medir o servidor da outra."""
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return int(s.getsockname()[1])
+
+
 def _limpar(bucket: dict) -> None:
     cli = _boto3(bucket, ro=False)
     alias = bucket["bucket_alias"]
@@ -642,7 +650,7 @@ def test_4b_adaptador_recusa_a_mesma_chave_e_a_versao_1_fica_intacta(ambiente):
 # ================================================================ ataque 5: faixa de bytes
 @pytest.fixture(scope="module")
 def nginx_cog(ambiente, tmp_path_factory):
-    """nginx PRÓPRIO na 8173 com o bloco de deploy/nginx.conf (o mesmo recorte que o construtor usa), um
+    """nginx PRÓPRIO em porta livre com o bloco de deploy/nginx.conf (o mesmo recorte que o construtor usa), um
     objeto de ~3 MiB no balde de A e um token de serviço de A. Devolve tudo o que o ataque 5 precisa."""
     import ssl
 
@@ -681,6 +689,7 @@ def nginx_cog(ambiente, tmp_path_factory):
     assert tok_b.status_code == 201, tok_b.text
     token_b = tok_b.json()
 
+    porta_nginx = _porta_livre()
     prefixo = tmp_path_factory.mktemp("nginx_adv")
     (prefixo / "logs").mkdir()
     (prefixo / "cache").mkdir()
@@ -707,7 +716,7 @@ http {{
   scgi_temp_path {prefixo}/scgi_temp;
   proxy_cache_path {prefixo}/cache levels=1:2 keys_zone=plat_cog_adv:4m max_size=64m inactive=10m use_temp_path=off;
   server {{
-    listen 8173 ssl;
+    listen {porta_nginx} ssl;
     server_name localhost;
     ssl_certificate {prefixo}/c.pem;
     ssl_certificate_key {prefixo}/k.pem;
@@ -724,11 +733,12 @@ http {{
     ctx.verify_mode = ssl.CERT_NONE
     try:
         for _ in range(60):
-            if _porta_viva(8173):
+            if _porta_viva(porta_nginx):
                 break
             time.sleep(0.1)
-        assert _porta_viva(8173), "o nginx do adversário não subiu na 8173"
-        yield {"dados": dados, "chave": gravado["chave"], "token_a": token_a, "token_b": token_b, "ssl": ctx}
+        assert _porta_viva(porta_nginx), f"o nginx do adversário não subiu na {porta_nginx}"
+        yield {"dados": dados, "chave": gravado["chave"], "token_a": token_a, "token_b": token_b, "ssl": ctx,
+               "porta": porta_nginx}
     finally:
         proc.terminate()
         try:
@@ -748,7 +758,7 @@ def _pedir(nginx, caminho, faixa=None):
     import urllib.request
 
     cabecalhos = {"Range": faixa} if faixa else {}
-    pedido = urllib.request.Request(f"https://127.0.0.1:8173{caminho}", headers=cabecalhos)
+    pedido = urllib.request.Request(f"https://127.0.0.1:{nginx['porta']}{caminho}", headers=cabecalhos)
     try:
         with urllib.request.urlopen(pedido, context=nginx["ssl"], timeout=30) as r:
             return r.status, dict(r.headers), r.read()
