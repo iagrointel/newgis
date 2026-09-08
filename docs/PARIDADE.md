@@ -417,3 +417,37 @@ acesso 2026-09-05); Dashboards, "Actions" e "Relationships between data sources"
 | ciclo de mensagens (A filtra B, B filtra A) | não documentado | validação avisa (não recusa); o barramento corta a recursão em uma volta e emite `aviso` `ciclo_cortado` | feito | node (`test_ciclo_...`) | 2026-09-08 | pendente (D20) |
 | latência gatilho → ação | não publicada | p95 medido em node com 10 mil feições em memória, 200 disparos (`tests/medidas/L5-07-fontes-vistas-mensagens.json`, com carga e RAM ao lado) | feito (≤ 100 ms na medida desta máquina) | `test_medida_latencia_...` | 2026-09-08 | pendente (D20) |
 | mapa-base e estilo por camada no widget de mapa | MapLibre/ArcGIS JS | fora — o widget de mapa deste item desenha a camada de DADO da vista em SVG (projeção do envelope; clique, seleção, extensão, popup, piscar reais); mapa-base MapLibre e simbologia são o L5-01-b | fora (L5-01-b) | — | 2026-09-08 | pendente (D20) |
+
+## Widgets de dado do aplicativo (item L5-01-c-widgets-dado; ADR `20260908T1500-widgets-de-dado`)
+
+Referência Esri: Experience Builder, categoria "Data centric" da lista de widgets (doc.arcgis.com/en/experience-builder/latest/configure-widgets/widgets-overview.htm
+e as páginas de cada widget, acesso 2026-09-08): 15 widgets. Aqui cada linha diz o que existe, sobre qual vista, e onde a
+agregação/paginação acontece. A fonte de camada NUNCA é carregada inteira no navegador: a Vista (`web/js/app/vistas.js`)
+delega ao FeatureServer do L2-04 (`query`: where traduzido do CQL2-JSON, orderByFields, resultOffset/resultRecordCount,
+outStatistics + groupByFieldsForStatistics, returnDistinctValues, returnIdsOnly, geometry) e guarda em cache só o que
+já foi visto; fonte embutida/arquivo/URL continua em memória com a mesma API assíncrona.
+
+| widget Esri (Data centric) | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|
+| Table | `tabela` 2.0.0: página, ordenação por cabeçalho e contagem no servidor; seleção por linha (vista); exportar CSV/GeoJSON do filtro ativo (páginas de 5 mil); colunas configuráveis ou todos os campos | feito — p95 por página com 100 mil pontos em `tests/medidas/L5-01-c-widgets-dado.json` (portão < 300 ms) | api (`test_tabela_100_mil_...`), e2e (ordenar, paginar, CSV lido) | 2026-09-08 | pendente (D20) |
+| List | `lista` 1.0.0: cartões com modelo de texto `{campo}` e `{= expressão }` (linguagem do L2-10-c, `$campo`), paginada pela vista, clique seleciona | feito | e2e (`Ponto 1 (B) 3`) | 2026-09-08 | pendente (D20) |
+| Chart | `grafico` 2.0.0: barra, linha, pizza (agregação `outStatistics` por grupo no servidor: contagem, soma, média, mínimo, máximo), histograma (min/max + uma contagem por faixa no servidor), dispersão (amostra de até 5 mil); Chart.js 4.5.1 vendido (D21), SVG próprio sem ele; clique vira filtro | feito — 5 agregações batem com SQL direto (`test_grafico_agrega_no_servidor_...`) | api, e2e (soma por categoria = valor calculado; histograma 5 faixas) | 2026-09-08 | pendente (D20) |
+| Filter | `filtro` 2.0.0: modos texto (`like`), valores únicos (`returnDistinctValues` no servidor; um ou vários), intervalo numérico (`between`), data (`>=`/`<=`) | feito | e2e (valores únicos carregados; combinado com a seleção do mapa) | 2026-09-08 | pendente (D20) |
+| Query | `consulta` 1.0.0: campo + operador + valor, CQL2-text livre, e "dentro da seleção do mapa" (`s_intersects` com o envelope da seleção → parâmetro `geometry`); emite o filtro e mostra o total | feito | e2e (`valor > 300` → 100 registros) | 2026-09-08 | pendente (D20) |
+| Select | `selecao` 1.0.0: por atributo (`returnIdsOnly` no servidor com o filtro da vista), tudo, inverter, limpar; a seleção interativa é do mapa/tabela/lista | feito | e2e (`categoria = 'C'` → 100 selecionados) | 2026-09-08 | pendente (D20) |
+| Feature Info | `info-feicao` 1.0.0: feição selecionada da vista (navega entre várias), campos ou modelo de texto | feito (leitura); popup configurável por construtor é o L5-26 | e2e | 2026-09-08 | pendente (D20) |
+| Add Data | `adicionar-dado` 1.0.0: GeoJSON de arquivo do usuário ou caminho do próprio servidor entra como dado TEMPORÁRIO na fonte em memória da vista alvo (`dado_adicionado`); fonte de camada recusa | feito (temporário, nunca gravado) | e2e (arquivo de 2 feições → tabela 3 → 5) | 2026-09-08 | pendente (D20) |
+| Edit | formulário dentro do app | fora — depende do L5-03 (form builder, pendente); a edição por API existe (L2-03-a) | — | 2026-09-08 | — |
+| Search | busca por texto em camadas/geocodificador | fora — L5-01 (widget de busca) / L2-11 geocodificador | — | 2026-09-08 | — |
+| Near Me | proximidade em torno de um ponto | fora — `distance`/`units` do FeatureServer existem (L2-04-c); o widget não entra neste item | — | 2026-09-08 | — |
+| Analysis | ferramentas de análise da Esri | fora — L3 (motor multicritério) | — | 2026-09-08 | — |
+| Suitability Modeler | modelagem de adequação | fora — L3-19 multiescala cobre a família | — | 2026-09-08 | — |
+| Feature Report (Survey123) | relatório por feição | fora — coberto por L5-29 | — | 2026-09-08 | — |
+| Business Analyst | infográficos do Business Analyst | fora — produto pago da Esri sem equivalente planejado | — | 2026-09-08 | — |
+
+Regras que este item fixa: (1) filtros dinâmicos de ORIGENS diferentes se combinam por AND na vista (filtro de
+widget + seleção no mapa levada por mensagem = interseção; a mesma origem substitui o próprio filtro; seleção vazia
+tira só o filtro daquela origem); (2) o `where` gerado no navegador só usa o subconjunto que o analisador seguro do
+servidor aceita, com literais sempre entre aspas dobradas e nome de campo validado nos dois lados
+(`test_where_gerado_no_navegador_e_aceito_pelo_analisador_do_servidor`); (3) exportação respeita o filtro ativo e
+para no teto de 200 mil feições.
