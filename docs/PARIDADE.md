@@ -530,3 +530,29 @@ Fontes declaradas no item: `pandapower.readthedocs.io/en/latest/shortcircuit.htm
 | resultado como camada e como tabela | a Esri publica resultado de traçado como seleção, não como camada de análise elétrica | `GET .../curto` devolve a tabela com as colunas descritas; `GET .../curto/camada` devolve GeoJSON de pontos com a coordenada lida da topologia na hora (nunca cópia) | feito | `::test_tabela_e_camada_do_mesmo_calculo` | 2026-09-08 | não se aplica |
 | rede em malha | não se aplica | limitação declarada: a impedância é somada ao longo do caminho de menor impedância até a fonte, e onde há laço a corrente sai SUBESTIMADA, com o aviso `rede_com_laco` e a contagem de trechos fora da árvore | limitação declarada | `::test_laco_sai_com_aviso` | 2026-09-08 | não se aplica |
 | desequilíbrio entre fases | não se aplica | o cálculo é por sequências, com a rede tratada como equilibrada; trecho monofásico entra com a mesma impedância do trifásico | limitação declarada | cabeçalho de `app/rede_utilidades/curto_circuito.py` | 2026-09-08 | não se aplica |
+
+## Rede de utilidades — fluxo de potência do alimentador (item L4-07-fluxo-de-potencia)
+
+Como as duas seções anteriores, esta capacidade **NÃO é paridade**: o ArcGIS Utility Network não resolve
+fluxo de potência — ele modela a rede, traça e valida topologia. Cálculo elétrico é "além da paridade"
+(a expressão está no `L4_CONCEITO.md`, decisão C17), e a linha "Pro editando o nosso fluxo = FORA" vale
+aqui como em todo o L4. Não se vende isto como "fazemos o que a Esri faz": a Esri resolve outro problema.
+
+Texto obrigatório junto de qualquer número que saia daqui: **triagem, sinal, não prova**. A impedância de
+condutor e a reatância de dispersão do transformador são valores PADRÃO do motor OpenDSS, porque o
+cadastro de distribuição não os traz, e o carregamento de trecho é sobre uma corrente nominal DECLARADA no
+pedido, não sobre uma ampacidade lida do arquivo — que não existe.
+
+Fontes declaradas no item: `opendss.epri.com/opendss_documentation.html`, `dss-extensions.org`,
+`github.com/dss-extensions/OpenDSSDirect.py` e o PRODIST Módulo 7 da ANEEL, acesso 2026-09-08.
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| fluxo de potência trifásico desequilibrado do alimentador | não existe | `POST /api/rede/{id}/subrede/{nome}/fluxo` resolve no OpenDSS sobre o MESMO modelo em memória dos exportadores; varredura anual de 864 pontos (24 h x 3 tipos de dia x 12 meses) ou uma hora escolhida | feito (além da paridade) | `tests/unit/test_fluxo_potencia.py::test_queda_de_tensao_em_linha_unica_e_i_vezes_z` (resposta analítica em cinco barras, contra I x Z fasorial) e a medida na cooperativa em `tests/medidas/L4-07-fluxo-de-potencia.json` | 2026-09-08 | não se aplica |
+| tensão por barra e fase, corrente e carregamento por trecho, carregamento e perda por transformador | não existe | uma linha por elemento em `plat.rede_fluxo_resultado`, no ponto de maior carga do ano; `GET .../fluxo` devolve a tabela ordenada pelo que dói primeiro | feito (além da paridade) | `tests/api/test_rede_fluxo.py::test_fluxo_do_alimentador_tem_resultado_por_elemento` | 2026-09-08 | não se aplica |
+| camadas de tensão, corrente e carregamento no mapa | não existe (mapa temático de atributo existe; a grandeza calculada, não) | `GET .../fluxo/camada?grandeza=tensao\|corrente\|carregamento`, com a geometria lida da topologia na hora; tela `/redes/fluxo` | feito (além da paridade) | `tests/e2e/test_rede_fluxo.py::test_camadas_de_tensao_corrente_e_carregamento_no_mapa` (pergunta ao MapLibre quais camadas existem) | 2026-09-08 | não se aplica |
+| estado de convergência ao lado de todo número | não se aplica | `convergiu` e `pontos_sem_convergencia` são NOT NULL na execução e vêm no POST, na tabela e na camada; a tela escreve a tarja antes de desenhar; `agregar` exclui e NOMEIA quem não convergiu | feito | `tests/api/test_rede_fluxo.py::test_convergencia_acompanha_toda_leitura` e `tests/unit/test_fluxo_potencia.py::test_alimentador_que_nao_converge_fica_marcado_e_fora_da_agregacao` | 2026-09-08 | não se aplica |
+| perda de ferro simulada conferida contra o arquivo | não se aplica | a perda a vazio simulada no ano é comparada com PER_FER x horas do ano do cadastro; a razão sai gravada | feito | `tests/unit/test_fluxo_potencia.py::test_perda_de_ferro_simulada_bate_com_a_declarada` (razão 0,9946, contra a referência 99,5 % da casa) | 2026-09-08 | não se aplica |
+| impedância de condutor e reatância do transformador | não se aplica | não vêm do cadastro: são o valor PADRÃO do OpenDSS, escrito em vez de implícito. O perfil de tensão não é medição desta rede | limitação declarada | `docs/adr/20260908T1255-fluxo-de-potencia.md` | 2026-09-08 | não se aplica |
+| barra com tensão de base errada | não se aplica | onde trecho de média e de baixa se encostam sem transformador entre eles, a base atravessa o nó; a barra sai fora de 0,5 a 1,5 pu e é CONTADA em `barras_fora_de_faixa_plausivel`, com aviso — nunca corrigida em silêncio | limitação declarada e medida | a medida na cooperativa, em `tests/medidas/L4-07-fluxo-de-potencia.json` | 2026-09-08 | não se aplica |
+| job remoto no servidor com GPU por ssh | não se aplica | FORA: o executor `gpu` existe como declaração em `app/jobs/registro.py`, mas o despacho remoto não está implementado na fila — é item da linha de jobs. O motor roda no worker desta máquina, com o pico de memória medido | fora | a medida na cooperativa (campo `onde_roda_pico_de_ram`) | 2026-09-08 | não se aplica |
