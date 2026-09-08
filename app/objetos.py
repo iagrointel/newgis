@@ -32,6 +32,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import os
 import re
 import time
 import uuid
@@ -245,6 +246,64 @@ def guardar(
     return {"chave": chave, "sha256": sha, "bytes": len(dados), "content_type": content_type}
 
 
+PARTE_STREAM_BYTES = 16 * 1024 * 1024  # parte do multipart no envio em stream (>= PARTE_TAMANHO_MINIMO do S3)
+
+
+def guardar_arquivo(
+    cur, classe: str, caminho, content_type: str, item_id: Any = None, usuario_id: int | None = None
+) -> dict:
+    """Mesmo contrato de `guardar` (chave por sha256 do conteúdo, HEAD antes de PUT, metadado com RLS) lendo
+    de um ARQUIVO EM DISCO em vez de bytes em RAM (item L1-01: COG de centenas de MB nunca passa inteiro pela
+    memória do worker — sha256 calculado em stream, envio por multipart acima de PARTE_STREAM_BYTES)."""
+    tenant_id, tenant_slug = _tenant_atual(cur)
+    bucket = garantir_bucket(cur, tenant_id, tenant_slug)
+    h = hashlib.sha256()
+    with open(caminho, "rb") as f:
+        for pedaco in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(pedaco)
+    sha = h.hexdigest()
+    tamanho = os.path.getsize(caminho)
+    ext = EXTENSOES.get(content_type, "bin")
+    referencia = str(item_id) if item_id is not None else None
+    meio = f"{referencia}/" if referencia else ""
+    obj_key = f"{classe}/{meio}{sha}.{ext}"
+    chave = f"{tenant_slug}/{obj_key}"
+    cli = _cliente(bucket)
+    if cli.head(bucket["bucket_alias"], obj_key) is None:
+        usado = _admin().info_bucket(bucket["bucket_id"]).get("bytes", 0)
+        if usado + tamanho > bucket["cota_bytes"]:
+            raise CotaExcedida(
+                f"cota de {bucket['cota_bytes']} bytes excedida: uso atual {usado}, objeto de {tamanho} bytes"
+            )
+        if tamanho <= PARTE_STREAM_BYTES:
+            with open(caminho, "rb") as f:
+                cli.put(bucket["bucket_alias"], obj_key, f.read(), content_type)
+        else:
+            upload_id = cli.multipart_iniciar(bucket["bucket_alias"], obj_key, content_type)
+            try:
+                partes: list[tuple[int, str]] = []
+                with open(caminho, "rb") as f:
+                    numero = 1
+                    while True:
+                        pedaco = f.read(PARTE_STREAM_BYTES)
+                        if not pedaco:
+                            break
+                        etag = cli.multipart_enviar_parte(
+                            bucket["bucket_alias"], obj_key, upload_id, numero, pedaco
+                        )
+                        partes.append((numero, etag))
+                        numero += 1
+                cli.multipart_concluir(bucket["bucket_alias"], obj_key, upload_id, partes)
+            except Exception:
+                try:
+                    cli.multipart_abortar(bucket["bucket_alias"], obj_key, upload_id)
+                except ErroGarage:
+                    log.warning("objetos: abortar multipart de %s falhou na limpeza", obj_key)
+                raise
+    _registrar_metadado(cur, tenant_id, classe, referencia, sha, tamanho, content_type, chave, usuario_id)
+    return {"chave": chave, "sha256": sha, "bytes": tamanho, "content_type": content_type}
+
+
 def existe(chave: str) -> bool:
     try:
         bucket, obj_key = _chave_e_objeto(chave)
@@ -262,6 +321,29 @@ def ler_intervalo(chave: str, inicio: int, fim: int) -> bytes:
     """Bytes [inicio, fim] inclusive (contrato ADR 0005: cabeçalho central de zip sem baixar o arquivo inteiro)."""
     bucket, obj_key = _chave_e_objeto(chave)
     return _cliente(bucket).get_intervalo(bucket["bucket_alias"], obj_key, inicio, fim)
+
+
+def tamanho(chave: str) -> int:
+    """Tamanho do objeto em bytes (HEAD no Garage); FileNotFoundError se não existe (item L1-01: o handler de
+    tiles e a entrega por Range precisam do tamanho sem baixar nada)."""
+    bucket, obj_key = _chave_e_objeto(chave)
+    info = _cliente(bucket).head(bucket["bucket_alias"], obj_key)
+    if info is None:
+        raise FileNotFoundError(chave)
+    return int(info.tamanho)
+
+
+def baixar(chave: str, destino) -> int:
+    """Grava o objeto em `destino` (caminho local) EM STREAM, sem materializar em RAM (item L1-01: o bruto de
+    até RASTER_BYTES_MAX desce para o diretório de trabalho do job). Devolve os bytes escritos."""
+    bucket, obj_key = _chave_e_objeto(chave)
+    cli = _cliente(bucket)
+    escrito = 0
+    with open(destino, "wb") as f:
+        for pedaco in cli.get_stream(bucket["bucket_alias"], obj_key):
+            f.write(pedaco)
+            escrito += len(pedaco)
+    return escrito
 
 
 def apagar(chave: str) -> bool:
