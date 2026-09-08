@@ -131,6 +131,8 @@ ROUTERS = [
     # --- motor multicritério (AMC), localização semelhante (L3-17-similaridade): /api/amc/similaridade e
     # /api/amc/similaridade/exportar; sem tabela própria, mesmo padrão sem-estado de rotas_rede acima
     rotas_similaridade,
+    # --- motor multicritério (L3-01-a/b): /api/amc/modelos, /api/amc/conjuntos, /api/amc/execucoes
+    rotas_amc,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
