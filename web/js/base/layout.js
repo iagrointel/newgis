@@ -20,6 +20,8 @@ export const TELAS = [
   { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar' },
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver' },
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
+  // item L0-07-e: painel Atividade e relatórios do admin
+  { caminho: '/admin/atividade', chave: 'nav.atividade', privilegio: 'org.exportar' },
 ];
 
 export function telasVisiveis(usuario) {
