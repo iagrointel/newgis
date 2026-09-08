@@ -14,7 +14,12 @@ import { montarLayout, pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
 import { criarEditor } from './editor.js';
 import { PALETA_LAYOUT } from './paleta.js';
+import { PALETA_PAGINAS } from './paleta_paginas.js';
 import { novoDocumento } from './documento.js';
+
+/* item `app` ganha a paleta de PÁGINAS E LAYOUT (L5-01-a: página, cabeçalho, menu, janela, ...); os demais
+   tipos de construtor continuam com a paleta de layout comum do L5-08, sem página nenhuma dentro deles. */
+function paletaDoTipo(tipo) { return tipo === 'app' ? PALETA_PAGINAS : PALETA_LAYOUT; }
 
 await carregar();
 const usuario = await exigirSessao();
@@ -44,12 +49,15 @@ async function iniciar() {
   const alvo = h('div', { id: 'editor-raiz' });
   const btSalvar = h('button', { type: 'button', id: 'salvar', class: 'primario', disabled: !id }, 'Salvar');
   const estado = h('span', { id: 'estado-salvo', class: 'estado' }, id ? 'sem alterações' : 'sem item: passe ?item=<id>');
-  principal.append(h('div', { class: 'linha-ferramentas' }, btSalvar, estado), alvo);
+  const linkExecutar = documento.tipo === 'app' && id
+    ? h('a', { id: 'executar', class: 'pequeno', href: `/executar?item=${id}`, target: '_blank', rel: 'noopener' }, 'Executar')
+    : null;
+  principal.append(h('div', { class: 'linha-ferramentas' }, btSalvar, estado, linkExecutar), alvo);
 
   const editor = criarEditor({
     raiz: alvo,
     documento,
-    paleta: PALETA_LAYOUT,
+    paleta: paletaDoTipo(documento.tipo),
     aoMudar: () => { estado.textContent = 'alterações não gravadas'; },
   });
 

@@ -1,11 +1,39 @@
-# CHANGELOG.md é acrescentado por TODO item, então todo ramo conflitava com todo ramo:
-# em 07/09 seis junções seguidas reprovaram por isso e nenhuma era defeito de código.
-# `merge=union` (embutido no git) guarda os dois lados quando ambos só acrescentam.
-# A ordem das linhas do lote fica arbitrária — de propósito: é registro, não contrato.
-CHANGELOG.md merge=union
 
-# Arquivos GERADOS: nunca vale a pena arbitrar conflito neles, a fila regera com `make openapi`
-# depois de montar o lote. `merge=ours` guarda a versão do alvo e o gerador escreve a verdade.
 # (07/09: openapi.json reprovou junção de item cujo código estava correto.)
+# 07/09 tarde: 5 ramos reprovaram de uma vez por conflito aqui, nenhum por teste. União; a fila
+# A ordem das linhas do lote fica arbitrária — de propósito: é registro, não contrato.
+app/auth/escopos.py merge=union
+# app/auth/escopos.py: registro de escopos de token, um por item. Oitavo da família.
+# app/jobs/tipos.py é REGISTRO de tipos de job (um import por módulo de tarefas); mesma família.
+app/jobs/tipos.py merge=union
+app/limites.py merge=union
+# app/main.py é REGISTRO de rotas: cada item acrescenta import + include_router no mesmo lugar.
+app/main.py merge=union
+app/paginas.py merge=union
+ARQUITETURA.md merge=union
+# Arquivos GERADOS: nunca vale a pena arbitrar conflito neles, a fila regera com `make openapi`
+# CHANGELOG.md é acrescentado por TODO item, então todo ramo conflitava com todo ramo:
+CHANGELOG.md merge=union
+# conflita com todo ramo e a fila serializa (07/09: 5 reprovações seguidas, nenhuma por teste).
+# depois de montar o lote. `merge=ours` guarda a versão do alvo e o gerador escreve a verdade.
+docs/cobertura_ui_lacunas.json merge=ours
+docs/COBERTURA_UI.md merge=ours
+docs/LIMITES.md merge=ours
 docs/openapi.json merge=ours
 docs/PARIDADE.md merge=ours
+# em 07/09 seis junções seguidas reprovaram por isso e nenhuma era defeito de código.
+# faz a união das CHAVES (laco/merge_json.py; `git config merge.jsonuniao.driver` já posto na máquina).
+# Gerado por `make limites` a partir de app/limites.py — a fila regera ao fechar o lote.
+.gitignore merge=union
+# MANUAL.md: cada item acrescenta a sua seção. Nono registro da família; união (markdown tolera).
+MANUAL.md merge=union
+# `merge=union` (embutido no git) guarda os dois lados quando ambos só acrescentam.
+# Registros que só CRESCEM: cada item acrescenta uma entrada de uma linha. Sem isto, todo ramo
+# remove include_router duplicado e confere sintaxe antes da suíte.
+# Risco aceito: se a união quebrar a sintaxe, a verificação do lote reprova na hora e alto.
+SISTEMA.md merge=union
+tests/api/cruzado_casos.py merge=union
+tests/api/eventos_esperados.py merge=union
+# tests/api/eventos_esperados.py: registro de eventos por rota, um por item. Sétimo da família.
+# web/js/i18n/*.json: dicionário de tradução, um texto por chave — union quebra JSON; driver próprio
+web/js/i18n/*.json merge=jsonuniao
