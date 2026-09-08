@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## 8 de setembro de 2026 (item L1-01-i-ciclo-de-vida-exclusao-e-coleta-de-lixo: lixeira de 7 dias, expurgo pelo catálogo e `plat raster gc`)
+
+O item de imagem ganha fim de linha. Excluir pelo navegador esconde o item pela RLS (tile responde 404 em
+0,016 s, `tests/medidas/L1-01-i-ciclo-de-vida-exclusao-e-coleta-de-lixo.json`), tira o corpo STAC do pgstac
+guardando-o em `plat.raster_item.stac` (migração 20260908T1911) e enfileira o apagamento dos objetos para
+daqui a 7 dias; restaurar dentro da retenção devolve tudo (o objeto nunca saiu do balde) e fora dela devolve
+409 `objetos_ja_apagados`. O expurgo do catálogo passa a ter destruidor do tipo 'raster' (objetos + STAC +
+espelho, bytes liberados no evento). O CLI `plat raster gc` lista órfãos, quebrados e lixeira vencida e
+registra o relatório como job concluído em Tarefas — fora do worker, pelo caminho honesto da máquina de
+estados: `plat.job_registrar_concluido` (migração 20260908T1932, SECURITY DEFINER) nasce pendente, vira
+'rodando' se ninguém pegou e conclui por `plat.job_terminar`; a enumeração de inquilinos da CLI usa
+`plat.tenants_para_manutencao()`, porque a RLS de `plat.tenant` deixa a tabela vazia para o app sem sessão.
+A coleta LISTA e RELATA; apagar órfão é decisão humana. Refutação: 3 itens, apaga 2, o 3º intacto byte a
+byte, e o COG excluído não volta pela URL antiga (403 dentro da retenção — barra até a fatia em cache do
+nginx; 404 por ausência depois). ADR 20260908T1955.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
