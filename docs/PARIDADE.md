@@ -399,6 +399,54 @@ da busca com os trechos citados literalmente, não de navegação própria pela 
 | Window (modal / ancorada) | "Window" NÃO é um widget de layout na doc da Esri — é um TIPO de página à parte, com dois modos de exibição (centralizado/modal e ancorado perto do que a abriu) | `janela`: um nó de conteúdo com `modo` `modal` (`<dialog>` nativo, Esc/backdrop do navegador) ou `ancorada` (`div` posicionado, Esc por `keydown` manual); modelamos como WIDGET, não como página — divergência deliberada (documento único por app, sem página extra para cada popup) | parcial (cobre os dois modos; modelo diferente do da Esri) | idem (cláusula "janela modal abre por botão e fecha por Esc") | 2026-09-07 | pendente (D20) |
 | Tab (seção com vistas/abas) | não está entre os 6 widgets confirmados na busca desta passagem (candidato a widget "layout adjacente"; não confirmado por citação literal) | `secao_vistas`/`vista`: barra de abas + painel único visível (`role="tab"`, `aria-selected`) | não comparável (Esri não confirmada nesta busca) | construído; sem e2e próprio nesta passagem | 2026-09-07 | pendente (D20) |
 
+## Ações configuráveis dos widgets (item L5-01-e-acoes-configuraveis; ADR `20260908T1200-acoes-configuraveis`)
+
+Referência Esri: Experience Builder, "Add actions to widgets" (doc.arcgis.com/en/experience-builder/latest/configure-widgets/add-actions-to-widgets.htm,
+acesso 2026-09-08 — a página respondeu; os 8 gatilhos listados nela são os do quadro) e o botão "Actions" dos widgets
+de dado (Table/List/Map: export, show on map, zoom to, pan to, select). O que o produto tem é o painel "Ações" do
+widget selecionado no construtor (`web/js/app/painel_acoes.js`, sobre o modelo do L5-07) e o botão "Ações" do usuário
+nos widgets de dado (`web/js/widgets/base.js`).
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| painel de ações por widget: gatilho → alvo → ação → parâmetros | "Action" tab do widget no EXB | painel "Ações" no fim das propriedades do widget selecionado: evento (só os que o TIPO emite), alvo (widget ou vista), ação (só as que o alvo ACEITA), relação (mesma fonte / atributo com campos em lista / espacial) e condição CQL2 | feito | `tests/e2e/test_app_acoes.py` (app montado só pelo painel, 8 capturas) | 2026-09-08 | não |
+| validação no construtor: gatilho já usado | EXB não deixa repetir o mesmo trigger+target+action | `gatilho_repetido` (origem+evento+alvo+ação) recusado antes de entrar, nomeado no painel | feito | e2e + `tests/unit/test_app_acoes.py` (Python = node) | 2026-09-08 | não |
+| validação no construtor: alvo incompatível | EXB só lista widgets/fontes compatíveis | `evento_incompativel` (origem não emite) e `alvo_incompativel` (alvo não aceita) — contrato lido do registro dos widgets, espelhado em `app/app_modelo/contratos.py` (teste compara os dois) | feito | unit (2 lados) | 2026-09-08 | não |
+| referência quebrada ao renomear campo da camada | EXB mostra aviso no widget | `campo_inexistente` na relação e na condição; o painel marca a ação como "referência quebrada" com a mensagem | feito | unit `test_renomear_campo...` (2 lados); painel (e2e do L5-07 cobre o formulário) | 2026-09-08 | não |
+| condição na ação ("apenas se") | Dashboards: filtro na ação | `parametros.condicao` (CQL2) sobre os registros de origem: ação de dado leva só os que passam; ação de widget não dispara se nenhum passa | feito | e2e (gráfico pisca só se uf = 'MG') | 2026-09-08 | não |
+| ações do usuário: exportar | "Export" (CSV/JSON/GeoJSON) no Table/List | "Ações" → Exportar CSV / GeoJSON das feições FILTRADAS da vista (download no navegador) | feito | e2e (1 linha filtrada no CSV e no GeoJSON) | 2026-09-08 | não |
+| ações do usuário: ver na tabela, zoom, selecionar | "Show on map", "Zoom to", "Pan to" | "Ver na tabela" (tabelas da mesma fonte filtram pela seleção), "Zoom à seleção" (mapas da mesma fonte) | feito | e2e (zoom muda `data-extensao`) | 2026-09-08 | não |
+| ações do usuário: criar item no catálogo com a seleção | "Save selection"/"Add to map" (AGOL) | "Criar item com a seleção" → `POST /api/itens` tipo `selecao` (fonte, ids, filtro); instalação sem o tipo devolve o erro nomeado no menu | parcial — depende do tipo `selecao` do L6-01-c/L2-01-h chegar a master | e2e aceita 201 ou o erro nomeado | 2026-09-08 | não |
+| cadeia longa de ações (30) e recursão | não publicado | 30 ações encadeadas: p95 por volta em `tests/medidas/L5-01-e-*.json`; ciclo fechado só avisa e para sozinho (filtro idempotente) ou é cortado em uma volta | feito | unit `test_refutacao_30_acoes...` | 2026-09-08 | não |
+
+### Gatilhos × alvos × ações (o quadro que o adversário confere contra a doc do EXB)
+
+Os 8 gatilhos do EXB ("Record selection changes", "Data filtering changes", "Extent changes", "Data records loaded",
+"Data source changed (view)", "Record added", "Location changes", "Button click") são, nesta ordem, `selecao_mudou`,
+`filtro_mudou`, `extensao_mudou`, `registros_carregados`, `vista_mudou`, `dado_adicionado`, `localizacao`, `clique`.
+Quem EMITE cada um (contrato do registro; vista = as 5 de dado):
+
+| gatilho | mapa | tabela | gráfico | filtro | botão | texto | legenda | vista |
+|---|---|---|---|---|---|---|---|---|
+| clique | sim | sim | sim | — | sim | — | — | — |
+| selecao_mudou | sim | sim | sim | — | — | — | — | sim |
+| filtro_mudou | — | — | sim | sim | — | — | — | sim |
+| extensao_mudou | sim | — | — | — | — | — | — | — |
+| registros_carregados | sim | sim | sim | — | — | — | — | sim |
+| vista_mudou | — | — | — | — | — | — | — | sim |
+| dado_adicionado | — | — | — | — | — | — | — | sim |
+| localizacao | — (sem widget de localização ainda; L5-01-b) | — | — | — | — | — | — | — |
+
+Quem ACEITA cada ação (o painel só oferece o que casa; fora disso é `alvo_incompativel` nos dois lados):
+
+| ação | mapa | tabela | gráfico | filtro | botão | texto | legenda | vista |
+|---|---|---|---|---|---|---|---|---|
+| filtrar / selecionar / limpar_filtro / limpar_selecao | sim | sim | sim | limpar_filtro | — | — | — | sim |
+| zoom / pan / popup | sim | — | — | — | — | — | — | — |
+| piscar | sim | sim | sim | — | — | — | — | — |
+| abrir / fechar | — | — | — | — | sim | — | — | — |
+| definir_parametro | — | — | — | sim | — | sim | — | — |
+
 ## Fontes, vistas e mensagens do aplicativo (item L5-07-fontes-vistas-mensagens; ADR `20260908T1050-fontes-vistas-mensagens`)
 
 Referência Esri: Experience Builder, "Add actions to widgets" / "action triggers" (doc oficial
