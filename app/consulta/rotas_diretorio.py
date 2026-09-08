@@ -34,6 +34,7 @@ from app import db
 from app.auth import escopos as esc
 from app.auth import sessao as auth_sessao
 from app.auth.politica import HASH_FANTASMA
+from app.catalogo.tipos import TIPOS_CAMADA
 from app.consulta import rotas_query, rotas_servico
 from app.consulta.formato_esri import resposta_esri
 from app.erros import ErroAPI
@@ -80,8 +81,9 @@ def _camadas_visiveis(cur) -> list[dict]:
     cur.execute(
         "SELECT i.id, i.titulo, i.resumo, i.descricao, i.tags, i.dados, i.pasta_id, p.nome AS pasta "
         "FROM plat.item i LEFT JOIN plat.pasta p ON p.id = i.pasta_id "
-        "WHERE i.tipo = 'camada_vetorial' AND i.apagado_em IS NULL "
-        "ORDER BY p.nome NULLS FIRST, i.titulo"
+        "WHERE i.tipo = ANY(%s) AND i.apagado_em IS NULL "
+        "ORDER BY p.nome NULLS FIRST, i.titulo",
+        (list(TIPOS_CAMADA),),
     )
     return cur.fetchall()
 
