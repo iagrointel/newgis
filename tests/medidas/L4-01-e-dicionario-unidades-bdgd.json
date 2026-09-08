@@ -8,8 +8,8 @@
   "exportador_le_da_auditoria": "carga do OpenDSS mil vezes maior com o arquivo em megawatt-hora"
  },
  "medido": {
-  "kw_da_primeira_carga_arquivo_em_kwh": 0.00041,
-  "kw_da_primeira_carga_arquivo_em_mwh": 0.409836,
+  "kw_da_primeira_carga_arquivo_em_kwh": 0.000137,
+  "kw_da_primeira_carga_arquivo_em_mwh": 0.136612,
   "energia_anual_do_arquivo_sintetico_kwh": 64800.0,
   "comprimento_geodesico_total_m": 2324.901
  }
