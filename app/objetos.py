@@ -56,6 +56,7 @@ EXTENSOES = {
     "application/pdf": "pdf",
     "application/zip": "zip",
     "application/vnd.google-earth.kmz": "kmz",
+    "application/geopackage+sqlite3": "gpkg",   # pacote de réplica (item L2-13-b)
     "application/octet-stream": "bin",
 }
 _SLUG = r"[a-z0-9][a-z0-9-]{1,38}"
