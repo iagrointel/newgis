@@ -214,13 +214,13 @@ body.mapa .mapa-acervo-legenda {
   font-family: var(--sans); display: grid; gap: var(--e2);
 }
 body.mapa .mapa-acervo-legenda[hidden] { display: none; }
-body.mapa .mapa-acervo-legenda h2 { margin: 0; font-size: .8rem; text-transform: lowercase; color: var(--mapa-texto-fraco); }
+body.mapa .mapa-acervo-legenda h2 { margin: 0; font-size: var(--t-2); text-transform: lowercase; color: var(--mapa-texto-fraco); }
 body.mapa .mapa-acervo-legenda ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
 body.mapa .mapa-acervo-legenda li { border-top: 1px solid var(--mapa-borda); padding-top: var(--e2); }
 body.mapa .mapa-acervo-legenda li:first-child { border-top: none; padding-top: 0; }
 body.mapa .mapa-acervo-legenda .titulo { display: block; color: var(--mapa-texto); }
-body.mapa .mapa-acervo-legenda .licenca { display: block; color: var(--mapa-texto-fraco); font-size: .75rem; }
-body.mapa .mapa-acervo-legenda .atribuicao { display: block; color: var(--atencao); font-size: .75rem; }
+body.mapa .mapa-acervo-legenda .licenca { display: block; color: var(--mapa-texto-fraco); font-size: var(--t-3); }
+body.mapa .mapa-acervo-legenda .atribuicao { display: block; color: var(--atencao); font-size: var(--t-3); }
 @media (max-width: 640px) {
   body.mapa .mapa-acervo-legenda { right: var(--e2); left: var(--e2); bottom: var(--e2); max-width: none; max-height: 30vh; }
 }
