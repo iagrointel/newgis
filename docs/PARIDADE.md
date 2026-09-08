@@ -417,3 +417,29 @@ acesso 2026-09-05); Dashboards, "Actions" e "Relationships between data sources"
 | ciclo de mensagens (A filtra B, B filtra A) | não documentado | validação avisa (não recusa); o barramento corta a recursão em uma volta e emite `aviso` `ciclo_cortado` | feito | node (`test_ciclo_...`) | 2026-09-08 | pendente (D20) |
 | latência gatilho → ação | não publicada | p95 medido em node com 10 mil feições em memória, 200 disparos (`tests/medidas/L5-07-fontes-vistas-mensagens.json`, com carga e RAM ao lado) | feito (≤ 100 ms na medida desta máquina) | `test_medida_latencia_...` | 2026-09-08 | pendente (D20) |
 | mapa-base e estilo por camada no widget de mapa | MapLibre/ArcGIS JS | fora — o widget de mapa deste item desenha a camada de DADO da vista em SVG (projeção do envelope; clique, seleção, extensão, popup, piscar reais); mapa-base MapLibre e simbologia são o L5-01-b | fora (L5-01-b) | — | 2026-09-08 | pendente (D20) |
+
+## Site do inquilino, páginas públicas (item L5-20-sites-paginas-publicas; ADR `20260908T1210-sites-paginas-publicas`)
+
+Referência Esri: ArcGIS Hub / Enterprise Sites, "Create a site" e "What is ArcGIS Hub"
+(doc.arcgis.com/en/hub/sites/create-a-site.htm e doc.arcgis.com/en/hub/get-started/what-is-arcgis-hub-.htm,
+conferidas por HTTP em 2026-09-05, anexo C de `laco/decomposicao/L5_CONCEITO.md`). **Ressalva de método,
+registrada pelo papel esri e não escondida aqui: essas duas páginas devolvem 200 mas montam o conteúdo por
+JavaScript**, então o que o `curl` traz é a casca, não o texto — a coluna "Esri" abaixo é a leitura do papel
+esri no turno T1 (§1, "Hub / Enterprise Sites") mais os nomes de cartão que a própria doc enumera; nenhuma
+linha desta seção vale como citação literal de página estática. Paridade contra Hub real só com credencial do
+parceiro (decisão D20, aberta).
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| criar um site do portal | "Create a site": escolher modelo, nome e domínio; o site nasce como item do portal | item de tipo `site` no catálogo (família `site`), criado como qualquer item; a tela `/sites` abre o documento dele | feito (sem galeria de modelos de site: o L5-37 já traz pacote/modelo entre inquilinos, mas nenhum modelo de site vem de fábrica) | testador T5 (`tests/api/catalogo/test_site.py`, e2e `test_site_publico.py`) | 2026-09-08 | pendente (D20) |
+| editor por arrasto de linhas e cartões | editor do Sites: arrastar cartão para linha, editar no painel lateral | o MESMO editor de arrasto da linha (L5-08) com a paleta de site; página → seção → cartão, com alternativa de teclado herdada do L5-08 | feito | e2e (montagem só por arrasto, HTML5 DnD) | 2026-09-08 | pendente (D20) |
+| páginas do site e menu | páginas do site com navegação; página inicial | `pagina` na raiz (título, caminho, ordem, oculta, inicial); cabeçalho monta o menu com `aria-current` na página atual; `/s/<inquilino>/` = inicial, `/s/<inquilino>/<caminho>` = as demais | feito (3 páginas provadas) | api + e2e | 2026-09-08 | pendente (D20) |
+| cartões de conteúdo | cartões do Hub: texto, imagem, galeria/categoria, mapa/web map, app, busca, chamada para ação, métricas/estatística, iframe | 9 cartões: `texto`, `imagem`, `galeria` (itens do catálogo com filtro), `mapa` (incorporado), `aplicativo`, `busca`, `chamada` (com botão), `estatisticas`, `incorporado` | feito (9 de 9 no vocabulário; nenhum cartão de evento, de iniciativa nem de "follow", que dependem de conceitos do Hub que não existem aqui) | api (as 9 classes `cartao-*` no HTML das 3 páginas) | 2026-09-08 | pendente (D20) |
+| tema do site | tema por site (cores, logotipo, fontes) | cor e logotipo do INQUILINO (`tenant.config`), com a cor do texto sobre a marca escolhida no servidor pelo contraste; sem tema por site nem escolha de fonte | parcial (tema do inquilino, não do site) | e2e (axe: contraste sem violação) | 2026-09-08 | pendente (D20) |
+| catálogo de dados abertos, download e API | Hub: página por conjunto, downloads gerados, API, DCAT/schema.org | fora deste item (é o L5-21): aqui a galeria lista item público e liga para a leitura pública `/api/publico/itens/{id}` | fora (L5-21) | — | 2026-09-08 | pendente (D20) |
+| busca de conteúdo no site | busca do Hub sobre o catálogo do portal | cartão de busca com o mesmo `tsvector` do catálogo, restrito ao que é público; formulário `GET`, resposta renderizada no servidor | feito | api (adversário busca o título exato do item privado) | 2026-09-08 | pendente (D20) |
+| quem enxerga o conteúdo listado | conteúdo compartilhado com "everyone" (público) | `acesso = 'publico'` + inquilino com `compartilhar_publico`; nenhuma outra leitura na página anônima | feito | api (`itens_privados_vazados = 0` por tipo, por busca e por uuid) | 2026-09-08 | pendente (D20) |
+| página servida sem JavaScript | páginas do Hub são aplicação em JavaScript (a própria doc do Hub não devolve texto ao `curl`) | HTML completo do servidor; `curl` lê o texto; nenhum `<script>` na página | feito (acima da Esri neste ponto) | api (`"<script" not in html`) | 2026-09-08 | pendente (D20) |
+| indexação por buscador | site do Hub é público e indexável por padrão | `noindex, nofollow` por padrão (regra da casa); `index, follow` só por opção explícita, com aviso na tela | feito (deliberadamente abaixo da Esri no padrão) | api (cabeçalho e `<meta>` nas 3 páginas) | 2026-09-08 | pendente (D20) |
+| domínio próprio do site | domínio/subdomínio do Hub | fora: a URL é `/s/<inquilino>/` na instalação (L5_CONCEITO D10) | fora (decisão) | — | 2026-09-08 | pendente (D20) |
+| vários sites por organização | vários sites e páginas por organização | um site publicado por inquilino (`plat.site_publicado`, chave por `tenant_id`); publicar outro exige retirar o anterior | parcial (decisão: a URL do D10 não tem lugar para slug de site) | api (`409 site_em_uso`) | 2026-09-08 | pendente (D20) |
