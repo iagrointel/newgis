@@ -158,4 +158,19 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+
+    # ---- linhagem do mapa e tabela de atributos (chegaram pela cadeia UX-04; achado na junção do UX-12):
+    ("POST", "/api/anotacoes"): [],  # anotação de feição: gatilho no banco (20260907T1655), a rota não narra evento
+    ("PATCH", "/api/anotacoes/{id}"): [],
+    ("DELETE", "/api/anotacoes/{id}"): [],
+    ("POST", "/api/exportacoes"): ["camadas/exportar", "mapas/exportar_pacote"],
+    ("DELETE", "/api/exportacoes/{exportacao_id}"): [],  # apaga o registro/arquivo da própria exportação, sem evento
+    ("PUT", "/api/camadas/{item_id}/tabela/vista"): ["camadas/vista_tabela"],
+    ("POST", "/api/camadas/{item_id}/tabela/linhas"): [],  # leitura com corpo (página de linhas)
+    ("POST", "/api/camadas/{item_id}/tabela/estatisticas"): [],  # leitura com corpo
+    ("POST", "/api/mapa/camadas/{id}/filtrar"): [],  # leitura com corpo (filtro CQL2)
+    ("POST", "/api/mapa/camadas/{id}/selecionar"): [],  # leitura com corpo (seleção espacial)
+    ("POST", "/api/mapa/selecao-espacial"): [],  # leitura com corpo
+    ("POST", "/api/mapa/pacotes/importar"): ["mapas/importar_pacote"],
+    ("POST", "/api/mapa/{mapa_id}/desenho/promover"): ["mapa/desenho_promovido"],
 }
