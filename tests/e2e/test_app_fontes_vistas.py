@@ -141,15 +141,15 @@ def test_selecao_no_mapa_filtra_tabela_grafico_e_outra_fonte_e_url_reabre(
         tela.medidas["pagina_pronta_ms_aplicativo"] = tela.ir(f"/aplicativo?item={app_id}")
         page.wait_for_function("() => document.querySelectorAll('plat-mapa .feicao').length === 12", timeout=15000)
         assert page.locator("[data-tipo='tabela']").nth(0).locator("tbody tr").count() == 12
-        assert page.locator("plat-grafico .barra").count() == 3
+        page.wait_for_selector("plat-grafico[data-pronto='1'][data-grupos='3']", timeout=15000)
         assert page.locator("[data-tipo='tabela']").nth(1).locator("tbody tr").count() == 24
         assert page.locator("#avisos-barramento p").count() == 0
         # 1. clique na feição cod=5 (UF RJ, 5 % 3 = 2 -> MG): tabela 1 linha, gráfico 1 barra, gráfico piscou
         page.locator("plat-mapa .feicao[data-id='5']").click()
         page.wait_for_function(_LINHAS_TABELA.format(i=0, n=1), timeout=15000)
         assert page.locator("[data-tipo='tabela']").nth(0).locator("tbody tr td").nth(0).text_content() == "Município 5"
-        assert page.locator("plat-grafico .barra").count() == 1
-        assert page.locator("plat-grafico .barra").get_attribute("data-valor") == UFS[5 % 3]
+        page.wait_for_selector("plat-grafico[data-grupos='1']", timeout=15000)
+        assert page.evaluate("() => document.querySelector('plat-grafico').dados[0].valor") == UFS[5 % 3]
         assert page.locator("plat-mapa .feicao.selecionada").count() == 1
         # 2. relação por atributo entre fontes diferentes: escolas do município 5 (5 % 3 + 1 = 3 escolas)
         page.wait_for_function(_LINHAS_TABELA.format(i=1, n=3), timeout=15000)
