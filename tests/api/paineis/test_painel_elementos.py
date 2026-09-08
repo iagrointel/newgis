@@ -342,6 +342,11 @@ def camada_fronteira(conexao_plat_app, sessao_a):
             (item_id, tenant_id, "zt L2-06-b fronteira", adm,
              psycopg2.extras.Json(dados), adm, adm),
         )
+        # a camada semeada é publicada como qualquer outra: função de tile garantida na criação.
+        # Sem isto a janela do teste viola a invariância do leitor (toda camada ATIVA do catálogo
+        # com t_<tabela> em pg_proc) — sob xdist, a varredura de test_leitor_tiles passa por aqui
+        # no meio da janela e reprova uma camada que nunca teve função.
+        cur.execute("SELECT plat.camada_tile_garantir(%s, %s, %s::uuid)", (schema, tabela, item_id))
     conexao_plat_app.commit()
     # painel com uma fonte apontando para essa camada
     corpo = {"grade": {"colunas": 12, "linha_px": 36},
@@ -361,7 +366,10 @@ def camada_fronteira(conexao_plat_app, sessao_a):
     with conexao_plat_app.cursor() as cur:
         cur.execute("SET search_path = plat, public")
         cur.execute(f'DROP TABLE IF EXISTS "{schema}"."{tabela}" CASCADE')
-        cur.execute("DELETE FROM plat.item WHERE id = %s::uuid", (item_id,))
+        # a política p_item_apagar é `false` de propósito: como plat_app não há DELETE em item — a casa
+        # apaga pela lixeira (apagado_em), e o expurgo físico é SECURITY DEFINER. A invariância do leitor
+        # (toda camada ATIVA do catálogo com função de tile) só enxerga apagado_em IS NULL.
+        cur.execute("UPDATE plat.item SET apagado_em = now() WHERE id = %s::uuid", (item_id,))
     conexao_plat_app.commit()
 
 
