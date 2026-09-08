@@ -130,6 +130,30 @@ Medido na cooperativa de teste (três maiores alimentadores da BDGD, 13.646 trec
 traz 5.392 elementos, 4.963 ligações e 337.047 m de linha agregada. Achado no caminho e corrigido: sem a
 camada de chaves no arquivo, a marcação automática elegia o TRANSFORMADOR como controlador do tier de média
 tensão, e o traçado partia do lado de lá da fronteira de subrede — 4 elementos alcançados de 13.646 trechos.
+## turno 3, setembro de 2026 (item L4-15-serie-temporal-da-rede: várias safras da mesma rede)
+
+Uma safra da rede é uma `plat.rede` inteira; `plat.rede_serie` + `plat.rede_serie_safra` amarram várias
+delas em ordem de ano no mesmo inquilino (ADR 20260908T1105). `plat.rede_linhagem` classifica CADA COD_ID
+por par de safras consecutivas em persistente, recodificado, novo ou extinto, pela régua medida da casa:
+Jaccard das unidades consumidoras identificadas >= 0,6, ou coordenada a <= 10 m com Jaccard >= 0,3, ou
+coordenada a <= 10 m em transformador com menos de cinco unidades consumidoras. `plat.rede_trafo_safra`
+guarda o carregamento por transformador por safra (proxy declarado: energia da fonte com fator de carga
+0,45 e fator de potência 0,92, ambos gravados junto com o número) e `plat.rede_alimentador_safra` o
+crescimento por alimentador (km, unidades consumidoras, transformadores).
+
+Regra da placa: quando mais de 10 % dos transformadores persistentes de um par de safras mudam de
+potência nominal, a safra mais antiga do par é marcada como não confiável para placa, com o motivo
+escrito, e a ressalva viaja na tabela de tendência e no CSV exportado.
+
+Achado que mudou o desenho: para `UCBT_tab`/`UCMT_tab` o importador grava em `codigo_externo` o OBJECTID
+da linha do arquivo — um número que muda de uma safra para outra. O `COD_ID` de 64 hexadecimais existe e
+está preservado em `atributos`; a série lê a identidade de lá. Sem isso, toda unidade consumidora
+apareceria como extinta e nascida a cada ano. Correção no importador registrada no repasse.
+
+Rotas em `/api/rede-serie` (prefixo próprio: `/api/rede/{rede_id}` engoliria uma coleção nova ali dentro):
+série e safras, `/calcular`, `/linhagem`, `/tendencia` (com `formato=csv` e `so_sobrecarga`),
+`/alimentadores` e `/mapa?ano=`. Tela `/redes/serie` com o controle deslizante de safra sobre o mapa.
+
 ## junção, setembro de 2026 (ramo wt/bdgdjob × wt/il402bmonta: casos cruzados e eventos da família de rede)
 
 União dos dois ramos da linha L4 que trabalharam a rede de utilidades ao mesmo tempo. `test_cruzado.py`

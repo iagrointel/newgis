@@ -1,0 +1,82 @@
+{
+ "item": "L4-15-serie-temporal-da-rede",
+ "medidas": {
+  "refutacao_recodificados_casados": {
+   "valor": {
+    "pedidos": 10,
+    "casados": 10,
+    "geometria_e_poucas_ucs": 5,
+    "jaccard": 5,
+    "carga_1min": 5.71,
+    "ram_livre_gb": 4.22,
+    "medido_em": "2026-09-08T11:02:22"
+   },
+   "unidade": "COD_ID",
+   "comando": "pytest tests/api/test_rede_serie.py::test_refutacao_dez_codigos_recodificados_a_mao"
+  },
+  "duas_safras_reais": {
+   "valor": {
+    "safras": [
+     2023,
+     2024
+    ],
+    "trafos_arquivo_base": 50,
+    "trafos_arquivo_alvo": 50,
+    "linhagem_trafo": {
+     "persistente": 50,
+     "recodificado": 0,
+     "novo": 0,
+     "extinto": 0
+    },
+    "linhagem_uc": {
+     "persistente": 150,
+     "recodificado": 0,
+     "novo": 0,
+     "extinto": 0
+    },
+    "trafos_com_tendencia": 50,
+    "viraram_sobrecarga": 0,
+    "pot_nom": [
+     {
+      "ano": 2023,
+      "ano_seguinte": 2024,
+      "persistentes": 50,
+      "trocaram": 0,
+      "fracao": 0.0,
+      "em_massa": false
+     }
+    ],
+    "duracao_s": 1.4,
+    "carga_1min": 5.82,
+    "ram_livre_gb": 4.16,
+    "medido_em": "2026-09-08T11:02:26"
+   },
+   "unidade": "COD_ID",
+   "comando": "pytest tests/api/test_rede_serie.py::test_duas_safras_reais_da_cooperativa -m lento"
+  },
+  "controle_safra_posicoes": {
+   "valor": 2,
+   "unidade": "safras",
+   "comando": "bash laco/roda_teste.sh tests/e2e/test_rede_serie.py --base-url http://127.0.0.1:8388"
+  },
+  "abrir_redes_serie_ms": {
+   "valor": 742.0,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  },
+  "cooperativa_inteira_nao_medida": {
+   "valor": {
+    "tentado": "duas safras da cooperativa inteira (5.481 trafos, 27.587 UCs por safra)",
+    "resultado": "nao medido: 45 min sem terminar a importacao da primeira safra",
+    "onde_parou": "INSERT INTO plat.rede_associacao (pendencia de desempenho do item L4-01-c: associacao linha a linha)",
+    "carga_1min": 5.78,
+    "medido_em": "2026-09-08T11:47:00",
+    "observacao": "o calculo da serie e SQL de conjunto e levou 1,4 s no recorte real; o gargalo e do importador"
+   },
+   "unidade": "veredito",
+   "comando": "venv/bin/python (script fora da suite) com obter_extrato()/obter_extrato_anterior()"
+  }
+ },
+ "gerado_em": "2026-09-08T11:14:08Z",
+ "git_sha": "951b326e3049"
+}

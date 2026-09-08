@@ -59,6 +59,7 @@ class Preparacao:
     fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
     conexao_b: dict = field(default_factory=dict)  # L6-02-a: conexão externa de B
     rede_b: dict = field(default_factory=dict)  # L4-01-a: rede de utilidades de B, com pacote de ativos importado
+    serie_b: dict = field(default_factory=dict)  # L4-15: série temporal de B, com a rede de B como safra
     convite_b: dict = field(default_factory=dict)  # L0-07-d: convite pendente de B
     conjunto_b: dict = field(default_factory=dict)  # L3-19-multiescala: área de estudo de B
     fator_b: dict = field(default_factory=dict)  # L3-19-multiescala: fator de B
@@ -173,6 +174,27 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b, rede_b=rede_b,
+    # L4-01-a: rede de utilidades de B com o pacote de ativos JÁ importado — é o alvo das rotas /api/rede/{rede_id}
+    # (inclusive a exportação, que é onde um vazamento de esquema apareceria). A união dos ramos de L4 com o
+    # master tinha deixado DOIS `return` aqui: o primeiro (sem `rede_b`) matava o segundo, e todo caso de
+    # /api/rede/{rede_id} caía em KeyError antes de chegar à API.
+    r = sessao_b.post("/api/rede", json={"nome": f"{PREFIXO}rede-{sufixo}", "disciplina": "agua"})
+    assert r.status_code == 201, r.text
+    rede_b = r.json()
+    r = sessao_b.post(f"/api/rede/{rede_b['id']}/pacote", content=instalados.bruto("agua-epanet"),
+                      headers={"Content-Type": "application/json"})
+    assert r.status_code == 201, r.text
+    # L4-15: série temporal de B, com a rede de B como safra de um ano — alvo das rotas /api/rede-serie/{id}
+    r = sessao_b.post("/api/rede-serie", json={"nome": f"{PREFIXO}serie-{sufixo}"})
+    assert r.status_code == 201, r.text
+    serie_b = r.json()
+    r = sessao_b.post(f"/api/rede-serie/{serie_b['id']}/safras",
+                      json={"rede_id": rede_b["id"], "ano": 2024})
+    assert r.status_code == 201, r.text
+    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
+                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
+                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
+                      rede_b=rede_b, serie_b=serie_b, convite_b=convite_b,
                       conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
 
 
@@ -197,6 +219,8 @@ def desfazer(p: Preparacao) -> None:
         p.sessao_b.delete(f"/api/itens/{p.item_b['id']}?cascata=true")
     if p.pasta_b:
         p.sessao_b.delete(f"/api/pastas/{p.pasta_b['id']}")
+    if p.serie_b:
+        p.sessao_b.delete(f"/api/rede-serie/{p.serie_b['id']}")
     if p.rede_b:
         p.sessao_b.delete(f"/api/rede/{p.rede_b['id']}")
     if p.conexao_b:
@@ -832,6 +856,35 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("DELETE", "/api/rede/{rede_id}/config_tracado/{config_id}"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/config_tracado/{UUID_NULO}"),
+    # ---- L4-15 série temporal da rede: a coleção /api/rede-serie é do próprio chamador (A só vê as séries
+    # dele); tudo em /api/rede-serie/{serie_id} aponta a série de B e tem de dar 404 — inclusive o cálculo,
+    # que é o que mais interessa (rodá-lo na série de B escreveria linhagem no inquilino de B).
+    ("GET", "/api/rede-serie"): Caso(
+        lambda p: "/api/rede-serie", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/rede-serie"): Caso(
+        lambda p: "/api/rede-serie",
+        lambda p: {"nome": f"{PREFIXO}serie-a-{secrets.token_hex(3)}"},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/rede-serie/{id}")),
+    ),
+    ("GET", "/api/rede-serie/{serie_id}"): Caso(lambda p: f"/api/rede-serie/{p.serie_b['id']}"),
+    ("DELETE", "/api/rede-serie/{serie_id}"): Caso(lambda p: f"/api/rede-serie/{p.serie_b['id']}"),
+    ("POST", "/api/rede-serie/{serie_id}/safras"): Caso(
+        lambda p: f"/api/rede-serie/{p.serie_b['id']}/safras",
+        lambda p: {"rede_id": p.rede_b["id"], "ano": 2023},
+    ),
+    ("DELETE", "/api/rede-serie/{serie_id}/safras/{ano}"): Caso(
+        lambda p: f"/api/rede-serie/{p.serie_b['id']}/safras/2024"),
+    ("POST", "/api/rede-serie/{serie_id}/calcular"): Caso(
+        lambda p: f"/api/rede-serie/{p.serie_b['id']}/calcular", lambda p: None),
+    ("GET", "/api/rede-serie/{serie_id}/linhagem"): Caso(
+        lambda p: f"/api/rede-serie/{p.serie_b['id']}/linhagem"),
+    ("GET", "/api/rede-serie/{serie_id}/tendencia"): Caso(
+        lambda p: f"/api/rede-serie/{p.serie_b['id']}/tendencia"),
+    ("GET", "/api/rede-serie/{serie_id}/alimentadores"): Caso(
+        lambda p: f"/api/rede-serie/{p.serie_b['id']}/alimentadores"),
+    ("GET", "/api/rede-serie/{serie_id}/mapa"): Caso(
+        lambda p: f"/api/rede-serie/{p.serie_b['id']}/mapa?ano=2024"),
     # ---- L4-04-a controlador de subrede e tiers: tudo em /api/rede/{rede_id} aponta a rede de B e tem de
     # dar 404 (a rede nem é vista). O id de controlador/subrede é forjado: se a rede fosse alcançável, a
     # resposta mudaria de 404 de rede para 404 de controlador — e mesmo isso vazaria a existência da rede.
