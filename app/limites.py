@@ -228,3 +228,10 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# ---------------------------------------------------------------- provisionamento federado (item L0-08-e)
+PROVISIONAMENTO_REGRAS_MAX = 200          # regras (valores do IdP mapeados) por provedor
+PROVISIONAMENTO_GRUPOS_POR_REGRA = 50     # grupos internos por regra
+PROVISIONAMENTO_GRUPOS_IDP_MAX = 1000     # valores do atributo de grupos lidos do IdP por login (o resto é ignorado)
+PROVISIONAMENTO_VALOR_MAX = 200           # tamanho de um valor de grupo do IdP
+
