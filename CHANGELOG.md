@@ -3,6 +3,24 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 7, setembro de 2026 (item L4-01-e-dicionario-unidades-bdgd: a unidade vem do arquivo, medida)
+
+O dicionário do pacote `eletrica-br` declarava `COMP` em quilômetro e `ENE_SUM` em megawatt-hora; o extrato
+de referência da casa traz os dois em metro e em quilowatt-hora. A unidade passou a ser **medida na
+importação, campo a campo**, e gravada na auditoria (`plat.rede_importacao.unidades`): comprimento pela razão
+contra o comprimento geodésico da própria geometria (medida que o item L4-01-c já fazia, agora com nome e
+casa própria em `app/rede_utilidades/unidades.py`), energia pela ordem de grandeza contra a potência
+instalada dos transformadores e contra o número de unidades consumidoras — duas âncoras que têm de concordar.
+
+Quem soma e quem exporta lê o fator de lá, nunca do dicionário: o sumário por subrede (item L4-04-c) grava a
+unidade e a origem dela na própria linha, e o exportador OpenDSS deixou de multiplicar `ENE_SUM` por mil de
+cabeça. Sem importação registrada nada é convertido — fator 1 e `origem: nao_medida` escrito ao lado do
+número. Medido em `tests/medidas/L4-01-e-dicionario-unidades-bdgd.json`: dois arquivos iguais em tudo menos
+na unidade dão o mesmo comprimento em metros e a mesma energia anual em quilowatt-hora, e a carga do
+circuito exportado muda mil vezes quando a auditoria diz megawatt-hora. Fronteira: o exportador EPANET ainda
+não existe; a exportação de subrede em JSON, que é o que serve à água hoje, passou a carregar o mesmo bloco
+`unidades`.
+
 ## turno 7, setembro de 2026 (item L4-05-a-exportar-opendss: a subrede vira circuito OpenDSS)
 
 `GET /api/rede/{id}/subrede/{nome}/exportar?formato=dss` devolve a pasta `.dss` da subrede num zip:
