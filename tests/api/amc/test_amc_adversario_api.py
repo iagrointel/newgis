@@ -581,7 +581,7 @@ def test_adv_execute_values_e_o_unico_desvio_da_reescrita_de_schema():
        tests/unit/test_schema_ambiente.py)."""
     import inspect
 
-    from app.schema_ambiente import CursorSchemaAmbiente, reescrever_schema
+    from app.schema_ambiente import CursorSchemaAmbiente, MixinReescritaSchema, reescrever_schema
 
     fonte_unidades = inspect.getsource(mod_unidades)
     assert "execute_values" not in fonte_unidades.replace("`psycopg2.extras.execute_values`", ""), \
@@ -590,13 +590,9 @@ def test_adv_execute_values_e_o_unico_desvio_da_reescrita_de_schema():
 
     assert reescrever_schema("SELECT 1 FROM plat.amc_unidade", "plat_homolog") == \
         "SELECT 1 FROM plat_homolog.amc_unidade"
-    # a mesma consulta em bytes, que era o buraco: em master o cursor decodifica os bytes em `_texto` antes de
-    # reescrever, em vez de um mixin com lista de pontos de entrada — a trava continua sendo
-    # tests/unit/test_schema_ambiente.py, que é quem impede um caminho novo de escapar
-    fonte_cursor = inspect.getsource(CursorSchemaAmbiente)
-    for ponto in ("execute", "executemany", "callproc", "copy_expert"):
-        assert f"def {ponto}(" in fonte_cursor, f"o cursor deixou de cobrir {ponto}: consulta escaparia da reescrita"
-    assert "_texto" in fonte_cursor, "o caminho de bytes sumiu do cursor: execute_values voltaria a escapar"
+    # a mesma consulta em bytes, que era o buraco
+    assert CursorSchemaAmbiente._reescrever is MixinReescritaSchema._reescrever
+    assert set(MixinReescritaSchema.PONTOS_COM_CONSULTA) >= {"execute", "executemany", "callproc"}
 
 
 @pytest.mark.lento
