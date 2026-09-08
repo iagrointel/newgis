@@ -8,7 +8,7 @@ class PlatMenu extends PlatWidget {
   renderizar() {
     const c = this.configuracao;
     const nav = document.createElement('nav');
-    nav.className = `plat-menu plat-menu-${c.orientacao || 'horizontal'}`;
+    nav.className = `plat-w-menu plat-menu-${c.orientacao || 'horizontal'}`;
     nav.setAttribute('aria-label', c.rotulo || 'menu');
     const ul = document.createElement('ul');
     for (const item of c.itens || []) {
@@ -32,4 +32,4 @@ class PlatMenu extends PlatWidget {
   acao_menu_definir(detalhe) { this.configuracao = { ...this.configuracao, itens: detalhe.itens || [] }; }
 }
 
-definir('plat-menu', PlatMenu);
+definir('plat-w-menu', PlatMenu);

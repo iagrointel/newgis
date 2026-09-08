@@ -122,8 +122,8 @@ def test_doze_widgets_no_executor_sem_script_executado(page, base_url, credencia
             "() => [...document.querySelectorAll('a[href]')]"
             ".every((a) => !a.href.toLowerCase().startsWith('javascript:'))")
         # ---- imagem boa e imagem com javascript: recusada com erro nomeado
-        assert page.locator("plat-imagem img[src='/static/favicon.svg']").count() >= 1
-        assert page.locator("plat-imagem figcaption").text_content() == "legenda da imagem"
+        assert page.locator("plat-w-imagem img[src='/static/favicon.svg']").count() >= 1
+        assert page.locator("plat-w-imagem figcaption").text_content() == "legenda da imagem"
         assert "recusado" in _widget(page, ids["imagem_ma"]).locator("[role=alert]").text_content()
         # ---- botão: link mau recusado, link bom com rel/target, botão de página troca de página
         assert "recusado" in _widget(page, ids["botao_ma"]).locator("[role=alert]").text_content()
@@ -134,7 +134,7 @@ def test_doze_widgets_no_executor_sem_script_executado(page, base_url, credencia
         assert "Cartão {nome}" in cartao.locator("h3").text_content()
         assert cartao.locator("[onerror]").count() == 0 and cartao.locator("strong").count() == 1
         # ---- divisor
-        assert page.locator("plat-divisor hr.plat-divisor-tracejado").count() == 1
+        assert page.locator("plat-w-divisor hr.plat-divisor-tracejado").count() == 1
         # ---- incorporar: sandbox sem allow-same-origin; fora da lista = erro; html sanitizado em srcdoc
         ok = _widget(page, ids["embed_ok"]).locator("iframe")
         assert ok.get_attribute("sandbox") == "allow-scripts" and ok.get_attribute("src") == "https://exemplo.invalido/mapa"
@@ -144,26 +144,26 @@ def test_doze_widgets_no_executor_sem_script_executado(page, base_url, credencia
         assert html.get_attribute("sandbox") == "" and "<script" not in srcdoc and "onerror" not in srcdoc
         assert "<p>seguro</p>" in html.get_attribute("srcdoc")
         # ---- menu configurável: item mau sem href; item externo com href; item de página navega
-        assert page.locator("plat-menu a[aria-disabled='true']").count() == 1
-        assert page.locator("plat-menu a[href='https://exemplo.invalido/']").count() == 1
+        assert page.locator("plat-w-menu a[aria-disabled='true']").count() == 1
+        assert page.locator("plat-w-menu a[href='https://exemplo.invalido/']").count() == 1
         # ---- controlador: fecha e abre o cartão; alvo inexistente marcado
-        botao_ctrl = page.locator(f'plat-controlador button[data-alvo="{ids["cartao"]}"]')
+        botao_ctrl = page.locator(f'plat-w-controlador button[data-alvo="{ids["cartao"]}"]')
         assert botao_ctrl.get_attribute("aria-expanded") == "true"
         botao_ctrl.click()
         assert cartao.evaluate("el => el.hidden") is True and botao_ctrl.get_attribute("aria-expanded") == "false"
         botao_ctrl.click()
         assert cartao.evaluate("el => el.hidden") is False
-        assert page.locator('plat-controlador button[data-alvo="inexistente"]').get_attribute("title") is not None
+        assert page.locator('plat-w-controlador button[data-alvo="inexistente"]').get_attribute("title") is not None
         _capturar(page, "inicio")
         # ---- navegação por menu widget → página Sobre
-        page.click('plat-menu button[data-pagina="sobre"]')
+        page.click('plat-w-menu button[data-pagina="sobre"]')
         page.wait_for_selector('.exec-pagina[data-pagina="sobre"]', timeout=5000)
         assert "pagina=sobre" in page.url
         # texto puro: HTML inerte, nível traduzido para h2
-        puro = page.locator(".exec-pagina plat-texto h2")
+        puro = page.locator(".exec-pagina plat-w-texto h2")
         assert puro.count() == 1 and "<script>" in puro.text_content()
         # compartilhar: link, QR local, embed
-        comp = page.locator("plat-compartilhar")
+        comp = page.locator("plat-w-compartilhar")
         assert comp.locator("input[aria-label='link']").input_value() == page.url
         qr = comp.locator("img.plat-qr")
         assert qr.get_attribute("src").startswith("/api/qr.svg?texto=")
@@ -172,25 +172,25 @@ def test_doze_widgets_no_executor_sem_script_executado(page, base_url, credencia
             timeout=10000)
         assert "sandbox=" in comp.locator("textarea").input_value()
         # login: mostra quem está autenticado
-        page.wait_for_selector("plat-login[data-autenticado='1'] .plat-login-nome", timeout=10000)
-        assert page.locator("plat-login .plat-login-nome").text_content().strip() != ""
+        page.wait_for_selector("plat-w-login[data-autenticado='1'] .plat-login-nome", timeout=10000)
+        assert page.locator("plat-w-login .plat-login-nome").text_content().strip() != ""
         # idioma: seletor com o idioma disponível
-        assert page.locator("plat-idioma select option").count() == 1
+        assert page.locator("plat-w-idioma select option").count() == 1
         # tema: escuro põe data-theme no <html>; sistema tira
-        page.click('plat-tema button[data-tema="dark"]')
+        page.click('plat-w-tema button[data-tema="dark"]')
         assert page.evaluate("() => document.documentElement.dataset.theme") == "dark"
-        assert page.locator('plat-tema button[data-tema="dark"]').get_attribute("aria-pressed") == "true"
+        assert page.locator('plat-w-tema button[data-tema="dark"]').get_attribute("aria-pressed") == "true"
         _capturar(page, "sobre_escuro")
-        page.click('plat-tema button[data-tema="sistema"]')
+        page.click('plat-w-tema button[data-tema="sistema"]')
         assert page.evaluate("() => document.documentElement.dataset.theme") is None
         # ---- volta pelo botão de página e pelo cartão
         page.go_back()
         page.wait_for_selector('.exec-pagina[data-pagina="inicio"]', timeout=5000)
-        page.click("plat-botao button:has-text('Ir para Sobre')")
+        page.click("plat-w-botao button:has-text('Ir para Sobre')")
         page.wait_for_selector('.exec-pagina[data-pagina="sobre"]', timeout=5000)
         page.go_back()
         page.wait_for_selector('.exec-pagina[data-pagina="inicio"]', timeout=5000)
-        page.click("plat-cartao button:has-text('abrir sobre')")
+        page.click("plat-w-cartao button:has-text('abrir sobre')")
         page.wait_for_selector('.exec-pagina[data-pagina="sobre"]', timeout=5000)
         # ---- veredito da refutação: nenhum vetor executou, console limpo
         page.wait_for_timeout(300)

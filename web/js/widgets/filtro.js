@@ -13,4 +13,4 @@ class PlatFiltro extends PlatWidget {
   acao_filtro_definir(detalhe) { this.configuracao = { ...this.configuracao, valor: String(detalhe.valor || '') }; }
 }
 
-definir('plat-filtro', PlatFiltro);
+definir('plat-w-filtro', PlatFiltro);

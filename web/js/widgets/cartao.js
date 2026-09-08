@@ -6,7 +6,7 @@ export const contrato = Object.freeze({ eventos: ['cartao.acionado', 'cartao.pag
 class PlatCartao extends PlatWidget {
   renderizar() {
     const c = this.configuracao;
-    const raiz = document.createElement('article'); raiz.className = 'plat-cartao';
+    const raiz = document.createElement('article'); raiz.className = 'plat-w-cartao';
     const img = c.imagem ? urlSegura(c.imagem, { imagem: true }) : null;
     if (c.imagem && !img) { this.erro('endereço de imagem recusado'); return; }
     if (img) { const i = document.createElement('img'); i.src = img; i.alt = c.imagem_alternativo || ''; raiz.append(i); }
@@ -31,4 +31,4 @@ class PlatCartao extends PlatWidget {
   acao_cartao_feicao(detalhe) { this.definirFeicao(detalhe); }
 }
 
-definir('plat-cartao', PlatCartao);
+definir('plat-w-cartao', PlatCartao);

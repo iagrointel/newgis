@@ -25,4 +25,4 @@ class PlatImagem extends PlatWidget {
   acao_imagem_feicao(detalhe) { this.definirFeicao(detalhe); }
 }
 
-definir('plat-imagem', PlatImagem);
+definir('plat-w-imagem', PlatImagem);

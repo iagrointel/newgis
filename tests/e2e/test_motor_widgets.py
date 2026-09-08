@@ -32,10 +32,10 @@ def abrir(page, base_url):
 
 def test_publicacao_carrega_so_os_tres_modulos_usados(page, base_url, medida, console):
     abrir(page, base_url)
-    assert page.locator("plat-texto, plat-filtro, plat-tabela").count() == 3
-    assert page.locator("plat-tabela tbody tr").count() == 2
-    page.locator("plat-filtro input").fill("rios")
-    assert page.locator("plat-tabela tbody tr").count() == 1
+    assert page.locator("plat-w-texto, plat-w-filtro, plat-w-tabela").count() == 3
+    assert page.locator("plat-w-tabela tbody tr").count() == 2
+    page.locator("plat-w-filtro input").fill("rios")
+    assert page.locator("plat-w-tabela tbody tr").count() == 1
 
     recursos = page.evaluate("""() => performance.getEntriesByType('resource').map((r) => ({
       nome: new URL(r.name).pathname, bytes: r.transferSize || r.encodedBodySize || 0
@@ -90,9 +90,9 @@ def test_html_em_campo_de_texto_fica_inerte_e_console_sem_erro(page, base_url, c
       return {
         xss: window.__xss ?? null,
         imagens: alvo.querySelectorAll('img, script, b').length,
-        texto: alvo.querySelector('plat-texto p').textContent,
-        celula: alvo.querySelector('plat-tabela td').textContent,
-        rotulos: alvo.querySelectorAll('plat-botao button, plat-legenda button, plat-tabela th').length,
+        texto: alvo.querySelector('plat-w-texto p').textContent,
+        celula: alvo.querySelector('plat-w-tabela td').textContent,
+        rotulos: alvo.querySelectorAll('plat-w-botao button, plat-w-legenda button, plat-w-tabela th').length,
       };
     }""", malicioso)
     assert resultado["xss"] is None
@@ -107,13 +107,13 @@ def test_modulo_apagado_do_disco_degrada_para_mensagem(page, base_url, console):
     # o mesmo que `rm web/js/widgets/texto.js`: o navegador recebe 404 para o módulo e nada mais muda
     page.route("**/static/js/widgets/texto.js", lambda rota: rota.fulfill(status=404, body="apagado"))
     abrir(page, base_url)
-    assert page.locator("plat-filtro, plat-tabela").count() == 2
-    assert page.locator("plat-texto").count() == 0
+    assert page.locator("plat-w-filtro, plat-w-tabela").count() == 2
+    assert page.locator("plat-w-texto").count() == 0
     erro = page.locator('.plat-widget-erro[data-widget="texto"]')
     assert erro.count() == 1
     assert erro.text_content().startswith("Widget “texto”: módulo ./texto.js não carregou (")
-    page.locator("plat-filtro input").fill("rios")
-    assert page.locator("plat-tabela tbody tr").count() == 1
+    page.locator("plat-w-filtro input").fill("rios")
+    assert page.locator("plat-w-tabela tbody tr").count() == 1
     # o único erro de console tolerado é o próprio 404 do módulo apagado
     assert [e for e in console if "texto.js" not in e and "status of 404" not in e] == []
 
@@ -123,7 +123,7 @@ def test_mesmo_modulo_alterna_chrome_de_edicao_e_publicacao(page, base_url, cons
     resultado = page.evaluate("""() => {
       const motor = window.plat.widgets;
       const grade = document.querySelector('.plat-widgets');
-      const tabela = document.querySelector('plat-tabela');
+      const tabela = document.querySelector('plat-w-tabela');
       const antes = tabela.querySelector('table');
       const publicado = {edicao: grade.hasAttribute('data-edicao'), foco: tabela.hasAttribute('tabindex'),
         rotulo: getComputedStyle(tabela, '::before').content};

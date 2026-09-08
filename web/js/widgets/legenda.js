@@ -23,4 +23,4 @@ class PlatLegenda extends PlatWidget {
   acao_legenda_definir(detalhe) { this.configuracao = { ...this.configuracao, itens: detalhe.itens || [] }; }
 }
 
-definir('plat-legenda', PlatLegenda);
+definir('plat-w-legenda', PlatLegenda);

@@ -28,4 +28,4 @@ class PlatTexto extends PlatWidget {
   acao_texto_feicao(detalhe) { this.definirFeicao(detalhe); }
 }
 
-definir('plat-texto', PlatTexto);
+definir('plat-w-texto', PlatTexto);

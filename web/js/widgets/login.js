@@ -6,7 +6,7 @@ export const contrato = Object.freeze({ eventos: ['login.mudou'], acoes: ['login
 /* login: quem está autenticado (GET /api/eu) com botão sair, ou link para entrar */
 class PlatLogin extends PlatWidget {
   renderizar() {
-    const raiz = document.createElement('div'); raiz.className = 'plat-login';
+    const raiz = document.createElement('div'); raiz.className = 'plat-w-login';
     raiz.textContent = '…';
     this.replaceChildren(raiz);
     this.atualizar(raiz);
@@ -36,4 +36,4 @@ class PlatLogin extends PlatWidget {
   acao_login_atualizar() { this.renderizar(); }
 }
 
-definir('plat-login', PlatLogin);
+definir('plat-w-login', PlatLogin);

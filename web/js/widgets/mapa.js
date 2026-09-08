@@ -20,4 +20,4 @@ class PlatMapa extends PlatWidget {
   }
 }
 
-definir('plat-mapa', PlatMapa);
+definir('plat-w-mapa', PlatMapa);

@@ -8,7 +8,7 @@ const TEMAS = [['sistema', 'Sistema'], ['light', 'Claro'], ['dark', 'Escuro']];
 class PlatTema extends PlatWidget {
   renderizar() {
     const atual = document.documentElement.dataset.theme || 'sistema';
-    const grupo = document.createElement('div'); grupo.className = 'plat-tema'; grupo.setAttribute('role', 'group');
+    const grupo = document.createElement('div'); grupo.className = 'plat-w-tema'; grupo.setAttribute('role', 'group');
     grupo.setAttribute('aria-label', this.configuracao.rotulo || 'Tema');
     for (const [valor, rotulo] of TEMAS) {
       const b = document.createElement('button'); b.type = 'button'; b.textContent = rotulo; b.dataset.tema = valor;
@@ -29,4 +29,4 @@ class PlatTema extends PlatWidget {
   acao_tema_definir(detalhe) { this.definir(String(detalhe.tema || 'sistema')); }
 }
 
-definir('plat-tema', PlatTema);
+definir('plat-w-tema', PlatTema);

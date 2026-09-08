@@ -29,4 +29,4 @@ class PlatTabela extends PlatWidget {
   acao_tabela_filtrar(detalhe) { this.#filtro = String(detalhe.valor || '').toLocaleLowerCase('pt-BR'); this.renderizar(); }
 }
 
-definir('plat-tabela', PlatTabela);
+definir('plat-w-tabela', PlatTabela);

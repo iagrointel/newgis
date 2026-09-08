@@ -32,4 +32,4 @@ class PlatBotao extends PlatWidget {
   acao_botao_habilitar(detalhe) { this.configuracao = { ...this.configuracao, habilitado: detalhe.habilitado !== false }; }
 }
 
-definir('plat-botao', PlatBotao);
+definir('plat-w-botao', PlatBotao);

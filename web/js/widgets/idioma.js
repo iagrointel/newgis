@@ -28,4 +28,4 @@ class PlatIdioma extends PlatWidget {
   acao_idioma_definir(detalhe) { this.definir(String(detalhe.idioma || 'pt-BR')); }
 }
 
-definir('plat-idioma', PlatIdioma);
+definir('plat-w-idioma', PlatIdioma);

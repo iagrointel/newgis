@@ -9,7 +9,7 @@ class PlatControlador extends PlatWidget {
 
   renderizar() {
     const c = this.configuracao;
-    const barra = document.createElement('div'); barra.className = 'plat-controlador';
+    const barra = document.createElement('div'); barra.className = 'plat-w-controlador';
     for (const alvo of c.alvos || []) {
       const el = this._alvo(alvo.id);
       const b = document.createElement('button'); b.type = 'button'; b.textContent = alvo.rotulo || alvo.id;
@@ -36,4 +36,4 @@ class PlatControlador extends PlatWidget {
   acao_controlador_fechar(detalhe) { this.alternar(detalhe.alvo, null, false); }
 }
 
-definir('plat-controlador', PlatControlador);
+definir('plat-w-controlador', PlatControlador);

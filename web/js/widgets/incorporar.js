@@ -29,4 +29,4 @@ class PlatIncorporar extends PlatWidget {
   acao_incorporar_definir(detalhe) { this.configuracao = { ...this.configuracao, url: String(detalhe.url || '') }; }
 }
 
-definir('plat-incorporar', PlatIncorporar);
+definir('plat-w-incorporar', PlatIncorporar);

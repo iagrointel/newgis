@@ -9,12 +9,12 @@ class PlatCompartilhar extends PlatWidget {
   renderizar() {
     const c = this.configuracao;
     const url = c.url || location.href;
-    const raiz = document.createElement('div'); raiz.className = 'plat-compartilhar';
+    const raiz = document.createElement('div'); raiz.className = 'plat-w-compartilhar';
     const campo = document.createElement('input'); campo.type = 'text'; campo.readOnly = true; campo.value = url; campo.setAttribute('aria-label', 'link');
     raiz.append(campo, botaoCopiar(() => url, campo));
     if (c.qr !== false) {
       const img = document.createElement('img');
-      img.alt = 'QR do link'; img.className = 'plat-qr';
+      img.alt = 'QR do link'; img.className = 'plat-w-qr';
       img.src = `/api/qr.svg?texto=${encodeURIComponent(url)}`;
       raiz.append(img);
     }
@@ -28,4 +28,4 @@ class PlatCompartilhar extends PlatWidget {
   }
 }
 
-definir('plat-compartilhar', PlatCompartilhar);
+definir('plat-w-compartilhar', PlatCompartilhar);

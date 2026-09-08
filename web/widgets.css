@@ -3,13 +3,13 @@
 .plat-widgets { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--e4); }
 .plat-widgets > * { min-width: 0; }
 .plat-widget-erro { border: var(--borda-largura) solid var(--falha); padding: var(--e4); color: var(--falha); border-radius: var(--raio); }
-plat-mapa { display: block; min-height: 18rem; }
-plat-legenda ul { list-style: none; padding: 0; }
-plat-legenda button::before { content: ''; display: inline-block; width: var(--e3); height: var(--e3); margin-right: var(--e2); background: var(--cor); }
-plat-tabela { display: block; overflow: auto; }
-plat-tabela table { width: 100%; border-collapse: collapse; }
-plat-tabela th, plat-tabela td { padding: var(--e2); text-align: left; border-bottom: var(--borda-largura) solid var(--borda); }
-plat-filtro label { display: grid; gap: var(--e1); }
+plat-w-mapa { display: block; min-height: 18rem; }
+plat-w-legenda ul { list-style: none; padding: 0; }
+plat-w-legenda button::before { content: ''; display: inline-block; width: var(--e3); height: var(--e3); margin-right: var(--e2); background: var(--cor); }
+plat-w-tabela { display: block; overflow: auto; }
+plat-w-tabela table { width: 100%; border-collapse: collapse; }
+plat-w-tabela th, plat-w-tabela td { padding: var(--e2); text-align: left; border-bottom: var(--borda-largura) solid var(--borda); }
+plat-w-filtro label { display: grid; gap: var(--e1); }
 /* chrome de edição (construtor): só CSS sobre o atributo que motor.js alterna; o widget não muda */
 .plat-widgets[data-edicao] > [data-no-id] { position: relative; outline: var(--borda-largura) dashed var(--acento); outline-offset: var(--e0); }
 .plat-widgets[data-edicao] > [data-no-id]::before {
@@ -17,30 +17,31 @@ plat-filtro label { display: grid; gap: var(--e1); }
   padding: var(--e0) var(--e1); background: var(--acento); color: var(--acento-texto);
 }
 .plat-widgets[data-edicao] > [data-no-id]:focus { outline-style: solid; }
-/* widgets de página e de menu (item L5-01-d) */
-.plat-texto-rico img { max-width: 100%; max-height: 24rem; height: auto; }
-.plat-texto-rico code { font-family: var(--mono, monospace); font-size: .9em; }
-plat-imagem figure { margin: 0; }
-plat-imagem img { max-width: 100%; max-height: 24rem; width: auto; height: auto; display: block; }
-plat-imagem figcaption { font-size: .8rem; color: var(--fraco, #666); margin-top: .25rem; }
-plat-cartao .plat-cartao { border: 1px solid var(--borda, #ccd3d4); border-radius: var(--raio, 4px); padding: var(--e3, .75rem); display: grid; gap: .5rem; }
-plat-cartao .plat-cartao img { max-width: 100%; max-height: 12rem; width: auto; height: auto; object-fit: contain; }
-plat-cartao .plat-cartao h3 { margin: 0; }
-plat-incorporar iframe { width: 100%; border: 1px solid var(--borda, #ccd3d4); }
-plat-divisor hr { border: 0; border-top: 1px solid var(--borda, #ccd3d4); margin: var(--e3, .75rem) 0; }
-plat-divisor hr.plat-divisor-tracejado { border-top-style: dashed; }
-plat-divisor hr.plat-divisor-espaco { border: 0; height: var(--e4, 1rem); margin: 0; }
-plat-divisor[data-vertical] { display: inline-block; width: 1px; align-self: stretch; }
-plat-divisor[data-vertical] hr { border-top: 0; border-left: 1px solid var(--borda, #ccd3d4); height: 100%; margin: 0 var(--e3, .75rem); }
-plat-menu ul { list-style: none; margin: 0; padding: 0; display: flex; gap: .25rem; flex-wrap: wrap; }
-plat-menu .plat-menu-vertical ul { flex-direction: column; }
-plat-menu button, plat-menu a { display: block; padding: .35rem .6rem; text-decoration: none; }
-plat-controlador .plat-controlador { display: flex; gap: .25rem; flex-wrap: wrap; }
-plat-controlador button[aria-expanded="true"] { border-color: var(--acento, #1f6f8b); }
-plat-compartilhar .plat-compartilhar { display: grid; gap: .5rem; grid-template-columns: 1fr auto; align-items: center; }
-plat-compartilhar .plat-qr { grid-column: 1 / -1; width: 10rem; height: 10rem; background: #fff; padding: .25rem; }
-plat-compartilhar textarea { font-family: var(--mono, monospace); font-size: .75rem; width: 100%; }
-plat-login .plat-login { display: flex; gap: .5rem; align-items: center; }
-plat-tema .plat-tema { display: inline-flex; gap: .25rem; }
-plat-tema button[aria-pressed="true"] { border-color: var(--acento, #1f6f8b); font-weight: 600; }
-plat-idioma label { display: inline-flex; gap: .4rem; align-items: center; }
+/* widgets de página e de menu (item L5-01-d); elementos plat-w-* para não colidir com os componentes do sistema
+   de design (plat-tabela, plat-tema, plat-idioma são outra coisa: tabela declarativa, seletor de tema e de idioma) */
+.plat-w-texto-rico img { max-width: 100%; max-height: 24rem; height: auto; }
+.plat-w-texto-rico code { font-family: var(--mono); font-size: var(--t-1); }
+plat-w-imagem figure { margin: 0; }
+plat-w-imagem img { max-width: 100%; max-height: 24rem; width: auto; height: auto; display: block; }
+plat-w-imagem figcaption { font-size: var(--t-2); color: var(--fraco); margin-top: var(--e1); }
+plat-w-cartao .plat-w-cartao { border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); padding: var(--e3); display: grid; gap: var(--e2); }
+plat-w-cartao .plat-w-cartao img { max-width: 100%; max-height: 12rem; width: auto; height: auto; object-fit: contain; }
+plat-w-cartao .plat-w-cartao h3 { margin: 0; }
+plat-w-incorporar iframe { width: 100%; border: var(--borda-largura) solid var(--borda); }
+plat-w-divisor hr { border: 0; border-top: var(--borda-largura) solid var(--borda); margin: var(--e3) 0; }
+plat-w-divisor hr.plat-w-divisor-tracejado { border-top-style: dashed; }
+plat-w-divisor hr.plat-w-divisor-espaco { border: 0; height: var(--e4); margin: 0; }
+plat-w-divisor[data-vertical] { display: inline-block; width: var(--borda-largura); align-self: stretch; }
+plat-w-divisor[data-vertical] hr { border-top: 0; border-left: var(--borda-largura) solid var(--borda); height: 100%; margin: 0 var(--e3); }
+plat-w-menu ul { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--e1); flex-wrap: wrap; }
+plat-w-menu .plat-w-menu-vertical ul { flex-direction: column; }
+plat-w-menu button, plat-w-menu a { display: block; padding: var(--e1) var(--e3); text-decoration: none; }
+plat-w-controlador .plat-w-controlador { display: flex; gap: var(--e1); flex-wrap: wrap; }
+plat-w-controlador button[aria-expanded="true"] { border-color: var(--acento); }
+plat-w-compartilhar .plat-w-compartilhar { display: grid; gap: var(--e2); grid-template-columns: 1fr auto; align-items: center; }
+plat-w-compartilhar .plat-w-qr { grid-column: 1 / -1; width: 10rem; height: 10rem; background: var(--i-branco); padding: var(--e1); }
+plat-w-compartilhar textarea { font-family: var(--mono); font-size: var(--t-3); width: 100%; }
+plat-w-login .plat-w-login { display: flex; gap: var(--e2); align-items: center; }
+plat-w-tema .plat-w-tema { display: inline-flex; gap: var(--e1); }
+plat-w-tema button[aria-pressed="true"] { border-color: var(--acento); font-weight: 600; }
+plat-w-idioma label { display: inline-flex; gap: var(--e2); align-items: center; }
