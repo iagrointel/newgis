@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 from app import erros, limite_corpo, paginas
 from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
+from app.analise3d.rotas import router as rotas_analise3d
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
 from app.auth import (
@@ -121,6 +122,8 @@ ROUTERS = [
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     rotas_multiescala,
+    # --- análise 3D (L2-09-d): /api/analise3d/visada, /viewshed, /perfil, /sombra sobre terreno inline
+    rotas_analise3d,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
