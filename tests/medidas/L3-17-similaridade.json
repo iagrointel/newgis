@@ -1,0 +1,47 @@
+{
+ "item": "L3-17-similaridade",
+ "medidas": {
+  "exemplo_referencia_indice_A": {
+   "valor": 1.0,
+   "unidade": "índice (0-1)",
+   "comando": "test_1_reproduz_exemplo_numerico_de_referencia"
+  },
+  "exemplo_referencia_ordem": {
+   "valor": "A,D,B,C",
+   "unidade": "sequência de unidade_id",
+   "comando": "test_1_reproduz_exemplo_numerico_de_referencia"
+  },
+  "exemplo_referencia_euclidiana_indice_A": {
+   "valor": 1.0,
+   "unidade": "índice (0-1)",
+   "comando": "test_1c_metrica_euclidiana_tambem_bate_com_recomputacao_independente"
+  },
+  "centroide_duas_referencias_indice_C": {
+   "valor": 0.005019209369576283,
+   "unidade": "índice (0-1)",
+   "comando": "test_1d_centroide_de_duas_referencias_e_a_media_dos_vetores_padronizados"
+  },
+  "campos_escolhidos_mudam_ranking": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "test_2_escolha_de_campos_muda_o_ranking"
+  },
+  "export_csv_linhas": {
+   "valor": 5,
+   "unidade": "linhas (cabeçalho + unidades)",
+   "comando": "test_3_export_csv_tem_cabecalho_fixo_e_uma_linha_por_unidade_do_ranking"
+  },
+  "export_geojson_feicoes": {
+   "valor": 4,
+   "unidade": "feições",
+   "comando": "test_3b_export_geojson_e_featurecollection_com_uma_feicao_por_unidade_do_ranking"
+  },
+  "refutacao_referencia_igual_candidato": {
+   "valor": true,
+   "unidade": "booleano",
+   "comando": "test_refutacao_referencia_igual_a_candidato_da_indice_1_e_1o_lugar"
+  }
+ },
+ "gerado_em": "2026-09-07T12:45:05Z",
+ "git_sha": "325b004a38bd"
+}

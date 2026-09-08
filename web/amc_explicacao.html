@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Por que esta nota · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  #resumo-lista { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: 0; }
+  #resumo-lista dt { color: var(--fraco); }
+  #resumo-lista dd { margin: 0; }
+  #tabela-fatores td, #tabela-fatores th { padding: .35rem .6rem; text-align: left; white-space: nowrap; }
+  #tabela-fatores td.observacao, #tabela-fatores th:last-child { white-space: normal; }
+  tr[data-vetado] { opacity: .6; }
+  /* item L3-15: ficha de metadado no '?' do fator — details nativo, sem biblioteca e sem janela flutuante */
+  .ficha > summary { cursor: pointer; font-weight: 600; width: 1.4rem; text-align: center; }
+  .ficha > dl { display: grid; grid-template-columns: max-content 1fr; gap: .15rem .8rem; margin: .4rem 0 0;
+                white-space: normal; max-width: 46rem; }
+  .ficha > dl dt { color: var(--fraco); }
+  .ficha > dl dd { margin: 0; }
+  .marca-proxy { font-size: .85em; border: 1px solid currentColor; border-radius: .2rem; padding: 0 .25rem;
+                 margin-left: .35rem; }
+  #proxies-lista, #ancoras-lista { margin: .25rem 0 .75rem; }
+</style>
+</head>
+<body class="tela">
+<a class="pular" href="#principal">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1>Por que esta unidade tem esta nota</h1>
+    <p class="fraco">análise / beta privado · triagem: sinal, não prova</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <section class="cartao" id="resumo-cartao" aria-labelledby="t-resumo">
+      <h2 id="t-resumo">resumo</h2>
+      <dl id="resumo-lista"></dl>
+    </section>
+
+    <section class="cartao" id="tabela-cartao" aria-labelledby="t-tabela">
+      <h2 id="t-tabela">fator a fator</h2>
+      <p class="fraco">os pesos abaixo são os que o usuário escolheu para esta execução, não uma medida.</p>
+      <div class="tabela-rolagem">
+        <table id="tabela-fatores">
+          <thead>
+            <tr>
+              <th><span aria-hidden="true">?</span><span class="sr-only">ficha do fator</span></th>
+              <th>fator</th><th>fonte</th><th>valor bruto</th><th>unidade</th><th>transformação</th>
+              <th>favorabilidade</th><th>peso</th><th>presente</th><th>contribuição</th><th>observação</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-corpo"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="cartao" id="metadado-cartao" aria-labelledby="t-metadado">
+      <h2 id="t-metadado">proxies e âncoras</h2>
+      <p class="fraco" id="aviso-proxy"></p>
+      <ul id="proxies-lista"></ul>
+      <p class="fraco" id="aviso-ancora"></p>
+      <ul id="ancoras-lista"></ul>
+      <p class="fraco" id="sem-versao"></p>
+    </section>
+
+    <section class="cartao" id="observacoes-cartao" aria-labelledby="t-observacoes" hidden>
+      <h2 id="t-observacoes">observações</h2>
+      <ul id="observacoes-lista"></ul>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/amc/explicacao_pagina.js"></script>
+</body>
+</html>

@@ -8,6 +8,8 @@ import secrets
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from tests.api.amc import exemplos as amc_exemplos
+
 PREFIXO = "zt-cruzado-"
 # L6-02-a: dado aberto federal (IBGE), nunca nome de cliente/parceiro; passa pela defesa de SSRF na criação
 URL_CONEXAO_TESTE = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/35"
@@ -54,11 +56,15 @@ class Preparacao:
     link_b: dict = field(default_factory=dict)  # L0-03: link por token de B (token em claro só aqui)
     categoria_b: dict = field(default_factory=dict)  # L0-03: categoria de B
     fonte_acervo: str = ""  # L6-01-a: fonte do acervo com licença escrita (compartilhada, não é de A nem de B)
+    camada_acervo: str = ""  # L6-01-b: view publicada em plat_acervo; "" quando nada está publicado nesta base
     conexao_b: dict = field(default_factory=dict)  # L6-02-a: conexão externa de B
     convite_b: dict = field(default_factory=dict)  # L0-07-d: convite pendente de B
     conjunto_b: dict = field(default_factory=dict)  # L3-19-multiescala: área de estudo de B
     fator_b: dict = field(default_factory=dict)  # L3-19-multiescala: fator de B
     execucao_b: dict = field(default_factory=dict)  # L3-19-multiescala: execução macro de B (sobre conjunto_b)
+    amc_modelo_b: dict = field(default_factory=dict)      # L3-01-a: modelo multicritério de B
+    amc_conjunto_b: dict = field(default_factory=dict)    # L3-01-b: conjunto de unidades de B
+    amc_execucao_b: dict = field(default_factory=dict)    # L3-01-a: execução de B (proveniência congelada)
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -72,6 +78,8 @@ class Preparacao:
             marcas.append(self.convite_b["email"])
         if self.conjunto_b:
             marcas += [self.conjunto_b["nome"], self.fator_b["nome"]]
+        if self.amc_modelo_b:
+            marcas += [self.amc_modelo_b["versao_hash"], self.amc_conjunto_b["nome"]]
         return marcas
 
 
@@ -131,6 +139,12 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_a.get("/api/acervo?limite=1")
     assert r.status_code == 200, r.text
     fonte_acervo = r.json()["itens"][0]["fonte_id"]
+    # L6-01-b: camada publicada (view em plat_acervo). O registro é da CASA, não de A nem de B; se nada estiver
+    # publicado nesta base, os casos apontam um nome inexistente e o esperado vira 404 — que já está no PADRÃO.
+    r = sessao_a.get("/api/acervo/camadas")
+    assert r.status_code == 200, r.text
+    publicadas = r.json()["camadas"]
+    camada_acervo = publicadas[0]["view_nome"] if publicadas else ""
     # L6-02-a: conexão externa de B, alvo das rotas de /api/conexoes (URL pública real — passa pela defesa de
     # SSRF na criação; dado aberto federal, nunca nome de cliente/parceiro)
     r = sessao_b.post(
@@ -160,6 +174,34 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b,
                       conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
+    # L3-01-a/b: modelo, conjunto de unidades e execução de B (a camada do modelo é o item de B, que já existe)
+    definicao = amc_exemplos.modelo_sem_camada_externa()
+    definicao["nome"] = f"{PREFIXO}amc-{sufixo}"
+    definicao["fatores"][0]["camada"] = {"tipo": "item", "id": item_b["id"], "banda": 1}
+    r = sessao_b.post("/api/amc/modelos", json={"definicao": definicao})
+    assert r.status_code == 201, r.text
+    amc_modelo_b = r.json()
+    r = sessao_b.post("/api/amc/conjuntos", json={"nome": f"{PREFIXO}amc-conj-{sufixo}", "tipo": "feicoes",
+                                                  "feicoes": amc_feicoes("b1")})
+    assert r.status_code == 201, r.text
+    amc_conjunto_b = r.json()
+    r = sessao_b.post("/api/amc/execucoes", json={"modelo_id": amc_modelo_b["id"],
+                                                  "conjunto_id": amc_conjunto_b["id"]})
+    assert r.status_code == 201, r.text
+    amc_execucao_b = r.json()
+    return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
+                      job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
+                      categoria_b=categoria_b, fonte_acervo=fonte_acervo, camada_acervo=camada_acervo,
+                      conexao_b=conexao_b, convite_b=convite_b, amc_modelo_b=amc_modelo_b,
+                      amc_conjunto_b=amc_conjunto_b, amc_execucao_b=amc_execucao_b)
+
+
+def amc_feicoes(*ids: str) -> dict:
+    """FeatureCollection mínima para um conjunto de unidades do tipo 'feicoes' (quadrados de ~1 km em Goiás)."""
+    return {"type": "FeatureCollection", "features": [
+        {"type": "Feature", "id": i, "properties": {},
+         "geometry": amc_exemplos.area_retangulo(-49.30 + 0.02 * k, -16.70, 0.01, 0.01)}
+        for k, i in enumerate(ids)]}
 
 
 def _no_categoria(no: dict) -> dict:
@@ -178,6 +220,12 @@ def desfazer(p: Preparacao) -> None:
         arvore = p.sessao_b.get("/api/categorias").json()["arvore"]
         restante = [_no_categoria(n) for n in arvore if n["id"] != p.categoria_b["id"]]
         p.sessao_b.put("/api/categorias", json={"arvore": restante})
+    if p.amc_execucao_b:
+        p.sessao_b.delete(f"/api/amc/execucoes/{p.amc_execucao_b['id']}")
+    if p.amc_conjunto_b:
+        p.sessao_b.delete(f"/api/amc/conjuntos/{p.amc_conjunto_b['id']}")
+    if p.amc_modelo_b:
+        p.sessao_b.delete(f"/api/amc/modelos/{p.amc_modelo_b['id']}")
     if p.item_b:
         p.sessao_b.put(f"/api/itens/{p.item_b['id']}", json={"protegido": False})
         p.sessao_b.delete(f"/api/itens/{p.item_b['id']}?cascata=true")
@@ -200,6 +248,12 @@ def _sem_marca(p: Preparacao, j: Any) -> None:
     texto = str(j)
     for marca in p.marcas_de_b:
         assert marca not in texto, f"resposta de A carrega dado de B: {marca}"
+
+
+def _cancelar_assinatura(p: Preparacao, j: Any) -> None:
+    """L6-01-b: desfaz a assinatura que a chamada 2xx de A criou (a rota não devolve id para _apagar_criado)."""
+    if p.camada_acervo:
+        p.sessao_a.delete(f"/api/acervo/camadas/{p.camada_acervo}/assinatura")
 
 
 def _so_a(p: Preparacao, j: Any) -> None:
@@ -496,6 +550,22 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/acervo/{p.fonte_acervo}/adicionar", proprio=True, aceita=frozenset({201}),
         verificar=_sem_marca, limpar=_apagar_criado(("DELETE", "/api/itens/{id}")),
     ),
+    # ---- L6-01-b publicação sem cópia: a camada é da CASA (compartilhada); a ASSINATURA é do inquilino.
+    # A assina para si e cancela na limpeza; ler feição/tile sem assinatura é 403, que já está no PADRÃO.
+    ("GET", "/api/acervo/camadas"): Caso(lambda p: "/api/acervo/camadas", proprio=True,
+                                         aceita=frozenset({200}), verificar=_sem_marca),
+    ("POST", "/api/acervo/camadas/{camada}/assinatura"): Caso(
+        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/assinatura", proprio=True,
+        aceita=frozenset({201}), verificar=_sem_marca, limpar=_cancelar_assinatura,
+    ),
+    ("DELETE", "/api/acervo/camadas/{camada}/assinatura"): Caso(
+        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/assinatura", proprio=True,
+        aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/acervo/camadas/{camada}/feicoes"): Caso(
+        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/feicoes?limite=1"),
+    ("GET", "/api/acervo/camadas/{camada}/tiles/{z}/{x}/{y}.mvt"): Caso(
+        lambda p: f"/api/acervo/camadas/{p.camada_acervo or 'inexistente'}/tiles/10/379/580.mvt"),
     # ---- L6-02-a modelo de conexão externa: conexão é do INQUILINO (tenant_id + RLS), diferente do acervo
     # acima; GET/POST agem só sobre o próprio chamador (o POST usa o MESMO nome de B para provar que a
     # unicidade de nome é por inquilino, não global); GET/PATCH/DELETE/testar por id de B são cross-tenant puro
@@ -905,6 +975,59 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    # ---- L3-01-a/b motor multicritério: modelo, conjunto de unidades e execução de B
+    ("POST", "/api/amc/modelos/validar"): Caso(
+        lambda p: "/api/amc/modelos/validar",
+        lambda p: {"definicao": amc_exemplos.modelo_sem_camada_externa()},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    ("GET", "/api/amc/modelos"): Caso(
+        lambda p: "/api/amc/modelos?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("POST", "/api/amc/modelos"): Caso(
+        lambda p: "/api/amc/modelos", lambda p: {"definicao": amc_exemplos.modelo_sem_camada_externa()},
+        proprio=True, aceita=frozenset({201}), verificar=_so_a,
+        limpar=_apagar_criado(("DELETE", "/api/amc/modelos/{id}")),
+    ),
+    ("GET", "/api/amc/modelos/{modelo_id}"): Caso(lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}"),
+    ("PUT", "/api/amc/modelos/{modelo_id}"): Caso(
+        lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}",
+        lambda p: {"definicao": amc_exemplos.modelo_sem_camada_externa()},
+    ),
+    ("DELETE", "/api/amc/modelos/{modelo_id}"): Caso(lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}"),
+    ("GET", "/api/amc/modelos/{modelo_id}/versoes"): Caso(
+        lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}/versoes"
+    ),
+    ("GET", "/api/amc/modelos/{modelo_id}/versoes/{versao_hash}"): Caso(
+        lambda p: f"/api/amc/modelos/{p.amc_modelo_b['id']}/versoes/{p.amc_modelo_b['versao_hash']}"
+    ),
+    ("GET", "/api/amc/conjuntos"): Caso(
+        lambda p: "/api/amc/conjuntos?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("POST", "/api/amc/conjuntos"): Caso(
+        lambda p: "/api/amc/conjuntos",
+        lambda p: {"nome": f"{PREFIXO}amc-conj-a", "tipo": "feicoes", "feicoes": amc_feicoes("a1")},
+        proprio=True, aceita=frozenset({201}), verificar=_so_a,
+        limpar=_apagar_criado(("DELETE", "/api/amc/conjuntos/{id}")),
+    ),
+    ("GET", "/api/amc/conjuntos/{conjunto_id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.amc_conjunto_b['id']}"),
+    ("DELETE", "/api/amc/conjuntos/{conjunto_id}"): Caso(lambda p: f"/api/amc/conjuntos/{p.amc_conjunto_b['id']}"),
+    ("GET", "/api/amc/conjuntos/{conjunto_id}/unidades"): Caso(
+        lambda p: f"/api/amc/conjuntos/{p.amc_conjunto_b['id']}/unidades?limite=5"
+    ),
+    ("GET", "/api/amc/execucoes"): Caso(
+        lambda p: "/api/amc/execucoes?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    # a execução aponta modelo E conjunto de B: A não pode criar execução sobre o que não é dela
+    ("POST", "/api/amc/execucoes"): Caso(
+        lambda p: "/api/amc/execucoes",
+        lambda p: {"modelo_id": p.amc_modelo_b["id"], "conjunto_id": p.amc_conjunto_b["id"]},
+    ),
+    ("GET", "/api/amc/execucoes/{execucao_id}"): Caso(lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}"),
+    ("DELETE", "/api/amc/execucoes/{execucao_id}"): Caso(lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}"),
+    ("GET", "/api/amc/execucoes/{execucao_id}/resultados"): Caso(
+        lambda p: f"/api/amc/execucoes/{p.amc_execucao_b['id']}/resultados"
     ),
 }
 

@@ -1,0 +1,79 @@
+{
+ "item": "L6-04-acervo-no-motor",
+ "medidas": {
+  "camadas_reais_usadas": {
+   "valor": 3,
+   "unidade": "camadas",
+   "comando": "public.icmbio_unidades_conservacao (UC, 346 linhas), public.funai_terras_indigenas (TI, 655 linhas), public.hidro_nacional_bc250 (hidrografia, 1.599.240 linhas COUNT(*) exato) — dado real da casa, nunca sintético"
+  },
+  "fatores_extraidos_sem_copia": {
+   "valor": 3,
+   "unidade": "fatores",
+   "comando": "app/amc/executor.py::executar — cada fator lê plat_acervo.<view> (schema plat_til604acervo_acervo nesta trilha), nunca a tabela public.* diretamente; provado por SELECT direto negado em tests/api/test_acervo_publicacao.py (dependência)"
+  },
+  "unidades_da_grade_de_teste": {
+   "valor": 3,
+   "unidade": "unidades",
+   "comando": "conjunto tipo 'feicoes': u_uc (dentro do Parque Nacional da Serra do Itajaí), u_ti (dentro da TI Águas Claras), u_fora (fora das duas) — bbox -49.5,-27.4,-48.9,-26.9"
+  },
+  "fracao_uc_unidade_dentro": {
+   "valor": 1.0,
+   "unidade": "fração",
+   "comando": "amc_fator_bruto.valor do fator 'uc' na unidade u_uc (poligono_fracao_area) — quadrado de teste inteiro dentro do parque"
+  },
+  "fracao_uc_unidade_fora": {
+   "valor": 0.0,
+   "unidade": "fração",
+   "comando": "amc_fator_bruto.valor do fator 'uc' na unidade u_fora"
+  },
+  "fracao_ti_unidade_dentro": {
+   "valor": ">0.5 (medido, não é 1.0 exato: a TI não é um retângulo)",
+   "unidade": "fração",
+   "comando": "amc_fator_bruto.valor do fator 'ti' na unidade u_ti (poligono_fracao_area)"
+  },
+  "proveniencia_com_fonte_id_e_contagem": {
+   "valor": 3,
+   "unidade": "camadas com fonte_id+contagem>0 em amc_execucao.camadas",
+   "comando": "GET /api/amc/execucoes/{id} — campo camadas[].fonte_id e camadas[].contagem (acervo.linhas_exatas), não NULL nem 'nao_registrado'"
+  },
+  "revogar_impede_nova_execucao": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "DELETE .../assinatura da camada UC + POST /api/amc/execucoes com o mesmo modelo -> 422 'sem_assinatura' (app/amc/camadas.py::_acervo)"
+  },
+  "revogar_nao_apaga_resultado_antigo": {
+   "valor": 3,
+   "unidade": "linhas de amc_resultado que sobrevivem à revogação",
+   "comando": "COUNT(*) em plat.amc_resultado da execução concluída ANTES da revogação, medido de novo DEPOIS: 3 = 3"
+  },
+  "refutacao_job_falha_com_mensagem": {
+   "valor": 1,
+   "unidade": "booleano",
+   "comando": "revoga a assinatura de 'ti' (via API) entre a extração de 'uc' e a checagem de 'ti' dentro do mesmo job -> FalhaDefinitiva levantada, amc_execucao.estado='falhou' com erro citando a camada"
+  },
+  "refutacao_zero_linhas_gravadas_apos_falha": {
+   "valor": 0,
+   "unidade": "linhas em amc_resultado e amc_fator_bruto da execução que falhou",
+   "comando": "COUNT(*) em ambas as tabelas para a execucao_id que falhou — nunca completa com zeros, nunca completa parcial"
+  },
+  "testes_verdes_desta_suite": {
+   "valor": 4,
+   "unidade": "testes",
+   "comando": "bash laco/roda_teste.sh tests/api/amc/test_acervo_no_motor.py -q"
+  },
+  "regressao_suites_dependentes": {
+   "valor": "sem regressão",
+   "unidade": "texto",
+   "comando": "bash laco/roda_teste.sh tests/api/amc tests/unit/test_amc_zonal.py tests/unit/test_amc_vetorial.py tests/unit/test_amc_adversario.py tests/unit/test_amc_esquema.py tests/unit/test_schema_ambiente.py tests/api/test_acervo_publicacao.py -q — só as 2 falhas PRÉ-EXISTENTES de docs/openapi.json desatualizado (test_amc_adversario_api.py, itens L3-01-a/b, não deste item) continuam vermelhas; nenhuma nova"
+  },
+  "carga_1min": {"valor": 16.81, "unidade": "load average", "medido_em": "2026-09-07T13:18:12Z"},
+  "ram_livre_gb": {"valor": 0, "unidade": "GB (buff/cache 14 GB, available 8 GB)", "medido_em": "2026-09-07T13:18:12Z"}
+ },
+ "notas": [
+  "Sem cláusula de tempo/vazão no portão deste item — carga da máquina registrada só por transparência (regra do brief), não como medida de desempenho.",
+  "docs/openapi.json não inclui nenhuma das 18 rotas /api/amc (débito pré-existente do item L3-01-a/b, achado ao rodar tests/api/amc/test_amc_adversario_api.py e tests/api/test_cruzado.py::test_cobertura_100_por_cento) — 2 testes ficam vermelhos por isso, fora do escopo deste item, não regredidos por ele.",
+  "tests/api/cruzado_casos.py estava com ERRO DE SINTAXE real (SyntaxError, não conflito de git) resultante do merge automático (git ort) de wt/amc + wt/t601b: duas versões de `return Preparacao(...)` foram costuradas incorretamente, deixando uma função partida no meio por `def amc_feicoes` e faltando um `),` de fechamento no dicionário CASOS. Corrigido neste ramo (commit deste item) para o arquivo voltar a ser Python válido — sem essa correção `make lint` e QUALQUER teste que importe tests/api/conftest.py (ou seja, toda a suíte de API) falhava na coleta."
+ ],
+ "gerado_em": "2026-09-07T13:18:19Z",
+ "git_sha": "92c7b2975d77"
+}

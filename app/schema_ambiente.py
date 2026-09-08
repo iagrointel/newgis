@@ -26,6 +26,11 @@ SCHEMA_TRABALHO_PADRAO = "plat_trabalho"
 # sem espaço entre o parêntese e a aspa (conferido: as 16+12 ocorrências da árvore batem 1 a 1).
 _SCHEMA = re.compile(r"(?<!current_setting\(')(?<!set_config\(')\bplat\b")
 _TRABALHO = re.compile(r"\bplat_trabalho\b")
+# item L6-01-b: as views de publicação sem cópia moram no schema `plat_acervo` e são de
+# `plat_acervo_publicador`. Nenhum dos dois casa com `\bplat\b` (o `_` seguinte mata a fronteira de palavra),
+# então sem esta linha uma trilha/homologação escreveria no `plat_acervo` de PRODUÇÃO. O grupo opcional
+# mantém o sufixo do papel: plat_acervo_publicador -> <schema>_acervo_publicador.
+_ACERVO = re.compile(r"\bplat_acervo(_publicador)?\b")
 
 
 def esquemas_do_ambiente() -> tuple[str, str]:
@@ -50,16 +55,36 @@ def reescrever_schema(sql: str, schema: str = SCHEMA_PADRAO, schema_trabalho: st
     """Troca todo `plat`/`plat_trabalho` que é schema (não GUC) pelo nome do ambiente atual. No-op
     quando os dois já são o padrão — é isso que garante custo zero em produção."""
     if schema != SCHEMA_PADRAO:
+        sql = _ACERVO.sub(lambda m: f"{schema}_acervo{m.group(1) or ''}", sql)
         sql = _SCHEMA.sub(schema, sql)
     if schema_trabalho != SCHEMA_TRABALHO_PADRAO:
         sql = _TRABALHO.sub(schema_trabalho, sql)
     return sql
 
 
-class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
-    """RealDictCursor que reescreve o texto da consulta para settings.PLAT_SCHEMA/PLAT_SCHEMA_TRABALHO
-    antes de mandar ao servidor. Import de app.settings é tardio (dentro do método) para não criar
-    ciclo — app/settings.py não importa este módulo."""
+class MixinReescritaSchema:
+    """Reescrita de schema em cada ponto de entrada do cursor que carrega um comando SQL, e não só no `execute`
+    com texto. Fica separada do cursor do psycopg2 de propósito: assim `tests/unit/test_schema_ambiente.py`
+    monta a mesma reescrita sobre uma base espiã, sem banco, e confere método a método o que chegou ao driver.
+
+    Por que a classe inteira e não um método de cada vez: em 06/09/2026 o mesmo defeito apareceu três vezes num
+    dia (o `bytes` de `psycopg2.extras.execute_values`, as conexões de teste e o `executemany` de
+    `POST`/`PUT /api/papeis`), e nas três a consequência foi a mesma — a consulta ia para o schema `plat` de
+    produção mesmo com `PLAT_SCHEMA` apontando para outro lugar, e o 42501 que voltava chegava ao cliente
+    disfarçado de "operação fora do inquilino da sessão". Uma prova de isolamento entre inquilinos que roda
+    contra o schema errado não prova nada.
+
+    `PONTOS_COM_CONSULTA` é a lista fechada do que é coberto; `PONTOS_FORA_DE_COBERTURA` diz o que ficou de
+    fora e por quê. O teste de unidade reprova se aparecer um ponto de entrada novo que não esteja num dos dois."""
+
+    # nome do método -> posição do argumento que carrega o comando (todos são o primeiro depois de self)
+    PONTOS_COM_CONSULTA = ("execute", "executemany", "callproc", "mogrify", "copy_expert")
+    PONTOS_FORA_DE_COBERTURA = {
+        "copy_from": "recebe NOME de tabela (e a casa não usa: varrido em 06/09/2026 em app/, scripts/, db/ e "
+                     "tests/). Se passar a usar, cobrir aqui — o nome também leva o prefixo do schema.",
+        "copy_to": "recebe NOME de tabela e a casa não usa (mesma varredura de copy_from, 06/09/2026).",
+        "stream_factory": "não existe no psycopg2 2.x; anotado para o caso de troca de driver.",
+    }
 
     def execute(self, query, *args, **kwargs):
         # `psycopg2.extras.execute_values` (usado pelos importadores em lote da rede de utilidades,
@@ -104,9 +129,13 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
         return bytes(query).decode(_ext.encodings[self.connection.encoding])
 
     def callproc(self, procname, *args, **kwargs):
-        if isinstance(procname, str):
-            procname = self._reescrever(procname)
-        return super().callproc(procname, *args, **kwargs)
+        return super().callproc(self._reescrever(procname), *args, **kwargs)
+
+    def mogrify(self, query, *args, **kwargs):
+        return super().mogrify(self._reescrever(query), *args, **kwargs)
+
+    def copy_expert(self, sql, *args, **kwargs):
+        return super().copy_expert(self._reescrever(sql), *args, **kwargs)
 
     @staticmethod
     def _reescrever(sql: str) -> str:
