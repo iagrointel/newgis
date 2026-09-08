@@ -1106,3 +1106,86 @@ Dividir polígono por linha de corte; união com política de mesclagem de atrib
 primeira feição ou o que o chamador mandar"; desfazer/refazer por atalho de teclado (o mecanismo hoje
 é o histórico por feição, não uma pilha global de ações). Ver
 `docs/adr/20260907T1123-historico-restauracao-anexos-feicao.md`.
+
+---
+
+## 23. Réplicas para trabalho desconectado (item L2-13-b-replicas-sincronizacao)
+
+Uma réplica é um recorte declarado de camadas empacotado num GeoPackage, para editar sem rede e devolver
+depois. É a base da PWA de campo (L2-07-c) e o formato que o QField lê.
+
+### Criar
+
+```
+POST /api/replicas
+{"nome": "campanha de campo", "dispositivo": "tablet-3", "politica_conflito": "servidor_vence",
+ "anexos": false,
+ "extensao": {"type": "Polygon", "coordinates": [[[...]]]},
+ "camadas": [{"camada_id": "<uuid>", "nome_gpkg": "pontos", "filtro": "grupo = 'norte'"}]}
+```
+
+Responde 202 com a réplica em `criando` e o `job_id` do trabalho que monta o pacote (tipo `replicas.criar`).
+O `filtro` é escrito na mesma linguagem `where` do FeatureServer e vale só para os campos daquela camada;
+filtro inválido reprova a criação com 422, não vira job que falha depois. A `extensao` é um Polygon em
+EPSG:4326 e recorta todas as camadas. Sem `nome_gpkg` o nome da tabela no pacote é derivado do título do
+item. Tetos: 20 camadas por réplica, 100 mil feições por camada, 20 réplicas vivas por usuário.
+
+Quando o job termina, `GET /api/replicas/{id}` mostra `estado: "pronta"` e `GET /api/replicas/{id}/pacote`
+baixa o arquivo (`application/geopackage+sqlite3`, com o sha256 no cabeçalho `x-plat-sha256`).
+
+### O que vem dentro do pacote
+
+Uma tabela por camada, mais quatro tabelas de serviço: `plat_sync` (camada, fid, globalid e versão de cada
+feição — é o que o aparelho compara para saber o que ele mudou), `plat_replica` (geração do servidor,
+filtro, política e validade por camada), `plat_dominio` (os valores de domínio dos campos, para montar lista
+fechada) e, quando a réplica foi pedida com anexos, `plat_anexo` com o METADADO dos anexos. O conteúdo
+binário do anexo não vai no pacote: é baixado por
+`GET /api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}` quando houver rede.
+
+### Sincronizar
+
+```
+POST /api/replicas/{id}/sincronizar
+{"idempotencia": "<chave do lote, gerada pelo cliente>",
+ "camadas": [{"camada_id": "<uuid>",
+              "adicionar": [{"atributos": {...}, "geometria": {...}}],
+              "atualizar": [{"id": "<globalid>", "versao": 3, "atributos": {...}}],
+              "apagar":    [{"id": "<globalid>", "versao": 3}]}]}
+```
+
+A resposta traz `subidas` (quantas foram aplicadas), `conflitos` e `baixadas` (o que o servidor mudou desde
+a geração que o aparelho tinha). Regras que valem saber:
+
+- **A mesma chave de idempotência repete a resposta e aplica zero.** Se a rede caiu depois de o servidor
+  aplicar e antes de o aparelho ler a resposta, repita o lote com a MESMA chave: a resposta volta igual, com
+  `repetida: true`, e nada é duplicado. Chave nova = lote novo.
+- **Conflito é sempre relatado, mesmo quando resolvido.** Cada entrada de `conflitos` diz a versão que o
+  cliente leu, a que o servidor tem, a resolução (`servidor`, `cliente` ou `pendente`) e a feição atual do
+  servidor. Com `servidor_vence` a edição do cliente é descartada; com `cliente_vence` ela é reaplicada
+  sobre a versão atual do servidor (e o histórico guarda o que foi sobrescrito); com `pergunta` nada é
+  aplicado e a decisão fica com quem opera.
+- **O que o cliente acabou de subir não volta na descida.**
+- **Feição que saiu do recorte desce como `apagar`.** Da janela desta réplica ela deixou de existir; não é
+  uma exclusão no servidor.
+- **A geração só avança quando algo é aplicado**, e avança de um em um.
+- Sincronizar uma camada que não está no recorte declarado da réplica é 404 `camada_fora_da_replica`, mesmo
+  que a camada exista e o usuário possa editá-la por outra porta.
+
+### Validade
+
+A réplica vale 30 dias; o rastreio de mudanças é retido por 45. Passada a validade, sincronizar devolve 409
+`replica_expirada` e o caminho é criar réplica nova — uma sincronização com rastreio incompleto devolveria
+menos mudanças do que o real sem avisar ninguém, e é isso que a validade menor evita.
+
+### Privilégio
+
+`campo.coletar` em todas as rotas (o perfil `campo` já o tem); sincronizar exige também `feicoes.editar` ou
+`feicoes.editar_total`, porque escreve feição. Token de serviço: escopo `camada:ler` para ler, `camada:editar`
+para sincronizar. Só o dono da réplica (ou quem tem `conteudo.editar_tudo`) mexe nela.
+
+### QField
+
+O GeoPackage gerado é o formato que o QField lê. A sincronização própria do QFieldCloud auto-hospedado fica
+registrada como alternativa (decisão pendente do dono): as duas convivem, porque o pacote é o mesmo arquivo.
+A abertura no aparelho ainda não foi testada por esta equipe — o que está provado por máquina é a forma que
+o QField exige (driver GPKG, CRS declarado, tabelas de serviço registradas em `gpkg_contents`).
