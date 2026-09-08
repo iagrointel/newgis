@@ -8629,6 +8629,315 @@
     "x-privilegio": "publico"
    }
   },
+  "/api/itens/{id}/pacote": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Exportar Pacote",
+    "description": "Zip com o documento, tudo de que ele depende e as fontes DECLARADAS (sem dado).",
+    "operationId": "exportar_pacote_api_itens__id__pacote_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "application/zip": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/pacotes/verificar": {
+   "post": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Verificar Pacote",
+    "description": "Não escreve nada: lista os documentos, as fontes e, para cada fonte já mapeada, a diferença de\nesquema campo a campo. `pronto` só é verdadeiro quando a importação passaria.",
+    "operationId": "verificar_pacote_api_pacotes_verificar_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PacoteEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AnalisePacote"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "conteudo.criar"
+   }
+  },
+  "/api/pacotes/importar": {
+   "post": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Importar Pacote",
+    "operationId": "importar_pacote_api_pacotes_importar_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PacoteEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImportacaoPacote"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "conteudo.criar"
+   }
+  },
+  "/api/modelos": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Listar Modelos",
+    "description": "Modelos do próprio inquilino e os de escopo `plataforma` (a política de linha da tabela é quem\ndecide; a rota não filtra por inquilino à mão).",
+    "operationId": "listar_modelos_api_modelos_get",
+    "parameters": [
+     {
+      "name": "escopo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Escopo"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ModeloGaleria"
+         },
+         "title": "Response Listar Modelos Api Modelos Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "post": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Publicar Modelo",
+    "description": "Publica um pacote na galeria: `conteudo` em base64, ou `item_id` para exportar e publicar de uma vez.\nEscopo `plataforma` (visível a todos os inquilinos) só passa se quem chama for superadmin — quem recusa\né a política da tabela, não um `if` da rota.",
+    "operationId": "publicar_modelo_api_modelos_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ModeloEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ModeloGaleria"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "conteudo.criar"
+   }
+  },
+  "/api/modelos/{id}/pacote": {
+   "get": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Baixar Modelo",
+    "operationId": "baixar_modelo_api_modelos__id__pacote_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "application/zip": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/modelos/{id}": {
+   "delete": {
+    "tags": [
+     "catalogo"
+    ],
+    "summary": "Apagar Modelo",
+    "operationId": "apagar_modelo_api_modelos__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "conteudo.criar"
+   }
+  },
   "/ogc/records": {
    "get": {
     "tags": [
@@ -12021,6 +12330,92 @@
     ],
     "title": "AmostrasResultado"
    },
+   "AnalisePacote": {
+    "properties": {
+     "raiz": {
+      "type": "string",
+      "title": "Raiz"
+     },
+     "tipo_raiz": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo Raiz"
+     },
+     "titulo_raiz": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Titulo Raiz"
+     },
+     "origem": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Origem"
+     },
+     "sha256_conteudo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sha256 Conteudo"
+     },
+     "documentos": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Documentos"
+     },
+     "fontes": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Fontes"
+     },
+     "pronto": {
+      "type": "boolean",
+      "title": "Pronto"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "raiz",
+     "tipo_raiz",
+     "titulo_raiz",
+     "origem",
+     "sha256_conteudo",
+     "documentos",
+     "fontes",
+     "pronto"
+    ],
+    "title": "AnalisePacote"
+   },
    "CategoriaNo": {
     "properties": {
      "id": {
@@ -14398,6 +14793,34 @@
     ],
     "title": "ImportacaoEntrada"
    },
+   "ImportacaoPacote": {
+    "properties": {
+     "raiz": {
+      "type": "string",
+      "title": "Raiz"
+     },
+     "itens": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Itens"
+     },
+     "fontes_mapeadas": {
+      "type": "integer",
+      "title": "Fontes Mapeadas"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "raiz",
+     "itens",
+     "fontes_mapeadas"
+    ],
+    "title": "ImportacaoPacote"
+   },
    "ImportadoCategorias": {
     "properties": {
      "criadas": {
@@ -15687,6 +16110,129 @@
     "title": "MiniaturaEntrada",
     "description": "Imagem em base64 (JSON: o CSRF sob cookie exige application/json; multipart entra com o L0-11)."
    },
+   "ModeloEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "descricao": {
+      "type": "string",
+      "maxLength": 2000,
+      "title": "Descricao",
+      "default": ""
+     },
+     "escopo": {
+      "type": "string",
+      "pattern": "^(inquilino|plataforma)$",
+      "title": "Escopo",
+      "default": "inquilino"
+     },
+     "conteudo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 8388608
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Conteudo"
+     },
+     "item_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Item Id"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome"
+    ],
+    "title": "ModeloEntrada"
+   },
+   "ModeloGaleria": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "escopo": {
+      "type": "string",
+      "title": "Escopo"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "descricao": {
+      "type": "string",
+      "title": "Descricao"
+     },
+     "tipo_raiz": {
+      "type": "string",
+      "title": "Tipo Raiz"
+     },
+     "documentos": {
+      "type": "integer",
+      "title": "Documentos"
+     },
+     "fontes": {
+      "type": "integer",
+      "title": "Fontes"
+     },
+     "sha256": {
+      "type": "string",
+      "title": "Sha256"
+     },
+     "bytes": {
+      "type": "integer",
+      "title": "Bytes"
+     },
+     "do_inquilino": {
+      "type": "boolean",
+      "title": "Do Inquilino"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "escopo",
+     "nome",
+     "descricao",
+     "tipo_raiz",
+     "documentos",
+     "fontes",
+     "sha256",
+     "bytes",
+     "do_inquilino",
+     "criado_em"
+    ],
+    "title": "ModeloGaleria"
+   },
    "MoverEntrada": {
     "properties": {
      "pasta_id": {
@@ -15946,6 +16492,57 @@
      "auth"
     ],
     "title": "OrgSaida"
+   },
+   "PacoteEntrada": {
+    "properties": {
+     "conteudo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 8388608
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Conteudo"
+     },
+     "modelo_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Modelo Id"
+     },
+     "mapeamento": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Mapeamento"
+     },
+     "pasta_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pasta Id"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "PacoteEntrada",
+    "description": "O zip vem em base64 dentro de JSON, e não em multipart, pela mesma razão da miniatura (ADR 0004\nseção 11): o CSRF sob cookie exige application/json."
    },
    "Papeis": {
     "properties": {

@@ -163,4 +163,12 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # ---- pacote entre inquilinos e galeria de modelos (L5-37-pacotes-modelos-entre-inquilinos; vocabulário na
+    # migração 20260908T1055_pacote_modelo.sql). `verificar` é a tela de antes de importar: não escreve nada e
+    # por isso não narra evento. A exportação narra `pacotes/exportar`, mas é um GET e não entra nesta tabela
+    # (que cobre as rotas de escrita).
+    ("POST", "/api/pacotes/verificar"): [],
+    ("POST", "/api/pacotes/importar"): ["pacotes/importar"],
+    ("POST", "/api/modelos"): ["modelos/publicar"],
+    ("DELETE", "/api/modelos/{id}"): ["modelos/apagar"],
 }

@@ -16,7 +16,7 @@ todo UUID citado tem de ser (a) outro documento do mesmo pacote ou (b) uma fonte
 item que o inquilino de destino enxerga. UUID que não seja nenhum dos dois faz a importação inteira parar —
 é assim que um pacote com id de item de outro inquilino é recusado.
 
-Ids: na importação, TODO id é regerado — o UUID de cada documento e o ULID de cada nó — e todas as
+Ids: na importação, cada identificador é regerado — o UUID de cada documento e o ULID de cada nó — e todas as
 referências são reescritas pelo mesmo mapa, numa passada só. Importar o mesmo pacote duas vezes dá dois
 conjuntos de itens distintos, sem colisão, e nenhum id do pacote sobra dentro do destino.
 
