@@ -21,7 +21,7 @@ SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); \
 	[ -n "$$PLAT_DSN" ] && export PLAT_DSN; \
 	[ -n "$$PLAT_GARAGE_ADMIN_TOKEN" ] && export PLAT_GARAGE_ADMIN_TOKEN;
 
-.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps homolog
+.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps homolog videos videos-validar
 
 check: lint sem-marcador limites teste e2e  ## suíte inteira (portão P3)
 
@@ -77,3 +77,9 @@ e2e-worker:                                 ## testes lentos da fila (reinício 
 
 homolog:                                    ## item L7-31 (docs/HOMOLOGACAO.md): migra plat_homolog, sobe API+worker em :8154 e roda o e2e isolado; derruba tudo ao final
 	bash scripts/homolog_e2e.sh
+
+videos:                                     ## item L7-04-d: >= 10 vídeos de tarefa gravados do e2e com narração pt-BR (piper) e legendas pt/en/es; precisa da bancada no ar (PLAT_URL_PUBLICA) e do piper (~/tools/piper)
+	$(VENV)/python scripts/videos/gerar.py
+
+videos-validar:                             ## confere o que está gerado (10+ vídeos, vídeo+áudio, duração <= 3 min, 3 legendas, seção do manual)
+	$(VENV)/python scripts/videos/gerar.py --validar

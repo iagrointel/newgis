@@ -30,3 +30,5 @@ laco/*.log
 # fica no curado tests/medidas/L7-19.json)
 tests/medidas/_prova_segredos_bruta.json
 tests/medidas/_prova_garage_chave_s3.json
+# vídeos gerados por `make videos` (item L7-04-d); o número citável vive em tests/medidas/
+web/videos/
