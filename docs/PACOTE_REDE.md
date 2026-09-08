@@ -468,3 +468,387 @@ Total: 214 atributos, 154 com origem conferida em extração real e 60 declarado
 | fixacao_estrutural | `ponto_notavel/1` | `trecho_de_baixa_tensao/1` | trecho de baixa tensão fixado no poste |
 | fixacao_estrutural | `ponto_notavel/1` | `trecho_de_media_tensao/1` | trecho de média tensão fixado no poste |
 | fixacao_estrutural | `ponto_notavel/2` | `trecho_de_media_tensao/1` | trecho de média tensão fixado na torre |
+
+## `esgoto-teksi` — Esgoto sanitário e drenagem (esquema TEKSI)
+
+Pacote de ativos de esgoto sanitário e drenagem pluvial, com o tier na BACIA (partição, não hierarquia) e o escoamento por gravidade: o trecho declara o sentido pela ordem dos vértices e carrega a cota de montante e a de jusante, e a plataforma confere se a cota concorda com o sentido declarado. Trecho de categoria recalque fica de fora dessa conferência, porque ali quem manda é a bomba. As colunas de origem são as do datamodel aberto TEKSI (views tww_app.vw_tww_reach e tww_app.vw_tww_wastewater_structure), lidas na definição de tabela do projeto e ainda não conferidas contra dado real: todo atributo sai com origem.conferida = false.
+
+| campo | valor |
+|---|---|
+| versão do pacote | 1.0.0 |
+| versão do esquema | 1 |
+| disciplina | esgoto |
+| fonte | https://teksi.github.io/wastewater/ |
+| tamanho | 72442 bytes |
+| sha256 | `308c5f038ad87f285804b1ce5a07f2b6b3bb9b2075c7c9399aeb0bd9bbd77e8b` |
+
+### Redes de domínio e tiers
+
+| domínio | tipo do domínio | tier | ordem | tipo do tier | o que é |
+|---|---|---|---|---|---|
+| `esgoto_sanitario` | dominio | `bacia_de_esgotamento` | 1 | particionado | Tudo o que escoa por gravidade para a mesma saída (emissário, elevatória ou estação de tratamento). Particionado: não há montante e jusante entre bacias, cada uma é uma partição. |
+| `esgoto_sanitario` | dominio | `recalque_sanitario` | 2 | particionado | Trecho sob pressão a jusante de uma elevatória. A cota NÃO decide o sentido aqui: o sentido é o da bomba, e por isso a conferência de escoamento por gravidade não se aplica. |
+| `drenagem_pluvial` | dominio | `bacia_de_drenagem` | 1 | particionado | Área que escoa por gravidade para o mesmo ponto de lançamento pluvial. |
+
+### Categorias de rede
+
+| categoria | nome | o que significa no traçado |
+|---|---|---|
+| `bombeamento` | Bombeamento | Acrescenta carga: a partir daqui a gravidade deixa de governar. |
+| `captacao` | Captação | Ponto por onde a água de chuva entra na rede. |
+| `coleta` | Coleta | Recebe a contribuição de um imóvel ou de uma via. |
+| `conducao` | Condução | Conduz por gravidade, sem bombear nem controlar. |
+| `extravasamento` | Extravasamento | Alivia a rede acima de uma vazão, desviando o excedente. |
+| `inspecao` | Inspeção | Permite acesso à rede para inspeção e limpeza; é onde os trechos se encontram. |
+| `lancamento` | Lançamento | Onde a rede devolve o efluente ao corpo receptor. |
+| `medicao` | Medição | Mede vazão ou nível sem alterar o escoamento. |
+| `recalque` | Recalque | Trecho sob pressão a jusante da bomba; a cota não decide o sentido. |
+| `seccionamento` | Seccionamento | Interrompe o escoamento por manobra. |
+| `tratamento` | Tratamento | Fim da rede coletora; o traçado a jusante termina aqui. |
+
+### Configurações de terminal
+
+| configuração | nome | terminais | caminhos válidos |
+|---|---|---|---|
+| `dois_terminais` | Dois terminais | 1=montante, 2=jusante | 1→2 (escoa) |
+| `dois_terminais_bidirecional` | Dois terminais (sem sentido imposto) | 1=lado_1, 2=lado_2 | 1→2 (escoa), 2→1 (escoa_invertido) |
+| `um_terminal` | Um terminal | 1=conexao | — |
+
+### Grupos e tipos de ativo
+
+| grupo | geometria | camada de origem | código do tipo | chave | nome | tier | categorias | códigos na fonte |
+|---|---|---|---|---|---|---|---|---|
+| `boca_de_lobo` | ponto | vw_tww_wastewater_structure | 1 | `boca_de_lobo` | Boca de lobo | bacia_de_drenagem | captacao | manhole |
+| `boca_de_lobo` | ponto | vw_tww_wastewater_structure | 2 | `poco_de_visita_pluvial` | Poço de visita pluvial | bacia_de_drenagem | inspecao | manhole |
+| `coletor` | linha | vw_tww_reach | 1 | `coletor_de_rede` | Coletor de rede | bacia_de_esgotamento | conducao | reach |
+| `coletor` | linha | vw_tww_reach | 2 | `coletor_tronco` | Coletor tronco | bacia_de_esgotamento | conducao | reach |
+| `coletor` | linha | vw_tww_reach | 3 | `interceptor` | Interceptor | bacia_de_esgotamento | conducao | reach |
+| `coletor` | linha | vw_tww_reach | 4 | `emissario` | Emissário | bacia_de_esgotamento | conducao | reach |
+| `coletor` | linha | vw_tww_reach | 5 | `linha_de_recalque` | Linha de recalque | recalque_sanitario | recalque | reach |
+| `coletor` | linha | vw_tww_reach | 6 | `sifao_invertido` | Sifão invertido | recalque_sanitario | recalque | reach |
+| `elevatoria` | ponto | pump, vw_tww_wastewater_structure | 1 | `elevatoria` | Elevatória | bacia_de_esgotamento | bombeamento | pump |
+| `elevatoria` | ponto | pump, vw_tww_wastewater_structure | 2 | `conjunto_moto_bomba` | Conjunto motobomba | recalque_sanitario | bombeamento | pump |
+| `estacao_de_tratamento` | ponto | vw_tww_wastewater_structure | 1 | `estacao_de_tratamento` | Estação de tratamento | bacia_de_esgotamento | tratamento | wwtp_structure |
+| `estrutura_especial` | ponto | vw_tww_wastewater_structure | 1 | `extravasor` | Extravasor | bacia_de_esgotamento | extravasamento | special_structure |
+| `estrutura_especial` | ponto | vw_tww_wastewater_structure | 2 | `camara_de_transicao` | Câmara de transição | bacia_de_esgotamento | conducao | special_structure |
+| `estrutura_especial` | ponto | vw_tww_wastewater_structure | 3 | `caixa_de_passagem` | Caixa de passagem | bacia_de_esgotamento | conducao, seccionamento | special_structure |
+| `galeria_pluvial` | linha | vw_tww_reach | 1 | `galeria_pluvial` | Galeria pluvial | bacia_de_drenagem | conducao | reach |
+| `galeria_pluvial` | linha | vw_tww_reach | 2 | `canal_de_drenagem` | Canal de drenagem | bacia_de_drenagem | conducao | reach |
+| `ligacao_predial` | linha | vw_tww_reach | 1 | `ligacao_predial` | Ligação predial | bacia_de_esgotamento | coleta | reach |
+| `poco_de_visita` | ponto | vw_tww_wastewater_structure | 1 | `poco_de_visita_simples` | Poço de visita | bacia_de_esgotamento | inspecao | manhole |
+| `poco_de_visita` | ponto | vw_tww_wastewater_structure | 2 | `poco_de_queda` | Poço de queda | bacia_de_esgotamento | inspecao | manhole |
+| `poco_de_visita` | ponto | vw_tww_wastewater_structure | 3 | `caixa_de_inspecao` | Caixa de inspeção | bacia_de_esgotamento | coleta, inspecao | manhole |
+| `ponto_de_lancamento` | ponto | vw_tww_wastewater_structure | 1 | `ponto_de_lancamento` | Ponto de lançamento | bacia_de_esgotamento | lancamento | discharge_point |
+
+### Atributos: mapeamento coluna a coluna
+
+| camada de origem | coluna | grupo | atributo | nome | tipo | unidade | obrigatório | conferida | observação |
+|---|---|---|---|---|---|---|---|---|---|
+| vw_tww_wastewater_structure | `year_of_construction` | `boca_de_lobo` | `ano_de_construcao` | ano de construção | inteiro | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `identifier` | `boca_de_lobo` | `codigo_de_cadastro` | código da estrutura no cadastro | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `co_level` | `boca_de_lobo` | `cota_da_tampa` | cota da tampa | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `wn_bottom_level` | `boca_de_lobo` | `cota_de_fundo` | cota de fundo do nó | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `co_diameter` | `boca_de_lobo` | `diametro_da_tampa` | diâmetro da tampa | real | mm | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ws_type` | `boca_de_lobo` | `especie` | espécie da estrutura na fonte | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `obj_id` | `boca_de_lobo` | `identificador` | identificador da estrutura | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `co_material` | `boca_de_lobo` | `material_da_tampa` | material da tampa | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `status` | `boca_de_lobo` | `situacao` | situação operacional | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `clear_height` | `coletor` | `altura_livre` | altura livre da seção | real | mm | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `identifier` | `coletor` | `codigo_de_cadastro` | código do trecho no cadastro | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `coefficient_of_friction` | `coletor` | `coeficiente_de_atrito` | coeficiente de atrito | real | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `length_effective` | `coletor` | `comprimento` | comprimento efetivo | real | m | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `rp_to_level` | `coletor` | `cota_jusante` | cota da geratriz interna inferior no ponto de jusante | real | m | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `rp_from_level` | `coletor` | `cota_montante` | cota da geratriz interna inferior no ponto de montante | real | m | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `_slope_per_mill` | `coletor` | `declividade` | declividade calculada pela fonte | real | mm/m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `ch_function_hierarchic` | `coletor` | `funcao_hierarquica` | função hierárquica do canal | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `obj_id` | `coletor` | `identificador` | identificador do trecho | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `material` | `coletor` | `material` | material do tubo | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `rp_to_obj_id` | `coletor` | `no_jusante` | nó de jusante | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `rp_from_obj_id` | `coletor` | `no_montante` | nó de montante | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `ws_status` | `coletor` | `situacao` | situação da estrutura a que o trecho pertence | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `ch_usage_current` | `coletor` | `uso_atual` | uso atual do canal | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `year_of_construction` | `elevatoria` | `ano_de_construcao` | ano de construção | inteiro | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `identifier` | `elevatoria` | `codigo_de_cadastro` | código da estrutura no cadastro | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `co_level` | `elevatoria` | `cota_da_tampa` | cota da tampa | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `wn_bottom_level` | `elevatoria` | `cota_de_fundo` | cota de fundo do nó | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ws_type` | `elevatoria` | `especie` | espécie da estrutura na fonte | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `obj_id` | `elevatoria` | `identificador` | identificador da estrutura | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| pump | `stop_level` | `elevatoria` | `nivel_de_desliga` | nível que desliga a bomba | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| pump | `start_level` | `elevatoria` | `nivel_de_liga` | nível que liga a bomba | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| pump | `placement_of_pump` | `elevatoria` | `posicao_da_bomba` | posição da bomba | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `status` | `elevatoria` | `situacao` | situação operacional | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| pump | `construction_type` | `elevatoria` | `tipo_construtivo` | tipo construtivo da bomba | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| pump | `pump_flow_max_single` | `elevatoria` | `vazao_maxima_por_bomba` | vazão máxima de uma bomba | real | L/s | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `year_of_construction` | `estacao_de_tratamento` | `ano_de_construcao` | ano de construção | inteiro | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| — | `—` | `estacao_de_tratamento` | `capacidade` | capacidade de tratamento | real | L/s | não | não |  |
+| vw_tww_wastewater_structure | `identifier` | `estacao_de_tratamento` | `codigo_de_cadastro` | código da estrutura no cadastro | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `co_level` | `estacao_de_tratamento` | `cota_da_tampa` | cota da tampa | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `wn_bottom_level` | `estacao_de_tratamento` | `cota_de_fundo` | cota de fundo do nó | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ws_type` | `estacao_de_tratamento` | `especie` | espécie da estrutura na fonte | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `obj_id` | `estacao_de_tratamento` | `identificador` | identificador da estrutura | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `status` | `estacao_de_tratamento` | `situacao` | situação operacional | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `year_of_construction` | `estrutura_especial` | `ano_de_construcao` | ano de construção | inteiro | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `identifier` | `estrutura_especial` | `codigo_de_cadastro` | código da estrutura no cadastro | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `co_level` | `estrutura_especial` | `cota_da_tampa` | cota da tampa | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `wn_bottom_level` | `estrutura_especial` | `cota_de_fundo` | cota de fundo do nó | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ss_upper_elevation` | `estrutura_especial` | `cota_superior` | cota superior da estrutura | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ws_type` | `estrutura_especial` | `especie` | espécie da estrutura na fonte | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `obj_id` | `estrutura_especial` | `identificador` | identificador da estrutura | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ss_depth` | `estrutura_especial` | `profundidade` | profundidade da estrutura | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `status` | `estrutura_especial` | `situacao` | situação operacional | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ss_bypass` | `estrutura_especial` | `tem_desvio` | tem desvio (bypass) | booleano | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `clear_height` | `galeria_pluvial` | `altura_livre` | altura livre da seção | real | mm | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `identifier` | `galeria_pluvial` | `codigo_de_cadastro` | código do trecho no cadastro | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `coefficient_of_friction` | `galeria_pluvial` | `coeficiente_de_atrito` | coeficiente de atrito | real | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `length_effective` | `galeria_pluvial` | `comprimento` | comprimento efetivo | real | m | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `rp_to_level` | `galeria_pluvial` | `cota_jusante` | cota da geratriz interna inferior no ponto de jusante | real | m | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `rp_from_level` | `galeria_pluvial` | `cota_montante` | cota da geratriz interna inferior no ponto de montante | real | m | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `_slope_per_mill` | `galeria_pluvial` | `declividade` | declividade calculada pela fonte | real | mm/m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `ch_function_hierarchic` | `galeria_pluvial` | `funcao_hierarquica` | função hierárquica do canal | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `obj_id` | `galeria_pluvial` | `identificador` | identificador do trecho | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `material` | `galeria_pluvial` | `material` | material do tubo | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `rp_to_obj_id` | `galeria_pluvial` | `no_jusante` | nó de jusante | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `rp_from_obj_id` | `galeria_pluvial` | `no_montante` | nó de montante | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `ws_status` | `galeria_pluvial` | `situacao` | situação da estrutura a que o trecho pertence | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `ch_usage_current` | `galeria_pluvial` | `uso_atual` | uso atual do canal | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `clear_height` | `ligacao_predial` | `altura_livre` | altura livre da seção | real | mm | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `identifier` | `ligacao_predial` | `codigo_de_cadastro` | código do trecho no cadastro | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `coefficient_of_friction` | `ligacao_predial` | `coeficiente_de_atrito` | coeficiente de atrito | real | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `length_effective` | `ligacao_predial` | `comprimento` | comprimento efetivo | real | m | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `rp_to_level` | `ligacao_predial` | `cota_jusante` | cota da geratriz interna inferior no ponto de jusante | real | m | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `rp_from_level` | `ligacao_predial` | `cota_montante` | cota da geratriz interna inferior no ponto de montante | real | m | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `_slope_per_mill` | `ligacao_predial` | `declividade` | declividade calculada pela fonte | real | mm/m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `ch_function_hierarchic` | `ligacao_predial` | `funcao_hierarquica` | função hierárquica do canal | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `obj_id` | `ligacao_predial` | `identificador` | identificador do trecho | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `material` | `ligacao_predial` | `material` | material do tubo | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `rp_to_obj_id` | `ligacao_predial` | `no_jusante` | nó de jusante | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `rp_from_obj_id` | `ligacao_predial` | `no_montante` | nó de montante | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `ws_status` | `ligacao_predial` | `situacao` | situação da estrutura a que o trecho pertence | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_reach | `ch_usage_current` | `ligacao_predial` | `uso_atual` | uso atual do canal | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `year_of_construction` | `poco_de_visita` | `ano_de_construcao` | ano de construção | inteiro | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `identifier` | `poco_de_visita` | `codigo_de_cadastro` | código da estrutura no cadastro | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `co_level` | `poco_de_visita` | `cota_da_tampa` | cota da tampa | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `wn_bottom_level` | `poco_de_visita` | `cota_de_fundo` | cota de fundo do nó | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `wn_backflow_level_current` | `poco_de_visita` | `cota_de_remanso` | cota de remanso atual | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ma_dimension1` | `poco_de_visita` | `dimensao_1` | primeira dimensão em planta | real | mm | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ma_dimension2` | `poco_de_visita` | `dimensao_2` | segunda dimensão em planta | real | mm | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ws_type` | `poco_de_visita` | `especie` | espécie da estrutura na fonte | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ma_function` | `poco_de_visita` | `funcao` | função do poço na fonte | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `obj_id` | `poco_de_visita` | `identificador` | identificador da estrutura | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ma_material` | `poco_de_visita` | `material` | material do poço | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ma_depth` | `poco_de_visita` | `profundidade` | profundidade do poço | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `status` | `poco_de_visita` | `situacao` | situação operacional | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `year_of_construction` | `ponto_de_lancamento` | `ano_de_construcao` | ano de construção | inteiro | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `identifier` | `ponto_de_lancamento` | `codigo_de_cadastro` | código da estrutura no cadastro | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `co_level` | `ponto_de_lancamento` | `cota_da_tampa` | cota da tampa | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `dp_highwater_level` | `ponto_de_lancamento` | `cota_de_cheia` | cota de cheia do corpo receptor | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `wn_bottom_level` | `ponto_de_lancamento` | `cota_de_fundo` | cota de fundo do nó | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `dp_terrain_level` | `ponto_de_lancamento` | `cota_do_terreno` | cota do terreno no lançamento | real | m | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `ws_type` | `ponto_de_lancamento` | `especie` | espécie da estrutura na fonte | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `obj_id` | `ponto_de_lancamento` | `identificador` | identificador da estrutura | texto | — | sim | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `dp_water_course_number` | `ponto_de_lancamento` | `numero_do_curso_de_agua` | número do curso de água na fonte | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+| vw_tww_wastewater_structure | `status` | `ponto_de_lancamento` | `situacao` | situação operacional | texto | — | não | não | coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real |
+
+Total: 104 atributos, 0 com origem conferida em extração real e 104 declarados da fonte sem conferência.
+
+
+### Regras de conexão
+
+| tipo de regra | de | para | o que diz |
+|---|---|---|---|
+| conectividade_entre_nos | `elevatoria/1` | `elevatoria/2` | conjunto motobomba faz parte da elevatória |
+| conectividade_no_trecho | `boca_de_lobo/1` | `galeria_pluvial/1` | boca de lobo entrega na galeria pluvial |
+| conectividade_no_trecho | `boca_de_lobo/2` | `galeria_pluvial/1` | poço de visita pluvial recebe e entrega galeria pluvial |
+| conectividade_no_trecho | `boca_de_lobo/2` | `galeria_pluvial/2` | poço de visita pluvial entrega no canal de drenagem |
+| conectividade_no_trecho | `elevatoria/1` | `coletor/2` | elevatória recebe coletor tronco por gravidade |
+| conectividade_no_trecho | `elevatoria/1` | `coletor/3` | elevatória recebe o interceptor por gravidade |
+| conectividade_no_trecho | `elevatoria/1` | `coletor/5` | elevatória entrega na linha de recalque, e daí em diante a cota não decide o sentido |
+| conectividade_no_trecho | `estacao_de_tratamento/1` | `coletor/3` | interceptor termina na estação de tratamento |
+| conectividade_no_trecho | `estacao_de_tratamento/1` | `coletor/4` | emissário termina na estação de tratamento |
+| conectividade_no_trecho | `estrutura_especial/1` | `coletor/3` | extravasor instalado no interceptor |
+| conectividade_no_trecho | `estrutura_especial/1` | `coletor/4` | extravasor desvia o excedente para o emissário |
+| conectividade_no_trecho | `estrutura_especial/2` | `coletor/1` | câmara de transição entre dois coletores de rede |
+| conectividade_no_trecho | `estrutura_especial/3` | `coletor/2` | caixa de passagem no coletor tronco |
+| conectividade_no_trecho | `poco_de_visita/1` | `coletor/1` | poço de visita recebe e entrega coletor de rede |
+| conectividade_no_trecho | `poco_de_visita/1` | `coletor/2` | poço de visita recebe e entrega coletor tronco |
+| conectividade_no_trecho | `poco_de_visita/1` | `coletor/3` | poço de visita recebe e entrega interceptor |
+| conectividade_no_trecho | `poco_de_visita/1` | `coletor/4` | poço de visita recebe e entrega emissário |
+| conectividade_no_trecho | `poco_de_visita/1` | `coletor/5` | a linha de recalque termina num poço de visita, onde volta a escoar por gravidade |
+| conectividade_no_trecho | `poco_de_visita/1` | `coletor/6` | sifão invertido começa e termina em poço de visita |
+| conectividade_no_trecho | `poco_de_visita/1` | `ligacao_predial/1` | ligação predial pode chegar direto no poço de visita |
+| conectividade_no_trecho | `poco_de_visita/2` | `coletor/1` | poço de queda recebe coletor de rede com desnível |
+| conectividade_no_trecho | `poco_de_visita/2` | `coletor/2` | poço de queda recebe coletor tronco com desnível |
+| conectividade_no_trecho | `poco_de_visita/3` | `coletor/1` | caixa de inspeção entrega no coletor de rede |
+| conectividade_no_trecho | `poco_de_visita/3` | `ligacao_predial/1` | caixa de inspeção recebe a ligação predial |
+| conectividade_no_trecho | `ponto_de_lancamento/1` | `coletor/4` | emissário termina no ponto de lançamento |
+| conectividade_no_trecho | `ponto_de_lancamento/1` | `galeria_pluvial/1` | galeria pluvial termina no ponto de lançamento |
+| conectividade_no_trecho | `ponto_de_lancamento/1` | `galeria_pluvial/2` | canal de drenagem termina no ponto de lançamento |
+| contencao | `poco_de_visita/1` | `poco_de_visita/3` | caixa de inspeção pode estar contida no mesmo conjunto do poço de visita |
+| fixacao_estrutural | `elevatoria/1` | `estrutura_especial/3` | caixa de passagem apoiada na estrutura da elevatória |
+
+## `gas-br` — Gás canalizado (tiers por pressão)
+
+Pacote de ativos da rede de gás canalizado. O tier é o degrau de pressão (transporte, alta, média e baixa) e o regulador é o ativo que muda de tier: é ele que controla o degrau, e é por isso que a conferência de pressão da plataforma o exige em toda transição. Os atributos são o vocabulário próprio do pacote, não a cópia de um esquema externo: nenhum tem coluna de origem, e a paridade com a Gas Utility Network Foundation da Esri está escrita em docs/rede/PARIDADE_GAS.md.
+
+| campo | valor |
+|---|---|
+| versão do pacote | 1.0.0 |
+| versão do esquema | 1 |
+| disciplina | gas |
+| fonte | https://solutions.arcgis.com/utilities/gas/help/gas-utility-network-foundation/ |
+| tamanho | 28749 bytes |
+| sha256 | `d7d3ccac26d832ded8e423b068b2bc54865770b2f3b98f051b67b0df5e725843` |
+
+### Redes de domínio e tiers
+
+| domínio | tipo do domínio | tier | ordem | tipo do tier | o que é |
+|---|---|---|---|---|---|
+| `gas_distribuicao` | dominio | `transporte` | 1 | hierarquico | Malha de transporte a montante do city gate; a pressão mais alta da rede. |
+| `gas_distribuicao` | dominio | `alta_pressao` | 2 | hierarquico | Entre o city gate e o regulador de rede. A subrede é o trecho alimentado por um city gate. |
+| `gas_distribuicao` | dominio | `media_pressao` | 3 | hierarquico | Entre o regulador de rede e o regulador de ramal. |
+| `gas_distribuicao` | dominio | `baixa_pressao` | 4 | hierarquico | Do regulador de ramal ao ponto de entrega. |
+
+### Categorias de rede
+
+| categoria | nome | o que significa no traçado |
+|---|---|---|
+| `alivio` | Alívio | Libera gás para a atmosfera acima de uma pressão de ajuste. |
+| `conducao` | Condução | Conduz sem controlar pressão nem seccionar. |
+| `consumo` | Consumo | Ponto final que retira gás da rede. |
+| `controle_de_pressao` | Controle de pressão | Impõe a pressão a jusante e separa dois tiers. |
+| `fonte` | Fonte | Onde o gás entra na rede; o traçado a montante termina aqui. |
+| `medicao` | Medição | Mede volume ou vazão sem alterar o escoamento. |
+| `odorizacao` | Odorização | Injeta odorante para tornar o vazamento perceptível. |
+| `protecao` | Proteção | Impede escoamento em sentido indevido ou isola por falha. |
+| `purga` | Purga | Ponto de esvaziamento do trecho para manutenção. |
+| `seccionamento` | Seccionamento | Abre ou fecha o escoamento por manobra. |
+
+### Configurações de terminal
+
+| configuração | nome | terminais | caminhos válidos |
+|---|---|---|---|
+| `dois_terminais` | Dois terminais | 1=montante, 2=jusante | 1→2 (aberto) |
+| `dois_terminais_bidirecional` | Dois terminais (sem sentido imposto) | 1=lado_1, 2=lado_2 | 1→2 (aberto), 2→1 (aberto_invertido) |
+| `um_terminal` | Um terminal | 1=conexao | — |
+
+### Grupos e tipos de ativo
+
+| grupo | geometria | camada de origem | código do tipo | chave | nome | tier | categorias | códigos na fonte |
+|---|---|---|---|---|---|---|---|---|
+| `city_gate` | ponto | GasAssembly | 1 | `city_gate` | City gate | transporte | controle_de_pressao, fonte, medicao, odorizacao | gasStation |
+| `estacao_de_medicao` | ponto | GasAssembly | 1 | `medidor_de_transferencia` | Medidor de transferência | alta_pressao | medicao | gasMeter |
+| `estacao_de_medicao` | ponto | GasAssembly | 2 | `medidor_de_faturamento` | Medidor de faturamento | baixa_pressao | consumo, medicao | gasMeter |
+| `juncao_de_gas` | ponto | GasJunction | 1 | `juncao_de_transporte` | Junção de transporte | transporte | conducao | gasJunction |
+| `juncao_de_gas` | ponto | GasJunction | 2 | `juncao_de_alta_pressao` | Junção de alta pressão | alta_pressao | conducao | gasJunction |
+| `juncao_de_gas` | ponto | GasJunction | 3 | `juncao_de_media_pressao` | Junção de média pressão | media_pressao | conducao | gasJunction |
+| `juncao_de_gas` | ponto | GasJunction | 4 | `juncao_de_baixa_pressao` | Junção de baixa pressão | baixa_pressao | conducao | gasJunction |
+| `ponto_de_entrega` | ponto | GasDevice | 1 | `ponto_de_entrega_residencial` | Ponto de entrega residencial | baixa_pressao | consumo | gasServicePoint |
+| `ponto_de_entrega` | ponto | GasDevice | 2 | `ponto_de_entrega_comercial` | Ponto de entrega comercial | baixa_pressao | consumo | gasServicePoint |
+| `ponto_de_entrega` | ponto | GasDevice | 3 | `ponto_de_entrega_industrial` | Ponto de entrega industrial | media_pressao | consumo | gasServicePoint |
+| `regulador` | ponto | GasDevice | 1 | `regulador_de_city_gate` | Regulador de city gate | alta_pressao | controle_de_pressao | gasRegulator |
+| `regulador` | ponto | GasDevice | 2 | `regulador_de_rede` | Regulador de rede | media_pressao | controle_de_pressao | gasRegulator |
+| `regulador` | ponto | GasDevice | 3 | `regulador_de_ramal` | Regulador de ramal | baixa_pressao | controle_de_pressao | gasRegulator |
+| `regulador` | ponto | GasDevice | 4 | `regulador_monitor` | Regulador monitor | alta_pressao | controle_de_pressao, protecao | gasRegulator |
+| `tubulacao_de_gas` | linha | GasLine | 1 | `rede_de_transporte` | Rede de transporte | transporte | conducao | gasMain |
+| `tubulacao_de_gas` | linha | GasLine | 2 | `rede_de_alta_pressao` | Rede de alta pressão | alta_pressao | conducao | gasMain |
+| `tubulacao_de_gas` | linha | GasLine | 3 | `rede_de_media_pressao` | Rede de média pressão | media_pressao | conducao | gasMain |
+| `tubulacao_de_gas` | linha | GasLine | 4 | `rede_de_baixa_pressao` | Rede de baixa pressão | baixa_pressao | conducao | gasMain |
+| `tubulacao_de_gas` | linha | GasLine | 5 | `ramal_de_servico` | Ramal de serviço | baixa_pressao | conducao | gasService |
+| `tubulacao_de_gas` | linha | GasLine | 6 | `tubulacao_desativada` | Tubulação desativada | baixa_pressao | conducao | gasMainAbandoned |
+| `valvula_de_gas` | ponto | GasDevice | 1 | `valvula_de_bloqueio` | Válvula de bloqueio | media_pressao | seccionamento | gasValve |
+| `valvula_de_gas` | ponto | GasDevice | 2 | `valvula_de_alivio` | Válvula de alívio | alta_pressao | alivio | gasValve |
+| `valvula_de_gas` | ponto | GasDevice | 3 | `valvula_de_purga` | Válvula de purga | media_pressao | purga | gasValve |
+| `valvula_de_gas` | ponto | GasDevice | 4 | `valvula_de_retencao` | Válvula de retenção | alta_pressao | protecao | gasValve |
+
+### Atributos: mapeamento coluna a coluna
+
+| camada de origem | coluna | grupo | atributo | nome | tipo | unidade | obrigatório | conferida | observação |
+|---|---|---|---|---|---|---|---|---|---|
+| — | `—` | `city_gate` | `ano_de_instalacao` | ano de instalação | inteiro | — | não | não |  |
+| — | `—` | `city_gate` | `capacidade` | capacidade nominal | real | m3/h | sim | não |  |
+| — | `—` | `city_gate` | `identificador` | identificador do ativo | texto | — | sim | não |  |
+| — | `—` | `city_gate` | `odorizacao` | odoriza o gás | booleano | — | não | não |  |
+| — | `—` | `city_gate` | `pressao_de_entrada` | pressão de entrada de projeto | real | kPa | sim | não |  |
+| — | `—` | `city_gate` | `pressao_de_saida` | pressão de saída ajustada | real | kPa | sim | não |  |
+| — | `—` | `city_gate` | `situacao` | situação operacional | texto | — | não | não |  |
+| — | `—` | `city_gate` | `tier_jusante` | tier de pressão a jusante | texto | — | sim | não |  |
+| — | `—` | `city_gate` | `tier_montante` | tier de pressão a montante | texto | — | sim | não |  |
+| — | `—` | `estacao_de_medicao` | `ano_de_instalacao` | ano de instalação | inteiro | — | não | não |  |
+| — | `—` | `estacao_de_medicao` | `correcao_ptz` | corrige pressão, temperatura e compressibilidade | booleano | — | não | não |  |
+| — | `—` | `estacao_de_medicao` | `identificador` | identificador do ativo | texto | — | sim | não |  |
+| — | `—` | `estacao_de_medicao` | `situacao` | situação operacional | texto | — | não | não |  |
+| — | `—` | `estacao_de_medicao` | `tipo_de_medidor` | tecnologia do medidor | texto | — | não | não |  |
+| — | `—` | `estacao_de_medicao` | `vazao_maxima` | vazão máxima medida | real | m3/h | não | não |  |
+| — | `—` | `juncao_de_gas` | `ano_de_instalacao` | ano de instalação | inteiro | — | não | não |  |
+| — | `—` | `juncao_de_gas` | `identificador` | identificador do ativo | texto | — | sim | não |  |
+| — | `—` | `juncao_de_gas` | `situacao` | situação operacional | texto | — | não | não |  |
+| — | `—` | `juncao_de_gas` | `tipo_de_conexao` | tipo de conexão | texto | — | não | não |  |
+| — | `—` | `ponto_de_entrega` | `ano_de_instalacao` | ano de instalação | inteiro | — | não | não |  |
+| — | `—` | `ponto_de_entrega` | `classe_de_consumo` | classe de consumo | texto | — | não | não |  |
+| — | `—` | `ponto_de_entrega` | `identificador` | identificador do ativo | texto | — | sim | não |  |
+| — | `—` | `ponto_de_entrega` | `situacao` | situação operacional | texto | — | não | não |  |
+| — | `—` | `ponto_de_entrega` | `vazao_contratada` | vazão contratada | real | m3/h | não | não |  |
+| — | `—` | `regulador` | `ano_de_instalacao` | ano de instalação | inteiro | — | não | não |  |
+| — | `—` | `regulador` | `fabricante` | fabricante | texto | — | não | não |  |
+| — | `—` | `regulador` | `identificador` | identificador do ativo | texto | — | sim | não |  |
+| — | `—` | `regulador` | `pressao_de_entrada` | pressão de entrada de projeto | real | kPa | sim | não |  |
+| — | `—` | `regulador` | `pressao_de_saida` | pressão de saída ajustada | real | kPa | sim | não |  |
+| — | `—` | `regulador` | `situacao` | situação operacional | texto | — | não | não |  |
+| — | `—` | `regulador` | `tem_valvula_de_bloqueio_automatico` | tem bloqueio automático por sobrepressão | booleano | — | não | não |  |
+| — | `—` | `regulador` | `tier_jusante` | tier de pressão a jusante | texto | — | sim | não |  |
+| — | `—` | `regulador` | `tier_montante` | tier de pressão a montante | texto | — | sim | não |  |
+| — | `—` | `regulador` | `vazao_maxima` | vazão máxima | real | m3/h | não | não |  |
+| — | `—` | `tubulacao_de_gas` | `ano_de_instalacao` | ano de instalação | inteiro | — | não | não |  |
+| — | `—` | `tubulacao_de_gas` | `comprimento` | comprimento do trecho | real | m | sim | não |  |
+| — | `—` | `tubulacao_de_gas` | `diametro_nominal` | diâmetro nominal | real | mm | sim | não |  |
+| — | `—` | `tubulacao_de_gas` | `identificador` | identificador do ativo | texto | — | sim | não |  |
+| — | `—` | `tubulacao_de_gas` | `material` | material do tubo | texto | — | sim | não |  |
+| — | `—` | `tubulacao_de_gas` | `pressao_maxima_de_operacao` | pressão máxima de operação admissível | real | kPa | sim | não |  |
+| — | `—` | `tubulacao_de_gas` | `profundidade_de_assentamento` | profundidade de assentamento | real | m | não | não |  |
+| — | `—` | `tubulacao_de_gas` | `protecao_catodica` | tem proteção catódica | booleano | — | não | não |  |
+| — | `—` | `tubulacao_de_gas` | `revestimento` | revestimento externo | texto | — | não | não |  |
+| — | `—` | `tubulacao_de_gas` | `situacao` | situação operacional | texto | — | não | não |  |
+| — | `—` | `valvula_de_gas` | `acionamento` | forma de acionamento | texto | — | não | não |  |
+| — | `—` | `valvula_de_gas` | `ano_de_instalacao` | ano de instalação | inteiro | — | não | não |  |
+| — | `—` | `valvula_de_gas` | `diametro_nominal` | diâmetro nominal | real | mm | sim | não |  |
+| — | `—` | `valvula_de_gas` | `estado` | estado da manobra | texto | — | sim | não |  |
+| — | `—` | `valvula_de_gas` | `identificador` | identificador do ativo | texto | — | sim | não |  |
+| — | `—` | `valvula_de_gas` | `situacao` | situação operacional | texto | — | não | não |  |
+| — | `—` | `valvula_de_gas` | `pressao_de_ajuste` | pressão de ajuste | real | kPa | não | não |  |
+
+Total: 51 atributos, 0 com origem conferida em extração real e 51 declarados da fonte sem conferência.
+
+
+### Regras de conexão
+
+| tipo de regra | de | para | o que diz |
+|---|---|---|---|
+| conectividade_entre_nos | `city_gate/1` | `estacao_de_medicao/1` | o medidor de transferência faz parte do conjunto do city gate |
+| conectividade_entre_nos | `city_gate/1` | `regulador/1` | o regulador de city gate faz parte do conjunto do city gate |
+| conectividade_entre_nos | `regulador/3` | `estacao_de_medicao/2` | regulador de ramal e medidor de faturamento no mesmo abrigo |
+| conectividade_entre_nos | `regulador/4` | `regulador/1` | regulador monitor em série com o regulador de city gate |
+| conectividade_no_trecho | `city_gate/1` | `tubulacao_de_gas/1` | city gate recebe da rede de transporte |
+| conectividade_no_trecho | `city_gate/1` | `tubulacao_de_gas/2` | city gate entrega na rede de alta pressão |
+| conectividade_no_trecho | `estacao_de_medicao/1` | `tubulacao_de_gas/2` | medidor de transferência instalado na rede de alta pressão |
+| conectividade_no_trecho | `estacao_de_medicao/2` | `tubulacao_de_gas/5` | medidor de faturamento instalado no ramal de serviço |
+| conectividade_no_trecho | `juncao_de_gas/1` | `tubulacao_de_gas/1` | junção conecta tubulações no tier de transporte |
+| conectividade_no_trecho | `juncao_de_gas/2` | `tubulacao_de_gas/2` | junção conecta tubulações no tier de alta pressão |
+| conectividade_no_trecho | `juncao_de_gas/3` | `tubulacao_de_gas/3` | junção conecta tubulações no tier de média pressão |
+| conectividade_no_trecho | `juncao_de_gas/4` | `tubulacao_de_gas/4` | junção conecta tubulações no tier de baixa pressão |
+| conectividade_no_trecho | `juncao_de_gas/4` | `tubulacao_de_gas/5` | ramal de serviço derivado por junção na baixa pressão |
+| conectividade_no_trecho | `juncao_de_gas/4` | `tubulacao_de_gas/6` | tubulação desativada permanece ligada à junção que a derivava |
+| conectividade_no_trecho | `ponto_de_entrega/1` | `tubulacao_de_gas/5` | entrega residencial no fim do ramal de serviço |
+| conectividade_no_trecho | `ponto_de_entrega/2` | `tubulacao_de_gas/5` | entrega comercial no fim do ramal de serviço |
+| conectividade_no_trecho | `ponto_de_entrega/3` | `tubulacao_de_gas/3` | entrega industrial direto da rede de média pressão |
+| conectividade_no_trecho | `regulador/1` | `tubulacao_de_gas/1` | regulador de city gate recebe da rede de transporte |
+| conectividade_no_trecho | `regulador/1` | `tubulacao_de_gas/2` | regulador de city gate entrega na rede de alta pressão |
+| conectividade_no_trecho | `regulador/2` | `tubulacao_de_gas/2` | regulador de rede recebe da rede de alta pressão |
+| conectividade_no_trecho | `regulador/2` | `tubulacao_de_gas/3` | regulador de rede entrega na rede de média pressão |
+| conectividade_no_trecho | `regulador/3` | `tubulacao_de_gas/3` | regulador de ramal recebe da rede de média pressão |
+| conectividade_no_trecho | `regulador/3` | `tubulacao_de_gas/4` | regulador de ramal entrega na rede de baixa pressão |
+| conectividade_no_trecho | `regulador/4` | `tubulacao_de_gas/2` | regulador monitor fica em série na rede de alta pressão |
+| conectividade_no_trecho | `valvula_de_gas/1` | `tubulacao_de_gas/3` | válvula de bloqueio instalada na rede de média pressão |
+| conectividade_no_trecho | `valvula_de_gas/1` | `tubulacao_de_gas/4` | válvula de bloqueio instalada na rede de baixa pressão |
+| conectividade_no_trecho | `valvula_de_gas/2` | `tubulacao_de_gas/2` | válvula de alívio derivada da rede de alta pressão |
+| conectividade_no_trecho | `valvula_de_gas/3` | `tubulacao_de_gas/3` | válvula de purga derivada da rede de média pressão |
+| conectividade_no_trecho | `valvula_de_gas/4` | `tubulacao_de_gas/2` | válvula de retenção instalada na rede de alta pressão |
