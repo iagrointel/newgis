@@ -8,6 +8,10 @@ let carregado = false;
 export const EVENTO = 'plat:i18n';
 
 export async function carregar(id) {
+  /* sem argumento, o idioma escolhido no painel de ajuda (plat.idioma) vence; pt-BR é o padrão (L7-04-a) */
+  if (!id) {
+    try { id = localStorage.getItem('plat.idioma') || undefined; } catch { /* armazenamento bloqueado */ }
+  }
   idioma = id || document.documentElement.lang || 'pt-BR';
   const resp = await fetch(`/static/js/i18n/${idioma}.json`, { cache: 'no-store', credentials: 'same-origin' });
   dicionario = resp.ok ? await resp.json() : {};
