@@ -230,3 +230,12 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## presets do motor multicritério (L3-01-h-presets; migração 20260908T1659_amc_preset.sql):
+
+| nome | valor | explicação |
+|---|---|---|
+| `AMC_PRESET_FATORES_MAX` | `200` | fatores declarados por preset (mesma ordem do modelo) |
+| `AMC_PRESET_FATOR_NOME_MAX` | `120` | nome de fator dentro do preset |
+| `AMC_PRESET_DESCRICAO_MAX` | `2000` | mesmo teto de CHECK(length(descricao)<=2000) da migração |
+| `AMC_PRESET_UNIDADES_MAX` | `250000` | unidades (linhas da matriz) por aplicação síncrona |

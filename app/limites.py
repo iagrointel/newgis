@@ -222,3 +222,13 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# --- presets do motor multicritério (L3-01-h-presets; migração 20260908T1659_amc_preset.sql):
+# preset = conjunto nomeado de pesos e vetos de um modelo, salvo por usuário ou compartilhado no
+# inquilino; 'pesos iguais' e os quatro exemplos do motor logístico são INTEGRADOS (código, não
+# tabela). A aplicação é SÍNCRONA (recalcula sem job), por isso o teto de unidades é o mesmo freio
+# de RAM da grade aninhada (ESCALA_CELULAS_MAX).
+AMC_PRESET_FATORES_MAX = 200          # fatores declarados por preset (mesma ordem do modelo)
+AMC_PRESET_FATOR_NOME_MAX = 120       # nome de fator dentro do preset
+AMC_PRESET_DESCRICAO_MAX = 2000       # mesmo teto de CHECK(length(descricao)<=2000) da migração
+AMC_PRESET_UNIDADES_MAX = 250_000     # unidades (linhas da matriz) por aplicação síncrona
