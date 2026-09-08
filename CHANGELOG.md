@@ -3,6 +3,24 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 48, setembro de 2026 (item L4-parcelas-01-modelo-de-parcelas: malha de parcelas orientada a registro, retirar não apaga)
+
+Seis tabelas por inquilino (`db/migracoes/20260908T2140_parcelas.sql`): `parcela_registro` (o documento
+legal, vocabulário fechado), `parcela_ponto` (precisão declarada, ponto fixo), `parcela_linha` (COGO:
+rumo, distância, raio COM SINAL, comprimento de arco, precisão de rumo e de distância),
+`parcela_linha_parcela` (divisa partilhada n:n), `parcela` (polígono por tipo fechado — lote, gleba,
+quadra, servidão, estrato — com área declarada, área calculada pelo banco e erro de fechamento) e
+`parcela_conexao`. Biblioteca `app/parcelas/` (modelo, cogo, importar, validação): retirar parcela é
+ato de registro que NÃO apaga — sai do atual, entra no histórico com o registro, linha exclusiva sai
+junto, linha partilhada fica, ponto fica. Import dos lotes derivados do SIG de teste interno (dado
+aberto, schema `sigcorp`, só leitura por `COPY` como postgres) com registro sintético por
+empreendimento e vértice/linha deduplicados. Validação de sobreposição por consulta viva entre
+parcelas ativas do mesmo tipo (tolerância 1 cm²). Paridade com o esquema do parcel fabric do ArcGIS
+Pro 3.4 escrita com fontes datadas (`docs/PARIDADE_PARCELAS.md`); decisões em
+`docs/adr/20260908T2210-parcelas.md`. Visões `v_parcela_atual`/`v_parcela_historico` com
+`security_invoker` — a visão responde com a RLS de quem consulta, senão o histórico vazaria inquilino
+pela porta do dono.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
