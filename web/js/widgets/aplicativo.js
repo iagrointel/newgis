@@ -1,4 +1,5 @@
 import { montarWidgets } from './motor.js';
+import { aplicarDaUrl, ligarUrl } from '../app/estado_url.js';
 
 const DEMONSTRACAO = {
   tipo: 'app', esquema_versao: 2,
@@ -27,7 +28,19 @@ const DEMONSTRACAO = {
   },
 };
 
-function documentoDaPagina() {
+/* item L5-07: `/aplicativo?item=<id>` publica o documento do item (GET /api/itens/{id}); sem `item`, o documento
+   embutido na página ou a demonstração do L5-06. O estado de filtros e seleção vive na URL (`v.<vista>`):
+   restaurado ANTES de as mensagens ouvirem e reescrito a cada mudança de vista. */
+async function documentoDaPagina() {
+  const itemId = new URL(location.href).searchParams.get('item');
+  if (itemId) {
+    const r = await fetch(`/api/itens/${encodeURIComponent(itemId)}`, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+    if (!r.ok) throw new Error(`item ${itemId}: HTTP ${r.status}`);
+    const item = await r.json();
+    if (!item.dados?.corpo?.nos) throw new Error(`item ${itemId} não é um documento de aplicativo`);
+    document.title = `${item.titulo} · plat`;
+    return item.dados;
+  }
   const incorporado = document.getElementById('documento-widgets');
   return incorporado ? JSON.parse(incorporado.textContent) : DEMONSTRACAO;
 }
@@ -36,7 +49,17 @@ function documentoDaPagina() {
 // e `data-pronto` é marcado de qualquer jeito para o e2e (e quem lê a tela) saber que terminou.
 const principal = document.getElementById('aplicativo');
 try {
-  const motor = await montarWidgets(principal, documentoDaPagina());
+  const documento = await documentoDaPagina();
+  const motor = await montarWidgets(principal, documento, {
+    antesDoBarramento: (vistas) => { aplicarDaUrl(vistas); ligarUrl(vistas); },
+  });
+  const avisos = document.createElement('div');
+  avisos.id = 'avisos-barramento'; avisos.setAttribute('aria-live', 'polite'); avisos.className = 'plat-avisos';
+  motor.barramentoApp.addEventListener('aviso', (e) => {
+    const p = document.createElement('p'); p.dataset.tipo = e.detail.tipo; p.textContent = e.detail.mensagem;
+    avisos.append(p);
+  });
+  principal.append(avisos);
   window.plat = { ...(window.plat || {}), widgets: motor };
 } catch (erro) {
   const aviso = document.createElement('section');
