@@ -269,8 +269,8 @@ def _resolver_uniao(candidatos: list[dict], pares: list, esquema: dict,
         return len(esquema["terminais_do_tipo"](tipo_id))
 
     for r in pares:
-        ia, ka, tia, ga = r["a_idx"], r["a_kind"], r["a_tipo_id"], r["a_grupo_id"]
-        ib, kb, tib, gb = r["b_idx"], r["b_kind"], r["b_tipo_id"], r["b_grupo_id"]
+        ia, ka, tia = r["a_idx"], r["a_kind"], r["a_tipo_id"]
+        ib, kb, tib = r["b_idx"], r["b_kind"], r["b_tipo_id"]
         # `_admitir_pares` já aplicou a tolerância do par e a regra do alcance de dispositivo
         multi_a = ka == "terminal" and n_terminais(tia) >= 2
         multi_b = kb == "terminal" and n_terminais(tib) >= 2

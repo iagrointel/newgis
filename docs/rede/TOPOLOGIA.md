@@ -30,6 +30,55 @@ Medido (`tests/api/test_rede_topologia.py`): um ponto a 0,04 m de um vértice co
 0,06 m não conecta; a MESMA distância de 0,06 m conecta numa rede que declarou tolerância de 0,1 m — a régua é
 da rede, nunca uma constante global.
 
+### 2.1 Tolerância por PAR DE TIPOS (item L4-01-f)
+
+A tolerância da rede não dá conta sozinha porque a precisão da coordenada não é a mesma em toda camada. No
+ativo de referência (BDGD real), a camada de PONTO guarda a coordenada com 6 casas decimais de grau e a de
+LINHA com 13: meia unidade da última casa de 6 decimais vale 5e-7 grau, ou 0,055 m em latitude e 0,048 m
+naquela longitude — até 0,073 m de diferença entre o MESMO poste escrito nas duas camadas. Conferido no
+alimentador medido: os 50 transformadores (inclusive os 16 que a topologia não alcançava) têm uma ponta de
+trecho cuja coordenada, arredondada a 6 casas, é IGUAL à do transformador. Não é proximidade; é o mesmo
+ponto escrito com menos precisão.
+
+Por isso `plat.rede_regra.tolerancia_m` declara a tolerância DAQUELE par de tipos (NULL = a da rede). O
+pacote `eletrica-br` declara 0,10 m nos pares que envolvem dispositivo de cadastro de ponto; o par
+(trecho, trecho) fica com a tolerância da rede, sempre. Fundir duas pontas de trechos vizinhos é o que
+fabrica laço: medido no mesmo ativo, subir a tolerância da rede para 1,0 m leva os laços da média tensão de
+584 para 638.
+
+Duas travas, ambas em `topologia._admitir_pares`:
+
+1. continuação natural do mesmo grupo (trecho com trecho) vale SEMPRE pela tolerância da rede;
+2. a folga extra é sobre precisão de coordenada, nunca sobre alcance: por dispositivo, havendo candidato
+   dentro da tolerância da rede, só esses valem; não havendo, vale o mais próximo (e o que estiver a menos
+   da tolerância da rede DELE, que é o mesmo ponto físico). Sem essa segunda trava, um dispositivo de dois
+   terminais soldaria duas pontas distintas e fecharia um ciclo que a rede não tem — foi o que o teste da
+   refutação pegou (`test_a_tolerancia_do_par_nao_fabrica_laco_na_media_tensao`).
+
+Medido no ativo de referência (7 alimentadores, 9.925 trechos, 1.172 transformadores; medida completa em
+`tests/medidas/L4-01-f-alcance-do-tracado-rede-real.json`), cada alimentador na sua própria rede:
+
+| | sem a tolerância do par | com a tolerância do par |
+|---|---|---|
+| transformadores alcançados a jusante do controlador | 428 de 600 | 599 de 600 |
+| pior alcance de um alimentador | 66,67 % | 99,51 % |
+| alimentadores acima de 95 % | 1 de 5 | 5 de 5 |
+| laços na média tensão (por alimentador) | 0,0,0,0,0,1,1 | 0,0,0,0,0,1,1 |
+| nós órfãos | 1.038 | 495 |
+
+Dois dos sete alimentadores têm laço no próprio arquivo e o traçado recusa arbitrar sentido neles — antes e
+depois igualmente; o conserto não criou nem apagou laço.
+
+### 2.2 Diagnóstico do órfão por classe
+
+`GET /api/rede/{id}/topologia/diagnostico` (`app/rede_utilidades/diagnostico.py`) separa os nós órfãos em
+classes com contagem, distância medida e exemplo: `sem_camada_compativel`, `terminal_sem_par_no_dispositivo`,
+`derivacao_sem_no`, `fora_da_tolerancia_declarada`, `sem_vizinho_no_limiar`, `no_de_conexao_sem_aresta`.
+Contar órfão não diz o que consertar; a classe diz. No ativo de referência, o conserto deste item apaga as
+classes `fora_da_tolerancia_declarada` (274 nós, todos entre 0,0503 m e 0,0726 m — a faixa do arredondamento)
+e `derivacao_sem_no`; o que sobra é o segundo terminal de cada transformador, sem a camada de baixa tensão
+carregada, e dois transformadores longe da rede.
+
 ## 3. Coincidência geométrica + associação explícita
 
 Cruzar não é conectar: só os vértices DECLARADOS (as duas pontas de um trecho, o ponto de um dispositivo)

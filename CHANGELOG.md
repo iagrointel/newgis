@@ -3,6 +3,32 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 7, setembro de 2026 (item L4-01-f-alcance-do-tracado-rede-real: alcance do traçado e diagnóstico do órfão)
+
+O traçado a jusante alcançava 34 dos 50 transformadores de um alimentador do ativo de referência. A causa
+medida: a camada de PONTO do arquivo guarda a coordenada com 6 casas decimais de grau e a de LINHA com 13,
+então o mesmo poste aparece nas duas com até 0,073 m de diferença; os 16 transformadores fora estavam todos
+entre 0,051 m e 0,071 m da ponta de trecho mais próxima, e os 50 têm uma ponta cuja coordenada, arredondada
+a 6 casas, é IGUAL à deles. Subir a tolerância da rede não é conserto: com 1,0 m os laços da média tensão
+sobem de 584 para 638, porque o que funde nessa folga são pontas de trechos vizinhos.
+
+Conserto: `plat.rede_regra.tolerancia_m` (migração `20260908T0650`) declara a tolerância DAQUELE par de
+tipos; o pacote `eletrica-br` (versão 1.1.0) declara 0,10 m nos 16 pares que envolvem cadastro de ponto, e o
+par (trecho, trecho) fica com a tolerância da rede. `topologia._admitir_pares` aplica isso e mais uma trava:
+a folga extra serve para reencontrar o MESMO ponto, nunca para alcançar um SEGUNDO — sem ela, um dispositivo
+de dois terminais soldaria duas pontas distintas e fecharia ciclo (pego pelo teste da refutação). Novo
+`GET /api/rede/{id}/topologia/diagnostico`: os órfãos que sobram saem por classe, com contagem, distância e
+exemplo.
+
+Medido (`tests/medidas/L4-01-f-alcance-do-tracado-rede-real.json`; 7 alimentadores, 9.925 trechos, 1.172
+transformadores, cada alimentador na sua própria rede, carga 1 min 9,49 e 4,3 GB livres): transformadores
+alcançados a jusante do controlador de 428/600 para 599/600; pior alcance de um alimentador de 66,67 % para
+99,51 %; alimentadores acima de 95 % de 1 de 5 para 5 de 5; laços na média tensão iguais antes e depois
+(0,0,0,0,0,1,1 por alimentador); nós órfãos de 1.038 para 495. As classes `fora_da_tolerancia_declarada`
+(274 nós, todos entre 0,0503 m e 0,0726 m) e `derivacao_sem_no` somem; sobram o segundo terminal de cada
+transformador (sem a camada de baixa tensão carregada) e dois transformadores longe da rede. Dois dos sete
+alimentadores têm laço no próprio arquivo e o traçado recusa arbitrar sentido neles, antes e depois.
+
 ## turno 7, setembro de 2026 (item L4-01-g-tarefas-import-tardio: a API sobe sem GDAL)
 
 `pyogrio` — a ligação vetorizada com o GDAL/OGR que o importador BDGD usa — estava importado no topo de
