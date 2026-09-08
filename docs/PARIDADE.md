@@ -381,6 +381,31 @@ Referência Esri: `gp-service`, `gp-task`, `execute-gp-task`, `submit-gp-job`, `
 | Buffer (Create Buffers) | Map Viewer 11.4 "Use proximity" | `buffer` geodésico em metros, dissolver | feito | testes acima | 2026-09-07 | pendente (D20) |
 | demais ferramentas do "Perform analysis" 11.4 (Summarize, Find locations, Enrich, Analyze patterns, Manage data, Use proximity além do buffer) | Map Viewer 11.4 | itens irmãos do L2-05 (b em diante) sobre este registro | fora (itens separados) | — | 2026-09-07 | pendente (D20) |
 
+## Ferramentas de rede: Use proximity (item L2-05-f-rede-isocrona-rota-ferramentas, turno 4)
+
+Referência Esri: "Use proximity" do Map Viewer 11.4 — Generate Travel Areas
+(doc.arcgis.com/en/arcgis-online/analyze/generate-travel-areas-mv.htm e
+enterprise.arcgis.com/en/portal/11.4/use/generate-travel-areas-mv.htm), Find Nearest, Plan Routes — e a caixa
+Network Analyst do ArcGIS Pro
+(pro.arcgis.com/en/pro-app/latest/tool-reference/network-analyst/an-overview-of-the-network-analyst-toolbox.htm).
+Do nosso lado o cálculo é do OSRM (project-osrm.org/docs/v5.24.0/api), servido pelo item L2-11-c. Sem ArcGIS
+Pro/AGOL reais (D20). A diferença de fundo é o dado de rede: a Esri roda sobre um network dataset com regras de
+tráfego, restrições e horário; nós rodamos sobre um recorte OSM com um perfil de carro. Onde a Esri cobra crédito
+por área de serviço e por parada, o custo aqui é o do nosso próprio servidor.
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| área de serviço / isócrona | Generate Travel Areas (Map Viewer 11.4) — N pontos × M intervalos, "overlapping/dissolve", tempo ou distância | ferramenta `area_de_servico`: N pontos × M intervalos de TEMPO, `por_origem` ou `dissolver`; polígono idêntico ao de `/api/isocrona` | parcial (só intervalo de tempo; distância não) | `test_isocrona_de_30_min_e_a_mesma_do_servico_l2_11_c`, `test_isocrona_por_origem_e_dissolvida_saem_da_mesma_camada_de_entrada` | 2026-09-08 | pendente (D20) |
+| modo de viagem (carro, pé, bicicleta) | vários travel modes do network dataset | só `carro`: é o único perfil carregado no OSRM de teste; o parâmetro existe e recusa o resto com 422 | parcial | `test_parametro_fora_da_faixa_e_422_nomeando_o_campo` | 2026-09-08 | pendente (D20) |
+| rota por paradas com ordem otimizada | Plan Routes / Find Routes (até 25 paradas) | ferramenta `rota_paradas`: ordem de fid ou otimizada pelo `/trip` do OSRM (inserção do mais distante), até 25 paradas, um trecho por feição com instruções | feito | `test_rota_de_10_paradas_otimizada_nao_custa_mais_que_a_ordem_original` (custo otimizado ≤ custo da ordem original) | 2026-09-08 | pendente (D20) |
+| matriz origem-destino | OD Cost Matrix (Network Analyst) | ferramenta `matriz_od`: N×M declarado até 1.000×1.000, partido em blocos do teto do OSRM; par sem rota fica NULL, nunca 0 | feito | `test_matriz_100x100_em_tempo_medido` (medida em `tests/medidas/L2-05-f-*.json`) | 2026-09-08 | pendente (D20) |
+| K instalações mais próximas | Find Nearest / Closest Facility | ferramenta `mais_proximas`: K por tempo, com teto de tempo opcional; confere com a matriz das mesmas camadas | feito | `test_k_mais_proximas_confere_com_a_matriz_das_mesmas_camadas` | 2026-09-08 | pendente (D20) |
+| conectar pontos à rede (snap) | localização de rede (`Calculate Locations`) | ferramenta `conectar_a_rede`: `/nearest` do OSRM, com deslocamento máximo; fora do alcance = geometria nula | feito | `test_ponto_fora_da_rede_sai_com_geometria_nula_e_distancia_declarada` | 2026-09-08 | pendente (D20) |
+| localizar-alocar | Location-Allocation (7 tipos de problema, ótimo por solver) | ferramenta `localizar_alocar`: só cobertura máxima, por heurística gulosa DECLARADA (não é ótimo garantido) | parcial | `test_localizar_alocar_escolhe_por_ganho_decrescente_e_declara_a_cobertura` | 2026-09-08 | pendente (D20) |
+| procedência do resultado de rede | não documentada | `metodo` da camada nomeia o serviço usado e a versão do grafo OSM (arquivo, data e sha256 do recorte) | feito (supera) | `test_camada_de_saida_tem_atributos_de_tempo_e_distancia_e_a_versao_do_grafo` | 2026-09-08 | — |
+| tráfego por horário, barreiras, janelas de tempo, restrições de veículo | Network Analyst | não existe | fora | — | 2026-09-08 | pendente (D20) |
+| área de serviço por DISTÂNCIA e Service Areas do Pro com "trim/polygon detail" | Network Analyst | não existe; a nossa isócrona é grade + casco côncavo, e satura no limite do recorte de teste | fora | — | 2026-09-08 | pendente (D20) |
+
 ## SMTP, convite de membro e redefinição de senha (item L0-07-d-smtp-convites, turno 3; ADR 0017)
 
 | capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |

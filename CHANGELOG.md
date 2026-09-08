@@ -3,6 +3,27 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L2-05-f-rede-isocrona-rota-ferramentas: ferramentas de rede com resultado em camada)
+
+- **Seis ferramentas de rede** (`app/ferramentas/rede.py`), no mesmo registro do L2-05-a e no mesmo formulário de
+  `/analise`: `area_de_servico` (isócrona por origem ou dissolvida), `rota_paradas` (ordem de fid ou otimizada),
+  `matriz_od` (N×M, teto declarado 1.000×1.000), `mais_proximas` (K por tempo), `conectar_a_rede` (snap) e
+  `localizar_alocar` (cobertura máxima por heurística gulosa declarada).
+- **O cálculo continua no serviço do L2-11-c**: as ferramentas chamam `app/rede/osrm.py` e `app/rede/isocrona.py`,
+  não um segundo cliente. A isócrona de 30 min de um ponto sai igual à de `/api/isocrona` (mesmo polígono,
+  diferença simétrica de área 0,0 — `test_isocrona_de_30_min_e_a_mesma_do_servico_l2_11_c`).
+- **Medidas** (`tests/medidas/L2-05-f-rede-isocrona-rota-ferramentas.json`): matriz 100×100 = 10.000 pares em
+  **3,96 s** de execução inteira (matriz + escrita da camada + item), 10.000 de 10.000 pares com rota, com carga
+  de 1 min em 7,68; rota de 10 paradas: **3.583,9 s** na ordem original contra **3.521,6 s** na ordem otimizada.
+- **Procedência de rede**: toda camada de saída traz no `metodo` a versão do grafo OSM (arquivo, data e sha256 do
+  recorte), agora com fonte única em `app.rede.osrm.PROVENIENCIA`.
+- **Três defeitos corrigidos no que já existia**: a isócrona de 30 min estourava o tamanho de URL do cliente (a
+  grade passa do `--max-table-size` do OSRM) e agora é partida em blocos; `ST_Extent` de camada com uma feição só
+  degenerava em ponto e quebrava a publicação do item; caixa degenerada é recusada pelo CHECK de `plat.item`, e o
+  item passa a ficar sem extent em vez de ganhar caixa inventada.
+- **Paridade escrita** contra "Use proximity" do Map Viewer 11.4 (Generate Travel Areas, Find Nearest, Plan
+  Routes) e a caixa Network Analyst do Pro, em `docs/PARIDADE.md`, com o que é parcial e o que está fora.
+
 ## turno 4, setembro de 2026 (item L2-05-a-catalogo-ferramentas-gpserver: registro de ferramentas e GPServer)
 
 - **Registro `@ferramenta`** (`app/ferramentas/registro.py`): manifesto tipado no vocabulário GP da Esri, validado
