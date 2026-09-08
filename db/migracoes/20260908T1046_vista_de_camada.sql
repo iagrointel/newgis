@@ -79,3 +79,30 @@ BEGIN
     EXECUTE 'GRANT EXECUTE ON FUNCTION plat.origem_atual() TO plat_app';
   END IF;
 END $$;
+
+-- ---------------------------------------------------------------- segunda dívida trazida junto:
+-- `plat.camada_schema_garantir` dá `GRANT USAGE ON SCHEMA d_<slug> TO plat_leitor` a CADA chamada, mesmo
+-- quando o privilégio já está lá. O schema `d_<slug>` é o mesmo objeto para todas as bases de trilha da
+-- máquina (só o schema `plat` é reescrito por trilha, `d_demo` não), então duas trilhas criando camada ao
+-- mesmo tempo escrevem a MESMA linha de `pg_namespace` e o PostgreSQL devolve "tuple concurrently updated" —
+-- erro que não vem do produto, mas derruba o teste de quem estiver no meio. Com a checagem antes do GRANT, a
+-- escrita só acontece na primeira vez, e a corrida deixa de existir no caminho comum.
+CREATE OR REPLACE FUNCTION plat.camada_schema_garantir(p_slug text) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = plat, public AS $$
+DECLARE nome_schema text;
+BEGIN
+  IF p_slug !~ '^[a-z][a-z0-9_]{0,60}$' THEN
+    RAISE EXCEPTION 'slug_invalido';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM plat.tenant WHERE slug = p_slug AND id = plat.tenant_atual()) THEN
+    RAISE EXCEPTION 'schema_de_outro_inquilino';
+  END IF;
+  nome_schema := 'd_' || p_slug;
+  IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = nome_schema) THEN
+    EXECUTE format('CREATE SCHEMA IF NOT EXISTS %I AUTHORIZATION plat_app', nome_schema);
+  END IF;
+  IF NOT has_schema_privilege('plat_leitor', nome_schema, 'USAGE') THEN
+    EXECUTE format('GRANT USAGE ON SCHEMA %I TO plat_leitor', nome_schema);
+  END IF;
+END $$;
+GRANT EXECUTE ON FUNCTION plat.camada_schema_garantir(text) TO plat_app;
