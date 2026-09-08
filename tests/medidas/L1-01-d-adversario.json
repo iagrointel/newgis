@@ -66,7 +66,7 @@
       "chave_rw_segredo": 403
     },
     "2_controle_positivo": {
-      "balde": "tgadv-plat-demo2",
+      "balde": "til101dgarag-plat-demo2",
       "bytes": 2176,
       "sha_bate": true
     },
@@ -78,9 +78,9 @@
       "GetBucketLocation_de_B": "AccessDenied",
       "GetObject_virtualhost_de_B": "AccessDenied",
       "GetObject_prefixo_do_alias_de_A": "NoSuchKey",
-      "travessia_ponto_ponto": "GET tgadv-plat-demo/../tgadv-plat-demo2/zadv/alvo_90185099.bin: 403 <?xml versio",
-      "travessia_codificada": "GET tgadv-plat-demo/..%2Ftgadv-plat-demo2%2Fzadv/alvo_90185099.bin: 403 <?xml ve",
-      "travessia_codificada_dupla": "GET tgadv-plat-demo/..%252Ftgadv-plat-demo2%252Fzadv/alvo_90185099.bin: 403 <?xm",
+      "travessia_ponto_ponto": "GET til101dgarag-plat-demo/../til101dgarag-plat-demo2/zadv/alvo_90185099.bin: 40",
+      "travessia_codificada": "GET til101dgarag-plat-demo/..%2Ftil101dgarag-plat-demo2%2Fzadv/alvo_90185099.bin",
+      "travessia_codificada_dupla": "GET til101dgarag-plat-demo/..%252Ftil101dgarag-plat-demo2%252Fzadv/alvo_90185099",
       "sufixo_no_nome_do_balde": "404",
       "caminho_cru_sem_assinatura": "403"
     },
@@ -119,6 +119,19 @@
           "tamanho_cada": 16384,
           "cabem_pela_cota": 1,
           "cota_bytes": 19520,
+          "aceitos": 2,
+          "codigos_de_recusa": [
+            "AccessDenied"
+          ],
+          "bytes_no_garage_depois": 34880,
+          "sobra_sobre_a_cota": 15360,
+          "razao": 1.79
+        },
+        {
+          "gravacoes_simultaneas": 32,
+          "tamanho_cada": 16384,
+          "cabem_pela_cota": 1,
+          "cota_bytes": 19520,
           "aceitos": 1,
           "codigos_de_recusa": [
             "AccessDenied"
@@ -126,19 +139,6 @@
           "bytes_no_garage_depois": 18496,
           "sobra_sobre_a_cota": -1024,
           "razao": 0.95
-        },
-        {
-          "gravacoes_simultaneas": 32,
-          "tamanho_cada": 16384,
-          "cabem_pela_cota": 1,
-          "cota_bytes": 19520,
-          "aceitos": 4,
-          "codigos_de_recusa": [
-            "AccessDenied"
-          ],
-          "bytes_no_garage_depois": 67648,
-          "sobra_sobre_a_cota": 48128,
-          "razao": 3.47
         },
         {
           "gravacoes_simultaneas": 32,
@@ -159,13 +159,13 @@
         "tamanho_cada": 16384,
         "cabem_pela_cota": 1,
         "cota_bytes": 19520,
-        "aceitos": 4,
+        "aceitos": 2,
         "codigos_de_recusa": [
           "AccessDenied"
         ],
-        "bytes_no_garage_depois": 67648,
-        "sobra_sobre_a_cota": 48128,
-        "razao": 3.47
+        "bytes_no_garage_depois": 34880,
+        "sobra_sobre_a_cota": 15360,
+        "razao": 1.79
       }
     },
     "4_sobrescrita_no_garage": {
@@ -248,7 +248,7 @@
     "6_listbuckets": {
       "status": 200,
       "baldes_listados": [
-        "tgadv-plat-demo"
+        "til101dgarag-plat-demo"
       ],
       "traz_o_proprio": true,
       "traz_o_do_vizinho": false,
