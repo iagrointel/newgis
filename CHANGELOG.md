@@ -728,6 +728,27 @@ comentário em cima do teste que o registrou. O que mudou:
 Suíte dos dois arquivos juntos: **55 passed** (32 do construtor, 23 do adversário), `ruff` limpo,
 `make sem-marcador` limpo.
 
+Um SEGUNDO adversário atacou o mecanismo novo e achou mais dois furos (`tests/unit/
+test_raster_validacao_adversario2.py`, 3 casos `xfail(strict=True)`), consertados neste turno:
+
+* **A conferência do VRT passa a percorrer a árvore do XML, não o texto.** A expressão regular casava só
+  `<SourceFilename>`; um `VRTWarpedDataset` põe a fonte em `<SourceDataset>` e uma isca `<SourceFilename>`
+  dentro de comentário XML fazia a conferência antiga passar — o VRT enviado lia arquivo de fora do envio.
+  Agora vale a árvore (`xml.etree`): os elementos que sempre apontam para dado (`SourceFilename`,
+  `SourceDataset`, `Filename`, `Dataset`, `MaskFilename`…) e todo texto ou atributo com forma de caminho
+  (absoluto, `../`, `~`, esquema remoto, extensão de dado) são resolvidos por `realpath` e têm de cair
+  dentro do diretório do envio. Como a recusa é do XML, ela vale ANTES de o GDAL abrir qualquer coisa: o
+  filtro de chamadas de sistema deixa de ser a única camada que segura a rede.
+* **O ambiente do filho é lista de PERMISSÃO** (`ambiente_do_filho()`). A remoção nominal de `PLAT_DSN` e
+  `PLAT_SECRET` deixava passar `PLAT_DSN_WORKER` (senha da role que escreve no banco) e
+  `PLAT_GARAGE_ADMIN_TOKEN` para o processo que abre o arquivo hostil, e `AF_UNIX` não é bloqueado pelo
+  filtro. Entram só `PATH`, `HOME`, `TMPDIR`, idioma, fuso, caminho de biblioteca, ambiente virtual e o que
+  começa com `GDAL_`/`PROJ_`/`CPL_`/`OGR_`.
+
+Prova: `tests/unit/test_raster_validacao_refutacao3.py` (10 casos escritos antes do conserto; 8 falhavam
+contra o código anterior) e os 3 `xfail(strict=True)` do 2º adversário, agora sem marcador. Os quatro
+arquivos de teste do item juntos: **77 passed**, `ruff` limpo, `make sem-marcador` e `make limites` limpos.
+
 ## turno 3, setembro de 2026 (item L0-08-d-ldap: LDAP/Active Directory como provedor de login externo)
 
 Módulo isolado `app/auth/ldap.py` (`ldap3` 2.9.1, puro Python, sem dependência de sistema — só a venv):

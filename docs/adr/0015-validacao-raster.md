@@ -169,3 +169,26 @@ lê `info.nodata.valor == "NaN"` e sabe o que fazer.
 * **O `RLIMIT_AS` e o relógio de 90 s continuam sem prova por arquivo real.** Os testes que os exercitam usam
   o parâmetro `_prova` do próprio módulo. Nenhum arquivo fabricado pelo construtor ou pelo adversário fez o
   GDAL passar de 131 MB de pico nem de 0,5 s.
+
+## 10. Turno 4 — os dois achados do 2º adversário
+
+* **A conferência do VRT olha a ÁRVORE, não o texto.** Casar `<SourceFilename>` por expressão regular
+  cobria uma parte do modelo: o `VRTWarpedDataset` referencia a fonte em `<SourceDataset>`, e um comentário
+  XML com uma isca `<SourceFilename>` bastava para a conferência antiga achar que havia fonte legítima. O
+  XML passa a ser interpretado (`xml.etree`, que não expande entidade externa) e percorrido nó a nó: valem
+  os elementos que sempre apontam para dado (`SourceFilename`, `SourceDataset`, `Filename`, `Dataset`,
+  `SourceDatasetName`, `MaskFilename`) e, além deles, qualquer texto ou atributo com forma de caminho
+  (absoluto, `../`, `~`, esquema remoto, extensão de dado). Toda referência é resolvida por `realpath` e tem
+  de cair dentro do diretório do envio; `/vsi…`, esquema remoto e byte nulo são recusados. XML que não
+  interpreta é recusado. Consequência de projeto: a recusa acontece ANTES de o GDAL abrir qualquer coisa,
+  então a rede deixa de ter o filtro de chamadas de sistema como única camada — com o filtro degradado, o
+  VRT com `/vsicurl` continua recusado.
+* **O ambiente do filho é lista de permissão.** Remover `PLAT_DSN` e `PLAT_SECRET` de `os.environ` só
+  protege contra as variáveis que alguém lembrou de nomear; `PLAT_DSN_WORKER` (senha da role que escreve no
+  banco) e `PLAT_GARAGE_ADMIN_TOKEN` seguiam para o processo que abre o arquivo hostil, e `AF_UNIX` passa
+  pelo filtro. `ambiente_do_filho()` monta o ambiente do zero: `PATH`, `HOME`, `TMPDIR`, idioma, fuso,
+  caminho de biblioteca e ambiente virtual, mais o que começa com `GDAL_`, `PROJ_`, `CPL_` ou `OGR_`, e
+  por cima o `AMBIENTE_FILHO`. Variável nova do worker fica de fora por padrão, não por lembrança.
+* **O que continua valendo.** O isolamento segue sendo de processo: `AF_UNIX` não é bloqueado (a libc
+  precisa) e o filho lê, em leitura, os arquivos que o worker lê. O que mudou é que já não existe credencial
+  no ambiente dele para transformar esse soquete em acesso ao banco.
