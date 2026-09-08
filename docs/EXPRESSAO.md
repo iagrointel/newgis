@@ -3,9 +3,12 @@
 Estado: NÚCLEO entregue (turno 3) — o equivalente ao Arcade da Esri, para os perfis popup, rótulo,
 cálculo, restrição, validação, visibilidade e indicador (L2_CONCEITO.md, decisão C6). Esta passagem
 constrói só a linguagem: gramática, AST tipada e os dois avaliadores (Python e JavaScript), que têm
-de concordar byte a byte. A integração com popup, rótulo, formulário e regra de atributo é de itens
-futuros do L2-10 e do L5 (`L5-11`, citado como "ativo da casa" no item) — nada abaixo liga a
-expressão a uma camada, um popup ou uma regra de formulário de verdade.
+de concordar byte a byte. A integração com popup, rótulo e formulário é de itens futuros do L2-10 e
+do L5 (`L5-11`, citado como "ativo da casa" no item) — nada abaixo liga a expressão a uma camada,
+um popup ou um formulário de verdade. A parte de REGRA DE ATRIBUTO DE REDE é o item
+`L4-29-regras-de-atributo-de-rede`: seis funções de rede (seção 5) que o motor
+`app/rede/regras.py` alimenta pelo contexto, e a paridade com os perfis do Arcade está em
+`docs/PARIDADE_REGRAS_ATRIBUTO.md`.
 
 Implementações: `app/expressao/avaliador_py.py` (Python, servidor) e
 `web/js/expressao/avaliador.js` (JavaScript puro, navegador). Nenhuma das duas usa `eval`/`exec`/
@@ -136,7 +139,7 @@ lados e têm vetor de teste em `tests/expressoes/vetores_convergencia.json`.
   devolve `valor` sem nunca avaliar `alternativa`.
 - **`&&`/`||`**: como descrito acima — o lado que decide sozinho evita avaliar o outro.
 
-## 5. Catálogo de funções (43)
+## 5. Catálogo de funções (49)
 
 Uma linha por função, com 1 exemplo. `TABELA_FUNCOES` em `avaliador_py.py` e `TABELA_FUNCOES` em
 `avaliador.js` são a fonte única — `tests/unit/test_expressao_doc_sincronizada.py` confere que
@@ -242,6 +245,26 @@ As funções novas propagam argumento nulo, exceto `Lista`, `Obter`, `Contem` e 
 posteriores à primeira correspondência. Não modifica o contexto. As chaves `__proto__`,
 `prototype` e `constructor` são recusadas por `Obter`; getters e propriedades herdadas não
 são caminhos de acesso a dados.
+
+### Rede (item L4-29-regras-de-atributo-de-rede)
+
+Funções que leem a chave reservada `rede` do contexto, montada POR OBJETO pelo motor de regras de
+atributo (`app/rede/regras.py`): nível de tensão, nome da subrede, alimentador, tensão nominal
+herdada do alimentador, clientes a jusante já calculados e os atributos do objeto. Nenhuma delas
+faz I/O e nenhuma consulta camada — o valor vem pronto no contexto, e a linguagem segue sem rede
+por construção. `rede` fora do contexto é erro de permissão (`campo_nao_permitido`), nunca `nulo`
+silencioso; chave ausente DENTRO de `rede` é `nulo` (objeto fora de subrede, jusante ainda não
+calculada, atributo que este objeto não tem). Os nomes `__proto__`, `prototype` e `constructor`
+pedidos a `AtributoRede` são recusados com `campo_nao_permitido`, como em `Obter`.
+
+| função | aridade | descrição | exemplo |
+|---|---|---|---|
+| `Subrede()` | 0 | nome da subrede do objeto | `Subrede()` → `'SR-CENTRO'` |
+| `Alimentador()` | 0 | código do alimentador (circuito) do objeto | `Alimentador()` → `'AL-1042'` |
+| `TensaoAlimentador()` | 0 | tensão nominal do alimentador em kV, herdada em um salto | `TensaoAlimentador()` → `13.8` |
+| `ContarJusante()` | 0 | clientes a jusante já calculados pelo motor (nulo se não calculado) | `ContarJusante()` → `42` |
+| `NivelRede()` | 0 | nível de tensão do objeto (`'mt'` ou `'bt'`) | `NivelRede()` → `'mt'` |
+| `AtributoRede(nome)` | 1 | atributo de rede pelo nome (nulo se ausente) | `AtributoRede('tensao_kv')` → `13.8` |
 
 ## 6. Algoritmos que têm de ser IDÊNTICOS nos dois avaliadores
 
@@ -547,8 +570,11 @@ Lista de nomes lida das páginas oficiais (`developers.arcgis.com/arcade/functio
 
 - Geometria; funções com expressão por elemento (`Filter`/`Map`),
   domínio (`DomainName`/`DomainCode`/`Subtypes`) e `FeatureSetByRelationship`.
-- Integração com popup, rótulo (MapLibre), regra de atributo/formulário, restrição/validação,
-  indicador — todas de itens futuros do L2-10/L5 (o "ativo da casa" `L5-11` do item).
+- Integração com popup, rótulo (MapLibre), regra de formulário e indicador — itens futuros do
+  L2-10/L5 (o "ativo da casa" `L5-11` do item). A parte de regra de atributo saiu do papel no
+  item L4-29: as seis funções de rede da seção 5 mais o motor `app/rede/regras.py` (perfis
+  `calculo`/`restricao`/`validacao` sobre `plat.rede_regra`/`plat.rede_objeto`) cobrem o que a
+  paridade com os perfis do Arcade descreve em `docs/PARIDADE_REGRAS_ATRIBUTO.md`.
 - Máscara livre de formatação (`#,###.00`, `DD/MM/Y`) do `Text` do Arcade: `TextoNumero` tem casas
   decimais e `TextoData` tem 4 formatos fixos, nada além disso. `Texto()` continua sem localidade
   de propósito (é a conversão crua para texto, usada por `Concatenar` e `Juntar`); quem quer pt-BR
