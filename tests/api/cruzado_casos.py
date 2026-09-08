@@ -906,6 +906,18 @@ CASOS: dict[tuple[str, str], Caso] = {
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # --- formulário de coleta (L2-07-b): documento é item; camada de B nunca vira destino de A
+    ("GET", "/api/formularios/equivalencia"): Caso(
+        lambda p: "/api/formularios/equivalencia", proprio=True, aceita=frozenset({200}),
+    ),
+    ("POST", "/api/formularios/xlsform"): Caso(
+        lambda p: "/api/formularios/xlsform",
+        lambda p: {"nome": "x.xlsx", "conteudo": "AAAA", "camada_destino": p.item_b["id"]},
+    ),
+    ("GET", "/api/formularios/{id}"): Caso(lambda p: f"/api/formularios/{p.item_b['id']}"),
+    ("POST", "/api/formularios/{id}/respostas"): Caso(
+        lambda p: f"/api/formularios/{p.item_b['id']}/respostas", lambda p: {"valores": {}},
+    ),
 }
 
 

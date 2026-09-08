@@ -1,0 +1,21 @@
+/* Formulário de coleta (item L2-07-b): uma coluna, controles largos, pensado para tela de celular. */
+.coleta-form { max-width: 40rem; display: flex; flex-direction: column; gap: 0.75rem; padding-bottom: 4rem; }
+.coleta-campo { display: flex; flex-direction: column; gap: 0.25rem; }
+.coleta-campo[hidden] { display: none; }
+.coleta-campo label { font-weight: 600; }
+.coleta-campo .dica { font-size: 0.875rem; opacity: 0.8; }
+.coleta-campo input, .coleta-campo select, .coleta-campo textarea { width: 100%; box-sizing: border-box; min-height: 2.75rem; font-size: 1rem; }
+.coleta-campo .erro { color: var(--cor-erro, #b00020); font-size: 0.875rem; min-height: 1rem; }
+.coleta-campo.com-erro input, .coleta-campo.com-erro select { outline: 2px solid var(--cor-erro, #b00020); }
+.coleta-nota { padding: 0.5rem 0.75rem; border-left: 3px solid var(--cor-borda, #999); }
+.coleta-grupo { border: 1px solid var(--cor-borda, #ccc); border-radius: 0.5rem; padding: 0.5rem 0.75rem; }
+.coleta-grupo > summary { cursor: pointer; font-weight: 700; padding: 0.25rem 0; }
+.coleta-grupo .coleta-filhos { display: flex; flex-direction: column; gap: 0.75rem; padding-top: 0.5rem; }
+.coleta-repeticao { border: 1px dashed var(--cor-borda, #999); border-radius: 0.5rem; padding: 0.5rem 0.75rem; }
+.coleta-linha { border-top: 1px solid var(--cor-borda, #ddd); padding-top: 0.5rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.coleta-linha .coleta-linha-cabecalho { display: flex; justify-content: space-between; align-items: center; }
+.coleta-busca { margin-bottom: 0.25rem; }
+.coleta-caixas { display: flex; flex-direction: column; gap: 0.25rem; }
+.coleta-caixas label { font-weight: 400; display: flex; gap: 0.5rem; align-items: center; }
+.coleta-rodape { position: sticky; bottom: 0; background: var(--cor-fundo, #fff); padding: 0.75rem 0; display: flex; gap: 0.5rem; align-items: center; border-top: 1px solid var(--cor-borda, #ddd); }
+.coleta-idiomas { display: flex; gap: 0.5rem; align-items: center; font-size: 0.875rem; }

@@ -13,6 +13,22 @@ os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutaca
   (XPASS) e a suíte fica vermelha.
 - `app/garage.py` deixa de seguir `Location` automaticamente nas duas chamadas que mandam `Authorization`
   (`allow_redirects=False`): o outro caminho da casa que montava credencial e seguia redirecionamento.
+## turno 8, setembro de 2026 (item L2-07-b-formulario-de-coleta-xlsform: XLSForm vira formulário que grava feição)
+
+`POST /api/formularios/xlsform` importa uma planilha XLSForm (pyxform) como item `formulario` do catálogo,
+cria a camada de destino (e uma camada filha por `begin repeat`, com `pai_globalid`) e traduz relevant,
+constraint, calculation e choice_filter do XPath para a linguagem de expressão própria por tabela de função
+com estado feito/parcial/fora (regex, date, uuid e position ficam fora, com o trecho no aviso; tabela em
+`GET /api/formularios/equivalencia`). A tela `/coleta?formulario=<id>` desenha texto, inteiro, decimal, data,
+hora, data-hora, select_one com busca, select_multiple, cascata de 3 níveis, grupos e repetições, guarda
+rascunho a cada mudança e envia; o servidor recalcula, reaplica relevância (campo não relevante vai NULL),
+restrições e obrigatoriedade e só então grava pela `POST /api/camadas/{id}/edicoes`. Cálculo circular é 422
+`dependencia_circular` na importação e no navegador. Conferido: 102 vetores XLSForm nos dois avaliadores
+(`tests/expressoes/vetores_xlsform.json`), motor JS = motor Python em 13 respostas dos 5 formulários de
+teste, 11 testes de API. Conserto no caminho: gatilho de histórico de feição (L2-03-d) quebrava com geometria
+nula (`20260907T2020_historico_geom_nula.sql`). Fora do brief: geoponto com GPS, foto, áudio, assinatura,
+código de barras, fila off-line.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -139,6 +155,141 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 5, setembro de 2026 (item L2-03-edicao: fechamento — dois achados corrigidos, junção do turno 4)
+
+Retomada do turno 4 (sessão anterior morreu por limitação do servidor da API antes de registrar, comitar
+e enfileirar): conferência independente da suíte revelou dois defeitos reais, além do já corrigido pelo
+próprio turno 4. Corrigidos e cobertos por teste permanente (não script de auditoria à parte — removido,
+mesma convenção do commit `054286a`):
+
+1. `app/edicao/combinar.py::unir` checava `versao` declarada ANTES de checar existência/acesso do id — um
+   id inexistente ou de outro inquilino, quando listado depois de um id existente sem `versao`, nunca
+   chegava a 404 (ficava preso em 422 `versao_ausente`). Corrigido para existência de todos os ids primeiro,
+   depois versão de todos (`tests/api/test_edicao_dividir_unir.py::test_unir_sem_declarar_versao_de_uma_das_feicoes_e_422`
+   fecha o buraco original: `versoes` incompleto não pode mais deixar uma origem sem checagem de
+   concorrência).
+2. `limites.ANEXO_TAMANHO_MAX` (10 MiB) igual ao teto de corpo do middleware (`CORPO_MAX_PADRAO_BYTES`,
+   também 10 MiB) — como o anexo viaja em JSON com o conteúdo em base64 (~4/3 de inchaço), o 413 genérico
+   do corpo sempre disparava antes do 422 `anexo_grande` específico rodar; o limite documentado de anexo
+   era, na prática, letra morta. Reduzido para 7 MiB, com folga sob o teto de corpo mesmo codificado
+   (`tests/api/test_edicao_historico_anexos.py::test_anexo_no_teto_real_ainda_da_anexo_grande_nao_corpo_grande`).
+
+Suíte dedicada reconferida após os dois consertos: verde (mesmo comando do turno 4); `ruff` e
+`sem-marcador` verdes. Portão e veredito do item-pai continuam os do turno 4 (nenhuma cláusula mudou de
+prova, só a implementação ficou mais correta). Handoff em `laco/handoffs/T5/L2-03-edicao/`.
+
+## turno 4, setembro de 2026 (item L2-03-edicao: edição de feições no mapa — criar/mover/vértice/dividir/unir/apagar, formulário, anexos, desfazer, histórico e restauração)
+
+Constrói sobre o L2-03-a (API única de escrita) e o L2-01-mapa-web (visualizador): `web/js/mapa/edicao.js`
+inteiro novo, ligado à tela `/mapa`. Criar ponto/linha/polígono por clique; mover e editar vértice
+por arrasto (a geometria de trabalho vem sempre de `GET /api/camadas/{id}/feicoes/{globalid}`, exata,
+nunca da versão recortada por tile); apagar; formulário de atributos gerado dos mesmos `campos`/
+`regras_campo` da camada, com domínio/obrigatório espelhados no navegador — e reconferidos direto na
+API nesta rodada, sem passar pela tela, provando que a validação real mora no servidor (cláusula do
+item-pai). Aderência (checkbox "aderir a vértice próximo", tolerância de 12 px sobre feições
+renderizadas) e edição em lote (N feições selecionadas por shift-clique, um atributo aplicado a todas
+num único lote `atualizar`, reaproveitando o array heterogêneo que o L2-03-a já aceitava).
+
+Histórico e restauração são novos no banco: `plat.feicao_historico` + gatilho genérico
+`feicao_historico_registrar()` ligado por `plat.camada_preparar` a TODA tabela de camada (não só a
+escrita que passa pela API — SQL direto, importação e réplica também ficam registrados), migração
+`20260907T1025`. Restaurar reaplica pela MESMA porta de escrita (`_inserir`/`_atualizar` de
+`app.edicao.servico`) — feição existente vira `UPDATE`, feição apagada vira `INSERT` com o MESMO
+`globalid` (referência externa nunca quebra); a própria restauração grava um marcador
+`operacao='restaurar'` a mais no histórico, que nunca é reescrito.
+
+Anexos (`plat.feicao_anexo`, migração `20260907T1035`): limite de tamanho e de tipo aplicados no
+SERVIDOR em duas etapas (tamanho da string base64 antes de decodificar, depois o tamanho real) e
+contra o conteúdo de fato (item L7-03-b) — um PDF disfarçado de PNG é recusado mesmo com
+`content_type` mentindo. Objeto guardado no Garage por trás do adaptador já existente (`app.objetos`).
+
+Dividir/unir (`app/edicao/combinar.py`): geometria estrutural nunca sai do MVT (recortado/generalizado
+por tile) — as duas operações leem a geometria exata do banco e usam `ST_Union`/`ST_LineMerge`/
+`ST_LineSubstring`. `unir` funciona para qualquer família de geometria; `dividir` está escopado a
+LineString/MultiLineString de uma parte só nesta passagem (dividir polígono por linha de corte fica
+de fora, registrado no ADR, não escondido).
+
+Dois defeitos de infraestrutura achados e corrigidos nesta rodada (não só no código do item):
+`app/garage.py::criar_chave` devolvia um dicionário sem `accessKeyId` no caminho de reaproveitamento
+(`ListKeys` usa a chave `id`, `CreateKey` usa `accessKeyId`) — crashava com `KeyError` em vez de um
+erro que diz o que aconteceu; e `docs/gerar_limites.py` ficaria não determinístico se um limite fosse
+guardado como `frozenset` (a ordem de iteração de um set do Python varia entre execuções) — corrigido
+trocando `ANEXO_TIPOS_PERMITIDOS` para tupla ordenada antes de existir um segundo caso.
+
+ADR: `docs/adr/20260907T1123-historico-restauracao-anexos-feicao.md`. Medidas em
+`tests/medidas/L2-03-edicao.json` — sem cláusula numérica de tempo neste item; a suíte dedicada (75
+testes de API/unit) e o e2e dedicado (6 cláusulas no chromium do playwright, 0 erro de console) estão
+registrados lá com o comando exato. Fronteira honesta e vereditos completos no handoff do item.
+
+## turno 3, setembro de 2026 (item L2-03-a-api-edicao-transacional: edição transacional de feições — única porta de escrita)
+
+`POST /api/camadas/{id}/edicoes` (`app/edicao/`): equivalente do `applyEdits` da Esri e, a partir
+daqui, a única porta de escrita de feição para navegador, PWA, FeatureServer (L2-04-d) e OGC
+(L2-04-g). Corpo com `adicionar`/`atualizar`/`apagar` numa transação — tudo-ou-nada por padrão
+(`modo=transacao`), ou `modo=parcial` com `SAVEPOINT` por feição, devolvendo resultado feição a
+feição (como o `applyEdits` com `rollbackOnFailure=false`). Roda direto contra a tabela de camada
+`d_<slug>.c_<uuid16>` que `plat.camada_preparar` (029_ingestao_vetor.sql) já cria — nenhuma tabela
+nova (migração 20260906T1859, bump do esquema `camada_vetorial` v2→v3, só propriedades opcionais).
+
+Validação sempre no servidor: tipo de geometria e SRID da coluna (com a mesma promoção
+Point/LineString/Polygon → Multi* que `app/ingestao/carregar.py` usa na carga); `ST_IsValid`, com
+`ST_MakeValid` só quando `corrigir_geometria=true` (sem isso, polígono inválido é 422); domínio de
+atributo por `dados.regras_campo` (obrigatório, somente-leitura, lista de valores ou
+mínimo/máximo — mecanismo próprio deste item; quando o L2-10-a-dominios-subtipos, entregue noutra
+trilha, for integrado, ganha uma segunda fonte compartilhada entre camadas, não substitui esta);
+tamanho de texto (64 KiB); concorrência otimista pela coluna `versao` já existente na tabela de
+camada — atualizar/apagar com a versão errada devolve `409` com a feição ATUAL, nunca sobrescreve
+em silêncio; campos de rastreio (`fid`, `globalid`, `versao`, `tenant_id`, `criado_*`,
+`atualizado_*`) NUNCA aceitos do corpo, sempre preenchidos pelo servidor; "só as próprias feições"
+(`edicao.somente_proprias`) e "geometria travada" (`edicao.geometria_travada`) por camada, com
+`feicoes.editar_total` (perfil admin) ignorando as duas. Sanidade de CRS não declarado: coordenada
+fora de `[-180,180]`/`[-90,90]` numa camada de SRID geográfico sem `crs.srid` declarado é `422
+geometria_fora_do_crs` (cobre o envio de metros — UTM/Web Mercator — sem declarar). Um evento por
+LOTE (`camadas/editar`, nunca um por feição) com a contagem de adicionadas/atualizadas/apagadas, e
+bump de `dados.tiles_versao` no item (ponto de integração para a invalidação de tiles do L2-01-b,
+ainda pendente). Isolamento entre inquilinos por RLS FORCE já existente: o inquilino B recebe `404`
+ao ler, atualizar ou apagar feição de A — nunca `403`, nunca sucesso silencioso, porque a existência
+não é confirmada a quem não pode ver (ADR 20260907T0216).
+
+Medido: 1.000 feições em `adicionar` (modo transação) em menos de 1 s, contra o teto de 3 s do
+portão (`tests/medidas/L2-03-a-api-edicao-transacional.json`). Refutação do item (roteiro do
+adversário) rodada nesta passagem: lote de 100 mil feições recusado pelo teto de lista
+(`EDICAO_LOTE_MAX=2.000`); `crs.srid=0` recusado pela própria validação de entrada; texto de 1 MB
+recusado (`EDICAO_TEXTO_MAX=64 KiB`); geometria em outro CRS sem declarar recusada pela sanidade de
+grau; feição de outro inquilino nunca aceita (404); duas sessões editando a mesma feição — só uma
+ganha (200), a outra recebe 409 com a versão atual, nunca as duas 200. 20 testes verdes em
+`tests/api/test_edicao_transacional.py`.
+
+Fora desta passagem (fronteira honesta, ver ADR): matriz fina de permissão por operação × grupo
+(ficou em `edicao.habilitada`/`somente_proprias`/`geometria_travada` + privilégio único);
+integração com `plat.dominio` do L2-10-a; consumidor da invalidação de tiles (L2-01-b); histórico/
+restauração de feição (L2-03-d-historico-restauracao) — a coluna `versao` cobre só a concorrência
+otimista, não um log de mudanças.
+## turno 4, setembro de 2026 (item L2-01-mapa-web: visualizador de mapa próprio, do Martin à impressão)
+
+Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava chegar a `master`.
+
+- **Servidor de tiles**: Martin 1.15.0 (musl, sha256 do pacote fixado em `deploy/martin_instalar.sh`) como
+  unidade `plat-martin` em `127.0.0.1:8151`, publicando SÓ funções (`auto_publish.tables: false`) — a
+  tabela crua da camada nunca é exposta. Papel de leitura `plat_leitor` (LOGIN, sem BYPASSRLS, sem ser
+  dono), `plat.contexto_por_token` e a função de tile por camada com RLS vieram do trabalho dos itens
+  L2-01-b/L2-04-a, que nunca tinha sido juntado.
+- **API do mapa** (`app/mapa/`): `GET /api/mapa/camadas` com estilo MapLibre e legenda geradas da
+  simbologia; `GET /api/mapa/camadas/{id}/tilejson` cunhando token de 12 h com escopo de UMA camada;
+  repasse `GET /tiles/{esquema}/{funcao}/{z}/{x}/{y}` com a mesma autorização do `auth_request` do nginx
+  (uma implementação, duas portas); `plat.camada_extensao` para o "enquadrar".
+- **Tela `/mapa`**: lista de camadas com ordem (arrastar e por botão), opacidade, ligar/desligar e
+  enquadrar; legenda; janela de atributos (campo nulo aparece marcado, multi-geometria não se repete);
+  medição geodésica de distância e área; pesquisa de endereço (CNEFE) e de coordenada em decimal e em
+  grau-minuto-segundo; escala, coordenadas e escala numérica 1:N; troca de mapa-base; impressão em PNG e
+  em PDF com escala, barra de escala e seta de norte.
+- **`GET /api/geocodificar`**: geocodificar é leitura e agora tem o verbo certo (o POST continua).
+- Medido com 1.000.000 de feições: 2,4 s do clique ao primeiro desenho, 1,5 s de zoom até `idle`, 61 MB
+  de heap; 10 camadas ao mesmo tempo em 4,3 s, pan em 302 ms, 24,8 MB. Tile z8 pelo repasse: 406 ms
+  frio, 21 ms quente. Detalhe em `tests/medidas/L2-01-mapa-web.json`.
+- Dois defeitos reais achados pelos testes e corrigidos: `attribution: undefined` fazia o MapLibre
+  recusar a fonte inteira em silêncio; repassar `Content-Encoding: gzip` com corpo já descompactado
+  entregava tile ilegível ao navegador. Registrados no ADR 20260907T0400.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 

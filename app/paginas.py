@@ -39,6 +39,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- formulário de coleta (L2-07-b-formulario-de-coleta-xlsform)
+    "/coleta": "coleta.html",
 }
 router = APIRouter()
 
