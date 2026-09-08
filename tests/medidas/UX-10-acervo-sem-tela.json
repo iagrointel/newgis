@@ -1,0 +1,27 @@
+{
+ "item": "UX-10-acervo-sem-tela",
+ "medidas": {
+  "estados_provados": {
+   "valor": 8,
+   "unidade": "estados",
+   "comando": "lista:vazio; lista:erro; lista:negado; adicionar:negado; adicionar:erro:422; adicionar:erro:413; adicionar:confirmacao_pii; adicionar:ok"
+  },
+  "violacoes_serias_axe": {
+   "valor": 0,
+   "unidade": "violações",
+   "comando": "axe-core 4.10.3 wcag2a/aa em /acervo lista, /acervo lista em erro, /acervo ficha aberta, /acervo adicionar negado"
+  },
+  "erros_de_console": {
+   "valor": 0,
+   "unidade": "erros",
+   "comando": "Tela.verificar (console.error, pageerror, respostas >= 400 não declaradas)"
+  },
+  "pagina_pronta_ms_acervo": {
+   "valor": 101.2,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  }
+ },
+ "gerado_em": "2026-09-08T02:31:37Z",
+ "git_sha": "199b63a915d6"
+}

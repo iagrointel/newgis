@@ -167,6 +167,10 @@ def test_estados_da_lista_e_do_controle_adicionar(page, base_url, credenciais_de
     _axe(page, "/acervo adicionar negado", violacoes)
     _capturar(page, "adicionar_negado")
     parar()
+    # negado desabilita o botão de propósito (o privilégio não vai aparecer sozinho): reabre a ficha para seguir
+    page.keyboard.press("Escape")
+    page.wait_for_selector("dialog[open]", state="detached")
+    _abrir_ficha(page, "openstreetmap")
     # 422 e 413: a mensagem da API, nomeada, no controle — nunca o número cru sozinho nem tela quebrada
     for status, corpo, nome in (
         (422, {"erro": "corpo_invalido", "mensagem": "pedido inválido: corpo fora do esquema", "req_id": "e2e-422"},
