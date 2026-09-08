@@ -537,6 +537,16 @@ CASOS: dict[tuple[str, str], Caso] = {
     # L6-02-c (conector WFS/OGC API): os três casos de leitura do modo referenciado saíram daqui porque as
     # rotas não existem nesta árvore (o ramo do conector ainda não entrou); caso sem rota reprova a cobertura
     # do cruzado. Voltam com o ramo que traz as rotas.
+    # L6-02-c (conector WFS/OGC API): as três rotas de leitura do modo referenciado. A conexão de B é
+    # cross-tenant puro — `_carregar` (RLS) roda ANTES de qualquer ida ao serviço externo, então a rota nem
+    # chega a abrir conexão de rede quando o id é de outro inquilino.
+    ("GET", "/api/conexoes/{id}/colecoes"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes"),
+    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/campos"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/campos"
+    ),
+    ("GET", "/api/conexoes/{id}/colecoes/{colecao}/feicoes"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/colecoes/qualquer/feicoes"
+    ),
     # ---- L3-19-multiescala: conjunto/fator/execução são do INQUILINO (tenant_id + RLS, mesma classe da
     # conexão acima, não do registro compartilhado do acervo); GET/POST/DELETE de lista agem só sobre o
     # próprio chamador, GET/DELETE/POST por id de B são cross-tenant puro (404, a RLS nunca deixa ver a linha).
@@ -899,6 +909,21 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("DELETE", "/api/org/logo"): Caso(
         lambda p: "/api/org/logo", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    # ---- L4-01-b-topologia-derivada: alcance, áreas sujas e applyEdits sobre rede de B = 404
+    ("GET", "/api/rede/{rede_id}/topologia/alcance"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/alcance?no=1",
+    ),
+    ("GET", "/api/rede/{rede_id}/topologia/areas-sujas"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/topologia/areas-sujas",
+    ),
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/pontos/applyEdits",
+        lambda p: {"adds": [], "updates": [], "deletes": []},
+    ),
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas/applyEdits"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/feicoes/linhas/applyEdits",
+        lambda p: {"adds": [], "updates": [], "deletes": []},
     ),
     # ---- L0-07-d convite de membro por e-mail (ADR 0013): GET/POST/DELETE agem só sobre o inquilino do
     # chamador (a tabela é por tenant_id, igual a papéis/tokens); POST usa o MESMO e-mail do convite de B de
