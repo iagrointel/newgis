@@ -161,7 +161,9 @@ class IdpGovBrFalso:
                     if recurso == "niveis":
                         ordem = ["bronze", "silver", "gold"]
                         ate = ordem.index(c["level"])
-                        niveis = [{"id": NIVEL_API[n], "dataAtualizacao": "2025-07-02 14:17:16"} for n in ordem[: ate + 1]]
+                        niveis = [
+                            {"id": NIVEL_API[n], "dataAtualizacao": "2025-07-02 14:17:16"} for n in ordem[: ate + 1]
+                        ]
                         return self._json(niveis)
                     if recurso == "confiabilidades":
                         selos = [{"id": s["id"], "dataAtualizacao": "2025-07-02 14:17:16"} for s in c["reliabilities"]]
