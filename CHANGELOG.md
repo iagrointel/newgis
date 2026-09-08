@@ -104,6 +104,23 @@ próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo:
 segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+
+## turno 3, setembro de 2026 (item L4-05-e-gas-e-esgoto: pacotes de gás e de esgoto, escoamento por cota e importação TEKSI)
+
+Dois pacotes de ativos novos, entregues como dado: `gas-br` (1 domínio, 4 tiers de PRESSÃO, 7 grupos, 24 tipos,
+51 atributos, 29 regras, 3 configurações de terminal) e `esgoto-teksi` (2 domínios, tier por BACIA, 9 grupos,
+21 tipos, 104 atributos com a coluna de origem do datamodel aberto TEKSI, 29 regras). Três rotas:
+`GET /api/rede/{id}/esgoto/escoamento` confere se a ponta declarada como jusante é a mais baixa em cada trecho
+que escoa por gravidade — e NUNCA inverte nada, cada divergência sai como problema nomeado com as duas cotas;
+`GET /api/rede/{id}/gas/pressao` confere que todo regulador reduz pressão e que não há emenda entre tiers
+diferentes sem controlador de pressão ao lado; `POST /api/rede/{id}/teksi` importa um GeoPackage no esquema
+TEKSI (lido com o `sqlite3` da biblioteca padrão, sem GDAL) usando como de-para as origens declaradas no
+próprio pacote. Rede sintética de 200 elementos com cotas em `tests/dados/gerar_esgoto.py`: os 99 trechos
+concordam em 100 %, e inverter a cota de um deles derruba para 98 com o problema `contrafluxo`, sem que a
+geometria mude. ADR 20260908T1054; paridade em `docs/rede/PARIDADE_GAS.md` (com o que NÃO foi conferido dito
+em voz alta). De quebra, as 11 rotas de escrita de `/api/rede` ganharam a declaração de evento que faltava em
+`tests/api/eventos_esperados.py`, e `docs/openapi.json` voltou a bater com a aplicação.
+
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
 Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,
