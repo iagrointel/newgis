@@ -26,7 +26,6 @@ latitude. `_ordem_lat_lon` decide por essa regra e é o único lugar onde ela mo
 
 from __future__ import annotations
 
-import datetime
 import re
 from typing import Any
 
@@ -181,11 +180,18 @@ def _pos_list(no, lat_lon: bool) -> list[list[float]]:
     raise ErroFes("gml_invalido", "geometria sem gml:posList/gml:pos/gml:coordinates")
 
 
-def geometria_para_geojson(no) -> dict:
+# CRS padrão do serviço quando o documento não traz `srsName`: é o `DefaultCRS` que o
+# GetCapabilities publica, e sua ordem de autoridade é latitude, longitude. Sem isto, o filtro
+# espacial que o GDAL manda (Envelope SEM srsName, em lat/lon) seria lido invertido e devolveria
+# zero feição — medido com `ogrinfo -spat` em 08/09.
+CRS_PADRAO_SERVICO = "urn:ogc:def:crs:EPSG::4326"
+
+
+def geometria_para_geojson(no, srs_padrao: str = CRS_PADRAO_SERVICO) -> dict:
     """gml:Envelope/Point/LineString/Polygon -> dict GeoJSON em longitude, latitude (o que o
-    `cql2.compilar` espera)."""
+    `cql2.compilar` espera). Sem `srsName` no elemento vale o CRS padrão do tipo de feição."""
     nome = _local(no.tag)
-    srs = no.get("srsName")
+    srs = no.get("srsName") or srs_padrao
     _exigir_crs_do_filtro(srs)
     lat_lon = _ordem_lat_lon(srs)
     if nome == "Envelope":
@@ -221,15 +227,15 @@ def geometria_para_geojson(no) -> dict:
 
 # --------------------------------------------------------------------------------- literais e instantes
 def _instante(texto: str):
+    """O MESMO leitor de instante do CQL2 (`cql2._instante`): as duas linguagens de filtro têm de
+    produzir o mesmo valor Python, senão o mesmo pedido escrito nas duas contaria diferente."""
     t = (texto or "").strip()
     if not t:
         raise ErroFes("filtro_sintaxe", "instante temporal vazio")
     try:
-        if len(t) == 10:
-            return datetime.date.fromisoformat(t)
-        return datetime.datetime.fromisoformat(t.replace("Z", "+00:00"))
-    except ValueError as e:
-        raise ErroFes("filtro_sintaxe", f"instante temporal fora do ISO 8601: {texto!r}") from e
+        return cql2._instante(t)  # noqa: SLF001 - reuso deliberado: uma regra de instante só na casa
+    except cql2.ErroCql2 as e:
+        raise ErroFes(e.codigo, e.mensagem, e.detalhe) from e
 
 
 def _literal(texto: str | None):
@@ -291,19 +297,19 @@ def _como_like(padrao: str, coringa: str, um: str, escape: str) -> str:
 
 
 # --------------------------------------------------------------------------------- FES -> AST do CQL2
-def _no(elem, profundidade: int = 0):
+def _no(elem, profundidade: int = 0, srs_padrao: str = CRS_PADRAO_SERVICO):
     if profundidade > MAX_PROFUNDIDADE:
         raise ErroFes("filtro_profundo_demais", f"filtro além de {MAX_PROFUNDIDADE} níveis")
     nome = _local(elem.tag)
     if nome == "And":
-        return cql2.E(termos=[_no(f, profundidade + 1) for f in elem])
+        return cql2.E(termos=[_no(f, profundidade + 1, srs_padrao) for f in elem])
     if nome == "Or":
-        return cql2.Ou(termos=[_no(f, profundidade + 1) for f in elem])
+        return cql2.Ou(termos=[_no(f, profundidade + 1, srs_padrao) for f in elem])
     if nome == "Not":
         filhos = list(elem)
         if len(filhos) != 1:
             raise ErroFes("filtro_sintaxe", "fes:Not exige exatamente um operando")
-        return cql2.Nao(termo=_no(filhos[0], profundidade + 1))
+        return cql2.Nao(termo=_no(filhos[0], profundidade + 1, srs_padrao))
     if nome in _COMPARACAO:
         campo = _propriedade(elem)
         lit = _valor_de(elem, "Literal")
@@ -335,11 +341,11 @@ def _no(elem, profundidade: int = 0):
     if nome in ("PropertyIsNull", "PropertyIsNil"):
         return cql2.Comparacao(op="is_null", operando=_propriedade(elem))
     if nome == "BBOX":
-        geo = _geometria_do_operador(elem)
+        geo = _geometria_do_operador(elem, srs_padrao)
         campo = _propriedade_geometria(elem)
         return cql2.Espacial(op="s_intersects", operando=campo, geometria=geo)
     if nome in _ESPACIAL:
-        geo = _geometria_do_operador(elem)
+        geo = _geometria_do_operador(elem, srs_padrao)
         campo = _propriedade_geometria(elem)
         distancia = None
         if nome == "DWithin":
@@ -371,11 +377,11 @@ def _propriedade_geometria(elem) -> cql2.Propriedade:
         return cql2.Propriedade("geometria")
 
 
-def _geometria_do_operador(elem) -> dict:
+def _geometria_do_operador(elem, srs_padrao: str = CRS_PADRAO_SERVICO) -> dict:
     for filho in elem:
         if _local(filho.tag) in ("ValueReference", "PropertyName", "Distance"):
             continue
-        return geometria_para_geojson(filho)
+        return geometria_para_geojson(filho, srs_padrao)
     raise ErroFes("filtro_sintaxe", f"{_local(elem.tag)} sem geometria GML")
 
 
@@ -422,7 +428,7 @@ def ids_de(raiz) -> list[str]:
     return saida
 
 
-def analisar(xml_texto: str | bytes) -> tuple[Any, list[str]]:
+def analisar(xml_texto: str | bytes, srs_padrao: str = CRS_PADRAO_SERVICO) -> tuple[Any, list[str]]:
     """`fes:Filter` -> (nó da AST do CQL2 ou None, lista de rid). Um `Filter` só com ResourceId
     não tem predicado: devolve `(None, [rid...])` e a rota vira aquilo num filtro por identidade."""
     raiz = ler_xml(xml_texto)
@@ -436,15 +442,16 @@ def analisar(xml_texto: str | bytes) -> tuple[Any, list[str]]:
             return None, ids
         raise ErroFes("filtro_sintaxe", "fes:Filter vazio")
     if len(predicados) > 1:
-        return cql2.E(termos=[_no(p) for p in predicados]), ids
-    return _no(predicados[0]), ids
+        return cql2.E(termos=[_no(p, 0, srs_padrao) for p in predicados]), ids
+    return _no(predicados[0], 0, srs_padrao), ids
 
 
 def compilar_fes(xml_texto: str | bytes, colunas_sql: dict, srid_nativo: int,
-                 coluna_geom_sql: str = "geom") -> tuple[str | None, list, list[str]]:
+                 coluna_geom_sql: str = "geom",
+                 srs_padrao: str = CRS_PADRAO_SERVICO) -> tuple[str | None, list, list[str]]:
     """`(sql, params, ids)` pronto para entrar numa cláusula WHERE parametrizada — o SQL sai do
     `cql2.compilar`, o mesmo do OGC API Features."""
-    no, ids = analisar(xml_texto)
+    no, ids = analisar(xml_texto, srs_padrao)
     if no is None:
         return None, [], ids
     try:
