@@ -265,12 +265,13 @@ def test_tipo_de_dado_exotico_passa_sem_uma_palavra(tmp_path: Path) -> None:
 
 
 # =========================================================== ATAQUE 3 — limite que não segura
-def test_limites_do_filho_conferidos_no_proc_do_processo_vivo(tmp_path: Path) -> None:
+def test_limites_do_filho_conferidos_no_proc_do_processo_vivo(tmp_path: Path, monkeypatch) -> None:
     """Prova independente (não olha o código do pai): enquanto o filho roda, lê /proc/<pid>/limits e
-    /proc/<pid>/environ dele."""
+    /proc/<pid>/environ dele. As variáveis vão por `monkeypatch`: a versão anterior apagava PLAT_DSN do
+    processo de teste no fim e derrubava, no setup, toda a suíte de API que rodasse depois neste worker."""
     alvo = tif(tmp_path / "x.tif", lado=64)
-    os.environ["PLAT_DSN"] = "dbname=nao_devia_chegar_aqui"
-    os.environ["PLAT_SECRET"] = "segredo"
+    monkeypatch.setenv("PLAT_DSN", "dbname=nao_devia_chegar_aqui")
+    monkeypatch.setenv("PLAT_SECRET", "segredo")
     achado: dict = {}
 
     def espiar() -> None:
@@ -290,17 +291,13 @@ def test_limites_do_filho_conferidos_no_proc_do_processo_vivo(tmp_path: Path) ->
                     continue
             time.sleep(0.0005)
 
-    try:
-        for _ in range(3):
-            thread = threading.Thread(target=espiar)
-            thread.start()
-            v.validar(alvo)
-            thread.join()
-            if achado:
-                break
-    finally:
-        os.environ.pop("PLAT_DSN", None)
-        os.environ.pop("PLAT_SECRET", None)
+    for _ in range(3):
+        thread = threading.Thread(target=espiar)
+        thread.start()
+        v.validar(alvo)
+        thread.join()
+        if achado:
+            break
     assert achado, "não consegui capturar o filho vivo"
     def valor(rotulo: str) -> str:
         return [ln for ln in achado["limites"].splitlines() if ln.startswith(rotulo)][0].split()[-3]
