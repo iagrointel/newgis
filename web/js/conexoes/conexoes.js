@@ -147,6 +147,13 @@ async function apagarConexao(c) {
   const ok = await confirmar(t('conexoes.apagar_titulo'), t('conexoes.apagar_texto', { nome: c.nome }), { ok: t('acao.apagar'), perigo: true });
   if (!ok) return;
   const r = await api.apagar(`/api/conexoes/${encodeURIComponent(c.id)}`);
+  if (r.status === 404) {
+    // já apagada por outra pessoa: a lista é que está velha
+    if (s.editando === c.id) fecharFormulario();
+    aviso('lista-aviso', t('conexoes.ja_removida', { nome: c.nome }), 'atencao');
+    await carregar({ silencioso: true });
+    return;
+  }
   if (r.status !== 204) {
     aviso('lista-aviso', t('conexoes.erro_apagar', { nome: c.nome, erro: api.mensagemDe(r) }));
     return;
@@ -281,6 +288,14 @@ async function salvar(valores) {
     await carregar({ silencioso: true });
     const tr = document.querySelector(`tr[data-id="${CSS.escape(r.json.id)}"]`);
     if (tr) tr.scrollIntoView({ block: 'nearest' });
+    return;
+  }
+  if (r.status === 404 && s.editando) {
+    // a conexão em edição foi apagada por outra pessoa: fecha o formulário e recarrega a lista
+    const nome = dados.nome;
+    fecharFormulario();
+    aviso('lista-aviso', t('conexoes.ja_removida', { nome }), 'atencao');
+    await carregar({ silencioso: true });
     return;
   }
   const j = r.json || {};

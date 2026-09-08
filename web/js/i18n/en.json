@@ -590,6 +590,7 @@
   "conexoes.hist_titulo": "health history",
   "conexoes.hist_vazio": "no test recorded yet; use \"test now\" or wait for the periodic check (every 15 min)",
   "conexoes.historico": "history",
+  "conexoes.ja_removida": "connection {nome} no longer exists (deleted by someone else); the list was reloaded",
   "conexoes.legenda_degradado": "(the most recent passed, but one of the last 5 failed),",
   "conexoes.legenda_fora": "(the most recent failed),",
   "conexoes.legenda_intro": "state computed from the latest health checks:",

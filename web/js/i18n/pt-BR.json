@@ -590,6 +590,7 @@
   "conexoes.hist_titulo": "histórico de saúde",
   "conexoes.hist_vazio": "nenhum teste registrado ainda; use \"testar agora\" ou aguarde o periódico (a cada 15 min)",
   "conexoes.historico": "histórico",
+  "conexoes.ja_removida": "a conexão {nome} já não existe (apagada por outra pessoa); a lista foi recarregada",
   "conexoes.legenda_degradado": "(a mais recente passou, mas alguma das últimas 5 falhou),",
   "conexoes.legenda_fora": "(a mais recente falhou),",
   "conexoes.legenda_intro": "estado calculado das últimas verificações de saúde:",
