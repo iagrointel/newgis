@@ -184,7 +184,7 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
+                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b,
                       modelo_amc_b=modelo_amc_b, conjunto_amc_b=conjunto_amc_b,
                       execucao_amc_b=execucao_amc_b)
 
