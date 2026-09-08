@@ -1,4 +1,7 @@
 import { REGISTRO, validarEsquema } from './registro.js';
+import { criarFontes } from '../app/fontes.js';
+import { criarVistas } from '../app/vistas.js';
+import { Barramento } from '../app/barramento.js';
 
 export class BarramentoWidgets extends EventTarget {
   #pilha = new Set();
@@ -51,11 +54,24 @@ function alternarEdicao(grade, ativo) {
   return ativo;
 }
 
-export async function montarWidgets(destino, documento, { barramento = new BarramentoWidgets(), edicao = false } = {}) {
+/* Monta os widgets de um documento. Item L5-07: `corpo.fontes`/`corpo.vistas`/`corpo.mensagens` viram Fonte,
+   Vista e Barramento (app/*.js); cada widget com `configuracao.vista` recebe a Vista e o barramento de
+   mensagens; as fontes carregam depois de tudo montado (os widgets repintam em `registros_carregados`).
+   `antesDoBarramento(vistas)` deixa quem chama restaurar o estado da URL antes de as mensagens começarem a
+   ouvir (senão o estado restaurado dispararia as mensagens de novo). As ligações simples do L5-06
+   (`corpo.ligacoes`) continuam valendo. */
+export async function montarWidgets(destino, documento, {
+  barramento = new BarramentoWidgets(), edicao = false, antesDoBarramento = null, carregarFontes = true, buscar = undefined,
+} = {}) {
   const corpo = corpoDe(documento);
   const falhas = await carregarModulos([...new Set(corpo.nos.map((no) => no.tipo))]);
 
+  const fontes = criarFontes(corpo);
+  const vistas = criarVistas(corpo, fontes);
+  if (antesDoBarramento) antesDoBarramento(vistas, fontes);
   const instancias = new Map();
+  const barramentoApp = new Barramento(corpo, { vistas, widgets: instancias });
+
   const grade = document.createElement('div'); grade.className = 'plat-widgets';
   for (const no of corpo.nos) {
     const manifesto = REGISTRO.get(no.tipo);
@@ -63,8 +79,12 @@ export async function montarWidgets(destino, documento, { barramento = new Barra
     if (falhas.has(no.tipo)) { grade.append(erroWidget(no, falhas.get(no.tipo))); continue; }
     try {
       validarEsquema(no.configuracao || {}, manifesto.esquema_config, `widget.${no.id}.configuracao`);
+      const vistaId = no.configuracao?.vista;
+      if (vistaId && !vistas.has(vistaId)) throw new Error(`vista inexistente no documento: ${vistaId}`);
       const widget = document.createElement(manifesto.elemento);
-      widget.noId = no.id; widget.barramento = barramento; widget.configuracao = no.configuracao || {};
+      widget.noId = no.id; widget.barramento = barramento; widget.barramentoApp = barramentoApp;
+      widget.configuracao = no.configuracao || {};
+      if (vistaId) widget.vista = vistas.get(vistaId);
       widget.dataset.noId = no.id; widget.dataset.tipo = no.tipo;
       if (no.posicao) {
         widget.style.gridColumn = `${no.posicao.coluna || 1} / span ${no.posicao.largura || 1}`;
@@ -85,5 +105,18 @@ export async function montarWidgets(destino, documento, { barramento = new Barra
   });
   alternarEdicao(grade, edicao);
   destino.replaceChildren(grade);
-  return { barramento, instancias, falhas, edicao: (ativo) => alternarEdicao(grade, ativo) };
+
+  const errosFontes = new Map();
+  if (carregarFontes) {
+    await Promise.all([...fontes.values()].map(async (f) => {
+      try { await f.carregar(buscar); } catch (e) { errosFontes.set(f.id, e.message); }
+    }));
+    for (const [id, msg] of errosFontes) {
+      const aviso = document.createElement('section');
+      aviso.className = 'plat-widget-erro'; aviso.setAttribute('role', 'alert'); aviso.dataset.fonte = id;
+      aviso.textContent = `Fonte “${fontes.get(id).nome}”: ${msg}`;
+      grade.prepend(aviso);
+    }
+  }
+  return { barramento, barramentoApp, fontes, vistas, instancias, falhas, errosFontes, edicao: (ativo) => alternarEdicao(grade, ativo) };
 }
