@@ -260,7 +260,9 @@ async function esriChamar(rotulo, fazer) {
   const r = await fazer();
   if (r.status === 401) { location.href = '/entrar?proximo=/geocodificar'; return null; }
   if (r.status === 403) { estado.negado(erroEsri(r)); return null; }
-  if (r.status === 422) {
+  if (r.status === 400 || r.status === 404 || r.status === 422) {
+    // respostas de NEGÓCIO do protocolo Esri (nao_encontrado sem UF instalada, fora_da_distancia, location_ausente,
+    // lote_vazio…): estado vazio com o código e a mensagem, nunca o número cru
     estado.mostrar({ tipo: 'vazio', titulo: t('geocodificar.vazio_titulo'), texto: erroEsri(r),
       acoes: [{ id: 'limpar', rotulo: t('geocodificar.vazio_acao') }] });
     return null;
