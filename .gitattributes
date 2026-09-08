@@ -16,12 +16,15 @@ ARQUITETURA.md merge=union
 CHANGELOG.md merge=union
 # conflita com todo ramo e a fila serializa (07/09: 5 reprovações seguidas, nenhuma por teste).
 # depois de montar o lote. `merge=ours` guarda a versão do alvo e o gerador escreve a verdade.
+docs/cobertura_ui_lacunas.json merge=ours
+docs/COBERTURA_UI.md merge=ours
 docs/LIMITES.md merge=ours
 docs/openapi.json merge=ours
 docs/PARIDADE.md merge=ours
 # em 07/09 seis junções seguidas reprovaram por isso e nenhuma era defeito de código.
 # faz a união das CHAVES (laco/merge_json.py; `git config merge.jsonuniao.driver` já posto na máquina).
 # Gerado por `make limites` a partir de app/limites.py — a fila regera ao fechar o lote.
+.gitignore merge=union
 # MANUAL.md: cada item acrescenta a sua seção. Nono registro da família; união (markdown tolera).
 MANUAL.md merge=union
 # `merge=union` (embutido no git) guarda os dois lados quando ambos só acrescentam.
