@@ -48,7 +48,15 @@
                   "texto",
                   "indicador",
                   "grafico",
-                  "tabela"
+                  "tabela",
+                  "serial",
+                  "pizza",
+                  "lista",
+                  "mapa",
+                  "detalhes",
+                  "texto_rico",
+                  "legenda",
+                  "cabecalho"
                 ],
                 "type": "string"
               },
@@ -330,7 +338,7 @@
           "type": "array"
         },
         "semente": {
-          "description": "marca interna de idempotência de uma semente de demonstração (ex.: plat_til206amodel.painel_exemplo_semear); documento de autor nunca grava este campo",
+          "description": "marca interna de idempotência de uma semente de demonstração (ex.: plat.painel_exemplo_semear); documento de autor nunca grava este campo",
           "maxLength": 60,
           "type": "string"
         },
