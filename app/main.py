@@ -46,10 +46,9 @@ from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.mapa.anotacoes import router as rotas_anotacoes
-from app.mapa.promover import router as rotas_promover
-from app.mapa.popup import router as rotas_mapa_popup
-from app.mapa.rotas import router as rotas_mapa
 from app.mapa.exportar import router as rotas_exportar_mapa
+from app.mapa.popup import router as rotas_mapa_popup
+from app.mapa.promover import router as rotas_promover
 from app.mapa.rotas import router as rotas_mapa
 from app.mapa.selecao import router as rotas_selecao
 from app.multiescala.rotas import router as rotas_multiescala
@@ -57,8 +56,8 @@ from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
-from app.tiles.rotas import router as rotas_tiles
 from app.tabela.rotas import router as rotas_tabela
+from app.tiles.rotas import router as rotas_tiles
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 
@@ -150,7 +149,6 @@ ROUTERS = [
     # --- exportação a partir do mapa (L2-01-l): cópia de feição, estilo (MapLibre/SLD) e import de pacote
     rotas_exportar_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
-    rotas_tiles,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

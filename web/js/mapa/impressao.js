@@ -55,8 +55,6 @@ function desenharSetaNorte(ctx, x, y, tamanho, cor) {
   ctx.restore();
 }
 
-/* compor(map, {titulo}) -> {canvas, escala, barra} : o canvas do mapa mais a faixa de informação */
-export function compor(map, { titulo = 'Mapa', atribuicao = '' } = {}) {
 /* Legenda desenhada NA IMAGEM (item L2-01-l): as entradas vêm prontas de `ficha.legenda`, geradas pelo
    servidor da mesma lista de classes que gerou o estilo (app/mapa/simbologia.py). O canvas não inventa
    cor nenhuma — se inventasse, a legenda impressa e o mapa impresso poderiam discordar. */
@@ -153,8 +151,6 @@ export function compor(map, { titulo = 'Mapa', atribuicao = '', legenda = [] } =
   }
   ctx.textAlign = 'left';
   desenharSetaNorte(ctx, l - 34, yb + 28, 13, '#0f1416');
-  ctx.restore();
-  return { canvas: destino, escala, barra, centro, zoom };
   const alturaLegenda = alturaDaLegenda(legenda);
   if (alturaLegenda) desenharLegenda(ctx, legenda, 12, yb - alturaLegenda - 12, 168);
   ctx.restore();
@@ -172,11 +168,6 @@ function baixar(blob, nome) {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
-export async function paraPng(map, opcoes = {}) {
-  const { canvas, escala } = compor(map, opcoes);
-  const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
-  baixar(blob, opcoes.nome || 'mapa.png');
-  return { bytes: blob.size, escala, largura: canvas.width, altura: canvas.height };
 /* PNG em 2x: o canvas da tela tem a resolução da tela, e ampliá-lo só interpola pixel. Para dobrar de
    verdade, um mapa TEMPORÁRIO é montado fora da tela com o dobro da largura e da altura, o mesmo estilo
    e a mesma câmera, e é ELE que é lido depois do 'idle'. Custa uma renderização a mais e entrega o

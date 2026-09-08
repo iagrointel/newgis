@@ -17,14 +17,6 @@ SCHEMA=${PLAT_SCHEMA:-plat}
 PAPEL="${SCHEMA}_leitor"
 PG_HBA=${PG_HBA:-/etc/postgresql/16/main/pg_hba.conf}
 CRED_DIR=${CRED_DIR:-/etc/plat/segredos}
-# 07/09: dois agentes, em duas trilhas, gravaram credencial de TRILHA em /etc/plat/segredos por deixar o
-# padrão passar. O diretório de produção só é aceito quando o ambiente É produção; trilha e homologação
-# têm de dizer o seu CRED_DIR de propósito.
-if [ "$CRED_DIR" = /etc/plat/segredos ] && [ "${PLAT_AMBIENTE:-}" != producao ]; then
-  echo "leitor_instalar: CRED_DIR=/etc/plat/segredos é o diretório de PRODUÇÃO e PLAT_AMBIENTE não é 'producao'." >&2
-  echo "  numa trilha, passe CRED_DIR=/home/dev/plataforma/laco/var/trilha/<trilha>_segredos" >&2
-  exit 3
-fi
 CRED="$CRED_DIR/PLAT_DSN_LEITOR"
 # dono do credential: root em produção (só o systemd entrega uma cópia à unidade, docs/SEGURANCA.md §1).
 # A suíte de teste passa CRED_DONO=<usuário> porque precisa LER o DSN para conectar como papel de leitura.

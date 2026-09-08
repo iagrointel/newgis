@@ -191,12 +191,6 @@ export class Arvore {
     if (!no) return;
     if (no.tipo === 'camada') {
       try { await this.catalogo.alternar(no.id); } catch (e) { this.aoErro(e); }
-      // "a mais recente entra no topo": a camada que acabou de ser ligada sobe para o topo do seu grupo, como o
-      // catálogo já faz em `ativas` (unshift) — sem isto a árvore e o mapa discordam da ordem de desenho
-      if (this.catalogo.ativas.includes(no.id)) {
-        const achado = encontrar(this.itens, chave);
-        if (achado && achado.indice > 0) achado.pai.splice(0, 0, achado.pai.splice(achado.indice, 1)[0]);
-      }
     } else {
       // grupo: liga tudo se algo estiver desligado, senão desliga tudo
       const ids = achatar(no.itens);
