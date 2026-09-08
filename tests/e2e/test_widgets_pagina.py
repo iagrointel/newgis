@@ -168,7 +168,8 @@ def test_doze_widgets_no_executor_sem_script_executado(page, base_url, credencia
         qr = comp.locator("img.plat-w-qr")
         assert qr.get_attribute("src").startswith("/api/qr.svg?texto=")
         page.wait_for_function(
-            "() => { const i = document.querySelector('img.plat-w-qr'); return i && i.complete && i.naturalWidth > 0; }",
+            "() => { const i = document.querySelector('img.plat-w-qr'); "
+            "return i && i.complete && i.naturalWidth > 0; }",
             timeout=10000)
         assert "sandbox=" in comp.locator("textarea").input_value()
         # login: mostra quem está autenticado

@@ -26,7 +26,8 @@ def test_registro_declara_seis_widgets_com_contrato_valido():
       console.log(JSON.stringify(nomes));
     """)
     assert {"mapa", "legenda", "tabela", "texto", "botao", "filtro"} <= {item["nome"] for item in resultado}
-    assert all(item["elemento"] == f"plat-w-{item['nome']}" for item in resultado)  # plat-w-: não colide com o sistema de design
+    # plat-w-: não colide com os componentes do sistema de design (plat-tabela, plat-tema, plat-idioma)
+    assert all(item["elemento"] == f"plat-w-{item['nome']}" for item in resultado)
     assert all(isinstance(item["eventos"], list) and isinstance(item["acoes"], list) for item in resultado)
 
 

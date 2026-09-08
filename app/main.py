@@ -52,7 +52,6 @@ from app.mapa.promover import router as rotas_promover
 from app.mapa.rotas import router as rotas_mapa
 from app.mapa.selecao import router as rotas_selecao
 from app.multiescala.rotas import router as rotas_multiescala
-from app.mapa.rotas import router as rotas_mapa
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
