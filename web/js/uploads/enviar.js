@@ -112,7 +112,7 @@ async function montarTela() {
   const botaoCancelar = h('button', { type: 'button', class: 'texto', id: 'upload-cancelar', hidden: true }, t('upload.cancelar_tudo'));
   const botaoLimpar = h('button', { type: 'button', class: 'texto', id: 'upload-limpar', hidden: true }, t('upload.limpar_fila'));
   const resultado = h('div', { id: 'upload-resultado', 'aria-live': 'polite' });
-  const fila = h('ol', { id: 'upload-fila', class: 'upload-fila', 'aria-label': t('upload.fila') });
+  const fila = h('ol', { id: 'upload-fila', class: 'upload-fila vazio', 'aria-label': t('upload.fila'), hidden: true });
 
   /* ---- fila ---- */
   const itens = []; // {id, arquivo, tipo, estado, enviados, uploadId, aborto, erro, li, ...}
@@ -128,6 +128,7 @@ async function montarTela() {
       itens.push(it);
       fila.append(it.li);
     }
+    marcarFilaVazia();
     if (arquivos.length === 1 && itens.filter((i) => !ESTADOS_FINAIS.has(i.estado)).length === 1) {
       // um arquivo só: a caixa mostra o nome e o tipo detectado vai para o seletor (comportamento do item L0-04-a)
       const it = itens[itens.length - 1];
@@ -139,6 +140,9 @@ async function montarTela() {
     botaoLimpar.hidden = false;
     atualizarLinhas();
   }
+
+  /* estado vazio explícito da fila: sem arquivo, a lista some e a área de soltar é o convite */
+  function marcarFilaVazia() { fila.classList.toggle('vazio', itens.length === 0); fila.hidden = itens.length === 0; }
 
   function atualizarResumo() {
     const pendentes = itens.filter((i) => !ESTADOS_FINAIS.has(i.estado));
@@ -170,7 +174,7 @@ async function montarTela() {
     const btRepetir = h('button', { type: 'button', class: 'pequeno acao-repetir', hidden: true }, t('upload.tentar_de_novo'));
     btRepetir.addEventListener('click', () => { it.estado = 'na_fila'; it.enviados = 0; it.erro = null; it.uploadId = null; atualizarLinhas(); atualizarResumo(); processar(); });
     const btRemover = h('button', { type: 'button', class: 'pequeno texto acao-remover' }, t('upload.remover'));
-    btRemover.addEventListener('click', () => { if (it.estado === 'enviando' || it.estado === 'concluindo') return; itens.splice(itens.indexOf(it), 1); it.li.remove(); atualizarResumo(); botaoLimpar.hidden = !itens.length; });
+    btRemover.addEventListener('click', () => { if (it.estado === 'enviando' || it.estado === 'concluindo') return; itens.splice(itens.indexOf(it), 1); it.li.remove(); atualizarResumo(); botaoLimpar.hidden = !itens.length; marcarFilaVazia(); });
     const li = h('li', { class: 'upload-item', dataset: { estado: it.estado, id: it.id } },
       h('div', { class: 'upload-item-topo' },
         h('span', { class: 'nome-arquivo' }, it.arquivo.name),
@@ -254,6 +258,7 @@ async function montarTela() {
     }
     botaoLimpar.hidden = !itens.length;
     atualizarResumo();
+    marcarFilaVazia();
   });
 
   botaoEnviar.addEventListener('click', () => {

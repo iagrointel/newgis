@@ -305,9 +305,13 @@ def cruzar(vivo: bool = True) -> dict:
         if not html.is_file():
             continue
         mods = modulos_da_tela(html, grafo)
-        texto_da_tela[caminhos[0]] = "\n".join(m.read_text(encoding="utf-8", errors="replace") for m in mods)
+        # o mesmo HTML pode servir mais de um caminho (/tarefas e /tarefas/{job_id}): o texto vale para todos
+        texto = "\n".join(m.read_text(encoding="utf-8", errors="replace") for m in mods)
         proprios = [m for m in mods if (WEB / "js" / "base") not in m.parents]
-        texto_proprio[caminhos[0]] = "\n".join(m.read_text(encoding="utf-8", errors="replace") for m in proprios)
+        texto_prop = "\n".join(m.read_text(encoding="utf-8", errors="replace") for m in proprios)
+        for caminho in caminhos:
+            texto_da_tela[caminho] = texto
+            texto_proprio[caminho] = texto_prop
         for m in mods:
             modulo_para_telas[m].update(caminhos)
     todas = chamadas(arquivos)
