@@ -13,7 +13,7 @@ class PlatTexto extends PlatWidget {
     const bruto = substituirCampos(c.texto || '', this.feicao);
     if (c.formato === 'markdown') {
       // Markdown → HTML mínimo → DOMPurify (D23): script, on*, javascript: e afins nunca chegam ao DOM
-      const raiz = document.createElement('div'); raiz.className = 'plat-texto-rico';
+      const raiz = document.createElement('div'); raiz.className = 'plat-w-texto-rico';
       raiz.append(this.fragmentoSeguro(markdownParaHtml(bruto)));
       this.replaceChildren(raiz);
       return;
