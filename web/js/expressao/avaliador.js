@@ -541,7 +541,8 @@ const PROIBIDOS = new Set(['__proto__', 'prototype', 'constructor']);
 const EXT_ARIDADES = {Trim:[1,1],Left:[2,2],Right:[2,2],Mid:[2,3],Find:[2,3],Split:[2,2],Replace:[3,3],
   Floor:[1,1],Ceil:[1,1],Sqrt:[1,1],Weekday:[1,1],Decode:[4,null],Lista:[0,null],Contagem:[1,1],
   Primeiro:[1,1],Ultimo:[1,1],Obter:[2,3],Contem:[2,2],Soma:[1,1],Media:[1,1],Reverter:[1,1],Unicos:[1,1],Juntar:[1,2],
-  TextoNumero:[1,2],TextoData:[1,2]};
+  TextoNumero:[1,2],TextoData:[1,2],
+  Atributo:[2,3],Geometria:[1,1],Area:[1,1],Comprimento:[1,1],Distancia:[2,2],Dentro:[2,2]};
 Object.assign(TABELA_FUNCOES, EXT_ARIDADES);
 const possui = (o,k) => Object.prototype.hasOwnProperty.call(o,k);
 function falha(codigo='tipo_invalido') { throw new ErroExpressao(codigo,'valor ou operação fora do contrato'); }
@@ -636,6 +637,107 @@ function igualJson(a,b,contador) {
   return ka.length===kb.length && ka.every(k=>possui(b,k) && igualJson(a[k],b[k],contador));
 }
 function indice(a) { if(typeof a!=='number' || !Number.isInteger(a) || a<0) falha(); return a; }
+// ---- feição e geometria (item L5-11). Espelho EXATO de avaliador_py.py: GeoJSON (RFC 7946), grau
+// decimal WGS-84, longitude antes da latitude, esfera de raio autálico 6.371.008,8 m, mesma fórmula
+// fechada e mesmo arredondamento a CASAS_GEO casas — o portão exige o MESMO número nos dois lados, e
+// `sin`/`cos`/`asin` do V8 e da biblioteca do Python podem divergir no último bit.
+export const RAIO_TERRA_M = 6371008.8;
+export const CASAS_GEO = 6;
+const GRAU = Math.PI / 180.0;
+
+function coordenada(p) {
+  if(!Array.isArray(p) || p.length<2) falha('geometria_invalida');
+  const lon=p[0], lat=p[1];
+  if(!ehNumero(lon) || !ehNumero(lat)) falha('geometria_invalida');
+  if(!(lon>=-180.0 && lon<=180.0) || !(lat>=-90.0 && lat<=90.0)) falha('geometria_invalida');
+  return [lon, lat];
+}
+
+function coordenadasDe(g, tipo) {
+  if(!g || typeof g!=='object' || Array.isArray(g) || proprioOuNulo(g,'type')!==tipo) falha('geometria_invalida');
+  return proprioOuNulo(g,'coordinates');
+}
+
+function proprioOuNulo(o,k) { return possui(o,k)?proprio(o,k):null; }
+
+function linhaDe(coords, contador) {
+  if(!Array.isArray(coords) || coords.length<2) falha('geometria_invalida');
+  const pontos=[];
+  for(const p of coords) { contador.passo(); pontos.push(coordenada(p)); }
+  return pontos;
+}
+
+function anelDe(coords, contador) {
+  const pontos=linhaDe(coords, contador);
+  const a=pontos[0], b=pontos[pontos.length-1];
+  if(pontos.length<4 || a[0]!==b[0] || a[1]!==b[1]) falha('geometria_invalida');
+  return pontos;
+}
+
+function aneisDe(coords, contador) {
+  if(!Array.isArray(coords) || !coords.length) falha('geometria_invalida');
+  return coords.map(c=>anelDe(c, contador));
+}
+
+function areaDoAnel(pontos) {
+  let total=0.0;
+  for(let i=0;i<pontos.length-1;i++) {
+    const [lon1,lat1]=pontos[i], [lon2,lat2]=pontos[i+1];
+    total += (lon2-lon1)*GRAU*(Math.sin(lat1*GRAU)+Math.sin(lat2*GRAU));
+  }
+  return total*RAIO_TERRA_M*RAIO_TERRA_M/2.0;
+}
+
+function haversine(a,b) {
+  const [lon1,lat1]=a, [lon2,lat2]=b;
+  const sdlat=Math.sin((lat2-lat1)*GRAU/2.0), sdlon=Math.sin((lon2-lon1)*GRAU/2.0);
+  const h=sdlat*sdlat + Math.cos(lat1*GRAU)*Math.cos(lat2*GRAU)*sdlon*sdlon;
+  return 2.0*RAIO_TERRA_M*Math.asin(h<1.0?Math.sqrt(h):1.0);
+}
+
+function noSegmento(x,y,x1,y1,x2,y2) {
+  if((x-x1)*(y2-y1)-(y-y1)*(x2-x1) !== 0.0) return false;
+  return Math.min(x1,x2)<=x && x<=Math.max(x1,x2) && Math.min(y1,y2)<=y && y<=Math.max(y1,y2);
+}
+
+function pontoNoAnel(ponto, anel, contador) {
+  const [lon,lat]=ponto;
+  let dentro=false;
+  for(let i=0;i<anel.length-1;i++) {
+    contador.passo();
+    const [x1,y1]=anel[i], [x2,y2]=anel[i+1];
+    if(noSegmento(lon,lat,x1,y1,x2,y2)) return true;
+    if((y1>lat)!==(y2>lat)) {
+      if(lon < (x2-x1)*(lat-y1)/(y2-y1)+x1) dentro=!dentro;
+    }
+  }
+  return dentro;
+}
+
+function geoFuncao(nome,a,contador) {
+  if(nome==='Area') {
+    const aneis=aneisDe(coordenadasDe(a[0],'Polygon'), contador);
+    let area=Math.abs(areaDoAnel(aneis[0]));
+    for(let i=1;i<aneis.length;i++) area-=Math.abs(areaDoAnel(aneis[i]));
+    return arredondarNumero(area>0.0?area:0.0, CASAS_GEO);
+  }
+  if(nome==='Comprimento') {
+    const pontos=linhaDe(coordenadasDe(a[0],'LineString'), contador);
+    let total=0.0;
+    for(let i=0;i<pontos.length-1;i++) { contador.passo(); total+=haversine(pontos[i],pontos[i+1]); }
+    return arredondarNumero(total, CASAS_GEO);
+  }
+  if(nome==='Distancia') {
+    const p1=coordenada(coordenadasDe(a[0],'Point')), p2=coordenada(coordenadasDe(a[1],'Point'));
+    return arredondarNumero(haversine(p1,p2), CASAS_GEO);
+  }
+  const ponto=coordenada(coordenadasDe(a[0],'Point'));
+  const aneis=aneisDe(coordenadasDe(a[1],'Polygon'), contador);
+  if(!pontoNoAnel(ponto, aneis[0], contador)) return false;
+  for(let i=1;i<aneis.length;i++) if(pontoNoAnel(ponto, aneis[i], contador)) return false;
+  return true;
+}
+
 function extFuncao(nome,a,contador) {
   const [min,max]=EXT_ARIDADES[nome];
   if(a.length<min || (max!==null && a.length>max)) falha('aridade_invalida');
@@ -648,12 +750,27 @@ function extFuncao(nome,a,contador) {
     if(PROIBIDOS.has(k)) falha('campo_nao_permitido');
     return possui(c,k)?proprio(c,k):def;
   }
+  if(nome==='Atributo') {
+    const feicao=a[0], chave=a[1], def=a.length===3?a[2]:null;
+    if(feicao===null) return def;
+    if(!feicao || typeof feicao!=='object' || Array.isArray(feicao) || typeof chave!=='string') falha();
+    if(PROIBIDOS.has(chave)) falha('campo_nao_permitido');
+    const atributos=proprioOuNulo(feicao,'atributos');
+    if(atributos===null) return def;
+    if(typeof atributos!=='object' || Array.isArray(atributos)) falha();
+    return possui(atributos,chave)?proprio(atributos,chave):def;
+  }
   if(nome==='Contem') {
     if(a[0]===null) return null;
     if(!Array.isArray(a[0])) falha();
     return a[0].some(x=>igualJson(x,a[1],contador));
   }
   if(a.some(x=>x===null)) return null;
+  if(nome==='Geometria') {
+    if(!a[0] || typeof a[0]!=='object' || Array.isArray(a[0])) falha();
+    return proprioOuNulo(a[0],'geometria');
+  }
+  if(['Area','Comprimento','Distancia','Dentro'].includes(nome)) return geoFuncao(nome,a,contador);
   if(['Trim','Left','Right','Mid','Find','Split','Replace'].includes(nome)) {
     if(typeof a[0]!=='string') falha();
     const t=a[0], points=Array.from(t);
