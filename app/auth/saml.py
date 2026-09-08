@@ -56,8 +56,9 @@ from onelogin.saml2.settings import OneLogin_Saml2_Settings
 from pydantic import Field
 
 from app import db, limites
+from app.auth import provisionamento
 from app.auth.comum import apagar_cookie, erro_do_banco, registrar_evento
-from app.auth.ldap import PERFIS_VALIDOS, perfil_por_grupos
+from app.auth.ldap import PERFIS_VALIDOS
 from app.auth.modelos import Modelo, Saida
 from app.auth.oidc import _url_valida_https_ou_teste
 from app.auth.politica import politica_de
@@ -436,44 +437,32 @@ async def sso_saml_acs(request: Request, resposta: Response):
         raise _falha(request, f"login_fora_da_regra:{login[:40]!r}", "nameid_invalido")
     email = _texto_atributo(atributos, p["atributo_email"])
     nome = _texto_atributo(atributos, p["atributo_nome"]) or (email.split("@")[0] if email else login)
-    perfil = perfil_por_grupos(
-        _grupos(atributos, p["atributo_grupos"]), p["mapa_grupo_perfil"] or {}, p["perfil_padrao"]
-    )
-    if perfil is None:
-        request.state.resultado = "sem_grupo_mapeado"
-        raise ErroAPI(
-            403,
-            "sem_grupo_mapeado",
-            "nenhum grupo do provedor está mapeado para um perfil desta plataforma; fale com o administrador",
-        )
     sujeito_externo = f"{p['idp_entity_id']}#{name_id}"
+    # item L0-08-e: regras de provisionamento do provedor (mesmo laço do OIDC e do LDAP)
     try:
-        with db.db() as cur:
-            cur.execute(
-                "SELECT * FROM plat.usuario_externo_provisionar(%s, 'saml', %s, %s, %s, %s, %s, true)",
-                (p["tenant_id"], login, nome[:200], email, perfil, sujeito_externo),
-            )
-            prov = cur.fetchone()
-            cur.execute("SELECT * FROM plat.auth_login(%s, %s)", (p["tenant_slug"], login))
-            linha = cur.fetchone()
+        resultado = provisionamento.aplicar(
+            request, "saml", p["provedor_id"], p["tenant_id"], p["tenant_slug"], login, nome[:200], email,
+            _grupos(atributos, p["atributo_grupos"]), sujeito_externo, p["mapa_grupo_perfil"], p["perfil_padrao"],
+        )
     except psycopg2.errors.RaiseException as e:
         if (e.diag.message_primary or "").strip() == "login_em_uso_local":
             raise _falha(request, "login_em_uso_local", "login_em_uso_local") from e
         raise erro_do_banco(e) from e
     except psycopg2.Error as e:
         raise erro_do_banco(e) from e
-    if linha is None:
-        raise _falha(request, "provisionamento_sem_login_correspondente")
+    linha = resultado["linha"]
+    perfil = resultado["perfil"]
     ctx = db.Contexto(linha["tenant_id"], linha["usuario_id"], login)
     with db.db(ctx) as cur:
         registrar_evento(
             cur,
             request,
-            "usuarios/criar" if prov["criado"] else "usuarios/atualizar",
+            "usuarios/criar" if resultado["criado"] else "usuarios/atualizar",
             "usuario",
             linha["usuario_id"],
-            {"origem": "saml", "perfil": perfil, "perfil_anterior": prov["perfil_anterior"]},
+            {"origem": "saml", "perfil": perfil, "perfil_anterior": resultado["perfil_anterior"]},
         )
+        provisionamento.registrar_efeitos(cur, request, resultado, "saml", linha["usuario_id"])
     _abrir_sessao(
         request, resposta, ctx, linha["usuario_id"], politica_de(linha["config"], p["tenant_slug"]), "saml", None
     )
