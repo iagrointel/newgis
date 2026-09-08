@@ -531,6 +531,48 @@ CASOS: dict[tuple[str, str], Caso] = {
     # quando o alvo é de B (a rota lê a conexão pelo RLS de _carregar ANTES de qualquer efeito colateral).
     ("GET", "/api/conexoes/{id}/saude-historico"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/saude-historico"),
     ("POST", "/api/conexoes/{id}/publicar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar"),
+    # ---- L2-03-edicao e L2-01-mapa-web: rotas trazidas pelos ramos juntados neste worktree, que estavam sem
+    # caso porque o docs/openapi.json comitado naqueles ramos estava desatualizado. Todas recebem um item de B
+    # (mapa privado do admin de B): a checagem de acesso do item roda ANTES de qualquer coisa específica de
+    # camada, então A tem de receber 404 mesmo quando o tipo do item não é camada.
+    ("POST", "/api/camadas/{id}/edicoes"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/edicoes", lambda p: {"adicionar": []}
+    ),
+    ("POST", "/api/camadas/{id}/feicoes/unir"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/unir",
+        lambda p: {"ids": [UUID_NULO, UUID_NULO], "versoes": {UUID_NULO: 1}},
+    ),
+    ("POST", "/api/camadas/{id}/feicoes/dividir"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/dividir",
+        lambda p: {"id": UUID_NULO, "versao": 1, "ponto": [0.0, 0.0]},
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}"
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/historico"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/historico"
+    ),
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/historico/1/restaurar",
+        lambda p: {},
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/anexos"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/anexos"
+    ),
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/anexos",
+        lambda p: {"nome": f"{PREFIXO}anexo.png", "content_type": "image/png", "conteudo": "aGE="},
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"
+    ),
+    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"
+    ),
+    ("GET", "/api/mapa/camadas"): Caso(lambda p: "/api/mapa/camadas", proprio=True,
+                                       aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}"),
+    ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/tilejson"),
     # ---- L2-14-a: fonte de fluxo é do INQUILINO (tenant_id + RLS, mesma classe de conexão). O RECEPTOR de
     # evento não está aqui porque não é rota desta aplicação: vive no processo plat-fluxo, na porta 8155, e o
     # seu isolamento entre inquilinos é provado em tests/api/test_fluxo_receptor.py.
@@ -889,6 +931,11 @@ CASOS: dict[tuple[str, str], Caso] = {
     # nesta trilha), não vazamento — aceito ao lado de 200.
     ("POST", "/api/geocodificar"): Caso(
         lambda p: "/api/geocodificar", lambda p: {"endereco": "Avenida Paulista, São Paulo - SP"},
+        proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
+    ),
+    # o mesmo recurso pelo verbo de leitura (a caixa de pesquisa do mapa chama assim)
+    ("GET", "/api/geocodificar"): Caso(
+        lambda p: "/api/geocodificar?endereco=Avenida+Paulista,+S%C3%A3o+Paulo+-+SP",
         proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
     ),
     ("POST", "/api/reverso"): Caso(

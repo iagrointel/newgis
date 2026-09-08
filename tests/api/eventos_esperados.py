@@ -169,6 +169,15 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
     # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
     ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
+    # As cinco linhas abaixo são das rotas do item L2-03-edicao (histórico, anexos, unir e dividir): elas
+    # existem no código daquele ramo, mas o docs/openapi.json comitado lá estava desatualizado, então o teste
+    # não as via. Ao regerar o OpenAPI depois de juntar o ramo, elas apareceram sem declaração. Os nomes de
+    # evento vêm de app/edicao/{historico,anexos,combinar}.py e de db/migracoes/20260907T1025_*.sql.
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): ["camadas/restaurar"],
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): ["camadas/anexo_enviar"],
+    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): ["camadas/anexo_apagar"],
+    ("POST", "/api/camadas/{id}/feicoes/unir"): ["camadas/unir"],
+    ("POST", "/api/camadas/{id}/feicoes/dividir"): ["camadas/dividir"],
     # ---- painel: dados por fonte (L2-06-a). São LEITURAS agregadas feitas por POST (o corpo carrega o
     # conjunto de pedidos e o filtro, que não cabem em query string); não mudam nada, logo não narram evento.
     ("POST", "/api/itens/{item_id}/paineis/fontes/{fonte_id}/dados"): [],
