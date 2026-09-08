@@ -2,7 +2,7 @@
 agrupa todos os elementos que apontam para a MESMA fonte (`corpo.fontes[].id`) numa única leitura por ciclo de
 atualização — nunca uma consulta por elemento (cláusula do portão do L2-06-a e do adversário).
 
-Item L2-06-b: TODO NÚMERO vem do motor de agregação do L2-06-e (`app.estatistica.agregacao`), nunca de conta
+Item L2-06-b: cada número mostrado vem do motor de agregação do L2-06-e (`app.estatistica.agregacao`), nunca de conta
 no navegador e nunca de SQL próprio deste módulo — é a delegação que o docstring anterior deixou prometida
 ("quando o L2-06-e estiver na árvore principal, esta função pode passar a delegar a agregação inteira") e que
 o teste `test_paineis_elementos.py` confere contra SQL direto. O que este módulo ainda monta à mão é só o que
