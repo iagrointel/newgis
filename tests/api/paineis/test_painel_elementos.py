@@ -366,10 +366,12 @@ def camada_fronteira(conexao_plat_app, sessao_a):
     with conexao_plat_app.cursor() as cur:
         cur.execute("SET search_path = plat, public")
         cur.execute(f'DROP TABLE IF EXISTS "{schema}"."{tabela}" CASCADE')
-        # a política p_item_apagar é `false` de propósito: como plat_app não há DELETE em item — a casa
-        # apaga pela lixeira (apagado_em), e o expurgo físico é SECURITY DEFINER. A invariância do leitor
-        # (toda camada ATIVA do catálogo com função de tile) só enxerga apagado_em IS NULL.
-        cur.execute("UPDATE plat.item SET apagado_em = now() WHERE id = %s::uuid", (item_id,))
+        # nem DELETE nem UPDATE direto em plat.item: a política p_item_apagar é `false` de propósito
+        # e o item não tem política de UPDATE para plat_app — a casa apaga pela lixeira, e a função
+        # plat.item_lixeira é SECURITY DEFINER justamente para isso. A invariância do leitor (toda
+        # camada ATIVA do catálogo com função de tile) só enxerga apagado_em IS NULL.
+        cur.execute("SELECT plat.item_lixeira(%s::uuid, true) AS ok", (item_id,))
+        assert cur.fetchone()["ok"] is True, "lixeira recusou o item da fixture"
     conexao_plat_app.commit()
 
 
