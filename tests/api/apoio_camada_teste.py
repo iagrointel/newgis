@@ -1,19 +1,45 @@
 """Duas camadas vetoriais do inquilino, criadas do jeito que a plataforma as tem depois de uma importação:
-uma tabela no schema de dado do inquilino (`d_<slug>`) e um item `camada_vetorial` no catálogo apontando para
-ela. Apoio dos testes da rede simples (item L4-18-rede-simples-trace-network) — a rede simples nasce de
-camadas do inquilino, então o teste precisa de camadas de verdade, não de um atalho por dentro.
+uma tabela num schema de dado e um item `camada_vetorial` no catálogo apontando para ela. Apoio dos testes da
+rede simples (item L4-18-rede-simples-trace-network) — a rede simples nasce de camadas do inquilino, então o
+teste precisa de camadas de verdade, não de um atalho por dentro.
 
-⛔ O schema `d_demo` é COMPARTILHADO entre as trilhas desta sessão (só as trilhas que já têm a migração de
-prefixo por trilha escrevem em `d_<trilha>_<slug>`). Por isso as tabelas daqui têm nome fixo com prefixo do
-item (`zt_l418_*`), são recriadas por `CREATE TABLE IF NOT EXISTS` + `TRUNCATE`, e NADA que não tenha esse
-prefixo é apagado."""
+A bancada nasce no schema de dado da PRÓPRIA instalação (`PLAT_SCHEMA_TRABALHO` do ambiente da trilha; nas
+árvores que já têm o isolamento por instalação esse é o schema com o prefixo da instalação). Antes ela nascia
+no `d_demo`, compartilhado entre as trilhas: a primeira trilha a rodar virava dona das tabelas e todas as
+outras recebiam `permission denied`. Cada trilha agora escreve no seu schema, e o `apagar_tabelas` do teardown
+só apaga tabela com o prefixo do item dentro desse schema — o `d_demo` de outras trilhas nunca é tocado.
+"""
 
 import os
+import re
 
 import psycopg2
 import psycopg2.extras
 
 PREFIXO_TABELA = "zt_l418_"
+SCHEMA_COMPARTILHADO = "d_demo"
+SCHEMA_TRABALHO_PADRAO = "plat_trabalho"
+NOME_SCHEMA = re.compile(r"^[a-z_][a-z0-9_]*$")
+
+
+def schema_dado() -> str:
+    """O schema de dado desta instalação: `PLAT_SCHEMA_TRABALHO` (ambiente do processo ou `.env`), com o
+    mesmo padrão que `tests/api/semear_catalogo.py` usa. Cada trilha tem o seu, então duas trilhas não
+    disputam a dona da mesma tabela; o schema compartilhado nunca é devolvido."""
+    from tests.conftest import valores_env
+
+    schema = (valores_env().get("PLAT_SCHEMA_TRABALHO") or SCHEMA_TRABALHO_PADRAO).strip()
+    assert NOME_SCHEMA.match(schema) and schema != SCHEMA_COMPARTILHADO, schema
+    return schema
+
+
+def apagar_tabelas(con, schema: str, tabelas: list[str]) -> None:
+    """Teardown da bancada. Só apaga dentro do schema da própria instalação e só o que tem o prefixo do item."""
+    assert schema != SCHEMA_COMPARTILHADO, "nunca apagar tabela no schema compartilhado"
+    with con.cursor() as cur:
+        for tabela in tabelas:
+            assert tabela.startswith(PREFIXO_TABELA)
+            cur.execute(f'DROP TABLE IF EXISTS "{schema}"."{tabela}"')
 
 
 def conexao():
