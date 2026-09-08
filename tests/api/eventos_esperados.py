@@ -164,4 +164,16 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # --- formulário de coleta (L2-07-b)
     ("POST", "/api/formularios/xlsform"): ["formularios/importar"],
     ("POST", "/api/formularios/{id}/respostas"): ["formularios/responder", "camadas/editar"],
+    # L2-03-edicao: as rotas de edição de feição vieram no mesmo ramo do L2-07-b e ainda não estavam
+    # declaradas aqui (o docs/openapi.json do ramo não tinha sido regerado, então o teste não as via).
+    ("POST", "/api/camadas/{id}/feicoes/unir"): ["camadas/unir"],
+    ("POST", "/api/camadas/{id}/feicoes/dividir"): ["camadas/dividir"],
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): ["camadas/restaurar"],
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): ["camadas/anexo_enviar"],
+    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): ["camadas/anexo_apagar"],
+    # L2-07-e (ponte ODK Central): publicar registra `odk/publicar`; sincronizar registra `odk/sincronizar` e,
+    # por dentro, os mesmos eventos que uma resposta de formulário registra (a escrita é a mesma porta).
+    ("POST", "/api/odk/pontes"): ["odk/publicar"],
+    ("POST", "/api/odk/pontes/{id}/sincronizar"): ["odk/sincronizar", "formularios/responder", "camadas/editar",
+                                                   "camadas/anexo_enviar"],
 }

@@ -918,6 +918,56 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/formularios/{id}/respostas"): Caso(
         lambda p: f"/api/formularios/{p.item_b['id']}/respostas", lambda p: {"valores": {}},
     ),
+    # --- rotas que chegaram nos ramos juntados como dependência deste item (L2-01-mapa, L2-03-edicao,
+    # L2-11-b) e ainda não tinham caso porque o `docs/openapi.json` daqueles ramos não fora regerado. O
+    # vetor é sempre o mesmo: A aponta um id de B (aqui o item de B) e a camada não existe para A -> 404.
+    ("GET", "/api/mapa/camadas"): Caso(lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}),
+                                       verificar=_sem_marca),
+    ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}"),
+    ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/tilejson"),
+    ("GET", "/api/geocodificar"): Caso(lambda p: "/api/geocodificar?endereco=Avenida+Paulista", proprio=True,
+                                       aceita=frozenset({200, 422}), verificar=_sem_marca),
+    ("POST", "/api/camadas/{id}/edicoes"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/edicoes", lambda p: {"adicionar": []}),
+    ("POST", "/api/camadas/{id}/feicoes/unir"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/unir",
+        lambda p: {"ids": [UUID_NULO, UUID_NULO], "versoes": {UUID_NULO: 1}}),
+    ("POST", "/api/camadas/{id}/feicoes/dividir"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/dividir",
+        lambda p: {"id": UUID_NULO, "versao": 1, "ponto": [-46.6, -23.5]}),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}"),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/historico"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/historico"),
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/historico/1/restaurar",
+        lambda p: {}),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/anexos"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/anexos"),
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/anexos",
+        lambda p: {"nome": "x.png", "content_type": "image/png", "conteudo": "AAAA"}),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"),
+    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"),
+    # --- ponte com o ODK Central (L2-07-e): a ponte é do inquilino (RLS); A não lista nem toca a de B. Não há
+    # ponte de B na preparação de propósito: criar uma exigiria publicar num Central de verdade (que não existe
+    # nesta máquina) — o id apontado é o do item de B, que para A é 404 igual, e a listagem de A é conferida
+    # com `_sem_marca` (nada de B aparece nela).
+    ("GET", "/api/odk/pontes"): Caso(lambda p: "/api/odk/pontes", proprio=True, aceita=frozenset({200}),
+                                     verificar=_sem_marca),
+    ("POST", "/api/odk/pontes"): Caso(
+        lambda p: "/api/odk/pontes",
+        lambda p: {"conexao": p.conexao_b["id"], "formulario": p.item_b["id"], "projeto": 1, "conteudo": "AAAA"},
+    ),
+    ("GET", "/api/odk/pontes/{id}"): Caso(lambda p: f"/api/odk/pontes/{p.item_b['id']}"),
+    ("POST", "/api/odk/pontes/{id}/sincronizar"): Caso(
+        lambda p: f"/api/odk/pontes/{p.item_b['id']}/sincronizar", lambda p: None,
+    ),
+    ("GET", "/api/odk/pontes/{id}/entidades/{dataset}"): Caso(
+        lambda p: f"/api/odk/pontes/{p.item_b['id']}/entidades/municipios",
+    ),
 }
 
 
