@@ -27,13 +27,13 @@ FABRICA = "CursorSchemaAmbiente"
 # Exceção = arquivo:função onde a conexão NÃO precisa da fábrica, com o motivo. Só entra aqui quem não
 # manda SQL com nome de objeto do schema da plataforma. Acrescentar linha sem motivo é reprovar a trava.
 EXCECOES_DECLARADAS: dict[str, str] = {
-    # os dois scripts abaixo são conferência INDEPENDENTE e publicação operada à mão, sempre com o schema
-    # escrito no comando pelo operador; passam a usar a fábrica assim que alguém os rodar em base de trilha.
-    "scripts/acervo_publicar.py:publicar": "publicação do acervo: o schema entra por argumento (--schema) e é escrito na consulta pelo próprio "
-                                    "script; a reescrita por cima trocaria o nome duas vezes",
-    "scripts/amc_hash_independente.py:conferir_banco": "conferência INDEPENDENTE do hash: usa RealDictCursor de propósito, "
-                                           "para não depender do mesmo cursor que o produto usa, e fixa o "
-                                           "schema com SET search_path",
+    # os dois scripts abaixo fixam o schema por conta própria: um recebe `--schema` e escreve o nome na consulta,
+    # o outro faz `SET search_path`. A reescrita por cima trocaria o nome duas vezes.
+    "scripts/acervo_publicar.py:publicar":
+        "publicação do acervo: o schema entra por argumento e é escrito na consulta pelo próprio script",
+    "scripts/amc_hash_independente.py:conferir_banco":
+        "conferência INDEPENDENTE do hash: usa RealDictCursor de propósito, para não depender do mesmo cursor "
+        "que o produto usa, e fixa o schema com SET search_path",
 }
 
 
