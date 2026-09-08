@@ -225,3 +225,18 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `EDICAO_REGRA_CAMPO_MAX` | `500` | entradas em dados.regras_campo (mesmo teto de campos da camada) |
 | `EDICAO_DOMINIO_VALORES_MAX` | `1000` | valores aceitos por regra de domínio codificado |
 | `EDICAO_SRID_MAX` | `999999` | mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql) |
+## grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
+
+| nome | valor | explicação |
+|---|---|---|
+| `ESCALA_AREA_VERTICES_MAX` | `5000` | vértices do polígono de estudo (mesma ordem de grandeza de INGESTAO_*) |
+| `ESCALA_RESOLUCAO_MIN_M` | `1.0` | — |
+| `ESCALA_RESOLUCAO_MAX_M` | `100000.0` | — |
+| `ESCALA_CELULAS_MAX` | `250000` | — |
+| `ESCALA_FATORES_MAX` | `20` | — |
+| `ESCALA_LIGACOES_MAX` | `2000000` | — |
+| `ESCALA_APROVACAO_TIPOS` | `('limiar', 'top_pct')` | — |
+| `ESCALA_NOME_MAX` | `200` | mesmo teto de CHECK(length(nome)<=200) da migração |
+| `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
+| `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
+| `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |

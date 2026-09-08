@@ -5,6 +5,7 @@ miniatura_job_s); tipo sem gerador 409; adaptador de objetos grava/lê/apaga e a
 
 import base64
 import io
+import os
 import resource
 import struct
 import time
@@ -15,6 +16,9 @@ from PIL import Image
 
 from tests.api.catalogo.conftest import esperar_job, titulo_zt
 from tests.api.test_rls import contexto, ids_por_slug
+
+# 07/09: a base por trilha reescreve só o texto SQL, não o metadado do item
+_TRAB = os.environ.get("PLAT_SCHEMA_TRABALHO", "plat_trabalho")
 
 ITEM = "L0-03-catalogo"
 
@@ -116,7 +120,7 @@ def test_job_de_camada_semeada(sessao_a, itens_a, conexao_plat_app, medida, work
     it = itens_a.criar(
         "camada_vetorial",
         dados={
-            "schema": "plat_trabalho",
+            "schema": _TRAB,
             "tabela": tabela,
             "geometria": "Polygon",
             "srid": 4326,
