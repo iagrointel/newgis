@@ -1,0 +1,26 @@
+{
+  "barreira": true,
+  "chave_aberta_interrompe_travessia": true,
+  "frontend_clique_tabela_e2e": "NAO_CUMPRIDA: nao existe front-end de rede de utilidades no repositorio (sem web/ sob rede_utilidades) para acoplar clique, tabela lateral e captura e2e; a API do item esta completa e testada",
+  "loop_nao_duplica_e_termina": true,
+  "p95_tracar_maior_alimentador": {
+    "carga_1min": 18.24,
+    "medido": false,
+    "motivo": "carga_1min=18.24 acima de 8 (regra do brief: não medir tempo sob disputa)",
+    "ram_livre_gb": 7.0
+  },
+  "pgrouting_instalada": true,
+  "ponto_de_partida_por_coordenada": true,
+  "ponto_de_partida_por_terminal_explicito": true,
+  "rede_sintetica_12_nos": {
+    "conectado_elementos": 9,
+    "conectado_nos": 6,
+    "subrede_elementos": 6,
+    "subrede_nos": 4
+  },
+  "transformador_e_fronteira_de_subrede": true,
+  "tres_clientes_simultaneos": {
+    "medido": false,
+    "motivo": "carga_1min=18.24 acima de 8 (regra do brief: não medir sob disputa)"
+  }
+}
