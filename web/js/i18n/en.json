@@ -1687,7 +1687,7 @@
   "ldap.desabilitado": "disabled",
   "ldap.campo_habilitado": "directory sign-in enabled",
   "ldap.url": "server (ldap:// or ldaps://)",
-  "ldap.url_ajuda": "empty uses the installation server, if any",
+  "ldap.url_ajuda": "empty uses the installation server, if any (for example ldaps://directory.example:636)",
   "ldap.base_dn": "search base (base DN)",
   "ldap.start_tls": "start TLS (StartTLS) on ldap:// connections",
   "ldap.bind_dn": "service account (bind DN)",
@@ -1714,5 +1714,7 @@
   "ldap.importar_ok": "group read: {encontrados} found; {criados} created, {ja_existentes} already existed, {recusados} refused",
   "ldap.importar_sem_configuracao": "configure and enable the directory before importing a group",
   "ldap.importar_indisponivel": "the directory did not answer; check server, base and service account",
-  "ldap.importar_negado": "your account lacks the integrations privilege to import groups"
+  "ldap.importar_negado": "your account lacks the integrations privilege to import groups",
+  "ldap.base_dn_ajuda": "for example dc=example,dc=local",
+  "ldap.grupo_dn_ajuda": "for example cn=team,ou=groups,dc=example,dc=local"
 }

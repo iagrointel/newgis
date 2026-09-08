@@ -1687,7 +1687,7 @@
   "ldap.desabilitado": "desabilitado",
   "ldap.campo_habilitado": "login pelo diretório habilitado",
   "ldap.url": "servidor (ldap:// ou ldaps://)",
-  "ldap.url_ajuda": "vazio usa o servidor da instalação, se houver",
+  "ldap.url_ajuda": "vazio usa o servidor da instalação, se houver (por exemplo ldaps://diretorio.exemplo:636)",
   "ldap.base_dn": "base de busca (base DN)",
   "ldap.start_tls": "iniciar TLS (StartTLS) na conexão ldap://",
   "ldap.bind_dn": "conta de serviço (bind DN)",
@@ -1714,5 +1714,7 @@
   "ldap.importar_ok": "grupo lido: {encontrados} encontrado(s); {criados} criado(s), {ja_existentes} já existia(m), {recusados} recusado(s)",
   "ldap.importar_sem_configuracao": "configure e habilite o diretório antes de importar um grupo",
   "ldap.importar_indisponivel": "o diretório não respondeu; confira servidor, base e conta de serviço",
-  "ldap.importar_negado": "a sua conta não tem o privilégio de integrações para importar grupos"
+  "ldap.importar_negado": "a sua conta não tem o privilégio de integrações para importar grupos",
+  "ldap.base_dn_ajuda": "por exemplo dc=exemplo,dc=local",
+  "ldap.grupo_dn_ajuda": "por exemplo cn=equipe,ou=grupos,dc=exemplo,dc=local"
 }

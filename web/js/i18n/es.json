@@ -1687,7 +1687,7 @@
   "ldap.desabilitado": "deshabilitado",
   "ldap.campo_habilitado": "acceso por el directorio habilitado",
   "ldap.url": "servidor (ldap:// o ldaps://)",
-  "ldap.url_ajuda": "vacío usa el servidor de la instalación, si existe",
+  "ldap.url_ajuda": "vacío usa el servidor de la instalación, si existe (por ejemplo ldaps://directorio.ejemplo:636)",
   "ldap.base_dn": "base de búsqueda (base DN)",
   "ldap.start_tls": "iniciar TLS (StartTLS) en la conexión ldap://",
   "ldap.bind_dn": "cuenta de servicio (bind DN)",
@@ -1714,5 +1714,7 @@
   "ldap.importar_ok": "grupo leído: {encontrados} encontrado(s); {criados} creado(s), {ja_existentes} ya existía(n), {recusados} rechazado(s)",
   "ldap.importar_sem_configuracao": "configure y habilite el directorio antes de importar un grupo",
   "ldap.importar_indisponivel": "el directorio no respondió; revise servidor, base y cuenta de servicio",
-  "ldap.importar_negado": "su cuenta no tiene el privilegio de integraciones para importar grupos"
+  "ldap.importar_negado": "su cuenta no tiene el privilegio de integraciones para importar grupos",
+  "ldap.base_dn_ajuda": "por ejemplo dc=ejemplo,dc=local",
+  "ldap.grupo_dn_ajuda": "por ejemplo cn=equipo,ou=grupos,dc=ejemplo,dc=local"
 }

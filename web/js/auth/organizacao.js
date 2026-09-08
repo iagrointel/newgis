@@ -343,8 +343,8 @@ function montarLdap() {
   f.hidden = false;
   f.campos = [
     { nome: 'habilitado', rotulo: t('ldap.campo_habilitado'), tipo: 'caixa', padrao: s ? s.habilitado : false },
-    { nome: 'url', rotulo: t('ldap.url'), tipo: 'texto', padrao: s?.url || '', ajuda: t('ldap.url_ajuda'), atributos: { maxlength: 250, placeholder: 'ldaps://diretorio.exemplo:636' } },
-    { nome: 'base_dn', rotulo: t('ldap.base_dn'), tipo: 'texto', padrao: s?.base_dn || '', atributos: { maxlength: 250, placeholder: 'dc=exemplo,dc=local' } },
+    { nome: 'url', rotulo: t('ldap.url'), tipo: 'texto', padrao: s?.url || '', ajuda: t('ldap.url_ajuda'), atributos: { maxlength: 250 } },
+    { nome: 'base_dn', rotulo: t('ldap.base_dn'), tipo: 'texto', padrao: s?.base_dn || '', ajuda: t('ldap.base_dn_ajuda'), atributos: { maxlength: 250 } },
     { nome: 'start_tls', rotulo: t('ldap.start_tls'), tipo: 'caixa', padrao: s ? s.start_tls : true },
     { nome: 'bind_dn', rotulo: t('ldap.bind_dn'), tipo: 'texto', padrao: s?.bind_dn || '', ajuda: t('ldap.bind_dn_ajuda'), atributos: { maxlength: 250, autocomplete: 'off' } },
     { nome: 'bind_senha', rotulo: t(s?.tem_bind_senha ? 'ldap.bind_senha_trocar' : 'ldap.bind_senha'), tipo: 'senha', padrao: '', ajuda: s?.tem_bind_senha ? t('ldap.bind_senha_ajuda') : '', atributos: { maxlength: 250, autocomplete: 'new-password' } },
@@ -389,7 +389,7 @@ function montarImportar() {
   mostrarImportar(true);
   const f = document.getElementById('form-ldap-importar');
   f.campos = [
-    { nome: 'grupo_dn', rotulo: t('ldap.grupo_dn'), tipo: 'texto', obrigatorio: true, padrao: '', atributos: { maxlength: 250, placeholder: 'cn=equipe,ou=grupos,dc=exemplo,dc=local' } },
+    { nome: 'grupo_dn', rotulo: t('ldap.grupo_dn'), tipo: 'texto', obrigatorio: true, padrao: '', ajuda: t('ldap.grupo_dn_ajuda'), atributos: { maxlength: 250 } },
     { nome: 'atributo_membro', rotulo: t('ldap.atributo_membro'), tipo: 'texto', obrigatorio: true, padrao: 'member', atributos: { maxlength: 64 } },
     { nome: 'atributo_login', rotulo: t('ldap.atributo_login'), tipo: 'texto', obrigatorio: true, padrao: 'uid', atributos: { maxlength: 64 } },
     { nome: 'perfil', rotulo: t('ldap.perfil'), tipo: 'select', padrao: 'visualizador', opcoes: opcoesPerfilLdap(false) },
