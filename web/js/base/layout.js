@@ -11,6 +11,8 @@ export const TELAS = [
   { caminho: '/conteudo', chave: 'nav.conteudo' },
   { caminho: '/mapa', chave: 'nav.mapa' },
   { caminho: '/conexoes', chave: 'nav.conexoes' },
+  // --- motor multicritério, presets (L3-01-h-presets); exige o privilégio da análise
+  { caminho: '/amc/presets', chave: 'nav.amc_presets', privilegio: 'analise.amc' },
   { caminho: '/uploads', chave: 'nav.uploads', privilegio: 'conteudo.criar' },
   { caminho: '/conta', chave: 'nav.conta' },
   { caminho: '/admin/usuarios', chave: 'nav.usuarios', privilegio: 'membros.ver' },
