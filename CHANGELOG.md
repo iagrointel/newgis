@@ -3,6 +3,31 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L2-04-k-sync-replicas-esri: createReplica/synchronizeReplica/extractChanges/unRegisterReplica no protocolo Esri)
+
+As quatro operações de sincronização do FeatureServer (`app/consulta/rotas_sync_esri.py`, montadas em
+`/rest/services/{item_id}/FeatureServer/*`) são uma FACHADA sobre o mecanismo de réplica do L2-13-b
+(`app/replica/servico.py`) — nenhum relógio novo, nenhum pacote novo: o mesmo `plat.feicao_historico`
+como relógio, o mesmo ponteiro `geracao_servidor` por camada, o mesmo GeoPackage por ogr. O cliente
+Field Maps fala de camada "0"; a fachada aceita "0" E o uuid de qualquer outra camada do inquilino na
+mesma réplica (extensão declarada em `docs/PARIDADE.md`), aplica as edições pela porta única
+`app.edicao.servico` (versão otimista obrigatória por update, conflito de réplica concorrente resolvido
+pela política da réplica, update de feição apagada é conflito e nunca insert silencioso) e deriva a
+idempotência de `esri-sinc:{replica_id}:{replicaClientGen}` sobre o `UNIQUE(replica_id, idempotencia)`
+do L2-13-b — a repetição devolve a resposta guardada com `repetida=true` e aplica zero mudança.
+`extractChanges` lê a janela SEM adiantar o ponteiro; `unRegisterReplica` apaga pelo mesmo
+`servico.apagar` da casa. O job assíncrono (`async=true` → `jobId`/`statusUrl`) usa a fila do L0-05 e o
+teste prova os três estados `esriJobSubmitted/Executing/Succeeded` pelas FUNÇÕES DO WORKER de produção
+(`plat.job_pegar`/`plat.job_terminar` com `PLAT_DSN_WORKER`), não por forjamento de linha. Os
+descritores do serviço e da camada (`rotas_servico.py`) passam a anunciar `Sync`/`syncCapabilities` —
+só o que existe, sem anunciar Create/Update/Delete/Uploads.
+
+Medidas em `tests/medidas/L2-04-k-sync-replicas-esri.json`: createReplica síncrono de 200 feições em
+0,35 s (carga de 1 min 3,07 registrada no comando). 14 testes em `tests/api/test_sync_esri.py`, todos
+passando. Cláusula do portão NÃO feita e nomeada lá: Field Maps/ArcGIS Pro reais sincronizando
+(decisão D20 do dono — não há licença Esri nesta máquina). Registro triplo das 8 rotas novas no mesmo
+commit (cruzado_casos, eventos_esperados, openapi_extra).
+
 ## turno 4, setembro de 2026 (item L2-04-d-featureserver-edicao-anexos: escrita pelo protocolo Esri sobre a porta única)
 
 `applyEdits` (na camada e no serviço), `addFeatures`/`updateFeatures`/`deleteFeatures`, `calculate`, os seis
