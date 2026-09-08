@@ -14,12 +14,10 @@ import json
 import threading
 import time
 
-import psycopg2
 import pytest
 
 from app import limites
 from app.db import Contexto
-from app.schema_ambiente import CursorSchemaAmbiente
 from app.vivo import eventos as mod
 from tests.api.test_rls import ids_por_slug
 from tests.api.vivo.conftest import conectar_como, tabela_fisica
@@ -93,13 +91,16 @@ def _editar(env, camada: dict, atraso_s: float = 0.0, linhas: int | None = None)
     marca = {}
     if atraso_s:
         time.sleep(atraso_s)
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
+    # com o contexto de inquilino: a tabela física da camada tem RLS, e sem contexto o UPDATE toca ZERO
+    # linhas em silêncio (o gatilho é por COMANDO e dispararia do mesmo jeito — o teste passaria medindo
+    # uma edição que nunca aconteceu)
+    con = conectar_como(env, camada["slug"])
     try:
         with con.cursor() as cur:
             alvo = "" if linhas is None else f" WHERE fid IN (SELECT fid FROM \"{schema}\".\"{tabela}\" LIMIT {linhas})"
+            marca["em"] = time.monotonic()
             cur.execute(f'UPDATE "{schema}"."{tabela}" SET valor = valor{alvo}')
-        marca["em"] = time.monotonic()
-        con.commit()
+            assert cur.rowcount > 0, "a edição tocou zero linhas (contexto de inquilino ausente?)"
         marca["em"] = time.monotonic()
     finally:
         con.close()
@@ -184,7 +185,7 @@ def test_update_chega_ao_cliente_assinado_em_ate_um_segundo(ctx_a, camada_a, env
     assert quadro["id"] and quadro["id"].isdigit(), quadro["id"]
     latencia = quadro["chegou_em"] - marca["em"]
     assert latencia <= 1.0, f"evento levou {latencia:.3f}s (cláusula do portão: <= 1 s)"
-    medida(ITEM)("latencia_commit_ate_evento_s", round(latencia, 3), "s",
+    medida(ITEM)("latencia_commit_ate_evento_s", round(latencia, 4), "s",
                  "do COMMIT do UPDATE na tabela da camada até o quadro SSE chegar ao consumidor "
                  "(um assinante, uma camada, gerador lido no mesmo processo)")
 

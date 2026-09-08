@@ -46,6 +46,9 @@ async function iniciar() {
   const marcador = el('painel-atualizado');
   const assinar = (camadas, aoMudar, op) => assinarCamadas(camadas, aoMudar, {
     aoIndisponivel: () => { porIntervalo = true; op.aoIndisponivel(); },
+    // marca no DOM que o fluxo está de pé: quem dá suporte (e o teste de tela) consegue distinguir
+    // "painel vivo" de "painel que só carregou uma vez"
+    aoVivo: () => { marcador.dataset.vivo = '1'; },
   });
   const aoAtualizar = (data) => {
     marcador.hidden = false;

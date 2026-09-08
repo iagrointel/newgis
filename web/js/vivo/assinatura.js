@@ -21,7 +21,8 @@ export const ATRASO_MS = 1000;
 /**
  * @param {string[]} camadas ids das camadas a assinar (o servidor recusa acima do teto declarado)
  * @param {(camadasMudadas: Set<string>) => void} aoMudar chamado no máximo uma vez por janela
- * @param {{aoIndisponivel?: () => void, atrasoMs?: number, criarFonte?: (url: string) => EventSource}} opcoes
+ * @param {{aoIndisponivel?: () => void, aoVivo?: (reconexao: boolean) => void, atrasoMs?: number,
+ *          criarFonte?: (url: string) => EventSource}} opcoes
  * @returns {{fechar: () => void, disponivel: () => boolean}}
  */
 export function assinarCamadas(camadas, aoMudar, opcoes = {}) {
@@ -61,7 +62,15 @@ export function assinarCamadas(camadas, aoMudar, opcoes = {}) {
   const url = `/api/eventos/camadas?camadas=${unicas.map(encodeURIComponent).join(',')}`;
   fonte = criarFonte(url);
 
-  fonte.addEventListener('pronto', () => { vivo = true; });
+  fonte.addEventListener('pronto', () => {
+    const reconexao = vivo;
+    vivo = true;
+    if (opcoes.aoVivo) opcoes.aoVivo(reconexao);
+    // RECONEXÃO: entre a queda e a volta pode ter passado edição que o Last-Event-ID não alcança (a janela
+    // de retenção do servidor é curta). Em vez de fingir que nada mudou, a volta marca todas as camadas
+    // assinadas como sujas — uma consulta por fonte, uma vez, contra um painel que poderia estar mentindo.
+    if (reconexao) for (const c of unicas) acumular(c);
+  });
   fonte.addEventListener('camada', (ev) => {
     let dados;
     try {
