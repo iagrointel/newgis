@@ -3,6 +3,23 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## codex cx1, setembro de 2026 (item L2-01-i-graficos-de-camada: cinco gráficos por camada agregados no servidor, clique que seleciona no mapa)
+
+`POST /api/camadas/{id}/grafico` ao lado da rota de estatísticas do L2-06-e (mesmo item, colunas, filtro,
+extensão e cache; `compilar_filtro` passou a ser partilhado): barras/pizza com N maiores + `outros` calculado
+na mesma consulta, linha por faixa de data pelo motor do L2-06-e, histograma com bordas de `numpy.histogram`
+reproduzidas em float8 no Postgres (`width_bucket` nas bordas; contagens e bordas idênticas nos testes),
+dispersão com `regr_*` sobre todas as linhas e amostra por `TABLESAMPLE` (reta igual à do `numpy.polyfit` a
+1e-6), e `contagem` para a seleção. Achado de desempenho com migração própria: a política de RLS
+`tenant_id = plat.tenant_atual()` impedia varredura paralela em toda camada hospedada (função PARALLEL UNSAFE
+por padrão) — o histograma de 1 mi de pontos levava 551 ms; com `20260908T0100_funcoes_contexto_parallel_safe`
+os cinco pedidos do portão ficam entre 72 e 168 ms p95 (`tests/medidas/L2-01-i-graficos-de-camada.json`).
+No visualizador: bloco "Gráficos" e botão ▥ na árvore, SVG próprio puro (`grafico_svg.js`, árvore convertida por
+`createElementNS`, ≤ 40 kB nos piores casos por tetos de desenho), tabela oculta e CSV dos mesmos dados, PNG por
+canvas, guardado por camada em localStorage, clique que seleciona no mapa (filtro SQL-92 para a contagem no
+servidor + expressão MapLibre numa camada de destaque). Testes: 31 de API, 16 unitários no node, 6 e2e com 12
+capturas.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
