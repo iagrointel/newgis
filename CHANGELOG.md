@@ -3,6 +3,18 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L0-11-arquivos-objetos: /saude marca o Garage como obrigatório — achado G4-19)
+
+Faltava uma cláusula do portão do L0-11: `/saude` decidia o status HTTP só pelo banco, então instalação
+com o Garage inalcançável continuava 200 "saudável" (`servicos["garage"] == "erro"` e tudo).
+`app/saude.py` agora responde 503 quando um serviço de `OBRIGATORIOS = ("garage",)` está configurado e
+não responde, declara a lista no corpo (`servicos_obrigatorios`) e a fronteira fica no ADR
+20260908T2125: sem `PLAT_GARAGE_URL` configurada o sonda fica "ausente" e não derruba o 200 (modo de
+desenvolvimento sem objetos); martin/titiler/worker continuam informativos. O teste adversarial
+`test_saude_reprova_quando_o_garage_esta_fora` saiu de `xfail(strict=True)` para portão em pé, com
+teste complementar da fronteira (`test_saude_200_quando_garage_ausente`) e o contrato do corpo
+atualizado em `tests/api/test_saude.py`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
