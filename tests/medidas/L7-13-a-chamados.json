@@ -1,0 +1,12 @@
+{
+ "item": "L7-13-a-chamados",
+ "medidas": {
+  "pagina_pronta_ms_chamados": {
+   "valor": 123.2,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] (tests/e2e/apoio.py Tela.ir)"
+  }
+ },
+ "gerado_em": "2026-09-08T23:23:22Z",
+ "git_sha": "610896979710"
+}
