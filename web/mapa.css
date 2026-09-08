@@ -138,3 +138,15 @@ body.mapa #edicao-painel .campo input, body.mapa #edicao-painel .campo select { 
 body.mapa .edicao-erros { list-style: none; margin: 0 0 .3rem; padding: 0; color: var(--erro, #c0392b); font-size: .75rem; }
 body.mapa .edicao-historico, body.mapa .edicao-anexos { list-style: none; margin: 0; padding: 0; font-size: .75rem; display: flex; flex-direction: column; gap: .2rem; }
 body.mapa .botao.pequeno, body.mapa .botao.secundario.pequeno { font-size: .68rem; padding: .15rem .35rem; }
+
+/* edição em lote (item L2-03-f) */
+body.mapa #edicao-lote { border-top: 1px solid var(--borda, #ddd); margin-top: var(--e2); padding-top: var(--e2); }
+body.mapa #edicao-lote h3 { font-size: .85rem; margin: 0 0 var(--e1); }
+body.mapa #edicao-lote textarea, body.mapa #edicao-lote input[type=text], body.mapa #edicao-lote select { font-size: .8rem; width: 100%; box-sizing: border-box; }
+body.mapa .lote-selecao { border: 0; padding: 0; margin: 0 0 var(--e2); display: flex; flex-direction: column; gap: .15rem; font-size: .8rem; }
+body.mapa .lote-selecao legend { font-size: .8rem; color: var(--fraco); padding: 0; }
+body.mapa .lote-radio { display: flex; gap: .3rem; align-items: center; }
+body.mapa .lote-tabela { border-collapse: collapse; font-size: .72rem; width: 100%; }
+body.mapa .lote-tabela th, body.mapa .lote-tabela td { text-align: left; padding: .1rem .3rem; border-bottom: 1px solid var(--borda, #ddd); word-break: break-word; }
+body.mapa .lote-tabela tr.erro td { color: var(--erro, #c0392b); }
+body.mapa .lote-tabela td.mono { font-family: var(--mono); }

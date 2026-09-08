@@ -470,6 +470,7 @@ export class Edicao {
 
   async _desenharPainelSelecao() {
     if (!this.painelDinamico) return;
+    if (this._loteAtualizar) this._loteAtualizar();
     limpar(this.painelDinamico);
     if (!this.selecionadas.size) {
       this.painelDinamico.append(h('p', { class: 'saida' }, t('mapa.edicao_sem_selecao')));
@@ -505,6 +506,153 @@ export class Edicao {
       this.painelDinamico.append(await this._historicoPainel(primeiroId));
       this.painelDinamico.append(await this._anexosPainel(primeiroId));
     }
+  }
+
+  // ---------------------------------------------------------------- edição em lote (item L2-03-f)
+  /* `POST /api/camadas/{id}/lote`: calcular campo por expressão, atribuir valor, apagar e corrigir geometria sobre
+     as selecionadas, todas ou uma expressão `onde`; pré-visualização (10 linhas antes/depois) antes de aplicar;
+     acima de 5.000 feições a API devolve 202 com o job — o painel acompanha o progresso e permite cancelar. */
+  _montarLote() {
+    const caixa = h('section', { id: 'edicao-lote', class: 'edicao-lote', 'aria-labelledby': 'edicao-lote-titulo' });
+    const op = h('select', { id: 'lote-operacao' },
+      ...[['calcular', 'mapa.lote_calcular'], ['atribuir', 'mapa.lote_atribuir'], ['apagar', 'mapa.lote_apagar'],
+        ['corrigir_geometria', 'mapa.lote_corrigir']].map(([v, k]) => h('option', { value: v }, t(k))));
+    const campo = h('select', { id: 'lote-campo' });
+    const expressao = h('textarea', { id: 'lote-expressao', rows: '2', spellcheck: 'false',
+      title: t('mapa.lote_expressao_exemplo') });
+    const valor = h('input', { id: 'lote-valor', type: 'text' });
+    const onde = h('input', { id: 'lote-onde', type: 'text', title: t('mapa.lote_onde_exemplo'),
+      'aria-label': t('mapa.lote_onde') });
+    const radio = (v, rotulo) => h('label', { class: 'lote-radio' },
+      h('input', { type: 'radio', name: 'lote-selecao', value: v, checked: v === 'todas' }), h('span', {}, rotulo));
+    const rSel = radio('selecionadas', '');
+    const ajuda = h('small', { id: 'lote-ajuda', class: 'ajuda' });
+    const linhaCampo = h('div', { class: 'campo' }, h('label', { for: 'lote-campo' }, t('mapa.lote_campo')), campo);
+    const linhaExpr = h('div', { class: 'campo' }, h('label', { for: 'lote-expressao' }, t('mapa.lote_expressao')),
+      expressao, ajuda);
+    const linhaValor = h('div', { class: 'campo' }, h('label', { for: 'lote-valor' }, t('mapa.lote_valor')), valor);
+    const saida = h('div', { id: 'lote-resultado', 'aria-live': 'polite' });
+    const erro = h('p', { id: 'lote-erro', class: 'edicao-erros', role: 'alert', hidden: true });
+    const btPrevia = h('button', { type: 'button', class: 'botao secundario', id: 'lote-previa' }, t('mapa.lote_previa'));
+    const btAplicar = h('button', { type: 'button', class: 'botao', id: 'lote-aplicar' }, t('mapa.lote_aplicar'));
+    const btCancelar = h('button', { type: 'button', class: 'botao secundario', id: 'lote-cancelar', hidden: true },
+      t('mapa.lote_cancelar'));
+    const atualizarCampos = () => {
+      limpar(campo);
+      const regras = this._regrasDaCamada();
+      for (const c of this._camposDaCamada()) {
+        if ((regras[c.nome] || {}).somente_leitura) continue;
+        campo.append(h('option', { value: c.nome }, `${c.nome} (${c.tipo})`));
+      }
+      const nomes = this._camposDaCamada().map((c) => `$${c.nome}`);
+      ajuda.textContent = t('mapa.lote_expressao_ajuda', {
+        campos: nomes.join(' '), derivados: '$area_m2 $comprimento_m $perimetro_m $x $y' });
+    };
+    const atualizarVisibilidade = () => {
+      const o = op.value;
+      linhaCampo.hidden = !(o === 'calcular' || o === 'atribuir');
+      linhaExpr.hidden = o !== 'calcular';
+      linhaValor.hidden = o !== 'atribuir';
+      rSel.firstChild.disabled = !this.selecionadas.size;
+      rSel.lastChild.textContent = t('mapa.lote_selecionadas', { n: this.selecionadas.size });
+      if (!this.selecionadas.size && rSel.firstChild.checked) caixa.querySelector('input[value="todas"]').checked = true;
+    };
+    op.addEventListener('change', atualizarVisibilidade);
+    this._loteAtualizar = () => { atualizarCampos(); atualizarVisibilidade(); };
+    const corpo = () => {
+      const sel = caixa.querySelector('input[name="lote-selecao"]:checked').value;
+      const selecao = sel === 'selecionadas' ? { ids: [...this.selecionadas.keys()] }
+        : sel === 'onde' ? { onde: onde.value } : { todas: true };
+      const c = { operacao: op.value, selecao };
+      if (op.value === 'calcular') { c.campo = campo.value; c.expressao = expressao.value; }
+      if (op.value === 'atribuir') {
+        c.campo = campo.value;
+        const tipo = (this._camposDaCamada().find((x) => x.nome === campo.value) || {}).tipo;
+        const v = valor.value;
+        c.valor = v === '' ? null : tipo === 'boolean' ? (v === 'true' || v === 'verdadeiro' || v === '1')
+          : (tipo === 'integer' || tipo === 'bigint' || tipo === 'double precision') ? Number(v) : v;
+      }
+      return c;
+    };
+    const mostrarErro = (r) => {
+      const j = r.json || {};
+      // erro NOMEADO da API (422/403/409): código + mensagem, nunca o número cru
+      erro.textContent = j.erro ? `${j.erro}: ${j.mensagem}` : (j.mensagem || t('erro.carregar'));
+      erro.hidden = false;
+    };
+    const desenharPrevia = (j) => {
+      limpar(saida);
+      const linhas = j.previa || [];
+      saida.append(h('p', { class: 'ajuda' }, t('mapa.lote_previa_total', { n: linhas.length, total: j.total })
+        + (j.traducao ? ` · ${t('mapa.lote_traducao_' + j.traducao)}` : '')));
+      if (!linhas.length) return;
+      const fmt = (v) => (v === null || v === undefined ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v));
+      saida.append(h('table', { class: 'lote-tabela' },
+        h('thead', {}, h('tr', {}, h('th', {}, 'id'), h('th', {}, t('mapa.lote_antes')), h('th', {}, t('mapa.lote_depois')))),
+        h('tbody', {}, ...linhas.map((l) => h('tr', { class: l.erro ? 'erro' : '' },
+          h('td', { class: 'mono' }, l.id.slice(0, 8)), h('td', {}, fmt(l.antes)),
+          h('td', {}, l.erro ? `${l.erro}: ${l.mensagem}` : fmt(l.depois)))))));
+    };
+    const resumo = (j) => t('mapa.lote_resultado', { alteradas: j.alteradas || 0, apagadas: j.apagadas || 0,
+      criadas: j.criadas || 0, corrigidas: j.corrigidas || 0, falhas: j.falhas_total || 0 });
+    let jobAtual = null;
+    const acompanhar = async (jobId) => {
+      jobAtual = jobId;
+      btCancelar.hidden = false;
+      limpar(saida);
+      const linha = h('p', { id: 'lote-job' }, t('mapa.lote_job', { pct: 0 }), ' ',
+        h('a', { href: `/tarefas/${jobId}` }, t('mapa.lote_job_ver')));
+      saida.append(linha);
+      for (;;) {
+        await new Promise((r) => setTimeout(r, 1000));
+        const r = await obter(`/api/jobs/${jobId}`);
+        if (r.status !== 200) { mostrarErro(r); break; }
+        const j = r.json;
+        linha.firstChild.textContent = t('mapa.lote_job', { pct: j.progresso || 0 });
+        if (['concluido', 'falhou', 'cancelado'].includes(j.estado)) {
+          linha.firstChild.textContent = j.estado === 'concluido' ? resumo(j.resultado || {})
+            : t('mapa.lote_job_' + j.estado, { erro: j.erro || '' });
+          if (j.estado === 'concluido') await this._religar();
+          break;
+        }
+      }
+      btCancelar.hidden = true;
+      jobAtual = null;
+    };
+    btCancelar.addEventListener('click', async () => { if (jobAtual) await enviar(`/api/jobs/${jobAtual}/cancelar`, {}); });
+    btPrevia.addEventListener('click', async () => {
+      erro.hidden = true;
+      const r = await enviar(`/api/camadas/${this.camadaId}/lote`, { ...corpo(), previa: true });
+      if (r.status !== 200) { mostrarErro(r); return; }
+      desenharPrevia(r.json);
+    });
+    btAplicar.addEventListener('click', async () => {
+      erro.hidden = true;
+      const c = corpo();
+      if (c.operacao === 'apagar' && !window.confirm(t('mapa.lote_confirmar_apagar'))) return;
+      btAplicar.disabled = true;
+      const r = await enviar(`/api/camadas/${this.camadaId}/lote`, c);
+      btAplicar.disabled = false;
+      if (r.status === 202) { await acompanhar(r.json.job_id); return; }
+      if (r.status !== 200) { mostrarErro(r); return; }
+      limpar(saida);
+      saida.append(h('p', { id: 'lote-ok' }, resumo(r.json)
+        + (r.json.traducao ? ` · ${t('mapa.lote_traducao_' + r.json.traducao)}` : '')));
+      await this._religar();
+      this._mensagem(t('mapa.edicao_salvo'));
+      if (c.operacao === 'apagar') this.limparSelecao();
+    });
+    caixa.append(
+      h('h3', { id: 'edicao-lote-titulo' }, t('mapa.lote')),
+      h('div', { class: 'campo' }, h('label', { for: 'lote-operacao' }, t('mapa.lote_operacao')), op),
+      linhaCampo, linhaExpr, linhaValor,
+      h('fieldset', { class: 'lote-selecao' }, h('legend', {}, t('mapa.lote_selecao')),
+        rSel, radio('todas', t('mapa.lote_todas')), radio('onde', t('mapa.lote_onde')), onde),
+      h('div', { class: 'linha' }, btPrevia, btAplicar, btCancelar),
+      erro, saida,
+    );
+    this._loteAtualizar();
+    return caixa;
   }
 
   // ---------------------------------------------------------------- barra de ferramentas
@@ -545,12 +693,14 @@ export class Edicao {
 
     this.saida = h('p', { class: 'saida', id: 'edicao-saida', 'aria-live': 'polite' });
     this.painelDinamico = h('div', { id: 'edicao-dinamico' });
+    const lote = this._montarLote();
 
     seletor.addEventListener('change', () => {
       this.camadaId = seletor.value || null;
       this.selecionadas.clear();
       this._verticesRedesenhar();
       this._desenharPainelSelecao();
+      this._loteAtualizar();
     });
     this.catalogo.aoMudar(() => this._redesenharSeletor(seletor));
     this._redesenharSeletor(seletor);
@@ -564,6 +714,7 @@ export class Edicao {
       h('div', { class: 'linha' }, aderirCk, h('label', { for: 'edicao-aderir' }, t('mapa.edicao_aderir'))),
       this.saida,
       this.painelDinamico,
+      lote,
     );
     this._desenharPainelSelecao();
   }
