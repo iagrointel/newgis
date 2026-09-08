@@ -16107,6 +16107,15 @@
       },
       "type": "array",
       "title": "Perfis"
+     },
+     "redirect_uri_oidc": {
+      "type": "string",
+      "title": "Redirect Uri Oidc"
+     },
+     "govbr": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Govbr"
      }
     },
     "additionalProperties": true,
@@ -16114,7 +16123,9 @@
     "required": [
      "provedores",
      "criacoes",
-     "perfis"
+     "perfis",
+     "redirect_uri_oidc",
+     "govbr"
     ],
     "title": "Logins"
    },
@@ -17347,6 +17358,24 @@
       },
       "type": "object",
       "title": "Mapa Grupo Perfil"
+     },
+     "modelo": {
+      "type": "string",
+      "pattern": "^(generico|govbr)$",
+      "title": "Modelo",
+      "default": "generico"
+     },
+     "api_base": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 250
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Api Base"
      }
     },
     "additionalProperties": false,
@@ -17410,6 +17439,21 @@
       "additionalProperties": true,
       "type": "object",
       "title": "Mapa Grupo Perfil"
+     },
+     "modelo": {
+      "type": "string",
+      "title": "Modelo"
+     },
+     "api_base": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Api Base"
      }
     },
     "additionalProperties": true,
@@ -17425,7 +17469,9 @@
      "escopos",
      "atributo_grupos",
      "perfil_padrao",
-     "mapa_grupo_perfil"
+     "mapa_grupo_perfil",
+     "modelo",
+     "api_base"
     ],
     "title": "ProvedorOidcSaida"
    },
