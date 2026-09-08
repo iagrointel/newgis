@@ -9,7 +9,11 @@ from tests.e2e.apoio import credenciais
 
 @pytest.fixture(scope="session")
 def browser_context_args(browser_context_args):
-    return {**browser_context_args, "locale": "pt-BR", "viewport": {"width": 1280, "height": 800}}
+    # ignore_https_errors: numa trilha (worktree) o nginx da frente usa certificado autoassinado
+    # (receita do handoff T8); com certificado de verdade a opção não muda nada, só relaxa a
+    # validação que o próprio navegador faria contra uma autoridade reconhecida.
+    return {**browser_context_args, "locale": "pt-BR", "viewport": {"width": 1280, "height": 800},
+            "ignore_https_errors": True}
 
 
 @pytest.fixture(scope="session")
