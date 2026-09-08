@@ -3,6 +3,21 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L3-10-corredor-custo-minimo: rota HTTP do traçado, testes e documentos)
+
+Fechamento do item do traçado linear sobre a execução do motor multicritério (o motor, a ponte e a conferência
+bit a bit contra o trecho de referência da casa já estavam no ramo). `POST /api/multiescala/execucoes/{id}/corredor`
+devolve linha + corredor + manifesto (superfície declarada, parâmetros, medidas) de forma síncrona, com teto
+próprio para a geometria do corredor e ponto do usuário nunca movido (ADR `20260908T1545-corredor-sincrono-com-teto.md`).
+Reprodução do portão de referência medida e em `tests/medidas/L3-10-corredor-custo-minimo.json`: superfície IGUAL
+BIT A BIT à `saida/superficie.npz` da rodada oficial (27 camadas do cache + 2 rasters), rota recalculada a
+Hausdorff 100,0 m da oficial (uma célula de 100 m), trecho de 382,4 km traçado em 5,8 s (motor esparso com janela
+de 400 células, teto do portão 10 s), corredor de 5 % = 1.877.780 células. O corredor de 5 % gravado no arquivo
+oficial está VAZIO (zero célula) — registrado como achado, não há contra o que comparar. Testes: unidade (31, na
+grade pequena e contra a referência, os de referência marcados `lento`) e API na trilha (11, sobre execução
+multiescala real; área de estudo retangular de propósito — num quadrado 10x10 o desvio para a faixa barata NÃO
+compensa na aritmética de peso = média × comprimento e a reta é o resultado certo).
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
