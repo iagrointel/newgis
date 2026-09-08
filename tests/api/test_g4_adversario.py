@@ -343,13 +343,10 @@ def test_banner_de_aviso_e_saneado(sessao_a):
 
 
 # ================================================================ L0-11 — saúde obrigatória
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-19 (L0-11): o portão diz '/saude marca garage como obrigatório a partir deste item'. "
-           "app/saude.py decide o status só pelo banco (linha 79: 200 if banco == 'ok' else 503); com o Garage "
-           "inalcançável a plataforma continua respondendo 200 e 'saudável'.",
-)
 def test_saude_reprova_quando_o_garage_esta_fora(cliente, monkeypatch):
+    """ACHADO G4-19 (L0-11), portão cumprido (ADR 20260908T2125): nasceu como xfail estrito apontando que
+    app/saude.py decidia o status só pelo banco; agora Garage configurado e sondado como erro reprova a
+    instalação com 503, como banco fora."""
     from app import saude as mod
 
     original = mod.sondar_servico
@@ -358,6 +355,19 @@ def test_saude_reprova_quando_o_garage_esta_fora(cliente, monkeypatch):
     r = cliente.get("/saude")
     assert r.json()["servicos"]["garage"] == "erro", r.json()["servicos"]
     assert r.status_code == 503, f"{r.status_code} com garage em erro: {r.json()['servicos']}"
+
+
+def test_saude_200_quando_garage_ausente(cliente, monkeypatch):
+    """Fronteira do ADR 20260908T2125: 'obrigatório' se aplica a instalação que DECLARA o serviço e não o
+    tem. Sem PLAT_GARAGE_URL (desenvolvimento sem objetos) o sonda fica 'ausente' e NÃO derruba o 200."""
+    import dataclasses
+
+    from app import saude as mod
+
+    monkeypatch.setattr(mod, "settings", dataclasses.replace(mod.settings, PLAT_GARAGE_URL=None))
+    r = cliente.get("/saude")
+    assert r.status_code == 200, r.text
+    assert r.json()["servicos"]["garage"] == "ausente", r.json()["servicos"]
 
 
 # ================================================================ L0-09 — metadado e catálogo
