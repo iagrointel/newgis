@@ -177,6 +177,23 @@ def _esperar(sessao, job_id: str, timeout: float = 120) -> dict:
 MAPEAMENTO = {"logradouro": "logradouro", "numero": "numero", "municipio": "municipio", "uf": "uf"}
 
 
+def _declarar_inquilino(conexao_plat_app, sessao_a) -> None:
+    """Declara inquilino/usuário na conexão crua do teste (o mesmo trio que `app.db.db` declara para a API).
+    As políticas de RLS da tabela `item` (apertadas pelo adversário de tenancy sobre o master) escondem TODA
+    linha de uma conexão sem contexto — o job gravou a camada como o admin da sessão, então a leitura direta
+    do portão só vê o resultado quando se declara o mesmo par tenant/usuário. Sem isso o teste falha por
+    não ver a linha que ele próprio acabou de criar (achado 08/09)."""
+    eu = sessao_a.get("/api/eu").json()
+    with conexao_plat_app.cursor() as cur:
+        cur.execute("SELECT tenant_id FROM plat.auth_login(%s, 'admin')", (eu["inquilino"]["slug"],))
+        tenant_id = cur.fetchone()["tenant_id"]
+        cur.execute(
+            "SELECT set_config('plat.tenant_id', %s, false), set_config('plat.usuario_id', %s, false), "
+            "set_config('plat.login', %s, false)",
+            (str(tenant_id), str(eu["id"]), eu["login"]),
+        )
+
+
 def test_1000_enderecos_boa_vista_85pct_numero_exato_0pct_fora_municipio(
     worker_temporario, sessao_a, amostra_1000, conexao_plat_app, medida
 ):
@@ -190,6 +207,7 @@ def test_1000_enderecos_boa_vista_85pct_numero_exato_0pct_fora_municipio(
     assert resultado["estado"] == "concluido", resultado
     item_id = resultado["resultado"]["item_id"]
 
+    _declarar_inquilino(conexao_plat_app, sessao_a)
     with conexao_plat_app.cursor() as cur:
         cur.execute("SELECT dados FROM plat.item WHERE id = %s::uuid", (item_id,))
         item = cur.fetchone()
@@ -206,7 +224,7 @@ def test_1000_enderecos_boa_vista_85pct_numero_exato_0pct_fora_municipio(
 
     numero_exato_perto = 0
     fora_municipio = 0
-    for ponto, esperado in zip(pontos, amostra_1000):
+    for ponto, esperado in zip(pontos, amostra_1000, strict=True):
         if ponto["lon"] is not None and ponto["cod_municipio"] is not None:
             if ponto["cod_municipio"] != cod_boa_vista:
                 fora_municipio += 1
@@ -226,8 +244,6 @@ def test_1000_enderecos_boa_vista_85pct_numero_exato_0pct_fora_municipio(
 
     assert pct_numero_exato >= 85, f"acerto numero_exato a <=50m = {pct_numero_exato:.1f}%, abaixo do portão (85%)"
     assert pct_fora_municipio == 0, f"{pct_fora_municipio:.1f}% dos pontos caíram fora do município"
-
-    return item_id
 
 
 def test_pendentes_aparecem_na_tela_de_revisao_e_arrasto_grava_origem_manual(worker_temporario, sessao_a, amostra_1000):
@@ -288,7 +304,8 @@ def test_regeocodificar_so_toca_pendentes(worker_temporario, sessao_a, amostra_1
         "regeocodificar não pode reintroduzir na fila um ponto já corrigido à mão"
 
 
-def test_adversario_abreviacao_sem_acento_cep_errado_numero_inexistente(worker_temporario, sessao_a, amostra_1000, conexao_plat_app):
+def test_adversario_abreviacao_sem_acento_cep_errado_numero_inexistente(worker_temporario, sessao_a, amostra_1000,
+                                                                        conexao_plat_app):
     """Refutação exigida pelo item: endereços com abreviação (R., Av.), sem acento, CEP errado e número
     inexistente — nenhum ponto pode cair no centroide do município sem estar marcado como tal."""
     amostra = amostra_1000[:200]
@@ -298,6 +315,7 @@ def test_adversario_abreviacao_sem_acento_cep_errado_numero_inexistente(worker_t
     assert resultado["estado"] == "concluido", resultado
     item_id = resultado["resultado"]["item_id"]
 
+    _declarar_inquilino(conexao_plat_app, sessao_a)
     with conexao_plat_app.cursor() as cur:
         cur.execute("SELECT dados FROM plat.item WHERE id = %s::uuid", (item_id,))
         item = cur.fetchone()
