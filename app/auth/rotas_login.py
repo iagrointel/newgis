@@ -127,7 +127,15 @@ def login(corpo: LoginEntrada, request: Request, resposta: Response):
     if not r["ativo_tenant"]:
         senha.verificar(corpo.senha, HASH_FANTASMA)
         request.state.resultado = "suspenso"
-        raise ErroAPI(503, "inquilino_suspenso", "inquilino suspenso; fale com o operador da plataforma")
+        # item L0-07-f: a mensagem do operador (config.suspensao.mensagem) chega aos membros no próprio 503
+        suspensao = (r["config"] or {}).get("suspensao") or {}
+        mensagem = (suspensao.get("mensagem") or "").strip()
+        raise ErroAPI(
+            503,
+            "inquilino_suspenso",
+            f"inquilino suspenso: {mensagem}" if mensagem else "inquilino suspenso; fale com o operador da plataforma",
+            {"mensagem": mensagem or None, "desde": suspensao.get("em")},
+        )
     if r["origem"] != "local":
         request.state.resultado = "externo"
         raise ErroAPI(403, "login_externo", "esta conta entra pelo login da organização")
