@@ -3,6 +3,7 @@
 campo; id: de item privado de outro → 0; autoritativo antes de comum; facetas batem com count; medidas busca_p95_ms,
 busca_trgm_p95_ms, lista_tipo_p95_ms, facetas_p95_ms."""
 
+import secrets
 import statistics
 import time
 
@@ -86,8 +87,15 @@ def test_tag_por_api_aparece_na_requisicao_seguinte(sessao_a, itens_a):
 
 
 def test_doze_consultas_por_campo(sessao_a, itens_a, ids, corpus):
+    """08/09: a etiqueta discriminadora era a constante `zt-campo`, então toda consulta contava 1 apenas
+    enquanto não houvesse OUTRO item com essa etiqueta no inquilino. Uma rodada interrompida (o `timeout` de
+    `roda_teste.sh` corta a perna paralela em 600 s quando a máquina está disputada) não chega à varredura de
+    resíduo do controlador e deixa o item para trás; a rodada seguinte lia 2 onde esperava 1
+    (`('titulo:rodovia zt-campo', 2)`). A etiqueta agora é única por execução: o que o teste conta é só o item
+    que ele mesmo criou. Nenhum número esperado mudou."""
+    etiqueta = f"zt-campo-{secrets.token_hex(3)}"
     mapa = itens_a.criar(
-        "mapa", titulo=titulo_zt("Rodovia federal"), tags=["zt-campo"], resumo="resumo campo"
+        "mapa", titulo=titulo_zt("Rodovia federal"), tags=[etiqueta], resumo="resumo campo"
     )
     r = sessao_a.post("/api/pastas", json={"nome": titulo_zt("Campo")})
     pasta = r.json()
@@ -96,24 +104,24 @@ def test_doze_consultas_por_campo(sessao_a, itens_a, ids, corpus):
     sessao_a.put(f"/api/itens/{mapa['id']}", json={"status": "obsoleto"})
     login = ids["a"]["login"]
     consultas = {
-        "titulo:rodovia zt-campo": 1,
-        "tags:zt-campo": 1,
-        "resumo:campo tags:zt-campo": 1,
-        "descricao:inexistente tags:zt-campo": 0,
-        f"dono:{login} tags:zt-campo": 1,
-        "tipo:mapa tags:zt-campo": 1,
-        "tipo:app tags:zt-campo": 0,
-        "status:obsoleto tags:zt-campo": 1,
-        "acesso:inquilino tags:zt-campo": 1,
+        f"titulo:rodovia {etiqueta}": 1,
+        f"tags:{etiqueta}": 1,
+        f"resumo:campo tags:{etiqueta}": 1,
+        f"descricao:inexistente tags:{etiqueta}": 0,
+        f"dono:{login} tags:{etiqueta}": 1,
+        f"tipo:mapa tags:{etiqueta}": 1,
+        f"tipo:app tags:{etiqueta}": 0,
+        f"status:obsoleto tags:{etiqueta}": 1,
+        f"acesso:inquilino tags:{etiqueta}": 1,
         f"id:{mapa['id']}": 1,
         f"pasta:{pasta['id']}": 1,
-        "criado:[2026-01-01 TO *] tags:zt-campo": 1,
-        "criado:[* TO 2020] tags:zt-campo": 0,
-        "tags:zt-campo NOT tipo:mapa": 0,
-        "(tipo:app OR tipo:mapa) tags:zt-campo": 1,
-        '"resumo campo" tags:zt-campo': 1,
-        "origem:hospedado tags:zt-campo": 1,
-        "familia:mapa tags:zt-campo": 1,
+        f"criado:[2026-01-01 TO *] tags:{etiqueta}": 1,
+        f"criado:[* TO 2020] tags:{etiqueta}": 0,
+        f"tags:{etiqueta} NOT tipo:mapa": 0,
+        f"(tipo:app OR tipo:mapa) tags:{etiqueta}": 1,
+        f'"resumo campo" tags:{etiqueta}': 1,
+        f"origem:hospedado tags:{etiqueta}": 1,
+        f"familia:mapa tags:{etiqueta}": 1,
     }
     for q, esperado in consultas.items():
         r = sessao_a.get("/api/itens", params={"q": q})
