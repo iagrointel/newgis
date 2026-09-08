@@ -1,0 +1,43 @@
+{
+ "item": "L1-01-i-ciclo-de-vida-exclusao-e-coleta-de-lixo",
+ "medidas": {
+  "refutacao_3_itens_intacto": {
+   "valor": {
+    "c_sha256_ok": true,
+    "cog_excluido_autorizar": 403,
+    "cog_retido_objeto_presente": false,
+    "tiles_404_em_s": 0.016,
+    "retencao_dias": 7,
+    "agendado_dias": 7.0,
+    "bytes_liberados_b": 50
+   },
+   "unidade": "tests/api/imagens/test_ciclo_vida.py",
+   "comando": "python -m pytest tests/api/imagens/test_ciclo_vida.py -q"
+  },
+  "expurgo_catalogo": {
+   "valor": {
+    "expurgados": 1,
+    "bytes_liberados": 50,
+    "objeto_fora_do_balde": true
+   },
+   "unidade": "tests/api/imagens/test_ciclo_vida.py",
+   "comando": "python -m pytest tests/api/imagens/test_ciclo_vida.py -q"
+  },
+  "tiles_404_em_s": {
+   "valor": 0.016,
+   "unidade": "s",
+   "comando": "GET /api/imagens/{id}/tiles/3/2/1.png logo após DELETE /api/itens/{id}"
+  },
+  "gc_relatorio": {
+   "valor": {
+    "orfaos": 1,
+    "quebrados": 1,
+    "lixeira_vencida": 1
+   },
+   "unidade": "itens",
+   "comando": "plat raster gc --inquilino zt-inq-f290b1 (subprocesso)"
+  }
+ },
+ "gerado_em": "2026-09-08T21:51:50Z",
+ "git_sha": "c89228222ec6"
+}
