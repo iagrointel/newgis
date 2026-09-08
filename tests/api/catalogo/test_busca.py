@@ -8,9 +8,9 @@ import time
 
 import pytest
 
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 from tests.api.catalogo.conftest import titulo_zt
 from tests.api.semear_catalogo import PREFIXO, semear
-from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 
 ITEM = "L0-03-catalogo"
 

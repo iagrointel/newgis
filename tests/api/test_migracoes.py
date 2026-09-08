@@ -6,7 +6,14 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
+from app.db import migracoes_em_disco
+
 ROOT = Path(__file__).resolve().parents[2]
+# worktree: db/migrar.sh recusa de propósito (a base por trilha aplica as migrações reescritas)
+if (ROOT / ".git").is_file():
+    pytest.skip("db/migrar.sh não roda em worktree; este módulo só prova na árvore principal", allow_module_level=True)
 MIGRAR = ROOT / "db" / "migrar.sh"
 MIGRACOES = ROOT / "db" / "migracoes"
 
@@ -30,12 +37,12 @@ def test_migrar_duas_vezes_nao_insere_linha(conexao_plat_app):
     assert r2.returncode == 0, r2.stderr
     assert linhas(conexao_plat_app) == antes
     assert "pendentes 0" in r2.stdout and "aplicadas 0" in r2.stdout
-    assert r2.stdout.count("igual ") == len(list(MIGRACOES.glob("[0-9][0-9][0-9]_*.sql")))
+    assert r2.stdout.count("igual ") == len(migracoes_em_disco())
 
 
 def test_tabela_reflete_os_arquivos_em_disco(conexao_plat_app):
     nomes = {n for n, _ in linhas(conexao_plat_app)}
-    assert nomes == {p.stem for p in MIGRACOES.glob("[0-9][0-9][0-9]_*.sql")}
+    assert nomes == set(migracoes_em_disco())
 
 
 def test_arquivo_aplicado_editado_devolve_codigo_3(tmp_path, conexao_plat_app):

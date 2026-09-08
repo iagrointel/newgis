@@ -70,6 +70,17 @@ def test_so_admin_cria_altera_e_apaga_admin(sessao_a, usuarios_a):
         },
     )
     assert r.status_code == 422 and r.json()["erro"] == "papel_incompativel"
+    # nem num visualizador (refutação literal do item L0-07-b: "papel administrativo para tipo visualizador")
+    r = sessao_a.post(
+        "/api/usuarios",
+        json={
+            "login": f"{PREFIXO_TESTE}{secrets.token_hex(3)}",
+            "nome": "x",
+            "perfil": "visualizador",
+            "papel_id": papel["id"],
+        },
+    )
+    assert r.status_code == 422 and r.json()["erro"] == "papel_incompativel", r.text
     # admin secundário com esse papel (subconjunto do teto): não é admin? é admin de perfil, então pode; o teste da
     # regra (b)(c) usa um editor puro
     c_ed, ed, _ = usuarios_a.sessao("editor")

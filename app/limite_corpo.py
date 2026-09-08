@@ -37,7 +37,11 @@ PREFIXOS_COM_LIMITE = ("/api/", "/svc/", "/ogc/", "/tiles/")
 # upload de arquivo (L0-11; ADR 0006): POST /api/arquivos aplica o próprio teto (limites.ARQUIVO_BYTES_MAX) em
 # streaming (app/rotas_arquivos.py), sem bufferizar o corpo aqui — é a rota que este comentário previa desde o
 # L0-12. GET/DELETE do mesmo prefixo não têm corpo grande; ficarem isentos junto não muda nada para eles.
-PREFIXOS_ISENTOS: tuple[str, ...] = ("/api/arquivos",)
+# upload retomável (L0-04-a-upload-arquivo; ADR 0005 seção 3): PUT /api/uploads/{id}/partes/{n} envia partes de
+# limites.UPLOAD_PARTE_BYTES (16 MiB) — acima do padrão de 10 MiB deste middleware — e já confere o próprio
+# Content-Length contra o tamanho exato esperado da parte (app/uploads/rotas.py::enviar_parte); POST/DELETE do
+# mesmo prefixo (JSON pequeno) ficam isentos junto, sem que isso mude nada para eles.
+PREFIXOS_ISENTOS: tuple[str, ...] = ("/api/arquivos", "/api/uploads")
 
 
 def limite_para(caminho: str) -> int | None:

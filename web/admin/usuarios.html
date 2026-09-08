@@ -21,9 +21,32 @@
     <plat-tabela id="tabela" legenda="usuários do inquilino"></plat-tabela>
     <plat-paginacao id="paginacao"></plat-paginacao>
     <p class="rodape-tela" data-i18n="usuarios.rodape">recomendação: mantenha dois administradores ativos; o bloqueio por senha vale para administradores</p>
+    <section class="cartao" id="convites" aria-labelledby="t-convites">
+      <h2 id="t-convites" data-i18n="convite.titulo">Convidar por e-mail</h2>
+      <p class="fraco" data-i18n="convite.ajuda">cria a conta quando o convidado aceitar; sem SMTP configurado, o link fica disponível aqui para repassar manualmente</p>
+      <plat-aviso id="convite-aviso"></plat-aviso>
+      <form id="form-convite" class="form linha" novalidate>
+        <div class="campo">
+          <label for="convite-email" data-i18n="convite.email">e-mail</label>
+          <input id="convite-email" name="email" type="email" required maxlength="254" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="convite-perfil" data-i18n="convite.perfil">perfil</label>
+          <select id="convite-perfil" name="perfil">
+            <option value="visualizador" data-i18n="perfil.visualizador">visualizador</option>
+            <option value="campo" data-i18n="perfil.campo">campo</option>
+            <option value="editor" data-i18n="perfil.editor">editor</option>
+            <option value="admin" data-i18n="perfil.admin">admin</option>
+          </select>
+        </div>
+        <div class="botoes"><button type="submit" class="primario" data-i18n="convite.enviar">Convidar</button></div>
+      </form>
+      <ul class="lista-convites" id="lista-convites"></ul>
+    </section>
   </main>
 </div>
 <plat-dialogo id="painel" modo="lateral"></plat-dialogo>
 <script type="module" src="/static/js/auth/usuarios.js"></script>
+<script type="module" src="/static/js/auth/convites.js"></script>
 </body>
 </html>

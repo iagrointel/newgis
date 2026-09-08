@@ -1,0 +1,105 @@
+{
+  "item": "L0-05-jobs",
+  "veredito": "PASSA",
+  "papel": "adversario",
+  "turno": "T2",
+  "trilha": "B",
+  "quando": "2026-09-05T20:24Z",
+  "portao_refutacao": "adversário mata o worker no meio de um job e reinicia: job não pode aparecer como concluído",
+  "evidencia": [
+    {
+      "ataque": "1a — sudo systemctl restart plat-worker no meio de prova.progresso(300 s)",
+      "comando": "POST /api/jobs prova.progresso; ao progresso>=45% sudo systemctl restart plat-worker; observador leu plat.job + plat_trabalho.marcadores até o fim",
+      "saida": "restart devolveu em 0,5 s; job -> pendente (erro='worker reiniciado'), tentativa 1->0 e reinicios 0->1; worker novo repegou, tentativa voltou a 1, reexecutou DO ZERO (passos zerados); marc=0 durante toda a reexecução; FINAL estado=concluido tentativa=1 reinicios=1 marc=1, resultado.marcador=738ce257... = o marcador gravado no ÚLTIMO passo; proveniencia.reinicios=1. NRestarts=0 (parada limpa).",
+      "resultado": "não refutado: nunca apareceu concluido sem o marcador; job não sumiu"
+    },
+    {
+      "ataque": "1b — kill -9 no processo FILHO no meio do job",
+      "comando": "kill -9 <pid do filho lido em GET /api/jobs/{id}.processo_pid>",
+      "saida": "job -> pendente (erro='morto por sinal 9'), repegado tentativa 1->2 reinicios=0 (kill do filho conta como tentativa, ADR seção 6), reexecutou do zero, FINAL concluido tentativa=2 reinicios=0 marc=1 (marcador dd8dc187...). Worker vivo, NRestarts=0.",
+      "resultado": "não refutado"
+    },
+    {
+      "ataque": "1c — kill -9 no processo PAI (worker) no meio do job",
+      "comando": "sudo systemctl kill -s KILL plat-worker; ps do filho 2 s depois",
+      "saida": "filho morreu junto por PR_SET_PDEATHSIG; job ficou rodando até a ceifa por heartbeat vencido; worker novo (systemd Restart, NRestarts 0->1) devolveu reinicios=1 e reexecutou do zero; FINAL concluido tentativa=1 reinicios=1 marc=1 (marcador e859cbeb...).",
+      "resultado": "não refutado"
+    },
+    {
+      "ataque": "1d — DOIS restart seguidos, o 2º ~6 s depois (dentro do TimeoutStopSec=40 s)",
+      "comando": "restart; sleep 6; restart; ambos no meio de prova.progresso(100 s)",
+      "saida": "cada restart devolveu em 0,5 s; reinicios 0->1->2 (tentativa 0 entre eles, volta a 1 ao repegar); reexecutou do zero; FINAL concluido tentativa=1 reinicios=2 marc=1 (marcador d785959b...). NRestarts=0.",
+      "resultado": "não refutado"
+    },
+    {
+      "ataque": "2 — forja por SQL como plat_app (role da API) com contexto do inquilino",
+      "comando": "psycopg2 PLAT_DSN (current_user=plat_app, tenant 1); UPDATE->rodando/concluido; set_config plat.via_worker='sim' + UPDATE; INSERT já concluído; job_pegar/terminar/devolver/ceifar; worker_registrar; SELECT plat.worker",
+      "saida": "UPDATE plat.job -> 'permission denied for table job' (REVOKE UPDATE, migr. 006); INSERT concluído -> 'job nasce pendente e sem resultado' (gatilho job_transicao); via_worker_ligar()/todas as funções do worker/SELECT worker -> 'permission denied'; SET plat.via_worker='sim' é aceito como GUC de sessão mas INÓCUO (o UPDATE segue barrado pela permissão de tabela).",
+      "resultado": "não refutado: plat_app não muda estado de job nem forja resultado"
+    },
+    {
+      "ataque": "3 — forja com a senha da role plat_worker (modelo de ameaça pedido pelo item)",
+      "comando": "psycopg2 PLAT_DSN_WORKER (do .env, 600); nome do worker lido em GET /api/jobs/{id}.worker (público); SELECT plat.job_terminar(jid, '<nome público>', 'concluido', '{\"marcador\":\"forjado\"}', ...)",
+      "saida": "job_progresso como plat_app: 'permission denied'. Como plat_worker: job_terminar devolveu ok=TRUE e o job passou a concluido com resultado.marcador='forjado' SEM a execução ter terminado (marcador real em plat_trabalho = 0). job_terminar com nome de worker INVENTADO -> ok=FALSE (checa worker=job.worker). plat_worker NÃO lê plat.job direto (SELECT count(*) -> permission denied).",
+      "resultado": "não refuta o portão: exige o segredo PLAT_DSN_WORKER, que é a própria autoridade do worker (mesma identidade operacional). NOTA DE AMEAÇA registrada: quem obtém PLAT_DSN_WORKER pode forjar conclusão de QUALQUER job de QUALQUER inquilino (job_terminar é SECURITY DEFINER, só confere worker=nome), e o nome do worker é público na API — não há autenticação por-worker; a senha é o único portão."
+    },
+    {
+      "ataque": "4 — worker homônimo fora do systemd durante um job",
+      "comando": "medida do testador reconferida (prova_012.py) + migração 012 lida",
+      "saida": "job_ceifar(int, text, int) foi REMOVIDA (só existe job_ceifar(int,int)); a ceifa devolve apenas job cujo heartbeat venceu E cujo worker dono está sem heartbeat em plat.worker, nunca por igualdade de nome; identidade é <base>:<pid>. medida registrada: homônimo com job de 240 s -> reinicios permaneceu 0.",
+      "resultado": "não refutado (achado 2 do testador corrigido pela 012)"
+    },
+    {
+      "ataque": "5 — RLS cruzado A(demo) sobre job e agenda de B(demo2) em TODAS as rotas /api/jobs* e /api/agendas* do OpenAPI vivo, + SSE",
+      "comando": "login demo e demo2 por senha; B cria job e agenda; A chama listar/obter/log/cancelar/repetir/resumo/tipos, agendas listar/obter/put/pausar/retomar/rodar-agora/delete, SSE do job de B, SSE próprio com Last-Event-ID",
+      "saida": "15 rotas: listas de A não trazem recurso de B (usuario_id de B -> itens vazios); rotas com id de B -> 404 job_inexistente/agenda_inexistente; SSE de job de B com sessão de A -> 404; SSE próprio com Last-Event-ID=0/gigante/'abc' reenvia SÓ o log do próprio job (nenhum id de B); agenda de B intacta após as tentativas. 0 vazamento.",
+      "resultado": "não refutado"
+    },
+    {
+      "ataque": "6 — limites: memória 3 GB, ignora SIGTERM, timeout, cotas, NOTIFY flood, cron/fuso",
+      "comando": "prova.memoria(3072); prova.ignora_cancelamento + cancelar; prova.tempo_esgotado(timeout_s=5); 3x prova.pesado; 10000 pg_notify em plat_job; payload 8001 bytes; agendas cron/fuso inválidos e intervalo < 15 min; cota de agendas",
+      "saida": "3 GB -> falhou 'memória excedida (limite 256 MB)', worker vivo, NRestarts=0; ignora SIGTERM -> cancelado em 40,7 s ('morto após ignorar cancelamento') = 30 s SIGTERM + 10 s SIGKILL; timeout_s=5 -> falhou 'tempo esgotado (timeout_s = 5)'; 3 pesados -> 1 rodando 2 pendente (1 pesado por vez, advisory lock); 10000 NOTIFY em 0,02 s -> worker tick 1,3 ms, RSS estável, API 200, NRestarts=0; payload 8001 -> 'payload string too long'; cron '61 * * * *'/'* * * *'/vazia/6-campos -> 422; fuso 'Marte/Olimpo'/'UTC-3' -> 422; '*/1..*/14 * * * *' -> 422 intervalo_minimo; cota_agendas parou em 50 -> 413.",
+      "resultado": "não refutado"
+    },
+    {
+      "ataque": "7 — unidade systemd vs ADR 0003 seção 4.5",
+      "comando": "systemctl show plat-worker",
+      "saida": "MemoryMax=2147483648 (=2G), MemoryHigh=1610612736 (=1536M), KillMode=mixed, OOMPolicy=continue, TimeoutStopUSec=40s, Restart=always, RestartUSec=3s — todos idênticos ao ADR.",
+      "resultado": "conforme"
+    },
+    {
+      "ataque": "8 — placeholder/segredo/nome de cliente no escopo",
+      "comando": "grep de TODO/FIXME/mock/em breve/placeholder em app/jobs, db/migracoes/004..013, deploy/plat-worker.service, web (fora de vendor); grep de segredo/nome de cliente; git ls-files de .env",
+      "saida": "0 placeholder no escopo; nenhuma senha embutida (senhas só em .env 600, fora do git via .gitignore; SQL usa CREATE ROLE sem senha, install.sh faz ALTER ROLE); nenhum nome de cliente. unidade usa APP_USER/APP_DIR (substituídos pelo install.sh).",
+      "resultado": "conforme"
+    },
+    {
+      "ataque": "9/10 — ADR x código e testes que não testam",
+      "comando": "leitura de worker.py/filho.py/servico.py/migrações e de tests/api/jobs/test_jobs_reinicio.py e test_jobs_transicoes.py",
+      "saida": "os testes de reinício usam sudo systemctl real e conferem o marcador (concluido só com o marcador do último passo; 5x kill -9 -> falhou 'devolvido 5 vezes'); test_jobs_transicoes cobre as três camadas da 006 e o expurgo. Não achei promessa de ADR sem implementação nem teste oco.",
+      "resultado": "conforme"
+    }
+  ],
+  "o_que_nao_prova": [
+    "Não provei paridade com ArcGIS (P4) — fora do escopo deste item; é do papel esri.",
+    "Não rodei o make check inteiro (a fila tem 1 slot e o backend do catálogo trabalhava na mesma árvore; a regra proíbe pytest concorrente sem flock e reinstalação). Reconferi por reprodução direta contra o serviço vivo, não pela suíte.",
+    "Não medi vazão sob concorrência alta nem PostGIS/vetorial.",
+    "O marcador de plat_trabalho é instrumento de PROVA da tarefa prova.progresso, não um controle de segurança de produção: plat_app pode inserir marcador forjado (ver fraqueza 1), mas não consegue levar o job a concluido; a integridade 'concluido => execução inteira' repousa em job_terminar ser exclusivo do worker, o que se sustentou contra plat_app."
+  ],
+  "fraquezas_registradas": [
+    "plat_trabalho.passos e plat_trabalho.marcadores NÃO têm RLS e não têm coluna tenant_id: um inquilino A pode ler/inserir/apagar linhas de scratch de jobs de qualquer inquilino (chave só por job_id). Hoje só contém dado de diagnóstico (job_id + passo/uuid). Risco futuro: tarefas reais que gravem efeito parcial ali (ADR seção 6) exporiam dado entre inquilinos. Não viola P6 pela letra (P6 diz 'toda tabela com tenant_id'), mas é uma brecha cruzada a fechar antes de tarefas que guardem conteúdo do inquilino em plat_trabalho. O próprio teste (test_jobs_transicoes) já comenta 'plat_trabalho não tem RLS'.",
+    "Modelo de ameaça do worker (ataque 3): PLAT_DSN_WORKER concede autoridade total sobre o estado de job de TODOS os inquilinos (job_terminar/job_devolver SECURITY DEFINER só conferem worker=nome), e o nome do worker é público em GET /api/jobs/{id}.worker. Não há autenticação por-processo: a senha do worker é o único portão. É por desenho (a role do worker É o mudador de estado confiável), mas o dono deve saber que vazar PLAT_DSN_WORKER = forjar conclusão cross-inquilino.",
+    "plat_app detém DELETE em plat.job (visto em information_schema): pode apagar jobs do próprio inquilino por SQL (confinado por RLS; nenhuma rota da API expõe DELETE). Over-grant a rever; não vi uso legítimo por plat_app."
+  ],
+  "clausulas": [
+    {"clausula": "job de 5 min mostra progresso em tempo real", "evidencia": "SSE público mediana 0,005 s heartbeat; 62 eventos estado no job de 5 min (medidas do item, reconferido: progresso subiu de 45% a 100% na reexecução)", "passa": true},
+    {"clausula": "pode ser cancelado", "evidencia": "ataque 6: cancelado em 40,7 s mesmo ignorando a flag; RLS: cancelar de B por A -> 404", "passa": true},
+    {"clausula": "sobrevive a reinício do serviço (retoma ou marca falha, nunca some)", "evidencia": "ataques 1a/1b/1c/1d: job volta a pendente visível (nunca some), reexecuta do zero e só chega a concluido COM o marcador; 5x kill -9 -> falhou", "passa": true},
+    {"clausula": "reexecutar do zero satisfaz o portão?", "evidencia": "o ADR documenta 'reinício = reexecução' com tarefa idempotente + troca atômica; reinicios e proveniencia registram; nunca observado concluido sem execução inteira. JULGAMENTO: satisfaz — não é silencioso nem conclui sem execução", "passa": true},
+    {"clausula": "1 worker por padrão com limite de RAM declarado", "evidencia": "unidade MemoryMax=2G/MemoryHigh=1536M; RLIMIT_DATA por job matou 3 GB com worker vivo", "passa": true},
+    {"clausula": "tela Tarefas por inquilino", "evidencia": "ataque 5: 15 rotas + SSE sem vazamento cruzado", "passa": true},
+    {"clausula": "ACHADO T2 (transição forjável por SQL) corrigido", "evidencia": "ataque 2: plat_app não muda estado nem forja resultado (006/010/013)", "passa": true},
+    {"clausula": "ACHADO 2 T2 (worker homônimo rouba jobs) corrigido", "evidencia": "ataque 4: ceifa só por heartbeat vencido; job_ceifar(int,text,int) removida (012)", "passa": true},
+    {"clausula": "plat_trabalho.marcadores expurgada por jobs_expurgar", "evidencia": "jobs_expurgar apaga órfãos de marcadores/passos (006); só roda no inquilino plataforma", "passa": true}
+  ]
+}

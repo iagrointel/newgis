@@ -1,0 +1,1386 @@
+{
+ "objetivo": "Construir, testar, refutar e ENTREGAR em produção uma plataforma SIG corporativa própria, 100 % pilha aberta, que substitui o ArcGIS Enterprise para o cliente: L1 imagens (COG/STAC/tiles por inquilino + conectores Sentinel/NASA/Copernicus/MapBiomas), L2 plataforma (dado do cliente vira catálogo, mapas, edição, serviços Esri-compatíveis e OGC, análise, painéis, campo, migração), L3 motor multicritério explicável, L4 rede de utilidades (modelo, traçado, edição com regras, BDGD), L5 construtores arrasta-e-solta (app, fluxo, formulário, narrativa), L6 conectores ao acervo da casa, L7 operação de produção. Sem limite de turnos nem de tempo. Sem placeholder: função que aparece na tela funciona. Cada item só fecha quando o PORTÃO DE PRONTO passa cláusula a cláusula e um adversário independente não refuta.",
+ "produto": {
+  "codinome": "plat",
+  "nome_publico": "PENDENTE (D18 do dono)",
+  "repo": "/home/dev/plataforma/enterprise",
+  "schema": "plat",
+  "role": "plat_app",
+  "portas": "8150-8159 (api 8150, martin 8151, titiler 8152, worker 8153)",
+  "unidades_systemd": "plat-*",
+  "url_interna": "https://plat.iagrointel.com (noindex; nunca linkar de lugar público)"
+ },
+ "estado": "ATIVO",
+ "turno": 2,
+ "orcamento_turnos": null,
+ "autoturno": true,
+ "criado": "2026-09-05",
+ "regras_herdadas": "CLAUDE.md da casa inteiro (análise/beta privado; sem PII; sem nome de cliente em material da plataforma; sem preço Esri; dado aberto) + METODOLOGIA.md do tracado-lt (número nunca digitado, régua declarada, portão congelado, quem produz não aprova, erro nunca é sucesso, ausência de dado nunca vira medição) + regras de escrita para cliente (03/09).",
+ "guardrails": [
+  "DISCO: conferir `df` antes de qualquer download; nenhum dado novo > 2 GB sem decisão do dono; repositório ≤ 3 GB; dado de demonstração só aberto e pequeno; cache em scratchpad, nunca em /tmp",
+  "RAM: `free -g` available ≥ 4 GB antes de lançar PROCESSO novo (claude -p do driver, job de máquina, playwright); subagentes de papel são em processo e podem ir a 12 em paralelo; 1 job pesado e 1 reinstalação destrutiva por vez; 20 sessões claude derrubaram o Postgres em 30/08",
+  "NUNCA tocar fgr/sig, cbre/sig, sigcorp, cbresig, geoapp, plataforma/pipeline em produção — copiar código, não editar; `bash /home/dev/fgr/sig/pipeline/testar.sh` = 9/9 depois de qualquer mexida em banco compartilhado",
+  "schema `plat` + role `plat_app` + linha no pg_hba.conf (role nova sem pg_hba sobe e quebra na 1ª consulta); nginx: editar sites-enabled/iagrosat-db (não é symlink); portas 8150-8159",
+  "publicação externa, contato com cliente/parceiro, DNS público e preço são atos do dono; o laço publica só em URL interna noindex e registra decisões pendentes em `decisoes_do_dono`",
+  "sem placeholder: TODO/FIXME/mock/'em breve'/lorem/botão inerte/rota que devolve dado falso em código entregue = erro de build (o driver varre e reprova)",
+  "quem constrói não aprova: adversário em contexto próprio, sem ver o raciocínio do construtor, com instrução de derrubar; padrão = 'achei problema'",
+  "toda funcionalidade visível tem teste e2e playwright (chromium do playwright; google-chrome headless quebra nesta máquina) com captura salva em tests/e2e/capturas/",
+  "commit por turno em português, sem emoji; ledger a cada turno; CHANGELOG.md e MANUAL.md crescem com o produto, nunca no fim",
+  "número em documento sai de JSON gerado por script; paridade com Esri só do que foi TESTADO (Pro/AGOL reais = teste do parceiro, registrado como pendente)",
+  "TRILHAS: um turno trabalha N itens independentes ao mesmo tempo (um por trilha, subdiretório próprio em handoffs/T<turno>/<item>/, trilhas.json com o estado de cada uma); regra do dono 05/09"
+ ],
+ "papeis": {
+  "gerente": "a sessão que roda a skill: lê estado, escolhe item, escreve o plano do turno, lança os papéis, integra, julga o portão, escreve ledger, comita. Não codifica item médio/grande sozinho.",
+  "pesquisador": "pesquisa com fonte datada e URL testada por HTTP; entrega handoff com 'o que muda no item'",
+  "arquiteto": "ADR em docs/adr/, contratos de API, esquema, decisões de biblioteca; nunca decide por moda, decide por medição ou por doc oficial",
+  "esri": "o que o ArcGIS Enterprise/Pro/AGOL faz EXATAMENTE nessa capacidade (doc Esri datada), lista de paridade feito/parcial/fora, expectativa do usuário Esri",
+  "cartografo": "simbologia, projeção, rótulo, legenda, escala, UX de mapa; o mapa tem de ser bonito e correto",
+  "redes": "rede de utilidades: topologia, traçado, regras de conectividade, BDGD/CIM/OpenDSS, hierarquia; paridade com Utility Network",
+  "raster": "COG/STAC/tiles/sensores/índices; conectores de satélite; proveniência de imagem",
+  "dados": "PostGIS/pgRouting/pgstac: esquema, RLS, índices, desempenho medido, migrações",
+  "backend": "FastAPI/Python/serviços; testes pytest; OpenAPI",
+  "frontend": "MapLibre + app própria; e2e playwright; 0 erro de console; responsivo",
+  "testador": "escreve e roda testes independentes do codificador; mede números; reprova sem dó",
+  "adversario": "contexto próprio; tenta derrubar o item contra o portão; escreve refutacao.json com veredito e evidência",
+  "cronista": "MANUAL.md, CHANGELOG.md, ARQUITETURA.md, página interna do laço"
+ },
+ "protocolo_de_comunicacao": "Tudo por arquivo em laco/handoffs/T<turno>/<ordem>_<papel>.md, nunca por contexto compartilhado. Modelo: Objetivo · O que fiz · Evidência (comando + saída) · Riscos · Pendências · Para o próximo papel. O gerente lê os handoffs e decide; um papel nunca aprova o próprio trabalho. Trilhas paralelas: laco/handoffs/T<turno>/<item>/<ordem>_<papel>.md; trilhas.json registra a etapa de cada item.",
+ "backlog": [
+  {
+   "id": "L0-01-repo",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "entregue",
+   "dependencias": [],
+   "hipotese": "um repositório único (plataforma/enterprise) com layout fixo, instalador idempotente, esquema `plat` próprio no iagro_sat, role própria, pg_hba, unidade systemd `plat-api` e nginx interno noindex = tudo o que vem depois tem onde morar",
+   "portao_de_pronto": "git com README/ARQUITETURA/MANUAL/CHANGELOG; `install.sh` cria schema+role+pg_hba (com linha em pg_hba.conf) e sobe `plat-api` (:8150) sem erro em máquina que nunca viu o repo; `make check` roda pytest verde; URL interna HTTPS com noindex responde 200 em /saude com JSON de versão; `docs/adr/0001-fundacao.md` escrito",
+   "refutacao": "adversário apaga schema `plat` e role, roda install.sh de novo, confere que sobe e que /saude e um pytest completo passam; confere noindex no cabeçalho",
+   "papeis": [
+    "arquiteto",
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 1,
+   "turno": 1,
+   "bloqueio": null
+  },
+  {
+   "id": "L0-02-tenant-auth",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "tentando",
+   "dependencias": [
+    "L0-01-repo"
+   ],
+   "hipotese": "inquilino + usuário + perfil + sessão + 2FA + token de serviço (revogável, com log de leitura) — herdado do SIG de teste interno e generalizado; RLS em TODA tabela com tenant_id",
+   "portao_de_pronto": "tabelas tenant/usuario/sessao/token/permissao com RLS ativa; login/logout/2FA/troca de senha/usuários (admin) funcionam pelo navegador (e2e playwright com captura); teste automatizado prova que usuário do inquilino A não lê nem edita linha do B em nenhum endpoint (varredura de todas as rotas); token de serviço aparece no log com IP/rota/bytes; HERDADO DO T1: toda função SECURITY DEFINER checa o inquilino do contexto (auth_sessao_criar, auth_falha, auth_login, tenant_criar) e EXECUTE só para plat_app; middleware grava plat.log_acesso por requisição autenticada; limiares declarados no ADR (senha ≥ 8 com letra e número, bloqueio 5 tentativas/15 min, sessão e token com expiração configurável, MFA TOTP por usuário)",
+   "refutacao": "adversário escreve consultas cruzadas e chamadas com token de outro inquilino em todas as rotas listadas no OpenAPI; qualquer 200 cruzado = refutado",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 1,
+   "turno": 2,
+   "bloqueio": null,
+   "tentando_desde": "2026-09-05T13:21"
+  },
+  {
+   "id": "L0-03-catalogo",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-tenant-auth"
+   ],
+   "hipotese": "catálogo de conteúdo por inquilino (item = camada vetorial, raster, mapa, app, painel, formulário, fluxo, rede) com metadado, tags, dono, compartilhamento (privado/grupo/inquilino/link por token), busca e miniatura — o equivalente ao Portal 'Content'",
+   "portao_de_pronto": "tabela item + grupo + compartilhamento; tela 'Conteúdo' com lista/grade, busca, filtros por tipo/tag/dono, criar pasta, compartilhar, excluir, e detalhe do item com metadado editável; e2e cobre criar-editar-compartilhar-excluir; OpenAPI publicado; paridade escrita contra Portal Content (feito/parcial/fora)",
+   "refutacao": "adversário compara a lista de ações do Portal 'Content' (doc Esri datada) com a tela e marca o que falta; item compartilhado por link tem de negar acesso após revogação",
+   "papeis": [
+    "esri",
+    "arquiteto",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L0-04-ingest-vetor",
+   "linha": "L0 fundação",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-catalogo"
+   ],
+   "hipotese": "upload de shapefile(zip)/GeoPackage/GeoJSON/KML/CSV(lat,lon)/DXF-DWG(via ODA/ezdxf) vira camada PostGIS do inquilino com CRS detectado, campos tipados, índice espacial, validação (ST_MakeValid), estatísticas e página de camada",
+   "portao_de_pronto": "cada formato listado importa por upload no navegador e aparece no mapa em ≤ 60 s para 100 mil feições; CRS errado/ausente é perguntado, não assumido; feições inválidas contadas e corrigidas com relatório; teste automatizado com arquivo de cada formato (dado aberto); tamanho máximo e cota por inquilino aplicados",
+   "refutacao": "adversário envia shapefile sem .prj, GeoJSON com polígono auto-intersectado, CSV com vírgula decimal e DXF com blocos; cada um tem de ou importar certo ou recusar com mensagem exata — silêncio = refutado",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L0-05-jobs",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "tentando",
+   "dependencias": [
+    "L0-01-repo"
+   ],
+   "hipotese": "fila de trabalho só com Postgres (Procrastinate ou própria) para ingestão, geoprocessamento, COG, IA: progresso, cancelamento, log por job, retentativa, visível na tela 'Tarefas'",
+   "portao_de_pronto": "job de 5 min mostra progresso em tempo real, pode ser cancelado, sobrevive a reinício do serviço (retoma ou marca falha, nunca some); 1 worker por padrão com limite de RAM declarado; tela Tarefas por inquilino; teste automatizado",
+   "refutacao": "adversário mata o worker no meio de um job e reinicia: job não pode aparecer como concluído",
+   "papeis": [
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 1,
+   "turno": 2,
+   "bloqueio": null,
+   "tentando_desde": "2026-09-05T13:21"
+  },
+  {
+   "id": "L0-06-backup-status",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-ingest-vetor"
+   ],
+   "hipotese": "pgBackRest (ou pg_basebackup+WAL) com PITR, dump por inquilino em formato aberto (GeoPackage+JSON) sob demanda, restore drill scriptado, página de status e log de correções",
+   "portao_de_pronto": "backup diário + WAL; `restore_drill.sh` restaura em schema temporário e confere contagens = produção; botão 'exportar meu inquilino' gera GeoPackage completo; página /status pública interna com uptime dos serviços; teste do drill no CI",
+   "refutacao": "adversário restaura o backup mais recente em schema à parte e compara COUNT(*) de todas as tabelas com tenant_id; divergência = refutado",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L1-01-ingest-raster",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-05-jobs",
+    "L0-03-catalogo"
+   ],
+   "hipotese": "upload de GeoTIFF/JP2/ECW(se GDAL)/ortomosaico vira COG (visual JPEG/WEBP + científico ZSTD) no Garage com item STAC (pgstac) e entra no catálogo do inquilino com miniatura e estatísticas",
+   "portao_de_pronto": "upload pelo navegador → job → COG validado (rio-cogeo) → item STAC em pgstac → aparece em Conteúdo e no mapa; tempo e taxa de compressão registrados por job; pgstac instalado e migrado; teste com S2 e ortofoto abertos",
+   "refutacao": "adversário envia raster sem CRS, com nodata errado e 16 bits: cada um importa certo ou recusa com mensagem; conferir que o COG lê por Range (206) e que sobrescrever não corrompe (nome por sha)",
+   "papeis": [
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L1-02-tiles-token",
+   "linha": "L1 imagens",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-ingest-raster",
+    "L0-02-tenant-auth"
+   ],
+   "hipotese": "serviço de tiles raster por inquilino: XYZ/WMTS 1.0.0/TileJSON com token longo no caminho, revogável, restrito por Referer/IP, com log de leitura; NDVI e expressões ao vivo; mosaico por coleção",
+   "portao_de_pronto": "URLs `/svc/<token>/raster/<item>/{z}/{x}/{y}` e WMTS GetCapabilities válidas; QGIS carrega WMTS e XYZ; token revogado → 403 em ≤ 5 s; expressão NDVI via parâmetro; log com contagem por token; bench: ≥ 500 tiles/s quente com cache nginx",
+   "refutacao": "adversário tenta URL arbitrária no parâmetro (SSRF), token de outro inquilino, Referer falso; e valida o XML do WMTS com o esquema OGC",
+   "papeis": [
+    "raster",
+    "esri",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L1-03-conectores-sensores",
+   "linha": "L1 imagens",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-01-ingest-raster"
+   ],
+   "hipotese": "conectores prontos, sem chave do cliente: Sentinel-2 (Element84 STAC), Sentinel-1 (onde houver COG aberto), Landsat (USGS STAC), MapBiomas col.10 (COG), ESA WorldCover, JRC água, Hansen, GLO-30, NASA POWER, SoilGrids, Copernicus CDS (AgERA5/ERA5) com a chave da casa — o usuário desenha/seleciona área e período e a camada entra no catálogo dele",
+   "portao_de_pronto": "tela 'Sensores' lista conectores com estado (testado por HTTP na hora); para cada um, área+período → job → camada no catálogo; série NDVI por polígono em ≤ 90 s; cada conector com teste automatizado que baixa 1 recorte pequeno; licença de cada fonte escrita na ficha",
+   "refutacao": "adversário confere licença e URL de cada conector contra a página oficial datada e roda cada um numa área nova; conector que falha silenciosamente = refutado",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L1-04-serie-temporal",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-tiles-token",
+    "L1-03-conectores-sensores"
+   ],
+   "hipotese": "série temporal por camada raster (data no STAC): controle deslizante de tempo no mapa, comparação lado a lado/cortina, gráfico de índice por polígono, exportação CSV",
+   "portao_de_pronto": "mapa com controle de tempo sobre coleção com ≥ 6 datas; cortina e lado a lado funcionam (e2e); gráfico NDVI/qualquer índice por feição desenhada; CSV baixa; paridade contra 'Time slider'/Image Analyst escrita",
+   "refutacao": "adversário confere que a data mostrada é a do STAC e não a do upload; compara valor do gráfico com cálculo independente em rasterio",
+   "papeis": [
+    "raster",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L1-05-ia-na-entrada",
+   "linha": "L1 imagens",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-03-conectores-sensores",
+    "L0-05-jobs"
+   ],
+   "hipotese": "inferência opcional na ingestão (GPU box): detecção de mudança S2, telhado/edificação (Open Buildings como base), vegetação em faixa — gera camada leve com proveniência (modelo, versão, data, hash)",
+   "portao_de_pronto": "pelo menos 1 modelo em produção na entrada com opção por inquilino; camada resultante tem metadado de proveniência; teste com área conhecida; NUNCA afirma o que não foi medido (frase de enquadramento na camada)",
+   "refutacao": "adversário roda o modelo em área de controle e confere taxa de falso positivo declarada na ficha",
+   "papeis": [
+    "raster",
+    "pesquisador",
+    "backend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-01-mapa-web",
+   "linha": "L2 plataforma",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-ingest-vetor"
+   ],
+   "hipotese": "visualizador MapLibre próprio: camadas do catálogo (vetor via Martin/PMTiles, raster via tiles), ordem, opacidade, legenda, popup, escala, coordenadas, medição, pesquisa de endereço/coordenada, base cartográfica (OSM + satélite aberta), impressão",
+   "portao_de_pronto": "Martin instalado (`plat-martin` :8151) servindo funções com RLS; mapa carrega camada de 1 mi de feições sem travar (medido); todos os controles listados funcionam por e2e; legenda gerada da simbologia; impressão gera PNG/PDF com escala e norte; 0 erro de console",
+   "refutacao": "adversário carrega 10 camadas ao mesmo tempo e mede tempo e memória do navegador; testa popup em feição com campo nulo e geometria multi",
+   "papeis": [
+    "cartografo",
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-02-simbologia",
+   "linha": "L2 plataforma",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "editor de simbologia completo: único, por categoria, por classe (quantil/intervalo/natural), proporcional, mapa de calor, rótulos com expressão, transparência, escala de visibilidade, para ponto/linha/polígono e raster (rampa, faixa, transparência)",
+   "portao_de_pronto": "cada tipo de simbologia acima aplicável pelo navegador e salvo no mapa; rótulos com prioridade de colisão; rampas ColorBrewer; estilo exportável como JSON (spec MapLibre) e importável; e2e por tipo; paridade contra Smart Mapping do Map Viewer escrita",
+   "refutacao": "adversário aplica classificação em campo com nulos e valores repetidos; compara cortes com cálculo independente (numpy)",
+   "papeis": [
+    "cartografo",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-03-edicao",
+   "linha": "L2 plataforma",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-01-mapa-web",
+    "L0-02-tenant-auth"
+   ],
+   "hipotese": "edição de feições no mapa: criar/mover/vértices/dividir/unir/apagar, formulário de atributos com domínios e validação, anexos, desfazer/refazer, snapping, edição em lote, histórico de versão por feição (quem/quando/o quê) e restauração",
+   "portao_de_pronto": "todas as operações por e2e; domínios e obrigatórios aplicados no servidor (não só no navegador); histórico consultável e restauração funciona; edição concorrente detectada (versão otimista); anexos com limite e tipos",
+   "refutacao": "adversário edita a mesma feição em duas sessões e confere que a última não sobrescreve em silêncio; envia atributo fora do domínio direto na API",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-04-servicos-esri-ogc",
+   "linha": "L2 plataforma",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-03-edicao",
+    "L0-02-tenant-auth"
+   ],
+   "hipotese": "toda camada do inquilino publicada automaticamente como FeatureServer Esri-compatível (query com where/geometry/outFields/orderBy/paginação/estatísticas, applyEdits, attachments, relacionamentos, queryRelatedRecords) E OGC API Features/WFS 2.0 E tiles vetoriais, tudo por token",
+   "portao_de_pronto": "conformidade medida: script de conformidade que percorre a spec REST do FeatureServer (parâmetros da doc Esri datada) e marca cada um; ArcGIS Pro/QGIS/AGOL carregam (QGIS medido aqui; Pro/AGOL = teste do parceiro registrado como PENDENTE, nunca como feito); OGC API Features passa no `ogcapi-features` validator (teamengine ou pyogcapi) para o núcleo; WFS 2.0 GetCapabilities válido",
+   "refutacao": "adversário roda o cliente Python `arcgis` (Esri) e `owslib` contra o serviço e lista toda chamada que quebra",
+   "papeis": [
+    "esri",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-05-geoprocessamento",
+   "linha": "L2 plataforma",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-01-mapa-web",
+    "L0-05-jobs"
+   ],
+   "hipotese": "ferramentas de análise no navegador (executam no servidor como job): buffer, recorte, interseção, união, dissolver, junção espacial, centroides, área/comprimento, agregação por polígono, seleção por atributo/local, isócrona (OSRM), rota, estatísticas zonais sobre raster, calculadora raster, reprojeção, criação de grade hex/quadrada",
+   "portao_de_pronto": "cada ferramenta com formulário, execução como job, resultado como nova camada no catálogo com proveniência (entrada+parâmetros+versão); teste automatizado por ferramenta contra resultado calculado independentemente (shapely/rasterio); paridade contra Analysis tools do Map Viewer escrita",
+   "refutacao": "adversário compara cada saída com QGIS processing (qgis_process headless) na mesma entrada; divergência > tolerância declarada = refutado",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-06-paineis",
+   "linha": "L2 plataforma",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "painéis (dashboards) ligados a camadas: indicador, gráfico de barras/linha/pizza, tabela, lista, mapa, filtro por seleção; atualização quando o dado muda; compartilhável por link",
+   "portao_de_pronto": "editor de painel arrasta-e-solta (grade), cada elemento configurável; filtro em um elemento filtra os outros (ação); e2e; dado muda no banco → painel reflete sem recarregar (polling/SSE) ; paridade contra ArcGIS Dashboards escrita",
+   "refutacao": "adversário confere que soma/média do indicador bate com SQL direto e que painel de inquilino A não vaza para B pelo link",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-07-campo",
+   "linha": "L2 plataforma",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-03-edicao"
+   ],
+   "hipotese": "formulários de campo (construtor XLSForm-compatível) com coleta em celular via PWA offline (fila local + sincronização), foto/GPS/assinatura; integração ODK Central opcional",
+   "portao_de_pronto": "construtor de formulário arrasta-e-solta gera XLSForm válido; PWA instala no celular, coleta offline 10 registros e sincroniza; registros viram feições na camada; e2e em viewport móvel; paridade contra Survey123/Field Maps escrita",
+   "refutacao": "adversário coleta sem rede, muda relógio, sincroniza duas vezes: sem duplicata e sem perda",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-08-migracao-agol",
+   "linha": "L2 plataforma",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-02-simbologia",
+    "L0-04-ingest-vetor"
+   ],
+   "hipotese": "ferramenta de migração: dado um Portal/AGOL do cliente (token dele), clona itens (camadas hospedadas, web maps, grupos, simbologia simples, Survey123→XLSForm), gera relatório do que entrou e do que NÃO entra (Arcade, Experience Builder, StoryMaps, Dashboards com ações)",
+   "portao_de_pronto": "roda contra conta AGOL de teste (a parceiro geo tem — item PENDENTE de credencial do parceiro; até lá, contra JSON exportado de web map público) e produz catálogo espelho + relatório; web map clonado abre no nosso visualizador com mesmas camadas e simbologia simples; teste automatizado com JSON de exemplo",
+   "refutacao": "adversário compara camada por camada, contagem e simbologia; item marcado 'migrado' com diferença = refutado",
+   "papeis": [
+    "esri",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-09-3d",
+   "linha": "L2 plataforma",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "cena 3D: terreno (GLO-30 terrain-RGB), extrusão por atributo, modelos (glTF/IFC convertidos), iluminação, corte, medição em 3D",
+   "portao_de_pronto": "cena com terreno + extrusão + 1 modelo IFC convertido abre e roda a 30 fps em máquina comum (medido); e2e; paridade contra Scene Viewer escrita",
+   "refutacao": "adversário confere altura extrudada contra atributo e que o terreno não tem degrau de 128 m (armadilha terrain-RGB)",
+   "papeis": [
+    "frontend",
+    "cartografo",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L3-01-motor-servico",
+   "linha": "L3 motor AMC",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-05-geoprocessamento"
+   ],
+   "hipotese": "motor multicritério como serviço da plataforma: fator = camada + critério (transformação declarada: linear, faixas, distância, categoria→nota, veto), peso escolhido pelo usuário, unidade de análise = grade hex/quadrada ou feições do usuário, favorabilidade 0-100 explicável por célula/feição; herdado dos motores logístico (25 fatores) e de LT (322 camadas)",
+   "portao_de_pronto": "tela 'Motor' em qualquer camada de unidades: adicionar fatores de camadas do catálogo, definir transformação com pré-visualização de histograma, pesos, vetos, 'rodar' como job, resultado como camada com explicação por unidade (fator × peso, Σ, vetado); presets salvos; export do método em PDF/JSON; teste contra o motor logístico (mesmos fatores = mesma nota ±0,5)",
+   "refutacao": "adversário recalcula 200 unidades em numpy a partir dos rasters/vetores de entrada e compara; divergência > 0,5 ponto = refutado; e tenta peso negativo/soma zero",
+   "papeis": [
+    "arquiteto",
+    "dados",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L3-02-robustez",
+   "linha": "L3 motor AMC",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-motor-servico"
+   ],
+   "hipotese": "análise de robustez do motor: sensibilidade por fator (Sobol/SMAA simplificado), ranking estável × instável, comparação de presets lado a lado, Monte Carlo de pesos",
+   "portao_de_pronto": "botão 'robustez' gera relatório com ranking sob N sorteios de pesos e marca unidades estáveis; comparação de 2 presets no mapa; teste automatizado; texto 'pesos escolhidos, não medidos' em todo resultado",
+   "refutacao": "adversário confere que ranking estável não muda com permutação de pesos dentro da faixa declarada",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L4-01-modelo-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-ingest-vetor"
+   ],
+   "hipotese": "modelo de rede de utilidades genérico (elétrica/água/gás/telecom): nós (junção, dispositivo, fonte/sub, consumidor) e arestas (trecho/condutor) com conectividade explícita (tabela de associação), estado (aberto/fechado), hierarquia (subestação→alimentador→trafo→BT), atributos por tipo, regras de conectividade por catálogo de ativos; PostGIS + pgRouting",
+   "portao_de_pronto": "pgRouting instalado; DDL `plat.rede_*` com regras de conectividade validadas por trigger; importador BDGD (ANEEL) que monta a rede de 1 distribuidora inteira (SUB/CTMT/SSDMT/UNTRMT/SSDBT/UCBT) com contagem conferida contra o arquivo; documento do modelo com paridade contra ArcGIS Utility Network (domínios, tiers, associations, subnetworks) escrita",
+   "refutacao": "adversário importa a BDGD de outra distribuidora e confere: nº de alimentadores, km por nível, trafos e UCs = o que o arquivo declara; nó órfão e aresta sem nó contados e explicados",
+   "papeis": [
+    "redes",
+    "pesquisador",
+    "arquiteto",
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L4-02-tracado",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-modelo-rede"
+   ],
+   "hipotese": "traçados de rede: conectado, montante, jusante, isolamento (dispositivos a abrir), laço, caminho mais curto, subrede (alimentador) e barreiras — como serviço e no mapa com seleção",
+   "portao_de_pronto": "cada traçado por API e no visualizador (clicar um ponto → resultado destacado com contagem e lista de ativos); tempo ≤ 2 s em alimentador de 10 mil trechos (medido); teste automatizado contra rede sintética com resposta conhecida; paridade contra os trace types do UN escrita",
+   "refutacao": "adversário monta rede com laço e chave aberta e confere que jusante respeita o estado; recalcula isolamento à mão",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L4-03-edicao-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-02-tracado",
+    "L2-03-edicao"
+   ],
+   "hipotese": "edição de rede com regras: inserir dispositivo em trecho (divide e reconecta), mover nó arrasta as arestas, apagar trecho avisa desconexão, validar topologia (área suja), versões de edição (rascunho→revisão→publicado)",
+   "portao_de_pronto": "operações no mapa por arrasta-e-solta com snapping; validação de topologia devolve erros com posição; versões com diff e publicação; e2e; regras de conectividade recusam ligação proibida no servidor",
+   "refutacao": "adversário liga MT em BT direto pela API e conecta trecho a nó inexistente: tem de ser recusado com mensagem",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L4-04-subredes-diagramas",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-03-edicao-rede"
+   ],
+   "hipotese": "subredes calculadas e mantidas (nome do alimentador propagado, controlador), sumários por subrede (km, clientes, carga), diagrama esquemático automático (layout ortogonal) do alimentador",
+   "portao_de_pronto": "atualização de subrede após edição; tabela de sumário por alimentador conferida contra BDGD; diagrama esquemático abre e se navega ligado ao mapa; e2e",
+   "refutacao": "adversário abre chave de fronteira e confere que a subrede re-atribui os trechos",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L4-05-conectores-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-modelo-rede"
+   ],
+   "hipotese": "conectores: BDGD (ANEEL, 101 distribuidoras, já na casa), SINDAT/ONS (transmissão), CNEFE/consumidores, OSM power=*, e exportação CIM (IEC 61970/61968 XML) e OpenDSS",
+   "portao_de_pronto": "importar BDGD de qualquer distribuidora pelo nome (pacote ANEEL) como job; exportar alimentador em OpenDSS e o `dss` roda power flow sem erro; CIM XML valida contra esquema; teste automatizado",
+   "refutacao": "adversário roda OpenDSS e confere que nº de barras e linhas = nossos trechos e nós",
+   "papeis": [
+    "redes",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L5-01-app-builder",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-06-paineis",
+    "L2-02-simbologia"
+   ],
+   "hipotese": "construtor de aplicação arrasta-e-solta: layout (cabeçalho, barra lateral, abas), widgets (mapa, legenda, lista de camadas, busca, filtro, tabela, gráfico, texto, imagem, botão de ação, formulário), temas, publicação por link/token, versão publicada × rascunho",
+   "portao_de_pronto": "criar app do zero só arrastando, com ≥ 8 widgets funcionando entre si (seleção no mapa filtra tabela e gráfico), publicar, abrir por link anônimo com token; e2e; paridade contra Experience Builder (widgets e ações) escrita",
+   "refutacao": "adversário abre o app publicado em viewport móvel e desktop e lista widget que quebra; muda rascunho e confere que a versão publicada não muda até publicar",
+   "papeis": [
+    "frontend",
+    "backend",
+    "esri",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L5-02-fluxos",
+   "linha": "L5 builder",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-05-geoprocessamento",
+    "L3-01-motor-servico",
+    "L0-05-jobs"
+   ],
+   "hipotese": "construtor de fluxos de geoprocessamento (nós e ligações, estilo Carto Workflows/ModelBuilder): entrada camada → ferramentas de L2-05 e motor L3 → saída camada; salvar, agendar, executar como job, ver proveniência",
+   "portao_de_pronto": "fluxo com ≥ 5 nós roda e gera camada; agendamento (cron) re-executa; erro em nó mostra onde parou; fluxo exportável como JSON e como script Python equivalente; e2e",
+   "refutacao": "adversário monta fluxo com ciclo e com tipo incompatível (raster em buffer vetorial): tem de recusar antes de rodar",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L5-03-form-builder",
+   "linha": "L5 builder",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-03-edicao",
+    "L2-07-campo"
+   ],
+   "hipotese": "construtor de formulário de atributos arrasta-e-solta para camadas (grupos, condicional, cálculo, domínio, obrigatório) usado na edição e no campo",
+   "portao_de_pronto": "formulário definido por arrasto vale na edição web e no PWA de campo; regra condicional e cálculo funcionam nos dois; e2e",
+   "refutacao": "adversário define campo obrigatório e submete sem ele pela API",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L5-04-storymap",
+   "linha": "L5 builder",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "narrativas com mapa (StoryMap): seções de texto + mapa que voa para vista/camadas por seção, imagens, publicação por link",
+   "portao_de_pronto": "criar narrativa de 5 seções, publicar, abrir por link; e2e",
+   "refutacao": "adversário confere que vista por seção é a salva (sem deriva) e link revogado nega",
+   "papeis": [
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L6-01-acervo-casa",
+   "linha": "L6 conectores",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "o acervo da casa (376 fontes, 132 populadas no principal) como catálogo assinável de camadas prontas: o inquilino 'adiciona' camada do acervo (CAR, SIGEF, UC/TI, embargos, BDGD, hidrografia, relevo, MapBiomas, CNEFE…) com licença, frescor, sha256 e procedência lidos de `acervo.*`",
+   "portao_de_pronto": "tela 'Acervo' com busca por domínio e fonte, ficha com licença/frescor/procedência, botão 'adicionar ao meu mapa' que vira camada só-leitura (view RLS) sem copiar dado; ≥ 40 camadas expostas com licença ESCRITA (nunca as sem licença — regra D17); teste automatizado",
+   "refutacao": "adversário confere que nenhuma camada sem licença escrita aparece e que a ficha bate com `acervo.fonte`",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L6-02-conectores-vivos",
+   "linha": "L6 conectores",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "conectores a serviços vivos por URL: WMS/WMTS/WFS/OGC API/ArcGIS REST externos (ler camadas de qualquer Portal público), STAC externo, GeoParquet no bucket (DuckDB), PMTiles",
+   "portao_de_pronto": "adicionar camada por URL de cada tipo pelo navegador e vê-la no mapa; catálogo guarda a conexão com teste de saúde; teste automatizado contra endpoints públicos (IBGE, ANA, ANM)",
+   "refutacao": "adversário fornece URL interna (SSRF) e serviço com CRS exótico",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L7-01-instalador-limpo",
+   "linha": "L7 operação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-04-servicos-esri-ogc",
+    "L1-02-tiles-token"
+   ],
+   "hipotese": "instalação do zero em máquina limpa (docker compose OU install.sh em Ubuntu 24.04): Postgres+PostGIS+pgRouting+pgstac, Garage, Martin, TiTiler, API, front, nginx — 1 comando, ≤ 30 min, com dado de demonstração aberto",
+   "portao_de_pronto": "instalação executada em ambiente limpo (contêiner nesta máquina ou GPU box) a partir do repositório e passa `make check` inteiro + e2e; documento de instalação; tamanho do repositório ≤ 3 GB",
+   "refutacao": "adversário instala seguindo só o documento, sem falar com ninguém, e anota cada passo que falhou",
+   "papeis": [
+    "arquiteto",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L7-02-carga",
+   "linha": "L7 operação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L7-01-instalador-limpo"
+   ],
+   "hipotese": "teste de carga k6: 100 usuários simultâneos navegando mapa (tiles vetor+raster) e 20 editando; medir p95 e erro; ajustar cache e pool",
+   "portao_de_pronto": "k6 instalado; cenário reproduzível em `tests/carga/`; p95 tile < 200 ms quente e 0 erro 5xx com 100 usuários; relatório com números e comando",
+   "refutacao": "adversário repete o k6 com cache frio e publica os dois números",
+   "papeis": [
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L7-03-seguranca",
+   "linha": "L7 operação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-04-servicos-esri-ogc"
+   ],
+   "hipotese": "lista de segurança executada: cabeçalhos, CSP, rate limit, senha/2FA, tokens com escopo, RLS em tudo, upload seguro (tipo/tamanho/antivírus opcional), SSRF, injeção em where do FeatureServer, dependências com CVE",
+   "portao_de_pronto": "checklist em `docs/SEGURANCA.md` com cada item marcado por teste automatizado ou evidência; scanner de dependências no `make check`; teste de injeção no `where` do FeatureServer passa",
+   "refutacao": "adversário com instrução de invadir: tenta SQLi no where, path traversal em anexos, token de outro inquilino, upload de .svg com script; qualquer sucesso = refutado",
+   "papeis": [
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L7-04-manual-e-tour",
+   "linha": "L7 operação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-01-app-builder"
+   ],
+   "hipotese": "manual do usuário completo (por tela, com captura real do produto) + manual do administrador + tour guiado dentro do produto para o primeiro acesso",
+   "portao_de_pronto": "MANUAL.md/site interno com uma seção por tela e captura gerada por playwright (nunca desenho); tour no primeiro login; e2e do tour",
+   "refutacao": "adversário segue o manual para fazer 5 tarefas sem ajuda e anota onde travou",
+   "papeis": [
+    "cronista",
+    "frontend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L7-05-producao-final",
+   "linha": "L7 operação",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-06-backup-status",
+    "L0-07-admin-org",
+    "L0-08-sso",
+    "L0-09-metadado-catalogo",
+    "L1-04-serie-temporal",
+    "L1-05-ia-na-entrada",
+    "L2-08-migracao-agol",
+    "L2-09-3d",
+    "L2-10-relacoes-regras",
+    "L2-11-geocodificacao-rota",
+    "L2-12-impressao-layout",
+    "L2-13-versionamento-sync",
+    "L2-14-tempo-real",
+    "L2-15-analitica-grande",
+    "L2-16-notebooks-scripts",
+    "L3-02-robustez",
+    "L4-04-subredes-diagramas",
+    "L4-05-conectores-rede",
+    "L4-06-estruturas-regras-avancadas",
+    "L5-02-fluxos",
+    "L5-03-form-builder",
+    "L5-04-storymap",
+    "L6-01-acervo-casa",
+    "L6-02-conectores-vivos",
+    "L7-01-instalador-limpo",
+    "L7-02-carga",
+    "L7-03-seguranca",
+    "L7-04-manual-e-tour",
+    "L7-06-observabilidade",
+    "L7-07-alta-disponibilidade",
+    "L7-08-sdk-api-webhooks",
+    "L7-09-medicao-cobranca",
+    "L7-10-i18n-acessibilidade",
+    "L7-11-appliance-cliente",
+    "L7-12-lgpd-governanca",
+    "L7-13-suporte-chamados"
+   ],
+   "hipotese": "estado de produção: todos os itens L0-L6 entregues, instalação limpa aprovada, carga aprovada, segurança aprovada, backup/restore drill aprovado, manual completo, roteiro de demonstração para o dono, e página interna única atualizada",
+   "portao_de_pronto": "todas as dependências `entregue`; roteiro `docs/DEMO.md` de 30 min percorrível por e2e; página interna do laço (noindex) com placar, capturas e o que NÃO faz (fronteira); nenhum placeholder no produto (varredura do driver = 0)",
+   "refutacao": "adversário final com instrução de achar qualquer função que não funcione como o manual diz",
+   "papeis": [
+    "gerente",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L0-07-admin-org",
+   "linha": "L0 fundação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-tenant-auth",
+    "L0-03-catalogo"
+   ],
+   "hipotese": "console de administração da organização (inquilino): configurações, identidade visual, tipos de usuário e privilégios personalizados, grupos, cotas (disco/usuários/itens), uso por período, convites por e-mail, redefinição de senha, licenças por membro",
+   "portao_de_pronto": "tela Administração com todas as funções acima operando por e2e; convite e redefinição chegam por SMTP configurável (teste com servidor SMTP local de captura); cota excedida bloqueia upload com mensagem; relatório de uso exportável; paridade contra Organization settings do Portal escrita",
+   "refutacao": "adversário tenta ultrapassar cota pela API direta e usar convite expirado",
+   "papeis": [
+    "esri",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L0-08-sso",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-02-tenant-auth"
+   ],
+   "hipotese": "login federado: SAML 2.0 e OIDC (Keycloak/Authentik opcional ou biblioteca própria), gov.br como provedor quando o órgão tiver credencial, mapeamento de grupo→perfil, provisionamento automático",
+   "portao_de_pronto": "login por OIDC contra provedor de teste (Keycloak em contêiner ou mock server OIDC conformante) e por SAML (simplesamlphp/teste) funcionam por e2e; usuário federado cai no inquilino e perfil certos; desligar o provedor não derruba login local de admin",
+   "refutacao": "adversário forja assertion SAML sem assinatura e token OIDC expirado",
+   "papeis": [
+    "pesquisador",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L0-09-metadado-catalogo",
+   "linha": "L0 fundação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-catalogo"
+   ],
+   "hipotese": "metadado completo por item (ISO 19115/19139 e perfil MGB/INDE), categorias, favoritos, proteção contra exclusão, dependências entre itens, histórico de versões do item, transferência de propriedade, e catálogo OGC API Records/CSW para descoberta externa",
+   "portao_de_pronto": "editor de metadado com exportação ISO válida (valida contra XSD); CSW GetRecords e OGC API Records respondem e passam no validador; dependências mostram 'usado por'; e2e; paridade escrita",
+   "refutacao": "adversário apaga item com proteção ligada e item usado por mapa: deve recusar",
+   "papeis": [
+    "esri",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-10-relacoes-regras",
+   "linha": "L2 plataforma",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-03-edicao"
+   ],
+   "hipotese": "tabelas relacionadas (1:N, N:M), subtipos, domínios codificados e de intervalo, regras de atributo (cálculo, restrição, validação) com linguagem de expressão própria documentada (equivalente ao Arcade nas funções mais usadas), aplicadas no servidor",
+   "portao_de_pronto": "relacionamento consultável via FeatureServer (queryRelatedRecords) e no popup; regra de cálculo dispara na edição; regra de restrição recusa; expressão com ≥ 40 funções documentadas e testadas; paridade contra Arcade (perfis popup/calculation/constraint) escrita",
+   "refutacao": "adversário escreve expressão maliciosa (laço infinito, acesso a tabela de outro inquilino) e edita pela API",
+   "papeis": [
+    "esri",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-11-geocodificacao-rota",
+   "linha": "L2 plataforma",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "serviços de localização da plataforma: geocodificação e reversa (Nominatim/Pelias self-host com OSM + CNEFE/CEP abertos), rota e matriz (OSRM/Valhalla), área de serviço; expostos como serviço REST e no mapa (busca, rota, isócrona)",
+   "portao_de_pronto": "busca de endereço no mapa e API `/svc/<token>/geocode`; rota entre 2 pontos com instruções; matriz 10×10; instalação com dado de 1 UF aberta (disco!); teste automatizado com endereços conhecidos; paridade contra World Geocoding/Routing escrita",
+   "refutacao": "adversário compara 50 endereços contra coordenadas oficiais (CNEFE) e mede erro mediano",
+   "papeis": [
+    "pesquisador",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-12-impressao-layout",
+   "linha": "L2 plataforma",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-02-simbologia"
+   ],
+   "hipotese": "serviço de impressão com layouts: título, legenda, escala, norte, grade de coordenadas, texto, tamanho de papel A4-A0, exportação PDF/PNG/SVG com resolução, modelos por inquilino",
+   "portao_de_pronto": "layout editável por arrasto, exportação PDF vetorial em A3 com legenda correta; e2e; paridade contra Print service/Layout escrita",
+   "refutacao": "adversário confere escala impressa com régua sobre o PDF e a legenda contra a simbologia",
+   "papeis": [
+    "cartografo",
+    "frontend",
+    "backend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-13-versionamento-sync",
+   "linha": "L2 plataforma",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-03-edicao",
+    "L2-07-campo"
+   ],
+   "hipotese": "versionamento de dado (ramificação: rascunho por usuário/equipe, reconciliar, publicar, conflitos) e sincronização offline (replica: baixar, editar sem rede, subir com resolução de conflito) para o campo",
+   "portao_de_pronto": "criar versão, editar, reconciliar com conflito detectado e resolvido por e2e; replica baixada em GeoPackage, editada fora e sincronizada; teste automatizado; paridade contra branch versioning/sync escrita",
+   "refutacao": "adversário edita a mesma feição em duas réplicas e sincroniza as duas",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-14-tempo-real",
+   "linha": "L2 plataforma",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-01-mapa-web",
+    "L0-05-jobs"
+   ],
+   "hipotese": "fluxo em tempo real: entrada de posições/eventos (MQTT/WebSocket/HTTP; ex. AIS, GPS de frota, sensor), camada viva no mapa, regras de alerta (entrou/saiu de área, valor acima de), histórico com TimescaleDB",
+   "portao_de_pronto": "fonte de teste (simulador de 100 veículos) aparece viva no mapa; regra geofence dispara notificação; histórico consultável por período; teste automatizado; paridade contra GeoEvent/Velocity escrita",
+   "refutacao": "adversário envia 10 mil eventos/s e mede perda e atraso",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-15-analitica-grande",
+   "linha": "L2 plataforma",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-05-geoprocessamento"
+   ],
+   "hipotese": "analítica em escala sobre GeoParquet no bucket (DuckDB spatial/SedonaDB): agregações espaciais em centenas de milhões de linhas, junções com o acervo, resultado como camada",
+   "portao_de_pronto": "consulta sobre ≥ 100 mi de linhas (dado aberto já na casa, ex. CAR/AIS) responde em tempo medido e vira camada; exportação GeoParquet de qualquer camada; teste automatizado; paridade contra GeoAnalytics escrita",
+   "refutacao": "adversário confere contagem contra PostGIS na mesma pergunta",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L2-16-notebooks-scripts",
+   "linha": "L2 plataforma",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-02-fluxos"
+   ],
+   "hipotese": "ambiente de script do usuário: notebooks (JupyterLab por inquilino, isolado, com SDK Python da plataforma) e ferramentas personalizadas (script Python vira ferramenta com formulário, como Python toolbox)",
+   "portao_de_pronto": "notebook abre com SDK que lista camadas do inquilino e grava camada; script com parâmetros declarados vira ferramenta no L5-02; isolamento de recurso (CPU/RAM/tempo) medido; paridade contra ArcGIS Notebooks/Python toolbox escrita",
+   "refutacao": "adversário tenta ler dado de outro inquilino e escapar do isolamento",
+   "papeis": [
+    "arquiteto",
+    "backend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L4-06-estruturas-regras-avancadas",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-03-edicao-rede"
+   ],
+   "hipotese": "rede de utilidades: contenção e estrutura (poste contém equipamentos; câmara contém cabos), terminais, controladores de subrede, regras de atributo de rede, validação em área suja, e diagrama com camadas",
+   "portao_de_pronto": "associações de contenção/estrutura editáveis e traçadas; validação lista erros por regra; e2e; paridade contra UN (associations, terminals, dirty areas) escrita",
+   "refutacao": "adversário monta poste com 3 trafos e trecho sem terminal e roda validação",
+   "papeis": [
+    "redes",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L7-06-observabilidade",
+   "linha": "L7 operação",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-06-backup-status"
+   ],
+   "hipotese": "métricas (Prometheus), painéis (Grafana), alertas (disco, RAM, fila, erro 5xx, certificado), retenção de logs, rastreamento de requisição por X-Req-Id, página de status ligada às métricas",
+   "portao_de_pronto": "exporter da API e do Postgres; painel Grafana com 10 métricas; alerta de disco > 95 % chega (canal de teste); logs consultáveis por req_id; e2e da página de status",
+   "refutacao": "adversário derruba o Martin e confere que alerta dispara em ≤ 2 min",
+   "papeis": [
+    "backend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L7-07-alta-disponibilidade",
+   "linha": "L7 operação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L7-01-instalador-limpo",
+    "L0-06-backup-status"
+   ],
+   "hipotese": "réplica do Postgres (streaming), failover documentado e testado, cache de tiles em CDN, réplica do Garage, teste de restauração completa em máquina limpa (RTO/RPO medidos)",
+   "portao_de_pronto": "failover executado em ensaio com RTO medido; RPO medido pelo WAL; drill documentado com comandos; SLA declarado só com número medido",
+   "refutacao": "adversário mata o primário sem aviso e cronometra",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L7-08-sdk-api-webhooks",
+   "linha": "L7 operação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L2-04-servicos-esri-ogc"
+   ],
+   "hipotese": "SDK Python e JS da plataforma, portal de API (OpenAPI navegável com exemplos que rodam), webhooks por evento (item criado, edição, job concluído), chaves de API com escopo",
+   "portao_de_pronto": "SDK publicado no repositório com testes; 20 exemplos executáveis no portal; webhook entregue com assinatura HMAC e retentativa; paridade contra ArcGIS API for Python/JS e webhooks do Portal escrita",
+   "refutacao": "adversário forja webhook sem assinatura e usa chave com escopo errado",
+   "papeis": [
+    "backend",
+    "cronista",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L7-09-medicao-cobranca",
+   "linha": "L7 operação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-07-admin-org",
+    "L1-02-tiles-token"
+   ],
+   "hipotese": "medição por inquilino (TB armazenado, tiles servidos, usuários ativos, jobs, GPU) com relatório mensal e limites por plano — o taxímetro da spec, sem crédito",
+   "portao_de_pronto": "tabela de uso por inquilino calculada diariamente; relatório mensal exportável; limite por plano aplicado com aviso; números conferidos contra contagem direta",
+   "refutacao": "adversário compara TB medido com `du` do bucket",
+   "papeis": [
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L7-10-i18n-acessibilidade",
+   "linha": "L7 operação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L5-01-app-builder"
+   ],
+   "hipotese": "interface em português, inglês e espanhol; acessibilidade (teclado, leitor de tela, contraste) medida; responsivo em celular/tablet",
+   "portao_de_pronto": "troca de idioma por usuário sem recarregar; 0 chave sem tradução (teste); axe-core sem violação crítica em todas as telas; e2e em 3 viewports",
+   "refutacao": "adversário navega só por teclado e com leitor de tela em 5 tarefas",
+   "papeis": [
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L7-11-appliance-cliente",
+   "linha": "L7 operação",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L7-01-instalador-limpo"
+   ],
+   "hipotese": "instalação dentro da infraestrutura do cliente (Degrau 0 da spec): pacote (docker compose ou instalador Ubuntu) com licença, atualização assinada, telemetria opcional, sem dependência da nossa nuvem",
+   "portao_de_pronto": "instalação em contêiner limpo a partir do pacote; atualização de versão aplicada com migração; funciona sem internet depois de instalado (exceto conectores); documento do cliente",
+   "refutacao": "adversário instala com rede desligada e lista o que quebra",
+   "papeis": [
+    "arquiteto",
+    "backend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L7-12-lgpd-governanca",
+   "linha": "L7 operação",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-07-admin-org"
+   ],
+   "hipotese": "governança de dado: classificação de camada (pública/interna/pessoal), retenção e expurgo, exportação/eliminação por titular, registro de tratamento, trilha de auditoria exportável",
+   "portao_de_pronto": "camada marcada 'pessoal' exige justificativa de acesso e aparece na trilha; expurgo agendado roda; relatório de tratamento gerado; teste automatizado",
+   "refutacao": "adversário acessa camada pessoal por token de serviço e confere que ficou na trilha",
+   "papeis": [
+    "backend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  },
+  {
+   "id": "L7-13-suporte-chamados",
+   "linha": "L7 operação",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L7-04-manual-e-tour"
+   ],
+   "hipotese": "chamados de suporte dentro do produto (abrir, anexar, acompanhar), base de conhecimento ligada ao manual, notificações",
+   "portao_de_pronto": "abrir chamado com captura, receber resposta, fechar; e2e; ligação com MANUAL por contexto de tela",
+   "refutacao": "adversário abre chamado de outro inquilino pela API",
+   "papeis": [
+    "frontend",
+    "backend",
+    "adversario"
+   ],
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null
+  }
+ ],
+ "ledger": [
+  {
+   "turno": 1,
+   "item": "L0-01-repo",
+   "quando": "2026-09-05 13:21",
+   "papeis": [
+    "gerente",
+    "arquiteto",
+    "backend",
+    "esri",
+    "testador",
+    "adversario",
+    "cronista",
+    "backend(correcao)"
+   ],
+   "construido": "repo enterprise/ (install.sh idempotente, schema plat + role plat_app + pg_hba, migracoes 001/002 com sha256, app FastAPI /saude e /api/versao, systemd plat-api :8150 com PYTHONNOUSERSITE=1, nginx plat.iagrointel.com noindex+HSTS, Swagger local, Makefile check/medidas/vendor, 82 testes + 1 e2e, ADR 0001, ARQUITETURA/MANUAL/CHANGELOG/README, PARIDADE.md, laco/PAINEL.md via gera_painel.py); DNS A DNS-only + certificado Let's Encrypt",
+   "medicoes": {
+    "install_zero_s": 6.24,
+    "install_nunca_viu_s": 9.14,
+    "testes": 82,
+    "make_check_s": 2.86,
+    "placeholders": 0,
+    "noindex_rotas": "11/11",
+    "hsts_rotas": "11/11",
+    "latencia_saude_ms_mediana_tls_novo": 19.8,
+    "rss_mb": 88.5,
+    "rls_insert_cruzado_bloqueado": true,
+    "nomes_cliente": 0
+   },
+   "adversario": "rodada 1 PARCIAL (deps de ~/.local, senha no journal, ADR x codigo, HSTS/Swagger CDN) -> corrigido em 8ffe950 -> rodada 2 PASSA",
+   "portao": "entregue (5/5 clausulas; P1-P9 passam; P4 nao se aplica)",
+   "commits": [
+    "a1d0c20",
+    "904a849",
+    "b22761e",
+    "ca61ea1",
+    "3b53c24",
+    "7092755",
+    "8ffe950",
+    "3083366",
+    "6678cf6"
+   ],
+   "proximo_passo": "T2 em trilhas paralelas: L0-02 tenant/auth (com clausulas herdadas), L0-05 jobs, + trilhas de preparacao (pesquisa/arquitetura) dos itens L0-03/L0-04/L1-01; antes, integrar a decomposicao (>200 itens) ao backlog",
+   "custo_aproximado": "~2,3 mi tokens de subagentes, ~75 min de parede, 1 interrupcao por limite de API"
+  }
+ ],
+ "decisoes_do_dono": [
+  {
+   "id": "D18",
+   "data": "2026-09-05",
+   "pergunta": "nome público do produto (codinome interno: plat)",
+   "estado": "aberta"
+  },
+  {
+   "id": "D19",
+   "data": "2026-09-05",
+   "pergunta": "URL interna: subdomínio (plat.iagrointel.com, como cbre/fgrsig) × caminho não-adivinhável em iagrointel.com",
+   "estado": "seguido o precedente da casa (cbre/fgrsig): subdomínio plat.iagrointel.com, DNS-only + certbot, noindex; reversível"
+  },
+  {
+   "id": "D20",
+   "data": "2026-09-05",
+   "pergunta": "credencial AGOL/Portal de teste do parceiro para L2-08 (migração) e teste real Pro/AGOL contra nossos serviços",
+   "estado": "aberta"
+  },
+  {
+   "id": "D21",
+   "data": "2026-09-05",
+   "pergunta": "disco: os dois servidores estão a 98 %. O laço trabalha com ≤ 3 GB; qualquer dado de rede/imagem além disso exige decisão (apagar cópias declaradas em acervo.objeto = 242 GB, ou volume novo)",
+   "estado": "aberta"
+  }
+ ],
+ "placar": {
+  "entregues": 1,
+  "parciais": 0,
+  "refutados": 0,
+  "total": 57,
+  "turnos": 1
+ },
+ "notas": [
+  "2026-09-05: laço criado a pedido do dono ('no token limit, no time limit, production, no placeholder, drag-and-drop everything, utility networks'). Ativos reutilizados: fgr/sig (tenant/RLS/FeatureServer), plataforma/pipeline (COG/STAC/TiTiler/Garage), cbre motor AMC (25 fatores), tracado-lt motor (322 camadas), geoapp (conectores globais keyless), BDGD 2024 (101 distribuidoras), acervo.* (376 fontes).",
+  "2026-09-05 T1: DNS A plat.iagrointel.com (DNS-only) criado via API Cloudflare; certbot emitiu certificado (expira 2026-12-04); bloco nginx inicial 503 com X-Robots-Tag noindex; venv do repo com pytest 9.1.1 + pytest-playwright.",
+  "2026-09-05 T1: pergunta do dono 'isso é TUDO para produção?'. Resposta: não — acrescentados 19 itens (admin/org, SSO, metadado ISO/CSW, relações e regras de atributo, geocodificação e rota, impressão, versionamento e sync, tempo real, analítica grande, notebooks, estruturas de rede, observabilidade, alta disponibilidade, SDK/webhooks, medição e cobrança, i18n/acessibilidade, appliance, LGPD, suporte); cada item ainda se subdivide em -a/-b quando trabalhado. Produção final depende de todos.",
+  "2026-09-05 T1 (esri, handoff 21_esri.md, 92 URLs testadas): doc 'latest' da Esri é a 12.1; usar série 11.4 versionada como alvo. Para L0-02: ADR tem de declarar limiares de senha (Esri: ≥8 com letra e número, lockout 5 tentativas/15 min), expiração de sessão/token (generateToken máx. 14 d, padrão 120 min), MFA TOTP por membro. Para L0-03: acrescentar sub-itens pastas hierárquicas, favoritos, proteção contra exclusão, status authoritative/deprecated e LIXEIRA (Enterprise não tem — irritação nº 5 da migração); 'link por token' tem de negar após revogação. Paridade-alvo L0-02 (16 linhas) e L0-03 (18 linhas) já escrita no handoff para o adversário cobrar.",
+  "2026-09-05 T1 13:2x: limite de sessão da API (429, reset 15h UTC) derrubou 4 agentes no meio (cronista com .md sem commit; decomposição L1 e L2 sem saída; L3L6 com JSON de 61 itens pronto e conceito parcial). Conta trocada pelo dono (/login) e agentes relançados/retomados. Regra: decompositor grava JSON incrementalmente antes do conceito; o driver segue medindo sem modelo quando o modelo falta."
+ ]
+}

@@ -12,6 +12,8 @@ import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 
+from app.migracoes import chave_migracao
+from app.migracoes import listar as listar_migracoes
 from app.schema_ambiente import CursorSchemaAmbiente
 from app.settings import settings
 
@@ -32,12 +34,20 @@ class Contexto:
 
 
 def pool() -> psycopg2.pool.ThreadedConnectionPool:
-    """Cria o pool na primeira chamada (a configuração é lida só então)."""
+    """Cria o pool na primeira chamada (a configuração é lida só então).
+
+    O tamanho vem de PLAT_POOL_MIN/PLAT_POOL_MAX (padrão 1/8 = o que estava fixo aqui antes; produção não muda).
+    O banco iagro_sat é compartilhado com dezenas de frentes da casa e tem max_connections=100 com 3 reservadas
+    ao superusuário: cada trilha de teste do laço grava PLAT_POOL_MAX=2 no seu .env para que 12 trilhas em
+    paralelo caibam no orçamento de conexões (ver laco/governador.sh e laco/trilha_ambiente.sh).
+    """
     global _pool
     if _pool is None:
         with _trava:
             if _pool is None:
-                _pool = psycopg2.pool.ThreadedConnectionPool(1, 8, settings.PLAT_DSN)
+                _pool = psycopg2.pool.ThreadedConnectionPool(
+                    settings.PLAT_POOL_MIN, settings.PLAT_POOL_MAX, settings.PLAT_DSN
+                )
     return _pool
 
 
@@ -108,15 +118,16 @@ def db(ctx: Contexto | None = None, somente_leitura: bool = False):
 
 
 def migracoes_em_disco() -> list[str]:
-    """Nomes (sem .sql) de db/migracoes/NNN_*.sql em ordem lexicográfica."""
-    return sorted(p.stem for p in DIR_MIGRACOES.glob("[0-9][0-9][0-9]_*.sql"))
+    """Nomes (sem .sql) das migrações em db/migracoes/, na ordem de aplicação (ver app/migracoes.py)."""
+    return listar_migracoes(DIR_MIGRACOES)
 
 
 def migracoes_estado() -> tuple[int, int, str | None]:
-    """(aplicadas, pendentes, ultima) comparando o disco com plat.versao_migracao."""
+    """(aplicadas, pendentes, ultima) comparando o disco com plat.versao_migracao.
+    `ultima` é a de autoria mais recente pela chave_migracao, não a maior string."""
     disco = migracoes_em_disco()
     with db() as cur:
-        cur.execute("SELECT nome FROM plat.versao_migracao ORDER BY nome")
-        aplicadas = [r["nome"] for r in cur.fetchall()]
+        cur.execute("SELECT nome FROM plat.versao_migracao")
+        aplicadas = sorted((r["nome"] for r in cur.fetchall()), key=chave_migracao)
     pendentes = [n for n in disco if n not in aplicadas]
     return len(aplicadas), len(pendentes), (aplicadas[-1] if aplicadas else None)

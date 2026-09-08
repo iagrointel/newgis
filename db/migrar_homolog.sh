@@ -27,9 +27,21 @@ CREATE TABLE IF NOT EXISTS plat_homolog.versao_migracao (
 );
 SQL
 
+# Lista as migrações na ORDEM DE APLICAÇÃO. Duas famílias de nome (ADR 0014):
+#  - legada `NNN_slug.sql` (001 a 048), FECHADA e imutável;
+#  - carimbo de tempo `YYYYMMDDTHHMM_slug.sql`, com 3 hex opcionais quando duas nascem no mesmo minuto.
+# Chave de ordenação: prefixo "0" para o legado e "1" para o carimbo, depois o nome. Assim todo o
+# legado vem antes de qualquer carimbo e a ordem lexicográfica continua válida dentro de cada família.
+listar_migracoes() {
+  local d=$1 f
+  { for f in "$d"/[0-9][0-9][0-9]_*.sql; do [ -e "$f" ] && printf '0\t%s\n' "$f"; done
+    for f in "$d"/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]T[0-9][0-9][0-9][0-9]*_*.sql; do [ -e "$f" ] && printf '1\t%s\n' "$f"; done
+  } | LC_ALL=C sort -t "$(printf '\t')" -k1,1 -k2,2 | cut -f2
+}
+
 aplicadas=0; puladas=0; reaplicadas=0
 shopt -s nullglob
-arquivos=("$DIR"/[0-9][0-9][0-9]_*.sql)
+mapfile -t arquivos < <(listar_migracoes "$DIR")
 if [ ${#arquivos[@]} -eq 0 ]; then echo "nenhuma migração em $DIR" >&2; exit 2; fi
 for arq in "${arquivos[@]}"; do
   nome=$(basename "$arq" .sql)

@@ -242,3 +242,33 @@ body.instrumento .marca strong, body.instrumento h1, body.instrumento h2 {
 body.instrumento dd, body.instrumento .mono, body.instrumento .tabela td.mono, body.instrumento .codigo {
   font-variant-numeric: tabular-nums;
 }
+
+/* --- convite de membro (item L0-07-d-smtp-convites) */
+.form.linha { display: flex; gap: var(--e3); align-items: flex-end; flex-wrap: wrap; }
+.form.linha .campo { min-width: 220px; }
+.lista-convites { list-style: none; padding: 0; margin: var(--e3) 0 0; display: grid; gap: var(--e2); }
+.convite-item { display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap; padding: var(--e2) var(--e3); border: 1px solid var(--borda); border-radius: var(--raio); }
+.convite-email { font-weight: 600; }
+.convite-link { display: flex; align-items: center; gap: var(--e2); flex: 1 1 100%; }
+.convite-link .link-manual { flex: 1; font-family: var(--mono); font-size: .8rem; }
+
+/* --- upload retomável (item L0-04-a-upload-arquivo): dropzone + barra de progresso, escopadas a body.uploads
+   (a folha inteira já herda --acento/--painel/--borda de body.instrumento; aqui só o que é específico da tela) */
+.upload-area { display: grid; gap: var(--e4); max-width: 640px; }
+.upload-dropzone {
+  border: 2px dashed var(--borda-forte);
+  border-radius: var(--raio);
+  padding: var(--e6) var(--e4);
+  text-align: center;
+  cursor: pointer;
+  color: var(--fraco);
+  transition: border-color .15s, background-color .15s;
+}
+.upload-dropzone:hover, .upload-dropzone:focus-visible { border-color: var(--acento); color: var(--texto); }
+.upload-dropzone.sobre { border-color: var(--acento); background: var(--painel-2); color: var(--texto); }
+#upload-nome { font-family: var(--mono); color: var(--texto); margin-top: var(--e2); }
+#upload-progresso { width: 100%; height: .6rem; accent-color: var(--acento); border: none; border-radius: 999px; }
+#upload-progresso::-webkit-progress-bar { background: var(--painel-2); border-radius: 999px; }
+#upload-progresso::-webkit-progress-value { background: var(--acento); border-radius: 999px; }
+#upload-rotulo-progresso { font-family: var(--mono); font-size: .85rem; color: var(--fraco); }
+.upload-ok { color: var(--ok); }

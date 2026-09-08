@@ -16,9 +16,9 @@ from urllib.parse import urlparse
 
 import psycopg2
 import psycopg2.extras
+import pytest
 
 from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
-import pytest
 
 CAPTURAS = Path(__file__).resolve().parent / "capturas"
 ITEM = "L0-05-jobs"
