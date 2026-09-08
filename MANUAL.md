@@ -1070,3 +1070,46 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Publicação de documento de construtor (item L5-14-publicacao-links-embed)
+
+Um documento `app`/`painel` (seção 17) publica numa URL fixa e anônima `/p/<inquilino>/<slug>`:
+
+```
+POST   /api/itens/{id}/publicacao                # publica/republica; body {slug, dominios_permitidos?, versao?}
+GET    /api/itens/{id}/publicacao                # estado atual (slug, url, domínios, camadas citadas)
+DELETE /api/itens/{id}/publicacao                # despublica: revoga o token do app, apaga a linha
+GET    /api/itens/{id}/publicacao/visualizacoes  # contagem por dia (padrão 30 dias)
+GET    /api/itens/{id}/publicacao/exportacao     # HTML autocontido: abre de file://, sem chamada de rede
+GET    /api/p/{inquilino}/{slug}?link=<token>    # o documento (JSON), sem sessão
+GET    /p/{inquilino}/{slug}                     # a casca HTML (a mesma que embute em <iframe>)
+```
+
+Publicar faz três coisas na mesma chamada: aponta `plat.item.versao_publicada` para a versão escolhida (a
+leitura pública nunca mostra o rascunho — editar o item depois de publicar não muda `/p/` até um novo
+`POST .../publicacao`); reserva o slug (único por inquilino); e emite um **token de serviço próprio da
+publicação** (mesma tabela `plat.token_servico` do item de tokens, seção 7) com escopo calculado
+automaticamente — as camadas citadas pelo documento (fecho de `plat.item_relacao` até a família `camada`,
+tipicamente app → mapa → camada) — e `restricao.referer` = a lista `dominios_permitidos`. Esse token vem
+embutido no JSON que `/api/p/...` devolve (é uma "chave publicável": qualquer visitante da página já a vê
+no HTML/JS servido, então escondê-la do banco não protegeria nada — o que protege é o escopo e a
+restrição de domínio; ver `docs/adr/20260907T1410-publicacao-links-embed.md` seção 3).
+
+Acesso à página: **público** (quando `item.acesso = 'publico'` e o inquilino permite) ou **por link**
+(reaproveita o mesmo `plat.compartilhamento_link`/`/api/itens/{id}/links` da seção de compartilhamento —
+não é um segundo tipo de link). Sem link e sem ser público: `401`. Link revogado, expirado ou de outro
+item: `403`. Acesso por sessão de inquilino/grupo autenticada a `/p/` fica fora desta rodada (a navegação
+autenticada já usa os endpoints normais do item).
+
+`GET /p/{inquilino}/{slug}` manda `Content-Security-Policy: frame-ancestors 'self' <dominios_permitidos>`
+— nunca `X-Frame-Options: DENY` — então só carrega em `<iframe>` nos domínios cadastrados no app; qualquer
+outra origem tem o carregamento bloqueado pelo PRÓPRIO NAVEGADOR do visitante. A exportação estática
+(`.../publicacao/exportacao`) embute o grafo e o metadado das camadas citadas como
+`<script type="application/json">`, sem `<script src>` externo nem `fetch` — abre por `file://` com o
+mesmo conteúdo porque não há rede para falhar (não inclui geometria/feição: é um retrato do DOCUMENTO).
+
+O que ficou fora deste turno (ver ADR seção 6): miniatura por captura headless no publish (o portão não
+pede; a miniatura própria do item, seção de catálogo, continua valendo), acesso a `/p/` por sessão
+autenticada, e o envio automático da exportação para hub/appliance (o endpoint devolve o arquivo; a
+distribuição é integração de outro item). O token gerado pela SEÇÃO 7 (`/admin/tokens`) e o desta seção
+usam a MESMA tabela e o MESMO mecanismo de escopo/restrição — nenhuma autorização nova nasceu aqui.
