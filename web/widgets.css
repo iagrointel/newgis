@@ -35,3 +35,21 @@ plat-grafico .barra text { font-size: 10px; fill: var(--cor-texto, #222); }
 [data-piscando] { outline: 3px solid var(--cor-erro, #b42318); outline-offset: 2px; }
 .plat-avisos p { color: var(--cor-atencao, #d98a2b); font-size: .85rem; margin: .25rem 0; }
 .plat-avisos p[data-tipo="ciclo_cortado"]::before { content: 'ciclo cortado: '; font-weight: 600; }
+/* item L5-01-c: widgets de dado */
+plat-tabela .tabela-barra, plat-lista .lista-barra { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; font-size: .8rem; color: var(--cor-texto-fraco, #666); padding: .25rem 0; }
+plat-tabela th[aria-sort] { cursor: pointer; user-select: none; }
+plat-tabela th[aria-sort="ascending"]::after { content: ' ▲'; font-size: .7em; }
+plat-tabela th[aria-sort="descending"]::after { content: ' ▼'; font-size: .7em; }
+plat-tabela tbody tr { cursor: pointer; }
+plat-tabela[data-carregando] table { opacity: .6; }
+plat-tabela .tabela-erro, plat-lista .lista-erro, plat-grafico .grafico-erro { color: var(--cor-erro, #b42318); font-size: .85rem; }
+plat-grafico .grafico-caixa { position: relative; width: 100%; }
+plat-lista .lista-cartoes { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+plat-lista .lista-cartoes li { padding: .5rem .6rem; border: 1px solid var(--cor-borda, #ccd3d4); border-radius: 4px; cursor: pointer; background: var(--cor-fundo, #fff); }
+plat-lista .lista-cartoes li[aria-selected="true"] { border-color: var(--cor-atencao, #d98a2b); background: var(--cor-atencao-fundo, #fff3e0); }
+plat-filtro label { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+plat-consulta .consulta-form, plat-selecao .selecao-form, plat-adicionar-dado .adicionar-form { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+plat-consulta output, plat-selecao output, plat-adicionar-dado output { font-size: .85rem; color: var(--cor-texto-fraco, #666); }
+plat-info-feicao dl { display: grid; grid-template-columns: max-content 1fr; gap: .2rem .6rem; margin: 0; }
+plat-info-feicao .info-nav { display: flex; gap: .4rem; align-items: center; font-size: .85rem; margin-bottom: .3rem; }
+plat-info-feicao .info-vazia { color: var(--cor-texto-fraco, #666); font-size: .85rem; margin: 0; }
