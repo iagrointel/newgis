@@ -1,0 +1,72 @@
+{
+ "item": "L7-07-b-replica-garage",
+ "medidas": {
+  "nos_no_status": {
+   "valor": 3,
+   "unidade": "nós",
+   "comando": "garage status contra o nó 1 (3 processos `garage server` v2.3.0, rf=3, zonas sala1/sala2/sala3)"
+  },
+  "rf2_2nos_um_parado_leitura": {
+   "valor": "ok",
+   "unidade": "resultado",
+   "comando": "GET pelo nó vivo com o outro parado (rf=2, 2 nós)"
+  },
+  "rf2_2nos_um_parado_escrita": {
+   "valor": "ServiceUnavailable",
+   "unidade": "erro S3",
+   "comando": "PUT pelo nó vivo com o outro parado: quórum de escrita 2 de 2 não atinge"
+  },
+  "escrita_1000_objetos_com_no_parado_s": {
+   "valor": 53.5,
+   "unidade": "s",
+   "comando": "1000 PUT de 16384 B pelo nó 1 com o nó 2 desligado (rf=2)"
+  },
+  "resync_1000_objetos_s": {
+   "valor": 5.2,
+   "unidade": "s",
+   "comando": "garage repair --yes blocks no nó 2 até fila de resync = 0"
+  },
+  "scrub_no2_erros_de_bloco": {
+   "valor": 0,
+   "unidade": "blocos",
+   "comando": "garage block list-errors no nó 2 após scrub (9    Idle   Block scrub worker            4      -        - )"
+  },
+  "blocos_em_disco_iguais_no1_no2": {
+   "valor": 1003,
+   "unidade": "blocos",
+   "comando": "conjunto de hashes em data_dir do nó 2 == nó 1 depois do resync"
+  },
+  "objetos_conferidos_no_no2_com_no1_parado": {
+   "valor": 1000,
+   "unidade": "objetos",
+   "comando": "sha256 de cada um dos 1.000 objetos lido pelo nó 2 com o nó 1 (que recebeu as escritas) desligado"
+  },
+  "resync_volume_mb": {
+   "valor": 256,
+   "unidade": "MiB",
+   "comando": "32 objetos de 8 MiB escritos com o nó 2 parado"
+  },
+  "resync_volume_s": {
+   "valor": 4.7,
+   "unidade": "s",
+   "comando": "garage repair --yes blocks no nó 2 até fila = 0 (mesma máquina, disco compartilhado)"
+  },
+  "resync_volume_mb_por_s": {
+   "valor": 54.2,
+   "unidade": "MiB/s",
+   "comando": "resync_volume_mb / resync_volume_s"
+  },
+  "resync_10gb_s": {
+   "valor": "não medido",
+   "unidade": "s",
+   "comando": "10 GB não cabe no teto de 3 GB por trilha (D21); extrapolar de resync_volume_mb_por_s é estimativa, não medida"
+  },
+  "carga_1min_no_resync": {
+   "valor": 3.06,
+   "unidade": "carga",
+   "comando": "os.getloadavg()[0] ao fim da medição"
+  }
+ },
+ "gerado_em": "2026-09-08T01:52:11Z",
+ "git_sha": "5e89faa4268e"
+}
