@@ -30,3 +30,10 @@ laco/*.log
 # fica no curado tests/medidas/L7-19.json)
 tests/medidas/_prova_segredos_bruta.json
 tests/medidas/_prova_garage_chave_s3.json
+
+# manual gerado (item L7-04-a): artefatos de build; a fonte é docs/manual/*.md + capturas do e2e
+# (web/dados/manual.json é GERADO mas commitado: o painel de ajuda e a suíte leem do repositório)
+docs/manual/index.html
+docs/manual/impressao.html
+docs/manual/manual.pdf
+docs/manual/capturas/
