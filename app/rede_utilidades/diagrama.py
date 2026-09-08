@@ -699,14 +699,23 @@ def aplicar_layout(grafo: dict, layout: str) -> dict:
             "duracao_ms": int((time.perf_counter() - inicio) * 1000)}
 
 
-def menor_distancia(grafo: dict) -> float | None:
-    """A menor distância entre dois nós, pela mesma grade do resolvedor. É a medida da cláusula do portão."""
+DISTANCIA_VIZINHA = 2 * SEPARACAO_MINIMA
+
+
+def menor_distancia(grafo: dict, raio: float = DISTANCIA_VIZINHA) -> float | None:
+    """A menor distância entre dois nós PRÓXIMOS — próximos = a até `raio` unidades um do outro.
+
+    Devolve `None` quando nenhum par está a menos de `raio`: o desenho está folgado e não há o que medir.
+    Isto NÃO é "a menor distância do grafo": a varredura é em grade de célula `raio` com as 8 células
+    vizinhas, então ela enxerga todo par a até `raio` e ignora o resto. É de propósito — a cláusula do portão
+    pergunta se algum par ficou perto demais, não qual é o par mais próximo de um desenho esparso, e a
+    resposta exata para a segunda pergunta custaria comparar todos contra todos."""
     celulas: dict[tuple, list] = defaultdict(list)
     menor = None
     for chave in sorted(grafo["nos"]):
         no = grafo["nos"][chave]
         x, y = float(no["x"]), float(no["y"])
-        cx, cy = int(math.floor(x / SEPARACAO_MINIMA)), int(math.floor(y / SEPARACAO_MINIMA))
+        cx, cy = int(math.floor(x / raio)), int(math.floor(y / raio))
         for i in (-1, 0, 1):
             for j in (-1, 0, 1):
                 for (ox, oy) in celulas.get((cx + i, cy + j), ()):
@@ -732,6 +741,12 @@ def pares_sobrepostos(grafo: dict, minimo: float = SEPARACAO_MINIMA) -> int:
                         total += 1
         celulas[(cx, cy)].append((x, y))
     return total
+
+
+def _menor_arredondada(grafo: dict) -> float | None:
+    """`menor_distancia` arredondada para o resumo gravado; `None` quando nenhum par está próximo."""
+    menor = menor_distancia(grafo)
+    return round(menor, 6) if menor is not None else None
 
 
 # --- modelos (templates) ----------------------------------------------------------------------------------
@@ -880,7 +895,7 @@ def gerar(cur, tenant_id: int, rede_id: str, nome: str, origem: dict, modelo_cod
         "nos": len(grafo["nos"]), "arestas": len(grafo["arestas"]), "componentes": componentes(grafo),
         "regras": relatorio, "layout": medida_layout,
         "pares_sobrepostos": pares_sobrepostos(grafo),
-        "menor_distancia": round(menor_distancia(grafo), 6) if menor_distancia(grafo) is not None else None,
+        "menor_distancia_proxima": _menor_arredondada(grafo),
         "elementos_no_recorte": len(elementos),
         "duracao_ms": {
             "recorte": int((t_grafo - inicio) * 1000), "grafo": int((t_regras - t_grafo) * 1000),
@@ -1035,8 +1050,7 @@ def reaplicar_layout(cur, rede_id: str, diagrama_id: str, layout: str) -> dict:
     resumo = dict(doc["resumo"] or {})
     resumo["layout"] = medida
     resumo["pares_sobrepostos"] = pares_sobrepostos(grafo)
-    menor = menor_distancia(grafo)
-    resumo["menor_distancia"] = round(menor, 6) if menor is not None else None
+    resumo["menor_distancia_proxima"] = _menor_arredondada(grafo)
     cur.execute("UPDATE plat.rede_diagrama SET layout = %s, resumo = %s::jsonb WHERE id = %s::uuid",
                 (layout, json.dumps(resumo), diagrama_id))
     return {"id": diagrama_id, "nome": doc["nome"], "layout": layout, "estado": doc["estado"],
