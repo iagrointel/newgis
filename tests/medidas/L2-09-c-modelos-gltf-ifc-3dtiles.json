@@ -1,0 +1,65 @@
+{
+ "item": "L2-09-c-modelos-gltf-ifc-3dtiles",
+ "medidas": {
+  "erro_da_caixa_projetada": {
+   "valor": 0.0968,
+   "unidade": "m",
+   "comando": "venv/bin/pytest tests/e2e/test_modelos3d.py -k posicao_e_na_escala"
+  },
+  "tileset_carregado_no_navegador": {
+   "valor": {
+    "tiles": 1,
+    "versao": "1.1"
+   },
+   "unidade": "contagem",
+   "comando": "venv/bin/pytest tests/e2e/test_modelos3d.py -k tileset_carrega"
+  },
+  "quadros_por_segundo_com_modelo": {
+   "valor": {
+    "fps": 58.7,
+    "alvo": 30.0,
+    "carga_1min": 9.49,
+    "ram_livre_gb": 5.8,
+    "navegador": "chromium do playwright, sem GPU"
+   },
+   "unidade": "quadros/s",
+   "comando": "venv/bin/pytest tests/e2e/test_modelos3d.py -k quadros_por_segundo"
+  },
+  "validador_oficial_64_nos_por_tile": {
+   "valor": {
+    "tiles": 1,
+    "erros": 0,
+    "avisos": 0,
+    "validador": "3d-tiles-validator 0.6.1"
+   },
+   "unidade": "contagem",
+   "comando": "bash deploy/tiles3d_validador_instalar.sh && venv/bin/pytest tests/unit/test_modelos3d_tiles3d.py -k validador_oficial"
+  },
+  "validador_oficial_2_nos_por_tile": {
+   "valor": {
+    "tiles": 8,
+    "erros": 0,
+    "avisos": 0,
+    "validador": "3d-tiles-validator 0.6.1"
+   },
+   "unidade": "contagem",
+   "comando": "bash deploy/tiles3d_validador_instalar.sh && venv/bin/pytest tests/unit/test_modelos3d_tiles3d.py -k validador_oficial"
+  },
+  "ifc_50mb_tempo_e_memoria": {
+   "valor": {
+    "bytes_do_arquivo": 52429100,
+    "elementos": 62038,
+    "segundos_leitura": 15.06,
+    "segundos_montagem": 4.32,
+    "pico_de_memoria_mb": 678.5,
+    "teto_do_job_mb": 1024,
+    "bytes_do_glb": 59102972,
+    "carga_1min": 8.38
+   },
+   "unidade": "medida",
+   "comando": "venv/bin/pytest tests/unit/test_modelos3d_ifc_grande.py -m lento"
+  }
+ },
+ "gerado_em": "2026-09-08T12:55:12Z",
+ "git_sha": "51bdfbbb91b0"
+}
