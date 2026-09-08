@@ -224,3 +224,30 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `REDEFINICAO_JANELA_MIN` | `15` | limite de taxa (refutação do item: 1.000 pedidos/min p/ o mesmo e-mail) |
 | `REDEFINICAO_MAX_JANELA` | `5` | no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN |
 | `AVISO_EXPIRACAO_DIAS` | `(90, 30, 7, 1)` | avisos de expiração de token de serviço (hipótese do item; como a Esri) |
+
+## grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
+
+| nome | valor | explicação |
+|---|---|---|
+| `ESCALA_AREA_VERTICES_MAX` | `5000` | vértices do polígono de estudo (mesma ordem de grandeza de INGESTAO_*) |
+| `ESCALA_RESOLUCAO_MIN_M` | `1.0` | — |
+| `ESCALA_RESOLUCAO_MAX_M` | `100000.0` | — |
+| `ESCALA_CELULAS_MAX` | `250000` | — |
+| `ESCALA_FATORES_MAX` | `20` | — |
+| `ESCALA_LIGACOES_MAX` | `2000000` | — |
+| `ESCALA_APROVACAO_TIPOS` | `('limiar', 'top_pct')` | — |
+| `ESCALA_NOME_MAX` | `200` | mesmo teto de CHECK(length(nome)<=200) da migração |
+| `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
+| `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
+| `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## pacotes e galeria de modelos (L5-37-pacotes-modelos-entre-inquilinos; migração 20260908T1055).
+
+| nome | valor | explicação |
+|---|---|---|
+| `PACOTE_DOCUMENTOS_MAX` | `200` | — |
+| `PACOTE_PROFUNDIDADE_MAX` | `8` | — |
+| `PACOTE_BYTES_MAX` | `4194304` | — |
+| `PACOTE_MODELOS_MAX` | `200` | modelos na galeria por inquilino (o de escopo plataforma conta no dele) |
+| `PACOTE_NOME_MAX` | `200` | CHECK(length(nome) BETWEEN 1 AND 200) da migração |
+| `PACOTE_DESCRICAO_MAX` | `2000` | — |

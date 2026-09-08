@@ -1,0 +1,22 @@
+{
+ "item": "L5-37-pacotes-modelos-entre-inquilinos",
+ "medidas": {
+  "documentos_no_pacote": {
+   "valor": 2,
+   "unidade": "documentos",
+   "comando": "GET /api/itens/{id}/pacote"
+  },
+  "fontes_mapeadas": {
+   "valor": 3,
+   "unidade": "fontes",
+   "comando": "POST /api/pacotes/importar"
+  },
+  "bytes_do_pacote": {
+   "valor": 1622,
+   "unidade": "bytes",
+   "comando": "GET /api/itens/{id}/pacote"
+  }
+ },
+ "gerado_em": "2026-09-08T11:16:43Z",
+ "git_sha": "02760fb91cd6"
+}

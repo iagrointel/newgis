@@ -63,6 +63,7 @@ class Preparacao:
     execucao_b: dict = field(default_factory=dict)  # L3-19-multiescala: execução macro de B (sobre conjunto_b)
     app_b: dict = field(default_factory=dict)  # L5-14-publicacao: app de B (família publicável)
     publicacao_b: dict = field(default_factory=dict)  # L5-14-publicacao: publicação de B em /p/demo2/<slug>
+    modelo_b: dict = field(default_factory=dict)  # L5-37-pacotes: modelo de B na galeria (escopo inquilino)
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -78,6 +79,8 @@ class Preparacao:
             marcas += [self.conjunto_b["nome"], self.fator_b["nome"]]
         if self.app_b:
             marcas += [self.app_b["titulo"], self.publicacao_b["slug"]]
+        if self.modelo_b:
+            marcas.append(self.modelo_b["nome"])
         return marcas
 
 
@@ -174,12 +177,17 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     r = sessao_b.post(f"/api/itens/{app_b['id']}/publicacao", json={"slug": f"{PREFIXO}pub-{sufixo}"})
     assert r.status_code == 201, r.text
     publicacao_b = r.json()
+    # L5-37-pacotes-modelos-entre-inquilinos: modelo de B na galeria, escopo `inquilino`. A não pode vê-lo na
+    # lista, baixá-lo, apagá-lo, nem usá-lo como `modelo_id` de uma verificação/importação.
+    r = sessao_b.post("/api/modelos", json={"nome": f"{PREFIXO}modelo-{sufixo}", "item_id": app_b["id"]})
+    assert r.status_code == 201, r.text
+    modelo_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b,
                       conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b,
-                      app_b=app_b, publicacao_b=publicacao_b)
+                      app_b=app_b, publicacao_b=publicacao_b, modelo_b=modelo_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -190,6 +198,8 @@ def _no_categoria(no: dict) -> dict:
 def desfazer(p: Preparacao) -> None:
     for metodo, url in reversed(p.criados_em_a):
         p.sessao_a.request(metodo, url)
+    if p.modelo_b:
+        p.sessao_b.delete(f"/api/modelos/{p.modelo_b['id']}")
     if p.publicacao_b:  # libera o slug e revoga o token de serviço da publicação de B
         p.sessao_b.delete(f"/api/itens/{p.app_b['id']}/publicacao")
     if p.convite_b:
@@ -641,6 +651,26 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/itens/{p.app_b['id']}/publicacao/visualizacoes"
     ),
     ("GET", "/api/p/{inquilino}/{slug}"): Caso(lambda p: f"/api/p/demo2/{p.publicacao_b['slug']}"),
+    # ---- L5-37-pacotes-modelos-entre-inquilinos: exportar o pacote de um item de B, ou usar um modelo de B
+    # como origem de importação, é a mesma leitura de item barrada pela política de linha (404, nunca 403 com
+    # confirmação de existência). A lista de modelos é a única `proprio`: devolve os de A e os de escopo
+    # `plataforma`, e o teste confere que nenhum nome de B aparece nela.
+    ("GET", IT + "/pacote"): Caso(lambda p: f"/api/itens/{p.app_b['id']}/pacote"),
+    ("POST", "/api/pacotes/verificar"): Caso(
+        lambda p: "/api/pacotes/verificar", lambda p: {"modelo_id": p.modelo_b["id"]}
+    ),
+    ("POST", "/api/pacotes/importar"): Caso(
+        lambda p: "/api/pacotes/importar", lambda p: {"modelo_id": p.modelo_b["id"]}
+    ),
+    ("GET", "/api/modelos"): Caso(
+        lambda p: "/api/modelos", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("POST", "/api/modelos"): Caso(
+        lambda p: "/api/modelos",
+        lambda p: {"nome": f"{PREFIXO}modelo-invadido", "item_id": p.app_b["id"]},
+    ),
+    ("GET", "/api/modelos/{id}/pacote"): Caso(lambda p: f"/api/modelos/{p.modelo_b['id']}/pacote"),
+    ("DELETE", "/api/modelos/{id}"): Caso(lambda p: f"/api/modelos/{p.modelo_b['id']}"),
     # link é anônimo por desenho: a sessão de A não ganha nada além do link (o item vem sem dono.login e sem pode_*)
     ("GET", "/api/compartilhado/{token}"): Caso(
         lambda p: f"/api/compartilhado/{p.link_b['token']}", publico=True, aceita=frozenset({200}),
