@@ -12,7 +12,7 @@
    "copy_no_mesmo_balde": 403,
    "copy_entre_baldes": 403,
    "multipart": 403,
-   "list_buckets": "200 ['plat-demo']"
+   "list_buckets": "200 ['til101dgarag-plat-demo']"
   },
   "d_nunca_sobrescreve": {
    "chave_v1": "demo/zt_sobrescrita/cog_c9e41e3e.tif",
@@ -20,16 +20,16 @@
    "recusa": "ObjetoJaExiste"
   },
   "f_apagar": {
-   "objetos_antes": 73,
-   "bytes_antes": 138906,
-   "objetos_apos_gravar": 76,
-   "bytes_apos_gravar": 153906,
+   "objetos_antes": 0,
+   "bytes_antes": 0,
+   "objetos_apos_gravar": 3,
+   "bytes_apos_gravar": 15000,
    "liberados": {
     "objetos": 3,
     "bytes": 15000
    },
-   "objetos_no_fim": 73,
-   "bytes_no_fim": 138906
+   "objetos_no_fim": 0,
+   "bytes_no_fim": 0
   },
   "cog_autorizacao": {
    "/svc/<token de A>/cog/demo/item01/cog_77e7c523.tif": 204,
@@ -39,7 +39,7 @@
    "/svc/<token de A>/cog/demo/item01/cog_77e7c523.tif/etc/passwd": 403
   },
   "e_range_https": {
-   "url": "/svc/<token de A>/cog/demo/zt_range/cog_bbd2e341.tif",
+   "url": "/svc/<token de A>/cog/demo/zt_range/cog_63818cfc.tif",
    "status": 206,
    "content_range": "bytes 1048576-1048591/3146505",
    "bytes_conferidos": 16,
@@ -48,7 +48,7 @@
    "token_invalido": 403
   },
   "a_semeadura": {
-   "balde": "plat-zt-inq-01170b",
+   "balde": "til101dgarag-plat-zt-inq-6839cc",
    "cota_bytes_declarada": 21474836480,
    "cota_objetos_declarada": 200000,
    "cota_bytes_no_garage": 21474836480,
@@ -69,9 +69,9 @@
   "b_api": {
    "status": 413,
    "erro": "cota_excedida",
-   "mensagem": "cota de 500 bytes excedida: uso atual 138906, objeto de 2048 bytes"
+   "mensagem": "cota de 500 bytes excedida: uso atual 0, objeto de 2048 bytes"
   }
  },
- "medido_em": "2026-09-06T13:48:33+0000",
+ "medido_em": "2026-09-08T13:20:10+0000",
  "garage": "v2.3.0"
 }

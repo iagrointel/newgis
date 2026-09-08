@@ -80,15 +80,19 @@ def inquilino_de_teste(sessao_plat, env):
     """Inquilino zt-inq-* novo (nunca teve balde) + o balde apagado no fim, no Garage e no banco. A conexão de
     limpeza é PRÓPRIA (psycopg2 direto): `conexao_plat_app` é por função e este inquilino vive o módulo inteiro."""
     import psycopg2
-    import psycopg2.extras
 
+    from app.schema_ambiente import CursorSchemaAmbiente
     from tests.api.conftest import InquilinoTemporario
 
     inq = InquilinoTemporario(sessao_plat)
     yield inq
     from app import objetos
 
-    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=psycopg2.extras.RealDictCursor)
+    # CursorSchemaAmbiente, não RealDictCursor: esta conexão é própria (a `conexao_plat_app` é por função e este
+    # inquilino vive o módulo inteiro) e faz SQL cru com `plat.` literal. Sem a reescrita ela ignora PLAT_SCHEMA e
+    # vai bater no schema de produção — em base de trilha isso é "permission denied for schema plat" na limpeza,
+    # e em produção seria pior que um erro. É a mesma escolha da fixture `conexao_plat_app` de tests/conftest.py.
+    con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     try:
         contexto(con, inq.id, usuario_id=0, login="teste")
         with con.cursor() as cur:
