@@ -55,6 +55,8 @@ class Estatistica:
             return self.alias
         if self.tipo == "percentile":
             return f"percentile_{int(self.percentil)}_{self.campo}"
+        if self.campo == "*":
+            return f"{self.tipo}_linhas"
         return f"{self.tipo}_{self.campo}"
 
 
@@ -82,10 +84,16 @@ def montar_pedido(corpo: dict) -> PedidoAgregacao:
 
     estatisticas: list[Estatistica] = []
     for e in corpo.get("estatisticas") or []:
-        campo = _validar_ident(e.get("campo", ""), "campo de estatística")
         tipo = e.get("tipo")
         if tipo not in FUNCOES_TODAS:
             raise ErroAgregacao("estatistica_invalida", f"tipo de estatística desconhecido: {tipo!r}")
+        # `count` sobre `*` (linhas, não valores não-nulos de uma coluna) é o único campo não-identificador
+        # aceito: `construir_sql`/`_expr_estatistica_sem_alias` já o suportavam, mas o pedido o recusava —
+        # sem isto, contar linhas pela API era impossível (achado do item L2-06-b, que precisa disso em todo
+        # indicador de contagem e em todo gráfico de contagem por categoria).
+        campo = e.get("campo", "")
+        if not (tipo == "count" and campo == "*"):
+            campo = _validar_ident(campo, "campo de estatística")
         percentil = e.get("percentil")
         if tipo == "percentile":
             if percentil is None or not (0 <= float(percentil) <= 100):
