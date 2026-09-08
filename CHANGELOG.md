@@ -36,6 +36,36 @@ próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo:
 segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+
+## turno 3, setembro de 2026 (item L3-02-c-smaa: que pesos precisariam ser verdade para esta unidade ganhar)
+
+SMAA-2 simplificado (Lahdelma e Salminen, 2001) sobre o sorteio de pesos do item L3-02-a: para cada
+unidade, o indice de aceitabilidade por posicao (a fracao dos vetores de peso sorteados em que ela
+ficou em 1o, 2o ... 20o lugar), o vetor central de pesos (a media dos pesos que a puseram em primeiro,
+normalizada) e o fator de confianca (1 se ela fica mesmo em primeiro quando a combinacao e refeita com
+esse vetor central). O modulo `app/amc/smaa.py` nao reimplementa nada: chama `sortear_pesos` do
+L3-02-a e `combinar` do L3-01-e, e roda como job `amc.smaa` pela mesma razao da robustez (A8), sem
+rota nova de API. A saida traz a tabela do top-20 com o vetor central em cada linha e
+`explicacao_da_unidade`, que exibe o vetor central fator a fator em portugues.
+
+A prova central e de resposta CONHECIDA, nao conferida contra a propria implementacao: tres unidades
+sinteticas com dois fatores -- A=(100,0), B=(0,100), C=(49,49) -- e peso uniforme no simplex dao, na
+conta a mao, aceitabilidade de primeiro lugar 0,5 / 0,5 / 0, C em segundo em 98 % dos sorteios e vetor
+central (0,75; 0,25) para A. Medido com 20 mil sorteios: 0,5046 / 0,4955 / 0 e (0,7501; 0,2499). A
+conferencia do adversario do item -- soma da aceitabilidade de primeiro lugar entre TODAS as unidades
+igual a 1 +- 0,01 -- da 1,0 exato em 2.000 unidades x 1.000 sorteios (`tests/medidas/L3-02-c-smaa.json`),
+por construcao: cada sorteio tem um vencedor so, com empate desempatado pela ordem da unidade. Quando
+nao ha vencedor possivel (todas vetadas ou sem nota) a soma cai abaixo de 1 e a saida diz quantos
+sorteios foram, em vez de inventar vencedor. Tempo do job: 0,221 s para 1.000 sorteios em 2.000
+unidades x 6 fatores, com carga de 1 min 7,73 e 4,52 GB livres.
+
+Limites escritos em `docs/AMC_SMAA.md` e carregados dentro da propria saida (campo `limites`): so o
+peso e sorteado, entao a leitura vale sob incerteza de peso e nunca sob incerteza do dado; com
+combinador linear e fator deterministico a regiao de pesos vencedores e convexa e o fator de confianca
+da 1 por construcao (ele so separa com combinador nao linear, e por isso e medido e nao assumido);
+combinador que ignora peso por definicao torna o sorteio inocuo; empate depende da ordem de entrada; e
+linha inteira em zero quer dizer fora das 20 posicoes contadas, nunca ultimo lugar. ADR em
+`docs/adr/20260908T1029-smaa-aceitabilidade-por-posicao.md`.
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
 Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,
