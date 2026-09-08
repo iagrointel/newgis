@@ -48,6 +48,10 @@ VOCABULARIO_CATALOGO = {
     # esta lista.
     "publicacao/publicar",
     "publicacao/despublicar",
+    # L5-20-sites-paginas-publicas: mesma razão — as rotas do site ficam sob /api/itens/{id} e o vocabulário
+    # vem da migração 20260908T1134_site_paginas_publicas.sql.
+    "site/publicar",
+    "site/despublicar",
 }
 ROTAS_CATALOGO = [
     r
