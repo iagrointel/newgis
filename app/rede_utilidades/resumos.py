@@ -22,6 +22,13 @@ distribuidora declara ao regulador. A conferência contra o traçado topológico
 os elementos alcançados em `plat.rede_subrede_elemento`; quando essa tabela existir, a divergência entre as
 duas leituras é o achado, e nenhuma das duas some.
 
+UNIDADE DO COMPRIMENTO E DA ENERGIA (item L4-01-e). O dicionário do pacote declara COMP em quilômetro e
+ENE_SUM em megawatt-hora, mas o arquivo de cada distribuidora pode vir em metro e em quilowatt-hora — e o
+extrato de referência da casa vem. Por isso este sumário NÃO usa a unidade do dicionário: pede a
+`unidades.fatores_da_rede` a unidade que a importação MEDIU no arquivo e converte com o fator de lá. A
+origem (medida no arquivo ou declarada pelo dicionário, quando a rede não tem importação registrada) sai
+na coluna `unidades` de cada linha, para que ninguém confunda medido com suposto.
+
 COMPRIMENTO DECLARADO x COMPRIMENTO GEOMÉTRICO. Cada trecho traz o comprimento que o cadastro declara
 (atributo `comp`) e tem a geometria carregada. Os dois são somados e guardados lado a lado, com a diferença
 em porcento: é medida de qualidade de cadastro, e some se guardarmos só um dos dois.
@@ -38,6 +45,7 @@ import time
 from heapq import heappop, heappush
 
 from app.erros import ErroAPI
+from app.rede_utilidades import unidades as unidades_mod
 
 # Atributo que carrega o nome da subrede, por código de tier do pacote (ver docstring). Tier fora desta
 # tabela não tem como filiar elemento nenhum e é recusado dizendo isso.
@@ -45,10 +53,10 @@ ATRIBUTO_DE_SUBREDE_POR_TIER = {
     "media_tensao": "ctmt",
     "baixa_tensao": "uni_tr_mt",
 }
-ATRIBUTO_COMPRIMENTO = "comp"          # comprimento do trecho declarado no cadastro, em metros
+ATRIBUTO_COMPRIMENTO = "comp"          # comprimento do trecho declarado no cadastro
 ATRIBUTO_POTENCIA_TRAFO = "pot_nom"    # potência nominal do transformador, em kVA
 ATRIBUTO_CLASSE_UC = "clas_sub"        # classe/subclasse da unidade consumidora
-ATRIBUTO_ENERGIA = "ene"               # energia anual faturada da unidade consumidora, em kWh
+ATRIBUTO_ENERGIA = "ene"               # energia anual faturada da unidade consumidora
 ATRIBUTO_POTENCIA_GD = "pot"           # potência da geração distribuída, em kW
 
 GRUPO_TRAFO = "transformador_de_distribuicao"
@@ -80,6 +88,8 @@ COLUNAS = (
     {"codigo": "dispositivos_por_categoria", "nome": "Dispositivos por categoria", "tipo": "mapa",
      "unidade": None},
     {"codigo": "atributo_de_subrede", "nome": "Atributo de filiação", "tipo": "texto", "unidade": None},
+    {"codigo": "unidades", "nome": "Unidade do arquivo (comprimento e energia)", "tipo": "mapa",
+     "unidade": None},
     {"codigo": "calculado_em", "nome": "Calculado em", "tipo": "data", "unidade": None},
     {"codigo": "duracao_ms", "nome": "Duração do cálculo", "tipo": "inteiro", "unidade": "ms"},
 )
@@ -118,7 +128,7 @@ def atributo_do_tier(tier_codigo: str) -> str:
 
 # --- as somas de uma subrede --------------------------------------------------------------------------
 
-def _linhas(cur, rede_id: str, atributo: str, nome: str) -> dict:
+def _linhas(cur, rede_id: str, atributo: str, nome: str, fator_comp: float = 1.0) -> dict:
     cur.execute(
         "SELECT g.codigo AS grupo, count(*) AS n, "
         "       sum(" + _num("f.atributos") + ") AS declarado_m, "
@@ -131,7 +141,7 @@ def _linhas(cur, rede_id: str, atributo: str, nome: str) -> dict:
     km, km_geo, elementos, total_m, total_geo_m = {}, {}, 0, 0.0, 0.0
     for r in cur.fetchall():
         elementos += r["n"]
-        declarado = float(r["declarado_m"] or 0.0)
+        declarado = float(r["declarado_m"] or 0.0) * fator_comp
         geometria = float(r["geometria_m"] or 0.0)
         total_m += declarado
         total_geo_m += geometria
@@ -159,7 +169,7 @@ def _pontos(cur, rede_id: str, atributo: str, nome: str) -> dict:
     return {"trafos": trafos, "kva_instalado": kva, "elementos": elementos}
 
 
-def _consumidores(cur, rede_id: str, atributo: str, nome: str) -> dict:
+def _consumidores(cur, rede_id: str, atributo: str, nome: str, fator_ene: float = 1.0) -> dict:
     cur.execute(
         "SELECT coalesce(f.atributos ->> %(classe)s, 'sem_classe') AS classe, count(*) AS n, "
         "       sum(" + _num("f.atributos") + ") AS energia "
@@ -175,7 +185,7 @@ def _consumidores(cur, rede_id: str, atributo: str, nome: str) -> dict:
         por_classe[r["classe"]] = r["n"]
         total += r["n"]
         if r["energia"] is not None:
-            energia += float(r["energia"])
+            energia += float(r["energia"]) * fator_ene
             tem_energia = True
     return {"ucs": total, "ucs_por_classe": por_classe,
             "energia_anual_kwh": round(energia, 6) if tem_energia else None}
@@ -286,9 +296,12 @@ def calcular(cur, tenant_id: int, rede_id: str, subrede: dict) -> dict:
     inicio = time.perf_counter()
     atributo = atributo_do_tier(subrede["tier"])
     nome = subrede["nome"]
-    linhas = _linhas(cur, rede_id, atributo, nome)
+    # a unidade do comprimento e da energia vem do que a IMPORTAÇÃO mediu no arquivo, nunca do dicionário
+    # do pacote (item L4-01-e); sem importação registrada o fator é 1 e a origem diz `nao_medida`
+    fatores = unidades_mod.fatores_da_rede(cur, rede_id)
+    linhas = _linhas(cur, rede_id, atributo, nome, fatores["comp"]["fator_para_base"])
     pontos = _pontos(cur, rede_id, atributo, nome)
-    consumidores = _consumidores(cur, rede_id, atributo, nome)
+    consumidores = _consumidores(cur, rede_id, atributo, nome, fatores["ene"]["fator_para_base"])
     geracao = _geracao(cur, rede_id, atributo, nome)
     categorias = _por_categoria(cur, rede_id, atributo, nome)
     tronco = _tronco(cur, rede_id, str(subrede["id"]), atributo, nome)
@@ -303,6 +316,10 @@ def calcular(cur, tenant_id: int, rede_id: str, subrede: dict) -> dict:
         "tier_id": str(subrede["tier_id"]),
         "subrede_nome": nome,
         "atributo_de_subrede": atributo,
+        "unidades": {familia: {"unidade_do_arquivo": f.get("unidade"), "base": f["base"],
+                               "fator_para_base": f["fator_para_base"], "origem": f["origem"],
+                               "declarada_no_dicionario": f["declarada"]}
+                     for familia, f in fatores.items()},
         "elementos": linhas["elementos"] + pontos["elementos"],
         "km_por_nivel": linhas["km_por_nivel"],
         "km_por_nivel_geometria": linhas["km_por_nivel_geometria"],
@@ -323,19 +340,20 @@ def calcular(cur, tenant_id: int, rede_id: str, subrede: dict) -> dict:
     }
     cur.execute(
         "INSERT INTO plat.rede_subrede_resumo (subrede_id, tenant_id, rede_id, tier_id, subrede_nome, "
-        " atributo_de_subrede, elementos, km_por_nivel, km_por_nivel_geometria, km_declarado, km_geometria, "
+        " atributo_de_subrede, unidades, elementos, km_por_nivel, km_por_nivel_geometria, km_declarado, km_geometria, "
         " divergencia_pct, trafos, kva_instalado, ucs, ucs_por_classe, energia_anual_kwh, "
         " dispositivos_por_categoria, gd_unidades, gd_potencia_kw, tronco_max_m, tronco_origem, duracao_ms, "
         " calculado_em) "
         "VALUES (%(subrede_id)s::uuid, %(tenant_id)s, %(rede_id)s::uuid, %(tier_id)s::uuid, "
-        " %(subrede_nome)s, %(atributo_de_subrede)s, %(elementos)s, %(km_por_nivel)s::jsonb, "
+        " %(subrede_nome)s, %(atributo_de_subrede)s, %(unidades)s::jsonb, %(elementos)s, %(km_por_nivel)s::jsonb, "
         " %(km_por_nivel_geometria)s::jsonb, %(km_declarado)s, %(km_geometria)s, %(divergencia_pct)s, "
         " %(trafos)s, %(kva_instalado)s, %(ucs)s, %(ucs_por_classe)s::jsonb, %(energia_anual_kwh)s, "
         " %(dispositivos_por_categoria)s::jsonb, %(gd_unidades)s, %(gd_potencia_kw)s, %(tronco_max_m)s, "
         " %(tronco_origem)s, %(duracao_ms)s, now()) "
         "ON CONFLICT (subrede_id) DO UPDATE SET "
         " tier_id = EXCLUDED.tier_id, subrede_nome = EXCLUDED.subrede_nome, "
-        " atributo_de_subrede = EXCLUDED.atributo_de_subrede, elementos = EXCLUDED.elementos, "
+        " atributo_de_subrede = EXCLUDED.atributo_de_subrede, unidades = EXCLUDED.unidades, "
+        " elementos = EXCLUDED.elementos, "
         " km_por_nivel = EXCLUDED.km_por_nivel, km_por_nivel_geometria = EXCLUDED.km_por_nivel_geometria, "
         " km_declarado = EXCLUDED.km_declarado, km_geometria = EXCLUDED.km_geometria, "
         " divergencia_pct = EXCLUDED.divergencia_pct, trafos = EXCLUDED.trafos, "
@@ -346,6 +364,7 @@ def calcular(cur, tenant_id: int, rede_id: str, subrede: dict) -> dict:
         " tronco_max_m = EXCLUDED.tronco_max_m, tronco_origem = EXCLUDED.tronco_origem, "
         " duracao_ms = EXCLUDED.duracao_ms, calculado_em = now()",
         {**linha,
+         "unidades": json.dumps(linha["unidades"]),
          "km_por_nivel": json.dumps(linha["km_por_nivel"]),
          "km_por_nivel_geometria": json.dumps(linha["km_por_nivel_geometria"]),
          "ucs_por_classe": json.dumps(linha["ucs_por_classe"]),
@@ -410,6 +429,7 @@ def listar(cur, rede_id: str, limite: int, tier: str | None = None) -> list[dict
             "ucs_por_classe": r["ucs_por_classe"],
             "dispositivos_por_categoria": r["dispositivos_por_categoria"],
             "atributo_de_subrede": r["atributo_de_subrede"],
+            "unidades": r["unidades"] or {},
             "calculado_em": r["calculado_em"],
             "duracao_ms": r["duracao_ms"],
         })
