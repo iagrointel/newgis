@@ -324,5 +324,5 @@ plat-idioma select.controle { width: auto; padding: var(--e1) var(--e2); font-si
 .publica .principal { flex: 1; }
 .publica-rodape { padding: var(--e3) var(--e5); border-top: var(--borda-largura) solid var(--borda); color: var(--fraco); font-size: var(--t-2); }
 .publica #incluido h2 { margin: 0; }
-.publica .ficha-item h2 { margin-bottom: var(--e2); }
+.publica .ficha-item h2 { margin-bottom: var(--e2); text-transform: none; letter-spacing: normal; font-size: var(--t2); }  /* título do item é conteúdo, não rótulo de seção */
 @media (max-width: 800px) { .publica-topo { padding: var(--e2) var(--e3); } .publica-rodape { padding: var(--e2) var(--e3); } }

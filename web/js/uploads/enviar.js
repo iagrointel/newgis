@@ -1,9 +1,13 @@
 /* plat — tela /uploads (itens L0-04-a-upload-arquivo e UX-05; ADR 0005 seção 3): upload retomável em partes de
-   16 MiB com FILA de arquivos, progresso por BYTE (XMLHttpRequest expõe upload.onprogress; fetch não), velocidade e
-   estimativa de tempo, cancelar por arquivo ou tudo, tentar de novo o que falhou. O arquivo nunca é lido inteiro
-   na memória: cada parte é um Blob.slice que o navegador transmite por streaming; a tela pinta no máximo uma vez
-   por quadro (requestAnimationFrame), o que mantém o fio principal livre em arquivos de gigabytes (refutação do
-   item: "upload de 2 GB mostra progresso sem travar a tela" — a suíte e2e mede as tarefas longas do fio principal).
+   16 MiB com FILA de arquivos, progresso por PARTE com bytes acumulados, velocidade e estimativa de tempo, cancelar
+   por arquivo ou tudo (AbortController), tentar de novo o que falhou. O arquivo nunca é lido inteiro na memória:
+   cada parte é um Blob.slice que o navegador transmite por streaming; a tela pinta no máximo uma vez por quadro
+   (requestAnimationFrame), o que mantém o fio principal livre em arquivos de gigabytes (refutação do item: "upload
+   de 2 GB mostra progresso sem travar a tela" — a suíte e2e mede as tarefas longas do fio principal).
+   Por que não progresso por byte: só XMLHttpRequest expõe upload.onprogress, e um XHR na mesma origem SEMPRE leva o
+   cookie de sessão junto (withCredentials só vale entre origens); com cookie + Authorization a API responde 400
+   autenticacao_ambigua (regra deliberada de app/auth/sessao.py). fetch com credentials:'omit' é o único caminho que
+   omite o cookie, e fetch não expõe progresso de envio. Fica registrado no handoff para o dono da autenticação.
    A sessão (cookie) só assina `POST /api/uploads` (JSON, CSRF-seguro); o envio das partes, a conclusão e o aborto
    exigem um TOKEN de serviço — a própria tela troca a sessão por um token de escopo restrito (`POST /api/tokens`,
    uma vez por carregamento de página) e usa esse token só em memória, nunca localStorage.
@@ -83,7 +87,7 @@ async function montarTela() {
     ...tipos.map((tp) => h('option', { value: tp.tipo }, `${tp.rotulo} (${tp.extensoes.join(', ')})`)),
   );
 
-  const entrada = h('input', { type: 'file', id: 'upload-arquivo', class: 'sr-only', multiple: true });
+  const entrada = h('input', { type: 'file', id: 'upload-arquivo', class: 'sr-only', multiple: true, 'aria-label': t('upload.escolher_arquivos') });
   const nomeArquivo = h('p', { id: 'upload-nome' }, t('upload.nenhum_arquivo'));
   const dropzone = h(
     'div', { id: 'upload-dropzone', class: 'upload-dropzone', tabindex: '0', role: 'button', 'aria-label': t('upload.dropzone') },
@@ -111,7 +115,7 @@ async function montarTela() {
   const fila = h('ol', { id: 'upload-fila', class: 'upload-fila', 'aria-label': t('upload.fila') });
 
   /* ---- fila ---- */
-  const itens = []; // {id, arquivo, tipo, estado, enviados, upload_id, xhr, erro, li, ...}
+  const itens = []; // {id, arquivo, tipo, estado, enviados, uploadId, aborto, erro, li, ...}
   let seq = 0;
   let enviando = false;
   let cancelarTudo = false;
@@ -119,7 +123,7 @@ async function montarTela() {
   function acrescentar(arquivos) {
     aviso.limpar();
     for (const f of arquivos) {
-      const it = { id: `f${++seq}`, arquivo: f, tipo: tipoDaExtensao(f.name), estado: 'na_fila', enviados: 0, uploadId: null, xhr: null, erro: null, partes: 0, parteAtual: 0 };
+      const it = { id: `f${++seq}`, arquivo: f, tipo: tipoDaExtensao(f.name), estado: 'na_fila', enviados: 0, uploadId: null, aborto: null, erro: null, partes: 0, parteAtual: 0 };
       it.li = linhaFila(it);
       itens.push(it);
       fila.append(it.li);
@@ -221,7 +225,7 @@ async function montarTela() {
   async function cancelarItem(it) {
     if (it.estado === 'enviando' || it.estado === 'concluindo') {
       it.cancelado = true;
-      if (it.xhr) it.xhr.abort();
+      if (it.aborto) it.aborto.abort();
       return; // quem está enviando fecha a linha ao ver `cancelado`
     }
     it.estado = 'cancelado';
@@ -338,7 +342,8 @@ async function montarTela() {
       if (it.cancelado) throw new Error(t('upload.cancelado'));
       const inicio = (n - 1) * parteBytes;
       const pedaco = arquivo.slice(inicio, inicio + parteBytes);
-      await enviarParte(it, tk, id, n, pedaco, (carregados) => aoProgredir(inicio + carregados, n));
+      aoProgredir(inicio, n);
+      await enviarParte(it, tk, id, n, pedaco);
       aoProgredir(inicio + pedaco.size, n);
     }
     it.estado = 'concluindo';
@@ -354,26 +359,26 @@ async function montarTela() {
     return respConcluir.json();
   }
 
-  function enviarParte(it, tk, id, n, pedaco, aoProgredir) {
-    return new Promise((resolver, rejeitar) => {
-      const xhr = new XMLHttpRequest();
-      it.xhr = xhr;
-      xhr.open('PUT', `/api/uploads/${id}/partes/${n}`);
-      xhr.withCredentials = false;
-      xhr.setRequestHeader('authorization', `Bearer ${tk}`);
-      xhr.setRequestHeader('content-type', 'application/octet-stream');
-      xhr.upload.addEventListener('progress', (ev) => { if (ev.lengthComputable) aoProgredir(ev.loaded); });
-      xhr.addEventListener('load', () => {
-        it.xhr = null;
-        if (xhr.status >= 200 && xhr.status < 300) { resolver(); return; }
-        let corpo = {};
-        try { corpo = JSON.parse(xhr.responseText || '{}'); } catch { corpo = {}; }
-        rejeitar(new Error(corpo.mensagem ? `${t('upload.erro_parte', { n })}: ${corpo.mensagem}` : t('upload.erro_parte', { n })));
+  /* PUT da parte por fetch com credentials:'omit' (só o token de serviço; ver o cabeçalho do arquivo) e
+     AbortController para cancelar no meio; erro da API nomeado com a parte e a mensagem do servidor */
+  async function enviarParte(it, tk, id, n, pedaco) {
+    const aborto = new AbortController();
+    it.aborto = aborto;
+    let resp;
+    try {
+      resp = await fetch(`/api/uploads/${id}/partes/${n}`, {
+        method: 'PUT', credentials: 'omit', signal: aborto.signal,
+        headers: { authorization: `Bearer ${tk}`, 'content-type': 'application/octet-stream' }, body: pedaco,
       });
-      xhr.addEventListener('error', () => { it.xhr = null; rejeitar(new Error(t('upload.erro_rede_parte', { n }))); });
-      xhr.addEventListener('abort', () => { it.xhr = null; rejeitar(new Error(t('upload.cancelado'))); });
-      xhr.send(pedaco);
-    });
+    } catch (e) {
+      it.aborto = null;
+      if (e && e.name === 'AbortError') throw new Error(t('upload.cancelado'));
+      throw new Error(t('upload.erro_rede_parte', { n }));
+    }
+    it.aborto = null;
+    if (resp.ok) return;
+    const corpo = await resp.json().catch(() => ({}));
+    throw new Error(corpo.mensagem ? `${t('upload.erro_parte', { n })}: ${corpo.mensagem}` : t('upload.erro_parte', { n }));
   }
 
   const area = h(

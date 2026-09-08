@@ -70,7 +70,7 @@ function celulaProgresso(job) {
   if (job.estado === 'rodando') {
     const pct = Math.max(0, Math.min(100, Number(job.progresso) || 0));
     td.append(
-      h('div', { class: 'progresso', role: 'progressbar', 'aria-valuenow': String(pct), 'aria-valuemin': '0', 'aria-valuemax': '100' },
+      h('div', { class: 'progresso', role: 'progressbar', 'aria-label': t('tarefas.progresso_de', { tipo: job.tipo }), 'aria-valuenow': String(pct), 'aria-valuemin': '0', 'aria-valuemax': '100' },
         h('div', { class: 'barra-progresso' }, h('div', { class: 'preenchido', style: `width:${pct}%` })),
         h('span', { class: 'valor' }, `${pct} %`)),
       h('span', { class: 'msg' }, (job.mensagem || '') + (job.cancelar_solicitado ? ` · ${t('tarefas.cancelando')}` : '')),

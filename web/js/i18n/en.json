@@ -1444,5 +1444,7 @@
  "catalogo.link_invalido_titulo": "invalid link",
  "catalogo.link_429": "too many requests to this link in a short time; wait a minute and try again",
  "catalogo.link_carregando": "reading the shared item…",
- "catalogo.link_incluido_titulo": "included item"
+ "catalogo.link_incluido_titulo": "included item",
+ "upload.escolher_arquivos": "choose files to upload",
+ "tarefas.progresso_de": "progress of task {tipo}"
 }

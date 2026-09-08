@@ -1444,5 +1444,7 @@
  "catalogo.link_invalido_titulo": "link inválido",
  "catalogo.link_429": "muitos pedidos a este link em pouco tempo; aguarde um minuto e tente de novo",
  "catalogo.link_carregando": "lendo o item compartilhado…",
- "catalogo.link_incluido_titulo": "item incluído"
+ "catalogo.link_incluido_titulo": "item incluído",
+ "upload.escolher_arquivos": "escolher arquivos para enviar",
+ "tarefas.progresso_de": "progresso da tarefa {tipo}"
 }

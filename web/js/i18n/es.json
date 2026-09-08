@@ -1444,5 +1444,7 @@
  "catalogo.link_invalido_titulo": "enlace inválido",
  "catalogo.link_429": "demasiadas solicitudes a este enlace en poco tiempo; espere un minuto e intente de nuevo",
  "catalogo.link_carregando": "leyendo el ítem compartido…",
- "catalogo.link_incluido_titulo": "ítem incluido"
+ "catalogo.link_incluido_titulo": "ítem incluido",
+ "upload.escolher_arquivos": "elegir archivos para enviar",
+ "tarefas.progresso_de": "progreso de la tarea {tipo}"
 }

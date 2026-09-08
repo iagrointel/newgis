@@ -24,7 +24,8 @@
 #lista tbody tr[data-id]:focus-visible { outline: 2px solid var(--foco); outline-offset: -2px; }
 #lista td.c-progresso { min-width: 220px; max-width: 420px; }
 #lista td.c-quem, #lista td.c-criado { white-space: nowrap; }
-.progresso .valor { font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: right; }
+/* o seletor genérico `.progresso span` da folha comum pinta o fundo de andamento; o número não é barra */
+.progresso .valor { font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: right; background: none; color: var(--texto); height: auto; }
 .c-progresso .msg { display: block; color: var(--fraco); font-size: var(--t-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .msg.falha { color: var(--falha); }
 .link-item { white-space: nowrap; }

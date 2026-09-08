@@ -1,4 +1,4 @@
-# ADR — telas de operação: fila de envio por byte, página pública sem chrome, formulário de conexão (UX-05)
+# ADR — telas de operação: fila de envio, página pública sem chrome, formulário de conexão (UX-05)
 
 Data: setembro de 2026. Estado: aceito. Trilha de interface.
 
@@ -10,11 +10,17 @@ por PARTE de 16 MiB (num arquivo de 2 GB a barra dava 128 saltos e ficava parada
 página anônima e não mostrava a ficha dos itens incluídos (`GET /api/compartilhado/{token}/itens/{id}` sem tela).
 
 ## Decisão
-1. **Progresso por byte, não por parte.** O envio de cada parte passa a `XMLHttpRequest` (o único caminho do
-   navegador que expõe `upload.onprogress`; `fetch` não expõe o progresso de envio). Cada parte continua sendo um
-   `Blob.slice` do arquivo — nada é lido inteiro para a memória — e a tela pinta no máximo uma vez por quadro
-   (`requestAnimationFrame`), com bytes enviados, velocidade e tempo restante. É isso que sustenta a refutação
-   "upload de 2 GB mostra progresso sem travar a tela": o custo por quadro não cresce com o tamanho do arquivo.
+1. **Progresso por parte, com bytes, velocidade e tempo restante; por byte só depois de uma decisão de
+   autenticação.** Cada parte continua sendo um `Blob.slice` do arquivo — nada é lido inteiro para a memória — e a
+   tela pinta no máximo uma vez por quadro (`requestAnimationFrame`). É isso que sustenta a refutação "upload de
+   2 GB mostra progresso sem travar a tela": o custo por quadro não cresce com o tamanho do arquivo. A primeira
+   versão deste item enviava as partes por `XMLHttpRequest` para ter `upload.onprogress` (byte a byte) e foi
+   refutada pela própria trilha: um XHR na MESMA origem leva sempre o cookie de sessão (`withCredentials` só vale
+   entre origens), e cookie + `Authorization` na mesma requisição é `400 autenticacao_ambigua` por decisão de
+   `app/auth/sessao.py`. `fetch` com `credentials: 'omit'` é o único caminho que omite o cookie, e `fetch` não expõe
+   progresso de envio. Fica para o dono da autenticação decidir (registrado no handoff): aceitar Bearer + cookie
+   quando o token pertence ao mesmo usuário da sessão, ou uma rota de parte sob cookie com CSRF por `Origin`. Até
+   lá, a granularidade é 16 MiB (128 pinturas num arquivo de 2 GB).
    O e2e mede as tarefas longas do fio principal (`PerformanceObserver longtask`) num arquivo sintético de 256 MiB
    com as rotas de parte e conclusão interceptadas no navegador (o disco dos servidores está a 94–96 %; um arquivo
    real de 2 GB não cabe no orçamento do laço, D21). O caminho real continua provado pelos 100 MiB de
@@ -54,7 +60,8 @@ página anônima e não mostrava a ficha dos itens incluídos (`GET /api/compart
 
 ## Alternativas recusadas
 - `fetch` com `ReadableStream` no corpo para ter progresso de envio: exige HTTP/2 e cabeçalho `duplex`, não passa
-  pelo proxy da trilha e ainda não expõe bytes confirmados pelo servidor. XHR faz isso há vinte anos.
+  pelo uvicorn da trilha (HTTP/1.1) e ainda não expõe bytes confirmados pelo servidor.
+- `XMLHttpRequest` para ter `upload.onprogress`: refutado pelo `400 autenticacao_ambigua` (acima).
 - Uma tabela genérica `<plat-tabela>` para a lista de tarefas: as linhas mudam uma a uma por SSE e o cabeçalho
   ordena no servidor; a tabela própria continua (decisão do L0-05), só ganhou o estado explícito.
 - Esconder a barra lateral com CSS na página pública: o HTML continuaria pedindo `/api/eu` e montando menu; a
