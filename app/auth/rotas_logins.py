@@ -14,11 +14,12 @@ from fastapi import APIRouter, Request, Response
 from pydantic import Field
 
 from app import db
-from app.auth import provisionamento
+from app.auth import govbr, provisionamento
 from app.auth.comum import registrar_evento, usuario_ou_404
 from app.auth.modelos import Modelo, Saida
 from app.auth.sessao import Auth, autenticado, iso
 from app.erros import ErroAPI
+from app.settings import settings
 
 router = APIRouter(prefix="/api", tags=["logins"])
 PRIV = {"x-auth": "S", "x-privilegio": "org.integracoes"}
@@ -48,6 +49,8 @@ class Logins(Saida):
     provedores: list[LoginProvedor]
     criacoes: list[str]
     perfis: list[str]
+    redirect_uri_oidc: str
+    govbr: dict[str, Any]
 
 
 def _linha(tipo: str, r: dict) -> dict:
@@ -99,6 +102,16 @@ def listar(auth: Auth = autenticado("org.integracoes", so_sessao=True)):
         "provedores": provedores,
         "criacoes": list(provisionamento.CRIACOES),
         "perfis": list(provisionamento.PERFIS_VALIDOS),
+        # o que o roteiro do gov.br pede para cadastrar o cliente: a URL de retorno é fixa por instalação
+        "redirect_uri_oidc": settings.PLAT_URL_PUBLICA.rstrip("/") + "/api/sso/oidc/retorno",
+        "govbr": {
+            "issuer_producao": govbr.ISSUER_PRODUCAO,
+            "issuer_staging": govbr.ISSUER_STAGING,
+            "api_producao": govbr.API_PRODUCAO,
+            "api_staging": govbr.API_STAGING,
+            "escopos": govbr.ESCOPOS_PADRAO,
+            "valores": ["nivel:bronze", "nivel:prata", "nivel:ouro", "selo:<id>", "amr:<fator>"],
+        },
     }
 
 
