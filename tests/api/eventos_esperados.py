@@ -123,9 +123,6 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # L4-01-a/L4-01-b/L4-18: as rotas de escrita da rede de utilidades que ainda não estavam declaradas
     # aqui (a rota existe e registra o evento; faltava a linha desta tabela). Lidas uma a uma em
     # app/rede_utilidades/rotas*.py.
-    ("POST", "/api/rede"): ["redes/criar"],
-    ("DELETE", "/api/rede/{rede_id}"): ["redes/apagar"],
-    ("POST", "/api/rede/{rede_id}/pacote"): ["redes/importar_pacote"],
     ("POST", "/api/rede/{rede_id}/feicoes/pontos"): ["redes/feicao_criar"],
     ("POST", "/api/rede/{rede_id}/feicoes/linhas"): ["redes/feicao_criar"],
     ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): ["redes/feicao_editar"],
