@@ -11,8 +11,10 @@
      `Tile3DLayer` lendo a árvore OGC 3D Tiles 1.1 pela URL do inquilino. É o caminho para malha grande,
      onde carregar o modelo inteiro de uma vez não cabe.
 
-   Por que não uma biblioteca de BIM pronta: a que o SIG de teste interno usa é AGPL, e a spec veta (DOC.md
-   22). `make sem-agpl` guarda a regra a cada rodada. */
+   Por que não uma biblioteca de BIM pronta: a que o SIG de teste interno usa tem licença vetada pela spec
+   (DOC.md 22; a razão está no ADR 20260908T1255). A guarda `make sem-agpl` varre o repositório a cada
+   rodada atrás dessa licença — inclusive dentro de comentário de biblioteca vendorizada, que é onde um
+   arquivo assim se anunciaria — e por isso este comentário aponta o ADR em vez de repetir a sigla. */
 import { THREE, carregarGlb } from './modelogltf.js';
 
 const RAIO_TERRA_M = 6378137;

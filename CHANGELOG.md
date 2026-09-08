@@ -59,6 +59,28 @@ próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo:
 segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+## turno 3, setembro de 2026 (item L2-09-c-modelos-gltf-ifc-3dtiles: modelos 3D no mapa)
+
+Modelo de projeto posicionado no globo, sem nenhuma biblioteca AGPL. Três caminhos, um pacote
+(`app/modelos3d/`): **glTF binário** posicionado por longitude, latitude, altura, rotação e escala,
+desenhado por camada personalizada do MapLibre com three.js 0.185.1 (MIT, vendorizado); **IFC** lido em
+Python puro — elementos com identificador global, tipo, pavimento e propriedades em
+`plat.modelo3d_elemento`, geometria convertida de malha tesselada e de sólido de extrusão, e o que não
+converte sai CONTADO em `elementos_sem_forma` (arquivo aberto da buildingSMART: 13 elementos, 11 com
+forma); e **OGC 3D Tiles 1.1** gerado do glTF com divisão em quadrantes, servido por URI relativa a
+partir de `GET /api/modelos/{id}/3dtiles/{caminho}`.
+
+Oito rotas novas em `/api/modelos`, duas tarefas de fila (`modelo3d.converter`, `modelo3d.tileset`), duas
+tabelas com RLS por inquilino, e o bloco `modelos` acrescentado ao esquema do documento de cena. Modelo
+com recurso externo (textura fora do arquivo) é recusado nos dois lados — servidor e navegador.
+
+Medido: caixa desenhada pelo navegador contra a calculada pelo servidor, **0,097 m** de erro (folga do
+portão: 0,5 m); validador oficial `3d-tiles-validator` 0.6.1 com **0 erros e 0 avisos** nas árvores de 1 e
+de 8 tiles, e reprovando o controle negativo; **58,7 quadros/s** com o modelo na tela (carga 9,5, sem
+GPU); IFC sintético de 50 MB com 62.038 elementos em 19,4 s e pico de 679 MB, dentro do teto de 1.024 MB
+do trabalhador. `make check` ganhou `make sem-agpl`. i3s fica de fora, declarado (sem produtor aberto na
+pilha); consumo do tileset pelo cliente pesado do concorrente segue pendente da decisão D20.
+
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
 Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,
