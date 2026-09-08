@@ -1639,5 +1639,9 @@
  "construtor.largura_invalida": "width must be an integer from 1 to {total}",
  "construtor.largura_campo": "Width (columns of {total})",
  "construtor.tipo_invalido": "value must be of type {tipo}",
- "construtor.propriedade_gravada": "{campo} saved"
+ "construtor.propriedade_gravada": "{campo} saved",
+ "aplicativo.vazio_titulo": "application without widgets",
+ "aplicativo.vazio_texto": "the document has no widget on its initial page yet; build it in the builder",
+ "aplicativo.erro_montar": "the application could not be mounted: {erro}",
+ "aplicativo.widget_mapa": "map"
 }

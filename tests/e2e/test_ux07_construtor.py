@@ -147,6 +147,14 @@ def test_novo_app_tres_widgets_por_arrasto_publica_e_abre(page, base_url, creden
         assert page.locator("#lateral, .lateral").count() == 0  # aplicativo é dono do viewport: sem chrome interno
         _axe(page, "aplicativo")
         _capturar(page, "aplicativo")
+        # o mesmo item na grade de widgets (/aplicativo?item=): os três widgets pelo motor, sem chrome
+        tela.ir(f"/aplicativo?item={iid}")
+        page.wait_for_selector(".plat-widgets plat-w-texto", timeout=15000)
+        for tag in ("plat-w-texto", "plat-w-imagem", "plat-w-botao"):
+            assert page.locator(f".plat-widgets {tag}").count() == 1, tag
+        assert page.locator("#estado").is_hidden()
+        _axe(page, "grade de widgets")
+        _capturar(page, "aplicativo_grade", larguras=(1280,))
         tela.verificar()
     finally:
         _limpar(tela, ids)
@@ -241,4 +249,8 @@ def test_estados_do_construtor_e_do_executor(page, base_url, credenciais_demo):
     tela.ir(f"/executar?item={inexistente}")
     page.wait_for_selector("#estado[tipo='vazio']:not([hidden])")
     assert "não encontrado" in (page.text_content("#estado") or "")
+    tela.ir(f"/aplicativo?item={inexistente}")
+    page.wait_for_selector("#estado[tipo='vazio']:not([hidden])")
+    assert "não encontrado" in (page.text_content("#estado") or "")
+    _capturar(page, "aplicativo_inexistente", larguras=(1280,))
     tela.verificar()

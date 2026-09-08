@@ -23,6 +23,8 @@ import { novoDocumento } from './documento.js';
 /* item `app` ganha a paleta de PÁGINAS E LAYOUT (L5-01-a: página, cabeçalho, menu, janela, ...); os demais
    tipos de construtor continuam com a paleta de layout comum do L5-08, sem página nenhuma dentro deles. */
 function paletaDoTipo(tipo) { return tipo === 'app' ? PALETA_PAGINAS : PALETA_LAYOUT; }
+/* `app` roda no executor de páginas; `painel` (grade de widgets, sem página) roda em /aplicativo pelo motor */
+function urlExecucao(item) { return `${item.tipo === 'app' ? '/executar' : '/aplicativo'}?item=${encodeURIComponent(item.id)}`; }
 const el = (id) => document.getElementById(id);
 
 await carregar();
@@ -53,7 +55,7 @@ async function escolherItem() {
   tab.acoes = () => [{ id: 'abrir', rotulo: t('construtor.abrir_no_construtor'), classe: 'primario' }, { id: 'executar', rotulo: t('construtor.executar') }];
   tab.addEventListener('acao', (ev) => {
     if (ev.detail.id === 'abrir') location.href = `/construtor?item=${encodeURIComponent(ev.detail.linha.id)}`;
-    else window.open(`/executar?item=${encodeURIComponent(ev.detail.linha.id)}`, '_blank', 'noopener');
+    else window.open(urlExecucao(ev.detail.linha), '_blank', 'noopener');
   });
   let q = '';
   async function listar() {
@@ -136,10 +138,7 @@ async function abrirItem(id) {
   const btPublicar = h('button', { type: 'button', id: 'publicar', disabled: !podeEditar }, t('construtor.publicar'));
   const estadoSalvo = h('span', { id: 'estado-salvo', class: 'estado', 'aria-live': 'polite' }, podeEditar ? t('construtor.sem_alteracoes') : t('construtor.so_leitura'));
   const publicado = h('span', { id: 'estado-publicado', class: 'marcador' });
-  // só `app` tem páginas para o executor desenhar; um painel (paleta de layout) não abre em /executar
-  const linkExecutar = item.tipo === 'app'
-    ? h('a', { id: 'executar', class: 'botao pequeno', href: `/executar?item=${encodeURIComponent(item.id)}`, target: '_blank', rel: 'noopener' }, t('construtor.executar'))
-    : null;
+  const linkExecutar = h('a', { id: 'executar', class: 'botao pequeno', href: urlExecucao(item), target: '_blank', rel: 'noopener' }, t('construtor.executar'));
   const linkEscolher = h('a', { id: 'escolher-outro', class: 'botao pequeno texto', href: '/construtor' }, t('construtor.escolher_outro'));
   const barra = el('ferramentas');
   limpar(barra).append(h('div', { class: 'botoes' }, btSalvar, btPublicar, linkExecutar, linkEscolher), h('div', { class: 'direita' }, estadoSalvo, publicado));
@@ -198,7 +197,7 @@ async function abrirItem(id) {
     item = r.json;
     pintarPublicado();
     aviso.mostrar(t('construtor.publicado', { n: item.versao_publicada }), 'ok');
-    aviso.append(' ', h('a', { href: `/executar?item=${encodeURIComponent(item.id)}`, target: '_blank', rel: 'noopener' }, t('construtor.abrir_publicado')));
+    aviso.append(' ', h('a', { href: urlExecucao(item), target: '_blank', rel: 'noopener' }, t('construtor.abrir_publicado')));
   }
 
   btSalvar.addEventListener('click', salvar);

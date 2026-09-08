@@ -1639,5 +1639,9 @@
  "construtor.largura_invalida": "el ancho debe ser un entero de 1 a {total}",
  "construtor.largura_campo": "Ancho (columnas de {total})",
  "construtor.tipo_invalido": "el valor debe ser del tipo {tipo}",
- "construtor.propriedade_gravada": "{campo} guardado"
+ "construtor.propriedade_gravada": "{campo} guardado",
+ "aplicativo.vazio_titulo": "aplicación sin widgets",
+ "aplicativo.vazio_texto": "el documento aún no tiene ningún widget en la página inicial; móntelo en el constructor",
+ "aplicativo.erro_montar": "la aplicación no pudo montarse: {erro}",
+ "aplicativo.widget_mapa": "mapa"
 }

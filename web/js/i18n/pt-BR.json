@@ -1639,5 +1639,9 @@
  "construtor.largura_invalida": "largura precisa ser um inteiro de 1 a {total}",
  "construtor.largura_campo": "Largura (colunas de {total})",
  "construtor.tipo_invalido": "valor precisa ser do tipo {tipo}",
- "construtor.propriedade_gravada": "{campo} gravado"
+ "construtor.propriedade_gravada": "{campo} gravado",
+ "aplicativo.vazio_titulo": "aplicativo sem widget",
+ "aplicativo.vazio_texto": "o documento ainda não tem nenhum widget na página inicial; monte-o no construtor",
+ "aplicativo.erro_montar": "o aplicativo não pôde ser montado: {erro}",
+ "aplicativo.widget_mapa": "mapa"
 }
