@@ -17,6 +17,8 @@ AREA_MULTIESCALA_TESTE = {
     "coordinates": [[[-46.61, -23.51], [-46.59, -23.51], [-46.59, -23.49], [-46.61, -23.49], [-46.61, -23.51]]],
 }
 PADRAO = frozenset({401, 403, 404})
+FS = "/rest/services/{item_id}/FeatureServer"  # família L2-04: serviços de camada por item
+OGCF = "/ogc/features/{item_id}"
 UUID_NULO = "00000000-0000-0000-0000-000000000000"  # id que não é de A nem de B: 404 garantido pela RLS/dono
 
 
@@ -906,6 +908,49 @@ CASOS: dict[tuple[str, str], Caso] = {
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # ---- Serviços de camada por item (família L2-04: FeatureServer Esri, OGC API Features e WFS) e a
+    # porta única de escrita de feições (L2-03-a). Todos resolvem a camada por `plat.item` sob RLS: com o
+    # item de B, A recebe 404 ("item inexistente, não é camada vetorial, ou sem permissão"), e sem
+    # autenticação, 401. O item de B da preparação é um MAPA, não uma camada vetorial — então o 404 vale
+    # para A e para B, e nenhuma destas chamadas chega a tocar tabela de dado.
+    ("GET", FS): Caso(lambda p: f"/rest/services/{p.item_b['id']}/FeatureServer"),
+    ("GET", FS + "/{camada_id}"): Caso(lambda p: f"/rest/services/{p.item_b['id']}/FeatureServer/0"),
+    ("GET", FS + "/{camada_id}/query"): Caso(
+        lambda p: f"/rest/services/{p.item_b['id']}/FeatureServer/0/query?where=1%3D1"),
+    ("POST", FS + "/{camada_id}/query"): Caso(
+        lambda p: f"/rest/services/{p.item_b['id']}/FeatureServer/0/query", lambda p: {"where": "1=1"}),
+    ("GET", OGCF): Caso(lambda p: f"/ogc/features/{p.item_b['id']}"),
+    ("GET", OGCF + "/api"): Caso(lambda p: f"/ogc/features/{p.item_b['id']}/api"),
+    ("GET", OGCF + "/conformance"): Caso(lambda p: f"/ogc/features/{p.item_b['id']}/conformance"),
+    ("GET", OGCF + "/collections"): Caso(lambda p: f"/ogc/features/{p.item_b['id']}/collections"),
+    ("GET", OGCF + "/collections/{colecao_id}"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0"),
+    ("GET", OGCF + "/collections/{colecao_id}/queryables"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/queryables"),
+    ("GET", OGCF + "/collections/{colecao_id}/items"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/items"),
+    ("GET", OGCF + "/collections/{colecao_id}/items/{feature_id}"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/items/1"),
+    ("POST", OGCF + "/collections/{colecao_id}/items"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/items",
+        lambda p: {"type": "Feature", "properties": {}, "geometry": None}),
+    ("PUT", OGCF + "/collections/{colecao_id}/items/{feature_id}"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/items/1",
+        lambda p: {"type": "Feature", "properties": {}, "geometry": None}),
+    ("PATCH", OGCF + "/collections/{colecao_id}/items/{feature_id}"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/items/1",
+        lambda p: {"type": "Feature", "properties": {}, "geometry": None}),
+    ("DELETE", OGCF + "/collections/{colecao_id}/items/{feature_id}"): Caso(
+        lambda p: f"/ogc/features/{p.item_b['id']}/collections/0/items/1"),
+    ("POST", "/api/camadas/{id}/edicoes"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/edicoes", lambda p: {"adicionar": []}),
+    # WFS 2.0 (L2-04-h): um endpoint KVP por item, GET e POST. `REQUEST=GetCapabilities` na URL para a
+    # chamada chegar à resolução da camada (sem REQUEST a resposta seria 400 de protocolo, que não diz
+    # nada sobre isolamento). O POST sem corpo cai no mesmo caminho KVP.
+    ("GET", "/wfs/{item_id}"): Caso(
+        lambda p: f"/wfs/{p.item_b['id']}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetCapabilities"),
+    ("POST", "/wfs/{item_id}"): Caso(
+        lambda p: f"/wfs/{p.item_b['id']}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetCapabilities"),
 }
 
 
