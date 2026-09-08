@@ -59,6 +59,7 @@ class Preparacao:
     conjunto_b: dict = field(default_factory=dict)  # L3-19-multiescala: área de estudo de B
     fator_b: dict = field(default_factory=dict)  # L3-19-multiescala: fator de B
     execucao_b: dict = field(default_factory=dict)  # L3-19-multiescala: execução macro de B (sobre conjunto_b)
+    preset_b: dict = field(default_factory=dict)  # L3-01-h-presets: preset do motor de B (escopo usuario)
 
     @property
     def marcas_de_b(self) -> list[str]:
@@ -72,6 +73,8 @@ class Preparacao:
             marcas.append(self.convite_b["email"])
         if self.conjunto_b:
             marcas += [self.conjunto_b["nome"], self.fator_b["nome"]]
+        if self.preset_b:
+            marcas.append(self.preset_b["nome"])
         return marcas
 
 
@@ -155,11 +158,20 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     })
     assert r.status_code == 201, r.text
     execucao_b = r.json()
+    # L3-01-h-presets: preset de B, escopo 'usuario' (o mais restrito: só o dono vê — e o dono é o admin
+    # de B, nunca A; a RLS isola o inquilino e o filtro de visibilidade isola o dono)
+    r = sessao_b.post("/api/amc/presets", json={
+        "nome": f"{PREFIXO}preset-{sufixo}", "escopo": "usuario",
+        "conteudo": {"fatores": ["acesso_rodoviario", "custo_terreno"],
+                     "pesos": {"acesso_rodoviario": 5.0, "custo_terreno": 2.0}},
+    })
+    assert r.status_code == 201, r.text
+    preset_b = r.json()
     return Preparacao(sessao_b, sessao_a, ids, inquilino_b, usuario_b, grupo_b, papel_b, token_b, sessao_b_id,
                       job_b=job_b, agenda_b=agenda_b, item_b=item_b, pasta_b=pasta_b, link_b=link_b,
                       categoria_b=categoria_b, fonte_acervo=fonte_acervo, conexao_b=conexao_b,
                       convite_b=convite_b,
-                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b)
+                      conjunto_b=conjunto_b, fator_b=fator_b, execucao_b=execucao_b, preset_b=preset_b)
 
 
 def _no_categoria(no: dict) -> dict:
@@ -188,6 +200,8 @@ def desfazer(p: Preparacao) -> None:
     if p.conjunto_b:
         p.sessao_b.delete(f"/api/multiescala/conjuntos/{p.conjunto_b['id']}")  # cascata apaga a execução também
         p.sessao_b.delete(f"/api/multiescala/fatores/{p.fator_b['id']}")
+    if p.preset_b:
+        p.sessao_b.delete(f"/api/amc/presets/{p.preset_b['id']}")
     if p.agenda_b:
         p.sessao_b.delete(f"/api/agendas/{p.agenda_b['id']}")
     p.sessao_b.delete(f"/api/grupos/{p.grupo_b['id']}")
@@ -557,6 +571,39 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}/micro",
         lambda p: {"resolucao_m": 100.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
                    "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
+    ),
+    # ---- L3-01-h-presets: preset é do INQUILINO e, no escopo 'usuario', só do DONO (duas travas: RLS de
+    # tenant + filtro de visibilidade por dono). GET/POST de lista agem só sobre o próprio chamador (a
+    # listagem de A traz os integrados + os de A, nunca o de B); GET/PATCH/DELETE/exportar/aplicar por id
+    # de B são cross-tenant puro (404 — e para A o preset de B e o inexistente são a mesma resposta).
+    ("GET", "/api/amc/presets"): Caso(lambda p: "/api/amc/presets", proprio=True, aceita=frozenset({200}),
+                                      verificar=_sem_marca),
+    ("POST", "/api/amc/presets"): Caso(
+        lambda p: "/api/amc/presets",
+        lambda p: {"nome": f"{PREFIXO}preset-a-{secrets.token_hex(3)}", "escopo": "usuario",
+                   "conteudo": {"fatores": ["acesso_rodoviario", "custo_terreno"],
+                                "pesos": {"acesso_rodoviario": 5.0, "custo_terreno": 2.0}}},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/amc/presets/{id}")),
+    ),
+    ("GET", "/api/amc/presets/{id}"): Caso(lambda p: f"/api/amc/presets/{p.preset_b['id']}"),
+    ("PATCH", "/api/amc/presets/{id}"): Caso(
+        lambda p: f"/api/amc/presets/{p.preset_b['id']}", lambda p: {"nome": f"{PREFIXO}invadido"}
+    ),
+    ("DELETE", "/api/amc/presets/{id}"): Caso(lambda p: f"/api/amc/presets/{p.preset_b['id']}"),
+    ("GET", "/api/amc/presets/{id}/exportar"): Caso(lambda p: f"/api/amc/presets/{p.preset_b['id']}/exportar"),
+    ("POST", "/api/amc/presets/{id}/aplicar"): Caso(
+        lambda p: f"/api/amc/presets/{p.preset_b['id']}/aplicar",
+        lambda p: {"fatores": [[80.0, 40.0]], "ids_fatores": ["acesso_rodoviario", "custo_terreno"]},
+    ),
+    ("POST", "/api/amc/presets/importar"): Caso(
+        lambda p: "/api/amc/presets/importar",
+        lambda p: {"formato": "plat/amc_preset", "versao": 1,
+                   "nome": f"{PREFIXO}preset-imp-{secrets.token_hex(3)}", "escopo": "usuario",
+                   "conteudo": {"pesos_iguais": True, "combinador": "soma_ponderada",
+                                "politica_ausente": "excluir"}},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/amc/presets/{id}")),
     ),
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
