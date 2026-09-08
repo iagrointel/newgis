@@ -1,0 +1,2321 @@
+{
+ "atributos": [
+  {
+   "codigo": "ano_de_construcao",
+   "grupo": "boca_de_lobo",
+   "nome": "ano de construção",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "year_of_construction",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "codigo_de_cadastro",
+   "grupo": "boca_de_lobo",
+   "nome": "código da estrutura no cadastro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "identifier",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "cota_da_tampa",
+   "grupo": "boca_de_lobo",
+   "nome": "cota da tampa",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "co_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_de_fundo",
+   "grupo": "boca_de_lobo",
+   "nome": "cota de fundo do nó",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "wn_bottom_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "diametro_da_tampa",
+   "grupo": "boca_de_lobo",
+   "nome": "diâmetro da tampa",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "co_diameter",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "mm"
+  },
+  {
+   "codigo": "especie",
+   "grupo": "boca_de_lobo",
+   "nome": "espécie da estrutura na fonte",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ws_type",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "boca_de_lobo",
+   "nome": "identificador da estrutura",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "material_da_tampa",
+   "grupo": "boca_de_lobo",
+   "nome": "material da tampa",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "co_material",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "boca_de_lobo",
+   "nome": "situação operacional",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "status",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "altura_livre",
+   "grupo": "coletor",
+   "nome": "altura livre da seção",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "clear_height",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "mm"
+  },
+  {
+   "codigo": "codigo_de_cadastro",
+   "grupo": "coletor",
+   "nome": "código do trecho no cadastro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "identifier",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "coeficiente_de_atrito",
+   "grupo": "coletor",
+   "nome": "coeficiente de atrito",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "coefficient_of_friction",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": null
+  },
+  {
+   "codigo": "comprimento",
+   "grupo": "coletor",
+   "nome": "comprimento efetivo",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "length_effective",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_jusante",
+   "grupo": "coletor",
+   "nome": "cota da geratriz interna inferior no ponto de jusante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "rp_to_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_montante",
+   "grupo": "coletor",
+   "nome": "cota da geratriz interna inferior no ponto de montante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "rp_from_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "declividade",
+   "grupo": "coletor",
+   "nome": "declividade calculada pela fonte",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "_slope_per_mill",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "mm/m"
+  },
+  {
+   "codigo": "funcao_hierarquica",
+   "grupo": "coletor",
+   "nome": "função hierárquica do canal",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "ch_function_hierarchic",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "coletor",
+   "nome": "identificador do trecho",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "material",
+   "grupo": "coletor",
+   "nome": "material do tubo",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "material",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "no_jusante",
+   "grupo": "coletor",
+   "nome": "nó de jusante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "rp_to_obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "no_montante",
+   "grupo": "coletor",
+   "nome": "nó de montante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "rp_from_obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "coletor",
+   "nome": "situação da estrutura a que o trecho pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "ws_status",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "uso_atual",
+   "grupo": "coletor",
+   "nome": "uso atual do canal",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "ch_usage_current",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ano_de_construcao",
+   "grupo": "elevatoria",
+   "nome": "ano de construção",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "year_of_construction",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "codigo_de_cadastro",
+   "grupo": "elevatoria",
+   "nome": "código da estrutura no cadastro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "identifier",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "cota_da_tampa",
+   "grupo": "elevatoria",
+   "nome": "cota da tampa",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "co_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_de_fundo",
+   "grupo": "elevatoria",
+   "nome": "cota de fundo do nó",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "wn_bottom_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "especie",
+   "grupo": "elevatoria",
+   "nome": "espécie da estrutura na fonte",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ws_type",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "elevatoria",
+   "nome": "identificador da estrutura",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "nivel_de_desliga",
+   "grupo": "elevatoria",
+   "nome": "nível que desliga a bomba",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "pump",
+    "coluna": "stop_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "nivel_de_liga",
+   "grupo": "elevatoria",
+   "nome": "nível que liga a bomba",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "pump",
+    "coluna": "start_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "posicao_da_bomba",
+   "grupo": "elevatoria",
+   "nome": "posição da bomba",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "pump",
+    "coluna": "placement_of_pump",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "elevatoria",
+   "nome": "situação operacional",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "status",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "tipo_construtivo",
+   "grupo": "elevatoria",
+   "nome": "tipo construtivo da bomba",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "pump",
+    "coluna": "construction_type",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "vazao_maxima_por_bomba",
+   "grupo": "elevatoria",
+   "nome": "vazão máxima de uma bomba",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "pump",
+    "coluna": "pump_flow_max_single",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "L/s"
+  },
+  {
+   "codigo": "ano_de_construcao",
+   "grupo": "estacao_de_tratamento",
+   "nome": "ano de construção",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "year_of_construction",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "capacidade",
+   "grupo": "estacao_de_tratamento",
+   "nome": "capacidade de tratamento",
+   "obrigatorio": false,
+   "tipo_dado": "real",
+   "unidade": "L/s"
+  },
+  {
+   "codigo": "codigo_de_cadastro",
+   "grupo": "estacao_de_tratamento",
+   "nome": "código da estrutura no cadastro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "identifier",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "cota_da_tampa",
+   "grupo": "estacao_de_tratamento",
+   "nome": "cota da tampa",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "co_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_de_fundo",
+   "grupo": "estacao_de_tratamento",
+   "nome": "cota de fundo do nó",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "wn_bottom_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "especie",
+   "grupo": "estacao_de_tratamento",
+   "nome": "espécie da estrutura na fonte",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ws_type",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "estacao_de_tratamento",
+   "nome": "identificador da estrutura",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "estacao_de_tratamento",
+   "nome": "situação operacional",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "status",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ano_de_construcao",
+   "grupo": "estrutura_especial",
+   "nome": "ano de construção",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "year_of_construction",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "codigo_de_cadastro",
+   "grupo": "estrutura_especial",
+   "nome": "código da estrutura no cadastro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "identifier",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "cota_da_tampa",
+   "grupo": "estrutura_especial",
+   "nome": "cota da tampa",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "co_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_de_fundo",
+   "grupo": "estrutura_especial",
+   "nome": "cota de fundo do nó",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "wn_bottom_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_superior",
+   "grupo": "estrutura_especial",
+   "nome": "cota superior da estrutura",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ss_upper_elevation",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "especie",
+   "grupo": "estrutura_especial",
+   "nome": "espécie da estrutura na fonte",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ws_type",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "estrutura_especial",
+   "nome": "identificador da estrutura",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "profundidade",
+   "grupo": "estrutura_especial",
+   "nome": "profundidade da estrutura",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ss_depth",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "estrutura_especial",
+   "nome": "situação operacional",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "status",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "tem_desvio",
+   "grupo": "estrutura_especial",
+   "nome": "tem desvio (bypass)",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ss_bypass",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "booleano",
+   "unidade": null
+  },
+  {
+   "codigo": "altura_livre",
+   "grupo": "galeria_pluvial",
+   "nome": "altura livre da seção",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "clear_height",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "mm"
+  },
+  {
+   "codigo": "codigo_de_cadastro",
+   "grupo": "galeria_pluvial",
+   "nome": "código do trecho no cadastro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "identifier",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "coeficiente_de_atrito",
+   "grupo": "galeria_pluvial",
+   "nome": "coeficiente de atrito",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "coefficient_of_friction",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": null
+  },
+  {
+   "codigo": "comprimento",
+   "grupo": "galeria_pluvial",
+   "nome": "comprimento efetivo",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "length_effective",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_jusante",
+   "grupo": "galeria_pluvial",
+   "nome": "cota da geratriz interna inferior no ponto de jusante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "rp_to_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_montante",
+   "grupo": "galeria_pluvial",
+   "nome": "cota da geratriz interna inferior no ponto de montante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "rp_from_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "declividade",
+   "grupo": "galeria_pluvial",
+   "nome": "declividade calculada pela fonte",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "_slope_per_mill",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "mm/m"
+  },
+  {
+   "codigo": "funcao_hierarquica",
+   "grupo": "galeria_pluvial",
+   "nome": "função hierárquica do canal",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "ch_function_hierarchic",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "galeria_pluvial",
+   "nome": "identificador do trecho",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "material",
+   "grupo": "galeria_pluvial",
+   "nome": "material do tubo",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "material",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "no_jusante",
+   "grupo": "galeria_pluvial",
+   "nome": "nó de jusante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "rp_to_obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "no_montante",
+   "grupo": "galeria_pluvial",
+   "nome": "nó de montante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "rp_from_obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "galeria_pluvial",
+   "nome": "situação da estrutura a que o trecho pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "ws_status",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "uso_atual",
+   "grupo": "galeria_pluvial",
+   "nome": "uso atual do canal",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "ch_usage_current",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "altura_livre",
+   "grupo": "ligacao_predial",
+   "nome": "altura livre da seção",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "clear_height",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "mm"
+  },
+  {
+   "codigo": "codigo_de_cadastro",
+   "grupo": "ligacao_predial",
+   "nome": "código do trecho no cadastro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "identifier",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "coeficiente_de_atrito",
+   "grupo": "ligacao_predial",
+   "nome": "coeficiente de atrito",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "coefficient_of_friction",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": null
+  },
+  {
+   "codigo": "comprimento",
+   "grupo": "ligacao_predial",
+   "nome": "comprimento efetivo",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "length_effective",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_jusante",
+   "grupo": "ligacao_predial",
+   "nome": "cota da geratriz interna inferior no ponto de jusante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "rp_to_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_montante",
+   "grupo": "ligacao_predial",
+   "nome": "cota da geratriz interna inferior no ponto de montante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "rp_from_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "declividade",
+   "grupo": "ligacao_predial",
+   "nome": "declividade calculada pela fonte",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "_slope_per_mill",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "mm/m"
+  },
+  {
+   "codigo": "funcao_hierarquica",
+   "grupo": "ligacao_predial",
+   "nome": "função hierárquica do canal",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "ch_function_hierarchic",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "ligacao_predial",
+   "nome": "identificador do trecho",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "material",
+   "grupo": "ligacao_predial",
+   "nome": "material do tubo",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "material",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "no_jusante",
+   "grupo": "ligacao_predial",
+   "nome": "nó de jusante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "rp_to_obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "no_montante",
+   "grupo": "ligacao_predial",
+   "nome": "nó de montante",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "rp_from_obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "ligacao_predial",
+   "nome": "situação da estrutura a que o trecho pertence",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "ws_status",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "uso_atual",
+   "grupo": "ligacao_predial",
+   "nome": "uso atual do canal",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_reach",
+    "coluna": "ch_usage_current",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ano_de_construcao",
+   "grupo": "poco_de_visita",
+   "nome": "ano de construção",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "year_of_construction",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "codigo_de_cadastro",
+   "grupo": "poco_de_visita",
+   "nome": "código da estrutura no cadastro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "identifier",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "cota_da_tampa",
+   "grupo": "poco_de_visita",
+   "nome": "cota da tampa",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "co_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_de_fundo",
+   "grupo": "poco_de_visita",
+   "nome": "cota de fundo do nó",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "wn_bottom_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_de_remanso",
+   "grupo": "poco_de_visita",
+   "nome": "cota de remanso atual",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "wn_backflow_level_current",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "dimensao_1",
+   "grupo": "poco_de_visita",
+   "nome": "primeira dimensão em planta",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ma_dimension1",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "mm"
+  },
+  {
+   "codigo": "dimensao_2",
+   "grupo": "poco_de_visita",
+   "nome": "segunda dimensão em planta",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ma_dimension2",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "mm"
+  },
+  {
+   "codigo": "especie",
+   "grupo": "poco_de_visita",
+   "nome": "espécie da estrutura na fonte",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ws_type",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "funcao",
+   "grupo": "poco_de_visita",
+   "nome": "função do poço na fonte",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ma_function",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "poco_de_visita",
+   "nome": "identificador da estrutura",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "material",
+   "grupo": "poco_de_visita",
+   "nome": "material do poço",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ma_material",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "profundidade",
+   "grupo": "poco_de_visita",
+   "nome": "profundidade do poço",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ma_depth",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "poco_de_visita",
+   "nome": "situação operacional",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "status",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "ano_de_construcao",
+   "grupo": "ponto_de_lancamento",
+   "nome": "ano de construção",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "year_of_construction",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "inteiro",
+   "unidade": null
+  },
+  {
+   "codigo": "codigo_de_cadastro",
+   "grupo": "ponto_de_lancamento",
+   "nome": "código da estrutura no cadastro",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "identifier",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "cota_da_tampa",
+   "grupo": "ponto_de_lancamento",
+   "nome": "cota da tampa",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "co_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_de_cheia",
+   "grupo": "ponto_de_lancamento",
+   "nome": "cota de cheia do corpo receptor",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "dp_highwater_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_de_fundo",
+   "grupo": "ponto_de_lancamento",
+   "nome": "cota de fundo do nó",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "wn_bottom_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "cota_do_terreno",
+   "grupo": "ponto_de_lancamento",
+   "nome": "cota do terreno no lançamento",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "dp_terrain_level",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "real",
+   "unidade": "m"
+  },
+  {
+   "codigo": "especie",
+   "grupo": "ponto_de_lancamento",
+   "nome": "espécie da estrutura na fonte",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "ws_type",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "identificador",
+   "grupo": "ponto_de_lancamento",
+   "nome": "identificador da estrutura",
+   "obrigatorio": true,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "obj_id",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "numero_do_curso_de_agua",
+   "grupo": "ponto_de_lancamento",
+   "nome": "número do curso de água na fonte",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "dp_water_course_number",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  },
+  {
+   "codigo": "situacao",
+   "grupo": "ponto_de_lancamento",
+   "nome": "situação operacional",
+   "obrigatorio": false,
+   "origem": {
+    "camada": "vw_tww_wastewater_structure",
+    "coluna": "status",
+    "conferida": false,
+    "esquema": "tww_app",
+    "nota": "coluna lida na definição de tabela do datamodel TEKSI (changelog 2025.0.1, arquivo 03_tww_db_dss.sql, e views em datamodel/app/view); ainda não vista em GeoPackage de dado real"
+   },
+   "tipo_dado": "texto",
+   "unidade": null
+  }
+ ],
+ "categorias": [
+  {
+   "codigo": "bombeamento",
+   "descricao": "Acrescenta carga: a partir daqui a gravidade deixa de governar.",
+   "nome": "Bombeamento"
+  },
+  {
+   "codigo": "captacao",
+   "descricao": "Ponto por onde a água de chuva entra na rede.",
+   "nome": "Captação"
+  },
+  {
+   "codigo": "coleta",
+   "descricao": "Recebe a contribuição de um imóvel ou de uma via.",
+   "nome": "Coleta"
+  },
+  {
+   "codigo": "conducao",
+   "descricao": "Conduz por gravidade, sem bombear nem controlar.",
+   "nome": "Condução"
+  },
+  {
+   "codigo": "extravasamento",
+   "descricao": "Alivia a rede acima de uma vazão, desviando o excedente.",
+   "nome": "Extravasamento"
+  },
+  {
+   "codigo": "inspecao",
+   "descricao": "Permite acesso à rede para inspeção e limpeza; é onde os trechos se encontram.",
+   "nome": "Inspeção"
+  },
+  {
+   "codigo": "lancamento",
+   "descricao": "Onde a rede devolve o efluente ao corpo receptor.",
+   "nome": "Lançamento"
+  },
+  {
+   "codigo": "medicao",
+   "descricao": "Mede vazão ou nível sem alterar o escoamento.",
+   "nome": "Medição"
+  },
+  {
+   "codigo": "recalque",
+   "descricao": "Trecho sob pressão a jusante da bomba; a cota não decide o sentido.",
+   "nome": "Recalque"
+  },
+  {
+   "codigo": "seccionamento",
+   "descricao": "Interrompe o escoamento por manobra.",
+   "nome": "Seccionamento"
+  },
+  {
+   "codigo": "tratamento",
+   "descricao": "Fim da rede coletora; o traçado a jusante termina aqui.",
+   "nome": "Tratamento"
+  }
+ ],
+ "dominios": [
+  {
+   "codigo": "drenagem_pluvial",
+   "descricao": "Captação e condução de água de chuva. Mesma regra de escoamento por gravidade do esgoto sanitário, bacia própria.",
+   "disciplina": "esgoto",
+   "nome": "Drenagem pluvial",
+   "ordem": 2,
+   "tipo": "dominio"
+  },
+  {
+   "codigo": "esgoto_sanitario",
+   "descricao": "Coleta e transporte de esgoto sanitário. O tier é a bacia: a subrede não tem hierarquia de pressão, é a área que escoa para uma mesma saída.",
+   "disciplina": "esgoto",
+   "nome": "Esgoto sanitário",
+   "ordem": 1,
+   "tipo": "dominio"
+  }
+ ],
+ "esquema": "plat.rede.pacote",
+ "esquema_versao": 1,
+ "grupos": [
+  {
+   "camadas_fonte": [
+    "vw_tww_wastewater_structure"
+   ],
+   "codigo": "boca_de_lobo",
+   "descricao": "Captação de água de chuva na via.",
+   "dominio": "drenagem_pluvial",
+   "geometria": "ponto",
+   "nome": "Boca de lobo"
+  },
+  {
+   "camadas_fonte": [
+    "vw_tww_reach"
+   ],
+   "codigo": "galeria_pluvial",
+   "descricao": "Trecho de drenagem por gravidade.",
+   "dominio": "drenagem_pluvial",
+   "geometria": "linha",
+   "nome": "Galeria pluvial"
+  },
+  {
+   "camadas_fonte": [
+    "vw_tww_reach"
+   ],
+   "codigo": "coletor",
+   "descricao": "Trecho de tubulação entre duas estruturas; escoa por gravidade, do primeiro para o último vértice.",
+   "dominio": "esgoto_sanitario",
+   "geometria": "linha",
+   "nome": "Coletor"
+  },
+  {
+   "camadas_fonte": [
+    "pump",
+    "vw_tww_wastewater_structure"
+   ],
+   "codigo": "elevatoria",
+   "descricao": "Onde a rede é bombeada porque a gravidade não alcança a saída.",
+   "dominio": "esgoto_sanitario",
+   "geometria": "ponto",
+   "nome": "Elevatória"
+  },
+  {
+   "camadas_fonte": [
+    "vw_tww_wastewater_structure"
+   ],
+   "codigo": "estacao_de_tratamento",
+   "descricao": "Destino final da rede coletora.",
+   "dominio": "esgoto_sanitario",
+   "geometria": "ponto",
+   "nome": "Estação de tratamento"
+  },
+  {
+   "camadas_fonte": [
+    "vw_tww_wastewater_structure"
+   ],
+   "codigo": "estrutura_especial",
+   "descricao": "Extravasor, câmara de transição, caixa de passagem.",
+   "dominio": "esgoto_sanitario",
+   "geometria": "ponto",
+   "nome": "Estrutura especial"
+  },
+  {
+   "camadas_fonte": [
+    "vw_tww_reach"
+   ],
+   "codigo": "ligacao_predial",
+   "descricao": "Trecho que liga o imóvel ao coletor de rede.",
+   "dominio": "esgoto_sanitario",
+   "geometria": "linha",
+   "nome": "Ligação predial"
+  },
+  {
+   "camadas_fonte": [
+    "vw_tww_wastewater_structure"
+   ],
+   "codigo": "poco_de_visita",
+   "descricao": "Estrutura de inspeção onde os coletores se encontram; carrega a cota da tampa e a cota de fundo.",
+   "dominio": "esgoto_sanitario",
+   "geometria": "ponto",
+   "nome": "Poço de visita"
+  },
+  {
+   "camadas_fonte": [
+    "vw_tww_wastewater_structure"
+   ],
+   "codigo": "ponto_de_lancamento",
+   "descricao": "Onde a rede devolve o efluente ao corpo receptor.",
+   "dominio": "esgoto_sanitario",
+   "geometria": "ponto",
+   "nome": "Ponto de lançamento"
+  }
+ ],
+ "pacote": {
+  "codigo": "esgoto-teksi",
+  "descricao": "Pacote de ativos de esgoto sanitário e drenagem pluvial, com o tier na BACIA (partição, não hierarquia) e o escoamento por gravidade: o trecho declara o sentido pela ordem dos vértices e carrega a cota de montante e a de jusante, e a plataforma confere se a cota concorda com o sentido declarado. Trecho de categoria recalque fica de fora dessa conferência, porque ali quem manda é a bomba. As colunas de origem são as do datamodel aberto TEKSI (views tww_app.vw_tww_reach e tww_app.vw_tww_wastewater_structure), lidas na definição de tabela do projeto e ainda não conferidas contra dado real: todo atributo sai com origem.conferida = false.",
+  "disciplina": "esgoto",
+  "fonte": "https://teksi.github.io/wastewater/",
+  "nome": "Esgoto sanitário e drenagem (esquema TEKSI)",
+  "versao": "1.0.0"
+ },
+ "regras": [
+  {
+   "de": "elevatoria/1",
+   "descricao": "conjunto motobomba faz parte da elevatória",
+   "para": "elevatoria/2",
+   "tipo": "conectividade_entre_nos"
+  },
+  {
+   "de": "boca_de_lobo/1",
+   "descricao": "boca de lobo entrega na galeria pluvial",
+   "para": "galeria_pluvial/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "boca_de_lobo/2",
+   "descricao": "poço de visita pluvial recebe e entrega galeria pluvial",
+   "para": "galeria_pluvial/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "boca_de_lobo/2",
+   "descricao": "poço de visita pluvial entrega no canal de drenagem",
+   "para": "galeria_pluvial/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "elevatoria/1",
+   "descricao": "elevatória recebe coletor tronco por gravidade",
+   "para": "coletor/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "elevatoria/1",
+   "descricao": "elevatória recebe o interceptor por gravidade",
+   "para": "coletor/3",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "elevatoria/1",
+   "descricao": "elevatória entrega na linha de recalque, e daí em diante a cota não decide o sentido",
+   "para": "coletor/5",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "estacao_de_tratamento/1",
+   "descricao": "interceptor termina na estação de tratamento",
+   "para": "coletor/3",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "estacao_de_tratamento/1",
+   "descricao": "emissário termina na estação de tratamento",
+   "para": "coletor/4",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "estrutura_especial/1",
+   "descricao": "extravasor instalado no interceptor",
+   "para": "coletor/3",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "estrutura_especial/1",
+   "descricao": "extravasor desvia o excedente para o emissário",
+   "para": "coletor/4",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "estrutura_especial/2",
+   "descricao": "câmara de transição entre dois coletores de rede",
+   "para": "coletor/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "estrutura_especial/3",
+   "descricao": "caixa de passagem no coletor tronco",
+   "para": "coletor/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "poço de visita recebe e entrega coletor de rede",
+   "para": "coletor/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "poço de visita recebe e entrega coletor tronco",
+   "para": "coletor/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "poço de visita recebe e entrega interceptor",
+   "para": "coletor/3",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "poço de visita recebe e entrega emissário",
+   "para": "coletor/4",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "a linha de recalque termina num poço de visita, onde volta a escoar por gravidade",
+   "para": "coletor/5",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "sifão invertido começa e termina em poço de visita",
+   "para": "coletor/6",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "ligação predial pode chegar direto no poço de visita",
+   "para": "ligacao_predial/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "poco_de_visita/2",
+   "descricao": "poço de queda recebe coletor de rede com desnível",
+   "para": "coletor/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "poco_de_visita/2",
+   "descricao": "poço de queda recebe coletor tronco com desnível",
+   "para": "coletor/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "poco_de_visita/3",
+   "descricao": "caixa de inspeção entrega no coletor de rede",
+   "para": "coletor/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "poco_de_visita/3",
+   "descricao": "caixa de inspeção recebe a ligação predial",
+   "para": "ligacao_predial/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ponto_de_lancamento/1",
+   "descricao": "emissário termina no ponto de lançamento",
+   "para": "coletor/4",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ponto_de_lancamento/1",
+   "descricao": "galeria pluvial termina no ponto de lançamento",
+   "para": "galeria_pluvial/1",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "ponto_de_lancamento/1",
+   "descricao": "canal de drenagem termina no ponto de lançamento",
+   "para": "galeria_pluvial/2",
+   "tipo": "conectividade_no_trecho"
+  },
+  {
+   "de": "poco_de_visita/1",
+   "descricao": "caixa de inspeção pode estar contida no mesmo conjunto do poço de visita",
+   "para": "poco_de_visita/3",
+   "tipo": "contencao"
+  },
+  {
+   "de": "elevatoria/1",
+   "descricao": "caixa de passagem apoiada na estrutura da elevatória",
+   "para": "estrutura_especial/3",
+   "tipo": "fixacao_estrutural"
+  }
+ ],
+ "terminais": [
+  {
+   "caminhos_validos": [
+    {
+     "de": 1,
+     "nome": "escoa",
+     "para": 2
+    }
+   ],
+   "codigo": "dois_terminais",
+   "nome": "Dois terminais",
+   "terminais": [
+    {
+     "id": 1,
+     "montante": true,
+     "nome": "montante"
+    },
+    {
+     "id": 2,
+     "montante": false,
+     "nome": "jusante"
+    }
+   ]
+  },
+  {
+   "caminhos_validos": [
+    {
+     "de": 1,
+     "nome": "escoa",
+     "para": 2
+    },
+    {
+     "de": 2,
+     "nome": "escoa_invertido",
+     "para": 1
+    }
+   ],
+   "codigo": "dois_terminais_bidirecional",
+   "nome": "Dois terminais (sem sentido imposto)",
+   "terminais": [
+    {
+     "id": 1,
+     "montante": true,
+     "nome": "lado_1"
+    },
+    {
+     "id": 2,
+     "montante": false,
+     "nome": "lado_2"
+    }
+   ]
+  },
+  {
+   "caminhos_validos": [],
+   "codigo": "um_terminal",
+   "nome": "Um terminal",
+   "terminais": [
+    {
+     "id": 1,
+     "montante": true,
+     "nome": "conexao"
+    }
+   ]
+  }
+ ],
+ "tiers": [
+  {
+   "codigo": "bacia_de_drenagem",
+   "descricao": "Área que escoa por gravidade para o mesmo ponto de lançamento pluvial.",
+   "dominio": "drenagem_pluvial",
+   "nome": "Bacia de drenagem",
+   "ordem": 1,
+   "tipo": "particionado"
+  },
+  {
+   "codigo": "bacia_de_esgotamento",
+   "descricao": "Tudo o que escoa por gravidade para a mesma saída (emissário, elevatória ou estação de tratamento). Particionado: não há montante e jusante entre bacias, cada uma é uma partição.",
+   "dominio": "esgoto_sanitario",
+   "nome": "Bacia de esgotamento",
+   "ordem": 1,
+   "tipo": "particionado"
+  },
+  {
+   "codigo": "recalque_sanitario",
+   "descricao": "Trecho sob pressão a jusante de uma elevatória. A cota NÃO decide o sentido aqui: o sentido é o da bomba, e por isso a conferência de escoamento por gravidade não se aplica.",
+   "dominio": "esgoto_sanitario",
+   "nome": "Recalque sanitário",
+   "ordem": 2,
+   "tipo": "particionado"
+  }
+ ],
+ "tipos": [
+  {
+   "categorias": [
+    "captacao"
+   ],
+   "chave": "boca_de_lobo",
+   "codigo": 1,
+   "codigos_fonte": [
+    "manhole"
+   ],
+   "descricao": "Captação de sarjeta, com grelha ou abertura lateral.",
+   "grupo": "boca_de_lobo",
+   "nome": "Boca de lobo",
+   "terminal": "um_terminal",
+   "tier": "bacia_de_drenagem"
+  },
+  {
+   "categorias": [
+    "inspecao"
+   ],
+   "chave": "poco_de_visita_pluvial",
+   "codigo": 2,
+   "codigos_fonte": [
+    "manhole"
+   ],
+   "descricao": "Estrutura de inspeção da rede de drenagem.",
+   "grupo": "boca_de_lobo",
+   "nome": "Poço de visita pluvial",
+   "terminal": "um_terminal",
+   "tier": "bacia_de_drenagem"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "coletor_de_rede",
+   "codigo": 1,
+   "codigos_fonte": [
+    "reach"
+   ],
+   "descricao": "Trecho que recebe as ligações prediais de uma via.",
+   "grupo": "coletor",
+   "nome": "Coletor de rede",
+   "terminal": "dois_terminais",
+   "tier": "bacia_de_esgotamento"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "coletor_tronco",
+   "codigo": 2,
+   "codigos_fonte": [
+    "reach"
+   ],
+   "descricao": "Trecho que recebe outros coletores e não recebe ligação predial.",
+   "grupo": "coletor",
+   "nome": "Coletor tronco",
+   "terminal": "dois_terminais",
+   "tier": "bacia_de_esgotamento"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "interceptor",
+   "codigo": 3,
+   "codigos_fonte": [
+    "reach"
+   ],
+   "descricao": "Trecho que corta as bacias e leva o esgoto ao emissário ou à estação de tratamento.",
+   "grupo": "coletor",
+   "nome": "Interceptor",
+   "terminal": "dois_terminais",
+   "tier": "bacia_de_esgotamento"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "emissario",
+   "codigo": 4,
+   "codigos_fonte": [
+    "reach"
+   ],
+   "descricao": "Trecho final, sem contribuição ao longo do percurso.",
+   "grupo": "coletor",
+   "nome": "Emissário",
+   "terminal": "dois_terminais",
+   "tier": "bacia_de_esgotamento"
+  },
+  {
+   "categorias": [
+    "recalque"
+   ],
+   "chave": "linha_de_recalque",
+   "codigo": 5,
+   "codigos_fonte": [
+    "reach"
+   ],
+   "descricao": "Trecho sob pressão a jusante da elevatória; o sentido é o da bomba, não o da cota.",
+   "grupo": "coletor",
+   "nome": "Linha de recalque",
+   "terminal": "dois_terminais",
+   "tier": "recalque_sanitario"
+  },
+  {
+   "categorias": [
+    "recalque"
+   ],
+   "chave": "sifao_invertido",
+   "codigo": 6,
+   "codigos_fonte": [
+    "reach"
+   ],
+   "descricao": "Travessia sob obstáculo, em carga; a cota sobe no fim do trecho por projeto.",
+   "grupo": "coletor",
+   "nome": "Sifão invertido",
+   "terminal": "dois_terminais",
+   "tier": "recalque_sanitario"
+  },
+  {
+   "categorias": [
+    "bombeamento"
+   ],
+   "chave": "elevatoria",
+   "codigo": 1,
+   "codigos_fonte": [
+    "pump"
+   ],
+   "descricao": "Conjunto de bombas que eleva o esgoto para a linha de recalque.",
+   "grupo": "elevatoria",
+   "nome": "Elevatória",
+   "terminal": "dois_terminais",
+   "tier": "bacia_de_esgotamento"
+  },
+  {
+   "categorias": [
+    "bombeamento"
+   ],
+   "chave": "conjunto_moto_bomba",
+   "codigo": 2,
+   "codigos_fonte": [
+    "pump"
+   ],
+   "descricao": "Uma bomba dentro da elevatória, com níveis de liga e desliga próprios.",
+   "grupo": "elevatoria",
+   "nome": "Conjunto motobomba",
+   "terminal": "dois_terminais",
+   "tier": "recalque_sanitario"
+  },
+  {
+   "categorias": [
+    "tratamento"
+   ],
+   "chave": "estacao_de_tratamento",
+   "codigo": 1,
+   "codigos_fonte": [
+    "wwtp_structure"
+   ],
+   "descricao": "Destino da rede coletora.",
+   "grupo": "estacao_de_tratamento",
+   "nome": "Estação de tratamento",
+   "terminal": "um_terminal",
+   "tier": "bacia_de_esgotamento"
+  },
+  {
+   "categorias": [
+    "extravasamento"
+   ],
+   "chave": "extravasor",
+   "codigo": 1,
+   "codigos_fonte": [
+    "special_structure"
+   ],
+   "descricao": "Desvia o excedente de vazão para outro destino.",
+   "grupo": "estrutura_especial",
+   "nome": "Extravasor",
+   "terminal": "dois_terminais",
+   "tier": "bacia_de_esgotamento"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "camara_de_transicao",
+   "codigo": 2,
+   "codigos_fonte": [
+    "special_structure"
+   ],
+   "descricao": "Muda seção, material ou direção fora de um poço de visita.",
+   "grupo": "estrutura_especial",
+   "nome": "Câmara de transição",
+   "terminal": "dois_terminais",
+   "tier": "bacia_de_esgotamento"
+  },
+  {
+   "categorias": [
+    "conducao",
+    "seccionamento"
+   ],
+   "chave": "caixa_de_passagem",
+   "codigo": 3,
+   "codigos_fonte": [
+    "special_structure"
+   ],
+   "descricao": "Caixa sem acesso de inspeção, usada em travessia.",
+   "grupo": "estrutura_especial",
+   "nome": "Caixa de passagem",
+   "terminal": "dois_terminais",
+   "tier": "bacia_de_esgotamento"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "galeria_pluvial",
+   "codigo": 1,
+   "codigos_fonte": [
+    "reach"
+   ],
+   "descricao": "Trecho fechado de drenagem por gravidade.",
+   "grupo": "galeria_pluvial",
+   "nome": "Galeria pluvial",
+   "terminal": "dois_terminais",
+   "tier": "bacia_de_drenagem"
+  },
+  {
+   "categorias": [
+    "conducao"
+   ],
+   "chave": "canal_de_drenagem",
+   "codigo": 2,
+   "codigos_fonte": [
+    "reach"
+   ],
+   "descricao": "Trecho aberto de drenagem por gravidade.",
+   "grupo": "galeria_pluvial",
+   "nome": "Canal de drenagem",
+   "terminal": "dois_terminais",
+   "tier": "bacia_de_drenagem"
+  },
+  {
+   "categorias": [
+    "coleta"
+   ],
+   "chave": "ligacao_predial",
+   "codigo": 1,
+   "codigos_fonte": [
+    "reach"
+   ],
+   "descricao": "Do imóvel até o coletor de rede.",
+   "grupo": "ligacao_predial",
+   "nome": "Ligação predial",
+   "terminal": "dois_terminais",
+   "tier": "bacia_de_esgotamento"
+  },
+  {
+   "categorias": [
+    "inspecao"
+   ],
+   "chave": "poco_de_visita_simples",
+   "codigo": 1,
+   "codigos_fonte": [
+    "manhole"
+   ],
+   "descricao": "Estrutura de inspeção comum, sem queda.",
+   "grupo": "poco_de_visita",
+   "nome": "Poço de visita",
+   "terminal": "um_terminal",
+   "tier": "bacia_de_esgotamento"
+  },
+  {
+   "categorias": [
+    "inspecao"
+   ],
+   "chave": "poco_de_queda",
+   "codigo": 2,
+   "codigos_fonte": [
+    "manhole"
+   ],
+   "descricao": "Poço em que o coletor de montante chega acima do de jusante; a diferença de cota é intencional.",
+   "grupo": "poco_de_visita",
+   "nome": "Poço de queda",
+   "terminal": "um_terminal",
+   "tier": "bacia_de_esgotamento"
+  },
+  {
+   "categorias": [
+    "coleta",
+    "inspecao"
+   ],
+   "chave": "caixa_de_inspecao",
+   "codigo": 3,
+   "codigos_fonte": [
+    "manhole"
+   ],
+   "descricao": "Caixa menor, no limite do imóvel, onde a ligação predial encontra a rede.",
+   "grupo": "poco_de_visita",
+   "nome": "Caixa de inspeção",
+   "terminal": "um_terminal",
+   "tier": "bacia_de_esgotamento"
+  },
+  {
+   "categorias": [
+    "lancamento"
+   ],
+   "chave": "ponto_de_lancamento",
+   "codigo": 1,
+   "codigos_fonte": [
+    "discharge_point"
+   ],
+   "descricao": "Devolve o efluente ao corpo receptor; o traçado a jusante termina aqui.",
+   "grupo": "ponto_de_lancamento",
+   "nome": "Ponto de lançamento",
+   "terminal": "um_terminal",
+   "tier": "bacia_de_esgotamento"
+  }
+ ]
+}
