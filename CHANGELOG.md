@@ -3,6 +3,21 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L7-13-a-chamados: chamados de suporte dentro do produto, com captura, SLA de primeira resposta e painel do operador)
+
+O cliente reporta de dentro de qualquer tela (botão "Reportar problema"), com captura do canvas do mapa e
+contexto automático (tela, versão, navegador, idioma, req_id das últimas 20 requisições, estrutura do DOM sem
+valor de campo). O operador (superadmin) tem painel em `/admin/chamados` com a fila de todos os inquilinos,
+resposta e mudança de estado por funções SECURITY DEFINER que provam a identidade pelo hash da sessão; quem
+não é superadmin leva 404. Anexo passa por duas provas (varredura de cabeçalho em memória + prova de tipo lendo
+o objeto de volta do Garage, esta FORA da transação porque o bucket só é visível após o commit — falha medida
+nesta rodada); executável declarado geojson é 415 na entrada, e a chave do objeto nunca sai do banco (a
+refutação "ler anexo alheio pela URL" não tem URL). SLA de primeira resposta por severidade (4/8/24/72 h
+declarados em `app/limites.py`) exibido junto do tempo MEDIDO em toda leitura; e-mail de resposta no idioma da
+conta do cliente (pt-BR/en/es, regra de escrita de 03/09 testada) e banner dentro do produto cobrindo quem não
+tem e-mail. Testes: 32 unit + 9 API + 2 e2e (fluxo completo por tela contra a bancada TLS e invisibilidade
+entre inquilinos na UI). ADR `docs/adr/20260908T2330-chamados-suporte.md`; MANUAL seção 22.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
