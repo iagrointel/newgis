@@ -1,0 +1,22 @@
+{
+ "item": "L4-20-consumidores-e-enderecos",
+ "medidas": {
+  "contagem_enderecos_sem_rede": {
+   "valor": 10914,
+   "unidade": "endereços",
+   "comando": "POST /api/rede/consumidores/enderecos-sem-rede vs end_sem_rede da casa (10911)"
+  },
+  "geracao_camada_s": {
+   "valor": 6.4,
+   "unidade": "s",
+   "comando": "POST /api/rede/consumidores/enderecos-sem-rede"
+  },
+  "jusante_calcular_s": {
+   "valor": 3.6,
+   "unidade": "s",
+   "comando": "POST /api/rede/consumidores/jusante/calcular sobre 44268 trechos"
+  }
+ },
+ "gerado_em": "2026-09-08T19:12:55Z",
+ "git_sha": "610896979710"
+}
