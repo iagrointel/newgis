@@ -1,0 +1,15 @@
+/* plat — tela /versoes (item L2-13-a): diff lado a lado de conflito de reconciliação.
+   Três colunas de largura igual (base, ramo, padrão) para que a comparação seja por POSIÇÃO e não por
+   leitura de rótulo; o lado que mudou recebe contorno, nunca só cor (contraste não pode ser o único
+   canal de informação). */
+.versoes .barra { display: flex; gap: .75rem; align-items: end; flex-wrap: wrap; margin-bottom: 1rem; }
+.versoes .conflito { border: 1px solid var(--borda, #d0d0d0); border-radius: .5rem; padding: 1rem; margin-bottom: 1rem; }
+.versoes .conflito > h2 { font-size: 1rem; margin: 0 0 .5rem; }
+.versoes .diff { width: 100%; border-collapse: collapse; }
+.versoes .diff th, .versoes .diff td { text-align: left; padding: .35rem .5rem; vertical-align: top; width: 25%; }
+.versoes .diff tbody tr + tr { border-top: 1px solid var(--borda, #e6e6e6); }
+.versoes .mudou { outline: 2px solid var(--acento, #2d6cdf); outline-offset: -2px; font-weight: 600; }
+.versoes .decisao { display: flex; gap: 1rem; align-items: center; margin-top: .75rem; flex-wrap: wrap; }
+.versoes .manual { display: grid; gap: .5rem; margin-top: .5rem; }
+.versoes .manual[hidden] { display: none; }
+.versoes .resumo { margin: .5rem 0 1rem; }
