@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Acervo · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/acervo.css">
+</head>
+<body class="tela acervo">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <div id="ferramentas" class="linha-ferramentas">
+      <h1 data-i18n="acervo.titulo">Acervo</h1>
+    </div>
+    <p class="ajuda" data-i18n="acervo.subtitulo">fontes oficiais da casa — domínio, licença, frescor e procedência</p>
+    <plat-aviso id="aviso"></plat-aviso>
+
+    <div class="acervo-filtros" id="acervo-filtros">
+      <plat-busca id="busca" rotulo="buscar por nome ou órgão" atraso="350"></plat-busca>
+      <label class="acervo-dominio-campo">
+        <span data-i18n="acervo.dominio">domínio</span>
+        <select id="dominio-filtro"></select>
+      </label>
+      <span id="contagem" class="contagem" aria-live="polite"></span>
+    </div>
+
+    <plat-estado id="lista-estado" hidden></plat-estado>
+    <div id="grade" class="acervo-grade" aria-live="polite" aria-busy="false"></div>
+    <plat-paginacao id="paginacao"></plat-paginacao>
+
+    <plat-dialogo id="ficha" modo="lateral"></plat-dialogo>
+  </main>
+</div>
+<script type="module" src="/static/js/acervo/acervo.js"></script>
+</body>
+</html>

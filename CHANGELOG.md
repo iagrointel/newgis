@@ -14,6 +14,18 @@ salvar/importar, onde o erro da API aparece nomeado — 409 categoria_em_uso com
 limite_categorias com "N de M", 403 negado (refutação: nunca o número cru). `docs/COBERTURA_UI.md` e
 `docs/cobertura_ui_lacunas.json` regenerados (41 → 36). e2e com axe (0 sérias), capturas 390/1280 e restauração da
 árvore original ao fim em `tests/e2e/test_categorias_ux12.py`; textos em pt-BR/en/es.
+## codex cx1, setembro de 2026 (item UX-10-acervo-sem-tela: a rota de escrita do acervo com controle nomeado na tela /acervo)
+
+Fecha a lacuna "POST /api/acervo/{fonte_id}/adicionar sem tela" do mapa de cobertura (UX-00): a tela /acervo do
+L6-01-c (juntada aqui sobre a cadeia UX-00..05, com a legenda do acervo reaplicada nos arquivos do mapa da UX-04)
+ganha os quatro estados do sistema de design — `<plat-estado>` na lista (carregando com esqueleto, vazio com
+"limpar filtros", erro com "tentar de novo" e referência, negado) e no controle "adicionar ao meu mapa", que
+passa a viver dentro da ficha com estado próprio: 403 vira negado com o privilégio exigido (e quem não tem
+`conteudo.registrar_fonte` vê o negado antes de clicar), 409 vira o diálogo de confirmação de dado pessoal
+(a confirmação repete com `confirma_risco_pii`), 413/422/5xx mostram a mensagem da API com a referência —
+nunca o número cru (refutação). `plat-estado` ganhou `data-acao` nos botões; acervo.css e a legenda do mapa
+ficaram só com tokens (guarda do UX-01 = 0). `docs/COBERTURA_UI.md` e `docs/cobertura_ui_lacunas.json`
+regenerados: 41 → 40 lacunas. e2e com axe (0 sérias) e capturas 390/1280 em `tests/e2e/test_acervo_ux10.py`.
 
 ## turno 8, setembro de 2026 (item UX-04-tela-mapa-polimento: chrome único do visualizador; ramos de painel juntados)
 
@@ -370,6 +382,32 @@ de ordem, fechando um ciclo sem fim com a árvore de camadas sempre que o catál
 
 Medido com 5.000 desenhos num mapa: salvar em 190 ms e reabrir em 39 ms, idênticos bit a bit, com carga de
 1 minuto em 14,12 e 7,8 GB de memória livre (`tests/medidas/L2-01-k-desenho-anotacoes.json`).
+## turno 3, setembro de 2026 (item L6-01-c-tela-acervo: tela do Acervo — busca, ficha, adicionar ao mapa e atribuição na legenda)
+
+Tela `/acervo` (`web/acervo.html`, `web/acervo.css`, `web/js/acervo/acervo.js`): filtro pelos **22 domínios**
+da taxonomia de `acervo.fonte` (medido, `tests/medidas/L6-01-c-tela-acervo.json`), busca por nome e órgão,
+cartão por fonte (órgão, domínio, etiqueta de licença, frescor, tabelas, registros) e ficha completa de
+procedência em painel lateral, com pré-visualização do endpoint vivo quando existe. Rota nova
+`GET /api/acervo/dominios` devolve a taxonomia inteira com a contagem de fontes VISÍVEIS por domínio: domínio
+sem fonte visível hoje aparece com zero, nunca some da lista.
+
+Licença curada entra na lista, na ficha e no instantâneo gravado ao adicionar (`licenca_curada_tipo`, do
+vocabulário fechado de `plat.acervo_licenca`, item L6-01-g) — nunca inferida do texto livre de `licenca`.
+ODbL e CC-BY-SA acionam o aviso de atribuição obrigatória em dois lugares: na ficha e na legenda da tela
+`/mapa`. A legenda lê `GET /api/acervo/meu-mapa`, rota nova que lista as camadas do acervo já adicionadas ao
+catálogo do inquilino (`dados->>'protocolo' = 'acervo'`, isolamento pela RLS de `plat.item`) — `GET /api/itens`
+não serve porque não devolve `dados` e não filtra por protocolo.
+
+Medido no e2e `tests/e2e/test_acervo.py` (1 teste, percurso inteiro, contra o uvicorn da trilha): 22 domínios
+no filtro; buscar "unidades de conservação" devolve **0 cartões** e as 3 fontes com esse nome no acervo — todas
+sem licença escrita — não aparecem nem têm o identificador no HTML; adicionar cria 1 item `conexao` em modo
+`referenciada` (sem cópia de dado); a legenda do mapa mostra o nome, a licença e a linha de atribuição;
+`document.body.scrollWidth` = 390 px num visor de 390 px em `/acervo` e em `/mapa`; **0 erro de console** em
+todo o percurso. Capturas em `tests/e2e/capturas/L6-01-c-tela-acervo_{ficha,legenda_no_mapa,celular}.png`.
+
+Correção de borda na tela do mapa (item L2-01-a), achada ao medir o responsivo: painel flutuante ganhou
+`max-width: calc(100% - var(--e4) * 2)` — o seletor de camada base media 378 px e terminava em 394 px num visor
+de 390 px, empurrando a página 2 px para fora da tela.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 

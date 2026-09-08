@@ -39,7 +39,7 @@ export class PlatEstado extends HTMLElement {
     if (acoes.length) {
       const div = h('div', { class: 'estado-acoes' });
       for (const a of acoes) {
-        const b = h('button', { type: 'button', class: a.classe || '' }, a.rotulo);
+        const b = h('button', { type: 'button', class: a.classe || '', dataset: { acao: a.id } }, a.rotulo);
         b.addEventListener('click', () => this.dispatchEvent(new CustomEvent('acao', { detail: { id: a.id } })));
         div.append(b);
       }

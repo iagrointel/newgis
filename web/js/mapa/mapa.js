@@ -38,6 +38,7 @@ import { instalarPopup } from './atributos.js';
 import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
+import { exigeAtribuicao, rotuloLicenca } from '../acervo/licencas.js';
 import { criarTabela } from './tabela.js';
 import { Desenho, kmlParaGeoJSON } from './desenho.js';
 import { PainelAnotacoes } from './anotacoes.js';
@@ -187,6 +188,37 @@ function marcador(map, maplibregl, lonlat, rotulo) {
   if (rotulo) m.setPopup(new maplibregl.Popup({ closeButton: true }).setText(rotulo));
   m.addTo(map);
   return m;
+}
+
+/* --------------------------------------------------------------- legenda das camadas do acervo (item L6-01-c)
+   O botão "adicionar ao meu mapa" da tela /acervo cria um item do catálogo tipo `conexao` com protocolo
+   `acervo` (nunca copia dado). Aqui o mapa lê essas camadas por `GET /api/acervo/meu-mapa` e mostra, por
+   camada, o nome e a licença; quando a licença CURADA é ODbL ou CC-BY-SA, a linha de atribuição obrigatória
+   aparece junto — esta é a tela onde o dado é visto, e é essa tela que a licença obriga a creditar.
+   O painel fica escondido quando não há nenhuma camada: legenda vazia sobre o mapa é ruído, não informação. */
+function linhaLegendaAcervo(camada) {
+  const rotulo = rotuloLicenca(camada.licenca_curada_tipo) || camada.licenca || t('acervo.licenca_nao_declarada');
+  const filhos = [
+    h('span', { class: 'titulo' }, camada.titulo),
+    h('span', { class: 'licenca' }, `${t('acervo.licenca')}: ${rotulo}`),
+  ];
+  if (exigeAtribuicao(camada.licenca_curada_tipo)) {
+    filhos.push(h('span', { class: 'atribuicao' }, t('acervo.atribuicao_obrigatoria', { licenca: camada.licenca_curada_tipo })));
+  }
+  return h('li', { 'data-fonte-id': camada.fonte_id }, filhos);
+}
+
+async function montarLegendaAcervo() {
+  const painel = el('acervo-legenda');
+  const lista = el('acervo-legenda-lista');
+  if (!painel || !lista) return 0;
+  const r = await obter('/api/acervo/meu-mapa');
+  if (r.status >= 400) throw new Error(mensagemDe(r));
+  const camadas = r.json || [];
+  limpar(lista);
+  for (const camada of camadas) lista.append(linhaLegendaAcervo(camada));
+  painel.hidden = camadas.length === 0;
+  return camadas.length;
 }
 
 async function iniciar() {
@@ -421,6 +453,11 @@ async function iniciar() {
   try {
     await arvore.carregar();
     legenda.desenhar();
+    try {
+      await montarLegendaAcervo();
+    } catch (e) {
+      el('aviso').erro(`${t('acervo.erro_legenda')}: ${(e && e.message) || e}`);
+    }
     await painelExportar.iniciar();
     estadoCamadas.limpar();
     if (!el('lista-camadas').children.length) estadoCamadas.mostrar({ tipo: 'vazio', titulo: t('mapa.sem_camadas_titulo'), texto: t('mapa.sem_camadas') });
