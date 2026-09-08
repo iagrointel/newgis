@@ -243,3 +243,20 @@ ANEXO_TAMANHO_MAX = 7 * 1024 * 1024       # 7 MiB por anexo — NÃO 10: o envio
 # tupla ordenada, não frozenset: repr() de um set não é determinístico entre execuções (docs/gerar_limites.py
 # lê repr() literal — um frozenset faria docs/LIMITES.md variar a cada regeneração sem nada ter mudado)
 ANEXO_TIPOS_PERMITIDOS = ("application/pdf", "image/gif", "image/jpeg", "image/png", "image/webp")
+
+# --- réplicas para trabalho desconectado (item L2-13-b-replicas-sincronizacao)
+# REPLICA_RASTREIO_RETENCAO_DIAS é a retenção DECLARADA de plat.feicao_historico: além dela o rastreio pode
+# ter sido expurgado e "o que mudou desde a geração G" deixa de ser respondível. A validade da réplica é
+# menor de propósito — uma réplica dentro da validade sempre acha o seu rastreio inteiro. O invariante
+# (validade < retenção) é provado em tests/unit/test_replica_limites.py: inverter os dois deixaria a
+# sincronização devolver um conjunto de mudanças INCOMPLETO sem nenhum erro, que é o pior desfecho possível.
+REPLICA_VALIDADE_DIAS = 30
+REPLICA_RASTREIO_RETENCAO_DIAS = 45
+REPLICA_CAMADAS_MAX = 20                  # camadas por réplica (o pacote é um arquivo só, baixado por rede de campo)
+REPLICA_FEICOES_MAX = 100_000             # feições por camada no pacote; acima disso o recorte tem de ser menor
+REPLICA_SINCRONIZAR_LOTE_MAX = 2_000      # mudanças por camada num pedido (mesmo teto de EDICAO_LOTE_MAX)
+REPLICA_BAIXAR_MAX = 5_000                # mudanças do servidor devolvidas por camada por sincronização
+REPLICA_ANEXOS_BYTES_MAX = 64 * 1024 * 1024  # 64 MiB de anexo embutido no pacote (acima disso o pacote é recusado)
+REPLICA_POR_USUARIO = 20                  # réplicas vivas por usuário (cada uma segura um pacote no armazenamento)
+REPLICA_NOME_MAX = 200                    # CHECK(length(nome) BETWEEN 1 AND 200) da migração
+REPLICA_FILTRO_MAX = 2_000                # CHECK(length(filtro) <= 2000) da migração

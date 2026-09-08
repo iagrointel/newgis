@@ -230,3 +230,37 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## edição transacional de feições (L2-03-a-api-edicao-transacional; POST /api/camadas/{id}/edicoes, única
+
+| nome | valor | explicação |
+|---|---|---|
+| `EDICAO_LOTE_MAX` | `2000` | — |
+| `EDICAO_ATRIBUTOS_MAX` | `500` | campos por feição num único pedido (mesmo teto de INGESTAO_CAMPOS_MAX) |
+| `EDICAO_TEXTO_MAX` | `65536` | 64 KiB por valor de campo texto (mesma ordem de ITEM_DESCRICAO_MAX) |
+| `EDICAO_REGRA_CAMPO_MAX` | `500` | entradas em dados.regras_campo (mesmo teto de campos da camada) |
+| `EDICAO_DOMINIO_VALORES_MAX` | `1000` | valores aceitos por regra de domínio codificado |
+| `EDICAO_SRID_MAX` | `999999` | mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql) |
+
+## edição no mapa: histórico/restauração e anexos por feição (item L2-03-edicao)
+
+| nome | valor | explicação |
+|---|---|---|
+| `HISTORICO_LISTA_MAX` | `500` | entradas devolvidas por consulta (mais recentes primeiro) |
+| `ANEXO_TAMANHO_MAX` | `7340032` | 7 MiB por anexo — NÃO 10: o envio é JSON com o conteúdo em base64 |
+| `ANEXO_TIPOS_PERMITIDOS` | `('application/pdf', 'image/gif', 'image/jpeg', 'image/png', 'image/webp')` | — |
+
+## réplicas para trabalho desconectado (item L2-13-b-replicas-sincronizacao)
+
+| nome | valor | explicação |
+|---|---|---|
+| `REPLICA_VALIDADE_DIAS` | `30` | — |
+| `REPLICA_RASTREIO_RETENCAO_DIAS` | `45` | — |
+| `REPLICA_CAMADAS_MAX` | `20` | camadas por réplica (o pacote é um arquivo só, baixado por rede de campo) |
+| `REPLICA_FEICOES_MAX` | `100000` | feições por camada no pacote; acima disso o recorte tem de ser menor |
+| `REPLICA_SINCRONIZAR_LOTE_MAX` | `2000` | mudanças por camada num pedido (mesmo teto de EDICAO_LOTE_MAX) |
+| `REPLICA_BAIXAR_MAX` | `5000` | mudanças do servidor devolvidas por camada por sincronização |
+| `REPLICA_ANEXOS_BYTES_MAX` | `67108864` | 64 MiB de anexo embutido no pacote (acima disso o pacote é recusado) |
+| `REPLICA_POR_USUARIO` | `20` | réplicas vivas por usuário (cada uma segura um pacote no armazenamento) |
+| `REPLICA_NOME_MAX` | `200` | CHECK(length(nome) BETWEEN 1 AND 200) da migração |
+| `REPLICA_FILTRO_MAX` | `2000` | CHECK(length(filtro) <= 2000) da migração |
