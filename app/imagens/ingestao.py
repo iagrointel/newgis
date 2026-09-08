@@ -13,6 +13,10 @@ Ordem das gravações (pensada para cancelamento/retentativa):
 3. a escrita no catálogo (coleção STAC, item STAC, raster_item, plat.item, miniatura) é UMA transação só —
    ou o item inteiro aparece, ou nada aparece; objetos órfãos de uma falha no meio são varríveis por
    `objetos.varrer_orfaos`.
+4. só DEPOIS do catálogo gravado é que o bruto é apagado (regra do L1-01-i, hipótese: "o arquivo bruto
+   enviado é apagado assim que o COG é validado"), salvo `guardar_original` — com ele, o asset `bruto`
+   entra no STAC e o objeto permanece; sem ele, nem asset existe. Uma falha ao apagar o bruto vira AVISO:
+   a ingestão já está íntegra no catálogo.
 """
 
 from __future__ import annotations
@@ -47,6 +51,11 @@ class IngestarParametros(BaseModel):
     arquivo_id: uuid.UUID
     titulo: str | None = Field(default=None, max_length=250)
     epsg_declarado: int | None = Field(default=None, ge=1, le=999999)
+    guardar_original: bool = Field(
+        default=False,
+        description="manter o arquivo bruto no armazenamento depois de validar os COGs (ocupa cota); "
+        "o padrão é apagar o bruto assim que os COGs são validados (regra do L1-01-i)",
+    )
 
 
 def _colecao_garantir(cur, tenant_id: int) -> str:
@@ -111,7 +120,7 @@ def _item_stac(
                 },
             })
     tipo_cog = "image/tiff; application=geotiff; profile=cloud-optimized"
-    assets = {
+    assets: dict = {
         "visual": {
             **_asset_objeto(objetos_ref["visual"], ["visual"], "COG visual (8 bits, JPEG/WEBP)", tipo_cog),
             "plat:compressao": objetos_ref["visual"]["compressao"],
@@ -120,11 +129,12 @@ def _item_stac(
             **_asset_objeto(objetos_ref["cientifico"], ["data"], "COG científico (dtype original, ZSTD)", tipo_cog),
             "raster:bands": raster_bandas,
         },
-        "bruto": _asset_objeto(objetos_ref["bruto"], ["source"], "arquivo original enviado",
-                               "application/octet-stream"),
         "miniatura": _asset_objeto(objetos_ref["miniatura"], ["thumbnail"], "miniatura 600x400",
                                    "image/png"),
     }
+    if objetos_ref.get("bruto"):  # sem guardar_original o bruto é apagado: asset que apontaria para ele não existe
+        assets["bruto"] = _asset_objeto(objetos_ref["bruto"], ["source"], "arquivo original enviado",
+                                        "application/octet-stream")
     return {
         "type": "Feature",
         "stac_version": "1.0.0",
@@ -163,7 +173,7 @@ def _item_stac(
     ferramentas=("gdalinfo", "gdal_translate"),
 )
 def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
-                     epsg_declarado: int | None = None) -> dict:
+                     epsg_declarado: int | None = None, guardar_original: bool = False) -> dict:
     inicio = time.monotonic()
     with ctx.db() as cur:
         cur.execute("SELECT id, titulo, dados FROM plat.item WHERE id = %s::uuid AND tipo = 'arquivo'",
@@ -234,9 +244,12 @@ def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
     objetos_ref = {
         "visual": {**o_vis, "compressao": visual.compressao},
         "cientifico": o_cient,
-        "bruto": {"chave": chave_bruto, "sha256": dados_arq.get("sha256") or "", "bytes": bytes_baixados},
         "miniatura": o_mini,
     }
+    if guardar_original:
+        objetos_ref["bruto"] = {
+            "chave": chave_bruto, "sha256": dados_arq.get("sha256") or "", "bytes": bytes_baixados,
+        }
     stac = _item_stac(item_id, ps.nome_colecao(ctx.tenant_id, SLUG_COLECAO), titulo_final, rel, stats,
                       geometria, bbox, objetos_ref, versoes, rel.nodata_final())
 
@@ -247,6 +260,7 @@ def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
         "perfil": "visual",
         "origem": "copiado",
         "srid_nativo": rel.epsg,
+        "guardar_original": guardar_original,
         "bandas": [{"nome": f"banda_{i}"} for i in range(1, rel.bandas + 1)],
     }
     tipos_item.validar("raster", dados_item)
@@ -269,6 +283,18 @@ def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
         except Exception as e:  # extents são derivados; nunca derrubam a ingestão
             ctx.log("AVISO", f"update_collection_extents falhou (extent da coleção ficou mundial): {e}")
     ctx.entrada(item_id, o_cient["sha256"], "COG científico no catálogo")
+
+    bruto_apagado = None
+    if not guardar_original:
+        # COGs validados e catalogados: o bruto é redundante (regra do L1-01-i). Falha aqui não derruba a
+        # ingestão — o objeto continua lá e a lixeira do catálogo continua sabendo apagá-lo pelo item arquivo.
+        ctx.progresso(98, "apagando o arquivo bruto (COGs validados)")
+        try:
+            bruto_apagado = objetos.apagar(chave_bruto)
+            if not bruto_apagado:
+                ctx.log("AVISO", f"bruto {chave_bruto} já não estava no armazenamento")
+        except objetos.ChaveInvalida as e:
+            ctx.log("AVISO", f"chave do bruto fora do padrão, não apagado: {e}")
 
     duracao = time.monotonic() - inicio
     bytes_cogs = o_cient["bytes"] + o_vis["bytes"]
@@ -294,6 +320,8 @@ def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
         "dtype": rel.dtype,
         "avisos_validacao": rel.avisos,
         "versoes": versoes,
+        "guardar_original": guardar_original,
+        "bruto_apagado": bruto_apagado,
     }
 
 
