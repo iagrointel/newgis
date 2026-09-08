@@ -8321,6 +8321,187 @@
     "x-privilegio": "rls:visibilidade|conteudo.apagar_tudo"
    }
   },
+  "/api/itens/{item_id}/paineis/fontes/{fonte_id}/dados": {
+   "post": {
+    "tags": [
+     "paineis"
+    ],
+    "summary": "Painel Dados",
+    "operationId": "painel_dados_api_itens__item_id__paineis_fontes__fonte_id__dados_post",
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "fonte_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Fonte Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Corpo"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/compartilhado/{token}/paineis/{item_id}/fontes/{fonte_id}/dados": {
+   "post": {
+    "tags": [
+     "paineis"
+    ],
+    "summary": "Painel Dados Compartilhado",
+    "operationId": "painel_dados_compartilhado_api_compartilhado__token__paineis__item_id__fontes__fonte_id__dados_post",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Item Id"
+      }
+     },
+     {
+      "name": "fonte_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Fonte Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Corpo"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/eventos/camadas": {
+   "get": {
+    "tags": [
+     "vivo"
+    ],
+    "summary": "Eventos De Camadas",
+    "description": "Fluxo SSE: `pronto` com a versão corrente de cada camada, depois um `camada` por comando de edição\nconfirmado; `Last-Event-ID` reenvia o que passou na janela de reconexão.",
+    "operationId": "eventos_de_camadas_api_eventos_camadas_get",
+    "parameters": [
+     {
+      "name": "camadas",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "ids de camada separados por vírgula",
+       "title": "Camadas"
+      },
+      "description": "ids de camada separados por vírgula"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "text/event-stream": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/ogc/records": {
    "get": {
     "tags": [

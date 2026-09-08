@@ -46,6 +46,25 @@ próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo:
 segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+## turno 3, setembro de 2026 (item L2-06-d-atualizacao-viva-sse: o painel reflete a edição sem recarregar)
+
+O dado muda no banco e a tela mostra o número novo, sem recarregamento e sem sondagem. Gatilho POR COMANDO
+na tabela física da camada (`plat.camada_notificar`, migração `20260908T0702_camada_eventos_vivos.sql`):
+uma edição em lote de N linhas gera UM evento, não N. `pg_notify` no canal do schema, um `LISTEN` por
+processo da aplicação e fan-out por camada para as conexões abertas — o MESMO desenho do progresso de
+tarefa, não um segundo mecanismo de empurrão. Rota nova `GET /api/eventos/camadas?camadas=a,b`
+(Server-Sent Events, autenticada): camada inexistente ou de outro inquilino é 404 na hora, cota estourada
+é 429 na hora, `PLAT_SSE_LIGADO=false` é 503 na hora — nada que possa recusar entra no fluxo. Reconexão
+recupera o que passou pela janela de retenção de quinze minutos (`Last-Event-ID`); a volta ainda marca
+todas as camadas assinadas como sujas, porque entre a queda e o retorno pode ter passado edição que a
+janela não alcança. No navegador, uma assinatura por tela agrupa a rajada em um segundo e refaz uma
+consulta por fonte afetada; com o fluxo de pé o intervalo de cada fonte fica desligado e só volta se o
+fluxo se declarar indisponível. O cabeçalho mostra "atualizado às hh:mm:ss" e diz quando está no intervalo
+em vez do fluxo. Medido: 0,0005 s do COMMIT ao quadro no consumidor (teto do portão: 1 s); mil eventos numa
+rajada viram uma consulta. Limites em `app/limites.py` (100 conexões por inquilino, 10 por usuário, 50
+camadas por conexão, 30 min por conexão). ADR `docs/adr/20260908T0702-atualizacao-viva-de-camada.md`.
+Fecha também três registros que faltavam das rotas do L2-06-a (caso cruzado, evento e `docs/openapi.json`).
+
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
 Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,

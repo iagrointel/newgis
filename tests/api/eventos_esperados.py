@@ -161,4 +161,8 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
     # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
     ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
+    # ---- painel: dados por fonte (L2-06-a). São LEITURAS agregadas feitas por POST (o corpo carrega o
+    # conjunto de pedidos e o filtro, que não cabem em query string); não mudam nada, logo não narram evento.
+    ("POST", "/api/itens/{item_id}/paineis/fontes/{fonte_id}/dados"): [],
+    ("POST", "/api/compartilhado/{token}/paineis/{item_id}/fontes/{fonte_id}/dados"): [],
 }

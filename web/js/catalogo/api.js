@@ -115,6 +115,11 @@ export const linkRevogar = (itemId, linkId) => chamar('DELETE', `${I(itemId)}/li
 export const compartilhado = (token) => chamar('GET', `/api/compartilhado/${id(token)}`);
 export const compartilhadoMiniaturaUrl = (token, itemId) => `/api/compartilhado/${id(token)}/itens/${id(itemId)}/miniatura`;
 
+/* painel (L2-06-a): dados de UMA fonte, agrupando todos os elementos que a usam num só POST por ciclo */
+export const painelDados = (itemId, fonteId, corpo) => chamar('POST', `${I(itemId)}/paineis/fontes/${id(fonteId)}/dados`, corpo);
+export const painelDadosCompartilhado = (token, itemId, fonteId, corpo) =>
+  chamar('POST', `/api/compartilhado/${id(token)}/paineis/${id(itemId)}/fontes/${id(fonteId)}/dados`, corpo);
+
 /* pastas */
 export const pastasArvore = () => chamar('GET', '/api/pastas/arvore');
 export const pastaCriar = (nome, paiId) => chamar('POST', '/api/pastas', paiId ? { nome, pai_id: paiId } : { nome });

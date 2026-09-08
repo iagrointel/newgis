@@ -243,3 +243,15 @@ ANEXO_TAMANHO_MAX = 7 * 1024 * 1024       # 7 MiB por anexo — NÃO 10: o envio
 # tupla ordenada, não frozenset: repr() de um set não é determinístico entre execuções (docs/gerar_limites.py
 # lê repr() literal — um frozenset faria docs/LIMITES.md variar a cada regeneração sem nada ter mudado)
 ANEXO_TIPOS_PERMITIDOS = ("application/pdf", "image/gif", "image/jpeg", "image/png", "image/webp")
+
+# --- atualização viva de painel e mapa por SSE (L2-06-d; migração 20260908T0702_camada_eventos_vivos.sql).
+# Conexão SSE é conexão TCP presa: os dois tetos abaixo são o que impede uma instalação de ficar sem soquete
+# por causa de abas esquecidas abertas. São POR PROCESSO da aplicação (o contador vive na memória do
+# processo, como o do progresso de job) — com N workers o teto efetivo do inquilino é N × VIVO_SSE_POR_INQUILINO.
+VIVO_SSE_POR_INQUILINO = 100          # refutação do item: 1.000 conexões têm de bater em 429
+VIVO_SSE_POR_USUARIO = 10             # uma pessoa não consome sozinha a cota do inquilino
+VIVO_SSE_CAMADAS_MAX = 50             # camadas assinadas por conexão (um painel real usa 2 a 6)
+VIVO_SSE_DURACAO_MAX_S = 1800         # a conexão fecha sozinha em 30 min; o navegador reconecta com Last-Event-ID
+VIVO_SSE_KEEPALIVE_S = 15             # comentário `: keepalive` que impede proxy de derrubar conexão ociosa
+VIVO_EVENTO_JANELA_MIN = 15           # retenção de plat.camada_evento = janela de recuperação da reconexão
+VIVO_DEBOUNCE_MS = 1000               # atraso do navegador antes de refazer a consulta (coalesce de rajada)
