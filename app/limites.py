@@ -229,3 +229,6 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# --- widgets de página e de menu (L5-01-d)
+QR_TEXTO_MAX = 2048                         # conteúdo máximo do QR de compartilhar (uma URL longa cabe)

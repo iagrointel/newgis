@@ -1,0 +1,107 @@
+{
+ "item": "L2-01-mapa-web",
+ "medidas": {
+  "impressao_png_bytes": {
+   "valor": 616556,
+   "unidade": "bytes",
+   "comando": "download do botão PNG da tela /mapa"
+  },
+  "impressao_pdf_bytes": {
+   "valor": 235715,
+   "unidade": "bytes",
+   "comando": "download do botão PDF da tela /mapa"
+  },
+  "impressao_pdf_paginas": {
+   "valor": 1,
+   "unidade": "páginas",
+   "comando": "pdftoppm -png -r 60 sobre o PDF gerado"
+  },
+  "impressao_pdf_cores_distintas": {
+   "valor": 47129,
+   "unidade": "contagem",
+   "comando": "PIL Image.getcolors() sobre a página convertida pelo Poppler"
+  },
+  "dez_camadas_ligadas": {
+   "valor": 10,
+   "unidade": "camadas",
+   "comando": "checkbox de cada linha da lista, uma a uma"
+  },
+  "dez_camadas_ate_tiles_carregados_ms": {
+   "valor": 4236.9,
+   "unidade": "ms",
+   "comando": "performance.now() do primeiro clique até map.areTilesLoaded() (inclui a camada de 1 mi)"
+  },
+  "dez_camadas_pan_ate_idle_ms": {
+   "valor": 3.9,
+   "unidade": "ms",
+   "comando": "map.panBy([120,80]) até 'idle' com as 10 camadas ligadas"
+  },
+  "dez_camadas_memoria_js_mb": {
+   "valor": 24.8,
+   "unidade": "MB",
+   "comando": "performance.memory.usedJSHeapSize com as 10 camadas ligadas"
+  },
+  "camada_1mi_feicoes_no_banco": {
+   "valor": 1000000,
+   "unidade": "feições",
+   "comando": "scripts/mapa_demo_camadas.py criar (pontos sintéticos uniformes no Brasil)"
+  },
+  "camada_1mi_carga_ate_primeiro_desenho_ms": {
+   "valor": 2372.6,
+   "unidade": "ms",
+   "comando": "performance.now() entre ligar a camada e haver feição em queryRenderedFeatures (chromium 1280x800)"
+  },
+  "camada_1mi_feicoes_desenhadas_na_tela": {
+   "valor": 19997,
+   "unidade": "feições",
+   "comando": "map.queryRenderedFeatures() com a camada enquadrada (extensão inteira do Brasil na tela)"
+  },
+  "camada_1mi_zoom_ate_idle_ms": {
+   "valor": 1500.2,
+   "unidade": "ms",
+   "comando": "map.zoomIn({duration:0}) até o evento 'idle' com a camada de 1 mi ligada"
+  },
+  "camada_1mi_memoria_js_mb": {
+   "valor": 40.1,
+   "unidade": "MB",
+   "comando": "performance.memory.usedJSHeapSize no chromium com a camada de 1 mi ligada"
+  },
+  "tile_z8_frio_mediana_ms": {
+   "valor": 395.5,
+   "unidade": "ms",
+   "comando": "12 tiles z8 distintos da camada de 1 mi pelo repasse /tiles (token válido)"
+  },
+  "tile_z8_quente_mediana_ms": {
+   "valor": 21.7,
+   "unidade": "ms",
+   "comando": "o MESMO tile z8 pedido 12 vezes (cache em memória do Martin, 64 MB)"
+  },
+  "tile_z8_bytes": {
+   "valor": 167093,
+   "unidade": "bytes",
+   "comando": "corpo do tile z8 sem compressão (Accept-Encoding: identity)"
+  },
+  "tile_z0_bytes": {
+   "valor": 1029144,
+   "unidade": "bytes",
+   "comando": "corpo do tile z0 (o milhão inteiro cai neste tile; o corte de 10.000 feições por tile age aqui)"
+  },
+  "martin_unidade_estado": {
+   "valor": "active",
+   "unidade": "estado systemd",
+   "comando": "systemctl is-active plat-martin (porta 8151, deploy/plat-martin.service)"
+  },
+  "martin_versao": {
+   "valor": "martin 1.15.0",
+   "unidade": "versão",
+   "comando": "bin/martin --version (instalado por deploy/martin_instalar.sh com sha256 fixado)"
+  },
+  "martin_funcoes_publicadas": {
+   "valor": 10,
+   "unidade": "funções de tile",
+   "comando": "GET http://127.0.0.1:8151/catalog"
+  }
+ },
+ "gerado_em": "2026-09-07T03:29:26Z",
+ "git_sha": "f183b1a2ea41"
+}

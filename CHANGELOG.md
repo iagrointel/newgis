@@ -23,6 +23,18 @@ mostra a contagem por dia (`plat.item_publicacao_visualizacao`, incrementada den
 (decisão de guardar o token da publicação em texto claro, não só hash — ele é uma chave publicável por
 natureza, não um segredo) e `laco/handoffs/T5/L5-14-publicacao-links-embed.md` (portão cláusula a
 cláusula, o que ficou de fora).
+## turno 4, setembro de 2026 (item L5-01-d-widgets-pagina-menu: widgets de página e de menu)
+
+- **12 widgets** sobre o motor do L5-06 (`web/js/widgets/`): texto (Markdown + `{campo}` da feição, sanitizado),
+  imagem (endereço ou campo), botão (evento, link seguro, página), cartão, incorporar (iframe com sandbox e lista
+  de domínios; HTML sanitizado em srcdoc), divisor, menu, controlador de widgets, compartilhar (link, QR local por
+  `GET /api/qr.svg`, código de incorporação), login, seletor de idioma e seletor de tema.
+- **Executor de páginas** (`/executar`) desenha esses tipos pelo motor de widgets — `texto` e `imagem` deixam de
+  ter renderizador próprio; eventos `*.pagina` trocam de página; paleta de páginas ganha os tipos novos.
+- Segurança: `web/js/widgets/seguro.js` (URL, domínio, sandbox, Markdown, `{campo}`), `htmlSeguro` com `proibir`
+  (corta `<style>`); e2e injeta 10 vetores XSS em texto, cartão, botão, imagem, menu e embed — nenhum executa,
+  console sem erro. ADR `docs/adr/20260907T2245-widgets-de-pagina-e-menu.md`; paridade em docs/PARIDADE.md.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -149,6 +161,40 @@ Achado de ambiente: esta é a primeira tela que grava por `fetch` sob cookie a p
 isso a primeira a bater no 403 `origem_invalida` quando `PLAT_URL_PUBLICA` não é a origem servida — os e2e
 anteriores escreviam pelo contexto de requisição do playwright, que não manda `Origin`. Em produção as duas
 coincidem; no ambiente da trilha o nginx local reescreve o cabeçalho. ADR 20260907T0302.
+## turno 4, setembro de 2026 (item L5-06-motor-widgets: motor de widgets sem framework)
+
+- **Motor de widgets** (`web/js/widgets/`): registro com 6 manifestos validados (mapa, legenda, tabela, texto,
+  botão, filtro), `import()` só dos módulos citados no documento, barramento com corte de recursão, ligações
+  evento → ação por id de nó, caixa de erro nomeada para tipo desconhecido, configuração fora do esquema e
+  módulo que não carrega; alternador de chrome de edição no mesmo módulo; página `/aplicativo`; `<plat-mapa>`
+  embrulha o visualizador. Medido em `tests/medidas/L5-06-motor-widgets.json` (3 módulos = 1,32 kB por widget,
+  primeira pintura 48 ms, carga 5,1). ADR `docs/adr/20260907T1930-motor-de-widgets.md`.
+
+## turno 4, setembro de 2026 (item L2-01-mapa-web: visualizador de mapa próprio, do Martin à impressão)
+
+Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava chegar a `master`.
+
+- **Servidor de tiles**: Martin 1.15.0 (musl, sha256 do pacote fixado em `deploy/martin_instalar.sh`) como
+  unidade `plat-martin` em `127.0.0.1:8151`, publicando SÓ funções (`auto_publish.tables: false`) — a
+  tabela crua da camada nunca é exposta. Papel de leitura `plat_leitor` (LOGIN, sem BYPASSRLS, sem ser
+  dono), `plat.contexto_por_token` e a função de tile por camada com RLS vieram do trabalho dos itens
+  L2-01-b/L2-04-a, que nunca tinha sido juntado.
+- **API do mapa** (`app/mapa/`): `GET /api/mapa/camadas` com estilo MapLibre e legenda geradas da
+  simbologia; `GET /api/mapa/camadas/{id}/tilejson` cunhando token de 12 h com escopo de UMA camada;
+  repasse `GET /tiles/{esquema}/{funcao}/{z}/{x}/{y}` com a mesma autorização do `auth_request` do nginx
+  (uma implementação, duas portas); `plat.camada_extensao` para o "enquadrar".
+- **Tela `/mapa`**: lista de camadas com ordem (arrastar e por botão), opacidade, ligar/desligar e
+  enquadrar; legenda; janela de atributos (campo nulo aparece marcado, multi-geometria não se repete);
+  medição geodésica de distância e área; pesquisa de endereço (CNEFE) e de coordenada em decimal e em
+  grau-minuto-segundo; escala, coordenadas e escala numérica 1:N; troca de mapa-base; impressão em PNG e
+  em PDF com escala, barra de escala e seta de norte.
+- **`GET /api/geocodificar`**: geocodificar é leitura e agora tem o verbo certo (o POST continua).
+- Medido com 1.000.000 de feições: 2,4 s do clique ao primeiro desenho, 1,5 s de zoom até `idle`, 61 MB
+  de heap; 10 camadas ao mesmo tempo em 4,3 s, pan em 302 ms, 24,8 MB. Tile z8 pelo repasse: 406 ms
+  frio, 21 ms quente. Detalhe em `tests/medidas/L2-01-mapa-web.json`.
+- Dois defeitos reais achados pelos testes e corrigidos: `attribution: undefined` fazia o MapLibre
+  recusar a fonte inteira em silêncio; repassar `Content-Encoding: gzip` com corpo já descompactado
+  entregava tile ilegível ao navegador. Registrados no ADR 20260907T0400.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
