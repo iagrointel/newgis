@@ -3,6 +3,40 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L2-04-f-mapserver-identify-legend-geometryserver: MapServer e GeometryServer)
+
+O outro contrato do protocolo Esri, o dos clientes que consomem MAPA e não feição: `/svc/{token}/rest/services/
+{mapa}/MapServer` com descritor, `/layers`, `/{id}`, `export`, `identify`, `find`, `legend` e `generateKml`
+(`app/consulta/rotas_mapserver.py` + `app/consulta/mapserver.py`), e o
+`/svc/{token}/rest/services/Utilities/Geometry/GeometryServer` com `project`, `buffer`, `areasAndLengths`,
+`lengths`, `distance`, `union`, `intersect`, `difference`, `convexHull` e `simplify`
+(`app/consulta/rotas_geometria.py`). O serviço é um item de tipo `mapa` do catálogo, e o identificador de
+camada é a posição no documento; o diretório do item L2-04-b passou a listar mapa como `MapServer` ao lado da
+camada como `FeatureServer`.
+
+Sem dependência nova: o desenho é `PIL.ImageDraw`, o mesmo que `app/catalogo/miniatura.py` já usava, com o
+símbolo vindo do `drawingInfo` que o FeatureServer publica — a amostra da legenda e o pixel do mapa saem da
+MESMA estrutura, então não existe caminho em que a legenda diga uma cor e o mapa desenhe outra. Toda operação
+do GeometryServer é uma chamada ao PostGIS; nada de geometria é calculado em Python.
+
+Medido (`tests/medidas/L2-04-f-mapserver-identify-legend-geometryserver.json`): export de 1024×768 em
+**0,075 s quentes sobre 5.003 polígonos** (carga 4,81 em 12 núcleos; teto do portão 1,5 s) e 0,047 s no mapa
+de três camadas; `project` de 100 pontos com diferença **0,0 m** contra `ST_Transform`; envoltória geodésica
+de 1 km com erro relativo de área **0,0** contra `ST_Buffer` sobre `geography`. `identify` sobre três camadas
+devolve exatamente o mesmo conjunto de feições da consulta espacial escrita à mão (comparação por
+identificador, com e sem tolerância).
+
+Refutação declarada do item, toda ela em teste: export de 8.000×8.000 volta 400 com o limite declarado
+(`MAPSERVER_LADO_MAX = 4096`, no descritor do serviço) antes de alocar imagem; `identify` com tolerância 0
+responde sem erro; `layerDefs` com SQL injetado é 400 pelo analisador `where_ast`, o mesmo da operação
+`query`, e nunca chega ao banco.
+
+⛔ NÃO medido: QGIS e ArcGIS Pro não existem nesta máquina (sem ambiente gráfico). A cláusula do portão que
+pede a captura do cliente está na matriz de conformidade como `nao_medido`, com o motivo — nunca como
+aprovada. A comparação da imagem com a captura do visualizador foi substituída, com a razão escrita, pela
+comparação do pixel desenhado com a cor que o `drawingInfo` declara para aquela classe. ADR:
+`docs/adr/20260908T0712-mapserver-e-geometryserver.md`.
+
 ## turno 4, setembro de 2026 (item L2-04-d-featureserver-edicao-anexos: escrita pelo protocolo Esri sobre a porta única)
 
 `applyEdits` (na camada e no serviço), `addFeatures`/`updateFeatures`/`deleteFeatures`, `calculate`, os seis
