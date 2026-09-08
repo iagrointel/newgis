@@ -2,142 +2,142 @@
  "item": "L1-01-b",
  "medidas": {
   "sem_crs_tempo_s": {
-   "valor": 0.27,
+   "valor": 0.263,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso sem_crs (pendente, arquivo 3628 bytes)"
   },
   "sem_crs_ram_pico_kb": {
-   "valor": 84352,
+   "valor": 87996,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso sem_crs"
   },
   "sem_crs_respondido_tempo_s": {
-   "valor": 0.282,
+   "valor": 0.285,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso sem_crs_respondido (aceito, arquivo 3628 bytes)"
   },
   "sem_crs_respondido_ram_pico_kb": {
-   "valor": 91140,
+   "valor": 94228,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso sem_crs_respondido"
   },
   "sem_crs_resposta_invalida_tempo_s": {
-   "valor": 0.287,
+   "valor": 0.272,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso sem_crs_resposta_invalida (recusado, arquivo 3628 bytes)"
   },
   "sem_crs_resposta_invalida_ram_pico_kb": {
-   "valor": 87744,
+   "valor": 91060,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso sem_crs_resposta_invalida"
   },
   "crs_sem_epsg_tempo_s": {
-   "valor": 0.395,
+   "valor": 0.402,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso crs_sem_epsg (aceito, arquivo 4268 bytes)"
   },
   "crs_sem_epsg_ram_pico_kb": {
-   "valor": 99200,
+   "valor": 102536,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso crs_sem_epsg"
   },
   "nodata_ausente_tempo_s": {
-   "valor": 0.303,
+   "valor": 0.292,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso nodata_ausente (pendente, arquivo 3864 bytes)"
   },
   "nodata_ausente_ram_pico_kb": {
-   "valor": 91676,
+   "valor": 95112,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso nodata_ausente"
   },
   "nodata_respondido_tempo_s": {
-   "valor": 0.295,
+   "valor": 0.287,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso nodata_respondido (aceito, arquivo 3864 bytes)"
   },
   "nodata_respondido_ram_pico_kb": {
-   "valor": 91644,
+   "valor": 95040,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso nodata_respondido"
   },
   "16_bits_dados_tempo_s": {
-   "valor": 0.285,
+   "valor": 0.293,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso 16_bits_dados (aceito, arquivo 6984 bytes)"
   },
   "16_bits_dados_ram_pico_kb": {
-   "valor": 91512,
+   "valor": 95108,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso 16_bits_dados"
   },
   "16_bits_visual_tempo_s": {
-   "valor": 0.286,
+   "valor": 0.288,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso 16_bits_visual (pendente, arquivo 6984 bytes)"
   },
   "16_bits_visual_ram_pico_kb": {
-   "valor": 91764,
+   "valor": 94648,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso 16_bits_visual"
   },
   "16_bits_visual_escala_tempo_s": {
-   "valor": 0.29,
+   "valor": 0.282,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso 16_bits_visual_escala (aceito, arquivo 6984 bytes)"
   },
   "16_bits_visual_escala_ram_pico_kb": {
-   "valor": 91516,
+   "valor": 95108,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso 16_bits_visual_escala"
   },
   "tipos_diferentes_vrt_tempo_s": {
-   "valor": 0.291,
+   "valor": 0.282,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso tipos_diferentes_vrt (recusado, arquivo 1590 bytes)"
   },
   "tipos_diferentes_vrt_ram_pico_kb": {
-   "valor": 89824,
+   "valor": 93040,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso tipos_diferentes_vrt"
   },
   "tipos_diferentes_zip_tempo_s": {
-   "valor": 0.297,
+   "valor": 0.285,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso tipos_diferentes_zip (recusado, arquivo 771 bytes)"
   },
   "tipos_diferentes_zip_ram_pico_kb": {
-   "valor": 90524,
+   "valor": 94092,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso tipos_diferentes_zip"
   },
   "zip_dois_tif_ok_tempo_s": {
-   "valor": 0.294,
+   "valor": 0.295,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso zip_dois_tif_ok (aceito, arquivo 752 bytes)"
   },
   "zip_dois_tif_ok_ram_pico_kb": {
-   "valor": 91680,
+   "valor": 95008,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso zip_dois_tif_ok"
   },
   "zip_bomba_50x_tempo_s": {
-   "valor": 0.042,
+   "valor": 0.044,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso zip_bomba_50x (recusado, arquivo 2171 bytes)"
   },
   "zip_bomba_50x_ram_pico_kb": {
-   "valor": 79916,
+   "valor": 83732,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso zip_bomba_50x"
   },
   "zip_acima_cota_tempo_s": {
-   "valor": 0.042,
+   "valor": 0.043,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso zip_acima_cota (recusado, arquivo 2171 bytes)"
   },
   "zip_acima_cota_ram_pico_kb": {
-   "valor": 79916,
+   "valor": 83732,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso zip_acima_cota"
   },
@@ -147,107 +147,107 @@
    "comando": "tests/unit/test_raster_validacao.py caso zip_bomba_real (recusado, arquivo 4196 bytes)"
   },
   "zip_bomba_real_ram_pico_kb": {
-   "valor": 79916,
+   "valor": 83732,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso zip_bomba_real"
   },
   "epsg_4674_tempo_s": {
-   "valor": 0.31,
+   "valor": 0.284,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso epsg_4674 (aceito, arquivo 3888 bytes)"
   },
   "epsg_4674_ram_pico_kb": {
-   "valor": 91748,
+   "valor": 94904,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso epsg_4674"
   },
   "epsg_31983_tempo_s": {
-   "valor": 0.306,
+   "valor": 0.292,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso epsg_31983 (aceito, arquivo 3884 bytes)"
   },
   "epsg_31983_ram_pico_kb": {
-   "valor": 92744,
+   "valor": 95820,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso epsg_31983"
   },
   "1_banda_visual_tempo_s": {
-   "valor": 0.294,
+   "valor": 0.292,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso 1_banda_visual (recusado, arquivo 1816 bytes)"
   },
   "1_banda_visual_ram_pico_kb": {
-   "valor": 91244,
+   "valor": 94576,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso 1_banda_visual"
   },
   "1_banda_dados_tempo_s": {
-   "valor": 0.298,
+   "valor": 0.313,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso 1_banda_dados (aceito, arquivo 1816 bytes)"
   },
   "1_banda_dados_ram_pico_kb": {
-   "valor": 91608,
+   "valor": 94576,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso 1_banda_dados"
   },
   "data_ausente_tempo_s": {
-   "valor": 0.301,
+   "valor": 0.317,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso data_ausente (pendente, arquivo 3855 bytes)"
   },
   "data_ausente_ram_pico_kb": {
-   "valor": 91564,
+   "valor": 95168,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso data_ausente"
   },
   "data_respondida_tempo_s": {
-   "valor": 0.296,
+   "valor": 0.291,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso data_respondida (aceito, arquivo 3855 bytes)"
   },
   "data_respondida_ram_pico_kb": {
-   "valor": 91812,
+   "valor": 94860,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso data_respondida"
   },
   "fora_do_brasil_tempo_s": {
-   "valor": 0.291,
+   "valor": 0.287,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso fora_do_brasil (aceito, arquivo 3876 bytes)"
   },
   "fora_do_brasil_ram_pico_kb": {
-   "valor": 90192,
+   "valor": 93660,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso fora_do_brasil"
   },
   "bigtiff_esparso_100gb_tempo_s": {
-   "valor": 0.3,
+   "valor": 0.285,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso bigtiff_esparso_100gb (recusado, arquivo 75489 bytes)"
   },
   "bigtiff_esparso_100gb_ram_pico_kb": {
-   "valor": 90228,
+   "valor": 93812,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso bigtiff_esparso_100gb"
   },
   "tiff_fabricado_160gb_tempo_s": {
-   "valor": 0.284,
+   "valor": 0.32,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso tiff_fabricado_160gb (recusado, arquivo 134 bytes)"
   },
   "tiff_fabricado_160gb_ram_pico_kb": {
-   "valor": 89248,
+   "valor": 92540,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso tiff_fabricado_160gb"
   },
   "prova_memoria_2gb_tempo_s": {
-   "valor": 0.041,
+   "valor": 0.05,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso prova_memoria_2gb (recusado, arquivo 3888 bytes)"
   },
   "prova_memoria_2gb_ram_pico_kb": {
-   "valor": 80256,
+   "valor": 83988,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso prova_memoria_2gb; morte=memoria"
   },
@@ -257,172 +257,172 @@
    "comando": "tests/unit/test_raster_validacao.py caso prova_timeout_2s (recusado, arquivo 3888 bytes)"
   },
   "prova_timeout_2s_ram_pico_kb": {
-   "valor": 80260,
+   "valor": 83992,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso prova_timeout_2s; morte=timeout"
   },
   "vrt_remoto_tempo_s": {
-   "valor": 0.043,
+   "valor": 0.045,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso vrt_remoto (recusado, arquivo 232 bytes)"
   },
   "vrt_remoto_ram_pico_kb": {
-   "valor": 80260,
+   "valor": 83992,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso vrt_remoto"
   },
   "vrt_raw_tempo_s": {
-   "valor": 0.041,
+   "valor": 0.044,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso vrt_raw (recusado, arquivo 181 bytes)"
   },
   "vrt_raw_ram_pico_kb": {
-   "valor": 80264,
+   "valor": 83992,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso vrt_raw"
   },
   "ifd_circular_tempo_s": {
-   "valor": 0.275,
+   "valor": 0.286,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso ifd_circular (pendente, arquivo 134 bytes)"
   },
   "ifd_circular_ram_pico_kb": {
-   "valor": 84316,
+   "valor": 87700,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso ifd_circular"
   },
   "jp2_truncado_tempo_s": {
-   "valor": 0.312,
+   "valor": 0.329,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso jp2_truncado (recusado, arquivo 9273 bytes)"
   },
   "jp2_truncado_ram_pico_kb": {
-   "valor": 91940,
+   "valor": 95388,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso jp2_truncado"
   },
   "65535_bandas_tempo_s": {
-   "valor": 0.508,
+   "valor": 0.554,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso 65535_bandas (recusado, arquivo 134 bytes)"
   },
   "65535_bandas_ram_pico_kb": {
-   "valor": 153404,
+   "valor": 157028,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso 65535_bandas"
   },
   "vrt_aninhado_dentro_tempo_s": {
-   "valor": 0.315,
+   "valor": 0.337,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso vrt_aninhado_dentro (aceito, arquivo 440 bytes)"
   },
   "vrt_aninhado_dentro_ram_pico_kb": {
-   "valor": 91276,
+   "valor": 95216,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso vrt_aninhado_dentro"
   },
   "vrt_aninhado_fora_tempo_s": {
-   "valor": 0.041,
+   "valor": 0.054,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso vrt_aninhado_fora (recusado, arquivo 440 bytes)"
   },
   "vrt_aninhado_fora_ram_pico_kb": {
-   "valor": 81900,
+   "valor": 85712,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso vrt_aninhado_fora"
   },
   "vrt_fonte_symlink_tempo_s": {
-   "valor": 0.041,
+   "valor": 0.053,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso vrt_fonte_symlink (recusado, arquivo 440 bytes)"
   },
   "vrt_fonte_symlink_ram_pico_kb": {
-   "valor": 81900,
+   "valor": 85712,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso vrt_fonte_symlink"
   },
   "vrt_circular_tempo_s": {
-   "valor": 0.042,
+   "valor": 0.05,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso vrt_circular (recusado, arquivo 440 bytes)"
   },
   "vrt_circular_ram_pico_kb": {
-   "valor": 81900,
+   "valor": 85712,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso vrt_circular"
   },
   "vrt_profundo_tempo_s": {
-   "valor": 0.041,
+   "valor": 0.055,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso vrt_profundo (recusado, arquivo 441 bytes)"
   },
   "vrt_profundo_ram_pico_kb": {
-   "valor": 81904,
+   "valor": 85712,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso vrt_profundo"
   },
   "vrt_xml_gordo_tempo_s": {
-   "valor": 0.041,
+   "valor": 0.053,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso vrt_xml_gordo (recusado, arquivo 16778689 bytes)"
   },
   "vrt_xml_gordo_ram_pico_kb": {
-   "valor": 81652,
+   "valor": 85192,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso vrt_xml_gordo"
   },
   "isolamento_rede_tempo_s": {
-   "valor": 0.293,
+   "valor": 0.329,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso isolamento_rede (aceito, arquivo 1816 bytes)"
   },
   "isolamento_rede_ram_pico_kb": {
-   "valor": 91372,
+   "valor": 94972,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso isolamento_rede"
   },
   "nodata_nan_tempo_s": {
-   "valor": 0.29,
+   "valor": 0.293,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso nodata_nan (aceito, arquivo 4888 bytes)"
   },
   "nodata_nan_ram_pico_kb": {
-   "valor": 91620,
+   "valor": 94944,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso nodata_nan"
   },
   "zip_volume_desproporcional_tempo_s": {
-   "valor": 0.043,
+   "valor": 0.055,
    "unidade": "s",
-   "comando": "tests/unit/test_raster_validacao.py caso zip_volume_desproporcional (recusado, arquivo 3185650 bytes)"
+   "comando": "tests/unit/test_raster_validacao.py caso zip_volume_desproporcional (recusado, arquivo 3185657 bytes)"
   },
   "zip_volume_desproporcional_ram_pico_kb": {
-   "valor": 87860,
+   "valor": 91684,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso zip_volume_desproporcional"
   },
   "tipo_complex64_tempo_s": {
-   "valor": 0.299,
+   "valor": 0.296,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso tipo_complex64 (aceito, arquivo 8984 bytes)"
   },
   "tipo_complex64_ram_pico_kb": {
-   "valor": 91636,
+   "valor": 95084,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso tipo_complex64"
   },
   "tipo_uint8_tempo_s": {
-   "valor": 0.291,
+   "valor": 0.294,
    "unidade": "s",
    "comando": "tests/unit/test_raster_validacao.py caso tipo_uint8 (aceito, arquivo 1816 bytes)"
   },
   "tipo_uint8_ram_pico_kb": {
-   "valor": 91460,
+   "valor": 94900,
    "unidade": "kB",
    "comando": "ru_maxrss do subprocesso (os.wait4) no caso tipo_uint8"
   },
   "ram_pico_maximo_kb": {
-   "valor": 153404,
+   "valor": 157028,
    "unidade": "kB",
    "comando": "maior ru_maxrss entre os 42 casos; RLIMIT_AS=768 MB, RLIMIT_CPU=60 s, timeout=90 s"
   },
@@ -432,6 +432,6 @@
    "comando": "cada caso = arquivo sintético gerado em tmp_path pelo teste"
   }
  },
- "gerado_em": "2026-09-06T14:26:32Z",
- "git_sha": "b62d88a67e59"
+ "gerado_em": "2026-09-08T13:10:10Z",
+ "git_sha": "feb5cb7dcb8f"
 }
