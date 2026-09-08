@@ -178,7 +178,7 @@ def test_visualizador_nao_cria_e_editor_publica_camada_so_com_privilegio(visuali
 
 def test_tipo_item_e_vocabulario_sem_escrita(conexao_plat_app, cliente, sessao_a):
     r = sessao_a.get("/api/tipos-item")
-    assert r.status_code == 200 and len(r.json()) == 14
+    assert r.status_code == 200 and len(r.json()) == 15
     nomes = {t["nome"] for t in r.json()}
     assert {
         "camada_vetorial",
@@ -195,6 +195,7 @@ def test_tipo_item_e_vocabulario_sem_escrita(conexao_plat_app, cliente, sessao_a
         "conexao",
         "arquivo",
         "modelo_amc",
+        "site",
     } == nomes
     assert all(t["esquema"].get("additionalProperties") is False for t in r.json())
     ids = ids_por_slug(conexao_plat_app)
