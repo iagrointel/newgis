@@ -217,6 +217,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
     } else if (ev.shiftKey && ev.key === 'ArrowRight') { ev.preventDefault(); api.largura(no.id, no.largura_colunas + 1); }
     else if (ev.shiftKey && ev.key === 'ArrowLeft') { ev.preventDefault(); api.largura(no.id, no.largura_colunas - 1); }
     else if (ev.key === 'Delete') { ev.preventDefault(); api.remover(no.id); }
+    else if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); api.selecionar(no.id); }
     else return;
     const foco = elEstrutura.querySelector(`[data-arvore="${no.id}"]`);
     foco?.focus();
@@ -243,26 +244,27 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
     if (!linhas.length) { elEstrutura.append(h('p', { class: 'vazio' }, t('construtor.documento_vazio'))); return; }
     for (const { no, nivel } of linhas) {
       const def = paleta.tipos[no.tipo] || { rotulo: no.tipo };
-      const bt = h('button', {
-        type: 'button', class: `arvore-item${selecionado === no.id ? ' selecionado' : ''}`,
-        dataset: { arvore: no.id, nivel: String(nivel), pai: no.pai ?? '' },
-      },
+      /* o item da árvore (treeitem) é a LINHA: focável, com nível e seleção; o rótulo dentro dela não é botão
+         (um botão dentro de treeitem seria controle aninhado). data-arvore fica na linha: é o endereço do
+         teclado (foco + setas) e da seleção por clique. */
+      const bt = h('span', { class: `arvore-item${selecionado === no.id ? ' selecionado' : ''}` },
         h('span', { class: 'arvore-rotulo' }, `${def.rotulo}`),
         h('span', { class: 'arvore-resumo', dataset: { arvoreResumo: no.id } }, resumoDe(no)),
         h('span', { class: 'arvore-colunas', dataset: { arvoreColunas: no.id } }, `${no.largura_colunas}/${doc.COLUNAS}`));
       bt.style.paddingLeft = `${nivel * 16 + 8}px`;
-      bt.addEventListener('click', () => api.selecionar(no.id));
-      bt.addEventListener('keydown', (ev) => porTeclado(ev, no));
       const acoes = h('div', { class: 'arvore-acoes' },
         ...menuMoverPara(no),
         botao('−', t('construtor.diminuir_largura', { rotulo: def.rotulo }), () => api.largura(no.id, no.largura_colunas - 1), { larguraMenos: no.id }),
         botao('+', t('construtor.aumentar_largura', { rotulo: def.rotulo }), () => api.largura(no.id, no.largura_colunas + 1), { larguraMais: no.id }),
         botao(t('construtor.remover'), t('construtor.remover_rotulo', { rotulo: def.rotulo }), () => api.remover(no.id), { remover: no.id }));
-      /* a linha é o treeitem (filho direto do role=tree, como a ARIA exige); o botão dentro dela é o que recebe foco */
-      elEstrutura.append(h('div', {
-        class: 'arvore-linha', dataset: { linha: no.id }, role: 'treeitem',
+      const linha = h('div', {
+        class: 'arvore-linha', dataset: { linha: no.id, arvore: no.id, nivel: String(nivel), pai: no.pai ?? '' },
+        role: 'treeitem', tabindex: '0',
         'aria-level': String(nivel + 1), 'aria-selected': selecionado === no.id ? 'true' : 'false',
-      }, bt, acoes));
+      }, bt, acoes);
+      linha.addEventListener('click', (ev) => { if (!ev.target.closest('button, select')) api.selecionar(no.id); });
+      linha.addEventListener('keydown', (ev) => { if (ev.target === linha) porTeclado(ev, no); });
+      elEstrutura.append(linha);
     }
   }
 
