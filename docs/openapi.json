@@ -10321,6 +10321,665 @@
     "x-privilegio": "proprio"
    }
   },
+  "/api/ferramentas": {
+   "get": {
+    "tags": [
+     "ferramentas"
+    ],
+    "summary": "Listar",
+    "description": "Catálogo das ferramentas registradas, com manifesto e JSON Schema dos parâmetros.",
+    "operationId": "listar_api_ferramentas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.executar"
+   }
+  },
+  "/api/ferramentas/{nome}": {
+   "get": {
+    "tags": [
+     "ferramentas"
+    ],
+    "summary": "Obter",
+    "operationId": "obter_api_ferramentas__nome__get",
+    "parameters": [
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.executar"
+   }
+  },
+  "/api/ferramentas/{nome}/executar": {
+   "post": {
+    "tags": [
+     "ferramentas"
+    ],
+    "summary": "Executar",
+    "description": "Roda a ferramenta. Custo <= FERRAMENTA_SINCRONO_CUSTO_MAX e modo=auto: em processo, devolve 200 com o item.\nSenão: 202 com o job (`ferramentas.executar`); o resultado aparece em `resultado.item_id` do job.",
+    "operationId": "executar_api_ferramentas__nome__executar_post",
+    "parameters": [
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/Execucao-Input"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.executar"
+   }
+  },
+  "/rest/services/{ferramenta}/GPServer": {
+   "get": {
+    "tags": [
+     "ferramentas-esri"
+    ],
+    "summary": "Descritor Servico",
+    "operationId": "gpserver_servico",
+    "parameters": [
+     {
+      "name": "ferramenta",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ferramenta"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/rest/services/{ferramenta}/GPServer/{tarefa}": {
+   "get": {
+    "tags": [
+     "ferramentas-esri"
+    ],
+    "summary": "Descritor Tarefa",
+    "operationId": "gpserver_tarefa",
+    "parameters": [
+     {
+      "name": "ferramenta",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ferramenta"
+      }
+     },
+     {
+      "name": "tarefa",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tarefa"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/rest/services/{ferramenta}/GPServer/{tarefa}/execute": {
+   "post": {
+    "tags": [
+     "ferramentas-esri"
+    ],
+    "summary": "Execute",
+    "description": "Execução síncrona (execute-gp-task): só abaixo do custo declarado; acima, 400 mandando usar submitJob.",
+    "operationId": "gpserver_execute_post",
+    "parameters": [
+     {
+      "name": "ferramenta",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ferramenta"
+      }
+     },
+     {
+      "name": "tarefa",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tarefa"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.executar"
+   },
+   "get": {
+    "tags": [
+     "ferramentas-esri"
+    ],
+    "summary": "Execute",
+    "description": "Execução síncrona (execute-gp-task): só abaixo do custo declarado; acima, 400 mandando usar submitJob.",
+    "operationId": "gpserver_execute_get",
+    "parameters": [
+     {
+      "name": "ferramenta",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ferramenta"
+      }
+     },
+     {
+      "name": "tarefa",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tarefa"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.executar"
+   }
+  },
+  "/rest/services/{ferramenta}/GPServer/{tarefa}/submitJob": {
+   "post": {
+    "tags": [
+     "ferramentas-esri"
+    ],
+    "summary": "Submit Job",
+    "operationId": "gpserver_submit_post",
+    "parameters": [
+     {
+      "name": "ferramenta",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ferramenta"
+      }
+     },
+     {
+      "name": "tarefa",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tarefa"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.executar"
+   },
+   "get": {
+    "tags": [
+     "ferramentas-esri"
+    ],
+    "summary": "Submit Job",
+    "operationId": "gpserver_submit_get",
+    "parameters": [
+     {
+      "name": "ferramenta",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ferramenta"
+      }
+     },
+     {
+      "name": "tarefa",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tarefa"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.executar"
+   }
+  },
+  "/rest/services/{ferramenta}/GPServer/{tarefa}/jobs/{job_id}": {
+   "get": {
+    "tags": [
+     "ferramentas-esri"
+    ],
+    "summary": "Job Status",
+    "operationId": "gpserver_job",
+    "parameters": [
+     {
+      "name": "ferramenta",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ferramenta"
+      }
+     },
+     {
+      "name": "tarefa",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tarefa"
+      }
+     },
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.executar"
+   }
+  },
+  "/rest/services/{ferramenta}/GPServer/{tarefa}/jobs/{job_id}/results/{parametro}": {
+   "get": {
+    "tags": [
+     "ferramentas-esri"
+    ],
+    "summary": "Job Resultado",
+    "operationId": "gpserver_job_resultado",
+    "parameters": [
+     {
+      "name": "ferramenta",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ferramenta"
+      }
+     },
+     {
+      "name": "tarefa",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tarefa"
+      }
+     },
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     },
+     {
+      "name": "parametro",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Parametro"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.executar"
+   }
+  },
+  "/rest/services/{ferramenta}/GPServer/{tarefa}/jobs/{job_id}/cancel": {
+   "post": {
+    "tags": [
+     "ferramentas-esri"
+    ],
+    "summary": "Job Cancel",
+    "operationId": "gpserver_cancel_post",
+    "parameters": [
+     {
+      "name": "ferramenta",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ferramenta"
+      }
+     },
+     {
+      "name": "tarefa",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tarefa"
+      }
+     },
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.executar"
+   },
+   "get": {
+    "tags": [
+     "ferramentas-esri"
+    ],
+    "summary": "Job Cancel",
+    "operationId": "gpserver_cancel_get",
+    "parameters": [
+     {
+      "name": "ferramenta",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ferramenta"
+      }
+     },
+     {
+      "name": "tarefa",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Tarefa"
+      }
+     },
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.executar"
+   }
+  },
   "/api/multiescala/conjuntos": {
    "post": {
     "tags": [
@@ -10786,7 +11445,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/Execucao"
+         "$ref": "#/components/schemas/Execucao-Output"
         }
        }
       }
@@ -10841,7 +11500,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/Execucao"
+         "$ref": "#/components/schemas/Execucao-Output"
         }
        }
       }
@@ -10885,7 +11544,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/Execucao"
+         "$ref": "#/components/schemas/Execucao-Output"
         }
        }
       }
@@ -13213,7 +13872,35 @@
     ],
     "title": "Eu"
    },
-   "Execucao": {
+   "Execucao-Input": {
+    "properties": {
+     "parametros": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Parametros",
+      "default": {}
+     },
+     "titulo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Titulo"
+     },
+     "modo": {
+      "type": "string",
+      "title": "Modo",
+      "default": "auto"
+     }
+    },
+    "type": "object",
+    "title": "Execucao"
+   },
+   "Execucao-Output": {
     "properties": {
      "id": {
       "type": "string",
@@ -13434,7 +14121,7 @@
      },
      "itens": {
       "items": {
-       "$ref": "#/components/schemas/Execucao"
+       "$ref": "#/components/schemas/Execucao-Output"
       },
       "type": "array",
       "title": "Itens"
