@@ -106,7 +106,8 @@ def test_motor_area_fatores_macro_micro_e_explicacao(page, base_url, credenciais
         page.click("#motor-area-criar")
         page.wait_for_selector("#motor-area-estado[tipo='erro']:not([hidden])")
         # área exata do L3-19 (a vista tem a proporção da janela; o retângulo digitado não)
-        page.fill("#motor-area-bbox", ", ".join(f"{v:.6f}" for v in (CENTRO[0] - MEIA_LON, CENTRO[1] - MEIA_LAT, CENTRO[0] + MEIA_LON, CENTRO[1] + MEIA_LAT)))
+        cantos = (CENTRO[0] - MEIA_LON, CENTRO[1] - MEIA_LAT, CENTRO[0] + MEIA_LON, CENTRO[1] + MEIA_LAT)
+        page.fill("#motor-area-bbox", ", ".join(f"{v:.6f}" for v in cantos))
         page.click("#motor-area-criar")
         page.wait_for_function(
             "(n) => [...document.querySelectorAll('#motor-area option')].some(o => o.textContent === n)",
