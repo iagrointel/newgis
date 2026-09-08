@@ -222,3 +222,8 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# --- ferramentas por job (L2-16-a-sdk-python-geo): a geometria entra no CORPO do job; o teto abaixo
+# guarda o worker (e o registro em plat.job.parametros) de um GeoJSON grande demais para buffer em memória.
+FERRAMENTA_GEOJSON_MAX_BYTES = 5_000_000  # GeoJSON de entrada por ferramenta (5 MB ≈ 1-2 milhões de vértices)
+FERRAMENTA_BUFFER_MAX_M = 100_000.0       # distância de buffer; 100 km já é análise regional, não local
