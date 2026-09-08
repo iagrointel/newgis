@@ -440,6 +440,16 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/plataforma/inquilinos/{id}/reativar"): Caso(
         lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/reativar"
     ),
+    # ---- L0-07-f console da plataforma: as rotas novas seguem a mesma regra (404 para quem não é superadmin)
+    ("GET", "/api/plataforma/inquilinos/{id}"): Caso(lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}"),
+    ("PUT", "/api/plataforma/inquilinos/{id}/cotas"): Caso(
+        lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/cotas", lambda p: {"cota_usuarios": 5}
+    ),
+    ("POST", "/api/plataforma/inquilinos/{id}/admins/{usuario_id}/2fa/desativar"): Caso(
+        lambda p: f"/api/plataforma/inquilinos/{p.inquilino_b}/admins/{p.ids['b']['id']}/2fa/desativar"
+    ),
+    ("GET", "/api/plataforma/fila"): Caso(lambda p: "/api/plataforma/fila"),
+    ("GET", "/api/plataforma/eventos"): Caso(lambda p: "/api/plataforma/eventos?limite=5"),
     # ---- L0-05 fila de jobs: leituras e criação agem só no chamador (RLS + filtro de dono); alvos de B = 404
     ("GET", "/api/jobs"): Caso(
         lambda p: "/api/jobs?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
