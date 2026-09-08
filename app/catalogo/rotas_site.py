@@ -75,7 +75,7 @@ def _pagina(inquilino: str, caminho: str, request: Request) -> HTMLResponse:
             parametros=dict(request.query_params),
         )
         html = site_render.renderizar(ctx, corpo, pagina)
-        hosts = site_render.hosts_incorporados(corpo)
+        hosts = site_render.hosts_incorporados(corpo, pagina.get("id"))
     robos = "index, follow" if r["indexavel"] else "noindex, nofollow"
     return HTMLResponse(
         html,
