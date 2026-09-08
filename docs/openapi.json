@@ -12075,6 +12075,213 @@
     "x-privilegio": "rls:visibilidade"
    }
   },
+  "/api/rede/{rede_id}/subrede/{nome}/curto": {
+   "post": {
+    "tags": [
+     "rede de utilidades — curto-circuito e proteção"
+    ],
+    "summary": "Calcular Curto",
+    "description": "Corrente de curto-circuito por barra (trifásica e fase-terra) e verificação de coordenação simples\ndo dispositivo a montante de cada barra, sobre o mesmo modelo em memória que os exportadores usam.\n\nO corpo são as PREMISSAS: `potencia_de_curto_mva` (obrigatória — sem ela a impedância da fonte é nula\ne a corrente seria infinita), `relacao_x_r_fonte`, `fator_tensao_c`, `fator_sequencia_zero_linha`,\n`fator_sequencia_zero_fonte` e `base_mva`. Todas saem gravadas ao lado do resultado. É triagem:\na impedância de condutor e a do transformador são valores de REFERÊNCIA declarados, porque o cadastro\nde distribuição não os traz.",
+    "operationId": "calcular_curto_api_rede__rede_id__subrede__nome__curto_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "ano",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Ano"
+      }
+     },
+     {
+      "name": "jusante",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Jusante"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Premissas"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades — curto-circuito e proteção"
+    ],
+    "summary": "Ler Curto",
+    "description": "A tabela do último cálculo desta subrede: uma linha por barra, com a corrente trifásica, a\nfase-terra, o dispositivo a montante e o veredito de coordenação; as premissas do cálculo vêm no\nmesmo corpo, porque o número não se lê sem elas.",
+    "operationId": "ler_curto_api_rede__rede_id__subrede__nome__curto_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/subrede/{nome}/curto/camada": {
+   "get": {
+    "tags": [
+     "rede de utilidades — curto-circuito e proteção"
+    ],
+    "summary": "Ler Curto Camada",
+    "description": "O mesmo resultado como camada de pontos (GeoJSON): um ponto por barra que tem nó com geometria,\ncom corrente e veredito nas propriedades. Barra sem coordenada é contada em `barras_sem_coordenada`\ne não vira feição.",
+    "operationId": "ler_curto_camada_api_rede__rede_id__subrede__nome__curto_camada_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/geocodificar": {
    "post": {
     "tags": [

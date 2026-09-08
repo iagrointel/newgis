@@ -856,6 +856,16 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/rede/{p.rede_b['id']}/subredes/resumos/calcular", lambda p: {}),
     ("POST", "/api/rede/{rede_id}/controladores/importar"): Caso(
         lambda p: f"/api/rede/{p.rede_b['id']}/controladores/importar", lambda p: {}),
+    # ---- L4-27 curto-circuito: as três rotas apontam a rede de B. O corpo do POST leva uma premissa
+    # VÁLIDA de propósito — se a rota recusasse por premissa antes de olhar a rede, o 422 esconderia um
+    # vazamento; assim o único desfecho aceitável continua sendo 404 (a rede de B nem é vista).
+    ("POST", "/api/rede/{rede_id}/subrede/{nome}/curto"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/curto",
+        lambda p: {"potencia_de_curto_mva": 100.0}),
+    ("GET", "/api/rede/{rede_id}/subrede/{nome}/curto"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/curto"),
+    ("GET", "/api/rede/{rede_id}/subrede/{nome}/curto/camada"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/subrede/zt-inexistente/curto/camada"),
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
     ("PUT", "/api/org"): Caso(
         lambda p: "/api/org", _corpo_org_atual, proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
