@@ -222,3 +222,11 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# --- resultado de traçado de rede de utilidades (L4-02-f-resultados-e-exportacao)
+# O traçado inteiro é montado em memória antes de virar arquivo (CSV, GeoJSON ou GeoPackage), e o
+# GeoPackage é um SQLite construído em memória: o teto abaixo é o que impede um traçado de alimentador
+# inteiro de virar consumo de RAM sem freio na máquina (a casa trabalha com 2-3 GB livres). Acima dele a
+# resposta é 413 dizendo o número medido e como estreitar, nunca um arquivo pela metade.
+TRACADO_EXPORTACAO_MAX = 50_000     # elementos por exportação ou por camada salva
+TRACADO_HISTORICO_MAX = 20          # "os 20 últimos traçados do usuário" (portão do item)
