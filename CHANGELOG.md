@@ -3,6 +3,23 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 7, setembro de 2026 (item L4-01-g-tarefas-import-tardio: a API sobe sem GDAL)
+
+`pyogrio` — a ligação vetorizada com o GDAL/OGR que o importador BDGD usa — estava importado no topo de
+`app/rede_utilidades/bdgd.py` e de `app/rede_utilidades/tarefas.py`, e nesta máquina vinha do site do
+usuário (`~/.local`), não da venv. Como `app/jobs/tipos.py` importa as tarefas, todo `import app.main`
+dependia dele: com `PYTHONNOUSERSITE=1`, que é como a unidade systemd roda a aplicação,
+`tests/unit/test_dependencias.py::test_app_main_importa_sem_site_do_usuario` reprovava com
+`ModuleNotFoundError: No module named 'pyogrio'`.
+
+Duas mudanças, nenhuma sozinha: o pacote passa a ser dependência declarada (`pyogrio==0.12.1` em
+`requirements.txt`, com o motivo escrito ao lado — é o job `rede.importar_bdgd` que precisa dele) e o
+import passa a ser tardio, dentro da função que abre o arquivo (`bdgd._pyogrio()`, usada também por
+`tarefas._ler_camadas_do_contrato`). A API sobe sem GDAL; quem depende do GDAL é o worker, no instante em
+que lê o `.gdb`. Instalação na venv aditiva, conferida com `pip install --dry-run` antes: nenhuma versão
+de fastapi, starlette, pydantic, psycopg2, uvicorn ou rasterio mudou. ADR
+`docs/adr/20260908T0628-pyogrio-dependencia-declarada-import-tardio.md`.
+
 ## turno 7, setembro de 2026 (item L4-02-e-configuracoes-de-tracado: o pedido de traçado vira documento salvo)
 
 Configuração de traçado nomeada e compartilhável, o que a rede de utilidades da Esri chama *trace

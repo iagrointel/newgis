@@ -28,7 +28,6 @@ import uuid
 import zipfile
 from pathlib import Path
 
-import pyogrio
 from pydantic import BaseModel, Field
 
 from app import settings as cfg
@@ -95,6 +94,9 @@ def _ano_da_safra(p: Path) -> int | None:
 
 
 def _ler_camadas_do_contrato(gdb: Path, progresso) -> dict:
+    # import tardio do pyogrio: ver bdgd._pyogrio — só o job que abre o GDB depende do GDAL,
+    # a subida da API não
+    pyogrio = bdgd._pyogrio()
     camadas = {}
     for i, nome in enumerate(contrato.CAMADAS_DO_CONTRATO):
         try:

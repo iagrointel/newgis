@@ -29,7 +29,6 @@ import hashlib
 import time
 from pathlib import Path
 
-import pyogrio
 from psycopg2.extras import Json, execute_values
 
 from app.rede_utilidades import unidades as unidades_mod
@@ -72,6 +71,20 @@ def _texto(v) -> str | None:
     return s or None
 
 
+def _pyogrio():
+    """Import tardio do pyogrio (GDAL/OGR): só quem lê arquivo de feição precisa dele.
+
+    A aplicação inteira é importada por `app.main` no processo da API, que não abre GDB nenhum; deixar
+    o `import pyogrio` no topo fazia `import app.main` depender de um pacote pesado e, nesta máquina,
+    presente apenas no site do usuário (~/.local) — `tests/unit/test_dependencias.py` reprovava com
+    PYTHONNOUSERSITE=1. O pacote está fixado em `requirements.txt`; este atraso é para que a falta dele
+    apareça no job que de fato lê o arquivo, e não na subida da API.
+    """
+    import pyogrio  # noqa: PLC0415 — tardio de propósito (ver docstring)
+
+    return pyogrio
+
+
 def inspecionar(caminho: str | Path) -> dict[str, int]:
     """Feature count por camada do GDB — a régua contra a qual a carga é conferida."""
     caminho = Path(caminho)
@@ -82,7 +95,7 @@ def inspecionar(caminho: str | Path) -> dict[str, int]:
     contagens = {}
     for camada in CAMADAS + CAMADAS_APOIO:
         try:
-            contagens[camada] = int(pyogrio.read_info(str(caminho), layer=camada)["features"])
+            contagens[camada] = int(_pyogrio().read_info(str(caminho), layer=camada)["features"])
         except Exception:
             contagens[camada] = 0  # camada ausente no GDB da distribuidora: 0 declarado, não erro
     return contagens
@@ -113,7 +126,7 @@ def _ler(caminho: str, camada: str, geometria: bool = True):
     100 mil linhas com geometria de linha — cabe na cota de memória do worker, medido na distribuidora
     de referência)."""
     try:
-        return pyogrio.read_dataframe(caminho, layer=camada, read_geometry=geometria, fid_as_index=True)
+        return _pyogrio().read_dataframe(caminho, layer=camada, read_geometry=geometria, fid_as_index=True)
     except Exception as exc:
         raise ErroBdgd(f"falha ao ler a camada {camada}: {exc}") from exc
 

@@ -84,3 +84,12 @@ Markdown==3.10.2
 opendssdirect.py==0.9.4
 dss_python==0.15.7
 dss_python_backend==0.14.5
+#
+# leitura de arquivo de feição (GDAL/OGR vetorizado): app/rede_utilidades/bdgd.py e
+# app/rede_utilidades/tarefas.py abrem o pacote BDGD da ANEEL (.gdb/.gdb.zip) no job
+# `rede.importar_bdgd`. Antes desta linha o pacote vinha do site do usuário (~/.local) e não da venv,
+# e `import app.main` quebrava com PYTHONNOUSERSITE=1 (tests/unit/test_dependencias.py). Agora é
+# dependência declarada, e o import dela é TARDIO (dentro da função que lê o arquivo) para que só o
+# worker do job dependa do GDAL — a API sobe sem ele. numpy/certifi/packaging, que o pyogrio exige,
+# vêm de /usr/local/lib/python3.12/dist-packages (mesmo caso do shapely, comentado no topo).
+pyogrio==0.12.1
