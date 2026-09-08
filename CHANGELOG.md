@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## codex cx1, setembro de 2026 (item L2-03-f-edicao-em-lote-calculo-campo: edição em lote e cálculo de campo por expressão)
+
+`POST /api/camadas/{id}/lote` sobre uma seleção (ids, expressão `onde` ou todas): calcular campo por expressão da
+linguagem L2-10-c traduzida para SQL quando o subconjunto permite (`app/expressao/compilador_sql.py`) e avaliada
+linha a linha no servidor quando não; atribuir valor fixo; apagar; corrigir geometrias inválidas (ST_MakeValid com
+relatório); copiar/mover entre camadas com mapeamento de campos; pré-visualização (10 linhas antes/depois) sem
+gravar. Até 5.000 feições roda no pedido; acima vira o job `camadas.lote` com progresso e cancelamento — tudo numa
+transação só (erro ou cancelamento devolve a camada ao estado anterior). Campos derivados de geometria na
+expressão (`$area_m2`, `$comprimento_m`, `$perimetro_m`, `$x`, `$y`). Mesma validação, "só as próprias", gatilhos
+de versão/histórico, `tiles_versao` e evento por lote do L2-03-a. Painel "Edição em lote" na tela /mapa (edição do
+L2-03-edicao) com prévia, aplicação, acompanhamento do job e erro nomeado. Medido em tests/medidas/L2-03-f-*.json:
+100.000 MultiPolygon com `area_ha = $area_m2 / 10000` como job em 16,1 s (15,2 s dentro da transação), amostra de
+1.000 igual a ST_Area/10000 (desvio 0), histórico gerado para as 100.000. Migrações: evento `camadas/lote`;
+`camada_schema_garantir` só concede USAGE quando falta (evita "tuple concurrently updated" no d_demo partilhado).
+ADR `docs/adr/20260908T0830-edicao-em-lote-calculo-de-campo.md`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -138,7 +154,7 @@ mesma convenção do commit `054286a`):
 
 1. `app/edicao/combinar.py::unir` checava `versao` declarada ANTES de checar existência/acesso do id — um
    id inexistente ou de outro inquilino, quando listado depois de um id existente sem `versao`, nunca
-   chegava a 404 (ficava preso em 422 `versao_ausente`). Corrigido para existência de TODOS os ids primeiro,
+   chegava a 404 (ficava preso em 422 `versao_ausente`). Corrigido para existência de todos os ids primeiro,
    depois versão de todos (`tests/api/test_edicao_dividir_unir.py::test_unir_sem_declarar_versao_de_uma_das_feicoes_e_422`
    fecha o buraco original: `versoes` incompleto não pode mais deixar uma origem sem checagem de
    concorrência).
