@@ -38,12 +38,13 @@ from app.catalogo import (
     rotas_ogc,
     rotas_pastas,
     transferencia,
+    vista_camada,
 )
 from app.conexao import rotas as rotas_conexao
 from app.consulta import cors_servicos
 from app.consulta.rotas_diretorio import router as rotas_diretorio_esri
-from app.consulta.rotas_ogc_features import router as rotas_ogc_features
 from app.consulta.rotas_edicao_esri import router as rotas_edicao_esri
+from app.consulta.rotas_ogc_features import router as rotas_ogc_features
 from app.consulta.rotas_query import router as rotas_consulta_esri
 from app.consulta.rotas_servico import router as rotas_consulta_servico
 from app.consulta.rotas_wfs import router as rotas_wfs
@@ -53,8 +54,8 @@ from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
-from app.multiescala.rotas import router as rotas_multiescala
 from app.mapa.rotas import router as rotas_mapa
+from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
@@ -128,6 +129,9 @@ ROUTERS = [
     # --- construtor de camada por esquema (L5-31): /api/camadas/esquema, /api/camadas/{id}/esquema[/plano],
     # /api/camadas/{id}/campos (fields no formato FeatureServer)
     camada_esquema.router,
+    # --- vista de camada (L5-32): POST /api/camadas/{id}/vistas, GET/PUT /api/vistas/{id} (view PostgreSQL
+    # com filtro congelado e campos ocultos; servida pelo mesmo FeatureServer/OGC da camada-mãe)
+    vista_camada.router,
     # --- edição transacional de feições (L2-03-a): POST /api/camadas/{id}/edicoes (adicionar/atualizar/apagar
     # numa transação; única porta de escrita de feição — FeatureServer/OGC futuros chamam este mesmo caminho)
     rotas_edicao,
