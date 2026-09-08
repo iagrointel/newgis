@@ -8738,6 +8738,62 @@
     "x-privilegio": "rls:visibilidade"
    }
   },
+  "/api/acervo/dominios": {
+   "get": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Dominios",
+    "description": "22 domínios como filtro (hipótese do item L6-01-c-tela-acervo): a lista de NOMES vem da taxonomia\ninteira de `acervo.fonte` (categoria pública, não identifica fonte nenhuma — regra D17 vale para\nQUAL fonte existe, não para o nome de uma categoria), com a contagem de fontes VISÍVEIS (licença\nescrita) por domínio; domínio sem fonte visível hoje aparece com fontes=0, nunca some da lista, para\na tela poder mostrar a categoria vazia em vez de fingir que ela não existe.",
+    "operationId": "dominios_api_acervo_dominios_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/AcervoDominio"
+         },
+         "type": "array",
+         "title": "Response Dominios Api Acervo Dominios Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/acervo/meu-mapa": {
+   "get": {
+    "tags": [
+     "acervo"
+    ],
+    "summary": "Meu Mapa",
+    "description": "Camadas do acervo já adicionadas ao catálogo de quem chama, para a legenda da tela /mapa (item\nL6-01-c-tela-acervo). Rota própria porque `GET /api/itens` não devolve `dados` (campo pesado, fora de\n`SQL_ITEM_LISTA`) e não filtra por protocolo: pela lista do catálogo a legenda teria de pedir a ficha de\ncada item, uma chamada por camada. Aqui é uma consulta só, e o filtro `dados->>'protocolo' = 'acervo'` é\nfeito no banco. O isolamento por inquilino é o mesmo do resto do catálogo (RLS sobre `plat.item` pela\nconexão de `auth.contexto()`), não um WHERE escrito aqui.",
+    "operationId": "meu_mapa_api_acervo_meu_mapa_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/AcervoCamadaMapa"
+         },
+         "type": "array",
+         "title": "Response Meu Mapa Api Acervo Meu Mapa Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/acervo/{fonte_id}": {
    "get": {
     "tags": [
@@ -12436,6 +12492,64 @@
     "title": "AcervoAdicionarEntrada",
     "description": "Corpo opcional de POST /api/acervo/{fonte_id}/adicionar (item L6-01-f-lgpd). Fonte marcada em\n`plat.acervo_lgpd.risco_pii` exige `confirma_risco_pii=true` explícito; sem isso a rota recusa com 409\nantes de criar qualquer item. Default false: nunca se confirma sozinho."
    },
+   "AcervoCamadaMapa": {
+    "properties": {
+     "item_id": {
+      "type": "string",
+      "title": "Item Id"
+     },
+     "titulo": {
+      "type": "string",
+      "title": "Titulo"
+     },
+     "fonte_id": {
+      "type": "string",
+      "title": "Fonte Id"
+     },
+     "dominio": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dominio"
+     },
+     "licenca": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Licenca"
+     },
+     "licenca_curada_tipo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Licenca Curada Tipo"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "item_id",
+     "titulo",
+     "fonte_id"
+    ],
+    "title": "AcervoCamadaMapa",
+    "description": "Uma camada do acervo já adicionada ao catálogo do inquilino, como a legenda do mapa precisa dela (item\nL6-01-c-tela-acervo). Os campos vêm do instantâneo gravado em `dados.parametros` na hora de adicionar, não\nde uma nova consulta ao acervo: a legenda mostra a licença sob a qual o dado foi adicionado."
+   },
    "AcervoCartao": {
     "properties": {
      "fonte_id": {
@@ -12521,6 +12635,17 @@
        }
       ],
       "title": "Risco Pii Motivo"
+     },
+     "licenca_curada_tipo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Licenca Curada Tipo"
      }
     },
     "additionalProperties": true,
@@ -12534,6 +12659,25 @@
      "registros_estimados"
     ],
     "title": "AcervoCartao"
+   },
+   "AcervoDominio": {
+    "properties": {
+     "dominio": {
+      "type": "string",
+      "title": "Dominio"
+     },
+     "fontes": {
+      "type": "integer",
+      "title": "Fontes"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "dominio",
+     "fontes"
+    ],
+    "title": "AcervoDominio"
    },
    "AcervoEndpoint": {
     "properties": {
@@ -12716,6 +12860,17 @@
        }
       ],
       "title": "Risco Pii Motivo"
+     },
+     "licenca_curada_tipo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Licenca Curada Tipo"
      },
      "url": {
       "anyOf": [

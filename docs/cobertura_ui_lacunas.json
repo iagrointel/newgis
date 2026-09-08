@@ -8,7 +8,6 @@
   "DELETE /api/multiescala/fatores/{id}",
   "DELETE /api/plataforma/inquilinos/{id}",
   "PATCH /api/anotacoes/{id}",
-  "POST /api/acervo/{fonte_id}/adicionar",
   "POST /api/arquivos",
   "POST /api/geocodificar",
   "POST /api/importacoes",
