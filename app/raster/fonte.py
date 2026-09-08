@@ -24,8 +24,9 @@ from dataclasses import dataclass, field
 
 import rasterio
 
-from app import objetos, settings
+from app import objetos
 from app.imagens import tiles
+from app.settings import settings
 
 
 @dataclass(frozen=True)
