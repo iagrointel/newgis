@@ -35,6 +35,7 @@ import os
 import re
 import time
 
+from app import temas
 from app.catalogo import tipos
 from app.erros import ErroAPI
 
@@ -86,10 +87,13 @@ def validar_grafo(tipo: str, dados) -> None:
     ligação (`origem`/`alvo`) apontando para um id que não está em `corpo.nos`. O formato de cada campo (tipo do
     nó, tipos de `corpo`/`nos`/`ligacoes`) já é responsabilidade do JSON Schema do tipo (`tipos.validar`,
     chamado ANTES desta função nas duas rotas que escrevem `dados`); aqui só entra o que precisa da lista
-    inteira para ser conferido."""
+    inteira para ser conferido. Item L5-10-temas-marca: `corpo.tema` presente passa pela MESMA checagem —
+    referência ({"id"}) ou definição ({"definicao"}) com tokens validados por formato em app/temas.py."""
     corpo = _corpo_do_documento(tipo, dados)
     if corpo is None:
         return
+    if corpo.get("tema") is not None:
+        temas.validar_referencia_de_documento(corpo["tema"])
     nos = corpo.get("nos", [])
     if not isinstance(nos, list):
         return
@@ -150,10 +154,27 @@ def _migrar_app_v1_v2(dados: dict) -> dict:
     return {**dados, "corpo": corpo, "esquema_versao": 2}
 
 
+def _migrar_v2_v3(tipo: str, dados: dict) -> dict:
+    """v2→v3 (`20260908T1709_temas_marca.sql`, item L5-10): o esquema ganha a chave OPCIONAL `corpo.tema`.
+    Nada a migrar no dado — tema ausente continua ausente (documento sem tema renderiza com o padrão);
+    só sobe o número para a leitura parar de re-migrar. v1 já passou por v1→v2 antes (cadeia)."""
+    return {**dados, "esquema_versao": 3}
+
+
+def _migrar_painel_v2_v3(dados: dict) -> dict:
+    return _migrar_v2_v3("painel", dados)
+
+
+def _migrar_app_v2_v3(dados: dict) -> dict:
+    return _migrar_v2_v3("app", dados)
+
+
 # registro fechado: (tipo, versão de origem) -> função que devolve o documento na versão seguinte
 _MIGRACOES = {
     ("painel", 1): _migrar_painel_v1_v2,
     ("app", 1): _migrar_app_v1_v2,
+    ("painel", 2): _migrar_painel_v2_v3,
+    ("app", 2): _migrar_app_v2_v3,
 }
 
 _TETO_PASSOS = 50  # mesma ordem de grandeza de outras cadeias da casa; documento real nunca chega perto disso
