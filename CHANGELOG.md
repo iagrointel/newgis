@@ -3,6 +3,16 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L6-02-a-modelo-conexao-e-seguranca)
+
+- O "Bearer da casa" passa a ser provado onde ele nasce, não só dentro de `buscar_seguro`:
+  `tests/unit/test_conexao_credencial_chamadores.py` (job `conexoes.saude_verificar`) e
+  `tests/api/test_conexoes_credencial_saltos.py` (rota `POST /api/conexoes/{id}/testar`, pela API de verdade,
+  com varredura por texto na resposta e no registro de log). Seis guardas `xfail(strict=True)` afirmam o
+  comportamento VULNERÁVEL: enquanto o conserto estiver de pé elas falham; se alguém o desfizer, elas passam
+  (XPASS) e a suíte fica vermelha.
+- `app/garage.py` deixa de seguir `Location` automaticamente nas duas chamadas que mandam `Authorization`
+  (`allow_redirects=False`): o outro caminho da casa que montava credencial e seguia redirecionamento.
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -175,6 +185,19 @@ não desta mudança), e a casa já teve OOM por lançar Chromium sob essa press�
 com RAM livre. Fora do portão literal deste turno (hipótese do item, registrado no ADR 0017 §D5): avisos
 de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail — o job `correio.enviar` já serve,
 falta só o gatilho periódico cross-tenant.
+## turno 3, setembro de 2026 (conserto de segurança L6-02-a: credencial não atravessa mudança de origem)
+
+`app/conexao/seguranca.buscar_seguro` retira `Authorization`, `Cookie`, `Proxy-Authorization` e qualquer nome
+declarado em `cabecalhos_secretos` no primeiro salto de redirecionamento em que esquema, host ou porta deixam
+de ser os da URL original; a retirada é definitiva (cadeia a→b→a não devolve a credencial) e redirecionamento
+na mesma origem continua autenticado. `ResultadoBusca` ganhou o campo `credencial_retirada`. Conserta o achado
+do adversário do grupo G5 (turno 3): a rota `POST /api/conexoes/{id}/testar` e o periódico
+`conexoes.saude_verificar` decifram a credencial do inquilino, e um serviço cadastrado que respondesse 302
+para outro host recebia esse segredo. `requests` e `httpx` já retiram a credencial nessa situação; a casa
+seguia o redirecionamento à mão (para revalidar SSRF a cada salto) e não tinha herdado a proteção.
+Provas: `tests/unit/test_conexao_credencial_redirect.py` (12 casos) e `tests/adversario/test_g5_adversario.py`
+(o teste do adversário, agora sem a marca `xfail`). ADR 0012, seção "a credencial nunca atravessa uma mudança
+de origem".
 
 ## turno 3, setembro de 2026 (nome de migração por carimbo de tempo — ADR 0014)
 
