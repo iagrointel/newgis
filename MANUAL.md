@@ -1070,3 +1070,33 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 28. Localizar regiões sobre a favorabilidade (item L3-05-localizar-regioes)
+
+Depois de rodar o motor multicritério (execução macro ou micro), a pergunta "onde ficam as N áreas" tem rota
+própria:
+
+```
+POST /api/multiescala/execucoes/{id}/regioes
+{
+  "n_regioes": 3, "area_total_m2": 3750000, "area_min_m2": null, "area_max_m2": null,
+  "distancia_min_m": 2000, "distancia_max_m": null, "compromisso": 50,
+  "forma": "circulo|quadrado|hexagono", "metodo": "maior_media|maior_soma|mediana|maior_area_nucleo",
+  "selecao": "sequencial|combinatoria", "vizinhanca": 8, "sem_ilhas": true,
+  "sementes": "auto|poucas|medias|muitas|maximo", "semente_aleatoria": 7, "so_aprovadas": false
+}
+```
+
+A resposta traz, por região: o polígono (união das células, GeoJSON 4326), um ponto interno, área, favorabilidade
+média, soma, mediana, área de núcleo, compacidade contra a forma-alvo e o centróide em índice de célula. Fora das
+regiões vêm os parâmetros usados, a área alvo, a área total obtida e as observações (por exemplo, quando a área
+mínima ou a distância impediram chegar ao alvo ou a N regiões).
+
+- `compromisso` 0 escolhe só pela favorabilidade; 100 escolhe só pela forma; 50 é o padrão.
+- Célula sem nota ou vetada nunca entra em região, nem quando o preenchimento de buracos passa por cima dela.
+- `so_aprovadas` restringe a busca às células que a própria execução aprovou.
+- Mesma `semente_aleatoria` = mesma resposta.
+Recusas com código próprio (HTTP 422): `area_maior_que_a_disponivel`, `n_regioes_fora_do_limite` (1 a 30),
+`area_min_impossivel`, `area_max_impossivel`, `distancia_min_maior_que_max`, `sem_regiao_possivel`,
+`sem_combinacao_possivel`, `grade_grande_demais` (teto de 4 milhões de células por chamada), `execucao_sem_nota`.
+Nada é gravado: a rota responde a uma pergunta sobre a execução; para guardar, crie um item com o GeoJSON.

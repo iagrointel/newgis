@@ -1069,3 +1069,18 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 4, setembro de 2026 (item L3-05-localizar-regioes: N regiões contíguas sobre a favorabilidade)
+
+`app/amc/regioes.py` responde "onde ficam as N áreas", não só "quanto vale cada célula": crescimento de região
+por fila de prioridade a partir de sementes espalhadas, com compromisso declarado entre FORMA (círculo, quadrado
+ou hexágono, medido por compacidade em célula) e UTILIDADE, área total alvo distribuída entre as regiões, área
+mínima e máxima por região, distância mínima e máxima entre elas, quatro métodos de avaliação (maior média,
+maior soma, mediana, maior área de núcleo) e duas seleções (sequencial e combinatória). Célula sem dado ou
+vetada é intransponível; fechar buraco nunca engole veto. `POST /api/multiescala/execucoes/{id}/regioes` roda o
+motor sobre a grade de uma execução do motor multicritério e devolve um polígono por região (união das células,
+4326) com as estatísticas. Medido (`tests/medidas/L3-05-localizar-regioes.json`): grade de 1.000.000 de células
+em 3,42 s (N = 3) e 9,09 s (N = 10); sobre a execução real, 3 regiões sobre os 3 picos com área a 0 % do alvo.
+Refutação: área maior que a disponível e N = 31 recusados com código próprio; mesma semente, resposta idêntica.
+Paridade parâmetro a parâmetro contra o Locate Regions (Pro, página lida em 08/09/2026) em `docs/PARIDADE.md`;
+ADR `docs/adr/20260908T1450-localizar-regioes.md`.

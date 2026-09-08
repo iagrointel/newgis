@@ -398,3 +398,34 @@ da busca com os trechos citados literalmente, não de navegação própria pela 
 | Accordion widget | organiza widgets num menu empilhado verticalmente; cada widget vira um cabeçalho com estado aberto/fechado | `acordeao`: um painel por filho, cabeçalho sempre visível, corpo com `hidden`; `multiplo_aberto` controla se fecha os outros | feito | construído; sem e2e próprio nesta passagem | 2026-09-07 | pendente (D20) |
 | Window (modal / ancorada) | "Window" NÃO é um widget de layout na doc da Esri — é um TIPO de página à parte, com dois modos de exibição (centralizado/modal e ancorado perto do que a abriu) | `janela`: um nó de conteúdo com `modo` `modal` (`<dialog>` nativo, Esc/backdrop do navegador) ou `ancorada` (`div` posicionado, Esc por `keydown` manual); modelamos como WIDGET, não como página — divergência deliberada (documento único por app, sem página extra para cada popup) | parcial (cobre os dois modos; modelo diferente do da Esri) | idem (cláusula "janela modal abre por botão e fecha por Esc") | 2026-09-07 | pendente (D20) |
 | Tab (seção com vistas/abas) | não está entre os 6 widgets confirmados na busca desta passagem (candidato a widget "layout adjacente"; não confirmado por citação literal) | `secao_vistas`/`vista`: barra de abas + painel único visível (`role="tab"`, `aria-selected`) | não comparável (Esri não confirmada nesta busca) | construído; sem e2e próprio nesta passagem | 2026-09-07 | pendente (D20) |
+
+## Localizar regiões (item L3-05-localizar-regioes, turno 4; ADR `20260908T1450-localizar-regioes`)
+
+Referência: **Locate Regions** do ArcGIS Pro (Spatial Analyst), página
+`doc.esri.com/en/arcgis-pro/latest/tool-reference/spatial-analyst/locate-regions.html` (o endereço antigo
+`pro.arcgis.com/.../locate-regions.htm` responde 301 para esse), **lida em 08/09/2026**; os nomes de parâmetro e
+as palavras-chave abaixo são as da própria página. Nosso lado: `app/amc/regioes.py` e
+`POST /api/multiescala/execucoes/{id}/regioes`; provas em `tests/unit/test_regioes.py` (16) e
+`tests/api/multiescala/test_regioes.py` (5); medidas em `tests/medidas/L3-05-localizar-regioes.json`.
+
+| parâmetro (Esri) | palavras-chave da referência | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| Input Raster | raster de utilidade | a grade de favorabilidade da execução do motor multicritério (`plat.escala_resultado`), 0-100, `nan` onde não há dado ou há veto | feito | `test_tres_regioes_sobre_a_execucao_real_com_poligono` | 2026-09-08 | pendente (D20) |
+| Total Area | valor; padrão 10 % das células | `area_total_m2`; sem ele, 10 % da área não vetada (mesmo padrão) | feito | `test_area_total_dentro_de_cinco_por_cento` | 2026-09-08 | pendente (D20) |
+| Area Units | `SQUARE_MAP_UNITS`, `SQUARE_KILOMETERS`, `HECTARES`, … | metro quadrado, sempre (a grade tem resolução em metro; a conversão é do cliente) | parcial | `test_area_em_metros_quadrados_e_distancia_em_metros` | 2026-09-08 | pendente (D20) |
+| Number of Regions | 1-30, padrão 1 | `n_regioes`, 1-30, padrão 1 — mesmo teto | feito | `test_n_regioes_acima_de_trinta_recusa` | 2026-09-08 | pendente (D20) |
+| Region Shape | `CIRCLE`, `ELLIPSE`, `TRIANGLE`, `SQUARE`, `PENTAGON`, `HEXAGON`, `OCTAGON` | `circulo`, `quadrado`, `hexagono` (as três que o item pede); elipse, triângulo, pentágono e octógono ficam fora | parcial (3 de 7) | `test_compromisso_cem_gera_a_forma_alvo` | 2026-09-08 | pendente (D20) |
+| Region Orientation | 0-360°, padrão 0 | fora desta versão: as três formas são usadas sem giro | fora | — | 2026-09-08 | pendente (D20) |
+| Shape/Utility Tradeoff (%) | 0-100, padrão 50 | `compromisso` 0-100, padrão 50 — 0 só utilidade, 100 só forma | feito | `test_compromisso_zero_prefere_utilidade` | 2026-09-08 | pendente (D20) |
+| Evaluation Method | `HIGHEST_AVERAGE_VALUE`, `HIGHEST_SUM`, `HIGHEST_MEDIAN_VALUE`, `HIGHEST_VALUE`, `LOWEST_VALUE`, `GREATEST_CORE_AREA`, `HIGHEST_CORE_SUM`, `GREATEST_EDGE` | `maior_media` (padrão), `maior_soma`, `mediana`, `maior_area_nucleo` — os quatro do item | parcial (4 de 8) | `test_metodos_de_avaliacao_e_selecao` | 2026-09-08 | pendente (D20) |
+| Region Minimum/Maximum Area | valor; sem padrão | `area_min_m2` / `area_max_m2`; N × mínimo maior que o alvo é recusa nomeada | feito | `test_minimo_maximo_e_distancias_respeitados` | 2026-09-08 | pendente (D20) |
+| Minimum/Maximum Distance Between Regions | valor; sem padrão | `distancia_min_m` / `distancia_max_m`, entre centróides | feito (entre centróides, não entre bordas) | idem | 2026-09-08 | pendente (D20) |
+| Distance Units | `MAP_UNITS`, `KILOMETERS`, `METERS`, … | metro, sempre | parcial | idem | 2026-09-08 | pendente (D20) |
+| Input Raster or Feature of Existing Regions | dataset de regiões já existentes | fora desta versão | fora | — | 2026-09-08 | pendente (D20) |
+| Number of Neighbors | `FOUR`, `EIGHT` (padrão `EIGHT`) | `vizinhanca` 4 ou 8, padrão 8 | feito | `test_parametros_invalidos_tem_codigo_proprio` | 2026-09-08 | pendente (D20) |
+| Islands Not Allowed in Regions | `NO_ISLANDS` (padrão), `ISLANDS_ALLOWED` | `sem_ilhas` (padrão verdadeiro); ao fechar buraco nunca engole célula vetada | feito (mais estrito) | `test_sem_ilhas_fecha_buraco_sem_engolir_veto` | 2026-09-08 | pendente (D20) |
+| Number of Seeds to Grow From | `AUTO`, `SMALL`, `MEDIUM`, `LARGE`, `MAXIMUM` | `sementes`: `auto`, `poucas`, `medias`, `muitas`, `maximo` | feito | `test_parametros_invalidos_tem_codigo_proprio` | 2026-09-08 | pendente (D20) |
+| Resolution of the Growth | `AUTO`, `LOW`, `MEDIUM`, `HIGH`, `MAXIMUM` | `resolucao_crescimento` declarada e validada; hoje o crescimento é sempre na resolução da grade (o parâmetro não muda o resultado) | parcial (declarado, sem efeito) | idem | 2026-09-08 | pendente (D20) |
+| Region Selection Method | `AUTO`, `COMBINATORIAL`, `SEQUENTIAL` | `sequencial` (padrão) e `combinatoria` (teto de 20 candidatas, declarado) | parcial (2 de 3: sem `AUTO`) | `test_metodos_de_avaliacao_e_selecao` | 2026-09-08 | pendente (D20) |
+| Output Raster | raster inteiro com as regiões numeradas | polígono por região (união das células, GeoJSON 4326) + estatísticas (área, média, soma, mediana, área de núcleo, compacidade, centróide) | feito (vetorial em vez de raster) | `test_tres_regioes_sobre_a_execucao_real_com_poligono` | 2026-09-08 | pendente (D20) |
+| determinismo entre execuções | não documentado na referência | mesma semente = resposta idêntica, byte a byte | feito (mais estrito) | `test_mesma_semente_da_resultado_identico` | 2026-09-08 | pendente (D20) |
