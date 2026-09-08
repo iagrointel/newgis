@@ -3,6 +3,35 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 10, setembro de 2026 (item HARD-02-testes-de-carga-e-caos: caos de processo de TRILHA — worker e API mortos no meio do job)
+
+Fecha a cláusula de caos de processo que faltava no HARD-02. O cenário de banco morto é do
+`tests/api/adversario/test_hard02_caos_banco.py` (wt/cx4h08, na fila) e o reinício da unidade de
+produção é do `tests/api/jobs/test_jobs_reinicio.py` (que exige systemd e sudo); faltava a trilha
+mesma, onde não há systemd — o worker de trilha é um subprocesso da suíte e a API é um uvicorn
+próprio. `tests/api/jobs/test_hard02_caos_trilha.py` (2 testes, marcados `lento`, com guarda que
+recusa rodar contra o schema `plat` — os processos mortos aqui são da suíte, e a prova é sobre
+ambiente de trilha) prova, contra a trilha `l02caos`:
+
+1. **Worker de trilha morto no meio** (`kill -9` no WorkerExtra com `prova.progresso` rodando): o job
+   órfão segue `rodando` e sem marcador em `plat_trabalho.marcadores` (ninguém ceifa sem worker vivo);
+   o worker NOVO, levantado pela própria suíte, ceifa por heartbeat vencido (limite de 60 s, ceifa a
+   cada 30 s — migração 012), devolve o job com `reinicios=1` e `tentativa` <= 2, e quem retoma é a
+   identidade do worker novo (nunca a do morto); o cancelamento via `POST /api/jobs/{id}/cancelar`
+   termina em `cancelado` com `reinicios=1`.
+2. **API de trilha morta no meio** (`kill -9` no uvicorn com o job rodando): a chamada seguinte falha
+   (conexão recusada) e, com uma API nova no ar contra a mesma base, o MESMO cookie continua
+   autenticado (a sessão vive no banco, não no processo), o job segue 200 no mesmo estado
+   (`pendente`/`rodando`), com `reinicios=0` e o MESMO worker (a morte da API não é devolução de job)
+   e o cancelamento pela API nova termina em `cancelado`.
+
+Duas rodadas na trilha: 2 passed em 95,1 s e 2 passed em 94,3 s
+(`bash laco/roda_teste.sh tests/api/jobs/test_hard02_caos_trilha.py` com o env da trilha). A
+infraestrutura é a da casa: `WorkerExtra` e `porta_livre()` de `tests/api/jobs/conftest.py` (porta
+pedida ao sistema, nunca constante; processos mortos sempre por PID exato) e um `ApiTrilha` novo que
+segue o mesmo padrão para o uvicorn. **Segue aberto no item**: p95 por rota (medida pós-parada da
+superfície, conforme o próprio texto do item) e o caos de banco (wt/cx4h08).
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
