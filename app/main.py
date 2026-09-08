@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse
 
-from app import erros, limite_corpo, paginas
+from app import erros, limite_corpo, paginas, rotas_qr
 from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
 from app.auth import ldap as rotas_ldap
@@ -150,6 +150,8 @@ ROUTERS = [
     # --- exportação a partir do mapa (L2-01-l): cópia de feição, estilo (MapLibre/SLD) e import de pacote
     rotas_exportar_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
+    # --- QR local para o widget compartilhar (L5-01-d)
+    rotas_qr.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

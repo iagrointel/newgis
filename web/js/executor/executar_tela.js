@@ -7,7 +7,7 @@ import { carregar } from '../base/i18n.js';
 import '../base/componentes.js';
 import { pronto } from '../base/layout.js';
 import { exigirSessao } from '../auth/sessao.js';
-import { montarExecucao } from './executor.js';
+import { montarExecucao, prepararWidgets } from './executor.js';
 import { PALETA_PAGINAS } from '../editor/paleta_paginas.js';
 import { novoDocumento } from '../editor/documento.js';
 
@@ -30,5 +30,6 @@ async function iniciar() {
     ? { tipo: item.tipo, esquema_versao: dados.esquema_versao || 2, corpo: { nos: [], ligacoes: [], ...dados.corpo } }
     : novoDocumento(item.tipo);
 
-  montarExecucao({ raiz, documento, paleta: PALETA_PAGINAS });
+  const falhas = await prepararWidgets(documento);
+  montarExecucao({ raiz, documento, paleta: PALETA_PAGINAS, falhas });
 }

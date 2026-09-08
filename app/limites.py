@@ -260,3 +260,6 @@ EXPORTACAO_CSV_SEPARADORES = (",", ";", "\t", "|")
 EXPORTACAO_CSV_DECIMAIS = (".", ",")
 EXPORTACAO_BLOCO_LEITURA_BYTES = 8 * 1024 * 1024   # leitura do arquivo pronto em blocos (sha256 e envio); NUNCA
                                               # o arquivo inteiro em memória, nem no envio ao Garage nem na entrega
+
+# --- widgets de página e de menu (L5-01-d)
+QR_TEXTO_MAX = 2048                         # conteúdo máximo do QR de compartilhar (uma URL longa cabe)
