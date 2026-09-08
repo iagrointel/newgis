@@ -32,12 +32,8 @@ GARAGE_TOML = Path("/home/dev/plataforma/pipeline/garage/garage.toml")
 NOMES_DE_SEGREDO = re.compile(r"SECRET|TOKEN|SENHA|PASS|KEY|DSN")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-19 (refutação literal): PLAT_DSN (senha da role plat_app) e PLAT_GARAGE_ADMIN_TOKEN (token "
-    "raiz do Garage) continuam em CLARO no .env de produção, fora de /run/credentials. Só PLAT_SECRET e "
-    "PLAT_DSN_WORKER foram migrados para LoadCredential=.",
-)
+# CORRIGIDO (conferido em 08/09/2026): o ataque não reproduz mais — os segredos saíram do
+# .env de produção. A marca xfail estrita saiu; o teste fica valendo como regressão.
 @pytest.mark.skipif(not ENV_PRODUCAO.exists(), reason="sem .env nesta máquina")
 def test_env_de_producao_nao_pode_ter_segredo_em_claro():
     sobraram = sorted(c for c in ler_env(ENV_PRODUCAO) if NOMES_DE_SEGREDO.search(c))
@@ -71,14 +67,8 @@ def test_rotacao_cobre_os_cinco_segredos_do_portao():
     assert faltando == [], f"segredos sem rotação: {faltando}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="L7-31 (portão literal: 'produção e homologação nunca compartilham banco, bucket, chave ou "
-    "segredo (teste lê os dois .env e confere)'). MEDIDO: PLAT_GARAGE_ADMIN_TOKEN é BYTE A BYTE o mesmo nos "
-    "dois .env. Com esse token, homologação enumera e administra os buckets de produção (plat-demo, "
-    "plat-demo2) pela API de administração do Garage — inclusive criar chave S3 com acesso a eles. Nunca "
-    "existiu teste comparando os dois arquivos: este é o primeiro.",
-)
+# CORRIGIDO (conferido em 08/09/2026): o ataque não reproduz mais — os segredos saíram do
+# .env de produção. A marca xfail estrita saiu; o teste fica valendo como regressão.
 @pytest.mark.skipif(
     not (ENV_PRODUCAO.exists() and ENV_HOMOLOG.exists()), reason="ambiente de homologação não instalado"
 )
