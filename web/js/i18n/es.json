@@ -1570,5 +1570,13 @@
  "usuarios.vazio_filtros": "ningún miembro con estos filtros",
  "usuarios.limpar_filtros": "limpiar filtros",
  "grupos.vazio_busca": "ningún grupo contiene \"{q}\"",
- "org.carregando": "leyendo la organización…"
+ "org.carregando": "leyendo la organización…",
+ "executor.sem_item_titulo": "ninguna aplicación indicada",
+ "executor.sem_item_texto": "abra esta página desde el constructor o el catálogo: la dirección lleva ?item=<id> de la aplicación",
+ "executor.ir_construtor": "ir al constructor",
+ "executor.carregando": "leyendo la aplicación…",
+ "executor.inexistente_titulo": "aplicación no encontrada",
+ "executor.inexistente_texto": "el ítem no existe, fue eliminado o su cuenta no lo ve",
+ "executor.nao_e_app_titulo": "este ítem no es una aplicación",
+ "executor.nao_e_app_texto": "el ítem es del tipo {tipo}; solo app y panel abren aquí"
 }

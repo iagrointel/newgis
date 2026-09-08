@@ -1570,5 +1570,13 @@
  "usuarios.vazio_filtros": "no member matches these filters",
  "usuarios.limpar_filtros": "clear filters",
  "grupos.vazio_busca": "no group contains \"{q}\"",
- "org.carregando": "reading the organization…"
+ "org.carregando": "reading the organization…",
+ "executor.sem_item_titulo": "no application indicated",
+ "executor.sem_item_texto": "open this page from the builder or the catalog: the address carries ?item=<id> of the application",
+ "executor.ir_construtor": "go to the builder",
+ "executor.carregando": "reading the application…",
+ "executor.inexistente_titulo": "application not found",
+ "executor.inexistente_texto": "the item does not exist, was deleted or your account cannot see it",
+ "executor.nao_e_app_titulo": "this item is not an application",
+ "executor.nao_e_app_texto": "the item is of type {tipo}; only app and panel open here"
 }
