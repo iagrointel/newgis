@@ -53,6 +53,21 @@ FONTES = {
     "arcgis_python": ("https://developers.arcgis.com/python/latest/api-reference/arcgis.gis.toc.html",
                       "2026-09-07"),
     "ogc_features": ("https://docs.ogc.org/is/17-069r4/17-069r4.html", "2026-09-07"),
+    "map_service": ("https://developers.arcgis.com/rest/services-reference/enterprise/map-service/",
+                    "2026-09-08"),
+    "export_map": ("https://developers.arcgis.com/rest/services-reference/enterprise/export-map/",
+                   "2026-09-08"),
+    "identify": ("https://developers.arcgis.com/rest/services-reference/enterprise/identify-map-service/",
+                 "2026-09-08"),
+    "legend": ("https://developers.arcgis.com/rest/services-reference/enterprise/legend-map-service/",
+               "2026-09-08"),
+    "find": ("https://developers.arcgis.com/rest/services-reference/enterprise/find/", "2026-09-08"),
+    "geometry_service": ("https://developers.arcgis.com/rest/services-reference/enterprise/geometry-service/",
+                         "2026-09-08"),
+    "project": ("https://developers.arcgis.com/rest/services-reference/enterprise/project/", "2026-09-08"),
+    "buffer": ("https://developers.arcgis.com/rest/services-reference/enterprise/buffer/", "2026-09-08"),
+    "areas_lengths": ("https://developers.arcgis.com/rest/services-reference/enterprise/areas-and-lengths/",
+                      "2026-09-08"),
 }
 
 # Os 45 parâmetros da operação `query`, na ordem da tabela "Request parameters" da doc Esri (acesso em
@@ -98,6 +113,8 @@ A = "tests/api/test_edicao_historico_anexos.py"
 V = "tests/api/test_vector_tile_server.py"
 G = "tests/api/test_ogc_features_crs_cql2.py"
 C = "tests/api/test_conformidade_clientes.py"
+M = "tests/api/test_mapserver_esri.py"
+MU = "tests/unit/test_mapserver_desenho.py"
 
 
 def matriz() -> list[dict]:
@@ -275,12 +292,87 @@ def matriz() -> list[dict]:
                "suportado", "feature_service", [_pytest(f"{V}::test_token_revogado_401_em_todas_as_rotas")]),
     ]
 
+    # --- MapServer e GeometryServer (L2-04-f): o bloco que até 07/09 estava na lista dos AUSENTES
+    F = "L2-04-f-mapserver-identify-legend-geometryserver"
+    linhas += [
+        _linha("mapserver", F, "descritor do MapServer (layers, spatialReference, initialExtent, capabilities)",
+               "suportado", "map_service", [_pytest(f"{M}::test_mapserver_lista_as_camadas_do_documento")]),
+        _linha("mapserver", F, "MapServer/layers e MapServer/{id} com os metadados do FeatureServer",
+               "suportado", "map_service",
+               [_pytest(f"{M}::test_layers_e_camada_trazem_os_metadados_do_featureserver"),
+                _pytest(f"{M}::test_camada_inexistente_no_mapserver_e_404")]),
+        _linha("mapserver", F, "export (bbox, size, dpi, format, transparent, f=json e f=image)",
+               "suportado", "export_map",
+               [_pytest(f"{M}::test_export_1024x768_devolve_imagem_do_tamanho_pedido"),
+                _pytest(f"{M}::test_export_f_json_traz_href_extensao_e_a_mesma_imagem"),
+                _pytest(f"{M}::test_export_nos_formatos_de_imagem_declarados"),
+                _pytest(f"{M}::test_export_em_pdf")]),
+        _linha("mapserver", F, "export desenha com o símbolo do estilo (mesmo drawingInfo do FeatureServer)",
+               "suportado", "export_map",
+               [_pytest(f"{M}::test_export_desenha_a_cor_que_o_drawing_info_declara"),
+                _pytest(f"{MU}::test_desenho_de_poligono_pinta_a_cor_do_simbolo"),
+                _pytest(f"{MU}::test_camada_zero_desenha_por_cima")]),
+        _linha("mapserver", F, "export: layers show/hide/include/exclude e layerDefs",
+               "suportado", "export_map",
+               [_pytest(f"{M}::test_layer_defs_valido_filtra_o_que_e_desenhado"),
+                _pytest(f"{M}::test_layer_defs_para_camada_inexistente_e_400"),
+                _pytest(f"{MU}::test_selecao_de_camadas"),
+                _pytest(f"{MU}::test_layer_defs_nas_duas_formas")]),
+        _linha("mapserver", F, "export: teto de tamanho declarado e layerDefs com SQL injetado recusado",
+               "suportado", "export_map",
+               [_pytest(f"{M}::test_export_de_8000x8000_e_recusado_com_o_limite_declarado"),
+                _pytest(f"{M}::test_layer_defs_com_sql_injetado_e_400"),
+                _pytest(f"{M}::test_export_recusa_pedido_malformado_sem_500")]),
+        _linha("mapserver", F, "export: parâmetro time",
+               "fora", "export_map", [_pytest(f"{M}::test_export_com_time_declara_por_que_recusa")],
+               "nenhuma camada declara timeInfo nesta implementação (o descritor já diz timeInfo=null); "
+               "o pedido com time volta 422 com o motivo, em vez de ser ignorado em silêncio"),
+        _linha("mapserver", F, "identify (geometry, tolerance em pixels, layers, mapExtent, imageDisplay)",
+               "suportado", "identify",
+               [_pytest(f"{M}::test_identify_em_tres_camadas_bate_com_a_consulta_espacial_direta"),
+                _pytest(f"{M}::test_identify_com_tolerancia_zero_responde_sem_erro"),
+                _pytest(f"{M}::test_identify_top_olha_so_a_primeira_camada"),
+                _pytest(f"{M}::test_identify_devolve_geometria_esri_quando_pedido")]),
+        _linha("mapserver", F, "find (searchText, searchFields, contains)",
+               "suportado", "find", [_pytest(f"{M}::test_find_acha_pelo_texto_e_declara_o_campo"),
+                                     _pytest(f"{M}::test_find_com_campo_inexistente_e_400")]),
+        _linha("mapserver", F, "legend (uma amostra PNG por classe do estilo)",
+               "suportado", "legend", [_pytest(f"{M}::test_legend_devolve_uma_imagem_por_classe_do_estilo"),
+                                       _pytest(f"{M}::test_legend_f_image_devolve_png"),
+                                       _pytest(f"{MU}::test_amostra_de_legenda_usa_a_cor_da_classe")]),
+        _linha("mapserver", F, "generateKml",
+               "parcial", "map_service",
+               [_pytest(f"{M}::test_generate_kml_devolve_documento_com_uma_pasta_por_camada")],
+               "KML sem KMZ e sem <Style> por classe: uma pasta por camada com as feições em WGS 84"),
+        _linha("mapserver", F, "MapServer de outro inquilino é 404 e sem token nada abre",
+               "suportado", "map_service",
+               [_pytest(f"{M}::test_mapa_de_outro_inquilino_nao_abre_pelo_token_de_a"),
+                _pytest(f"{M}::test_sem_token_valido_nada_do_mapserver_abre")]),
+        _linha("mapserver", F, "QGIS e ArcGIS Pro adicionam o MapServer e desenham",
+               "nao_medido", "map_service", [],
+               "nem QGIS nem ArcGIS Pro existem nesta máquina (sem ambiente gráfico); a cláusula do portão "
+               "que os pede fica declarada como não medida, nunca como aprovada"),
+        _linha("geometria", F, "GeometryServer: project (igual a ST_Transform)",
+               "suportado", "project", [_pytest(f"{M}::test_project_de_100_pontos_bate_com_st_transform")]),
+        _linha("geometria", F, "GeometryServer: buffer geodésico (igual a ST_Buffer sobre geography)",
+               "suportado", "buffer", [_pytest(f"{M}::test_buffer_geodesico_de_1km_tem_area_de_st_buffer_geografico"),
+                                       _pytest(f"{M}::test_buffer_com_distancia_negativa_e_400")]),
+        _linha("geometria", F, "GeometryServer: areasAndLengths, lengths e distance",
+               "suportado", "areas_lengths",
+               [_pytest(f"{M}::test_areas_and_lengths_geodesico_bate_com_postgis"),
+                _pytest(f"{M}::test_lengths_e_distance")]),
+        _linha("geometria", F, "GeometryServer: union, intersect, difference, convexHull e simplify",
+               "suportado", "geometry_service",
+               [_pytest(f"{M}::test_union_intersect_difference_convex_hull_e_simplify")]),
+        _linha("geometria", F, "GeometryServer: teto de lote e pedido malformado sem 500",
+               "suportado", "geometry_service",
+               [_pytest(f"{M}::test_lote_de_geometrias_acima_do_teto_e_recusado"),
+                _pytest(f"{M}::test_geometry_server_recusa_pedido_malformado_sem_500"),
+                _pytest(f"{M}::test_geometry_server_descritor")]),
+    ]
+
     # --- serviços Esri que este repositório NÃO tem (a matriz existe para dizer isso com a mesma clareza)
     linhas += [
-        _linha("ausente", "L2-04-f-mapserver-identify-legend-geometryserver",
-               "MapServer, identify, legend e GeometryServer",
-               "fora", "feature_service", [_pytest(f"{C}::test_nao_existe_rota_wms_neste_repositorio")],
-               "nenhuma rota MapServer/GeometryServer no repositório; a prova mede a ausência de rota de mapa"),
         _linha("ausente", "L2-04-i-wms-wmts-sld", "WMS, WMTS e SLD",
                "fora", "feature_service", [_pytest(f"{C}::test_nao_existe_rota_wms_neste_repositorio")],
                "medido: GET /wms/{item} devolve 404 e o OpenAPI não tem caminho WMS/WMTS"),
