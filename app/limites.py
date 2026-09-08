@@ -217,6 +217,19 @@ STAC_PAGINA_PADRAO = 10      # `limit` padrão da busca (mesmo padrão da spec S
 STAC_PAGINA_MAX = 1000       # `limit` máximo aceito por pedido (pgstac pagina por token, não por offset)
 STAC_COLECOES_POR_INQUILINO = 500
 STAC_LOTE_ITENS_MAX = 10_000  # POST .../items:lote (semeadura de teste/ingestão em massa; ADR do item L1-01-h)
+
+# --- ingestão de raster (L1-01-ingest-raster; ADR 20260906T2127): validação isolada + COG dois perfis +
+# STAC no pgstac. RASTER_DIMENSAO_MAX/RASTER_BANDAS_MAX são recusa da validação (acima disto o COG não é
+# manejável pelo appliance: 200k×200k px uint8 já são 40 GB por banda); RASTER_VISUAL_MAX_LADO só limita a
+# MINIATURA/estatística amostrada, nunca o COG. TILE_CACHE_DATASET_MAX limita datasets abertos por processo
+# no handler de tiles (mínimo honesto até o TiTiler do L1-02).
+RASTER_DIMENSAO_MAX = 200_000           # pixels por eixo (linhas ou colunas) — acima: recusa na validação
+RASTER_BANDAS_MAX = 64                  # bandas por raster — acima: recusa na validação
+RASTER_BYTES_MAX = 2 * 1024 * 1024 * 1024  # bruto aceito para ingestão (igual a UPLOAD_BYTES_MAX)
+RASTER_VISUAL_MAX_LADO = 1024           # miniatura PNG (lado maior)
+RASTER_ESTATISTICA_AMOSTRA = 100_000    # pixels amostrados por banda para percentis do perfil visual
+RASTER_TILE_CACHE_DATASET_MAX = 8       # datasets abertos por processo no handler de tiles (LRU)
+RASTER_TILE_TIMEOUT_S = 30              # teto de renderização de um tile (mata a requisição, não o worker)
 # --- grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
 # macro (grosseira, ex. 1 km) triando regiões e micro (fina, ex. 100 m) gerada SÓ dentro das aprovadas.
 # ESCALA_CELULAS_MAX vale tanto para a grade macro inteira quanto para o refino micro (aprovadas × k²) — é o

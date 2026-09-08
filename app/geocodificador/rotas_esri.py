@@ -32,6 +32,9 @@ from app.geocodificador.normalizacao import analisar_linha_unica, expandir_abrev
 
 log = logging.getLogger("plat.geocodificador.esri")
 router = APIRouter(tags=["geocodificador-esri"])
+# Toda rota do OpenAPI declara `x-auth` e `x-privilegio` (ADR 0002 seção 3.4). O `x-privilegio` faltava
+# nestas oito e só apareceu quando o docs/openapi.json foi regerado no item L1-02 (o arquivo comitado
+# estava desatualizado). "proprio" é o mesmo valor das rotas irmãs em app/geocodificador/rotas.py.
 PREFIXO = "/rest/services/Geocodificador/GeocodeServer"
 ESCOPO = "geocodificar:usar"
 

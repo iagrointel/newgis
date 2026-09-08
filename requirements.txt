@@ -18,7 +18,7 @@ annotated-doc==0.0.5
 typing-inspection==0.4.4
 typing_extensions==4.15.0
 anyio==4.13.0
-idna==3.13
+idna==3.19  # subiu de 3.13 no item L1-02: httpx2 (dependência do rio-tiler) exige >= 3.18
 python-dotenv==1.2.2
 #
 # httpx/httpcore: app/rede/osrm.py (L2-11-c) e app/conexao/seguranca.py (L6-02-a) importam direto (não é só
@@ -75,3 +75,15 @@ sortedcontainers==2.4.0
 tomli==2.4.1
 tomli_w==1.2.0
 Markdown==3.10.2
+
+# ladrilho raster (item L1-02-tiles-token): rio-tiler é o motor que roda dentro do TiTiler (ADR
+# 20260907T0300 seção 3). Aditivo: instalado com `pip install --dry-run` conferido antes, e nenhuma
+# versão de fastapi/starlette/pydantic/rasterio/uvicorn mudou. rasterio 1.5.0, rio-cogeo, morecantile,
+# pyproj e numpy vêm de fora deste arquivo (pip global da casa, como shapely acima) — a mesma pendência
+# de decisão do cabeçalho vale para eles; o self-check do install.sh falha alto se faltarem.
+rio-tiler==9.4.3
+numexpr==2.14.2
+color-operations==0.4.0
+httpx2==2.12.0
+httpcore2==2.12.0
+truststore==0.10.4

@@ -58,30 +58,23 @@ def colecao_10k(token_stac_a, tenant_id_a, env):
             }
         )
     with db.db(ctx) as cur:
+        # O schema `pgstac` é GLOBAL do banco (o pypgstac não aceita nome de schema por parâmetro), enquanto
+        # `plat.raster_item` é do schema da trilha. Uma trilha vizinha que já semeou a coleção deixa
+        # `pgstac.items` cheio e o espelho DESTA base vazio; por isso as duas contagens decidem se semeia.
         cur.execute("SELECT count(*) AS n FROM pgstac.items WHERE collection = %s", (colecao_id,))
         ja = cur.fetchone()["n"]
-        if ja < N_ITENS:
-            LOTE = 1000
-            for i in range(0, len(itens), LOTE):
-                ps.itens_criar_lote(cur, colecao_id, itens[i : i + LOTE])
-                ri.espelhar_lote(cur, tenant_id_a, colecao_id, [it["id"] for it in itens[i : i + LOTE]])
-        # `pgstac` é infraestrutura GLOBAL da máquina (compartilhada por TODAS as trilhas; ver
-        # db/pgstac_instalar.sh) enquanto `plat.raster_item` vive no schema PRÓPRIO desta trilha — uma
-        # base de trilha recriada do zero (`trilha_ambiente.sh`) herda os itens que outra rodada já
-        # deixou no pgstac para esta MESMA coleção sintética, mas começa com `raster_item` vazio. Sem
-        # este espelhamento de reconciliação a asserção de contagem do espelho falharia por um motivo
-        # de higiene do ambiente de teste, não por um defeito do código: sempre alinhar o espelho aos
-        # itens que já existem no pgstac desta coleção, nunca assumir que os dois nasceram juntos.
         cur.execute(
             "SELECT count(*) AS n FROM plat.raster_item WHERE tenant_id = %s AND colecao = %s",
             (tenant_id_a, colecao_id),
         )
-        if cur.fetchone()["n"] < N_ITENS:
-            cur.execute("SELECT id FROM pgstac.items WHERE collection = %s", (colecao_id,))
-            todos_ids = [r["id"] for r in cur.fetchall()]
-            LOTE = 1000
-            for i in range(0, len(todos_ids), LOTE):
-                ri.espelhar_lote(cur, tenant_id_a, colecao_id, todos_ids[i : i + LOTE])
+        ja_espelhados = cur.fetchone()["n"]
+        LOTE = 1000
+        for i in range(0, len(itens), LOTE):
+            fatia = itens[i : i + LOTE]
+            if ja < N_ITENS:  # `pgstac.create_items` não é upsert: só cria quando a coleção ainda não existe
+                ps.itens_criar_lote(cur, colecao_id, fatia)
+            if ja < N_ITENS or ja_espelhados < N_ITENS:
+                ri.espelhar_lote(cur, tenant_id_a, colecao_id, [it["id"] for it in fatia])
     return colecao_id
 
 
