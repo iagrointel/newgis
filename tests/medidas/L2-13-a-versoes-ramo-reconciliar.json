@@ -1,0 +1,67 @@
+{
+ "item": "L2-13-a-versoes-ramo-reconciliar",
+ "medidas": {
+  "reconciliar_10k_edicoes_s": {
+   "valor": 29.64,
+   "unidade": "segundos",
+   "comando": "PLAT_MEDIR_RECONCILIAR=1 bash /home/dev/plataforma/laco/roda_teste.sh tests/api/test_versionamento_ramo.py::test_medida_reconciliar_10_mil_edicoes -q"
+  },
+  "carga_1min": {
+   "valor": 9.28,
+   "unidade": "media de carga de 1 min",
+   "comando": "uptime"
+  },
+  "ram_livre_gb": {
+   "valor": 6.51,
+   "unidade": "GiB",
+   "comando": "free -g"
+  },
+  "edicoes_no_ramo": {
+   "valor": 10000,
+   "unidade": "feições editadas no ramo",
+   "comando": "-"
+  },
+  "clausula_conflitos_exatos": {
+   "valor": 3,
+   "unidade": "conflitos listados de 10 feições editadas no ramo e 3 no padrão",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/test_versionamento_ramo.py -q::test_reconciliar_lista_exatamente_os_tres_conflitos"
+  },
+  "clausula_resolver_e_publicar": {
+   "valor": 10,
+   "unidade": "feições do padrão atualizadas após 2 'ramo vence' e 1 manual",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/test_versionamento_ramo.py -q::test_resolver_dois_ramo_um_manual_e_publicar"
+  },
+  "clausula_nao_vaza_ramo_padrao": {
+   "valor": "11 no ramo x 10 no padrão",
+   "unidade": "contagem por FeatureServer query antes do post",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/test_versionamento_ramo.py -q::test_leitura_no_ramo_nao_vaza_para_o_padrao_nem_o_contrario"
+  },
+  "clausula_historic_moment": {
+   "valor": "3 antes x 2 agora",
+   "unidade": "contagem com historicMoment e sem",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/test_versionamento_ramo.py -q::test_historic_moment_devolve_o_estado_anterior"
+  },
+  "clausula_protocolo_version_management_server": {
+   "valor": 12,
+   "unidade": "passos da sequência do cliente arcgis, todos ok; pacote arcgis NÃO instalado",
+   "comando": "venv/bin/python tests/esri/cliente_arcgis_versoes.py"
+  },
+  "clausula_arcgis_pro_real": {
+   "valor": "pendente",
+   "unidade": "decisão D20 do dono: sem licença nem máquina Windows nesta casa",
+   "comando": "-"
+  },
+  "clausula_e2e_diff_com_captura": {
+   "valor": "escrito, não executado",
+   "unidade": "os e2e da casa rodam contra a URL pública (make e2e --base-url), que ainda não tem este ramo",
+   "comando": "make e2e (tests/e2e/test_versoes_diff.py)"
+  },
+  "testes_do_item": {
+   "valor": "12 passaram, 1 saltado",
+   "unidade": "bateria de API do item",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/test_versionamento_ramo.py -q"
+  }
+ },
+ "gerado_em": "2026-09-08T13:26:32Z",
+ "git_sha": "50758da0b514"
+}
