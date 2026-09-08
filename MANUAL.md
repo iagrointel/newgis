@@ -1106,3 +1106,124 @@ Dividir polígono por linha de corte; união com política de mesclagem de atrib
 primeira feição ou o que o chamador mandar"; desfazer/refazer por atalho de teclado (o mecanismo hoje
 é o histórico por feição, não uma pilha global de ações). Ver
 `docs/adr/20260907T1123-historico-restauracao-anexos-feicao.md`.
+
+## 23. Entrada de eventos em tempo real (`/api/fluxos`, processo `plat-fluxo`, item L2-14-a-ingestao-de-fluxos)
+
+Uma FONTE de fluxo é um objeto do inquilino que recebe evento sem parar: veículo de frota, sensor, embarcação
+por AIS, serviço de terceiro que publica posição. Equivale ao *feed* do ArcGIS Velocity/GeoEvent; a comparação
+linha a linha está em `docs/PARIDADE.md`.
+
+### 23.1 Os oito tipos de fonte
+
+Quatro RECEBEM (o remetente vem até a plataforma):
+
+- **`http`** — o remetente faz `POST` no endereço da fonte, com JSON, NDJSON, CSV ou GeoJSON.
+- **`websocket_servidor`** — o remetente abre um WebSocket e manda um evento (ou um lote) por quadro de texto.
+- **`gps_frota`** — o mesmo `POST`, aceitando também GPX 1.1 (`trkpt`, `wpt`, `rtept`).
+- **`sensor`** — o mesmo `POST`, com JSON de valor e unidade mapeados como campos.
+
+Quatro VÃO BUSCAR (a plataforma se conecta ao terceiro):
+
+- **`mqtt`** — assina um tópico de um broker externo, com TLS, usuário e senha, QoS 0 ou 1. A plataforma nunca
+  publica no broker; ela só assina. Broker próprio na nossa máquina depende da decisão D31 do dono.
+- **`websocket_cliente`** — assina um WebSocket de terceiro, com cabeçalho de credencial e mensagem de
+  assinatura opcionais.
+- **`sondagem`** — busca uma URL no intervalo declarado (5 s a 24 h). Com `campo_atualizacao`, cada rodada só
+  ingere o registro cujo valor daquele campo é maior que o da rodada anterior — sem isso a mesma lista entraria
+  de novo a cada busca. `caminho_lista` aponta a lista dentro do documento. Aceita JSON, NDJSON, CSV, GeoJSON e
+  a resposta `f=json` de um FeatureServer.
+- **`ais`** — lê sentenças NMEA por TCP e decodifica as mensagens de POSIÇÃO (1, 2, 3 e 18). Mensagens de dado
+  estático (5, 24) chegam, são ignoradas e contadas.
+
+Todo endereço declarado — URL, e também o par host/porta do MQTT e do AIS — passa pela defesa contra SSRF do
+item L6-02-a antes de a fonte ser gravada: uma fonte nunca fica registrada apontando para a rede interna, para
+o serviço de metadado da nuvem ou para o loopback da máquina.
+
+### 23.2 Mapeamento e esquema de destino
+
+O `mapeamento` diz como o registro cru vira evento:
+
+- `campo_tempo`: `caminho` (caminho JSON, com ponto e índice: `a.b[0].c`), `tipo` (`iso`, `epoch_s`,
+  `epoch_ms`, `texto` com `formato`) e `fuso` (nome IANA, por exemplo `America/Sao_Paulo`). O fuso vale para
+  texto SEM deslocamento; texto COM deslocamento manda no próprio dado. Sem `caminho`, o tempo do evento é o
+  do recebimento.
+- `campo_rastro`: o caminho do identificador que liga os eventos do mesmo objeto (placa, MMSI, número de série).
+- `geometria`: `{"modo": "lonlat", "lon": ..., "lat": ...}`, `{"modo": "wkt", "caminho": ...}` (só `POINT`),
+  `{"modo": "geojson", "caminho": ...}` (só `Point`) ou `{"modo": "nenhum"}`.
+- `campos`: lista de `{caminho, coluna, tipo}` com tipo em `texto`, `inteiro`, `numero`, `booleano`, `data`.
+
+Disso a plataforma GERA o `esquema_destino` (nome, tipo e origem por campo), que é o que a API devolve e o que
+quem consome o fluxo pode contar que existe. Os valores já convertidos ficam em `atributos` da tabela de
+eventos; não há uma tabela com colunas por fonte (o porquê está no ADR do item, seção 2).
+
+Antes de apontar o remetente, `POST /api/fluxos/{id}/simular` com um registro de exemplo mostra o que sai do
+mapeamento e do filtro **sem gravar nada e sem gastar o teto por segundo**. É como se confere um fuso.
+
+### 23.3 Filtro na entrada
+
+`filtro` é uma expressão da linguagem da casa (`docs/EXPRESSAO.md`) avaliada por evento, sobre os campos
+mapeados mais `rastro_id`, `tempo_evento` (milissegundos desde a época), `lon` e `lat`. Exemplo:
+`$velocidade > 40 && $lat < -20`. Evento que não passa é descartado e contado em `descartados_filtro`. Campo
+fora dessa lista é erro nomeado, nunca nulo silencioso.
+
+### 23.4 Teto por segundo, e o que o teto significa
+
+`limite_eventos_s` (1 a 100.000, padrão 1.000) é um balde de fichas por fonte: passado o teto, o evento é
+descartado e CONTADO em `descartados_limite` — nunca enfileirado, porque enfileirar o excesso é o mesmo que
+não ter teto. O teto é **por processo `plat-fluxo`**: com N processos, o teto efetivo do inquilino é N vezes o
+valor. Hoje o serviço é um processo só.
+
+O teto é conferido ANTES do mapeamento: numa rajada, converter o evento é o trabalho que não se quer gastar.
+Por isso a contagem de inválidos vale só sobre o que passou pelo teto.
+
+### 23.5 Pausar e retomar
+
+`PATCH /api/fluxos/{id}` com `{"estado": "pausada"}` para a GRAVAÇÃO, não a conexão: o conector continua
+assinado e o evento vai para um buffer em memória com teto declarado — `limite_eventos_s × 30 s`, nunca acima
+de 50.000 eventos. Retomada, o buffer é drenado na ordem de chegada. Cheio, o evento novo é descartado e
+contado como `buffer_de_pausa_cheio`: pausa não é armazenamento.
+
+⚠ O buffer vive na memória do processo. **Uma parada do `plat-fluxo` com fonte pausada perde o buffer.**
+
+### 23.6 Como o remetente se autentica
+
+Token de serviço (`/api/tokens`) com o escopo **`fluxo:escrever`**. O escopo aceita o sufixo de uma fonte —
+`fluxo:escrever:<uuid>` — e é assim que se entrega um token a um veículo sem lhe dar as outras fontes da casa.
+Para ler evento e métrica pela API basta `fluxo:ler`.
+
+    curl -X POST https://<host>/fluxo/<id-da-fonte>/eventos \
+      -H "Authorization: Bearer plat_..." -H "Content-Type: application/json" \
+      -d '[{"ts":"2026-01-15T09:00:00","placa":"AAA0A00","lon":-46.6,"lat":-23.5,"velocidade":50}]'
+
+A resposta é o resumo do lote: `recebidos`, `aceitos`, `descartados_limite`, `descartados_invalido`,
+`descartados_filtro`, `em_buffer`. No WebSocket, o mesmo resumo volta por quadro. Token de um inquilino que
+aponta para fonte de outro recebe **404** (não 403): a existência do identificador alheio não vaza.
+
+Tetos do receptor: 4 MiB por pedido (e por quadro), 20.000 eventos por lote, 200 caracteres no identificador
+de rastro, 4.096 caracteres por valor de texto, 5 minutos de folga de relógio para tempo à frente e 10 anos
+para trás. Fora disso, o evento é recusado com motivo nomeado e contado.
+
+### 23.7 Ler o que entrou, e a métrica
+
+- `GET /api/fluxos/{id}/eventos?desde=&ate=&rastro=&limite=` — os eventos gravados, mais recentes primeiro.
+- `DELETE /api/fluxos/{id}/eventos?antes_de=<instante>` — expurga por corte de tempo.
+- `GET /api/fluxos/{id}` — traz `metrica`: recebidos, aceitos, descartados por motivo, atraso do último evento
+  e mediana, e quando a métrica foi atualizada (o processo a espelha no banco a cada segundo).
+- `GET http://127.0.0.1:8155/saude` — estado do processo; com `Authorization` de um token, também a métrica
+  viva por fonte **daquele inquilino**, com o tamanho do buffer e a contagem por motivo de descarte.
+
+Apagar a fonte apaga os eventos dela junto (não há chave estrangeira entre as duas tabelas: uma verificação
+por linha custaria caro no lote, então o expurgo é explícito na rota).
+
+### 23.8 Onde o evento fica
+
+`plat.fluxo_evento`, particionada por MÊS de recebimento, com índice BRIN em tempo, GIST em geometria e índice
+por fonte e por rastro. Cada mês é uma partição (`plat.fluxo_particao_garantir()`), mais uma partição padrão
+que garante que nada se perca na virada do mês. Expurgo de histórico antigo é `DROP` da partição inteira, que
+é barato; o `DELETE` por corte de tempo da rota serve para janelas curtas.
+
+Medido em 8 de setembro de 2026, contra o processo de verdade em uma máquina de 12 núcleos com carga 6,8:
+**600.000 eventos em 60,0 s (10.000 por segundo, em lotes de 2.000), perda zero, atraso mediano de 30,9 ms**
+(percentil 95 em 44,3 ms), fila drenada 0,4 s depois do último envio, memória residente do processo em
+78,5 MB. Os números e a carga da máquina ao lado deles estão em
+`tests/medidas/L2-14-a-ingestao-de-fluxos.json`.

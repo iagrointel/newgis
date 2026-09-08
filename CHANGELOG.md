@@ -3,6 +3,30 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 3, setembro de 2026 (item L2-14-a-ingestao-de-fluxos: entrada de eventos em tempo real)
+
+Oito tipos de fonte de evento no vocabulário fechado: receptor HTTP, WebSocket servidor, GPS de frota e sensor
+recebem; MQTT, WebSocket cliente, sondagem de URL e AIS vão buscar. Processo próprio `plat-fluxo` na porta
+8155, com fila em memória, escrita em lote uma vez por segundo e métrica por fonte; gestão da fonte em
+`/api/fluxos`, na aplicação, com escopos de token `fluxo:escrever` e `fluxo:ler`.
+
+Medido contra o processo de verdade, com uvicorn e soquete TCP, em 12 núcleos com carga 6,8 e 6,2 GB livres:
+**600.000 eventos em 60,0 s (10.000 por segundo, em lotes de 2.000), 600.000 gravados, perda zero, atraso
+mediano de 30,9 ms** e 44,3 ms no percentil 95 contra o teto de 2.000 ms do portão; fila drenada 0,4 s depois
+do último envio; memória residente de 78,5 MB; nenhum lote de escrita com erro
+(`tests/medidas/L2-14-a-ingestao-de-fluxos.json`).
+
+O que a construção corrigiu na decisão C14: **COPY não escreve em tabela com segurança de linha** — o Postgres
+recusa e manda usar INSERT. Como o isolamento por inquilino é cláusula do portão, o lote virou um
+`INSERT ... SELECT FROM unnest(...)`, medido em 62.419 linhas por segundo, seis vezes o alvo. A tabela de
+eventos é particionada por mês com BRIN em tempo e GIST em geometria, como a decisão pedia.
+
+Também nesta entrada: cliente MQTT 3.1.1 escrito com a biblioteca padrão (a casa não tem `paho` e o disco não
+comporta dependência nova), exercido contra um servidor que fala o protocolo no fio; decodificador AIVDM das
+mensagens de posição 1, 2, 3 e 18, conferido contra as duas cargas de referência públicas; paridade escrita
+contra os tipos de feed do Velocity e do GeoEvent em `docs/PARIDADE.md`, com Kafka, Event Hub, AWS IoT, QoS 2,
+MQTT 5 e broker próprio declarados fora.
+
 ## turno 4, setembro de 2026 (item L6-02-a-modelo-conexao-e-seguranca)
 
 - O "Bearer da casa" passa a ser provado onde ele nasce, não só dentro de `buscar_seguro`:

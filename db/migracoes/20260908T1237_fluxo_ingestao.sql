@@ -147,7 +147,7 @@ GRANT SELECT, INSERT, DELETE ON plat.fluxo_evento TO plat_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON plat.fluxo_fonte, plat.fluxo_metrica TO plat_app;
 GRANT EXECUTE ON FUNCTION plat.fluxo_particao_garantir(timestamptz) TO plat_app;
 
--- O processo plat-fluxo atende TODOS os inquilinos e conecta como `plat_app`, que sob RLS não enxerga
+-- O processo plat-fluxo atende todos os inquilinos e conecta como `plat_app`, que sob RLS não enxerga
 -- nada sem contexto de inquilino — nem `plat.tenant`, nem `plat.fluxo_fonte`. Para saber QUAIS inquilinos
 -- têm fonte (e então ler a lista de cada um já com o contexto certo), existe esta função SECURITY DEFINER,
 -- no mesmo padrão de `plat.auth_login`/`plat.auth_token`: ela devolve SÓ os identificadores de inquilino que
