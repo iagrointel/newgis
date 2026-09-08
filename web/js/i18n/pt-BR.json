@@ -918,5 +918,21 @@
  "usuarios.desregistrar": "Desregistrar",
  "usuarios.desregistrar_confirma": "desregistrar a conta federada de {login}? O vínculo com o provedor é removido e a conta fica desativada; a conta no provedor continua.",
  "usuarios.desregistrado": "conta de {login} desregistrada",
- "login.convite_necessario": "este provedor só aceita membros convidados; peça um convite ao administrador do inquilino"
+ "login.convite_necessario": "este provedor só aceita membros convidados; peça um convite ao administrador do inquilino",
+ "logins.novo_oidc": "Novo provedor OIDC",
+ "logins.modelo": "modelo",
+ "logins.modelo_govbr": "gov.br (Login Único)",
+ "logins.modelo_generico": "OpenID Connect genérico",
+ "logins.modelo_ajuda": "gov.br: o nível da conta (bronze, prata, ouro), os selos e os fatores entram como valores do mapa de regras (nivel:ouro, selo:801, amr:mfa); o CPF nunca fica em claro",
+ "logins.govbr_ambiente": "ambiente gov.br",
+ "logins.govbr_staging": "homologação (sso.staging.acesso.gov.br)",
+ "logins.govbr_producao": "produção (sso.acesso.gov.br)",
+ "logins.govbr_rotulo_padrao": "Entrar com gov.br",
+ "logins.client_id_ajuda": "identificador do cliente entregue pelo gov.br depois do ofício do órgão (roteiro técnico)",
+ "logins.client_secret_ajuda": "segredo do cliente; guardado cifrado, nunca mostrado de novo; vazio = cliente público (PKCE puro)",
+ "logins.redirect": "URL de retorno (redirect_uri)",
+ "logins.redirect_ajuda": "informe exatamente esta URL no cadastro do cliente no gov.br",
+ "logins.escopos": "escopos",
+ "logins.govbr_valores": "depois de criar, abra Regras e mapeie os valores: nivel:bronze, nivel:prata, nivel:ouro, selo:<id> (801 certificado digital, 701 TSE facial...), amr:<fator>",
+ "logins.oidc_criado": "provedor {rotulo} criado; agora configure as regras"
 }
