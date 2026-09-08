@@ -99,7 +99,7 @@ def test_compromisso_zero_prefere_utilidade():
 
 def test_metodos_de_avaliacao_e_selecao():
     fav = _superficie()
-    for metodo in R.METODOS:
+    for metodo in R.AVALIACOES:
         res = R.localizar(fav, R.Pedido(n_regioes=2, area_total=600, metodo=metodo, semente_aleatoria=7))
         assert len(res.regioes) == 2 and res.parametros["metodo"] == metodo
         assert all(r.nota == pytest.approx(R._nota(r, metodo)) for r in res.regioes)

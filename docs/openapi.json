@@ -10987,6 +10987,58 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/multiescala/execucoes/{id}/regioes": {
+   "post": {
+    "tags": [
+     "multiescala"
+    ],
+    "summary": "Localizar Regioes",
+    "operationId": "localizar_regioes_api_multiescala_execucoes__id__regioes_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RegioesEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
   }
  },
  "components": {
@@ -16511,6 +16563,140 @@
      "ok"
     ],
     "title": "RedefinicaoSolicitarSaida"
+   },
+   "RegioesEntrada": {
+    "properties": {
+     "n_regioes": {
+      "type": "integer",
+      "maximum": 30.0,
+      "minimum": 1.0,
+      "title": "N Regioes",
+      "default": 1
+     },
+     "area_total_m2": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Area Total M2"
+     },
+     "area_min_m2": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Area Min M2"
+     },
+     "area_max_m2": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Area Max M2"
+     },
+     "distancia_min_m": {
+      "anyOf": [
+       {
+        "type": "number",
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Distancia Min M"
+     },
+     "distancia_max_m": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Distancia Max M"
+     },
+     "compromisso": {
+      "type": "integer",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Compromisso",
+      "default": 50
+     },
+     "forma": {
+      "type": "string",
+      "pattern": "^(circulo|quadrado|hexagono)$",
+      "title": "Forma",
+      "default": "circulo"
+     },
+     "metodo": {
+      "type": "string",
+      "pattern": "^(maior_media|maior_soma|mediana|maior_area_nucleo)$",
+      "title": "Metodo",
+      "default": "maior_media"
+     },
+     "selecao": {
+      "type": "string",
+      "pattern": "^(sequencial|combinatoria)$",
+      "title": "Selecao",
+      "default": "sequencial"
+     },
+     "vizinhanca": {
+      "type": "integer",
+      "title": "Vizinhanca",
+      "default": 8
+     },
+     "sem_ilhas": {
+      "type": "boolean",
+      "title": "Sem Ilhas",
+      "default": true
+     },
+     "sementes": {
+      "type": "string",
+      "pattern": "^(auto|poucas|medias|muitas|maximo)$",
+      "title": "Sementes",
+      "default": "auto"
+     },
+     "resolucao_crescimento": {
+      "type": "string",
+      "pattern": "^(auto|baixa|media|alta|maxima)$",
+      "title": "Resolucao Crescimento",
+      "default": "auto"
+     },
+     "semente_aleatoria": {
+      "type": "integer",
+      "maximum": 2147483647.0,
+      "minimum": 0.0,
+      "title": "Semente Aleatoria",
+      "default": 0
+     },
+     "so_aprovadas": {
+      "type": "boolean",
+      "title": "So Aprovadas",
+      "description": "usar só as células aprovadas pela execução",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "RegioesEntrada"
    },
    "RelacaoEntrada": {
     "properties": {

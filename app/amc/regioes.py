@@ -45,7 +45,7 @@ FORMAS: dict[str, str] = {
     "quadrado": "quadrado (SQUARE)",
     "hexagono": "hexágono (HEXAGON)",
 }
-METODOS: dict[str, str] = {
+AVALIACOES: dict[str, str] = {
     "maior_media": "maior favorabilidade média (HIGHEST_AVERAGE_VALUE, o padrão da referência)",
     "maior_soma": "maior soma de favorabilidade (HIGHEST_SUM)",
     "mediana": "maior mediana de favorabilidade (HIGHEST_MEDIAN_VALUE)",
@@ -147,9 +147,9 @@ def _validar(p: Pedido, fav: np.ndarray) -> tuple[float, float, float, float]:
     if p.forma not in FORMAS:
         raise ErroRegioes("forma_desconhecida", f"forma-alvo desconhecida: {p.forma!r}",
                           {"aceitas": sorted(FORMAS)})
-    if p.metodo not in METODOS:
+    if p.metodo not in AVALIACOES:
         raise ErroRegioes("metodo_desconhecido", f"método de avaliação desconhecido: {p.metodo!r}",
-                          {"aceitos": sorted(METODOS)})
+                          {"aceitos": sorted(AVALIACOES)})
     if p.selecao not in SELECOES:
         raise ErroRegioes("selecao_desconhecida", f"método de seleção desconhecido: {p.selecao!r}",
                           {"aceitos": sorted(SELECOES)})
@@ -490,7 +490,7 @@ def localizar(fav: np.ndarray, pedido: Pedido | None = None) -> Resultado:
         "n_regioes": p.n_regioes, "area_total_pedida": alvo, "area_min": p.area_min, "area_max": p.area_max,
         "distancia_min": p.distancia_min, "distancia_max": p.distancia_max, "compromisso": p.compromisso,
         "forma": p.forma, "forma_descricao": FORMAS[p.forma], "metodo": p.metodo,
-        "metodo_descricao": METODOS[p.metodo], "selecao": p.selecao, "selecao_descricao": SELECOES[p.selecao],
+        "metodo_descricao": AVALIACOES[p.metodo], "selecao": p.selecao, "selecao_descricao": SELECOES[p.selecao],
         "vizinhanca": p.vizinhanca, "sem_ilhas": p.sem_ilhas, "sementes": p.sementes,
         "resolucao_crescimento": p.resolucao_crescimento, "semente_aleatoria": p.semente_aleatoria,
         "area_celula": p.area_celula, "lado_celula": p.lado_celula, "area_disponivel": area_disponivel,
@@ -500,5 +500,5 @@ def localizar(fav: np.ndarray, pedido: Pedido | None = None) -> Resultado:
                      parametros=parametros, observacoes=observacoes)
 
 
-__all__ = ["ErroRegioes", "FORMAS", "METODOS", "Pedido", "Regiao", "Resultado", "SELECOES", "SEMENTES",
+__all__ = ["ErroRegioes", "FORMAS", "AVALIACOES", "Pedido", "Regiao", "Resultado", "SELECOES", "SEMENTES",
            "N_REGIOES_MAX", "compacidade", "localizar"]
