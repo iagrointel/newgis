@@ -36,6 +36,25 @@ próprios do backlog com dono nomeado — o desenho do produto em si saiu limpo:
 segredos por `LoadCredential=`, repositório e histórico git com 0 ocorrências, `.env` raiz sem segredo.
 Runbook em `docs/RUNBOOKS/segredos.md` (procedimento por segredo, janela trust declarada, ressalva do
 garage.toml do daemon, que é da frente plataforma/pipeline e o produto nunca lê em operação).
+## turno 3, setembro de 2026 (item L5-11-expressoes-no-navegador: perfis de uso, feição e geometria)
+
+- A linguagem de expressão ganhou os sete PERFIS de uso (`app/expressao/perfis.py`,
+  `web/js/expressao/perfis.js`): popup, rótulo, cálculo de formulário, visibilidade, restrição,
+  indicador de painel e título dinâmico. Cada perfil declara os tipos de retorno que aceita e o
+  orçamento de tempo (50 ms no navegador, 500 ms no servidor); o contexto é montado só da feição
+  recebida (`$feicao`, `$geometria` e um `$campo` por atributo com nome de identificador).
+- Seis funções novas nos dois avaliadores (43 → 49): `Atributo`, `Geometria`, `Area`,
+  `Comprimento`, `Distancia` e `Dentro`. Geometria é GeoJSON, o modelo é a esfera de raio autálico
+  6.371.008,8 m e o resultado métrico é arredondado a 6 casas para servidor e navegador devolverem
+  o mesmo número — erro de modelo de até 0,5 %, sem valor de medição legal de área.
+- Vetores compartilhados: 309 → 339 em `tests/expressoes/vetores.json`, mais 11 vetores de erro de
+  geometria em `tests/expressoes/vetores_geometria_erros.json` e 57 vetores de perfil em
+  `tests/expressoes/vetores_perfis.json`, todos rodados em Python e em Node.
+- `MANUAL.md` seção 25, gerada de `TABELA_FUNCOES`/`PERFIS` por `docs/gerar_manual_expressao.py`,
+  com uma linha e um exemplo por função. `docs/EXPRESSAO.md` ganhou a subseção de feição/geometria
+  e a seção 12 (perfis). ADR `docs/adr/20260908T1331-expressoes-no-navegador.md`.
+- Nenhuma tela chama os perfis ainda: o que entrou é a biblioteca, provada nos dois runtimes.
+
 ## turno 3, setembro de 2026 (item L3-19-multiescala: grades aninhadas do motor multicritério)
 
 Construído do zero neste turno (RESGATE da sessão executora derrubada por cota só tinha a migração,
