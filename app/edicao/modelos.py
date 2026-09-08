@@ -96,3 +96,66 @@ class DivisaoEntrada(Modelo):
     id: str = Field(pattern=UUID_PADRAO)
     versao: int = Field(ge=1)
     ponto: list[float] = Field(min_length=2, max_length=2)
+
+
+# ---------------------------------------------------------------- edição em lote (item L2-03-f)
+OPERACOES_LOTE = ("calcular", "atribuir", "apagar", "corrigir_geometria", "copiar", "mover")
+
+
+class LoteSelecao(Modelo):
+    """Exatamente uma das três formas: `ids` (globalids), `onde` (expressão booleana da linguagem L2-10-c sobre
+    os campos da camada) ou `todas`."""
+
+    ids: list[str] | None = Field(default=None, max_length=limites.LOTE_IDS_MAX)
+    onde: str | None = Field(default=None, max_length=20_000)
+    todas: bool = False
+
+
+class LoteDestino(Modelo):
+    camada: str = Field(pattern=UUID_PADRAO)
+    mapeamento: dict[str, str] = Field(default_factory=dict, max_length=limites.LOTE_MAPEAMENTO_MAX)
+
+
+class LoteEntrada(Modelo):
+    operacao: str = Field(pattern="^(calcular|atribuir|apagar|corrigir_geometria|copiar|mover)$")
+    selecao: LoteSelecao
+    campo: str | None = Field(default=None, max_length=63)
+    expressao: str | None = Field(default=None, max_length=20_000)
+    valor: Any = None
+    destino: LoteDestino | None = None
+    modo: str = Field(default="transacao", pattern="^(transacao|parcial)$")
+    previa: bool = False
+    avaliacao: str = Field(default="auto", pattern="^(auto|sql|linha_a_linha)$")
+
+
+class LoteFalha(Saida):
+    id: str | None = None
+    erro: str
+    mensagem: str
+    detalhe: Any = None
+
+
+class LotePrevia(Saida):
+    id: str
+    antes: Any = None
+    depois: Any = None
+    erro: str | None = None
+    mensagem: str | None = None
+
+
+class LoteSaida(Saida):
+    execucao: str  # sincrono | job | previa
+    operacao: str
+    total: int
+    alteradas: int = 0
+    apagadas: int = 0
+    criadas: int = 0
+    corrigidas: int = 0
+    falhas: list[LoteFalha] = Field(default_factory=list)
+    falhas_total: int = 0
+    avisos: list[str] = Field(default_factory=list)
+    traducao: str | None = None  # sql | linha_a_linha (só calcular/onde)
+    traducao_motivo: str | None = None
+    job_id: str | None = None
+    previa: list[LotePrevia] | None = None
+    duracao_ms: int | None = None
