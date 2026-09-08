@@ -3,6 +3,32 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 48, setembro de 2026 (item L2-09-d-analise-3d-visibilidade: as quatro análises de terreno do Scene Viewer, com o viewshed sendo o gdal_viewshed de verdade)
+
+`POST /api/analise3d/{visada,viewshed,perfil,sombra}` sobre um terreno INLINE no corpo (`app/analise3d/`:
+grade srid/x0/y0/célula/alturas, sha256 canônico em toda procedência). A bacia visual NÃO é
+reimplementada: a casa escreve o GeoTIFF, chama o binário `gdal_viewshed` instalado e devolve os bytes
+dele mais o comando — a paridade da cláusula 2 é byte a byte com a MESMA linha de comando reexecutada,
+em relevo suave e íngreme (`tests/unit/test_analise3d_viewshed.py`). Visada por varredura própria com
+passo declarado: ponto de obstrução a 2,75 m do cruzamento verdadeiro (varredura densa independente de
+0,25 m; cláusula 1 pede ≤ 30 m) — `tests/medidas/L2-09-d-analise-3d-visibilidade.json`. Perfil
+bilinear conferido com `rasterio.sample` (20/20 amostras, cláusula 3); sombra = prisma + posição solar
+NOAA, desvio de 0,268 % contra h/tan(elevação) no meio-dia solar verdadeiro de 21/12 (cláusula 4 pede
+≤ 5 %). Refutações do item viraram 422 com código nomeado: observador abaixo do terreno, alvo a 200 km
+ou fora da grade, amostras acima do teto, visada nula, Sol abaixo do horizonte, data sem fuso, srid
+fora da faixa. `salvar_item` em qualquer rota cria item `analise_3d` pela MESMA função do
+POST /api/itens (cota, schema, evento `itens/adicionar`, RLS) e exige o mesmo `conteudo.criar`; escopo
+de token novo `analise3d:usar` (`app/auth/escopos.py`). Tela `/analise3d` (`web/analise3d.html`,
+`web/js/analise3d/painel.js`) com terreno de exemplo determinístico; e2e com captura de cada análise
+(`tests/e2e/capturas/L2-09-d-analise-3d-visibilidade_analise3d_*.png`; cláusula 5). Fora do item, por
+portão: corte de malha e análise de malha integrada — paridade escrita em `docs/PARIDADE.md` (seção
+"Análise 3D", cláusula 6), ADR `docs/adr/20260908T1818-analise-3d-visibilidade.md`.
+
+Um defeito real de front achado na bancada do e2e e consertado: `perfilSvg` em
+`web/js/analise3d/painel.js` chamava `.map()` da segunda série sem guardá-la — toda resposta de perfil
+(que traz uma série só) quebrava a página com "Cannot read properties of undefined (reading 'map')"
+com a API respondendo 200 correto. Corrigido com guard ternário; o e2e é o teste dele.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
