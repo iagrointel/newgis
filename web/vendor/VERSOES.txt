@@ -17,3 +17,14 @@ ibm-plex-sans-3.201.woff2  3.201  e2291e842cf5af167122a22881a740c7f2dda7716f1e8c
 ibm-plex-mono-regular-2.3.woff2  2.3  08949f728dc52d528e69b1667d15c89a5686a4ee9a296ff90983985f99c380f7  OFL-1.1  https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexmono/OFL.txt (baixado de fonts.gstatic.com via CSS2 API, 06/09/2026; peso 400)
 ibm-plex-mono-medium-2.3.woff2  2.3  01d285447409c8a588692162439a038b8cbd7871309ee20267b0d2d91c6e8e22  OFL-1.1  https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexmono/OFL.txt (baixado de fonts.gstatic.com via CSS2 API, 06/09/2026; peso 500)
 pmtiles-4.5.0.js  4.5.0  caf981bc46f6327ee7e65d5dc964d89d38a69f60edca2bd4c5c890c21b554c6c  BSD-3-Clause  https://registry.npmjs.org/pmtiles/-/pmtiles-4.5.0.tgz (npm pack pmtiles@4.5.0, 06/09/2026; arquivo package/dist/pmtiles.js, build UMD global `pmtiles`; item L2-01-a-basemap-local-pmtiles — protocolo `pmtiles://` que o MapLibre usa para ler o PMTiles local por Range HTTP, sem servidor de tiles dinâmico)
+# Item L2-09-c-modelos-gltf-ifc-3dtiles (08/09/2026). Duas bibliotecas novas, as duas MIT, as duas com a
+# licença copiada ao lado do arquivo (three-0.185.1/LICENSE e deck.gl-9.4.0.LICENSE) — a spec veta AGPL e
+# `make sem-agpl` confere o repositório inteiro a cada rodada. O three.js é ESM e vem em DOIS arquivos que
+# se referenciam por caminho relativo (`three.module.min.js` importa `./three.core.min.js`): por isso, e só
+# por isso, esta é a primeira entrada do vendor que mora numa PASTA com a versão no nome, em vez de a versão
+# ir no nome do arquivo. A conferência de sha256 abaixo continua arquivo a arquivo.
+three-0.185.1/three.module.min.js  0.185.1  86bcee248b64f44bcfc23c331ae74619061957d59cab040171dcb6fb5900beb6  MIT  https://registry.npmjs.org/three/-/three-0.185.1.tgz (npm pack three@0.185.1, 08/09/2026; arquivo package/build/three.module.min.js)
+three-0.185.1/three.core.min.js  0.185.1  05b2609338c76cd65daf74f3ac515bc9a5045e1b3b33edc07d8c9bd55250fa90  MIT  https://registry.npmjs.org/three/-/three-0.185.1.tgz (npm pack three@0.185.1, 08/09/2026; arquivo package/build/three.core.min.js; importado por caminho relativo pelo anterior)
+three-0.185.1/LICENSE  0.185.1  8b378ebe60e2fe500158cb0ac71cb5e8b7d92953c2abcc63a0eb90499653b5bc  MIT  https://registry.npmjs.org/three/-/three-0.185.1.tgz (npm pack three@0.185.1, 08/09/2026; arquivo package/LICENSE)
+deck.gl-9.4.0.min.js  9.4.0  2eb6a1ae0d58604b1378682cd1136f8793478ba801e43dae48b3807e48758a6b  MIT  https://registry.npmjs.org/deck.gl/-/deck.gl-9.4.0.tgz (npm pack deck.gl@9.4.0, 08/09/2026; arquivo package/dist.min.js, empacotamento UMD com o global `deck`; traz Tile3DLayer e MapboxOverlay, que é o que põe 3D Tiles sobre o MapLibre)
+deck.gl-9.4.0.LICENSE  9.4.0  e499a2c2ba3b9faabe91fdfddf43e329439263264b7148e5548d0ec605cce9f2  MIT  https://registry.npmjs.org/deck.gl/-/deck.gl-9.4.0.tgz (npm pack deck.gl@9.4.0, 08/09/2026; arquivo package/LICENSE)
