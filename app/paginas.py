@@ -21,11 +21,10 @@ PAGINAS = {
     "/admin/log": "admin/log.html",
     # --- configurações da organização (L0-07-a-configuracoes-org)
     "/admin/organizacao": "admin/organizacao.html",
-    # --- catálogo (L0-03)
+    # --- catálogo (L0-03); /c/{token} é servida por app/catalogo/rotas_compartilhamento.py (leva og:)
     "/conteudo": "conteudo.html",
     "/conteudo/lixeira": "conteudo_lixeira.html",
     "/conteudo/{id}": "conteudo_item.html",
-    "/c/{token}": "compartilhado.html",
     # --- mapa (L2-01-a)
     "/mapa": "mapa.html",
     # --- conexões externas (L6-02-a/L6-02-l/L6-05)
@@ -39,6 +38,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- leitora de coleção (L5-04-c-temas-capa-colecao): ?item=<id de item colecao>
+    "/colecao": "colecao.html",
 }
 router = APIRouter()
 
