@@ -128,11 +128,13 @@ def validar(doc: Any) -> dict:
                     raise ErroLayout(f"{onde}: centro fora do mundo", f"{onde}.centro")
             else:
                 ext = el.get("extensao")
-                if not (isinstance(ext, list) and len(ext) == 4 and all(isinstance(v, (int, float)) for v in ext)):
+                if ext is None and d["modelo"]:
+                    pass  # modelo: a extensão vem do mapa na hora de usar (app/layout/compor.py::_mapa)
+                elif not (isinstance(ext, list) and len(ext) == 4 and all(isinstance(v, (int, float)) for v in ext)):
                     raise ErroLayout(
                         f"{onde}: modo extensao exige extensao [oeste, sul, leste, norte]", f"{onde}.extensao"
                     )
-                if not (ext[0] < ext[2] and ext[1] < ext[3]):
+                elif not (ext[0] < ext[2] and ext[1] < ext[3]):
                     raise ErroLayout(f"{onde}: extensão inválida (oeste < leste, sul < norte)", f"{onde}.extensao")
             el["rotacao"] = _num(el, "rotacao", -180, 180, onde, obrigatorio=False) or 0.0
             el["moldura"] = bool(el.get("moldura", True))

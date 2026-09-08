@@ -291,7 +291,17 @@ class Compositor:
                 quadro.centro, geo.zoom_da_escala(float(el["escala"]), dpi_ef, el["centro"][1]), w_px, h_px, self.dpi
             )
         else:
-            quadro = geo.quadro_por_extensao(tuple(el["extensao"]), w_px, h_px, self.dpi)
+            ext = el.get("extensao") or self.mapa.get("extensao")
+            if not ext and self.mapa.get("centro") and self.mapa.get("zoom") is not None:
+                # vista do mapa (centro + zoom do visualizador): vira extensão pela mesma matemática do quadro
+                visto = Quadro(tuple(self.mapa["centro"]), float(self.mapa["zoom"]), w_px, h_px, self.dpi)
+                ext = list(visto.extensao())
+            if not ext:
+                ext = [-46.70, -23.55, -46.40, -23.35]
+                self.relatorio["avisos"].append(
+                    f"{el['id']}: sem extensão no layout nem no mapa; usada a extensão padrão"
+                )
+            quadro = geo.quadro_por_extensao(tuple(ext), w_px, h_px, self.dpi)
         escala_real = geo.metros_por_pixel_web_mercator(quadro.centro[1], quadro.zoom) / (el["w"] / 1000.0 / w_px)
         try:
             png = self.fontes.render_quadro(quadro, self.mapa, el)
