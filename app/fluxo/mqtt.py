@@ -171,6 +171,12 @@ class Cliente:
             except TimeoutError:
                 self._enviar(pacote_pingreq())
                 continue
+            except (OSError, ErroMQTT):
+                # `parar()` fecha o soquete DEBAIXO desta leitura: parada pedida sai limpa, queda do
+                # servidor continua subindo como erro (é o que faz o conector reconectar).
+                if self._parar or self._sock is None:
+                    return
+                raise
             if tipo == PUBLISH:
                 qos = (bandeiras >> 1) & 0x03
                 topico, carga, identificador = ler_publish(corpo, qos)
