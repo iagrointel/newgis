@@ -326,3 +326,9 @@ plat-idioma select.controle { width: auto; padding: var(--e1) var(--e2); font-si
 .publica #incluido h2 { margin: 0; }
 .publica .ficha-item h2 { margin-bottom: var(--e2); }
 @media (max-width: 800px) { .publica-topo { padding: var(--e2) var(--e3); } .publica-rodape { padding: var(--e2) var(--e3); } }
+
+/* item UX-15: URLs para clientes externos na tela de tokens */
+.servicos-externos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
+.servico-externo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); font-size: var(--t-1); }
+.servico-externo .servico-nome { min-width: 12rem; color: var(--fraco); }
+.servico-externo code { font-size: var(--t-2); word-break: break-all; }

@@ -23,6 +23,7 @@ function maxDias() { const c = config(); return Number(c.token_max_dias) > 0 ? N
 
 async function iniciar() {
   montarLayout({ usuario, ativo: '/admin/tokens' });
+  montarServicosExternos();
   const botoes = [];
   if (tem('tokens.gerir_todos')) {
     const cx = h('input', { type: 'checkbox', id: 'todos' });
@@ -193,4 +194,26 @@ async function abrirAcessos(tk) {
   const resumo = detalhe.status === 200 ? h('p', { class: 'fraco' }, t('token.resumo_acessos', { n: detalhe.json.acessos_30d ?? 0, status: detalhe.json.ultimo_status ?? '—' })) : null;
   painel.abrir({ titulo: `${t('token.acessos')}: ${tk.nome}`, corpo: h('div', {}, resumo, aviso, tab, pag), botoes: [{ id: 'ok', rotulo: t('acao.fechar') }] }).then(() => {});
   await carregarPagina();
+}
+
+/* item UX-15-geocodificador-esri-sem-controle (e a mesma pendência do OGC Records): as URLs que o cliente externo
+   consome, expostas para copiar — o token de serviço vai em `?token=` (Esri) ou `Authorization: Bearer` (OGC). */
+const SERVICOS_EXTERNOS = [
+  { id: 'geocodeserver', caminho: '/rest/services/Geocodificador/GeocodeServer', escopo: 'geocodificar:usar', chave: 'tokens.servico_geocodeserver' },
+  { id: 'ogc-records', caminho: '/ogc/records', escopo: 'catalogo:ler', chave: 'tokens.servico_ogc_records' },
+];
+
+function montarServicosExternos() {
+  const lista = document.getElementById('servicos-externos');
+  if (!lista) return;
+  limpar(lista);
+  for (const s of SERVICOS_EXTERNOS) {
+    const url = `${location.origin}${s.caminho}`;
+    const cod = h('code', { class: 'mono', id: `servico-${s.id}` }, url);
+    lista.append(h('li', { class: 'servico-externo' },
+      h('span', { class: 'servico-nome' }, t(s.chave)),
+      cod,
+      h('span', { class: 'marcador info' }, s.escopo),
+      botaoCopiar(url, cod, { copiar: t('acao.copiar'), copiado: t('acao.copiado'), selecionado: t('acao.selecionado') })));
+  }
 }
