@@ -9,13 +9,17 @@ import re
 from pathlib import Path
 
 from app.main import app
+from tests.unit.test_rotas_sombreamento import achatar_rotas
 
 ROOT = Path(__file__).resolve().parents[2]
 SEGMENTO_DE_VERSAO = re.compile(r"(^|/)v\d+(/|$)", re.IGNORECASE)
 
 
 def _rotas_da_aplicacao_viva() -> list[str]:
-    return [r.path for r in app.routes if hasattr(r, "path")]
+    """Usa o achatador de `tests/unit/test_rotas_sombreamento.py`: a partir do FastAPI 0.138, `app.routes`
+    guarda um nó por router incluído, e ler `r.path` direto enxergava 3 rotas onde há 236 — a varredura deste
+    arquivo estava quase vazia sem acusar nada."""
+    return [caminho for caminho, _metodos in achatar_rotas(app.routes)]
 
 
 def test_nenhuma_rota_viva_leva_segmento_de_versao_na_url():
