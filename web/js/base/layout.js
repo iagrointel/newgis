@@ -20,10 +20,12 @@ export const TELAS = [
   { caminho: '/admin/tokens', chave: 'nav.tokens', privilegio: 'tokens.gerar' },
   { caminho: '/admin/log', chave: 'nav.log', privilegio: 'org.log_ver' },
   { caminho: '/admin/organizacao', chave: 'nav.organizacao', privilegio: 'org.configurar' },
+  // item L0-07-f: console da plataforma, só para o superadmin (GET /api/eu superadmin=true), fora de qualquer inquilino
+  { caminho: '/plataforma', chave: 'nav.plataforma', superadmin: true },
 ];
 
 export function telasVisiveis(usuario) {
-  return TELAS.filter((tela) => !tela.privilegio || tem(tela.privilegio, usuario));
+  return TELAS.filter((tela) => (!tela.privilegio || tem(tela.privilegio, usuario)) && (!tela.superadmin || usuario?.superadmin === true));
 }
 
 export function montarLayout({ usuario, ativo = location.pathname }) {
