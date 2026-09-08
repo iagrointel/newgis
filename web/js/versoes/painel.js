@@ -42,7 +42,7 @@ function informar(texto) {
 
 async function iniciar() {
   const r = await obter('/api/mapa/camadas');
-  const camadas = r.status === 200 ? (r.json.itens || r.json || []) : [];
+  const camadas = r.status === 200 ? (r.json.camadas || []) : [];
   const opcoes = camadas.map((c) => h('option', { value: c.id }, c.titulo || c.id));
   limpar(selCamada());
   selCamada().append(...opcoes);

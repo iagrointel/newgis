@@ -35,8 +35,8 @@ def camada_versionada(admin_api, rotas_api):
         pytest.skip("backend publicado ainda sem as rotas de versionamento por ramo (ramo wt/il213averso)")
     r = admin_api.get("/api/mapa/camadas")
     assert r.status == 200, r.text()
-    itens = r.json().get("itens", r.json()) if isinstance(r.json(), dict) else r.json()
-    alvo = next((c for c in itens if "edicao-pontos" in (c.get("titulo") or "")), None)
+    camadas = r.json().get("camadas", [])
+    alvo = next((c for c in camadas if "edicao-pontos" in (c.get("titulo") or "")), None)
     if alvo is None:
         pytest.skip("bancada ausente: rode scripts/edicao_demo_camadas.py criar")
     item_id = alvo["id"]
