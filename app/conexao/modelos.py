@@ -140,3 +140,19 @@ class CamadaDaConexaoItem(Saida):
 
 class CamadaDaConexaoSaida(Saida):
     itens: list[CamadaDaConexaoItem]
+
+
+class ConsultaSqlEntrada(Modelo):
+    """consulta SQL do cliente sobre o banco externo dele (L6-02-j): só SELECT, LIMIT obrigatório."""
+
+    sql: str = Field(min_length=1, max_length=limites.CONEXAO_PG_CONSULTA_TEXTO_MAX)
+    schema_remoto: str = Field(default="public", min_length=1, max_length=63)
+
+
+class ConsultaSqlSaida(Saida):
+    colunas: list[str]
+    linhas: list[list[Any]]
+    n: int
+    limite: int
+    tabelas: list[str]
+    tempo_ms: int

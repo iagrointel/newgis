@@ -237,3 +237,8 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# --- consulta SQL do cliente no banco externo (L6-02-j-bancos-externos; app/conexao/consulta_sql.py): LIMIT
+# obrigatório e explícito, teto de linhas e de texto; o statement_timeout é o mesmo de CONEXAO_PG_ESTATEMENT_TIMEOUT_MS
+CONEXAO_PG_CONSULTA_LINHAS_MAX = 5000
+CONEXAO_PG_CONSULTA_TEXTO_MAX = 4000

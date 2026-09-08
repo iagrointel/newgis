@@ -945,3 +945,11 @@ def _link_so_o_item(p: Preparacao, j: Any) -> None:
     assert "login" not in item["dono"] and "pode_editar" not in item and item["id"] == p.item_b["id"]
     for marca in (p.usuario_b["login"], p.grupo_b["nome"], p.papel_b["nome"], p.token_b["prefixo"], "demo2"):
         assert marca not in str(j), marca
+
+
+# ---- L6-02-j-bancos-externos: consulta SQL na conexão de B é cross-tenant puro (RLS em _carregar: 404)
+CASOS.update({
+    ("POST", "/api/conexoes/{id}/consulta"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/consulta", lambda p: {"sql": "SELECT 1 FROM x LIMIT 1"},
+    ),
+})

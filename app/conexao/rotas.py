@@ -23,9 +23,9 @@ from app.catalogo import documento as catalogo_documento
 from app.catalogo import tipos as catalogo_tipos
 from app.catalogo.comum import registrar_evento, uuid_ok
 from app.catalogo.modelos import Item as ItemSaida
+from app.conexao import consulta_sql, proveniencia, seguranca
 from app.conexao import credencial as credencial_mod
 from app.conexao import pgfdw as pgfdw_mod
-from app.conexao import proveniencia, seguranca
 from app.conexao.modelos import (
     CamadaDaConexaoSaida,
     Conexao,
@@ -33,6 +33,8 @@ from app.conexao.modelos import (
     ConexaoEntrada,
     ConexaoPagina,
     ConexaoTeste,
+    ConsultaSqlEntrada,
+    ConsultaSqlSaida,
     PublicarCamadaEntrada,
     PublicarEmMassaEntrada,
     PublicarEmMassaSaida,
@@ -595,3 +597,34 @@ def camadas_da_conexao(id: str, auth: Auth = autenticado(escopo_token="catalogo:
         for linha in linhas
     ]
     return {"itens": itens}
+
+
+@router.post("/{id}/consulta", response_model=ConsultaSqlSaida, openapi_extra=LER)
+def consulta_sql_externa(id: str, corpo: ConsultaSqlEntrada, request: Request, auth: Auth = autenticado()):
+    """Consulta SQL do cliente no banco externo dele (item L6-02-j; "query layer"): só SELECT, tabelas da lista
+    que a própria conexão enxerga, LIMIT obrigatório, conexão só-leitura com statement_timeout; tempo medido.
+    Recusa (422) ANTES de tocar o banco para tudo que não é leitura com limite."""
+    cid = uuid_ok(id, "conexao_inexistente", "conexão inexistente")
+    with db.db(auth.contexto()) as cur:
+        r = _carregar(cur, cid)
+        _pode_editar(r, auth)
+        senha = _decifrar_senha(cur, cid)
+    if not pgfdw_mod.identificador_ok(corpo.schema_remoto):
+        raise ErroAPI(422, "schema_invalido", "nome de schema remoto inválido")
+    alvo = _alvo_pg(r, corpo.schema_remoto)
+    try:
+        tabelas = {t["tabela"] for t in pgfdw_mod.listar_tabelas(alvo, senha)}
+        consulta = consulta_sql.validar(corpo.sql, tabelas, corpo.schema_remoto)
+        resultado = consulta_sql.executar(alvo, senha, consulta)
+    except consulta_sql.ConsultaRecusada as e:
+        raise ErroAPI(422, e.codigo, e.mensagem) from e
+    except pgfdw_mod.ErroFonteIndisponivel as e:
+        with db.db(auth.contexto()) as cur:
+            _marcar_saude(cur, cid, False, e.motivo)
+        raise ErroAPI(503, "fonte_indisponivel", f"não foi possível conectar à fonte: {e.motivo}") from e
+    except pgfdw_mod.ErroAlvoProibido as e:
+        raise ErroAPI(422, "alvo_proibido", f"alvo recusado: {e.motivo}", {"motivo": e.motivo}) from e
+    with db.db(auth.contexto()) as cur:
+        registrar_evento(cur, request, "conexoes/consultar", "conexao", cid,
+                         {"tabelas": resultado["tabelas"], "n": resultado["n"], "tempo_ms": resultado["tempo_ms"]})
+    return resultado
