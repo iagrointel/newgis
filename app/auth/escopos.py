@@ -13,7 +13,7 @@ ESCOPO = re.compile(
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",
     "geocodificar:usar", "multiescala:usar", "admin:inquilino",
-    rf"geocodificar:usar|amc:usar|admin:inquilino)$"
+    r"geocodificar:usar|amc:usar|admin:inquilino)$"
 )
 ESCOPOS_SEM_UUID = (
     "catalogo:ler", "camada:ler", "camada:editar", "tiles:ler", "jobs:executar", "rota:usar",

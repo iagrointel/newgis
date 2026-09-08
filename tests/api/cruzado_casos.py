@@ -940,6 +940,7 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
     # ---- motor de análise multicritério (L3-01-a-modelo-dado): modelo/conjunto têm ciclo de vida limpo
     # (limpar apaga o que a chamada de A criou); execução/resultado de B são só lidos — nenhuma rota de A
     # resolve o id de B (404 antes de tocar amc_execucao/amc_resultado; ver também o teste dedicado

@@ -84,7 +84,7 @@ def camada_poligono(env):
         con.close()
 
 
-def test_tile_com_mais_de_10000_feicoes_trunca_e_marca(leitor, camada_poligono, medida):
+def test_tile_com_mais_de_10000_feicoes_trunca_e_marca(leitor, camada_poligono, medida):  # noqa: F811 -- fixture do pytest, injetada pelo nome do parametro
     """Cláusula: "limite de 10.000 feições por tile com marcação 'truncado' no cabeçalho". z0 (mundo
     inteiro) vê as 12.500 feições da camada; a função deve cortar em 10.000. Decodificar MVT sem biblioteca
     dedicada seria frágil — a prova aqui é a mesma que a função faz internamente (COUNT vs LIMIT), com o
@@ -110,7 +110,7 @@ def test_tile_com_mais_de_10000_feicoes_trunca_e_marca(leitor, camada_poligono, 
         "ST_AsMVT do tile z0 já com o corte de 10.000 aplicado (plat.camada_tile_garantir)")
 
 
-def test_generalizacao_reduz_vertices_em_zoom_baixo(leitor, camada_poligono, medida):
+def test_generalizacao_reduz_vertices_em_zoom_baixo(leitor, camada_poligono, medida):  # noqa: F811 -- fixture do pytest, injetada pelo nome do parametro
     """Cláusula: "generalização por zoom declarada (ST_SimplifyPreserveTopology com tolerância = resolução
     do tile/2 para z < 12)". Mede a MESMA fórmula que a função usa (não decodifica o MVT): tolerância em
     z=4 é maior que em z=13 (z<12 simplifica, z>=12 não)."""
@@ -132,7 +132,7 @@ def test_generalizacao_reduz_vertices_em_zoom_baixo(leitor, camada_poligono, med
         "fórmula (largura do tile em 3857)/4096/2 nos dois zooms")
 
 
-def test_item_da_tabela_acha_dono_correto(leitor, camadas, medida):
+def test_item_da_tabela_acha_dono_correto(leitor, camadas, medida):  # noqa: F811 -- fixture do pytest, injetada pelo nome do parametro
     """`plat.item_da_tabela` (migração 20260907T0213, achado do adversário): dado o nome da tabela `c_<hex>`,
     devolve o item e o inquilino DONO — é o que fecha o buraco de o item vir de query param do cliente."""
     a = camadas["demo"]
@@ -147,7 +147,7 @@ def test_item_da_tabela_acha_dono_correto(leitor, camadas, medida):
         "item_da_tabela_resolve_dono", True, "bool", "SELECT * FROM plat.item_da_tabela(<tabela de A>)")
 
 
-def test_item_da_tabela_tabela_inexistente_devolve_vazio(leitor):
+def test_item_da_tabela_tabela_inexistente_devolve_vazio(leitor):  # noqa: F811 -- fixture do pytest, injetada pelo nome do parametro
     with leitor.cursor() as cur:
         cur.execute("SELECT item_id, tenant_id FROM plat.item_da_tabela(%s)", ("c_" + "0" * 16,))
         assert cur.fetchone() is None
@@ -159,7 +159,7 @@ def test_item_da_tabela_tabela_inexistente_devolve_vazio(leitor):
 
 
 @pytest.fixture
-def cliente_verificacao(instalador, monkeypatch):
+def cliente_verificacao(instalador, monkeypatch):  # noqa: F811 -- fixture do pytest, injetada pelo nome do parametro
     """TestClient do FastAPI (app.main:app real, já com rotas_tiles montado) com `app.db_leitor.settings`
     trocado por um objeto que só tem PLAT_DSN_LEITOR apontando para o credential que `instalador` já gerou
     — `Settings` é `frozen=True` (não dá para setattr no campo), então troca-se o NOME do módulo, não o
@@ -177,7 +177,7 @@ def cliente_verificacao(instalador, monkeypatch):
         yield client
 
 
-def test_verificar_sem_token_401(cliente_verificacao, camadas):
+def test_verificar_sem_token_401(cliente_verificacao, camadas):  # noqa: F811 -- fixture do pytest, injetada pelo nome do parametro
     a = camadas["demo"]
     r = cliente_verificacao.get(
         "/internal/tiles/verificar", headers={"X-Original-Uri": f"/tiles/{a['funcao']}/8/1/1"}
@@ -186,7 +186,7 @@ def test_verificar_sem_token_401(cliente_verificacao, camadas):
     assert r.headers["x-motivo-recusa"] == "token_ausente"
 
 
-def test_verificar_token_largo_de_outro_inquilino_recusa(cliente_verificacao, camadas):
+def test_verificar_token_largo_de_outro_inquilino_recusa(cliente_verificacao, camadas):  # noqa: F811 -- fixture do pytest, injetada pelo nome do parametro
     """O achado do adversário: token AMPLO ('camada:ler', sem uuid) do inquilino B, mas apontando (pela
     URL) para a tabela do inquilino A — tem de recusar, nunca autenticar como se fosse de A."""
     a, b = camadas["demo"], camadas["demo2"]
@@ -199,7 +199,7 @@ def test_verificar_token_largo_de_outro_inquilino_recusa(cliente_verificacao, ca
     assert r.headers["x-motivo-recusa"] == "tile_de_outro_inquilino"
 
 
-def test_verificar_token_do_proprio_dono_passa(cliente_verificacao, camadas):
+def test_verificar_token_do_proprio_dono_passa(cliente_verificacao, camadas):  # noqa: F811 -- fixture do pytest, injetada pelo nome do parametro
     a = camadas["demo"]
     r = cliente_verificacao.get(
         "/internal/tiles/verificar",
@@ -209,7 +209,7 @@ def test_verificar_token_do_proprio_dono_passa(cliente_verificacao, camadas):
     assert r.status_code == 204, r.text
 
 
-def test_verificar_tabela_nao_catalogada_recusa(cliente_verificacao, camadas):
+def test_verificar_tabela_nao_catalogada_recusa(cliente_verificacao, camadas):  # noqa: F811 -- fixture do pytest, injetada pelo nome do parametro
     a = camadas["demo"]
     r = cliente_verificacao.get(
         "/internal/tiles/verificar",
