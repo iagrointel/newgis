@@ -47,6 +47,15 @@ class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
             query = self._reescrever(query)
         return super().execute(query, *args, **kwargs)
 
+    def executemany(self, query, args_list, *args, **kwargs):
+        # executemany NÃO passa pelo execute do psycopg2 (laço próprio em C): sem esta sobrecarga, todo
+        # executemany com `plat.` literal ia bater no schema de produção dentro de trilha/homolog —
+        # 42501 "permission denied for schema plat" mascarado de 403 (achado da suíte cruzada, item
+        # L0-08-a-oidc; a rota POST /api/papeis era a única consumidora de executemany do app).
+        if isinstance(query, str):
+            query = self._reescrever(query)
+        return super().executemany(query, args_list, *args, **kwargs)
+
     def callproc(self, procname, *args, **kwargs):
         if isinstance(procname, str):
             procname = self._reescrever(procname)
