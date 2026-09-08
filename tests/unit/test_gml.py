@@ -90,9 +90,6 @@ def test_toda_geometria_tem_gml_id(cache_presente):
         ITEM, _geojson({"type": "MultiPolygon", "coordinates": [
             [[[-49.1, -27.1], [-49.0, -27.1], [-49.0, -27.0], [-49.1, -27.1]]]]}),
         META, gml.CRS_PADRAO, True, "fid", 1, "http://exemplo/schema")
-    for elemento in re.findall(r"<gml:(Point|LineString|Polygon|MultiSurface|MultiCurve|MultiPoint)\b[^>]*",
-                                doc):
-        pass
     for trecho in re.findall(r"<gml:(?:Point|LineString|Polygon|MultiSurface|MultiCurve|MultiPoint)[^>]*>",
                               doc):
         assert "gml:id=" in trecho, trecho
