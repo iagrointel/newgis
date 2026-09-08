@@ -9,7 +9,9 @@ from tests.e2e.apoio import credenciais
 
 @pytest.fixture(scope="session")
 def browser_context_args(browser_context_args):
-    return {**browser_context_args, "locale": "pt-BR", "viewport": {"width": 1280, "height": 800}}
+    # ignore_https_errors: bancada de trilha com cert autoassinado (sem efeito com certificado de verdade)
+    return {**browser_context_args, "locale": "pt-BR", "viewport": {"width": 1280, "height": 800},
+            "ignore_https_errors": True}
 
 
 @pytest.fixture(scope="session")
