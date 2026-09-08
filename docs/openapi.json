@@ -10987,6 +10987,170 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/analise3d/visada": {
+   "post": {
+    "tags": [
+     "analise3d"
+    ],
+    "summary": "Visada",
+    "operationId": "visada_api_analise3d_visada_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VisadaEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.criar"
+   }
+  },
+  "/api/analise3d/viewshed": {
+   "post": {
+    "tags": [
+     "analise3d"
+    ],
+    "summary": "Viewshed",
+    "operationId": "viewshed_api_analise3d_viewshed_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ViewshedEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.criar"
+   }
+  },
+  "/api/analise3d/perfil": {
+   "post": {
+    "tags": [
+     "analise3d"
+    ],
+    "summary": "Perfil",
+    "operationId": "perfil_api_analise3d_perfil_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PerfilEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.criar"
+   }
+  },
+  "/api/analise3d/sombra": {
+   "post": {
+    "tags": [
+     "analise3d"
+    ],
+    "summary": "Sombra",
+    "operationId": "sombra_api_analise3d_sombra_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SombraEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.criar"
+   }
   }
  },
  "components": {
@@ -16161,6 +16325,66 @@
     ],
     "title": "PedidoRota"
    },
+   "PerfilEntrada": {
+    "properties": {
+     "terreno": {
+      "$ref": "#/components/schemas/Terreno"
+     },
+     "ponto_a": {
+      "prefixItems": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "number"
+       }
+      ],
+      "type": "array",
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Ponto A"
+     },
+     "ponto_b": {
+      "prefixItems": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "number"
+       }
+      ],
+      "type": "array",
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Ponto B"
+     },
+     "n_amostras": {
+      "type": "integer",
+      "maximum": 20000.0,
+      "minimum": 2.0,
+      "title": "N Amostras"
+     },
+     "salvar_item": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/SalvarItemEntrada"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "terreno",
+     "ponto_a",
+     "ponto_b",
+     "n_amostras"
+    ],
+    "title": "PerfilEntrada"
+   },
    "Privilegio": {
     "properties": {
      "nome": {
@@ -16799,6 +17023,43 @@
     ],
     "title": "SMTPTestarSaida"
    },
+   "SalvarItemEntrada": {
+    "properties": {
+     "titulo": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 1,
+      "title": "Titulo"
+     },
+     "resumo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2048
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Resumo"
+     },
+     "tags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 50,
+      "title": "Tags"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "titulo"
+    ],
+    "title": "SalvarItemEntrada",
+    "description": "O que o usuário escolhe para o item do catálogo; o `dados` do item é montado pelo servidor."
+   },
    "SaudeHistoricoItem": {
     "properties": {
      "verificada_em": {
@@ -17017,6 +17278,118 @@
      "atual"
     ],
     "title": "Sessao"
+   },
+   "SolidoEntrada": {
+    "properties": {
+     "poligono": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Poligono",
+      "description": "GeoJSON Polygon no SRID declarado"
+     },
+     "altura_m": {
+      "type": "number",
+      "maximum": 10000.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Altura M"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "poligono",
+     "altura_m"
+    ],
+    "title": "SolidoEntrada"
+   },
+   "SombraEntrada": {
+    "properties": {
+     "srid": {
+      "type": "integer",
+      "title": "Srid",
+      "description": "SIRGAS 2000 UTM sul (31965-31985), a mesma faixa do terreno"
+     },
+     "data_hora": {
+      "type": "string",
+      "title": "Data Hora",
+      "description": "instante ISO 8601 com fuso (ex.: 2026-12-21T12:00:00-03:00)"
+     },
+     "solidos": {
+      "items": {
+       "$ref": "#/components/schemas/SolidoEntrada"
+      },
+      "type": "array",
+      "maxItems": 500,
+      "minItems": 1,
+      "title": "Solidos"
+     },
+     "salvar_item": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/SalvarItemEntrada"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "srid",
+     "data_hora",
+     "solidos"
+    ],
+    "title": "SombraEntrada"
+   },
+   "Terreno": {
+    "properties": {
+     "srid": {
+      "type": "integer",
+      "title": "Srid",
+      "description": "SIRGAS 2000 UTM sul (31965-31985): zona do terreno"
+     },
+     "x0": {
+      "type": "number",
+      "title": "X0",
+      "description": "oeste da grade, no SRID, em metros"
+     },
+     "y0": {
+      "type": "number",
+      "title": "Y0",
+      "description": "sul da grade, no SRID, em metros"
+     },
+     "celula_m": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Celula M",
+      "description": "lado da célula, em metros"
+     },
+     "alturas": {
+      "items": {
+       "items": {
+        "type": "number"
+       },
+       "type": "array"
+      },
+      "type": "array",
+      "minItems": 1,
+      "title": "Alturas",
+      "description": "linhas de NORTE para SUL"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "srid",
+     "x0",
+     "y0",
+     "celula_m",
+     "alturas"
+    ],
+    "title": "Terreno",
+    "description": "Grade de alturas do terreno, em SRID projetado (metros)."
    },
    "TipoItem": {
     "properties": {
@@ -17993,6 +18366,192 @@
      "corpo"
     ],
     "title": "VersaoCompleta"
+   },
+   "ViewshedEntrada": {
+    "properties": {
+     "terreno": {
+      "$ref": "#/components/schemas/Terreno"
+     },
+     "observador": {
+      "prefixItems": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "number"
+       }
+      ],
+      "type": "array",
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Observador"
+     },
+     "altura_observador_m": {
+      "type": "number",
+      "maximum": 1000000.0,
+      "minimum": -1000000.0,
+      "title": "Altura Observador M",
+      "default": 2.0
+     },
+     "altura_alvo_m": {
+      "type": "number",
+      "maximum": 1000000.0,
+      "minimum": 0.0,
+      "title": "Altura Alvo M",
+      "description": "altura do objeto a ver (gdal_viewshed -tz)",
+      "default": 0.0
+     },
+     "distancia_max_m": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Distancia Max M",
+      "description": "gdal_viewshed -md; o raster sai recortado à janela"
+     },
+     "coef_curvatura": {
+      "type": "number",
+      "maximum": 1.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Coef Curvatura",
+      "description": "gdal_viewshed -cc; 0.85714 = refração atmosférica padrão",
+      "default": 0.85714
+     },
+     "modo": {
+      "type": "string",
+      "enum": [
+       "normal",
+       "dem",
+       "ground"
+      ],
+      "title": "Modo",
+      "default": "normal"
+     },
+     "visivel_valor": {
+      "type": "integer",
+      "maximum": 255.0,
+      "minimum": 0.0,
+      "title": "Visivel Valor",
+      "default": 255
+     },
+     "invisivel_valor": {
+      "type": "integer",
+      "maximum": 255.0,
+      "minimum": 0.0,
+      "title": "Invisivel Valor",
+      "default": 128
+     },
+     "fora_de_alcance_valor": {
+      "type": "integer",
+      "maximum": 255.0,
+      "minimum": 0.0,
+      "title": "Fora De Alcance Valor",
+      "default": 0
+     },
+     "salvar_item": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/SalvarItemEntrada"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "terreno",
+     "observador"
+    ],
+    "title": "ViewshedEntrada"
+   },
+   "VisadaEntrada": {
+    "properties": {
+     "terreno": {
+      "$ref": "#/components/schemas/Terreno"
+     },
+     "observador": {
+      "prefixItems": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "number"
+       }
+      ],
+      "type": "array",
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Observador"
+     },
+     "alvo": {
+      "prefixItems": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "number"
+       }
+      ],
+      "type": "array",
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Alvo"
+     },
+     "altura_observador_m": {
+      "type": "number",
+      "maximum": 1000000.0,
+      "minimum": -1000000.0,
+      "title": "Altura Observador M",
+      "description": "altura do observador SOBRE o terreno; negativa = abaixo (422)",
+      "default": 2.0
+     },
+     "altura_alvo_m": {
+      "type": "number",
+      "maximum": 1000000.0,
+      "minimum": -1000000.0,
+      "title": "Altura Alvo M",
+      "default": 0.0
+     },
+     "passo_m": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Passo M",
+      "description": "passo máximo da amostragem; padrão = metade da célula"
+     },
+     "salvar_item": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/SalvarItemEntrada"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "terreno",
+     "observador",
+     "alvo"
+    ],
+    "title": "VisadaEntrada"
    },
    "app__auth__modelos__LoteEntrada": {
     "properties": {
