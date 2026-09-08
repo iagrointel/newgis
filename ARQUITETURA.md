@@ -537,7 +537,10 @@ tabela `versao_migracao`) e da 002 (9,5 s) nesta instância compartilhada com di
 
 ### 7.1 `scripts/` (ferramentas de operação)
 
-`rotacionar_segredo.sh` (item L7-19, já existia) e, do turno 3 (item L7-16, ADR 0007 seção 2-3):
+`plat` (dispatcher) + `segredo_rotacionar.py` (item L7-19: `plat segredo rotacionar <nome>` para os 5
+segredos — `PLAT_SECRET` com dupla-chave, `PLAT_DSN`, `PLAT_DSN_WORKER`, `PLAT_GARAGE_ADMIN_TOKEN`,
+`PLAT_GARAGE_CHAVE_S3:<slug>`; substitui o antigo `rotacionar_segredo.sh`, que só cobria 2 dos 5 —
+detalhe em `docs/SEGURANCA.md` §1-2 e `docs/RUNBOOKS/segredos.md`) e, do turno 3 (item L7-16, ADR 0007 seção 2-3):
 `assinar_pacote.sh` + `verificar_pacote.sh`, finos wrappers de `plat_assinatura.py` (Ed25519 via
 `cryptography`). Assinar roda fora do appliance, gera o par de chaves na 1ª execução (privada fora do
 repositório, pública registrada em `deploy/chaves_publicas_release.txt`); verificar roda no appliance, sem

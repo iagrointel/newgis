@@ -27,5 +27,11 @@ if [ -r "$SECRETS_DIR/PLAT_DSN_WORKER" ]; then
   PLAT_DSN_WORKER=$(cat "$SECRETS_DIR/PLAT_DSN_WORKER")
   export PLAT_DSN_WORKER
 fi
+# PLAT_DSN (item L7-19): settings.py exige a chave sempre, mesmo no worker (que só USA PLAT_DSN_WORKER para
+# mudar estado de job) — sem isto o import de app.settings falha na partida com "chave obrigatória ausente".
+if [ -r "$SECRETS_DIR/PLAT_DSN" ]; then
+  PLAT_DSN=$(cat "$SECRETS_DIR/PLAT_DSN")
+  export PLAT_DSN
+fi
 
 exec setpriv --reuid=plat --regid=plat --init-groups -- venv/bin/python -m app.jobs.worker

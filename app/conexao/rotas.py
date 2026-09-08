@@ -40,6 +40,7 @@ from app.conexao.modelos import (
     TabelasExternasSaida,
 )
 from app.erros import ErroAPI
+from app.seguranca_rotacao import decifrar_com_rotacao
 from app.settings import settings
 
 router = APIRouter(prefix="/api/conexoes", tags=["conexoes"])
@@ -247,9 +248,14 @@ def testar(id: str, request: Request, auth: Auth = autenticado()):
             cur.execute("SELECT credencial_cifrada FROM plat.conexao WHERE id = %s::uuid", (cid,))
             bruta = cur.fetchone()["credencial_cifrada"]
         try:
-            senha_ou_token = credencial_mod.decifrar(bruta, settings.PLAT_SECRET)
-        except ValueError:
-            senha_ou_token = None  # PLAT_SECRET trocado ou dado corrompido: testa sem credencial, nunca quebra a rota
+            # dupla-chave de 24 h da rotação de PLAT_SECRET (item L7-19): a credencial cifrada antes da troca
+            # ainda decifra com o valor anterior.
+            senha_ou_token = decifrar_com_rotacao(
+                credencial_mod.decifrar, bruta, settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR
+            )
+        except Exception:  # noqa: BLE001 — PLAT_SECRET (e ANTERIOR) trocados ou dado corrompido: testa sem
+            # credencial, nunca quebra a rota (InvalidTag do AEAD não é ValueError — abrangido de propósito)
+            senha_ou_token = None
 
     if r["tipo"] == "postgres_fdw":
         host, porta, banco = pgfdw_mod.alvo_da_url(url)

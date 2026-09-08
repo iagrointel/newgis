@@ -978,7 +978,7 @@ Curadoria (evidência, não suposição): das 68 fontes licenciadas, uma varredu
 `information_schema.columns` nas 219 tabelas canônicas ligadas a elas (contra um padrão amplo de nome de
 coluna — cpf/cnpj/nome/email/telefone/endereço/titular/...) achou 114 colunas suspeitas; lidas uma a uma, a
 esmagadora maioria é nome de LUGAR (`zona_nome`, `nome_municipio`), CNPJ de FUNDO (não de pessoa física) ou
-endereço de IMÓVEL já público por natureza (leilão/edital). Um caso quase enganou: `cbre.cad_gu_face_pgv`
+endereço de IMÓVEL já público por natureza (leilão/edital). Um caso quase enganou: `<frente>.cad_gu_face_pgv`
 tem `telefone`/`telefone_p`, mas são FLAGS de infraestrutura de rua (a rua tem rede telefônica?), não contato
 de pessoa. O único achado real: **`onr`** (ONR/matrículas) — a tabela ingerida não guarda nome do titular,
 mas `url_mat` aponta para o visualizador de matrícula do cartório, que guarda. Marcada `risco_pii = true`.
