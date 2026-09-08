@@ -6,3 +6,6 @@
 ^BRIEF_WORKTREES\.md:[0-9]+:[0-9]+\. Sem placeholder
 ^web/js/camadas\.js:[0-9]+:.*placeholder: '(0|24)'
 # (08/09) atributo HTML de dica numérica no campo de zoom do L2-01; não é texto de enchimento. Dez ramos da fila carregam a linha.
+# (08/09) a palavra METODOLOGIA contém as quatro letras de TODO no meio (ME-TODO-LOGIA); não é marcador de
+# código morto, é o nome do documento de método da casa citado no ADR dos extratores (item L3-01-c/d).
+^docs/adr/0017-extratores-raster-e-vetor\.md:[0-9]+:.*METODOLOGIA
