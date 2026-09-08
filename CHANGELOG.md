@@ -3,6 +3,30 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L7-04-d-videos-por-tarefa: 11 vídeos de tarefa gravados da sessão real, narração piper, legendas pt/en/es, quadro confrontado com a tela real)
+
+`make videos` executa cada roteiro (`scripts/videos/roteiros.py`, 11 tarefas: saúde, entrar, conta,
+usuários, grupos, papéis, tokens, log, tarefas, mapa, conexões) com Playwright contra a instalação
+viva, grava o webm da própria sessão e o ffmpeg monta o mp4 h264+aac com a narração sintética pt-BR
+(voz piper livre, binário fora do git em `~/tools/piper`, ausência falha com mensagem escrita — nunca
+vídeo mudo passando por completo). A legenda WebVTT nasce da janela de tempo MEDIDA por relógio
+compartilhado com o gravador e só é registrada depois de a ação do passo acontecer — a resposta
+estrutural à refutação "passo que não existe na versão instalada", porque execução interrompida não
+gera janela nem vídeo. Cada tarefa declara a seção de `MANUAL.md` a que corresponde; gerar e
+`--validar` reprovam se a seção sair do manual, a página `/videos` mostra a seção em cada cartão e a
+seção 22 do `MANUAL.md` aponta de volta (laço manual ↔ vídeo fechado sem depender da tela da
+L7-04-a, que segue pendente como dependência). Regeneração por versão menor: o manifesto guarda a
+versão do produto e sha256 de cada mp4; `--forcar` regenera, `--validar` só confere (11 vídeos,
+vídeo+áudio por ffprobe, 3 legendas com marca de tempo, duração ≤ 180 s). Entrega por
+`GET /videos/arquivo/{caminho}` com sessão e lista fechada de sufixos; `web/videos/` fora do git.
+E2e (`tests/e2e/test_videos.py`, 3/3 verdes contra a bancada): página lista o manifesto com manual e
+3 legendas por cartão; reprodução no navegador com duração ≤ 180 s e cues carregando; quadro do
+vídeo capturado por canvas e confrontado com a tela real NO MESMO estado de sessão (a 1ª versão
+comparava com a página logada — prova fraca, corrigida), diferença média 0,20 num teto de 24,0
+(`tests/e2e/capturas/L7-04-d-videos-por-tarefa_*.png`). Medidas: 11 vídeos, maior duração 17,7 s,
+4,6 MB, carga 1 min 5,29, RAM livre 7,0 GB (`tests/medidas/L7-04-d-videos-por-tarefa.json`, comando
+`make videos`). ADR `docs/adr/20260908T2130-videos-por-tarefa.md`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
