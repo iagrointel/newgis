@@ -8629,6 +8629,145 @@
     "x-privilegio": "publico"
    }
   },
+  "/api/itens/{id}/site": {
+   "get": {
+    "tags": [
+     "site"
+    ],
+    "summary": "Ver Site",
+    "operationId": "ver_site_api_itens__id__site_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "anyOf": [
+          {
+           "$ref": "#/components/schemas/Site"
+          },
+          {
+           "type": "null"
+          }
+         ],
+         "title": "Response Ver Site Api Itens  Id  Site Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "put": {
+    "tags": [
+     "site"
+    ],
+    "summary": "Publicar Site",
+    "operationId": "publicar_site_api_itens__id__site_put",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SiteEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Site"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   },
+   "delete": {
+    "tags": [
+     "site"
+    ],
+    "summary": "Despublicar Site",
+    "operationId": "despublicar_site_api_itens__id__site_delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
   "/api/itens/{id}/pacote": {
    "get": {
     "tags": [
@@ -10643,15 +10782,180 @@
     "summary": "Geocodificar",
     "operationId": "geocodificar_api_geocodificar_post",
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/PedidoGeocodificar"
        }
       }
-     },
-     "required": true
+     }
     },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "get": {
+    "tags": [
+     "geocodificador"
+    ],
+    "summary": "Geocodificar Get",
+    "description": "Mesma busca do POST, por parâmetro de consulta.\n\nExiste porque geocodificar é LEITURA e o verbo certo para leitura é GET: a caixa de pesquisa do\nvisualizador de mapa (item L2-01-mapa-web) não deve passar pela porta de escrita sob cookie, que\nexige a checagem de origem do ADR 0002 seção 5.3 (e falha, corretamente, em qualquer ambiente cuja\nURL pública não seja a mesma do navegador). O POST continua valendo, com o mesmo contrato.",
+    "operationId": "geocodificar_get",
+    "parameters": [
+     {
+      "name": "endereco",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 300
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Endereco"
+      }
+     },
+     {
+      "name": "logradouro",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 200
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Logradouro"
+      }
+     },
+     {
+      "name": "numero",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 999999,
+         "minimum": 0
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Numero"
+      }
+     },
+     {
+      "name": "bairro",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 120
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Bairro"
+      }
+     },
+     {
+      "name": "municipio",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 120
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Municipio"
+      }
+     },
+     {
+      "name": "uf",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 2,
+         "maxLength": 2
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Uf"
+      }
+     },
+     {
+      "name": "cep",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 9
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Cep"
+      }
+     },
+     {
+      "name": "max_locations",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 50,
+       "minimum": 1,
+       "default": 10,
+       "title": "Max Locations"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "Successful Response",
@@ -11603,6 +11907,112 @@
     },
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/mapa/camadas": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Listar Camadas",
+    "description": "Camadas vetoriais que a sessão pode ler (a RLS de plat.item decide), prontas para o mapa.",
+    "operationId": "listar_camadas_api_mapa_camadas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Obter Camada",
+    "operationId": "obter_camada_api_mapa_camadas__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}/tilejson": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Tilejson",
+    "operationId": "tilejson_api_mapa_camadas__id__tilejson_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    }
   }
  },
@@ -18114,6 +18524,94 @@
      "atual"
     ],
     "title": "Sessao"
+   },
+   "Site": {
+    "properties": {
+     "item_id": {
+      "type": "string",
+      "title": "Item Id"
+     },
+     "tenant_slug": {
+      "type": "string",
+      "title": "Tenant Slug"
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "indexavel": {
+      "type": "boolean",
+      "title": "Indexavel"
+     },
+     "versao_publicada": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Versao Publicada"
+     },
+     "publicado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Publicado Em"
+     },
+     "atualizado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atualizado Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "item_id",
+     "tenant_slug",
+     "url",
+     "indexavel",
+     "versao_publicada",
+     "publicado_em",
+     "atualizado_em"
+    ],
+    "title": "Site"
+   },
+   "SiteEntrada": {
+    "properties": {
+     "indexavel": {
+      "type": "boolean",
+      "title": "Indexavel",
+      "default": false
+     },
+     "versao": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Versao"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "SiteEntrada"
    },
    "TipoItem": {
     "properties": {
