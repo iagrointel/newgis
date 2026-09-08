@@ -26,6 +26,10 @@ SCHEMA_TRABALHO_PADRAO = "plat_trabalho"
 # sem espaço entre o parêntese e a aspa (conferido: as 16+12 ocorrências da árvore batem 1 a 1).
 _SCHEMA = re.compile(r"(?<!current_setting\(')(?<!set_config\(')\bplat\b")
 _TRABALHO = re.compile(r"\bplat_trabalho\b")
+# 08/09 (achado do L3-01-g): as views publicadas do acervo (L6-01-b) vivem em `plat_acervo`, que nas bases por
+# trilha e em homologação vira `<schema>_acervo` (app/acervo/publicacao.py); sem esta regra a migração criava
+# o schema GLOBAL e os testes do acervo erravam na preparação em toda trilha nova.
+_ACERVO = re.compile(r"\bplat_acervo\b")
 
 
 def esquemas_do_ambiente() -> tuple[str, str]:
@@ -50,6 +54,7 @@ def reescrever_schema(sql: str, schema: str = SCHEMA_PADRAO, schema_trabalho: st
     """Troca todo `plat`/`plat_trabalho` que é schema (não GUC) pelo nome do ambiente atual. No-op
     quando os dois já são o padrão — é isso que garante custo zero em produção."""
     if schema != SCHEMA_PADRAO:
+        sql = _ACERVO.sub(f"{schema}_acervo", sql)  # antes de `plat` (o \b não separa `plat_acervo`)
         sql = _SCHEMA.sub(schema, sql)
     if schema_trabalho != SCHEMA_TRABALHO_PADRAO:
         sql = _TRABALHO.sub(schema_trabalho, sql)
