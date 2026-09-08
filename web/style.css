@@ -272,3 +272,21 @@ body.instrumento dd, body.instrumento .mono, body.instrumento .tabela td.mono, b
 #upload-progresso::-webkit-progress-value { background: var(--acento); border-radius: 999px; }
 #upload-rotulo-progresso { font-family: var(--mono); font-size: .85rem; color: var(--fraco); }
 .upload-ok { color: var(--ok); }
+
+/* --- chamados de suporte (item L7-13-a-chamados): banner de resposta na lateral, conversa do chamado no
+   diálogo e o formulário "reportar problema" (as regras de .campo ficam escopadas para não mexer em .form) */
+.banner-chamados { margin-bottom: var(--e2); }
+.banner-chamados a { display: block; padding: var(--e2) var(--e3); border: 1px solid var(--info); border-radius: var(--raio); color: var(--info); font-size: .85rem; text-decoration: none; }
+.banner-chamados a:hover { background: var(--painel); }
+.formulario { display: grid; gap: var(--e3); }
+.formulario .campo, .dialogo-corpo .campo { display: grid; gap: var(--e1); }
+.formulario .campo > span, .dialogo-corpo .campo > span { color: var(--fraco); font-size: .85rem; }
+.formulario .campo-linha { display: flex; gap: var(--e2); align-items: center; color: var(--texto); }
+.conversa { display: grid; gap: var(--e2); margin: var(--e2) 0; }
+.comentario { border: 1px solid var(--borda); border-radius: var(--raio); padding: var(--e2) var(--e3); }
+.comentario.origem-operador { border-left: 3px solid var(--info); }
+.comentario.origem-cliente { border-left: 3px solid var(--borda-forte); }
+.comentario p { margin: 0; }
+.comentario p + p { margin-top: var(--e1); }
+.anexos { margin: var(--e2) 0; padding-left: 1.2rem; }
+.anexos li { margin-bottom: var(--e1); }
