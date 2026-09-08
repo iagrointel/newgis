@@ -63,6 +63,18 @@
    "valor": 742.0,
    "unidade": "ms",
    "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  },
+  "cooperativa_inteira_nao_medida": {
+   "valor": {
+    "tentado": "duas safras da cooperativa inteira (5.481 trafos, 27.587 UCs por safra)",
+    "resultado": "nao medido: 45 min sem terminar a importacao da primeira safra",
+    "onde_parou": "INSERT INTO plat.rede_associacao (pendencia de desempenho do item L4-01-c: associacao linha a linha)",
+    "carga_1min": 5.78,
+    "medido_em": "2026-09-08T11:47:00",
+    "observacao": "o calculo da serie e SQL de conjunto e levou 1,4 s no recorte real; o gargalo e do importador"
+   },
+   "unidade": "veredito",
+   "comando": "venv/bin/python (script fora da suite) com obter_extrato()/obter_extrato_anterior()"
   }
  },
  "gerado_em": "2026-09-08T11:14:08Z",
