@@ -1,0 +1,125 @@
+/* plat — temas de marca (item L5-10-temas-marca). Duas funções:
+
+   1. REMAPEAMENTO ESCOPADO a `.tema-aplicado` (o nó que recebe os tokens por style.setProperty — a raiz
+      da execução em /executar e a pré-visualização em /temas): as variáveis genéricas do painel
+      (--fundo/--painel/--borda/--texto/--fraco/--acento/--raio/--e1..--e6) passam a ler primeiro o token
+      do tema (`--t-*`, nomes definidos por app/temas.py::css_variaveis e espelhados em
+      web/js/temas/temas.js::variaveis) e só na ausência caem no token da plataforma (--i-*). Assim TODA
+      superfície do executor (.exec-*) pinta com o tema sem uma regra nova por componente, e um tema
+      PARCIAL (só alguns tokens) é sobreposição de verdade — o que não veio no tema herda a plataforma.
+   2. Widgets do editor /temas (cartões de tema, slots de token, paleta de arrasto, tabela de pares de
+      contraste, seletor flutuante do executor). */
+
+.tema-aplicado {
+  --fundo: var(--t-fundo, var(--i-fundo, #f4f5f7));
+  --fundo-2: var(--t-fundo, var(--i-fundo, #f4f5f7));
+  --painel: var(--t-superficie, var(--i-superficie, #ffffff));
+  --painel-2: var(--t-superficie, var(--i-superficie-2, #f4f5f7));
+  --borda: var(--t-borda, var(--i-linha, #c9d1d9));
+  --borda-forte: var(--t-borda, var(--i-linha, #c9d1d9));
+  --texto: var(--t-texto, var(--i-texto, #1c2430));
+  --fraco: var(--t-texto-suave, var(--i-texto-fraco, #4e5d6e));
+  --ok: var(--t-sucesso, var(--i-sucesso, #1a6b3c));
+  --falha: var(--t-erro, var(--i-erro, #a12622));
+  --acento: var(--t-acento, var(--i-acento, #0b5cad));
+  --acento-texto: var(--t-texto-sobre-acento, var(--i-acento-texto, #ffffff));
+  --raio: var(--t-raio-medio, var(--i-raio, 4px));
+  --e1: var(--t-espacamento-pequeno, var(--i-e1, .25rem));
+  --e2: var(--t-espacamento-pequeno, var(--i-e2, .5rem));
+  --e3: var(--t-espacamento-medio, var(--i-e3, .75rem));
+  --e4: var(--t-espacamento-grande, var(--i-e4, 1rem));
+  --e5: var(--t-espacamento-grande, var(--i-e5, 1.5rem));
+  --e6: var(--t-espacamento-grande, var(--i-e6, 2rem));
+
+  background: var(--t-fundo, var(--i-fundo, #f4f5f7));
+  color: var(--t-texto, var(--i-texto, #1c2430));
+  font-family: var(--t-familia-texto, var(--i-fonte-texto, system-ui, sans-serif));
+}
+.tema-aplicado .exec-cabecalho, .tema-aplicado .exec-rodape {
+  font-family: var(--t-familia-titulo, var(--i-fonte-titulo, inherit));
+  background: var(--t-superficie, var(--i-superficie, #ffffff));
+}
+.tema-aplicado .exec-menu a[aria-current="page"] {
+  background: var(--t-acento, var(--i-acento, #0b5cad));
+  color: var(--t-texto-sobre-acento, var(--i-acento-texto, #ffffff));
+}
+.tema-aplicado .exec-janela-botao, .tema-aplicado .exec-acordeao-cabecalho,
+.tema-aplicado .exec-painel-lateral-alternar {
+  background: var(--t-superficie, var(--i-superficie, #ffffff));
+  color: var(--t-texto, var(--i-texto, #1c2430));
+  border: 1px solid var(--t-borda, var(--i-linha, #c9d1d9));
+  border-radius: var(--t-raio-pequeno, var(--i-raio, 2px));
+}
+.tema-aplicado .exec-janela-modal, .tema-aplicado .exec-janela-ancorada,
+.tema-aplicado .exec-painel-fixo, .tema-aplicado .exec-painel-lateral {
+  background: var(--t-superficie, var(--i-superficie, #ffffff));
+  box-shadow: var(--t-sombra-nivel-2, var(--i-sombra, none));
+}
+.tema-aplicado .exec-mapa, .tema-aplicado .exec-tabela {
+  background: var(--t-superficie, var(--i-superficie, #ffffff));
+  border: 1px dashed var(--t-borda, var(--i-linha, #c9d1d9));
+}
+
+/* ---------------------------------------------------------------- seletor do executor (flutuante, canto
+   inferior direito; pertence ao CROMO da plataforma, não ao app executado — por isso fora de .tema-aplicado
+   e com os tokens da plataforma direto) */
+.tema-seletor {
+  position: fixed;
+  right: var(--e3, .75rem);
+  bottom: var(--e3, .75rem);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: var(--e2, .5rem);
+  padding: var(--e2, .5rem) var(--e3, .75rem);
+  background: var(--painel, #12181a);
+  color: var(--texto, #e7ece9);
+  border: 1px solid var(--borda, #263133);
+  border-radius: var(--raio, 4px);
+  box-shadow: var(--sombra, 0 2px 12px rgba(0, 0, 0, .3));
+  font-size: .8rem;
+}
+.tema-seletor label { color: var(--fraco, #8fa19c); }
+.tema-seletor select {
+  max-width: 180px;
+  background: var(--fundo-2, #1a2224);
+  color: var(--texto, #e7ece9);
+  border: 1px solid var(--borda, #263133);
+  border-radius: var(--raio, 4px);
+  padding: 2px var(--e2, .5rem);
+}
+
+/* ---------------------------------------------------------------- editor /temas */
+.tema-cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--e3); }
+.tema-cartao { text-align: left; cursor: pointer; display: grid; gap: var(--e2); padding: var(--e3); background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); color: inherit; font: inherit; }
+.tema-cartao[aria-pressed="true"] { border-color: var(--acento); outline: 2px solid var(--acento); outline-offset: 1px; }
+.tema-cartao .nome { font-weight: 600; }
+.tema-amostras { display: flex; gap: 2px; }
+.tema-amostra { width: 26px; height: 16px; border: 1px solid rgba(128, 128, 128, .35); }
+
+.tema-grade { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.2fr); gap: var(--e4); align-items: start; }
+@media (max-width: 900px) { .tema-grade { grid-template-columns: minmax(0, 1fr); } }
+
+.tema-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: var(--e2); }
+.tema-slot { display: flex; align-items: center; gap: var(--e2); padding: var(--e1) var(--e2); border: 1px dashed var(--borda); border-radius: var(--raio); background: var(--fundo-2); }
+.tema-slot.sobre { border-color: var(--acento); background: var(--painel); }
+.tema-slot input[type="text"], .tema-slot select { min-width: 0; flex: 1; font-size: .78rem; }
+.tema-slot input[type="color"] { width: 30px; height: 24px; padding: 0; border: 1px solid var(--borda); background: none; flex: 0 0 auto; }
+.tema-slot .rotulo { font-size: .72rem; color: var(--fraco); min-width: 84px; }
+
+.tema-paleta { display: flex; flex-wrap: wrap; gap: var(--e2); margin: var(--e2) 0; }
+.tema-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--borda); border-radius: var(--raio); background: var(--painel); cursor: grab; font-size: .75rem; }
+.tema-chip .quad { width: 12px; height: 12px; border: 1px solid rgba(128, 128, 128, .4); }
+.tema-chip.arrastando { opacity: .5; }
+
+.tema-previa { border: 1px solid var(--borda); border-radius: var(--raio); overflow: hidden; min-height: 260px; display: flex; flex-direction: column; }
+.tema-previa .previa-corpo { padding: var(--e4); display: grid; gap: var(--e3); }
+
+.tema-pares { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.tema-pares td, .tema-pares th { padding: 2px 6px; border-bottom: 1px solid var(--borda); text-align: left; }
+.tema-pares td.mono { font-family: var(--mono, monospace); }
+.tema-par-aviso { color: var(--falha, var(--atencao)); font-weight: 600; }
+.tema-par-ok { color: var(--ok, var(--fraco)); }
+
+.tema-json { width: 100%; min-height: 140px; font-family: var(--mono, monospace); font-size: .75rem; }
+.tema-aviso-lista { margin: var(--e2) 0 0; padding-left: 1.1rem; }
