@@ -1275,3 +1275,29 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 3, setembro de 2026 (item L2-13-b-replicas-sincronizacao: réplicas para trabalho desconectado)
+
+`POST /api/replicas` monta um recorte declarado de camadas (filtro por camada na linguagem `where` do
+FeatureServer, extensão em Polygon 4326) e enfileira o job `replicas.criar`, que escreve um GeoPackage por
+`ogr2ogr` — o mesmo formato que o QField lê. Dentro do pacote, além de uma tabela por camada, vão
+`plat_sync` (fid, globalid e versão de cada feição), `plat_replica` (geração do servidor por camada),
+`plat_dominio` (valores de domínio dos campos) e, opcionalmente, `plat_anexo` (metadado dos anexos).
+
+`POST /api/replicas/{id}/sincronizar` sobe as mudanças do aparelho pela porta única de escrita do L2-03-a,
+resolve versão divergente pela política escolhida na criação (`servidor_vence`, `cliente_vence`,
+`pergunta` — conflito é sempre relatado, mesmo quando resolvido), baixa o que o servidor mudou desde a
+geração do cliente e avança a geração. Repetir o mesmo lote com a mesma chave de idempotência devolve a
+mesma resposta e aplica zero.
+
+Sem tabela de rastreio nova: o relógio é o `id` de `plat.feicao_historico` (item L2-03-edicao), que já grava
+por gatilho toda escrita, inclusive o DELETE. A migração acrescenta só o índice
+`ix_feicao_historico_desde` e as três tabelas da réplica.
+
+Medido: 100 mil feições exportadas em 1,97 s (pacote de 32,8 MB), com carga de 1 min em 7,86 de 12 núcleos.
+Validade da réplica 30 dias, menor que a retenção declarada do rastreio (45) — invariante provado em teste,
+porque o contrário devolveria mudanças a menos sem erro nenhum.
+
+Nenhum privilégio novo (`campo.coletar`, mais `feicoes.editar` para sincronizar) e nenhuma dependência nova.
+Detalhe e as limitações honestas: `docs/adr/20260908T1231-replicas-e-sincronizacao.md` e a seção 23 do
+`MANUAL.md`.
