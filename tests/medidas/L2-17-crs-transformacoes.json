@@ -30,8 +30,13 @@
    "valor": 722.6,
    "unidade": "m",
    "comando": "venv/bin/pytest tests/api/crs/test_crs.py::test_servicos_respondem_em_4674_31982_5880_com_o_mesmo_bbox"
+  },
+  "pagina_pronta_ms_crs": {
+   "valor": 1659.4,
+   "unidade": "ms",
+   "comando": "playwright chromium contra a URL interna (tests/e2e/test_crs.py)"
   }
  },
- "gerado_em": "2026-09-07T16:41:17Z",
- "git_sha": "099fc463e1c7"
+ "gerado_em": "2026-09-08T19:33:49Z",
+ "git_sha": "99dacd935a73"
 }
