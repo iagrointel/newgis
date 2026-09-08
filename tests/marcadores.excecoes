@@ -4,3 +4,4 @@
 ^app/settings\.py:[0-9]+: *# SMTP de instalação
 ^Makefile:[0-9]+:#
 ^BRIEF_WORKTREES\.md:[0-9]+:[0-9]+\. Sem placeholder
+^docs/adr/0017-extratores-raster-e-vetor\.md:[0-9]+:.*METODOLOGIA
