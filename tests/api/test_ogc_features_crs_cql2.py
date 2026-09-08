@@ -7,13 +7,11 @@ from __future__ import annotations
 
 import json
 import time
-import uuid
 
 import psycopg2.errors
 import psycopg2.extras
 import pytest
 
-from tests.api.conftest import PREFIXO_TESTE
 from tests.api.test_edicao_transacional import FabricaCamada, _admin_usuario_id
 from tests.api.test_rls import contexto, ids_por_slug
 
@@ -95,8 +93,8 @@ def test_crs_31982_bate_com_st_transform(sessao_a, camada, conexao_plat_app):
     contexto(conexao_plat_app, camada["tenant_id"], usuario_id=camada["admin_id"], login="admin")
     with conexao_plat_app.cursor() as cur:
         cur.execute(
-            f"SELECT ST_X(ST_Transform(ST_SetSRID(ST_MakePoint(%s,%s), 4326), 31982)) x, "
-            f"ST_Y(ST_Transform(ST_SetSRID(ST_MakePoint(%s,%s), 4326), 31982)) y",
+            "SELECT ST_X(ST_Transform(ST_SetSRID(ST_MakePoint(%s,%s), 4326), 31982)) x, "
+            "ST_Y(ST_Transform(ST_SetSRID(ST_MakePoint(%s,%s), 4326), 31982)) y",
             [lon, lat, lon, lat],
         )
         esperado = cur.fetchone()
@@ -136,7 +134,8 @@ def test_bbox_invertido_e_400(sessao_a, camada):
 
 # ---------------------------------------------------------------------------------- Part 3: CQL2
 def test_filter_cql2_text_e_cql2_json_mesma_contagem(sessao_a, camada):
-    _semear(sessao_a, camada["id"], [("um", 50.0, "A", -49.0), ("dois", 150.0, "B", -49.1), ("tres", 250.0, "A", -49.2)])
+    _semear(sessao_a, camada["id"], [("um", 50.0, "A", -49.0), ("dois", 150.0, "B", -49.1), ("tres", 250.0, "A",
+        -49.2)])
     r_text = sessao_a.get(f"/ogc/features/{camada['id']}/collections/0/items",
                            params={"filter": "area > 100"})
     assert r_text.status_code == 200, r_text.text

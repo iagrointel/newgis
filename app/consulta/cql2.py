@@ -289,7 +289,8 @@ class _AnalisadorTexto:
                 neg = True
             self._esperar("null")
             return Comparacao("is_not_null" if neg else "is_null", campo)
-        if tl == "not" and self.i + 1 < len(self.tokens) and self.tokens[self.i + 1].lower() in ("in", "like", "between"):
+        if tl == "not" and self.i + 1 < len(self.tokens) and self.tokens[self.i + 1].lower() in ("in", "like",
+            "between"):
             self._tomar()
             no = self._comparacao_pos(campo)
             return Nao(no)
