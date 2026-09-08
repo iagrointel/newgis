@@ -262,3 +262,19 @@ def buscar_seguro(
         ok=False, status=None, mensagem="redirecionamentos_demais", url_final=alvo,
         latencia_ms=int((time.monotonic() - inicio) * 1000), saltos=max_redirects,
     )
+
+
+def resolver_ips_bloqueando_categorias(host: str, porta: int, categorias_bloqueadas: frozenset[str]) -> tuple[str, ...]:
+    """Resolve `host` (DNS, com timeout) e recusa se algum IP resolvido cair numa das `categorias_bloqueadas`
+    (as mesmas de `_categoria_bloqueada`: loopback/link_local/multicast/nao_especificado/reservado/privado).
+    Usado por conectores que não são HTTP (item L0-04-i-fonte-registrada: `app/conexao/pgfdw.py`, conexão
+    TCP direta a um Postgres externo) — a defesa de SSRF é a MESMA função de resolução do módulo HTTP; só a
+    lista de categorias bloqueadas muda (um Postgres de cliente pode estar numa rede privada/VPN, o que um
+    serviço HTTP arbitrário não deveria estar, então o conector Postgres bloqueia menos categorias e some
+    a diferença com uma lista explícita de alvo proibido — ver `pgfdw.validar_alvo`)."""
+    ips = _resolver_host(host, porta)
+    for ip_str in ips:
+        categoria = _categoria_bloqueada(ipaddress.ip_address(ip_str))
+        if categoria is not None and categoria in categorias_bloqueadas:
+            raise ErroURLInsegura(f"ip_bloqueado:{categoria}:{ip_str}", host)
+    return tuple(ips)

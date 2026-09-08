@@ -905,11 +905,39 @@ ou reservado. A conexão real nunca resolve o host de novo depois de validado (f
 todo redirecionamento é revalidado do zero, salto a salto — um serviço público que redireciona para um IP
 interno é aceito no primeiro salto e recusado no segundo, nunca no primeiro.
 
+### 18.2a Fonte de dado registrada: conector `postgres_fdw` (item L0-04-i-fonte-registrada)
+
+O primeiro conector concreto de `plat.conexao` — "Data store item" da Esri Enterprise 11.4 / "store" do
+GeoServer, restrito a PostgreSQL/PostGIS externo (`docs/adr/20260907T0148-fonte-registrada-postgres-fdw.md`).
+
+```
+GET  /api/conexoes/{id}/tabelas            ?schema_remoto=public   # tabelas do banco do cliente (pg_catalog)
+POST /api/conexoes/{id}/publicar-em-massa  {"tabelas": ["t1","t2"], "schema_remoto": "public"}
+GET  /api/conexoes/{id}/camadas            # camadas já publicadas desta conexão + estado_fonte ao vivo
+```
+
+`url` de uma conexão `postgres_fdw` é `postgres://host:porta/banco` (nunca `http(s)`); `config.usuario` é o
+usuário remoto (não secreto), `credencial` é a senha (cifrada, mesmo mecanismo do resto de `plat.conexao`).
+A defesa de alvo (`app/conexao/pgfdw.py::validar_alvo`) é DIFERENTE da defesa de SSRF HTTP acima: um Postgres
+de cliente pode estar numa rede privada/VPN de propósito, então só metadado de nuvem/multicast/não-
+especificado são recusados por categoria de IP; o banco `iagro_sat` é recusado em qualquer host (lista
+explícita) e o `(host,porta,banco)` do `PLAT_DSN` desta instalação é recusado por IP.
+
+Cada tabela publicada vira uma `FOREIGN TABLE` + `VIEW` num schema `d_<slug>` do inquilino (função SECURITY
+DEFINER `plat.conexao_fdw_publicar`, já que `plat_app` não tem `CREATE` nem `USAGE` na extensão
+`postgres_fdw`) e um item de catálogo `camada_vetorial` com `dados.fonte = "referenciada"` — nenhum dado é
+copiado. Conexão fora do ar devolve `503 fonte_indisponivel` com mensagem em qualquer rota que precise falar
+com o Postgres do cliente; a camada e a conexão continuam no catálogo, e `GET .../camadas` mostra
+`estado_fonte: "fonte_indisponivel"` calculado da última saúde registrada.
+
 ### 18.3 Limites desta fatia
 
 Sem tela em nenhum dos dois; `acervo_camada` ainda não tem rota HTTP própria (só a tabela); lista branca de
-coluna do acervo é por nome, não por conteúdo (L6-01-f); os 15 conectores concretos (o que de fato busca e
-traduz WMS/WFS/STAC/... para camada do mapa) são itens futuros, L6-02-b em diante.
+coluna do acervo é por nome, não por conteúdo (L6-01-f); os demais 14 conectores concretos (o que de fato
+busca e traduz WMS/WFS/STAC/... para camada do mapa) são itens futuros, L6-02-b em diante — só `postgres_fdw`
+foi construído (item L0-04-i). `DELETE /api/conexoes/{id}` ainda não limpa `SERVER`/`USER MAPPING` do
+`postgres_fdw` associados (pendência no handoff do item); risco conhecido de senha em texto claro na DDL do
+`postgres_fdw` (limitação do próprio `postgres_fdw`, não deste código — ver ADR).
 
 ## 19. Ficha do acervo completa e gate de LGPD (itens L6-01-d-ficha-fonte e L6-01-f-lgpd)
 

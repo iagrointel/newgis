@@ -558,6 +558,14 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"resolucao_m": 100.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
                    "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
     ),
+    # item L0-04-i-fonte-registrada: mesma regra (conexão de B é cross-tenant puro para A) — as 3 rotas
+    # novas do conector postgres_fdw seguem a mesma _carregar/RLS das duas acima, nenhuma toca o banco
+    # remoto antes de checar a posse da conexão.
+    ("GET", "/api/conexoes/{id}/tabelas"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/tabelas"),
+    ("POST", "/api/conexoes/{id}/publicar-em-massa"): Caso(
+        lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar-em-massa", lambda p: {"tabelas": ["qualquer"]}
+    ),
+    ("GET", "/api/conexoes/{id}/camadas"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/camadas"),
     ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
                                 verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
     ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,

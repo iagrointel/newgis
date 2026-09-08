@@ -1,0 +1,42 @@
+{
+ "item": "L0-04-i-fonte-registrada",
+ "medidas": {
+  "testes_unitarios_alvo_e_seguranca": {
+   "valor": 32,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/unit/test_pgfdw_seguranca.py -q"
+  },
+  "testes_api_e2e_pgfdw": {
+   "valor": 6,
+   "unidade": "testes",
+   "comando": "venv/bin/pytest tests/api/test_pgfdw.py -q (docker plat-il004ifonte-pg no ar)"
+  },
+  "tabelas_publicadas_e2e": {
+   "valor": 3,
+   "unidade": "camadas camada_vetorial",
+   "comando": "test_fluxo_completo_registrar_listar_publicar_ver_no_mapa"
+  },
+  "linhas_conferidas_view_vs_origem": {
+   "valor": 9,
+   "unidade": "linhas (3 estados + 3 municipios + 3 precipitacao_mensal)",
+   "comando": "test_fluxo_completo_registrar_listar_publicar_ver_no_mapa (count(*) view == count(*) docker)"
+  },
+  "conexao_indisponivel_status_http": {
+   "valor": 503,
+   "unidade": "status HTTP",
+   "comando": "test_conexao_que_cai_devolve_503_e_camada_continua_no_catalogo"
+  },
+  "adversario_casos_passados": {
+   "valor": 3,
+   "unidade": "casos (superuser, auto-referencia iagro_sat, injecao de nome de tabela)",
+   "comando": "test_adversario_superuser_avisa_mas_nao_recusa_registro, test_adversario_aponta_para_o_proprio_iagro_sat, test_adversario_injeta_no_nome_da_tabela"
+  },
+  "regressao_conexao_existente": {
+   "valor": 39,
+   "unidade": "testes (13 test_conexoes.py API + 26 test_conexao_seguranca.py unit, todos ainda verdes)",
+   "comando": "venv/bin/pytest tests/api/test_conexoes.py tests/unit/test_conexao_seguranca.py -q"
+  }
+ },
+ "gerado_em": "2026-09-07T02:24:39Z",
+ "git_sha": "2382a8e7c5dd"
+}
