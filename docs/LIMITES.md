@@ -223,3 +223,51 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `FERRAMENTA_JOB_MEMORIA_MB` | `1024` | RLIMIT_DATA do filho que roda uma ferramenta |
 | `FERRAMENTA_JOB_TIMEOUT_S` | `1800` | 30 min por execução; ferramenta mais longa é outro tipo de job |
 | `BUFFER_DISTANCIA_M_MAX` | `100000` | 100 km: acima disso o buffer geodésico deixa de fazer sentido em camada |
+
+## imagens/STAC (L1-01-a-pgstac-e-stac-api-por-inquilino; app/imagens/): catálogo é o pgstac (schema
+
+| nome | valor | explicação |
+|---|---|---|
+| `STAC_SLUG_MAX` | `58` | — |
+| `STAC_ITEM_ID_MAX` | `256` | — |
+| `STAC_PAGINA_PADRAO` | `10` | `limit` padrão da busca (mesmo padrão da spec STAC API Item Search) |
+| `STAC_PAGINA_MAX` | `1000` | `limit` máximo aceito por pedido (pgstac pagina por token, não por offset) |
+| `STAC_COLECOES_POR_INQUILINO` | `500` | — |
+| `STAC_LOTE_ITENS_MAX` | `10000` | POST .../items:lote (semeadura de teste/ingestão em massa; ADR do item L1-01-h) |
+
+## ingestão de raster (L1-01-ingest-raster; ADR 20260906T2127): validação isolada + COG dois perfis +
+
+| nome | valor | explicação |
+|---|---|---|
+| `RASTER_DIMENSAO_MAX` | `200000` | pixels por eixo (linhas ou colunas) — acima: recusa na validação |
+| `RASTER_BANDAS_MAX` | `64` | bandas por raster — acima: recusa na validação |
+| `RASTER_BYTES_MAX` | `2147483648` | bruto aceito para ingestão (igual a UPLOAD_BYTES_MAX) |
+| `RASTER_VISUAL_MAX_LADO` | `1024` | miniatura PNG (lado maior) |
+| `RASTER_ESTATISTICA_AMOSTRA` | `100000` | pixels amostrados por banda para percentis do perfil visual |
+| `RASTER_TILE_CACHE_DATASET_MAX` | `8` | datasets abertos por processo no handler de tiles (LRU) |
+| `RASTER_TILE_TIMEOUT_S` | `30` | teto de renderização de um tile (mata a requisição, não o worker) |
+
+## grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
+
+| nome | valor | explicação |
+|---|---|---|
+| `ESCALA_AREA_VERTICES_MAX` | `5000` | vértices do polígono de estudo (mesma ordem de grandeza de INGESTAO_*) |
+| `ESCALA_RESOLUCAO_MIN_M` | `1.0` | — |
+| `ESCALA_RESOLUCAO_MAX_M` | `100000.0` | — |
+| `ESCALA_CELULAS_MAX` | `250000` | — |
+| `ESCALA_FATORES_MAX` | `20` | — |
+| `ESCALA_LIGACOES_MAX` | `2000000` | — |
+| `ESCALA_APROVACAO_TIPOS` | `('limiar', 'top_pct')` | — |
+| `ESCALA_NOME_MAX` | `200` | mesmo teto de CHECK(length(nome)<=200) da migração |
+| `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
+| `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
+| `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## ferramentas raster (item L2-05-e) ---------------------------------------------------------------
+
+| nome | valor | explicação |
+|---|---|---|
+| `FERRAMENTA_RASTER_ZONAS_MAX` | `20000` | feições de uma camada de zonas por execução |
+| `FERRAMENTA_RASTER_PIXELS_SAIDA_MAX` | `4000000000` | pixels do raster de saída (4 Gpx) |
+| `FERRAMENTA_RASTER_FEICOES_SAIDA_MAX` | `500000` | feições de curva de nível / vetorização por execução |
+| `FERRAMENTA_RASTER_ENTRADAS_MAX` | `20` | rasters numa calculadora ou num mosaico |
