@@ -79,6 +79,8 @@ BUSCA_REFORCO_STATUS = 0.25
 ITENS_PAGINA_MAX = 200
 ITENS_DESLOCAMENTO_MAX = 10_000
 LIXEIRA_DIAS = 30
+RASTER_LIXEIRA_DIAS = 7  # retenção da lixeira do item de IMAGEM: os objetos ficam no balde 7 dias após a
+# exclusão (janela de restauração); depois o job imagens.raster_apagar_objetos libera o espaço (L1-01-i)
 COTA_ITENS = 100_000  # padrão por inquilino, tenant.config.catalogo.cota_itens
 USADO_POR_PROFUNDIDADE_MAX = 5
 
