@@ -1,0 +1,1556 @@
+{
+ "gerado_em": "2026-09-05",
+ "linhas": [
+  "L3 motor AMC",
+  "L6 conectores"
+ ],
+ "brief": "/home/dev/plataforma/laco/decomposicao/BRIEF.md",
+ "conceito": "/home/dev/plataforma/laco/decomposicao/L3L6_CONCEITO.md",
+ "n_itens": 61,
+ "n_por_linha": {
+  "L3 motor AMC": 32,
+  "L6 conectores": 29
+ },
+ "itens_existentes_detalhados": [
+  "L3-01-motor-servico",
+  "L3-02-robustez",
+  "L6-01-acervo-casa",
+  "L6-02-conectores-vivos"
+ ],
+ "dependencias_externas_propostas": [
+  {
+   "id": "L7-14-extensoes-fdw",
+   "linha": "L7 operação",
+   "prioridade": 4,
+   "motivo": "L6-02-j precisa de tds_fdw (SQL Server referenciado) e oracle_fdw/OCI (Oracle); nenhum dos dois está nesta máquina (pg_available_extensions medido 05/09: só postgres_fdw e file_fdw). Instalação exige apt/sudo e decisão do dono (licença do Instant Client da Oracle). Sem isto, Oracle fica fora e SQL Server só em modo copiado por GDAL."
+  },
+  {
+   "id": "L1-06-rasters-do-acervo-em-cog",
+   "linha": "L1 imagens",
+   "prioridade": 3,
+   "motivo": "L6-01-i expõe rasters da casa; os que ainda não são COG (MapBiomas por ano em GeoTIFF comum, recortes GLO-30) precisam da conversão do L1-01 aplicada em lote com sha256 conferido; disco a 98 % impõe conversão por partes."
+  }
+ ],
+ "fontes_esri_geoserver_qgis_testadas_http_200_em_2026-09-05": [
+  "https://pro.arcgis.com/en/pro-app/3.4/help/analysis/spatial-analyst/suitability-modeler/what-is-the-suitability-modeler.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/help/analysis/spatial-analyst/suitability-modeler/suitability-modeling-framework.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/help/analysis/spatial-analyst/suitability-modeler/transformation-pane-in-suitability-modeler.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/help/analysis/spatial-analyst/suitability-modeler/implement-the-suitability-modeling-workflow-using-the-suitability-modeler.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/help/analysis/spatial-analyst/suitability-modeler/generate-a-suitability-model-report.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/spatial-analyst/weighted-overlay.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/spatial-analyst/weighted-sum.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/spatial-analyst/rescale-by-function.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/spatial-analyst/fuzzy-membership.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/spatial-analyst/fuzzy-overlay.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/spatial-analyst/locate-regions.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/spatial-analyst/how-locate-regions-works.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/spatial-analyst/distance-accumulation.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/spatial-analyst/optimal-region-connections.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/spatial-analyst/zonal-statistics-as-table.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/tool-reference/spatial-statistics/similarity-search.htm",
+  "https://doc.arcgis.com/en/business-analyst/web/suitability-analysis.htm",
+  "https://doc.arcgis.com/en/business-analyst/web/smart-map-search.htm",
+  "https://doc.arcgis.com/en/business-analyst/web/data-browser.htm",
+  "https://doc.arcgis.com/en/business-analyst/web/understand-arcgis-living-atlas.htm",
+  "https://doc.arcgis.com/en/arcgis-online/analyze/find-similar-locations.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/what-is-living-atlas.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/add-layers.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/add-layers-mv.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/add-items.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/data-store-items.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/add-data-store-item.htm",
+  "https://enterprise.arcgis.com/en/portal/11.4/use/perform-analysis-mv.htm",
+  "https://enterprise.arcgis.com/en/server/11.4/manage-data/windows/registering-your-data-with-arcgis-server-using-manager.htm",
+  "https://doc.arcgis.com/en/data-pipelines/latest/get-started/about-data-pipelines.htm",
+  "https://doc.arcgis.com/en/data-pipelines/latest/get-started/schedule-data-pipeline-tasks.htm",
+  "https://doc.arcgis.com/en/data-pipelines/latest/get-started/faq.htm",
+  "https://doc.arcgis.com/en/data-pipelines/latest/get-started/data-pipelines-editor.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/help/data/data-interoperability/what-is-the-data-interoperability-extension.htm",
+  "https://pro.arcgis.com/en/pro-app/3.4/help/data/data-interoperability/supported-formats-with-the-data-interoperability-extension.htm",
+  "https://docs.geoserver.org/stable/en/user/data/cascaded/index.html",
+  "https://docs.geoserver.org/stable/en/user/data/database/index.html",
+  "https://docs.geoserver.org/stable/en/user/data/vector/index.html",
+  "https://docs.geoserver.org/stable/en/user/extensions/ogr/index.html",
+  "https://docs.geoserver.org/stable/en/user/extensions/importer/index.html",
+  "https://docs.geoserver.org/stable/en/user/community/geoparquet/index.html",
+  "https://docs.geoserver.org/stable/en/user/community/stac-datastore/index.html",
+  "https://docs.geoserver.org/stable/en/user/community/cog/index.html",
+  "https://docs.geoserver.org/stable/en/user/community/vsi/index.html",
+  "https://docs.qgis.org/3.40/en/docs/server_manual/index.html",
+  "https://docs.qgis.org/3.40/en/docs/server_manual/services/wms.html",
+  "https://docs.qgis.org/3.40/en/docs/server_manual/services/wfs.html",
+  "https://docs.qgis.org/3.40/en/docs/server_manual/services/ogcapif.html",
+  "https://docs.qgis.org/3.40/en/docs/user_manual/managing_data_source/opening_data.html",
+  "https://docs.qgis.org/3.40/en/docs/user_manual/processing_algs/qgis/rasteranalysis.html"
+ ],
+ "itens": [
+  {
+   "id": "L3-01-a-modelo-dado",
+   "linha": "L3 motor AMC",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-catalogo",
+    "L0-02-tenant-auth"
+   ],
+   "hipotese": "esquema plat.amc_*: modelo (definição em JSONB validada por JSON Schema amc_modelo.v1; versão = sha256 do JSON canônico; imutável depois de executada), conjunto_unidade, fator_bruto (valor bruto por unidade × fator, materializado uma vez), execucao (versão do modelo + pesos + sha256/contagem de cada camada de entrada + versão do motor + semente), resultado (favorabilidade real, vetado, motivo, cobertura). RLS por inquilino em todas as tabelas; nada de coluna por fator (esquema largo do motor logístico vira linhas fator × unidade).",
+   "portao_de_pronto": "migração db/migracoes/NNN_amc.sql idempotente; JSON Schema publicado em docs/esquemas/amc_modelo.v1.json e validado no POST; modelo inválido (peso negativo, fator sem transformação, soma de pesos zero, fator duplicado) devolve 422 com a cláusula violada; teste cruzado A→B falha em plat.amc_modelo, amc_execucao e amc_resultado; hash do modelo recomputado por script independente (json.dumps sort_keys, separators fixos) é igual ao gravado; OpenAPI atualizado.",
+   "refutacao": "adversário edita um modelo já executado e confere que a execução antiga continua apontando para a versão antiga e que o resultado não muda; tenta ler execução de outro inquilino por id direto e por FeatureServer.",
+   "papeis": [
+    "arquiteto",
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-01-motor-servico",
+   "origem": "casa"
+  },
+  {
+   "id": "L3-01-b-unidades",
+   "linha": "L3 motor AMC",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-a-modelo-dado"
+   ],
+   "hipotese": "conjunto de unidades de análise: grade hexagonal (ST_HexagonGrid) ou quadrada (ST_SquareGrid) gerada no CRS métrico declarado (UTM SIRGAS 2000 da zona do centróide da área, srid_trabalho gravado), com lado escolhido, recortada à área de estudo; OU feições de camada do usuário ou do acervo (imóvel, lote, setor, município) com o id do usuário preservado; toda unidade tem id estável, área geodésica em m² e geometria 4326 para o mapa. Sem h3-pg nesta máquina (medido): H3 só como índice opcional via biblioteca Python, não como geometria.",
+   "portao_de_pronto": "tela cria grade de 250 m sobre polígono de 2.000 km² como job em ≤ 60 s; contagem de células bate com área/área da célula ± 2 %; grade de 100 m sobre 10.000 km² (≈ 1 mi de células) conclui em tempo medido e gravado em tests/medidas; feições com id duplicado recusadas com mensagem; CRS de trabalho e distorção máxima de área exibidos na ficha do conjunto; e2e.",
+   "refutacao": "adversário gera a mesma grade no QGIS (Create Grid) no mesmo CRS e compara contagem e área total; passa área que cruza a divisa de duas zonas UTM e confere que a escolha do CRS e a distorção estão declaradas, não escondidas.",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-01-motor-servico",
+   "origem": "esri"
+  },
+  {
+   "id": "L3-01-c-extracao-fator",
+   "linha": "L3 motor AMC",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-b-unidades",
+    "L1-01-ingest-raster",
+    "L0-04-ingest-vetor"
+   ],
+   "hipotese": "extratores que produzem o VALOR BRUTO por unidade (os 'derived criteria' do Suitability Modeler): raster (média, mínimo, máximo, mediana, percentil, moda, fração de classe; rasterio+numpy com peso de área na borda da unidade), polígono (fração de área intersectada, área, contagem, atributo ponderado por área), linha (comprimento dentro, distância à mais próxima), ponto (contagem em raio, densidade kernel com largura declarada, distância ao mais próximo, atributo do mais próximo). Cada extrator declara unidade de medida, CRS de cálculo e cobertura (fração de unidades com dado). Sem dado = NULL, nunca 0.",
+   "portao_de_pronto": "cada extrator tem teste contra recomputação independente (shapely/rasterio puro, sem o código do extrator) em 200 unidades: divergência ≤ 0,5 % em área e comprimento e ≤ 1 célula raster na média zonal; fração na borda ponderada por área (não por centróide); cobertura gravada por fator; extração de 12 fatores em 73 mil células conclui em tempo medido (referência do motor logístico: 1-2 min em SQL); camada sumida ou raster sem CRS aborta o job com mensagem e nunca produz coluna de zeros.",
+   "refutacao": "adversário recorta metade de um raster e roda: o fator tem de sair com cobertura < 100 % e NULL nas unidades sem dado; compara distância ao mais próximo com ST_Distance(geography) em 50 unidades; entra com polígono inválido (auto-interseção).",
+   "papeis": [
+    "dados",
+    "raster",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-01-motor-servico",
+   "origem": "esri"
+  },
+  {
+   "id": "L3-01-d-transformacoes",
+   "linha": "L3 motor AMC",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-c-extracao-fator"
+   ],
+   "hipotese": "biblioteca declarativa de transformações valor bruto → favorabilidade 0-100, cada uma um JSON (tipo + parâmetros) com DUAS implementações equivalentes, SQL (materializar) e numpy (pré-visualizar e recomputar): categoria→nota (Unique Categories), faixas com quebras manuais ou por quantil/intervalo igual/quebras naturais (Range of Classes), linear com mínimo/máximo e direção, degraus (bandas), e as funções contínuas do Rescale by Function: linear, simétrica linear, exponencial, potência, logarítmica, logística crescente e decrescente, gaussiana, near, small, large, MSSmall, MSLarge, com os mesmos nomes de parâmetro; valor fora da faixa recebe nota declarada (abaixo/acima); NULL permanece NULL.",
+   "portao_de_pronto": "para cada tipo, teste que aplica SQL e numpy à mesma amostra e exige |Δ| ≤ 0,01; pré-visualização com histograma de entrada e histograma de saída em ≤ 300 ms para 100 mil valores; as transformações dos 19 fatores do motor logístico reescritas neste JSON reproduzem cbre.hex_fav (só leitura) com |Δ| ≤ 0,5 em 100 % das células; MANUAL.md tem fórmula e gráfico de cada função gerados por script.",
+   "refutacao": "adversário implementa gaussiana, logística e MSLarge do zero a partir da página Rescale by Function (Pro 3.4, URL testada) e compara; testa mínimo = máximo, spread 0, valores negativos e NaN.",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-01-motor-servico",
+   "origem": "esri"
+  },
+  {
+   "id": "L3-01-e-combinacao",
+   "linha": "L3 motor AMC",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-d-transformacoes"
+   ],
+   "hipotese": "combinadores declarados por modelo: soma ponderada normalizada Σ w_i f_i / Σ w_i sobre os fatores COM dado (padrão, herdado do motor logístico), soma com percentuais que fecham 100 (modo Weighted Overlay), média geométrica ponderada, mínimo (AND fuzzy), máximo (OR fuzzy), produto, soma fuzzy e gama; política de dado ausente obrigatória: excluir o fator naquela unidade (padrão, com cobertura na explicação) × unidade fica NULL × nota pessimista declarada; veto zera e registra motivo sem depender de peso; pesos multiplicador ≥ 0 ou percentual; peso negativo e soma zero recusados.",
+   "portao_de_pronto": "recálculo de 4.346 unidades × 19 fatores em ≤ 50 ms no servidor e ≤ 20 ms no navegador (referência: ≈ 5 ms no motor logístico); teste numpy independente em 200 unidades com |Δ| ≤ 0,5; cada combinador com casos de borda (todos NULL, um fator, pesos iguais); modo percentual recusa soma ≠ 100; a frase 'pesos escolhidos pelo usuário, não medidos' presente em todo resultado (teste procura).",
+   "refutacao": "adversário passa peso negativo, soma zero, NaN, fator duplicado e unidade com todos os fatores NULL: nada disso pode sair com favorabilidade numérica.",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-01-motor-servico",
+   "origem": "casa"
+  },
+  {
+   "id": "L3-01-f-explicacao",
+   "linha": "L3 motor AMC",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-e-combinacao"
+   ],
+   "hipotese": "endpoint e painel 'por que esta unidade tem nota N': tabela fator → valor bruto (com unidade de medida e fonte) → transformação aplicada → favorabilidade → peso → contribuição; soma; veto e motivo; cobertura; recalculada a partir de fator_bruto na hora (não armazenada), portanto sempre igual ao resultado gravado.",
+   "portao_de_pronto": "para 100 unidades sorteadas, soma das contribuições exibidas = favorabilidade gravada (|Δ| ≤ 0,5); unidade vetada mostra fator e motivo; resposta em ≤ 100 ms; e2e com captura do painel; texto segue a regra de escrita de 03/09 (sem metáfora, número com universo e fonte).",
+   "refutacao": "adversário confere a explicação de 5 unidades com cálculo manual em planilha a partir dos valores brutos exibidos.",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-01-motor-servico",
+   "origem": "casa"
+  },
+  {
+   "id": "L3-01-g-tela-motor",
+   "linha": "L3 motor AMC",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-f-explicacao",
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "tela 'Motor' aberta a partir de qualquer conjunto de unidades: adicionar fator (camada do catálogo ou do acervo + extrator), escolher transformação com pré-visualização do histograma, marcar veto, peso por controle deslizante (multiplicador) ou por percentual com trava, 'rodar' (extração como job) e recombinar na hora ao mover pesos, mapa recolorido por favorabilidade (rampa declarada, vetado em cinza), lista das N melhores, clique = explicação, link com pesos na URL.",
+   "portao_de_pronto": "e2e playwright: criar modelo com 5 fatores (2 raster, 2 polígono, 1 ponto) sobre grade de 250 m em área de dado aberto, rodar, mover um peso e ver o mapa mudar sem novo job, abrir explicação, copiar link e reabrir com os mesmos pesos; 0 erro de console; celular mostra lista e mapa em abas; capturas em tests/e2e/capturas.",
+   "refutacao": "adversário abre o link com pesos adulterados (peso 999, fator inexistente, soma percentual 130): a tela recusa e explica, nunca calcula em silêncio.",
+   "papeis": [
+    "frontend",
+    "backend",
+    "cartografo",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-01-motor-servico",
+   "origem": "casa"
+  },
+  {
+   "id": "L3-01-h-presets",
+   "linha": "L3 motor AMC",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-g-tela-motor"
+   ],
+   "hipotese": "preset = conjunto nomeado de pesos e vetos de um modelo, salvo por usuário ou compartilhado no inquilino, com autor, data e descrição; 'pesos iguais' existe sempre; os presets do motor logístico (galpão, última milha, indústria, custo mínimo) migrados como exemplo sobre dado aberto e sem nome de cliente.",
+   "portao_de_pronto": "CRUD por API e tela; aplicar preset recalcula sem job; preset de outro inquilino inacessível (teste cruzado); export e import em JSON; e2e.",
+   "refutacao": "adversário importa preset com fator que o modelo não tem: recusa com a lista do que falta.",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-01-motor-servico",
+   "origem": "casa"
+  },
+  {
+   "id": "L3-01-i-exportacao-metodo",
+   "linha": "L3 motor AMC",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-h-presets"
+   ],
+   "hipotese": "exportação do método: JSON canônico (modelo, transformações, pesos, vetos, sha256 e contagem das camadas, versão do motor, cobertura, data) + PDF gerado por script no desenho da casa, no molde do relatório do Suitability Modeler: resumo, diagrama do fluxo do modelo, uma página por fator (histograma bruto, curva de transformação, mapa do fator), pesos, mapa final, regiões quando houver, e ressalvas obrigatórias ('pesos escolhidos', 'triagem: sinal, não prova', proxies declarados).",
+   "portao_de_pronto": "PDF verificado página a página (pdftoppm → leitura); páginas = seções; teste extrai todos os números do PDF e os encontra no JSON (nenhum digitado); JSON reimportado recria o modelo com o mesmo hash; teste automatizado.",
+   "refutacao": "adversário altera um peso no JSON exportado e reimporta: o hash tem de mudar e o PDF antigo não pode ser aceito como do modelo novo.",
+   "papeis": [
+    "backend",
+    "cronista",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-01-motor-servico",
+   "origem": "esri"
+  },
+  {
+   "id": "L3-01-j-equivalencia-motor-logistico",
+   "linha": "L3 motor AMC",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-e-combinacao"
+   ],
+   "hipotese": "prova de que o motor genérico reproduz o motor logístico da casa: os 19 fatores disponíveis reescritos como fatores do modelo (extrator + transformação JSON) sobre as mesmas 73.115 células e 4.346 feições; favorabilidade por célula e por feição (agregação ponderada por área com fração vetada) comparada com cbre.hex_fav e cbre.imoveis_fav (só leitura).",
+   "portao_de_pronto": "|Δ| ≤ 0,5 ponto em ≥ 99,5 % das células e das feições, divergências restantes listadas e explicadas (smallint × real); mesmos vetos e motivos; tempo total medido; relatório em tests/medidas/L3-01-j.json.",
+   "refutacao": "adversário sorteia 200 células, recalcula em numpy a partir de cbre.hex (só leitura) e compara; divergência > 0,5 = refutado.",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-01-motor-servico",
+   "origem": "casa"
+  },
+  {
+   "id": "L3-02-a-monte-carlo-pesos",
+   "linha": "L3 motor AMC",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-e-combinacao"
+   ],
+   "hipotese": "sorteio de pesos (Dirichlet no simplex ou faixa ± k % por fator, declarada), N recombinações baratas (sem reextração); por unidade: favorabilidade mínima/média/máxima, desvio, frequência no top-k e no decil superior; ranking estável (unidade no top-k em ≥ 95 % dos sorteios) × instável; vetos e restrições nunca sorteados (regra do motor de LT).",
+   "portao_de_pronto": "N = 1.000 sorteios em 5.000 unidades em ≤ 60 s como job; mapa de frequência; semente gravada e resultado reproduzível bit a bit com a mesma semente; teste com modelo de 2 fatores de resposta analítica conhecida.",
+   "refutacao": "adversário permuta a ordem dos fatores e reexecuta com a mesma semente: resultado idêntico; confere que unidade vetada nunca aparece no top-k.",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-02-robustez",
+   "origem": "casa"
+  },
+  {
+   "id": "L3-02-b-sensibilidade-sobol-oat",
+   "linha": "L3 motor AMC",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-02-a-monte-carlo-pesos"
+   ],
+   "hipotese": "sensibilidade global (índices de Sobol de 1ª ordem e total sobre pesos e parâmetros de transformação; amostragem Saltelli com scipy.stats.qmc, presente; N declarado) e local (um fator por vez, gráfico tornado: quanto o top-k muda ao mover cada peso de −50 % a +100 %); saída: quais fatores mandam no resultado e quais são irrelevantes (índice total < 0,01).",
+   "portao_de_pronto": "função de teste (Ishigami) reproduz índices de referência ± 0,05; relatório por modelo com N, índices e intervalo por bootstrap; tempo medido; texto explica que sensibilidade mede dependência do modelo ao peso, não importância real.",
+   "refutacao": "adversário duplica um fator (mesma camada duas vezes) e confere que a soma dos índices dos dois é igual ao do fator único ± 0,05.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-02-robustez",
+   "origem": "usuario"
+  },
+  {
+   "id": "L3-02-c-smaa",
+   "linha": "L3 motor AMC",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-02-a-monte-carlo-pesos"
+   ],
+   "hipotese": "SMAA-2 simplificado: para cada unidade, índice de aceitabilidade por posição (probabilidade de ficar em 1º, 2º … k-ésimo lugar sob pesos sorteados), vetor central de pesos que a leva ao 1º lugar e fator de confiança; responde 'que pesos precisariam ser verdade para esta unidade ganhar'.",
+   "portao_de_pronto": "tabela de aceitabilidade para o top-20; vetor central exibido na explicação; teste com 3 unidades sintéticas de resposta conhecida; documentação com a referência (Lahdelma e Salminen, 2001) e limites.",
+   "refutacao": "adversário confere que a soma da aceitabilidade de 1º lugar entre todas as unidades é 1 ± 0,01.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-02-robustez",
+   "origem": "usuario"
+  },
+  {
+   "id": "L3-02-d-comparacao-cenarios",
+   "linha": "L3 motor AMC",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-h-presets"
+   ],
+   "hipotese": "dois cenários (modelo + preset) lado a lado: mapa dividido ou deslizante, mapa da diferença por unidade, tabela das unidades que mais sobem e descem, correlação de postos (Spearman) e sobreposição do top-k (Jaccard); comparação também entre duas versões do mesmo modelo, com diff do JSON campo a campo (auditoria do que mudou).",
+   "portao_de_pronto": "e2e com 2 presets; Spearman conferido contra scipy em 1.000 unidades; diff de versões exibido; captura.",
+   "refutacao": "adversário compara um cenário com ele mesmo: diferença 0 em toda unidade, Spearman = 1, Jaccard = 1.",
+   "papeis": [
+    "frontend",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L3-02-robustez",
+   "origem": "spec"
+  },
+  {
+   "id": "L3-03-ahp-pares",
+   "linha": "L3 motor AMC",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-h-presets"
+   ],
+   "hipotese": "derivação de pesos por comparação par a par (escala de Saaty 1-9): autovetor principal, razão de consistência CR com índice aleatório por n, aviso quando CR > 0,10, julgamento de cada par guardado (quem, quando); alternativa 'swing weighting' (ordem + magnitude); o resultado vira preset marcado 'derivado de pares'.",
+   "portao_de_pronto": "matrizes 3×3 e 8×8 de referência reproduzem pesos e CR ± 0,001; tela preenche metade da matriz e completa a recíproca; preset gerado; teste; texto diz que consistência não é acerto.",
+   "refutacao": "adversário preenche matriz circular (A>B, B>C, C>A): CR tem de estourar e a tela avisar.",
+   "papeis": [
+    "dados",
+    "frontend",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "usuario"
+  },
+  {
+   "id": "L3-04-restricoes",
+   "linha": "L3 motor AMC",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-c-extracao-fator"
+   ],
+   "hipotese": "restrição como objeto próprio (equivalente ao Restricted/NoData do Weighted Overlay, com o rigor do motor de LT): máscara de estudo, exclusão por camada (fração intersectada > limiar, distância < buffer em metros geodésicos), metadado obrigatório: base (norma citada × precaução declarada), fonte, buffer, versão da camada; composição por OU; restrição nunca é sorteada em robustez; unidade restrita = favorabilidade 0 com motivo e contagem separada por restrição.",
+   "portao_de_pronto": "3 restrições encadeadas sobre grade de teste com contagem por restrição batendo com ST_Intersects independente; buffer usa geography (teste contra ST_DWithin); relatório escreve 'vetamos por precaução' ou 'a norma veda' a partir do metadado; e2e.",
+   "refutacao": "adversário cria restrição com buffer 0, buffer negativo e camada vazia: camada vazia não pode restringir zero unidades em silêncio, tem de avisar 'camada sem feições na área'.",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L3-05-localizar-regioes",
+   "linha": "L3 motor AMC",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-e-combinacao"
+   ],
+   "hipotese": "equivalente ao Locate Regions: a partir da favorabilidade em grade, encontrar N regiões contíguas (N ≤ 30) com área total alvo, área mínima/máxima por região, distância mínima/máxima entre regiões, compromisso forma × utilidade (0-100) com forma-alvo (círculo, quadrado, hexágono) medida por compacidade, método de avaliação (maior média, maior soma, mediana, maior área de núcleo), seleção sequencial ou combinatória (N pequeno); crescimento de região parametrizado a partir de sementes proporcionais à favorabilidade (scipy.ndimage/skimage, presentes), resolução de crescimento declarada; saída = polígonos com estatísticas.",
+   "portao_de_pronto": "sobre superfície sintética com 3 picos, N = 3 devolve regiões com centróide a ≤ 2 células dos picos; área total ± 5 % do alvo; mínimos, máximos e distâncias respeitados; compromisso 100 gera compacidade ≥ 0,9 do círculo; tempo em grade de 1 mi de células medido; paridade parâmetro a parâmetro contra a página Locate Regions (Pro 3.4, URL testada) em docs/PARIDADE.md.",
+   "refutacao": "adversário pede área total maior que a área não vetada e N = 31: recusa com mensagem; roda duas vezes com a mesma semente: resultado idêntico.",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "esri",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L3-06-criterios-de-feicao",
+   "linha": "L3 motor AMC",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-c-extracao-fator"
+   ],
+   "hipotese": "quando a unidade é feição do usuário (imóvel, loja, lote), critérios no molde da análise de adequação do Business Analyst: atributo numérico da própria feição, contagem de pontos de outra camada em raio ou dentro, distância ao ponto mais próximo, influência positiva/inversa/ideal (nota máxima no alvo, decaindo simetricamente), filtro de inclusão por faixa (feição fora da faixa sai 'filtrada', não vetada); até 5.000 feições na tela, acima vira job.",
+   "portao_de_pronto": "modelo sobre 1.000 pontos de dado aberto (ex.: escolas do censo escolar) com 4 critérios roda e ranqueia; contagem em raio conferida contra ST_DWithin; 'ideal' dá 100 no alvo e 0 nos extremos; histograma e matriz de correlação entre critérios exibidos; export CSV; e2e.",
+   "refutacao": "adversário passa raio 0 e raio 1.000 km, feição sem geometria e atributo texto como numérico.",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L3-07-agregacao",
+   "linha": "L3 motor AMC",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-e-combinacao"
+   ],
+   "hipotese": "agregação de grade para feição (imóvel, lote, município, setor): média por fator ponderada pela área de interseção sobre células não vetadas, fração vetada, veto principal (maior área), favorabilidade da feição = combinação × (1 − fração vetada); limiar de fração vetada para 'sai do ranking' declarado por modelo; também o caminho inverso (feição → células) para exibir.",
+   "portao_de_pronto": "reproduz cbre.imoveis_fav (só leitura) com |Δ| ≤ 0,5 em ≥ 99,5 % das 4.346 feições; interseção com ST_Area no CRS métrico; feição que não toca célula sai como 'sem célula', nunca 0; tempo medido.",
+   "refutacao": "adversário recalcula 50 feições com ST_Intersection à mão no psql e compara.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa"
+  },
+  {
+   "id": "L3-08-pareto",
+   "linha": "L3 motor AMC",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-e-combinacao"
+   ],
+   "hipotese": "análise sem agregação: 2 a 4 fatores como objetivos, fronteira de Pareto (unidades não dominadas), fronteiras de 2ª e 3ª ordem, gráfico de dispersão ligado ao mapa (escovar no gráfico realça no mapa); mostra que 'a melhor' depende do peso.",
+   "portao_de_pronto": "ordenação não dominada conferida contra implementação ingênua O(n²) em 2.000 unidades; gráfico e mapa ligados (e2e); export da fronteira como camada.",
+   "refutacao": "adversário passa objetivos idênticos: a fronteira tem de ser a unidade de valor máximo e seus empates.",
+   "papeis": [
+    "dados",
+    "frontend",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "usuario"
+  },
+  {
+   "id": "L3-09-backtest-decisao-real",
+   "linha": "L3 motor AMC",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-e-combinacao",
+    "L3-02-a-monte-carlo-pesos"
+   ],
+   "hipotese": "backtest contra decisão real (herdado do motor de LT): o usuário fornece a camada das escolhas reais (galpões construídos, linhas existentes, agências abertas) e o motor mede (a) percentil das escolhas no ranking do modelo, (b) nulo por permutação (N sorteios de igual número de unidades), (c) AUC escolhida × não escolhida, (d) preferência revelada por fator: evitamento = 1 − fração das escolhas no fator / fração do nulo no fator (sinal e ordem, nunca peso); ressalvas obrigatórias no relatório: camada mais nova que a decisão é anacrônica; distância confunde.",
+   "portao_de_pronto": "sobre dado aberto (galpões OSM > 5.000 m² como escolhas sobre grade regional) sai relatório com AUC, percentil mediano, nulo e p-valor; escolhas sintéticas geradas pelo próprio modelo dão AUC ≥ 0,95 e escolhas aleatórias 0,5 ± 0,05; camada anacrônica marcada.",
+   "refutacao": "adversário passa escolhas = todas as unidades (AUC indefinida, a tela tem de dizer) e escolhas fora da grade (contagem 'fora' exibida).",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa"
+  },
+  {
+   "id": "L3-10-corredor-custo-minimo",
+   "linha": "L3 motor AMC",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-e-combinacao",
+    "L3-04-restricoes"
+   ],
+   "hipotese": "motor de traçado linear na mesma pilha (equivalente a Distance Accumulation + Optimal Path as Line): superfície de custo = combinação declarada (custo por máximo, atração multiplicativa com piso, veto intransponível, curva de relevo), caminho de custo mínimo entre A e B (Dijkstra 16 vizinhos com aresta íntegra no salto de cavalo), corredor-epsilon (+5 %/+10 %), compressão de amplitude até o portão de sinuosidade declarado, métricas na faixa (km em cada camada, geodésico), saída = linha + corredor + manifesto.",
+   "portao_de_pronto": "reproduz o trecho de referência do motor de LT: superfície bit a bit contra saida/superficie.npz (só leitura) e rota oficial a Hausdorff ≤ 100 m; 382 km em ≤ 10 s; teste de sinuosidade contra o limiar; e2e: escolher A e B no mapa, rodar, ver linha e corredor.",
+   "refutacao": "adversário põe A ou B dentro de veto e camada de veto vazia; move um peso e confere que a rota muda só onde a superfície mudou.",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa"
+  },
+  {
+   "id": "L3-11-fator-de-rede",
+   "linha": "L3 motor AMC",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-c-extracao-fator",
+    "L2-11-geocodificacao-rota"
+   ],
+   "hipotese": "extrator por rede viária: tempo e distância roteados (OSRM da plataforma) da unidade a um ou mais polos (ponto ou camada), banda de isócrona, 'menor entre N portões'; roteado, não estimado por reta; sem rota = NULL.",
+   "portao_de_pronto": "5.000 unidades × 3 polos em tempo medido; célula dentro da banda de 30 min tem tempo roteado ≤ 30 min em ≥ 95 %; unidades sem rota contadas e NULL.",
+   "refutacao": "adversário compara 30 tempos com rota calculada direto no OSRM.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa"
+  },
+  {
+   "id": "L3-12-integracao-fluxo-e-api",
+   "linha": "L3 motor AMC",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-g-tela-motor",
+    "L5-02-fluxos",
+    "L0-05-jobs"
+   ],
+   "hipotese": "motor invocável por API (OpenAPI) com ids de camada do catálogo e JSON do modelo; nó 'motor multicritério' no construtor de fluxos com entradas (unidades, fatores) e saída (camada de resultado); execução como job com progresso por fator; cancelamento.",
+   "portao_de_pronto": "fluxo de 4 nós (recorte → grade → motor → dissolver top-10 %) roda e gera camada; API documentada com exemplo que roda no CI; job cancelado no meio não deixa resultado parcial visível.",
+   "refutacao": "adversário mata o worker durante a extração e reinicia: a execução não pode aparecer concluída.",
+   "papeis": [
+    "backend",
+    "frontend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "spec"
+  },
+  {
+   "id": "L3-13-resultado-como-camada",
+   "linha": "L3 motor AMC",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-e-combinacao",
+    "L2-04-servicos-esri-ogc",
+    "L1-02-tiles-token"
+   ],
+   "hipotese": "cada execução vira item do catálogo: camada vetorial (unidades + favorabilidade + fatores + veto) servida por tiles Martin, FeatureServer e OGC API Features; para grade, também raster COG da favorabilidade no bucket com item STAC (multihash); proveniência no item (hash do modelo, camadas e versões, motor, data).",
+   "portao_de_pronto": "resultado abre no QGIS por WFS/OGC e por XYZ; COG válido (rio-cogeo validate); item STAC com hash; ficha de proveniência mostra as versões; teste automatizado.",
+   "refutacao": "adversário reexecuta o mesmo modelo sobre as mesmas camadas: tabela e COG com o mesmo sha256 (reprodutível bit a bit); tenta ler o resultado com token de outro inquilino.",
+   "papeis": [
+    "backend",
+    "raster",
+    "dados",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "spec"
+  },
+  {
+   "id": "L3-14-cobertura-dado-ausente",
+   "linha": "L3 motor AMC",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-c-extracao-fator"
+   ],
+   "hipotese": "cobertura por fator (fração de unidades com dado e área coberta) na tela, na explicação e no relatório; fator com cobertura abaixo do limiar declarado (padrão 80 %) sai marcado; política de ausente do modelo obrigatória e visível; 'ausência de dado nunca vira medição': NULL nunca vira 0 nem 100 em nenhum caminho de código.",
+   "portao_de_pronto": "teste injeta NULL em 30 % de um fator e confere favorabilidade recalculada só com os presentes e cobertura 70 % exibida; varredura estática do código do motor por COALESCE(...,0) sobre colunas de fator (lista de exceções declarada) integrada ao make check; relatório mostra cobertura por fator.",
+   "refutacao": "adversário procura qualquer caminho em que uma célula sem raster produza nota igual à de uma célula com valor 0.",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa"
+  },
+  {
+   "id": "L3-15-metadado-fator",
+   "linha": "L3 motor AMC",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-d-transformacoes"
+   ],
+   "hipotese": "cada fator carrega (herdado de pesos.py e camadas.py do motor de LT): fonte e versão, unidade, direção, base (norma × engenharia × preferência), marca de proxy (mede grandeza diferente do gatilho) com teto de peso declarado, classe de peso (custo medido em R$ × apetite de risco × consequência normativa), âncora do peso (medida × escolhida) e 'o que não sustenta'; aparece no '?' do fator e no relatório.",
+   "portao_de_pronto": "peso acima do teto de proxy recusado com explicação; relatório lista proxies e âncoras; JSON Schema exige base e fonte; teste.",
+   "refutacao": "adversário tenta salvar fator sem fonte e proxy com peso máximo.",
+   "papeis": [
+    "arquiteto",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa"
+  },
+  {
+   "id": "L3-16-desempenho-escala",
+   "linha": "L3 motor AMC",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-c-extracao-fator",
+    "L3-01-e-combinacao"
+   ],
+   "hipotese": "limites medidos e declarados: grade de 1 mi de células × 15 fatores (extração em SQL por conjuntos com índices GiST e raster por blocos), combinação em SQL para > 200 mil unidades e no navegador para ≤ 50 mil; memória por job limitada; tabela de tempos em tests/medidas por tamanho (10 mil, 100 mil, 1 mi).",
+   "portao_de_pronto": "1 mi de células × 15 fatores extraídas em ≤ 30 min com RAM ≤ 4 GB (guardrail); recombinação de 1 mi em ≤ 5 s no servidor; navegador recusa combinar > 50 mil e delega ao servidor; números no MANUAL saem de tests/medidas.",
+   "refutacao": "adversário lança 2 execuções simultâneas e confere que a segunda espera na fila (1 job pesado por vez).",
+   "papeis": [
+    "dados",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "spec"
+  },
+  {
+   "id": "L3-17-similaridade",
+   "linha": "L3 motor AMC",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-c-extracao-fator"
+   ],
+   "hipotese": "equivalente a Find Similar Locations / Similarity Search: dadas 1-N unidades de referência, as mais parecidas por cosseno (ou distância euclidiana) sobre fatores padronizados (z-score), ranking com índice de similaridade; 'onde mais parece com este local que deu certo'.",
+   "portao_de_pronto": "reproduz exemplo numérico de referência; escolha de campos; export; teste.",
+   "refutacao": "adversário passa referência = candidato: similaridade 1 e 1º lugar.",
+   "papeis": [
+    "dados",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L3-18-paridade-esri-amc",
+   "linha": "L3 motor AMC",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-g-tela-motor"
+   ],
+   "hipotese": "docs/PARIDADE.md, seção motor: cada capacidade do Suitability Modeler (abas Settings/Suitability/Locate/Sources/Evaluate, três métodos de transformação, peso multiplicador × percentual, relatório PDF com 2-5 critérios), Weighted Overlay (escala, restrito, NoData, soma 100 inteira), Rescale by Function (13 funções), Fuzzy Overlay (5 combinações), Locate Regions (11 parâmetros), adequação do Business Analyst (influência positiva/inversa/ideal, filtro, contagem/distância, 5.000 sítios, 5 vistas), Find Similar Locations, Distance Accumulation/Optimal Path e os algoritmos fuzzify/reclassify/zonal do QGIS 3.40, com estado feito/parcial/fora e o teste que prova cada 'feito'.",
+   "portao_de_pronto": "URLs testadas por HTTP na data em docs/urls_paridade.txt com teste que exige 200; cada linha 'feito' aponta para um teste que existe; adversário confere 10 linhas ao acaso.",
+   "refutacao": "adversário escolhe 5 linhas 'feito' e tenta reproduzir a função no produto; qualquer falha rebaixa a parcial.",
+   "papeis": [
+    "esri",
+    "cronista",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L3-19-multiescala",
+   "linha": "L3 motor AMC",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-b-unidades"
+   ],
+   "hipotese": "grades aninhadas: macro (ex.: 1 km) para triagem regional com fatores de escala grosseira, micro (100 m) só dentro das regiões aprovadas no macro; camada de escala quilométrica não custa por célula de 100 m (regra do motor de LT); o resultado macro vira a máscara de estudo do micro.",
+   "portao_de_pronto": "fluxo macro → micro em 2 execuções ligadas; célula micro fora das regiões macro não é calculada; relatório declara a escala de cada fator.",
+   "refutacao": "adversário usa fator de 1 km na grade de 100 m sem declarar: o motor tem de marcar 'escala grosseira' no fator.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa"
+  },
+  {
+   "id": "L3-20-narrativa-de-resultado",
+   "linha": "L3 motor AMC",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L3-01-i-exportacao-metodo"
+   ],
+   "hipotese": "resumo textual das top-N e do modelo gerado por modelo de texto determinístico (template a partir do JSON: 'a unidade X tem nota 82 de 100 porque …'), sem modelo de linguagem afirmando fato; segue a regra de escrita de 03/09 (número com universo, base e fonte); revisor automático marca frase sem número de origem.",
+   "portao_de_pronto": "cada número do texto existe no JSON (teste); zero termos da lista proibida; texto de 3 unidades conferido à mão.",
+   "refutacao": "adversário procura frase no texto que não decorre de um campo do JSON.",
+   "papeis": [
+    "backend",
+    "cronista",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa"
+  },
+  {
+   "id": "L6-01-a-registro",
+   "linha": "L6 conectores",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-catalogo"
+   ],
+   "hipotese": "tabela plat.acervo_camada sincronizada por script a partir de acervo.fonte/objeto (só leitura) e geometry_columns: uma linha por tabela canônica com geometria no servidor principal (medido 05/09: 462 candidatas, 269 em public), com fonte_id, schema.tabela, srid, tipo de geometria, lista branca de colunas expostas, COUNT(*) exato com data, sha256 quando existir e estado (exposta / bloqueada / pendente de licença); nada é copiado e acervo.* nunca é escrito pela plataforma.",
+   "portao_de_pronto": "script acervo_sync.py idempotente roda em ≤ 5 min; toda linha exposta tem licença curada (L6-01-g) e COUNT(*) do dia; teste compara 20 linhas com \\d e COUNT(*) no psql; tabela fantasma (estimativa > 0 e COUNT 0) nunca fica exposta.",
+   "refutacao": "adversário confere que as 2 tabelas fantasma conhecidas do registro (public.prodes_yearly_all_indexed e farma.djen_pub_termo) não aparecem e que a coluna de contagem não é reltuples.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-01-acervo-casa",
+   "origem": "casa"
+  },
+  {
+   "id": "L6-01-b-view-so-leitura",
+   "linha": "L6 conectores",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-01-a-registro",
+    "L0-02-tenant-auth"
+   ],
+   "hipotese": "publicação sem cópia: para cada camada exposta, view SECURITY INVOKER no schema plat_acervo com só as colunas da lista branca; GRANT SELECT por view a plat_app; a leitura só passa quando existe assinatura do inquilino (função plat.acervo_pode_ler(camada) no WHERE da view); Martin serve tiles pela função com inquilino; FeatureServer e OGC API só-leitura (applyEdits = 405).",
+   "portao_de_pronto": "inquilino A assina CAR e consulta de mapa sobre 7,36 mi de imóveis responde em ≤ 100 ms (índice GiST da tabela original); inquilino B sem assinatura recebe 403/0 linhas em API, tiles e FeatureServer; nenhuma tabela public tem GRANT direto a plat_app (teste varre pg_class/aclexplode); e2e adiciona ao mapa.",
+   "refutacao": "adversário tenta SELECT direto em public.car_area_imovel como plat_app, a view sem assinatura e applyEdits na camada.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-01-acervo-casa",
+   "origem": "casa"
+  },
+  {
+   "id": "L6-01-c-tela-acervo",
+   "linha": "L6 conectores",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-01-b-view-so-leitura",
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "tela 'Acervo' (o equivalente do Living Atlas): 22 domínios como filtro, busca por nome e órgão, cartão por camada (órgão, frescor, licença, contagem exata, data), ficha completa, botão 'adicionar ao meu mapa' (item do catálogo tipo acervo, só-leitura), pré-visualização, aviso de atribuição obrigatória para ODbL e CC BY-SA.",
+   "portao_de_pronto": "e2e: buscar 'unidades de conservação', abrir ficha, adicionar, ver no mapa, ver a atribuição na legenda; camada sem licença curada não aparece (teste conta); responsivo; 0 erro de console.",
+   "refutacao": "adversário procura no HTML e na API qualquer camada com estado bloqueada ou pendente.",
+   "papeis": [
+    "frontend",
+    "backend",
+    "cartografo",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-01-acervo-casa",
+   "origem": "esri"
+  },
+  {
+   "id": "L6-01-d-ficha-fonte",
+   "linha": "L6 conectores",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-01-a-registro"
+   ],
+   "hipotese": "ficha com os 10 campos de procedência do registro (url, licença, frescor, data do dado, script gerador, sha256, método, confiança, limites, próxima verificação) + endpoints confirmados e vivos (acervo.endpoint) + 'o que este dado não sustenta' + comando de reexecução do hash; campo ausente aparece como 'não registrado', nunca vazio em silêncio; completude x/10 exibida.",
+   "portao_de_pronto": "ficha de 20 fontes conferida contra SELECT em acervo.fonte (teste); e2e.",
+   "refutacao": "adversário compara a ficha de 5 fontes com o registro e procura campo inventado ou preenchido por padrão.",
+   "papeis": [
+    "frontend",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-01-acervo-casa",
+   "origem": "casa"
+  },
+  {
+   "id": "L6-01-e-assinatura-e-uso",
+   "linha": "L6 conectores",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-01-b-view-so-leitura"
+   ],
+   "hipotese": "assinatura por inquilino (quem, quando, texto da licença aceito na hora), revogação, registro de leitura por camada (consultas e feições servidas por dia), exportação com o aviso da licença (ODbL e CC BY-SA levam LICENCA.txt e atribuição), relatório mensal de uso do acervo por inquilino (entrada para L7-09).",
+   "portao_de_pronto": "assinar exige clique no texto da licença (gravado); registro conta consultas do dia (teste faz 10 e lê 10); revogação corta leitura em ≤ 1 s; export leva LICENCA.txt.",
+   "refutacao": "adversário exporta camada ODbL e procura o aviso de atribuição no pacote.",
+   "papeis": [
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-01-acervo-casa",
+   "origem": "casa"
+  },
+  {
+   "id": "L6-01-f-lgpd",
+   "linha": "L6 conectores",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-01-a-registro"
+   ],
+   "hipotese": "classificação obrigatória por camada (pública / pessoal / sigilo) e por coluna (lista negra: cpf, cnpj de pessoa física, nome, endereço de pessoa, e-mail, telefone); fontes inteiras em bloqueio permanente (SICOR identidade, CNPJ sócios, CAFIR, SNGPC, matrículas, eleitorado individual, BO com nome); a lista branca de colunas da view exclui identificadores; decisão de expor gravada com usuário e data.",
+   "portao_de_pronto": "teste automatizado percorre todas as views expostas e falha se existir coluna cujo nome case com a lista negra ou cujo conteúdo case com regex de CPF/CNPJ em amostra de 1.000 linhas; fontes bloqueadas não têm view; make check inclui o teste.",
+   "refutacao": "adversário procura em todas as views expostas coluna com CPF ou nome (amostra + regex) e tenta expor SICOR identidade pela tela.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-01-acervo-casa",
+   "origem": "casa"
+  },
+  {
+   "id": "L6-01-g-licenca-curada",
+   "linha": "L6 conectores",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-01-a-registro"
+   ],
+   "hipotese": "tabela plat.acervo_licenca (fonte_id → tipo em vocabulário fechado: CC0, CC-BY, CC-BY-SA, ODbL, dado-aberto-com-termo-do-órgão, Copernicus, licença-própria, não-declarada; URL da página da licença testada por HTTP; data; trecho de evidência) preenchida para ≥ 40 fontes com geometria e licença ESCRITA na origem (IBGE, INPE, MapBiomas, Copernicus, OSM, ANA, ICMBio/INDE, IBAMA dados abertos, ANM, FUNAI, INCRA …); acervo.* não é editado; 'dado público sem licença escrita' não conta (regra D17; hoje só 15 das 68 fontes com texto de licença têm licença nomeada, medido 05/09); o que ficar pendente vai para decisoes_do_dono.",
+   "portao_de_pronto": "≥ 40 fontes com tipo ≠ não-declarada e URL com HTTP 200 na data; teste reexecuta os 40 GETs; lista das fontes pendentes gravada em decisoes_do_dono (D17); nenhuma licença digitada sem URL.",
+   "refutacao": "adversário abre 10 URLs e confere que a página diz o que a tabela diz; qualquer 'dado público' sem termo escrito contado como licença = refutado.",
+   "papeis": [
+    "pesquisador",
+    "dados",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-01-acervo-casa",
+   "origem": "casa"
+  },
+  {
+   "id": "L6-01-h-frescor-verificacao",
+   "linha": "L6 conectores",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-01-a-registro",
+    "L0-05-jobs"
+   ],
+   "hipotese": "job semanal que reexecuta COUNT(*) com timeout, o comando de sha256 quando existir e o teste HTTP dos endpoints; grava em plat (nunca em acervo.*); camada com proxima_verificacao vencida ou endpoint morto mostra 'verificação vencida' na ficha e no mapa; relatório de mudanças (contagem que variou > 5 %).",
+   "portao_de_pronto": "job cobre as camadas expostas em ≤ 30 min; aviso aparece para uma fonte forçada a vencida (teste); histórico de 12 verificações por camada.",
+   "refutacao": "adversário derruba um endpoint na fixture e confere o aviso.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-01-acervo-casa",
+   "origem": "casa"
+  },
+  {
+   "id": "L6-01-i-raster-e-arquivos",
+   "linha": "L6 conectores",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L1-02-tiles-token",
+    "L6-01-a-registro"
+   ],
+   "hipotese": "o acervo não é só tabela: rasters da casa (MapBiomas col. 10 por ano, recortes GLO-30, mosaicos S2 já em COG) e as 321 camadas de arquivo com sha256 (acervo.camada_arquivo) entram no catálogo do acervo como camadas raster (TiTiler) e vetoriais (ingestão única para PostGIS com sha256 conferido), com a mesma ficha.",
+   "portao_de_pronto": "≥ 10 rasters e ≥ 20 arquivos expostos; sha256 conferido antes de ingerir (teste); tiles por token; nada > 2 GB novo sem decisão do dono (guardrail de disco, D21).",
+   "refutacao": "adversário altera 1 byte de um arquivo da fixture: a ingestão tem de recusar por hash.",
+   "papeis": [
+    "raster",
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-01-acervo-casa",
+   "origem": "casa"
+  },
+  {
+   "id": "L6-01-j-multi-servidor",
+   "linha": "L6 conectores",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-01-a-registro"
+   ],
+   "hipotese": "tabelas que só vivem nos outros dois servidores (412 tabelas em mais de uma máquina; muitas só no GPU box ou no segundo servidor) entram por postgres_fdw só-leitura (extensão presente) com credencial de leitura e schema espelho, ou ficam marcadas 'não disponível nesta instalação' na ficha; nunca copiadas sem decisão (disco a 98 %).",
+   "portao_de_pronto": "3 tabelas remotas lidas por FDW com tempo medido; ficha mostra 'servidor remoto'; falha de rede vira aviso, não camada vazia.",
+   "refutacao": "adversário derruba a rede da fixture e confere que a camada não aparece como '0 feições'.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-01-acervo-casa",
+   "origem": "casa"
+  },
+  {
+   "id": "L6-02-a-modelo-conexao-e-seguranca",
+   "linha": "L6 conectores",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-03-catalogo"
+   ],
+   "hipotese": "tabela plat.conexao (tipo em vocabulário fechado, config JSONB validada por schema por tipo, credencial cifrada com pgp_sym_encrypt e chave do servidor fora do banco, dono, saúde, última verificação) e camada externa como item do catálogo em dois modos: referenciada (lida ao vivo, via proxy quando há credencial) e copiada (materializada em PostGIS com agendamento); proteção contra SSRF (resolução DNS e bloqueio de RFC1918, loopback, link-local e metadata; só http/https; redirecionamento revalidado), timeouts, limite de bytes, defusedxml.",
+   "portao_de_pronto": "teste de SSRF com 8 URLs (127.0.0.1, 10.x, 169.254.169.254, file://, redirect para interno, DNS que resolve para interno, userinfo na URL, porta interna 8150) = todas recusadas; credencial nunca aparece em resposta de API nem em log (teste grep); RLS; OpenAPI.",
+   "refutacao": "adversário usa host público que redireciona para 127.0.0.1:8150 e host cujo DNS muda entre a validação e o uso (rebinding).",
+   "papeis": [
+    "arquiteto",
+    "backend",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "casa"
+  },
+  {
+   "id": "L6-02-b-wms-wmts",
+   "linha": "L6 conectores",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-a-modelo-conexao-e-seguranca",
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "WMS 1.1.1/1.3.0 (GetCapabilities analisado com defusedxml, sem owslib, que não está nesta máquina; escolha de camada, estilo, CRS 3857/4326, formato, GetFeatureInfo no clique) e WMTS (KVP e RESTful; TileMatrixSet 3857 direto no MapLibre; outros conjuntos → proxy que reprojeta por GDAL e marca 'reprojetado'); proxy com cache e credencial escondida; equivalente ao WMS/WMTS em cascata do GeoServer.",
+   "portao_de_pronto": "e2e adiciona 1 WMS e 1 WMTS públicos brasileiros e vê no mapa; GetFeatureInfo devolve atributos; serviço só em EPSG:4674 funciona via proxy; teste sem rede com capabilities em fixture + 1 teste com rede marcado.",
+   "refutacao": "adversário fornece capabilities de 40 MB, com entidade externa XML, e camada 1.3.0 com eixo lat/lon invertido.",
+   "papeis": [
+    "backend",
+    "frontend",
+    "cartografo",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "geoserver"
+  },
+  {
+   "id": "L6-02-c-wfs-ogcapi",
+   "linha": "L6 conectores",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-a-modelo-conexao-e-seguranca"
+   ],
+   "hipotese": "WFS 2.0 (GetFeature paginado por startIndex/count, GML e GeoJSON, filtro por bbox) e OGC API Features (collections/items, paginação por links next, bbox, datetime) via GDAL (drivers WFS e OAPIF presentes, medido) → modo referenciado (consulta por bbox com cache curto) e copiado (ogr2ogr para PostGIS com agendamento); CRS nativo gravado e reprojetado para 4326; equivalente ao WFS em cascata do GeoServer.",
+   "portao_de_pronto": "1 WFS e 1 OGC API Features públicos adicionados; camada copiada com 50 mil feições em tempo medido; paginação conferida (contagem = numberMatched); tipos de atributo preservados; teste.",
+   "refutacao": "adversário aponta WFS com 5 mi de feições e sem paginação: o modo copiado para no limite declarado e avisa, sem travar o worker.",
+   "papeis": [
+    "backend",
+    "dados",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "geoserver"
+  },
+  {
+   "id": "L6-02-d-arcgis-rest-externo",
+   "linha": "L6 conectores",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-a-modelo-conexao-e-seguranca"
+   ],
+   "hipotese": "leitura de serviços ArcGIS REST de terceiros (Portal e AGOL públicos, e com token do cliente): FeatureServer (query paginado por resultOffset/resultRecordCount, maxRecordCount respeitado, f=geojson ou pbf, outSR=4326), MapServer (export como imagem dinâmica via proxy), ImageServer (exportImage como raster referenciado); simbologia simples importada do renderer; modos referenciado e copiado.",
+   "portao_de_pronto": "3 serviços públicos de órgãos brasileiros que respondem 200 na data adicionados e vistos; contagem copiada = returnCountOnly; token do cliente cifrado e nunca exposto; cor de preenchimento/linha importada.",
+   "refutacao": "adversário aponta serviço com maxRecordCount = 1 e serviço que exige token sem fornecê-lo: erro claro, sem laço infinito.",
+   "papeis": [
+    "backend",
+    "esri",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "esri"
+  },
+  {
+   "id": "L6-02-e-stac-externo",
+   "linha": "L6 conectores",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-a-modelo-conexao-e-seguranca",
+    "L1-03-conectores-sensores"
+   ],
+   "hipotese": "STAC API externa por URL (busca por bbox/datetime/coleção com pystac-client, presente) e catálogo estático; item → asset COG como camada raster via TiTiler (referenciada por URL; assinatura SAS quando a fonte exige, como o Planetary Computer); ficha com licença lida do campo license do item/coleção.",
+   "portao_de_pronto": "2 STACs públicos (Element84 e Planetary Computer) buscados e 1 asset de cada visto como camada; licença exibida; teste com resposta gravada.",
+   "refutacao": "adversário passa STAC cujo asset não é COG (JP2 sem overviews): a tela avisa 'não é COG; lento ou ingerir'.",
+   "papeis": [
+    "raster",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "spec"
+  },
+  {
+   "id": "L6-02-f-geoparquet-duckdb",
+   "linha": "L6 conectores",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-a-modelo-conexao-e-seguranca",
+    "L2-15-analitica-grande"
+   ],
+   "hipotese": "GeoParquet/Parquet por URL HTTP(S) ou S3-compatível (Overture, Source Cooperative, bucket do cliente) lido por DuckDB spatial (1.5.5 presente) com bbox pushdown; modos: consulta por bbox ao vivo (limite de linhas) e cópia materializada; o GDAL 3.8.4 desta máquina não tem driver Parquet (medido), DuckDB é o caminho.",
+   "portao_de_pronto": "recorte de Overture buildings por bbox de 10 km² em ≤ 30 s vira camada; contagem conferida contra DuckDB direto; ficha com o esquema do Parquet; teste.",
+   "refutacao": "adversário aponta Parquet sem coluna de geometria e Parquet de 50 GB: recusa e limite declarado.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "spec"
+  },
+  {
+   "id": "L6-02-g-pmtiles-xyz-tilejson",
+   "linha": "L6 conectores",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-a-modelo-conexao-e-seguranca",
+    "L2-01-mapa-web"
+   ],
+   "hipotese": "tiles de terceiros: PMTiles por URL (Range/206 conferido antes de aceitar), XYZ raster e vetor com {z}/{x}/{y}, TileJSON, com atribuição obrigatória e zoom mínimo/máximo; token do cliente no caminho guardado cifrado; camada sempre referenciada.",
+   "portao_de_pronto": "PMTiles público e XYZ público adicionados e vistos; teste de 206; URL sem Range recusada com mensagem; atribuição na legenda.",
+   "refutacao": "adversário fornece servidor que responde 200 a Range (ignora o cabeçalho): tem de ser recusado.",
+   "papeis": [
+    "frontend",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "spec"
+  },
+  {
+   "id": "L6-02-h-csv-url-geojson-kml",
+   "linha": "L6 conectores",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-a-modelo-conexao-e-seguranca",
+    "L0-04-ingest-vetor"
+   ],
+   "hipotese": "arquivos por URL: CSV (detecção de lat/lon, WKT, vírgula decimal e ponto-e-vírgula; endereço → geocodificação quando L2-11 existir), GeoJSON, KML/KMZ, GeoRSS, GPX; modo copiado com atualização agendada e ETag/Last-Modified para não recarregar igual; limite de tamanho; equivalente ao 'CSV/KML/GeoRSS/GeoJSON pela web' do Map Viewer 11.4.",
+   "portao_de_pronto": "4 formatos por URL pública viram camada; atualização agendada detecta arquivo inalterado (ETag) e não recarrega (teste); CSV com vírgula decimal reconhecido.",
+   "refutacao": "adversário passa CSV com lat/lon trocados (lon > 90) e KML com 200 mil pontos.",
+   "papeis": [
+    "backend",
+    "dados",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "esri"
+  },
+  {
+   "id": "L6-02-i-google-sheets",
+   "linha": "L6 conectores",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-h-csv-url-geojson-kml"
+   ],
+   "hipotese": "Google Sheets como fonte: planilha publicada na web (URL de exportação CSV pública) sem credencial, e planilha privada via conta de serviço do cliente (JSON cifrado) pela API Sheets; mesma máquina do CSV-URL; agendamento.",
+   "portao_de_pronto": "planilha pública de teste vira camada e atualiza em 15 min; planilha privada lida com conta de serviço de teste da casa (se não houver, registrado como pendente, nunca como feito); credencial nunca em log.",
+   "refutacao": "adversário revoga a conta de serviço e confere que a camada mostra 'falha na atualização', não dado velho como novo.",
+   "papeis": [
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "esri"
+  },
+  {
+   "id": "L6-02-j-bancos-externos",
+   "linha": "L6 conectores",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-a-modelo-conexao-e-seguranca"
+   ],
+   "hipotese": "bancos externos do cliente (equivalente ao data store item de banco relacional e à query layer): PostgreSQL/PostGIS via postgres_fdw (presente) em modo referenciado (tabela estrangeira, sem copiar linha) e copiado (agendado); SQL Server via driver GDAL MSSQLSpatial (presente, medido) em modo copiado; Oracle exige oracle_fdw ou OCI, ausentes nesta máquina → declarado 'pendente de instalação com decisão do dono' e ausente da tela até existir; credencial cifrada; consulta SQL do cliente com lista branca de SELECT e limite de linhas.",
+   "portao_de_pronto": "PostgreSQL remoto (segundo banco local como fixture) referenciado e visto no mapa; SQL Server testado só se o dono liberar um container (registrado como pendente); consulta SQL recusa DDL/DML e exige LIMIT; tempo medido.",
+   "refutacao": "adversário tenta 'SELECT …; DROP TABLE' e consulta sem LIMIT em tabela de 100 mi de linhas.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "esri"
+  },
+  {
+   "id": "L6-02-k-agendamento",
+   "linha": "L6 conectores",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-a-modelo-conexao-e-seguranca",
+    "L0-05-jobs"
+   ],
+   "hipotese": "atualização agendada de camadas copiadas: intervalo de 15 min a mensal, execução como job da fila (pg_cron 1.6 só como relógio), histórico de 30 execuções por tarefa, 5 falhas seguidas → pausa e aviso ao dono da camada, e-mail no máximo 1 a cada 6 h, tetos por inquilino declarados e medidos (a referência Esri publica 10 tarefas ativas por usuário e 50 por organização); troca atômica da camada (a antiga só sai quando a nova entrou inteira).",
+   "portao_de_pronto": "tarefa de 15 min roda 3 vezes em teste acelerado; 5 falhas pausam; troca atômica provada (consulta durante a troca nunca vê tabela vazia); tela 'Tarefas' lista; teste.",
+   "refutacao": "adversário mata o worker no meio da troca: a camada antiga tem de continuar íntegra.",
+   "papeis": [
+    "backend",
+    "dados",
+    "testador",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "esri"
+  },
+  {
+   "id": "L6-02-l-saude",
+   "linha": "L6 conectores",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-a-modelo-conexao-e-seguranca"
+   ],
+   "hipotese": "verificação periódica de cada conexão (HEAD/GetCapabilities, latência, código), estado na ficha (verde/âmbar/vermelho com data), aviso no mapa quando a camada referenciada está fora do ar (nunca mapa vazio em silêncio), disponibilidade em 30 dias.",
+   "portao_de_pronto": "conexão com URL inválida fica vermelha em ≤ 1 ciclo; mapa mostra aviso; disponibilidade em % no painel; teste.",
+   "refutacao": "adversário derruba a fixture e abre o mapa: tem de haver aviso visível (e2e).",
+   "papeis": [
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "casa"
+  },
+  {
+   "id": "L6-02-m-catalogo-endpoints-brasil",
+   "linha": "L6 conectores",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-b-wms-wmts",
+    "L6-02-c-wfs-ogcapi",
+    "L6-02-d-arcgis-rest-externo"
+   ],
+   "hipotese": "catálogo de conectores públicos prontos para 'um clique': endpoints confirmados e vivos do registro (342 medidos em 01/09 em acervo.endpoint, filtrando os de serviço OGC/ArcGIS REST/STAC) + a fila keyless global já verificada do mapa aberto da casa (relevo, cobertura, clima, solo, água, população); cada entrada com órgão, tipo, licença, data do teste; reteste semanal.",
+   "portao_de_pronto": "≥ 60 endpoints com teste HTTP verde na data (script + JSON em tests/medidas); 10 adicionados pela tela em e2e; entrada morta sai da lista e vai para 'fora do ar'.",
+   "refutacao": "adversário sorteia 15 e testa por conta própria; endpoint 200 que devolve HTML de erro conta como morto.",
+   "papeis": [
+    "pesquisador",
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "casa"
+  },
+  {
+   "id": "L6-02-n-etl-na-entrada",
+   "linha": "L6 conectores",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-k-agendamento",
+    "L5-02-fluxos"
+   ],
+   "hipotese": "transformações na entrada de qualquer conector, salvas como 'pipeline de dados' (equivalente ao Data Pipelines e ao Quick Import do Data Interoperability): selecionar/renomear/tipar campos, filtrar por atributo e por geometria, calcular campo (expressão aritmética e de texto restrita, sem código arbitrário), criar geometria de lat/lon/WKT, reprojetar, unir por chave, mesclar, dissolver; executa como job na atualização agendada; visível no construtor de fluxos; base DuckDB + ogr2ogr + PostGIS.",
+   "portao_de_pronto": "pipeline de 5 passos sobre CSV-URL roda agendado e gera camada; cada passo com teste contra resultado independente; expressão maliciosa recusada; paridade escrita contra as ferramentas do Data Pipelines (doc datada, URL testada).",
+   "refutacao": "adversário monta join que multiplica linhas (N:M) e confere que o produto mostra a contagem antes/depois antes de gravar.",
+   "papeis": [
+    "backend",
+    "dados",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "esri"
+  },
+  {
+   "id": "L6-02-o-importacao-exportacao-formatos",
+   "linha": "L6 conectores",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L0-04-ingest-vetor"
+   ],
+   "hipotese": "importação e exportação em lote nos formatos que o GDAL desta máquina lê e escreve (medido 05/09: GPKG, Shapefile, GeoJSON/Seq, KML/LIBKML, DXF, CSV, XLSX, OpenFileGDB leitura e escrita, MVT/PMTiles, MSSQLSpatial; sem Parquet e sem OCI), com mapeamento de campos e CRS; 'exportar meu inquilino inteiro' em GeoPackage + JSON (escrow, L0-06); paridade contra a lista de formatos do Data Interoperability escrita como 'temos / não temos', nunca como total de formatos.",
+   "portao_de_pronto": "cada formato com teste de ida e volta (geometria e atributos preservados); FileGDB escrito abre no QGIS; export do inquilino com 20 camadas em tempo medido.",
+   "refutacao": "adversário exporta shapefile com nome de campo > 10 caracteres e com data: tem de haver aviso de truncamento.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L6-02-conectores-vivos",
+   "origem": "esri"
+  },
+  {
+   "id": "L6-03-paridade-conectores",
+   "linha": "L6 conectores",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-m-catalogo-endpoints-brasil"
+   ],
+   "hipotese": "docs/PARIDADE.md, seção conectores e acervo: tipos de camada por URL do Map Viewer 11.4 (serviço ArcGIS, WFS, WMS, WMTS, OGC API Features, KML, GeoRSS, GeoJSON, CSV, tiles), itens de data store (pasta, banco relacional, armazém em nuvem, armazenamento S3/Azure/GCS/Alibaba e S3-compatível 'não garantido', NoSQL), Living Atlas (curadoria por revisor, termos por item, modo desconectado com camadas de limites publicadas), Data Pipelines (entradas S3/Azure/BigQuery/Snowflake/camada/arquivo/URL; saída só camada ou arquivo; 15 min a mensal; 10/50 tarefas; 30 execuções; ≤ 1 mi de registros recomendado), Data Interoperability (ETL FME) e o cascateamento WMS/WMTS/WFS do GeoServer — feito/parcial/fora com o teste que prova.",
+   "portao_de_pronto": "URLs testadas (200) na data em docs/urls_paridade.txt; cada 'feito' aponta para teste; adversário confere 10 linhas.",
+   "refutacao": "adversário escolhe 5 linhas 'feito' e tenta reproduzir no produto; falha rebaixa a parcial.",
+   "papeis": [
+    "esri",
+    "cronista",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "esri"
+  },
+  {
+   "id": "L6-04-acervo-no-motor",
+   "linha": "L6 conectores",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-01-b-view-so-leitura",
+    "L3-01-c-extracao-fator"
+   ],
+   "hipotese": "camada do acervo assinada é usável como fator ou restrição no motor L3 sem cópia (o extrator lê a view); o resultado guarda fonte_id, sha256 e contagem da camada na proveniência.",
+   "portao_de_pronto": "modelo com 3 fatores do acervo (UC, TI, hidrografia) roda sobre grade de teste; proveniência mostra fonte_id e contagem; revogar a assinatura impede nova execução e não apaga resultado antigo.",
+   "refutacao": "adversário revoga a assinatura durante um job: o job falha com mensagem, nunca completa com zeros.",
+   "papeis": [
+    "dados",
+    "backend",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa"
+  },
+  {
+   "id": "L6-05-proveniencia-camada-externa",
+   "linha": "L6 conectores",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-a-modelo-conexao-e-seguranca"
+   ],
+   "hipotese": "toda camada externa recebe a mesma ficha de 10 campos do acervo, preenchida automaticamente do que o serviço declara (GetCapabilities: AccessConstraints/Fees, título, órgão; STAC: license; ArcGIS: copyrightText/description) e o resto 'não registrado'; hash do capabilities e data de acesso; a ficha é a mesma tela da L6-01-d.",
+   "portao_de_pronto": "5 conexões com ficha automática; campos vazios marcados; atribuição lida do serviço aparece na legenda; teste.",
+   "refutacao": "adversário confere que a licença mostrada é a do serviço e não um valor padrão.",
+   "papeis": [
+    "backend",
+    "frontend",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "casa"
+  },
+  {
+   "id": "L6-06-descoberta-csw",
+   "linha": "L6 conectores",
+   "prioridade": 4,
+   "estado": "pendente",
+   "dependencias": [
+    "L6-02-b-wms-wmts",
+    "L6-02-c-wfs-ogcapi"
+   ],
+   "hipotese": "descoberta por catálogo CSW 2.0.2 de terceiros (a INDE e os geoportais estaduais publicam CSW): busca por texto e bbox, leitura do registro ISO 19139 e criação da conexão WMS/WFS a partir do registro com um clique; o metadado ISO alimenta a ficha.",
+   "portao_de_pronto": "busca no CSW da INDE devolve registros e cria 2 conexões válidas; teste com resposta gravada; ficha preenchida do ISO.",
+   "refutacao": "adversário fornece registro ISO sem OnlineResource: a tela diz 'sem serviço ligado', não cria conexão vazia.",
+   "papeis": [
+    "backend",
+    "pesquisador",
+    "adversario"
+   ],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "geoserver"
+  }
+ ]
+}

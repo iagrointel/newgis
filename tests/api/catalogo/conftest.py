@@ -2,17 +2,20 @@
 contexto do admin, só itens do próprio inquilino), usuários temporários do inquilino demo e a semente de 10 mil itens
 (tests/api/semear_catalogo.py) usada pelas medidas."""
 
+import os
 import secrets
 
 import psycopg2
 import psycopg2.extras
-
-from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 import pytest
 
+from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 from tests.api.conftest import PREFIXO_TESTE
 from tests.api.semear_catalogo import PREFIXO as SEMENTE
 from tests.api.test_rls import contexto, ids_por_slug
+
+# 07/09: a base por trilha reescreve só o texto SQL, não o metadado do item
+_TRAB = os.environ.get("PLAT_SCHEMA_TRABALHO", "plat_trabalho")
 
 DADOS_POR_TIPO = {
     "mapa": {"esquema_versao": 1, "corpo": {}},
@@ -30,7 +33,7 @@ DADOS_POR_TIPO = {
         "nome_original": "x.bin",
     },
     "camada_vetorial": {
-        "schema": "plat_trabalho",
+        "schema": _TRAB,
         "tabela": "zt_inexistente",
         "geometria": "Point",
         "srid": 4326,

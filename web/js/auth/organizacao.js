@@ -36,6 +36,7 @@ async function carregarOrg() {
   montarArmazenamento();
   montarUsuarios();
   montarSeguranca();
+  await carregarSmtp();
 }
 
 /* corpo completo de PUT /api/org a partir do último GET conhecido; `sobre` sobrepõe só o que a seção que
@@ -201,4 +202,58 @@ document.getElementById('logo-remover').addEventListener('click', async () => {
   atual.logo = null;
   montarLogo();
   aviso.ok(t('org.logo_removido'));
+});
+
+/* ---------------------------------------------------------------- SMTP (item L0-07-d-smtp-convites):
+   endpoint PRÓPRIO (/api/org/smtp), fora de /api/org — a senha nunca volta na resposta (só
+   senha_configurada: bool); "host" vazio apaga o override do inquilino (volta à instalação/caminho manual). */
+let smtpAtual = null;
+
+async function carregarSmtp() {
+  const r = await obter('/api/org/smtp');
+  if (r.status !== 200) { document.getElementById('aviso').erro(`${t('smtp.erro_carregar')}: ${mensagemDe(r)}`); return; }
+  smtpAtual = r.json;
+  montarSmtp();
+}
+
+function montarSmtp() {
+  const s = smtpAtual;
+  const rotulo = document.getElementById('smtp-origem');
+  rotulo.textContent = s.configurado
+    ? t(s.origem === 'inquilino' ? 'smtp.origem_inquilino' : 'smtp.origem_instalacao', { host: s.host })
+    : t('smtp.origem_nenhum');
+  const f = document.getElementById('form-smtp');
+  f.campos = [
+    { nome: 'host', rotulo: t('smtp.host'), tipo: 'texto', padrao: s.origem === 'inquilino' ? (s.host || '') : '', ajuda: t('smtp.host_ajuda'), atributos: { maxlength: 255 } },
+    { nome: 'porta', rotulo: t('smtp.porta'), tipo: 'numero', padrao: s.origem === 'inquilino' ? (s.porta ?? 587) : 587, atributos: { min: 1, max: 65535, step: 1 } },
+    { nome: 'tls', rotulo: t('smtp.tls'), tipo: 'caixa', padrao: s.origem === 'inquilino' ? (s.tls ?? true) : true },
+    { nome: 'usuario', rotulo: t('smtp.usuario'), tipo: 'texto', padrao: s.origem === 'inquilino' ? (s.usuario || '') : '', atributos: { maxlength: 255, autocomplete: 'off' } },
+    { nome: 'senha', rotulo: t(s.senha_configurada && s.origem === 'inquilino' ? 'smtp.senha_trocar' : 'smtp.senha'), tipo: 'senha', padrao: '', ajuda: s.senha_configurada && s.origem === 'inquilino' ? t('smtp.senha_ajuda') : '', atributos: { maxlength: 1024, autocomplete: 'new-password' } },
+    { nome: 'remetente', rotulo: t('smtp.remetente'), tipo: 'texto', padrao: s.origem === 'inquilino' ? (s.remetente || '') : '', atributos: { maxlength: 255 } },
+    { nome: 'rotulo', rotulo: t('smtp.rotulo'), tipo: 'texto', padrao: s.origem === 'inquilino' ? (s.rotulo || '') : '', atributos: { maxlength: 100 } },
+  ];
+  f.botoes = [{ id: 'salvar', rotulo: t('acao.salvar'), tipo: 'submit' }];
+  f.addEventListener('enviar', async (e) => {
+    const v = e.detail.valores;
+    f.ocupado = true;
+    const corpo = { host: v.host, porta: v.porta, tls: v.tls, usuario: v.usuario, remetente: v.remetente, rotulo: v.rotulo };
+    if (v.senha) corpo.senha = v.senha; // vazio: preserva a cifra atual (nunca reenviamos a senha existente)
+    const r = await alterar('/api/org/smtp', corpo);
+    f.ocupado = false;
+    if (r.status !== 200) { f.mensagem(mensagemDe(r), 'erro'); return; }
+    smtpAtual = r.json;
+    document.getElementById('aviso').ok(t('smtp.salvo'));
+    montarSmtp();
+  });
+}
+
+document.getElementById('smtp-testar').addEventListener('click', async () => {
+  const aviso = document.getElementById('aviso');
+  aviso.limpar();
+  const bt = document.getElementById('smtp-testar');
+  bt.disabled = true;
+  const r = await enviar('/api/org/smtp/testar', {});
+  bt.disabled = false;
+  if (r.status !== 200) { aviso.erro(`${t('smtp.testar_falhou')}: ${mensagemDe(r)}`); return; }
+  aviso.ok(t('smtp.testar_ok', { destinatario: r.json.destinatario }));
 });

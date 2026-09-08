@@ -304,10 +304,19 @@ def url_assinada(chave: str, segundos: int, segredo: str | None = None) -> str:
 
 
 def assinatura_valida(chave: str, ate: int, assinatura: str, segredo: str | None = None) -> bool:
+    """item L7-19: além do segredo atual, aceita `PLAT_SECRET_ANTERIOR` (dupla-chave, 24h após uma
+    rotação) — uma URL assinada minutos antes da troca não pode virar 403 no meio da janela de rotação."""
     if not CHAVE.match(chave) or ate < int(time.time()):
         return False
+    assinatura = assinatura or ""
     esperada = _assinar(chave, ate, segredo or settings.PLAT_SECRET)
-    return hmac.compare_digest(esperada, assinatura or "")
+    if hmac.compare_digest(esperada, assinatura):
+        return True
+    if segredo is None and settings.PLAT_SECRET_ANTERIOR:
+        esperada_anterior = _assinar(chave, ate, settings.PLAT_SECRET_ANTERIOR)
+        if hmac.compare_digest(esperada_anterior, assinatura):
+            return True
+    return False
 
 
 # ---------------------------------------------------------------- multipart (contrato ADR 0005 seção 11.3-estendida)
