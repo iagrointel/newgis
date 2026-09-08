@@ -768,6 +768,12 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/rede/{p.rede_b['id']}/importar-bdgd",
         lambda p: {"caminho": "inexistente.gdb"},
     ),
+    # L4-05-c: importação de caso MATPOWER — a rota confere a REDE antes de olhar o corpo (mesma ordem de
+    # POST /pacote), então a rede de B dá 404 sem que o `.m` chegue a ser lido. O corpo vai sem caso válido
+    # de propósito: se a ordem fosse invertida, a resposta seria 422 e a varredura acusaria.
+    ("POST", "/api/rede/{rede_id}/matpower"): Caso(
+        lambda p: f"/api/rede/{p.rede_b['id']}/matpower",
+    ),
     # ---- L4-01-b / L4-02-a / L4-18: as rotas de feição, topologia, traçado e rede simples vieram nos
     # ramos-base desta família e ainda não tinham caso cruzado. Todas apontam a rede de B: a resposta tem de
     # ser 404 (a rede nem é vista) antes de qualquer trabalho. `/api/rede/simples` aponta uma CAMADA que não
