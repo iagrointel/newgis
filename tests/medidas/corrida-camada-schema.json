@@ -1,0 +1,12 @@
+{
+ "item": "corrida-camada-schema",
+ "medidas": {
+  "falhas_em_corrida_4_conexoes": {
+   "valor": 0,
+   "unidade": "falhas em 24 chamadas",
+   "comando": "bash /home/dev/plataforma/laco/roda_teste.sh tests/api/test_camada_schema_corrida.py -q"
+  }
+ },
+ "gerado_em": "2026-09-07T02:47:32Z",
+ "git_sha": "90d03c07da0c"
+}
