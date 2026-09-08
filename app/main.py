@@ -38,6 +38,7 @@ from app.catalogo import (
     rotas_pacote,
     rotas_pastas,
     rotas_publicacao,
+    rotas_site,
     transferencia,
 )
 from app.conexao import rotas as rotas_conexao
@@ -105,6 +106,8 @@ ROUTERS = [
     # --- publicação de documento de construtor (L5-14): /api/itens/{id}/publicacao(+/exportacao,+/visualizacoes),
     # vitrine pública /api/p/{inquilino}/{slug} e /p/{inquilino}/{slug}
     rotas_publicacao.router,
+    # --- site do inquilino (L5-20): /api/itens/{id}/site e a vitrine /s/{inquilino}/[caminho]
+    rotas_site.router,
     # --- pacote entre inquilinos e galeria de modelos (L5-37): /api/itens/{id}/pacote, /api/pacotes/verificar,
     # /api/pacotes/importar, /api/modelos
     rotas_pacote.router,
