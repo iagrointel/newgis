@@ -648,6 +648,151 @@ próprios; falta só o item na varredura genérica. Ver `docs/PARIDADE.md` e `la
 | sha | mensagem |
 |---|---|
 | (este) | Metadado ISO 19139 por item e catálogo externo OGC API Records (item L0-09-metadado-catalogo) |
+## turno 3, setembro de 2026 (item L0-02-g-checagem-privilegio-papel-id: quem concede papel tem de ter o papel)
+
+Fecha um escalonamento de privilégio real na tela de usuários. O papel personalizado RESTRINGE o teto do perfil
+(`plat.privilegios_de` é a interseção entre os dois), mas `POST /api/usuarios` e `PUT /api/usuarios/{id}`
+conferiam apenas se o papel CABIA no perfil do alvo, nunca se o ATOR tinha o que estava concedendo. Um
+administrador restrito por papel podia atribuir a outro um papel mais amplo que o seu, ou zerar o `papel_id` de
+alguém — inclusive o próprio — e recuperar o teto inteiro do perfil, ou ainda promover um editor a administrador
+sem papel, e fazer qualquer um dos três em massa pelo lote. `_nao_conceder_alem_do_proprio` (ADR 0016) recusa
+com 403 `privilegio_proprio_insuficiente` e devolve no `detalhe` a lista do que sobraria. Vale para perfil e
+papel juntos, porque promover a admin com papel nulo concede exatamente o mesmo conjunto.
+
+A refutação exigida foi rodada na forma completa, não em um caso: para **cada um dos 47 privilégios** do
+vocabulário, o papel do ator passa a ser "todos menos ele" e o papel oferecido passa a ser "todos" — um
+privilégio a mais. **94 chamadas (POST e PUT), 94 respostas 403, nenhuma 2xx**; 92 pela conferência nova
+(`privilegio_proprio_insuficiente`) e 2 pelo portão de privilégio (`sem_privilegio`), que são exatamente os
+casos em que o privilégio retirado do ator era `membros.gerir` ou `membros.papel`. Retirando as duas chamadas
+da conferência, 7 dos 10 testes do arquivo reprovam — a prova de que mordem.
+
+Varredura de privilégio rota por rota, em duas camadas, sobre as **138 rotas** de `docs/openapi.json`. A
+estática lê o fecho da dependência `autenticado(...)` de cada rota viva e compara com o declarado: **41 rotas**
+cobram na dependência exatamente o privilégio nomeado que declaram, **72** declaram valor especial ou
+alternativa e cobram no corpo, **8** cobram na dependência um privilégio que a declaração não menciona. A
+dinâmica prova as 41 com chamada real: um administrador de inquilino descartável recebe um papel com todos os
+privilégios menos um e **as 41 rotas respondem 403 `sem_privilegio` com `exigido` igual ao declarado**; com o
+papel completo, nenhuma delas responde `sem_privilegio` (controle positivo). Fronteira declarada: **31 rotas**
+de privilégio alternativo cobrado depois de carregar o recurso ficam fora do alcance deste item — a medida
+`rotas_alternativas_nao_provadas` guarda o número, e as duas de `/api/usuarios` que o item alcança foram
+provadas.
+
+As 8 rotas de declaração incompleta (`/api/tokens/{id}` e `/renovar` cobrando `tokens.gerar` sem declarar,
+`/api/acervo/{fonte_id}/adicionar` cobrando `conteudo.criar` numa declaração que promete alternativa,
+`/api/itens/{id}/miniatura/gerar` e `/api/lixeira/esvaziar` cobrando `jobs.executar`, e `POST /api/logout` sem
+dependência) **apertam** o acesso em vez de afrouxá-lo: exigem mais do que a documentação promete, então não são
+falha de segurança, e sim documentação errada. O conserto é do dono de cada rota. A lista está CONGELADA em
+`DIVERGENCIAS_CONHECIDAS` no teste: divergência nova reprova.
+
+De quebra, um defeito que impedia a homologação inteira: `CursorSchemaAmbiente` não sobrescrevia `executemany`,
+então o INSERT em lote de `plat.papel_privilegio` ia ao servidor com o literal `plat.` e todo ambiente fora do
+schema de produção respondia 403 "operação fora do inquilino da sessão" nas rotas de papel. Corrigido junto com
+`mogrify`, com guarda em `tests/unit/test_schema_ambiente_metodos.py` que varre `app/` atrás de método de cursor
+usado sem sobrescrita. O cursor de `conexao_plat_app` passou a ser o mesmo, senão nenhum teste que escreve
+`plat.` na mão roda fora de produção.
+
+## turno 3, setembro de 2026 (item L1-01-b-validacao-e-isolamento-da-entrada: validação de raster)
+
+Abre a linha L1 (imagens) com o portão que fica ANTES de qualquer conversão: `app/raster/validacao.py` (ADR
+0015) roda toda a inspeção do arquivo do cliente em **subprocesso separado**, com `RLIMIT_AS` 768 MB,
+`RLIMIT_CPU` 60 s, `RLIMIT_NOFILE` 64, `RLIMIT_CORE` 0, relógio de parede de 90 s (SIGKILL no grupo de
+processos) e ambiente GDAL sem leitura de diretório (`GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR`), sem
+`/vsicurl` (nenhuma extensão permitida ao driver HTTP), sem `.aux.xml`, sem `VRTRawRasterBand` e sem função
+de pixel. O processo pai **nunca importa rasterio para olhar o arquivo do cliente**: só lê os 64 primeiros
+bytes e confere a ASSINATURA de formato contra a extensão declarada (um PNG renomeado para `.tif` é recusado
+sem sequer abrir subprocesso). Qualquer morte do filho — memória, CPU, relógio, sinal, saída sem JSON — vira
+relatório `recusado` com a causa em português, nunca exceção subindo pela fila.
+
+Três estados no mesmo relatório JSON, gravado inteiro no resultado do job `raster.validar`
+(`app/raster/tarefas.py`): `recusado` (defeito do arquivo, mensagem exata), **`pendente`** (falta o que só o
+usuário sabe — CRS, NoData, data de aquisição, escala para reduzir 16 bits a 8 no perfil visual: a
+plataforma PERGUNTA e grava a resposta em `respostas`, **nunca assume um CRS**) e `aceito` (avisos não
+impedem: CRS sem EPSG resolvível é aceito com o WKT2 inteiro gravado; extensão fora do Brasil vira aviso).
+O tamanho descompactado é estimado pelo CABEÇALHO (`largura × altura × bandas × itemsize`) e comparado com a
+cota do inquilino antes de ler um pixel; no zip só o diretório central é lido antes de decidir (nº de
+entradas, soma declarada contra a cota, razão declarado/comprimido ≥ 50× = recusa, nome de caminho, link
+simbólico, zip aninhado) e **nada é extraído antes de aprovado**.
+
+Medido (`tests/medidas/L1-01-b.json`, 33 casos com arquivo sintético gerado em `tmp_path`, 31 deles com
+subprocesso): tempo do subprocesso mediana **0,294 s**, máximo 0,406 s fora do caso que prova o relógio;
+pico de RSS do subprocesso entre **87,1 MB e 130,4 MB**, ou seja 17 % do `RLIMIT_AS` declarado.
+Um BigTIFF esparso de **320.000 × 320.000** (95,4 GB descompactados estimados, **menos de 200 kB em disco**)
+é recusado em 0,3 s sem derrubar o pai; um TIFF fabricado à mão de 400.000 × 400.000 (menos de 1 kB) idem.
+Os três casos de invenção do adversário estão na suíte e passam: TIFF com IFD circular (o laço não trava —
+o relatório sai em menos de 10 s), JP2 truncado pela metade (recusado ao ler a janela de prova) e GeoTIFF
+declarando **65.535 bandas** (recusado, RSS abaixo do limite). Provas de isolamento: filho que tenta alocar
+2 GB morre e o pai devolve `morte=memoria`; filho em laço infinito é morto por relógio em 2,01 s com
+`codigo_saida=-9`.
+
+Fora deste turno de propósito: o e2e do job `raster.validar` (fila real) — a trilha rodou em worktree e não
+sobe worker que dispute a fila de produção; o registro do tipo é provado por teste de unidade.
+
+### conserto do laudo do adversário (mesmo turno)
+
+Um adversário independente REFUTOU a primeira versão com 9 achados (`laco/handoffs/T3/L1-01-b-ADVERSARIO.md`,
+23 casos em `tests/unit/test_raster_validacao_adversario.py`, 9 deles `xfail(strict=True)`). Os 9 foram
+consertados e os 23 casos passam, sem nenhum ser apagado ou afrouxado — o texto de cada achado ficou como
+comentário em cima do teste que o registrou. O que mudou:
+
+* **A rede fecha no processo, não por variável.** O filho recebe um filtro **seccomp** (BPF clássico montado
+  com `ctypes` sobre a libc; nenhuma dependência nova) que faz `socket(AF_INET/AF_INET6)` devolver
+  `EAFNOSUPPORT`, com `PR_SET_NO_NEW_PRIVS` para sobreviver ao `execve`. Antes, `CPL_VSIL_CURL_ALLOWED_
+  EXTENSIONS` aceitava qualquer extensão que o remetente escrevesse na URL e o `http://` direto nem passava
+  por ela: o adversário recebeu `HEAD /x.nenhuma-extensao-permitida` e `GET /y.tif` num ouvinte em
+  127.0.0.1. Medido depois do conserto, com o mesmo ouvinte e quatro caminhos de ataque (`/vsicurl` e
+  `http://`, direto e por VRT aninhado): **0 pedido recebido**. Provado também com a camada de conferência
+  DESLIGADA (chamando o GDAL direto no filho): 0 pedido, e `socket()` cru devolve erro. O filho MEDE o
+  próprio isolamento em `/proc/self/status` e grava `info.isolamento` (`seccomp: 2`, `no_new_privs: 1`) no
+  relatório. Namespace de rede foi testado e recusado: funciona, mas o kernel desta máquina não deixa
+  escrever `uid_map`, e o filho passaria a valer como `nobody` para permissão de arquivo.
+* **VRT conferido RECURSIVAMENTE.** Toda `SourceFilename` é resolvida com `os.path.realpath` (desfaz `..` e
+  **ligação simbólica**) e tem de cair dentro do diretório do envio; VRT que aponta para VRT é conferido até
+  5 níveis, com referência circular recusada. O XML é lido INTEIRO até 16 MiB — o corte de 1 MiB escondia
+  uma segunda banda atrás de um comentário grande. Fechou os achados 1, 2 e 3 (leitura de arquivo de fora do
+  envio por três caminhos).
+* **`NaN` não derruba mais a gravação.** NoData `NaN` (comum em float32) virava `NaN` no JSON, que o `jsonb`
+  do Postgres recusa: o relatório não chegava a ser gravado no job. Agora `NaN`/`±Infinity` viram o texto
+  declarado `"NaN"`/`"Infinity"`/`"-Infinity"` na única saída do relatório, e há teste que **atravessa o
+  `jsonb` de verdade** (`psycopg2.extras.Json` → `SELECT %s::jsonb`) com a role da aplicação.
+* **Teto de VOLUME no zip**, além da razão de 50× e da cota: `min(cota, 8 × tamanho do envio + 8 MiB)`. Antes,
+  um envio de 1,4 MB escrevia 60 MB no diretório de trabalho (42× o enviado) sem violar regra nenhuma.
+* **Coordenada impossível vira PERGUNTA.** Latitude de 7.400.000° (resposta de CRS errada num arquivo em
+  metros) saía como aviso e o arquivo era aceito; agora é pendência de `crs`, com a sugestão de UTM.
+  "Fora do Brasil" continua aviso.
+* **Nenhum defeito do arquivo sai como traceback.** `rasterio._err.CPLE_AppDefinedError` não é
+  `RasterioError` nem `ValueError` e escapava do `except`, devolvendo ao usuário a última linha do traceback
+  em inglês. Três redes novas (por operação, no `_inspecionar` inteiro e no `main` do filho) e um
+  `_sem_caminho()` que tira caminho absoluto do servidor de toda mensagem vinda do GDAL/SO.
+* **Zip legítimo de 200 rasters volta a ser aceito.** O código abria todos os arquivos ao mesmo tempo e
+  batia no `RLIMIT_NOFILE=64` a partir de ~55 arquivos, recusando envio válido com `Too many open files` e o
+  caminho do servidor na mensagem. Agora abre **um de cada vez** (cabeçalho numa passagem, janela de prova
+  noutra) e o teto subiu para 256 como folga.
+* **`complex64`/`int64` declarados.** Continuam aceitos (o arquivo está íntegro), mas o relatório passa a
+  trazer `info.tipo_convertivel: false`: nenhum COG ou tile serve esses tipos, e a recusa é da conversão.
+
+Suíte dos dois arquivos juntos: **55 passed** (32 do construtor, 23 do adversário), `ruff` limpo,
+`make sem-marcador` limpo.
+
+Um SEGUNDO adversário atacou o mecanismo novo e achou mais dois furos (`tests/unit/
+test_raster_validacao_adversario2.py`, 3 casos `xfail(strict=True)`), consertados neste turno:
+
+* **A conferência do VRT passa a percorrer a árvore do XML, não o texto.** A expressão regular casava só
+  `<SourceFilename>`; um `VRTWarpedDataset` põe a fonte em `<SourceDataset>` e uma isca `<SourceFilename>`
+  dentro de comentário XML fazia a conferência antiga passar — o VRT enviado lia arquivo de fora do envio.
+  Agora vale a árvore (`xml.etree`): os elementos que sempre apontam para dado (`SourceFilename`,
+  `SourceDataset`, `Filename`, `Dataset`, `MaskFilename`…) e todo texto ou atributo com forma de caminho
+  (absoluto, `../`, `~`, esquema remoto, extensão de dado) são resolvidos por `realpath` e têm de cair
+  dentro do diretório do envio. Como a recusa é do XML, ela vale ANTES de o GDAL abrir qualquer coisa: o
+  filtro de chamadas de sistema deixa de ser a única camada que segura a rede.
+* **O ambiente do filho é lista de PERMISSÃO** (`ambiente_do_filho()`). A remoção nominal de `PLAT_DSN` e
+  `PLAT_SECRET` deixava passar `PLAT_DSN_WORKER` (senha da role que escreve no banco) e
+  `PLAT_GARAGE_ADMIN_TOKEN` para o processo que abre o arquivo hostil, e `AF_UNIX` não é bloqueado pelo
+  filtro. Entram só `PATH`, `HOME`, `TMPDIR`, idioma, fuso, caminho de biblioteca, ambiente virtual e o que
+  começa com `GDAL_`/`PROJ_`/`CPL_`/`OGR_`.
+
+Prova: `tests/unit/test_raster_validacao_refutacao3.py` (10 casos escritos antes do conserto; 8 falhavam
+contra o código anterior) e os 3 `xfail(strict=True)` do 2º adversário, agora sem marcador. Os quatro
+arquivos de teste do item juntos: **77 passed**, `ruff` limpo, `make sem-marcador` e `make limites` limpos.
 
 ## turno 3, setembro de 2026 (item L0-08-d-ldap: LDAP/Active Directory como provedor de login externo)
 
