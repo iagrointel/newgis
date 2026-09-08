@@ -1,0 +1,37 @@
+{
+ "item": "L0-07-e-relatorios",
+ "medidas": {
+  "pagina_pronta_ms_atividade": {
+   "valor": 107.5,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright (apoio.py Tela.ir)"
+  },
+  "relatorio_itens_10k_duracao_s": {
+   "valor": 0.6,
+   "unidade": "s",
+   "comando": "job relatorios.gerar itens com 10001 itens (duracao_s do job, worker em subprocesso na trilha)"
+  },
+  "relatorio_itens_10k_parede_s": {
+   "valor": 0.63,
+   "unidade": "s",
+   "comando": "POST /api/relatorios até estado concluido (inclui a espera na fila)"
+  },
+  "carga_1min": {
+   "valor": 4.39,
+   "unidade": "load",
+   "comando": "os.getloadavg()[0] no instante do pedido"
+  },
+  "ram_livre_gb": {
+   "valor": 6.99,
+   "unidade": "GB",
+   "comando": "MemAvailable de /proc/meminfo no instante do pedido"
+  },
+  "medido_em": {
+   "valor": "2026-09-08T01:57:13Z",
+   "unidade": "instante",
+   "comando": "relógio UTC"
+  }
+ },
+ "gerado_em": "2026-09-08T01:57:13Z",
+ "git_sha": "78f3f67699b1"
+}
