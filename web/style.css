@@ -299,3 +299,30 @@ plat-idioma select.controle { width: auto; padding: var(--e1) var(--e2); font-si
 .progresso { display: flex; align-items: center; gap: var(--e2); }
 .barra-progresso { flex: 1; height: var(--e2); min-width: 80px; background: var(--fundo); border: var(--borda-largura) solid var(--borda); border-radius: var(--raio-pilula); overflow: hidden; }
 .barra-progresso .preenchido, .progresso span { display: block; height: 100%; background: var(--andamento); transition: width .3s ease; }
+
+/* ---------- fila de envio (/uploads, UX-05): uma linha por arquivo com barra própria ---------- */
+.upload-fila { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
+.upload-item { border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); padding: var(--e2) var(--e3); display: grid; gap: var(--e1); background: var(--painel); }
+.upload-item-topo { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; }
+.upload-item-topo .nome-arquivo { font-weight: 600; overflow-wrap: anywhere; }
+.upload-item-topo .tamanho, .upload-item-topo .tipo-arquivo { color: var(--fraco); font-size: var(--t-1); }
+.upload-item-topo .estado-marcador { margin-left: auto; }
+.upload-item-rodape { display: flex; gap: var(--e2); align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: var(--t-1); color: var(--fraco); }
+.upload-item-rodape .estado-arquivo.falha { color: var(--falha); }
+.upload-item[data-estado="concluido"] { border-color: var(--ok); }
+.upload-item[data-estado="falhou"] { border-color: var(--falha); }
+.upload-item[data-estado="cancelado"] { opacity: .7; }
+.conexoes .c-nome .nome { display: block; font-weight: 600; }
+.conexoes .c-nome .url { display: block; font-size: var(--t-2); overflow-wrap: anywhere; }
+
+/* ---------- página pública de link compartilhado (/c/<token>, UX-05): sem chrome interno ---------- */
+.publica-pagina { min-height: 100vh; display: flex; flex-direction: column; }
+.publica-topo { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); padding: var(--e3) var(--e5); border-bottom: var(--borda-largura) solid var(--borda); background: var(--fundo); position: sticky; top: 0; z-index: 30; }
+.publica-topo .marca strong { font-size: var(--t1); margin-right: var(--e2); }
+.publica-topo .marca span { color: var(--fraco); font-size: var(--t-1); }
+.publica-controles { display: flex; gap: var(--e2); align-items: center; }
+.publica .principal { flex: 1; }
+.publica-rodape { padding: var(--e3) var(--e5); border-top: var(--borda-largura) solid var(--borda); color: var(--fraco); font-size: var(--t-2); }
+.publica #incluido h2 { margin: 0; }
+.publica .ficha-item h2 { margin-bottom: var(--e2); }
+@media (max-width: 800px) { .publica-topo { padding: var(--e2) var(--e3); } .publica-rodape { padding: var(--e2) var(--e3); } }
