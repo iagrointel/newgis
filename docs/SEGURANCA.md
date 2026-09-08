@@ -1,135 +1,151 @@
 # Segurança — segredos, certificados, dependências e upload
 
-Item L7-19-segredos-e-certificados (§1-6). Esta seção é o mapa: onde cada segredo mora, como rotacionar sem
-derrubar o produto, e como o certificado TLS se renova sozinho. Ela não repete o que já está no
-`docs/adr/0001-fundacao.md` seção 8 (contrato de `.env`) — só o que mudou e o que é operação. Estendida com
-o item L7-03-f-dependencias-cve-log-correcoes (§7, varredura de dependência + log de correções) e o item
-L7-03-b-antivirus-anexos (§8, varredura de conteúdo em upload de anexo/miniatura).
+Item L7-19-segredos-e-certificados (§1-6). Esta seção é o mapa: onde cada segredo mora, como rotacionar
+CADA um deles sem derrubar o produto (comando único `plat segredo rotacionar <nome>`), e como o
+certificado TLS se renova sozinho. Ela não repete o que já está no `docs/adr/0001-fundacao.md` seção 8
+(contrato de `.env`) — só o que mudou e o que é operação. Procedimento passo a passo para um humano em
+plantão: `docs/RUNBOOKS/segredos.md`. Estendida com o item L7-03-f-dependencias-cve-log-correcoes (§7,
+varredura de dependência + log de correções) e o item L7-03-b-antivirus-anexos (§8, varredura de
+conteúdo em upload de anexo/miniatura).
 
-## 1. Onde cada segredo mora
+## 1. Os 5 segredos — onde cada um mora hoje
 
-| segredo | onde mora hoje | quem lê | dono do arquivo | modo |
-|---|---|---|---|---|
-| `PLAT_SECRET` | `/etc/plat/segredos/PLAT_SECRET` | `plat-api`, `plat-worker` (via `LoadCredential=`) | root | 0600, diretório 0700 |
-| `PLAT_DSN_WORKER` (senha da role `plat_worker`) | `/etc/plat/segredos/PLAT_DSN_WORKER` | `plat-worker` (via `LoadCredential=`) | root | 0600 |
-| `PLAT_DSN` (senha da role `plat_app`) | `.env` na raiz do repositório | `plat-api` | dono do repositório (`APP_USER`) | 0600 — **fora do escopo deste item**, ver §5 |
-| credenciais dos admins semeados (`tests/credenciais.txt`) | arquivo na raiz, gitignorado | `install.sh` (semente) | `APP_USER` | 0600 |
-| segredo TOTP por usuário (`plat.usuario.totp_secret`) | banco, cifrado com `PLAT_SECRET` (`app/auth/totp.py`) | `plat-api` | — | coluna do banco |
+| segredo | onde mora | quem lê | dono/modo |
+|---|---|---|---|
+| `PLAT_SECRET` | `/etc/plat/segredos/PLAT_SECRET` | `plat-api`, `plat-worker` (`LoadCredential=`) | root, 0600 |
+| `PLAT_SECRET_ANTERIOR` (dupla-chave, 24h) | `/etc/plat/segredos/PLAT_SECRET_ANTERIOR` | `plat-api`, `plat-worker` | root, 0600 (normalmente vazio) |
+| `PLAT_DSN` (senha da role `plat_app`) | `/etc/plat/segredos/PLAT_DSN` | `plat-api`, `plat-worker` (a chave é exigida sempre por `settings.py`, só a API se autentica de verdade com ela) | root, 0600 |
+| `PLAT_DSN_WORKER` (senha da role `plat_worker`) | `/etc/plat/segredos/PLAT_DSN_WORKER` | `plat-worker` | root, 0600 |
+| `PLAT_GARAGE_ADMIN_TOKEN` (bearer da Admin API do Garage, :3903) | `/etc/plat/segredos/PLAT_GARAGE_ADMIN_TOKEN` e `garage.toml` (`admin_token`) | `plat-api` (chama o Garage) e o próprio Garage (autentica quem chama) | root, 0600 / dono do Garage |
+| chaves S3 por inquilino (`chave_rw_*`, `chave_ro_*`) | `plat.arquivo_bucket` (banco, uma linha por inquilino) | `plat-api`, resolvidas por `SELECT` a cada requisição — nunca em arquivo | RLS por `tenant_id` |
+| segredo TOTP por usuário | banco, cifrado com `PLAT_SECRET`/`PLAT_SECRET_ANTERIOR` (`app/auth/totp.py`) | `plat-api` | coluna do banco |
 
-Antes deste item, `PLAT_SECRET` e `PLAT_DSN_WORKER` moravam no `.env` (modo 600, mas dono do usuário do
-sistema que roda o repositório inteiro — o mesmo usuário que roda todo outro produto desta máquina).
-O adversário do turno T2 (item L0-05, `laco/handoffs/T2/L0-05-jobs/refutacao.json`) registrou a
-ameaça: quem lê `PLAT_DSN_WORKER` tem autoridade total sobre o estado de job de **qualquer** inquilino
-(`plat.job_terminar`/`plat.job_devolver` são `SECURITY DEFINER` e só conferem `worker = nome`, e o nome
-do worker é público em `GET /api/jobs/{id}.worker`) — não há autenticação por processo, a senha é o
-único portão. Um `.env` legível por qualquer processo do usuário do sistema é portão fraco demais para
-isso.
+Nenhum dos 5 primeiros está mais no `.env` (`tests/unit/test_segredos_fora_do_repo.py` e
+`tests/unit/test_instalador.py::test_env_real_desta_maquina_nao_tem_nenhum_dos_cinco_segredos` provam
+isso na máquina real, não só no texto de `install.sh`). A chave S3 por inquilino nunca esteve em
+arquivo — é um desenho de banco que já existia (item L0-11); entra na tabela porque rotacioná-la é uma
+das 5 cláusulas do portão deste item.
 
-### O mecanismo: `LoadCredential=` do systemd
+### O mecanismo: `LoadCredential=` do systemd (retomado do turno T3, agora nos 5)
 
-`deploy/plat-api.service` e `deploy/plat-worker.service` declaram:
+`deploy/plat-api.service` declara `LoadCredential=` para `PLAT_SECRET`, `PLAT_SECRET_ANTERIOR`,
+`PLAT_DSN` e `PLAT_GARAGE_ADMIN_TOKEN`; `deploy/plat-worker.service` para `PLAT_SECRET`,
+`PLAT_SECRET_ANTERIOR`, `PLAT_DSN` e `PLAT_DSN_WORKER`. O systemd (root, antes de rebaixar para
+`APP_USER`) lê o arquivo fonte e entrega uma cópia em `$CREDENTIALS_DIRECTORY`
+(`/run/credentials/<unidade>/`); nenhum valor aparece em `ps`, `systemctl show` ou `journalctl` — só o
+*caminho* do arquivo fonte, o que mantém a regra do ADR 0001 §8.
 
-```
-LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
-LoadCredential=PLAT_DSN_WORKER:/etc/plat/segredos/PLAT_DSN_WORKER   # só plat-worker
-```
+**Um detalhe que muda o desenho**: `LoadCredential=` EXIGE que o arquivo-fonte exista, mesmo vazio — se
+não existir, a unidade não sobe. Isso é trivial para os 4 segredos que sempre têm um valor, mas
+`PLAT_SECRET_ANTERIOR` normalmente NÃO tem (só existe durante a janela de 24h depois de uma rotação de
+`PLAT_SECRET`) — por isso `install.sh` cria o arquivo **vazio** quando ele não existe (nunca pula a
+criação), e `settings.py` trata conteúdo vazio como chave ausente, idêntico ao comportamento sem o
+arquivo.
 
-O systemd (rodando como root, antes de rebaixar para `APP_USER`) lê o arquivo fonte e entrega uma cópia
-à unidade que a declarou, em `$CREDENTIALS_DIRECTORY` (tipicamente `/run/credentials/<unidade>/`). Isso
-é diferente de um segredo em argumento de linha de comando ou em `Environment=` da unidade: nenhum dos
-dois aparece em `ps` nem em `systemctl show` (só o *caminho* do arquivo fonte aparece ali, nunca o
-valor), o que mantém a regra do ADR 0001 §8 ("segredo nunca em argumento de linha de comando nem em
-unidade systemd") — e o arquivo fonte em `/etc/plat/segredos/` é `root:root 0600`, ilegível para
-qualquer usuário do sistema que não seja root.
+**O que isso NÃO isola — medido nesta máquina (systemd 255, sem `DynamicUser=`)**: a ACL do
+`LoadCredential=` libera o arquivo só ao `User=`/`Group=` da unidade (`dev`, o mesmo usuário que roda
+**todo outro produto desta máquina**); outro processo rodando como `dev` que souber o caminho em
+`/run/credentials/` ainda lê. O ganho real é tirar o segredo de um `.env` que rotina de operação
+(`cat`, `grep -r`, editor, backup, histórico do git) varre o tempo todo, e nunca aparecer em
+`ps`/journal/unit file. Isolamento por-unidade de verdade pede `DynamicUser=` — muda a dono de toda a
+árvore do repositório, fora de escopo aqui (ver §5 do handoff do item para o detalhe).
 
-**O que isso NÃO isola — medido nesta máquina (systemd 255, sem `DynamicUser=`), não presumido:**
-
-```
-$ sudo getfacl /run/credentials/plat-api.service/PLAT_SECRET
-user::r--
-user:dev:r--          # dev = APP_USER desta unidade
-group::---
-other::---
-
-$ cat /run/credentials/plat-api.service/PLAT_SECRET     # rodando como dev, sem sudo
-851a69...                                                # LÊ — mesmo usuário do sistema, mesma ACL
-
-$ sudo -u postgres cat /run/credentials/plat-api.service/PLAT_SECRET
-cat: ...: Permission denied                              # outro usuário do sistema: bloqueado
-```
-
-O `LoadCredential=` sem sandboxing adicional (`DynamicUser=`, `PrivateMounts=`) libera o arquivo por
-ACL só ao `User=`/`Group=` configurado na unidade — aqui, `APP_USER` (`dev`), o mesmo usuário que roda
-**todo outro produto desta máquina** (CLAUDE.md: `/home/dev/*` é uma única conta operando dezenas de
-serviços). Não existe isolamento *por processo* nesta configuração: outro processo rodando como `dev`
-que conheça o caminho lê o arquivo igual. O ganho real deste item é outro, e é genuíno: o segredo sai
-de um `.env` dentro de um repositório que rotina de operação (`cat`, `grep -r`, editor, backup,
-histórico do git) varre o tempo todo — exatamente o método do adversário do T2 ("lê o repositório...
-o histórico do git à procura de qualquer segredo") — e passa a exigir saber o caminho específico em
-`/run/credentials/` e ter UID `dev`, nunca aparece em `ps`/journal/unit file, e fica ilegível para
-qualquer usuário do sistema que não seja root ou `dev`. Isolamento por-unidade de verdade (nem outro
-processo do mesmo usuário lê) pediria `DynamicUser=` (usuário efêmero por serviço, alocado a cada
-início) — mudaria a dono de toda a árvore do repositório hoje `dev:dev` e ficou fora desta passagem.
-
-`app/settings.py` (`_credenciais_systemd`) lê `$CREDENTIALS_DIRECTORY` quando ela existe e sobrepõe o
-`.env` com qualquer arquivo de lá cujo nome bata com um campo de `Settings`; o ambiente do processo
-continua por cima de tudo (é assim que a suíte injeta valor de teste sem tocar em arquivo, ver §4).
-Fora do systemd (dev, CLI, pytest fora do `Makefile`) a variável não existe e a função devolve vazio —
-comportamento idêntico ao de antes deste item, retrocompatibilidade P5.
-
-## 2. `scripts/rotacionar_segredo.sh` — rotação sem reinstalar
+## 2. `plat segredo rotacionar <nome>` — um comando para os 5
 
 ```
-sudo bash scripts/rotacionar_segredo.sh PLAT_SECRET
-sudo bash scripts/rotacionar_segredo.sh PLAT_DSN_WORKER
+sudo scripts/plat segredo rotacionar PLAT_SECRET
+sudo scripts/plat segredo rotacionar PLAT_DSN
+sudo scripts/plat segredo rotacionar PLAT_DSN_WORKER
+sudo scripts/plat segredo rotacionar PLAT_GARAGE_ADMIN_TOKEN
+sudo scripts/plat segredo rotacionar PLAT_GARAGE_CHAVE_S3:<slug-do-inquilino>
 ```
 
-O que cada rotação faz, em ordem (a ordem importa: nunca existe um instante em que o serviço novo suba
-com um segredo que o outro lado — banco ou processo — ainda não aceita):
+`scripts/plat` é o dispatcher; a lógica mora em `scripts/segredo_rotacionar.py` (Python, não bash —
+os 5 casos manipulam banco, arquivo e a Admin API do Garage, cada um com sua prova de "o valor antigo
+parou de funcionar"; um script só por caso viraria 5 arquivos quase iguais). Os nomes de unidade/porta
+são **parâmetros com valor-padrão de produção** (`plat-api`:8150, `plat-worker`:8153,
+`plataforma-garage`:3903) — o mesmo script roda em produção de verdade e, com os overrides
+`--unidade-api`/`--unidade-worker`/`--unidade-garage`/`--cred-dir`, foi o que provou o mecanismo deste
+item inteiro contra 3 serviços DE TESTE (`plat-teste-segredo-{a,b,garage}`, portas 8197-8199), sem
+nunca reiniciar `plat-api`/`plat-worker`/`nginx`/`postgres` reais — ver `scripts/prova_segredos_l7_19.py`
+(orquestra tudo, do zero até a limpeza) e `scripts/prova_garage_chave_s3.py` (o único dos 5 que roda de
+verdade em produção, porque não reinicia nada — ver abaixo). Reprodução automatizada:
+`pytest tests/e2e/test_rotacao_segredos.py -m lento`.
 
-1. **`PLAT_DSN_WORKER`**: gera senha nova (`openssl rand -hex 16`) → `ALTER ROLE plat_worker PASSWORD`
-   no banco **primeiro** → grava o DSN novo em `/etc/plat/segredos/PLAT_DSN_WORKER` → confere que a
-   senha **antiga** já não autentica mais (tenta conectar com ela e exige falha) → `systemctl restart
-   plat-worker` → espera `/saude` responder 200 (mesmo laço de espera do `install.sh`).
-2. **`PLAT_SECRET`**: gera valor novo (`openssl rand -hex 32`) → grava em
-   `/etc/plat/segredos/PLAT_SECRET` → `systemctl restart plat-api` → espera `/saude` responder 200.
+O que cada rotação faz, em ordem (a ordem sempre garante que nunca existe um instante em que o lado que
+recebe o restart já tenha o valor novo antes do lado que o autentica):
 
-Downtime = o tempo do `systemctl restart` daquela unidade só (poucos segundos; `plat-worker` devolve os
-jobs em andamento ao receber `SIGTERM`, `TimeoutStopSec=40`, e o `plat-api` tem `Restart=on-failure`).
-Nenhuma outra unidade é tocada — rotacionar `PLAT_DSN_WORKER` nunca reinicia `plat-api` e vice-versa.
+1. **`PLAT_SECRET`** (dupla-chave): o valor atual vira `PLAT_SECRET_ANTERIOR` (grava-se ele **primeiro**,
+   nunca se perde o que estava valendo), gera-se um valor novo, grava-se como `PLAT_SECRET`, reinicia-se
+   `plat-api` (o único consumidor direto — o worker só precisa que a chave exista, ver tabela do §1)
+   e espera-se `/saude` = 200. Por 24h (janela documentada, não automática — ver §5) o que foi
+   cifrado/assinado com o valor antigo continua legível (`app/seguranca_rotacao.py`); depois disso,
+   apagar (esvaziar) `/etc/plat/segredos/PLAT_SECRET_ANTERIOR` — não há hoje um timer que faça isso
+   sozinho, é passo do runbook.
+2. **`PLAT_DSN`** (senha de `plat_app`): `ALTER ROLE plat_app PASSWORD` no banco **primeiro** → grava o
+   DSN novo no credential → reinicia `plat-api` → confere que a senha **antiga** já não autentica.
+3. **`PLAT_DSN_WORKER`** (senha de `plat_worker`): mesmo desenho, sobre `plat-worker`.
+4. **`PLAT_GARAGE_ADMIN_TOKEN`**: edita `admin_token` em `garage.toml` (texto exato, nunca por posição)
+   → grava o token novo no credential do plat → reinicia o Garage → reinicia `plat-api` → confere que
+   o token antigo já não autentica na Admin API e que o novo autentica. É o único dos 5 que reinicia
+   DOIS serviços diferentes ("reinício em cadeia"), cada um com sua própria janela medida.
+5. **`PLAT_GARAGE_CHAVE_S3:<slug>`**: cria uma chave NOVA no Garage (nunca reaproveita id), concede
+   permissão no bucket do inquilino, grava a chave nova (a gravação em `plat.arquivo_bucket` é o mesmo
+   caminho que `app/garage.py`/`app/objetos.py` já usam), confirma que a chave nova grava/lê um objeto
+   de prova, **apaga a chave antiga no Garage** e confirma que ela já não autentica (403). **Nenhuma
+   unidade reinicia** — a API resolve o par de chaves do bucket por `SELECT` a cada requisição
+   (`app.objetos._resolver_bucket_por_slug`), nunca as guarda em memória de processo — por isso este é
+   o único dos 5 cuja rotação real roda em produção de verdade dentro deste item: mede-se `/saude` de
+   `plat-api` antes/depois (sempre 200, nunca reiniciado) contra um bucket **descartável**, nunca um
+   inquilino real.
 
-**Consequência de rotacionar `PLAT_SECRET` (avisar antes, em produção com usuários ativos):**
-- Toda URL assinada de objeto (`app/objetos.py`, HMAC-SHA256 do `PLAT_SECRET`) emitida antes da troca
-  para de validar imediatamente — o cliente pede o link de novo, sem novo estado a limpar.
-- O `totp_secret` de cada usuário com 2FA ligado está cifrado com o `PLAT_SECRET` anterior
-  (`app/auth/totp.py`); depois da troca ele fica ilegível. Isto **já é tratado no código**, não é uma
-  falha nova: `app/auth/rotas_login.py` captura a exceção de decifragem e cai para código de
-  recuperação (`# segredo ilegível (PLAT_SECRET trocado): só recuperação vale`). A pessoa entra com um
-  código de recuperação e recadastra o 2FA. Não há hoje uma janela de dupla-chave (`PLAT_SECRET` +
-  `PLAT_SECRET_ANTERIOR`) que evite esse recadastro — ficou de fora deste passe por tamanho; ver §6.
+### Zero 5xx durante o restart — a técnica, não um acaso
 
-## 3. Prova de que o segredo não está mais no repositório
+Os 4 segredos que reiniciam serviço usam **ativação por soquete** (`Sockets=` do systemd) nos serviços
+de teste: o soquete TCP é propriedade da unidade `.socket`, que continua no ar e enfileirando conexões
+novas no kernel enquanto a unidade `.service` reinicia — por isso uma janela de restart não vira
+"connection refused" nem 5xx, ela só some na fila até o processo novo assumir. `scripts/
+segredo_rotacionar.py::reiniciar_e_medir` marreta `/saude` a cada 50 ms durante o `systemctl restart`
+inteiro e conta os códigos de resposta à parte de qualquer erro de conexão (os dois nunca se somam:
+"5xx" é uma resposta HTTP de servidor com erro; "erro de conexão" é ausência de resposta — confundir os
+dois esconderia justamente a baixa real, se existisse). **Medido, `tests/medidas/L7-19.json`: 0
+respostas 5xx nas 4 rotações que reiniciam algo**, num total de ~150 requisições martelo; um punhado de
+erros de conexão isolados (a fração de segundo entre o processo velho soltar o soquete e o novo
+assumi-lo, mesmo com socket activation) — reportados, nunca escondidos, nunca contados como 5xx.
+**Produção hoje (`plat-api`/`plat-worker`) NÃO usa socket activation** — a técnica foi provada no
+serviço de teste deste item; adotá-la em produção pede editar as unidades reais e um restart controlado
+para aplicar, o que este turno não fez (limite duro: nenhum restart de produção). Fica registrado como
+próximo passo natural em `docs/RUNBOOKS/segredos.md` §6.
+
+## 3. Prova de que nenhum dos 5 está no repositório nem no journal
 
 ```
-grep -c '^PLAT_SECRET=\|^PLAT_DSN_WORKER=' .env        # 0
-sudo stat -c '%a %U' /etc/plat/segredos/PLAT_SECRET     # 600 root
-sudo stat -c '%a %U' /etc/plat/segredos/PLAT_DSN_WORKER # 600 root
-sudo -u "$(stat -c %U .)" cat /etc/plat/segredos/PLAT_SECRET   # Permission denied — nem o dono do repo lê direto
+sudo scripts/plat segredo rotacionar <nome> --json-saida /tmp/resultado.json   # cada rotação já imprime a prova "antigo falha / novo funciona"
 ```
 
-`journalctl -u plat-api -o cat | grep -i PLAT_SECRET` e o mesmo para `plat-worker` continuam vazios
-(o middleware de log nunca grava valor de configuração; isso já valia antes deste item).
+Automatizado (roda com `pytest`, lê os valores REAIS de `/etc/plat/segredos/` via `sudo cat` e procura
+por eles — nunca imprime o valor, só o nome do segredo se achar):
 
-## 4. Como a suíte de testes ainda usa os dois segredos
+```
+pytest tests/unit/test_segredos_fora_do_repo.py -q
+```
 
-`tests/conftest.py` (`valores_env`) e `app/settings.py` (`valores_do_ambiente`) sempre deixam o
-**ambiente do processo** vencer o `.env` e o credential. O `Makefile` explora exatamente isso: a
-variável `SEGREDOS` lê os dois arquivos com `sudo cat` (o mesmo privilégio que `install.sh` e `make
-migrar` já exigem — nenhuma novidade de permissão) e os passa como variável de ambiente só para o
-processo filho (`pytest`, `uvicorn` de desenvolvimento), nunca como argumento visível em `ps`:
+Três cláusulas: (1) `grep -rIl` na árvore de trabalho inteira (exceto `.git`/`venv`/`node_modules`);
+(2) `git log --all -S<valor>` no histórico inteiro, não só o HEAD; (3) `journalctl -u plat-api -u
+plat-worker -g <valor>` — as três dão zero para os 5 segredos hoje. `.env` sem nenhum dos 5:
+`tests/unit/test_instalador.py::test_env_real_desta_maquina_nao_tem_nenhum_dos_cinco_segredos` lê o
+`.env` real desta instalação (não um exemplo) e falha se qualquer um aparecer.
+
+## 4. Como a suíte de testes ainda usa os 5 segredos
+
+`tests/conftest.py` e `app/settings.py::valores_do_ambiente` sempre deixam o **ambiente do processo**
+vencer o `.env` e o credential. O `Makefile` explora isso: a variável `SEGREDOS` lê os 5 arquivos com
+`sudo cat` (mesmo privilégio que `install.sh`/`make migrar` já exigem) e os exporta só para o processo
+filho (`pytest`, `uvicorn` de desenvolvimento) — nunca em argumento visível em `ps` — e só quando o
+arquivo existe e não é vazio (assim `PLAT_SECRET_ANTERIOR`/`PLAT_GARAGE_ADMIN_TOKEN`, normalmente
+vazios, não pisam em nada por engano):
 
 ```makefile
-SEGREDOS=PLAT_SECRET="$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null)" PLAT_DSN_WORKER="$$(sudo cat /etc/plat/segredos/PLAT_DSN_WORKER 2>/dev/null)"
 teste:
 	$(SEGREDOS) $(VENV)/pytest -m "not lento"
 ```
@@ -139,17 +155,17 @@ Isso é só para desenvolvimento/CI local fora do systemd. Em produção o syste
 
 ## 5. O que fica de fora deste item (fora de escopo, não esquecido)
 
-- `PLAT_DSN` (senha da role `plat_app`) continua no `.env`. O mesmo raciocínio deste item vale para
-  ela; ficou de fora desta passagem porque o pedido foi específico (`PLAT_DSN_WORKER` + `PLAT_SECRET`,
-  os dois nomeados no achado do adversário do T2). Item futuro: migrar `PLAT_DSN` do mesmo jeito.
-- Chaves S3 do Garage por inquilino e o token admin do Garage (`garage.toml`, hoje em claro) — parte
-  maior do backlog original deste item (hipótese completa em `laco/estado.json`), tocam um daemon que
-  outra trilha (L0-11) está construindo em paralelo nesta mesma janela; não mexido aqui para não
-  colidir.
-- Dupla-chave de `PLAT_SECRET` (`PLAT_SECRET` + `PLAT_SECRET_ANTERIOR` por 24h) para rotação sem
-  recadastro de 2FA — ver §2.
-- CA própria para appliance de cliente (Degrau 0 da plataforma) — não existe cliente com appliance
-  ainda.
+- **`DynamicUser=`** (isolamento por-unidade de verdade, nem outro processo do mesmo usuário lê) —
+  mudaria a dono de toda a árvore do repositório hoje `dev:dev`; fora de escopo.
+- **Socket activation em produção** (`plat-api`/`plat-worker` de verdade) — provada no serviço de teste
+  (§2), não adotada nos serviços reais porque isso pede editar a unidade instalada e um restart
+  controlado, banido neste turno. Ver `docs/RUNBOOKS/segredos.md` §6 para o procedimento de adoção.
+- **Limpeza automática de `PLAT_SECRET_ANTERIOR` depois de 24h** — hoje é passo manual do runbook (§2
+  do `docs/RUNBOOKS/segredos.md`); um timer/cron que zera o arquivo sozinho é próximo passo natural.
+- **CA própria para appliance de cliente** (Degrau 0 da plataforma) — não existe cliente com appliance.
+- **Alarme de expiração de certificado antes dos 30 dias do certbot** (blackbox exporter, proposto no
+  backlog original) — não construído; `certbot.timer` automático continua sendo a única rede de
+  segurança (§6).
 
 ## 6. Certificado TLS — expiração e renovação
 
@@ -192,10 +208,8 @@ sudo certbot renew --dry-run              # simula a renovação sem gastar rate
 sudo certbot renew --cert-name plat.iagrointel.com --force-renewal
 ```
 
-**Alarme antes do vencimento**: não existe hoje (o backlog original deste item propunha um exporter
-`blackbox` avisando 14 dias antes — fonte `PROM-blackbox` em `laco/estado.json`); com a renovação
-automática em 30 dias de folga o risco real é o *timer* parar (ex.: máquina desligada por mais de 30
-dias) — `systemctl status certbot.timer` acima é hoje a única checagem, manual.
+**Alarme antes do vencimento**: não existe hoje (ver §5) — `systemctl status certbot.timer` é hoje a
+única checagem, manual.
 
 ## 7. Varredura de dependência com CVE conhecido (item L7-03-f-dependencias-cve-log-correcoes)
 

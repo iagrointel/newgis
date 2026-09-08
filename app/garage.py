@@ -289,11 +289,19 @@ class ClienteAdmin:
 
     def criar_chave(self, nome: str) -> dict:
         """Idempotente por NOME: uma chave já existente com o mesmo nome não gera segredo novo (o segredo antigo
-        continua sendo o que está gravado em `plat.arquivo_bucket`; só a criação é idempotente, não a rotação)."""
+        continua sendo o que está gravado em `plat.arquivo_bucket`; só a criação é idempotente, não a rotação).
+
+        Achado nesta verificação: `ListKeys` (usado por `chave_por_nome`) devolve um RESUMO da chave — campo
+        `id`, sem `accessKeyId`/`secretAccessKey` — enquanto `CreateKey` devolve o objeto completo. Devolver o
+        resumo direto quebrava `garantir_bucket` (`rw["accessKeyId"]`) sempre que a chave já existisse no Garage
+        mas a linha de `plat.arquivo_bucket` não (base recriada sem apagar o bucket external, ex.: trilha
+        recriada com o schema dropado — o Garage não é dropado junto). Corrigido: no caminho idempotente, busca
+        o objeto completo por `GetKeyInfo?showSecretKey=true` (Garage guarda o segredo e devolve de novo; não é
+        rotação, é a MESMA chave)."""
         existente = self.chave_por_nome(nome)
         if existente is not None:
             log.info("garage: chave %s já existe (id=%s), reaproveitada sem novo segredo", nome, existente["id"])
-            return existente
+            return self._chamar("GET", f"/v2/GetKeyInfo?id={existente['id']}&showSecretKey=true")
         return self._chamar("POST", "/v2/CreateKey", {"name": nome})
 
     def permitir(self, bucket_id: str, chave_id: str, *, ler: bool, escrever: bool, dono: bool) -> dict:

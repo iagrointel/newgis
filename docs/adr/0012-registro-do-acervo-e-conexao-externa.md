@@ -44,8 +44,8 @@ nunca é digitado em teste, só medido de novo a cada rodada).
 
 2. **`COUNT(*)` exato, nunca `reltuples`, com timeout de 25 s.** Mesmo padrão do `contagem2.py` da casa
    (citado na hipótese do item). Medido: a maioria das 475 candidatas tem `COUNT(*)` em milissegundos
-   (mediana de linhas estimadas = 1.710), mas um punhado de tabelas grandes (`cbre.osm_lines_raw`,
-   `cbre.cad_lote`, `public.car_nativa_go`...) estoura o timeout quando a máquina está ocupada com OUTRO
+   (mediana de linhas estimadas = 1.710), mas um punhado de tabelas grandes (`<frente>.osm_lines_raw`,
+   `<frente>.cad_lote`, `public.car_nativa_go`...) estoura o timeout quando a máquina está ocupada com OUTRO
    job pesado da casa — medido ao vivo neste mesmo turno: uma `REFRESH MATERIALIZED VIEW` de 3h e um
    `COUNT(*)` de 18 min concorrentes de outra frente, competindo pelo mesmo disco. Timeout nunca vira
    `linhas_exatas = 0`; vira `NULL` com `motivo_bloqueio = 'contagem_nao_concluida_em_25s'`
@@ -281,9 +281,9 @@ fontes licenciadas, com um padrão de nome de coluna deliberadamente LARGO (a me
 lista branca "grossa e provisória, por nome, nunca por conteúdo" — aqui invertida: usar o nome como
 PRIMEIRO filtro, depois ler o conteúdo de verdade antes de decidir). 114 colunas bateram; cada uma foi
 inspecionada (`\d` da tabela, contagem de preenchimento quando havia dúvida real, como em
-`cbre.cad_gu_face_pgv.id_responsavel`, preenchida em 1 de 25.436 linhas — não é cadastro de contato pessoal,
+`<frente>.cad_gu_face_pgv.id_responsavel`, preenchida em 1 de 25.436 linhas — não é cadastro de contato pessoal,
 é flag de infraestrutura de rua ao lado de `agua`/`luz`/`esgoto`). Achado único: `onr`, por um caminho que a
-varredura de NOME não pegaria sozinha — a tabela ingerida (`cbre.onr_matricula`) não guarda o nome do
+varredura de NOME não pegaria sozinha — a tabela ingerida (`<frente>.onr_matricula`) não guarda o nome do
 titular, mas guarda `url_mat`, um link para o documento de matrícula real no cartório, que guarda. A decisão
 de marcar `onr` não veio da regex; veio de abrir o link e ver o que está do outro lado.
 
