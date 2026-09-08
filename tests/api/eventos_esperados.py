@@ -161,4 +161,35 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
     # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
     ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
+    # --- construtor de camada por esquema (L5-31) e vista de camada (L5-32)
+    ("POST", "/api/camadas/esquema"): ["camadas/criar_esquema"],
+    ("POST", "/api/camadas/{item_id}/esquema/plano"): [],  # só simula o plano; nada muda no banco
+    ("PUT", "/api/camadas/{item_id}/esquema"): ["camadas/alterar_esquema"],
+    ("POST", "/api/camadas/{camada_id}/vistas"): ["camadas/criar_vista"],
+    ("PUT", "/api/vistas/{vista_id}"): ["camadas/alterar_vista"],
+    # --- edição de feição por caminhos próprios (L2-03) — todos passam pela porta única de escrita
+    ("POST", "/api/camadas/{id}/feicoes/unir"): ["camadas/unir"],
+    ("POST", "/api/camadas/{id}/feicoes/dividir"): ["camadas/dividir"],
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): ["camadas/restaurar"],
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): ["camadas/anexo_enviar"],
+    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): ["camadas/anexo_apagar"],
+    # --- escrita compatível Esri (L2-04-d): tudo desemboca em aplicar_edicoes, que grava camadas/editar
+    ("POST", "/rest/services/{item_id}/FeatureServer/applyEdits"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/applyEdits"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/addFeatures"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/updateFeatures"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/deleteFeatures"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/calculate"): ["camadas/editar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/addAttachment"):
+        ["camadas/anexo_enviar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/updateAttachment"):
+        ["camadas/anexo_enviar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/deleteAttachments"):
+        ["camadas/anexo_apagar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/uploads/upload"): ["camadas/upload_esri"],
+    # leituras que o protocolo Esri manda por POST (o corpo é o pedido, nada muda no banco)
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): [],
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/queryAttachments"): [],
+    ("POST", "/svc/{token}/rest/info"): [],  # ficha do servidor; sem credencial e sem efeito
+    ("POST", "/svc/{token}/rest/generateToken"): [],  # a emissão já é registrada pelo caminho de token
 }
