@@ -7,6 +7,11 @@
 -- obrigatório em imagem — a regra que o esquema não expressa). `ligacoes` fica vazio na v1 (blocos não se ligam).
 -- Família própria `narrativa`: entra em FAMILIAS_GRAFO (validação de ULID/ligações no servidor) e em
 -- FAMILIAS_PUBLICAVEIS do L5-14 (publica em /p/<inquilino>/<slug>).
+-- a família é nova: o CHECK de 011_catalogo.sql (JÁ APLICADA) lista as famílias; entra 'narrativa' na lista
+ALTER TABLE plat.tipo_item DROP CONSTRAINT IF EXISTS tipo_item_familia_check;
+ALTER TABLE plat.tipo_item ADD CONSTRAINT tipo_item_familia_check CHECK (familia IN
+  ('camada','raster','mapa','app','painel','formulario','fluxo','rede','arquivo','ferramenta','documento','narrativa'));
+
 INSERT INTO plat.tipo_item(nome, familia, rotulo, descricao, esquema, esquema_versao, icone, modulo_front, abre_em,
                            tem_dado_fisico, linha_dona)
 SELECT 'narrativa', 'narrativa', 'Narrativa', 'narrativa por blocos (texto, mídia, mapa com vista salva; envelope L5)',
