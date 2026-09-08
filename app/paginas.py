@@ -33,6 +33,10 @@ PAGINAS = {
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
     "/aceitar-convite": "aceitar_convite.html",
     "/redefinir-senha": "redefinir_senha.html",
+    # --- rede simples (L4-18-rede-simples-trace-network)
+    "/redes/simples": "redes_simples.html",
+    # --- controladores de subrede e tiers (L4-04-a-controladores-e-tiers)
+    "/redes/controladores": "redes_controladores.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>

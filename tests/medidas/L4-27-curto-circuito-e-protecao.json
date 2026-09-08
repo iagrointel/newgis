@@ -1,0 +1,124 @@
+{
+ "item": "L4-27-curto-circuito-e-protecao",
+ "assinado_por": "redes+backend+testador (trilha il427curtoc)",
+ "gerado_em": "2026-09-08T11:06:02Z",
+ "git_sha": "3294fb325c22e4991a76305df08e2a7a686e1b18",
+ "maquina": "PostgreSQL 16 em iagro_sat; base própria da trilha (plat_til427curtoc); fonte = schema da cooperativa de teste (BDGD, ativo da casa, somente leitura); outras sessões da casa na mesma máquina",
+ "metodo": "fonte de tensão equivalente no ponto de falta (forma da IEC 60909); impedância de trecho e de transformador são valores de REFERÊNCIA declarados, porque o cadastro não os traz; rede tratada como radial e equilibrada. Triagem: sinal, não prova.",
+ "medidas": {
+  "rede_id": "1861e8d0-f81f-4953-a774-698c7a3f5cd2",
+  "clausulas": {
+   "ik_por_barra_em_alimentador_real": {
+    "prova": "alimentador 5_CTJ2_1 (191 trechos de média tensão de 20 alimentadores do arquivo): 192 barras, 192 com corrente calculada, de 6442.331 A a 10982.206 A (trifásica), em 0.205 s, com carga 8.57 e 2.75 GB de RAM livre; premissas declaradas ao lado",
+    "ok": true
+   },
+   "dispositivo_sem_faixa_sai_sem_dado": {
+    "prova": "vereditos no alimentador real: {'sem_dispositivo_a_montante': 1, 'sem_dado': 191}; nenhuma barra recebeu faixa de interrupção suposta (a BDGD não traz esse campo)",
+    "ok": true
+   },
+   "camada_e_tabela": {
+    "prova": "192 pontos na camada + 0 barras sem coordenada = 192 linhas na tabela",
+    "ok": true
+   },
+   "fonte_de_impedancia_nula_recusada": {
+    "prova": "POST com potencia_de_curto_mva = 0 devolveu 422 impedancia_de_fonte_nula",
+    "ok": true
+   }
+  },
+  "avisos": [
+   "carga 8.57 acima de 8.0: o tempo mede a máquina cheia, não o produto; o número fica registrado com a carga ao lado"
+  ],
+  "recorte": {
+   "alimentador": "5_CTJ2_1",
+   "trechos_mt_no_arquivo": 191,
+   "de_quantos_alimentadores": 20,
+   "postes": "fora (0 nó de topologia)"
+  },
+  "carga_bdgd": {
+   "ssdmt": {
+    "linhas": 191,
+    "segundos": 0.021
+   },
+   "ssdbt": {
+    "linhas": 0,
+    "segundos": 0.004
+   },
+   "ramlig": {
+    "linhas": 0,
+    "segundos": 0.002
+   },
+   "trafo": {
+    "linhas": 1,
+    "segundos": 0.002
+   }
+  },
+  "topologia": {
+   "rede_id": "1861e8d0-f81f-4953-a774-698c7a3f5cd2",
+   "tolerancia_m": 0.05,
+   "nos": 193,
+   "arestas": 191,
+   "nos_orfaos": 1,
+   "arestas_sem_no": 0,
+   "duracao_ms": 106,
+   "construido_em": "2026-09-08T11:06:02Z"
+  },
+  "saida_da_subestacao": {
+   "origem_do_controlador_antes": "no_de_cabeca",
+   "ten_nom_do_arquivo": "49",
+   "posicao": "nó de cabeça do alimentador (convenção declarada, não lida do arquivo)",
+   "terminal_do_controlador": 1
+  },
+  "curto": {
+   "segundos": 0.205,
+   "barras": 192,
+   "resumo": {
+    "barras": 192,
+    "barras_alcancadas": 192,
+    "barra_fonte": "b2466d6653ff1473ba2b449a64d1a2073",
+    "kv_fonte": 13.8,
+    "ik3_maxima_a": 10982.206,
+    "ik3_minima_a": 6442.331,
+    "arestas_fora_da_arvore": 0,
+    "dispositivos_por_veredito": {
+     "sem_dado": 191,
+     "sem_dispositivo_a_montante": 1
+    },
+    "impedancia_de_referencia": {
+     "r_ohm_per_km": 0.058,
+     "x_ohm_per_km": 0.1206,
+     "c_nf_per_km": 3.4,
+     "max_i_ka": 0.4
+    },
+    "vk_percent_de_referencia": 7.0
+   },
+   "avisos": [],
+   "premissas": {
+    "potencia_de_curto_mva": 250.0,
+    "relacao_x_r_fonte": 10.0,
+    "fator_tensao_c": 1.05,
+    "fator_sequencia_zero_linha": 3.0,
+    "fator_sequencia_zero_fonte": 1.0,
+    "base_mva": 100.0,
+    "impedancia_da_fonte_pu": 0.4
+   },
+   "carga_1min": 8.57,
+   "ram_livre_gb": 2.75,
+   "medido_em": "2026-09-08T11:06:02Z"
+  },
+  "vereditos": {
+   "sem_dispositivo_a_montante": 1,
+   "sem_dado": 191
+  },
+  "camada": {
+   "feicoes": 192,
+   "barras_sem_coordenada": 0,
+   "linhas_na_tabela": 192
+  },
+  "ok": true
+ },
+ "clausulas_provadas_fora_desta_medida": {
+  "resposta_analitica": "tests/unit/test_curto_circuito.py::test_ik_bate_com_a_conta_analitica_em_tres_barras",
+  "dispositivo_com_faixa_interrompe": "tests/api/test_rede_curto.py::test_dispositivo_sem_faixa_sai_sem_dado_e_com_faixa_interrompe",
+  "paridade_fora_na_esri": "docs/PARIDADE.md, seção do item"
+ }
+}

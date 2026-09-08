@@ -111,6 +111,36 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- redefinição de senha por e-mail (L0-07-d-smtp-convites; ADR 0002 seção 6.3): `solicitar` SEMPRE
     # responde {"ok": true} sem revelar se o e-mail existe e não registra evento nenhum (mesma decisão de
     # /api/login com credencial errada) — o evento nasce só quando a senha É trocada, em `aplicar`.
+    # ---- rede de utilidades — controlador de subrede e tiers (L4-04-a): as quatro escritas registram evento;
+    # a importação registra um evento só, com a contagem por tier no detalhe.
+    # --- rede de utilidades (L4-01-a/L4-01-b/L4-02-a/L4-18): as rotas vieram nos ramos-base desta família e
+    # ainda não tinham entrada aqui; o nome do evento é o que cada rota registra de fato.
+    ("POST", "/api/rede"): ["redes/criar"],
+    ("DELETE", "/api/rede/{rede_id}"): ["redes/apagar"],
+    ("POST", "/api/rede/{rede_id}/pacote"): ["redes/importar_pacote"],
+    # L4-01-c: a importação BDGD é um job; o evento é o do enfileiramento
+    ("POST", "/api/rede/{rede_id}/importar-bdgd"): ["redes/importar_bdgd"],
+    ("POST", "/api/rede/{rede_id}/matpower"): ["redes/importar_matpower"],
+    # L4-01-a/L4-01-b/L4-18: as rotas de escrita da rede de utilidades que ainda não estavam declaradas
+    # aqui (a rota existe e registra o evento; faltava a linha desta tabela). Lidas uma a uma em
+    # app/rede_utilidades/rotas*.py.
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos"): ["redes/feicao_criar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas"): ["redes/feicao_criar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): ["redes/feicao_editar"],
+    ("POST", "/api/rede/{rede_id}/feicoes/linhas/applyEdits"): ["redes/feicao_editar"],
+    ("POST", "/api/rede/{rede_id}/topologia/habilitar"): ["redes/topologia_habilitar"],
+    ("POST", "/api/rede/{rede_id}/tracar"): ["redes/tracar"],
+    ("POST", "/api/rede/simples"): ["redes/simples_criar"],
+    ("POST", "/api/rede/{rede_id}/promover"): ["redes/simples_promover"],
+    ("POST", "/api/rede/{rede_id}/controlador"): ["redes/controlador_definir"],
+    ("DELETE", "/api/rede/{rede_id}/controlador/{controlador_id}"): ["redes/controlador_remover"],
+    ("POST", "/api/rede/{rede_id}/controladores/importar"): ["redes/controlador_importar"],
+    ("POST", "/api/rede/{rede_id}/subredes/{subrede_id}/atualizar"): ["redes/subrede_atualizar"],
+    # L4-04-b: o lote é um JOB — o evento é o do enfileiramento; a exportação e a conferência são leituras
+    ("POST", "/api/rede/{rede_id}/subredes/atualizar"): ["redes/subredes_atualizar"],
+    ("PUT", "/api/rede/{rede_id}/tier/{codigo}/propagadores"): ["redes/tier_propagadores"],
+    ("POST", "/api/rede/{rede_id}/subredes/resumos/calcular"): ["redes/subrede_resumo"],
+    ("POST", "/api/rede/{rede_id}/subrede/{nome}/curto"): ["redes/curto_circuito"],
     ("POST", "/api/senha/redefinir/solicitar"): [],
     ("POST", "/api/senha/redefinir/aplicar"): ["usuarios/redefinir_senha_email"],
     # ---- SMTP por inquilino (L0-07-d-smtp-convites; ADR 0013): PUT tanto configura quanto remove o override
