@@ -1,9 +1,9 @@
 {
  "item": "L2-06-e-estatisticas-servidor",
  "assinado_por": "backend/dados/testador (retomada apos queda por cota, worktree wt/il206eestat)",
- "gerado_em": "2026-09-07T13:22:16Z",
- "git_sha": "325b004",
- "maquina": "12 vCPU, load_1min medido 15,8-16,0 no momento da medida de desempenho (muitos agentes concorrentes)",
+ "gerado_em": "2026-09-08T19:20:34Z",
+ "git_sha": "575754fbc1de",
+ "maquina": "12 vCPU; a medida de desempenho rodou com a maquina livre (load_1min=2.12 na gravacao, 2026-09-08 19:20 UTC); as duas tentativas de 07/09 pularam com load_1min 15,8-16,0",
  "medidas": {
   "consultas_referencia_batem_com_sql_a_mao": {
    "valor": 10,
@@ -31,9 +31,9 @@
    "comando": "test_mesma_rota_alimenta_outstatistics: traduzir_outstatistics(payload Esri) -> POST na mesma rota -> mesmas linhas que o pedido canonico equivalente"
   },
   "agregacao_1mi_100cat_p95_ms": {
-   "valor": null,
+   "valor": 113.0,
    "unidade": "ms",
-   "comando": "NAO MEDIDA: test_um_milhao_de_linhas_100_categorias_p95 (marcador 'lento') pulou por regra propria (carga_1min > 8) em duas tentativas as 13:21 UTC, load_1min=15,81 e 15,98 (12 vCPU; ~14 sessoes/agentes concorrentes na trilha). O teste esta escrito e roda no CI/turno seguinte quando a maquina esvaziar (bash roda_teste.sh tests/api/catalogo/test_estatisticas.py::test_um_milhao_de_linhas_100_categorias_p95 -m lento -q, com PLAT_GRAVAR_MEDIDAS=1). A agregacao e feita 100% em SQL (GROUP BY no Postgres, nao leitura em massa por cursor de tupla em Python) e as 10 consultas de referencia (ate 600 linhas) respondem em poucos ms cada, mas o alvo de <=500ms p95 em 1 milhao de linhas fica pendente de medicao honesta."
+   "comando": "pytest tests/api/test_estatisticas.py::test_um_milhao_de_linhas_100_categorias_p95 (carga_1min=2.12, ram_livre_gb=0)"
   }
  },
  "refutacao_adversario": {
