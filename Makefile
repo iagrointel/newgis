@@ -28,7 +28,7 @@ check: lint sem-marcador limites teste e2e  ## suíte inteira (portão P3)
 check-rapido: lint sem-marcador limites teste  ## o que o driver roda
 
 lint:
-	$(VENV)/ruff check app tests docs/gerar_limites.py
+	$(VENV)/ruff check app tests docs/gerar_limites.py docs/gerar_manual_expressao.py
 
 limites:                                    ## docs/LIMITES.md == app/limites.py (item L0-12); falha se divergir
 	$(VENV)/python docs/gerar_limites.py --check

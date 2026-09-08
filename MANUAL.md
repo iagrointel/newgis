@@ -1100,3 +1100,100 @@ Erros de configuração (422, antes de gravar): `regra_expressao_invalida`, `reg
 `regra_invalida` e `regra_ciclo` (regra que calcula um campo que está nos próprios gatilhos, ou cadeia fechada
 entre regras; o `detalhe.ciclo` traz o caminho). A regra vale por qualquer caminho de escrita porque todos passam
 por `POST /api/camadas/{id}/edicoes`.
+
+## 25. Linguagem de expressão no navegador (item L5-11-expressoes-no-navegador)
+
+A mesma linguagem de expressão da seção 24 roda também no NAVEGADOR, com semântica idêntica: um
+analisador escrito à mão em `web/js/expressao/avaliador.js` e outro em `app/expressao/avaliador_py.py`,
+os dois sobre os mesmos vetores de teste (`tests/expressoes/vetores.json` e
+`tests/expressoes/vetores_perfis.json`), comparados valor a valor pela suíte. A gramática completa,
+os tipos, a propagação de nulo e a AST em JSON estão em `docs/EXPRESSAO.md`; esta seção é o resumo
+de uso, com um exemplo por função.
+
+Como se escreve: `$nome` é um atributo da feição, `$feicao` é a feição inteira
+(`{"atributos": ..., "geometria": ...}`) e `$geometria` é a geometria dela, em GeoJSON
+(`{"type": "Point"|"LineString"|"Polygon", "coordinates": ...}`, grau decimal WGS-84, longitude
+antes da latitude). Atributo cujo nome tem espaço, acento ou hífen não vira `$nome`: alcança-se por
+`Atributo($feicao, 'nome do lote')`. Exemplo de popup:
+`Concatenar($nome, ' - ', TextoNumero($area_ha, 1), ' ha')`.
+
+O que a expressão NÃO alcança: rede, disco, banco, outra feição e outro inquilino. O contexto é
+montado por `contexto_da_feicao` (`app/expressao/perfis.py` e `web/js/expressao/perfis.js`) só a
+partir da feição recebida, e `$campo` fora dessa lista devolve o erro `campo_nao_permitido`.
+Expressão que não termina é cortada pelo orçamento de tempo do perfil (50 ms no navegador, 500 ms
+no servidor) ou pelo orçamento de 100.000 passos, sempre com erro nomeado (`tempo_excedido`,
+`limite_passos`), nunca com a aba travada.
+
+Medidas de área, comprimento e distância usam a ESFERA de raio autálico 6.371.008,8 m, sem
+elipsoide e sem projeção — o erro do modelo chega a 0,5 %, então servem para ordem de grandeza e
+comparação, não para medição legal de área. O resultado é arredondado a 6 casas decimais para o
+servidor e o navegador devolverem exatamente o mesmo número.
+
+<!-- inicio: catalogo de expressao gerado por docs/gerar_manual_expressao.py -->
+
+### Perfis (onde a expressão é usada)
+
+| perfil | tipo de valor que tem de devolver | orçamento de tempo | para que serve |
+|---|---|---|---|
+| `popup` | texto · numero · booleano · nulo | 50 ms | linha de conteúdo da janela de feição, avaliada no navegador a cada clique |
+| `rotulo` | texto · numero · nulo | 50 ms | texto desenhado sobre a feição no mapa, avaliado no navegador a cada quadro |
+| `calculo_formulario` | texto · numero · booleano · nulo | 500 ms | valor calculado de um campo do formulário de edição, conferido também no servidor |
+| `visibilidade` | booleano · nulo | 50 ms | mostra ou esconde um campo/elemento; nulo é 'não sei' e o chamador trata como escondido |
+| `restricao` | booleano · nulo | 500 ms | verdadeiro = a feição pode ser gravada; falso ou nulo = a gravação é recusada |
+| `indicador_painel` | numero · nulo | 500 ms | número exibido num indicador de painel |
+| `titulo_dinamico` | texto · numero · nulo | 50 ms | título de janela, aba ou painel montado a partir da feição |
+
+### Catálogo de funções (49), uma linha e um exemplo por função
+
+| função | argumentos | o que faz | exemplo |
+|---|---|---|---|
+| `Maiuscula` | 1 | converte texto para maiúsculas | `Maiuscula('sítio') → 'SÍTIO'` |
+| `Minuscula` | 1 | converte texto para minúsculas | `Minuscula('SÍTIO') → 'sítio'` |
+| `Concatenar` | 1 ou mais | junta 2+ textos (nulo vira texto vazio) | `Concatenar('a','b','c') → 'abc'` |
+| `Texto` | 1 | converte número/booleano/nulo para texto | `Texto(3.5) → '3.5'` |
+| `Arredondar` | 1-2 | arredonda para N casas (padrão 0), meio-para-longe-de-zero | `Arredondar(2.345, 2) → 2.35` |
+| `Absoluto` | 1 | valor absoluto | `Absoluto(-4) → 4` |
+| `Minimo` | 1 ou mais | menor valor entre 1+ números | `Minimo(4, 1, 9) → 1` |
+| `Maximo` | 1 ou mais | maior valor entre 1+ números | `Maximo(4, 1, 9) → 9` |
+| `Numero` | 1 | converte texto/booleano para número (nulo se não for número válido) | `Numero('42') → 42` |
+| `Potencia` | 2 | base elevada ao expoente | `Potencia(2, 10) → 1024` |
+| `AgoraUTC` | 0 | instante atual, milissegundos UTC desde a época Unix | `AgoraUTC() → 1798000000000` |
+| `Ano` | 1 | ano civil UTC de uma data | `Ano(1798761600000) → 2026` |
+| `Mes` | 1 | mês civil UTC de uma data (1-12) | `Mes(1798761600000) → 12` |
+| `Dia` | 1 | dia do mês civil UTC de uma data (1-31) | `Dia(1798761600000) → 31` |
+| `DiferencaDias` | 2 | dias corridos completos entre duas datas (data2 − data1) | `DiferencaDias(a, b) → 30` |
+| `SeNulo` | 2 | se o 1º argumento é nulo, avalia e devolve o 2º (curto-circuito) | `SeNulo($x, 0) → 0` |
+| `EhNulo` | 1 | verdadeiro se o argumento é nulo | `EhNulo($x) → falso` |
+| `Se` | 3 | condição booleana decide qual ramo é avaliado (curto-circuito) | `Se($a > 0, 'pos', 'neg')` |
+| `Trim` | 1 | remove espaços ASCII das pontas | `Trim(' a ') → 'a'` |
+| `Left` | 2 | primeiros N pontos de código | `Left('a🌍b', 2) → 'a🌍'` |
+| `Right` | 2 | últimos N pontos de código (0 devolve vazio) | `Right('abc', 1) → 'c'` |
+| `Mid` | 2-3 | trecho a partir de um índice; sem quantidade vai até o fim | `Mid('abcd', 1, 2) → 'bc'` |
+| `Find` | 2-3 | índice da 1ª ocorrência a partir de um início; −1 se ausente | `Find('b', 'abc') → 1` |
+| `Split` | 2 | divide por separador literal (vazio divide em pontos de código) | `Split('a,b', ',')` |
+| `Replace` | 3 | troca todas as ocorrências literais | `Replace('aba', 'a', 'x') → 'xbx'` |
+| `Floor` | 1 | maior inteiro ≤ número | `Floor(-1.5) → -2` |
+| `Ceil` | 1 | menor inteiro ≥ número | `Ceil(-1.5) → -1` |
+| `Sqrt` | 1 | raiz quadrada (negativo é numero_invalido) | `Sqrt(9) → 3` |
+| `Weekday` | 1 | dia da semana UTC, domingo 0 … sábado 6 | `Weekday(0) → 4` |
+| `Decode` | 4 ou mais | pares caso/resultado e padrão; só o resultado escolhido é avaliado | `Decode(1, 1, 'a', 'z')` |
+| `Lista` | 0 ou mais | lista nova com os argumentos (preserva nulos) | `Lista(1, nulo)` |
+| `Contagem` | 1 | tamanho de lista, texto (pontos de código) ou dicionário | `Contagem(Lista(1, 2)) → 2` |
+| `Primeiro` | 1 | primeiro elemento (nulo se vazia) | `Primeiro(Lista(4, 5)) → 4` |
+| `Ultimo` | 1 | último elemento (nulo se vazia) | `Ultimo(Lista(4, 5)) → 5` |
+| `Obter` | 2-3 | lista por índice ou dicionário por chave própria; ausente → padrão/nulo | `Obter(Lista(4), 0) → 4` |
+| `Contem` | 2 | presença por igualdade estrutural estrita | `Contem(Lista(1), verdadeiro) → falso` |
+| `Soma` | 1 | soma de números (vazia → 0; membro nulo → nulo) | `Soma(Lista(1, 2)) → 3` |
+| `Media` | 1 | média de números (vazia ou membro nulo → nulo) | `Media(Lista(1, 2)) → 1.5` |
+| `Reverter` | 1 | cópia em ordem inversa | `Reverter(Lista(1, 2))` |
+| `Unicos` | 1 | sem repetições, preservando a 1ª ocorrência | `Unicos(Lista(1, 1))` |
+| `Juntar` | 1-2 | texto dos escalares com separador (nulo vira vazio) | `Juntar(Lista(1, 2), '/') → '1/2'` |
+| `TextoNumero` | 1-2 | número em pt-BR: milhar '.', decimal ',', N casas (padrão 2) | `TextoNumero(1234.5) → '1.234,50'` |
+| `TextoData` | 1-2 | data UTC em pt-BR: 'data' (padrão), 'data_hora', 'data_hora_segundos', 'extenso' | `TextoData(0) → '01/01/1970'` |
+| `Atributo` | 2-3 | atributo da feição por nome; ausente devolve o padrão (ou nulo) | `Atributo($feicao, 'uso')` |
+| `Geometria` | 1 | geometria da feição (nulo se a feição não tiver) | `Geometria($feicao)` |
+| `Area` | 1 | área do polígono em metros quadrados | `Area($area) → 12363718145.180046` |
+| `Comprimento` | 1 | comprimento da linha em metros | `Comprimento($linha) → 111195.080234` |
+| `Distancia` | 2 | distância entre dois pontos em metros | `Distancia($a, $b) → 111195.080234` |
+| `Dentro` | 2 | verdadeiro se o ponto está dentro do polígono | `Dentro($p, $area) → verdadeiro` |
+<!-- fim: catalogo de expressao gerado por docs/gerar_manual_expressao.py -->
