@@ -2,7 +2,7 @@
    Só tokens (docs/verificar_tokens.py); a grade de duas colunas e o estado de job vêm de tarefas.css. */
 .ferramentas-lista { display: flex; flex-direction: column; gap: var(--e4); }
 .ferramentas-grupo h3 { margin: 0 0 var(--e2); font-size: var(--t-1); color: var(--fraco); }
-.ferramentas-grupo { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--e3); }
+.ferramentas-grupo { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--e3); }
 .ferramentas-grupo h3 { grid-column: 1 / -1; }
 .ferramenta-cartao { border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); padding: var(--e3); background: var(--fundo-2); display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
 .ferramenta-cartao.selecionada { border-color: var(--acento); box-shadow: inset 0 0 0 var(--borda-largura) var(--acento); }

@@ -20,7 +20,7 @@ import * as api from './api.js';
 import { assinar, cancelarAssinatura } from './eventos.js';
 import { FINAIS, dataHora, estado as fmtEstado, hora } from './formato.js';
 
-const el = (id) => document.getElementById(id);
+function el(id) { return document.getElementById(id); }
 const s = { tipos: [], q: '', diagnostico: false, tipo: null, job: null, form: null, conversores: {}, validadores: {}, linhasLog: new Set() };
 
 await carregarIdioma();
@@ -63,9 +63,10 @@ async function carregarTipos() {
   desenharCatalogo();
 }
 
-const ehDiagnostico = (tp) => tp.nome.startsWith('prova.') || tp.nome.startsWith('jobs.');
-const grupoDe = (tp) => tp.nome.split('.')[0];
-const podeRodar = (tp) => !tp.perfil_minimo || tem('jobs.executar');
+// declarações de função (içadas): o módulo executa `await iniciar()` no topo, antes de qualquer `const` abaixo
+function ehDiagnostico(tp) { return tp.nome.startsWith('prova.') || tp.nome.startsWith('jobs.'); }
+function grupoDe(tp) { return tp.nome.split('.')[0]; }
+function podeRodar(tp) { return !tp.perfil_minimo || tem('jobs.executar'); }
 
 function visiveis() {
   const q = s.q.toLocaleLowerCase();
@@ -75,7 +76,7 @@ function visiveis() {
 function custoDe(tp) {
   const partes = [];
   if (tp.memoria_mb) partes.push(t('ferramentas.custo_memoria', { mb: formatarNumero(tp.memoria_mb) }));
-  if (tp.timeout_s) partes.push(t('ferramentas.custo_tempo', { min: formatarNumero(Math.round(tp.timeout_s / 60)) }));
+  if (tp.timeout_s) partes.push(tp.timeout_s < 60 ? t('ferramentas.custo_tempo_s', { s: formatarNumero(tp.timeout_s) }) : t('ferramentas.custo_tempo', { min: formatarNumero(Math.round(tp.timeout_s / 60)) }));
   if (tp.pesado) partes.push(t('ferramentas.custo_pesado'));
   if (tp.executor && tp.executor !== 'local') partes.push(t('ferramentas.custo_executor', { executor: tp.executor }));
   if (tp.perfil_minimo) partes.push(t('ferramentas.perfil_minimo', { perfil: t(`perfil.${tp.perfil_minimo}`) }));
@@ -121,7 +122,7 @@ function esquemaBase(esq) {
 /* JSON Schema (pydantic) -> definição de campo do <plat-formulario>; devolve também o conversor de valor */
 function campoDe(nome, esqBruto, obrigatorio) {
   const esq = esquemaBase(esqBruto);
-  const rotulo = esq.title || nome;
+  const rotulo = nome; // o nome do parâmetro é o que a API recebe; o título do pydantic é derivado dele
   const ajuda = [esq.description, limitesTexto(esq)].filter(Boolean).join(' · ');
   const base = { nome, rotulo, obrigatorio, ajuda };
   if (Array.isArray(esq.enum)) {
