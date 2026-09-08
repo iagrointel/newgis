@@ -3,6 +3,16 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L0-12-contrato-api-e-limites: 42501 sem RLS deixa de virar 403 de inquilino — achado G4-23)
+
+`app/auth/comum.py::erro_do_banco` convertia QUALQUER `InsufficientPrivilege` do banco (SQLSTATE 42501)
+em `403 sem_permissao "operação fora do inquilino da sessão"` — GRANT faltando, schema errado e papel mal
+configurado saíam para o cliente como se o inquilino do usuário tivesse ultrapassado a fronteira (o
+disfarce escondeu o G4-24 por horas). Agora o 403 de inquilino exige prova: a mensagem de violação de
+row-level security. Os demais 42501 viram `500 configuracao_banco`, com a causa real no diário. O teste
+adversarial G4-23 saiu de xfail estrito para portão e a fronteira (violação de RLS continua 403) tem
+teste próprio; `docs/CONTRATO_API.md` ganhou a linha do 500.
+
 ## turno 8, setembro de 2026 (item L0-11-arquivos-objetos: /saude marca o Garage como obrigatório — achado G4-19)
 
 Faltava uma cláusula do portão do L0-11: `/saude` decidia o status HTTP só pelo banco, então instalação
