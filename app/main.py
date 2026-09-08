@@ -35,6 +35,7 @@ from app.catalogo import (
     rotas_lixeira,
     rotas_miniatura,
     rotas_ogc,
+    rotas_pacote,
     rotas_pastas,
     rotas_publicacao,
     transferencia,
@@ -102,6 +103,9 @@ ROUTERS = [
     # --- publicação de documento de construtor (L5-14): /api/itens/{id}/publicacao(+/exportacao,+/visualizacoes),
     # vitrine pública /api/p/{inquilino}/{slug} e /p/{inquilino}/{slug}
     rotas_publicacao.router,
+    # --- pacote entre inquilinos e galeria de modelos (L5-37): /api/itens/{id}/pacote, /api/pacotes/verificar,
+    # /api/pacotes/importar, /api/modelos
+    rotas_pacote.router,
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar

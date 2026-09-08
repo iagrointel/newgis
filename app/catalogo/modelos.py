@@ -372,3 +372,53 @@ class DocumentoPublico(Saida):
 class VisualizacaoDia(Saida):
     dia: str
     visualizacoes: int
+
+
+# ---- pacotes e galeria de modelos (L5-37-pacotes-modelos-entre-inquilinos)
+class PacoteEntrada(Modelo):
+    """O zip vem em base64 dentro de JSON, e não em multipart, pela mesma razão da miniatura (ADR 0004
+    seção 11): o CSRF sob cookie exige application/json."""
+
+    conteudo: str | None = Field(default=None, max_length=limites.PACOTE_BYTES_MAX * 2)
+    modelo_id: str | None = Field(default=None, pattern=UUID_PADRAO)
+    mapeamento: dict[str, str] = Field(default_factory=dict)
+    pasta_id: str | None = Field(default=None, pattern=UUID_PADRAO)
+
+
+class ModeloEntrada(Modelo):
+    nome: str = Field(min_length=1, max_length=limites.PACOTE_NOME_MAX)
+    descricao: str = Field(default="", max_length=limites.PACOTE_DESCRICAO_MAX)
+    escopo: str = Field(default="inquilino", pattern="^(inquilino|plataforma)$")
+    conteudo: str | None = Field(default=None, max_length=limites.PACOTE_BYTES_MAX * 2)
+    item_id: str | None = Field(default=None, pattern=UUID_PADRAO)
+
+
+class AnalisePacote(Saida):
+    raiz: str
+    tipo_raiz: str | None
+    titulo_raiz: str | None
+    origem: dict | None
+    sha256_conteudo: str | None
+    documentos: list[dict]
+    fontes: list[dict]
+    pronto: bool
+
+
+class ImportacaoPacote(Saida):
+    raiz: str
+    itens: list[dict]
+    fontes_mapeadas: int
+
+
+class ModeloGaleria(Saida):
+    id: str
+    escopo: str
+    nome: str
+    descricao: str
+    tipo_raiz: str
+    documentos: int
+    fontes: int
+    sha256: str
+    bytes: int
+    do_inquilino: bool
+    criado_em: str | None

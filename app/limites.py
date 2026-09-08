@@ -229,3 +229,15 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# --- pacotes e galeria de modelos (L5-37-pacotes-modelos-entre-inquilinos; migração 20260908T1055).
+# Um pacote é só JSON (documentos, estilos, fluxos, formulários) e as fontes DECLARADAS: nenhum dado de
+# feição, nenhuma imagem. Por isso o teto de bytes é pequeno de propósito — pacote grande é sinal de que
+# alguém pôs dado dentro. O teto de documentos e o de profundidade freiam a caminhada no grafo de
+# dependências antes de ela virar consulta sem fim.
+PACOTE_DOCUMENTOS_MAX = 200
+PACOTE_PROFUNDIDADE_MAX = 8
+PACOTE_BYTES_MAX = 4 * 1024 * 1024
+PACOTE_MODELOS_MAX = 200           # modelos na galeria por inquilino (o de escopo plataforma conta no dele)
+PACOTE_NOME_MAX = 200              # CHECK(length(nome) BETWEEN 1 AND 200) da migração
+PACOTE_DESCRICAO_MAX = 2000

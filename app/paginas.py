@@ -39,6 +39,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- galeria de modelos e importação de pacote (L5-37-pacotes-modelos-entre-inquilinos)
+    "/modelos": "modelos.html",
 }
 router = APIRouter()
 
