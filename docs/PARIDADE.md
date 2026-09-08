@@ -405,8 +405,12 @@ Fonte Esri: páginas listadas em `docs/urls_paridade.txt` (chave entre colchetes
 na data de `tests/medidas/L6-03-paridade-conectores.json` (gerado por `scripts/paridade_urls_testar.py`). Regra
 desta seção, presa por `tests/unit/test_paridade_conectores.py`: toda linha `feito` ou `parcial` cita ao menos um
 arquivo de teste (`tests/...`) que existe no repositório ou no ramo nomeado da fila de junção; linha sem teste só
-pode ser `fora`. Onde o conector vive num ramo ainda não juntado a `master`, o ramo aparece entre parênteses —
-o adversário reproduz no ramo, não em `master`. "Pro/AGOL real" segue `pendente (D20)` em todas.
+pode ser `fora`, e a linha `fora` nomeia o item ou a decisão que a cobre — ou declara que nenhum cobre. Todo
+caminho `tests/...` citado em QUALQUER célula da linha existe no repositório ou no ramo nomeado na própria linha.
+(Achado do adversário de 08/09/2026, corrigido aqui: duas linhas diziam `fora (decisão)` sem decisão nenhuma no
+registro do laço — D18-D41 não falam de armazém em nuvem nem de Knowledge Server — e a linha STAC citava um teste
+num ramo que não tinha o arquivo.) Onde o conector vive num ramo ainda não juntado a `master`, o ramo aparece
+entre parênteses — o adversário reproduz no ramo, não em `master`. "Pro/AGOL real" segue `pendente (D20)` em todas.
 
 ### Tipos de camada por URL do Map Viewer 11.4 [E11-mv-tipos, E11-mv-url]
 
@@ -423,7 +427,7 @@ o adversário reproduz no ramo, não em `master`. "Pro/AGOL real" segue `pendent
 | CSV por URL | "CSV" por URL com campos de localização (lat/lon ou endereço) | CSV por URL: detecção de lat/lon, WKT, vírgula decimal e ponto-e-vírgula; endereço → geocodificação pelo geocodificador da casa (L2-11-b) | feito | `tests/api/conexao/test_arquivo_url.py`, `tests/unit/test_conexao_arquivo_url.py` (ramo `wt/il602igoogl`) | 2026-09-07 | pendente (D20) |
 | tiles por URL (XYZ, TileJSON) | "tile layers" por URL com `{level}/{col}/{row}`; sem PMTiles | XYZ raster e vetor (`{z}/{x}/{y}` literais), TileJSON, e PMTiles por URL (Range/206 conferido antes de aceitar); zoom e atribuição sempre declarados pelo usuário, nunca sondados | feito (PMTiles além da Esri; PMTiles/COG por URL NUNCA prometidos DENTRO do ArcGIS, C18 da L1) | `tests/api/conexao/test_pmtiles_xyz_tilejson.py`, `tests/unit/test_ladrilhos.py` (ramo `wt/il602gpmtil`, na fila) | 2026-09-07 | pendente (D20) |
 | planilha Google Sheets | não é tipo de URL do Map Viewer (só arquivo Excel local) | planilha publicada (URL normalizada para exportação CSV, sem credencial) e planilha privada por conta de serviço (JWT RS256 → token de curta duração, escopo somente leitura, sem biblioteca do Google) | parcial (privada só com conta de serviço de teste da casa, decisão do dono pendente) | `tests/api/conexao/test_google_sheets.py`, `tests/unit/test_google_sheets.py` (ramo `wt/il602igoogl`) | 2026-09-07 | pendente (D20) |
-| STAC por URL | não existe no Map Viewer (STAC Connection é do Pro 3.2+) | item L6-02-e pendente; a linha L1 lê STAC de terceiros pela lista fechada de hosts (`tests/api/imagens/test_stacit_gdal.py`, ramo `wt/stac`) | fora (L6-02-e) | — | 2026-09-07 | pendente (D20) |
+| STAC por URL | não existe no Map Viewer (STAC Connection é do Pro 3.2+) | item L6-02-e pendente; a linha L1 lê STAC de terceiros pela lista fechada de hosts (`tests/api/imagens/test_stacit_gdal.py`, ramo `wt/il101apgsta`) | fora (L6-02-e) | — | 2026-09-07 | pendente (D20) |
 | GeoParquet por URL | não existe no Map Viewer (Data Pipelines lê Parquet de S3) | item L6-02-f pendente (DuckDB presente, GDAL sem driver Parquet) | fora (L6-02-f) | — | 2026-09-07 | pendente (D20) |
 | descoberta por catálogo (CSW) | não existe no Map Viewer (busca só no próprio portal/Living Atlas) | CSW 2.0.2 de terceiros (a INDE): busca por texto e bbox, registro ISO 19139, criação de conexão WMS/WFS/WMTS num clique com a ficha do ISO; "sem serviço ligado" nunca vira conexão | feito (além da Esri) | `tests/api/test_csw.py`, `tests/unit/test_csw_analise.py` (ramo `wt/cx5l606`, na fila) | 2026-09-07 | pendente (D20) |
 | catálogo de conectores públicos prontos | Living Atlas (curadoria da Esri, conteúdo dela) | `plat.endpoint_publico`: 78 serviços públicos vivos na data (WMS/WFS/WMTS/ArcGIS REST/STAC/OGC API), retestados por semana, morto vai para "fora do ar", um clique cria a conexão com a ficha | feito (além da Esri, que não cataloga serviços de terceiros) | `tests/api/test_endpoints_publicos.py`, `tests/unit/test_endpoints_publicos_vivo.py`, `tests/e2e/test_endpoints_publicos_tela.py` (ramo `wt/cx5l602m`, na fila) | 2026-09-07 | pendente (D20) |
@@ -432,11 +436,11 @@ o adversário reproduz no ramo, não em `master`. "Pro/AGOL real" segue `pendent
 
 | capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
 |---|---|---|---|---|---|---|
-| pasta (file share) | "Folder" com arquivos publicáveis em massa | não existe: arquivo entra por upload retomável (L0-04-a) ou por URL; não há registro de pasta de rede | fora (decisão: appliance sem montagem de rede; L7-11) | — | 2026-09-07 | pendente (D20) |
+| pasta (file share) | "Folder" com arquivos publicáveis em massa | não existe: arquivo entra por upload retomável (L0-04-a) ou por URL; não há registro de pasta de rede | fora (L7-11) | — | 2026-09-07 | pendente (D20) |
 | banco relacional (SQL Server, Oracle, PostgreSQL, SAP HANA) com publicação em massa | ".sde" registrado; "publish map image layers and feature layers in bulk" | PostgreSQL/PostGIS externo por `postgres_fdw`: registra, lista tabelas, publica em massa uma camada REFERENCIADA por tabela (VIEW sobre FOREIGN TABLE por função SECURITY DEFINER); SQL Server só copiado via GDAL (MSSQLSpatial), Oracle ausente (sem OCI, decisão do dono, B8) | parcial (só PostgreSQL referenciado; SQL Server/Oracle fora) | `tests/api/test_acervo_fdw.py` (ramo `wt/il601jmulti`) e o item L0-04-i (`app/conexao/pgfdw.py`, ramo `wt/il004ifonte`, sem teste próprio ainda) | 2026-09-07 | pendente (D20) |
-| armazém em nuvem (BigQuery, Snowflake, Redshift...) | "cloud data warehouse": sem bulk publishing nem edição | não existe (o cliente daqui não tem armazém em nuvem — L3L6_CONCEITO seção 14) | fora (decisão) | — | 2026-09-07 | pendente (D20) |
+| armazém em nuvem (BigQuery, Snowflake, Redshift...) | "cloud data warehouse": sem bulk publishing nem edição | não existe (nenhum item do backlog do laço pede conector de armazém em nuvem e nenhuma decisão do dono cobre — conferido no registro do laço, D18-D41, em 08/09/2026) | fora (nenhum item do backlog pede; nenhuma decisão do dono cobre) | — | 2026-09-07 | pendente (D20) |
 | armazenamento de objetos (S3, Azure, GCS, Alibaba; S3-compatível "não garantido") | registrado como data store; S3-compatível fora da garantia | bucket S3-compatível por inquilino no Garage (chave só-leitura, cota) como armazenamento da casa (L1 C13); leitura de bucket do cliente como conector é o L6-02-f (pendente) | parcial (armazenamento próprio sim; bucket do cliente como fonte não) | `tests/api/test_arquivos.py` (master), `tests/api/test_arquivos_entrega.py` (ramo `wt/segur`) | 2026-09-07 | pendente (D20) |
-| NoSQL (Knowledge Server) | só com Knowledge Server | não existe | fora (decisão) | — | 2026-09-07 | pendente (D20) |
+| NoSQL (Knowledge Server) | só com Knowledge Server | não existe (nenhum item do backlog pede Knowledge Server e nenhuma decisão do dono cobre — conferido no registro do laço, D18-D41, em 08/09/2026) | fora (nenhum item do backlog pede; nenhuma decisão do dono cobre) | — | 2026-09-07 | pendente (D20) |
 
 ### Living Atlas [E11-living-atlas, E11-living-atlas-admin, BA-living-atlas]
 
