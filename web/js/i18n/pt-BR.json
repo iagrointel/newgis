@@ -863,5 +863,15 @@
  "upload.erro_generico": "não foi possível concluir o envio",
  "upload.erro_iniciar": "não foi possível iniciar o envio",
  "upload.erro_parte": "falha ao enviar a parte {n}",
- "upload.erro_concluir": "não foi possível concluir o envio"
+ "upload.erro_concluir": "não foi possível concluir o envio",
+ "pareto.titulo": "Fronteira de Pareto",
+ "pareto.execucao": "execução",
+ "pareto.rodar": "ordenar",
+ "pareto.baixar": "baixar a fronteira",
+ "pareto.objetivos": "objetivos (2 a 4)",
+ "pareto.maximizar": "maximizar",
+ "pareto.minimizar": "minimizar",
+ "pareto.escolha_objetivos": "escolha de 2 a 4 objetivos",
+ "pareto.erro_biblioteca": "as bibliotecas do mapa não carregaram",
+ "pareto.explicacao": "A ordenação não usa peso nenhum. Uma unidade domina outra quando é pelo menos igual em todos os objetivos e melhor em pelo menos um; a 1ª ordem é o que ninguém domina. Arraste um retângulo no gráfico para realçar as mesmas unidades no mapa."
 }
