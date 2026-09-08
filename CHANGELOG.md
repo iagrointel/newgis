@@ -3,6 +3,20 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## codex cx1, setembro de 2026 (item L2-06-b-elementos-basicos: doze tipos de elemento no painel, todos com número do servidor)
+
+Indicador (nove estatísticas, formato, ícone, cor por faixa, modo "uma feição"), gráfico serial (barras, linhas e
+área; por categoria ou por data com o fuso do inquilino; várias séries; empilhado), pizza/rosca, tabela (colunas
+com ordenação, ou agrupada com subtotal e total geral vindos do servidor), lista paginada, mapa, detalhes, texto
+rico com markdown seguro, legenda e cabeçalho. Nenhum número é calculado no navegador: tudo passa pelo motor de
+agregação do L2-06-e por `app/paineis/dados.py`. O mapa publica a extensão dos pontos que desenhou e ela vira
+condição espacial em todas as fontes do painel. Medido em `tests/medidas/L2-06-b-elementos-basicos.json`: lista de
+10.000 feições a **66,8 ms por página** (p95 no navegador, portão ≤ 300 ms), extensão do mapa recortando 10.000
+para 999 feições e 14 elementos com captura própria. Dois defeitos de plataforma corrigidos no caminho: a ordem
+dos parâmetros do SQL de agregação (gráfico por mês MAIS filtro global dava 500) e o repintar com resposta
+atrasada (o painel voltava ao filtro anterior). Paridade contra a lista de elementos dos Dashboards em
+`docs/PARIDADE.md`; ADR `docs/adr/20260908T1500-elementos-do-painel.md`.
+
 ## codex cx1, setembro de 2026 (item L2-01-i-graficos-de-camada: cinco gráficos por camada agregados no servidor, clique que seleciona no mapa)
 
 `POST /api/camadas/{id}/grafico` ao lado da rota de estatísticas do L2-06-e (mesmo item, colunas, filtro,
