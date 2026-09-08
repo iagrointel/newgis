@@ -1103,3 +1103,19 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 8, setembro de 2026 (item L5-07-fontes-vistas-mensagens: modelo de dado do app e barramento de mensagens)
+
+O documento `app` (esquema 3) ganha `fontes` (item do catálogo, caminho do servidor ou embutida; campos tipados),
+`vistas` (fonte + filtro CQL2-JSON + seleção + ordenação + campos) e `mensagens` (gatilho {origem, evento} → ações
+[{alvo, ação, parâmetros, relação}]) com os 8 gatilhos do Experience Builder e as ações de dado (filtrar,
+selecionar, limpar_*) e de widget (zoom, pan, piscar, popup, abrir, fechar, definir_parametro). Regra de relação
+dos Dashboards entre fontes diferentes (atributo com tipos que casam, ou espacial); sem relação é recusado no
+construtor com mensagem e na API (422 `modelo_invalido`) — o mesmo validador em JS e Python, provado igual.
+Barramento EventTarget com corte de ciclo em uma volta (aviso `ciclo_cortado`); estado de seleção e filtros na URL
+por vista; widgets de tabela, gráfico (novo) e mapa (renderizador SVG da vista) ligados a vistas; painel "Dados e
+mensagens" no construtor. Medido em node com 10 mil feições em memória: latência gatilho→ação p95 em
+`tests/medidas/L5-07-fontes-vistas-mensagens.json` (com carga e RAM ao lado). e2e: seleção no mapa filtra tabela e
+gráfico (2 vistas da mesma fonte) e a tabela de outra fonte por relação de atributo; URL reabre igual; recusa no
+construtor com captura. Tabela gatilhos × ações contra a doc do Experience Builder em `docs/PARIDADE.md`. ADR
+`20260908T1050-fontes-vistas-mensagens.md`. Ramo contém `wt/cx506` (L5-06) por merge.
