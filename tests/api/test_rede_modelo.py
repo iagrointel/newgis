@@ -152,20 +152,24 @@ def test_gatilho_recusa_no_fora_da_rede(rede_eletrica):
 
 
 def test_gatilho_recusa_subrede_de_nivel_invertido(rede_eletrica):
-    """Cláusula 2: subrede de nível 3 exige pai de nível 2 — pular direto do nível 1 é recusado."""
+    """Cláusula 2: subrede de nível 3 exige pai de nível 2 — pular direto do nível 1 é recusado.
+
+    Desde o item L4-04-c-unificar-subrede a hierarquia declarada vive em `plat.rede_subrede` com
+    `origem='bdgd'`; o gatilho e o nome da exceção são os mesmos."""
     con, tenant_id, usuario_id, rede_id = rede_eletrica
     with con.cursor() as cur:
         contexto(con, tenant_id, usuario_id)
         cur.execute(
-            "INSERT INTO plat.rede_subrede_bdgd (tenant_id, rede_id, nivel, codigo_externo) "
-            "VALUES (%s, %s::uuid, 1, 'zt-nivel1') RETURNING id",
+            "INSERT INTO plat.rede_subrede (tenant_id, rede_id, origem, estado, nivel, codigo_externo, "
+            "nome) VALUES (%s, %s::uuid, 'bdgd', 'declarada', 1, 'zt-nivel1', 'zt-nivel1') RETURNING id",
             (tenant_id, rede_id),
         )
         nivel1 = cur.fetchone()["id"]
         with pytest.raises(Exception, match="subrede_nivel_invertido"):
             cur.execute(
-                "INSERT INTO plat.rede_subrede_bdgd (tenant_id, rede_id, nivel, codigo_externo, pai_id) "
-                "VALUES (%s, %s::uuid, 3, 'zt-nivel3', %s::uuid)",
+                "INSERT INTO plat.rede_subrede (tenant_id, rede_id, origem, estado, nivel, "
+                "codigo_externo, nome, pai_id) "
+                "VALUES (%s, %s::uuid, 'bdgd', 'declarada', 3, 'zt-nivel3', 'zt-nivel3', %s::uuid)",
                 (tenant_id, rede_id, nivel1),
             )
 
@@ -252,7 +256,8 @@ def test_importa_distribuidora_real_e_confere_contagem(rede_eletrica, extrato_re
         total_nos = cur.fetchone()["n"]
         cur.execute("SELECT count(*) AS n FROM plat.rede_aresta WHERE rede_id = %s::uuid", (rede_id,))
         total_arestas = cur.fetchone()["n"]
-        cur.execute("SELECT count(*) AS n FROM plat.rede_subrede_bdgd WHERE rede_id = %s::uuid", (rede_id,))
+        cur.execute("SELECT count(*) AS n FROM plat.rede_subrede WHERE rede_id = %s::uuid "
+                    "AND origem = 'bdgd'", (rede_id,))
         total_subredes = cur.fetchone()["n"]
         cur.execute("SELECT count(*) AS n FROM plat.rede_associacao WHERE rede_id = %s::uuid", (rede_id,))
         total_associacoes = cur.fetchone()["n"]

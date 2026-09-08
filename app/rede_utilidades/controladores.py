@@ -295,7 +295,7 @@ GRUPO_TRAFO = "transformador_de_distribuicao"
 GRUPO_CHAVE_MT = "chave_de_media_tensao"
 
 
-def _tier_do_grupo(cur, rede_id: str, grupo_codigo: str) -> dict:
+def tier_do_grupo(cur, rede_id: str, grupo_codigo: str) -> dict:
     """O tier em que vive o grupo de ativo `grupo_codigo` (o menor `ordem`, quando o grupo tem tipos em
     tiers diferentes). É assim que a marcação descobre "o tier de média tensão" sem depender do NOME do
     tier: o pacote é que diz onde cada grupo vive."""
@@ -381,13 +381,17 @@ def marcar_da_importacao(cur, tenant_id: int, rede_id: str, usuario_id: int | No
         jusante (o lado de baixa) — é ele que dá origem à subrede de BT.
 
     Idempotente: rodar de novo não duplica (o terminal já marcado é contado em `ja_marcados`). Exige a
-    topologia construída, porque o nó de cabeça só existe depois dela."""
+    topologia construída, porque o nó de cabeça só existe depois dela.
+
+    No fim, item L4-04-c-unificar-subrede: a MESMA passagem grava a hierarquia que o arquivo declara
+    (`origem='bdgd'` na mesma tabela) e reconcilia as duas leituras — `declarado` e `reconciliacao` na
+    saída dizem quantas subredes o arquivo declara e quantas casam com a derivada do controlador."""
     cur.execute("SELECT 1 FROM plat.rede_topo_resumo WHERE rede_id = %s::uuid", (rede_id,))
     if cur.fetchone() is None:
         raise ErroAPI(409, "topologia_inexistente", "esta rede ainda não teve a topologia habilitada")
 
-    tier_mt = _tier_do_grupo(cur, rede_id, GRUPO_TRECHO_MT)
-    tier_bt = _tier_do_grupo(cur, rede_id, GRUPO_TRECHO_BT)
+    tier_mt = tier_do_grupo(cur, rede_id, GRUPO_TRECHO_MT)
+    tier_bt = tier_do_grupo(cur, rede_id, GRUPO_TRECHO_BT)
     contagem = {"tier_media_tensao": tier_mt["codigo"], "tier_baixa_tensao": tier_bt["codigo"],
                 "alimentadores": 0, "alimentadores_por_dispositivo": 0, "alimentadores_por_no_de_cabeca": 0,
                 "alimentadores_sem_no": 0, "transformadores": 0, "transformadores_marcados": 0,
@@ -475,4 +479,11 @@ def marcar_da_importacao(cur, tenant_id: int, rede_id: str, usuario_id: int | No
         definir(cur, tenant_id, rede_id, feicao_id=str(tr["id"]), terminal=terminal, subrede=nome,
                 tier_codigo=tier_bt["codigo"], papel="fonte", nome=nome, usuario_id=usuario_id)
         contagem["transformadores_marcados"] += 1
+
+    # import local: `reconciliacao` usa `tier_do_grupo` e as constantes de grupo daqui, e importar os dois
+    # no topo fecharia um ciclo. A dependência é de uma função só, e ela não roda na importação do módulo.
+    from app.rede_utilidades import reconciliacao
+
+    contagem["declarado"] = reconciliacao.declarar(cur, tenant_id, rede_id)
+    contagem["reconciliacao"] = reconciliacao.reconciliar(cur, rede_id)
     return contagem

@@ -8,8 +8,10 @@ UNTRMT, UNSEMT, SSDBT, RAMLIG, UCBT_tab, UCMT_tab, PONNOT) e monta a rede de neg
   `comprimento_m` NULL declarado, nunca zero disfarçado);
 - nó 'fonte' por subestação (SUB), 'dispositivo' por transformador (UNTRMT) e por chave (UNSEMT,
   com estado de manobra de P_N_OPE), 'consumidor' por unidade consumidora (UCBT_tab/UCMT_tab);
-- hierarquia de subredes: subestação (nível 1) -> alimentador (nível 2, CTMT) -> transformador
-  (nível 3, controlador da baixa tensão dele);
+- hierarquia de subredes DECLARADA PELO ARQUIVO: subestação (nível 1) -> alimentador (nível 2, CTMT)
+  -> transformador (nível 3, controlador da baixa tensão dele). Desde o item L4-04-c-unificar-subrede
+  ela entra em `plat.rede_subrede` com `origem='bdgd'`, na mesma tabela da subrede derivada do
+  controlador — o que o arquivo declara e o que o traçado calcula ficam lado a lado e comparáveis;
 - associação de conectividade explícita (o ativo com a junção onde a fonte diz que ele se liga).
   O gatilho `rede_associacao_validar` confere cada uma contra o catálogo de regras do pacote; o
   importador já filtra com a mesma régua (EXISTS no SQL do lote) para que uma distribuidora com
@@ -54,6 +56,11 @@ TIPO_POR_CAMADA = {
     "UCBT_tab": ("unidade_consumidora", 1),
     "UCMT_tab": ("unidade_consumidora", 2),
 }
+
+# A hierarquia declarada pelo arquivo vive na MESMA tabela da subrede derivada do controlador desde o item
+# L4-04-c-unificar-subrede (migração 20260908T0152): `origem='bdgd'`, `estado='declarada'`, sem tier. O
+# índice único dessas linhas é PARCIAL, então o `ON CONFLICT` tem de repetir o predicado do índice.
+_CONFLITO_DECLARADA = "ON CONFLICT (rede_id, nivel, codigo_externo) WHERE origem = 'bdgd' DO NOTHING"
 
 LOTE = 5000
 EXEMPLOS_MAX = 5
@@ -370,11 +377,11 @@ class _Importador:
                 self._desvio("fonte_duplicada", "COD_ID de subestação repetido no arquivo", cod)
                 continue
             self.cur.execute(
-                "INSERT INTO plat.rede_subrede_bdgd "
-                "(tenant_id, rede_id, nivel, codigo_externo, nome, controlador_no_id) "
-                "VALUES (%s, %s::uuid, 1, %s, %s, %s::uuid) "
-                "ON CONFLICT (rede_id, nivel, codigo_externo) DO NOTHING RETURNING id",
-                (self.tenant_id, self.rede_id, cod, _texto(linha.get("NOME")), r["id"]),
+                "INSERT INTO plat.rede_subrede "
+                "(tenant_id, rede_id, origem, estado, nivel, codigo_externo, nome, controlador_no_id) "
+                "VALUES (%s, %s::uuid, 'bdgd', 'declarada', 1, %s, coalesce(%s, %s), %s::uuid) "
+                + _CONFLITO_DECLARADA + " RETURNING id",
+                (self.tenant_id, self.rede_id, cod, _texto(linha.get("NOME")), cod, r["id"]),
             )
             r2 = self.cur.fetchone()
             if r2:
@@ -398,11 +405,11 @@ class _Importador:
                 )
                 continue  # o gatilho recusa nível 2 sem pai; o desvio explica a ausência
             self.cur.execute(
-                "INSERT INTO plat.rede_subrede_bdgd "
-                "(tenant_id, rede_id, nivel, codigo_externo, nome, pai_id, atributos) "
-                "VALUES (%s, %s::uuid, 2, %s, %s, %s::uuid, %s) "
-                "ON CONFLICT (rede_id, nivel, codigo_externo) DO NOTHING RETURNING id",
-                (self.tenant_id, self.rede_id, cod, _texto(linha.get("NOME")), pai,
+                "INSERT INTO plat.rede_subrede "
+                "(tenant_id, rede_id, origem, estado, nivel, codigo_externo, nome, pai_id, atributos) "
+                "VALUES (%s, %s::uuid, 'bdgd', 'declarada', 2, %s, coalesce(%s, %s), %s::uuid, %s) "
+                + _CONFLITO_DECLARADA + " RETURNING id",
+                (self.tenant_id, self.rede_id, cod, _texto(linha.get("NOME")), cod, pai,
                  Json(_atributos(linha))),
             )
             r = self.cur.fetchone()
@@ -790,16 +797,16 @@ class _Importador:
         if camada == "UNTRMT":
             # t[5] é a subrede de nível 2 (o alimentador); sem ele o desvio 'trafo_sem_alimentador'
             # já foi contado e a subrede de nível 3 não é criada (o gatilho recusaria o órfão).
-            com_alimentador = [(self.tenant_id, self.rede_id, t[3], por_codigo[t[3]], t[5])
+            com_alimentador = [(self.tenant_id, self.rede_id, t[3], t[3], por_codigo[t[3]], t[5])
                                for t in validos if t[5] is not None]
             if com_alimentador:
                 criadas = execute_values(
                     self.cur,
-                    "INSERT INTO plat.rede_subrede_bdgd (tenant_id, rede_id, nivel, codigo_externo, "
-                    "controlador_no_id, pai_id) VALUES %s "
-                    "ON CONFLICT (rede_id, nivel, codigo_externo) DO NOTHING RETURNING id, codigo_externo",
+                    "INSERT INTO plat.rede_subrede (tenant_id, rede_id, origem, estado, nome, nivel, "
+                    "codigo_externo, controlador_no_id, pai_id) VALUES %s "
+                    + _CONFLITO_DECLARADA + " RETURNING id, codigo_externo",
                     com_alimentador,
-                    template="(%s, %s::uuid, 3, %s, %s::uuid, %s::uuid)",
+                    template="(%s, %s::uuid, 'bdgd', 'declarada', %s, 3, %s, %s::uuid, %s::uuid)",
                     page_size=LOTE,
                     fetch=True,
                 )

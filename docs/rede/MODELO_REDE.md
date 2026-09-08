@@ -13,7 +13,7 @@ Três peças da família L4-01 respondem a perguntas diferentes:
 |---|---|---|
 | L4-01-a (pacote de ativos) | o que PODE existir na rede? | `rede_tipo`, `rede_regra`, `rede_dominio`, `rede_tier` |
 | L4-01-b (topologia derivada) | onde as feições se TOCAM geometricamente? | `rede_topo_no`, `rede_topo_aresta` |
-| **L4-01-modelo-rede (este)** | qual é a rede de NEGÓCIO, com conectividade DECLARADA pela fonte? | `rede_no`, `rede_aresta`, `rede_subrede_bdgd`, `rede_associacao`, `rede_importacao` |
+| **L4-01-modelo-rede (este)** | qual é a rede de NEGÓCIO, com conectividade DECLARADA pela fonte? | `rede_no`, `rede_aresta`, `rede_subrede` (origem `bdgd`), `rede_associacao`, `rede_importacao` |
 
 É sobre o grafo deste item que o pgRouting corre (`plat.rede_menor_caminho`). A diferença para o item
 b: aqui a conectividade não é inferida por proximidade geométrica com tolerância — ela é lida do
@@ -29,8 +29,12 @@ recusa qualquer gravação fora do catálogo do pacote.
 - `rede_aresta` — um trecho/condutor entre dois `rede_no`, com `comprimento_m` (NULL declarado
   quando a fonte não tem geometria para aquele trecho, nunca zero disfarçado) e `no_origem_seq`/
   `no_destino_seq` copiados pelo gatilho, nunca preenchidos pela aplicação.
-- `rede_subrede_bdgd` — hierarquia por nível estrito (1 subestação → 2 alimentador → 3 transformador →
-  4 reservado), pai obrigatoriamente um nível acima; nível 1 é o único sem pai.
+- `rede_subrede` com `origem='bdgd'` — hierarquia por nível estrito (1 subestação → 2 alimentador →
+  3 transformador → 4 reservado), pai obrigatoriamente um nível acima; nível 1 é o único sem pai. Desde o
+  item L4-04-c-unificar-subrede ela mora na MESMA tabela da subrede derivada do controlador (que tem
+  `origem='controlador'`), separada pela coluna `origem` e ligada a ela por `equivalente_id` quando a
+  reconciliação encontra o par — ver o ADR 20260908T0152. Antes disso a tabela se chamava
+  `rede_subrede_bdgd`; o nome não existe mais.
 - `rede_associacao` — conectividade explícita entre um ativo (dispositivo/fonte/consumidor) e uma
   junção, outro ativo ou um trecho, com `tipo` (`conectividade`/`contencao`/`fixacao`) validado contra
   `plat.rede_regra` do pacote na escrita, não depois.
@@ -102,7 +106,7 @@ A tabela viva fica em `docs/PARIDADE.md` (linha L4). Resumo:
 | nó/aresta com atributo por *asset type* | `rede_no`/`rede_aresta` + `tipo_id` (este item) | feito |
 | *containment/attachment association* | `rede_associacao` tipo `contencao`/`fixacao` (este item) | feito, sem consumidor ainda |
 | *connectivity association* | `rede_associacao` tipo `conectividade` (este item) | feito |
-| *subnetwork* (definição, hierarquia) | `rede_subrede_bdgd` (este item) | feito |
+| *subnetwork* (definição, hierarquia) | `rede_subrede` origem `bdgd` (este item) | feito |
 | *Update Subnetwork* / *Trace* | — | fora (próximos itens L4-02/L4-04) |
 | *terminal configuration* | `rede_terminal_config` (item L4-01-a) | feito |
 | importador de fonte real com contagem conferida | `bdgd.py` (este item) | parcial — ver §4 |
