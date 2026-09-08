@@ -12,7 +12,7 @@
 
 export const LARGURA = 320;
 export const ALTURA = 220;
-const MARGEM = { topo: 14, dir: 10, base: 42, esq: 46 };
+const MARGEM = { topo: 22, dir: 10, base: 42, esq: 46 };
 export const CORES = ['#d98a2b', '#4f9e6e', '#5b8fd9', '#c75c8a', '#8fa19c', '#e0c24a', '#7c5cc7', '#4fb0b8',
   '#b8623b', '#6b9e3a', '#a05c9e', '#3c7f9e'];
 const COR_OUTROS = '#5b6467';
@@ -165,7 +165,7 @@ function barras(dados, opcoes) {
     if (contiguo) {
       if (i % cada === 0) rotulos.push(texto(xa, y0 + 12, formatarNumero(e.de), { class: 'eixo', 'text-anchor': 'middle', 'font-size': '8' }));
       if (i === n - 1) rotulos.push(texto(xa + w, y0 + 12, formatarNumero(e.ate), { class: 'eixo', 'text-anchor': 'middle', 'font-size': '8' }));
-    } else if (i % cada === 0 || n <= 12) {
+    } else if (i % cada === 0 || n <= 12 || e.outros) {
       const r = rot.length > 12 ? `${rot.slice(0, 11)}…` : rot;
       rotulos.push(texto(xa + w / 2, y0 + 10, r, n > 6
         ? { class: 'eixo', 'text-anchor': 'end', transform: `rotate(-35 ${r2(xa + w / 2)} ${y0 + 10})`, 'font-size': '8' }
