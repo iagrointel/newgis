@@ -120,6 +120,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/rede/{rede_id}/pacote"): ["redes/importar_pacote"],
     # L4-01-c: a importação BDGD é um job; o evento é o do enfileiramento
     ("POST", "/api/rede/{rede_id}/importar-bdgd"): ["redes/importar_bdgd"],
+    ("POST", "/api/rede/{rede_id}/matpower"): ["redes/importar_matpower"],
     # L4-01-a/L4-01-b/L4-18: as rotas de escrita da rede de utilidades que ainda não estavam declaradas
     # aqui (a rota existe e registra o evento; faltava a linha desta tabela). Lidas uma a uma em
     # app/rede_utilidades/rotas*.py.

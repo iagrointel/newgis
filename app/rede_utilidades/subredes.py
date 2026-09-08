@@ -488,3 +488,76 @@ def exportar_dss(cur, rede_id: str, nome: str, tier: str | None = None, ano: int
     }
     arquivos["resumo.json"] = json.dumps(resumo, ensure_ascii=False, indent=1) + "\n"
     return {"arquivos": arquivos, "resumo": resumo}
+
+
+def _coordenadas_das_barras(cur, rede_id: str, barras: set[str]) -> dict[str, tuple[float, float]]:
+    """Longitude/latitude de cada barra, quando o nó que a representa tem geometria. O nome da barra é
+    `b` + o identificador do nó sem hífen (regra de `opendss._barra`), então a busca é uma só, por rede.
+    Barra sem coordenada simplesmente não entra no mapa — nunca vira (0, 0)."""
+    if not barras:
+        return {}
+    cur.execute(
+        "SELECT 'b' || replace(id::text, '-', '') AS barra, ST_X(geom) AS lon, ST_Y(geom) AS lat "
+        "FROM plat.rede_topo_no WHERE rede_id = %s::uuid AND geom IS NOT NULL "
+        "AND 'b' || replace(id::text, '-', '') = ANY(%s)", (rede_id, sorted(barras)))
+    return {r["barra"]: (float(r["lon"]), float(r["lat"])) for r in cur.fetchall()}
+
+
+def exportar_equilibrada(cur, rede_id: str, nome: str, formato: str, tier: str | None = None,
+                         ano: int | None = None, jusante: bool = False) -> dict:
+    """`Export Subnetwork` para os formatos de rede EQUILIBRADA (item L4-05-c): `pandapower` (o JSON
+    que `pandapower.from_json` lê) e `matpower` (o `.m` do caseformat 2).
+
+    Reusa `opendss.montar_da_subrede` inteiro: o modelo em memória é o mesmo do exportador `.dss`, e
+    por isso os três arquivos descrevem a mesma rede. Devolve `{"arquivos": {...}, "resumo": {...}}`,
+    como `exportar_dss`."""
+    from app.rede_utilidades import matpower, pandapower_rede
+
+    s = por_nome(cur, rede_id, nome, tier)
+    if s["atualizado_em"] is None:
+        raise ErroAPI(409, "subrede_nunca_atualizada",
+                      "esta subrede ainda não foi atualizada: não há elementos gravados para exportar")
+    dela = [c for c in controladores.listar_controladores(cur, rede_id, 1000)
+            if c["subrede_id"] == str(s["id"])]
+    s = dict(s)
+    s["propagados"] = (dict(s["resumo"] or {})).get("propagados") or {}
+    ids = [str(s["id"])]
+    if jusante:
+        ids = opendss.subredes_de_jusante(cur, rede_id, ids, s["tier_ordem"])
+    try:
+        modelo = opendss.montar_da_subrede(cur, rede_id, s, dela,
+                                          ano if ano is not None else datetime.now(timezone.utc).year,
+                                          ids)
+    except opendss.ErroConversao as e:
+        raise ErroAPI(422, e.codigo, e.mensagem) from e
+
+    resumo = {
+        "subrede": s["nome"], "tier": s["tier"], "formato": formato,
+        "subredes_no_circuito": len(modelo["subredes"]), "com_jusante": jusante,
+        "exportado_em": datetime.now(timezone.utc).isoformat(),
+        "barra_fonte": modelo["barra_fonte"], "kv_fonte": modelo["kv_fonte"],
+        "codigo_tensao_nominal": modelo["codigo_tensao_nominal"],
+        "conferencia": modelo["conferencia"], "unidades": modelo["unidades"],
+        "avisos": modelo["avisos"], "ignorados": modelo["ignorados"],
+        "chaves": [{"codigo": c["codigo"], "tipo": c["tipo"], "estado": c["estado"]}
+                   for c in modelo["chaves"]],
+    }
+    if formato == "pandapower":
+        coordenadas = _coordenadas_das_barras(cur, rede_id, set(modelo["barras"]))
+        net = pandapower_rede.montar_net(modelo, coordenadas)
+        resumo["pandapower"] = pandapower_rede.conferencia(modelo, net)
+        arquivos = {"rede.json": pandapower_rede.texto(net),
+                    "NAO_FAZ.md": pandapower_rede.RELATORIO_NAO_FAZ}
+    else:
+        matrizes = matpower.matrizes_do_modelo(modelo)
+        resumo["matpower"] = {
+            "base_mva": matrizes["baseMVA"], "bus": len(matrizes["bus"]),
+            "gen": len(matrizes["gen"]), "branch": len(matrizes["branch"]),
+            "barras_esperadas": modelo["conferencia"]["barras_esperadas"],
+            "ramos_esperados": (modelo["conferencia"]["linhas_esperadas"]
+                                + modelo["conferencia"]["transformadores"]),
+        }
+        arquivos = {f"{opendss.sanear(modelo['nome']).lower()}.m": matpower.texto_do_caso(modelo),
+                    "NAO_FAZ.md": pandapower_rede.RELATORIO_NAO_FAZ}
+    arquivos["resumo.json"] = json.dumps(resumo, ensure_ascii=False, indent=1) + "\n"
+    return {"arquivos": arquivos, "resumo": resumo}

@@ -468,3 +468,93 @@ Total: 214 atributos, 154 com origem conferida em extração real e 60 declarado
 | fixacao_estrutural | `ponto_notavel/1` | `trecho_de_baixa_tensao/1` | trecho de baixa tensão fixado no poste |
 | fixacao_estrutural | `ponto_notavel/1` | `trecho_de_media_tensao/1` | trecho de média tensão fixado no poste |
 | fixacao_estrutural | `ponto_notavel/2` | `trecho_de_media_tensao/1` | trecho de média tensão fixado na torre |
+
+## `transmissao-matpower` — Transmissão no vocabulário do MATPOWER
+
+Pacote de ativos de rede de transmissão/subtransmissão no vocabulário do caseformat versão 2 do MATPOWER: barra e ramo (linha e transformador de potência); o que a matriz gen declara entra como atributo da barra. Existe porque o caso do MATPOWER descreve uma rede ELÉTRICA SEM GEOMETRIA — as matrizes bus/branch/gen não têm coordenada nenhuma. Por isso todo grupo deste pacote tem geometria 'sem_geometria': a barra importada vira objeto não espacial, e nunca um ponto na coordenada (0, 0). O vocabulário de distribuição (pacote eletrica-br, da BDGD) não serve aqui: lá o objeto é o trecho de média tensão com traçado medido em campo.
+
+| campo | valor |
+|---|---|
+| versão do pacote | 1.0.0 |
+| versão do esquema | 1 |
+| disciplina | eletrica |
+| fonte | https://github.com/MATPOWER/matpower |
+| tamanho | 16738 bytes |
+| sha256 | `311229960ee0e1c49a1a12b6945165c921c2d99f000311e43cf22e5eb2f719a4` |
+
+### Redes de domínio e tiers
+
+| domínio | tipo do domínio | tier | ordem | tipo do tier | o que é |
+|---|---|---|---|---|---|
+| `transmissao` | dominio | `sistema` | 1 | hierarquico | O caso inteiro. O caseformat do MATPOWER não declara hierarquia de subrede; a área (coluna area da matriz bus) é partição, não hierarquia. |
+| `transmissao` | dominio | `area` | 2 | particionado | Partição declarada na coluna area da matriz bus. |
+
+### Categorias de rede
+
+| categoria | nome | o que significa no traçado |
+|---|---|---|
+| `barramento` | Barramento | Ponto do sistema onde a tensão é a mesma para todos os ramos que ali chegam. |
+| `consumo` | Consumo | Potência ativa e reativa retirada do sistema numa barra. |
+| `injecao` | Injeção | Elemento que injeta potência ativa no sistema. |
+| `interligacao` | Interligação | Elemento que liga duas barras e carrega potência entre elas. |
+| `transformacao` | Transformação | Elemento que liga dois níveis de tensão. |
+
+### Configurações de terminal
+
+| configuração | nome | terminais | caminhos válidos |
+|---|---|---|---|
+| `dois_terminais` | Dois terminais | 1=de, 2=para | 1→2 (fechado) |
+| `sem_terminal` | Sem terminal | — | — |
+
+### Grupos e tipos de ativo
+
+| grupo | geometria | camada de origem | código do tipo | chave | nome | tier | categorias | códigos na fonte |
+|---|---|---|---|---|---|---|---|---|
+| `barra` | sem_geometria | mpc.bus | 1 | `barra_de_carga` | Barra de carga (PQ) | sistema | barramento, consumo | 1 |
+| `barra` | sem_geometria | mpc.bus | 2 | `barra_de_geracao` | Barra de geração (PV) | sistema | barramento, injecao | 2 |
+| `barra` | sem_geometria | mpc.bus | 3 | `barra_de_referencia` | Barra de referência (slack) | sistema | barramento, injecao | 3 |
+| `barra` | sem_geometria | mpc.bus | 4 | `barra_isolada` | Barra isolada | sistema | barramento | 4 |
+| `ramo` | sem_geometria | mpc.branch | 1 | `linha_de_transmissao` | Linha de transmissão | sistema | interligacao | ratio=0 |
+| `ramo` | sem_geometria | mpc.branch | 2 | `transformador_de_potencia` | Transformador de potência | sistema | interligacao, transformacao | ratio<>0 |
+
+### Atributos: mapeamento coluna a coluna
+
+| camada de origem | coluna | grupo | atributo | nome | tipo | unidade | obrigatório | conferida | observação |
+|---|---|---|---|---|---|---|---|---|---|
+| mpc.bus | `area` | `barra` | `area` | área do sistema | inteiro | — | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.bus | `baseKV` | `barra` | `base_kv` | tensão de base da barra | real | kV | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.bus | `bus_i` | `barra` | `bus_i` | número da barra no caso | inteiro | — | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.bus | `type` | `barra` | `bus_type` | tipo da barra | inteiro | — | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.gen | `bus` | `barra` | `gen_n` | quantidade de geradores ligados à barra | inteiro | — | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Somado por barra: o caseformat permite mais de uma linha da matriz gen na mesma barra. |
+| mpc.gen | `Pg` | `barra` | `gen_pg` | potência ativa gerada na barra | real | MW | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Soma das linhas da matriz gen desta barra. |
+| mpc.gen | `Qg` | `barra` | `gen_qg` | potência reativa gerada na barra | real | Mvar | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Soma das linhas da matriz gen desta barra. |
+| mpc.gen | `Vg` | `barra` | `gen_vg` | tensão de referência do gerador | real | pu | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte Da primeira linha da matriz gen desta barra. |
+| mpc.bus | `Pd` | `barra` | `pd` | potência ativa demandada | real | MW | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.bus | `Qd` | `barra` | `qd` | potência reativa demandada | real | Mvar | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.bus | `Va` | `barra` | `va` | ângulo da tensão | real | grau | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.bus | `Vm` | `barra` | `vm` | módulo da tensão | real | pu | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `angle` | `ramo` | `angle` | defasagem angular | real | grau | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `b` | `ramo` | `b` | susceptância total de carregamento | real | pu | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `fbus` | `ramo` | `f_bus` | barra de origem | inteiro | — | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `r` | `ramo` | `r` | resistência | real | pu | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `rateA` | `ramo` | `rate_a` | capacidade de longa duração | real | MVA | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `ratio` | `ramo` | `ratio` | relação de transformação | real | — | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `status` | `ramo` | `status` | em serviço | inteiro | — | não | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `tbus` | `ramo` | `t_bus` | barra de destino | inteiro | — | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+| mpc.branch | `x` | `ramo` | `x` | reatância | real | pu | sim | sim | coluna da matriz do caseformat versão 2 do MATPOWER (matpower.org, github.com/MATPOWER/matpower); a posição da coluna foi conferida contra o arquivo de caso lido pela suíte |
+
+Total: 21 atributos, 21 com origem conferida em extração real e 0 declarados da fonte sem conferência.
+
+
+### Regras de conexão
+
+| tipo de regra | de | para | o que diz |
+|---|---|---|---|
+| conectividade_no_trecho | `ramo/1` | `barra/1` | ramo ligado à barra |
+| conectividade_no_trecho | `ramo/1` | `barra/2` | ramo ligado à barra |
+| conectividade_no_trecho | `ramo/1` | `barra/3` | ramo ligado à barra |
+| conectividade_no_trecho | `ramo/1` | `barra/4` | ramo ligado à barra |
+| conectividade_no_trecho | `ramo/2` | `barra/1` | ramo ligado à barra |
+| conectividade_no_trecho | `ramo/2` | `barra/2` | ramo ligado à barra |
+| conectividade_no_trecho | `ramo/2` | `barra/3` | ramo ligado à barra |
+| conectividade_no_trecho | `ramo/2` | `barra/4` | ramo ligado à barra |

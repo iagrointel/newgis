@@ -68,6 +68,27 @@ salva que só falharia ao ser usada. Tela `/redes/configuracoes` com a lista e o
 lacunas declaradas (sem *function barrier*, sem *filter bitset*, sem `SUBTRACT`, contenção por coincidência
 de posição) em `docs/rede/CONFIG_TRACADO.md`; decisão em
 `docs/adr/20260908T0145-configuracoes-de-tracado.md`.
+## turno 7, setembro de 2026 (item L4-05-c-pandapower-e-matpower: conector para rede equilibrada)
+
+A subrede passou a sair em mais dois formatos, na MESMA rota do OpenDSS:
+`GET /api/rede/{id}/subrede/{nome}/exportar?formato=pandapower` devolve o `rede.json` que
+`pandapower.from_json` lê, e `?formato=matpower` devolve o `.m` do caseformat 2. Os três formatos vêm do
+mesmo modelo em memória (`opendss.montar_da_subrede`): uma leitura do banco, uma regra de conversão, três
+línguas. Medido em `tests/medidas/L4-05-c-pandapower-e-matpower.json`: `pp.runpp` converge sobre o arquivo
+exportado, o mesmo alimentador escrito em MATPOWER e relido por `pandapower.converter.from_mpc` converge com
+tensão a menos de 1 % do outro, e o número de `bus`/`line`/`trafo` bate com nós, trechos e transformadores
+contados por consulta independente ao banco.
+
+Na outra ponta, `POST /api/rede/{id}/matpower` importa um caso público (`case9` e `case30` entram na suíte,
+9 e 30 barras, e o traçado de menor caminho corre sobre eles). O caseformat não tem coordenada nenhuma:
+a barra entra no grafo de negócio com `geom` NULO, e nunca no ponto (0, 0). Pacote de ativos novo,
+`transmissao-matpower`, com os dois grupos declarados `sem_geometria` — o catálogo diz a mesma coisa que a
+tabela. Limitações escritas no `NAO_FAZ.md` que sai em toda exportação: os dois formatos são de rede
+EQUILIBRADA (as fases por trecho não são representadas — para desequilíbrio, o formato é o `dss`), e a
+impedância de linha é a de REFERÊNCIA (o padrão do motor OpenDSS, escrito em vez de implícito), porque o
+pacote de ativos não tem catálogo de condutor. Em `docs/PARIDADE.md` isto está registrado como CONECTOR: o
+ArcGIS Utility Network não exporta para esses formatos nem roda fluxo de potência, e a linha não deve ser
+lida como capacidade equivalente. ADR `docs/adr/20260908T0220-pandapower-e-matpower.md`.
 
 ## turno 7, setembro de 2026 (item L4-01-e-dicionario-unidades-bdgd: a unidade vem do arquivo, medida)
 
