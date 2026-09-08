@@ -57,7 +57,7 @@ def reescrever_schema(sql: str, schema: str = SCHEMA_PADRAO, schema_trabalho: st
 
 
 class MixinReescritaSchema:
-    """Reescrita de schema em TODOS os pontos de entrada do cursor que carregam comando SQL.
+    """Reescrita de schema em cada ponto de entrada do cursor que carrega comando SQL.
 
     Por que um mixin com lista declarada, e não quatro métodos soltos: em 06/09/2026 o MESMO defeito apareceu
     três vezes num dia (o `bytes` que `psycopg2.extras.execute_values` manda ao cursor; o `executemany` que
