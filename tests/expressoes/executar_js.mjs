@@ -20,9 +20,6 @@ if (process.argv.includes('--nomes-funcoes')) {
   process.exit(0);
 }
 
-const modoAst = process.argv.includes('--ast');
-const vetores = JSON.parse(readFileSync(process.argv.includes('--stdin') ? 0 : path.join(aqui, 'vetores.json'), 'utf8'));
-
 function guardado(fn) {
   try {
     return { resultado: fn(), erro: null };
@@ -31,6 +28,37 @@ function guardado(fn) {
     return { resultado: null, erro: `EXCECAO_NAO_TRATADA:${e.message}` };
   }
 }
+
+// `--perfis` roda tests/expressoes/vetores_perfis.json pelo avaliador de PERFIL do navegador
+// (web/js/expressao/perfis.js): cada vetor traz perfil, expressão e feição, e o Python compara o
+// resultado com o do avaliador de perfil do servidor (app/expressao/perfis.py). `--perfis-pares`
+// avalia CADA vetor nos dois perfis nomeados em `pares` e devolve os dois valores — é a prova de
+// que a mesma expressão no popup e no cálculo de formulário dá o mesmo valor, no navegador.
+if (process.argv.includes('--perfis') || process.argv.includes('--perfis-pares')) {
+  const { avaliarPerfil, PERFIS } = await import('../../web/js/expressao/perfis.js');
+  if (process.argv.includes('--nomes-perfis')) {
+    process.stdout.write(JSON.stringify(Object.keys(PERFIS)));
+    process.exit(0);
+  }
+  const arquivo = process.argv.includes('--stdin') ? 0 : path.join(aqui, 'vetores_perfis.json');
+  const casos = JSON.parse(readFileSync(arquivo, 'utf8'));
+  const pares = process.argv.includes('--perfis-pares');
+  const saida = casos.map((caso) => {
+    const alvos = pares ? caso.pares : [caso.perfil];
+    const valores = alvos.map((perfil) => guardado(() => avaliarPerfil(perfil, caso.entrada, caso.feicao ?? null)));
+    return {
+      entrada: caso.entrada,
+      resultados: valores.map((v) => v.resultado),
+      erros: valores.map((v) => v.erro),
+    };
+  });
+  process.stdout.write(JSON.stringify(saida));
+  process.exit(0);
+}
+
+const modoAst = process.argv.includes('--ast');
+const vetores = JSON.parse(readFileSync(process.argv.includes('--stdin') ? 0 : path.join(aqui, 'vetores.json'), 'utf8'));
+
 
 const saida = vetores.map((vetor) => {
   const contexto = vetor.contexto || {};
