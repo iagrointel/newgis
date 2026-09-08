@@ -281,7 +281,8 @@ def redes_analisar_alimentador(ctx, rede_id: str, subredes: list[str] | None = N
             recusados.append({"subrede": nome, "codigo": e.codigo, "mensagem": e.mensagem})
             continue
         except ErroAPI as e:
-            recusados.append({"subrede": nome, "codigo": e.codigo, "mensagem": e.mensagem})
+            # em ErroAPI o código curto chama-se `erro` (app/erros.py), não `codigo` como em ErroFluxo
+            recusados.append({"subrede": nome, "codigo": e.erro, "mensagem": e.mensagem})
             continue
         feitos.append(saida)
 

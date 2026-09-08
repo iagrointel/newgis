@@ -129,6 +129,14 @@ MAXIMO_PONTOS_LISTADOS = 50
 # tensão em por unidade abaixo da qual o nó é considerado NÃO ENERGIZADO e sai de fora do extremo do
 # circuito: um nó ilhado por chave aberta lê ~0 e puxaria a "tensão mínima" para zero em todo alimentador.
 PU_MINIMO_ENERGIZADO = 0.01
+# Faixa em que uma barra de distribuição PODE estar, mesmo numa rede ruim. Fora dela não existe rede: o que
+# existe é tensão de BASE errada. Medido em 08/09/2026 na cooperativa de teste: num alimentador em que o
+# trecho de média e o de baixa compartilham nó na topologia (não há transformador entre eles na geometria),
+# a propagação de tensão de base atravessa esse nó e dá base de média tensão a barra de baixa — a barra sai
+# com 0,045 pu, e o transformador ali "perde" quase nada de ferro porque a perda a vazio cai com o quadrado
+# da tensão. O resultado não é apagado nem corrigido: ele sai CONTADO, com aviso, para quem lê saber que
+# aquela parte do modelo tem base trocada.
+FAIXA_DE_TENSAO_PLAUSIVEL = (0.5, 1.5)
 
 
 class ErroFluxo(Exception):
@@ -520,6 +528,20 @@ def resolver_neste_processo(modelo: dict, parametros: dict) -> dict:
             "mensagem": "transformador sem PER_FER no cadastro: ele não entra na perda de ferro declarada "
                         "nem na simulada, e a conferência das duas vale só para os que têm o campo",
             "quantidade": declarada["transformadores_sem_per_fer"]})
+    fora_de_faixa = sum(
+        1 for x in elementos
+        if x["tipo"] == "barra" and x["tensao_pu"] is not None
+        and not (FAIXA_DE_TENSAO_PLAUSIVEL[0] <= x["tensao_pu"] <= FAIXA_DE_TENSAO_PLAUSIVEL[1]))
+    if fora_de_faixa:
+        avisos.append({
+            "codigo": "tensao_fora_de_faixa_plausivel",
+            "mensagem": "barra com tensão fora de "
+                        f"{FAIXA_DE_TENSAO_PLAUSIVEL[0]}-{FAIXA_DE_TENSAO_PLAUSIVEL[1]} por unidade: não "
+                        "é estado de rede, é tensão de BASE errada nessa parte do modelo — em geral um nó "
+                        "onde trecho de média e de baixa se encostam sem transformador entre eles, e a "
+                        "base atravessa. O que estiver ligado ali (inclusive a perda de ferro do "
+                        "transformador) sai subestimado ou superestimado",
+            "quantidade": fora_de_faixa})
     if modelo.get("avisos"):
         avisos.append({"codigo": "avisos_da_conversao",
                        "mensagem": "o conversor contou suposições e faltas ao montar este circuito",
@@ -551,6 +573,8 @@ def resolver_neste_processo(modelo: dict, parametros: dict) -> dict:
             "tensao_pu_maxima": (None if varredura["tensao_pu_maxima"] is None
                                  else round(varredura["tensao_pu_maxima"], 6)),
             "corrente_nominal_de_referencia_a": parametros["corrente_nominal_a"],
+            "barras_fora_de_faixa_plausivel": fora_de_faixa,
+            "faixa_de_tensao_plausivel": list(FAIXA_DE_TENSAO_PLAUSIVEL),
             "impedancia": "padrão do OpenDSS (o cadastro não traz catálogo de condutor) — triagem, sinal, "
                           "não prova",
         },
