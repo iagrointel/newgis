@@ -26,6 +26,20 @@ async function principal() {
     return;
   }
   const it = r.item || r;
+  // item `colecao` (L5-04-c): a leitora substitui o cartão e a tabela; o corpo cita itens por uuid e o que
+  // ficou fora do link entra como aviso (o anônimo precisa saber que o conteúdo é parcial, nunca vê vazio sem dizer)
+  const corpo = it.dados && typeof it.dados === 'object' ? it.dados.corpo : null;
+  if (it.tipo === 'colecao' && corpo && Array.isArray(corpo.itens)) {
+    const leitor = await import('../colecao/leitor.js');
+    const carregados = new Map((r.itens_incluidos || []).map((x) => [x.id, x]));
+    const { presentes, ausentes } = leitor.separar(corpo.itens, carregados);
+    if (ausentes.length) aviso.erro(t('colecao.nao_no_link_contagem', { n: ausentes.length }));
+    const avisos = ausentes.map((a) => t('colecao.nao_no_link', { titulo: a.rotulo || a.item_id }));
+    document.title = `${elipse((corpo.capa || {}).titulo || it.titulo, 60)} · ${t('app.nome')}`;
+    leitor.montar(el('leitor-colecao'), corpo.capa || {}, presentes, avisos, {});
+    el('leitor-colecao').hidden = false;
+    return;
+  }
   const sec = el('item');
   limpar(sec);
   document.title = `${elipse(it.titulo, 60)} · ${t('app.nome')}`;
