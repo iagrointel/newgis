@@ -641,6 +641,7 @@ def calcular_e_gravar(cur, tenant_id: int, rede_id: str, nome: str, parametros_p
     s, modelo = curto_circuito.modelo_da_subrede(cur, rede_id, nome, tier, parametros["ano"], jusante)
     saida = resolver(modelo, parametros)
 
+    versao_topologia = _topologia_versao(cur, rede_id)
     cur.execute("DELETE FROM plat.rede_fluxo_execucao WHERE subrede_id = %s::uuid", (str(s["id"]),))
     cur.execute(
         "INSERT INTO plat.rede_fluxo_execucao (tenant_id, rede_id, subrede_id, subrede_nome, parametros, "
@@ -650,7 +651,7 @@ def calcular_e_gravar(cur, tenant_id: int, rede_id: str, nome: str, parametros_p
         "%s::jsonb, %s, %s, %s, %s) RETURNING id",
         (tenant_id, rede_id, str(s["id"]), s["nome"],
          json.dumps(saida["parametros"], ensure_ascii=False),
-         _topologia_versao(cur, rede_id),
+         versao_topologia,
          saida["convergencia"]["convergiu"], saida["convergencia"]["pontos"],
          saida["convergencia"]["pontos_sem_convergencia"],
          json.dumps(saida["ponto_critico"], ensure_ascii=False),
@@ -672,9 +673,15 @@ def calcular_e_gravar(cur, tenant_id: int, rede_id: str, nome: str, parametros_p
               "carr": x["carregamento_pc"], "perda": x["perda_kw"], "ferro": x["perda_ferro_kw"],
               "kva": x["potencia_kva"]} for x in saida["elementos"]])
 
+    from app.auth.sessao import iso
+
     return {"execucao_id": execucao_id, "subrede": s["nome"], "tier": s["tier"],
             "parametros": saida["parametros"], "convergencia": saida["convergencia"],
             "convergiu": saida["convergencia"]["convergiu"],
+            # a versão da topologia acompanha o resultado desde a PRIMEIRA resposta, não só a releitura:
+            # a tela mostra a ficha logo depois de analisar, e ficha sem a versão do índice sobre o qual o
+            # modelo foi montado não diz de que rede aquele número é.
+            "topologia_versao": iso(versao_topologia) if versao_topologia else None,
             "ponto_critico": saida["ponto_critico"], "energia": saida["energia"],
             "resumo": saida["resumo"], "avisos": saida["avisos"],
             "elementos": len(saida["elementos"]), "duracao_ms": saida["duracao_ms"],

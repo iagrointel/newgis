@@ -160,8 +160,12 @@ def test_ficha_traz_parametros_e_topologia(sessao_a, env, limpar_redes):
     rid, _ = _alimentador_pronto(sessao_a, env, limpar_redes, "fluxo-ficha")
     corpo = {**UMA_HORA, "fator_de_carga": 1.3, "corrente_nominal_a": 120.0,
              "modelo_de_carga": "corrente_constante", "tensao_da_fonte_pu": 1.01}
-    assert _analisar(sessao_a, rid, corpo).status_code == 200
+    resposta = _analisar(sessao_a, rid, corpo)
+    assert resposta.status_code == 200
+    # a versão da topologia vem já na PRIMEIRA resposta, não só na releitura
+    assert resposta.json()["topologia_versao"], resposta.json()
     ficha = sessao_a.get(f"/api/rede/{rid}/subrede/{CTMT}/fluxo").json()
+    assert ficha["topologia_versao"] == resposta.json()["topologia_versao"]
     assert ficha["parametros"]["fator_de_carga"] == 1.3
     assert ficha["parametros"]["corrente_nominal_a"] == 120.0
     assert ficha["parametros"]["modelo_de_carga"] == "corrente_constante"
