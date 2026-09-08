@@ -3,6 +3,18 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## codex cx1, setembro de 2026 (item L5-04-a-blocos-de-conteudo: narrativa por blocos no editor de arrasto, mapa com vista salva, texto alternativo obrigatório na publicação)
+
+Tipo de item `narrativa` (migração `20260908T0300_narrativa_tipo.sql`, envelope do L5-05) editado pelo editor
+compartilhado do L5-08 com a paleta `paleta_narrativa.js` (capa, texto, imagem, vídeo, áudio, mapa, tabela, botão,
+separador, incorporar, aplicativo); o editor ganhou ganchos genéricos (`personalizados`/`controle`/`resumo`,
+`api.propriedade`, área de texto para strings longas). Leitor próprio (`web/js/narrativa/leitor.js`) para
+`/executar` e para a página publicada do L5-14; bloco de mapa com vista salva = bbox + proporção do quadro,
+reaberto por `fitBounds` (deriva ≤ 1 % em 5 mapas × 2 viewports, e2e). Publicar recusa imagem sem texto
+alternativo (`422 narrativa_nao_publicavel`, lista por bloco) — regra no servidor, mensagem no construtor. Ramo
+junta `wt/il514public` (L5-14) e `wt/cx501d` (L5-01-d) para reusar publicação e sanitização. Testes: 5 unitários,
+4 de API, 4 e2e com capturas.
+
 ## turno 5, setembro de 2026 (item L5-14-publicacao-links-embed: publicação de documento de construtor — links e embed)
 
 Publicar um documento de construtor (`app`/`painel`) por `POST /api/itens/{id}/publicacao` faz três coisas
