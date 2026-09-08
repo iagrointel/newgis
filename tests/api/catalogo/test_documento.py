@@ -177,8 +177,9 @@ def test_ulid_de_no_nunca_se_repete_entre_versoes(sessao_a, itens_a):
 
 def test_migracao_de_esquema_na_leitura_com_evento(sessao_a, itens_a, conexao_plat_app):
     """Documento gravado com esquema_versao=1 (`corpo:{}`, a forma que existia antes de 028_documento_grafo.sql
-    e que os 1.573/1.571 itens semeados em demo ainda têm) chega pela API JÁ migrado para v2, com `nos`/`ligacoes`
-    default, e o evento `itens/esquema_migrado` fica registrado — nunca é gravado de volta em `plat.item.dados`."""
+    e que os 1.573/1.571 itens semeados em demo ainda têm) chega pela API JÁ migrado para a versão vigente
+    (hoje v3, pela cadeia v1→v2→v3 de `20260908T1709_temas_marca.sql`), com `nos`/`ligacoes` default, e o
+    evento `itens/esquema_migrado` fica registrado — nunca é gravado de volta em `plat.item.dados`."""
     it = itens_a.criar("painel", dados={"tipo": "painel", "esquema_versao": 1, "corpo": {}})
     iid = it["id"]
     ids = ids_por_slug(conexao_plat_app)
@@ -198,7 +199,7 @@ def test_migracao_de_esquema_na_leitura_com_evento(sessao_a, itens_a, conexao_pl
     r = sessao_a.get(f"/api/itens/{iid}")
     assert r.status_code == 200
     dados = r.json()["dados"]
-    assert dados["esquema_versao"] == 2 and dados["corpo"] == {"nos": [], "ligacoes": []}
+    assert dados["esquema_versao"] == 3 and dados["corpo"] == {"nos": [], "ligacoes": []}
 
     contexto(conexao_plat_app, ids["demo"], usuario_id=adm, login="admin")  # SET LOCAL não sobrevive ao commit acima
     with conexao_plat_app.cursor() as cur:
@@ -215,7 +216,7 @@ def test_migracao_de_esquema_na_leitura_com_evento(sessao_a, itens_a, conexao_pl
             (iid,),
         )
         evento = cur.fetchone()
-    assert evento is not None and evento["propriedades"]["de"] == 1 and evento["propriedades"]["para"] == 2
+    assert evento is not None and evento["propriedades"]["de"] == 1 and evento["propriedades"]["para"] == 3
 
 
 def test_versoes_de_outro_inquilino_404_para_documento(sessao_a, itens_b):
