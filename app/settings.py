@@ -74,6 +74,11 @@ class Settings:
     PLAT_SCHEMA_TRABALHO: str
     PLAT_CANAL_JOB: str
     PLAT_CANAL_WORKER: str
+    # atualização viva (L2-06-d): canal do NOTIFY de camada e interruptor do fluxo SSE. Desligado
+    # (PLAT_SSE_LIGADO=false), `GET /api/eventos/camadas` responde 503 e a tela cai no intervalo de
+    # atualização de cada fonte — é a saída para proxy que não sustenta conexão longa.
+    PLAT_CANAL_CAMADA: str
+    PLAT_SSE_LIGADO: bool
     # SMTP de instalação (item L0-07-d-smtp-convites; ADR 0013): padrão de TODOS os inquilinos que não têm
     # override próprio em tenant.config.smtp (app/correio/config.py::smtp_efetivo). Nenhuma chave é obrigatória:
     # sem PLAT_SMTP_HOST a instalação simplesmente não tem SMTP — o inquilino que precisar configura o dele, e
@@ -228,6 +233,8 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SCHEMA_TRABALHO=_identificador(valores, "PLAT_SCHEMA_TRABALHO", "plat_trabalho"),
         PLAT_CANAL_JOB=_identificador(valores, "PLAT_CANAL_JOB", "plat_job"),
         PLAT_CANAL_WORKER=_identificador(valores, "PLAT_CANAL_WORKER", "plat_worker"),
+        PLAT_CANAL_CAMADA=_identificador(valores, "PLAT_CANAL_CAMADA", f"{schema}_camada"),
+        PLAT_SSE_LIGADO=_booleano(valores, "PLAT_SSE_LIGADO", True),
         PLAT_SMTP_HOST=_opcional(valores, "PLAT_SMTP_HOST"),
         PLAT_SMTP_PORTA=_inteiro(valores, "PLAT_SMTP_PORTA", 587, 1),
         PLAT_SMTP_TLS=_booleano(valores, "PLAT_SMTP_TLS", True),

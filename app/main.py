@@ -53,6 +53,7 @@ from app.saude import router as rotas_saude
 from app.settings import settings
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
+from app.vivo.rotas import router as rotas_vivo
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
@@ -110,6 +111,8 @@ ROUTERS = [
     rotas_lixeira.router,
     # --- documento de painel (L2-06-a-modelo-painel-fontes): dados por fonte, sessão/token e link anônimo
     rotas_paineis,
+    # --- atualização viva de painel e mapa (L2-06-d): /api/eventos/camadas (SSE)
+    rotas_vivo,
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar

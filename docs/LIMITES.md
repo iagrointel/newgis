@@ -230,3 +230,15 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## atualização viva de painel e mapa por SSE (L2-06-d; migração 20260908T0702_camada_eventos_vivos.sql).
+
+| nome | valor | explicação |
+|---|---|---|
+| `VIVO_SSE_POR_INQUILINO` | `100` | refutação do item: 1.000 conexões têm de bater em 429 |
+| `VIVO_SSE_POR_USUARIO` | `10` | uma pessoa não consome sozinha a cota do inquilino |
+| `VIVO_SSE_CAMADAS_MAX` | `50` | camadas assinadas por conexão (um painel real usa 2 a 6) |
+| `VIVO_SSE_DURACAO_MAX_S` | `1800` | a conexão fecha sozinha em 30 min; o navegador reconecta com Last-Event-ID |
+| `VIVO_SSE_KEEPALIVE_S` | `15` | comentário `: keepalive` que impede proxy de derrubar conexão ociosa |
+| `VIVO_EVENTO_JANELA_MIN` | `15` | retenção de plat.camada_evento = janela de recuperação da reconexão |
+| `VIVO_DEBOUNCE_MS` | `1000` | atraso do navegador antes de refazer a consulta (coalesce de rajada) |
