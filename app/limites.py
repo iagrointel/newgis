@@ -205,6 +205,11 @@ REDEFINICAO_JANELA_MIN = 15               # limite de taxa (refutação do item:
 REDEFINICAO_MAX_JANELA = 5                # no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN
 AVISO_EXPIRACAO_DIAS = (90, 30, 7, 1)     # avisos de expiração de token de serviço (hipótese do item; como a Esri)
 
+# --- ferramentas de análise (L2-05-a; L2_CONCEITO C8): job por padrão, síncrono só abaixo do custo declarado
+FERRAMENTA_SINCRONO_CUSTO_MAX = 5000       # custo = feições × complexidade declarada no manifesto; acima disso só job
+FERRAMENTA_JOB_MEMORIA_MB = 1024            # RLIMIT_DATA do filho que roda uma ferramenta
+FERRAMENTA_JOB_TIMEOUT_S = 1800             # 30 min por execução; ferramenta mais longa é outro tipo de job
+BUFFER_DISTANCIA_M_MAX = 100_000            # 100 km: acima disso o buffer geodésico deixa de fazer sentido em camada
 # --- grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
 # macro (grosseira, ex. 1 km) triando regiões e micro (fina, ex. 100 m) gerada SÓ dentro das aprovadas.
 # ESCALA_CELULAS_MAX vale tanto para a grade macro inteira quanto para o refino micro (aprovadas × k²) — é o

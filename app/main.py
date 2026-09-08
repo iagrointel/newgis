@@ -40,6 +40,8 @@ from app.catalogo import (
 )
 from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
+from app.ferramentas import rotas as rotas_ferramentas
+from app.ferramentas import rotas_gp as rotas_ferramentas_gp
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
@@ -118,6 +120,10 @@ ROUTERS = [
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
     rotas_geocodificador_esri,
+    # --- ferramentas de análise (L2-05-a): /api/ferramentas (catálogo, execução) + GPServer compatível Esri em
+    # /rest/services/{ferramenta}/GPServer/*
+    rotas_ferramentas.router,
+    rotas_ferramentas_gp.router,
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     rotas_multiescala,
