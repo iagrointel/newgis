@@ -550,6 +550,21 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: f"/api/multiescala/fatores/{p.fator_b['id']}/amostras",
         lambda p: {"amostras": [{"lon": -46.60, "lat": -23.50, "valor": 1.0}]},
     ),
+    # ---- L3-08-pareto: análise sem agregação sobre a execução de B. As duas rotas são leitura por POST
+    # (a lista de objetivos não cabe em query string) e carregam a execução pela RLS: de outro inquilino
+    # é 404 antes de qualquer conta, e nenhum valor de B chega a A.
+    ("POST", "/api/amc/pareto"): Caso(
+        lambda p: "/api/amc/pareto",
+        lambda p: {"execucao_id": p.execucao_b["id"], "ordens": 3, "objetivos": [
+            {"fator_id": p.fator_b["id"], "direcao": "maximizar", "base": "favorabilidade"},
+            {"fator_id": p.fator_b["id"], "direcao": "minimizar", "base": "valor"}]},
+    ),
+    ("POST", "/api/amc/pareto/camada"): Caso(
+        lambda p: "/api/amc/pareto/camada",
+        lambda p: {"execucao_id": p.execucao_b["id"], "ordens": 3, "ordens_incluidas": [1], "objetivos": [
+            {"fator_id": p.fator_b["id"], "direcao": "maximizar", "base": "favorabilidade"},
+            {"fator_id": p.fator_b["id"], "direcao": "minimizar", "base": "valor"}]},
+    ),
     ("GET", "/api/multiescala/execucoes"): Caso(lambda p: "/api/multiescala/execucoes", proprio=True,
                                                 aceita=frozenset({200}), verificar=_sem_marca),
     ("GET", "/api/multiescala/execucoes/{id}"): Caso(lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}"),
