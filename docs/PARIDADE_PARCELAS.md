@@ -172,3 +172,56 @@ malha) — fase de desenho.
 
 Fora do portão: ajuste por mínimos quadrados (classes de Adjustment); Is Seed; feição de erro
 persistente de validação.
+
+## 11. Fachada REST `ParcelFabricServer` (fluxos do item 02)
+
+A fachada da casa é `POST /api/parcelas/fabrica/<operação>` (escopo de token `parcelas:usar`),
+mapeada na documentação de desenvolvedores do ParcelFabricServer (feature service, consultada em
+08/09/2026). Forma de resposta da doc aceita: `moment`, `exceededTransferLimit`, `success` e
+`serviceEdits` (id da camada + `editedFeatures.adds/updates` resumidos em `id`, `codigo`,
+`areaCalculadaM2`). Erro é HTTP 4xx do padrão da casa com `erro`/`mensagem` — nunca
+`success: false` com 200. O `record` da doc é o registro da casa e é OBRIGATÓRIO em toda
+operação que nasce ou mata feição (regra do item 01); onde a doc o faz opcional, a divergência é
+declarada. O "apaga" da doc é RETIRADA na casa (`ativa=false` + `retirada_por_registro` +
+`retirada_em`): nada é DELETE.
+
+| Operação da doc | Rota da casa | Parâmetros aceitos e mapeados | Divergência declarada |
+|---|---|---|---|
+| build | `/build` | `record` (obrigatório na casa), `buildExtent` (envelope), `tipo` extra da casa para `parcel type` | `gdbVersion`, `sessionId`, `async`, `f`, `spatialReference` aceitos sem efeito (versão única por inquilino, síncrono, SRID 31982 fixo); `record` opcional na doc, obrigatório na casa |
+| divide | `/divide` | `divideParcelGuid`, `divideParcelType`, `record`, `divideOption` (`ProportionalArea` = N partes proporcionais; `EqualArea` = área igual por parte, 0 = N partes iguais; `EqualWidth` = faixas de largura fixa), `divideNumberOfParts`, `dividePartAreaOrWidth`, `divideLineBearing` (azimute 0-360), `divideLeftSide`, `divideDistributeRemainder` | extra da casa: `linha` com 2 pontos corta direto (a doc aceita polilinha; a casa só corte reto). Corte que não cruza: 422 `linha_nao_cruza` (recusa, nunca divisão em silêncio). Sobra vira a ÚLTIMA parte (`divideDistributeRemainder=false` da doc) |
+| merge | `/merge` | `parentParcels` [{id, layerId}], `record`, `targetParcelType`, `defaultAreaUnit` (aceito, sem efeito — a casa grava m²) | `mergeInto` é recusado 422: a união sempre cria parcela nova. Linhas externas continuam ativas e passam à unida; a divisa interna é RETIRADA (o "apaga a interna" da doc) |
+| clip | `/clip` | `parentParcels`, `record`, `clippingParcels` OU `clippingGeometry` (GeoJSON Polygon), `clipOption` (`PreserveArea`: interseção vira parcela e o pai fica com o resto, sem resto o pai é retirado; `DiscardArea`: o pai fica com o resto e a interseção é descartada; `PreserveBothAreasSplit`: o pai é retirado e nascem interseção e resto), `codigo` extra da casa | a casa aceita 1 `parentParcel` por chamada (a doc aceita array); área sempre m² |
+| createSeeds | `/createSeeds` | `record` (obrigatório na casa e na doc), `extent` | a semente da casa vive em `plat.parcela_semente` (tabela própria, mesma semântica Is Seed do item 01), não em linha de classe especial |
+| reconstructFromSeeds | `/reconstructFromSeeds` | `extent` (obrigatório na doc e na casa), resposta com `reconstructedParcelCount` | `record` não existe na doc e é obrigatório na casa (a parcela nasce por registro); `targetParcelType` não existe na casa (a semente reconstrói como `lote`) |
+| assignToRecord (nome do portão) = **assignFeaturesToRecord** (nome real da doc) | `/assignFeaturesToRecord` | `parcelFeatures` [{id, layerId}], `record`, `writeAttribute` (`CreatedByRecord` reatribui a criação; `RetiredByRecord` RETIRA) | `layerId` da doc vira camada da casa: `parcela`, `linha`, `ponto` ou `conexao` (vocabulário fechado). Retirada pelo MESMO registro que criou: 422 legível (a restrição da tabela proíbe). Ponto não tem retirada por registro (item 01, decisão declarada): `RetiredByRecord` deixa o ponto inativo |
+
+Fluxos de edição da hipótese que a fachada cobre: dividir por área igual/proporção/largura ou
+por linha de corte, unir, recortar, construir parcelas a partir de linhas (build), copiar linhas
+de CAD (import DXF, §12), duplicar (cópia nova por registro, linhas continuam partilhadas) e
+mudar tipo (EDIÇÃO DE ATRIBUTO na casa: a feição continua a mesma, sem nascer nem morrer; na
+referência a feição MIGRA de classe de feição — divergência declarada). A varredura do corte por
+rumo usa meio-plano com busca binária (área acumulada monótona no deslocamento, raiz única,
+64 passos de bisseção — erro de corte muito abaixo do ±0,01 m² do portão).
+
+## 12. Copiar linhas de CAD (DXF)
+
+Escopo do leitor da casa (`app/parcelas/dxf.py`): DXF **ASCII** com entidades `LINE` e
+`LWPOLYLINE` (a fechada, flag 70 = 1, é quebrada em segmentos — o modelo da casa só tem linha
+reta de dois pontos, paridade §3). DXF **binário** e **DWG** ficam FORA: conversão é fase
+externa (o handoff L0-04 mediu que os conversores de linha de comando geram arquivo que nem o
+GDAL nem o ezdxf reabrem — a casa não depõe sobre binário que não lê). A camada (código 8) vai
+na descrição do registro sintético; `parcela_linha` não tem campo de atributo livre e inventar
+coluna por formato é o caminho para tabela de importador. Coordenada: DXF de planta não tem CRS
+declarado; o import aceita as coordenadas do arquivo COMO ESTÃO (planta importa em coordenada
+local sobre a malha 31982) — quem precisa de georreferência reposiciona com os pontos fixos.
+Rumo e distância são CALCULADOS da geometria e a precisão fica NULA (origem `derivada`:
+ausência declarada, não inferência). O dado de teste é a planta de teste da casa (corpus aberto
+de projeto, fixture `tests/api/parcelas/dados/planta_baixa_A01.dxf`, 557 segmentos, camada LOT
+fechando o terreno); nenhuma planta de cliente passa por aqui.
+
+Estado do item 02: fluxos medidos em `tests/medidas/L4-parcelas-02-fluxos-cogo.json` (segmentos
+do DXF real, faces que o build fecha, área do lote da camada LOT). Captura de tela dos fluxos
+com pré-visualização: SEM CAPTURA — o google-chrome headless desta máquina quebra (dumped core,
+defeito de máquina já registrado na casa); a suíte prova os fluxos por API e por banco, e a
+interação de arrastar-e-soltar com pré-visualização fica na hipótese do item, para a trilha de
+interface (UX).
