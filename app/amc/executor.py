@@ -28,7 +28,14 @@ Limite honesto e deliberado deste item (não é o L3-01-e completo, combinadores
   ao mais próximo, portanto, é a mais próxima DENTRO dessa caixa, documentada aqui e no handoff."""
 
 from app.acervo.publicacao import _ident, _schema_views
-from app.amc import transformacoes, vetorial
+from app.amc import transformacoes
+
+# `app.amc.vetorial` importa geopandas no topo, e geopandas NÃO está em requirements.txt nem na venv da
+# unidade systemd (só no site do usuário desta máquina). Importado aqui em cima, ele derrubava o import de
+# `app.main` inteiro — a aplicação não subia, e tests/unit/test_dependencias.py::
+# test_app_main_importa_sem_site_do_usuario reprovava. O extrator de vetor é UM caminho do executor, então o
+# import vive onde ele é usado: quem não extrai fator de vetor não paga a dependência, e quem extrai recebe
+# o ModuleNotFoundError no lugar certo, dizendo o que falta instalar.
 from app.amc.zonal import ErroExtracao
 from app.jobs.registro import FalhaDefinitiva
 
@@ -253,6 +260,8 @@ def executar(ctx, execucao_id) -> dict:
             raise FalhaDefinitiva(motivo)
         feicoes = _ler_camada_acervo(ctx, camada_id, unidades, fator["camada"].get("atributo"))
         try:
+            from app.amc import vetorial  # tardio: ver a nota do import no topo deste arquivo
+
             brutos[fator["id"]] = vetorial.extrair(
                 unidades, feicoes, tipo_vetor, srid_trabalho, extrator.get("parametros") or {}
             )

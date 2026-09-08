@@ -56,61 +56,67 @@ def reescrever_schema(sql: str, schema: str = SCHEMA_PADRAO, schema_trabalho: st
     return sql
 
 
-class CursorSchemaAmbiente(psycopg2.extras.RealDictCursor):
-    """RealDictCursor que reescreve o texto da consulta para settings.PLAT_SCHEMA/PLAT_SCHEMA_TRABALHO
-    antes de mandar ao servidor. Import de app.settings é tardio (dentro do método) para não criar
-    ciclo — app/settings.py não importa este módulo."""
+class MixinReescritaSchema:
+    """Reescrita de schema em TODOS os pontos de entrada do cursor que carregam comando SQL.
+
+    Por que um mixin com lista declarada, e não quatro métodos soltos: em 06/09/2026 o MESMO defeito apareceu
+    três vezes num dia (o `bytes` que `psycopg2.extras.execute_values` manda ao cursor; o `executemany` que
+    `POST`/`PUT /api/papeis` usa para gravar os privilégios do papel; o `copy_expert` da carga do
+    geocodificador). Nos três casos a consulta escapou da reescrita e foi para o schema `plat` de PRODUÇÃO
+    com PLAT_SCHEMA apontando para outro lugar, e o 42501 que voltava chegava ao cliente como 403 "operação
+    fora do inquilino da sessão" — não uma checagem de inquilino, um schema errado na consulta. Tapar buraco
+    por buraco deixava o próximo caminho aberto; a lista abaixo é confrontada com a API do driver em
+    tests/unit/test_schema_ambiente.py, então um ponto de entrada novo sem decisão ESCRITA reprova a suíte.
+
+    O import de app.settings é tardio (dentro da função) para não criar ciclo: app/settings.py não importa
+    este módulo."""
+
+    PONTOS_COM_CONSULTA = ("execute", "executemany", "callproc", "mogrify", "copy_expert")
+    PONTOS_FORA_DE_COBERTURA = {
+        "copy_from": "recebe NOME de tabela e a casa não usa este caminho em lugar nenhum; no dia em que usar, "
+                     "o teste da trava reprova e obriga a cobrir antes de a homologação descobrir sozinha",
+        "copy_to": "mesma razão do copy_from: só nome de tabela, sem uso em app/, scripts/ ou db/",
+    }
 
     def execute(self, query, *args, **kwargs):
-        # `psycopg2.extras.execute_values` (usado pelos importadores em lote da rede de utilidades,
-        # L4-01-modelo-rede/L4-05-g-osm-power) monta a consulta em BYTES antes de chamar cur.execute
-        # -- isinstance(query, str) nunca batia para essas chamadas, então o schema de homologação/
-        # trilha nunca era aplicado nelas e o INSERT ia parar no `plat` de produção com permissão
-        # negada (achado do item L4-05-g-osm-power). Decodifica na codificação da conexão, reescreve
-        # e devolve como texto -- psycopg2 aceita str no lugar de bytes sem custo extra.
-        if isinstance(query, (bytes, bytearray)):
-            query = self._texto(query)
-        if isinstance(query, str):
-            query = self._reescrever(query)
-        return super().execute(query, *args, **kwargs)
+        return super().execute(self._reescrever(query), *args, **kwargs)
 
     def executemany(self, query, vars_list):
-        # mesma classe de defeito do bytes/`execute_values` acima, achada agora em `cur.executemany`
-        # (usado por `POST /api/papeis` para `plat.papel_privilegio`, app/auth/rotas_usuarios.py, e pelo
-        # item L3-19-multiescala em execuções de grade aninhada): psycopg2 implementa executemany em C
-        # chamando pq_execute diretamente por linha, NUNCA através do `self.execute()` Python —
-        # subclassificar só `execute()` não intercepta nada aqui. Sem esta sobrecarga, o INSERT ia com o
-        # literal `plat.` para o schema de PRODUÇÃO em qualquer ambiente isolado (trilha/homologação), e a
-        # permissão negada aparecia traduzida como "operação fora do inquilino da sessão" — não uma
-        # checagem de inquilino, um schema errado na consulta.
-        if isinstance(query, (bytes, bytearray)):
-            query = self._texto(query)
-        if isinstance(query, str):
-            query = self._reescrever(query)
-        return super().executemany(query, vars_list)
-
-    def copy_expert(self, sql, *args, **kwargs):
-        # `COPY plat.geo_endereco ... FROM STDIN` da carga do geocodificador (achado F2, item F9): o COPY em
-        # lote também não passa pelo `execute` da subclasse.
-        if isinstance(sql, (bytes, bytearray)):
-            sql = self._texto(sql)
-        if isinstance(sql, str):
-            sql = self._reescrever(sql)
-        return super().copy_expert(sql, *args, **kwargs)
-
-    def _texto(self, query) -> str:
-        from psycopg2 import extensions as _ext
-
-        return bytes(query).decode(_ext.encodings[self.connection.encoding])
+        return super().executemany(self._reescrever(query), vars_list)
 
     def callproc(self, procname, *args, **kwargs):
-        if isinstance(procname, str):
-            procname = self._reescrever(procname)
-        return super().callproc(procname, *args, **kwargs)
+        return super().callproc(self._reescrever(procname), *args, **kwargs)
+
+    def mogrify(self, query, *args, **kwargs):
+        return super().mogrify(self._reescrever(query), *args, **kwargs)
+
+    def copy_expert(self, sql, *args, **kwargs):
+        return super().copy_expert(self._reescrever(sql), *args, **kwargs)
 
     @staticmethod
-    def _reescrever(sql: str) -> str:
+    def _reescrever(consulta):
+        """Reescreve texto OU bytes, devolvendo o MESMO tipo que entrou; qualquer outro tipo (por exemplo um
+        `psycopg2.sql.Composed`, que a casa não usa) passa cru, como sempre passou. No-op quando os dois
+        schemas já são o padrão: é o que garante que produção não paga nem uma regex.
+
+        O caminho de bytes existe porque `psycopg2.extras.execute_values` monta o comando final com
+        `b"".join(...)` e chama `cur.execute(bytes)` — foi por aí que a carga em lote da rede de utilidades
+        (itens L4-01/L4-05-g) escapou da reescrita."""
         schema, trabalho = esquemas_do_ambiente()  # tardio: evita ciclo settings <-> schema_ambiente
         if schema == SCHEMA_PADRAO and trabalho == SCHEMA_TRABALHO_PADRAO:
-            return sql  # caminho de produção: nenhuma regex roda
-        return reescrever_schema(sql, schema, trabalho)
+            return consulta  # caminho de produção: nenhuma regex roda, nem sobre texto nem sobre bytes
+        if isinstance(consulta, str):
+            return reescrever_schema(consulta, schema, trabalho)
+        if isinstance(consulta, (bytes, bytearray)):
+            try:
+                texto = bytes(consulta).decode("utf-8")
+            except UnicodeDecodeError:
+                return consulta  # não é SQL em UTF-8: melhor mandar cru do que corromper o comando
+            return reescrever_schema(texto, schema, trabalho).encode("utf-8")
+        return consulta
+
+
+class CursorSchemaAmbiente(MixinReescritaSchema, psycopg2.extras.RealDictCursor):
+    """RealDictCursor que reescreve o texto da consulta para o schema do ambiente antes de mandar ao servidor,
+    em todos os pontos de `MixinReescritaSchema.PONTOS_COM_CONSULTA`. O mixin vem PRIMEIRO na ordem de
+    resolução para que `super()` caia no cursor do psycopg2."""

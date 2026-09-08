@@ -26,7 +26,17 @@ FABRICA = "CursorSchemaAmbiente"
 
 # Exceção = arquivo:função onde a conexão NÃO precisa da fábrica, com o motivo. Só entra aqui quem não
 # manda SQL com nome de objeto do schema da plataforma. Acrescentar linha sem motivo é reprovar a trava.
-EXCECOES_DECLARADAS: dict[str, str] = {}
+EXCECOES_DECLARADAS: dict[str, str] = {
+    "scripts/amc_hash_independente.py:conferir_banco":
+        "recomputação INDEPENDENTE do hash do modelo multicritério (item L3-01-a): o script existe para "
+        "conferir, de fora, o que a aplicação gravou. Usar a fábrica da casa faria a conferência passar pelo "
+        "mesmo código que ela deveria vigiar. O schema entra por argumento de linha de comando, escrito por "
+        "quem roda, e não por reescrita.",
+    "scripts/acervo_publicar.py:publicar":
+        "publicador do acervo (item L6-04): roda como `postgres`, faz DDL (CREATE SCHEMA, GRANT) e recebe o "
+        "schema de destino em argumento de linha de comando, montando cada nome com psycopg2.sql.Identifier. "
+        "Não escreve `plat.` na mão em lugar nenhum, logo não há o que reescrever.",
+}
 
 
 def _modulo(caminho_relativo: str):
@@ -163,8 +173,15 @@ def test_toda_excecao_declarada_tem_motivo_escrito():
 def test_a_fabrica_reescreve_tambem_o_que_nao_passa_por_execute():
     """`executemany` e `copy_expert` são do C do psycopg2 e não chamavam o `execute` desta subclasse —
     um módulo podia ter a fábrica e ainda assim mandar `INSERT INTO plat....` cru (F1/F2)."""
+    # a pergunta é se o método RESOLVE para a reescrita da casa, não em que classe da hierarquia ele está
+    # escrito: desde que a reescrita virou um mixin com lista declarada (`MixinReescritaSchema`, cuja trava é
+    # tests/unit/test_schema_ambiente.py) os métodos não estão mais no __dict__ da subclasse, e continuam
+    # todos cobertos. Comparar com o cursor cru do driver pega as duas formas.
+    import psycopg2.extensions
+
     for metodo in ("execute", "executemany", "copy_expert", "callproc"):
-        assert metodo in CursorSchemaAmbiente.__dict__, f"{metodo} não é sobrescrito pela fábrica"
+        assert getattr(CursorSchemaAmbiente, metodo) is not getattr(psycopg2.extensions.cursor, metodo), \
+            f"{metodo} não é sobrescrito pela fábrica"
 
 
 if __name__ == "__main__":  # varredura solta
