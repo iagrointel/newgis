@@ -3,6 +3,18 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 10, setembro de 2026 (item L0-09-a-procedencia: o e2e de navegador que faltava no bloco de procedência)
+
+O item estava parcial por uma cláusula só de tela: o bloco de procedência era provado pela API e pelo SQL,
+mas não havia e2e de navegador. `tests/e2e/test_procedencia_tela.py` abre a ficha de um item de dado com o
+bloco cheio (`POST /api/itens`, tipo `camada_vetorial` — o esquema do tipo `mapa` é estrito e recusa
+`dados.procedencia`), procura a seção `section.procedencia`, a nota exata `10,0/10`, os campos com a etiqueta
+de origem (`medido` no sha256, `declarado` na licença) e a mensagem "Sem procedência registrada" no item sem
+bloco (ausência de registro nunca é 0/10), com capturas 1280 e 390 em `tests/e2e/capturas/L0-09-a_*.png` e
+0 erro de console. Observação registrada: o cabeçalho da ficha mostra outra régua de 0-10 (completude do
+CADASTRO do item — resumo, descrição, tags, escopo do L0-03), que nos itens novos de teste marca "pontuação
+2 de 10"; é outro número, com outro significado, e não entra no escopo deste item.
+
 ## turno 3, setembro de 2026 (item L0-04-h-exportar: tirar o dado da plataforma, em 11 formatos)
 
 Exportação de camada vetorial como job (`POST /api/exportacoes` → 202; `GET /api/exportacoes[/{id}]`;
