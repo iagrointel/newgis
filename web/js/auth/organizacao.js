@@ -12,6 +12,12 @@ import '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from './sessao.js';
 
+/* item UX-17: estado da seção Diretório declarado ANTES de `iniciar()` rodar (o módulo executa de cima para
+   baixo e `carregarLdap` é chamado durante a carga — declarar depois seria TDZ, o mesmo susto do smtpAtual). */
+let ldapAtual = null;
+let ldapOuvintesLigados = false; // os dois formulários são remontados a cada gravação; o ouvinte liga uma vez
+const PERFIS_LDAP = ['admin', 'editor', 'visualizador', 'campo'];
+
 const IDIOMAS = [
   { valor: 'pt-BR', rotulo: 'Português (Brasil)' },
   { valor: 'en', rotulo: 'English' },
@@ -271,9 +277,6 @@ document.getElementById('smtp-testar').addEventListener('click', async () => {
    (grupo → usuários desabilitados). Estados do sistema de design: carregando, erro (com "tentar de novo" e
    referência), negado (403: privilégio org.integracoes é separado do org.configurar desta tela), vazio (nenhum
    provedor ainda) e conteúdo. A senha da conta de serviço nunca volta na resposta (só tem_bind_senha). */
-let ldapAtual = null;
-let ldapOuvintesLigados = false; // os dois formulários são remontados a cada gravação; o ouvinte liga uma vez
-const PERFIS_LDAP = ['admin', 'editor', 'visualizador', 'campo'];
 
 function opcoesPerfilLdap(comNenhum) {
   const base = PERFIS_LDAP.map((p) => ({ valor: p, rotulo: t(`perfil.${p}`) }));

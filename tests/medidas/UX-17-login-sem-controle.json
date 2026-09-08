@@ -1,0 +1,32 @@
+{
+ "item": "UX-17-login-sem-controle",
+ "medidas": {
+  "login_ldap_ms": {
+   "valor": 125.6,
+   "unidade": "ms",
+   "comando": "POST /api/login/ldap pela tela /entrar até a tela inicial pronta (glauth local)"
+  },
+  "axe_serias_entrar_ldap": {
+   "valor": 0,
+   "unidade": "violacoes",
+   "comando": "axe-core 4.10.3 wcag2a/aa/21a/21aa, impactos serious+critical"
+  },
+  "gravar_ldap_ms": {
+   "valor": 60.8,
+   "unidade": "ms",
+   "comando": "PUT /api/org/ldap pela tela até o resumo 'habilitado'"
+  },
+  "axe_serias_organizacao": {
+   "valor": 0,
+   "unidade": "violacoes",
+   "comando": "axe-core 4.10.3 wcag2a/aa/21a/21aa, impactos serious+critical"
+  },
+  "axe_serias_organizacao_configurada": {
+   "valor": 0,
+   "unidade": "violacoes",
+   "comando": "axe-core 4.10.3 wcag2a/aa/21a/21aa, impactos serious+critical"
+  }
+ },
+ "gerado_em": "2026-09-08T11:32:24Z",
+ "git_sha": "c3375706181c"
+}
