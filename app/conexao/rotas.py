@@ -40,6 +40,7 @@ from app.conexao.modelos import (
     SaudeHistoricoPagina,
 )
 from app.erros import ErroAPI
+from app.seguranca_rotacao import decifrar_com_rotacao
 from app.settings import settings
 
 router = APIRouter(prefix="/api/conexoes", tags=["conexoes"])
@@ -239,10 +240,13 @@ def testar(id: str, request: Request, auth: Auth = autenticado()):
             cur.execute("SELECT credencial_cifrada FROM plat.conexao WHERE id = %s::uuid", (cid,))
             bruta = cur.fetchone()["credencial_cifrada"]
         try:
-            token = credencial_mod.decifrar(bruta, settings.PLAT_SECRET)
+            token = decifrar_com_rotacao(
+                credencial_mod.decifrar, bruta, settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR
+            )
             cabecalhos = {"Authorization": f"Bearer {token}"}
-        except ValueError:
-            cabecalhos = None  # PLAT_SECRET trocado ou dado corrompido: testa sem credencial, nunca quebra a rota
+        except Exception:  # noqa: BLE001 — PLAT_SECRET (e ANTERIOR) trocados ou dado corrompido: testa sem
+            # credencial, nunca quebra a rota (InvalidTag do AEAD não é ValueError — abrangido de propósito)
+            cabecalhos = None
 
     resultado = seguranca.buscar_seguro(
         url, metodo="GET", timeout_conectar=limites.CONEXAO_CONECTAR_TIMEOUT_S,

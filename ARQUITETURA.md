@@ -537,7 +537,10 @@ tabela `versao_migracao`) e da 002 (9,5 s) nesta instância compartilhada com di
 
 ### 7.1 `scripts/` (ferramentas de operação)
 
-`rotacionar_segredo.sh` (item L7-19, já existia) e, do turno 3 (item L7-16, ADR 0007 seção 2-3):
+`plat` (dispatcher) + `segredo_rotacionar.py` (item L7-19: `plat segredo rotacionar <nome>` para os 5
+segredos — `PLAT_SECRET` com dupla-chave, `PLAT_DSN`, `PLAT_DSN_WORKER`, `PLAT_GARAGE_ADMIN_TOKEN`,
+`PLAT_GARAGE_CHAVE_S3:<slug>`; substitui o antigo `rotacionar_segredo.sh`, que só cobria 2 dos 5 —
+detalhe em `docs/SEGURANCA.md` §1-2 e `docs/RUNBOOKS/segredos.md`) e, do turno 3 (item L7-16, ADR 0007 seção 2-3):
 `assinar_pacote.sh` + `verificar_pacote.sh`, finos wrappers de `plat_assinatura.py` (Ed25519 via
 `cryptography`). Assinar roda fora do appliance, gera o par de chaves na 1ª execução (privada fora do
 repositório, pública registrada em `deploy/chaves_publicas_release.txt`); verificar roda no appliance, sem
@@ -970,7 +973,7 @@ com `tipo: conexao.copiar_vetor`, para herdar fila, cota, cancelamento, log e pr
 Mudança no L0-05 exigida por este item: o advisory lock de "1 pesado por vez" (`app/jobs/worker.py`,
 `LOCK_PESADO`) passou a carregar o nome do schema. Ele é um lock do BANCO, e o banco é um só para produção,
 homologação e as bases por trilha — com o nome fixo, um job pesado de um ambiente segurava o único lugar de
-TODOS os outros (medido em 06/09). Em produção, onde só existe o schema `plat`, o comportamento não muda.
+todos os outros ambientes (medido em 06/09). Em produção, onde só existe o schema `plat`, o comportamento não muda.
 
 Válvula de teste: `PLAT_TESTE_CONEXAO_ALVOS` (`app/conexao/seguranca.py::alvos_de_teste`), lista de pares
 `host:porta` exatos aceita só fora de produção, para a suíte falar com um WFS e um OGC API de verdade subidos

@@ -44,14 +44,16 @@ LIMITE_WORKER_S = 90
 GRACA_CANCELAMENTO_S = 30
 GRACA_KILL_S = 10
 ESPERA_PARADA_S = 20
-# "1 pesado por vez" é um advisory lock do BANCO, e o banco é um só para produção, homologação (ADR 0009) e
-# todas as bases por trilha (laco/trilha_ambiente.sh). Com o nome fixo "plat.job.pesado" o semáforo passava a
-# valer entre AMBIENTES: um job pesado da homologação (ou de uma trilha) segurava o único lugar e o job pesado
-# de produção ficava pendente sem nada rodando nele — medido em 06/09, com o worker de uma trilha segurando o
-# lock e o de outra rodando só job leve. O nome carrega o schema, então o semáforo volta a ser o que sempre se
-# quis dizer: um pesado por vez DENTRO de um ambiente. Em produção, onde só existe o schema `plat`, o valor é
-# o mesmo de antes e o comportamento não muda.
-LOCK_PESADO = f"plat.job.pesado:{settings.PLAT_SCHEMA or 'plat'}"
+LOCK_PESADO = "plat.job.pesado"  # nome-base; a chave real leva o schema (ver _chave_pesado)
+
+
+def _chave_pesado() -> str:
+    """07/09 (achado do item L2-15-a + classe F5): a chave era CONSTANTE no cluster inteiro, então o worker
+    de uma trilha isolada segurava o "1 pesado por vez" de produção e de todas as outras trilhas. A chave
+    leva o schema do ambiente: cada base tem a sua vez de pesado."""
+    from app.settings import settings
+
+    return f"{settings.PLAT_SCHEMA}.job.pesado"
 UTC = datetime.UTC
 
 
@@ -310,25 +312,33 @@ class Worker:
         except OSError:
             f.eof = True
 
+    def _pesado_rodando(self) -> bool:
+        return any(f.pesado for f in self.filhos.values())
+
     def _pegar(self) -> None:
         while len(self.filhos) < self.processos and not self.parando:
-            pesado_ok = False
-            if not self.lock_pesado:
-                r = self.um("SELECT pg_try_advisory_lock(hashtext(%s)) AS ok", (LOCK_PESADO,))
+            # 07/09 (achado do item L2-15-a): o lock ficava preso quando o filho pesado terminava — o tick
+            # seguinte entrava com lock_pesado=True, pesado_ok=False por inicialização, e nunca soltava.
+            # Regra: segura o lock enquanto (e só enquanto) há filho pesado rodando.
+            if self.lock_pesado and not self._pesado_rodando():
+                self._soltar_pesado()
+            pesado_ok = self.lock_pesado
+            if not pesado_ok:
+                r = self.um("SELECT pg_try_advisory_lock(hashtext(%s)) AS ok", (_chave_pesado(),))
                 pesado_ok = bool(r and r["ok"])
                 self.lock_pesado = pesado_ok
-            job = self.um("SELECT * FROM plat.job_pegar(%s, %s)", (self.nome, pesado_ok))
+            job = self.um("SELECT * FROM plat.job_pegar(%s, %s)", (self.nome, pesado_ok and not self._pesado_rodando()))
             if job is None or job.get("id") is None:
-                if pesado_ok:
+                if pesado_ok and not self._pesado_rodando():
                     self._soltar_pesado()
                 return
-            if not job["pesado"] and pesado_ok:
+            if not job["pesado"] and pesado_ok and not self._pesado_rodando():
                 self._soltar_pesado()
             self._lancar(job)
 
     def _soltar_pesado(self) -> None:
         if self.lock_pesado:
-            self.sql("SELECT pg_advisory_unlock(hashtext(%s))", (LOCK_PESADO,))
+            self.sql("SELECT pg_advisory_unlock(hashtext(%s))", (_chave_pesado(),))
             self.lock_pesado = False
 
     def _lancar(self, job: dict) -> None:

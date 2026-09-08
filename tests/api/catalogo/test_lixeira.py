@@ -3,6 +3,7 @@ iguais: diff = 0) → apagar → esvaziar (job); protegido 409; admin de inquili
 com evento forcado; expurgo com relógio simulado (+31 d) apaga registro e tabela física (pg_class); restaurar item de
 outro inquilino 404; camada usada por mapa sem cascata 409; lote apagar/restaurar/proteger; medida expurgo_s."""
 
+import os
 import time
 
 import psycopg2
@@ -10,6 +11,9 @@ import pytest
 
 from tests.api.catalogo.conftest import documento_mapa, esperar_job, titulo_zt
 from tests.api.test_rls import contexto, ids_por_slug
+
+# 07/09: a base por trilha reescreve só o texto SQL, não o metadado do item
+_TRAB = os.environ.get("PLAT_SCHEMA_TRABALHO", "plat_trabalho")
 
 ITEM = "L0-03-catalogo"
 
@@ -133,7 +137,7 @@ def test_expurgo_com_relogio_simulado_apaga_tabela_fisica(sessao_a, itens_a, con
     it = itens_a.criar(
         "camada_vetorial",
         dados={
-            "schema": "plat_trabalho",
+            "schema": _TRAB,
             "tabela": tabela,
             "geometria": "Point",
             "srid": 4326,
@@ -169,7 +173,10 @@ def test_expurgo_com_relogio_simulado_apaga_tabela_fisica(sessao_a, itens_a, con
         "POST /api/jobs catalogo.lixeira_expurgar (1 camada apagada há 31 dias) até concluido",
     )
     with conexao_plat_app.cursor() as cur:
-        cur.execute("SELECT to_regclass(%s) AS t", (f"plat_trabalho.{tabela}",))
+        # 07/09: o nome do schema vai no TEXTO da consulta, não como parâmetro — é o texto que
+        # CursorSchemaAmbiente reescreve para o schema da trilha (base própria da fila/homolog);
+        # como parâmetro, `plat_trabalho` batia no schema de PRODUÇÃO e dava permission denied.
+        cur.execute(f"SELECT to_regclass('plat_trabalho.{tabela}') AS t")
         assert cur.fetchone()["t"] is None, "a tabela física tem de sumir no expurgo"
         cur.execute("SELECT set_config('plat.lixeira', 'on', true)")
         cur.execute("SELECT count(*) AS n FROM plat.item WHERE id = %s::uuid", (it["id"],))
