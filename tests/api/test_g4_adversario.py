@@ -422,22 +422,35 @@ def test_todas_as_telas_usam_os_tokens_e_existe_pagina_estilo():
 
 
 # ================================================================ contrato: erro interno disfarçado de 403
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G4-23 (L0-12): app/auth/comum.py::erro_do_banco converte QUALQUER "
-           "psycopg2.errors.InsufficientPrivilege (SQLSTATE 42501 — GRANT faltando, schema errado, papel mal "
-           "configurado: defeito do servidor) em 403 sem_permissao 'operação fora do inquilino da sessão'. Pela "
-           "própria tabela de docs/CONTRATO_API.md 403 é 'sem privilégio' do chamador; aqui o servidor afirma "
-           "sobre o inquilino do usuário um fato que não mediu, e esconde erro de configuração. Medido: "
-           "POST /api/papeis devolve esse 403 quando o erro real é 'permission denied for schema plat'.",
-)
 def test_privilegio_insuficiente_do_banco_nao_vira_403_de_inquilino():
+    """ACHADO G4-23 (L0-12), GRADUADO de xfail estrito para portão: app/auth/comum.py::erro_do_banco convertia
+    QUALQUER psycopg2.errors.InsufficientPrivilege (SQLSTATE 42501 — GRANT faltando, schema errado, papel mal
+    configurado: defeito do servidor) em 403 sem_permissao 'operação fora do inquilino da sessão'. Pela própria
+    tabela de docs/CONTRATO_API.md 403 é 'sem privilégio' do chamador; o servidor afirmava sobre o inquilino do
+    usuário um fato que não mediu, e escondia erro de configuração (foi esse disfarce que escondeu o G4-24 por
+    horas). Regra agora: 403 de inquilino SÓ com violação de RLS na mensagem (test_violacao_de_rls_continua_403);
+    os demais 42501 voltam 500 configuracao_banco."""
     import psycopg2
 
     from app.auth.comum import erro_do_banco
 
     erro = erro_do_banco(psycopg2.errors.InsufficientPrivilege("permission denied for schema plat"))
     assert erro.status_code >= 500, f"{erro.status_code} {getattr(erro, 'erro', '')}"
+    assert erro.erro == "configuracao_banco", getattr(erro, "erro", "")
+
+
+def test_violacao_de_rls_continua_403_de_inquilino():
+    """Fronteira do conserto do G4-23 (L0-12): a violação de row-level security é o banco PROVANDO a fronteira
+    do inquilino — esse 403 sem_permissao continua correto e não pode ser confundido com defeito de servidor."""
+    import psycopg2
+
+    from app.auth.comum import erro_do_banco
+
+    erro = erro_do_banco(
+        psycopg2.errors.InsufficientPrivilege('new row violates row-level security policy for table "item"')
+    )
+    assert erro.status_code == 403, f"{erro.status_code} {getattr(erro, 'erro', '')}"
+    assert erro.erro == "sem_permissao", getattr(erro, "erro", "")
 
 
 def test_cursor_de_schema_reescreve_executemany():
