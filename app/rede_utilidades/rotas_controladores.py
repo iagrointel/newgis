@@ -20,7 +20,7 @@ from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
-from app.rede_utilidades import controladores
+from app.rede_utilidades import controladores, subredes
 from app.rede_utilidades.modelos import Controlador, ControladorEntrada
 
 router = APIRouter(prefix="/api/rede", tags=["rede de utilidades — controladores e tiers"])
@@ -126,7 +126,7 @@ def _atualizar_sincrono(rid: str, sid: str, auth: Auth, request: Request) -> dic
     with db.db(auth.contexto()) as cur:
         _rede_existe(cur, rid)
         try:
-            r = controladores.atualizar(cur, auth.tenant_id, rid, sid)
+            r = subredes.atualizar(cur, auth.tenant_id, rid, sid)
         except psycopg2.Error as e:
             raise auth_comum.erro_do_banco(e) from e
         registrar_evento(cur, request, "redes/subrede_atualizar", "rede", rid,

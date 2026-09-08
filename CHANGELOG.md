@@ -3,6 +3,133 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 7, setembro de 2026 (item L4-01-f-alcance-do-tracado-rede-real: alcance do traçado e diagnóstico do órfão)
+
+O traçado a jusante alcançava 34 dos 50 transformadores de um alimentador do ativo de referência. A causa
+medida: a camada de PONTO do arquivo guarda a coordenada com 6 casas decimais de grau e a de LINHA com 13,
+então o mesmo poste aparece nas duas com até 0,073 m de diferença; os 16 transformadores fora estavam todos
+entre 0,051 m e 0,071 m da ponta de trecho mais próxima, e os 50 têm uma ponta cuja coordenada, arredondada
+a 6 casas, é IGUAL à deles. Subir a tolerância da rede não é conserto: com 1,0 m os laços da média tensão
+sobem de 584 para 638, porque o que funde nessa folga são pontas de trechos vizinhos.
+
+Conserto: `plat.rede_regra.tolerancia_m` (migração `20260908T0650`) declara a tolerância DAQUELE par de
+tipos; o pacote `eletrica-br` (versão 1.1.0) declara 0,10 m nos 16 pares que envolvem cadastro de ponto, e o
+par (trecho, trecho) fica com a tolerância da rede. `topologia._admitir_pares` aplica isso e mais uma trava:
+a folga extra serve para reencontrar o MESMO ponto, nunca para alcançar um SEGUNDO — sem ela, um dispositivo
+de dois terminais soldaria duas pontas distintas e fecharia ciclo (pego pelo teste da refutação). Novo
+`GET /api/rede/{id}/topologia/diagnostico`: os órfãos que sobram saem por classe, com contagem, distância e
+exemplo.
+
+Medido (`tests/medidas/L4-01-f-alcance-do-tracado-rede-real.json`; 7 alimentadores, 9.925 trechos, 1.172
+transformadores, cada alimentador na sua própria rede, carga 1 min 9,49 e 4,3 GB livres): transformadores
+alcançados a jusante do controlador de 428/600 para 599/600; pior alcance de um alimentador de 66,67 % para
+99,51 %; alimentadores acima de 95 % de 1 de 5 para 5 de 5; laços na média tensão iguais antes e depois
+(0,0,0,0,0,1,1 por alimentador); nós órfãos de 1.038 para 495. As classes `fora_da_tolerancia_declarada`
+(274 nós, todos entre 0,0503 m e 0,0726 m) e `derivacao_sem_no` somem; sobram o segundo terminal de cada
+transformador (sem a camada de baixa tensão carregada) e dois transformadores longe da rede. Dois dos sete
+alimentadores têm laço no próprio arquivo e o traçado recusa arbitrar sentido neles, antes e depois.
+
+## turno 7, setembro de 2026 (item L4-01-g-tarefas-import-tardio: a API sobe sem GDAL)
+
+`pyogrio` — a ligação vetorizada com o GDAL/OGR que o importador BDGD usa — estava importado no topo de
+`app/rede_utilidades/bdgd.py` e de `app/rede_utilidades/tarefas.py`, e nesta máquina vinha do site do
+usuário (`~/.local`), não da venv. Como `app/jobs/tipos.py` importa as tarefas, todo `import app.main`
+dependia dele: com `PYTHONNOUSERSITE=1`, que é como a unidade systemd roda a aplicação,
+`tests/unit/test_dependencias.py::test_app_main_importa_sem_site_do_usuario` reprovava com
+`ModuleNotFoundError: No module named 'pyogrio'`.
+
+Duas mudanças, nenhuma sozinha: o pacote passa a ser dependência declarada (`pyogrio==0.12.1` em
+`requirements.txt`, com o motivo escrito ao lado — é o job `rede.importar_bdgd` que precisa dele) e o
+import passa a ser tardio, dentro da função que abre o arquivo (`bdgd._pyogrio()`, usada também por
+`tarefas._ler_camadas_do_contrato`). A API sobe sem GDAL; quem depende do GDAL é o worker, no instante em
+que lê o `.gdb`. Instalação na venv aditiva, conferida com `pip install --dry-run` antes: nenhuma versão
+de fastapi, starlette, pydantic, psycopg2, uvicorn ou rasterio mudou. ADR
+`docs/adr/20260908T0628-pyogrio-dependencia-declarada-import-tardio.md`.
+
+## turno 7, setembro de 2026 (item L4-02-e-configuracoes-de-tracado: o pedido de traçado vira documento salvo)
+
+Configuração de traçado nomeada e compartilhável, o que a rede de utilidades da Esri chama *trace
+configuration*: tipo do traçado, barreiras de condição (atributo, fase, categoria, grupo ou tipo), barreiras
+de filtro, filtro de saída, funções sobre atributo (soma, contagem, mínimo, máximo, média) e tipo de
+resultado (elementos, geometria agregada, conectividade). Tabela `plat.rede_config_tracado` com RLS por
+inquilino, dono e `compartilhada`; CRUD em `/api/rede/{id}/config_tracado`. **Não existe rota nova de
+traçado**: `POST /api/rede/{id}/tracar` ganhou o campo `config_id`, e do corpo continuam valendo só os pontos
+de partida e as barreiras pontuais. A barreira de condição é traduzida para o que o motor já sabia recusar —
+a feição de ponto que casa perde os terminais, a de linha perde a aresta (`arestas_excluidas`, o único
+parâmetro novo em `tracado._montar_sql_arestas`); a barreira de FILTRO faz o traçado correr uma segunda vez
+com as duas listas somadas e publica a interseção, com `passagens` na resposta dizendo qual valeu.
+
+Seis configurações vêm prontas com o pacote elétrica-BR (clientes a jusante, kVA instalado a jusante,
+isolamento por chave fusível, alimentador inteiro, protetores a montante, trechos sem fase C), semeadas na
+importação do pacote — ficam em `config_tracado.CONFIGS_PADRAO` e não dentro do arquivo do pacote, cujo
+esquema JSON é fechado. Atributo, categoria, grupo, tipo, operador, função e tipo de resultado são conferidos
+contra o catálogo DA REDE na criação: o que a rede não tem vira 422 dizendo o nome, nunca uma configuração
+salva que só falharia ao ser usada. Tela `/redes/configuracoes` com a lista e o formulário. Paridade e
+lacunas declaradas (sem *function barrier*, sem *filter bitset*, sem `SUBTRACT`, contenção por coincidência
+de posição) em `docs/rede/CONFIG_TRACADO.md`; decisão em
+`docs/adr/20260908T0145-configuracoes-de-tracado.md`.
+
+## turno 7, setembro de 2026 (item L4-01-e-dicionario-unidades-bdgd: a unidade vem do arquivo, medida)
+
+O dicionário do pacote `eletrica-br` declarava `COMP` em quilômetro e `ENE_SUM` em megawatt-hora; o extrato
+de referência da casa traz os dois em metro e em quilowatt-hora. A unidade passou a ser **medida na
+importação, campo a campo**, e gravada na auditoria (`plat.rede_importacao.unidades`): comprimento pela razão
+contra o comprimento geodésico da própria geometria (medida que o item L4-01-c já fazia, agora com nome e
+casa própria em `app/rede_utilidades/unidades.py`), energia pela ordem de grandeza contra a potência
+instalada dos transformadores e contra o número de unidades consumidoras — duas âncoras que têm de concordar.
+
+Quem soma e quem exporta lê o fator de lá, nunca do dicionário: o sumário por subrede (item L4-04-c) grava a
+unidade e a origem dela na própria linha, e o exportador OpenDSS deixou de multiplicar `ENE_SUM` por mil de
+cabeça. Sem importação registrada nada é convertido — fator 1 e `origem: nao_medida` escrito ao lado do
+número. Medido em `tests/medidas/L4-01-e-dicionario-unidades-bdgd.json`: dois arquivos iguais em tudo menos
+na unidade dão o mesmo comprimento em metros e a mesma energia anual em quilowatt-hora, e a carga do
+circuito exportado muda mil vezes quando a auditoria diz megawatt-hora. Fronteira: o exportador EPANET ainda
+não existe; a exportação de subrede em JSON, que é o que serve à água hoje, passou a carregar o mesmo bloco
+`unidades`.
+
+## turno 7, setembro de 2026 (item L4-05-a-exportar-opendss: a subrede vira circuito OpenDSS)
+
+`GET /api/rede/{id}/subrede/{nome}/exportar?formato=dss` devolve a pasta `.dss` da subrede num zip:
+`Master.dss`, `Linhas.dss`, `Transformadores.dss`, `Cargas.dss`, `Curvas.dss`, `resumo.json` e `NAO_FAZ.md`.
+Barra do circuito = nó da topologia (com os dois terminais de uma chave fechada fundidos numa barra só),
+`Line` = trecho com comprimento geodésico medido, `Transformer` = transformador com kVA e perdas de PER_FER e
+PER_TOT, `Load` = unidade consumidora, e a geração distribuída como carga negativa de corrente constante.
+`jusante=true` inclui as subredes de tier inferior: é o alimentador inteiro, e não só o tier pedido.
+
+O dicionário de códigos de tensão da BDGD (domínio TTEN) entra completo: **110 códigos, de 0 a 109, sem
+buraco**, contra os 13 do conversor que a casa já rodava — que por isso não resolvia o **código 63 (23,1 kV)**,
+presente num alimentador da cooperativa de teste. Todo código de tensão do acervo da casa (TEN_NOM, TEN_PRI e
+TEN_SEC) é resolvido pelo dicionário, medido no próprio acervo. A curva de carga tem **864 pontos**
+(12 meses x 3 tipos de dia x 24 horas, PRODIST Módulo 7), com feriado contando como domingo e energia
+conservada.
+
+Medido (`tests/medidas/L4-05-a-exportar-opendss.json`, opendssdirect.py 0.9.4): o circuito exportado compila
+sem erro, e o circuito compilado tem **7 barras e 5 linhas** contra **8 nós menos 1 fusão de chave fechada, e
+5 trechos**, contados por consulta independente ao banco.
+
+O conversor falha alto em vez de completar cadastro: transformador sem POT_NOM, tensão nominal ausente ou
+código fora do domínio TTEN param a exportação com 422. O que ele não faz — impedância de condutor, reatância
+de transformador, chave manobrável, curva típica por classe, regulador e capacitor — sai escrito em
+`NAO_FAZ.md`, dentro da pasta exportada. ADR `20260907T2319-exportador-opendss.md`.
+
+## turno 7, setembro de 2026 (item L4-04-b-atualizar-e-exportar-subrede: nome da subrede no elemento, propagação, SubnetLine e exportação)
+
+`Update Subnetwork` passa a fazer o que a fonte descreve: traça a subrede a partir dos controladores, grava o
+nome dela em cada elemento (`plat.rede_subrede_elemento` — tabela derivada, para não misturar o cálculo com o
+dado do arquivo), propaga os atributos declarados no tier (`plat.rede_tier.propagadores`, valor lido no
+dispositivo controlador), gera a linha agregada da subrede (`rede_subrede.linha` e `comprimento_m`, a
+SubnetLine da Esri) e devolve a subrede limpa. A edição marca `suja` só a subrede que a área suja toca — antes
+qualquer edição sujava a rede inteira — e o lote (`redes.subredes_atualizar`, job, com filtro por tier) só
+atualiza as sujas. `GET /api/rede/{id}/subrede/{nome}/exportar` devolve o JSON da subrede validado contra
+`plat.rede.subrede_exportada`; `GET .../subredes/conferencia` compara o nome calculado com um atributo do
+arquivo e lista as diferenças como candidatas a erro de cadastro.
+
+Medido na cooperativa de teste (três maiores alimentadores da BDGD, 13.646 trechos de média tensão;
+`tests/medidas/L4-04-b-atualizar-e-exportar-subrede.json`): 3 subredes, 14.878 elementos em 9,3 s com carga
+12,66; nome da subrede igual ao `CTMT` do arquivo em 13.646 de 13.646 (1,0); a exportação do maior alimentador
+traz 5.392 elementos, 4.963 ligações e 337.047 m de linha agregada. Achado no caminho e corrigido: sem a
+camada de chaves no arquivo, a marcação automática elegia o TRANSFORMADOR como controlador do tier de média
+tensão, e o traçado partia do lado de lá da fronteira de subrede — 4 elementos alcançados de 13.646 trechos.
 ## junção, setembro de 2026 (ramo wt/bdgdjob × wt/il402bmonta: casos cruzados e eventos da família de rede)
 
 União dos dois ramos da linha L4 que trabalharam a rede de utilidades ao mesmo tempo. `test_cruzado.py`
@@ -206,6 +333,33 @@ e 1 transformador, a marcação automática deu **1 por dispositivo, 1 por nó d
 rodar de novo não duplicou nada (3 já marcados). 17 testes de API e 1 e2e da ficha. Lacuna nomeada: **grupo de
 tier (tier group) não existe** no modelo — a fonte o exige em domínio hierárquico e o dispensa em particionado,
 que é o caso do pacote elétrico entregue.
+
+## turno 4, setembro de 2026 (item L4-04-c-sumarios-por-subrede: sumário por subrede, tabela e CSV)
+
+Quanto tem cada alimentador passou a ser tabela, e não conta feita à mão (ADR
+`docs/adr/20260907T2243-sumario-por-subrede.md`; paridade em `docs/PARIDADE.md`, seção "sumário por
+subrede"). `plat.rede_subrede_resumo` tem uma linha por subrede com quilômetro por nível de tensão
+(declarado pelo cadastro e pela geometria, com a diferença em porcento ao lado), transformadores e kVA
+instalado, unidades consumidoras e sua distribuição por classe, energia anual faturada, dispositivos por
+categoria de rede, geração distribuída (unidades e kW) e o tronco — a maior distância, andando pela rede,
+de um controlador até um ponto alcançável da subrede. `POST /api/rede/{id}/subredes/resumos/calcular`
+recalcula (a rede inteira, um tier ou uma subrede) e `GET /api/rede/{id}/subredes/resumos` devolve a
+tabela com a DESCRIÇÃO das colunas ao lado das linhas — código, nome, tipo e unidade, que é o que um
+elemento de painel precisa para se ligar à fonte sem rótulo escrito à mão; `formato=csv` devolve a mesma
+tabela como arquivo.
+
+A filiação de cada elemento à subrede vem do atributo que o arquivo declara por tier (`ctmt` na média
+tensão, `uni_tr_mt` na baixa), a mesma convenção com que a importação da BDGD nomeia as subredes. É o
+retrato do CADASTRO, não do que a topologia alcança, e está dito assim no ADR e na tabela de paridade.
+
+Medido em `tests/medidas/L4-04-c-sumarios-por-subrede.json`, sobre o arquivo real da cooperativa de teste
+(44.268 trechos de média tensão, 5.481 transformadores, 27.587 unidades consumidoras, 1.385 gerações):
+**20 alimentadores somados em 1,5 s**, quilômetro de média tensão idêntico à soma do comprimento declarado
+no arquivo nos 20 (tolerância do portão: 0,1 %), contagem de unidades consumidoras idêntica nos 20 e
+**soma das unidades dos 20 sumários = 27.587 = total do arquivo** — nenhuma unidade contada em dois
+alimentadores. A diferença entre o comprimento declarado e o da geometria, medida e guardada por
+alimentador, vai de +0,03 % a −8,49 %. Um alimentador declarado na camada CTMT não tem trecho nenhum no
+arquivo e ficou anotado (não vira subrede). 9 testes de API rápidos e 1 medição em escala real.
 
 ## turno 4, setembro de 2026 (item L4-18-rede-simples-trace-network: rede simples, direção de fluxo, montante e jusante)
 

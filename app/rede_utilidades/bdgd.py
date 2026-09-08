@@ -29,8 +29,9 @@ import hashlib
 import time
 from pathlib import Path
 
-import pyogrio
 from psycopg2.extras import Json, execute_values
+
+from app.rede_utilidades import unidades as unidades_mod
 
 # camadas de feição conferidas, na ordem de dependência da montagem. SUB/CTMT/SSDMT/UNTRMT/SSDBT/
 # UCBT_tab são o mínimo do portão; as demais enriquecem o mesmo modelo (chave com estado, ramal,
@@ -70,6 +71,20 @@ def _texto(v) -> str | None:
     return s or None
 
 
+def _pyogrio():
+    """Import tardio do pyogrio (GDAL/OGR): só quem lê arquivo de feição precisa dele.
+
+    A aplicação inteira é importada por `app.main` no processo da API, que não abre GDB nenhum; deixar
+    o `import pyogrio` no topo fazia `import app.main` depender de um pacote pesado e, nesta máquina,
+    presente apenas no site do usuário (~/.local) — `tests/unit/test_dependencias.py` reprovava com
+    PYTHONNOUSERSITE=1. O pacote está fixado em `requirements.txt`; este atraso é para que a falta dele
+    apareça no job que de fato lê o arquivo, e não na subida da API.
+    """
+    import pyogrio  # noqa: PLC0415 — tardio de propósito (ver docstring)
+
+    return pyogrio
+
+
 def inspecionar(caminho: str | Path) -> dict[str, int]:
     """Feature count por camada do GDB — a régua contra a qual a carga é conferida."""
     caminho = Path(caminho)
@@ -80,7 +95,7 @@ def inspecionar(caminho: str | Path) -> dict[str, int]:
     contagens = {}
     for camada in CAMADAS + CAMADAS_APOIO:
         try:
-            contagens[camada] = int(pyogrio.read_info(str(caminho), layer=camada)["features"])
+            contagens[camada] = int(_pyogrio().read_info(str(caminho), layer=camada)["features"])
         except Exception:
             contagens[camada] = 0  # camada ausente no GDB da distribuidora: 0 declarado, não erro
     return contagens
@@ -111,7 +126,7 @@ def _ler(caminho: str, camada: str, geometria: bool = True):
     100 mil linhas com geometria de linha — cabe na cota de memória do worker, medido na distribuidora
     de referência)."""
     try:
-        return pyogrio.read_dataframe(caminho, layer=camada, read_geometry=geometria, fid_as_index=True)
+        return _pyogrio().read_dataframe(caminho, layer=camada, read_geometry=geometria, fid_as_index=True)
     except Exception as exc:
         raise ErroBdgd(f"falha ao ler a camada {camada}: {exc}") from exc
 
@@ -182,6 +197,8 @@ class _Importador:
         self.arquivo: dict[str, int] = {}
         self.importacao_id: str | None = None
         self.comp: dict[str, dict] = {}                 # camada -> unidade/fator/razão do COMP (item L4-01-c)
+        self.unidades: dict[str, dict] = {}             # campo do arquivo -> unidade declarada x detectada (L4-01-e)
+        self.kva_instalado = 0.0                        # Σ POT_NOM dos transformadores lidos (âncora da energia)
 
     # ---------- utilidades ----------
 
@@ -234,9 +251,15 @@ class _Importador:
         else:
             self.cur.execute(
                 "UPDATE plat.rede_importacao SET estado = 'concluida', contagens = %s, desvios = %s, "
-                "comp = %s, orfaos = %s, atualizado_em = now(), concluido_em = now() WHERE id = %s::uuid",
+                # clock_timestamp(), não now(): duas importações da mesma rede na MESMA transação teriam o
+                # mesmo now() e quem lê "a última importação" (unidades.fatores_da_rede) escolheria no
+                # empate. O carimbo é o instante em que a carga terminou, que é o que a coluna diz.
+                "comp = %s, unidades = %s, orfaos = %s, atualizado_em = clock_timestamp(), "
+                "concluido_em = clock_timestamp() "
+                "WHERE id = %s::uuid",
                 (Json(resultado["contagens"]), Json(resultado["desvios"]),
-                 Json(resultado.get("comp") or {}), Json(resultado.get("orfaos") or {}), self.importacao_id),
+                 Json(resultado.get("comp") or {}), Json(resultado.get("unidades") or {}),
+                 Json(resultado.get("orfaos") or {}), self.importacao_id),
             )
 
     def gravar_contrato(self, relatorio: dict) -> None:
@@ -292,6 +315,7 @@ class _Importador:
             "apoio": {c: {"arquivo": arquivo[c], "papel": "geometria das junções"} for c in CAMADAS_APOIO},
             "desvios": self.desvios,
             "comp": self.comp,
+            "unidades": self.unidades,
             "orfaos": orfaos,
             "duracao_ms": int((time.monotonic() - t0) * 1000),
             "conferido": all(c["arquivo"] == c["inserido"] for c in contagens.values()),
@@ -548,14 +572,22 @@ class _Importador:
                 )
 
     def _detectar_unidade_comp(self, camada: str, df) -> float | None:
-        """Razão Σ COMP / Σ comprimento geodésico (WGS84, pyproj) da camada. Devolve o fator que
-        leva COMP a metros: 1 (já em metros; razão perto de 1 — medida na casa 1,024, a flecha e o
-        caminho real deixam o ativo mais longo que a reta), 1000 (COMP em km; razão perto de 0,001)
-        ou None quando a razão não cai em nenhuma faixa — aí o desvio é contado e a aresta fica
-        com o geodésico. A refutação do item troca a unidade num arquivo de teste e espera ver
-        o fator mudar por esta medida, não por configuração."""
+        """Razão Σ COMP / Σ comprimento geodésico (WGS84, pyproj) da camada. Devolve o fator que leva COMP
+        a metros: 1 (já em metros; razão perto de 1 — medida na casa 1,024, a flecha e o caminho real
+        deixam o ativo mais longo que a reta), 1000 (COMP em km; razão perto de 0,001) ou None quando a
+        razão não cai em nenhuma faixa — aí o desvio é contado e a aresta fica com o geodésico. A faixa e a
+        classificação vivem em `app/rede_utilidades/unidades.py` (item L4-01-e), que é o mesmo lugar de
+        onde o sumário e os exportadores leem o fator depois. A refutação do item troca a unidade num
+        arquivo de teste e espera ver o fator mudar por esta medida, não por configuração."""
+        campo = f"{camada}.COMP"
         if "COMP" not in df.columns or df.empty:
             self.comp[camada] = {"unidade": "sem_coluna", "fator": None}
+            self.unidades[campo] = {
+                "familia": "comp", "camada": camada, "coluna": "COMP",
+                "declarada": unidades_mod.DECLARADA["comp"], "detectada": "sem_coluna",
+                "unidade": None, "fator_para_base": None, "base": unidades_mod.BASE["comp"],
+                "origem": "sem_medida", "explicacao": "a camada não tem a coluna COMP",
+            }
             return None
         from pyproj import Geod
 
@@ -572,31 +604,61 @@ class _Importador:
                 continue
             soma_comp += float(comp)
             n += 1
-        if n == 0 or soma_geo <= 0:
-            self.comp[camada] = {"unidade": "indeterminada", "fator": None, "trechos_medidos": n}
-            self._desvio("comp_unidade_indeterminada",
-                         f"{camada}: sem trecho com COMP e geometria para medir a razão", None)
-            return None
-        razao = soma_comp / soma_geo
-        if 0.5 <= razao <= 2.0:
-            unidade, fator = "metros", 1.0
-        elif 0.0005 <= razao <= 0.002:
-            unidade, fator = "quilometros", 1000.0
-        else:
-            unidade, fator = "indeterminada", None
-            self._desvio(
-                "comp_unidade_indeterminada",
-                f"{camada}: razão Σ COMP / Σ geodésico = {razao:.4f} fora das faixas de metro (0,5-2) e "
-                "de quilômetro (0,0005-0,002); comprimento_m fica com o geodésico",
-                None,
-            )
+        medida = unidades_mod.detectar_comprimento(soma_comp, soma_geo, n)
+        medida.update({"camada": camada, "coluna": "COMP"})
+        self.unidades[campo] = medida
+        fator = medida["fator_para_base"]
+        if medida["origem"] != "detectada":
+            self._desvio("comp_unidade_indeterminada", f"{camada}: {medida['explicacao']}", None)
         self.comp[camada] = {
-            "unidade": unidade, "fator": fator, "razao_comp_sobre_geodesico": round(razao, 5),
-            "soma_comp_declarada": round(soma_comp, 3), "soma_geodesica_m": round(soma_geo, 3),
-            "soma_comp_convertida_m": round(soma_comp * fator, 3) if fator else None,
+            "unidade": medida["detectada"], "fator": fator,
+            "razao_comp_sobre_geodesico": medida.get("razao_comp_sobre_geodesico"),
+            "soma_comp_declarada": medida.get("soma_comp_declarada"),
+            "soma_geodesica_m": medida.get("soma_geodesica_m"),
+            "soma_comp_convertida_m": (round(soma_comp * fator, 3) if fator else None),
             "trechos_medidos": n,
+            "declarada_no_dicionario": unidades_mod.DECLARADA["comp"],
         }
         return fator
+
+    def _detectar_unidade_energia(self, camada: str, df) -> None:
+        """Unidade da energia da camada de unidade consumidora (ENE_01..ENE_12, ou ENE_SUM quando os doze
+        meses não vêm). Não há régua geométrica aqui: a ordem de grandeza é comparada com a potência
+        instalada dos transformadores já lidos (Σ POT_NOM × 8.760 h é o teto físico do ano) e com o número
+        de unidades consumidoras da camada (energia média por unidade e por mês). A decisão fica em
+        `unidades.detectar_energia`; aqui só se somam as colunas do arquivo."""
+        campo = f"{camada}.ENE"
+        colunas = [c for c in (f"ENE_{m:02d}" for m in range(1, 13)) if c in df.columns]
+        origem_colunas = colunas or ([c for c in ("ENE_SUM",) if c in df.columns])
+        if df.empty or not origem_colunas:
+            self.unidades[campo] = {
+                "familia": "ene", "camada": camada, "colunas": origem_colunas,
+                "declarada": unidades_mod.DECLARADA["ene"], "detectada": "sem_coluna", "unidade": None,
+                "fator_para_base": None, "base": unidades_mod.BASE["ene"], "origem": "sem_medida",
+                "explicacao": "a camada não tem ENE_01..ENE_12 nem ENE_SUM",
+            }
+            return
+        total = 0.0
+        for coluna in origem_colunas:
+            for valor in df[coluna]:
+                if valor is None or valor != valor:
+                    continue
+                try:
+                    v = float(valor)
+                except (TypeError, ValueError):
+                    continue
+                if v > 0:
+                    total += v
+        medida = unidades_mod.detectar_energia(total, int(len(df)), self.kva_instalado)
+        medida.update({"camada": camada, "colunas": origem_colunas})
+        self.unidades[campo] = medida
+        if medida["origem"] != "detectada":
+            self._desvio(
+                "energia_unidade_indeterminada",
+                f"{camada}: {medida['explicacao']}; quem somar energia desta rede usa a unidade declarada "
+                "pelo dicionário e diz que é declarada",
+                None,
+            )
 
     def _orfaos(self) -> dict:
         """Os três órfãos que o portão manda contar E listar: UC sem transformador (UNI_TR_MT que
@@ -676,6 +738,15 @@ class _Importador:
                 pno = _texto(linha.get("P_N_OPE"))
                 estado = {"A": "aberto", "F": "fechado"}.get(pno, "na")
             subrede = self.subredes.get((2, _texto(linha.get("CTMT")) or ""))
+            if camada == "UNTRMT":
+                # Σ POT_NOM (kVA) é o teto contra o qual a energia declarada é medida (item L4-01-e)
+                pot = linha.get("POT_NOM")
+                try:
+                    pot = float(pot)
+                except (TypeError, ValueError):
+                    pot = None
+                if pot is not None and pot == pot and pot > 0:
+                    self.kva_instalado += pot
             if camada == "UNTRMT" and subrede is None:
                 self._desvio(
                     "trafo_sem_alimentador",
@@ -805,6 +876,7 @@ class _Importador:
         # (índice do dataframe, fid_as_index=True) e o ponto de ligação é o PN_CON. As junções que só
         # aparecem aqui (ponta de ramal) entram pelo mesmo caminho das demais, com o mesmo desvio de
         # geometria ausente quando não há PONNOT para elas.
+        self._detectar_unidade_energia(camada, df)
         pns = {_texto(v) for v in df["PN_CON"]} - {None}
         self._garantir_juncoes(pns, geometrias)
         tipo_id = self._tipo_id(camada)

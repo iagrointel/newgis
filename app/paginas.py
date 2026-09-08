@@ -37,6 +37,8 @@ PAGINAS = {
     "/redes/simples": "redes_simples.html",
     # --- controladores de subrede e tiers (L4-04-a-controladores-e-tiers)
     "/redes/controladores": "redes_controladores.html",
+    # --- configurações de traçado (L4-02-e-configuracoes-de-tracado)
+    "/redes/configuracoes": "redes_configuracoes.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>
