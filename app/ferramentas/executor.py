@@ -177,20 +177,27 @@ def executar(ctx, f: registro.Ferramenta, parametros: dict, titulo: str | None =
             cur.execute(f'ANALYZE "{schema}"."{tabela}"')
             campos = [c["nome"] for c in saida["campos"]]
             sha_saida = sha256_camada(cur, schema, tabela, campos)
+            # ST_XMin/ST_YMax em vez do GeoJSON do retângulo: quando todas as feições caem no MESMO ponto (ou
+            # há uma só), ST_Extent degenera em POINT e o GeoJSON não traz anel de coordenadas (achado no L2-05-f,
+            # ao conectar um único ponto à rede)
+            caixa = (f'ST_Transform(ST_SetSRID(ST_Extent(geom)::geometry, {int(saida["srid"])}), 4326)')
             cur.execute(
-                f'SELECT count(*) AS feicoes, ST_AsGeoJSON(ST_Transform(ST_SetSRID(ST_Extent(geom)::geometry, '
-                f'{int(saida["srid"])}), 4326)) AS extent FROM "{schema}"."{tabela}"'
+                f'SELECT count(*) AS feicoes, ST_XMin({caixa}) AS x0, ST_YMin({caixa}) AS y0, '
+                f'ST_XMax({caixa}) AS x1, ST_YMax({caixa}) AS y1 FROM "{schema}"."{tabela}"'
             )
             est = cur.fetchone()
             cur.execute('SELECT pg_total_relation_size(%s::regclass) AS b', (f'"{schema}"."{tabela}"',))
             tamanho = int(cur.fetchone()["b"])
         ctx.progresso(90, "publicando no catálogo")
         extent = None
-        if est["extent"]:
-            coords = json.loads(est["extent"])["coordinates"][0]
-            xs, ys = [c[0] for c in coords], [c[1] for c in coords]
-            if -180 <= min(xs) and max(xs) <= 180 and -90 <= min(ys) and max(ys) <= 90:
-                extent = [min(xs), min(ys), max(xs), max(ys)]
+        if est["x0"] is not None:
+            x0, y0, x1, y1 = (float(est["x0"]), float(est["y0"]), float(est["x1"]), float(est["y1"]))
+            # caixa degenerada (uma feição só, ou todas no mesmo ponto/linha) não é polígono válido e o CHECK de
+            # plat.item a recusa: o item fica sem extent em vez de ganhar uma caixa inventada
+            if -180 <= x0 and x1 <= 180 and -90 <= y0 and y1 <= 90 and x1 > x0 and y1 > y0:
+                extent = [x0, y0, x1, y1]
+            else:
+                ctx.log("INFO", "extensão degenerada (menos de duas coordenadas distintas): item sem extent")
         proveniencia = {
             "ferramenta": f.nome, "versao": f.versao, "parametros": parametros,
             "entradas": [{"parametro": n, "item_id": e["item_id"], "versao": e["versao"], "sha256": e["sha256"]}
