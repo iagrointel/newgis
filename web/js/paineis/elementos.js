@@ -374,8 +374,12 @@ export function markdownSeguro(texto) {
 
 function renderTextoRico(corpo, el, resultado) {
   const op = el.opcoes || {};
-  const valores = resultado && resultado.tipo === 'feicao' ? (resultado.valores || {}) : {};
-  const texto = preencherModelo(op.texto || '', valores);
+  const pedeFeicao = !!(op.campos && op.campos.length);
+  const valores = resultado && resultado.tipo === 'feicao' ? resultado.valores : null;
+  // texto rico ligado a campos: sem feição no filtro, o estado é "sem dado" — nunca o modelo com os
+  // {campos} trocados por vazio ("maior valor: em"), que pareceria um dado de verdade
+  if (pedeFeicao && !valores) { corpo.append(semDado(op.texto_sem_dado || 'sem feição para o texto')); return true; }
+  const texto = preencherModelo(op.texto || '', valores || {});
   if (!texto.trim()) { corpo.append(semDado(op.texto_sem_dado || 'sem texto')); return true; }
   corpo.append(...markdownSeguro(texto));
   return false;
