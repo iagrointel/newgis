@@ -10357,6 +10357,61 @@
     "x-privilegio": "rede.editar"
    }
   },
+  "/api/rede/{rede_id}/matpower": {
+   "post": {
+    "tags": [
+     "rede de utilidades — MATPOWER"
+    ],
+    "summary": "Importar Matpower",
+    "description": "Importa um caso MATPOWER (caseformat 2) para o grafo da rede. A rede precisa ter o pacote de\nativos `transmissao-matpower` importado antes. `prefixo` entra no código externo de cada objeto e\npermite mais de um caso na mesma rede. As barras entram SEM geometria: o caseformat não tem\ncoordenada, e a plataforma não inventa uma.",
+    "operationId": "importar_matpower_api_rede__rede_id__matpower_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "prefixo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "maxLength": 32,
+       "pattern": "^[A-Za-z0-9_-]*$",
+       "default": "",
+       "title": "Prefixo"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
   "/api/rede/{rede_id}/feicoes/pontos": {
    "post": {
     "tags": [
@@ -11767,7 +11822,7 @@
      "rede de utilidades — subredes"
     ],
     "summary": "Exportar Subrede",
-    "description": "`formato=json` (padrão): rede, subrede (com a linha agregada), controladores, elementos,\nconectividade e resumo, validado contra `plat.rede.subrede_exportada` antes de sair.\n\n`formato=dss`: a pasta OpenDSS da subrede, num zip. `ano` escolhe o calendário da curva de 864 pontos\n(24 h x 3 tipos de dia x 12 meses); o padrão é o ano corrente. `jusante=true` inclui as subredes de tier\ninferior que penduram nesta — é o alimentador inteiro, com transformador e carga, em vez de só o tier\npedido.",
+    "description": "`formato=json` (padrão): rede, subrede (com a linha agregada), controladores, elementos,\nconectividade e resumo, validado contra `plat.rede.subrede_exportada` antes de sair.\n\n`formato=dss`: a pasta OpenDSS da subrede, num zip. `ano` escolhe o calendário da curva de 864 pontos\n(24 h x 3 tipos de dia x 12 meses); o padrão é o ano corrente. `jusante=true` inclui as subredes de tier\ninferior que penduram nesta — é o alimentador inteiro, com transformador e carga, em vez de só o tier\npedido.\n\n`formato=pandapower`: `rede.json`, que `pandapower.from_json` lê, mais `resumo.json` e `NAO_FAZ.md`,\nnum zip. `formato=matpower`: o `.m` do caseformat 2, com os mesmos dois arquivos ao lado. Os dois são\nmodelos de rede EQUILIBRADA (sequência positiva): as fases declaradas por trecho não são\nrepresentadas, e onde o desequilíbrio importa o formato certo é o `dss`. O `ano` não muda nada nesses\ndois formatos — a curva de carga só existe no OpenDSS; cada carga sai com a potência média do ano.",
     "operationId": "exportar_subrede_api_rede__rede_id__subrede__nome__exportar_get",
     "parameters": [
      {
@@ -11848,6 +11903,161 @@
        "application/json": {
         "schema": {}
        }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/subredes/resumos/calcular": {
+   "post": {
+    "tags": [
+     "rede de utilidades — sumário por subrede"
+    ],
+    "summary": "Calcular Resumos",
+    "description": "Recalcula o sumário de cada subrede: quilômetro por nível de tensão, transformadores e potência\ninstalada, unidades consumidoras por classe, energia anual faturada, dispositivos por categoria,\ngeração distribuída e tronco. Sem `tier` nem `subrede_id`, recalcula a rede inteira.",
+    "operationId": "calcular_resumos_api_rede__rede_id__subredes_resumos_calcular_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "subrede_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Subrede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/subredes/resumos": {
+   "get": {
+    "tags": [
+     "rede de utilidades — sumário por subrede"
+    ],
+    "summary": "Listar Resumos",
+    "description": "A tabela de sumários: `colunas` descreve cada coluna (código, nome, tipo, unidade) e `itens` traz as\nlinhas. `formato=csv` devolve a mesma tabela como arquivo.",
+    "operationId": "listar_resumos_api_rede__rede_id__subredes_resumos_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 500,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "json",
+       "title": "Formato"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "text/csv": {}
       }
      },
      "422": {
