@@ -46,8 +46,9 @@ from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
-from app.multiescala.rotas import router as rotas_multiescala
 from app.mapa.rotas import router as rotas_mapa
+from app.multiescala.rotas import router as rotas_multiescala
+from app.odk import rotas as rotas_odk
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
@@ -135,6 +136,8 @@ ROUTERS = [
     # --- formulário de coleta por XLSForm (L2-07-b): /api/formularios/xlsform, /api/formularios/{id},
     # /api/formularios/{id}/respostas, /api/formularios/equivalencia
     rotas_coleta,
+    # --- ponte opcional com o ODK Central (L2-07-e): /api/odk/pontes (publicar, sincronizar, entidades)
+    rotas_odk.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
