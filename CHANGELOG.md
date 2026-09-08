@@ -3,6 +3,23 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L6-03-paridade-conectores: as duas linhas `fora (decisão)` que o adversário provou falsas)
+
+O adversário do item reproduziu 11 linhas `feito` OK e provou 2 FALSIFICADAS. As linhas "armazém em
+nuvem" e "NoSQL (Knowledge Server)" diziam `fora (decisão)`, e nenhuma decisão do dono cobre nenhuma
+das duas — o registro `laco/estado.json`, D18-D41, não fala de armazém em nuvem nem de Knowledge
+Server; a linha do armazém citava ainda "L3L6_CONCEITO seção 14", seção que não existe no documento
+(as seções são A1-A10 e B1-B13) e que não trata do assunto. Correção honesta: as duas linhas agora
+declaram que NENHUM item do backlog e NENHUMA decisão do dono cobre a exclusão, e a linha "pasta (file
+share)" perde o "decisão:" sem dono e fica `fora (L7-11)` (o item do appliance existe e é o que
+cobre). A linha STAC citava `tests/api/imagens/test_stacit_gdal.py` no ramo `wt/stac`, que não tem o
+arquivo; a citação aponta agora `wt/il101apgsta` (item L1-01-a, na fila de junção, onde o teste
+existe — conferido com `git cat-file -e`). A trava do guard (`tests/unit/test_paridade_conectores.py`)
+era mais fraca que a regra escrita nela: linha `fora` só precisava de um parêntese no estado. Agora a
+trava cobra o que a regra promete: linha `fora` nomeia item (`L<n>-<n>`) ou decisão (`D<n>`) ou
+declara "nenhum item"; e TODO caminho `tests/...` citado em qualquer célula da linha (a coluna "nós"
+inclusive) tem de existir em `master` ou num ramo nomeado na própria linha. Suíte: 36 passed.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
