@@ -17,6 +17,7 @@
    o nó na tela e o rótulo na árvore. */
 
 import { h, limpar } from '../base/dom.js';
+import { t } from '../base/i18n.js';
 import * as doc from './documento.js';
 import { validarValor, valorDoControle, conferirSuportado } from './esquema.js';
 import { ligarOrigemPaleta, ligarOrigemNo, ligarAlvo, ligarRedimensionar } from './arrasto.js';
@@ -32,19 +33,19 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
   let documentoAtual = documento;
   let selecionado = null;
 
-  const elPaleta = h('section', { class: 'editor-paleta', 'aria-label': 'Paleta' }, h('h2', {}, 'Paleta'));
-  const elTela = h('div', { class: 'editor-tela', id: 'tela', role: 'group', 'aria-label': 'Tela' });
-  const elEstrutura = h('div', { class: 'editor-arvore', id: 'estrutura', role: 'tree', 'aria-label': 'Estrutura' });
+  const elPaleta = h('section', { class: 'editor-paleta', 'aria-label': t('construtor.paleta') }, h('h2', {}, t('construtor.paleta')));
+  const elTela = h('div', { class: 'editor-tela', id: 'tela', role: 'group', 'aria-label': t('construtor.tela') });
+  const elEstrutura = h('div', { class: 'editor-arvore', id: 'estrutura', role: 'tree', 'aria-label': t('construtor.estrutura') });
   const elProps = h('div', { class: 'editor-props', id: 'propriedades' });
   const elMensagem = h('p', { class: 'editor-mensagem', id: 'editor-mensagem', role: 'status', 'aria-live': 'polite' }, '');
 
   limpar(raiz).append(
     h('div', { class: 'editor' },
       elPaleta,
-      h('section', { class: 'editor-centro', 'aria-label': 'Tela do documento' }, elMensagem, elTela),
+      h('section', { class: 'editor-centro', 'aria-label': t('construtor.tela_documento') }, elMensagem, elTela),
       h('aside', { class: 'editor-lado' },
-        h('section', { 'aria-label': 'Estrutura' }, h('h2', {}, 'Estrutura'), elEstrutura),
-        h('section', { 'aria-label': 'Propriedades' }, h('h2', {}, 'Propriedades'), elProps))));
+        h('section', { 'aria-label': t('construtor.estrutura') }, h('h2', {}, t('construtor.estrutura')), elEstrutura),
+        h('section', { 'aria-label': t('construtor.propriedades') }, h('h2', {}, t('construtor.propriedades')), elProps))));
 
   function dizer(texto, tipo = 'ok') {
     elMensagem.textContent = texto;
@@ -84,20 +85,20 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
         const r = doc.inserir(documentoAtual, paleta, { tipo, pai, antes });
         idNovo = r.id;
         return r.documento;
-      }, `${paleta.tipos[tipo]?.rotulo || tipo} adicionado`);
+      }, t('construtor.adicionado', { rotulo: paleta.tipos[tipo]?.rotulo || tipo }));
       if (ok && selecionar) api.selecionar(idNovo);
       return ok ? idNovo : null;
     },
     mover(id, { pai = null, antes = null } = {}) {
-      return tentar(() => doc.mover(documentoAtual, paleta, id, { pai, antes }), 'movido');
+      return tentar(() => doc.mover(documentoAtual, paleta, id, { pai, antes }), t('construtor.movido'));
     },
     largura(id, colunas) {
       const c = Math.min(doc.COLUNAS, Math.max(1, Math.round(colunas)));
-      return tentar(() => doc.redimensionar(documentoAtual, id, c), `largura: ${c} de ${doc.COLUNAS} colunas`);
+      return tentar(() => doc.redimensionar(documentoAtual, id, c), t('construtor.largura_definida', { n: c, total: doc.COLUNAS }));
     },
     remover(id) {
       if (selecionado === id) selecionado = null;
-      return tentar(() => doc.remover(documentoAtual, id), 'removido');
+      return tentar(() => doc.remover(documentoAtual, id), t('construtor.removido'));
     },
   };
 
@@ -120,7 +121,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
       dataset: { no: no.id, tipo: no.tipo, colunas: String(no.largura_colunas) },
       tabindex: '0',
       role: 'group',
-      'aria-label': `${def.rotulo}, ${no.largura_colunas} de ${doc.COLUNAS} colunas`,
+      'aria-label': t('construtor.no_rotulo', { rotulo: def.rotulo, n: no.largura_colunas, total: doc.COLUNAS }),
     });
     el.style.gridColumn = `span ${no.largura_colunas}`;
     el.addEventListener('click', (ev) => { ev.stopPropagation(); api.selecionar(no.id); });
@@ -128,7 +129,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
     /* soltar SOBRE um nó = entrar antes dele, no mesmo pai (regra única, sem zona de meio pixel) */
     ligarAlvo(el, {
       aoSoltar: (carga) => {
-        if (carga.tipo === 'no' && carga.valor === no.id) { dizer('um nó não pode ser solto sobre si mesmo', 'erro'); return; }
+        if (carga.tipo === 'no' && carga.valor === no.id) { dizer(t('construtor.sobre_si_mesmo'), 'erro'); return; }
         alvoDeSoltura(carga, { pai: no.pai ?? null, antes: no.id });
       },
     });
@@ -138,16 +139,16 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
     el.append(h('header', { class: 'no-cabecalho' }, titulo, resumo));
 
     if (def.aceita_filhos) {
-      const dentro = h('div', { class: 'no-filhos', dataset: { filhosDe: no.id }, role: 'group', 'aria-label': `Dentro de ${def.rotulo}` });
+      const dentro = h('div', { class: 'no-filhos', dataset: { filhosDe: no.id }, role: 'group', 'aria-label': t('construtor.dentro_de', { rotulo: def.rotulo }) });
       for (const f of doc.filhos(documentoAtual, no.id)) dentro.append(desenharNo(f));
-      if (!dentro.childElementCount) dentro.append(h('p', { class: 'vazio' }, 'contêiner vazio'));
+      if (!dentro.childElementCount) dentro.append(h('p', { class: 'vazio' }, t('construtor.conteiner_vazio')));
       ligarAlvo(dentro, { aoSoltar: (carga) => alvoDeSoltura(carga, { pai: no.id, antes: null }) });
       el.append(dentro);
     }
 
     const alca = h('button', {
       type: 'button', class: 'alca-largura', dataset: { alca: no.id },
-      'aria-label': `Largura de ${def.rotulo} em colunas: ${no.largura_colunas}`,
+      'aria-label': t('construtor.alca_largura', { rotulo: def.rotulo, n: no.largura_colunas }),
     });
     alca.addEventListener('keydown', (ev) => {
       if (ev.key === 'ArrowRight') { ev.preventDefault(); api.largura(no.id, no.largura_colunas + 1); }
@@ -172,7 +173,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
   function desenharTela() {
     limpar(elTela);
     for (const n of doc.filhos(documentoAtual, null)) elTela.append(desenharNo(n));
-    if (!elTela.childElementCount) elTela.append(h('p', { class: 'vazio', id: 'tela-vazia' }, 'arraste um item da paleta, ou use o botão Adicionar'));
+    if (!elTela.childElementCount) elTela.append(h('p', { class: 'vazio', id: 'tela-vazia' }, t('construtor.tela_vazia')));
   }
   ligarAlvo(elTela, { aoSoltar: (carga) => alvoDeSoltura(carga, { pai: null, antes: null }) });
   elTela.addEventListener('click', () => api.selecionar(null));
@@ -184,7 +185,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
       const def = paleta.tipos[tipo];
       const arrastavel = h('span', { class: 'paleta-item', dataset: { paleta: tipo } }, def.rotulo);
       ligarOrigemPaleta(arrastavel, tipo);
-      const bt = h('button', { type: 'button', class: 'pequeno', dataset: { adicionar: tipo } }, 'Adicionar');
+      const bt = h('button', { type: 'button', class: 'pequeno', dataset: { adicionar: tipo } }, t('construtor.adicionar'));
       bt.addEventListener('click', () => {
         /* alternativa sem arrasto: entra dentro do contêiner selecionado, senão no fim da raiz */
         const sel = selecionado ? doc.acharNo(documentoAtual, selecionado) : null;
@@ -193,7 +194,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
       });
       ul.append(h('li', {}, arrastavel, bt));
     }
-    limpar(elPaleta).append(h('h2', {}, 'Paleta'), ul);
+    limpar(elPaleta).append(h('h2', {}, t('construtor.paleta')), ul);
   }
 
   /* ---------------------------------------------------------------- estrutura (árvore) */
@@ -223,15 +224,15 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
 
   function menuMoverPara(no) {
     /* alternativa de PONTEIRO ÚNICO (toque): escolher o destino numa lista e apertar Mover — nenhum gesto. */
-    const opcoes = [h('option', { value: '' }, 'raiz')];
+    const opcoes = [h('option', { value: '' }, t('construtor.raiz'))];
     for (const { no: outro, nivel } of doc.emProfundidade(documentoAtual)) {
       if (!paleta.tipos[outro.tipo]?.aceita_filhos) continue;
       if (outro.id === no.id || doc.ehDescendente(documentoAtual, outro.id, no.id)) continue;
       opcoes.push(h('option', { value: outro.id }, `${'— '.repeat(nivel)}${paleta.tipos[outro.tipo].rotulo}: ${resumoDe(outro)}`));
     }
-    const sel = h('select', { dataset: { moverPara: no.id }, 'aria-label': 'Mover para' }, ...opcoes);
+    const sel = h('select', { dataset: { moverPara: no.id }, 'aria-label': t('construtor.mover_para') }, ...opcoes);
     sel.value = no.pai ?? '';
-    const bt = h('button', { type: 'button', class: 'pequeno', dataset: { mover: no.id } }, 'Mover');
+    const bt = h('button', { type: 'button', class: 'pequeno', dataset: { mover: no.id } }, t('construtor.mover'));
     bt.addEventListener('click', () => api.mover(no.id, { pai: sel.value || null, antes: null }));
     return [sel, bt];
   }
@@ -239,7 +240,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
   function desenharEstrutura() {
     limpar(elEstrutura);
     const linhas = doc.emProfundidade(documentoAtual);
-    if (!linhas.length) { elEstrutura.append(h('p', { class: 'vazio' }, 'documento vazio')); return; }
+    if (!linhas.length) { elEstrutura.append(h('p', { class: 'vazio' }, t('construtor.documento_vazio'))); return; }
     for (const { no, nivel } of linhas) {
       const def = paleta.tipos[no.tipo] || { rotulo: no.tipo };
       const bt = h('button', {
@@ -255,9 +256,9 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
       bt.addEventListener('keydown', (ev) => porTeclado(ev, no));
       const acoes = h('div', { class: 'arvore-acoes' },
         ...menuMoverPara(no),
-        botao('−', `Diminuir largura de ${def.rotulo}`, () => api.largura(no.id, no.largura_colunas - 1), { larguraMenos: no.id }),
-        botao('+', `Aumentar largura de ${def.rotulo}`, () => api.largura(no.id, no.largura_colunas + 1), { larguraMais: no.id }),
-        botao('Remover', `Remover ${def.rotulo}`, () => api.remover(no.id), { remover: no.id }));
+        botao('−', t('construtor.diminuir_largura', { rotulo: def.rotulo }), () => api.largura(no.id, no.largura_colunas - 1), { larguraMenos: no.id }),
+        botao('+', t('construtor.aumentar_largura', { rotulo: def.rotulo }), () => api.largura(no.id, no.largura_colunas + 1), { larguraMais: no.id }),
+        botao(t('construtor.remover'), t('construtor.remover_rotulo', { rotulo: def.rotulo }), () => api.remover(no.id), { remover: no.id }));
       elEstrutura.append(h('div', { class: 'arvore-linha', dataset: { linha: no.id } }, bt, acoes));
     }
   }
@@ -272,7 +273,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
   function desenharPropriedades() {
     limpar(elProps);
     const no = selecionado ? doc.acharNo(documentoAtual, selecionado) : null;
-    if (!no) { elProps.append(h('p', { class: 'vazio' }, 'selecione um item na tela ou na estrutura')); return; }
+    if (!no) { elProps.append(h('p', { class: 'vazio' }, t('construtor.selecione'))); return; }
     const def = paleta.tipos[no.tipo];
     elProps.append(h('p', { class: 'props-tipo' }, def.rotulo));
 
@@ -281,10 +282,10 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
     });
     largura.addEventListener('change', () => {
       const v = Number(largura.value);
-      if (!Number.isInteger(v) || v < 1 || v > doc.COLUNAS) { dizer(`largura precisa ser um inteiro de 1 a ${doc.COLUNAS}`, 'erro'); largura.value = String(no.largura_colunas); return; }
+      if (!Number.isInteger(v) || v < 1 || v > doc.COLUNAS) { dizer(t('construtor.largura_invalida', { total: doc.COLUNAS }), 'erro'); largura.value = String(no.largura_colunas); return; }
       api.largura(no.id, v);
     });
-    elProps.append(h('label', { class: 'campo' }, h('span', {}, `Largura (colunas de ${doc.COLUNAS})`), largura));
+    elProps.append(h('label', { class: 'campo' }, h('span', {}, t('construtor.largura_campo', { total: doc.COLUNAS })), largura));
 
     for (const [nome, esq] of Object.entries(def.esquema.properties || {})) {
       elProps.append(campoDeEsquema(no, nome, esq, (def.esquema.required || []).includes(nome)));
@@ -316,10 +317,10 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
       const valor = conv.valor;
       const problemas = conv.ok
         ? [
-          ...(obrigatorio && (valor === undefined || valor === '') ? [{ erro: 'campo obrigatório' }] : []),
+          ...(obrigatorio && (valor === undefined || valor === '') ? [{ erro: t('form.obrigatorio') }] : []),
           ...validarValor(esq, valor, nome),
         ]
-        : [{ erro: `valor precisa ser do tipo ${esq.type}` }];
+        : [{ erro: t('construtor.tipo_invalido', { tipo: esq.type }) }];
       if (problemas.length) {
         /* RECUSA: o documento não muda, o valor volta ao que era e a mensagem fica no campo. Nada aqui
            redesenha o painel — redesenhar apagaria esta mensagem no mesmo instante em que ela aparece. */
@@ -337,7 +338,7 @@ export function criarEditor({ raiz, documento = doc.novoDocumento('app'), paleta
       if (naTela) naTela.textContent = resumoDe(noAtualizado);
       const naArvore = elEstrutura.querySelector(`[data-arvore-resumo="${no.id}"]`);
       if (naArvore) naArvore.textContent = resumoDe(noAtualizado);
-      dizer(`${esq.title || nome} gravado`);
+      dizer(t('construtor.propriedade_gravada', { campo: esq.title || nome }));
       aoMudar?.(documentoAtual);
     });
     return h('label', { class: 'campo' },

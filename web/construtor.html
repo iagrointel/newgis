@@ -15,10 +15,28 @@
 <div class="app">
   <aside id="lateral" class="lateral"></aside>
   <main id="principal" class="principal" tabindex="-1">
-    <h1>Construtor</h1>
+    <h1 data-i18n="construtor.titulo">Construtor</h1>
+    <div class="linha-ferramentas" id="ferramentas"></div>
+    <p class="aviso-beta" data-i18n="app.beta">análise / beta privado</p>
     <plat-aviso id="aviso"></plat-aviso>
+    <plat-estado id="estado" hidden></plat-estado>
+    <section id="escolha" class="cartao" aria-labelledby="t-escolha" hidden>
+      <h2 id="t-escolha" data-i18n="construtor.escolha_titulo">Aplicativos e painéis</h2>
+      <p class="fraco" data-i18n="construtor.escolha_ajuda">abra um item do catálogo para editar, ou crie um aplicativo novo; a lista mostra o que a sua conta pode editar</p>
+      <div class="linha-ferramentas">
+        <plat-busca id="escolha-busca" rotulo="buscar por título"></plat-busca>
+        <div class="direita"><button type="button" id="novo-app" class="primario" data-i18n="construtor.novo_app">Novo aplicativo</button></div>
+      </div>
+      <div id="novo-app-caixa" class="cartao-interno" hidden>
+        <h3 data-i18n="construtor.novo_app">Novo aplicativo</h3>
+        <plat-formulario id="novo-app-form"></plat-formulario>
+      </div>
+      <plat-estado id="escolha-estado" hidden></plat-estado>
+      <plat-tabela id="escolha-tabela" legenda="aplicativos e painéis"></plat-tabela>
+    </section>
   </main>
 </div>
+<plat-dialogo id="dialogo"></plat-dialogo>
 <script type="module" src="/static/js/editor/tela.js"></script>
 </body>
 </html>

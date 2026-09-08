@@ -40,3 +40,10 @@
   .editor { grid-template-columns: minmax(0, 1fr); }
   .editor-tela { grid-template-columns: repeat(12, minmax(0, 1fr)); }
 }
+
+/* UX-07: caixa de formulário dentro de um cartão (novo aplicativo) e barra de ferramentas do construtor */
+.cartao-interno { border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); padding: var(--e3) var(--e4); margin-bottom: var(--e3); background: var(--fundo-2); }
+.cartao-interno h3 { margin: 0 0 var(--e3); font-size: var(--t0); }
+.construtor #ferramentas { justify-content: space-between; }
+.construtor #ferramentas .direita { display: flex; gap: var(--e2); align-items: center; }
+.construtor #estado-salvo { color: var(--fraco); font-size: var(--t-1); }
