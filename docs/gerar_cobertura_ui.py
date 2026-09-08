@@ -176,7 +176,14 @@ def _metodo_na_instrucao(trecho: str) -> str | None:
 def _metodo_antes_do_literal(linha: str, bruto: str) -> str | None:
     """método da chamada `nome(` que fica imediatamente antes do literal na mesma linha (o trecho entre o último
     nome de chamada e o literal); None quando o literal não é precedido por um nome conhecido."""
-    pos = linha.find(bruto)
+    # procura o literal COM o delimitador: `'/api/tokens'` não pode casar dentro de `/api/tokens/${id}` mais à esquerda
+    pos = -1
+    for delim in ("'", '"', "`"):
+        pos = linha.find(f"{delim}{bruto}{delim}")
+        if pos >= 0:
+            break
+    if pos < 0:
+        pos = linha.find(bruto)
     if pos < 0:
         return None
     antes = linha[:pos]

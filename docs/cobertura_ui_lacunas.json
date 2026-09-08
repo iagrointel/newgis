@@ -8,7 +8,6 @@
   "DELETE /api/multiescala/fatores/{id}",
   "DELETE /api/plataforma/inquilinos/{id}",
   "PATCH /api/anotacoes/{id}",
-  "POST /api/acervo/{fonte_id}/adicionar",
   "POST /api/arquivos",
   "POST /api/categorias/importar",
   "POST /api/geocodificar",
@@ -25,7 +24,6 @@
   "POST /api/multiescala/execucoes/{id}/micro",
   "POST /api/multiescala/fatores",
   "POST /api/multiescala/fatores/{id}/amostras",
-  "POST /api/org/ldap/importar",
   "POST /api/plataforma/inquilinos",
   "POST /api/plataforma/inquilinos/{id}/reativar",
   "POST /api/plataforma/inquilinos/{id}/suspender",
@@ -36,8 +34,6 @@
   "POST /rest/services/Geocodificador/GeocodeServer/geocodeAddresses",
   "POST /rest/services/Geocodificador/GeocodeServer/reverseGeocode",
   "PUT /api/categorias",
-  "PUT /api/importacoes/{id}/confirmar",
-  "PUT /api/org/ldap",
-  "PUT /api/papeis/{id}"
+  "PUT /api/importacoes/{id}/confirmar"
  ]
 }

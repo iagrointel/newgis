@@ -272,7 +272,8 @@ def test_acervo_lista_ficha_e_adicionar_com_confirmacao_lgpd(page, base_url, cre
         assert len(chamadas) == 2 and "confirma_risco_pii" in chamadas[1], chamadas
         href = page.get_attribute("#aviso a", "href")
         criados.append(href.rsplit("/", 1)[-1])
-        assert page.locator("#evento-registrado:not([hidden])").count() == 1
+        # o aviso de evento chega depois do aviso de sucesso (é outra leitura): esperar, não contar na hora
+        page.wait_for_selector("#evento-registrado:not([hidden])", timeout=10000)
         assert "itens/adicionar" in (page.text_content("#evento-registrado") or "")  # tipo do evento da rota
         _capturar(page, "acervo_adicionado", larguras=(1280,))
         tela.verificar()
