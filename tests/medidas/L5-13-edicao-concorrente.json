@@ -1,0 +1,27 @@
+{
+ "item": "L5-13-edicao-concorrente",
+ "medidas": {
+  "mesclagem_por_no_sem_conflito": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "PATCH com base_versao antiga e nós disjuntos = 200 + mesclagem"
+  },
+  "cem_pares_api_alteracoes_perdidas": {
+   "valor": 0,
+   "unidade": "alteracoes",
+   "comando": "100 pares de PATCH com a mesma base em nós disjuntos"
+  },
+  "cem_pares_api_s": {
+   "valor": 5.15,
+   "unidade": "s",
+   "comando": "200 PATCH + 100 GET pela API da trilha (TestClient)"
+  },
+  "presenca_sse_latencia_s": {
+   "valor": 0.001,
+   "unidade": "s",
+   "comando": "batimento de outra aba -> evento presenca no gerador SSE (mesmo processo)"
+  }
+ },
+ "gerado_em": "2026-09-08T11:00:23Z",
+ "git_sha": "34e4a323a105"
+}
