@@ -1069,3 +1069,19 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 8, setembro de 2026 (item L0-07-e-relatorios: relatórios do admin como job, CSV, agendamento por e-mail, painel Atividade)
+
+Cinco relatórios do inquilino (`relatorios.gerar`, `app/relatorios/tarefas.py`): membros (perfil/papel, tipo de
+conta, último acesso, itens, grupos), itens (tipo, dono, tamanho, compartilhamento, acessos em 30 dias pelo log
+de acesso, última modificação), grupos, atividade (eventos por tipo e dia) e uso (série diária do que master já
+mede; a série do L0-07-c substitui quando entrar). CSV com cabeçalho documentado (`GET /api/relatorios/tipos` =
+`CABECALHOS`), gravado no armazenamento de objetos como a exportação do catálogo e baixado por
+`GET /api/relatorios/{id}/csv` (404 para outro inquilino, 403 sem `org.exportar`). Limites declarados iguais aos
+da Esri: 12 meses (422), 10 mil linhas (corte marcado `truncado`), 1 pedido por tipo por hora (429).
+Agendamento diário/semanal/mensal vira `plat.agenda` com cron e entrega por e-mail do link assinado (7 dias) ao
+solicitante pelo SMTP do inquilino. Painel `/admin/atividade`: totais, 10 itens mais acessados, eventos por dia e
+por tipo, acessos por dia (SVG sem biblioteca), pedidos e agendas na mesma tela. Medido na trilha, worker em
+subprocesso (`tests/medidas/L0-07-e-relatorios.json`): relatório de itens com 10.001 itens em **0,6 s** de job
+(0,63 s de parede, carga 4,39, 7 GB livres); página pronta em 107 ms. Dado pessoal: e-mail só de domínio
+corporativo configurado; sem CPF no modelo (teste procura). ADR `20260908T0155-relatorios-do-admin.md`.
