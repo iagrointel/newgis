@@ -3,6 +3,19 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 48, setembro de 2026 (item L3-20-narrativa-de-resultado: resumo textual por template, com revisor que marca número sem origem)
+
+`app/amc/narrativa.py`: `narrar(documento, top_n=3)` escreve o resumo do resultado como template puro
+sobre o documento canônico `plat/amc_metodo` — uma ideia por frase, número só com origem em campo do
+documento, universo nas formas "X de 100" e "o resultado cobre Y unidades" (regra de escrita de
+03/09). A explicação de magnitude de cada nota é aritmética declarada (peso normalizado × valor do
+fator de maior contribuição). `revisar(texto, documento)` é a refutação do item automatizada: marca
+`numero_sem_origem` (a varredura cobre valores, números dentro de textos e dentro de chaves),
+`termo_proibido` (lista da regra de escrita) e `pontuacao_proibida`. O texto gerado passa com zero
+marcações; frase fabricada ("os pesos somam 17") é marcada. Sem banco, sem relógio, sem modelo de
+linguagem. Conferência à mão do texto de 3 unidades gravada em
+`tests/medidas/L3-20-narrativa-de-resultado.json`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
