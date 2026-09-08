@@ -15,7 +15,7 @@ import psycopg2.errors
 import pytest
 
 from tests.api.test_edicao_transacional import FabricaCamada, _admin_usuario_id
-from tests.api.test_rls import contexto, ids_por_slug
+from tests.api.test_rls import ids_por_slug
 
 SRID = 4674
 

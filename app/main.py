@@ -41,10 +41,8 @@ from app.catalogo import (
 from app.conexao import rotas as rotas_conexao
 from app.consulta import cors_servicos
 from app.consulta.rotas_diretorio import router as rotas_diretorio_esri
-from app.consulta.rotas_ogc_features import router as rotas_ogc_features
 from app.consulta.rotas_edicao_esri import router as rotas_edicao_esri
-from app.versionamento.rotas import router as rotas_versionamento
-from app.versionamento.rotas_esri import router as rotas_versionamento_esri
+from app.consulta.rotas_ogc_features import router as rotas_ogc_features
 from app.consulta.rotas_query import router as rotas_consulta_esri
 from app.consulta.rotas_servico import router as rotas_consulta_servico
 from app.consulta.rotas_wfs import router as rotas_wfs
@@ -54,8 +52,8 @@ from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
-from app.multiescala.rotas import router as rotas_multiescala
 from app.mapa.rotas import router as rotas_mapa
+from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
@@ -63,6 +61,8 @@ from app.settings import settings
 from app.tiles.rotas import router as rotas_tiles
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
+from app.versionamento.rotas import router as rotas_versionamento
+from app.versionamento.rotas_esri import router as rotas_versionamento_esri
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"

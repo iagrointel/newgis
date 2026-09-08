@@ -41,10 +41,10 @@ from app.consulta.rotas_query import _autenticar, _parametros
 from app.edicao import anexos as anexos_mod
 from app.edicao.modelos import EdicoesEntrada
 from app.edicao.servico import _schema_tabela, aplicar_edicoes, camada_ou_404
-from app.versionamento import consulta as versao_consulta
 from app.erros import ErroAPI
 from app.expressao.avaliador_py import ErroExpressao, avaliar_texto
 from app.varredura_conteudo import ConteudoRecusado, escanear_cabecalho
+from app.versionamento import consulta as versao_consulta
 
 router = APIRouter(tags=["edicao-esri"])
 SERVICO = "/rest/services/{item_id}/FeatureServer"
