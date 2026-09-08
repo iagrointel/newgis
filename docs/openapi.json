@@ -10018,6 +10018,253 @@
     "x-privilegio": "proprio"
    }
   },
+  "/api/rede/consumidores/enderecos-sem-rede": {
+   "post": {
+    "tags": [
+     "rede"
+    ],
+    "summary": "Gerar Enderecos Sem Rede",
+    "description": "Gera (recria) a camada de endereços com rede de média tensão a até raio_rede_m e sem rede\nde baixa tensão a até raio_bt_m para o inquilino da sessão.",
+    "operationId": "gerar_enderecos_sem_rede_api_rede_consumidores_enderecos_sem_rede_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PedidoGerar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede"
+    ],
+    "summary": "Listar Enderecos Sem Rede",
+    "operationId": "listar_enderecos_sem_rede_api_rede_consumidores_enderecos_sem_rede_get",
+    "parameters": [
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 1000,
+       "minimum": 1,
+       "default": 50,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     },
+     {
+      "name": "situacao",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Situacao"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/rede/consumidores/uc/{id}": {
+   "get": {
+    "tags": [
+     "rede"
+    ],
+    "summary": "Ficha Uc",
+    "description": "Ficha da unidade consumidora: só campos de rede; consumo exclusivamente agregado.",
+    "operationId": "ficha_uc_api_rede_consumidores_uc__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/rede/consumidores/trecho/{id}": {
+   "get": {
+    "tags": [
+     "rede"
+    ],
+    "summary": "Ficha Trecho",
+    "description": "Ficha do trecho de média tensão: número de consumidores a jusante e consumo agregado\n(só com pelo menos REDE_AGREGACAO_MIN_UCS unidades).",
+    "operationId": "ficha_trecho_api_rede_consumidores_trecho__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/rede/consumidores/jusante/calcular": {
+   "post": {
+    "tags": [
+     "rede"
+    ],
+    "summary": "Calcular Jusante",
+    "description": "Calcula e grava o número de consumidores a jusante de cada trecho de média tensão.",
+    "operationId": "calcular_jusante_api_rede_consumidores_jusante_calcular_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/PedidoJusante"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Pedido"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
   "/api/geocodificar": {
    "post": {
     "tags": [
@@ -16004,6 +16251,26 @@
     "type": "object",
     "title": "PedidoGeocodificar"
    },
+   "PedidoGerar": {
+    "properties": {
+     "raio_rede_m": {
+      "type": "number",
+      "maximum": 2000.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Raio Rede M",
+      "default": 700.0
+     },
+     "raio_bt_m": {
+      "type": "number",
+      "maximum": 2000.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Raio Bt M",
+      "default": 135.0
+     }
+    },
+    "type": "object",
+    "title": "PedidoGerar"
+   },
    "PedidoIsocrona": {
     "properties": {
      "ponto": {
@@ -16051,6 +16318,12 @@
      "minutos"
     ],
     "title": "PedidoIsocrona"
+   },
+   "PedidoJusante": {
+    "properties": {},
+    "type": "object",
+    "title": "PedidoJusante",
+    "description": "o cálculo cobre todo o inquilino; o corpo é opcional e ignorado."
    },
    "PedidoMatriz": {
     "properties": {
