@@ -129,8 +129,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # app/rede_utilidades/rotas*.py.
     ("POST", "/api/rede/{rede_id}/feicoes/pontos"): ["redes/feicao_criar"],
     ("POST", "/api/rede/{rede_id}/feicoes/linhas"): ["redes/feicao_criar"],
-    ("POST", "/api/rede/{rede_id}/feicoes/pontos/applyEdits"): ["redes/feicao_editar"],
-    ("POST", "/api/rede/{rede_id}/feicoes/linhas/applyEdits"): ["redes/feicao_editar"],
+    # (applyEdits de ponto e de linha já estão declarados no bloco do L4-01-b, acima)
     ("POST", "/api/rede/{rede_id}/topologia/habilitar"): ["redes/topologia_habilitar"],
     ("POST", "/api/rede/{rede_id}/tracar"): ["redes/tracar"],
     ("POST", "/api/rede/{rede_id}/config_tracado"): ["redes/config_tracado_criar"],
