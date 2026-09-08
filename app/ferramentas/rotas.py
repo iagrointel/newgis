@@ -16,6 +16,7 @@ from app.auth.sessao import Auth, autenticado
 from app.erros import ErroAPI
 from app.ferramentas import buffer as _buffer  # noqa: F401 — a importação registra a ferramenta de exemplo
 from app.ferramentas import executor, registro
+from app.ferramentas import rede as _rede  # noqa: F401 — registra as ferramentas de rede (L2-05-f)
 from app.jobs import servico
 from app.jobs.contexto import ErroServico, sessao_de
 
