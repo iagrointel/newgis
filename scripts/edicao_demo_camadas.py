@@ -69,19 +69,21 @@ def criar():
             adm = _contexto(cur, "demo")
 
             t = "c_" + _hex16()
-            cur.execute(f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, nome text, '
-                        f'categoria text, ativo boolean, geom geometry(Point, 4326))')
+            # `ordem`/`calc` (item L2-03-f): campo numérico de entrada e campo alvo para "calcular campo" no e2e
+            cur.execute(f'CREATE TABLE "d_demo"."{t}" (fid bigserial PRIMARY KEY, nome text, categoria text, '
+                        f'ativo boolean, ordem integer, calc double precision, geom geometry(Point, 4326))')
             cur.execute(
-                f'INSERT INTO "d_demo"."{t}" (nome, categoria, ativo, geom) VALUES '
-                "('ponto um', 'A', true, ST_SetSRID(ST_MakePoint(-46.533, -23.462), 4326)), "
-                "('ponto dois', 'B', false, ST_SetSRID(ST_MakePoint(-46.528, -23.458), 4326)), "
-                "('ponto tres', 'C', true, ST_SetSRID(ST_MakePoint(-46.520, -23.470), 4326))"
+                f'INSERT INTO "d_demo"."{t}" (nome, categoria, ativo, ordem, geom) VALUES '
+                "('ponto um', 'A', true, 1, ST_SetSRID(ST_MakePoint(-46.533, -23.462), 4326)), "
+                "('ponto dois', 'B', false, 2, ST_SetSRID(ST_MakePoint(-46.528, -23.458), 4326)), "
+                "('ponto tres', 'C', true, 3, ST_SetSRID(ST_MakePoint(-46.520, -23.470), 4326))"
             )
             cur.execute(f'CREATE INDEX ON "d_demo"."{t}" USING gist(geom)')
             saida["pontos"] = _publicar(
                 cur, adm, "edicao-pontos (L2-03, editável)", t, "Point",
                 [{"nome": "nome", "tipo": "text"}, {"nome": "categoria", "tipo": "text"},
-                 {"nome": "ativo", "tipo": "boolean"}],
+                 {"nome": "ativo", "tipo": "boolean"}, {"nome": "ordem", "tipo": "integer"},
+                 {"nome": "calc", "tipo": "double precision"}],
                 edicao={"habilitada": True},
                 regras_campo={"nome": {"obrigatorio": True}, "categoria": {"dominio_valores": ["A", "B", "C"]}},
                 simbologia={"tipo": "simples", "cor": "#d9822b"},
