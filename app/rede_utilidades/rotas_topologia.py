@@ -11,7 +11,6 @@ construção pesada vai para o threadpool (lição do achado A4 do item L4-01-a)
 import json
 import uuid as uuid_mod
 
-import psycopg2
 from fastapi import APIRouter, Request
 from starlette.concurrency import run_in_threadpool
 
@@ -20,7 +19,7 @@ from app.auth import comum as auth_comum
 from app.auth.sessao import Auth, autenticado, iso
 from app.catalogo.comum import registrar_evento
 from app.erros import ErroAPI
-from app.rede_utilidades import config_tracado, direcao, feicoes, fluxo, lacos, topologia, tracado
+from app.rede_utilidades import despacho, feicoes, resultados, topologia
 from app.rede_utilidades.modelos import (
     Feicao,
     FeicaoLinhaEntrada,
@@ -314,49 +313,14 @@ def _uuid_ok_no(valor: str) -> str:
 def _tracar_sincrono(rid: str, corpo: TracadoEntrada, auth: Auth, request: Request) -> dict:
     with db.db(auth.contexto()) as cur:
         _rede_existe(cur, rid)
-        barreiras = [b.model_dump() for b in corpo.barreiras]
-        try:
-            if corpo.config_id is not None:
-                # item L4-02-e: o pedido inteiro (tipo, barreiras de condição e de filtro, filtro de saída,
-                # funções e tipo de resultado) vem da configuração salva; do corpo só valem os pontos de
-                # partida e as barreiras pontuais deste traçado.
-                ficha = config_tracado.obter(cur, rid, corpo.config_id, auth.usuario_id)
-                resultado = config_tracado.executar(
-                    cur, auth.tenant_id, rid, ficha,
-                    [p.model_dump() for p in corpo.pontos_partida], barreiras)
-            elif corpo.tipo is None:
-                raise ErroAPI(422, "tipo_obrigatorio",
-                              "informe 'tipo' ou 'config_id' (a configuração salva traz o tipo)")
-            elif corpo.tipo in tracado.TIPOS_TRACADO:
-                resultado = tracado.tracar(
-                    cur, auth.tenant_id, rid, corpo.tipo,
-                    [p.model_dump() for p in corpo.pontos_partida], barreiras,
-                )
-            elif corpo.tipo in fluxo.TIPOS_FLUXO:
-                # o sentido vem do controlador de subrede (L4-02-b) ou do atributo de fluxo (L4-18); quem
-                # escolhe é `direcao.tracar_direcao`, e a resposta sempre diz qual foi em `origem_direcao`.
-                resultado = direcao.tracar_direcao(
-                    cur, auth.tenant_id, rid, corpo.tipo,
-                    [p.model_dump() for p in corpo.pontos_partida], barreiras, corpo.origem_direcao,
-                )
-            elif corpo.tipo == "lacos":
-                resultado = lacos.detectar_lacos(cur, auth.tenant_id, rid, barreiras)
-            elif corpo.tipo == "isolados":
-                resultado = lacos.isolados(cur, auth.tenant_id, rid, corpo.categoria_controlador, barreiras)
-            elif corpo.tipo == "caminho_curto":
-                if len(corpo.pontos_partida) != 1:
-                    raise ErroAPI(422, "origem_invalida",
-                                  "caminho_curto exige exatamente um ponto em pontos_partida (a origem)")
-                if corpo.destino is None:
-                    raise ErroAPI(422, "destino_obrigatorio", "caminho_curto exige o campo 'destino'")
-                resultado = lacos.caminho_curto(
-                    cur, auth.tenant_id, rid, corpo.pontos_partida[0].model_dump(),
-                    corpo.destino.model_dump(), corpo.atributo_custo, corpo.k, barreiras,
-                )
-            else:  # nunca alcançado — o pattern do pydantic já barrou; guarda por clareza
-                raise ErroAPI(422, "tipo_invalido", f"tipo desconhecido: {corpo.tipo}")
-        except psycopg2.Error as e:  # noqa: BLE001 — erro do banco vira mensagem legível, nunca 500 cru
-            raise auth_comum.erro_do_banco(e) from e
+        # o despacho ao motor certo mora em `despacho.py` desde o item L4-02-f: as rotas de exportar, de
+        # salvar como camada e de repetir do histórico chamam o MESMO traçado que esta.
+        resultado = despacho.executar(cur, auth.tenant_id, rid, corpo, auth.usuario_id)
+        resultado["agregacoes"] = resultados.agregar(
+            resultados.tabela(cur, rid, resultado.get("elementos") or [], com_geometria=False))
+        if auth.leitura_inquilino is None:
+            resultado["execucao_id"] = despacho.registrar(
+                cur, auth.tenant_id, rid, auth.usuario_id, corpo, resultado)
         registrar_evento(cur, request, "redes/tracar", "rede", rid,
                          {"tipo": resultado.get("tipo") or corpo.tipo,
                           "config_id": corpo.config_id,
