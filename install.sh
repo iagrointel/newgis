@@ -340,6 +340,18 @@ for i in $(seq 1 30); do
 done
 systemctl --no-pager --lines=0 status plat-worker | sed -n '1,4p'
 
+echo "== h2b. systemd plat-fluxo (item L2-14-a: entrada de eventos em tempo real, :8155)"
+sed -e "s#APP_DIR#$APP_DIR#g" -e "s#APP_USER#$APP_USER#g" deploy/plat-fluxo.service > /etc/systemd/system/plat-fluxo.service
+systemctl daemon-reload
+systemctl enable -q plat-fluxo
+systemctl restart plat-fluxo
+for i in $(seq 1 30); do
+  if curl -fsS -m 2 "http://127.0.0.1:8155/saude" >/dev/null 2>&1; then echo "/saude do plat-fluxo respondeu 200 em ${i} s"; break; fi
+  if [ "$i" -eq 30 ]; then echo "plat-fluxo não respondeu em 30 s:" >&2; journalctl -u plat-fluxo -n 30 --no-pager >&2; exit 1; fi
+  sleep 1
+done
+systemctl --no-pager --lines=0 status plat-fluxo | sed -n '1,4p'
+
 echo "== h3. timer de expiração do PLAT_SECRET_ANTERIOR (item L7-19: a dupla-chave vale 24 h de verdade)"
 sed -e "s#APP_DIR#$APP_DIR#g" deploy/plat-segredo-expira.service > /etc/systemd/system/plat-segredo-expira.service
 install -m 0644 deploy/plat-segredo-expira.timer /etc/systemd/system/plat-segredo-expira.timer

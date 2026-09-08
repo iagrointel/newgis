@@ -1,0 +1,37 @@
+[Unit]
+Description=plat — entrada de eventos em tempo real (:8155). Interno. Análise / beta privado.
+After=network.target postgresql.service plat-api.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=APP_USER
+Group=APP_USER
+WorkingDirectory=APP_DIR
+# nunca ~/.local de ninguém: só a venv e os pacotes dpkg (ADR 0001 seção 2.1)
+Environment=PYTHONNOUSERSITE=1
+# PLAT_SECRET e PLAT_SECRET_ANTERIOR (item L7-19, docs/SEGURANCA.md): o processo decifra a credencial da
+# fonte (senha do broker MQTT, cabeçalho do WebSocket de terceiro) em memória, na hora de conectar. A janela
+# de 24 h de rotação vale aqui como vale na API e no worker.
+LoadCredential=PLAT_SECRET:/etc/plat/segredos/PLAT_SECRET
+LoadCredential=PLAT_SECRET_ANTERIOR:/etc/plat/segredos/PLAT_SECRET_ANTERIOR
+# PLAT_DSN: o processo escreve como plat_app, DEBAIXO da segurança de linha por inquilino (ADR do item,
+# seção 4). Nunca PLAT_DSN_WORKER aqui: o worker tem autoridade sobre estado de job de todos os inquilinos,
+# e a ingestão de evento não pode ter autoridade nenhuma além do inquilino da fonte.
+LoadCredential=PLAT_DSN:/etc/plat/segredos/PLAT_DSN
+ExecStart=APP_DIR/venv/bin/python -m app.fluxo.servico --porta 8155 --host 127.0.0.1
+# só termina por sinal: qualquer saída é anômala
+Restart=always
+RestartSec=3
+# SIGTERM: o uvicorn para de aceitar, os conectores fecham e a fila grava o que sobrou antes de sair
+KillSignal=SIGTERM
+TimeoutStopSec=45
+# a fila vive em memória: o teto de FLUXO_FILA_MAX (200 mil eventos) é o que este limite tem de comportar
+MemoryHigh=768M
+MemoryMax=1G
+Nice=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
