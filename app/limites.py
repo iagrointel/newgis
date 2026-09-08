@@ -222,3 +222,13 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# --- regras de atributo de rede (L4-29-regras-de-atributo-de-rede; migração 20260908T1934_regras_atributo_rede.sql):
+# perfis cálculo/restrição/validação sobre `plat.rede_objeto`. A refutação do item é o laço
+# "jusante de jusante": o motor NÃO itera — cada rodada avalia cada regra UMA vez por objeto
+# (declarado em docs/adr/20260908T1945-regras-atributo-de-rede.md), então não existe fixpoint;
+# os tetos abaixo freiam o tamanho da rodada, não a profundidade da iteração.
+REDE_REGRA_MAX = 1_000          # regras ativas por (inquilino, perfil) numa rodada
+REDE_REGRAS_OBJETOS_MAX = 50_000   # objetos de rede avaliados por rodada de cálculo
+REDE_REGRAS_ITENS_MAX = 10_000  # itens de uma validação em lote (acima disso: truncado=true)
+REDE_REGRAS_ERROS_MAX = 100     # erros de avaliação guardados no resultado de uma rodada (o total é contado)
