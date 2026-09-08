@@ -3,7 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
-## turno 8, setembro de 2026 (item UX-09-ferramentas-e-tarefas: catálogo de ferramentas com formulário gerado do esquema)
+## turno 8, setembro de 2026 (item UX-23-mapa-sem-controle: painel Seleção, anotações com controle, importar pacote)
+
+Trilha de interface. Painel **Seleção** (atalho `s`) no visualizador: por atributo (condições campo · operador ·
+valor com E/OU → CQL2-JSON → `POST /api/mapa/camadas/{id}/filtrar`, com valores únicos sugeridos e o SQL
+equivalente mostrado), por geometria do painel Desenho (`.../selecionar`, intersecta ou a até X m, combinando com
+a seleção atual) e entre camadas (`POST /api/mapa/selecao-espacial`). O resultado vai para a tabela de atributos
+(realce), vira filtro da camada no mapa (e sai) e é guardado como item `selecao`. Validação local nomeada por
+condição; erro do servidor nomeado com o campo e a referência. **Anotações** reescritas: estados explícitos,
+editar texto (só o autor; PATCH via `remendar`, que corrige o PUT que nunca funcionou), resolver/reabrir, apagar
+com confirmação; avisos no painel, sem `alert`. **Importar pacote** no painel Exportar (`POST
+/api/mapa/pacotes/importar`, zip cru): recusas locais, 413/422 nomeados, resumo com ligação para o mapa
+importado. `Desenho.aoMudar` aceita vários ouvintes. e2e `tests/e2e/test_ux23_selecao_anotacoes_pacote.py`
+(3 testes, capturas 390/1280, axe, console limpo); `test_mapa_chrome.py` conhece o painel. Cobertura regenerada:
+240 rotas, 18 lacunas de escrita (era 24); o grupo `mapa` fica sem lacuna. ADR `docs/adr/20260908T1500-*`.
+
+## turno 8, setembro de 2026 (item UX-09-telas-ferramentas-e-tarefas: catálogo de ferramentas com formulário gerado do esquema)
 
 Trilha de interface. Nova tela `/ferramentas` (entrada na barra lateral com `jobs.executar`): catálogo dos tipos de
 tarefa de `GET /api/jobs/tipos` em cartões por grupo, com custo declarado (memória, tempo, pesada, executor, perfil
