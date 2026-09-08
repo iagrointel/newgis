@@ -190,14 +190,14 @@ def test_estados_da_lista_e_do_controle_adicionar(page, base_url, credenciais_de
                      "detalhe": {"risco_pii_motivo": "campo com CPF, curadoria manual de teste"}, "req_id": "e2e-409"})
     tela.esperar_status(409)
     page.click("dialog[open] button[data-id='adicionar']")
-    page.wait_for_selector("#confirmacao dialog[open], dialog[open] .confirmar", timeout=10000)
+    page.wait_for_selector("plat-dialogo:not(#ficha) dialog[open] button[data-id='ok']", timeout=10000)
     assert "CPF" in (page.text_content("body") or "")
     estados.append("adicionar:confirmacao_pii")
     _capturar(page, "adicionar_confirmacao_pii", (1280,))
     corpos = []
     page.on("request", lambda r: corpos.append(r.post_data)
             if r.url.endswith("/adicionar") and r.method == "POST" else None)
-    page.click("dialog[open] button[data-id='ok']")
+    page.click("plat-dialogo:not(#ficha) dialog[open] button[data-id='ok']")
     # o 409 foi consumido (vezes=1): a repetição confirmada vai à API real e cria o item
     page.wait_for_selector("#acervo-ver-no-mapa", timeout=15000)
     assert any(c and "confirma_risco_pii" in c for c in corpos), corpos
