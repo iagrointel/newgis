@@ -37,6 +37,8 @@ PAGINAS = {
     "/redes/simples": "redes_simples.html",
     # --- controladores de subrede e tiers (L4-04-a-controladores-e-tiers)
     "/redes/controladores": "redes_controladores.html",
+    # --- fluxo de potência do alimentador (L4-07-fluxo-de-potencia)
+    "/redes/fluxo": "redes_fluxo.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>

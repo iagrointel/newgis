@@ -49,6 +49,7 @@ from app.rede.rotas import router as rotas_rede
 from app.rede_utilidades.rotas import router as rotas_rede_utilidades
 from app.rede_utilidades.rotas_controladores import router as rotas_rede_controladores
 from app.rede_utilidades.rotas_curto import router as rotas_rede_curto
+from app.rede_utilidades.rotas_fluxo import router as rotas_rede_fluxo
 from app.rede_utilidades.rotas_matpower import router as rotas_rede_matpower
 from app.rede_utilidades.rotas_resumos import router as rotas_rede_resumos
 from app.rede_utilidades.rotas_simples import router as rotas_rede_simples
@@ -144,6 +145,9 @@ ROUTERS = [
     # --- curto-circuito e coordenação de proteção (L4-27): /api/rede/{rede_id}/subrede/{nome}/curto
     # (POST calcula com as premissas declaradas, GET a tabela) e .../curto/camada
     rotas_rede_curto,
+    # --- fluxo de potência do alimentador (L4-07): /api/rede/{rede_id}/subrede/{nome}/fluxo
+    # (POST analisa no OpenDSS com os parâmetros declarados, GET a tabela) e .../fluxo/camada
+    rotas_rede_fluxo,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
