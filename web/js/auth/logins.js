@@ -3,7 +3,7 @@
    (PUT /api/org/logins/{tipo}/{id}): criação automática ou só por convite, padrões para membro novo (papel, grupos,
    pasta), mapa valor exato do grupo do IdP -> perfil/papel/grupos, atualizar a cada login, desligar sem grupo
    mapeado. Privilégio org.integracoes. O editor de regras é uma tabela simples: uma linha por valor do IdP. */
-import { obter, alterar, mensagemDe } from '../base/api.js';
+import { obter, enviar, alterar, mensagemDe } from '../base/api.js';
 import { h, limpar, marcador } from '../base/dom.js';
 import { carregar, t, formatarData } from '../base/i18n.js';
 import '../base/componentes.js';
@@ -15,6 +15,7 @@ let provedores = [];
 let criacoes = [];
 let papeis = [];
 let grupos = [];
+let infoLogins = null;
 
 await carregar();
 const usuario = await exigirSessao({ privilegio: 'org.integracoes' });
@@ -31,6 +32,66 @@ async function iniciar() {
   grupos = rg.status === 200 ? (rg.json.itens || []).map((g) => ({ valor: g.id, rotulo: g.nome })) : [];
   montarTabela();
   await carregarLista();
+  const bt = h('button', { type: 'button', class: 'primario', id: 'novo-oidc' }, t('logins.novo_oidc'));
+  bt.addEventListener('click', () => abrirNovoOidc());
+  cabecalho(t('logins.titulo'), { contagem: provedores.length, botoes: [bt] });
+}
+
+/* ---------- novo provedor OIDC / gov.br (item L0-08-c): os campos que o roteiro do gov.br pede ---------- */
+function abrirNovoOidc() {
+  const painel = document.getElementById('painel');
+  const g = infoLogins?.govbr || {};
+  const form = h('form', { class: 'form', id: 'form-oidc', novalidate: true });
+  const modelo = selecao('modelo', [{ valor: 'govbr', rotulo: t('logins.modelo_govbr') }, { valor: 'generico', rotulo: t('logins.modelo_generico') }], 'govbr');
+  modelo.id = 'o-modelo';
+  const ambiente = selecao('ambiente', [{ valor: g.issuer_staging || '', rotulo: t('logins.govbr_staging') }, { valor: g.issuer_producao || '', rotulo: t('logins.govbr_producao') }], g.issuer_staging || '');
+  ambiente.id = 'o-ambiente';
+  const issuer = h('input', { type: 'text', id: 'o-issuer', name: 'issuer', value: g.issuer_staging || '', maxlength: 250, required: true, spellcheck: 'false' });
+  const clientId = h('input', { type: 'text', id: 'o-client-id', name: 'client_id', maxlength: 250, required: true, autocomplete: 'off', spellcheck: 'false' });
+  const secret = h('input', { type: 'password', id: 'o-client-secret', name: 'client_secret', maxlength: 500, autocomplete: 'new-password' });
+  const rotulo = h('input', { type: 'text', id: 'o-rotulo', name: 'rotulo', value: t('logins.govbr_rotulo_padrao'), maxlength: 120, required: true });
+  const escopos = h('input', { type: 'text', id: 'o-escopos', name: 'escopos', value: g.escopos || 'openid profile email', maxlength: 250, required: true, spellcheck: 'false' });
+  const redirect = h('code', { class: 'codigo', id: 'o-redirect' }, infoLogins?.redirect_uri_oidc || '');
+  const ligarModelo = () => {
+    const govbr = modelo.value === 'govbr';
+    ambiente.disabled = !govbr;
+    if (govbr) { issuer.value = ambiente.value; escopos.value = g.escopos || escopos.value; rotulo.value = rotulo.value || t('logins.govbr_rotulo_padrao'); }
+  };
+  modelo.addEventListener('change', ligarModelo);
+  ambiente.addEventListener('change', () => { issuer.value = ambiente.value; });
+  const avisoForm = h('plat-aviso', { id: 'oidc-aviso' });
+  const btSalvar = h('button', { type: 'submit', class: 'primario', id: 'oidc-salvar' }, t('acao.criar'));
+  const btCancelar = h('button', { type: 'button' }, t('acao.cancelar'));
+  btCancelar.addEventListener('click', () => painel.fechar(null));
+  form.append(
+    h('div', { class: 'campo' }, h('label', { for: 'o-modelo' }, t('logins.modelo')), modelo, h('small', { class: 'fraco' }, t('logins.modelo_ajuda'))),
+    h('div', { class: 'campo' }, h('label', { for: 'o-ambiente' }, t('logins.govbr_ambiente')), ambiente),
+    h('div', { class: 'campo' }, h('label', { for: 'o-issuer' }, 'issuer'), issuer),
+    h('div', { class: 'campo' }, h('label', { for: 'o-client-id' }, 'client_id'), clientId, h('small', { class: 'fraco' }, t('logins.client_id_ajuda'))),
+    h('div', { class: 'campo' }, h('label', { for: 'o-client-secret' }, 'client_secret'), secret, h('small', { class: 'fraco' }, t('logins.client_secret_ajuda'))),
+    h('div', { class: 'campo' }, h('span', { class: 'rotulo' }, t('logins.redirect')), redirect, h('small', { class: 'fraco' }, t('logins.redirect_ajuda'))),
+    h('div', { class: 'campo' }, h('label', { for: 'o-escopos' }, t('logins.escopos')), escopos),
+    h('div', { class: 'campo' }, h('label', { for: 'o-rotulo' }, t('logins.col_rotulo')), rotulo),
+    h('p', { class: 'fraco' }, t('logins.govbr_valores')),
+    avisoForm, h('div', { class: 'botoes' }, btSalvar, btCancelar),
+  );
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const corpo = {
+      habilitado: true, rotulo: rotulo.value.trim(), ordem: provedores.length, issuer: issuer.value.trim(),
+      client_id: clientId.value.trim(), client_secret: secret.value || null, escopos: escopos.value.trim(),
+      atributo_grupos: 'groups', perfil_padrao: null, mapa_grupo_perfil: {}, modelo: modelo.value, api_base: null,
+    };
+    btSalvar.disabled = true;
+    const r = await enviar('/api/org/oidc', corpo);
+    btSalvar.disabled = false;
+    if (r.status !== 201) { avisoForm.erro(mensagemDe(r)); return; }
+    painel.fechar('ok');
+    await carregarLista();
+    aviso().ok(t('logins.oidc_criado', { rotulo: r.json.rotulo }));
+  });
+  ligarModelo();
+  painel.abrir({ titulo: t('logins.novo_oidc'), corpo: form });
 }
 
 function montarTabela() {
@@ -59,6 +120,7 @@ async function carregarLista() {
   const r = await obter('/api/org/logins');
   if (r.status !== 200) { aviso().erro(`${t('erro.carregar')}: ${mensagemDe(r)}`); return; }
   criacoes = r.json.criacoes;
+  infoLogins = r.json;
   provedores = r.json.provedores.map((p) => ({ ...p, chave: `${p.tipo}:${p.id}` }));
   document.getElementById('tabela').linhas = provedores;
   cabecalho(t('logins.titulo'), { contagem: provedores.length });
