@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!-- Catálogo XML para o xmllint resolver os XSD do OGC/W3C SEM rede (o teste do WMTS não pode depender
+     de schemas.opengis.net estar no ar). Cópia baixada em 07/09/2026 de https://schemas.opengis.net/ e
+     https://www.w3.org/. -->
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+  <rewriteURI uriStartString="http://schemas.opengis.net/" rewritePrefix="./"/>
+  <rewriteURI uriStartString="https://schemas.opengis.net/" rewritePrefix="./"/>
+  <rewriteURI uriStartString="http://www.w3.org/1999/xlink.xsd" rewritePrefix="./www.w3.org/xlink.xsd"/>
+  <rewriteURI uriStartString="http://www.w3.org/2001/xml.xsd" rewritePrefix="./www.w3.org/xml.xsd"/>
+  <rewriteURI uriStartString="https://www.w3.org/1999/xlink.xsd" rewritePrefix="./www.w3.org/xlink.xsd"/>
+  <rewriteURI uriStartString="https://www.w3.org/2001/xml.xsd" rewritePrefix="./www.w3.org/xml.xsd"/>
+</catalog>
