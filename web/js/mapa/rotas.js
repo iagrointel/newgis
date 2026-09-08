@@ -168,6 +168,10 @@ export class PainelRotas {
       const m = new this.gl.Marker({ color: cor }).setLngLat(p);
       if (rotulo) m.setPopup(new this.gl.Popup({ closeButton: true }).setText(rotulo));
       m.addTo(this.map); this.marcadores.push(m);
+      // o MapLibre põe aria-label num <div> sem papel (axe: aria-prohibited-attr); marcador é imagem com nome
+      const el = m.getElement();
+      el.setAttribute('role', 'img');
+      el.setAttribute('aria-label', rotulo ? t('rotas.marcador', { rotulo }) : t('rotas.marcador_sem_nome'));
     };
     if (this.modo === 'rota') { por(this.pontos.origem, COR_ROTA, t('rotas.origem')); por(this.pontos.destino, COR_DESTINO, t('rotas.destino')); }
     if (this.modo === 'isocrona') por(this.pontos.ponto, COR_ISO, t('rotas.ponto'));

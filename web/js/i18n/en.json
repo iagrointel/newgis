@@ -1687,8 +1687,7 @@
  "motor.area_escolha": "— choose —",
  "motor.area_vazio": "no study area yet; frame the map on the region and create one from the view",
  "motor.area_nome": "name of the new area",
- "motor.area_da_vista": "create from the current view",
- "motor.area_da_vista_ajuda": "the polygon is the map's visible rectangle right now",
+ "motor.area_da_vista_ajuda": "empty = the map's visible rectangle right now; or west, south, east, north in degrees",
  "motor.area_nome_obrigatorio": "name the area",
  "motor.area_info": "{largura} m × {altura} m · working CRS {srid}",
  "motor.area_apagar_confirma": "Delete the study area \"{nome}\" and all its runs?",
@@ -1753,5 +1752,10 @@
  "motor.celula_nota": "score {nota} (0-100)",
  "motor.celula_cobertura": "coverage {pct}% of the weight with data",
  "motor.celula_aprovada": "approved",
- "motor.celula_reprovada": "not approved"
+ "motor.celula_reprovada": "not approved",
+ "motor.area_criar": "create area",
+ "motor.area_bbox": "rectangle in degrees (optional)",
+ "motor.area_bbox_invalido": "invalid rectangle: four numbers west, south, east, north, with west < east and south < north",
+ "rotas.marcador": "marker: {rotulo}",
+ "rotas.marcador_sem_nome": "marker"
 }

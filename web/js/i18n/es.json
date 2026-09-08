@@ -1687,8 +1687,7 @@
  "motor.area_escolha": "— elija —",
  "motor.area_vazio": "ninguna área de estudio todavía; encuadre el mapa en la región y cree una desde la vista",
  "motor.area_nome": "nombre de la nueva área",
- "motor.area_da_vista": "crear desde la vista actual",
- "motor.area_da_vista_ajuda": "el polígono es el rectángulo visible del mapa ahora",
+ "motor.area_da_vista_ajuda": "vacío = el rectángulo visible del mapa ahora; o oeste, sur, este, norte en grados",
  "motor.area_nome_obrigatorio": "dé un nombre al área",
  "motor.area_info": "{largura} m × {altura} m · CRS de trabajo {srid}",
  "motor.area_apagar_confirma": "¿Eliminar el área de estudio \"{nome}\" y todas sus ejecuciones?",
@@ -1753,5 +1752,10 @@
  "motor.celula_nota": "nota {nota} (0-100)",
  "motor.celula_cobertura": "cobertura {pct}% del peso con dato",
  "motor.celula_aprovada": "aprobada",
- "motor.celula_reprovada": "no aprobada"
+ "motor.celula_reprovada": "no aprobada",
+ "motor.area_criar": "crear área",
+ "motor.area_bbox": "rectángulo en grados (opcional)",
+ "motor.area_bbox_invalido": "rectángulo inválido: cuatro números oeste, sur, este, norte, con oeste < este y sur < norte",
+ "rotas.marcador": "marcador: {rotulo}",
+ "rotas.marcador_sem_nome": "marcador"
 }

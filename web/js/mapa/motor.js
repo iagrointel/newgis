@@ -49,7 +49,7 @@ export class PainelMotor {
   }
 
   _secao(id, titulo, ...filhos) {
-    return h('section', { class: 'motor-secao', id: `motor-${id}` }, h('h3', {}, titulo), ...filhos);
+    return h('section', { class: 'motor-secao', id: `motor-secao-${id}` }, h('h3', {}, titulo), ...filhos);
   }
 
   _secaoArea() {
@@ -58,8 +58,9 @@ export class PainelMotor {
     this.selArea = h('select', { id: 'motor-area', class: 'controle', 'aria-label': t('motor.area') });
     this.selArea.addEventListener('change', () => this.escolherConjunto(this.selArea.value));
     const nome = h('input', { type: 'text', id: 'motor-area-nome', class: 'controle', maxlength: '200', autocomplete: 'off' });
-    const btCriar = h('button', { type: 'button', class: 'primario pequeno', id: 'motor-area-criar' }, t('motor.area_da_vista'));
-    btCriar.addEventListener('click', () => this.criarConjunto(nome.value.trim()));
+    const bbox = h('input', { type: 'text', id: 'motor-area-bbox', class: 'controle', autocomplete: 'off', spellcheck: 'false' });
+    const btCriar = h('button', { type: 'button', class: 'primario pequeno', id: 'motor-area-criar' }, t('motor.area_criar'));
+    btCriar.addEventListener('click', () => this.criarConjunto(nome.value.trim(), bbox.value.trim()));
     const btEnquadrar = h('button', { type: 'button', class: 'pequeno', id: 'motor-area-enquadrar' }, t('mapa.enquadrar'));
     btEnquadrar.addEventListener('click', () => this._enquadrarArea());
     const btApagar = h('button', { type: 'button', class: 'pequeno perigo', id: 'motor-area-apagar' }, t('acao.apagar'));
@@ -70,7 +71,8 @@ export class PainelMotor {
       h('div', { class: 'campo' }, h('label', { for: 'motor-area' }, t('motor.area_existente')), this.selArea),
       h('div', { class: 'botoes' }, btEnquadrar, btApagar),
       this.infoArea,
-      h('div', { class: 'campo' }, h('label', { for: 'motor-area-nome' }, t('motor.area_nome')), nome, h('span', { class: 'ajuda' }, t('motor.area_da_vista_ajuda'))),
+      h('div', { class: 'campo' }, h('label', { for: 'motor-area-nome' }, t('motor.area_nome')), nome),
+      h('div', { class: 'campo' }, h('label', { for: 'motor-area-bbox' }, t('motor.area_bbox')), bbox, h('span', { class: 'ajuda' }, t('motor.area_da_vista_ajuda'))),
       h('div', { class: 'botoes' }, btCriar));
   }
 
@@ -153,12 +155,25 @@ export class PainelMotor {
     return { type: 'Polygon', coordinates: [[[o, s], [e, s], [e, n], [o, n], [o, s]]] };
   }
 
-  async criarConjunto(nome) {
+  /* "oeste, sul, leste, norte" em graus → polígono; null quando vazio; false quando inválido */
+  _poligonoDoTexto(texto) {
+    if (!texto) return null;
+    const n = texto.split(/[,;\s]+/).filter(Boolean).map(Number);
+    if (n.length !== 4 || n.some((x) => Number.isNaN(x))) return false;
+    const [o, s, e, nn] = n;
+    if (o < -180 || e > 180 || s < -90 || nn > 90 || o >= e || s >= nn) return false;
+    return { type: 'Polygon', coordinates: [[[o, s], [e, s], [e, nn], [o, nn], [o, s]]] };
+  }
+
+  async criarConjunto(nome, bboxTexto = '') {
     if (!nome) { this.estadoArea.erro(t('motor.area_nome_obrigatorio'), []); this.raiz.querySelector('#motor-area-nome').focus(); return; }
+    const doTexto = this._poligonoDoTexto(bboxTexto);
+    if (doTexto === false) { this.estadoArea.erro(t('motor.area_bbox_invalido'), []); this.raiz.querySelector('#motor-area-bbox').focus(); return; }
     this.estadoArea.carregando(t('motor.criando'));
-    const r = await enviar('/api/multiescala/conjuntos', { nome, area: this._poligonoDaVista() });
+    const r = await enviar('/api/multiescala/conjuntos', { nome, area: doTexto || this._poligonoDaVista() });
     if (r.status !== 201) { this.estadoArea.erro(r, []); return; }
     this.raiz.querySelector('#motor-area-nome').value = '';
+    this.raiz.querySelector('#motor-area-bbox').value = '';
     await this.carregarConjuntos(r.json.id);
   }
 

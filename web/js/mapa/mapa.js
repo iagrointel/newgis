@@ -189,6 +189,9 @@ function marcador(map, maplibregl, lonlat, rotulo) {
   const m = new maplibregl.Marker({ color: cor }).setLngLat(lonlat);
   if (rotulo) m.setPopup(new maplibregl.Popup({ closeButton: true }).setText(rotulo));
   m.addTo(map);
+  // o MapLibre põe aria-label num <div> sem papel (axe: aria-prohibited-attr); marcador é imagem com nome
+  m.getElement().setAttribute('role', 'img');
+  m.getElement().setAttribute('aria-label', rotulo ? t('rotas.marcador', { rotulo }) : t('rotas.marcador_sem_nome'));
   return m;
 }
 
