@@ -151,6 +151,10 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
     # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por
     # isso tem tipo próprio (`_apagar`), separado do de criação.
+    # ---- fronteira de Pareto (L3-08-pareto): as duas rotas são LEITURA; usam POST só porque a lista de
+    # objetivos não cabe em query string. Não escrevem nada, logo não há evento de domínio a registrar.
+    ("POST", "/api/amc/pareto"): [],
+    ("POST", "/api/amc/pareto/camada"): [],
     ("POST", "/api/multiescala/conjuntos"): ["multiescala/conjunto"],
     ("DELETE", "/api/multiescala/conjuntos/{id}"): ["multiescala/conjunto_apagar"],
     ("POST", "/api/multiescala/fatores"): ["multiescala/fator"],
