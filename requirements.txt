@@ -87,3 +87,10 @@ color-operations==0.4.0
 httpx2==2.12.0
 httpcore2==2.12.0
 truststore==0.10.4
+
+# referência das estatísticas zonais na SUÍTE (item L2-05-e): o `rasterstats` é a implementação da
+# literatura para a conta, e é contra ele que tests/unit/test_raster_zonal.py compara a nossa. A
+# aplicação NÃO o importa. Aditivo: `pip install --dry-run` conferido antes, nenhuma versão de
+# fastapi/starlette/pydantic/rasterio/uvicorn mudou (só simplejson entrou junto).
+rasterstats==0.21.0
+simplejson==4.1.2
