@@ -542,7 +542,12 @@ const EXT_ARIDADES = {Trim:[1,1],Left:[2,2],Right:[2,2],Mid:[2,3],Find:[2,3],Spl
   Floor:[1,1],Ceil:[1,1],Sqrt:[1,1],Weekday:[1,1],Decode:[4,null],Lista:[0,null],Contagem:[1,1],
   Primeiro:[1,1],Ultimo:[1,1],Obter:[2,3],Contem:[2,2],Soma:[1,1],Media:[1,1],Reverter:[1,1],Unicos:[1,1],Juntar:[1,2],
   TextoNumero:[1,2],TextoData:[1,2]};
+// Rede (item L4-29): mesmas seis funções de _REDE_FUNCOES em avaliador_py.py — leem a chave
+// reservada `rede` do contexto, montada pelo motor de regras (app/rede/regras.py); sem I/O.
+const REDE_ARIDADES = {Subrede:[0,0],Alimentador:[0,0],TensaoAlimentador:[0,0],ContarJusante:[0,0],
+  NivelRede:[0,0],AtributoRede:[1,1]};
 Object.assign(TABELA_FUNCOES, EXT_ARIDADES);
+Object.assign(TABELA_FUNCOES, REDE_ARIDADES);
 const possui = (o,k) => Object.prototype.hasOwnProperty.call(o,k);
 function falha(codigo='tipo_invalido') { throw new ErroExpressao(codigo,'valor ou operação fora do contrato'); }
 function finito(n) { if (!Number.isFinite(n)) falha('numero_invalido'); return n; }
@@ -725,6 +730,41 @@ function extFuncao(nome,a,contador) {
   falha('funcao_desconhecida');
 }
 
+const CHAVE_REDE_POR_FUNCAO = {Subrede:'subrede',Alimentador:'alimentador',TensaoAlimentador:'tensao_alimentador_kv',
+  ContarJusante:'jusante',NivelRede:'nivel'};
+
+function redeFuncao(nome, contexto, args) {
+  // Funções de rede (item L4-29): leem `contexto.rede`, dicionário simples montado pelo motor de
+  // regras de atributo (app/rede/regras.py). `rede` fora do contexto é campo_nao_permitido (dado
+  // de rede não autorizado pelo chamador), nunca nulo silencioso; chave ausente DENTRO de `rede`
+  // é nulo (objeto fora de subrede, jusante ainda não calculada, atributo que este objeto não
+  // tem). Leitura por DESCRITOR (proprio), igual ao resto do avaliador — getter não roda.
+  if (!possui(contexto, 'rede')) {
+    throw new ErroExpressao('campo_nao_permitido', 'campo não permitido: rede', { campo: 'rede' });
+  }
+  const rede = proprio(contexto, 'rede');
+  if (rede === null || typeof rede !== 'object' || Array.isArray(rede)) falha();
+  const proto = Object.getPrototypeOf(rede);
+  if (proto !== Object.prototype && proto !== null) falha();
+  const [minimo, maximo] = REDE_ARIDADES[nome];
+  if (args.length < minimo || (maximo !== null && args.length > maximo)) falha('aridade_invalida');
+  if (nome === 'AtributoRede') {
+    const chave = args[0];
+    if (typeof chave !== 'string') falha();
+    if (PROIBIDOS.has(chave)) {
+      throw new ErroExpressao('campo_nao_permitido', `campo não permitido: ${chave}`, { campo: chave });
+    }
+    if (!possui(rede, 'atributos')) return null;
+    const atributos = proprio(rede, 'atributos');
+    if (atributos === null) return null;
+    if (typeof atributos !== 'object' || Array.isArray(atributos)) falha();
+    const protoA = Object.getPrototypeOf(atributos);
+    if (protoA !== Object.prototype && protoA !== null) falha();
+    return possui(atributos, chave) ? proprio(atributos, chave) : null;
+  }
+  return possui(rede, CHAVE_REDE_POR_FUNCAO[nome]) ? proprio(rede, CHAVE_REDE_POR_FUNCAO[nome]) : null;
+}
+
 function chamarFuncao(nome, args) {
   if (!possui(TABELA_FUNCOES, nome)) {
     throw new ErroExpressao('funcao_desconhecida', `função desconhecida: ${nome}`, { nome });
@@ -903,6 +943,7 @@ export function avaliar(no, contexto, opcoes) {
         return v(a[a.length-1]);
       }
       const args = nodo.argumentos.map(v);
+      if(possui(REDE_ARIDADES,nodo.nome)) return redeFuncao(nodo.nome,contexto,args);
       if(possui(EXT_ARIDADES,nodo.nome)) return extFuncao(nodo.nome,args,contador);
       return chamarFuncao(nodo.nome, args);
     }
