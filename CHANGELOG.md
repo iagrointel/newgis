@@ -3,6 +3,29 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L2-09-b-cena-extrusao-slides: documento de cena 3D, extrusão por atributo e slides)
+
+O tipo de item `cena`, que existia desde a migração 011 com envelope vazio, ganhou esquema próprio
+(`db/migracoes/20260908T0601_cena_esquema.sql`): câmera, terreno com exagero, iluminação por data e
+hora, atmosfera, camadas com extrusão por atributo e slides. Nenhuma tabela nova e nenhuma rota nova de
+documento — a cena é criada, versionada e publicada pelas rotas genéricas de `/api/itens`, e o esquema
+continua na versão 1 porque todo documento que já existia (corpo vazio) segue válido. O que o JSON
+Schema não expressa (id repetido, slide que cita camada ausente, extrusão sem altura, base acima do
+topo) entra por `app/cena/documento.py`, chamado da MESMA porta que valida o grafo dos construtores.
+
+A tela `/cena` usa o mesmo MapLibre do visualizador 2D — `fill-extrusion` para volume, `setTerrain`
+para relevo, `setSky` e `setLight` para atmosfera e luz —, sem nenhuma segunda biblioteca 3D. Altura
+vem de um atributo, com escala explícita, e é presa em 0 quando o valor é nulo, ausente ou negativo
+(sem isso o MapLibre desenha caixa invertida em silêncio). Slide é vista salva no corpo do documento:
+nome, câmera, camadas visíveis, hora e miniatura JPEG feita do próprio canvas; restaurar usa `jumpTo`,
+não `flyTo`, para a vista voltar igual.
+
+A posição do Sol é calculada no servidor (`app/cena/sol.py`, algoritmo do NOAA) e exposta em
+`GET /api/cena/sol`, com a luz já no formato do estilo. A conferência do teste não é contra a própria
+implementação: é contra a fórmula do Astronomical Almanac, escrita dentro do teste, em três datas e
+horas, mais o invariante do ponto subsolar. Decisão de desenho em
+`docs/adr/20260908T0620-documento-de-cena-3d.md`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a

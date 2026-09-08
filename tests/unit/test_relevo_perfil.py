@@ -7,10 +7,8 @@ nas mesmas coordenadas (a mesma verificação que o portão de pronto pede)."""
 
 from __future__ import annotations
 
-import math
 import socket
 
-import numpy as np
 import pytest
 import rasterio
 
@@ -52,7 +50,7 @@ def test_perfil_de_10km_com_200_amostras_confere_com_rasterio_sample_direto():
         valores_diretos = [v[0] for v in ds.sample(coordenadas)]
 
     validos = 0
-    for p, esperado in zip(pontos, valores_diretos):
+    for p, esperado in zip(pontos, valores_diretos, strict=False):
         if esperado <= -9000.0:
             assert p.altura_m is None
             continue

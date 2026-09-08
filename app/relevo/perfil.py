@@ -55,7 +55,7 @@ def perfil_elevacao(caminho_fonte: str, lat1: float, lon1: float, lat2: float, l
     with rasterio.open(caminho_fonte) as ds:
         nodata = ds.nodata
         amostras = list(ds.sample([(lon, lat) for lat, lon in pontos]))
-    for i, ((lat, lon), valor) in enumerate(zip(pontos, amostras)):
+    for i, ((lat, lon), valor) in enumerate(zip(pontos, amostras, strict=False)):
         altura = float(valor[0])
         if nodata is not None and altura == nodata:
             altura_final = None

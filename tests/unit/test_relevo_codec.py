@@ -9,7 +9,6 @@ import pytest
 
 from app.relevo import codec
 
-
 # ---------------------------------------------------------------------------- terrain-RGB (Mapbox)
 
 @pytest.mark.parametrize("altura", [-413.0, 0.0, 0.1, 1.0, 848.9, 8848.86, 3.7])
@@ -68,7 +67,7 @@ def test_terrain_rgb_degrau_de_128m_da_armadilha_conhecida():
     rgb = codec.codificar_terrain_rgb(alturas.reshape(1, -1))
     de_volta = codec.decodificar_terrain_rgb(rgb)[0]
     diffs = np.diff(de_volta)
-    assert np.max(diffs) <= 1.0 + codec.TERRAIN_RGB_PASSO + 1e-6, "degrau maior que 1 passo do codec entre alturas vizinhas"
+    assert np.max(diffs) <= 1.0 + codec.TERRAIN_RGB_PASSO + 1e-6, "degrau maior que um passo do codec entre vizinhas"
     assert np.min(diffs) >= 1.0 - codec.TERRAIN_RGB_PASSO - 1e-6
 
 

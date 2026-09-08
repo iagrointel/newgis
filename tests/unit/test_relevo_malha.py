@@ -41,7 +41,9 @@ def _tem_rede_s3() -> bool:
         return False
 
 
-pytestmark_rede = pytest.mark.skipif(not _tem_rede_s3(), reason="sem alcance ao S3 copernicus-dem-30m nesta máquina agora")
+pytestmark_rede = pytest.mark.skipif(
+    not _tem_rede_s3(), reason="sem alcance ao S3 copernicus-dem-30m nesta máquina agora"
+)
 
 
 # ---------------------------------------------------------------------------- geometria pura
