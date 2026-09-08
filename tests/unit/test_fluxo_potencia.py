@@ -27,12 +27,69 @@ API em `tests/api/test_rede_fluxo.py`.)
 """
 
 import cmath
+import json
 import math
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
 
 import pytest
 
 from app.rede_utilidades import fluxo_potencia as fp
 from app.rede_utilidades import opendss
+
+RAIZ = Path(__file__).resolve().parents[2]
+
+# O mesmo circuito que o módulo resolve, aberto num processo filho SÓ para ler os fasores crus (tensão e
+# corrente complexas, e a impedância que o motor declarou para cada trecho). É a conta de referência da
+# cláusula analítica, e roda em processo separado pela MESMA razão que o módulo: o motor OpenDSS não
+# sobrevive fora da thread que o iniciou (ver o cabeçalho de app/rede_utilidades/fluxo_potencia.py).
+_LEITOR_DE_FASORES = """
+import json, os, sys
+import opendssdirect as dss
+pasta, ponto, barras, trechos = json.loads(sys.stdin.read())
+dss.Text.Command("Clear")
+dss.Text.Command('Compile "%s"' % os.path.join(pasta, "Master.dss"))
+erro = dss.Error.Description()
+if erro:
+    raise SystemExit("compila: " + erro)
+dss.Text.Command("Set mode=yearly stepsize=1h number=1 hour=%d" % ponto)
+dss.Solution.Solve()
+tensoes = {}
+for barra in barras:
+    dss.Circuit.SetActiveBus(barra)
+    crus = dss.Bus.Voltages()
+    tensoes[barra] = [[crus[2 * f], crus[2 * f + 1]] for f in range(3)]
+correntes, impedancias, unidades = {}, {}, {}
+for nome in trechos:
+    dss.Lines.Name(nome)
+    impedancias[nome] = [dss.Lines.R1(), dss.Lines.X1(), dss.Lines.Length()]
+    unidades[nome] = dss.Lines.Units()
+    dss.Circuit.SetActiveElement("Line." + nome)
+    crus = dss.CktElement.Currents()
+    correntes[nome] = [[crus[2 * f], crus[2 * f + 1]] for f in range(3)]
+json.dump({"tensoes": tensoes, "correntes": correntes, "impedancias": impedancias,
+           "unidades": unidades}, sys.stdout)
+"""
+
+
+def _fasores(modelo, parametros, barras, trechos) -> dict:
+    """Tensão e corrente COMPLEXAS e a impedância declarada de cada trecho, lidas do motor num processo
+    filho, sobre o MESMO texto de circuito que o módulo escreve."""
+    with tempfile.TemporaryDirectory(prefix="zt-fasores-") as tmp:
+        for nome, texto in opendss.linhas_do_circuito(modelo).items():
+            (Path(tmp) / nome).write_text(texto, encoding="utf-8")
+        pedido = json.dumps([tmp, parametros["ponto"] or 0, list(barras), list(trechos)])
+        filho = subprocess.run([sys.executable, "-c", _LEITOR_DE_FASORES], input=pedido,
+                               capture_output=True, text=True, cwd=str(RAIZ), timeout=300, check=False)
+    assert filho.returncode == 0, filho.stderr[-2000:]
+    bruto = json.loads(filho.stdout)
+    return {
+        "tensoes": {b: [complex(*par) for par in v] for b, v in bruto["tensoes"].items()},
+        "correntes": {n: [complex(*par) for par in v] for n, v in bruto["correntes"].items()},
+        "impedancias": bruto["impedancias"], "unidades": bruto["unidades"],
+    }
 
 pytest.importorskip("opendssdirect",
                     reason="opendssdirect não está nesta máquina: o motor de fluxo não foi medido")
@@ -84,30 +141,24 @@ def test_queda_de_tensao_em_linha_unica_e_i_vezes_z():
     (R1 + jX1, ohm por quilômetro, vezes o comprimento) e I a corrente fasorial que atravessa o trecho.
 
     Cinco barras conferidas — as mesmas cinco que a refutação do item pede."""
-    import opendssdirect as dss
-
     modelo = _alimentador_em_serie()
-    saida = _resolver(modelo)
+    parametros = fp.validar_parametros({"modo": "hora", "ponto": 0, "ano": ANO})
+    saida = fp.resolver(modelo, parametros)
     assert saida["convergencia"]["convergiu"] is True, saida["avisos"]
 
-    # o motor ficou no ponto resolvido: lê dele a tensão e a corrente COMPLEXAS, e a impedância declarada
-    tensoes = {}
-    for barra in [f"b{i}" for i in range(1, 7)]:
-        dss.Circuit.SetActiveBus(barra)
-        crus = dss.Bus.Voltages()
-        tensoes[barra] = [complex(crus[2 * f], crus[2 * f + 1]) for f in range(3)]
+    barras = [f"b{i}" for i in range(1, 7)]
+    trechos = [f"t{i}" for i in range(1, 6)]
+    cru = _fasores(modelo, parametros, barras, trechos)
+    tensoes, correntes = cru["tensoes"], cru["correntes"]
 
     conferidas = 0
     for i in range(1, 6):
         nome = f"t{i}"
-        dss.Lines.Name(nome)
-        assert dss.Lines.Units() == 3, "o comprimento do trecho é declarado em quilômetro"
-        z = complex(dss.Lines.R1(), dss.Lines.X1()) * dss.Lines.Length()
-        dss.Circuit.SetActiveElement(f"Line.{nome}")
-        crus = dss.CktElement.Currents()
-        correntes = [complex(crus[2 * f], crus[2 * f + 1]) for f in range(3)]
+        assert cru["unidades"][nome] == 3, "o comprimento do trecho é declarado em quilômetro"
+        r1, x1, comprimento = cru["impedancias"][nome]
+        z = complex(r1, x1) * comprimento
         for fase in range(3):
-            esperada = tensoes[f"b{i}"][fase] - z * correntes[fase]
+            esperada = tensoes[f"b{i}"][fase] - z * correntes[nome][fase]
             medida = tensoes[f"b{i + 1}"][fase]
             assert cmath.isclose(medida, esperada, rel_tol=1e-6, abs_tol=1e-3), (nome, fase, medida, esperada)
             conferidas += 1
