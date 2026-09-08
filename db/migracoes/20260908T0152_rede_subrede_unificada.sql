@@ -151,7 +151,5 @@ DROP TRIGGER IF EXISTS tg_rede_subrede_validar ON plat.rede_subrede;
 CREATE TRIGGER tg_rede_subrede_validar BEFORE INSERT OR UPDATE ON plat.rede_subrede
   FOR EACH ROW EXECUTE FUNCTION plat.rede_subrede_validar();
 
-INSERT INTO plat.evento_tipo(nome, descricao) VALUES
-  ('redes/subredes_reconciliar',
-   'hierarquia declarada pelo arquivo reconciliada com a subrede derivada do controlador')
-ON CONFLICT (nome) DO NOTHING;
+-- Sem tipo de evento novo: a declaração e a reconciliação rodam DENTRO da marcação de controladores da
+-- importação, que já registra `redes/controlador_importar`. Tipo de evento que ninguém emite é lixo.

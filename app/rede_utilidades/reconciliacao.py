@@ -114,8 +114,11 @@ def declarar(cur, tenant_id: int, rede_id: str) -> dict:
         "ORDER BY 1",
         (rede_id, controladores.GRUPO_TRAFO),
     )
+    # materializa ANTES de qualquer outra consulta: o cursor é um só, e `_ja_declaradas` abaixo
+    # substituiria o resultado desta consulta no meio da varredura.
+    trafos = [dict(r) for r in cur.fetchall()]
     ja_trafos = _ja_declaradas(cur, rede_id, NIVEL_TRANSFORMADOR)
-    for tr in cur.fetchall():
+    for tr in trafos:
         cod, ctmt = tr["cod_id"], tr["ctmt"]
         if cod in ja_trafos:
             contagem["ja_declaradas"] += 1
