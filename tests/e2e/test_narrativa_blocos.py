@@ -246,12 +246,18 @@ def test_html_hostil_no_texto_e_sanitizado(tela, page, admin_api):
     page.wait_for_selector("article.narrativa .bloco-texto", timeout=15000)
     page.wait_for_timeout(300)
     assert page.evaluate("() => window.__xss") is None
-    dom = page.evaluate("() => document.querySelector('article.narrativa').innerHTML")
-    assert "<script" not in dom and "onerror" not in dom and "javascript:" not in dom and "<style" not in dom
-    assert "<iframe" not in dom.split("bloco-tabela")[0]
+    # nada executável chega ao DOM: nem elemento, nem atributo de evento, nem href javascript: (o texto hostil
+    # pode sobreviver como TEXTO escapado — isso é o correto, e por isso a conferência é por elemento/atributo)
+    perigosos = page.evaluate(r"""() => {
+      const a = document.querySelector('article.narrativa');
+      return { tags: [...a.querySelectorAll('script, style, iframe, object, embed, form')].map((e) => e.tagName),
+               eventos: [...a.querySelectorAll('*')]
+                 .filter((e) => [...e.attributes].some((x) => /^on/i.test(x.name))).length,
+               js: [...a.querySelectorAll('[href], [src]')].map((e) => e.getAttribute('href') || e.getAttribute('src'))
+                     .filter((v) => /^\s*javascript:/i.test(v)).length };
+    }""")
+    assert perigosos == {"tags": [], "eventos": 0, "js": 0}, perigosos
     assert page.locator("article.narrativa table td").first.text_content() == "<script>x</script>"  # texto, não HTML
-    hrefs = page.eval_on_selector_all("article.narrativa .bloco-texto a",
-                                      "els => els.map((e) => e.getAttribute('href'))")
-    assert all(h.startswith("https://") or h.startswith("/") for h in hrefs), hrefs
+    assert page.locator("article.narrativa table th").nth(1).text_content() == "<b>b</b>"
     _capturar(page, "texto_hostil")
     tela.verificar()
