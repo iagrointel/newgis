@@ -3,7 +3,9 @@
 Três serviços, e nada além disso:
 
 * `exportar(...)`: escreve a camada (ou só a sua geometria) como GeoJSON no diretório de trabalho, já
-  reprojetada para o CRS do raster. É o que vira `-cutline` do gdalwarp e fonte do gdal_rasterize;
+  reprojetada para o CRS do raster. É o que vira `-cutline` do gdalwarp e fonte do gdal_rasterize. O
+  arquivo leva o membro `crs` no formato antigo da especificação, porque sem ele o GDAL assume
+  EPSG:4326 e um recorte em coordenadas métricas falha com "Invalid latitude" (medido nesta suíte);
 * `zonas(...)`: devolve, uma a uma, as feições de uma camada como (fid, atributos, geometria GeoJSON,
   limites) no CRS do raster — o que as estatísticas zonais consomem sem carregar a camada inteira em
   memória (cursor nomeado, lote a lote);
@@ -46,7 +48,9 @@ def exportar(ctx, camada: dict, srid: int, caminho: Path, campos: list[str] | No
     propriedades = f"jsonb_build_object({lista})" if campos else "'{}'::jsonb"
     with ctx.db() as cur:
         cur.execute(
-            f"SELECT jsonb_build_object('type', 'FeatureCollection', 'features', "
+            f"SELECT jsonb_build_object('type', 'FeatureCollection', "
+            f"'crs', jsonb_build_object('type', 'name', 'properties', jsonb_build_object("
+            f"'name', 'urn:ogc:def:crs:EPSG::{int(srid)}')), 'features', "
             f"coalesce(jsonb_agg(jsonb_build_object('type', 'Feature', 'id', t.fid, "
             f"'properties', {propriedades}, "
             f"'geometry', ST_AsGeoJSON({_geom_no_crs(camada, srid)})::jsonb)), '[]'::jsonb)) AS gj "
