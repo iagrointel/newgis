@@ -92,6 +92,9 @@ class Settings:
     # .env de trilha grava PLAT_POOL_MAX=2 (ver laco/trilha_ambiente.sh).
     PLAT_POOL_MIN: int
     PLAT_POOL_MAX: int
+    # telemetria opcional do appliance (item L7-11-c): receptor na casa; vazio = "ligar" só grava a intenção e o
+    # envio diário avisa "sem destino configurado" (nunca inventa um endereço)
+    PLAT_TELEMETRIA_URL: str | None
 
     @property
     def producao(self) -> bool:
@@ -237,6 +240,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SMTP_ROTULO=_opcional(valores, "PLAT_SMTP_ROTULO"),
         PLAT_POOL_MIN=pool_min,
         PLAT_POOL_MAX=pool_max,
+        PLAT_TELEMETRIA_URL=_opcional(valores, "PLAT_TELEMETRIA_URL"),
     )
 
 
