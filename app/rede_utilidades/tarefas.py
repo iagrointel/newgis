@@ -19,6 +19,11 @@ tarefas de rede de utilidades ficam juntas aqui. O trabalho em si é `subredes.a
 o MESMO caminho da rota síncrona de uma subrede só; o job é apenas o transporte, porque numa rede
 de cooperativa a atualização percorre dezenas de milhares de elementos por subrede e não cabe
 numa requisição HTTP.
+
+E abriga o job `redes.analisar_alimentador` (item L4-07-fluxo-de-potencia): o fluxo de
+potência de um ou de todos os alimentadores da rede, um de cada vez. O motor OpenDSS é global
+ao processo, e a varredura de 864 pontos de uma cooperativa inteira não cabe numa requisição
+HTTP — por isso o caminho pesado é job, no processo próprio do worker.
 """
 
 from __future__ import annotations
@@ -32,6 +37,7 @@ import pyogrio
 from pydantic import BaseModel, Field
 
 from app import settings as cfg
+from app.erros import ErroAPI
 from app.jobs.registro import FalhaDefinitiva, tarefa
 from app.rede_utilidades import bdgd, contrato, subredes
 
@@ -206,3 +212,90 @@ def redes_subredes_atualizar(ctx, rede_id: str, todas: bool = False, tier: str |
     with ctx.db() as cur:
         return subredes.atualizar_todas(cur, ctx.tenant_id, rede_id, todas=todas, tier=tier,
                                         progresso=ctx.progresso)
+
+
+class AnalisarAlimentadorParametros(BaseModel):
+    """Parâmetros do job `redes.analisar_alimentador` (item L4-07-fluxo-de-potencia).
+
+    `subredes` vazio = cada um dos alimentadores do tier escolhido que já foram atualizados. É assim que a
+    cooperativa inteira é analisada: um alimentador de cada vez, com o resultado de cada um gravado assim
+    que sai — a análise de 16 alimentadores que morre no décimo deixa nove resultados no banco, não zero.
+    O importador BDGD já mostrou que trabalhar por alimentador é a única forma que fecha nesta base."""
+
+    rede_id: str = Field(min_length=36, max_length=36)
+    subredes: list[str] = Field(default_factory=list, max_length=500)
+    tier: str = Field(default="media_tensao", max_length=63)
+    # o alimentador inteiro inclui o que pende do transformador (o tier de baixa tensão)
+    jusante: bool = False
+    parametros: dict = Field(default_factory=dict)
+
+
+@tarefa(
+    nome="redes.analisar_alimentador",
+    descricao="Fluxo de potência (OpenDSS) de um ou de todos os alimentadores de uma rede de utilidades, "
+              "com convergência por alimentador e agregação que exclui quem não convergiu",
+    parametros=AnalisarAlimentadorParametros,
+    pesado=True,
+    memoria_mb=1024,
+    timeout_s=7200,
+    tentativas=1,
+    chave=lambda p: f"redes_analisar_alimentador:{p['rede_id']}",
+    perfil_minimo="editor",
+)
+def redes_analisar_alimentador(ctx, rede_id: str, subredes: list[str] | None = None,
+                               tier: str = "media_tensao", jusante: bool = False,
+                               parametros: dict | None = None) -> dict:
+    """Um alimentador de cada vez. O que falhar (dado que não permite montar o modelo, circuito que não
+    compila) entra em `recusados` com o motivo e NÃO derruba o lote; o que não convergir entra no resultado
+    marcado e fica FORA da agregação, nomeado em `alimentadores_fora_por_nao_convergencia`."""
+    from app.rede_utilidades import fluxo_potencia
+
+    # valida os parâmetros UMA vez, antes de tocar em alimentador nenhum: pedido malformado tem de falhar
+    # no primeiro segundo, não no décimo alimentador.
+    try:
+        fluxo_potencia.validar_parametros(parametros)
+    except fluxo_potencia.ErroFluxo as e:
+        raise FalhaDefinitiva(f"{e.codigo}: {e.mensagem}") from e
+
+    with ctx.db() as cur:
+        nomes = list(subredes or [])
+        if not nomes:
+            cur.execute(
+                "SELECT s.nome FROM plat.rede_subrede s JOIN plat.rede_tier t ON t.id = s.tier_id "
+                "WHERE s.rede_id = %s::uuid AND t.codigo = %s AND s.atualizado_em IS NOT NULL "
+                "ORDER BY s.nome", (rede_id, tier))
+            nomes = [r["nome"] for r in cur.fetchall()]
+    if not nomes:
+        raise FalhaDefinitiva(
+            f"a rede não tem alimentador atualizado no tier '{tier}': atualize as subredes antes de analisar")
+
+    feitos: list[dict] = []
+    recusados: list[dict] = []
+    for i, nome in enumerate(nomes):
+        ctx.progresso(int(100 * i / len(nomes)), f"alimentador {nome} ({i + 1} de {len(nomes)})")
+        try:
+            with ctx.db() as cur:
+                saida = fluxo_potencia.calcular_e_gravar(cur, ctx.tenant_id, rede_id, nome, parametros,
+                                                         tier, jusante)
+        except fluxo_potencia.ErroFluxo as e:
+            recusados.append({"subrede": nome, "codigo": e.codigo, "mensagem": e.mensagem})
+            continue
+        except ErroAPI as e:
+            recusados.append({"subrede": nome, "codigo": e.codigo, "mensagem": e.mensagem})
+            continue
+        feitos.append(saida)
+
+    ctx.progresso(100, "análise concluída")
+    return {
+        "alimentadores_pedidos": len(nomes),
+        "analisados": [{"subrede": f["subrede"], "convergiu": f["convergiu"],
+                        "pontos": f["convergencia"]["pontos"],
+                        "pontos_sem_convergencia": f["convergencia"]["pontos_sem_convergencia"],
+                        "ponto_critico": f["ponto_critico"], "energia": f["energia"],
+                        "resumo": f["resumo"], "elementos": f["elementos"],
+                        "duracao_ms": f["duracao_ms"], "pico_ram_mb": f["pico_ram_mb"]}
+                       for f in feitos],
+        "recusados": recusados,
+        "agregado": fluxo_potencia.agregar(feitos),
+        "pico_ram_mb": max((f["pico_ram_mb"] for f in feitos), default=None),
+    }
