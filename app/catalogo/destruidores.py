@@ -14,6 +14,17 @@ class Recusado(Exception):
     """O destruidor não sabe apagar o dado físico: o item não é expurgado nesta rodada."""
 
 
+def _vista_de_camada(cur, dados: dict, log) -> int:
+    """A vista (item L5-32) é uma VIEW: não ocupa bytes de dado e some com um DROP VIEW. `DROP TABLE`
+    falharia aqui, e `CASCADE` na tabela-mãe deixaria o item órfão — por isso a vista tem porta própria."""
+    schema, tabela = dados.get("schema"), dados.get("tabela")
+    if not schema or not tabela or not NOME.match(schema) or not NOME.match(tabela):
+        return 0
+    cur.execute(f'DROP VIEW IF EXISTS "{schema}"."{tabela}"')
+    log("INFO", f"vista {schema}.{tabela} apagada")
+    return 0
+
+
 def _camada_vetorial(cur, dados: dict, log) -> int:
     schema, tabela = dados.get("schema"), dados.get("tabela")
     if not schema or not tabela or not NOME.match(schema) or not NOME.match(tabela):
@@ -56,7 +67,8 @@ def _raster(cur, dados: dict, log) -> int:
     raise Recusado("raster: o destruidor (pgstac + objetos) é do L1-01; o item fica na lixeira")
 
 
-DESTRUIDORES = {"camada_vetorial": _camada_vetorial, "arquivo": _arquivo, "raster": _raster}
+DESTRUIDORES = {"camada_vetorial": _camada_vetorial, "vista_de_camada": _vista_de_camada,
+                "arquivo": _arquivo, "raster": _raster}
 
 
 def destruir(cur, tipo: str, dados: dict, miniatura_chave: str | None, log) -> int:
