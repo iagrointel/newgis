@@ -52,3 +52,51 @@
   .painel-grade { grid-template-columns: 1fr !important; }
   .painel-el { grid-column: auto !important; grid-row: auto !important; }
 }
+
+/* ------------------------------------------------------------------ elementos básicos (item L2-06-b)
+   Só token e cor herdada: nenhuma cor literal fora das que já existiam neste arquivo como valor de
+   emergência do `var()`. O estado "sem dado" é VISÍVEL em todo elemento (nunca quadro em branco) e a
+   tabela equivalente de cada gráfico fica num <details> — presente no DOM mesmo fechada, que é como o
+   leitor de tela a alcança pelo `aria-describedby`. */
+.painel-sem-dado { margin: 0; padding: var(--e3, 12px) 0; color: var(--fraco, #667); font-size: .85rem; font-style: italic; }
+.painel-equivalente { margin-top: 6px; font-size: .78rem; color: var(--fraco, #667); }
+.painel-equivalente summary { cursor: pointer; }
+.painel-el svg.grafico, .painel-el svg.grafico-svg, .painel-el svg.painel-mapa { width: 100%; height: auto; max-height: 100%; }
+
+.painel-indicador { display: flex; align-items: baseline; gap: 8px; margin: 0; flex-wrap: wrap; }
+.painel-indicador-icone { font-size: 1.4rem; }
+.painel-indicador-rotulo { font-size: .8rem; color: var(--fraco, #667); }
+
+.painel-cabecalho { display: flex; align-items: center; gap: var(--e3, 12px); }
+.painel-cabecalho-titulo { margin: 0; font-size: 1.1rem; }
+.painel-cabecalho-sub { margin: 2px 0 0; font-size: .82rem; color: var(--fraco, #667); }
+.painel-logo { max-height: 40px; width: auto; }
+
+.painel-legenda { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: .82rem; }
+.painel-legenda li { display: flex; align-items: center; gap: 6px; }
+.painel-legenda-cor { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--borda, #ccd2d6); flex: none; }
+
+.painel-detalhes { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: .82rem; }
+.painel-detalhes dt { color: var(--fraco, #667); }
+.painel-detalhes dd { margin: 0; }
+
+.painel-tabela td.num, .painel-tabela th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.painel-tabela tfoot .painel-total th, .painel-tabela tfoot .painel-total td { font-weight: 700; border-top: 2px solid var(--borda, #ccd2d6); border-bottom: 0; }
+.painel-ordenar { font: inherit; font-weight: 600; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; }
+.painel-rodape-tabela { margin: 6px 0 0; font-size: .78rem; color: var(--fraco, #667); }
+
+.painel-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.painel-lista-item { display: flex; align-items: baseline; gap: 6px; font-size: .85rem; }
+.painel-lista-texto { display: flex; flex-direction: column; min-width: 0; }
+.painel-lista-titulo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.painel-lista-detalhe { font-size: .78rem; color: var(--fraco, #667); }
+.painel-paginacao { display: flex; align-items: center; gap: 8px; padding-top: 6px; }
+.painel-paginacao-texto { font-size: .78rem; color: var(--fraco, #667); }
+
+.painel-mapa-ponto { fill: var(--acento, #2f7d5b); fill-opacity: .75; stroke: var(--painel-fundo-el, #fff); stroke-width: .5; }
+.painel-mapa-acoes { display: flex; gap: 8px; padding-top: 6px; }
+
+.painel-el[data-tipo="texto_rico"] p, .painel-el[data-tipo="texto_rico"] ul { margin: 0 0 6px; font-size: .85rem; }
+
+.painel-escuro .painel-sem-dado, .painel-escuro .painel-lista-detalhe, .painel-escuro .painel-paginacao-texto,
+.painel-escuro .painel-cabecalho-sub, .painel-escuro .painel-detalhes dt, .painel-escuro .painel-rodape-tabela { color: #a9b4b0; }
