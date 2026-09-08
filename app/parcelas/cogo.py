@@ -87,11 +87,15 @@ def criar_parcela_cogo(cur, tenant_id: int, *, registro_id, ponto_inicial_id, co
                        area_declarada_m2=None, atributos=None, origem="medida") -> dict:
     """O e2e do portão: registro → trajeto COGO → pontos intermediários, linhas, associações e
     parcela, numa transação (o cursor vem de fora). O ponto inicial é REUSADO (não se cria
-    outro no mesmo lugar); cada vértice novo vira ponto com a precisão declarada no argumento."""
+    outro no mesmo lugar); cada vértice novo vira ponto com a precisão declarada no argumento.
+    Trajeto que NÃO fecha: o anel guarda o ponto de chegada REAL e a aresta de fechamento (do
+    chegada de volta ao início) nasce SEM rumo e SEM distância — o misclose fica declarado na
+    parcela e a aresta não finge ser medida (nada fecha em silêncio)."""
     resultado = caminhar(_ponto_xy_inicial(cur, ponto_inicial_id), trajeto)
-    vertices = resultado["vertices"][:-1]  # o anel fecha sozinho em criar_parcela
+    fechado = resultado["fechamento_m"] <= 1e-9
+    anel = resultado["vertices"][:-1] if fechado else list(resultado["vertices"])
     ponto_ids = [str(ponto_inicial_id)]
-    for vertice in vertices[1:]:
+    for vertice in anel[1:]:
         p = modelo.criar_ponto(cur, tenant_id, x=vertice[0], y=vertice[1], precisao_xy_m=precisao_xy_m,
                                origem=origem, registro_id=registro_id)
         ponto_ids.append(p["id"])
@@ -99,20 +103,25 @@ def criar_parcela_cogo(cur, tenant_id: int, *, registro_id, ponto_inicial_id, co
     for i in range(len(ponto_ids)):
         de_id = ponto_ids[i]
         para_id = ponto_ids[(i + 1) % len(ponto_ids)]
-        passo = trajeto[i]
-        rumo = float(passo[0])
-        raio = float(passo[2]) if len(passo) > 2 else None
-        arco_m = float(passo[1]) if raio is not None else None
-        linha = modelo.criar_linha(
-            cur, tenant_id, de_ponto_id=de_id, para_ponto_id=para_id, rumo_graus=rumo,
-            distancia_m=float(passo[1]), raio_m=raio,  # com sinal: positivo curva à direita
-            arco_m=arco_m, tipo_cogo="arco" if raio is not None else "reta",
-            precisao_rumo_s=precisao_rumo_s, precisao_dist_cm=precisao_dist_cm, origem=origem,
-            registro_id=registro_id,
-        )
+        if i < len(trajeto):
+            passo = trajeto[i]
+            rumo = float(passo[0])
+            raio = float(passo[2]) if len(passo) > 2 else None
+            arco_m = float(passo[1]) if raio is not None else None
+            linha = modelo.criar_linha(
+                cur, tenant_id, de_ponto_id=de_id, para_ponto_id=para_id, rumo_graus=rumo,
+                distancia_m=float(passo[1]), raio_m=raio,  # com sinal: positivo curva à direita
+                arco_m=arco_m, tipo_cogo="arco" if raio is not None else "reta",
+                precisao_rumo_s=precisao_rumo_s, precisao_dist_cm=precisao_dist_cm, origem=origem,
+                registro_id=registro_id,
+            )
+        else:
+            # aresta de fechamento do anel do misclose: não é medida, não finge ser
+            linha = modelo.criar_linha(cur, tenant_id, de_ponto_id=de_id, para_ponto_id=para_id,
+                                       tipo_cogo="reta", origem=origem, registro_id=registro_id)
         linha_ids.append(linha["id"])
     return modelo.criar_parcela(
-        cur, tenant_id, tipo=tipo, codigo=codigo, registro_id=registro_id, anel=vertices,
+        cur, tenant_id, tipo=tipo, codigo=codigo, registro_id=registro_id, anel=anel,
         area_declarada_m2=area_declarada_m2, atributos=atributos, linha_ids=linha_ids,
         erro_fechamento_m=resultado["fechamento_m"], erro_fechamento_razao=resultado["razao"],
     )
