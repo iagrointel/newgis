@@ -26,7 +26,13 @@ FABRICA = "CursorSchemaAmbiente"
 
 # Exceção = arquivo:função onde a conexão NÃO precisa da fábrica, com o motivo. Só entra aqui quem não
 # manda SQL com nome de objeto do schema da plataforma. Acrescentar linha sem motivo é reprovar a trava.
-EXCECOES_DECLARADAS: dict[str, str] = {}
+EXCECOES_DECLARADAS: dict[str, str] = {
+    "scripts/amc_hash_independente.py:_modo_tenant": (
+        "conferidor independente do versao_hash do modelo AMC (item L3-01-a): não importa nada de `app` de "
+        "propósito, para que um defeito na aplicação não escape à prova. Não escreve `plat.` na mão — lê "
+        "PLAT_SCHEMA e faz `SET search_path`, então respeita o schema da trilha; e só lê (SELECT)."
+    ),
+}
 
 
 def _modulo(caminho_relativo: str):

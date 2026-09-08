@@ -64,8 +64,12 @@ def test_vocabulario_no_banco_e_rotas_declaradas(conexao_plat_app):
 def test_sequencia_real_e_propriedades_sem_segredo(sessao_a, itens_a):
     it = itens_a.criar("mapa", descricao="descrição longa que nunca vai para o evento " * 3)
     iid = it["id"]
+    # o `corpo` respeita o esquema publicado do tipo `mapa` (docs/esquemas/mapa-v1.json, item
+    # L2-01-a-documento-mapa): `additionalProperties: false`, então uma chave inventada seria recusada com
+    # 422 e nenhum evento `itens/atualizar` sairia. `rotacao` é o campo mais simples que muda o documento.
     sessao_a.put(
-        f"/api/itens/{iid}", json={"titulo": it["titulo"] + " x", "dados": {"esquema_versao": 1, "corpo": {"a": 1}}}
+        f"/api/itens/{iid}",
+        json={"titulo": it["titulo"] + " x", "dados": {"esquema_versao": 1, "corpo": {"rotacao": 30}}},
     )
     r = sessao_a.post(f"/api/itens/{iid}/links", json={})
     tok, lid = r.json()["token"], r.json()["id"]
