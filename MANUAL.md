@@ -1070,3 +1070,74 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 22. Edição de feições no mapa (`/mapa`, painel "Edição", item L2-03-edicao)
+
+Aparece na tela `/mapa` (seção 13) sempre que houver ao menos uma camada com edição habilitada
+(`dados.edicao.habilitada`) — o seletor "camada a editar" lista só essas.
+
+- **Criar**: botões Ponto/Linha/Polígono; ponto entra com um clique, linha/polígono acumulam cliques
+  até "Concluir". Um formulário abre com os campos da camada, domínio (lista fechada vira `<select>`,
+  faixa numérica é conferida) e obrigatório marcados — a mesma regra que `app/edicao/servico.py`
+  aplica no servidor (a tela nunca é a única barreira: mandar um valor fora do domínio direto na API
+  também volta `422`).
+- **Selecionar/mover/editar vértice**: botão "Selecionar" e clique numa feição desenhada; a geometria
+  de trabalho é sempre lida de `GET /api/camadas/{id}/feicoes/{globalid}` (exata), nunca a versão
+  recortada por tile. Vértices aparecem como círculos arrastáveis — soltar salva na hora.
+- **Apagar**: com uma feição selecionada, botão "Apagar".
+- **Aderência**: caixa "aderir a vértice próximo" (ligada por padrão); ao desenhar ou arrastar, um
+  vértice a até 12 px de outra feição desenhada salta para a coordenada exata dela.
+- **Edição em lote**: selecionar mais de uma feição (shift+clique) muda um atributo e clicar "Aplicar
+  às selecionadas" grava o mesmo valor em todas, num único lote.
+- **Dividir/Unir**: "Dividir" pede um clique no meio de uma linha selecionada (LineString de uma parte
+  só nesta passagem — polígono e linha de mais de uma parte ficam fora, ver ADR); "Unir" combina duas
+  ou mais feições selecionadas (qualquer geometria) numa só.
+- **Desfazer**: o histórico de cada feição (abaixo do formulário, ao selecionar UMA) lista toda escrita
+  — inclusive as que não passaram pela tela — com botão "restaurar" por entrada; restaurar uma feição
+  apagada a recria com o MESMO identificador.
+- **Anexos**: por feição, envia (limite de tamanho e de tipo aplicados no servidor, contra o conteúdo
+  de verdade, não só o `Content-Type` declarado), lista e apaga.
+- **Edição concorrente**: duas sessões na mesma feição — quem salva por último recebe o aviso "outra
+  sessão alterou esta feição" (nunca sobrescreve calado; versão otimista do L2-03-a).
+
+### 22.1 O que ficou de fora
+
+Dividir polígono por linha de corte; união com política de mesclagem de atributo além de "usa os da
+primeira feição ou o que o chamador mandar"; desfazer/refazer por atalho de teclado (o mecanismo hoje
+é o histórico por feição, não uma pilha global de ações). Ver
+`docs/adr/20260907T1123-historico-restauracao-anexos-feicao.md`.
+## 22. Modelo de estilo (item L2-02-a-modelo-estilo)
+
+O documento de um item do tipo `estilo` tem duas partes: `plat_construtor` (o que o editor grava — tipo de
+classificação entre `unico`, `categoria`, `classes`, `proporcional`, `calor`, `agrupamento`, `raster`, o
+campo classificador, as cores, os rótulos, a faixa de escala e a transparência) e `maplibre` (as camadas da
+MapLibre Style Spec v8 que o navegador desenha). Só `plat_construtor` é editável de fato: `maplibre` é sempre
+recalculado pelo servidor a partir dele no momento de gravar (`POST`/`PUT /api/itens`), então salvar duas
+vezes o mesmo construtor produz sempre o mesmo estilo — reabrir um estilo salvo e salvar de novo nunca muda o
+desenho por acidente.
+
+Um estilo inválido nunca chega a ficar salvo: campo de classificação que não existe na lista declarada,
+faixa de classe com o mínimo maior que o máximo, valor de categoria repetido, mais de 200 camadas, ou uma
+camada que não é uma MapLibre Style Spec válida — tudo isso volta como erro `422` no momento de salvar, com
+o campo exatamente apontado, nunca como um mapa que desenha errado depois de aberto.
+
+### 22.1 Como um estilo se referencia num mapa
+
+A entrada de camada de um documento de mapa (item L2-01-a-documento-mapa) referencia um estilo por
+`{ref: <uuid do item estilo>}` (reutilizável entre vários mapas) ou `{embutido: <o mesmo formato>}` (só
+daquele mapa). Apagar um item `estilo` referenciado por algum mapa é recusado (`409`, com a lista de mapas
+que dependem dele — mesmo mecanismo de dependência do L0-03-i).
+
+### 22.2 Estilo padrão e exportação
+
+Toda camada nova recebe um estilo padrão determinístico por tipo de geometria: a cor sai de um hash da
+identidade do item, então a mesma camada tem sempre a mesma cor padrão, em qualquer instalação. Um estilo
+`unico`/`categoria`/`classes` pode ser exportado como SLD 1.0 (para QGIS ou para o WMS do L2-04-i); os demais
+tipos (`proporcional`, `calor`, `agrupamento`, `raster`) não têm equivalente em SLD e a exportação recusa,
+dizendo por quê.
+
+### 22.3 O que ficou de fora
+
+A conversão para/do renderer da Esri (item L2-04-b) e o WMS que consome o SLD (L2-02-e/L2-04-i) são itens
+seguintes. O editor visual do construtor (tela) não foi construído aqui — este item é o formato e a
+validação do documento, não a interface.

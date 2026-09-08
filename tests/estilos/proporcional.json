@@ -1,0 +1,51 @@
+{
+  "corpo": {
+    "maplibre": {
+      "layers": [
+        {
+          "id": "camada",
+          "paint": {
+            "circle-color": "#4e79a7",
+            "circle-opacity": 1.0,
+            "circle-radius": [
+              "interpolate",
+              [
+                "linear"
+              ],
+              [
+                "to-number",
+                [
+                  "get",
+                  "populacao"
+                ]
+              ],
+              0,
+              3,
+              1000000,
+              30
+            ]
+          },
+          "type": "circle"
+        }
+      ],
+      "version": 8
+    },
+    "plat_construtor": {
+      "campo": "populacao",
+      "campos": [
+        "populacao"
+      ],
+      "geometria": "ponto",
+      "proporcional": {
+        "cor": "#4e79a7",
+        "raio_max": 30,
+        "raio_min": 3,
+        "valor_max": 1000000,
+        "valor_min": 0
+      },
+      "tipo": "proporcional",
+      "versao": 1
+    }
+  },
+  "esquema_versao": 1
+}

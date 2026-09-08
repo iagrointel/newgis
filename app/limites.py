@@ -222,3 +222,31 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+# --- edição transacional de feições (L2-03-a-api-edicao-transacional; POST /api/camadas/{id}/edicoes, única
+# porta de escrita para navegador/PWA/FeatureServer/OGC). LOTE_MAX = 2× o tamanho medido no portão (1.000
+# feições ≤ 3 s), com folga operacional; bem abaixo do lote de 100 mil que a refutação do item manda recusar
+# (esse cai primeiro no 413 de CORPO_MAX_PADRAO_BYTES quando o corpo é grande, mas o teto por lista garante o
+# 422 mesmo com corpo pequeno e muitas feições minúsculas).
+EDICAO_LOTE_MAX = 2_000
+EDICAO_ATRIBUTOS_MAX = 500                # campos por feição num único pedido (mesmo teto de INGESTAO_CAMPOS_MAX)
+EDICAO_TEXTO_MAX = 65_536                 # 64 KiB por valor de campo texto (mesma ordem de ITEM_DESCRICAO_MAX)
+EDICAO_REGRA_CAMPO_MAX = 500              # entradas em dados.regras_campo (mesmo teto de campos da camada)
+EDICAO_DOMINIO_VALORES_MAX = 1_000        # valores aceitos por regra de domínio codificado
+EDICAO_SRID_MAX = 999_999                 # mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql)
+
+# --- edição no mapa: histórico/restauração e anexos por feição (item L2-03-edicao)
+HISTORICO_LISTA_MAX = 500                 # entradas devolvidas por consulta (mais recentes primeiro)
+ANEXO_TAMANHO_MAX = 7 * 1024 * 1024       # 7 MiB por anexo — NÃO 10: o envio é JSON com o conteúdo em base64
+# (achado do adversário 07/09), que incha o arquivo em ~4/3; um anexo de 10 MiB vira ~13,3 MiB de corpo, acima
+# de CORPO_MAX_PADRAO_BYTES (10 MiB) — o 413 genérico do middleware dispara ANTES desta checagem rodar, e o
+# 422 "anexo_grande" (com a mensagem específica) nunca aparece. 7 MiB codifica para ~9,33 MiB, com folga.
+# tupla ordenada, não frozenset: repr() de um set não é determinístico entre execuções (docs/gerar_limites.py
+# lê repr() literal — um frozenset faria docs/LIMITES.md variar a cada regeneração sem nada ter mudado)
+ANEXO_TIPOS_PERMITIDOS = ("application/pdf", "image/gif", "image/jpeg", "image/png", "image/webp")
+# --- motor multicritério, modelo (L3-01-a-modelo-dado; laco/decomposicao/L3L6_CONCEITO.md decisões A1/A4/A10).
+# Vocabulário e tetos do documento em docs/esquemas/amc_modelo.v1.json nascem daqui quando o número é livre
+# (o que é vocabulário FECHADO — tipos de transformação, combinador — mora só no JSON Schema, que é o contrato
+# público; aqui só os tetos de tamanho, que são os mesmos limites transversais do resto da casa).
+AMC_NOME_MAX = 250                # mesmo teto de ITEM_TITULO_MAX
+AMC_FATORES_MAX = 50              # mesmo teto de docs/esquemas/amc_modelo.v1.json fatores.maxItems
+AMC_CAMADAS_MAX = 50              # camadas de entrada declaradas por execução (A10)

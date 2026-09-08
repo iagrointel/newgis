@@ -61,3 +61,119 @@ body.mapa .mapa-painel-base { top: var(--e4); display: flex; align-items: center
 body.mapa .mapa-painel-base label { color: var(--mapa-texto-fraco); text-transform: lowercase; }
 body.mapa .mapa-painel-base select { background: #1a2224; color: var(--mapa-texto); border: 1px solid var(--mapa-borda); border-radius: var(--raio); padding: .2rem .4rem; }
 body.mapa .mapa-coordenadas { top: calc(var(--e4) + 2.4rem); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+
+/* ------------------------------------------------------------------ item L2-01-mapa-web
+   Painel lateral do visualizador (pesquisa, camadas, legenda, medição, impressão) ao lado do mapa. É
+   CHROME do produto, não cartografia: aqui as cores voltam a ser as do tema (var(--texto), var(--painel)),
+   ao contrário dos painéis sobrepostos ao canvas, que são fixos pelo motivo explicado no topo. */
+body.mapa .mapa-corpo { display: flex; flex: 1; min-height: 0; }
+body.mapa .mapa-painel-lateral {
+  width: 21rem;
+  flex: 0 0 21rem;
+  overflow-y: auto;
+  border-right: 1px solid var(--borda);
+  background: var(--painel);
+  padding: var(--e3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+}
+body.mapa .mapa-painel-lateral .bloco h2 {
+  margin: 0 0 var(--e2);
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--fraco);
+}
+body.mapa .mapa-painel-lateral .linha { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; }
+body.mapa .mapa-painel-lateral .linha input[type=search] { flex: 1; min-width: 8rem; }
+body.mapa .mapa-painel-lateral .rotulo { display: block; font-size: .75rem; color: var(--fraco); margin-bottom: .25rem; }
+body.mapa .mapa-painel-lateral .saida { margin: var(--e2) 0 0; font-family: var(--mono); font-size: .8rem; }
+body.mapa .sugestoes { list-style: none; margin: var(--e2) 0 0; padding: 0; }
+body.mapa .sugestoes .sugestao {
+  display: block; width: 100%; text-align: left; background: none; border: 0;
+  color: var(--texto); padding: .3rem .2rem; font-size: .82rem; cursor: pointer; border-radius: var(--raio);
+}
+body.mapa .sugestoes .sugestao:hover, body.mapa .sugestoes .sugestao:focus { background: var(--superficie-2); }
+
+body.mapa .lista-camadas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .25rem; }
+body.mapa .camada-linha { border: 1px solid transparent; border-radius: var(--raio); padding: .3rem .35rem; }
+body.mapa .camada-linha.ativa { border-color: var(--borda); background: var(--superficie-2); }
+body.mapa .camada-linha.alvo { border-color: var(--acento); }
+body.mapa .camada-cabecalho { display: flex; align-items: center; gap: var(--e2); }
+body.mapa .camada-titulo { flex: 1; font-size: .85rem; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.mapa .camada-conta { font-family: var(--mono); font-size: .7rem; color: var(--fraco); }
+body.mapa .camada-controles { display: flex; align-items: center; gap: .25rem; margin-top: .25rem; }
+body.mapa .camada-controles .camada-opacidade { flex: 1; min-width: 4rem; }
+body.mapa .botao-mini {
+  background: var(--superficie); border: 1px solid var(--borda); color: var(--texto);
+  border-radius: var(--raio); font-size: .7rem; line-height: 1; padding: .25rem .35rem; cursor: pointer;
+}
+body.mapa .botao-mini[disabled] { opacity: .4; cursor: default; }
+
+body.mapa .legenda-bloco h3 { margin: var(--e2) 0 .25rem; font-size: .8rem; font-weight: 600; }
+body.mapa .legenda-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; }
+body.mapa .legenda-lista li { display: flex; align-items: center; gap: var(--e2); font-size: .8rem; }
+body.mapa .legenda-amostra { display: inline-block; background: var(--cor); border: 1px solid rgba(0,0,0,.35); }
+body.mapa .legenda-ponto { width: .7rem; height: .7rem; border-radius: 50%; }
+body.mapa .legenda-linha { width: 1.1rem; height: .2rem; border-radius: 1px; }
+body.mapa .legenda-poligono { width: 1rem; height: .7rem; border-radius: 2px; }
+body.mapa .legenda .vazio { color: var(--fraco); font-size: .8rem; margin: 0; }
+
+/* janela de atributos */
+body.mapa .popup-plat .maplibregl-popup-content { background: var(--painel); color: var(--texto); border: 1px solid var(--borda); border-radius: var(--raio); max-height: 22rem; overflow: auto; }
+body.mapa .popup-plat .maplibregl-popup-tip { border-top-color: var(--painel); border-bottom-color: var(--painel); }
+body.mapa .popup-camada h3 { margin: 0 0 .25rem; font-size: .8rem; }
+body.mapa .popup-tabela { width: 100%; border-collapse: collapse; font-size: .78rem; margin-bottom: .4rem; }
+body.mapa .popup-tabela th { text-align: left; font-weight: 500; color: var(--fraco); padding: .12rem .4rem .12rem 0; vertical-align: top; }
+body.mapa .popup-tabela td { padding: .12rem 0; font-family: var(--mono); }
+body.mapa .popup-tabela td.nulo { color: var(--fraco); font-style: italic; }
+body.mapa .popup-mais { margin: 0; font-size: .75rem; color: var(--fraco); }
+
+/* edição de feições (item L2-03-edicao) */
+body.mapa #edicao-painel select#edicao-camada { width: 100%; margin-bottom: var(--e2); }
+body.mapa #edicao-painel .linha { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin-bottom: var(--e2); }
+body.mapa #edicao-painel .campo { display: flex; flex-direction: column; gap: .15rem; margin-bottom: .35rem; font-size: .8rem; }
+body.mapa #edicao-painel .campo input, body.mapa #edicao-painel .campo select { font-size: .8rem; }
+body.mapa .edicao-erros { list-style: none; margin: 0 0 .3rem; padding: 0; color: var(--erro, #c0392b); font-size: .75rem; }
+body.mapa .edicao-historico, body.mapa .edicao-anexos { list-style: none; margin: 0; padding: 0; font-size: .75rem; display: flex; flex-direction: column; gap: .2rem; }
+body.mapa .botao.pequeno, body.mapa .botao.secundario.pequeno { font-size: .68rem; padding: .15rem .35rem; }
+
+/* --- painel de camadas do documento de mapa (item L2-01-a-documento-mapa). Fica FORA do canvas (coluna à
+   esquerda do mapa), não sobreposto: a lista é operável (arrastar, caixa, botões) e sobreposição em cima de
+   um mapa que também arrasta confunde o gesto. Cores do chrome do instrumento, como o resto da tela. */
+body.mapa .mapa-camadas {
+  width: 20rem;
+  flex: 0 0 auto;
+  overflow-y: auto;
+  padding: var(--e3);
+  border-right: 1px solid var(--borda);
+  background: var(--painel);
+}
+body.mapa .mapa-camadas h2 { margin: 0 0 var(--e2); font-size: .95rem; }
+body.mapa .mapa-camadas .fraco { margin: 0 0 var(--e3); font-size: .78rem; }
+body.mapa .mapa-nome { font-size: .9rem; color: var(--fraco); }
+body.mapa .camadas-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+body.mapa .camada-linha {
+  /* grade de duas linhas: a de cima é a operável (pega, visibilidade, título, botões), a de baixo é o
+     metadado (tipo e selo). ACHADO na captura do e2e: com tudo numa linha só de flex, o título ficava
+     espremido a zero (é o único elemento encolhível, com overflow:hidden) e a linha parecia sem nome. */
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  grid-template-areas: "pega visivel titulo botoes" ". . meta meta";
+  align-items: center;
+  gap: var(--e1) var(--e2);
+  padding: var(--e2);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--fundo);
+  cursor: grab;
+}
+body.mapa .camada-linha.arrastando { opacity: .5; border-style: dashed; }
+body.mapa .camada-pega { grid-area: pega; border: 0; background: none; color: var(--fraco); cursor: grab; font-size: 1rem; padding: 0 .2rem; }
+body.mapa .camada-visivel { grid-area: visivel; }
+body.mapa .camada-rotulo { grid-area: titulo; display: contents; }
+body.mapa .camada-titulo { grid-area: titulo; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.mapa .camada-tipo { grid-area: meta; font-family: var(--mono); font-size: .7rem; color: var(--fraco); }
+body.mapa .camada-selo { grid-area: meta; justify-self: end; font-size: .68rem; border: 1px solid var(--borda); border-radius: var(--raio); padding: 0 .3rem; color: var(--fraco); }
+body.mapa .camada-botoes { grid-area: botoes; display: flex; gap: .2rem; }

@@ -1,0 +1,18 @@
+{
+  "item": "L2-03-edicao",
+  "medido_em": "2026-09-07T13:04:00Z",
+  "carga_1min": 25.90,
+  "ram_livre_gb": 0,
+  "nota_desempenho": "portao deste item nao tem clausula numerica de tempo; nenhuma medida de latencia foi gravada porque a carga da maquina (25,9, muito acima do teto de 8 da casa) invalidaria qualquer numero — marcado como NAO MEDIDO por desempenho, nao por falha funcional",
+  "suite_dedicada": {
+    "comando": "flock /home/dev/plataforma/laco/.pytest.lock venv/bin/pytest tests/api/test_edicao_transacional.py tests/api/test_edicao_historico_anexos.py tests/api/test_edicao_dividir_unir.py tests/api/test_mapa_api.py tests/api/test_arquivos.py -q --deselect tests/api/test_mapa_api.py::test_tile_de_tabela_fora_do_catalogo_e_recusado",
+    "resultado": "75 passed, 8 skipped (Martin/leitor nao instalado em toda rodada)",
+    "quando": "2026-09-07T12:56Z sob flock (sem flock a mesma suite deu 'tuple concurrently updated' por contencao de DDL em d_demo, achado ja documentado pelo item L2-03-a)"
+  },
+  "e2e_dedicado": {
+    "comando": "venv/bin/pytest tests/e2e/test_mapa_edicao.py -q --base-url http://127.0.0.1:8243",
+    "resultado": "6 passed (0 erro de console em todos)",
+    "ambiente": "servidor local (scripts/servir_local.py :8182) atras de nginx minimo que reescreve Origin para PLAT_URL_PUBLICA (achado: sem isso toda escrita sob cookie bate em 403 origem_invalida, exatamente o aviso do brief) + Martin proprio desta trilha em :8241 (deploy/local/martin_edicao.yaml, fora do git, nao afeta a unidade plat-martin :8151 de nenhuma outra trilha)",
+    "rodado_2x_para_estabilidade": true
+  }
+}
