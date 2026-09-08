@@ -10,6 +10,7 @@ export const TELAS = [
   { caminho: '/', chave: 'nav.inicio' },
   { caminho: '/conteudo', chave: 'nav.conteudo' },
   { caminho: '/mapa', chave: 'nav.mapa' },
+  { caminho: '/acervo', chave: 'nav.acervo' },
   { caminho: '/conexoes', chave: 'nav.conexoes' },
   { caminho: '/uploads', chave: 'nav.uploads', privilegio: 'conteudo.criar' },
   { caminho: '/conta', chave: 'nav.conta' },

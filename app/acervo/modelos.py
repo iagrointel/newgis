@@ -31,6 +31,9 @@ class AcervoCartao(Saida):
     proxima_verificacao: str | None = None
     risco_pii: bool = False
     risco_pii_motivo: str | None = None
+    # item L6-01-c-tela-acervo: tipo do vocabulário fechado do L6-01-g (plat.acervo_licenca), quando a fonte
+    # já foi curada por HTTP; None quando só existe o texto livre de `licenca` (nunca inferido do texto).
+    licenca_curada_tipo: str | None = None
 
 
 class AcervoEndpoint(Saida):
@@ -77,6 +80,19 @@ class AcervoPagina(Saida):
 class AcervoDominio(Saida):
     dominio: str
     fontes: int
+
+
+class AcervoCamadaMapa(Saida):
+    """Uma camada do acervo já adicionada ao catálogo do inquilino, como a legenda do mapa precisa dela (item
+    L6-01-c-tela-acervo). Os campos vêm do instantâneo gravado em `dados.parametros` na hora de adicionar, não
+    de uma nova consulta ao acervo: a legenda mostra a licença sob a qual o dado foi adicionado."""
+
+    item_id: str
+    titulo: str
+    fonte_id: str
+    dominio: str | None = None
+    licenca: str | None = None
+    licenca_curada_tipo: str | None = None
 
 
 class AcervoAdicionarEntrada(BaseModel):

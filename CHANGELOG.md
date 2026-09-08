@@ -358,6 +358,32 @@ de ordem, fechando um ciclo sem fim com a árvore de camadas sempre que o catál
 
 Medido com 5.000 desenhos num mapa: salvar em 190 ms e reabrir em 39 ms, idênticos bit a bit, com carga de
 1 minuto em 14,12 e 7,8 GB de memória livre (`tests/medidas/L2-01-k-desenho-anotacoes.json`).
+## turno 3, setembro de 2026 (item L6-01-c-tela-acervo: tela do Acervo — busca, ficha, adicionar ao mapa e atribuição na legenda)
+
+Tela `/acervo` (`web/acervo.html`, `web/acervo.css`, `web/js/acervo/acervo.js`): filtro pelos **22 domínios**
+da taxonomia de `acervo.fonte` (medido, `tests/medidas/L6-01-c-tela-acervo.json`), busca por nome e órgão,
+cartão por fonte (órgão, domínio, etiqueta de licença, frescor, tabelas, registros) e ficha completa de
+procedência em painel lateral, com pré-visualização do endpoint vivo quando existe. Rota nova
+`GET /api/acervo/dominios` devolve a taxonomia inteira com a contagem de fontes VISÍVEIS por domínio: domínio
+sem fonte visível hoje aparece com zero, nunca some da lista.
+
+Licença curada entra na lista, na ficha e no instantâneo gravado ao adicionar (`licenca_curada_tipo`, do
+vocabulário fechado de `plat.acervo_licenca`, item L6-01-g) — nunca inferida do texto livre de `licenca`.
+ODbL e CC-BY-SA acionam o aviso de atribuição obrigatória em dois lugares: na ficha e na legenda da tela
+`/mapa`. A legenda lê `GET /api/acervo/meu-mapa`, rota nova que lista as camadas do acervo já adicionadas ao
+catálogo do inquilino (`dados->>'protocolo' = 'acervo'`, isolamento pela RLS de `plat.item`) — `GET /api/itens`
+não serve porque não devolve `dados` e não filtra por protocolo.
+
+Medido no e2e `tests/e2e/test_acervo.py` (1 teste, percurso inteiro, contra o uvicorn da trilha): 22 domínios
+no filtro; buscar "unidades de conservação" devolve **0 cartões** e as 3 fontes com esse nome no acervo — todas
+sem licença escrita — não aparecem nem têm o identificador no HTML; adicionar cria 1 item `conexao` em modo
+`referenciada` (sem cópia de dado); a legenda do mapa mostra o nome, a licença e a linha de atribuição;
+`document.body.scrollWidth` = 390 px num visor de 390 px em `/acervo` e em `/mapa`; **0 erro de console** em
+todo o percurso. Capturas em `tests/e2e/capturas/L6-01-c-tela-acervo_{ficha,legenda_no_mapa,celular}.png`.
+
+Correção de borda na tela do mapa (item L2-01-a), achada ao medir o responsivo: painel flutuante ganhou
+`max-width: calc(100% - var(--e4) * 2)` — o seletor de camada base media 378 px e terminava em 394 px num visor
+de 390 px, empurrando a página 2 px para fora da tela.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 

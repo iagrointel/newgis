@@ -31,7 +31,7 @@ export class PlatDialogo extends HTMLElement {
     limpar(this._corpo); limpar(this._botoes);
     if (corpo) this._corpo.append(corpo);
     for (const b of botoes) {
-      const btn = h('button', { type: 'button', class: b.classe || '' }, b.rotulo);
+      const btn = h('button', { type: 'button', class: b.classe || '', 'data-id': b.id }, b.rotulo);
       btn.addEventListener('click', () => this.fechar(b.id));
       this._botoes.append(btn);
     }
