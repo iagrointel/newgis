@@ -1134,3 +1134,28 @@ guardado — só o identificador dele e o prefixo visível.
 - não há WMS 1.3.0 (L1-02-g), nem OGC API Tiles/Maps (L1-02-i), nem ponto/estatística/histograma
   (L1-02-h), nem predefinição de renderização gravada (L1-02-f): por enquanto a pintura vive na URL;
 - a única grade é a WebMercatorQuad (a do Google/OSM/AGOL).
+
+## 27. Acervo de arquivo da casa no catálogo (item L6-01-i-raster-e-arquivos)
+
+Além das fontes (seção do acervo) e das tabelas com geometria, o acervo da casa tem ARQUIVOS registrados com
+sha256. Eles aparecem em:
+
+```
+GET  /api/acervo/arquivos?tipo=raster|vetor&fonte_id=&q=&so_no_disco=&limite=&deslocamento=
+POST /api/acervo/arquivos/expor    {"caminhos": ["backtest/3876/dem.tif", ...], "titulo": "opcional"}
+```
+
+A lista traz caminho, tipo, extensão, bytes, sha256, feições, SRID, a ficha da fonte (nome, órgão, domínio,
+licença), `publicavel` (há licença escrita?), `exposto` (já está no catálogo deste inquilino?) e `no_disco` (o
+arquivo do registro existe nesta instalação). A exposição enfileira um job por caminho; o job **confere o
+sha256 do arquivo antes de escrever qualquer coisa** e recusa com `hash_divergente` se o arquivo mudou.
+
+- **raster** (`.tif`, `.tiff`, `.vrt`): vira item `raster` com item STAC apontando para o arquivo onde ele está
+  (`acervo://<caminho>`), sem cópia; serve ladrilho por token como qualquer raster (seção do ladrilho).
+- **vetor** (`.geojson`, `.gpkg`, `.shp`, `.parquet`, ...): é ingerido uma vez para PostGIS e vira
+  `camada_vetorial` hospedada.
+
+Recusas nomeadas: `caminho_inexistente`, `arquivo_ausente`, `arquivo_grande_demais` (acima de 2 GB),
+`lote_grande_demais` (soma acima de 3 GB), `ja_exposto`, `hash_divergente`, `acervo_sem_raiz`. A raiz dos
+arquivos é `PLAT_ACERVO_ARQUIVOS_RAIZ` no `.env`; sem ela a lista vem vazia e a exposição responde 409.
+Item de fonte **sem licença escrita** nasce privado e marcado `uso_restrito` no campo `dados`.
