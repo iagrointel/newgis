@@ -238,8 +238,13 @@ export class PainelGraficos {
     if (!this.camadaId) return null;
     const corpo = this.pedido();
     if (!corpo.campo) { this.saida.textContent = t('mapa.grafico_sem_campo'); return null; }
+    // pedidos em voo fora de ordem (filtro digitado + extensão marcada em seguida): só a resposta do ÚLTIMO
+    // pedido conta; uma anterior que chegue depois é descartada em vez de sobrescrever o gráfico
+    this._sequencia = (this._sequencia || 0) + 1;
+    const meu = this._sequencia;
     this.raiz.dataset.ocupado = '1';
     const r = await enviar(`/api/camadas/${this.camadaId}/grafico`, corpo);
+    if (meu !== this._sequencia) return null;
     delete this.raiz.dataset.ocupado;
     if (r.status !== 200) {
       this.saida.textContent = mensagemDe(r);
