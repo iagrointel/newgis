@@ -204,3 +204,31 @@ body.mapa .exportar #exp-perda { color: var(--fraco); font-size: var(--t-2); }
   body.mapa .mapa-area { position: fixed; inset: 0; }
   body.mapa .mapa-status { display: block; }
 }
+
+/* ---------- painéis Rotas e Motor (UX-08): controles do sistema de design dentro da gaveta ---------- */
+.rotas, .motor { display: grid; gap: var(--e3); }
+.rotas .campo, .motor .campo { display: grid; gap: var(--e1); }
+.rotas .linha, .motor .linha { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; }
+.rotas .linha .controle, .motor .linha .controle { flex: 1; min-width: 8rem; }
+.rotas-modos { display: flex; gap: var(--e1); flex-wrap: wrap; }
+.rotas-modos [aria-checked="true"] { background: var(--acento); color: var(--acento-texto); border-color: var(--acento); }
+.rotas-bloco { display: grid; gap: var(--e2); }
+.rotas-conjunto { border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); padding: var(--e2) var(--e3); display: grid; gap: var(--e2); }
+.rotas-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e1); font-size: var(--t-1); }
+.rotas-lista li { display: flex; justify-content: space-between; align-items: center; gap: var(--e2); }
+.rotas-resumo { margin: 0; }
+.rotas-instrucoes { margin: 0; padding-left: var(--e5); font-size: var(--t-1); display: grid; gap: var(--e1); }
+.rotas-saida, .motor-saida { display: grid; gap: var(--e2); }
+.motor-secao { border-top: var(--borda-largura) solid var(--borda); padding-top: var(--e3); display: grid; gap: var(--e2); }
+.motor-secao h3 { margin: 0; font-size: var(--t0); }
+.motor-fatores { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
+.motor-fator { border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); padding: var(--e2) var(--e3); display: grid; gap: var(--e1); }
+.motor-fator input[type="range"] { flex: 1; min-width: 6rem; accent-color: var(--acento); }
+.motor-amostras { display: grid; gap: var(--e1); }
+.motor-amostras textarea { font-family: var(--mono); font-size: var(--t-2); width: 100%; }
+.motor-novo summary { cursor: pointer; color: var(--acento); }
+.motor-execucao { display: grid; gap: var(--e1); }
+.motor-relatorio-fatores { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e1); font-size: var(--t-1); }
+.motor-relatorio-fatores li.grosseira { border-left: var(--borda-destaque) solid var(--atencao); padding-left: var(--e2); }
+.motor-popup .maplibregl-popup-content { white-space: pre-line; font-family: var(--mono); font-size: var(--t-2); }
+.cartao-interno { border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); padding: var(--e3) var(--e4); background: var(--fundo-2); }

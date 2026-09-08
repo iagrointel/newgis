@@ -39,6 +39,8 @@ import { Medicao } from './medicao.js';
 import { interpretarCoordenada, sugerir, geocodificar } from './busca.js';
 import { paraPng, paraPdf, escalaNumerica } from './impressao.js';
 import '../widgets/mapa.js';
+import { PainelRotas } from './rotas.js';
+import { PainelMotor } from './motor.js';
 import { criarTabela } from './tabela.js';
 import { Desenho, kmlParaGeoJSON } from './desenho.js';
 import { PainelAnotacoes } from './anotacoes.js';
@@ -49,8 +51,8 @@ const BASES = [
   { id: 'sem-base', rotuloChave: 'mapa.base_nenhuma', arquivo: null },
 ];
 const CENTRO = [-46.593018, -23.493476];
-const PAINEIS = ['busca', 'camadas', 'legenda', 'medicao', 'desenho', 'anotacoes', 'impressao', 'exportar'];
-const ATALHOS = { b: 'busca', c: 'camadas', l: 'legenda', m: 'medicao', d: 'desenho', a: 'anotacoes', i: 'impressao', e: 'exportar' };
+const PAINEIS = ['busca', 'camadas', 'legenda', 'medicao', 'desenho', 'anotacoes', 'impressao', 'exportar', 'rotas', 'motor'];
+const ATALHOS = { b: 'busca', c: 'camadas', l: 'legenda', m: 'medicao', d: 'desenho', a: 'anotacoes', i: 'impressao', e: 'exportar', r: 'rotas', o: 'motor' };
 const CHAVE_PAINEL = 'plat_mapa_painel';
 const el = (id) => document.getElementById(id);
 
@@ -399,6 +401,10 @@ async function iniciar() {
     aoErro: (e) => el('aviso').erro(`${t('mapa.exportar_falhou', { erro: (e && e.message) || e })}`),
   });
 
+  // --- rotas (rota, isócrona, matriz) e motor multicritério de grades aninhadas (item UX-08)
+  const painelRotas = new PainelRotas(map, maplibregl, el('rotas'));
+  const painelMotor = new PainelMotor(map, maplibregl, el('motor'));
+
   // --- impressão PNG/PDF: a legenda impressa é a MESMA que o painel mostra
   const titulo = () => `${t('mapa.titulo')} — ${new Date().toLocaleDateString('pt-BR')}`;
   const atribuicao = '© colaboradores do OpenStreetMap — ODbL 1.0';
@@ -452,7 +458,7 @@ async function iniciar() {
   window.plat.org = window.plat.org || {};
   obter('/api/mapa/fuso').then((r) => { if (r.status === 200) window.plat.org.fuso = r.json.fuso; }).catch(() => {});
   // ponto de inspeção do e2e, nunca de negócio
-  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, desenho, painelAnotacoes, exportar: painelExportar, abrirPainel, fecharGaveta, painelAberto, get mapaId() { return mapaId; } };
+  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, desenho, painelAnotacoes, exportar: painelExportar, rotas: painelRotas, motor: painelMotor, abrirPainel, fecharGaveta, painelAberto, get mapaId() { return mapaId; } };
   document.body.dataset.pronto = '1';
 }
 

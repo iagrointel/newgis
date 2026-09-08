@@ -38,6 +38,8 @@
         <button type="button" class="trilho-botao" data-painel="anotacoes" aria-pressed="false" aria-controls="painel-anotacoes"><span data-i18n="mapa.anotacoes">Anotações</span><kbd>a</kbd></button>
         <button type="button" class="trilho-botao" data-painel="impressao" aria-pressed="false" aria-controls="painel-impressao"><span data-i18n="mapa.impressao">Impressão</span><kbd>i</kbd></button>
         <button type="button" class="trilho-botao" data-painel="exportar" aria-pressed="false" aria-controls="painel-exportar"><span data-i18n="mapa.exportar_titulo">Exportar</span><kbd>e</kbd></button>
+        <button type="button" class="trilho-botao" data-painel="rotas" aria-pressed="false" aria-controls="painel-rotas"><span data-i18n="rotas.titulo">Rotas</span><kbd>r</kbd></button>
+        <button type="button" class="trilho-botao" data-painel="motor" aria-pressed="false" aria-controls="painel-motor"><span data-i18n="motor.titulo">Motor</span><kbd>o</kbd></button>
         <button type="button" class="trilho-botao" id="tabela-alternar" aria-expanded="false" aria-controls="painel-tabela"><span data-i18n="mapa.tabela">Tabela</span><kbd>t</kbd></button>
       </nav>
 
@@ -141,6 +143,12 @@
 
         <plat-painel id="painel-exportar" fechavel hidden data-titulo="mapa.exportar_titulo">
           <div id="exportar" class="exportar"></div>
+        </plat-painel>
+        <plat-painel id="painel-rotas" fechavel hidden data-titulo="rotas.titulo">
+          <div id="rotas" class="rotas"></div>
+        </plat-painel>
+        <plat-painel id="painel-motor" fechavel hidden data-titulo="motor.titulo">
+          <div id="motor" class="motor"></div>
         </plat-painel>
       </section>
 
