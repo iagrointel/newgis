@@ -3,6 +3,31 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item UX-05-telas-conexoes-uploads-tarefas-compartilhado: conexões com controle, fila de envio, tarefas traduzidas, página pública sem chrome)
+
+Trilha de interface. `/conexoes` ganhou criar, editar e apagar (confirmação) por `<plat-formulario>` — nome, tipo
+(travado depois de criada), endereço, modo, config JSON, credencial que nunca volta do servidor —, com os 422 do
+servidor (`url_insegura`, `config_grande_demais`, pydantic) e o 409 de nome no campo certo; busca, ordenação por
+coluna com `aria-sort` e estados vazio/carregando/erro/negado: fecha as quatro rotas de UX-13. `/uploads` virou fila
+(vários arquivos, uma barra por arquivo, cancelar por arquivo ou tudo, tentar de novo, remover), com bytes, velocidade
+e tempo restante pintados uma vez por quadro; o progresso por byte via `XMLHttpRequest` foi tentado e refutado pela
+própria trilha (XHR na mesma origem leva o cookie e cai em `400 autenticacao_ambigua`), então as partes seguem por
+`fetch` com `AbortController` e granularidade de 16 MiB — decisão registrada na ADR e no handoff para o dono da
+autenticação. `/tarefas` sem texto cravado (lista, detalhe, agendas e `jobs/formato.js` pelo dicionário; pt-BR
+inalterado, en/es com paridade) e com `<plat-estado>` na lista (vazio com "limpar filtros", erro, negado), no detalhe
+(id inexistente) e nas agendas. `/c/<token>` deixou de montar a barra lateral do produto: cabeçalho próprio (marca,
+idioma, tema), estados nomeados para 404/410/429/erro e a ficha do item incluído por
+`GET /api/compartilhado/{token}/itens/{id}` (rota que estava sem tela). Achados consertados de passagem: o seletor
+`.progresso span` da folha comum pintava o número da barra de tarefas com o fundo de andamento (contraste); a barra
+de progresso não tinha nome acessível; o tema claro tinha sucesso 4,27:1 e acento 4,45:1 sobre a superfície de hover
+(tokens escurecidos para 4,69 e 5,05); o título do item na página pública saía em caixa alta; o gerador de cobertura
+só atribuía o texto da tela ao primeiro caminho do mesmo HTML (`/tarefas/{job_id}` aparecia sem estado nenhum).
+Medida (`tests/medidas/UX-05.json`): arquivo sintético de 256 MiB (16 partes) com PUT/concluir interceptados no
+navegador, maior tarefa longa do fio principal 199 ms, maior intervalo entre quadros 23 ms, 18 pinturas do rótulo
+(carga 6,42). e2e `tests/e2e/test_ux05_telas.py` (4 telas, capturas 390/1280, axe, i18n, 0 erro de console);
+suítes anteriores das quatro telas passam contra esta árvore. Cobertura regenerada: 238 rotas, 38 lacunas de escrita
+(eram 41).
+
 ## turno 8, setembro de 2026 (item UX-04-tela-mapa-polimento: chrome único do visualizador; ramos de painel juntados)
 
 Trilha de interface. Juntados no mesmo tronco os ramos de painel do mapa (`wt/l201mapa`, `wt/il201gtabel`,
