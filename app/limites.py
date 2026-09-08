@@ -243,3 +243,12 @@ AMC_RESULTADOS_PAGINA_MAX = 5_000     # linhas por página em GET /api/amc/execu
 SIMILARIDADE_UNIDADES_MAX = 20_000
 SIMILARIDADE_CAMPOS_MAX = 50
 SIMILARIDADE_REFERENCIAS_MAX = 500
+
+# --- critérios sobre a própria feição (L3-06-criterios-de-feicao): a avaliação é SÍNCRONA e roda na tela,
+# sobre as feições que chegam no pedido (com os atributos delas), então o teto é o que a requisição responde
+# em segundos. Acima do teto a API recusa com `acima_do_sincrono` e manda para o caminho de lote que já
+# existe (conjunto de unidades + POST /api/amc/execucoes, job `amc.executar`); nunca corta a lista em silêncio.
+AMC_CRITERIOS_FEICAO_MAX = 5_000        # feições por avaliação síncrona (na tela)
+AMC_CRITERIOS_POR_AVALIACAO = 20        # critérios por avaliação (o painel compara par a par: 20 = 400 células)
+AMC_CRITERIO_RAIO_M_MAX = 100_000.0     # 100 km: raio maior que isto não vale numa única zona UTM
+AMC_CRITERIO_CAMADA_PONTOS_MAX = 200_000  # pontos por camada auxiliar num pedido (raio, contenção, distância)
