@@ -690,6 +690,7 @@
   "nav.uploads": "Enviar arquivo",
   "nav.usuarios": "Usuários",
   "nav.usuarios_desc": "membros do inquilino: criar, editar, desabilitar, redefinir senha",
+  "nav.vista_camada": "Vista de camada",
   "org.armazenamento": "Armazenamento",
   "org.basemap": "mapa-base",
   "org.bloqueio_minutos": "duração do bloqueio (minutos)",
