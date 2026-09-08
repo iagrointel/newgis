@@ -923,6 +923,7 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
     # ---- rede de utilidades (L4-01-a-pacote-de-ativos): o catálogo /api/rede/pacotes vem com a instalação e
     # não é de inquilino nenhum (proprio); tudo em /api/rede/{rede_id} aponta a rede de B e tem de dar 404.
     ("GET", "/api/rede"): Caso(lambda p: "/api/rede", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),

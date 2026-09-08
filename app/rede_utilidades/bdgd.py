@@ -440,8 +440,6 @@ class _Importador:
             (self.rede_id, tipo_id),
         )
         total = int(self.cur.fetchone()["n"])
-        duplicados = (self.inseridos.get(camada, 0) + len(df) - self._falhas[camada]) - total \
-            if hasattr(self, "_falhas") else 0
         self.inseridos[camada] = total
 
     def _gravar_arestas(self, tuplas: list[tuple]) -> None:
@@ -456,7 +454,8 @@ class _Importador:
             tuplas,
             template="(%s, %s::uuid, %s::uuid, %s, %s::uuid, %s::uuid, 0, 0, "
                      "ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE) + "), 4326), "
-                     "ST_Length(ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE) + "), 4326)::geography), "
+                     "ST_Length(ST_Transform(ST_SetSRID(ST_GeomFromWKB(%s), " + str(SRID_FONTE)
+                     + "), 4326)::geography), "
                      "%s, %s::uuid, %s)",
             page_size=LOTE,
         )
@@ -642,7 +641,8 @@ class _Importador:
             "   AND ((r.de_tipo_id = a.tipo_id AND r.para_tipo_id = n.tipo_id) "
             "     OR (r.de_tipo_id = n.tipo_id AND r.para_tipo_id = a.tipo_id)) "
             "   JOIN plat.rede_no n ON n.tenant_id = v.tenant_id AND n.id = v.de_no::uuid "
-            "   WHERE a.rede_id = v.rede_id::uuid AND (a.no_origem_id = v.para_no::uuid OR a.no_destino_id = v.para_no::uuid)"
+            "   WHERE a.rede_id = v.rede_id::uuid"
+            "     AND (a.no_origem_id = v.para_no::uuid OR a.no_destino_id = v.para_no::uuid)"
             ") RETURNING de_no_id",
             associacoes,
             page_size=LOTE,
