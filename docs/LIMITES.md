@@ -251,3 +251,15 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `PACOTE_MODELOS_MAX` | `200` | modelos na galeria por inquilino (o de escopo plataforma conta no dele) |
 | `PACOTE_NOME_MAX` | `200` | CHECK(length(nome) BETWEEN 1 AND 200) da migração |
 | `PACOTE_DESCRICAO_MAX` | `2000` | — |
+
+## site do inquilino (L5-20-sites-paginas-publicas): tetos do documento e do que a página pública consulta
+
+| nome | valor | explicação |
+|---|---|---|
+| `SITE_PAGINAS_MAX` | `50` | páginas por site (o menu do cabeçalho fica ilegível muito antes disso) |
+| `SITE_NOS_MAX` | `400` | nós do documento inteiro (páginas + seções + cartões) |
+| `SITE_TEXTO_MAX` | `4000` | caracteres do cartão de texto e do rodapé |
+| `SITE_GALERIA_ITENS_MAX` | `60` | teto duro do cartão de galeria e da busca (o mesmo do LIMIT da função SQL) |
+| `SITE_GALERIA_ITENS_PADRAO` | `12` | — |
+| `SITE_INCORPORADO_ALTURA_MIN` | `120` | — |
+| `SITE_INCORPORADO_ALTURA_MAX` | `1200` | — |
