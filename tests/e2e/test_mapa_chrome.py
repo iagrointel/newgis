@@ -21,7 +21,8 @@ from tests.e2e.test_i18n_cru import _cruas, _texto
 pytestmark = [pytest.mark.lento, pytest.mark.e2e]
 
 ITEM = "UX-04"
-PAINEIS = ["busca", "camadas", "legenda", "medicao", "desenho", "anotacoes", "impressao", "exportar", "rotas", "motor"]
+PAINEIS = ["busca", "camadas", "legenda", "medicao", "desenho", "anotacoes", "impressao", "exportar", "rotas", "motor",
+           "selecao"]
 ATALHOS = {
     "b": "busca",
     "c": "camadas",
@@ -33,6 +34,7 @@ ATALHOS = {
     "e": "exportar",
     "r": "rotas",
     "o": "motor",
+    "s": "selecao",
 }
 
 

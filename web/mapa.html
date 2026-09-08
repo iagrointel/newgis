@@ -40,6 +40,7 @@
         <button type="button" class="trilho-botao" data-painel="exportar" aria-pressed="false" aria-controls="painel-exportar"><span data-i18n="mapa.exportar_titulo">Exportar</span><kbd>e</kbd></button>
         <button type="button" class="trilho-botao" data-painel="rotas" aria-pressed="false" aria-controls="painel-rotas"><span data-i18n="rotas.titulo">Rotas</span><kbd>r</kbd></button>
         <button type="button" class="trilho-botao" data-painel="motor" aria-pressed="false" aria-controls="painel-motor"><span data-i18n="motor.titulo">Motor</span><kbd>o</kbd></button>
+        <button type="button" class="trilho-botao" data-painel="selecao" aria-pressed="false" aria-controls="painel-selecao"><span data-i18n="selecao.titulo">Seleção</span><kbd>s</kbd></button>
         <button type="button" class="trilho-botao" id="tabela-alternar" aria-expanded="false" aria-controls="painel-tabela"><span data-i18n="mapa.tabela">Tabela</span><kbd>t</kbd></button>
       </nav>
 
@@ -120,9 +121,11 @@
         <plat-painel id="painel-anotacoes" fechavel hidden data-titulo="mapa.anotacoes">
           <div id="bloco-anotacoes">
             <button type="button" id="btn-anotar" class="pequeno" aria-pressed="false" data-i18n="mapa.anotacao_modo">Clicar numa feição para anotar</button>
+            <plat-aviso id="anotacoes-aviso"></plat-aviso>
+            <plat-estado id="anotacoes-estado" hidden></plat-estado>
             <div id="anotacoes-corpo" class="form" hidden>
               <p id="anotacoes-alvo" class="saida"></p>
-              <ul id="lista-anotacoes" class="lista-camadas" data-i18n-aria="mapa.anotacoes" aria-label="anotações da feição"></ul>
+              <ul id="lista-anotacoes" class="lista-camadas anotacoes" data-i18n-aria="mapa.anotacoes" aria-label="anotações da feição"></ul>
               <div class="campo"><label for="anotacao-grupo" data-i18n="mapa.anotacao_grupo">grupo</label><select id="anotacao-grupo"></select></div>
               <div class="campo"><label for="anotacao-texto" data-i18n="mapa.anotacao_texto">comentário</label><textarea id="anotacao-texto" maxlength="4000" rows="2"></textarea></div>
               <div class="botoes"><button type="button" id="btn-anotacao-enviar" class="pequeno primario" data-i18n="mapa.anotacao_enviar">Comentar</button></div>
@@ -149,6 +152,9 @@
         </plat-painel>
         <plat-painel id="painel-motor" fechavel hidden data-titulo="motor.titulo">
           <div id="motor" class="motor"></div>
+        </plat-painel>
+        <plat-painel id="painel-selecao" fechavel hidden data-titulo="selecao.titulo">
+          <div id="selecao" class="selecao"></div>
         </plat-painel>
       </section>
 

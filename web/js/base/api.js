@@ -59,6 +59,7 @@ export const obter = (url, opcoes) => chamar('GET', url, undefined, opcoes);
 export const enviar = (url, corpo) => chamar('POST', url, corpo ?? {});
 export const alterar = (url, corpo) => chamar('PUT', url, corpo ?? {});
 export const apagar = (url) => chamar('DELETE', url);
+export const remendar = (url, corpo) => chamar('PATCH', url, corpo ?? {}); // UX-23: PATCH parcial (anotações)
 
 /* texto de tela para uma resposta de erro: a mensagem já vem em português da API; o front só mostra.
    Em 5xx acrescenta o req_id para o usuário citar ao suporte. */

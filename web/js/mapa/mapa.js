@@ -43,6 +43,7 @@ import { PainelRotas } from './rotas.js';
 import { PainelMotor } from './motor.js';
 import { criarTabela } from './tabela.js';
 import { Desenho, kmlParaGeoJSON } from './desenho.js';
+import { PainelSelecao } from './selecao.js';
 import { PainelAnotacoes } from './anotacoes.js';
 import { PainelExportar } from './exportar.js';
 
@@ -51,8 +52,8 @@ const BASES = [
   { id: 'sem-base', rotuloChave: 'mapa.base_nenhuma', arquivo: null },
 ];
 const CENTRO = [-46.593018, -23.493476];
-const PAINEIS = ['busca', 'camadas', 'legenda', 'medicao', 'desenho', 'anotacoes', 'impressao', 'exportar', 'rotas', 'motor'];
-const ATALHOS = { b: 'busca', c: 'camadas', l: 'legenda', m: 'medicao', d: 'desenho', a: 'anotacoes', i: 'impressao', e: 'exportar', r: 'rotas', o: 'motor' };
+const PAINEIS = ['busca', 'camadas', 'legenda', 'medicao', 'desenho', 'anotacoes', 'impressao', 'exportar', 'rotas', 'motor', 'selecao'];
+const ATALHOS = { b: 'busca', c: 'camadas', l: 'legenda', m: 'medicao', d: 'desenho', a: 'anotacoes', i: 'impressao', e: 'exportar', r: 'rotas', o: 'motor', s: 'selecao' };
 const CHAVE_PAINEL = 'plat_mapa_painel';
 const el = (id) => document.getElementById(id);
 
@@ -385,7 +386,7 @@ async function iniciar() {
   const painelAnotacoes = new PainelAnotacoes(map, catalogo, {
     btnModo: el('btn-anotar'), corpo: el('anotacoes-corpo'), alvo: el('anotacoes-alvo'),
     lista: el('lista-anotacoes'), selGrupo: el('anotacao-grupo'), campoTexto: el('anotacao-texto'),
-    btnEnviar: el('btn-anotacao-enviar'),
+    btnEnviar: el('btn-anotacao-enviar'), estado: el('anotacoes-estado'), aviso: el('anotacoes-aviso'),
   });
 
   if (mapaId) {
@@ -454,14 +455,17 @@ async function iniciar() {
   estadoCamadas.addEventListener('acao', async () => { estadoCamadas.carregando(); try { await arvore.carregar(); legenda.desenhar(); estadoCamadas.limpar(); } catch (e) { estadoCamadas.erro({ status: e && e.status, json: { mensagem: (e && e.message) || String(e) } }); } });
 
   // tabela de atributos (L2-01-g): painel ancorado ao rodapé do mapa; a seleção da tabela realça a feição
-  await criarTabela(map, el('aviso')).iniciar();
+  const tabela = criarTabela(map, el('aviso'));
+  await tabela.iniciar();
+  // painel Seleção (UX-23): atributo, geometria do desenho e entre camadas; resultado cai na tabela
+  const painelSelecao = new PainelSelecao(map, catalogo, desenho, tabela, el('selecao'));
 
   // item L2-01-d-popup-runtime: o fuso do inquilino, uma vez só (nunca por campo de data no popup)
   window.plat = window.plat || {};
   window.plat.org = window.plat.org || {};
   obter('/api/mapa/fuso').then((r) => { if (r.status === 200) window.plat.org.fuso = r.json.fuso; }).catch(() => {});
   // ponto de inspeção do e2e, nunca de negócio
-  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, desenho, painelAnotacoes, exportar: painelExportar, rotas: painelRotas, motor: painelMotor, abrirPainel, fecharGaveta, painelAberto, get mapaId() { return mapaId; } };
+  window.plat.mapa = { map, catalogo, medicao, arvore, legenda, desenho, painelAnotacoes, exportar: painelExportar, rotas: painelRotas, motor: painelMotor, selecao: painelSelecao, tabela, abrirPainel, fecharGaveta, painelAberto, get mapaId() { return mapaId; } };
   document.body.dataset.pronto = '1';
 }
 

@@ -78,11 +78,11 @@ export class Desenho {
     this._idEmprestado = null;    // id que o terra-draw deu a essa feição enquanto ela é editada
     this._draw = null;
     this._snap = { ativo: false, toleranciaPx: 10 };
-    this._aoMudar = null;         // callback(features) — o chamador decide quando salvar
+    this._ouvintes = new Set();    // callbacks(features) — o chamador decide quando salvar; vários painéis ouvem (UX-23)
     this._imagensTexto = new Map(); // nome da imagem -> assinatura (texto|tamanho|cor) já registrada
   }
 
-  aoMudar(fn) { this._aoMudar = fn; }
+  aoMudar(fn) { this._ouvintes.add(fn); return () => this._ouvintes.delete(fn); }
 
   // ------------------------------------------------------------------------------------------- camada de render
   _garantirCamadas() {
@@ -253,7 +253,7 @@ export class Desenho {
   _repintar() {
     const src = this.map.getSource(FONTE);
     if (src) src.setData(this._colecao());
-    if (this._aoMudar) this._aoMudar(this._features);
+    for (const fn of this._ouvintes) fn(this._features);
   }
 
   // ------------------------------------------------------------------------------------------------ terra-draw

@@ -19,6 +19,12 @@ import { chamar, obter } from '../base/api.js';
 
 const ESPERA_MS = 700;
 
+/* corpo CRU (zip do pacote) sob o cookie da sessão: o cliente comum js/base/api.js só fala JSON */
+function enviarBruto(metodo, url, corpo, tipo) {
+  return fetch(url, { method: metodo, body: corpo, credentials: 'same-origin', cache: 'no-store',
+    headers: { 'Content-Type': tipo, Accept: 'application/json' } });
+}
+
 export async function listarFormatos() {
   const r = await obter('/api/exportacoes/formatos');
   if (r.status !== 200) throw new Error((r.json && r.json.mensagem) || 'falha ao listar formatos');
@@ -89,6 +95,7 @@ export class PainelExportar {
     const ativas = this.catalogo.ativas.map((id) => this.catalogo.ficha(id)).filter(Boolean);
     if (!ativas.length) {
       raiz.append(h('p', { class: 'saida', id: 'exp-vazio' }, t('mapa.exportar_sem_camada')));
+      this.desenharImportacao();
       return;
     }
     const camada = h('select', { id: 'exp-camada', 'aria-label': t('mapa.exportar_camada') },
@@ -119,6 +126,83 @@ export class PainelExportar {
       h('p', { class: 'saida', id: 'exp-saida', 'aria-live': 'polite' }),
     );
     this.mostrarPerda();
+    this.desenharImportacao();
+  }
+
+  /* importação de pacote de mapa (UX-23): o zip que outro inquilino exportou volta como mapa + camadas novas
+     (POST /api/mapa/pacotes/importar, corpo = zip cru). O bloco existe mesmo sem camada ativa — importar é o
+     que traz a primeira camada. */
+  desenharImportacao() {
+    const raiz = this.raiz;
+    if (raiz.querySelector('#imp-bloco')) return;
+    const entrada = h('input', { type: 'file', id: 'imp-arquivo', accept: '.zip,application/zip' });
+    const botao = h('button', { type: 'button', class: 'botao', id: 'btn-importar-pacote', disabled: true,
+      onclick: () => this.importarPacote() }, t('mapa.pacote_importar'));
+    entrada.addEventListener('change', () => { botao.disabled = !entrada.files.length; });
+    const estado = h('plat-estado', { id: 'imp-estado' });
+    estado.addEventListener('acao', (ev) => { if (ev.detail.id === 'tentar') this.importarPacote(); });
+    raiz.append(h('section', { class: 'exp-importar', id: 'imp-bloco', 'aria-labelledby': 'imp-titulo' },
+      h('h3', { id: 'imp-titulo' }, t('mapa.pacote_titulo')),
+      h('p', { class: 'ajuda' }, t('mapa.pacote_ajuda')),
+      h('div', { class: 'linha' }, h('label', { class: 'rotulo', for: 'imp-arquivo' }, t('mapa.pacote_arquivo')), entrada),
+      h('div', { class: 'linha' }, botao),
+      estado,
+      h('p', { class: 'saida', id: 'imp-saida', 'aria-live': 'polite' })));
+    // o painel é redesenhado a cada mudança do catálogo (inclusive a recarga depois de importar): o resumo da
+    // última importação é reposto para não sumir debaixo do usuário
+    if (this.ultimaImportacao) this.mostrarImportacao(this.ultimaImportacao);
+  }
+
+  mostrarImportacao(json) {
+    const saida = this.raiz.querySelector('#imp-saida');
+    if (!saida) return;
+    const camadas = (json && json.camadas) || [];
+    limpar(saida).append(t('mapa.pacote_importado', { n: camadas.length, titulo: (json && json.titulo) || '' }), ' ',
+      h('a', { href: `/mapa?mapa=${encodeURIComponent(json.mapa_id)}`, id: 'imp-abrir' }, t('mapa.pacote_abrir')));
+  }
+
+  async importarPacote() {
+    const entrada = this.raiz.querySelector('#imp-arquivo');
+    const estado = this.raiz.querySelector('#imp-estado');
+    const saida = this.raiz.querySelector('#imp-saida');
+    const botao = this.raiz.querySelector('#btn-importar-pacote');
+    const arquivo = entrada && entrada.files && entrada.files[0];
+    limpar(saida);
+    if (!arquivo) { estado.erro(t('mapa.pacote_sem_arquivo'), []); return; }
+    if (!/\.zip$/i.test(arquivo.name)) { estado.erro(t('mapa.pacote_nao_zip', { nome: arquivo.name }), []); return; }
+    estado.carregando(t('mapa.pacote_enviando', { mb: (arquivo.size / (1024 * 1024)).toFixed(1) }));
+    botao.disabled = true;
+    let resp; let json = null;
+    try {
+      resp = await enviarBruto('POST', '/api/mapa/pacotes/importar', arquivo, 'application/zip');
+      try { json = await resp.json(); } catch { json = null; }
+    } catch (e) {
+      botao.disabled = false;
+      estado.erro({ status: 0, json: { mensagem: (e && e.message) || String(e) } }, [{ id: 'tentar', rotulo: t('estado.tentar_de_novo') }]);
+      return;
+    }
+    botao.disabled = false;
+    if (resp.status !== 201) {
+      const r = { status: resp.status, json: json || {} };
+      estado.mostrar({ tipo: resp.status === 403 ? 'negado' : 'erro', texto: this.textoErroPacote(r),
+        acoes: resp.status >= 500 ? [{ id: 'tentar', rotulo: t('estado.tentar_de_novo') }] : [], ref: r.json.req_id });
+      return;
+    }
+    estado.limpar();
+    entrada.value = '';
+    botao.disabled = true;
+    this.ultimaImportacao = json;
+    this.mostrarImportacao(json);
+    try { await this.catalogo.carregar(); } catch (e) { this.aoErro(e); }
+  }
+
+  textoErroPacote(r) {
+    const j = r.json || {};
+    const base = (j.mensagem) || `${t('erro.carregar')} (${r.status})`;
+    if (r.status === 413) return t('mapa.pacote_grande', { mensagem: base });
+    if (j.erro === 'pacote_invalido' || j.erro === 'pacote_vazio') return t('mapa.pacote_invalido', { mensagem: base });
+    if (j.erro === 'pacote_camada_invalida') return t('mapa.pacote_camada_invalida', { mensagem: base });
+    return base;
   }
 
   mostrarPerda() {

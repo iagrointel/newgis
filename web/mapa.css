@@ -232,3 +232,24 @@ body.mapa .exportar #exp-perda { color: var(--fraco); font-size: var(--t-2); }
 .motor-relatorio-fatores li.grosseira { border-left: var(--borda-destaque) solid var(--atencao); padding-left: var(--e2); }
 .motor-popup .maplibregl-popup-content { white-space: pre-line; font-family: var(--mono); font-size: var(--t-2); }
 .cartao-interno { border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); padding: var(--e3) var(--e4); background: var(--fundo-2); }
+
+/* --- painel Seleção (UX-23) e anotações com controle */
+.selecao { display: grid; gap: var(--e3); }
+.selecao .campo { display: grid; gap: var(--e1); }
+.selecao .linha { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; }
+.selecao .linha .controle { flex: 1; min-width: 6rem; }
+.sel-condicoes { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
+.sel-condicao { border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); padding: var(--e2); display: grid; gap: var(--e1); }
+.sel-condicao .linha .controle { min-width: 5rem; }
+.sel-resultado { border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); padding: var(--e2) var(--e3); display: grid; gap: var(--e2); }
+.sel-resultado details { font-size: var(--t-1); }
+.sel-sql { display: block; white-space: pre-wrap; word-break: break-all; font-family: var(--mono); font-size: var(--t-2); margin-top: var(--e1); }
+.anotacoes { display: grid; gap: var(--e2); }
+.anotacao-item { border: var(--borda-largura) solid var(--borda); border-radius: var(--raio); padding: var(--e2); display: grid; gap: var(--e1); }
+.anotacao-item[data-resolvido="1"] p { color: var(--fraco); }
+.anotacao-cabecalho { font-size: var(--t-2); color: var(--fraco); display: flex; flex-wrap: wrap; gap: var(--e1); align-items: center; }
+.anotacao-item p { margin: 0; white-space: pre-wrap; }
+.anotacao-acoes { display: flex; gap: var(--e1); flex-wrap: wrap; }
+.anotacao-editor { width: 100%; box-sizing: border-box; }
+.exp-importar { border-top: var(--borda-largura) solid var(--borda); padding-top: var(--e3); margin-top: var(--e2); display: grid; gap: var(--e2); }
+.exp-importar h3 { margin: 0; font-size: var(--t0); }

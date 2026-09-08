@@ -458,5 +458,24 @@ export function criarTabela(map, aviso) {
     if (camadas.length === 1) { sel.value = camadas[0].id; await trocarCamada(camadas[0].id); }
   }
 
-  return { iniciar, estado };
+  /* seleção vinda de fora (painel Seleção, UX-23): troca a camada se preciso, aplica os fids como seleção,
+     realça no mapa e abre a tabela — a mesma trilha do clique numa linha, sem segunda fonte de verdade */
+  async function selecionar(camadaId, ids) {
+    const sel = el('tabela-camada');
+    if (estado.camadaId !== camadaId) {
+      sel.value = camadaId;
+      await trocarCamada(camadaId);
+    }
+    estado.selecionados = new Set((ids || []).map((v) => (typeof v === 'string' && /^\d+$/.test(v) ? Number(v) : v)));
+    estado.pagina = 1;
+    estado.recontar = true;
+    const painel = el('painel-tabela');
+    if (painel.hidden) el('tabela-alternar').click();
+    garantirCamadasDoMapa();
+    aplicarRealce();
+    await atualizarTabela();
+    await atualizarMapa();
+  }
+
+  return { iniciar, estado, selecionar };
 }
