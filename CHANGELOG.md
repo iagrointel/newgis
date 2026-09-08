@@ -3,6 +3,18 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## codex cx1, setembro de 2026 (item UX-14-geocodificador-sem-tela: tela /geocodificar para POST /api/geocodificar e /api/reverso)
+
+Fecha as lacunas "POST /api/geocodificar" e "POST /api/reverso sem controle" do mapa de cobertura (UX-00): tela nova
+`/geocodificar` (menu, sem privilégio além da sessão — as rotas exigem só o escopo `geocodificar:usar`) com dois
+`<plat-formulario>`: endereço em linha única e/ou campos estruturados (até 50 candidatos, com pontuação, tipo de
+acerto traduzido, coordenada e "ver no mapa") e coordenada para endereço (vizinho mais próximo, distância, marca
+"fora do raio"). Estados do sistema de design por `<plat-estado>`: carregando, vazio NOMEADO com a resposta real do
+motor (422 sem_correspondencia / sem_dado_instalado: o código e a mensagem, nunca o número cru), erro com "tentar de
+novo" e referência, negado (403); 422 endereco_vazio e a lista do pydantic caem no campo. `docs/COBERTURA_UI.md` e
+`docs/cobertura_ui_lacunas.json` regenerados (35 → 33). e2e `tests/e2e/test_geocodificar_ux14.py` (10 estados, dois
+deles reais contra a base sem CNEFE; axe 0 sérias; capturas 390/1280); textos em pt-BR/en/es.
+
 ## codex cx1, setembro de 2026 (item UX-13-conexoes-sem-controle: a escrita de conexões com erro nomeado no controle da tela /conexoes)
 
 Fecha a lacuna "POST/PATCH/DELETE /api/conexoes sem controle" do mapa de cobertura (UX-00). A tela `/conexoes` da
