@@ -34,6 +34,8 @@ router = APIRouter(prefix="/api/rede", tags=["rede de utilidades — subredes"])
 LER = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade"}
 EDITAR = {"x-auth": "S/T", "x-privilegio": "rede.editar"}
 CONFERENCIA_LIMITE_MAX = 1000
+# formatos que saem em zip. 'json' é o padrão e sai como corpo JSON, não como arquivo.
+FORMATOS = ("json", "dss", "pandapower", "matpower")
 
 
 def _uuid_ok(valor: str) -> str:
@@ -101,11 +103,14 @@ def _exportar_sincrono(rid: str, nome: str, tier: str | None, auth: Auth) -> dic
         return subredes.exportar(cur, rid, nome, tier)
 
 
-def _exportar_dss_sincrono(rid: str, nome: str, tier: str | None, ano: int | None, jusante: bool,
-                           auth: Auth) -> bytes:
+def _exportar_zip_sincrono(rid: str, nome: str, formato: str, tier: str | None, ano: int | None,
+                           jusante: bool, auth: Auth) -> bytes:
     with db.db(auth.contexto()) as cur:
         _rede_existe(cur, rid)
-        saida = subredes.exportar_dss(cur, rid, nome, tier, ano, jusante)
+        if formato == "dss":
+            saida = subredes.exportar_dss(cur, rid, nome, tier, ano, jusante)
+        else:
+            saida = subredes.exportar_equilibrada(cur, rid, nome, formato, tier, ano, jusante)
     pasta = opendss.sanear(nome)
     memoria = io.BytesIO()
     # ZIP_DEFLATED e não ZIP_STORED: a curva de 864 pontos é texto muito repetido e o zip cai a uma fração.
@@ -125,17 +130,26 @@ async def exportar_subrede(rede_id: str, nome: str, tier: str | None = None, for
     `formato=dss`: a pasta OpenDSS da subrede, num zip. `ano` escolhe o calendário da curva de 864 pontos
     (24 h x 3 tipos de dia x 12 meses); o padrão é o ano corrente. `jusante=true` inclui as subredes de tier
     inferior que penduram nesta — é o alimentador inteiro, com transformador e carga, em vez de só o tier
-    pedido."""
+    pedido.
+
+    `formato=pandapower`: `rede.json`, que `pandapower.from_json` lê, mais `resumo.json` e `NAO_FAZ.md`,
+    num zip. `formato=matpower`: o `.m` do caseformat 2, com os mesmos dois arquivos ao lado. Os dois são
+    modelos de rede EQUILIBRADA (sequência positiva): as fases declaradas por trecho não são
+    representadas, e onde o desequilíbrio importa o formato certo é o `dss`. O `ano` não muda nada nesses
+    dois formatos — a curva de carga só existe no OpenDSS; cada carga sai com a potência média do ano."""
     rid = _uuid_ok(rede_id)
     if formato == "json":
         return await run_in_threadpool(_exportar_sincrono, rid, nome, tier, auth)
-    if formato != "dss":
-        raise ErroAPI(422, "formato_desconhecido", "formato tem de ser 'json' ou 'dss'")
+    if formato not in FORMATOS:
+        raise ErroAPI(422, "formato_desconhecido",
+                      "formato tem de ser um de: " + ", ".join(FORMATOS))
     if ano is not None and not 1970 <= ano <= 2200:
         raise ErroAPI(422, "ano_fora_da_faixa", "ano tem de estar entre 1970 e 2200")
-    bruto = await run_in_threadpool(_exportar_dss_sincrono, rid, nome, tier, ano, jusante, auth)
+    bruto = await run_in_threadpool(_exportar_zip_sincrono, rid, nome, formato, tier, ano, jusante,
+                                    auth)
     return Response(
         content=bruto, media_type="application/zip",
         headers={"Cache-Control": "no-store",
-                 "Content-Disposition": f'attachment; filename="{opendss.sanear(nome)}-dss.zip"'},
+                 "Content-Disposition":
+                     f'attachment; filename="{opendss.sanear(nome)}-{formato}.zip"'},
     )
