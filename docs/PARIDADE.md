@@ -421,3 +421,28 @@ da busca com os trechos citados literalmente, não de navegação própria pela 
 | Accordion widget | organiza widgets num menu empilhado verticalmente; cada widget vira um cabeçalho com estado aberto/fechado | `acordeao`: um painel por filho, cabeçalho sempre visível, corpo com `hidden`; `multiplo_aberto` controla se fecha os outros | feito | construído; sem e2e próprio nesta passagem | 2026-09-07 | pendente (D20) |
 | Window (modal / ancorada) | "Window" NÃO é um widget de layout na doc da Esri — é um TIPO de página à parte, com dois modos de exibição (centralizado/modal e ancorado perto do que a abriu) | `janela`: um nó de conteúdo com `modo` `modal` (`<dialog>` nativo, Esc/backdrop do navegador) ou `ancorada` (`div` posicionado, Esc por `keydown` manual); modelamos como WIDGET, não como página — divergência deliberada (documento único por app, sem página extra para cada popup) | parcial (cobre os dois modos; modelo diferente do da Esri) | idem (cláusula "janela modal abre por botão e fecha por Esc") | 2026-09-07 | pendente (D20) |
 | Tab (seção com vistas/abas) | não está entre os 6 widgets confirmados na busca desta passagem (candidato a widget "layout adjacente"; não confirmado por citação literal) | `secao_vistas`/`vista`: barra de abas + painel único visível (`role="tab"`, `aria-selected`) | não comparável (Esri não confirmada nesta busca) | construído; sem e2e próprio nesta passagem | 2026-09-07 | pendente (D20) |
+
+## Layout de impressão e Export Web Map Task (item L2-12-b-layouts-elementos-exportacao; ADR 20260908T1230)
+
+Referência: Print service do ArcGIS Server (`Export Web Map Task`, `Get Layout Templates Info Task`), layouts do
+ArcGIS Pro e o "Print" do Map Viewer.
+
+| capacidade | ArcGIS | plat | estado |
+|---|---|---|---|
+| papel (A4-A0, carta), retrato/paisagem, margens | Pro (layouts) | tipo `layout`, `papel`/`orientacao`/`margens_mm` | feito |
+| elementos posicionados por arrasto | Pro | formulário em mm (o arrasto é o L5-08) | aproximado |
+| quadro de mapa por extensão fixa ou escala 1:N; várias molduras (principal + localização) | Pro map frame | `mapa` com `modo` extensao/escala, `papel_do_quadro` | feito |
+| rotação do quadro | Pro | `rotacao` (bearing) — grade não desenhada sobre quadro rotacionado | aproximado |
+| legenda do estilo, colunas, itens escolhidos, só o visível | Pro legend | `legenda` (colunas, camadas, so_visivel); 300 classes paginadas com aviso | feito |
+| barra de escala correta ao DPI e à latitude, divisões, unidade | Pro scale bar | `escala` (distância "redonda", mm = m·1000/N) | feito |
+| seta de norte verdadeiro / de grade | Pro north arrow | `norte` (convergência meridiana UTM) | feito |
+| grade/graticule UTM (m) ou geográfica (GMS), rótulos nas bordas | Pro grid | `grade` (crs utm/4326, intervalo automático ou fixo) | feito |
+| título/texto com expressões | Pro dynamic text | `{data} {data_longa} {escala} {autor} {titulo_mapa} {inquilino}`; campo de feição → L5-29 | aproximado |
+| imagem/logo do inquilino, tabela de atributos da seleção, data, atribuição obrigatória | Pro picture/table | `imagem`, `tabela` (item `selecao`), `data`, `atribuicao` (automática se faltar) | feito |
+| modelos por inquilino e modelos padrão | Print service templates | itens `layout` com `modelo: true` + `MODELOS_PADRAO` | feito |
+| PDF vetorial (texto selecionável), PNG, SVG, JPG, DPI 96-300 | Print service formats | WeasyPrint/PyMuPDF; mapa raster no DPI, teto de pixels declarado; vetor puro do mapa FORA | feito (fronteira declarada) |
+| exportação como job com link | Print service async | `layout.exportar` → `/api/arquivos/{sha}?classe=layout_exportacao` | feito |
+| `Export Web Map Task` (Web_Map_as_JSON, Format, Layout_Template) | Print service | `/rest/services/Impressao/GPServer/Export Web Map Task/execute` (síncrono; submitJob FORA) | aproximado |
+| `Get Layout Templates Info` | Print service | `.../Get Layout Templates Info Task/execute` | feito |
+| camadas do web map: nossas por URL de tile; externas (Living Atlas, WMS, basemaps Esri) | Print service | nossas viram quadro; externas viram aviso "fora do quadro", nunca cópia; baseMap → mapa-base local | aproximado |
+| diálogo de impressão no visualizador | Map Viewer Print | painel Layout (`y`): modelo, elementos, prévia, exportação, gravar | feito |

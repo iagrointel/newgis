@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L2-12-b-layouts-elementos-exportacao: layout de impressão, exportação e Export Web Map Task)
+
+Tipo de item `layout` (papel A4-A0/carta, orientação, margens, elementos em mm: quadro de mapa por extensão ou
+escala 1:N, legenda, barra de escala, seta de norte verdadeiro/grade, grade UTM/geográfica, título e texto com
+expressões, imagem, tabela, data, atribuição obrigatória), modelos padrão em código e modelos do inquilino.
+Compositor `app/layout/compor.py`: primitivas em mm → PDF vetorial (WeasyPrint, texto selecionável) / PNG / JPG /
+SVG, quadro raster no DPI pedido com teto de pixels declarado (A0 a 300 DPI sai a DPI efetivo menor, no relatório),
+legenda paginada. Geometria declarada (`geometria.py`): escala ↔ zoom do MapLibre, UTM por pyproj. Quadro desenhado
+pelo motor de render do L2-12-a (copiado de `wt/il212amotor` 900c0b16) numa página headless com token interno
+assinado que cunha tokens de tile por camada — desenha camadas do catálogo via Martin. Job `layout.exportar`
+(arquivo como objeto do inquilino, classe `layout_exportacao`), rotas `/api/layouts/{modelos,validar,previa,exportar}`,
+Esri `Export Web Map Task` e `Get Layout Templates Info Task`. Painel Layout no visualizador (atalho `y`). Testes:
+unidade (geometria, validação nomeada, PDF lido por pdftotext, legenda de 300 classes, teto A0), API contra uvicorn
+real (régua sobre o PDF: dois pontos a 1.000 m medidos no pdftoppm, ≤ 1 %; cor da legenda; grade lida; Esri),
+e2e do diálogo. ADR `20260908T1230`; PARIDADE com a tabela Print service × plat.
+
 ## turno 8, setembro de 2026 (itens UX-11-arquivos-sem-controle, UX-17-login-sem-controle e UX-18-plataforma-sem-tela: últimas lacunas da trilha de interface)
 
 Trilha de interface. **UX-11**: seção "Arquivos e objetos" em `/admin/organizacao` — uso × cota (`GET
