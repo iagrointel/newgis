@@ -1111,3 +1111,17 @@ estático: nenhum HTML/JS/CSS carrega `http(s)://`, bibliotecas e fontes vendori
 `docs/APPLIANCE.md`: o que não funciona offline e a mensagem exata da tela (conectores, CSW, catálogo público,
 imagens, e-mail, OSRM, certbot), CA interna, rede `--internal` do compose (não executada: imagens do perfil
 appliance pendentes por disco, D21). `tests/operacao/frente_estatica.py` faz o papel do nginx para e2e em trilha.
+
+## turno 4, setembro de 2026 (item L7-08-c-sdk-js: SDK JavaScript e ajudantes MapLibre)
+
+`web/sdk/plat.js` (também `sdk/js/plat.js`): módulo ES sem dependência, só `fetch`, com o mesmo modelo do SDK
+Python — `Plataforma(url, token)`, `Plataforma.entrar()`, `.itens/.camadas/.mapas` (paginação por cursor em
+`todos()`), `.jobs.esperar()`, `.tokens`, retentativa em 429/502/503/504, `ErroPlataforma` (RFC 9457). Ajudantes
+MapLibre em `.maplibre`: `fonte(item)`, `camada(item)`, `estilo(mapaItem)`, `catalogo({bbox})`,
+`transformRequest`, `enquadrar`. Regra medida e embutida: Bearer nunca junto com o cookie (a API responde 400
+`autenticacao_ambigua`). 10 exemplos HTML em `/static/sdk/exemplos/` com CSP `default-src 'none'` na página,
+sem inline; são o e2e (`tests/e2e/test_sdk_js.py`, 13 verdes no Chromium: os 10 exemplos, token revogado com a
+mensagem exata, script inline bloqueado pela CSP, capturas dos dois mapas com >1.600 cores). Unidade em Node
+(`tests/sdk_js/plat.test.mjs`, 13, via `tests/unit/test_sdk_js.py`). Paridade contra o ArcGIS Maps SDK for
+JavaScript em `docs/PARIDADE.md`; ADR `docs/adr/20260908T0705-sdk-javascript.md`; `sdk/js/README.md`. Fora:
+feições por camada e tiles dinâmicos (dependem do L2-04); CORS (a API é same-origin).
