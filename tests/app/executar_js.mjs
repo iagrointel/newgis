@@ -22,6 +22,7 @@ const { Fonte, normalizarLista } = await import('../../web/js/app/fontes.js');
 const { criarVistas } = await import('../../web/js/app/vistas.js');
 const { Barramento } = await import('../../web/js/app/barramento.js');
 const url = await import('../../web/js/app/estado_url.js');
+const { REGISTRO } = await import('../../web/js/widgets/registro.js');
 
 const comando = process.argv[2];
 const entrada = () => JSON.parse(readFileSync(0, 'utf8'));
@@ -130,6 +131,54 @@ if (comando === 'url') {
   const vistas2 = criarVistas(corpo, fontes);
   const aplicados = url.aplicarEstado(vistas2, url.estadoDosParams(params));
   sair({ query: params.toString(), aplicados, filtro: vistas2.get(A).filtro, selecao: [...vistas2.get(A).selecao], registros: vistas2.get(A).registros().map((f) => f.id) });
+}
+
+
+/* item L5-01-e: contrato por tipo de widget (o teste compara com app/app_modelo/contratos.py) */
+if (comando === 'contratos') {
+  sair(Object.fromEntries([...REGISTRO.values()].map((m) => [m.nome, { eventos: [...m.eventos], acoes: [...m.acoes] }])));
+}
+
+/* item L5-01-e, refutação: N ações em cadeia (mapa -> vista 1 -> vista 2 -> ... -> vista N, cada uma filtrando a
+   próxima por mesma_fonte no evento filtro_mudou), 100 voltas de seleção no mapa; mede p95/máximo por volta, a
+   profundidade da pilha de disparo e conta cortes de recursão. Com "ciclo", a última vista filtra a primeira. */
+if (comando === 'cadeia') {
+  const N = Number(process.argv[3] || 30); const NF = Number(process.argv[4] || 5000); const fecharCiclo = process.argv[5] === 'ciclo';
+  const feicoes = [];
+  for (let i = 0; i < NF; i += 1) feicoes.push({ type: 'Feature', id: i, properties: { k: i, uf: ['SP', 'RJ', 'MG'][i % 3] }, geometry: { type: 'Point', coordinates: [-50 + (i % 100) * 0.1, -20 + Math.floor(i / 100) * 0.1] } });
+  const F = ulid(1);
+  const fontes = new Map([[F, fonteEmbutida(F, feicoes, [{ nome: 'k', tipo: 'inteiro' }, { nome: 'uf', tipo: 'texto' }, { nome: 'geometria', tipo: 'geometria' }])]]);
+  const V = (i) => ulid(100 + i); const W = ulid(50);
+  const vistasDef = []; const mensagens = [];
+  for (let i = 0; i <= N; i += 1) vistasDef.push({ id: V(i), nome: `v${i}`, fonte: F });
+  mensagens.push({ id: ulid(200), gatilho: { origem: W, evento: 'selecao_mudou' }, acoes: [{ alvo: V(1), acao: 'filtrar', parametros: {}, relacao: { tipo: 'mesma_fonte' } }] });
+  for (let i = 1; i < N; i += 1) mensagens.push({ id: ulid(200 + i), gatilho: { origem: V(i), evento: 'filtro_mudou' }, acoes: [{ alvo: V(i + 1), acao: 'filtrar', parametros: {}, relacao: { tipo: 'mesma_fonte' } }] });
+  if (fecharCiclo) mensagens.push({ id: ulid(299), gatilho: { origem: V(N), evento: 'filtro_mudou' }, acoes: [{ alvo: V(1), acao: 'filtrar', parametros: {}, relacao: { tipo: 'mesma_fonte' } }] });
+  const corpo = { nos: [{ id: W, tipo: 'mapa', configuracao: { vista: V(0) } }], fontes: [{ id: F, nome: 'f', origem: { tipo: 'embutida', feicoes: [] }, campos: fontes.get(F).campos }], vistas: vistasDef, mensagens };
+  const validacao = modelo.validarModelo(corpo);
+  if (validacao.erros.length) sair({ erro: 'modelo inválido', erros: validacao.erros });
+  const vistas = criarVistas(corpo, fontes);
+  const widgets = new Map([[W, widgetFalso(W, vistas.get(V(0)))]]);
+  const bus = new Barramento(corpo, { vistas, widgets });
+  let cortes = 0; let profundidade = 0; let atual = 0;
+  bus.addEventListener('aviso', (e) => { if (e.detail.tipo === 'ciclo_cortado') cortes += 1; });
+  const original = bus.disparar.bind(bus);
+  bus.disparar = (...args) => { atual += 1; profundidade = Math.max(profundidade, atual); try { return original(...args); } finally { atual -= 1; } };
+  const tempos = []; let disparosPorVolta = 0;
+  for (let k = 0; k < 100; k += 1) {
+    const ids = [k % NF, (k * 7 + 1) % NF, (k * 13 + 2) % NF];
+    const antes = bus.medidas.length;
+    const t0 = performance.now();
+    bus.disparar(W, 'selecao_mudou', { ids });
+    tempos.push(performance.now() - t0);
+    disparosPorVolta = bus.medidas.slice(antes).reduce((s, m) => s + m.mensagens, 0);
+  }
+  const ord = [...tempos].sort((a, b) => a - b);
+  const p = (q) => ord[Math.min(ord.length - 1, Math.ceil(ord.length * q) - 1)];
+  sair({ vistas: vistasDef.length, mensagens: mensagens.length, feicoes: NF, voltas: tempos.length, disparos_por_volta: disparosPorVolta,
+    p50_ms: +p(0.5).toFixed(3), p95_ms: +p(0.95).toFixed(3), max_ms: +ord[ord.length - 1].toFixed(3), profundidade_max: profundidade, cortes,
+    avisos: [...new Set(bus.avisos.map((a) => a.tipo))], registros_primeira: vistas.get(V(1)).registros().length, registros_ultima: vistas.get(V(N)).registros().length,
+    avisos_validacao: validacao.avisos.map((a) => a.regra) });
 }
 
 process.stderr.write(`comando desconhecido: ${comando}\n`);
