@@ -22,7 +22,8 @@ Este módulo acrescenta só o que é específico de documento de construtor e qu
    banco (quem grava de novo grava a versão nova por si — a leitura só devolve o corpo já ajustado ao esquema
    vigente e registra o evento).
 
-Vale hoje para as famílias `app` e `painel` (`FAMILIAS_GRAFO`); `formulario`/`fluxo` continuam com o envelope
+Vale hoje para as famílias `app`, `painel` e `site` (`FAMILIAS_GRAFO`; o site do L5-20 é o mesmo
+envelope, com as regras de montagem próprias em `app/catalogo/site.py`); `formulario`/`fluxo` continuam com o envelope
 trivial até o item que desenha a forma própria dos nós (L5-03/L5-02) decidir o formato deles — quando decidir,
 é só acrescentar a família aqui, nada neste módulo é específico de app/painel.
 """
@@ -43,7 +44,7 @@ ULID_RE = re.compile(r"^[0-7][0-9A-HJKMNP-TV-Z]{25}$")
 _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 # famílias de plat.tipo_item cujo `corpo` segue o formato {"nos": [...], "ligacoes": [...]} validado aqui
-FAMILIAS_GRAFO = {"app", "painel"}
+FAMILIAS_GRAFO = {"app", "painel", "site"}
 
 
 def gerar_ulid() -> str:
