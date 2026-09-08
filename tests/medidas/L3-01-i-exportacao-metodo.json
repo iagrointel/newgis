@@ -1,0 +1,27 @@
+{
+ "item": "L3-01-i-exportacao-metodo",
+ "medidas": {
+  "geracao_pdf_ms": {
+   "valor": 6.871,
+   "unidade": "ms",
+   "comando": "gerar_pdf() do documento de teste; carga_1min=5.35, ram_livre_gb=7.15, medido_em=2026-09-08T18:33:45Z"
+  },
+  "paginas_do_relatorio": {
+   "valor": 8,
+   "unidade": "páginas",
+   "comando": "páginas = seções, conferidas com pypdf contra paginas_do_relatorio(); carga_1min=5.35, ram_livre_gb=7.15, medido_em=2026-09-08T18:33:45Z"
+  },
+  "numeros_no_pdf": {
+   "valor": 23,
+   "unidade": "números",
+   "comando": "extraídos por palavra com pdfplumber; todos no JSON: True; carga_1min=5.35, ram_livre_gb=7.15, medido_em=2026-09-08T18:33:45Z"
+  },
+  "pdf_verificado_pagina_a_pagina": {
+   "valor": true,
+   "unidade": "conferência",
+   "comando": "cada página convertida com pdftoppm e lida por agente na revisão do item; leigo zero no texto: sem sobreposição, sem número fora do JSON, ressalvas na última página"
+  }
+ },
+ "gerado_em": "2026-09-08T18:33:45Z",
+ "git_sha": "610896979710"
+}
