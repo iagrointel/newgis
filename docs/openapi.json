@@ -10987,6 +10987,94 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/amc/pareto": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Ordenacao",
+    "description": "Ordenação não dominada das unidades de uma execução, com 2 a 4 objetivos e sem peso nenhum.",
+    "operationId": "ordenacao_api_amc_pareto_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PedidoPareto"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Saida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/amc/pareto/camada": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Camada",
+    "description": "A fronteira (ou as ordens pedidas) como camada GeoJSON: é o que o mapa desenha e o que se baixa.",
+    "operationId": "camada_api_amc_pareto_camada_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PedidoCamada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Saida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
   }
  },
  "components": {
@@ -15324,6 +15412,33 @@
     "type": "object",
     "title": "MoverEntrada"
    },
+   "Objetivo": {
+    "properties": {
+     "fator_id": {
+      "type": "string",
+      "title": "Fator Id",
+      "description": "fator da execução (plat.escala_execucao_fator)"
+     },
+     "direcao": {
+      "type": "string",
+      "title": "Direcao",
+      "description": "maximizar ou minimizar",
+      "default": "maximizar"
+     },
+     "base": {
+      "type": "string",
+      "title": "Base",
+      "description": "favorabilidade 0-100 transformada, ou valor bruto do fator",
+      "default": "favorabilidade"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "fator_id"
+    ],
+    "title": "Objetivo"
+   },
    "OrdemExclusao": {
     "properties": {
      "ordem": {
@@ -15909,6 +16024,45 @@
     ],
     "title": "PastaEntrada"
    },
+   "PedidoCamada": {
+    "properties": {
+     "execucao_id": {
+      "type": "string",
+      "title": "Execucao Id"
+     },
+     "objetivos": {
+      "items": {
+       "$ref": "#/components/schemas/Objetivo"
+      },
+      "type": "array",
+      "maxItems": 4,
+      "minItems": 2,
+      "title": "Objetivos"
+     },
+     "ordens": {
+      "type": "integer",
+      "maximum": 10.0,
+      "minimum": 1.0,
+      "title": "Ordens",
+      "default": 3
+     },
+     "ordens_incluidas": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Ordens Incluidas",
+      "description": "quais ordens entram na camada; [1] é só a fronteira"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "execucao_id",
+     "objetivos"
+    ],
+    "title": "PedidoCamada"
+   },
    "PedidoGeocodificar": {
     "properties": {
      "endereco": {
@@ -16089,6 +16243,37 @@
      "destinos"
     ],
     "title": "PedidoMatriz"
+   },
+   "PedidoPareto": {
+    "properties": {
+     "execucao_id": {
+      "type": "string",
+      "title": "Execucao Id"
+     },
+     "objetivos": {
+      "items": {
+       "$ref": "#/components/schemas/Objetivo"
+      },
+      "type": "array",
+      "maxItems": 4,
+      "minItems": 2,
+      "title": "Objetivos"
+     },
+     "ordens": {
+      "type": "integer",
+      "maximum": 10.0,
+      "minimum": 1.0,
+      "title": "Ordens",
+      "default": 3
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "execucao_id",
+     "objetivos"
+    ],
+    "title": "PedidoPareto"
    },
    "PedidoReverso": {
     "properties": {
@@ -16798,6 +16983,12 @@
      "destinatario"
     ],
     "title": "SMTPTestarSaida"
+   },
+   "Saida": {
+    "properties": {},
+    "additionalProperties": true,
+    "type": "object",
+    "title": "Saida"
    },
    "SaudeHistoricoItem": {
     "properties": {
