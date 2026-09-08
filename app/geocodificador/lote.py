@@ -118,13 +118,14 @@ def _endereco_auditoria(campos: dict) -> str:
 
 
 def geocodificar_linha(cur, linha_origem: int, linha_csv: dict, mapeamento: dict, *,
-                        limiar_pendente: float) -> LinhaGeocodificada:
+                        limiar_pendente: float, cache: dict | None = None) -> LinhaGeocodificada:
     """Geocodifica UMA linha CRUA do CSV: aplica o mapeamento de coluna e delega a `geocodificar_campos`."""
     campos = aplicar_mapeamento(linha_csv, mapeamento)
-    return geocodificar_campos(cur, linha_origem, campos, limiar_pendente=limiar_pendente)
+    return geocodificar_campos(cur, linha_origem, campos, limiar_pendente=limiar_pendente, cache=cache)
 
 
-def geocodificar_campos(cur, linha_origem: int, campos_entrada: dict, *, limiar_pendente: float) -> LinhaGeocodificada:
+def geocodificar_campos(cur, linha_origem: int, campos_entrada: dict, *, limiar_pendente: float,
+                        cache: dict | None = None) -> LinhaGeocodificada:
     """Geocodifica campos JÁ MAPEADOS (`logradouro`/`numero`/`bairro`/`municipio`/`uf`/`cep`/`endereco`) — usada
     tanto pela carga inicial (depois do mapeamento de coluna) quanto pelo re-geocodificar dos pendentes (que
     relê `campos_entrada` já gravado na camada, sem mapeamento nenhum: a coluna já virou campo há muito tempo).
@@ -156,6 +157,7 @@ def geocodificar_campos(cur, linha_origem: int, campos_entrada: dict, *, limiar_
         candidatos = motor.buscar(
             cur, logradouro=campos.get("logradouro"), numero=campos.get("numero"), bairro=campos.get("bairro"),
             municipio=campos.get("municipio"), uf=campos.get("uf"), cep=campos.get("cep"), max_locations=1,
+            cache=cache,
         )
     except motor.InconsistenciaEndereco as e:
         resultado.erro = e.codigo
@@ -178,8 +180,11 @@ def processar_lote(cur, linhas_csv: list[dict], mapeamento: dict, *,
     `_INTERVALO_PROGRESSO` linhas (o job usa para `ctx.progresso`; os testes de unidade passam None)."""
     total = len(linhas_csv)
     saida: list[LinhaGeocodificada] = []
+    # um cache POR JOB: a tabela real repete a mesma via em muitas linhas e as consultas de via do motor
+    # (pg_trgm + leitura dos pontos) não dependem do número — ver docstring de `motor._buscar_interna`.
+    cache: dict = {}
     for i, linha in enumerate(linhas_csv, start=1):
-        saida.append(geocodificar_linha(cur, i, linha, mapeamento, limiar_pendente=limiar_pendente))
+        saida.append(geocodificar_linha(cur, i, linha, mapeamento, limiar_pendente=limiar_pendente, cache=cache))
         if ao_progredir is not None and (i % 100 == 0 or i == total):
             ao_progredir(i, total)
     return saida
