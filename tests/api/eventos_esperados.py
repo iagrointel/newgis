@@ -107,6 +107,9 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
     # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
     ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
+    # L2-10-d-regras-de-atributo: definir regras grava evento próprio; validar enfileira job (evento do serviço)
+    ("PUT", "/api/camadas/{id}/regras"): ["camadas/regras_definir"],
+    ("POST", "/api/camadas/{id}/validar"): ["jobs/criar"],
     # ---- convite de membro por e-mail (L0-07-d-smtp-convites; ADR 0013)
     ("POST", "/api/convites"): ["convites/criar"],
     ("DELETE", "/api/convites/{id}"): ["convites/cancelar"],

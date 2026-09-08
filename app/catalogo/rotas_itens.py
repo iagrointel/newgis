@@ -50,6 +50,7 @@ from app.catalogo.modelos import (
     VersaoCompleta,
 )
 from app.erros import ErroAPI
+from app.regras import motor as regras_motor
 from app.settings import settings
 
 router = APIRouter(tags=["catalogo"])
@@ -557,6 +558,8 @@ def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteu
     tipos.obter(corpo.tipo)
     _publicar_tipo(auth, corpo.tipo)
     tipos.validar(corpo.tipo, corpo.dados)
+    if corpo.tipo == "camada_vetorial":
+        regras_motor.compilar(corpo.dados)  # L2-10-d: expressão, campo e ciclo das regras, 422 nomeado
     documento.validar_grafo(corpo.tipo, corpo.dados)
     _classificacao(auth, corpo.classificacao, novo=True)
     iid = str(uuid.UUID(corpo.id)) if corpo.id else str(uuid.uuid4())
@@ -693,6 +696,8 @@ def editar_item(
     dados = campos.get("dados", r["dados"])
     if "dados" in campos:
         tipos.validar(r["tipo"], dados)
+        if r["tipo"] == "camada_vetorial":
+            regras_motor.compilar(dados)  # L2-10-d
         documento.validar_grafo(r["tipo"], dados)
     if "classificacao" in campos:
         _classificacao(auth, campos["classificacao"], novo=False)

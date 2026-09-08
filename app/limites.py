@@ -233,3 +233,13 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# ---- L2-10-d-regras-de-atributo: regras por camada (cálculo, restrição, validação) e campos virtuais, avaliadas
+# pela linguagem de expressão (app/expressao) no caminho único de escrita (app/edicao) e no job camadas.validar
+REGRAS_POR_CAMADA_MAX = 100                # entradas em dados.regras (cálculo + restrição + validação)
+REGRAS_CAMPOS_VIRTUAIS_MAX = 50            # entradas em dados.campos_virtuais (só leitura, avaliados na leitura)
+REGRAS_EXPRESSAO_TEXTO_MAX = 4_000         # caracteres por expressão de regra (bem abaixo de MAX_TEXTO do avaliador)
+REGRAS_MENSAGEM_MAX = 500                  # mensagem configurada da restrição/validação
+REGRAS_VALIDACAO_LOTE = 5_000              # feições por lote do job camadas.validar (cursor no servidor)
+REGRAS_VALIDACAO_ERROS_MAX = 1_000_000     # teto de erros gravados por execução (acima disso o job para e avisa)
+REGRAS_FEICOES_LEITURA_MAX = 1_000         # linhas por chamada de GET /api/camadas/{id}/feicoes

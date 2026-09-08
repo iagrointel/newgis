@@ -937,3 +937,19 @@ def _link_so_o_item(p: Preparacao, j: Any) -> None:
     assert "login" not in item["dono"] and "pode_editar" not in item and item["id"] == p.item_b["id"]
     for marca in (p.usuario_b["login"], p.grupo_b["nome"], p.papel_b["nome"], p.token_b["prefixo"], "demo2"):
         assert marca not in str(j), marca
+
+
+# ---- L2-03-a (edição transacional) + L2-10-d (regras de atributo): tudo sobre o item de B é cross-tenant puro (404
+# pela RLS de plat.item em camada_ou_404, antes de tocar a tabela da camada)
+CASOS.update({
+    ("POST", "/api/camadas/{id}/edicoes"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/edicoes", lambda p: {"adicionar": [{"atributos": {}}]},
+    ),
+    ("GET", "/api/camadas/{id}/regras"): Caso(lambda p: f"/api/camadas/{p.item_b['id']}/regras"),
+    ("PUT", "/api/camadas/{id}/regras"): Caso(
+        lambda p: f"/api/camadas/{p.item_b['id']}/regras", lambda p: {"regras": [], "campos_virtuais": []},
+    ),
+    ("POST", "/api/camadas/{id}/validar"): Caso(lambda p: f"/api/camadas/{p.item_b['id']}/validar"),
+    ("GET", "/api/camadas/{id}/feicoes"): Caso(lambda p: f"/api/camadas/{p.item_b['id']}/feicoes"),
+    ("GET", "/api/camadas/{id}/erros"): Caso(lambda p: f"/api/camadas/{p.item_b['id']}/erros"),
+})

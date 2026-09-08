@@ -31,6 +31,7 @@ from app.edicao.modelos import (
 )
 from app.erros import ErroAPI
 from app.ingestao.geometria import MULTI_DE, TIPOS_CONCRETOS
+from app.regras import motor as regras_motor  # L2-10-d: cálculo/restrição no caminho único de escrita
 
 # campos de rastreio e sistema: NUNCA aceitos do cliente, mesmo que ele os inclua em `atributos` — ignorados em
 # silêncio (portão cláusula 7). Nunca fazem parte de `dados.campos` (a ingestão nunca os lista lá), então isso
@@ -286,6 +287,11 @@ def _inserir(
 ) -> tuple[ResultadoFeicao, list[str]]:
     schema, tabela = _schema_tabela(dados)
     atributos, avisos = validar_atributos(feicao.atributos, dados, "adicionar")
+    # L2-10-d: regras de cálculo preenchem campos e regras de restrição recusam (422 com código/mensagem da regra)
+    atributos, _ = regras_motor.aplicar_edicao(
+        regras_motor.compilar(dados), atributos, None, "inserir", em_massa=corpo.em_massa,
+        geometria_mudou=feicao.geometria is not None,
+    )
     tem_geom = dados.get("geometria") not in (None, "nenhuma")
     colunas = list(atributos.keys())
     valores: list[Any] = [atributos[c] for c in colunas]
@@ -340,12 +346,19 @@ def _atualizar(
     avisos: list[str] = []
     sets: list[str] = []
     valores: list[Any] = []
+    atributos: dict[str, Any] = {}
     if feicao.atributos:
         atributos, avisos_a = validar_atributos(feicao.atributos, dados, "atualizar")
         avisos += avisos_a
-        for c, v in atributos.items():
-            sets.append(f"{_ident(c)} = %s")
-            valores.append(v)
+    if feicao.atributos or feicao.geometria is not None:
+        # L2-10-d: gatilho por campo (o que veio no pedido + o que outra regra calculou) ou por geometria
+        atributos, _ = regras_motor.aplicar_edicao(
+            regras_motor.compilar(dados), atributos, atual, "atualizar", em_massa=corpo.em_massa,
+            geometria_mudou=feicao.geometria is not None,
+        )
+    for c, v in atributos.items():
+        sets.append(f"{_ident(c)} = %s")
+        valores.append(v)
     if feicao.geometria is not None:
         if not tem_geom:
             raise ErroAPI(422, "camada_sem_geometria", "esta camada não aceita geometria")
@@ -366,7 +379,7 @@ def _atualizar(
         valores,
     )
     r = cur.fetchone()
-    return ResultadoFeicao(sucesso=True, id=feicao.id, fid=r["fid"], versao=r["versao"]), avisos
+    return ResultadoFeicao(sucesso=True, id=feicao.id, fid=r["fid"], versao=r["versao"], atributos=atributos), avisos
 
 
 def _apagar(
