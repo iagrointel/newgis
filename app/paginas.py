@@ -39,6 +39,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- análise 3D (L2-09-d): visada, viewshed, perfil e sombra sobre terreno de exemplo ou próprio
+    "/analise3d": "analise3d.html",
 }
 router = APIRouter()
 
