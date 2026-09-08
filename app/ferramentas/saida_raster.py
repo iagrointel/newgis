@@ -158,7 +158,8 @@ def publicar(ctx, f, saida: dict, destino: dict, entradas: dict, prov: dict, tit
         "colecao": stac["collection"], "stac_id": item_id, "perfil": "cientifico", "origem": "copiado",
         "srid_nativo": epsg or 0, "bandas": bandas,
         "procedencia": {"gerador": f"plat ferramenta {f.nome} v{f.versao}", "metodo": saida.get("metodo"),
-                        "sha256": objeto["sha256"], "job_id": prov["job_id"], "ferramenta": prov},
+                        "sha256": objeto["sha256"], "job_id": prov["job_id"], "ferramenta": prov,
+                        "resumo": saida.get("resumo"), "cog": saida.get("cog")},
     }
     tipos_item.validar("raster", dados_item)
 
@@ -193,10 +194,14 @@ def publicar(ctx, f, saida: dict, destino: dict, entradas: dict, prov: dict, tit
         else:
             cur.execute("SELECT plat.evento_registrar('analises/executar', 'item', %s, %s::jsonb, NULL, NULL)",
                         (item_id, json.dumps(props, default=str)))
-        try:
+    # a atualização do extent da coleção vai em transação PRÓPRIA: dentro da transação do catálogo, uma
+    # falha dela aborta a transação inteira e o `commit` vira `rollback` em silêncio — o item sumia do
+    # catálogo sem nenhum erro visível (medido nesta suíte).
+    try:
+        with ctx.db() as cur:
             cur.execute("SELECT pgstac.update_collection_extents()")
-        except Exception as e:  # extents são derivados: nunca derrubam a publicação
-            ctx.log("AVISO", f"update_collection_extents falhou: {e}")
+    except Exception as e:  # extents são derivados: nunca derrubam a publicação
+        ctx.log("AVISO", f"update_collection_extents falhou: {e}")
     ctx.entrada(item_id, objeto["sha256"], "COG do resultado")
     ctx.progresso(100, "concluído")
     return {"item_id": item_id, "titulo": titulo_final, "feicoes": saida.get("pixels_validos"),
