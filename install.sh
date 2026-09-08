@@ -248,6 +248,9 @@ echo "venv: $(venv/bin/python --version) · fastapi $("${PY[@]}" -c 'import fast
 echo "== f2. cache do XSD ISO 19139 (item L0-09-metadado-catalogo): comitado no repo; idempotente, sem rede quando já presente"
 "${PY[@]}" docs/xsd/baixar_iso19139.py
 
+echo "== f2b. cache das XSD de WMS 1.3.0, WMTS 1.0.0 e SLD 1.0 (item L2-04-i-wms-wmts-sld): mesma máquina do f2"
+"${PY[@]}" docs/xsd/baixar_ogc_servicos.py
+
 echo "== f3. validador oficial da MapLibre Style Spec (item L2-02-a-modelo-estilo): versão fixada em ferramentas/estilo/package.json"
 command -v node >/dev/null || { echo "node ausente (apt install nodejs)" >&2; exit 1; }
 (cd ferramentas/estilo && npm ci --no-audit --no-fund --silent 2>/dev/null || npm install --no-audit --no-fund --silent)
