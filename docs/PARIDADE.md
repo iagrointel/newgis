@@ -88,7 +88,7 @@ decisão consciente de escopo, não esquecimento).
 | Content and Analysis: Reality Mapping | — | fora | |
 | Features: Edit | `feicoes.editar` | feito | |
 | Features: Edit with full control | `feicoes.editar_total` | feito | |
-| Version Management: Manage all | — | fora | sem versionamento de dado (branch versioning) |
+| Version Management: Manage all | `feicoes.editar_total` | feito | versionamento por ramo (item L2-13-a): criar, reconciliar, resolver, publicar e apagar ramo, por API própria e por VersionManagementServer; sem ramo de ramo e sem detecção por atributo (ADR 20260908T1323) |
 | Webhooks: Feature layer | — | fora | webhook só existe amplo (`org.integracoes`), não por camada |
 
 ### Privilégios administrativos

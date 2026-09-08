@@ -1106,3 +1106,91 @@ Dividir polígono por linha de corte; união com política de mesclagem de atrib
 primeira feição ou o que o chamador mandar"; desfazer/refazer por atalho de teclado (o mecanismo hoje
 é o histórico por feição, não uma pilha global de ações). Ver
 `docs/adr/20260907T1123-historico-restauracao-anexos-feicao.md`.
+
+## 23. Ramos de versão e reconciliação (`/versoes`, item L2-13-a-versoes-ramo-reconciliar)
+
+Um **ramo** é uma linha de trabalho paralela sobre uma camada: as edições ficam guardadas fora do
+padrão até alguém decidir publicá-las. É o equivalente ao *branch versioning* do ArcGIS Enterprise, e
+serve para o caso comum de campo — três equipes revisando o mesmo cadastro sem uma pisar na outra.
+
+### Ligar o versionamento numa camada
+
+    POST /api/camadas/{id}/versionar          {"ramos_max": 10}
+
+Só camada vetorial hospedada. Cria a tabela onde as linhas de ramo vão morar e grava o metadado em
+`dados.versionamento`. É idempotente: chamar de novo só reafirma, e permite mudar o teto de ramos.
+Sem `ramos_max`, vale o teto da plataforma (50 ramos ABERTOS por camada).
+
+### Criar, listar e apagar ramo
+
+    POST   /api/camadas/{id}/versoes          {"nome": "revisao-norte", "acesso": "protegido"}
+    GET    /api/camadas/{id}/versoes
+    GET    /api/camadas/{id}/versoes/{nome ou id}
+    DELETE /api/camadas/{id}/versoes/{nome ou id}
+
+`acesso` diz quem faz o quê: `privado` — só o dono lê e escreve; `protegido` (padrão) — todos leem, só
+o dono escreve; `publico` — todos leem e escrevem. Quem tem `feicoes.editar_total` passa em tudo.
+Apagar **descarta as edições do ramo**: nada vai para o padrão.
+
+### Editar dentro do ramo
+
+A porta de escrita é a de sempre; o que muda é um campo:
+
+    POST /api/camadas/{id}/edicoes
+    {"versao": "revisao-norte", "atualizar": [{"id": "<globalid>", "versao": 3, "atributos": {...}}]}
+
+Vale igual para o `applyEdits` do FeatureServer, com `gdbVersion=revisao-norte`. Uma feição criada no
+ramo só existe no ramo; uma apagada no ramo some do ramo e continua no padrão.
+
+### Ler dentro do ramo, e ler o passado
+
+    GET /rest/services/{item}/FeatureServer/0/query?where=1=1&gdbVersion=revisao-norte
+    GET /rest/services/{item}/FeatureServer/0/query?where=1=1&historicMoment=1757332800000
+
+A leitura no ramo mostra as edições do ramo mais o padrão **como estava no momento em que o ramo
+nasceu**: uma mudança feita no padrão depois disso só aparece no ramo depois de reconciliar.
+`historicMoment` (epoch em milissegundos, ou data ISO 8601) devolve o padrão como estava naquele
+instante, incluindo feição que já foi apagada. Os dois juntos são recusados: o momento histórico é do
+padrão.
+
+### Reconciliar, resolver e publicar
+
+    POST /api/camadas/{id}/versoes/{ramo}/reconciliar
+    GET  /api/camadas/{id}/versoes/{ramo}/conflitos
+    POST /api/camadas/{id}/versoes/{ramo}/conflitos/{globalid}/resolver   {"decisao": "ramo"}
+    POST /api/camadas/{id}/versoes/{ramo}/publicar                        {"modo": "fechar"}
+
+**Reconciliar** compara ramo e padrão desde o momento base e lista as feições alteradas dos dois lados,
+atributo a atributo e geometria. Sem conflito, o momento base avança — é assim que o ramo passa a
+enxergar o padrão de agora nas feições que ele não tocou.
+
+**Resolver** decide uma feição: `ramo` mantém o que o ramo tem, `padrao` traz o estado atual do padrão
+para dentro do ramo, `manual` grava no ramo os valores enviados em `atributos`/`geometria`. A decisão
+fica gravada com o momento do padrão em que foi tomada: **se o padrão mudar de novo, o conflito
+reabre**.
+
+**Publicar** reconcilia antes (é obrigatório) e recusa com 409 se sobrar conflito sem decisão; a lista
+vem no corpo do erro. `modo=fechar` encerra o ramo; `modo=rebasear` mantém o ramo aberto, descarta as
+linhas já publicadas e reposiciona o momento base no agora.
+
+### A tela
+
+`/versoes?camada=<id>` mostra os ramos da camada e, depois de reconciliar, um cartão por conflito com o
+diff lado a lado: **base** (o valor no momento do ramo), **no ramo** e **no padrão**, sempre nessas três
+colunas e na mesma ordem. O lado que mudou é marcado. A decisão é tomada ali, com a opção `decidir
+campo a campo` abrindo um formulário já preenchido com os valores do ramo.
+
+### VersionManagementServer (compatibilidade Esri)
+
+`/rest/services/{item}/VersionManagementServer` com `versions`, `versionInfos`, `create`,
+`{guid}/reconcile`, `{guid}/conflicts`, `{guid}/post`, `{guid}/delete` e as sessões
+`startReading`/`stopReading`/`startEditing`/`stopEditing`. As sessões conferem o ramo e a permissão e
+devolvem o momento do servidor; não guardam sessão, porque a leitura consistente e a escrita atômica
+vêm da transação do banco.
+
+### O que NÃO está aqui
+
+Ramo de ramo (a coluna `pai` existe e é sempre o padrão); detecção de conflito por atributo
+(`conflictDetection=byAttribute` é aceito e ignorado — a detecção é por objeto); `historicMoment`
+dentro de um ramo; e coluna acrescentada à camada depois de ela ser versionada, que exige reversionar.
+Ver `docs/adr/20260908T1323-versionamento-por-ramo.md`.

@@ -1275,3 +1275,31 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 4, setembro de 2026 (item L2-13-a-versoes-ramo-reconciliar: versionamento por ramo)
+
+Camada marcada como versionada aceita RAMOS de trabalho paralelos, no molde do *branch versioning* do
+ArcGIS Enterprise. Ler num ramo mostra as edições dele mais o padrão como estava no momento em que o
+ramo nasceu; reconciliar compara os dois lados desde esse momento e lista as feições alteradas dos
+dois; resolver decide `ramo`, `padrão` ou `manual` campo a campo; publicar (post) leva as linhas do
+ramo para o padrão e fecha ou rebaseia o ramo; apagar descarta tudo.
+
+Onde as linhas do ramo moram: numa tabela companheira `c_<uuid16>__ramo`, e não em colunas novas na
+tabela da camada. O motivo está no ADR 20260908T1323 e vale repetir: todo caminho de leitura que já
+existe (FeatureServer, OGC, WFS, tiles, exportação, união/divisão) lê a tabela sem filtro de versão, e
+com as colunas lá dentro o não-vazamento passaria a depender de lembrar de corrigir cada um. Assim ele
+é estrutural. O momento histórico do padrão vem de `plat.feicao_historico` (item L2-03-d), reusado
+inteiro.
+
+No protocolo Esri: `gdbVersion` na consulta e no `applyEdits`, `historicMoment` na consulta (os dois
+como troca da RELAÇÃO lida, no motor), e um `VersionManagementServer` com `versions`, `versionInfos`,
+`create`, `reconcile`, `conflicts`, `post`, `delete` e as sessões `startReading`/`stopReading`/
+`startEditing`/`stopEditing`. As doze chamadas da sequência do cliente Python `arcgis` foram rodadas
+por `tests/esri/cliente_arcgis_versoes.py`, todas ok; o pacote `arcgis` em si NÃO está instalado nesta
+máquina e o script diz isso em vez de fingir. ArcGIS Pro de verdade continua pendente (D20).
+
+Tela nova `/versoes`: diff lado a lado do conflito (base, ramo, padrão nas mesmas três colunas em toda
+feição, com o lado que mudou marcado por classe e não só por cor) e a decisão gravada por feição.
+
+Limite declarado: 50 ramos abertos por camada (`VERSOES_POR_CAMADA_MAX`), e a camada pode declarar um
+teto menor em `dados.versionamento.ramos_max`.
