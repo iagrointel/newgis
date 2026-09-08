@@ -38,17 +38,45 @@ def test_instalador_grava_plat_git_sha_e_confere_hsts():
     assert "grep -q 'max-age=31536000'" in INSTALL  # conferência pública
 
 
+def _blocos_location(texto: str) -> list[str]:
+    """Os blocos `location ... { ... }` de verdade do modelo, um item por bloco. Conta LINHA que começa com
+    `location` (fora de comentário): a contagem antiga era `texto.count("location ")`, que também somava a
+    palavra dentro de comentário — e passou a acusar bloco inexistente assim que o modelo ganhou explicação
+    em prosa sobre o repasse de tiles (achado ao juntar ramos, 08/09)."""
+    blocos, atual, profundidade = [], None, 0
+    for linha in texto.splitlines():
+        nua = linha.strip()
+        if nua.startswith("#"):
+            continue
+        if atual is None and nua.startswith("location ") and nua.endswith("{"):
+            atual, profundidade = [linha], 1
+            continue
+        if atual is not None:
+            atual.append(linha)
+            profundidade += nua.count("{") - nua.count("}")
+            if profundidade == 0:
+                blocos.append("\n".join(atual))
+                atual = None
+    return blocos
+
+
 def test_hsts_em_todo_bloco_de_add_header_do_modelo():
-    locais = NGINX.count("location ")
-    hsts = NGINX.count('add_header Strict-Transport-Security "max-age=31536000" always;')
-    # 5 desde o item L2-01-a (location nova para o PMTiles do mapa-base, deploy/nginx.conf)
-    assert locais == 5 and hsts == locais + 1, (locais, hsts)
+    blocos = _blocos_location(NGINX)
+    assert len(blocos) >= 5, len(blocos)  # 5 desde o L2-01-a (PMTiles do mapa-base); cada item novo pode somar
+    sem = [b.splitlines()[0].strip() for b in blocos
+           if 'add_header Strict-Transport-Security "max-age=31536000" always;' not in b]
+    assert sem == [], sem
+    # o bloco server{} declara o cabeçalho uma vez além dos blocos (add_header dentro de location cancela o herdado)
+    assert NGINX.count('add_header Strict-Transport-Security "max-age=31536000" always;') == len(blocos) + 1
 
 
 def test_referrer_policy_em_todo_bloco_de_add_header_do_modelo():
     """Achado do testador do T2: declarado no server{} não chegava às rotas (add_header no bloco cancela o herdado)."""
-    locais = NGINX.count("location ")
-    assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == locais + 1, locais
+    blocos = _blocos_location(NGINX)
+    sem = [b.splitlines()[0].strip() for b in blocos
+           if 'add_header Referrer-Policy "strict-origin-when-cross-origin" always;' not in b]
+    assert sem == [], sem
+    assert NGINX.count('add_header Referrer-Policy "strict-origin-when-cross-origin" always;') == len(blocos) + 1
 
 
 def test_instalador_limpa_residuos_de_teste_so_em_dev():
