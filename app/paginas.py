@@ -39,6 +39,8 @@ PAGINAS = {
     "/redes/controladores": "redes_controladores.html",
     # --- configurações de traçado (L4-02-e-configuracoes-de-tracado)
     "/redes/configuracoes": "redes_configuracoes.html",
+    # --- resultado de traçado: seleção, camada, exportação e histórico (L4-02-f-resultados-e-exportacao)
+    "/redes/tracado": "redes_tracado.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>
