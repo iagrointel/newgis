@@ -292,8 +292,8 @@ def relatorios_gerar(ctx, tipo: str, desde: str | None = None, ate: str | None =
         "truncado": truncado,
         "limite_linhas": teto,
         "cabecalho": CABECALHOS[tipo],
-        "desde": _texto(inicio),
-        "ate": _texto(fim),
+        "desde": inicio.isoformat(),  # precisão inteira: a janela exata do que foi contado (o CSV usa segundos)
+        "ate": fim.isoformat(),
         "chave": o["chave"],
         "sha256": o["sha256"],
         "bytes": o["bytes"],
