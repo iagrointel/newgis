@@ -863,5 +863,12 @@
  "upload.erro_generico": "não foi possível concluir o envio",
  "upload.erro_iniciar": "não foi possível iniciar o envio",
  "upload.erro_parte": "falha ao enviar a parte {n}",
- "upload.erro_concluir": "não foi possível concluir o envio"
+ "upload.erro_concluir": "não foi possível concluir o envio",
+ "ajuda.titulo": "Ajuda",
+ "ajuda.busca": "buscar no manual",
+ "ajuda.idioma": "idioma da ajuda",
+ "ajuda.fechar": "fechar a ajuda",
+ "ajuda.sem_resultado": "nada encontrado no manual para essa busca",
+ "ajuda.abrir_manual": "abrir o manual completo",
+ "ajuda.corpo_idioma": "a seção completa está em português; o resumo acima resume no seu idioma."
 }
