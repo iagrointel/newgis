@@ -222,3 +222,12 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# ---------------------------------------------------------------- modelos 3D (item L2-09-c)
+MODELO3D_ARQUIVO_BYTES = 200 * 1024 * 1024   # teto do IFC/GLB de entrada; a refutação do item usa 50 MB
+MODELO3D_GLB_BYTES = 300 * 1024 * 1024       # teto do glTF binário PRODUZIDO pela conversão
+MODELO3D_MEMORIA_MB = 1024                   # teto do trabalhador (PLAT_WORKER_MEMORIA_MB): o grafo do IFC
+MODELO3D_TIMEOUT_S = 1800
+MODELO3D_NOME_MAX = 200                      # mesmo teto de CHECK(length(nome)<=200) da migração
+MODELO3D_ELEMENTOS_PAGINA_MAX = 500          # elementos por página em GET /api/modelos/{id}/elementos
+MODELO3D_PAGINA_MAX = 200                    # modelos por página em GET /api/modelos
