@@ -243,33 +243,33 @@ function montarEsri() {
   form.addEventListener('enviar', (ev) => esriLote(ev.detail.valores.enderecos || []));
 }
 
-/* o protocolo Esri devolve o erro em {error: {code, message}}; a API da casa em {erro, mensagem}: os dois nomeados */
+/* o GeocodeServer da casa responde erro no formato da API ({erro, mensagem}, normalizado por api.js): código nomeado
+   + mensagem, nunca só o número */
 function erroEsri(r) {
   const j = r.json || {};
-  if (j.error && typeof j.error === 'object') return `${j.error.code}: ${j.error.message || ''}`;
-  if (j.erro) return `${j.erro}: ${j.mensagem || ''}`;
-  return mensagemDe(r);
+  return j.erro ? `${j.erro}: ${j.mensagem || ''}` : mensagemDe(r);
 }
 
-async function esriChamar(rotulo, fazer) {
+async function esriChamar(fazer, mostrar) {
+  /* `fazer` faz a chamada; `mostrar(json)` desenha o resultado — os dois juntos são o que "tentar de novo" repete */
   const estado = el('esri-estado');
   const saida = el('esri-resultado');
-  ultimoEsri = () => esriChamar(rotulo, fazer);
+  ultimoEsri = () => esriChamar(fazer, mostrar);
   saida.hidden = true;
   estado.carregando(t('geocodificar.carregando'));
   const r = await fazer();
-  if (r.status === 401) { location.href = '/entrar?proximo=/geocodificar'; return null; }
-  if (r.status === 403) { estado.negado(erroEsri(r)); return null; }
+  if (r.status === 401) { location.href = '/entrar?proximo=/geocodificar'; return; }
+  if (r.status === 403) { estado.negado(erroEsri(r)); return; }
   if (r.status === 400 || r.status === 404 || r.status === 422) {
     // respostas de NEGÓCIO do protocolo Esri (nao_encontrado sem UF instalada, fora_da_distancia, location_ausente,
     // lote_vazio…): estado vazio com o código e a mensagem, nunca o número cru
     estado.mostrar({ tipo: 'vazio', titulo: t('geocodificar.vazio_titulo'), texto: erroEsri(r),
       acoes: [{ id: 'limpar', rotulo: t('geocodificar.vazio_acao') }] });
-    return null;
+    return;
   }
-  if (r.status !== 200) { estado.erro(r, [{ id: 'tentar', rotulo: t('estado.tentar_de_novo'), classe: 'primario' }]); return null; }
+  if (r.status !== 200) { estado.erro(r, [{ id: 'tentar', rotulo: t('estado.tentar_de_novo'), classe: 'primario' }]); return; }
   estado.limpar();
-  return r.json;
+  mostrar(r.json);
 }
 
 function mostrarEsri(titulo, json, linhas) {
@@ -281,14 +281,14 @@ function mostrarEsri(titulo, json, linhas) {
       h('thead', {}, h('tr', {}, ...linhas[0].map((c) => h('th', { scope: 'col' }, c)))),
       h('tbody', {}, ...linhas.slice(1).map((l) => h('tr', {}, ...l.map((c) => h('td', {}, c)))))));
   }
-  saida.append(h('pre', { class: 'geo-json', id: 'esri-json' }, JSON.stringify(json, null, 1)));
+  saida.append(h('pre', { class: 'geo-json', id: 'esri-json', tabindex: '0' }, JSON.stringify(json, null, 1)));
   saida.hidden = false;
 }
 
 async function esriDescritor() {
-  const j = await esriChamar('descritor', () => enviar('/rest/services/Geocodificador/GeocodeServer', {}));
-  if (!j) return;
-  mostrarEsri(t('geocodificar.esri_descritor_resultado', { versao: j.currentVersion, capacidades: j.capabilities }), j);
+  await esriChamar(() => enviar('/rest/services/Geocodificador/GeocodeServer', {}), (j) => {
+    mostrarEsri(t('geocodificar.esri_descritor_resultado', { versao: j.currentVersion, capacidades: j.capabilities }), j);
+  });
 }
 
 async function esriCandidatos() {
@@ -297,31 +297,31 @@ async function esriCandidatos() {
     region: v.uf, postal: v.cep, maxLocations: v.max_locations || 10, f: 'json' };
   const q = new URLSearchParams(Object.entries(parametros).filter(([, x]) => x !== '' && x !== null && x !== undefined)
     .map(([k, x]) => [k, String(x)])).toString();
-  const j = await esriChamar('candidatos', () => enviar(`/rest/services/Geocodificador/GeocodeServer/findAddressCandidates?${q}`, {}));
-  if (!j) return;
-  const cands = j.candidates || [];
-  if (!cands.length) {
-    el('esri-estado').mostrar({ tipo: 'vazio', titulo: t('geocodificar.vazio_titulo'), texto: t('geocodificar.esri_sem_candidatos'),
-      acoes: [{ id: 'limpar', rotulo: t('geocodificar.vazio_acao') }] });
-    return;
-  }
-  mostrarEsri(t('geocodificar.esri_candidatos_resultado', { n: cands.length }), j, [
-    ['Score', 'Match_addr', 'Addr_type', 'x, y'],
-    ...cands.map((c) => [String(c.score), c.address, (c.attributes || {}).Addr_type || '', `${c.location.x}, ${c.location.y}`]),
-  ]);
+  await esriChamar(() => enviar(`/rest/services/Geocodificador/GeocodeServer/findAddressCandidates?${q}`, {}), (j) => {
+    const cands = j.candidates || [];
+    if (!cands.length) {
+      el('esri-estado').mostrar({ tipo: 'vazio', titulo: t('geocodificar.vazio_titulo'), texto: t('geocodificar.esri_sem_candidatos'),
+        acoes: [{ id: 'limpar', rotulo: t('geocodificar.vazio_acao') }] });
+      return;
+    }
+    mostrarEsri(t('geocodificar.esri_candidatos_resultado', { n: cands.length }), j, [
+      ['Score', 'Match_addr', 'Addr_type', 'x, y'],
+      ...cands.map((c) => [String(c.score), c.address, (c.attributes || {}).Addr_type || '', `${c.location.x}, ${c.location.y}`]),
+    ]);
+  });
 }
 
 async function esriReverso() {
   const v = el('form-reverso').valores();
   if (v.lon === null || v.lat === null) { el('form-reverso').erro('lon', t('geocodificar.esri_coordenada_obrigatoria')); return; }
   const q = new URLSearchParams({ location: `${v.lon},${v.lat}`, distance: String(v.raio_m || 2000), f: 'json' }).toString();
-  const j = await esriChamar('reverso', () => enviar(`/rest/services/Geocodificador/GeocodeServer/reverseGeocode?${q}`, {}));
-  if (!j) return;
-  const a = j.address || {};
-  mostrarEsri(t('geocodificar.esri_reverso_resultado'), j, [
-    ['Match_addr', 'City', 'Region', 'Postal', 'x, y'],
-    [a.Match_addr || a.Address || '', a.City || '', a.Region || '', a.Postal || '', j.location ? `${j.location.x}, ${j.location.y}` : ''],
-  ]);
+  await esriChamar(() => enviar(`/rest/services/Geocodificador/GeocodeServer/reverseGeocode?${q}`, {}), (j) => {
+    const a = j.address || {};
+    mostrarEsri(t('geocodificar.esri_reverso_resultado'), j, [
+      ['Match_addr', 'City', 'Region', 'Postal', 'x, y'],
+      [a.Match_addr || a.Address || '', a.City || '', a.Region || '', a.Postal || '', j.location ? `${j.location.x}, ${j.location.y}` : ''],
+    ]);
+  });
 }
 
 async function esriLote(enderecos) {
@@ -330,14 +330,14 @@ async function esriLote(enderecos) {
   if (!enderecos.length) { form.erro('enderecos', t('geocodificar.esri_lote_vazio')); return; }
   const corpo = { addresses: { records: enderecos.map((e, i) => ({ attributes: { OBJECTID: i + 1, SingleLine: e } })) } };
   form.ocupado = true;
-  const j = await esriChamar('lote', () => enviar('/rest/services/Geocodificador/GeocodeServer/geocodeAddresses', corpo));
+  await esriChamar(() => enviar('/rest/services/Geocodificador/GeocodeServer/geocodeAddresses', corpo), (j) => {
+    const locais = j.locations || [];
+    const achados = locais.filter((l) => (l.attributes || {}).Status === 'M').length;
+    mostrarEsri(t('geocodificar.esri_lote_resultado', { n: locais.length, achados }), j, [
+      ['ResultID', 'Status', 'Match_addr', 'Score', 'x, y'],
+      ...locais.map((l) => [String((l.attributes || {}).ResultID ?? ''), (l.attributes || {}).Status || '', l.address || '',
+        String(l.score ?? ''), l.location && l.location.x !== null ? `${l.location.x}, ${l.location.y}` : '']),
+    ]);
+  });
   form.ocupado = false;
-  if (!j) return;
-  const locais = j.locations || [];
-  const achados = locais.filter((l) => (l.attributes || {}).Status === 'M').length;
-  mostrarEsri(t('geocodificar.esri_lote_resultado', { n: locais.length, achados }), j, [
-    ['ResultID', 'Status', 'Match_addr', 'Score', 'x, y'],
-    ...locais.map((l) => [String((l.attributes || {}).ResultID ?? ''), (l.attributes || {}).Status || '', l.address || '',
-      String(l.score ?? ''), l.location && l.location.x !== null ? `${l.location.x}, ${l.location.y}` : '']),
-  ]);
 }
