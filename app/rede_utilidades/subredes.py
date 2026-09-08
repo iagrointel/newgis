@@ -30,6 +30,7 @@ from jsonschema import Draft202012Validator
 
 from app.erros import ErroAPI
 from app.rede_utilidades import controladores, esquema_exportacao, opendss, tracado
+from app.rede_utilidades import unidades as unidades_mod
 
 _VALIDADOR = Draft202012Validator(esquema_exportacao.ESQUEMA)
 
@@ -410,6 +411,13 @@ def exportar(cur, rede_id: str, nome: str, tier: str | None = None) -> dict:
     dela = [c for c in controladores.listar_controladores(cur, rede_id, 1000)
             if c["subrede_id"] == str(s["id"])]
     resumo = dict(s["resumo"] or {})
+    # Unidade do arquivo (comprimento, energia) medida pela importação e lida da auditoria, nunca do
+    # dicionário do pacote (item L4-01-e). Quem converte esta saída para EPANET ou para qualquer outro
+    # simulador precisa saber em que unidade os números do cadastro vieram, e se isso foi medido.
+    resumo["unidades"] = {familia: {"unidade_do_arquivo": f.get("unidade"), "base": f["base"],
+                                    "fator_para_base": f["fator_para_base"], "origem": f["origem"],
+                                    "declarada_no_dicionario": f["declarada"]}
+                          for familia, f in unidades_mod.fatores_da_rede(cur, rede_id).items()}
     saida = {
         "esquema": esquema_exportacao.ESQUEMA_ID,
         "esquema_versao": esquema_exportacao.ESQUEMA_VERSAO,
@@ -473,7 +481,8 @@ def exportar_dss(cur, rede_id: str, nome: str, tier: str | None = None, ano: int
         "exportado_em": datetime.now(timezone.utc).isoformat(),
         "barra_fonte": modelo["barra_fonte"], "kv_fonte": modelo["kv_fonte"],
         "codigo_tensao_nominal": modelo["codigo_tensao_nominal"],
-        "conferencia": modelo["conferencia"], "avisos": modelo["avisos"], "ignorados": modelo["ignorados"],
+        "conferencia": modelo["conferencia"], "unidades": modelo["unidades"],
+        "avisos": modelo["avisos"], "ignorados": modelo["ignorados"],
         "chaves": [{"codigo": c["codigo"], "tipo": c["tipo"], "estado": c["estado"]} for c in modelo["chaves"]],
         "pontos_por_curva": opendss.PONTOS_DA_CURVA,
     }

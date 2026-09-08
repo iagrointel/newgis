@@ -21,6 +21,8 @@ import hashlib
 import math
 from datetime import date
 
+from app.rede_utilidades import unidades as unidades_mod
+
 # --- códigos de tensão da BDGD (domínio TTEN do dicionário de dados da ANEEL) ---------------------------
 # TEN_NOM, TEN_PRI, TEN_SEC e TEN_LIN_SE são CÓDIGOS, não quilovolts. O dicionário abaixo tem os 110 códigos
 # do domínio (0 a 109, sem buraco) e foi conferido contra `bdgd2opendss` (Paulo Radatz, licença MIT,
@@ -203,6 +205,10 @@ deixou de fora é lido como se estivesse completo.
    a curva só varia de mês para mês, e é o que o dado permite afirmar.
 5. **Energia mensal.** Quando a unidade consumidora só tem a energia anual, os 12 meses recebem energia
    proporcional às horas do mês. Variação mensal medida só aparece se o acervo tiver ENE_01..ENE_12.
+   A UNIDADE da energia (quilowatt-hora ou megawatt-hora) não é assumida do dicionário da BDGD: vem do que
+   a importação mediu no arquivo e gravou na auditoria. Quando a rede não tem importação registrada, o
+   valor entra como está e `resumo.json` diz `origem: nao_medida` no bloco `unidades` — nesse caso a carga
+   pode estar mil vezes fora, e está escrito que pode.
 6. **Regulador de tensão, banco de capacitores e proteção.** Não são convertidos. Aparecem contados em
    `resumo.json` como elementos ignorados.
 7. **Equilíbrio, ajuste e calibração.** O conversor não ajusta carga para fechar o balanço de energia do
@@ -411,11 +417,16 @@ def montar_da_subrede(cur, rede_id: str, subrede: dict, controladores_da: list[d
     `subredes_ids` é o conjunto de subredes que entra no circuito (a pedida e, se quem chama quiser, as de
     jusante); o padrão é só a pedida."""
     ids = list(subredes_ids or [str(subrede["id"])])
+    # unidade da energia: medida no arquivo pela importação e lida da auditoria (item L4-01-e). O
+    # dicionário da BDGD declara ENE_SUM em megawatt-hora, mas o extrato de referência da casa vem em
+    # quilowatt-hora; multiplicar por mil de cabeça (o que este conversor fazia) errava a carga por mil.
+    fatores = unidades_mod.fatores_da_rede(cur, rede_id)
     parametros = {"rede": rede_id, "subs": ids}
     cur.execute(_SQL_TRECHOS, parametros)
     trechos = [dict(r) for r in cur.fetchall()]
     cur.execute(_SQL_PONTOS, parametros)
     pontos = [dict(r) for r in cur.fetchall()]
+    fator_energia = fatores["ene"]["fator_para_base"]
 
     avisos: dict[str, int] = {}
     ignorados: dict[str, int] = {}
@@ -581,14 +592,18 @@ def montar_da_subrede(cur, rede_id: str, subrede: dict, controladores_da: list[d
         return chave
 
     def energia_mensal_kwh(atributos: dict, prefixos: tuple[str, ...]) -> tuple[list[float], bool]:
+        """Energia do mês em quilowatt-hora. Os valores do arquivo (ENE_01..12, ou ENE_SUM quando os doze
+        meses não vêm) são multiplicados pelo fator que a IMPORTAÇÃO mediu — 1 se o arquivo está em
+        quilowatt-hora, 1.000 se está em megawatt-hora. Sem importação registrada o fator é 1 e o
+        `resumo.json` do circuito diz que a unidade não foi medida."""
         mensal = [_numero(atributo(atributos, *(f"{p}ene_{m:02d}" for p in prefixos))) for m in range(1, 13)]
         if all(v is not None for v in mensal):
-            return [float(v) for v in mensal], True
-        anual_mwh = _numero(atributo(atributos, *(f"{p}ene_sum" for p in prefixos)))
-        if anual_mwh is None:
+            return [float(v) * fator_energia for v in mensal], True
+        anual = _numero(atributo(atributos, *(f"{p}ene_sum" for p in prefixos)))
+        if anual is None:
             return [0.0] * 12, False
         total_horas = sum(horas) * 1.0
-        anual_kwh = anual_mwh * 1000.0
+        anual_kwh = anual * fator_energia
         return [anual_kwh * (sum(horas[m * 72:(m + 1) * 72]) / total_horas) for m in range(12)], False
 
     for _feicao_id, linhas_da_feicao in sorted(por_feicao.items()):
@@ -648,5 +663,9 @@ def montar_da_subrede(cur, rede_id: str, subrede: dict, controladores_da: list[d
             "cargas": sum(1 for c in cargas_modelo if c["kw"] >= 0),
             "geracao_distribuida": sum(1 for c in cargas_modelo if c["kw"] < 0),
         },
+        "unidades": {familia: {"unidade_do_arquivo": f.get("unidade"), "base": f["base"],
+                               "fator_para_base": f["fator_para_base"], "origem": f["origem"],
+                               "declarada_no_dicionario": f["declarada"]}
+                     for familia, f in fatores.items()},
         "avisos": avisos, "ignorados": ignorados,
     }
