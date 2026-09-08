@@ -76,11 +76,16 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   ALTER TABLE plat.rede_no DROP CONSTRAINT IF EXISTS rede_no_tenant_subrede_bdgd_fkey;
+  -- SET NULL com LISTA DE COLUNA: numa chave composta, `ON DELETE SET NULL` sem lista anula TODAS as
+  -- colunas da chave — inclusive `tenant_id`, que é NOT NULL — e a exclusão morre com erro. A forma com
+  -- lista existe desde o PostgreSQL 15 e é a única correta aqui.
   ALTER TABLE plat.rede_no ADD CONSTRAINT rede_no_tenant_subrede_fkey
-    FOREIGN KEY (tenant_id, subrede_id) REFERENCES plat.rede_subrede (tenant_id, id) ON DELETE SET NULL;
+    FOREIGN KEY (tenant_id, subrede_id) REFERENCES plat.rede_subrede (tenant_id, id)
+    ON DELETE SET NULL (subrede_id);
   ALTER TABLE plat.rede_aresta DROP CONSTRAINT IF EXISTS rede_aresta_tenant_subrede_bdgd_fkey;
   ALTER TABLE plat.rede_aresta ADD CONSTRAINT rede_aresta_tenant_subrede_fkey
-    FOREIGN KEY (tenant_id, subrede_id) REFERENCES plat.rede_subrede (tenant_id, id) ON DELETE SET NULL;
+    FOREIGN KEY (tenant_id, subrede_id) REFERENCES plat.rede_subrede (tenant_id, id)
+    ON DELETE SET NULL (subrede_id);
 
   DROP TABLE plat.rede_subrede_bdgd;
   DROP FUNCTION IF EXISTS plat.rede_subrede_bdgd_validar();
@@ -96,10 +101,12 @@ ALTER TABLE plat.rede_subrede ADD CONSTRAINT rede_subrede_tenant_pai_fkey
   FOREIGN KEY (tenant_id, pai_id) REFERENCES plat.rede_subrede (tenant_id, id) ON DELETE NO ACTION;
 ALTER TABLE plat.rede_subrede DROP CONSTRAINT IF EXISTS rede_subrede_tenant_equivalente_fkey;
 ALTER TABLE plat.rede_subrede ADD CONSTRAINT rede_subrede_tenant_equivalente_fkey
-  FOREIGN KEY (tenant_id, equivalente_id) REFERENCES plat.rede_subrede (tenant_id, id) ON DELETE SET NULL;
+  FOREIGN KEY (tenant_id, equivalente_id) REFERENCES plat.rede_subrede (tenant_id, id)
+  ON DELETE SET NULL (equivalente_id);
 ALTER TABLE plat.rede_subrede DROP CONSTRAINT IF EXISTS rede_subrede_tenant_controlador_no_fkey;
 ALTER TABLE plat.rede_subrede ADD CONSTRAINT rede_subrede_tenant_controlador_no_fkey
-  FOREIGN KEY (tenant_id, controlador_no_id) REFERENCES plat.rede_no (tenant_id, id) ON DELETE SET NULL;
+  FOREIGN KEY (tenant_id, controlador_no_id) REFERENCES plat.rede_no (tenant_id, id)
+  ON DELETE SET NULL (controlador_no_id);
 
 -- 4. o gatilho de nível da hierarquia declarada, agora na tabela unificada --------------------------
 -- Mesmas regras e MESMOS nomes de exceção da função antiga (`subrede_nivel_invertido`,

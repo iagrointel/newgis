@@ -66,6 +66,16 @@ def _rede_com_trafo_no_alimentador(sessao, rid, lon0=31.0, lat0=11.0):
     return {"disjuntor": disjuntor, "trafo": trafo}
 
 
+def _usuario_do_inquilino(con, tenant_id: int) -> int:
+    """A política de inserção da RLS exige `plat.usuario_do_inquilino()`: escrever direto no banco pede um
+    usuário de verdade no contexto, não o zero."""
+    contexto(con, tenant_id)
+    with con.cursor() as cur:
+        cur.execute("SELECT id FROM plat.usuario WHERE tenant_id = %s AND ativo ORDER BY id LIMIT 1",
+                    (tenant_id,))
+        return cur.fetchone()["id"]
+
+
 @pytest.fixture
 def rede_importada(sessao_a, limpar_redes):  # noqa: F811 — a fixture vem do módulo irmão
     rid = _criar_rede(sessao_a, "unifica", limpar_redes)
@@ -198,7 +208,8 @@ def test_forma_da_linha_depende_da_origem(rede_importada, conexao_plat_app):
     rid, _rede, _c = rede_importada
     con = conexao_plat_app
     tenant_id = ids_por_slug(con)["demo"]
-    contexto(con, tenant_id)
+    usuario_id = _usuario_do_inquilino(con, tenant_id)
+    contexto(con, tenant_id, usuario_id)
     with con.cursor() as cur:
         cur.execute("SELECT id FROM plat.rede_tier WHERE rede_id = %s::uuid LIMIT 1", (rid,))
         tier_id = cur.fetchone()["id"]
@@ -210,7 +221,7 @@ def test_forma_da_linha_depende_da_origem(rede_importada, conexao_plat_app):
                 (tenant_id, rid, tier_id),
             )
     con.rollback()
-    contexto(con, tenant_id)
+    contexto(con, tenant_id, usuario_id)
     with con.cursor() as cur:
         with pytest.raises(Exception, match="rede_subrede_forma_da_origem"):
             cur.execute(
@@ -226,7 +237,7 @@ def test_nivel_invertido_continua_recusado(rede_importada, conexao_plat_app):
     rid, _rede, _c = rede_importada
     con = conexao_plat_app
     tenant_id = ids_por_slug(con)["demo"]
-    contexto(con, tenant_id)
+    contexto(con, tenant_id, _usuario_do_inquilino(con, tenant_id))
     with con.cursor() as cur:
         cur.execute(
             "INSERT INTO plat.rede_subrede (tenant_id, rede_id, origem, estado, nivel, codigo_externo, "
