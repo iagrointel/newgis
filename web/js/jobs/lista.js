@@ -353,7 +353,9 @@ export async function iniciar({ usuario = null, tipos = [], aoAbrir = null } = {
   porId('f-limpar').addEventListener('click', limparFiltros);
   const estadoLista = document.getElementById('lista-estado');
   if (estadoLista) estadoLista.addEventListener('acao', (ev) => { if (ev.detail.id === 'limpar') limparFiltros(); else if (ev.detail.id === 'tentar') carregar(); });
-  aoTraduzir(() => { renderizar(); atualizarResumo(); });
+  // aoTraduzir roda já na inscrição: a primeira chamada é pulada (a carga inicial vem logo abaixo)
+  let primeira = true;
+  aoTraduzir(() => { if (primeira) { primeira = false; return; } renderizar(); atualizarResumo(); });
   for (const th of document.querySelectorAll('#lista th[data-campo]')) {
     th.addEventListener('click', () => ordenarPor(th.dataset.campo));
     th.addEventListener('keydown', (ev) => {

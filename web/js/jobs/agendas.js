@@ -248,6 +248,7 @@ export async function iniciar({ usuario = null, tipos = [], aoNovoJob = null } =
   s.form.addEventListener('enviar', (ev) => salvar(ev.detail.valores));
   s.form.addEventListener('botao', (ev) => { if (ev.detail.id === 'cancelar') fecharFormulario(); });
   porId('agenda-nova').addEventListener('click', () => abrirFormulario());
-  aoTraduzir(() => { montarTabela(); s.tabela.linhas = s.itens; montarForm(); });
+  let primeira = true;
+  aoTraduzir(() => { if (primeira) { primeira = false; return; } montarTabela(); s.tabela.linhas = s.itens; montarForm(); });
   await carregar();
 }

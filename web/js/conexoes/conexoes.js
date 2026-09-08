@@ -442,7 +442,9 @@ function ligarControles() {
       if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ordenarPor(th.dataset.campo); }
     });
   }
-  aoTraduzir(() => { traduzirEstaticos(); renderizar(); });
+  // aoTraduzir roda já na inscrição: a primeira chamada é pulada (a lista ainda não foi lida)
+  let primeira = true;
+  aoTraduzir(() => { if (primeira) { primeira = false; return; } traduzirEstaticos(); renderizar(); });
 }
 
 async function principal() {
