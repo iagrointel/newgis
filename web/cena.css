@@ -1,0 +1,17 @@
+/* plat · cena 3D (item L2-09-b-cena-extrusao-slides) — só o que a tela do mapa ainda não tem:
+   a área da cena e a tira de slides. Todo o resto (barra, blocos, botões) vem de mapa.css/style.css. */
+#cena { position: absolute; inset: 0; }
+
+.camada-cena { display: flex; align-items: center; gap: .5rem; padding: .15rem 0; }
+
+.lista-slides { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .4rem; }
+.lista-slides > li { display: flex; align-items: center; gap: .4rem; }
+.slide {
+  display: flex; align-items: center; gap: .5rem; flex: 1;
+  background: none; border: 1px solid var(--borda, #2a3237); border-radius: 4px;
+  color: inherit; cursor: pointer; padding: .25rem; text-align: left;
+}
+.slide:hover, .slide:focus-visible { border-color: var(--realce, #d98a2b); }
+.slide-miniatura { width: 72px; height: auto; display: block; border-radius: 2px; }
+.slide-sem-miniatura { width: 72px; text-align: center; opacity: .6; }
+.slide-nome { font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Cena · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/vendor/maplibre-gl-4.7.1.css">
+<link rel="stylesheet" href="/static/mapa.css">
+<link rel="stylesheet" href="/static/cena.css">
+</head>
+<body class="tela instrumento mapa">
+<a class="pular" href="#cena" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal mapa-tela" tabindex="-1">
+    <div class="linha-ferramentas mapa-barra" id="ferramentas">
+      <h1 id="titulo" data-i18n="cena.titulo">Cena</h1>
+      <plat-aviso id="aviso"></plat-aviso>
+    </div>
+    <div class="mapa-corpo">
+      <section class="mapa-painel-lateral" aria-label="painel da cena">
+        <section class="bloco">
+          <h2 data-i18n="cena.camadas">Camadas da cena</h2>
+          <ul id="lista-camadas" class="lista-camadas" aria-label="Camadas da cena"></ul>
+        </section>
+
+        <section class="bloco">
+          <h2 data-i18n="cena.terreno">Terreno</h2>
+          <div class="linha">
+            <input type="checkbox" id="terreno-ligado">
+            <label for="terreno-ligado" data-i18n="cena.terreno_ligado">relevo ligado</label>
+          </div>
+          <label class="rotulo" for="exagero" data-i18n="cena.exagero">exagero vertical</label>
+          <div class="linha">
+            <input type="range" id="exagero" min="0" max="8" step="0.1">
+            <span id="exagero-saida" class="saida">1,0×</span>
+          </div>
+        </section>
+
+        <section class="bloco">
+          <h2 data-i18n="cena.iluminacao">Iluminação</h2>
+          <label class="rotulo" for="instante" data-i18n="cena.instante">data e hora</label>
+          <input type="datetime-local" id="instante">
+          <p id="sol-saida" class="saida" aria-live="polite"></p>
+        </section>
+
+        <section class="bloco">
+          <h2 data-i18n="cena.medicao">Medição 3D</h2>
+          <div class="linha">
+            <button type="button" id="btn-distancia3d" class="botao" data-i18n="cena.distancia3d">Distância</button>
+            <button type="button" id="btn-altura" class="botao" data-i18n="cena.altura">Altura</button>
+            <button type="button" id="btn-medicao-limpar" class="botao secundario" data-i18n="cena.limpar">Limpar</button>
+          </div>
+          <p id="medicao-saida" class="saida" aria-live="polite"></p>
+        </section>
+
+        <section class="bloco">
+          <h2 data-i18n="cena.slides">Slides</h2>
+          <div class="linha">
+            <input id="slide-nome" type="text" maxlength="200" data-i18n-aria="cena.slide_nome">
+            <button type="button" id="btn-slide-novo" class="botao" data-i18n="cena.slide_novo">Salvar vista</button>
+          </div>
+          <ul id="lista-slides" class="lista-slides"></ul>
+          <p id="slides-saida" class="saida" aria-live="polite"></p>
+        </section>
+
+        <section class="bloco">
+          <div class="linha">
+            <button type="button" id="btn-gravar" class="botao" data-i18n="cena.gravar">Gravar a cena</button>
+          </div>
+          <p id="gravar-saida" class="saida" aria-live="polite"></p>
+        </section>
+      </section>
+
+      <div class="mapa-area">
+        <div id="cena" aria-label="cena 3D" role="application"></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/static/vendor/maplibre-gl-4.7.1.js"></script>
+<script src="/static/vendor/pmtiles-4.5.0.js"></script>
+<script type="module" src="/static/js/cena/cena.js"></script>
+</body>
+</html>
