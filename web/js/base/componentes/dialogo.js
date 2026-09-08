@@ -13,7 +13,8 @@ export class PlatDialogo extends HTMLElement {
     this._titulo = h('h2', { id: `${id}-titulo` });
     this._fechar = h('button', { type: 'button', class: 'fechar-x', 'aria-label': t('dialogo.fechar') }, '×');
     this._fechar.addEventListener('click', () => this.fechar(null));
-    this._corpo = h('div', { class: 'dialogo-corpo' });
+    // corpo rolável precisa ser alcançável por teclado (axe scrollable-region-focusable; achado no UX-10, ficha longa)
+    this._corpo = h('div', { class: 'dialogo-corpo', tabindex: '0' });
     this._botoes = h('div', { class: 'dialogo-botoes' });
     this._dlg = h('dialog', { class: `dialogo${lateral ? ' dialogo-lateral' : ''}`, 'aria-labelledby': `${id}-titulo` },
       h('div', { class: 'dialogo-cabecalho' }, this._titulo, this._fechar), this._corpo, this._botoes);
