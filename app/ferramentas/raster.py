@@ -75,6 +75,37 @@ def _publicar_cog(ctx, bruto, env: dict, *, compressao: str = "ZSTD", categorico
             "cog": cog, "bandas": bandas or [{"nome": "banda_1"}]}
 
 
+def _exigir_intersecao(ctx, raster: dict, camada: dict) -> None:
+    """Camada de recorte que não toca o raster é erro nomeado, e não um raster vazio: o gdalwarp com
+    `-crop_to_cutline` fora da extensão devolve código 0 e um produto sem nenhum pixel do dado."""
+    with ctx.db() as cur:
+        cur.execute(f'SELECT ST_XMin(e) AS x0, ST_YMin(e) AS y0, ST_XMax(e) AS x1, ST_YMax(e) AS y1 FROM '
+                    f'(SELECT ST_Extent(ST_Transform(geom, {int(raster["epsg"])})) AS e '
+                    f'FROM "{camada["schema"]}"."{camada["tabela"]}") s')
+        e = cur.fetchone()
+    if e is None or e["x0"] is None:
+        raise ErroExecucao(422, "camada_vazia", "a camada de recorte não tem geometria")
+    caixa = (float(e["x0"]), float(e["y0"]), float(e["x1"]), float(e["y1"]))
+    if not _limites_comuns(raster, caixa):
+        raise ErroExecucao(422, "sem_intersecao",
+                           "a camada de recorte não toca a extensão do raster",
+                           {"camada": list(caixa), "raster": raster["limites"]})
+
+
+def _nodata_do_tipo(dtype: str, pedido):
+    """-9999 não cabe em uint8 nem em uint16: sem pedido explícito, o nodata do tipo sem sinal é o maior
+    valor dele, e o dos demais é -9999."""
+    if pedido is not None:
+        return float(pedido)
+    return {"uint8": 255.0, "uint16": 65535.0}.get(dtype, -9999.0)
+
+
+def _num(v: float):
+    """Infinito não existe em JSON e o Postgres recusa o documento inteiro por causa dele (medido ao
+    gravar o item STAC): a faixa aberta vai para o resumo como o texto que o usuário escreveu."""
+    return "*" if v in (float("inf"), float("-inf")) else v
+
+
 def _limites_comuns(a: dict, b) -> bool:
     x0, y0, x1, y1 = a["limites"]
     return not (b[2] <= x0 or b[0] >= x1 or b[3] <= y0 or b[1] >= y1)
@@ -276,6 +307,8 @@ def _alinhar(ctx, itens: list[dict], caminhos: list[str], reamostragem: str | No
         Parametro("classe_fora", "GPDouble", "classe do que fica fora das faixas", obrigatorio=False),
         Parametro("tipo_saida", "GPString", "tipo de saída", obrigatorio=False, padrao="int16",
                   opcoes=calculo.TIPOS_SAIDA),
+        Parametro("nodata", "GPDouble", "nodata da saída", obrigatorio=False,
+                  descricao="sem valor, usa o maior do tipo sem sinal ou -9999 nos demais"),
         Parametro("saida", "GPRasterDataLayer", "raster de saída", direcao="saida"),
     ),
     custo=lambda entradas, p: entradas["raster"]["largura"] * entradas["raster"]["altura"] // 1000,
@@ -291,15 +324,18 @@ def reclassificar_raster(ctx, entradas, parametros, destino) -> dict:
     except calculo.ErroCalculo as e:
         raise ErroExecucao(422, "tabela_invalida", str(e)) from e
     bruto = ctx.dir_trabalho / "reclass.tif"
+    dtype = parametros.get("tipo_saida") or "int16"
+    nodata = _nodata_do_tipo(dtype, parametros.get("nodata"))
     ctx.progresso(30, "reclassificando bloco a bloco")
     with fonte_raster.abrir(raster["origem"]) as ds:
         info = calculo.reclassificar(ds, faixas, bruto, banda=int(parametros.get("banda") or 1),
-                                     dtype=parametros.get("tipo_saida") or "int16",
+                                     dtype=dtype, nodata=nodata,
                                      classe_fora=parametros.get("classe_fora"))
     ctx.progresso(70, "escrevendo o COG do resultado")
     return _publicar_cog(ctx, bruto, env, categorico=True,
                          metodo=f"reclassificação por faixas: {parametros['tabela']}",
-                         resumo={"faixas": [[a, b, c] for a, b, c in faixas], **info, **aviso},
+                         resumo={"faixas": [[_num(a), _num(b), c] for a, b, c in faixas],
+                                 "nodata_saida": nodata, **info, **aviso},
                          bandas=[{"nome": "classe"}])
 
 
@@ -323,6 +359,7 @@ def recortar_raster(ctx, entradas, parametros, destino) -> dict:
     mascara = entradas["mascara"]
     env = fonte_raster.ambiente(raster["origem"])
     aviso = _aviso_nodata(ctx, raster)
+    _exigir_intersecao(ctx, raster, mascara)
     corte = vetor_ponte.exportar(ctx, mascara, raster["epsg"], ctx.dir_trabalho / "recorte.geojson", campos=[])
     ctx.progresso(30, "recortando (gdalwarp -cutline)")
     bruto = ctx.dir_trabalho / "recorte.tif"
