@@ -44,11 +44,23 @@ from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
+from app.mapa.rotas import router as rotas_mapa
 from app.multiescala.rotas import router as rotas_multiescala
 from app.rede.rotas import router as rotas_rede
+from app.rede_utilidades.rotas import router as rotas_rede_utilidades
+from app.rede_utilidades.rotas_config_tracado import router as rotas_rede_config_tracado
+from app.rede_utilidades.rotas_controladores import router as rotas_rede_controladores
+from app.rede_utilidades.rotas_curto import router as rotas_rede_curto
+from app.rede_utilidades.rotas_diagrama import router as rotas_rede_diagrama
+from app.rede_utilidades.rotas_matpower import router as rotas_rede_matpower
+from app.rede_utilidades.rotas_resumos import router as rotas_rede_resumos
+from app.rede_utilidades.rotas_simples import router as rotas_rede_simples
+from app.rede_utilidades.rotas_subredes import router as rotas_rede_subredes
+from app.rede_utilidades.rotas_topologia import router as rotas_rede_topologia
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
+from app.tiles.rotas import router as rotas_tiles
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 
@@ -114,6 +126,34 @@ ROUTERS = [
     rotas_ingestao,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
+    # --- rede de utilidades (L4-01-a): /api/rede (redes do inquilino), /api/rede/{rede_id}/pacote (importa e
+    # exporta o pacote de ativos) e /api/rede/pacotes (os pacotes entregues com a instalação)
+    rotas_rede_utilidades,
+    rotas_rede_matpower,
+    # --- topologia derivada da rede de utilidades (L4-01-b): /api/rede/{rede_id}/feicoes/{pontos,linhas}
+    # (as camadas de rede, editáveis) e /api/rede/{rede_id}/topologia/{habilitar,nos,arestas} (o índice derivado)
+    rotas_rede_topologia,
+    # --- configuração de traçado (L4-02-e): /api/rede/{rede_id}/config_tracado (CRUD) e o campo `config_id`
+    # do POST /api/rede/{rede_id}/tracar, que faz o traçado ler o pedido salvo em vez do corpo
+    rotas_rede_config_tracado,
+    # --- rede simples (L4-18): /api/rede/simples (cria a partir de 2 camadas do inquilino),
+    # /api/rede/{rede_id}/simples (a configuração) e /api/rede/{rede_id}/promover (pacote mínimo)
+    rotas_rede_simples,
+    # --- controlador de subrede e tiers (L4-04-a): /api/rede/{rede_id}/controlador,
+    # /api/rede/{rede_id}/{subredes,tiers} e /api/rede/{rede_id}/controladores/importar
+    rotas_rede_controladores,
+    # --- atualizar e exportar subrede (L4-04-b): /api/rede/{rede_id}/subredes/atualizar (job),
+    # /api/rede/{rede_id}/subredes/conferencia, /api/rede/{rede_id}/subrede/{nome}/exportar e os propagadores
+    rotas_rede_subredes,
+    # --- sumário por subrede (L4-04-c): /api/rede/{rede_id}/subredes/resumos (tabela e CSV) e
+    # /api/rede/{rede_id}/subredes/resumos/calcular
+    rotas_rede_resumos,
+    # --- curto-circuito e coordenação de proteção (L4-27): /api/rede/{rede_id}/subrede/{nome}/curto
+    # (POST calcula com as premissas declaradas, GET a tabela) e .../curto/camada
+    rotas_rede_curto,
+    # --- diagrama de rede (L4-04-d): /api/rede/{rede_id}/diagrama (gerar), /diagramas, /diagrama/{id},
+    # .../layout, .../exportar (json|svg|png) e os modelos em /diagrama-modelos
+    rotas_rede_diagrama,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
     # Esri em /rest/services/Geocodificador/GeocodeServer/*, sobre o CNEFE 2022 do IBGE instalado por UF
     rotas_geocodificador,
@@ -121,6 +161,10 @@ ROUTERS = [
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     rotas_multiescala,
+    # --- visualizador de mapa (L2-01-mapa-web): /api/mapa/camadas, TileJSON com token curto, repasse /tiles
+    rotas_mapa,
+    # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
+    rotas_tiles,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

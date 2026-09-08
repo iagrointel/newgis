@@ -75,3 +75,36 @@ sortedcontainers==2.4.0
 tomli==2.4.1
 tomli_w==1.2.0
 Markdown==3.10.2
+
+# OpenDSS (item L4-05-a-exportar-opendss): SÓ A SUÍTE importa. A aplicação escreve o `.dss` com a biblioteca
+# padrão — o conversor é texto — e nada em `app/` importa opendssdirect. Ele entra aqui porque a cláusula do
+# portão do item é "o circuito exportado COMPILA no OpenDSS", e provar isso exige o motor de verdade. Sem ele
+# na máquina, `tests/api/test_rede_opendss.py` pula a compilação com a razão escrita, e o resto do teste vale.
+# opendssdirect.py 0.9.4 = DSS C-API 0.14.5, a mesma versão do conversor que a casa já rodava.
+opendssdirect.py==0.9.4
+dss_python==0.15.7
+dss_python_backend==0.14.5
+#
+# leitura de arquivo de feição (GDAL/OGR vetorizado): app/rede_utilidades/bdgd.py e
+# app/rede_utilidades/tarefas.py abrem o pacote BDGD da ANEEL (.gdb/.gdb.zip) no job
+# `rede.importar_bdgd`. Antes desta linha o pacote vinha do site do usuário (~/.local) e não da venv,
+# e `import app.main` quebrava com PYTHONNOUSERSITE=1 (tests/unit/test_dependencias.py). Agora é
+# dependência declarada, e o import dela é TARDIO (dentro da função que lê o arquivo) para que só o
+# worker do job dependa do GDAL — a API sobe sem ele. numpy/certifi/packaging, que o pyogrio exige,
+# vêm de /usr/local/lib/python3.12/dist-packages (mesmo caso do shapely, comentado no topo).
+pyogrio==0.12.1
+
+# pandapower (item L4-05-c-pandapower-e-matpower): SÓ A SUÍTE importa, pela mesma razão do
+# opendssdirect acima. A aplicação escreve o JSON do pandapower e o `.m` do MATPOWER com a biblioteca
+# padrão (os dois são texto) e nada em `app/` importa pandapower. Ele entra aqui porque as cláusulas do
+# portão do item são "o arquivo é lido por pp.from_json" e "pp.runpp converge", e provar isso exige o
+# motor de verdade.
+# ⚠ NÃO instalado na venv compartilhada desta máquina em 08/09/2026: pandapower 3.5.4 exige `pandas~=2.3`
+# e a venv está com pandas 3.0.2, então o resolvedor REBAIXARIA pandas e scipy para todo mundo que
+# compartilha a venv. A regra do laço manda parar e registrar em vez de instalar. A medida do fluxo foi
+# feita num ambiente SEPARADO (fora do repositório) e o teste procura, nesta ordem, o interpretador de
+# `PLAT_PYTHON_PANDAPOWER`, o da própria suíte e o do laço; não achando nenhum, PULA com a razão escrita.
+# matpowercaseframes é dependência opcional do pandapower para ler `.m` (o `from_mpc` só aceita `.mat`
+# sem ela) e serve à conferência cruzada da suíte, nunca ao produto.
+pandapower==3.5.4
+matpowercaseframes==1.1.1

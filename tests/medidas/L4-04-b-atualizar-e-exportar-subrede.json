@@ -1,0 +1,155 @@
+{
+ "item": "L4-04-b-atualizar-e-exportar-subrede",
+ "assinado_por": "redes+backend+testador+adversario (trilha il404batual)",
+ "gerado_em": "2026-09-07T22:07:05Z",
+ "git_sha": "dffb1b6b79882e046969d34c3d6a4318dda201cd",
+ "maquina": "PostgreSQL 16 em iagro_sat; base própria da trilha (plat_til404batual); fonte = schema certaja (BDGD, ativo da casa, somente leitura); outras sessões da casa na mesma máquina",
+ "medidas": {
+  "rede_id": "14faa0ac-77d9-473e-a32c-28941dff700f",
+  "clausulas": {
+   "atualizar_todas_em_tempo_medido": {
+    "prova": "3 subredes de média tensão candidatas (3 de 20 alimentadores do arquivo): 3 atualizadas e 0 recusadas com motivo nomeado ([]), 14878 elementos, em 9.279 s, com carga 12.66 e 7.01 GB de RAM livre",
+    "ok": true
+   },
+   "nome_da_subrede_igual_ao_ctmt": {
+    "prova": "13646 de 13646 trechos de média tensão com o nome da subrede igual ao CTMT do arquivo = 1.0; 0 diferenças listadas como candidatas a erro de cadastro (nunca erro provado)",
+    "ok": true
+   },
+   "exportacao_bate_com_o_resumo": {
+    "prova": "5392 elementos exportados == resumo 5392 da atualização",
+    "ok": true
+   }
+  },
+  "avisos": [
+   "carga 12.66 acima de 8.0: o tempo mede a máquina cheia, não o produto; o número fica registrado com a carga ao lado"
+  ],
+  "recorte": {
+   "alimentadores": [
+    "5_VAS_1",
+    "2_CTJ2_1",
+    "4_CTJ3_1"
+   ],
+   "de_quantos_no_arquivo": 20,
+   "trechos_mt_no_arquivo": 13646,
+   "postes": "fora (0 nó de topologia)"
+  },
+  "carga_bdgd": {
+   "ssdmt": {
+    "linhas": 13646,
+    "segundos": 0.474
+   },
+   "ssdbt": {
+    "linhas": 8550,
+    "segundos": 0.288
+   },
+   "ramlig": {
+    "linhas": 0,
+    "segundos": 0.002
+   },
+   "trafo": {
+    "linhas": 1729,
+    "segundos": 0.047
+   }
+  },
+  "topologia": {
+   "rede_id": "14faa0ac-77d9-473e-a32c-28941dff700f",
+   "tolerancia_m": 0.05,
+   "nos": 24582,
+   "arestas": 22196,
+   "nos_orfaos": 1265,
+   "arestas_sem_no": 0,
+   "duracao_ms": 7690,
+   "construido_em": "2026-09-07T22:05:05Z"
+  },
+  "importacao_de_controladores": {
+   "tier_media_tensao": "media_tensao",
+   "tier_baixa_tensao": "baixa_tensao",
+   "alimentadores": 3,
+   "alimentadores_por_dispositivo": 0,
+   "alimentadores_por_no_de_cabeca": 3,
+   "alimentadores_sem_no": 0,
+   "transformadores": 1729,
+   "transformadores_marcados": 1729,
+   "ja_marcados": 0
+  },
+  "lote": {
+   "segundos": 9.279,
+   "candidatas": 3,
+   "atualizadas": 3,
+   "recusadas": [],
+   "elementos": 14878,
+   "carga_1min": 12.66,
+   "ram_livre_gb": 7.01,
+   "medido_em": "2026-09-07T22:06:29Z"
+  },
+  "conferencia": {
+   "atributo": "ctmt",
+   "grupo": "trecho_de_media_tensao",
+   "tier": "media_tensao",
+   "total": 13646,
+   "comparaveis": 13646,
+   "iguais": 13646,
+   "sem_atributo": 0,
+   "sem_subrede": 0,
+   "diferentes": 0,
+   "concordancia": 1.0,
+   "diferencas_truncadas": false,
+   "diferencas_amostra": []
+  },
+  "tiers": [
+   {
+    "id": "431172ec-8369-4b9f-bbb6-b06d8dfbf924",
+    "codigo": "estrutura",
+    "nome": "Estrutura",
+    "ordem": 1,
+    "tipo": "particionado",
+    "dominio": "estrutura",
+    "dominio_nome": "Estrutura",
+    "subredes": 0,
+    "controladores": 0
+   },
+   {
+    "id": "2c55e4f6-7343-4332-80ee-ea6535eadf7d",
+    "codigo": "subtransmissao",
+    "nome": "Subtransmissão",
+    "ordem": 1,
+    "tipo": "hierarquico",
+    "dominio": "eletrica_distribuicao",
+    "dominio_nome": "Elétrica de distribuição",
+    "subredes": 0,
+    "controladores": 0
+   },
+   {
+    "id": "47b32359-a8f7-42f0-b7b1-602f9e9c0ce8",
+    "codigo": "media_tensao",
+    "nome": "Média tensão",
+    "ordem": 2,
+    "tipo": "hierarquico",
+    "dominio": "eletrica_distribuicao",
+    "dominio_nome": "Elétrica de distribuição",
+    "subredes": 3,
+    "controladores": 3
+   },
+   {
+    "id": "8c4d7117-8e43-4b01-8fba-194edb3111c3",
+    "codigo": "baixa_tensao",
+    "nome": "Baixa tensão",
+    "ordem": 3,
+    "tipo": "hierarquico",
+    "dominio": "eletrica_distribuicao",
+    "dominio_nome": "Elétrica de distribuição",
+    "subredes": 1729,
+    "controladores": 1729
+   }
+  ],
+  "exportacao": {
+   "subrede": "5_VAS_1",
+   "elementos": 5392,
+   "conectividade": 4963,
+   "comprimento_m": 337047.6173646944,
+   "resumo_elementos": 5392
+  },
+  "ok": true
+ },
+ "comando": "venv/bin/pytest tests/api/test_rede_subredes_medida.py -m lento -q"
+}
