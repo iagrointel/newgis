@@ -398,3 +398,23 @@ da busca com os trechos citados literalmente, não de navegação própria pela 
 | Accordion widget | organiza widgets num menu empilhado verticalmente; cada widget vira um cabeçalho com estado aberto/fechado | `acordeao`: um painel por filho, cabeçalho sempre visível, corpo com `hidden`; `multiplo_aberto` controla se fecha os outros | feito | construído; sem e2e próprio nesta passagem | 2026-09-07 | pendente (D20) |
 | Window (modal / ancorada) | "Window" NÃO é um widget de layout na doc da Esri — é um TIPO de página à parte, com dois modos de exibição (centralizado/modal e ancorado perto do que a abriu) | `janela`: um nó de conteúdo com `modo` `modal` (`<dialog>` nativo, Esc/backdrop do navegador) ou `ancorada` (`div` posicionado, Esc por `keydown` manual); modelamos como WIDGET, não como página — divergência deliberada (documento único por app, sem página extra para cada popup) | parcial (cobre os dois modos; modelo diferente do da Esri) | idem (cláusula "janela modal abre por botão e fecha por Esc") | 2026-09-07 | pendente (D20) |
 | Tab (seção com vistas/abas) | não está entre os 6 widgets confirmados na busca desta passagem (candidato a widget "layout adjacente"; não confirmado por citação literal) | `secao_vistas`/`vista`: barra de abas + painel único visível (`role="tab"`, `aria-selected`) | não comparável (Esri não confirmada nesta busca) | construído; sem e2e próprio nesta passagem | 2026-09-07 | pendente (D20) |
+
+## Coleta de campo por servidor de terceiro (item L2-07-e-odk-central-ponte; ADR `20260908T1130-ponte-odk-central`)
+
+Comparação de três clientes de campo para o MESMO formulário: o aplicativo da Esri, o ODK Collect falando com um
+ODK Central que a plataforma alimenta, e a PWA da própria plataforma (itens L2-07-a/c/d, ainda em construção).
+Tudo o que está na coluna "ODK Collect via Central" foi conferido contra o dublê da API do Central, não contra um
+Central instalado — a ressalva vale para toda a seção (ver ADR, seção "Prova").
+
+| capacidade | Survey123 field app (Esri) | ODK Collect via Central (nós) | nossa PWA | estado | data |
+|---|---|---|---|---|---|
+| aplicativo de campo | app nativo iOS/Android da Esri, conta ArcGIS | ODK Collect (Apache-2.0), que a equipe já usa; a plataforma publica o formulário no Central e puxa os envios | PWA no mesmo domínio (L2-07-a) | feito pelo lado do Central; PWA é outro item | 2026-09-08 |
+| publicar o formulário | Survey123 Connect publica no ArcGIS | `POST /v1/projects/{p}/forms?publish=true` com a MESMA planilha que gerou o formulário (conferida campo a campo antes de sair) | o documento já é o formulário | feito | 2026-09-08 |
+| coleta sem rede | fila local do app | fila local do Collect (do ODK, não nossa) | L2-07-c (fila em IndexedDB) | fora deste item (é do Collect) | 2026-09-08 |
+| envio sem duplicata | replica/applyEdits com id de objeto | `instanceID` do ODK como chave em `plat.odk_envio`; sincronizar N vezes aplica uma vez | mesmo mecanismo (L2-07-c) | feito | 2026-09-08 |
+| anexos (foto, áudio, arquivo) | anexos da feature service | baixados por `/submissions/{id}/attachments`, gravados em `plat.feicao_anexo` com sha256 conferido contra os bytes recebidos | anexo por base64 (L2-07-b) | feito para imagem/PDF (tipos permitidos da plataforma); áudio não está na lista de tipos | parcial | 2026-09-08 |
+| geometria | ponto/linha/polígono no app | geopoint do OData (GeoJSON) vira geometria da feição; geotrace/geoshape ainda não | parcial (L2-07-b) | parcial | 2026-09-08 |
+| listas ligadas a dado vivo | feature service como fonte de escolhas | Entities do Central viram lista de escolhas, com as propriedades como colunas de filtro (cascata do L2-07-b) | mesma lista | feito | 2026-09-08 |
+| regras do formulário no envio recebido | aplicadas no app; o servidor aceita o que chegar | `relevant`/`constraint`/`calculation` reavaliados no servidor: envio que viola restrição NÃO vira feição e fica registrado com o motivo | mesmo motor | acima da Esri (o servidor confere de novo) | 2026-09-08 |
+| puxar por agenda | webhook/ETL fora do produto | job `odk.sincronizar` no relógio do inquilino (L0-05) | sincronização da PWA | feito (sem webhook do Central) | 2026-09-08 |
+| credencial do servidor de campo | conta ArcGIS | token do Central cifrado em `plat.conexao`, nunca devolvido por rota nenhuma; erro de credencial vira saúde vermelha da conexão | — | feito | 2026-09-08 |

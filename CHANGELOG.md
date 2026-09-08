@@ -3,6 +3,24 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 8, setembro de 2026 (item L2-07-e-odk-central-ponte: ponte opcional com o ODK Central)
+
+Uma equipe que já coleta no ODK Collect passa a alimentar as camadas da plataforma sem trocar de aplicativo.
+`POST /api/odk/pontes` publica no ODK Central a MESMA planilha que gerou o formulário do L2-07-b (conferida
+campo a campo antes de sair) e guarda a ligação em `plat.odk_ponte`;
+`POST /api/odk/pontes/{id}/sincronizar` — e o job `odk.sincronizar`, no relógio do inquilino — lê os envios por
+OData, baixa os anexos, e grava tudo pela porta única de escrita do formulário, com `relevant`/`constraint`/
+`calculation` reavaliados no servidor. A idempotência é o `instanceID` do ODK em `plat.odk_envio`: sincronizar
+três vezes seguidas deixa 20 feições e 0 duplicatas (medido em `tests/medidas/L2-07-e-odk-central-ponte.json`).
+Envio recusado fica gravado com o motivo, nunca some. `GET /api/odk/pontes/{id}/entidades/{dataset}` traz as
+Entities do Central como lista de escolhas com as propriedades como colunas de filtro (a cascata do L2-07-b).
+A conexão é do tipo novo `odk_central` (L6-02-a): URL contra SSRF, token cifrado, e erro de credencial marcando
+a saúde da conexão na tela que já existe.
+
+⛔ O ODK Central de verdade NÃO foi usado: ele se instala por docker, docker não sobe nesta máquina e o disco
+está em 96 %. A prova é contra um dublê HTTP da API documentada (`tests/odk_central_duble.py`); o que o dublê
+não prova está listado no ADR `docs/adr/20260908T1130-ponte-odk-central.md`, seção "Prova".
+
 ## turno 4, setembro de 2026 (item L6-02-a-modelo-conexao-e-seguranca)
 
 - O "Bearer da casa" passa a ser provado onde ele nasce, não só dentro de `buscar_seguro`:
