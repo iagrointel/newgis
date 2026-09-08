@@ -49,7 +49,8 @@ class FatorEntrada(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     nome: str = Field(..., min_length=1, max_length=limites.ESCALA_NOME_MAX)
-    resolucao_fonte_m: float = Field(..., gt=0, description="escala nativa DECLARADA da fonte, em metros")
+    resolucao_fonte_m: float = Field(..., gt=0, allow_inf_nan=False,
+                                     description="escala nativa DECLARADA da fonte, em metros")
     papel: Literal["atrai", "custo"]
     unidade: str = Field("", max_length=limites.ESCALA_UNIDADE_MAX)
     fonte: str = Field("", max_length=limites.ESCALA_FONTE_MAX)
@@ -78,7 +79,7 @@ class AmostraEntrada(BaseModel):
 
     lon: float = Field(..., ge=-180.0, le=180.0)
     lat: float = Field(..., ge=-90.0, le=90.0)
-    valor: float
+    valor: float = Field(..., allow_inf_nan=False)
 
 
 class AmostrasEntrada(BaseModel):
@@ -99,16 +100,16 @@ class FatorPesoEntrada(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     fator_id: str
-    peso: float = Field(..., gt=0)
+    peso: float = Field(..., gt=0, allow_inf_nan=False)
 
 
 class ExecucaoEntrada(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    resolucao_m: float = Field(..., gt=0)
+    resolucao_m: float = Field(..., gt=0, allow_inf_nan=False)
     fatores: list[FatorPesoEntrada] = Field(..., min_length=1, max_length=limites.ESCALA_FATORES_MAX)
     aprovacao_tipo: Literal["limiar", "top_pct"]
-    aprovacao_valor: float = Field(..., ge=0)
+    aprovacao_valor: float = Field(..., ge=0, allow_inf_nan=False)
 
 
 class GradeSaida(Saida):
