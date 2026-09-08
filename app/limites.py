@@ -222,3 +222,9 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+
+# ---- L3-05-localizar-regioes: localizar N regiões contíguas sobre a grade de favorabilidade
+REGIOES_N_MAX = 30                    # o mesmo teto da referência (Locate Regions: 1-30)
+REGIOES_CELULAS_MAX = 4_000_000       # células da grade aceitas por chamada (2.000×2.000; acima disso é job)
+REGIOES_TEMPO_LIMITE_S = 120          # a rota é síncrona: acima disto o pedido é grande demais para a tela
+

@@ -937,3 +937,10 @@ def _link_so_o_item(p: Preparacao, j: Any) -> None:
     assert "login" not in item["dono"] and "pode_editar" not in item and item["id"] == p.item_b["id"]
     for marca in (p.usuario_b["login"], p.grupo_b["nome"], p.papel_b["nome"], p.token_b["prefixo"], "demo2"):
         assert marca not in str(j), marca
+
+
+# ---- L3-05-localizar-regioes: a execução é do inquilino (RLS em plat.escala_execucao) — a de B some para A
+CASOS[("POST", "/api/multiescala/execucoes/{id}/regioes")] = Caso(
+    lambda p: f"/api/multiescala/execucoes/{p.execucao_b['id']}/regioes", lambda p: {"n_regioes": 1},
+)
+

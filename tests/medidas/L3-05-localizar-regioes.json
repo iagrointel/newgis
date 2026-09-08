@@ -1,0 +1,32 @@
+{
+ "item": "L3-05-localizar-regioes",
+ "medidas": {
+  "grade_1mi_n3_s": {
+   "valor": 3.42,
+   "unidade": "s",
+   "comando": "localizar 3 regiões de 10.000 células em grade de 1.000×1.000"
+  },
+  "grade_1mi_n10_s": {
+   "valor": 9.09,
+   "unidade": "s",
+   "comando": "localizar 10 regiões de 6.000 células na mesma grade"
+  },
+  "grade_1mi_celulas": {
+   "valor": 1000000,
+   "unidade": "celulas",
+   "comando": "1.000×1.000, com 40.000 células vetadas"
+  },
+  "execucao_real_celulas": {
+   "valor": 1663,
+   "unidade": "celulas",
+   "comando": "grade macro de 250 m sobre 10 km × 10 km"
+  },
+  "execucao_real_regioes": {
+   "valor": 3,
+   "unidade": "regioes",
+   "comando": "POST /api/multiescala/execucoes/{id}/regioes"
+  }
+ },
+ "gerado_em": "2026-09-08T12:48:25Z",
+ "git_sha": "33be09441f2f"
+}
