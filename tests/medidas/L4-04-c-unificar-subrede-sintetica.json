@@ -1,0 +1,22 @@
+{
+ "item": "L4-04-c-unificar-subrede-sintetica",
+ "medidas": {
+  "alimentadores_declarados_pelo_arquivo": {
+   "valor": 2,
+   "unidade": "alimentadores",
+   "comando": "bash laco/roda_teste.sh tests/api/test_rede_subrede_unificada.py (rede sintética de 2 alimentadores; a medida na cooperativa de teste está em test_rede_subrede_unificada_medida.py)"
+  },
+  "alimentadores_reconciliados": {
+   "valor": 2,
+   "unidade": "alimentadores",
+   "comando": "bash laco/roda_teste.sh tests/api/test_rede_subrede_unificada.py"
+  },
+  "taxa_de_reconciliacao_sintetica": {
+   "valor": 1.0,
+   "unidade": "razão sobre os alimentadores declarados",
+   "comando": "bash laco/roda_teste.sh tests/api/test_rede_subrede_unificada.py"
+  }
+ },
+ "gerado_em": "2026-09-08T02:47:46Z",
+ "git_sha": "9beaf63541e4"
+}

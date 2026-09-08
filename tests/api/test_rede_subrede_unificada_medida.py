@@ -106,7 +106,10 @@ def test_medida_reconciliacao_na_cooperativa(cred, env):
                         "WHERE ctmt = ANY(%s) AND wkt IS NOT NULL", (escolhidos,))
             ctmts_no_arquivo = cur.fetchone()["n"]
         con.commit()
-        medida["recorte"] = {"alimentadores": escolhidos, "ctmts_no_arquivo_no_recorte": ctmts_no_arquivo,
+        # o CÓDIGO do alimentador não entra no arquivo de medida: é identificador do cadastro de um
+        # parceiro e este repositório é público. O que a medida precisa é do TAMANHO do recorte.
+        medida["recorte"] = {"quantos_alimentadores": len(escolhidos),
+                             "ctmts_no_arquivo_no_recorte": ctmts_no_arquivo,
                              "postes": "fora (0 nó de topologia)"}
         medida["carga_bdgd"] = cron
 

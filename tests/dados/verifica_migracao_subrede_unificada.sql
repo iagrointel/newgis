@@ -34,6 +34,7 @@ CREATE TABLE rede_subrede_bdgd (
 DO $verifica$
 DECLARE
   v_tenant int;
+  v_usuario int;
   v_rede uuid;
   v_n1 uuid; v_n2 uuid; v_n3 uuid;
   v_no uuid;
@@ -44,8 +45,9 @@ BEGIN
   IF v_tenant IS NULL THEN
     RAISE EXCEPTION 'base sem inquilino: rode o semeador antes';
   END IF;
-  INSERT INTO rede (tenant_id, nome, disciplina) VALUES (v_tenant, 'zt-verifica-migracao', 'eletrica')
-    RETURNING id INTO v_rede;
+  SELECT u.id INTO v_usuario FROM usuario u WHERE u.tenant_id = v_tenant ORDER BY u.id LIMIT 1;
+  INSERT INTO rede (tenant_id, nome, disciplina, dono_id)
+    VALUES (v_tenant, 'zt-verifica-migracao', 'eletrica', v_usuario) RETURNING id INTO v_rede;
 
   INSERT INTO rede_subrede_bdgd (tenant_id, rede_id, nivel, codigo_externo, nome)
     VALUES (v_tenant, v_rede, 1, 'zt-sub', 'Subestação de teste') RETURNING id INTO v_n1;
@@ -54,6 +56,11 @@ BEGIN
   INSERT INTO rede_subrede_bdgd (tenant_id, rede_id, nivel, codigo_externo, pai_id)
     VALUES (v_tenant, v_rede, 3, 'zt-trafo', v_n2) RETURNING id INTO v_n3;
 
+  -- devolve o estado de ANTES da migração: a referência de `rede_no` apontava a tabela antiga
+  ALTER TABLE rede_no DROP CONSTRAINT rede_no_tenant_subrede_fkey;
+  ALTER TABLE rede_no ADD CONSTRAINT rede_no_tenant_subrede_bdgd_fkey
+    FOREIGN KEY (tenant_id, subrede_id) REFERENCES rede_subrede_bdgd (tenant_id, id)
+    ON DELETE SET NULL (subrede_id);
   INSERT INTO rede_no (tenant_id, rede_id, papel, subrede_id)
     VALUES (v_tenant, v_rede, 'juncao', v_n2) RETURNING id INTO v_no;
 
@@ -65,6 +72,12 @@ BEGIN
          b.criado_em
     FROM rede_subrede_bdgd b ORDER BY b.nivel
   ON CONFLICT (id) DO NOTHING;
+
+  -- e o MESMO repontamento da migração
+  ALTER TABLE rede_no DROP CONSTRAINT rede_no_tenant_subrede_bdgd_fkey;
+  ALTER TABLE rede_no ADD CONSTRAINT rede_no_tenant_subrede_fkey
+    FOREIGN KEY (tenant_id, subrede_id) REFERENCES rede_subrede (tenant_id, id)
+    ON DELETE SET NULL (subrede_id);
 
   SELECT count(*) INTO v_copiadas FROM rede_subrede
    WHERE rede_id = v_rede AND origem = 'bdgd' AND id IN (v_n1, v_n2, v_n3);
