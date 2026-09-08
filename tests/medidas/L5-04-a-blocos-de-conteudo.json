@@ -1,0 +1,27 @@
+{
+ "item": "L5-04-a-blocos-de-conteudo",
+ "medidas": {
+  "blocos": {
+   "valor": 10,
+   "unidade": "blocos",
+   "comando": "e2e: 10 blocos de 8 tipos por arrasto == por teclado"
+  },
+  "diferenca_arrasto_teclado": {
+   "valor": 0,
+   "unidade": "campos",
+   "comando": "canônico(arrasto) == canônico(teclado)"
+  },
+  "deriva_maxima_vista_mapa": {
+   "valor": 0.0012,
+   "unidade": "fração",
+   "comando": "5 mapas × 2 viewports: |bbox lido − bbox salvo| / bbox salvo"
+  },
+  "mapas_conferidos": {
+   "valor": 10,
+   "unidade": "medições",
+   "comando": "5 vistas em 1280×800 e 480×900"
+  }
+ },
+ "gerado_em": "2026-09-08T02:05:15Z",
+ "git_sha": "9ac92cde4a8b"
+}
