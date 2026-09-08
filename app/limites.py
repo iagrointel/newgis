@@ -237,3 +237,11 @@ SUBDIVIDIR_VERTICES = 256                   # ST_Subdivide nas entradas poligona
 GRADE_CELULAS_MAX = 250_000                 # células que agregar_pontos aceita desenhar antes de recusar o tamanho
 DISTANCIAS_PARES_MAX = 5_000_000            # pares origem x destino sem vizinhos_por_origem nem distancia_maxima
 DISTANCIAS_VIZINHOS_MAX = 1_000             # teto de vizinhos_por_origem na tabela de distâncias
+
+# --- grades, densidade, padrões espaciais e interpolação (L2-05-d)
+PADROES_FEICOES_MAX = 200_000               # Gi*, Moran e vizinho mais próximo carregam as coordenadas em memória
+H3_NIVEL_MIN = 5                            # níveis aceitos na tesselação H3 (aresta de ~ 8 km a ~ 66 m)
+H3_NIVEL_MAX = 10
+DENSIDADE_RAIO_M_MAX = 100_000              # raio do kernel: mesmo teto do buffer geodésico
+IDW_VIZINHOS_MAX = 64                       # amostras usadas por célula na interpolação por inverso da distância
+CONTORNO_LINHAS_MAX = 200_000               # isolinhas geradas antes de a ferramenta recusar o intervalo
