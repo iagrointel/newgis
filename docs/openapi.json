@@ -11002,6 +11002,270 @@
     "x-privilegio": "rls:visibilidade"
    }
   },
+  "/api/rede/{rede_id}/config_tracado": {
+   "post": {
+    "tags": [
+     "rede de utilidades — configuração de traçado"
+    ],
+    "summary": "Criar Config",
+    "operationId": "criar_config_api_rede__rede_id__config_tracado_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConfigTracadoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConfigTracado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades — configuração de traçado"
+    ],
+    "summary": "Listar Configs",
+    "operationId": "listar_configs_api_rede__rede_id__config_tracado_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConfigTracadoPagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/config_tracado/{config_id}": {
+   "get": {
+    "tags": [
+     "rede de utilidades — configuração de traçado"
+    ],
+    "summary": "Ver Config",
+    "operationId": "ver_config_api_rede__rede_id__config_tracado__config_id__get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "config_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Config Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConfigTracado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "put": {
+    "tags": [
+     "rede de utilidades — configuração de traçado"
+    ],
+    "summary": "Alterar Config",
+    "operationId": "alterar_config_api_rede__rede_id__config_tracado__config_id__put",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "config_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Config Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConfigTracadoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConfigTracado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "delete": {
+    "tags": [
+     "rede de utilidades — configuração de traçado"
+    ],
+    "summary": "Apagar Config",
+    "operationId": "apagar_config_api_rede__rede_id__config_tracado__config_id__delete",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "config_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Config Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
   "/api/rede/simples": {
    "post": {
     "tags": [
@@ -11848,6 +12112,161 @@
        "application/json": {
         "schema": {}
        }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/subredes/resumos/calcular": {
+   "post": {
+    "tags": [
+     "rede de utilidades — sumário por subrede"
+    ],
+    "summary": "Calcular Resumos",
+    "description": "Recalcula o sumário de cada subrede: quilômetro por nível de tensão, transformadores e potência\ninstalada, unidades consumidoras por classe, energia anual faturada, dispositivos por categoria,\ngeração distribuída e tronco. Sem `tier` nem `subrede_id`, recalcula a rede inteira.",
+    "operationId": "calcular_resumos_api_rede__rede_id__subredes_resumos_calcular_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "subrede_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Subrede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/subredes/resumos": {
+   "get": {
+    "tags": [
+     "rede de utilidades — sumário por subrede"
+    ],
+    "summary": "Listar Resumos",
+    "description": "A tabela de sumários: `colunas` descreve cada coluna (código, nome, tipo, unidade) e `itens` traz as\nlinhas. `formato=csv` devolve a mesma tabela como arquivo.",
+    "operationId": "listar_resumos_api_rede__rede_id__subredes_resumos_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 500,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "json",
+       "title": "Formato"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       },
+       "text/csv": {}
       }
      },
      "422": {
@@ -14252,6 +14671,162 @@
      "saude_verificada_em"
     ],
     "title": "ConexaoTeste"
+   },
+   "ConfigTracado": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "rede_id": {
+      "type": "string",
+      "title": "Rede Id"
+     },
+     "codigo": {
+      "type": "string",
+      "title": "Codigo"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "config": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Config"
+     },
+     "origem": {
+      "type": "string",
+      "title": "Origem"
+     },
+     "compartilhada": {
+      "type": "boolean",
+      "title": "Compartilhada"
+     },
+     "dono_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dono Id"
+     },
+     "criado_em": {
+      "type": "string",
+      "title": "Criado Em"
+     },
+     "atualizado_em": {
+      "type": "string",
+      "title": "Atualizado Em"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "rede_id",
+     "codigo",
+     "nome",
+     "descricao",
+     "tipo",
+     "config",
+     "origem",
+     "compartilhada",
+     "dono_id",
+     "criado_em",
+     "atualizado_em"
+    ],
+    "title": "ConfigTracado"
+   },
+   "ConfigTracadoEntrada": {
+    "properties": {
+     "codigo": {
+      "type": "string",
+      "maxLength": 63,
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$",
+      "title": "Codigo"
+     },
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "tipo": {
+      "type": "string",
+      "pattern": "^(conectado|subrede|montante|jusante)$",
+      "title": "Tipo"
+     },
+     "config": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Config"
+     },
+     "compartilhada": {
+      "type": "boolean",
+      "title": "Compartilhada",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "codigo",
+     "nome",
+     "tipo"
+    ],
+    "title": "ConfigTracadoEntrada",
+    "description": "O documento salvo que preenche o pedido de traçado. `config` é validado contra o catálogo DA REDE em\n`config_tracado.validar_documento` (atributo, categoria, grupo, tipo, operador, função e tipo de\nresultado), e não por pydantic: a mensagem de erro precisa dizer qual atributo a rede não tem."
+   },
+   "ConfigTracadoPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/ConfigTracado"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "ConfigTracadoPagina"
    },
    "ConfirmarEntrada": {
     "properties": {
@@ -20151,9 +20726,29 @@
    "TracadoEntrada": {
     "properties": {
      "tipo": {
-      "type": "string",
-      "pattern": "^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante)$",
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(conectado|subrede|lacos|caminho_curto|isolados|montante|jusante)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
       "title": "Tipo"
+     },
+     "config_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 36,
+        "minLength": 36
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Config Id"
      },
      "pontos_partida": {
       "items": {
@@ -20215,9 +20810,6 @@
      }
     },
     "type": "object",
-    "required": [
-     "tipo"
-    ],
     "title": "TracadoEntrada",
     "description": "`tipo=montante|jusante` (item L4-18) exige `pontos_partida` e anda pela direção de fluxo declarada em\natributo; `tipo=conectado|subrede` (item L4-02-a) exige `pontos_partida`; `tipo=caminho_curto` (item L4-02-d)\nexige um único ponto em `pontos_partida` (a origem) e `destino`; `tipo=lacos` e `tipo=isolados` não\nexigem `pontos_partida` (operam sobre a rede inteira) — a validação por tipo é feita na rota, não aqui,\nporque cada tipo tem uma exigência diferente sobre a MESMA lista."
    },
