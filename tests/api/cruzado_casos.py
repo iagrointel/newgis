@@ -855,6 +855,10 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: "/api/geocodificar", lambda p: {"endereco": "Avenida Paulista, São Paulo - SP"},
         proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
     ),
+    ("GET", "/api/geocodificar"): Caso(
+        lambda p: "/api/geocodificar?endereco=Avenida+Paulista%2C+S%C3%A3o+Paulo+-+SP",
+        proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
+    ),
     ("POST", "/api/reverso"): Caso(
         lambda p: "/api/reverso", lambda p: {"lon": -46.6333, "lat": -23.5505},
         proprio=True, aceita=frozenset({200, 422}), verificar=_sem_marca,
@@ -905,6 +909,101 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    # ---- edição de feição (L2-03-a / L2-03-edicao) e escrita compatível Esri (L2-04-d): o alvo é sempre um
+    # UUID que não é de A nem de B, então a RLS de `plat.item` responde 404 antes de qualquer escrita. As
+    # rotas de anexo em multipart leem o corpo só DEPOIS de a camada existir, para que o pedido cruzado morra
+    # no 404 sem consumir formulário.
+    ("POST", "/api/camadas/{id}/edicoes"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/edicoes", lambda p: {"adicionar": []}
+    ),
+    ("POST", "/api/camadas/{id}/feicoes/unir"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/unir",
+        lambda p: {"ids": [UUID_NULO, UUID_NULO], "versoes": {UUID_NULO: 1}},
+    ),
+    ("POST", "/api/camadas/{id}/feicoes/dividir"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/dividir",
+        lambda p: {"id": UUID_NULO, "versao": 1, "ponto": [0.0, 0.0]},
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}"
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/historico"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/historico"
+    ),
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/historico/{historico_id}/restaurar"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/historico/1/restaurar"
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/anexos"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos"
+    ),
+    ("POST", "/api/camadas/{id}/feicoes/{globalid}/anexos"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos",
+        lambda p: {"nome": "zt.png", "content_type": "image/png", "conteudo": "aGk="},
+    ),
+    ("GET", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"
+    ),
+    ("DELETE", "/api/camadas/{id}/feicoes/{globalid}/anexos/{anexo_id}"): Caso(
+        lambda p: f"/api/camadas/{UUID_NULO}/feicoes/{UUID_NULO}/anexos/{UUID_NULO}"
+    ),
+    # ---- visualizador de mapa (L2-01-mapa-web): a lista é do próprio chamador; o resto é por id
+    ("GET", "/api/mapa/camadas"): Caso(
+        lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{UUID_NULO}"),
+    ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{UUID_NULO}/tilejson"),
+    # ---- FeatureServer compatível Esri: leitura (L2-04-c) e escrita (L2-04-d)
+    ("GET", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/query?where=1%3D1&f=json"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/query"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/query", lambda p: {"where": "1=1", "f": "json"}
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/applyEdits"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/applyEdits",
+        lambda p: {"edits": [{"id": 0, "adds": []}]},
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/uploads/upload"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/uploads/upload"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/applyEdits"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/applyEdits", lambda p: {"adds": []}
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/addFeatures"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/addFeatures", lambda p: {"features": []}
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/updateFeatures"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/updateFeatures", lambda p: {"features": []}
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/deleteFeatures"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/deleteFeatures", lambda p: {"objectIds": "1"}
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/calculate"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/calculate",
+        lambda p: {"where": "1=1", "calcExpression": [{"field": "nome", "value": "x"}]},
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/{camada_id}/queryAttachments"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/queryAttachments?objectIds=1"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/queryAttachments"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/queryAttachments", lambda p: {"objectIds": "1"}
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/attachments"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/1/attachments"
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/attachments/{anexo_numero}"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/1/attachments/1"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/addAttachment"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/1/addAttachment"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/updateAttachment"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/1/updateAttachment"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/{object_id}/deleteAttachments"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/1/deleteAttachments",
+        lambda p: {"attachmentIds": "1"},
     ),
 }
 
