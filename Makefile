@@ -21,7 +21,7 @@ SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); \
 	[ -n "$$PLAT_DSN" ] && export PLAT_DSN; \
 	[ -n "$$PLAT_GARAGE_ADMIN_TOKEN" ] && export PLAT_GARAGE_ADMIN_TOKEN;
 
-.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps homolog
+.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites pacote seguranca-deps homolog
 
 check: lint sem-marcador limites teste e2e  ## suíte inteira (portão P3)
 
@@ -59,6 +59,9 @@ medidas:                                    ## suíte inteira gravando tests/med
 
 vendor:                                     ## confere sha256 de web/vendor contra VERSOES.txt
 	cd web/vendor && grep -v '^\#' VERSOES.txt | awk '{print $$3"  "$$1}' | sha256sum -c
+
+pacote:                                     ## item L2-16-a: constrói o wheel do SDK em pacote/dist (distribuição interna, sem PyPI)
+	$(VENV)/python -m pip wheel --no-build-isolation --no-deps -w pacote/dist ./pacote
 
 seguranca-deps:                             ## item L7-03-f: pip-audit em requirements.txt; reprova com CVE crítico/alto sem exceção viva em docs/excecoes_cve.json (docs/SEGURANCA.md seção 7); OPCIONAL, ainda não bloqueia `check`
 	$(VENV)/python scripts/varredura_dependencias.py --json var/seguranca/ultima_varredura.json
