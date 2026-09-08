@@ -10987,6 +10987,387 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/amc/presets": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Listar",
+    "description": "Lista os presets visíveis: os INTEGRADOS primeiro (sempre existem), depois os do inquilino.",
+    "operationId": "listar_api_amc_presets_get",
+    "parameters": [
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PresetPagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   },
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Criar",
+    "operationId": "criar_api_amc_presets_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PresetEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Preset"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/presets/importar": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Importar",
+    "description": "Importa o documento de exportação. Com `fatores_modelo` informado, preset que declara fator\nfora do modelo é recusado com a LISTA do que falta (refutação do item).",
+    "operationId": "importar_api_amc_presets_importar_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PresetImportar"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PresetImportado"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/presets/{id}": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Ver",
+    "operationId": "ver_api_amc_presets__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Preset"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   },
+   "patch": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Editar",
+    "operationId": "editar_api_amc_presets__id__patch",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PresetEditar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Preset"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   },
+   "delete": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Apagar",
+    "operationId": "apagar_api_amc_presets__id__delete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/presets/{id}/exportar": {
+   "get": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Exportar",
+    "operationId": "exportar_api_amc_presets__id__exportar_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
+  },
+  "/api/amc/presets/{id}/aplicar": {
+   "post": {
+    "tags": [
+     "amc"
+    ],
+    "summary": "Aplicar",
+    "description": "Aplica o preset sobre a matriz enviada e devolve a nota recalculada NA HORA (nenhum job é\ncriado; a rota nem toca em plat.job). Preset que declara fator fora da matriz é recusado com a\nlista do que falta.",
+    "operationId": "aplicar_api_amc_presets__id__aplicar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PresetAplicar"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AplicacaoFeita"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "analise.amc"
+   }
   }
  },
  "components": {
@@ -11712,6 +12093,36 @@
      "gravadas"
     ],
     "title": "AmostrasResultado"
+   },
+   "AplicacaoFeita": {
+    "properties": {
+     "preset_id": {
+      "type": "string",
+      "title": "Preset Id"
+     },
+     "preset_nome": {
+      "type": "string",
+      "title": "Preset Nome"
+     },
+     "pesos_iguais": {
+      "type": "boolean",
+      "title": "Pesos Iguais"
+     },
+     "resultado": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Resultado"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "preset_id",
+     "preset_nome",
+     "pesos_iguais",
+     "resultado"
+    ],
+    "title": "AplicacaoFeita"
    },
    "CategoriaNo": {
     "properties": {
@@ -16160,6 +16571,347 @@
      "destino"
     ],
     "title": "PedidoRota"
+   },
+   "Preset": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "descricao": {
+      "type": "string",
+      "title": "Descricao"
+     },
+     "escopo": {
+      "type": "string",
+      "title": "Escopo"
+     },
+     "integrado": {
+      "type": "boolean",
+      "title": "Integrado"
+     },
+     "conteudo": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Conteudo"
+     },
+     "dono_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dono Id"
+     },
+     "dono_login": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Dono Login"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     },
+     "atualizado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atualizado Em"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "descricao",
+     "escopo",
+     "integrado",
+     "conteudo"
+    ],
+    "title": "Preset"
+   },
+   "PresetAplicar": {
+    "properties": {
+     "fatores": {
+      "items": {
+       "items": {},
+       "type": "array"
+      },
+      "type": "array",
+      "title": "Fatores"
+     },
+     "ids_fatores": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "minItems": 1,
+      "title": "Ids Fatores"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "fatores",
+     "ids_fatores"
+    ],
+    "title": "PresetAplicar",
+    "description": "Matriz de fatores (unidade × fator, escala 0-100, `null` = sem dado) na ordem de\n`ids_fatores`. Tudo que é escolha do modelo (peso, veto, combinador, política) vem do PRESET —\na chamada só traz dado."
+   },
+   "PresetEditar": {
+    "properties": {
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "descricao": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descricao"
+     },
+     "escopo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "usuario",
+         "inquilino"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Escopo"
+     },
+     "conteudo": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Conteudo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "PresetEditar"
+   },
+   "PresetEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "descricao": {
+      "type": "string",
+      "maxLength": 2000,
+      "title": "Descricao",
+      "default": ""
+     },
+     "escopo": {
+      "type": "string",
+      "enum": [
+       "usuario",
+       "inquilino"
+      ],
+      "title": "Escopo",
+      "default": "usuario"
+     },
+     "conteudo": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Conteudo",
+      "description": "pesos e vetos por fator; ver app/amc/presets.py"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "conteudo"
+    ],
+    "title": "PresetEntrada"
+   },
+   "PresetImportado": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "escopo": {
+      "type": "string",
+      "title": "Escopo"
+     },
+     "integrado": {
+      "type": "boolean",
+      "title": "Integrado",
+      "default": false
+     },
+     "faltando": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Faltando",
+      "default": []
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "nome",
+     "escopo"
+    ],
+    "title": "PresetImportado"
+   },
+   "PresetImportar": {
+    "properties": {
+     "formato": {
+      "type": "string",
+      "title": "Formato"
+     },
+     "versao": {
+      "type": "integer",
+      "title": "Versao"
+     },
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "descricao": {
+      "type": "string",
+      "maxLength": 2000,
+      "title": "Descricao",
+      "default": ""
+     },
+     "escopo": {
+      "type": "string",
+      "enum": [
+       "usuario",
+       "inquilino"
+      ],
+      "title": "Escopo",
+      "default": "usuario"
+     },
+     "conteudo": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Conteudo"
+     },
+     "integrado": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Integrado"
+     },
+     "fatores_modelo": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fatores Modelo"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "formato",
+     "versao",
+     "nome",
+     "conteudo"
+    ],
+    "title": "PresetImportar",
+    "description": "Documento gerado por GET .../exportar. `fatores_modelo` é OPCIONAL: quando informado, preset\nque declara fator fora dessa lista é recusado com a lista do que falta (refutação do item)."
+   },
+   "PresetPagina": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "$ref": "#/components/schemas/Preset"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "PresetPagina"
    },
    "Privilegio": {
     "properties": {
