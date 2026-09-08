@@ -161,4 +161,9 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     # ---- edição transacional de feições (L2-03-a): um evento por LOTE (nunca um por feição), com a contagem
     # de adicionadas/atualizadas/apagadas em propriedades — mesmo em modo `parcial` com tudo recusado
     ("POST", "/api/camadas/{id}/edicoes"): ["camadas/editar"],
+    # L2-13-b: criar registra a réplica (o pacote em si é job), sincronizar registra o lote,
+    # apagar registra a remoção. Baixar o pacote é leitura: sem evento de domínio (o log de acesso cobre).
+    ("POST", "/api/replicas"): ["replicas/criar"],
+    ("POST", "/api/replicas/{id}/sincronizar"): ["replicas/sincronizar"],
+    ("DELETE", "/api/replicas/{id}"): ["replicas/apagar"],
 }
