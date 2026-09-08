@@ -12,10 +12,21 @@ if [ "${1:-}" = "segredo" ] && [ "${2:-}" = "rotacionar" ]; then
   exec "$RAIZ/venv/bin/python" "$DIR/segredo_rotacionar.py" rotacionar "$@"
 fi
 
+if [ "${1:-}" = "raster" ] && [ "${2:-}" = "gc" ]; then
+  shift 2
+  cd "$RAIZ"
+  exec "$RAIZ/venv/bin/python" -m app.imagens.ciclo_vida gc "$@"
+fi
+
 cat >&2 <<'USO'
 uso: plat segredo rotacionar <NOME> [opções]
+      plat raster gc [--inquilino <slug>]
 
 NOME em: PLAT_SECRET | PLAT_DSN | PLAT_DSN_WORKER | PLAT_GARAGE_ADMIN_TOKEN | PLAT_GARAGE_CHAVE_S3:<slug>
+
+`raster gc` (L1-01-i): roda agora a coleta de lixo das imagens de cada inquilino — lista objetos órfãos,
+itens quebrados e lixeira vencida — e registra o relatório como job concluído do tipo imagens.raster_gc,
+visível em Tarefas. Apagar órfão é decisão humana: a coleta LISTA e RELATA, não apaga.
 
 Ver docs/RUNBOOKS/segredos.md para o procedimento completo (o que cada segredo invalida, quando avisar
 antes de rodar em produção com usuários ativos).
