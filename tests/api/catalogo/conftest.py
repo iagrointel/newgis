@@ -9,6 +9,7 @@ import psycopg2
 import psycopg2.extras
 import pytest
 
+from app import objetos
 from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 from tests.api.conftest import PREFIXO_TESTE, sob_xdist
 from tests.api.semear_catalogo import PREFIXO as SEMENTE
@@ -67,6 +68,26 @@ class Itens:
         return j
 
 
+def _apagar_miniatura(chave: str | None) -> None:
+    """Apaga o OBJETO da miniatura antes de expurgar o registro do item.
+
+    08/09: `plat.item_expurgar` apaga só o registro. A linha de `plat.arquivo` da miniatura cai por cascata do
+    item, mas o objeto correspondente no Garage fica para trás — e `objetos.varrer_orfaos` passa a acusá-lo em
+    `sem_linha`. Medido nesta base: 56 miniaturas órfãs depois de algumas rodadas da suíte, o bastante para
+    `tests/api/test_arquivos.py::test_varredura_acusa_orfao_plantado` reprovar logo na primeira asserção, sem
+    relação com o que o teste prova. É a mesma correção que `tests/api/ingestao/conftest.py` já aplica: chamar o
+    destruidor do dado físico, como faz `catalogo.lixeira_expurgar`. Aqui só o objeto: a tabela física de uma
+    camada não é apagada por esta varredura, que roda por PREFIXO de título e não pode decidir sobre schema
+    partilhado.
+    """
+    if not chave:
+        return
+    try:
+        objetos.apagar(chave)
+    except objetos.ChaveInvalida:
+        pass
+
+
 def _expurgar_zt(env, slug: str) -> None:
     """Limpeza física dos itens/pastas/categorias zt* do inquilino: como plat_app no contexto do admin."""
     con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
@@ -87,11 +108,12 @@ def _expurgar_zt(env, slug: str) -> None:
                 (PREFIXO_TESTE + "%", SEMENTE + "%"),
             )
             cur.execute(
-                "SELECT id FROM plat.item WHERE titulo LIKE %s AND titulo NOT LIKE %s",
+                "SELECT id, miniatura_chave FROM plat.item WHERE titulo LIKE %s AND titulo NOT LIKE %s",
                 (PREFIXO_TESTE + "%", SEMENTE + "%"),
             )
             for r in cur.fetchall():
                 cur.execute("SELECT plat.item_lixeira(%s::uuid, true)", (r["id"],))
+                _apagar_miniatura(r["miniatura_chave"])
                 cur.execute("SELECT plat.item_expurgar(%s::uuid)", (r["id"],))
             # o gatilho pasta_vazia recusa apagar pasta com filha: das folhas para a raiz, até não sobrar nenhuma
             for _ in range(10):
