@@ -509,6 +509,9 @@ BEGIN
               'fonte', 'hospedada', 'semente', 'painel_exemplo',
               'procedencia', jsonb_build_object('origem', 'sintetico', 'detalhe', 'generate_series(1,120) em plat.painel_exemplo_semear')),
             t_admin, t_admin);
+    -- a camada semeada é publicada como qualquer outra: função de tile garantida na criação
+    -- (a invariância do leitor — toda camada do catálogo com t_<tabela> em pg_proc — vale para a semente)
+    PERFORM plat.camada_tile_garantir(schema_d, tabela, c_id);
   ELSE
     SELECT i.dados->>'tabela' INTO tabela FROM plat.item i WHERE i.id = c_id;
   END IF;
