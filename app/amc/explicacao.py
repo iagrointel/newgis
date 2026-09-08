@@ -14,11 +14,11 @@ Escopo da transformação valor bruto → favorabilidade: os quatro tipos DECLAR
 `faixas`, `linear`, `degraus`) são inequívocos a partir do próprio JSON Schema e estão implementados aqui por
 inteiro. As doze funções contínuas do Rescale by Function (`exponencial`, `gaussiana`, `grande`, `logaritmo`,
 `decaimento_logistico`, `crescimento_logistico`, `ms_grande`, `ms_pequena`, `proxima`, `potencia`, `pequena`,
-`linear_simetrica`) são o objeto do item L3-01-d-transformacoes (pendente; portão dele exige que um adversário
-implemente cada uma do zero contra a documentação do ArcGIS Pro 3.4 e compare) — fabricar essas fórmulas aqui,
-sem essa verificação cruzada, arriscaria gravar um número errado na explicação de um fator que pesa numa decisão
-de negócio. Por isso um fator com transformação contínua aparece na tabela com o valor bruto, a unidade e a fonte,
-mas com `favorabilidade_fator = None` e uma observação nomeando a lacuna — nunca um número inventado."""
+`linear_simetrica`) foram o objeto do item L3-01-d-transformacoes, hoje entregue: quando o tipo não é um dos
+quatro declarativos, esta função DELEGA a `app/amc/transformacoes.py` em vez de fabricar a fórmula aqui. É essa
+delegação que garante que a explicação de uma unidade e a matriz da tela do motor (`GET .../matriz`, item
+L3-01-g) devolvam o mesmo número para o mesmo fator. Tipo que não existe em nenhuma das duas bibliotecas
+continua com `favorabilidade_fator = None` e a lacuna nomeada na observação — nunca um número inventado."""
 
 from __future__ import annotations
 
@@ -74,8 +74,17 @@ def aplicar_transformacao(valor: float | None, transformacao: dict) -> tuple[flo
     acima = transformacao.get("acima")
 
     if tipo not in TIPOS_TRANSFORMACAO_IMPLEMENTADOS:
-        return None, (f"transformação '{tipo}' fora do escopo desta explicação: as funções contínuas do Rescale "
-                       f"by Function são o item L3-01-d-transformacoes, hoje pendente")
+        # as doze funções contínuas do Rescale by Function chegaram com o item L3-01-d (app/amc/transformacoes.py,
+        # já juntado): delegar é o que impede a explicação e a matriz da tela do motor de darem números
+        # diferentes para o mesmo fator. Tipo desconhecido continua sem nota, com a lacuna nomeada.
+        from app.amc import transformacoes as _transformacoes
+
+        if tipo not in _transformacoes.TIPOS_VALIDOS:
+            return None, f"transformação '{tipo}' não existe na biblioteca de transformações do motor"
+        try:
+            return _transformacoes.transformar_um(valor, transformacao), None
+        except (_transformacoes.ErroTransformacao, ValueError, KeyError) as e:
+            return None, f"transformação '{tipo}' não se aplica a este valor: {e}"
 
     if tipo == "categoria":
         notas = transformacao.get("notas") or {}
