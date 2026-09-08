@@ -116,6 +116,24 @@ impedância de linha é a de REFERÊNCIA (o padrão do motor OpenDSS, escrito em
 pacote de ativos não tem catálogo de condutor. Em `docs/PARIDADE.md` isto está registrado como CONECTOR: o
 ArcGIS Utility Network não exporta para esses formatos nem roda fluxo de potência, e a linha não deve ser
 lida como capacidade equivalente. ADR `docs/adr/20260908T0220-pandapower-e-matpower.md`.
+## turno 7, setembro de 2026 (item L4-04-c-unificar-subrede: uma tabela de subrede, com a origem ao lado)
+
+Dois itens tinham criado, em ramos separados, duas tabelas para o mesmo conceito: `plat.rede_subrede` (a
+subrede DERIVADA do controlador, item L4-04-a) e `plat.rede_subrede_bdgd` (a hierarquia que o ARQUIVO da
+BDGD declara, item L4-01-c). Agora é **uma tabela só**, com a coluna `origem`: a derivada é a canônica
+(tier, ciclo de vida limpa/suja, elementos, resumo) e a do arquivo entra como origem declarada
+(`origem='bdgd'`, `estado='declarada'`, com nível, código e pai). Um `CHECK` por origem impede a mistura, e
+o gatilho de nível estrito do item L4-01-c passou para a tabela unificada com os mesmos nomes de exceção.
+
+A migração `20260908T0152` copia as linhas da tabela antiga **preservando o `id`** e repõe as chaves
+estrangeiras de `plat.rede_no.subrede_id` e `plat.rede_aresta.subrede_id` na tabela unificada — nenhuma
+referência é reescrita, e a tabela antiga deixa de existir.
+
+Novo: `app/rede_utilidades/reconciliacao.py` grava a hierarquia declarada pelo arquivo e a liga à derivada
+de mesmo nome dentro do tier daquele nível (`equivalente_id`). As duas rodam no fim da marcação de
+controladores da importação, sem rota nova; a saída passa a trazer `declarado` e `reconciliacao`. O que não
+casa fica com `equivalente_id` nulo e é contado — divergência é candidata a erro de cadastro, nunca erro
+provado. Decisão em `docs/adr/20260908T0152-uma-tabela-de-subrede.md`.
 
 ## turno 7, setembro de 2026 (item L4-01-e-dicionario-unidades-bdgd: a unidade vem do arquivo, medida)
 
