@@ -402,6 +402,7 @@ class _Leitor:
         for el in pai.iterfind(caminho, NS):
             for filho in el:
                 if filho.tag in (
+                    f"{{{GMD}}}URL",  # gmd:linkage guarda o endereço num gmd:URL, não num gco:CharacterString
                     f"{{{GCO}}}CharacterString",
                     f"{{{GCO}}}Date",
                     f"{{{GCO}}}DateTime",
@@ -565,13 +566,7 @@ def analisar(dados: bytes) -> Analise:
             "gmd:distributionInfo/gmd:MD_Distribution/gmd:transferOptions/"
             "gmd:MD_DigitalTransferOptions/gmd:onLine/gmd:CI_OnlineResource",
         )
-        url = lt.texto(recurso, "gmd:linkage") if recurso is not None else None
-        if url is None and recurso is not None:
-            ligacao = lt.acha(recurso, "gmd:linkage")
-            alvo = None if ligacao is None else ligacao.find(f"{{{GMD}}}URL")
-            if alvo is not None and (alvo.text or "").strip():
-                lt._marcar(alvo)
-                url = alvo.text.strip()
+        url = lt.texto(recurso, "gmd:linkage")
         if url:
             a.procedencia["url"] = url
     if "licenca" not in a.procedencia:
