@@ -3,6 +3,38 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 7, setembro de 2026 (item L4-04-d-diagrama-esquematico: diagrama de rede, regras e layouts)
+
+O esquema do alimentador deixou de ser desenho de apresentação e virou objeto do produto. Um diagrama é um
+grafo derivado de um recorte da topologia — a subrede atualizada, um traçado com pontos de partida, ou uma
+seleção de feições —, passado pelas regras do modelo escolhido e posicionado por um layout. Fica gravado em
+`plat.rede_diagrama` com `rede_diagrama_no`/`rede_diagrama_aresta`, e as coordenadas dos nós vivem no espaço
+do diagrama, adimensional: o esquema não tem geografia, e guardar aquilo em graus faria parecer que tem.
+
+Três regras de construção, com vocabulário fechado: reduzir junção de passagem, colapsar contêiner e remover
+tipos. Seis layouts: árvore inteligente, radial, linha principal, geográfico, grade e força dirigida.
+Exportação em JSON, SVG e PNG, os três do mesmo grafo gravado. A tela `/redes/diagrama` põe o esquema e o
+mapa lado a lado e casa a seleção nos dois sentidos: cada nó é um botão de verdade nos dois quadros, com
+foco de teclado e rótulo anunciado, e a seleção não depende só de cor.
+
+Editar a rede marca o diagrama como `inconsistente` no mesmo instante em que marca a subrede suja — a área
+suja é apagada quando a topologia é reconstruída, então o estado tem de ser gravado na hora. Trocar de
+layout não conserta: só gerar de novo devolve `consistente`.
+
+Medido em `tests/medidas/L4-04-d-diagrama-esquematico.json` (comando
+`venv/bin/pytest tests/api/test_rede_diagrama_medida.py -m lento -q`), sobre o MAIOR alimentador da
+cooperativa de teste — 1 de 20, 4.963 trechos de média tensão no arquivo: o diagrama de 4.963 nós e 4.963
+ligações é gerado em **0,694 s** (teto do portão: 10 s), com carga 6,06 e 6,79 GB de RAM livre na máquina.
+Os quatro layouts do portão terminam com **0 par de nós a menos de 1 unidade**, entre 1,19 s e 1,76 s cada.
+A regra de redução leva o grafo de **4.963 para 1.037 nós** e mantém **1 componente conexo** antes e depois.
+
+O que NÃO faz, declarado em `docs/PARIDADE.md`: das cerca de onze opções de layout da fonte há seis; das
+muitas regras dela há três; não existe edição manual do desenho, nem diagrama que se refaça sozinho quando a
+subrede é atualizada, nem geração assíncrona. `colapsar_conteiner` é tradução, não equivalência — o modelo
+daqui não tem contêiner com conteúdo, e o que a regra colapsa é o dispositivo multi-terminal. O quadro do
+mapa desenha só os nós: ligar dois nós por uma reta seria inventar traçado. Acima de 200 nós a força
+dirigida cai na grade, com o aviso na resposta, porque ela compara todos contra todos a cada rodada.
+
 ## turno 7, setembro de 2026 (item L4-01-f-alcance-do-tracado-rede-real: alcance do traçado e diagnóstico do órfão)
 
 O traçado a jusante alcançava 34 dos 50 transformadores de um alimentador do ativo de referência. A causa

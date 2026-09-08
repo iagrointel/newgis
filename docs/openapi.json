@@ -10357,6 +10357,61 @@
     "x-privilegio": "rede.editar"
    }
   },
+  "/api/rede/{rede_id}/matpower": {
+   "post": {
+    "tags": [
+     "rede de utilidades — MATPOWER"
+    ],
+    "summary": "Importar Matpower",
+    "description": "Importa um caso MATPOWER (caseformat 2) para o grafo da rede. A rede precisa ter o pacote de\nativos `transmissao-matpower` importado antes. `prefixo` entra no código externo de cada objeto e\npermite mais de um caso na mesma rede. As barras entram SEM geometria: o caseformat não tem\ncoordenada, e a plataforma não inventa uma.",
+    "operationId": "importar_matpower_api_rede__rede_id__matpower_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "prefixo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "maxLength": 32,
+       "pattern": "^[A-Za-z0-9_-]*$",
+       "default": "",
+       "title": "Prefixo"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
   "/api/rede/{rede_id}/feicoes/pontos": {
    "post": {
     "tags": [
@@ -10817,6 +10872,69 @@
        "type": "integer",
        "default": 200,
        "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/topologia/diagnostico": {
+   "get": {
+    "tags": [
+     "rede de utilidades — topologia"
+    ],
+    "summary": "Diagnosticar Topologia",
+    "description": "Nós órfãos da topologia separados por CLASSE, com contagem, distância medida e exemplo (item L4-01-f).\n\nContar órfão não diz o que consertar: cada classe tem uma causa e um conserto diferente — ver\n`app/rede_utilidades/diagnostico.py`. Só leitura; a varredura vai ao threadpool porque percorre a camada\nde linha com índice espacial e, em rede grande, passa de um segundo.",
+    "operationId": "diagnosticar_topologia_api_rede__rede_id__topologia_diagnostico_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limiar_m",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "number",
+       "default": 1.0,
+       "title": "Limiar M"
+      }
+     },
+     {
+      "name": "exemplos",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 1,
+       "title": "Exemplos"
       }
      }
     ],
@@ -12031,7 +12149,7 @@
      "rede de utilidades — subredes"
     ],
     "summary": "Exportar Subrede",
-    "description": "`formato=json` (padrão): rede, subrede (com a linha agregada), controladores, elementos,\nconectividade e resumo, validado contra `plat.rede.subrede_exportada` antes de sair.\n\n`formato=dss`: a pasta OpenDSS da subrede, num zip. `ano` escolhe o calendário da curva de 864 pontos\n(24 h x 3 tipos de dia x 12 meses); o padrão é o ano corrente. `jusante=true` inclui as subredes de tier\ninferior que penduram nesta — é o alimentador inteiro, com transformador e carga, em vez de só o tier\npedido.",
+    "description": "`formato=json` (padrão): rede, subrede (com a linha agregada), controladores, elementos,\nconectividade e resumo, validado contra `plat.rede.subrede_exportada` antes de sair.\n\n`formato=dss`: a pasta OpenDSS da subrede, num zip. `ano` escolhe o calendário da curva de 864 pontos\n(24 h x 3 tipos de dia x 12 meses); o padrão é o ano corrente. `jusante=true` inclui as subredes de tier\ninferior que penduram nesta — é o alimentador inteiro, com transformador e carga, em vez de só o tier\npedido.\n\n`formato=pandapower`: `rede.json`, que `pandapower.from_json` lê, mais `resumo.json` e `NAO_FAZ.md`,\nnum zip. `formato=matpower`: o `.m` do caseformat 2, com os mesmos dois arquivos ao lado. Os dois são\nmodelos de rede EQUILIBRADA (sequência positiva): as fases declaradas por trecho não são\nrepresentadas, e onde o desequilíbrio importa o formato certo é o `dss`. O `ano` não muda nada nesses\ndois formatos — a curva de carga só existe no OpenDSS; cada carga sai com a potência média do ano.",
     "operationId": "exportar_subrede_api_rede__rede_id__subrede__nome__exportar_get",
     "parameters": [
      {
@@ -12284,6 +12402,645 @@
     "x-privilegio": "rls:visibilidade"
    }
   },
+  "/api/rede/{rede_id}/subrede/{nome}/curto": {
+   "post": {
+    "tags": [
+     "rede de utilidades — curto-circuito e proteção"
+    ],
+    "summary": "Calcular Curto",
+    "description": "Corrente de curto-circuito por barra (trifásica e fase-terra) e verificação de coordenação simples\ndo dispositivo a montante de cada barra, sobre o mesmo modelo em memória que os exportadores usam.\n\nO corpo são as PREMISSAS: `potencia_de_curto_mva` (obrigatória — sem ela a impedância da fonte é nula\ne a corrente seria infinita), `relacao_x_r_fonte`, `fator_tensao_c`, `fator_sequencia_zero_linha`,\n`fator_sequencia_zero_fonte` e `base_mva`. Todas saem gravadas ao lado do resultado. É triagem:\na impedância de condutor e a do transformador são valores de REFERÊNCIA declarados, porque o cadastro\nde distribuição não os traz.",
+    "operationId": "calcular_curto_api_rede__rede_id__subrede__nome__curto_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "ano",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Ano"
+      }
+     },
+     {
+      "name": "jusante",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Jusante"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Premissas"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades — curto-circuito e proteção"
+    ],
+    "summary": "Ler Curto",
+    "description": "A tabela do último cálculo desta subrede: uma linha por barra, com a corrente trifásica, a\nfase-terra, o dispositivo a montante e o veredito de coordenação; as premissas do cálculo vêm no\nmesmo corpo, porque o número não se lê sem elas.",
+    "operationId": "ler_curto_api_rede__rede_id__subrede__nome__curto_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/subrede/{nome}/curto/camada": {
+   "get": {
+    "tags": [
+     "rede de utilidades — curto-circuito e proteção"
+    ],
+    "summary": "Ler Curto Camada",
+    "description": "O mesmo resultado como camada de pontos (GeoJSON): um ponto por barra que tem nó com geometria,\ncom corrente e veredito nas propriedades. Barra sem coordenada é contada em `barras_sem_coordenada`\ne não vira feição.",
+    "operationId": "ler_curto_camada_api_rede__rede_id__subrede__nome__curto_camada_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/diagrama": {
+   "post": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Gerar Diagrama",
+    "description": "Gera o diagrama. `origem` é um objeto com `tipo`:\n\n  * `{\"tipo\": \"subrede\", \"subrede\": \"<nome>\", \"tier\": \"<codigo>\"}` — a subrede tem de estar atualizada\n    (o diagrama é feito do que a atualização gravou, não de um traçado novo escondido dentro da chamada);\n  * `{\"tipo\": \"tracado\", \"tracado\": \"subrede|conectado\", \"pontos_partida\": [...], \"barreiras\": [...]}`;\n  * `{\"tipo\": \"selecao\", \"feicoes\": [\"<uuid>\", ...]}`.\n\nGerar de novo com o MESMO nome substitui o desenho e devolve o diagrama a `consistente`, mantendo o\nidentificador — o link que alguém guardou continua valendo.",
+    "operationId": "gerar_diagrama_api_rede__rede_id__diagrama_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DiagramaEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/diagramas": {
+   "get": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Listar Diagramas",
+    "description": "A lista de diagramas da rede, com o estado de consistência de cada um.",
+    "operationId": "listar_diagramas_api_rede__rede_id__diagramas_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/diagrama/{diagrama_id}": {
+   "get": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Ler Diagrama",
+    "description": "O grafo do diagrama: nós (x,y do diagrama, mais `feicao_id`/`terminal`/`lon`/`lat` para a seleção\ncasar com o mapa) e arestas (com a lista de feições que cada uma representa).",
+    "operationId": "ler_diagrama_api_rede__rede_id__diagrama__diagrama_id__get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "diagrama_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Diagrama Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "delete": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Apagar Diagrama",
+    "description": "Apaga o diagrama e o desenho dele. A rede não é tocada: diagrama é derivado.",
+    "operationId": "apagar_diagrama_api_rede__rede_id__diagrama__diagrama_id__delete",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "diagrama_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Diagrama Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/diagrama/{diagrama_id}/layout": {
+   "post": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Aplicar Layout Diagrama",
+    "description": "Reposiciona os nós com outro layout, sem refazer o recorte nem as regras. Não muda o estado de\nconsistência: trocar o desenho não conserta diagrama velho.",
+    "operationId": "aplicar_layout_diagrama_api_rede__rede_id__diagrama__diagrama_id__layout_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "diagrama_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Diagrama Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DiagramaLayoutEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
+  "/api/rede/{rede_id}/diagrama/{diagrama_id}/exportar": {
+   "get": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Exportar Diagrama",
+    "description": "`json` (padrão) devolve o mesmo documento da leitura; `svg` devolve o desenho vetorial e `png` a\nimagem. Os três saem do MESMO grafo gravado — a figura nunca é redesenhada por outro caminho.",
+    "operationId": "exportar_diagrama_api_rede__rede_id__diagrama__diagrama_id__exportar_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "diagrama_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Diagrama Id"
+      }
+     },
+     {
+      "name": "formato",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "json",
+       "title": "Formato"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/diagrama-modelos": {
+   "get": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Listar Modelos Diagrama",
+    "description": "Os modelos embutidos (`basico`, `esquematico`, `geografico`) e os declarados nesta rede.",
+    "operationId": "listar_modelos_diagrama_api_rede__rede_id__diagrama_modelos_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/diagrama-modelo/{codigo}": {
+   "put": {
+    "tags": [
+     "rede de utilidades — diagrama"
+    ],
+    "summary": "Definir Modelo Diagrama",
+    "description": "Declara um modelo do inquilino: as regras de construção, na ordem em que se aplicam, e o layout\npadrão. Código de modelo embutido é recusado — quem quer outro comportamento cria outro código.",
+    "operationId": "definir_modelo_diagrama_api_rede__rede_id__diagrama_modelo__codigo__put",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "codigo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Codigo"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DiagramaModeloEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   }
+  },
   "/api/geocodificar": {
    "post": {
     "tags": [
@@ -12292,15 +13049,180 @@
     "summary": "Geocodificar",
     "operationId": "geocodificar_api_geocodificar_post",
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/PedidoGeocodificar"
        }
       }
-     },
-     "required": true
+     }
     },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   },
+   "get": {
+    "tags": [
+     "geocodificador"
+    ],
+    "summary": "Geocodificar Get",
+    "description": "Mesma busca do POST, por parâmetro de consulta.\n\nExiste porque geocodificar é LEITURA e o verbo certo para leitura é GET: a caixa de pesquisa do\nvisualizador de mapa (item L2-01-mapa-web) não deve passar pela porta de escrita sob cookie, que\nexige a checagem de origem do ADR 0002 seção 5.3 (e falha, corretamente, em qualquer ambiente cuja\nURL pública não seja a mesma do navegador). O POST continua valendo, com o mesmo contrato.",
+    "operationId": "geocodificar_get",
+    "parameters": [
+     {
+      "name": "endereco",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 300
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Endereco"
+      }
+     },
+     {
+      "name": "logradouro",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 200
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Logradouro"
+      }
+     },
+     {
+      "name": "numero",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 999999,
+         "minimum": 0
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Numero"
+      }
+     },
+     {
+      "name": "bairro",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 120
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Bairro"
+      }
+     },
+     {
+      "name": "municipio",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 120
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Municipio"
+      }
+     },
+     {
+      "name": "uf",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 2,
+         "maxLength": 2
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Uf"
+      }
+     },
+     {
+      "name": "cep",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 9
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Cep"
+      }
+     },
+     {
+      "name": "max_locations",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 50,
+       "minimum": 1,
+       "default": 10,
+       "title": "Max Locations"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "Successful Response",
@@ -13252,6 +14174,112 @@
     },
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/mapa/camadas": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Listar Camadas",
+    "description": "Camadas vetoriais que a sessão pode ler (a RLS de plat.item decide), prontas para o mapa.",
+    "operationId": "listar_camadas_api_mapa_camadas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Obter Camada",
+    "operationId": "obter_camada_api_mapa_camadas__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/mapa/camadas/{id}/tilejson": {
+   "get": {
+    "tags": [
+     "mapa"
+    ],
+    "summary": "Tilejson",
+    "operationId": "tilejson_api_mapa_camadas__id__tilejson_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "proprio"
    }
   }
  },
@@ -15545,6 +16573,93 @@
      "motivo"
     ],
     "title": "ConviteResolvido"
+   },
+   "DiagramaEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "origem": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Origem"
+     },
+     "modelo": {
+      "type": "string",
+      "maxLength": 60,
+      "minLength": 1,
+      "title": "Modelo",
+      "default": "basico"
+     },
+     "layout": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Layout"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome"
+    ],
+    "title": "DiagramaEntrada",
+    "description": "Pedido de geração de diagrama. `origem` é validada em `diagrama._elementos_da_origem`, não aqui: as\ntrês formas (subrede, traçado, seleção) têm campos diferentes, e a mensagem de erro precisa dizer qual\nsubrede/feição não existe NESTA rede — coisa que pydantic não sabe."
+   },
+   "DiagramaLayoutEntrada": {
+    "properties": {
+     "layout": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Layout"
+     }
+    },
+    "type": "object",
+    "required": [
+     "layout"
+    ],
+    "title": "DiagramaLayoutEntrada"
+   },
+   "DiagramaModeloEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Nome"
+     },
+     "regras": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "maxItems": 20,
+      "title": "Regras"
+     },
+     "layout": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Layout"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nome",
+     "layout"
+    ],
+    "title": "DiagramaModeloEntrada",
+    "description": "Modelo (template) de diagrama do inquilino: as regras de construção e o layout padrão. As regras são\nvalidadas em `diagrama._validar_regras` contra o vocabulário fechado do módulo."
    },
    "Dono": {
     "properties": {
