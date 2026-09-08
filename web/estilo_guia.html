@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Guia de estilo · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/estilo/guia.css">
+</head>
+<body class="tela guia">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="guia.titulo">Guia de estilo</h1>
+    <p class="fraco" data-i18n="guia.intro">toda variação do sistema de design, renderizada de verdade com os tokens vivos</p>
+    <div class="linha-ferramentas">
+      <span class="campo-rotulo" data-i18n="guia.tema">Tema</span>
+      <plat-tema id="tema"></plat-tema>
+    </div>
+    <plat-aviso id="aviso"></plat-aviso>
+    <div id="guia"></div>
+  </main>
+</div>
+<plat-dialogo id="dialogo"></plat-dialogo>
+<plat-dialogo id="dialogo-lateral" modo="lateral"></plat-dialogo>
+<script type="module" src="/static/js/estilo/guia.js"></script>
+</body>
+</html>

@@ -6,32 +6,192 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Mapa · plat</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/estilo/tokens.css">
+<script src="/static/js/base/tema_cedo.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 <link rel="stylesheet" href="/static/vendor/maplibre-gl-4.7.1.css">
 <link rel="stylesheet" href="/static/mapa.css">
 </head>
-<body class="tela instrumento mapa">
+<body class="tela mapa">
 <a class="pular" href="#mapa" data-i18n="app.pular">pular para o conteúdo</a>
 <div class="app">
   <aside id="lateral" class="lateral"></aside>
+  <button type="button" class="mapa-veu" id="nav-veu" hidden tabindex="-1" data-i18n-aria="nav.menu"></button>
   <main id="principal" class="principal mapa-tela" tabindex="-1">
-    <div class="linha-ferramentas mapa-barra" id="ferramentas">
+    <div class="mapa-barra" id="ferramentas">
+      <button type="button" class="pequeno" id="btn-nav" aria-expanded="false" aria-controls="lateral" data-i18n="nav.menu">menu</button>
       <h1 data-i18n="mapa.titulo">Mapa</h1>
       <plat-aviso id="aviso"></plat-aviso>
-    </div>
-    <div class="mapa-area">
-      <div id="mapa" aria-label="mapa" role="application"></div>
-      <div class="mapa-painel mapa-painel-base">
-        <label for="seletor-base" data-i18n="mapa.camada_base">camada base</label>
-        <select id="seletor-base"></select>
+      <div class="mapa-barra-direita">
+        <button type="button" class="pequeno" id="btn-atalhos" data-i18n-aria="mapa.atalhos" data-i18n-title="mapa.atalhos">?</button>
+        <button type="button" class="pequeno" id="btn-imprimir" data-i18n="mapa.imprimir">imprimir</button>
+        <button type="button" class="pequeno" id="btn-tela-cheia" aria-pressed="false" data-i18n="mapa.tela_cheia">tela cheia</button>
       </div>
-      <div class="mapa-painel mapa-coordenadas" id="coordenadas" aria-live="off">—</div>
+    </div>
+    <div class="mapa-corpo">
+      <nav class="mapa-trilho" id="trilho" data-i18n-aria="mapa.paineis" aria-label="painéis do mapa">
+        <button type="button" class="trilho-botao" data-painel="busca" aria-pressed="false" aria-controls="painel-busca"><span data-i18n="mapa.busca">Pesquisar</span><kbd>b</kbd></button>
+        <button type="button" class="trilho-botao" data-painel="camadas" aria-pressed="false" aria-controls="painel-camadas"><span data-i18n="mapa.camadas">Camadas</span><kbd>c</kbd></button>
+        <button type="button" class="trilho-botao" data-painel="legenda" aria-pressed="false" aria-controls="painel-legenda"><span data-i18n="mapa.legenda">Legenda</span><kbd>l</kbd></button>
+        <button type="button" class="trilho-botao" data-painel="medicao" aria-pressed="false" aria-controls="painel-medicao"><span data-i18n="mapa.medicao">Medição</span><kbd>m</kbd></button>
+        <button type="button" class="trilho-botao" data-painel="desenho" aria-pressed="false" aria-controls="painel-desenho"><span data-i18n="mapa.desenho">Desenho</span><kbd>d</kbd></button>
+        <button type="button" class="trilho-botao" data-painel="anotacoes" aria-pressed="false" aria-controls="painel-anotacoes"><span data-i18n="mapa.anotacoes">Anotações</span><kbd>a</kbd></button>
+        <button type="button" class="trilho-botao" data-painel="impressao" aria-pressed="false" aria-controls="painel-impressao"><span data-i18n="mapa.impressao">Impressão</span><kbd>i</kbd></button>
+        <button type="button" class="trilho-botao" data-painel="exportar" aria-pressed="false" aria-controls="painel-exportar"><span data-i18n="mapa.exportar_titulo">Exportar</span><kbd>e</kbd></button>
+        <button type="button" class="trilho-botao" id="tabela-alternar" aria-expanded="false" aria-controls="painel-tabela"><span data-i18n="mapa.tabela">Tabela</span><kbd>t</kbd></button>
+      </nav>
+
+      <section class="mapa-gaveta" id="gaveta" hidden data-i18n-aria="mapa.painel_aberto" aria-label="painel aberto">
+        <plat-painel id="painel-busca" fechavel hidden data-titulo="mapa.busca">
+          <form id="busca-form" role="search">
+            <label class="rotulo" for="busca-campo" data-i18n="mapa.busca_ajuda">endereço ou coordenada</label>
+            <div class="linha">
+              <input id="busca-campo" name="q" type="search" autocomplete="off" data-i18n-aria="mapa.busca">
+              <button type="submit" class="pequeno primario" data-i18n="mapa.ir">Ir</button>
+            </div>
+            <ul id="busca-sugestoes" class="sugestoes"></ul>
+            <p id="busca-resultado" class="saida" aria-live="polite"></p>
+          </form>
+        </plat-painel>
+
+        <plat-painel id="painel-camadas" fechavel hidden data-titulo="mapa.camadas">
+          <button type="button" slot="acoes" id="btn-novo-grupo" class="pequeno" data-i18n="mapa.novo_grupo">+ grupo</button>
+          <div class="linha">
+            <label for="seletor-base" data-i18n="mapa.camada_base">camada base</label>
+            <select id="seletor-base" class="controle"></select>
+          </div>
+          <ul id="lista-camadas" class="lista-camadas arvore" role="tree" data-i18n-aria="mapa.camadas" aria-label="Camadas"></ul>
+          <plat-estado id="camadas-estado" hidden></plat-estado>
+        </plat-painel>
+
+        <plat-painel id="painel-legenda" fechavel hidden data-titulo="mapa.legenda">
+          <div id="legenda" class="legenda"></div>
+        </plat-painel>
+
+        <plat-painel id="painel-medicao" fechavel hidden data-titulo="mapa.medicao">
+          <div class="linha">
+            <button type="button" id="btn-distancia" class="pequeno" aria-pressed="false" data-i18n="mapa.distancia">Distância</button>
+            <button type="button" id="btn-area" class="pequeno" aria-pressed="false" data-i18n="mapa.area">Área</button>
+            <button type="button" id="btn-medicao-limpar" class="pequeno texto" data-i18n="mapa.limpar">Limpar</button>
+          </div>
+          <p class="ajuda" data-i18n="mapa.medicao_ajuda">clique no mapa para marcar os vértices; duplo clique termina</p>
+          <p id="medicao-saida" class="saida" aria-live="polite"></p>
+        </plat-painel>
+
+        <plat-painel id="painel-desenho" fechavel hidden data-titulo="mapa.desenho">
+          <div id="bloco-desenho">
+            <div class="linha desenho-ferramentas" role="group" data-i18n-aria="mapa.desenho_ferramentas" aria-label="ferramentas de desenho">
+              <button type="button" class="pequeno" data-desenho="ponto" data-i18n="mapa.desenho_ponto">Ponto</button>
+              <button type="button" class="pequeno" data-desenho="linha" data-i18n="mapa.desenho_linha">Linha</button>
+              <button type="button" class="pequeno" data-desenho="poligono" data-i18n="mapa.desenho_poligono">Polígono</button>
+              <button type="button" class="pequeno" data-desenho="retangulo" data-i18n="mapa.desenho_retangulo">Retângulo</button>
+              <button type="button" class="pequeno" data-desenho="circulo" data-i18n="mapa.desenho_circulo">Círculo</button>
+              <button type="button" class="pequeno" data-desenho="texto" data-i18n="mapa.desenho_texto">Texto</button>
+              <button type="button" class="pequeno" data-desenho="seta" data-i18n="mapa.desenho_seta">Seta</button>
+              <button type="button" id="btn-desenho-parar" class="pequeno texto" data-i18n="mapa.desenho_parar">Parar</button>
+              <button type="button" id="btn-desenho-editar-fim" class="pequeno texto" data-i18n="mapa.desenho_editar_fim">Terminar edição</button>
+            </div>
+            <div class="grade-campos desenho-estilo">
+              <label for="desenho-cor" data-i18n="mapa.desenho_cor">cor</label>
+              <input type="color" id="desenho-cor" value="#d98a2b">
+              <label for="desenho-opacidade" data-i18n="mapa.desenho_opacidade">opacidade</label>
+              <input type="range" id="desenho-opacidade" min="0" max="1" step="0.05" value="0.85">
+              <label for="desenho-largura" data-i18n="mapa.desenho_largura">largura</label>
+              <input type="number" id="desenho-largura" min="0" max="50" step="1" value="2">
+              <label for="desenho-fonte" data-i18n="mapa.desenho_tamanho_fonte">tam. fonte</label>
+              <input type="number" id="desenho-fonte" min="4" max="96" step="1" value="14">
+              <label for="desenho-snap" data-i18n="mapa.desenho_snap">encaixar (10 px)</label>
+              <input type="checkbox" id="desenho-snap">
+            </div>
+            <ul id="lista-desenho" class="lista-camadas" data-i18n-aria="mapa.desenho_feicoes" aria-label="feições desenhadas"></ul>
+            <div class="linha">
+              <button type="button" id="btn-desenho-limpar" class="pequeno texto" data-i18n="mapa.desenho_limpar">Limpar tudo</button>
+              <button type="button" id="btn-desenho-salvar" class="pequeno" data-i18n="mapa.desenho_salvar">Salvar no mapa</button>
+              <button type="button" id="btn-desenho-promover" class="pequeno" data-i18n="mapa.desenho_promover">Promover a camada</button>
+              <label for="desenho-importar" class="botao pequeno" data-i18n="mapa.desenho_importar">Importar GeoJSON/KML</label>
+              <input type="file" id="desenho-importar" accept=".geojson,.json,.kml" hidden>
+            </div>
+            <p id="desenho-saida" class="saida" aria-live="polite"></p>
+          </div>
+        </plat-painel>
+
+        <plat-painel id="painel-anotacoes" fechavel hidden data-titulo="mapa.anotacoes">
+          <div id="bloco-anotacoes">
+            <button type="button" id="btn-anotar" class="pequeno" aria-pressed="false" data-i18n="mapa.anotacao_modo">Clicar numa feição para anotar</button>
+            <div id="anotacoes-corpo" class="form" hidden>
+              <p id="anotacoes-alvo" class="saida"></p>
+              <ul id="lista-anotacoes" class="lista-camadas" data-i18n-aria="mapa.anotacoes" aria-label="anotações da feição"></ul>
+              <div class="campo"><label for="anotacao-grupo" data-i18n="mapa.anotacao_grupo">grupo</label><select id="anotacao-grupo"></select></div>
+              <div class="campo"><label for="anotacao-texto" data-i18n="mapa.anotacao_texto">comentário</label><textarea id="anotacao-texto" maxlength="4000" rows="2"></textarea></div>
+              <div class="botoes"><button type="button" id="btn-anotacao-enviar" class="pequeno primario" data-i18n="mapa.anotacao_enviar">Comentar</button></div>
+            </div>
+          </div>
+        </plat-painel>
+
+        <plat-painel id="painel-impressao" fechavel hidden data-titulo="mapa.impressao">
+          <div class="linha">
+            <button type="button" id="btn-png" class="pequeno">PNG</button>
+            <button type="button" id="btn-pdf" class="pequeno">PDF</button>
+            <label class="caixa"><input type="checkbox" id="png-2x"> <span data-i18n="mapa.impressao_2x">2x</span></label>
+            <button type="button" id="btn-imprimir-navegador" class="pequeno texto" data-i18n="mapa.imprimir_navegador">imprimir pelo navegador</button>
+          </div>
+          <p class="ajuda" data-i18n="mapa.impressao_ajuda">PNG e PDF saem com título, escala, norte, legenda e atribuição</p>
+          <p id="impressao-saida" class="saida" aria-live="polite"></p>
+        </plat-painel>
+
+        <plat-painel id="painel-exportar" fechavel hidden data-titulo="mapa.exportar_titulo">
+          <div id="exportar" class="exportar"></div>
+        </plat-painel>
+      </section>
+
+      <div class="mapa-area">
+        <div id="mapa" data-i18n-aria="mapa.titulo" aria-label="mapa" role="application"></div>
+        <div class="mapa-status" id="coordenadas" aria-live="off">—</div>
+      <section class="mapa-painel mapa-acervo-legenda" id="acervo-legenda" aria-labelledby="acervo-legenda-titulo" hidden>
+        <h2 id="acervo-legenda-titulo" data-i18n="acervo.camadas_do_mapa">camadas do acervo neste mapa</h2>
+        <ul id="acervo-legenda-lista"></ul>
+      </section>
+        <div id="popup-dock" class="popup-dock" hidden aria-live="polite"></div>
+        <section id="painel-tabela" class="mapa-tabela" data-i18n-aria="tabela.alternar" aria-label="tabela de atributos" hidden>
+          <div class="mapa-tabela-barra">
+            <label for="tabela-camada" data-i18n="tabela.camada">camada</label>
+            <select id="tabela-camada" class="controle"></select>
+            <label for="tabela-busca" data-i18n="tabela.busca">busca</label>
+            <input type="search" id="tabela-busca" class="controle" maxlength="200">
+            <label class="caixa"><input type="checkbox" id="tabela-extensao">
+              <span data-i18n="tabela.so_extensao">só na extensão do mapa</span></label>
+            <label for="tabela-por-pagina" data-i18n="tabela.por_pagina">por página</label>
+            <select id="tabela-por-pagina" class="controle"></select>
+            <button type="button" id="tabela-colunas-abrir" class="pequeno" data-i18n="tabela.colunas">colunas</button>
+            <button type="button" id="tabela-estatisticas-abrir" class="pequeno" data-i18n="tabela.estatisticas">estatísticas</button>
+            <button type="button" id="tabela-limpar" class="pequeno" data-i18n="tabela.limpar">limpar seleção</button>
+            <span id="tabela-selecao" class="mapa-tabela-info">—</span>
+            <span id="tabela-contagem" class="mapa-tabela-info">—</span>
+            <button type="button" id="tabela-fechar" class="fechar-x" data-i18n-aria="painel.fechar" aria-label="fechar painel">×</button>
+          </div>
+          <div class="mapa-tabela-rolagem">
+            <table class="mapa-tabela-grade">
+              <thead><tr id="tabela-cabecalho"></tr></thead>
+              <tbody id="tabela-corpo"></tbody>
+            </table>
+          </div>
+          <div class="mapa-tabela-rodape">
+            <button type="button" id="tabela-anterior" class="pequeno" data-i18n="tabela.anterior">anterior</button>
+            <span id="tabela-paginacao" class="mapa-tabela-info">—</span>
+            <button type="button" id="tabela-proxima" class="pequeno" data-i18n="tabela.proxima">próxima</button>
+          </div>
+          <div id="tabela-popup" class="mapa-tabela-caixa" hidden></div>
+          <div id="tabela-colunas-painel" class="mapa-tabela-caixa" hidden></div>
+          <div id="tabela-estatisticas-painel" class="mapa-tabela-caixa" hidden></div>
+        </section>
+      </div>
     </div>
   </main>
 </div>
+<plat-dialogo id="dialogo-atalhos"></plat-dialogo>
 <script src="/static/vendor/maplibre-gl-4.7.1.js"></script>
 <script src="/static/vendor/pmtiles-4.5.0.js"></script>
+<script src="/static/vendor/terra-draw/terra-draw-1.33.0.js"></script>
+<script src="/static/vendor/terra-draw/terra-draw-maplibre-gl-adapter-1.4.1.js"></script>
 <script type="module" src="/static/js/mapa/mapa.js"></script>
 </body>
 </html>

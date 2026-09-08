@@ -3,12 +3,44 @@
 ficam de fora e confirmam que a ficha de uma sem licença nunca aparece. O `adicionar` cria item tipo `conexao` no
 inquilino de quem chamou, provado com a mesma trava cruzada A→B do resto do catálogo (RLS por `tenant_id`)."""
 
+import subprocess
+
 import psycopg2.extras
 import pytest
 
 from app.schema_ambiente import CursorSchemaAmbiente  # honra PLAT_SCHEMA (make homolog / bases por trilha)
 from tests.api.conftest import PREFIXO_TESTE
 from tests.api.test_rls import contexto, ids_por_slug
+
+# item L6-01-c-tela-acervo: `plat.acervo_licenca` (item L6-01-g) só é povoada por scripts/acervo_licenca_sync.py
+# rodando como postgres SEM olhar PLAT_SCHEMA (grava sempre em produção) — inútil para provar o JOIN novo desta
+# rota numa base de trilha isolada (mesma causa raiz de test_acervo_licenca.py estar vermelho aqui, fora do
+# escopo deste item). A fixture abaixo semeia, na tabela da PRÓPRIA trilha, a MESMA linha que já existe hoje em
+# produção para 'openstreetmap' (conferida ao vivo em 07/09/2026: tipo ODbL, evidência real do texto de
+# openstreetmap.org/copyright) — não inventa licença nenhuma, só reproduz o que a curadoria real já confirmou.
+
+
+@pytest.fixture
+def licenca_curada_odbl(env):
+    schema = env["PLAT_SCHEMA"]
+    sql = (
+        f"INSERT INTO {schema}.acervo_licenca"
+        "(fonte_id, tipo, url_licenca, metodo, identificador_remoto, http_status, evidencia, confianca, verificado_em) "
+        "VALUES ('openstreetmap', 'ODbL', 'https://www.openstreetmap.org/copyright', 'html_regex', NULL, 200, "
+        "'<h3>OpenStreetMap licensing</h3> licenciado sob a Open Data Commons Open Database License (ODbL)', "
+        "'página oficial de copyright/licença da OpenStreetMap Foundation.', now()) "
+        "ON CONFLICT (fonte_id) DO NOTHING"
+    )
+    subprocess.run(
+        ["sudo", "-u", "postgres", "psql", "-d", "iagro_sat", "-X", "-q", "-v", "ON_ERROR_STOP=1", "-c", sql],
+        check=True, capture_output=True, text=True,
+    )
+    yield "openstreetmap"
+    subprocess.run(
+        ["sudo", "-u", "postgres", "psql", "-d", "iagro_sat", "-X", "-q", "-c",
+         f"DELETE FROM {schema}.acervo_licenca WHERE fonte_id='openstreetmap'"],
+        check=True, capture_output=True, text=True,
+    )
 
 
 def _admin_contexto(env, slug):
@@ -372,3 +404,120 @@ def test_adicionar_fonte_sem_risco_pii_nao_exige_confirmacao(sessao_a, env, item
     item = r.json()
     item_acervo_a.append(item["id"])
     assert "confirma_risco_pii" not in item["dados"]["parametros"]
+
+
+# ---------------------------------------------------------------------------------------------- L6-01-c-tela-acervo
+# A tela precisa de (1) 22 domínios como filtro — a taxonomia INTEIRA de acervo.fonte, não só os domínios com
+# fonte visível hoje, para não fingir que uma categoria vazia não existe — e (2) saber, por fonte, o tipo de
+# licença CURADA (vocabulário fechado do L6-01-g, plat.acervo_licenca) para acionar o aviso de atribuição
+# obrigatória de ODbL/CC-BY-SA — nunca inferido do texto livre de `licenca` (medido: o texto livre de fontes
+# como `aneel` diz "licença não declarada" mesmo quando a curadoria HTTP achou ODbL de verdade).
+
+
+def test_dominios_lista_a_taxonomia_inteira_com_contagem_de_visiveis(sessao_a, env):
+    con = _conexao_direta(env)
+    try:
+        with con.cursor() as cur:
+            cur.execute("SELECT DISTINCT dominio FROM acervo.fonte")
+            todos_dominios = {r["dominio"] for r in cur.fetchall()}
+            cur.execute(
+                "SELECT dominio, count(*) AS n FROM acervo.fonte "
+                "WHERE licenca IS NOT NULL AND btrim(licenca) <> '' GROUP BY dominio"
+            )
+            visiveis = {r["dominio"]: r["n"] for r in cur.fetchall()}
+    finally:
+        con.close()
+    assert len(todos_dominios) >= 2, "o teste pressupõe mais de um domínio na taxonomia"
+
+    r = sessao_a.get("/api/acervo/dominios")
+    assert r.status_code == 200, r.text
+    itens = r.json()
+    por_dominio = {i["dominio"]: i["fontes"] for i in itens}
+    assert set(por_dominio) == todos_dominios, "domínio sem fonte visível não pode sumir da lista de filtro"
+    for dominio in todos_dominios:
+        assert por_dominio[dominio] == visiveis.get(dominio, 0), dominio
+    assert sum(por_dominio.values()) == sum(visiveis.values())
+    # nenhum domínio sem fonte visível some — ao menos um caso real disso na base
+    assert any(n == 0 for n in por_dominio.values()) or todos_dominios == set(visiveis)
+
+
+def test_ficha_e_cartao_trazem_licenca_curada_quando_existe(sessao_a, licenca_curada_odbl):
+    fonte_id = licenca_curada_odbl
+    r = sessao_a.get(f"/api/acervo/{fonte_id}")
+    assert r.status_code == 200, r.text
+    assert r.json()["licenca_curada_tipo"] == "ODbL"
+
+    r_lista = sessao_a.get(f"/api/acervo?q={fonte_id}&limite=1000")
+    assert r_lista.status_code == 200
+    cartao = next(i for i in r_lista.json()["itens"] if i["fonte_id"] == fonte_id)
+    assert cartao["licenca_curada_tipo"] == "ODbL"
+
+
+def test_ficha_sem_licenca_curada_e_none_nunca_inferida_do_texto_livre(sessao_a, env):
+    con = _conexao_direta(env)
+    try:
+        with con.cursor() as cur:
+            cur.execute(
+                "SELECT f.fonte_id FROM acervo.fonte f "
+                "WHERE f.licenca IS NOT NULL AND btrim(f.licenca) <> '' "
+                "AND NOT EXISTS (SELECT 1 FROM plat.acervo_licenca l WHERE l.fonte_id = f.fonte_id) "
+                "ORDER BY f.fonte_id LIMIT 1"
+            )
+            fonte_id = cur.fetchone()["fonte_id"]
+    finally:
+        con.close()
+    assert fonte_id is not None, "o teste pressupõe fonte licenciada SEM licença curada (a maioria, 39 de 68)"
+    r = sessao_a.get(f"/api/acervo/{fonte_id}")
+    assert r.status_code == 200, r.text
+    assert r.json()["licenca_curada_tipo"] is None
+
+
+def test_adicionar_congela_licenca_curada_tipo_no_item(sessao_a, licenca_curada_odbl, item_acervo_a):
+    fonte_id = licenca_curada_odbl
+    r = sessao_a.post(f"/api/acervo/{fonte_id}/adicionar")
+    assert r.status_code == 201, r.text
+    item = r.json()
+    item_acervo_a.append(item["id"])
+    assert item["dados"]["parametros"]["licenca_curada_tipo"] == "ODbL"
+
+
+def test_meu_mapa_lista_so_camadas_do_acervo_do_proprio_inquilino(sessao_a, sessao_b, licenca_curada_odbl,
+                                                                  item_acervo_a):
+    """A legenda do mapa (item L6-01-c) lê `GET /api/acervo/meu-mapa`. Ela devolve as camadas do acervo já
+    adicionadas — com o tipo de licença CURADA congelado ao adicionar, que é o que aciona o aviso de atribuição
+    obrigatória — e nada do vizinho: a mesma trava cruzada A→B do resto do catálogo (RLS por `tenant_id`)."""
+    fonte_id = licenca_curada_odbl
+    antes_a = sessao_a.get("/api/acervo/meu-mapa")
+    assert antes_a.status_code == 200, antes_a.text
+    antes_com_a_fonte = [c for c in antes_a.json() if c["fonte_id"] == fonte_id]
+
+    r = sessao_a.post(f"/api/acervo/{fonte_id}/adicionar")
+    assert r.status_code == 201, r.text
+    item_acervo_a.append(r.json()["id"])
+
+    depois_a = sessao_a.get("/api/acervo/meu-mapa")
+    assert depois_a.status_code == 200, depois_a.text
+    depois_com_a_fonte = [c for c in depois_a.json() if c["fonte_id"] == fonte_id]
+    assert len(depois_com_a_fonte) == len(antes_com_a_fonte) + 1
+    camada = next(c for c in depois_com_a_fonte if c["item_id"] == r.json()["id"])
+    assert camada["licenca_curada_tipo"] == "ODbL"
+    assert camada["titulo"].startswith("Acervo — ")
+
+    # inquilino B não enxerga a camada de A
+    r_b = sessao_b.get("/api/acervo/meu-mapa")
+    assert r_b.status_code == 200, r_b.text
+    assert all(c["item_id"] != r.json()["id"] for c in r_b.json()), r_b.json()
+
+
+def test_meu_mapa_nao_devolve_conexao_que_nao_e_do_acervo(sessao_a, item_acervo_a):
+    """Item tipo `conexao` de outro protocolo (uma conexão externa comum, item L6-02) não é camada do acervo e
+    não pode aparecer na legenda: o filtro é `dados->>'protocolo' = 'acervo'`, não o tipo do item."""
+    r = sessao_a.post("/api/itens", json={
+        "tipo": "conexao",
+        "titulo": f"{PREFIXO_TESTE} conexão que não é do acervo",
+        "dados": {"protocolo": "wms", "url": "https://exemplo.invalido/wms", "parametros": {}},
+    })
+    assert r.status_code == 201, r.text
+    item_acervo_a.append(r.json()["id"])
+    camadas = sessao_a.get("/api/acervo/meu-mapa").json()
+    assert all(c["item_id"] != r.json()["id"] for c in camadas), camadas

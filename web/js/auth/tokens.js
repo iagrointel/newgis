@@ -2,7 +2,7 @@
    (escopos em caixas; admin:inquilino só para perfil admin; validade; referer; IP/CIDR), token mostrado uma única vez,
    renovar (24 h de sobreposição), revogar, aba Acessos (GET /api/tokens/{id}/log). */
 import { obter, enviar, apagar, mensagemDe, consulta } from '../base/api.js';
-import { h, botaoCopiar, marcador } from '../base/dom.js';
+import { h, botaoCopiar, limpar, marcador } from '../base/dom.js';
 import { carregar, t, formatarData, diasAte } from '../base/i18n.js';
 import { tem } from '../base/estado.js';
 import '../base/componentes.js';
@@ -23,6 +23,7 @@ function maxDias() { const c = config(); return Number(c.token_max_dias) > 0 ? N
 
 async function iniciar() {
   montarLayout({ usuario, ativo: '/admin/tokens' });
+  montarServicosExternos();
   const botoes = [];
   if (tem('tokens.gerir_todos')) {
     const cx = h('input', { type: 'checkbox', id: 'todos' });
@@ -193,4 +194,28 @@ async function abrirAcessos(tk) {
   const resumo = detalhe.status === 200 ? h('p', { class: 'fraco' }, t('token.resumo_acessos', { n: detalhe.json.acessos_30d ?? 0, status: detalhe.json.ultimo_status ?? '—' })) : null;
   painel.abrir({ titulo: `${t('token.acessos')}: ${tk.nome}`, corpo: h('div', {}, resumo, aviso, tab, pag), botoes: [{ id: 'ok', rotulo: t('acao.fechar') }] }).then(() => {});
   await carregarPagina();
+}
+
+/* item UX-15-geocodificador-esri-sem-controle (e a mesma pendência do OGC Records): as URLs que o cliente externo
+   consome, expostas para copiar — o token de serviço vai em `?token=` (Esri) ou `Authorization: Bearer` (OGC). */
+function montarServicosExternos() {
+  // lista DENTRO da função: o módulo chama iniciar() no topo, antes de avaliar o resto do arquivo (uma const de
+  // módulo aqui embaixo ainda estaria na zona morta temporal)
+  const servicos = [
+    { id: 'geocodeserver', caminho: '/rest/services/Geocodificador/GeocodeServer', escopo: 'geocodificar:usar',
+      chave: 'tokens.servico_geocodeserver' },
+    { id: 'ogc-records', caminho: '/ogc/records', escopo: 'catalogo:ler', chave: 'tokens.servico_ogc_records' },
+  ];
+  const lista = document.getElementById('servicos-externos');
+  if (!lista) return;
+  limpar(lista);
+  for (const s of servicos) {
+    const url = `${location.origin}${s.caminho}`;
+    const cod = h('code', { class: 'mono', id: `servico-${s.id}` }, url);
+    lista.append(h('li', { class: 'servico-externo' },
+      h('span', { class: 'servico-nome' }, t(s.chave)),
+      cod,
+      h('span', { class: 'marcador info' }, s.escopo),
+      botaoCopiar(url, cod, { copiar: t('acao.copiar'), copiado: t('acao.copiado'), selecionado: t('acao.selecionado') })));
+  }
 }

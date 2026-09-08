@@ -18,6 +18,13 @@ def _camada_vetorial(cur, dados: dict, log) -> int:
     schema, tabela = dados.get("schema"), dados.get("tabela")
     if not schema or not tabela or not NOME.match(schema) or not NOME.match(tabela):
         return 0
+    # item L2-04-a: a função de tile não é dona de plat_app e não cai com o DROP TABLE; sai por porta própria
+    # só tabela hospedada no padrão da casa (d_<slug>.c_<16 hex>) tem função de tile; a função RECUSA outro
+    # nome (nome_de_tabela_invalido) e derrubava o expurgo de camadas de teste em plat_trabalho
+    if re.match(r"^d_[a-z0-9_]{1,60}$", schema) and re.match(r"^c_[0-9a-f]{16}$", tabela):
+        cur.execute("SELECT to_regprocedure('plat.camada_tile_apagar(text, text)') IS NOT NULL AS tem")
+        if cur.fetchone()["tem"]:
+            cur.execute("SELECT plat.camada_tile_apagar(%s, %s)", (schema, tabela))
     cur.execute("SELECT to_regprocedure('plat.camada_apagar(text, text)') IS NOT NULL AS tem")
     if cur.fetchone()["tem"]:
         cur.execute("SELECT plat.camada_apagar(%s, %s)", (schema, tabela))

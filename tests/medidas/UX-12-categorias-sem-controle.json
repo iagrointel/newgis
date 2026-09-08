@@ -1,0 +1,27 @@
+{
+ "item": "UX-12-categorias-sem-controle",
+ "medidas": {
+  "estados_provados": {
+   "valor": 10,
+   "unidade": "estados",
+   "comando": "lista:vazio; lista:erro; lista:negado; lista:conteudo; salvar:erro:409; salvar:erro:422; salvar:negado; salvar:ok; importar:negado; importar:ok"
+  },
+  "violacoes_serias_axe": {
+   "valor": 0,
+   "unidade": "violações",
+   "comando": "axe-core 4.10.3 wcag2a/aa em /admin/categorias vazia, /admin/categorias em erro, /admin/categorias editor, /admin/categorias importada"
+  },
+  "erros_de_console": {
+   "valor": 0,
+   "unidade": "erros",
+   "comando": "Tela.verificar (console.error, pageerror, respostas >= 400 não declaradas)"
+  },
+  "pagina_pronta_ms_categorias": {
+   "valor": 97.4,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  }
+ },
+ "gerado_em": "2026-09-08T06:01:10Z",
+ "git_sha": "798c21042da2"
+}

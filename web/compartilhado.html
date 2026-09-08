@@ -6,23 +6,36 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Item compartilhado · plat</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/js/base/tema_cedo.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 <link rel="stylesheet" href="/static/conteudo.css">
 </head>
-<body class="tela">
+<body class="tela publica">
 <a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
-<div class="app">
-  <aside id="lateral" class="lateral"></aside>
+<div class="publica-pagina">
+  <header class="publica-topo">
+    <div class="marca"><strong data-i18n="app.nome">plat</strong> <span data-i18n="catalogo.compartilhado_titulo">Item compartilhado</span></div>
+    <div class="publica-controles">
+      <plat-idioma id="idioma"></plat-idioma>
+      <plat-tema id="tema"></plat-tema>
+    </div>
+  </header>
   <main id="principal" class="principal compartilhado-pagina" tabindex="-1">
-    <h1 data-i18n="catalogo.compartilhado_titulo">Item compartilhado</h1>
     <p class="aviso-beta" data-i18n="app.beta">análise / beta privado</p>
     <plat-aviso id="aviso"></plat-aviso>
+    <plat-estado id="estado" hidden></plat-estado>
     <section id="item" class="cartao" hidden></section>
     <section id="incluidos" class="cartao" hidden>
       <h2 data-i18n="catalogo.link_incluidos">itens incluídos</h2>
+      <p class="ajuda" data-i18n="catalogo.link_incluidos_ajuda">clique num item para ver a ficha dele neste mesmo link</p>
       <plat-tabela id="incluidos-tabela"></plat-tabela>
     </section>
+    <section id="incluido" class="cartao" hidden aria-live="polite"></section>
+    <plat-dialogo id="dialogo"></plat-dialogo>
   </main>
+  <footer class="publica-rodape">
+    <span data-i18n="catalogo.link_rodape">página de leitura de um link compartilhado; sem sessão e sem acesso ao restante do catálogo</span>
+  </footer>
 </div>
 <script src="/static/vendor/dompurify-3.4.14.js"></script>
 <script type="module" src="/static/js/catalogo/compartilhado.js"></script>

@@ -12,8 +12,15 @@ import '../base/componentes.js';
 import { montarLayout, cabecalho, pronto } from '../base/layout.js';
 import { exigirSessao } from './sessao.js';
 
-const IDIOMAS = [{ valor: 'pt-BR', rotulo: 'Português (Brasil)' }];
+const IDIOMAS = [
+  { valor: 'pt-BR', rotulo: 'Português (Brasil)' },
+  { valor: 'en', rotulo: 'English' },
+  { valor: 'es', rotulo: 'Español' },
+];
 let atual = null;
+// declarado ANTES do await de nível de módulo abaixo: carregarSmtp() o atribui durante iniciar(), e um `let` que
+// só aparecesse depois estaria na zona morta temporal (achado UX-01: a página nunca marcava body[data-pronto])
+let smtpAtual = null;
 
 await carregar();
 const usuario = await exigirSessao({ privilegio: 'org.configurar' });
@@ -207,7 +214,6 @@ document.getElementById('logo-remover').addEventListener('click', async () => {
 /* ---------------------------------------------------------------- SMTP (item L0-07-d-smtp-convites):
    endpoint PRÓPRIO (/api/org/smtp), fora de /api/org — a senha nunca volta na resposta (só
    senha_configurada: bool); "host" vazio apaga o override do inquilino (volta à instalação/caminho manual). */
-let smtpAtual = null;
 
 async function carregarSmtp() {
   const r = await obter('/api/org/smtp');
