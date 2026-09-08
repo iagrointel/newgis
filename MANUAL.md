@@ -1070,3 +1070,33 @@ registrado (conta para o limite de taxa) mas não chega e-mail nenhum — o usu�
 Avisos de expiração de token (90/30/7/1 dia) e notificação de grupo por e-mail não foram construídos neste
 turno (fora do portão literal do item; ver ADR 0017 seção D5) — o job `correio.enviar` já está pronto para
 os dois, falta só o gatilho periódico.
+
+## 24. Regras de atributo por camada (item L2-10-d-regras-de-atributo)
+
+Uma camada hospedada pode ter regras avaliadas no servidor, na mesma porta de escrita da seção de edição:
+
+```
+GET  /api/camadas/{id}/regras            # regras, campos virtuais, última validação, ordem de avaliação
+PUT  /api/camadas/{id}/regras            {"regras": [...], "campos_virtuais": [...]}   # compila antes de gravar
+POST /api/camadas/{id}/validar           # job camadas.validar -> {"job_id", "estado"}
+GET  /api/camadas/{id}/feicoes?limite=&fid=   # feições com os campos virtuais avaliados
+GET  /api/camadas/{id}/erros             # erros da última validação
+```
+
+Uma regra é `{"id", "tipo", "expressao", ...}` na linguagem de expressão (`docs/EXPRESSAO.md`; campo = `$nome`):
+- `calculo`: `campo` alvo recebe o valor da expressão ao inserir e ao atualizar; `gatilhos` (lista de campos,
+  `geom` inclusive) limitam a atualização aos pedidos que mudam um deles; `ordem` define a sequência e o valor
+  calculado por uma regra dispara as seguintes; `eventos` restringe a `inserir`/`atualizar`.
+- `restricao`: expressão booleana; falso ou nulo recusa a edição com HTTP 422, `erro` = `codigo` da regra e
+  `mensagem` configurada (no modo `parcial`, só aquela feição falha).
+- `validacao`: nunca roda na edição; `POST .../validar` percorre a camada inteira em lotes e grava cada falha
+  (feição, regra, código, mensagem, instante, geometria) na tabela `e_<hex16>` ao lado da camada, e cria o item
+  "Erros de validação — <camada>" (camada só-leitura) no catálogo.
+- `habilitada: false` desliga sem apagar; `excluir_em_massa: true` pula a regra quando o lote de edição vem com
+  `"em_massa": true` (importação em massa).
+- `campos_virtuais`: `{"nome", "expressao"}` só leitura, avaliados na leitura e disponíveis nas expressões das
+  regras; nunca gravados nem aceitos como atributo.
+Erros de configuração (422, antes de gravar): `regra_expressao_invalida`, `regra_campo_inexistente`,
+`regra_invalida` e `regra_ciclo` (regra que calcula um campo que está nos próprios gatilhos, ou cadeia fechada
+entre regras; o `detalhe.ciclo` traz o caminho). A regra vale por qualquer caminho de escrita porque todos passam
+por `POST /api/camadas/{id}/edicoes`.

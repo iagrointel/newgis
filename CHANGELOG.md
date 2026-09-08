@@ -1113,3 +1113,17 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 4, setembro de 2026 (item L2-10-d-regras-de-atributo: regras de atributo por camada)
+
+Sobre a porta única de escrita (L2-03-a, mesclada aqui) e a linguagem de expressão (L2-10-c): `dados.regras` da
+camada (esquema v4) com regras de **cálculo** (campo alvo = expressão, gatilho por campo, ordem, encadeamento),
+**restrição** (booleana; falso = 422 com código e mensagem configurados) e **validação** (job `camadas.validar`
+grava erros em `e_<hex16>` e cria a camada de erros no catálogo), mais **campos virtuais** só-leitura avaliados na
+leitura. Motor em `app/regras/motor.py` (ciclo detectado na configuração: `regra_ciclo` com o caminho); rotas
+`GET/PUT /api/camadas/{id}/regras`, `POST /api/camadas/{id}/validar`, `GET /api/camadas/{id}/feicoes`,
+`GET /api/camadas/{id}/erros`; `em_massa` no corpo de edição pula regras marcadas `excluir_em_massa`. Testes:
+`tests/unit/test_regras_motor.py` (12) e `tests/api/test_regras_atributo.py` (validação de 100 mil como job com
+N conferido por SQL; 1.000 edições com 3 regras contra sem regras, medido). ADR
+`docs/adr/20260908T0740-regras-de-atributo.md`; paridade contra "attribute rules" (Pro/hosted 11.4) em
+`docs/PARIDADE.md`. Fora: compilação para SQL (L2-10-e), WFS-T (não existe em master), tela.

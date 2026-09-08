@@ -9895,6 +9895,353 @@
     "x-privilegio": "proprio"
    }
   },
+  "/api/camadas/{id}/edicoes": {
+   "post": {
+    "tags": [
+     "edicao"
+    ],
+    "summary": "Editar Feicoes",
+    "operationId": "editar_feicoes_api_camadas__id__edicoes_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EdicoesEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EdicoesSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "feicoes.editar|feicoes.editar_total"
+   }
+  },
+  "/api/camadas/{id}/regras": {
+   "get": {
+    "tags": [
+     "regras"
+    ],
+    "summary": "Regras Ler",
+    "operationId": "regras_ler_api_camadas__id__regras_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RegrasSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   },
+   "put": {
+    "tags": [
+     "regras"
+    ],
+    "summary": "Regras Definir",
+    "operationId": "regras_definir_api_camadas__id__regras_put",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RegrasEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RegrasSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"
+   }
+  },
+  "/api/camadas/{id}/validar": {
+   "post": {
+    "tags": [
+     "regras"
+    ],
+    "summary": "Validar",
+    "description": "Enfileira `camadas.validar` para a camada: avalia toda regra de validação habilitada em cada feição e grava\nos erros em e_<hex16> + camada de erros (equivalente ao Evaluate Rules). Evento `jobs/criar` (do serviço).",
+    "operationId": "validar_api_camadas__id__validar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ValidarSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "jobs.executar"
+   }
+  },
+  "/api/camadas/{id}/feicoes": {
+   "get": {
+    "tags": [
+     "regras"
+    ],
+    "summary": "Feicoes Ler",
+    "description": "Feições com atributos, geometria (GeoJSON) e os CAMPOS VIRTUAIS avaliados na leitura (só leitura; nunca\ngravados). É a leitura que popup e tabela usam até o FeatureServer (L2-04) entrar.",
+    "operationId": "feicoes_ler_api_camadas__id__feicoes_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 1000,
+       "minimum": 1,
+       "default": 100,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     },
+     {
+      "name": "fid",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Fid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FeicoesSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/camadas/{id}/erros": {
+   "get": {
+    "tags": [
+     "regras"
+    ],
+    "summary": "Erros Ler",
+    "operationId": "erros_ler_api_camadas__id__erros_get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 1000,
+       "minimum": 1,
+       "default": 100,
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrosSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/rota": {
    "post": {
     "tags": [
@@ -11713,6 +12060,40 @@
     ],
     "title": "AmostrasResultado"
    },
+   "CampoVirtualEntrada": {
+    "properties": {
+     "nome": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,62}$",
+      "title": "Nome"
+     },
+     "expressao": {
+      "type": "string",
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Expressao"
+     },
+     "alias": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Alias"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "nome",
+     "expressao"
+    ],
+    "title": "CampoVirtualEntrada"
+   },
    "CategoriaNo": {
     "properties": {
      "id": {
@@ -12882,6 +13263,22 @@
     ],
     "title": "ConviteResolvido"
    },
+   "Crs": {
+    "properties": {
+     "srid": {
+      "type": "integer",
+      "maximum": 999999.0,
+      "minimum": 1.0,
+      "title": "Srid"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "srid"
+    ],
+    "title": "Crs"
+   },
    "Dono": {
     "properties": {
      "id": {
@@ -12911,6 +13308,108 @@
      "login"
     ],
     "title": "Dono"
+   },
+   "EdicoesEntrada": {
+    "properties": {
+     "modo": {
+      "type": "string",
+      "pattern": "^(transacao|parcial)$",
+      "title": "Modo",
+      "default": "transacao"
+     },
+     "crs": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Crs"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "corrigir_geometria": {
+      "type": "boolean",
+      "title": "Corrigir Geometria",
+      "default": false
+     },
+     "em_massa": {
+      "type": "boolean",
+      "title": "Em Massa",
+      "default": false
+     },
+     "adicionar": {
+      "items": {
+       "$ref": "#/components/schemas/FeicaoAdicionar"
+      },
+      "type": "array",
+      "maxItems": 2000,
+      "title": "Adicionar"
+     },
+     "atualizar": {
+      "items": {
+       "$ref": "#/components/schemas/FeicaoAtualizar"
+      },
+      "type": "array",
+      "maxItems": 2000,
+      "title": "Atualizar"
+     },
+     "apagar": {
+      "items": {
+       "$ref": "#/components/schemas/FeicaoApagar"
+      },
+      "type": "array",
+      "maxItems": 2000,
+      "title": "Apagar"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "EdicoesEntrada"
+   },
+   "EdicoesSaida": {
+    "properties": {
+     "modo": {
+      "type": "string",
+      "title": "Modo"
+     },
+     "adicionar": {
+      "items": {
+       "$ref": "#/components/schemas/ResultadoFeicao"
+      },
+      "type": "array",
+      "title": "Adicionar"
+     },
+     "atualizar": {
+      "items": {
+       "$ref": "#/components/schemas/ResultadoFeicao"
+      },
+      "type": "array",
+      "title": "Atualizar"
+     },
+     "apagar": {
+      "items": {
+       "$ref": "#/components/schemas/ResultadoFeicao"
+      },
+      "type": "array",
+      "title": "Apagar"
+     },
+     "avisos": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Avisos"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "modo",
+     "adicionar",
+     "atualizar",
+     "apagar"
+    ],
+    "title": "EdicoesSaida"
    },
    "Erro": {
     "properties": {
@@ -12949,6 +13448,41 @@
      "mensagem"
     ],
     "title": "Erro"
+   },
+   "ErrosSaida": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Itens"
+     },
+     "validacao": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Validacao"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "ErrosSaida"
    },
    "Estado": {
     "properties": {
@@ -13577,6 +14111,135 @@
      "peso"
     ],
     "title": "FatorPesoEntrada"
+   },
+   "FeicaoAdicionar": {
+    "properties": {
+     "atributos": {
+      "additionalProperties": true,
+      "type": "object",
+      "maxProperties": 500,
+      "title": "Atributos"
+     },
+     "geometria": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Geometria"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "FeicaoAdicionar"
+   },
+   "FeicaoApagar": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Id"
+     },
+     "versao": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Versao"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "id"
+    ],
+    "title": "FeicaoApagar"
+   },
+   "FeicaoAtualizar": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Id"
+     },
+     "versao": {
+      "type": "integer",
+      "minimum": 1.0,
+      "title": "Versao"
+     },
+     "atributos": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object",
+        "maxProperties": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atributos"
+     },
+     "geometria": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Geometria"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "id",
+     "versao"
+    ],
+    "title": "FeicaoAtualizar"
+   },
+   "FeicoesSaida": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Itens"
+     },
+     "campos_virtuais": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Campos Virtuais"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens",
+     "campos_virtuais"
+    ],
+    "title": "FeicoesSaida"
    },
    "FotoEntrada": {
     "properties": {
@@ -16512,6 +17175,204 @@
     ],
     "title": "RedefinicaoSolicitarSaida"
    },
+   "RegraEntrada": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,62}$",
+      "title": "Id"
+     },
+     "tipo": {
+      "type": "string",
+      "pattern": "^(calculo|restricao|validacao)$",
+      "title": "Tipo"
+     },
+     "expressao": {
+      "type": "string",
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Expressao"
+     },
+     "nome": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nome"
+     },
+     "campo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 63
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Campo"
+     },
+     "gatilhos": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gatilhos"
+     },
+     "eventos": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Eventos"
+     },
+     "ordem": {
+      "type": "integer",
+      "maximum": 100000.0,
+      "minimum": 0.0,
+      "title": "Ordem",
+      "default": 0
+     },
+     "habilitada": {
+      "type": "boolean",
+      "title": "Habilitada",
+      "default": true
+     },
+     "mensagem": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mensagem"
+     },
+     "codigo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]{0,62}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Codigo"
+     },
+     "excluir_em_massa": {
+      "type": "boolean",
+      "title": "Excluir Em Massa",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "id",
+     "tipo",
+     "expressao"
+    ],
+    "title": "RegraEntrada"
+   },
+   "RegrasEntrada": {
+    "properties": {
+     "regras": {
+      "items": {
+       "$ref": "#/components/schemas/RegraEntrada"
+      },
+      "type": "array",
+      "maxItems": 100,
+      "title": "Regras"
+     },
+     "campos_virtuais": {
+      "items": {
+       "$ref": "#/components/schemas/CampoVirtualEntrada"
+      },
+      "type": "array",
+      "maxItems": 50,
+      "title": "Campos Virtuais"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "RegrasEntrada"
+   },
+   "RegrasSaida": {
+    "properties": {
+     "camada_id": {
+      "type": "string",
+      "title": "Camada Id"
+     },
+     "regras": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Regras"
+     },
+     "campos_virtuais": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Campos Virtuais"
+     },
+     "validacao": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Validacao"
+     },
+     "ordem_de_avaliacao": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Ordem De Avaliacao"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "camada_id",
+     "regras",
+     "campos_virtuais",
+     "ordem_de_avaliacao"
+    ],
+    "title": "RegrasSaida"
+   },
    "RelacaoEntrada": {
     "properties": {
      "destino": {
@@ -16581,6 +17442,90 @@
     "additionalProperties": false,
     "type": "object",
     "title": "RestaurarVersaoEntrada"
+   },
+   "ResultadoFeicao": {
+    "properties": {
+     "sucesso": {
+      "type": "boolean",
+      "title": "Sucesso"
+     },
+     "id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Id"
+     },
+     "fid": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fid"
+     },
+     "versao": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Versao"
+     },
+     "atributos": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atributos"
+     },
+     "erro": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Erro"
+     },
+     "mensagem": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mensagem"
+     },
+     "detalhe": {
+      "title": "Detalhe"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "sucesso"
+    ],
+    "title": "ResultadoFeicao"
    },
    "Resumo": {
     "properties": {
@@ -17859,6 +18804,25 @@
     "additionalProperties": false,
     "type": "object",
     "title": "UsuarioEditar"
+   },
+   "ValidarSaida": {
+    "properties": {
+     "job_id": {
+      "type": "string",
+      "title": "Job Id"
+     },
+     "estado": {
+      "type": "string",
+      "title": "Estado"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "job_id",
+     "estado"
+    ],
+    "title": "ValidarSaida"
    },
    "ValidationError": {
     "properties": {

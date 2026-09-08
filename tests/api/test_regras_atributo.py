@@ -13,8 +13,12 @@ A camada de teste é criada direto no banco pela mesma `FabricaCamada` de test_e
 
 from __future__ import annotations
 
+import fcntl
 import time
+from contextlib import nullcontext
+from pathlib import Path
 
+import psycopg2.errors
 import pytest
 
 from tests.api.jobs.conftest import WorkerExtra, esperar
@@ -32,7 +36,7 @@ REGRAS = [
      "gatilhos": ["area"], "ordem": 2},
     {"id": "positivo", "tipo": "restricao", "expressao": "$largura > 0 && $altura > 0", "codigo": "medida_invalida",
      "mensagem": "largura e altura precisam ser maiores que zero"},
-    {"id": "nome_ok", "tipo": "validacao", "expressao": "!EhNulo($nome) && Tamanho($nome) >= 3",
+    {"id": "nome_ok", "tipo": "validacao", "expressao": "!EhNulo($nome) && Contagem($nome) >= 3",
      "codigo": "nome_curto", "mensagem": "nome com menos de 3 caracteres"},
 ]
 VIRTUAIS = [{"nome": "area_m2", "expressao": "$area * 10000", "alias": "área em m²"}]
@@ -61,7 +65,26 @@ def fabrica(conexao_plat_app):
 def camada(fabrica, conexao_plat_app):
     ids = ids_por_slug(conexao_plat_app)
     admin_id = _admin_usuario_id(conexao_plat_app, "demo")
-    item_id, dados = fabrica.criar("demo", ids["demo"], admin_id, campos=CAMPOS, geometria="Point")
+    # `plat.camada_schema_garantir` faz GRANT em d_demo; trilhas construídas ao mesmo tempo fazem o mesmo GRANT nas
+    # migrações e o Postgres responde "tuple concurrently updated". Os construtores serializam pelo trinco
+    # laco/var/.trilha_build.lock; a fixture entra no mesmo trinco só para criar a camada (ambiente, não o item).
+    trinco = Path("/home/dev/plataforma/laco/.trilha_build.lock")
+    for tentativa in range(6):  # trilhas que rodam testes fazem o mesmo GRANT sem o trinco: retentativa por cima
+        try:
+            with open(trinco, "a+") if trinco.parent.is_dir() else nullcontext() as f:
+                if f is not None:
+                    fcntl.flock(f, fcntl.LOCK_EX)
+                try:
+                    item_id, dados = fabrica.criar("demo", ids["demo"], admin_id, campos=CAMPOS, geometria="Point")
+                finally:
+                    if f is not None:
+                        fcntl.flock(f, fcntl.LOCK_UN)
+            break
+        except psycopg2.errors.InternalError_ as e:
+            conexao_plat_app.rollback()
+            if "concurrently" not in str(e) or tentativa == 5:
+                raise
+            time.sleep(2 + tentativa)
     return {"id": item_id, "dados": dados, "tenant_id": ids["demo"], "admin_id": admin_id, "schema": dados["schema"],
             "tabela": dados["tabela"]}
 

@@ -27,7 +27,7 @@ from app.regras.modelos import ErrosSaida, FeicoesSaida, RegrasEntrada, RegrasSa
 router = APIRouter(tags=["regras"])
 AUTH_JOBS = dependencia_jobs()  # singleton de módulo, como em app/jobs/rotas.py
 LER = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade"}
-DEFINIR = {"x-auth": "S/T", "x-privilegio": "conteudo.editar"}
+DEFINIR = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade|conteudo.editar_tudo"}  # como PUT/PATCH /api/itens
 
 
 def _ident(nome: str) -> str:
@@ -60,7 +60,7 @@ def regras_ler(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
 @router.put("/api/camadas/{id}/regras", response_model=RegrasSaida, openapi_extra=DEFINIR)
 def regras_definir(
     id: str, corpo: RegrasEntrada, request: Request,
-    auth: Auth = autenticado("conteudo.editar", escopo_token="camada:editar"),
+    auth: Auth = autenticado(escopo_token="camada:editar"),
 ):
     iid = comum.uuid_ok(id)
     esc.exigir_escopo(auth, "camada:editar", iid)

@@ -93,6 +93,8 @@ BEGIN
     '  tenant_id      int NOT NULL DEFAULT %5$L)',
     p_schema, p_tabela, p_srid, tipo_geom, t_atual
   );
+  -- dona = plat_app, como as tabelas c_* (a aplicação apaga a tabela de erros junto com a camada)
+  EXECUTE format('ALTER TABLE %1$I.%2$I OWNER TO plat_app', p_schema, p_tabela);
   EXECUTE format('CREATE INDEX IF NOT EXISTS e_%2$s_geom_gix ON %1$I.%3$I USING gist (geom)', p_schema, nome_curto, p_tabela);
   EXECUTE format('CREATE INDEX IF NOT EXISTS e_%2$s_feicao_ix ON %1$I.%3$I (feicao_fid)', p_schema, nome_curto, p_tabela);
   EXECUTE format('ALTER TABLE %1$I.%2$I ENABLE ROW LEVEL SECURITY', p_schema, p_tabela);

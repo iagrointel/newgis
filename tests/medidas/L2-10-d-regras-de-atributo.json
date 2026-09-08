@@ -1,0 +1,47 @@
+{
+ "item": "L2-10-d-regras-de-atributo",
+ "medidas": {
+  "ordem_encadeada_respeitada": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "area (ordem 1) -> classe (ordem 2), gatilho no campo calculado"
+  },
+  "validacao_100k_feicoes_s": {
+   "valor": 3.94,
+   "unidade": "s",
+   "comando": "POST /api/camadas/{id}/validar -> job camadas.validar concluído (1 regra, 100 mil feições)"
+  },
+  "validacao_100k_duracao_job_s": {
+   "valor": 3.343,
+   "unidade": "s",
+   "comando": "resultado.duracao_s do job (só a varredura)"
+  },
+  "validacao_100k_erros": {
+   "valor": 14285,
+   "unidade": "erros",
+   "comando": "1 a cada 7 feições com nome curto; conferido por SQL"
+  },
+  "custo_extrapolado_1mi_s": {
+   "valor": 33.4,
+   "unidade": "s",
+   "comando": "adversário: 1 mi de feições = 10x o lote de 100 mil (varredura linear por cursor; sem medir 1 mi nesta trilha)"
+  },
+  "mil_edicoes_sem_regras_s": {
+   "valor": 0.756,
+   "unidade": "s",
+   "comando": "2 x POST /edicoes com 500 feições, melhor de 2"
+  },
+  "mil_edicoes_com_3_regras_s": {
+   "valor": 0.996,
+   "unidade": "s",
+   "comando": "idem com 2 cálculos encadeados + 1 restrição"
+  },
+  "razao_com_sobre_sem": {
+   "valor": 1.318,
+   "unidade": "x",
+   "comando": "portão: <= 2"
+  }
+ },
+ "gerado_em": "2026-09-08T10:36:19Z",
+ "git_sha": "4d7493efe60d"
+}
