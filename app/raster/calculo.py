@@ -3,7 +3,7 @@ amostragem de valores em pontos.
 
 A expressão é a MESMA do motor de ladrilho (`app.imagens.tiles.expressao_valida` — gramática fechada:
 referência de banda `b1..b99`, número, aritmética, parênteses e um punhado de funções) e o avaliador é o
-MESMO que roda dentro do TiTiler (`numexpr`, chamado como o `rio_tiler.utils.apply_expression` chama).
+MESMO que roda dentro do TiTiler (`numexpr`, chamado como o `rio_tiler.expression.apply_expression` chama).
 Por isso o resultado da calculadora é comparável pixel a pixel com o que o TiTiler devolveria para a
 mesma expressão — e é o que a suíte mede.
 
