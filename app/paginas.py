@@ -39,6 +39,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- vídeos por tarefa (L7-04-d): arquivos em /videos/arquivo/... (app/rotas_videos.py)
+    "/videos": "videos.html",
 }
 router = APIRouter()
 
