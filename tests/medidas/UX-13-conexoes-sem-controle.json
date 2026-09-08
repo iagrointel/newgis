@@ -1,0 +1,27 @@
+{
+ "item": "UX-13-conexoes-sem-controle",
+ "medidas": {
+  "estados_provados": {
+   "valor": 17,
+   "unidade": "estados",
+   "comando": "lista:vazio; lista:erro; lista:negado; lista:conteudo; criar:negado; criar:erro:409; criar:erro:422; criar:erro:422:config; criar:erro:413; criar:ok; editar:negado; editar:erro:422; editar:ok; apagar:negado; apagar:erro:500; apagar:ja_removida; apagar:ok"
+  },
+  "violacoes_serias_axe": {
+   "valor": 0,
+   "unidade": "violações",
+   "comando": "axe-core 4.10.3 wcag2a/aa em /conexoes vazia, /conexoes formulário com erros, /conexoes diálogo de apagar, /conexoes lista ao fim"
+  },
+  "erros_de_console": {
+   "valor": 0,
+   "unidade": "erros",
+   "comando": "Tela.verificar (console.error, pageerror, respostas >= 400 não declaradas)"
+  },
+  "pagina_pronta_ms_conexoes": {
+   "valor": 83.2,
+   "unidade": "ms",
+   "comando": "goto até body[data-pronto=1] no chromium do playwright"
+  }
+ },
+ "gerado_em": "2026-09-08T06:16:13Z",
+ "git_sha": "f69ae0e68ba5"
+}

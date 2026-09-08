@@ -128,6 +128,7 @@ def test_escrita_de_conexoes_nomeada_no_controle(page, base_url, credenciais_dem
         estados.append("lista:conteudo")
 
         # ---------------------------------------------- 2. POST: erros nomeados no formulário, depois cria
+        tela.esperar_status(409, 413, 422)  # forjados pela própria página, nos passos 2 e 3
         _preencher_nova(page, nome)
         parar = _forjar(page, "**/api/conexoes", "POST", 403,
                         {"erro": "sem_privilegio", "mensagem": "a operação exige o privilégio conteudo.registrar_fonte",
