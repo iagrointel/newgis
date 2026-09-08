@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import subprocess
 import time
-import uuid
 from pathlib import Path
 
 import psycopg2.errors
@@ -253,7 +252,7 @@ def test_fes_comparacao_conta_o_mesmo_que_o_cql2(sessao_a, camada):
                         FILTER=_filtro("<fes:PropertyIsGreaterThan>"
                                        "<fes:ValueReference>area</fes:ValueReference>"
                                        "<fes:Literal>1.5</fes:Literal></fes:PropertyIsGreaterThan>")))
-    ogc = sessao_a.get(f"/ogcfeat/{camada['id']}/collections/camada/items",
+    ogc = sessao_a.get(f"/ogc/features/{camada['id']}/collections/0/items",
                        params={"filter": "area > 1.5", "filter-lang": "cql2-text"})
     assert ogc.status_code == 200, ogc.text
     assert int(wfs.get("numberMatched")) == ogc.json()["numberMatched"] == 3
@@ -268,9 +267,11 @@ def test_fes_intersects_conta_o_mesmo_que_o_cql2(sessao_a, camada):
     wfs = _arvore(_wfs(sessao_a, camada["id"], REQUEST="GetFeature", RESULTTYPE="hits",
                         FILTER=_filtro("<fes:Intersects><fes:ValueReference>geometria</fes:ValueReference>"
                                        + poligono + "</fes:Intersects>")))
-    cql = ("S_INTERSECTS(geometria, POLYGON((-49.25 -27.25, -48.95 -27.25, -48.95 -26.95, "
-           "-49.25 -26.95, -49.25 -27.25)))")
-    ogc = sessao_a.get(f"/ogcfeat/{camada['id']}/collections/camada/items",
+    # CQL2-text desta casa recebe geometria como GeoJSON entre aspas simples (ver app/consulta/cql2.py)
+    cql = ("S_INTERSECTS(geometria, '{\"type\": \"Polygon\", \"coordinates\": "
+           "[[[-49.25, -27.25], [-48.95, -27.25], [-48.95, -26.95], [-49.25, -26.95], "
+           "[-49.25, -27.25]]]}')")
+    ogc = sessao_a.get(f"/ogc/features/{camada['id']}/collections/0/items",
                        params={"filter": cql, "filter-lang": "cql2-text"})
     assert ogc.status_code == 200, ogc.text
     assert int(wfs.get("numberMatched")) == ogc.json()["numberMatched"] == 3
@@ -433,6 +434,8 @@ def test_gdal_rele_o_gml_com_geometria_valida(sessao_a, camada, conexao_plat_app
             f"ST_SetSRID(ST_MakePoint(-49.0 - i * 0.001, -27.0 - i * 0.001), {SRID}) "
             "FROM generate_series(1, 1000) i")
         conexao_plat_app.commit()
+    contexto(conexao_plat_app, camada["tenant_id"], usuario_id=camada["admin_id"], login="admin")
+    with conexao_plat_app.cursor() as cur:
         cur.execute(f'SELECT count(*) AS n FROM "{dados["schema"]}"."{dados["tabela"]}"')
         no_banco = cur.fetchone()["n"]
     conexao_plat_app.rollback()
