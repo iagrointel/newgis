@@ -398,3 +398,30 @@ da busca com os trechos citados literalmente, não de navegação própria pela 
 | Accordion widget | organiza widgets num menu empilhado verticalmente; cada widget vira um cabeçalho com estado aberto/fechado | `acordeao`: um painel por filho, cabeçalho sempre visível, corpo com `hidden`; `multiplo_aberto` controla se fecha os outros | feito | construído; sem e2e próprio nesta passagem | 2026-09-07 | pendente (D20) |
 | Window (modal / ancorada) | "Window" NÃO é um widget de layout na doc da Esri — é um TIPO de página à parte, com dois modos de exibição (centralizado/modal e ancorado perto do que a abriu) | `janela`: um nó de conteúdo com `modo` `modal` (`<dialog>` nativo, Esc/backdrop do navegador) ou `ancorada` (`div` posicionado, Esc por `keydown` manual); modelamos como WIDGET, não como página — divergência deliberada (documento único por app, sem página extra para cada popup) | parcial (cobre os dois modos; modelo diferente do da Esri) | idem (cláusula "janela modal abre por botão e fecha por Esc") | 2026-09-07 | pendente (D20) |
 | Tab (seção com vistas/abas) | não está entre os 6 widgets confirmados na busca desta passagem (candidato a widget "layout adjacente"; não confirmado por citação literal) | `secao_vistas`/`vista`: barra de abas + painel único visível (`role="tab"`, `aria-selected`) | não comparável (Esri não confirmada nesta busca) | construído; sem e2e próprio nesta passagem | 2026-09-07 | pendente (D20) |
+
+## WMS 1.3.0 e WMTS 1.0.0 (item L2-04-i-wms-wmts-sld; ADR `20260908T1900-wms-wmts`)
+
+Referência: OGC 06-042 (WMS 1.3.0) e OGC 07-057r7 (WMTS 1.0.0), com a documentação do GeoServer e do
+ArcGIS Server como régua do que um cliente espera na prática (acesso 2026-09-08). Um serviço por ITEM
+(`/wms/{item}` e `/wmts/{item}`), mesmo token e mesmo escopo `camada:ler` do FeatureServer (L2-04-c).
+Toda a imagem é desenhada pelo rasterizador próprio (`app/ogc_mapas/pintor.py`, Pillow) sobre as feições
+da caixa, com o estilo do L2-02-a — a cor do WMS é a mesma do visualizador porque a fonte do estilo é a
+mesma.
+
+| capacidade | GeoServer/Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| WMS GetCapabilities 1.3.0 | sim | `WMS_Capabilities` com `MaxWidth/MaxHeight` 4.096, 9 CRS, `Style` nomeado e `LegendURL` medido | feito — valida contra a XSD OFICIAL em cache (`docs/xsd/cache`, sem rede) | unit + api (`_validar_xsd`) | 2026-09-08 | pendente (D20) |
+| WMS GetMap | sim | `CRS`, `BBOX` com ordem de eixo 1.3.0, `WIDTH`/`HEIGHT` <= 4.096, `FORMAT` png/png8/jpeg/gif, `TRANSPARENT`, `STYLES`, `SLD_BODY`, `EXCEPTIONS` XML/INIMAGE/BLANK | feito | api (formatos, tamanhos, transparência, eixo) | 2026-09-08 | pendente (D20) |
+| ordem de eixo em EPSG:4326 (1.3.0) | sim | `BBOX` chega latitude primeiro em EPSG:4326 e EPSG:4674; `CRS:84` e projetados em x,y | feito — o mesmo mapa pedido nos dois sai idêntico pixel a pixel; trocado de propósito sai vazio | unit + api | 2026-09-08 | pendente (D20) |
+| WMS GetFeatureInfo | sim | `I`/`J`, `FEATURE_COUNT`, `INFO_FORMAT` json/html/plain/gml | feito — devolve o MESMO conjunto de feições que o `identify` do FeatureServer no mesmo ponto | api | 2026-09-08 | pendente (D20) |
+| WMS GetLegendGraphic | extensão de fato | legenda desenhada das mesmas classes do estilo, tamanho publicado no `LegendURL` | feito | api | 2026-09-08 | pendente (D20) |
+| SLD no pedido | `SLD_BODY` e `SLD` por URL | `SLD_BODY` com o subconjunto SLD 1.0 que o escritor do L2-02-a produz (Polygon/Line/PointSymbolizer, Fill/Stroke, filtros `PropertyIsEqualTo`/`Between`/comparação, `And`/`Or`); `SLD` por URL **recusado de propósito** (o servidor não busca endereço externo, regra do L0-11) | parcial | unit (ida e volta com o escritor) + api (cor muda; XXE recusado) | 2026-09-08 | pendente (D20) |
+| WMTS GetCapabilities (KVP e RESTful) | sim | `Capabilities` 1.0.0 com `GoogleMapsCompatible` completo e `ResourceURL` RESTful | feito — valida contra a XSD oficial | unit + api | 2026-09-08 | pendente (D20) |
+| WMTS GetTile | sim | KVP e RESTful, PNG/JPEG, grade `GoogleMapsCompatible` (a mesma dos tiles XYZ do visualizador) | feito | api (KVP e REST dão o mesmo byte) | 2026-09-08 | pendente (D20) |
+| WMTS pré-renderizado | GeoServer: `gwc` em disco | job `wmts.publicar` grava PMTiles RASTER no bucket do inquilino; o `GetTile` serve por leitura de FAIXA (`Range`), fora da faixa publicada volta a desenhar ao vivo | feito — 100 mil feições, z0-z14, tempo e tamanho medidos | api de carga | 2026-09-08 | pendente (D20) |
+| limite de carga | GeoServer: `Resource limits` | orçamento em MEGAPIXELS em voo; excedente espera até 5 s e recebe 503 `ServerBusy` com `Retry-After` | feito (refutação do item) | api (12 pedidos de 2048x2048 em paralelo) | 2026-09-08 | pendente (D20) |
+| WMS de RASTER (TiTiler) | sim | fora — depende de `L1-02-tiles-token`, REFUTADO (sem rota de ladrilho raster em master). O item irmão `L1-02-g-wms-1-3-0-raster` é o lugar dele | fora | — | 2026-09-08 | — |
+| `TIME` / dimensões | sim | fora — nenhuma camada tem `timeInfo` configurado (mesma limitação declarada no FeatureServer e no OGC Features) | fora | — | 2026-09-08 | — |
+| faixas de escala por estilo (`MinScaleDenominator`) | sim | publicado no `GetCapabilities` quando existir; hoje sempre nulo (o modelo de estilo do L2-02-a ainda não guarda faixa de escala) | parcial | — | 2026-09-08 | — |
+| cliente real | QGIS | **QGIS não está instalado nesta máquina** (medido). A prova é com os drivers WMS e WMTS do **GDAL**: leem o `GetCapabilities`, montam o pedido e baixam a imagem | parcial (cláusula do portão cumprida com outro cliente OGC) | `test_wms_wmts_clientes.py` | 2026-09-08 | pendente (D20) |
+
