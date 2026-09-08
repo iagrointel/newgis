@@ -1069,3 +1069,15 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 4 (líder 5), setembro de 2026 (item L7-11-b-appliance-sem-internet: e2e inteiro atrás de um proxy de captura, 0 pedido a host externo)
+
+`tests/operacao/proxy_captura.py` (proxy HTTP em fluxo, com túnel CONNECT só para a própria instalação; todo
+outro host é recusado e contado) + `scripts/appliance_offline_medir.py` (roda `tests/e2e` inteiro com o navegador
+atrás do proxy, `PLAT_E2E_PROXY` lido por `tests/e2e/conftest.py`, grava `tests/medidas/L7-11-b-*.json`).
+Medido: 2.676 pedidos pelo proxy, **0 a host externo**, mapa-base PMTiles local apareceu, 33 e2e verdes (3
+falhas reproduzem igual sem o proxy: ambiente da trilha). `tests/unit/test_appliance_sem_cdn.py` prende o
+estático: nenhum HTML/JS/CSS carrega `http(s)://`, bibliotecas e fontes vendorizadas com sha256, Swagger local.
+`docs/APPLIANCE.md`: o que não funciona offline e a mensagem exata da tela (conectores, CSW, catálogo público,
+imagens, e-mail, OSRM, certbot), CA interna, rede `--internal` do compose (não executada: imagens do perfil
+appliance pendentes por disco, D21). `tests/operacao/frente_estatica.py` faz o papel do nginx para e2e em trilha.
