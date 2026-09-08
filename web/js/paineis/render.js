@@ -13,42 +13,21 @@
    ORDEM DO DOCUMENTO (a mesma ordem de `corpo.elementos`) — nenhum JS decide o empilhamento, é puro CSS. */
 
 import { h, limpar } from '../base/dom.js';
+import { TIPOS_COM_FONTE, pedidoDoElemento, renderElemento } from './elementos.js';
 
-const TIPOS_COM_FONTE = new Set(['indicador', 'grafico', 'tabela']);
+/* item L2-06-b-elementos-basicos: os tipos de elemento, o pedido de cada um e o desenho vivem em
+   `elementos.js`; este módulo continua responsável só pela GRADE, pelo ciclo de atualização (uma requisição
+   por fonte) e pelo estado de execução (filtros globais, ordenação de tabela, paginação de lista, extensão do
+   mapa como filtro). */
 
-function formatarNumero(v) {
-  if (v === null || v === undefined) return '—';
-  const n = Number(v);
-  if (!Number.isFinite(n)) return String(v);
-  return n.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
-}
-
-function pedidoDoElemento(elemento) {
-  const op = elemento.opcoes || {};
-  if (elemento.tipo === 'indicador') {
-    return { agregacao: op.agregacao || 'contagem', campo: op.campo };
-  }
-  if (elemento.tipo === 'grafico') {
-    return {
-      agregacao: 'categorias',
-      campo: op.campo_rotulo,
-      agregacao_valor: op.agregacao || 'contagem',
-      campo_valor: op.campo,
-      max_categorias: op.max_categorias || 8,
-    };
-  }
-  if (elemento.tipo === 'tabela') {
-    return { agregacao: 'linhas', campos: op.campos, limite: op.max_linhas || 50 };
-  }
-  return null;
-}
-
-function agruparPorFonte(elementos) {
+function agruparPorFonte(elementos, ajustes = {}) {
   const porFonte = new Map();
   for (const el of elementos) {
     if (!TIPOS_COM_FONTE.has(el.tipo) || !el.fonte) continue;
     const pedido = pedidoDoElemento(el);
     if (!pedido) continue;
+    const ajuste = ajustes[el.id];
+    if (ajuste) Object.assign(pedido, ajuste);
     if (!porFonte.has(el.fonte)) porFonte.set(el.fonte, {});
     porFonte.get(el.fonte)[el.id] = pedido;
   }
@@ -59,12 +38,15 @@ function renderElementoVazio(elemento) {
   const div = h('div', {
     class: `painel-el painel-el-${elemento.tipo}`,
     'data-id': elemento.id,
+    'data-tipo': elemento.tipo,
     style: `--gx:${elemento.x};--gy:${elemento.y};--gw:${elemento.largura};--gh:${elemento.altura}`,
   });
   if (elemento.titulo) div.append(h('h3', { class: 'painel-el-titulo' }, elemento.titulo));
   const corpo = h('div', { class: 'painel-el-corpo', 'data-papel': 'corpo' });
   if (elemento.tipo === 'texto') {
     corpo.textContent = (elemento.opcoes || {}).texto || '';
+  } else if (!TIPOS_COM_FONTE.has(elemento.tipo)) {
+    corpo.dataset.semFonte = '1';   // legenda, cabeçalho e texto rico sem campos: desenham na montagem
   } else {
     corpo.textContent = '…';
     corpo.setAttribute('aria-busy', 'true');
@@ -73,48 +55,19 @@ function renderElementoVazio(elemento) {
   return div;
 }
 
-function pintarResultado(container, elemento, resultado) {
-  const corpo = container.querySelector(`.painel-el[data-id="${CSS.escape(elemento.id)}"] [data-papel="corpo"]`);
+function corpoDoElemento(container, elemento) {
+  return container.querySelector(`.painel-el[data-id="${CSS.escape(elemento.id)}"] [data-papel="corpo"]`);
+}
+
+function pintarResultado(container, elemento, resultado, ctx) {
+  const corpo = corpoDoElemento(container, elemento);
   if (!corpo) return;
   corpo.removeAttribute('aria-busy');
-  limpar(corpo);
-  if (!resultado) { corpo.textContent = '—'; return; }
-  if (resultado.tipo === 'numero') {
-    corpo.append(h('span', { class: 'painel-indicador-valor' }, formatarNumero(resultado.valor)));
-    return;
-  }
-  if (resultado.tipo === 'categorias') {
-    const linhas = resultado.linhas || [];
-    const max = Math.max(1, ...linhas.map((l) => Number(l.valor) || 0));
-    const lista = h('ul', { class: 'painel-grafico-barras' });
-    for (const linha of linhas) {
-      const pct = Math.max(2, Math.round(((Number(linha.valor) || 0) / max) * 100));
-      lista.append(
-        h(
-          'li',
-          {},
-          h('span', { class: 'painel-grafico-rotulo' }, String(linha.categoria ?? '')),
-          h('span', { class: 'painel-grafico-barra-fundo' }, h('span', { class: 'painel-grafico-barra', style: `width:${pct}%` })),
-          h('span', { class: 'painel-grafico-valor' }, formatarNumero(linha.valor)),
-        ),
-      );
-    }
-    corpo.append(lista);
-    return;
-  }
-  if (resultado.tipo === 'linhas') {
-    const colunas = resultado.colunas || [];
-    const tabela = h('table', { class: 'painel-tabela' });
-    tabela.append(h('thead', {}, h('tr', {}, ...colunas.map((c) => h('th', {}, c)))));
-    const tbody = h('tbody');
-    for (const linha of resultado.linhas || []) {
-      tbody.append(h('tr', {}, ...colunas.map((c) => h('td', {}, linha[c] === null || linha[c] === undefined ? '' : String(linha[c])))));
-    }
-    tabela.append(tbody);
-    corpo.append(tabela);
-    return;
-  }
-  corpo.textContent = '—';
+  const caixa = corpo.closest('.painel-el');
+  const marcarVazio = (vazio) => { if (caixa) caixa.dataset.vazio = vazio ? '1' : '0'; };
+  const r = renderElemento(corpo, elemento, resultado, ctx);
+  if (r && typeof r.then === 'function') { r.then((vazio) => marcarVazio(vazio)); return; }
+  marcarVazio(r);
 }
 
 /**
@@ -128,7 +81,6 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
   const grade = corpo.grade || { colunas: 12, linha_px: 36 };
   const elementos = corpo.elementos || [];
   const fontesPorId = new Map((corpo.fontes || []).map((f) => [f.id, f]));
-  const porFonte = agruparPorFonte(elementos);
 
   limpar(container);
   container.classList.add('painel-grade');
@@ -140,9 +92,44 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
 
   const filtroExecucao = { ...parametrosUrlIniciais };
   const temporizadores = [];
+  const ajustes = {};              // por elemento: paginação da lista (deslocamento)
+  const estados = new Map();       // por elemento: ordenação da tabela (só no cliente, sobre a página lida)
+  const ultimos = new Map();       // último resultado por elemento (repintar sem nova requisição)
+  let atualizadoEm = null;
+
+  const ctx = {
+    estado(id, inicial) {
+      if (!estados.has(id)) estados.set(id, { ...inicial });
+      return estados.get(id);
+    },
+    repintar(id) {
+      const el = elementos.find((e) => e.id === id);
+      if (el) pintarResultado(container, el, ultimos.get(id), ctx);
+    },
+    paginar(id, deslocamento) {
+      ajustes[id] = { ...(ajustes[id] || {}), deslocamento: Math.max(0, deslocamento) };
+      const el = elementos.find((e) => e.id === id);
+      if (el) return atualizarFonte(el.fonte);
+      return Promise.resolve();
+    },
+    /* extensão do mapa como filtro dos OUTROS elementos: entra no filtro de execução como caixa em
+       EPSG:4326 (`__extensao`), que o servidor transforma em condição espacial na coluna de geometria */
+    filtrarExtensao(caixa) {
+      if (!caixa) delete filtroExecucao.__extensao;
+      else filtroExecucao.__extensao = caixa.map((v) => Number(v).toFixed(6)).join(',');
+      container.dataset.extensao = filtroExecucao.__extensao || '';
+      return atualizarTudo();
+    },
+    textoAtualizacao() {
+      if (!atualizadoEm) return 'atualizando…';
+      return `atualizado às ${atualizadoEm.toLocaleTimeString('pt-BR')}`;
+    },
+  };
+
+  function porFonteAtual() { return agruparPorFonte(elementos, ajustes); }
 
   async function atualizarFonte(fonteId) {
-    const pedidos = porFonte.get(fonteId);
+    const pedidos = porFonteAtual().get(fonteId);
     if (!pedidos || !Object.keys(pedidos).length) return;
     let resposta;
     try {
@@ -150,26 +137,43 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
     } catch {
       for (const elId of Object.keys(pedidos)) {
         const el = elementos.find((e) => e.id === elId);
-        if (el) pintarResultado(container, el, null);
+        if (el) { ultimos.set(elId, null); pintarResultado(container, el, null, ctx); }
       }
       return;
     }
     const resultados = (resposta && resposta.resultados) || {};
     for (const elId of Object.keys(pedidos)) {
       const el = elementos.find((e) => e.id === elId);
-      if (el) pintarResultado(container, el, resultados[elId]);
+      if (el) { ultimos.set(elId, resultados[elId]); pintarResultado(container, el, resultados[elId], ctx); }
+    }
+  }
+
+  function pintarSemFonte() {
+    for (const el of elementos) {
+      if (TIPOS_COM_FONTE.has(el.tipo) || el.tipo === 'texto') continue;
+      pintarResultado(container, el, null, ctx);
+    }
+  }
+
+  function marcarAtualizacao() {
+    atualizadoEm = new Date();
+    for (const alvo of container.querySelectorAll('[data-papel="atualizado"]')) {
+      alvo.textContent = ctx.textoAtualizacao();
     }
   }
 
   async function atualizarTudo() {
-    await Promise.all([...porFonte.keys()].map((fid) => atualizarFonte(fid)));
+    await Promise.all([...porFonteAtual().keys()].map((fid) => atualizarFonte(fid)));
+    marcarAtualizacao();
   }
 
-  for (const fonteId of porFonte.keys()) {
+  pintarSemFonte();
+
+  for (const fonteId of porFonteAtual().keys()) {
     const fonte = fontesPorId.get(fonteId);
     const intervaloS = fonte && fonte.atualizacao_s;
     if (intervaloS && intervaloS > 0) {
-      temporizadores.push(setInterval(() => atualizarFonte(fonteId), intervaloS * 1000));
+      temporizadores.push(setInterval(() => atualizarFonte(fonteId).then(marcarAtualizacao), intervaloS * 1000));
     }
   }
 
@@ -178,6 +182,7 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
   function atualizarFiltro(campo, valor) {
     if (valor === undefined || valor === null || valor === '') delete filtroExecucao[campo];
     else filtroExecucao[campo] = valor;
+    for (const id of Object.keys(ajustes)) delete ajustes[id].deslocamento;  // filtro novo volta à 1ª página
     return atualizarTudo();
   }
 
@@ -185,7 +190,7 @@ export function montarPainel(container, corpo, buscarDados, parametrosUrlIniciai
     for (const t of temporizadores) clearInterval(t);
   }
 
-  return { atualizarFiltro, destruir, aguardarPrimeiraCarga, filtroExecucao };
+  return { atualizarFiltro, destruir, aguardarPrimeiraCarga, filtroExecucao, filtrarExtensao: ctx.filtrarExtensao };
 }
 
 /** Constrói a barra de filtros globais (`corpo.filtros`) — um controle por filtro, chamando
