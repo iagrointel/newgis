@@ -24,16 +24,29 @@ def versao() -> str:
 
 def _sha_do_git() -> str | None:
     git = ROOT / ".git"
+    apontador = _ler(git)
+    if apontador and apontador.startswith("gitdir:"):
+        # worktree do git: .git é um ARQUIVO que aponta para o gitdir real do repositório principal
+        indicado = Path(apontador.split(":", 1)[1].strip())
+        git = indicado if indicado.is_absolute() else ROOT / indicado
     head = _ler(git / "HEAD")
     if not head:
         return None
     if not head.startswith("ref:"):
         return head if _HEX.match(head) else None
     ref = head.split(":", 1)[1].strip()
-    direto = _ler(git / ref)
-    if direto and _HEX.match(direto):
-        return direto
-    empacotadas = _ler(git / "packed-refs") or ""
+    # refs de ramo vivem no diretório COMUM (o .git do repositório principal); o gitdir do
+    # worktree guarda só o que é dele (HEAD, bisect). O arquivo 'commidir' diz onde fica o comum.
+    comum = git
+    apontador_comum = _ler(git / "commidir")
+    if apontador_comum:
+        indicado = Path(apontador_comum.strip())
+        comum = indicado if indicado.is_absolute() else (git / indicado).resolve()
+    for base in (git, comum):
+        direto = _ler(base / ref)
+        if direto and _HEX.match(direto):
+            return direto
+    empacotadas = _ler(comum / "packed-refs") or ""
     for linha in empacotadas.splitlines():
         partes = linha.split()
         if len(partes) == 2 and partes[1] == ref and _HEX.match(partes[0]):
