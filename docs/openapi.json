@@ -12282,6 +12282,233 @@
     "x-privilegio": "rls:visibilidade"
    }
   },
+  "/api/rede/{rede_id}/subrede/{nome}/fluxo": {
+   "post": {
+    "tags": [
+     "rede de utilidades — fluxo de potência"
+    ],
+    "summary": "Calcular Fluxo",
+    "description": "Fluxo de potência trifásico desequilibrado do alimentador, no OpenDSS, sobre o MESMO modelo em\nmemória que os exportadores usam.\n\nO corpo são os PARÂMETROS: `modo` (`anual`, os 864 pontos da curva, ou `hora`), `ponto`, `ano`,\n`fator_de_carga`, `modelo_de_carga` (com `zipv` obrigatório quando `zip`), `tensao_da_fonte_pu`,\n`corrente_nominal_a` e `com_geracao_distribuida`. Todos saem gravados ao lado do resultado, com a\nversão da topologia e o estado de convergência. É triagem: a impedância de condutor é a padrão do\nOpenDSS, porque o cadastro de distribuição não a traz.",
+    "operationId": "calcular_fluxo_api_rede__rede_id__subrede__nome__fluxo_post",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     },
+     {
+      "name": "tier",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tier"
+      }
+     },
+     {
+      "name": "jusante",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Jusante"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Parametros"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rede.editar"
+   },
+   "get": {
+    "tags": [
+     "rede de utilidades — fluxo de potência"
+    ],
+    "summary": "Ler Fluxo",
+    "description": "A tabela do último cálculo deste alimentador: uma linha por elemento (barra e fase, trecho,\ntransformador), ordenada pelo que dói primeiro — menor tensão, maior carregamento, maior perda. A ficha\ndo resultado (parâmetros, versão da topologia, convergência) vem no mesmo corpo, porque o número não se\nlê sem a hipótese que o produziu nem sem saber se o cálculo fechou.",
+    "operationId": "ler_fluxo_api_rede__rede_id__subrede__nome__fluxo_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     },
+     {
+      "name": "tipo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tipo"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 5000,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/rede/{rede_id}/subrede/{nome}/fluxo/camada": {
+   "get": {
+    "tags": [
+     "rede de utilidades — fluxo de potência"
+    ],
+    "summary": "Ler Fluxo Camada",
+    "description": "O mesmo resultado como camada para o mapa: `tensao` (um ponto por barra e fase, em por unidade),\n`corrente` (a linha do trecho, em ampere) ou `carregamento` (a mesma linha, em por cento da corrente\nnominal declarada). Elemento sem geometria é contado em `elementos_sem_geometria` e não vira feição.",
+    "operationId": "ler_fluxo_camada_api_rede__rede_id__subrede__nome__fluxo_camada_get",
+    "parameters": [
+     {
+      "name": "rede_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Rede Id"
+      }
+     },
+     {
+      "name": "nome",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Nome"
+      }
+     },
+     {
+      "name": "grandeza",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "tensao",
+       "title": "Grandeza"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
   "/api/geocodificar": {
    "post": {
     "tags": [
