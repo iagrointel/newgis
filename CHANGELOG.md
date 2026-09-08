@@ -3,6 +3,19 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## codex cx1, setembro de 2026 (item UX-13-conexoes-sem-controle: a escrita de conexões com erro nomeado no controle da tela /conexoes)
+
+Fecha a lacuna "POST/PATCH/DELETE /api/conexoes sem controle" do mapa de cobertura (UX-00). A tela `/conexoes` da
+cadeia UX-05 já chamava as 8 rotas de `/api/conexoes*` (formulário `<plat-formulario>` de criar/editar, ação "apagar"
+com confirmação, testar, histórico, publicar) com os quatro estados de `<plat-estado>`; este item prova a refutação
+rota a rota e fecha o que faltava: 404 em PATCH/DELETE (conexão apagada por outra pessoa) avisa e recarrega a lista
+em vez de deixar o formulário preso (`conexoes.ja_removida` em pt-BR/en/es). `tests/e2e/test_conexoes_ux13.py`:
+lista vazia/erro/negada forjadas; POST com 403 (privilégio nomeado na mensagem do formulário), 409 (campo nome), 422
+da validação (campo apontado por `loc`), 422 config e 413 cota forjados e criação real; PATCH com 403 e 422
+url_insegura forjados e gravação real conferida por GET; DELETE com 403, 500 e 404 forjados nomeados no aviso da lista
+(role=alert, referência) e remoção real; axe 0 sérias, capturas 390/1280, 0 erro de console. `docs/COBERTURA_UI.md`
+regenerado (35 lacunas na junção, nenhuma de conexões).
+
 ## codex cx1, setembro de 2026 (item UX-12-categorias-sem-controle: as rotas de escrita de categorias com controle na tela /admin/categorias)
 
 Fecha as lacunas "PUT /api/categorias" e "POST /api/categorias/importar sem controle" do mapa de cobertura (UX-00):
