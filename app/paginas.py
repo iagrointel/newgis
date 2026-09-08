@@ -34,6 +34,8 @@ PAGINAS = {
     "/acervo": "acervo.html",
     # --- conexões externas (L6-02-a/L6-02-l/L6-05)
     "/conexoes": "conexoes.html",
+    # item UX-14-geocodificador-sem-tela: tela de trabalho do geocodificador (POST /api/geocodificar e /api/reverso)
+    "/geocodificar": "geocodificar.html",
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
     "/aceitar-convite": "aceitar_convite.html",
     "/redefinir-senha": "redefinir_senha.html",
