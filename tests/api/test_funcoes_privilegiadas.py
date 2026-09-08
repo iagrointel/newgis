@@ -132,6 +132,11 @@ _REVOGA = re.compile(r"REVOKE\s+(?:EXECUTE|ALL)\s+ON\s+FUNCTION\s+plat\.([a-z0-9
 _REVOGA_TODAS = re.compile(r"REVOKE\s+EXECUTE\s+ON\s+ALL\s+FUNCTIONS[^;]*FROM[^;]*PUBLIC", re.I | re.S)
 _REVOGA_EM_LACO = re.compile(r"format\(\s*'REVOKE[^']*FROM[^']*PUBLIC", re.I)
 _LITERAL = re.compile(r"'plat\.([a-z0-9_]+)\s*\(")
+# Um laço DO que varre `pg_proc` do schema plat e revoga por `format()` alcança TODA função do schema — é
+# mais forte que a lista nominal, e o nome da função nunca aparece como literal para o _LITERAL achar.
+_LACO_TODO_SCHEMA = re.compile(
+    r"FROM\s+pg_proc\b.*?nspname\s*=\s*'plat'.*?format\(\s*'REVOKE[^']*FROM[^']*PUBLIC", re.I | re.S
+)
 _LEGADO = re.compile(r"^\d{3}_")
 
 
@@ -160,6 +165,8 @@ def _debito_por_arquivo() -> dict[str, list[str]]:
             revogadas |= criadas
         if _REVOGA_EM_LACO.search(sql):
             revogadas |= set(_LITERAL.findall(sql))
+        if _LACO_TODO_SCHEMA.search(sql):
+            revogadas |= criadas
         falta = sorted(novas - revogadas)
         if falta:
             debito[arq.name] = falta
@@ -201,6 +208,8 @@ def test_migracao_que_concede_execucao_tambem_revoga_do_publico(arquivo: Path):
         revogadas |= concedidas
     if _REVOGA_EM_LACO.search(sql):
         revogadas |= set(_LITERAL.findall(sql))
+    if _LACO_TODO_SCHEMA.search(sql):
+        revogadas |= concedidas
     falta = sorted(concedidas - revogadas)
     if _LEGADO.match(arquivo.name):
         pytest.skip(f"legado fechado (ADR 0014); dívida em DIVIDA_LEGADA: {falta}")
