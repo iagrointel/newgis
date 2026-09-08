@@ -28,12 +28,12 @@ const CORES = {
     0, '#2f6f4e', 80, '#d98324', 100, '#b02a37'],
 };
 
+const el = (id) => document.getElementById(id);
+
 await carregar();
 const usuario = await exigirSessao({ privilegio: 'rede.editar' });
 if (usuario) iniciar();
 pronto();
-
-const el = (id) => document.getElementById(id);
 
 function novoMapa() {
   if (!window.maplibregl) return null;
@@ -53,6 +53,9 @@ async function iniciar() {
   const painel = el('painel');
   const mapa = novoMapa();
   if (!mapa) { aviso.mostrar(t('fluxo.sem_biblioteca'), 'erro'); return; }
+  // o mapa fica alcançável para o teste de ponta a ponta perguntar quais camadas existem: conferir a
+  // camada NO MAPA é diferente de conferir que o servidor respondeu, e é essa a cláusula do item.
+  window.__mapa = mapa;
   let carregado = false;
   mapa.on('load', () => { carregado = true; });
 
