@@ -73,6 +73,15 @@ def inq(sessao_plat):
     i.apagar()
 
 
+@pytest.fixture(scope="module")
+def inq10k(sessao_plat):
+    """Inquilino temporário só para a medida de 10 mil itens: o limite de 1 pedido por tipo por hora já foi gasto
+    em `inq` pelo relatório de itens do teste de contagem."""
+    i = InquilinoTemporario(sessao_plat)
+    yield i
+    i.apagar()
+
+
 def _conexao(env):
     con = psycopg2.connect(env["PLAT_DSN"], cursor_factory=CursorSchemaAmbiente)
     con.autocommit = False
@@ -242,16 +251,17 @@ def test_painel_atividade(inq):
     assert inq.admin.get("/api/atividade?dias=400").status_code == 422
 
 
-def test_medida_relatorio_de_itens_com_10_mil_itens(env, inq, worker, medida, monkeypatch):
+def test_medida_relatorio_de_itens_com_10_mil_itens(env, inq10k, worker, medida, monkeypatch):
+    inq = inq10k
     # a semeadura do catálogo (ADR 0004 seção 7.6) só conhece demo/demo2; aqui ela semeia o inquilino temporário
     monkeypatch.setattr(semear_catalogo, "ids_por_slug", lambda con: {inq.slug: inq.id})
     con = _conexao(env)
     try:
-        semear_catalogo.semear(con, inq.slug, 10_000)
+        semear_catalogo.semear(con, inq.slug, 10_001)  # uma acima do teto: prova o corte e a marca `truncado`
     finally:
         con.close()
     total = _contagem(env, inq, "SELECT count(*) AS n FROM plat.item WHERE apagado_em IS NULL")
-    assert total >= 10_000
+    assert total >= 10_001
     carga = os.getloadavg()[0]
     with open("/proc/meminfo", encoding="utf-8") as f:
         livre_kb = next(int(li.split()[1]) for li in f if li.startswith("MemAvailable"))
