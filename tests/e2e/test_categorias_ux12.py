@@ -127,7 +127,7 @@ def test_estados_editor_e_importacao(page, base_url, credenciais_demo, admin_api
     # sobe a nova raiz uma posição (fica antes da penúltima), se houver mais de uma
     n_raizes = page.locator("#arvore > li.categoria").count()
     if n_raizes > 1:
-        page.locator("#arvore > li.categoria").last.locator("button[aria-label='subir']").click()
+        page.locator("#arvore > li.categoria").last.locator("> .categoria-linha button[aria-label='subir']").click()
         page.wait_for_function("(nome) => [...document.querySelectorAll("
                                "'#arvore > li.categoria > .categoria-linha input')].at(-2).value === nome",
                                arg=nome_raiz)
@@ -166,9 +166,11 @@ def test_estados_editor_e_importacao(page, base_url, credenciais_demo, admin_api
     assert "conteudo.categorias" in page.text_content("#salvar-estado")
     estados.append("salvar:negado")
     parar()
-    # salvar de verdade
-    page.click("#salvar")
-    page.wait_for_function("() => document.getElementById('estado-edicao').textContent.includes('gravadas')")
+    # salvar de verdade (a resposta real do PUT fica registrada para o diagnóstico ser legível)
+    with page.expect_response(lambda r: r.request.method == "PUT" and r.url.endswith("/api/categorias")) as resp:
+        page.click("#salvar")
+    assert resp.value.status == 200, resp.value.text()
+    page.wait_for_function("() => document.getElementById('estado-edicao').textContent === 'categorias gravadas'")
     r = admin_api.get("/api/categorias")
     assert r.status == 200
     raizes = {n["nome"]: n for n in r.json()["arvore"]}
