@@ -189,7 +189,12 @@ def construir_sql(
     if pedido.faixa_data and pedido.faixa_data.campo not in colunas:
         raise ErroAgregacao("campo_inexistente", f"campo de faixa de data inexistente: {pedido.faixa_data.campo}")
 
-    params: list = list(where_params or [])
+    # os parâmetros seguem a ORDEM EM QUE OS %s APARECEM NO SQL — SELECT, depois WHERE, depois GROUP BY —,
+    # nunca a ordem em que este código os descobre: com faixa de data E filtro, juntar tudo numa lista só
+    # (where primeiro) trocava o fuso pelo valor do filtro e o Postgres devolvia GroupingError, porque a
+    # expressão do GROUP BY deixava de ser idêntica à do SELECT.
+    params_select: list = []
+    params_grupo: list = []
     select_grupos = [f'"{g}"' for g in pedido.grupos]
     agrupa_por = [f'"{g}"' for g in pedido.grupos]
     colunas_saida = list(pedido.grupos)
@@ -198,11 +203,11 @@ def construir_sql(
         expr_completa = _expr_grupo_data(pedido.faixa_data)
         expr_sem_alias = expr_completa.rsplit(" AS ", 1)[0]
         select_grupos.append(expr_completa)
-        params += [pedido.faixa_data.fuso, pedido.faixa_data.fuso]
+        params_select += [pedido.faixa_data.fuso, pedido.faixa_data.fuso]
         # agrupa pela EXPRESSÃO, não pelo alias: reconstrução idêntica à do SELECT, com os MESMOS
         # parâmetros de fuso repetidos na mesma ordem (um %s por AT TIME ZONE).
         agrupa_por.append(expr_sem_alias)
-        params += [pedido.faixa_data.fuso, pedido.faixa_data.fuso]
+        params_grupo += [pedido.faixa_data.fuso, pedido.faixa_data.fuso]
         colunas_saida.append(pedido.faixa_data.alias)
 
     select_stats = [_expr_estatistica(e, colunas) for e in pedido.estatisticas]
@@ -212,8 +217,10 @@ def construir_sql(
     sql = f'SELECT {select_sql} FROM "{schema}"."{tabela}"'
     if where_sql:
         sql += f" WHERE {where_sql}"
+    params: list = params_select + list(where_params or [])
     if agrupa_por:
         sql += " GROUP BY " + ", ".join(agrupa_por)
+        params += params_grupo
 
     if pedido.having:
         # HAVING referencia a EXPRESSÃO agregada, não o alias de saída (ver docstring de
