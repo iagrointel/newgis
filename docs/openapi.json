@@ -2550,7 +2550,7 @@
        "application/json": {
         "schema": {
          "items": {
-          "$ref": "#/components/schemas/Inquilino"
+          "$ref": "#/components/schemas/InquilinoUso"
          },
          "type": "array",
          "title": "Response Listar Api Plataforma Inquilinos Get"
@@ -2604,13 +2604,56 @@
     "x-privilegio": "superadmin"
    }
   },
-  "/api/plataforma/inquilinos/{id}/suspender": {
-   "post": {
+  "/api/plataforma/inquilinos/{id}": {
+   "get": {
     "tags": [
      "plataforma"
     ],
-    "summary": "Suspender",
-    "operationId": "suspender_api_plataforma_inquilinos__id__suspender_post",
+    "summary": "Detalhe",
+    "operationId": "detalhe_api_plataforma_inquilinos__id__get",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/InquilinoDetalhe"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   },
+   "delete": {
+    "tags": [
+     "plataforma"
+    ],
+    "summary": "Apagar",
+    "description": "Apaga o inquilino inteiro (usuários, sessões, tokens, grupos, papéis, log, eventos, jobs) pela função\nplat.tenant_apagar; `plataforma` não se apaga (409). Sem lixeira: é operação do superadmin, com evento.",
+    "operationId": "apagar_api_plataforma_inquilinos__id__delete",
     "parameters": [
      {
       "name": "id",
@@ -2641,14 +2684,13 @@
     "x-privilegio": "superadmin"
    }
   },
-  "/api/plataforma/inquilinos/{id}": {
-   "delete": {
+  "/api/plataforma/inquilinos/{id}/cotas": {
+   "put": {
     "tags": [
      "plataforma"
     ],
-    "summary": "Apagar",
-    "description": "Apaga o inquilino inteiro (usuários, sessões, tokens, grupos, papéis, log, eventos, jobs) pela função\nplat.tenant_apagar; `plataforma` não se apaga (409). Sem lixeira: é operação do superadmin, com evento.",
-    "operationId": "apagar_api_plataforma_inquilinos__id__delete",
+    "summary": "Alterar Cotas",
+    "operationId": "alterar_cotas_api_plataforma_inquilinos__id__cotas_put",
     "parameters": [
      {
       "name": "id",
@@ -2660,6 +2702,78 @@
       }
      }
     ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CotasEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/InquilinoDetalhe"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   }
+  },
+  "/api/plataforma/inquilinos/{id}/suspender": {
+   "post": {
+    "tags": [
+     "plataforma"
+    ],
+    "summary": "Suspender",
+    "description": "Suspende: login, sessão viva e token do inquilino passam a receber 503 `inquilino_suspenso` com a\nmensagem (quando dada); nada é apagado. O inquilino `plataforma` não se suspende (409).",
+    "operationId": "suspender_api_plataforma_inquilinos__id__suspender_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/SuspenderEntrada"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Corpo"
+       }
+      }
+     }
+    },
     "responses": {
      "204": {
       "description": "Successful Response"
@@ -2700,6 +2814,161 @@
     "responses": {
      "204": {
       "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   }
+  },
+  "/api/plataforma/inquilinos/{id}/admins/{usuario_id}/2fa/desativar": {
+   "post": {
+    "tags": [
+     "plataforma"
+    ],
+    "summary": "Desligar 2Fa De Admin",
+    "description": "Desliga o segundo fator de um ADMINISTRADOR do inquilino (o que a Esri resolve por chamado ao suporte):\nsó perfil admin (409 para membro comum: o admin do inquilino faz isso), nunca no inquilino `plataforma`\n(409), sessões do alvo encerradas, evento com o login do alvo.",
+    "operationId": "desligar_2fa_de_admin_api_plataforma_inquilinos__id__admins__usuario_id__2fa_desativar_post",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id"
+      }
+     },
+     {
+      "name": "usuario_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Usuario Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   }
+  },
+  "/api/plataforma/fila": {
+   "get": {
+    "tags": [
+     "plataforma"
+    ],
+    "summary": "Fila",
+    "description": "Fila de jobs agregada: totais, por inquilino, o pendente mais antigo já vencido e os workers vivos.",
+    "operationId": "fila_api_plataforma_fila_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FilaResumo"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "superadmin"
+   }
+  },
+  "/api/plataforma/eventos": {
+   "get": {
+    "tags": [
+     "plataforma"
+    ],
+    "summary": "Eventos",
+    "description": "Trilha do próprio console (eventos do inquilino `plataforma`: criar, suspender, cotas, 2fa, leituras de\noutro inquilino...). Eventos de OUTRO inquilino continuam só por GET /api/eventos + X-Plat-Inquilino, que\nregistra a leitura.",
+    "operationId": "eventos_api_plataforma_eventos_get",
+    "parameters": [
+     {
+      "name": "tipo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tipo"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Limite"
+      }
+     },
+     {
+      "name": "deslocamento",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Deslocamento"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PaginaEventos"
+        }
+       }
+      }
      },
      "422": {
       "description": "Validation Error",
@@ -12882,6 +13151,86 @@
     ],
     "title": "ConviteResolvido"
    },
+   "CotasEntrada": {
+    "properties": {
+     "cota_bytes": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 104857600.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Bytes"
+     },
+     "cota_usuarios": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Usuarios"
+     },
+     "cota_jobs_dia": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Jobs Dia"
+     },
+     "cota_jobs_simultaneos": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Jobs Simultaneos"
+     },
+     "cota_agendas": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Agendas"
+     },
+     "cota_itens": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cota Itens"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "CotasEntrada",
+    "description": "Cotas de um inquilino (item L0-07-f-console-plataforma): chave ausente = mantém; nada aceita zero."
+   },
    "Dono": {
     "properties": {
      "id": {
@@ -13578,6 +13927,53 @@
     ],
     "title": "FatorPesoEntrada"
    },
+   "FilaResumo": {
+    "properties": {
+     "total": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Total"
+     },
+     "mais_antigo_pendente_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mais Antigo Pendente Em"
+     },
+     "por_inquilino": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Por Inquilino"
+     },
+     "workers": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Workers"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "mais_antigo_pendente_em",
+     "por_inquilino",
+     "workers"
+    ],
+    "title": "FilaResumo"
+   },
    "FotoEntrada": {
     "properties": {
      "conteudo": {
@@ -14109,64 +14505,6 @@
     ],
     "title": "Iniciar2FA"
    },
-   "Inquilino": {
-    "properties": {
-     "id": {
-      "type": "integer",
-      "title": "Id"
-     },
-     "slug": {
-      "type": "string",
-      "title": "Slug"
-     },
-     "nome": {
-      "type": "string",
-      "title": "Nome"
-     },
-     "ativo": {
-      "type": "boolean",
-      "title": "Ativo"
-     },
-     "usuarios": {
-      "type": "integer",
-      "title": "Usuarios"
-     },
-     "criado_em": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Criado Em"
-     },
-     "ultimo_acesso": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Ultimo Acesso"
-     }
-    },
-    "additionalProperties": true,
-    "type": "object",
-    "required": [
-     "id",
-     "slug",
-     "nome",
-     "ativo",
-     "usuarios",
-     "criado_em",
-     "ultimo_acesso"
-    ],
-    "title": "Inquilino"
-   },
    "InquilinoCriado": {
     "properties": {
      "id": {
@@ -14235,6 +14573,16 @@
       "maxLength": 200,
       "minLength": 1,
       "title": "Admin Nome"
+     },
+     "cotas": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/CotasEntrada"
+       },
+       {
+        "type": "null"
+       }
+      ]
      }
     },
     "additionalProperties": false,
@@ -14246,6 +14594,208 @@
      "admin_nome"
     ],
     "title": "InquilinoCriar"
+   },
+   "InquilinoDetalhe": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "slug": {
+      "type": "string",
+      "title": "Slug"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "ativo": {
+      "type": "boolean",
+      "title": "Ativo"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     },
+     "ultimo_acesso": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Acesso"
+     },
+     "suspensao": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Suspensao"
+     },
+     "cotas": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Cotas"
+     },
+     "uso": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Uso"
+     },
+     "admins": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Admins"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "slug",
+     "nome",
+     "ativo",
+     "criado_em",
+     "ultimo_acesso",
+     "suspensao",
+     "cotas",
+     "uso",
+     "admins"
+    ],
+    "title": "InquilinoDetalhe"
+   },
+   "InquilinoUso": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "slug": {
+      "type": "string",
+      "title": "Slug"
+     },
+     "nome": {
+      "type": "string",
+      "title": "Nome"
+     },
+     "ativo": {
+      "type": "boolean",
+      "title": "Ativo"
+     },
+     "usuarios": {
+      "type": "integer",
+      "title": "Usuarios"
+     },
+     "criado_em": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Criado Em"
+     },
+     "ultimo_acesso": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ultimo Acesso"
+     },
+     "usuarios_ativos": {
+      "type": "integer",
+      "title": "Usuarios Ativos"
+     },
+     "cota_usuarios": {
+      "type": "integer",
+      "title": "Cota Usuarios"
+     },
+     "cota_bytes": {
+      "type": "integer",
+      "title": "Cota Bytes"
+     },
+     "bytes_usados": {
+      "type": "integer",
+      "title": "Bytes Usados"
+     },
+     "itens": {
+      "type": "integer",
+      "title": "Itens"
+     },
+     "cota_itens": {
+      "type": "integer",
+      "title": "Cota Itens"
+     },
+     "jobs_pendentes": {
+      "type": "integer",
+      "title": "Jobs Pendentes"
+     },
+     "jobs_rodando": {
+      "type": "integer",
+      "title": "Jobs Rodando"
+     },
+     "suspensao": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Suspensao"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "slug",
+     "nome",
+     "ativo",
+     "usuarios",
+     "criado_em",
+     "ultimo_acesso",
+     "usuarios_ativos",
+     "cota_usuarios",
+     "cota_bytes",
+     "bytes_usados",
+     "itens",
+     "cota_itens",
+     "jobs_pendentes",
+     "jobs_rodando",
+     "suspensao"
+    ],
+    "title": "InquilinoUso"
    },
    "Item": {
     "properties": {
@@ -15564,6 +16114,29 @@
      "auth"
     ],
     "title": "OrgSaida"
+   },
+   "PaginaEventos": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "itens": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Itens"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "total",
+     "itens"
+    ],
+    "title": "PaginaEventos"
    },
    "Papeis": {
     "properties": {
@@ -17017,6 +17590,25 @@
      "atual"
     ],
     "title": "Sessao"
+   },
+   "SuspenderEntrada": {
+    "properties": {
+     "mensagem": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 300
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mensagem"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "SuspenderEntrada"
    },
    "TipoItem": {
     "properties": {
