@@ -985,6 +985,35 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/rest/services/{item_id}/FeatureServer/uploads/upload"): Caso(
         lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/uploads/upload"
     ),
+    # ---- sincronização de réplica no protocolo Esri (L2-04-k) sobre o mecanismo do L2-13-b
+    ("POST", "/rest/services/{item_id}/FeatureServer/createReplica"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/createReplica",
+        lambda p: {"layers": "0", "dataFormat": "sqlite", "transportType": "esriTransportTypeUrl"},
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/synchronizeReplica"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/synchronizeReplica",
+        lambda p: {"replicaID": UUID_NULO, "syncDirection": "download", "edits": "[]"},
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/extractChanges"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/extractChanges",
+        lambda p: {"replicaID": UUID_NULO, "layerServerGens": [{"id": 0, "serverGen": 0}]},
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/replicas"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/replicas"
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/replicas/{replica_id}"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/replicas/{UUID_NULO}"
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/replicas/{replica_id}/pacote"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/replicas/{UUID_NULO}/pacote"
+    ),
+    ("POST", "/rest/services/{item_id}/FeatureServer/unRegisterReplica"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/unRegisterReplica",
+        lambda p: {"replicaID": UUID_NULO},
+    ),
+    ("GET", "/rest/services/{item_id}/FeatureServer/jobs/{job_id}"): Caso(
+        lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/jobs/{UUID_NULO}"
+    ),
     ("POST", "/rest/services/{item_id}/FeatureServer/{camada_id}/applyEdits"): Caso(
         lambda p: f"/rest/services/{UUID_NULO}/FeatureServer/0/applyEdits", lambda p: {"adds": []}
     ),

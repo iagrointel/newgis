@@ -166,4 +166,10 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/replicas"): ["replicas/criar"],
     ("POST", "/api/replicas/{id}/sincronizar"): ["replicas/sincronizar"],
     ("DELETE", "/api/replicas/{id}"): ["replicas/apagar"],
+    # L2-04-k: as rotas Esri são a MESMA fachada — o evento é o do mecanismo de réplica da casa.
+    # extractChanges é leitura de janela, não conta como sincronização: sem evento de domínio.
+    ("POST", "/rest/services/{item_id}/FeatureServer/createReplica"): ["replicas/criar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/synchronizeReplica"): ["replicas/sincronizar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/unRegisterReplica"): ["replicas/apagar"],
+    ("POST", "/rest/services/{item_id}/FeatureServer/extractChanges"): [],
 }
