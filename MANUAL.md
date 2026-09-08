@@ -1226,3 +1226,16 @@ visto. Sem nenhuma camada adicionada, a legenda não aparece.
 
 A camada adicionada aparece na **legenda** e no catálogo; ela ainda não é desenhada como geometria sobre o
 mapa — isso depende do serviço de tiles das fontes do acervo, que é item de outra frente.
+
+## 26. Diretório LDAP pela tela (item UX-17-login-sem-controle)
+
+Em `/admin/organizacao`, seção "Diretório (LDAP / Active Directory)": quem tem o privilégio `org.integracoes`
+configura o servidor (`ldap://` ou `ldaps://`), a base de busca, StartTLS, a conta de serviço (a senha nunca
+volta; vazio preserva a guardada), o filtro de usuário (`{login}` é substituído), o atributo de grupos, o perfil
+padrão e o mapa grupo → perfil (uma linha por grupo: `nome-do-grupo = admin | editor | visualizador | campo`).
+Abaixo, "Importar um grupo do diretório" cria os membros como usuários desabilitados, ativados no primeiro
+login pela rede; o resultado diz encontrados, criados, já existentes e recusados. Sem o privilégio a seção mostra
+"sem permissão"; sem diretório configurado, mostra o formulário com os padrões.
+Em `/entrar`, com o diretório habilitado, aparece "Entrar com o diretório da organização (LDAP)": o botão
+alterna o modo, o "Entrar" vira "Entrar pelo diretório" e o mesmo usuário e senha vão a `POST /api/login/ldap`.
+Diretório fora do ar e diretório não configurado aparecem com a mensagem própria; senha errada marca o campo.

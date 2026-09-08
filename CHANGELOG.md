@@ -1406,3 +1406,18 @@ caminhos do `install.sh` só lidos (`.env` inexistente, certbot emitindo, `nginx
 | `8ffe950` | L0-01 correção (T1): dependências fixadas sem ~/.local, senha por stdin, HSTS, Swagger local, make medidas, PLAT_GIT_SHA |
 | `3083366` | Medidas do item L0-01-repo, rodada 2 do testador sobre 8ffe950 |
 | (este) | Documentação atualizada sobre 8ffe950 e 3083366 (passe curto do cronista) |
+
+## turno 4, setembro de 2026 (item UX-17-login-sem-controle: diretório LDAP com controle em tela)
+
+As três rotas do grupo `login` que só existiam no backend ganharam controle: em `/admin/organizacao`, a seção
+"Diretório (LDAP / Active Directory)" (`PUT /api/org/ldap`: servidor, base, StartTLS, conta de serviço, filtro,
+atributo de grupos, perfil padrão e mapa grupo → perfil) e o formulário "Importar um grupo do diretório"
+(`POST /api/org/ldap/importar`), com os estados do sistema de design: carregando, erro com "tentar de novo" e
+referência, negado (403, privilégio `org.integracoes`) e vazio; em `/entrar`, quando o inquilino habilitou o
+diretório, `GET /api/login/provedores` o anuncia e a tela oferece "Entrar com o diretório da organização (LDAP)"
+— o mesmo formulário enviado a `POST /api/login/ldap`, com endpoints literais no código (a credencial nunca vai a
+um caminho vindo da rede). Erros nomeados no controle: 422 no campo, 409 sem configuração, 503 diretório
+indisponível, 403 negado; nunca um código cru. e2e `tests/e2e/test_login_ldap_ux17.py` com o glauth de teste
+real (configura, importa `gg-plataforma-leitura` = 1 encontrado, entra como usuária da rede em 125,6 ms), axe 0
+violações sérias nas duas telas, capturas 390/1280. `docs/COBERTURA_UI.md` regenerado: 26 → 23 lacunas de
+escrita. Textos em pt-BR, en e es.
