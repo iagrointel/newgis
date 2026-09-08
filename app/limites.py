@@ -205,6 +205,12 @@ REDEFINICAO_JANELA_MIN = 15               # limite de taxa (refutação do item:
 REDEFINICAO_MAX_JANELA = 5                # no máximo 5 pedidos por (inquilino, e-mail) a cada REDEFINICAO_JANELA_MIN
 AVISO_EXPIRACAO_DIAS = (90, 30, 7, 1)     # avisos de expiração de token de serviço (hipótese do item; como a Esri)
 
+# --- SAML 2.0 Web SSO por inquilino (L0-08-b-saml; app/auth/saml.py)
+SAML_DESVIO_RELOGIO_S = 300              # tolerância de relógio IdP x SP (o portão manda recusar 10 min à frente)
+SAML_RESPOSTA_MAX = 256 * 1024           # SAMLResponse/LogoutRequest acima disto = 413 (asserção real tem poucos KiB)
+SAML_METADADO_MAX = 512 * 1024           # metadado do IdP lido por URL/arquivo
+SAML_METADADO_TIMEOUT_S = 8.0            # leitura do metadado do IdP por URL
+SAML_TRANSACAO_MIN = 10                  # validade do AuthnRequest/LogoutRequest emitido (plat.saml_transacao)
 # --- grades aninhadas do motor multicritério (L3-19-multiescala; migração 20260906T1640_multiescala.sql):
 # macro (grosseira, ex. 1 km) triando regiões e micro (fina, ex. 100 m) gerada SÓ dentro das aprovadas.
 # ESCALA_CELULAS_MAX vale tanto para a grade macro inteira quanto para o refino micro (aprovadas × k²) — é o

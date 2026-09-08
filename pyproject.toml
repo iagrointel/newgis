@@ -12,6 +12,10 @@ extend-exclude = ["venv", "web/vendor"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "B", "I"]
 
+[tool.ruff.lint.per-file-ignores]
+# XML SAML de teste em f-string: as linhas do modelo são a mensagem SAML, não código para dobrar (item L0-08-b)
+"tests/saml_fixture/idp_falso.py" = ["E501"]
+
 [tool.ruff.lint.flake8-bugbear]
 # Depends()/Body() em valor padrão é a forma do FastAPI; autenticado()/exigir() devolvem um Depends
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Body", "fastapi.Query", "fastapi.Header",

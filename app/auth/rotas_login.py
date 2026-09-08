@@ -104,8 +104,14 @@ def provedores(inquilino: str):
         t = cur.fetchone()
     if t is None:
         raise ErroAPI(404, "inquilino_inexistente", "inquilino inexistente")
-    # provedores externos nascem no L0-08; a lista vazia é o estado real, não um dado fixo
-    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": [], "login_local": True}
+    # botões OIDC do inquilino (item L0-08-a): rótulo + ordem, nunca o issuer/client_id (informação interna
+    # da configuração, sem valor para a tela de login); SAML/LDAP entram do mesmo jeito quando forem feitos
+    with db.db() as cur:
+        cur.execute("SELECT provedor_id, rotulo FROM plat.provedores_oidc_de(%s)", (inquilino,))
+        oidc = [{"tipo": "oidc", "id": r["provedor_id"], "rotulo": r["rotulo"]} for r in cur.fetchall()]
+        cur.execute("SELECT provedor_id, rotulo FROM plat.provedores_saml_de(%s)", (inquilino,))  # L0-08-b
+        saml = [{"tipo": "saml", "id": r["provedor_id"], "rotulo": r["rotulo"]} for r in cur.fetchall()]
+    return {"inquilino": {"slug": t["slug"], "nome": t["nome"]}, "provedores": oidc + saml, "login_local": True}
 
 
 @router.post(

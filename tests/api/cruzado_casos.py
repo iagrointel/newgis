@@ -20,6 +20,15 @@ PADRAO = frozenset({401, 403, 404})
 UUID_NULO = "00000000-0000-0000-0000-000000000000"  # id que não é de A nem de B: 404 garantido pela RLS/dono
 
 
+def _metadado_saml_novo() -> str:
+    """Metadado de um IdP sintético novo (chave gerada na hora, `tests/saml_fixture/idp_falso.py`): corpo VÁLIDO
+    para POST/PUT de /api/org/saml, para a chamada chegar à checagem de inquilino em vez de parar no 422 de
+    validação. entityId único por chamada por causa do UNIQUE (tenant_id, idp_entity_id)."""
+    from tests.saml_fixture.idp_falso import IdpFalso
+
+    return IdpFalso.novo(f"https://idp-{PREFIXO}{secrets.token_hex(6)}.invalido/saml").metadado()
+
+
 @dataclass
 class Caso:
     url: Callable[[Any], str]
@@ -111,8 +120,10 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     assert r.status_code == 201, r.text
     agenda_b = r.json()
     # L0-03: item, pasta, link e categoria de B, alvos das rotas do catálogo
-    r = sessao_b.post("/api/itens", json={"tipo": "mapa", "titulo": f"{PREFIXO}item-{sufixo}",
-                                          "dados": {"esquema_versao": 1, "corpo": {}}})
+    r = sessao_b.post(
+        "/api/itens",
+        json={"tipo": "mapa", "titulo": f"{PREFIXO}item-{sufixo}", "dados": {"esquema_versao": 1, "corpo": {}}},
+    )
     assert r.status_code == 201, r.text
     item_b = r.json()
     r = sessao_b.post("/api/pastas", json={"nome": f"{PREFIXO}pasta-{sufixo}"})
@@ -122,8 +133,10 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
     assert r.status_code == 201, r.text
     link_b = r.json()
     arvore = sessao_b.get("/api/categorias").json()["arvore"]
-    r = sessao_b.put("/api/categorias", json={"arvore": [_no_categoria(n) for n in arvore]
-                                               + [{"nome": f"{PREFIXO}cat-{sufixo}", "filhas": []}]})
+    r = sessao_b.put(
+        "/api/categorias",
+        json={"arvore": [_no_categoria(n) for n in arvore] + [{"nome": f"{PREFIXO}cat-{sufixo}", "filhas": []}]},
+    )
     assert r.status_code == 200, r.text
     categoria_b = r.json()["arvore"][-1]
     # L6-01-a: acervo é registro compartilhado (não pertence a A nem a B); só precisa de UMA fonte com licença
@@ -163,8 +176,12 @@ def preparar(sessao_a, sessao_b, sessao_plat, ids) -> Preparacao:
 
 
 def _no_categoria(no: dict) -> dict:
-    return {"id": no["id"], "nome": no["nome"], "codigo": no.get("codigo"),
-            "filhas": [_no_categoria(f) for f in no.get("filhas", [])]}
+    return {
+        "id": no["id"],
+        "nome": no["nome"],
+        "codigo": no.get("codigo"),
+        "filhas": [_no_categoria(f) for f in no.get("filhas", [])],
+    }
 
 
 def desfazer(p: Preparacao) -> None:
@@ -240,15 +257,24 @@ def _corpo_org_atual(p: Preparacao) -> dict:
     mudar nada — a varredura cruzada só precisa provar que a rota não enxerga nem altera B."""
     org = p.sessao_a.get("/api/org").json()
     return {
-        "nome": org["nome"], "cor": org["cor"], "idioma_padrao": org["idioma_padrao"],
-        "centro": org["mapa"]["centro"], "zoom": org["mapa"]["zoom"], "basemap": org["mapa"]["basemap"],
-        "srid_padrao": org["mapa"]["srid_padrao"], "cota_bytes": org["armazenamento"]["cota_bytes"],
-        "cota_usuarios": org["usuarios"]["cota"], "auth": dict(org["auth"]),
+        "nome": org["nome"],
+        "cor": org["cor"],
+        "idioma_padrao": org["idioma_padrao"],
+        "centro": org["mapa"]["centro"],
+        "zoom": org["mapa"]["zoom"],
+        "basemap": org["mapa"]["basemap"],
+        "srid_padrao": org["mapa"]["srid_padrao"],
+        "cota_bytes": org["armazenamento"]["cota_bytes"],
+        "cota_usuarios": org["usuarios"]["cota"],
+        "auth": dict(org["auth"]),
     }
 
 
-JOB_PENDENTE = {"tipo": "prova.progresso", "parametros": {"duracao_s": 0, "passos": 1},
-                "agendado_para": "2099-01-01T00:00:00Z"}  # fica pendente: nunca ocupa o worker
+JOB_PENDENTE = {
+    "tipo": "prova.progresso",
+    "parametros": {"duracao_s": 0, "passos": 1},
+    "agendado_para": "2099-01-01T00:00:00Z",
+}  # fica pendente: nunca ocupa o worker
 AGENDA_BASE = {"tipo": "prova.progresso", "parametros": {"duracao_s": 0, "passos": 1}, "cron": "0 3 1 1 *"}
 
 
@@ -325,11 +351,16 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/eu/foto"): Caso(
         lambda p: "/api/eu/foto",
         lambda p: {"conteudo": _PNG_1X1_B64},
-        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=_sem_marca,
         limpar=lambda p, j: p.sessao_a.delete("/api/eu/foto"),
     ),
     ("DELETE", "/api/eu/foto"): Caso(
-        lambda p: "/api/eu/foto", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+        lambda p: "/api/eu/foto",
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=_sem_marca,
     ),
     # ---- vocabulário e papéis
     ("GET", "/api/privilegios"): Caso(
@@ -451,7 +482,11 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: "/api/jobs/tipos", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
     ),
     ("POST", "/api/jobs"): Caso(
-        lambda p: "/api/jobs", lambda p: JOB_PENDENTE, proprio=True, aceita=frozenset({201}), verificar=_so_a,
+        lambda p: "/api/jobs",
+        lambda p: JOB_PENDENTE,
+        proprio=True,
+        aceita=frozenset({201}),
+        verificar=_so_a,
         limpar=_cancelar_criado,
     ),
     ("GET", J): Caso(lambda p: f"/api/jobs/{p.job_b['id']}"),
@@ -479,32 +514,43 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", AG + "/retomar"): Caso(lambda p: f"/api/agendas/{p.agenda_b['id']}/retomar"),
     ("POST", AG + "/rodar-agora"): Caso(lambda p: f"/api/agendas/{p.agenda_b['id']}/rodar-agora"),
     # ---- L0-03 catálogo: alvos de B = 404 (não 403: não confirma existência); leituras de lista agem só no chamador
-    ("GET", "/api/tipos-item"): Caso(lambda p: "/api/tipos-item", proprio=True, aceita=frozenset({200}),
-                                     verificar=_sem_marca),
+    ("GET", "/api/tipos-item"): Caso(
+        lambda p: "/api/tipos-item", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
     # ---- L5-05 documento de construtor: vocabulário do tipo (mesmo esquema para A e B, não é dado de inquilino)
-    ("GET", "/api/esquemas"): Caso(lambda p: "/api/esquemas", proprio=True, aceita=frozenset({200}),
-                                   verificar=_sem_marca),
-    ("GET", "/api/esquemas/{tipo}"): Caso(lambda p: "/api/esquemas/app", proprio=True, aceita=frozenset({200}),
-                                         verificar=_sem_marca),
+    ("GET", "/api/esquemas"): Caso(
+        lambda p: "/api/esquemas", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("GET", "/api/esquemas/{tipo}"): Caso(
+        lambda p: "/api/esquemas/app", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
     # ---- L6-01-a acervo da casa: registro compartilhado (não é de A nem de B); só fonte com licença escrita
     # aparece (regra D17); "adicionar" cria item SÓ no inquilino do chamador (mesma trava do resto do catálogo)
-    ("GET", "/api/acervo"): Caso(lambda p: "/api/acervo?limite=5", proprio=True, aceita=frozenset({200}),
-                                 verificar=_sem_marca),
-    ("GET", "/api/acervo/{fonte_id}"): Caso(lambda p: f"/api/acervo/{p.fonte_acervo}", proprio=True,
-                                            aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/api/acervo"): Caso(
+        lambda p: "/api/acervo?limite=5", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("GET", "/api/acervo/{fonte_id}"): Caso(
+        lambda p: f"/api/acervo/{p.fonte_acervo}", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
     ("POST", "/api/acervo/{fonte_id}/adicionar"): Caso(
-        lambda p: f"/api/acervo/{p.fonte_acervo}/adicionar", proprio=True, aceita=frozenset({201}),
-        verificar=_sem_marca, limpar=_apagar_criado(("DELETE", "/api/itens/{id}")),
+        lambda p: f"/api/acervo/{p.fonte_acervo}/adicionar",
+        proprio=True,
+        aceita=frozenset({201}),
+        verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/itens/{id}")),
     ),
     # ---- L6-02-a modelo de conexão externa: conexão é do INQUILINO (tenant_id + RLS), diferente do acervo
     # acima; GET/POST agem só sobre o próprio chamador (o POST usa o MESMO nome de B para provar que a
     # unicidade de nome é por inquilino, não global); GET/PATCH/DELETE/testar por id de B são cross-tenant puro
-    ("GET", "/api/conexoes"): Caso(lambda p: "/api/conexoes", proprio=True, aceita=frozenset({200}),
-                                   verificar=_sem_marca),
+    ("GET", "/api/conexoes"): Caso(
+        lambda p: "/api/conexoes", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
     ("POST", "/api/conexoes"): Caso(
         lambda p: "/api/conexoes",
         lambda p: {"tipo": "ogc_api", "nome": p.conexao_b["nome"], "url": URL_CONEXAO_TESTE},
-        proprio=True, aceita=frozenset({201}), verificar=lambda p, j: None,  # mesmo nome de B: prova que a
+        proprio=True,
+        aceita=frozenset({201}),
+        verificar=lambda p, j: None,  # mesmo nome de B: prova que a
         # unicidade é por inquilino (não global) — por isso não checa _sem_marca (o nome É de propósito igual)
         limpar=_apagar_criado(("DELETE", "/api/conexoes/{id}")),
     ),
@@ -518,6 +564,21 @@ CASOS: dict[tuple[str, str], Caso] = {
     # quando o alvo é de B (a rota lê a conexão pelo RLS de _carregar ANTES de qualquer efeito colateral).
     ("GET", "/api/conexoes/{id}/saude-historico"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/saude-historico"),
     ("POST", "/api/conexoes/{id}/publicar"): Caso(lambda p: f"/api/conexoes/{p.conexao_b['id']}/publicar"),
+    ("GET", "/api/itens"): Caso(
+        lambda p: f"/api/itens?q=id:{p.item_b['id']}",
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=lambda p, j: [_sem_marca(p, j), _zero(j)],
+    ),
+    ("GET", "/api/itens/facetas"): Caso(
+        lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}",
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=_sem_marca,
+    ),
+    ("GET", "/api/itens/tags"): Caso(
+        lambda p: f"/api/itens/tags?q={PREFIXO}", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
     # ---- L3-19-multiescala: conjunto/fator/execução são do INQUILINO (tenant_id + RLS, mesma classe da
     # conexão acima, não do registro compartilhado do acervo); GET/POST/DELETE de lista agem só sobre o
     # próprio chamador, GET/DELETE/POST por id de B são cross-tenant puro (404, a RLS nunca deixa ver a linha).
@@ -558,20 +619,21 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"resolucao_m": 100.0, "fatores": [{"fator_id": p.fator_b["id"], "peso": 1.0}],
                    "aprovacao_tipo": "top_pct", "aprovacao_valor": 50.0},
     ),
-    ("GET", "/api/itens"): Caso(lambda p: f"/api/itens?q=id:{p.item_b['id']}", proprio=True, aceita=frozenset({200}),
-                                verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
-    ("GET", "/api/itens/facetas"): Caso(lambda p: f"/api/itens/facetas?q=id:{p.item_b['id']}", proprio=True,
-                                        aceita=frozenset({200}), verificar=_sem_marca),
-    ("GET", "/api/itens/tags"): Caso(lambda p: f"/api/itens/tags?q={PREFIXO}", proprio=True, aceita=frozenset({200}),
-                                     verificar=_sem_marca),
     ("POST", "/api/itens"): Caso(
         lambda p: "/api/itens",
-        lambda p: {"tipo": "mapa", "titulo": f"{PREFIXO}novo", "pasta_id": p.pasta_b["id"],
-                   "dados": {"esquema_versao": 1, "corpo": {}}},
+        lambda p: {
+            "tipo": "mapa",
+            "titulo": f"{PREFIXO}novo",
+            "pasta_id": p.pasta_b["id"],
+            "dados": {"esquema_versao": 1, "corpo": {}},
+        },
     ),
     ("POST", "/api/itens/lote"): Caso(
-        lambda p: "/api/itens/lote", lambda p: {"ids": [p.item_b["id"]], "acao": "proteger"}, proprio=True,
-        aceita=frozenset({200}), verificar=lambda p, j: _lote_itens_recusado(p, j),
+        lambda p: "/api/itens/lote",
+        lambda p: {"ids": [p.item_b["id"]], "acao": "proteger"},
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=lambda p, j: _lote_itens_recusado(p, j),
     ),
     ("POST", "/api/itens/transferir"): Caso(
         lambda p: "/api/itens/transferir",
@@ -583,14 +645,16 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("DELETE", IT): Caso(lambda p: f"/api/itens/{p.item_b['id']}"),
     ("POST", IT + "/mover"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/mover", lambda p: {"pasta_id": None}),
     ("GET", IT + "/miniatura"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/miniatura"),
-    ("POST", IT + "/miniatura"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/miniatura",
-                                      lambda p: {"conteudo": "AAAA"}),
+    ("POST", IT + "/miniatura"): Caso(
+        lambda p: f"/api/itens/{p.item_b['id']}/miniatura", lambda p: {"conteudo": "AAAA"}
+    ),
     ("POST", IT + "/miniatura/gerar"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/miniatura/gerar"),
     ("DELETE", IT + "/miniatura"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/miniatura"),
     ("GET", IT + "/versoes"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/versoes"),
     ("GET", IT + "/versoes/{n}"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/versoes/1"),
-    ("POST", IT + "/versoes/{n}/restaurar"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/versoes/1/restaurar",
-                                                  lambda p: {}),
+    ("POST", IT + "/versoes/{n}/restaurar"): Caso(
+        lambda p: f"/api/itens/{p.item_b['id']}/versoes/1/restaurar", lambda p: {}
+    ),
     ("POST", IT + "/versoes/{n}/publicar"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/versoes/1/publicar"),
     ("GET", IT + "/integridade"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/integridade"),
     ("GET", IT + "/usado-por"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/usado-por"),
@@ -607,68 +671,102 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("DELETE", IT + "/links/{lid}"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/links/{p.link_b['id']}"),
     # link é anônimo por desenho: a sessão de A não ganha nada além do link (o item vem sem dono.login e sem pode_*)
     ("GET", "/api/compartilhado/{token}"): Caso(
-        lambda p: f"/api/compartilhado/{p.link_b['token']}", publico=True, aceita=frozenset({200}),
+        lambda p: f"/api/compartilhado/{p.link_b['token']}",
+        publico=True,
+        aceita=frozenset({200}),
         verificar=lambda p, j: _link_so_o_item(p, j),
     ),
     ("GET", "/api/compartilhado/{token}/itens/{id}"): Caso(
-        lambda p: f"/api/compartilhado/{p.link_b['token']}/itens/{p.item_b['id']}", publico=True,
+        lambda p: f"/api/compartilhado/{p.link_b['token']}/itens/{p.item_b['id']}",
+        publico=True,
         aceita=frozenset({200}),
         verificar=lambda p, j: _link_so_o_item(p, {"item": j}),
     ),
     ("GET", "/api/compartilhado/{token}/itens/{id}/miniatura"): Caso(
-        lambda p: f"/api/compartilhado/{p.link_b['token']}/itens/{p.item_b['id']}/miniatura", publico=True,
+        lambda p: f"/api/compartilhado/{p.link_b['token']}/itens/{p.item_b['id']}/miniatura",
+        publico=True,
         aceita=frozenset({204}),
     ),
     # público: o inquilino B não liga compartilhar_publico → 404 sempre
     ("GET", "/api/publico/itens/{id}"): Caso(lambda p: f"/api/publico/itens/{p.item_b['id']}", publico=True),
-    ("GET", "/api/publico/itens/{id}/miniatura"): Caso(lambda p: f"/api/publico/itens/{p.item_b['id']}/miniatura",
-                                                       publico=True),
+    ("GET", "/api/publico/itens/{id}/miniatura"): Caso(
+        lambda p: f"/api/publico/itens/{p.item_b['id']}/miniatura", publico=True
+    ),
     ("GET", "/api/objetos/{chave}"): Caso(
         lambda p: f"/api/objetos/miniatura/{p.item_b['id']}/{'0' * 64}.png?ate=1&assinatura=x", publico=True
     ),
     # pastas, categorias, favoritos, lixeira
-    ("GET", "/api/pastas"): Caso(lambda p: f"/api/pastas?pai_id={p.pasta_b['id']}", proprio=True,
-                                 aceita=frozenset({200}), verificar=lambda p, j: [_sem_marca(p, j), _vazio(j)]),
-    ("GET", "/api/pastas/arvore"): Caso(lambda p: "/api/pastas/arvore", proprio=True, aceita=frozenset({200}),
-                                        verificar=_sem_marca),
-    ("POST", "/api/pastas"): Caso(lambda p: "/api/pastas",
-                                  lambda p: {"nome": f"{PREFIXO}nova", "pai_id": p.pasta_b["id"]}),
+    ("GET", "/api/pastas"): Caso(
+        lambda p: f"/api/pastas?pai_id={p.pasta_b['id']}",
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=lambda p, j: [_sem_marca(p, j), _vazio(j)],
+    ),
+    ("GET", "/api/pastas/arvore"): Caso(
+        lambda p: "/api/pastas/arvore", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("POST", "/api/pastas"): Caso(
+        lambda p: "/api/pastas", lambda p: {"nome": f"{PREFIXO}nova", "pai_id": p.pasta_b["id"]}
+    ),
     ("PUT", "/api/pastas/{id}"): Caso(lambda p: f"/api/pastas/{p.pasta_b['id']}", lambda p: {"nome": "invadida"}),
     ("DELETE", "/api/pastas/{id}"): Caso(lambda p: f"/api/pastas/{p.pasta_b['id']}"),
-    ("GET", "/api/categorias"): Caso(lambda p: "/api/categorias", proprio=True, aceita=frozenset({200}),
-                                     verificar=_sem_marca),
+    ("GET", "/api/categorias"): Caso(
+        lambda p: "/api/categorias", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
     ("PUT", "/api/categorias"): Caso(
         lambda p: "/api/categorias",
         lambda p: {"arvore": [{"id": p.categoria_b["id"], "nome": "invadida", "filhas": []}]},
     ),
     ("POST", "/api/categorias/importar"): Caso(
-        lambda p: "/api/categorias/importar", lambda p: {"modelo": "iso19115"}, proprio=True, aceita=frozenset({200}),
+        lambda p: "/api/categorias/importar",
+        lambda p: {"modelo": "iso19115"},
+        proprio=True,
+        aceita=frozenset({200}),
         verificar=_sem_marca,
     ),
-    ("GET", "/api/favoritos"): Caso(lambda p: f"/api/favoritos?q=id:{p.item_b['id']}", proprio=True,
-                                    aceita=frozenset({200}), verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
+    ("GET", "/api/favoritos"): Caso(
+        lambda p: f"/api/favoritos?q=id:{p.item_b['id']}",
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=lambda p, j: [_sem_marca(p, j), _zero(j)],
+    ),
     ("PUT", "/api/favoritos/{item_id}"): Caso(lambda p: f"/api/favoritos/{p.item_b['id']}"),
-    ("DELETE", "/api/favoritos/{item_id}"): Caso(lambda p: f"/api/favoritos/{p.item_b['id']}", proprio=True,
-                                                 aceita=frozenset({204})),
-    ("GET", "/api/lixeira"): Caso(lambda p: f"/api/lixeira?q=id:{p.item_b['id']}", proprio=True,
-                                  aceita=frozenset({200}), verificar=lambda p, j: [_sem_marca(p, j), _zero(j)]),
+    ("DELETE", "/api/favoritos/{item_id}"): Caso(
+        lambda p: f"/api/favoritos/{p.item_b['id']}", proprio=True, aceita=frozenset({204})
+    ),
+    ("GET", "/api/lixeira"): Caso(
+        lambda p: f"/api/lixeira?q=id:{p.item_b['id']}",
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=lambda p, j: [_sem_marca(p, j), _zero(j)],
+    ),
     ("POST", "/api/lixeira/{id}/restaurar"): Caso(lambda p: f"/api/lixeira/{p.item_b['id']}/restaurar"),
     ("POST", "/api/lixeira/esvaziar"): Caso(
-        lambda p: "/api/lixeira/esvaziar", lambda p: {"ids": [p.item_b["id"]]}, proprio=True, aceita=frozenset({202}),
-        verificar=_sem_marca, limpar=lambda p, j: p.sessao_a.post(f"/api/jobs/{j['job_id']}/cancelar"),
+        lambda p: "/api/lixeira/esvaziar",
+        lambda p: {"ids": [p.item_b["id"]]},
+        proprio=True,
+        aceita=frozenset({202}),
+        verificar=_sem_marca,
+        limpar=lambda p, j: p.sessao_a.post(f"/api/jobs/{j['job_id']}/cancelar"),
     ),
     # ---- arquivos/objetos (L0-11): a rota nunca recebe id de inquilino na URL (o bucket vem do auth.tenant_id),
     # então "o recurso de B" para GET/DELETE por sha256 é qualquer sha256 que A também não tem — 404 garantido
     # sem precisar upar nada como B (a suíte própria do item, tests/api/test_arquivos.py, prova o isolamento com
     # objeto REAL dos dois lados). POST/GET/_varredura agem só sobre o inquilino do chamador (proprio=True).
     ("POST", "/api/arquivos"): Caso(
-        lambda p: "/api/arquivos", lambda p: {"conteudo": "zt-cruzado"}, proprio=True, aceita=frozenset({201}),
-        verificar=_sem_marca, limpar=_apagar_arquivo,
+        lambda p: "/api/arquivos",
+        lambda p: {"conteudo": "zt-cruzado"},
+        proprio=True,
+        aceita=frozenset({201}),
+        verificar=_sem_marca,
+        limpar=_apagar_arquivo,
     ),
-    ("GET", "/api/arquivos"): Caso(lambda p: "/api/arquivos", proprio=True, aceita=frozenset({200}),
-                                   verificar=_sem_marca),
-    ("GET", "/api/arquivos/_varredura"): Caso(lambda p: "/api/arquivos/_varredura", proprio=True,
-                                               aceita=frozenset({200}), verificar=_sem_marca),
+    ("GET", "/api/arquivos"): Caso(
+        lambda p: "/api/arquivos", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("GET", "/api/arquivos/_varredura"): Caso(
+        lambda p: "/api/arquivos/_varredura", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
     ("GET", "/api/arquivos/{sha256}"): Caso(lambda p: f"/api/arquivos/{'0' * 64}?classe=zt_cruzado"),
     ("DELETE", "/api/arquivos/{sha256}"): Caso(lambda p: f"/api/arquivos/{'0' * 64}?classe=zt_cruzado"),
     # ---- L2-11-c rede de rota: cálculo sobre dado aberto (OSM, recorte de teste), não é de A nem de B —
@@ -676,17 +774,23 @@ CASOS: dict[tuple[str, str], Caso] = {
     ("POST", "/api/rota"): Caso(
         lambda p: "/api/rota",
         lambda p: {"origem": [-46.5330, -23.4628], "destino": [-46.4730, -23.4356], "perfil": "carro"},
-        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=_sem_marca,
     ),
     ("POST", "/api/matriz"): Caso(
         lambda p: "/api/matriz",
         lambda p: {"origens": [[-46.5330, -23.4628]], "destinos": [[-46.4730, -23.4356]], "perfil": "carro"},
-        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=_sem_marca,
     ),
     ("POST", "/api/isocrona"): Caso(
         lambda p: "/api/isocrona",
         lambda p: {"ponto": [-46.5330, -23.4628], "minutos": 10, "perfil": "carro"},
-        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=_sem_marca,
     ),
     # ---- LDAP/Active Directory (L0-08-d): login é público (mesmo padrão de /api/login); a configuração do
     # provedor age só sobre o inquilino do chamador (proprio), nunca sobre B
@@ -695,22 +799,78 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"inquilino": "demo2", "login": p.usuario_b["login"], "senha": "Senha-errada-1"},
         publico=True,
     ),
-    ("GET", "/api/org/ldap"): Caso(lambda p: "/api/org/ldap", proprio=True, aceita=frozenset({200}),
-                                   verificar=_sem_marca),
+    ("GET", "/api/org/ldap"): Caso(
+        lambda p: "/api/org/ldap", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
     ("PUT", "/api/org/ldap"): Caso(
         lambda p: "/api/org/ldap",
         lambda p: {"habilitado": False},
-        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=_sem_marca,
         limpar=lambda p, j: p.sessao_a.put("/api/org/ldap", json={"habilitado": False}),
     ),
     ("POST", "/api/org/ldap/importar"): Caso(
         lambda p: "/api/org/ldap/importar",
-        lambda p: {"grupo_dn": "cn=inexistente,dc=zz", "atributo_membro": "memberOf", "atributo_login": "uid",
-                   "perfil": "visualizador"},
+        lambda p: {
+            "grupo_dn": "cn=inexistente,dc=zz",
+            "atributo_membro": "memberOf",
+            "atributo_login": "uid",
+            "perfil": "visualizador",
+        },
         # sem provedor configurado (ou desabilitado pela suíte de LDAP, que sempre desliga no fim) → 409;
         # se por acaso ficou habilitado apontando para um glauth de teste já derrubado → 503; nunca um 2xx
         # aqui (não há credencial de bind válida contra nenhum diretório real neste teste)
-        proprio=True, aceita=frozenset({409, 503}),
+        proprio=True,
+        aceita=frozenset({409, 503}),
+    ),
+    # ---- OpenID Connect (L0-08-a-oidc): login e retorno são públicos (mesmo padrão de /api/login/ldap);
+    # sem provedor OIDC configurado no inquilino B (esta suíte nunca configura um), iniciar dá 404
+    # ('oidc_sem_configuracao') e retorno dá 401 ('token_invalido', o state genérico é sempre rejeitado);
+    # a configuração do provedor e o logout agem só sobre o chamador (proprio) — id inexistente em PUT/DELETE
+    # evita depender da suíte de OIDC ter rodado antes (cobertura não pode depender de ordem de arquivo).
+    ("GET", "/api/sso/oidc/iniciar"): Caso(
+        lambda p: "/api/sso/oidc/iniciar?inquilino=demo2",
+        publico=True,
+        aceita=frozenset({404}),
+    ),
+    ("GET", "/api/sso/oidc/retorno"): Caso(
+        lambda p: "/api/sso/oidc/retorno?code=zt-cruzado-x&state=zt-cruzado-y",
+        publico=True,
+        aceita=frozenset({401}),
+    ),
+    ("GET", "/api/sso/oidc/logout"): Caso(
+        lambda p: "/api/sso/oidc/logout",
+        publico=True,
+        aceita=frozenset({204}),
+        descartavel=True,
+    ),
+    ("GET", "/api/org/oidc"): Caso(
+        lambda p: "/api/org/oidc", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("POST", "/api/org/oidc"): Caso(
+        lambda p: "/api/org/oidc",
+        lambda p: {
+            "habilitado": False,
+            "rotulo": f"{PREFIXO}oidc",
+            "issuer": "http://127.0.0.1:8236/realms/zt-cruzado",
+            "client_id": f"{PREFIXO}cliente",
+        },
+        proprio=True,
+        aceita=frozenset({201}),
+        verificar=_sem_marca,
+        limpar=lambda p, j: p.sessao_a.delete(f"/api/org/oidc/{j['id']}"),
+    ),
+    ("PUT", "/api/org/oidc/{provedor_id}"): Caso(
+        lambda p: "/api/org/oidc/999999999",
+        lambda p: {"issuer": "http://127.0.0.1:8236/realms/zt-cruzado", "client_id": f"{PREFIXO}cliente"},
+        proprio=True,
+        aceita=frozenset({404}),
+    ),
+    ("DELETE", "/api/org/oidc/{provedor_id}"): Caso(
+        lambda p: "/api/org/oidc/999999999",
+        proprio=True,
+        aceita=frozenset({404}),
     ),
     # ---- configurações da organização (L0-07-a-configuracoes-org): igual ao /api/org/ldap acima, a rota
     # nunca recebe id de inquilino na URL — age só sobre `plat.tenant_atual()` (proprio). O corpo do PUT
@@ -718,16 +878,25 @@ CASOS: dict[tuple[str, str], Caso] = {
     # então não precisa de `limpar`; o logotipo enviado É apagado no fim (1×1 PNG, não é dado de B).
     ("GET", "/api/org"): Caso(lambda p: "/api/org", proprio=True, aceita=frozenset({200}), verificar=_sem_marca),
     ("PUT", "/api/org"): Caso(
-        lambda p: "/api/org", _corpo_org_atual, proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+        lambda p: "/api/org",
+        _corpo_org_atual,
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=_sem_marca,
     ),
     ("POST", "/api/org/logo"): Caso(
         lambda p: "/api/org/logo",
         lambda p: {"conteudo": _PNG_1X1_B64},
-        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=_sem_marca,
         limpar=lambda p, j: p.sessao_a.delete("/api/org/logo"),
     ),
     ("DELETE", "/api/org/logo"): Caso(
-        lambda p: "/api/org/logo", proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+        lambda p: "/api/org/logo",
+        proprio=True,
+        aceita=frozenset({200}),
+        verificar=_sem_marca,
     ),
     # ---- L0-07-d convite de membro por e-mail (ADR 0013): GET/POST/DELETE agem só sobre o inquilino do
     # chamador (a tabela é por tenant_id, igual a papéis/tokens); POST usa o MESMO e-mail do convite de B de
@@ -906,6 +1075,40 @@ CASOS: dict[tuple[str, str], Caso] = {
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
+    # --- SAML 2.0 (L0-08-b): rotas públicas do protocolo respondem igual para todos; configuração é por inquilino
+    ("GET", "/api/sso/saml/metadata"): Caso(
+        lambda p: "/api/sso/saml/metadata?provedor_id=999999999", publico=True, aceita=frozenset({404}),
+    ),
+    ("GET", "/api/sso/saml/iniciar"): Caso(
+        lambda p: "/api/sso/saml/iniciar?inquilino=demo2&provedor_id=999999999", publico=True, aceita=frozenset({404}),
+    ),
+    ("POST", "/api/sso/saml/acs"): Caso(lambda p: "/api/sso/saml/acs", publico=True, aceita=frozenset({401})),
+    ("GET", "/api/sso/saml/slo"): Caso(lambda p: "/api/sso/saml/slo", publico=True, aceita=frozenset({401})),
+    ("POST", "/api/sso/saml/slo"): Caso(lambda p: "/api/sso/saml/slo", publico=True, aceita=frozenset({401})),
+    # logout: encerra a sessão de quem chama (mesmo padrão de /api/sso/oidc/logout do L0-08-a) — cliente
+    # descartável, nunca a sessão de A, e 204 para qualquer chamador porque não há sessão SAML a propagar
+    ("GET", "/api/sso/saml/logout"): Caso(
+        lambda p: "/api/sso/saml/logout", publico=True, aceita=frozenset({204, 302}), descartavel=True,
+    ),
+    ("GET", "/api/org/saml"): Caso(
+        lambda p: "/api/org/saml", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    # POST/PUT levam corpo VÁLIDO (metadado de IdP sintético): assim a chamada chega à checagem de inquilino em
+    # vez de parar no 422 de validação. POST age só sobre o chamador (proprio, provedor criado em A e apagado no
+    # limpar); PUT com id inexistente dá 404 sem depender da suíte de SAML ter rodado antes.
+    ("POST", "/api/org/saml"): Caso(
+        lambda p: "/api/org/saml",
+        lambda p: {"habilitado": False, "rotulo": f"{PREFIXO}saml", "metadado_xml": _metadado_saml_novo()},
+        proprio=True,
+        aceita=frozenset({201}),
+        verificar=_sem_marca,
+        limpar=lambda p, j: p.sessao_a.delete(f"/api/org/saml/{j['id']}"),
+    ),
+    ("PUT", "/api/org/saml/{provedor_id}"): Caso(
+        lambda p: "/api/org/saml/999999999",
+        lambda p: {"habilitado": False, "rotulo": f"{PREFIXO}saml", "metadado_xml": _metadado_saml_novo()},
+    ),
+    ("DELETE", "/api/org/saml/{provedor_id}"): Caso(lambda p: "/api/org/saml/999999999"),
 }
 
 

@@ -2998,6 +2998,698 @@
     "x-privilegio": "org.integracoes"
    }
   },
+  "/api/sso/oidc/iniciar": {
+   "get": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Sso Oidc Iniciar",
+    "operationId": "sso_oidc_iniciar_api_sso_oidc_iniciar_get",
+    "parameters": [
+     {
+      "name": "inquilino",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Inquilino"
+      }
+     },
+     {
+      "name": "provedor_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Provedor Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/sso/oidc/retorno": {
+   "get": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Sso Oidc Retorno",
+    "operationId": "sso_oidc_retorno_api_sso_oidc_retorno_get",
+    "parameters": [
+     {
+      "name": "code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Code"
+      }
+     },
+     {
+      "name": "state",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "State"
+      }
+     },
+     {
+      "name": "error",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Error"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/sso/oidc/logout": {
+   "get": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Sso Oidc Logout",
+    "description": "Encerra a sessão local sempre (mesmo passo de app.auth.rotas_login.logout); quando a conta é OIDC e o\nprovedor associado publica `end_session_endpoint`, devolve a URL no cabeçalho `X-Oidc-End-Session` para o\nfront completar a propagação no IdP (RP-Initiated Logout não tem como o backend, sozinho, encerrar a\nsessão do NAVEGADOR no IdP — só redirecionando o navegador para lá).",
+    "operationId": "sso_oidc_logout_api_sso_oidc_logout_get",
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/org/oidc": {
+   "get": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Org Oidc Listar",
+    "operationId": "org_oidc_listar_api_org_oidc_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/ProvedorOidcSaida"
+         },
+         "type": "array",
+         "title": "Response Org Oidc Listar Api Org Oidc Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes"
+   },
+   "post": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Org Oidc Criar",
+    "operationId": "org_oidc_criar_api_org_oidc_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProvedorOidcEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProvedorOidcSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes"
+   }
+  },
+  "/api/org/oidc/{provedor_id}": {
+   "put": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Org Oidc Atualizar",
+    "operationId": "org_oidc_atualizar_api_org_oidc__provedor_id__put",
+    "parameters": [
+     {
+      "name": "provedor_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Provedor Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProvedorOidcEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProvedorOidcSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes"
+   },
+   "delete": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Org Oidc Remover",
+    "operationId": "org_oidc_remover_api_org_oidc__provedor_id__delete",
+    "parameters": [
+     {
+      "name": "provedor_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Provedor Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes"
+   }
+  },
+  "/api/sso/saml/metadata": {
+   "get": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Sso Saml Metadata",
+    "operationId": "sso_saml_metadata_api_sso_saml_metadata_get",
+    "parameters": [
+     {
+      "name": "inquilino",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Inquilino"
+      }
+     },
+     {
+      "name": "provedor_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Provedor Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/sso/saml/iniciar": {
+   "get": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Sso Saml Iniciar",
+    "operationId": "sso_saml_iniciar_api_sso_saml_iniciar_get",
+    "parameters": [
+     {
+      "name": "inquilino",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Inquilino"
+      }
+     },
+     {
+      "name": "provedor_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Provedor Id"
+      }
+     },
+     {
+      "name": "proximo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Proximo"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/sso/saml/acs": {
+   "post": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Sso Saml Acs",
+    "operationId": "sso_saml_acs_api_sso_saml_acs_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/sso/saml/logout": {
+   "get": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Sso Saml Logout",
+    "description": "Encerra a sessão local sempre; quando ela nasceu por SAML e o IdP tem SLO, 302 com o LogoutRequest assinado\n(o navegador leva a mensagem ao IdP, que encerra a sessão dele e volta por /sso/saml/slo); senão 204.",
+    "operationId": "sso_saml_logout_api_sso_saml_logout_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "S",
+    "x-privilegio": "proprio"
+   }
+  },
+  "/api/sso/saml/slo": {
+   "get": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Sso Saml Slo Get",
+    "operationId": "sso_saml_slo_get_api_sso_saml_slo_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   },
+   "post": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Sso Saml Slo Post",
+    "operationId": "sso_saml_slo_post_api_sso_saml_slo_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "x-auth": "-",
+    "x-privilegio": "publico"
+   }
+  },
+  "/api/org/saml": {
+   "get": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Org Saml Listar",
+    "operationId": "org_saml_listar_api_org_saml_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/ProvedorSamlSaida"
+         },
+         "type": "array",
+         "title": "Response Org Saml Listar Api Org Saml Get"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes"
+   },
+   "post": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Org Saml Criar",
+    "operationId": "org_saml_criar_api_org_saml_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProvedorSamlEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProvedorSamlSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes"
+   }
+  },
+  "/api/org/saml/{provedor_id}": {
+   "put": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Org Saml Atualizar",
+    "operationId": "org_saml_atualizar_api_org_saml__provedor_id__put",
+    "parameters": [
+     {
+      "name": "provedor_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Provedor Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProvedorSamlEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProvedorSamlSaida"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes"
+   },
+   "delete": {
+    "tags": [
+     "login"
+    ],
+    "summary": "Org Saml Remover",
+    "operationId": "org_saml_remover_api_org_saml__provedor_id__delete",
+    "parameters": [
+     {
+      "name": "provedor_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Provedor Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "org.integracoes"
+   }
+  },
   "/api/org/smtp": {
    "get": {
     "tags": [
@@ -16374,6 +17066,456 @@
      "mapa_grupo_perfil"
     ],
     "title": "ProvedorLdapSaida"
+   },
+   "ProvedorOidcEntrada": {
+    "properties": {
+     "habilitado": {
+      "type": "boolean",
+      "title": "Habilitado",
+      "default": true
+     },
+     "rotulo": {
+      "type": "string",
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Rotulo",
+      "default": "Entrar com a organização"
+     },
+     "ordem": {
+      "type": "integer",
+      "title": "Ordem",
+      "default": 0
+     },
+     "issuer": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 8,
+      "title": "Issuer"
+     },
+     "client_id": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 1,
+      "title": "Client Id"
+     },
+     "client_secret": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Secret"
+     },
+     "escopos": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 5,
+      "title": "Escopos",
+      "default": "openid profile email"
+     },
+     "atributo_grupos": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Atributo Grupos",
+      "default": "groups"
+     },
+     "perfil_padrao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Perfil Padrao"
+     },
+     "mapa_grupo_perfil": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Mapa Grupo Perfil"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "issuer",
+     "client_id"
+    ],
+    "title": "ProvedorOidcEntrada"
+   },
+   "ProvedorOidcSaida": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "habilitado": {
+      "type": "boolean",
+      "title": "Habilitado"
+     },
+     "rotulo": {
+      "type": "string",
+      "title": "Rotulo"
+     },
+     "ordem": {
+      "type": "integer",
+      "title": "Ordem"
+     },
+     "issuer": {
+      "type": "string",
+      "title": "Issuer"
+     },
+     "client_id": {
+      "type": "string",
+      "title": "Client Id"
+     },
+     "tem_client_secret": {
+      "type": "boolean",
+      "title": "Tem Client Secret"
+     },
+     "escopos": {
+      "type": "string",
+      "title": "Escopos"
+     },
+     "atributo_grupos": {
+      "type": "string",
+      "title": "Atributo Grupos"
+     },
+     "perfil_padrao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Perfil Padrao"
+     },
+     "mapa_grupo_perfil": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Mapa Grupo Perfil"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "habilitado",
+     "rotulo",
+     "ordem",
+     "issuer",
+     "client_id",
+     "tem_client_secret",
+     "escopos",
+     "atributo_grupos",
+     "perfil_padrao",
+     "mapa_grupo_perfil"
+    ],
+    "title": "ProvedorOidcSaida"
+   },
+   "ProvedorSamlEntrada": {
+    "properties": {
+     "habilitado": {
+      "type": "boolean",
+      "title": "Habilitado",
+      "default": true
+     },
+     "rotulo": {
+      "type": "string",
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Rotulo",
+      "default": "Entrar com a organização (SAML)"
+     },
+     "ordem": {
+      "type": "integer",
+      "title": "Ordem",
+      "default": 0
+     },
+     "metadado_url": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 1000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Metadado Url"
+     },
+     "metadado_xml": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 524288
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Metadado Xml"
+     },
+     "idp_entity_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Idp Entity Id"
+     },
+     "idp_sso_url": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 1000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Idp Sso Url"
+     },
+     "idp_slo_url": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 1000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Idp Slo Url"
+     },
+     "idp_certificado": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 10000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Idp Certificado"
+     },
+     "assercao_cifrada": {
+      "type": "boolean",
+      "title": "Assercao Cifrada",
+      "default": false
+     },
+     "formato_nameid": {
+      "type": "string",
+      "maxLength": 200,
+      "title": "Formato Nameid",
+      "default": "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
+     },
+     "atributo_login": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atributo Login"
+     },
+     "atributo_email": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Atributo Email",
+      "default": "email"
+     },
+     "atributo_nome": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Atributo Nome",
+      "default": "name"
+     },
+     "atributo_grupos": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Atributo Grupos",
+      "default": "groups"
+     },
+     "perfil_padrao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Perfil Padrao"
+     },
+     "mapa_grupo_perfil": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Mapa Grupo Perfil"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "ProvedorSamlEntrada"
+   },
+   "ProvedorSamlSaida": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "habilitado": {
+      "type": "boolean",
+      "title": "Habilitado"
+     },
+     "rotulo": {
+      "type": "string",
+      "title": "Rotulo"
+     },
+     "ordem": {
+      "type": "integer",
+      "title": "Ordem"
+     },
+     "idp_entity_id": {
+      "type": "string",
+      "title": "Idp Entity Id"
+     },
+     "idp_sso_url": {
+      "type": "string",
+      "title": "Idp Sso Url"
+     },
+     "idp_slo_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Idp Slo Url"
+     },
+     "idp_certificados": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Idp Certificados"
+     },
+     "idp_metadado_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Idp Metadado Url"
+     },
+     "sp_certificado": {
+      "type": "string",
+      "title": "Sp Certificado"
+     },
+     "sp_metadata_url": {
+      "type": "string",
+      "title": "Sp Metadata Url"
+     },
+     "assercao_cifrada": {
+      "type": "boolean",
+      "title": "Assercao Cifrada"
+     },
+     "formato_nameid": {
+      "type": "string",
+      "title": "Formato Nameid"
+     },
+     "atributo_login": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Atributo Login"
+     },
+     "atributo_email": {
+      "type": "string",
+      "title": "Atributo Email"
+     },
+     "atributo_nome": {
+      "type": "string",
+      "title": "Atributo Nome"
+     },
+     "atributo_grupos": {
+      "type": "string",
+      "title": "Atributo Grupos"
+     },
+     "perfil_padrao": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Perfil Padrao"
+     },
+     "mapa_grupo_perfil": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Mapa Grupo Perfil"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "habilitado",
+     "rotulo",
+     "ordem",
+     "idp_entity_id",
+     "idp_sso_url",
+     "idp_slo_url",
+     "idp_certificados",
+     "idp_metadado_url",
+     "sp_certificado",
+     "sp_metadata_url",
+     "assercao_cifrada",
+     "formato_nameid",
+     "atributo_login",
+     "atributo_email",
+     "atributo_nome",
+     "atributo_grupos",
+     "perfil_padrao",
+     "mapa_grupo_perfil"
+    ],
+    "title": "ProvedorSamlSaida"
    },
    "Provedores": {
     "properties": {

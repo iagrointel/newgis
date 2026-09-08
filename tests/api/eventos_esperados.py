@@ -147,6 +147,19 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("DELETE", "/api/conexoes/{id}"): ["conexoes/apagar"],
     ("POST", "/api/conexoes/{id}/testar"): ["conexoes/testar"],
     ("POST", "/api/conexoes/{id}/publicar"): ["conexoes/publicar_camada"],
+    # --- OpenID Connect (L0-08-a): só a configuração por inquilino é rota de escrita (o retorno e o logout do
+    # protocolo são GET e não entram no conjunto conferido por tests/api/test_eventos.py)
+    ("POST", "/api/org/oidc"): ["org/oidc_configurar"],
+    ("PUT", "/api/org/oidc/{provedor_id}"): ["org/oidc_configurar"],
+    ("DELETE", "/api/org/oidc/{provedor_id}"): ["org/oidc_remover"],
+    # --- SAML 2.0 (L0-08-b). GET /api/sso/saml/logout narra usuarios/sair e GET /api/sso/saml/slo não narra
+    # nada (o LogoutRequest do IdP encerra sessões por função SECURITY DEFINER, sem sessão local), mas GET não
+    # é rota de escrita e por isso não fica declarado aqui.
+    ("POST", "/api/sso/saml/acs"): ["usuarios/entrar", "usuarios/criar", "usuarios/atualizar"],
+    ("POST", "/api/sso/saml/slo"): [],
+    ("POST", "/api/org/saml"): ["org/saml_configurar"],
+    ("PUT", "/api/org/saml/{provedor_id}"): ["org/saml_configurar"],
+    ("DELETE", "/api/org/saml/{provedor_id}"): ["org/saml_remover"],
     # ---- motor multicritério em grades aninhadas (L3-19-multiescala; vocabulário nas migrações
     # 20260906T1640_multiescala.sql e 20260906T1823_multiescala_apagar.sql). Conjunto, fator e execução são
     # tabelas do inquilino com dono humano, então toda escrita narra evento; o DELETE apaga em cascata e por

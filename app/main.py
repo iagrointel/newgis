@@ -15,6 +15,7 @@ from app import log as plat_log
 from app.acervo import rotas as rotas_acervo
 from app.auth import ldap as rotas_ldap
 from app.auth import middleware as auth_middleware
+from app.auth import oidc as rotas_oidc
 from app.auth import (
     rotas_convites,
     rotas_eu,
@@ -27,6 +28,7 @@ from app.auth import (
     rotas_tokens,
     rotas_usuarios,
 )
+from app.auth import saml as rotas_saml
 from app.catalogo import (
     rotas_categorias,
     rotas_compartilhamento,
@@ -82,6 +84,10 @@ ROUTERS = [
     rotas_org.router,
     # --- LDAP/Active Directory (L0-08-d): POST /api/login/ldap; GET/PUT /api/org/ldap; POST /api/org/ldap/importar
     rotas_ldap.router,
+    # --- OpenID Connect (L0-08-a): GET /api/sso/oidc/{iniciar,retorno,logout}; GET/POST/PUT/DELETE /api/org/oidc
+    rotas_oidc.router,
+    # --- SAML 2.0 (L0-08-b): /api/sso/saml/{metadata,iniciar,acs,slo,logout}; GET/POST/PUT/DELETE /api/org/saml
+    rotas_saml.router,
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): GET/PUT /api/org/smtp,
     # POST /api/org/smtp/testar; /api/convites (+ /resolver e /aceitar públicos); /api/senha/redefinir/*
     rotas_smtp,

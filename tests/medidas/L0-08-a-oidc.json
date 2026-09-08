@@ -1,0 +1,15 @@
+{
+ "item": "L0-08-a-oidc",
+ "medidas": {
+  "latencia_login_oidc_ms": {
+   "valor": [
+    720.8,
+    123.8
+   ],
+   "unidade": "ms",
+   "comando": "2x fluxo completo (iniciar -> Keycloak -> retorno), Authorization Code + PKCE S256"
+  }
+ },
+ "gerado_em": "2026-09-07T02:31:03Z",
+ "git_sha": "2382a8e7c5dd"
+}
