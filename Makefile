@@ -21,14 +21,14 @@ SEGREDOS=PLAT_SECRET=$$(sudo cat /etc/plat/segredos/PLAT_SECRET 2>/dev/null); \
 	[ -n "$$PLAT_DSN" ] && export PLAT_DSN; \
 	[ -n "$$PLAT_GARAGE_ADMIN_TOKEN" ] && export PLAT_GARAGE_ADMIN_TOKEN;
 
-.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps homolog conformidade conformidade-conferir
+.PHONY: check check-rapido lint sem-marcador teste e2e medidas migrar openapi vendor limites seguranca-deps homolog conformidade conformidade-conferir pacote-rede
 
 check: lint sem-marcador limites teste e2e  ## suíte inteira (portão P3)
 
 check-rapido: lint sem-marcador limites teste  ## o que o driver roda
 
 lint:
-	$(VENV)/ruff check app tests docs/gerar_limites.py
+	$(VENV)/ruff check app tests docs/gerar_limites.py docs/gerar_pacote_rede.py
 
 limites:                                    ## docs/LIMITES.md == app/limites.py (item L0-12); falha se divergir
 	$(VENV)/python docs/gerar_limites.py --check
@@ -62,6 +62,9 @@ conformidade-conferir:                      ## reprova se docs/PARIDADE.md diver
 
 medidas:                                    ## suíte inteira gravando tests/medidas/<item>.json (ADR 0001 seção 10)
 	$(SEGREDOS) PLAT_GRAVAR_MEDIDAS=1 $(VENV)/pytest --base-url $(URL_PUBLICA)
+
+pacote-rede:                                ## docs/PACOTE_REDE.md == app/rede_utilidades/pacotes/*.json (item L4-01-a); GERA (o `make check` confere via tests/unit/test_rede_pacote.py)
+	$(VENV)/python docs/gerar_pacote_rede.py
 
 vendor:                                     ## confere sha256 de web/vendor contra VERSOES.txt
 	cd web/vendor && grep -v '^\#' VERSOES.txt | awk '{print $$3"  "$$1}' | sha256sum -c

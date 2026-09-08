@@ -513,6 +513,48 @@ servidor de tiles vetoriais nem raster instalado nesta máquina (itens L2-01-b e
 vazio com o motivo escrito, porque a camada ainda não guarda vocabulário de domínio (L0-04-c, parcial). A tela
 lista e reordena as camadas do documento; não as desenha no canvas, pelo mesmo motivo, e diz isso em cada
 linha. ⛔ Quebra declarada: documento com `corpo.camadas` como lista de uuid soltos passa a ser 422.
+## turno 4, setembro de 2026 (item L2-12-a-motor-render-servidor: motor de render no servidor, PNG/PDF por chromium headless)
+
+Pool de páginas do chromium do playwright (`app/render/motor.py::Motor`) mantidas quentes, uma por processo
+(`google-chrome` do sistema nunca é usado — regra da casa, ele quebra nesta máquina). Fila com teto
+(`PLAT_RENDER_FILA_MAX`, 429 acima do limite) e um teto de tempo único para fila + execução
+(`PLAT_RENDER_TIMEOUT_S`). Isolamento de rede por interceptação de rota (só `127.0.0.1`/`::1`/`localhost` e o
+host de `PLAT_URL_PUBLICA` em produção passam; o resto é abortado antes de sair da máquina). Token interno
+HMAC de curta duração (`app/render/token.py`, TTL cortado a 60 s mesmo se pedirem mais) mais bloqueio por
+host (`request.client.host` tem de ser loopback) para uma futura chamada da página headless a uma rota
+interna. `POST /api/render/mapa` (extensão/zoom/tamanho/DPI/formato) devolve PNG ou PDF; a página headless
+(`web/render_mapa.html` + `web/js/mapa/render_entrada.js`) importa o MESMO `web/js/mapa/estilo.js` do
+visualizador interativo — WYSIWYG de verdade, não uma cópia. ADR 0023.
+
+Achado real rodando a medida de p95 sob carga (não hipotético): um `goto` que estoura o timeout deixava a
+MESMA página presa, e as navegações seguintes nela falhavam também — exatamente o cenário da refutação do
+item ("mata o processo do chromium no meio e confere recuperação do pool"). Consertado ANTES do adversário:
+`Motor._pagina_de_reposicao` fecha a página envenenada e abre uma nova no lugar; provado isolado
+(`test_pool_se_recupera_de_pagina_que_travou_no_meio`, contra um socket que aceita e nunca responde) e
+também exercido pela medida de p95 (12 falhas em 33 tentativas de "quente" e o motor nunca ficou preso).
+
+Medido (`tests/medidas/L2-12-a-motor-render-servidor.json`, `test_frio_e_quente_p95_da_demo_1024x768`):
+frio p95 **1.347,8 ms** (2/2 amostras, teto do portão 3.000 ms — **passa**); quente p95 **1.400,2 ms** sobre
+21 amostras que terminaram de 33 tentadas (teto do portão 1.000 ms — **não passa**), medido com a máquina
+sob `uptime` ~20-23 de carga e `free` com 0 GB livres/swap cheio (dezenas de outras trilhas do laço rodando
+ao mesmo tempo; `laco/vivo/leases` no momento confirma). Não repetido em janela mais calma por orçamento de
+turno — fica nomeado para o adversário/próximo turno decidir se remede antes de fechar.
+`tests/api/test_render.py` (7/7, servidor uvicorn real + chromium real, login com 2FA de verdade — achado:
+a conta semeada de `plataforma` exige 2FA, sem isso o teste via 401 sem entender por quê) e
+`tests/unit/test_motor_render.py` (7/8, só o de p95 falha pelo motivo acima) cobrem: PNG do tamanho pedido,
+PDF gerado, PNG 300 DPI de A4 (2.480×3.508), fila recusando acima do limite, 20 pedidos simultâneos com
+pool respeitado e todos < 30 s, página headless sem alcançar host externo (`fetch` para host de fora
+resolve com falha de rede, não trava), token interno com TTL ≤ 60 s e bloqueio por host, e recuperação de
+página travada.
+
+Fronteira honesta: `POST /api/render/mapa` com `mapa_id` de um documento COM camadas devolve `501` — compor
+as camadas dentro da página de render depende de servidor de tiles vetoriais (L2-01-b) e raster (L1-02) que
+não existem nesta máquina (mesma fronteira já declarada em `app/mapas/documento.py`); o motor genérico
+(pool/fila/token/isolamento/PNG/PDF) está pronto para qualquer página, a composição de camada é item futuro.
+`deploy/plat-render.service` (porta 8154, `MemoryMax` NOMINAL, não medido sob carga real — a trilha não tem
+a unidade systemd isolada) fica para conferência em produção. `docs/openapi.json` comitado não foi
+regenerado (ficaria com um diff de milhares de linhas por dessincronia PRÉ-EXISTENTE de outros itens já
+juntados neste ramo — regenerar aqui misturaria a autoria; registrado, não escondido).
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 
@@ -573,6 +615,54 @@ carimbo) e o cabeçalho opcional `-- depende: <arquivo>`; `db/migrar.sh`, `db/mi
 reprova nome fora do padrão, três dígitos novos e dependência que vem depois na ordem;
 `tests/api/test_saude.py` deixa de casar o glob de três dígitos e escreve o que "última migração" passa a
 significar (a de autoria mais recente pela chave, não a maior string nem a última aplicada no relógio).
+## turno 3, setembro de 2026 (item L2-01-a-documento-mapa: o mapa é um documento com esquema, não um punhado de URLs)
+
+O tipo `mapa` deixa de ter `corpo` livre e passa a carregar um **JSON Schema publicado**
+(`docs/esquemas/mapa-v1.json`, gerado de `plat.tipo_item`): mapa-base, lista ordenada de camadas com
+visibilidade, opacidade, faixa de escala, grupo (até 3 níveis), estilo, popup, filtro CQL2-JSON, rótulos,
+campo de tempo e intervalo de atualização; extensão inicial, rotação, CRS de exibição fixo em 3857 e
+favoritos. Cada camada aponta o item do catálogo por **uuid** (`ref`), nunca por URL — o oposto do Web Map
+JSON da Esri, onde a URL do portal fica congelada dentro de cada mapa salvo. Rotas novas: `POST/GET/PUT
+/api/mapas`, `GET /api/mapas` e `GET /api/mapas/{id}/completo`, que devolve o documento com as camadas já
+resolvidas (título, tipo, campos, estilo, popup) em UMA chamada. Contrato no ADR 0022; de-para chave a chave
+contra a Web Map Specification em `docs/PARIDADE.md`.
+
+Medido em `tests/medidas/L2-01-a.json`: `/completo` de um mapa com **10 camadas** responde com p95 de
+**20,7 ms** (mediana 12,2 ms) em **50 chamadas**, contra o teto de 150 ms do portão. Camada de outro inquilino
+citada no documento = **404** (o mesmo 404 de uuid inexistente, sem revelar que existe); apagar camada usada
+por mapa = **409** com a lista dos mapas dependentes; 500 camadas, 5 níveis de grupo, ciclo de grupo e
+extensão fora do mundo = **422**, nenhum 200 e nenhum 500. Na tela `/mapa?id=<uuid>` a lista de camadas
+reordena arrastando (e por teclado, Alt+seta): e2e grava a ordem, recarrega a página e confere que voltou a
+mesma, com captura em `tests/e2e/capturas/L2-01-a-documento-mapa_painel_camadas.png`.
+
+⛔ Fronteira honesta: `/completo` devolve o CONTRATO da URL de tiles com `pronto: false` e o motivo — não há
+servidor de tiles vetoriais nem raster instalado nesta máquina (itens L2-01-b e L1-02) —, e `dominios` sai
+vazio com o motivo escrito, porque a camada ainda não guarda vocabulário de domínio (L0-04-c, parcial). A tela
+lista e reordena as camadas do documento; não as desenha no canvas, pelo mesmo motivo, e diz isso em cada
+linha. ⛔ Quebra declarada: documento com `corpo.camadas` como lista de uuid soltos passa a ser 422.
+
+## turno 3, setembro de 2026 (item L4-01-a-pacote-de-ativos: o esquema da rede de utilidades é dado)
+
+Primeiro item da linha L4. O esquema de uma rede de utilidades — redes de domínio, tiers, grupos e tipos de
+ativo, categorias de rede, atributos e configurações de terminal — passa a ser um **pacote de ativos**: um
+documento JSON versionado, importado para dez tabelas `plat.rede_*` do inquilino (`POST
+/api/rede/{rede_id}/pacote`) e exportado de volta a partir delas (`GET .../pacote`). O contrato está no ADR
+0019; o mapeamento coluna a coluna, em `docs/PACOTE_REDE.md`, gerado do próprio dado.
+
+A exportação é **reconstruída das tabelas**, nunca o arquivo recebido — dos 96.042 bytes importados do pacote
+`eletrica-br`, saem os mesmos 96.042 bytes, e um teste altera uma linha no banco para mostrar que a exportação
+muda junto (`test_a_exportacao_vem_das_tabelas_e_nao_do_arquivo_recebido`). Pacote recusado sai com a lista
+inteira de problemas, cada um com o caminho (`tipos[41].grupo`) e a **linha do arquivo enviado**.
+
+Dois pacotes vêm com a instalação: `eletrica-br` (2 domínios, 4 tiers, 14 grupos, 24 tipos, 214 atributos, 24
+regras) cobrindo as 13 camadas de rede da BDGD do Módulo 10 do PRODIST, e `agua-epanet` (1 domínio, 2 tiers, 6
+grupos, 14 tipos, 41 atributos, 16 regras) no vocabulário do EPANET 2.2.
+
+⛔ Fronteira honesta declarada no próprio dado: dos 214 atributos do pacote elétrico, **154 têm a coluna de
+origem conferida contra uma extração real** (11 camadas) e **60 são declarados do documento da fonte, sem
+conferência** (`SUB`, `UNSEMT`, `UNCRMT`, `UNREMT`, `UGMT_tab`); o pacote de água é inteiramente declarado.
+Nenhum atributo com `conferida = false` deve decidir carga de dado sem antes conferir o dicionário da entrega.
+Topologia, traçado e subrede não existem ainda — este item entrega só o catálogo do esquema.
 
 ## turno 3, setembro de 2026 (item L0-04-a-upload-arquivo: upload retomável pelo navegador)
 

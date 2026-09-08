@@ -1,0 +1,39 @@
+{
+  "cenario": "1024x768, mapa-base local (pmtiles Guarulhos), pool=2",
+  "comando": "venv/bin/pytest tests/unit/test_motor_render.py::test_frio_e_quente_p95_da_demo_1024x768 -q",
+  "frio_ms": [
+    1347.8,
+    1281.7
+  ],
+  "frio_p95_ms": 1347.8,
+  "item": "L2-12-a-motor-render-servidor",
+  "maquina_no_dia_da_medida": "carga/RAM medidas com `uptime`/`free` no momento — ver handoff do item; esta é uma máquina compartilhada por dezenas de trilhas do laço ao mesmo tempo",
+  "n_frio_falhou": 0,
+  "n_frio_ok": 2,
+  "n_quente_falhou": 12,
+  "n_quente_ok": 21,
+  "quente_ms": [
+    1203.5,
+    1247.0,
+    1206.7,
+    1257.8,
+    1340.8,
+    1379.8,
+    1302.1,
+    948.4,
+    1234.5,
+    1234.4,
+    982.7,
+    1400.2,
+    976.8,
+    1284.0,
+    1318.3,
+    1380.8,
+    1224.6,
+    1528.4,
+    1233.6,
+    1391.5,
+    1272.4
+  ],
+  "quente_p95_ms": 1400.2
+}

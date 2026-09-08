@@ -98,6 +98,15 @@ class Settings:
     # .env de trilha grava PLAT_POOL_MAX=2 (ver laco/trilha_ambiente.sh).
     PLAT_POOL_MIN: int
     PLAT_POOL_MAX: int
+    # motor de render no servidor (item L2-12-a-motor-render-servidor; ADR 0023): pool de páginas do
+    # chromium do playwright mantidas quentes, fila com limite e teto de tempo por pedido, token interno
+    # de curta duração. Padrões reproduzem o que já rodava (nenhum .env existente declara estas chaves).
+    PLAT_RENDER_POOL_TAMANHO: int
+    PLAT_RENDER_FILA_MAX: int
+    PLAT_RENDER_TIMEOUT_S: int
+    PLAT_RENDER_TOKEN_TTL_S: int
+    PLAT_RENDER_MAX_PX: int
+    PLAT_RENDER_MEMORIA_MB: int
 
     @property
     def producao(self) -> bool:
@@ -244,6 +253,12 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_SMTP_ROTULO=_opcional(valores, "PLAT_SMTP_ROTULO"),
         PLAT_POOL_MIN=pool_min,
         PLAT_POOL_MAX=pool_max,
+        PLAT_RENDER_POOL_TAMANHO=_inteiro(valores, "PLAT_RENDER_POOL_TAMANHO", 2, 1),
+        PLAT_RENDER_FILA_MAX=_inteiro(valores, "PLAT_RENDER_FILA_MAX", 20, 1),
+        PLAT_RENDER_TIMEOUT_S=_inteiro(valores, "PLAT_RENDER_TIMEOUT_S", 30, 1),
+        PLAT_RENDER_TOKEN_TTL_S=_inteiro(valores, "PLAT_RENDER_TOKEN_TTL_S", 60, 1),
+        PLAT_RENDER_MAX_PX=_inteiro(valores, "PLAT_RENDER_MAX_PX", 4096, 64),
+        PLAT_RENDER_MEMORIA_MB=_inteiro(valores, "PLAT_RENDER_MEMORIA_MB", 768, 128),
     )
 
 
