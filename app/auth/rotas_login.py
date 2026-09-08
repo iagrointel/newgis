@@ -198,8 +198,12 @@ def login_2fa(corpo: Login2FAEntrada, request: Request, resposta: Response):
     with db.db(ctx) as cur:
         if corpo.codigo:
             try:
-                segredo = totp.decifrar(r["totp_secret"] or "", settings.PLAT_SECRET)
-            except Exception:  # noqa: BLE001 — segredo ilegível (PLAT_SECRET trocado): só recuperação vale
+                from app.seguranca_rotacao import decifrar_com_rotacao
+
+                segredo = decifrar_com_rotacao(
+                    totp.decifrar, r["totp_secret"] or "", settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR
+                )
+            except Exception:  # noqa: BLE001 — segredo ilegível (PLAT_SECRET e ANTERIOR trocados): só recuperação vale
                 segredo = None
             passo = totp.verificar(segredo, corpo.codigo, r["totp_ultimo_passo"]) if segredo else None
             if passo is not None:

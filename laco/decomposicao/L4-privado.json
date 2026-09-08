@@ -1,0 +1,351 @@
+{
+ "linha": "L4 rede de utilidades",
+ "submodulo": "L4-privado (infraestrutura interna de empreendimento fechado)",
+ "gerado_em": "2026-09-06",
+ "gerado_por": "pesquisa L4-privado (agente 'pesquisador'), a partir de L4-privado_CONCEITO.md",
+ "n_itens": 14,
+ "depende_de": [
+  "L4-01-a-pacote-de-ativos",
+  "L4-03-b-terminais",
+  "L4-04-a-controladores-e-tiers",
+  "L4-parcelas-01-modelo-de-parcelas"
+ ],
+ "nota_geral": "nenhum item deste arquivo pode citar dado real de cliente; todo exemplo de execução usa dado aberto/sintético (mesma regra do L4.json e do SIG de teste interno). 'incorporadora de teste'/'SIG de teste interno' = alias do caso lido só para pesquisa, nunca nome real.",
+ "itens": [
+  {
+   "id": "L4-privado-01-pacote-ativos-infra-privada",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-01-a-pacote-de-ativos"
+   ],
+   "hipotese": "escrever o pacote de ativos 'infra-privada-loteamento' (domínio/tier/grupo/tipo/terminal/regra em JSON versionado, mesmo mecanismo do L4-01-a): nós (caixa de passagem, poço de visita, boca de lobo, hidrante, poste, luminária, reservatório, casa de bombas, estação elevatória) e arestas (tubulação de água, coletor de esgoto, galeria de drenagem, circuito de iluminação), cada um com terminal e regra de conectividade declarada; regra dura: separação sanitário × pluvial nunca pode conectar boca de lobo a coletor de esgoto",
+   "portao_de_pronto": "JSON do pacote validado pelo mesmo importador de pacotes do L4-01-a (schema, sem inventar campo); importar 1 empreendimento aberto/sintético com os 4 domínios (água, esgoto, drenagem, iluminação) e ver os 4 tipos de nó e 4 de aresta aparecerem no catálogo do inquilino; tentativa de ligar boca de lobo a coletor de esgoto é recusada pela regra; comparado ao pacote 'elétrica-BR' já existente (mesma forma, campos diferentes)",
+   "refutacao": "adversário tenta inserir uma aresta entre dois nós sem terminal compatível declarado (ex.: hidrante ligado direto a luminária) e confere que o pacote recusa; adversário conta os tipos declarados contra a lista da hipótese (nenhum a mais, nenhum a menos sem justificativa)",
+   "papeis": ["redes", "dados", "arquiteto", "adversario"],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-01-a-pacote-de-ativos",
+   "origem": "pesquisa L4-privado",
+   "fontes": [],
+   "ativos_da_casa": [
+    "/home/dev/fgr/sig/db/schema.sql (só leitura): tabela equipamento e dominio.equipamento_tipo mostram o vocabulário hoje existente (portaria, quiosque, playground etc.) sem nenhum item de poste/luminária/caixa de passagem — o pacote novo cobre exatamente essa lacuna"
+   ],
+   "nota": "este é o item de maior prioridade porque C4/C6/C7 do L4-privado_CONCEITO.md dependem dele para ter onde declarar os tipos que faltam."
+  },
+  {
+   "id": "L4-privado-02-regime-titularidade-subrede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-04-a-controladores-e-tiers"
+   ],
+   "hipotese": "estender plat.rede_subrede com titularidade ('pública'|'privada-condomínio'|'privada-empreendimento') e responsavel_manutencao (texto); nenhuma mudança de algoritmo de traçado/isolamento — só dois campos e um filtro opcional nas consultas de subrede",
+   "portao_de_pronto": "migração aditiva (ALTER TABLE, sem quebrar subredes existentes); criar uma subrede sintética com titularidade='privada-condomínio' e outra 'pública' no mesmo empreendimento de teste; traçado e exportação de subrede (L4-04-b) funcionam idênticos para as duas, só o filtro por titularidade muda o resultado da consulta",
+   "refutacao": "adversário confere que uma consulta sem filtro de titularidade devolve as duas subredes juntas (nenhuma delas fica invisível por acidente) e que o traçado de jusante atravessa a fronteira de titularidade sem parar sozinho (a interface é explícita, ver L4-privado-04, não implícita por mudança de campo)",
+   "papeis": ["redes", "dados"],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-04-a-controladores-e-tiers",
+   "origem": "pesquisa L4-privado",
+   "fontes": [],
+   "ativos_da_casa": [],
+   "nota": "responde à pergunta do dono (2): o regime jurídico é atributo, não modelo diferente — este item é a prova de que a mudança cabe em duas colunas."
+  },
+  {
+   "id": "L4-privado-03-parcela-area-comum-servidao",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 1,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-parcelas-01-modelo-de-parcelas",
+    "L4-privado-02-regime-titularidade-subrede"
+   ],
+   "hipotese": "amarrar a rede privada (nós/arestas) à parcela que é o contêiner legal do espaço onde ela está enterrada: testar explicitamente os tipos 'área comum' e 'servidão' já citados (mas não testados) em L4-parcelas-01, com chave estrangeira da rede para a parcela, sem herdar geometria (a rede tem a própria geometria, a parcela dá o histórico jurídico)",
+   "portao_de_pronto": "criar registro + parcela tipo 'área comum' (equivalente às 8.638 amostras de dado aberto já citadas em L4-parcelas-01) sobre um empreendimento de teste; importar um trecho de rede privada (L4-privado-01) referenciando essa parcela; consultar 'que parcela responde por este trecho' sem junção espacial cara (leitura direta da chave estrangeira); retirar a parcela por novo registro e confirmar que a rede não desaparece (a rede sobrevive à parcela histórica, só perde a referência ativa)",
+   "refutacao": "adversário sobrepõe duas parcelas 'área comum' ativas no mesmo lugar (mesmo teste de L4-parcelas-01) e confere que a validação aponta; adversário verifica que nenhuma matrícula real aparece em nenhum dado de teste",
+   "papeis": ["arquiteto", "dados", "redes"],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-parcelas-01-modelo-de-parcelas",
+   "origem": "pesquisa L4-privado",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/createstrataparcels.htm"
+   ],
+   "ativos_da_casa": [
+    "SIG de teste interno (só leitura): 8.638 lotes derivados de casa (Google Open Buildings v3 + Voronoi) já citados como dado de exemplo em L4-parcelas-01 — mesma fonte, agora testando os tipos 'área comum'/'servidão' que ainda não tinham teste próprio"
+   ],
+   "nota": "regra da casa: parcela ≠ gleba ≠ lote ≠ matrícula; SIGEF/CAR entram só como referência, nunca como parcela oficial (herdado de L4-parcelas-01, vale igual aqui)."
+  },
+  {
+   "id": "L4-privado-04-no-interface-publico-privado",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-03-b-terminais",
+    "L4-privado-02-regime-titularidade-subrede"
+   ],
+   "hipotese": "criar o tipo de terminal 'ponto de entrega/interface': nó que carrega os dois valores de titularidade dos dois lados (ex.: poço de visita onde o coletor do condomínio deságua no interceptor municipal) e é candidato natural a virar ponto de medição (L4-13) e ponto de auditoria de qualidade",
+   "portao_de_pronto": "declarar 1 nó de interface entre uma subrede 'privada-condomínio' e uma 'pública' (dado sintético); o traçado de montante a partir de um ponto privado PARA no nó de interface por padrão (flag para atravessar, nunca atravessa em silêncio); consulta 'quantos nós de interface tem este empreendimento' funciona",
+   "refutacao": "adversário tenta criar um nó de interface sem os dois lados de titularidade preenchidos e confere que é recusado; adversário confere que o traçado atravessa a interface só quando o flag é passado explicitamente, nunca por padrão",
+   "papeis": ["redes", "backend", "adversario"],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-03-b-terminais",
+   "origem": "pesquisa L4-privado",
+   "fontes": [
+    "https://pro.arcgis.com/en/pro-app/3.4/help/data/utility-network/device-terminals.htm"
+   ],
+   "ativos_da_casa": [],
+   "nota": "mesmo nó serve de gancho a L4-13 (integração de telemetria) e a auditorias de qualidade de dado (concessionária × condomínio) sem trabalho extra."
+  },
+  {
+   "id": "L4-privado-05-drenagem-pluvial-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-privado-01-pacote-ativos-infra-privada",
+    "L4-02-b-montante-jusante"
+   ],
+   "hipotese": "modelar drenagem pluvial como domínio de rede completo (boca de lobo → poço de visita → galeria → bacia de detenção → corpo receptor), reaproveitando o mesmo motor de traçado de jusante já especificado para água/esgoto; ligar ao pipeline que já mede drenagem NATURAL por gleba (GLO-30 + gdaldem slope + hidrografia BC250) como camada de referência externa, nunca como substituto da rede construída",
+   "portao_de_pronto": "importar uma rede de drenagem sintética (10-20 nós) sobre um empreendimento de teste; traçado de jusante a partir de uma boca de lobo alcança o corpo receptor declarado; comparar a rede construída com a drenagem natural já calculada pelo pipeline de gleba (distância entre os dois, sem confundir um pelo outro); regra de não-mistura com esgoto sanitário testada (herdada de L4-privado-01)",
+   "refutacao": "adversário aponta uma boca de lobo sem caminho até um corpo receptor (rede incompleta) e confere que o sistema sinaliza 'sem saída', nunca inventa uma; adversário verifica que a camada de drenagem natural (satélite/relevo) nunca é escrita por cima do cadastro da rede construída (mesma regra de C15 do L4 original)",
+   "papeis": ["redes", "dados", "backend"],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "pesquisa L4-privado",
+   "fontes": [],
+   "ativos_da_casa": [
+    "SIG de teste interno / spike de loteamento (só leitura): pipeline já mede desnível, declividade e drenagem NATURAL por gleba via GLO-30 + gdaldem slope + hidro_nacional_bc250 — este item é o próximo passo lógico do MESMO pipeline (rede CONSTRUÍDA), não uma frente nova"
+   ],
+   "nota": "domínio que hoje não existe nem como camada simples (só dist_curso_dagua_m para APP) — é o maior gap absoluto encontrado na leitura."
+  },
+  {
+   "id": "L4-privado-06-iluminacao-privada-inventario",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-privado-01-pacote-ativos-infra-privada"
+   ],
+   "hipotese": "inventariar postes/luminárias privados por imagem (câmera de veículo ou drone, detecção de estado aceso/apagado à noite), reaproveitando o MÉTODO de visão computacional já validado em outro produto da casa (iluminação pública) — nunca o casamento com a base de faturamento pública (BDGD PIP/COSIP), que não existe para poste privado",
+   "portao_de_pronto": "rodar o detector de estado (aceso/apagado) sobre um conjunto de imagens abertas/sintéticas de rua de condomínio; gerar inventário de postes com posição + estado + fonte='drive-by'; nenhuma tentativa de casamento com camada de faturamento público; comparar contagem do inventário com a contagem manual da mesma amostra (portão de precisão a definir no turno de execução)",
+   "refutacao": "adversário confere que nenhuma tabela deste item referencia BDGD PIP/COSIP; adversário insere uma imagem sem poste nenhum e confere que o detector não inventa um",
+   "papeis": ["redes", "dados"],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "pesquisa L4-privado",
+   "fontes": [],
+   "ativos_da_casa": [
+    "método de visão computacional de outro produto da casa (drive-by, câmera+GPS): reaproveitar só a DETECÇÃO de estado aceso/apagado, nunca o casamento com cadastro de faturamento público (que é de rede PÚBLICA e não existe para poste privado)"
+   ],
+   "nota": "regra: fonte sempre declarada (drive-by | declarado | satélite) — nunca confundir estado detectado com estado declarado pelo condomínio."
+  },
+  {
+   "id": "L4-privado-07-terminal-casa-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-03-b-terminais",
+    "L4-privado-01-pacote-ativos-infra-privada"
+   ],
+   "hipotese": "padronizar um marcador de saída por sistema (água, esgoto, energia) no objeto de tipologia de casa e importar esse marcador como nó-terminal do lote na rede do empreendimento, ligando o modelo de casa (de dentro para fora) à rede (de fora para dentro); depende de uma mudança do lado do gerador de tipologia de casa, que é projeto separado e fora do controle desta pesquisa",
+   "portao_de_pronto": "definir o formato do marcador (posição relativa ao lote + tipo de sistema) como contrato de importação; importar um lote com o marcador declarado (dado sintético, sem depender do gerador real ainda) e ver o nó aparecer ligado à subrede do empreendimento; consulta 'quantas casas deste empreendimento estão sem terminal declarado' funciona (lista de pendência, nunca suposição)",
+   "refutacao": "adversário importa um lote sem marcador e confere que o sistema lista como pendente, nunca infere a posição por proximidade; adversário move o marcador para fora do polígono do lote e confere que a importação recusa com aviso",
+   "papeis": ["redes", "backend", "arquiteto"],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-03-b-terminais",
+   "origem": "pesquisa L4-privado",
+   "fontes": [],
+   "ativos_da_casa": [
+    "GABARITO (projeto separado, GPU box, inacessível desta máquina — só por memória): tipologia paramétrica de casa já calcula hidrossanitário por NBR 5626 e elétrico por circuito; a rede de incêndio já é modelada como traçado e diâmetro (não cálculo hidráulico); nenhum código liga hoje o ponto de saída da casa a uma rede fora do lote (0 rotas de coordenação registradas para BIM em geral)"
+   ],
+   "nota": "esta é a peça que menos depende de nós: exige decisão e trabalho do lado do gerador de casa, que é outro projeto da casa — registrado aqui como dependência externa, não como item que este módulo resolve sozinho."
+  },
+  {
+   "id": "L4-privado-08-digitalizacao-dwg-rede",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-privado-01-pacote-ativos-infra-privada",
+    "L4-privado-03-parcela-area-comum-servidao"
+   ],
+   "hipotese": "pipeline semi-automático de digitalização de as-built em DWG 2D: converter DWG→DXF (conversor já provado em outro projeto da casa), aplicar heurística de padrão de camada quando existir, ancorar por pontos de controle no polígono do lote/quadra já georreferenciado, e devolver um relatório do que foi digitalizado automaticamente × o que precisa de revisão manual — nunca 'pronto' sem esse relatório",
+   "portao_de_pronto": "rodar o pipeline sobre um DWG de exemplo aberto/sintético (nunca de cliente real); contagem de elementos digitalizados automaticamente × pendentes de revisão bate com uma contagem manual da mesma amostra; exportar de volta para DXF e reimportar dá o mesmo grafo (mesmo padrão de portão do conector EPANET, L4-05-d); relatório de qualidade sempre anexado ao resultado, nunca omitido",
+   "refutacao": "adversário remove o padrão de camada do DWG de teste (arquivo sem convenção nenhuma) e confere que o pipeline aumenta a fila de revisão manual em vez de arriscar uma leitura errada; adversário confere que nenhum resultado sai marcado 'concluído' sem o relatório de qualidade",
+   "papeis": ["dados", "redes", "backend", "adversario"],
+   "tamanho": "G",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "pesquisa L4-privado",
+   "fontes": [],
+   "ativos_da_casa": [
+    "LibreDWG (GPU box, já instalado e provado em outro projeto da casa para conversão DWG→DXF com verificação tripla): reaproveitar a conversão, não a verificação estrutural de armadura, que é de outro domínio"
+   ],
+   "nota": "⛔ é SERVIÇO, cotado à parte da assinatura (C11 do CONCEITO); nunca prometer digitalização automática completa — lição já registrada em outro caso da casa que custou tempo real."
+  },
+  {
+   "id": "L4-privado-09-perfil-sindico-administradora",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [],
+   "hipotese": "criar um quinto perfil de usuário ('síndico'/'administradora') com escopo limitado à infraestrutura comum do(s) empreendimento(s) sob sua gestão, sem acesso ao dado comercial/financeiro da incorporadora nem ao dado privado de lotes individuais que não sejam área comum",
+   "portao_de_pronto": "criar um usuário de teste com este perfil sobre um empreendimento sintético; confirmar que ele lê rede/ativos/documentos de infraestrutura comum e NÃO lê dado comercial (situação_comercial, valor) nem documento de outro lote; teste cruzado A→B (mesmo padrão de L4-23) aplicado a este perfil",
+   "refutacao": "adversário tenta, logado como este perfil, ler um campo comercial ou o documento de um lote individual e confere bloqueio; adversário tenta ler infraestrutura de OUTRO empreendimento não atribuído a este perfil e confere bloqueio",
+   "papeis": ["backend", "arquiteto", "adversario"],
+   "tamanho": "M",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "pesquisa L4-privado",
+   "fontes": [],
+   "ativos_da_casa": [
+    "SIG de teste interno (só leitura): hoje só tem 4 perfis (admin/tecnico/consulta/cliente), nenhum voltado à administradora/condomínio como comprador separado da incorporadora"
+   ],
+   "nota": "sem este item não há para quem vender depois da entrega — é a condição de existência do modelo comercial em C11."
+  },
+  {
+   "id": "L4-privado-10-modelo-comercial-assinatura-condominio",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-privado-09-perfil-sindico-administradora"
+   ],
+   "hipotese": "registrar o modelo de cobrança (assinatura mensal por condomínio entregue, unidade de medida = ativo cadastrado no pacote de C4), separado do contrato com a incorporadora; sem valor definido nesta pesquisa (decisão comercial do dono)",
+   "portao_de_pronto": "documento de modelo comercial (não código) descrevendo a unidade de cobrança e o gatilho (entrega do empreendimento); nenhum número de preço — só estrutura",
+   "refutacao": "adversário confere que nenhum valor em R$ aparece em nenhum artefato deste item (regra da casa: preço é decisão do dono, nunca do agente de pesquisa)",
+   "papeis": ["arquiteto", "gerente"],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": null,
+   "origem": "pesquisa L4-privado",
+   "fontes": [],
+   "ativos_da_casa": [],
+   "nota": "item de decisão, não de construção; existe para não perder o C11 do CONCEITO quando o backlog for priorizado."
+  },
+  {
+   "id": "L4-privado-11-importador-epanet-agua-predial",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-05-d-epanet-inp",
+    "L4-privado-01-pacote-ativos-infra-privada"
+   ],
+   "hipotese": "reaproveitar o conector EPANET .inp já especificado para rede de água regional (L4-05-d) na escala de rede de água interna de baixo porte (condomínio), com o pacote de ativos de C4 no lugar do 'água-EPANET' original",
+   "portao_de_pronto": "importar um .inp sintético pequeno (dezenas de nós, escala de condomínio, não de cidade) usando o mesmo importador de L4-05-d; contagens batem; exportar e reimportar dá o mesmo grafo (mesmo portão de L4-05-d, reaplicado)",
+   "refutacao": "mesma refutação de L4-05-d (remover uma linha de COORDINATES e conferir aviso, não ponto (0,0)), aplicada à escala menor",
+   "papeis": ["redes", "backend"],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-05-d-epanet-inp",
+   "origem": "pesquisa L4-privado",
+   "fontes": [
+    "https://www.epa.gov/water-research/epanet"
+   ],
+   "ativos_da_casa": [],
+   "nota": "não é conector novo, é o mesmo conector testado em escala diferente — baixo esforço, alto reaproveitamento."
+  },
+  {
+   "id": "L4-privado-12-tracado-privado-montante-jusante",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-02-b-montante-jusante",
+    "L4-privado-01-pacote-ativos-infra-privada"
+   ],
+   "hipotese": "aplicar o traçado de montante/jusante já especificado no L4 original a perguntas do dono privado: 'que trecho de esgoto afeta que lotes se este poço entupir', 'que casas ficam sem água se esta válvula fechar' — sem novo algoritmo, só nova pergunta de negócio sobre o mesmo motor",
+   "portao_de_pronto": "rodar traçado de jusante a partir de um nó de rede privada sintética e devolver a lista de lotes conectados (via terminal casa-rede de L4-privado-07, quando disponível; sem ele, devolve nós órfãos declarados como tal)",
+   "refutacao": "adversário compara a lista de lotes afetados com uma verificação manual da mesma rede sintética pequena",
+   "papeis": ["redes", "backend"],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-02-b-montante-jusante",
+   "origem": "pesquisa L4-privado",
+   "fontes": [],
+   "ativos_da_casa": [],
+   "nota": "só existe valor de produto real depois de L4-privado-07 (sem o terminal casa-rede, o traçado para em nós sem consumidor identificado)."
+  },
+  {
+   "id": "L4-privado-13-isolamento-inquilino-rede-privada",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 2,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-23-isolamento-por-inquilino-na-rede",
+    "L4-privado-01-pacote-ativos-infra-privada"
+   ],
+   "hipotese": "estender o teste de isolamento por inquilino já especificado (L4-23) para cobrir as tabelas novas deste módulo (pacote de ativos privado, subrede com titularidade, nó de interface, terminal casa-rede)",
+   "portao_de_pronto": "teste cruzado A→B (mesmo padrão de L4-23) rodado sobre as tabelas novas deste módulo; nenhuma linha de um inquilino aparece para outro",
+   "refutacao": "adversário tenta consulta direta nas tabelas novas sob a role de outro inquilino e confere bloqueio por RLS",
+   "papeis": ["backend", "adversario"],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-23-isolamento-por-inquilino-na-rede",
+   "origem": "pesquisa L4-privado",
+   "fontes": [],
+   "ativos_da_casa": [],
+   "nota": "item de conformidade, não de produto novo — garante que o módulo privado herda a mesma disciplina de isolamento do L4 original."
+  },
+  {
+   "id": "L4-privado-14-manual-infra-privada",
+   "linha": "L4 rede de utilidades",
+   "prioridade": 3,
+   "estado": "pendente",
+   "dependencias": [
+    "L4-30-manual-e-tour-de-rede",
+    "L4-privado-09-perfil-sindico-administradora"
+   ],
+   "hipotese": "estender o manual/tour de rede já especificado (L4-30) com a jornada do segundo comprador (síndico/administradora): o que ele vê, o que ele não vê, como consulta um ativo, como abre um chamado sobre a infraestrutura comum",
+   "portao_de_pronto": "tour funcional sobre um usuário de teste do perfil L4-privado-09; nenhuma tela do tour mostra dado fora do escopo desse perfil",
+   "refutacao": "adversário segue o tour até o fim e confere que nenhum passo tenta acessar dado comercial ou de outro empreendimento",
+   "papeis": ["frontend", "redes"],
+   "tamanho": "P",
+   "tentativas": 0,
+   "turno": null,
+   "bloqueio": null,
+   "pai": "L4-30-manual-e-tour-de-rede",
+   "origem": "pesquisa L4-privado",
+   "fontes": [],
+   "ativos_da_casa": [],
+   "nota": "último item do backlog — só faz sentido depois que o perfil (09) e ao menos um pacote de ativos (01) existirem para ter o que mostrar."
+  }
+ ]
+}

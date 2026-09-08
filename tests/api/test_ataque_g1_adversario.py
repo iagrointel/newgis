@@ -61,13 +61,8 @@ def test_t1_openapi_do_arquivo_reflete_o_app_vivo():
     assert sorted(arquivo - vivas) == [], "rotas em docs/openapi.json que já não existem"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ACHADO G1-T2: as migrações 046/047 dão GRANT EXECUTE ao plat_app sem o REVOKE ... FROM PUBLIC que "
-    "as migrações 003/006/024 usam; 6 funções SECURITY DEFINER do schema plat ficaram executáveis por PUBLIC "
-    "(convite_aceitar, convite_resolver, redefinicao_solicitar, redefinicao_resolver, redefinicao_contexto, "
-    "uploads_expirar_candidatos). Cláusula literal do portão do L0-02-e.",
-)
+# ACHADO G1-T2 CORRIGIDO (conferido em 08/09/2026): a migração 20260906T1615_revoke_public_uploads_expirar
+# fechou EXECUTE para PUBLIC em todo o schema plat. A marca xfail estrita saiu; o teste fica como regressão.
 def test_t2_nenhuma_security_definer_executavel_por_public(conexao_plat_app):
     with conexao_plat_app.cursor() as cur:
         cur.execute(

@@ -45,6 +45,7 @@ from app.auth.privilegios import ORDEM_PERFIL
 from app.auth.rotas_login import _abrir_sessao  # reaproveita a criação de sessão do login local; ver docstring
 from app.auth.sessao import Auth, autenticado
 from app.erros import ErroAPI
+from app.seguranca_rotacao import decifrar_com_rotacao
 from app.settings import settings
 
 log = logging.getLogger("plat.auth.ldap")
@@ -353,7 +354,9 @@ def login_ldap(corpo: LoginEntrada, request: Request, resposta: Response):
     bind_senha = None
     if r["bind_dn"] and r["bind_senha_cifrada"]:
         try:
-            bind_senha = decifrar_bind_senha(r["bind_senha_cifrada"], settings.PLAT_SECRET)
+            bind_senha = decifrar_com_rotacao(
+                decifrar_bind_senha, r["bind_senha_cifrada"], settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR
+            )
         except ValueError:
             log.error("senha de bind do provedor LDAP do inquilino %s ilegível (PLAT_SECRET trocado?)", tenant_slug)
             raise ErroAPI(503, "ldap_indisponivel", "diretório indisponível; tente o login local") from None
@@ -575,7 +578,13 @@ def org_ldap_importar(corpo: ImportarGrupoEntrada, request: Request, auth: Auth 
     base_dn = r["base_dn"] or _base_dn_padrao()
     if not url or not base_dn:
         raise ErroAPI(503, "ldap_sem_configuracao", "login por LDAP não está configurado neste inquilino")
-    bind_senha = decifrar_bind_senha(r["bind_senha_cifrada"], settings.PLAT_SECRET) if r["bind_senha_cifrada"] else None
+    bind_senha = (
+        decifrar_com_rotacao(
+            decifrar_bind_senha, r["bind_senha_cifrada"], settings.PLAT_SECRET, settings.PLAT_SECRET_ANTERIOR
+        )
+        if r["bind_senha_cifrada"]
+        else None
+    )
     servidor = _conectar(url, limites.LDAP_TIMEOUT_S)
     conexao = ldap3.Connection(
         servidor, user=r["bind_dn"], password=bind_senha,
