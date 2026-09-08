@@ -38,7 +38,7 @@ O portão do item pede que a saída raster entre pelo caminho de ingestão de ra
 item do catálogo). Esse caminho **não existe no ramo em que este item foi construído** (`app/raster/` não
 está em master; o ramo do L1-01 está PARCIAL). Duas saídas ruins seriam: (a) inventar aqui um segundo
 mecanismo de publicação de raster, que o item proíbe; (b) registrar uma ferramenta cuja saída não pode ser
-publicada, que é placeholder.
+publicada, que é exatamente o vazio que a regra da casa proíbe.
 
 O que foi feito: a superfície sai como camada de células quadradas com o valor no centro — que é também o
 que o "Calculate Density" do Map Viewer da Esri devolve — e a MESMA conta em array
