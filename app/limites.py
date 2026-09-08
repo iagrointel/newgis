@@ -243,3 +243,13 @@ ANEXO_TAMANHO_MAX = 7 * 1024 * 1024       # 7 MiB por anexo — NÃO 10: o envio
 # tupla ordenada, não frozenset: repr() de um set não é determinístico entre execuções (docs/gerar_limites.py
 # lê repr() literal — um frozenset faria docs/LIMITES.md variar a cada regeneração sem nada ter mudado)
 ANEXO_TIPOS_PERMITIDOS = ("application/pdf", "image/gif", "image/jpeg", "image/png", "image/webp")
+
+# --- edição em lote (L2-03-f-edicao-em-lote-calculo-campo; `POST /api/camadas/{id}/lote`)
+LOTE_SINCRONO_MAX = 5_000                 # hipótese do item: acima disto roda como job (L0-05), com progresso
+LOTE_TRANSACAO = 1_000                    # feições por sub-lote dentro da transação única (progresso a cada sub-lote)
+LOTE_PREVIA = 10                          # linhas da pré-visualização (antes/depois), hipótese do item
+LOTE_IDS_MAX = 50_000                     # ids explícitos numa seleção (acima disto use `onde` ou `todas`)
+LOTE_FALHAS_MAX = 100                     # falhas por feição devolvidas no modo parcial (o resto vira contagem)
+LOTE_EXPRESSAO_MS = 500                   # orçamento do avaliador POR LINHA (mesmo teto do servidor do L2-10-c)
+LOTE_JOB_TIMEOUT_S = 1_800                # teto do job (refutação: "mede se o job respeita o timeout")
+LOTE_MAPEAMENTO_MAX = 500                 # pares campo_destino: campo_origem em copiar/mover (teto de campos da camada)

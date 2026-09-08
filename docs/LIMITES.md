@@ -230,3 +230,35 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+
+## edição transacional de feições (L2-03-a-api-edicao-transacional; POST /api/camadas/{id}/edicoes, única
+
+| nome | valor | explicação |
+|---|---|---|
+| `EDICAO_LOTE_MAX` | `2000` | — |
+| `EDICAO_ATRIBUTOS_MAX` | `500` | campos por feição num único pedido (mesmo teto de INGESTAO_CAMPOS_MAX) |
+| `EDICAO_TEXTO_MAX` | `65536` | 64 KiB por valor de campo texto (mesma ordem de ITEM_DESCRICAO_MAX) |
+| `EDICAO_REGRA_CAMPO_MAX` | `500` | entradas em dados.regras_campo (mesmo teto de campos da camada) |
+| `EDICAO_DOMINIO_VALORES_MAX` | `1000` | valores aceitos por regra de domínio codificado |
+| `EDICAO_SRID_MAX` | `999999` | mesmo teto do esquema de camada_vetorial (029_ingestao_vetor.sql) |
+
+## edição no mapa: histórico/restauração e anexos por feição (item L2-03-edicao)
+
+| nome | valor | explicação |
+|---|---|---|
+| `HISTORICO_LISTA_MAX` | `500` | entradas devolvidas por consulta (mais recentes primeiro) |
+| `ANEXO_TAMANHO_MAX` | `7340032` | 7 MiB por anexo — NÃO 10: o envio é JSON com o conteúdo em base64 |
+| `ANEXO_TIPOS_PERMITIDOS` | `('application/pdf', 'image/gif', 'image/jpeg', 'image/png', 'image/webp')` | — |
+
+## edição em lote (L2-03-f-edicao-em-lote-calculo-campo; `POST /api/camadas/{id}/lote`)
+
+| nome | valor | explicação |
+|---|---|---|
+| `LOTE_SINCRONO_MAX` | `5000` | hipótese do item: acima disto roda como job (L0-05), com progresso |
+| `LOTE_TRANSACAO` | `1000` | feições por sub-lote dentro da transação única (progresso a cada sub-lote) |
+| `LOTE_PREVIA` | `10` | linhas da pré-visualização (antes/depois), hipótese do item |
+| `LOTE_IDS_MAX` | `50000` | ids explícitos numa seleção (acima disto use `onde` ou `todas`) |
+| `LOTE_FALHAS_MAX` | `100` | falhas por feição devolvidas no modo parcial (o resto vira contagem) |
+| `LOTE_EXPRESSAO_MS` | `500` | orçamento do avaliador POR LINHA (mesmo teto do servidor do L2-10-c) |
+| `LOTE_JOB_TIMEOUT_S` | `1800` | teto do job (refutação: "mede se o job respeita o timeout") |
+| `LOTE_MAPEAMENTO_MAX` | `500` | pares campo_destino: campo_origem em copiar/mover (teto de campos da camada) |
