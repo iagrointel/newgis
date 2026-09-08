@@ -1,0 +1,15 @@
+{
+  "item": "L6-02-a-modelo-conexao-e-seguranca",
+  "turno": 4,
+  "ramo": "wt/conex",
+  "medido_em": "2026-09-07",
+  "o_que_foi_medido": "O Bearer decifrado da conexao nao sai da origem cadastrada, provado nos DOIS chamadores credenciados (rota POST /api/conexoes/{id}/testar e job conexoes.saude_verificar), nao so dentro de buscar_seguro.",
+  "como": "pytest offline e deterministico: socket.getaddrinfo e app.conexao.seguranca.cliente_pinado trocados por monkeypatch; nenhum socket aberto; base de trilha plat_tconex.",
+  "resultados": {
+    "tests/unit/test_conexao_credencial_chamadores.py": "4 passed, 5 xfailed (guardas de regressao)",
+    "tests/api/test_conexoes_credencial_saltos.py": "4 passed, 1 xfailed (guarda de regressao)",
+    "conjunto_do_item": "72 passed, 6 xfailed em 6,64 s (test_conexao_seguranca, test_conexao_credencial_redirect, test_conexao_credencial_chamadores, tests/adversario, test_conexoes, test_conexoes_credencial_saltos)"
+  },
+  "guardas_de_regressao": "6 testes marcados xfail(strict=True) afirmam o comportamento VULNERAVEL (mudanca de host, mudanca de porta, volta a origem, job de saude, rota testar, garage seguindo Location). Enquanto o conserto estiver de pe eles falham; se alguem desfizer o conserto eles passam (XPASS) e a suite fica vermelha.",
+  "o_que_nao_foi_medido": "Nenhum servidor externo real redirecionando (a rede e substituida). Nenhum e2e de navegador (sem chrome nesta maquina)."
+}

@@ -91,7 +91,29 @@ nunca é digitado em teste, só medido de novo a cada rodada).
    sempre a consulta COMPLETA a `geometry_columns`×`acervo.objeto`, calculada antes do corte de
    `--limite`. `--limite` serve só para teste rápido; nunca reduz o que conta como "ainda existe".
 
-### O que fica para os itens seguintes (nunca prometido como pronto aqui)
+### Decisão (setembro de 2026, turno T4): a regra vale no CHAMADOR, e a guarda é um teste que reprova por construção
+
+O conserto de T3 fechou a função (`buscar_seguro`), mas a prova parava ali; o bloqueio do item citava os dois
+chamadores por nome ("`testar`/`saude` vazam o Bearer da casa"). Agora cada um tem prova própria e offline:
+`tests/unit/test_conexao_credencial_chamadores.py` roda o job `conexoes.saude_verificar` com um contexto de
+mentira e uma credencial cifrada de verdade; `tests/api/test_conexoes_credencial_saltos.py` faz o caminho
+completo pela rota HTTP (cifra no POST, decifra no `testar`, cabeçalho, salto), e varre POR TEXTO a resposta da
+API e todo registro de log atrás do segredo.
+
+Regra de manutenção que fica escrita: **todo furo de segurança fechado deixa para trás um teste que afirma o
+comportamento VULNERÁVEL, marcado `xfail(strict=True)`**. Enquanto o conserto estiver de pé o teste falha (é o
+esperado); no dia em que alguém o desfizer, o teste passa, o `strict` transforma o XPASS em erro e a suíte fica
+vermelha. Um teste que só afirma o comportamento correto pode ser apagado junto com o conserto sem que nada
+apite; este não.
+
+Varredura de classe (todo lugar da casa que monta cabeçalho de credencial e segue redirecionamento):
+`app/conexao/seguranca.py` (consertado em T3), `app/garage.py` (as duas chamadas `requests.request` que mandam
+`Authorization` — SigV4 e token de administração — passam a usar `allow_redirects=False`; o Garage não
+redireciona, então um 3xx ali é erro de configuração e deve aparecer como erro, nunca virar requisição
+autenticada para outro destino), `app/rede/osrm.py` (não segue redirecionamento, não leva credencial) e
+`app/saude.py` (segue, mas é sonda sem credencial). No navegador, `web/js` não monta `Authorization`.
+
+## O que fica para os itens seguintes (nunca prometido como pronto aqui)
 
 L6-01-b (view só-leitura + RLS por assinatura), L6-01-f (LGPD por conteúdo), L6-01-g (licença curada em
 vocabulário fechado), L6-01-h (verificação semanal automatizada — hoje o script roda manual/via cron
@@ -167,6 +189,59 @@ RESOLVIDO, sempre.
 8. **Porta nunca é critério isolado**: a porta 8150 (reservada nesta máquina) só é bloqueada porque o
    HOST de teste é loopback — um serviço público de verdade pode escutar em qualquer porta; testado
    explicitamente que a MESMA porta 443 num host público é aceita.
+
+### Decisão (setembro de 2026, turno T3): a credencial nunca atravessa uma mudança de origem
+
+O adversário independente do grupo G5 refutou a Parte 2 deste ADR com um achado real. Os 8 casos acima
+aguentaram — inclusive a pinagem de IP e a recusa de redirecionamento para IP interno —, mas nenhum deles
+olhava para o SEGREDO que viaja junto: `buscar_seguro` repassava `headers=cabecalhos` em cada salto de
+redirecionamento. Como `POST /api/conexoes/{id}/testar` e o periódico `conexoes.saude_verificar` decifram a
+credencial do inquilino e a passam como `Authorization: Bearer ...`, bastava o serviço cadastrado responder
+302 para fora (redirecionamento aberto, ou desvio deliberado) para a credencial do cliente chegar a um
+servidor de terceiro. Prova offline do adversário (`host-a` → `host-b`, IPs públicos distintos):
+`hop host=host-b.teste Authorization='Bearer CREDENCIAL-DA-CASA'`. O defeito era de uma peça só, mas central:
+atingia os dois chamadores credenciados de uma vez.
+
+Decisão: `buscar_seguro` passou a comparar a ORIGEM (esquema + host + porta, RFC 6454; a porta já vem
+normalizada de `validar_url`, então `https://h/` e `https://h:443/` são a mesma origem) de cada salto com a
+origem da URL original. Mudou qualquer uma das três, todo cabeçalho de credencial sai antes de a conexão ser
+aberta: `Authorization`, `Cookie`, `Proxy-Authorization` e os nomes que o conector declarar em
+`cabecalhos_secretos` (comparação sem diferenciar caixa). O resultado ganhou o campo
+`ResultadoBusca.credencial_retirada`, para o chamador saber que um `401` depois de redirecionamento é
+esperado e não senha errada.
+
+Duas escolhas dentro da decisão:
+
+- **A retirada é definitiva**: numa cadeia a→b→a, a credencial NÃO volta ao chegar de novo na origem inicial.
+  Devolvê-la seria defensável (o destino final é a origem cadastrada), mas quem desenhou o desvio foi o
+  servidor de destino; se ele pode fazer a requisição autenticada ser repetida quando quiser, o segredo passa
+  a depender do comportamento de um terceiro. `requests` faz igual: `Session.rebuild_auth` apaga o cabeçalho e
+  não o remonta nos saltos seguintes. Está testado como caso próprio.
+- **Redirecionamento na MESMA origem mantém a credencial** (inclusive `Location` relativo, o caso comum de
+  GetCapabilities e de catálogo STAC), senão o conserto viraria uma quebra silenciosa do teste de saúde
+  autenticado. Também testado, como controle negativo.
+
+- **Divergência deliberada das bibliotecas**: `requests` e `httpx` abrem uma exceção para a SUBIDA
+  `http://h/` → `https://h/` em porta padrão e mantêm a credencial ali (o comentário na fonte de
+  `requests.Session.should_strip_auth`, versão 2.33.1 instalada, diz que é compatibilidade com versões
+  antigas; `httpx` 0.28.1 faz o mesmo em `_is_https_redirect`). Aqui a credencial sai também nesse salto:
+  mudou o esquema, sai. O custo é conhecido — uma conexão cadastrada com `http://` num serviço que
+  redireciona para `https://` passa a ser testada sem credencial e pode voltar 401 —, e o resultado diz por
+  quê (`credencial_retirada=True`); o conserto de operação é cadastrar a URL `https://`, a única que nunca
+  manda o segredo em claro no salto 0.
+
+Isto é o comportamento padrão das bibliotecas de mercado, e é por isso que a ausência dele passou
+despercebida: `requests` (`should_strip_auth`, que compara hostname, porta e esquema) e `httpx`
+(`_redirect_headers`, que compara `url.origin` e retira `Authorization` e `Cookie`) retiram a credencial ao
+mudar de origem. Aqui o redirecionamento é seguido À MÃO — de propósito, para revalidar SSRF a cada salto
+(item 6 acima) —, e ao trocar o laço automático pelo manual a casa herdou a responsabilidade sem herdar
+essa proteção. Regra que fica: toda vez que se reimplementa um comportamento de biblioteca por segurança,
+lista-se o que a biblioteca fazia ALÉM do motivo da troca.
+
+Provas: `tests/unit/test_conexao_credencial_redirect.py` (12 casos: host, porta, esquema nos dois sentidos, cadeia de dois
+saltos, volta à origem, mesma origem, cookie/proxy/cabeçalho secreto declarado, caixa do nome, sem
+credencial, dicionário do chamador intacto) e `tests/adversario/test_g5_adversario.py` — o teste do
+adversário, palavra por palavra, sem a marca `xfail(strict=True)` que valia enquanto o achado estava aberto.
 
 ### O que fica para os itens seguintes
 
