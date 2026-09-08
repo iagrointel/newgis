@@ -41,6 +41,18 @@ class Settings:
     PLAT_URL_PUBLICA: str
     PLAT_GIT_SHA: str | None
     PLAT_MARTIN_URL: str | None
+    # motor de render no servidor (item L2-12-a-motor-render-servidor; ADR 0023): pool de páginas do chromium do
+    # playwright mantidas quentes, fila com limite e teto de tempo por pedido, token interno de curta duração.
+    PLAT_RENDER_POOL_TAMANHO: int
+    PLAT_RENDER_FILA_MAX: int
+    PLAT_RENDER_TIMEOUT_S: int
+    PLAT_RENDER_TOKEN_TTL_S: int
+    PLAT_RENDER_MAX_PX: int
+    PLAT_RENDER_MEMORIA_MB: int
+    # layout (item L2-12-b): base HTTP que a página headless do quadro de mapa usa (padrão PLAT_URL_PUBLICA) e
+    # aceitação de certificado autoassinado SÓ para host de loopback (ambiente de trilha/desenvolvimento)
+    PLAT_RENDER_BASE_URL: str | None
+    PLAT_RENDER_IGNORAR_HTTPS: bool
     PLAT_TITILER_URL: str | None
     PLAT_GARAGE_URL: str | None
     # arquivos/objetos (L0-11; ADR 0006): garage vira obrigatório a partir deste item (saude.py); admin api
@@ -208,6 +220,15 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_URL_PUBLICA=url,
         PLAT_GIT_SHA=_opcional(valores, "PLAT_GIT_SHA"),
         PLAT_MARTIN_URL=_opcional(valores, "PLAT_MARTIN_URL"),
+        PLAT_RENDER_POOL_TAMANHO=_inteiro(valores, "PLAT_RENDER_POOL_TAMANHO", 2, 1),
+        PLAT_RENDER_FILA_MAX=_inteiro(valores, "PLAT_RENDER_FILA_MAX", 20, 1),
+        PLAT_RENDER_TIMEOUT_S=_inteiro(valores, "PLAT_RENDER_TIMEOUT_S", 30, 1),
+        PLAT_RENDER_TOKEN_TTL_S=_inteiro(valores, "PLAT_RENDER_TOKEN_TTL_S", 60, 1),
+        PLAT_RENDER_MAX_PX=_inteiro(valores, "PLAT_RENDER_MAX_PX", 4096, 64),
+        PLAT_RENDER_MEMORIA_MB=_inteiro(valores, "PLAT_RENDER_MEMORIA_MB", 768, 128),
+        PLAT_RENDER_BASE_URL=_opcional(valores, "PLAT_RENDER_BASE_URL"),
+        PLAT_RENDER_IGNORAR_HTTPS=(valores.get("PLAT_RENDER_IGNORAR_HTTPS") or "").strip().lower()
+        in ("1", "sim", "true"),
         PLAT_TITILER_URL=_opcional(valores, "PLAT_TITILER_URL"),
         PLAT_GARAGE_URL=_opcional(valores, "PLAT_GARAGE_URL"),
         PLAT_GARAGE_ADMIN_URL=_opcional(valores, "PLAT_GARAGE_ADMIN_URL"),

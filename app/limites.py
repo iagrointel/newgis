@@ -264,3 +264,16 @@ EXPORTACAO_BLOCO_LEITURA_BYTES = 8 * 1024 * 1024   # leitura do arquivo pronto e
 
 # --- widgets de página e de menu (L5-01-d)
 QR_TEXTO_MAX = 2048                         # conteúdo máximo do QR de compartilhar (uma URL longa cabe)
+
+# --- layout de impressão (item L2-12-b-layouts-elementos-exportacao)
+LAYOUT_ELEMENTOS_MAX = 200                  # elementos por documento de layout
+LAYOUT_QUADROS_MAX = 6                      # quadros de mapa por layout (principal + localização + auxiliares)
+LAYOUT_ESCALA_MIN = 100                     # 1:N mínimo aceito no quadro por escala fixa
+LAYOUT_ESCALA_MAX = 50_000_000              # 1:N máximo (o mundo cabe em A4)
+LAYOUT_TEXTO_MAX = 4000                     # caracteres de um título/texto do layout
+LAYOUT_TABELA_LINHAS_MAX = 200              # linhas da tabela de atributos num layout
+LAYOUT_DPI_MIN = 72                         # DPI mínimo de exportação
+LAYOUT_DPI_MAX = 300                        # DPI máximo de exportação (o portão do item pede 96-300)
+LAYOUT_QUADRO_PIXELS_MAX = 4096             # maior lado do quadro em pixels no motor de render; acima, o quadro é
+                                            # desenhado neste teto e o DPI efetivo (menor) vai no relatório
+LAYOUT_INLINE_BYTES_MAX = 256 * 1024        # documento de layout inline num pedido/job (JSON)

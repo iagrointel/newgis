@@ -45,6 +45,7 @@ from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
+from app.layout import rotas as rotas_layout
 from app.mapa.anotacoes import router as rotas_anotacoes
 from app.mapa.exportar import router as rotas_exportar_mapa
 from app.mapa.popup import router as rotas_mapa_popup
@@ -109,6 +110,8 @@ ROUTERS = [
     rotas_lixeira.router,
     # --- catálogo externo OGC API Records (L0-09-metadado-catalogo): /ogc/records; token catalogo:ler, nunca aberto
     rotas_ogc.router,
+    # --- layout de impressão (L2-12-b): /api/layouts, página headless do quadro e Export Web Map Task (Esri)
+    rotas_layout.router,
     # --- acervo da casa (L6-01-a): /api/acervo, /api/acervo/{fonte_id}, /api/acervo/{fonte_id}/adicionar
     rotas_acervo.router,
     # --- conexão externa (L6-02-a): /api/conexoes, /api/conexoes/{id}, /api/conexoes/{id}/testar
@@ -176,3 +179,23 @@ def inicio():
     return FileResponse(
         WEB / "index.html", media_type="text/html; charset=utf-8", headers={"Cache-Control": "no-store"}
     )
+
+
+if not settings.producao:
+    # Fora de produção (trilha de teste, servidor local sem nginx) não há quem sirva /static: o motor de render
+    # (L2-12-a/L2-12-b) e a página headless do quadro precisam de /static respondendo para carregar MapLibre,
+    # pmtiles e estilo.js. Guardado por `settings.producao`: zero mudança em produção, onde o nginx serve web/.
+    from fastapi.staticfiles import StaticFiles
+
+    if not any(getattr(r, "name", "") == "static" for r in app.routes):
+        app.mount("/static", StaticFiles(directory=str(WEB)), name="static_dev")
+
+
+@app.on_event("shutdown")
+async def _fechar_motor_render():
+    """O pool de chromium (L2-12-a) nasce só no primeiro render; quando nasceu, fecha aqui para não vazar processo."""
+    from app.render.motor import motor
+
+    m = motor()
+    if m.ativo:
+        await m.parar()

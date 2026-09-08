@@ -229,7 +229,7 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_NOME_MAX` | `200` | mesmo teto de CHECK(length(nome)<=200) da migração |
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
-| `ESCALA_CELULAS_GEOJSON_MAX` | `50000` | feições de GET /api/multiescala/execucoes/{id}/celulas (UX-08); acima disso `truncado` |
+| `ESCALA_CELULAS_GEOJSON_MAX` | `50000` | feições de GET /api/multiescala/execucoes/{id}/celulas (UX-08); além = truncado |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
 
 ## tabela de atributos da camada (L2-01-g-tabela-atributos): paginação no servidor, busca em texto, filtro
@@ -275,3 +275,18 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | nome | valor | explicação |
 |---|---|---|
 | `QR_TEXTO_MAX` | `2048` | conteúdo máximo do QR de compartilhar (uma URL longa cabe) |
+
+## layout de impressão (item L2-12-b-layouts-elementos-exportacao)
+
+| nome | valor | explicação |
+|---|---|---|
+| `LAYOUT_ELEMENTOS_MAX` | `200` | elementos por documento de layout |
+| `LAYOUT_QUADROS_MAX` | `6` | quadros de mapa por layout (principal + localização + auxiliares) |
+| `LAYOUT_ESCALA_MIN` | `100` | 1:N mínimo aceito no quadro por escala fixa |
+| `LAYOUT_ESCALA_MAX` | `50000000` | 1:N máximo (o mundo cabe em A4) |
+| `LAYOUT_TEXTO_MAX` | `4000` | caracteres de um título/texto do layout |
+| `LAYOUT_TABELA_LINHAS_MAX` | `200` | linhas da tabela de atributos num layout |
+| `LAYOUT_DPI_MIN` | `72` | DPI mínimo de exportação |
+| `LAYOUT_DPI_MAX` | `300` | DPI máximo de exportação (o portão do item pede 96-300) |
+| `LAYOUT_QUADRO_PIXELS_MAX` | `4096` | maior lado do quadro em pixels no motor de render; acima, o quadro é |
+| `LAYOUT_INLINE_BYTES_MAX` | `262144` | documento de layout inline num pedido/job (JSON) |
