@@ -706,11 +706,11 @@
     "coluna": "ENE_SUM",
     "conferida": true,
     "esquema": "bdgd_modulo_10",
-    "nota": "soma de ENE_01..ENE_12 feita pela extração"
+    "nota": "soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e)"
    },
    "tipo": 1,
    "tipo_dado": "real",
-   "unidade": "MWh"
+   "unidade": "unidade do arquivo, detectada"
   },
   {
    "codigo": "ugbt_ene_zero",
@@ -946,11 +946,11 @@
     "coluna": "ENE_SUM",
     "conferida": false,
     "esquema": "bdgd_modulo_10",
-    "nota": "soma de ENE_01..ENE_12 feita pela extração"
+    "nota": "soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e)"
    },
    "tipo": 2,
    "tipo_dado": "real",
-   "unidade": "MWh"
+   "unidade": "unidade do arquivo, detectada"
   },
   {
    "codigo": "ugmt_mun",
@@ -1147,10 +1147,10 @@
     "coluna": "ENE_SUM",
     "conferida": true,
     "esquema": "bdgd_modulo_10",
-    "nota": "soma de ENE_01..ENE_12 feita pela extração"
+    "nota": "soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e)"
    },
    "tipo_dado": "real",
-   "unidade": "MWh"
+   "unidade": "unidade do arquivo, detectada"
   },
   {
    "codigo": "pip_ene_zero",
@@ -1507,10 +1507,10 @@
     "coluna": "COMP",
     "conferida": true,
     "esquema": "bdgd_modulo_10",
-    "nota": ""
+    "nota": "o Módulo 10 da ANEEL declara quilômetro, mas o arquivo de cada distribuidora pode vir em metro: a unidade é medida na importação pela razão contra o comprimento geodésico e gravada na auditoria (item L4-01-e)"
    },
    "tipo_dado": "real",
-   "unidade": "km"
+   "unidade": "unidade do arquivo, detectada"
   },
   {
    "codigo": "ramlig_ctmt",
@@ -2317,10 +2317,10 @@
     "coluna": "COMP",
     "conferida": true,
     "esquema": "bdgd_modulo_10",
-    "nota": ""
+    "nota": "o Módulo 10 da ANEEL declara quilômetro, mas o arquivo de cada distribuidora pode vir em metro: a unidade é medida na importação pela razão contra o comprimento geodésico e gravada na auditoria (item L4-01-e)"
    },
    "tipo_dado": "real",
-   "unidade": "km"
+   "unidade": "unidade do arquivo, detectada"
   },
   {
    "codigo": "ssdbt_ctmt",
@@ -2422,10 +2422,10 @@
     "coluna": "COMP",
     "conferida": true,
     "esquema": "bdgd_modulo_10",
-    "nota": ""
+    "nota": "o Módulo 10 da ANEEL declara quilômetro, mas o arquivo de cada distribuidora pode vir em metro: a unidade é medida na importação pela razão contra o comprimento geodésico e gravada na auditoria (item L4-01-e)"
    },
    "tipo_dado": "real",
-   "unidade": "km"
+   "unidade": "unidade do arquivo, detectada"
   },
   {
    "codigo": "ssdmt_conj",
@@ -2750,11 +2750,11 @@
     "coluna": "ENE_SUM",
     "conferida": true,
     "esquema": "bdgd_modulo_10",
-    "nota": "soma de ENE_01..ENE_12 feita pela extração"
+    "nota": "soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e)"
    },
    "tipo": 1,
    "tipo_dado": "real",
-   "unidade": "MWh"
+   "unidade": "unidade do arquivo, detectada"
   },
   {
    "codigo": "ucbt_ene_zero",
@@ -3182,11 +3182,11 @@
     "coluna": "ENE_SUM",
     "conferida": true,
     "esquema": "bdgd_modulo_10",
-    "nota": "soma de ENE_01..ENE_12 feita pela extração"
+    "nota": "soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e)"
    },
    "tipo": 2,
    "tipo_dado": "real",
-   "unidade": "MWh"
+   "unidade": "unidade do arquivo, detectada"
   },
   {
    "codigo": "ucmt_ene_zero",

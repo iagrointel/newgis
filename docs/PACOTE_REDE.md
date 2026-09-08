@@ -152,8 +152,8 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | versão do esquema | 1 |
 | disciplina | eletrica |
 | fonte | https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd |
-| tamanho | 96210 bytes |
-| sha256 | `08e78e0ce4ec93d3217ac7edd74d1056f35b4a7540ebfe132414d7dd879cb191` |
+| tamanho | 98436 bytes |
+| sha256 | `57d121ad8a6adaeaca5e4df42915c85a164e9a96f8f9d68ad52a4cceac4cbe42` |
 
 ### Redes de domínio e tiers
 
@@ -268,7 +268,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | UGBT_tab | `CONJ` | `geracao_distribuida` | `ugbt_conj` | conjunto elétrico | texto | — | não | sim |  |
 | UGBT_tab | `CTMT` | `geracao_distribuida` | `ugbt_ctmt` | circuito de média tensão (alimentador) | texto | — | não | sim |  |
 | UGBT_tab | `DAT_CON` | `geracao_distribuida` | `ugbt_dat_con` | data de conexão | data | — | não | sim |  |
-| UGBT_tab | `ENE_SUM` | `geracao_distribuida` | `ugbt_ene_sum` | energia anual | real | MWh | não | sim | soma de ENE_01..ENE_12 feita pela extração |
+| UGBT_tab | `ENE_SUM` | `geracao_distribuida` | `ugbt_ene_sum` | energia anual | real | unidade do arquivo, detectada | não | sim | soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e) |
 | UGBT_tab | `ENE_ZERO` | `geracao_distribuida` | `ugbt_ene_zero` | meses com energia zero | inteiro | meses | não | sim | contagem sobre ENE_01..ENE_12 feita pela extração |
 | UGBT_tab | `MUN` | `geracao_distribuida` | `ugbt_mun` | município (código IBGE) | texto | — | não | sim |  |
 | UGBT_tab | `PN_CON` | `geracao_distribuida` | `ugbt_pn_con` | ponto notável de conexão | texto | — | não | sim |  |
@@ -283,7 +283,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | UGMT_tab | `CONJ` | `geracao_distribuida` | `ugmt_conj` | conjunto elétrico | texto | — | não | não | coluna declarada do Módulo 10, ainda não conferida contra extração real |
 | UGMT_tab | `CTMT` | `geracao_distribuida` | `ugmt_ctmt` | circuito de média tensão (alimentador) | texto | — | não | não | coluna declarada do Módulo 10, ainda não conferida contra extração real |
 | UGMT_tab | `DAT_CON` | `geracao_distribuida` | `ugmt_dat_con` | data de conexão | data | — | não | não | coluna declarada do Módulo 10, ainda não conferida contra extração real |
-| UGMT_tab | `ENE_SUM` | `geracao_distribuida` | `ugmt_ene_sum` | energia anual | real | MWh | não | não | soma de ENE_01..ENE_12 feita pela extração |
+| UGMT_tab | `ENE_SUM` | `geracao_distribuida` | `ugmt_ene_sum` | energia anual | real | unidade do arquivo, detectada | não | não | soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e) |
 | UGMT_tab | `MUN` | `geracao_distribuida` | `ugmt_mun` | município (código IBGE) | texto | — | não | não | coluna declarada do Módulo 10, ainda não conferida contra extração real |
 | UGMT_tab | `PN_CON` | `geracao_distribuida` | `ugmt_pn_con` | ponto notável de conexão | texto | — | não | não | coluna declarada do Módulo 10, ainda não conferida contra extração real |
 | UGMT_tab | `POT_INST` | `geracao_distribuida` | `ugmt_pot_inst` | potência instalada | real | kVA | não | não | coluna declarada do Módulo 10, ainda não conferida contra extração real |
@@ -296,7 +296,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | PIP | `CONJ` | `ponto_de_iluminacao_publica` | `pip_conj` | conjunto elétrico | texto | — | não | sim |  |
 | PIP | `CONTROLE` | `ponto_de_iluminacao_publica` | `pip_controle` | tipo de controle do acionamento | texto | — | não | sim |  |
 | PIP | `CTMT` | `ponto_de_iluminacao_publica` | `pip_ctmt` | circuito de média tensão (alimentador) | texto | — | não | sim |  |
-| PIP | `ENE_SUM` | `ponto_de_iluminacao_publica` | `pip_ene_sum` | energia anual | real | MWh | não | sim | soma de ENE_01..ENE_12 feita pela extração |
+| PIP | `ENE_SUM` | `ponto_de_iluminacao_publica` | `pip_ene_sum` | energia anual | real | unidade do arquivo, detectada | não | sim | soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e) |
 | PIP | `ENE_ZERO` | `ponto_de_iluminacao_publica` | `pip_ene_zero` | meses com energia zero | inteiro | meses | não | sim | contagem sobre ENE_01..ENE_12 feita pela extração |
 | PIP | `MUN` | `ponto_de_iluminacao_publica` | `pip_mun` | município (código IBGE) | texto | — | não | sim |  |
 | PIP | `PN_CON` | `ponto_de_iluminacao_publica` | `pip_pn_con` | ponto notável de conexão | texto | — | não | sim |  |
@@ -320,7 +320,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | PONNOT | `X` | `ponto_notavel` | `ponnot_x` | longitude do ponto | real | graus | não | sim | derivada da geometria do ponto pela extração |
 | PONNOT | `Y` | `ponto_notavel` | `ponnot_y` | latitude do ponto | real | graus | não | sim | derivada da geometria do ponto pela extração |
 | RAMLIG | `COD_ID` | `ramal_de_ligacao` | `ramlig_cod_id` | código do objeto | texto | — | sim | sim |  |
-| RAMLIG | `COMP` | `ramal_de_ligacao` | `ramlig_comp` | comprimento do trecho | real | km | não | sim |  |
+| RAMLIG | `COMP` | `ramal_de_ligacao` | `ramlig_comp` | comprimento do trecho | real | unidade do arquivo, detectada | não | sim | o Módulo 10 da ANEEL declara quilômetro, mas o arquivo de cada distribuidora pode vir em metro: a unidade é medida na importação pela razão contra o comprimento geodésico e gravada na auditoria (item L4-01-e) |
 | RAMLIG | `CTMT` | `ramal_de_ligacao` | `ramlig_ctmt` | circuito de média tensão (alimentador) | texto | — | não | sim |  |
 | RAMLIG | `FAS_CON` | `ramal_de_ligacao` | `ramlig_fas_con` | fases conectadas | texto | — | não | sim |  |
 | RAMLIG | `TIP_CND` | `ramal_de_ligacao` | `ramlig_tip_cnd` | tipo de condutor (código do cadastro de condutores) | texto | — | não | sim |  |
@@ -374,14 +374,14 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | UNTRMT | `X` | `transformador_de_distribuicao` | `untrmt_x` | longitude do ponto | real | graus | não | sim | derivada da geometria do ponto pela extração |
 | UNTRMT | `Y` | `transformador_de_distribuicao` | `untrmt_y` | latitude do ponto | real | graus | não | sim | derivada da geometria do ponto pela extração |
 | SSDBT | `COD_ID` | `trecho_de_baixa_tensao` | `ssdbt_cod_id` | código do objeto | texto | — | sim | sim |  |
-| SSDBT | `COMP` | `trecho_de_baixa_tensao` | `ssdbt_comp` | comprimento do trecho | real | km | não | sim |  |
+| SSDBT | `COMP` | `trecho_de_baixa_tensao` | `ssdbt_comp` | comprimento do trecho | real | unidade do arquivo, detectada | não | sim | o Módulo 10 da ANEEL declara quilômetro, mas o arquivo de cada distribuidora pode vir em metro: a unidade é medida na importação pela razão contra o comprimento geodésico e gravada na auditoria (item L4-01-e) |
 | SSDBT | `CTMT` | `trecho_de_baixa_tensao` | `ssdbt_ctmt` | circuito de média tensão (alimentador) | texto | — | não | sim |  |
 | SSDBT | `FAS_CON` | `trecho_de_baixa_tensao` | `ssdbt_fas_con` | fases conectadas | texto | — | não | sim |  |
 | SSDBT | `TIP_CND` | `trecho_de_baixa_tensao` | `ssdbt_tip_cnd` | tipo de condutor (código do cadastro de condutores) | texto | — | não | sim |  |
 | SSDBT | `UNI_TR_MT` | `trecho_de_baixa_tensao` | `ssdbt_uni_tr_mt` | unidade transformadora de média tensão | texto | — | não | sim |  |
 | SSDBT | `WKT` | `trecho_de_baixa_tensao` | `ssdbt_wkt` | geometria do trecho | geometria | — | não | sim | geometria da linha serializada em WKT pela extração |
 | SSDMT | `COD_ID` | `trecho_de_media_tensao` | `ssdmt_cod_id` | código do objeto | texto | — | sim | sim |  |
-| SSDMT | `COMP` | `trecho_de_media_tensao` | `ssdmt_comp` | comprimento do trecho | real | km | não | sim |  |
+| SSDMT | `COMP` | `trecho_de_media_tensao` | `ssdmt_comp` | comprimento do trecho | real | unidade do arquivo, detectada | não | sim | o Módulo 10 da ANEEL declara quilômetro, mas o arquivo de cada distribuidora pode vir em metro: a unidade é medida na importação pela razão contra o comprimento geodésico e gravada na auditoria (item L4-01-e) |
 | SSDMT | `CONJ` | `trecho_de_media_tensao` | `ssdmt_conj` | conjunto elétrico | texto | — | não | sim |  |
 | SSDMT | `CTMT` | `trecho_de_media_tensao` | `ssdmt_ctmt` | circuito de média tensão (alimentador) | texto | — | não | sim |  |
 | SSDMT | `FAS_CON` | `trecho_de_media_tensao` | `ssdmt_fas_con` | fases conectadas | texto | — | não | sim |  |
@@ -402,7 +402,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | UCBT_tab | `DAT_CON` | `unidade_consumidora` | `ucbt_dat_con` | data de conexão | data | — | não | sim |  |
 | UCBT_tab | `DIC_SUM` | `unidade_consumidora` | `ucbt_dic_sum` | DIC anual | real | h | não | sim | soma de DIC_01..DIC_12 feita pela extração |
 | UCBT_tab | `DIC_ZERO` | `unidade_consumidora` | `ucbt_dic_zero` | meses com DIC zero | inteiro | meses | não | sim | contagem sobre DIC_01..DIC_12 feita pela extração |
-| UCBT_tab | `ENE_SUM` | `unidade_consumidora` | `ucbt_ene_sum` | energia anual | real | MWh | não | sim | soma de ENE_01..ENE_12 feita pela extração |
+| UCBT_tab | `ENE_SUM` | `unidade_consumidora` | `ucbt_ene_sum` | energia anual | real | unidade do arquivo, detectada | não | sim | soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e) |
 | UCBT_tab | `ENE_ZERO` | `unidade_consumidora` | `ucbt_ene_zero` | meses com energia zero | inteiro | meses | não | sim | contagem sobre ENE_01..ENE_12 feita pela extração |
 | UCBT_tab | `FAS_CON` | `unidade_consumidora` | `ucbt_fas_con` | fases conectadas | texto | — | não | sim |  |
 | UCBT_tab | `FIC_SUM` | `unidade_consumidora` | `ucbt_fic_sum` | FIC anual | real | interrupções | não | sim | soma de FIC_01..FIC_12 feita pela extração |
@@ -429,7 +429,7 @@ Pacote de ativos da rede elétrica de distribuição brasileira, no recorte das 
 | UCMT_tab | `CONJ` | `unidade_consumidora` | `ucmt_conj` | conjunto elétrico | texto | — | não | sim |  |
 | UCMT_tab | `CTMT` | `unidade_consumidora` | `ucmt_ctmt` | circuito de média tensão (alimentador) | texto | — | não | sim |  |
 | UCMT_tab | `DAT_CON` | `unidade_consumidora` | `ucmt_dat_con` | data de conexão | data | — | não | sim |  |
-| UCMT_tab | `ENE_SUM` | `unidade_consumidora` | `ucmt_ene_sum` | energia anual | real | MWh | não | sim | soma de ENE_01..ENE_12 feita pela extração |
+| UCMT_tab | `ENE_SUM` | `unidade_consumidora` | `ucmt_ene_sum` | energia anual | real | unidade do arquivo, detectada | não | sim | soma de ENE_01..ENE_12 feita pela extração; o Módulo 10 da ANEEL declara megawatt-hora, mas o arquivo de cada distribuidora pode vir em quilowatt-hora: a unidade é medida na importação pela ordem de grandeza contra a potência instalada e o número de unidades consumidoras, e gravada na auditoria (item L4-01-e) |
 | UCMT_tab | `ENE_ZERO` | `unidade_consumidora` | `ucmt_ene_zero` | meses com energia zero | inteiro | meses | não | sim | contagem sobre ENE_01..ENE_12 feita pela extração |
 | UCMT_tab | `GRU_TAR` | `unidade_consumidora` | `ucmt_gru_tar` | grupo tarifário | texto | — | não | sim |  |
 | UCMT_tab | `MUN` | `unidade_consumidora` | `ucmt_mun` | município (código IBGE) | texto | — | não | sim |  |
