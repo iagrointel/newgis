@@ -11281,6 +11281,132 @@
     "x-auth": "S/T",
     "x-privilegio": "rls:visibilidade"
    }
+  },
+  "/api/parcelas/fabrica/analyzeByLSA": {
+   "post": {
+    "tags": [
+     "parcelas"
+    ],
+    "summary": "Analyze By Lsa",
+    "description": "AnalyzeByLSA (forma da doc `.../ParcelFabricServer/analyzeByLSA`): resolve a rede das\nparcelas pedidas e DEVOLVE O RELATÓRIO sem escrever nada — nem coordenada, nem precisão\n(a prova é o checksum da malha no teste). CONSISTENCY_CHECK devolve o mesmo relatório com\na lista de suspeitas (|v/sigma| > 3) sem nunca mover ponto.",
+    "operationId": "analyze_by_lsa_api_parcelas_fabrica_analyzeByLSA_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LsaEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/parcelas/fabrica/applyLSA": {
+   "post": {
+    "tags": [
+     "parcelas"
+    ],
+    "summary": "Apply Lsa",
+    "description": "ApplyLSA (forma da doc `.../ParcelFabricServer/applyLSA`): aplica o ajuste ponderado —\nmove os pontos com deslocamento acima de movementTolerance, propaga para a geometria de\nlinha e de parcela, atualiza a precisão por ponto quando updateAttributes, e GRAVA A\nVERSÃO do ajuste (plat.parcela_ajuste, o relatório integral).",
+    "operationId": "apply_lsa_api_parcelas_fabrica_applyLSA_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ApplyLsaEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
+  },
+  "/api/parcelas/qualidade": {
+   "post": {
+    "tags": [
+     "parcelas"
+    ],
+    "summary": "Qualidade Rodar",
+    "description": "Camada 'lacunas e sobreposições' (Find Gaps and Overlaps do Pro, paridade §13): sobre-\nposições por par, lacunas por face não coberta e as regras de atributo (área calculada ×\ndeclarada, fechamento). Relatório vivo sobre parcelas ativas; nada escreve além do evento.",
+    "operationId": "qualidade_rodar_api_parcelas_qualidade_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/QualidadeEntrada"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-auth": "S/T",
+    "x-privilegio": "rls:visibilidade"
+   }
   }
  },
  "components": {
@@ -12006,6 +12132,87 @@
      "gravadas"
     ],
     "title": "AmostrasResultado"
+   },
+   "ApplyLsaEntrada": {
+    "properties": {
+     "gdbVersion": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gdbversion"
+     },
+     "sessionId": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sessionid"
+     },
+     "parcelFeatures": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Parcelfeatures"
+     },
+     "analysisType": {
+      "type": "string",
+      "enum": [
+       "CONSISTENCY_CHECK",
+       "WEIGHTED_LEAST_SQUARES"
+      ],
+      "title": "Analysistype",
+      "default": "WEIGHTED_LEAST_SQUARES"
+     },
+     "convergenceTolerance": {
+      "type": "number",
+      "maximum": 10.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Convergencetolerance",
+      "default": 0.05
+     },
+     "semLinhas": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Semlinhas"
+     },
+     "movementTolerance": {
+      "type": "number",
+      "maximum": 10.0,
+      "minimum": 0.0,
+      "title": "Movementtolerance",
+      "default": 0.05
+     },
+     "updateAttributes": {
+      "type": "boolean",
+      "title": "Updateattributes",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "parcelFeatures"
+    ],
+    "title": "ApplyLsaEntrada"
    },
    "AssignEntrada": {
     "properties": {
@@ -15952,6 +16159,76 @@
     ],
     "title": "LoginSaida"
    },
+   "LsaEntrada": {
+    "properties": {
+     "gdbVersion": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gdbversion"
+     },
+     "sessionId": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sessionid"
+     },
+     "parcelFeatures": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Parcelfeatures"
+     },
+     "analysisType": {
+      "type": "string",
+      "enum": [
+       "CONSISTENCY_CHECK",
+       "WEIGHTED_LEAST_SQUARES"
+      ],
+      "title": "Analysistype",
+      "default": "WEIGHTED_LEAST_SQUARES"
+     },
+     "convergenceTolerance": {
+      "type": "number",
+      "maximum": 10.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Convergencetolerance",
+      "default": 0.05
+     },
+     "semLinhas": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Semlinhas"
+     }
+    },
+    "type": "object",
+    "required": [
+     "parcelFeatures"
+    ],
+    "title": "LsaEntrada",
+    "description": "Analyze/apply na forma da doc (analysisType, convergenceTolerance, parcelFeatures). O\ncampo `semLinhas` é extra declarado da casa (§13): medida excluída DA RODADA por ser\ngrosseira — o ajuste não apaga medida, só deixa de usá-la."
+   },
    "Membro": {
     "properties": {
      "usuario": {
@@ -17250,6 +17527,36 @@
     "additionalProperties": false,
     "type": "object",
     "title": "PublicarCamadaEntrada"
+   },
+   "QualidadeEntrada": {
+    "properties": {
+     "tipo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "lote",
+         "gleba",
+         "quadra",
+         "servidao",
+         "estrato"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo"
+     },
+     "toleranciaM2": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Toleranciam2",
+      "default": 0.01
+     }
+    },
+    "type": "object",
+    "title": "QualidadeEntrada"
    },
    "ReconstructEntrada": {
     "properties": {

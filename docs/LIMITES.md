@@ -244,3 +244,5 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `PARCELA_DIVIDE_PARTES_MAX` | `100` | partes por divisão (EqualArea/ProportionalArea/EqualWidth) |
 | `PARCELA_UNIR_MAX` | `50` | parcelas por união (merge) |
 | `PARCELA_ATRIBUICAO_MAX` | `1000` | feições por assignFeaturesToRecord |
+| `PARCELA_AJUSTE_LINHAS_MAX` | `10000` | linhas observadas numa rede de ajuste LSA (item 03) |
+| `PARCELA_QUALIDADE_FACES_MAX` | `500` | faces de lacuna devolvidas pela camada de qualidade |
