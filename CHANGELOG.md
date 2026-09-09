@@ -3,6 +3,32 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 48, setembro de 2026 (item L4-parcelas-03-ajuste-e-qualidade: ajuste por mínimos quadrados e camada de qualidade da malha)
+
+Ajuste de rede `app/parcelas/ajuste.py` (par do analyzeByLSA/applyLSA do ParcelFabricServer): Gauss-Newton
+ponderado em metros e segundos de arco, peso por categoria de ponto (controle 0,005 m; apoio 0,05 m) e de
+linha (medido 2 cm/10"; escritura 10 cm/60"; derivado 50 cm/300"), sempre superável por coluna explícita.
+Portão resolvido pela prova FORTE: malha sintética 4x5 com desvio inicial determinístico, 30 nós, 3 controles,
+98 observações, 54 incógnitas — as coordenadas ajustadas reproduzem a SOLUÇÃO ANALÍTICA a 1 mm (com tolerância
+fina, 1e-4 m), e a refutação planta 1 m de erro numa linha de 100 m: ela vira a suspeita nº 1 por dominância
+(resíduo normalizado > 3 sigma) e, excluída via `semLinhas`, a rede reconverge com todo resíduo dentro do
+sigma. `analisar` não escreve nada (prova por checksum); `aplicar` move ponto com deslocamento estritamente
+maior que a tolerância, recompõe linha e face e grava a versão em `plat.parcela_ajuste`. Fachada
+`POST /api/parcelas/fabrica/{analyzeByLSA,applyLSA}` na forma da doc. A solução analítica pegou TRÊS bugs que
+suíte de fumaça deixaria passar: sinal da derivada de distância, colunas da matriz de design por ponto em vez
+de por incógnita e linha de distância sem divisão pelo sigma. Camada de qualidade `POST /api/parcelas/qualidade`
+(Find Gaps and Overlaps + regras de atributo, relatório vivo que não altera dado): sobreposição por par do
+MESMO tipo, lacuna por face do polygonize DENTRO de cada registro que nenhuma parcela DO REGISTRO cobre, área
+declarada × calculada e fechamento acima de 0,10 m. No corpus vivo (`tests/medidas/L4-parcelas-03-ajuste-e-qualidade.json`):
+11.473 lotes de exemplo, 9.432 pares de sobreposição e 250 lacunas, ambos conferidos com predicados independentes
+(DE-9IM; ST_Difference contra a união do registro). O caminho até o verde custou duas lições de recurso alheio:
+a conferência sem pré-filtro de bbox varreu 65,8 milhões de pares e o estouro derrubou o Postgres de produção
+(OOM, dmesg 09/09) — e o polygonize do corpus inteiro de uma vez não termina (20 min de GEOS); por registro a
+maior malha tem 968 lotes e é trivial. E dois defeitos de SQL pegos pela conferência: cobertura global apagava
+lacuna coberta por malha de outro registro (234 × 250) e `ST_Polygonize(g)` com geometria solta resolve para a
+forma AGREGADA, que misturava as bordas dos 25 registros — a forma por linha é `ST_Polygonize(ARRAY[g])`.
+Paridade §13 (8 fontes datadas) e ADR 20260909T0142.
+
 ## turno 48, setembro de 2026 (item L4-parcelas-02-fluxos-cogo: fluxos de edição e fachada ParcelFabricServer)
 
 Fluxos de edição da malha (`app/parcelas/fluxos.py`): dividir por rumo com as três
