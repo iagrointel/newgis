@@ -56,7 +56,8 @@
                   "detalhes",
                   "texto_rico",
                   "legenda",
-                  "cabecalho"
+                  "cabecalho",
+                  "seletor"
                 ],
                 "type": "string"
               },
@@ -273,6 +274,134 @@
             "format": "uuid",
             "type": "string"
           },
+          "type": "array"
+        },
+        "mensagens": {
+          "description": "interação do painel (item L2-06-c): gatilho {origem, evento} de um elemento e as ações que dispara em outros — o mesmo modelo do barramento do L5-07, com ids de ELEMENTO do painel; a regra de relação entre fontes diferentes é validada em app/paineis/interacoes.py",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "acoes": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "acao": {
+                      "enum": [
+                        "filtrar",
+                        "selecionar",
+                        "limpar_filtro",
+                        "limpar_selecao",
+                        "zoom",
+                        "pan",
+                        "piscar",
+                        "popup",
+                        "abrir",
+                        "fechar",
+                        "definir_parametro"
+                      ],
+                      "type": "string"
+                    },
+                    "alvo": {
+                      "description": "id do elemento que recebe a ação",
+                      "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                      "type": "string"
+                    },
+                    "parametros": {
+                      "description": "parâmetros da ação de widget (ex.: definir_parametro exige nome)",
+                      "type": "object"
+                    },
+                    "relacao": {
+                      "additionalProperties": false,
+                      "description": "como o dado da origem chega ao alvo: atributo (valores de campo_origem viram IN em campo_alvo) ou espacial (envelope da origem vira s_intersects no alvo); obrigatória entre fontes diferentes e em gatilho de seleção",
+                      "properties": {
+                        "campo_alvo": {
+                          "maxLength": 63,
+                          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                          "type": "string"
+                        },
+                        "campo_origem": {
+                          "maxLength": 63,
+                          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                          "type": "string"
+                        },
+                        "operador": {
+                          "enum": [
+                            "=",
+                            "in"
+                          ],
+                          "type": "string"
+                        },
+                        "tipo": {
+                          "enum": [
+                            "mesma_fonte",
+                            "atributo",
+                            "espacial"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "tipo"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "alvo",
+                    "acao"
+                  ],
+                  "type": "object"
+                },
+                "maxItems": 20,
+                "minItems": 1,
+                "type": "array"
+              },
+              "descricao": {
+                "maxLength": 200,
+                "type": "string"
+              },
+              "gatilho": {
+                "additionalProperties": false,
+                "properties": {
+                  "evento": {
+                    "description": "os 8 eventos do Experience Builder que o barramento do L5-07 já atende",
+                    "enum": [
+                      "clique",
+                      "dado_adicionado",
+                      "filtro_mudou",
+                      "extensao_mudou",
+                      "localizacao",
+                      "registros_carregados",
+                      "selecao_mudou",
+                      "vista_mudou"
+                    ],
+                    "type": "string"
+                  },
+                  "origem": {
+                    "description": "id do elemento de onde o gatilho parte",
+                    "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "origem",
+                  "evento"
+                ],
+                "type": "object"
+              },
+              "id": {
+                "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "gatilho",
+              "acoes"
+            ],
+            "type": "object"
+          },
+          "maxItems": 500,
           "type": "array"
         },
         "nos": {
