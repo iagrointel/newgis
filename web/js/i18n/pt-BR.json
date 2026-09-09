@@ -863,5 +863,8 @@
  "upload.erro_generico": "não foi possível concluir o envio",
  "upload.erro_iniciar": "não foi possível iniciar o envio",
  "upload.erro_parte": "falha ao enviar a parte {n}",
- "upload.erro_concluir": "não foi possível concluir o envio"
+ "upload.erro_concluir": "não foi possível concluir o envio",
+ "upload.formatos_resumo": "formatos de imagem aceitos na importação ({n} aceitos, {m} recusados)",
+ "upload.formatos_georref": "georreferência: {g}",
+ "upload.formatos_recusados": "recusados nesta instalação"
 }
