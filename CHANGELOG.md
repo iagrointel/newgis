@@ -3,6 +3,23 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 48, setembro de 2026 (item L2-03-a-api-edicao-transacional reentregue: a família de edição inteira pousa em master pela junção do wt/cx203f)
+
+O item tinha sido marcado refutado por auditoria HARD-03 (07/09) com o motivo exato "artefato ausente em master":
+`app/edicao/` existia só em ramos de worktree e nunca tinha pousado — o que deixou refutados, pela mesma causa,
+L2-03-edicao, L2-03-f e todos os itens que dependem da porta de escrita (L2-03-d, L2-03-e, L2-07-c, L2-13). A
+reentrega é a junção do ramo `wt/cx203f` sobre o master atual (`wt/il203aed`, merge `c54ca762`), que traz a API
+`POST /api/camadas/{id}/edicoes` (única porta de escrita de feição; transação tudo-ou-nada, versão otimista com
+409 e feição atual, domínios/tipo/SRID/ST_IsValid validados no servidor, rastreio preenchido pelo servidor, RLS
+por inquilino), `POST /api/camadas/{id}/lote` (L2-03-f: prévia, até 5.000 síncrono, job `camadas.lote` acima, com
+cálculo de campo pela linguagem L2-10-c traduzida a SQL) e a edição no mapa (`web/js/mapa/edicao.js` sobre
+Martin/MapLibre do L2-01/L2-04-a). Na árvore junta, sobre o master que desde então ganhou as suítes adversariais
+HARD-03 (tenancy/RLS e SSRF), tudo verde: `tests/api/test_edicao_transacional.py` 20 passed — as 6 cláusulas do
+portão e os 6 ataques da refutação (lote de 100 mil recusado por limite declarado, CRS não declarado, SRID 0,
+texto de 1 MB, fid de outro inquilino, edição concorrente sem sobrescrita silenciosa); cruzado/eventos/docs/
+privilegios declarados 232 passed; adversário + unit verde; lote 9 passed com worker da trilha; `make lint` e
+`make sem-marcador` ok; `docs/openapi.json` regenerado sem um byte de diferença.
+
 ## codex cx1, setembro de 2026 (item L2-03-f-edicao-em-lote-calculo-campo: edição em lote e cálculo de campo por expressão)
 
 `POST /api/camadas/{id}/lote` sobre uma seleção (ids, expressão `onde` ou todas): calcular campo por expressão da
