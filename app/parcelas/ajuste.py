@@ -168,16 +168,18 @@ def _resolver(rede: _Rede, tolerancia_m: float, sem_linhas: frozenset[str]) -> d
             d = math.hypot(dx, dy)
             if d <= 0.0:
                 raise ErroAPI(422, "valor_invalido", f"linha {ln.id} tem os dois pontos no mesmo lugar")
-            # observação de DISTÂNCIA
+            # observação de DISTÂNCIA (colunas de um ponto são 2i = x e 2i+1 = y; a linha
+            # inteira fica nas MESMAS unidades normalizadas de b, dividida por sigma_d —
+            # é isso que aplica a ponderação 1/sigma²)
             a[k, :] = 0.0
             if ln.de in indice:
                 i = indice[ln.de]
-                a[k, i] = dx / d
-                a[k, i + 1] = dy / d
+                a[k, 2 * i] = -dx / d / ln.sigma_d
+                a[k, 2 * i + 1] = -dy / d / ln.sigma_d
             if ln.para in indice:
                 j = indice[ln.para]
-                a[k, j] = -dx / d
-                a[k, j + 1] = -dy / d
+                a[k, 2 * j] = dx / d / ln.sigma_d
+                a[k, 2 * j + 1] = dy / d / ln.sigma_d
             b[k] = (ln.distancia - d) / ln.sigma_d
             # observação de RUMO (de norte, horário): theta = atan2(dx, dy)
             dk2 = d * d
@@ -186,12 +188,12 @@ def _resolver(rede: _Rede, tolerancia_m: float, sem_linhas: frozenset[str]) -> d
             a[n // 2 + k, :] = 0.0
             if ln.de in indice:
                 i = indice[ln.de]
-                a[n // 2 + k, i] = -(dy / dk2) * RHO / ln.sigma_t
-                a[n // 2 + k, i + 1] = (dx / dk2) * RHO / ln.sigma_t
+                a[n // 2 + k, 2 * i] = -(dy / dk2) * RHO / ln.sigma_t
+                a[n // 2 + k, 2 * i + 1] = (dx / dk2) * RHO / ln.sigma_t
             if ln.para in indice:
                 j = indice[ln.para]
-                a[n // 2 + k, j] = (dy / dk2) * RHO / ln.sigma_t
-                a[n // 2 + k, j + 1] = -(dx / dk2) * RHO / ln.sigma_t
+                a[n // 2 + k, 2 * j] = (dy / dk2) * RHO / ln.sigma_t
+                a[n // 2 + k, 2 * j + 1] = -(dx / dk2) * RHO / ln.sigma_t
             b[n // 2 + k] = dif * 3600.0 / ln.sigma_t
         passo, *_ = np.linalg.lstsq(a, b, rcond=None)
         maior = 0.0
@@ -309,14 +311,17 @@ def aplicar(cur, tenant_id: int, *, parcela_ids: list[str], tolerancia_movimento
             (SRID, [p["id"] for p in movidos], [p["id"] for p in movidos]),
         )
         # a face da parcela volta a fechar pelas linhas dela (o mesmo polygonize do build);
-        # anel aberto não tem face: a geometria anterior fica, e o relatório diz quais
+        # anel aberto não tem face: a geometria anterior fica, e o relatório diz quais.
+        # (o polygonize pede um nível de subconsulta entre o agregado e o Dump: um LATERAL
+        # irmão não pode referenciar a saída agregada do outro — regra do PostgreSQL)
         cur.execute(
-            "SELECT p.id::text AS id, ST_AsText(f.g) AS wkt FROM plat.parcela p "
-            "CROSS JOIN LATERAL (SELECT ST_UnaryUnion(ST_Collect(l.geom)) AS g "
-            "  FROM plat.parcela_linha_parcela u JOIN plat.parcela_linha l ON l.id = u.linha_id "
-            "  WHERE u.parcela_id = p.id AND l.ativa) linhas, "
-            "LATERAL (SELECT (ST_Dump(ST_Polygonize(linhas.g))).geom AS g) f "
-            "WHERE p.id = ANY(%s::uuid[]) AND ST_GeometryType(f.g) = 'ST_Polygon'",
+            "WITH linhas AS ("
+            "  SELECT u.parcela_id AS pid, ST_UnaryUnion(ST_Collect(l.geom)) AS g"
+            "  FROM plat.parcela_linha_parcela u JOIN plat.parcela_linha l ON l.id = u.linha_id"
+            "  WHERE u.parcela_id = ANY(%s::uuid[]) AND l.ativa GROUP BY u.parcela_id),"
+            "faces AS (SELECT pid, (ST_Dump(ST_Polygonize(ARRAY[g]))).geom AS g FROM linhas)"
+            "SELECT pid::text AS id, ST_AsText(g) AS wkt FROM faces"
+            " WHERE ST_GeometryType(g) = 'ST_Polygon'",
             (ids_parcelas,),
         )
         faces = {r["id"]: r["wkt"] for r in cur.fetchall()}
