@@ -12,7 +12,9 @@ agregação não se aplica.
 O filtro continua com a MESMA gramática auditada do resto da trilha (`app.consulta.where_ast` via o tradutor
 CQL2→texto de `app.paineis.cql2`): o filtro FIXO da fonte (decidido por quem edita o painel) combinado com os
 valores de EXECUÇÃO (filtros globais e parâmetros de URL de quem abre a tela), sempre por igualdade e só em
-campo que a fonte já expõe.
+campo que a fonte já expõe. O item L2-06-c acrescenta a terceira camada, por PEDIDO: `pedidos[<elemento>].
+filtro` é o CQL2-JSON que uma AÇÃO (seletor, seleção em barra/lista, extensão do mapa) entregou ao elemento —
+mesma lista branca de campos, e a relação espacial do barramento (`s_intersects` em caixa) entra com parâmetro.
 
 Tipos de pedido (um por elemento do L2-06-b; os quatro primeiros são o contrato do L2-06-a, mantido):
   contagem|soma|media|minimo|maximo  -> {tipo: numero}            (indicador simples)
@@ -33,7 +35,7 @@ from dataclasses import dataclass
 from app.consulta.where_ast import ErroWhere, compilar_where
 from app.erros import ErroAPI
 from app.estatistica import agregacao
-from app.paineis.cql2 import cql2_para_texto
+from app.paineis.cql2 import CAMADA_MAX_ENVELOPES, cql2_para_texto, propriedades, separar_espacial
 
 IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _FUNCOES = {"contagem": "count", "soma": "sum", "media": "avg", "minimo": "min", "maximo": "max"}
@@ -123,6 +125,50 @@ def montar_where(fonte: dict, filtro_execucao: dict | None, campos_fonte: list[s
     return sql, params
 
 
+CHAVE_FILTRO_PEDIDO = "filtro"   # chave opcional de cada pedido: CQL2-JSON dinâmico da ação (L2-06-c)
+
+
+def filtro_do_pedido(pedido: dict, campos_fonte: list[str]) -> tuple[str, list]:
+    """Filtro CQL2 dinâmico que UMA ação trouxe ao pedido (`{"filtro": <CQL2>}` — seletor, seleção em
+    barra/lista, extensão do mapa; item L2-06-c). Mesma lista branca do filtro fixo: só campo que a
+    fonte expõe, mais a coluna de geometria para `s_intersects`, que vira caixa com parâmetro.
+    Devolve ("", []) quando o pedido não traz filtro (ou traz vazio) — nada muda para quem não usa."""
+    filtro = pedido.get(CHAVE_FILTRO_PEDIDO)
+    if not filtro:
+        return "", []
+    if not isinstance(filtro, dict):
+        raise ErroAPI(422, "filtro_cql2_invalido", "filtro do pedido precisa ser um objeto CQL2")
+    coluna = COLUNA_GEOMETRIA
+    for p in propriedades(filtro):
+        if p in ("geometria", coluna):
+            continue
+        _campo_da_fonte(p, campos_fonte)
+    resto, caixas = separar_espacial(filtro, coluna)
+    if len(caixas) > CAMADA_MAX_ENVELOPES:
+        raise ErroAPI(422, "filtro_cql2_invalido",
+                      f"no máximo {CAMADA_MAX_ENVELOPES} caixas espaciais por filtro de pedido")
+    extra_sql = [f'"{coluna}" && ST_MakeEnvelope(%s, %s, %s, %s, 4326)' for _ in caixas]
+    extra_params = [v for caixa in caixas for v in caixa]
+    if resto is None:
+        if not extra_sql:
+            return "", []
+        return " AND ".join(extra_sql), extra_params
+    texto = cql2_para_texto(resto)
+    if not texto:
+        return (" AND ".join(extra_sql), extra_params) if extra_sql else ("", [])
+    colunas_ident = {c: f'"{c}"' for c in campos_fonte}
+    try:
+        consulta = compilar_where(texto, colunas_ident)
+    except ErroWhere as exc:
+        raise ErroAPI(400, exc.codigo, exc.mensagem, exc.detalhe) from exc
+    sql = consulta.sql
+    params = list(consulta.params)
+    if extra_sql:
+        sql = f"({sql}) AND " + " AND ".join(extra_sql)
+        params += extra_params
+    return sql, params
+
+
 @dataclass
 class ConsultaMedida:
     total_consultas_sql: int = 0
@@ -148,7 +194,15 @@ def executar_pedidos(
         if not isinstance(pedido, dict):
             raise ErroAPI(422, "pedido_invalido", f"pedido inválido para {chave!r}")
         tipo = pedido.get("agregacao")
-        ctx = _Contexto(cur, schema, tabela, colunas, campos_fonte, where_sql, where_params, medida)
+        # filtro dinâmico da ação (L2-06-c): CQL2 do seletor/seleção/extensão que este elemento recebeu,
+        # combinado ao WHERE comum da fonte por AND (o filtro comum continua valendo para todos)
+        f_sql, f_params = filtro_do_pedido(pedido, campos_fonte)
+        # filtro dinâmico da ação + WHERE comum da fonte, cada um presente ou não (o where comum é vazio
+        # quando a fonte não tem filtro fixo e o painel não tem filtro de execução — nunca `() AND ...`)
+        partes = [p for p in (where_sql, f_sql) if p]
+        where_final = " AND ".join(f"({p})" for p in partes)
+        ctx = _Contexto(cur, schema, tabela, colunas, campos_fonte, where_final,
+                        (list(where_params) + f_params) if f_sql else list(where_params), medida)
         if tipo in ("linhas", "uma_feicao"):
             resultados[chave] = _linhas(ctx, pedido, uma=(tipo == "uma_feicao"))
         elif tipo == "categorias":
