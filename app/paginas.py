@@ -39,6 +39,8 @@ PAGINAS = {
     "/construtor": "construtor.html",
     # --- executor de páginas e layout (L5-01-a-layout-paginas): ?item=<id>&pagina=<caminho>
     "/executar": "executar.html",
+    # --- ferramenta de script (L2-16-c): ?item=<id de ferramenta_script>; formulário do cabeçalho
+    "/ferramentas": "ferramenta.html",
 }
 router = APIRouter()
 
