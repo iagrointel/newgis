@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 48, setembro de 2026 (item L2-02-b-classificacao-servidor: reentrega por junção do wt/cx202c)
+
+- O item estava **refutado** por "artefato ausente em master" (auditoria HARD-03 de 07/09) — causa de
+  integração: a família catalogo-visual (L2-02-b classificação, L2-02-c editor/rampas, L2-02-e símbolos/sprites/glifos)
+  vivia só no ramo `wt/cx202c`. Este ramo é **master `61089697` + merge do `wt/cx202c`** (bdb104d7), com a junção
+  concertada e provada na árvore junta (trilha `il202bclas`, schema `plat_til202bclas`, porta 8653).
+- Concertos de junção, todos com commit próprio: `docs/openapi.json` e `docs/LIMITES.md` regenerados (as rotas de
+  estilos/símbolos/mapas/tiles não estavam no contrato publicado); contagem de blocos `location` do modelo nginx passa a
+  ignorar comentário (o bloco de repasse opcional de tiles está documentado em comentário); regra 3 do vendor estendida
+  ao texto de licença `<nome>-<versão>.LICENSE.txt` (portão do L2-02-c exige a licença ao lado das rampas) com origem
+  https do tarball npm; ordenação de imports de `app/main.py`.
+- Verde na árvore junta: portão do L2-02-b (`tests/api/catalogo/test_classes_rota.py` +
+  `tests/unit/test_classificacao.py`, 65), suítes de símbolos/estilos do L2-02-c e L2-02-e (79), coerência
+  (`test_cruzado`/`test_eventos`/`test_docs`/`test_privilegios_declarados`/`test_instalador`/`test_vendor`/
+  `test_limites_doc`, 255 + 1 skip), `tests/adversario` (1 xfail esperado), `make lint`, `make sem-marcador`.
+
 ## turno 4, setembro de 2026 (item L2-02-c-editor-simbologia-vetor: editor de simbologia no visualizador)
 
 - **Editor de simbologia** (`web/js/mapa/estilo_editor.js`, painel `#painel-estilo` na tela `/mapa`): símbolo
