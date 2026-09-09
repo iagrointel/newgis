@@ -3,6 +3,36 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## 8 de setembro de 2026 (item L1-01-f-formatos-de-entrada: a lista fechada de formatos, com arquivo aberto provando cada um)
+
+A ingestão de imagem ganha contrato de entrada. `app.imagens.formatos` é a tabela única — 12 formatos
+aceitos (GeoTIFF/BigTIFF, JPEG 2000, Erdas Imagine, ENVI, ASCII Grid, PNG/JPEG com world file, netCDF
+1 variável × 1 tempo, GRIB 1 mensagem, Zarr, KMZ superoverlay e o zip contêiner de mosaico) e os
+recusados com mensagem dirigida (ECW/MrSID por SDK proprietário ausente; GeoPDF, HDF5, netCDF com eixo
+de tempo apontando o L1-19, ASCII com vírgula decimal). A rota GET /api/imagens/formatos devolve
+`formatos.lista()` e a tela de upload lê a mesma tabela (i18n pt-BR) — teste de API compara resposta e
+código, tabela diferente é a refutação nomeada. O portão inteiro roda contra o job real, o Garage e o
+pgstac da trilha (`tests/api/imagens/test_formatos_entrada.py`, 22 testes; arquivos de teste em
+`tests/dados/raster/` com licença anotada): cada formato aceito vira COG válido (o científico do
+GeoTIFF e o do MOSAICO revalidados fora do job com `cog_validate --strict`), zip com 4 cenas vira 1
+item com 1 COG mosaicado (192×144 da união, identidade de mosaico preservada — achado: o VRT dizia
+"1 cena"), zip com CRS diferentes recusa dizendo quais (EPSG:31983 × EPSG:4326, com o nome de cada
+arquivo), JP2 de 12 bits importa com UInt16 preservado, IMG com `.rrd` importa. Quatro achados de
+produto do ramo base, consertados e medidos aqui: (1) CRÍTICO — `pgstac.update_collection_extents()`
+falhava no schema da trilha e o `except` Python capturava, mas a transação Postgres ficava ABORTADA: o
+commit virava ROLLBACK e o item raster inteiro se perdia silenciosamente (21 itens 'arquivo', zero
+'raster'); conserto por SAVEPOINT/ROLLBACK TO SAVEPOINT. (2) O cadeado de sidecar
+(`GDAL_DISABLE_READDIR_ON_OPEN`) impede o driver ENVI de achar o `.hdr` irmão — e o mesmo cadeado
+quebrava a 2ª etapa da conversão visual, porque o VRT REFERENCIA o `.dat`; `ambiente_isolado(*fontes)`
+cede pela FONTE ORIGINAL (`cog._rodar(fonte=...)`). (3) Upload canônico (`objetos.guardar`, chave
+`<slug>/<classe>/<sha256>.<ext>`) × objeto de imagem (`objetos_raster`, chave `<slug>/<item>/...`) são
+contratos distintos — misturá-los chegava ao job como "o objeto não existe mais no armazenamento".
+(4) A rota POST /api/imagens/ingestoes (L1-01-i) registrava o evento `imagens/ingestar` sem cadastro em
+`plat.evento_tipo` — FK reprovava, 500 em todo POST; migração 20260908T2350 registra o tipo. ADR
+20260908T2357. Ressalva do merge: `openapi.json` ficou obsoleto quanto à rota de formatos (turno de
+outro item) e o caso cruzado de GET /api/imagens/formatos fica deliberadamente fora (rota só de
+leitura, coberta pelo teste de igualdade com a tabela).
+
 ## 8 de setembro de 2026 (item L1-01-i-ciclo-de-vida-exclusao-e-coleta-de-lixo: lixeira de 7 dias, expurgo pelo catálogo e `plat raster gc`)
 
 O item de imagem ganha fim de linha. Excluir pelo navegador esconde o item pela RLS (tile responde 404 em
