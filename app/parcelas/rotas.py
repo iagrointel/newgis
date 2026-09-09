@@ -30,9 +30,10 @@ from app.auth import comum as auth_comum
 from app.auth.comum import registrar_evento
 from app.auth.sessao import Auth, autenticado, iso
 from app.erros import ErroAPI
-from app.parcelas import fluxos
+from app.parcelas import ajuste, fluxos, qualidade
 
 router = APIRouter(prefix="/api/parcelas/fabrica", tags=["parcelas"])
+router_qualidade = APIRouter(prefix="/api/parcelas", tags=["parcelas"])
 LER = {"x-auth": "S/T", "x-privilegio": "rls:visibilidade"}
 ESCOPO = "parcelas:usar"
 
@@ -110,6 +111,26 @@ class AssignEntrada(_OpEntrada):
     parcelFeatures: list[dict]
     record: str
     writeAttribute: Literal["CreatedByRecord", "RetiredByRecord"]
+
+
+class LsaEntrada(_OpEntrada):
+    """Analyze/apply na forma da doc (analysisType, convergenceTolerance, parcelFeatures). O
+    campo `semLinhas` é extra declarado da casa (§13): medida excluída DA RODADA por ser
+    grosseira — o ajuste não apaga medida, só deixa de usá-la."""
+    parcelFeatures: list[dict]
+    analysisType: Literal["CONSISTENCY_CHECK", "WEIGHTED_LEAST_SQUARES"] = "WEIGHTED_LEAST_SQUARES"
+    convergenceTolerance: float = Field(default=ajuste.TOLERANCIA_PADRAO_M, gt=0.0, le=10.0)
+    semLinhas: list[str] | None = None
+
+
+class ApplyLsaEntrada(LsaEntrada):
+    movementTolerance: float = Field(default=0.05, ge=0.0, le=10.0)
+    updateAttributes: bool = True
+
+
+class QualidadeEntrada(BaseModel):
+    tipo: Literal["lote", "gleba", "quadra", "servidao", "estrato"] | None = None
+    toleranciaM2: float = Field(default=qualidade.validacao.TOLERANCIA_M2, gt=0.0)
 
 
 # ------------------------------------------------------------------ resposta na forma da doc
@@ -300,3 +321,88 @@ def assign_features_to_record(corpo: AssignEntrada, request: Request,
         return _resposta(request, cur, "parcelas/assign_features_to_record", corpo.record,
                          {"writeAttribute": r["writeAttribute"], "feicoes": len(r["feitos"])},
                          r["feitos"][0]["layerId"] if r["feitos"] else "Parcela", [], [])
+
+
+# ------------------------------------------------------- ajuste por mínimos quadrados (item 03)
+
+
+def _parcela_ids(pares: list[dict]) -> list[str]:
+    ids = []
+    for par in pares:
+        fid = (par or {}).get("id")
+        if not fid:
+            raise ErroAPI(422, "valor_invalido", "parcelFeatures precisa de {id, layerId} por item")
+        ids.append(str(fid))
+    return ids
+
+
+@router.post("/analyzeByLSA", status_code=200, openapi_extra=LER)
+def analyze_by_lsa(corpo: LsaEntrada, request: Request,
+                   auth: Auth = autenticado(escopo_token=ESCOPO)):
+    """AnalyzeByLSA (forma da doc `.../ParcelFabricServer/analyzeByLSA`): resolve a rede das
+    parcelas pedidas e DEVOLVE O RELATÓRIO sem escrever nada — nem coordenada, nem precisão
+    (a prova é o checksum da malha no teste). CONSISTENCY_CHECK devolve o mesmo relatório com
+    a lista de suspeitas (|v/sigma| > 3) sem nunca mover ponto."""
+    ids = _parcela_ids(corpo.parcelFeatures)
+    with db.db(auth.contexto()) as cur:
+        relatorio = _rodar(ajuste.analisar, cur, auth.tenant_id, parcela_ids=ids,
+                           analysis_type=corpo.analysisType,
+                           tolerancia_m=corpo.convergenceTolerance,
+                           sem_linhas=tuple(corpo.semLinhas or ()))
+        registrar_evento(cur, request, "parcelas/analyze_lsa", "parcela", ids[0],
+                         {"analysisType": corpo.analysisType, "convergiu": relatorio["convergiu"],
+                          "suspeitas": len(relatorio["suspeitas"])})
+        return {"moment": iso(datetime.now(timezone.utc)), "success": True,
+                "exceededTransferLimit": False, "analysisType": corpo.analysisType,
+                "resumo": {k: relatorio[k] for k in
+                           ("convergiu", "iteracoes", "sigma_zero", "redundancia", "observacoes",
+                            "incognitas", "deslocamento_maximo_m", "maior_residuo", "suspeitas",
+                            "linhas_excluidas")},
+                "pontos": relatorio["pontos"], "linhas": relatorio["linhas"]}
+
+
+@router.post("/applyLSA", status_code=200, openapi_extra=LER)
+def apply_lsa(corpo: ApplyLsaEntrada, request: Request,
+              auth: Auth = autenticado(escopo_token=ESCOPO)):
+    """ApplyLSA (forma da doc `.../ParcelFabricServer/applyLSA`): aplica o ajuste ponderado —
+    move os pontos com deslocamento acima de movementTolerance, propaga para a geometria de
+    linha e de parcela, atualiza a precisão por ponto quando updateAttributes, e GRAVA A
+    VERSÃO do ajuste (plat.parcela_ajuste, o relatório integral)."""
+    ids = _parcela_ids(corpo.parcelFeatures)
+    with db.db(auth.contexto()) as cur:
+        r = _rodar(ajuste.aplicar, cur, auth.tenant_id, parcela_ids=ids,
+                   tolerancia_movimento_m=corpo.movementTolerance,
+                   atualizar_atributos=corpo.updateAttributes,
+                   tolerancia_m=corpo.convergenceTolerance,
+                   sem_linhas=tuple(corpo.semLinhas or ()))
+        registrar_evento(cur, request, "parcelas/apply_lsa", "parcela", ids[0],
+                         {"ajuste": r["id"], "pontos_ajustados": len(r["movidos"]),
+                          "deslocamento_maximo_m": r["relatorio"]["deslocamento_maximo_m"]})
+        return {"moment": iso(datetime.now(timezone.utc)), "success": True,
+                "exceededTransferLimit": False,
+                "serviceEdits": [{"id": "Ponto", "editedFeatures": {
+                    "adds": [],
+                    "updates": [{"id": p["id"], "x": p["x"], "y": p["y"],
+                                 "deslocamentoM": p["deslocamento_m"]} for p in r["movidos"]],
+                }}],
+                "ajuste": {"id": r["id"], "sigma_zero": r["relatorio"]["sigma_zero"],
+                           "iteracoes": r["relatorio"]["iteracoes"],
+                           "redundancia": r["relatorio"]["redundancia"],
+                           "deslocamento_maximo_m": r["relatorio"]["deslocamento_maximo_m"],
+                           "sem_face": r["sem_face"]}}
+
+
+@router_qualidade.post("/qualidade", status_code=200, openapi_extra=LER)
+def qualidade_rodar(corpo: QualidadeEntrada, request: Request,
+                    auth: Auth = autenticado(escopo_token=ESCOPO)):
+    """Camada 'lacunas e sobreposições' (Find Gaps and Overlaps do Pro, paridade §13): sobre-
+    posições por par, lacunas por face não coberta e as regras de atributo (área calculada ×
+    declarada, fechamento). Relatório vivo sobre parcelas ativas; nada escreve além do evento."""
+    with db.db(auth.contexto()) as cur:
+        camada = _rodar(qualidade.camada_qualidade, cur, tenant_id=auth.tenant_id,
+                        tipo=corpo.tipo, tolerancia_m2=corpo.toleranciaM2)
+        registrar_evento(cur, request, "parcelas/qualidade", "parcela", "-",
+                         {"tipo": corpo.tipo, "lotes_avaliados": camada["lotes_avaliados"],
+                          "sobreposicoes": camada["sobreposicoes"]["total"],
+                          "lacunas": camada["lacunas"]["total"]})
+        return camada
