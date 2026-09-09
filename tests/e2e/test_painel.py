@@ -1,7 +1,9 @@
-"""e2e /paineis/{id} e /c/{token} (item L2-06-a-modelo-painel-fontes). Prova: painel de exemplo (6
-elementos, 2 fontes — `plat.painel_exemplo_semear`, migração `20260906T2145_documento_painel.sql`) abre
-com first-contentful-paint <= 1.500 ms; em viewport 390 px a grade empilha (captura); filtro global muda
-a contagem mostrada; link compartilhado abre em contexto anônimo do navegador e nega depois de revogado.
+"""e2e /paineis/{id} e /c/{token} (item L2-06-a-modelo-painel-fontes; semente ampliada pelo L2-06-c).
+Prova: painel de exemplo (9 elementos — os 6 originais + seletor, mapa e lista —, 2 fontes e 3 mensagens
+de interação — `plat.painel_exemplo_semear`, migrações `20260906T2145_documento_painel.sql` e
+`20260909T0045_painel_seletor_mensagens.sql`) abre com first-contentful-paint <= 1.500 ms; em viewport
+390 px a grade empilha (captura); filtro global muda a contagem mostrada; link compartilhado abre em
+contexto anônimo do navegador e nega depois de revogado.
 
 Roda contra a URL da PRÓPRIA trilha (uvicorn solto na porta do item, `PLAT_SERVIR_STATIC_DEV=1` — sem
 nginx na frente, servindo web/ em /static/ direto do disco só para este cenário isolado): passe
@@ -80,7 +82,7 @@ def test_painel_primeira_pintura_e_empilhamento_em_tela_estreita(
     pronto_ms = tela.ir(f"/paineis/{painel_id}", "pagina_pronta_ms_painel")
 
     page.wait_for_selector(".painel-el", timeout=20000)
-    assert page.locator(".painel-el").count() == 6
+    assert page.locator(".painel-el").count() == 9
 
     pintura = page.evaluate(
         "() => { const e = performance.getEntriesByType('paint')"
@@ -102,14 +104,14 @@ def test_painel_primeira_pintura_e_empilhamento_em_tela_estreita(
     # de verdade do layout renderizado)
     page.set_viewport_size({"width": 390, "height": 900})
     page.wait_for_timeout(200)
-    xs = [round(box["x"]) for box in (page.locator(".painel-el").nth(i).bounding_box() for i in range(6))]
+    xs = [round(box["x"]) for box in (page.locator(".painel-el").nth(i).bounding_box() for i in range(9))]
     assert len(set(xs)) == 1, f"elementos não empilharam em 390px: x = {xs}"
     page.screenshot(path=str(CAPTURAS / f"{ITEM}_390px.png"), full_page=True)
 
     tela.verificar()
     gravar = medida(ITEM)
     gravar("primeira_pintura_painel_ms", round(pintura, 1), "ms",
-           "first-contentful-paint de /paineis/{id} com o painel de exemplo (6 elementos, chromium)")
+           "first-contentful-paint de /paineis/{id} com o painel de exemplo (9 elementos, chromium)")
     gravar("pagina_painel_pronta_ms", pronto_ms, "ms", "goto('/paineis/{id}') até body[data-pronto=1]")
     assert pintura <= 1500, f"primeira pintura {pintura:.0f} ms > 1.500 ms (portão do item)"
 
@@ -155,7 +157,7 @@ def test_link_compartilhado_abre_anonimo_e_nega_apos_revogar(
     tela_anon = Tela(pagina_anon, base_url)
     pagina_anon.goto(f"{base_url}/c/{link['token']}", wait_until="domcontentloaded")
     pagina_anon.wait_for_selector(".painel-el", timeout=20000)
-    assert pagina_anon.locator(".painel-el").count() == 6
+    assert pagina_anon.locator(".painel-el").count() == 9
     tela_anon.verificar()
     pagina_anon.close()
 
