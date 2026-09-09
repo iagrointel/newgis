@@ -18,6 +18,14 @@ AREA_MULTIESCALA_TESTE = {
 }
 PADRAO = frozenset({401, 403, 404})
 UUID_NULO = "00000000-0000-0000-0000-000000000000"  # id que não é de A nem de B: 404 garantido pela RLS/dono
+# L2-16-c: script com cabeçalho válido para os casos de criação/versão (o cabeçalho é validado
+# ANTES do 404 na rota de versão — sem cabeçalho válido a resposta seria 422, fora do padrão)
+SCRIPT_CRUZADO = (
+    '"""\nnome: cruzado_prova\ntitulo: Prova cruzada\n'
+    "parametros:\n  - nome: texto\n    tipo: texto\n"
+    "saidas:\n  - nome: fora\n    tipo: texto\n\"\"\"\n"
+    'from plat import saidas\nsaidas.gravar("fora", "ok")\n'
+)
 
 
 @dataclass
@@ -927,6 +935,29 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     ("DELETE", "/notebooks/{slug}/{caminho}"): Caso(
         lambda p: "/notebooks/demo2/api/contents/zt.ipynb",
+    ),
+    # ---- ferramenta de script (L2-16-c): o item ferramenta_script é do INQUILINO (RLS); A apontando
+    # o id de um item qualquer de B leva 404 que nem confirma o tipo ("ferramenta inexistente"),
+    # porque item de B pode ser de outro tipo — a RLS já esconde antes de qualquer pergunta de tipo.
+    ("POST", "/api/ferramentas/script"): Caso(
+        lambda p: "/api/ferramentas/script",
+        lambda p: {"codigo": SCRIPT_CRUZADO, "tags": [PREFIXO + "a"]},
+        proprio=True, aceita=frozenset({201}), verificar=_sem_marca,
+        limpar=_apagar_criado(("DELETE", "/api/itens/{id}")),
+    ),
+    ("POST", "/api/ferramentas/script/{id}/versao"): Caso(
+        lambda p: f"/api/ferramentas/script/{p.item_b['id']}/versao",
+        lambda p: {"codigo": SCRIPT_CRUZADO},
+    ),
+    ("GET", "/api/ferramentas/script/{id}/formulario"): Caso(
+        lambda p: f"/api/ferramentas/script/{p.item_b['id']}/formulario",
+    ),
+    ("POST", "/api/ferramentas/script/{id}/executar"): Caso(
+        lambda p: f"/api/ferramentas/script/{p.item_b['id']}/executar",
+        lambda p: {"parametros": {}},
+    ),
+    ("GET", "/api/ferramentas/script/{id}/execucoes"): Caso(
+        lambda p: f"/api/ferramentas/script/{p.item_b['id']}/execucoes",
     ),
 }
 
