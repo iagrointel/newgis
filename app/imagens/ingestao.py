@@ -36,7 +36,7 @@ from app.imagens import cog
 from app.imagens import pgstac as ps
 from app.imagens import raster_item as ri
 from app.imagens.cog import ErroConversao
-from app.imagens.validacao import RecusaValidacao, validar
+from app.imagens.validacao import RecusaValidacao, ambiente_isolado, validar
 from app.jobs.registro import FalhaDefinitiva, tarefa
 
 EXTENSOES_STAC = (
@@ -89,6 +89,46 @@ def _geometria_4326(rel) -> tuple[dict, list[float]]:
     anel.append(anel[0])
     bbox = [min(lons), min(lats), max(lons), max(lats)]
     return {"type": "Polygon", "coordinates": [anel]}, [round(v, 7) for v in bbox]
+
+
+def _fonte_de_conversao(ctx, bruto, rel):
+    """De onde os conversores (estatísticas, COG, miniatura) LEEM (item L1-01-f): o bruto mesmo nos formatos
+    simples; o raster extraído do zip/KMZ; o diretório do armazém Zarr; ou o VRT do mosaico — zip com várias
+    cenas contíguas vira 1 gdalbuildvrt e o VRT é REVALIDADO no subprocesso isolado, para a geometria e as
+    dimensões do item saírem da UNIÃO das cenas (bbox e geotransform do VRT), não da primeira cena. Devolve
+    (fonte, relatório a usar daqui em diante)."""
+    if not rel.extraido_em or not rel.arquivos:
+        return bruto, rel
+    extraido = bruto.parent / rel.extraido_em
+    candidatos = [extraido / nome for nome in rel.arquivos]
+    if len(candidatos) == 1:
+        return candidatos[0], rel
+    vrt = ctx.dir_trabalho / "mosaico.vrt"
+    lista_cenas = ctx.dir_trabalho / "mosaico_cenas.txt"
+    lista_cenas.write_text("\n".join(str(c) for c in candidatos) + "\n", encoding="utf-8")
+    r = ctx.subprocesso(["gdalbuildvrt", "-input_file_list", str(lista_cenas), str(vrt)],
+                        env=ambiente_isolado(*candidatos))
+    if r.returncode != 0:
+        linhas = [ln for ln in (r.stderr or "").splitlines() if ln.strip()]
+        raise FalhaDefinitiva(f"gdalbuildvrt saiu com código {r.returncode}: "
+                              f"{(linhas[-1] if linhas else 'sem detalhe')[:300]}")
+    try:
+        rel_vrt = validar(ctx, str(vrt))
+    except RecusaValidacao as e:
+        raise RecusaValidacao(f"mosaico_{e.codigo}", f"o VRT do mosaico foi recusado na revalidação: {e}") from e
+    unificados: list[str] = []
+    for aviso in [*rel.avisos, *rel_vrt.avisos]:
+        if aviso not in unificados:
+            unificados.append(aviso)
+    rel_vrt.avisos = unificados
+    # o VRT em si é um raster único para os conversores (geometria e dimensões da UNIÃO, que é o que
+    # se quer dele); a identidade de ORIGEM vem do contêiner: sem copiar, o item diria "não mosaico,
+    # 1 cena" embora tenha nascido de um zip com N cenas
+    rel_vrt.formato = rel.formato
+    rel_vrt.mosaico = rel.mosaico
+    rel_vrt.arquivos = rel.arquivos
+    rel_vrt.extraido_em = rel.extraido_em
+    return vrt, rel_vrt
 
 
 def _asset_objeto(o: dict, papel: list[str], titulo: str, tipo_midia: str) -> dict:
@@ -170,7 +210,7 @@ def _item_stac(
     timeout_s=3600,
     tentativas=1,
     perfil_minimo="editor",
-    ferramentas=("gdalinfo", "gdal_translate"),
+    ferramentas=("gdalinfo", "gdal_translate", "gdalbuildvrt"),
 )
 def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
                      epsg_declarado: int | None = None, guardar_original: bool = False) -> dict:
@@ -209,14 +249,23 @@ def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
     ctx.log("INFO", f"validação: {rel.largura}x{rel.altura} {rel.bandas} bandas {rel.dtype} EPSG:{rel.epsg} "
             f"({rel.epsg_origem}) driver {rel.driver}")
 
+    ctx.progresso(22, "preparando a fonte de conversão (extração de contêiner, mosaico por VRT)")
+    try:
+        fonte, rel = _fonte_de_conversao(ctx, bruto, rel)
+    except RecusaValidacao as e:
+        raise FalhaDefinitiva(f"raster recusado ({e.codigo}): {e}") from e
+    if fonte != bruto:
+        ctx.log("INFO", f"fonte de conversão: {fonte.name} (de {bruto.name}; "
+                + ("VRT do mosaico" if fonte.suffix == ".vrt" else "extraído do contêiner") + ")")
+
     ctx.progresso(25, "medindo estatísticas do bruto")
-    stats = cog.estatisticas_bruto(bruto, rel)
+    stats = cog.estatisticas_bruto(fonte, rel)
 
     ctx.progresso(35, "convertendo o perfil científico (ZSTD)")
     try:
-        cientifico = cog.converter_cientifico(ctx, bruto, rel, ctx.dir_trabalho / "cientifico.tif")
+        cientifico = cog.converter_cientifico(ctx, fonte, rel, ctx.dir_trabalho / "cientifico.tif")
         ctx.progresso(60, "convertendo o perfil visual (JPEG/WEBP)")
-        visual = cog.converter_visual(ctx, bruto, rel, stats, ctx.dir_trabalho / "visual.tif")
+        visual = cog.converter_visual(ctx, fonte, rel, stats, ctx.dir_trabalho / "visual.tif")
         ctx.progresso(75, "gerando a miniatura")
         mini = cog.miniatura_png(ctx, visual, ctx.dir_trabalho / "miniatura.png")
     except ErroConversao as e:
@@ -279,8 +328,14 @@ def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
         )
         miniatura_catalogo.guardar(cur, item_id, png600)
         try:
+            # extents são derivados; nunca derrubam a ingestão. SAVEPOINT obrigatório: um erro do
+            # Postgres ABORTA a transação no servidor — o except abaixo captura a exceção python, mas
+            # sem savepoint o commit do `with ctx.db()` vira ROLLBACK e o item raster inteiro se perde
+            # silenciosamente (achado L1-01-f, medido nesta trilha)
+            cur.execute("SAVEPOINT update_collection_extents")
             cur.execute("SELECT pgstac.update_collection_extents()")
-        except Exception as e:  # extents são derivados; nunca derrubam a ingestão
+        except Exception as e:
+            cur.execute("ROLLBACK TO SAVEPOINT update_collection_extents")
             ctx.log("AVISO", f"update_collection_extents falhou (extent da coleção ficou mundial): {e}")
     ctx.entrada(item_id, o_cient["sha256"], "COG científico no catálogo")
 
@@ -318,6 +373,9 @@ def imagens_ingestar(ctx, arquivo_id: uuid.UUID, titulo: str | None = None,
         "dimensoes": [rel.largura, rel.altura],
         "bandas": rel.bandas,
         "dtype": rel.dtype,
+        "formato_entrada": rel.formato,
+        "mosaico": rel.mosaico,
+        "cenas": len(rel.arquivos) if rel.arquivos else 1,
         "avisos_validacao": rel.avisos,
         "versoes": versoes,
         "guardar_original": guardar_original,
