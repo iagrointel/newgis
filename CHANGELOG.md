@@ -22,6 +22,29 @@ o ArcGIS API for Python em `docs/PARIDADE.md` (seção SDK); decisões no ADR `2
 cláusulas do portão que dependem de FeatureServer (L2-04-c, parcial sem merge), edição transacional (L2-03-a,
 refutado), TiTiler/STAC e nbconvert ficaram PENDENTES declaradas no handoff do item.
 
+## turno 48, setembro de 2026 (item L2-16-b-jupyter-por-inquilino-isolado: notebook JupyterLab por inquilino, com isolamento medido)
+
+Cada inquilino tem um notebook próprio em `/notebooks/{slug}/` — aberto só com SESSÃO da plataforma (token de
+serviço não abre; o slug de outro inquilino é 404, não 403). O contêiner sobe sob demanda no docker da própria
+máquina (`plat-notebook`, 1,12 GB, construída por `install.sh --imagem-notebook`): partida medida em 2,21 s
+(cláusula ≤ 20 s), `--memory 2g --cpus 2`, rede docker `--internal` e o firewall do host derrubando
+contêiner→host — de dentro do kernel, a leitura de camada pela API interna funciona e conexão direta ao Postgres
+e à internet falham (o código roda no kernel pela API do Jupyter no teste). A API chega ao contêiner por gateway
+próprio (contêiner vigia segurando a rede, uvicorn em socket unix do host e uma bomba stdlib lançada por
+`nsenter` dentro da rede — nada escuta em TCP do host). O único segredo no contêiner é o token de serviço do
+usuário (escopos `catalogo:ler`+`camada:ler`, 1 dia), provado lendo `/proc/1/environ`. Processo que aloca acima
+do teto é morto pelo cgroup (rc=137 medido; se a onda do OOM levar o PID 1, o levantar seguinte devolve o
+notebook). O ceifador do worker encerra o contêiner sem uso de API por 30 min (ou vida > 12 h), revoga o token e
+apaga o volume, e a passagem seguinte pelo proxy reergue na MESMA requisição (conserto do 500 medido: com o
+contêiner morto o httpx recebia `http://:8888/...`, que ele reescreve relativo e estoura ValueError). O job
+`notebooks.executar` roda o `.ipynb` agendado com `jupyter nbconvert --execute` no mesmo contêiner e grava a
+saída HTML como item `notebook_saida` com evento `notebooks/executado` (migração `20260908T2258`: tipo, evento e
+`plat.notebook_uso`). A suíte achou e consertou quatro defeitos reais: trava não reentrante no gateway (o mesmo
+thread ficou esperando a própria trava), ordem de partida fria (IP do vigia consultado antes de existir), barra
+final faltando no `base_url` (404 medido) e `websockets` fora da venv (PYTHONNOUSERSITE=1 da casa esconde
+`~/.local`; o handshake do kernel dava 500). Medidas em `tests/medidas/L2-16-b-jupyter-por-inquilino-isolado.json`
+(partida só com carga 1 min ≤ 8); paridade com ArcGIS Notebooks em `docs/PARIDADE.md`.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
