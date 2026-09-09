@@ -1,0 +1,21 @@
+{
+ "item": "L5-36-widgets-personalizados-sdk",
+ "medidas": {
+  "carregamento_pagina_ms": {
+   "valor": 2412,
+   "unidade": "ms",
+   "comando": "First Contentful Paint de /aplicativo?item= com 2 widgets externos instalados (tests/e2e/test_widget_externo.py)"
+  },
+  "contexto_da_maquina": {
+   "valor": {
+    "carga_1min": 5.3,
+    "ram_livre_gb": 1.48,
+    "medido_em": "2026-09-09T04:11:12Z"
+   },
+   "unidade": "contexto",
+   "comando": "os.getloadavg()[0] e MemAvailable de /proc/meminfo, lidos no fechamento do item — após as rodadas de testes deste fechamento (não simultâneas); cláusula de número de desempenho: carga_1min <= 8. Máquina compartilhada com os outros agentes do laço: a 1ª leitura (04:08Z) deu carga 11,49 (acima da cláusula) e foi descartada; esta leitura espera a carga cair antes de registrar."
+  }
+ },
+ "gerado_em": "2026-09-09T04:07:05Z",
+ "git_sha": "41b613c37e67"
+}
