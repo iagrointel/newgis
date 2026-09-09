@@ -16,6 +16,18 @@ import tokenize
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
+# 09/09 (plataforma-48): set/frozenset não tem ordem de iteração estável entre processos Python
+# diferentes (hash aleatorizado por padrão) — o repr() cru fazia o arquivo gerado "mudar" a cada
+# rodada sem nenhuma mudança real de código, reprovando lotes inteiros à toa (achado ao vivo na
+# fila de junção: 3 ramos diferentes, mesma constante, ordens diferentes). Ordena antes de imprimir.
+def _repr_deterministico(valor):
+    if isinstance(valor, (set, frozenset)):
+        nome_tipo = type(valor).__name__
+        interior = "{" + ", ".join(repr(x) for x in sorted(valor, key=repr)) + "}"
+        return f"{nome_tipo}({interior})" if nome_tipo != "set" else interior
+    return repr(valor)
+
+
 if str(RAIZ) not in sys.path:  # roda como `python docs/gerar_limites.py`, sem PYTHONPATH=.
     sys.path.insert(0, str(RAIZ))
 ORIGEM = RAIZ / "app" / "limites.py"
@@ -73,7 +85,7 @@ def gerar_markdown() -> str:
             if isinstance(valor, dict):
                 partes.append(f"| `{nome}` | *(dicionário; ver subtabela abaixo)* | {comentarios.get(linha, '—')} |")
             else:
-                partes.append(f"| `{nome}` | `{valor!r}` | {comentarios.get(linha, '—')} |")
+                partes.append(f"| `{nome}` | `{_repr_deterministico(valor)}` | {comentarios.get(linha, '—')} |")
         for nome, _ in nomes:
             valor = getattr(modulo, nome)
             if isinstance(valor, dict):
