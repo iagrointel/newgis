@@ -3,6 +3,31 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 48, setembro de 2026 (item L2-16-c-script-vira-ferramenta: script Python com cabeçalho declarativo vira ferramenta do catálogo)
+
+O usuário escreve um script Python cuja DOCSTRING DE MÓDULO é um YAML com o manifesto da ferramenta (nome, título,
+parâmetros e saídas) e publica com `POST /api/ferramentas/script`: o cabeçalho é validado ANTES de gravar (422
+`cabecalho_invalido`, nada é escrito) e o script vira ITEM `ferramenta_script` versionado pela máquina `item_versao`
+do L5-05 — sem registro paralelo. O formulário (`GET /formulario`) é derivado SÓ do cabeçalho (rótulo, exigência,
+padrão, mínimo/máximo e JSON Schema por parâmetro); o corpo do script não sai por ele. O vocabulário de tipos é o
+GP da família do L2-05-a (texto=GPString, numero=GPDouble, inteiro=GPLong, booleano=GPBoolean,
+item=GPFeatureRecordSetLayer). Executar (`POST /executar`, 202) valida os valores ANTES de enfileirar (422
+`parametros_invalidos` com detalhe por campo, mesma forma do `dados_invalidos` do catálogo), confere no banco que
+toda entrada do tipo `item` existe no inquilino e congela `versao` + `sha256` NO PEDIDO do job: o worker
+(`app/ferramentas/script_tarefas.py`) roda o RETRATO imutável da versão pedida, confere o sha256 do texto antes de
+rodar (diverge = FalhaDefinitiva) e executa no contêiner do inquilino (L2-16-b) com o teto do `timeout -k` do
+coreutils (124 = estouro nomeado). O script lê `entradas.json`, usa o SDK copiado para o diretório de trabalho (o
+`plat.saidas` novo grava `saida.json`) e o JOB registra o item `ferramenta_resultado` com procedência
+`origem=script, ferramenta_id, versao, sha256_script` e evento `ferramentas/script-executado` (migração
+`20260909T0049`). Refutação rodada: script que abre socket, que lê `/etc/shadow`, que grava via SDK em camada sem
+permissão e que roda além do teto todos falham presos ao escopo (e sha256 adulterado no pedido é recusado pelo
+worker); a execução de versão nova não muda execução passada nenhuma (procedência e log apontam a versão de cada
+uma). Cláusula PENDENTE declarada: chamada pelo GPServer `submitJob` depende do ramo `wt/cx205` (L2-05-a), que
+não é ancestral deste; o vocabulário GP já está alinhado. Interface `/ferramentas` com formulário renderizado do
+cabeçalho e exemplo `examples/ferramentas/buffer_por_campo.py` (buffer por feição via SDK, publicado e executado
+pela própria suíte com captura de tela). Medidas e provas em
+`tests/medidas/L2-16-c-script-vira-ferramenta.json`; paridade com Python toolbox/web tool em `docs/PARIDADE.md`.
+
 ## turno 48, setembro de 2026 (item L2-16-a-sdk-python-geo: SDK Python `plat` e ferramenta por job cujo resultado vira item)
 
 Pacote Python `plat` (`pacote/`, wheel interno por `make pacote`, sem PyPI até decisão do dono): `Plataforma(url,
