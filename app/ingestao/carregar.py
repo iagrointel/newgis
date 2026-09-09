@@ -16,7 +16,11 @@ import psycopg2.extras
 from pydantic import BaseModel
 
 from app import limites, objetos
+from app import versao as app_versao
+from app.catalogo import procedencia as mod_procedencia
 from app.ingestao.inspecionar import PREPARADORES, tabela_de
+from app.ingestao import georreferencia
+from app.ingestao.inspecionar import PREPARADORES, _cfg, tabela_de
 from app.jobs.registro import Cancelado, FalhaDefinitiva, tarefa
 from app.settings import settings
 
@@ -92,7 +96,7 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             raise FalhaDefinitiva("importação inexistente")
         if imp["estado"] != "confirmada":
             raise FalhaDefinitiva(f"importação em estado {imp['estado']!r}; esperava 'confirmada'")
-        cur.execute("SELECT dados FROM plat.item WHERE id = %s::uuid", (imp["arquivo_id"],))
+        cur.execute("SELECT dados, criado_em FROM plat.item WHERE id = %s::uuid", (imp["arquivo_id"],))
         arq = cur.fetchone()
         if arq is None:
             raise FalhaDefinitiva("o arquivo de origem não existe mais")
@@ -140,7 +144,11 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         ctx.progresso(15, "preparando a fonte")
         encoding_confirmada = ((confirmacao.get("codificacao") or {}).get("valor")
                                or proposta.get("codificacao", {}).get("valor"))
-        prep = PREPARADORES[formato](ctx, dados, encoding_confirmada)
+        respostas_cad = {k: v for k, v in (confirmacao.get("cad") or {}).items() if v is not None}
+        if formato in ("dxf", "dwg"):
+            prep = PREPARADORES[formato](ctx, dados, encoding_confirmada, respostas_cad)
+        else:
+            prep = PREPARADORES[formato](ctx, dados, encoding_confirmada)
 
         srid = int((confirmacao.get("crs") or {}).get("srid") or proposta.get("crs", {}).get("srid") or 0)
         if not srid:
@@ -152,6 +160,17 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         tipo_escolhido_raw = geom.get("escolhida") or "Geometry"  # o que a inspeção/usuário resolveu
         camada_origem = proposta.get("camada_origem") or prep.get("layer")
         sql_origem = f'SELECT {select_sql} FROM "{camada_origem}"'
+        # DXF/DWG: o usuário escolhe QUAIS camadas do desenho entram (a lista veio na proposta). Sem escolha,
+        # entram todas — nunca um recorte silencioso.
+        camadas_escolhidas = respostas_cad.get("camadas") if formato in ("dxf", "dwg") else None
+        if camadas_escolhidas:
+            disponiveis = set(proposta.get("camadas_desenho") or [])
+            desconhecidas = [c for c in camadas_escolhidas if c not in disponiveis]
+            if desconhecidas:
+                raise FalhaDefinitiva(
+                    f"camada do desenho que não existe na proposta: {desconhecidas[0][:80]}")
+            lista = ", ".join("'" + c.replace("'", "''") + "'" for c in camadas_escolhidas)
+            sql_origem += f" WHERE Layer IN ({lista})"
 
         # PROMOTE_TO_MULTI (e não o tipo singular): ST_MakeValid pode fragmentar um Polygon/LineString
         # inválido em várias partes (MEDIDO com dado real: buraco tocando o contorno em cobertura do solo de
@@ -166,6 +185,7 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             oo_args += ["-oo", o]
         argv = [
             "ogr2ogr", "-f", "PostgreSQL", _pg_conninfo(),
+            *_cfg(prep.get("config")),
             *oo_args,
             prep["caminho"],
             "-nln", f"{schema}.{tabela}", "-nlt", nlt,
@@ -194,6 +214,34 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
                      "GEOMETRY": "Geometry", "GEOMETRYCOLLECTION": "Geometry"}
         tipo_escolhido_raw = mapa_tipo.get((r_tipo["type"] if r_tipo else "").upper(), tipo_escolhido_raw)
         tipo_escolhido_nlt = tipo_escolhido_raw.upper()
+
+        # ------------------------------------------------------------ georreferência do desenho (CAD)
+        # O DXF vem em coordenada de desenho. A semelhança 2D ajustada nos pontos de controle (ou, na falta
+        # deles, a escala da unidade declarada) é aplicada AQUI, na tabela já carregada, com `ST_Affine` — o
+        # desenho original não é reescrito. O RMSE do ajuste vai para o relatório da importação.
+        georref = None
+        if formato in ("dxf", "dwg"):
+            pedido = respostas_cad.get("georreferencia") or {}
+            pontos = pedido.get("pontos") or []
+            if pontos:
+                origem = [(float(p["desenho"][0]), float(p["desenho"][1])) for p in pontos]
+                destino = [(float(p["terreno"][0]), float(p["terreno"][1])) for p in pontos]
+                try:
+                    georref = georreferencia.ajustar(origem, destino)
+                except (georreferencia.PontosInsuficientes, georreferencia.AjusteImpossivel) as e:
+                    raise FalhaDefinitiva(f"georreferência recusada: {e}") from e
+                georref["origem"] = "pontos_de_controle"
+            else:
+                unidade = ((proposta.get("cad") or {}).get("unidade") or {})
+                metros = respostas_cad.get("metros_por_unidade") or unidade.get("metros_por_unidade")
+                georref = georreferencia.escala_de_unidade(metros)
+                if georref:
+                    georref["origem"] = "unidade_declarada"
+            if georref:
+                ctx.progresso(40, "aplicando a georreferência")
+                with ctx.db() as cur:
+                    cur.execute(f'UPDATE "{schema}"."{tabela}" SET geom = '
+                                f'{georreferencia.sql_geometria(georref)} WHERE geom IS NOT NULL')
 
         # ------------------------------------------------------------ validade (ST_MakeValid)
         ctx.progresso(45, "validando geometria")
@@ -239,6 +287,9 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
         with ctx.db() as cur:
             cur.execute("SELECT plat.camada_preparar(%s, %s, %s, %s, %s)",
                         (schema, tabela, srid, tipo_escolhido_raw, ctx.usuario_id))
+            # item L2-04-a: a função de tile da camada (d_<slug>.t_<16 hex>) e a política de RLS do papel de
+            # leitura nascem aqui, com a tabela; sem isto a camada não é servível pelo Martin.
+            cur.execute("SELECT plat.camada_tile_garantir(%s, %s, %s::uuid)", (schema, tabela, item_id))
 
         # ------------------------------------------------------------ estatísticas
         ctx.progresso(80, "estatísticas")
@@ -258,21 +309,32 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
                 if -180 <= min(xs) and max(xs) <= 180 and -90 <= min(ys) and max(ys) <= 90:
                     extent_4326 = [min(xs), min(ys), max(xs), max(ys)]
             por_campo = {}
+            # A autoridade sobre o tipo da coluna é o BANCO, não a proposta — o mesmo princípio já usado
+            # acima para o tipo da geometria. O `ogr2ogr` cria a coluna com o tipo dele: um DXF traz
+            # `PaperSpace` como boolean e `BlockScale`/`BlockOCSCoords` como `double precision[]`, e
+            # `min(boolean)` e `max(length(double precision[]))` NÃO EXISTEM no Postgres (os dois derrubaram
+            # a carga no item L0-04-e). Agora a agregação é escolhida pelo tipo real.
+            cur.execute(
+                "SELECT column_name, data_type FROM information_schema.columns "
+                "WHERE table_schema = %s AND table_name = %s", (schema, tabela),
+            )
+            tipo_real = {r["column_name"]: r["data_type"] for r in cur.fetchall()}
+            ORDENAVEIS = ("smallint", "integer", "bigint", "numeric", "real", "double precision", "money",
+                          "date", "time without time zone", "time with time zone",
+                          "timestamp without time zone", "timestamp with time zone", "interval")
             for c in campos_usados:
-                if c["tipo"] in ("text",):
-                    cur.execute(
-                        f'SELECT count(*) FILTER (WHERE {c["nome"]} IS NULL) AS nulos, '
-                        f'count(DISTINCT {c["nome"]}) AS distintos, max(length({c["nome"]})) AS max_len '
-                        f'FROM "{schema}"."{tabela}"'
-                    )
-                else:
-                    cur.execute(
-                        f'SELECT count(*) FILTER (WHERE {c["nome"]} IS NULL) AS nulos, '
-                        f'count(DISTINCT {c["nome"]}) AS distintos, min({c["nome"]}) AS minimo, '
-                        f'max({c["nome"]}) AS maximo '
-                        f'FROM "{schema}"."{tabela}"'
-                    )
+                tipo_pg = tipo_real.get(c["nome"], c["tipo"])
+                base = (f'SELECT count(*) FILTER (WHERE {c["nome"]} IS NULL) AS nulos, '
+                        f'count(DISTINCT {c["nome"]}) AS distintos, ')
+                if tipo_pg in ("text", "character varying", "character"):
+                    extra = f'max(length({c["nome"]})) AS max_len '
+                elif tipo_pg in ORDENAVEIS:
+                    extra = f'min({c["nome"]}) AS minimo, max({c["nome"]}) AS maximo '
+                else:  # boolean, bytea, ARRAY, USER-DEFINED (geometry, json…): só contagem
+                    extra = "NULL AS minimo, NULL AS maximo "
+                cur.execute(base + extra + f'FROM "{schema}"."{tabela}"')
                 por_campo[c["nome"]] = {k: v for k, v in cur.fetchone().items()}
+                por_campo[c["nome"]]["tipo_real"] = tipo_pg
             cur.execute('SELECT pg_total_relation_size(%s::regclass) AS b', (f'"{schema}"."{tabela}"',))
             tamanho_bytes = int(cur.fetchone()["b"])
 
@@ -282,12 +344,28 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             "feicoes": int(est["feicoes"]), "extent_nativo": extent_4326, "por_campo": por_campo,
             "calculadas_em": None,
         }
-        procedencia = {
-            "fonte": (arq["dados"] or {}).get("nome_original"), "url": None, "licenca": None,
-            "data_do_dado": None, "data_de_acesso": None, "gerador": "plat ingestao.carregar v1",
-            "sha256": sha_real, "metodo": "ogr2ogr + ST_MakeValid", "confianca": None,
-            "limites": proposta.get("avisos", []), "job_id": str(ctx.job_id), "importacao_id": iid,
-        }
+        # Procedência (item L0-09-a; ADR 0005 seção 6.3): os 4 campos que a máquina MEDE nascem preenchidos em
+        # toda camada importada — sha256 do arquivo lido de volta, data de acesso (quando o arquivo entrou),
+        # gerador e método. Os demais ficam null porque só o usuário pode declará-los: inferir licença ou url do
+        # nome do arquivo é exatamente a procedência errada que a regra da casa proíbe (D17).
+        nome_original = (arq["dados"] or {}).get("nome_original")
+        procedencia = mod_procedencia.normalizar({
+            "fonte": nome_original, "url": None, "licenca": None,
+            "data_do_dado": None,
+            "data_de_acesso": arq["criado_em"].date().isoformat() if arq["criado_em"] else None,
+            "gerador": f"plat ingestao.carregar {app_versao.versao()}",
+            "sha256": sha_real,
+            "comando_reexecucao": f"sha256sum {nome_original}" if nome_original else None,
+            "metodo": "ogr2ogr + ST_MakeValid", "confianca": None,
+            "limites": proposta.get("avisos", []), "frescor": None, "proxima_verificacao": None,
+            "responsavel": None,
+            "origem": {
+                "fonte": "declarado",          # nome do arquivo: o usuário é quem o nomeou
+                "data_de_acesso": "medido",    # quando o arquivo entrou na plataforma
+                "gerador": "medido", "sha256": "medido", "metodo": "medido", "limites": "medido",
+            },
+            "job_id": str(ctx.job_id), "importacao_id": iid,
+        })
         item_dados = {
             "schema": schema, "tabela": tabela, "geometria": tipo_escolhido_raw,
             "srid": srid,
@@ -297,6 +375,13 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             "estatisticas": estatisticas,
             "importacao": {"importacao_id": iid, "job_id": str(ctx.job_id), "relatorio": relatorio},
         }
+        if formato in ("dxf", "dwg"):
+            item_dados["cad"] = {"desenho": (proposta.get("cad") or {}).get("totais"),
+                                 "versao": (proposta.get("cad") or {}).get("versao"),
+                                 "unidade": (proposta.get("cad") or {}).get("unidade"),
+                                 "camadas_importadas": camadas_escolhidas or proposta.get("camadas_desenho"),
+                                 "georreferencia": georref}
+            relatorio["georreferencia"] = georref
         titulo = (confirmacao.get("titulo") or proposta.get("titulo") or "camada")[:250]
         with ctx.db() as cur:
             cur.execute(
@@ -330,7 +415,8 @@ def ingestao_carregar(ctx, importacao_id: uuid.UUID) -> dict:
             )
         ctx.progresso(100, "concluído")
         return {"item_id": item_id, "feicoes": int(est["feicoes"]), "corrigidas": relatorio["corrigidas"],
-                "descartadas": relatorio["descartadas"], "avisos": proposta.get("avisos", [])}
+                "descartadas": relatorio["descartadas"], "avisos": proposta.get("avisos", []),
+                "rmse": (relatorio.get("georreferencia") or {}).get("rmse")}
     except Cancelado:
         if tabela_criada:
             _limpar_orfao(ctx, schema, tabela, item_id)

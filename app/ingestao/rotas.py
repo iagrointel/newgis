@@ -46,6 +46,64 @@ class ConfirmarEntrada(Modelo):
     geometria: dict | None = None
     campos: list[dict] | None = None
     validade: dict | None = None
+    cad: dict | None = None   # DXF/DWG: unidade, camadas do desenho, blocos e pontos de controle (ADR 0020)
+
+
+def _confirmar_cad(pedido: dict, proposta: dict, perguntas_pendentes: list) -> dict:
+    """Valida as respostas de DXF/DWG CONTRA a proposta gravada (nunca contra o arquivo de novo, ADR 0005 §5):
+    unidade da lista do formato, camadas entre as que o desenho tem, blocos como ponto ou explodidos, e de 2 a 4
+    pontos de controle para a georreferência. O RMSE é calculado aqui para que a tela mostre o erro ANTES de
+    disparar a carga — quem confirma vê o resíduo, não descobre depois."""
+    from app.ingestao import cad as cad_mod
+    from app.ingestao import georreferencia
+
+    saida: dict = {}
+    unidade = pedido.get("unidade")
+    if unidade is not None:
+        try:
+            codigo = int(unidade)
+        except (TypeError, ValueError):
+            raise ErroAPI(422, "validacao", "cad.unidade deve ser o código $INSUNITS do DXF") from None
+        if codigo not in cad_mod.UNIDADES or cad_mod.UNIDADES[codigo][1] is None:
+            raise ErroAPI(422, "unidade_invalida", "unidade de desenho desconhecida",
+                          {"opcoes": [{"codigo": c, "nome": n, "metros": m}
+                                      for c, (n, m) in sorted(cad_mod.UNIDADES.items()) if m is not None]})
+        saida["unidade"] = codigo
+        saida["metros_por_unidade"] = cad_mod.UNIDADES[codigo][1]
+        if "unidade" in perguntas_pendentes:
+            perguntas_pendentes.remove("unidade")
+    if pedido.get("blocos") is not None:
+        if pedido["blocos"] not in ("ponto", "explodido"):
+            raise ErroAPI(422, "validacao", "cad.blocos deve ser 'ponto' ou 'explodido'")
+        saida["blocos"] = pedido["blocos"]
+    if pedido.get("camadas") is not None:
+        disponiveis = list(proposta.get("camadas_desenho") or [])
+        escolhidas = [str(c) for c in pedido["camadas"]]
+        faltando = [c for c in escolhidas if c not in disponiveis]
+        if faltando:
+            raise ErroAPI(422, "camada_desconhecida", f"camada {faltando[0][:80]!r} não está no desenho",
+                          {"camadas": disponiveis})
+        if not escolhidas:
+            raise ErroAPI(422, "validacao", "escolha ao menos uma camada do desenho")
+        saida["camadas"] = escolhidas
+    pontos = (pedido.get("georreferencia") or {}).get("pontos")
+    if pontos:
+        try:
+            origem = [(float(p["desenho"][0]), float(p["desenho"][1])) for p in pontos]
+            destino = [(float(p["terreno"][0]), float(p["terreno"][1])) for p in pontos]
+        except (KeyError, IndexError, TypeError, ValueError):
+            raise ErroAPI(422, "validacao",
+                          "cada ponto de controle precisa de desenho:[x,y] e terreno:[x,y]") from None
+        try:
+            ajuste = georreferencia.ajustar(origem, destino)
+        except (georreferencia.PontosInsuficientes, georreferencia.AjusteImpossivel) as e:
+            raise ErroAPI(422, "georreferencia_invalida", str(e)) from e
+        saida["georreferencia"] = {"pontos": [{"desenho": list(o), "terreno": list(d)}
+                                              for o, d in zip(origem, destino, strict=True)],
+                                  "ajuste": ajuste}
+    if "georreferencia" in perguntas_pendentes and (pontos or saida.get("unidade") is not None):
+        perguntas_pendentes.remove("georreferencia")
+    return saida
 
 
 def _importacao_json(r: dict) -> dict:
@@ -130,6 +188,11 @@ def listar(limite: int = 50, deslocamento: int = 0, auth: Auth = autenticado(esc
     return {"itens": [_importacao_json(r) for r in linhas], "total": len(linhas)}
 
 
+@router.get("/api/importacoes/formatos", openapi_extra=LER)
+def formatos_aceitos():
+    return [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo} for f in FORMATOS.values()]
+
+
 @router.get("/api/importacoes/{id}", openapi_extra=LER)
 def ver(id: str, auth: Auth = autenticado(escopo_token="catalogo:ler")):
     with db.db(auth.contexto()) as cur:
@@ -195,8 +258,14 @@ def confirmar(id: str, corpo: ConfirmarEntrada, request: Request,
                 if base["nome"] not in mencionados:
                     campos_saida.append({**base, "importar": True})
             confirmacao["campos"] = campos_saida
+        if corpo.cad is not None:
+            confirmacao["cad"] = _confirmar_cad(corpo.cad, proposta, perguntas_pendentes)
         if corpo.titulo:
             confirmacao["titulo"] = corpo.titulo
+        # DXF/DWG: a pendência de georreferência é respondida de duas maneiras — o EPSG em que o desenho já
+        # está, ou os pontos de controle. Confirmar o CRS basta.
+        if "georreferencia" in perguntas_pendentes and "crs" in confirmacao:
+            perguntas_pendentes.remove("georreferencia")
 
         if perguntas_pendentes:
             raise ErroAPI(422, "perguntas_pendentes", "há perguntas sem resposta na proposta",
@@ -223,7 +292,3 @@ def apagar(id: str, auth: Auth = autenticado("conteudo.publicar_camada")):
         cur.execute("DELETE FROM plat.importacao WHERE id = %s::uuid", (r["id"],))
     return Response(status_code=204)
 
-
-@router.get("/api/importacoes/formatos", openapi_extra=LER)
-def formatos_aceitos():
-    return [{"tipo": f.nome, "extensoes": list(f.extensoes), "rotulo": f.rotulo} for f in FORMATOS.values()]

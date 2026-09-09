@@ -1,0 +1,106 @@
+{
+ "item": "L4-01-a-pacote-de-ativos",
+ "assinado_por": "redes+arquiteto+dados+backend (turno T3, handoff laco/handoffs/T3/L4-01-a-pacote-de-ativos.md)",
+ "gerado_em": "2026-09-06T16:20:00Z",
+ "git_sha": "1d0040b8d465b9d844eee58564cda43d32b4965b",
+ "maquina": "12 vCPU, 23 GB RAM, disco / a 98%; PostgreSQL 16 em iagro_sat; base própria da trilha (schema plat_tt401a, laco/trilha_ambiente.sh t401a), com outras sessões da casa na mesma máquina",
+ "medidas": {
+  "pacote_eletrica_br_bytes": {
+   "valor": 96042,
+   "unidade": "bytes",
+   "comando": "wc -c app/rede_utilidades/pacotes/eletrica-br.json"
+  },
+  "pacote_eletrica_br_sha256": {
+   "valor": "8bc3786c221e3ed5f0a40a85401301c266b15495c7444d5e64fa738f4d612663",
+   "unidade": "hex",
+   "comando": "sha256sum app/rede_utilidades/pacotes/eletrica-br.json"
+  },
+  "pacote_eletrica_br_contagens": {
+   "valor": {
+    "dominios": 2,
+    "tiers": 4,
+    "categorias": 11,
+    "terminais": 4,
+    "grupos": 14,
+    "tipos": 24,
+    "atributos": 214,
+    "regras": 24
+   },
+   "unidade": "elementos por seção",
+   "comando": "GET /api/rede/pacotes (campo contagens) e resposta 201 de POST /api/rede/{id}/pacote"
+  },
+  "pacote_agua_epanet_bytes": {
+   "valor": 27765,
+   "unidade": "bytes",
+   "comando": "wc -c app/rede_utilidades/pacotes/agua-epanet.json"
+  },
+  "pacote_agua_epanet_sha256": {
+   "valor": "1a6bbe11731451a38f58df1e0ba264c3b2959666fd5a8ea8eb340937c5a26789",
+   "unidade": "hex",
+   "comando": "sha256sum app/rede_utilidades/pacotes/agua-epanet.json"
+  },
+  "pacote_agua_epanet_contagens": {
+   "valor": {
+    "dominios": 1,
+    "tiers": 2,
+    "categorias": 8,
+    "terminais": 2,
+    "grupos": 6,
+    "tipos": 14,
+    "atributos": 41,
+    "regras": 16
+   },
+   "unidade": "elementos por seção",
+   "comando": "GET /api/rede/pacotes (campo contagens)"
+  },
+  "ida_e_volta_byte_a_byte": {
+   "valor": true,
+   "unidade": "igualdade de bytes",
+   "comando": "pytest tests/api/test_rede_pacote.py::test_importa_e_exporta_byte_a_byte -q (2 casos: eletrica-br 96.042 bytes e agua-epanet 27.765 bytes; a exportação é reconstruída das tabelas, o arquivo recebido NÃO é guardado)"
+  },
+  "importacao_ms_eletrica_br": {
+   "valor": 146.3,
+   "unidade": "ms",
+   "comando": "POST /api/rede/{id}/pacote com os 96.042 bytes do pacote elétrico, medido com time.perf_counter no TestClient contra a base da trilha; 1 execução, máquina compartilhada"
+  },
+  "exportacao_ms_eletrica_br": {
+   "valor": 16.4,
+   "unidade": "ms",
+   "comando": "GET /api/rede/{id}/pacote logo depois, mesma execução"
+  },
+  "recusa_ms_pacote_invalido": {
+   "valor": 22.1,
+   "unidade": "ms",
+   "comando": "POST com o mesmo pacote e um tipo apontando grupo inexistente: 422 com 1 problema, caminho e linha do arquivo enviado; nada é escrito"
+  },
+  "atributos_com_origem_conferida": {
+   "valor": 154,
+   "unidade": "de 214 atributos",
+   "comando": "contagem em app/rede_utilidades/pacotes/eletrica-br.json de origem.conferida = true; camadas conferidas: CTMT, EQTRMT, PIP, PONNOT, RAMLIG, SSDBT, SSDMT, UCBT_tab, UCMT_tab, UGBT_tab, UNTRMT"
+  },
+  "atributos_declarados_sem_conferencia": {
+   "valor": 60,
+   "unidade": "de 214 atributos",
+   "comando": "camadas sem conferência contra extração real: SUB, UGMT_tab, UNCRMT, UNREMT, UNSEMT — declaradas do Módulo 10 do PRODIST, marcadas no próprio dado"
+  },
+  "tabelas_do_catalogo_com_rls": {
+   "valor": 10,
+   "unidade": "tabelas",
+   "comando": "pytest tests/api/test_rede_pacote.py::test_toda_tabela_do_catalogo_tem_rls_ligada — 10 tabelas, relrowsecurity = true e 4 políticas cada (40 políticas), conferido como plat_app"
+  },
+  "rotas_novas_no_openapi": {
+   "valor": 8,
+   "unidade": "rotas",
+   "comando": "GET/POST /api/rede, GET/DELETE /api/rede/{rede_id}, POST/GET /api/rede/{rede_id}/pacote, GET /api/rede/pacotes, GET /api/rede/pacotes/{codigo}; todas com caso em tests/api/cruzado_casos.py"
+  },
+  "testes_do_item": {
+   "valor": 34,
+   "unidade": "testes",
+   "comando": "pytest tests/unit/test_rede_pacote.py tests/api/test_rede_pacote.py -q: 21 de unidade + 13 de API, todos passando na base da trilha t401a"
+  }
+ },
+ "erros_conhecidos_nao_causados_por_este_item": {
+  "tests/api/test_migracoes.py::test_tabela_reflete_os_arquivos_em_disco": "a base da trilha aplica as migrações da ÁRVORE PRINCIPAL (048, 049), que este worktree ainda não tem, e o worktree tem um 046_raster_item de outra trilha ainda sem commit. Falha igual sem nenhuma alteração deste item; a migração deste item usa carimbo de tempo e nem entra nesse conjunto.",
+  "tests/api/test_cruzado.py (fixture `preparacao`)": "quebra em POST /api/papeis com 403 sem_permissao ('operação fora do inquilino da sessão') ANTES de qualquer linha deste item; reproduzido com uma sessão limpa de demo2 sem tocar em nada de rede. Os 8 casos cruzados das rotas novas estão escritos e a cobertura de 100 % não acusa falta deles; o cruzamento A→B das rotas de rede é provado à parte em tests/api/test_rede_pacote.py."
+ }
+}

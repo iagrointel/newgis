@@ -33,6 +33,8 @@ PAGINAS = {
     # --- SMTP, convite de membro e redefinição de senha (L0-07-d-smtp-convites): públicas, sem sessão
     "/aceitar-convite": "aceitar_convite.html",
     "/redefinir-senha": "redefinir_senha.html",
+    # --- domínios e subtipos da camada (L2-10-a): campos x domínio, formulário de feição e tabela
+    "/camadas/{id}/dominios": "camada_dominios.html",
     # --- upload retomável (L0-04-a-upload-arquivo)
     "/uploads": "uploads.html",
     # --- construtor por arrasto (L5-08-editor-arrasto): ?item=<id de item app/painel>

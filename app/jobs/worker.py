@@ -50,7 +50,9 @@ LOCK_PESADO = "plat.job.pesado"  # nome-base; a chave real leva o schema (ver _c
 def _chave_pesado() -> str:
     """07/09 (achado do item L2-15-a + classe F5): a chave era CONSTANTE no cluster inteiro, então o worker
     de uma trilha isolada segurava o "1 pesado por vez" de produção e de todas as outras trilhas. A chave
-    leva o schema do ambiente: cada base tem a sua vez de pesado."""
+    leva o schema do ambiente: cada base tem a sua vez de pesado. O advisory é do BANCO, e o banco é um só
+    para produção, homologação (ADR 0009) e todas as bases por trilha (laco/trilha_ambiente.sh) — o semáforo
+    vale DENTRO de um ambiente; em produção, onde só existe o schema `plat`, o valor é o mesmo de antes."""
     from app.settings import settings
 
     return f"{settings.PLAT_SCHEMA}.job.pesado"

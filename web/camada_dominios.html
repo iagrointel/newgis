@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Domínios da camada · plat</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/estilo/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="tela instrumento dominios">
+<a class="pular" href="#principal" data-i18n="app.pular">pular para o conteúdo</a>
+<div class="app">
+  <aside id="lateral" class="lateral"></aside>
+  <main id="principal" class="principal" tabindex="-1">
+    <h1 data-i18n="dominios.titulo">Domínios da camada</h1>
+    <plat-aviso id="aviso"></plat-aviso>
+    <section id="ligacoes" aria-labelledby="ligacoes-titulo">
+      <h2 id="ligacoes-titulo" data-i18n="dominios.ligacoes">Campos e domínios</h2>
+      <div id="ligacoes-corpo"></div>
+    </section>
+    <section id="formulario" aria-labelledby="formulario-titulo">
+      <h2 id="formulario-titulo" data-i18n="dominios.formulario">Nova feição</h2>
+      <form id="feicao-form" novalidate></form>
+    </section>
+    <section id="tabela" aria-labelledby="tabela-titulo">
+      <h2 id="tabela-titulo" data-i18n="dominios.tabela">Feições da camada</h2>
+      <div id="tabela-corpo"></div>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/js/dominios/tela.js"></script>
+</body>
+</html>

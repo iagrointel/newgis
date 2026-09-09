@@ -5,9 +5,11 @@
 import { t } from '../base/i18n.js';
 
 export const CAMPOS_TEXTO = ['titulo', 'tags', 'resumo', 'descricao'];
-export const CAMPOS_EXATOS = ['dono', 'tipo', 'status', 'acesso', 'pasta', 'categoria', 'grupo', 'id', 'origem', 'familia'];
+export const CAMPOS_EXATOS = ['dono', 'tipo', 'status', 'acesso', 'pasta', 'categoria', 'grupo', 'id', 'origem', 'familia', 'licenca'];
 export const CAMPOS_DATA = ['criado', 'modificado'];
-export const CAMPOS = [...CAMPOS_TEXTO, ...CAMPOS_EXATOS, ...CAMPOS_DATA];
+/* item L0-09-a: intervalo NUMÉRICO de 0 a 10 (pontuação de procedência), aceito também como valor solto = mínimo */
+export const CAMPOS_NUMERO = ['procedencia'];
+export const CAMPOS = [...CAMPOS_TEXTO, ...CAMPOS_EXATOS, ...CAMPOS_DATA, ...CAMPOS_NUMERO];
 export const OPERADORES = ['AND', 'OR', 'NOT'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATA = /^(\*|\d{4}(-\d{2}(-\d{2})?)?)$/;
@@ -60,7 +62,13 @@ export function analisar(q) {
       const valor = token.slice(doisPontos + 1);
       if (!CAMPOS.includes(campo)) { erros.push({ posicao: inicio, mensagem: t('catalogo.busca_erro_campo', { campo }) }); continue; }
       if (!valor) { erros.push({ posicao: inicio, mensagem: t('catalogo.busca_erro_valor', { campo }) }); continue; }
-      if (CAMPOS_DATA.includes(campo)) {
+      if (CAMPOS_NUMERO.includes(campo)) {
+        const m = /^\[\s*(\S+)\s+TO\s+(\S+)\s*\]$/i.exec(valor);
+        const numeros = m ? [m[1], m[2]] : [valor];
+        const invalido = numeros.some((x) => x !== '*' && (Number.isNaN(Number(x.replace(',', '.'))) || Number(x.replace(',', '.')) < 0 || Number(x.replace(',', '.')) > 10));
+        if (invalido) { erros.push({ posicao: inicio, mensagem: t('catalogo.busca_erro_numero_0_10', { campo }) }); continue; }
+        partes.push(m ? { tipo: 'intervalo', campo, de: m[1], ate: m[2] } : { tipo: 'campo', campo, valor });
+      } else if (CAMPOS_DATA.includes(campo)) {
         const m = /^\[\s*(\S+)\s+TO\s+(\S+)\s*\]$/i.exec(valor);
         if (!m) { erros.push({ posicao: inicio, mensagem: t('catalogo.busca_erro_intervalo') }); continue; }
         if (!DATA.test(m[1]) || !DATA.test(m[2])) { erros.push({ posicao: inicio, mensagem: t('catalogo.busca_erro_data') }); continue; }

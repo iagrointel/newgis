@@ -10,6 +10,7 @@ import datetime
 import hashlib
 import hmac
 import logging
+import re
 import urllib.parse
 from dataclasses import dataclass
 from typing import Any
@@ -23,6 +24,59 @@ SERVICO = "s3"
 
 class ErroGarage(RuntimeError):
     """Garage (S3 ou Admin API) devolveu erro; a mensagem traz o corpo devolvido, cortado."""
+
+
+class CotaGarage(ErroGarage):
+    """O PRÓPRIO Garage recusou a escrita por cota do balde (bytes ou objetos) — item L1-01-d: a mensagem já
+    vem em português (`traduzir_erro_s3`) para chegar assim à API e à tela; `limite` é o número que o Garage
+    citou, quando citou."""
+
+    def __init__(self, mensagem: str, *, tipo: str, limite: int | None):
+        super().__init__(mensagem)
+        self.tipo = tipo  # "bytes" | "objetos"
+        self.limite = limite
+
+
+_RE_XML_CODE = re.compile(r"<Code>([^<]*)</Code>")
+_RE_XML_MSG = re.compile(r"<Message>([^<]*)</Message>")
+_RE_NUMERO = re.compile(r"(\d+)\s*$")
+
+
+def traduzir_erro_s3(status: int, corpo: str) -> tuple[str, str, CotaGarage | None]:
+    """(código S3, mensagem em português, CotaGarage ou None) a partir da resposta de erro do Garage. As frases
+    do Garage foram MEDIDAS nesta instância (v2.3.0, 06/09/2026): "Bucket size quota is reached, maximum size
+    for this bucket: N" e "Object quota is reached, maximum objects for this bucket: N" (ambas 403 AccessDenied);
+    "Operation is not allowed for this key" (chave sem permissão; também 403)."""
+    codigo = (_RE_XML_CODE.search(corpo or "") or [None, ""])[1] or f"HTTP{status}"
+    msg = (_RE_XML_MSG.search(corpo or "") or [None, ""])[1] or (corpo or "")[:200]
+    baixo = msg.lower()
+    numero = _RE_NUMERO.search(msg)
+    limite = int(numero.group(1)) if numero else None
+    if "size quota" in baixo:
+        pt = "o Garage recusou a gravação: a cota de armazenamento do inquilino foi atingida"
+        if limite is not None:
+            pt += f" (limite do balde: {limite} bytes)"
+        return codigo, pt, CotaGarage(pt, tipo="bytes", limite=limite)
+    if "object quota" in baixo:
+        pt = "o Garage recusou a gravação: a cota de objetos do inquilino foi atingida"
+        if limite is not None:
+            pt += f" (limite do balde: {limite} objetos)"
+        return codigo, pt, CotaGarage(pt, tipo="objetos", limite=limite)
+    if "not allowed for this key" in baixo:
+        return codigo, "a chave de acesso não tem permissão para esta operação neste balde", None
+    if codigo == "NoSuchBucket":
+        return codigo, "o balde não existe no Garage", None
+    if codigo == "NoSuchKey":
+        return codigo, "o objeto não existe no balde", None
+    return codigo, f"o Garage respondeu {status} {codigo}: {msg}", None
+
+
+def _erro_escrita(operacao: str, status: int, corpo: str) -> ErroGarage:
+    """Exceção certa para uma resposta de erro de ESCRITA: CotaGarage quando foi cota, ErroGarage nos demais."""
+    codigo, pt, cota = traduzir_erro_s3(status, corpo)
+    if cota is not None:
+        return cota
+    return ErroGarage(f"{operacao}: {status} {codigo} — {pt}")
 
 
 def _assinar(chave: bytes, mensagem: str) -> bytes:
@@ -106,7 +160,7 @@ class ClienteS3:
     def put(self, bucket: str, chave: str, dados: bytes, content_type: str = "application/octet-stream") -> str:
         r = self._requisicao("PUT", bucket, chave, corpo=dados, extra={"content-type": content_type})
         if r.status_code != 200:
-            raise ErroGarage(f"PUT {bucket}/{chave}: {r.status_code} {r.text[:300]}")
+            raise _erro_escrita(f"PUT {bucket}/{chave}", r.status_code, r.text)
         return (r.headers.get("etag") or "").strip('"')
 
     def get(self, bucket: str, chave: str) -> bytes:
@@ -154,10 +208,24 @@ class ClienteS3:
             raise ErroGarage(f"DELETE {bucket}/{chave}: {r.status_code} {r.text[:300]}")
         return r.status_code == 204
 
-    def copiar(self, bucket: str, origem: str, destino: str) -> None:
-        r = self._requisicao("PUT", bucket, destino, extra={"x-amz-copy-source": f"/{bucket}/{origem}"})
+    def copiar(self, bucket: str, origem: str, destino: str, bucket_origem: str | None = None) -> None:
+        """CopyObject dentro do balde (`bucket_origem=None`) ou de OUTRO balde (a refutação do L1-01-d tenta isso
+        com a chave só-leitura: o Garage recusa, é o que o teste prova)."""
+        fonte = f"/{bucket_origem or bucket}/{origem}"
+        r = self._requisicao("PUT", bucket, destino, extra={"x-amz-copy-source": fonte})
         if r.status_code != 200:
-            raise ErroGarage(f"COPY {bucket}/{origem} -> {destino}: {r.status_code} {r.text[:300]}")
+            raise _erro_escrita(f"COPY {fonte} -> {bucket}/{destino}", r.status_code, r.text)
+
+    def listar_buckets(self) -> list[str]:
+        """ListBuckets do S3: os baldes que ESTA chave enxerga (o Garage só lista os que a chave tem permissão)."""
+        import xml.etree.ElementTree as ET
+
+        r = self._requisicao("GET", "")
+        if r.status_code != 200:
+            raise ErroGarage(f"ListBuckets: {r.status_code} {r.text[:300]}")
+        ns = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
+        root = ET.fromstring(r.text)
+        return [b.findtext("s3:Name", default="", namespaces=ns) for b in root.iter("{%s}Bucket" % ns["s3"])]
 
     def listar(self, bucket: str, prefixo: str = "", max_chaves: int = 1000) -> list[dict[str, Any]]:
         import xml.etree.ElementTree as ET
@@ -209,7 +277,7 @@ class ClienteS3:
     def multipart_enviar_parte(self, bucket: str, chave: str, upload_id: str, numero: int, dados: bytes) -> str:
         r = self._requisicao("PUT", bucket, chave, corpo=dados, query=f"partNumber={numero}&uploadId={upload_id}")
         if r.status_code != 200:
-            raise ErroGarage(f"UploadPart {bucket}/{chave} #{numero}: {r.status_code} {r.text[:300]}")
+            raise _erro_escrita(f"UploadPart {bucket}/{chave} #{numero}", r.status_code, r.text)
         return (r.headers.get("etag") or "").strip('"')
 
     def multipart_concluir(
@@ -220,7 +288,7 @@ class ClienteS3:
         ) + "</CompleteMultipartUpload>"
         r = self._requisicao("POST", bucket, chave, corpo=corpo_xml.encode("utf-8"), query=f"uploadId={upload_id}")
         if r.status_code != 200:
-            raise ErroGarage(f"CompleteMultipartUpload {bucket}/{chave}: {r.status_code} {r.text[:300]}")
+            raise _erro_escrita(f"CompleteMultipartUpload {bucket}/{chave}", r.status_code, r.text)
         return r.text
 
     def multipart_abortar(self, bucket: str, chave: str, upload_id: str) -> None:
@@ -267,10 +335,22 @@ class ClienteAdmin:
     def info_bucket(self, bucket_id: str) -> dict:
         return self._chamar("GET", f"/v2/GetBucketInfo?id={bucket_id}")
 
-    def definir_cota(self, bucket_id: str, max_bytes: int) -> dict:
+    def definir_cota(self, bucket_id: str, max_bytes: int, max_objetos: int | None = None) -> dict:
+        """Cota do balde em bytes e, quando dada, em objetos (item L1-01-d; `maxObjects: null` = sem limite de
+        objetos, que era o comportamento do L0-11). Campo `quotas` do UpdateBucket v2, MEDIDO nesta instância."""
         return self._chamar(
-            "POST", f"/v2/UpdateBucket?id={bucket_id}", {"quotas": {"maxSize": int(max_bytes), "maxObjects": None}}
+            "POST",
+            f"/v2/UpdateBucket?id={bucket_id}",
+            {"quotas": {"maxSize": int(max_bytes), "maxObjects": int(max_objetos) if max_objetos else None}},
         )
+
+    def definir_web(self, bucket_id: str, ativo: bool) -> dict:
+        """Liga/desliga o endpoint web do balde (:3902, Host `<alias>.web.garage.localhost`): leitura ANÔNIMA
+        por HTTP só nesse endpoint, atrás do nginx com auth_request (ADR 0016). MEDIDO 06/09/2026: com o web
+        ligado, GET/LIST anônimos no endpoint S3 (:3900) continuam 403 — o web não abre a API S3."""
+        acesso = {"enabled": True, "indexDocument": "index.html", "errorDocument": "error.html"} if ativo \
+            else {"enabled": False}
+        return self._chamar("POST", f"/v2/UpdateBucket?id={bucket_id}", {"websiteAccess": acesso})
 
     def listar_chaves(self) -> list[dict]:
         return self._chamar("GET", "/v2/ListKeys")
