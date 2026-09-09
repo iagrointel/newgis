@@ -53,6 +53,7 @@ EXTENSOES = {
     "application/json": "json",
     "application/geo+json": "geojson",
     "text/csv": "csv",
+    "text/html": "html",  # L2-16-b: saída HTML do notebook agendado (notebooks.executar)
     "application/pdf": "pdf",
     "application/zip": "zip",
     "application/vnd.google-earth.kmz": "kmz",
