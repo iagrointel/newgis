@@ -1,0 +1,20 @@
+{
+  "nome": "semaforo",
+  "versao": "1.0.0",
+  "api_widget": 1,
+  "modulo": "./semaforo.js",
+  "elemento": "plat-semaforo",
+  "sandbox": true,
+  "esquema_config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "rotulo": { "type": "string", "maxLength": 200 },
+      "nivel": { "type": "string", "enum": ["verde", "amarelo", "vermelho"] }
+    }
+  },
+  "eventos": ["semaforo.nivel"],
+  "acoes": ["clique", "selecao_mudou", "semaforo.nivel", "definir_parametro", "piscar"],
+  "fontes": { "min": 0, "max": 0, "tipos": [] },
+  "i18n": "widget.semaforo"
+}
