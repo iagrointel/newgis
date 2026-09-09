@@ -10,6 +10,7 @@ from app.ferramentas import tarefas as ferramentas_tarefas  # noqa: F401 — L2-
 from app.ingestao import tarefas as ingestao_tarefas  # noqa: F401 — L0-04: ingestao.inspecionar/ingestao.carregar
 from app.jobs import periodicos, tipos_prova  # noqa: F401 — importação registra os tipos
 from app.jobs.registro import REGISTRO
+from app.notebooks import tarefas as notebooks_tarefas  # noqa: F401 — L2-16-b: notebooks.executar/ceifar
 from app.uploads import tarefas as uploads_tarefas  # noqa: F401 — L0-04-a: uploads.expirar + periódico
 
 __all__ = ["REGISTRO"]
