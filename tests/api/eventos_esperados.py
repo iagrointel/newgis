@@ -158,4 +158,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/multiescala/fatores/{id}/amostras"): ["multiescala/amostras"],
     ("POST", "/api/multiescala/conjuntos/{id}/macro"): ["multiescala/macro"],
     ("POST", "/api/multiescala/execucoes/{id}/micro"): ["multiescala/micro"],
+    # L5-36: instalar/desinstalar widget externo é configuração da organização — ambos narrados
+    ("POST", "/api/widgets/externos"): ["widgets/instalar"],
+    ("DELETE", "/api/widgets/externos/{nome}"): ["widgets/desinstalar"],
 }
