@@ -8,8 +8,10 @@ Três seções, tudo sobre parcelas ATIVAS do mesmo inquilino (e do mesmo tipo, 
 - LACUNAS: faces fechadas pelas próprias bordas das parcelas que NÃO pertencem a parcela
   nenhuma — Polygonize das bordas DENTRO DE CADA REGISTRO (cada registro é um levantamento;
   espaço entre registros não é lacuna de malha) e a face cujo ponto sobre a superfície não é
-  coberto por nenhuma parcela é uma lacuna, com a área. A contagem INDEPENDENTE (ST_Overlaps
-  no par, ST_Difference na face) é a prova do portão, em tests/api/parcelas/test_qualidade.py.
+  coberto por nenhuma parcela DO MESMO REGISTRO é uma lacuna, com a área (a lacuna do registro
+  A não desaparece porque a malha do registro B cobre a área por cima; o transpasse entre
+  malhas já aparece nas sobreposições). A contagem INDEPENDENTE (ST_Overlaps no par,
+  ST_Difference na face) é a prova do portão, em tests/api/parcelas/test_qualidade.py.
 - REGRAS DE ATRIBUTO (parcelfabricattributerules): área CALCULADA × DECLARADA com desvio acima
   da tolerância e FECHAMENTO — parcela com erro_fechamento_m acima do teto declarado. A regra
   não altera dado: aponta.
@@ -45,9 +47,12 @@ def camada_qualidade(cur, *, tenant_id: int, tipo: str | None = None,
     # o mesmo cálculo é trivial. O polygonize é a parte cara (GEOS, não work_mem): faz UMA vez
     # por registro numa tabela temporária, e conta, soma e lista a partir dela.
     cur.execute("DROP TABLE IF EXISTS lacunas_face")  # duas chamadas na mesma transação
+    # ST_Polygonize(ARRAY[g]) e não ST_Polygonize(g): com geometria solta o PostGIS resolve a
+    # forma AGREGADA, que misturaria as bordas de TODOS os registros numa polygonize só (e com
+    # a coluna do registro ao lado o Postgres recusa: "must appear in the GROUP BY")
     cur.execute(
         "CREATE TEMP TABLE lacunas_face ON COMMIT DROP AS "
-        "SELECT (ST_Dump(ST_Polygonize(b.g))).geom AS g FROM ("
+        "SELECT criada_por_registro AS rid, (ST_Dump(ST_Polygonize(ARRAY[b.g]))).geom AS g FROM ("
         "  SELECT p.criada_por_registro, ST_UnaryUnion(ST_Collect(ST_Boundary(p.geom))) AS g"
         "  FROM plat.parcela p"
         "  WHERE p.tenant_id = %s AND p.ativa AND p.criada_por_registro IS NOT NULL"
@@ -56,11 +61,15 @@ def camada_qualidade(cur, *, tenant_id: int, tipo: str | None = None,
         ") b",
         (tenant_id, tipo, tipo),
     )
+    # a COBERTURA também é da própria malha: a lacuna do registro A não desaparece porque o
+    # registro B (uma importação duplicada, por exemplo) cobre a área por cima — o transpasse
+    # ENTRE malhas já aparece na seção de sobreposições
     cur.execute(
         "SELECT count(*) AS total, COALESCE(ST_Area(ST_UnaryUnion(ST_Collect(g))), 0) AS area_m2 "
-        "FROM lacunas_face WHERE ST_Area(g) > %s AND NOT EXISTS ("
+        "FROM lacunas_face f WHERE ST_Area(f.g) > %s AND NOT EXISTS ("
         "  SELECT 1 FROM plat.parcela p WHERE p.tenant_id = %s AND p.ativa"
-        "   AND (%s::text IS NULL OR p.tipo = %s) AND ST_Covers(p.geom, ST_PointOnSurface(g)))",
+        "   AND p.criada_por_registro = f.rid"
+        "   AND (%s::text IS NULL OR p.tipo = %s) AND ST_Covers(p.geom, ST_PointOnSurface(f.g)))",
         (tolerancia_m2, tenant_id, tipo, tipo),
     )
     r = cur.fetchone()
@@ -72,12 +81,13 @@ def camada_qualidade(cur, *, tenant_id: int, tipo: str | None = None,
         "tolerancia_m2": tolerancia_m2,
     }
     cur.execute(
-        "SELECT ST_Area(g) AS area_m2, ST_AsText(ST_Centroid(g)) AS centroide, "
-        "       ST_NPoints(g) AS vertices FROM lacunas_face"
-        " WHERE ST_Area(g) > %s AND NOT EXISTS ("
+        "SELECT ST_Area(f.g) AS area_m2, ST_AsText(ST_Centroid(f.g)) AS centroide, "
+        "       ST_NPoints(f.g) AS vertices FROM lacunas_face f"
+        " WHERE ST_Area(f.g) > %s AND NOT EXISTS ("
         "  SELECT 1 FROM plat.parcela p WHERE p.tenant_id = %s AND p.ativa"
-        "   AND (%s::text IS NULL OR p.tipo = %s) AND ST_Covers(p.geom, ST_PointOnSurface(g)))"
-        " ORDER BY ST_Area(g) DESC LIMIT %s",
+        "   AND p.criada_por_registro = f.rid"
+        "   AND (%s::text IS NULL OR p.tipo = %s) AND ST_Covers(p.geom, ST_PointOnSurface(f.g)))"
+        " ORDER BY ST_Area(f.g) DESC LIMIT %s",
         (tolerancia_m2, tenant_id, tipo, tipo, limites.PARCELA_QUALIDADE_FACES_MAX),
     )
     lacunas["faces"] = [
