@@ -165,4 +165,11 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("PUT", "/notebooks/{slug}/{caminho}"): [],
     ("PATCH", "/notebooks/{slug}/{caminho}"): [],
     ("DELETE", "/notebooks/{slug}/{caminho}"): [],
+    # ---- ferramenta de script (L2-16-c; vocabulário na migração 20260909T0049_script_ferramenta.sql).
+    # Publicar e publicar versão narram o MESMO evento (`ferramentas/script-publicado`) porque os dois
+    # são o mesmo fato (script publicado, com a versão no detalhe); a execução narra o pedido (o
+    # `ferramentas/script-executado` do item de resultado nasce na tarefa, não na rota).
+    ("POST", "/api/ferramentas/script"): ["ferramentas/script-publicado"],
+    ("POST", "/api/ferramentas/script/{id}/versao"): ["ferramentas/script-publicado"],
+    ("POST", "/api/ferramentas/script/{id}/executar"): ["ferramentas/script-execucao-pedida"],
 }
