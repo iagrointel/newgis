@@ -233,6 +233,9 @@ Fontes (consultadas em 09/09/2026):
 - Analyze by least squares adjustment (REST, parâmetros e valores de `analysisType`) — `developers.arcgis.com/rest/services-reference/enterprise/analyzebylsa-parcel-fabric-service/`
 - Apply least squares adjustment (REST, `movementTolerance`, `updateAttributes`) — `developers.arcgis.com/rest/services-reference/enterprise/applylsa-parcel-fabric-service/`
 - Least-squares adjustments and the parcel fabric (Pro) — `pro.arcgis.com/en/pro-app/3.5/help/data/parcel-editing/least-squares-parcel-fabric.htm`
+- Run a parcel least-squares adjustment (Pro; o analisar escreve em classes de ajuste e a malha original não muda; sigma perto de 1 é ajuste bem estimado; a priori padrão 30 s / 0,15 m) — `pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/runleastsquaresadjustment.htm`
+- Measurements and accuracy (Pro; Direction/Distance/XY Accuracy como pesos, sem valor = ponto flutuante) — `pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/aboutmeasurementaccuracy.htm`
+- Parcel fabric attribute rules (Pro; AREAS MUST MATCH WITHIN, MISCLOSE RATIO/DISTANCE) — `pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/parcelfabricattributerules.htm`
 - Find gaps and overlaps (Pro, comando Highlight da aba Quality) — `pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/findgapsoverlaps.htm`
 - Parcel fabric data quality layers ("do not alter the original data") — `pro.arcgis.com/en/pro-app/3.4/help/data/parcel-editing/parcelfabricdataqualitylayers.htm`
 
@@ -264,11 +267,16 @@ face da parcela pelo polygonize das linhas dela (anel aberto não tem face e fic
 
 Método da casa: Gauss-Newton ponderado sobre rumos (arcsegundos) e distâncias (metros), pesos por
 categoria (`medido` 2 cm/10"; `escritura` 10 cm/60"; `derivado` 50 cm/300"; ponto `controle`
-0,005 m / `apoio` 0,05 m), superáveis por coluna explícita de precisão. O portão é a solução
-analítica: malha 4x5 (98 observações, 54 incógnitas, 44 redundâncias) cujas coordenadas verdadeiras
-o ajuste tem de reproduzir a 1 mm — e a refutação (1 m em 100) tem de virar a SUSPEITA nº 1 e,
-excluída, reconvergir limpa. ADR `docs/adr/20260909T0142-ajuste-lsa-parcelas.md` registra os três
-bugs que essa prova pegou antes de passar.
+0,005 m / `apoio` 0,05 m), superáveis por coluna explícita de precisão (o par da doc são
+Direction/Distance/XY Accuracy, com a priori padrão de 30 s / 0,15 m — a casa usa tetos mais
+rígidos por categoria, declarados, não os padrões da doc). Leitura do `sigma_zero` como na doc:
+perto de 1 é ajuste bem estimado (os a priori retratam o erro real); na malha de teste as medidas
+são EXATAS, então o sigma zero desce a ~0 com tolerância fina — e é isso que o teste prova. O
+portão é a solução analítica: malha 4x5 (98 observações, 54 incógnitas, 44 redundâncias) cujas
+coordenadas verdadeiras o ajuste tem de reproduzir a 1 mm — e a refutação (1 m em 100) tem de
+virar a SUSPEITA nº 1 e, excluída, reconvergir limpa. ADR
+`docs/adr/20260909T0142-ajuste-lsa-parcelas.md` registra os três bugs que essa prova pegou antes
+de passar.
 
 ### 13.2 Qualidade — lacunas, sobreposições e regras de atributo
 
@@ -276,13 +284,18 @@ Rota da casa: `POST /api/parcelas/qualidade` (mesmo escopo; `tipo` opcional no v
 `toleranciaM2` > 0). É o par do Find Gaps and Overlaps (o Highlight da aba Quality e a ferramenta
 da Parcel toolbox, que guarda lacuna/sobreposição como polígono): a casa devolve RELATÓRIO VIVO —
 sobreposições por par do MESMO tipo com área de interseção, lacunas por face do polygonize que
-nenhuma parcela cobre, e as regras de atributo (área calculada x declarada fora da tolerância;
-fechamento acima de 0,10 m). **[diverge — decidido]**: a LACUNA é calculada DENTRO de cada
-registro (cada registro é um levantamento; espaço entre dois registros não é lacuna de malha
-nenhuma) — a ferramenta da doc opera sobre a seleção do usuário, a casa sobre a malha do registro,
-e o polygonize do corpus inteiro de uma vez é inviável (medido: 20 min de GEOS e estouro de
-memória; por registro a maior malha do corpus é de 968 lotes e o mesmo cálculo é trivial). As
-camadas de qualidade do Pro "do not alter the original data" — a casa idem: a regra aponta, não
-altera dado. Conferência independente no teste com predicados DIFERENTES dos da implementação
-(ST_Overlaps no par; ST_Difference contra a união na face), sobre a malha determinística E sobre o
-corpo real de lotes de exemplo.
+nenhuma parcela DO MESMO REGISTRO cobre, e as regras de atributo (área calculada x declarada fora
+da tolerância; fechamento acima de 0,10 m). **[diverge — decidido]**: a LACUNA é calculada DENTRO
+de cada registro — polygonize E cobertura — (cada registro é um levantamento; espaço entre dois
+registros não é lacuna de malha nenhuma, e a lacuna de um não desaparece porque a malha de outro
+cobre a área por cima: esse transpasse entre malhas é o que a seção de sobreposições aponta —
+medido no corpus: cobertura global dizia 234 lacunas, por registro 250, 16 faces cobertas por
+importações duplicadas; e o `ST_Polygonize` com geometria solta resolve para a forma AGREGADA,
+que misturava as bordas dos registros numa polygonize só — a forma por linha é
+`ST_Polygonize(ARRAY[g])`) — a ferramenta da doc opera sobre a seleção do usuário, a casa sobre a
+malha do registro, e o polygonize do corpus inteiro de uma vez é inviável (medido: 20 min de GEOS
+e estouro de memória; por registro a maior malha do corpus é de 968 lotes e o mesmo cálculo é
+trivial). As camadas de qualidade do Pro "do not alter the original data" — a casa idem: a regra
+aponta, não altera dado. Conferência independente no teste com predicados DIFERENTES dos da
+implementação (ST_Overlaps no par; ST_Difference contra a união do registro na face), sobre a
+malha determinística E sobre o corpo real de lotes de exemplo.
