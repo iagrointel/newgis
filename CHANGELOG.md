@@ -3,6 +3,24 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## codex cx1, setembro de 2026 (item L2-06-c-acoes-seletores-filtros-cruzados: gatilho e ação entre elementos do painel, filtro cruzado por SQL no servidor)
+
+O painel ganhou o barramento do L5-07 (verbatim, um só para a plataforma) e a ponte que liga elemento a elemento:
+elemento `seletor` (categoria, número com faixa, data com presets, feição) e documento `mensagens` (gatilho →
+ações `filtrar`/`selecionar`/`limpar_*`/`zoom`/`pan`/`piscar`/`popup`/`abrir`/`fechar`/`definir_parametro`). A
+mesma mensagem valida nos DOIS lados: `app/paineis/interacoes.py` (422 `grafo_invalido` com a regra quebrada —
+relação obrigatória em ação de dado, inclusive na mesma fonte, porque linha de painel não tem coluna de id) roda
+os mesmos casos do `modelo.js` real em node (`tests/app/executar_painel_js.mjs`). O filtro dinâmico de cada ação
+entra pelo CQL2 já auditado com um nó novo (`separar_espacial`: `s_intersects` só na forma de retângulo alinhado,
+virando `ST_MakeEnvelope` com parâmetro — geometria nunca vira texto) e todo campo citado passa pela lista branca
+da fonte. Estado no URL por vista (`v.v:`), então a URL copiada reabre com os mesmos seletores. Medido em
+`tests/medidas/L2-06-c-acoes-seletores-filtros-cruzados.json`: latência gatilho→ação **p95 0,054 ms com 10.000
+feições** (portão ≤ 100 ms; pior caso com relação por atributo 2,08 ms), ciclo A↔B cortado em uma volta
+(200 disparos, 200 cortes), 5.000 seleções em 0,88 ms, e o e2e confere cada contagem da tela contra COUNT(*) na
+tabela da camada, na MESMA conexão do contexto (a tabela tem RLS forçada por inquilino). Defeito corrigido no
+caminho: filtro de execução com parte vazia montava `WHERE () AND (...)` e dava erro de sintaxe
+(`app/paineis/dados.py`); ADR `docs/adr/20260909T0045-interacoes-do-painel.md`.
+
 ## codex cx1, setembro de 2026 (item L2-06-b-elementos-basicos: doze tipos de elemento no painel, todos com número do servidor)
 
 Indicador (nove estatísticas, formato, ícone, cor por faixa, modo "uma feição"), gráfico serial (barras, linhas e
