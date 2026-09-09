@@ -100,3 +100,33 @@
 
 .painel-escuro .painel-sem-dado, .painel-escuro .painel-lista-detalhe, .painel-escuro .painel-paginacao-texto,
 .painel-escuro .painel-cabecalho-sub, .painel-escuro .painel-detalhes dt, .painel-escuro .painel-rodape-tabela { color: #a9b4b0; }
+
+/* ---- item L2-06-c: seletor, seleção visual, piscar e popup do mapa ---- */
+.painel-seletor { display: flex; flex-direction: column; gap: 4px; }
+.painel-seletor-controle { font: inherit; padding: 4px 6px; border: 1px solid var(--borda, #ccd2d6);
+  border-radius: 6px; background: var(--painel-fundo-el, #fff); color: inherit; max-width: 100%; }
+.painel-seletor-faixa { display: flex; align-items: center; gap: 6px; }
+.painel-seletor-num { font: inherit; width: 6.5ch; padding: 4px 6px; border: 1px solid var(--borda, #ccd2d6);
+  border-radius: 6px; background: var(--painel-fundo-el, #fff); color: inherit; }
+.painel-seletor-ate { color: var(--fraco, #667); }
+
+/* a marca gráfica (barra/ponto/fatia) e a linha selecionadas ganham contorno amarelo — o mesmo `.sel`
+   que o grafico_svg usa, mais a classe do painel para tabela e lista */
+.painel-el .barra.painel-selecionado, .painel-el .ponto.painel-selecionado,
+.painel-el .fatia.painel-selecionado, .painel-el .painel-mapa-ponto.painel-selecionado
+  { stroke: #ffd54a; stroke-width: 2; }
+.painel-el tr.painel-selecionado td, .painel-el .painel-lista-item.painel-selecionado
+  { background: rgba(255, 213, 74, .18); }
+.painel-el tr.painel-selecionado, .painel-el .painel-lista-item { cursor: pointer; }
+.painel-el tr.painel-selecionado:hover td, .painel-el .painel-lista-item:hover { filter: brightness(.97); }
+
+@keyframes painel-piscar { 0%, 100% { opacity: 1; } 50% { opacity: .15; } }
+.painel-el .painel-mapa-ponto.painel-piscar { animation: painel-piscar .8s ease-in-out infinite;
+  stroke: #ffd54a; stroke-width: 2; }
+
+.painel-mapa-caixa { position: relative; }
+.painel-mapa-popup { position: absolute; top: 8px; left: 8px; max-width: 90%; padding: 4px 8px;
+  font-size: .78rem; background: var(--painel-fundo-el, #fff); border: 1px solid var(--borda, #ccd2d6);
+  border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.18); pointer-events: none; }
+.painel-escuro .painel-seletor-controle, .painel-escuro .painel-seletor-num { background: #2c3540; color: #e8eeec; border-color: #3a4550; }
+.painel-escuro .painel-mapa-popup { background: #2c3540; border-color: #3a4550; }
