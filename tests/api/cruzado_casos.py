@@ -946,6 +946,22 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"parcelFeatures": [{"id": UUID_NULO, "layerId": "parcela"}],
                    "record": UUID_NULO, "writeAttribute": "RetiredByRecord"},
     ),
+    # ---- ajuste LSA + camada de qualidade (L4-parcelas-03-ajuste-e-qualidade): a parcela
+    # aponta para UUID nulo — a RLS devolve 404 antes de coletar a rede.
+    ("POST", "/api/parcelas/fabrica/analyzeByLSA"): Caso(
+        lambda p: "/api/parcelas/fabrica/analyzeByLSA",
+        lambda p: {"parcelFeatures": [{"id": UUID_NULO, "layerId": "parcela"}],
+                   "analysisType": "WEIGHTED_LEAST_SQUARES"},
+    ),
+    ("POST", "/api/parcelas/fabrica/applyLSA"): Caso(
+        lambda p: "/api/parcelas/fabrica/applyLSA",
+        lambda p: {"parcelFeatures": [{"id": UUID_NULO, "layerId": "parcela"}],
+                   "movementTolerance": 0.05},
+    ),
+    ("POST", "/api/parcelas/qualidade"): Caso(
+        lambda p: "/api/parcelas/qualidade",
+        lambda p: {"tipo": "lote"},
+    ),
 }
 
 

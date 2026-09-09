@@ -168,4 +168,7 @@ EVENTOS_POR_ROTA: dict[tuple[str, str], list[str]] = {
     ("POST", "/api/parcelas/fabrica/createSeeds"): ["parcelas/create_seeds"],
     ("POST", "/api/parcelas/fabrica/reconstructFromSeeds"): ["parcelas/reconstruct_from_seeds"],
     ("POST", "/api/parcelas/fabrica/assignFeaturesToRecord"): ["parcelas/assign_features_to_record"],
+    ("POST", "/api/parcelas/fabrica/analyzeByLSA"): ["parcelas/analyze_lsa"],
+    ("POST", "/api/parcelas/fabrica/applyLSA"): ["parcelas/apply_lsa"],
+    ("POST", "/api/parcelas/qualidade"): ["parcelas/qualidade"],
 }
