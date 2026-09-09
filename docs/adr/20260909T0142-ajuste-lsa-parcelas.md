@@ -68,9 +68,9 @@ excluída, a rede reconverge com todo resíduo dentro do sigma.
 hora (as camadas de qualidade do Pro também "do not alter the original data"). SOBREPOSIÇÃO é par do
 MESMO tipo (`a.tipo = b.tipo`): quadra sobre lote não é par — a comparação é dentro da família, e o
 teste tem o par de quadras para provar que o filtro de tipo filtra. LACUNA é face do polygonize das
-próprias bordas que nenhuma parcela cobre. As duas contagens são conferidas no teste com
-PREDICADOS DIFERENTES dos da implementação (ST_Overlaps no par; ST_Difference contra a união na
-face) — conferência independente de verdade, não repetição do mesmo SQL.
+próprias bordas que nenhuma parcela DO MESMO REGISTRO cobre. As duas contagens são conferidas no
+teste com PREDICADOS DIFERENTES dos da implementação (ST_Overlaps no par; ST_Difference contra a
+união do registro na face) — conferência independente de verdade, não repetição do mesmo SQL.
 
 ## D6. Memória é recurso alheio: lacuna POR REGISTRO, uma passada de polygonize, e o `&&` na conferência
 
@@ -87,3 +87,19 @@ mesmo cálculo é trivial. O polygonize roda UMA vez por registro em tabela temp
 lista a partir dela — eram duas passadas iguais). Regra para o laço: consulta de corpo inteiro em
 máquina dividida com produção tem de ter custo declarado e pré-filtro indexável; e sessão de teste
 que estoura relógio deixa ZUMBI — matar o backend antes de medir qualquer coisa de novo.
+
+A conferência independente do corpus pegou um segundo erro de escopo, depois do primeiro conserto:
+com o polygonize por registro mas a COBERTURA ainda global no inquilino, a camada dizia 234 lacunas
+e o conferente (ST_Difference contra a união do PRÓPRIO registro) dizia 250 — 16 faces eram
+cobertas por parcelas de OUTRO registro (importações duplicadas no corpus de exemplo). Lacuna de
+malha não desaparece porque outra malha cobre a área por cima: esse transpasse ENTRE registros é
+exatamente o que a seção de sobreposições aponta. A cobertura passou a ser da própria malha
+(`criada_por_registro = f.rid`), e as duas contagens bateram.
+
+E a conferência pegou um TERCEIRO defeito, este latente no SQL: `ST_Polygonize(g)` com geometria
+solta resolve para a forma AGREGADA do PostGIS — agregava as bordas dos 25 registros NUMA polygonize
+só, misturando coleções de levantamentos diferentes (faces que fecham com borda de um registro e
+borda de outro). Passou a admitir `rid` ao lado e o Postgres recusou ("must appear in the GROUP BY")
+— a forma correta é `ST_Polygonize(ARRAY[g])`, uma linha por registro. Regra: função do PostGIS com
+forma agregada e forma de valor tem de ser chamada com ARRAY explícito quando a intenção é por
+linha.
