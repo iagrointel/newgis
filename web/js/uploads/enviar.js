@@ -54,6 +54,32 @@ async function montarTela() {
   const rTipos = await obter('/api/uploads/tipos');
   const tipos = rTipos.status === 200 ? rTipos.json : [];
 
+  // L1-01-f: os formatos de imagem raster aceitos e recusados vêm da MESMA tabela que a validação usa
+  // (GET /api/imagens/formatos -> app.imagens.formatos.lista()) — a tela nunca mantém lista à mão.
+  const rFormatos = await obter('/api/imagens/formatos');
+  const formatos = rFormatos.status === 200 ? rFormatos.json : [];
+  const aceitos = formatos.filter((f) => f.aceito);
+  const recusados = formatos.filter((f) => !f.aceito);
+  const secaoFormatos = h(
+    'details', { id: 'upload-formatos', class: 'upload-formatos' },
+    h('summary', {}, t('upload.formatos_resumo', { n: aceitos.length, m: recusados.length })),
+    h('ul', {}, ...aceitos.map((f) => h(
+      'li', { id: `formato-${f.chave}` },
+      h('strong', {}, f.rotulo),
+      ` (${f.extensoes.join(', ')}) — ${t('upload.formatos_georref', { g: f.georreferencia })}`,
+      f.observacao ? `: ${f.observacao}` : '',
+    ))),
+    recusados.length
+      ? [
+          h('p', { class: 'upload-formatos-recusados' }, t('upload.formatos_recusados')),
+          ...recusados.map((f) => h(
+            'p', { id: `formato-${f.chave}`, class: 'upload-formato-recusado' },
+            h('strong', {}, `${f.rotulo} (${f.extensoes.join(', ')})`), `: ${f.mensagem}`,
+          )),
+        ]
+      : [],
+  );
+
   const selecao = h(
     'select', { id: 'upload-tipo' },
     h('option', { value: '' }, t('upload.tipo_detectar')),
@@ -150,6 +176,7 @@ async function montarTela() {
     entrada,
     dropzone,
     h('div', { class: 'botoes' }, botaoEnviar, botaoCancelar),
+    secaoFormatos,
     barra,
     rotuloProgresso,
     resultado,
