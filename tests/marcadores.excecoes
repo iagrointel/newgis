@@ -4,3 +4,6 @@
 ^app/settings\.py:[0-9]+: *# SMTP de instalação
 ^Makefile:[0-9]+:#
 ^BRIEF_WORKTREES\.md:[0-9]+:[0-9]+\. Sem placeholder
+^CHANGELOG\.md:[0-9]+:.*TODO caminho `tests/\.\.\.` citado em
+# (09/09, plataforma-48) artefato do driver merge=union: duas entradas de CHANGELOG de ramos
+# diferentes se costuram numa frase que ninguém escreveu, contendo 'TODO' (português = "cada").
