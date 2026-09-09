@@ -230,3 +230,7 @@ Gerado de `app/limites.py` por `docs/gerar_limites.py` (`make limites`); não ed
 | `ESCALA_UNIDADE_MAX` | `40` | CHECK(length(unidade)<=40) |
 | `ESCALA_FONTE_MAX` | `500` | CHECK(length(fonte)<=500) |
 | `ESCALA_AMOSTRAS_LOTE_MAX` | `20000` | amostras de fator por chamada de POST (streaming não é o item; teto direto) |
+| `SIMBOLO_SVG_BYTES_MAX` | `65536` | — |
+| `SIMBOLO_NOME_MAX` | `64` | — |
+| `SIMBOLO_CATEGORIA_MAX` | `40` | — |
+| `SIMBOLO_GALERIA_BUSCA_MAX` | `100` | — |
