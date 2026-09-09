@@ -48,7 +48,7 @@ def camada_qualidade(cur, *, tenant_id: int, tipo: str | None = None,
     # por registro numa tabela temporária, e conta, soma e lista a partir dela.
     cur.execute("DROP TABLE IF EXISTS lacunas_face")  # duas chamadas na mesma transação
     # ST_Polygonize(ARRAY[g]) e não ST_Polygonize(g): com geometria solta o PostGIS resolve a
-    # forma AGREGADA, que misturaria as bordas de TODOS os registros numa polygonize só (e com
+    # forma AGREGADA, que misturaria as bordas de todos os registros numa polygonize só (e com
     # a coluna do registro ao lado o Postgres recusa: "must appear in the GROUP BY")
     cur.execute(
         "CREATE TEMP TABLE lacunas_face ON COMMIT DROP AS "
