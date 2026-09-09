@@ -1,7 +1,11 @@
 /* plat · painel — os ELEMENTOS BÁSICOS do painel (item L2-06-b-elementos-basicos): indicador, gráfico serial,
    pizza/rosca, tabela (com agrupamento e subtotal), lista paginada, mapa, detalhes, texto rico, legenda e
-   cabeçalho. Um módulo por responsabilidade: aqui ficam o PEDIDO de cada elemento (o que o servidor precisa
-   agregar) e o DESENHO do resultado; `render.js` só monta a grade e faz uma requisição por fonte.
+   cabeçalho. O item L2-06-c-acoes-seletores-filtros-cruzados acrescenta o `seletor` e os CLIQUES que viram
+   GATILHO: clicar numa barra/ponto/fatia do gráfico, numa linha de tabela/lista ou num ponto do mapa chama
+   `ctx.definirSelecaoElemento(el.id, [id])`, e a mudança do seletor chama `ctx.definirFiltroElemento(el.id,
+   filtro)` — quem transforma isso em mensagem do barramento é `render.js` + `interacoes.js`.
+   Um módulo por responsabilidade: aqui ficam o PEDIDO de cada elemento (o que o servidor precisa agregar)
+   e o DESENHO do resultado; `render.js` só monta a grade e faz uma requisição por fonte.
 
    Regras do item, valendo para todos:
    - nenhum número é calculado aqui: contagem, soma, média, subtotal e total vêm do motor do L2-06-e pelo
@@ -18,8 +22,29 @@ let seq = 0;
 const proximoId = (prefixo) => `${prefixo}-${(seq += 1)}`;
 
 export const TIPOS_COM_FONTE = new Set([
-  'indicador', 'grafico', 'serial', 'pizza', 'tabela', 'lista', 'mapa', 'detalhes', 'texto_rico',
+  'indicador', 'grafico', 'serial', 'pizza', 'tabela', 'lista', 'mapa', 'detalhes', 'texto_rico', 'seletor',
 ]);
+
+/* presets do seletor de período (mesma lista de `app/paineis/interacoes.py` — paridade de validação) */
+export const PRESETS_DATA = ['ultimos_7_dias', 'ultimos_30_dias', 'ultimos_90_dias', 'este_ano'];
+const ROTULO_PRESET = {
+  ultimos_7_dias: 'últimos 7 dias', ultimos_30_dias: 'últimos 30 dias',
+  ultimos_90_dias: 'últimos 90 dias', este_ano: 'este ano',
+};
+
+function isoDePreset(nome, agora = new Date()) {
+  if (nome === 'este_ano') return `${agora.getUTCFullYear()}-01-01T00:00:00Z`;
+  const dias = nome === 'ultimos_7_dias' ? 7 : nome === 'ultimos_30_dias' ? 30 : nome === 'ultimos_90_dias' ? 90 : null;
+  if (dias === null) return nome;  // já é uma data ISO (opção "desde <data>" restaurada da URL)
+  return new Date(agora.getTime() - dias * 86400000).toISOString();
+}
+
+/** true quando o elemento participa de um PEDIDO de dado (o seletor de lista fixa, de número ou de
+ * período não pede nada ao servidor — desenha na montagem, como legenda e cabeçalho). */
+export function precisaPedido(el) {
+  if (!TIPOS_COM_FONTE.has(el.tipo) || !el.fonte) return false;
+  return pedidoDoElemento(el) !== null;
+}
 
 /* ------------------------------------------------------------------ formatação */
 export function formatarNumero(v, op = {}) {
@@ -93,14 +118,24 @@ export function pedidoDoElemento(elemento) {
       total: true };
   }
   if (tipo === 'lista') {
+    // geometria: true dá __lon/__lat às linhas (sem virar coluna visível — `dados.py` só acrescenta ao
+    // SELECT): a seleção de uma linha vira feição com geometria e alimenta ações de zoom/pan do barramento
     return { agregacao: 'linhas', campos: op.campos, limite: op.por_pagina || 25, ordenacao: op.ordenacao,
-      total: true, deslocamento: 0 };
+      total: true, deslocamento: 0, geometria: true };
   }
   if (tipo === 'mapa') {
     return { agregacao: 'linhas', campos: op.campos, limite: op.max_pontos || 500, geometria: true };
   }
   if (tipo === 'detalhes') {
     return { agregacao: 'uma_feicao', campos: op.campos, ordenacao: op.ordenacao };
+  }
+  if (tipo === 'seletor') {  // item L2-06-c: só o seletor que LÊ opções da fonte faz pedido
+    if (Array.isArray(op.valores) && op.valores.length) return null;  // lista fixa do autor
+    if (op.modo === 'numero' || op.modo === 'data') return null;      // limites/presets do cliente
+    if (op.modo === 'feicao') {
+      return op.campo ? { agregacao: 'linhas', campos: [op.campo], limite: op.max_opcoes || 50 } : null;
+    }
+    return op.campo ? { agregacao: 'categorias', campo: op.campo, max_categorias: op.max_opcoes || 50 } : null;
   }
   if (tipo === 'texto_rico') {
     return op.campos && op.campos.length
@@ -149,7 +184,7 @@ function renderIndicador(corpo, el, resultado) {
   return false;
 }
 
-function renderSerial(corpo, el, resultado) {
+function renderSerial(corpo, el, resultado, ctx) {
   const op = el.opcoes || {};
   if (!resultado || resultado.tipo !== 'serie' || !(resultado.chaves || []).length) {
     corpo.append(semDado(op.texto_sem_dado)); return true;
@@ -161,11 +196,31 @@ function renderSerial(corpo, el, resultado) {
     mensagemVazio: op.texto_sem_dado || 'sem dado',
   }));
   svg.setAttribute('aria-describedby', eq.id);
+  ligarSelecaoPorChave(svg, el, ctx);  // L2-06-c: clicar numa barra/ponto é gatilho de seleção
   corpo.append(svg, eq.no);
   return false;
 }
 
-function renderPizza(corpo, el, resultado) {
+/** L2-06-c: marca como `.painel-selecionado` as marcas gráficas cujo `data-chave`/`data-id` está na
+ * seleção da vista do elemento e transforma o clique nelas em `ctx.definirSelecaoElemento(el.id, [id])`
+ * (clicar de novo na mesma marca limpa — o alternar é do `definirSelecaoElemento`, em render.js). */
+function ligarSelecaoPorChave(svg, el, ctx) {
+  const vista = ctx.vista ? ctx.vista(el.id) : null;
+  const marcados = vista ? vista.selecao : new Set();
+  for (const b of svg.querySelectorAll('[data-chave],[data-id]')) {
+    const chave = b.getAttribute('data-chave') ?? b.getAttribute('data-id');
+    if (marcados.has(chave)) b.classList.add('painel-selecionado');
+  }
+  svg.addEventListener('click', (e) => {
+    const alvo = e.target.closest('[data-chave],[data-id]');
+    if (!alvo || !ctx.definirSelecaoElemento) return;
+    const chave = alvo.getAttribute('data-chave') ?? alvo.getAttribute('data-id');
+    if (alvo.getAttribute('data-outros') === '1') return;  // fatia "outros" não é uma categoria
+    ctx.definirSelecaoElemento(el.id, [chave]);
+  });
+}
+
+function renderPizza(corpo, el, resultado, ctx) {
   const op = el.opcoes || {};
   const serie = resultado && resultado.tipo === 'serie' ? (resultado.series || [])[0] : null;
   const chaves = (resultado && resultado.chaves) || [];
@@ -184,6 +239,7 @@ function renderPizza(corpo, el, resultado) {
     const svg = paraDom(desenhar(dados, { rosca: op.rosca !== false, titulo: el.titulo || 'gráfico de pizza',
       mensagemVazio: op.texto_sem_dado || 'sem dado' }));
     svg.setAttribute('aria-describedby', eq.id);
+    ligarSelecaoPorChave(svg, el, ctx);
     corpo.append(svg, eq.no);
     return false;
   });
@@ -226,7 +282,12 @@ function renderTabela(corpo, el, resultado, ctx) {
   const linhasBrutas = (resultado && resultado.linhas) || [];
   if (!linhasBrutas.length) { corpo.append(semDado(op.texto_sem_dado)); return true; }
   const estado = ctx.estado(el.id, { campo: (op.ordenacao || {}).campo, direcao: (op.ordenacao || {}).direcao });
-  const linhas = ordenarLinhas(linhasBrutas, estado.campo, estado.direcao);
+  // o id de seleção é a POSIÇÃO na resposta (linha de painel não tem chave estável — ver interacoes.js);
+  // a ordenação do cliente reordena as linhas mas PRESERVA o id original de cada uma
+  const linhas = ordenarLinhas(linhasBrutas.map((linha, i) => ({ ...linha, __id: String(i) })),
+    estado.campo, estado.direcao);
+  const vista = ctx.vista ? ctx.vista(el.id) : null;
+  const marcados = vista ? vista.selecao : new Set();
   const tabela = h('table', { class: 'painel-tabela' });
   const cabecalho = h('tr', {});
   for (const c of colunas) {
@@ -241,8 +302,12 @@ function renderTabela(corpo, el, resultado, ctx) {
     cabecalho.append(th);
   }
   tabela.append(h('thead', {}, cabecalho));
-  tabela.append(h('tbody', {}, ...linhas.map((linha) => h('tr', {},
-    ...colunas.map((c) => h('td', {}, valorDeCelula(linha[c])))))));
+  tabela.append(h('tbody', {}, ...linhas.map((linha) => {
+    const tr = h('tr', { 'data-id': linha.__id, class: marcados.has(linha.__id) ? 'painel-selecionado' : '' },
+      ...colunas.map((c) => h('td', {}, valorDeCelula(linha[c]))));
+    tr.addEventListener('click', () => { if (ctx.definirSelecaoElemento) ctx.definirSelecaoElemento(el.id, [linha.__id]); });
+    return tr;
+  })));
   corpo.append(tabela);
   if (resultado.total !== undefined && resultado.total !== null) {
     corpo.append(h('p', { class: 'painel-rodape-tabela' },
@@ -255,16 +320,21 @@ function renderLista(corpo, el, resultado, ctx) {
   const op = el.opcoes || {};
   const linhas = (resultado && resultado.linhas) || [];
   if (!linhas.length) { corpo.append(semDado(op.texto_sem_dado)); return true; }
+  const vista = ctx.vista ? ctx.vista(el.id) : null;
+  const marcados = vista ? vista.selecao : new Set();
   const lista = h('ul', { class: 'painel-lista' });
-  for (const linha of linhas) {
-    const item = h('li', { class: 'painel-lista-item' });
+  linhas.forEach((linha, i) => {
+    const id = String(i);
+    const item = h('li', { class: `painel-lista-item${marcados.has(id) ? ' painel-selecionado' : ''}`,
+      'data-id': id });
     if (op.icone) item.append(h('span', { class: 'painel-lista-icone', 'aria-hidden': 'true' }, op.icone));
     const texto = h('div', { class: 'painel-lista-texto' },
       h('span', { class: 'painel-lista-titulo' }, preencherModelo(op.modelo_titulo || `{${(resultado.colunas || [])[0] || ''}}`, linha)));
     if (op.modelo_detalhe) texto.append(h('span', { class: 'painel-lista-detalhe' }, preencherModelo(op.modelo_detalhe, linha)));
     item.append(texto);
+    item.addEventListener('click', () => { if (ctx.definirSelecaoElemento) ctx.definirSelecaoElemento(el.id, [id]); });
     lista.append(item);
-  }
+  });
   corpo.append(lista);
   const total = resultado.total;
   if (total !== undefined && total !== null && total > (resultado.limite || 0)) {
@@ -295,25 +365,44 @@ function renderMapa(corpo, el, resultado, ctx) {
   const pontos = linhas.filter((l) => Number.isFinite(Number(l.__lon)) && Number.isFinite(Number(l.__lat)))
     .map((l) => ({ lon: Number(l.__lon), lat: Number(l.__lat), linha: l }));
   if (!pontos.length) { corpo.append(semDado(op.texto_sem_dado || 'sem feição com geometria neste filtro')); return true; }
+  const estado = ctx.estado(el.id, {});
+  const vista = ctx.vista ? ctx.vista(el.id) : null;
+  const marcados = vista ? vista.selecao : new Set();
+  const piscados = new Set((estado.piscar || []).map((f) => f.id));
   const lons = pontos.map((p) => p.lon); const lats = pontos.map((p) => p.lat);
   const env = [Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)];
   const dx = (env[2] - env[0]) || 0.01; const dy = (env[3] - env[1]) || 0.01;
-  const caixa = [env[0] - dx * 0.06, env[1] - dy * 0.06, env[2] + dx * 0.06, env[3] + dy * 0.06];
-  const px = (lon) => PROJ.MARGEM + ((lon - caixa[0]) / (caixa[2] - caixa[0])) * (PROJ.LARGURA - 2 * PROJ.MARGEM);
-  const py = (lat) => PROJ.ALTURA - PROJ.MARGEM - ((lat - caixa[1]) / (caixa[3] - caixa[1])) * (PROJ.ALTURA - 2 * PROJ.MARGEM);
-  const filhos = pontos.map((p) => ({
+  // a caixa do ESTADO (zoom/pan vindos de ação de widget do barramento, ver interacoes.js) vence o
+  // envelope do dado; pontos fora da caixa ficam fora do desenho
+  const caixa = Array.isArray(estado.caixa) ? estado.caixa : [env[0] - dx * 0.06, env[1] - dy * 0.06, env[2] + dx * 0.06, env[3] + dy * 0.06];
+  const visivel = (p) => p.lon >= caixa[0] && p.lon <= caixa[2] && p.lat >= caixa[1] && p.lat <= caixa[3];
+  const largura = (caixa[2] - caixa[0]) || 0.01; const altura = (caixa[3] - caixa[1]) || 0.01;
+  const px = (lon) => PROJ.MARGEM + ((lon - caixa[0]) / largura) * (PROJ.LARGURA - 2 * PROJ.MARGEM);
+  const py = (lat) => PROJ.ALTURA - PROJ.MARGEM - ((lat - caixa[1]) / altura) * (PROJ.ALTURA - 2 * PROJ.MARGEM);
+  const filhos = pontos.map((p, i) => ({
     tag: 'circle',
     atrs: { cx: Math.round(px(p.lon) * 100) / 100, cy: Math.round(py(p.lat) * 100) / 100, r: 4,
-      class: 'painel-mapa-ponto' },
+      class: `painel-mapa-ponto${marcados.has(String(i)) ? ' painel-selecionado' : ''}${piscados.has(String(i)) ? ' painel-piscar' : ''}`,
+      'data-id': String(i) },
     filhos: [{ tag: 'title', atrs: {}, filhos: [preencherModelo(op.modelo_titulo || '', p.linha) || `${p.lon}, ${p.lat}`] }],
-  }));
+  })).filter((_, i) => visivel(pontos[i]));
   const svg = paraDom({ tag: 'svg', atrs: { viewBox: `0 0 ${PROJ.LARGURA} ${PROJ.ALTURA}`, class: 'painel-mapa',
     role: 'img', 'aria-label': el.titulo || 'mapa', 'data-extensao': caixa.map((v) => v.toFixed(5)).join(',') },
   filhos });
   const eq = tabelaEquivalente(['longitude', 'latitude'], pontos.slice(0, 200).map((p) => [p.lon, p.lat]),
     { rotulo: el.titulo || 'pontos do mapa' });
   svg.setAttribute('aria-describedby', eq.id);
-  corpo.append(svg);
+  ligarSelecaoPorChave(svg, el, ctx);  // clicar num ponto é gatilho de seleção (o data-id é a posição)
+  if (estado.popup && estado.popup.propriedades) {
+    const texto = preencherModelo(op.modelo_titulo || '', estado.popup.propriedades)
+      || Object.entries(estado.popup.propriedades).slice(0, 4).map(([c, v]) => `${c}: ${valorDeCelula(v)}`).join(' · ');
+    const popup = h('div', { class: 'painel-mapa-popup', role: 'status' }, texto);
+    const caixaMapa = h('div', { class: 'painel-mapa-caixa' });
+    caixaMapa.append(svg, popup);
+    corpo.append(caixaMapa);
+  } else {
+    corpo.append(svg);
+  }
   // "extensão como filtro": a extensão visível vira condição espacial nas OUTRAS fontes do painel
   const barra = h('div', { class: 'painel-mapa-acoes' });
   const btFiltrar = h('button', { type: 'button', class: 'pequeno', 'data-acao': 'filtrar-extensao' },
@@ -411,6 +500,106 @@ function renderCabecalho(corpo, el, _resultado, ctx) {
   return false;
 }
 
+/* --------------------------------------------------------------- seletor (item L2-06-c) */
+/** Lê o valor do seletor a partir do filtro CQL2 que a vista guarda (restauração da URL): '=' e 'in' de
+ * um valor viram o valor do controle; intervalo numérico vira {min,max}; '>=' de data ISO vira a data. */
+export function valorInicialDoSeletor(filtro, modo) {
+  const vazio = modo === 'numero' ? { min: '', max: '' } : '';
+  if (!filtro) return vazio;
+  const eNumero = (x) => typeof x === 'number' && Number.isFinite(x);
+  if (modo === 'numero') {
+    const partes = filtro.op === 'and' && Array.isArray(filtro.args) ? filtro.args : [filtro];
+    const minmax = { min: '', max: '' };
+    for (const p of partes) {
+      if (!p || !Array.isArray(p.args) || !p.args[0] || typeof p.args[0].property !== 'string') continue;
+      if (p.op === '>=' && eNumero(p.args[1])) minmax.min = String(p.args[1]);
+      if (p.op === '<=' && eNumero(p.args[1])) minmax.max = String(p.args[1]);
+    }
+    return minmax;
+  }
+  if (filtro.op === '=' && filtro.args && typeof filtro.args[1] !== 'object') return String(filtro.args[1]);
+  if (filtro.op === 'in' && Array.isArray(filtro.args?.[1]) && filtro.args[1].length === 1) return String(filtro.args[1][0]);
+  if (modo === 'data' && filtro.op === '>=' && typeof filtro.args?.[1] === 'string') return filtro.args[1];
+  return vazio;
+}
+
+function renderSeletor(corpo, el, resultado, ctx) {
+  const op = el.opcoes || {};
+  const modo = op.modo || 'categoria';
+  const campo = op.campo;
+  const vista = ctx.vista ? ctx.vista(el.id) : null;
+  const inicial = valorInicialDoSeletor(vista ? vista.filtroDinamico : null, modo);
+  const aplicar = (filtro) => { if (ctx.definirFiltroElemento) ctx.definirFiltroElemento(el.id, filtro); };
+  const caixa = h('div', { class: 'painel-seletor' });
+
+  // número: dois campos (mínimo e máximo) — intervalo vira `and` de >= e <= (nunca `between`: o
+  // servidor de painel não aceita esse operador no filtro por pedido)
+  if (modo === 'numero') {
+    const rotulo = op.rotulo || el.titulo || 'valor';
+    const de = h('input', { type: 'number', class: 'painel-seletor-num', placeholder: 'mínimo',
+      'aria-label': `mínimo de ${rotulo}`, value: inicial.min });
+    const ate = h('input', { type: 'number', class: 'painel-seletor-num', placeholder: 'máximo',
+      'aria-label': `máximo de ${rotulo}`, value: inicial.max });
+    let temporizador = null;
+    const disparar = () => {
+      clearTimeout(temporizador);
+      temporizador = setTimeout(() => {
+        const partes = [];
+        if (de.value !== '' && Number.isFinite(Number(de.value))) partes.push({ op: '>=', args: [{ property: campo }, Number(de.value)] });
+        if (ate.value !== '' && Number.isFinite(Number(ate.value))) partes.push({ op: '<=', args: [{ property: campo }, Number(ate.value)] });
+        aplicar(partes.length === 0 ? null : partes.length === 1 ? partes[0] : { op: 'and', args: partes });
+      }, 250);
+    };
+    de.addEventListener('input', disparar);
+    ate.addEventListener('input', disparar);
+    caixa.append(h('div', { class: 'painel-seletor-faixa' }, de, h('span', { class: 'painel-seletor-ate' }, 'a'), ate));
+    corpo.append(caixa);
+    return false;
+  }
+
+  // período: presets (a data-limite é calculada no cliente na HORA da escolha e o filtro guarda a data
+  // exata — a URL reabre com a MESMA data, não recalcula)
+  if (modo === 'data') {
+    const presets = Array.isArray(op.presets) && op.presets.length ? op.presets : [...PRESETS_DATA];
+    const sel = h('select', { class: 'painel-seletor-controle', 'aria-label': op.rotulo || el.titulo || 'período' });
+    sel.append(h('option', { value: '' }, op.rotulo_todos || 'todo o período'));
+    for (const p of presets) sel.append(h('option', { value: p }, ROTULO_PRESET[p] || p));
+    if (typeof inicial === 'string' && inicial && !presets.some((p) => isoDePreset(p) === inicial)) {
+      sel.append(h('option', { value: inicial }, `desde ${inicial.slice(0, 10)}`));
+    }
+    sel.value = typeof inicial === 'string' ? inicial : '';
+    sel.addEventListener('change', () => {
+      aplicar(sel.value ? { op: '>=', args: [{ property: campo }, isoDePreset(sel.value)] } : null);
+    });
+    caixa.append(sel);
+    corpo.append(caixa);
+    return false;
+  }
+
+  // categoria e feição: um <select>; a primeira opção "todos" limpa o filtro (valor null na vista)
+  let valores = [];
+  if (Array.isArray(op.valores) && op.valores.length) valores = op.valores;
+  else if (modo === 'feicao' && resultado && resultado.tipo === 'linhas') {
+    valores = (resultado.linhas || []).map((l) => l[campo]);
+  } else if (resultado && resultado.tipo === 'categorias') {
+    valores = (resultado.linhas || []).map((l) => l.categoria);
+  } else {
+    corpo.append(semDado(op.texto_sem_dado || 'sem opções para o seletor')); return true;
+  }
+  const unicos = [...new Set(valores.filter((v) => v !== null && v !== undefined).map((v) => String(v)))];
+  const sel = h('select', { class: 'painel-seletor-controle', 'aria-label': op.rotulo || el.titulo || 'filtro' });
+  sel.append(h('option', { value: '' }, op.rotulo_todos || 'todos'));
+  for (const v of unicos) sel.append(h('option', { value: v }, v));
+  sel.value = typeof inicial === 'string' && inicial ? inicial : '';
+  if (sel.value && !unicos.includes(sel.value)) sel.append(h('option', { value: sel.value }, sel.value));
+  sel.addEventListener('change', () => {
+    aplicar(sel.value && campo ? { op: '=', args: [{ property: campo }, sel.value] } : null);
+  });
+  caixa.append(sel);
+  corpo.append(caixa);
+  return false;
+}
+
 const RENDER = {
   indicador: renderIndicador,
   grafico: renderSerial,        // o `grafico` do L2-06-a passa a desenhar em SVG, com tabela equivalente
@@ -420,6 +609,7 @@ const RENDER = {
   lista: renderLista,
   mapa: renderMapa,
   detalhes: renderDetalhes,
+  seletor: renderSeletor,
   texto_rico: renderTextoRico,
   legenda: renderLegenda,
   cabecalho: renderCabecalho,
@@ -431,8 +621,9 @@ export function renderElemento(corpo, elemento, resultado, ctx) {
   const f = RENDER[elemento.tipo];
   if (!f) { corpo.textContent = '—'; return false; }
   // o `grafico` do L2-06-a devolve `{tipo:'categorias'}`: converte para a forma de série antes de desenhar
+  // (o seletor NÃO: ele lê as categorias como estão, uma opção por linha)
   let dado = resultado;
-  if (resultado && resultado.tipo === 'categorias') {
+  if (resultado && resultado.tipo === 'categorias' && elemento.tipo !== 'seletor') {
     dado = { tipo: 'serie', chave: (elemento.opcoes || {}).campo_rotulo || 'categoria', granularidade: null,
       chaves: (resultado.linhas || []).map((l) => l.categoria),
       series: [{ alias: 's0', rotulo: 'valor', valores: (resultado.linhas || []).map((l) => l.valor) }] };
