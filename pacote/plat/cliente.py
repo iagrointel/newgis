@@ -14,6 +14,7 @@ Exemplo (nos doctests a suíte injeta `pla`, uma `Plataforma` conectada à insta
 
 from __future__ import annotations
 
+import os
 from typing import Any
 from urllib.parse import urljoin
 
@@ -37,6 +38,21 @@ class Plataforma:
         self.sessao = requests.Session()
         self.sessao.verify = verificar_tls
         self._dominios: dict[str, Any] = {}
+
+    @classmethod
+    def do_ambiente(cls) -> "Plataforma":
+        """Instância ligada à instalação onde este código está rodando (item L2-16-c): lê
+        PLAT_URL_API e PLAT_TOKEN do ambiente — as variáveis que o contêiner do inquilino
+        recebe (L2-16-b). Dentro de um script de ferramenta é a forma canônica de conectar;
+        fora do contêiner as variáveis vêm do ambiente de quem executa."""
+        url = os.environ.get("PLAT_URL_API")
+        token = os.environ.get("PLAT_TOKEN")
+        if not url or not token:
+            raise erros.ErroPlataforma(
+                "PLAT_URL_API e PLAT_TOKEN precisam estar no ambiente "
+                "(dentro do contêiner da plataforma elas já vêm postas)"
+            )
+        return cls(url, token, verificar_tls=False)
 
     # ------------------------------------------------------------------ HTTP
     def _pede(self, metodo: str, caminho: str, **kw) -> Any:
