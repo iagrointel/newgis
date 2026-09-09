@@ -37,6 +37,7 @@ from app.auth.sessao import Auth, autenticado
 from app.catalogo.comum import registrar_evento, uuid_ok
 from app.catalogo.modelos import Modelo
 from app.erros import ErroAPI
+from app.imagens import formatos
 from app.imagens import pgstac as ps
 from app.jobs import servico
 from app.jobs.contexto import sessao_de
@@ -201,6 +202,16 @@ class IngestaoEntrada(Modelo):
         default=False,
         description="manter o bruto no armazenamento após os COGs validados (ocupa cota); padrão: apagar",
     )
+
+
+# ---------------------------------------------------------------- tabela de formatos (a MESMA do código)
+@router.get("/api/imagens/formatos", openapi_extra=LER)
+def formatos_de_entrada():
+    """A tabela canônica de formatos de entrada raster (`app.imagens.formatos.lista()`): aceitos com a
+    georreferência de cada um e recusados com a mensagem exata (ECW/MrSID sem SDK no GDAL desta
+    instalação; GeoPDF e HDF5 com razão medida). A tela de upload lê ESTA rota — nunca mantém lista à
+    mão: tabela da tela diferente da tabela do código é a refutação nomeada do item L1-01-f."""
+    return formatos.lista()
 
 
 @router.post("/api/imagens/ingestoes", status_code=202, openapi_extra=PUBLICAR)
