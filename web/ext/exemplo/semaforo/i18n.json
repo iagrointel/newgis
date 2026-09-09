@@ -1,0 +1,4 @@
+{
+  "widget.semaforo.rotulo": "Semáforo da seleção",
+  "widget.semaforo.ajuda": "Recebe o clique da tabela e pinta o nível: 1 verde, 2 amarelo, 3 ou mais vermelho."
+}
