@@ -53,6 +53,7 @@ from app.settings import settings
 from app.tiles.rotas import router as rotas_tiles
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
+from app.widgets.rotas import router as rotas_widgets_externos
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
@@ -127,6 +128,9 @@ ROUTERS = [
     rotas_mapa,
     # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
     rotas_tiles,
+    # --- widgets externos por inquilino (L5-36-widgets-personalizados-sdk): /api/widgets/externos instala
+    # (admin, org.configurar), lista e serve o módulo same-origin com sha256 — o SDK do parceiro carrega daqui
+    rotas_widgets_externos,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]
