@@ -62,7 +62,12 @@ class Tela:
     esperada de um fluxo (senha errada = 401). Esses, e só esses, são aceitos quando o status foi declarado com
     esperar_status(); qualquer outro erro de console reprova (cláusula P1: 0 erro de console)."""
 
-    def __init__(self, page, base_url: str):
+    def __init__(self, page, base_url: str, item: str | None = None):
+        # `item` nomeia a captura (tests/e2e/capturas/<item>_<nome>.png). Sem argumento, cai no ITEM deste
+        # módulo (L0-02) por compatibilidade — era o único valor possível antes (achado no item
+        # L2-02-e-simbolos-sprites-glifos: toda captura de todo item saía como "L0-02-tenant-auth_*", porque
+        # `capturar()` usava a constante do módulo em vez do item do teste que a chamou).
+        self.item = item or ITEM
         self.page = page
         self.base_url = base_url.rstrip("/")
         self.console: list[str] = []
@@ -101,7 +106,7 @@ class Tela:
 
     def capturar(self, nome: str) -> Path:
         CAPTURAS.mkdir(parents=True, exist_ok=True)
-        caminho = CAPTURAS / f"{ITEM}_{nome}.png"
+        caminho = CAPTURAS / f"{self.item}_{nome}.png"
         self.page.screenshot(path=str(caminho), full_page=True)
         return caminho
 
@@ -131,6 +136,6 @@ def texto_aviso(page, seletor: str = "#aviso") -> str:
 
 
 def gravar_medidas(medida, tela: Tela) -> None:
-    gravar = medida(ITEM)
+    gravar = medida(tela.item)
     for nome, valor in tela.medidas.items():
         gravar(nome, valor, "ms", "goto até body[data-pronto=1] no chromium do playwright (tests/e2e/apoio.py Tela.ir)")

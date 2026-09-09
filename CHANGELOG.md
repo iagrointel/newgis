@@ -3,6 +3,22 @@
 Uma entrada por turno do laço PLATAFORMA ENTERPRISE. Números só de `tests/medidas/<item>.json` (com o comando que
 os gerou) ou dos vereditos do adversário em `laco/handoffs/T<n>/<item>/refutacao.json`.
 
+## turno 4, setembro de 2026 (item L2-02-c-editor-simbologia-vetor: editor de simbologia no visualizador)
+
+- **Editor de simbologia** (`web/js/mapa/estilo_editor.js`, painel `#painel-estilo` na tela `/mapa`): símbolo
+  único (cor, contorno, tamanho, ícone do sprite, tracejado, seta, padrão de preenchimento), por categoria (valores
+  do servidor, cor/ícone por valor, ordem, rampa qualitativa, "outros" para o que passa de 200), por classe de cor e de
+  tamanho (método e n do L2-02-b, rampas ColorBrewer sequenciais/divergentes com inversão), proporcional, mapa de
+  calor, agrupamento (clusters no tile), efeitos (sombra, brilho; mistura registrada), faixa de escala por camada e por
+  classe; pré-visualização ao vivo pela mesma função que grava (`POST /api/estilos/compilar`); desfazer/refazer;
+  exportar/importar JSON; salvar como item `estilo` ligado à camada (`camada_id` → `estilo_de_camada`).
+- **Visualizador** desenha a camada com o estilo salvo mais recente (`/api/mapa/camadas`), com sprite e glifos do
+  inquilino; `tilejson?agrupar=<raio>` serve clusters pela função `t_<hex>_ag` (migração
+  `20260907T2110_agrupamento_tile.sql`, `plat.camada_agrupar`).
+- Esquema `estilo-v1` estendido só com campos opcionais (migração `20260907T2100_estilo_editor.sql`); compilador com
+  outros, classes de tamanho, ícone, tracejado, padrão, seta, efeitos e escala; ColorBrewer 1.7.0 no vendor com licença.
+  ADR `docs/adr/20260907T2130-editor-de-simbologia.md`; paridade contra "Apply styles" em docs/PARIDADE.md.
+
 ## turno 7, setembro de 2026 (item L7-19-segredos-e-certificados: os 5 segredos fora do .env, rotação com 0 erro 5xx medido pelo k6)
 
 Colheita da bancada `wt/segredos` (interrompida por limite de cota em 06/09) mais o conserto do que a
@@ -152,6 +168,123 @@ estoura o `statement_timeout` de 1 s. Guarda contra regressão: `test_toda_funca
 `pg_proc.prosrc` vivo e reprova função `SECURITY DEFINER` que faça DDL de schema, GRANT ou CREATE/DROP
 TABLE sem o trinco — necessário porque a migração redefine funções inteiras e um ramo posterior pode
 derrubar o trinco em silêncio. ADR 0025.
+## turno 4, setembro de 2026 (item L2-01-mapa-web: visualizador de mapa próprio, do Martin à impressão)
+
+Visualizador MapLibre da plataforma, com a pilha de tiles vetoriais que faltava chegar a `master`.
+
+- **Servidor de tiles**: Martin 1.15.0 (musl, sha256 do pacote fixado em `deploy/martin_instalar.sh`) como
+  unidade `plat-martin` em `127.0.0.1:8151`, publicando SÓ funções (`auto_publish.tables: false`) — a
+  tabela crua da camada nunca é exposta. Papel de leitura `plat_leitor` (LOGIN, sem BYPASSRLS, sem ser
+  dono), `plat.contexto_por_token` e a função de tile por camada com RLS vieram do trabalho dos itens
+  L2-01-b/L2-04-a, que nunca tinha sido juntado.
+- **API do mapa** (`app/mapa/`): `GET /api/mapa/camadas` com estilo MapLibre e legenda geradas da
+  simbologia; `GET /api/mapa/camadas/{id}/tilejson` cunhando token de 12 h com escopo de UMA camada;
+  repasse `GET /tiles/{esquema}/{funcao}/{z}/{x}/{y}` com a mesma autorização do `auth_request` do nginx
+  (uma implementação, duas portas); `plat.camada_extensao` para o "enquadrar".
+- **Tela `/mapa`**: lista de camadas com ordem (arrastar e por botão), opacidade, ligar/desligar e
+  enquadrar; legenda; janela de atributos (campo nulo aparece marcado, multi-geometria não se repete);
+  medição geodésica de distância e área; pesquisa de endereço (CNEFE) e de coordenada em decimal e em
+  grau-minuto-segundo; escala, coordenadas e escala numérica 1:N; troca de mapa-base; impressão em PNG e
+  em PDF com escala, barra de escala e seta de norte.
+- **`GET /api/geocodificar`**: geocodificar é leitura e agora tem o verbo certo (o POST continua).
+- Medido com 1.000.000 de feições: 2,4 s do clique ao primeiro desenho, 1,5 s de zoom até `idle`, 61 MB
+  de heap; 10 camadas ao mesmo tempo em 4,3 s, pan em 302 ms, 24,8 MB. Tile z8 pelo repasse: 406 ms
+  frio, 21 ms quente. Detalhe em `tests/medidas/L2-01-mapa-web.json`.
+- Dois defeitos reais achados pelos testes e corrigidos: `attribution: undefined` fazia o MapLibre
+  recusar a fonte inteira em silêncio; repassar `Content-Encoding: gzip` com corpo já descompactado
+  entregava tile ilegível ao navegador. Registrados no ADR 20260907T0400.
+## turno 5, setembro de 2026 (item L2-02-a-modelo-estilo: o estilo de uma camada vira documento versionado)
+
+O tipo `estilo` deixa de ter `corpo` livre e passa a carregar o **JSON Schema publicado**
+(`docs/esquemas/estilo-v1.json`): `plat_construtor` (a intenção do usuário — 7 tipos: `unico`, `categoria`,
+`classes`, `proporcional`, `calor`, `agrupamento`, `raster`, com campo, cortes, cores, rótulos, faixa de
+escala e transparência) e `maplibre` (as camadas MapLibre Style Spec v8 que o navegador desenha). O servidor
+recompila `maplibre` a partir de `plat_construtor` na gravação (`app/estilos/validador.py`) — nunca existe um
+`maplibre` gravado que não seja exatamente o que aquele `plat_construtor` implica, o que fecha a ida-e-volta
+sem perda sem depender do cliente calcular o documento certo. Validação em três camadas na gravação, nunca no
+desenho: (1) `plat_construtor` compila sem erro (campo ausente, faixa invertida, tipo desconhecido —
+`app/estilos/compilador.py`, `EstiloInvalido` → 422 `plat_construtor_invalido` com o campo apontado); (2)
+todo campo citado em expressões `get`/`has`/`in` está no vocabulário `plat_construtor.campos` (422
+`campo_inexistente`); (3) a Style Spec enviada é válida pelo pacote oficial `@maplibre/maplibre-gl-style-spec`
+20.4.0, chamado por subprocesso Node (`ferramentas/estilo/validar.mjs`) — 422 `estilo_invalido` com a
+mensagem literal do validador. `docs/adr/20260907T1200-modelo-de-estilo.md` registra a convivência com
+`app/mapa/simbologia.py` (item L2-01-mapa-web, ramo `wt/l201mapa`, ainda não juntado): as duas coisas ainda
+não se ligam (nenhum código resolve um `estilo.ref` desenhando-o), e o caminho de convergência fica descrito
+lá, com a mesma paleta categórica preservada nos dois lugares.
+
+`app/estilos/padrao.py::estilo_padrao` gera o estilo padrão de uma camada nova por hash sha256 do uuid do
+item — mesmo uuid, mesma cor, em qualquer instalação (testado em `tests/unit/test_estilos_compilador.py`);
+wiring dentro do INSERT de `app/ingestao/carregar.py` fica para quem tocar o L0-04-c/L2-02-e em seguida (a
+função está pronta e testada, a chamada dentro do pipeline de ingestão não foi feita neste item).
+`app/estilos/sld.py::gerar_sld` converte o subconjunto declarado (`unico`/`categoria`/`classes`) para SLD 1.0;
+provado por leitura do XML (as mesmas cores do construtor), não por abrir no QGIS — QGIS não está instalado
+nesta máquina (`SISTEMA.md` recursos), então essa metade da cláusula fica **parcial**, nomeada no handoff.
+
+Sete exemplos (um por tipo do construtor) em `tests/estilos/*.json`: todos compilam, passam no validador
+oficial e a ida-e-volta (compilar de novo o mesmo `plat_construtor`) dá byte a byte o mesmo `maplibre`.
+Bateria da refutação, todas recusadas em 422 na gravação: expressão com campo inexistente, 300 layers
+(o esquema limita a 200), sprite de URL externa (padrão restrito a `/sprites/...` interno), faixa de classe
+invertida, valor de categoria duplicado; item de um inquilino não é legível por outro (404, RLS genérico do
+catálogo). `tests/api/catalogo/conftest.py::DADOS_POR_TIPO["estilo"]` e duas fixtures de `test_mapas.py` que
+fabricavam um `estilo` de exemplo com a forma antiga (`corpo` livre) foram atualizadas para o novo formato.
+
+## turno 3, setembro de 2026
+, setembro de 2026 (item L2-01-a-documento-mapa: o mapa é um documento com esquema, não um punhado de URLs)
+
+O tipo `mapa` deixa de ter `corpo` livre e passa a carregar um **JSON Schema publicado**
+(`docs/esquemas/mapa-v1.json`, gerado de `plat.tipo_item`): mapa-base, lista ordenada de camadas com
+visibilidade, opacidade, faixa de escala, grupo (até 3 níveis), estilo, popup, filtro CQL2-JSON, rótulos,
+campo de tempo e intervalo de atualização; extensão inicial, rotação, CRS de exibição fixo em 3857 e
+favoritos. Cada camada aponta o item do catálogo por **uuid** (`ref`), nunca por URL — o oposto do Web Map
+JSON da Esri, onde a URL do portal fica congelada dentro de cada mapa salvo. Rotas novas: `POST/GET/PUT
+/api/mapas`, `GET /api/mapas` e `GET /api/mapas/{id}/completo`, que devolve o documento com as camadas já
+resolvidas (título, tipo, campos, estilo, popup) em UMA chamada. Contrato no ADR 0022; de-para chave a chave
+contra a Web Map Specification em `docs/PARIDADE.md`.
+
+Medido em `tests/medidas/L2-01-a.json`: `/completo` de um mapa com **10 camadas** responde com p95 de
+**20,7 ms** (mediana 12,2 ms) em **50 chamadas**, contra o teto de 150 ms do portão. Camada de outro inquilino
+citada no documento = **404** (o mesmo 404 de uuid inexistente, sem revelar que existe); apagar camada usada
+por mapa = **409** com a lista dos mapas dependentes; 500 camadas, 5 níveis de grupo, ciclo de grupo e
+extensão fora do mundo = **422**, nenhum 200 e nenhum 500. Na tela `/mapa?id=<uuid>` a lista de camadas
+reordena arrastando (e por teclado, Alt+seta): e2e grava a ordem, recarrega a página e confere que voltou a
+mesma, com captura em `tests/e2e/capturas/L2-01-a-documento-mapa_painel_camadas.png`.
+
+⛔ Fronteira honesta: `/completo` devolve o CONTRATO da URL de tiles com `pronto: false` e o motivo — não há
+servidor de tiles vetoriais nem raster instalado nesta máquina (itens L2-01-b e L1-02) —, e `dominios` sai
+vazio com o motivo escrito, porque a camada ainda não guarda vocabulário de domínio (L0-04-c, parcial). A tela
+lista e reordena as camadas do documento; não as desenha no canvas, pelo mesmo motivo, e diz isso em cada
+linha. ⛔ Quebra declarada: documento com `corpo.camadas` como lista de uuid soltos passa a ser 422.
+## turno 3, setembro de 2026 (item L2-02-e-simbolos-sprites-glifos: biblioteca de símbolos, sprite por inquilino e glifos de fonte)
+
+Biblioteca própria de símbolos em `app/simbolos/biblioteca.py`: **153 ícones** e **10 padrões de
+preenchimento** (hachuras, pontos, tracejados), todos de produção própria sob CC0-1.0, gerados por
+composição de traço sobre moldura de categoria (energia, água, saneamento, transporte, ambiente,
+imobiliário, campo, setas, formas). Licença de cada arquivo, com sha256, em `docs/LICENCAS_SIMBOLOS.md`,
+gerado do manifesto vivo por `scripts/gerar_licencas_simbolos.py` — o arquivo não se edita à mão.
+
+Sprite por inquilino em `/api/simbolos/sprite/{slug}.json|.png`, 1x e 2x, no formato que o MapLibre
+consome, composto pela própria API. O Martin não serve o sprite porque lê o diretório uma única vez na
+subida do processo (medido com o binário v1.15.0 e `curl`, sem código nosso): um SVG acrescentado ao vivo
+não aparece. Decisão e medição em `docs/adr/20260907T1642-sprite-proprio-em-vez-de-martin.md`. Os glifos
+de fonte, que não mudam em runtime, continuam vindo do Martin de verdade (`app/simbolos/fontes.py`), sobre
+as TTF embutidas Noto Sans (OFL-1.1) e Open Sans (Apache-2.0) registradas em `web/vendor/VERSOES.txt`.
+
+Upload de SVG do inquilino saneado por `app/simbolos/validador.py`: `<script>`, referência externa e XML
+perigoso (DOCTYPE/entidade — a bomba de XML da refutação) são recusados com **422** e motivo nomeado;
+acima de 64 kB é recusado. O upload entra no sprite sob o prefixo `personalizado/`, então um ícone com o
+mesmo nome de um da base não sobrescreve nada — os dois convivem no mesmo sprite (a segunda refutação).
+Pedir o sprite de outro inquilino com token próprio dá **403 `inquilino_divergente`** (a terceira).
+
+Medido (`tests/medidas/L2-02-e-simbolos-sprites-glifos.json`, com a carga da máquina ao lado): compor o
+atlas dos 163 itens leva **0,097 s** em 1x e **0,145 s** em 2x; do POST do ícone até ele aparecer no
+`sprite.json` pelo HTTP, **0,271 s** sem reinício de processo — folga de 18x sobre os 5 s do portão, e
+isso com carga 12,38 e 0,4 GiB livres. Galeria em `/simbolos` com busca por nome e filtro por categoria;
+o e2e escolhe um ícone e vê o marcador no mapa, e uma captura real do navegador mostra os glifos da Noto
+Sans com acento português ("Nação, Água, Ímã, Coração, Codificação").
+
+Achado de fora do item, consertado de passagem: `tests/e2e/apoio.py` nomeava a captura de qualquer item
+como `L0-02-tenant-auth_*`, porque usava a constante do próprio módulo em vez do item do teste que a
+chamou. `Tela(...)` agora recebe `item=`, com o valor antigo como padrão.
 
 ## turno 3, setembro de 2026 (item L0-07-d-smtp-convites: SMTP, convite de membro por e-mail e redefinição de senha por e-mail)
 

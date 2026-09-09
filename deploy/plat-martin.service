@@ -1,0 +1,25 @@
+[Unit]
+Description=plat — servidor de tiles vetoriais Martin (item L2-01-b-martin-tiles-vetoriais). Análise / beta privado.
+After=postgresql.service network.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=APP_USER
+WorkingDirectory=APP_DIR
+# plat_leitor: LOGIN, sem BYPASSRLS, sem dono de nada (db/leitor_instalar.sh). A senha vem do credential do
+# LoadCredential, nunca do .env nem da linha de comando (docs/SEGURANCA.md §1) — martin.yaml interpola
+# ${PLAT_DSN_LEITOR} do ambiente, que o systemd só entrega a esta unidade.
+LoadCredential=PLAT_DSN_LEITOR:/etc/plat/segredos/PLAT_DSN_LEITOR
+ExecStart=/bin/sh -c 'PLAT_DSN_LEITOR=$(cat ${CREDENTIALS_DIRECTORY}/PLAT_DSN_LEITOR) exec APP_DIR/bin/martin --config APP_DIR/deploy/martin.yaml'
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=APP_DIR
+
+[Install]
+WantedBy=multi-user.target

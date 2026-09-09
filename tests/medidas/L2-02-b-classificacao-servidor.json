@@ -1,0 +1,39 @@
+{
+ "item": "L2-02-b-classificacao-servidor",
+ "clausulas_do_portao": {
+  "quantil_intervalo_igual_5_campos": {
+   "prova": "tests/unit/test_classificacao.py::test_quantil_igual_a_numpy, test_intervalo_igual_a_numpy",
+   "resultado": "passou"
+  },
+  "jenks_referencia_independente_3_conjuntos_1000": {
+   "prova": "tests/unit/test_classificacao.py::test_jenks_confere_com_referencia_independente (jenkspy)",
+   "resultado": "passou"
+  },
+  "nulos_excluidos_contados_repetidos_sem_classe_vazia": {
+   "prova": "tests/api/catalogo/test_classes_rota.py::test_nulos_excluidos_e_contados_repetidos_sem_classe_vazia",
+   "resultado": "passou"
+  },
+  "categorias_5000_devolve_200_mais_total": {
+   "prova": "tests/api/catalogo/test_classes_rota.py::test_categorias_5000_distintos_devolve_200_mais_total",
+   "resultado": "passou"
+  },
+  "refutacao_n1_n100_texto_data": {
+   "prova": "tests/api/catalogo/test_classes_rota.py::test_n_igual_1, test_n_igual_100_maior_que_distintos, "
+             "test_campo_texto_para_metodo_numerico_e_4xx, test_campo_data_classificado_e_comparado_com_numpy",
+   "resultado": "passou (n=100 acima do teto de 32 classes da rota devolve 422, não é silenciosamente truncado)"
+  }
+ },
+ "medidas": {
+  "classes_1mi_quantil_s": {
+   "valor": 0.61,
+   "unidade": "s",
+   "alvo": "<= 2",
+   "passou": true,
+   "comando": "tests/api/catalogo/medir_classes_desempenho.py",
+   "carga_1min": 24.12646484375,
+   "ram_livre_gb": 8.0,
+   "carga_geracao_dado_s": 1.337,
+   "medido_em": "2026-09-07T13:03:34Z"
+  }
+ }
+}

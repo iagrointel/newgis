@@ -50,6 +50,7 @@ from app.catalogo.modelos import (
     VersaoCompleta,
 )
 from app.erros import ErroAPI
+from app.estilos import validador as estilos_validador
 from app.settings import settings
 
 router = APIRouter(tags=["catalogo"])
@@ -558,6 +559,7 @@ def criar(corpo: ItemEntrada, request: Request, auth: Auth = autenticado("conteu
     _publicar_tipo(auth, corpo.tipo)
     tipos.validar(corpo.tipo, corpo.dados)
     documento.validar_grafo(corpo.tipo, corpo.dados)
+    estilos_validador.validar_estilo(corpo.tipo, corpo.dados)
     _classificacao(auth, corpo.classificacao, novo=True)
     iid = str(uuid.UUID(corpo.id)) if corpo.id else str(uuid.uuid4())
     ext_sql, ext_params = _extent_sql(corpo.extent)
@@ -694,6 +696,7 @@ def editar_item(
     if "dados" in campos:
         tipos.validar(r["tipo"], dados)
         documento.validar_grafo(r["tipo"], dados)
+        estilos_validador.validar_estilo(r["tipo"], dados)
     if "classificacao" in campos:
         _classificacao(auth, campos["classificacao"], novo=False)
     cats = (
@@ -1075,7 +1078,7 @@ def relacoes_definir(id: str, corpo: RelacoesEntrada, request: Request, auth: Au
     try:
         with db.db(auth.contexto()) as cur:
             r = exigir_edicao(cur, iid)
-            if relacoes.tem_extrator(r["tipo"]):
+            if relacoes.relacoes_pelo_documento(r["tipo"], r["dados"]):
                 raise ErroAPI(409, "relacoes_pelo_tipo", f"as relações de {r['tipo']} saem de dados; edite o item")
             cur.execute("SELECT nome FROM plat.relacao_tipo")
             vocab = {x["nome"] for x in cur.fetchall()}

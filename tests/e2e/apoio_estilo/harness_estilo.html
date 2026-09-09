@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../../web/vendor/maplibre-gl-4.7.1.css" />
+<style>html,body,#mapa{margin:0;padding:0;width:800px;height:600px;}</style>
+</head>
+<body>
+<div id="mapa"></div>
+<script src="../../../web/vendor/maplibre-gl-4.7.1.js"></script>
+<script>
+// Arnês de renderização do item L2-02-a-modelo-estilo: recebe um documento de estilo (o mesmo formato
+// gravado no catálogo, `{plat_construtor, maplibre}`) por `window.ESTILO_TESTE` (o teste injeta via
+// page.evaluate ANTES de navegar para este arquivo não é possível — em vez disso injeta um <script> com
+// o JSON, ver tests/e2e/test_estilos_render.py) e desenha as camadas de `maplibre.layers` sobre uma fonte
+// GeoJSON sintética compatível com a geometria e os campos do `plat_construtor`. Marca `data-pronto="1"`
+// no <body> quando o mapa termina de desenhar (evento `idle`), para o teste esperar por isso, nunca por
+// um `sleep` fixo.
+function geojsonDe(geometria, campos) {
+  var feicoes = [];
+  var n = 24;
+  for (var i = 0; i < n; i++) {
+    var props = {};
+    (campos || []).forEach(function (c, idx) {
+      if (c === "classe_uso") props[c] = ["lavoura", "pastagem"][i % 2];
+      else if (c === "area_ha") props[c] = 10 + i * 40;
+      else if (c === "populacao") props[c] = i * 40000;
+      else props[c] = i;
+    });
+    var x = -47 + (i % 6) * 0.05, y = -23 + Math.floor(i / 6) * 0.05;
+    var geom;
+    if (geometria === "ponto") geom = { type: "Point", coordinates: [x, y] };
+    else if (geometria === "linha") geom = { type: "LineString", coordinates: [[x, y], [x + 0.03, y + 0.02]] };
+    else geom = { type: "Polygon", coordinates: [[[x, y], [x + 0.04, y], [x + 0.04, y + 0.04], [x, y + 0.04], [x, y]]] };
+    feicoes.push({ type: "Feature", properties: props, geometry: geom });
+  }
+  return { type: "FeatureCollection", features: feicoes };
+}
+
+var doc = window.ESTILO_TESTE;
+var pc = doc.corpo.plat_construtor;
+var ml = doc.corpo.maplibre;
+var camposUsados = (pc.campos || []).concat(pc.campo ? [pc.campo] : []);
+var dado = geojsonDe(pc.geometria, camposUsados);
+
+var layers = ml.layers.map(function (l) {
+  var novo = Object.assign({}, l);
+  novo.source = "camada";
+  if (novo.type === "circle" && novo.filter && JSON.stringify(novo.filter).indexOf("point_count") >= 0) {
+    // camada de agrupamento: precisa da fonte com cluster ligado (feito abaixo)
+  }
+  return novo;
+});
+
+var map = new maplibregl.Map({
+  container: "mapa",
+  style: {
+    version: 8,
+    sources: {
+      camada: pc.tipo === "agrupamento"
+        ? { type: "geojson", data: dado, cluster: true, clusterRadius: 40 }
+        : { type: "geojson", data: dado },
+    },
+    layers: layers,
+  },
+  center: [-46.9, -22.9],
+  zoom: 9,
+});
+window.mapaEstilo = map; // exposto só para o e2e ler getPaintProperty/getLayer (prova a mesma cor pintada de verdade)
+map.on("idle", function () {
+  document.body.setAttribute("data-pronto", "1");
+});
+map.on("error", function (e) {
+  document.body.setAttribute("data-erro", (e && e.error && e.error.message) || "erro desconhecido");
+});
+</script>
+</body>
+</html>

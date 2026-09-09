@@ -222,3 +222,8 @@ ESCALA_NOME_MAX = 200                 # mesmo teto de CHECK(length(nome)<=200) d
 ESCALA_UNIDADE_MAX = 40               # CHECK(length(unidade)<=40)
 ESCALA_FONTE_MAX = 500                # CHECK(length(fonte)<=500)
 ESCALA_AMOSTRAS_LOTE_MAX = 20_000     # amostras de fator por chamada de POST (streaming não é o item; teto direto)
+# item L2-02-e-simbolos-sprites-glifos: ícone SVG enviado pelo inquilino
+SIMBOLO_SVG_BYTES_MAX = 64 * 1024
+SIMBOLO_NOME_MAX = 64
+SIMBOLO_CATEGORIA_MAX = 40
+SIMBOLO_GALERIA_BUSCA_MAX = 100

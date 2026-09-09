@@ -848,6 +848,33 @@ CASOS: dict[tuple[str, str], Caso] = {
     ),
     # ---- L0-09 metadado ISO 19139 do item: mesmo `item_ou_404` + RLS de `IT` acima.
     ("GET", IT + "/metadado.xml"): Caso(lambda p: f"/api/itens/{p.item_b['id']}/metadado.xml"),
+    # ---- L2-01-mapa-web / L2-01-a / L2-02-b (rotas trazidas pelos ramos juntados no L2-02-c; sem caso até então):
+    # leituras de lista agem só no chamador (RLS); item de B como alvo = 404 em toda perna.
+    ("GET", "/api/mapa/camadas"): Caso(lambda p: "/api/mapa/camadas", proprio=True, aceita=frozenset({200}),
+                                       verificar=_sem_marca),
+    ("GET", "/api/mapa/camadas/{id}"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}"),
+    ("GET", "/api/mapa/camadas/{id}/tilejson"): Caso(lambda p: f"/api/mapa/camadas/{p.item_b['id']}/tilejson"),
+    ("GET", "/api/camadas/{item_id}/classes"): Caso(lambda p: f"/api/camadas/{p.item_b['id']}/classes?campo=x"),
+    ("GET", "/api/mapas"): Caso(lambda p: "/api/mapas?limite=5", proprio=True, aceita=frozenset({200}),
+                                verificar=_sem_marca),
+    ("GET", "/api/mapas/{id}"): Caso(lambda p: f"/api/mapas/{p.item_b['id']}"),
+    ("GET", "/api/mapas/{id}/completo"): Caso(lambda p: f"/api/mapas/{p.item_b['id']}/completo"),
+    ("POST", "/api/mapas"): Caso(
+        lambda p: "/api/mapas", lambda p: {"titulo": PREFIXO + "mapa " + secrets.token_hex(2)}, proprio=True,
+        aceita=frozenset({201}), verificar=_so_a, limpar=lambda p, j: p.sessao_a.delete(f"/api/itens/{j['id']}"),
+    ),
+    ("PUT", "/api/mapas/{id}"): Caso(lambda p: f"/api/mapas/{p.item_b['id']}", lambda p: {"titulo": "x"}),
+    ("GET", "/api/geocodificar"): Caso(
+        lambda p: "/api/geocodificar?endereco=Avenida+Paulista,+Sao+Paulo+-+SP", proprio=True,
+        aceita=frozenset({200, 422}), verificar=_sem_marca,
+    ),
+    # ---- L2-02-c editor de estilo: compilar é cálculo puro (nenhum dado de inquilino entra ou sai)
+    ("POST", "/api/estilos/compilar"): Caso(
+        lambda p: "/api/estilos/compilar",
+        lambda p: {"plat_construtor": {"tipo": "unico", "geometria": "ponto", "versao": 1,
+                                        "simbolo": {"cor": "#4e79a7"}}},
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
     # ---- L2-11-b geocodificador próprio (dado aberto CNEFE/IBGE, sem tabela de inquilino, mesmo padrão de
     # /api/rota-/api/matriz-/api/isocrona acima): 422 é resposta de NEGÓCIO (UF/logradouro não instalado
     # nesta trilha), não vazamento — aceito ao lado de 200.
@@ -905,6 +932,39 @@ CASOS: dict[tuple[str, str], Caso] = {
         lambda p: {"addresses": {"records": [{"attributes": {"OBJECTID": 1,
                                                               "SingleLine": "Avenida Paulista, Sao Paulo - SP"}}]}},
         publico=True, aceita=frozenset({200}), verificar=_sem_marca,
+    ),
+    # ---- L2-02-e símbolos, sprites e glifos. Três formas diferentes nesta família:
+    # (1) `/api/simbolos/sprite/{slug}`: o slug do inquilino está NO CAMINHO, então é a rota da família em
+    #     que A pode tentar nomear B. `_sprite_do_slug` compara o slug pedido com o do chamador e devolve
+    #     403 `inquilino_divergente` — cai no padrão {401,403,404}, sem caso especial.
+    # (2) galeria e glifos de fonte: não recebem identificação de inquilino nenhuma. A galeria devolve os
+    #     ícones embutidos mais os do PRÓPRIO chamador (RLS por `current_setting`), e a fonte é um arquivo
+    #     embutido no produto, igual para todo mundo — daí `proprio=True` com verificação de marca de B.
+    # (3) POST /api/simbolos: o corpo não tem campo nenhum que aponte para outro inquilino (nome, categoria
+    #     e SVG), então não há como A endereçar B por aqui. O corpo declarado abaixo é recusado com 422
+    #     pelo saneador (tem `<script>`), de propósito: assim a varredura não deixa ícone residual no
+    #     inquilino A a cada rodada — não existe rota de apagar símbolo (fora do portão deste item), logo
+    #     não haveria como `limpar`. O caminho do 201 e o isolamento entre inquilinos que ele produz estão
+    #     medidos em tests/api/test_simbolos.py (`test_upload_de_a_nao_aparece_no_sprite_de_b`).
+    ("GET", "/api/simbolos"): Caso(
+        lambda p: "/api/simbolos", proprio=True, aceita=frozenset({200}), verificar=_sem_marca
+    ),
+    ("POST", "/api/simbolos"): Caso(
+        lambda p: "/api/simbolos",
+        lambda p: {
+            "nome": f"{PREFIXO}simbolo",
+            "categoria": "teste",
+            "conteudo_svg": '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+        },
+        proprio=True, aceita=frozenset({422}),
+    ),
+    ("GET", "/api/simbolos/sprite/{slug}.json"): Caso(lambda p: "/api/simbolos/sprite/demo2.json"),
+    ("GET", "/api/simbolos/sprite/{slug}.png"): Caso(lambda p: "/api/simbolos/sprite/demo2.png"),
+    ("GET", "/api/simbolos/sprite/{slug}@2x.json"): Caso(lambda p: "/api/simbolos/sprite/demo2@2x.json"),
+    ("GET", "/api/simbolos/sprite/{slug}@2x.png"): Caso(lambda p: "/api/simbolos/sprite/demo2@2x.png"),
+    ("GET", "/api/simbolos/fontes/{fontstack}/{faixa}.pbf"): Caso(
+        lambda p: "/api/simbolos/fontes/Noto%20Sans%20Regular/0-255.pbf",
+        proprio=True, aceita=frozenset({200}), verificar=_sem_marca,
     ),
 }
 

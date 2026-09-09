@@ -40,15 +40,21 @@ from app.catalogo import (
 )
 from app.conexao import rotas as rotas_conexao
 from app.correio.rotas_smtp import router as rotas_smtp
+from app.estatistica.rotas import router as rotas_estatistica
+from app.estilos import rotas as rotas_estilos
 from app.geocodificador.rotas import router as rotas_geocodificador
 from app.geocodificador.rotas_esri import router as rotas_geocodificador_esri
 from app.ingestao.rotas import router as rotas_ingestao
 from app.jobs.rotas import router as rotas_jobs
 from app.multiescala.rotas import router as rotas_multiescala
+from app.mapa.rotas import router as rotas_mapa
+from app.mapas.rotas import router as rotas_mapas
 from app.rede.rotas import router as rotas_rede
 from app.rotas_arquivos import router as rotas_arquivos
 from app.saude import router as rotas_saude
 from app.settings import settings
+from app.simbolos.rotas import router as rotas_simbolos
+from app.tiles.rotas import router as rotas_tiles
 from app.uploads.rotas import router as rotas_uploads
 from app.versao import versao
 
@@ -67,6 +73,17 @@ auth_middleware.instalar(app)
 # acrescentado por último: no empilhamento do Starlette isso o torna o mais externo, executando ANTES do
 # middleware de log/sessão acima (ADR 0001 seção 12; app/limite_corpo.py) — corpo grande nunca chega à sessão.
 limite_corpo.instalar(app)
+
+if not settings.producao:
+    # Em produção o nginx serve web/ em /static/ direto do disco (comentário do topo deste arquivo). Fora de
+    # produção (trilha de teste, `venv/bin/uvicorn app.main:app` sem nginx na frente) não existe esse
+    # servidor — o e2e de navegador (item L2-02-e-simbolos-sprites-glifos) precisa de /static respondendo
+    # para a página carregar MapLibre/estilo/js. Guardado por `settings.producao`: zero mudança de
+    # comportamento em produção, só liga o que já faltava para testar sem nginx (mesmo padrão já usado por
+    # outras trilhas, ex. L2-12-a).
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/static", StaticFiles(directory=str(WEB)), name="static_dev")
 
 ROUTERS = [
     rotas_saude,
@@ -112,6 +129,8 @@ ROUTERS = [
     rotas_uploads,
     # --- ingestão vetorial (L0-04): /api/importacoes (upload -> inspeção -> confirmação -> carga -> camada)
     rotas_ingestao,
+    # --- mapa (L2-01-a-documento-mapa): /api/mapas (lista, criar, ler, editar) e /api/mapas/{id}/completo
+    rotas_mapas,
     # --- rede de rota (L2-11-c): /api/rota, /api/matriz, /api/isocrona sobre o OSRM de teste plat-osrm-guarulhos
     rotas_rede,
     # --- geocodificador (L2-11-b): /api/geocodificar, /api/reverso, /api/sugerir + GeocodeServer compatível
@@ -121,6 +140,18 @@ ROUTERS = [
     # --- motor multicritério, grades aninhadas (L3-19-multiescala): /api/multiescala/conjuntos, /fatores,
     # /fatores/{id}/amostras, /conjuntos/{id}/macro, /execucoes/{id}/micro, /execucoes
     rotas_multiescala,
+    # --- visualizador de mapa (L2-01-mapa-web): /api/mapa/camadas, TileJSON com token curto, repasse /tiles
+    rotas_mapa,
+    # --- tiles vetoriais (L2-01-b): /internal/tiles/verificar (auth_request do nginx antes do Martin)
+    rotas_tiles,
+    # --- classificação numérica no servidor (L2-02-b): GET /api/camadas/{id}/classes; mesma rota
+    # atende classificationDef do generateRenderer Esri (L2-04)
+    rotas_estatistica,
+    # --- símbolos, sprites e glifos (L2-02-e): /api/simbolos (galeria + upload), /api/simbolos/sprite/{slug}
+    # (.json/.png, 1x e 2x), /api/simbolos/fontes/{fontstack}/{faixa}.pbf
+    rotas_simbolos,
+    # --- editor de estilo (L2-02-c): POST /api/estilos/compilar (pré-visualização pela mesma função que grava)
+    rotas_estilos.router,
     # --- páginas (cada trilha acrescenta a sua em app/paginas.py)
     paginas.router,
 ]

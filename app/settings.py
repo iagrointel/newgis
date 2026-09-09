@@ -41,6 +41,11 @@ class Settings:
     PLAT_URL_PUBLICA: str
     PLAT_GIT_SHA: str | None
     PLAT_MARTIN_URL: str | None
+    # glifos de fonte do item L2-02-e-simbolos-sprites-glifos (Noto Sans/Open Sans embutidas, nunca mudam
+    # em runtime — por isso podem vir de um Martin de verdade, ao contrário do sprite; ver
+    # docs/adr/20260907T1642-sprite-proprio-em-vez-de-martin.md). Sem valor: app/simbolos/fontes.py sobe um
+    # Martin próprio, efêmero, só para teste/desenvolvimento local.
+    PLAT_MARTIN_SIMBOLOS_URL: str | None
     PLAT_TITILER_URL: str | None
     PLAT_GARAGE_URL: str | None
     # arquivos/objetos (L0-11; ADR 0006): garage vira obrigatório a partir deste item (saude.py); admin api
@@ -66,6 +71,12 @@ class Settings:
     PLAT_OSRM_URL: str
     PLAT_ROTA_MATRIZ_MAX: int
     PLAT_ROTA_ISOCRONA_MAX_PONTOS: int
+    # tiles vetoriais (L2-01-b): DSN do papel plat_leitor (LOGIN, sem BYPASSRLS), usado SÓ pela rota
+    # /internal/tiles/verificar (auth_request do nginx) para validar o token antes de o pedido chegar ao
+    # Martin — o Martin (martin-core GetTileWithQueryError) devolve 500 para QUALQUER erro do Postgres,
+    # nunca 401/403, então a checagem de "sem token = 401" tem de acontecer fora dele. Ausente = a rota
+    # devolve 503 (falha fechada: sem DSN de leitor, nenhum tile passa).
+    PLAT_DSN_LEITOR: str | None
     # item L7-31 (docs/HOMOLOGACAO.md): homologação reusa o MESMO banco iagro_sat, nunca um banco novo (disco a
     # 98%) — schema e canal de notificação viram configuráveis para que o mesmo código sirva os dois ambientes
     # sem colisão. Produção nunca declara estas 4 chaves no .env: os padrões abaixo reproduzem bit a bit o que
@@ -202,6 +213,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_URL_PUBLICA=url,
         PLAT_GIT_SHA=_opcional(valores, "PLAT_GIT_SHA"),
         PLAT_MARTIN_URL=_opcional(valores, "PLAT_MARTIN_URL"),
+        PLAT_MARTIN_SIMBOLOS_URL=_opcional(valores, "PLAT_MARTIN_SIMBOLOS_URL"),
         PLAT_TITILER_URL=_opcional(valores, "PLAT_TITILER_URL"),
         PLAT_GARAGE_URL=_opcional(valores, "PLAT_GARAGE_URL"),
         PLAT_GARAGE_ADMIN_URL=_opcional(valores, "PLAT_GARAGE_ADMIN_URL"),
@@ -224,6 +236,7 @@ def carregar(valores: Mapping[str, str | None]) -> Settings:
         PLAT_ROTA_ISOCRONA_MAX_PONTOS=_inteiro(
             valores, "PLAT_ROTA_ISOCRONA_MAX_PONTOS", limites.ROTA_ISOCRONA_MAX_PONTOS_PADRAO, 4
         ),
+        PLAT_DSN_LEITOR=_opcional(valores, "PLAT_DSN_LEITOR"),
         PLAT_SCHEMA=schema,
         PLAT_SCHEMA_TRABALHO=_identificador(valores, "PLAT_SCHEMA_TRABALHO", "plat_trabalho"),
         PLAT_CANAL_JOB=_identificador(valores, "PLAT_CANAL_JOB", "plat_job"),

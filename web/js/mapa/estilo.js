@@ -21,10 +21,14 @@ const COR = {
   lugar: '#d98a2b',
 };
 
-export function construirEstilo(urlPmtiles) {
+export function construirEstilo(urlPmtiles, { sprite = null, glyphs = null } = {}) {
+  // sprite/glyphs do inquilino (item L2-02-e via L2-02-c): ícones e rótulos das camadas do catálogo; só entram
+  // quando informados — chave com valor nulo faz o MapLibre recusar o estilo inteiro (armadilha medida em catalogo.js)
   return {
     version: 8,
     name: 'plat-instrumento-guarulhos',
+    ...(sprite ? { sprite } : {}),
+    ...(glyphs ? { glyphs } : {}),
     sources: {
       base: {
         type: 'vector',
