@@ -105,7 +105,11 @@ export function validarManifesto(manifesto) {
   if (!/^plat-[a-z][a-z0-9-]*$/.test(manifesto.elemento)) falha('manifesto.elemento', 'Custom Element inválido');
   if (!/^\d+\.\d+\.\d+$/.test(manifesto.versao)) falha('manifesto.versao', 'semver inválido');
   if (manifesto.api_widget !== 1) falha('manifesto.api_widget', 'versão de API incompatível');
-  if (!manifesto.modulo.startsWith('./') || !manifesto.modulo.endsWith('.js')) falha('manifesto.modulo', 'módulo relativo inválido');
+  // L5-36: além do relativo de fábrica ('./texto.js'), o manifesto de widget EXTERNO aponta o caminho
+  // absoluto same-origin servido pela API ('/api/widgets/externos/<nome>/modulo.js') — nunca URL de outra
+  // origem: código de terceiro só corre vindo do próprio servidor e com o sha256 conferido.
+  if ((!manifesto.modulo.startsWith('./') && !manifesto.modulo.startsWith('/')) || !manifesto.modulo.endsWith('.js'))
+    falha('manifesto.modulo', 'módulo inválido (relativo ./algo.js ou caminho same-origin /algo.js)');
   if (!Array.isArray(manifesto.eventos) || !Array.isArray(manifesto.acoes)) falha('manifesto', 'eventos e ações precisam ser listas');
   if (!Number.isInteger(manifesto.fontes.min) || !Number.isInteger(manifesto.fontes.max)
       || manifesto.fontes.min < 0 || manifesto.fontes.max < manifesto.fontes.min) falha('manifesto.fontes', 'limites inválidos');
