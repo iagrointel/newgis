@@ -418,3 +418,25 @@ de `arcgis.geometry.buffer` e de `Geometry.buffer`).
 | GeoDataFrame (ler/escrever camada) | `GeoAccessor`/`sedf` sobre pandas (`SpatialDataFrame` → `GeoAccessor.from_layer` etc.) | FORA desta passagem: depende de FeatureServer (L2-04-c, parcial, sem merge) e de edição transacional (L2-03-a, refutado) | fora (pendência registrada no handoff) | — | 2026-09-08 | pendente (D20) |
 | raster/imagens por API | módulos `arcgis.raster` sobre Image Server do Enterprise | FORA: TiTiler/STAC do L2-04 ainda não está em master | fora (pendência) | — | 2026-09-08 | pendente (D20) |
 | notebook com o SDK | ArcGIS Notebooks (Enterprise) embutem o `arcgis` | FORA: JupyterLab/nbconvert é o item PAI (L2-16-notebooks-scripts) | fora (item pai cobre) | — | 2026-09-08 | pendente (D20) |
+
+## Notebook por inquilino (item L2-16-b-jupyter-por-inquilino-isolado, turno 48)
+
+Fonte Esri: "Manage ArcGIS Notebook Server resources" (`enterprise.arcgis.com/en/notebook/11.5/administer/linux/
+manage-notebook-server-resources.htm`, acesso 2026-09-09 — "ArcGIS Notebook Server uses containers—virtualized
+operating systems—to isolate each notebook author's environment"; "The Standard runtime allots 1 CPU core and
+4 GB of RAM per container"; "The Advanced runtime allots 2 CPU cores and 6 GB of RAM per container") e
+"Schedule a notebook task" (`enterprise.arcgis.com/en/notebook/11.4/use/linux/prepare-a-notebook-for-automated-
+execution.htm`, acesso 2026-09-09 — "Starting at 10.8.1, you can create tasks to schedule the automated run of a
+notebook"). No ArcGIS Online, tarefa agendada consome créditos por execução (`doc.arcgis.com/en/arcgis-online/
+administer/credits.htm`, acesso 2026-09-09).
+
+| capacidade | Esri | nós | estado | testado por | data | Pro/AGOL real |
+|---|---|---|---|---|---|---|
+| contêiner por autor | papel separado e licenciado (ArcGIS Notebook Server) com Docker; "containers ... isolate each notebook author's environment" | um contêiner JupyterLab POR INQUILINO no MESMO docker da máquina, criado sob demanda pela própria API (sem papel extra, sem segunda instalação); imagem própria de 1,12 GB (`plat-notebook`) | feito | construtor do turno (`tests/api/test_notebooks.py`) | 2026-09-09 | pendente (D20) |
+| recursos por contêiner | runtime Standard = 1 core/4 GB, Advanced = 2 cores/6 GB, editáveis por runtime no administrador | `--memory 2g --cpus 2` por contêiner (2 GiB por padrão nesta máquina de ~6 GB livres); processo que aloca acima é morto pelo cgroup (rc=137 medido) | feito | idem (`test_ram_limite_mata_processo`) | 2026-09-09 | pendente (D20) |
+| partida do ambiente | contêiner criado no primeiro acesso do autor (sem SLA público no documento) | partida medida em 2,21 s com o contêiner novo (`tests/medidas/L2-16-b-jupyter-por-inquilino-isolado.json`, carga 1 min = 1,56); cláusula do portão: ≤ 20 s | feito | idem (`contenedor_demo`) | 2026-09-09 | pendente (D20) |
+| fim do ambiente ocioso | o notebook server mantém o contêiner do autor; recuperação de espaço é tarefa de administrador | ceifador do worker encerra o contêiner sem uso de API por 30 min ou com vida > 12 h, revoga o token e apaga o volume; a próxima passagem reergue na mesma requisição | feito | idem (`test_ociosidade_ceifa`) | 2026-09-09 | pendente (D20) |
+| execução agendada | "Starting at 10.8.1, you can create tasks to schedule the automated run of a notebook" (a partir de 10.8.1); no AGOL cada execução consome créditos | job `notebooks.executar` da fila da casa (cron por inquilino em `plat.agenda`): `jupyter nbconvert --execute` no mesmo contêiner, saída em HTML vira ITEM (`notebook_saida`) com evento de domínio `notebooks/executado`, sem crédito e sem serviço externo | feito | idem (`test_job_agendado_roda_e_salva_html`) | 2026-09-09 | pendente (D20) |
+| dado do inquilino dentro do notebook | notebooks acessam itens do portal pela identidade do autor | o contêiner recebe UM token de serviço do usuário (escopos `catalogo:ler`+`camada:ler`, 1 dia) — leitura de camada pela API interna; `/proc/1/environ` do contêiner não tem NENHUM outro segredo (sem DSN, sem PLAT_SECRET, sem admin do Garage) | feito | idem (`test_kernel_le_camada_pela_api_e_nao_escapa`, `test_environ_so_tem_o_token`) | 2026-09-09 | pendente (D20) |
+| rede do notebook | contêiner no docker do Notebook Server, com saída definida pelo site | rede docker `--internal` (sem rota default), firewall do host derruba contêiner→host: Postgres e internet INACESSÍVEIS de dentro; a API chega por gateway próprio (rele por netns, socket unix) | feito | idem (`test_kernel_le_camada_pela_api_e_nao_escapa`) | 2026-09-09 | pendente (D20) |
+| autenticação do editor | login do portal abre o notebook (identidade do autor) | abrir `/notebooks/{slug}/` exige SESSÃO da plataforma (cookie); token de serviço NÃO abre (o portão pede sessão de propósito); slug de outro inquilino é 404, não 403 | feito | idem (`test_401_sem_sessao`, `test_404_para_outro_inquilino`) | 2026-09-09 | pendente (D20) |
