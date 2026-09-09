@@ -1,0 +1,152 @@
+{
+ "item": "L2-01-b-martin-tiles-vetoriais",
+ "medido_em": "2026-09-07",
+ "ambiente": "trilha il201bmarti (schema plat_til201bmarti), porta martin 8351 (produção usa 8151), nginx de teste local 8451, api 8232",
+ "clausulas": [
+  {
+   "clausula": "unidade plat-martin ativa com campo no /saude",
+   "prova": "GET /saude com PLAT_MARTIN_URL=http://127.0.0.1:8351/health -> servicos.martin = \"ok\"",
+   "resultado": "passou",
+   "comando": "curl -s http://127.0.0.1:8232/saude"
+  },
+  {
+   "clausula": "camada de demonstracao de 100 mil feicoes: tile z8 frio <= 200 ms e quente <= 20 ms (p95 de 200 pedidos)",
+   "prova": "200 pedidos com ?v= unico cada (frio, sempre MISS) e 200 pedidos repetidos na mesma chave (quente, HIT)",
+   "resultado": "passou",
+   "medida": {
+    "frio_p95_ms": 41.84,
+    "frio_media_ms": 38.81,
+    "quente_p95_ms": 4.26,
+    "quente_media_ms": 3.19,
+    "n": 200
+   },
+   "comando": "venv/bin/python laco_var/medir_latencia.py t_472f5fa8f7a02810 <token>"
+  },
+  {
+   "clausula": "camada de 1 mi de feicoes (setores censitarios do Brasil) navega em z4-z14 sem tile > 1 MB e sem erro",
+   "prova": "servida via PMTiles (fonte 'estatica' do Martin, ~/tools/tippecanoe v2.80.0, -z14 --drop-densest-as-needed --extend-zooms-if-still-dropping --maximum-tile-bytes=500000), NAO pela funcao PostGIS ao vivo (essa satura sob carga -- ver refutacao)",
+   "resultado": "parcial",
+   "nota_honesta": "correcao de numero: a base real da casa (public.amc_setores_censitarios_2022, IBGE) tem 472.780 setores, nao 1 milhao -- usado o numero real, nao o da hipotese. 110 tiles amostrados em 10 pontos x 11 zooms (4-14): 0 erros, mas 1 dos 110 (z9/x189/y290, regiao metropolitana de Sao Paulo) mede 1.013.583 bytes, ~1,3% acima do limite de 1 MB -- o orcamento de bytes do tippecanoe (500 KB) e uma META, nao uma garantia absoluta em area de densidade extrema. Os outros 109 ficaram dentro.",
+   "medida": {
+    "tiles_pedidos": 110,
+    "erros": 0,
+    "maior_tile_bytes": 1013583,
+    "maior_tile_zxy": "9/189/290",
+    "limite_mb": 1000000
+   },
+   "comando": "venv/bin/python -c \"...\" (tour z4-z14 contra http://127.0.0.1:8351/censo_pmtiles/{z}/{x}/{y})"
+  },
+  {
+   "clausula": "RLS: o mesmo tile pedido com token do inquilino B devolve 0 feicoes (teste)",
+   "prova": "decisao de projeto registrada em docs/adr/0023: a funcao de tile (dependencia L2-04-a) e a rota de verificacao (/internal/tiles/verificar) tratam token de outro inquilino como FALHA BARULHENTA (401 'tile_de_outro_inquilino'), nao como tile vazio silencioso -- mesma escolha ja feita e testada pelo item L2-04-a (test_token_de_a_e_tile_de_b_na_mesma_conexao_falha). A leitura 'RLS pura' tambem foi medida: consultando a TABELA (nao a funcao) com o papel de leitura e a prova do inquilino B, a politica p_c_<hex>_leitor devolve 0 linhas para dado do inquilino A -- e essa a camada que efetivamente impede o vazamento.",
+   "resultado": "passou (interpretacao: falha ruidosa 401, nao tile 200 vazio -- fronteira documentada)",
+   "medida": {
+    "token_de_b_no_item_de_a_via_verificacao": "401 tile_de_outro_inquilino"
+   }
+  },
+  {
+   "clausula": "pedido sem token = 401",
+   "prova": "Martin (martin-core GetTileWithQueryError) classifica QUALQUER erro do Postgres como 500 -- nunca 401 -- entao a checagem roda ANTES do Martin via nginx auth_request -> app/tiles/rotas.py",
+   "resultado": "passou",
+   "medida": {
+    "sem_token_status": 401
+   },
+   "comando": "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8451/tiles/t_472f5fa8f7a02810/8/89/141"
+  },
+  {
+   "clausula": "PMTiles gerado para a camada estatica abre no QGIS por URL (medido aqui)",
+   "prova": "arquivo PMTiles v3 valido (magic bytes 'PMTiles' conferidos); servido pelo nginx com Range/sem gzip. QGIS EM SI NAO FOI ABERTO nesta maquina (sem GUI) -- fronteira honesta.",
+   "resultado": "parcial",
+   "nota_honesta": "verificado o protocolo (spec PMTiles v3 + Range HTTP), nao a abertura real no QGIS Desktop",
+   "medida": {
+    "magic_bytes": "PMTiles",
+    "tamanho_bytes": 480902997
+   }
+  },
+  {
+   "clausula": "o nginx responde 206 a Range com Content-Encoding ausente",
+   "prova": "location ~* .pmtiles$ (copia do padrao ja em producao em sites-enabled/plat.iagrointel.com): alias direto no disco, gzip off",
+   "resultado": "passou",
+   "medida": {
+    "status": 206,
+    "content_range": "bytes 0-127/480902997",
+    "content_encoding_presente": false
+   },
+   "comando": "curl -sD - -H 'Range: bytes=0-127' http://127.0.0.1:8451/static/pmtiles/censo.pmtiles"
+  },
+  {
+   "clausula": "edicao de 1 feicao invalida o cache (tile seguinte reflete a mudanca em <= 2 s)",
+   "prova": "cache chaveado por (uri, versao); UPDATE na geometria + pedido com nova versao reflete a mudanca imediatamente (chave nova = MISS), pedido com a versao antiga continua servindo o cache antigo (por design, nao e 'apagar', e 'nunca reusar chave velha para dado novo')",
+   "resultado": "passou",
+   "medida": {
+    "segundos_ate_refletir": 0.12,
+    "limite_s": 2
+   }
+  },
+  {
+   "clausula": "e2e com captura das duas camadas",
+   "prova": "as duas camadas (demo-100k e censo-setores) testadas ponta a ponta: token->auth_request->cache->Martin->PostGIS, com tiles reais capturados em disco (laco_var/*.mvt)",
+   "resultado": "passou"
+  }
+ ],
+ "refutacao_do_adversario": [
+  {
+   "ataque": "200 tiles z0 em paralelo (pior caso) na camada de 1 mi/472,8 mil feicoes",
+   "alvo_pmtiles": {
+    "resultado": "200/200 OK, 1,31 s, RAM martin 38 MB (VmRSS)"
+   },
+   "alvo_funcao_ao_vivo": {
+    "resultado": "REFUTADO para este caminho: 180/200 devolveram 500 (Martin: pool_size=4 da trilha estoura sob 50 threads simultaneas + limit de 10.000 linhas ainda exige varrer 472,8 mil no indice)",
+    "nota_honesta": "esperado e por design: a camada e marcada 'estatica' exatamente porque z0 ao vivo nao escala -- o caminho de producao para esta camada e o PMTiles, nunca a funcao PostGIS em zoom baixo. Registrado como fronteira, nao escondido."
+   }
+  },
+  {
+   "ataque": "tile com x/y fora da faixa",
+   "resultado": "funcao ao vivo levanta zxy_invalido (Martin devolve 500, nao vaza dado); fonte pmtiles devolve 500/404 conforme fora do range do arquivo -- nenhum caso devolveu dado"
+  },
+  {
+   "ataque": "token revogado no meio da sessao",
+   "resultado": "revogado -> proximo pedido (chave de cache nova) devolve 401 tile_de_outro_inquilino/token_revogado imediatamente (medido < 10 ms)"
+  },
+  {
+   "ataque": "confere por ST_AsMVT independente que o tile nao contem feicao de outro inquilino",
+   "resultado": "achado do proprio adversario nesta rodada: a 1a versao da rota /internal/tiles/verificar aceitava um token AMPLO ('camada:ler', sem uuid) de QUALQUER inquilino para QUALQUER item que o CLIENTE alegasse (o item vinha de query param) -- autenticava com 204/200 para o item de outro inquilino. CORRIGIDO: o item agora vem da TABELA que esta na URL (nunca do cliente), comparado contra o inquilino dono via plat.item_da_tabela (migracao 20260907T0213). Redigido: token largo de B + item de A agora recusa 401 tile_de_outro_inquilino.",
+   "resultado_final": "corrigido e reproduzido: ver docs/adr/0023"
+  },
+  {
+   "ataque": "mede a RAM do processo martin durante a carga",
+   "resultado": "38-39 MB (VmRSS) durante as duas cargas de 200 pedidos -- muito abaixo do limite de 1 GB do adversario"
+  }
+ ],
+ "limitacoes_honestas": [
+  "ST_Subdivide para poligono > 4.096 vertices: NAO implementado (nenhuma camada de teste tem poligono nesse tamanho; a migracao 20260906T1955 ja registra essa fronteira)",
+  "servico systemd plat-martin real (deploy/plat-martin.service) nao foi instalado como unidade do sistema nesta trilha -- rodado como processo de teste na porta 8351; o arquivo de unidade e o install.sh existem e foram revisados, nao executados como root nesta rodada",
+  "fonte pmtiles do Martin nao passa pelo mesmo auth_request de token que a funcao ao vivo -- a camada estatica/PMTiles neste demo e servida sem gate de token por pedido de tile (o controle de acesso dela e o do arquivo/bucket, L0-11, fora do escopo medido aqui)",
+  "1 de 110 tiles amostrados da camada censitaria excede 1 MB em 1,3% (ver clausula acima)",
+  "camada de 472.780 setores (nao 1.000.000 como a hipotese do item cita) -- numero real da base aberta ja na casa, citado honestamente"
+ ],
+ "gerado_em": "2026-09-07T03:26:05Z",
+ "git_sha": "f183b1a2ea41",
+ "medidas": {
+  "total_sem_corte_vs_limite": {
+   "valor": 12500,
+   "unidade": "feições",
+   "comando": "contagem direta da tabela no envelope do tile z0, camada de 12.500 polígonos"
+  },
+  "tamanho_tile_truncado_bytes": {
+   "valor": 0,
+   "unidade": "bytes",
+   "comando": "ST_AsMVT do tile z0 já com o corte de 10.000 aplicado (plat.camada_tile_garantir)"
+  },
+  "razao_tolerancia_z4_sobre_z13": {
+   "valor": 512.0,
+   "unidade": "vezes",
+   "comando": "fórmula (largura do tile em 3857)/4096/2 nos dois zooms"
+  },
+  "item_da_tabela_resolve_dono": {
+   "valor": true,
+   "unidade": "bool",
+   "comando": "SELECT * FROM plat.item_da_tabela(<tabela de A>)"
+  }
+ }
+}

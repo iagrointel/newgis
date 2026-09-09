@@ -207,6 +207,11 @@ else
 fi
 "${PSQL[@]}" -Atc "SELECT pg_reload_conf()" >/dev/null
 
+# papel de LEITURA (item L2-04-a): LOGIN, senha em credential, linha no pg_hba e nada mais. Fica em script
+# próprio porque tem de poder rodar sozinho numa base de trilha/homologação (PLAT_SCHEMA) sem reescrever o
+# .env desta instalação. Idempotente: a segunda execução seguida imprime `mudancas: 0`.
+PG_HBA="$PG_HBA" CRED_DIR="$CRED_DIR" bash "$APP_DIR/db/leitor_instalar.sh" "$DB"
+
 echo "== e2. pacotes apt (deploy/pacotes_apt.txt, item L7-14)"
 # Lista fechada e comentada em deploy/pacotes_apt.txt (ADR 0007 seção 1): servidor ASGI, driver de banco,
 # criador de venv, criptografia (ADR 0002/L7-16), GDAL (ADR 0005, subprocesso do worker) e sniff de tipo
