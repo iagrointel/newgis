@@ -190,3 +190,8 @@ GRANT SELECT ON plat.parcela_registro, plat.parcela_ponto, plat.parcela_linha,
 -- tabela nova; visão só deste ramo não nasce com privilégio nos ambientes de trilha, que copiam
 -- a matriz de produção (onde a visão ainda não existe) e só alargam TABELA.
 GRANT SELECT ON plat.v_parcela_atual, plat.v_parcela_historico TO plat_app;
+-- O dono é o papel da aplicação: os ambientes de trilha REVOGAM tudo e recopiaram a matriz de
+-- produção, que não conhece visão só de ramo — e privilégio de DONO não se revoga. A leitura
+-- continua sob RLS (security_invoker + política por inquilino), que olha o chamador, não o dono.
+ALTER VIEW plat.v_parcela_atual OWNER TO plat_app;
+ALTER VIEW plat.v_parcela_historico OWNER TO plat_app;
