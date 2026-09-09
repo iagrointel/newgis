@@ -1,7 +1,9 @@
 """Subconjunto seguro de CQL2-JSON (item L2-06-a-modelo-painel-fontes) para o filtro FIXO de uma vista
 de painel (`corpo.fontes[].filtro`, forma `{"op": ..., "args": [...]}` do padrão OGC CQL2 — JSON, não
 texto). O L2-01-h amplia a gramática (mais operadores, geometria); este módulo cobre só o que o
-esquema do painel aceita hoje: comparação simples, `and`/`or`, `in`, `isNull`, `like`.
+esquema do painel aceita hoje: comparação simples, `and`/`or`, `in`, `isNull`, `like` — e, para o
+filtro dinâmico por pedido do L2-06-c (`separar_espacial`), o nó `s_intersects` na única forma que
+o barramento do L5-07 produz (caixa alinhada aos eixos), que não entra no texto: vira parâmetro.
 
 Em vez de gerar SQL de novo (uma segunda superfície de injeção para auditar), este módulo TRADUZ o
 CQL2-JSON para o texto da gramática já auditada de `app.consulta.where_ast` (a mesma que
@@ -95,6 +97,91 @@ def cql2_para_texto(filtro: dict | None) -> str | None:
     if not filtro:
         return None
     return _traduzir(filtro)
+
+
+# -----------------------------------------------------------------------------------------------
+# Item L2-06-c: o filtro dinâmico de UMA ação (seletor, seleção em barra/lista, extensão do mapa)
+# chega por PEDIDO (`pedidos[<elemento>].filtro`), além do filtro fixo da fonte. Gramática é a mesma;
+# o único nó novo é `s_intersects` (a relação espacial do barramento do L5-07), que só é aceito na
+# forma que o barramento produz: polígono-retaângulo alinhado aos eixos → vira caixa [o,s,l,n] e o
+# chamador transforma em `ST_MakeEnvelope(%s,%s,%s,%s,4326)` com parâmetro (nunca texto solto).
+CAMADA_MAX_ENVELOPES = 8  # caixas espaciais num mesmo filtro de pedido (basta: cada ação produz 1)
+
+
+def propriedades(filtro, saida: set[str] | None = None) -> set[str]:
+    """Todo nome de campo citado no filtro (para validar contra a lista branca da fonte ANTES de
+    traduzir, devolvendo `campo_fora_da_fonte` em vez de um erro de gramática genérico)."""
+    saida = saida if saida is not None else set()
+    if isinstance(filtro, dict):
+        if isinstance(filtro.get("property"), str):
+            saida.add(filtro["property"])
+        for v in filtro.values():
+            if isinstance(v, (dict, list)):
+                propriedades(v, saida)
+    elif isinstance(filtro, list):
+        for v in filtro:
+            propriedades(v, saida)
+    return saida
+
+
+def _caixa_de_poligono(geom) -> list[float]:
+    """Polygon CQL2 → caixa [oeste, sul, leste, norte], só quando o anel é um retângulo alinhado
+    (a forma que o barramento do L5-07 produz em `#traduzir` para a relação `espacial`). Qualquer
+    outra geometria é RECUSADA: interseção exata de polígono no servidor é trabalho do L2-01-h,
+    não do filtro de execução do painel."""
+    if not isinstance(geom, dict) or geom.get("type") != "Polygon":
+        raise _erro("CQL2: s_intersects do painel aceita só Polygon alinhado aos eixos")
+    anel = geom.get("coordinates")
+    if not isinstance(anel, list) or len(anel) != 1 or not isinstance(anel[0], list) or len(anel[0]) != 5:
+        raise _erro("CQL2: s_intersects do painel exige um único anel fechado de 5 pontos (retângulo)")
+    pontos = anel[0]
+    try:
+        xs = [float(p[0]) for p in pontos]
+        ys = [float(p[1]) for p in pontos]
+    except (TypeError, ValueError, IndexError) as e:
+        raise _erro("CQL2: s_intersects com coordenada inválida") from e
+    if pontos[0] != pontos[4]:
+        raise _erro("CQL2: anel de s_intersects não fecha (primeiro e último ponto diferem)")
+    if len({*xs}) > 2 or len({*ys}) > 2:
+        raise _erro("CQL2: s_intersects do painel só aceita retângulo alinhado aos eixos (caixa)")
+    return [min(xs), min(ys), max(xs), max(ys)]
+
+
+def separar_espacial(filtro, coluna_geometria: str = "geom", profundidade: int = 0):
+    """Divide o filtro CQL2 de um pedido em (resto, caixas): os nós `s_intersects` saem da árvore e
+    viram caixas [o,s,l,n] para o chamador montar a condição espacial com parâmetro; o que sobra
+    (podendo ser `None`) segue pelo tradutor de texto de sempre. `s_intersects` dentro de `or` é
+    recusado — (A ou caixa) não separa em (A) E (caixa); o editor manda o autor usar dois pedidos."""
+    if profundidade > MAX_PROFUNDIDADE:
+        raise _erro("CQL2: filtro aninhado demais")
+    if not isinstance(filtro, dict):
+        return filtro, []
+    no = _normalizar(filtro)
+    op = no.get("op")
+    if op == "s_intersects":
+        args = no.get("args")
+        if not isinstance(args, list) or len(args) != 2:
+            raise _erro("CQL2: 's_intersects' exige campo e geometria")
+        campo = _propriedade(args[0])
+        if campo not in ("geometria", coluna_geometria):
+            raise _erro(f"CQL2: s_intersects só vale na coluna de geometria da fonte ({campo!r})")
+        return None, [_caixa_de_poligono(args[1])]
+    if op in ("and", "or"):
+        args = no.get("args")
+        if not isinstance(args, list) or len(args) < 2:
+            raise _erro(f"CQL2: '{op}' exige ao menos dois operandos")
+        restos = []
+        caixas: list[list[float]] = []
+        for a in args:
+            r, c = separar_espacial(a, coluna_geometria, profundidade + 1)
+            if c and op == "or":
+                raise _erro("CQL2: s_intersects dentro de 'or' não é aceito no filtro de pedido do painel")
+            if r is not None:
+                restos.append(r)
+            caixas += c
+        resto = {"op": op, "args": restos} if len(restos) > 1 else (restos[0] if restos else None)
+        return resto, caixas[:CAMADA_MAX_ENVELOPES + 1]
+    return no, []
 
 
 def _normalizar(no):
