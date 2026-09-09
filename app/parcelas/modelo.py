@@ -63,16 +63,20 @@ def criar_registro(cur, tenant_id: int, *, codigo, tipo, origem="manual", data_r
 
 
 def criar_ponto(cur, tenant_id: int, *, x: float, y: float, nome=None, precisao_xy_m=None,
-                fixo=False, origem="medida", registro_id=None) -> dict:
+                fixo=False, origem="medida", registro_id=None, categoria=None) -> dict:
     """Ponto da malha com PRECISÃO DECLARADA (a coluna existe para ser preenchida por quem
-    mediu; importação derivada deixa NULL — ausência declarada, não inferência)."""
+    mediu; importação derivada deixa NULL — ausência declarada, não inferência) e CATEGORIA de
+    exatidão (item 03: 'controle' é o datum do ajuste, 'apoio' o resto; o DEFAULT do banco é
+    'apoio', a CHECK do banco recusa o resto)."""
     if origem not in ORIGENS:
         raise ErroAPI(422, "tipo_invalido", f"origem precisa ser uma de: {', '.join(ORIGENS)}")
     cur.execute(
         "INSERT INTO plat.parcela_ponto(tenant_id, nome, geom, precisao_xy_m, fixo, origem, "
-        "criada_por_registro) VALUES (%s,%s,ST_SetSRID(ST_MakePoint(%s,%s),%s),%s,%s,%s,%s) "
-        "RETURNING id, nome, precisao_xy_m, fixo, origem",
-        (tenant_id, nome, float(x), float(y), SRID, precisao_xy_m, bool(fixo), origem, registro_id),
+        "criada_por_registro, categoria) VALUES (%s,%s,ST_SetSRID(ST_MakePoint(%s,%s),%s),%s,%s,"
+        "%s,%s,COALESCE(%s,'apoio')) "
+        "RETURNING id, nome, precisao_xy_m, fixo, origem, categoria",
+        (tenant_id, nome, float(x), float(y), SRID, precisao_xy_m, bool(fixo), origem, registro_id,
+         categoria),
     )
     return cur.fetchone()
 
@@ -91,11 +95,13 @@ def _ponto_xy(cur, ponto_id) -> tuple[float, float]:
 
 def criar_linha(cur, tenant_id: int, *, de_ponto_id, para_ponto_id, rumo_graus=None,
                 distancia_m=None, raio_m=None, arco_m=None, tipo_cogo=None, precisao_rumo_s=None,
-                precisao_dist_cm=None, origem="medida", registro_id=None) -> dict:
+                precisao_dist_cm=None, origem="medida", registro_id=None, categoria=None) -> dict:
     """Linha de limite com atributos COGO. A GEOMETRIA vem sempre dos dois pontos
     (ST_MakeLine) — arco de verdade fica para a fase de desenho; a corda fecha a malha e o
     raio (COM SINAL: positivo curva à direita) e o comprimento de arco ficam declarados na
-    linha (paridade §3 do documento de paridade)."""
+    linha (paridade §3 do documento de paridade). CATEGORIA de exatidão (item 03): 'medido'
+    (padrão do banco), 'escritura' ou 'derivado'; o par de sigma padrão vem da tabela de
+    categorias em ajuste.py."""
     if origem not in ORIGENS:
         raise ErroAPI(422, "tipo_invalido", f"origem precisa ser uma de: {', '.join(ORIGENS)}")
     if tipo_cogo not in ("reta", "arco", None):
@@ -109,12 +115,12 @@ def criar_linha(cur, tenant_id: int, *, de_ponto_id, para_ponto_id, rumo_graus=N
     cur.execute(
         "INSERT INTO plat.parcela_linha(tenant_id, de_ponto_id, para_ponto_id, geom, rumo_graus, "
         "distancia_m, raio_m, arco_m, tipo_cogo, precisao_rumo_s, precisao_dist_cm, origem, "
-        "criada_por_registro) VALUES (%s,%s,%s,ST_SetSRID(ST_MakeLine(ST_MakePoint(%s,%s),"
-        "ST_MakePoint(%s,%s)),%s),%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id, tipo_cogo, rumo_graus, "
-        "distancia_m, raio_m, arco_m",
+        "criada_por_registro, categoria) VALUES (%s,%s,%s,ST_SetSRID(ST_MakeLine(ST_MakePoint(%s,%s),"
+        "ST_MakePoint(%s,%s)),%s),%s,%s,%s,%s,%s,%s,%s,%s,%s,COALESCE(%s,'medido')) "
+        "RETURNING id, tipo_cogo, rumo_graus, distancia_m, raio_m, arco_m, categoria",
         (tenant_id, str(de_ponto_id), str(para_ponto_id), x1, y1, x2, y2, SRID, rumo_graus,
          distancia_m, raio_m, arco_m, tipo_cogo, precisao_rumo_s, precisao_dist_cm, origem,
-         registro_id),
+         registro_id, categoria),
     )
     return cur.fetchone()
 
